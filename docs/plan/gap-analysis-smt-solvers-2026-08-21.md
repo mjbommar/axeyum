@@ -304,11 +304,45 @@ Two measured numbers that should temper the claim further:
   because the wildcard in that function undercounts by construction, which is the
   same defect one level down. Still: **84% re-validates only by calling back into
   axeyum's own Rust**, and that is the real number to move.
-- **~30 of 34 structural evidence checkers re-run the producer and compare for
+- **Structural evidence checkers that re-run the producer and compare for
   equality** — `producer(arena, assertions).is_some_and(|fresh| fresh == *cert)`.
   That is a determinism check, not a soundness check: if the recognizer is
-  wrong, the checker is wrong identically. This covers `unsat-array-axiom`, the
-  single highest-volume family (85 of 765 recorded instances).
+  wrong, the checker is wrong identically.
+
+  **CORRECTED 2026-08-21 — "~30 of 34" counts one code shape and three different
+  situations, and it overstates the hole.** All 34 were read at
+  `35d3fd6b1`. Four families are now decided independently:
+  `array-axiom` (85 certified `unsat`), `nra-even-power` (10),
+  `finite-array-extensionality` (4) and `finite-domain-pigeonhole` (3) — 102
+  instances, 36.3% of the 281. Of the 28 checkers still carrying the shape:
+
+  | | families | certified `unsat` |
+  |---|---:|---:|
+  | (A) the producer is a **complete decision procedure**, so the re-run re-decides | 3 | 16 |
+  | (B) a recognizer whose certificate **carries its own claim** — convertible | 18 | 33 |
+  | (C) a recognizer whose certificate **cannot express its claim** | 5 | 14 |
+
+  (A) is the correction that matters: `bool-uf-exhaustive` (7),
+  `bool-euf-exhaustive` (6) and `bool-euf-online` (3) enumerate a finite domain
+  with a trusted evaluator over the original assertions, or call the online EUF
+  solver outright. A satisfiable query is refused by the re-run itself, so
+  "determinism check sold as a soundness check" is simply not true of them.
+
+  (C) is the residual and it is a **certificate** defect, not a checker defect —
+  now named in `evidence.rs` beside each checker: `uf-arith-congruence` (4, two
+  counts), `bv-abstraction` (4, which produces and self-checks an inner QF_BV
+  proof and then discards it), `datatype-structural` (3, one count),
+  `cross-store-array-disequality` (2, no derivation chain), `fifo-bc04` (1, a
+  whole-instance structural fingerprint plus three compile-time constants).
+  `bool-euf-online` (3) sits in (A) *and* has a (C)-grade certificate — one
+  `atoms: usize` — so for it the re-run genuinely is the whole check, and that
+  is sound only because the thing re-run is a decision procedure.
+
+  The cheapest instance of (C) to close is `bv-abstraction`: it already builds,
+  proves and self-checks a QF_BV refutation and then keeps only
+  `abstracted_terms: Vec<TermId>`. Carrying that proof would move 4 instances
+  from "re-validates only inside axeyum" straight into the external DRAT column
+  above.
 
 Against that, what genuinely holds: 269/326 baseline `unsat` satisfy the full
 conjunction (certified + independently checked + trust-hole-free +
@@ -545,8 +579,8 @@ Ordered by *measured* cost, not by how large the hole feels.
 | 2 | **Re-measure, then gate the measurement** | §2.1, §8 | 15 days dark on the headline; cheap, and everything else is priced off it |
 | 3 | **Consumer interface** — single-query CLI, inert `set-option`, no-op `get-*` | §6.3 | Nothing here is research; it is the difference between a library and a solver a stranger can run |
 | 4 | **QF_NIA at 38.2%** | §2; **diagnosed 2026-08-21**: [nia-deficit-diagnosis](../research/05-algorithms/nia-deficit-diagnosis-2026-08-21.md) | **"Multi-year catch-up" CONFIRMED for the search — and the sizing is wrong in three ways.** (a) **cvc5 1.3.4 IS on this host** (`/nas3/data/axeyum/harness/bin/cvc5`, not on `$PATH`), so this was measured against the recorded reference, not a stand-in — and **z3 is not a stand-in for cvc5 here**: same run, z3 **136/200** vs cvc5 **76/200**, 60 files apart, cvc5's decided set a strict SUBSET of z3's. The sibling note's "z3 within 5 files" holds on the linear divisions and does not transfer. So the row means 38.2% of *plain cvc5*; against z3 it is **27.9%**. (b) **58 of our 162 undecided files are decided by neither reference** — a gap sized by "files we miss" rather than "files the reference decides" overstates this division by 36%. (c) **The deficit is one benchmark family.** `20170427-VeryMax/ITS` is 134 of the 200 pinned files and **74 of the 104 misses**; excluding it the same run gives 29/39 = **74.4% of cvc5**, around QF_RDL's rate, and on `20220315-MathProblems` we decide **6/9 where both references decide 0**. Mechanism: every specialised nonlinear-integer route declines and `int-blast-ladder` is decisive on **158/161**; its width ladder admits a rung only if every integer *literal* fits, so a `2^30` Farkas coefficient leaves **1 live rung on 32 files, of which we decide 0**. **No cheap win exists and three were measured to prove it**: lifting the projected-clause ceiling by the measured 9.4x over-approximation → **0 of 49**; admitting `nia-linearize` past the `dpll_lia` pre-SAT envelope (the same constant as gap #1's QF_IDL class) → **+1 of 200**; **4x the wall clock → 0 of 20** `Timeout` files. z3 decides 74 of the 104 misses in under 5 s — this is a different algorithm, not lost time. **Postscript**: the board was re-measured 127 s after this landed and the row now reads **40.7% (33/81)**. Three same-day cvc5 runs give 76 / 76 / 81 against the 89 recorded 15 days earlier, so the 89 is the outlier and every "N files behind" priced off it is a few files too large. Nothing in the diagnosis moves — the classes are per-file properties of our own failures. Residual hypothesis, unpriced: an **eager** small-domain product split (`nia_linearize.rs:750-777` already implements the lemma and its width-4 limit matches the `[-2,2]` boxes these benchmarks declare) reached *without* the lazy refinement loop that fails |
-| 5 | **Externally-portable evidence — 15.7%, not the 8.5% first published** | §6.2 | The metric was counted from labels and undercounted by 1.75x; it is now decided from the certificate and guarded by a test that reads the source. The remaining 84% re-validates only inside axeyum, and that is the real target |
-| 6 | **~30 checkers that re-run the producer** | §6.2 | A determinism check sold as a soundness check, over the highest-volume family |
+| 5 | **Externally-portable evidence — 15.7%, and the array family cannot raise it** | §6.2 | **Attempted and refuted, with a real external checker now in the loop.** I briefed this on the belief that `read_over_write`/`read_over_write_same` were Alethe rules — they are **axeyum-internal labels**, and I had read them out of the list our OWN checker accepts. Carcara 1.1.0 does have array rules (`arrays_idx`, `arrays_row`, `arrays_row_contra`, `arrays_ext`) and `arrays_idx` IS `read_over_write_same` shape for shape, so the emitter was renamed and now validates against **real Carcara** (cloned and built at `references/carcara`, `6624ea80`). But the binding constraint was never the vocabulary: of the 85, `ReadCongruence` is **70 (82%)** and 67 of those carry their disequality inside a BTOR bv1 encoding, so the `assume` a proof needs is not a problem premise. **0 of 85 emit Alethe**, measured per rung. The figure stays 15.7% — but it is now decided from the artifact and defended by a test, where `portable_artifact` previously counted **every** `UnsatAletheProof` regardless of rule name, so a proof Carcara answers `invalid` was counting toward the published number |
+| 6 | **Checkers that re-run the producer** | §6.2 | A determinism check sold as a soundness check. **Re-sized 2026-08-21**: "~30 of 34" counts one code shape and three situations. 4 families (102 of 281 certified `unsat`, 36.3%) are now decided independently; of the 28 remaining, **3 families / 16 instances are a complete decision procedure re-run and were never the defect**, ~19 are convertible, and 6 families / 15 instances need a **certificate** change, not a checker change — named in `evidence.rs` rather than implied away |
 | 7 | **User triggers (`:pattern`, `:weight`)** | §5 | The one quantifier gap that is real vs Z3, now that the sat-direction is closed |
 | 8 | **Memory bound is inert** | §7 | Operational, and this box has already been OOM-killed once |
 | 9 | Transcendentals; nested arrays; parametric datatypes | §4.1, §4.3, sized below | **Sized 2026-08-21 and DEPRIORITISED — "each blocking a whole slice" is not true of anything we measure.** Across 2,200 files in the 11 pinned competition lists: transcendentals **0**, nested arrays **0**, parametric datatypes **0**. Across the 1,101-file committed corpus: 10, 0, 0. These are real capability zeros and they block approximately nothing in the population this document scores. The honest caveat is that the population is a CHOICE — `QF_UFNRAT` has no pinned list, so its 0 is partly "we do not measure that division" |
@@ -617,9 +651,72 @@ that read as "we are slower" is substantially "we stop early". And 26 files —
   over a **satisfiable** query. Two residual shapes (`ReadCongruence`, and the
   BTOR path where the assertion only *entails* the disequality) are named in the
   code rather than implied away.
+
+  **Continued 2026-08-21.** `nra-even-power` (10), `finite-array-extensionality`
+  (4) and `finite-domain-pigeonhole` (3) converted the same way — 11 guards, 11
+  adversarial fixtures over satisfiable queries, each deletion killing exactly
+  one test — taking the independently-decided share to 102 of 281, 36.3%.
+
+  **And the row's own denominator was wrong in our favour.** All 28 remaining
+  checkers were read and classified (§6.2): 3 families / 16 instances re-run a
+  *complete decision procedure*, not a recognizer, so a satisfiable query is
+  refused by the re-run itself and they were never the defect the row describes;
+  18 families / 33 instances are convertible; 5 families / 14 instances need a
+  **certificate** change rather than a checker change and are now named in
+  `evidence.rs`. The cheapest of those is `bv-abstraction`, which already
+  produces and self-checks a QF_BV refutation and then discards it.
+
+  The generalisable part: "N checkers match this code shape" was measured by
+  grep and turned out to be one shape covering three different situations. The
+  shape is not the property that matters — whether the thing re-run is a
+  *recognizer* or a *decision procedure* is.
 - **Gap #3.** `examples/axeyum_cli.rs` answers one verdict per `check-sat`,
   matching z3 on `push`/`pop` and on `check-sat-assuming` non-retention. The
   engine could always do this; nothing user-facing reached it.
+
+  **Items 2, 3 and 4 of §6.3 are now closed too** (ADR-0541). `get-model`,
+  `get-value`, `get-unsat-core`, `get-proof`, `get-assertions` and `echo` are
+  answered at the command where they stand; `set-option` reports `unsupported`
+  for every option it does not honour and honours `:produce-models`,
+  `:produce-unsat-cores`, `:produce-proofs`, `:print-success` and `:timeout`;
+  `(set-logic NONSENSE_XYZ)` answers `unsupported` and still decides, as z3
+  does. `solve_smtlib_incremental` is the same walk with the output commands
+  switched off, so no verdict could move — A/B'd over all 1,430 tracked `.smt2`
+  files at a 10 s budget: **2 differences, both budget artefacts** on files that
+  finish in 9.7–11.8 s, and both binaries agree three runs out of three when
+  given 60–120 s. Reporting that pair as "0" would have been the easy sentence
+  and the wrong one; the honest reading is that a wall-clock A/B cannot
+  distinguish a behaviour change from a boundary file without re-running it.
+
+  Two things the closure does *not* claim. **`set-logic` is recognised, not
+  enforced**: a minimal conformance check flags 5 of the 1,430 files (all
+  `QF_SLIA` using `(_ BitVec n)`; z3 rejects all five at the parser, we decide
+  one), and the reason not to enforce is that a logic → theory table with a hole
+  refuses a *correct* file. And a `QF_UF` `(get-model)` is **refused**, because
+  z3's `U!val!0` universe block is a z3 extension rather than SMT-LIB.
+
+  A census picked which refusal to stop making. Over 400 corpus files,
+  `(get-model)` was refused 66 times and **58 were arrays** — more than every
+  other cause combined — so arrays now render as
+  `(store … ((as const (Array I E)) default) …)`, and the same census re-run
+  reads **166 rendered, 9 refused** (7 uninterpreted-sort tokens, 2 algebraic
+  reals). Uninterpreted sorts *felt* like the gap; arrays were ten times the
+  volume, and only the measurement said so.
+
+  The new answers are cross-validated by z3 rather than diffed against it, since
+  two models are both correct: every reported value is pinned as an equation on
+  the original script and z3 must call it `sat` (**133/133**), and every unsat
+  core is re-run alone and z3 must call it `unsat` (**122/122**). Both checks
+  were shown to fire — on a corrupted value and on a core with one member
+  removed — and both took a fix to get there. The value control first reported
+  DID NOT FIRE because z3 **error-recovers**: a sort-broken pin draws
+  `(error …)` and the following `(check-sat)` still prints a verdict for the
+  rest of the script, so the check passed on a script that never contained the
+  corruption. And the harness's own `(get-value)` parser read the first
+  parenthesised group as the *term*, which is wrong when the term is an atom and
+  the value is an array — 89 files came back as "z3 rejected our model" and the
+  models were fine. Whenever a harness and the thing it measures disagree,
+  suspect the harness first.
 - **Gap #2's gate**, ahead of its measurement:
   `scripts/check-parity-freshness.py` fails when a division's ledger entry ages
   past 14 days, wired into both gate sets. It reads `FAIL` today, which is the

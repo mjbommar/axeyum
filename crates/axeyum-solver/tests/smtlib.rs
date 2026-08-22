@@ -1676,7 +1676,8 @@ fn get_proof_serves_the_lia_fragment() {
 
 /// `(get-proof)` serves the **`QF_ABV`** read-over-write-same fragment: the
 /// disequality `(select (store a i v) i) != v` is unsat by the ROW-same axiom, and
-/// the returned proof re-checks in-tree (the `read_over_write_same` rule).
+/// the returned proof re-checks in-tree AND names only rules the external Carcara
+/// checker checks — the array step is `arrays_idx`, Carcara's own rule.
 #[test]
 fn get_proof_serves_the_array_row_same_fragment() {
     use axeyum_cnf::{check_alethe, parse_alethe};
@@ -1694,10 +1695,15 @@ fn get_proof_serves_the_array_row_same_fragment() {
         .expect("decides")
         .expect("an Alethe proof for the read-over-write-same conflict");
     assert!(
-        proof.contains("read_over_write_same"),
-        "uses the array axiom rule:\n{proof}"
+        proof.contains("arrays_idx"),
+        "uses Carcara's own array axiom rule:\n{proof}"
     );
     let parsed = parse_alethe(&proof).expect("emitted Alethe parses");
+    assert!(
+        axeyum_cnf::non_carcara_checked_rules(&parsed).is_empty(),
+        "every rule must be one Carcara checks, else the artifact is not portable \
+         no matter what `portable_artifact` says:\n{proof}"
+    );
     assert_eq!(
         check_alethe(&parsed),
         Ok(true),

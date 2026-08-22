@@ -1339,6 +1339,10 @@ macro_rules! full_exports {
             solve_smtlib_get_value, solve_smtlib_incremental, solve_smtlib_model,
             solve_smtlib_unsat_core, upgrade_bounded_string_unknown, word_route_verdict,
         };
+        /// The SMT-LIB **session** front door: one response per output command
+        /// (ADR-0541). Not `doc(hidden)` like its siblings — it is the entry
+        /// point a consumer running `axeyum_cli script.smt2` reaches.
+        pub use smtlib::{SmtLibResponse, solve_smtlib_session};
         #[doc(hidden)]
         pub use solver::InterpolantOutcome;
         pub use solver::Solver;

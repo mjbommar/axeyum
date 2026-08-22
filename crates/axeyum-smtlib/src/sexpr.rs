@@ -48,6 +48,48 @@ impl SExpr {
     pub fn descendants(&self) -> Descendants<'_> {
         Descendants { stack: vec![self] }
     }
+
+    /// This tree rendered back to s-expression text, one space between siblings.
+    ///
+    /// Round-trips through [`read_all`] up to whitespace: atoms are
+    /// stored verbatim (including a string literal's quotes), so nothing is
+    /// re-escaped on the way out.
+    ///
+    /// This exists for `(get-value (t …))`, whose SMT-LIB response echoes each
+    /// *requested term as written* beside its value. Rendering the parsed
+    /// [`TermId`](axeyum_ir::TermId) instead would print the IR's spelling of
+    /// it — a declared `String` is a packed bit-vector by ADR-0029, so
+    /// `(str.len s)` would come back as bit-vector arithmetic over a symbol the
+    /// user never wrote, and a consumer diffing our output against another
+    /// solver's would see a difference that is not a disagreement.
+    ///
+    /// Iterative for the same reason the reader is (see the module docs): the
+    /// nesting depth is chosen by the input file.
+    pub fn to_text(&self) -> String {
+        enum Step<'a> {
+            Node(&'a SExpr),
+            Literal(&'a str),
+        }
+        let mut out = String::new();
+        let mut stack = vec![Step::Node(self)];
+        while let Some(step) = stack.pop() {
+            match step {
+                Step::Literal(text) => out.push_str(text),
+                Step::Node(SExpr::Atom(text)) => out.push_str(text),
+                Step::Node(SExpr::List(items)) => {
+                    out.push('(');
+                    stack.push(Step::Literal(")"));
+                    for (i, item) in items.iter().enumerate().rev() {
+                        stack.push(Step::Node(item));
+                        if i > 0 {
+                            stack.push(Step::Literal(" "));
+                        }
+                    }
+                }
+            }
+        }
+        out
+    }
 }
 
 /// Pre-order iterator over an [`SExpr`] tree; see [`SExpr::descendants`].

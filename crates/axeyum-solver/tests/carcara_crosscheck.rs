@@ -9,8 +9,27 @@
 //!
 //! Carcara lives in the gitignored `references/` tree and is not present in CI,
 //! so each test **skips** (prints a note, passes) when the binary is absent.
-//! Build it with `cargo build --release -p carcara-cli` inside
-//! `references/carcara`, or point `AXEYUM_CARCARA_BIN` at a `carcara` binary.
+//! Point `AXEYUM_CARCARA_BIN` at a `carcara` binary, or build one:
+//!
+//! ```sh
+//! scripts/fetch-references.sh            # or: git clone --depth 1 …/carcara
+//! cd references/carcara
+//! RUSTUP_TOOLCHAIN=stable PATH="<dir-with-m4>:$PATH" \
+//!   cargo build --release -p carcara-cli
+//! ```
+//!
+//! Two things bite, measured 2026-08-21 building it here for the first time:
+//! its `rust-toolchain.toml` pins 1.87 and that channel cannot be downloaded on
+//! this box (missing `miri`/`cranelift` components), so override to `stable`;
+//! and `rug`'s `gmp-mpfr-sys` build needs **`m4`**, which is not installed here
+//! but ships inside a snap (`/snap/gnome-46-2404/153/usr/bin/m4` — symlink it
+//! into a directory on `$PATH`). No host package was installed to get this
+//! running.
+//!
+//! **A skipping suite is a suite that has never been shown to fail.** Nothing in
+//! this repository had a Carcara binary until that date, so every test here had
+//! been returning early for as long as the file existed; five of them failed the
+//! first time one ran. Confirm the binary is found before believing a green run.
 #![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
@@ -116,6 +135,19 @@ fn carcara_accepts(
     proof: &[axeyum_cnf::AletheCommand],
 ) -> String {
     carcara_accepts_smt2(bin, tag, &write_script(arena, assertions), proof)
+}
+
+/// [`carcara_output`] over an IR-derived `.smt2` — the non-asserting counterpart of
+/// [`carcara_accepts`], for measuring what Carcara says about a proof that is NOT
+/// expected to be valid.
+fn carcara_output_ir(
+    bin: &Path,
+    tag: &str,
+    arena: &TermArena,
+    assertions: &[TermId],
+    proof: &[axeyum_cnf::AletheCommand],
+) -> String {
+    carcara_output(bin, tag, &write_script(arena, assertions), proof)
 }
 
 /// Renders a `.smt2` whose assertions are **fully inlined** (no shared-subterm
@@ -1608,6 +1640,42 @@ fn driver_compound_in_ult_predicate_is_accepted_by_carcara() {
 // the rewritten originals together with the (conservative) abstraction
 // definitions, so each proof `assume` matches an original problem premise.
 
+/// The `!fn_app_*` Ackermann abstraction symbols the emitter actually introduced,
+/// in order of first appearance in the rendered proof.
+///
+/// **Why this is not a hand-written list.** It was one, and it silently rotted.
+/// The ids are allocated as the arena interns symbols, so they shift whenever
+/// anything upstream interns one more symbol first — and when they shifted, the
+/// four `ufbv_*_congruence_is_accepted_by_carcara` tests below started emitting a
+/// `.smt2` that declares `!fn_app_0`/`!fn_app_1` for a proof that names
+/// `!fn_app_2`/`!fn_app_3`. Carcara answers
+/// `parser error: identifier '!fn_app_2' is not defined`, which is a *problem*
+/// error, not a proof error: the certificate was fine and the test was broken.
+///
+/// Nobody saw it because no host in this repository had a Carcara binary until
+/// 2026-08-21, so every test in this file skipped. Measured that day, five of them
+/// fail against the real checker. Parameterising the names keeps the assertion
+/// SHAPES hand-written — which is the part that has to be independent of the proof
+/// — while removing the one detail that cannot be maintained by hand.
+fn abstraction_symbols(proof: &[AletheCommand]) -> Vec<String> {
+    const PREFIX: &str = "!fn_app_";
+    let text = write_alethe(proof);
+    let mut out: Vec<String> = Vec::new();
+    let mut rest = text.as_str();
+    while let Some(index) = rest.find(PREFIX) {
+        let tail = &rest[index..];
+        let end = tail[PREFIX.len()..]
+            .find(|c: char| !c.is_ascii_digit())
+            .map_or(tail.len(), |n| PREFIX.len() + n);
+        let name = tail[..end].to_owned();
+        if !out.contains(&name) {
+            out.push(name);
+        }
+        rest = &tail[end..];
+    }
+    out
+}
+
 #[test]
 fn ufbv_unary_congruence_is_accepted_by_carcara() {
     let Some(bin) = carcara_bin() else {
@@ -1632,21 +1700,27 @@ fn ufbv_unary_congruence_is_accepted_by_carcara() {
     };
 
     let proof = prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3]).expect("emit QF_UFBV proof");
-    let smt2 = "\
+    // `fa` and `fb` are the abstractions of `f(a)` and `f(b)`, in that order.
+    let [fa_abs, fb_abs] = abstraction_symbols(&proof)
+        .try_into()
+        .unwrap_or_else(|s: Vec<_>| panic!("expected exactly 2 abstraction symbols, got {s:?}"));
+    let smt2 = format!(
+        "\
 (set-logic QF_UFBV)
 (declare-fun f ((_ BitVec 2)) (_ BitVec 2))
 (declare-const a (_ BitVec 2))
 (declare-const b (_ BitVec 2))
-(declare-const !fn_app_0 (_ BitVec 2))
-(declare-const !fn_app_1 (_ BitVec 2))
-(assert (= !fn_app_0 #b00))
+(declare-const {fa_abs} (_ BitVec 2))
+(declare-const {fb_abs} (_ BitVec 2))
+(assert (= {fa_abs} #b00))
 (assert (= a b))
-(assert (not (= !fn_app_1 #b00)))
-(assert (= !fn_app_0 (f a)))
-(assert (= (f b) !fn_app_1))
+(assert (not (= {fb_abs} #b00)))
+(assert (= {fa_abs} (f a)))
+(assert (= (f b) {fb_abs}))
 (check-sat)
-";
-    let report = carcara_accepts_smt2(&bin, "ufbv_unary", smt2, &proof);
+"
+    );
+    let report = carcara_accepts_smt2(&bin, "ufbv_unary", &smt2, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }
 
@@ -1679,24 +1753,29 @@ fn ufbv_binary_congruence_is_accepted_by_carcara() {
 
     let proof =
         prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3, e4]).expect("emit QF_UFBV proof");
-    let smt2 = "\
+    let [gab_abs, gcd_abs] = abstraction_symbols(&proof)
+        .try_into()
+        .unwrap_or_else(|s: Vec<_>| panic!("expected exactly 2 abstraction symbols, got {s:?}"));
+    let smt2 = format!(
+        "\
 (set-logic QF_UFBV)
 (declare-fun g ((_ BitVec 2) (_ BitVec 2)) (_ BitVec 2))
 (declare-const a (_ BitVec 2))
 (declare-const b (_ BitVec 2))
 (declare-const c (_ BitVec 2))
 (declare-const d (_ BitVec 2))
-(declare-const !fn_app_0 (_ BitVec 2))
-(declare-const !fn_app_1 (_ BitVec 2))
-(assert (= !fn_app_0 #b00))
+(declare-const {gab_abs} (_ BitVec 2))
+(declare-const {gcd_abs} (_ BitVec 2))
+(assert (= {gab_abs} #b00))
 (assert (= a c))
 (assert (= b d))
-(assert (not (= !fn_app_1 #b00)))
-(assert (= !fn_app_0 (g a b)))
-(assert (= (g c d) !fn_app_1))
+(assert (not (= {gcd_abs} #b00)))
+(assert (= {gab_abs} (g a b)))
+(assert (= (g c d) {gcd_abs}))
 (check-sat)
-";
-    let report = carcara_accepts_smt2(&bin, "ufbv_binary", smt2, &proof);
+"
+    );
+    let report = carcara_accepts_smt2(&bin, "ufbv_binary", &smt2, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }
 
@@ -1731,23 +1810,28 @@ fn ufbv_transitive_congruence_is_accepted_by_carcara() {
 
     let proof =
         prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3, e4]).expect("emit QF_UFBV proof");
-    let smt2 = "\
+    let [fa_abs, fc_abs] = abstraction_symbols(&proof)
+        .try_into()
+        .unwrap_or_else(|s: Vec<_>| panic!("expected exactly 2 abstraction symbols, got {s:?}"));
+    let smt2 = format!(
+        "\
 (set-logic QF_UFBV)
 (declare-fun f ((_ BitVec 2)) (_ BitVec 2))
 (declare-const a (_ BitVec 2))
 (declare-const b (_ BitVec 2))
 (declare-const c (_ BitVec 2))
-(declare-const !fn_app_0 (_ BitVec 2))
-(declare-const !fn_app_1 (_ BitVec 2))
-(assert (= !fn_app_0 #b00))
+(declare-const {fa_abs} (_ BitVec 2))
+(declare-const {fc_abs} (_ BitVec 2))
+(assert (= {fa_abs} #b00))
 (assert (= a b))
 (assert (= b c))
-(assert (not (= !fn_app_1 #b00)))
-(assert (= !fn_app_0 (f a)))
-(assert (= (f c) !fn_app_1))
+(assert (not (= {fc_abs} #b00)))
+(assert (= {fa_abs} (f a)))
+(assert (= (f c) {fc_abs}))
 (check-sat)
-";
-    let report = carcara_accepts_smt2(&bin, "ufbv_transitive", smt2, &proof);
+"
+    );
+    let report = carcara_accepts_smt2(&bin, "ufbv_transitive", &smt2, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }
 
@@ -1788,26 +1872,33 @@ fn ufbv_nested_congruence_is_accepted_by_carcara() {
     };
 
     let proof = prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3]).expect("emit QF_UFBV proof");
-    let smt2 = "\
+    // First-appearance order: the outer `f` abstractions head the proof's `assume`
+    // block, then the inner `g` ones.
+    let [fga_abs, fgb_abs, ga_abs, gb_abs] = abstraction_symbols(&proof)
+        .try_into()
+        .unwrap_or_else(|s: Vec<_>| panic!("expected exactly 4 abstraction symbols, got {s:?}"));
+    let smt2 = format!(
+        "\
 (set-logic QF_UFBV)
 (declare-fun f ((_ BitVec 2)) (_ BitVec 2))
 (declare-fun g ((_ BitVec 2)) (_ BitVec 2))
 (declare-const a (_ BitVec 2))
 (declare-const b (_ BitVec 2))
-(declare-const !fn_app_0 (_ BitVec 2))
-(declare-const !fn_app_1 (_ BitVec 2))
-(declare-const !fn_app_2 (_ BitVec 2))
-(declare-const !fn_app_3 (_ BitVec 2))
-(assert (= !fn_app_1 #b00))
+(declare-const {ga_abs} (_ BitVec 2))
+(declare-const {gb_abs} (_ BitVec 2))
+(declare-const {fga_abs} (_ BitVec 2))
+(declare-const {fgb_abs} (_ BitVec 2))
+(assert (= {fga_abs} #b00))
 (assert (= a b))
-(assert (not (= !fn_app_3 #b00)))
-(assert (= !fn_app_0 (g a)))
-(assert (= (g b) !fn_app_2))
-(assert (= !fn_app_1 (f !fn_app_0)))
-(assert (= (f !fn_app_2) !fn_app_3))
+(assert (not (= {fgb_abs} #b00)))
+(assert (= {ga_abs} (g a)))
+(assert (= (g b) {gb_abs}))
+(assert (= {fga_abs} (f {ga_abs})))
+(assert (= (f {gb_abs}) {fgb_abs}))
 (check-sat)
-";
-    let report = carcara_accepts_smt2(&bin, "ufbv_nested", smt2, &proof);
+"
+    );
+    let report = carcara_accepts_smt2(&bin, "ufbv_nested", &smt2, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }
 
@@ -1998,17 +2089,32 @@ fn dt_select_over_construct_is_accepted_by_carcara() {
 // --- Route 2: certify the UN-LOWERED `bvsub` original (Task #15) -------------
 //
 // `prove_qf_bv_unsat_alethe_route2` keeps `(bvsub a b)` at the term level and bridges
-// it to `(bvadd a (bvneg b))` with a Carcara-valid `bv_poly_simp` step, then bit-blasts
-// the `bvadd`/`bvneg`. Carcara validates the whole refutation — INCLUDING the
-// `bv_poly_simp` `bvsub`-rewrite step — over an `.smt2` whose assertions literally
-// contain `bvsub`. This is the third-party trust anchor for the un-lowered cert.
+// it to `(bvadd a (bvneg b))` with a `bv_poly_simp` step, then bit-blasts the
+// `bvadd`/`bvneg`.
+//
+// **`bv_poly_simp` IS NOT A CARCARA RULE.** The test below asserted that Carcara
+// accepts the whole refutation and was named
+// `route2_bvsub_rewrite_proof_is_accepted_by_carcara`; measured 2026-08-21 — the
+// first day any host in this repository had a Carcara binary — Carcara answers
+// `checking failed on step 's0' with rule 'bv_poly_simp': unknown rule`. The
+// module doc on `prove_qf_bv_unsat_alethe_route2` said "Carcara-valid" for as long
+// as no one could run Carcara; it now says otherwise, with this measurement.
+//
+// Worse than a naming problem, and found by the same run: **`check_alethe` does
+// not accept the step either** — it answers `UnsupportedRule { "bv_poly_simp" }`.
+// So the Route-2 certificate is checked by NEITHER checker. The emitter does not
+// self-validate (unlike every other emitter in this tree, which returns `Some`
+// only after `check_alethe` accepts), so nothing caught it. Route 2 is not on the
+// evidence path, so no published figure rests on it; fixing it — a `bv_poly_simp`
+// case in `check_alethe`, or emitting the rewrite in rules that exist — belongs to
+// whoever owns Route 2.
+//
+// So the test records what is true, on both axes, and still fails if anything
+// changes: if Carcara gains the rule, if `check_alethe` gains a case, or if the
+// emitter stops using it.
 
 #[test]
-fn route2_bvsub_rewrite_proof_is_accepted_by_carcara() {
-    let Some(bin) = carcara_bin() else {
-        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
-        return;
-    };
+fn route2_bvsub_rewrite_proof_is_checked_by_neither_checker() {
     // (= (bvsub a b) a) ∧ (bvult a b) over width-2 a, b — unsat: `a - b = a` forces
     // `b = 0`, then `a < b = a < 0` is impossible (unsigned). All-variable, exercising
     // the two's-complement subtract carry semantics. The original assertions contain
@@ -2023,7 +2129,7 @@ fn route2_bvsub_rewrite_proof_is_accepted_by_carcara() {
 
     let proof =
         prove_qf_bv_unsat_alethe_route2(&mut arena, &assertions).expect("emit Route-2 proof");
-    // The proof must contain the Carcara `bv_poly_simp` bvsub-rewrite step.
+    // The proof contains the `bv_poly_simp` bvsub-rewrite step...
     assert!(
         proof.iter().any(|c| matches!(
             c,
@@ -2031,8 +2137,36 @@ fn route2_bvsub_rewrite_proof_is_accepted_by_carcara() {
         )),
         "Route-2 proof must contain a bv_poly_simp step"
     );
-    let report = carcara_accepts(&bin, "route2_bvsub", &arena, &assertions, &proof);
-    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+    // ...our own checker does NOT accept it -- it has no case for the rule...
+    assert!(
+        matches!(
+            axeyum_cnf::check_alethe(&proof),
+            Err(axeyum_cnf::AletheError::UnsupportedRule { ref rule }) if rule == "bv_poly_simp"
+        ),
+        "expected check_alethe to report `bv_poly_simp` unsupported, got {:?}",
+        axeyum_cnf::check_alethe(&proof)
+    );
+    // ...and the vocabulary gate reports exactly why it is not portable.
+    assert_eq!(
+        axeyum_cnf::non_carcara_checked_rules(&proof),
+        vec!["bv_poly_simp".to_owned()]
+    );
+
+    // The external measurement, when a binary is available.
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let report = carcara_output_ir(&bin, "route2_bvsub", &arena, &assertions, &proof);
+    assert!(
+        !report.lines().any(|l| l.trim() == "valid"),
+        "expected Carcara to reject `bv_poly_simp`; if this now passes, add the rule \
+         to CARCARA_CHECKED_RULES and restore the acceptance assertion:\n{report}"
+    );
+    assert!(
+        report.contains("unknown rule"),
+        "expected Carcara's `unknown rule` diagnostic for `bv_poly_simp`, got:\n{report}"
+    );
 }
 
 // --- Extended comparisons: bvule/bvugt/bvuge/bvsle/bvsgt/bvsge ----------------
@@ -3038,5 +3172,185 @@ fn tampered_certified_uflra_interpolant_cert_is_rejected_by_carcara() {
     assert!(
         report.contains("invalid") || report.contains("ERROR") || report.contains("holey"),
         "Carcara must reject the tampered certificate, got:\n{report}"
+    );
+}
+
+// --- The SHIPPED QF_ABV read-over-write-same proof: `arrays_idx` -------------
+//
+// `prove_qf_abv_unsat_alethe` is the emitter `Evidence::UnsatAletheProof` and the
+// `(get-proof)` front door actually use, so its portability is the one the
+// published "artifact an external checker can read" figure rests on. Until
+// 2026-08-21 its array step was named `read_over_write_same`, on the belief that
+// "Alethe/Carcara has no array theory rules" (recorded in
+// docs/research/07-verification/array-elimination-alethe-proofs.md). Carcara 1.1.0
+// registers `arrays_idx`, `arrays_row`, `arrays_row_contra` and `arrays_ext`, and
+// `arrays_idx` is exactly this rule. The two tests below are the measurement: the
+// same three-step proof over the same problem, `valid` under `arrays_idx`, and
+// rejected when the step is renamed back or its conclusion is tampered.
+//
+// The sibling `prove_qf_abv_row_same_alethe_carcara` tests above prove something
+// different and weaker in one respect: they ASSERT the read-over-write rewrite
+// instance as a problem premise. This proof assumes only the query's own
+// disequality.
+
+/// The `.smt2` matching `row_same_diseq` — the disequality alone, nothing assumed.
+const ROW_SAME_ONLY_SMT2: &str = "\
+(set-logic QF_ABV)
+(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))
+(declare-const i (_ BitVec 4))
+(declare-const v (_ BitVec 8))
+(assert (not (= (select (store a i v) i) v)))
+(check-sat)
+";
+
+#[test]
+fn shipped_abv_row_same_proof_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let neq = row_same_diseq(&mut arena);
+    let proof = axeyum_solver::prove_qf_abv_unsat_alethe(&arena, &[neq])
+        .expect("the shipped ROW-same emitter covers this shape");
+    assert!(
+        axeyum_cnf::non_carcara_checked_rules(&proof).is_empty(),
+        "the shipped proof must name only rules Carcara checks, got {:?}",
+        axeyum_cnf::non_carcara_checked_rules(&proof)
+    );
+    let report = carcara_accepts_smt2(&bin, "shipped_abv_row_same", ROW_SAME_ONLY_SMT2, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn the_internal_rule_name_is_rejected_by_carcara() {
+    // The negative control for the test above, and the measurement that makes the
+    // rename a fix rather than a preference: ONLY the rule name changes, and
+    // Carcara's verdict flips from `valid` to `unknown rule` / `invalid`. Without
+    // this control, "we renamed a rule and Carcara says valid" is consistent with
+    // Carcara having accepted the old name too.
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let neq = row_same_diseq(&mut arena);
+    let mut proof = axeyum_solver::prove_qf_abv_unsat_alethe(&arena, &[neq])
+        .expect("the shipped ROW-same emitter covers this shape");
+    let mut renamed = false;
+    for cmd in &mut proof {
+        if let AletheCommand::Step { rule, .. } = cmd
+            && rule == "arrays_idx"
+        {
+            *rule = "read_over_write_same".to_owned();
+            renamed = true;
+        }
+    }
+    assert!(renamed, "expected an `arrays_idx` step to rename");
+    let report = carcara_output(
+        &bin,
+        "abv_row_same_internal_name",
+        ROW_SAME_ONLY_SMT2,
+        &proof,
+    );
+    assert!(
+        !report.lines().any(|l| l.trim() == "valid"),
+        "the axeyum-internal rule name must NOT be reported valid, got:\n{report}"
+    );
+    assert!(
+        report.contains("unknown rule"),
+        "expected Carcara's `unknown rule` diagnostic, got:\n{report}"
+    );
+}
+
+#[test]
+fn tampered_shipped_abv_row_same_proof_is_rejected_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let neq = row_same_diseq(&mut arena);
+    let mut proof = axeyum_solver::prove_qf_abv_unsat_alethe(&arena, &[neq])
+        .expect("the shipped ROW-same emitter covers this shape");
+    // Tamper the `arrays_idx` conclusion: claim the read returns the BASE array's
+    // value `(select a i)` instead of the stored `v`. That is FALSE — it is what
+    // `arrays_row` would conclude, and only under a `(not (= i i))` premise that
+    // cannot exist. A checker that accepts this accepts a forged array refutation.
+    let mut tampered = false;
+    for cmd in &mut proof {
+        if let AletheCommand::Step { rule, clause, .. } = cmd
+            && rule == "arrays_idx"
+        {
+            let AletheLit { atom, .. } = &mut clause[0];
+            let AletheTerm::App(_, eq_args) = atom else {
+                panic!("expected (= lhs rhs) in the arrays_idx conclusion");
+            };
+            // LHS is `(select (store a i v) i)`; rebuild `(select a i)` from it.
+            let AletheTerm::App(_, sel_args) = &eq_args[0] else {
+                panic!("expected a `select` on the LHS");
+            };
+            let AletheTerm::App(_, store_args) = &sel_args[0] else {
+                panic!("expected a `store` under the `select`");
+            };
+            eq_args[1] = AletheTerm::App(
+                "select".to_owned(),
+                vec![store_args[0].clone(), sel_args[1].clone()],
+            );
+            tampered = true;
+        }
+    }
+    assert!(tampered, "expected an `arrays_idx` step to tamper");
+    let report = carcara_output(
+        &bin,
+        "shipped_abv_row_same_tampered",
+        ROW_SAME_ONLY_SMT2,
+        &proof,
+    );
+    assert!(
+        !report.lines().any(|l| l.trim() == "valid"),
+        "a tampered arrays_idx conclusion must NOT be reported valid, got:\n{report}"
+    );
+    assert!(
+        report.contains("invalid") || report.contains("ERROR"),
+        "Carcara must reject the tampered arrays_idx step, got:\n{report}"
+    );
+}
+
+/// The in-tree checker must reject the same tampering the external one does.
+///
+/// A tamper test that only runs against Carcara leaves our own checker unmeasured
+/// — and `check_alethe` is what `Evidence::check` re-validates with, on every host
+/// where Carcara is not installed (which is every CI host).
+#[test]
+fn tampered_shipped_abv_row_same_proof_is_rejected_in_tree() {
+    let mut arena = TermArena::new();
+    let neq = row_same_diseq(&mut arena);
+    let mut proof = axeyum_solver::prove_qf_abv_unsat_alethe(&arena, &[neq])
+        .expect("the shipped ROW-same emitter covers this shape");
+    assert_eq!(axeyum_cnf::check_alethe(&proof), Ok(true));
+    for cmd in &mut proof {
+        if let AletheCommand::Step { rule, clause, .. } = cmd
+            && rule == "arrays_idx"
+        {
+            let AletheLit { atom, .. } = &mut clause[0];
+            let AletheTerm::App(_, eq_args) = atom else {
+                panic!("expected (= lhs rhs) in the arrays_idx conclusion");
+            };
+            let AletheTerm::App(_, sel_args) = &eq_args[0] else {
+                panic!("expected a `select` on the LHS");
+            };
+            let AletheTerm::App(_, store_args) = &sel_args[0] else {
+                panic!("expected a `store` under the `select`");
+            };
+            eq_args[1] = AletheTerm::App(
+                "select".to_owned(),
+                vec![store_args[0].clone(), sel_args[1].clone()],
+            );
+        }
+    }
+    assert!(
+        !matches!(axeyum_cnf::check_alethe(&proof), Ok(true)),
+        "check_alethe must reject a tampered arrays_idx conclusion"
     );
 }

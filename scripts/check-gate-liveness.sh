@@ -58,6 +58,7 @@ cd "$(dirname "$0")/.."
 manifest=$(
   cat <<'EOF'
 axeyum-solver|test:corpus_regression|full|1
+axeyum-solver|test:smtlib_session|full|25
 axeyum-solver|lib|full|900
 axeyum-solver|test:progress_frontier|full|9
 axeyum-solver|test:online_string_front_door|full|40

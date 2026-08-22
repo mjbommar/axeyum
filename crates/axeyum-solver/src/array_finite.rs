@@ -139,6 +139,112 @@ pub fn finite_array_extensionality_refutation(
     None
 }
 
+/// Decides a [`FiniteArrayExtensionalityCertificate`]'s own claim from the query,
+/// **without asking [`finite_array_extensionality_refutation`] anything**.
+///
+/// The checker this replaces was
+/// `finite_array_extensionality_refutation(..).is_some_and(|fresh| fresh == *cert)`
+/// — a *determinism* check. A recognizer that matched a satisfiable query
+/// matches it identically on the re-run, so the checker whose entire job is to
+/// catch a wrong producer would agree with it. This certificate does not need
+/// that: it names both arrays, the index width, and one read equality per index
+/// value, so the extensionality argument is re-derivable in full.
+///
+/// Four things are decided, each of which a satisfiable query can be built to
+/// violate on its own:
+///
+/// 1. **coverage** — one read equality per index value of the finite domain,
+///    ascending and complete. A missing index is exactly the case where the two
+///    arrays may still differ.
+/// 2. **membership** — every named read equality is a top-level conjunct of the
+///    query. Otherwise the certificate supplies its own premises.
+/// 3. **shape** — each named conjunct really states
+///    `select(lhs, k) = select(rhs, k)` at the index value it claims, over the
+///    two arrays the certificate names. Either orientation is accepted, because
+///    equality is symmetric and pinning an arbitrary one would reject honest
+///    certificates.
+/// 4. **the disequality** — the query really asserts `¬(lhs = rhs)` at the
+///    recorded index width. Without it, the pointwise equalities are simply
+///    satisfiable.
+#[must_use]
+pub fn certificate_is_finite_array_extensionality(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &FiniteArrayExtensionalityCertificate,
+) -> bool {
+    let Some(domain_size) = finite_bv_domain_size(cert.index_width) else {
+        return false;
+    };
+
+    // GUARD 1 — COVERAGE. Exactly one read equality per index value, ascending
+    // and complete. Extensionality over a finite index domain needs every point;
+    // a certificate covering all but one index proves nothing about two arrays
+    // that differ only there.
+    if cert.read_equalities.len() as u128 != domain_size {
+        return false;
+    }
+    if !cert
+        .read_equalities
+        .iter()
+        .enumerate()
+        .all(|(position, read)| u128::try_from(position) == Ok(read.index_value))
+    {
+        return false;
+    }
+
+    let mut conjuncts = Vec::new();
+    for &assertion in assertions {
+        collect_top_conjuncts(arena, assertion, &mut conjuncts);
+    }
+
+    for read in &cert.read_equalities {
+        // GUARD 2 — MEMBERSHIP. The named equality is a conjunct of the QUERY.
+        if !conjuncts.contains(&read.equality) {
+            return false;
+        }
+        // GUARD 3 — SHAPE. The named conjunct states the read equality the
+        // certificate says it does, at the index value it says, over the two
+        // arrays it names.
+        if !read_equality_matches(arena, cert, read) {
+            return false;
+        }
+    }
+
+    // GUARD 4 — THE DISEQUALITY. Some top-level conjunct asserts the two arrays
+    // unequal at the recorded index width.
+    conjuncts.iter().any(|&conjunct| {
+        match_array_disequality(arena, conjunct).is_some_and(|diseq| {
+            diseq.index_width == cert.index_width
+                && ((diseq.lhs_array == cert.lhs_array && diseq.rhs_array == cert.rhs_array)
+                    || (diseq.lhs_array == cert.rhs_array && diseq.rhs_array == cert.lhs_array))
+        })
+    })
+}
+
+/// Whether `read.equality` structurally states the pointwise read equality the
+/// certificate records, in either orientation.
+fn read_equality_matches(
+    arena: &TermArena,
+    cert: &FiniteArrayExtensionalityCertificate,
+    read: &FiniteArrayReadEquality,
+) -> bool {
+    let Some(matched) = match_read_equality(arena, read.equality) else {
+        return false;
+    };
+    if matched.index_value != read.index_value {
+        return false;
+    }
+    let forward = matched.lhs_array == cert.lhs_array
+        && matched.rhs_array == cert.rhs_array
+        && matched.lhs_read == read.lhs_read
+        && matched.rhs_read == read.rhs_read;
+    let mirrored = matched.lhs_array == cert.rhs_array
+        && matched.rhs_array == cert.lhs_array
+        && matched.lhs_read == read.rhs_read
+        && matched.rhs_read == read.lhs_read;
+    forward || mirrored
+}
+
 /// Returns a Bool-index array read-collapse certificate when the top-level
 /// conjunction contains:
 ///

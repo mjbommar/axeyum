@@ -23,16 +23,37 @@
 //!
 //! ```text
 //! (assume h  (not (= (select (store a i v) i) v)))
-//! (step    rw   (cl (= (select (store a i v) i) v)) :rule read_over_write_same)
+//! (step    rw   (cl (= (select (store a i v) i) v)) :rule arrays_idx)
 //! (step    done (cl) :rule resolution :premises (rw h))
 //! ```
 //!
-//! where `read_over_write_same` is an **axeyum-internal** Alethe rule (Alethe/Carcara
-//! has no array theory rules; see
-//! `docs/research/07-verification/array-elimination-alethe-proofs.md`), structurally
-//! checked by the in-tree [`axeyum_cnf::check_alethe`]. The emitter is
-//! **self-validating**: it returns `Some(proof)` only after `check_alethe` accepts the
-//! proof, so a returned certificate is always genuinely checkable.
+//! where `arrays_idx` is **Carcara's own** array rule
+//! (`carcara/src/checker/rules/arrays.rs`), so this artifact is checkable by an
+//! external checker and not only by the in-tree [`axeyum_cnf::check_alethe`].
+//!
+//! **This rule name was `read_over_write_same` until 2026-08-21**, on the belief —
+//! recorded in `docs/research/07-verification/array-elimination-alethe-proofs.md`
+//! and repeated in half a dozen doc comments — that "Alethe/Carcara has no array
+//! theory rules". That was true when the note was written and is false now:
+//! Carcara 1.1.0 registers `arrays_idx`, `arrays_row`, `arrays_row_contra` and
+//! `arrays_ext`, and `arrays_idx` is this rule, shape for shape. Measured against
+//! `references/carcara` at `6624ea80`, same problem and same proof, only the rule
+//! name differing:
+//!
+//! ```text
+//! read_over_write_same -> [ERROR] ... 'read_over_write_same': unknown rule / invalid
+//! arrays_idx           -> valid
+//! ```
+//!
+//! The consequence was not cosmetic: `Evidence::portable_artifact` counted every
+//! `UnsatAletheProof` as externally checkable, so a proof Carcara *rejects* was
+//! being counted toward the published "artifact an external checker can read"
+//! figure — the same defect the `lia_generic` exclusion in that function exists to
+//! prevent, one level down.
+//!
+//! The emitter is **self-validating**: it returns `Some(proof)` only after
+//! `check_alethe` accepts the proof, so a returned certificate is always genuinely
+//! checkable.
 
 use axeyum_cnf::{
     AletheClause, AletheCommand, AletheLit, AletheTerm, check_alethe, check_alethe_with,
@@ -55,7 +76,8 @@ use axeyum_ir::{Op, TermArena, TermId, TermNode};
 /// lowers it to the very same `(not (= sel rhs))` IR.
 ///
 /// The ROW proof is the three-command refutation
-/// `assume`/`read_over_write_same`/`resolution`; the congruence routes use standard
+/// `assume`/`arrays_idx`/`resolution` (`arrays_idx` is Carcara's own array rule,
+/// so the artifact is externally checkable); the congruence routes use standard
 /// equality steps. Every route closes to the empty clause `(cl)`, uses
 /// deterministic step ids, and returns only after [`axeyum_cnf::check_alethe`]
 /// accepts it.
@@ -84,7 +106,7 @@ pub fn prove_qf_abv_unsat_alethe(
             .or_else(|| crate::prove_qf_uf_unsat_alethe(arena, assertions));
     };
 
-    // Render `(= sel rhs)` exactly as the `read_over_write_same` rule expects.
+    // Render `(= sel rhs)` exactly as the `arrays_idx` rule expects.
     let sel_alethe = array_term_to_alethe(arena, sel)?;
     let rhs_alethe = array_term_to_alethe(arena, rhs)?;
     let equality = AletheTerm::App("=".to_owned(), vec![sel_alethe, rhs_alethe]);
@@ -94,7 +116,7 @@ pub fn prove_qf_abv_unsat_alethe(
         atom: equality.clone(),
         negated: true,
     }];
-    // (step rw (cl (= sel rhs)) :rule read_over_write_same)
+    // (step rw (cl (= sel rhs)) :rule arrays_idx) -- Carcara's own array rule.
     let rw_clause: AletheClause = vec![AletheLit {
         atom: equality,
         negated: false,
@@ -108,7 +130,7 @@ pub fn prove_qf_abv_unsat_alethe(
         AletheCommand::Step {
             id: "rw".to_owned(),
             clause: rw_clause,
-            rule: "read_over_write_same".to_owned(),
+            rule: "arrays_idx".to_owned(),
             premises: Vec::new(),
             args: Vec::new(),
         },
@@ -444,15 +466,21 @@ fn bv_const_literal(width: u32, value: u128) -> String {
 /// disequality, deriving `select(store(a, i, v), i) = v` from the *general*
 /// read-over-write rewrite instance through Carcara's own `eq_simplify`,
 /// `cong`, `ite_simplify`, and `trans` rules — instead of the axeyum-internal
-/// premise-free `read_over_write_same` rule used by [`prove_qf_abv_unsat_alethe`].
+/// premise-free `arrays_idx` rule used by [`prove_qf_abv_unsat_alethe`].
 ///
-/// ## Why this is a tighter certificate than `read_over_write_same`
+/// ## Why this is a tighter certificate than `arrays_idx`
 ///
 /// [`prove_qf_abv_unsat_alethe`] discharges the same-index read with a single
-/// premise-free `read_over_write_same` step, an **axeyum-internal** Alethe rule:
-/// Alethe/Carcara has no array theory rules, so that step is checkable only by
-/// the in-tree [`axeyum_cnf::check_alethe`], never by Carcara. The trusted
-/// surface is the whole collapsed equality `(= (select (store a i v) i) v)`.
+/// premise-free `arrays_idx` step. That step **is** externally checkable —
+/// `arrays_idx` is Carcara's own rule — but it takes the whole collapsed equality
+/// `(= (select (store a i v) i) v)` as a primitive of the array theory.
+///
+/// (Until 2026-08-21 that step was named `read_over_write_same`, an
+/// axeyum-internal name Carcara answers with `unknown rule`; this emitter was
+/// built as the externally-anchored alternative to it. `arrays_idx` supersedes
+/// that motivation, but not this emitter's: the derivation below still shrinks
+/// the trusted surface from the collapsed equality to the general rewrite
+/// instance.)
 ///
 /// This emitter shrinks that surface to a *more primitive* premise — the
 /// **read-over-write rewrite instance**

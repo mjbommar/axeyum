@@ -127,6 +127,12 @@ now. Nothing was deleted.
 | 2026-08-21 | `e7d8629c5` | `docs/PROJECT-STATE.md` said the parity ledger holds "eleven divisions" and named QF_ABV among its parity cells. It holds nine and has never held a QF_ABV entry — that list is committed and was never run. Two guards added to `check-parity-docs.py`, both derived from the ledger and both shown to fire on the real tree before the prose was fixed. |
 | 2026-08-21 | `35f46112b` | `scripts/parity-run.sh` was invoked by NO gate, so the repository's declared headline froze on 2026-08-06 for fifteen days and nothing went red. `scripts/check-parity-freshness.py` fails past 14 days per logic (warn 10), wired into BOTH `scripts/check.sh` and the justfile's `check`. Parser classifies every `## ` header and exits 2 on one it does not recognise — a silently skipped entry is indistinguishable from an absent one, which is how a stale logic reads as fresh. 12 controls, every guard mutation-verified. |
 | 2026-08-21 | `45587c513` | QF_NIA gap #4 diagnosed. "Multi-year catch-up" confirmed for the search — three cheapest levers yield 0 / +1 / +3 files, 4× clock buys 0 of 20 timeouts — and three premises corrected: **cvc5 is on this host** (`/nas3/data/axeyum/harness/bin/cvc5`, not on `$PATH`; two docs say otherwise), **z3 is 60 files from cvc5 here** (136 vs 76, cvc5's set a strict subset), and **the deficit is one family** (`VeryMax/ITS` = 74 of 104 misses; excluding it, 74.4 % of cvc5). `int-blast-ladder` decisive on 158/161; its constant-fit rule leaves **1 live rung on 32 files, 0 decided**. Four per-file passes committed. |
+| 2026-08-21 | `b3ef9a965` | The refusal census picked the next thing to build, and it was not what the gap felt like. `(get-model)` declined 66 times over 400 corpus files and **58 were arrays**, against 6 uninterpreted-sort tokens; arrays now render as `(store … ((as const (Array I E)) default) …)` and the same census reads **166 rendered, 9 refused**. Also `DecidedQuery::proof_eligible`: a bounded-string `unsat` the gate did not confirm cannot draw an Alethe proof of the *packed* assertions. That one is defence in depth and says so — over 184 QF_S/QF_SLIA benchmarks, deleting it changes no answer, because the QF_BV emitter declines those shapes. |
+| 2026-08-21 | `81361cdd1` | Gap #3's items 2–4. `solve_smtlib_session` answers `get-model`, `get-value`, `get-unsat-core`, `get-proof`, `get-assertions` and `echo` at the command where they stand; `set-option` reports `unsupported` for every option it does not honour; `(set-logic NONSENSE_XYZ)` says `unsupported` and still decides, as z3 does. `solve_smtlib_incremental` became the same walk with the output commands off, so no verdict could move — A/B over all 1,430 tracked `.smt2` at a 10 s budget: 2 differences, both on files that finish in 9.7–11.8 s, both binaries agreeing three of three at 60–120 s. 34 tests; 23 guards deleted one at a time, 22 killed a test and 16 killed exactly one. |
+| 2026-08-21 | `326445bba` | Gap #6: `nra-even-power`, `finite-array-extensionality` and `finite-domain-pigeonhole` no longer checked by re-running their producer — 11 guards, 11 satisfiable-query fixtures, each deletion killing exactly one test. All 28 remaining re-run checkers classified: **16 instances are a complete decision procedure re-run, not the defect**; 14 across 5 families cannot be made independent without a certificate change and are now named in the code. |
+| 2026-08-21 | `3a509de54` | Carcara HAS array rules: `check_alethe` gains `arrays_idx`/`arrays_row` under Carcara's semantics, `prove_qf_abv_unsat_alethe` emits `arrays_idx` instead of a name Carcara rejects, and `portable_artifact` decides Alethe portability from the artifact's rule vocabulary rather than its variant. Six guards, each deletion killing exactly one test. |
+| 2026-08-21 | `4b0f001c7` | Built Carcara for the first time and ran the crosscheck suite: **5 of 79 tests failed**. Four hand-wrote stale `!fn_app_*` ids into the problem (fixed by reading them from the proof); the fifth found `bv_poly_simp` checked by neither checker. Adds the shipped ROW-same proof's Carcara acceptance, its negative control, and tamper rejection in both checkers. |
+| 2026-08-21 | `f9ccdcb9d` | `alethe_portability_probe`: the first committed tool behind the "externally checkable" figure, plus the per-`ArrayAxiomKind` census showing the array-axiom family unreachable at every rung and why. |
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
 | 2026-08-21 | `98657cef7` | V2 source compiles but a direct exporter invocation yields an empty stream; V3 freezes the unchanged source and exact `lake env lean4export` command |
@@ -1531,6 +1537,207 @@ Next, if this is picked up: an **eager** small-domain split feeding the resultin
 linear integer problem to the LIA route, measured against the 74 `VeryMax/ITS`
 misses. It is the one hypothesis these measurements have not refuted; it is
 unpriced, and it is a route, not a constant.
+
+**Gap #3 of the 2026-08-21 capability audit is closed at the command level**
+(`WIP`, agent-consumer-interface, 2026-08-21). §6.3 ranked the consumer
+interface third by measured cost and called it "the difference between a library
+and a solver a stranger can run". Four of its six items were one defect wearing
+four hats: **the front door accepted a command and did not answer it.**
+`get-model`, `get-value`, `get-unsat-core` and `get-proof` were CLI no-ops with
+Rust-API-only counterparts; `set-option` was inert; `set-logic` was stored and
+never read.
+
+The half landed earlier — `examples/axeyum_cli.rs`, one verdict per `check-sat` —
+made the rest sharper rather than softer. A driver that answers `check-sat` and
+drops `(get-model)` produces **no output and no complaint**, and that is
+indistinguishable from a solver with no model. It is this repository's own
+recurring failure: silence read as a negative result.
+
+ADR-0541 states the rule as **a command is answered or it says `unsupported`
+with a reason**. `solve_smtlib_session` walks the command stream and returns one
+response per output command; `solve_smtlib_incremental` is now that same walk
+with the output commands switched off (`SessionPolicy::VerdictsOnly`), not a
+second implementation, so the two cannot disagree about a verdict.
+
+**Every default was measured against both references, not assumed.** Z3 4.13.3
+and cvc5 1.3.4 both answer `(get-model)` in a script that never set
+`:produce-models`, so that default is `true`; both error on `(get-unsat-core)`
+without `:produce-unsat-cores`, so that one is `false`. An unhonored
+`set-option` answers `unsupported` (cvc5's behaviour and SMT-LIB §4.1.7; z3
+raises an error instead). `(set-logic NONSENSE_XYZ)` answers `unsupported` and
+still decides, which is exactly z3.
+
+**`set-logic` is recognized and deliberately not enforced, and the decision is
+priced.** Over the 1,430 tracked `.smt2` files every one declares a logic, and a
+minimal five-rule conformance check flags **5** — all `QF_SLIA` scripts using
+`(_ BitVec n)` sequence elements. z3 rejects all five at the parser; axeyum
+decides one. So enforcement costs one file, which is *not* the reason to
+decline: enforcement needs a complete logic → theory table, and a table with a
+hole refuses a **correct** file, which is a wrong answer where deciding a
+nonconforming script merely answers a superset.
+
+**The recognizer was a hand-written list and the list was wrong on first
+contact.** It omitted **`BV`**, which 59 tracked files declare. It is now a shape
+rule over the generated grammar, with the corpus's 40 distinct logic names as a
+positive control.
+
+**`get-model`/`get-value` decline rather than guess** — and a census said which
+refusal to stop making. A value whose sort has no re-parseable SMT-LIB spelling
+makes the whole command `unsupported`; over 400 corpus files that was **66
+refusals, 58 of them arrays** — more than every other cause combined. So arrays
+now render as `(store … ((as const (Array I E)) default) …)`, the spelling z3
+4.13.3 prints, and the same census re-run reads **166 models rendered, 9
+refused**. The residual is uninterpreted carrier tokens (7), algebraic reals (2)
+and datatypes (0 in this population): a `QF_UF`
+`(get-model)` is refused because z3's `U!val!0` universe block is a z3 extension
+whose element distinctness is conventional, and inventing our own spelling would
+hand a consumer something that looks like a model and is not one.
+
+Measuring the refusals rather than reasoning about them is what changed the
+order of work: uninterpreted sorts *felt* like the gap and arrays were ten times
+the volume.
+
+**`smtcomp_cli` is untouched** and stays single-query with no added output
+(SMT-COMP 2026 §7.1.2 treats stray verdict text as a reported result).
+
+**The new answers are cross-validated by z3, not diffed against it** — two
+models are both correct, so equality is the wrong test. Every reported value is
+pinned as an equation on the original script and z3 must call the result `sat`
+(**133/133**); every unsat core is re-run alone and z3 must call it `unsat`
+(**122/122**). Both controls fire, and both needed a fix first: z3
+**error-recovers**, so a sort-broken pin draws `(error …)` and the following
+`(check-sat)` still prints a verdict — the corrupted-value control passed on a
+script that never contained the corruption. And the harness's own `(get-value)`
+parser read the first parenthesised group as the *term*, which is wrong when the
+term is an atom and the value is an array; 89 files read as "z3 rejected our
+model" and the models were fine.
+
+**Next.** Render uninterpreted-sort models (7 refusals of 400 files) and
+algebraic reals (2); answer `get-info`/`get-option`, which say `unsupported`
+where z3 answers; decide
+whether `(exit)` should truncate the walk, which needs the parser to stop reading
+at it rather than the driver to stop executing; and the logic → theory table if
+conformance is ever wanted.
+
+**Gap #6, second and third turns: three more families converted, and the row's
+own denominator corrected (`WIP`, agent-checker-independence, 2026-08-21).**
+[Gap analysis](docs/plan/gap-analysis-smt-solvers-2026-08-21.md) §9 row 6 / §6.2.
+
+`nra-even-power` (10 certified `unsat`), `finite-array-extensionality` (4) and
+`finite-domain-pigeonhole` (3) no longer rest on
+`producer(arena, assertions).is_some_and(|fresh| fresh == *cert)`. Each is now
+decided from the certificate and the query, with **no fall-through** to the
+re-run — the lesson from the array-axiom turn, where the same guards placed in
+front of the equality comparison killed nothing because the comparison subsumed
+them. Eleven guards, eleven adversarial fixtures over **satisfiable** queries,
+each deletion killing exactly one test.
+
+**The row's headline number is wrong in our favour, and that is the more useful
+finding.** "~30 of 34 checkers re-run the producer" counts one shape and three
+situations. All 28 remaining were read:
+
+- **3 families (16 instances) are not the defect at all.** `bool-uf-exhaustive`
+  (7), `bool-euf-exhaustive` (6) and `bool-euf-online` (3) re-run a *complete
+  decision procedure* over the original assertions — exhaustive enumeration with
+  a trusted evaluator, or the online EUF solver. A satisfiable query is refused
+  by the re-run itself; there is no recognizer whose mistake could be reproduced.
+- **18 families / 33 instances are convertible** — the certificate names terms, sorts, counts
+  or coefficients from which its claim is re-derivable. Largest still owed:
+  `bv-forall-nonconstant` (6), `bv-uf-local` (6), `set-cardinality` (4),
+  `term-identity` (3).
+- **5 families (14 instances) cannot be made independent without changing the
+  CERTIFICATE**, and are now named in `evidence.rs` beside their checkers rather
+  than implied away: `uf-arith-congruence` (4, two counts),
+  `bv-abstraction` (4, discards the inner QF_BV evidence that establishes the
+  `unsat`), `datatype-structural` (3, one count),
+  `cross-store-array-disequality` (2, no derivation chain),
+  `fifo-bc04` (1, a whole-instance fingerprint plus compile-time constants).
+  `bool-euf-online` (3) is in both (A) and this class: its certificate is one
+  `atoms: usize`, so the re-run is the whole check — sound only because the
+  thing re-run is a decision procedure.
+
+Next in this lane, largest first: `bv-forall-nonconstant` and `bv-uf-local` (6
+each), then `set-cardinality` and `term-identity`. `bv-abstraction` is the one
+worth doing as a *certificate* change instead — it already produces and
+self-checks a QF_BV proof and then throws it away, so carrying it would move 4
+instances from class (C) straight into the externally-portable DRAT column.
+
+**Gap #5: the rule vocabulary was fixed and it was never the binding constraint
+(`WIP`, agent-portable-evidence, 2026-08-21).**
+[Gap analysis](docs/plan/gap-analysis-smt-solvers-2026-08-21.md) §9 row 5 / §6.2.
+
+**Carcara was built here for the first time.** No host in this repository had a
+Carcara binary — not in `references/`, not on `$PATH`, not on any fleet host —
+so every test in `tests/carcara_crosscheck.rs` had been passing by returning
+early for as long as the file has existed. `references/carcara` now carries a
+built `target/release/carcara` (Carcara 1.1.0, `6624ea80`). Building it needs
+`m4`, which is not installed on this box but ships inside a snap
+(`/snap/gnome-46-2404/153/usr/bin/m4`); no host package was installed.
+
+**The central claim of the array-proof design note is false.**
+`docs/research/07-verification/array-elimination-alethe-proofs.md` records
+"Alethe/Carcara has NO array theory rules", quoted from there into six doc
+comments, into `check_alethe`'s dispatch, and into the design of two emitters.
+Carcara 1.1.0 registers `arrays_idx`, `arrays_row`, `arrays_row_contra` and
+`arrays_ext`, and `arrays_idx` **is** axeyum's `read_over_write_same`, shape for
+shape. Same problem, same proof, one identifier changed:
+`read_over_write_same` → `unknown rule` / `invalid`; `arrays_idx` → `valid`.
+
+That mattered to a published number: `Evidence::portable_artifact` reported
+*every* `UnsatAletheProof` as externally checkable, so a proof Carcara answers
+`invalid` counted toward the "artifact an external checker can read" figure —
+the `lia_generic` defect that function's own comment warns about, one level
+down. Portability is now decided from the artifact's **rule vocabulary**
+(`axeyum_cnf::non_carcara_checked_rules` against a pinned 179-rule list that
+excludes `hole`, `lia_generic` and `rare_rewrite`), not from the variant.
+
+**The number did not move, and the measurement says why.** 44 of 281 (15.7%)
+before and after: all 44 currently-claimed instances name only rules Carcara
+checks, so the published figure was right and is now defensible by a test rather
+than by a reading. The 85-instance `unsat-array-axiom` family — 30% of certified
+`unsat`, the target this lane was pointed at — is unreachable at every rung, per
+instance (`alethe_portability_probe --array-shapes`):
+
+| `ArrayAxiomKind` | instances | share |
+|---|---:|---:|
+| `ReadCongruence` | 70 | 82.4% |
+| `ReadOverWrite` | 8 | 9.4% |
+| `StoreShadowing` | 5 | 5.9% |
+| `SelectIte` | 1 | 1.2% |
+| `StoreIteSelect` | 1 | 1.2% |
+
+- `arrays_idx` reaches **1 of 85**: one certificate is the ROW-same shape, and
+  its disequality is inside a BTOR bv1 encoding rather than asserted at top
+  level, so the `assume` a proof needs is not a problem assertion. 67 of the 70
+  `ReadCongruence` instances share that bv1 head.
+- The whole zero-trust Alethe ladder reaches **0 of 85**.
+- `eliminate_arrays` then bit-blast reaches **0 of 85**, structurally: array
+  elimination rewrites every select-of-store to an `ite` and
+  `prove_qf_bv_unsat_alethe`'s fragment has no `Op::Ite` arm. Carcara has no
+  `bitblast_ite` either.
+
+So the next real slices, in the order their cost was measured, are: **`Op::Ite`
+in the bit-blast Alethe emitter** (unblocks elim→bitblast for the whole family
+but needs a Carcara-checkable `ite` treatment — the case split over
+`arrays_idx`/`arrays_row`, since Carcara has both branches); **clausification
+rules** `not_implies1`/`not_implies2` plus the existing `eq_congruent`, worth the
+3 pure-Boolean `ReadCongruence` instances (`arr1.smt2` and two siblings) but
+carrying a Lean-column regression risk, since 81 of these 85 currently produce
+Lean *reasoning* modules through `UnsatArrayAxiom` and a route change would swap
+that for an Alethe cert. Neither is a rule-name fix.
+
+**Open, found and not fixed here.** `bv_poly_simp` (Route 2) is checked by
+neither Carcara (`unknown rule`) nor `check_alethe`
+(`UnsupportedRule`) — Route 2 is the one Alethe emitter that does not
+re-validate its own output, which is why three doc comments could call the rule
+"Carcara-valid" unchallenged. It is not on the evidence path.
+`PortableArtifact` is not re-exported from `axeyum_solver`, so a consumer can
+call `portable_artifact` and cannot name its return type.
+
+QF_ABV dominance audit re-run from a clean `lane-snapshot` tree (`dirty=false`,
+sha `35d3fd6b1`): 169/169 audited decided, **85 certified, 85 checked, 85
+Lean-checked (81 reasoning / 4 attestation)**, 0 mismatches, 0 audit errors —
+per-instance identical to the committed artifact.
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, and both recurrence corollaries `Int.fib_add_one` and `Int.fib_eq_fib_add_two_sub_fib_add_one` are durably proved with empty kernel footprints. The negative-natural Fibonacci route now has an exact empty-footprint power-parity capsule, and its final two left-multiplication contracts are implemented as native axiom-free integer laws.
 
@@ -3041,7 +3248,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 143 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 150 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

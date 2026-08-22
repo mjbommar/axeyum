@@ -292,6 +292,19 @@ fn collect_uninterpreted_sort(sort: Sort, out: &mut HashSet<SortId>) {
     }
 }
 
+/// Renders `sort` in SMT-LIB syntax.
+///
+/// Two variants have **no** SMT-LIB spelling here and render as placeholders:
+/// `Sort::Datatype` prints `(Datatype <id>)` (the declaration name is not
+/// reachable from the id alone) and `Sort::Seq` prints `(Seq …)` even for a
+/// declared `String` (ADR-0029 packs one into a bit-vector, so by this point the
+/// distinction is gone). Neither is re-parseable. A caller emitting a model must
+/// therefore decline those sorts rather than print the placeholder — see
+/// `axeyum_solver::SmtLibResponse`.
+pub fn sort_text(arena: &TermArena, sort: Sort) -> String {
+    sort_str(arena, sort)
+}
+
 fn sort_str(arena: &TermArena, sort: Sort) -> String {
     match sort {
         Sort::Bool => "Bool".to_owned(),

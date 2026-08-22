@@ -26,6 +26,8 @@ use axeyum_strings::{
     MembershipOutcome, RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations,
     solve_word_equations,
 };
+use std::fmt::Write as _;
+use std::time::Duration;
 
 use crate::auto::{solve, unsat_core};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -1751,7 +1753,18 @@ fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError
                 stack.clear();
                 scopes.clear();
             }
-            ScriptCommand::GetAssertions => {}
+            // Output/metadata commands do not move the assertion stack, which is
+            // all this walk reconstructs. Listed rather than wildcarded so a new
+            // command that DOES move it cannot be added silently.
+            ScriptCommand::GetAssertions
+            | ScriptCommand::SetLogic(_)
+            | ScriptCommand::SetOption { .. }
+            | ScriptCommand::GetModel
+            | ScriptCommand::GetValue(_)
+            | ScriptCommand::GetUnsatCore
+            | ScriptCommand::GetProof
+            | ScriptCommand::Echo(_)
+            | ScriptCommand::UnansweredOutput(_) => {}
         }
     }
 
@@ -2391,7 +2404,6 @@ pub fn solve_smtlib_get_assertions(
                 stack.clear();
                 scopes.clear();
             }
-            ScriptCommand::CheckSat | ScriptCommand::CheckSatAssuming(_) => {}
             ScriptCommand::GetAssertions => {
                 snapshots.push(
                     stack
@@ -2400,6 +2412,18 @@ pub fn solve_smtlib_get_assertions(
                         .collect(),
                 );
             }
+            // Listed, not wildcarded: a new command that moves the assertion
+            // stack must fail to compile here rather than be skipped.
+            ScriptCommand::CheckSat
+            | ScriptCommand::CheckSatAssuming(_)
+            | ScriptCommand::SetLogic(_)
+            | ScriptCommand::SetOption { .. }
+            | ScriptCommand::GetModel
+            | ScriptCommand::GetValue(_)
+            | ScriptCommand::GetUnsatCore
+            | ScriptCommand::GetProof
+            | ScriptCommand::Echo(_)
+            | ScriptCommand::UnansweredOutput(_) => {}
         }
     }
     if snapshots.is_empty() {
@@ -2786,6 +2810,14 @@ pub fn solve_smtlib_get_proof(
 /// soundness one). Declarations are global (the shared arena keeps them), which
 /// is sound for deciding the assertion sets even across `pop`.
 ///
+/// Every other output command in the script — `get-model`, `get-value`,
+/// `get-unsat-core`, `get-proof` — is **dropped**, and `set-option` has no
+/// effect. That is deliberate here: this is the verdict-only contract, and
+/// honoring `(set-option :timeout …)` would change what an existing corpus file
+/// decides. [`solve_smtlib_session`] is the same walk with those commands
+/// answered; this function delegates to it, so the two cannot report different
+/// verdicts.
+///
 /// # Errors
 ///
 /// [`SolverError::Parse`] for malformed/unsupported text, or any
@@ -2795,61 +2827,1110 @@ pub fn solve_smtlib_incremental(
     config: &SolverConfig,
 ) -> Result<Vec<CheckResult>, SolverError> {
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    Ok(
+        run_session(&mut script, config, SessionPolicy::VerdictsOnly)?
+            .into_iter()
+            .map(|response| match response {
+                SmtLibResponse::CheckSat(result) => result,
+                other => unreachable!("VerdictsOnly emits only CheckSat, got {other:?}"),
+            })
+            .collect(),
+    )
+}
+
+// ---------------------------------------------------------------------------
+// The SMT-LIB **session**: one response per output command, in script order.
+// ---------------------------------------------------------------------------
+
+/// One SMT-LIB response, in command order (ADR-0541).
+///
+/// [`solve_smtlib_incremental`] answers `check-sat` and nothing else, and every
+/// other output command in the script is silently dropped. That is the shape a
+/// consumer notices first: `(get-model)` after a `sat` produces no output and no
+/// complaint, which is indistinguishable from a solver that has no model.
+///
+/// A session answers each output command where it *stands*, against the scoped
+/// assertion stack at that point, and says `unsupported` — never nothing — where
+/// it cannot.
+///
+/// Deliberately **not** `#[non_exhaustive]`: a downstream `match` would then need
+/// a wildcard, and the wildcard is exactly how a new response variant gets
+/// silently dropped by the driver that is supposed to print it. `axeyum_cli`
+/// matches this exhaustively, so adding a variant here fails to compile there.
+#[derive(Debug, Clone)]
+pub enum SmtLibResponse {
+    /// `(check-sat)` / `(check-sat-assuming …)`. The verdict is produced by
+    /// exactly the same walk as [`solve_smtlib_incremental`], which delegates
+    /// here; a session cannot decide a query differently from the verdict-only
+    /// front door because it is not a second implementation of it.
+    CheckSat(CheckResult),
+    /// `(get-model)` after a `sat`: the rendered `( (define-fun …) … )` block.
+    ///
+    /// Text rather than an [`SmtLibModel`] because rendering a value needs the
+    /// [`TermArena`] the response would otherwise have to borrow, and because
+    /// the *decision to decline* is part of rendering: a value with no
+    /// re-parseable SMT-LIB spelling here makes the command `unsupported`
+    /// instead. Callers wanting the typed model still have
+    /// [`solve_smtlib_model`].
+    Model(String),
+    /// `(get-value (t …))` after a `sat`: one `(term as written, value as
+    /// rendered)` pair per requested term, in request order. Text for the same
+    /// reason as [`SmtLibResponse::Model`]; the typed form is
+    /// [`solve_smtlib_get_value`].
+    Values(Vec<(String, String)>),
+    /// `(get-unsat-core)` after an `unsat`: the `:named` labels of a minimized
+    /// unsatisfiable subset (`assertion #i` for an unnamed assertion).
+    UnsatCore(Vec<String>),
+    /// `(get-proof)` after an `unsat`: a textual Alethe proof, re-checked by the
+    /// in-tree checker before it is returned (same emitters and same
+    /// re-validation as [`solve_smtlib_get_proof`]).
+    Proof(String),
+    /// `(echo "…")`.
+    Echo(String),
+    /// `(get-assertions)`: the currently-active assertion stack at that command
+    /// point, one rendered term per entry.
+    Assertions(Vec<String>),
+    /// The SMT-LIB `unsupported` response, with the command that drew it and a
+    /// human-readable reason. A reason is always present: "unsupported" with no
+    /// cause is the silent no-op wearing a different hat.
+    Unsupported {
+        /// The command keyword, e.g. `set-option` or `get-model`.
+        command: String,
+        /// Why it could not be answered.
+        detail: String,
+    },
+    /// The SMT-LIB `(error "…")` response — the command is well-formed but
+    /// illegal in this state (e.g. `(get-unsat-core)` without
+    /// `:produce-unsat-cores`, which both Z3 4.13.3 and cvc5 1.3.4 report as an
+    /// error rather than as `unsupported`).
+    Error {
+        /// The command keyword.
+        command: String,
+        /// The message.
+        message: String,
+    },
+    /// `success`, emitted only under `(set-option :print-success true)`.
+    Success,
+}
+
+/// How much of the script a session walk answers.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SessionPolicy {
+    /// `check-sat` only, and no option has any effect — the historical
+    /// [`solve_smtlib_incremental`] contract, preserved verbatim so that adding
+    /// a session could not move a verdict on any existing corpus file.
+    VerdictsOnly,
+    /// Every command, with `set-option` honored.
+    Full,
+}
+
+/// The options a session honors. Anything not listed here draws `unsupported`,
+/// which is the whole point: an option that is accepted and ignored is a lie the
+/// consumer cannot see.
+#[derive(Debug, Clone)]
+// Five independent SMT-LIB options, not one state machine: `:produce-models`
+// does not constrain `:produce-proofs`, and folding any pair into an enum would
+// invent a relationship the standard does not have.
+#[allow(clippy::struct_excessive_bools)]
+struct SessionOptions {
+    /// `:produce-models`. Defaults to **true**: Z3 4.13.3 and cvc5 1.3.4 both
+    /// answer `(get-model)` in a script that never set it, and only refuse when
+    /// it is explicitly `false` [measured 2026-08-21].
+    produce_models: bool,
+    /// `:produce-unsat-cores`. Defaults to **false**, matching both references,
+    /// which error on `(get-unsat-core)` unless it was set.
+    produce_unsat_cores: bool,
+    /// `:produce-proofs`. Defaults to **false**, by analogy with cores; no
+    /// reference agrees on this one, so the strict reading is used.
+    produce_proofs: bool,
+    /// `:print-success`. Defaults to **false** (both references).
+    print_success: bool,
+    /// `:timeout`, in milliseconds.
+    timeout_ms: Option<u64>,
+}
+
+impl Default for SessionOptions {
+    fn default() -> Self {
+        SessionOptions {
+            produce_models: true,
+            produce_unsat_cores: false,
+            produce_proofs: false,
+            print_success: false,
+            timeout_ms: None,
+        }
+    }
+}
+
+/// SMT-LIB `b_value`: exactly `true` or `false` (§3.9). Anything else is a
+/// malformed option value, not a false.
+fn parse_smtlib_bool(value: &str) -> Option<bool> {
+    match value {
+        "true" => Some(true),
+        "false" => Some(false),
+        _ => None,
+    }
+}
+
+/// Decides an SMT-LIB script as a **session**, returning one response per output
+/// command in script order (ADR-0541).
+///
+/// This is the driver behind `axeyum_cli`. Relative to
+/// [`solve_smtlib_incremental`] it adds `get-model`, `get-value`,
+/// `get-unsat-core`, `get-proof`, `echo`, and a `set-option` that reports
+/// `unsupported` for every option it does not honor.
+///
+/// The verdicts are not a second opinion: [`solve_smtlib_incremental`] is
+/// implemented as this walk with `SessionPolicy::VerdictsOnly`, so the two
+/// cannot disagree about a `check-sat`.
+///
+/// # Divergences from `z3 file.smt2`, stated rather than discovered
+///
+/// - **`(exit)` does not stop the walk.** This parser reads the whole script
+///   before anything is decided, so honoring `exit` would mean dropping trailing
+///   commands — a verdict-stream change to every corpus file that ends in one.
+/// - **Declarations are global.** A `declare-fun` inside a `push` survives the
+///   matching `pop` (documented on [`solve_smtlib_incremental`]), so a
+///   `(get-model)` may name a symbol Z3 would consider out of scope, and names
+///   symbols declared *later* in the file.
+/// - **`(get-model)` and `(get-value …)` decline rather than guess.** A value
+///   whose sort has no re-parseable SMT-LIB spelling here — an uninterpreted
+///   carrier token, a datatype, an array, an algebraic real — makes the whole
+///   command `unsupported`. Printing a placeholder would hand a consumer
+///   something that looks like a model and is not one.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text, or any
+/// [`SolverError`] from a per-`check-sat` [`crate::solve`]. A command that is
+/// merely illegal in its state is an [`SmtLibResponse::Error`] in the stream,
+/// not a `Result::Err` — the script keeps running, as it does under both
+/// reference solvers.
+pub fn solve_smtlib_session(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<Vec<SmtLibResponse>, SolverError> {
+    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    run_session(&mut script, config, SessionPolicy::Full)
+}
+
+/// Whether `name` is shaped like an SMT-LIB logic name.
+///
+/// Used **only** to answer `(set-logic …)` with `unsupported` for a name that is
+/// not a logic at all, which is what Z3 4.13.3 does — it prints `unsupported`,
+/// then carries on and decides the script [measured 2026-08-21].
+///
+/// # Why a shape rule and not a list
+///
+/// This started as a hand-written list of logic names and the list was wrong on
+/// its first contact with the corpus: it omitted **`BV`**, which 59 tracked
+/// benchmark files declare. SMT-LIB logic names are *generated* — an optional
+/// `QF_` prefix followed by theory tokens in canonical order — so a list is a
+/// snapshot of someone's memory and a shape rule is the actual grammar. A shape
+/// rule can over-accept (`QF_AFFS` passes and is not a division), and that costs
+/// nothing here because nothing is enforced; a list that under-accepts prints
+/// `unsupported` at a file that is perfectly well-formed, which is noise a
+/// consumer cannot distinguish from a real refusal.
+///
+/// # This is not conformance checking, and that is a decision
+///
+/// Rejecting `Int` under `QF_BV` is standards-correct and both references do it.
+/// Measured 2026-08-21 over the 1,430 tracked `.smt2` files: every one declares
+/// a logic, and a minimal five-rule conformance check flags **5** of them (all
+/// `QF_SLIA` scripts using `(_ BitVec n)` sequence elements, which `QF_SLIA` does
+/// not have). Z3 4.13.3 rejects all five at the parser — `unknown sort
+/// 'BitVec'` — and axeyum decides one of them (`sat`).
+///
+/// So the cost of enforcing is one decided file, which is not the reason to
+/// decline. The reason is that enforcement needs a complete logic → theory
+/// table, and a table with a hole rejects a *correct* file: a false refusal is
+/// worse than deciding a nonconforming script, because the second is a superset
+/// of what was asked and the first is a wrong answer. The table is the work, and
+/// it is not started here rather than half-started.
+/// `logic_conformance_would_reject_five_corpus_files` in
+/// `tests/smtlib_session.rs` pins the measurement so the claim above cannot
+/// quietly stop being true.
+fn is_smtlib_logic_name(name: &str) -> bool {
+    // Theory tokens in canonical name order; longest alternative first within a
+    // group so `LIRA` is not read as `LIA` + junk and `SEQ` not as `S` + junk.
+    const GROUPS: &[&[&str]] = &[
+        &["AX", "A"],
+        &["UF"],
+        &["BV"],
+        &["FP"],
+        &["DT"],
+        &["SEQ", "S"],
+        &["FF"],
+        &["C"],
+        &["LIRA", "LIA", "LRA", "NIRA", "NIA", "NRA", "IDL", "RDL"],
+        &["T"],
+        &["FS"],
+    ];
+    if name == "ALL" || name == "HORN" {
+        return true;
+    }
+    let rest = name.strip_prefix("QF_").unwrap_or(name);
+    if rest.is_empty() {
+        return false;
+    }
+    let mut rest = rest;
+    for group in GROUPS {
+        for token in *group {
+            if let Some(tail) = rest.strip_prefix(token) {
+                rest = tail;
+                break;
+            }
+        }
+    }
+    rest.is_empty()
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_session(
+    script: &mut Script,
+    config: &SolverConfig,
+    policy: SessionPolicy,
+) -> Result<Vec<SmtLibResponse>, SolverError> {
     // Source-first parse fallback (T-B.4d): fallback scripts are non-incremental
     // by construction, so decide their one query through only the checked
     // source-level ladder.
     if script.word_only_fallback.is_some() {
-        return Ok(vec![decide_word_only(&mut script, config)?]);
+        return Ok(vec![SmtLibResponse::CheckSat(decide_word_only(
+            script, config,
+        )?)]);
     }
-    let gate = StringGate::from_script(&script);
-    let mut stack: Vec<axeyum_ir::TermId> = Vec::new();
+    let gate = StringGate::from_script(script);
+    let mut options = SessionOptions::default();
+    // The caller's timeout is a CEILING on the script's `:timeout`, never the
+    // other way round: a script that asks for a longer budget than the operator
+    // granted does not get it.
+    let ceiling = config.timeout;
+    let mut effective = config.clone();
+
+    // `:named` labels, keyed by term, in the parser's assertion order — the same
+    // reconstruction `smtlib_single_query` performs, because `ScriptCommand::Assert`
+    // carries the term and not its label.
+    let mut names_by_term = BTreeMap::<TermId, VecDeque<Option<String>>>::new();
+    for (&assertion, name) in script.assertions.iter().zip(&script.assertion_names) {
+        names_by_term
+            .entry(assertion)
+            .or_default()
+            .push_back(name.clone());
+    }
+
+    let mut stack: Vec<TermId> = Vec::new();
+    let mut names: Vec<Option<String>> = Vec::new();
     let mut scopes: Vec<usize> = Vec::new(); // assertion-stack depth at each open push
-    let mut results = Vec::new();
+    let mut responses = Vec::new();
+    // The last `check-sat` and the exact assertion set it decided. `get-model`,
+    // `get-value`, `get-unsat-core` and `get-proof` all answer about THAT query,
+    // not about the stack as it stands now — which is the same thing unless the
+    // script asserted more in between, in which case SMT-LIB says the model
+    // command is illegal and both references error.
+    let mut last: Option<DecidedQuery> = None;
+    let mut stack_dirty_since_check = true;
+
+    let full = policy == SessionPolicy::Full;
     // Clone the command stream so the per-`check-sat` word route can take
     // `&mut script` (arena + word-problem side channel) without holding a borrow
     // of `script.commands` across the loop body.
     let commands = script.commands.clone();
     for command in &commands {
         match command {
-            ScriptCommand::Assert(t) => stack.push(*t),
+            ScriptCommand::Assert(t) => {
+                stack.push(*t);
+                names.push(
+                    names_by_term
+                        .get_mut(t)
+                        .and_then(VecDeque::pop_front)
+                        .unwrap_or(None),
+                );
+                stack_dirty_since_check = true;
+            }
             ScriptCommand::Push(n) => {
                 for _ in 0..*n {
                     scopes.push(stack.len());
                 }
+                stack_dirty_since_check = true;
             }
             ScriptCommand::Pop(n) => {
                 for _ in 0..*n {
                     if let Some(depth) = scopes.pop() {
                         stack.truncate(depth);
+                        names.truncate(depth);
                     }
                 }
+                stack_dirty_since_check = true;
             }
             ScriptCommand::CheckSat => {
-                let result = solve(&mut script.arena, &stack, config)?;
-                let result = gate.confirm(&mut script.arena, &stack, config, result)?;
-                results.push(apply_word_route(&mut script, config, result));
+                let result = solve(&mut script.arena, &stack, &effective)?;
+                let result = gate.confirm(&mut script.arena, &stack, &effective, result)?;
+                let proof_eligible = !gate.active || matches!(result, CheckResult::Unsat);
+                let result = apply_word_route(script, &effective, result);
+                last = Some(DecidedQuery {
+                    result: result.clone(),
+                    assertions: stack.clone(),
+                    assertion_names: names.clone(),
+                    proof_eligible,
+                });
+                stack_dirty_since_check = false;
+                responses.push(SmtLibResponse::CheckSat(result));
             }
             ScriptCommand::CheckSatAssuming(assumptions) => {
                 // Decide the active assertions together with the assumptions, but
                 // do not retain them: solve a temporary stack, then discard.
                 let mut with = stack.clone();
                 with.extend_from_slice(assumptions);
-                let result = solve(&mut script.arena, &with, config)?;
-                let result = gate.confirm(&mut script.arena, &with, config, result)?;
+                let result = solve(&mut script.arena, &with, &effective)?;
+                let result = gate.confirm(&mut script.arena, &with, &effective, result)?;
+                let proof_eligible = !gate.active || matches!(result, CheckResult::Unsat);
                 // The word-problem side channel is `None` whenever the script
                 // uses `check-sat-assuming` (see `build_word_problem`), so this is
                 // a plain pass-through here; kept uniform with the other queries.
-                results.push(apply_word_route(&mut script, config, result));
+                let result = apply_word_route(script, &effective, result);
+                let mut with_names = names.clone();
+                with_names.resize(with.len(), None);
+                last = Some(DecidedQuery {
+                    result: result.clone(),
+                    assertions: with,
+                    assertion_names: with_names,
+                    proof_eligible,
+                });
+                stack_dirty_since_check = false;
+                responses.push(SmtLibResponse::CheckSat(result));
             }
             ScriptCommand::ResetAssertions => {
                 // Remove all assertions and open scopes (declarations stay interned
                 // in the arena). Subsequent `check-sat`s see only assertions made
                 // after the reset — the SMT-LIB `reset-assertions` semantics.
                 stack.clear();
+                names.clear();
                 scopes.clear();
+                stack_dirty_since_check = true;
             }
-            ScriptCommand::GetAssertions => {}
+            ScriptCommand::GetAssertions => {
+                if full {
+                    responses.push(SmtLibResponse::Assertions(
+                        stack
+                            .iter()
+                            .map(|&term| render(&script.arena, term))
+                            .collect(),
+                    ));
+                }
+            }
+            ScriptCommand::SetLogic(logic) => {
+                if !full {
+                    continue;
+                }
+                if is_smtlib_logic_name(logic) {
+                    responses.extend(session_ack(&options));
+                } else {
+                    responses.push(SmtLibResponse::Unsupported {
+                        command: "set-logic".to_owned(),
+                        detail: format!("`{logic}` is not an SMT-LIB logic name"),
+                    });
+                }
+            }
+            ScriptCommand::SetOption { key, value } => {
+                if !full {
+                    continue;
+                }
+                responses.extend(apply_set_option(&mut options, key, value));
+                effective = match options.timeout_ms {
+                    Some(ms) => {
+                        let asked = Duration::from_millis(ms);
+                        config
+                            .clone()
+                            .with_timeout(ceiling.map_or(asked, |cap| cap.min(asked)))
+                    }
+                    None => config.clone(),
+                };
+            }
+            ScriptCommand::Echo(text) => {
+                if full {
+                    responses.push(SmtLibResponse::Echo(text.clone()));
+                }
+            }
+            ScriptCommand::UnansweredOutput(keyword) => {
+                if full {
+                    responses.push(SmtLibResponse::Unsupported {
+                        command: keyword.clone(),
+                        detail: "not answered by this front door".to_owned(),
+                    });
+                }
+            }
+            ScriptCommand::GetModel => {
+                if full {
+                    responses.push(answer_get_model(
+                        script,
+                        &options,
+                        last.as_ref(),
+                        stack_dirty_since_check,
+                    ));
+                }
+            }
+            ScriptCommand::GetValue(requested) => {
+                if full {
+                    responses.push(answer_get_value(
+                        script,
+                        &options,
+                        last.as_ref(),
+                        stack_dirty_since_check,
+                        requested,
+                    ));
+                }
+            }
+            ScriptCommand::GetUnsatCore => {
+                if full {
+                    responses.push(answer_get_unsat_core(
+                        script,
+                        &options,
+                        &effective,
+                        last.as_ref(),
+                        stack_dirty_since_check,
+                    )?);
+                }
+            }
+            ScriptCommand::GetProof => {
+                if full {
+                    responses.push(answer_get_proof(
+                        script,
+                        &options,
+                        last.as_ref(),
+                        stack_dirty_since_check,
+                    ));
+                }
+            }
         }
     }
-    Ok(results)
+    Ok(responses)
+}
+
+/// The acknowledgement of a command that succeeded and has no other answer:
+/// `success` under `:print-success`, and nothing at all otherwise (both
+/// references default to silence here).
+fn session_ack(options: &SessionOptions) -> Option<SmtLibResponse> {
+    options.print_success.then_some(SmtLibResponse::Success)
+}
+
+/// Applies one `(set-option :key value)`.
+///
+/// The honored set is closed on purpose. An option outside it draws
+/// `unsupported`, which is what cvc5 1.3.4 does and what SMT-LIB §4.1.7
+/// prescribes; Z3 4.13.3 raises an error instead, and the standard response is
+/// the one chosen here.
+fn apply_set_option(
+    options: &mut SessionOptions,
+    key: &str,
+    value: &str,
+) -> Option<SmtLibResponse> {
+    fn flag(slot: &mut bool, key: &str, value: &str) -> Result<(), SmtLibResponse> {
+        match parse_smtlib_bool(value) {
+            Some(v) => {
+                *slot = v;
+                Ok(())
+            }
+            None => Err(SmtLibResponse::Error {
+                command: "set-option".to_owned(),
+                message: format!("{key} expects true or false, got `{value}`"),
+            }),
+        }
+    }
+    let set = match key {
+        ":produce-models" => flag(&mut options.produce_models, key, value),
+        ":produce-unsat-cores" => flag(&mut options.produce_unsat_cores, key, value),
+        ":produce-proofs" => flag(&mut options.produce_proofs, key, value),
+        ":print-success" => flag(&mut options.print_success, key, value),
+        ":timeout" => match value.parse::<u64>() {
+            Ok(ms) => {
+                options.timeout_ms = Some(ms);
+                Ok(())
+            }
+            Err(_) => Err(SmtLibResponse::Error {
+                command: "set-option".to_owned(),
+                message: format!(":timeout expects milliseconds, got `{value}`"),
+            }),
+        },
+        other => {
+            return Some(SmtLibResponse::Unsupported {
+                command: "set-option".to_owned(),
+                detail: format!("`{other}` is not honored by this solver"),
+            });
+        }
+    };
+    match set {
+        Ok(()) => session_ack(options),
+        Err(error) => Some(error),
+    }
+}
+
+/// The `check-sat` a model/core/proof query answers about: its verdict, the
+/// exact assertion set it decided, and those assertions' `:named` labels.
+struct DecidedQuery {
+    result: CheckResult,
+    assertions: Vec<TermId>,
+    assertion_names: Vec<Option<String>>,
+    /// Whether an Alethe proof of `assertions` would be a proof of the *query*.
+    ///
+    /// It is not, in one narrow shape. ADR-0029 packs strings into bit-vectors
+    /// with an encoding bound, so a bit-blast refutation of the packed
+    /// assertions can be bound-DEPENDENT — true of the encoding, false of the
+    /// string theory. [`StringGate::confirm`] catches that and downgrades such
+    /// an `unsat` to `unknown`; the word route may then restore `unsat` on
+    /// *source* grounds, which is a correct verdict reached by a different
+    /// argument. The final verdict is `Unsat` either way, so the verdict alone
+    /// cannot tell the two apart — and emitting the packed refutation in the
+    /// second case would hand a consumer a proof of the encoding labelled as a
+    /// proof of the query.
+    ///
+    /// So this records the verdict **as `StringGate::confirm` left it**, before
+    /// the word route ran. `solve_smtlib_get_proof` gets the same guarantee by
+    /// running the gate itself.
+    ///
+    /// **Defence in depth, not a measured leak.** Scanned 2026-08-21 over 184
+    /// tracked `QF_S`/`QF_SLIA` benchmarks: the flag is `false` on real files
+    /// (`cli__regress0__strings__replace-find-base.smt2` is one), and with the
+    /// check deleted those same files still answer `unsupported` — the `QF_BV`
+    /// Alethe emitter declines the packed shapes, which carry shifts and
+    /// division. No instance was found where removing this leaks a proof. It
+    /// stays because the emitter's coverage is a moving target and the failure
+    /// it would cause is a bound-dependent refutation published as a proof of
+    /// the query, which is exactly the class of defect this repository has paid
+    /// for before.
+    proof_eligible: bool,
+}
+
+/// The shared precondition of every model/core/proof query: a `check-sat` must
+/// have run, and the assertion stack must not have moved since.
+fn last_query<'a>(
+    command: &str,
+    last: Option<&'a DecidedQuery>,
+    dirty: bool,
+) -> Result<&'a DecidedQuery, SmtLibResponse> {
+    match last {
+        None => Err(SmtLibResponse::Error {
+            command: command.to_owned(),
+            message: format!("`{command}` before any check-sat"),
+        }),
+        Some(_) if dirty => Err(SmtLibResponse::Error {
+            command: command.to_owned(),
+            message: format!(
+                "the assertion stack changed since the last check-sat; `{command}` would answer \
+                 about a query that was never decided"
+            ),
+        }),
+        Some(query) => Ok(query),
+    }
+}
+
+fn answer_get_model(
+    script: &Script,
+    options: &SessionOptions,
+    last: Option<&DecidedQuery>,
+    dirty: bool,
+) -> SmtLibResponse {
+    if !options.produce_models {
+        return SmtLibResponse::Error {
+            command: "get-model".to_owned(),
+            message: "model generation is disabled (:produce-models false)".to_owned(),
+        };
+    }
+    let query = match last_query("get-model", last, dirty) {
+        Ok(query) => query,
+        Err(response) => return response,
+    };
+    let CheckResult::Sat(model) = &query.result else {
+        return SmtLibResponse::Error {
+            command: "get-model".to_owned(),
+            message: "no model is available (the last check-sat was not sat)".to_owned(),
+        };
+    };
+    // `bind_readable_string_values` only ADDS bindings (it never replaces one),
+    // so applying it here cannot change what the model says about a symbol the
+    // solver already bound.
+    let CheckResult::Sat(model) =
+        bind_readable_string_values(script, CheckResult::Sat(model.clone()))
+    else {
+        unreachable!("bind_readable_string_values preserves Sat");
+    };
+
+    let decline = |detail: String| SmtLibResponse::Unsupported {
+        command: "get-model".to_owned(),
+        detail,
+    };
+    let mut out = String::from("(\n");
+    for &symbol in &script.model_symbols {
+        let (name, sort) = script.arena.symbol(symbol);
+        let Some(value) = model
+            .get(symbol)
+            .or_else(|| well_founded_default(&script.arena, sort))
+        else {
+            return decline(format!("no value for `{name}` of sort {sort:?}"));
+        };
+        let value = render_string_value_for(script, symbol, value);
+        let is_string = script.declared_strings.iter().any(|&(s, _)| s == symbol);
+        let text = match smtlib_value_text(&script.arena, &value, is_string) {
+            Ok(text) => text,
+            Err(detail) => return decline(format!("`{name}`: {detail}")),
+        };
+        // A declared `String` is `(_ BitVec …)` in the IR by ADR-0029, so the
+        // arena's sort is not the sort the user wrote.
+        let sort_text = if is_string {
+            "String".to_owned()
+        } else {
+            match smtlib_sort_text(&script.arena, sort) {
+                Ok(text) => text,
+                Err(detail) => return decline(format!("`{name}`: {detail}")),
+            }
+        };
+        let _ = writeln!(out, "  (define-fun {name} () {sort_text} {text})");
+    }
+    for &func in &script.model_functions {
+        let Some(value) = model.function(func) else {
+            continue;
+        };
+        let (name, _params, _result) = script.arena.function(func);
+        match smtlib_function_text(&script.arena, name, value) {
+            Ok(text) => out.push_str(&text),
+            Err(detail) => return decline(format!("`{name}`: {detail}")),
+        }
+    }
+    out.push(')');
+    SmtLibResponse::Model(out)
+}
+
+fn answer_get_value(
+    script: &Script,
+    options: &SessionOptions,
+    last: Option<&DecidedQuery>,
+    dirty: bool,
+    requested: &[(String, TermId)],
+) -> SmtLibResponse {
+    if !options.produce_models {
+        return SmtLibResponse::Error {
+            command: "get-value".to_owned(),
+            message: "model generation is disabled (:produce-models false)".to_owned(),
+        };
+    }
+    let query = match last_query("get-value", last, dirty) {
+        Ok(query) => query,
+        Err(response) => return response,
+    };
+    let CheckResult::Sat(model) = &query.result else {
+        return SmtLibResponse::Error {
+            command: "get-value".to_owned(),
+            message: "no model is available (the last check-sat was not sat)".to_owned(),
+        };
+    };
+    let CheckResult::Sat(model) =
+        bind_readable_string_values(script, CheckResult::Sat(model.clone()))
+    else {
+        unreachable!("bind_readable_string_values preserves Sat");
+    };
+    let decline = |detail: String| SmtLibResponse::Unsupported {
+        command: "get-value".to_owned(),
+        detail,
+    };
+    let assignment = model.to_assignment();
+    let mut values = Vec::with_capacity(requested.len());
+    for (text, term) in requested {
+        let Ok(value) = axeyum_ir::eval(&script.arena, *term, &assignment) else {
+            return decline(format!("`{text}` does not evaluate under the model"));
+        };
+        let is_string = is_declared_string_term(script, *term);
+        let value = render_string_value(script, *term, value);
+        // ADR-0029 packs a declared `String` into a bit-vector, and
+        // `render_string_value` unpacks only a term that IS a declared `String`
+        // symbol. So in a string script any OTHER bit-vector-valued term may be
+        // a packed string, which we would print as `#b…`: a value that looks
+        // like a bit-vector and is not one. Decline instead of guessing — a
+        // wrong-looking model is worse than a refused one.
+        if !is_string
+            && script.uses_bounded_strings
+            && matches!(value, Value::Bv { .. } | Value::WideBv(_))
+        {
+            return decline(format!(
+                "`{text}` evaluates to a bit-vector in a script using the bounded string \
+                 encoding, where it cannot be told apart from a packed string"
+            ));
+        }
+        match smtlib_value_text(&script.arena, &value, is_string) {
+            Ok(rendered) => values.push((text.clone(), rendered)),
+            Err(detail) => return decline(format!("`{text}`: {detail}")),
+        }
+    }
+    SmtLibResponse::Values(values)
+}
+
+/// Whether `term` is one of the script's declared `String` symbols — the only
+/// terms [`render_string_value`] unpacks, and therefore the only ones whose
+/// `Value::Seq` is known to be a string rather than a generic sequence.
+fn is_declared_string_term(script: &Script, term: TermId) -> bool {
+    let TermNode::Symbol(symbol) = script.arena.node(term) else {
+        return false;
+    };
+    script.declared_strings.iter().any(|&(s, _)| s == *symbol)
+}
+
+/// Renders `value` in SMT-LIB syntax, or says why it has no spelling here.
+///
+/// `as_string` marks a value the caller knows to be a declared `String`
+/// (ADR-0029): its runtime form is a `Value::Seq` of code points, which is
+/// **indistinguishable** from a genuine `(Seq …)` value, and rendering the
+/// wrong one of those two as `"…"` would be a wrong model rather than an
+/// unreadable one. So the decision is the caller's and never inferred here.
+///
+/// Every `Err` is a refusal the caller turns into `unsupported`. That is the
+/// contract: this function never invents a placeholder.
+fn smtlib_value_text(arena: &TermArena, value: &Value, as_string: bool) -> Result<String, String> {
+    match value {
+        Value::Bool(b) => Ok(b.to_string()),
+        Value::Int(n) => Ok(smtlib_int_text(*n)),
+        Value::Real(r) => {
+            let (num, den) = (r.numerator(), r.denominator());
+            if den == 1 {
+                Ok(smtlib_decimal_text(num))
+            } else {
+                Ok(format!(
+                    "(/ {} {})",
+                    smtlib_decimal_text(num),
+                    smtlib_decimal_text(den)
+                ))
+            }
+        }
+        Value::Bv { width, value } => {
+            let mut text = String::from("#b");
+            for i in (0..*width).rev() {
+                text.push(if (value >> i) & 1 == 1 { '1' } else { '0' });
+            }
+            Ok(text)
+        }
+        Value::WideBv(w) => {
+            let mut text = String::from("#b");
+            for i in (0..w.width()).rev() {
+                text.push(if w.bit(i) { '1' } else { '0' });
+            }
+            Ok(text)
+        }
+        Value::Seq(elements) if as_string => smtlib_string_literal(elements),
+        Value::Seq(_) => Err("a sequence value has no SMT-LIB spelling here".to_owned()),
+        // A declared `String` whose packing the decoder rejected as malformed
+        // arrives here still `Bv`-shaped. Rendering it as `#b…` would print a
+        // bit-vector for a variable the user declared `String` — the guess this
+        // whole function refuses to make — so it is a refusal, not a fallback.
+        //
+        // THIS ARM IS NOT COVERED BY A TEST, and deleting it kills nothing.
+        // Recorded rather than left implied: no input reaching it was found.
+        // Searched 2026-08-21 over unconstrained, length-pinned, `str.contains`,
+        // `str.++`, `str.in_re` and concatenation-equation shapes — every model
+        // value of a declared `String` decoded. It is kept because it fails
+        // CLOSED (a refusal, never a wrong value), which is the only kind of
+        // untested guard worth keeping.
+        other if as_string => Err(format!(
+            "a declared `String` whose model value did not decode as a string: {other:?}"
+        )),
+        // `(store … ((as const (Array I E)) default) …)`, the spelling Z3 4.13.3
+        // prints. Refusing arrays cost more than every other refusal combined —
+        // 58 of 66 declined `(get-model)`s in a 400-file census, 2026-08-21.
+        Value::Array(array) => {
+            let sort = smtlib_sort_text(
+                arena,
+                Sort::Array {
+                    index: ArraySortKey::BitVec(array.index_width()),
+                    element: ArraySortKey::BitVec(array.element_width()),
+                },
+            )?;
+            let bv = |width, value| Value::Bv { width, value };
+            let default = smtlib_value_text(
+                arena,
+                &bv(array.element_width(), array.default_element()),
+                false,
+            )?;
+            let mut text = format!("((as const {sort}) {default})");
+            // `ArrayValue::entries` walks a `BTreeMap`, so the store order is
+            // index order and the text is deterministic — an API promise.
+            for (index_value, element_value) in array.entries() {
+                let i = smtlib_value_text(arena, &bv(array.index_width(), index_value), false)?;
+                let e = smtlib_value_text(arena, &bv(array.element_width(), element_value), false)?;
+                text = format!("(store {text} {i} {e})");
+            }
+            Ok(text)
+        }
+        Value::GenericArray(array) => {
+            let sort = smtlib_sort_text(
+                arena,
+                Sort::Array {
+                    index: array.index_sort(),
+                    element: array.element_sort(),
+                },
+            )?;
+            let default = smtlib_value_text(arena, array.default_value(), false)?;
+            let mut text = format!("((as const {sort}) {default})");
+            // Insertion order here (`Value` is not `Ord`), which the array value
+            // itself keeps deterministic.
+            for (index_value, element_value) in array.entries() {
+                let i = smtlib_value_text(arena, index_value, false)?;
+                let e = smtlib_value_text(arena, element_value, false)?;
+                text = format!("(store {text} {i} {e})");
+            }
+            Ok(text)
+        }
+        Value::Datatype { .. } => Err("a datatype value has no SMT-LIB spelling here \
+                                       (constructor names are not reachable from the id)"
+            .to_owned()),
+        Value::Uninterpreted { .. } => Err("an uninterpreted-sort value has no portable \
+                                            SMT-LIB spelling (the carrier token is a model \
+                                            artifact, not a term)"
+            .to_owned()),
+        Value::RealAlgebraic(_) => Err(
+            "an algebraic real has no SMT-LIB spelling (it is a root of a polynomial, \
+                 not a rational literal)"
+                .to_owned(),
+        ),
+    }
+}
+
+/// SMT-LIB renders a negative integer as `(- n)`; there is no negative numeral.
+fn smtlib_int_text(n: i128) -> String {
+    if n < 0 {
+        format!("(- {})", n.unsigned_abs())
+    } else {
+        n.to_string()
+    }
+}
+
+/// SMT-LIB `Real` literals are decimals: `1.0`, `(- 3.0)`.
+fn smtlib_decimal_text(n: i128) -> String {
+    if n < 0 {
+        format!("(- {}.0)", n.unsigned_abs())
+    } else {
+        format!("{n}.0")
+    }
+}
+
+/// An SMT-LIB 2.6 string literal from a sequence of code-point values.
+///
+/// §3.1: the literal body holds printable ASCII directly, `""` escapes a double
+/// quote, and everything else is `\u{...}`. A non-`Bv` element or a code point
+/// outside the SMT-LIB Unicode range is a refusal, not a substitution.
+fn smtlib_string_literal(elements: &[Value]) -> Result<String, String> {
+    let mut text = String::from("\"");
+    for element in elements {
+        let Value::Bv { value, .. } = element else {
+            return Err("a string value with a non-scalar element".to_owned());
+        };
+        let code = u32::try_from(*value)
+            .map_err(|_| "a string element outside the Unicode range".to_owned())?;
+        if code > 0x0002_FFFF {
+            return Err(format!(
+                "a string element outside the SMT-LIB range: {code}"
+            ));
+        }
+        match code {
+            0x22 => text.push_str("\"\""),
+            0x20..=0x7E => text.push(char::from_u32(code).unwrap_or('?')),
+            _ => {
+                let _ = write!(text, "\\u{{{code:x}}}");
+            }
+        }
+    }
+    text.push('"');
+    Ok(text)
+}
+
+/// A sort's SMT-LIB spelling, refusing the two that [`axeyum_smtlib::sort_text`]
+/// renders as non-re-parseable placeholders.
+fn smtlib_sort_text(arena: &TermArena, sort: Sort) -> Result<String, String> {
+    match sort {
+        Sort::Datatype(_) => Err("a datatype sort renders as an internal id here".to_owned()),
+        Sort::Seq(_) => Err("a sequence sort has no SMT-LIB spelling here".to_owned()),
+        other => Ok(axeyum_smtlib::sort_text(arena, other)),
+    }
+}
+
+/// One `(define-fun f ((x!0 S) …) R body)` line for an uninterpreted function's
+/// finite interpretation, as a nested `ite` over its explicit entries with the
+/// default in the tail.
+fn smtlib_function_text(
+    arena: &TermArena,
+    name: &str,
+    value: &FuncValue,
+) -> Result<String, String> {
+    let params = value.params();
+    let result = value.result();
+    let mut header = format!("  (define-fun {name} (");
+    for (i, &sort) in params.iter().enumerate() {
+        if i > 0 {
+            header.push(' ');
+        }
+        let _ = write!(header, "(x!{i} {})", smtlib_sort_text(arena, sort)?);
+    }
+    let _ = write!(header, ") {} ", smtlib_sort_text(arena, result)?);
+
+    // Entries come out in the storage's deterministic order (a `BTreeMap` key
+    // order for scalars, insertion order for full values), which is what the
+    // determinism promise requires of any model text.
+    let mut arms: Vec<(Vec<String>, String)> = Vec::new();
+    let default = if value.uses_value_storage() {
+        for (args, out) in value.value_entries() {
+            let mut rendered = Vec::with_capacity(args.len());
+            for arg in args {
+                rendered.push(smtlib_value_text(arena, arg, false)?);
+            }
+            arms.push((rendered, smtlib_value_text(arena, out, false)?));
+        }
+        smtlib_value_text(arena, &value.default_value(), false)?
+    } else {
+        for (args, _coded_out) in value.entries() {
+            let mut rendered = Vec::with_capacity(args.len());
+            for (&code, &sort) in args.iter().zip(params) {
+                rendered.push(smtlib_value_text(
+                    arena,
+                    &Value::from_scalar_code(sort, code),
+                    false,
+                )?);
+            }
+            arms.push((
+                rendered,
+                smtlib_value_text(
+                    arena,
+                    &Value::from_scalar_code(result, value.apply(args)),
+                    false,
+                )?,
+            ));
+        }
+        smtlib_value_text(
+            arena,
+            &Value::from_scalar_code(result, value.default_result()),
+            false,
+        )?
+    };
+
+    let mut body = default;
+    for (args, out) in arms.into_iter().rev() {
+        let guard = if args.len() == 1 {
+            format!("(= x!0 {})", args[0])
+        } else {
+            let conjuncts: Vec<String> = args
+                .iter()
+                .enumerate()
+                .map(|(i, a)| format!("(= x!{i} {a})"))
+                .collect();
+            format!("(and {})", conjuncts.join(" "))
+        };
+        body = format!("(ite {guard} {out} {body})");
+    }
+    Ok(format!("{header}{body})\n"))
+}
+
+fn answer_get_unsat_core(
+    script: &mut Script,
+    options: &SessionOptions,
+    config: &SolverConfig,
+    last: Option<&DecidedQuery>,
+    dirty: bool,
+) -> Result<SmtLibResponse, SolverError> {
+    if !options.produce_unsat_cores {
+        return Ok(SmtLibResponse::Error {
+            command: "get-unsat-core".to_owned(),
+            message: "unsat core construction is not enabled (:produce-unsat-cores true)"
+                .to_owned(),
+        });
+    }
+    let query = match last_query("get-unsat-core", last, dirty) {
+        Ok(query) => query,
+        Err(response) => return Ok(response),
+    };
+    if !matches!(query.result, CheckResult::Unsat) {
+        return Ok(SmtLibResponse::Error {
+            command: "get-unsat-core".to_owned(),
+            message: "no unsat core is available (the last check-sat was not unsat)".to_owned(),
+        });
+    }
+    let (assertions, assertion_names) = (&query.assertions, &query.assertion_names);
+    // The bounded-string gate already ran on this query inside the walk: the
+    // retained verdict is `Unsat` only if `StringGate::confirm` kept it, so the
+    // refutation is bound-independent and a core of it is meaningful.
+    let Some(core) = unsat_core(&mut script.arena, assertions, config)? else {
+        return Ok(SmtLibResponse::Unsupported {
+            command: "get-unsat-core".to_owned(),
+            detail: "the refutation route does not expose a core for this query".to_owned(),
+        });
+    };
+    let labels = core
+        .into_iter()
+        .map(|i| {
+            assertion_names
+                .get(i)
+                .and_then(Clone::clone)
+                .unwrap_or_else(|| format!("assertion #{i}"))
+        })
+        .collect();
+    Ok(SmtLibResponse::UnsatCore(labels))
+}
+
+fn answer_get_proof(
+    script: &Script,
+    options: &SessionOptions,
+    last: Option<&DecidedQuery>,
+    dirty: bool,
+) -> SmtLibResponse {
+    if !options.produce_proofs {
+        return SmtLibResponse::Error {
+            command: "get-proof".to_owned(),
+            message: "proof production is not enabled (:produce-proofs true)".to_owned(),
+        };
+    }
+    let query = match last_query("get-proof", last, dirty) {
+        Ok(query) => query,
+        Err(response) => return response,
+    };
+    if !matches!(query.result, CheckResult::Unsat) {
+        return SmtLibResponse::Error {
+            command: "get-proof".to_owned(),
+            message: "no proof is available (the last check-sat was not unsat)".to_owned(),
+        };
+    }
+    if !query.proof_eligible {
+        return SmtLibResponse::Unsupported {
+            command: "get-proof".to_owned(),
+            detail: "this `unsat` was reached by a source-level string route; a refutation of \
+                     the bounded encoding would not be a proof of the query"
+                .to_owned(),
+        };
+    }
+    let arena = &script.arena;
+    let assertions = &query.assertions;
+    match alethe_proof_for(arena, assertions) {
+        Some(proof) => SmtLibResponse::Proof(proof),
+        None => SmtLibResponse::Unsupported {
+            command: "get-proof".to_owned(),
+            detail: "this `unsat` is outside every Alethe fragment with an emitter".to_owned(),
+        },
+    }
+}
+
+/// The four Alethe fragments, in the order [`solve_smtlib_get_proof`] tries
+/// them, each re-checked before it is returned.
+fn alethe_proof_for(arena: &TermArena, assertions: &[TermId]) -> Option<String> {
+    if let Some(proof) = crate::prove_qf_bv_unsat_alethe(arena, assertions)
+        && matches!(check_alethe(&proof), Ok(true))
+    {
+        return Some(write_alethe(&proof));
+    }
+    if let Some(proof) = crate::prove_qf_abv_unsat_alethe(arena, assertions)
+        && matches!(check_alethe(&proof), Ok(true))
+    {
+        return Some(write_alethe(&proof));
+    }
+    if let Some(proof) = crate::prove_lra_unsat_alethe(arena, assertions)
+        && matches!(crate::check_alethe_lra(&proof), Ok(true))
+    {
+        return Some(write_alethe(&proof));
+    }
+    if let Some(proof) = crate::prove_lia_unsat_alethe(arena, assertions)
+        && matches!(crate::check_alethe_lra(&proof), Ok(true))
+    {
+        return Some(write_alethe(&proof));
+    }
+    None
 }

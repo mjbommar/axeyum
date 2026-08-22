@@ -126,8 +126,24 @@ pub fn prove_qf_bv_unsat_alethe(
 /// the formula to the core via [`axeyum_rewrite::lower_derived_bv`] and certifying the
 /// *lowered* result (as [`prove_qf_bv_unsat_alethe_lowered`] does), Route 2 keeps each
 /// `(bvsub a b)` at the term level and bridges it to `(bvadd a (bvneg b))` with a
-/// **Carcara-valid `bv_poly_simp` step** — the polynomial-simplification rule that
-/// validates `(= (bvsub a b) (bvadd a (bvneg b)))` (the two are equal modulo `2^w`).
+/// `bv_poly_simp` step — the polynomial-simplification rule that validates
+/// `(= (bvsub a b) (bvadd a (bvneg b)))` (the two are equal modulo `2^w`).
+///
+/// **`bv_poly_simp` is NOT a Carcara rule**, contrary to what this comment said
+/// until 2026-08-21. Measured against `references/carcara` at `6624ea80`, which
+/// was the first time this repository had a Carcara binary to measure with:
+/// `route2_bvsub_rewrite_proof_is_accepted_by_carcara` fails with
+/// `checking failed on step 's0' with rule 'bv_poly_simp': unknown rule`.
+///
+/// **Nor does `check_alethe`**, measured the same day:
+/// `Err(UnsupportedRule { rule: "bv_poly_simp" })`. So the step is checked by
+/// neither checker, and this emitter — alone among the Alethe emitters here —
+/// does not re-validate its own output before returning it, which is why nothing
+/// said so. Route 2 is not on the evidence path, so no published portability
+/// figure rests on it; [`axeyum_cnf::non_carcara_checked_rules`] now reports any
+/// artifact containing the step as internal-only rather than trusting a comment.
+/// The fix (a `bv_poly_simp` case in `check_alethe`, or emitting the rewrite in
+/// rules that exist) is open work for whoever owns Route 2.
 /// The `bvsub` term's bits are then taken from the bit-blasted `bvadd`/`bvneg` via the
 /// `trans`-chained term equality, so the emitted refutation — and its kernel
 /// reconstruction ([`crate::reconstruct_qf_bv_proof`], whose faithful `bv_bit` model
@@ -564,7 +580,8 @@ fn is_leaf_bv(arena: &TermArena, term: TermId) -> bool {
 /// `bvnot`/`bvand`/`bvor`/`bvxor`/`bvxnor`, arithmetic `bvadd`/`bvneg`/`bvmul`,
 /// `bvcomp`, and structural `extract`/`concat`/`sign_extend`). A `(bvsub a b)` keyed
 /// in `sub_rewrites` (Route 2) is admitted too — it is bridged to its
-/// `(bvadd a (bvneg b))` rewrite by a Carcara `bv_poly_simp` step. Any other operator
+/// `(bvadd a (bvneg b))` rewrite by a `bv_poly_simp` step (NOT a Carcara rule --
+/// see the note on `prove_qf_bv_unsat_alethe_route2`). Any other operator
 /// — shifts, division/remainder, `zero_extend`, rotates, `bvnand`/`bvnor`, or an
 /// un-keyed `bvsub` — makes the term out of fragment (Carcara holes).
 fn is_bitblastable_bv(
@@ -756,7 +773,7 @@ impl<'r> BbReducer<'r> {
             return Some(cached.clone());
         }
         // Route-2 `bvsub` bridge. A `(bvsub a b)` keyed in `sub_rewrites` is bit-blasted
-        // through its `(bvadd a (bvneg b))` rewrite, with a Carcara-valid `bv_poly_simp`
+        // through its `(bvadd a (bvneg b))` rewrite, with a `bv_poly_simp`
         // term equality threading the two — so the proof keeps `bvsub` at the term level
         // and certifies the ORIGINAL assertion.
         if let Some(&rewrite) = self.sub_rewrites.get(&term) {
@@ -837,7 +854,7 @@ impl<'r> BbReducer<'r> {
     /// Route-2 reduction of a `(bvsub a b)` term (id `sub`) via its interned
     /// `(bvadd a (bvneg b))` rewrite (id `rewrite`). Emits, in order:
     ///
-    /// 1. **`bv_poly_simp`**: `(= (bvsub a b) (bvadd a (bvneg b)))` — the Carcara-valid
+    /// 1. **`bv_poly_simp`**: `(= (bvsub a b) (bvadd a (bvneg b)))` — the
     ///    polynomial-simplification step (the two sides are equal modulo `2^w`).
     /// 2. The rewrite's own reduction `(= (bvadd a (bvneg b)) bbform)` (recursing into
     ///    [`BbReducer::reduce_term`], which bit-blasts the `bvadd` and the inner `bvneg`

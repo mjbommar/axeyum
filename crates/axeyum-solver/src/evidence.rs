@@ -852,8 +852,32 @@ impl Evidence {
     /// level down, so it is not left to vigilance — see the test named in this
     /// module that fails when a certificate gains an `UnsatProof` field without
     /// an arm here.
+    ///
+    /// **The Alethe arms OVERCOUNTED by construction until 2026-08-21**, which is
+    /// the same error in the other direction and the more dangerous one. Every
+    /// [`Evidence::UnsatAletheProof`] was reported portable regardless of the rule
+    /// names inside it, and the `QF_ABV` emitter's array step was named
+    /// `read_over_write_same` — an axeyum-internal name Carcara answers with
+    /// `unknown rule`, i.e. `invalid`, not merely `holey`. Measured against
+    /// `references/carcara` at `6624ea80`: same problem, same proof, rule renamed
+    /// to Carcara's own `arrays_idx`, `valid`. So the Alethe arms now decide from
+    /// the **rule vocabulary of the artifact** via
+    /// [`axeyum_cnf::non_carcara_checked_rules`], exactly as the `lia_generic`
+    /// exclusion below does for one rule by hand. A name-based judgement of
+    /// portability is what produced both the 1.75x undercount this function was
+    /// written to fix and this overcount.
     #[must_use]
-    pub const fn portable_artifact(&self) -> Option<PortableArtifact> {
+    pub fn portable_artifact(&self) -> Option<PortableArtifact> {
+        /// An Alethe artifact is externally checkable only if **every** rule it
+        /// names is one Carcara checks. One unknown rule makes the whole proof
+        /// `invalid` to the external checker, so this is an all-or-nothing test,
+        /// not a proportion.
+        fn alethe_if_carcara_vocabulary(proof: &[AletheCommand]) -> Option<PortableArtifact> {
+            axeyum_cnf::non_carcara_checked_rules(proof)
+                .is_empty()
+                .then_some(PortableArtifact::Alethe)
+        }
+
         match self {
             // DRAT: checkable by `check_drat` in-tree and by external
             // `drat-trim` out of tree (verified with a negative control — a
@@ -864,14 +888,25 @@ impl Evidence {
             | Evidence::UnsatBvAlternationCounterexample(_)
             | Evidence::UnsatBvConjunctiveUniversalInstance(_)
             | Evidence::UnsatBvPositiveUniversalInstanceSet(_) => Some(PortableArtifact::Drat),
-            // Alethe: checkable by Carcara, a Rust Alethe checker.
+            // Alethe: checkable by Carcara, a Rust Alethe checker — but only
+            // when every rule in the artifact is one Carcara checks.
             //
-            // `UnsatArithAletheProof` is deliberately EXCLUDED. Its QF_LIA route
-            // emits `lia_generic`, a rule Carcara has no case for and treats as
-            // a hole — so it is checkable only internally, and claiming it here
-            // would re-commit the exact error this function was written to fix.
-            Evidence::UnsatAletheProof(_) | Evidence::UnsatGuardedQuantAletheProof { .. } => {
-                Some(PortableArtifact::Alethe)
+            // `UnsatGuardedQuantAletheProof` reaches the same gate rather than a
+            // blanket `Some`: its refutation is `forall_inst_guarded` (an axeyum
+            // hook rule Carcara has never heard of) plus `lia_generic` (which
+            // Carcara accepts only by holing it), so the gate reports it
+            // internal-only. It was counted as portable before this change.
+            //
+            // `UnsatArithAletheProof` stays EXCLUDED as a variant. Its QF_LIA
+            // route emits `lia_generic`, a rule Carcara has no checker for and
+            // treats as a hole; the QF_LRA route's `la_generic` IS checked, but
+            // routing the variant through the vocabulary gate would widen what
+            // this function claims on the strength of a rule-name list alone,
+            // with no Carcara crosscheck behind it for this variant. Widen it
+            // when there is one.
+            Evidence::UnsatAletheProof(proof) => alethe_if_carcara_vocabulary(proof),
+            Evidence::UnsatGuardedQuantAletheProof { proof, .. } => {
+                alethe_if_carcara_vocabulary(proof)
             }
             _ => None,
         }
@@ -1510,13 +1545,99 @@ fn check_direct_structural_evidence(
     }
 }
 
+// ---------------------------------------------------------------------------
+// GAP #6 OF `docs/plan/gap-analysis-smt-solvers-2026-08-21.md`: the checkers
+// below that read
+//
+//     producer(arena, assertions).is_some_and(|fresh| fresh == *cert)
+//
+// are a DETERMINISM check, not a soundness check. If the producer's recognizer
+// matched a satisfiable query it matches it identically on the re-run, and the
+// checker whose entire job is to catch a wrong producer agrees with it.
+//
+// Every remaining one was read and classified on 2026-08-21, because "~30
+// checkers re-run the producer" turns out to be three different situations and
+// only one of them is the defect:
+//
+//   (A) THE PRODUCER IS A COMPLETE DECISION PROCEDURE, not a recognizer, so the
+//       re-run genuinely re-decides `unsat` over the ORIGINAL assertions.
+//       `bool_uf_exhaustive_refutation` enumerates every Boolean assignment and
+//       every `Bool^n -> Bool` truth table and returns `None` the moment one
+//       satisfies the query; `bool_euf_exhaustive_refutation` enumerates every
+//       Boolean-abstraction assignment and requires congruence to kill each;
+//       `bool_euf_online_refutation` calls the online EUF solver outright. For
+//       these the criticism does not bite the same way: a satisfiable query is
+//       refused by the re-run itself. 3 families, 16 instances:
+//       `bool-uf-exhaustive` 7, `bool-euf-exhaustive` 6, `bool-euf-online` 3.
+//
+//   (B) A RECOGNIZER WHOSE CERTIFICATE CARRIES ITS OWN CLAIM. These are the
+//       convertible ones: the certificate names terms, sorts, counts or
+//       coefficients from which the claim can be re-derived without asking the
+//       recognizer anything. Four have been converted so far —
+//       `array-axiom` (85 instances), `nra-even-power` (10),
+//       `finite-array-extensionality` (4), `finite-domain-pigeonhole` (3);
+//       together 102 of the 281 certified `unsat`, 36.3%.
+//       18 families / 33 instances remain in this class. Largest first:
+//       `bv-forall-nonconstant` (6),
+//       `bv-uf-local` (6), `set-cardinality` (4), `term-identity` (3),
+//       `const-array-default-mismatch` (1), `store-chain-readback` (1),
+//       `bool-array-read-collapse` (1), and the generated array-workload
+//       family (`aligned-write-chain-commutation`, `two-byte-memcpy`,
+//       `two-element-{bubble,selection}-sort`, `two-cell-xor-swap`,
+//       `two-byte-xor-swap-roundtrip`, `binary-search16`).
+//
+//   (C) A RECOGNIZER WHOSE CERTIFICATE CANNOT EXPRESS ITS CLAIM — 5 families,
+//       14 instances. Named here rather than implied away, because a named
+//       residual is worth more than a silent one, and because the fix for each
+//       is a CERTIFICATE change, not a checker change:
+//
+//         `uf-arith-congruence` (4) — the certificate is two counts
+//           (`arithmetic_assertions`, `congruence_consequents`). Nothing
+//           identifies WHICH congruence consequents were used or carries the
+//           arithmetic refutation that closed them.
+//         `bv-abstraction` (4) — carries `abstracted_terms: Vec<TermId>` and
+//           DISCARDS the inner QF_BV evidence that actually establishes the
+//           `unsat`. The producer self-checks that evidence and then throws it
+//           away. This is the cheapest one to close, and closing it moves 4
+//           instances into the externally-checkable DRAT column rather than
+//           merely making the internal check honest.
+//         `datatype-structural` (3) — carries `branches: u64`. The conflicting
+//           merge / acyclicity cycle / distinctness pair is never recorded.
+//         `cross-store-array-disequality` (2) — two `TermId`s and a `steps`
+//           count; the reciprocal-store chain that derives the base equality is
+//           not recorded, so the entailment cannot be replayed.
+//         `fifo-bc04` (1) — an `assertion` id plus three compile-time
+//           constants; the query test is a whole-instance structural
+//           fingerprint against the generated benchmark.
+//
+//       `bool-euf-online` (3) is in (A) AND has a (C)-grade certificate (a lone
+//       `atoms: usize`), so for it the re-run genuinely IS the whole check —
+//       which is sound only because the thing re-run is a decision procedure.
+//
+// The rule the conversions follow, learned the expensive way on the
+// array-axiom family: an independent stage placed IN FRONT of the re-run kills
+// nothing, because `fresh == *cert` subsumes it. Anything reachable by the
+// independent route must be DECIDED by it, with no fall-through.
+// ---------------------------------------------------------------------------
+
+/// Was `finite_domain_pigeonhole_refutation(..).is_some_and(|fresh| fresh == *cert)`
+/// — a **determinism** check sold as a soundness check. A recognizer that matched
+/// a satisfiable query matches it identically on the re-run, so the checker whose
+/// entire job is to catch a wrong producer would agree with it.
+///
+/// It is now decided from the certificate and the query alone. This family's
+/// certificate carries enough to make that possible — the function, the claimed
+/// domain cardinality, and the pairwise-disequal applications — so the pigeonhole
+/// argument is re-derived rather than re-searched. There is deliberately **no
+/// fall-through** to the re-run: a guard placed behind `fresh == *cert` is
+/// unreachable, because the equality subsumes it, and would then kill no test at
+/// all.
 fn check_uf_pigeonhole_evidence(
     arena: &TermArena,
     assertions: &[TermId],
     cert: &FiniteDomainPigeonholeCertificate,
 ) -> bool {
-    crate::ufbv_finite::finite_domain_pigeonhole_refutation(arena, assertions)
-        .is_some_and(|fresh| fresh == *cert)
+    crate::ufbv_finite::certificate_is_finite_domain_pigeonhole(arena, assertions, cert)
 }
 
 fn check_bool_uf_exhaustive_evidence(
@@ -1564,13 +1685,20 @@ fn check_datatype_structural_evidence(
         .is_some_and(|fresh| fresh == *cert)
 }
 
+/// Was `finite_array_extensionality_refutation(..).is_some_and(|fresh| fresh == *cert)`
+/// — a **determinism** check, for the same reason as
+/// [`check_uf_pigeonhole_evidence`] above.
+///
+/// It is now decided from the certificate and the query alone: coverage of every
+/// index value, membership of every named read equality in the query, the shape
+/// of each of those conjuncts, and the array disequality itself. No fall-through
+/// to the re-run.
 fn check_finite_array_extensionality_evidence(
     arena: &TermArena,
     assertions: &[TermId],
     cert: &FiniteArrayExtensionalityCertificate,
 ) -> bool {
-    crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
-        .is_some_and(|fresh| fresh == *cert)
+    crate::array_finite::certificate_is_finite_array_extensionality(arena, assertions, cert)
 }
 
 fn check_bool_array_read_collapse_evidence(
@@ -1581,13 +1709,31 @@ fn check_bool_array_read_collapse_evidence(
     cert.recheck(arena, assertions)
 }
 
+/// Was `nra_even_power_refutation(..).is_some_and(|fresh| fresh == *cert)` — a
+/// **determinism** check, for the same reason as [`check_uf_pigeonhole_evidence`]
+/// above.
+///
+/// This certificate's claim is entirely local to the conjunct it names, so it is
+/// now decided in two stages and the search is never re-run:
+///
+/// 1. `cert.assertion` is a top-level conjunct of the QUERY. Without this the
+///    certificate may name a valid refutation of something the query never
+///    asserts, and "¬(impossible)" would refute a satisfiable query.
+/// 2. that conjunct really is a negative-even-power-sum refutation, re-derived
+///    from the two terms alone.
 fn check_nra_even_power_evidence(
     arena: &TermArena,
     assertions: &[TermId],
     cert: &NraEvenPowerRefutationCertificate,
 ) -> bool {
-    crate::nra_even_power::nra_even_power_refutation(arena, assertions)
-        .is_some_and(|fresh| fresh == *cert)
+    let mut conjuncts = Vec::new();
+    for &assertion in assertions {
+        crate::term_walk::collect_top_binary_conjuncts(arena, assertion, &mut conjuncts);
+    }
+    if !conjuncts.contains(&cert.assertion) {
+        return false;
+    }
+    crate::nra_even_power::certificate_refutes_its_assertion(arena, cert)
 }
 
 fn check_bv_defined_enum_evidence(
@@ -5010,6 +5156,115 @@ mod tests {
         );
     }
 
+    /// An Alethe artifact is portable only if EVERY rule in it is one the
+    /// external checker checks.
+    ///
+    /// This is the guard for the overcount half of `portable_artifact`. Before
+    /// 2026-08-21 the function answered `Some(Alethe)` for any
+    /// `UnsatAletheProof`, so a proof whose array step was named
+    /// `read_over_write_same` — which Carcara rejects outright with
+    /// `unknown rule`, measured against `references/carcara` at `6624ea80` —
+    /// counted toward the published "artifact an external checker can read"
+    /// figure. Renaming that one step to Carcara's own `arrays_idx` makes the
+    /// same proof `valid`.
+    #[test]
+    fn an_alethe_proof_naming_a_rule_carcara_lacks_is_not_portable() {
+        use axeyum_cnf::{AletheLit, AletheTerm};
+
+        fn row_proof(rule: &str) -> Vec<AletheCommand> {
+            let sel = AletheTerm::App(
+                "select".to_owned(),
+                vec![
+                    AletheTerm::App(
+                        "store".to_owned(),
+                        vec![
+                            AletheTerm::Const("a".to_owned()),
+                            AletheTerm::Const("i".to_owned()),
+                            AletheTerm::Const("v".to_owned()),
+                        ],
+                    ),
+                    AletheTerm::Const("i".to_owned()),
+                ],
+            );
+            let row = AletheTerm::App("=".to_owned(), vec![sel, AletheTerm::Const("v".to_owned())]);
+            vec![
+                AletheCommand::Assume {
+                    id: "h".to_owned(),
+                    clause: vec![AletheLit {
+                        atom: row.clone(),
+                        negated: true,
+                    }],
+                },
+                AletheCommand::Step {
+                    id: "s1".to_owned(),
+                    clause: vec![AletheLit {
+                        atom: row,
+                        negated: false,
+                    }],
+                    rule: rule.to_owned(),
+                    premises: Vec::new(),
+                    args: Vec::new(),
+                },
+                AletheCommand::Step {
+                    id: "s2".to_owned(),
+                    clause: Vec::new(),
+                    rule: "resolution".to_owned(),
+                    premises: vec!["s1".to_owned(), "h".to_owned()],
+                    args: Vec::new(),
+                },
+            ]
+        }
+
+        // Both proofs are accepted by our OWN checker -- that is the point: the
+        // in-tree checker cannot tell you whether an outside one can read it.
+        let internal = row_proof("read_over_write_same");
+        let portable = row_proof("arrays_idx");
+        assert_eq!(check_alethe(&internal), Ok(true));
+        assert_eq!(check_alethe(&portable), Ok(true));
+
+        assert_eq!(
+            Evidence::UnsatAletheProof(internal).portable_artifact(),
+            None,
+            "`read_over_write_same` is an axeyum-internal rule name; Carcara \
+             answers `unknown rule`, so this artifact is not externally checkable"
+        );
+        assert_eq!(
+            Evidence::UnsatAletheProof(portable).portable_artifact(),
+            Some(PortableArtifact::Alethe),
+            "`arrays_idx` is Carcara's own array rule"
+        );
+    }
+
+    /// The shipped `QF_ABV` read-over-write-same route must emit a portable
+    /// artifact — not merely a checkable one.
+    ///
+    /// A test that only asserted `check_alethe(&proof) == Ok(true)` would have
+    /// passed for the whole period the emitted rule name was one no external
+    /// checker knows. This asserts the property that was actually claimed.
+    #[test]
+    fn the_shipped_qf_abv_row_same_proof_is_portable() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).expect("array var");
+        let i = arena.bv_var("i", 4).expect("index var");
+        let v = arena.bv_var("v", 8).expect("value var");
+        let stored = arena.store(a, i, v).expect("store");
+        let sel = arena.select(stored, i).expect("select");
+        let eq = arena.eq(sel, v).expect("eq");
+        let neq = arena.not(eq).expect("not");
+
+        let proof = crate::prove_qf_abv_unsat_alethe(&arena, &[neq])
+            .expect("the ROW-same emitter covers this shape");
+        assert_eq!(
+            axeyum_cnf::non_carcara_checked_rules(&proof),
+            Vec::<String>::new(),
+            "the shipped array proof names a rule no external checker has"
+        );
+        assert_eq!(
+            Evidence::UnsatAletheProof(proof).portable_artifact(),
+            Some(PortableArtifact::Alethe)
+        );
+    }
+
     /// Every certificate that CARRIES a DRAT proof must be reported as portable.
     ///
     /// `portable_artifact`'s wildcard undercounts by construction, and
@@ -5077,7 +5332,7 @@ mod tests {
 
         // The arms actually listed in `portable_artifact`.
         let listed = evidence
-            .split("pub const fn portable_artifact")
+            .split("pub fn portable_artifact")
             .nth(1)
             .and_then(|tail| tail.split("\n    }").next())
             .expect("portable_artifact is present")
@@ -5104,5 +5359,395 @@ mod tests {
                  count is understated by every instance of this family"
             );
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Gap #6, continued: three more families whose checker was a re-run of
+    // its own producer compared for equality.
+    //
+    // Every fixture below forges a certificate over a **SATISFIABLE** query.
+    // That is the whole method: a determinism check cannot tell an honest
+    // certificate from one produced by a recognizer that matched a satisfiable
+    // query, because the re-run reproduces the same mistake. A guard that no
+    // satisfiable query can exercise is not load-bearing, and per CLAUDE.md
+    // deleting each guard below must kill EXACTLY ONE of these tests.
+    // ------------------------------------------------------------------
+
+    /// `unsat-nra-even-power`, membership stage. The named conjunct is a
+    /// genuine even-power refutation — it just is not in the query. `(> x 0)`
+    /// is satisfiable, and without the membership stage the certificate
+    /// "refutes" it by exhibiting a contradiction it invented itself.
+    #[test]
+    fn a_forged_nra_even_power_certificate_naming_an_unasserted_conjunct_is_refused() {
+        use crate::nra_even_power::NraEvenPowerRefutationCertificate;
+        use axeyum_ir::Rational;
+
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").expect("declare x");
+        let zero = arena.real_const(Rational::zero());
+        let asserted = arena.real_gt(x, zero).expect("x > 0");
+        let square = arena.real_mul(x, x).expect("x * x");
+        let unasserted = arena.real_lt(square, zero).expect("x * x < 0");
+
+        let cert = NraEvenPowerRefutationCertificate {
+            assertion: unasserted,
+            even_power_terms: 1,
+            max_even_exponent: 2,
+            constant: Rational::zero(),
+        };
+        // The fixture must CLEAR the shape stage, or it would be testing the
+        // wrong guard — the mistake that cost a rewrite on the array-axiom
+        // family.
+        assert!(
+            crate::nra_even_power::certificate_refutes_its_assertion(&arena, &cert),
+            "fixture must clear the shape stage so only membership can refuse it"
+        );
+        assert!(
+            !check_nra_even_power_evidence(&arena, &[asserted], &cert),
+            "a certificate naming a conjunct the query never asserts must be refused"
+        );
+    }
+
+    /// `unsat-nra-even-power`, shape stage. `(< (* x y) 0)` is satisfiable at
+    /// `x = 1, y = -1`; `x * y` is not an even power of anything. The conjunct
+    /// IS asserted, so membership accepts and only the shape stage can refuse.
+    #[test]
+    fn a_forged_nra_even_power_certificate_over_a_mixed_product_is_refused() {
+        use crate::nra_even_power::NraEvenPowerRefutationCertificate;
+        use axeyum_ir::Rational;
+
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").expect("declare x");
+        let y = arena.real_var("y").expect("declare y");
+        let product = arena.real_mul(x, y).expect("x * y");
+        let zero = arena.real_const(Rational::zero());
+        let assertion = arena.real_lt(product, zero).expect("x * y < 0");
+
+        let cert = NraEvenPowerRefutationCertificate {
+            assertion,
+            even_power_terms: 1,
+            max_even_exponent: 2,
+            constant: Rational::zero(),
+        };
+        assert!(
+            !check_nra_even_power_evidence(&arena, &[assertion], &cert),
+            "`x * y < 0` is satisfiable and is not an even-power refutation"
+        );
+    }
+
+    /// `unsat-finite-domain-pigeonhole`, guard 1. Three pairwise-distinct
+    /// values, but one of them is an application of a DIFFERENT function, whose
+    /// range is unconstrained by `f`'s two-point domain. Satisfiable.
+    #[test]
+    fn a_forged_pigeonhole_certificate_counting_a_foreign_application_is_refused() {
+        use crate::ufbv_finite::FiniteDomainPigeonholeCertificate;
+
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::Bool], Sort::BitVec(8))
+            .expect("declare f");
+        let g = arena
+            .declare_fun("g", &[Sort::Bool], Sort::BitVec(8))
+            .expect("declare g");
+        let arg1 = arena.declare("p", Sort::Bool).expect("p");
+        let arg2 = arena.declare("q", Sort::Bool).expect("q");
+        let arg3 = arena.declare("r", Sort::Bool).expect("r");
+        let (arg1, arg2, arg3) = (arena.var(arg1), arena.var(arg2), arena.var(arg3));
+        let fp = arena.apply(f, &[arg1]).expect("f p");
+        let fq = arena.apply(f, &[arg2]).expect("f q");
+        let gr = arena.apply(g, &[arg3]).expect("g r");
+
+        let mut assertions = Vec::new();
+        for (a, b) in [(fp, fq), (fp, gr), (fq, gr)] {
+            let eq = arena.eq(a, b).expect("eq");
+            assertions.push(arena.not(eq).expect("not"));
+        }
+
+        let cert = FiniteDomainPigeonholeCertificate {
+            function: f,
+            domain_size: 2,
+            applications: vec![fp, fq, gr],
+        };
+        assert!(
+            !check_uf_pigeonhole_evidence(&arena, &assertions, &cert),
+            "three distinct values across TWO functions do not over-subscribe \
+             either one's domain, and this query is satisfiable"
+        );
+    }
+
+    /// `unsat-finite-domain-pigeonhole`, guard 2. Three applications of one
+    /// function over a two-point domain — but only two of the three
+    /// disequalities are asserted, so `f q` and `f r` may coincide. Satisfiable
+    /// at `p = false`, `q = r = true`.
+    #[test]
+    fn a_forged_pigeonhole_certificate_with_an_unasserted_pair_is_refused() {
+        use crate::ufbv_finite::FiniteDomainPigeonholeCertificate;
+
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::Bool], Sort::BitVec(8))
+            .expect("declare f");
+        let arg1 = arena.declare("p", Sort::Bool).expect("p");
+        let arg2 = arena.declare("q", Sort::Bool).expect("q");
+        let arg3 = arena.declare("r", Sort::Bool).expect("r");
+        let (arg1, arg2, arg3) = (arena.var(arg1), arena.var(arg2), arena.var(arg3));
+        let fp = arena.apply(f, &[arg1]).expect("f p");
+        let fq = arena.apply(f, &[arg2]).expect("f q");
+        let fr = arena.apply(f, &[arg3]).expect("f r");
+
+        let mut assertions = Vec::new();
+        for (a, b) in [(fp, fq), (fp, fr)] {
+            let eq = arena.eq(a, b).expect("eq");
+            assertions.push(arena.not(eq).expect("not"));
+        }
+
+        let cert = FiniteDomainPigeonholeCertificate {
+            function: f,
+            domain_size: 2,
+            applications: vec![fp, fq, fr],
+        };
+        assert!(
+            !check_uf_pigeonhole_evidence(&arena, &assertions, &cert),
+            "the query never asserts `f q != f r`, so only two distinct values \
+             are required and it is satisfiable"
+        );
+    }
+
+    /// `unsat-finite-domain-pigeonhole`, guard 3. Every disequality is
+    /// asserted and every application is `f`'s — but `f`'s domain is
+    /// `BitVec(8)`, 256 points, and the certificate says 2. Satisfiable.
+    #[test]
+    fn a_forged_pigeonhole_certificate_understating_its_domain_is_refused() {
+        use crate::ufbv_finite::FiniteDomainPigeonholeCertificate;
+
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .expect("declare f");
+        let arg1 = arena.declare("u", Sort::BitVec(8)).expect("u");
+        let arg2 = arena.declare("v", Sort::BitVec(8)).expect("v");
+        let arg3 = arena.declare("w", Sort::BitVec(8)).expect("w");
+        let (arg1, arg2, arg3) = (arena.var(arg1), arena.var(arg2), arena.var(arg3));
+        let fu = arena.apply(f, &[arg1]).expect("f u");
+        let fv = arena.apply(f, &[arg2]).expect("f v");
+        let fw = arena.apply(f, &[arg3]).expect("f w");
+
+        let mut assertions = Vec::new();
+        for (a, b) in [(fu, fv), (fu, fw), (fv, fw)] {
+            let eq = arena.eq(a, b).expect("eq");
+            assertions.push(arena.not(eq).expect("not"));
+        }
+
+        let cert = FiniteDomainPigeonholeCertificate {
+            function: f,
+            // A LIE: the real cardinality is 2^8 = 256.
+            domain_size: 2,
+            applications: vec![fu, fv, fw],
+        };
+        assert!(
+            !check_uf_pigeonhole_evidence(&arena, &assertions, &cert),
+            "three distinct values of a 256-point-domain function is satisfiable; \
+             the domain cardinality must be recomputed, never read from the \
+             certificate"
+        );
+    }
+
+    /// `unsat-finite-domain-pigeonhole`, guard 4. Two distinct values over a
+    /// two-point domain is an exact fit, not an over-subscription. Satisfiable.
+    #[test]
+    fn a_forged_pigeonhole_certificate_at_an_exact_domain_fit_is_refused() {
+        use crate::ufbv_finite::FiniteDomainPigeonholeCertificate;
+
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::Bool], Sort::BitVec(8))
+            .expect("declare f");
+        let arg1 = arena.declare("p", Sort::Bool).expect("p");
+        let arg2 = arena.declare("q", Sort::Bool).expect("q");
+        let (arg1, arg2) = (arena.var(arg1), arena.var(arg2));
+        let fp = arena.apply(f, &[arg1]).expect("f p");
+        let fq = arena.apply(f, &[arg2]).expect("f q");
+        let eq = arena.eq(fp, fq).expect("eq");
+        let assertions = vec![arena.not(eq).expect("not")];
+
+        let cert = FiniteDomainPigeonholeCertificate {
+            function: f,
+            domain_size: 2,
+            applications: vec![fp, fq],
+        };
+        assert!(
+            !check_uf_pigeonhole_evidence(&arena, &assertions, &cert),
+            "two distinct values over a two-point domain is satisfiable — the \
+             pigeonhole inequality must be STRICT"
+        );
+    }
+
+    /// A one-bit-index array pair and its two concrete reads, shared by the
+    /// finite-array extensionality fixtures below.
+    fn finite_array_ext_fixture(arena: &mut TermArena) -> (TermId, TermId, [TermId; 2], [TermId; 2])
+    {
+        let array_sort = Sort::Array {
+            index: axeyum_ir::ArraySortKey::BitVec(1),
+            element: axeyum_ir::ArraySortKey::BitVec(8),
+        };
+        let a = arena.declare("a", array_sort).expect("a");
+        let b = arena.declare("b", array_sort).expect("b");
+        let (a, b) = (arena.var(a), arena.var(b));
+        let mut a_reads = [a; 2];
+        let mut b_reads = [b; 2];
+        for value in 0..2u128 {
+            let index = arena.bv_const(1, value).expect("index");
+            a_reads[value as usize] = arena.select(a, index).expect("select a");
+            b_reads[value as usize] = arena.select(b, index).expect("select b");
+        }
+        (a, b, a_reads, b_reads)
+    }
+
+    fn finite_array_read(
+        arena: &mut TermArena,
+        lhs_read: TermId,
+        rhs_read: TermId,
+        index_value: u128,
+    ) -> crate::array_finite::FiniteArrayReadEquality {
+        crate::array_finite::FiniteArrayReadEquality {
+            equality: arena.eq(lhs_read, rhs_read).expect("read equality"),
+            lhs_read,
+            rhs_read,
+            index_value,
+        }
+    }
+
+    /// `unsat-finite-array-extensionality`, coverage guard (count half). One
+    /// index of a two-point domain is left uncovered, so the arrays may differ
+    /// exactly there. Satisfiable.
+    #[test]
+    fn a_forged_finite_array_extensionality_certificate_missing_an_index_is_refused() {
+        use crate::array_finite::FiniteArrayExtensionalityCertificate;
+
+        let mut arena = TermArena::new();
+        let (a, b, a_reads, b_reads) = finite_array_ext_fixture(&mut arena);
+        let read0 = finite_array_read(&mut arena, a_reads[0], b_reads[0], 0);
+        let array_eq = arena.eq(a, b).expect("a = b");
+        let diseq = arena.not(array_eq).expect("not");
+        let assertions = vec![diseq, read0.equality];
+
+        let cert = FiniteArrayExtensionalityCertificate {
+            lhs_array: a,
+            rhs_array: b,
+            index_width: 1,
+            read_equalities: vec![read0],
+        };
+        assert!(
+            !check_finite_array_extensionality_evidence(&arena, &assertions, &cert),
+            "one of two indices is uncovered, so the arrays may differ there"
+        );
+    }
+
+    /// `unsat-finite-array-extensionality`, coverage guard (position half). The
+    /// certificate carries the right NUMBER of read equalities — by listing the
+    /// same index twice. Index 1 is still uncovered. Satisfiable.
+    #[test]
+    fn a_forged_finite_array_extensionality_certificate_repeating_an_index_is_refused() {
+        use crate::array_finite::FiniteArrayExtensionalityCertificate;
+
+        let mut arena = TermArena::new();
+        let (a, b, a_reads, b_reads) = finite_array_ext_fixture(&mut arena);
+        let read0 = finite_array_read(&mut arena, a_reads[0], b_reads[0], 0);
+        let array_eq = arena.eq(a, b).expect("a = b");
+        let diseq = arena.not(array_eq).expect("not");
+        let assertions = vec![diseq, read0.equality];
+
+        let cert = FiniteArrayExtensionalityCertificate {
+            lhs_array: a,
+            rhs_array: b,
+            index_width: 1,
+            read_equalities: vec![read0.clone(), read0],
+        };
+        assert!(
+            !check_finite_array_extensionality_evidence(&arena, &assertions, &cert),
+            "two read equalities at the SAME index cover a two-point domain no \
+             better than one does"
+        );
+    }
+
+    /// `unsat-finite-array-extensionality`, membership guard. Both read
+    /// equalities are genuine terms the query never asserts; it says only that
+    /// the arrays differ, which is satisfiable.
+    #[test]
+    fn a_forged_finite_array_extensionality_certificate_with_unasserted_reads_is_refused() {
+        use crate::array_finite::FiniteArrayExtensionalityCertificate;
+
+        let mut arena = TermArena::new();
+        let (a, b, a_reads, b_reads) = finite_array_ext_fixture(&mut arena);
+        let read0 = finite_array_read(&mut arena, a_reads[0], b_reads[0], 0);
+        let read1 = finite_array_read(&mut arena, a_reads[1], b_reads[1], 1);
+        let array_eq = arena.eq(a, b).expect("a = b");
+        let assertions = vec![arena.not(array_eq).expect("not")];
+
+        let cert = FiniteArrayExtensionalityCertificate {
+            lhs_array: a,
+            rhs_array: b,
+            index_width: 1,
+            read_equalities: vec![read0, read1],
+        };
+        assert!(
+            !check_finite_array_extensionality_evidence(&arena, &assertions, &cert),
+            "the query asserts none of the pointwise equalities; a certificate \
+             may not supply its own premises"
+        );
+    }
+
+    /// `unsat-finite-array-extensionality`, shape guard. The conjunct named for
+    /// index 1 is asserted, but it equates `a[1]` with `b[0]` — a real
+    /// constraint that says nothing about `b[1]`. Satisfiable.
+    #[test]
+    fn a_forged_finite_array_extensionality_certificate_with_a_crossed_read_is_refused() {
+        use crate::array_finite::FiniteArrayExtensionalityCertificate;
+
+        let mut arena = TermArena::new();
+        let (a, b, a_reads, b_reads) = finite_array_ext_fixture(&mut arena);
+        let read0 = finite_array_read(&mut arena, a_reads[0], b_reads[0], 0);
+        // `a[1] = b[0]`, recorded as if it were the index-1 read equality.
+        let crossed = finite_array_read(&mut arena, a_reads[1], b_reads[0], 1);
+        let array_eq = arena.eq(a, b).expect("a = b");
+        let diseq = arena.not(array_eq).expect("not");
+        let assertions = vec![diseq, read0.equality, crossed.equality];
+
+        let cert = FiniteArrayExtensionalityCertificate {
+            lhs_array: a,
+            rhs_array: b,
+            index_width: 1,
+            read_equalities: vec![read0, crossed],
+        };
+        assert!(
+            !check_finite_array_extensionality_evidence(&arena, &assertions, &cert),
+            "`a[1] = b[0]` is not the index-1 pointwise equality and leaves \
+             `b[1]` free"
+        );
+    }
+
+    /// `unsat-finite-array-extensionality`, disequality guard. Every pointwise
+    /// equality is asserted and nothing says the arrays differ, so `a = b`
+    /// satisfies the query.
+    #[test]
+    fn a_forged_finite_array_extensionality_certificate_without_the_disequality_is_refused() {
+        use crate::array_finite::FiniteArrayExtensionalityCertificate;
+
+        let mut arena = TermArena::new();
+        let (a, b, a_reads, b_reads) = finite_array_ext_fixture(&mut arena);
+        let read0 = finite_array_read(&mut arena, a_reads[0], b_reads[0], 0);
+        let read1 = finite_array_read(&mut arena, a_reads[1], b_reads[1], 1);
+        let assertions = vec![read0.equality, read1.equality];
+
+        let cert = FiniteArrayExtensionalityCertificate {
+            lhs_array: a,
+            rhs_array: b,
+            index_width: 1,
+            read_equalities: vec![read0, read1],
+        };
+        assert!(
+            !check_finite_array_extensionality_evidence(&arena, &assertions, &cert),
+            "nothing asserts the arrays differ, so `a = b` satisfies the query"
+        );
     }
 }

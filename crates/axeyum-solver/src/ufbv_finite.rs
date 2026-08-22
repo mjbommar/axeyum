@@ -94,6 +94,85 @@ pub fn finite_domain_pigeonhole_refutation(
     None
 }
 
+/// Decides a [`FiniteDomainPigeonholeCertificate`]'s own claim from the query,
+/// **without asking [`finite_domain_pigeonhole_refutation`] anything**.
+///
+/// Re-running the recognizer and comparing the fresh certificate for equality is
+/// a *determinism* check: if the recognizer matched a satisfiable query it
+/// matches it identically on the re-run, and the checker whose entire job is to
+/// catch a wrong producer agrees with it instead. This family's certificate is
+/// unusual in that it carries everything needed to avoid that — the function,
+/// the claimed domain cardinality, and the applications — so the pigeonhole
+/// argument can be re-derived rather than re-searched:
+///
+/// 1. every listed application is a direct application of `cert.function`;
+/// 2. every unordered pair of listed applications is asserted disequal by a
+///    top-level conjunct of the query (either orientation);
+/// 3. `cert.domain_size` is the cardinality of `cert.function`'s argument tuple
+///    domain, recomputed from its parameter sorts; and
+/// 4. there are strictly more applications than that domain has points.
+///
+/// Together: `n` pairwise-distinct values of `cert.function` require `n` distinct
+/// argument tuples, and the domain has fewer than `n`. Duplicated entries in
+/// `applications` are deliberately not rejected — a repeated term forces
+/// `¬(t = t)` to be an asserted conjunct at step 2, which is itself
+/// unsatisfiable, so the conclusion holds either way and a uniqueness guard here
+/// could not be exercised by any satisfiable query.
+#[must_use]
+pub fn certificate_is_finite_domain_pigeonhole(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &FiniteDomainPigeonholeCertificate,
+) -> bool {
+    // GUARD 1 — every application is an application of the NAMED function. An
+    // application of some other symbol is not constrained by this function's
+    // domain at all, so admitting one lets `n` applications over a domain of
+    // `n - 1` points be assembled out of two functions.
+    if cert.applications.len() < 2 {
+        return false;
+    }
+    for &app in &cert.applications {
+        match direct_application(arena, app) {
+            Some((func, _)) if func == cert.function => {}
+            _ => return false,
+        }
+    }
+
+    // GUARD 2 — every pair really is asserted disequal BY THE QUERY. Without
+    // this the certificate asserts its own premises.
+    let mut conjuncts = Vec::new();
+    for &assertion in assertions {
+        collect_top_conjuncts(arena, assertion, &mut conjuncts);
+    }
+    let mut asserted_diseqs: BTreeSet<(TermId, TermId)> = BTreeSet::new();
+    for &conjunct in &conjuncts {
+        if let Some((lhs, rhs)) = match_disequality(arena, conjunct) {
+            asserted_diseqs.insert(ordered_pair(lhs, rhs));
+        }
+    }
+    if !pairwise_disequal(&cert.applications, &asserted_diseqs) {
+        return false;
+    }
+
+    // GUARD 3 — the claimed domain cardinality is recomputed from the function's
+    // parameter sorts, never read from the certificate. A certificate that
+    // understates its own domain makes any number of applications look
+    // over-subscribed.
+    let (_, params, _) = arena.function(cert.function);
+    let Some(domain_size) = finite_tuple_cardinality(params) else {
+        return false;
+    };
+    if domain_size != cert.domain_size {
+        return false;
+    }
+
+    // GUARD 4 — the pigeonhole inequality itself, STRICT. `n` applications over
+    // `n` domain points is satisfiable. Read against the CERTIFICATE's own
+    // number, so that guard 3 above is what binds that number to reality; using
+    // the recomputed one here would make guard 3 unreachable and unkillable.
+    cert.applications.len() as u128 > cert.domain_size
+}
+
 /// Returns an exhaustive finite-Boolean-UF certificate for tiny formulas.
 #[must_use]
 pub fn bool_uf_exhaustive_refutation(

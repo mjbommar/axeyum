@@ -55,6 +55,48 @@ pub fn nra_even_power_refutation(
     })
 }
 
+/// Decides — from the query and the certificate alone, **without asking
+/// [`nra_even_power_refutation`] anything** — whether this certificate's own
+/// claim holds.
+///
+/// The claim a [`NraEvenPowerRefutationCertificate`] makes is entirely local to
+/// the assertion it names: *this conjunct is a nonnegative sum of syntactic even
+/// powers plus a nonnegative constant, related to a negative right-hand side*.
+/// That is decidable by re-deriving the decomposition of `cert.assertion`, which
+/// is what this does. It deliberately does **not** search the other assertions:
+/// searching is the producer's job, and asking the producer to re-run its own
+/// search and comparing the answer for equality is a determinism check — a
+/// recognizer that matched a satisfiable query matches it identically on the
+/// re-run.
+///
+/// The recorded summary fields are re-derived rather than trusted, so a
+/// certificate whose numbers disagree with its own assertion is refused. Note
+/// what that half is and is not: it cannot be exercised by a *satisfiable*
+/// query, because if the shape re-derives at all the conjunct is genuinely
+/// unsatisfiable no matter what counts were recorded. It binds the published
+/// numbers (they appear in dominance artifacts and Lean modules), and the shape
+/// match beside it is what carries the soundness weight.
+///
+/// **Membership is NOT checked here** — the caller must separately establish that
+/// `cert.assertion` is a top-level conjunct of the query. Without that, a
+/// certificate can name a perfectly valid refutation of a conjunct the query
+/// never asserts, and "¬(something impossible)" would then "refute" a
+/// satisfiable query.
+#[must_use]
+pub fn certificate_refutes_its_assertion(
+    arena: &TermArena,
+    cert: &NraEvenPowerRefutationCertificate,
+) -> bool {
+    let Some(sum) = match_even_power_lt_zero(arena, cert.assertion)
+        .or_else(|| match_even_power_eq_negative(arena, cert.assertion))
+    else {
+        return false;
+    };
+    sum.even_power_terms == cert.even_power_terms
+        && sum.max_even_exponent == cert.max_even_exponent
+        && sum.constant == cert.constant
+}
+
 fn match_even_power_lt_zero(arena: &TermArena, assertion: TermId) -> Option<NonnegativeSum> {
     let TermNode::App {
         op: Op::RealLt,
