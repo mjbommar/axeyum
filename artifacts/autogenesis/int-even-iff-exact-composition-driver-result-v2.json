@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-iff-exact-composition-driver-result",
+  "state": "driver-builds-clippy-clean-before-stream-access",
+  "plan": "artifacts/autogenesis/int-even-iff-exact-composition-plan-v2.json",
+  "driver": "crates/axeyum-lean-import/examples/int_even_iff_exact_composition.rs",
+  "focused_build": {
+    "command": "cargo clippy -p axeyum-lean-import --example int_even_iff_exact_composition -- -D warnings",
+    "exit": 0
+  },
+  "execution": {
+    "input_stream_reads": 0,
+    "target_submissions": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0
+  },
+  "credit": "driver assurance only",
+  "next_boundary": "Run exactly one invocation against both hash-bound inputs and fail-if-present output."
+}

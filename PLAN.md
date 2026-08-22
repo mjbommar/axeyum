@@ -239,6 +239,8 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Exact direction driver passes focused Clippy with both proof streams unread; one fail-if-present composition remains |
 | 2026-08-21 | (pending) | Both exact integer evenness directions specialize, replay, and survive two fresh imports with empty footprints |
 | 2026-08-21 | (pending) | Exact-name clean `Int.even_iff` reconstruction is frozen over the two closed directions with mandatory target absence before driver code |
+| 2026-08-21 | (pending) | Exact-Iff driver V1 stops before stream access on Clippy's primitive stable sort; V2 freezes only `sort_unstable` |
+| 2026-08-21 | (pending) | Exact-Iff driver V2 passes focused Clippy with both streams unread; one exact-name invocation remains |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

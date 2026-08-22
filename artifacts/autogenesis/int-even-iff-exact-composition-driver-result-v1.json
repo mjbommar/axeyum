@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-iff-exact-composition-driver-result",
+  "state": "focused-build-failed-before-stream-access",
+  "plan": "artifacts/autogenesis/int-even-iff-exact-composition-plan-v1.json",
+  "driver": "crates/axeyum-lean-import/examples/int_even_iff_exact_composition.rs",
+  "diagnostic": "Clippy stable_sort_primitive requires sort_unstable for the three-element expected dependency array",
+  "execution": {
+    "input_stream_reads": 0,
+    "target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "credit": "none",
+  "next_boundary": "Preregister replacement of only sort() with sort_unstable() before rebuilding."
+}
