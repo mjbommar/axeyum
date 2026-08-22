@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-decision-free-join-result",
+  "state": "residual-and-negative-adapters-accepted-power-adapters-rejected",
+  "plan": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-plan-v2.json",
+  "evidence": {
+    "residual": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-v1/residual-v2-1.ndjson", "bytes": 417280, "sha256": "16e90aa1e7bd22f81050add555523628171d89382a96e5f047fbd4e833d0b995", "exports_byte_identical": true, "root": "Axeyum.Autogenesis.intFibNegNatCastDecisionFreeResidualV1", "declaration_sha256": "da09608856f0763f3b8b1a4a015bd8d6e5044fa64793b9ef6a1ba96bbb35edd3", "axiom_footprint": []},
+    "adapters": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-v1/adapters-v2-1.ndjson", "bytes": 1422943, "sha256": "9b5d199e973e86e79b204c6471ff3758a0e6c35e8d2fa1ce2d43b00d86e7b9a3", "exports_byte_identical": true}
+  },
+  "accepted_roots": [
+    {"name": "Axeyum.Autogenesis.intFibNegativeEvenAdapterV1", "declaration_sha256": "75b81f571fdcee00b05aa8e555475fb76edac24b5d13e4cb67509affcfe4fcb2", "axiom_footprint": []},
+    {"name": "Axeyum.Autogenesis.intFibNegativeOddAdapterV1", "declaration_sha256": "2d652002af90d6fdb69da662872ba7dee4058bffe6692fa796a6f6682cd16c27", "axiom_footprint": []}
+  ],
+  "rejected_roots": [
+    {"name": "Axeyum.Autogenesis.intFibPowerEvenAdapterV1", "declaration_sha256": "5617fbfa7fbeb790a977cb87b4f9a4254f15b9d9dcb8609367b9bf8df9fdc11b", "axiom_footprint": ["propext"]},
+    {"name": "Axeyum.Autogenesis.intFibPowerOddAdapterV1", "declaration_sha256": "5189193f3a8c8d136646ab2b1d4088e75baead097bb48df51240d89129187b92", "axiom_footprint": ["propext"]}
+  ],
+  "finding": "The combined adapter module imports the Fibonacci presentation's broader environment; its negative adapters remain clean, while power notation resolves through contaminated official Int monoid carriers. The same power contract was clean in the Basic-only parity bridge.",
+  "authority": {"qualified_residuals": 1, "qualified_negative_adapters": 2, "qualified_power_adapters": 0, "exact_target_submissions": 0, "ledger_writes": 0},
+  "limitations": "The combined adapter stream is retained as evidence but its power roots receive no support credit."
+}
