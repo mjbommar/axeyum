@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-constructor-lift-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {
+    "path": "artifacts/autogenesis/nat-even-arithmetic-composition-result-v1.json",
+    "required_state": "two-closed-targets-specialized-exported-and-reimported-empty-footprint"
+  },
+  "targets": [
+    {
+      "name": "Axeyum.Autogenesis.intDoubleModTwoZeroLiftV1",
+      "statement": "forall m : Int, (m + m) % 2 = 0"
+    },
+    {
+      "name": "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroLiftV1",
+      "statement": "forall n : Int, n % 2 = 0 -> exists m : Int, n = m + m"
+    }
+  ],
+  "explicit_contracts": [
+    "Axeyum.Autogenesis.natDoubleModTwoZeroClosedV1",
+    "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroClosedV1",
+    "Axeyum.IntFib.modCases",
+    "Axeyum.IntFib.succOne",
+    "Axeyum.IntFib.succZero"
+  ],
+  "proof_route": {
+    "nonnegative": "reduce Int.ofNat addition and emod definitionally, then transport the corresponding closed Nat theorem through Int.ofNat",
+    "negative_double": "reduce negSucc addition/emod definitionally; natDouble plus succOne makes the remainder branch reflexive",
+    "negative_half": "use modCases to reject index remainder zero from the given Int remainder, use succZero and natHalf on index+1, then choose the negated natural witness and apply clean neg_add_rev"
+  },
+  "source": "artifacts/autogenesis/sources/int-even-constructor-lift-v1.lean",
+  "environment": {
+    "host": "s5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "import": "Mathlib.Data.Int.Basic"
+  },
+  "budget": {
+    "source_constructions": 1,
+    "compilations": 1,
+    "exports": 0,
+    "retries": 0,
+    "exact_int_direction_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": "Both parameterized constructor lifts compile under the narrow import without simp, omega, generic Int division decomposition, official Int.even_iff, or decision machinery.",
+  "stop_rule": "Any elaboration failure stops after the one compilation and records the exact missing definitional or theorem boundary before another source version.",
+  "output": "artifacts/autogenesis/int-even-constructor-lift-result-v1.json",
+  "limitations": "Compilation alone gives no footprint or closed integer theorem credit; export, audit, specialization, direction composition, and ledger mutation remain separate."
+}

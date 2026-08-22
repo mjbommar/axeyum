@@ -222,6 +222,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Closure driver V1 stops before stream access at Clippy's line threshold; V2 freezes only one function-scoped allowance before rebuilding |
 | 2026-08-21 | (pending) | Closure driver V2 passes focused Clippy with every proof stream still unread; one fail-if-present invocation remains authorized |
 | 2026-08-21 | (pending) | Clean `modStepTwo` closes both natural parity residuals through replayed specialization; both targets survive two fresh imports empty-footprint |
+| 2026-08-21 | (pending) | Target-owned `Int.ofNat`/`Int.negSucc` lifts are frozen over the new Nat supports plus clean modulo cases/successor flips before source construction |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
