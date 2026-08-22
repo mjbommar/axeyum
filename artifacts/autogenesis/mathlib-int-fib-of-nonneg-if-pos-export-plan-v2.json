@@ -1,0 +1,15 @@
+{
+  "schema_version":1,
+  "kind":"axeyum-autogenesis-mathlib-int-fib-of-nonneg-if-pos-export-plan-v2",
+  "state":"preregistered-corrected-containing-module-before-second-export",
+  "predecessor":{"path":"artifacts/autogenesis/mathlib-int-fib-of-nonneg-if-pos-export-result-v1.json","sha256":"50c7f61030bf034b7b12de861efcca33b1ac4b11e36db1a80a0fd90f8226889b","required_state":"rejected-exporter-zero-exit-panic-root-absent"},
+  "target":{"fact_id":"F:ml430-int-fib-of-nonneg-438018c5","fact_path":"artifacts/facts/F-ml430-int-fib-of-nonneg-438018c5.json","fact_sha256":"312711e8dc1d54a17b9efdad9c61ab46ca9ef77747acc80a0c24d5f6821d6d6e","required_status":"open"},
+  "fixed_environment":{"ssh_alias":"s5","hostname":"server5","mathlib_checkout":"/home/mjbommar/lean-import-scale/mathlib4","mathlib_commit":"c5ea00351c28e24afc9f0f84379aa41082b1188f","lean_version":"4.30.0","lean_githash":"d024af099ca4bf2c86f649261ebf59565dc8c622","lake_binary":"/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lake","lean4export_binary":"/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export","lean4export_binary_sha256":"8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"},
+  "environment_probe":{"command":"import Mathlib.Data.Int.Fib.Basic; #check if_pos","result":"if_pos elaborates with the expected conditional-equality type","proof_stream_reads":0},
+  "support":{"module":"Mathlib.Data.Int.Fib.Basic","ordered_roots":["if_pos"],"forbidden_roots":["Int.fib_of_nonneg"],"root_selection_required":true},
+  "command":{"shape":"cd <mathlib_checkout> && <lake> env <lean4export> Mathlib.Data.Int.Fib.Basic -- if_pos","output":"/nas3/data/axeyum/autogenesis/reference-packs/if-pos-mathlib-basic-v1/root.ndjson","stderr_must_be_empty":true,"output_must_not_preexist":true,"minimum_bytes":174},
+  "execution":{"max_exporter_invocations":1,"max_root_stream_writes":1,"max_importer_runs":2,"max_retries":0,"rendered_proof_terms":0,"rendered_theorem_types":0,"rendered_theorem_values":0,"target_theorem_submissions":0,"ledger_writes":0},
+  "acceptance":{"root_name":"if_pos","axiom_footprint":[],"two_fresh_imports":true,"observations_identical":true,"target_root_absent":true,"sealed_output":true},
+  "limitations":"Only if_pos may be exported and audited. The containing module does not authorize reading, importing, or using Int.fib_of_nonneg.",
+  "next_on_accept":"preregister one exact direct kernel construction over target-owned Int.fib plus if_pos"
+}
