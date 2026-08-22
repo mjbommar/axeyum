@@ -241,9 +241,7 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
     )?;
 
     let proof = app_const(kernel, reverse, &[], &[fib_m, fib_n, both_transport]);
-    let proposition = kernel
-        .infer(proof)
-        .map_err(|error| format!("completed target proof inference failed: {error:?}"))?;
+    let proposition = dvd(kernel, int_ty, "Int.instDvd", fib_m, fib_n)?;
     let hypothesis_binder = nested_name(kernel, &["h"]);
     let proposition_with_h = kernel.pi(
         hypothesis_binder,

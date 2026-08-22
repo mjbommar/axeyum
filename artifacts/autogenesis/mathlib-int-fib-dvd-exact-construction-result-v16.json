@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-construction-result-v16",
+  "state": "direct-target-proposition-builds-clippy-clean",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-construction-plan-v16.json",
+    "sha256": "503370a8659702310a9df785890f611ff5c96c310206842c97b82de26b5dc078"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "sha256": "2cbaf9137fe0201ec630ddab8c7ed059e74edf343565400f29959c7ceeae755c",
+    "open_result_inference_removed": true,
+    "direct_target_proposition_present": true
+  },
+  "execution": {
+    "driver_builds": 1,
+    "focused_clippy_exit_status": 0,
+    "complete_invocations": 0,
+    "input_stream_reads": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {"target_credit": 0, "ledger_writes": 0},
+  "next_boundary": "authorize one new complete execution over the unchanged four capsules and proof term"
+}
