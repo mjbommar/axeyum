@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-even-arithmetic-export-plan",
+  "state": "preregistered-after-root-mapping-failure",
+  "predecessor": {
+    "path": "artifacts/autogenesis/nat-even-arithmetic-export-result-v2.json",
+    "required_state": "failed-closed-before-module-or-export"
+  },
+  "unchanged": {
+    "source_sha256": "f9e4b52ad28f861790b91c60ca91890e71620d7b9df0969f56d78c6386bbdc76",
+    "module": "AxeyumNatEvenArithmeticV1",
+    "roots": [
+      "Axeyum.Autogenesis.natDoubleModTwoZeroV1",
+      "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroV1"
+    ],
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0"
+  },
+  "sole_command_change": {
+    "before": "lake env lean -o <olean> <shared-source>",
+    "after": "lake env lean --root=<shared-pack> -o <olean> <shared-source>",
+    "basis": "Lean 4.30 --help defines --root as the package root from which the input module name is calculated"
+  },
+  "operation": {
+    "shared_pack": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-v1",
+    "source": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-v1/AxeyumNatEvenArithmeticV1.lean",
+    "olean": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-v1/AxeyumNatEvenArithmeticV1.olean",
+    "outputs": ["roots-1.ndjson", "roots-2.ndjson"],
+    "all_outputs_must_be_absent_before_execution": true
+  },
+  "budget": {
+    "module_builds": 1,
+    "exports": 2,
+    "retries": 0,
+    "root_footprint_audits": 2,
+    "proof_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "build_exit": 0,
+    "both_export_exits": 0,
+    "exports_byte_identical": true,
+    "both_root_footprints": []
+  },
+  "stop_rule": "Any failure, mismatch, nonempty footprint, or preexisting output stops without retry or downstream composition.",
+  "output": "artifacts/autogenesis/nat-even-arithmetic-export-result-v3.json"
+}
