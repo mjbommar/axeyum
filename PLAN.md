@@ -118,6 +118,7 @@ now. Nothing was deleted.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
+| 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Durable V5 paths identify official `Int.fib` through its Even decider as the common carrier of all eight assumptions; V6 freezes a fully function-abstracted, decision-free eight-parameter residual before source construction |
 | 2026-08-22 | (pending) | V6 stops before export because each universal natAbs rewrite leaves its second occurrence; V7 freezes only three explicit repeated rewrite sequences with the abstraction boundary unchanged |
 | 2026-08-22 | (pending) | V7 exports twice as the same 351,201-byte residual, imports twice with zero axioms, and retains only clean Eq.symm/congrArg; exact eight-parameter specialization remains separately unauthorized |
@@ -1911,9 +1912,9 @@ sha `35d3fd6b1`): 169/169 audited decided, **85 certified, 85 checked, 85
 Lean-checked (81 reasoning / 4 attestation)**, 0 mismatches, 0 audit errors —
 per-instance identical to the committed artifact.
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, and now `Nat.fib_pos` are durably proved with empty kernel footprints. `Nat.fib_pos` survived an exit-75 intent fault unchanged, recovered with exactly one ledger write, passed its registered checker, and produced the preregistered empty readiness delta.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, and now `Nat.fib_eq_zero` are durably proved with empty kernel footprints. `Nat.fib_eq_zero` survived an exit-75 intent fault unchanged, recovered with exactly one ledger write, passed its registered checker, and produced the preregistered empty readiness delta.
 
-**Next:** commit the exact checker return-shape correction, then derive frontier, execution, and transaction anew from that clean commit before any intent or ledger write.
+**Next:** replay `Nat.fib_eq_zero` once from the historical open state in an isolated worktree, then construct exact `Int.fib_eq_zero` from the admitted natural characterization and existing integer Fibonacci bridge.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
