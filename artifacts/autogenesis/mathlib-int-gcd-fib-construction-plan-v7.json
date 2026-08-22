@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v7",
+  "state": "preregistered-before-explicit-second-natabs-rewrite",
+  "parent_result": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v6.json",
+    "sha256": "fca02cd25c0b510f096f706eb5c96544797d83d85295df4a0bd0530879a9e326"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-natabs-residual-v2.lean",
+    "before_sha256": "b443b4b8ad49b43d1bc4a096daceb8b5d161ed38777a9f565d16ff8858c6e543",
+    "only_change": "repeat natAbsOfNat in the positive branch; repeat natAbsNeg and natAbsOfNat in the negative-even branch; order natAbsOfNat then natAbsNeg then natAbsOfNat in the negative-odd branch"
+  },
+  "unchanged": {
+    "theorem_name": "Axeyum.Autogenesis.intFibNatAbsResidualV2",
+    "explicit_parameter_count": 8,
+    "forbidden_constants": [
+      "Int.fib",
+      "Int.instDecidablePredEven",
+      "Int.even_iff",
+      "Classical.propDecidable"
+    ],
+    "proof_architecture": "function-abstracted and proposition-decision-free"
+  },
+  "execution": {
+    "max_lean_compiler_invocations": 1,
+    "max_exporter_invocations": 2,
+    "max_importer_runs": 2,
+    "max_retries": 0,
+    "specialization_submissions": 0,
+    "int_gcd_fib_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "exports_byte_identical": true,
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [],
+    "forbidden_constants_absent_from_root_closure": true,
+    "fresh_imports": 2
+  },
+  "next_on_accept": "freeze exact specialization over the sealed presentation and natAbs roots"
+}

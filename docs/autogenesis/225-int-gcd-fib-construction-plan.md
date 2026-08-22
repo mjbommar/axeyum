@@ -89,3 +89,8 @@ its five direct equality helpers; it accidentally retained the broad official
 function definition. V6 therefore abstracts both Fibonacci functions and uses
 only explicit positive, negative-even, negative-odd, modulo-case, and `natAbs`
 contracts. It contains no proposition-level `Even` conditional at all.
+
+The single V6 compile stopped before export on three residual goals: each
+universal `natAbs` rewrite consumed its first occurrence and left the second
+under `natFib`. V7 changes only those rewrite lists. It does not reintroduce
+`Int.fib`, Even decisions, automation, specialization, or ledger authority.

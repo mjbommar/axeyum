@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v6",
+  "state": "compiler-declined-before-export-at-second-natabs-occurrences",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v6.json",
+    "sha256": "9067012410261a492e1a187dffeaa6849936a4240e5e83c06e8c352e5b0f606f"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-natabs-residual-v2.lean",
+    "sha256": "b443b4b8ad49b43d1bc4a096daceb8b5d161ed38777a9f565d16ff8858c6e543"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_accepted": false,
+    "exporter_invocations": 0,
+    "proof_bearing_stream_reads": 0,
+    "specialization_submissions": 0,
+    "int_gcd_fib_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": {
+    "ofNat_residual": "natFib n = natFib (Int.ofNat n).natAbs",
+    "negSucc_even_residual": "natFib n = natFib (-Int.ofNat n).natAbs",
+    "negSucc_odd_residual": "natFib n = natFib (Int.ofNat n).natAbs",
+    "cause": "Each rw use of a universal natAbs contract rewrote its first matching occurrence only; the second occurrence under natFib remained.",
+    "forbidden_constant_failure_observed": false
+  },
+  "cleanup": {
+    "remote_source_removed": true,
+    "remote_olean_absent": true,
+    "empty_pack_removed": true
+  },
+  "authority": {
+    "diagnostic_credit": 1,
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  }
+}
