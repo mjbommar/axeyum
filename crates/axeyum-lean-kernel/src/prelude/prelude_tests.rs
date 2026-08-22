@@ -266,6 +266,16 @@ fn prelude_admits_all_declarations() {
         p.well_founded_fix,
         p.well_founded_fix_eq,
         p.not,
+        p.and_left,
+        p.and_right,
+        p.or_elim,
+        p.or_resolve_left,
+        p.or_resolve_right,
+        p.iff_mp,
+        p.iff_mpr,
+        p.congr_fun_prime,
+        p.absurd,
+        p.mt,
     ] {
         assert!(
             k.environment().contains(name),
@@ -1990,5 +2000,349 @@ fn recursive_family_size_iota_reduces() {
     assert!(
         k.def_eq(s_chx, succ_s_x),
         "size (cons h x) = succ (size x) for opaque x"
+    );
+}
+
+/// **`And.left`/`And.right`**: `And.left A B (And.intro A B ha hb)` ι-reduces
+/// to exactly `ha` (not `hb`), and symmetrically for `And.right` — a stronger
+/// check than an inferred-type comparison, since it confirms the projections
+/// are not swapped.
+#[test]
+fn and_left_and_right_project_the_correct_field() {
+    let mut f = fixture();
+    let a = f.a_const();
+    let b = f.b_const();
+    let ha = f.ha_const();
+    let hb = f.hb_const();
+
+    let intro = f.k.const_(f.p.and_intro, vec![]);
+    let and_ab_proof = apply_all(&mut f.k, intro, &[a, b, ha, hb]);
+
+    let and_left = f.k.const_(f.p.and_left, vec![]);
+    let left = apply_all(&mut f.k, and_left, &[a, b, and_ab_proof]);
+    assert!(
+        f.k.def_eq(left, ha),
+        "And.left A B (And.intro A B ha hb) = ha"
+    );
+
+    let and_right = f.k.const_(f.p.and_right, vec![]);
+    let right = apply_all(&mut f.k, and_right, &[a, b, and_ab_proof]);
+    assert!(
+        f.k.def_eq(right, hb),
+        "And.right A B (And.intro A B ha hb) = hb"
+    );
+}
+
+/// **`Or.elim`**: on `Or.inl A B ha` it ι-reduces to `f ha`; on
+/// `Or.inr A B hb` it ι-reduces to `g hb` — confirming the two branches are
+/// wired to the matching case, not swapped.
+#[test]
+fn or_elim_selects_the_correct_branch() {
+    let mut f = fixture();
+    let anon = f.k.anon();
+    let a = f.a_const();
+    let b = f.b_const();
+    let c = f.c_const();
+
+    // f : A → C, g : B → C  (axioms).
+    let ac = f.k.pi(anon, a, c, BinderInfo::Default);
+    let f_name = f.k.name_str(anon, "f");
+    f.k.add_declaration(Declaration::Axiom {
+        name: f_name,
+        uparams: vec![],
+        ty: ac,
+    })
+    .unwrap();
+    let bc = f.k.pi(anon, b, c, BinderInfo::Default);
+    let g_name = f.k.name_str(anon, "g");
+    f.k.add_declaration(Declaration::Axiom {
+        name: g_name,
+        uparams: vec![],
+        ty: bc,
+    })
+    .unwrap();
+    let f_const = f.k.const_(f_name, vec![]);
+    let g_const = f.k.const_(g_name, vec![]);
+
+    let or_elim = f.k.const_(f.p.or_elim, vec![]);
+
+    // Or.elim A B C (Or.inl A B ha) f g = f ha.
+    let ha = f.ha_const();
+    let or_inl = f.k.const_(f.p.or_inl, vec![]);
+    let or_ab_left = apply_all(&mut f.k, or_inl, &[a, b, ha]);
+    let result_left = apply_all(&mut f.k, or_elim, &[a, b, c, or_ab_left, f_const, g_const]);
+    let expected_left = f.k.app(f_const, ha);
+    assert!(
+        f.k.def_eq(result_left, expected_left),
+        "Or.elim on Or.inl reduces to f ha"
+    );
+
+    // Or.elim A B C (Or.inr A B hb) f g = g hb.
+    let hb = f.hb_const();
+    let or_inr = f.k.const_(f.p.or_inr, vec![]);
+    let or_ab_right = apply_all(&mut f.k, or_inr, &[a, b, hb]);
+    let result_right = apply_all(&mut f.k, or_elim, &[a, b, c, or_ab_right, f_const, g_const]);
+    let expected_right = f.k.app(g_const, hb);
+    assert!(
+        f.k.def_eq(result_right, expected_right),
+        "Or.elim on Or.inr reduces to g hb"
+    );
+}
+
+/// **`Or.resolve_left`/`Or.resolve_right`**: on the surviving disjunct they
+/// ι-reduce to exactly that proof (no dependency on the opaque refutation);
+/// on the refuted disjunct the refutation is genuinely applied, and the
+/// result is still well-typed (stuck, since the refutation is an opaque
+/// axiom, but not ill-typed).
+#[test]
+fn or_resolve_left_and_right_pick_the_surviving_branch() {
+    let mut f = fixture();
+    let anon = f.k.anon();
+    let a = f.a_const();
+    let b = f.b_const();
+    let ha = f.ha_const();
+    let hb = f.hb_const();
+
+    // na : A → False, nb : B → False  (opaque refutations).
+    let false_const = f.k.const_(f.p.false_, vec![]);
+    let na_ty = f.k.pi(anon, a, false_const, BinderInfo::Default);
+    let na_name = f.k.name_str(anon, "na");
+    f.k.add_declaration(Declaration::Axiom {
+        name: na_name,
+        uparams: vec![],
+        ty: na_ty,
+    })
+    .unwrap();
+    let nb_ty = f.k.pi(anon, b, false_const, BinderInfo::Default);
+    let nb_name = f.k.name_str(anon, "nb");
+    f.k.add_declaration(Declaration::Axiom {
+        name: nb_name,
+        uparams: vec![],
+        ty: nb_ty,
+    })
+    .unwrap();
+    let na = f.k.const_(na_name, vec![]);
+    let nb = f.k.const_(nb_name, vec![]);
+
+    let or_inl = f.k.const_(f.p.or_inl, vec![]);
+    let or_ab_left = apply_all(&mut f.k, or_inl, &[a, b, ha]);
+    let or_inr = f.k.const_(f.p.or_inr, vec![]);
+    let or_ab_right = apply_all(&mut f.k, or_inr, &[a, b, hb]);
+
+    let or_resolve_left = f.k.const_(f.p.or_resolve_left, vec![]);
+    let or_resolve_right = f.k.const_(f.p.or_resolve_right, vec![]);
+
+    // Or.resolve_left on the surviving Or.inr reduces to hb.
+    let result = apply_all(&mut f.k, or_resolve_left, &[a, b, or_ab_right, na]);
+    assert!(
+        f.k.def_eq(result, hb),
+        "Or.resolve_left A B (Or.inr ... hb) na = hb"
+    );
+    // Or.resolve_left on the refuted Or.inl still checks, at type B.
+    let result2 = apply_all(&mut f.k, or_resolve_left, &[a, b, or_ab_left, na]);
+    let inferred2 = f.k.infer(result2).unwrap();
+    assert!(
+        f.k.def_eq(inferred2, b),
+        "Or.resolve_left A B (Or.inl ... ha) na : B"
+    );
+
+    // Or.resolve_right on the surviving Or.inl reduces to ha.
+    let result3 = apply_all(&mut f.k, or_resolve_right, &[a, b, or_ab_left, nb]);
+    assert!(
+        f.k.def_eq(result3, ha),
+        "Or.resolve_right A B (Or.inl ... ha) nb = ha"
+    );
+    // Or.resolve_right on the refuted Or.inr still checks, at type A.
+    let result4 = apply_all(&mut f.k, or_resolve_right, &[a, b, or_ab_right, nb]);
+    let inferred4 = f.k.infer(result4).unwrap();
+    assert!(
+        f.k.def_eq(inferred4, a),
+        "Or.resolve_right A B (Or.inr ... hb) nb : A"
+    );
+}
+
+/// **`Iff.mp`/`Iff.mpr`**: `Iff.mp A B (Iff.intro A B mp mpr)` ι-reduces to
+/// exactly `mp` (not `mpr`), and symmetrically for `Iff.mpr`.
+#[test]
+fn iff_mp_and_mpr_project_the_correct_direction() {
+    let mut f = fixture();
+    let anon = f.k.anon();
+    let a = f.a_const();
+    let b = f.b_const();
+
+    let ab = f.k.pi(anon, a, b, BinderInfo::Default);
+    let mp_name = f.k.name_str(anon, "mp_fn");
+    f.k.add_declaration(Declaration::Axiom {
+        name: mp_name,
+        uparams: vec![],
+        ty: ab,
+    })
+    .unwrap();
+    let ba = f.k.pi(anon, b, a, BinderInfo::Default);
+    let mpr_name = f.k.name_str(anon, "mpr_fn");
+    f.k.add_declaration(Declaration::Axiom {
+        name: mpr_name,
+        uparams: vec![],
+        ty: ba,
+    })
+    .unwrap();
+    let mp_fn = f.k.const_(mp_name, vec![]);
+    let mpr_fn = f.k.const_(mpr_name, vec![]);
+
+    let iff_intro = f.k.const_(f.p.iff_intro, vec![]);
+    let iff_ab_proof = apply_all(&mut f.k, iff_intro, &[a, b, mp_fn, mpr_fn]);
+
+    let iff_mp = f.k.const_(f.p.iff_mp, vec![]);
+    let mp_result = apply_all(&mut f.k, iff_mp, &[a, b, iff_ab_proof]);
+    assert!(
+        f.k.def_eq(mp_result, mp_fn),
+        "Iff.mp A B (Iff.intro A B mp mpr) = mp"
+    );
+
+    let iff_mpr = f.k.const_(f.p.iff_mpr, vec![]);
+    let mpr_result = apply_all(&mut f.k, iff_mpr, &[a, b, iff_ab_proof]);
+    assert!(
+        f.k.def_eq(mpr_result, mpr_fn),
+        "Iff.mpr A B (Iff.intro A B mp mpr) = mpr"
+    );
+
+    // The projected direction genuinely composes: Iff.mp ... ha = mp_fn ha.
+    let ha = f.ha_const();
+    let applied_mp = f.k.app(mp_result, ha);
+    let expected = f.k.app(mp_fn, ha);
+    assert!(
+        f.k.def_eq(applied_mp, expected),
+        "Iff.mp A B (Iff.intro A B mp mpr) ha = mp_fn ha"
+    );
+}
+
+/// **`` congrFun' ``**: transports a function equality along application at a
+/// point. Checked two ways: the general (opaque `h : Eq f g`) case infers the
+/// expected `Eq C (f a) (g a)`, and the reflexivity case
+/// `congrFun' (Eq.refl f) ha` genuinely ι-reduces to `Eq.refl C (f ha)`.
+#[test]
+fn congr_fun_prime_transports_along_function_equality() {
+    let mut f = fixture();
+    let anon = f.k.anon();
+    let a = f.a_const();
+    let c = f.c_const();
+    let ha = f.ha_const();
+    let zero = f.k.level_zero();
+
+    let ac = f.k.pi(anon, a, c, BinderInfo::Default);
+    let f_name = f.k.name_str(anon, "cf_f");
+    f.k.add_declaration(Declaration::Axiom {
+        name: f_name,
+        uparams: vec![],
+        ty: ac,
+    })
+    .unwrap();
+    let g_name = f.k.name_str(anon, "cf_g");
+    f.k.add_declaration(Declaration::Axiom {
+        name: g_name,
+        uparams: vec![],
+        ty: ac,
+    })
+    .unwrap();
+    let f_fn = f.k.const_(f_name, vec![]);
+    let g_fn = f.k.const_(g_name, vec![]);
+
+    let eq_const = f.k.const_(f.p.eq, vec![zero]);
+    let hyp_ty = apply_all(&mut f.k, eq_const, &[ac, f_fn, g_fn]);
+    let h_name = f.k.name_str(anon, "cf_h");
+    f.k.add_declaration(Declaration::Axiom {
+        name: h_name,
+        uparams: vec![],
+        ty: hyp_ty,
+    })
+    .unwrap();
+    let h = f.k.const_(h_name, vec![]);
+
+    let congr_fun_prime = f.k.const_(f.p.congr_fun_prime, vec![zero, zero]);
+    let applied = apply_all(&mut f.k, congr_fun_prime, &[a, c, f_fn, g_fn, h, ha]);
+
+    let f_ha = f.k.app(f_fn, ha);
+    let g_ha = f.k.app(g_fn, ha);
+    let eq_const2 = f.k.const_(f.p.eq, vec![zero]);
+    let expected = apply_all(&mut f.k, eq_const2, &[c, f_ha, g_ha]);
+    let inferred = f.k.infer(applied).unwrap();
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "congrFun' A C f g h ha : Eq C (f ha) (g ha)"
+    );
+
+    // Reflexivity case: congrFun' (Eq.refl f) ha reduces to Eq.refl (f ha).
+    let eq_refl_const = f.k.const_(f.p.eq_refl, vec![zero]);
+    let refl_f = apply_all(&mut f.k, eq_refl_const, &[ac, f_fn]);
+    let congr_fun_prime2 = f.k.const_(f.p.congr_fun_prime, vec![zero, zero]);
+    let applied_refl = apply_all(&mut f.k, congr_fun_prime2, &[a, c, f_fn, f_fn, refl_f, ha]);
+    let eq_refl_const2 = f.k.const_(f.p.eq_refl, vec![zero]);
+    let expected_refl = apply_all(&mut f.k, eq_refl_const2, &[c, f_ha]);
+    assert!(
+        f.k.def_eq(applied_refl, expected_refl),
+        "congrFun' A C f f (Eq.refl f) ha = Eq.refl C (f ha)"
+    );
+}
+
+/// **`absurd`/`mt`**: `absurd A C ha na : C` for any target `C`, and
+/// `mt A B f nb ha` genuinely applies both: it ι-reduces to `nb (f ha)`.
+#[test]
+fn absurd_and_mt_check() {
+    let mut f = fixture();
+    let anon = f.k.anon();
+    let a = f.a_const();
+    let b = f.b_const();
+    let c = f.c_const();
+    let ha = f.ha_const();
+    let hb = f.hb_const();
+
+    // na : A → False, for `absurd`.
+    let false_const = f.k.const_(f.p.false_, vec![]);
+    let na_ty = f.k.pi(anon, a, false_const, BinderInfo::Default);
+    let na_name = f.k.name_str(anon, "na");
+    f.k.add_declaration(Declaration::Axiom {
+        name: na_name,
+        uparams: vec![],
+        ty: na_ty,
+    })
+    .unwrap();
+    let na = f.k.const_(na_name, vec![]);
+
+    let zero = f.k.level_zero();
+    let absurd = f.k.const_(f.p.absurd, vec![zero]);
+    let result = apply_all(&mut f.k, absurd, &[a, c, ha, na]);
+    let inferred = f.k.infer(result).unwrap();
+    assert!(f.k.def_eq(inferred, c), "absurd A C ha na : C");
+
+    // nb : B → False, for `mt`.
+    let nb_ty = f.k.pi(anon, b, false_const, BinderInfo::Default);
+    let nb_name = f.k.name_str(anon, "nb");
+    f.k.add_declaration(Declaration::Axiom {
+        name: nb_name,
+        uparams: vec![],
+        ty: nb_ty,
+    })
+    .unwrap();
+    let nb = f.k.const_(nb_name, vec![]);
+
+    // const_b_fn := fun (_ : A) => hb : A → B.
+    let dummy_fv = 99_000u64;
+    let const_b_fn = lam_fvar(&mut f.k, dummy_fv, a, hb);
+
+    let mt = f.k.const_(f.p.mt, vec![]);
+    let mt_partial = apply_all(&mut f.k, mt, &[a, b, const_b_fn, nb]);
+    let inferred_mt = f.k.infer(mt_partial).unwrap();
+    let expected_mt_ty = f.k.pi(anon, a, false_const, BinderInfo::Default);
+    assert!(
+        f.k.def_eq(inferred_mt, expected_mt_ty),
+        "mt A B f nb : A → False"
+    );
+
+    // mt A B const_b_fn nb ha  ι-reduces to nb (const_b_fn ha) = nb hb.
+    let mt_applied = f.k.app(mt_partial, ha);
+    let expected_applied = f.k.app(nb, hb);
+    assert!(
+        f.k.def_eq(mt_applied, expected_applied),
+        "mt A B f nb ha = nb hb"
     );
 }

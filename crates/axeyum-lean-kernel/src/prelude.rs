@@ -21,12 +21,16 @@
 //! - **`True : Prop`** — one nullary constructor `True.intro : True`.
 //! - **`False : Prop`** — **no** constructors; its recursor `False.rec` is the
 //!   ex-falso eliminator.
-//! - **`And (a b : Prop) : Prop`** — `And.intro : a → b → And a b`.
+//! - **`And (a b : Prop) : Prop`** — `And.intro : a → b → And a b`, plus the
+//!   `And.rec`-derived projections **`And.left`**/**`And.right`**.
 //! - **`Or (a b : Prop) : Prop`** — `Or.inl : a → Or a b`,
-//!   `Or.inr : b → Or a b`.
-//! - **`Iff (a b : Prop) : Prop`** — `Iff.intro : (a → b) → (b → a) → Iff a b`.
+//!   `Or.inr : b → Or a b`, plus **`Or.elim`** and its two corollaries
+//!   **`Or.resolve_left`**/**`Or.resolve_right`**.
+//! - **`Iff (a b : Prop) : Prop`** — `Iff.intro : (a → b) → (b → a) → Iff a b`,
+//!   plus the `Iff.rec`-derived projections **`Iff.mp`**/**`Iff.mpr`**.
 //! - **`Eq.{u} {α : Sort u} (a : α) : α → Prop`** — `Eq.refl : Eq a a`
-//!   (the slice-7 indexed inductive).
+//!   (the slice-7 indexed inductive), plus **`Eq.symm`** and the
+//!   non-dependent function-congruence lemma **`` congrFun' ``**.
 //! - **`Exists.{u} (α : Sort u) (p : α → Prop) : Prop`** —
 //!   `Exists.intro : ∀ (w : α), p w → Exists α p` (the existential, a parametric
 //!   non-indexed inductive). Its generated recursor `Exists.rec` is the
@@ -39,11 +43,18 @@
 //!   **`WellFounded.fix`** supplies a universe-polymorphic fixpoint with a
 //!   checked **`WellFounded.fix_eq`** unfolding theorem.
 //! - **`Not (a : Prop) : Prop := a → False`** — a [`Declaration::Definition`],
-//!   not an inductive.
+//!   not an inductive, plus **`absurd`** (universe-polymorphic ex falso) and
+//!   **`mt`** (modus tollens).
 //!
 //! Every inductive's generated recursor (`True.rec`, `False.rec`, `And.rec`,
 //! `Or.rec`, `Iff.rec`, `Eq.rec`, `Exists.rec`) is registered too and is the
-//! eliminator used by the proof terms.
+//! eliminator used by the proof terms. The corollaries listed above
+//! (`And.left`/`And.right`, `Or.elim`/`Or.resolve_left`/`Or.resolve_right`,
+//! `Iff.mp`/`Iff.mpr`, `` congrFun' ``, `absurd`, `mt`) are all
+//! [`Declaration::Theorem`]s built directly from those recursors (or from
+//! plain function composition for `mt`) — none needs an axiom, and
+//! `Kernel::axiom_footprint` is empty for every one of them (see
+//! `prelude_tests`).
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use crate::env::{Declaration, ReducibilityHint};
@@ -79,6 +90,14 @@ pub struct LogicPrelude {
     pub and_intro: NameId,
     /// `And.rec` — the `And` eliminator.
     pub and_rec: NameId,
+    /// `And.left : Π (a b : Prop), And a b → a` — the first-field projection,
+    /// built directly from `And.rec` (motive := the constant `a`, minor :=
+    /// `fun ha hb => ha`).
+    pub and_left: NameId,
+    /// `And.right : Π (a b : Prop), And a b → b` — the second-field
+    /// projection, the same construction with motive `b` and minor
+    /// `fun ha hb => hb`.
+    pub and_right: NameId,
 
     /// `Or : Prop → Prop → Prop`.
     pub or: NameId,
@@ -88,6 +107,17 @@ pub struct LogicPrelude {
     pub or_inr: NameId,
     /// `Or.rec` — the `Or` case-analysis eliminator.
     pub or_rec: NameId,
+    /// `Or.elim : Π (a b c : Prop), Or a b → (a → c) → (b → c) → c` — built
+    /// directly from `Or.rec` with a constant motive `c` and the two supplied
+    /// arrows reused verbatim as the minor premises.
+    pub or_elim: NameId,
+    /// `Or.resolve_left : Π (a b : Prop), Or a b → (a → False) → b` — the
+    /// left branch discharged by `False.rec` against the supplied refutation
+    /// of `a`, the right branch returned as-is.
+    pub or_resolve_left: NameId,
+    /// `Or.resolve_right : Π (a b : Prop), Or a b → (b → False) → a` — the
+    /// mirror image of [`Self::or_resolve_left`].
+    pub or_resolve_right: NameId,
 
     /// `Iff : Prop → Prop → Prop`.
     pub iff: NameId,
@@ -95,6 +125,14 @@ pub struct LogicPrelude {
     pub iff_intro: NameId,
     /// `Iff.rec` — the `Iff` eliminator.
     pub iff_rec: NameId,
+    /// `Iff.mp : Π (a b : Prop), Iff a b → a → b` — the forward-direction
+    /// projection, built from `Iff.rec` with motive `a → b` and minor
+    /// `fun mp mpr => mp`.
+    pub iff_mp: NameId,
+    /// `Iff.mpr : Π (a b : Prop), Iff a b → b → a` — the backward-direction
+    /// projection, the same construction with motive `b → a` and minor
+    /// `fun mp mpr => mpr`.
+    pub iff_mpr: NameId,
 
     /// `Eq.{u} : ∀ {α : Sort u}, α → α → Prop`.
     pub eq: NameId,
@@ -110,6 +148,13 @@ pub struct LogicPrelude {
     /// applies uniformly to equalities between propositions, naturals, or
     /// anything else built on top.
     pub eq_symm: NameId,
+    /// `` congrFun' `` `.{u,v} : Π (α : Sort u) (β : Sort v) (f g : α → β),
+    /// Eq.{imax u v} (α → β) f g → Π (a : α), Eq.{v} β (f a) (g a)` — the
+    /// non-dependent function-congruence lemma, built directly from `Eq.rec`
+    /// the same way [`Self::eq_symm`] is: the varying side of the hypothesis
+    /// equality (`g'`) is transported into the motive `Eq β (f a) (g' a)`
+    /// against the trivial `Eq.refl β (f a)` at `g' := f`.
+    pub congr_fun_prime: NameId,
 
     /// `Exists.{u} : ∀ (α : Sort u), (α → Prop) → Prop`.
     pub exists_: NameId,
@@ -147,6 +192,17 @@ pub struct LogicPrelude {
 
     /// `Not : Prop → Prop` (the definition `fun a => a → False`).
     pub not: NameId,
+    /// `absurd.{v} : Π (a : Prop) (b : Sort v), a → (a → False) → b` — ex
+    /// falso from a proposition and its refutation, built directly from
+    /// `False.rec`; universe-polymorphic in the target `b` the same way
+    /// [`Self::eq_symm`] is polymorphic in its carrier.
+    pub absurd: NameId,
+    /// The universe parameter `v` of [`Self::absurd`] (the target sort).
+    pub absurd_vparam: NameId,
+    /// `mt : Π (a b : Prop), (a → b) → (b → False) → (a → False)` — modus
+    /// tollens, direct function composition (`fun ha => nb (f ha)`), no
+    /// recursor needed.
+    pub mt: NameId,
 
     /// `Bool : Type` (`Sort 1`) — the **computational** two-element type, a
     /// nullary enum `Bool.false | Bool.true`, in official Lean order. This is
@@ -316,6 +372,98 @@ pub(crate) fn build_logic_prelude_uncached(
         }
         let and_rec = kernel.name_str(and, "rec");
 
+        // --- And.left / And.right : Π (a b : Prop), And a b → a / b ---------
+        // Direct `And.rec` field projections: motive := the constant field
+        // (`a` or `b`), minor := the matching argument of `And.intro`. The
+        // same construction `int_prelude`'s private `and_left`/`and_right`
+        // helpers already use, promoted here to a genuine, reusable,
+        // axiom-free kernel theorem so it does not need re-deriving per
+        // prelude.
+        let and_left = kernel.name_str(and, "left");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_000;
+            let b_fvar = 23_001;
+            let h_fvar = 23_002;
+            let pair_fvar = 23_003;
+            let ha_fvar = 23_004;
+            let hb_fvar = 23_005;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let and_const = kernel.const_(and, vec![]);
+            let and_ab = apply_all(kernel, and_const, &[a, b]);
+
+            // type: Π (a b : Prop), And a b → a.
+            let with_h = kernel.pi(anon, and_ab, a, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, with_h, BinderInfo::Default);
+            let and_left_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b h => And.rec.{0} a b (fun _ => a) (fun ha hb => ha) h.
+            let motive = lam_fvar(kernel, pair_fvar, and_ab, a, BinderInfo::Default);
+            let minor = {
+                let ha = kernel.fvar(ha_fvar);
+                let inner = lam_fvar(kernel, hb_fvar, b, ha, BinderInfo::Default);
+                lam_fvar(kernel, ha_fvar, a, inner, BinderInfo::Default)
+            };
+            let zero = kernel.level_zero();
+            let and_rec_const = kernel.const_(and_rec, vec![zero]);
+            let h = kernel.fvar(h_fvar);
+            let applied = apply_all(kernel, and_rec_const, &[a, b, motive, minor, h]);
+
+            let with_h_v = lam_fvar(kernel, h_fvar, and_ab, applied, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_h_v, BinderInfo::Default);
+            let and_left_value = lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: and_left,
+                uparams: vec![],
+                ty: and_left_ty,
+                value: and_left_value,
+            })?;
+        }
+        let and_right = kernel.name_str(and, "right");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_100;
+            let b_fvar = 23_101;
+            let h_fvar = 23_102;
+            let pair_fvar = 23_103;
+            let ha_fvar = 23_104;
+            let hb_fvar = 23_105;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let and_const = kernel.const_(and, vec![]);
+            let and_ab = apply_all(kernel, and_const, &[a, b]);
+
+            // type: Π (a b : Prop), And a b → b.
+            let with_h = kernel.pi(anon, and_ab, b, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, with_h, BinderInfo::Default);
+            let and_right_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b h => And.rec.{0} a b (fun _ => b) (fun ha hb => hb) h.
+            let motive = lam_fvar(kernel, pair_fvar, and_ab, b, BinderInfo::Default);
+            let minor = {
+                let hb = kernel.fvar(hb_fvar);
+                let inner = lam_fvar(kernel, hb_fvar, b, hb, BinderInfo::Default);
+                lam_fvar(kernel, ha_fvar, a, inner, BinderInfo::Default)
+            };
+            let zero = kernel.level_zero();
+            let and_rec_const = kernel.const_(and_rec, vec![zero]);
+            let h = kernel.fvar(h_fvar);
+            let applied = apply_all(kernel, and_rec_const, &[a, b, motive, minor, h]);
+
+            let with_h_v = lam_fvar(kernel, h_fvar, and_ab, applied, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_h_v, BinderInfo::Default);
+            let and_right_value = lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: and_right,
+                uparams: vec![],
+                ty: and_right_ty,
+                value: and_right_value,
+            })?;
+        }
+
         // --- Or (a b : Prop) : Prop, Or.inl : a → Or a b, Or.inr : b → Or a b -
         let or = kernel.name_str(anon, "Or");
         let or_inl = kernel.name_str(or, "inl");
@@ -359,6 +507,212 @@ pub(crate) fn build_logic_prelude_uncached(
         }
         let or_rec = kernel.name_str(or, "rec");
 
+        // --- Or.elim : Π (a b c : Prop), Or a b → (a → c) → (b → c) → c -----
+        // `Or.rec` with a constant motive `c`; since the motive is constant,
+        // the minor premises are exactly the two supplied arrows themselves
+        // (no wrapping needed). `Or.rec` has no elimination-universe
+        // parameter (a two-constructor `Prop` eliminates only into `Prop`,
+        // confirmed by `or_case_analysis_checks` in the prelude tests).
+        let or_elim = kernel.name_str(or, "elim");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_200;
+            let b_fvar = 23_201;
+            let c_fvar = 23_202;
+            let h_fvar = 23_203;
+            let ha_fvar = 23_204;
+            let hb_fvar = 23_205;
+            let dummy_fvar = 23_206;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let c = kernel.fvar(c_fvar);
+            let or_const = kernel.const_(or, vec![]);
+            let or_ab = apply_all(kernel, or_const, &[a, b]);
+            let ac = kernel.pi(anon, a, c, BinderInfo::Default); // a → c
+            let bc = kernel.pi(anon, b, c, BinderInfo::Default); // b → c
+
+            // type: Π (a b c : Prop), Or a b → (a → c) → (b → c) → c.
+            let t_inner = kernel.pi(anon, bc, c, BinderInfo::Default);
+            let t_mid = kernel.pi(anon, ac, t_inner, BinderInfo::Default);
+            let t_outer = kernel.pi(anon, or_ab, t_mid, BinderInfo::Default);
+            let with_c = pi_fvar(kernel, c_fvar, prop, t_outer, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, with_c, BinderInfo::Default);
+            let or_elim_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b c h ha hb => Or.rec a b (fun _ => c) ha hb h.
+            let motive = lam_fvar(kernel, dummy_fvar, or_ab, c, BinderInfo::Default);
+            let or_rec_const = kernel.const_(or_rec, vec![]);
+            let ha = kernel.fvar(ha_fvar);
+            let hb = kernel.fvar(hb_fvar);
+            let h = kernel.fvar(h_fvar);
+            let applied = apply_all(kernel, or_rec_const, &[a, b, motive, ha, hb, h]);
+
+            let with_hb_v = lam_fvar(kernel, hb_fvar, bc, applied, BinderInfo::Default);
+            let with_ha_v = lam_fvar(kernel, ha_fvar, ac, with_hb_v, BinderInfo::Default);
+            let with_h_v = lam_fvar(kernel, h_fvar, or_ab, with_ha_v, BinderInfo::Default);
+            let with_c_v = lam_fvar(kernel, c_fvar, prop, with_h_v, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_c_v, BinderInfo::Default);
+            let or_elim_value = lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: or_elim,
+                uparams: vec![],
+                ty: or_elim_ty,
+                value: or_elim_value,
+            })?;
+        }
+
+        // --- Or.resolve_left / Or.resolve_right ------------------------------
+        // `Or.resolve_left : Π (a b : Prop), Or a b → (a → False) → b` and its
+        // mirror `Or.resolve_right`. The hypothesis is written as the plain
+        // arrow `a → False` rather than `Not a` applied (matching how
+        // `nat_prelude::order_extra` states its own `Not`-shaped lemmas): the
+        // two are definitionally equal since `Not` unfolds to exactly this
+        // arrow, and writing it directly avoids relying on delta-unfolding an
+        // applied `Not` during the recursor's minor-premise type check.
+        let or_resolve_left = kernel.name_str(or, "resolve_left");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_300;
+            let b_fvar = 23_301;
+            let h_fvar = 23_302;
+            let na_fvar = 23_303;
+            let ha_fvar = 23_304;
+            let hb_fvar = 23_305;
+            let dummy_fvar = 23_306;
+            let false_dummy_fvar = 23_307;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let or_const = kernel.const_(or, vec![]);
+            let or_ab = apply_all(kernel, or_const, &[a, b]);
+            let false_const = kernel.const_(false_, vec![]);
+            let na_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // a → False
+
+            // type: Π (a b : Prop), Or a b → (a → False) → b.
+            let t_inner = kernel.pi(anon, na_ty, b, BinderInfo::Default);
+            let t_outer = kernel.pi(anon, or_ab, t_inner, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, t_outer, BinderInfo::Default);
+            let or_resolve_left_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b h na =>
+            //   Or.rec a b (fun _ => b)
+            //     (fun ha => False.rec.{0} (fun _ => b) (na ha))
+            //     (fun hb => hb)
+            //     h.
+            let motive = lam_fvar(kernel, dummy_fvar, or_ab, b, BinderInfo::Default);
+            let na = kernel.fvar(na_fvar);
+            let minor_inl = {
+                let ha = kernel.fvar(ha_fvar);
+                let na_ha = kernel.app(na, ha);
+                let false_motive = lam_fvar(
+                    kernel,
+                    false_dummy_fvar,
+                    false_const,
+                    b,
+                    BinderInfo::Default,
+                );
+                let zero = kernel.level_zero();
+                let false_rec_const = kernel.const_(false_rec, vec![zero]);
+                let absurd_proof = apply_all(kernel, false_rec_const, &[false_motive, na_ha]);
+                lam_fvar(kernel, ha_fvar, a, absurd_proof, BinderInfo::Default)
+            };
+            let minor_inr = {
+                let hb = kernel.fvar(hb_fvar);
+                lam_fvar(kernel, hb_fvar, b, hb, BinderInfo::Default)
+            };
+            let or_rec_const = kernel.const_(or_rec, vec![]);
+            let h = kernel.fvar(h_fvar);
+            let applied = apply_all(
+                kernel,
+                or_rec_const,
+                &[a, b, motive, minor_inl, minor_inr, h],
+            );
+
+            let with_na_v = lam_fvar(kernel, na_fvar, na_ty, applied, BinderInfo::Default);
+            let with_h_v = lam_fvar(kernel, h_fvar, or_ab, with_na_v, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_h_v, BinderInfo::Default);
+            let or_resolve_left_value =
+                lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: or_resolve_left,
+                uparams: vec![],
+                ty: or_resolve_left_ty,
+                value: or_resolve_left_value,
+            })?;
+        }
+        let or_resolve_right = kernel.name_str(or, "resolve_right");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_400;
+            let b_fvar = 23_401;
+            let h_fvar = 23_402;
+            let nb_fvar = 23_403;
+            let ha_fvar = 23_404;
+            let hb_fvar = 23_405;
+            let dummy_fvar = 23_406;
+            let false_dummy_fvar = 23_407;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let or_const = kernel.const_(or, vec![]);
+            let or_ab = apply_all(kernel, or_const, &[a, b]);
+            let false_const = kernel.const_(false_, vec![]);
+            let nb_ty = kernel.pi(anon, b, false_const, BinderInfo::Default); // b → False
+
+            // type: Π (a b : Prop), Or a b → (b → False) → a.
+            let t_inner = kernel.pi(anon, nb_ty, a, BinderInfo::Default);
+            let t_outer = kernel.pi(anon, or_ab, t_inner, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, t_outer, BinderInfo::Default);
+            let or_resolve_right_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b h nb =>
+            //   Or.rec a b (fun _ => a)
+            //     (fun ha => ha)
+            //     (fun hb => False.rec.{0} (fun _ => a) (nb hb))
+            //     h.
+            let motive = lam_fvar(kernel, dummy_fvar, or_ab, a, BinderInfo::Default);
+            let nb = kernel.fvar(nb_fvar);
+            let minor_inl = {
+                let ha = kernel.fvar(ha_fvar);
+                lam_fvar(kernel, ha_fvar, a, ha, BinderInfo::Default)
+            };
+            let minor_inr = {
+                let hb = kernel.fvar(hb_fvar);
+                let nb_hb = kernel.app(nb, hb);
+                let false_motive = lam_fvar(
+                    kernel,
+                    false_dummy_fvar,
+                    false_const,
+                    a,
+                    BinderInfo::Default,
+                );
+                let zero = kernel.level_zero();
+                let false_rec_const = kernel.const_(false_rec, vec![zero]);
+                let absurd_proof = apply_all(kernel, false_rec_const, &[false_motive, nb_hb]);
+                lam_fvar(kernel, hb_fvar, b, absurd_proof, BinderInfo::Default)
+            };
+            let or_rec_const = kernel.const_(or_rec, vec![]);
+            let h = kernel.fvar(h_fvar);
+            let applied = apply_all(
+                kernel,
+                or_rec_const,
+                &[a, b, motive, minor_inl, minor_inr, h],
+            );
+
+            let with_nb_v = lam_fvar(kernel, nb_fvar, nb_ty, applied, BinderInfo::Default);
+            let with_h_v = lam_fvar(kernel, h_fvar, or_ab, with_nb_v, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_h_v, BinderInfo::Default);
+            let or_resolve_right_value =
+                lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: or_resolve_right,
+                uparams: vec![],
+                ty: or_resolve_right_ty,
+                value: or_resolve_right_value,
+            })?;
+        }
+
         // --- Iff (a b : Prop) : Prop, Iff.intro : (a → b) → (b → a) → Iff a b -
         let iff = kernel.name_str(anon, "Iff");
         let iff_intro = kernel.name_str(iff, "intro");
@@ -401,6 +755,102 @@ pub(crate) fn build_logic_prelude_uncached(
             kernel.add_inductive(iff, &[], 2, iff_ty, &[(iff_intro, intro_ty)])?;
         }
         let iff_rec = kernel.name_str(iff, "rec");
+
+        // --- Iff.mp / Iff.mpr : Π (a b : Prop), Iff a b → a → b / b → a -----
+        // `Iff` is a single-constructor `Prop` (like `And`), so `Iff.rec`
+        // admits the same constant-motive projection trick as
+        // `And.left`/`And.right`: motive := the arrow itself, minor := the
+        // matching field of `Iff.intro`. The result of applying `Iff.rec`
+        // already has the arrow type, so — exactly as with `And.left` — no
+        // extra binder for the hypothesis of type `a` (resp. `b`) is needed.
+        let iff_mp = kernel.name_str(iff, "mp");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_500;
+            let b_fvar = 23_501;
+            let h_fvar = 23_502;
+            let pair_fvar = 23_503;
+            let mp_fvar = 23_504;
+            let mpr_fvar = 23_505;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let iff_const = kernel.const_(iff, vec![]);
+            let iff_ab = apply_all(kernel, iff_const, &[a, b]);
+            let ab_arrow = kernel.pi(anon, a, b, BinderInfo::Default); // a → b
+            let ba_arrow = kernel.pi(anon, b, a, BinderInfo::Default); // b → a
+
+            // type: Π (a b : Prop), Iff a b → a → b.
+            let with_h = kernel.pi(anon, iff_ab, ab_arrow, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, with_h, BinderInfo::Default);
+            let iff_mp_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b h => Iff.rec.{0} a b (fun _ => a → b) (fun mp mpr => mp) h.
+            let motive = lam_fvar(kernel, pair_fvar, iff_ab, ab_arrow, BinderInfo::Default);
+            let minor = {
+                let mp = kernel.fvar(mp_fvar);
+                let inner = lam_fvar(kernel, mpr_fvar, ba_arrow, mp, BinderInfo::Default);
+                lam_fvar(kernel, mp_fvar, ab_arrow, inner, BinderInfo::Default)
+            };
+            let zero = kernel.level_zero();
+            let iff_rec_const = kernel.const_(iff_rec, vec![zero]);
+            let h = kernel.fvar(h_fvar);
+            let applied = apply_all(kernel, iff_rec_const, &[a, b, motive, minor, h]);
+
+            let with_h_v = lam_fvar(kernel, h_fvar, iff_ab, applied, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_h_v, BinderInfo::Default);
+            let iff_mp_value = lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: iff_mp,
+                uparams: vec![],
+                ty: iff_mp_ty,
+                value: iff_mp_value,
+            })?;
+        }
+        let iff_mpr = kernel.name_str(iff, "mpr");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_510;
+            let b_fvar = 23_511;
+            let h_fvar = 23_512;
+            let pair_fvar = 23_513;
+            let mp_fvar = 23_514;
+            let mpr_fvar = 23_515;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let iff_const = kernel.const_(iff, vec![]);
+            let iff_ab = apply_all(kernel, iff_const, &[a, b]);
+            let ab_arrow = kernel.pi(anon, a, b, BinderInfo::Default); // a → b
+            let ba_arrow = kernel.pi(anon, b, a, BinderInfo::Default); // b → a
+
+            // type: Π (a b : Prop), Iff a b → b → a.
+            let with_h = kernel.pi(anon, iff_ab, ba_arrow, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, with_h, BinderInfo::Default);
+            let iff_mpr_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b h => Iff.rec.{0} a b (fun _ => b → a) (fun mp mpr => mpr) h.
+            let motive = lam_fvar(kernel, pair_fvar, iff_ab, ba_arrow, BinderInfo::Default);
+            let minor = {
+                let mpr = kernel.fvar(mpr_fvar);
+                let inner = lam_fvar(kernel, mpr_fvar, ba_arrow, mpr, BinderInfo::Default);
+                lam_fvar(kernel, mp_fvar, ab_arrow, inner, BinderInfo::Default)
+            };
+            let zero = kernel.level_zero();
+            let iff_rec_const = kernel.const_(iff_rec, vec![zero]);
+            let h = kernel.fvar(h_fvar);
+            let applied = apply_all(kernel, iff_rec_const, &[a, b, motive, minor, h]);
+
+            let with_h_v = lam_fvar(kernel, h_fvar, iff_ab, applied, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_h_v, BinderInfo::Default);
+            let iff_mpr_value = lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: iff_mpr,
+                uparams: vec![],
+                ty: iff_mpr_ty,
+                value: iff_mpr_value,
+            })?;
+        }
 
         // --- Eq.{u} {α : Sort u} (a : α) : α → Prop, Eq.refl : Eq a a --------
         // The slice-7 indexed inductive: 2 params (α, a), 1 index, one ctor.
@@ -491,6 +941,117 @@ pub(crate) fn build_logic_prelude_uncached(
                 uparams: vec![eq_uparam],
                 ty: symm_ty,
                 value: symm_value,
+            })?;
+        }
+
+        // --- congrFun'.{u,v} : Π (α : Sort u) (β : Sort v) (f g : α → β), --
+        //     Eq.{imax u v} (α → β) f g → Π (a : α), Eq.{v} β (f a) (g a) ----
+        // The non-dependent function-congruence lemma, built the same way
+        // `Eq.symm` above is: `Eq.rec` transports the trivial
+        // `Eq.refl β (f a) : Eq β (f a) (f a)` along `h : Eq (α → β) f g`
+        // into `Eq β (f a) (g a)`, via the motive
+        // `fun (g' : α → β) (_ : Eq (α → β) f g') => Eq β (f a) (g' a)`.
+        // `α → β`'s own sort is `imax u v` (the kernel's Pi-formation rule,
+        // `tc.rs::infer_pi`), matching Lean's own convention; `Eq` itself is
+        // always `Prop`-valued regardless of the carrier's universe, so the
+        // elimination (motive) level is always `0`, exactly as in `Eq.symm`.
+        let congr_fun_prime = kernel.name_str(anon, "congrFun'");
+        {
+            let u_name = kernel.name_str(anon, "u");
+            let v_name = kernel.name_str(anon, "v");
+            let u_lvl = kernel.level_param(u_name);
+            let v_lvl = kernel.level_param(v_name);
+            let sort_u = kernel.sort(u_lvl);
+            let sort_v = kernel.sort(v_lvl);
+            let imax_uv = kernel.level_imax(u_lvl, v_lvl);
+            let zero = kernel.level_zero();
+
+            let alpha_fvar = 23_600;
+            let beta_fvar = 23_601;
+            let f_fvar = 23_602;
+            let g_fvar = 23_603;
+            let h_fvar = 23_604;
+            let a_pt_fvar = 23_605;
+            let gprime_fvar = 23_606;
+            let heq_dummy_fvar = 23_607;
+
+            let alpha = kernel.fvar(alpha_fvar);
+            let beta = kernel.fvar(beta_fvar);
+            let arrow_ab = kernel.pi(anon, alpha, beta, BinderInfo::Default); // α → β
+            let f = kernel.fvar(f_fvar);
+            let g = kernel.fvar(g_fvar);
+            let eq_const_imax = kernel.const_(eq, vec![imax_uv]);
+            let hyp_ty = apply_all(kernel, eq_const_imax, &[arrow_ab, f, g]); // Eq (α→β) f g
+
+            let a_pt = kernel.fvar(a_pt_fvar);
+            let f_a = kernel.app(f, a_pt);
+            let g_a = kernel.app(g, a_pt);
+            let eq_const_v = kernel.const_(eq, vec![v_lvl]);
+            let concl = apply_all(kernel, eq_const_v, &[beta, f_a, g_a]); // Eq β (f a) (g a)
+
+            // type: Π (α β) (f g : α→β) (h : hyp_ty) (a : α), concl.
+            let with_a = pi_fvar(kernel, a_pt_fvar, alpha, concl, BinderInfo::Default);
+            let with_h = kernel.pi(anon, hyp_ty, with_a, BinderInfo::Default);
+            let with_g = pi_fvar(kernel, g_fvar, arrow_ab, with_h, BinderInfo::Default);
+            let with_f = pi_fvar(kernel, f_fvar, arrow_ab, with_g, BinderInfo::Default);
+            let with_beta = pi_fvar(kernel, beta_fvar, sort_v, with_f, BinderInfo::Default);
+            let congr_fun_ty = pi_fvar(kernel, alpha_fvar, sort_u, with_beta, BinderInfo::Implicit);
+
+            // value: fun α β f g h a =>
+            //   Eq.rec.{0,imax u v} (α→β) f
+            //     (fun g' (_ : Eq (α→β) f g') => Eq β (f a) (g' a))
+            //     (Eq.refl β (f a))
+            //     g h.
+            let eq_refl_const_v = kernel.const_(eq_refl, vec![v_lvl]);
+            let refl_case = apply_all(kernel, eq_refl_const_v, &[beta, f_a]);
+
+            let gprime = kernel.fvar(gprime_fvar);
+            let gprime_a = kernel.app(gprime, a_pt);
+            let eq_const_v2 = kernel.const_(eq, vec![v_lvl]);
+            let motive_body = apply_all(kernel, eq_const_v2, &[beta, f_a, gprime_a]);
+            let eq_const_imax2 = kernel.const_(eq, vec![imax_uv]);
+            let hyp_ty_g = apply_all(kernel, eq_const_imax2, &[arrow_ab, f, gprime]);
+            let motive_inner = lam_fvar(
+                kernel,
+                heq_dummy_fvar,
+                hyp_ty_g,
+                motive_body,
+                BinderInfo::Default,
+            );
+            let motive = lam_fvar(
+                kernel,
+                gprime_fvar,
+                arrow_ab,
+                motive_inner,
+                BinderInfo::Default,
+            );
+
+            let eq_rec_const = kernel.const_(eq_rec, vec![zero, imax_uv]);
+            let h = kernel.fvar(h_fvar);
+            let applied = apply_all(
+                kernel,
+                eq_rec_const,
+                &[arrow_ab, f, motive, refl_case, g, h],
+            );
+
+            let with_a_v = lam_fvar(kernel, a_pt_fvar, alpha, applied, BinderInfo::Default);
+            let with_h_v = lam_fvar(kernel, h_fvar, hyp_ty, with_a_v, BinderInfo::Default);
+            let with_g_v = lam_fvar(kernel, g_fvar, arrow_ab, with_h_v, BinderInfo::Default);
+            let with_f_v = lam_fvar(kernel, f_fvar, arrow_ab, with_g_v, BinderInfo::Default);
+            let with_beta_v = lam_fvar(kernel, beta_fvar, sort_v, with_f_v, BinderInfo::Default);
+            let congr_fun_value = lam_fvar(
+                kernel,
+                alpha_fvar,
+                sort_u,
+                with_beta_v,
+                BinderInfo::Implicit,
+            );
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: congr_fun_prime,
+                uparams: vec![u_name, v_name],
+                ty: congr_fun_ty,
+                value: congr_fun_value,
             })?;
         }
 
@@ -1790,6 +2351,101 @@ pub(crate) fn build_logic_prelude_uncached(
             })?;
         }
 
+        // --- absurd.{v} : Π (a : Prop) (b : Sort v), a → (a → False) → b ----
+        // Ex falso from a proposition and its refutation, built directly from
+        // `False.rec` (universe-polymorphic in the target `b`, same technique
+        // as the `False.rec.{level}` calls throughout `int_prelude`/
+        // `nat_prelude`'s private `absurd` helpers). The refutation is again
+        // the plain arrow `a → False` rather than `Not a` applied.
+        let absurd_vparam = kernel.name_str(anon, "v");
+        let absurd = kernel.name_str(anon, "absurd");
+        {
+            let prop = kernel.prop();
+            let v_lvl = kernel.level_param(absurd_vparam);
+            let sort_v = kernel.sort(v_lvl);
+
+            let a_fvar = 23_700;
+            let b_fvar = 23_701;
+            let h1_fvar = 23_702;
+            let h2_fvar = 23_703;
+            let dummy_fvar = 23_704;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let h2_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // a → False
+
+            // type: Π (a : Prop) (b : Sort v), a → (a → False) → b.
+            let t_inner = kernel.pi(anon, h2_ty, b, BinderInfo::Default);
+            let t_outer = kernel.pi(anon, a, t_inner, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, sort_v, t_outer, BinderInfo::Default);
+            let absurd_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b h1 h2 => False.rec.{v} (fun _ => b) (h2 h1).
+            let h1 = kernel.fvar(h1_fvar);
+            let h2 = kernel.fvar(h2_fvar);
+            let h2_h1 = kernel.app(h2, h1);
+            let false_motive = lam_fvar(kernel, dummy_fvar, false_const, b, BinderInfo::Default);
+            let false_rec_const = kernel.const_(false_rec, vec![v_lvl]);
+            let absurd_body = apply_all(kernel, false_rec_const, &[false_motive, h2_h1]);
+
+            let with_h2 = lam_fvar(kernel, h2_fvar, h2_ty, absurd_body, BinderInfo::Default);
+            let with_h1 = lam_fvar(kernel, h1_fvar, a, with_h2, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, sort_v, with_h1, BinderInfo::Default);
+            let absurd_value = lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: absurd,
+                uparams: vec![absurd_vparam],
+                ty: absurd_ty,
+                value: absurd_value,
+            })?;
+        }
+
+        // --- mt : Π (a b : Prop), (a → b) → (b → False) → (a → False) ------
+        // Modus tollens: plain function composition, `fun ha => nb (f ha)`,
+        // no recursor needed.
+        let mt = kernel.name_str(anon, "mt");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_710;
+            let b_fvar = 23_711;
+            let f_fvar = 23_712;
+            let nb_fvar = 23_713;
+            let ha_fvar = 23_714;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let f_ty = kernel.pi(anon, a, b, BinderInfo::Default); // a → b
+            let nb_ty = kernel.pi(anon, b, false_const, BinderInfo::Default); // b → False
+            let result_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // a → False
+
+            // type: Π (a b : Prop), (a → b) → (b → False) → (a → False).
+            let t_inner = kernel.pi(anon, nb_ty, result_ty, BinderInfo::Default);
+            let t_outer = kernel.pi(anon, f_ty, t_inner, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, t_outer, BinderInfo::Default);
+            let mt_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b f nb ha => nb (f ha).
+            let f = kernel.fvar(f_fvar);
+            let nb = kernel.fvar(nb_fvar);
+            let ha = kernel.fvar(ha_fvar);
+            let f_ha = kernel.app(f, ha);
+            let nb_f_ha = kernel.app(nb, f_ha);
+
+            let with_ha = lam_fvar(kernel, ha_fvar, a, nb_f_ha, BinderInfo::Default);
+            let with_nb = lam_fvar(kernel, nb_fvar, nb_ty, with_ha, BinderInfo::Default);
+            let with_f = lam_fvar(kernel, f_fvar, f_ty, with_nb, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_f, BinderInfo::Default);
+            let mt_value = lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: mt,
+                uparams: vec![],
+                ty: mt_ty,
+                value: mt_value,
+            })?;
+        }
+
         Ok(LogicPrelude {
             true_,
             true_intro,
@@ -1799,18 +2455,26 @@ pub(crate) fn build_logic_prelude_uncached(
             and,
             and_intro,
             and_rec,
+            and_left,
+            and_right,
             or,
             or_inl,
             or_inr,
             or_rec,
+            or_elim,
+            or_resolve_left,
+            or_resolve_right,
             iff,
             iff_intro,
             iff_rec,
+            iff_mp,
+            iff_mpr,
             eq,
             eq_refl,
             eq_rec,
             eq_uparam,
             eq_symm,
+            congr_fun_prime,
             exists_,
             exists_intro,
             exists_rec,
@@ -1825,6 +2489,9 @@ pub(crate) fn build_logic_prelude_uncached(
             well_founded_fix_eq,
             well_founded_fix_vparam,
             not,
+            absurd,
+            absurd_vparam,
+            mt,
             bool_,
             bool_true,
             bool_false,
