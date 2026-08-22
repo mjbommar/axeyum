@@ -51,6 +51,7 @@
 | 2026-08-22 | (pending) | Next collision-free foundation is `Int.fib_dvd`; one pinned v4.30 root export of core `Int.natAbs_dvd_natAbs` is frozen before reading support bytes or constructing the target |
 | 2026-08-22 | (pending) | Pinned support export imports twice identically but reaches `propext`; it is sealed as rejected evidence, with zero target submissions or ledger writes, and the next route narrows to directional witness reconstruction |
 | 2026-08-22 | (pending) | V2 freezes four narrower core roots for directional witness transport, explicitly forbids the rejected biconditional, and keeps target construction and ledger authority at zero |
+| 2026-08-22 | (pending) | All four directional convenience roots import twice identically but each reaches `propext`; the sealed rejection localizes V3 below theorem-level divisibility helpers to direct existential witnesses |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

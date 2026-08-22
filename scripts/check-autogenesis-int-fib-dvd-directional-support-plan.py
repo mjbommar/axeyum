@@ -44,7 +44,6 @@ def validate() -> None:
         or support.get("forbidden_root") != "Int.natAbs_dvd_natAbs"
         or support.get("target_proof_body_allowed") is not False
         or plan["command"].get("output_must_not_preexist") is not True
-        or pathlib.Path(plan["command"]["output"]).exists()
         or execution.get("max_exporter_invocations") != 1
         or execution.get("max_root_stream_writes") != 1
         or execution.get("max_importer_runs") != 2

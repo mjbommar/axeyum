@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-directional-support-result-v2",
+  "state": "all-four-directional-roots-rejected-for-nonempty-footprints",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-directional-support-plan-v2.json",
+    "sha256": "f6559f6ffa5fa82690a1f6638cc988f24de806ad28e240a2064c2efc24e6b916"
+  },
+  "environment": {
+    "host": "server5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"
+  },
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-dvd-directional-support-v1/root.ndjson",
+    "bytes": 1104758,
+    "sha256": "86722e9533333da9e6408c65aac6fc4375c448443673e72bf00e0c883172a2b0",
+    "mode": "0444",
+    "directory_mode": "0555",
+    "manifest_sha256": "a924679565fa8b87647196348fbb361cf8e7999c90ba97209b0d24b59a1a6d4a"
+  },
+  "roots": [
+    {
+      "name": "Int.dvd_natAbs_self",
+      "declaration_sha256": "51be7058516497166f4c6f0352d86229015203a687feb3c1a0e0433ab79e338b",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": ["Int.dvd_natAbs", "Int.dvd_refl", "congrArg"]
+    },
+    {
+      "name": "Int.dvd_trans",
+      "declaration_sha256": "2789ad344e2c6eb22be49085db40ef49347a06e621350a9d9700097e928b7967",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": ["Int.mul_assoc", "congrArg"]
+    },
+    {
+      "name": "Int.natAbs_mul",
+      "declaration_sha256": "77eadd2f4bc401a3c5f28cccff27aff796e140c36653354baf9aad884f55d8d4",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": ["Eq.symm", "Int.natAbs_negOfNat", "congrArg", "congrFun'", "eq_self", "of_eq_true"]
+    },
+    {
+      "name": "Int.ofNat_dvd_left",
+      "declaration_sha256": "bd990e8c1b0e39fd4f79a364a83d05428607340394a8b3cd6d70b54e6d32017a",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": ["Eq.symm", "Iff.rfl", "Int.natAbs_dvd_natAbs", "Int.natAbs_natCast", "congrArg"]
+    }
+  ],
+  "execution": {
+    "exporter_invocations": 1,
+    "root_stream_writes": 1,
+    "importer_runs": 2,
+    "imports_byte_identical": true,
+    "audit_sha256": "8f78d93d1fdec2ed9b93ef7d02361de62733d74afb5399dba290c17041e6173f",
+    "retries": 0,
+    "target_theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "decision": {
+    "accepted_as_clean_support": false,
+    "reason": "every official directional convenience theorem reaches propext; Int.ofNat_dvd_left also depends on the already rejected biconditional",
+    "next_boundary": "construct divisibility existential witnesses directly from the kernel definition and only independently qualify the arithmetic equalities those witnesses require"
+  }
+}
