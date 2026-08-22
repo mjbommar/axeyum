@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-construction-plan-v11",
+  "state": "preregistered-five-driver-build-repairs-before-code-change",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-construction-result-v10.json",
+    "sha256": "115977e1d742aa1fc910145293bc0b018d8e19d16041fb6d2483be9125dd128d"
+  },
+  "implementation": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+  "repairs": [
+    "materialize the intNatAbsMulDirectV1 constant expression before applying the forward theorem",
+    "replace Kernel.str_name with the current Kernel.name_str API",
+    "materialize the Nat Dvd instance expression before passing the application argument slice",
+    "rename the Nat.fib_dvd declaration handle or its produced proof to satisfy similar-names",
+    "rename the two bridge symmetry proofs by first/second transport role to satisfy similar-names"
+  ],
+  "proof_change_forbidden": true,
+  "execution": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 0,
+    "max_input_stream_reads": 0,
+    "max_target_theorem_submissions": 0,
+    "max_target_exports": 0,
+    "max_fresh_target_imports": 0,
+    "max_retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "focused_clippy_exit_status": 0,
+    "exactly_five_local_repairs": true
+  },
+  "next_on_accept": "freeze one complete four-capsule execution with the unchanged proof construction"
+}
