@@ -61,6 +61,53 @@ below `j/2` when `j` is odd), so there is no clean tower recursion beyond the
 four-population identity; `T_{17,3} != 0` at `(ell,n)=(20,41)` witnesses that
 the would-be recursion is wrong.
 
+### 1.1 The one-sided route, measured: no cylinder is special
+
+`lemire_cylinders.py` evaluates the branch's `(ICV)` object directly. With
+`a = ell - ceil(log2 ell) - 1` and `K = ker(E_ell -> E_{a-1})`
+(`|K| = 2^{ell-a+1}`, elementary abelian since `a > ell/2`), put
+`SSD_h = sum_{g in hK} (N(g) - mean_{hK})^2` for each of the `2^{a-1}`
+cylinders `h`. `(REL)` follows from `SSD_1 < 2^{2 ell - 2}` (identity
+cylinder). Measured (`data/cylinder-variances-ell12-22.txt`):
+
+```text
+ell n   a  |K| cylinders  SSD_id/avg  rank of id   max/avg  SSD_id/2^{2ell-2}  avg/SatoTate
+14 29   9  64      256     0.82       215/256      1.62     0.30              0.84
+16 33  11  64     1024     1.23        91/1024     1.62     0.13              0.87
+18 37  12 128     2048     1.15       265/2048     1.44     0.072             0.89
+18 38  12 128     2048     0.93      1444/2048     1.49     0.12              0.88
+20 41  14 128     8192     1.09      1869/8192     1.59     0.019             0.90
+20 42  14 128     8192     1.18       664/8192     1.77     0.042             0.90
+22 45  16 128    32768     1.03     12775/32768    1.59     0.0050            0.90
+22 46  16 128    32768     1.05     10744/32768    1.69     0.010             0.90
+```
+
+Three facts. (i) The identity cylinder is typical: within 25% of the average
+and ranked mid-pack every time. (ii) The average matches the diagonal
+(Sato--Tate) prediction `ell 2^{n-a+1}` to within 10--16%, i.e. the second
+moment is at its random value and the off-diagonal pair term is small
+(`-10%`). (iii) The maximum over all cylinders is at most `1.8 x` the
+average: the variance is spread uniformly, so the required statement "the
+identity cylinder carries at most a `1/(16 ell^2)` fraction of the total
+variance" holds with a margin `2^{a-1}/(16 ell^2 x 1.8)`.
+
+The same dump gives the twisted cylinder sums
+`A_psi^{(h)} = sum_{g in hK} N(g) psi(g h^{-1})`, `psi in K^dual`, i.e. the
+prime mass of the cylinder interval twisted by a sign character of the
+`log2 ell + 2` middle coefficients; `(REL)` follows from
+`|A_psi^{(1)}| < 2^{ell-1}` for every `psi != 1`, and every class then lies
+within `2^{ell-1}` of its cylinder mean. Measured at `(ell,n) = (20,41),
+(20,42), (22,45)`: the rms of `A_psi` over cylinders equals the random-phase
+prediction `2^{(n-a+1)/2} sqrt(ell)` to three digits (e.g. `72787` vs
+`73271`); the maximum over all `(h, psi)` is `0.63, 0.94, 0.36` of the
+threshold `2^{ell-1}`, consistent with Gaussian tails over
+`2^{a-1}(|K|-1)` samples; the identity cylinder's maximum is `0.46, 0.61,
+0.20` of threshold. Weil gives `(ell-1) 2^{ceil(n/2)}`, i.e. `76 x`, `76 x`,
+`84 x` the threshold. So the minimal true statement is a uniform
+`1/(16 ell)`-relative equidistribution of primes in a `16 ell sqrt(X)`-long
+interval against sign patterns of the next `log2 ell + 2` coefficients, and
+it holds for every cylinder with margin growing like `2^{ell/2}/ell`.
+
 ## 2. Four further exact reformulations
 
 ### 2.1 Type I is exact; the top layer is a second difference of Moebius interval sums

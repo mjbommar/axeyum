@@ -1,0 +1,11 @@
+ell=12 n=25 a= 7 |K|=  64 cylinders=     64 N_id=     8551 mean_K=     8209.0 dev_id=   +342.0 | SSD_id=4.725e+06 avg=5.058e+06 max=6.634e+06 rank=41/64 | ST~6.29e+06 thr=2^(2ell-2)=4.19e+06 SSD_id/thr=1.13e+00
+ell=14 n=29 a= 9 |K|=  64 cylinders=    256 N_id=    31872 mean_K=    32760.5 dev_id=   -888.5 | SSD_id=2.013e+07 avg=2.461e+07 max=3.994e+07 rank=215/256 | ST~2.94e+07 thr=2^(2ell-2)=6.71e+07 SSD_id/thr=3.00e-01
+ell=14 n=30 a= 9 |K|=  64 cylinders=    256 N_id=    66181 mean_K=    65608.4 dev_id=   +572.6 | SSD_id=4.540e+07 avg=5.035e+07 max=7.934e+07 rank=172/256 | ST~5.87e+07 thr=2^(2ell-2)=6.71e+07 SSD_id/thr=6.77e-01
+ell=16 n=33 a=11 |K|=  64 cylinders=   1024 N_id=   133816 mean_K=   131103.3 dev_id=  +2712.7 | SSD_id=1.441e+08 avg=1.168e+08 max=1.898e+08 rank=91/1024 | ST~1.34e+08 thr=2^(2ell-2)=1.07e+09 SSD_id/thr=1.34e-01
+ell=16 n=34 a=11 |K|=  64 cylinders=   1024 N_id=   262804 mean_K=   262055.8 dev_id=   +748.2 | SSD_id=2.286e+08 avg=2.331e+08 max=4.072e+08 rank=535/1024 | ST~2.68e+08 thr=2^(2ell-2)=1.07e+09 SSD_id/thr=2.13e-01
+ell=18 n=37 a=12 |K|= 128 cylinders=   2048 N_id=   525216 mean_K=   524322.7 dev_id=   +893.3 | SSD_id=1.232e+09 avg=1.071e+09 max=1.543e+09 rank=265/2048 | ST~1.21e+09 thr=2^(2ell-2)=1.72e+10 SSD_id/thr=7.17e-02
+ell=18 n=38 a=12 |K|= 128 cylinders=   2048 N_id=  1058168 mean_K=  1048496.2 dev_id=  +9671.8 | SSD_id=1.988e+09 avg=2.136e+09 max=3.183e+09 rank=1444/2048 | ST~2.42e+09 thr=2^(2ell-2)=1.72e+10 SSD_id/thr=1.16e-01
+ell=20 n=41 a=14 |K|= 128 cylinders=   8192 N_id=  2100267 mean_K=  2097996.0 dev_id=  +2271.0 | SSD_id=5.244e+09 avg=4.819e+09 max=7.664e+09 rank=1869/8192 | ST~5.37e+09 thr=2^(2ell-2)=2.75e+11 SSD_id/thr=1.91e-02
+ell=20 n=42 a=14 |K|= 128 cylinders=   8192 N_id=  4189795 mean_K=  4195743.4 dev_id=  -5948.4 | SSD_id=1.142e+10 avg=9.644e+09 max=1.711e+10 rank=664/8192 | ST~1.07e+10 thr=2^(2ell-2)=2.75e+11 SSD_id/thr=4.15e-02
+ell=22 n=45 a=16 |K|= 128 cylinders=  32768 N_id=  8381026 mean_K=  8387515.2 dev_id=  -6489.2 | SSD_id=2.197e+10 avg=2.135e+10 max=3.394e+10 rank=12775/32768 | ST~2.36e+10 thr=2^(2ell-2)=4.40e+12 SSD_id/thr=5.00e-03
+ell=22 n=46 a=16 |K|= 128 cylinders=  32768 N_id= 16805618 mean_K= 16778952.3 dev_id= +26665.7 | SSD_id=4.490e+10 avg=4.270e+10 max=7.236e+10 rank=10744/32768 | ST~4.72e+10 thr=2^(2ell-2)=4.40e+12 SSD_id/thr=1.02e-02
