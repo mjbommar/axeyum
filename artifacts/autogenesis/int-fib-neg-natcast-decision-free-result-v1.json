@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-decision-free-join-result",
+  "state": "sources-compile-export-stops-at-missing-new-module-directory",
+  "plan": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-plan-v1.json",
+  "compilation": {
+    "residual": "accepted",
+    "adapters": "accepted",
+    "pinned_lean_version": "4.30.0",
+    "compilations": 2
+  },
+  "decline": {
+    "stage": "first-residual-export-module-resolution",
+    "class": "ExporterModuleSearchPath",
+    "message": "unknown module prefix 'AxeyumIntFibNegNatcastDecisionFreeResidualV1'",
+    "cause": "export LEAN_PATH contained the imported presentation module directory but omitted the new decision-free olean directory",
+    "proof_source_rejected": false,
+    "completed_exports": 0,
+    "partial_kernel_published": false
+  },
+  "execution": {"source_constructions": 2, "compilations": 2, "completed_exports": 0, "footprint_audits": 0, "exact_target_submissions": 0, "ledger_writes": 0},
+  "next_boundary": "Preregister prepending both the new decision-free module directory and the presentation module directory to exporter LEAN_PATH with all source and proof contracts unchanged.",
+  "limitations": "Compilation alone grants no residual, adapter, exact-target, fact, evaluation, or ledger credit."
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-decision-free-join-plan",
+  "state": "preregistered-export-path-only-repair",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-result-v1.json", "required_state": "sources-compile-export-stops-at-missing-new-module-directory"},
+  "repair": {
+    "only_change": "prepend /nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-v1 before the already present presentation-module directory in exporter LEAN_PATH",
+    "sources_unchanged": true,
+    "compiled_oleans_unchanged": true,
+    "proof_contracts_unchanged": true,
+    "target_authority_unchanged": true
+  },
+  "budget": {"residual_exports": 2, "adapter_exports": 2, "root_footprint_audits": 2, "retries": 0, "exact_target_submissions": 0, "ledger_writes": 0},
+  "acceptance": {"outputs_per_source_byte_identical": true, "residual_footprint": [], "all_four_adapter_footprints": [], "proof_terms_types_or_values_may_be_rendered": false},
+  "output": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-result-v2.json",
+  "limitations": "This repair may qualify support roots only; exact composition remains separately preregistered."
+}
