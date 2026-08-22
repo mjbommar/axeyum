@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-branches-composition-driver-result",
+  "state": "route-specific-driver-builds-clippy-clean-before-stream-reread",
+  "plan": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-plan-v3.json",
+  "focused_build": {
+    "command": "cargo clippy -p axeyum-lean-import --example int_fib_neg_concrete_branches_composition -- -D warnings",
+    "exit": 0
+  },
+  "execution": {
+    "input_stream_reads": 0,
+    "composition_operations": 0,
+    "specialization_operations": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0
+  },
+  "credit": "driver assurance only",
+  "next": "Run exactly one route-specific branch composition against all five hash-bound inputs."
+}

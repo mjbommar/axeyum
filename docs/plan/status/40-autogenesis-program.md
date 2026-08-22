@@ -161,6 +161,7 @@
 | 2026-08-21 | (pending) | Concrete-branch driver V1 stops before stream access on Clippy's immediate-push lint; V2 freezes only an order-preserving `vec!` rewrite |
 | 2026-08-21 | (pending) | V2 applies only the order-preserving vector rewrite and passes focused Clippy with all five streams unread; one invocation remains |
 | 2026-08-21 | (pending) | V2 stops before composition because a clean selected neg-neg root shares a stream with rejected neg-add; V3 freezes route-specific root assurance |
+| 2026-08-21 | (pending) | V3 checks the selected neg-neg root's empty footprint and exact identity, then passes focused Clippy with streams unread; one invocation remains |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
