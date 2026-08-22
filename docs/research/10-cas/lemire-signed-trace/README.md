@@ -49,6 +49,10 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   barrier: provable irreducibility-preserving constructions multiply the
   degree, so window families are lacunary (density zero) and cannot cover a
   residue class; honest scope (known toolbox, not a logical impossibility).
+- [10-open-problem-statement.md](10-open-problem-statement.md) -- the missing
+  estimate `(HWO)` stated for a specialist (Katz--Sawin monodromy / ASW towers
+  / fixed-q pair correlation), with its three equivalent faces and the three
+  precise questions whose answer would close the chain.
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).
