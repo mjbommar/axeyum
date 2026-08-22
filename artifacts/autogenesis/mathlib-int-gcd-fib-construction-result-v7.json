@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v7",
+  "state": "function-abstracted-residual-exported-twice-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v7.json",
+    "sha256": "7badec4827ae61f4cf33b03bbf636d5431fe9a2342418735d03a963d795eed93"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-natabs-residual-v2.lean",
+    "sha256": "9d02f5c5ce7b69453f0dff1f74fe88e187583b497260c02d92fadff38a539f43"
+  },
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-residual-v2/residual-1.ndjson",
+    "bytes": 351201,
+    "sha256": "03efd3c14aaac8cb610e72283e783dcf4fcf90bb223112a74b1058b0a05fe793"
+  },
+  "root": {
+    "name": "Axeyum.Autogenesis.intFibNatAbsResidualV2",
+    "declaration_sha256": "0cc9cda1ab907e1770fa6eeddd1ace28ec9ce06314c46667da9c22907bfbed34",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Eq.symm", "congrArg"]
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "exporter_invocations": 2,
+    "exports_byte_identical": true,
+    "fresh_imports": 2,
+    "specialization_submissions": 0,
+    "int_gcd_fib_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "measured": {
+    "v1_stream_bytes": 9846065,
+    "v2_stream_bytes": 351201,
+    "official_int_fib_even_closure_removed": true,
+    "assumptions_removed": 8
+  },
+  "authority": {
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Inventory and freeze the exact clean roots for all eight residual parameters before a specialization driver is written."
+}

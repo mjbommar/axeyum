@@ -94,3 +94,9 @@ The single V6 compile stopped before export on three residual goals: each
 universal `natAbs` rewrite consumed its first occurrence and left the second
 under `natFib`. V7 changes only those rewrite lists. It does not reintroduce
 `Int.fib`, Even decisions, automation, specialization, or ledger authority.
+
+V7 compiles and exports twice byte-identically. The stream is 351,201 bytes
+instead of V1's 9,846,065, both fresh imports report no axioms, and the only
+direct theorem dependencies are clean `Eq.symm` and `congrArg`. Exact
+specialization remains separate and must bind all eight explicit contracts to
+already sealed clean roots.
