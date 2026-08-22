@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-gcd-fib-goal-identity-plan",
+  "state": "preregistered-before-single-nonrendering-capsule-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v13.json", "sha256": "06399e4b003f7be2c897be4eeb0144a9e5590b229e4bccf7e287aea128b5a059"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-gcd-fib-exact-v1/root.ndjson", "bytes": 1152698, "sha256": "b1ce136473ead161243e7cdc053f3a8e0dab81a8e253c364171e839f22fd86f6", "root": "Int.gcd_fib"},
+  "fact": {"path": "artifacts/facts/F-ml430-int-gcd-fib-73bdafc2.json", "sha256": "0363e2fa200d99356050891f3c697b5447ca9744965ea0c554b0070f7f8607c5", "id": "F:ml430-int-gcd-fib-73bdafc2", "required_status": "open"},
+  "tool": {"path": "crates/axeyum-lean-import/examples/theorem_goal_identity_audit.rs", "sha256": "a2f09df135fba32b00edf1b7263343d388cf7725688116a4faafd72afe5d923b"},
+  "execution": {"max_importer_runs": 1, "max_stream_reads": 1, "max_retries": 0, "rendered_proof_terms": 0, "rendered_theorem_types": 0, "rendered_theorem_values": 0, "ledger_writes": 0},
+  "acceptance": {"name": "Int.gcd_fib", "declaration_sha256": "44660dc7f15cda1b469f99e349f4b874afca9dbca24bcfc5c847ca226ccc357f", "axiom_footprint": [], "direct_theorem_dependency_count": 5},
+  "output": "artifacts/autogenesis/mathlib-int-gcd-fib-goal-identity-result-v1.json",
+  "next_on_accept": "register one crash-safe admission operation binding exact canonical type and capsule identities"
+}
