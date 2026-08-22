@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-branches-composition-plan",
+  "state": "preregistered-vector-initialization-repair-before-rebuild",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-driver-result-v1.json",
+    "required_state": "driver-build-stopped-on-vector-initialization-lint-before-stream-access"
+  },
+  "correction": {
+    "allowed_code_change": "replace Vec::new plus three immediate pushes with one vec literal preserving order",
+    "proof_route_changed": false,
+    "inputs_outputs_and_budgets_changed": false
+  },
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_concrete_branches_composition.rs",
+  "budget": {
+    "driver_edits": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 5,
+    "ordinary_compositions": 3,
+    "ordinary_replays": 3,
+    "target_leaf_compositions": 1,
+    "target_leaf_replays": 1,
+    "specialization_operations": 2,
+    "specialization_replays": 2,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance_and_stop_rule": "unchanged from artifacts/autogenesis/int-fib-neg-concrete-branches-composition-plan-v1.json",
+  "output_result": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-result-v2.json",
+  "limitations": "Concrete branches alone grant no exact target, fact, or ledger credit."
+}
