@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-decision-free-join-result",
+  "state": "basic-only-power-adapters-qualified-empty-footprint",
+  "plan": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-plan-v3.json",
+  "evidence": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-v1/power-adapters-v2-1.ndjson", "bytes": 402752, "sha256": "dcf683e222dae0ac7e0bb28931855a69ed97463afb3bac189402298b80ab879d", "exports_byte_identical": true, "stream_axioms": []},
+  "roots": [
+    {"name": "Axeyum.Autogenesis.intFibPowerEvenAdapterV2", "declaration_sha256": "39536b5df9182664092a1231d2dc306f5ad11381d6b9aa787b99e5637790f520", "axiom_footprint": [], "direct_theorem_dependencies": ["Eq.trans", "if_pos"]},
+    {"name": "Axeyum.Autogenesis.intFibPowerOddAdapterV2", "declaration_sha256": "769a696d8765b18b07ad3f42af8f76e146831e9f9492d27ca0e573fa5638dca6", "axiom_footprint": [], "direct_theorem_dependencies": ["Eq.symm", "Eq.trans", "if_neg", "noConfusion_of_Nat"]}
+  ],
+  "execution": {"source_constructions": 1, "compilations": 1, "exports": 2, "footprint_audits": 1, "retries": 0, "exact_target_submissions": 0, "ledger_writes": 0},
+  "authority": {"qualified_power_adapters": 2, "total_decision_free_support_roots": 5, "exact_target_submissions": 0, "ledger_writes": 0},
+  "next_boundary": "Root-export the already accepted negative adapters alone so their composition input has no unrelated rejected power closure, then freeze exact composition identities.",
+  "limitations": "These adapters are support-only and establish no exact target or ledger state."
+}
