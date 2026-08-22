@@ -66,6 +66,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proof_sha256 = sha256(&rendered_proof);
     let candidate_name = candidate_name(&mut kernel, &goal_sha256);
 
+    if std::env::var("BIS_DEBUG").is_ok() {
+        eprintln!("PROOF (pre-check)|{rendered_proof}");
+    }
     kernel
         .add_declaration(Declaration::Theorem {
             name: candidate_name,
@@ -74,6 +77,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             value: candidate.proof,
         })
         .map_err(|error| {
+            if std::env::var("BIS_DEBUG").is_ok()
+                && let axeyum_lean_kernel::KernelError::TypeMismatch { expected, got } = error
+            {
+                eprintln!("TypeMismatch expected={}", kernel.render_lean(expected));
+                eprintln!("TypeMismatch got={}", kernel.render_lean(got));
+            }
             format!("independent kernel rejected bounded-induction candidate: {error:?}")
         })?;
     let closure = kernel.declaration_dependency_closure(candidate_name);

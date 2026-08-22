@@ -31,17 +31,59 @@
 //! (the induction variable occurs in two positions at once — a genuinely
 //! diagonal recursion where the induction hypothesis's shape does not
 //! directly relate `descFactorial (n+1) n` back to `descFactorial n n`,
-//! needing more than a rewrite chain) and `n < k -> descFactorial n k = 0`
-//! (needs a hypothesis-driven case split this producer does not attempt: the
-//! base case `n < 0` is vacuous, and closing it needs eliminating an
-//! impossible `Nat.le` proof via ITS OWN indexed recursor — a capability
-//! entirely absent here, distinct from the zero/succ structural induction
-//! this producer performs on the GOAL's own binders). Every decline above is
-//! a real `Err`, checked against the same kernel, never a silent skip.
+//! needing more than a rewrite chain). Every decline above is a real `Err`,
+//! checked against the same kernel, never a silent skip.
+//!
+//! ## Absurd elimination
+//!
+//! `n < k -> descFactorial n k = 0` used to decline the same way: the search
+//! reaches a base case whose only hypothesis is `n < 0` (`Nat.lt` unfolds to
+//! the indexed `Nat.le (succ n) 0`), and closing a Prop-headed goal from a
+//! hypothesis it never inspects is not something the congruence-rewrite
+//! machinery above can do at all. [`Search::local_hyps`] now retains every
+//! ordinary (non-induction) Pi-bound hypothesis introduced along the current
+//! derivation, and when a terminal goal is otherwise stuck,
+//! [`Search::try_absurd_elimination`] looks for one whose type unfolds to an
+//! application of a [`LeShape`]-shaped indexed family (discovered
+//! structurally — nothing here names `Nat.le`, `Nat.lt`, or any target
+//! declaration) at index `zero`, with its parameter structurally
+//! `succ`-shaped. That hypothesis can never be inhabited, and its OWN
+//! recursor, instantiated with a motive that depends only on the index (not
+//! on the hypothesis itself — the "vacuous motive" the module-level search
+//! above never needed), produces a proof of the CURRENT goal directly, no
+//! matter what that goal is — without any reference to `descFactorial`,
+//! `n`, or `k` in the mechanism itself. This genuinely closes the induction's
+//! *base* case (`n < 0 -> descFactorial n 0 = 0`, for both the literal `n =
+//! 0` and a fully generic `n`), exactly the shape the decline above named.
+//!
+//! It does not, by itself, close `descFactorial_of_lt` as a whole: the
+//! induction's non-vacuous *step* case needs `n < succ k' -> descFactorial n
+//! (succ k') = 0`, and the search's only route to that is its own induction
+//! hypothesis `n < k' -> descFactorial n k' = 0` — usable only once `n <
+//! succ k'` is turned into `n < k'`, which is false whenever `n = k'`. That
+//! needs a genuine case split (`n < succ k' -> n < k' ∨ n = k'`, via the
+//! SAME [`LeShape`] recursor, this time consuming both constructors rather
+//! than ruling one out) whose `n = k'` branch then needs `n - n = 0`
+//! (`Nat.sub_self`) — itself not a single-step induction, since `Nat.sub`
+//! recurses on its second argument and `pred (n - m)` at `m = succ m'` needs
+//! `n - m'` already equal to something `pred` can act on, not `n - n`
+//! directly. Both pieces are real, bounded, shape-general capabilities in
+//! the same spirit as this one — but they are additional capabilities, not
+//! a corollary of absurd elimination, and are not implemented here. Also
+//! fixed alongside this capability, because building it exposed the gap
+//! directly: [`instantiate_hypothesis`] previously applied an induction
+//! hypothesis's proof to a goal binder's fresh variable without checking
+//! that the two binders' domains actually agree, which a hypothesis whose
+//! own type depends on the induction variable (like `n < k`) makes false at
+//! the step case — silently building an ILL-TYPED term that only the FINAL
+//! kernel re-check caught, turning a declinable shape mismatch into a hard
+//! kernel rejection of the whole candidate instead of a clean decline.
 
 use std::collections::BTreeSet;
 
-use axeyum_lean_kernel::{BinderInfo, Declaration, ExprId, ExprNode, Kernel, LevelId, NameId};
+use axeyum_lean_kernel::{
+    BinderInfo, Declaration, ExprId, ExprNode, Kernel, LevelId, LocalContext, LocalDecl, NameId,
+};
 
 /// Maximum number of leading `Pi` binders this producer will peel (shared
 /// budget across plain generalization and structural induction).
@@ -524,6 +566,182 @@ fn detect_nat_shape(kernel: &Kernel, family: NameId) -> Option<NatShape> {
     None
 }
 
+/// A singly-parametrized, singly-indexed two-constructor inductive family
+/// shaped like `Nat.le`: one constructor concluding at the index equal to
+/// the (fixed) parameter itself ("refl"), and one constructor with a
+/// recursive occurrence at index `m` concluding at index `succ m` ("step"),
+/// where the index's own type is itself zero/succ-shaped ([`NatShape`]).
+///
+/// Discovered structurally from [`Kernel::environment`] — never by name,
+/// exactly like [`NatShape`] is for the goal's own binders. This happens to
+/// be the shape behind `Nat.le`/`Nat.lt` in an imported Lean kernel
+/// (`Nat.lt a b` unfolds to `Nat.le (Nat.succ a) b`), but nothing in its
+/// detection mentions `Nat.le`, `Nat.lt`, or any target fact: it fires for
+/// whatever inductive a hypothesis's type happens to unfold to, provided it
+/// has this shape.
+struct LeShape {
+    idx_ty: ExprId,
+    idx_shape: NatShape,
+    rec_name: NameId,
+}
+
+/// Try `(refl_ctor, step_ctor)` as the "at-param"/"step" pair for a
+/// [`LeShape`] over `family` (already known to have exactly 2 constructors,
+/// 1 parameter, 1 index). Returns `None` (never a hard error) on any shape
+/// mismatch, including a family whose recursor does not eliminate directly
+/// into `Prop` (this producer only builds the Prop-restricted application) —
+/// the caller tries the other constructor ordering, or gives up.
+#[allow(clippy::similar_names)]
+fn try_le_shape_pair(
+    search: &mut Search,
+    kernel: &mut Kernel,
+    family: NameId,
+    refl_ctor: NameId,
+    step_ctor: NameId,
+) -> Option<LeShape> {
+    // `refl_ctor : Π (p : P), family p p` — no fields beyond the parameter.
+    let Some(Declaration::Constructor {
+        ty: refl_ty,
+        num_fields: 0,
+        ..
+    }) = kernel.environment().get(refl_ctor).cloned()
+    else {
+        return None;
+    };
+    let ExprNode::Pi(_, _param_ty, refl_body, _) = kernel.expr_node(refl_ty).clone() else {
+        return None;
+    };
+    let p_fv = search.fresh_fvar();
+    let p = kernel.fvar(p_fv);
+    let refl_body_inst = kernel.instantiate(refl_body, &[p]);
+    let (rh, ra) = app_spine(kernel, refl_body_inst);
+    let ExprNode::Const(rf, _) = kernel.expr_node(rh).clone() else {
+        return None;
+    };
+    if rf != family || ra.len() != 2 || !kernel.def_eq(ra[0], p) || !kernel.def_eq(ra[1], p) {
+        return None;
+    }
+
+    // `step_ctor : Π (p : P) (m : Q) (_ : family p m), family p (succ m)` —
+    // exactly 2 fields beyond the parameter (the index `m` and the
+    // recursive occurrence).
+    let Some(Declaration::Constructor {
+        ty: step_ty,
+        num_fields: 2,
+        ..
+    }) = kernel.environment().get(step_ctor).cloned()
+    else {
+        return None;
+    };
+    let ExprNode::Pi(_, _param_ty2, step_body1, _) = kernel.expr_node(step_ty).clone() else {
+        return None;
+    };
+    let p2_fv = search.fresh_fvar();
+    let p2 = kernel.fvar(p2_fv);
+    let step_body1_inst = kernel.instantiate(step_body1, &[p2]);
+    let ExprNode::Pi(_, idx_ty, step_body2, _) = kernel.expr_node(step_body1_inst).clone() else {
+        return None;
+    };
+    let m_fv = search.fresh_fvar();
+    let m = kernel.fvar(m_fv);
+    let step_body2_inst = kernel.instantiate(step_body2, &[m]);
+    let ExprNode::Pi(_, proof_ty, step_body3, _) = kernel.expr_node(step_body2_inst).clone() else {
+        return None;
+    };
+    let (ph, pa) = app_spine(kernel, proof_ty);
+    let ExprNode::Const(pf, _) = kernel.expr_node(ph).clone() else {
+        return None;
+    };
+    if pf != family || pa.len() != 2 || !kernel.def_eq(pa[0], p2) || !kernel.def_eq(pa[1], m) {
+        return None;
+    }
+    let h_fv = search.fresh_fvar();
+    let h = kernel.fvar(h_fv);
+    let concl = kernel.instantiate(step_body3, &[h]);
+    let (ch, ca) = app_spine(kernel, concl);
+    let ExprNode::Const(cf, _) = kernel.expr_node(ch).clone() else {
+        return None;
+    };
+    if cf != family || ca.len() != 2 || !kernel.def_eq(ca[0], p2) {
+        return None;
+    }
+
+    // The index type must itself be zero/succ-shaped, and the step
+    // constructor's own conclusion index must be exactly its successor of
+    // `m` — the structural fact that makes "step always lands past zero".
+    let idx_ty_whnf = kernel.whnf(idx_ty);
+    let ExprNode::Const(idx_family, _) = kernel.expr_node(idx_ty_whnf).clone() else {
+        return None;
+    };
+    let idx_shape = detect_nat_shape(kernel, idx_family)?;
+    let succ_ctor_e = kernel.const_(idx_shape.succ_ctor, vec![]);
+    let succ_m = kernel.app(succ_ctor_e, m);
+    if !kernel.def_eq(ca[1], succ_m) {
+        return None;
+    }
+
+    let rec_name = find_le_recursor(kernel, refl_ctor, step_ctor)?;
+    Some(LeShape {
+        idx_ty,
+        idx_shape,
+        rec_name,
+    })
+}
+
+/// Recursor discovery for [`LeShape`], mirroring the search loop in
+/// [`detect_nat_shape`]: match by `rec_rules`' constructor set, never by
+/// name. Restricted to a Prop-only eliminator (`uparams` empty) — the shape
+/// this producer's construction actually builds; a large-eliminating
+/// recursor over the same family is simply not matched here.
+fn find_le_recursor(kernel: &Kernel, refl_ctor: NameId, step_ctor: NameId) -> Option<NameId> {
+    for (name, decl) in kernel.environment().iter() {
+        let Declaration::Recursor {
+            rec_rules,
+            num_motives,
+            num_minors,
+            num_params,
+            num_indices,
+            uparams,
+            ..
+        } = decl
+        else {
+            continue;
+        };
+        if *num_params != 1
+            || *num_indices != 1
+            || *num_motives != 1
+            || *num_minors != 2
+            || !uparams.is_empty()
+        {
+            continue;
+        }
+        let rule_ctors: BTreeSet<NameId> = rec_rules.iter().map(|rule| rule.ctor_name).collect();
+        if rule_ctors == BTreeSet::from([refl_ctor, step_ctor]) {
+            return Some(*name);
+        }
+    }
+    None
+}
+
+/// Detect a [`LeShape`] over `family`, trying both constructor orderings.
+fn detect_le_shape(search: &mut Search, kernel: &mut Kernel, family: NameId) -> Option<LeShape> {
+    let Some(Declaration::Inductive {
+        num_params,
+        num_indices,
+        ctor_names,
+        ..
+    }) = kernel.environment().get(family).cloned()
+    else {
+        return None;
+    };
+    if num_params != 1 || num_indices != 1 || ctor_names.len() != 2 {
+        return None;
+    }
+    let (c0, c1) = (ctor_names[0], ctor_names[1]);
+    try_le_shape_pair(search, kernel, family, c0, c1)
+        .or_else(|| try_le_shape_pair(search, kernel, family, c1, c0))
+}
+
 /// A live induction hypothesis available while closing a subgoal: a proof of
 /// `stmt`. `stmt` may still carry leading `Pi`s of its own (when further
 /// binders follow the induction variable in the original goal) — it is
@@ -536,19 +754,35 @@ struct Hypothesis {
     stmt: ExprId,
 }
 
-/// Peel one `Pi` off `hypothesis.stmt`, applying its proof to `x` to match the
-/// goal's own generalization of the same binder. Returns `None` (dropping the
-/// hypothesis rather than failing the search) if `stmt` is not a `Pi` here —
-/// a genuine shape mismatch between the induction hypothesis and the goal,
-/// which should cost this one rewrite opportunity, not the whole candidate.
+/// Peel one `Pi` off `hypothesis.stmt`, applying its proof to `x` (of
+/// declared type `x_ty`) to match the goal's own generalization of the same
+/// binder. Returns `None` (dropping the hypothesis rather than failing the
+/// search) if `stmt` is not a `Pi` here, OR if the peeled `Pi`'s own domain
+/// is not definitionally equal to `x_ty` — a genuine shape mismatch between
+/// the induction hypothesis and the goal, which should cost this one
+/// rewrite opportunity, not the whole candidate.
+///
+/// The second check matters whenever a hypothesis Pi's domain itself
+/// depends on the variable being inducted (e.g. `n < k -> …` inducted on
+/// `k`): the goal's OWN binder at the step case has domain `P(succ k')`
+/// while the induction hypothesis's leading binder has domain `P(k')` —
+/// different types — so applying the IH's proof to the goal's fresh
+/// variable without this check silently builds an ILL-TYPED application
+/// (`hyp.proof : Pi _:P(k') -> _` applied to a value of type `P(succ k')`)
+/// that only the FINAL kernel re-check would ever catch, turning a
+/// declinable shape mismatch into a hard rejection of the whole candidate.
 fn instantiate_hypothesis(
     kernel: &mut Kernel,
     hypothesis: Hypothesis,
     x: ExprId,
+    x_ty: ExprId,
 ) -> Option<Hypothesis> {
-    let ExprNode::Pi(_, _, body, _) = kernel.expr_node(hypothesis.stmt).clone() else {
+    let ExprNode::Pi(_, domain_ty, body, _) = kernel.expr_node(hypothesis.stmt).clone() else {
         return None;
     };
+    if !kernel.def_eq(domain_ty, x_ty) {
+        return None;
+    }
     let stmt = kernel.instantiate(body, &[x]);
     let proof = kernel.app(hypothesis.proof, x);
     Some(Hypothesis { proof, stmt })
@@ -588,6 +822,16 @@ struct Search {
     /// of — [`MAX_BINDERS`]/[`MAX_INDUCTIONS`], which the residual attempt
     /// also shares and is bound by.
     residual_budget: usize,
+    /// Every ordinary (non-induction) Pi-bound hypothesis introduced along
+    /// the CURRENT derivation path: `(free variable, its type)`. Pushed by
+    /// the plain-generalization branch of [`Search::attempt`] right before
+    /// recursing, and truncated back to its pre-push length immediately
+    /// after — regardless of that recursive call's outcome — so a
+    /// hypothesis from one branch (e.g. an induction's base case) never
+    /// leaks into a sibling branch (e.g. that induction's step case, or an
+    /// entirely different candidate reached after a failed nested
+    /// induction). Consulted only by [`Search::try_absurd_elimination`].
+    local_hyps: Vec<(u64, ExprId)>,
 }
 
 impl Search {
@@ -639,7 +883,17 @@ impl Search {
                 .ok()
                 .map(|g| (hyp.proof, g))
         }) else {
-            return Err(DeclineReason::TerminalNotDefEqNoRewrite);
+            let target = build_eq(
+                kernel,
+                self.eqp_eq,
+                goal.level,
+                goal.carrier,
+                goal.lhs,
+                goal.rhs,
+            );
+            return self
+                .try_absurd_elimination(kernel, target)
+                .ok_or(DeclineReason::TerminalNotDefEqNoRewrite);
         };
         // Try deriving the rewrite "wrap" `f` by abstracting every occurrence
         // of the hypothesis's RHS anywhere inside the (whnf-reduced) goal RHS
@@ -692,7 +946,334 @@ impl Search {
         ) {
             return Ok(proof);
         }
-        Err(DeclineReason::TerminalNotDefEqNoRewrite)
+        let target = build_eq(
+            kernel,
+            self.eqp_eq,
+            goal.level,
+            goal.carrier,
+            goal.lhs,
+            goal.rhs,
+        );
+        self.try_absurd_elimination(kernel, target)
+            .ok_or(DeclineReason::TerminalNotDefEqNoRewrite)
+    }
+
+    /// Maximum number of retained local hypotheses ([`Search::local_hyps`])
+    /// [`Search::try_absurd_elimination`] will try, most-recently-introduced
+    /// first, for one stuck terminal goal. Bounded independently of
+    /// [`MAX_BINDERS`] (which already bounds how many can even exist) so
+    /// this loop is visibly finite on its own; exhausting it is a decline,
+    /// never a hang.
+    const MAX_ABSURD_HYPOTHESES: usize = MAX_BINDERS;
+
+    /// Try to close `target` (an arbitrary Prop-valued goal — not
+    /// necessarily anything to do with the induction currently in progress)
+    /// from an outright contradiction in one of the ordinary Pi-bound
+    /// hypotheses collected so far ([`Search::local_hyps`]),
+    /// most-recently-introduced first.
+    ///
+    /// This is "absurd elimination": when a hypothesis's type unfolds to an
+    /// application of a [`LeShape`]-shaped indexed family at index `zero`,
+    /// with its parameter structurally `succ`-shaped, that hypothesis can
+    /// never be inhabited (`Nat.lt a b` unfolds to exactly this shape, and
+    /// `a < 0` is impossible for every `a`) — its OWN recursor, instantiated
+    /// with a motive that depends only on the index (never on the
+    /// hypothesis, nor on `target`'s own head symbol), produces a proof of
+    /// `target` directly, without first isolating a standalone `False` and
+    /// without any reference to what `target` actually says. Purely
+    /// shape-driven: nothing here names `Nat.lt`, `Nat.le`, or any target
+    /// declaration. Returns `None` (never a hard error) when no retained
+    /// hypothesis matches — the caller declines as before.
+    fn try_absurd_elimination(&mut self, kernel: &mut Kernel, target: ExprId) -> Option<ExprId> {
+        if std::env::var("BIS_DEBUG").is_ok() {
+            eprintln!(
+                "  [absurd] try_absurd_elimination: {} local hyps, target={}",
+                self.local_hyps.len(),
+                kernel.render_lean(target)
+            );
+        }
+        let mut budget = Self::MAX_ABSURD_HYPOTHESES;
+        for i in (0..self.local_hyps.len()).rev() {
+            if budget == 0 {
+                break;
+            }
+            budget -= 1;
+            let (fv, ty) = self.local_hyps[i];
+            if let Some(proof) = self.try_absurd_from_hypothesis(kernel, fv, ty, target) {
+                return Some(proof);
+            }
+        }
+        None
+    }
+
+    /// One candidate hypothesis for [`Search::try_absurd_elimination`]; see
+    /// that method's doc for the shape being matched. Builds the candidate
+    /// and then independently confirms its INFERRED type is exactly
+    /// `target` before returning it — declining (`None`) rather than
+    /// risking a malformed candidate reaching the caller's `add_declaration`
+    /// and turning a graceful decline into a hard kernel rejection.
+    #[allow(clippy::too_many_lines)]
+    fn try_absurd_from_hypothesis(
+        &mut self,
+        kernel: &mut Kernel,
+        hyp_fv: u64,
+        hyp_ty: ExprId,
+        target: ExprId,
+    ) -> Option<ExprId> {
+        let debug = std::env::var("BIS_DEBUG").is_ok();
+        let hyp_whnf = kernel.whnf(hyp_ty);
+        let (head, args) = app_spine(kernel, hyp_whnf);
+        let ExprNode::Const(family, levels) = kernel.expr_node(head).clone() else {
+            if debug {
+                eprintln!(
+                    "  [absurd] head not Const: {}",
+                    kernel.render_lean(hyp_whnf)
+                );
+            }
+            return None;
+        };
+        if args.len() != 2 {
+            if debug {
+                eprintln!(
+                    "  [absurd] args.len()={} (want 2): {}",
+                    args.len(),
+                    kernel.render_lean(hyp_whnf)
+                );
+            }
+            return None;
+        }
+        let Some(le_shape) = detect_le_shape(self, kernel, family) else {
+            if debug {
+                eprintln!(
+                    "  [absurd] no LeShape for family {}",
+                    kernel.display_name(family)
+                );
+            }
+            return None;
+        };
+        let (param, idx_val) = (args[0], args[1]);
+
+        // The hypothesis's own index must BE `zero` -- the one instance
+        // this family can never actually inhabit once the parameter is
+        // `succ`-shaped.
+        let zero_e = kernel.const_(le_shape.idx_shape.zero_ctor, vec![]);
+        if !kernel.def_eq(idx_val, zero_e) {
+            if debug {
+                eprintln!(
+                    "  [absurd] idx_val {} not defeq zero",
+                    kernel.render_lean(idx_val)
+                );
+            }
+            return None;
+        }
+        // The parameter must be STRUCTURALLY `succ _` (any predecessor) --
+        // this is what makes the family's `refl` constructor unreachable at
+        // this index (`refl : family p p`, so `p` would have to be `zero`
+        // too, contradicting `succ`-shaped).
+        let param_whnf = kernel.whnf(param);
+        let (phead, pargs) = app_spine(kernel, param_whnf);
+        let ExprNode::Const(psucc, _) = kernel.expr_node(phead).clone() else {
+            if debug {
+                eprintln!(
+                    "  [absurd] param head not Const: {}",
+                    kernel.render_lean(param_whnf)
+                );
+            }
+            return None;
+        };
+        if psucc != le_shape.idx_shape.succ_ctor || pargs.len() != 1 {
+            if debug {
+                eprintln!(
+                    "  [absurd] param not succ-shaped: {}",
+                    kernel.render_lean(param_whnf)
+                );
+            }
+            return None;
+        }
+        let pred_a = pargs[0];
+
+        // The carrier level for equalities between two index-typed values --
+        // read off the index type's OWN inferred sort, never assumed.
+        let Ok(idx_sort) = kernel.infer(le_shape.idx_ty) else {
+            if debug {
+                eprintln!("  [absurd] infer(idx_ty) failed");
+            }
+            return None;
+        };
+        let idx_sort_whnf = kernel.whnf(idx_sort);
+        let ExprNode::Sort(idx_level) = kernel.expr_node(idx_sort_whnf).clone() else {
+            if debug {
+                eprintln!(
+                    "  [absurd] idx_ty sort not Sort: {}",
+                    kernel.render_lean(idx_sort_whnf)
+                );
+            }
+            return None;
+        };
+
+        let anon = kernel.anon();
+        let level_zero = kernel.level_zero();
+        let level_one = kernel.level_succ(level_zero);
+        let eqp_eq = self.eqp_eq;
+        let eqp_refl = self.eqp_refl;
+
+        // `motive_over_idx := fun (idx : idx_ty) (_ : family param idx) =>
+        //     idx_shape.rec{level_one} (fun _ => Sort level_zero)
+        //         target
+        //         (fun pred _ih => Eq idx_ty pred pred)
+        //         idx`
+        // -- a Prop-VALUED (not proof-valued) case split on `idx`: at
+        // `zero` this reduces by iota to exactly `target`; at any `succ
+        // pred` it reduces to the trivially-inhabited `Eq idx_ty pred pred`.
+        let idx_fv = self.fresh_fvar();
+        let idx_e = kernel.fvar(idx_fv);
+        let sort0 = kernel.sort(level_zero);
+        let motive2 = kernel.lam(anon, le_shape.idx_ty, sort0, BinderInfo::Default);
+        let succ_pred_fv = self.fresh_fvar();
+        let succ_pred = kernel.fvar(succ_pred_fv);
+        let succ_case_body = build_eq(
+            kernel,
+            eqp_eq,
+            idx_level,
+            le_shape.idx_ty,
+            succ_pred,
+            succ_pred,
+        );
+        let succ_ih_fv = self.fresh_fvar();
+        let succ_ih_ty = kernel.sort(level_zero);
+        let succ_case = lam_fv(
+            kernel,
+            anon,
+            succ_ih_fv,
+            succ_ih_ty,
+            succ_case_body,
+            BinderInfo::Default,
+        );
+        let succ_case = lam_fv(
+            kernel,
+            anon,
+            succ_pred_fv,
+            le_shape.idx_ty,
+            succ_case,
+            BinderInfo::Default,
+        );
+        let idx_rec = kernel.const_(le_shape.idx_shape.rec_name, vec![level_one]);
+        let case_generic = kernel.app(idx_rec, motive2);
+        let case_generic = kernel.app(case_generic, target);
+        let case_generic = kernel.app(case_generic, succ_case);
+        let case_generic = kernel.app(case_generic, idx_e);
+
+        let fam_c = kernel.const_(family, levels.clone());
+        let fam_applied_p = kernel.app(fam_c, param);
+        let fam_applied_idx = kernel.app(fam_applied_p, idx_e);
+        let h2_fv = self.fresh_fvar();
+        let motive_inner = lam_fv(
+            kernel,
+            anon,
+            h2_fv,
+            fam_applied_idx,
+            case_generic,
+            BinderInfo::Default,
+        );
+        let motive_over_idx = lam_fv(
+            kernel,
+            anon,
+            idx_fv,
+            le_shape.idx_ty,
+            motive_inner,
+            BinderInfo::Default,
+        );
+
+        // `refl` minor premise: `motive_over_idx param (refl param)`
+        // reduces (since `param` is literally `succ pred_a`) to
+        // `Eq idx_ty pred_a pred_a`.
+        let refl_proof = build_eq_refl(kernel, eqp_refl, idx_level, le_shape.idx_ty, pred_a);
+
+        // `step` minor premise: `fun m a ih => Eq.refl idx_ty m`, which has
+        // type `motive_over_idx (succ m) (step param m a) = Eq idx_ty m m`
+        // regardless of `m`, `a`, or the unused `ih`.
+        let m_fv = self.fresh_fvar();
+        let m = kernel.fvar(m_fv);
+        let a_fv = self.fresh_fvar();
+        let fam_c2 = kernel.const_(family, levels.clone());
+        let fam_applied_p2 = kernel.app(fam_c2, param);
+        let fam_applied_m = kernel.app(fam_applied_p2, m);
+        let a_val = kernel.fvar(a_fv);
+        let ih_fv = self.fresh_fvar();
+        let ih_ty = kernel.app(motive_over_idx, m);
+        let ih_ty = kernel.app(ih_ty, a_val);
+        let refl_m = build_eq_refl(kernel, eqp_refl, idx_level, le_shape.idx_ty, m);
+        let step_body = lam_fv(kernel, anon, ih_fv, ih_ty, refl_m, BinderInfo::Default);
+        let step_body = lam_fv(
+            kernel,
+            anon,
+            a_fv,
+            fam_applied_m,
+            step_body,
+            BinderInfo::Default,
+        );
+        let step_minor = lam_fv(
+            kernel,
+            anon,
+            m_fv,
+            le_shape.idx_ty,
+            step_body,
+            BinderInfo::Default,
+        );
+
+        let le_rec = kernel.const_(le_shape.rec_name, vec![]);
+        let applied = kernel.app(le_rec, param);
+        let applied = kernel.app(applied, motive_over_idx);
+        let applied = kernel.app(applied, refl_proof);
+        let applied = kernel.app(applied, step_minor);
+        let applied = kernel.app(applied, idx_val);
+        let hyp_e = kernel.fvar(hyp_fv);
+        let applied = kernel.app(applied, hyp_e);
+
+        // `applied` mentions `hyp_fv` freely (it is only abstracted once
+        // this proof is returned all the way up to the plain generalization
+        // branch of `Search::attempt` that introduced it) AND every
+        // outer-scope induction/generalization variable `param`/`idx_val`
+        // were themselves built from (`n`, `k`, a predecessor, …) — plain
+        // `Kernel::infer`, used elsewhere in this file only for CLOSED
+        // candidates, would reject any of them as an unbound fvar. Every one
+        // of those is already typed in `self.fvar_types` (every
+        // `fresh_fvar_typed` call, in both `Search::try_induction` and the
+        // plain-generalization branch, records it there), so build a
+        // `LocalContext` from the whole map rather than trying to track
+        // which subset `applied` actually touches.
+        let mut local_ctx = LocalContext::new();
+        for (&fv, &ty) in &self.fvar_types {
+            local_ctx.push(LocalDecl {
+                fvar: fv,
+                name: anon,
+                ty,
+                info: BinderInfo::Default,
+            });
+        }
+        let inferred = match kernel.infer_in(applied, &mut local_ctx) {
+            Ok(t) => t,
+            Err(e) => {
+                if debug {
+                    eprintln!("  [absurd] infer(applied) failed: {e:?}");
+                }
+                return None;
+            }
+        };
+        if !kernel.def_eq(inferred, target) {
+            if debug {
+                eprintln!(
+                    "  [absurd] inferred {} not defeq target {}",
+                    kernel.render_lean(inferred),
+                    kernel.render_lean(target)
+                );
+            }
+            return None;
+        }
+        if debug {
+            eprintln!("  [absurd] SUCCESS");
+        }
+        Some(applied)
     }
 
     /// Abstract every occurrence of `needle` inside `haystack` into a fresh
@@ -1275,11 +1856,24 @@ impl Search {
             // one more generalization here means one more application there
             // (or the hypothesis quietly stops being usable, which is a lost
             // rewrite opportunity, never a hard failure).
+            //
+            // Also retained in `local_hyps` for the absurd-elimination
+            // fallback ([`Search::try_absurd_elimination`]) — `ty` may be an
+            // ordinary Prop-valued hypothesis (e.g. `n < k`), not just an
+            // opaque generalized value, and there is no cheaper place to
+            // notice that than here, where it is already in scope. Popped
+            // back off after the recursive call regardless of outcome, so it
+            // never leaks into a sibling branch.
             let fv = self.fresh_fvar_typed(ty);
             let x = kernel.fvar(fv);
             let sub_goal = kernel.instantiate(body, &[x]);
-            let sub_hypothesis = hypothesis.and_then(|hyp| instantiate_hypothesis(kernel, hyp, x));
-            let sub_proof = self.attempt(kernel, sub_goal, eqp, sub_hypothesis)?;
+            let sub_hypothesis =
+                hypothesis.and_then(|hyp| instantiate_hypothesis(kernel, hyp, x, ty));
+            let local_hyps_mark = self.local_hyps.len();
+            self.local_hyps.push((fv, ty));
+            let sub_proof = self.attempt(kernel, sub_goal, eqp, sub_hypothesis);
+            self.local_hyps.truncate(local_hyps_mark);
+            let sub_proof = sub_proof?;
             return Ok(lam_fv(kernel, name, fv, ty, sub_proof, info));
         }
         let parsed = parse_eq_goal(kernel, eqp.eq, goal)?;
@@ -1308,6 +1902,7 @@ pub fn propose_bounded_induction(
         inductions_used: 0,
         fvar_types: std::collections::BTreeMap::new(),
         residual_budget: MAX_RESIDUAL_LEMMAS,
+        local_hyps: Vec::new(),
     };
     let proof = search.attempt(kernel, goal, &eqp, None)?;
     Ok(Candidate {
