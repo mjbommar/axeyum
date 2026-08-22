@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-construction-result-v11",
+  "state": "bounded-driver-repair-builds-clippy-clean-before-execution",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-construction-plan-v11.json",
+    "sha256": "53a02b369519d33ea3b99517fb974715b4e482c41e1d041d4ec233ee1af9681e"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "sha256": "8c17371a667f57bf6ee60efac1342b1d2b83a04cf9c8bcb16f79591925c12ae8",
+    "bounded_repairs": 5
+  },
+  "execution": {
+    "driver_builds": 1,
+    "focused_clippy_exit_status": 0,
+    "complete_invocations": 0,
+    "input_stream_reads": 0,
+    "composition_operations": 0,
+    "target_theorem_submissions": 0,
+    "target_exports": 0,
+    "fresh_target_imports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "driver_build_credit": 1,
+    "target_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "authorize one complete four-capsule execution of the unchanged proof construction"
+}

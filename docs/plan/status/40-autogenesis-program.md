@@ -69,6 +69,7 @@
 | 2026-08-22 | (pending) | V10 freezes exact `Int.fib_dvd` over four sealed capsules: forward witness transport, admitted `Nat.fib_dvd`, two `intFibNatAbsV1` equality transports, and direct reverse witness transport before driver code |
 | 2026-08-22 | (pending) | V10 driver build declines on three local Rust type/API errors and two Clippy name collisions before reading any capsule or submitting any theorem; the proof construction itself remains unexecuted |
 | 2026-08-22 | (pending) | V11 freezes exactly five local driver repairs—two expression materializations, one kernel API rename, and two binding renames—while forbidding proof changes and all capsule reads |
+| 2026-08-22 | (pending) | V11 applies exactly those five repairs and builds focused Clippy-clean; no capsule was read and the exact proof construction is now ready for one separately authorized execution |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

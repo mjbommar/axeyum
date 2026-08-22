@@ -163,8 +163,9 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
     let nat_fib = find_name(kernel, "Nat.fib")?;
     let nat_abs = find_name(kernel, "Int.natAbs")?;
     let bridge = find_name(kernel, BRIDGE)?;
-    let nat_fib_dvd = find_name(kernel, NAT_FIB_DVD)?;
-    let nat_abs_mul = find_name(kernel, NAT_ABS_MUL)?;
+    let nat_fib_dvd_theorem = find_name(kernel, NAT_FIB_DVD)?;
+    let nat_abs_mul_name = find_name(kernel, NAT_ABS_MUL)?;
+    let nat_abs_mul = kernel.const_(nat_abs_mul_name, vec![]);
     let forward = find_name(kernel, FORWARD)?;
     let reverse = find_name(kernel, REVERSE)?;
     let eq_symm = find_name(kernel, "Eq.symm")?;
@@ -187,9 +188,9 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
     let hypothesis_ty = function_domain(kernel, forward_mn, "forward hypothesis")?;
     let hypothesis = kernel.fvar(h_id);
     let abs_indices_dvd = kernel.app(forward_mn, hypothesis);
-    let nat_fibs_dvd = app_const(
+    let nat_fibonacci_divisibility = app_const(
         kernel,
-        nat_fib_dvd,
+        nat_fib_dvd_theorem,
         &[],
         &[abs_m, abs_n, abs_indices_dvd],
     );
@@ -198,13 +199,13 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
     let nat_level = kernel.level_succ(zero);
     let bridge_m = app_const(kernel, bridge, &[], &[m]);
     let bridge_n = app_const(kernel, bridge, &[], &[n]);
-    let bridge_m_reverse = app_const(
+    let first_bridge_reverse = app_const(
         kernel,
         eq_symm,
         &[nat_level],
         &[nat_ty, abs_fib_m, nat_fib_abs_m, bridge_m],
     );
-    let bridge_n_reverse = app_const(
+    let second_bridge_reverse = app_const(
         kernel,
         eq_symm,
         &[nat_level],
@@ -221,8 +222,8 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
         nat_fib_abs_n,
         abs_fib_n,
         second_motive,
-        nat_fibs_dvd,
-        bridge_n_reverse,
+        nat_fibonacci_divisibility,
+        second_bridge_reverse,
     )?;
 
     let first_id = u64::MAX - 140_201;
@@ -236,7 +237,7 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
         abs_fib_m,
         first_motive,
         first_transport,
-        bridge_m_reverse,
+        first_bridge_reverse,
     )?;
 
     let proof = app_const(kernel, reverse, &[], &[fib_m, fib_n, both_transport]);
@@ -289,12 +290,13 @@ fn nat_dvd(
 ) -> Result<ExprId, String> {
     let dvd = find_name(kernel, "Dvd.dvd")?;
     let instance = find_name(kernel, "Nat.instDvd")?;
+    let instance = kernel.const_(instance, vec![]);
     let zero = kernel.level_zero();
     Ok(app_const(
         kernel,
         dvd,
         &[zero],
-        &[nat_ty, kernel.const_(instance, vec![]), left, right],
+        &[nat_ty, instance, left, right],
     ))
 }
 
@@ -399,7 +401,7 @@ fn find_name(kernel: &Kernel, expected: &str) -> Result<NameId, String> {
 fn nested_name(kernel: &mut Kernel, parts: &[&str]) -> NameId {
     let mut name = kernel.anon();
     for part in parts {
-        name = kernel.str_name(name, (*part).to_owned());
+        name = kernel.name_str(name, *part);
     }
     name
 }
