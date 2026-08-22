@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, `Int.fib_dvd`, and now `Int.fib_of_nonneg` are durably proved with empty kernel footprints. The new operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, and an isolated exact-commit replay reproduced every primary byte identity and the preregistered empty unlock delta.
 
-**Next:** construct and compile the frozen function-abstracted recurrence-step positivity residual; it may retain only clean equality transport and must name no concrete Fibonacci declaration.
+**Next:** execute hash-only V6 qualification of the already measured congrArg-only step residual; rerun no proof stream or checker.
 
 <!-- plan-section: landed-changes -->
 
@@ -142,6 +142,7 @@
 | 2026-08-22 | (pending) | V4 freezes only two core positivity roots—successor positivity and right-summand positivity—to close all four concrete residual contracts over the reusable exact recurrence without touching official Fibonacci targets |
 | 2026-08-22 | (pending) | One bounded `Init.Prelude` export qualifies `Nat.zero_lt_succ` and `Nat.add_pos_right` empty-footprint through two fresh imports and seals the 124,573-byte support capsule with zero target submissions or ledger writes |
 | 2026-08-22 | (pending) | V5 isolates recurrence-step positivity as a second function-abstracted residual over only a recurrence contract and generic right-summand positivity, leaving zero/one presentations as target-owned definitional constructions in the final driver |
+| 2026-08-22 | (pending) | V5 compiles and exports twice byte-identically with empty footprints, but withholds credit because the actual direct closure `[congrArg]` is narrower than predicted `[Eq.symm, congrArg]`; V6 freezes hash-only correction |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
