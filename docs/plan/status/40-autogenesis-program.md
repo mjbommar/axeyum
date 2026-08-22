@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, `Nat.fib_eq_zero`, and now `Int.fib_eq_zero` are durably proved with empty kernel footprints. An isolated clean replay independently reproduced `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, exactly one ledger write, its proved fact, and the preregistered empty readiness delta.
 
-**Next:** compile exact constructive integer induction from the qualified adapter and five constructor supports, then qualify it before recurrence specialization.
+**Next:** export and freshly import exact constructive integer induction twice, then specialize recurrence uniqueness to exact `Int.fib_add`.
 
 <!-- plan-section: landed-changes -->
 
@@ -41,6 +41,7 @@
 | 2026-08-22 | (pending) | The constructive induction adapter exports and imports twice with an empty footprint; the direct constructor split plus four exact succ/pred laws are frozen next |
 | 2026-08-22 | (pending) | Direct constructor split and four succ/pred laws all compile by constructor reduction on the first bounded attempt; five-root qualification remains separate |
 | 2026-08-22 | (pending) | All five constructor supports export byte-identically and import twice empty-footprint; exact constructive integer induction composition is frozen next |
+| 2026-08-22 | (pending) | Exact constructive integer induction compiles on the first bounded attempt from only target-owned adapter and constructor supports; qualification remains separate |
 
 | 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
 | 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |
