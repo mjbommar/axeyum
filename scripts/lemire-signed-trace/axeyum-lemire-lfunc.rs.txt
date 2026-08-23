@@ -1,0 +1,657 @@
+//! `L`-function route to the horizontal conductor sums `A_r(n,j)` of the
+//! Kaser--Lemire lane (angle 4b).
+//!
+//! For `q = 2^r`, `E_j = (1 + x F_q[x])/x^{j+1}` and a character `chi` of `E_j`,
+//! the completely multiplicative function `F -> chi(<F>_j)` on monic
+//! polynomials has L-function
+//!
+//! ```text
+//! L(chi,T) = sum_{m=0}^{j-1} c_m(chi) T^m,   c_m(chi) = sum_{v in V_m} chi(v),
+//! ```
+//!
+//! where `V_m = {1 + b_1 x + ... + b_m x^m}` is the (injective) image of the
+//! monic degree-`m` polynomials under `F -> <F>_j` (`m < j`); coefficients
+//! `m >= j` vanish by orthogonality.  With `e_k = (-1)^k c_k` and Newton's
+//! identities, `S_n(chi) = -p_n` and
+//!
+//! ```text
+//! A_r(n,j) = sum_{chi of exact conductor j} S_n(chi),
+//! ```
+//!
+//! which is `q^j N_j(1) - q^{j-1} N_{j-1}(1)` (the quantity
+//! `axeyum-lemire-horizontal` computes by window enumeration at cost
+//! `q^{n-j+1}`).  This binary costs `~ j q^j log q` and is INDEPENDENT OF `n`:
+//! every `n <= nmax` comes out of one run.
+//!
+//! Structure used (proved in note 14): with `h_{k,l} = 1 + z^l x^k` (`z` a
+//! generator of `F_q^*`, `k` odd, `0 <= l < r`),
+//!
+//! ```text
+//! E_j = prod_{k odd <= j} prod_{l<r} <h_{k,l}>,   ord(h_{k,l}) = 2^{e_k},
+//! e_k = floor(log2(j/k)) + 1,   sum_{k odd} e_k = j,
+//! ```
+//!
+//! because `(1 + a x^k)^2 = 1 + a^2 x^{2k}` in characteristic two.  A character
+//! has exact conductor `j` iff some exponent in the block `k0 = odd part of j`
+//! is odd; there are `q^{j-1}(q-1)` of them.  All character values are 8th
+//! roots of unity for `j <= 7` (`exponent(E_j) = 2^{floor(log2 j)+1}`), so every
+//! quantity below is EXACT in `Z[zeta_8] = Z[T]/(T^4+1)`.
+//!
+//! Usage: `axeyum-lemire-lfunc <j> <r> <nmax> [threads] [--orders NORD]`
+//!
+//! Output lines: `META|...`, `A|n|value`, `MOM|a|b|c0|c1|c2|c3`,
+//! `ORD|n0|count`, `ORDINF|count`, `FIX|t_order|fixed_chars`.
+
+use std::env;
+
+/// PRIMITIVE polynomials over `F_2` (bit `i` = coefficient of `x^i`).  A merely
+/// irreducible modulus silently corrupts the log table (note 12, control C5).
+const MODULI: [u32; 17] = [
+    0, 0b11, 0b111, 0b1011, 0b10011, 0b100101, 0b1000011, 0b10000011, 0b100011101,
+    0b1000010001, 0b10000001001, 0b100000000101, 0b1000001010011, 0b10000000011011,
+    0b100010001000011, 0b1000000000000011, 0b10001000000001011,
+];
+
+struct Field {
+    r: u32,
+    q: u32,
+    log: Vec<u32>,
+    exp: Vec<u32>,
+}
+
+impl Field {
+    fn new(r: u32) -> Field {
+        assert!((1..=12).contains(&r), "r out of range");
+        let q = 1u32 << r;
+        let m = MODULI[r as usize];
+        let mut exp = vec![0u32; (2 * q) as usize];
+        let mut log = vec![0u32; q as usize];
+        let mut a = 1u32;
+        for i in 0..(q - 1) {
+            exp[i as usize] = a;
+            log[a as usize] = i;
+            a <<= 1;
+            if a & q != 0 {
+                a ^= m;
+            }
+        }
+        assert_eq!(a, 1, "modulus not primitive");
+        // primitivity, checked properly: exp[0..q-1] is a bijection onto F_q^*
+        let mut seen = vec![false; q as usize];
+        for i in 0..(q - 1) {
+            let v = exp[i as usize];
+            assert!(v != 0 && !seen[v as usize], "log table not a bijection (non-primitive modulus)");
+            seen[v as usize] = true;
+        }
+        for i in (q - 1)..(2 * q) {
+            exp[i as usize] = exp[(i - (q - 1)) as usize];
+        }
+        Field { r, q, log, exp }
+    }
+    #[inline]
+    fn mul(&self, a: u32, b: u32) -> u32 {
+        if a == 0 || b == 0 {
+            0
+        } else {
+            self.exp[(self.log[a as usize] + self.log[b as usize]) as usize]
+        }
+    }
+    fn pow(&self, a: u32, e: u32) -> u32 {
+        if a == 0 {
+            return 0;
+        }
+        self.exp[((self.log[a as usize] as u64 * e as u64) % (self.q as u64 - 1)) as usize]
+    }
+}
+
+/// `e_k = #{t >= 0 : k 2^t <= j}`.
+fn ek(j: u32, k: u32) -> u32 {
+    let mut e = 0;
+    let mut t = k;
+    while t <= j {
+        e += 1;
+        t *= 2;
+    }
+    e
+}
+
+// ---------------- Z[zeta_8] = Z[T]/(T^4+1) ----------------
+type I4 = [i64; 4];
+type C4 = [i32; 4];
+
+#[inline]
+fn mul_zeta_i32(a: C4, e: u32) -> C4 {
+    let (e, s) = if e & 4 != 0 { (e & 3, -1i32) } else { (e & 3, 1i32) };
+    let mut out = [0i32; 4];
+    for i in 0..4usize {
+        let k = i + e as usize;
+        if k >= 4 {
+            out[k - 4] = -s * a[i];
+        } else {
+            out[k] = s * a[i];
+        }
+    }
+    out
+}
+
+#[inline]
+fn cy_mul(a: I4, b: I4) -> I4 {
+    let mut c = [0i64; 7];
+    for i in 0..4usize {
+        let ai = a[i];
+        if ai != 0 {
+            for k in 0..4usize {
+                c[i + k] += ai * b[k];
+            }
+        }
+    }
+    [c[0] - c[4], c[1] - c[5], c[2] - c[6], c[3]]
+}
+
+#[inline]
+fn cy_conj(a: I4) -> I4 {
+    [a[0], -a[3], -a[2], -a[1]]
+}
+
+// ---------------- E_j ----------------
+struct Ej {
+    j: u32,
+    r: u32,
+    q: u32,
+    odd: Vec<u32>,
+    e: Vec<u32>,          // e[idx] for odd[idx]
+    gk: Vec<u32>,         // per generator: block k
+    ge: Vec<u32>,         // per generator: e_k
+    gshift: Vec<u32>,     // per generator: bit offset of its digit in the packed index
+    weight: Vec<u32>,     // per generator: 2^{3-e_k}
+    zpow: Vec<Vec<u32>>,  // zpow[i][l] = z^{l 2^i}
+    invcol: Vec<Vec<u32>>, // invcol[i][t]: inverse of the map b -> sum_l b_l z^{l 2^i}
+    n1: usize,            // number of generators in G1
+    bits1: u32,
+    size1: usize,
+    size2: usize,
+    k0mask: u64,          // mask of "digit is odd" bits for the k0 block (in G1 indexing)
+    k0mask2: u64,         // ditto in the G2 (block-character) indexing
+    k0_in_g2: bool,
+}
+
+impl Ej {
+    fn new(j: u32, f: &Field, g2bits: usize) -> Ej {
+        let odd: Vec<u32> = (1..=j).filter(|k| k % 2 == 1).collect();
+        let e: Vec<u32> = odd.iter().map(|&k| ek(j, k)).collect();
+        assert_eq!(e.iter().sum::<u32>(), j, "sum e_k must be j");
+        assert!(*e.iter().max().unwrap() <= 3, "j <= 7 required (Z[zeta_8])");
+        let r = f.r;
+        let mut gk = vec![];
+        let mut ge = vec![];
+        let mut gshift = vec![];
+        let mut weight = vec![];
+        let mut bit = 0u32;
+        for (bi, &k) in odd.iter().enumerate() {
+            for _l in 0..r {
+                gk.push(k);
+                ge.push(e[bi]);
+                gshift.push(bit);
+                weight.push(1 << (3 - e[bi]));
+                bit += e[bi];
+            }
+        }
+        assert_eq!(bit, j * r);
+        let emax = *e.iter().max().unwrap();
+        let mut zpow = vec![];
+        let mut invcol = vec![];
+        for i in 0..emax {
+            let col: Vec<u32> = (0..r).map(|l| f.pow(f.exp[l as usize], 1 << i)).collect();
+            invcol.push(invert_bitmatrix(&col, r));
+            zpow.push(col);
+        }
+        // G2 = the last odd block (always e = 1 for j >= 3); for j <= 2 it is empty
+        // G2 = a trailing run of radix-2 generators (so the block character is a SIGN)
+        let ngen = gk.len();
+        let mut maxg2 = 0usize;
+        while maxg2 < ngen && ge[ngen - 1 - maxg2] == 1 {
+            maxg2 += 1;
+        }
+        let want = if g2bits == 0 { (r as usize).min(maxg2) } else { g2bits };
+        assert!(want <= maxg2, "g2bits exceeds the trailing radix-2 run ({maxg2})");
+        let (n1, size2) = (ngen - want, 1usize << want);
+        let bits1: u32 = (0..n1).map(|gi| ge[gi]).sum();
+        let size1 = 1usize << bits1;
+        // k0 = odd part of j
+        let mut k0 = j;
+        while k0 % 2 == 0 {
+            k0 /= 2;
+        }
+        // exact conductor j <=> some exponent in the k0 block is ODD; the block may
+        // straddle the G1/G2 split, so keep one mask on each side.
+        let mut k0mask = 0u64;   // "digit is odd" bits inside the G1 index
+        let mut k0mask2 = 0u64;  // ditto inside the G2 index (all radix 2 there)
+        for gi in 0..ngen {
+            if gk[gi] == k0 {
+                if gi < n1 {
+                    k0mask |= 1u64 << gshift[gi];
+                } else {
+                    k0mask2 |= 1u64 << (gi - n1);
+                }
+            }
+        }
+        assert!(k0mask != 0 || k0mask2 != 0);
+        let k0_in_g2 = k0mask == 0;
+        Ej {
+            j, r, q: f.q, odd, e, gk, ge, gshift, weight, zpow, invcol,
+            n1, bits1, size1, size2, k0mask, k0mask2, k0_in_g2,
+        }
+    }
+
+    /// Discrete log: `b[1..=j]` are the coefficients of `x^1..x^j` (b[0] = 1).
+    /// Returns the packed (i1, i2) pair.
+    fn dlog(&self, f: &Field, b: &mut [u32]) -> (usize, usize) {
+        let j = self.j as usize;
+        let r = self.r as usize;
+        let mut i1: usize = 0;
+        let mut i2: usize = 0;
+        for m in 1..=j {
+            let i = (m as u32).trailing_zeros();
+            let k = (m as u32) >> i;
+            let c = b[m];
+            if c != 0 {
+                let mut bits = 0u32;
+                let mut v = c;
+                while v != 0 {
+                    let t = v.trailing_zeros();
+                    bits ^= self.invcol[i as usize][t as usize];
+                    v &= v - 1;
+                }
+                for l in 0..r {
+                    if (bits >> l) & 1 == 0 {
+                        continue;
+                    }
+                    // generator (k, l)
+                    let gi = self.gen_index(k, l as u32);
+                    if gi < self.n1 {
+                        i1 += (1usize << i) << self.gshift[gi];
+                    } else {
+                        i2 |= 1usize << (gi - self.n1);
+                        debug_assert_eq!(i, 0);
+                    }
+                    let a = self.zpow[i as usize][l];
+                    // b <- b / (1 + a x^m):  h[d] = b[d] + a h[d-m]
+                    for d in m..=j {
+                        let prev = if d >= m { b[d - m] } else { 0 };
+                        b[d] ^= f.mul(a, prev);
+                    }
+                }
+            }
+            debug_assert_eq!(b[m], 0);
+        }
+        (i1, i2)
+    }
+
+    fn gen_index(&self, k: u32, l: u32) -> usize {
+        let bi = self.odd.iter().position(|&x| x == k).unwrap();
+        bi * self.r as usize + l as usize
+    }
+}
+
+fn invert_bitmatrix(cols: &[u32], r: u32) -> Vec<u32> {
+    // cols[l] = image of the l-th basis vector; build the inverse map.
+    let mut basis = vec![(0u32, 0u32); 32];
+    for l in 0..r as usize {
+        let (mut v, mut c) = (cols[l], 1u32 << l);
+        loop {
+            assert!(v != 0, "columns dependent");
+            let p = (31 - v.leading_zeros()) as usize;
+            if basis[p].0 == 0 {
+                basis[p] = (v, c);
+                break;
+            }
+            v ^= basis[p].0;
+            c ^= basis[p].1;
+        }
+    }
+    let solve = |target: u32| -> u32 {
+        let mut v = target;
+        let mut out = 0u32;
+        while v != 0 {
+            let p = (31 - v.leading_zeros()) as usize;
+            assert!(basis[p].0 != 0, "target not in span");
+            v ^= basis[p].0;
+            out ^= basis[p].1;
+        }
+        out
+    };
+    (0..r).map(|t| solve(1u32 << t)).collect()
+}
+
+// ---------------- main ----------------
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 4 {
+        eprintln!("usage: axeyum-lemire-lfunc <j> <r> <nmax> [threads] [--orders NORD]");
+        std::process::exit(2);
+    }
+    let j: u32 = args[1].parse().expect("j");
+    let r: u32 = args[2].parse().expect("r");
+    let nmax: usize = args[3].parse().expect("nmax");
+    let threads: usize = if args.len() > 4 && !args[4].starts_with("--") {
+        args[4].parse().expect("threads")
+    } else {
+        8
+    };
+    let mut nord: usize = 0;
+    let mut g2bits: usize = 0;
+    for w in args.windows(2) {
+        if w[0] == "--orders" {
+            nord = w[1].parse().expect("NORD");
+        }
+        if w[0] == "--g2bits" {
+            g2bits = w[1].parse().expect("g2bits");
+        }
+    }
+    assert!(j >= 2 && j <= 7, "j in 2..7");
+    let f = Field::new(r);
+    let g = Ej::new(j, &f, g2bits);
+    let q = f.q as u64;
+    let d = (j - 1) as usize;
+
+    // overflow guard for the i64 Newton recursion
+    let bound = 32.0f64 * (1u64 << d) as f64 * (j as f64 - 1.0)
+        * (q as f64).powf(nmax.max(nord) as f64 / 2.0);
+    assert!(bound < 9.0e18, "nmax/NORD too large for i64 Newton (bound {bound:.3e})");
+
+    let t0 = std::time::Instant::now();
+
+    // ---- enumerate V_{j-1}, discrete-log, counting-sort by i1 ----
+    let nv: usize = (q as usize).pow(j - 1);
+    assert_eq!(g.size1 * g.size2, (q as usize).pow(j), "index space must be |E_j|");
+    assert!(nv.is_power_of_two());
+    let mut i1v = vec![0u32; nv];
+    let mut i2v = vec![0u32; nv];
+    let mut degv = vec![0u8; nv];
+    {
+        let chunk = nv.div_ceil(threads);
+        let fr = &f;
+        let gr = &g;
+        let mut parts: Vec<(usize, &mut [u32], &mut [u32], &mut [u8])> = Vec::new();
+        let mut off = 0usize;
+        let (mut a1, mut a2, mut a3): (&mut [u32], &mut [u32], &mut [u8]) =
+            (&mut i1v, &mut i2v, &mut degv);
+        while !a1.is_empty() {
+            let take = chunk.min(a1.len());
+            let (h1, t1) = a1.split_at_mut(take);
+            let (h2, t2) = a2.split_at_mut(take);
+            let (h3, t3) = a3.split_at_mut(take);
+            parts.push((off, h1, h2, h3));
+            a1 = t1;
+            a2 = t2;
+            a3 = t3;
+            off += take;
+        }
+        std::thread::scope(|s| {
+            for (off, c1, c2, c3) in parts {
+                s.spawn(move || {
+                    let jj = jj_len(gr.j);
+                    let mut buf = vec![0u32; jj];
+                    for t in 0..c1.len() {
+                        let mut code = off + t;
+                        buf.iter_mut().for_each(|x| *x = 0);
+                        buf[0] = 1;
+                        let mut dg = 0u8;
+                        for m in 1..gr.j as usize {
+                            let b = (code % fr.q as usize) as u32;
+                            code /= fr.q as usize;
+                            buf[m] = b;
+                            if b != 0 {
+                                dg = m as u8;
+                            }
+                        }
+                        let (x1, x2) = gr.dlog(fr, &mut buf);
+                        c1[t] = x1 as u32;
+                        c2[t] = x2 as u32;
+                        c3[t] = dg;
+                    }
+                });
+            }
+        });
+    }
+    // counting sort by i1
+    let mut order = vec![0u32; nv];
+    {
+        let mut cnt = vec![0u32; g.size1 + 1];
+        for &x in &i1v {
+            cnt[x as usize + 1] += 1;
+        }
+        for t in 0..g.size1 {
+            cnt[t + 1] += cnt[t];
+        }
+        for t in 0..nv {
+            let p = &mut cnt[i1v[t] as usize];
+            order[*p as usize] = t as u32;
+            *p += 1;
+        }
+    }
+
+    // ---- per-block work ----
+    let mut atot = vec![[0i128; 4]; nmax];
+    let momspec: [(u32, u32); 7] = [(1, 0), (0, 1), (1, 1), (2, 0), (2, 2), (3, 3), (2, 1)];
+    let mut momtot = vec![[0i128; 4]; momspec.len()];
+    let mut ordhist = vec![0u64; nord + 1];
+    let mut ordinf: u64 = 0;
+    let mut nprim: u64 = 0;
+    let mut arrs: Vec<Vec<C4>> = (0..j as usize).map(|_| vec![[0i32; 4]; g.size1]).collect();
+
+    for w2 in 0..g.size2 {
+        if (w2 as u64 & g.k0mask2) == 0 && g.k0_in_g2 {
+            continue; // no odd k0-exponent anywhere: conductor < j for the whole block
+        }
+        let block_has_k0 = (w2 as u64 & g.k0mask2) != 0;
+        for a in arrs.iter_mut() {
+            a.iter_mut().for_each(|x| *x = [0; 4]);
+        }
+        // fill: chi_{w2}(v) = (-1)^{popcount(w2 & i2)} because G2 has radix 2 and weight 4
+        for &oi in order.iter() {
+            let t = oi as usize;
+            let s = if ((w2 & i2v[t] as usize).count_ones() & 1) == 1 { -1 } else { 1 };
+            arrs[degv[t] as usize][i1v[t] as usize][0] += s;
+        }
+        // transform over G1
+        for a in arrs.iter_mut() {
+            for gi in 0..g.n1 {
+                let rad = 1usize << g.ge[gi];
+                let st = 1usize << g.gshift[gi];
+                ft_stage(a, st, rad, g.weight[gi], threads);
+            }
+        }
+        // per-character work
+        let per = g.size1.div_ceil(threads);
+        let mut results: Vec<(Vec<[i128; 4]>, Vec<[i128; 4]>, Vec<u64>, u64, u64)> = Vec::new();
+        {
+            let arrs_ref = &arrs;
+            let gr = &g;
+            std::thread::scope(|s| {
+                let mut handles = Vec::new();
+                for tid in 0..threads {
+                    let lo = tid * per;
+                    let hi = ((tid + 1) * per).min(gr.size1);
+                    handles.push(s.spawn(move || {
+                        let mut al = vec![[0i128; 4]; nmax];
+                        let mut ml = vec![[0i128; 4]; momspec.len()];
+                        let mut oh = vec![0u64; nord + 1];
+                        let mut oi = 0u64;
+                        let mut np = 0u64;
+                        let mut cm = vec![[0i64; 4]; d + 1];
+                        let mut ev = vec![[0i64; 4]; d + 1];
+                        let mut pv = vec![[0i64; 4]; nmax.max(nord) + 1];
+                        for idx in lo..hi {
+                            if !block_has_k0 && (idx as u64 & gr.k0mask) == 0 {
+                                continue;
+                            }
+                            np += 1;
+                            let mut acc = [0i64; 4];
+                            for m in 0..=d {
+                                let v = arrs_ref[m][idx];
+                                for t in 0..4 {
+                                    acc[t] += v[t] as i64;
+                                }
+                                cm[m] = acc;
+                            }
+                            // control: |c_d|^2 = q^d  (Weil purity, every character)
+                            let nm = cy_mul(cm[d], cy_conj(cm[d]));
+                            assert!(
+                                nm[1] == 0 && nm[2] == 0 && nm[3] == 0
+                                    && nm[0] == (q as i64).pow(d as u32),
+                                "purity |c_{{j-1}}|^2 = q^{{j-1}} failed at idx {idx}"
+                            );
+                            // control: conj(c_m) c_d = q^m c_{d-m} (functional equation), sampled
+                            if idx % 1021 == 0 {
+                                for m in 0..=d {
+                                    let lhs = cy_mul(cy_conj(cm[m]), cm[d]);
+                                    let qm = (q as i64).pow(m as u32);
+                                    for t in 0..4 {
+                                        assert_eq!(
+                                            lhs[t], qm * cm[d - m][t],
+                                            "functional equation failed at idx {idx} m {m}"
+                                        );
+                                    }
+                                }
+                            }
+                            for m in 0..=d {
+                                let sg = if m % 2 == 0 { 1i64 } else { -1i64 };
+                                ev[m] = [sg * cm[m][0], sg * cm[m][1], sg * cm[m][2], sg * cm[m][3]];
+                            }
+                            let ntop = nmax.max(nord);
+                            pv[0] = [0; 4];
+                            let mut ord_found = 0usize;
+                            for n in 1..=ntop {
+                                let mut a = [0i64; 4];
+                                let top = (n - 1).min(d);
+                                for i in 1..=top {
+                                    let t = cy_mul(ev[i], pv[n - i]);
+                                    if i % 2 == 1 {
+                                        for u in 0..4 { a[u] += t[u]; }
+                                    } else {
+                                        for u in 0..4 { a[u] -= t[u]; }
+                                    }
+                                }
+                                if n <= d {
+                                    let sgn = if n % 2 == 1 { 1i64 } else { -1i64 };
+                                    for u in 0..4 { a[u] += sgn * (n as i64) * ev[n][u]; }
+                                }
+                                pv[n] = a;
+                                if n <= nmax {
+                                    for u in 0..4 { al[n - 1][u] -= a[u] as i128; }
+                                }
+                                if nord > 0 && ord_found == 0 && n <= nord && n % 2 == 0 {
+                                    let want = (d as i64) * (q as i64).pow((n / 2) as u32);
+                                    if a[0] == want && a[1] == 0 && a[2] == 0 && a[3] == 0 {
+                                        ord_found = n;
+                                    }
+                                }
+                            }
+                            if nord > 0 {
+                                if ord_found == 0 { oi += 1; } else { oh[ord_found] += 1; }
+                            }
+                            // moments in c_1 (= S_1)
+                            let c1 = cm[1.min(d)];
+                            let c1b = cy_conj(c1);
+                            for (mi, &(aa, bb)) in momspec.iter().enumerate() {
+                                let mut v: I4 = [1, 0, 0, 0];
+                                for _ in 0..aa { v = cy_mul(v, c1); }
+                                for _ in 0..bb { v = cy_mul(v, c1b); }
+                                for u in 0..4 { ml[mi][u] += v[u] as i128; }
+                            }
+                        }
+                        (al, ml, oh, oi, np)
+                    }));
+                }
+                for h in handles {
+                    results.push(h.join().unwrap());
+                }
+            });
+        }
+        for (al, ml, oh, oi, np) in results {
+            for n in 0..nmax { for u in 0..4 { atot[n][u] += al[n][u]; } }
+            for mi in 0..momspec.len() { for u in 0..4 { momtot[mi][u] += ml[mi][u]; } }
+            for t in 0..=nord { ordhist[t] += oh[t]; }
+            ordinf += oi;
+            nprim += np;
+        }
+    }
+
+    let expect = (q.pow(j - 1)) * (q - 1);
+    assert_eq!(nprim, expect, "wrong number of exact-conductor-j characters");
+
+    // stabilizer / freeness report: #{g in E_j : sigma_t g = g} = q^{#{m<=j : t^m=1}}
+    let gcdjq: u64 = {
+        let mut a = j as u64;
+        while a % 2 == 0 { a /= 2; }
+        let (mut x, mut y) = (a, q - 1);
+        while y != 0 { let t = x % y; x = y; y = t; }
+        x
+    };
+    println!(
+        "META|j={}|r={}|q={}|nmax={}|nord={}|nprim={}|threads={}|gcd_jodd_qm1={}|free={}|secs={:.1}",
+        j, r, q, nmax, nord, nprim, threads, gcdjq,
+        if gcdjq == 1 { 1 } else { 0 },
+        t0.elapsed().as_secs_f64()
+    );
+    println!("STRUCT|blocks={:?}|e={:?}|size1={}|size2={}|n1={}", g.odd, g.e, g.size1, g.size2, g.n1);
+    for n in 0..nmax {
+        let v = atot[n];
+        assert!(v[1] == 0 && v[2] == 0 && v[3] == 0, "A_r({},{}) not rational: {:?}", n + 1, j, v);
+        assert!(
+            v[0] % (q as i128 - 1) == 0,
+            "control (q-1) | A_r: q-1={} does not divide A_{}({},{})={}",
+            q - 1, r, n + 1, j, v[0]
+        );
+        println!("A|{}|{}", n + 1, v[0]);
+    }
+    for (mi, &(a, b)) in momspec.iter().enumerate() {
+        let v = momtot[mi];
+        println!("MOM|{}|{}|{}|{}|{}|{}", a, b, v[0], v[1], v[2], v[3]);
+    }
+    if nord > 0 {
+        for t in 0..=nord {
+            if ordhist[t] > 0 {
+                println!("ORD|{}|{}", t, ordhist[t]);
+            }
+        }
+        println!("ORDINF|{}", ordinf);
+    }
+}
+
+fn jj_len(j: u32) -> usize {
+    j as usize + 1
+}
+
+/// One mixed-radix DFT stage over a cyclic factor of order `rad` at stride `st`,
+/// character weight `w` (so the kernel is `T^{v t w}`, `T = zeta_8`).
+fn ft_stage(a: &mut [C4], st: usize, rad: usize, w: u32, threads: usize) {
+    let block = st * rad;
+    let nblk = a.len() / block;
+    let per = nblk.div_ceil(threads) * block;
+    std::thread::scope(|s| {
+        for piece in a.chunks_mut(per.max(block)) {
+            s.spawn(move || {
+                let mut src = [[0i32; 4]; 8];
+                for base in (0..piece.len()).step_by(block) {
+                    for off in 0..st {
+                        for t in 0..rad {
+                            src[t] = piece[base + off + t * st];
+                        }
+                        for v in 0..rad {
+                            let mut acc = [0i32; 4];
+                            for t in 0..rad {
+                                let z = mul_zeta_i32(src[t], ((v * t) as u32 * w) & 7);
+                                for u in 0..4 {
+                                    acc[u] += z[u];
+                                }
+                            }
+                            piece[base + off + v * st] = acc;
+                        }
+                    }
+                }
+            });
+        }
+    });
+}

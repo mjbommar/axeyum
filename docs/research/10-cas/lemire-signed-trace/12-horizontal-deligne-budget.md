@@ -750,5 +750,7 @@ evidence, not a theorem (it is one `r`, and cancellation between degrees at
 resolve `(2j+1, j)` for `j = 4, 5, 6` at `r` up to 7--8, which decides whether
 top-degree classes persist past the finite-monodromy regime; (2) the
 monodromy of `L_univ` at `p = 2` as `j` grows -- at which `j` does it stop
-being finite, and is it then big (Katz's `p > 2n-1` theorem does not cover
-`p = 2`)? Both are concrete computations with the existing engines.
+being finite, and is it then big? [Answered in note 14: it is a theorem --
+Katz IMRN 2013 Thm 5.1 gives `G_geom` containing `SL(j-1)` at `p = 2` for every
+`j >= 4` (the `p > 2n-1` hypothesis belongs only to his Betti-constant Thm
+8.2), and Gorodetsky FFA 2019 Lemma 3.5 settles `(p,j) = (2,3)` as finite.]

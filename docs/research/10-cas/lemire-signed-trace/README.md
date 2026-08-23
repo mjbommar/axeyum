@@ -86,6 +86,25 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   Proposition 11: any such sieve proof would prove Legendre for `F_2[t]`
   (angle 5's uniform conjecture). Proposition 13: Type II transplants onto the
   same `S_n(chi)` family. Script `lemire_sieve_face.py`.
+- [14-horizontal-unblocked.md](14-horizontal-unblocked.md) -- angle 4b: is the
+  horizontal route unblocked? **Verdict: ALIVE.** The budget restated for the
+  range `(HWO)` actually uses (`a <= j <= ell`, so `ell/(j-1) -> 1`): only the
+  top `~6 + 2 log2 C` degrees need vanish, not concentration in degree `j+1`.
+  Proposition A (explicit basis `E_j = prod_{k odd} prod_l <1 + z^l x^k>`,
+  orders `2^{e_k}`, which makes the whole computation exact in `Z[zeta_8]`),
+  Proposition B (the `G_m`-action is free iff `gcd(j, q-1) = 1` -- corrects
+  note 12's "`j | q-1`"), Lemma C (`2j - i_max = min{k : H^k(B, G^v) != 0}`
+  after Leray descent along the `G_m`-torsor), Lemma D (`H^{2j}_c = 0` for
+  every `j >= 4`, `n != j-1`, from Katz's `SL(j-1)` monodromy). New engine
+  `axeyum-lemire-lfunc` (`L`-function route, cost independent of `n`) reaches
+  `j = 4..7`; every exactly resolved cell with `j >= 4` has top weight
+  `n + j` or `n + j + 1`, every one with `j <= 3` sits at `n + 2j - 1` or
+  `n + 2j`. The monodromy transition is at `j_0 = 4` and is a theorem
+  (Katz IMRN 2013 Thm. 5.1; Gorodetsky FFA 2019 Lemma 3.5), confirmed here
+  mechanically. What remains: (T1) the degree/weight statement -- the `w ~ j-7`
+  case of Sawin's Hypothesis H, whose only unconditional input is vacuous at
+  `p = 2` -- and (T2) a Betti bound, where the best in print is short by an
+  exponential. Script `lemire_horizontal_quotient.py`.
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).

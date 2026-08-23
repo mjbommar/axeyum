@@ -171,6 +171,19 @@ test, roughly 100x slower. Nothing else is required.
   `control C5: (q-1) does not divide A_8(7,4) = 190017374764662784`. Do not use
   it as data.
 
+- `lemire_horizontal_quotient.py` -- checker for
+  [note 14](../../docs/research/10-cas/lemire-signed-trace/14-horizontal-unblocked.md)
+  (angle 4b: is the horizontal route unblocked?). Exact `L`-function engine over
+  `F_{2^r}` in `Z[zeta_8]` via an explicit basis of `E_j` (producer: Rust bin
+  `axeyum-lemire-lfunc`, mirrored as `axeyum-lemire-lfunc.rs.txt`, built in the
+  lane snapshot; dumps in `data/lfunc-dumps/`, weights table
+  `data/horizontal-lfunc-weights.txt`). Reproduces the note-12 window-scan grid
+  on 136 overlapping cells and every note-12 closed form; reaches
+  `(j, r_max) = (4,8), (5,6), (6,5), (7,4)`. Controls C1--C9 (integrality,
+  `(q-1) | A_r`, the `G_m`-freeness criterion `gcd(j,q-1) = 1`, Frobenius
+  torsion orders `8` / `24` at `j = 2, 3` and none at `j >= 4`), mutation
+  controls via `--mutate k`; exits nonzero on any failure.
+
 - `lemire_sieve_face.py` -- checker for
   [note 13](../../docs/research/10-cas/lemire-signed-trace/13-sieve-face.md)
   (angle 2, the sieve face). Recomputes with python-flint, from scratch and

@@ -295,3 +295,83 @@ python-flint; LPs scipy/HiGHS, every LP-value-zero row re-certified over `Q`.
   sum_chi chi(<m>)chi(<l>)`, so every bilinear form is a reweighting of the same
   Hayes family, `A_M(chi)B_L(chi)` for `S_n(chi)`; angle 4's horizontal sums are
   the `alpha = beta = 1` case. Converse: `(HWO)` gives the count only.
+
+## Literature check 2 (sub-agent of angle 4b, 2026-08-22; primary texts read)
+
+- **Katz IMRN 2013 covers `p = 2` for conductor `j >= 4`.** Thm 5.1 (= 7.1):
+  "`G_geom` contains `SL(n-1)` except `(p=5,n=3)` and `(p=2,n=3)`"; `p=2`
+  handled via `NFT_3` (sec. 6, Lemma 6.8, Cor 7.4); Thm 1.2/8.1 is
+  equidistribution in `PU(n-1)#` for `n >= 4` in ANY characteristic. The
+  `p > 2n-1` hypothesis lives ONLY in Thm 8.2 (uniform Betti constant). The
+  lane's notes 10/12 said Katz's big-monodromy result excluded `p = 2`; that
+  was wrong -- only the uniform Betti constant does.
+- **`(p=2, j=3)` is finite monodromy, settled:** Gorodetsky FFA 56 (2019),
+  arXiv:1805.07105, Lemma 3.5 -- normalized roots are 24th roots of unity
+  (`Theta_chi^24 = I_2`), confirming Katz Rem 5.2 and the coordinator's hand
+  computation in note 12 sec. 9. So **`j_0 = 4`**: the resolved rows of note
+  12 (`j <= 3`) are exactly the finite-monodromy exceptions.
+- Sawin arXiv:1805.04330 Cor 5.3: `d >= 4 => G_geom` contains `SL_N`, no
+  characteristic hypothesis (unpublished; `q -> infinity` over a fixed
+  `F_{q0}`). Gorodetsky--Sawin Math. Ann. 376 (2019) Thm 9: for small `p`
+  they do the geometry on `Prim_ell` directly, top cohomology vanishes by
+  Katz 5.1; Thm 8: uniform-in-`p` Betti bound `3(4m deg M + ell + 2)^{2m+ell}`
+  (Katz FFA 2001 Thm 12 type) -- exponential `(O(j))^{O(j)}`, far above the
+  `~2^{j/2}` that (T2) needs. Sawin ANT 2020 (1810.01303) excludes `p=2` at
+  `n in {4,5}` for a determinant-order reason, not monodromy.
+- Still char-2-open in the literature: super-even/symplectic family at
+  `n = 3, 5` (Katz, Rudnick--Waxman paper; `n >= 7` covered); integral
+  monodromy (Perret-Gentil, odd `p` only); squarefree-conductor family
+  (Hall--Keating--Roditty-Gershon, odd `q`).
+- Consequence for (Q1'): with `G_geom` containing `SL(j-1)` for `j >= 4`, the
+  Adams/power-sum virtual representation `Xi_n` has a trivial constituent
+  only through `Lambda^{j-1}` (i.e. `n = j-1`), so for `n > j-1` there are
+  no geometric coinvariants and `H^{2j}_c = 0` -- the `i_max = 2j` rows of
+  note 12 are small-`j` artefacts. What big monodromy does NOT control is
+  `H^{2j-1}_c ... H^{j+2}_c` (dually `H^1 ... H^{j-2}` of the quotient `B`
+  with coefficients in `G^vee`); that is (T1), and it has no literature.
+
+## Entry 4b -- angle 4b (is the horizontal route unblocked?)
+
+Lane `lemire-signed-trace`, 2026-08-22. Note
+[14-horizontal-unblocked.md](14-horizontal-unblocked.md); script
+`lemire_horizontal_quotient.py` (controls C1--C9, mutation controls, exit 0);
+Rust bin `axeyum-lemire-lfunc` (exact `L`-function engine in `Z[zeta_8]`,
+cost `~ j q^j log q`, independent of `n`). The agent was terminated by a
+spend limit while finalising; this entry is the coordinator's digest of its
+note, which was complete through the verdict.
+
+- **Verdict: ALIVE** (moderate-to-high on "not dead"; low-to-moderate on
+  "provable"). Note 12's proposed obstruction (H) is refuted; the top-degree
+  classes of its resolved rows are the finite-monodromy artefact of `j <= 3`.
+- **Target corrected downward.** In the range `(HWO)` uses (`a <= j <= ell`,
+  `ell/(j-1) -> 1`) the budget reads `k >= 6.15 + 2 log2 C` uniformly in
+  `ell`: the top SIX OR SEVEN degrees must vanish, not "concentration in
+  degree `j+1`". What the data measure is `delta` = top weight minus `n`;
+  the estimate follows from `delta <= 2j - 6.15 - 2 log2 C` (T1w).
+- **Transition at `j_0 = 4` is a theorem** (Katz IMRN 2013 Thm 5.1 at `p=2`,
+  `j >= 4`; Gorodetsky FFA 2019 Lemma 3.5 for `(2,3)`), confirmed
+  mechanically by an exact Frobenius-torsion identity (orders `| 8`, `| 24`,
+  none `<= 100` at `j = 4`). **Lemma D (new, unconditional):** `H^{2j}_c = 0`
+  for all `j >= 4`, `n != j-1` (big monodromy + hook decomposition of the
+  Adams operation), so the worst case of note 12 cannot recur.
+- **Past the transition the top classes do not persist:** all nine exactly
+  resolved cells with `j >= 4` have `delta in {j, j+1}` (the `G_m`-forced
+  optimum); note 12's `(7,4)` is `delta = j+1`, `C = 6`; critical-line slope
+  of `delta` in `j` is `1.30 +- 0.19` (slope 1 within 1.5 sigma, slope 2 at
+  3.6 sigma). `q = 2` layer sums: `delta_1 = (1.00 +- 0.14) j + 2.3` over
+  `14 <= j <= 24` (supporting, not decisive).
+- **`G_m`-action is free iff `gcd(j, q-1) = 1`** (corrects note 12's guess);
+  non-free locus has `dim <= j/3`, invisible in degrees `>= j+1`, so the
+  Leray reduction to `B = Prim_j/G_m` survives: `C = 2C'`, `i_max = i'_max+2`.
+- **What remains is two named open statements.** (T1)/(T1w): the
+  `w = j - 7` case of Sawin's Hypothesis `H(n,r,r~,w)` (arXiv:1810.01303);
+  his only unconditional input (Lemma 5.3) is VACUOUS at `p = 2` for every
+  `r` and already sufficient at `p >= 3` -- the lane's obstruction is exactly
+  the characteristic-two case of that lemma. (T2): best uniform-in-`p` Betti
+  bound is `2^{O(j log j)}` (Sawin Lemma 2.11) against the allowed `~2^{j/2}`.
+- **Most decisive next computation:** extend the engine from `Z[zeta_8]` to
+  `Z[zeta_16]` (`j <= 15`) and measure `delta(2j+1, j)`, `delta(2j+2, j)` for
+  `j = 8, 9, 10` at `r = 4, 3, 3` (`q^j <= 2^{32}`, already-run size).
+- **Guidance for angles 1 and 5:** the family has big monodromy from `j = 4`;
+  the identity-class question is now (T1w)+(T2) on the quotient `B`; do not
+  re-derive Betti-size or shape arguments -- they are settled here.
