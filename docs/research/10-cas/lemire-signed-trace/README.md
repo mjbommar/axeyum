@@ -53,6 +53,12 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   barrier: provable irreducibility-preserving constructions multiply the
   degree, so window families are lacunary (density zero) and cannot cover a
   residue class; honest scope (known toolbox, not a logical impossibility).
+- [16-large-q-threshold.md](16-large-q-threshold.md) -- verification of the
+  `n`-independent large-`q` claim: Bagshaw's arbitrary-modulus level of
+  distribution does give Kaser--Lemire for all large `n` once `q > 7101 p^2`,
+  but only at **odd** `p` (his standing hypothesis, and the mechanism is
+  quadratic reciprocity), forcing `l >= 3` and smallest admissible `q = 3^11`.
+  The `p = 2` version asserted in note 15 is refuted.
 - [10-open-problem-statement.md](10-open-problem-statement.md) -- the missing
   estimate `(HWO)` stated for a specialist (Katz--Sawin monodromy / ASW towers
   / fixed-q pair correlation), with its three equivalent faces and the three

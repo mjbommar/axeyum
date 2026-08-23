@@ -184,6 +184,15 @@ test, roughly 100x slower. Nothing else is required.
   torsion orders `8` / `24` at `j = 2, 3` and none at `j >= 4`), mutation
   controls via `--mutate k`; exits nonzero on any failure.
 
+- `lemire_largeq.py` -- checker for
+  [note 16](../../docs/research/10-cas/lemire-signed-trace/16-large-q-threshold.md)
+  (the large-`q` threshold claim). Verifies the reversal duality
+  `f in W_n <-> f* = 1 mod T^{ceil(n/2)}` as a bijection with flint (89 `(q,n)`
+  pairs, 24,090 polynomials), re-derives Bagshaw's constant
+  `961 e^2 = 7100.88`, and reproduces his published newly-covered prime-power
+  list as an external control. 17 checks, 5 positive controls; exits nonzero on
+  failure. Data: `data/largeq-*.txt`.
+
 - `lemire_sieve_face.py` -- checker for
   [note 13](../../docs/research/10-cas/lemire-signed-trace/13-sieve-face.md)
   (angle 2, the sieve face). Recomputes with python-flint, from scratch and

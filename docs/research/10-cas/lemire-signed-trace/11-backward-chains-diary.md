@@ -463,3 +463,39 @@ note, which was complete through the verdict.
   independently before quoting) and Sawin's sparsity+Plancherel disproof
   template applied to note 07's `A_psi` (cheap: one uncounted statistic in
   dumps we already have).
+
+## Entry 7 -- the large-q threshold claim, verified/refuted
+
+Lane `lemire-signed-trace`, 2026-08-23. Note 16; checker
+`scripts/lemire-signed-trace/lemire_largeq.py` (17 checks, 5 positive controls,
+exits nonzero; data `largeq-*.txt`). Primary LaTeX: arXiv:2401.10399 (Can. J.
+Math. 78 (2026) 302--327), arXiv:1808.04001, arXiv:1204.0708.
+
+- **Individual, not averaged -- the structure survives.** Bagshaw
+  `cor:vonmangoldt` (Cor. 2.5) is single-modulus, ARBITRARY `F`, `r <= omega n`,
+  `omega < 1/2+1/62`. The Bombieri--Vinogradov form is a separate theorem
+  (Thm 2.6), better exponent, not used. `F = T^r` is legitimate; Sawin and
+  Sawin--Shusterman need squarefree and do not apply.
+- **Constant re-derives.** `g(omega) = e^2((16-omega)/(16-31omega))^2` is
+  increasing; `g(1/2) = 961 e^2 = 7100.8829`, so `7101 p^2` is right.
+- **REFUTED at `p = 2`.** The paper fixes `q` an ODD prime power, and its one
+  indispensable input -- SS `LinearFormsMobThm` (Thm 4.5) -- sits in a section
+  opening "we will assume that the characteristic `p` of `F_q` is odd. Because
+  of this, `F_q^x` admits a unique quadratic character". The Mobius cancellation
+  IS quadratic reciprocity (Jacobi symbol of a resultant). Note 15's "at
+  `p = 2`, every `q >= 2^15`" is a theorem that does not exist.
+- **REFUTED a second way.** `q > 7100.88 p^2` is `p^{l-2} > 7100.88`, forcing
+  `l >= 3`: NO prime field, NO `q = p^2`, ever. Admissible set is `O(X^{1/3})`
+  below `X`; smallest member `3^11 = 177147`. External control: the rule
+  reproduces Bagshaw's own list `3^14, 5^10, 13^7, 23^6, 59^5, ...` exactly.
+- **Reversal duality verified**, index `r = ceil(n/2)` (KR sec. 5.2), bijection
+  onto the `f(0) = 1` part of the window; 89 `(q,n)` pairs, 24,090 polynomials.
+  The brief's `floor(n/2)+1` is off by one at even `n`: over `F_3` at `n = 4` it
+  reports an EMPTY progression where the window holds 6 irreducibles.
+- **Step nobody wrote down:** at the endpoint `Lambda` also counts prime powers,
+  and `#{proper powers of degree n} ~ q^{n/2}` = the class size. They die because
+  `x = P^k = 1 mod T^r` forces `P = zeta mod T^{ceil(r/p^A)}`, leaving
+  `O(q^{n/2p})` -- a saving only by `1/p`.
+- **Next:** note 15 sec. 2.2, 3(i), 3(iii), 3(iv) and headline answer 2 need
+  note 16 sec. 8's corrections (note-15 owner / coordinator). Do NOT propagate
+  to notes 00/09 as written. Effective `n_0(q)` is a bounded follow-up.

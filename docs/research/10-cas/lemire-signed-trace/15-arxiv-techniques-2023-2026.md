@@ -19,18 +19,27 @@ Two headline answers, both new relative to notes 00--14:
    the resulting bound lands within an **absolute constant factor 4** of
    `(HWO)`, against the factor `~ell` by which every method in notes 03--09
    misses. This is the top item in the ranked list below.
-2. **The lane's residual problem is a small-`q` problem, not a large-`n`
-   problem, and that is now a theorem.** Bagshaw (arXiv:2401.10399) proves a
-   level of distribution `omega < 1/2 + 1/62` for von Mangoldt in arithmetic
-   progressions to an **arbitrary** modulus (Sawin and Sawin--Shusterman need
-   squarefree; ours, `x^{ell+1}`, is the maximally non-squarefree one), subject
-   to `q > p^2 e^2 ((16-omega)/(16-31 omega))^2`. Via the reversal duality this
-   **proves the Kaser--Lemire statement over `F_q` for all sufficiently large
-   `n`, for every `q > 7101 p^2`** -- at `p = 2`, every `q >= 2^15 = 32768`.
-   Note 09's threshold was `q > n/2` (even `n`) / `q > (n+1)^2/4`, which grows
-   with `n`; this one does not. So the open set has collapsed from
-   "`{fixed q} x {large n}`" to "`{q < ~2^15} x {all n}`", and at `q = 2` it is
-   still everything.
+2. **An `n`-independent `q`-threshold, but only at ODD `p` -- the `p = 2`
+   version of this claim is WITHDRAWN.** *(Corrected 2026-08-23 by the
+   verification of [note 16](16-large-q-threshold.md); the original text of this
+   item asserted the threshold at `p = 2` and read the residual problem as
+   "small `q`". Both are wrong.)* Bagshaw (arXiv:2401.10399) Cor. 2.5 does give
+   a level of distribution `omega < 1/2 + 1/62` for von Mangoldt in progressions
+   to an **arbitrary** modulus (Sawin and Sawin--Shusterman need squarefree;
+   ours, `x^{ell+1}`, is the maximally non-squarefree one), for an INDIVIDUAL
+   modulus, subject to `q > p^2 e^2 ((16-omega)/(16-31 omega))^2`. But his
+   standing hypothesis, `Files/Intro.tex` of the source, is verbatim "We fix an
+   **odd** prime power `q = p^ell`", and the `q`-condition enters only through
+   Sawin--Shusterman's Mobius estimate, whose proof IS quadratic reciprocity
+   (`F_q^x` needs a unique quadratic character). There is no `p = 2` analogue,
+   so "at `p = 2`, `q >= 2^15`" was arithmetic on a theorem that does not exist.
+   Moreover `q > 7101 p^2` means `p^{l-2} > 7101`, so **no prime field and no
+   `q = p^2` qualifies at any size**; the admissible set is `O(X^{1/3})` below
+   `X`, smallest member `3^11`. What survives: for `p` odd and
+   `q = p^l > 961 e^2 p^2`, Kaser--Lemire holds over `F_q` for all
+   `n >= n_0(q)` with `n_0` ineffective -- the first `n`-INDEPENDENT
+   `q`-criterion for the full half-degree window, and it does not touch
+   characteristic two. See note 16.
 
 A third, quieter answer: the fixed-`q` wall is a *single* wall, and the sweep
 identifies it. Every 2020s advance in short sums of trace functions over
@@ -252,11 +261,20 @@ So Kaser--Lemire over `F_q` is exactly "`sum_{x in M_n, x = 1 mod T^r} Lambda(x)
 > 0`" with `r = ceil(n/2)`, `F = T^r` -- and `phi(T^r) = q^{r-1}(q-1)`, so the
 main term is `~ q^{n-r+1}/(q-1)` and dominates the error `q^{n-r(1+delta)}`.
 Taking `omega = 1/2 + eps` with `eps -> 0` (legitimate for `n > 31`), the
-hypothesis is `q > p^2 e^2 * 31^2 = 7100.9 p^2`; at `p = 2` that is
-`q > 28404`, i.e. `q >= 2^15`. **Hence: the Kaser--Lemire statement over `F_q`
-is a theorem for all sufficiently large `n` whenever `q > 7101 p^2`** (implied
-constant depends on `omega` only; it is not made explicit, so "sufficiently
-large" is not effective as written).
+hypothesis is `q > p^2 e^2 * 31^2 = 7100.9 p^2`. **Hence: the Kaser--Lemire
+statement over `F_q` is a theorem for all sufficiently large `n` whenever `p`
+is ODD and `q > 7101 p^2`** (implied constant depends on `omega` only; it is
+not made explicit, so "sufficiently large" is not effective as written).
+**`p = 2` IS EXCLUDED** -- by Bagshaw's standing hypothesis ("We fix an odd
+prime power `q = p^ell`") and, more fundamentally, by mechanism: the
+`q`-condition comes from Sawin--Shusterman's Mobius estimate, which is
+quadratic reciprocity and has no characteristic-two form. The earlier version
+of this paragraph deduced "`q >= 2^15` at `p = 2`"; that was wrong. Note also
+`q > 7101 p^2` forces `p^{l-2} > 7101`, so `l >= 3`: no prime field, and no
+`q = p^2`, is admissible. Smallest admissible `q` is `3^11 = 177147`. Full
+verification, with the constant re-derived and an external control that
+reproduces Bagshaw's own published newly-covered list exactly, is
+[note 16](16-large-q-threshold.md).
 
 **Where `q -> infinity` enters, exactly.** Not in (i)--(iii), which hold at
 `q = 2`. It enters only when the Mobius bound is fed into the Sawin--Shusterman
@@ -774,11 +792,15 @@ Waring), squarefree modulus (2.4), or level-one Artin--Schreier (2.12, 2.11).
    **characteristic** and applicability to a **specified** rather than generic
    twist.
 3. **Note 09 / note 00, "Kaser--Lemire is a THEOREM for `q > n/2` (even `n`) /
-   `q > (n+1)^2/4` (odd `n`)".** Add the `n`-independent statement: via the
-   reversal duality, Bagshaw arXiv:2401.10399's arbitrary-modulus level of
-   distribution gives Kaser--Lemire over `F_q` for **all sufficiently large `n`
-   once `q > 7101 p^2`** -- at `p = 2`, `q >= 2^15`. The correct framing of the
-   residual problem is therefore *small `q`*, not *large `n`*.
+   `q > (n+1)^2/4` (odd `n`)".** *(Corrected 2026-08-23, note 16.)* An
+   `n`-independent companion exists but is narrower than first written: via the
+   reversal duality, Bagshaw arXiv:2401.10399 Cor. 2.5 gives Kaser--Lemire over
+   `F_q` for all `n >= n_0(q)` (ineffective) whenever **`p` is odd** and
+   `q > 7101 p^2`, hence `l >= 3` and smallest admissible `q = 3^11`. It does
+   NOT apply at `p = 2`. Since the two thresholds do not combine into an
+   unconditional "all `n`" (the `n_0` is ineffective), notes 00/09 should quote
+   the `n`-dependent Hsu/Cohen statement as before and add this only with its
+   hypotheses attached.
 4. **Note 07's wall paragraph, and note 00's "the wall (phase correlation)".**
    Both say the required fixed-`q` input is unavailable. Add the one exception:
    arXiv:2307.01344's `gcd` identity **is** a fixed-`q` saving over Weil for this
@@ -823,10 +845,13 @@ Whether it lifts is a bookkeeping question about single-position characters that
 can be settled in the lane's CAS in an afternoon. **This is the single highest-value
 next action from this sweep.**
 
-*The reframing.* After Bagshaw, the Kaser--Lemire statement is a theorem over
-every `F_q` with `q >= 2^15`, uniformly in `n`. The problem is `q < 2^15`, and
-in particular `q = 2` -- which matches, and sharpens, note 00's diagnosis that
-the obstruction is the fixed base field rather than the growing conductor.
+*The reframing, corrected (2026-08-23, note 16).* After Bagshaw the
+Kaser--Lemire statement is a theorem over `F_q` for all large `n` on a SPARSE
+set of `q` -- `p` odd and `p^{l-2} > 7101`, smallest `3^11`, density
+`O(X^{1/3})` -- not for "every `q >= 2^15`". Characteristic two, every prime
+field, and every `q = p^2` are outside it. So the open set has NOT collapsed
+to "small `q`": what is new is the first `n`-independent `q`-criterion for the
+full window, which is worth recording and does not bear on `q = 2`.
 
 *The disproof template.* Sawin's sparsity/Plancherel argument is the first
 technique in the sweep that could resolve the lane's target in the **negative**,
@@ -896,7 +921,7 @@ which is worth knowing, and (b) their Lemma `lem:Blk` (`sum_{L<d<=2L} log
 gcd(k, q^d-1)`), which is a tool for the same monomial sub-family.
 
 The other two findings of sec. 3 are unaffected by this and remain open leads:
-the Bagshaw reframing (`q > 7101 p^2`, i.e. `q >= 2^15` at `p = 2` -- the
-residual problem is small `q`, not large `n`; to be verified independently) and
+the Bagshaw reframing (verified 2026-08-23 in note 16 and **partly refuted**:
+the threshold holds only at odd `p` with `l >= 3`, never at `p = 2`) and
 Sawin's sparsity+Plancherel disproof template on the `A_psi` of note 07 (one
 uncounted statistic, cheap in the existing dumps).
