@@ -235,6 +235,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.choose_succ_self_eq_zero,
         p.choose_self,
         p.choose_symm,
+        p.sum_range_add,
+        p.sum_range_shift_front,
+        p.sum_range_congr_lt,
+        p.add_pow_zero,
+        p.add_pow_one,
     ]
 }
 
@@ -458,6 +463,168 @@ fn choose_computes_and_symm_holds_at_a_concrete_point() {
         p.choose_succ_self_eq_zero,
         p.choose_self,
         p.choose_symm,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
+
+/// The binomial theorem's finite-sum toolkit (`sum_range_add`,
+/// `sum_range_shift_front`, `sum_range_congr_lt`) checked numerically, plus
+/// the `n=0`/`n=1` sanity instances of `add_pow`'s statement shape — both
+/// sides fully compute to the same numeral once `a,b` are concrete, so this
+/// is a genuine arithmetic check, not just an admission.
+#[test]
+fn binomial_toolkit_and_add_pow_sanity_instances_compute() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // sum_range_add at a concrete instance: f = identity, g = identity, n = 3.
+    // sumRange (fun i => i+i) 3 = 0+2+4 = 6 = sumRange id 3 + sumRange id 3 = 3+3.
+    let i_fv = f.fresh_fvar();
+    let i = f.k.fvar(i_fv);
+    let nat = f.nat_ty();
+    let identity = f.lam_fv(i_fv, nat, i);
+    let three = f.num(3);
+    let sum_add_proof = f.lemma(p.sum_range_add, &[identity, identity, three]);
+    let inferred =
+        f.k.infer(sum_add_proof)
+            .unwrap_or_else(|e| panic!("sum_range_add(id,id,3) should infer: {}", f.explain(&e)));
+    let six = f.num(6);
+    let expected = {
+        let combined = {
+            let i_fv2 = f.fresh_fvar();
+            let iv = f.k.fvar(i_fv2);
+            let doubled = f.add(iv, iv);
+            f.lam_fv(i_fv2, nat, doubled)
+        };
+        let lhs = f.sum_range(combined, three);
+        let sr = f.sum_range(identity, three);
+        let rhs = f.add(sr, sr);
+        f.eq(lhs, rhs)
+    };
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "sum_range_add should state sumRange(i+i)3 = sumRange id 3 + sumRange id 3"
+    );
+    let combined_again = {
+        let i_fv2 = f.fresh_fvar();
+        let iv = f.k.fvar(i_fv2);
+        let doubled = f.add(iv, iv);
+        f.lam_fv(i_fv2, nat, doubled)
+    };
+    let lhs_val = f.sum_range(combined_again, three);
+    assert!(
+        f.k.def_eq(lhs_val, six),
+        "sumRange (i+i) 3 must reduce to 6"
+    );
+
+    // sum_range_shift_front at a concrete instance: f = identity, n = 3.
+    // sumRange id 4 = 0+1+2+3 = 6 = id(0) + sumRange (fun k => id(succ k)) 3
+    //               = 0 + (1+2+3) = 0+6 = 6.
+    let shift_proof = f.lemma(p.sum_range_shift_front, &[identity, three]);
+    let shift_inferred = f.k.infer(shift_proof).unwrap_or_else(|e| {
+        panic!(
+            "sum_range_shift_front(id,3) should infer: {}",
+            f.explain(&e)
+        )
+    });
+    let four = f.num(4);
+    let shift_expected = {
+        let lhs = f.sum_range(identity, four);
+        let zero = f.zero();
+        let f0 = f.apply(identity, &[zero]);
+        let shifted = {
+            let k_fv = f.fresh_fvar();
+            let k = f.k.fvar(k_fv);
+            let sk = f.succ(k);
+            let body = f.apply(identity, &[sk]);
+            f.lam_fv(k_fv, nat, body)
+        };
+        let sr = f.sum_range(shifted, three);
+        let rhs = f.add(f0, sr);
+        f.eq(lhs, rhs)
+    };
+    assert!(
+        f.k.def_eq(shift_inferred, shift_expected),
+        "sum_range_shift_front should state sumRange id 4 = id 0 + sumRange (shifted id) 3"
+    );
+    let shift_lhs_val = f.sum_range(identity, four);
+    assert!(
+        f.k.def_eq(shift_lhs_val, six),
+        "sumRange id 4 must reduce to 0+1+2+3=6"
+    );
+
+    // sum_range_congr_lt at a concrete instance: f = identity, g = identity, n = 2
+    // (the hypothesis is vacuously dischargeable since f and g agree everywhere).
+    let two = f.num(2);
+    let vacuous_hyp = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let hlt_ty = f.lt(k, two);
+        let hlt_fv = f.fresh_fvar();
+        let body = f.refl(k);
+        let inner = f.lam_fv(hlt_fv, hlt_ty, body);
+        f.lam_fv(k_fv, nat, inner)
+    };
+    let congr_lt_proof = f.lemma(
+        p.sum_range_congr_lt,
+        &[identity, identity, two, vacuous_hyp],
+    );
+    f.k.infer(congr_lt_proof).unwrap_or_else(|e| {
+        panic!(
+            "sum_range_congr_lt(id,id,2,_) should infer: {}",
+            f.explain(&e)
+        )
+    });
+
+    // add_pow_zero / add_pow_one at a=2, b=3: (2+3)^0=1 and (2+3)^1=5. Both
+    // sides of each declared equation fully compute to a literal once a,b are
+    // concrete numerals, so def_eq against the numeral is a genuine
+    // arithmetic check, not just a shape check.
+    let two_ = f.num(2);
+    let three_ = f.num(3);
+    let one = f.num(1);
+    let five = f.num(5);
+
+    let zero_proof = f.lemma(p.add_pow_zero, &[two_, three_]);
+    let zero_inferred =
+        f.k.infer(zero_proof)
+            .unwrap_or_else(|e| panic!("add_pow_zero(2,3) should infer: {}", f.explain(&e)));
+    let zero_expected = {
+        let sum = f.add(two_, three_);
+        let z = f.zero();
+        let lhs = f.pow(sum, z);
+        f.eq(lhs, one)
+    };
+    assert!(
+        f.k.def_eq(zero_inferred, zero_expected),
+        "add_pow_zero(2,3) should state (2+3)^0 = 1, and both sides must compute to 1"
+    );
+
+    let one_proof = f.lemma(p.add_pow_one, &[two_, three_]);
+    let one_inferred =
+        f.k.infer(one_proof)
+            .unwrap_or_else(|e| panic!("add_pow_one(2,3) should infer: {}", f.explain(&e)));
+    let one_expected = {
+        let sum = f.add(two_, three_);
+        let lhs = f.pow(sum, one);
+        f.eq(lhs, five)
+    };
+    assert!(
+        f.k.def_eq(one_inferred, one_expected),
+        "add_pow_one(2,3) should state (2+3)^1 = 5, and both sides must compute to 5"
+    );
+
+    for name in [
+        p.sum_range_add,
+        p.sum_range_shift_front,
+        p.sum_range_congr_lt,
+        p.add_pow_zero,
+        p.add_pow_one,
     ] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),
@@ -3556,7 +3723,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        20 + 127,
+        20 + 132,
         "every promised definition and theorem must be rendered"
     );
 }

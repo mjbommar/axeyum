@@ -344,7 +344,13 @@ pub(super) fn declare_choose_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
 /// Derived from `le_dest` rather than by induction: `hlt` gives a witness `j`
 /// with `add (succ k) j = m`, and `add_sub_cancel_left` reads off both
 /// `sub m (succ k) = j` and `sub m k = succ j` from that one witness.
-fn sub_succ_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, k: ExprId, hlt: ExprId) -> ExprId {
+pub(super) fn sub_succ_of_lt(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    m: ExprId,
+    k: ExprId,
+    hlt: ExprId,
+) -> ExprId {
     let p = *p;
     let nat = d.nat_ty();
     let anon = d.anon_name();

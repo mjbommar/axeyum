@@ -129,6 +129,7 @@ use crate::name::NameId;
 
 mod algebra;
 mod bezout;
+mod binomial;
 mod ble;
 mod choose;
 mod defs;
@@ -151,6 +152,7 @@ use algebra::{
     declare_subtraction_theorems,
 };
 use bezout::{declare_euclid_lemma, declare_gcd_bezout};
+use binomial::declare_binomial_theorem;
 use ble::declare_boolean_le;
 use choose::declare_choose_all;
 use defs::{
@@ -708,6 +710,25 @@ pub struct NatPrelude {
     pub choose_self: NameId,
     /// `Nat.choose_symm : ∀ n k, Le k n → choose n k = choose n (sub n k)`.
     pub choose_symm: NameId,
+
+    // --- binomial theorem (`binomial.rs`) -----------------------------------
+    /// `Nat.sumRange_add : ∀ f g n, sumRange (fun i => f i + g i) n = sumRange f n + sumRange g n`.
+    pub sum_range_add: NameId,
+    /// `Nat.sumRange_shiftFront : ∀ f n, sumRange f (succ n) = f 0 + sumRange (fun k => f (succ k)) n`
+    /// — peeling the FRONT term off a finite sum, the reindexing counterpart to
+    /// the defining (back-peeling) `sum_range_succ`.
+    pub sum_range_shift_front: NameId,
+    /// `Nat.sumRange_congr_lt : ∀ f g n, (∀ i, Lt i n → f i = g i) → sumRange f n = sumRange g n`
+    /// — the BOUNDED pointwise congruence: unlike `sum_range_congr`, the
+    /// hypothesis only needs to hold below the sum's own bound.
+    pub sum_range_congr_lt: NameId,
+    /// `Nat.add_pow_zero : ∀ a b, (a+b)^0 = sumRange (fun k => choose 0 k * a^k * b^(0-k)) 1`
+    /// — the `n=0` sanity instance of `add_pow`, checked directly (no
+    /// induction) before the general theorem.
+    pub add_pow_zero: NameId,
+    /// `Nat.add_pow_one : ∀ a b, (a+b)^1 = sumRange (fun k => choose 1 k * a^k * b^(1-k)) 2`
+    /// — the `n=1` sanity instance.
+    pub add_pow_one: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -960,6 +981,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             choose_succ_self_eq_zero: kernel.name_str(nat, "choose_succ_self_eq_zero"),
             choose_self: kernel.name_str(nat, "choose_self"),
             choose_symm: kernel.name_str(nat, "choose_symm"),
+            sum_range_add: kernel.name_str(nat, "sumRange_add"),
+            sum_range_shift_front: kernel.name_str(nat, "sumRange_shiftFront"),
+            sum_range_congr_lt: kernel.name_str(nat, "sumRange_congr_lt"),
+            add_pow_zero: kernel.name_str(nat, "add_pow_zero"),
+            add_pow_one: kernel.name_str(nat, "add_pow_one"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -988,6 +1014,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_primes(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
+        declare_binomial_theorem(&mut d, &p)?;
         Ok(p)
     })();
     match built {
