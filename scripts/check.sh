@@ -77,6 +77,8 @@ step autogenesis-mathlib-nursery-split-tests python3 -m unittest scripts.tests.t
 step autogenesis-nursery-dispatch-baseline-tests python3 -m unittest scripts.tests.test_create_autogenesis_nursery_dispatch_baseline
 step autogenesis-holdout-isolation-tests python3 -m unittest scripts.tests.test_check_autogenesis_holdout_isolation
 step autogenesis-holdout-isolation python3 scripts/check-autogenesis-holdout-isolation.py
+step development-partition-tests python3 -m unittest scripts.tests.test_development_partition
+step development-partition python3 scripts/check-development-partition.py
 step autogenesis-must-decline-population-tests python3 -m unittest scripts.tests.test_check_autogenesis_must_decline_population
 # The must-decline population is 9 of the nursery's 12 generated-mutation rows
 # (train/development; the other 3 are held-out and are never referenced here).

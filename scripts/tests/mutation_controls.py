@@ -81,6 +81,47 @@ ROOT = Path(__file__).resolve().parents[2]
 # edits when that is not the subject, which is how a control can be mutated to
 # check the control.
 SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] = {
+    "development-partition": (
+        "scripts/check-development-partition.py",
+        "scripts.tests.test_development_partition",
+        [
+            (
+                "development-without-train rule",
+                "        if touched_dev and not touched_train:",
+                "        if False:",
+            ),
+            (
+                "generic string walk, not applicability.fact_ids only",
+                "        referenced = {s for s in _strings(operation) if s in partitions}",
+                '        referenced = {\n            s\n            for s in operation.get("applicability", {}).get("fact_ids", [])\n            if s in partitions\n        }',
+            ),
+            (
+                "recorded-amendment exemption",
+                '        touched_dev = {f for f in referenced if partitions[f] == "development"} - exempt',
+                '        touched_dev = {f for f in referenced if partitions[f] == "development"}',
+            ),
+            (
+                "nursery/policy agreement guard",
+                "    if disagreements:",
+                "    if False:",
+            ),
+            (
+                "empty-development fail-closed",
+                "    if not development:",
+                "    if False:",
+            ),
+            (
+                "generality ratchet",
+                "    if covered < MULTI_TARGET_FLOOR:",
+                "    if False:",
+            ),
+            (
+                "empty-registry fail-closed",
+                "    if not isinstance(registry, list) or not registry:",
+                "    if False:",
+            ),
+        ],
+    ),
     "adr-index": (
         "scripts/gen-adr-index.py",
         "scripts.tests.test_gen_adr_index",
