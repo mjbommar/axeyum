@@ -724,6 +724,32 @@ pub struct CRealPrelude {
     /// Archimedean lemma needed, for the same reason as
     /// [`Self::limit_seq_regular`].
     pub limit_dist: NameId,
+
+    // --- convergence of sequences of `CReal` (ADR-0512 phase R9) -------------
+    /// `CReal.Converges (f : Nat → CReal) (L : CReal) : Prop :=
+    /// ∃ (K : Nat), ∀ n, Within (seq (f n) n − seq L n) (Rat.natDivSucc K n)`.
+    ///
+    /// The canonical-sample, free-constant formulation — see
+    /// [`convergence`](self::convergence)'s module documentation for why this
+    /// was chosen over the textbook `∀ k, ∃ N, ∀ n ≥ N, …` (that form needs an
+    /// antitonicity-in-the-index lemma for `Rat.natDivSucc` this development
+    /// deliberately never proves).
+    pub converges: NameId,
+    /// `CReal.converges_unique : ∀ f L M, Converges f L → Converges f M →
+    /// Equiv L M`.
+    ///
+    /// **The first theorem of analysis over `CReal`**: a limit, when one
+    /// exists, is unique up to `Equiv`. One instance of
+    /// [`Self::equiv_of_bounded`], no arbitrary third index.
+    pub converges_unique: NameId,
+    /// `CReal.converges_of_const : ∀ c, Converges (fun _ => c) c`.
+    pub converges_of_const: NameId,
+    /// `CReal.Cauchy (f : Nat → CReal) : Prop :=
+    /// ∃ (K : Nat), ∀ m n, Within (seq (f m) m − seq (f n) n)
+    /// (Rat.natDivSucc K m + Rat.natDivSucc K n)`.
+    pub cauchy: NameId,
+    /// `CReal.converges_cauchy : ∀ f L, Converges f L → Cauchy f`.
+    pub converges_cauchy: NameId,
 }
 
 impl CRealPrelude {
@@ -884,6 +910,11 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         limit_seq_regular: kernel.name_str(creal, "limitSeq_regular"),
         limit: kernel.name_str(creal, "limit"),
         limit_dist: kernel.name_str(creal, "limit_dist"),
+        converges: kernel.name_str(creal, "Converges"),
+        converges_unique: kernel.name_str(creal, "converges_unique"),
+        converges_of_const: kernel.name_str(creal, "converges_of_const"),
+        cauchy: kernel.name_str(creal, "Cauchy"),
+        converges_cauchy: kernel.name_str(creal, "converges_cauchy"),
     }
 }
 
@@ -954,7 +985,8 @@ pub(crate) fn build_creal_prelude_uncached(
         archimedean::declare_archimedean(&mut d, prelude)?;
         density::declare_density(&mut d, prelude)?;
         cotransitivity::declare_cotransitivity(&mut d, prelude)?;
-        completeness::declare_completeness(&mut d, prelude)
+        completeness::declare_completeness(&mut d, prelude)?;
+        convergence::declare_convergence(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -1869,6 +1901,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 
 mod archimedean;
 mod completeness;
+mod convergence;
 mod cotransitivity;
 mod density;
 mod field;

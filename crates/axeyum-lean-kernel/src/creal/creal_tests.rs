@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 99] = [
+    let expected: [(&str, crate::NameId, &str); 104] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -193,6 +193,15 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.rat_approx_upper", p.rat_approx_upper, "theorem"),
         ("CReal.rat_approx_lower", p.rat_approx_lower, "theorem"),
         ("CReal.density", p.density, "theorem"),
+        // Convergence (ADR-0512 phase R9). PRESENCE MATTERS AS MUCH AS THE
+        // FOOTPRINT here: `axiom_footprint` of an interned-but-never-declared
+        // name is vacuously empty, so a declaration silently missing from the
+        // build sequence would read as "axiom-free" rather than as absent.
+        ("CReal.Converges", p.converges, "def"),
+        ("CReal.converges_unique", p.converges_unique, "theorem"),
+        ("CReal.converges_of_const", p.converges_of_const, "theorem"),
+        ("CReal.Cauchy", p.cauchy, "def"),
+        ("CReal.converges_cauchy", p.converges_cauchy, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
