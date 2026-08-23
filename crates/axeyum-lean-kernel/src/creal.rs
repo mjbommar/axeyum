@@ -776,6 +776,38 @@ pub struct CRealPrelude {
     /// There is no `CReal.sub` operation in this development, so the
     /// difference is spelled `add _ (neg _)` throughout, honestly.
     pub converges_sub: NameId,
+
+    // --- boundedness of sequences, and sequential continuity (phase R10) ----
+    /// `CReal.Bounded (g : Nat → CReal) : Prop :=
+    /// ∃ (B : Nat), ∀ (n : Nat), Within (seq (g n) n) (Rat.natDivSucc B 0)`.
+    ///
+    /// The canonical-sample boundedness a product's variable shift needs
+    /// (`CReal.mulShift` scales by a bound on each multiplicand — see
+    /// [`convergence`](self::convergence)'s module documentation on
+    /// `converges_mul`), stated the same way [`Self::converges`] states its
+    /// own modulus: a free `Nat` constant, at the sample's own index.
+    pub bounded: NameId,
+    /// `CReal.converges_bounded : ∀ f L, Converges f L → Bounded f`.
+    ///
+    /// A linear-rate convergent sequence is automatically bounded, with no
+    /// choice: `Converges f L`'s own witness `K`, widened from `K/(n+1)` to
+    /// the constant `K/1`, combines with
+    /// [`Self::bound_within`]'s already-constant bound on `L`'s sample.
+    pub converges_bounded: NameId,
+    /// `CReal.ContinuousAt (F : CReal → CReal) (x : CReal) : Prop :=
+    /// ∀ (g : Nat → CReal), Converges g x → Converges (fun n => F (g n)) (F x)`.
+    ///
+    /// Sequential continuity, phrased entirely through [`Self::converges`]
+    /// rather than a new modulus — mirroring that predicate's own convention
+    /// instead of inventing a second one.
+    pub continuous_at: NameId,
+    /// `CReal.continuous_id : ∀ x, ContinuousAt (fun r => r) x`.
+    pub continuous_id: NameId,
+    /// `CReal.continuous_const : ∀ c x, ContinuousAt (fun _ => c) x`.
+    pub continuous_const: NameId,
+    /// `CReal.continuous_add : ∀ F G x, ContinuousAt F x → ContinuousAt G x →
+    /// ContinuousAt (fun r => add (F r) (G r)) x`.
+    pub continuous_add: NameId,
 }
 
 impl CRealPrelude {
@@ -944,6 +976,12 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_add: kernel.name_str(creal, "converges_add"),
         converges_neg: kernel.name_str(creal, "converges_neg"),
         converges_sub: kernel.name_str(creal, "converges_sub"),
+        bounded: kernel.name_str(creal, "Bounded"),
+        converges_bounded: kernel.name_str(creal, "converges_bounded"),
+        continuous_at: kernel.name_str(creal, "ContinuousAt"),
+        continuous_id: kernel.name_str(creal, "continuous_id"),
+        continuous_const: kernel.name_str(creal, "continuous_const"),
+        continuous_add: kernel.name_str(creal, "continuous_add"),
     }
 }
 

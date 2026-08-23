@@ -155,11 +155,15 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::group::rsub;
-use crate::rat_prelude::ops::{radd, rat_eq_rewrite, rchain, rcongr, rle, rneg, rsymm, rzero};
+use crate::rat_prelude::group::{rsub, rsum, rsum_perm};
+use crate::rat_prelude::ops::{
+    nat_rewrite_prop, radd, rat_eq_rewrite, rchain, rcongr, rle, rneg, rsymm, rzero,
+};
 
 /// Admit `CReal.Converges`, `CReal.converges_unique`, `CReal.converges_of_const`,
-/// `CReal.Cauchy` and `CReal.converges_cauchy`.
+/// `CReal.Cauchy`, `CReal.converges_cauchy`, the algebra of limits,
+/// `CReal.Bounded`/`converges_bounded`, and sequential `CReal.ContinuousAt`
+/// with its two anchors and closure under sums.
 ///
 /// # Errors
 ///
@@ -173,7 +177,13 @@ pub(super) fn declare_convergence(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     declare_converges_cauchy(d, p)?;
     declare_converges_add(d, p)?;
     declare_converges_neg(d, p)?;
-    declare_converges_sub(d, p)
+    declare_converges_sub(d, p)?;
+    declare_bounded(d, p)?;
+    declare_converges_bounded(d, p)?;
+    declare_continuous_at(d, p)?;
+    declare_continuous_id(d, p)?;
+    declare_continuous_const(d, p)?;
+    declare_continuous_add(d, p)
 }
 
 // --- shared term builders ----------------------------------------------------
@@ -1437,6 +1447,516 @@ fn declare_converges_sub(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.converges_sub,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- `CReal.Bounded`, and why it stops short of `converges_mul` -------------
+//
+// `CReal.mul`'s own regularity is a FIXED rate (see `product.rs`'s module
+// documentation: the shift `mulShift x y` is chosen so the estimate closes
+// with no slack), so a natural first step toward `converges_mul` is to show
+// a linear-rate convergent sequence is automatically bounded — which is
+// exactly [`declare_converges_bounded`] below, and it lands cleanly.
+//
+// It does **not** unlock `converges_mul`, and the reason is sharper than the
+// previous slice's framing ("needs an explicit boundedness hypothesis").
+// What `CReal.mul (f n) (g n)` needs bounded is `CReal.bound (f n)` — a
+// property of `f n`'s representative AT INDEX 0 (`bound x := natAbs (num
+// (seq x 0)) + 1`) — so that `mulShift (f n) (g n)` is uniformly bounded and
+// the product's sampling index `(c_n+1)·n + c_n` stays a *composed* index of
+// the shape `nat_div_succ_le_scaled` already handles for ANY `c_n` (bounded
+// or not — that lemma needs no uniform bound on `c_n` at all; the shift
+// bridge for each factor closes regardless). The genuine obstruction is
+// elsewhere: `mul (f n) (g n)` and `mul L M` sample their two factors at
+// *different* deep indices (`mulShift (f n) (g n)` varies with `n`;
+// `mulShift L M` is the fixed `bound L + bound M + 1`), so bounding
+// `seq (g n) (idx_fn_gn) − seq M (idx_LM)` needs a cross-index estimate
+// between two indices *neither* of which is `n` — precisely the
+// "arbitrary-third-index plus Archimedean" machinery `product.rs`'s own
+// module documentation names as the reason `mul_assoc`/`left_distrib`/
+// `mul_congr` needed it and `mul_zero`/`mul_comm`/`sq_nonneg` did not. That
+// machinery is not built in this development. So `Bounded`/
+// `converges_bounded` are a real, self-contained result, but `converges_mul`
+// itself needs the same absent cross-index estimate `mul_assoc` already
+// flagged as missing — not a bigger version of this module's shift bridge.
+
+/// `∀ n, Within (seq (func n) n) (natDivSucc b 0)`, for a (possibly
+/// symbolic) `Nat` bound `b`.
+fn bounded_body(d: &mut IntDev<'_>, p: CRealPrelude, func: ExprId, b: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let fn_term = d.apply(func, &[n]);
+    let point = sample(d, p, fn_term, n);
+    let zero_nat = d.num(0);
+    let bound = div_succ_at(d, p, b, zero_nat);
+    let claim = within(d, p, point, bound);
+    d.pi_fv(n_fv, nat, claim)
+}
+
+/// `λ B, ∀ n, Within (seq (func n) n) (natDivSucc B 0)`.
+fn bounded_predicate(d: &mut IntDev<'_>, p: CRealPrelude, func: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let body = bounded_body(d, p, func, b);
+    d.lam_fv(b_fv, nat, body)
+}
+
+/// `CReal.Bounded func`.
+fn bounded_applied(d: &mut IntDev<'_>, p: CRealPrelude, func: ExprId) -> ExprId {
+    d.const_app(p.bounded, &[func])
+}
+
+/// `CReal.Bounded (g : Nat → CReal) : Prop :=
+///   ∃ (B : Nat), ∀ (n : Nat), Within (seq (g n) n) (Rat.natDivSucc B 0)`.
+///
+/// The same canonical-sample, free-constant idiom [`declare_converges`]
+/// uses, at a bound that does not even need a second point of comparison.
+fn declare_bounded(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let prop = d.kernel().sort_zero();
+    let seq_ty = seq_fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+
+    let predicate = bounded_predicate(d, p, f);
+    let claim_ty = exists_ty(d, p, nat, predicate);
+    let value = d.lam_fv(f_fv, seq_ty, claim_ty);
+    let ty = d.arrow(seq_ty, prop);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.bounded,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 35),
+    })
+}
+
+/// `CReal.bound x + 1` — the numerator [`CReal.bound_within`] bounds `seq x`
+/// by, at every index. Duplicated from `product.rs`'s private
+/// `magnitude_of`/`bound_value` (pure term-builders, not proofs): one call
+/// site here does not carry the cost of widening a helper across a module
+/// boundary.
+fn bound_magnitude(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let base = d.const_app(p.bound, &[x]);
+    d.succ(base)
+}
+
+/// `Rat.le (natDivSucc k j) (natDivSucc k 0)` — a numerator carries its own
+/// constant bound, independent of the index.
+///
+/// **Not** antitonicity of `natDivSucc` in its index (the module
+/// documentation is explicit that this development deliberately never
+/// proves that in general). This is
+/// [`Rat.natDivSucc_le_scaled`](crate::RatPrelude::nat_div_succ_le_scaled)
+/// instantiated at its OWN composed index — `(k, c := j, n := 0)` — whose
+/// composed form `(j+1)·0 + j` is `j` after `Nat.mul_zero`/`Nat.zero_add`.
+/// The general lemma already covers indices of exactly this shape; nothing
+/// new about `natDivSucc` is needed, only the two `Nat` identities that
+/// collapse `(j+1)·0 + j` back to `j`.
+fn nat_div_succ_le_const(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> ExprId {
+    let rat = p.rat;
+    let nat = p.rat.int.nat;
+    let zero_nat = d.num(0);
+
+    // base : Rat.le (natDivSucc k ((j+1)*0+j)) (natDivSucc k 0).
+    let base = d.lemma(rat.nat_div_succ_le_scaled, &[k, j, zero_nat]);
+
+    let sj = d.succ(j);
+    let scaled = NatOps::mul(d, sj, zero_nat); // (j+1)*0
+    let index = NatOps::add(d, scaled, j); // (j+1)*0 + j
+
+    let mul_zero_eq = d.lemma(nat.mul_zero, &[sj]); // Eq Nat scaled 0
+    let zero_plus_j = NatOps::add(d, zero_nat, j);
+    let step1 = NatOps::congr(d, scaled, zero_nat, mul_zero_eq, &|d, t| {
+        NatOps::add(d, t, j)
+    }); // Eq Nat index zero_plus_j
+
+    let zero_add_eq = d.lemma(nat.zero_add, &[j]); // Eq Nat zero_plus_j j
+
+    let (_, index_eq) = NatOps::chain(d, index, &[(zero_plus_j, step1), (j, zero_add_eq)]);
+
+    nat_rewrite_prop(d, index, j, index_eq, base, &|d, t| {
+        let deep = div_succ_at(d, p, k, t);
+        let shallow = div_succ_at(d, p, k, zero_nat);
+        rle(d, rat, deep, shallow)
+    })
+}
+
+/// `CReal.converges_bounded : ∀ f L, Converges f L → Bounded f`.
+///
+/// A linear-rate convergent sequence is automatically bounded, with **no
+/// choice** — the same character as [`CReal.bound_within`]'s own derivation.
+/// Instantiate `Converges f L`'s witness `K` at `n`:
+/// `Within (seq (f n) n − seq L n) (natDivSucc K n)`. Widen the modulus to
+/// the CONSTANT `natDivSucc K 0` via [`nat_div_succ_le_const`] (not
+/// antitonicity — see that helper), then combine with
+/// [`CReal.bound_within`]'s own already-constant bound on `L`'s sample
+/// through `Rat.bounds_add` and the identity
+/// `seq L n + (seq (f n) n − seq L n) = seq (f n) n` — the same
+/// `first + (point − first) = point` shape `product.rs`'s
+/// `declare_bound_within` proves via one `Rat.sum_perm` plus `Rat.add_neg`/
+/// `Rat.add_zero`. The witness is `(bound L + 1) + K`, reported raw.
+fn declare_converges_bounded(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+    let nat_add = d.prelude().add;
+    let zero_nat = d.num(0);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+
+    let converges_fl = converges_applied(d, p, f, l);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let target = bounded_applied(d, p, f);
+
+    let predicate = converges_predicate(d, p, f, l);
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hp_ty = converges_body(d, p, f, l, k);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+
+        let per_n = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+
+            let fn_term = d.apply(f, &[n]);
+            let a_n = sample(d, p, fn_term, n);
+            let l_n = sample(d, p, l, n);
+            let gap = rsub(d, rat, a_n, l_n);
+
+            let gap_bound = div_succ_at(d, p, k, n);
+            let gap_proof = d.apply(hp, &[n]);
+
+            let wide_gap_bound = div_succ_at(d, p, k, zero_nat);
+            let widen_order = nat_div_succ_le_const(d, p, k, n);
+            let gap_widened = weaken(d, p, gap, gap_bound, wide_gap_bound, gap_proof, widen_order);
+
+            let magnitude = bound_magnitude(d, p, l);
+            let l_bound = div_succ_at(d, p, magnitude, zero_nat);
+            let l_proof = d.lemma(p.bound_within, &[l, n]);
+
+            let (ll, lu) = halves(d, p, l_n, l_bound, l_proof);
+            let (gl, gu) = halves(d, p, gap, wide_gap_bound, gap_widened);
+            let combined = d.lemma(
+                rat.bounds_add,
+                &[l_n, l_bound, gap, wide_gap_bound, ll, lu, gl, gu],
+            );
+            let total_bound = radd(d, l_bound, wide_gap_bound);
+
+            // `l_n + (a_n − l_n) = a_n`.
+            let restore = {
+                let negated = rneg(d, l_n);
+                let atoms = [l_n, a_n, negated];
+                let sorted = [a_n, l_n, negated];
+                let permute = rsum_perm(d, rat, &atoms, &sorted);
+                let start = rsum(d, rat, &atoms);
+                let sorted_term = rsum(d, rat, &sorted);
+                let zero_rat = rzero(d, rat);
+                let cancel = d.lemma(rat.add_neg, &[l_n]);
+                let inner = radd(d, l_n, negated);
+                let collapse = rcongr(d, inner, zero_rat, cancel, &|d, t| radd(d, a_n, t));
+                let padded = radd(d, a_n, zero_rat);
+                let trim = d.lemma(rat.add_zero, &[a_n]);
+                let (_, proof) = rchain(
+                    d,
+                    start,
+                    &[(sorted_term, permute), (padded, collapse), (a_n, trim)],
+                );
+                proof
+            };
+            let summed = radd(d, l_n, gap);
+            let at_quantity = rat_eq_rewrite(d, summed, a_n, restore, combined, &|d, t| {
+                within(d, p, t, total_bound)
+            });
+
+            let witness_b = d.const_app(nat_add, &[magnitude, k]);
+            let final_bound = div_succ_at(d, p, witness_b, zero_nat);
+            let fuse = d.lemma(rat.nat_div_succ_add, &[magnitude, k, zero_nat]);
+            let per_n_proof =
+                rat_eq_rewrite(d, total_bound, final_bound, fuse, at_quantity, &|d, t| {
+                    within(d, p, a_n, t)
+                });
+
+            (n_fv, witness_b, per_n_proof)
+        };
+
+        let (n_fv, witness_b, per_n_proof) = per_n;
+        let per_n_lam = d.lam_fv(n_fv, nat, per_n_proof);
+        let bounded_pred = bounded_predicate(d, p, f);
+        let witnessed = exists_intro(d, p, nat, bounded_pred, witness_b, per_n_lam);
+
+        let with_hp = d.lam_fv(hp_fv, hp_ty, witnessed);
+        d.lam_fv(k_fv, nat, with_hp)
+    };
+
+    let proof_body = exists_elim(d, p, nat, predicate, target, h, minor);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, converges_fl, proof_body);
+        let with_l = d.lam_fv(l_fv, carrier, with_h);
+        d.lam_fv(f_fv, seq_ty, with_l)
+    };
+    let ty = {
+        let after_h = d.arrow(converges_fl, target);
+        let with_l = d.pi_fv(l_fv, carrier, after_h);
+        d.pi_fv(f_fv, seq_ty, with_l)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.converges_bounded,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- `CReal.ContinuousAt` (sequential form) ---------------------------------
+
+/// `CReal → CReal`.
+fn fn_ty(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let carrier = creal_ty(d, p);
+    d.arrow(carrier, carrier)
+}
+
+/// `λ n, func (g n)` — the composed sequence `func ∘ g`.
+fn compose_seq(d: &mut IntDev<'_>, _p: CRealPrelude, func: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let gn = d.apply(g, &[n]);
+    let applied = d.apply(func, &[gn]);
+    d.lam_fv(n_fv, nat, applied)
+}
+
+/// `∀ (g : Nat → CReal), Converges g x → Converges (fun n => func (g n)) (func x)`.
+fn continuous_at_body(d: &mut IntDev<'_>, p: CRealPrelude, func: ExprId, x: ExprId) -> ExprId {
+    let seq_ty = seq_fn_ty(d, p);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let converges_gx = converges_applied(d, p, g, x);
+    let composed = compose_seq(d, p, func, g);
+    let fx = d.apply(func, &[x]);
+    let target = converges_applied(d, p, composed, fx);
+    let body = d.arrow(converges_gx, target);
+    d.pi_fv(g_fv, seq_ty, body)
+}
+
+/// `CReal.ContinuousAt func x`.
+fn continuous_at_applied(d: &mut IntDev<'_>, p: CRealPrelude, func: ExprId, x: ExprId) -> ExprId {
+    d.const_app(p.continuous_at, &[func, x])
+}
+
+/// `CReal.ContinuousAt (F : CReal → CReal) (x : CReal) : Prop :=
+///   ∀ (g : Nat → CReal), Converges g x → Converges (fun n => F (g n)) (F x)`.
+///
+/// **Sequential continuity**, phrased entirely through
+/// [`CReal.Converges`](CRealPrelude::converges) rather than a new modulus —
+/// mirroring the existing convention instead of inventing a second one, per
+/// the task brief. This is the standard constructive reading of continuity
+/// at a point: `F` preserves every sequence converging to `x`. It costs no
+/// new rational-algebra estimate at all — the two anchors and the sum law
+/// below are pure applications of theorems this module already has.
+fn declare_continuous_at(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let prop = d.kernel().sort_zero();
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let body = continuous_at_body(d, p, f, x);
+    let value = {
+        let with_x = d.lam_fv(x_fv, carrier, body);
+        d.lam_fv(f_fv, func_ty, with_x)
+    };
+    let ty = {
+        let inner = d.arrow(carrier, prop);
+        d.arrow(func_ty, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.continuous_at,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 36),
+    })
+}
+
+/// `CReal.continuous_id : ∀ x, ContinuousAt (fun r => r) x`.
+///
+/// The cheapest anchor: `fun n => (fun r => r) (g n)` is `g` itself up to
+/// beta and Pi-eta (`tc.rs`'s module documentation lists eta-expansion as
+/// in scope), so the hypothesis `Converges g x` already **is** a proof of
+/// the stated conclusion — no rational algebra at all.
+fn declare_continuous_id(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let converges_gx = converges_applied(d, p, g, x);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, converges_gx, h);
+        let with_g = d.lam_fv(g_fv, seq_ty, with_h);
+        d.lam_fv(x_fv, carrier, with_g)
+    };
+    let ty = {
+        let applied = continuous_at_applied(d, p, identity, x);
+        d.pi_fv(x_fv, carrier, applied)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.continuous_id,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.continuous_const : ∀ c x, ContinuousAt (fun _ => c) x`.
+///
+/// The second cheap anchor: `fun n => (fun _ => c) (g n)` beta-reduces to
+/// `fun n => c`, so the target is exactly `Converges (fun n => c) c`, which
+/// is [`CReal.converges_of_const`](CRealPrelude::converges_of_const) — the
+/// `g`/hypothesis pair is not even used.
+fn declare_continuous_const(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let const_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, c)
+    };
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let converges_gx = converges_applied(d, p, g, x);
+    let h_fv = d.fresh_fvar();
+
+    let proof = d.lemma(p.converges_of_const, &[c]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, converges_gx, proof);
+        let with_g = d.lam_fv(g_fv, seq_ty, with_h);
+        let with_x = d.lam_fv(x_fv, carrier, with_g);
+        d.lam_fv(c_fv, carrier, with_x)
+    };
+    let ty = {
+        let applied = continuous_at_applied(d, p, const_fn, x);
+        let with_x = d.pi_fv(x_fv, carrier, applied);
+        d.pi_fv(c_fv, carrier, with_x)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.continuous_const,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.continuous_add : ∀ F G x, ContinuousAt F x → ContinuousAt G x →
+///   ContinuousAt (fun r => add (F r) (G r)) x`.
+///
+/// Closure under sums, transferred straight from
+/// [`CReal.converges_add`](CRealPrelude::converges_add): given `g` converging
+/// to `x`, `hF g h` and `hG g h` give `Converges (fun n => F (g n)) (F x)`
+/// and `Converges (fun n => G (g n)) (G x)`, and `converges_add` combines
+/// them into exactly the (beta-equal) target. No new estimate.
+fn declare_continuous_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+    let func_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let big_g_fv = d.fresh_fvar();
+    let big_g = d.kernel().fvar(big_g_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let sum_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let fr = d.apply(f, &[r]);
+        let gr = d.apply(big_g, &[r]);
+        let added = d.const_app(p.add, &[fr, gr]);
+        d.lam_fv(r_fv, carrier, added)
+    };
+
+    let continuous_f = continuous_at_applied(d, p, f, x);
+    let continuous_g = continuous_at_applied(d, p, big_g, x);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let converges_gx = converges_applied(d, p, g, x);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let hf_applied = d.apply(hf, &[g, h]);
+    let hg_applied = d.apply(hg, &[g, h]);
+
+    let composed_f = compose_seq(d, p, f, g);
+    let composed_g = compose_seq(d, p, big_g, g);
+    let fx = d.apply(f, &[x]);
+    let gx = d.apply(big_g, &[x]);
+
+    let combined = d.lemma(
+        p.converges_add,
+        &[composed_f, composed_g, fx, gx, hf_applied, hg_applied],
+    );
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, converges_gx, combined);
+        let with_g = d.lam_fv(g_fv, seq_ty, with_h);
+        let with_hg = d.lam_fv(hg_fv, continuous_g, with_g);
+        let with_hf = d.lam_fv(hf_fv, continuous_f, with_hg);
+        let with_x = d.lam_fv(x_fv, carrier, with_hf);
+        let with_big_g = d.lam_fv(big_g_fv, func_ty, with_x);
+        d.lam_fv(f_fv, func_ty, with_big_g)
+    };
+    let ty = {
+        let applied = continuous_at_applied(d, p, sum_fn, x);
+        let after_hg = d.arrow(continuous_g, applied);
+        let after_hf = d.arrow(continuous_f, after_hg);
+        let with_x = d.pi_fv(x_fv, carrier, after_hf);
+        let with_big_g = d.pi_fv(big_g_fv, func_ty, with_x);
+        d.pi_fv(f_fv, func_ty, with_big_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.continuous_add,
         uparams: vec![],
         ty,
         value,
