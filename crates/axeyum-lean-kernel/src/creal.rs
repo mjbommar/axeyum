@@ -860,6 +860,29 @@ pub struct CRealPrelude {
     /// `CReal.continuous_add : ∀ F G x, ContinuousAt F x → ContinuousAt G x →
     /// ContinuousAt (fun r => add (F r) (G r)) x`.
     pub continuous_add: NameId,
+    /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
+    /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
+    /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
+    /// zero-divisor split. See `creal/mul_self_zero.rs`.
+    pub rat_sq_le: NameId,
+    /// `CReal.ratSqSandwich : ∀ (t s : Rat), Rat.le (t*t) (s*s) →
+    /// Rat.le Rat.zero s → CReal.Within t s`. Applies [`Self::rat_sq_le`] to
+    /// `t` and to `-t`.
+    pub rat_sq_sandwich: NameId,
+    /// `CReal.ratIndexRatioLeOne : ∀ (a : Nat), Rat.le (natDivSucc a a)
+    /// Rat.one` — generalizes `Rat.nat_div_succ_le_one` to a numerator
+    /// matched to its own index.
+    pub rat_index_ratio_le_one: NameId,
+    /// `CReal.ratUnitEqOne : Eq Rat (natDivSucc 1 0) Rat.one` — the cheap
+    /// bridge between `natDivSucc`'s own "1" and the field's `Rat.one`,
+    /// via `Rat.self_normalize` applied to `Rat.one` itself (no gcd/cross-
+    /// multiplication reasoning needed: `num`/`den` are structure
+    /// projections of `Rat.one`'s direct `mk`, and `normalize`'s proof
+    /// argument is proof-irrelevant).
+    pub rat_unit_eq_one: NameId,
+    /// `CReal.eq_zero_of_mul_self_zero : ∀ x, Equiv (mul x x) zero → Equiv x
+    /// zero`. See `creal/mul_self_zero.rs`.
+    pub eq_zero_of_mul_self_zero: NameId,
 }
 
 impl CRealPrelude {
@@ -1040,6 +1063,11 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         continuous_id: kernel.name_str(creal, "continuous_id"),
         continuous_const: kernel.name_str(creal, "continuous_const"),
         continuous_add: kernel.name_str(creal, "continuous_add"),
+        rat_sq_le: kernel.name_str(creal, "ratSqLe"),
+        rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
+        rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
+        rat_unit_eq_one: kernel.name_str(creal, "ratUnitEqOne"),
+        eq_zero_of_mul_self_zero: kernel.name_str(creal, "eq_zero_of_mul_self_zero"),
     }
 }
 
@@ -1115,7 +1143,8 @@ pub(crate) fn build_creal_prelude_uncached(
         density::declare_density(&mut d, prelude)?;
         cotransitivity::declare_cotransitivity(&mut d, prelude)?;
         completeness::declare_completeness(&mut d, prelude)?;
-        convergence::declare_convergence(&mut d, prelude)
+        convergence::declare_convergence(&mut d, prelude)?;
+        mul_self_zero::declare_mul_self_zero(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -2036,6 +2065,7 @@ mod density;
 mod field;
 mod inverse;
 mod lattice;
+mod mul_self_zero;
 mod product;
 
 #[cfg(test)]

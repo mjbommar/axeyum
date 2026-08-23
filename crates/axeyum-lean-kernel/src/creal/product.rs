@@ -195,7 +195,7 @@ pub(super) fn index_le(
 /// is one rewrite followed by [`index_le`]. Bishop's additive shift `2n+1` is
 /// the `a = 1` case, which is why `CReal.add` nested inside `CReal.mul` needs
 /// no arithmetic of its own.
-fn composed_index_le(
+pub(super) fn composed_index_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     k: ExprId,
