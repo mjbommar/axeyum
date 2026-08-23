@@ -20,10 +20,36 @@ bound (notes 12, 14); (angle 2) exact Type I to level `|W_n|`, `P_4`/`P_3`
 with large factors and an exact Brun--Titchmarsh proved; the parity barrier
 made exact by LP duality with rational prime-free witnesses `10 <= n <= 15`;
 a sieve proof of Lemire would prove Legendre for `F_2[t]` (note 13).
-**Next:** angles 1 and 5 (Frobenius-angle reformulation + "no averaging
-suffices" lemma; the uniform conjecture) -- now subordinate to 4b; then the
-decisive computation of note 14 sec. 10 (`Z[zeta_16]` engine, `delta(2j+1,j)`
-for `j = 8..10`). Nothing here is a proof of the conjecture.
+**Rung 8 -- arXiv sweep and its two leads, both closed (2026-08-23).**
+[Note 15](../../research/10-cas/lemire-signed-trace/15-arxiv-techniques-2023-2026.md)
+reads the SOURCES of 20 papers (2022--26): fixed `q` is untouched, and
+Hu--Teyssier arXiv:2502.11060 answers note 14 sec. 11.4 NEGATIVELY (their
+graded Betti recursion gives `2^{Theta(j log j)}`; the budget series diverges).
+Its three candidate findings were then checked and two were withdrawn.
+(a) The `gcd(k,q^n-1)` lever of arXiv:2307.01344 is real per character but
+does NOT lift: single-position characters number `~2 j ln j` against `2^j`
+(`2^{-1011}` of the dual at `j = 1024`), and the lemma's power-map proof IS the
+Adams action already barriered in note 06 (note 15 sec. 4).
+(b) [Note 16](../../research/10-cas/lemire-signed-trace/16-large-q-threshold.md):
+Bagshaw's `n`-independent `q`-threshold is INDIVIDUAL-modulus and admits the
+non-squarefree `T^r`, but holds only at ODD `p` (standing hypothesis; the
+mechanism is quadratic reciprocity), and `q > 7101 p^2` forces `l >= 3`, so
+no prime field and no `q = p^2` qualifies -- smallest admissible `q = 3^11`.
+The `p = 2` reframing is refuted.
+(c) [Note 17](../../research/10-cas/lemire-signed-trace/17-cylinder-plancherel.md):
+Sawin's sparsity+Plancherel DISPROOF template cannot refute `(CYL)` -- `Z = 0`
+at all 26 endpoints (a proof, not a measurement, where `A_1` is odd), and
+`|K| < 8 ell` caps the forcing at `sqrt(8 ell)` against an rms that is
+`Theta(ell 2^{-ell/2})` of the threshold (`3e25` short at `ell = 200`). The
+public PDF's `(CYL)` claim is confirmed verbatim and extended to `ell >= 12`.
+
+**Next:** the lane is at a natural stopping point -- every route now ends at a
+named open statement, and the deliverable is the map plus the re-posed
+specialist question (notes 10, 14 sec. 10--11). If work resumes, the one
+decisive computation is note 14 sec. 10 (`Z[zeta_16]` engine, `delta(2j+1,j)`
+for `j = 8..10`), which separates the alive law `delta ~ j` from the dead
+`delta ~ 2j`; angles 1 and 5 remain unrun and are subordinate to it. Nothing
+in this lane is a proof of the conjecture.
 
 
 **Bottom rung laid: target pinned, three formulations checked, toolkit
