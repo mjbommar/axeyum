@@ -584,3 +584,44 @@ Math. 78 (2026) 302--327), arXiv:1808.04001, arXiv:1204.0708.
 - SMALLEST `k` PROVED: unchanged, 8 at `(200,401)`, 7 at `(200,402)`,
   `= log_2 n - 1 + O(1)`, i.e. Hayes 1965. NO NEW RUNG; what is added is the
   calibration, the `5.7x`/`8.1x` constant, and the ceiling proof.
+
+## Entry 10 -- almost all degrees
+
+Lane `lemire-signed-trace`, 2026-08-23. Note 20; checker
+`lemire_almost_all_degrees.py` (11 checks, 10 mutation controls each tripping
+exactly one, ~4 s; data `aad-*.txt`).
+
+- TARGET (AAD) `#{n<=N : W_n holds no irreducible} = o(N)`. NOT proved, and it
+  gives NO prime degree and NO power of two -- where Barrier III is also silent.
+- REDUCTION (Thm 1-2). Split `d_n=(N_ell(1)-2^h)/2^h` at `a=ell-ceil(log2 ell)-1`.
+  Low block `< 2^{-5/2}` (n odd) / `< 2^{-3}` (n even) UNIFORMLY and SHARPLY
+  (sup 0.17672/0.12496 over `5<=ell<=10^6`). Then `|d^top|<=0.34 => I_n>=1` for
+  `n>=26`: AAD follows from `sum_{n<=N}|d^top_n|^2 = o(N)`.
+- NULL RESULT (Thm 4), the point. For ANY angle multiset `delta^{-1}>=D` and
+  `Sigma_2>=Sigma_1^2/D`, so the Montgomery-Vaughan bound
+  `(T+delta^{-1})Sigma_2/lambda^2` is ALWAYS `>= Sigma_1^2/lambda^2`: the large
+  sieve's own error term contains the trivial bound and never says anything at a
+  PRESCRIBED point. At the KL threshold the floor is `4.32(ell-1)^2` exceptional
+  degrees against the `<=2ceil(log2 j)+4` degrees whose TOP block holds
+  conductor `j` (Thm 3) -- vacuous by 8565x at `ell=200`. What survives is the
+  off-diagonal at `T=O(log ell)`: fixed-`q` PAIR CORRELATION, note 00's wall.
+- SLACK (Thm 8). Hsu/Cohen `k*(n)~log_2 n-1` for ALL n; the large-sieve slack
+  is `k*+1` or `k*+2`, NEVER less. Averaging buys ZERO coefficients, so
+  `k=O(1)` and `k=c log n`, `c<1`, are both out of reach. `k*(401)=8`,
+  `k*(402)=7`: independent concordance with Entry 8, now gated in CHECK F.
+- Cand. 2: under the ONLY canonical comparison of different `ell` (the tower
+  projections) the identity is a FIXED POINT, so "the exceptional set moves" is
+  contentless without a measure on `{X_ell}`, and the sole structure-preserving
+  source of one is a group action = Barrier II (Prop 6). Not the same statement.
+- MEASURED, 46 endpoints, every `ell` in 2..24: an INDEPENDENT python L-function
+  engine reproduces all 18 endpoints `ell<=10` EXACTLY, two CAS producers agree
+  at 13 more. `z=D_n/sd` rms 1.400, max 3.328 (identity is a TYPICAL class);
+  consecutive-`ell` r=-0.066/-0.056, nothing to average. NEW, no mechanism: the
+  two degrees of ONE group are ANTI-correlated, r=-0.657 (Spearman -0.617, perm
+  p=2.6e-4, jackknife [-0.70,-0.54]) -- but a PERFECT one gives density 1/2.
+  Angles repeat EXACTLY (j=9,10,11: 252/488/994 distinct L-polys), so `delta=0`.
+- MARGIN, flint search over 479 degrees: `s_min <= 10` for all `n<=410`
+  (reproduces Arndt), `<=13` to 3000; equality `s_min=floor(n/2)` ONLY at 2,3,5,8.
+- TRAP: `pkill -f "<pat>"` matched THIS shell (the pattern sits in the wrapper's
+  own cmdline), killing the invocation mid-heredoc: the script it was writing
+  never existed and the relaunch silently did nothing.
