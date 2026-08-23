@@ -278,6 +278,13 @@ Two consequences for what to do next, neither of which is "download more":
 5. [`05-throughput.md`](05-throughput.md) — **the construction plan**: the
    measured production rate, the single-file lock that caps it, and the
    self-extension loop only this architecture can run.
+6. [`06-parallel-production.md`](06-parallel-production.md) — **the fleet
+   playbook**: how to run four to five Sonnet lanes against the frontier
+   concurrently, measured on 2026-08-23 when the library went 463 -> 544
+   axiom-free theorems in a day. The four binding constraints in order (cargo
+   slots, disjoint file areas, the coordinator's own merge throughput, stalls),
+   the brief shape that works, where Haiku is and is not usable, and the merge
+   check that caught a silent five-theorem revert.
 
 ## The measure of success
 
