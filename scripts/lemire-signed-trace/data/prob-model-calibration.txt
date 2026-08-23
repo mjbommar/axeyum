@@ -1,0 +1,15 @@
+# Calibration of the independent-Sato-Tate model (independent USp/PU(j-1)
+# Frobenius angles per character, blocks independent across conductors)
+# against every statistic the lane can measure.  Each row is asserted by a
+# named check in lemire_probabilistic.py; see note 21 sec. 6.
+COL statistic model predicted measured spread verdict
+2nd-moment-over-classes V=2^{n-ell}D(ell) 1 1.0016 [0.9711,1.0274] CONFIRMED
+3rd-moment-of-classes Gaussian 0 -0.0051 [-0.1331,+0.0536] CONFIRMED
+4th-moment-of-classes Gaussian 3 3.0095 [2.9292,3.1836] CONFIRMED
+max-over-classes Gumbel:sqrt(2*ell*log2) 1 0.9437 [0.7583,1.1884] CONFIRMED
+identity-class-quantile uniform-on-(0,1] 0.5 0.3105 3.08-sigma-low FAILS
+identity-top-5-percent 0.05-of-endpoints 1.10 6 Poisson-p=9.7e-4 FAILS
+cross-character-repeats Sigma2/Sigma1=1 1 17.9753 ell=13 FAILS
+block-independence-in-j corr(g_j,g_j')=0 0 +0.4519 max|r|=0.745 FAILS
+block-variance-additivity Var(G)=sum_j Var(g_j) 1 2.3209 ell=11 FAILS
+consecutive-degree-corr 0 0 -0.44947 pred -0.44157 FAILS

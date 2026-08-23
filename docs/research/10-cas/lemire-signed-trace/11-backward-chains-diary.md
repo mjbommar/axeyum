@@ -625,3 +625,50 @@ exactly one, ~4 s; data `aad-*.txt`).
 - TRAP: `pkill -f "<pat>"` matched THIS shell (the pattern sits in the wrapper's
   own cmdline), killing the invocation mid-heredoc: the script it was writing
   never existed and the relaunch silently did nothing.
+
+## Entry 11 -- the probabilistic face
+
+Note 21; `lemire_probabilistic.py` (23 checks, 8 controls, ~7 s); `data/prob-*.txt`.
+An embedded Hayes-character engine (pure python, no CAS) reproduces `D_n` EXACTLY
+at all 20 endpoints `ell<=11`, `N_5(1)=45`, `N_7(1)=472`, and Entry 8's 11 flint
+`Theta_ell(1)` (extended to `ell=19..24`).
+
+- (A) VARIANCE STATEMENT: `Sigma_j <= C 2^{j-1}(j-1)2^n`, Weil over `(j-1)`. The
+  saving MUST be `j`-dependent -- `Sigma_2 = 2^{n+1}` EXACTLY at every endpoint,
+  so a uniform proportional saving over Weil is FALSE. 242 rows, `12<=ell<=22`:
+  `mean C_j = 1.000` at EVERY `j`, `sup_j = 2.179`, `sup_{j>=14} = 1.047`,
+  aggregate `1.0274`. NEW: Barrier I's fake population satisfies `(VAR)` iff
+  `k <~ k_Weil/2`, so `(VAR)` opens exactly `[k_Weil/2, k_Weil)` -- Entry 8's
+  `F=sqrt(ell-2)` rung, by a different computation.
+- (B) FOUR TOOLS, FOUR OBSTRUCTIONS, ONE CONSTANT `(ell-1)/(2 kappa)`. Negative
+  association: `sum_g N = 2^n` forces EXACTLY `sum_{t!=0}(R(t)-2^{2n-ell}) = -V`,
+  but Barrier I's `F` has a SMALLER second moment, hence MORE negative
+  correlation and an empty identity class -- it runs backwards. Doob martingale
+  along the tower: increments ARE the `H_j`, `b_ell/2^{n-ell} = (ell-1)/(2 kappa)`
+  exactly, no concentration inequality beats the largest increment bound,
+  Freedman dies on the same term, `max_g|D_2(g)|/b_2 = 1` at even `n`.
+  Chen--Stein: `d_TV` to Poisson has a REAL floor `~1/n`, short of resolving one
+  class in `2^ell` by `2^{18}/2^{191}/2^{1013}` at `n=50/402/2050`, its `b_2`
+  term being the fixed-`q` pair correlation -- clean impossibility. Extreme
+  value: `max_g|D|/sd` is `0.76-1.19` x Gumbel, but NEW, the identity's RANK
+  among the `2^ell` classes has quantile mean `0.311` vs uniform `0.500` (3.08
+  sigma low) and hits the top 5% at 6 of 22 endpoints vs 1.10 expected
+  (`p=9.7e-4`): **the identity is NOT typical**, and Entry 10's `rms z = 1.400`
+  was that same signal read as agreement.
+- (C) THE ANTI-CORRELATION IS SOLVED. Not normalisation: `z_n =
+  -2^{-ell/2}G_ell(n)/sqrt(ell-2+2^{1-ell})`, so the `2^{ceil(n/2)}` convention
+  is not in `z` at all. Not proper powers: `-0.661 -> -0.622` after removing the
+  square mass exactly. It is EXACT ANGLE REPEATS: `76-85%` of `sum m_theta^2`
+  sits at `theta in (1/8)Z`, dominated by `3/8, 5/8` = the conductor-2 Kerdock
+  roots `-(1 -+ i)`, `cos = -1/sqrt2`. The weight is `m^2`, NOT `m` -- exactly
+  why Entry 10's `g_j(1)` was two orders too small; `rho_k = (sum m^2 cos 2pi k
+  theta - m_0^2)/(sum m^2 - m_0^2)` matches the measured autocorrelation to
+  `0.008` at every `ell`. SHARPER: the 8-periodic atom phase gives a `mod 8` SIGN
+  LAW for `z_n`, right at 42 of 45 endpoints (`p=4.3e-10`); 3 of 4 residue
+  classes get opposite signs, so `r ~ -1/2` and `-0.657` is 1.41 sigma from it.
+- (D) MODEL: right WITHIN a character (2nd/3rd/4th moments, the max), wrong
+  ACROSS characters (`Sigma_2^A/Sigma_1^A = 18` at `ell=13`; block corr mean
+  `+0.452`; `Var(G) = 2.32 sum_j Var(g_j)`). Still finitely many bad `n`, exponent
+  `2^{ell} -> 2^{0.33 ell}`. OPEN and new: the atom term is `~2^{-0.07 ell}` in
+  `d_n` while `|z|` stays `O(1)`, so the non-atomic part must cancel it ever more
+  precisely; a lower bound on that residual would be a new handle.

@@ -663,3 +663,28 @@ where Barrier III already leaves nothing.
   each further `ell` roughly doubles that. The correlation statistics rest on 23
   groups, which is why section 5 reports a permutation test rather than an
   asymptotic p-value.
+
+## Addendum (coordinator, 2026-08-23): two readings corrected by note 21
+
+[Note 21](21-probabilistic-face.md) revisits two numbers in sec. C above and
+reverses their interpretation. Both corrections are against this note, not
+against its theorems, which stand.
+
+1. **`rms z = 1.400` is a signal, not agreement.** This note read it as "the
+   identity behaves like an `O(1)`-sigma class, no drift". A typical class has
+   `rms z = 1` by construction, so `1.400^2 = 1.96` says the identity carries
+   twice the typical variance. Note 21 measures the identity's rank among all
+   `2^ell` classes directly (rank 1 = most extreme): quantile mean `0.311`
+   against the uniform `0.500`, `3.08` sigma, and the identity is in the top
+   `5%` of classes at 6 of 22 endpoints against `1.10` expected
+   (Poisson `p = 9.7e-4`). **The identity is NOT a typical class.** Prop. 7's
+   heuristic conclusion survives, but on a smaller margin and with the
+   "typical class" hypothesis replaced by an atom-corrected one.
+2. **The anti-correlation is explained.** Note 21 finds the mechanism: exact
+   eighth-root repeats in the angle multiset, weighted by `m^2` and not by `m`
+   -- which is precisely why this note's `g_j(1)` test came out two orders too
+   small. Predicted vs measured lag-1 agree to about 1% over `ell = 8..13`,
+   and there is a `mod 8` sign law `sign z_n = -sign P_ell(n mod 8)` holding at
+   42 of 45 endpoints (`p = 4.3e-10`). This note's `-0.657` over 23 groups and
+   the asymptotic `~ -0.45` are the same number (Fisher-`z` distance
+   `1.41` sigma). The density-`1/2` ceiling stated here is unchanged.
