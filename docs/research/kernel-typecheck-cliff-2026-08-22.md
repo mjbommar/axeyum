@@ -260,3 +260,64 @@ together is follow-up work, not attempted in this session.
   completion) and confirm the full kernel suite
   (`cargo test -p axeyum-lean-kernel --lib`) stays green with the fix in
   place.
+
+---
+
+## Outcome: fixed, with the shipped-path numbers
+
+Fixed at `6e9aeab62`. `LocalContext::push`/`pop` no longer wipe the four memo
+tables; each `push` opens a journal frame, `remember_*` records into it, and
+`pop` undoes exactly that frame. An entry computed before a binder existed
+cannot mention it, so ancestor work survives.
+
+The one subtlety, found by an EXISTING test rather than by design: a `None` from
+`type_of`/`value_of` is also an observation an answer can depend on ("this fvar
+is not declared *yet*"), and unlike a `Some` it can flip on the very next
+`push`, not only on a pop. Handled by an `unbound_probes` counter, `volatile`
+tagging, and a drain on every push;
+`tc_tests::pushing_a_local_invalidates_a_memoised_stuck_reduction` is the test
+that caught it.
+
+### Measured, same instrument both sides
+
+Full kernel unit suite, build cached on both sides:
+
+| | tests | wall | outcome |
+|---|---:|---:|---|
+| original `tc.rs` | 412 | **1857.13 s** | all pass |
+| fixed `tc.rs` | 414 | **13.44 s** | all pass |
+
+**138x**, with identical accept/reject outcomes across all 412 shared tests --
+which is itself the differential check the fix required. The two extra tests are
+same-day `Int.modEq_iff_dvd` work that did not exist on the original.
+
+`examples/prelude_build_timing`, release mode, the shipped construction path:
+
+| prelude | iteration | original | fixed | speedup |
+|---|---|---:|---:|---|
+| `creal` | 0 (cold) | 7,445,422 us | 597,471 us | **12.5x** |
+| `creal` | 1 | 115,124 us | 23,937 us | 4.8x |
+| `creal` | 2 | 111,740 us | 25,064 us | 4.5x |
+| `creal` | 3 | 112,672 us | 24,264 us | 4.6x |
+| `creal` | 4 | 115,014 us | 23,783 us | 4.8x |
+| `rat` | 1 | 203,949 us | 119,954 us | 1.7x |
+| `nat`, `integer`, `logic`, `string` | any | -- | -- | unchanged |
+
+The effect is concentrated exactly where the diagnosis said it would be: `creal`,
+whose construction drives `check_core`'s Lam-vs-Pi path through `Rat`/`Int`
+arithmetic. `nat` and `integer` barely move, which is a useful negative control
+-- a change that sped up everything equally would more likely be a measurement
+artifact than a fix for this bug.
+
+### Two consequences worth acting on separately
+
+1. **`hooks/pre-push` records `cargo test -p axeyum-lean-kernel` at 2,296 s** and
+   moved the kernel suites out of the hook for being too slow to gate on. That
+   cost was this bug. Whether to put them back is a separate decision with its
+   own risk, and is deliberately not bundled here.
+2. **`lra_ctx()` building a CReal prelude before the route knows it will
+   decline** is a standing open item in the capability-assurance lane, recorded
+   at 35 s in a solver context. The cold construction is now 0.60 s on this
+   instrument. The item is not closed -- the right fix is still to not build a
+   prelude you are about to throw away -- but it is no longer a 35-second bill.
+
