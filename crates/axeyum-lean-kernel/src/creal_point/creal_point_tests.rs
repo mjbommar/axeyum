@@ -73,7 +73,10 @@ fn every_theorem_here_is_axiom_free() {
         ),
         ("dot_self_add", p.dot_self_add),
         ("dot_self_sub", p.dot_self_sub),
+        ("dot_self_add3", p.dot_self_add3),
         ("parallelogram_law", p.parallelogram_law),
+        ("euler_quadrilateral", p.euler_quadrilateral),
+        ("apollonius_median", p.apollonius_median),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -146,7 +149,10 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.parallelogram_opposite_sides_eq,
         p.dot_self_add,
         p.dot_self_sub,
+        p.dot_self_add3,
         p.parallelogram_law,
+        p.euler_quadrilateral,
+        p.apollonius_median,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -517,5 +523,97 @@ fn parallelogram_law_statement_is_exact() {
          (CReal.add (CReal.add (CPoint.distSq x0 x1) (CPoint.distSq x1 x2)) (CPoint.distSq x2 \
          x3)) (CPoint.distSq x3 x0)) (CReal.add (CPoint.distSq x0 x2) (CPoint.distSq x1 \
          x3)))))))"
+    );
+}
+
+/// `dot_self_add3`, verbatim. `x0,x1,x2 = U,V,W`. The trinomial expansion
+/// `dot((u+v)+w,(u+v)+w) ~ (u²+2uv+v²) + (2uw+2vw+w²)` — an empty axiom
+/// footprint on a theorem missing a cross term, or reusing
+/// [`dot_self_add_statement_is_exact`]'s two-variable shape, would still pass
+/// a substring check.
+#[test]
+fn dot_self_add3_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.dot_self_add3)
+        .expect("dot_self_add3 must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.Equiv (CPoint.dot \
+         (CPoint.add (CPoint.add x0 x1) x2) (CPoint.add (CPoint.add x0 x1) x2)) (CReal.add \
+         (CReal.add (CPoint.dot x0 x0) (CReal.add (CPoint.dot x0 x1) (CReal.add (CPoint.dot x0 \
+         x1) (CPoint.dot x1 x1)))) (CReal.add (CReal.add (CPoint.dot x0 x2) (CPoint.dot x1 \
+         x2)) (CReal.add (CReal.add (CPoint.dot x0 x2) (CPoint.dot x1 x2)) (CPoint.dot x2 \
+         x2)))))))"
+    );
+}
+
+/// **Apollonius' median theorem.** Verbatim-checked for the same reason as
+/// [`pythagoras_statement_is_exact`]: this is the literal `distSq A B +
+/// distSq A C ~ (distSq A M + distSq A M) + (distSq B M + distSq B M)`
+/// statement with `M` substituted directly as `CPoint.midpoint B C` (not a
+/// separately quantified, hypothesis-pinned point) — an empty axiom
+/// footprint on a theorem with a dropped doubling, a swapped `A`/`B`, or an
+/// `M` that is some other point entirely would still pass a substring check.
+/// `x0,x1,x2 = A,B,C`.
+#[test]
+fn apollonius_median_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.apollonius_median)
+        .expect("apollonius_median must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.Equiv (CReal.add \
+         (CPoint.distSq x0 x1) (CPoint.distSq x0 x2)) (CReal.add (CReal.add (CPoint.distSq x0 \
+         (CPoint.midpoint x1 x2)) (CPoint.distSq x0 (CPoint.midpoint x1 x2))) (CReal.add \
+         (CPoint.distSq x1 (CPoint.midpoint x1 x2)) (CPoint.distSq x1 (CPoint.midpoint x1 \
+         x2)))))))"
+    );
+}
+
+/// **Euler's quadrilateral theorem, unconditional.** Verbatim-checked for the
+/// same reason as [`pythagoras_statement_is_exact`]: this is the literal
+/// hypothesis-free `distSq A B + (distSq B C + (distSq C D + distSq D A)) ~
+/// (distSq A C + distSq B D) + dot W W`, `W := (A-B)+(C-D)`, statement — an
+/// empty axiom footprint on a theorem with a dropped `dot W W` term (i.e.
+/// [`CPointPrelude::parallelogram_law`]'s hypothesis-specialised shape), a
+/// missing summand, or a spurious hypothesis Pi-bound before the conclusion,
+/// would still pass a substring check. `x0,x1,x2,x3 = A,B,C,D`, and there is
+/// no fifth (hypothesis) binder.
+#[test]
+fn euler_quadrilateral_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.euler_quadrilateral)
+        .expect("euler_quadrilateral must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CReal.Equiv \
+         (CReal.add (CPoint.distSq x0 x1) (CReal.add (CPoint.distSq x1 x2) (CReal.add \
+         (CPoint.distSq x2 x3) (CPoint.distSq x3 x0)))) (CReal.add (CReal.add (CPoint.distSq x0 \
+         x2) (CPoint.distSq x1 x3)) (CPoint.dot (CPoint.add (CPoint.sub x0 x1) (CPoint.sub x2 \
+         x3)) (CPoint.add (CPoint.sub x0 x1) (CPoint.sub x2 x3))))))))"
     );
 }
