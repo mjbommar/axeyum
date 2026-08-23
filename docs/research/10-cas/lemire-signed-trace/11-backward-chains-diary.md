@@ -389,3 +389,77 @@ note, which was complete through the verdict.
   `2j`. Verdict stays "alive, not closed", with the caveat sharpened: at
   `j = 5` the critical line is not yet in the `j + O(1)` shape, and the
   `j = 8..10` computation of note 14 sec. 10 is the only thing that decides.
+
+## Entry 5 -- arXiv techniques sweep 2023-2026
+
+- 84 arXiv API queries (math.NT/math.AG, 2022-01..2026-08), 1262 distinct ids,
+  437 post-2022, 20 sources pulled and read. Full note:
+  [15-arxiv-techniques-2023-2026.md](15-arxiv-techniques-2023-2026.md).
+- **New lever (rank 1).** Gorodetsky--Kovaleva arXiv:2307.01344, `lem:sym` +
+  `cor:sym`: for `chi_{k,psi}(f) = psi(p_{-k}(f))`, a *primitive Dirichlet
+  character mod `T^{k+1}`*, the `Lambda`-weighted sum over degree `n` equals the
+  same sum for `k' = gcd(k, q^n - 1)`, hence `|sum Lambda chi| <= q^{n/2}
+  gcd(k, q^n-1)` against Weil's `q^{n/2} k`. Exact, fixed `q`, no geometry.
+  Proof uses ONLY that the summand is a function of `x^{-k}` on `F_{q^n}^x`,
+  which is also true of a Witt-level-`s` character supported at a single odd
+  position (Teichmuller is multiplicative). At `q = 2` the stated family is
+  order 2 (`s = 1`, the Kerdock layer). **Arithmetic: at `gcd = 1` the saving is
+  `(j-1)`; `(HWO)` needs `4 ell`; in the `(HWO)` range `j/ell -> 1`, so the
+  shortfall is the absolute constant 4** -- every mechanism in notes 03--09 is
+  short by `ell`. Next action: count single-position characters in `X_{j,s}`.
+- **Reframing.** Bagshaw arXiv:2401.10399 `cor:vonmangoldt`: level of
+  distribution `omega < 1/2 + 1/62` for **arbitrary** modulus (Sawin and
+  Sawin--Shusterman need squarefree; ours `x^{ell+1}` is maximally not), under
+  `q > p^2 e^2 ((16-omega)/(16-31omega))^2`. Reversal duality => **Kaser--Lemire
+  over `F_q` holds for all large `n` once `q > 7101 p^2`; at `p = 2`,
+  `q >= 2^15`.** Note 09's threshold `q > n/2` grows with `n`; this one does
+  not. The open set is small `q`, not large `n`.
+- **Note 14 sec. 11.4 answered, negatively.** Hu--Teyssier arXiv:2502.11060
+  Thm. 2 gives `h^i(A^n,L) <= b_i(lc) rk` with `b_i` explicit, uniform in `p`
+  and `l`, graded by degree, linear in rank -- all four properties (T2) wants.
+  Evaluated their recursion: `b_n(1) = 2^{Theta(n log n)}` (same as Sawin
+  Lemma 2.11), and the graded budget `sum_k b_k(1) 2^{-k/2}` diverges (partial
+  sums `1, 1.71, 10.2, 75, 690, 7621`) against a budget of `1/4`. Retarget: the
+  *coefficients* of `fd_k`, `k <= 7`, not "a polynomial Betti bound".
+- **Disproof template.** Sawin arXiv:2209.02170: at fixed `q`, prime-power
+  modulus, wild `p | k`, the Kloosterman sum vanishes off a sparse locus, and
+  Plancherel then forces one value to be huge -- so certain short-interval sums
+  and moments provably have NO square-root cancellation. Same computation runs
+  on note 07's `A_psi`: if `A_psi = 0` off a `2^{-c}` fraction then
+  `max |A_psi| >= 2^{c/2}(mean square)^{1/2}`, and `(CYL)` is false if that
+  exceeds `2^{ell-1}`. The vanishing locus is already in the note-07 dumps,
+  uncounted.
+- **Char-2 negative datum.** Klurman--Mangerel--Teravainen arXiv:2202.10370: the
+  functions with bounded short-interval discrepancy are exactly the Dirichlet
+  characters to prime-power modulus -- our family -- and "over `F_q[t]` with `q`
+  even ... the set of characters with bounded discrepancy is somewhat larger
+  than in the case of `q` odd".
+- **The fixed-`q` wall is one wall.** Sawin--Shusterman arXiv:2512.24080 bound
+  short trace-function sums by `X^{1/2} |g|^{log_q(2r+c)}`; that factor is `< 1`
+  only for `q > 2r + c`, and it is the same threshold reappearing in Bagshaw's
+  `q`-condition and in Sawin's `omega < 1`. Also: Sawin's Waring paper
+  arXiv:2412.14053 needs `k < p`, i.e. it dies at `p = 2` in the *same* lemma
+  (arXiv:1809.05137 Prop. 2.5) that makes his Lemma 5.3 vacuous -- two
+  independent papers, one `p = 2` wall.
+
+### Entry 5 addendum (coordinator, 2026-08-23): the lever does not lift
+
+- Verified `lem:sym`/`cor:sym` of arXiv:2307.01344 verbatim in the source. Then
+  closed the note's own open check, negatively, two ways (note 15 sec. 4):
+  (i) **counting** -- single-position characters number `~2 j ln j` against
+  `2^j` in the dual (`2^{-1011}` of it at `j = 1024`), so bounding them
+  perfectly does not move a layer sum `T_{j,s}` at all; (ii) **mechanism** --
+  the lemma's proof reindexes by the power map `x -> x^k`, which IS the
+  Adams action of note 06, whose orbit of the identity class is `<= 2`. The
+  unbounded saving in their setting comes from the phase being a SINGLE
+  monomial; our exact-conductor characters are tuples and the power map moves
+  the whole tuple.
+- So "a constant factor 4 from (HWO)" is withdrawn: true per character,
+  vacuous per layer. **Do not re-open this.** What survives: the existence of
+  a fixed-`q` improvement over Weil for a complete family (worth knowing), and
+  their `lem:Blk` as a tool for the monomial sub-family.
+- Unaffected and still open leads: the Bagshaw reframing (`q >= 2^15` at
+  `p = 2` would make the residual problem small `q`, not large `n` -- verify
+  independently before quoting) and Sawin's sparsity+Plancherel disproof
+  template applied to note 07's `A_psi` (cheap: one uncounted statistic in
+  dumps we already have).

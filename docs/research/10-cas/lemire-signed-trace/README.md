@@ -105,6 +105,23 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   case of Sawin's Hypothesis H, whose only unconditional input is vacuous at
   `p = 2` -- and (T2) a Betti bound, where the best in print is short by an
   exponential. Script `lemire_horizontal_quotient.py`.
+- [15-arxiv-techniques-2023-2026.md](15-arxiv-techniques-2023-2026.md) -- an
+  arXiv sweep (84 API queries, 437 post-2022 hits, 20 sources read) for
+  techniques in the surrounding field. Two findings change the map.
+  Gorodetsky--Kovaleva (arXiv:2307.01344) prove an exact fixed-`q` identity for
+  the Hayes characters mod `T^{k+1}` replacing Weil's conductor factor `k` by
+  `gcd(k, q^n - 1)`; at level one it is the Kerdock layer, but the proof uses
+  only that the summand is a function of `x^{-k}`, and if it lifts to Witt level
+  `s` it lands a factor `4` -- not a factor `ell` -- from `(HWO)`. Bagshaw
+  (arXiv:2401.10399) gives a level of distribution `> 1/2` for **arbitrary**
+  modulus, which via the reversal duality proves Kaser--Lemire over `F_q` for all
+  large `n` once `q > 7101 p^2` (at `p = 2`, `q >= 2^15`): the residual problem
+  is small `q`, not large `n`. Also: note 14's "most promising unexplored input
+  for (T2)" (Hu--Teyssier arXiv:2502.11060) is evaluated here and does **not**
+  close (T2); and Sawin arXiv:2209.02170 supplies a fixed-`q` *disproof*
+  template (sparse vanishing locus + Plancherel) applicable to note 07's
+  `A_psi` data. Scratch/reproduction outside the repo; `ht_b.py` reproduces the
+  (T2) evaluation.
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).
