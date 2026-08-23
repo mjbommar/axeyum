@@ -115,6 +115,12 @@ impl<'k> IntDev<'k> {
         self.const_app(f, &[a])
     }
 
+    /// `Int.sub a b`, i.e. `a + (-b)` under the `Int.sub` definition.
+    pub(crate) fn isub(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let f = self.int.sub;
+        self.const_app(f, &[a, b])
+    }
+
     /// `Int.ediv a b` — the Euclidean ("E-rounding") quotient.
     pub(crate) fn iediv(&mut self, a: ExprId, b: ExprId) -> ExprId {
         let f = self.int.ediv;

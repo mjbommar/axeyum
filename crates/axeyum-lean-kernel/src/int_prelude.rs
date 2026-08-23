@@ -87,6 +87,7 @@ mod order;
 mod rat;
 mod sign;
 mod statements;
+mod sub;
 mod sub_nat_nat;
 
 use ops::IntDev;
@@ -195,6 +196,12 @@ pub struct IntPrelude {
     pub mul: NameId,
     /// `neg : Int → Int`.
     pub neg: NameId,
+    /// `sub : Int → Int → Int := fun a b => add a (neg b)` — a plain
+    /// `Definition`, not a fresh inductive operation: every law about it
+    /// (`mul_sub`, `modEq_iff_dvd`'s difference) is proved by unfolding to
+    /// `add`/`neg` and folding back, the same defeq-bridging idiom
+    /// `Int.dvd`/`Int.ModEq` already use.
+    pub sub: NameId,
     /// `zero : Int`.
     pub zero: NameId,
     /// `one : Int`.
@@ -259,6 +266,13 @@ pub struct IntPrelude {
     /// `left_distrib :
     /// ∀ (a b c : Int), Eq Int (mul a (add b c)) (add (mul a b) (mul a c))`.
     pub left_distrib: NameId,
+    /// `mul_neg : ∀ (a b : Int), Eq Int (mul a (neg b)) (neg (mul a b))` —
+    /// derived from `mul_comm`/`mul_assoc`/`neg_one_mul` alone, no case split.
+    pub mul_neg: NameId,
+    /// `mul_sub :
+    /// ∀ (a x y : Int), Eq Int (mul a (sub x y)) (sub (mul a x) (mul a y))` —
+    /// `left_distrib` plus `mul_neg`, unfolding `sub` and folding it back.
+    pub mul_sub: NameId,
     /// `mul_nonneg : ∀ (a b : Int), le zero a → le zero b → le zero (mul a b)`.
     pub mul_nonneg: NameId,
     /// `sq_nonneg : ∀ (a : Int), le zero (mul a a)` — *unconditional*
@@ -345,6 +359,15 @@ pub struct IntPrelude {
     pub mod_eq_symm: NameId,
     /// `ModEq.trans : ∀ n a b c, ModEq n a b → ModEq n b c → ModEq n a c`.
     pub mod_eq_trans: NameId,
+    /// `modEq_iff_dvd : ∀ n a b, 0 < n → (ModEq n a b ↔ n ∣ (b - a))` — the
+    /// bridge from `ModEq` to `Int.dvd`, scoped to `0 < n` for the same reason
+    /// [`Self::emod_eq_zero_iff_dvd`] is: no proved bound on `emod`'s magnitude
+    /// for a negative modulus exists yet.
+    pub mod_eq_iff_dvd: NameId,
+    /// `ModEq.add_right : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (a+c) (b+c)`.
+    pub mod_eq_add_right: NameId,
+    /// `ModEq.add_left : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (c+a) (c+b)`.
+    pub mod_eq_add_left: NameId,
     /// `natAbs : Int → Nat` — the magnitude, `ofNat n ↦ n` and `negSucc m ↦ succ m`.
     pub nat_abs: NameId,
     /// `of_nat_nat_abs_of_nonneg : ∀ a, 0 ≤ a → ofNat (natAbs a) = a`.
@@ -435,6 +458,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         add: child(kernel, "add"),
         mul: child(kernel, "mul"),
         neg: child(kernel, "neg"),
+        sub: child(kernel, "sub"),
         zero: child(kernel, "zero"),
         one: child(kernel, "one"),
         le: child(kernel, "le"),
@@ -462,6 +486,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         neg_one_mul: child(kernel, "neg_one_mul"),
         mul_zero: child(kernel, "mul_zero"),
         left_distrib: child(kernel, "left_distrib"),
+        mul_neg: child(kernel, "mul_neg"),
+        mul_sub: child(kernel, "mul_sub"),
         mul_nonneg: child(kernel, "mul_nonneg"),
         sq_nonneg: child(kernel, "sq_nonneg"),
         no_int_between: child(kernel, "no_int_between"),
@@ -487,6 +513,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_refl: child(kernel, "modEq_refl"),
         mod_eq_symm: child(kernel, "modEq_symm"),
         mod_eq_trans: child(kernel, "modEq_trans"),
+        mod_eq_iff_dvd: child(kernel, "modEq_iff_dvd"),
+        mod_eq_add_right: child(kernel, "modEq_add_right"),
+        mod_eq_add_left: child(kernel, "modEq_add_left"),
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
@@ -559,6 +588,9 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         sign::declare_mul_assoc(&mut d)?;
         sub_nat_nat::declare_mul_lemmas(&mut d)?;
         algebra::declare_left_distrib(&mut d)?;
+        sub::declare_sub_definition(&mut d)?;
+        sub::declare_mul_neg(&mut d)?;
+        sub::declare_mul_sub(&mut d)?;
         order::declare_difference_lemmas(&mut d)?;
         order::declare_additive_order(&mut d)?;
         decide::declare_decidable_equality(&mut d)?;
@@ -584,6 +616,9 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modeq::declare_modeq_refl(&mut d)?;
         modeq::declare_modeq_symm(&mut d)?;
         modeq::declare_modeq_trans(&mut d)?;
+        modeq::declare_modeq_iff_dvd(&mut d)?;
+        modeq::declare_modeq_add_right(&mut d)?;
+        modeq::declare_modeq_add_left(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;

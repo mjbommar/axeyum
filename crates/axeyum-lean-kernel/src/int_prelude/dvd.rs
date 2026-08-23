@@ -19,7 +19,7 @@ use crate::nat_prelude::NatOps;
 
 /// `fun (c : Int) => Eq Int b (a * c)` — the predicate `Int.dvd a b` existentially
 /// quantifies.
-fn dvd_predicate(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+pub(super) fn dvd_predicate(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
     let int_ty = d.int_ty();
     let c_fv = d.fresh_fvar();
     let c = d.kernel().fvar(c_fv);
@@ -29,7 +29,7 @@ fn dvd_predicate(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
 }
 
 /// `Int.dvd a b`, i.e. `d.const_app(p.dvd, &[a, b])`.
-fn idvd(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+pub(super) fn idvd(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
     let f = d.int().dvd;
     d.const_app(f, &[a, b])
 }
@@ -345,7 +345,7 @@ pub(super) fn declare_dvd_add(d: &mut IntDev<'_>) -> Result<(), KernelError> {
 /// `Not (Eq Int b Int.zero)` from `0 < b` — `emod_nonneg`'s hypothesis is
 /// stated as inequality-freedom rather than positivity, so this is the small
 /// bridge every positive-divisor use of it needs.
-fn ne_zero_of_pos(d: &mut IntDev<'_>, b: ExprId, h_pos: ExprId) -> ExprId {
+pub(super) fn ne_zero_of_pos(d: &mut IntDev<'_>, b: ExprId, h_pos: ExprId) -> ExprId {
     let zero = d.izero();
     let heq0_fv = d.fresh_fvar();
     let heq0 = d.kernel().fvar(heq0_fv);
