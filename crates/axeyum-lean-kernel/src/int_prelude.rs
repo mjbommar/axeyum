@@ -409,6 +409,21 @@ pub struct IntPrelude {
     /// identity over `ℤ` (Elements VII.2, strong form), transported from
     /// `Nat.gcd_bezout` through `natAbs`.
     pub gcd_eq_gcd_ab: NameId,
+    /// `Int.Coprime a b := Eq Nat (gcd a b) 1` — the converse of Bézout
+    /// (Elements VII, Def. 12), stated over the `Nat`-valued `gcd`.
+    pub coprime: NameId,
+    /// `coprime_of_bezout_one : ∀ a b u v, Eq Int (a*u+b*v) one → Coprime a b`.
+    pub coprime_of_bezout_one: NameId,
+    /// `gauss_lemma : ∀ a b c, Coprime a b → a ∣ (b*c) → a ∣ c` — Elements
+    /// VII.30's engine; `euclid_lemma` is its corollary once `a` is prime.
+    pub gauss_lemma: NameId,
+    /// `euclid_lemma : ∀ p a b,
+    /// (2 ≤ natAbs p ∧ ∀ d, d ∣ natAbs p → d = 1 ∨ d = natAbs p) →
+    /// p ∣ a*b → p ∣ a ∨ p ∣ b` — Elements VII.30, transported from
+    /// `Nat.euclid_lemma` via `gauss_lemma`. Primality is stated on `natAbs p`,
+    /// mirroring `Nat`'s own inline convention (no `Prime` name exists over
+    /// either carrier).
+    pub euclid_lemma: NameId,
 
     // --- the rationals, as a normalised structure -----------------------------
     /// `Rat : Type` — a normalised `num/den` pair carrying its own positivity
@@ -559,6 +574,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         gcd_dvd_right: child(kernel, "gcd_dvd_right"),
         dvd_gcd: child(kernel, "dvd_gcd"),
         gcd_eq_gcd_ab: child(kernel, "gcd_eq_gcd_ab"),
+        coprime: child(kernel, "Coprime"),
+        coprime_of_bezout_one: child(kernel, "coprime_of_bezout_one"),
+        gauss_lemma: child(kernel, "gauss_lemma"),
+        euclid_lemma: child(kernel, "euclid_lemma"),
         rat,
         rat_mk: kernel.name_str(rat, "mk"),
         rat_normalize: kernel.name_str(rat, "normalize"),
@@ -669,6 +688,10 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_gcd_dvd_left_right(&mut d)?;
         gcd::declare_dvd_gcd(&mut d)?;
         gcd::declare_gcd_eq_gcd_ab(&mut d)?;
+        gcd::declare_coprime(&mut d)?;
+        gcd::declare_coprime_of_bezout_one(&mut d)?;
+        gcd::declare_gauss_lemma(&mut d)?;
+        gcd::declare_euclid_lemma(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;

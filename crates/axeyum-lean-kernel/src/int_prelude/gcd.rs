@@ -37,10 +37,11 @@
 
 use crate::BinderInfo;
 use crate::KernelError;
-use crate::env::Declaration;
+use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
 
+use super::defs::DERIVED_HEIGHT;
 use super::ops::{Branch, IntDev, Shape, case_split};
 
 // ---------------------------------------------------------------------------
@@ -1211,6 +1212,410 @@ pub(super) fn declare_gcd_eq_gcd_ab(d: &mut IntDev<'_>) -> Result<(), KernelErro
         };
 
         let proof = bezout_elim(d, big_a, big_b, g, stmt, certificate, minor);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// `Int.Coprime`, Gauss's lemma, and Euclid's lemma (Elements VII.30) — the
+// converse of Bézout and its two corollaries.
+// ---------------------------------------------------------------------------
+
+/// Admit `Int.Coprime : Int → Int → Prop := fun a b => Eq Nat (gcd a b) 1`.
+///
+/// The converse of Bézout's identity ([`declare_gcd_eq_gcd_ab`]):
+/// [`declare_coprime_of_bezout_one`] proves the direction *from* a Bézout
+/// certificate, and [`declare_gauss_lemma`] is the one place this development
+/// actually needs the predicate rather than the bare equation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_coprime(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let int_ty = d.int_ty();
+    let prop = d.kernel().sort_zero();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let g = igcd(d, a, b);
+    let one_nat = d.num(1);
+    let body = d.eq(g, one_nat);
+    let value = {
+        let inner = d.lam_fv(b_fv, int_ty, body);
+        d.lam_fv(a_fv, int_ty, inner)
+    };
+    let ty = {
+        let inner = d.arrow(int_ty, prop);
+        d.arrow(int_ty, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.coprime,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT),
+    })
+}
+
+/// `coprime_of_bezout_one : ∀ (a b u v : Int), Eq Int (a*u+b*v) one → Coprime a b`.
+///
+/// The converse of [`declare_gcd_eq_gcd_ab`]: `ofNat (gcd a b)` divides both
+/// `a` and `b`, hence both `a*u` and `b*v`, hence their sum; given that sum is
+/// `Int.one`, [`declare_nat_abs_dvd_nat_abs_of_dvd`] carries
+/// `ofNat (gcd a b) ∣ one` down to `Nat.dvd (gcd a b) 1` (both `natAbs`
+/// computations are `rfl`), and `Nat.eq_one_of_dvd_one` closes it.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_coprime_of_bezout_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.coprime_of_bezout_one, 4, &|d, v| {
+        let (a, b, u, vv) = (v[0], v[1], v[2], v[3]);
+        let au = d.imul(a, u);
+        let bv = d.imul(b, vv);
+        let sum = d.iadd(au, bv);
+        let one_i = d.ione();
+        let hyp_ty = d.ieq(sum, one_i);
+        let g = igcd(d, a, b);
+        let goal = d.const_app(p.coprime, &[a, b]);
+        let stmt = d.arrow(hyp_ty, goal);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let g_i = d.of_nat(g);
+        let dvd_a = d.const_app(p.gcd_dvd_left, &[a, b]);
+        let dvd_b = d.const_app(p.gcd_dvd_right, &[a, b]);
+
+        let dvd_au = {
+            let step = d.const_app(p.dvd_mul_right, &[a, u]);
+            d.const_app(p.dvd_trans, &[g_i, a, au, dvd_a, step])
+        };
+        let dvd_bv = {
+            let step = d.const_app(p.dvd_mul_right, &[b, vv]);
+            d.const_app(p.dvd_trans, &[g_i, b, bv, dvd_b, step])
+        };
+        let dvd_sum = d.const_app(p.dvd_add, &[g_i, au, bv, dvd_au, dvd_bv]);
+        let dvd_one = {
+            let motive = |d: &mut IntDev<'_>, x: ExprId| idvd(d, g_i, x);
+            d.int_eq_rewrite(sum, one_i, h, dvd_sum, &motive)
+        };
+        let nat_dvd_one = d.const_app(p.nat_abs_dvd_nat_abs_of_dvd, &[g_i, one_i, dvd_one]);
+        let proof_body = d.lemma(p.nat.eq_one_of_dvd_one, &[g, nat_dvd_one]);
+        let proof = d.lam_fv(h_fv, hyp_ty, proof_body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// Given `eq_one_sum : Eq Int one_i (a*u+b*v)`, derive
+/// `(a_cu, bc_v, Eq Int c (a_cu + bc_v))` where `a_cu = a*(c*u)` and
+/// `bc_v = (b*c)*v` — the shape [`declare_gauss_lemma`] needs to close with
+/// `dvd_mul_right`/`dvd_trans`/`dvd_add` alone.
+///
+/// Pure ring rearrangement: `c = c*1 = c*(a*u+b*v) = c*(a*u) + c*(b*v)`, and
+/// each summand is re-associated/commuted into the target shape by
+/// `mul_assoc`/`mul_comm` alone — no case split, unlike the Bézout
+/// development this composes with.
+fn gauss_rearrange(
+    d: &mut IntDev<'_>,
+    c: ExprId,
+    a: ExprId,
+    u: ExprId,
+    b: ExprId,
+    v: ExprId,
+    eq_one_sum: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let p = d.int();
+    let one_i = d.ione();
+    let au = d.imul(a, u);
+    let bv = d.imul(b, v);
+    let sum_uv = d.iadd(au, bv);
+
+    // c = c*one_i
+    let c_one = d.imul(c, one_i);
+    let step1 = {
+        let fwd = d.const_app(p.mul_one, &[c]); // c*one = c
+        d.isymm(c_one, c, fwd)
+    };
+
+    // c*one_i = c*sum_uv
+    let c_sum = d.imul(c, sum_uv);
+    let step2 = d.icongr(one_i, sum_uv, eq_one_sum, &|d, y| d.imul(c, y));
+
+    // c*sum_uv = c*au + c*bv
+    let c_au = d.imul(c, au);
+    let c_bv = d.imul(c, bv);
+    let step3 = d.const_app(p.left_distrib, &[c, au, bv]);
+    let c_au_c_bv = d.iadd(c_au, c_bv);
+
+    // c*au = a*(c*u)
+    let ca = d.imul(c, a);
+    let ca_u = d.imul(ca, u);
+    let step4a = {
+        let fwd = d.const_app(p.mul_assoc, &[c, a, u]); // (c*a)*u = c*(a*u)
+        d.isymm(ca_u, c_au, fwd)
+    };
+    let ac = d.imul(a, c);
+    let ac_u = d.imul(ac, u);
+    let step4b = {
+        let comm = d.const_app(p.mul_comm, &[c, a]); // c*a = a*c
+        d.icongr(ca, ac, comm, &|d, y| d.imul(y, u))
+    };
+    let cu = d.imul(c, u);
+    let a_cu = d.imul(a, cu);
+    let step4c = d.const_app(p.mul_assoc, &[a, c, u]); // (a*c)*u = a*(c*u)
+    let (_reached4, chain4) = d.ichain(c_au, &[(ca_u, step4a), (ac_u, step4b), (a_cu, step4c)]);
+
+    // c*bv = (b*c)*v
+    let cb = d.imul(c, b);
+    let cb_v = d.imul(cb, v);
+    let step5a = {
+        let fwd = d.const_app(p.mul_assoc, &[c, b, v]); // (c*b)*v = c*(b*v)
+        d.isymm(cb_v, c_bv, fwd)
+    };
+    let bc = d.imul(b, c);
+    let bc_v = d.imul(bc, v);
+    let step5b = {
+        let comm = d.const_app(p.mul_comm, &[c, b]); // c*b = b*c
+        d.icongr(cb, bc, comm, &|d, y| d.imul(y, v))
+    };
+    let (_reached5, chain5) = d.ichain(c_bv, &[(cb_v, step5a), (bc_v, step5b)]);
+
+    let target = d.iadd(a_cu, bc_v);
+    let combine = iadd_congr2(d, c_au, a_cu, chain4, c_bv, bc_v, chain5);
+
+    let (_final_target, final_chain) = d.ichain(
+        c,
+        &[
+            (c_one, step1),
+            (c_sum, step2),
+            (c_au_c_bv, step3),
+            (target, combine),
+        ],
+    );
+    (a_cu, bc_v, final_chain)
+}
+
+/// `gauss_lemma : ∀ (a b c : Int), Coprime a b → a ∣ (b*c) → a ∣ c` —
+/// Elements VII.30's engine.
+///
+/// The Bézout route: from `1 = a*u + b*v` (the coprimality certificate),
+/// `c = a*(c*u) + (b*c)*v` ([`gauss_rearrange`]), and both summands are
+/// divisible by `a` — the first outright (`dvd_mul_right`), the second
+/// through the hypothesis (`dvd_trans` with `dvd_mul_right (b*c) v`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_gauss_lemma(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.gauss_lemma, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let coprime_ty = d.const_app(p.coprime, &[a, b]);
+        let bc = d.imul(b, c);
+        let hyp2_ty = idvd(d, a, bc);
+        let goal = idvd(d, a, c);
+        let stmt = {
+            let inner = d.arrow(hyp2_ty, goal);
+            d.arrow(coprime_ty, inner)
+        };
+
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+
+        // `g` is built exactly as `gcd_eq_gcd_ab`'s own Bézout certificate
+        // builds it, so `bez`'s real predicate below matches ours by
+        // construction rather than by an appeal to deep defeq.
+        let big_a = nat_abs(d, a);
+        let big_b = nat_abs(d, b);
+        let g = NatOps::gcd(d, big_a, big_b);
+        let one_nat = d.num(1);
+        let g_i = d.of_nat(g);
+        let one_i = d.ione();
+
+        // `h1 : Coprime a b`, used directly at its unfolded type `Eq Nat g 1`.
+        let cast_eq = d.nat_eq_to_int(g, one_nat, h1, &|d, x| d.of_nat(x));
+
+        // The Bézout certificate for this exact `g`.
+        let bez = d.const_app(p.gcd_eq_gcd_ab, &[a, b]);
+
+        let int_ty = d.int_ty();
+        let one_level = d.level_one();
+        let exists_name = d.int().logic.exists_;
+        let inner_pred_for = |d: &mut IntDev<'_>, u: ExprId| -> ExprId {
+            let vv_fv = d.fresh_fvar();
+            let vv = d.kernel().fvar(vv_fv);
+            let au = d.imul(a, u);
+            let bv = d.imul(b, vv);
+            let sum = d.iadd(au, bv);
+            let body = d.ieq(g_i, sum);
+            d.lam_fv(vv_fv, int_ty, body)
+        };
+        let outer_pred = {
+            let u_fv = d.fresh_fvar();
+            let u = d.kernel().fvar(u_fv);
+            let inner_pred = inner_pred_for(d, u);
+            let exists = d.kernel().const_(exists_name, vec![one_level]);
+            let body = d.apply(exists, &[int_ty, inner_pred]);
+            d.lam_fv(u_fv, int_ty, body)
+        };
+
+        let minor = {
+            let u_fv = d.fresh_fvar();
+            let u = d.kernel().fvar(u_fv);
+            let inner_pred = inner_pred_for(d, u);
+            let ha_fv = d.fresh_fvar();
+            let ha = d.kernel().fvar(ha_fv);
+            let ha_ty = {
+                let exists = d.kernel().const_(exists_name, vec![one_level]);
+                d.apply(exists, &[int_ty, inner_pred])
+            };
+
+            let inner_minor = {
+                let vv_fv = d.fresh_fvar();
+                let vv = d.kernel().fvar(vv_fv);
+                let au = d.imul(a, u);
+                let bv = d.imul(b, vv);
+                let sum = d.iadd(au, bv);
+                let eq_ty = d.ieq(g_i, sum);
+                let eq_fv = d.fresh_fvar();
+                let eq_h = d.kernel().fvar(eq_fv);
+
+                let one_eq_sum = {
+                    let rev = d.isymm(g_i, one_i, cast_eq);
+                    d.itrans(one_i, g_i, sum, rev, eq_h)
+                };
+                let (a_cu, bc_v, chain_eq) = gauss_rearrange(d, c, a, u, b, vv, one_eq_sum);
+                let target = d.iadd(a_cu, bc_v);
+
+                let dvd_a_cu = {
+                    let cu = d.imul(c, u);
+                    d.const_app(p.dvd_mul_right, &[a, cu])
+                };
+                let dvd_bc_v = {
+                    let bcv = d.imul(bc, vv);
+                    let step = d.const_app(p.dvd_mul_right, &[bc, vv]);
+                    d.const_app(p.dvd_trans, &[a, bc, bcv, h2, step])
+                };
+                let dvd_target = d.const_app(p.dvd_add, &[a, a_cu, bc_v, dvd_a_cu, dvd_bc_v]);
+                let rev_chain = d.isymm(c, target, chain_eq);
+                let motive = |d: &mut IntDev<'_>, x: ExprId| idvd(d, a, x);
+                let body = d.int_eq_rewrite(target, c, rev_chain, dvd_target, &motive);
+
+                let with_eq = d.lam_fv(eq_fv, eq_ty, body);
+                d.lam_fv(vv_fv, int_ty, with_eq)
+            };
+            let eliminated = int_exists_elim(d, inner_pred, goal, ha, inner_minor);
+            let with_ha = d.lam_fv(ha_fv, ha_ty, eliminated);
+            d.lam_fv(u_fv, int_ty, with_ha)
+        };
+
+        let disjunction_result = int_exists_elim(d, outer_pred, goal, bez, minor);
+        let with_h2 = d.lam_fv(h2_fv, hyp2_ty, disjunction_result);
+        let proof = d.lam_fv(h1_fv, coprime_ty, with_h2);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.euclid_lemma : ∀ (p a b : Int),
+/// (2 ≤ natAbs p ∧ ∀ d, d ∣ natAbs p → d = 1 ∨ d = natAbs p) →
+/// p ∣ a*b → p ∣ a ∨ p ∣ b` — Elements VII.30.
+///
+/// Primality is stated on `natAbs p`, mirroring `Nat.euclid_lemma`'s own
+/// inline convention exactly (this prelude has no `Prime` name, over either
+/// carrier): a divisor of `natAbs p` is `1` or `natAbs p` itself.
+///
+/// Transported from the `ℕ` development, not re-derived: let
+/// `g = Int.gcd p a` (a `Nat`). `g ∣ natAbs p` (`Nat.gcd_dvd_left`), so
+/// primality gives `g = 1` or `g = natAbs p`.
+///
+/// * `g = natAbs p` — `g ∣ natAbs a` (`Nat.gcd_dvd_right`) transports along
+///   the equality to `natAbs p ∣ natAbs a`, and [`declare_dvd_of_nat_abs_dvd`]
+///   lifts that to `p ∣ a`.
+/// * `g = 1` — this literally **is** `Coprime p a` (`Int.gcd p a = 1`), so
+///   [`declare_gauss_lemma`] applied to the hypothesis `p ∣ a*b` closes
+///   `p ∣ b` directly — no Euclidean algorithm re-derived, no case split on
+///   sign.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_euclid_lemma(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.euclid_lemma, 3, &|d, v| {
+        let (pr, a, b) = (v[0], v[1], v[2]);
+        let big_pr = nat_abs(d, pr);
+        let big_a = nat_abs(d, a);
+
+        let divisor_clause = |d: &mut IntDev<'_>| -> ExprId {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hyp = d.dvd(x, big_pr);
+            let one_nat = d.num(1);
+            let is_one = d.eq(x, one_nat);
+            let is_prime = d.eq(x, big_pr);
+            let disjunction = d.or(is_one, is_prime);
+            let inner = d.arrow(hyp, disjunction);
+            let nat = d.nat_ty();
+            d.pi_fv(x_fv, nat, inner)
+        };
+        let two_nat = d.num(2);
+        let two_le = d.le(two_nat, big_pr);
+        let clause = divisor_clause(d);
+        let prime_ty = d.and(two_le, clause);
+
+        let ab = d.imul(a, b);
+        let divides_product = idvd(d, pr, ab);
+        let divides_a = idvd(d, pr, a);
+        let divides_b = idvd(d, pr, b);
+        let conclusion = d.or(divides_a, divides_b);
+        let stmt = {
+            let inner = d.arrow(divides_product, conclusion);
+            d.arrow(prime_ty, inner)
+        };
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+        let product_fv = d.fresh_fvar();
+        let product_hyp = d.kernel().fvar(product_fv);
+
+        let clause_proof = d.and_right(two_le, clause, prime_hyp);
+
+        let g = igcd(d, pr, a);
+        let common_divides_prime = d.lemma(p.nat.gcd_dvd_left, &[big_pr, big_a]);
+        let split = d.apply(clause_proof, &[g, common_divides_prime]);
+        let one_nat = d.num(1);
+        let is_one_ty = d.eq(g, one_nat);
+        let is_prime_ty = d.eq(g, big_pr);
+
+        let on_left = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+            // h : Eq Nat g 1, i.e. Coprime pr a (Int.gcd pr a is built the
+            // same way `Coprime`'s own body does).
+            let result = d.const_app(p.gauss_lemma, &[pr, a, b, h, product_hyp]);
+            d.or_inr(divides_a, divides_b, result)
+        };
+        let on_right = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+            // h : Eq Nat g big_pr.
+            let base = d.lemma(p.nat.gcd_dvd_right, &[big_pr, big_a]);
+            let motive = |d: &mut IntDev<'_>, x: ExprId| d.dvd(x, big_a);
+            let rewritten = d.nat_rewrite(g, big_pr, h, base, &motive);
+            let lifted = d.const_app(p.dvd_of_nat_abs_dvd, &[pr, a, rewritten]);
+            d.or_inl(divides_a, divides_b, lifted)
+        };
+        let disjunction_result =
+            d.or_elim(is_one_ty, is_prime_ty, conclusion, split, on_left, on_right);
+
+        let with_product = d.lam_fv(product_fv, divides_product, disjunction_result);
+        let proof = d.lam_fv(prime_fv, prime_ty, with_product);
         (stmt, proof)
     })?;
     Ok(())
