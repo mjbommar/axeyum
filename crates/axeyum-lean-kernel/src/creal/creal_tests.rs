@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 113] = [
+    let expected: [(&str, crate::NameId, &str); 114] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -211,6 +211,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // Boundedness and sequential continuity (phase R10).
         ("CReal.Bounded", p.bounded, "def"),
         ("CReal.converges_bounded", p.converges_bounded, "theorem"),
+        ("CReal.converges_mul", p.converges_mul, "theorem"),
         ("CReal.ContinuousAt", p.continuous_at, "def"),
         ("CReal.continuous_id", p.continuous_id, "theorem"),
         ("CReal.continuous_const", p.continuous_const, "theorem"),

@@ -61,17 +61,23 @@
 //! `natDivSucc_scale` and `natDivSucc_le_add_left`, exactly as `add_zero` and
 //! `add_assoc` did with the fixed shift.
 //!
-//! ## What is *not* here, and why the discrimination witness matters
+//! ## `mul_assoc`, `left_distrib`, `mul_le_mul` and `mul_congr`, and why the
+//! discrimination witness still matters for the other five
 //!
-//! `mul_assoc`, `left_distrib` and `mul_le_mul_of_nonneg_left` are not proved
-//! here; neither is `mul_congr`. All three of the former compare two products
-//! sampled at *different* indices — `mul x (add y z)` and `add (mul x y)
-//! (mul x z)` do not agree on any index and their shifts are not even equal as
-//! naturals — so each needs the arbitrary-third-index estimate `Equiv.trans`
-//! runs on, plus the Archimedean lemma. They are costed in the module docs of
-//! `creal` and in the lane status file.
+//! An earlier pass of this module left `mul_assoc`, `left_distrib`,
+//! `mul_le_mul_of_nonneg_left` and `mul_congr` unproved: all compare two
+//! products sampled at *different* indices — `mul x (add y z)` and
+//! `add (mul x y) (mul x z)` do not agree on any index and their shifts are
+//! not even equal as naturals — so each needs the arbitrary-third-index
+//! estimate `Equiv.trans` runs on, plus the Archimedean lemma. That estimate
+//! is now [`declare_equiv_of_bounded`], immediately below, and
+//! [`regular_between`]/[`cross_gap`]/[`product_gap`] are the reusable pieces
+//! it turned into; all four laws are declared by [`declare_product`] above.
+//! [`convergence`](super::convergence)'s `converges_mul` reuses
+//! `regular_between` and `product_gap` directly (widened to `pub(super)`)
+//! rather than re-deriving them.
 //!
-//! Of the five that *are* here, three —
+//! Of the five that were here from the start, three —
 //! [`mul_zero`](super::CRealPrelude::mul_zero),
 //! [`sq_nonneg`](super::CRealPrelude::sq_nonneg) and
 //! [`mul_comm`](super::CRealPrelude::mul_comm) — hold, footprint-free, of the
@@ -149,19 +155,19 @@ fn bound_value(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
 }
 
 /// `CReal.mulShift x y` — the `c` of `(c+1)·n + c`.
-fn mul_shift(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+pub(super) fn mul_shift(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.mul_shift, &[x, y])
 }
 
 /// `(c+1)·n + c`, the index `CReal.mul` samples at.
-fn mul_index(d: &mut IntDev<'_>, c: ExprId, n: ExprId) -> ExprId {
+pub(super) fn mul_index(d: &mut IntDev<'_>, c: ExprId, n: ExprId) -> ExprId {
     let factor = d.succ(c);
     let scaled = NatOps::mul(d, factor, n);
     NatOps::add(d, scaled, c)
 }
 
 /// `CReal.mul x y`.
-fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+pub(super) fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.mul, &[x, y])
 }
 
@@ -172,7 +178,13 @@ fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
 
 /// `Rat.le (natDivSucc k ((c+1)·n + c)) (natDivSucc k n)` — a bound read at a
 /// product index, brought back to `n`.
-fn index_le(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, c: ExprId, n: ExprId) -> ExprId {
+pub(super) fn index_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k: ExprId,
+    c: ExprId,
+    n: ExprId,
+) -> ExprId {
     d.lemma(p.rat.nat_div_succ_le_scaled, &[k, c, n])
 }
 
@@ -215,7 +227,7 @@ fn composed_index_le(
 /// Every crude estimate below is a sum of terms already read back at `n`, so
 /// this is the only combining step any of them needs: `bounds_add` followed by
 /// `natDivSucc_add`, with the numerators doing the bookkeeping.
-fn fuse_at(
+pub(super) fn fuse_at(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     left: ExprId,
@@ -252,7 +264,7 @@ fn fuse_at(
 /// `CReal.mul`'s own regularity achieves is not available across two different
 /// shifts, and it does not have to be:
 /// [`declare_equiv_of_bounded`] accepts any constant.
-fn regular_between(
+pub(super) fn regular_between(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     u: ExprId,
@@ -358,7 +370,7 @@ fn cross_gap(
 /// plain regularity gap on one side and a whole nested product estimate on the
 /// other.
 #[allow(clippy::too_many_arguments)]
-fn product_gap(
+pub(super) fn product_gap(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     a: ExprId,

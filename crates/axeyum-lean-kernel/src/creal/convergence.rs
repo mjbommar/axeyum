@@ -125,17 +125,32 @@
 //! built `add`), so the difference is spelled `add _ (neg _)` throughout,
 //! honestly rather than inventing a `sub` this module does not need.
 //!
-//! ## What is still *not* in this module, and why
+//! ## `CReal.converges_mul`, and the two obstructions it took to close
 //!
-//! The **product** of two convergent sequences is not attempted here. Unlike
-//! `add`/`neg`, `CReal.mul` needs a *bound* on one of the two sequences
-//! before its own regularity estimate is a fixed-rate `O(1/n)`
-//! ([`CReal.mulShift`](super::CRealPrelude::mul_shift)'s own construction
-//! scales the shift by a bound on the multiplicand), so `converges_mul` would
-//! need an explicit boundedness hypothesis stated up front rather than
-//! derived — a genuinely different theorem, not a bigger version of this
-//! one — and landing `converges_add`/`converges_neg`/`converges_sub` soundly
-//! was not worth risking by also reaching for it in the same slice.
+//! An earlier slice of this module reported the product as needing "an
+//! explicit boundedness hypothesis stated up front", by analogy with
+//! `CReal.mul`'s own regularity estimate needing a bound on one multiplicand
+//! ([`CReal.mulShift`](super::CRealPrelude::mul_shift)'s construction). A
+//! later slice showed that framing wrong: [`declare_converges_bounded`]
+//! discharges a boundedness hypothesis for free from `Converges` itself, no
+//! choice involved. The REAL obstruction is sharper: `mul (f n) (g n)` and
+//! `mul L M` sample their two factors at *different* deep indices
+//! (`mulShift (f n) (g n)` varies with `n`; `mulShift L M` is the fixed
+//! `bound L + bound M + 1`), so bounding the difference needs a cross-index
+//! estimate between two indices *neither* of which is `n` — exactly the
+//! "arbitrary-third-index plus Archimedean" machinery
+//! [`product`](self::product)'s own module documentation names as the reason
+//! `mul_assoc`/`left_distrib`/`mul_congr` needed it.
+//!
+//! That machinery — [`product::declare_equiv_of_bounded`],
+//! [`product::regular_between`], [`product::product_gap`] — was already
+//! built and exposed by the time this slice ran (widened to `pub(super)`,
+//! not re-derived). [`converges_mul`](Self::converges_mul) below reuses it
+//! directly: [`bounded_at_index`] widens `Bounded f`'s per-`n` bound to a
+//! bound uniform in any further sampling index, and [`converges_gap_at`] is
+//! the `Converges`-hypothesis analogue of [`product::cross_gap`]'s
+//! `Equiv`-hypothesis telescope. See the comment immediately above
+//! [`declare_converges_mul`] for the full derivation and the raw witness.
 
 #![allow(
     clippy::doc_markdown,
@@ -146,6 +161,7 @@
 )]
 
 use super::completeness::half_shift_le;
+use super::product::{cmul, fuse_at, index_le, mul_index, mul_shift, product_gap, regular_between};
 use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, div_succ, equiv, halves, modulus, sample,
     shift, weaken, within,
@@ -162,8 +178,8 @@ use crate::rat_prelude::ops::{
 
 /// Admit `CReal.Converges`, `CReal.converges_unique`, `CReal.converges_of_const`,
 /// `CReal.Cauchy`, `CReal.converges_cauchy`, the algebra of limits,
-/// `CReal.Bounded`/`converges_bounded`, and sequential `CReal.ContinuousAt`
-/// with its two anchors and closure under sums.
+/// `CReal.Bounded`/`converges_bounded`, `CReal.converges_mul`, and sequential
+/// `CReal.ContinuousAt` with its two anchors and closure under sums.
 ///
 /// # Errors
 ///
@@ -180,6 +196,7 @@ pub(super) fn declare_convergence(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     declare_converges_sub(d, p)?;
     declare_bounded(d, p)?;
     declare_converges_bounded(d, p)?;
+    declare_converges_mul(d, p)?;
     declare_continuous_at(d, p)?;
     declare_continuous_id(d, p)?;
     declare_continuous_const(d, p)?;
@@ -1453,7 +1470,7 @@ fn declare_converges_sub(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
     })
 }
 
-// --- `CReal.Bounded`, and why it stops short of `converges_mul` -------------
+// --- `CReal.Bounded`, and what it turned out to unlock ----------------------
 //
 // `CReal.mul`'s own regularity is a FIXED rate (see `product.rs`'s module
 // documentation: the shift `mulShift x y` is chosen so the estimate closes
@@ -1461,27 +1478,35 @@ fn declare_converges_sub(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 // a linear-rate convergent sequence is automatically bounded — which is
 // exactly [`declare_converges_bounded`] below, and it lands cleanly.
 //
-// It does **not** unlock `converges_mul`, and the reason is sharper than the
-// previous slice's framing ("needs an explicit boundedness hypothesis").
-// What `CReal.mul (f n) (g n)` needs bounded is `CReal.bound (f n)` — a
-// property of `f n`'s representative AT INDEX 0 (`bound x := natAbs (num
-// (seq x 0)) + 1`) — so that `mulShift (f n) (g n)` is uniformly bounded and
-// the product's sampling index `(c_n+1)·n + c_n` stays a *composed* index of
-// the shape `nat_div_succ_le_scaled` already handles for ANY `c_n` (bounded
-// or not — that lemma needs no uniform bound on `c_n` at all; the shift
-// bridge for each factor closes regardless). The genuine obstruction is
-// elsewhere: `mul (f n) (g n)` and `mul L M` sample their two factors at
-// *different* deep indices (`mulShift (f n) (g n)` varies with `n`;
-// `mulShift L M` is the fixed `bound L + bound M + 1`), so bounding
-// `seq (g n) (idx_fn_gn) − seq M (idx_LM)` needs a cross-index estimate
-// between two indices *neither* of which is `n` — precisely the
-// "arbitrary-third-index plus Archimedean" machinery `product.rs`'s own
-// module documentation names as the reason `mul_assoc`/`left_distrib`/
-// `mul_congr` needed it and `mul_zero`/`mul_comm`/`sq_nonneg` did not. That
-// machinery is not built in this development. So `Bounded`/
-// `converges_bounded` are a real, self-contained result, but `converges_mul`
-// itself needs the same absent cross-index estimate `mul_assoc` already
-// flagged as missing — not a bigger version of this module's shift bridge.
+// An earlier account of this file read the obstruction as needing
+// `CReal.bound (f n)` itself bounded uniformly in `n` — a property of `f n`'s
+// representative AT INDEX 0 (`bound x := natAbs (num (seq x 0)) + 1`). That
+// is not what `converges_mul`'s proof below actually needs, and is not what
+// `Bounded f` supplies: `Bounded`'s witness bounds `seq (f n) n` at EACH `n`'s
+// OWN index `n`, not at index `0`, so it is a different quantity from
+// `CReal.bound (f n)` and the two are never equated anywhere in this
+// development. What the proof needs is a bound on `seq (f n) i` for the
+// PARTICULAR further index `i` that `CReal.mul`'s sampling reads `f n` at —
+// and [`bounded_at_index`] gets that directly from `Bounded f`'s bound at `n`
+// plus one instance of `f n`'s own regularity between `n` and `i`, with no
+// detour through `CReal.bound` or `mulShift` at all.
+//
+// The genuine remaining obstruction was real, though: `mul (f n) (g n)` and
+// `mul L M` sample their two factors at *different* deep indices
+// (`mulShift (f n) (g n)` varies with `n`; `mulShift L M` is the fixed
+// `bound L + bound M + 1`), so bounding, say, `seq (g n) (idx_fn_gn) −
+// seq M (idx_LM)` needs a cross-index estimate between two indices *neither*
+// of which is `n` — precisely the "arbitrary-third-index plus Archimedean"
+// machinery `product.rs`'s own module documentation names as the reason
+// `mul_assoc`/`left_distrib`/`mul_congr` needed it and
+// `mul_zero`/`mul_comm`/`sq_nonneg` did not. That machinery — `product`'s
+// `regular_between`, `product_gap`, `equiv_of_bounded` — was already built
+// (and used by `mul_congr`/`left_distrib`/`mul_assoc`) by the time this slice
+// ran; [`converges_gap_at`] is its `Converges`-hypothesis analogue, reusing
+// `regular_between` rather than re-deriving it. So `Bounded`/
+// `converges_bounded` ARE the piece the mul side needed — via
+// [`bounded_at_index`], not via `CReal.bound` — and combined with
+// `converges_gap_at` and `product_gap`, [`declare_converges_mul`] closes.
 
 /// `∀ n, Within (seq (func n) n) (natDivSucc b 0)`, for a (possibly
 /// symbolic) `Nat` bound `b`.
@@ -1717,6 +1742,357 @@ fn declare_converges_bounded(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.converges_bounded,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- `CReal.converges_mul` --------------------------------------------------
+//
+// See the module documentation for the obstruction (`CReal.mul`'s two
+// per-`n` VARIABLE shifts) and its resolution. Two reusable pieces close it:
+//
+// [`bounded_at_index`] widens `Bounded f`'s bound — stated only at each `n`'s
+// OWN sample, `Within (seq (f n) n) (B/1)` — to a bound uniform in BOTH `n`
+// and an arbitrary further index, by the same triangle-inequality shape
+// [`product::declare_bound_within`] proves from the DEFINITIONAL bound at
+// index `0` (`|u_i| ≤ |u_anchor| + |u_i − u_anchor| ≤ B + 2`), generalised to
+// an arbitrary anchor because `Bounded`'s witness lives at `n`, not at `0`.
+//
+// [`converges_gap_at`] is the cross-index, cross-real estimate
+// `product.rs`'s own module documentation named as the reason `mul_assoc`/
+// `left_distrib`/`mul_congr` needed machinery this development did not have:
+// telescope `u_high − v_low = (u_high − u_n) + (u_n − v_n) + (v_n − v_low)`,
+// bound the outer two terms by [`product::regular_between`] (REUSED, not
+// re-derived — the same helper `mul_congr`'s `cross_gap` already runs on),
+// and the middle term by the `Converges` hypothesis directly — no widening
+// needed there, since it is already stated at `n`.
+//
+// Only ONE boundedness fact is needed, not two: `Rat.mul_sub_mul`'s
+// asymmetric split (`a·b − c·e = a·(b−e) + (a−c)·e`) bounds a factor of the
+// LEFT product (`a`, from `f`) and a factor of the RIGHT one (`e`, from `M`,
+// a FIXED real that already has `CReal.bound_within`) — `b` and `c` are never
+// bounded on their own, only inside the two gap differences. So
+// [`declare_converges_bounded`] supplies exactly the one fact this needed,
+// and [`product::product_gap`] (REUSED exactly as `mul_congr`/`left_distrib`
+// use it) closes the combination.
+
+/// `Within (seq u i) (natDivSucc (b + 2) 0)`, and the numerator `b + 2`,
+/// given a uniform `Nat` bound `b` on `u`'s OWN sample at some anchor index
+/// (`anchor_proof : Within (seq u anchor) (natDivSucc b 0)`).
+fn bounded_at_index(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    anchor: ExprId,
+    b: ExprId,
+    anchor_proof: ExprId,
+    i: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let zero_nat = d.num(0);
+
+    let first = sample(d, p, u, anchor);
+    let point = sample(d, p, u, i);
+    let base = div_succ_at(d, p, b, zero_nat);
+    let gap = rsub(d, rat, point, first);
+    let spread = modulus(d, p, i, anchor);
+    let regular = d.lemma(p.regular, &[u, i, anchor]);
+    let (gap_low, gap_high) = halves(d, p, gap, spread, regular);
+    let (anchor_low, anchor_high) = halves(d, p, first, base, anchor_proof);
+    let combined = d.lemma(
+        rat.bounds_add,
+        &[
+            first,
+            base,
+            gap,
+            spread,
+            anchor_low,
+            anchor_high,
+            gap_low,
+            gap_high,
+        ],
+    );
+    let total_bound = radd(d, base, spread);
+
+    // `u_anchor + (u_i − u_anchor) = u_i`.
+    let restore = {
+        let negated = rneg(d, first);
+        let atoms = [first, point, negated];
+        let sorted = [point, first, negated];
+        let permute = rsum_perm(d, rat, &atoms, &sorted);
+        let start = rsum(d, rat, &atoms);
+        let sorted_term = rsum(d, rat, &sorted);
+        let zero_rat = rzero(d, rat);
+        let cancel = d.lemma(rat.add_neg, &[first]);
+        let inner = radd(d, first, negated);
+        let collapse = rcongr(d, inner, zero_rat, cancel, &|d, t| radd(d, point, t));
+        let padded = radd(d, point, zero_rat);
+        let trim = d.lemma(rat.add_zero, &[point]);
+        let (_, proof) = rchain(
+            d,
+            start,
+            &[(sorted_term, permute), (padded, collapse), (point, trim)],
+        );
+        proof
+    };
+    let summed = radd(d, first, gap);
+    let at_quantity = rat_eq_rewrite(d, summed, point, restore, combined, &|d, t| {
+        within(d, p, t, total_bound)
+    });
+
+    // `1/(i+1) + 1/(anchor+1) ≤ 1/1 + 1/1 = 2/1` — BOTH legs need
+    // `Rat.natDivSucc_le_one` here (unlike `product::declare_bound_within`,
+    // whose anchor is the literal `0`, so its second leg is already `1/1`).
+    let unit = div_succ(d, p, 1, zero_nat);
+    let deep_i = div_succ(d, p, 1, i);
+    let deep_anchor = div_succ(d, p, 1, anchor);
+    let le_i = d.lemma(rat.nat_div_succ_le_one, &[i]);
+    let le_anchor = d.lemma(rat.nat_div_succ_le_one, &[anchor]);
+    let widened = d.lemma(
+        rat.add_le_add,
+        &[deep_i, unit, deep_anchor, unit, le_i, le_anchor],
+    );
+    let doubled = radd(d, unit, unit);
+    let two_unit = div_succ(d, p, 2, zero_nat);
+    let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, zero_nat]);
+    let spread_le = rat_eq_rewrite(d, doubled, two_unit, fuse, widened, &|d, t| {
+        rle(d, rat, spread, t)
+    });
+    let base_refl = d.lemma(rat.le_refl, &[base]);
+    let grown = d.lemma(
+        rat.add_le_add,
+        &[base, base, spread, two_unit, base_refl, spread_le],
+    );
+    let padded_bound = radd(d, base, two_unit);
+    let numerator = NatOps::add(d, b, two_nat);
+    let target = div_succ_at(d, p, numerator, zero_nat);
+    let fuse_bound = d.lemma(rat.nat_div_succ_add, &[b, two_nat, zero_nat]);
+    let order = rat_eq_rewrite(d, padded_bound, target, fuse_bound, grown, &|d, t| {
+        rle(d, rat, total_bound, t)
+    });
+    let proof = weaken(d, p, point, total_bound, target, at_quantity, order);
+    (numerator, proof)
+}
+
+/// `Within (seq u high − seq v low) (natDivSucc ((2+k)+2) n)`, and the
+/// numerator `(2+k)+2`, from a `Converges`-shaped bound `hyp_at_n : Within
+/// (seq u n − seq v n) (natDivSucc k n)` and index proofs that `high`/`low`
+/// are no shallower than `n` (`Rat.le (natDivSucc 1 high) (natDivSucc 1 n)`,
+/// likewise for `low`).
+///
+/// The `Converges` analogue of [`product::cross_gap`] (which does the same
+/// telescope from an `Equiv` hypothesis): `u_high − v_low = (u_high − u_n) +
+/// (u_n − v_n) + (v_n − v_low)`, the outer two terms by
+/// [`product::regular_between`] and the middle one by `hyp_at_n` directly.
+fn converges_gap_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    high: ExprId,
+    low: ExprId,
+    high_le: ExprId,
+    low_le: ExprId,
+    n: ExprId,
+    k: ExprId,
+    hyp_at_n: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let two_nat = d.num(2);
+
+    let n_le = {
+        let one_n = div_succ(d, p, 1, n);
+        d.lemma(rat.le_refl, &[one_n])
+    };
+
+    let a = sample(d, p, u, high);
+    let b = sample(d, p, u, n);
+    let c = sample(d, p, v, n);
+    let e = sample(d, p, v, low);
+
+    let t1 = regular_between(d, p, u, high, n, high_le, n_le, n);
+    let t2 = hyp_at_n;
+    let t3 = regular_between(d, p, v, n, low, n_le, low_le, n);
+
+    let ab = rsub(d, rat, a, b);
+    let bc = rsub(d, rat, b, c);
+    let ce = rsub(d, rat, c, e);
+
+    let first_two = fuse_at(d, p, ab, two_nat, bc, k, n, t1, t2);
+    let inner_numerator = NatOps::add(d, two_nat, k);
+    let fuse1 = d.lemma(rat.sub_add_sub, &[a, b, c]); // Eq (ab+bc) (a-c)
+    let ac = rsub(d, rat, a, c);
+    let inner_bound = div_succ_at(d, p, inner_numerator, n);
+    let ab_bc = radd(d, ab, bc);
+    let at_ac = rat_eq_rewrite(d, ab_bc, ac, fuse1, first_two, &|d, t| {
+        within(d, p, t, inner_bound)
+    });
+
+    let combined = fuse_at(d, p, ac, inner_numerator, ce, two_nat, n, at_ac, t3);
+    let final_numerator = NatOps::add(d, inner_numerator, two_nat);
+    let fuse2 = d.lemma(rat.sub_add_sub, &[a, c, e]); // Eq (ac+ce) (a-e)
+    let ae = rsub(d, rat, a, e);
+    let final_bound = div_succ_at(d, p, final_numerator, n);
+    let ac_ce = radd(d, ac, ce);
+    let proof = rat_eq_rewrite(d, ac_ce, ae, fuse2, combined, &|d, t| {
+        within(d, p, t, final_bound)
+    });
+    (final_numerator, proof)
+}
+
+/// `CReal.converges_mul : ∀ f g L M, Converges f L → Converges g M →
+/// Converges (fun n => mul (f n) (g n)) (mul L M)`.
+///
+/// See the module documentation immediately above for the two reusable
+/// pieces this needed (`bounded_at_index`, `converges_gap_at`) and why only
+/// `Bounded f`, not `Bounded g`, is required. The witness is raw:
+/// `(Bf+2)·((2+K₂)+2) + (bound M + 1)·((2+K₁)+2)`.
+fn declare_converges_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+    let one_nat = d.num(1);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let fg = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let fn_term = d.apply(f, &[n]);
+        let gn_term = d.apply(g, &[n]);
+        let product = cmul(d, p, fn_term, gn_term);
+        d.lam_fv(n_fv, nat, product)
+    };
+    let mul_lm = cmul(d, p, l, m);
+
+    let converges_fl = converges_applied(d, p, f, l);
+    let converges_gm = converges_applied(d, p, g, m);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let target = converges_applied(d, p, fg, mul_lm);
+
+    let outer_predicate = converges_predicate(d, p, f, l);
+    let outer_minor = {
+        let k1_fv = d.fresh_fvar();
+        let k1 = d.kernel().fvar(k1_fv);
+        let hp1_ty = converges_body(d, p, f, l, k1);
+        let hp1_fv = d.fresh_fvar();
+        let hp1 = d.kernel().fvar(hp1_fv);
+
+        let inner_predicate = converges_predicate(d, p, g, m);
+        let inner_minor = {
+            let k2_fv = d.fresh_fvar();
+            let k2 = d.kernel().fvar(k2_fv);
+            let hp2_ty = converges_body(d, p, g, m, k2);
+            let hp2_fv = d.fresh_fvar();
+            let hp2 = d.kernel().fvar(hp2_fv);
+
+            // `Bounded f`, from `Converges f L` — the one boundedness fact
+            // this needs (see the module documentation above).
+            let bounded_f = d.lemma(p.converges_bounded, &[f, l, h1]);
+            let bounded_pred = bounded_predicate(d, p, f);
+            let bounded_minor = {
+                let b_fv = d.fresh_fvar();
+                let b = d.kernel().fvar(b_fv);
+                let hb_ty = bounded_body(d, p, f, b);
+                let hb_fv = d.fresh_fvar();
+                let hb = d.kernel().fvar(hb_fv);
+
+                let n_fv = d.fresh_fvar();
+                let n = d.kernel().fvar(n_fv);
+
+                let fn_term = d.apply(f, &[n]);
+                let gn_term = d.apply(g, &[n]);
+
+                let c1 = mul_shift(d, p, fn_term, gn_term);
+                let c2 = mul_shift(d, p, l, m);
+                let idx1 = mul_index(d, c1, n);
+                let idx2 = mul_index(d, c2, n);
+
+                let idx1_le = index_le(d, p, one_nat, c1, n);
+                let idx2_le = index_le(d, p, one_nat, c2, n);
+
+                let hp1_n = d.apply(hp1, &[n]);
+                let hp2_n = d.apply(hp2, &[n]);
+
+                let (g1, gap_be) =
+                    converges_gap_at(d, p, gn_term, m, idx1, idx2, idx1_le, idx2_le, n, k2, hp2_n);
+                let (g2, gap_ac) =
+                    converges_gap_at(d, p, fn_term, l, idx1, idx2, idx1_le, idx2_le, n, k1, hp1_n);
+
+                let a = sample(d, p, fn_term, idx1);
+                let bb = sample(d, p, gn_term, idx1);
+                let cc = sample(d, p, l, idx2);
+                let e = sample(d, p, m, idx2);
+
+                let hb_n = d.apply(hb, &[n]);
+                let (ka, a_bound) = bounded_at_index(d, p, fn_term, n, b, hb_n, idx1);
+
+                let e_bound = d.lemma(p.bound_within, &[m, idx2]);
+                let ke = bound_magnitude(d, p, m);
+
+                let at_n = product_gap(
+                    d, p, a, bb, cc, e, ka, ke, g1, g2, n, a_bound, e_bound, gap_be, gap_ac,
+                );
+
+                let k_total = {
+                    let head = NatOps::mul(d, ka, g1);
+                    let tail = NatOps::mul(d, ke, g2);
+                    NatOps::add(d, head, tail)
+                };
+
+                let per_n_lam = d.lam_fv(n_fv, nat, at_n);
+                let converges_pred = converges_predicate(d, p, fg, mul_lm);
+                let witnessed = exists_intro(d, p, nat, converges_pred, k_total, per_n_lam);
+
+                let with_hb = d.lam_fv(hb_fv, hb_ty, witnessed);
+                d.lam_fv(b_fv, nat, with_hb)
+            };
+            let bounded_elim =
+                exists_elim(d, p, nat, bounded_pred, target, bounded_f, bounded_minor);
+
+            let with_hp2 = d.lam_fv(hp2_fv, hp2_ty, bounded_elim);
+            d.lam_fv(k2_fv, nat, with_hp2)
+        };
+        let inner_elim = exists_elim(d, p, nat, inner_predicate, target, h2, inner_minor);
+
+        let with_hp1 = d.lam_fv(hp1_fv, hp1_ty, inner_elim);
+        d.lam_fv(k1_fv, nat, with_hp1)
+    };
+    let proof_body = exists_elim(d, p, nat, outer_predicate, target, h1, outer_minor);
+
+    let value = {
+        let with_h2 = d.lam_fv(h2_fv, converges_gm, proof_body);
+        let with_h1 = d.lam_fv(h1_fv, converges_fl, with_h2);
+        let with_m = d.lam_fv(m_fv, carrier, with_h1);
+        let with_l = d.lam_fv(l_fv, carrier, with_m);
+        let with_g = d.lam_fv(g_fv, seq_ty, with_l);
+        d.lam_fv(f_fv, seq_ty, with_g)
+    };
+    let ty = {
+        let after_h2 = d.arrow(converges_gm, target);
+        let after_h1 = d.arrow(converges_fl, after_h2);
+        let with_m = d.pi_fv(m_fv, carrier, after_h1);
+        let with_l = d.pi_fv(l_fv, carrier, with_m);
+        let with_g = d.pi_fv(g_fv, seq_ty, with_l);
+        d.pi_fv(f_fv, seq_ty, with_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.converges_mul,
         uparams: vec![],
         ty,
         value,

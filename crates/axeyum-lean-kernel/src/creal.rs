@@ -794,6 +794,19 @@ pub struct CRealPrelude {
     /// the constant `K/1`, combines with
     /// [`Self::bound_within`]'s already-constant bound on `L`'s sample.
     pub converges_bounded: NameId,
+    /// `CReal.converges_mul : ∀ f g L M, Converges f L → Converges g M →
+    /// Converges (fun n => mul (f n) (g n)) (mul L M)`.
+    ///
+    /// The obstruction was sharper than a missing boundedness hypothesis:
+    /// `mul (f n) (g n)` and `mul L M` sample their two factors at
+    /// *different* deep indices, so closing this needed the same
+    /// arbitrary-third-index estimate [`Self::mul_congr`]/
+    /// [`Self::left_distrib`]/[`Self::mul_assoc`] needed —
+    /// [`Self::equiv_of_bounded`]'s machinery, reused rather than
+    /// re-derived. See [`convergence`](self::convergence)'s module
+    /// documentation for the two reusable pieces (`bounded_at_index`,
+    /// `converges_gap_at`) this took.
+    pub converges_mul: NameId,
     /// `CReal.ContinuousAt (F : CReal → CReal) (x : CReal) : Prop :=
     /// ∀ (g : Nat → CReal), Converges g x → Converges (fun n => F (g n)) (F x)`.
     ///
@@ -978,6 +991,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_sub: kernel.name_str(creal, "converges_sub"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
+        converges_mul: kernel.name_str(creal, "converges_mul"),
         continuous_at: kernel.name_str(creal, "ContinuousAt"),
         continuous_id: kernel.name_str(creal, "continuous_id"),
         continuous_const: kernel.name_str(creal, "continuous_const"),
