@@ -71,6 +71,9 @@ fn every_theorem_here_is_axiom_free() {
             "parallelogram_opposite_sides_eq",
             p.parallelogram_opposite_sides_eq,
         ),
+        ("dot_self_add", p.dot_self_add),
+        ("dot_self_sub", p.dot_self_sub),
+        ("parallelogram_law", p.parallelogram_law),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -141,6 +144,9 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.pythagoras_dist_sq,
         p.parallelogram_diagonals_bisect,
         p.parallelogram_opposite_sides_eq,
+        p.dot_self_add,
+        p.dot_self_sub,
+        p.parallelogram_law,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -432,5 +438,84 @@ fn parallelogram_opposite_sides_eq_statement_is_exact() {
          CPoint.Equiv (CPoint.sub x1 x0) (CPoint.sub x2 x3)) -> And (CReal.Equiv \
          (CPoint.distSq x2 x3) (CPoint.distSq x0 x1)) (CReal.Equiv (CPoint.distSq x3 x0) \
          (CPoint.distSq x1 x2)))))))"
+    );
+}
+
+/// `dot_self_add`, verbatim. `x0,x1 = U,V`. The bilinear expansion `dot(u+v,u+v)
+/// ~ dot u u + (dot u v + (dot u v + dot v v))` — an empty axiom footprint on
+/// a theorem missing a cross term, or with `dot_congr`-vacuous LHS/RHS, would
+/// still pass a substring check.
+#[test]
+fn dot_self_add_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.dot_self_add)
+        .expect("dot_self_add must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> CReal.Equiv (CPoint.dot (CPoint.add x0 x1) \
+         (CPoint.add x0 x1)) (CReal.add (CPoint.dot x0 x0) (CReal.add (CPoint.dot x0 x1) \
+         (CReal.add (CPoint.dot x0 x1) (CPoint.dot x1 x1))))))"
+    );
+}
+
+/// `dot_self_sub`, verbatim. `x0,x1 = U,V`. The minus sibling of
+/// [`dot_self_add_statement_is_exact`]: `dot(u-v,u-v) ~ dot u u + (-(dot u v)
+/// + (-(dot u v) + dot v v))`.
+#[test]
+fn dot_self_sub_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.dot_self_sub)
+        .expect("dot_self_sub must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> CReal.Equiv (CPoint.dot (CPoint.sub x0 x1) \
+         (CPoint.sub x0 x1)) (CReal.add (CPoint.dot x0 x0) (CReal.add (CReal.neg (CPoint.dot \
+         x0 x1)) (CReal.add (CReal.neg (CPoint.dot x0 x1)) (CPoint.dot x1 x1))))))"
+    );
+}
+
+/// **The parallelogram law.** Verbatim-checked for the same reason as
+/// [`pythagoras_statement_is_exact`]: this is the literal `distSq A B +
+/// distSq B C + distSq C D + distSq D A ~ distSq A C + distSq B D` sum, not a
+/// weaker restatement — an empty axiom footprint on a theorem missing a
+/// summand, with a swapped diagonal, or concluding the
+/// [`parallelogram_opposite_sides_eq_statement_is_exact`]-shaped `And` would
+/// still pass a substring check. `x0,x1,x2,x3 = A,B,C,D`.
+#[test]
+fn parallelogram_law_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.parallelogram_law)
+        .expect("parallelogram_law must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : \
+         CPoint.Equiv (CPoint.sub x1 x0) (CPoint.sub x2 x3)) -> CReal.Equiv (CReal.add \
+         (CReal.add (CReal.add (CPoint.distSq x0 x1) (CPoint.distSq x1 x2)) (CPoint.distSq x2 \
+         x3)) (CPoint.distSq x3 x0)) (CReal.add (CPoint.distSq x0 x2) (CPoint.distSq x1 \
+         x3)))))))"
     );
 }
