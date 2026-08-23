@@ -57,6 +57,8 @@ fn every_theorem_here_is_axiom_free() {
         ("dot_neg_left", p.dot_neg_left),
         ("pythagoras", p.pythagoras),
         ("thales", p.thales),
+        ("orthocentre_identity", p.orthocentre_identity),
+        ("orthocentre_third_altitude", p.orthocentre_third_altitude),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -118,6 +120,8 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.dot_neg_left,
         p.pythagoras,
         p.thales,
+        p.orthocentre_identity,
+        p.orthocentre_third_altitude,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -211,5 +215,56 @@ fn thales_statement_is_exact() {
          (CPoint.sub x2 x3) (CPoint.sub x2 x3)) (CPoint.dot (CPoint.sub x0 x3) \
          (CPoint.sub x0 x3))) -> CReal.Equiv (CPoint.dot (CPoint.sub x0 x2) (CPoint.sub \
          x1 x2)) CReal.zero))))))"
+    );
+}
+
+/// **The orthocentre identity, unconditional.** Verbatim-checked for the same
+/// reason as [`pythagoras_statement_is_exact`]: an empty axiom footprint on a
+/// theorem missing a summand, or with the wrong sign, or with a spurious
+/// hypothesis, would still pass a substring check. `x0,x1,x2,x3 = P,A,B,C`.
+#[test]
+fn orthocentre_identity_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.orthocentre_identity)
+        .expect("orthocentre_identity must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> \
+         CReal.Equiv (CReal.add (CReal.add (CPoint.dot (CPoint.sub x0 x1) (CPoint.sub \
+         x3 x2)) (CPoint.dot (CPoint.sub x0 x2) (CPoint.sub x1 x3))) (CPoint.dot \
+         (CPoint.sub x0 x3) (CPoint.sub x2 x1))) CReal.zero))))"
+    );
+}
+
+/// **Concurrence of the altitudes.** Verbatim-checked for the same reason.
+/// `x0,x1,x2,x3 = P,A,B,C`.
+#[test]
+fn orthocentre_third_altitude_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.orthocentre_third_altitude)
+        .expect("orthocentre_third_altitude must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : \
+         CReal.Equiv (CPoint.dot (CPoint.sub x0 x1) (CPoint.sub x3 x2)) CReal.zero) -> \
+         ((x5 : CReal.Equiv (CPoint.dot (CPoint.sub x0 x2) (CPoint.sub x1 x3)) CReal.zero) \
+         -> CReal.Equiv (CPoint.dot (CPoint.sub x0 x3) (CPoint.sub x2 x1)) \
+         CReal.zero))))))"
     );
 }
