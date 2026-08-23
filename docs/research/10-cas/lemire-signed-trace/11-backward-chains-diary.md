@@ -539,3 +539,48 @@ Math. 78 (2026) 302--327), arXiv:1808.04001, arXiv:1204.0708.
 - TOOL TRAP: `axeyum-gf2-dump-populations 24 49` needs its third argument
   (`1300000000` table cells); without it the binary PANICS, the shell loop keeps
   going, and you get a ZERO-BYTE dump that analyses as an empty group.
+
+## Entry 8 -- savings as a dial: the (HWO_k) ladder
+
+- The chain states its open estimate as a THRESHOLD ("prove `4 ell`"). It is a
+  DIAL. Exact dictionary (note 18, `lemire_savings_scale.py`, 11 checks, 7
+  controls): a uniform saving `F` over Weil for the whole non-trivial family of
+  `E_l` gives an irreducible with `deg(f-x^n) <= floor(n/2)+k`, `k = ell-l`, iff
+  `F > F_req(n,l) = D(l)/(2^{n/2} - 2^{l-n/2} Theta^+)`, `D(l)=(l-2)2^l+2`.
+- BOTH ENDS CHECK OUT. `F = 1` is not an analogue of Hayes/Weil, it IS the
+  published inequality: Gao arXiv:2109.14154 Thm 1(b), sharpening Hsu 1996 =
+  Cohen 2005 Thm 2.1 (ours is one coefficient better at `(16,33),(20,42),
+  (50,101)`). `k = 0` is Kaser--Lemire, needing `F > (ell-2)/kappa`.
+- **THE ROADMAP'S `4 ell` IS `4 kappa` STRONGER THAN NEEDED** (`kappa =
+  2^{n/2-ell}`): `5.714x` odd `n`, `8.081x` even, at `ell=200`; honest constants
+  `140.007`/`99.000`. Decomposition (asserted): `800 -> 625.198` (the chain's
+  own exact requirement) `-> 108.905` (`B=2^{2ell}-W` is the wrong target; the
+  true one is `2^n - 2^ell Theta - W`) `-> 99.000` (split `a=191 -> 4`).
+- Proper powers exactly: **odd `n`, `l>=n/3`: `Theta_l(1)=1`, only `x^n`**. Even
+  `n`: `E_l[2^v] = ker(E_l -> E_{floor(l/2^v)})`, so `2^l` times the `r=2` term
+  is `2^{n/2}|E_l[2]|` -- literally Gao's `|{eps^{1/2}}|`, same argument.
+- **B1--B5 FOUND NO UNCONDITIONAL `F > 1`.** B1 low orders: `Y_j = 0` if `Q|j`,
+  else `2^{j-1-j/Q}`; a `2^{-23}` share at `ell=200`, so free even at infinite
+  saving = `1 + 3.0e-8`. B2 the `W` term: `Phi(a)` is strictly INCREASING in `a`,
+  so the split only costs (`1.10x`-`1.33x`) and `a>=4` is forced. B3:
+  Cauchy--Schwarz on the unconditional 2nd moment gives `(ell-2)/
+  sqrt(ell^2-4ell+6) < 1`, WORSE than the triangle inequality (Weil saturates
+  the moment it is fed); on Sato--Tate it gives `sqrt(ell-2)=14.07`, i.e. `k=4/3`,
+  half the Weil `k`, but KR is `q -> oo`. B5: the trivial bound needs
+  `j-1 >= 2^{n/2}` (short by `2^{193.4}`) and the population route loses to Weil
+  by `>= 3` at EVERY layer -- every unconditional upper bound on a population
+  carries its own full Weil error.
+- NEW EXACT FACT (why `a >= 4`): `E_2 = Z/4`, `deg L = 1`, `alpha = -(1+i^{+-1})`,
+  so `|T_{2,2}(n)| = 2^{n/2+1}|cos(pi n/4)|` -- **conductor 2 SATURATES Weil when
+  `4|n`**, `1/sqrt2` of it at odd `n`, vanishing at `n=2 mod 4` (conductor 3 then
+  takes over at exactly `1/2`); all 22 endpoints. So a PER-PAIR `(HWO_k)` with
+  any constant `>1` is false at `j<=3`; the aggregate form needs no repair and
+  clears `F_req(0)` by 26x-565x at `ell<=18`, growing like `2^{ell/2}`.
+- **THE NEGATIVE IS FORCED.** Note 03 sec. 5's fake population, optimised over
+  its own split, exists at level `l` iff `2^{n/2-l} <= A*(l) = max_a (a-1)
+  (1-2^{a-1-l})`; that boundary EQUALS the Weil boundary at 22 of 26 endpoints
+  (gap of one at `(12,26),(24,50),(100,201),(30,61)`). B1--B5 are all
+  moduli-only, so no `k < k_Weil` was ever available.
+- SMALLEST `k` PROVED: unchanged, 8 at `(200,401)`, 7 at `(200,402)`,
+  `= log_2 n - 1 + O(1)`, i.e. Hayes 1965. NO NEW RUNG; what is added is the
+  calibration, the `5.7x`/`8.1x` constant, and the ceiling proof.
