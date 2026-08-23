@@ -74,6 +74,32 @@
 //! touches only `Nat.le`/`Nat.le.step`/`Nat.le.rec`, none of the optional
 //! `pred`/`sub`/`ble` primitives, so `Nat.le_trans` falls into the existing
 //! `_ => (false, false, false)` default arm.
+//!
+//! **`Nat.lt_irrefl` joined the same day, the same story again.** It was the
+//! single largest first-reported blocker in the next census cut (38 rows,
+//! measured once `le_trans` no longer shadowed it) and was already
+//! reconstructed as the internal helper [`B::lt_irrefl_at`] (used by
+//! [`B::not_succ_le_self`]'s own `Nat.not_succ_le_self` construction and by
+//! [`build_sub_lt`]'s base cases). Its real Lean-core wire type — `∀ n, Not
+//! (Nat.lt n n)`, i.e. `∀ n, Nat.lt n n → False` where `Nat.lt` is the
+//! *stream's own* reducible `Definition` unfolding to `fun a b => Nat.le
+//! (Nat.succ a) b` — is not literally [`B::lt_irrefl_at`]'s own conclusion
+//! type (`Not (Le (succ n) n)`, stated directly over `Le`/`succ` with no
+//! `Nat.lt` mention at all), so admission depends on [`Kernel::def_eq`]
+//! delta-unfolding the stream's `Nat.lt` during the final validation — the
+//! same reliance [`SUBSTITUTABLE_NAT_ORDER_THEOREMS`]'s existing
+//! `Nat.lt_succ_self`/`Nat.lt_add_one`/`Nat.lt_succ_of_le`/`Nat.le_of_lt_succ`
+//! entries already have (each of those states its conclusion or hypothesis
+//! over `Le`/`succ` too and is admitted against a `Nat.lt`-headed wire type
+//! the same way), so no new discovery or validation logic was needed. Only a
+//! new match arm in [`build`], identical in shape to the existing
+//! `"Nat.not_succ_le_self"` arm because both names wrap the exact same
+//! [`B::lt_irrefl_at`] value under a fresh outer `∀ n` binder.
+//! `required_optional_prims` needs no new entry for the same reason as
+//! `le_trans`: `lt_irrefl_at` touches only primitives already covered by the
+//! default `_ => (false, false, false)` arm (confirmed by
+//! `required_optional_prims_matches_each_names_own_construction`, extended
+//! below to include it in `needs_nothing`).
 
 // Proof-term construction is long, straight-line, and mirrors mathematical
 // names one-for-one — exactly the same tradeoff `nat_prelude` itself makes,
@@ -130,6 +156,7 @@ pub(crate) const SUBSTITUTABLE_NAT_ORDER_THEOREMS: &[&str] = &[
     "Nat.lt_succ_self",
     "Nat.lt_succ_of_le",
     "Nat.lt_add_one",
+    "Nat.lt_irrefl",
     "Nat.not_succ_le_self",
     "Nat.le_succ_of_le",
     "Nat.zero_lt_succ",
@@ -1192,7 +1219,7 @@ fn build(b: &mut B<'_>, rendered: &str) -> Result<ExprId, SubstitutionError> {
             let body = b.le_refl_ctor(sn);
             b.lam_fv(n_fv, nat, body)
         }
-        "Nat.not_succ_le_self" => {
+        "Nat.not_succ_le_self" | "Nat.lt_irrefl" => {
             let n_fv = b.fresh();
             let n = b.kernel.fvar(n_fv);
             let body = b.lt_irrefl_at(n);
@@ -1637,6 +1664,7 @@ mod tests {
             "Nat.lt_succ_self" => p.lt_succ_self,
             "Nat.lt_succ_of_le" => p.lt_succ_of_le,
             "Nat.lt_add_one" => p.lt_add_one,
+            "Nat.lt_irrefl" => p.lt_irrefl,
             "Nat.not_succ_le_self" => p.not_succ_le_self,
             "Nat.le_succ_of_le" => p.le_succ_of_le,
             "Nat.zero_lt_succ" => p.zero_lt_succ,
@@ -1776,6 +1804,7 @@ mod tests {
             "Nat.lt_succ_self",
             "Nat.lt_succ_of_le",
             "Nat.lt_add_one",
+            "Nat.lt_irrefl",
             "Nat.not_succ_le_self",
             "Nat.le_succ_of_le",
             "Nat.zero_lt_succ",
