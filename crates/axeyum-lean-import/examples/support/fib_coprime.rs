@@ -12,6 +12,9 @@ pub(crate) fn admit(
     admit_with_mode(kernel, target, goal, recurrence_name, false)
 }
 
+// Three examples include this module and each uses a different subset;
+// `admit` above carries the same allow for the same reason.
+#[allow(dead_code)]
 pub(crate) fn admit_target_native(
     kernel: &mut Kernel,
     target: NameId,

@@ -36,6 +36,9 @@ fn main() {
 /// Construct the inverse presentation theorem `Int.fib_gcd` from this
 /// driver's sealed `Int.gcd_fib` capsule. Kept here so both directions share
 /// the exact kernel-level equality constructors instead of duplicating them.
+// Dead in this example's own binary; live when `int_fib_gcd_exact` includes
+// this file with `#[path]`. One source, two compilation roles.
+#[allow(dead_code)]
 pub(crate) fn run_int_fib_gcd_exact() -> Result<(), String> {
     const INPUT_SHA256: &str = "b1ce136473ead161243e7cdc053f3a8e0dab81a8e253c364171e839f22fd86f6";
     const INPUT_ROOT_SHA256: &str =
@@ -223,6 +226,7 @@ fn add_int_gcd(kernel: &mut Kernel) -> Result<(), String> {
         .map_err(|error| format!("Int.gcd definition rejected: {error:?}"))
 }
 
+#[allow(dead_code)]
 fn add_int_fib_gcd(kernel: &mut Kernel) -> Result<(), String> {
     let name = nested_name(kernel, &["Int", "fib_gcd"]);
     if kernel.environment().get(name).is_some() {
