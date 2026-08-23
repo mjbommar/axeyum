@@ -166,6 +166,34 @@ use crate::trusted_substitution::{SubstitutionError, exact_name};
 /// see [`build_div_rec_lemma`]. `required_optional_prims` needs a fourth
 /// primitive, `And`, discovered *optionally* like `pred`/`sub`/`ble`
 /// ([`discover_optional_and`]) since only this one name needs it.
+///
+/// **`Nat.div_rec_fuel_lemma` joined 2026-08-22, once every real archive
+/// `int-modeq-*.ndjson` stream was measured (`statement_adapter_import`) to
+/// name it as the first blocker once `Nat.div_rec_lemma` fell.** Despite the
+/// "fuel"/well-founded-recursion-suggesting name, the stream's own PROOF
+/// VALUE (read directly, not inferred) is a plain three-fact composition —
+/// `Nat.lt_of_lt_of_le (Nat.div_rec_lemma x y ⟨hy, hle⟩) (Nat.le_of_lt_succ x
+/// fuel hfuel)` — of exactly the two arms directly above it plus
+/// [`build_div_rec_lemma`]'s own value, with `0 < y ∧ y ≤ x` rebuilt fresh
+/// via the new [`B::and_intro`] (the mirror of the existing
+/// [`B::and_left`]/[`B::and_right`] *projections*: this one *builds* a
+/// conjunction instead). See [`build_div_rec_fuel_lemma`]. No new elimination
+/// machinery, no well-founded recursion — genuinely no construction was
+/// needed once the type was read rather than assumed from the name.
+/// `required_optional_prims` maps it identically to `Nat.div_rec_lemma`
+/// (`pred`, `sub`, `and`; not `ble`), since it composes exactly that value.
+///
+/// **`Nat.le_of_succ_le_succ` joined the same day, immediately behind
+/// it** — measured as the very next first-blocker on all four
+/// `int-modeq-*.ndjson` streams once `Nat.div_rec_fuel_lemma` fell. Fourth
+/// instance of the by-now-established pattern (`Nat.zero_le`,
+/// `Nat.le_trans`, `Nat.lt_irrefl`, `Nat.not_succ_le_zero`): the real
+/// archive's own proof value (`Nat.pred_le_pred (succ n) (succ m)`, read
+/// directly) is irrelevant, because [`B::le_of_succ_le_succ_at`] already
+/// reconstructs `∀ n m, Le (succ n) (succ m) → Le n m` from primitives —
+/// used internally since before this module's `Nat.le_of_lt_succ` entry —
+/// and had simply never been exposed as a substitutable NAME in its own
+/// right. One list entry, one dispatch arm, no new construction.
 pub(crate) const SUBSTITUTABLE_NAT_ORDER_THEOREMS: &[&str] = &[
     "Nat.le_trans",
     "Nat.le_refl",
@@ -193,6 +221,8 @@ pub(crate) const SUBSTITUTABLE_NAT_ORDER_THEOREMS: &[&str] = &[
     "Nat.not_le_of_not_ble_eq_true",
     "Nat.lt_of_lt_of_le",
     "Nat.div_rec_lemma",
+    "Nat.div_rec_fuel_lemma",
+    "Nat.le_of_succ_le_succ",
 ];
 
 /// The primitive and directly-reusable-theorem names this module's
@@ -305,9 +335,17 @@ fn discover_optional_definition(kernel: &Kernel, rendered: &'static str) -> Opti
 /// on (confirmed there: `And.rec`'s only level argument is the elimination
 /// universe, `zero`).
 #[derive(Clone, Copy)]
+#[allow(clippy::struct_field_names)]
 struct AndPrims {
     and_: NameId,
     and_rec: NameId,
+    /// `And.intro`, discovered and structurally checked (see
+    /// [`discover_optional_and`]) but not stored until
+    /// [`Nat.div_rec_fuel_lemma`](build_div_rec_fuel_lemma) needed to build a
+    /// fresh conjunction from its own two separately-bound hypotheses rather
+    /// than only ever project an ALREADY-CONSTRUCTED one via
+    /// [`B::and_left`]/[`B::and_right`].
+    and_intro: NameId,
 }
 
 fn discover_optional_and(kernel: &Kernel) -> Option<AndPrims> {
@@ -333,7 +371,11 @@ fn discover_optional_and(kernel: &Kernel) -> Option<AndPrims> {
         Some(Declaration::Recursor { uparams, .. }) if uparams.len() == 1 => {}
         _ => return None,
     }
-    Some(AndPrims { and_, and_rec })
+    Some(AndPrims {
+        and_,
+        and_rec,
+        and_intro,
+    })
 }
 
 /// Which of the optional [`Prims::pred`]/[`Prims::sub`]/[`Prims::ble`]/
@@ -357,7 +399,12 @@ fn required_optional_prims(rendered: &str) -> (bool, bool, bool, bool) {
         // `Nat.div_rec_lemma` reduces to `Nat.sub_lt` internally (see
         // `build_div_rec_lemma`), so it needs everything `Nat.sub_lt` needs
         // PLUS `And`/`And.rec` to project its own conjunction hypothesis.
-        "Nat.div_rec_lemma" => (true, true, false, true),
+        // `Nat.div_rec_fuel_lemma` composes `build_div_rec_lemma` (for its
+        // own `x - y < x` piece) with `Nat.lt_of_lt_of_le`/
+        // `Nat.le_of_lt_succ`'s existing constructions (neither of which
+        // touches any of the four), so it needs exactly what
+        // `Nat.div_rec_lemma` needs — nothing more.
+        "Nat.div_rec_lemma" | "Nat.div_rec_fuel_lemma" => (true, true, false, true),
         _ => (false, false, false, false),
     }
 }
@@ -646,6 +693,24 @@ impl<'a> B<'a> {
             .expect("required_optional_prims must gate any call reaching B::and_app")
             .and_;
         self.const_app(and_name, &[a, b])
+    }
+
+    /// `And.intro ha hb : And a b`, from the discovered `And.intro`
+    /// constructor — the mirror of [`Self::and_left`]/[`Self::and_right`]'s
+    /// *projection*: this one *builds* a fresh conjunction from its own two
+    /// separately-bound hypotheses, which
+    /// [`build_div_rec_fuel_lemma`] needs to re-form the `0 < y ∧ y ≤ x`
+    /// hypothesis [`build_div_rec_lemma`]'s own value expects, rather than
+    /// projecting one out of an already-conjoined `h`. Panics if `And` was
+    /// not discovered — see [`Self::pred`].
+    fn and_intro(&mut self, a: ExprId, b: ExprId, ha: ExprId, hb: ExprId) -> ExprId {
+        let and_intro = self
+            .p
+            .and_
+            .as_ref()
+            .expect("required_optional_prims must gate any call reaching B::and_intro")
+            .and_intro;
+        self.const_app(and_intro, &[a, b, ha, hb])
     }
 
     fn le(&mut self, x: ExprId, y: ExprId) -> ExprId {
@@ -1535,6 +1600,22 @@ fn build(b: &mut B<'_>, rendered: &str) -> Result<ExprId, SubstitutionError> {
             b.lam_fv(a_fv, nat, with_b)
         }
         "Nat.div_rec_lemma" => build_div_rec_lemma(b),
+        "Nat.div_rec_fuel_lemma" => build_div_rec_fuel_lemma(b),
+        "Nat.le_of_succ_le_succ" => {
+            let n_fv = b.fresh();
+            let n = b.kernel.fvar(n_fv);
+            let m_fv = b.fresh();
+            let m = b.kernel.fvar(m_fv);
+            let h_fv = b.fresh();
+            let h = b.kernel.fvar(h_fv);
+            let sn = b.succ(n);
+            let sm = b.succ(m);
+            let hyp_ty = b.le(sn, sm);
+            let body = b.le_of_succ_le_succ_at(n, m, h);
+            let with_h = b.lam_fv(h_fv, hyp_ty, body);
+            let with_m = b.lam_fv(m_fv, nat, with_h);
+            b.lam_fv(n_fv, nat, with_m)
+        }
         _ => {
             return Err(SubstitutionError::UnexpectedShape(
                 "unreachable: checked against SUBSTITUTABLE_NAT_ORDER_THEOREMS above",
@@ -1829,6 +1910,84 @@ fn build_div_rec_lemma(b: &mut B<'_>) -> ExprId {
     b.lam_fv(x_fv, nat, with_y)
 }
 
+/// `Nat.div_rec_fuel_lemma {x y fuel : Nat} (hy : 0 < y) (hle : y ≤ x)
+/// (hfuel : x < fuel + 1) : x - y < fuel` — the last named blocker between
+/// the `Int.ModEq` family and a producer (docs/autogenesis/243). Despite the
+/// "fuel"/well-founded-recursion-suggesting name, the real stream's own
+/// proof VALUE (read directly from a genuine export, not inferred from the
+/// name) is not itself well-founded recursion at all — it is a three-fact
+/// composition:
+///
+/// ```text
+/// Nat.lt_of_lt_of_le (x - y) x fuel
+///   (Nat.div_rec_lemma x y (And.intro hy hle))   -- x - y < x
+///   (Nat.le_of_lt_succ x fuel hfuel)              -- x <= fuel
+/// ```
+///
+/// every piece of which this module already has: [`build_div_rec_lemma`]
+/// (its value, applied here rather than re-derived), [`B::le_of_succ_le_succ_at`]
+/// (backing the `"Nat.le_of_lt_succ"` arm above, reused identically for
+/// `x < fuel + 1 -> x <= fuel` since `fuel + 1` def-eq-unfolds through the
+/// stream's own `HAdd.hAdd`/`instHAdd`/`Nat.add`/`OfNat.ofNat 1` to `succ
+/// fuel`, giving `hfuel : Le (succ x) (succ fuel)` — exactly that arm's own
+/// hypothesis shape), and [`B::le_trans_at`] (backing the
+/// `"Nat.lt_of_lt_of_le"` arm, reused identically at `(succ (x - y), x,
+/// fuel)`). `0 < y ∧ y ≤ x` is rebuilt fresh from `hy`/`hle` via
+/// [`B::and_intro`] — never citing the stream's own conjunction value — and
+/// handed to `build_div_rec_lemma`'s value, which independently projects it
+/// straight back out via `And.rec`/[`B::and_left`]/[`B::and_right`]; nothing
+/// here short-circuits that round trip, so the arm adds no new elimination
+/// machinery, only composition.
+fn build_div_rec_fuel_lemma(b: &mut B<'_>) -> ExprId {
+    let nat = b.nat_ty();
+    let x_fv = b.fresh();
+    let x = b.kernel.fvar(x_fv);
+    let y_fv = b.fresh();
+    let y = b.kernel.fvar(y_fv);
+    let fuel_fv = b.fresh();
+    let fuel = b.kernel.fvar(fuel_fv);
+    let hy_fv = b.fresh();
+    let hy = b.kernel.fvar(hy_fv);
+    let hle_fv = b.fresh();
+    let hle = b.kernel.fvar(hle_fv);
+    let hfuel_fv = b.fresh();
+    let hfuel = b.kernel.fvar(hfuel_fv);
+
+    let zero = b.zero();
+    let szero = b.succ(zero);
+    let pos_y = b.le(szero, y); // `0 < y`, i.e. `Lt Zero y`.
+    let le_yx = b.le(y, x); // `y <= x`.
+    let sx = b.succ(x);
+    let sfuel = b.succ(fuel);
+    // `x < fuel + 1`, stated directly as `Le (succ x) (succ fuel)` — the
+    // same `Nat.lt`/`+1`-unfolding reliance `"Nat.le_of_lt_succ"`'s own
+    // `hyp_ty` already has.
+    let hfuel_ty = b.le(sx, sfuel);
+
+    // Rebuild `0 < y ∧ y ≤ x` fresh from `hy`/`hle`, never the stream's own
+    // conjunction value, then hand it to `Nat.div_rec_lemma`'s own value.
+    let and_h = b.and_intro(pos_y, le_yx, hy, hle);
+    let div_rec_lemma_value = build_div_rec_lemma(b);
+    let sub_lt_x = b.apply(div_rec_lemma_value, &[x, y, and_h]); // : x - y < x
+
+    // `Nat.le_of_lt_succ x fuel hfuel : x <= fuel`, identical to the
+    // `"Nat.le_of_lt_succ"` arm's own construction.
+    let le_x_fuel = b.le_of_succ_le_succ_at(x, fuel, hfuel);
+
+    // `Nat.lt_of_lt_of_le (x - y) x fuel sub_lt_x le_x_fuel : x - y < fuel`,
+    // identical to the `"Nat.lt_of_lt_of_le"` arm's own construction.
+    let sub_xy = b.sub(x, y);
+    let s_sub_xy = b.succ(sub_xy);
+    let result = b.le_trans_at(s_sub_xy, x, fuel, sub_lt_x, le_x_fuel);
+
+    let with_hfuel = b.lam_fv(hfuel_fv, hfuel_ty, result);
+    let with_hle = b.lam_fv(hle_fv, le_yx, with_hfuel);
+    let with_hy = b.lam_fv(hy_fv, pos_y, with_hle);
+    let with_fuel = b.lam_fv(fuel_fv, nat, with_hy);
+    let with_y = b.lam_fv(y_fv, nat, with_fuel);
+    b.lam_fv(x_fv, nat, with_y)
+}
+
 impl B<'_> {
     /// `Le (sub n m) n`, this project's own `Nat.sub_le`, re-derived inline
     /// using [`Self::le_trans_at`].
@@ -1902,6 +2061,7 @@ mod tests {
             "Nat.le_of_ble_eq_true" => p.le_of_ble_eq_true,
             "Nat.not_le_of_not_ble_eq_true" => p.not_le_of_not_ble_eq_true,
             "Nat.lt_of_lt_of_le" => p.lt_of_lt_of_le,
+            "Nat.le_of_succ_le_succ" => p.le_of_succ_le_succ,
             other => panic!("no NatPrelude field mapped for {other:?}"),
         }
     }
@@ -1915,8 +2075,10 @@ mod tests {
             // only the arithmetic facts (`sub_lt`, `lt_of_lt_of_le`) it
             // composes. Covered separately by
             // `div_rec_lemma_reconstructs_and_kernel_checks`, against a
-            // hand-built `And`-carrying wire type.
-            if rendered == "Nat.div_rec_lemma" {
+            // hand-built `And`-carrying wire type. `Nat.div_rec_fuel_lemma`
+            // is the same story, one level up — covered by
+            // `div_rec_fuel_lemma_reconstructs_and_kernel_checks`.
+            if rendered == "Nat.div_rec_lemma" || rendered == "Nat.div_rec_fuel_lemma" {
                 continue;
             }
             let existing = field_name(&prelude, rendered);
@@ -2085,6 +2247,131 @@ mod tests {
         );
     }
 
+    /// `Nat.div_rec_fuel_lemma {x y fuel} (hy : 0 < y) (hle : y ≤ x)
+    /// (hfuel : x < Nat.succ fuel) : x - y < fuel` — read directly off the
+    /// real `mathlib-v4.30.0-modeq-family-v1` archive streams
+    /// (`statement_adapter_import ... Nat.div_rec_fuel_lemma`, all four
+    /// identical), hand-built here the same way
+    /// `div_rec_lemma_reconstructs_and_kernel_checks` builds its own: this
+    /// project's own `nat_prelude` never states this composed lemma, only
+    /// the arithmetic facts it composes. Unlike `Nat.div_rec_lemma`'s own
+    /// wire type, `hy`/`hle` here are two SEPARATE curried hypotheses, never
+    /// a conjunction — confirmed by reading the archive's own printed type,
+    /// not assumed from the name. `hfuel` is stated via `Nat.lt`/`Nat.succ`
+    /// (not the unfolded `Le` form [`build_div_rec_fuel_lemma`] itself
+    /// builds), forcing the same `Nat.lt`-delta-unfolding reliance the real
+    /// archive's `fuel + 1` (`HAdd.hAdd`/`OfNat.ofNat 1`) shape has, exactly
+    /// like this module's other `lt_`-shaped entries already rely on.
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn div_rec_fuel_lemma_reconstructs_and_kernel_checks() {
+        let (mut kernel, prelude) = prelude_kernel();
+        let anon = kernel.anon();
+        let mut next_fvar = FVAR_BASE + 41_000_000;
+        let mut fresh = || {
+            next_fvar += 1;
+            next_fvar
+        };
+
+        // wire_ty := (x y fuel : Nat) -> (hy : Nat.lt Nat.zero y) ->
+        //   (hle : Nat.le y x) -> (hfuel : Nat.lt x (Nat.succ fuel)) ->
+        //   Nat.lt (Nat.sub x y) fuel
+        let nat_ty = kernel.const_(prelude.nat, vec![]);
+        let x_fv = fresh();
+        let x = kernel.fvar(x_fv);
+        let y_fv = fresh();
+        let y = kernel.fvar(y_fv);
+        let fuel_fv = fresh();
+        let fuel = kernel.fvar(fuel_fv);
+        let hy_fv = fresh();
+        let hle_fv = fresh();
+        let hfuel_fv = fresh();
+
+        let zero_c = kernel.const_(prelude.zero, vec![]);
+        let lt_zero_y = {
+            let c = kernel.const_(prelude.lt, vec![]);
+            let w1 = kernel.app(c, zero_c);
+            kernel.app(w1, y)
+        };
+        let le_y_x = {
+            let c = kernel.const_(prelude.le, vec![]);
+            let w1 = kernel.app(c, y);
+            kernel.app(w1, x)
+        };
+        let succ_fuel = {
+            let c = kernel.const_(prelude.succ, vec![]);
+            kernel.app(c, fuel)
+        };
+        let lt_x_succ_fuel = {
+            let c = kernel.const_(prelude.lt, vec![]);
+            let w1 = kernel.app(c, x);
+            kernel.app(w1, succ_fuel)
+        };
+        let concl = {
+            let sub_xy = {
+                let c = kernel.const_(prelude.sub, vec![]);
+                let w1 = kernel.app(c, x);
+                kernel.app(w1, y)
+            };
+            let c = kernel.const_(prelude.lt, vec![]);
+            let w1 = kernel.app(c, sub_xy);
+            kernel.app(w1, fuel)
+        };
+
+        let mut wire_ty = concl;
+        let abstracted = kernel.abstract_fvars(wire_ty, &[hfuel_fv]);
+        wire_ty = kernel.pi(anon, lt_x_succ_fuel, abstracted, BinderInfo::Default);
+        let abstracted = kernel.abstract_fvars(wire_ty, &[hle_fv]);
+        wire_ty = kernel.pi(anon, le_y_x, abstracted, BinderInfo::Default);
+        let abstracted = kernel.abstract_fvars(wire_ty, &[hy_fv]);
+        wire_ty = kernel.pi(anon, lt_zero_y, abstracted, BinderInfo::Default);
+        let abstracted = kernel.abstract_fvars(wire_ty, &[fuel_fv]);
+        wire_ty = kernel.pi(anon, nat_ty, abstracted, BinderInfo::Default);
+        let abstracted = kernel.abstract_fvars(wire_ty, &[y_fv]);
+        wire_ty = kernel.pi(anon, nat_ty, abstracted, BinderInfo::Default);
+        let abstracted = kernel.abstract_fvars(wire_ty, &[x_fv]);
+        wire_ty = kernel.pi(anon, nat_ty, abstracted, BinderInfo::Default);
+
+        let value = reconstruct(&mut kernel, "Nat.div_rec_fuel_lemma", wire_ty)
+            .unwrap_or_else(|e| panic!("Nat.div_rec_fuel_lemma: reconstruction declined: {e}"))
+            .unwrap_or_else(|| panic!("Nat.div_rec_fuel_lemma: not recognised as substitutable"));
+        let inferred = kernel
+            .infer(value)
+            .unwrap_or_else(|e| panic!("Nat.div_rec_fuel_lemma: candidate failed to infer: {e:?}"));
+        assert!(
+            kernel.def_eq(inferred, wire_ty),
+            "Nat.div_rec_fuel_lemma: candidate's type is not def-eq to wire_ty"
+        );
+
+        let fresh_name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestDivRecFuelLemma")
+        };
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name: fresh_name,
+                uparams: vec![],
+                ty: wire_ty,
+                value,
+            })
+            .unwrap_or_else(|e| panic!("Nat.div_rec_fuel_lemma: admission failed: {e:?}"));
+        assert_eq!(
+            kernel.axiom_footprint(fresh_name).len(),
+            0,
+            "Nat.div_rec_fuel_lemma: nonempty axiom footprint"
+        );
+        assert_eq!(
+            kernel.theorem_dependencies(fresh_name).len(),
+            0,
+            "Nat.div_rec_fuel_lemma: cites another theorem: {:?}",
+            kernel
+                .theorem_dependencies(fresh_name)
+                .iter()
+                .map(|&n| kernel.display_name(n).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+
     // The "`And` absent" case for `Nat.div_rec_lemma` cannot be exercised
     // through the public `reconstruct` entry point against `prelude_kernel`
     // — it always carries a real `And` (from `build_logic_prelude`, which
@@ -2165,6 +2452,7 @@ mod tests {
             "Nat.zero_lt_succ",
             "Nat.zero_le",
             "Nat.lt_of_lt_of_le",
+            "Nat.le_of_succ_le_succ",
         ];
         for name in needs_nothing {
             assert_eq!(
@@ -2208,6 +2496,11 @@ mod tests {
             required_optional_prims("Nat.div_rec_lemma"),
             (true, true, false, true),
             "Nat.div_rec_lemma: expected pred, sub, and and"
+        );
+        assert_eq!(
+            required_optional_prims("Nat.div_rec_fuel_lemma"),
+            (true, true, false, true),
+            "Nat.div_rec_fuel_lemma: expected pred, sub, and and (same as Nat.div_rec_lemma)"
         );
 
         // Every name in the substitution list is covered by exactly one of
