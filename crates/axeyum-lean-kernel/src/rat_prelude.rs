@@ -218,16 +218,6 @@ pub struct RatPrelude {
     pub int_right_distrib: NameId,
     /// `Rat.int_zero_mul : ∀ (a : Int), Int.zero * a = Int.zero`.
     pub int_zero_mul: NameId,
-    /// `Rat.int_le_antisymm : ∀ (x y : Int), Int.le x y → Int.le y x → x = y`.
-    ///
-    /// Missing from `int_prelude` itself (no `Int.le_antisymm` is declared
-    /// there), and not built by a four-way `Int.rec` split on the
-    /// constructors: `Int.eq_em` already decides `x = y`, so the only real
-    /// work is the `x ≠ y` branch, where `Int.lt_of_le_of_ne` sharpens both
-    /// hypotheses to strict and `Int.lt_trans` + `Int.lt_irrefl` close it.
-    /// What makes [`Self::le_antisymm`] possible without touching
-    /// `int_prelude/`.
-    pub int_le_antisymm: NameId,
     /// `Rat.eq_zero_of_num_zero : ∀ q, Int.Eq (num q) Int.zero → q = 0`.
     pub eq_zero_of_num_zero: NameId,
     /// `Rat.int_nonneg_of_nonneg : ∀ q, le 0 q → Int.le Int.zero (num q)`.
@@ -346,10 +336,9 @@ pub struct RatPrelude {
     ///
     /// **Also missing until now.** Not one of the 22 either — the `Real`
     /// package states no antisymmetry law — but unlike `le_total` it is not a
-    /// one-line transcription of an existing `Int` fact: `int_prelude` has no
-    /// `Int.le_antisymm`, so [`Self::int_le_antisymm`] had to be built first.
-    /// Given that, this is `eq_of_cross` applied to the two cross-products the
-    /// hypotheses already relate.
+    /// one-line transcription: `le a b` and `le b a` unfold to `Int.le` on the
+    /// two cross-products, and `int_prelude`'s own `Int.le_antisymm` applied to
+    /// them gives exactly the hypothesis `eq_of_cross` needs.
     pub le_antisymm: NameId,
     /// `Rat.lt_trichotomy : ∀ a b, Or (lt a b) (Or (a = b) (lt b a))`.
     ///
@@ -361,6 +350,19 @@ pub struct RatPrelude {
     /// order can offer — so this is a property `ℚ` has purely because its
     /// order is *decidable* and `ℝ` cannot inherit by transcription.
     pub lt_trichotomy: NameId,
+    /// `Rat.mul_eq_zero : ∀ a b, a * b = 0 → Or (a = 0) (b = 0)` — `ℚ` has no
+    /// zero divisors.
+    ///
+    /// Not a cross-multiplication transcription like the order laws: `a*b`
+    /// *normalises* its numerator, so `num (a*b)` is not literally
+    /// `num a * num b`. The route is `cross_of_eq` at `(a*b, 0)` to get
+    /// `num (a*b) = 0` outright (the cross product collapses via `mul_one` and
+    /// `int_zero_mul`), `normalize_cross` to move that across the
+    /// normalisation and `int_mul_right_cancel` to drop the positive
+    /// denominator, landing on the clean integer fact `num a * num b = 0`;
+    /// then `Int.natAbs` and `Nat.mul_eq_zero` decide which numerator
+    /// vanishes, and `eq_zero_of_num_zero` lifts that back to `ℚ`.
+    pub mul_eq_zero: NameId,
 
     // --- the Archimedean property (ADR-0512 phase R1) -------------------------
     /// `Rat.natDivSucc : Nat → Nat → Rat` — the rational `k/(j+1)`, as a single
@@ -709,7 +711,6 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         int_mul_lt_mul_right: child(kernel, "int_mul_lt_mul_right"),
         int_right_distrib: child(kernel, "int_right_distrib"),
         int_zero_mul: child(kernel, "int_zero_mul"),
-        int_le_antisymm: child(kernel, "int_le_antisymm"),
         eq_zero_of_num_zero: child(kernel, "eq_zero_of_num_zero"),
         int_nonneg_of_nonneg: child(kernel, "int_nonneg_of_nonneg"),
         nonneg_of_int_nonneg: child(kernel, "nonneg_of_int_nonneg"),
@@ -753,6 +754,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         lt_of_not_le: child(kernel, "lt_of_not_le"),
         le_antisymm: child(kernel, "le_antisymm"),
         lt_trichotomy: child(kernel, "lt_trichotomy"),
+        mul_eq_zero: child(kernel, "mul_eq_zero"),
         nat_div_succ: child(kernel, "natDivSucc"),
         int_le_or_lt: child(kernel, "int_le_or_lt"),
         le_or_lt: child(kernel, "le_or_lt"),

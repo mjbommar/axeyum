@@ -19,15 +19,16 @@
 
 use super::RatPrelude;
 use super::ops::{
-    den, den_pos, den_z, iregroup3, normalize, num, radd, rat_theorem, req, rle, rlt, rmul, rzero,
+    den, den_pos, den_z, int_eq_to_nat, iregroup3, normalize, num, radd, rat_theorem, req, rle,
+    rlt, rmul, rzero,
 };
 use super::statements;
 use crate::KernelError;
 use crate::expr::ExprId;
-use crate::int_prelude::ops::IntDev;
+use crate::int_prelude::ops::{IntDev, Shape, case_split};
 use crate::nat_prelude::NatOps;
 
-/// The three small `ℤ` facts and the two `Rat`/`ℤ` bridges the laws below need.
+/// The two small `ℤ` facts and the two `Rat`/`ℤ` bridges the laws below need.
 ///
 /// # Errors
 ///
@@ -77,54 +78,6 @@ fn declare_bridges(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError>
         let commute = d.lemma(int.mul_comm, &[zero, a]);
         let collapse = d.lemma(int.mul_zero, &[a]);
         let (_, proof) = d.ichain(left, &[(flipped, commute), (zero, collapse)]);
-        (stmt, proof)
-    })?;
-
-    // int_le_antisymm : ∀ x y, Int.le x y → Int.le y x → x = y.
-    //
-    // `int_prelude` has no antisymmetry law for `Int.le`, so this builds one
-    // from the pieces it DOES have: `Int.eq_em` decides `x = y` outright, and
-    // in the `x ≠ y` branch `Int.lt_of_le_of_ne` sharpens each `le` hypothesis
-    // to a strict one — `x < y` from the first, `y < x` from the second (the
-    // second needs `y ≠ x`, i.e. the given disequality read backwards) — and
-    // `Int.lt_trans` then `Int.lt_irrefl` close it. No `Int.rec`, no case split
-    // on constructors: this is the same "decidable order" style `le_or_lt`
-    // uses, not the representation-level style `int_mul_right_cancel` needs.
-    d.int_theorem(p.int_le_antisymm, 2, &|d, v| {
-        let (x, y) = (v[0], v[1]);
-        let forward = d.ile(x, y);
-        let backward = d.ile(y, x);
-        let goal = d.ieq(x, y);
-        let inner = d.arrow(backward, goal);
-        let stmt = d.arrow(forward, inner);
-
-        let h1_fv = d.fresh_fvar();
-        let h1 = d.kernel().fvar(h1_fv);
-        let h2_fv = d.fresh_fvar();
-        let h2 = d.kernel().fvar(h2_fv);
-
-        let decided = d.lemma(int.eq_em, &[x, y]);
-        let distinct = d.not(goal);
-        let body = d.or_elim(goal, distinct, goal, decided, &|_d, heq| heq, &|d, hne| {
-            // `hne : Not (x = y)`; flip it to `Not (y = x)` for the second
-            // `lt_of_le_of_ne` application.
-            let reversed_goal = d.ieq(y, x);
-            let hyx_fv = d.fresh_fvar();
-            let hyx = d.kernel().fvar(hyx_fv);
-            let hne_sym = {
-                let flipped = d.isymm(y, x, hyx);
-                let absurdity = d.apply(hne, &[flipped]);
-                d.lam_fv(hyx_fv, reversed_goal, absurdity)
-            };
-            let lt1 = d.lemma(int.lt_of_le_of_ne, &[x, y, h1, hne]);
-            let lt2 = d.lemma(int.lt_of_le_of_ne, &[y, x, h2, hne_sym]);
-            let lt3 = d.lemma(int.lt_trans, &[x, y, x, lt1, lt2]);
-            let irrefl = d.lemma(int.lt_irrefl, &[x]);
-            let contradiction = d.apply(irrefl, &[lt3]);
-            d.absurd(goal, contradiction)
-        });
-        let value = d.lam_fv(h2_fv, backward, body);
-        let proof = d.lam_fv(h1_fv, forward, value);
         (stmt, proof)
     })?;
 
@@ -208,6 +161,55 @@ fn declare_bridges(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError>
     };
     bridge(d, p.int_nonneg_of_nonneg, true)?;
     bridge(d, p.nonneg_of_int_nonneg, false)
+}
+
+/// `natAbs x = 0 → x = 0`, instantiated at a specific `x`.
+///
+/// Not interned as its own theorem: [`declare_order_laws`]'s `mul_eq_zero` is
+/// its only call site, applied once to `num a` and once to `num b`. Case-split
+/// on `x`'s sign — `natAbs (ofNat n)` **is** `n` by computation, so the
+/// `ofNat` branch is congruence on the hypothesis; `natAbs (negSucc n)` **is**
+/// `succ n`, so the `negSucc` branch's hypothesis is `succ n = 0`, refuted by
+/// `Nat.succ_ne_zero`.
+fn int_eq_zero_of_nat_abs_eq_zero(d: &mut IntDev<'_>, x: ExprId, h: ExprId) -> ExprId {
+    let int = d.int();
+    let statement = |d: &mut IntDev<'_>, args: &[ExprId]| {
+        let y = args[0];
+        let magnitude = d.const_app(int.nat_abs, &[y]);
+        let zero_nat = d.zero();
+        let hypothesis = d.eq(magnitude, zero_nat);
+        let zero_int = d.izero();
+        let conclusion = d.ieq(y, zero_int);
+        d.arrow(hypothesis, conclusion)
+    };
+    let implication = case_split(d, &[x], &statement, &|d, b| {
+        let n = b[0].1;
+        match b[0].0 {
+            Shape::OfNat => {
+                let h_fv = d.fresh_fvar();
+                let hh = d.kernel().fvar(h_fv);
+                let zero_nat = d.zero();
+                let hyp_ty = d.eq(n, zero_nat);
+                let lifted = d.nat_eq_to_int(n, zero_nat, hh, &|d, t| d.of_nat(t));
+                d.lam_fv(h_fv, hyp_ty, lifted)
+            }
+            Shape::NegSucc => {
+                let h_fv = d.fresh_fvar();
+                let hh = d.kernel().fvar(h_fv);
+                let succ_n = d.succ(n);
+                let zero_nat = d.zero();
+                let hyp_ty = d.eq(succ_n, zero_nat);
+                let value = d.neg_succ(n);
+                let zero_int = d.izero();
+                let goal = d.ieq(value, zero_int);
+                let ne = d.lemma(int.nat.succ_ne_zero, &[n]);
+                let false_proof = d.apply(ne, &[hh]);
+                let body = d.absurd(goal, false_proof);
+                d.lam_fv(h_fv, hyp_ty, body)
+            }
+        }
+    });
+    d.apply(implication, &[h])
 }
 
 /// The order laws: reflexivity, irreflexivity, the four transitivity shapes,
@@ -510,7 +512,7 @@ pub(super) fn declare_order_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     //
     // Also not one of the 22, and also missing until now: `le a b` and
     // `le b a` unfold to `Int.le x y` and `Int.le y x` at the same two cross-
-    // products `eq_of_cross` already asks for, so `int_le_antisymm` applied to
+    // products `eq_of_cross` already asks for, so `Int.le_antisymm` applied to
     // them gives exactly its hypothesis.
     rat_theorem(d, p.le_antisymm, 2, &|d, v| {
         let (a, b) = (v[0], v[1]);
@@ -527,11 +529,143 @@ pub(super) fn declare_order_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
 
         let x = cross(d, a, b);
         let y = cross(d, b, a);
-        let cross_eq = d.lemma(p.int_le_antisymm, &[x, y, h1, h2]);
+        let cross_eq = d.lemma(int.le_antisymm, &[x, y, h1, h2]);
         let body = d.lemma(p.eq_of_cross, &[a, b, cross_eq]);
 
         let value = d.lam_fv(h2_fv, hyp2, body);
         let proof = d.lam_fv(h1_fv, hyp1, value);
+        (stmt, proof)
+    })?;
+
+    // mul_eq_zero : ∀ a b, a*b = 0 → Or (a=0) (b=0) — `ℚ` has no zero
+    // divisors.
+    //
+    // `Rat.mul` normalises, so `num (a*b)` is not literally `num a * num b`.
+    // `cross_of_eq` at `(a*b, 0)` collapses, via `Int.mul_one` and
+    // `int_zero_mul` (the same computation `eq_zero_of_num_zero` runs in
+    // reverse), to `num (a*b) = 0` outright. Substituting that into
+    // `mul_cross` and cancelling the positive denominator `den (a*b)` with
+    // `int_mul_right_cancel` lands on the clean integer fact
+    // `num a * num b = 0`, with every denominator gone. From there
+    // `Int.natAbs` and `Nat.mul_eq_zero` decide which numerator vanishes, and
+    // `eq_zero_of_num_zero` lifts the winning branch back to `ℚ`.
+    rat_theorem(d, p.mul_eq_zero, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let ab = rmul(d, a, b);
+        let target = rzero(d, p);
+        let hypothesis = req(d, ab, target);
+        let left = req(d, a, target);
+        let right = req(d, b, target);
+        let goal = d.or(left, right);
+        let stmt = d.arrow(hypothesis, goal);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        // num (a*b) = 0.
+        let num_ab = num(d, ab);
+        let zero_int = d.izero();
+        let unit = d.ione();
+        let den_ab_z = den_z(d, ab);
+        let cross = d.lemma(p.cross_of_eq, &[ab, target, h]);
+        let scaled_num_ab = d.imul(num_ab, unit);
+        let unscale = d.lemma(int.mul_one, &[num_ab]);
+        let num_ab_eq_scaled = d.isymm(scaled_num_ab, num_ab, unscale);
+        let right_scaled = d.imul(zero_int, den_ab_z);
+        let num_ab_eq_right_scaled =
+            d.itrans(num_ab, scaled_num_ab, right_scaled, num_ab_eq_scaled, cross);
+        let collapse_right = d.lemma(p.int_zero_mul, &[den_ab_z]);
+        let num_ab_eq_zero = d.itrans(
+            num_ab,
+            right_scaled,
+            zero_int,
+            num_ab_eq_right_scaled,
+            collapse_right,
+        );
+
+        // num a * num b = 0, via mul_cross and cancelling den (a*b).
+        let num_a = num(d, a);
+        let num_b = num(d, b);
+        let prod = d.imul(num_a, num_b);
+        let den_ab = den(d, ab);
+        let den_ab_z2 = d.of_nat(den_ab);
+        let scale = {
+            let da = den(d, a);
+            let db = den(d, b);
+            let combined = NatOps::mul(d, da, db);
+            d.of_nat(combined)
+        };
+        let mc = d.lemma(p.mul_cross, &[a, b]);
+        let step2 = d.int_eq_rewrite(num_ab, zero_int, num_ab_eq_zero, mc, &|d, x| {
+            let l = d.imul(x, scale);
+            let r = d.imul(prod, den_ab_z2);
+            d.ieq(l, r)
+        });
+        let prod_scaled = d.imul(prod, den_ab_z2);
+        let right_scaled2 = d.imul(zero_int, scale);
+        let collapse_scale = d.lemma(p.int_zero_mul, &[scale]);
+        let back_collapse_scale = d.isymm(right_scaled2, zero_int, collapse_scale);
+        let (_, zero_eq_prod_scaled) = d.ichain(
+            zero_int,
+            &[(right_scaled2, back_collapse_scale), (prod_scaled, step2)],
+        );
+        let prod_scaled_eq_zero = d.isymm(zero_int, prod_scaled, zero_eq_prod_scaled);
+        let right_scaled_den = d.imul(zero_int, den_ab_z2);
+        let collapse_scale2 = d.lemma(p.int_zero_mul, &[den_ab_z2]);
+        let zero_eq_scaled2 = d.isymm(right_scaled_den, zero_int, collapse_scale2);
+        let h_cancel = d.itrans(
+            prod_scaled,
+            zero_int,
+            right_scaled_den,
+            prod_scaled_eq_zero,
+            zero_eq_scaled2,
+        );
+        let den_ab_pos = den_pos(d, ab);
+        let numerators_eq = d.lemma(
+            p.int_mul_right_cancel,
+            &[prod, zero_int, den_ab, den_ab_pos, h_cancel],
+        );
+
+        // natAbs a * natAbs b = 0, hence one of them is 0 (Nat.mul_eq_zero).
+        let magnitude_a = d.const_app(int.nat_abs, &[num_a]);
+        let magnitude_b = d.const_app(int.nat_abs, &[num_b]);
+        let magnitude_prod = d.const_app(int.nat_abs, &[prod]);
+        let magnitude_eq = int_eq_to_nat(d, prod, zero_int, numerators_eq, &|d, y| {
+            d.const_app(int.nat_abs, &[y])
+        });
+        let split = d.lemma(int.nat_abs_mul, &[num_a, num_b]);
+        let nat_prod = NatOps::mul(d, magnitude_a, magnitude_b);
+        let back_split = d.symm(magnitude_prod, nat_prod, split);
+        let zero_nat = d.zero();
+        let (_, nat_prod_eq_zero) = d.chain(
+            nat_prod,
+            &[(magnitude_prod, back_split), (zero_nat, magnitude_eq)],
+        );
+        let disjunction = d.lemma(
+            int.nat.mul_eq_zero,
+            &[magnitude_a, magnitude_b, nat_prod_eq_zero],
+        );
+
+        // Lift the winning branch back to ℚ.
+        let mag_a_zero = d.eq(magnitude_a, zero_nat);
+        let mag_b_zero = d.eq(magnitude_b, zero_nat);
+        let body = d.or_elim(
+            mag_a_zero,
+            mag_b_zero,
+            goal,
+            disjunction,
+            &|d, hma| {
+                let num_a_zero = int_eq_zero_of_nat_abs_eq_zero(d, num_a, hma);
+                let a_zero = d.const_app(p.eq_zero_of_num_zero, &[a, num_a_zero]);
+                d.or_inl(left, right, a_zero)
+            },
+            &|d, hmb| {
+                let num_b_zero = int_eq_zero_of_nat_abs_eq_zero(d, num_b, hmb);
+                let b_zero = d.const_app(p.eq_zero_of_num_zero, &[b, num_b_zero]);
+                d.or_inr(left, right, b_zero)
+            },
+        );
+        let proof = d.lam_fv(h_fv, hypothesis, body);
         (stmt, proof)
     })
 }

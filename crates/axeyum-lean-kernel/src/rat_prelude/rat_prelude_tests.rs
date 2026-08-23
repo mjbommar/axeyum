@@ -45,9 +45,9 @@ fn every_named_declaration_exists() {
         ("ext", p.ext),
         ("le_total", p.le_total),
         ("lt_of_not_le", p.lt_of_not_le),
-        ("int_le_antisymm", p.int_le_antisymm),
         ("le_antisymm", p.le_antisymm),
         ("lt_trichotomy", p.lt_trichotomy),
+        ("mul_eq_zero", p.mul_eq_zero),
         ("normalize_add_normalize", p.normalize_add_normalize),
         ("normalize_mul_normalize", p.normalize_mul_normalize),
         ("mul_neg", p.mul_neg),
@@ -166,15 +166,14 @@ fn the_ring_law_list_has_exactly_twenty_two_distinct_entries() {
 /// `Rat.le` is not just total (`le_total`) but **antisymmetric**
 /// (`le_antisymm`) and its strict companion is **trichotomous**
 /// (`lt_trichotomy`) — none of which is one of the 22, and the last two did
-/// not exist before this development. Every declaration involved, including
-/// the private `int_le_antisymm` bridge `int_prelude` itself lacks, is a
+/// not exist before this development. `le_antisymm` is built directly on
+/// `int_prelude`'s own `Int.le_antisymm`. Every declaration involved is a
 /// **checked** theorem with an empty axiom footprint — read out of the
 /// kernel, not off the diff.
 #[test]
 fn the_order_is_antisymmetric_and_trichotomous_and_axiom_free() {
     let (kernel, p) = built();
     let expected = [
-        ("int_le_antisymm", p.int_le_antisymm),
         ("le_antisymm", p.le_antisymm),
         ("lt_trichotomy", p.lt_trichotomy),
     ];
@@ -225,6 +224,33 @@ fn the_order_completeness_statements_are_the_unweakened_ones() {
         rendered(&mut kernel, p.lt_trichotomy),
         "((x0 : Rat) -> ((x1 : Rat) -> \
          Or (Rat.lt x0 x1) (Or (Eq.{1} Rat x0 x1) (Rat.lt x1 x0))))"
+    );
+}
+
+/// `Rat.mul_eq_zero` is a **checked** theorem with an empty axiom footprint.
+///
+/// It is not a cross-multiplication fact like the order laws above — `Rat.mul`
+/// normalises, so it earns its own check rather than riding along with
+/// [`the_order_is_antisymmetric_and_trichotomous_and_axiom_free`].
+#[test]
+fn mul_eq_zero_is_axiom_free() {
+    let (kernel, p) = built();
+    let declaration = kernel
+        .environment()
+        .get(p.mul_eq_zero)
+        .expect("Rat.mul_eq_zero was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Theorem { .. }),
+        "Rat.mul_eq_zero must be a checked Theorem, found a different kind"
+    );
+    let footprint: Vec<String> = kernel
+        .axiom_footprint(p.mul_eq_zero)
+        .into_iter()
+        .map(|entry| kernel.display_name(entry).to_string())
+        .collect();
+    assert!(
+        footprint.is_empty(),
+        "Rat.mul_eq_zero rests on {footprint:?}"
     );
 }
 
