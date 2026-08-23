@@ -59,6 +59,21 @@
 //! module cites a stream-supplied `Theorem` by name any more; the
 //! `theorem_dependencies` assertions in this module's own tests are the
 //! machine-checked form of that claim, not just this comment.
+//!
+//! **`Nat.le_trans` itself joined [`SUBSTITUTABLE_NAT_ORDER_THEOREMS`] on
+//! 2026-08-22** — it was already reconstructed as the internal helper
+//! [`B::le_trans_at`] (used by [`B::le_of_succ_le_succ_at`],
+//! [`B::pred_le_pred`]'s inline construction, and [`B::sub_le_at`]) but had
+//! never been exposed as a substitutable *name* in its own right, even though
+//! it was the single largest first-reported blocker in the frozen census (38
+//! rows). Its wire type — `∀ a b c, Le a b → Le b c → Le a c` — is exactly
+//! [`B::le_trans_at`]'s own signature with the three `Nat` arguments and two
+//! hypotheses re-quantified, so admitting it needed no new construction, only
+//! a new match arm in [`build`] wrapping [`B::le_trans_at`] in the matching
+//! telescope. `required_optional_prims` needs no new entry — `le_trans_at`
+//! touches only `Nat.le`/`Nat.le.step`/`Nat.le.rec`, none of the optional
+//! `pred`/`sub`/`ble` primitives, so `Nat.le_trans` falls into the existing
+//! `_ => (false, false, false)` default arm.
 
 // Proof-term construction is long, straight-line, and mirrors mathematical
 // names one-for-one — exactly the same tradeoff `nat_prelude` itself makes,
@@ -107,6 +122,7 @@ use crate::trusted_substitution::{SubstitutionError, exact_name};
 /// present — the `pred`/`sub`/`ble` accessors on [`B`] unwrap their
 /// `Option<NameId>` only under that already-checked precondition.
 pub(crate) const SUBSTITUTABLE_NAT_ORDER_THEOREMS: &[&str] = &[
+    "Nat.le_trans",
     "Nat.le_refl",
     "Nat.le_succ",
     "Nat.succ_le_succ",
@@ -1105,6 +1121,26 @@ pub(crate) fn reconstruct(
 fn build(b: &mut B<'_>, rendered: &str) -> Result<ExprId, SubstitutionError> {
     let nat = b.nat_ty();
     let value = match rendered {
+        "Nat.le_trans" => {
+            let a_fv = b.fresh();
+            let a = b.kernel.fvar(a_fv);
+            let bn_fv = b.fresh();
+            let bn = b.kernel.fvar(bn_fv);
+            let c_fv = b.fresh();
+            let c = b.kernel.fvar(c_fv);
+            let h1_fv = b.fresh();
+            let h1 = b.kernel.fvar(h1_fv);
+            let h2_fv = b.fresh();
+            let h2 = b.kernel.fvar(h2_fv);
+            let h1_ty = b.le(a, bn);
+            let h2_ty = b.le(bn, c);
+            let body = b.le_trans_at(a, bn, c, h1, h2);
+            let with_h2 = b.lam_fv(h2_fv, h2_ty, body);
+            let with_h1 = b.lam_fv(h1_fv, h1_ty, with_h2);
+            let with_c = b.lam_fv(c_fv, nat, with_h1);
+            let with_b = b.lam_fv(bn_fv, nat, with_c);
+            b.lam_fv(a_fv, nat, with_b)
+        }
         "Nat.le_refl" => {
             let n_fv = b.fresh();
             let n = b.kernel.fvar(n_fv);
@@ -1593,6 +1629,7 @@ mod tests {
     /// `wire_ty` — never as the value `reconstruct` is allowed to reuse.
     fn field_name(p: &NatPrelude, rendered: &str) -> NameId {
         match rendered {
+            "Nat.le_trans" => p.le_trans,
             "Nat.le_refl" => p.le_refl_thm,
             "Nat.le_succ" => p.le_succ,
             "Nat.succ_le_succ" => p.succ_le_succ,
@@ -1731,6 +1768,7 @@ mod tests {
     #[test]
     fn required_optional_prims_matches_each_names_own_construction() {
         let needs_nothing = [
+            "Nat.le_trans",
             "Nat.le_refl",
             "Nat.le_succ",
             "Nat.succ_le_succ",
