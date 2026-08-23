@@ -719,6 +719,13 @@ parity-docs:
     MEM_LIMIT_GB=4 ./scripts/mem-run.sh python3 scripts/gen-lean-axiom-ledger.py --check
     python3 -m unittest scripts.tests.test_gen_theorem_production_ledger
     MEM_LIMIT_GB=4 ./scripts/mem-run.sh python3 scripts/gen-theorem-production-ledger.py --check
+    # Three doc claims of the shape "`X` is not proved/built here" were FALSE
+    # against the actual construction on 2026-08-22/23 -- `declare_X` sat
+    # later in the same file (or same Rust module) and was wired into the
+    # build sequence. See the script's own docstring for the crisp sub-shape
+    # it catches and what it deliberately does not.
+    python3 -m unittest scripts.tests.test_check_stale_negative_claims
+    python3 scripts/check-stale-negative-claims.py
     python3 -m unittest scripts.tests.test_gen_production_provenance_ledger
     python3 scripts/gen-production-provenance-ledger.py --check
     python3 scripts/gen-gap-ownership.py --check

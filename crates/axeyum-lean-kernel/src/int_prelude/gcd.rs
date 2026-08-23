@@ -701,9 +701,16 @@ pub(super) fn declare_dvd_gcd(d: &mut IntDev<'_>) -> Result<(), KernelError> {
 }
 
 // ---------------------------------------------------------------------------
-// General `Int.neg` ring facts this development did not yet need:
-// `neg_mul`, `mul_neg`, `neg_neg`. Not declared as public theorems (nothing
-// else needs them yet); kept as private proof-term builders.
+// General `Int.neg` ring facts, built here as local proof-term helpers for
+// this module's own inline use: `neg_mul`, `mul_neg`, `neg_neg`.
+//
+// `neg_mul` and `neg_neg` are not declared as public kernel theorems (nothing
+// needs them as such). `Int.mul_neg` **is** one — see
+// `sub::declare_mul_neg` (`sub.rs`), added for `Int.modEq_iff_dvd` and run
+// earlier in the build sequence than anything in this file. The `mul_neg`
+// below is a separate, private proof-term builder kept so the derivations in
+// this module do not round-trip through the public theorem; it is not the
+// same declaration.
 // ---------------------------------------------------------------------------
 
 /// `Eq Int (neg (neg x)) x`, for any `x`.

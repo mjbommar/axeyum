@@ -396,6 +396,16 @@ step lean-axiom-ledger-tests python3 -m unittest scripts.tests.test_lean_axiom_l
 step lean-axiom-ledger python3 scripts/gen-lean-axiom-ledger.py --check
 step theorem-production-ledger-tests python3 -m unittest scripts.tests.test_gen_theorem_production_ledger
 step theorem-production-ledger python3 scripts/gen-theorem-production-ledger.py --check
+# Three doc claims of the shape "`X` is not proved/built here" were FALSE
+# against the actual construction on 2026-08-22/23 -- `declare_X` sat later in
+# the same file (or, in `int_prelude/gcd.rs`, the same module) and was wired
+# into the build sequence. One shipped in three separate agent briefs before
+# anyone read the code it contradicted. This catches the crispest, most
+# literal sub-shape (a bare-name list immediately followed by a present-tense
+# negation) with a same-Rust-module `declare_<name>` scope; see the script's
+# own docstring for what it deliberately does not catch.
+step stale-negative-claims-tests python3 -m unittest scripts.tests.test_check_stale_negative_claims
+step stale-negative-claims python3 scripts/check-stale-negative-claims.py
 step production-provenance-ledger-tests python3 -m unittest scripts.tests.test_gen_production_provenance_ledger
 step production-provenance-ledger python3 scripts/gen-production-provenance-ledger.py --check
 step foundational-resources ./scripts/check-foundational-resources.sh
