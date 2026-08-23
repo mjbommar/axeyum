@@ -124,9 +124,14 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.Equiv.not_zero_one", p.not_zero_one),
         ("Complex.Equiv.not_zero_I", p.not_zero_i),
         ("Complex.conj", p.conj),
+        ("Complex.conj_conj", p.conj_conj),
+        ("Complex.conj_add", p.conj_add),
+        ("Complex.conj_mul", p.conj_mul),
         ("Complex.normSq", p.norm_sq),
         ("Complex.mul_conj", p.mul_conj),
         ("Complex.normSq_nonneg", p.norm_sq_nonneg),
+        ("Complex.normSq_conj", p.norm_sq_conj),
+        ("Complex.normSq_mul", p.norm_sq_mul),
         ("Complex.no_compatible_order", p.no_compatible_order),
     ];
     for (label, name) in named {

@@ -210,6 +210,15 @@ pub struct ComplexPrelude {
 
     /// `Complex.conj : Complex → Complex`.
     pub conj: NameId,
+    /// `Complex.conj_conj : ∀ z, Equiv (conj (conj z)) z` — conjugation is an
+    /// involution.
+    pub conj_conj: NameId,
+    /// `Complex.conj_add : ∀ z w, Equiv (conj (add z w)) (add (conj z) (conj w))`
+    /// — conjugation is additive.
+    pub conj_add: NameId,
+    /// `Complex.conj_mul : ∀ z w, Equiv (conj (mul z w)) (mul (conj z) (conj w))`
+    /// — conjugation is a ring homomorphism, the multiplicative half.
+    pub conj_mul: NameId,
     /// `Complex.normSq : Complex → CReal` — `re z ² + im z ²`, valued in ℝ
     /// because ℂ has no order to be nonneg *in*.
     pub norm_sq: NameId,
@@ -222,6 +231,19 @@ pub struct ComplexPrelude {
     /// `Complex.normSq_nonneg : ∀ z, CReal.le CReal.zero (normSq z)` — the
     /// norm lands in `CReal`'s nonneg cone.
     pub norm_sq_nonneg: NameId,
+    /// `Complex.normSq_conj : ∀ z, CReal.Equiv (normSq (conj z)) (normSq z)` —
+    /// conjugation preserves the norm. Stated over `CReal.Equiv` directly:
+    /// `normSq` is `CReal`-valued, so there is no `Complex.Equiv` to phrase it
+    /// in.
+    pub norm_sq_conj: NameId,
+    /// `Complex.normSq_mul : ∀ z w, CReal.Equiv (normSq (mul z w))
+    /// (CReal.mul (normSq z) (normSq w))` — the norm is multiplicative.
+    ///
+    /// The **Brahmagupta–Fibonacci two-square identity**,
+    /// `(a²+b²)(c²+d²) = (ac−bd)² + (ad+bc)²`, decided by the same ring
+    /// calculus as every law above: a degree-4 commutative-ring identity with
+    /// no analysis in it, once expanded.
+    pub norm_sq_mul: NameId,
 
     /// `Complex.no_compatible_order` — **ℂ admits no ordered-ring structure**,
     /// as a theorem. See the module documentation.
@@ -298,9 +320,14 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         not_zero_one: kernel.name_str(equiv, "not_zero_one"),
         not_zero_i: kernel.name_str(equiv, "not_zero_I"),
         conj: kernel.name_str(complex, "conj"),
+        conj_conj: kernel.name_str(complex, "conj_conj"),
+        conj_add: kernel.name_str(complex, "conj_add"),
+        conj_mul: kernel.name_str(complex, "conj_mul"),
         norm_sq: kernel.name_str(complex, "normSq"),
         mul_conj: kernel.name_str(complex, "mul_conj"),
         norm_sq_nonneg: kernel.name_str(complex, "normSq_nonneg"),
+        norm_sq_conj: kernel.name_str(complex, "normSq_conj"),
+        norm_sq_mul: kernel.name_str(complex, "normSq_mul"),
         no_compatible_order: kernel.name_str(complex, "no_compatible_order"),
     }
 }
@@ -333,7 +360,9 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_congruences(&mut d, prelude)?;
         declare_ring_laws(&mut d, prelude)?;
         declare_pinning(&mut d, prelude)?;
+        declare_conj_laws(&mut d, prelude)?;
         declare_norm(&mut d, prelude)?;
+        declare_norm_conjugation(&mut d, prelude)?;
         declare_no_order(&mut d, prelude)
     })();
     match built {
@@ -1079,42 +1108,50 @@ fn declare_congruences(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kern
     unary(d, p.conj_congr, p.conj, false)
 }
 
+/// A universally-quantified `Complex.Equiv` law, `∀ vars, Equiv (lhs vars)
+/// (rhs vars)`, decided by the ring calculus and declared as a `Theorem`.
+///
+/// Shared by [`declare_ring_laws`] and [`declare_conj_laws`]: both reduce a
+/// `Complex` identity to two `CReal` ring obligations exactly this way, and
+/// the only thing that differs between call sites is which `CExpr`s `build`
+/// produces.
+fn complex_law(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    name: NameId,
+    arity: usize,
+    build: &dyn Fn(&mut IntDev<'_>, &[ExprId]) -> (CExpr, CExpr),
+) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let fvars: Vec<u64> = (0..arity).map(|_| d.fresh_fvar()).collect();
+    let vars: Vec<ExprId> = fvars.iter().map(|&f| d.kernel().fvar(f)).collect();
+    let (lhs, rhs) = build(d, &vars);
+    let body = ring_law_proof(d, p, &lhs, &rhs);
+    let left = render_c(d, p, &lhs);
+    let right = render_c(d, p, &rhs);
+    let claim = zeq(d, p, left, right);
+    let mut value = body;
+    let mut ty = claim;
+    for &f in fvars.iter().rev() {
+        value = d.lam_fv(f, carrier, value);
+        ty = d.pi_fv(f, carrier, ty);
+    }
+    d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// The nine commutative-ring laws, every one decided by the ring calculus.
 fn declare_ring_laws(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
-    let carrier = complex_ty(d, p);
-
-    let law = |d: &mut IntDev<'_>,
-               name: NameId,
-               arity: usize,
-               build: &dyn Fn(&mut IntDev<'_>, &[ExprId]) -> (CExpr, CExpr)|
-     -> Result<(), KernelError> {
-        let fvars: Vec<u64> = (0..arity).map(|_| d.fresh_fvar()).collect();
-        let vars: Vec<ExprId> = fvars.iter().map(|&f| d.kernel().fvar(f)).collect();
-        let (lhs, rhs) = build(d, &vars);
-        let body = ring_law_proof(d, p, &lhs, &rhs);
-        let left = render_c(d, p, &lhs);
-        let right = render_c(d, p, &rhs);
-        let claim = zeq(d, p, left, right);
-        let mut value = body;
-        let mut ty = claim;
-        for &f in fvars.iter().rev() {
-            value = d.lam_fv(f, carrier, value);
-            ty = d.pi_fv(f, carrier, ty);
-        }
-        d.kernel().add_declaration(Declaration::Theorem {
-            name,
-            uparams: vec![],
-            ty,
-            value,
-        })
-    };
-
-    law(d, p.add_comm, 2, &|d, v| {
+    complex_law(d, p, p.add_comm, 2, &|d, v| {
         let z = CExpr::var(d, p, v[0]);
         let w = CExpr::var(d, p, v[1]);
         (CExpr::add(z.clone(), w.clone()), CExpr::add(w, z))
     })?;
-    law(d, p.add_assoc, 3, &|d, v| {
+    complex_law(d, p, p.add_assoc, 3, &|d, v| {
         let z = CExpr::var(d, p, v[0]);
         let w = CExpr::var(d, p, v[1]);
         let u = CExpr::var(d, p, v[2]);
@@ -1123,20 +1160,20 @@ fn declare_ring_laws(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kernel
             CExpr::add(z, CExpr::add(w, u)),
         )
     })?;
-    law(d, p.add_zero, 1, &|d, v| {
+    complex_law(d, p, p.add_zero, 1, &|d, v| {
         let z = CExpr::var(d, p, v[0]);
         (CExpr::add(z.clone(), CExpr::Zero), z)
     })?;
-    law(d, p.add_neg, 1, &|d, v| {
+    complex_law(d, p, p.add_neg, 1, &|d, v| {
         let z = CExpr::var(d, p, v[0]);
         (CExpr::add(z.clone(), CExpr::neg(z)), CExpr::Zero)
     })?;
-    law(d, p.mul_comm, 2, &|d, v| {
+    complex_law(d, p, p.mul_comm, 2, &|d, v| {
         let z = CExpr::var(d, p, v[0]);
         let w = CExpr::var(d, p, v[1]);
         (CExpr::mul(z.clone(), w.clone()), CExpr::mul(w, z))
     })?;
-    law(d, p.mul_assoc, 3, &|d, v| {
+    complex_law(d, p, p.mul_assoc, 3, &|d, v| {
         let z = CExpr::var(d, p, v[0]);
         let w = CExpr::var(d, p, v[1]);
         let u = CExpr::var(d, p, v[2]);
@@ -1145,21 +1182,50 @@ fn declare_ring_laws(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kernel
             CExpr::mul(z, CExpr::mul(w, u)),
         )
     })?;
-    law(d, p.mul_one, 1, &|d, v| {
+    complex_law(d, p, p.mul_one, 1, &|d, v| {
         let z = CExpr::var(d, p, v[0]);
         (CExpr::mul(z.clone(), CExpr::One), z)
     })?;
-    law(d, p.mul_zero, 1, &|d, v| {
+    complex_law(d, p, p.mul_zero, 1, &|d, v| {
         let z = CExpr::var(d, p, v[0]);
         (CExpr::mul(z, CExpr::Zero), CExpr::Zero)
     })?;
-    law(d, p.left_distrib, 3, &|d, v| {
+    complex_law(d, p, p.left_distrib, 3, &|d, v| {
         let z = CExpr::var(d, p, v[0]);
         let w = CExpr::var(d, p, v[1]);
         let u = CExpr::var(d, p, v[2]);
         (
             CExpr::mul(z.clone(), CExpr::add(w.clone(), u.clone())),
             CExpr::add(CExpr::mul(z.clone(), w), CExpr::mul(z, u)),
+        )
+    })
+}
+
+/// `conj_conj`, `conj_add`, `conj_mul`: conjugation is an involutive ring
+/// homomorphism.
+///
+/// Each is a `Complex.Equiv` identity over the *same* commutative-ring
+/// calculus as [`declare_ring_laws`] — `CExpr::Conj` is already a case of
+/// [`parts`], so nothing new is needed to decide any of the three.
+fn declare_conj_laws(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    complex_law(d, p, p.conj_conj, 1, &|d, v| {
+        let z = CExpr::var(d, p, v[0]);
+        (CExpr::conj(CExpr::conj(z.clone())), z)
+    })?;
+    complex_law(d, p, p.conj_add, 2, &|d, v| {
+        let z = CExpr::var(d, p, v[0]);
+        let w = CExpr::var(d, p, v[1]);
+        (
+            CExpr::conj(CExpr::add(z.clone(), w.clone())),
+            CExpr::add(CExpr::conj(z), CExpr::conj(w)),
+        )
+    })?;
+    complex_law(d, p, p.conj_mul, 2, &|d, v| {
+        let z = CExpr::var(d, p, v[0]);
+        let w = CExpr::var(d, p, v[1]);
+        (
+            CExpr::conj(CExpr::mul(z.clone(), w.clone())),
+            CExpr::mul(CExpr::conj(z), CExpr::conj(w)),
         )
     })
 }
@@ -1325,6 +1391,121 @@ fn declare_norm(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError
         };
         d.kernel().add_declaration(Declaration::Theorem {
             name: p.norm_sq_nonneg,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// `normSq_conj` and `normSq_mul`: how the norm interacts with conjugation
+/// and multiplication.
+///
+/// Both are stated over `CReal.Equiv` directly rather than `Complex.Equiv` —
+/// `normSq` is `CReal`-valued, so [`ring_law_proof`]'s `And.intro` of two
+/// components does not apply; each is a single call to the underlying
+/// [`ring_proof`] on the unfolded `RExpr` forms, exactly the pattern
+/// [`declare_norm`]'s `mul_conj` already used for its real component.
+fn declare_norm_conjugation(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    // normSq_conj : CReal.Equiv (normSq (conj z)) (normSq z)
+    //
+    // normSq (conj z) unfolds to a·a + (−b)·(−b); normSq z to a·a + b·b. The
+    // ring calculus cancels the double negation, the same move `mul_conj`
+    // already relies on.
+    {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let a = re_of(d, p, z);
+        let b = im_of(d, p, z);
+        let conj_z = d.const_app(p.conj, &[z]);
+        let norm_conj = d.const_app(p.norm_sq, &[conj_z]);
+        let norm_z = d.const_app(p.norm_sq, &[z]);
+
+        let lhs = RExpr::add(
+            RExpr::mul(RExpr::Atom(a), RExpr::Atom(a)),
+            RExpr::mul(RExpr::neg(RExpr::Atom(b)), RExpr::neg(RExpr::Atom(b))),
+        );
+        let rhs = RExpr::add(
+            RExpr::mul(RExpr::Atom(a), RExpr::Atom(a)),
+            RExpr::mul(RExpr::Atom(b), RExpr::Atom(b)),
+        );
+        let proof = ring_proof(d, creal, &lhs, &rhs);
+        let value = d.lam_fv(z_fv, carrier, proof);
+        let ty = {
+            let claim = ceq(d, creal, norm_conj, norm_z);
+            d.pi_fv(z_fv, carrier, claim)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.norm_sq_conj,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // normSq_mul : CReal.Equiv (normSq (mul z w)) (CReal.mul (normSq z) (normSq w))
+    //
+    // The Brahmagupta-Fibonacci two-square identity:
+    //   (a*c - b*e)^2 + (a*e + b*c)^2 = (a*a + b*b) * (c*c + e*e)
+    // Both sides expand to the same four degree-4 monomials
+    // {a²c², a²e², b²c², b²e²}; the cross terms ±2·a·c·b·e cancel pairwise,
+    // exactly the multiset cancellation the ring calculus already performs.
+    {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let w_fv = d.fresh_fvar();
+        let w = d.kernel().fvar(w_fv);
+        let a = re_of(d, p, z);
+        let b = im_of(d, p, z);
+        let c = re_of(d, p, w);
+        let e = im_of(d, p, w);
+
+        let mul_zw = d.const_app(p.mul, &[z, w]);
+        let norm_mul = d.const_app(p.norm_sq, &[mul_zw]);
+        let norm_z = d.const_app(p.norm_sq, &[z]);
+        let norm_w = d.const_app(p.norm_sq, &[w]);
+        let norm_prod = cmul(d, creal, norm_z, norm_w);
+
+        // normSq (mul z w) unfolds to (a·c + −(b·e))·(a·c + −(b·e))
+        //                            + (a·e + b·c)·(a·e + b·c)
+        let ac = RExpr::mul(RExpr::Atom(a), RExpr::Atom(c));
+        let be = RExpr::mul(RExpr::Atom(b), RExpr::Atom(e));
+        let ae = RExpr::mul(RExpr::Atom(a), RExpr::Atom(e));
+        let bc = RExpr::mul(RExpr::Atom(b), RExpr::Atom(c));
+        let real_part = RExpr::add(ac, RExpr::neg(be));
+        let imag_part = RExpr::add(ae, bc);
+        let lhs = RExpr::add(
+            RExpr::mul(real_part.clone(), real_part),
+            RExpr::mul(imag_part.clone(), imag_part),
+        );
+
+        // normSq z * normSq w unfolds to (a·a + b·b) · (c·c + e·e)
+        let aa_bb = RExpr::add(
+            RExpr::mul(RExpr::Atom(a), RExpr::Atom(a)),
+            RExpr::mul(RExpr::Atom(b), RExpr::Atom(b)),
+        );
+        let cc_ee = RExpr::add(
+            RExpr::mul(RExpr::Atom(c), RExpr::Atom(c)),
+            RExpr::mul(RExpr::Atom(e), RExpr::Atom(e)),
+        );
+        let rhs = RExpr::mul(aa_bb, cc_ee);
+
+        let proof = ring_proof(d, creal, &lhs, &rhs);
+        let value = {
+            let with_w = d.lam_fv(w_fv, carrier, proof);
+            d.lam_fv(z_fv, carrier, with_w)
+        };
+        let ty = {
+            let claim = ceq(d, creal, norm_mul, norm_prod);
+            let with_w = d.pi_fv(w_fv, carrier, claim);
+            d.pi_fv(z_fv, carrier, with_w)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.norm_sq_mul,
             uparams: vec![],
             ty,
             value,
