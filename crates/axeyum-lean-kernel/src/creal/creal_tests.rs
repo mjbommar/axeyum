@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 104] = [
+    let expected: [(&str, crate::NameId, &str); 107] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -202,6 +202,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.converges_of_const", p.converges_of_const, "theorem"),
         ("CReal.Cauchy", p.cauchy, "def"),
         ("CReal.converges_cauchy", p.converges_cauchy, "theorem"),
+        // Algebra of limits (ADR-0512 phase R9, continued): the shift bridge
+        // (`half_shift_le`, widened to `pub(super)` in `completeness.rs`) let
+        // `convergence.rs` land these without re-deriving it.
+        ("CReal.converges_add", p.converges_add, "theorem"),
+        ("CReal.converges_neg", p.converges_neg, "theorem"),
+        ("CReal.converges_sub", p.converges_sub, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel

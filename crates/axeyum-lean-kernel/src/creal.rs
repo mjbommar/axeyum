@@ -750,6 +750,32 @@ pub struct CRealPrelude {
     pub cauchy: NameId,
     /// `CReal.converges_cauchy : ∀ f L, Converges f L → Cauchy f`.
     pub converges_cauchy: NameId,
+
+    // --- algebra of limits (ADR-0512 phase R9, continued) --------------------
+    /// `CReal.converges_add : ∀ f g L M, Converges f L → Converges g M →
+    /// Converges (fun n => add (f n) (g n)) (add L M)`.
+    ///
+    /// The first algebra-of-limits theorem, and the one the previous slice's
+    /// blocker was about: `add`'s Bishop shift means `seq (add (f n) (g n)) n`
+    /// samples `f n` and `g n` at `shift n`, not at `n`, so each summand needs
+    /// bridging through its own regularity before `Converges`'s hypotheses
+    /// apply. See [`convergence`](self::convergence)'s module documentation
+    /// for the bridge and the rate constant it costs.
+    pub converges_add: NameId,
+    /// `CReal.converges_neg : ∀ f L, Converges f L → Converges (fun n => neg
+    /// (f n)) (neg L)`.
+    ///
+    /// Cheap: `neg` is pointwise (no index shift), so this is one
+    /// `Rat.bounds_neg` plus the same rewrite [`Self::neg_congr`] already
+    /// uses, wrapped in `Converges`'s existential.
+    pub converges_neg: NameId,
+    /// `CReal.converges_sub : ∀ f g L M, Converges f L → Converges g M →
+    /// Converges (fun n => add (f n) (neg (g n))) (add L (neg M))`.
+    ///
+    /// Immediate from [`Self::converges_add`] and [`Self::converges_neg`].
+    /// There is no `CReal.sub` operation in this development, so the
+    /// difference is spelled `add _ (neg _)` throughout, honestly.
+    pub converges_sub: NameId,
 }
 
 impl CRealPrelude {
@@ -915,6 +941,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_of_const: kernel.name_str(creal, "converges_of_const"),
         cauchy: kernel.name_str(creal, "Cauchy"),
         converges_cauchy: kernel.name_str(creal, "converges_cauchy"),
+        converges_add: kernel.name_str(creal, "converges_add"),
+        converges_neg: kernel.name_str(creal, "converges_neg"),
+        converges_sub: kernel.name_str(creal, "converges_sub"),
     }
 }
 

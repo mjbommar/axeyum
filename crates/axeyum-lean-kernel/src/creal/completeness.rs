@@ -92,7 +92,15 @@ fn seq_of_creal_ty(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// left side with a nonnegative zero, fuse it into a doubled fraction, then
 /// read the doubled fraction back at the un-shifted denominator via
 /// `Rat.natDivSucc_halve`.
-fn half_shift_le(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
+///
+/// `pub(super)`, not private: [`super::convergence`]'s algebra-of-limits
+/// theorems need exactly this inequality to bridge a single real's own sample
+/// at `n` against its sample at `shift n` — the blocker the previous slice
+/// reported in that module's header. `completeness` and `convergence` are
+/// *siblings*, both children of `creal`, so `pub(super)` here (visible in
+/// `creal` and all of `creal`'s descendants) is the narrowest modifier that
+/// reaches across, and it is reused rather than re-derived.
+pub(super) fn half_shift_le(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
     let rat = p.rat;
     let sm = shift(d, m);
     let one_sm = div_succ(d, p, 1, sm);
