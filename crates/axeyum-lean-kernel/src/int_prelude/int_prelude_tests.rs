@@ -135,6 +135,7 @@ fn int_prelude_admits_all_declarations() {
         p.emod,
         p.dvd,
         p.mod_eq,
+        p.gcd,
     ] {
         assert!(
             matches!(
@@ -174,8 +175,15 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 51] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 58] {
     [
+        p.nat_abs_mul,
+        p.dvd_of_nat_abs_dvd,
+        p.nat_abs_dvd_nat_abs_of_dvd,
+        p.gcd_dvd_left,
+        p.gcd_dvd_right,
+        p.dvd_gcd,
+        p.gcd_eq_gcd_ab,
         p.euclidean_decomposition,
         p.of_nat_nat_abs_of_nonneg,
         p.euclid_of_nat,

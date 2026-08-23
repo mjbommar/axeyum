@@ -130,6 +130,7 @@ use crate::name::NameId;
 mod algebra;
 mod bezout;
 mod ble;
+mod choose;
 mod defs;
 mod divisibility;
 mod division;
@@ -151,6 +152,7 @@ use algebra::{
 };
 use bezout::{declare_euclid_lemma, declare_gcd_bezout};
 use ble::declare_boolean_le;
+use choose::declare_choose_all;
 use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
     declare_executable_division, declare_finite_ranges, declare_subtraction,
@@ -687,6 +689,25 @@ pub struct NatPrelude {
     /// [`least_divisor_search`](Self::least_divisor_search); minimality is
     /// exactly what makes it prime.
     pub exists_prime_dvd: NameId,
+
+    // --- binomial coefficients (`choose.rs`) --------------------------------
+    /// `Nat.choose : Nat → Nat → Nat`, by structural recursion on both
+    /// arguments: `choose n 0 ≡ 1`, `choose 0 (succ k) ≡ 0`,
+    /// `choose (succ n) (succ k) ≡ choose n k + choose n (succ k)`.
+    pub choose: NameId,
+    /// `Nat.choose_zero_right : ∀ n, choose n 0 = 1`.
+    pub choose_zero_right: NameId,
+    /// `Nat.choose_succ_succ : ∀ n k, choose (succ n) (succ k) = choose n k + choose n (succ k)`
+    /// — Pascal's rule.
+    pub choose_succ_succ: NameId,
+    /// `Nat.zero_choose_succ : ∀ k, choose 0 (succ k) = 0`.
+    pub zero_choose_succ: NameId,
+    /// `Nat.choose_succ_self_eq_zero : ∀ n, choose n (succ n) = 0`.
+    pub choose_succ_self_eq_zero: NameId,
+    /// `Nat.choose_self : ∀ n, choose n n = 1`.
+    pub choose_self: NameId,
+    /// `Nat.choose_symm : ∀ n k, Le k n → choose n k = choose n (sub n k)`.
+    pub choose_symm: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -932,6 +953,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             two_le_succ_or_eq_one: kernel.name_str(nat, "two_le_succ_or_eq_one"),
             least_divisor_search: kernel.name_str(nat, "least_divisor_search"),
             exists_prime_dvd: kernel.name_str(nat, "exists_prime_dvd"),
+            choose: kernel.name_str(nat, "choose"),
+            choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
+            choose_succ_succ: kernel.name_str(nat, "choose_succ_succ"),
+            zero_choose_succ: kernel.name_str(nat, "zero_choose_succ"),
+            choose_succ_self_eq_zero: kernel.name_str(nat, "choose_succ_self_eq_zero"),
+            choose_self: kernel.name_str(nat, "choose_self"),
+            choose_symm: kernel.name_str(nat, "choose_symm"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -959,6 +987,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_modular_congruence(&mut d, &p)?;
         declare_primes(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
+        declare_choose_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

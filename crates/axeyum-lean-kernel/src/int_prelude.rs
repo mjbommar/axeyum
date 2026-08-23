@@ -80,6 +80,7 @@ mod defs;
 mod division;
 mod dvd;
 mod euclid;
+mod gcd;
 mod modeq;
 mod nat_abs;
 pub(crate) mod ops;
@@ -379,6 +380,36 @@ pub struct IntPrelude {
     /// magnitude.
     pub nat_abs_neg: NameId,
 
+    // --- `Int.gcd`, Euclid's Book VII transported from `ℕ` -------------------
+    /// `Int.gcd a b := Nat.gcd (natAbs a) (natAbs b)` — a `Nat`-valued gcd, as
+    /// in Mathlib.
+    pub gcd: NameId,
+    /// `nat_abs_mul : ∀ a b, natAbs (a*b) = natAbs a * natAbs b` — the
+    /// multiplicativity of `natAbs` the sign bridges below rest on.
+    pub nat_abs_mul: NameId,
+    /// `dvd_of_nat_abs_dvd : ∀ (x y : Int), natAbs x ∣ natAbs y → x ∣ y` — a
+    /// `Nat` divisibility of two magnitudes lifts to `Int` divisibility of the
+    /// signed values, **regardless of either side's sign**. The general form
+    /// of the bridge the ℤ gcd development needs; `gcd_dvd_left`/
+    /// `gcd_dvd_right` and the closing step of `dvd_gcd` are both instances of
+    /// it.
+    pub dvd_of_nat_abs_dvd: NameId,
+    /// `nat_abs_dvd_nat_abs_of_dvd : ∀ a b, a ∣ b → natAbs a ∣ natAbs b` — the
+    /// reverse bridge, feeding `Nat.dvd_gcd` from `Int.dvd` hypotheses.
+    pub nat_abs_dvd_nat_abs_of_dvd: NameId,
+    /// `gcd_dvd_left : ∀ a b, ofNat (gcd a b) ∣ a`.
+    pub gcd_dvd_left: NameId,
+    /// `gcd_dvd_right : ∀ a b, ofNat (gcd a b) ∣ b`.
+    pub gcd_dvd_right: NameId,
+    /// `dvd_gcd : ∀ c a b, c ∣ a → c ∣ b → c ∣ ofNat (gcd a b)` — together with
+    /// `gcd_dvd_left`/`gcd_dvd_right`, the universal property that makes `gcd`
+    /// *the* greatest common divisor.
+    pub dvd_gcd: NameId,
+    /// `gcd_eq_gcd_ab : ∀ a b, ∃ u v, ofNat (gcd a b) = a*u + b*v` — Bézout's
+    /// identity over `ℤ` (Elements VII.2, strong form), transported from
+    /// `Nat.gcd_bezout` through `natAbs`.
+    pub gcd_eq_gcd_ab: NameId,
+
     // --- the rationals, as a normalised structure -----------------------------
     /// `Rat : Type` — a normalised `num/den` pair carrying its own positivity
     /// and reducedness proofs. Not a quotient: this kernel has no `Quot.sound`.
@@ -520,6 +551,14 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
         nat_abs_neg: child(kernel, "nat_abs_neg"),
+        gcd: child(kernel, "gcd"),
+        nat_abs_mul: child(kernel, "nat_abs_mul"),
+        dvd_of_nat_abs_dvd: child(kernel, "dvd_of_nat_abs_dvd"),
+        nat_abs_dvd_nat_abs_of_dvd: child(kernel, "nat_abs_dvd_nat_abs_of_dvd"),
+        gcd_dvd_left: child(kernel, "gcd_dvd_left"),
+        gcd_dvd_right: child(kernel, "gcd_dvd_right"),
+        dvd_gcd: child(kernel, "dvd_gcd"),
+        gcd_eq_gcd_ab: child(kernel, "gcd_eq_gcd_ab"),
         rat,
         rat_mk: kernel.name_str(rat, "mk"),
         rat_normalize: kernel.name_str(rat, "normalize"),
@@ -623,6 +662,13 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
         nat_abs::declare_nat_abs_neg(&mut d)?;
+        gcd::declare_gcd(&mut d)?;
+        gcd::declare_nat_abs_mul(&mut d)?;
+        gcd::declare_dvd_of_nat_abs_dvd(&mut d)?;
+        gcd::declare_nat_abs_dvd_nat_abs_of_dvd(&mut d)?;
+        gcd::declare_gcd_dvd_left_right(&mut d)?;
+        gcd::declare_dvd_gcd(&mut d)?;
+        gcd::declare_gcd_eq_gcd_ab(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;

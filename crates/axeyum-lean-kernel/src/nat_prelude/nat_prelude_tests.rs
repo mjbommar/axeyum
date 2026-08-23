@@ -102,6 +102,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq,
         p.valuation_at,
         p.lt_well_founded,
+        p.choose,
     ]
 }
 
@@ -228,6 +229,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.two_le_succ_or_eq_one,
         p.least_divisor_search,
         p.exists_prime_dvd,
+        p.choose_zero_right,
+        p.choose_succ_succ,
+        p.zero_choose_succ,
+        p.choose_succ_self_eq_zero,
+        p.choose_self,
+        p.choose_symm,
     ]
 }
 
@@ -377,6 +384,87 @@ fn arithmetic_reduces_on_numerals() {
         !f.k.def_eq(seven_sub_three, five),
         "7 - 3 must NOT be def-eq to 5"
     );
+}
+
+/// `Nat.choose` computes Pascal's triangle by pure reduction on numerals, and
+/// `choose_symm` is checkable at a genuinely non-trivial (non-self-symmetric)
+/// point, not just admitted vacuously.
+#[test]
+fn choose_computes_and_symm_holds_at_a_concrete_point() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let six = f.num(6);
+    let ten = f.num(10);
+
+    let c00 = f.choose(zero, zero);
+    assert!(f.k.def_eq(c00, one), "choose 0 0 = 1");
+    let c40 = f.choose(four, zero);
+    assert!(f.k.def_eq(c40, one), "choose 4 0 = 1");
+    let c03 = f.choose(zero, three);
+    assert!(f.k.def_eq(c03, zero), "choose 0 3 = 0");
+    let c44 = f.choose(four, four);
+    assert!(f.k.def_eq(c44, one), "choose 4 4 = 1");
+    let c42 = f.choose(four, two);
+    assert!(f.k.def_eq(c42, six), "choose 4 2 = 6");
+    let c52 = f.choose(five, two);
+    assert!(f.k.def_eq(c52, ten), "choose 5 2 = 10");
+    let c41 = f.choose(four, one);
+    assert!(f.k.def_eq(c41, four), "choose 4 1 = 4");
+    let c43 = f.choose(four, three);
+    assert!(f.k.def_eq(c43, four), "choose 4 3 = 4");
+
+    // NEGATIVE reduction control.
+    let c42_again = f.choose(four, two);
+    assert!(
+        !f.k.def_eq(c42_again, five),
+        "choose 4 2 must NOT be def-eq to 5"
+    );
+
+    // choose_symm at (n=4, k=1): a non-diagonal, non-edge point, so this
+    // actually exercises the strict `k' < m` case inside the proof, not just
+    // the `k = 0` or `k = n` shortcuts.
+    let four_minus_one = f.add(one, three);
+    let sum_eq = f.refl(four_minus_one);
+    let le_1_4 = f.lemma(p.le_intro, &[one, four, three, sum_eq]);
+    let symm_proof = f.lemma(p.choose_symm, &[four, one, le_1_4]);
+    let inferred = f
+        .k
+        .infer(symm_proof)
+        .unwrap_or_else(|e| panic!("choose_symm(4,1) instance should infer: {}", f.explain(&e)));
+    let sub_4_1 = f.sub(four, one);
+    let expected = {
+        let lhs = f.choose(four, one);
+        let rhs = f.choose(four, sub_4_1);
+        f.eq(lhs, rhs)
+    };
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "choose_symm(4,1) should state choose 4 1 = choose 4 (4-1)"
+    );
+    assert!(f.k.def_eq(sub_4_1, three), "4 - 1 = 3");
+
+    for name in [
+        p.choose,
+        p.choose_zero_right,
+        p.choose_succ_succ,
+        p.zero_choose_succ,
+        p.choose_succ_self_eq_zero,
+        p.choose_self,
+        p.choose_symm,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
 }
 
 /// Checked predecessor elimination supports successor injectivity and both
@@ -3468,7 +3556,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        19 + 121,
+        20 + 127,
         "every promised definition and theorem must be rendered"
     );
 }

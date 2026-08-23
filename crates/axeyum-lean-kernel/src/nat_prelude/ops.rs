@@ -388,6 +388,12 @@ pub trait NatOps {
         self.const_app(name, &[n])
     }
 
+    /// `Nat.choose n k`, the binomial coefficient.
+    fn choose(&mut self, n: ExprId, k: ExprId) -> ExprId {
+        let name = self.prelude().choose;
+        self.const_app(name, &[n, k])
+    }
+
     /// `Nat.le x y` (the `Prop` `x ≤ y`).
     fn le(&mut self, x: ExprId, y: ExprId) -> ExprId {
         let f = self.prelude().le;
