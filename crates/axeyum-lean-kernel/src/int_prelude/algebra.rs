@@ -257,6 +257,49 @@ pub(super) fn declare_algebra_theorems(d: &mut IntDev<'_>) -> Result<(), KernelE
         (stmt, proof)
     })?;
 
+    // mul_pos : ∀ a b, 0 < a → 0 < b → 0 < a*b. Same branch shape as
+    // `mul_nonneg` — only `(OfNat, OfNat)` survives — but the surviving branch
+    // needs an actual argument, because no strict positive-product lemma
+    // exists over `Nat` here: `0 < m` is `Nat.le 1 m`, so `m*1 ≤ m*n`
+    // (`Nat.mul_le_mul_left` at the hypothesis `1 ≤ n`) rewritten along
+    // `Nat.mul_one` gives `m ≤ m*n`, and `Nat.le_trans` chains that under
+    // `1 ≤ m` to `1 ≤ m*n`, i.e. `0 < m*n`. No new `Nat` lemma.
+    d.int_theorem(p.mul_pos, 2, &|d, v| {
+        let stmt = statements::mul_pos(d, v);
+        let proof = case_split(d, v, &statements::mul_pos, &|d, b| {
+            let left = d.branch_term(b[0]);
+            let right = d.branch_term(b[1]);
+            let zero = d.izero();
+            let first = d.ilt(zero, left);
+            let second = d.ilt(zero, right);
+            let product = d.imul(left, right);
+            let goal = d.ilt(zero, product);
+            let (m, n) = (b[0].1, b[1].1);
+            with_hypotheses(d, &[first, second], &|d, h| match (b[0].0, b[1].0) {
+                (Shape::OfNat, Shape::OfNat) => {
+                    let one = d.num(1);
+                    let m1 = NatOps::mul(d, m, one);
+                    let mn = NatOps::mul(d, m, n);
+                    let step1 = {
+                        let name = d.int().nat.mul_le_mul_left;
+                        d.const_app(name, &[m, one, n, h[1]])
+                    };
+                    let mul_one_eq = {
+                        let name = d.int().nat.mul_one;
+                        d.const_app(name, &[m])
+                    };
+                    let rewritten =
+                        d.nat_rewrite(m1, m, mul_one_eq, step1, &|d, t| NatOps::le(d, t, mn));
+                    let name = d.int().nat.le_trans;
+                    d.const_app(name, &[one, m, mn, h[0], rewritten])
+                }
+                (Shape::OfNat, Shape::NegSucc) => d.absurd(goal, h[1]),
+                (Shape::NegSucc, _) => d.absurd(goal, h[0]),
+            })
+        });
+        (stmt, proof)
+    })?;
+
     // sq_nonneg : ∀ a, 0 ≤ a*a. Unconditional, unlike `mul_nonneg` — and the
     // reason it is unconditional is structural rather than argued: `Int.mul`
     // sends *both* same-sign branches into `Int.ofNat` (`ofNat m * ofNat m` is

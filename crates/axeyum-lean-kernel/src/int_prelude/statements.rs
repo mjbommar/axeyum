@@ -216,6 +216,17 @@ pub(super) fn mul_nonneg(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     d.arrow(first, after_second)
 }
 
+/// `lt zero a → lt zero b → lt zero (mul a b)`.
+pub(super) fn mul_pos(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
+    let zero = d.izero();
+    let product = d.imul(v[0], v[1]);
+    let conclusion = d.ilt(zero, product);
+    let second = d.ilt(zero, v[1]);
+    let first = d.ilt(zero, v[0]);
+    let after_second = d.arrow(second, conclusion);
+    d.arrow(first, after_second)
+}
+
 /// `le zero (mul a a)`.
 pub(super) fn sq_nonneg(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     let zero = d.izero();

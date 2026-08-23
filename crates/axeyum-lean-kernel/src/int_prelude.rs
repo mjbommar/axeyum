@@ -277,6 +277,10 @@ pub struct IntPrelude {
     pub mul_sub: NameId,
     /// `mul_nonneg : ∀ (a b : Int), le zero a → le zero b → le zero (mul a b)`.
     pub mul_nonneg: NameId,
+    /// `mul_pos : ∀ (a b : Int), lt zero a → lt zero b → lt zero (mul a b)` —
+    /// the strict form `mul_nonneg` lacked; `crt_unique` used to take
+    /// `0 < m*n` as an explicit hypothesis for exactly this reason.
+    pub mul_pos: NameId,
     /// `sq_nonneg : ∀ (a : Int), le zero (mul a a)` — *unconditional*
     /// square-nonnegativity, sign-independent (unlike [`Self::mul_nonneg`],
     /// which needs both factors nonnegative). This is the nonnegativity
@@ -402,6 +406,21 @@ pub struct IntPrelude {
     pub gcd_dvd_left: NameId,
     /// `gcd_dvd_right : ∀ a b, ofNat (gcd a b) ∣ b`.
     pub gcd_dvd_right: NameId,
+    /// `gcd_comm : ∀ a b, Eq Nat (gcd a b) (gcd b a)` — proved by mutual
+    /// `Nat.dvd_gcd`/`Nat.gcd_dvd_left`/`Nat.gcd_dvd_right` plus a general
+    /// antisymmetry of `Nat.dvd` this development had not needed before
+    /// (`Nat.le_of_dvd` + `Nat.one_le_of_dvd_pos` + `Nat.le_antisymm`, zero
+    /// case by `Nat.zero_mul`), not by re-deriving Euclid's algorithm.
+    pub gcd_comm: NameId,
+    /// `gcd_one_right : ∀ a, Eq Nat (gcd a one) one` — `ofNat (gcd a 1) ∣ 1`
+    /// (`gcd_dvd_right`) is already a `Nat` divisor of `1`, so
+    /// `Nat.eq_one_of_dvd_one` closes it directly.
+    pub gcd_one_right: NameId,
+    /// `gcd_zero_right : ∀ a, Eq Nat (gcd a zero) (natAbs a)` — `gcd a 0`
+    /// divides `natAbs a` (`gcd_dvd_left`) and `natAbs a` divides `gcd a 0`
+    /// (`Nat.dvd_gcd` from `Nat.dvd_refl`/`Nat.dvd_zero`), closed by the same
+    /// `Nat.dvd` antisymmetry `gcd_comm` uses.
+    pub gcd_zero_right: NameId,
     /// `dvd_gcd : ∀ c a b, c ∣ a → c ∣ b → c ∣ ofNat (gcd a b)` — together with
     /// `gcd_dvd_left`/`gcd_dvd_right`, the universal property that makes `gcd`
     /// *the* greatest common divisor.
@@ -425,13 +444,24 @@ pub struct IntPrelude {
     /// mirroring `Nat`'s own inline convention (no `Prime` name exists over
     /// either carrier).
     pub euclid_lemma: NameId,
+    /// `euclid_infinitude : ∀ n, ∃ p, n < p ∧
+    /// (2 ≤ natAbs p ∧ ∀ x, x ∣ natAbs p → x = 1 ∨ x = natAbs p)` — Euclid's
+    /// theorem (infinitude of primes), transported from `Nat.exists_prime_gt`.
+    /// No `Prime` name is introduced on either carrier — primality stays
+    /// inline, mirroring `euclid_lemma`'s own convention (`gcd.rs`'s doc
+    /// comment on `declare_euclid_infinitude` has the full reasoning).
+    pub euclid_infinitude: NameId,
 
     // --- the Chinese Remainder Theorem ----------------------------------------
     /// `crt_exists : ∀ m n a b, 0 < m → 0 < n → Coprime m n →
     /// ∃ x, ModEq m x a ∧ ModEq n x b`.
     pub crt_exists: NameId,
-    /// `crt_unique : ∀ m n x y, 0 < m → 0 < n → 0 < m*n → Coprime m n →
+    /// `crt_unique : ∀ m n x y, 0 < m → 0 < n → Coprime m n →
     /// ModEq m x y → ModEq n x y → ModEq (m*n) x y`.
+    ///
+    /// The `0 < m*n` hypothesis this once carried is GONE: `Int.mul_pos` now
+    /// derives it internally from `0 < m` and `0 < n`. Strictly fewer
+    /// hypotheses, same conclusion.
     pub crt_unique: NameId,
 
     // --- the rationals, as a normalised structure -----------------------------
@@ -544,6 +574,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mul_neg: child(kernel, "mul_neg"),
         mul_sub: child(kernel, "mul_sub"),
         mul_nonneg: child(kernel, "mul_nonneg"),
+        mul_pos: child(kernel, "mul_pos"),
         sq_nonneg: child(kernel, "sq_nonneg"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
@@ -581,12 +612,16 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         nat_abs_dvd_nat_abs_of_dvd: child(kernel, "nat_abs_dvd_nat_abs_of_dvd"),
         gcd_dvd_left: child(kernel, "gcd_dvd_left"),
         gcd_dvd_right: child(kernel, "gcd_dvd_right"),
+        gcd_comm: child(kernel, "gcd_comm"),
+        gcd_one_right: child(kernel, "gcd_one_right"),
+        gcd_zero_right: child(kernel, "gcd_zero_right"),
         dvd_gcd: child(kernel, "dvd_gcd"),
         gcd_eq_gcd_ab: child(kernel, "gcd_eq_gcd_ab"),
         coprime: child(kernel, "Coprime"),
         coprime_of_bezout_one: child(kernel, "coprime_of_bezout_one"),
         gauss_lemma: child(kernel, "gauss_lemma"),
         euclid_lemma: child(kernel, "euclid_lemma"),
+        euclid_infinitude: child(kernel, "euclid_infinitude"),
         crt_exists: child(kernel, "crt_exists"),
         crt_unique: child(kernel, "crt_unique"),
         rat,
@@ -693,6 +728,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
         nat_abs::declare_nat_abs_neg(&mut d)?;
         gcd::declare_gcd(&mut d)?;
+        gcd::declare_gcd_comm(&mut d)?;
+        gcd::declare_gcd_one_zero_right(&mut d)?;
         gcd::declare_nat_abs_mul(&mut d)?;
         gcd::declare_dvd_of_nat_abs_dvd(&mut d)?;
         gcd::declare_nat_abs_dvd_nat_abs_of_dvd(&mut d)?;
@@ -703,6 +740,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_coprime_of_bezout_one(&mut d)?;
         gcd::declare_gauss_lemma(&mut d)?;
         gcd::declare_euclid_lemma(&mut d)?;
+        gcd::declare_euclid_infinitude(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         rat::declare_rat(&mut d)?;

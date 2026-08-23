@@ -42,7 +42,7 @@ use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
 
 use super::defs::DERIVED_HEIGHT;
-use super::ops::{Branch, IntDev, Shape, case_split};
+use super::ops::{Branch, IntDev, Shape, case_split, exists_elim};
 
 // ---------------------------------------------------------------------------
 // Small local term-building helpers.
@@ -184,6 +184,188 @@ pub(super) fn declare_gcd(d: &mut IntDev<'_>) -> Result<(), KernelError> {
         value,
         hint: crate::env::ReducibilityHint::Regular(6),
     })
+}
+
+// ---------------------------------------------------------------------------
+// `Nat.dvd` antisymmetry — the shared engine behind `gcd_comm` and
+// `gcd_zero_right`, neither of which has a ready-made `Nat.gcd_comm` or
+// `Nat.gcd_zero_right` to transport (this development has no such lemma; only
+// `gcd_zero_left`, `gcd_dvd_left/right`, and `dvd_gcd`).
+// ---------------------------------------------------------------------------
+
+/// `fun (h1 : ty1) (h2 : ty2) => body(h1, h2)`.
+fn with_two_hypotheses(
+    d: &mut IntDev<'_>,
+    ty1: ExprId,
+    ty2: ExprId,
+    body: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let inner = body(d, h1, h2);
+    let with_h2 = d.lam_fv(h2_fv, ty2, inner);
+    d.lam_fv(h1_fv, ty1, with_h2)
+}
+
+/// From `hxy : Nat.dvd x y` and `hyx : Nat.dvd y x`, derive `Eq Nat x y`.
+///
+/// A general antisymmetry of `Nat.dvd` this development has not needed
+/// before, built once by `Nat.rec` on `x` (holding `y` fixed): the zero
+/// branch eliminates `dvd 0 y` directly (`y = 0*c = 0`, via `Nat.zero_mul`),
+/// and the successor branch (`x = succ k`, so `1 ≤ x` by `Nat.zero_lt_succ`)
+/// gets `1 ≤ y` from `Nat.one_le_of_dvd_pos`, then both bounds from
+/// `Nat.le_of_dvd`, and closes with `Nat.le_antisymm`. Nothing here looks at
+/// how `x`/`y` were computed — it is not a re-derivation of Euclid's
+/// algorithm, just the standard "mutual divisibility is equality" argument
+/// from lemmas this prelude already has.
+fn nat_dvd_antisymm(d: &mut IntDev<'_>, x: ExprId, y: ExprId, hxy: ExprId, hyx: ExprId) -> ExprId {
+    let motive = |d: &mut IntDev<'_>, w: ExprId| {
+        let fwd = NatOps::dvd(d, w, y);
+        let back = NatOps::dvd(d, y, w);
+        let goal = d.eq(w, y);
+        let inner = d.arrow(back, goal);
+        d.arrow(fwd, inner)
+    };
+    let base = |d: &mut IntDev<'_>| {
+        let zero = d.zero();
+        let fwd_ty = NatOps::dvd(d, zero, y);
+        let back_ty = NatOps::dvd(d, y, zero);
+        with_two_hypotheses(d, fwd_ty, back_ty, &|d, fwd, _back| {
+            let nat = d.nat_ty();
+            let pred = d.dvd_predicate(zero, y);
+            let goal = d.eq(zero, y);
+            let c_fv = d.fresh_fvar();
+            let c = d.kernel().fvar(c_fv);
+            let zc = NatOps::mul(d, zero, c);
+            let eqc_ty = d.eq(y, zc);
+            let eqc_fv = d.fresh_fvar();
+            let eqc = d.kernel().fvar(eqc_fv);
+            let zero_mul_eq = {
+                let name = d.int().nat.zero_mul;
+                d.const_app(name, &[c])
+            };
+            let (_, chained) = d.chain(y, &[(zc, eqc), (zero, zero_mul_eq)]);
+            let flipped = d.symm(y, zero, chained);
+            let with_eqc = d.lam_fv(eqc_fv, eqc_ty, flipped);
+            let minor = d.lam_fv(c_fv, nat, with_eqc);
+            exists_elim(d, pred, goal, fwd, minor)
+        })
+    };
+    let step = |d: &mut IntDev<'_>, k: ExprId, _ih: ExprId| {
+        let sk = d.succ(k);
+        let fwd_ty = NatOps::dvd(d, sk, y);
+        let back_ty = NatOps::dvd(d, y, sk);
+        with_two_hypotheses(d, fwd_ty, back_ty, &|d, fwd, back| {
+            let h_pos = {
+                let name = d.int().nat.zero_lt_succ;
+                d.const_app(name, &[k])
+            };
+            let one_le_y = {
+                let name = d.int().nat.one_le_of_dvd_pos;
+                d.const_app(name, &[y, sk, h_pos, back])
+            };
+            let y_le_sk = {
+                let name = d.int().nat.le_of_dvd;
+                d.const_app(name, &[y, sk, h_pos, back])
+            };
+            let sk_le_y = {
+                let name = d.int().nat.le_of_dvd;
+                d.const_app(name, &[sk, y, one_le_y, fwd])
+            };
+            let name = d.int().nat.le_antisymm;
+            d.const_app(name, &[sk, y, sk_le_y, y_le_sk])
+        })
+    };
+    let implication = d.induct(&motive, &base, &step, x);
+    d.apply(implication, &[hxy, hyx])
+}
+
+/// `gcd_comm : ∀ (a b : Int), Eq Nat (gcd a b) (gcd b a)`.
+///
+/// Both `Int.gcd a b` and `Int.gcd b a` unfold to `Nat.gcd (natAbs a)
+/// (natAbs b)`/`Nat.gcd (natAbs b) (natAbs a)`; mutual divisibility comes
+/// straight from `Nat.gcd_dvd_left`/`Nat.gcd_dvd_right`/`Nat.dvd_gcd` (no
+/// `natAbs`/`Int.dvd` bridging needed, since everything here is already
+/// `Nat`-valued), and [`nat_dvd_antisymm`] closes it.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_gcd_comm(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.gcd_comm, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let m = nat_abs(d, a);
+        let n = nat_abs(d, b);
+        let stmt = {
+            let lhs = igcd(d, a, b);
+            let rhs = igcd(d, b, a);
+            d.eq(lhs, rhs)
+        };
+        let g1 = NatOps::gcd(d, m, n);
+        let g2 = NatOps::gcd(d, n, m);
+        let g1_dvd_m = d.const_app(p.nat.gcd_dvd_left, &[m, n]);
+        let g1_dvd_n = d.const_app(p.nat.gcd_dvd_right, &[m, n]);
+        let g2_dvd_n = d.const_app(p.nat.gcd_dvd_left, &[n, m]);
+        let g2_dvd_m = d.const_app(p.nat.gcd_dvd_right, &[n, m]);
+        let hxy = d.const_app(p.nat.dvd_gcd, &[g1, n, m, g1_dvd_n, g1_dvd_m]);
+        let hyx = d.const_app(p.nat.dvd_gcd, &[g2, m, n, g2_dvd_m, g2_dvd_n]);
+        let proof = nat_dvd_antisymm(d, g1, g2, hxy, hyx);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `gcd_one_right : ∀ (a : Int), Eq Nat (gcd a one) one` and
+/// `gcd_zero_right : ∀ (a : Int), Eq Nat (gcd a zero) (natAbs a)`.
+///
+/// `gcd_one_right`: `gcd a 1 ∣ 1` (`gcd_dvd_right`) already IS a `Nat` divisor
+/// of `1`, so `Nat.eq_one_of_dvd_one` closes it with no antisymmetry needed.
+///
+/// `gcd_zero_right`: `gcd a 0 ∣ natAbs a` (`gcd_dvd_left`) and `natAbs a ∣
+/// gcd a 0` (`Nat.dvd_gcd` fed by `Nat.dvd_refl`/`Nat.dvd_zero`), closed by
+/// [`nat_dvd_antisymm`] — the same engine `gcd_comm` uses, not a repeat of
+/// the Euclidean recursion.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_gcd_one_zero_right(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.gcd_one_right, 1, &|d, v| {
+        let a = v[0];
+        let one_i = d.ione();
+        let one_n = d.num(1);
+        let stmt = {
+            let g = igcd(d, a, one_i);
+            d.eq(g, one_n)
+        };
+        let big_a = nat_abs(d, a);
+        let g = NatOps::gcd(d, big_a, one_n);
+        let dvd_one = d.const_app(p.nat.gcd_dvd_right, &[big_a, one_n]);
+        let proof = d.const_app(p.nat.eq_one_of_dvd_one, &[g, dvd_one]);
+        (stmt, proof)
+    })?;
+    d.int_theorem(p.gcd_zero_right, 1, &|d, v| {
+        let a = v[0];
+        let zero_i = d.izero();
+        let zero_n = d.zero();
+        let m = nat_abs(d, a);
+        let stmt = {
+            let g = igcd(d, a, zero_i);
+            d.eq(g, m)
+        };
+        let g = NatOps::gcd(d, m, zero_n);
+        let g_dvd_m = d.const_app(p.nat.gcd_dvd_left, &[m, zero_n]);
+        let m_dvd_m = d.const_app(p.nat.dvd_refl, &[m]);
+        let m_dvd_zero = d.const_app(p.nat.dvd_zero, &[m]);
+        let m_dvd_g = d.const_app(p.nat.dvd_gcd, &[m, m, zero_n, m_dvd_m, m_dvd_zero]);
+        let proof = nat_dvd_antisymm(d, g, m, g_dvd_m, m_dvd_g);
+        (stmt, proof)
+    })?;
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -1616,6 +1798,162 @@ pub(super) fn declare_euclid_lemma(d: &mut IntDev<'_>) -> Result<(), KernelError
 
         let with_product = d.lam_fv(product_fv, divides_product, disjunction_result);
         let proof = d.lam_fv(prime_fv, prime_ty, with_product);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// `Int.euclid_infinitude` — Euclid's theorem, transported from `ℕ`.
+// ---------------------------------------------------------------------------
+
+/// `2 ≤ magnitude ∧ ∀ (x : Nat), x ∣ magnitude → Eq Nat x 1 ∨ Eq Nat x magnitude`.
+///
+/// The same inline primality convention `euclid_lemma` uses (Elements VII,
+/// Def. 11), spelled out again here rather than shared: five lines, and this
+/// prelude has no `Prime` name over either carrier (see the decision note on
+/// [`declare_euclid_infinitude`]).
+fn int_prime_condition(d: &mut IntDev<'_>, magnitude: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let two_nat = d.num(2);
+    let one_nat = d.num(1);
+    let two_le = d.le(two_nat, magnitude);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hyp = d.dvd(x, magnitude);
+    let is_one = d.eq(x, one_nat);
+    let is_whole = d.eq(x, magnitude);
+    let disjunction = d.or(is_one, is_whole);
+    let inner = d.arrow(hyp, disjunction);
+    let clause = d.pi_fv(x_fv, nat, inner);
+    d.and(two_le, clause)
+}
+
+/// `fun (p : Int) => And (lt n p) (int_prime_condition (natAbs p))`.
+fn euclid_pred(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+    let int_ty = d.int_ty();
+    let p_fv = d.fresh_fvar();
+    let p_var = d.kernel().fvar(p_fv);
+    let strict = d.ilt(n, p_var);
+    let big_p = nat_abs(d, p_var);
+    let prime = int_prime_condition(d, big_p);
+    let body = d.and(strict, prime);
+    d.lam_fv(p_fv, int_ty, body)
+}
+
+/// `∃ (p : Int), n < p ∧ (2 ≤ natAbs p ∧ ∀ x, x ∣ natAbs p → x=1 ∨ x=natAbs p)`,
+/// for the `n` in `v[0]`.
+fn euclid_infinitude_stmt(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
+    let n = v[0];
+    let int_ty = d.int_ty();
+    let one = d.level_one();
+    let pred = euclid_pred(d, n);
+    let exists_name = d.int().logic.exists_;
+    let exists_c = d.kernel().const_(exists_name, vec![one]);
+    d.apply(exists_c, &[int_ty, pred])
+}
+
+/// `Int.euclid_infinitude : ∀ (n : Int), ∃ (p : Int), n < p ∧
+/// (2 ≤ natAbs p ∧ ∀ (x : Nat), x ∣ natAbs p → x = 1 ∨ x = natAbs p)`.
+///
+/// Transported from `Nat.exists_prime_gt` (Euclid's theorem, already proved,
+/// not re-derived here): given `n`, case-split on its sign and let `m` be its
+/// magnitude (`natAbs n`, computed directly from the branch's own `Nat`
+/// field — `m'` for `ofNat m'`, `succ k` for `negSucc k`). `Nat.exists_prime_gt
+/// m` gives a `Nat` prime `q` with `m < q`; the witness is `p := ofNat q` for
+/// **both** branches.
+///
+/// * `n = ofNat m'`: `Int.lt (ofNat m') (ofNat q)` reduces to `Nat.lt m' q`,
+///   exactly `Nat.exists_prime_gt`'s own bound (`m` was built as `m'`, no
+///   conversion needed).
+/// * `n = negSucc k`: `Int.lt (negSucc k) (ofNat q)` reduces to `True`
+///   outright — every non-negative integer exceeds every negative one,
+///   independent of `q` — so the bound half of `Nat.exists_prime_gt`'s
+///   witness is discarded and only its primality half is used.
+///
+/// Either way, primality of `natAbs (ofNat q) ≡ q` is `Nat.exists_prime_gt`'s
+/// own conclusion with no extra work, because [`int_prime_condition`] is
+/// built to the identical shape as `Nat`'s own (unnamed) primality clause.
+///
+/// ## Why no `Int.Prime`/`Nat.Prime`
+///
+/// This development introduces a `Prime` name on **neither** carrier.
+/// `Nat.euclid_lemma`/`Nat.exists_prime_gt` already state primality inline
+/// (`2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p`), and `Int.euclid_lemma` mirrors that
+/// convention rather than introducing a name unilaterally on `ℤ`. Adding
+/// `Int.Prime` alone would make the two carriers state the *same* mathematical
+/// idea two different ways for no reason but convenience at the call site;
+/// adding `Nat.Prime` too is out of scope here (`nat_prelude/` is another
+/// lane's file today). Consistency across carriers — one convention, applied
+/// everywhere — outweighs the naming convenience, so neither carrier gets the
+/// name until both can get it together.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_euclid_infinitude(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.euclid_infinitude, 1, &|d, v| {
+        let stmt = euclid_infinitude_stmt(d, v);
+        let proof = case_split(d, v, &euclid_infinitude_stmt, &|d, b| {
+            let field = b[0].1;
+            let m = match b[0].0 {
+                Shape::OfNat => field,
+                Shape::NegSucc => d.succ(field),
+            };
+            let n_branch = d.branch_term(b[0]);
+
+            let source = d.const_app(p.nat.exists_prime_gt, &[m]);
+            let source_pred = {
+                let q_fv = d.fresh_fvar();
+                let q = d.kernel().fvar(q_fv);
+                let bound = d.lt(m, q);
+                let prime = int_prime_condition(d, q);
+                let body = d.and(bound, prime);
+                let nat = d.nat_ty();
+                d.lam_fv(q_fv, nat, body)
+            };
+
+            let target = euclid_infinitude_stmt(d, &[n_branch]);
+            let pred_branch = euclid_pred(d, n_branch);
+
+            let minor = {
+                let q_fv = d.fresh_fvar();
+                let q = d.kernel().fvar(q_fv);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let bound_ty = d.lt(m, q);
+                let prime_ty = int_prime_condition(d, q);
+                let h_ty = d.and(bound_ty, prime_ty);
+
+                let h_lt = d.and_left(bound_ty, prime_ty, h);
+                let h_prime = d.and_right(bound_ty, prime_ty, h);
+
+                let witness = d.of_nat(q);
+                let strict_proof = match b[0].0 {
+                    Shape::OfNat => h_lt,
+                    Shape::NegSucc => d.true_intro(),
+                };
+                let big_witness = nat_abs(d, witness);
+                let strict_ty = d.ilt(n_branch, witness);
+                let prime_ty2 = int_prime_condition(d, big_witness);
+                let and_proof = {
+                    let name = d.int().logic.and_intro;
+                    d.const_app(name, &[strict_ty, prime_ty2, strict_proof, h_prime])
+                };
+
+                let one_level = d.level_one();
+                let int_ty = d.int_ty();
+                let intro_name = d.int().logic.exists_intro;
+                let intro = d.kernel().const_(intro_name, vec![one_level]);
+                let exists_proof = d.apply(intro, &[int_ty, pred_branch, witness, and_proof]);
+
+                let nat = d.nat_ty();
+                let with_h = d.lam_fv(h_fv, h_ty, exists_proof);
+                d.lam_fv(q_fv, nat, with_h)
+            };
+            exists_elim(d, source_pred, target, source, minor)
+        });
         (stmt, proof)
     })?;
     Ok(())

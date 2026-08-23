@@ -24,14 +24,13 @@
 //! ## Positivity, stated honestly
 //!
 //! `Int.modEq_iff_dvd` is scoped to `0 < n` (this development has no bound on
-//! `emod`'s magnitude for a negative modulus). `crt_exists` therefore needs
-//! `0 < m` and `0 < n`; `crt_unique` needs those two **and** `0 < m*n`, because
-//! its conclusion is `ModEq (m*n) x y` and this development has not yet proved
-//! that a product of positives is positive (no `Int.mul_pos` exists yet — only
-//! `mul_nonneg`, which is not strict). Rather than block on a new lemma or
-//! silently prove something weaker, `0 < m*n` is taken as a hypothesis a
-//! caller can always discharge externally; the alternative (deriving it here)
-//! is a genuine follow-up, not a rushed one.
+//! `emod`'s magnitude for a negative modulus). `crt_exists` and `crt_unique`
+//! both therefore need `0 < m` and `0 < n`. `crt_unique`'s conclusion is
+//! `ModEq (m*n) x y`, which additionally needs `0 < m*n` — this used to be a
+//! third explicit hypothesis, back when only the non-strict `mul_nonneg`
+//! existed; now `Int.mul_pos` ([`super::algebra::declare_algebra_theorems`])
+//! derives it from the same `0 < m`/`0 < n` already in hand, so the signature
+//! carries only what a caller cannot already discharge from the other two.
 #![allow(clippy::many_single_char_names, clippy::similar_names)]
 
 use crate::KernelError;
@@ -410,8 +409,13 @@ pub(super) fn declare_crt_exists(d: &mut IntDev<'_>) -> Result<(), KernelError> 
 // Uniqueness.
 // ---------------------------------------------------------------------------
 
-/// `Int.crt_unique : ∀ m n x y, 0 < m → 0 < n → 0 < m*n → Coprime m n →
+/// `Int.crt_unique : ∀ m n x y, 0 < m → 0 < n → Coprime m n →
 /// ModEq m x y → ModEq n x y → ModEq (m*n) x y`.
+///
+/// `0 < m*n` is no longer a hypothesis — it used to be, back when only the
+/// non-strict `mul_nonneg` existed; now `mul_pos` derives it from `0 < m` and
+/// `0 < n` directly, so the signature carries only what the theorem actually
+/// needs. See [`super::algebra::declare_algebra_theorems`]'s `mul_pos` entry.
 ///
 /// # Errors
 ///
@@ -426,7 +430,6 @@ pub(super) fn declare_crt_unique(d: &mut IntDev<'_>) -> Result<(), KernelError> 
         let hm_ty = d.ilt(zero, m);
         let hn_ty = d.ilt(zero, n);
         let mn = d.imul(m, n);
-        let hmn_ty = d.ilt(zero, mn);
         let hc_ty = d.const_app(p.coprime, &[m, n]);
         let modeq_mxy = imodeq(d, m, x, y);
         let modeq_nxy = imodeq(d, n, x, y);
@@ -435,16 +438,14 @@ pub(super) fn declare_crt_unique(d: &mut IntDev<'_>) -> Result<(), KernelError> 
         let s1 = d.arrow(modeq_nxy, modeq_mnxy);
         let s2 = d.arrow(modeq_mxy, s1);
         let s3 = d.arrow(hc_ty, s2);
-        let s4 = d.arrow(hmn_ty, s3);
-        let s5 = d.arrow(hn_ty, s4);
+        let s5 = d.arrow(hn_ty, s3);
         let stmt = d.arrow(hm_ty, s5);
 
         let hm_fv = d.fresh_fvar();
         let hm = d.kernel().fvar(hm_fv);
         let hn_fv = d.fresh_fvar();
         let hn = d.kernel().fvar(hn_fv);
-        let hmn_fv = d.fresh_fvar();
-        let hmn = d.kernel().fvar(hmn_fv);
+        let hmn = d.const_app(p.mul_pos, &[m, n, hm, hn]);
         let hc_fv = d.fresh_fvar();
         let hc = d.kernel().fvar(hc_fv);
         let h1_fv = d.fresh_fvar();
@@ -563,8 +564,7 @@ pub(super) fn declare_crt_unique(d: &mut IntDev<'_>) -> Result<(), KernelError> 
         let with_h2 = d.lam_fv(h2_fv, modeq_nxy, eliminated_u);
         let with_h1 = d.lam_fv(h1_fv, modeq_mxy, with_h2);
         let with_hc = d.lam_fv(hc_fv, hc_ty, with_h1);
-        let with_hmn = d.lam_fv(hmn_fv, hmn_ty, with_hc);
-        let with_hn = d.lam_fv(hn_fv, hn_ty, with_hmn);
+        let with_hn = d.lam_fv(hn_fv, hn_ty, with_hc);
         let proof = d.lam_fv(hm_fv, hm_ty, with_hn);
         (stmt, proof)
     })?;
