@@ -59,6 +59,18 @@ fn every_theorem_here_is_axiom_free() {
         ("thales", p.thales),
         ("orthocentre_identity", p.orthocentre_identity),
         ("orthocentre_third_altitude", p.orthocentre_third_altitude),
+        ("dist_sq_congr", p.dist_sq_congr),
+        ("dist_sq_comm", p.dist_sq_comm),
+        ("dist_sq_self_zero", p.dist_sq_self_zero),
+        ("pythagoras_dist_sq", p.pythagoras_dist_sq),
+        (
+            "parallelogram_diagonals_bisect",
+            p.parallelogram_diagonals_bisect,
+        ),
+        (
+            "parallelogram_opposite_sides_eq",
+            p.parallelogram_opposite_sides_eq,
+        ),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -122,6 +134,13 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.thales,
         p.orthocentre_identity,
         p.orthocentre_third_altitude,
+        p.dist_sq,
+        p.dist_sq_congr,
+        p.dist_sq_comm,
+        p.dist_sq_self_zero,
+        p.pythagoras_dist_sq,
+        p.parallelogram_diagonals_bisect,
+        p.parallelogram_opposite_sides_eq,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -266,5 +285,152 @@ fn orthocentre_third_altitude_statement_is_exact() {
          ((x5 : CReal.Equiv (CPoint.dot (CPoint.sub x0 x2) (CPoint.sub x1 x3)) CReal.zero) \
          -> CReal.Equiv (CPoint.dot (CPoint.sub x0 x3) (CPoint.sub x2 x1)) \
          CReal.zero))))))"
+    );
+}
+
+/// `distSq_congr`, verbatim. `x0,x1,x2,x3 = P,P',Q,Q'`.
+#[test]
+fn dist_sq_congr_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.dist_sq_congr)
+        .expect("dist_sq_congr must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : \
+         CPoint.Equiv x0 x1) -> ((x5 : CPoint.Equiv x2 x3) -> CReal.Equiv (CPoint.distSq x0 \
+         x2) (CPoint.distSq x1 x3)))))))"
+    );
+}
+
+/// `distSq_comm`, verbatim. `x0,x1 = P,Q`.
+#[test]
+fn dist_sq_comm_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.dist_sq_comm)
+        .expect("dist_sq_comm must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> CReal.Equiv (CPoint.distSq x0 x1) (CPoint.distSq \
+         x1 x0)))"
+    );
+}
+
+/// `distSq_self_zero`, verbatim. `x0 = P`. This is the guard against a
+/// vacuous `distSq`: an empty axiom footprint alone would not distinguish
+/// this from, say, `distSq P P ~ distSq P P` (trivially true of ANY binary
+/// operation, not just one built from `dot`/`sub`).
+#[test]
+fn dist_sq_self_zero_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.dist_sq_self_zero)
+        .expect("dist_sq_self_zero must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> CReal.Equiv (CPoint.distSq x0 x0) CReal.zero)"
+    );
+}
+
+/// **Elements I.47, restated over `distSq`.** Verbatim-checked for the same
+/// reason [`pythagoras_statement_is_exact`] is: this is a NEW declaration
+/// (see [`CPointPrelude::pythagoras_dist_sq`]'s doc), not
+/// [`CPointPrelude::pythagoras`] edited, and an empty footprint on it says
+/// nothing about which statement it is unless the rendering is pinned too.
+/// `x0,x1,x2 = A,B,C`.
+#[test]
+fn pythagoras_dist_sq_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.pythagoras_dist_sq)
+        .expect("pythagoras_dist_sq must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal.Equiv (CPoint.dot \
+         (CPoint.sub x0 x2) (CPoint.sub x1 x2)) CReal.zero) -> CReal.Equiv (CPoint.distSq x0 \
+         x1) (CReal.add (CPoint.distSq x0 x2) (CPoint.distSq x1 x2))))))"
+    );
+}
+
+/// **Parallelogram diagonals bisect each other.** Verbatim-checked for the
+/// same reason as [`pythagoras_statement_is_exact`]: an empty axiom footprint
+/// on a theorem with a dropped hypothesis, a swapped diagonal, or a
+/// `varignon_diagonals_bisect`-shaped conclusion instead would still pass a
+/// substring check. `x0,x1,x2,x3 = A,B,C,D`.
+#[test]
+fn parallelogram_diagonals_bisect_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.parallelogram_diagonals_bisect)
+        .expect("parallelogram_diagonals_bisect must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : \
+         CPoint.Equiv (CPoint.sub x1 x0) (CPoint.sub x2 x3)) -> CPoint.Equiv (CPoint.midpoint \
+         x0 x2) (CPoint.midpoint x1 x3))))))"
+    );
+}
+
+/// **Opposite sides of a parallelogram are equal in length.** Verbatim-checked
+/// for the same reason as [`pythagoras_statement_is_exact`]: this is the
+/// scoped-down result actually landed for "the parallelogram law" slice (see
+/// [`CPointPrelude::parallelogram_opposite_sides_eq`]'s doc for what the full
+/// sum-of-squares identity would have needed beyond this). `x0,x1,x2,x3 =
+/// A,B,C,D`.
+#[test]
+fn parallelogram_opposite_sides_eq_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.parallelogram_opposite_sides_eq)
+        .expect("parallelogram_opposite_sides_eq must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : \
+         CPoint.Equiv (CPoint.sub x1 x0) (CPoint.sub x2 x3)) -> And (CReal.Equiv \
+         (CPoint.distSq x2 x3) (CPoint.distSq x0 x1)) (CReal.Equiv (CPoint.distSq x3 x0) \
+         (CPoint.distSq x1 x2)))))))"
     );
 }

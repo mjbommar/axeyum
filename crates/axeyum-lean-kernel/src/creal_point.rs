@@ -306,6 +306,59 @@ pub struct CPointPrelude {
     /// make the first two summands of that 3-term sum vanish, so the third
     /// must too.
     pub orthocentre_third_altitude: NameId,
+    /// `CPoint.distSq P Q := CPoint.dot (CPoint.sub P Q) (CPoint.sub P Q)` —
+    /// squared Euclidean distance. Purely a naming device (definitionally
+    /// equal to the raw `dot`/`sub` term [`Self::pythagoras`] etc. are stated
+    /// over), but it is what lets [`Self::parallelogram_diagonals_bisect`]'s
+    /// sibling squared-length facts read as geometry rather than algebra.
+    pub dist_sq: NameId,
+    /// `CPoint.distSq_congr : ∀ P P' Q Q', CPoint.Equiv P P' → CPoint.Equiv Q Q' →
+    /// Equiv (distSq P Q) (distSq P' Q')`.
+    pub dist_sq_congr: NameId,
+    /// `CPoint.distSq_comm : ∀ P Q, Equiv (distSq P Q) (distSq Q P)`.
+    pub dist_sq_comm: NameId,
+    /// `CPoint.distSq_self_zero : ∀ P, Equiv (distSq P P) CReal.zero`.
+    pub dist_sq_self_zero: NameId,
+    /// **Elements I.47, restated over `distSq`.** `∀ A B C,
+    /// Equiv (dot (sub A C) (sub B C)) zero →
+    /// Equiv (distSq A B) (add (distSq A C) (distSq B C))`.
+    ///
+    /// A *new* declaration, not [`Self::pythagoras`] edited: its `value` is
+    /// literally [`Self::pythagoras`] applied to the same three points, and
+    /// the kernel accepts it against this `distSq`-headed type only because
+    /// `distSq` unfolds (delta) to exactly the `dot (sub _ _) (sub _ _)` shape
+    /// [`Self::pythagoras`] is already stated over — no new proof term is
+    /// built, only a new (defeq) type is checked against the old value.
+    pub pythagoras_dist_sq: NameId,
+    /// **Parallelogram diagonals bisect each other.** `∀ A B C D,
+    /// CPoint.Equiv (CPoint.sub B A) (CPoint.sub C D) →
+    /// CPoint.Equiv (CPoint.midpoint A C) (CPoint.midpoint B D)`.
+    ///
+    /// `B − A ~ C − D` is the vector form of "`ABDC`... — concretely,
+    /// `AB` and `DC` are the same displacement — is a parallelogram"; the
+    /// conclusion is its two diagonals `AC`/`BD` sharing a midpoint. Pure
+    /// midpoint algebra ([`diag_bisect_midpoint_scalar_proof`]), the same
+    /// `add_assoc`/`add_comm`/`add_congr` toolkit as
+    /// [`Self::varignon_diagonals_bisect`], no hypothesis beyond the
+    /// parallelogram condition itself.
+    pub parallelogram_diagonals_bisect: NameId,
+    /// **Opposite sides of a parallelogram are equal in length.** `∀ A B C D,
+    /// CPoint.Equiv (CPoint.sub B A) (CPoint.sub C D) →
+    /// And (Equiv (distSq C D) (distSq A B)) (Equiv (distSq D A) (distSq B C))`.
+    ///
+    /// The scoped-down result actually landed for "the parallelogram law"
+    /// slice: `distSq A B + distSq B C + distSq C D + distSq D A ~ distSq A C
+    /// + distSq B D` (the full sum-of-squares identity, unconditional or
+    /// under this same hypothesis) needs expanding two diagonals'
+    /// `dot`-bilinearity in addition to this fact and was not reached in the
+    /// time available — this theorem is the two "opposite sides equal" facts
+    /// that identity would reduce to, each independently a real (and
+    /// independently checkable) instance of the parallelogram law.
+    /// `CD ~ -(AB)` follows from the hypothesis directly
+    /// ([`opposite_side_neg_scalar_proof`]), `DA ~ -(BC)` from that plus pure
+    /// ring algebra ([`diag_side_neg_scalar_proof`]); `dot(X,X) ~ dot(-X,-X)`
+    /// ([`dot_neg_neg_proof`]) turns each into a `distSq` equality.
+    pub parallelogram_opposite_sides_eq: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -356,6 +409,13 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_thales(&mut d, p)?;
     declare_orthocentre_identity(&mut d, p)?;
     declare_orthocentre_third_altitude(&mut d, p)?;
+    declare_dist_sq(&mut d, p)?;
+    declare_dist_sq_congr(&mut d, p)?;
+    declare_dist_sq_comm(&mut d, p)?;
+    declare_dist_sq_self_zero(&mut d, p)?;
+    declare_pythagoras_dist_sq(&mut d, p)?;
+    declare_parallelogram_diagonals_bisect(&mut d, p)?;
+    declare_parallelogram_opposite_sides_eq(&mut d, p)?;
     Ok(p)
 }
 
@@ -400,6 +460,13 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         thales: kernel.name_str(point, "thales"),
         orthocentre_identity: kernel.name_str(point, "orthocentre_identity"),
         orthocentre_third_altitude: kernel.name_str(point, "orthocentre_third_altitude"),
+        dist_sq: kernel.name_str(point, "distSq"),
+        dist_sq_congr: kernel.name_str(point, "distSq_congr"),
+        dist_sq_comm: kernel.name_str(point, "distSq_comm"),
+        dist_sq_self_zero: kernel.name_str(point, "distSq_self_zero"),
+        pythagoras_dist_sq: kernel.name_str(point, "pythagoras_distSq"),
+        parallelogram_diagonals_bisect: kernel.name_str(point, "parallelogram_diagonals_bisect"),
+        parallelogram_opposite_sides_eq: kernel.name_str(point, "parallelogram_opposite_sides_eq"),
     }
 }
 
@@ -633,6 +700,233 @@ fn sum_swap_proof(
         &[(ce, x_reduce), (ab, symm_h), (big_yz, symm_y)],
     );
     d.lemma(p.add_right_cancel, &[big_x, big_y, big_z, combined])
+}
+
+/// Given `h : Equiv (add b (neg a)) (add c (neg dd))` [`b - a ~ c - d`],
+/// produce `Equiv (mul inv2 (add a c)) (mul inv2 (add b dd))`
+/// [`midpoint a c ~ midpoint b d`] — the scalar content of
+/// [`CPointPrelude::parallelogram_diagonals_bisect`].
+///
+/// Same shape of argument as [`sum_swap_proof`] (add `a + d` to both sides of
+/// `h` and reduce each side by cancellation), but pointed the other way: that
+/// lemma turns a sum identity into a difference identity, this one turns a
+/// difference identity into a sum identity, which is then lifted through
+/// [`CPointPrelude::inv2`] by one `mul_congr` step.
+fn diag_bisect_midpoint_scalar_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    dd: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let na = cneg(d, p, a);
+    let ndd = cneg(d, p, dd);
+    let big_x = cadd(d, p, b, na); // X = b + (-a)
+    let big_y = cadd(d, p, c, ndd); // Y = c + (-d)
+    let big_z = cadd(d, p, a, dd); // Z = a + d
+    let bd = cadd(d, p, b, dd);
+    let ac = cadd(d, p, a, c);
+
+    // x_reduce : Equiv (add X Z) bd  —  (b + -a) + (a + dd) ~ b + dd.
+    let x_reduce = {
+        let xz = cadd(d, p, big_x, big_z);
+        let inner1 = cadd(d, p, na, big_z); // -a + (a+dd)
+        let b_inner1 = cadd(d, p, b, inner1);
+        let assoc1 = d.lemma(creal.add_assoc, &[b, na, big_z]); // Equiv(xz, b_inner1)
+
+        let na_a = cadd(d, p, na, a);
+        let na_a_dd = cadd(d, p, na_a, dd);
+        let assoc2 = d.lemma(creal.add_assoc, &[na, a, dd]); // Equiv(na_a_dd, inner1)
+        let step_inner1 = symm(d, p, na_a_dd, inner1, assoc2); // Equiv(inner1, na_a_dd)
+        let cancel_a = neg_add_cancel_proof(d, p, a); // Equiv(na_a, zero)
+        let zero = czero(d, p);
+        let zero_dd = cadd(d, p, zero, dd);
+        let refl_dd = refl(d, p, dd);
+        let congr_a = d.lemma(creal.add_congr, &[na_a, zero, dd, dd, cancel_a, refl_dd]);
+        let za = zero_add_proof(d, p, dd); // Equiv(zero_dd, dd)
+        let inner1_reduce = chain(
+            d,
+            p,
+            inner1,
+            &[(na_a_dd, step_inner1), (zero_dd, congr_a), (dd, za)],
+        );
+
+        let refl_b = refl(d, p, b);
+        let congr_b = d.lemma(creal.add_congr, &[b, b, inner1, dd, refl_b, inner1_reduce]); // Equiv(b_inner1, bd)
+        chain(d, p, xz, &[(b_inner1, assoc1), (bd, congr_b)])
+    };
+
+    // y_reduce : Equiv (add Y Z) ac  —  (c + -dd) + (a + dd) ~ a + c.
+    let y_reduce = {
+        let yz = cadd(d, p, big_y, big_z);
+        let inner2 = cadd(d, p, ndd, big_z); // -dd + (a+dd)
+        let c_inner2 = cadd(d, p, c, inner2);
+        let assoc3 = d.lemma(creal.add_assoc, &[c, ndd, big_z]); // Equiv(yz, c_inner2)
+
+        let dd_a = cadd(d, p, dd, a);
+        let comm_add = d.lemma(creal.add_comm, &[a, dd]); // Equiv(big_z, dd_a)
+        let ndd_dda = cadd(d, p, ndd, dd_a);
+        let refl_ndd = refl(d, p, ndd);
+        let congr_ndd = d.lemma(
+            creal.add_congr,
+            &[ndd, ndd, big_z, dd_a, refl_ndd, comm_add],
+        ); // Equiv(inner2, ndd_dda)
+
+        let ndd_dd = cadd(d, p, ndd, dd);
+        let ndd_dd_a = cadd(d, p, ndd_dd, a);
+        let assoc4 = d.lemma(creal.add_assoc, &[ndd, dd, a]); // Equiv(ndd_dd_a, ndd_dda)
+        let step_ndd_dda = symm(d, p, ndd_dd_a, ndd_dda, assoc4); // Equiv(ndd_dda, ndd_dd_a)
+
+        let cancel_dd = neg_add_cancel_proof(d, p, dd); // Equiv(ndd_dd, zero)
+        let zero = czero(d, p);
+        let zero_a = cadd(d, p, zero, a);
+        let refl_a2 = refl(d, p, a);
+        let congr_ndd2 = d.lemma(creal.add_congr, &[ndd_dd, zero, a, a, cancel_dd, refl_a2]);
+        let za2 = zero_add_proof(d, p, a); // Equiv(zero_a, a)
+        let inner2_reduce = chain(
+            d,
+            p,
+            inner2,
+            &[
+                (ndd_dda, congr_ndd),
+                (ndd_dd_a, step_ndd_dda),
+                (zero_a, congr_ndd2),
+                (a, za2),
+            ],
+        );
+
+        let ca = cadd(d, p, c, a);
+        let refl_c = refl(d, p, c);
+        let congr_c = d.lemma(creal.add_congr, &[c, c, inner2, a, refl_c, inner2_reduce]); // Equiv(c_inner2, ca)
+        let comm_ca = d.lemma(creal.add_comm, &[c, a]); // Equiv(ca, ac)
+        chain(
+            d,
+            p,
+            yz,
+            &[(c_inner2, assoc3), (ca, congr_c), (ac, comm_ca)],
+        )
+    };
+
+    let refl_z = refl(d, p, big_z);
+    let congr_xz_yz = d.lemma(creal.add_congr, &[big_x, big_y, big_z, big_z, h, refl_z]); // Equiv(X+Z, Y+Z)
+
+    let xz = cadd(d, p, big_x, big_z);
+    let yz = cadd(d, p, big_y, big_z);
+    let bd_symm = symm(d, p, xz, bd, x_reduce); // Equiv(bd, X+Z)
+    let combined = chain(
+        d,
+        p,
+        bd,
+        &[(xz, bd_symm), (yz, congr_xz_yz), (ac, y_reduce)],
+    ); // Equiv(bd, ac)
+    let ac_bd = symm(d, p, bd, ac, combined); // Equiv(ac, bd)
+
+    let inv2 = d.kernel().const_(p.inv2, vec![]);
+    let refl_inv2 = refl(d, p, inv2);
+    d.lemma(creal.mul_congr, &[inv2, inv2, ac, bd, refl_inv2, ac_bd]) // Equiv(midpoint a c, midpoint b dd)
+}
+
+/// `Equiv (add cx (neg dx)) (neg (add ax (neg bx)))` — `C - D ~ -(A - B)`,
+/// given `h : Equiv (add bx (neg ax)) (add cx (neg dx))` [`B - A ~ C - D`,
+/// the raw parallelogram hypothesis on one coordinate]. The scalar content
+/// behind [`CPointPrelude::parallelogram_opposite_sides_eq`]'s `CD ~ -(AB)`
+/// step: `neg_sub_comm_scalar_proof` turns the hypothesis's `B-A` into
+/// `-(A-B)`, and the rest is `symm`/`chain` bookkeeping.
+fn opposite_side_neg_scalar_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    ax: ExprId,
+    bx: ExprId,
+    cx: ExprId,
+    dx: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let neg_bx = cneg(d, p, bx);
+    let ux = cadd(d, p, ax, neg_bx); // A - B
+    let neg_ax = cneg(d, p, ax);
+    let ba_x = cadd(d, p, bx, neg_ax); // B - A
+    let neg_dx = cneg(d, p, dx);
+    let wx = cadd(d, p, cx, neg_dx); // C - D
+    let neg_ux = cneg(d, p, ux);
+
+    let nsc = neg_sub_comm_scalar_proof(d, p, ax, bx); // Equiv(neg_ux, ba_x)
+    let nsc_symm = symm(d, p, neg_ux, ba_x, nsc); // Equiv(ba_x, neg_ux)
+    let h_symm = symm(d, p, ba_x, wx, h); // Equiv(wx, ba_x)
+    chain(d, p, wx, &[(ba_x, h_symm), (neg_ux, nsc_symm)]) // Equiv(wx, neg_ux)
+}
+
+/// `Equiv (add dx (neg ax)) (neg (add bx (neg cx)))` — `D - A ~ -(B - C)`,
+/// given `hw : Equiv (add cx (neg dx)) (neg (add ax (neg bx)))`
+/// [`C - D ~ -(A - B)`, i.e. [`opposite_side_neg_scalar_proof`]'s conclusion
+/// on the same four coordinates] — the scalar content behind
+/// [`CPointPrelude::parallelogram_opposite_sides_eq`]'s `DA ~ -(BC)` step.
+///
+/// Pure ring algebra plus `hw`: `A - D ~ (A-C)+(C-D) ~ (A-B)+(B-C)+(C-D)`
+/// ([`telescope_scalar_proof`] twice), the last summand cancels the first
+/// against `hw` ([`add_sub_cancel_left`]) leaving `B - C`, then
+/// `neg_sub_comm_scalar_proof` turns `D - A ~ -(A - D)` into the claim.
+fn diag_side_neg_scalar_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    ax: ExprId,
+    bx: ExprId,
+    cx: ExprId,
+    dx: ExprId,
+    hw: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let neg_bx = cneg(d, p, bx);
+    let ux = cadd(d, p, ax, neg_bx); // A - B
+    let neg_cx = cneg(d, p, cx);
+    let vx = cadd(d, p, bx, neg_cx); // B - C
+    let neg_dx = cneg(d, p, dx);
+    let wx = cadd(d, p, cx, neg_dx); // C - D
+    let neg_ax = cneg(d, p, ax);
+    let zx = cadd(d, p, dx, neg_ax); // D - A
+    let neg_ux = cneg(d, p, ux);
+
+    let ax_cx = cadd(d, p, ax, neg_cx); // A - C
+    let telescope1 = telescope_scalar_proof(d, p, ax, cx, dx); // Equiv(ax_dx, add ax_cx wx)
+    let telescope2 = telescope_scalar_proof(d, p, ax, bx, cx); // Equiv(ax_cx, add ux vx)
+    let refl_wx = refl(d, p, wx);
+    let uxvx = cadd(d, p, ux, vx);
+    let combine1 = d.lemma(creal.add_congr, &[ax_cx, uxvx, wx, wx, telescope2, refl_wx]); // Equiv(ax_cx+wx, uxvx+wx)
+
+    let refl_uxvx = refl(d, p, uxvx);
+    let congr_w = d.lemma(creal.add_congr, &[uxvx, uxvx, wx, neg_ux, refl_uxvx, hw]); // Equiv(uxvx+wx, uxvx+neg_ux)
+    let cancel = add_sub_cancel_left(d, p, ux, vx); // Equiv(uxvx+neg_ux, vx)
+
+    let ax_dx = cadd(d, p, ax, neg_dx);
+    let ax_cx_wx = cadd(d, p, ax_cx, wx);
+    let uxvx_wx = cadd(d, p, uxvx, wx);
+    let uxvx_negux = cadd(d, p, uxvx, neg_ux);
+    let ax_dx_to_vx = chain(
+        d,
+        p,
+        ax_dx,
+        &[
+            (ax_cx_wx, telescope1),
+            (uxvx_wx, combine1),
+            (uxvx_negux, congr_w),
+            (vx, cancel),
+        ],
+    ); // Equiv(ax_dx, vx)
+
+    let neg_ax_dx = cneg(d, p, ax_dx);
+    let nsc_ad = neg_sub_comm_scalar_proof(d, p, ax, dx); // Equiv(neg_ax_dx, zx)
+    let zx_via_neg = symm(d, p, neg_ax_dx, zx, nsc_ad); // Equiv(zx, neg_ax_dx)
+    let neg_congr_adv = d.lemma(creal.neg_congr, &[ax_dx, vx, ax_dx_to_vx]); // Equiv(neg_ax_dx, neg_vx)
+    let neg_vx = cneg(d, p, vx);
+
+    chain(
+        d,
+        p,
+        zx,
+        &[(neg_ax_dx, zx_via_neg), (neg_vx, neg_congr_adv)],
+    ) // Equiv(zx, neg_vx)
 }
 
 // --- CReal ring toolkit ------------------------------------------------------
@@ -3892,6 +4186,576 @@ fn declare_orthocentre_third_altitude(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.orthocentre_third_altitude,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- distSq: squared Euclidean distance -------------------------------------
+
+/// `CPoint.distSq P Q := CPoint.dot (CPoint.sub P Q) (CPoint.sub P Q)`.
+fn declare_dist_sq(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+
+    let sub_ab = psub(d, p, pa, pb);
+    let value_body = dotp(d, p, sub_ab, sub_ab);
+
+    let value = {
+        let inner = d.lam_fv(pb_fv, point, value_body);
+        d.lam_fv(pa_fv, point, inner)
+    };
+    let ty = {
+        let carrier = creal_ty(d, p);
+        let inner = d.arrow(point, carrier);
+        d.arrow(point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.dist_sq,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 8),
+    })
+}
+
+/// `Equiv (sub pa qa) (sub pb qb)`, given `hp : CPoint.Equiv pa pb` and
+/// `hq : CPoint.Equiv qa qb` — the setoid obligation [`CPointPrelude::point_sub`]
+/// needs before it can be rewritten under, built the same way
+/// [`declare_dot_congr`] builds `dot`'s.
+fn psub_congr_fact(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    pa: ExprId,
+    pb: ExprId,
+    qa: ExprId,
+    qb: ExprId,
+    hp: ExprId,
+    hq: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let pax = d.const_app(p.x, &[pa]);
+    let pay = d.const_app(p.y, &[pa]);
+    let pbx = d.const_app(p.x, &[pb]);
+    let pby = d.const_app(p.y, &[pb]);
+    let qax = d.const_app(p.x, &[qa]);
+    let qay = d.const_app(p.y, &[qa]);
+    let qbx = d.const_app(p.x, &[qb]);
+    let qby = d.const_app(p.y, &[qb]);
+
+    let ex_ty = equiv(d, p, pax, pbx);
+    let ey_ty = equiv(d, p, pay, pby);
+    let hpx = d.and_left(ex_ty, ey_ty, hp);
+    let hpy = d.and_right(ex_ty, ey_ty, hp);
+    let fx_ty = equiv(d, p, qax, qbx);
+    let fy_ty = equiv(d, p, qay, qby);
+    let hqx = d.and_left(fx_ty, fy_ty, hq);
+    let hqy = d.and_right(fx_ty, fy_ty, hq);
+
+    let neg_qax = cneg(d, p, qax);
+    let neg_qbx = cneg(d, p, qbx);
+    let neg_congr_x = d.lemma(creal.neg_congr, &[qax, qbx, hqx]); // Equiv(neg_qax, neg_qbx)
+    let proof_x = d.lemma(
+        creal.add_congr,
+        &[pax, pbx, neg_qax, neg_qbx, hpx, neg_congr_x],
+    );
+
+    let neg_qay = cneg(d, p, qay);
+    let neg_qby = cneg(d, p, qby);
+    let neg_congr_y = d.lemma(creal.neg_congr, &[qay, qby, hqy]);
+    let proof_y = d.lemma(
+        creal.add_congr,
+        &[pay, pby, neg_qay, neg_qby, hpy, neg_congr_y],
+    );
+
+    let claim_x_lhs = cadd(d, p, pax, neg_qax);
+    let claim_x_rhs = cadd(d, p, pbx, neg_qbx);
+    let claim_y_lhs = cadd(d, p, pay, neg_qay);
+    let claim_y_rhs = cadd(d, p, pby, neg_qby);
+    let claim_x = equiv(d, p, claim_x_lhs, claim_x_rhs);
+    let claim_y = equiv(d, p, claim_y_lhs, claim_y_rhs);
+    and_intro(d, p, claim_x, claim_y, proof_x, proof_y)
+}
+
+/// `distSq_congr : ∀ P P' Q Q', CPoint.Equiv P P' → CPoint.Equiv Q Q' →
+/// Equiv (distSq P Q) (distSq P' Q')`.
+fn declare_dist_sq_congr(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+    let qa_fv = d.fresh_fvar();
+    let qa = d.kernel().fvar(qa_fv);
+    let qb_fv = d.fresh_fvar();
+    let qb = d.kernel().fvar(qb_fv);
+
+    let hp_ty = d.const_app(p.point_equiv, &[pa, pb]);
+    let hq_ty = d.const_app(p.point_equiv, &[qa, qb]);
+    let hp_fv = d.fresh_fvar();
+    let hp = d.kernel().fvar(hp_fv);
+    let hq_fv = d.fresh_fvar();
+    let hq = d.kernel().fvar(hq_fv);
+
+    let sub_fact = psub_congr_fact(d, p, pa, pb, qa, qb, hp, hq); // Equiv(sub pa qa, sub pb qb)
+    let sub_paqa = psub(d, p, pa, qa);
+    let sub_pbqb = psub(d, p, pb, qb);
+    let proof = d.lemma(
+        p.dot_congr,
+        &[sub_paqa, sub_pbqb, sub_paqa, sub_pbqb, sub_fact, sub_fact],
+    );
+
+    let dsq1 = d.const_app(p.dist_sq, &[pa, qa]);
+    let dsq2 = d.const_app(p.dist_sq, &[pb, qb]);
+    let ty_body = {
+        let concl = equiv(d, p, dsq1, dsq2);
+        let inner = d.arrow(hq_ty, concl);
+        d.arrow(hp_ty, inner)
+    };
+    let ty = {
+        let w4 = d.pi_fv(qb_fv, point, ty_body);
+        let w3 = d.pi_fv(qa_fv, point, w4);
+        let w2 = d.pi_fv(pb_fv, point, w3);
+        d.pi_fv(pa_fv, point, w2)
+    };
+    let value = {
+        let with_hq = d.lam_fv(hq_fv, hq_ty, proof);
+        let with_hp = d.lam_fv(hp_fv, hp_ty, with_hq);
+        let w4 = d.lam_fv(qb_fv, point, with_hp);
+        let w3 = d.lam_fv(qa_fv, point, w4);
+        let w2 = d.lam_fv(pb_fv, point, w3);
+        d.lam_fv(pa_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dist_sq_congr,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `distSq_comm : ∀ P Q, Equiv (distSq P Q) (distSq Q P)`.
+///
+/// `sub Q P ~ neg (sub P Q)` ([`point_sub_eq_neg_sub_fact`]), so `dot(sub Q P,
+/// sub Q P) ~ dot(neg sub_PQ, neg sub_PQ) ~ dot(sub_PQ, sub_PQ)`
+/// ([`dot_neg_neg_proof`]) — no coordinate arithmetic beyond what those two
+/// already-proved facts supply.
+fn declare_dist_sq_comm(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+
+    let pax = d.const_app(p.x, &[pa]);
+    let pay = d.const_app(p.y, &[pa]);
+    let pbx = d.const_app(p.x, &[pb]);
+    let pby = d.const_app(p.y, &[pb]);
+
+    let sub_ab = psub(d, p, pa, pb);
+    let sub_ba = psub(d, p, pb, pa);
+    let neg_sub_ab = pneg(d, p, sub_ab);
+
+    // fact : CPoint.Equiv (sub pb pa) (neg (sub pa pb))
+    let fact = point_sub_eq_neg_sub_fact(d, p, pax, pay, pbx, pby);
+
+    let step1 = d.lemma(
+        p.dot_congr,
+        &[sub_ba, neg_sub_ab, sub_ba, neg_sub_ab, fact, fact],
+    ); // Equiv(dot(sub_ba,sub_ba), dot(neg_sub_ab,neg_sub_ab))
+    let step2 = dot_neg_neg_proof(d, p, sub_ab); // Equiv(dot(neg_sub_ab,neg_sub_ab), dot(sub_ab,sub_ab))
+
+    let dot_baba = dotp(d, p, sub_ba, sub_ba);
+    let dot_negneg = dotp(d, p, neg_sub_ab, neg_sub_ab);
+    let dot_abab = dotp(d, p, sub_ab, sub_ab);
+    let ba_to_ab = chain(d, p, dot_baba, &[(dot_negneg, step1), (dot_abab, step2)]); // Equiv(distSq B A, distSq A B)
+    let proof = symm(d, p, dot_baba, dot_abab, ba_to_ab); // Equiv(distSq A B, distSq B A)
+
+    let dsq_ab = d.const_app(p.dist_sq, &[pa, pb]);
+    let dsq_ba = d.const_app(p.dist_sq, &[pb, pa]);
+    let ty_body = equiv(d, p, dsq_ab, dsq_ba);
+    let ty = {
+        let inner = d.pi_fv(pb_fv, point, ty_body);
+        d.pi_fv(pa_fv, point, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(pb_fv, point, proof);
+        d.lam_fv(pa_fv, point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dist_sq_comm,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `distSq_self_zero : ∀ P, Equiv (distSq P P) CReal.zero`.
+fn declare_dist_sq_self_zero(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+
+    let neg_ax = cneg(d, p, ax);
+    let vx = cadd(d, p, ax, neg_ax);
+    let neg_ay = cneg(d, p, ay);
+    let vy = cadd(d, p, ay, neg_ay);
+    let zero = czero(d, p);
+
+    let an_x = d.lemma(creal.add_neg, &[ax]); // Equiv(vx, zero)
+    let an_y = d.lemma(creal.add_neg, &[ay]); // Equiv(vy, zero)
+
+    let mul_vx_vx = cmul(d, p, vx, vx);
+    let mul_vy_vy = cmul(d, p, vy, vy);
+    let mul_zero_zero = cmul(d, p, zero, zero);
+    let mz = d.lemma(creal.mul_zero, &[zero]); // Equiv(mul zero zero, zero)
+
+    let congr_x = d.lemma(creal.mul_congr, &[vx, zero, vx, zero, an_x, an_x]);
+    let mul_vx_vx_reduce = chain(d, p, mul_vx_vx, &[(mul_zero_zero, congr_x), (zero, mz)]);
+    let congr_y = d.lemma(creal.mul_congr, &[vy, zero, vy, zero, an_y, an_y]);
+    let mul_vy_vy_reduce = chain(d, p, mul_vy_vy, &[(mul_zero_zero, congr_y), (zero, mz)]);
+
+    let sum = cadd(d, p, mul_vx_vx, mul_vy_vy); // == dot(sub pa pa, sub pa pa) == distSq pa pa
+    let congr_sum = d.lemma(
+        creal.add_congr,
+        &[
+            mul_vx_vx,
+            zero,
+            mul_vy_vy,
+            zero,
+            mul_vx_vx_reduce,
+            mul_vy_vy_reduce,
+        ],
+    );
+    let zero_zero = cadd(d, p, zero, zero);
+    let az = d.lemma(creal.add_zero, &[zero]); // Equiv(add zero zero, zero)
+    let proof = chain(d, p, sum, &[(zero_zero, congr_sum), (zero, az)]);
+
+    let dsq = d.const_app(p.dist_sq, &[pa, pa]);
+    let ty_body = equiv(d, p, dsq, zero);
+    let ty = d.pi_fv(pa_fv, point, ty_body);
+    let value = d.lam_fv(pa_fv, point, proof);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dist_sq_self_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// **Elements I.47, restated over `distSq`.** See
+/// [`CPointPrelude::pythagoras_dist_sq`]: the `value` here is
+/// [`CPointPrelude::pythagoras`] itself, instantiated at the same three
+/// points — the only thing that differs is the *declared type*, which the
+/// kernel accepts because `distSq` unfolds to exactly the `dot (sub _ _)
+/// (sub _ _)` shape [`declare_pythagoras`] already proved over.
+fn declare_pythagoras_dist_sq(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let sub_ac = psub(d, p, pa, pc);
+    let sub_bc = psub(d, p, pb, pc);
+    let dot_ac_bc = dotp(d, p, sub_ac, sub_bc);
+    let zero = czero(d, p);
+    let hyp_ty = equiv(d, p, dot_ac_bc, zero);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let dsq_ab = d.const_app(p.dist_sq, &[pa, pb]);
+    let dsq_ac = d.const_app(p.dist_sq, &[pa, pc]);
+    let dsq_bc = d.const_app(p.dist_sq, &[pb, pc]);
+
+    let inst = d.lemma(p.pythagoras, &[pa, pb, pc]); // hyp_ty -> (raw pythagoras conclusion)
+    let applied = d.apply(inst, &[h]);
+
+    let ty_body = {
+        let dsq_ac_bc = cadd(d, p, dsq_ac, dsq_bc);
+        let concl = equiv(d, p, dsq_ab, dsq_ac_bc);
+        d.arrow(hyp_ty, concl)
+    };
+    let ty = {
+        let w3 = d.pi_fv(c_fv, point, ty_body);
+        let w2 = d.pi_fv(b_fv, point, w3);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value = {
+        let inner = d.lam_fv(h_fv, hyp_ty, applied);
+        let w3 = d.lam_fv(c_fv, point, inner);
+        let w2 = d.lam_fv(b_fv, point, w3);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pythagoras_dist_sq,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- parallelogram diagonals bisect ------------------------------------------
+
+/// **Parallelogram diagonals bisect each other.** See
+/// [`CPointPrelude::parallelogram_diagonals_bisect`].
+fn declare_parallelogram_diagonals_bisect(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    // The fourth point ("D"); named `e_fv` so the local `d` (the `IntDev`
+    // builder) is never shadowed, matching `declare_varignon`'s convention.
+    let e_fv = d.fresh_fvar();
+    let pd = d.kernel().fvar(e_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+    let dx = d.const_app(p.x, &[pd]);
+    let dy = d.const_app(p.y, &[pd]);
+
+    let sub_ba = psub(d, p, pb, pa);
+    let sub_cd = psub(d, p, pc, pd);
+    let hyp_ty = d.const_app(p.point_equiv, &[sub_ba, sub_cd]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let ex_ty = {
+        let neg_ax = cneg(d, p, ax);
+        let lhs = cadd(d, p, bx, neg_ax);
+        let neg_dx = cneg(d, p, dx);
+        let rhs = cadd(d, p, cx, neg_dx);
+        equiv(d, p, lhs, rhs)
+    };
+    let ey_ty = {
+        let neg_ay = cneg(d, p, ay);
+        let lhs = cadd(d, p, by, neg_ay);
+        let neg_dy = cneg(d, p, dy);
+        let rhs = cadd(d, p, cy, neg_dy);
+        equiv(d, p, lhs, rhs)
+    };
+    let hx = d.and_left(ex_ty, ey_ty, h);
+    let hy = d.and_right(ex_ty, ey_ty, h);
+
+    let core_x = diag_bisect_midpoint_scalar_proof(d, p, ax, bx, cx, dx, hx);
+    let core_y = diag_bisect_midpoint_scalar_proof(d, p, ay, by, cy, dy, hy);
+
+    let mid_ac_x = midpoint(d, p, ax, cx);
+    let mid_bd_x = midpoint(d, p, bx, dx);
+    let claim_x = equiv(d, p, mid_ac_x, mid_bd_x);
+    let mid_ac_y = midpoint(d, p, ay, cy);
+    let mid_bd_y = midpoint(d, p, by, dy);
+    let claim_y = equiv(d, p, mid_ac_y, mid_bd_y);
+    let proof = and_intro(d, p, claim_x, claim_y, core_x, core_y);
+
+    let pmac = d.const_app(p.point_midpoint, &[pa, pc]);
+    let pmbd = d.const_app(p.point_midpoint, &[pb, pd]);
+    let ty_body = {
+        let concl = d.const_app(p.point_equiv, &[pmac, pmbd]);
+        d.arrow(hyp_ty, concl)
+    };
+    let ty = {
+        let w4 = d.pi_fv(e_fv, point, ty_body);
+        let w3 = d.pi_fv(c_fv, point, w4);
+        let w2 = d.pi_fv(b_fv, point, w3);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value = {
+        let inner = d.lam_fv(h_fv, hyp_ty, proof);
+        let w4 = d.lam_fv(e_fv, point, inner);
+        let w3 = d.lam_fv(c_fv, point, w4);
+        let w2 = d.lam_fv(b_fv, point, w3);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.parallelogram_diagonals_bisect,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// **Opposite sides of a parallelogram are equal in length.** See
+/// [`CPointPrelude::parallelogram_opposite_sides_eq`].
+fn declare_parallelogram_opposite_sides_eq(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    // The fourth point ("D"); named `e_fv` so the local `d` (the `IntDev`
+    // builder) is never shadowed, matching `declare_varignon`'s convention.
+    let e_fv = d.fresh_fvar();
+    let pd = d.kernel().fvar(e_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+    let dx = d.const_app(p.x, &[pd]);
+    let dy = d.const_app(p.y, &[pd]);
+
+    let sub_ba = psub(d, p, pb, pa);
+    let sub_cd = psub(d, p, pc, pd);
+    let hyp_ty = d.const_app(p.point_equiv, &[sub_ba, sub_cd]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let ex_ty = {
+        let neg_ax = cneg(d, p, ax);
+        let lhs = cadd(d, p, bx, neg_ax);
+        let neg_dx = cneg(d, p, dx);
+        let rhs = cadd(d, p, cx, neg_dx);
+        equiv(d, p, lhs, rhs)
+    };
+    let ey_ty = {
+        let neg_ay = cneg(d, p, ay);
+        let lhs = cadd(d, p, by, neg_ay);
+        let neg_dy = cneg(d, p, dy);
+        let rhs = cadd(d, p, cy, neg_dy);
+        equiv(d, p, lhs, rhs)
+    };
+    let hx = d.and_left(ex_ty, ey_ty, h);
+    let hy = d.and_right(ex_ty, ey_ty, h);
+
+    // CD ~ -(AB), per coordinate.
+    let hwx = opposite_side_neg_scalar_proof(d, p, ax, bx, cx, dx, hx);
+    let hwy = opposite_side_neg_scalar_proof(d, p, ay, by, cy, dy, hy);
+
+    // DA ~ -(BC), per coordinate, reusing the CD ~ -(AB) facts above.
+    let hzx = diag_side_neg_scalar_proof(d, p, ax, bx, cx, dx, hwx);
+    let hzy = diag_side_neg_scalar_proof(d, p, ay, by, cy, dy, hwy);
+
+    let sub_ab = psub(d, p, pa, pb);
+    let sub_bc = psub(d, p, pb, pc);
+    let sub_da = psub(d, p, pd, pa);
+    let neg_u = pneg(d, p, sub_ab);
+    let neg_v = pneg(d, p, sub_bc);
+
+    // fact_w_negu : CPoint.Equiv (sub C D) (neg (sub A B))
+    let fact_w_negu = {
+        let neg_bx = cneg(d, p, bx);
+        let ux = cadd(d, p, ax, neg_bx);
+        let neg_ux = cneg(d, p, ux);
+        let neg_dx = cneg(d, p, dx);
+        let wx = cadd(d, p, cx, neg_dx);
+        let claim_x = equiv(d, p, wx, neg_ux);
+
+        let neg_by = cneg(d, p, by);
+        let uy = cadd(d, p, ay, neg_by);
+        let neg_uy = cneg(d, p, uy);
+        let neg_dy = cneg(d, p, dy);
+        let wy = cadd(d, p, cy, neg_dy);
+        let claim_y = equiv(d, p, wy, neg_uy);
+
+        and_intro(d, p, claim_x, claim_y, hwx, hwy)
+    };
+
+    // fact_z_negv : CPoint.Equiv (sub D A) (neg (sub B C))
+    let fact_z_negv = {
+        let neg_cx = cneg(d, p, cx);
+        let vx = cadd(d, p, bx, neg_cx);
+        let neg_vx = cneg(d, p, vx);
+        let neg_ax = cneg(d, p, ax);
+        let zx = cadd(d, p, dx, neg_ax);
+        let claim_x = equiv(d, p, zx, neg_vx);
+
+        let neg_cy = cneg(d, p, cy);
+        let vy = cadd(d, p, by, neg_cy);
+        let neg_vy = cneg(d, p, vy);
+        let neg_ay = cneg(d, p, ay);
+        let zy = cadd(d, p, dy, neg_ay);
+        let claim_y = equiv(d, p, zy, neg_vy);
+
+        and_intro(d, p, claim_x, claim_y, hzx, hzy)
+    };
+
+    // Equiv (distSq C D) (distSq A B), via dot(X,X) ~ dot(-X,-X).
+    let cd_eq_ab = {
+        let step1 = d.lemma(
+            p.dot_congr,
+            &[sub_cd, neg_u, sub_cd, neg_u, fact_w_negu, fact_w_negu],
+        );
+        let step2 = dot_neg_neg_proof(d, p, sub_ab);
+        let dot_cdcd = dotp(d, p, sub_cd, sub_cd);
+        let dot_negu_negu = dotp(d, p, neg_u, neg_u);
+        let dot_abab = dotp(d, p, sub_ab, sub_ab);
+        chain(d, p, dot_cdcd, &[(dot_negu_negu, step1), (dot_abab, step2)])
+    };
+
+    // Equiv (distSq D A) (distSq B C), via dot(X,X) ~ dot(-X,-X).
+    let da_eq_bc = {
+        let step1 = d.lemma(
+            p.dot_congr,
+            &[sub_da, neg_v, sub_da, neg_v, fact_z_negv, fact_z_negv],
+        );
+        let step2 = dot_neg_neg_proof(d, p, sub_bc);
+        let dot_dada = dotp(d, p, sub_da, sub_da);
+        let dot_negv_negv = dotp(d, p, neg_v, neg_v);
+        let dot_bcbc = dotp(d, p, sub_bc, sub_bc);
+        chain(d, p, dot_dada, &[(dot_negv_negv, step1), (dot_bcbc, step2)])
+    };
+
+    let dsq_cd = d.const_app(p.dist_sq, &[pc, pd]);
+    let dsq_ab = d.const_app(p.dist_sq, &[pa, pb]);
+    let dsq_da = d.const_app(p.dist_sq, &[pd, pa]);
+    let dsq_bc = d.const_app(p.dist_sq, &[pb, pc]);
+    let concl_cd = equiv(d, p, dsq_cd, dsq_ab);
+    let concl_da = equiv(d, p, dsq_da, dsq_bc);
+    let proof = and_intro(d, p, concl_cd, concl_da, cd_eq_ab, da_eq_bc);
+
+    let ty_body = {
+        let concl = d.and(concl_cd, concl_da);
+        d.arrow(hyp_ty, concl)
+    };
+    let ty = {
+        let w4 = d.pi_fv(e_fv, point, ty_body);
+        let w3 = d.pi_fv(c_fv, point, w4);
+        let w2 = d.pi_fv(b_fv, point, w3);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value = {
+        let inner = d.lam_fv(h_fv, hyp_ty, proof);
+        let w4 = d.lam_fv(e_fv, point, inner);
+        let w3 = d.lam_fv(c_fv, point, w4);
+        let w2 = d.lam_fv(b_fv, point, w3);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.parallelogram_opposite_sides_eq,
         uparams: vec![],
         ty,
         value,
