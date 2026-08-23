@@ -240,6 +240,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sum_range_congr_lt,
         p.add_pow_zero,
         p.add_pow_one,
+        p.add_pow,
     ]
 }
 
@@ -632,6 +633,62 @@ fn binomial_toolkit_and_add_pow_sanity_instances_compute() {
             f.k.display_name(name)
         );
     }
+}
+
+/// The binomial theorem itself, `Nat.add_pow`, checked numerically at `n=2`
+/// and `n=3` with `a=2,b=3`: `(2+3)^2 = 25 = 2^2+2*2*3+3^2` and
+/// `(2+3)^3 = 125 = 2^3+3*2^2*3+3*2*3^2+3^3`, both via `def_eq` reducing the
+/// declared theorem's `sumRange`-shaped instance all the way down to the
+/// literal numeral — an off-by-one in the sum's bound or in either exponent's
+/// orientation would leave the two sides at DIFFERENT numerals, not just
+/// differently-shaped ones.
+#[test]
+fn add_pow_holds_at_n_equals_two_and_three() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let three = f.num(3);
+
+    let n2 = f.num(2);
+    let proof2 = f.lemma(p.add_pow, &[two, three, n2]);
+    let inferred2 =
+        f.k.infer(proof2)
+            .unwrap_or_else(|e| panic!("add_pow(2,3,2) should infer: {}", f.explain(&e)));
+    let twenty_five = f.num(25);
+    let expected2 = {
+        let sum = f.add(two, three);
+        let lhs = f.pow(sum, n2);
+        f.eq(lhs, twenty_five)
+    };
+    assert!(
+        f.k.def_eq(inferred2, expected2),
+        "add_pow(2,3,2) should state (2+3)^2 = 25 (= 2^2+2*2*3+3^2), and both \
+         sides must compute to 25"
+    );
+
+    let n3 = f.num(3);
+    let proof3 = f.lemma(p.add_pow, &[two, three, n3]);
+    let inferred3 =
+        f.k.infer(proof3)
+            .unwrap_or_else(|e| panic!("add_pow(2,3,3) should infer: {}", f.explain(&e)));
+    let one_hundred_twenty_five = f.num(125);
+    let expected3 = {
+        let sum = f.add(two, three);
+        let lhs = f.pow(sum, n3);
+        f.eq(lhs, one_hundred_twenty_five)
+    };
+    assert!(
+        f.k.def_eq(inferred3, expected3),
+        "add_pow(2,3,3) should state (2+3)^3 = 125 \
+         (= 2^3+3*2^2*3+3*2*3^2+3^3), and both sides must compute to 125"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.add_pow).is_empty(),
+        "{} must rest on zero axioms",
+        f.k.display_name(p.add_pow)
+    );
 }
 
 /// Checked predecessor elimination supports successor injectivity and both
@@ -3723,7 +3780,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        20 + 132,
+        20 + 133,
         "every promised definition and theorem must be rendered"
     );
 }

@@ -729,6 +729,9 @@ pub struct NatPrelude {
     /// `Nat.add_pow_one : ∀ a b, (a+b)^1 = sumRange (fun k => choose 1 k * a^k * b^(1-k)) 2`
     /// — the `n=1` sanity instance.
     pub add_pow_one: NameId,
+    /// `Nat.add_pow : ∀ a b n, (a+b)^n = sumRange (fun k => choose n k * a^k * b^(n-k)) (succ n)`
+    /// — the binomial theorem, by induction on `n`.
+    pub add_pow: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -986,6 +989,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_range_congr_lt: kernel.name_str(nat, "sumRange_congr_lt"),
             add_pow_zero: kernel.name_str(nat, "add_pow_zero"),
             add_pow_one: kernel.name_str(nat, "add_pow_one"),
+            add_pow: kernel.name_str(nat, "add_pow"),
         };
 
         let mut d = NatDev::new(kernel, p);
