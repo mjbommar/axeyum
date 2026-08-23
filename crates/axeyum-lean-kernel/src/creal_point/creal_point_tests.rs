@@ -44,6 +44,10 @@ fn every_theorem_here_is_axiom_free() {
         ("midpoint_diag_core", p.midpoint_diag_core),
         ("varignon_diagonals_bisect", p.varignon_diagonals_bisect),
         ("two_pos_bound", p.two_pos_bound),
+        ("add_right_cancel", p.add_right_cancel),
+        ("sum_of_midpoints_perm", p.sum_of_midpoints_perm),
+        ("midpoint_vector_swap", p.midpoint_vector_swap),
+        ("varignon_vector_parallel", p.varignon_vector_parallel),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -88,10 +92,48 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.sum_perm,
         p.midpoint_diag_core,
         p.varignon_diagonals_bisect,
+        p.add_right_cancel,
+        p.sum_of_midpoints_perm,
+        p.midpoint_vector_swap,
+        p.point_sub,
+        p.varignon_vector_parallel,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
             "expected declaration missing from the environment"
         );
     }
+}
+
+/// `varignon_vector_parallel` is the ledger's literal `Q − P ~ R − S` form,
+/// distinct from `varignon_diagonals_bisect`'s midpoint-of-diagonals form:
+/// its statement's head symbol is `CPoint.Equiv` applied to two `CPoint.sub`
+/// applications, not to two `CPoint.midpoint` applications. Confirms the new
+/// theorem is not just present but genuinely a different (and non-trivial)
+/// statement built from `point_sub`.
+#[test]
+fn varignon_vector_parallel_is_a_sub_statement_not_a_midpoint_statement() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.varignon_vector_parallel)
+        .expect("varignon_vector_parallel must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    // Verbatim, not just substring-checked: an empty axiom footprint on a
+    // theorem stating something WEAKER than intended is this repository's
+    // standing failure mode (see `the_setoid_laws_have_the_statements_...`
+    // test in `creal_tests.rs`). This is also the exact string
+    // `F:geometry-varignon-midpoint-parallelogram`'s `formal.statement`
+    // records for the `kernel-lean` route.
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> \
+         CPoint.Equiv (CPoint.sub (CPoint.midpoint x1 x2) (CPoint.midpoint x0 x1)) \
+         (CPoint.sub (CPoint.midpoint x2 x3) (CPoint.midpoint x3 x0))))))"
+    );
 }

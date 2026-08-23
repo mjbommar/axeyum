@@ -22,20 +22,29 @@
 //! `AB, BC, CD, DA`, it proves `midpoint(P, R) ~ midpoint(Q, S)` — the
 //! midpoints of the Varignon quadrilateral's two diagonals coincide. That is
 //! the standard characterisation of "PQRS is a parallelogram" (a
-//! quadrilateral is a parallelogram iff its diagonals bisect each other), and
-//! it is what the ledger's `F:geometry-varignon-midpoint-parallelogram`
-//! concludes. It is **not** textually the same statement as that fact's
-//! literal phrasing (`Q − P ~ R − S`, a vector difference); the two are
-//! algebraically equivalent in an abelian group (`Q + S ~ R + P` rearranges to
-//! `Q − P ~ R − S`), but that rearrangement is not proved here — it needs a
-//! cancellation/uniqueness-of-negation lemma this file does not build. See
-//! the module-level status note in the lane's `docs/plan/status/` file for
-//! the exact gap.
+//! quadrilateral is a parallelogram iff its diagonals bisect each other), but
+//! it is **not** textually the ledger's `F:geometry-varignon-midpoint-parallelogram`
+//! statement (`Q − P ~ R − S`, a vector difference).
 //!
-//! No hypothesis is taken (the theorem holds for every configuration of four
-//! points, degenerate or not), matching the `cas-certificate` route's own
-//! certificate for this fact (the empty generator list — see that fact's
-//! `notes`).
+//! [`CPointPrelude::varignon_vector_parallel`] is that literal statement, and
+//! it *is* what the fact now records (`proof_route: kernel-lean`,
+//! `axiom_footprint: []`). The bridge the note above used to say was missing
+//! is [`CPointPrelude::add_right_cancel`] — `CReal` uniqueness of the
+//! additive inverse, phrased as right-cancellation (`x+z ~ y+z → x ~ y`),
+//! proved from `add_zero`/`add_neg`/`add_assoc`/`add_congr` alone (seven
+//! `equiv_trans` steps, no analysis, see [`declare_add_right_cancel`]).
+//! [`sum_swap_proof`] is the one place it is consumed: given
+//! `a+b ~ c+e` it derives `c−a ~ b−e`, and applying that to
+//! [`CPointPrelude::sum_of_midpoints_perm`]'s `P+R ~ Q+S` (the
+//! single-`inv2`-level sibling of [`Self::midpoint_diag_core`]) yields
+//! [`CPointPrelude::midpoint_vector_swap`]'s `Q−P ~ R−S` per coordinate,
+//! which [`declare_varignon_vector`] packages at the `CPoint` level through
+//! the new [`CPointPrelude::point_sub`].
+//!
+//! No hypothesis is taken anywhere in this file (both Varignon theorems hold
+//! for every configuration of four points, degenerate or not), matching the
+//! `cas-certificate` route's own certificate for this fact (the empty
+//! generator list — see that fact's `notes`).
 //!
 //! ## How division is avoided being a blocker
 //!
@@ -161,6 +170,55 @@ pub struct CPointPrelude {
     /// quadrilateral bisect each other, hence PQRS is a parallelogram. No
     /// hypothesis, and axiom-footprint free.
     pub varignon_diagonals_bisect: NameId,
+    /// `CReal.add_right_cancel : ∀ x y z, Equiv (add x z) (add y z) → Equiv x y`.
+    ///
+    /// The bridge lemma the module doc identified as missing: uniqueness of
+    /// the additive inverse, phrased as right-cancellation. Declared under the
+    /// `CReal` root (via [`CRealPrelude::creal`]) because it is a genuine fact
+    /// about `CReal`, not about `CPoint` — but declared *here*, not in
+    /// `creal.rs`, so this file stays additive (see the module doc): it does
+    /// not touch `creal.rs`'s source, its struct, or its build pipeline, only
+    /// interns one more child of a name that file already owns. Proved from
+    /// `add_zero`/`add_neg`/`add_assoc`/`add_congr` alone — seven
+    /// `equiv_trans` steps, no analysis, matching the style of
+    /// [`Self::sum_perm`].
+    pub add_right_cancel: NameId,
+    /// `CPoint.Scalar.sum_of_midpoints_perm : ∀ a b c e,
+    /// Equiv (add (midpoint a b) (midpoint c e))
+    ///       (add (midpoint b c) (midpoint e a))`.
+    ///
+    /// The single-`inv2`-level sibling of [`Self::midpoint_diag_core`]: that
+    /// theorem compares the midpoint of the two midpoint-sums (an extra
+    /// `inv2` factor on each side that cancels), this one compares the sums
+    /// themselves. It is what lets [`Self::midpoint_vector_swap`] avoid ever
+    /// reconstructing the "multiply by two" argument
+    /// [`Self::midpoint_self`] already paid for.
+    pub sum_of_midpoints_perm: NameId,
+    /// `CPoint.Scalar.midpoint_vector_swap : ∀ a b c e,
+    /// Equiv (add (midpoint b c) (neg (midpoint a b)))
+    ///       (add (midpoint c e) (neg (midpoint e a)))`.
+    ///
+    /// The per-coordinate content of the ledger's vector-difference Varignon
+    /// (`Q − P ~ R − S`): [`Self::sum_of_midpoints_perm`] gives `P + R ~ Q + S`
+    /// (writing `P,Q,R,S` for the midpoints of `ab,bc,ce,ea`), and this
+    /// rearranges that sum identity into the difference identity via
+    /// [`Self::add_right_cancel`] — the one place in this file the new
+    /// cancellation lemma is actually used.
+    pub midpoint_vector_swap: NameId,
+    /// `CPoint.sub P Q := CPoint.mk (add (x P) (neg (x Q))) (add (y P) (neg (y Q)))`
+    /// — vector subtraction of points, coordinatewise.
+    pub point_sub: NameId,
+    /// `CPoint.varignon_vector_parallel : ∀ A B C D,
+    /// CPoint.Equiv (CPoint.sub (midpoint B C) (midpoint A B))
+    ///              (CPoint.sub (midpoint C D) (midpoint D A))`.
+    ///
+    /// The **vector-difference** form of Varignon's theorem, matching
+    /// `F:geometry-varignon-midpoint-parallelogram`'s literal formal statement
+    /// (`Q − P ~ R − S`) rather than [`Self::varignon_diagonals_bisect`]'s
+    /// midpoint-of-diagonals form. `CPoint.Equiv` unfolds to exactly the `And`
+    /// of two `CReal.Equiv`s the fact's SMT-LIB `and` states, coordinate by
+    /// coordinate. No hypothesis, axiom-footprint free.
+    pub varignon_vector_parallel: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -192,6 +250,11 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_midpoint_diag_core(&mut d, p)?;
     declare_point_midpoint(&mut d, p)?;
     declare_varignon(&mut d, p)?;
+    declare_add_right_cancel(&mut d, p)?;
+    declare_sum_of_midpoints_perm(&mut d, p)?;
+    declare_midpoint_vector_swap(&mut d, p)?;
+    declare_point_sub(&mut d, p)?;
+    declare_varignon_vector(&mut d, p)?;
     Ok(p)
 }
 
@@ -217,6 +280,11 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         midpoint_diag_core: kernel.name_str(scalar, "midpoint_diag_core"),
         point_midpoint: kernel.name_str(point, "midpoint"),
         varignon_diagonals_bisect: kernel.name_str(point, "varignon_diagonals_bisect"),
+        add_right_cancel: kernel.name_str(creal.creal, "add_right_cancel"),
+        sum_of_midpoints_perm: kernel.name_str(scalar, "sum_of_midpoints_perm"),
+        midpoint_vector_swap: kernel.name_str(scalar, "midpoint_vector_swap"),
+        point_sub: kernel.name_str(point, "sub"),
+        varignon_vector_parallel: kernel.name_str(point, "varignon_vector_parallel"),
     }
 }
 
@@ -240,6 +308,14 @@ fn cadd(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId, y: ExprId) -> ExprId {
 
 fn cmul(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.creal.mul, &[x, y])
+}
+
+fn cneg(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.creal.neg, &[x])
+}
+
+fn czero(d: &mut IntDev<'_>, p: CPointPrelude) -> ExprId {
+    d.kernel().const_(p.creal.zero, vec![])
 }
 
 fn midpoint(d: &mut IntDev<'_>, p: CPointPrelude, a: ExprId, b: ExprId) -> ExprId {
@@ -282,6 +358,146 @@ fn and_intro(
 ) -> ExprId {
     let intro = p.creal.rat.int.logic.and_intro;
     d.const_app(intro, &[left, right, lp, rp])
+}
+
+/// Proof of `Equiv (add CReal.zero x) x`, from `add_comm` and `add_zero`
+/// alone. Not declared as its own theorem — it is only ever used as an
+/// intermediate step inside a larger proof term, the way `refl`/`symm` are.
+fn zero_add_proof(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId) -> ExprId {
+    let creal = p.creal;
+    let zero = czero(d, p);
+    let lhs = cadd(d, p, zero, x);
+    let rhs = cadd(d, p, x, zero);
+    let comm = d.lemma(creal.add_comm, &[zero, x]);
+    let az = d.lemma(creal.add_zero, &[x]);
+    chain(d, p, lhs, &[(rhs, comm), (x, az)])
+}
+
+/// Proof of `Equiv (add (neg x) x) CReal.zero`, from `add_comm` and `add_neg`.
+fn neg_add_cancel_proof(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId) -> ExprId {
+    let creal = p.creal;
+    let nx = cneg(d, p, x);
+    let lhs = cadd(d, p, nx, x);
+    let rhs = cadd(d, p, x, nx);
+    let zero = czero(d, p);
+    let comm = d.lemma(creal.add_comm, &[nx, x]);
+    let an = d.lemma(creal.add_neg, &[x]);
+    chain(d, p, lhs, &[(rhs, comm), (zero, an)])
+}
+
+/// Given `h : Equiv (add a b) (add c e)`, builds a proof of
+/// `Equiv (add c (neg a)) (add b (neg e))` — the abstract group rearrangement
+/// `a + b ~ c + e  ⟹  c − a ~ b − e`. This is the one place
+/// [`CPointPrelude::add_right_cancel`] is consumed: everything else here is
+/// `add_comm`/`add_assoc`/`add_congr`, applied to cancel `a` and `e` out of
+/// `(c + (-a)) + (a + e)` and `(b + (-e)) + (a + e)` down to `c + e` and
+/// `a + b` respectively, then `add_right_cancel` strips the shared `a + e`.
+fn sum_swap_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    e: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let na = cneg(d, p, a);
+    let ne = cneg(d, p, e);
+    let big_x = cadd(d, p, c, na); // X = c + (-a)
+    let big_y = cadd(d, p, b, ne); // Y = b + (-e)
+    let big_z = cadd(d, p, a, e); // Z = a + e
+    let ab = cadd(d, p, a, b);
+    let ce = cadd(d, p, c, e);
+
+    // X_reduce : Equiv (add X Z) ce
+    let x_reduce = {
+        let xz = cadd(d, p, big_x, big_z); // (c + -a) + (a + e)
+        let inner1 = cadd(d, p, na, big_z); // -a + (a + e)
+        let c_inner1 = cadd(d, p, c, inner1); // c + (-a + (a+e))
+        let assoc1 = d.lemma(creal.add_assoc, &[c, na, big_z]); // Equiv(xz, c_inner1)
+
+        let na_a = cadd(d, p, na, a); // -a + a
+        let na_a_e = cadd(d, p, na_a, e); // (-a+a) + e
+        let assoc2 = d.lemma(creal.add_assoc, &[na, a, e]); // Equiv(na_a_e, inner1)
+        let step_inner1 = symm(d, p, na_a_e, inner1, assoc2); // Equiv(inner1, na_a_e)
+        let cancel_a = neg_add_cancel_proof(d, p, a); // Equiv(na_a, zero)
+        let zero = czero(d, p);
+        let zero_e = cadd(d, p, zero, e);
+        let refl_e = refl(d, p, e);
+        let congr_a = d.lemma(creal.add_congr, &[na_a, zero, e, e, cancel_a, refl_e]); // Equiv(na_a_e, zero_e)
+        let za = zero_add_proof(d, p, e); // Equiv(zero_e, e)
+        let inner1_reduce = chain(
+            d,
+            p,
+            inner1,
+            &[(na_a_e, step_inner1), (zero_e, congr_a), (e, za)],
+        );
+
+        let refl_c = refl(d, p, c);
+        let congr_c = d.lemma(creal.add_congr, &[c, c, inner1, e, refl_c, inner1_reduce]); // Equiv(c_inner1, ce)
+        chain(d, p, xz, &[(c_inner1, assoc1), (ce, congr_c)])
+    };
+
+    // Y_reduce : Equiv (add Y Z) ab
+    let y_reduce = {
+        let yz = cadd(d, p, big_y, big_z); // (b + -e) + (a + e)
+        let inner2 = cadd(d, p, ne, big_z); // -e + (a + e)
+        let b_inner2 = cadd(d, p, b, inner2); // b + (-e + (a+e))
+        let assoc3 = d.lemma(creal.add_assoc, &[b, ne, big_z]); // Equiv(yz, b_inner2)
+
+        let ea = cadd(d, p, e, a); // e + a
+        let comm_ae = d.lemma(creal.add_comm, &[a, e]); // Equiv(a+e, e+a) = Equiv(big_z, ea)
+        let ne_ea = cadd(d, p, ne, ea); // -e + (e+a)
+        let refl_ne = refl(d, p, ne);
+        let congr_ne = d.lemma(creal.add_congr, &[ne, ne, big_z, ea, refl_ne, comm_ae]); // Equiv(inner2, ne_ea)
+
+        let ne_e = cadd(d, p, ne, e); // -e + e
+        let ne_e_a = cadd(d, p, ne_e, a); // (-e+e) + a
+        let assoc4 = d.lemma(creal.add_assoc, &[ne, e, a]); // Equiv(ne_e_a, ne_ea)
+        let step_ne_ea = symm(d, p, ne_e_a, ne_ea, assoc4); // Equiv(ne_ea, ne_e_a)
+
+        let cancel_e = neg_add_cancel_proof(d, p, e); // Equiv(ne_e, zero)
+        let zero = czero(d, p);
+        let zero_a = cadd(d, p, zero, a);
+        let refl_a = refl(d, p, a);
+        let congr_ne2 = d.lemma(creal.add_congr, &[ne_e, zero, a, a, cancel_e, refl_a]); // Equiv(ne_e_a, zero_a)
+        let za2 = zero_add_proof(d, p, a); // Equiv(zero_a, a)
+        let inner2_reduce = chain(
+            d,
+            p,
+            inner2,
+            &[
+                (ne_ea, congr_ne),
+                (ne_e_a, step_ne_ea),
+                (zero_a, congr_ne2),
+                (a, za2),
+            ],
+        );
+
+        let ba = cadd(d, p, b, a); // b + a
+        let refl_b = refl(d, p, b);
+        let congr_b = d.lemma(creal.add_congr, &[b, b, inner2, a, refl_b, inner2_reduce]); // Equiv(b_inner2, ba)
+        let comm_ba = d.lemma(creal.add_comm, &[b, a]); // Equiv(ba, ab)
+        chain(
+            d,
+            p,
+            yz,
+            &[(b_inner2, assoc3), (ba, congr_b), (ab, comm_ba)],
+        )
+    };
+
+    let symm_h = symm(d, p, ab, ce, h); // Equiv(ce, ab)
+    let big_xz = cadd(d, p, big_x, big_z);
+    let big_yz = cadd(d, p, big_y, big_z);
+    let symm_y = symm(d, p, big_yz, ab, y_reduce); // Equiv(ab, big_yz)
+    let combined = chain(
+        d,
+        p,
+        big_xz,
+        &[(ce, x_reduce), (ab, symm_h), (big_yz, symm_y)],
+    );
+    d.lemma(p.add_right_cancel, &[big_x, big_y, big_z, combined])
 }
 
 // --- the carrier ---------------------------------------------------------
@@ -934,6 +1150,344 @@ fn declare_varignon(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelEr
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.varignon_diagonals_bisect,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.add_right_cancel : ∀ x y z, Equiv (add x z) (add y z) → Equiv x y`.
+///
+/// `x ~ x+0 ~ x+(z+-z) ~ (x+z)+-z ~ (y+z)+-z ~ y+(z+-z) ~ y+0 ~ y`, seven
+/// `equiv_trans` steps built from `add_zero`, `add_neg`, `add_assoc` and
+/// `add_congr` alone.
+fn declare_add_right_cancel(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = creal_ty(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+
+    let xz = cadd(d, p, x, z);
+    let yz = cadd(d, p, y, z);
+    let hyp_ty = equiv(d, p, xz, yz);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let nz = cneg(d, p, z);
+    let zero = czero(d, p);
+
+    let x_zero = cadd(d, p, x, zero); // x + 0
+    let az_x = d.lemma(creal.add_zero, &[x]); // Equiv(x_zero, x)
+    let step_a = symm(d, p, x_zero, x, az_x); // Equiv(x, x_zero)
+
+    let z_negz = cadd(d, p, z, nz); // z + -z
+    let x_z_negz = cadd(d, p, x, z_negz); // x + (z + -z)
+    let refl_x = refl(d, p, x);
+    let an_z0 = d.lemma(creal.add_neg, &[z]); // Equiv(z_negz, zero)
+    let symm_an_z = symm(d, p, z_negz, zero, an_z0); // Equiv(zero, z_negz)
+    let step_b = d.lemma(creal.add_congr, &[x, x, zero, z_negz, refl_x, symm_an_z]); // Equiv(x_zero, x_z_negz)
+
+    let xz_negz = cadd(d, p, xz, nz); // (x+z) + -z
+    let assoc_x = d.lemma(creal.add_assoc, &[x, z, nz]); // Equiv(xz_negz, x_z_negz)
+    let step_c = symm(d, p, xz_negz, x_z_negz, assoc_x); // Equiv(x_z_negz, xz_negz)
+
+    let yz_negz = cadd(d, p, yz, nz); // (y+z) + -z
+    let refl_nz = refl(d, p, nz);
+    let step_d = d.lemma(creal.add_congr, &[xz, yz, nz, nz, h, refl_nz]); // Equiv(xz_negz, yz_negz)
+
+    let y_z_negz = cadd(d, p, y, z_negz); // y + (z + -z)
+    let step_e = d.lemma(creal.add_assoc, &[y, z, nz]); // Equiv(yz_negz, y_z_negz)
+
+    let y_zero = cadd(d, p, y, zero); // y + 0
+    let refl_y = refl(d, p, y);
+    let an_z = d.lemma(creal.add_neg, &[z]); // Equiv(z_negz, zero)
+    let step_f = d.lemma(creal.add_congr, &[y, y, z_negz, zero, refl_y, an_z]); // Equiv(y_z_negz, y_zero)
+
+    let step_g = d.lemma(creal.add_zero, &[y]); // Equiv(y_zero, y)
+
+    let proof = chain(
+        d,
+        p,
+        x,
+        &[
+            (x_zero, step_a),
+            (x_z_negz, step_b),
+            (xz_negz, step_c),
+            (yz_negz, step_d),
+            (y_z_negz, step_e),
+            (y_zero, step_f),
+            (y, step_g),
+        ],
+    );
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, proof);
+        let with_z = d.lam_fv(z_fv, carrier, with_h);
+        let with_y = d.lam_fv(y_fv, carrier, with_z);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let conclusion = equiv(d, p, x, y);
+        let after_hyp = d.arrow(hyp_ty, conclusion);
+        let with_z = d.pi_fv(z_fv, carrier, after_hyp);
+        let with_y = d.pi_fv(y_fv, carrier, with_z);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.add_right_cancel,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `sum_of_midpoints_perm : ∀ a b c e,
+/// Equiv (add (midpoint a b) (midpoint c e)) (add (midpoint b c) (midpoint e a))`.
+///
+/// The single-`inv2`-level analogue of [`declare_midpoint_diag_core`]: reuses
+/// [`CPointPrelude::sum_perm`] directly (no need to redo the permutation
+/// argument) and `left_distrib` once on each side instead of twice.
+fn declare_sum_of_midpoints_perm(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = creal_ty(d, p);
+    let inv2 = d.kernel().const_(p.inv2, vec![]);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    let ab = cadd(d, p, a, b);
+    let ce = cadd(d, p, c, e);
+    let s = cadd(d, p, ab, ce); // s = (a+b)+(c+e)
+    let bc = cadd(d, p, b, c);
+    let ea = cadd(d, p, e, a);
+    let t = cadd(d, p, bc, ea); // t = (b+c)+(e+a)
+
+    let m1 = midpoint(d, p, a, b);
+    let m2 = midpoint(d, p, c, e);
+    let lhs = cadd(d, p, m1, m2);
+    let n1 = midpoint(d, p, b, c);
+    let n2 = midpoint(d, p, e, a);
+    let rhs = cadd(d, p, n1, n2);
+
+    let mul_inv2_s = cmul(d, p, inv2, s);
+    let ld_s = d.lemma(creal.left_distrib, &[inv2, ab, ce]); // Equiv(mul_inv2_s, lhs)
+    let lhs_reduce = symm(d, p, mul_inv2_s, lhs, ld_s); // Equiv(lhs, mul_inv2_s)
+
+    let mul_inv2_t = cmul(d, p, inv2, t);
+    let ld_t = d.lemma(creal.left_distrib, &[inv2, bc, ea]); // Equiv(mul_inv2_t, rhs)
+
+    let sp = d.lemma(p.sum_perm, &[a, b, c, e]); // Equiv(s, t)
+    let refl_inv2 = refl(d, p, inv2);
+    let inner_congr = d.lemma(creal.mul_congr, &[inv2, inv2, s, t, refl_inv2, sp]); // Equiv(mul_inv2_s, mul_inv2_t)
+
+    let proof = chain(
+        d,
+        p,
+        lhs,
+        &[
+            (mul_inv2_s, lhs_reduce),
+            (mul_inv2_t, inner_congr),
+            (rhs, ld_t),
+        ],
+    );
+
+    let ty_body = equiv(d, p, lhs, rhs);
+    let ty = {
+        let w4 = d.pi_fv(e_fv, carrier, ty_body);
+        let w3 = d.pi_fv(c_fv, carrier, w4);
+        let w2 = d.pi_fv(b_fv, carrier, w3);
+        d.pi_fv(a_fv, carrier, w2)
+    };
+    let value = {
+        let w4 = d.lam_fv(e_fv, carrier, proof);
+        let w3 = d.lam_fv(c_fv, carrier, w4);
+        let w2 = d.lam_fv(b_fv, carrier, w3);
+        d.lam_fv(a_fv, carrier, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_of_midpoints_perm,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `midpoint_vector_swap : ∀ a b c e,
+/// Equiv (add (midpoint b c) (neg (midpoint a b)))
+///       (add (midpoint c e) (neg (midpoint e a)))`.
+///
+/// [`declare_sum_of_midpoints_perm`] gives `P + R ~ Q + S` (writing
+/// `P,Q,R,S` for the midpoints of `ab,bc,ce,ea`); [`sum_swap_proof`] turns
+/// that into `Q − P ~ R − S`, consuming [`CPointPrelude::add_right_cancel`].
+fn declare_midpoint_vector_swap(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    let big_p = midpoint(d, p, a, b);
+    let big_r = midpoint(d, p, c, e);
+    let big_q = midpoint(d, p, b, c);
+    let big_s = midpoint(d, p, e, a);
+
+    let h = d.lemma(p.sum_of_midpoints_perm, &[a, b, c, e]); // Equiv(add P R, add Q S)
+    let proof = sum_swap_proof(d, p, big_p, big_r, big_q, big_s, h); // Equiv(add Q (neg P), add R (neg S))
+
+    let neg_big_p = cneg(d, p, big_p);
+    let lhs = cadd(d, p, big_q, neg_big_p);
+    let neg_big_s = cneg(d, p, big_s);
+    let rhs = cadd(d, p, big_r, neg_big_s);
+    let ty_body = equiv(d, p, lhs, rhs);
+    let ty = {
+        let w4 = d.pi_fv(e_fv, carrier, ty_body);
+        let w3 = d.pi_fv(c_fv, carrier, w4);
+        let w2 = d.pi_fv(b_fv, carrier, w3);
+        d.pi_fv(a_fv, carrier, w2)
+    };
+    let value = {
+        let w4 = d.lam_fv(e_fv, carrier, proof);
+        let w3 = d.lam_fv(c_fv, carrier, w4);
+        let w2 = d.lam_fv(b_fv, carrier, w3);
+        d.lam_fv(a_fv, carrier, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.midpoint_vector_swap,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CPoint.sub P Q := CPoint.mk (add (x P) (neg (x Q))) (add (y P) (neg (y Q)))`.
+fn declare_point_sub(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let neg_bx = cneg(d, p, bx);
+    let dx = cadd(d, p, ax, neg_bx);
+    let neg_by = cneg(d, p, by);
+    let dy = cadd(d, p, ay, neg_by);
+    let value_body = d.const_app(p.mk, &[dx, dy]);
+
+    let value = {
+        let inner = d.lam_fv(pb_fv, point, value_body);
+        d.lam_fv(pa_fv, point, inner)
+    };
+    let ty = {
+        let inner = d.arrow(point, point);
+        d.arrow(point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.point_sub,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 4),
+    })
+}
+
+/// `varignon_vector_parallel : ∀ A B C D,
+/// CPoint.Equiv (CPoint.sub (midpoint B C) (midpoint A B))
+///              (CPoint.sub (midpoint C D) (midpoint D A))`.
+///
+/// The ledger's literal `Q − P ~ R − S`. Packages
+/// [`declare_midpoint_vector_swap`] at both coordinates via `And.intro`,
+/// exactly the way [`declare_varignon`] packages [`declare_midpoint_diag_core`].
+fn declare_varignon_vector(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    let e_fv = d.fresh_fvar();
+    let pd = d.kernel().fvar(e_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+    let dx = d.const_app(p.x, &[pd]);
+    let dy = d.const_app(p.y, &[pd]);
+
+    let core_x = d.lemma(p.midpoint_vector_swap, &[ax, bx, cx, dx]);
+    let core_y = d.lemma(p.midpoint_vector_swap, &[ay, by, cy, dy]);
+
+    let claim_x = {
+        let q_x = midpoint(d, p, bx, cx);
+        let p_x = midpoint(d, p, ax, bx);
+        let r_x = midpoint(d, p, cx, dx);
+        let s_x = midpoint(d, p, dx, ax);
+        let neg_p_x = cneg(d, p, p_x);
+        let left_x = cadd(d, p, q_x, neg_p_x);
+        let neg_s_x = cneg(d, p, s_x);
+        let right_x = cadd(d, p, r_x, neg_s_x);
+        equiv(d, p, left_x, right_x)
+    };
+    let claim_y = {
+        let q_y = midpoint(d, p, by, cy);
+        let p_y = midpoint(d, p, ay, by);
+        let r_y = midpoint(d, p, cy, dy);
+        let s_y = midpoint(d, p, dy, ay);
+        let neg_p_y = cneg(d, p, p_y);
+        let left_y = cadd(d, p, q_y, neg_p_y);
+        let neg_s_y = cneg(d, p, s_y);
+        let right_y = cadd(d, p, r_y, neg_s_y);
+        equiv(d, p, left_y, right_y)
+    };
+    let proof = and_intro(d, p, claim_x, claim_y, core_x, core_y);
+
+    let pmbc = d.const_app(p.point_midpoint, &[pb, pc]);
+    let pmab = d.const_app(p.point_midpoint, &[pa, pb]);
+    let left = d.const_app(p.point_sub, &[pmbc, pmab]);
+    let pmcd = d.const_app(p.point_midpoint, &[pc, pd]);
+    let pmda = d.const_app(p.point_midpoint, &[pd, pa]);
+    let right = d.const_app(p.point_sub, &[pmcd, pmda]);
+    let ty_body = d.const_app(p.point_equiv, &[left, right]);
+
+    let ty = {
+        let w4 = d.pi_fv(e_fv, point, ty_body);
+        let w3 = d.pi_fv(c_fv, point, w4);
+        let w2 = d.pi_fv(b_fv, point, w3);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value = {
+        let w4 = d.lam_fv(e_fv, point, proof);
+        let w3 = d.lam_fv(c_fv, point, w4);
+        let w2 = d.lam_fv(b_fv, point, w3);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.varignon_vector_parallel,
         uparams: vec![],
         ty,
         value,
