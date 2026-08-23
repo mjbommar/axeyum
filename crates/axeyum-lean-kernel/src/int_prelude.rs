@@ -295,6 +295,11 @@ pub struct IntPrelude {
     /// `lt_of_le_of_ne :
     /// ∀ (a b : Int), le a b → Not (Eq Int a b) → lt a b`.
     pub lt_of_le_of_ne: NameId,
+    /// `le_antisymm : ∀ (a b : Int), le a b → le b a → Eq Int a b` — proved
+    /// through trichotomy (`eq_em`), not a sign case-split: split on whether
+    /// `a = b` already, and in the disequality branch `lt_of_le_of_ne` gives
+    /// both `lt a b` and `lt b a`, which `lt_trans` + `lt_irrefl` refute.
+    pub le_antisymm: NameId,
     /// `euclidean_decomposition : ∀ t k, 0 < k → ∃ q r, t = k*q+r ∧ 0 ≤ r ∧ r < k`.
     pub euclidean_decomposition: NameId,
     /// `euclid_of_nat : ∀ n m, ∃ q r, ofNat n = ofNat (succ m)*q+r ∧ 0 ≤ r ∧ r < ofNat (succ m)`.
@@ -597,6 +602,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
+        le_antisymm: child(kernel, "le_antisymm"),
         euclidean_decomposition: child(kernel, "euclidean_decomposition"),
         euclid_of_nat: child(kernel, "euclid_of_nat"),
         euclid_neg_succ: child(kernel, "euclid_neg_succ"),
@@ -721,6 +727,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         order::declare_difference_lemmas(&mut d)?;
         order::declare_additive_order(&mut d)?;
         decide::declare_decidable_equality(&mut d)?;
+        order::declare_le_antisymm(&mut d)?;
         algebra::declare_ordered_multiplication(&mut d)?;
         euclid::declare_of_nat_branch(&mut d)?;
         euclid::declare_neg_succ_branch(&mut d)?;

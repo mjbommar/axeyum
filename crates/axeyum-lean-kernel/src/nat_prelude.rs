@@ -49,7 +49,8 @@
 //! `add_right_comm`, successor injectivity, and left/right cancellation.
 //!
 //! **Multiplicative theorems**: `zero_mul`, `succ_mul`, `mul_comm`,
-//! `left_distrib`, `right_distrib`, `mul_assoc`, `one_mul`, `mul_one`.
+//! `left_distrib`, `right_distrib`, `mul_assoc`, `one_mul`, `mul_one`,
+//! `mul_eq_zero` (no zero divisors).
 //!
 //! **Order** (`Nat.le`): an *indexed* `Prop`-valued inductive relation with the
 //! same shape as Lean's own `Nat.le` — `Nat.le.refl : Le n n` and
@@ -148,8 +149,8 @@ mod primes;
 pub use ops::{NatDev, NatOps, NatState};
 
 use algebra::{
-    declare_additive_theorems, declare_finite_sum_theorems, declare_multiplicative_theorems,
-    declare_subtraction_theorems,
+    declare_additive_theorems, declare_finite_sum_theorems, declare_mul_no_zero_divisors,
+    declare_multiplicative_theorems, declare_subtraction_theorems,
 };
 use bezout::{declare_euclid_lemma, declare_gcd_bezout};
 use binomial::declare_binomial_theorem;
@@ -651,6 +652,12 @@ pub struct NatPrelude {
     pub one_le_of_dvd_pos: NameId,
     /// `Nat.one_le_mul : ∀ a b, 1 ≤ a → 1 ≤ b → 1 ≤ a * b`.
     pub one_le_mul: NameId,
+    /// `Nat.mul_eq_zero : ∀ a b, a * b = 0 → a = 0 ∨ b = 0` — `ℕ` has no zero
+    /// divisors. Proved by a constructor case-split on both factors (not
+    /// induction): `a = 0` or `b = 0` are immediate, and `a = succ x`,
+    /// `b = succ y` makes the product `succ_mul` + `add_succ` away from a bare
+    /// successor, which `succ_ne_zero` refutes against the hypothesis.
+    pub mul_eq_zero: NameId,
     /// `Nat.dvd_factorial_of_le : ∀ d n, Le 1 d → Le d n → dvd d (factorial n)`.
     ///
     /// Every positive number at most `n` divides `n!`. This is the first of the
@@ -970,6 +977,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             one_le_left_of_mul: kernel.name_str(nat, "one_le_left_of_mul"),
             one_le_of_dvd_pos: kernel.name_str(nat, "one_le_of_dvd_pos"),
             one_le_mul: kernel.name_str(nat, "one_le_mul"),
+            mul_eq_zero: kernel.name_str(nat, "mul_eq_zero"),
             dvd_factorial_of_le: kernel.name_str(nat, "dvd_factorial_of_le"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
@@ -1005,6 +1013,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_finite_sum_theorems(&mut d, &p)?;
         declare_order(&mut d, &p)?;
         declare_no_confusion(&mut d, &p)?;
+        declare_mul_no_zero_divisors(&mut d, &p)?;
         declare_order_extra(&mut d, &p)?;
         declare_order_more(&mut d, &p)?;
         declare_boolean_le(&mut d, &p)?;

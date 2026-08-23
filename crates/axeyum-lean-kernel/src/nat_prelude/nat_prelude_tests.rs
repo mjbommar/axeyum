@@ -152,6 +152,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mul_assoc,
         p.one_mul,
         p.mul_one,
+        p.mul_eq_zero,
         p.zero_le,
         p.le_succ_succ,
         p.le_of_succ_le_succ,
@@ -3780,7 +3781,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        20 + 133,
+        20 + 134,
         "every promised definition and theorem must be rendered"
     );
 }

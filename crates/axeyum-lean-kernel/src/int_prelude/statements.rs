@@ -261,6 +261,15 @@ pub(super) fn lt_of_le_of_ne(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     d.arrow(bound, after_distinct)
 }
 
+/// `le a b → le b a → Eq Int a b`.
+pub(super) fn le_antisymm(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
+    let forward = d.ile(v[0], v[1]);
+    let backward = d.ile(v[1], v[0]);
+    let conclusion = d.ieq(v[0], v[1]);
+    let after_backward = d.arrow(backward, conclusion);
+    d.arrow(forward, after_backward)
+}
+
 /// `Or (Eq Int a b) (Not (Eq Int a b))`.
 pub(super) fn eq_em(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     let equality = d.ieq(v[0], v[1]);

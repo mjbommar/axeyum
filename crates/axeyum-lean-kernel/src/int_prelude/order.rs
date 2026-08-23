@@ -412,6 +412,60 @@ pub(super) fn declare_order_theorems(d: &mut IntDev<'_>) -> Result<(), KernelErr
     Ok(())
 }
 
+/// Declare `Int.le_antisymm`. Called *after* `Int.eq_em` is declared
+/// (`decide::declare_decidable_equality`), which is why this lives in its own
+/// function rather than inside [`declare_order_theorems`]: `eq_em` is not
+/// available yet at that point in the build.
+///
+/// This is **not** the sign case-split `lt_of_le_of_ne` uses — it goes through
+/// trichotomy instead, which is shorter because it needs no `Int.rec` at all:
+/// `eq_em` splits on whether `a = b` already; the equality branch is
+/// immediate, and the disequality branch derives `lt a b` (from `le a b` and
+/// `a ≠ b` via `lt_of_le_of_ne`) and `lt b a` (symmetrically, from `le b a`
+/// and the flipped disequality), then closes by `lt_trans` + `lt_irrefl`
+/// against `lt a a`.
+pub(super) fn declare_le_antisymm(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+
+    d.int_theorem(p.le_antisymm, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let stmt = statements::le_antisymm(d, v);
+        let forward = d.ile(a, b);
+        let backward = d.ile(b, a);
+        let goal = d.ieq(a, b);
+        let proof = with_hypotheses(d, &[forward, backward], &|d, h| {
+            let equality = d.ieq(a, b);
+            let distinct = d.not(equality);
+            let disjunction = d.lemma(p.eq_em, &[a, b]);
+            d.or_elim(
+                equality,
+                distinct,
+                goal,
+                disjunction,
+                &|_d, eq_proof| eq_proof,
+                &|d, hne| {
+                    let lt_ab = d.lemma(p.lt_of_le_of_ne, &[a, b, h[0], hne]);
+                    let hne_rev = {
+                        let ba_eq = d.ieq(b, a);
+                        let fv = d.fresh_fvar();
+                        let hba = d.kernel().fvar(fv);
+                        let flipped = d.isymm(b, a, hba);
+                        let refuted = d.apply(hne, &[flipped]);
+                        d.lam_fv(fv, ba_eq, refuted)
+                    };
+                    let lt_ba = d.lemma(p.lt_of_le_of_ne, &[b, a, h[1], hne_rev]);
+                    let lt_aa = d.lemma(p.lt_trans, &[a, b, a, lt_ab, lt_ba]);
+                    let false_proof = d.lemma(p.lt_irrefl, &[a, lt_aa]);
+                    d.absurd(goal, false_proof)
+                },
+            )
+        });
+        (stmt, proof)
+    })?;
+
+    Ok(())
+}
+
 // --- the order as a difference ----------------------------------------------
 //
 // `Int.le a b` is a four-case definition, so proving `a ≤ b → a+c ≤ b+d` by

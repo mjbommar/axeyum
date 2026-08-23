@@ -2,6 +2,7 @@
 
 use super::NatPrelude;
 use super::ops::{NatDev, NatOps};
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -600,6 +601,137 @@ pub(super) fn declare_multiplicative_theorems(
             },
             n,
         );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.mul_eq_zero` — `ℕ` has no zero divisors.
+///
+/// Called *after* `declare_no_confusion` (not from inside
+/// [`declare_multiplicative_theorems`], where `mul`/`succ_mul`/`add_succ` are
+/// available but `Nat.succ_ne_zero` is not yet declared): the contradiction
+/// branch below needs `succ_ne_zero`.
+///
+/// A constructor case-split on both factors, not full induction (the
+/// induction hypotheses are built but never used): at `a = 0` the left
+/// disjunct is immediate; at `a = succ x`, case on `b`; at `b = 0` the right
+/// disjunct is immediate; at `b = succ y` the product is `succ_mul` then
+/// `add_succ` away from a bare successor, which `succ_ne_zero` refutes
+/// against the `a * b = 0` hypothesis.
+pub(super) fn declare_mul_no_zero_divisors(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    // mul_eq_zero : ∀ a b, mul a b = 0 → a = 0 ∨ b = 0
+    d.theorem(p.mul_eq_zero, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+
+        let conclusion = |d: &mut NatDev<'_>, x: ExprId, y: ExprId| {
+            let zero = d.zero();
+            let left = d.eq(x, zero);
+            let zero = d.zero();
+            let right = d.eq(y, zero);
+            d.const_app(p.logic.or, &[left, right])
+        };
+
+        let stmt = {
+            let zero = d.zero();
+            let product = d.mul(a, b);
+            let hyp = d.eq(product, zero);
+            let goal = conclusion(d, a, b);
+            d.arrow(hyp, goal)
+        };
+
+        // The motive for the outer case-split on `a`, closing over `b`.
+        let claim_a = |d: &mut NatDev<'_>, x: ExprId| {
+            let zero = d.zero();
+            let product = d.mul(x, b);
+            let hyp = d.eq(product, zero);
+            let goal = conclusion(d, x, b);
+            d.arrow(hyp, goal)
+        };
+
+        let at_zero_a = |d: &mut NatDev<'_>| {
+            let h_fv = d.fresh_fvar();
+            let zero = d.zero();
+            let product = d.mul(zero, b);
+            let zero2 = d.zero();
+            let hyp_ty = d.eq(product, zero2);
+            let zero3 = d.zero();
+            let left = d.eq(zero3, zero3);
+            let right = d.eq(b, zero3);
+            let refl = d.refl(zero3);
+            let body = d.const_app(p.logic.or_inl, &[left, right, refl]);
+            d.lam_fv(h_fv, hyp_ty, body)
+        };
+
+        let at_succ_a = |d: &mut NatDev<'_>, x: ExprId, _ih: ExprId| {
+            // The motive for the inner case-split on `b`, closing over the
+            // predecessor `x` bound by the outer step.
+            let claim_b = |d: &mut NatDev<'_>, y: ExprId| {
+                let zero = d.zero();
+                let sx = d.succ(x);
+                let product = d.mul(sx, y);
+                let hyp = d.eq(product, zero);
+                let goal = conclusion(d, sx, y);
+                d.arrow(hyp, goal)
+            };
+
+            let at_zero_b = |d: &mut NatDev<'_>| {
+                let h_fv = d.fresh_fvar();
+                let sx = d.succ(x);
+                let zero = d.zero();
+                let product = d.mul(sx, zero);
+                let zero2 = d.zero();
+                let hyp_ty = d.eq(product, zero2);
+                let zero3 = d.zero();
+                let left = d.eq(sx, zero3);
+                let right = d.eq(zero3, zero3);
+                let refl = d.refl(zero3);
+                let body = d.const_app(p.logic.or_inr, &[left, right, refl]);
+                d.lam_fv(h_fv, hyp_ty, body)
+            };
+
+            let at_succ_b = |d: &mut NatDev<'_>, y: ExprId, _ih: ExprId| {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let sx = d.succ(x);
+                let sy = d.succ(y);
+                let product = d.mul(sx, sy);
+                let zero = d.zero();
+                let hyp_ty = d.eq(product, zero);
+                let goal = conclusion(d, sx, sy);
+
+                // `mul (succ x) (succ y) = succ (add (mul x (succ y)) y)`,
+                // via `succ_mul` then `add_succ`.
+                let scaled = d.mul(x, sy);
+                let expanded = d.add(scaled, sy);
+                let step1 = d.lemma(p.succ_mul, &[x, sy]);
+                let inner_sum = d.add(scaled, y);
+                let bumped = d.succ(inner_sum);
+                let step2 = d.lemma(p.add_succ, &[scaled, y]);
+                let (_last, chained) = d.chain(product, &[(expanded, step1), (bumped, step2)]);
+                let flipped = d.symm(product, bumped, chained);
+                let zero2 = d.zero();
+                let located = d.trans(bumped, product, zero2, flipped, h);
+                let contradiction = d.lemma(p.succ_ne_zero, &[inner_sum, located]);
+
+                let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                let level = d.kernel().level_zero();
+                let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+                let anon = d.anon_name();
+                let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+                let body = d.apply(rec, &[motive, contradiction]);
+                d.lam_fv(h_fv, hyp_ty, body)
+            };
+
+            d.induct(&claim_b, &at_zero_b, &at_succ_b, b)
+        };
+
+        let proof = d.induct(&claim_a, &at_zero_a, &at_succ_a, a);
         (stmt, proof)
     })?;
     Ok(())
