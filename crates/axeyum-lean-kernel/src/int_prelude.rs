@@ -374,6 +374,24 @@ pub struct IntPrelude {
     pub mod_eq_add_right: NameId,
     /// `ModEq.add_left : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (c+a) (c+b)`.
     pub mod_eq_add_left: NameId,
+    /// `ModEq.mul_left : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (c*a) (c*b)`
+    /// — the primitive multiplicative congruence.
+    pub mod_eq_mul_left: NameId,
+    /// `ModEq.mul_right : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (a*c) (b*c)`
+    /// — derived from [`Self::mod_eq_mul_left`] by commuting.
+    pub mod_eq_mul_right: NameId,
+    /// `ModEq.mul :
+    /// ∀ n a b c e, 0 < n → ModEq n a b → ModEq n c e → ModEq n (a*c) (b*e)`
+    /// — the two-sided multiplicative congruence.
+    pub mod_eq_mul: NameId,
+    /// `modEq_cancel :
+    /// ∀ n c a b, 0 < n → Coprime c n → ModEq n (c*a) (c*b) → ModEq n a b` —
+    /// cancellation, via [`Self::gauss_lemma`].
+    pub mod_eq_cancel: NameId,
+    /// `modEq_inverse_exists :
+    /// ∀ n a, 0 < n → Coprime a n → ∃ b, ModEq n (a*b) one` — the modular
+    /// inverse, straight from Bézout ([`Self::gcd_eq_gcd_ab`]).
+    pub mod_eq_inverse_exists: NameId,
     /// `natAbs : Int → Nat` — the magnitude, `ofNat n ↦ n` and `negSucc m ↦ succ m`.
     pub nat_abs: NameId,
     /// `of_nat_nat_abs_of_nonneg : ∀ a, 0 ≤ a → ofNat (natAbs a) = a`.
@@ -602,6 +620,11 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_iff_dvd: child(kernel, "modEq_iff_dvd"),
         mod_eq_add_right: child(kernel, "modEq_add_right"),
         mod_eq_add_left: child(kernel, "modEq_add_left"),
+        mod_eq_mul_left: child(kernel, "modEq_mul_left"),
+        mod_eq_mul_right: child(kernel, "modEq_mul_right"),
+        mod_eq_mul: child(kernel, "modEq_mul"),
+        mod_eq_cancel: child(kernel, "modEq_cancel"),
+        mod_eq_inverse_exists: child(kernel, "modEq_inverse_exists"),
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
@@ -723,6 +746,9 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modeq::declare_modeq_iff_dvd(&mut d)?;
         modeq::declare_modeq_add_right(&mut d)?;
         modeq::declare_modeq_add_left(&mut d)?;
+        modeq::declare_modeq_mul_left(&mut d)?;
+        modeq::declare_modeq_mul_right(&mut d)?;
+        modeq::declare_modeq_mul(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
@@ -739,6 +765,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_coprime(&mut d)?;
         gcd::declare_coprime_of_bezout_one(&mut d)?;
         gcd::declare_gauss_lemma(&mut d)?;
+        modeq::declare_modeq_cancel(&mut d)?;
+        gcd::declare_modeq_inverse_exists(&mut d)?;
         gcd::declare_euclid_lemma(&mut d)?;
         gcd::declare_euclid_infinitude(&mut d)?;
         crt::declare_crt_exists(&mut d)?;

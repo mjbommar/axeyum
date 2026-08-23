@@ -5,19 +5,18 @@
 //! definition unfolds — no new proof technique, just `Eq`'s own equivalence
 //! laws transported through a definitional layer.
 //!
-//! ## What is NOT here yet, and why
+//! ## `Int.modEq_iff_dvd`, and what it unblocked
 //!
-//! `Int.modEq_iff_dvd : ModEq n a b ↔ n ∣ (b - a)` is the real content this
-//! definition exists for, and it needs [`super::dvd::declare_emod_eq_zero_iff_dvd`]
-//! (`a%n=0 ↔ n∣a`) plus a fact connecting `emod a n = emod b n` to
-//! `emod (b-a) n = 0`. That connecting fact is itself blocked: proving `b-a
-//! = n*((b/n)-(a/n))` from `a=n*(a/n)+r, b=n*(b/n)+r` (same remainder `r`)
-//! needs `Int.mul` distributing over subtraction and commuting with
-//! negation — `n*(x-y) = n*x - n*y` and `n*(-y) = -(n*y)` — and this
-//! development has proved neither. (`Int.left_distrib` only distributes over
-//! `add`.) Both are short derivations from `Int.neg_one_mul` +
-//! `Int.mul_assoc` + `Int.mul_comm`, but they are new lemmas, not composition
-//! of existing ones, so they are left for the next slice rather than rushed.
+//! `Int.modEq_iff_dvd : 0 < n → (ModEq n a b ↔ n ∣ (b - a))` — the bridge
+//! from `ModEq` to `Int.dvd` — is declared below
+//! ([`declare_modeq_iff_dvd`]), not merely planned: `Int.mul_sub`/`Int.mul_neg`
+//! (`sub.rs`) supplied the missing distributivity, and the actual shortest
+//! route to it turned out to go through two small "un-subtract" identities
+//! private to this module ([`cancel_neg_add`], [`cancel_common_addend`])
+//! rather than `mul_sub`/`mul_neg` directly — see the note above
+//! [`declare_modeq_iff_dvd`] for the full story of that deviation. Every
+//! multiplicative and additive `ModEq` congruence in this module, and the
+//! modular inverse in `gcd.rs`, is built on top of this bridge.
 //!
 //! ## The structural-vs-well-founded contrast
 //!
@@ -46,7 +45,7 @@ use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
 
 /// `Int.ModEq n a b`, i.e. `d.const_app(p.mod_eq, &[n, a, b])`.
-fn imodeq(d: &mut IntDev<'_>, n: ExprId, a: ExprId, b: ExprId) -> ExprId {
+pub(super) fn imodeq(d: &mut IntDev<'_>, n: ExprId, a: ExprId, b: ExprId) -> ExprId {
     let f = d.int().mod_eq;
     d.const_app(f, &[n, a, b])
 }
@@ -648,6 +647,247 @@ pub(super) fn declare_modeq_add_left(d: &mut IntDev<'_>) -> Result<(), KernelErr
 
         let with_h = d.lam_fv(h_fv, modeq_ab, step2);
         let proof = d.lam_fv(h_pos_fv, pos_ty, with_h);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// The multiplicative congruences: `ModEq` is a ring congruence, not merely an
+// equivalence relation.
+// ---------------------------------------------------------------------------
+
+/// `Int.ModEq.mul_left :
+/// ∀ n a b c, 0 < n → ModEq n a b → ModEq n (c*a) (c*b)`.
+///
+/// The primitive multiplicative congruence, straight from `modEq_iff_dvd`:
+/// `h` gives `n ∣ (b-a)`, `dvd_trans` against `dvd_mul_left` scales that to
+/// `n ∣ c*(b-a)`, and `mul_sub` rewrites `c*(b-a)` into `c*b - c*a` — exactly
+/// the divisibility `modEq_iff_dvd` needs for `ModEq n (c*a) (c*b)`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_modeq_mul_left(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mod_eq_mul_left, 4, &|d, v| {
+        let (n, a, b, c) = (v[0], v[1], v[2], v[3]);
+        let zero = d.izero();
+        let pos_ty = d.ilt(zero, n);
+        let modeq_ab = imodeq(d, n, a, b);
+        let ca = d.imul(c, a);
+        let cb = d.imul(c, b);
+        let modeq_cacb = imodeq(d, n, ca, cb);
+        let inner_arrow = d.arrow(modeq_ab, modeq_cacb);
+        let stmt = d.arrow(pos_ty, inner_arrow);
+
+        let h_pos_fv = d.fresh_fvar();
+        let h_pos = d.kernel().fvar(h_pos_fv);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let sub_ba = d.isub(b, a);
+        let dvd_ba_ty = super::dvd::idvd(d, n, sub_ba);
+        let iff_ab = d.const_app(p.mod_eq_iff_dvd, &[n, a, b, h_pos]);
+        let mp_ab = d.const_app(p.logic.iff_mp, &[modeq_ab, dvd_ba_ty, iff_ab]);
+        let dvd_h = d.apply(mp_ab, &[h]);
+
+        let cdiff = d.imul(c, sub_ba);
+        let step1 = {
+            let mul_left_step = d.const_app(p.dvd_mul_left, &[sub_ba, c]);
+            d.const_app(p.dvd_trans, &[n, sub_ba, cdiff, dvd_h, mul_left_step])
+        };
+
+        let eq_ms = d.const_app(p.mul_sub, &[c, b, a]);
+        let diff_cb_ca = d.isub(cb, ca);
+        let motive = |d: &mut IntDev<'_>, x: ExprId| super::dvd::idvd(d, n, x);
+        let dvd_new = d.int_eq_rewrite(cdiff, diff_cb_ca, eq_ms, step1, &motive);
+
+        let dvd_cacb_ty = super::dvd::idvd(d, n, diff_cb_ca);
+        let iff_cacb = d.const_app(p.mod_eq_iff_dvd, &[n, ca, cb, h_pos]);
+        let mpr_cacb = d.const_app(p.logic.iff_mpr, &[modeq_cacb, dvd_cacb_ty, iff_cacb]);
+        let modeq_proof = d.apply(mpr_cacb, &[dvd_new]);
+
+        let with_h = d.lam_fv(h_fv, modeq_ab, modeq_proof);
+        let proof = d.lam_fv(h_pos_fv, pos_ty, with_h);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.ModEq.mul_right :
+/// ∀ n a b c, 0 < n → ModEq n a b → ModEq n (a*c) (b*c)`.
+///
+/// Derived from [`declare_modeq_mul_left`] by commuting both products — once
+/// the primitive congruence exists this is a rewrite, not new divisibility
+/// reasoning (mirrors how [`declare_modeq_add_left`] derives from
+/// [`declare_modeq_add_right`]).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_modeq_mul_right(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mod_eq_mul_right, 4, &|d, v| {
+        let (n, a, b, c) = (v[0], v[1], v[2], v[3]);
+        let zero = d.izero();
+        let pos_ty = d.ilt(zero, n);
+        let modeq_ab = imodeq(d, n, a, b);
+        let ac = d.imul(a, c);
+        let bc = d.imul(b, c);
+        let modeq_acbc = imodeq(d, n, ac, bc);
+        let inner_arrow = d.arrow(modeq_ab, modeq_acbc);
+        let stmt = d.arrow(pos_ty, inner_arrow);
+
+        let h_pos_fv = d.fresh_fvar();
+        let h_pos = d.kernel().fvar(h_pos_fv);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let mul_left = d.const_app(p.mod_eq_mul_left, &[n, a, b, c, h_pos]);
+        let h_left = d.apply(mul_left, &[h]);
+
+        let ca = d.imul(c, a);
+        let cb = d.imul(c, b);
+
+        let eq1 = d.const_app(p.mul_comm, &[c, a]);
+        let step1 = d.int_eq_rewrite(ca, ac, eq1, h_left, &|d, x| imodeq(d, n, x, cb));
+        let eq2 = d.const_app(p.mul_comm, &[c, b]);
+        let step2 = d.int_eq_rewrite(cb, bc, eq2, step1, &|d, x| imodeq(d, n, ac, x));
+
+        let with_h = d.lam_fv(h_fv, modeq_ab, step2);
+        let proof = d.lam_fv(h_pos_fv, pos_ty, with_h);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.ModEq.mul :
+/// ∀ n a b c e, 0 < n → ModEq n a b → ModEq n c e → ModEq n (a*c) (b*e)`.
+///
+/// The two-sided congruence: scale the first hypothesis on the right by `c`
+/// ([`declare_modeq_mul_right`]), scale the second on the left by `b`
+/// ([`declare_modeq_mul_left`]), and chain through `ModEq.trans`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_modeq_mul(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mod_eq_mul, 5, &|d, v| {
+        let (n, a, b, c, e) = (v[0], v[1], v[2], v[3], v[4]);
+        let zero = d.izero();
+        let pos_ty = d.ilt(zero, n);
+        let modeq_ab = imodeq(d, n, a, b);
+        let modeq_ce = imodeq(d, n, c, e);
+        let ac = d.imul(a, c);
+        let bc = d.imul(b, c);
+        let be = d.imul(b, e);
+        let modeq_target = imodeq(d, n, ac, be);
+        let second_to_target = d.arrow(modeq_ce, modeq_target);
+        let ab_arrow = d.arrow(modeq_ab, second_to_target);
+        let stmt = d.arrow(pos_ty, ab_arrow);
+
+        let h_pos_fv = d.fresh_fvar();
+        let h_pos = d.kernel().fvar(h_pos_fv);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+
+        let mul_right = d.const_app(p.mod_eq_mul_right, &[n, a, b, c, h_pos]);
+        let first_scaled = d.apply(mul_right, &[h1]);
+
+        let mul_left = d.const_app(p.mod_eq_mul_left, &[n, c, e, b, h_pos]);
+        let second_scaled = d.apply(mul_left, &[h2]);
+
+        let body = d.const_app(
+            p.mod_eq_trans,
+            &[n, ac, bc, be, first_scaled, second_scaled],
+        );
+
+        let with_h2 = d.lam_fv(h2_fv, modeq_ce, body);
+        let with_h1 = d.lam_fv(h1_fv, modeq_ab, with_h2);
+        let proof = d.lam_fv(h_pos_fv, pos_ty, with_h1);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.ModEq.cancel :
+/// ∀ n c a b, 0 < n → Coprime c n → ModEq n (c*a) (c*b) → ModEq n a b`.
+///
+/// Cancellation, which is what a modular inverse buys: `modEq_iff_dvd` reads
+/// `n ∣ c*(b-a)` off the hypothesis (via `mul_sub`), `Coprime c n` gives
+/// `Coprime n c` (`gcd_comm`), and `gauss_lemma` turns `n ∣ c*(b-a)` with
+/// `Coprime n c` into `n ∣ (b-a)` — exactly what `modEq_iff_dvd` needs for
+/// `ModEq n a b`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_modeq_cancel(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mod_eq_cancel, 4, &|d, v| {
+        let (n, c, a, b) = (v[0], v[1], v[2], v[3]);
+        let zero = d.izero();
+        let pos_ty = d.ilt(zero, n);
+        let coprime_ty = d.const_app(p.coprime, &[c, n]);
+        let ca = d.imul(c, a);
+        let cb = d.imul(c, b);
+        let modeq_cacb = imodeq(d, n, ca, cb);
+        let modeq_ab = imodeq(d, n, a, b);
+
+        let inner_arrow = d.arrow(modeq_cacb, modeq_ab);
+        let cop_arrow = d.arrow(coprime_ty, inner_arrow);
+        let stmt = d.arrow(pos_ty, cop_arrow);
+
+        let h_pos_fv = d.fresh_fvar();
+        let h_pos = d.kernel().fvar(h_pos_fv);
+        let h_cop_fv = d.fresh_fvar();
+        let h_cop = d.kernel().fvar(h_cop_fv);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        // n ∣ (c*b - c*a), from `h : ModEq n (c*a) (c*b)`.
+        let diff_cb_ca = d.isub(cb, ca);
+        let dvd_diff_ty = super::dvd::idvd(d, n, diff_cb_ca);
+        let iff_cacb = d.const_app(p.mod_eq_iff_dvd, &[n, ca, cb, h_pos]);
+        let mp_cacb = d.const_app(p.logic.iff_mp, &[modeq_cacb, dvd_diff_ty, iff_cacb]);
+        let dvd_diff = d.apply(mp_cacb, &[h]);
+
+        // c*(b-a) = c*b - c*a, so n ∣ c*(b-a).
+        let sub_ba = d.isub(b, a);
+        let cdiff = d.imul(c, sub_ba);
+        let eq_ms = d.const_app(p.mul_sub, &[c, b, a]);
+        let eq_ms_rev = d.isymm(cdiff, diff_cb_ca, eq_ms);
+        let motive = |d: &mut IntDev<'_>, x: ExprId| super::dvd::idvd(d, n, x);
+        let dvd_cdiff = d.int_eq_rewrite(diff_cb_ca, cdiff, eq_ms_rev, dvd_diff, &motive);
+
+        // Coprime n c, from `h_cop : Coprime c n` via `gcd_comm`.
+        let gc = d.const_app(p.gcd, &[c, n]);
+        let gc2 = d.const_app(p.gcd, &[n, c]);
+        let one_nat = d.num(1);
+        let gcd_comm_cn = d.const_app(p.gcd_comm, &[c, n]);
+        let gc2_eq_gc = d.symm(gc, gc2, gcd_comm_cn);
+        let coprime_nc = d.trans(gc2, gc, one_nat, gc2_eq_gc, h_cop);
+
+        let dvd_ba = d.const_app(p.gauss_lemma, &[n, c, sub_ba, coprime_nc, dvd_cdiff]);
+
+        let modeq_proof = {
+            let dvd_ba_ty = super::dvd::idvd(d, n, sub_ba);
+            let iff_ab = d.const_app(p.mod_eq_iff_dvd, &[n, a, b, h_pos]);
+            let mpr_ab = d.const_app(p.logic.iff_mpr, &[modeq_ab, dvd_ba_ty, iff_ab]);
+            d.apply(mpr_ab, &[dvd_ba])
+        };
+
+        let with_h = d.lam_fv(h_fv, modeq_cacb, modeq_proof);
+        let with_cop = d.lam_fv(h_cop_fv, coprime_ty, with_h);
+        let proof = d.lam_fv(h_pos_fv, pos_ty, with_cop);
         (stmt, proof)
     })?;
     Ok(())

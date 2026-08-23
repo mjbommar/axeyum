@@ -1708,6 +1708,156 @@ pub(super) fn declare_gauss_lemma(d: &mut IntDev<'_>) -> Result<(), KernelError>
     Ok(())
 }
 
+/// `Int.modEq_inverse_exists :
+/// ∀ n a, 0 < n → Coprime a n → ∃ b, ModEq n (a*b) one` — the modular
+/// inverse.
+///
+/// Direct from Bézout ([`declare_gcd_eq_gcd_ab`]): `Coprime a n` casts the
+/// certificate's `ofNat (gcd a n)` down to `one`, giving `one = a*u + n*v`
+/// for the witnesses `u, v` the certificate supplies. `u` IS the inverse:
+/// commuting the sum and applying `add_neg_cancel_right` gives
+/// `one - a*u = n*v`, i.e. `n ∣ (one - a*u)` with witness `v` — exactly the
+/// divisibility `modEq_iff_dvd` needs for `ModEq n (a*u) one`.
+///
+/// `g` is built exactly as `gcd_eq_gcd_ab`'s own certificate builds it (the
+/// same reasoning [`declare_gauss_lemma`]'s doc comment spells out), so the
+/// predicate below lines up with `bez`'s by construction rather than by an
+/// appeal to deep defeq.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_modeq_inverse_exists(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mod_eq_inverse_exists, 2, &|d, v| {
+        let (n, a) = (v[0], v[1]);
+        let zero = d.izero();
+        let pos_ty = d.ilt(zero, n);
+        let coprime_ty = d.const_app(p.coprime, &[a, n]);
+        let int_ty = d.int_ty();
+        let one_level = d.level_one();
+        let one_i = d.ione();
+
+        let goal_pred = {
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let ab = d.imul(a, b);
+            let body = super::modeq::imodeq(d, n, ab, one_i);
+            d.lam_fv(b_fv, int_ty, body)
+        };
+        let exists_name = d.int().logic.exists_;
+        let goal = {
+            let exists = d.kernel().const_(exists_name, vec![one_level]);
+            d.apply(exists, &[int_ty, goal_pred])
+        };
+
+        let inner_arrow = d.arrow(coprime_ty, goal);
+        let stmt = d.arrow(pos_ty, inner_arrow);
+
+        let h_pos_fv = d.fresh_fvar();
+        let h_pos = d.kernel().fvar(h_pos_fv);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+
+        // `g` built exactly as `gcd_eq_gcd_ab`'s own certificate builds it.
+        let big_a = nat_abs(d, a);
+        let big_n = nat_abs(d, n);
+        let g = NatOps::gcd(d, big_a, big_n);
+        let g_i = d.of_nat(g);
+        let one_nat = d.num(1);
+        // `h1 : Coprime a n`, used directly at its unfolded type `Eq Nat g 1`.
+        let cast_eq = d.nat_eq_to_int(g, one_nat, h1, &|d, x| d.of_nat(x));
+
+        let bez = d.const_app(p.gcd_eq_gcd_ab, &[a, n]);
+
+        let inner_pred_for = |d: &mut IntDev<'_>, u: ExprId| -> ExprId {
+            let vv_fv = d.fresh_fvar();
+            let vv = d.kernel().fvar(vv_fv);
+            let au = d.imul(a, u);
+            let nv = d.imul(n, vv);
+            let sum = d.iadd(au, nv);
+            let body = d.ieq(g_i, sum);
+            d.lam_fv(vv_fv, int_ty, body)
+        };
+        let outer_pred = {
+            let u_fv = d.fresh_fvar();
+            let u = d.kernel().fvar(u_fv);
+            let inner_pred = inner_pred_for(d, u);
+            let exists = d.kernel().const_(exists_name, vec![one_level]);
+            let body = d.apply(exists, &[int_ty, inner_pred]);
+            d.lam_fv(u_fv, int_ty, body)
+        };
+
+        let minor = {
+            let u_fv = d.fresh_fvar();
+            let u = d.kernel().fvar(u_fv);
+            let inner_pred = inner_pred_for(d, u);
+            let ha_fv = d.fresh_fvar();
+            let ha = d.kernel().fvar(ha_fv);
+            let ha_ty = {
+                let exists = d.kernel().const_(exists_name, vec![one_level]);
+                d.apply(exists, &[int_ty, inner_pred])
+            };
+
+            let inner_minor = {
+                let vv_fv = d.fresh_fvar();
+                let vv = d.kernel().fvar(vv_fv);
+                let au = d.imul(a, u);
+                let nv = d.imul(n, vv);
+                let sum = d.iadd(au, nv);
+                let eq_ty = d.ieq(g_i, sum);
+                let eq_fv = d.fresh_fvar();
+                let eq_h = d.kernel().fvar(eq_fv);
+
+                // one = a*u + n*v
+                let one_eq_sum = {
+                    let rev = d.isymm(g_i, one_i, cast_eq);
+                    d.itrans(one_i, g_i, sum, rev, eq_h)
+                };
+                // one = n*v + a*u  (commute the sum)
+                let comm = d.const_app(p.add_comm, &[au, nv]);
+                let nv_au = d.iadd(nv, au);
+                let one_eq_comm = d.itrans(one_i, sum, nv_au, one_eq_sum, comm);
+
+                // one - a*u = n*v, via `add_neg_cancel_right (n*v) (a*u)`.
+                let neg_au = d.ineg(au);
+                let lhs = d.iadd(one_i, neg_au);
+                let rhs_start = d.iadd(nv_au, neg_au);
+                let step1 = d.icongr(one_i, nv_au, one_eq_comm, &|d, t| d.iadd(t, neg_au));
+                let cancel = d.const_app(p.add_neg_cancel_right, &[nv, au]);
+                let (_, diff_eq) = d.ichain(lhs, &[(rhs_start, step1), (nv, cancel)]);
+
+                // n ∣ (one - a*u), witness v.
+                let dvd_diff = idvd_intro(d, n, lhs, vv, diff_eq);
+
+                // ModEq n (a*u) one, from `modEq_iff_dvd`.
+                let modeq_ty = super::modeq::imodeq(d, n, au, one_i);
+                let dvd_ty = idvd(d, n, lhs);
+                let iff_ty = d.const_app(p.mod_eq_iff_dvd, &[n, au, one_i, h_pos]);
+                let mpr = d.const_app(p.logic.iff_mpr, &[modeq_ty, dvd_ty, iff_ty]);
+                let modeq_proof = d.apply(mpr, &[dvd_diff]);
+
+                // ∃ b, ModEq n (a*b) one, witness u.
+                let intro_name = d.int().logic.exists_intro;
+                let intro = d.kernel().const_(intro_name, vec![one_level]);
+                let witness_intro = d.apply(intro, &[int_ty, goal_pred, u, modeq_proof]);
+
+                let with_eq = d.lam_fv(eq_fv, eq_ty, witness_intro);
+                d.lam_fv(vv_fv, int_ty, with_eq)
+            };
+            let eliminated = int_exists_elim(d, inner_pred, goal, ha, inner_minor);
+            let with_ha = d.lam_fv(ha_fv, ha_ty, eliminated);
+            d.lam_fv(u_fv, int_ty, with_ha)
+        };
+
+        let disjunction_result = int_exists_elim(d, outer_pred, goal, bez, minor);
+        let with_h1 = d.lam_fv(h1_fv, coprime_ty, disjunction_result);
+        let proof = d.lam_fv(h_pos_fv, pos_ty, with_h1);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// `Int.euclid_lemma : ∀ (p a b : Int),
 /// (2 ≤ natAbs p ∧ ∀ d, d ∣ natAbs p → d = 1 ∨ d = natAbs p) →
 /// p ∣ a*b → p ∣ a ∨ p ∣ b` — Elements VII.30.
