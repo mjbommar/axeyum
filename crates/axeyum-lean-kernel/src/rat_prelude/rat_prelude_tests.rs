@@ -45,6 +45,9 @@ fn every_named_declaration_exists() {
         ("ext", p.ext),
         ("le_total", p.le_total),
         ("lt_of_not_le", p.lt_of_not_le),
+        ("int_le_antisymm", p.int_le_antisymm),
+        ("le_antisymm", p.le_antisymm),
+        ("lt_trichotomy", p.lt_trichotomy),
         ("normalize_add_normalize", p.normalize_add_normalize),
         ("normalize_mul_normalize", p.normalize_mul_normalize),
         ("mul_neg", p.mul_neg),
@@ -158,6 +161,71 @@ fn the_ring_law_list_has_exactly_twenty_two_distinct_entries() {
     names.sort();
     names.dedup();
     assert_eq!(names.len(), 22, "the ring-law list repeats an entry");
+}
+
+/// `Rat.le` is not just total (`le_total`) but **antisymmetric**
+/// (`le_antisymm`) and its strict companion is **trichotomous**
+/// (`lt_trichotomy`) — none of which is one of the 22, and the last two did
+/// not exist before this development. Every declaration involved, including
+/// the private `int_le_antisymm` bridge `int_prelude` itself lacks, is a
+/// **checked** theorem with an empty axiom footprint — read out of the
+/// kernel, not off the diff.
+#[test]
+fn the_order_is_antisymmetric_and_trichotomous_and_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("int_le_antisymm", p.int_le_antisymm),
+        ("le_antisymm", p.le_antisymm),
+        ("lt_trichotomy", p.lt_trichotomy),
+    ];
+    for (label, name) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "Rat.{label} must be a checked Theorem, found a different kind"
+        );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// The statements are the unweakened ones, rendered verbatim: `le_antisymm`'s
+/// conclusion is the bare equality (not, say, `le a b` again), and
+/// `lt_trichotomy`'s disjunction is right-associated with `lt a b` first,
+/// `a = b` in the middle and `lt b a` last — not some other bracketing that
+/// would still have an empty footprint while proving something weaker or
+/// differently-shaped than trichotomy.
+#[test]
+fn the_order_completeness_statements_are_the_unweakened_ones() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.le_antisymm),
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat.le x0 x1) -> \
+         ((x3 : Rat.le x1 x0) -> Eq.{1} Rat x0 x1))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.lt_trichotomy),
+        "((x0 : Rat) -> ((x1 : Rat) -> \
+         Or (Rat.lt x0 x1) (Or (Eq.{1} Rat x0 x1) (Rat.lt x1 x0))))"
+    );
 }
 
 /// ℚ is a model of the whole `Real` axiom package: every one of the 30

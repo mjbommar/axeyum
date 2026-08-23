@@ -80,6 +80,54 @@ fn declare_bridges(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError>
         (stmt, proof)
     })?;
 
+    // int_le_antisymm : ∀ x y, Int.le x y → Int.le y x → x = y.
+    //
+    // `int_prelude` has no antisymmetry law for `Int.le`, so this builds one
+    // from the pieces it DOES have: `Int.eq_em` decides `x = y` outright, and
+    // in the `x ≠ y` branch `Int.lt_of_le_of_ne` sharpens each `le` hypothesis
+    // to a strict one — `x < y` from the first, `y < x` from the second (the
+    // second needs `y ≠ x`, i.e. the given disequality read backwards) — and
+    // `Int.lt_trans` then `Int.lt_irrefl` close it. No `Int.rec`, no case split
+    // on constructors: this is the same "decidable order" style `le_or_lt`
+    // uses, not the representation-level style `int_mul_right_cancel` needs.
+    d.int_theorem(p.int_le_antisymm, 2, &|d, v| {
+        let (x, y) = (v[0], v[1]);
+        let forward = d.ile(x, y);
+        let backward = d.ile(y, x);
+        let goal = d.ieq(x, y);
+        let inner = d.arrow(backward, goal);
+        let stmt = d.arrow(forward, inner);
+
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+
+        let decided = d.lemma(int.eq_em, &[x, y]);
+        let distinct = d.not(goal);
+        let body = d.or_elim(goal, distinct, goal, decided, &|_d, heq| heq, &|d, hne| {
+            // `hne : Not (x = y)`; flip it to `Not (y = x)` for the second
+            // `lt_of_le_of_ne` application.
+            let reversed_goal = d.ieq(y, x);
+            let hyx_fv = d.fresh_fvar();
+            let hyx = d.kernel().fvar(hyx_fv);
+            let hne_sym = {
+                let flipped = d.isymm(y, x, hyx);
+                let absurdity = d.apply(hne, &[flipped]);
+                d.lam_fv(hyx_fv, reversed_goal, absurdity)
+            };
+            let lt1 = d.lemma(int.lt_of_le_of_ne, &[x, y, h1, hne]);
+            let lt2 = d.lemma(int.lt_of_le_of_ne, &[y, x, h2, hne_sym]);
+            let lt3 = d.lemma(int.lt_trans, &[x, y, x, lt1, lt2]);
+            let irrefl = d.lemma(int.lt_irrefl, &[x]);
+            let contradiction = d.apply(irrefl, &[lt3]);
+            d.absurd(goal, contradiction)
+        });
+        let value = d.lam_fv(h2_fv, backward, body);
+        let proof = d.lam_fv(h1_fv, forward, value);
+        (stmt, proof)
+    })?;
+
     // eq_zero_of_num_zero : num q = 0 → q = 0.
     // `Rat.zero` has numerator `ofNat 0` and denominator `1`, so the cross
     // equation is `num q * 1 = 0 * den q`, i.e. `num q = 0` on both sides.
@@ -456,6 +504,93 @@ pub(super) fn declare_order_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
         );
         let proof = d.lam_fv(h_fv, hypothesis, body);
         (stmt, proof)
+    })?;
+
+    // le_antisymm : ∀ a b, le a b → le b a → a = b.
+    //
+    // Also not one of the 22, and also missing until now: `le a b` and
+    // `le b a` unfold to `Int.le x y` and `Int.le y x` at the same two cross-
+    // products `eq_of_cross` already asks for, so `int_le_antisymm` applied to
+    // them gives exactly its hypothesis.
+    rat_theorem(d, p.le_antisymm, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let hyp1 = rle(d, p, a, b);
+        let hyp2 = rle(d, p, b, a);
+        let conclusion = req(d, a, b);
+        let inner = d.arrow(hyp2, conclusion);
+        let stmt = d.arrow(hyp1, inner);
+
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+
+        let x = cross(d, a, b);
+        let y = cross(d, b, a);
+        let cross_eq = d.lemma(p.int_le_antisymm, &[x, y, h1, h2]);
+        let body = d.lemma(p.eq_of_cross, &[a, b, cross_eq]);
+
+        let value = d.lam_fv(h2_fv, hyp2, body);
+        let proof = d.lam_fv(h1_fv, hyp1, value);
+        (stmt, proof)
+    })
+}
+
+/// `lt_trichotomy : ∀ a b, Or (lt a b) (Or (a = b) (lt b a))`.
+///
+/// Separate from [`declare_order_laws`] because it needs
+/// [`RatPrelude::le_or_lt`], which is not declared until
+/// `archimedean::declare_archimedean` runs — later in `build_rat_prelude`'s
+/// pipeline than `declare_order_laws`. [`RatPrelude::le_antisymm`] has no such
+/// dependency and stays there.
+///
+/// Constructive, not classical: `le_or_lt a b` gives `Or(le a b)(lt b a)`. The
+/// `lt b a` branch is done. The `le a b` branch asks `le_or_lt b a` again —
+/// `Or(le b a)(lt a b)` — and now `le a b ∧ le b a` gives `a = b` by
+/// `le_antisymm`, or `lt a b` outright. Two decidable-order splits and one
+/// antisymmetry, no double negation anywhere.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_trichotomy(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.lt_trichotomy, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let lt_ab = rlt(d, p, a, b);
+        let eq_ab = req(d, a, b);
+        let lt_ba = rlt(d, p, b, a);
+        let right_or = d.or(eq_ab, lt_ba);
+        let stmt = d.or(lt_ab, right_or);
+
+        let le_ab = rle(d, p, a, b);
+        let first = d.lemma(p.le_or_lt, &[a, b]);
+        let body = d.or_elim(
+            le_ab,
+            lt_ba,
+            stmt,
+            first,
+            &|d, h_le_ab| {
+                let le_ba = rle(d, p, b, a);
+                let second = d.lemma(p.le_or_lt, &[b, a]);
+                d.or_elim(
+                    le_ba,
+                    lt_ab,
+                    stmt,
+                    second,
+                    &|d, h_le_ba| {
+                        let eq_proof = d.lemma(p.le_antisymm, &[a, b, h_le_ab, h_le_ba]);
+                        let inner = d.or_inl(eq_ab, lt_ba, eq_proof);
+                        d.or_inr(lt_ab, right_or, inner)
+                    },
+                    &|d, h_lt_ab| d.or_inl(lt_ab, right_or, h_lt_ab),
+                )
+            },
+            &|d, h_lt_ba| {
+                let inner = d.or_inr(eq_ab, lt_ba, h_lt_ba);
+                d.or_inr(lt_ab, right_or, inner)
+            },
+        );
+        (stmt, body)
     })
 }
 

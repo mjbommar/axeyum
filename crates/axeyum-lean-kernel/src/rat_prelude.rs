@@ -218,6 +218,16 @@ pub struct RatPrelude {
     pub int_right_distrib: NameId,
     /// `Rat.int_zero_mul : ∀ (a : Int), Int.zero * a = Int.zero`.
     pub int_zero_mul: NameId,
+    /// `Rat.int_le_antisymm : ∀ (x y : Int), Int.le x y → Int.le y x → x = y`.
+    ///
+    /// Missing from `int_prelude` itself (no `Int.le_antisymm` is declared
+    /// there), and not built by a four-way `Int.rec` split on the
+    /// constructors: `Int.eq_em` already decides `x = y`, so the only real
+    /// work is the `x ≠ y` branch, where `Int.lt_of_le_of_ne` sharpens both
+    /// hypotheses to strict and `Int.lt_trans` + `Int.lt_irrefl` close it.
+    /// What makes [`Self::le_antisymm`] possible without touching
+    /// `int_prelude/`.
+    pub int_le_antisymm: NameId,
     /// `Rat.eq_zero_of_num_zero : ∀ q, Int.Eq (num q) Int.zero → q = 0`.
     pub eq_zero_of_num_zero: NameId,
     /// `Rat.int_nonneg_of_nonneg : ∀ q, le 0 q → Int.le Int.zero (num q)`.
@@ -332,6 +342,25 @@ pub struct RatPrelude {
     /// particular the first step of an Archimedean argument: `¬(a ≤ b)` gives
     /// `b < a`, and only then is there a positive quantity to bound.
     pub lt_of_not_le: NameId,
+    /// `Rat.le_antisymm : ∀ a b, le a b → le b a → a = b`.
+    ///
+    /// **Also missing until now.** Not one of the 22 either — the `Real`
+    /// package states no antisymmetry law — but unlike `le_total` it is not a
+    /// one-line transcription of an existing `Int` fact: `int_prelude` has no
+    /// `Int.le_antisymm`, so [`Self::int_le_antisymm`] had to be built first.
+    /// Given that, this is `eq_of_cross` applied to the two cross-products the
+    /// hypotheses already relate.
+    pub le_antisymm: NameId,
+    /// `Rat.lt_trichotomy : ∀ a b, Or (lt a b) (Or (a = b) (lt b a))`.
+    ///
+    /// The genuinely constructive trichotomy: two applications of
+    /// [`Self::le_or_lt`] (first at `(a,b)`, then, in the `le a b` branch, at
+    /// `(b,a)`) and one of [`Self::le_antisymm`] close every case, with no
+    /// step that is an argument by contradiction. `CReal.Equiv` has no
+    /// analogue — cotransitivity is the most a setoid over an undecidable
+    /// order can offer — so this is a property `ℚ` has purely because its
+    /// order is *decidable* and `ℝ` cannot inherit by transcription.
+    pub lt_trichotomy: NameId,
 
     // --- the Archimedean property (ADR-0512 phase R1) -------------------------
     /// `Rat.natDivSucc : Nat → Nat → Rat` — the rational `k/(j+1)`, as a single
@@ -680,6 +709,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         int_mul_lt_mul_right: child(kernel, "int_mul_lt_mul_right"),
         int_right_distrib: child(kernel, "int_right_distrib"),
         int_zero_mul: child(kernel, "int_zero_mul"),
+        int_le_antisymm: child(kernel, "int_le_antisymm"),
         eq_zero_of_num_zero: child(kernel, "eq_zero_of_num_zero"),
         int_nonneg_of_nonneg: child(kernel, "int_nonneg_of_nonneg"),
         nonneg_of_int_nonneg: child(kernel, "nonneg_of_int_nonneg"),
@@ -721,6 +751,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sq_nonneg: child(kernel, "sq_nonneg"),
         le_total: child(kernel, "le_total"),
         lt_of_not_le: child(kernel, "lt_of_not_le"),
+        le_antisymm: child(kernel, "le_antisymm"),
+        lt_trichotomy: child(kernel, "lt_trichotomy"),
         nat_div_succ: child(kernel, "natDivSucc"),
         int_le_or_lt: child(kernel, "int_le_or_lt"),
         le_or_lt: child(kernel, "le_or_lt"),
@@ -813,6 +845,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         laws::declare_ring_laws(&mut d, prelude)?;
         scaling::declare_scaling_laws(&mut d, prelude)?;
         archimedean::declare_archimedean(&mut d, prelude)?;
+        laws::declare_trichotomy(&mut d, prelude)?;
         group::declare_group_laws(&mut d, prelude)?;
         product::declare_product_laws(&mut d, prelude)?;
         field::declare_field_laws(&mut d, prelude)?;
