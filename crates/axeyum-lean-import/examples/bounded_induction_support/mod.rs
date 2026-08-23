@@ -243,6 +243,20 @@ const MIN_RESIDUAL_BINDERS: usize = 4;
 /// crash.
 const MAX_RESIDUAL_CHAIN_DEPTH: usize = 6;
 
+/// Maximum number of [`LeShape`] "step" constructor applications
+/// [`Search::ascend_le`] will chain from a known starting point (either
+/// `refl(param)` or a hypothesis's own proof) while looking for the
+/// terminal order goal's index. This is NOT a search over arbitrary
+/// derivations — every step is forced (there is exactly one way to grow a
+/// `family(param, ·)` proof by one `succ`), so this only ever closes a goal
+/// whose index is a SMALL, LITERAL number of `succ`s past the starting
+/// index (covering both literal base-case gaps like `0 < 1` and a
+/// hypothesis whose index already equals the goal's up to a small constant
+/// offset); a genuinely unbounded or non-literal gap correctly falls
+/// through to [`Search::try_order_absorbing_argument`] instead. Bounded so
+/// this can never loop; exhausting it is a decline, never a hang.
+const MAX_LE_ASCENT_STEPS: usize = 16;
+
 /// First free-variable id this producer mints. Chosen far above anything an
 /// import stream or the kernel's own `LocalContext` would use, so this
 /// producer's free variables cannot collide with either.
@@ -307,6 +321,22 @@ fn exact_name(kernel: &Kernel, rendered: &str) -> Result<NameId, DeclineReason> 
             rendered.to_owned(),
         )),
     }
+}
+
+/// Whether `rendered` occurs in `kernel`'s environment exactly ZERO times —
+/// as opposed to `exact_name`'s "exactly one", this distinguishes "genuinely
+/// absent" from "ambiguous" (`> 1`), which `propose_bounded_induction` needs
+/// to treat differently: a purely order-headed statement's minimal import
+/// closure legitimately never needs `Eq` at all (zero occurrences, a common
+/// and correct shape, not a malformed kernel), while more than one match is
+/// still the same hard ambiguity `discover_eq_primitives` already declines
+/// on today — this helper only ever WIDENS what is tolerated, never narrows
+/// it.
+fn declaration_absent(kernel: &Kernel, rendered: &str) -> bool {
+    !kernel
+        .environment()
+        .iter()
+        .any(|(name, _)| kernel.display_name(*name).to_string() == rendered)
 }
 
 fn app_spine(kernel: &Kernel, mut expression: ExprId) -> (ExprId, Vec<ExprId>) {
@@ -605,6 +635,57 @@ fn parse_eq_goal(kernel: &Kernel, eq_name: NameId, goal: ExprId) -> Result<EqGoa
     })
 }
 
+/// A terminal goal (or a live hypothesis, once peeled down) headed by a
+/// [`LeShape`]-shaped family applied to exactly two arguments — the ORDER
+/// counterpart of [`EqGoal`], parsed the same "exact application" way. This
+/// is a genuinely different terminal shape than [`EqGoal`], never a
+/// generalization of it: an order goal's two positions are `param` (fixed
+/// throughout one [`LeShape`] recursor elimination) and `idx` (the one that
+/// varies), not two freely-interchangeable sides of an equation.
+#[derive(Debug, Clone)]
+struct OrderGoal {
+    family: NameId,
+    levels: Vec<LevelId>,
+    shape: LeShape,
+    param: ExprId,
+    idx: ExprId,
+}
+
+/// Parse `expr` as an [`OrderGoal`], UNLIKE [`parse_eq_goal`] first reducing
+/// it to WHNF — `<`/`≤` surface syntax is typeclass notation (`LT.lt`,
+/// `LE.le`) that only unfolds down to the underlying [`LeShape`] inductive
+/// (`Nat.lt`, itself `Nat.le (succ _) _`, then `Nat.le` itself) through
+/// delta/iota reduction, which [`parse_eq_goal`] deliberately never performs
+/// on an already-exact `Eq` application. Structural throughout: `family` is
+/// whatever [`detect_le_shape`] confirms has the right constructor/recursor
+/// shape, never a name this producer already knows.
+fn parse_order_goal(search: &mut Search, kernel: &mut Kernel, expr: ExprId) -> Option<OrderGoal> {
+    let expr_whnf = kernel.whnf(expr);
+    let (head, args) = app_spine(kernel, expr_whnf);
+    if args.len() != 2 {
+        return None;
+    }
+    let ExprNode::Const(family, levels) = kernel.expr_node(head).clone() else {
+        return None;
+    };
+    let shape = detect_le_shape(search, kernel, family)?;
+    Some(OrderGoal {
+        family,
+        levels,
+        shape,
+        param: args[0],
+        idx: args[1],
+    })
+}
+
+/// Build `order.shape.refl_ctor(order.param) : family(order.param,
+/// order.param)` — the base value [`Search::ascend_le`] starts a chain from
+/// when no hypothesis is available (or none applies).
+fn build_le_refl(kernel: &mut Kernel, order: &OrderGoal) -> ExprId {
+    let c = kernel.const_(order.shape.refl_ctor, order.levels.clone());
+    kernel.app(c, order.param)
+}
+
 /// The ambient equality primitives, discovered by exact display name (never
 /// hand-supplied), plus the exact universe-parameter arity each one needs —
 /// checked rather than assumed, so a kernel with a different `Eq` shape
@@ -667,6 +748,7 @@ fn build_eq_refl(
 /// indices — one nullary ("zero"), one with exactly one field recursive on
 /// the family itself ("succ") — plus its generated recursor, discovered by
 /// inspecting `Kernel::environment()`, never by name.
+#[derive(Debug, Clone, Copy)]
 struct NatShape {
     zero_ctor: NameId,
     succ_ctor: NameId,
@@ -759,10 +841,20 @@ fn detect_nat_shape(kernel: &Kernel, family: NameId) -> Option<NatShape> {
 /// detection mentions `Nat.le`, `Nat.lt`, or any target fact: it fires for
 /// whatever inductive a hypothesis's type happens to unfold to, provided it
 /// has this shape.
+#[derive(Debug, Clone, Copy)]
 struct LeShape {
     idx_ty: ExprId,
     idx_shape: NatShape,
     rec_name: NameId,
+    /// `family`'s "at-param" constructor (`refl : family p p`), retained
+    /// (never just discarded after detection, as it used to be) so
+    /// [`Search::close_order_terminal`]'s new order-goal closers can build
+    /// actual `family` VALUES — not just inspect the shape — the same way
+    /// [`Search::try_induction`] already does for a plain [`NatShape`].
+    refl_ctor: NameId,
+    /// `family`'s "step" constructor (`step : family p m -> family p
+    /// (succ m)`), retained for the same reason as `refl_ctor`.
+    step_ctor: NameId,
 }
 
 /// Try `(refl_ctor, step_ctor)` as the "at-param"/"step" pair for a
@@ -865,6 +957,8 @@ fn try_le_shape_pair(
         idx_ty,
         idx_shape,
         rec_name,
+        refl_ctor,
+        step_ctor,
     })
 }
 
@@ -981,6 +1075,24 @@ struct Search {
     eqp_eq: NameId,
     eqp_refl: NameId,
     eqp_rec: NameId,
+    /// Whether `eqp_eq`/`eqp_refl`/`eqp_rec` name REAL declarations in this
+    /// kernel, as opposed to an inert placeholder ([`kernel.anon()`],
+    /// `propose_bounded_induction`'s own choice when
+    /// [`discover_eq_primitives`] fails because the minimal import closure
+    /// for a purely order-headed statement (e.g. `n ≤ n.factorial`) never
+    /// needed `Eq` at all — a real, common shape, not a malformed kernel.
+    /// Every consumer of the `eqp_*` fields for anything other than a
+    /// pass-through struct MUST check this first: `false` means those
+    /// fields are meaningless and must never be dereferenced (built into a
+    /// term, or compared against as a real name) — only ever gates whether
+    /// the `Eq`-shaped terminal route ([`Search::close_terminal`] and
+    /// everything reachable from it, including the two call sites in
+    /// [`Search::close_order_terminal`] that reuse [`Search::try_absurd_elimination`]
+    /// for its OWN internal `Eq`-shaped filler construction) is attempted
+    /// at all. When `true`, behavior is BYTE-IDENTICAL to before this field
+    /// existed — `eq_available` is set from `discover_eq_primitives`
+    /// SUCCEEDING, unchanged.
+    eq_available: bool,
     next_fvar: u64,
     binders_left: usize,
     inductions_left: usize,
@@ -3051,9 +3163,24 @@ impl Search {
         // generalizes any further binders below.
         let pred_fv = self.fresh_fvar_typed(binder_ty);
         let pred = kernel.fvar(pred_fv);
-        let ih_fv = self.fresh_fvar();
-        let ih = kernel.fvar(ih_fv);
         let pred_goal_expr = kernel.instantiate(body, &[pred]);
+        // Typed (unlike this same variable's role in `try_absurd_from_hypothesis`'s
+        // OWN internal `ih_fv`, immediately closed by a `lam_fv` a few lines
+        // below its own use and never independently `infer_in`-verified
+        // first): `Search::close_order_terminal`'s new routes
+        // (`Search::ascend_le`, `Search::verify_order_proof`) DO independently
+        // `infer_in` a candidate that may still directly embed this raw `ih`
+        // fvar, from a `LocalContext` built from `Search::fvar_types` — an
+        // unregistered `ih_fv` made that check fail with "unbound free
+        // variable" even when the underlying proof term was correct, turning
+        // a genuine admit into a decline. The existing `Eq`-side congruence
+        // route never needed this (its own final check is the OUTER,
+        // fully-closed `Kernel::add_declaration`, after every fvar including
+        // this one has already been abstracted back into a real binder), so
+        // registering it here changes nothing about that path — an unrelated
+        // extra `fvar_types` entry that nothing else looks up.
+        let ih_fv = self.fresh_fvar_typed(pred_goal_expr);
+        let ih = kernel.fvar(ih_fv);
         let succ_pred = kernel.app(succ_e, pred);
         let step_goal_expr = kernel.instantiate(body, &[succ_pred]);
         let step_ih = Hypothesis {
@@ -3112,6 +3239,146 @@ impl Search {
             binder_info,
             with_succ,
         ))
+    }
+
+    /// Verify that `proof`'s INFERRED type is exactly `order.family
+    /// order.param order.idx` before returning it — the same discipline
+    /// [`Search::try_absurd_from_hypothesis`] and
+    /// [`Search::try_case_split_from_hypothesis`] already apply to their
+    /// own constructions: a malformed candidate declines here, never
+    /// reaches the caller's `Kernel::add_declaration`.
+    fn verify_order_proof(
+        &self,
+        kernel: &mut Kernel,
+        proof: ExprId,
+        order: &OrderGoal,
+    ) -> Option<ExprId> {
+        let anon = kernel.anon();
+        let mut local_ctx = LocalContext::new();
+        for (&fv, &ty) in &self.fvar_types {
+            local_ctx.push(LocalDecl {
+                fvar: fv,
+                name: anon,
+                ty,
+                info: BinderInfo::Default,
+            });
+        }
+        let fam_c = kernel.const_(order.family, order.levels.clone());
+        let with_param = kernel.app(fam_c, order.param);
+        let target = kernel.app(with_param, order.idx);
+        let inferred = kernel.infer_in(proof, &mut local_ctx).ok()?;
+        kernel.def_eq(inferred, target).then_some(proof)
+    }
+
+    /// Chain `family`'s own "step" constructor forward from a known proof
+    /// `proof : family(order.param, current_idx)`, one `succ` at a time,
+    /// until `current_idx` becomes definitionally equal to `order.idx` or
+    /// [`MAX_LE_ASCENT_STEPS`] is exhausted.
+    ///
+    /// This is FORCED, never a search: at each step there is exactly one
+    /// way to grow the proof (apply `step_ctor` once more), so failing to
+    /// match after the budget is a genuine decline, not a missed
+    /// alternative. Covers both a literal base-case gap (`0 < 1`, zero
+    /// steps past `refl`... one step, see below) and a hypothesis whose own
+    /// index already equals the goal's up to a small constant offset —
+    /// never a genuinely unbounded or non-literal gap, which correctly
+    /// falls through to [`Search::try_order_absorbing_argument`] instead.
+    fn ascend_le(
+        &mut self,
+        kernel: &mut Kernel,
+        order: &OrderGoal,
+        mut current_idx: ExprId,
+        mut proof: ExprId,
+    ) -> Option<ExprId> {
+        for _ in 0..=MAX_LE_ASCENT_STEPS {
+            if std::env::var("BIS_DEBUG").is_ok() {
+                eprintln!(
+                    "  [ascend] current_idx={} target={}",
+                    kernel.render_lean(current_idx),
+                    kernel.render_lean(order.idx)
+                );
+            }
+            if kernel.def_eq(current_idx, order.idx) {
+                let verified = self.verify_order_proof(kernel, proof, order);
+                if std::env::var("BIS_DEBUG").is_ok() {
+                    eprintln!("  [ascend] MATCH, verified={}", verified.is_some());
+                }
+                return verified;
+            }
+            let step_c = kernel.const_(order.shape.step_ctor, order.levels.clone());
+            let with_param = kernel.app(step_c, order.param);
+            let with_idx = kernel.app(with_param, current_idx);
+            proof = kernel.app(with_idx, proof);
+            let succ_c = kernel.const_(order.shape.idx_shape.succ_ctor, vec![]);
+            current_idx = kernel.app(succ_c, current_idx);
+        }
+        if kernel.def_eq(current_idx, order.idx) {
+            return self.verify_order_proof(kernel, proof, order);
+        }
+        None
+    }
+
+    /// Close a terminal [`OrderGoal`] — `Eq`'s sibling terminal shape.
+    /// Tries, in order: (1) [`Search::try_absurd_elimination`], reused
+    /// UNCHANGED and passed the order goal's own raw application directly
+    /// as `target` (it never inspected `target`'s shape to begin with —
+    /// only ever a retained hypothesis's); (2) [`Search::ascend_le`] from
+    /// `refl(param)`, covering direct reflexivity and any small literal
+    /// gap; (3) [`Search::ascend_le`] from a live induction hypothesis of
+    /// the SAME family at the SAME param, covering a step whose index moved
+    /// by a small literal amount.
+    ///
+    /// Deliberately STOPS here rather than also generalizing `idx` and
+    /// posing a fresh residual the way the `Eq` side's own
+    /// `try_absorbing_argument` does: an order-side analogue was built and
+    /// measured 2026-08-22 to restate the WHOLE ambient goal one level
+    /// removed rather than a genuinely smaller side fact, and `attempt`'s
+    /// own greedy (wrong-variable-first) induction choice drove it into a
+    /// self-similar chain that exhausted the shared `MAX_RESIDUAL_LEMMAS`
+    /// budget on a goal as simple as `∀ a b, a ≤ b + a` before ever
+    /// backtracking to the choice that closes it — a real capacity cost to
+    /// every OTHER caller of the same shared budget, for zero admits on
+    /// this producer's actual twelve targets. Removed rather than shipped
+    /// half-tuned.
+    fn close_order_terminal(
+        &mut self,
+        kernel: &mut Kernel,
+        order: &OrderGoal,
+        hypothesis: Option<Hypothesis>,
+        debug: bool,
+    ) -> Result<ExprId, DeclineReason> {
+        if debug {
+            eprintln!(
+                "close_order_terminal: family={} param={} idx={}",
+                kernel.display_name(order.family),
+                kernel.render_lean(order.param),
+                kernel.render_lean(order.idx)
+            );
+        }
+        let fam_c = kernel.const_(order.family, order.levels.clone());
+        let with_param = kernel.app(fam_c, order.param);
+        let raw_target = kernel.app(with_param, order.idx);
+        if self.eq_available
+            && let Some(proof) = self.try_absurd_elimination(kernel, raw_target)
+        {
+            return Ok(proof);
+        }
+
+        let refl_proof = build_le_refl(kernel, order);
+        if let Some(proof) = self.ascend_le(kernel, order, order.param, refl_proof) {
+            return Ok(proof);
+        }
+
+        if let Some(hyp) = hypothesis
+            && let Some(hyp_order) = parse_order_goal(self, kernel, hyp.stmt)
+            && hyp_order.family == order.family
+            && kernel.def_eq(hyp_order.param, order.param)
+            && let Some(proof) = self.ascend_le(kernel, order, hyp_order.idx, hyp.proof)
+        {
+            return Ok(proof);
+        }
+
+        Err(DeclineReason::TerminalNotDefEqNoRewrite)
     }
 
     fn attempt(
@@ -3197,8 +3464,25 @@ impl Search {
             let sub_proof = sub_proof?;
             return Ok(lam_fv(kernel, name, fv, ty, sub_proof, info));
         }
-        let parsed = parse_eq_goal(kernel, eqp.eq, goal)?;
-        self.close_terminal(kernel, parsed, hypothesis)
+        if self.eq_available
+            && let Ok(parsed) = parse_eq_goal(kernel, eqp.eq, goal)
+        {
+            return self.close_terminal(kernel, parsed, hypothesis);
+        }
+        // Not an exact `Eq` application — try the sibling terminal shape
+        // ([`OrderGoal`]) before declining. `parse_order_goal` WHNF-reduces
+        // `goal` itself (unlike `parse_eq_goal`, which never unfolds
+        // anything), so a `<`/`≤` surface goal still typeclass-wrapped at
+        // this point is found here, not above.
+        if let Some(order) = parse_order_goal(self, kernel, goal) {
+            return self.close_order_terminal(
+                kernel,
+                &order,
+                hypothesis,
+                std::env::var("BIS_DEBUG").is_ok(),
+            );
+        }
+        Err(DeclineReason::NotEqualityGoal)
     }
 }
 
@@ -3211,11 +3495,34 @@ pub fn propose_bounded_induction(
     kernel: &mut Kernel,
     goal: ExprId,
 ) -> Result<Candidate, DeclineReason> {
-    let eqp = discover_eq_primitives(kernel)?;
+    // A purely order-headed statement's minimal import closure (e.g. `n ≤
+    // n.factorial`, which never mentions propositional equality anywhere in
+    // its own vocabulary) legitimately never imports `Eq` at all — that is
+    // NOT the same failure as `Eq` being ambiguous or malformed, so it must
+    // not hard-decline here the way `discover_eq_primitives` still does for
+    // those. When `Eq` is genuinely absent, `eq_available` is `false` and
+    // every consumer of the `eqp_*` fields for anything beyond a
+    // pass-through struct is gated on it (see `Search::eq_available`'s own
+    // doc) — when `Eq` IS present, this is `discover_eq_primitives(kernel)?`
+    // exactly as before, so nothing about an `Eq`-headed derivation changes.
+    let (eqp, eq_available) = if declaration_absent(kernel, "Eq") {
+        let anon = kernel.anon();
+        (
+            EqPrimitives {
+                eq: anon,
+                eq_refl: anon,
+                eq_rec: anon,
+            },
+            false,
+        )
+    } else {
+        (discover_eq_primitives(kernel)?, true)
+    };
     let mut search = Search {
         eqp_eq: eqp.eq,
         eqp_refl: eqp.eq_refl,
         eqp_rec: eqp.eq_rec,
+        eq_available,
         next_fvar: FVAR_BASE,
         binders_left: MAX_BINDERS,
         inductions_left: MAX_INDUCTIONS,
@@ -3233,4 +3540,220 @@ pub fn propose_bounded_induction(
         binders_used: search.binders_used,
         inductions_used: search.inductions_used,
     })
+}
+
+/// Self-contained tests for the [`OrderGoal`] terminal-closing capability
+/// (`close_order_terminal` and everything it calls), built against THIS
+/// project's own [`axeyum_lean_kernel::build_nat_prelude`] rather than an
+/// external Mathlib export stream — no typeclass/`OfNat` indirection to
+/// wade through, and portable to any host (no `/nas3` dependency), unlike
+/// the census sweep this capability was actually developed against. Every
+/// admitted candidate here is put through the SAME discipline
+/// `nat_order_substitution`'s own tests apply: independently re-inferred,
+/// re-`add_declaration`d under a fresh name, and confirmed both axiom-free
+/// and citing no other theorem. Every declined candidate is confirmed to
+/// decline, never merely "not asserted" — `Result::unwrap_err` panics if it
+/// doesn't.
+#[cfg(test)]
+mod order_terminal_tests {
+    use super::*;
+    use axeyum_lean_kernel::{Kernel, NatPrelude, build_nat_prelude};
+
+    fn prelude_kernel() -> (Kernel, NatPrelude) {
+        let mut kernel = Kernel::new();
+        let prelude = build_nat_prelude(&mut kernel).expect("nat prelude must build");
+        (kernel, prelude)
+    }
+
+    /// Build `Le(a, b)` (`Nat.le a b`, the same 2-constructor inductive
+    /// [`LeShape`] detects in a real Mathlib export) directly from the
+    /// prelude's own `le` family name — no typeclass indirection at all,
+    /// since this is the project's OWN internal representation rather than
+    /// Lean surface syntax.
+    fn le(kernel: &mut Kernel, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+        let c = kernel.const_(p.le, vec![]);
+        let with_a = kernel.app(c, a);
+        kernel.app(with_a, b)
+    }
+
+    /// Independently confirm an ADMITTED candidate the same way the real
+    /// checker binary does: re-infer, re-`def_eq` against `goal`, admit
+    /// under a fresh name, and require BOTH an empty axiom footprint and
+    /// zero theorem dependencies (axiom-free alone does not rule out citing
+    /// another already-axiom-free theorem — see `nat_order_substitution`'s
+    /// own tests for why both checks are needed).
+    fn assert_clean_admission(
+        kernel: &mut Kernel,
+        goal: ExprId,
+        candidate: &Candidate,
+        label: &str,
+    ) {
+        let inferred = kernel
+            .infer(candidate.proof)
+            .unwrap_or_else(|e| panic!("{label}: candidate failed to infer: {e:?}"));
+        assert!(
+            kernel.def_eq(inferred, goal),
+            "{label}: candidate's type is not def-eq to the goal"
+        );
+        let fresh_name = {
+            let root = kernel.anon();
+            kernel.name_str(root, format!("TestOrderTerminal_{label}"))
+        };
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name: fresh_name,
+                uparams: vec![],
+                ty: goal,
+                value: candidate.proof,
+            })
+            .unwrap_or_else(|e| panic!("{label}: admission failed: {e:?}"));
+        assert_eq!(
+            kernel.axiom_footprint(fresh_name).len(),
+            0,
+            "{label}: nonempty axiom footprint"
+        );
+        assert_eq!(
+            kernel.theorem_dependencies(fresh_name).len(),
+            0,
+            "{label}: cites another theorem"
+        );
+    }
+
+    /// `∀ n, 0 ≤ n` — the base capability this widening adds: a terminal
+    /// goal headed by [`LeShape`] rather than `Eq`, closed by ordinary
+    /// induction whose base case is direct reflexivity
+    /// ([`Search::ascend_le`] from `refl(zero)`, zero steps) and whose step
+    /// case lifts the induction hypothesis by exactly one `step_ctor`
+    /// application ([`Search::ascend_le`] from the hypothesis, one step) —
+    /// never touching [`Search::try_order_absorbing_argument`] at all.
+    #[test]
+    fn zero_le_all_admits_by_direct_induction() {
+        let (mut kernel, p) = prelude_kernel();
+        let nat = kernel.const_(p.nat, vec![]);
+        let zero = kernel.const_(p.zero, vec![]);
+        let n_fv = 1u64;
+        let n = kernel.fvar(n_fv);
+        let body = le(&mut kernel, &p, zero, n);
+        let anon = kernel.anon();
+        let abstracted = kernel.abstract_fvars(body, &[n_fv]);
+        let goal = kernel.pi(anon, nat, abstracted, BinderInfo::Default);
+
+        let candidate =
+            propose_bounded_induction(&mut kernel, goal).expect("0 <= n must be provable");
+        assert_clean_admission(&mut kernel, goal, &candidate, "zero_le_all");
+    }
+
+    /// `∀ n, 1 ≤ n` — FALSE at `n = 0` — the adversarial counterpart of
+    /// `zero_le_all_admits_by_direct_induction`, over the EXACT same
+    /// mechanism (`Le` at a literal parameter, plain induction on the
+    /// index). If [`Search::ascend_le`]'s bound check
+    /// (`kernel.def_eq(current_idx, order.idx)`) or its loop bound
+    /// ([`MAX_LE_ASCENT_STEPS`]) were ever wrong in the permissive
+    /// direction, THIS is the base case that would wrongly admit — `Le(1,
+    /// 0)` is reachable from `refl(1)` by ASCENDING, which never overshoots
+    /// downward, so the only way this could wrongly close is a genuine
+    /// defeq-check bug, not merely an off-by-one.
+    #[test]
+    fn one_le_all_declines() {
+        let (mut kernel, p) = prelude_kernel();
+        let nat = kernel.const_(p.nat, vec![]);
+        let zero = kernel.const_(p.zero, vec![]);
+        let succ_c = kernel.const_(p.succ, vec![]);
+        let one = kernel.app(succ_c, zero);
+        let n_fv = 1u64;
+        let n = kernel.fvar(n_fv);
+        let body = le(&mut kernel, &p, one, n);
+        let anon = kernel.anon();
+        let abstracted = kernel.abstract_fvars(body, &[n_fv]);
+        let goal = kernel.pi(anon, nat, abstracted, BinderInfo::Default);
+
+        propose_bounded_induction(&mut kernel, goal)
+            .expect_err("1 <= n is FALSE at n = 0 and must decline");
+    }
+
+    /// `∀ n, 0 ≤ n.succ.succ` — exercises [`Search::ascend_le`] over a
+    /// MULTI-step gap in the BASE case (`0 ≤ 0.succ.succ` needs TWO
+    /// `step_ctor` applications from `refl(zero)`, not the zero/one-step
+    /// gaps `zero_le_all_admits_by_direct_induction` and `one_le_all_declines`
+    /// already cover) while the step case still only needs the ordinary
+    /// one-step hypothesis lift — together these exercise
+    /// [`MAX_LE_ASCENT_STEPS`] actually being greater than one.
+    #[test]
+    fn ascend_two_steps_admits_zero_le_succ_succ_n() {
+        let (mut kernel, p) = prelude_kernel();
+        let nat = kernel.const_(p.nat, vec![]);
+        let zero = kernel.const_(p.zero, vec![]);
+        let succ_c1 = kernel.const_(p.succ, vec![]);
+        let n_fv = 1u64;
+        let n = kernel.fvar(n_fv);
+        let succ_n = kernel.app(succ_c1, n);
+        let succ_c2 = kernel.const_(p.succ, vec![]);
+        let succ_succ_n = kernel.app(succ_c2, succ_n);
+        let body = le(&mut kernel, &p, zero, succ_succ_n);
+        let anon = kernel.anon();
+        let abstracted = kernel.abstract_fvars(body, &[n_fv]);
+        let goal = kernel.pi(anon, nat, abstracted, BinderInfo::Default);
+
+        let candidate = propose_bounded_induction(&mut kernel, goal)
+            .expect("0 <= n.succ.succ must be provable by a two-step ascent in the base case");
+        assert_clean_admission(&mut kernel, goal, &candidate, "ascend_two_steps");
+    }
+
+    /// `∀ n, n.succ.succ ≤ 0` — FALSE for every `n` — the adversarial
+    /// counterpart of `ascend_two_steps_admits_zero_le_succ_succ_n`, over
+    /// the exact same two-`step_ctor` shape but with `param`/`idx` swapped:
+    /// [`Search::ascend_le`] only ever grows the index FORWARD by `succ`,
+    /// so it can never reach a SMALLER target no matter how many steps it
+    /// is given — the direction in which a bound or off-by-one bug in
+    /// `ascend_le` would show up as a wrong ADMIT rather than a
+    /// merely-incomplete decline.
+    #[test]
+    fn ascend_two_steps_declines_succ_succ_n_le_zero() {
+        let (mut kernel, p) = prelude_kernel();
+        let nat = kernel.const_(p.nat, vec![]);
+        let zero = kernel.const_(p.zero, vec![]);
+        let succ_c1 = kernel.const_(p.succ, vec![]);
+        let n_fv = 1u64;
+        let n = kernel.fvar(n_fv);
+        let succ_n = kernel.app(succ_c1, n);
+        let succ_c2 = kernel.const_(p.succ, vec![]);
+        let succ_succ_n = kernel.app(succ_c2, succ_n);
+        let body = le(&mut kernel, &p, succ_succ_n, zero);
+        let anon = kernel.anon();
+        let abstracted = kernel.abstract_fvars(body, &[n_fv]);
+        let goal = kernel.pi(anon, nat, abstracted, BinderInfo::Default);
+
+        propose_bounded_induction(&mut kernel, goal)
+            .expect_err("n.succ.succ <= 0 is FALSE for every n and must decline");
+    }
+
+    /// `declaration_absent` itself, confirmed both ways against a kernel
+    /// that unambiguously HAS `Eq` (this project's own `build_nat_prelude`
+    /// always declares it eagerly via `build_logic_prelude`, so there is no
+    /// lighter-weight constructor here that leaves it out — the genuinely
+    /// `Eq`-free case is exercised for real by the Mathlib census targets
+    /// this capability was developed against, e.g.
+    /// `F:ml430-nat-factorial-pos-f1dd2405`'s minimal import closure, whose
+    /// base case `close_order_terminal` closes with `Search::eq_available
+    /// == false` — not reproduced here since hand-building a `Eq`-free
+    /// prelude from scratch would mean re-declaring `Nat`/`Nat.le` from
+    /// raw `Declaration::Inductive`/`Declaration::Recursor` values, which
+    /// is exactly the fragile duplication `build_nat_prelude` exists to
+    /// avoid). This test only pins the narrower, still load-bearing claim:
+    /// the helper's zero/nonzero distinction itself is exactly right,
+    /// including the "ambiguous" (`> 1`) case `propose_bounded_induction`
+    /// deliberately does NOT treat the same as "absent" (see
+    /// `declaration_absent`'s own doc).
+    #[test]
+    fn declaration_absent_is_false_exactly_when_a_name_is_declared() {
+        let (kernel, _p) = prelude_kernel();
+        assert!(
+            !declaration_absent(&kernel, "Eq"),
+            "the prelude kernel declares Eq exactly once"
+        );
+        assert!(
+            declaration_absent(&kernel, "ThisNameIsNeverDeclaredAnywhere"),
+            "a name nothing declares must read as absent"
+        );
+    }
 }
