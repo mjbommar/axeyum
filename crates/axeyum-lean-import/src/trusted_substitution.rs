@@ -122,6 +122,32 @@ use axeyum_lean_kernel::{
 /// exactly like `Decidable`), built with a *constant* motive `fun _ => c`
 /// rather than a case split — see [`discover_or`]'s and [`or_elim_pair`]'s
 /// own doc comments for why neither branch needs a `False.rec` discharge.
+///
+/// `Or.resolve_right`/`ne_true_of_eq_false`/`dif_neg` were added the next
+/// census cycle, once `Nat.lt_irrefl`/`Or.elim`/`if_pos`/`of_decide_eq_true`
+/// no longer shadowed them (measured 15/3/18 of the first-reported
+/// blockers). `Or.resolve_right` is [`or_elim_pair`]'s own shape specialized
+/// rather than generalized: the same `Or.rec` case split with the same
+/// constant motive `fun _ => a`, but the `Or.inr` branch is now impossible
+/// (its own bound `hb : b` together with the *given* `nb : Not b` gives `nb
+/// hb : False`, discharged by `False.rec` exactly like [`if_neg_pair`]'s
+/// impossible branch) rather than handed a minor premise directly, and the
+/// `Or.inl` branch is `id`. `ne_true_of_eq_false` needs no case split at
+/// all: from `h : b = false` and the bound `h2 : b = true`, `Eq.trans
+/// (Eq.symm h) h2 : Bool.false = Bool.true` is discharged by
+/// [`bool_false_ne_true`] exactly as [`of_decide_eq_true_pair`]'s impossible
+/// branch does — the only new plumbing is [`build_eq_symm`], `Eq.symm`'s own
+/// construction factored out of [`eq_symm_pair`] so it can be reused inline
+/// without declaring a standalone `Eq.symm`. `dif_neg` is the DEPENDENT
+/// `if`: the same `Decidable.rec` case split as [`if_neg_pair`], but its
+/// branch arguments are themselves functions (`t : c -> α`, `e : Not c ->
+/// α`) rather than plain values, and the conclusion targets `e hnc` rather
+/// than bare `e` — the isFalse branch's own bound `hnc' : Not c` need not
+/// equal the *given* `hnc` syntactically for `Eq.refl (e hnc')` to also
+/// prove `Eq α (e hnc') (e hnc)`, because this kernel's definitional PROOF
+/// IRRELEVANCE (`tc.rs`'s `proof_irrel_eq`, reached through `def_eq_app`'s
+/// pointwise argument check) identifies any two proofs of `Not c : Prop`
+/// outright; see [`dif_neg_pair`]'s own doc comment.
 pub(crate) const SUBSTITUTABLE_THEOREMS: &[&str] = &[
     "congrArg",
     "congr",
@@ -134,6 +160,9 @@ pub(crate) const SUBSTITUTABLE_THEOREMS: &[&str] = &[
     "if_pos",
     "of_decide_eq_true",
     "Or.elim",
+    "Or.resolve_right",
+    "ne_true_of_eq_false",
+    "dif_neg",
 ];
 
 /// First free-variable id this module mints. Chosen far above any id an
@@ -364,6 +393,42 @@ fn build_trans(
     let with_minor = kernel.app(with_motive, p1);
     let with_b = kernel.app(with_minor, z);
     kernel.app(with_b, p2)
+}
+
+/// `Eq.symm`'s value at a specific `(level, carrier, x, y, proof)` — the
+/// same `Eq.rec` transport [`eq_symm_pair`] wraps into a standalone
+/// declaration, factored out so other constructions
+/// ([`ne_true_of_eq_false_pair`]) can reuse it inline without declaring an
+/// intermediate `Eq.symm`.
+#[allow(clippy::too_many_arguments)]
+fn build_eq_symm(
+    kernel: &mut Kernel,
+    eqp: &EqPrimitives,
+    next_fvar: &mut u64,
+    level: LevelId,
+    carrier: ExprId,
+    x: ExprId,
+    y: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let anon = kernel.anon();
+    // motive := fun (z : carrier) (_ : Eq level carrier x z) => Eq level carrier z x
+    let z_fv = fresh(next_fvar);
+    let z = kernel.fvar(z_fv);
+    let concl = build_eq(kernel, eqp.eq, level, carrier, z, x);
+    let hyp_ty = build_eq(kernel, eqp.eq, level, carrier, x, z);
+    let anon_hyp = kernel.anon();
+    let inner = kernel.lam(anon_hyp, hyp_ty, concl, BinderInfo::Default);
+    let motive = lam_fv(kernel, anon, z_fv, carrier, inner, BinderInfo::Default);
+    let refl_case = build_eq_refl(kernel, eqp.eq_refl, level, carrier, x);
+    let zero = kernel.level_zero();
+    let rec = kernel.const_(eqp.eq_rec, vec![zero, level]);
+    let with_carrier = kernel.app(rec, carrier);
+    let with_x = kernel.app(with_carrier, x);
+    let with_motive = kernel.app(with_x, motive);
+    let with_minor = kernel.app(with_motive, refl_case);
+    let with_y = kernel.app(with_minor, y);
+    kernel.app(with_y, proof)
 }
 
 /// Close a telescope of free variables over a paired (value, type),
@@ -768,25 +833,7 @@ fn eq_symm_pair(kernel: &mut Kernel) -> Result<(ExprId, ExprId, Vec<NameId>), Su
 
     let ty_h = build_eq(kernel, eqp.eq, u, alpha, a, b);
 
-    // motive := fun (x : alpha) (_ : Eq alpha a x) => Eq alpha x a
-    let motive = {
-        let x_fv = fresh(&mut next_fvar);
-        let x = kernel.fvar(x_fv);
-        let concl = build_eq(kernel, eqp.eq, u, alpha, x, a);
-        let hyp_ty = build_eq(kernel, eqp.eq, u, alpha, a, x);
-        let anon_hyp = kernel.anon();
-        let inner = kernel.lam(anon_hyp, hyp_ty, concl, BinderInfo::Default);
-        lam_fv(kernel, anon, x_fv, alpha, inner, BinderInfo::Default)
-    };
-    let refl_case = build_eq_refl(kernel, eqp.eq_refl, u, alpha, a);
-    let zero = kernel.level_zero();
-    let rec = kernel.const_(eqp.eq_rec, vec![zero, u]);
-    let with_alpha = kernel.app(rec, alpha);
-    let with_a = kernel.app(with_alpha, a);
-    let with_motive = kernel.app(with_a, motive);
-    let with_minor = kernel.app(with_motive, refl_case);
-    let with_b = kernel.app(with_minor, b);
-    let value_body = kernel.app(with_b, h);
+    let value_body = build_eq_symm(kernel, &eqp, &mut next_fvar, u, alpha, a, b, h);
     let type_body = build_eq(kernel, eqp.eq, u, alpha, b, a);
 
     let binders = [
@@ -1125,6 +1172,27 @@ fn discover_ite(kernel: &Kernel) -> Result<NameId, SubstitutionError> {
         }
         _ => Err(SubstitutionError::UnexpectedShape(
             "ite is not a one-universe-param unfoldable Definition",
+        )),
+    }
+}
+
+/// `dite`, discovered as a one-universe-param (`α : Sort u`) unfoldable
+/// `Definition` — the DEPENDENT-if analogue of [`discover_ite`]: needed so
+/// `dite α c (Decidable.isFalse c hnc') t e` / `dite α c (Decidable.isTrue c
+/// hc) t e` ι-reduce to `e hnc'`/`t hc` respectively once the kernel unfolds
+/// `dite` and iota-reduces the `Decidable.rec` application inside it on the
+/// literal constructor supplied by a [`DecidablePrimitives::rec`] minor
+/// premise.
+fn discover_dite(kernel: &Kernel) -> Result<NameId, SubstitutionError> {
+    let dite_name = exact_name(kernel, "dite")?;
+    match kernel.environment().get(dite_name) {
+        Some(Declaration::Definition { uparams, hint, .. })
+            if uparams.len() == 1 && !matches!(hint, ReducibilityHint::Opaque) =>
+        {
+            Ok(dite_name)
+        }
+        _ => Err(SubstitutionError::UnexpectedShape(
+            "dite is not a one-universe-param unfoldable Definition",
         )),
     }
 }
@@ -1861,6 +1929,310 @@ fn of_decide_eq_true_pair(
     Ok((value, ty, vec![]))
 }
 
+/// `Or.resolve_right : {a b : Prop} -> Or a b -> Not b -> a`, via `Or.rec`
+/// with the same constant motive `fun _ => a` [`or_elim_pair`] uses (see
+/// [`discover_or`]'s doc comment for why `Or.rec` here has no elimination
+/// universe parameter). Unlike `Or.elim`'s two minor premises, which are
+/// both handed in directly, here the `Or.inr` branch must be discharged:
+/// its own bound `hb : b` together with the *given* `nb : Not b` gives `nb
+/// hb : False`, closed via `False.rec` into `a` exactly like
+/// [`if_neg_pair`]'s impossible branch. The `Or.inl` branch is `id`.
+#[allow(clippy::many_single_char_names, clippy::similar_names)]
+fn or_resolve_right_pair(
+    kernel: &mut Kernel,
+) -> Result<(ExprId, ExprId, Vec<NameId>), SubstitutionError> {
+    let orp = discover_or(kernel)?;
+    let not_name = discover_not(kernel)?;
+    let falsep = discover_false(kernel)?;
+
+    let mut next_fvar = FVAR_BASE;
+    let anon = kernel.anon();
+    let zero = kernel.level_zero();
+    let prop = kernel.sort(zero);
+
+    let a_fv = fresh(&mut next_fvar);
+    let a = kernel.fvar(a_fv);
+    let b_fv = fresh(&mut next_fvar);
+    let b = kernel.fvar(b_fv);
+    let h_fv = fresh(&mut next_fvar);
+    let h = kernel.fvar(h_fv);
+    let nb_fv = fresh(&mut next_fvar);
+    let nb = kernel.fvar(nb_fv);
+
+    let or_ab = {
+        let head = kernel.const_(orp.or_, vec![]);
+        let w1 = kernel.app(head, a);
+        kernel.app(w1, b)
+    };
+    let not_b = {
+        let head = kernel.const_(not_name, vec![]);
+        kernel.app(head, b)
+    };
+
+    // motive := fun (_ : Or a b) => a
+    let motive = {
+        let ignore_fv = fresh(&mut next_fvar);
+        lam_fv(kernel, anon, ignore_fv, or_ab, a, BinderInfo::Default)
+    };
+
+    // Or.inl branch: ha : a -> a := id.
+    let minor_left = {
+        let ha_fv = fresh(&mut next_fvar);
+        let ha = kernel.fvar(ha_fv);
+        lam_fv(kernel, anon, ha_fv, a, ha, BinderInfo::Default)
+    };
+
+    // Or.inr branch: hb : b bound; `nb hb : False` makes the branch
+    // impossible, discharged via `False.rec` at motive `fun _ => a`.
+    let minor_right = {
+        let hb_fv = fresh(&mut next_fvar);
+        let hb = kernel.fvar(hb_fv);
+        let false_ty = kernel.const_(falsep.false_, vec![]);
+        let false_motive = kernel.lam(anon, false_ty, a, BinderInfo::Default);
+        let contradiction = kernel.app(nb, hb);
+        let rec = kernel.const_(falsep.false_rec, vec![zero]);
+        let w1 = kernel.app(rec, false_motive);
+        let body = kernel.app(w1, contradiction);
+        lam_fv(kernel, anon, hb_fv, b, body, BinderInfo::Default)
+    };
+
+    let value_body = {
+        let rec = kernel.const_(orp.rec, vec![]);
+        let w1 = kernel.app(rec, a);
+        let w2 = kernel.app(w1, b);
+        let w3 = kernel.app(w2, motive);
+        let w4 = kernel.app(w3, minor_left);
+        let w5 = kernel.app(w4, minor_right);
+        kernel.app(w5, h)
+    };
+    let type_body = a;
+
+    let binders = [
+        (a_fv, prop, BinderInfo::Implicit),
+        (b_fv, prop, BinderInfo::Implicit),
+        (h_fv, or_ab, BinderInfo::Default),
+        (nb_fv, not_b, BinderInfo::Default),
+    ];
+    let (value, ty) = close_telescope(kernel, &binders, value_body, type_body);
+    Ok((value, ty, vec![]))
+}
+
+/// `ne_true_of_eq_false : {b : Bool} -> Eq Bool b Bool.false ->
+/// Not (Eq Bool b Bool.true)` (`Not (Eq Bool b Bool.true)` unfolds to
+/// `Eq Bool b Bool.true -> False`, exactly like [`mt_pair`]'s own `Not a`).
+/// From the *given* `h : b = false` and the *bound* `h2 : b = true`,
+/// `Eq.trans (Eq.symm h) h2 : Eq Bool Bool.false Bool.true`, discharged by
+/// [`bool_false_ne_true`] exactly as [`of_decide_eq_true_pair`]'s
+/// impossible branch does — the only new plumbing is [`build_eq_symm`].
+#[allow(clippy::many_single_char_names, clippy::similar_names)]
+fn ne_true_of_eq_false_pair(
+    kernel: &mut Kernel,
+) -> Result<(ExprId, ExprId, Vec<NameId>), SubstitutionError> {
+    let eqp = discover_eq(kernel)?;
+    let boolp = discover_bool(kernel)?;
+    let bool_rec = discover_bool_rec(kernel)?;
+    let truep = discover_true(kernel)?;
+    let falsep = discover_false(kernel)?;
+    let not_name = discover_not(kernel)?;
+
+    let mut next_fvar = FVAR_BASE;
+    let anon = kernel.anon();
+    let zero = kernel.level_zero();
+    let one = kernel.level_succ(zero);
+    let bool_ty = kernel.const_(boolp.bool_, vec![]);
+    let bool_false = kernel.const_(boolp.false_, vec![]);
+    let bool_true = kernel.const_(boolp.true_, vec![]);
+
+    let b_fv = fresh(&mut next_fvar);
+    let b = kernel.fvar(b_fv);
+    let h_fv = fresh(&mut next_fvar);
+    let h = kernel.fvar(h_fv);
+    let h2_fv = fresh(&mut next_fvar);
+    let h2 = kernel.fvar(h2_fv);
+
+    let h_ty = build_eq(kernel, eqp.eq, one, bool_ty, b, bool_false);
+    let h2_ty = build_eq(kernel, eqp.eq, one, bool_ty, b, bool_true);
+
+    let symm_h = build_eq_symm(kernel, &eqp, &mut next_fvar, one, bool_ty, b, bool_false, h);
+    let contradiction_eq = build_trans(
+        kernel,
+        &eqp,
+        &mut next_fvar,
+        one,
+        bool_ty,
+        bool_false,
+        b,
+        symm_h,
+        bool_true,
+        h2,
+    );
+    let derived_false = bool_false_ne_true(
+        kernel,
+        &mut next_fvar,
+        &eqp,
+        &boolp,
+        bool_rec,
+        &truep,
+        &falsep,
+        contradiction_eq,
+    );
+
+    let not_b_true = {
+        let head = kernel.const_(not_name, vec![]);
+        kernel.app(head, h2_ty)
+    };
+    let value_body = lam_fv(
+        kernel,
+        anon,
+        h2_fv,
+        h2_ty,
+        derived_false,
+        BinderInfo::Default,
+    );
+    let type_body = not_b_true;
+
+    let binders = [
+        (b_fv, bool_ty, BinderInfo::Implicit),
+        (h_fv, h_ty, BinderInfo::Default),
+    ];
+    let (value, ty) = close_telescope(kernel, &binders, value_body, type_body);
+    Ok((value, ty, vec![]))
+}
+
+/// `dif_neg.{u} : {c : Prop} -> {h : Decidable c} -> (hnc : Not c) ->
+/// {α : Sort u} -> {t : c -> α} -> {e : Not c -> α} ->
+/// Eq α (dite α c h t e) (e hnc)`. The DEPENDENT `if`: the same
+/// `Decidable.rec` case split as [`if_neg_pair`] on the *ambient*
+/// `h : Decidable c`, but the two branch arguments are themselves functions
+/// (`t : c -> α`, `e : Not c -> α`) rather than plain values of `α`, and the
+/// conclusion's right-hand side is `e hnc`, not bare `e`.
+///
+/// The isFalse branch's own bound witness `hnc' : Not c` need not equal the
+/// *given* `hnc` syntactically for `Eq.refl (e hnc')` to also prove
+/// `Eq α (e hnc') (e hnc)` — `Not c : Prop`, so this kernel's definitional
+/// proof irrelevance (`tc.rs`'s `proof_irrel_eq`, reached through
+/// `def_eq_app`'s pointwise argument check when it compares `e hnc'`
+/// against `e hnc`) identifies `hnc'` and `hnc` outright.
+/// `if_neg`/`ite_self`/`decide_eq_false` never needed this because their
+/// branch minors are plain values, never applied to the case-split witness.
+/// isTrue is impossible exactly as in [`if_neg_pair`].
+#[allow(
+    clippy::many_single_char_names,
+    clippy::similar_names,
+    clippy::too_many_lines
+)]
+fn dif_neg_pair(kernel: &mut Kernel) -> Result<(ExprId, ExprId, Vec<NameId>), SubstitutionError> {
+    let eqp = discover_eq(kernel)?;
+    let dp = discover_decidable(kernel)?;
+    let dite_name = discover_dite(kernel)?;
+    let not_name = discover_not(kernel)?;
+    let falsep = discover_false(kernel)?;
+
+    let mut next_fvar = FVAR_BASE;
+    let anon = kernel.anon();
+    let u_name = kernel.name_str(anon, "u");
+    let u = kernel.level_param(u_name);
+    let sort_u = kernel.sort(u);
+    let zero = kernel.level_zero();
+    let prop = kernel.sort(zero);
+
+    let c_fv = fresh(&mut next_fvar);
+    let c = kernel.fvar(c_fv);
+    let h_fv = fresh(&mut next_fvar);
+    let h = kernel.fvar(h_fv);
+    let hnc_fv = fresh(&mut next_fvar);
+    let hnc = kernel.fvar(hnc_fv);
+    let alpha_fv = fresh(&mut next_fvar);
+    let alpha = kernel.fvar(alpha_fv);
+    let t_fv = fresh(&mut next_fvar);
+    let t = kernel.fvar(t_fv);
+    let e_fv = fresh(&mut next_fvar);
+    let e = kernel.fvar(e_fv);
+
+    let decidable_c = {
+        let head = kernel.const_(dp.decidable, vec![]);
+        kernel.app(head, c)
+    };
+    let not_c = {
+        let head = kernel.const_(not_name, vec![]);
+        kernel.app(head, c)
+    };
+    let ty_t = kernel.pi(anon, c, alpha, BinderInfo::Default);
+    let ty_e = kernel.pi(anon, not_c, alpha, BinderInfo::Default);
+
+    let dite_at = |kernel: &mut Kernel, inst: ExprId| -> ExprId {
+        let head = kernel.const_(dite_name, vec![u]);
+        let w1 = kernel.app(head, alpha);
+        let w2 = kernel.app(w1, c);
+        let w3 = kernel.app(w2, inst);
+        let w4 = kernel.app(w3, t);
+        kernel.app(w4, e)
+    };
+
+    let e_hnc = kernel.app(e, hnc);
+
+    // motive := fun (h' : Decidable c) => Eq alpha (dite_at h') (e hnc)
+    let motive = {
+        let hp_fv = fresh(&mut next_fvar);
+        let hp = kernel.fvar(hp_fv);
+        let dite_app = dite_at(kernel, hp);
+        let body = build_eq(kernel, eqp.eq, u, alpha, dite_app, e_hnc);
+        lam_fv(kernel, anon, hp_fv, decidable_c, body, BinderInfo::Default)
+    };
+
+    // isFalse case: `dite alpha c (isFalse hnc') t e` iota-reduces to
+    // `e hnc'`; `Eq.refl (e hnc')` also proves `Eq alpha (e hnc') (e hnc)`
+    // because `hnc'` and `hnc` are both proofs of `Not c : Prop`.
+    let minor_false = {
+        let hncp_fv = fresh(&mut next_fvar);
+        let hncp = kernel.fvar(hncp_fv);
+        let e_hncp = kernel.app(e, hncp);
+        let refl = build_eq_refl(kernel, eqp.eq_refl, u, alpha, e_hncp);
+        lam_fv(kernel, anon, hncp_fv, not_c, refl, BinderInfo::Default)
+    };
+
+    // isTrue case: `dite alpha c (isTrue hc) t e` iota-reduces to `t hc`,
+    // but `hnc hc : False` makes the branch impossible; discharge via
+    // `False.rec` at motive `fun _ => Eq alpha (t hc) (e hnc)`.
+    let minor_true = {
+        let hc_fv = fresh(&mut next_fvar);
+        let hc = kernel.fvar(hc_fv);
+        let t_hc = kernel.app(t, hc);
+        let target_ty = build_eq(kernel, eqp.eq, u, alpha, t_hc, e_hnc);
+        let false_ty = kernel.const_(falsep.false_, vec![]);
+        let false_motive = kernel.lam(anon, false_ty, target_ty, BinderInfo::Default);
+        let contradiction = kernel.app(hnc, hc);
+        let rec = kernel.const_(falsep.false_rec, vec![zero]);
+        let w1 = kernel.app(rec, false_motive);
+        let body = kernel.app(w1, contradiction);
+        lam_fv(kernel, anon, hc_fv, c, body, BinderInfo::Default)
+    };
+
+    let value_body = {
+        let rec = kernel.const_(dp.rec, vec![zero]);
+        let w1 = kernel.app(rec, c);
+        let w2 = kernel.app(w1, motive);
+        let w3 = kernel.app(w2, minor_false);
+        let w4 = kernel.app(w3, minor_true);
+        kernel.app(w4, h)
+    };
+    let type_body = {
+        let dite_h = dite_at(kernel, h);
+        build_eq(kernel, eqp.eq, u, alpha, dite_h, e_hnc)
+    };
+
+    let binders = [
+        (c_fv, prop, BinderInfo::Implicit),
+        (h_fv, decidable_c, BinderInfo::InstImplicit),
+        (hnc_fv, not_c, BinderInfo::Default),
+        (alpha_fv, sort_u, BinderInfo::Implicit),
+        (t_fv, ty_t, BinderInfo::Implicit),
+        (e_fv, ty_e, BinderInfo::Implicit),
+    ];
+    let (value, ty) = close_telescope(kernel, &binders, value_body, type_body);
+    Ok((value, ty, vec![u_name]))
+}
+
 /// Attempt to reconstruct `rendered` as a kernel-checked declaration built
 /// entirely from this module's own primitives, never from the untrusted
 /// stream, **or** (for the twenty names in
@@ -1893,6 +2265,9 @@ pub(crate) fn reconstruct(
             "if_pos" => if_pos_pair(kernel)?,
             "of_decide_eq_true" => of_decide_eq_true_pair(kernel)?,
             "Or.elim" => or_elim_pair(kernel)?,
+            "Or.resolve_right" => or_resolve_right_pair(kernel)?,
+            "ne_true_of_eq_false" => ne_true_of_eq_false_pair(kernel)?,
+            "dif_neg" => dif_neg_pair(kernel)?,
             _ => unreachable!("checked against SUBSTITUTABLE_THEOREMS above"),
         };
         return Ok(Some(Declaration::Theorem {
@@ -2348,6 +2723,79 @@ mod tests {
                 .expect("ite must admit");
         }
 
+        // dite {alpha : Sort u} (c : Prop) [h : Decidable c] (t : c -> alpha)
+        //   (e : Not c -> alpha) : alpha := Decidable.rec.{u} c (fun _ => alpha) e t h.
+        // Unlike `ite`'s `t`/`e` (plain values of `alpha`, wrapped in
+        // constant-ignoring minors), `dite`'s `t`/`e` are already functions
+        // of exactly the minor-premise domain (`c -> alpha`/`Not c -> alpha`),
+        // so the minors are `e`/`t` directly — no extra wrapping lambda.
+        let dite_name = kernel.name_str(anon, "dite");
+        {
+            let u_name = kernel.name_str(anon, "u");
+            let u = kernel.level_param(u_name);
+            let sort_u = kernel.sort(u);
+
+            let alpha_fv = fresh(&mut next_fvar);
+            let alpha = kernel.fvar(alpha_fv);
+            let c_fv = fresh(&mut next_fvar);
+            let c = kernel.fvar(c_fv);
+            let h_fv = fresh(&mut next_fvar);
+            let h = kernel.fvar(h_fv);
+            let t_fv = fresh(&mut next_fvar);
+            let t = kernel.fvar(t_fv);
+            let e_fv = fresh(&mut next_fvar);
+            let e = kernel.fvar(e_fv);
+
+            let decidable_c = {
+                let d = kernel.const_(decidable_name, vec![]);
+                kernel.app(d, c)
+            };
+            let not_c = {
+                let n = kernel.const_(not_name, vec![]);
+                kernel.app(n, c)
+            };
+            let ty_t = kernel.pi(anon, c, alpha, BinderInfo::Default);
+            let ty_e = kernel.pi(anon, not_c, alpha, BinderInfo::Default);
+            let motive = {
+                let ignore_fv = fresh(&mut next_fvar);
+                lam_fv(
+                    &mut kernel,
+                    anon,
+                    ignore_fv,
+                    decidable_c,
+                    alpha,
+                    BinderInfo::Default,
+                )
+            };
+            let value_body = {
+                let rec = kernel.const_(decidable_rec, vec![u]);
+                let w1 = kernel.app(rec, c);
+                let w2 = kernel.app(w1, motive);
+                let w3 = kernel.app(w2, e);
+                let w4 = kernel.app(w3, t);
+                kernel.app(w4, h)
+            };
+            let type_body = alpha;
+            let binders = [
+                (alpha_fv, sort_u, BinderInfo::Implicit),
+                (c_fv, prop, BinderInfo::Default),
+                (h_fv, decidable_c, BinderInfo::InstImplicit),
+                (t_fv, ty_t, BinderInfo::Default),
+                (e_fv, ty_e, BinderInfo::Default),
+            ];
+            let (dite_value, dite_ty) =
+                close_telescope(&mut kernel, &binders, value_body, type_body);
+            kernel
+                .add_declaration(Declaration::Definition {
+                    name: dite_name,
+                    uparams: vec![u_name],
+                    ty: dite_ty,
+                    value: dite_value,
+                    hint: ReducibilityHint::Regular(1),
+                })
+                .expect("dite must admit");
+        }
+
         // Decidable.decide (p : Prop) [h : Decidable p] : Bool :=
         //   Decidable.rec.{1} p (fun _ => Bool) (fun _ => Bool.false)
         //     (fun _ => Bool.true) h.
@@ -2629,6 +3077,7 @@ mod tests {
             "decide_eq_false",
             "if_pos",
             "of_decide_eq_true",
+            "dif_neg",
         ] {
             let mut kernel = decidable_test_kernel();
             let name = {
@@ -2888,12 +3337,214 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn dif_neg_reconstructs_and_kernel_checks() {
+        let mut kernel = decidable_test_kernel();
+        let (value, ty, uparams) = dif_neg_pair(&mut kernel).expect("dif_neg reconstructs");
+        assert_eq!(uparams.len(), 1);
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestDifNeg")
+        };
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams,
+                ty,
+                value,
+            })
+            .expect("reconstructed dif_neg must kernel-check");
+        assert_eq!(kernel.axiom_footprint(name).len(), 0);
+        assert_eq!(kernel.theorem_dependencies(name).len(), 0);
+    }
+
+    #[test]
+    fn dif_neg_declines_when_decidable_is_missing() {
+        let mut kernel = fixture_kernel();
+        assert!(matches!(
+            dif_neg_pair(&mut kernel),
+            Err(SubstitutionError::RequiredDeclarationUnavailable(
+                "Decidable"
+            ))
+        ));
+    }
+
+    /// [`dif_neg_pair`] additionally needs `dite`, unlike `if_neg`/
+    /// `ite_self`/`decide_eq_false`/`if_pos`/`of_decide_eq_true` (which all
+    /// case-split on `Decidable` via `ite`/`Decidable.decide` instead).
+    /// Mutation target: [`discover_dite`]'s definition-shape check.
+    #[test]
+    fn dif_neg_declines_when_dite_is_missing() {
+        // `decidable_test_kernel` builds `Decidable`/`ite`/`Decidable.decide`
+        // but this check only needs `Decidable` present and `dite` absent,
+        // so a plain `decidable_test_kernel()` minus the `dite` step would
+        // require duplicating that whole fixture; instead confirm directly
+        // that `exact_name` finds no `dite` in it once `dite` itself is
+        // never declared — using the pre-`dite` fixture shape via
+        // `fixture_kernel()` plus `Decidable` alone is not enough, since
+        // `discover_decidable` must also succeed first. Build the minimal
+        // shape here: `False`/`Not`/`Bool`/`Decidable`, no `ite`/`dite`.
+        let mut kernel = fixture_kernel();
+        let anon = kernel.anon();
+        let zero = kernel.level_zero();
+        let one = kernel.level_succ(zero);
+        let prop = kernel.sort(zero);
+        let sort1 = kernel.sort(one);
+        let mut next_fvar = FVAR_BASE + 30_000_000;
+
+        let false_name = kernel.name_str(anon, "False");
+        kernel
+            .add_inductive(false_name, &[], 0, prop, &[])
+            .expect("False must admit");
+        let not_name = kernel.name_str(anon, "Not");
+        {
+            let not_ty = kernel.pi(anon, prop, prop, BinderInfo::Default);
+            let not_value = {
+                let a_fv = fresh(&mut next_fvar);
+                let a = kernel.fvar(a_fv);
+                let false_const = kernel.const_(false_name, vec![]);
+                let arrow = kernel.pi(anon, a, false_const, BinderInfo::Default);
+                lam_fv(&mut kernel, anon, a_fv, prop, arrow, BinderInfo::Default)
+            };
+            kernel
+                .add_declaration(Declaration::Definition {
+                    name: not_name,
+                    uparams: vec![],
+                    ty: not_ty,
+                    value: not_value,
+                    hint: ReducibilityHint::Regular(1),
+                })
+                .expect("Not must admit");
+        }
+        let decidable_name = kernel.name_str(anon, "Decidable");
+        let is_false_name = kernel.name_str(decidable_name, "isFalse");
+        let is_true_name = kernel.name_str(decidable_name, "isTrue");
+        {
+            let decidable_ty = kernel.pi(anon, prop, sort1, BinderInfo::Default);
+            let decidable_const = kernel.const_(decidable_name, vec![]);
+            let not_const = kernel.const_(not_name, vec![]);
+            let is_false_ty = {
+                let p0 = kernel.bvar(0);
+                let not_p = kernel.app(not_const, p0);
+                let p1 = kernel.bvar(1);
+                let decidable_p = kernel.app(decidable_const, p1);
+                let inner = kernel.pi(anon, not_p, decidable_p, BinderInfo::Default);
+                kernel.pi(anon, prop, inner, BinderInfo::Default)
+            };
+            let is_true_ty = {
+                let p0 = kernel.bvar(0);
+                let p1 = kernel.bvar(1);
+                let decidable_p = kernel.app(decidable_const, p1);
+                let inner = kernel.pi(anon, p0, decidable_p, BinderInfo::Default);
+                kernel.pi(anon, prop, inner, BinderInfo::Default)
+            };
+            kernel
+                .add_inductive(
+                    decidable_name,
+                    &[],
+                    1,
+                    decidable_ty,
+                    &[(is_false_name, is_false_ty), (is_true_name, is_true_ty)],
+                )
+                .expect("Decidable must admit");
+        }
+        // Deliberately no `ite`/`dite` here.
+        assert!(matches!(
+            dif_neg_pair(&mut kernel),
+            Err(SubstitutionError::RequiredDeclarationUnavailable("dite"))
+        ));
+    }
+
+    #[test]
+    fn ne_true_of_eq_false_reconstructs_and_kernel_checks() {
+        let mut kernel = decidable_test_kernel();
+        let (value, ty, uparams) =
+            ne_true_of_eq_false_pair(&mut kernel).expect("ne_true_of_eq_false reconstructs");
+        assert_eq!(uparams.len(), 0);
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestNeTrueOfEqFalse")
+        };
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams,
+                ty,
+                value,
+            })
+            .expect("reconstructed ne_true_of_eq_false must kernel-check");
+        assert_eq!(kernel.axiom_footprint(name).len(), 0);
+        assert_eq!(kernel.theorem_dependencies(name).len(), 0);
+    }
+
+    #[test]
+    fn ne_true_of_eq_false_declines_when_bool_is_missing() {
+        let mut kernel = fixture_kernel();
+        assert!(matches!(
+            ne_true_of_eq_false_pair(&mut kernel),
+            Err(SubstitutionError::RequiredDeclarationUnavailable("Bool"))
+        ));
+    }
+
+    /// [`SUBSTITUTABLE_THEOREMS`] must dispatch `dif_neg`/`ne_true_of_eq_false`
+    /// exactly like [`reconstruct_dispatches_decidable_case_splits`] confirms
+    /// for the earlier `Decidable`-based names. Mutation target: deleting
+    /// either match arm in [`reconstruct`] makes exactly this test's
+    /// assertion for that name fail.
+    #[test]
+    fn reconstruct_dispatches_dif_neg_and_ne_true_of_eq_false() {
+        for rendered in ["dif_neg", "ne_true_of_eq_false"] {
+            let mut kernel = decidable_test_kernel();
+            let name = {
+                let root = kernel.anon();
+                kernel.name_str(root, "TestDispatch")
+            };
+            let wire_ty = kernel.sort_zero();
+            let result = reconstruct(&mut kernel, name, rendered, wire_ty);
+            assert!(
+                matches!(result, Ok(Some(Declaration::Theorem { .. }))),
+                "{rendered}: expected Ok(Some(Theorem)), got {result:?}"
+            );
+        }
+    }
+
     #[allow(clippy::similar_names)]
     fn or_test_kernel() -> Kernel {
         let mut kernel = Kernel::new();
         let anon = kernel.anon();
         let zero = kernel.level_zero();
         let prop = kernel.sort(zero);
+        let mut next_fvar = FVAR_BASE + 20_000_000;
+
+        // False : Prop, zero constructors, and Not (a : Prop) : Prop := a ->
+        // False — needed only by `or_resolve_right_pair`, not `or_elim_pair`,
+        // added here anyway so this one fixture covers both `Or`
+        // reconstructions.
+        let false_name = kernel.name_str(anon, "False");
+        kernel
+            .add_inductive(false_name, &[], 0, prop, &[])
+            .expect("False must admit");
+        {
+            let not_name = kernel.name_str(anon, "Not");
+            let not_ty = kernel.pi(anon, prop, prop, BinderInfo::Default);
+            let not_value = {
+                let a_fv = fresh(&mut next_fvar);
+                let a = kernel.fvar(a_fv);
+                let false_const = kernel.const_(false_name, vec![]);
+                let arrow = kernel.pi(anon, a, false_const, BinderInfo::Default);
+                lam_fv(&mut kernel, anon, a_fv, prop, arrow, BinderInfo::Default)
+            };
+            kernel
+                .add_declaration(Declaration::Definition {
+                    name: not_name,
+                    uparams: vec![],
+                    ty: not_ty,
+                    value: not_value,
+                    hint: ReducibilityHint::Regular(1),
+                })
+                .expect("Not must admit");
+        }
+
         let or_name = kernel.name_str(anon, "Or");
         let or_inl = kernel.name_str(or_name, "inl");
         let or_inr = kernel.name_str(or_name, "inr");
@@ -2983,6 +3634,52 @@ mod tests {
         assert!(
             matches!(result, Ok(Some(Declaration::Theorem { .. }))),
             "Or.elim: expected Ok(Some(Theorem)), got {result:?}"
+        );
+    }
+
+    #[test]
+    fn or_resolve_right_reconstructs_and_kernel_checks() {
+        let mut kernel = or_test_kernel();
+        let (value, ty, uparams) =
+            or_resolve_right_pair(&mut kernel).expect("Or.resolve_right reconstructs");
+        assert_eq!(uparams.len(), 0);
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestOrResolveRight")
+        };
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams,
+                ty,
+                value,
+            })
+            .expect("reconstructed Or.resolve_right must kernel-check");
+        assert_eq!(kernel.axiom_footprint(name).len(), 0);
+        assert_eq!(kernel.theorem_dependencies(name).len(), 0);
+    }
+
+    #[test]
+    fn or_resolve_right_declines_when_or_is_missing() {
+        let mut kernel = fixture_kernel();
+        assert!(matches!(
+            or_resolve_right_pair(&mut kernel),
+            Err(SubstitutionError::RequiredDeclarationUnavailable("Or"))
+        ));
+    }
+
+    #[test]
+    fn reconstruct_dispatches_or_resolve_right() {
+        let mut kernel = or_test_kernel();
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestDispatchOrResolveRight")
+        };
+        let wire_ty = kernel.sort_zero();
+        let result = reconstruct(&mut kernel, name, "Or.resolve_right", wire_ty);
+        assert!(
+            matches!(result, Ok(Some(Declaration::Theorem { .. }))),
+            "Or.resolve_right: expected Ok(Some(Theorem)), got {result:?}"
         );
     }
 }
