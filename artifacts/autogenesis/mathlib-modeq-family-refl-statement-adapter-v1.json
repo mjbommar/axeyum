@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-statement-adapter",
+  "state": "independent-kernel-goal-admitted-proof-free",
+  "source_fact_id": "F:ml430-int-modeq-refl-30e15520",
+  "source_statement_sha256": "5ef1cabc1b44e80e3f1f8be0cef1a5fe42e27736d5f1cc1c41091efda87cedab",
+  "adapter_source": {
+    "path": "scripts/lean/autogenesis_statement_adapter_modeq_family_v1.lean",
+    "sha256": "30a871fbeee3dc0e85fc4761d103846a3a4cb55f365a15da5f11348ac9e6f06a",
+    "target_definition": "Axeyum.Autogenesis.Statement.IntModEqFamily.intModEqRefl",
+    "encoding": "transparent-definition-of-prop",
+    "proof_declarations_allowed": false
+  },
+  "toolchain": {
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_version": "3.1.0",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf"
+  },
+  "external_artifact": {
+    "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-modeq-family-v1/int-modeq-refl.ndjson",
+    "sha256": "38d165bb7d274b6d4e38251b4c186cc890904971f9566b483ee301495b964486",
+    "bytes": 325456,
+    "records": 6023,
+    "mode": "0777"
+  },
+  "independent_import": {
+    "goal_sha256": "594f0839940784028e8601ac462591e19b0144f101b1de6bdd94eef2f68ad858",
+    "target_content_sha256": "b3e4c8fc348f90a85c9d2c76a9d689c796ccb22190990678ea0cc9b7f60cf49a",
+    "direct_dependencies": 2,
+    "admitted_declarations": 205,
+    "axioms": 0
+  },
+  "reproduction": {
+    "host_profile": "s5 pinned Mathlib v4.30.0 checkout",
+    "export": "copy the tracked adapter source to the pinned Mathlib root as AxeyumAutogenesisIntModEqFamilyV1.lean; lake env lean -o .lake/build/lib/lean/AxeyumAutogenesisIntModEqFamilyV1.olean -i .lake/build/lib/lean/AxeyumAutogenesisIntModEqFamilyV1.ilean AxeyumAutogenesisIntModEqFamilyV1.lean; lake env /home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export AxeyumAutogenesisIntModEqFamilyV1 -- Axeyum.Autogenesis.Statement.IntModEqFamily.intModEqRefl",
+    "check": "python3 scripts/check-autogenesis-modeq-family.py"
+  },
+  "limitations": "This adapts the train proposition F:ml430-int-modeq-refl-30e15520 into a checked goal. It exposes no Mathlib proof and grants no proof credit before authoritative execution."
+}

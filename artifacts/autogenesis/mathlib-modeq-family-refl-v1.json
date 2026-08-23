@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-modeq-family-candidate",
+  "state": "candidate-checked-not-admitted",
+  "source_fact_id": "F:ml430-int-modeq-refl-30e15520",
+  "statement_adapter": "artifacts/autogenesis/mathlib-modeq-family-refl-statement-adapter-v1.json",
+  "operation": {
+    "implementation": "crates/axeyum-lean-import/examples/modeq_family_operation.rs",
+    "target_definition": "Axeyum.Autogenesis.Statement.IntModEqFamily.intModEqRefl",
+    "goal_sha256": "594f0839940784028e8601ac462591e19b0144f101b1de6bdd94eef2f68ad858",
+    "proof_sha256": "509b3ca9c0ba948889964ece90708067a5aee8d9d44f82a753cf0b0d75b32731",
+    "target_content_sha256": "b3e4c8fc348f90a85c9d2c76a9d689c796ccb22190990678ea0cc9b7f60cf49a",
+    "binders_used": 2,
+    "max_binders": 8,
+    "admitted_declarations": 205,
+    "axioms": 0,
+    "theorem_dependencies": 0,
+    "target_dependency": false,
+    "ledger_writes": 0
+  },
+  "reproduction": "python3 scripts/check-autogenesis-modeq-family.py",
+  "limitations": "The candidate is independently kernel checked but remains uncredited until the exact registered operation completes the authoritative transaction."
+}

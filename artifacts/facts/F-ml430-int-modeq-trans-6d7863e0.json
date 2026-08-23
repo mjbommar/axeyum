@@ -8,10 +8,37 @@
     "statement": "∀ {n a b c : ℤ}, a ≡ b [ZMOD n] → b ≡ c [ZMOD n] → a ≡ c [ZMOD n]",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "autogenesis-operation-modeq-c5e4388868b7e82a",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Int.ModEq.trans` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "modeq-family-eq-iff-combinators-v1",
+        "axeyum-lean-import/modeq-family-operation-v1",
+        "axeyum-lean-import/modeq-family-multi-target-v1"
+      ],
+      "checker_command": "python3 scripts/check-autogenesis-modeq-family.py",
+      "artifact": "sha256:c5e4388868b7e82a46843080112d61a09e2115a4a7a2e36d8e5960a973391b82",
+      "checker_operation": {
+        "id": "authoritative-mathlib-modeq-family-v1",
+        "admitted_declarations": 205,
+        "binders_used": 6,
+        "goal_sha256": "8825d9b14d2554a6fddfebbd0de2d43c692d1817e30c5a448e85f9df5e2d2c19",
+        "proof_sha256": "c5e4388868b7e82a46843080112d61a09e2115a4a7a2e36d8e5960a973391b82",
+        "target_content_sha256": "1d4cb042dea50bd7c14597df1f8900347345c6be927b963877e14d714c38b367",
+        "max_binders": 8,
+        "statement_adapter_manifest": "artifacts/autogenesis/mathlib-modeq-family-trans-statement-adapter-v1.json",
+        "modeq_manifest": "artifacts/autogenesis/mathlib-modeq-family-trans-v1.json",
+        "target_definition": "Axeyum.Autogenesis.Statement.IntModEqFamily.intModEqTrans"
+      },
+      "notes": "Derived from an independently replayed modeq-family receipt. The registered fact-operation checker (scripts/check-autogenesis-modeq-family.py) replays the proof-isolated statement artifact through a fresh importer and requires the exact kernel-checked proof and dependency-free result; no caller-authored route, footprint, checker, or shell command is accepted. This is the ledger's SECOND general autogenesis operation (applicability.fact_ids names four facts, not one): unfold `Int.ModEq.trans`'s definitional `ModEq n a b := a % n = b % n` and close with Eq.refl/Eq.symm/Eq.trans/Iff.intro, each reconstructed directly from Eq.rec / Iff's own constructor -- never a borrowed theorem, never a reference to the target or a sibling ModEq fact. The same producer, unmodified after being tuned only on this train family, closed all four `natural-modular-equivalence` (development) siblings blind."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +53,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The registered operation authoritative-mathlib-modeq-family-v1 -- this ledger's second operation whose applicability.fact_ids names more than one fact -- produced a fresh-import axiom-free kernel proof for this fact via modeq_family_support (Eq.refl/Eq.symm/Eq.trans/Iff.intro over the definitional unfolding of ModEq, reconstructed directly from Eq.rec / Iff's own constructor).\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

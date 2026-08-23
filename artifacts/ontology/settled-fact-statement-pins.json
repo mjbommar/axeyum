@@ -35,14 +35,14 @@
       "statement_sha256": "e724f7ac47c08179993337bcb7259cd59974364ac1cf75bc1af44deb0965f4c6"
     },
     {
-      "fact_id": "F:chu-vandermonde-convolution-recurrence",
-      "language": "cas-term",
-      "statement_sha256": "42d9414b3c58441b24a2a30713b1e647e7b588614b34b3dd71833be8b7506aa7"
-    },
-    {
       "fact_id": "F:chu-vandermonde-convolution",
       "language": "cas-term",
       "statement_sha256": "7600a9b6642bf8c9fa5e524ed1e788c6a874d6157fe08de80158fdf54a87f5d3"
+    },
+    {
+      "fact_id": "F:chu-vandermonde-convolution-recurrence",
+      "language": "cas-term",
+      "statement_sha256": "42d9414b3c58441b24a2a30713b1e647e7b588614b34b3dd71833be8b7506aa7"
     },
     {
       "fact_id": "F:complex-admits-no-compatible-order",
@@ -328,6 +328,26 @@
       "fact_id": "F:ml430-int-gcd-fib-73bdafc2",
       "language": "lean4-surface",
       "statement_sha256": "c1cb52f71c2f43ec5677f630e02335f892309c571a775f4c9e867aa1fd5ee720"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-comm-1e4bcc07",
+      "language": "lean4-surface",
+      "statement_sha256": "fc8c080a952a6a0461359cdc97299c19b5dbdcb61465aa23c0e0bddf83b931b5"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-refl-30e15520",
+      "language": "lean4-surface",
+      "statement_sha256": "5ef1cabc1b44e80e3f1f8be0cef1a5fe42e27736d5f1cc1c41091efda87cedab"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-symm-984a6e67",
+      "language": "lean4-surface",
+      "statement_sha256": "6f22633eced9acc8bb496cc59ec39134b8ee68680d991b40121ca46829ce7d6d"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-trans-6d7863e0",
+      "language": "lean4-surface",
+      "statement_sha256": "33b42628e1980c850dee00b222191cbec52cf071bf77f567a8f5cebf659dfd3f"
     },
     {
       "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",

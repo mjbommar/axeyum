@@ -8,19 +8,19 @@
 
 | | |
 |---|---:|
-| Established facts (`proved` or `computed`) | 140 |
-| …via an operation covering **more than one** fact | **3** |
+| Established facts (`proved` or `computed`) | 144 |
+| …via an operation covering **more than one** fact | **7** |
 | …via a single-target operation (a capsule) | 21 |
 | …with no registered operation (hand-constructed or imported) | 116 |
-| Registered operations | 25 |
-| …**authoritative** and covering more than one fact | **1** |
+| Registered operations | 26 |
+| …**authoritative** and covering more than one fact | **2** |
 | …fixture-scope covering more than one fact (NOT the metric) | 0 |
 
-**3 fact(s) were established through an operation that
+**7 fact(s) were established through an operation that
 covers more than one fact.** That is the first evidence of generality this
 ledger has ever recorded; it is necessary, not sufficient.
 
-Facts: `F:ml430-nat-descfactorial-one-d4856d4a`, `F:ml430-nat-one-ascfactorial-8bacb017`, `F:ml430-nat-zero-ascfactorial-af4fcdca`
+Facts: `F:ml430-int-modeq-comm-1e4bcc07`, `F:ml430-int-modeq-refl-30e15520`, `F:ml430-int-modeq-symm-984a6e67`, `F:ml430-int-modeq-trans-6d7863e0`, `F:ml430-nat-descfactorial-one-d4856d4a`, `F:ml430-nat-one-ascfactorial-8bacb017`, `F:ml430-nat-zero-ascfactorial-af4fcdca`
 
 ## By route
 
@@ -28,7 +28,7 @@ Facts: `F:ml430-nat-descfactorial-one-d4856d4a`, `F:ml430-nat-one-ascfactorial-8
 |---|---:|---:|---:|---|
 | `cas-certificate` | 0 | 0 | 19 | computer-algebra certificate |
 | `imported-kernel-lean` | 0 | 0 | 5 | kernel proof imported from an external development |
-| `kernel-lean` | 3 | 20 | 58 | kernel proof, reconstructed and checked here |
+| `kernel-lean` | 7 | 20 | 58 | kernel proof, reconstructed and checked here |
 | `search-certificate` | 0 | 0 | 9 | search certificate |
 | `smt-clausal` | 0 | 0 | 9 | SMT decision with clausal (DRAT) evidence |
 | `smt-term-level` | 0 | 1 | 16 | SMT decision with term-level evidence |
@@ -50,7 +50,7 @@ is no proof-affecting intervention, which this join cannot see. Multi-target
 coverage is the **necessary** condition that is measurable today, and a
 single-target registry fails it without needing a harder test.
 
-Of the 140 established facts, 80 record an
+Of the 144 established facts, 84 record an
 empty axiom footprint. That is a different axis from provenance: a
 hand-written proof can be axiom-free and a produced one need not be.
 

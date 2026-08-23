@@ -122,6 +122,7 @@ autogenesis-nursery:
     python3 -m unittest scripts.tests.test_check_autogenesis_must_decline_population
     python3 scripts/check-autogenesis-must-decline-population.py
     python3 scripts/check-autogenesis-bounded-induction-family.py
+    python3 scripts/check-autogenesis-modeq-family.py
     python3 scripts/check-established-facts-bounded-truth.py
     python3 scripts/check-autogenesis-nursery.py
     python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check

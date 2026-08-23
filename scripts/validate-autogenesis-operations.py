@@ -22,6 +22,7 @@ EXECUTION_DRIVERS = {
     "axeyum-lean-kernel/nat-mul-one-episode-apply-v1",
     "axeyum-lean-import/statement-reflexivity-v1",
     "axeyum-lean-import/bounded-induction-multi-target-v1",
+    "axeyum-lean-import/modeq-family-multi-target-v1",
     "axeyum-lean-import/checked-theorem-receipt-v1",
     "axeyum-lean-import/dependency-theorem-receipt-v1",
     "axeyum-lean-import/sealed-kernel-capsule-v1",
@@ -261,6 +262,12 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "max_binders",
             "max_inductions",
         }
+    elif driver == "axeyum-lean-import/modeq-family-multi-target-v1":
+        expected = common | {
+            "additional_fact_ids",
+            "targets",
+            "max_binders",
+        }
     elif driver == "axeyum-lean-import/checked-theorem-receipt-v1":
         expected = common | {
             "receipt_manifest",
@@ -450,6 +457,93 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             fact_path = root / "artifacts/facts" / (
                 fid.replace("F:", "F-") + ".json"
             )
+            fact = json.loads(fact_path.read_text())
+            statement = (fact.get("formal") or {}).get("statement")
+            if (
+                not isinstance(statement, str)
+                or hashlib.sha256(statement.encode()).hexdigest()
+                != adapter.get("source_statement_sha256")
+            ):
+                raise RegistryError(
+                    f"{t_label} statement identity disagrees with its fact"
+                )
+        if target_fact_ids != all_fact_ids:
+            raise RegistryError(
+                f"{label}.targets fact_id order must match input_fact_id "
+                "followed by additional_fact_ids"
+            )
+    elif driver == "axeyum-lean-import/modeq-family-multi-target-v1":
+        additional = nonempty_strings(
+            value["additional_fact_ids"], f"{label}.additional_fact_ids"
+        )
+        for fid in additional:
+            if not FACT_ID_RE.fullmatch(fid):
+                raise RegistryError(
+                    f"{label}.additional_fact_ids has invalid fact id {fid!r}"
+                )
+        all_fact_ids = [value["input_fact_id"], *additional]
+        if len(all_fact_ids) != len(set(all_fact_ids)):
+            raise RegistryError(
+                f"{label} names a fact id more than once across "
+                "input_fact_id/additional_fact_ids"
+            )
+        targets = value["targets"]
+        if not isinstance(targets, list) or len(targets) != len(all_fact_ids):
+            raise RegistryError(
+                f"{label}.targets must have exactly one entry per named fact id"
+            )
+        expected_root = (root / "artifacts/autogenesis").resolve()
+        target_fact_ids = []
+        for t_index, target in enumerate(targets):
+            t_label = f"{label}.targets[{t_index}]"
+            if not isinstance(target, dict):
+                raise RegistryError(f"{t_label} must be an object")
+            exact_keys(
+                target,
+                {
+                    "fact_id",
+                    "statement_adapter_manifest",
+                    "modeq_manifest",
+                    "target_definition",
+                },
+                t_label,
+            )
+            fid = target["fact_id"]
+            if not isinstance(fid, str) or not FACT_ID_RE.fullmatch(fid):
+                raise RegistryError(f"{t_label}.fact_id is invalid")
+            target_fact_ids.append(fid)
+            adapter_path = repository_file(
+                target["statement_adapter_manifest"],
+                f"{t_label}.statement_adapter_manifest",
+                root,
+            )
+            modeq_path = repository_file(
+                target["modeq_manifest"], f"{t_label}.modeq_manifest", root
+            )
+            if adapter_path.parent != expected_root or modeq_path.parent != expected_root:
+                raise RegistryError(
+                    f"{t_label} manifests must be canonical autogenesis artifacts"
+                )
+            adapter = json.loads(adapter_path.read_text())
+            modeq = json.loads(modeq_path.read_text())
+            modeq_op = modeq.get("operation") or {}
+            if (
+                adapter.get("kind") != "axeyum-autogenesis-mathlib-statement-adapter"
+                or adapter.get("state") != "independent-kernel-goal-admitted-proof-free"
+                or modeq.get("kind")
+                != "axeyum-autogenesis-mathlib-modeq-family-candidate"
+                or modeq.get("state") != "candidate-checked-not-admitted"
+                or adapter.get("source_fact_id") != fid
+                or modeq.get("source_fact_id") != fid
+                or modeq.get("statement_adapter") != target["statement_adapter_manifest"]
+                or modeq_op.get("target_definition") != target["target_definition"]
+                or modeq_op.get("max_binders") != value["max_binders"]
+                or modeq_op.get("axioms") != 0
+                or modeq_op.get("theorem_dependencies") != 0
+                or modeq_op.get("target_dependency") is not False
+            ):
+                raise RegistryError(f"{t_label} modeq-family manifests disagree")
+            fact_path = root / "artifacts/facts" / (fid.replace("F:", "F-") + ".json")
             fact = json.loads(fact_path.read_text())
             statement = (fact.get("formal") or {}).get("statement")
             if (
@@ -881,7 +975,10 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
             raise RegistryError(f"{label}.admission footprint violates its policy")
         if scope == "authoritative":
             executor = operation["executor"]
-            if executor["driver"] == "axeyum-lean-import/bounded-induction-multi-target-v1":
+            if executor["driver"] in {
+                "axeyum-lean-import/bounded-induction-multi-target-v1",
+                "axeyum-lean-import/modeq-family-multi-target-v1",
+            }:
                 all_ids = [
                     executor["input_fact_id"],
                     *executor.get("additional_fact_ids", []),
@@ -922,6 +1019,17 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                 if (
                     applicability["formal_languages"] != ["lean4-surface"]
                     or applicability["fragments"] != ["Nat"]
+                    or admission["proof_route"] != "kernel-lean"
+                    or admission["evidence_kind"] != "kernel-term"
+                    or admission["axiom_footprint"] != []
+                ):
+                    raise RegistryError(
+                        f"{label}.executor driver is inconsistent with applicability/admission"
+                    )
+            elif executor["driver"] == "axeyum-lean-import/modeq-family-multi-target-v1":
+                if (
+                    applicability["formal_languages"] != ["lean4-surface"]
+                    or applicability["fragments"] not in (["Int"], ["Nat"])
                     or admission["proof_route"] != "kernel-lean"
                     or admission["evidence_kind"] != "kernel-term"
                     or admission["axiom_footprint"] != []
