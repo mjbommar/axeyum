@@ -43,6 +43,7 @@ mod alethe;
 mod bve;
 pub mod colouring;
 mod compact;
+mod cube;
 mod drat;
 mod drat_backward;
 mod drat_resource;
@@ -70,6 +71,12 @@ pub use bve::{
     eliminate_variables_within,
 };
 pub use compact::{CompactMap, compact};
+pub use cube::{
+    Cube, CubeCertifyOutcome, CubeCheckError, CubeGenError, CubeOutcome, CubeRefutation,
+    CubeStats, DEFAULT_COVERING_CONFLICT_LIMIT, DEFAULT_CUBE_CONFLICT_LIMIT,
+    MAX_PRODUCT_CUBE_SELECTORS, augmented_formula, boolean_product_cubes, certify_by_cubes,
+    check_cube_refutation, covering_formula,
+};
 #[cfg(unix)]
 pub use drat::CacheDroppingWriter;
 pub use drat::{
