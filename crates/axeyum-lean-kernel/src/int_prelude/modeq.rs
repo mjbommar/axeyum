@@ -183,7 +183,7 @@ pub(super) fn declare_modeq_trans(d: &mut IntDev<'_>) -> Result<(), KernelError>
 /// `x + (-y) = z` you get `x = z + y`. `Int.add_neg_cancel_right`
 /// (`(x+y)+(-y)=x`) is the mirror image; this is the direction it does not
 /// cover, and `Int.modEq_iff_dvd` needs both.
-fn cancel_neg_add(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId {
+pub(super) fn cancel_neg_add(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId {
     let p = d.int();
     let neg_y = d.ineg(y);
     let x_negy = d.iadd(x, neg_y);

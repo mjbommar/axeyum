@@ -75,6 +75,7 @@ use crate::nat_prelude::{NatPrelude, build_nat_prelude};
 use crate::{Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue};
 
 mod algebra;
+mod crt;
 mod decide;
 mod defs;
 mod division;
@@ -425,6 +426,14 @@ pub struct IntPrelude {
     /// either carrier).
     pub euclid_lemma: NameId,
 
+    // --- the Chinese Remainder Theorem ----------------------------------------
+    /// `crt_exists : ∀ m n a b, 0 < m → 0 < n → Coprime m n →
+    /// ∃ x, ModEq m x a ∧ ModEq n x b`.
+    pub crt_exists: NameId,
+    /// `crt_unique : ∀ m n x y, 0 < m → 0 < n → 0 < m*n → Coprime m n →
+    /// ModEq m x y → ModEq n x y → ModEq (m*n) x y`.
+    pub crt_unique: NameId,
+
     // --- the rationals, as a normalised structure -----------------------------
     /// `Rat : Type` — a normalised `num/den` pair carrying its own positivity
     /// and reducedness proofs. Not a quotient: this kernel has no `Quot.sound`.
@@ -578,6 +587,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         coprime_of_bezout_one: child(kernel, "coprime_of_bezout_one"),
         gauss_lemma: child(kernel, "gauss_lemma"),
         euclid_lemma: child(kernel, "euclid_lemma"),
+        crt_exists: child(kernel, "crt_exists"),
+        crt_unique: child(kernel, "crt_unique"),
         rat,
         rat_mk: kernel.name_str(rat, "mk"),
         rat_normalize: kernel.name_str(rat, "normalize"),
@@ -692,6 +703,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_coprime_of_bezout_one(&mut d)?;
         gcd::declare_gauss_lemma(&mut d)?;
         gcd::declare_euclid_lemma(&mut d)?;
+        crt::declare_crt_exists(&mut d)?;
+        crt::declare_crt_unique(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;
