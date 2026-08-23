@@ -143,6 +143,11 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             "Complex.normSq_eq_zero_of_eq_zero",
             p.norm_sq_eq_zero_of_eq_zero,
         ),
+        (
+            "Complex.eq_zero_of_normSq_eq_zero",
+            p.eq_zero_of_norm_sq_eq_zero,
+        ),
+        ("Complex.normSq_eq_zero_iff", p.norm_sq_eq_zero_iff),
         ("Complex.normSq_add", p.norm_sq_add),
         ("Complex.no_compatible_order", p.no_compatible_order),
         ("Complex.inv", p.inv),

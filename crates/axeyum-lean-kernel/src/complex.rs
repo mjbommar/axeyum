@@ -280,15 +280,30 @@ pub struct ComplexPrelude {
     /// CReal.Equiv (normSq z) CReal.zero` — the **easy** half of
     /// `normSq z ~ 0 ↔ z ~ 0`.
     ///
-    /// The converse — `normSq z ~ 0 → z ~ 0` — is **not** proved here. It
-    /// reduces to `CReal.mul x x ~ CReal.zero → CReal.Equiv x CReal.zero`
-    /// (apply it twice, at `re z` and `im z`, after the order argument that
-    /// splits a zero sum of two nonnegatives). That reduction is a genuine
-    /// analytic fact — an estimate on the underlying Bishop sequence, not an
-    /// algebraic rearrangement or an order-lemma composition — and needs new
-    /// work inside `creal.rs`/`creal/`, which is out of scope for this
-    /// development and owned by another lane this session.
+    /// The converse is [`Self::eq_zero_of_norm_sq_eq_zero`], and the
+    /// biconditional combining both is [`Self::norm_sq_eq_zero_iff`].
     pub norm_sq_eq_zero_of_eq_zero: NameId,
+    /// `Complex.eq_zero_of_normSq_eq_zero : ∀ z, CReal.Equiv (normSq z)
+    /// CReal.zero → Equiv z zero` — the **converse** half of
+    /// `normSq z ~ 0 ↔ z ~ 0`.
+    ///
+    /// `normSq z` unfolds to `re z * re z + im z * im z`, a sum of two
+    /// [`CRealPrelude::sq_nonneg`] terms; a zero sum of nonnegatives forces
+    /// each addend to zero (an order argument built here from `add_zero`,
+    /// `le_refl`, `add_le_add`, `le_congr`, `le_of_equiv`, `le_trans`,
+    /// `equiv_of_le_le` and `add_comm` — no such split is a named `CReal`
+    /// lemma), and then
+    /// [`CRealPrelude::eq_zero_of_mul_self_zero`](crate::CRealPrelude::eq_zero_of_mul_self_zero)
+    /// closes each component. That lemma is the genuine analytic estimate
+    /// this development needed from `creal.rs`/`creal/`; everything above it
+    /// is algebra plus the order laws.
+    pub eq_zero_of_norm_sq_eq_zero: NameId,
+    /// `Complex.normSq_eq_zero_iff : ∀ z, Iff (CReal.Equiv (normSq z)
+    /// CReal.zero) (Equiv z zero)` — the full biconditional, from
+    /// [`Self::norm_sq_eq_zero_of_eq_zero`] (`mpr`) and
+    /// [`Self::eq_zero_of_norm_sq_eq_zero`] (`mp`). A restatement, not a new
+    /// proof: the pattern `pythagoras_distSq` uses in `creal_point.rs`.
+    pub norm_sq_eq_zero_iff: NameId,
     /// `Complex.normSq_add : ∀ z w, CReal.Equiv
     /// (add (normSq (add z w)) (normSq (add z (neg w))))
     /// (add (add (normSq z) (normSq z)) (add (normSq w) (normSq w)))` — the
@@ -434,6 +449,8 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         norm_sq_conj: kernel.name_str(complex, "normSq_conj"),
         norm_sq_mul: kernel.name_str(complex, "normSq_mul"),
         norm_sq_eq_zero_of_eq_zero: kernel.name_str(complex, "normSq_eq_zero_of_eq_zero"),
+        eq_zero_of_norm_sq_eq_zero: kernel.name_str(complex, "eq_zero_of_normSq_eq_zero"),
+        norm_sq_eq_zero_iff: kernel.name_str(complex, "normSq_eq_zero_iff"),
         norm_sq_add: kernel.name_str(complex, "normSq_add"),
         no_compatible_order: kernel.name_str(complex, "no_compatible_order"),
         inv: kernel.name_str(complex, "inv"),
@@ -480,6 +497,8 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_norm(&mut d, prelude)?;
         declare_norm_conjugation(&mut d, prelude)?;
         declare_norm_sq_eq_zero_of_eq_zero(&mut d, prelude)?;
+        declare_eq_zero_of_norm_sq_eq_zero(&mut d, prelude)?;
+        declare_norm_sq_eq_zero_iff(&mut d, prelude)?;
         declare_norm_sq_add(&mut d, prelude)?;
         declare_no_order(&mut d, prelude)?;
         declare_inv(&mut d, prelude)?;
@@ -1972,9 +1991,8 @@ fn declare_norm_conjugation(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(),
 }
 
 /// `Complex.normSq_eq_zero_of_eq_zero`: the **easy** half of
-/// `normSq z ~ 0 ↔ z ~ 0`. See
-/// [`ComplexPrelude::norm_sq_eq_zero_of_eq_zero`] for why the converse is not
-/// attempted here.
+/// `normSq z ~ 0 ↔ z ~ 0`. The converse is
+/// [`declare_eq_zero_of_norm_sq_eq_zero`], just below.
 fn declare_norm_sq_eq_zero_of_eq_zero(
     d: &mut IntDev<'_>,
     p: ComplexPrelude,
@@ -2031,6 +2049,160 @@ fn declare_norm_sq_eq_zero_of_eq_zero(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.norm_sq_eq_zero_of_eq_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Equiv x CReal.zero`, from `le zero x`, `le zero y` and `Equiv (add x y)
+/// zero`.
+///
+/// The order half of "a zero sum of two nonnegatives forces each addend to
+/// zero": `x ≤ x + 0 ≤ x + y ~ 0` (the middle step is `add_le_add` at
+/// `le_refl x` and `le_zero_y`, the first is `add_zero` read backwards via
+/// `le_congr`), so `x ≤ 0`; combined with the given `0 ≤ x`,
+/// `equiv_of_le_le` closes `x ~ 0`. Nothing here is `CReal`-specific beyond
+/// the seven lemmas named above, and no such split is itself a named `CReal`
+/// lemma — this is the whole of what
+/// [`ComplexPrelude::eq_zero_of_norm_sq_eq_zero`] needed that was not already
+/// on the shelf.
+fn nonneg_sum_zero_left(
+    d: &mut IntDev<'_>,
+    creal: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    le_zero_x: ExprId,
+    le_zero_y: ExprId,
+    h_sum_zero: ExprId,
+) -> ExprId {
+    let zero = czero(d, creal);
+    let x_plus_zero = cadd(d, creal, x, zero);
+    let x_plus_y = cadd(d, creal, x, y);
+    let add_zero_x = d.lemma(creal.add_zero, &[x]); // Equiv (add x zero) x
+    let le_refl_x = d.lemma(creal.le_refl, &[x]); // le x x
+    let step = d.lemma(creal.add_le_add, &[x, x, zero, y, le_refl_x, le_zero_y]);
+    // step : le (add x zero) (add x y)
+    let refl_xy = crefl(d, creal, x_plus_y);
+    let le_x_xy = d.lemma(
+        creal.le_congr,
+        &[
+            x_plus_zero,
+            x,
+            x_plus_y,
+            x_plus_y,
+            add_zero_x,
+            refl_xy,
+            step,
+        ],
+    );
+    // le_x_xy : le x (add x y)
+    let le_xy_zero = d.lemma(creal.le_of_equiv, &[x_plus_y, zero, h_sum_zero]);
+    let le_x_zero = d.lemma(creal.le_trans, &[x, x_plus_y, zero, le_x_xy, le_xy_zero]);
+    d.lemma(creal.equiv_of_le_le, &[x, zero, le_x_zero, le_zero_x])
+}
+
+/// `Complex.eq_zero_of_normSq_eq_zero`: the **converse** half of
+/// `normSq z ~ 0 ↔ z ~ 0`. See
+/// [`ComplexPrelude::eq_zero_of_norm_sq_eq_zero`] for the route.
+fn declare_eq_zero_of_norm_sq_eq_zero(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let a = re_of(d, p, z);
+    let b = im_of(d, p, z);
+    let zero = czero(d, creal);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+
+    let aa = cmul(d, creal, a, a);
+    let bb = cmul(d, creal, b, b);
+    let norm_z = d.const_app(p.norm_sq, &[z]); // defeq to `add aa bb`
+
+    let hypothesis = ceq(d, creal, norm_z, zero);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    // h : Equiv (normSq z) zero, defeq to Equiv (add aa bb) zero — the same
+    // delta-unfolding `declare_norm`'s `normSq_nonneg` and
+    // `declare_norm_sq_eq_zero_of_eq_zero` above already rely on.
+
+    let aa_nonneg = d.lemma(creal.sq_nonneg, &[a]);
+    let bb_nonneg = d.lemma(creal.sq_nonneg, &[b]);
+
+    let aa_zero = nonneg_sum_zero_left(d, creal, aa, bb, aa_nonneg, bb_nonneg, h);
+
+    // For `bb`, the sum needs to be read in the other order:
+    // `add_comm bb aa : Equiv (add bb aa) (add aa bb)`, then `trans` with `h`
+    // (defeq: `add aa bb` against `normSq z`) gives `Equiv (add bb aa) zero`.
+    let add_bb_aa = cadd(d, creal, bb, aa);
+    let add_aa_bb = cadd(d, creal, aa, bb);
+    let comm_ba = d.lemma(creal.add_comm, &[bb, aa]); // Equiv (add bb aa) (add aa bb)
+    let h_swapped = ctrans(d, creal, add_bb_aa, add_aa_bb, zero, comm_ba, h);
+    let bb_zero = nonneg_sum_zero_left(d, creal, bb, aa, bb_nonneg, aa_nonneg, h_swapped);
+
+    let a_zero = d.lemma(creal.eq_zero_of_mul_self_zero, &[a, aa_zero]);
+    let b_zero = d.lemma(creal.eq_zero_of_mul_self_zero, &[b, bb_zero]);
+
+    // `re zero_c`/`im zero_c` are defeq to `CReal.zero`, so `a_zero`/`b_zero`
+    // (typed `Equiv _ CReal.zero`) close these two components directly.
+    let re_zero_c = re_of(d, p, zero_c);
+    let im_zero_c = im_of(d, p, zero_c);
+    let left_claim = ceq(d, creal, a, re_zero_c);
+    let right_claim = ceq(d, creal, b, im_zero_c);
+    let body = and_intro(d, p, left_claim, right_claim, a_zero, b_zero);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, body);
+        d.lam_fv(z_fv, carrier, with_h)
+    };
+    let ty = {
+        let claim = zeq(d, p, z, zero_c);
+        let inner = d.arrow(hypothesis, claim);
+        d.pi_fv(z_fv, carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.eq_zero_of_norm_sq_eq_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.normSq_eq_zero_iff`: the biconditional, from
+/// [`declare_norm_sq_eq_zero_of_eq_zero`] (`mpr`) and
+/// [`declare_eq_zero_of_norm_sq_eq_zero`] (`mp`) — a restatement, not a new
+/// proof, in the style `pythagoras_distSq` uses in `creal_point.rs`: each
+/// half is the existing theorem re-applied as a value.
+fn declare_norm_sq_eq_zero_iff(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let logic = creal.rat.int.logic;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let zero = czero(d, creal);
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+
+    let norm_stmt = ceq(d, creal, norm_z, zero);
+    let equiv_stmt = zeq(d, p, z, zero_c);
+
+    // mp : Equiv (normSq z) zero -> Equiv z zero
+    let mp_body = d.lemma(p.eq_zero_of_norm_sq_eq_zero, &[z]);
+    // mpr : Equiv z zero -> Equiv (normSq z) zero
+    let mpr_body = d.lemma(p.norm_sq_eq_zero_of_eq_zero, &[z]);
+
+    let iff_stmt = d.const_app(logic.iff, &[norm_stmt, equiv_stmt]);
+    let iff_proof = d.const_app(logic.iff_intro, &[norm_stmt, equiv_stmt, mp_body, mpr_body]);
+
+    let value = d.lam_fv(z_fv, carrier, iff_proof);
+    let ty = d.pi_fv(z_fv, carrier, iff_stmt);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.norm_sq_eq_zero_iff,
         uparams: vec![],
         ty,
         value,
