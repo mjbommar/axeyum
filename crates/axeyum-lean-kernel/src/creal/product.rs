@@ -122,6 +122,7 @@ pub(super) fn declare_product(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     declare_mul_assoc(d, p)?;
     declare_of_rat_mul(d, p)?;
     declare_pointwise_laws(d, p)?;
+    declare_neg_mul_neg(d, p)?;
     declare_mul_one(d, p)?;
     declare_nonneg_laws(d, p)?;
     declare_mul_le_mul(d, p)?;
@@ -2032,6 +2033,115 @@ fn declare_pointwise_laws(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
         })?;
     }
     Ok(())
+}
+
+/// `Eq Rat (mul (Rat.neg a) (Rat.neg a)) (mul a a)`.
+///
+/// `neg_mul(a, neg a)` turns the left factor's sign around, `mul_neg(a, a)`
+/// does the same for the right one hiding inside it, and `neg_neg` cancels
+/// the resulting double negation. Returns `(lhs, rhs, proof)` so a caller can
+/// chain `proof` against a further `Eq lhs' lhs` or `Eq rhs rhs''` without
+/// reconstructing either side and risking a syntactically different (if
+/// defeq) term.
+fn sq_neg_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> (ExprId, ExprId, ExprId) {
+    let rat = p.rat;
+    let neg_a = rneg(d, a);
+    let lhs0 = rmul(d, neg_a, neg_a);
+    let step1 = d.lemma(rat.neg_mul, &[a, neg_a]); // lhs0 = neg (mul a (neg a))
+    let mul_a_nega = rmul(d, a, neg_a);
+    let mid1 = rneg(d, mul_a_nega);
+    let aa = rmul(d, a, a);
+    let neg_aa = rneg(d, aa);
+    let step2raw = d.lemma(rat.mul_neg, &[a, a]); // mul a (neg a) = neg (mul a a)
+    let step2 = rcongr(d, mul_a_nega, neg_aa, step2raw, &|d, t| rneg(d, t));
+    let mid2 = rneg(d, neg_aa);
+    let step3 = d.lemma(rat.neg_neg, &[aa]); // neg (neg (mul a a)) = mul a a
+    let (_, proof) = rchain(d, lhs0, &[(mid1, step1), (mid2, step2), (aa, step3)]);
+    (lhs0, aa, proof)
+}
+
+/// `CReal.neg_mul_neg : ∀ x, Equiv (mul (neg x) (neg x)) (mul x x)`.
+///
+/// **Not pointwise.** `CReal.bound x` reads `Int.natAbs (Rat.num (seq x 0))`,
+/// and `seq (neg x) 0` is `Rat.neg (seq x 0)`, so `bound (neg x)` and
+/// `bound x` are not the *same term* — negation changes the representative.
+/// They are, however, provably **equal naturals** (`Int.natAbs_neg`), which
+/// is what this proof spends most of its length on: once `mulShift (neg x)
+/// (neg x) = mulShift x x` is a `Nat` equation, both products sample at a
+/// value-equal index and [`nat_eq_to_rat`] lifts that into a `Rat` equation
+/// between the two samples, exactly the way [`declare_pointwise_laws`]'s
+/// `mul_comm` proof lifts `Nat.add_comm` across `mulShift`. The sign
+/// cancellation itself ([`sq_neg_eq`]) is the easy half.
+fn declare_neg_mul_neg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let neg_x = d.const_app(p.neg, &[x]);
+    let product1 = cmul(d, p, neg_x, neg_x);
+    let product2 = cmul(d, p, x, x);
+
+    // bound (neg x) = bound x, via Int.natAbs_neg at the index-0 numerator.
+    let zero_nat = d.num(0);
+    let s0 = sample(d, p, x, zero_nat);
+    let q0 = num(d, s0);
+    let int_p = p.rat.int;
+    let neg_q0 = d.ineg(q0);
+    let natabs_neg_q0 = d.const_app(int_p.nat_abs, &[neg_q0]);
+    let natabs_q0 = d.const_app(int_p.nat_abs, &[q0]);
+    let magnitude_eq = d.lemma(int_p.nat_abs_neg, &[q0]);
+    let bound_negx = bound_of(d, p, neg_x);
+    let bound_x = bound_of(d, p, x);
+    let bound_eq = NatOps::congr(d, natabs_neg_q0, natabs_q0, magnitude_eq, &|d, t| d.succ(t));
+
+    // mulShift (neg x) (neg x) = mulShift x x.
+    let sum1 = NatOps::add(d, bound_negx, bound_negx);
+    let sum_mid = NatOps::add(d, bound_x, bound_negx);
+    let sum2 = NatOps::add(d, bound_x, bound_x);
+    let step_a = NatOps::congr(d, bound_negx, bound_x, bound_eq, &|d, t| {
+        NatOps::add(d, t, bound_negx)
+    });
+    let step_b = NatOps::congr(d, bound_negx, bound_x, bound_eq, &|d, t| {
+        NatOps::add(d, bound_x, t)
+    });
+    let (_, sum_eq) = NatOps::chain(d, sum1, &[(sum_mid, step_a), (sum2, step_b)]);
+    let shift1 = mul_shift(d, p, neg_x, neg_x);
+    let shift2 = mul_shift(d, p, x, x);
+    let shift_eq = NatOps::congr(d, sum1, sum2, sum_eq, &|d, t| d.succ(t));
+
+    // Both products sample at the same (value-equal) index.
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let j1 = mul_index(d, shift1, n);
+    let j2 = mul_index(d, shift2, n);
+    let index_eq = NatOps::congr(d, shift1, shift2, shift_eq, &|d, t| mul_index(d, t, n));
+
+    let a1 = sample(d, p, x, j1);
+    let a2 = sample(d, p, x, j2);
+    let base_eq = nat_eq_to_rat(d, j1, j2, index_eq, &|d, t| sample(d, p, x, t));
+
+    let (lhs0, aa1, sqneg_eq) = sq_neg_eq(d, p, a1);
+    let a1a2 = rmul(d, a1, a2);
+    let aa2 = rmul(d, a2, a2);
+    let sq_step1 = rcongr(d, a1, a2, base_eq, &|d, t| rmul(d, a1, t));
+    let sq_step2 = rcongr(d, a1, a2, base_eq, &|d, t| rmul(d, t, a2));
+    let sq_eq = rtrans(d, aa1, a1a2, aa2, sq_step1, sq_step2);
+    let pointwise_n = rtrans(d, lhs0, aa1, aa2, sqneg_eq, sq_eq);
+
+    let pointwise = d.lam_fv(n_fv, nat, pointwise_n);
+    let body = d.lemma(p.equiv_of_pointwise, &[product1, product2, pointwise]);
+    let value = d.lam_fv(x_fv, carrier, body);
+    let ty = {
+        let claim = equiv(d, p, product1, product2);
+        d.pi_fv(x_fv, carrier, claim)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.neg_mul_neg,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 /// `mul_one : ∀ x, Equiv (mul x one) x`.

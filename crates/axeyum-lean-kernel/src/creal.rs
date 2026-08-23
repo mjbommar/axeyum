@@ -98,7 +98,7 @@ use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::group::{rsub, rsum, rsum_append, rsum_perm};
 use crate::rat_prelude::ops::{
-    radd, rat_eq_rewrite, rat_ty, rchain, rcongr, rle, rlt, rneg, rone, rsymm, rzero,
+    radd, rat_eq_rewrite, rat_ty, rchain, rcongr, rle, rlt, rneg, rone, rrefl, rsymm, rzero,
 };
 use crate::rat_prelude::{RatPrelude, build_rat_prelude};
 use crate::{Kernel, KernelError, PreludeKey, PreludeValue};
@@ -195,6 +195,15 @@ pub struct CRealPrelude {
     /// of the setoid's congruence obligations, which ADR-0512 counts as the
     /// construction's real tax.
     pub neg_congr: NameId,
+    /// `CReal.neg_le_neg : ∀ x y, le x y → le (neg y) (neg x)`.
+    ///
+    /// Negation reverses `le`. Bishop's `le` is already one-sided
+    /// (`∀ n, seq x n − seq y n ≤ 2/(n+1)`), so this is a single
+    /// `Rat.sub_neg_sub` rewrite at each index — no shift, matching `neg`'s
+    /// own definition. One of the two order/negation facts a cotransitivity
+    /// argument over a negative threshold needs; the other is
+    /// [`Self::neg_mul_neg`].
+    pub neg_le_neg: NameId,
     /// `CReal.add : CReal → CReal → CReal`, with **Bishop's index shift**:
     /// `(x + y)_n := x_{2n+1} + y_{2n+1}`.
     ///
@@ -277,6 +286,25 @@ pub struct CRealPrelude {
     /// the whole difference is `(x_M − x_N) + (z_N − z_M)` — two regularity
     /// bounds, and then the *same* inequality `add_zero` needs.
     pub add_assoc: NameId,
+    /// `CReal.ofRat_add : ∀ a b, Equiv (add (ofRat a) (ofRat b)) (ofRat (Rat.add a b))`
+    /// — the additive counterpart of [`Self::of_rat_mul`]. Both sides sample
+    /// the same closed rational at every index, because `ofRat` is a constant
+    /// sequence and `add`'s index shift never touches a constant, so the
+    /// pointwise proof is `Eq.refl`, exactly as `of_rat_mul`'s is.
+    pub of_rat_add: NameId,
+    /// `CReal.ofRat_neg : ∀ a, Equiv (neg (ofRat a)) (ofRat (Rat.neg a))`.
+    ///
+    /// `CReal.neg` takes **no** index shift, so this is the simplest of the
+    /// three: both sides reduce to `Rat.neg a` at every index with no shift to
+    /// reconcile at all.
+    pub of_rat_neg: NameId,
+    /// `CReal.ofRat_sub : ∀ a b,
+    /// Equiv (add (ofRat a) (neg (ofRat b))) (ofRat (Rat.sub a b))`.
+    ///
+    /// `CReal` has no `sub` operator of its own — every other module states
+    /// subtraction as `add x (neg y)`, which is what `Rat.sub` itself unfolds
+    /// to — so this is stated over that combination rather than inventing one.
+    pub of_rat_sub: NameId,
 
     // --- the strict order (ADR-0512 phase R2, continued) ---------------------
     /// `CReal.le_add_of_nonneg : ∀ x q, Rat.le Rat.zero q →
@@ -416,6 +444,17 @@ pub struct CRealPrelude {
     /// `CReal.sq_nonneg : ∀ x, le zero (mul x x)` — one of the 22, verbatim,
     /// and free: `x_j·x_j ≥ 0` already holds in `ℚ`.
     pub sq_nonneg: NameId,
+    /// `CReal.neg_mul_neg : ∀ x, Equiv (mul (neg x) (neg x)) (mul x x)`.
+    ///
+    /// **Not pointwise**, unlike [`Self::mul_comm`]/[`Self::mul_zero`]:
+    /// `CReal.bound` reads `Int.natAbs (Rat.num (seq x 0))`, and negating the
+    /// representative negates that numerator, so `mulShift (neg x) (neg x)`
+    /// and `mulShift x x` are not the *same* natural literal — they are
+    /// **provably equal** (`Int.natAbs_neg`), which is exactly what lets both
+    /// products sample at a *value-equal* index and this be `Equiv`, not just
+    /// an estimate. The other of the two facts a negative-threshold
+    /// cotransitivity argument needs; see [`Self::neg_le_neg`].
+    pub neg_mul_neg: NameId,
     /// `CReal.not_equiv_mul_one_one_zero : Not (Equiv (mul one one) zero)`.
     ///
     /// The **discrimination** witness for the product. `mul_zero`, `mul_comm`
@@ -893,12 +932,16 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         equiv_of_pointwise: kernel.name_str(equiv, "of_pointwise"),
         neg: kernel.name_str(creal, "neg"),
         neg_congr: kernel.name_str(creal, "neg_congr"),
+        neg_le_neg: kernel.name_str(creal, "neg_le_neg"),
         add: kernel.name_str(creal, "add"),
         add_congr: kernel.name_str(creal, "add_congr"),
         add_comm: kernel.name_str(creal, "add_comm"),
         add_neg: kernel.name_str(creal, "add_neg"),
         add_zero: kernel.name_str(creal, "add_zero"),
         add_assoc: kernel.name_str(creal, "add_assoc"),
+        of_rat_add: kernel.name_str(creal, "ofRat_add"),
+        of_rat_neg: kernel.name_str(creal, "ofRat_neg"),
+        of_rat_sub: kernel.name_str(creal, "ofRat_sub"),
         le: kernel.name_str(creal, "le"),
         le_refl: kernel.name_str(creal, "le_refl"),
         le_trans: kernel.name_str(creal, "le_trans"),
@@ -932,6 +975,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         left_distrib: kernel.name_str(creal, "left_distrib"),
         mul_nonneg: kernel.name_str(creal, "mul_nonneg"),
         sq_nonneg: kernel.name_str(creal, "sq_nonneg"),
+        neg_mul_neg: kernel.name_str(creal, "neg_mul_neg"),
         not_equiv_mul_one_one_zero: kernel.name_str(creal, "not_equiv_mul_one_one_zero"),
         apart: kernel.name_str(creal, "Apart"),
         apart_symm: kernel.name_str(creal, "apart_symm"),
@@ -1057,7 +1101,11 @@ pub(crate) fn build_creal_prelude_uncached(
         declare_negation(&mut d, prelude)?;
         declare_addition(&mut d, prelude)?;
         declare_additive_laws(&mut d, prelude)?;
+        declare_of_rat_add(&mut d, prelude)?;
+        declare_of_rat_neg(&mut d, prelude)?;
+        declare_of_rat_sub(&mut d, prelude)?;
         declare_order(&mut d, prelude)?;
+        declare_neg_le_neg(&mut d, prelude)?;
         declare_strict_order(&mut d, prelude)?;
         product::declare_product(&mut d, prelude)?;
         field::declare_field(&mut d, prelude)?;
@@ -2857,6 +2905,201 @@ fn declare_additive_laws(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
         })?;
     }
     Ok(())
+}
+
+/// `CReal.ofRat_add : ∀ a b, Equiv (add (ofRat a) (ofRat b)) (ofRat (Rat.add a b))`
+/// — the additive counterpart of [`declare_of_rat_mul`](product::declare_of_rat_mul)'s
+/// `of_rat_mul`.
+///
+/// **Checked against the actual definitions, not assumed.** `add x y` samples
+/// at the *shifted* index `2n+1`, not at `n` — but `ofRat q`'s representative
+/// is the constant function `fun _ => q`, so `seq (ofRat a) (shift n)` reduces
+/// to `a` regardless of what the shift computes to, exactly the way
+/// `of_rat_mul`'s module doc puts it: "the embedding is a constant sequence,
+/// so the product's index shift never matters". The additive shift is no
+/// different, and the proof is `Eq.refl`, same as `of_rat_mul`'s.
+fn declare_of_rat_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = rat_ty(d);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let left = embed(d, p, a);
+    let right = embed(d, p, b);
+    let product = cadd(d, p, left, right);
+    let scalar = radd(d, a, b);
+    let embedded = embed(d, p, scalar);
+
+    let pointwise = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = rrefl(d, scalar);
+        let _ = n;
+        d.lam_fv(n_fv, nat, body)
+    };
+    let body = d.lemma(p.equiv_of_pointwise, &[product, embedded, pointwise]);
+    let value = {
+        let with_b = d.lam_fv(b_fv, carrier, body);
+        d.lam_fv(a_fv, carrier, with_b)
+    };
+    let ty = {
+        let claim = equiv(d, p, product, embedded);
+        let with_b = d.pi_fv(b_fv, carrier, claim);
+        d.pi_fv(a_fv, carrier, with_b)
+    };
+    let _ = rat;
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_rat_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.ofRat_neg : ∀ a, Equiv (neg (ofRat a)) (ofRat (Rat.neg a))`.
+///
+/// **Checked, not assumed.** `CReal.neg` takes no index shift at all — its
+/// representative is `fun n => Rat.neg (seq x n)` — so `seq (neg (ofRat a)) n`
+/// reduces to `Rat.neg a` at *every* `n` with no shift to reconcile, and the
+/// proof is `Eq.refl`.
+fn declare_of_rat_neg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let embedded_a = embed(d, p, a);
+    let product = d.const_app(p.neg, &[embedded_a]);
+    let scalar = rneg(d, a);
+    let embedded = embed(d, p, scalar);
+
+    let pointwise = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = rrefl(d, scalar);
+        let _ = n;
+        d.lam_fv(n_fv, nat, body)
+    };
+    let body = d.lemma(p.equiv_of_pointwise, &[product, embedded, pointwise]);
+    let value = d.lam_fv(a_fv, carrier, body);
+    let ty = {
+        let claim = equiv(d, p, product, embedded);
+        d.pi_fv(a_fv, carrier, claim)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_rat_neg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.ofRat_sub : ∀ a b,
+/// Equiv (add (ofRat a) (neg (ofRat b))) (ofRat (Rat.sub a b))`.
+///
+/// **`CReal` has no `sub` of its own — checked, not assumed**: no
+/// `CReal.sub` name is interned anywhere in this module, so subtraction is
+/// stated the way every other law here states it, as `add x (neg y)`. That
+/// combination is exactly what `Rat.sub` itself unfolds to (see
+/// `rat_prelude::group::rsub`'s doc comment), so both sides still reduce to
+/// the same closed rational at every index and the proof is `Eq.refl`.
+fn declare_of_rat_sub(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = rat_ty(d);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let embedded_a = embed(d, p, a);
+    let embedded_b = embed(d, p, b);
+    let negated_b = d.const_app(p.neg, &[embedded_b]);
+    let product = cadd(d, p, embedded_a, negated_b);
+    let scalar = rsub(d, rat, a, b);
+    let embedded = embed(d, p, scalar);
+
+    let pointwise = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = rrefl(d, scalar);
+        let _ = n;
+        d.lam_fv(n_fv, nat, body)
+    };
+    let body = d.lemma(p.equiv_of_pointwise, &[product, embedded, pointwise]);
+    let value = {
+        let with_b = d.lam_fv(b_fv, carrier, body);
+        d.lam_fv(a_fv, carrier, with_b)
+    };
+    let ty = {
+        let claim = equiv(d, p, product, embedded);
+        let with_b = d.pi_fv(b_fv, carrier, claim);
+        d.pi_fv(a_fv, carrier, with_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_rat_sub,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.neg_le_neg : ∀ x y, le x y → le (neg y) (neg x)`.
+///
+/// Bishop's `le` is already one-sided (`∀ n, seq x n − seq y n ≤ 2/(n+1)`),
+/// and `neg` takes no index shift, so this is a single `Rat.sub_neg_sub`
+/// rewrite at each index `n`, mirroring [`declare_negation`]'s `neg_congr`
+/// proof exactly (same shape, `Rat.le` in place of the two-sided `Within`).
+fn declare_neg_le_neg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rle = crate::rat_prelude::ops::rle;
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let hypothesis = d.const_app(p.le, &[x, y]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let xn = sample(d, p, x, n);
+    let yn = sample(d, p, y, n);
+    let bound = div_succ(d, p, 2, n);
+    let hn = d.apply(h, &[n]);
+    let u = rsub(d, rat, xn, yn);
+    let negated_y = rneg(d, yn);
+    let negated_x = rneg(d, xn);
+    let v = rsub(d, rat, negated_y, negated_x);
+    let eq_vu = d.lemma(rat.sub_neg_sub, &[yn, xn]);
+    let eq_uv = rsymm(d, v, u, eq_vu);
+    let moved = rat_eq_rewrite(d, u, v, eq_uv, hn, &|d, t| rle(d, rat, t, bound));
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, moved);
+        let with_h = d.lam_fv(h_fv, hypothesis, over_n);
+        let with_y = d.lam_fv(y_fv, carrier, with_h);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let neg_y = d.const_app(p.neg, &[y]);
+        let neg_x = d.const_app(p.neg, &[x]);
+        let conclusion = d.const_app(p.le, &[neg_y, neg_x]);
+        let inner = d.arrow(hypothesis, conclusion);
+        let with_y = d.pi_fv(y_fv, carrier, inner);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.neg_le_neg,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 /// `CReal.le`, Bishop's order, and the three of the 22 order laws that do not

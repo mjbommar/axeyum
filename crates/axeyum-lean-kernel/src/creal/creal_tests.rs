@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 114] = [
+    let expected: [(&str, crate::NameId, &str); 119] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -88,12 +88,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("Equiv.of_pointwise", p.equiv_of_pointwise, "theorem"),
         ("CReal.neg", p.neg, "def"),
         ("CReal.neg_congr", p.neg_congr, "theorem"),
+        ("CReal.neg_le_neg", p.neg_le_neg, "theorem"),
         ("CReal.add", p.add, "def"),
         ("CReal.add_congr", p.add_congr, "theorem"),
         ("CReal.add_comm", p.add_comm, "theorem"),
         ("CReal.add_neg", p.add_neg, "theorem"),
         ("CReal.add_zero", p.add_zero, "theorem"),
         ("CReal.add_assoc", p.add_assoc, "theorem"),
+        ("CReal.ofRat_add", p.of_rat_add, "theorem"),
+        ("CReal.ofRat_neg", p.of_rat_neg, "theorem"),
+        ("CReal.ofRat_sub", p.of_rat_sub, "theorem"),
         ("CReal.le", p.le, "def"),
         ("CReal.le_refl", p.le_refl, "theorem"),
         ("CReal.le_trans", p.le_trans, "theorem"),
@@ -126,6 +130,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.mul_zero", p.mul_zero, "theorem"),
         ("CReal.mul_nonneg", p.mul_nonneg, "theorem"),
         ("CReal.sq_nonneg", p.sq_nonneg, "theorem"),
+        ("CReal.neg_mul_neg", p.neg_mul_neg, "theorem"),
         (
             "CReal.not_equiv_mul_one_one_zero",
             p.not_equiv_mul_one_one_zero,
