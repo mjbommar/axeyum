@@ -57,6 +57,8 @@ step fmt    cargo fmt --all --check
 # for different reasons, and a disagreement between them is itself a finding.
 step fmt-all scripts/check-fmt-complete.sh
 step facts  python3 scripts/validate-facts.py
+step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
+step settled-fact-statements python3 scripts/check-settled-fact-statements.py
 step fact-dag-tests python3 -m unittest scripts.tests.test_check_fact_dag
 step fact-dag python3 scripts/check-fact-dag.py --quiet
 step fact-depends-tests python3 -m unittest scripts.tests.test_check_fact_depends_derived

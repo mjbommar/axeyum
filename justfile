@@ -211,6 +211,8 @@ autogenesis-authoritative-compare first second output:
 
 facts:
     python3 scripts/validate-facts.py
+    python3 -m unittest scripts.tests.test_settled_fact_statements
+    python3 scripts/check-settled-fact-statements.py
     # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
     # "the DAG picks the next goal". 60% of facts are isolated, so proving one
     # usually unlocks nothing; the ratchet keeps that from getting worse.

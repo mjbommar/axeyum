@@ -81,6 +81,42 @@ ROOT = Path(__file__).resolve().parents[2]
 # edits when that is not the subject, which is how a control can be mutated to
 # check the control.
 SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] = {
+    "settled-fact-statements": (
+        "scripts/check-settled-fact-statements.py",
+        "scripts.tests.test_settled_fact_statements",
+        [
+            (
+                "unamended-drift guard",
+                "        if amendment is None:",
+                "        if False:",
+            ),
+            (
+                "amendment must describe THIS change",
+                '        elif amendment["from_sha256"] != pin["statement_sha256"] or amendment[\n            "to_sha256"\n        ] != now["statement_sha256"]:',
+                "        elif False:",
+            ),
+            (
+                "amendment must carry a reason",
+                '        missing = [k for k in ("fact_id", "from_sha256", "to_sha256", "reason") if not row.get(k)]',
+                '        missing = [k for k in ("fact_id", "from_sha256", "to_sha256") if not row.get(k)]',
+            ),
+            (
+                "silent-retraction guard",
+                "        if fact_id not in amendments:",
+                "        if False:",
+            ),
+            (
+                "empty-manifest fail-closed",
+                "    if not isinstance(pins, list) or not pins:",
+                "    if False:",
+            ),
+            (
+                "no-settled-facts fail-closed",
+                "    if not out:",
+                "    if False:",
+            ),
+        ],
+    ),
     "development-partition": (
         "scripts/check-development-partition.py",
         "scripts.tests.test_development_partition",
