@@ -43,7 +43,6 @@ mod alethe;
 mod bve;
 pub mod colouring;
 mod compact;
-mod cube;
 mod drat;
 mod drat_backward;
 mod drat_resource;
@@ -71,12 +70,6 @@ pub use bve::{
     eliminate_variables_within,
 };
 pub use compact::{CompactMap, compact};
-pub use cube::{
-    Cube, CubeCertifyOutcome, CubeCheckError, CubeGenError, CubeOutcome, CubeRefutation, CubeStats,
-    DEFAULT_COVERING_CONFLICT_LIMIT, DEFAULT_CUBE_CONFLICT_LIMIT, MAX_PRODUCT_CUBE_SELECTORS,
-    augmented_formula, boolean_product_cubes, certify_by_cubes, check_cube_refutation,
-    covering_formula,
-};
 #[cfg(unix)]
 pub use drat::CacheDroppingWriter;
 pub use drat::{
@@ -102,8 +95,10 @@ pub use lrat::{
     parse_lrat, write_lrat,
 };
 pub use proof_sat::{
-    DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome, StreamingProofOutcome,
-    solve_with_drat_proof, solve_with_drat_proof_streaming, solve_with_drat_proof_with_limits,
+    DEFAULT_PROGRESS_CONFLICT_INTERVAL, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSearchProgress,
+    ProofSolveOutcome, StreamingProofOutcome, solve_with_drat_proof,
+    solve_with_drat_proof_streaming, solve_with_drat_proof_streaming_with_progress,
+    solve_with_drat_proof_with_limits, solve_with_drat_proof_with_limits_and_progress,
     solve_with_drat_proof_within,
 };
 pub use simplify::{SubsumeStats, simplify, simplify_within};

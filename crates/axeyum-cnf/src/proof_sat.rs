@@ -20,11 +20,21 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
+use std::time::Duration;
+
 use crate::drat::{DratSink, DratStep, ProofSinkError, VecProofSink};
 use crate::{CnfAssignment, CnfFormula, CnfLit, CnfVar};
 
 /// Default maximum conflicts before the proof-producing core gives up.
 pub const DEFAULT_PROOF_SAT_CONFLICT_LIMIT: usize = 2_000_000;
+
+/// Default number of conflicts between progress-sink polls, when a sink is
+/// installed (see [`ProofSearchProgress`]). A conflict-count cadence — not a
+/// wall-clock timer — keeps polling deterministic w.r.t. the search, mirroring
+/// [`DEADLINE_CHECK_INTERVAL`]'s rationale: the search trajectory up to any
+/// point does not depend on when the sink happens to be polled, only on
+/// whether it is installed at all (and it never is, on the default path).
+pub const DEFAULT_PROGRESS_CONFLICT_INTERVAL: usize = 5_000;
 
 /// How many conflicts elapse between wall-clock deadline checks. A fixed
 /// conflict cadence (not a per-decision clock read) keeps the deadline test
@@ -150,6 +160,57 @@ pub enum StreamingProofOutcome {
     SinkFailed(ProofSinkError),
 }
 
+/// A point-in-time, cumulative-since-start snapshot of a proof-producing
+/// search, handed to an optional callback so a long-running certificate run is
+/// observable (see the motivating incident: a `neg-fp16-add-monotone-rne.smt2`
+/// DRAT run went for 5 h 59 min with zero bytes of output before being
+/// reaped, and the same query decides in 11.5 s through the non-certifying
+/// path — only certificate production runs unboundedly). Every field is a
+/// running total, not a delta, so a watcher can compute a rate
+/// (`conflicts as f64 / elapsed.as_secs_f64()`, `proof_bytes as f64 /
+/// elapsed.as_secs_f64()`) from a single snapshot and state a falsifiable
+/// expectation ("at this rate it finishes by X or it does not") rather than
+/// just observe that something is still moving.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ProofSearchProgress {
+    /// Conflicts encountered so far.
+    pub conflicts: usize,
+    /// Live (non-deleted) learned clauses right now — distinct from `proof_steps`,
+    /// which counts every `add`/`delete` step ever emitted, including ones
+    /// `reduce_db` has since deleted.
+    pub learned_clauses: usize,
+    /// Total DRAT steps emitted so far (every `add_clause` and `delete_clause`
+    /// call made to the sink).
+    pub proof_steps: usize,
+    /// Exact byte length the emitted steps would occupy in the standard DRAT
+    /// text format ([`crate::write_drat`] / [`crate::TextProofSink`]) — computed
+    /// from the same literal counts without allocating or formatting a string.
+    pub proof_bytes: u64,
+    /// Wall-clock time since this search began.
+    pub elapsed: Duration,
+}
+
+/// Exact byte length [`crate::write_drat`] / [`crate::TextProofSink`] would
+/// produce for one step with these literals: mirrors the private
+/// `push_step_text` format (an optional `"d "` prefix, one space-terminated
+/// DIMACS integer per literal, a trailing `"0\n"`) without allocating a
+/// string. Used only to grow [`ProofSearchProgress::proof_bytes`] when a
+/// progress sink is installed — never on the hot path otherwise.
+fn step_text_bytes(delete: bool, lits: &[CnfLit]) -> u64 {
+    let mut bytes: u64 = u64::from(delete) * 2; // "d "
+    for lit in lits {
+        let value = lit.dimacs();
+        let mut n = value.unsigned_abs();
+        let mut digits: u64 = 1;
+        while n >= 10 {
+            n /= 10;
+            digits += 1;
+        }
+        bytes += digits + u64::from(value < 0) + 1; // digits + optional '-' + trailing space
+    }
+    bytes + 2 // "0\n"
+}
+
 /// Solves `formula` with the proof-producing CDCL core.
 pub fn solve_with_drat_proof(formula: &CnfFormula) -> ProofSolveOutcome {
     solve_with_drat_proof_within(formula, None)
@@ -226,6 +287,62 @@ pub fn solve_with_drat_proof_streaming(
     sink: &mut impl DratSink,
 ) -> StreamingProofOutcome {
     Cdcl::new(formula, sink).solve(deadline, max_conflicts)
+}
+
+/// Solves `formula` with explicit wall-clock and conflict limits, invoking
+/// `progress` every `progress_interval` conflicts (and once more at the end)
+/// with a cumulative [`ProofSearchProgress`] snapshot — the observability hook
+/// for a certificate run long enough that elapsed time and RSS are otherwise
+/// the only signals available.
+///
+/// **Same trajectory as [`solve_with_drat_proof_with_limits`], always.** The
+/// callback is pure output, read by nothing else in the search — installing
+/// one, or changing `progress_interval`, cannot change the decisions,
+/// conflicts, learned clauses, restarts, reductions, or the emitted DRAT
+/// proof, only when and how often this function is told about them. That
+/// property is asserted directly in
+/// [`tests::progress_sink_does_not_change_the_verdict_or_proof`].
+///
+/// `progress_interval` is clamped to at least 1 (an interval of 0 would never
+/// fire the modulo test).
+pub fn solve_with_drat_proof_with_limits_and_progress(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    progress_interval: usize,
+    progress: &mut dyn FnMut(&ProofSearchProgress),
+) -> ProofSolveOutcome {
+    let mut sink = VecProofSink::new();
+    let outcome = Cdcl::new(formula, &mut sink)
+        .with_progress(progress_interval, progress)
+        .solve(deadline, max_conflicts);
+    match outcome {
+        StreamingProofOutcome::Sat(model) => ProofSolveOutcome::Sat(model),
+        StreamingProofOutcome::Unsat => ProofSolveOutcome::Unsat(sink.into_steps()),
+        StreamingProofOutcome::ResourceOut => ProofSolveOutcome::ResourceOut,
+        // See `solve_with_drat_proof_with_limits`: `VecProofSink` is infallible.
+        StreamingProofOutcome::Interrupted | StreamingProofOutcome::SinkFailed(_) => {
+            ProofSolveOutcome::Interrupted
+        }
+    }
+}
+
+/// Like [`solve_with_drat_proof_streaming`], but also invokes `progress` every
+/// `progress_interval` conflicts (and once more at the end) with a cumulative
+/// [`ProofSearchProgress`] snapshot. See
+/// [`solve_with_drat_proof_with_limits_and_progress`] for the no-behaviour-change
+/// guarantee, which holds identically here.
+pub fn solve_with_drat_proof_streaming_with_progress(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    sink: &mut impl DratSink,
+    progress_interval: usize,
+    progress: &mut dyn FnMut(&ProofSearchProgress),
+) -> StreamingProofOutcome {
+    Cdcl::new(formula, sink)
+        .with_progress(progress_interval, progress)
+        .solve(deadline, max_conflicts)
 }
 
 fn lit_code(lit: CnfLit) -> usize {
@@ -373,6 +490,31 @@ struct Cdcl<'sink, S: DratSink> {
     /// highest-activity / lowest-index tie-break exactly.
     heap: Vec<usize>,
     heap_pos: Vec<usize>,
+    /// Optional progress callback (see [`ProofSearchProgress`]), polled every
+    /// [`Cdcl::progress_interval`] conflicts and once more at the end.
+    /// `None` on every existing entry point — the observability hook is
+    /// strictly opt-in via [`Cdcl::with_progress`].
+    ///
+    /// This is *output only*, exactly like [`Cdcl::sink`]: no branch of the
+    /// search reads it back, so its presence, absence, or polling cadence
+    /// cannot change the search trajectory (see
+    /// `tests::progress_sink_does_not_change_the_verdict_or_proof`). Kept as a
+    /// borrowed `dyn FnMut` (not a `Box`) so installing a sink allocates
+    /// nothing here, and leaving it `None` costs one `Option` check per
+    /// conflict on the hot path — no allocation, no syscall, no formatting.
+    progress: Option<&'sink mut dyn FnMut(&ProofSearchProgress)>,
+    /// Conflict-count cadence for [`Cdcl::progress`] polls.
+    progress_interval: usize,
+    /// Total DRAT steps emitted so far. Only maintained while a progress sink
+    /// is installed (see [`Cdcl::record_proof_step`]).
+    proof_steps: usize,
+    /// Total DRAT proof bytes (standard text format) emitted so far. Only
+    /// maintained while a progress sink is installed.
+    proof_bytes: u64,
+    /// Wall-clock instant the search began, used only to compute
+    /// [`ProofSearchProgress::elapsed`]. Cheap to record unconditionally (one
+    /// clock read at construction, not on the hot path).
+    search_start: Instant,
 }
 
 /// Sentinel in [`Cdcl::heap_pos`] marking a variable that is not currently in
@@ -457,6 +599,11 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
             learned_live: 0,
             heap: Vec::with_capacity(n),
             heap_pos: vec![HEAP_ABSENT; n],
+            progress: None,
+            progress_interval: DEFAULT_PROGRESS_CONFLICT_INTERVAL,
+            proof_steps: 0,
+            proof_bytes: 0,
+            search_start: Instant::now(),
         };
         // Seed the order heap with every variable. All activities are 0.0, so
         // the heap order is purely by index; inserting in ascending index order
@@ -466,6 +613,69 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
             cdcl.heap_insert(v);
         }
         cdcl
+    }
+
+    /// Installs a progress callback, polled every `interval` conflicts (and
+    /// once more when the search ends) with a cumulative
+    /// [`ProofSearchProgress`] snapshot. `interval` is clamped to at least 1.
+    ///
+    /// Builder-style, called before [`Cdcl::solve`]; every existing entry
+    /// point never calls this, so `progress` stays `None` and the hot-path
+    /// cost stays a single `Option::is_none` check (see the field doc).
+    fn with_progress(
+        mut self,
+        interval: usize,
+        progress: &'sink mut dyn FnMut(&ProofSearchProgress),
+    ) -> Self {
+        self.progress = Some(progress);
+        self.progress_interval = interval.max(1);
+        self
+    }
+
+    /// Records one emitted DRAT step (`add` when `delete` is `false`) toward
+    /// [`Cdcl::proof_steps`] / [`Cdcl::proof_bytes`] — but ONLY when a progress
+    /// sink is installed. The `is_none` check is the first thing this function
+    /// does, so with no sink installed a call here costs one predictable
+    /// branch and nothing else: no digit-counting loop, no counter writes.
+    #[inline]
+    fn record_proof_step(&mut self, delete: bool, lits: &[CnfLit]) {
+        if self.progress.is_none() {
+            return;
+        }
+        self.proof_steps += 1;
+        self.proof_bytes += step_text_bytes(delete, lits);
+    }
+
+    /// Builds and delivers a [`ProofSearchProgress`] snapshot to the installed
+    /// sink, if any. Called unconditionally at the natural reporting points
+    /// ([`Cdcl::maybe_report_progress`] gates the per-conflict cadence; the
+    /// terminal call in [`Cdcl::run`] always fires once more so the final
+    /// numbers are never stale by up to `progress_interval` conflicts).
+    fn report_progress(&mut self) {
+        let Some(sink) = self.progress.as_mut() else {
+            return;
+        };
+        let snapshot = ProofSearchProgress {
+            conflicts: self.conflicts,
+            learned_clauses: self.learned_live,
+            proof_steps: self.proof_steps,
+            proof_bytes: self.proof_bytes,
+            elapsed: self.search_start.elapsed(),
+        };
+        sink(&snapshot);
+    }
+
+    /// Polls the progress sink on the conflict-count cadence
+    /// ([`Cdcl::progress_interval`]). A no-op — one `is_none` check, nothing
+    /// more — whenever no sink is installed.
+    #[inline]
+    fn maybe_report_progress(&mut self) {
+        if self.progress.is_none() {
+            return;
+        }
+        if self.conflicts.is_multiple_of(self.progress_interval) {
+            self.report_progress();
+        }
     }
 
     /// The literals of clause `cid`, as a cache-local slice into the arena.
@@ -766,28 +976,47 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
         max_conflicts: usize,
     ) -> Result<StreamingProofOutcome, ProofSinkError> {
         if self.has_empty_clause {
+            self.record_proof_step(false, &[]);
             self.sink.add_clause(&[])?;
+            self.report_progress();
             return Ok(StreamingProofOutcome::Unsat);
         }
         for lit in std::mem::take(&mut self.initial_units) {
             match self.value(lit) {
                 Some(false) => {
+                    self.record_proof_step(false, &[]);
                     self.sink.add_clause(&[])?;
+                    self.report_progress();
                     return Ok(StreamingProofOutcome::Unsat);
                 }
                 Some(true) => {}
                 None => self.enqueue(lit, None),
             }
         }
+        self.search_loop(deadline, max_conflicts)
+    }
 
+    /// The main CDCL loop: propagate, learn from a conflict (or restart/decide
+    /// when there is none), until the formula is decided or a budget is
+    /// exhausted. Split out of [`Cdcl::run`] purely to keep both under
+    /// clippy's line-count lint; behaviour is exactly the tail of `run` this
+    /// replaced.
+    fn search_loop(
+        &mut self,
+        deadline: Option<Instant>,
+        max_conflicts: usize,
+    ) -> Result<StreamingProofOutcome, ProofSinkError> {
         loop {
             if let Some(conflict) = self.propagate() {
                 if self.decision_level() == 0 {
+                    self.record_proof_step(false, &[]);
                     self.sink.add_clause(&[])?;
+                    self.report_progress();
                     return Ok(StreamingProofOutcome::Unsat);
                 }
                 self.conflicts += 1;
                 if self.conflicts > max_conflicts {
+                    self.report_progress();
                     return Ok(StreamingProofOutcome::ResourceOut);
                 }
                 // Deterministic deadline cadence: only read the clock once every
@@ -797,6 +1026,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
                     && self.conflicts.is_multiple_of(DEADLINE_CHECK_INTERVAL)
                     && Instant::now() >= deadline
                 {
+                    self.report_progress();
                     return Ok(StreamingProofOutcome::Interrupted);
                 }
                 let (learned, backjump, lbd) = self.analyze(conflict);
@@ -808,8 +1038,10 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
                 if self.use_ema_restart {
                     self.update_restart_emas(lbd);
                 }
+                self.record_proof_step(false, &learned);
                 self.sink.add_clause(&learned)?;
                 if learned.is_empty() {
+                    self.report_progress();
                     return Ok(StreamingProofOutcome::Unsat);
                 }
                 let asserting = learned[0];
@@ -846,6 +1078,10 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
                     self.reduce_db()?;
                     self.reductions += 1;
                 }
+                // Observability hook (see `ProofSearchProgress`): a no-op cadence
+                // check when no sink is installed. Placed after all per-conflict
+                // bookkeeping so a fired snapshot reflects this conflict fully.
+                self.maybe_report_progress();
             } else {
                 // No conflict: snapshot the target phase if this is the deepest
                 // conflict-free assignment yet (the "closest to a model" polarities),
@@ -878,6 +1114,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
                     self.enqueue(decision, None);
                 } else {
                     let values = self.assign.iter().map(|v| v.unwrap_or(false)).collect();
+                    self.report_progress();
                     return Ok(StreamingProofOutcome::Sat(CnfAssignment::new(values)));
                 }
             }
@@ -1295,6 +1532,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
             // first because the arena and the sink are both reached through
             // `self`.)
             let lits = self.lits(cid).to_vec();
+            self.record_proof_step(true, &lits);
             self.sink.delete_clause(&lits)?;
         }
         if to_delete > 0 {
@@ -1372,9 +1610,10 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
 #[cfg(test)]
 mod tests {
     use super::{
-        Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSolveOutcome, StreamingProofOutcome,
-        Watch, lit_code, solve_with_drat_proof, solve_with_drat_proof_streaming,
-        solve_with_drat_proof_with_limits, solve_with_drat_proof_within,
+        Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSearchProgress, ProofSolveOutcome,
+        StreamingProofOutcome, Watch, lit_code, solve_with_drat_proof,
+        solve_with_drat_proof_streaming, solve_with_drat_proof_with_limits,
+        solve_with_drat_proof_with_limits_and_progress, solve_with_drat_proof_within,
     };
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, DratSink, ProofSinkError, SatResult, TextProofSink,
@@ -1478,6 +1717,185 @@ mod tests {
             solve_with_drat_proof_with_limits(&f, None, 0),
             ProofSolveOutcome::ResourceOut
         );
+    }
+
+    /// A pigeonhole-4-into-3 fixture: guaranteed unsat and forces enough
+    /// conflicts to exercise VSIDS branching, restarts, and (with the tests
+    /// below) several progress-sink polls.
+    fn pigeonhole_4_into_3() -> CnfFormula {
+        let v = |p: i64, h: i64| 3 * (p - 1) + h;
+        let mut clauses: Vec<Vec<i64>> = Vec::new();
+        for p in 1..=4 {
+            clauses.push(vec![v(p, 1), v(p, 2), v(p, 3)]);
+        }
+        for h in 1..=3 {
+            for p1 in 1..=4 {
+                for p2 in (p1 + 1)..=4 {
+                    clauses.push(vec![-v(p1, h), -v(p2, h)]);
+                }
+            }
+        }
+        let refs: Vec<&[i64]> = clauses.iter().map(Vec::as_slice).collect();
+        formula(12, &refs)
+    }
+
+    /// Control: [`Cdcl::record_proof_step`] is a no-op — the counters it would
+    /// otherwise update never move — when no progress sink is installed. This
+    /// is the guard the "zero cost when disabled" requirement rests on; delete
+    /// the `is_none` early return inside it and this test is the one that
+    /// dies (see the report's mutation table).
+    #[test]
+    fn record_proof_step_is_a_no_op_without_an_installed_sink() {
+        let f = formula(2, &[&[1, 2]]);
+        let mut sink = VecProofSink::new();
+        let mut cdcl = Cdcl::new(&f, &mut sink);
+        cdcl.record_proof_step(false, &[lit(1), lit(2)]);
+        cdcl.record_proof_step(true, &[lit(1)]);
+        assert_eq!(
+            cdcl.proof_steps, 0,
+            "no sink installed: proof_steps must not move"
+        );
+        assert_eq!(
+            cdcl.proof_bytes, 0,
+            "no sink installed: proof_bytes must not move"
+        );
+    }
+
+    /// The progress sink actually fires, and its cumulative totals agree
+    /// exactly with the ground truth the (unrelated) `VecProofSink` +
+    /// `write_drat` path independently produces: `proof_steps` matches the
+    /// returned proof's length, and `proof_bytes` matches the exact length of
+    /// its serialized DRAT text. `progress_interval = 1` polls every conflict,
+    /// so on a fixture that needs several conflicts the sink must fire more
+    /// than once, with non-decreasing totals throughout.
+    #[test]
+    fn progress_sink_fires_and_reports_totals_matching_the_proof() {
+        let f = pigeonhole_4_into_3();
+        let mut snapshots: Vec<ProofSearchProgress> = Vec::new();
+        let mut record = |p: &ProofSearchProgress| snapshots.push(*p);
+        let outcome = solve_with_drat_proof_with_limits_and_progress(
+            &f,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            1,
+            &mut record,
+        );
+        let ProofSolveOutcome::Unsat(proof) = outcome else {
+            panic!("expected unsat, got {outcome:?}");
+        };
+        assert_eq!(check_drat(&f, &proof), Ok(true));
+        assert!(
+            snapshots.len() > 1,
+            "an installed sink polled every conflict on a multi-conflict \
+             instance must fire more than once, got {}",
+            snapshots.len()
+        );
+        for pair in snapshots.windows(2) {
+            assert!(pair[1].conflicts >= pair[0].conflicts);
+            assert!(pair[1].proof_steps >= pair[0].proof_steps);
+            assert!(pair[1].proof_bytes >= pair[0].proof_bytes);
+            assert!(pair[1].elapsed >= pair[0].elapsed);
+        }
+        let last = snapshots.last().expect("at least one snapshot");
+        assert_eq!(
+            last.proof_steps,
+            proof.len(),
+            "final proof_steps must match the returned proof's step count exactly"
+        );
+        assert_eq!(
+            last.proof_bytes,
+            write_drat(&proof).len() as u64,
+            "final proof_bytes must match the exact serialized DRAT length"
+        );
+        assert!(last.conflicts > 0);
+    }
+
+    /// The conflict-count cadence in [`Cdcl::maybe_report_progress`] is honored:
+    /// a huge interval (bigger than the whole search needs) yields exactly the
+    /// one terminal snapshot every search gets regardless of cadence, while
+    /// `interval = 1` on the same fixture yields several. This is the guard
+    /// that would go silently unexercised if `maybe_report_progress` always
+    /// reported once a sink was installed, no matter the interval.
+    #[test]
+    fn progress_sink_honors_the_configured_interval() {
+        let f = pigeonhole_4_into_3();
+
+        let mut sparse: Vec<ProofSearchProgress> = Vec::new();
+        let mut record_sparse = |p: &ProofSearchProgress| sparse.push(*p);
+        let outcome_sparse = solve_with_drat_proof_with_limits_and_progress(
+            &f,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            1_000_000, // far more than this fixture's conflicts
+            &mut record_sparse,
+        );
+        assert!(matches!(outcome_sparse, ProofSolveOutcome::Unsat(_)));
+        assert_eq!(
+            sparse.len(),
+            1,
+            "an interval larger than the whole search must yield only the \
+             terminal report, got {} snapshots",
+            sparse.len()
+        );
+
+        let mut dense: Vec<ProofSearchProgress> = Vec::new();
+        let mut record_dense = |p: &ProofSearchProgress| dense.push(*p);
+        let outcome_dense = solve_with_drat_proof_with_limits_and_progress(
+            &f,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            1,
+            &mut record_dense,
+        );
+        assert!(matches!(outcome_dense, ProofSolveOutcome::Unsat(_)));
+        assert!(
+            dense.len() > sparse.len(),
+            "interval=1 must produce strictly more snapshots than a huge \
+             interval on the same fixture: dense={} sparse={}",
+            dense.len(),
+            sparse.len()
+        );
+    }
+
+    /// The behaviour-preservation guarantee the progress sink's doc comment
+    /// makes: installing a sink (any interval) must not change the verdict or
+    /// the emitted DRAT proof, on both a `sat` and an `unsat` fixture. Compares
+    /// against the plain non-progress entry point, byte for byte / bit for bit.
+    #[test]
+    fn progress_sink_does_not_change_the_verdict_or_proof() {
+        // Unsat fixture.
+        let unsat = pigeonhole_4_into_3();
+        let plain =
+            solve_with_drat_proof_with_limits(&unsat, None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT);
+        let mut ticks = 0usize;
+        let mut count = |_: &ProofSearchProgress| ticks += 1;
+        let with_sink = solve_with_drat_proof_with_limits_and_progress(
+            &unsat,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            1,
+            &mut count,
+        );
+        assert_eq!(
+            plain, with_sink,
+            "installing a progress sink must not change the outcome"
+        );
+        assert!(ticks > 0, "the sink must actually have been invoked");
+
+        // Sat fixture.
+        let sat = formula(3, &[&[1, 2], &[-1, 3], &[-2, -3]]);
+        let plain_sat =
+            solve_with_drat_proof_with_limits(&sat, None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT);
+        let mut sink_calls = 0usize;
+        let mut count_sat = |_: &ProofSearchProgress| sink_calls += 1;
+        let with_sink_sat = solve_with_drat_proof_with_limits_and_progress(
+            &sat,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            1,
+            &mut count_sat,
+        );
+        assert_eq!(plain_sat, with_sink_sat);
     }
 
     /// Strong validation of the watched-literal core: on many random CNFs, the

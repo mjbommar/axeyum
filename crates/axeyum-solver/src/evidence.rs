@@ -98,7 +98,10 @@ use crate::nra_monomial_bound_cert::MonomialBoundRefutationCertificate;
 use crate::nra_product_cert::RealProductRefutationCertificate;
 use crate::nra_real_root::{self, SosCertificate};
 use crate::nra_zero_product_cert::RealZeroProductRefutationCertificate;
-use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof_within};
+use crate::proof::{
+    UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof_with_progress,
+    export_qf_bv_unsat_proof_within,
+};
 use crate::quant_affine_growth_cert::IntAffineGrowthRefutationCertificate;
 use crate::quant_bv_alternation_cert::BvAlternationCounterexampleCertificate;
 use crate::quant_bv_conjunctive_cert::BvConjunctiveUniversalInstanceCertificate;
@@ -2077,6 +2080,7 @@ pub fn produce_qf_bv_evidence(
     let deadline = config
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
+    let progress = config.proof_progress.as_ref();
     let mut backend = SatBvBackend::new();
     let provenance = Provenance::for_query(config, backend.capabilities().name, assertions.len());
     if let Some(cert) = crate::set_cardinality::set_cardinality_refutation(arena, assertions) {
@@ -2198,10 +2202,10 @@ pub fn produce_qf_bv_evidence(
                                 ]),
                             )
                         } else {
-                            drat_qf_bv_evidence(arena, assertions, deadline)?
+                            drat_qf_bv_evidence(arena, assertions, deadline, progress)?
                         }
                     } else {
-                        drat_qf_bv_evidence(arena, assertions, deadline)?
+                        drat_qf_bv_evidence(arena, assertions, deadline, progress)?
                     }
                 }
             }
@@ -2228,6 +2232,12 @@ pub fn produce_qf_bv_evidence(
 /// `SatRefutation` recorded uncertified. It is never an [`Err`] and never an
 /// [`Evidence::Unknown`] — losing a proof must not lose a verdict.
 ///
+/// `progress`, when set, is forwarded to the proof-producing SAT search
+/// verbatim (see [`crate::backend::ProofProgress`] /
+/// `export_qf_bv_unsat_proof_with_progress`) — a pure observability hook that
+/// cannot change which of the three outcomes below is reached, only how often
+/// a snapshot is reported while getting there.
+///
 /// # Errors
 ///
 /// Returns [`SolverError`] from the proof export, including a soundness alarm if
@@ -2236,6 +2246,7 @@ fn drat_qf_bv_evidence(
     arena: &TermArena,
     assertions: &[TermId],
     deadline: Option<Instant>,
+    progress: Option<&crate::backend::ProofProgress>,
 ) -> Result<(Evidence, Vec<TrustStep>), SolverError> {
     // Already out of budget: do not even pay the bit-blast + Tseitin encoding the
     // exporter would redo before consulting the deadline.
@@ -2249,35 +2260,51 @@ fn drat_qf_bv_evidence(
             ]),
         ));
     }
-    Ok(
-        match export_qf_bv_unsat_proof_within(arena, assertions, deadline)? {
-            // Bit-blast is recorded (a miter route exists, but this plain DRAT export
-            // does not run it → certified:false); Tseitin + the SAT refutation are
-            // DRAT-checked here.
-            UnsatProofOutcome::Proved(proof) => (
-                Evidence::Unsat(Some(proof)),
-                trust_steps(&[
-                    (TrustId::BitBlast, false),
-                    (TrustId::Tseitin, true),
-                    (TrustId::SatRefutation, true),
-                ]),
-            ),
-            UnsatProofOutcome::Inconclusive => (
-                Evidence::Unsat(None),
-                trust_steps(&[
-                    (TrustId::BitBlast, false),
-                    (TrustId::Tseitin, true),
-                    (TrustId::SatRefutation, false),
-                ]),
-            ),
-            UnsatProofOutcome::Satisfiable => {
-                return Err(SolverError::Backend(
-                    "soundness alarm: backend reported unsat but the proof core found a model"
-                        .to_owned(),
-                ));
-            }
-        },
-    )
+    let outcome = match progress {
+        None => export_qf_bv_unsat_proof_within(arena, assertions, deadline)?,
+        Some(progress) => {
+            // A closed receiver must never fail, let alone abort, the search: a
+            // progress report reaching nobody is not a search error.
+            let mut send = |snapshot: &axeyum_cnf::ProofSearchProgress| {
+                let _ = progress.sink.send(*snapshot);
+            };
+            export_qf_bv_unsat_proof_with_progress(
+                arena,
+                assertions,
+                deadline,
+                axeyum_cnf::DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+                progress.interval,
+                &mut send,
+            )?
+        }
+    };
+    Ok(match outcome {
+        // Bit-blast is recorded (a miter route exists, but this plain DRAT export
+        // does not run it → certified:false); Tseitin + the SAT refutation are
+        // DRAT-checked here.
+        UnsatProofOutcome::Proved(proof) => (
+            Evidence::Unsat(Some(proof)),
+            trust_steps(&[
+                (TrustId::BitBlast, false),
+                (TrustId::Tseitin, true),
+                (TrustId::SatRefutation, true),
+            ]),
+        ),
+        UnsatProofOutcome::Inconclusive => (
+            Evidence::Unsat(None),
+            trust_steps(&[
+                (TrustId::BitBlast, false),
+                (TrustId::Tseitin, true),
+                (TrustId::SatRefutation, false),
+            ]),
+        ),
+        UnsatProofOutcome::Satisfiable => {
+            return Err(SolverError::Backend(
+                "soundness alarm: backend reported unsat but the proof core found a model"
+                    .to_owned(),
+            ));
+        }
+    })
 }
 
 /// Runs the exact-rational conjunctive `QF_LRA` pipeline on `assertions` and
@@ -4840,6 +4867,42 @@ mod tests {
         assert!(report.evidence.check(&arena, &assertions).expect("check"));
     }
 
+    /// Installing [`SolverConfig::proof_progress`] on the DRAT certificate route
+    /// (i) actually fires the sink and (ii) does not change the exported
+    /// certificate — a pure observability hook, exactly like `axeyum_cnf`'s own
+    /// no-behaviour-change guarantee on the search underneath it. Calls
+    /// `drat_qf_bv_evidence` directly (as `tampered_certificate_fails_rather_than_reading_as_unchecked`
+    /// already does via `export_qf_bv_unsat_proof`) to exercise the plain DRAT
+    /// route without depending on the term-level-enumeration/Alethe routing
+    /// thresholds above it.
+    #[test]
+    fn proof_progress_sink_fires_and_does_not_change_the_certificate() {
+        let (arena, assertions) = unsat_bv_query();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let progress = crate::backend::ProofProgress::new(1, tx);
+
+        let (with_progress, _) = drat_qf_bv_evidence(&arena, &assertions, None, Some(&progress))
+            .expect("evidence with a progress sink installed");
+        let (without_progress, _) = drat_qf_bv_evidence(&arena, &assertions, None, None)
+            .expect("evidence with no progress sink");
+
+        match (&with_progress, &without_progress) {
+            (Evidence::Unsat(Some(a)), Evidence::Unsat(Some(b))) => {
+                assert_eq!(
+                    a, b,
+                    "installing a progress sink must not change the exported DRAT certificate"
+                );
+            }
+            other => panic!("expected a DRAT-certified unsat both ways, got {other:?}"),
+        }
+
+        let snapshots: Vec<_> = rx.try_iter().collect();
+        assert!(
+            !snapshots.is_empty(),
+            "an installed sink must fire at least once (the terminal report)"
+        );
+    }
+
     /// ADR-0384 (A3): `Failed` (a certificate that does not hold up — a soundness
     /// alarm) stays distinguishable from `NothingToCheck` (no certificate at
     /// all). A boolean cannot express that difference, which is why `prove` can
@@ -4904,8 +4967,8 @@ mod tests {
             .expect("instant");
 
         let started = Instant::now();
-        let (evidence, steps) =
-            drat_qf_bv_evidence(&arena, &assertions, Some(expired)).expect("no error on timeout");
+        let (evidence, steps) = drat_qf_bv_evidence(&arena, &assertions, Some(expired), None)
+            .expect("no error on timeout");
         let elapsed = started.elapsed();
 
         assert!(
@@ -4944,7 +5007,7 @@ mod tests {
         let deadline = Instant::now().checked_add(Duration::from_secs(60));
 
         let (evidence, steps) =
-            drat_qf_bv_evidence(&arena, &assertions, deadline).expect("evidence");
+            drat_qf_bv_evidence(&arena, &assertions, deadline, None).expect("evidence");
 
         assert!(
             evidence.is_certified(),
@@ -5584,8 +5647,9 @@ mod tests {
 
     /// A one-bit-index array pair and its two concrete reads, shared by the
     /// finite-array extensionality fixtures below.
-    fn finite_array_ext_fixture(arena: &mut TermArena) -> (TermId, TermId, [TermId; 2], [TermId; 2])
-    {
+    fn finite_array_ext_fixture(
+        arena: &mut TermArena,
+    ) -> (TermId, TermId, [TermId; 2], [TermId; 2]) {
         let array_sort = Sort::Array {
             index: axeyum_ir::ArraySortKey::BitVec(1),
             element: axeyum_ir::ArraySortKey::BitVec(8),

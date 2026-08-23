@@ -209,6 +209,55 @@ fn export_qf_bv_unsat_proof_impl(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<UnsatProofOutcome, SolverError> {
+    let encoding = qf_bv_cnf_encoding(arena, assertions)?;
+    let formula = encoding.formula();
+    finish_unsat_proof_outcome(formula, solve_with_drat_proof_within(formula, deadline))
+}
+
+/// Like [`export_qf_bv_unsat_proof_within`], but polls `progress` every
+/// `progress_interval` conflicts (and once more at the end) during the
+/// proof-producing SAT search — the observability hook for a certificate run
+/// long enough that elapsed time and RSS are otherwise the only signals
+/// available (see [`axeyum_cnf::ProofSearchProgress`]).
+///
+/// Same soundness/behaviour as [`export_qf_bv_unsat_proof_within`]: this
+/// shares its bit-blast/encode step ([`qf_bv_cnf_encoding`]) and its
+/// outcome-to-certificate mapping ([`finish_unsat_proof_outcome`]) verbatim,
+/// differing only in which `axeyum_cnf` SAT-search entry point runs — and
+/// that entry point's own doc guarantees installing a sink cannot change the
+/// search trajectory or the emitted proof.
+///
+/// # Errors
+///
+/// Returns the same errors as [`export_qf_bv_unsat_proof`].
+pub fn export_qf_bv_unsat_proof_with_progress(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    progress_interval: usize,
+    progress: &mut dyn FnMut(&axeyum_cnf::ProofSearchProgress),
+) -> Result<UnsatProofOutcome, SolverError> {
+    let encoding = qf_bv_cnf_encoding(arena, assertions)?;
+    let formula = encoding.formula();
+    let outcome = axeyum_cnf::solve_with_drat_proof_with_limits_and_progress(
+        formula,
+        deadline,
+        max_conflicts,
+        progress_interval,
+        progress,
+    );
+    finish_unsat_proof_outcome(formula, outcome)
+}
+
+/// Bit-blasts `assertions` to a Tseitin `CnfEncoding` — the shared front half
+/// of every `export_qf_bv_unsat_proof*` variant (progress-observed or not),
+/// so the checks, `lower_terms`, and `tseitin_encode` calls exist exactly
+/// once regardless of which SAT-search entry point runs afterward.
+fn qf_bv_cnf_encoding(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<axeyum_cnf::CnfEncoding, SolverError> {
     for &term in assertions {
         if arena.sort_of(term) != Sort::Bool {
             return Err(SolverError::NonBooleanAssertion(term));
@@ -234,11 +283,20 @@ fn export_qf_bv_unsat_proof_impl(
         .iter()
         .map(|root| root.bits()[0])
         .collect::<Vec<_>>();
-    let encoding = tseitin_encode(lowering.aig(), &roots)
-        .map_err(|error| SolverError::Backend(format!("CNF encoding failed: {error}")))?;
-    let formula = encoding.formula();
+    tseitin_encode(lowering.aig(), &roots)
+        .map_err(|error| SolverError::Backend(format!("CNF encoding failed: {error}")))
+}
 
-    match solve_with_drat_proof_within(formula, deadline) {
+/// Maps a [`ProofSolveOutcome`] on `formula` to an [`UnsatProofOutcome`],
+/// including the LRAT elaboration and the DRAT self-check — the shared tail
+/// of every `export_qf_bv_unsat_proof*` variant, so this soundness-critical
+/// logic exists exactly once regardless of which SAT-search entry point (with
+/// or without a progress sink) produced `outcome`.
+fn finish_unsat_proof_outcome(
+    formula: &axeyum_cnf::CnfFormula,
+    outcome: ProofSolveOutcome,
+) -> Result<UnsatProofOutcome, SolverError> {
+    match outcome {
         ProofSolveOutcome::Sat(_) => Ok(UnsatProofOutcome::Satisfiable),
         ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => {
             Ok(UnsatProofOutcome::Inconclusive)

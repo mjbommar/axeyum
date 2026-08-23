@@ -50,13 +50,119 @@
 //! on top of deciding, so turning it on silently would invalidate every recorded
 //! parity baseline. Same discipline as `AXEYUM_CNF_INPROCESSING` /
 //! `AXEYUM_CNF_VIVIFY` below.
+//!
+//! # Progress mode (`AXEYUM_PROOF_PROGRESS=1` / `--progress`), OFF by default
+//!
+//! A DRAT certificate run on a hard instance can run for hours with **zero**
+//! observable output beyond elapsed time and RSS — the incident that motivates
+//! this flag ran 5 h 59 min and produced nothing before being reaped, on a
+//! query that the non-certifying path decides in 11.5 s. Progress mode makes
+//! that search's own conflict counter and proof growth visible while it runs.
+//! Only meaningful together with `--evidence` (progress is a property of the
+//! proof-producing SAT search evidence mode invokes on `QF_BV` `unsat`
+//! certificate production, `axeyum_solver::produce_qf_bv_evidence`'s DRAT
+//! route); it is a silent no-op otherwise, since there is then no such search
+//! to watch.
+//!
+//! Every `axeyum_cnf::DEFAULT_PROGRESS_CONFLICT_INTERVAL` conflicts (override
+//! with `AXEYUM_PROOF_PROGRESS_INTERVAL=N`), one line is printed:
+//!
+//! ```text
+//! ; progress conflicts=120000 learned=41230 proof_steps=118872 proof_bytes=9427110 elapsed_ms=8032 conflicts_per_sec=14938.7 proof_bytes_per_sec=1173596.9
+//! ```
+//!
+//! Same convention as the evidence line: `;`-prefixed, so it can never match
+//! `^(sat|unsat)$` or `^unknown$` — a harness that greps the verdict never sees
+//! it, and it is printed strictly BEFORE the evidence/verdict lines (the
+//! search that produced it has already returned by the time those print).
+//! `conflicts_per_sec` / `proof_bytes_per_sec` are computed from the snapshot's
+//! own cumulative totals over its own elapsed time, so a watcher can state a
+//! falsifiable expectation from a single line — "at this rate it finishes by X
+//! or it does not" — rather than just observe that the number moved.
+//!
+//! Off by default for the same reason evidence mode is: it costs real time
+//! (periodic snapshots are cheap, but every progress-observed run implies the
+//! certificate-producing route) and must never silently change a recorded
+//! baseline. Installing the sink cannot change the verdict or the emitted
+//! DRAT proof either way — see
+//! [`axeyum_cnf::solve_with_drat_proof_with_limits_and_progress`]'s
+//! no-behaviour-change guarantee, which this flag relies on rather than
+//! re-asserts.
 
 use std::process::ExitCode;
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use axeyum_solver::{
-    CheckResult, Evidence, EvidenceCheck, SolverConfig, produce_evidence_smtlib, solve_smtlib,
+    CheckResult, Evidence, EvidenceCheck, ProofProgress, SolverConfig, produce_evidence_smtlib,
+    solve_smtlib,
 };
+
+/// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
+/// progress line documented in the module header. `;` is the SMT-LIB comment
+/// character and this can never match `^(sat|unsat)$` / `^unknown$`, exactly
+/// like the `; evidence …` line — see [`evidence_report_line`].
+///
+/// Rates are computed from the snapshot's own cumulative totals over its own
+/// elapsed time (not a delta from the previous snapshot), so a single printed
+/// line is a complete, falsifiable claim on its own: "`conflicts_per_sec` ×
+/// remaining time" is an estimate a reader can check later against what
+/// actually happened, with no other line needed.
+///
+/// The `usize`/`u64` -> `f64` casts below are a display-only rate estimate,
+/// not a proof-relevant count (those stay exact `usize`/`u64` earlier in the
+/// same line); losing precision in the trailing digits of a conflicts-per-second
+/// figure changes nothing anyone checks against.
+#[allow(clippy::cast_precision_loss)]
+fn progress_report_line(snapshot: &axeyum_cnf::ProofSearchProgress) -> String {
+    let elapsed_secs = snapshot.elapsed.as_secs_f64();
+    let per_sec = |total: f64| {
+        if elapsed_secs > 0.0 {
+            total / elapsed_secs
+        } else {
+            0.0
+        }
+    };
+    format!(
+        "; progress conflicts={} learned={} proof_steps={} proof_bytes={} elapsed_ms={} \
+         conflicts_per_sec={:.1} proof_bytes_per_sec={:.1}",
+        snapshot.conflicts,
+        snapshot.learned_clauses,
+        snapshot.proof_steps,
+        snapshot.proof_bytes,
+        snapshot.elapsed.as_millis(),
+        per_sec(snapshot.conflicts as f64),
+        per_sec(snapshot.proof_bytes as f64),
+    )
+}
+
+/// Installs the progress sink (see the module header) on `config` when
+/// `progress_mode` is set, returning the (possibly updated) config alongside
+/// the receiver end. `progress_rx` outlives the `solve` closure built from the
+/// returned config (which moves `config`, and with it the sender), so
+/// whatever was sent before `solve()` returns is still there for the caller to
+/// drain and print afterward — no extra thread or join needed for that
+/// ordering. When `progress_mode` is `false` the channel is still created (so
+/// both branches return the same types) but never wired to `config`, so
+/// `progress_rx.try_iter()` is simply always empty — a silent no-op, exactly
+/// like every other lever in this file when its flag is off.
+fn install_progress_sink(
+    mut config: SolverConfig,
+    progress_mode: bool,
+) -> (
+    SolverConfig,
+    mpsc::Receiver<axeyum_cnf::ProofSearchProgress>,
+) {
+    let (progress_tx, progress_rx) = mpsc::channel();
+    if progress_mode {
+        let interval = std::env::var("AXEYUM_PROOF_PROGRESS_INTERVAL")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(axeyum_cnf::DEFAULT_PROGRESS_CONFLICT_INTERVAL);
+        config = config.with_proof_progress(ProofProgress::new(interval, progress_tx));
+    }
+    (config, progress_rx)
+}
 
 /// Extra wall clock the watchdog allows past the configured timeout, so the
 /// solver's own soft stop always wins the race when it can see the deadline.
@@ -176,30 +282,53 @@ fn evidence_report_line(
     )
 }
 
-fn main() -> ExitCode {
-    let mut args = std::env::args().skip(1);
-    let mut path: Option<String> = None;
-    let mut timeout_ms: Option<u64> = std::env::var("AXEYUM_TIMEOUT_MS")
-        .ok()
-        .and_then(|v| v.parse().ok());
-    let mut evidence_mode = std::env::var("AXEYUM_EVIDENCE").is_ok_and(|v| v == "1");
+/// Parsed command-line/env-var configuration: which file to solve, and every
+/// off-by-default lever this binary exposes. Split out of `main` purely to
+/// keep it under clippy's line-count lint.
+struct CliArgs {
+    path: Option<String>,
+    timeout_ms: Option<u64>,
+    evidence_mode: bool,
+    progress_mode: bool,
+}
 
-    while let Some(arg) = args.next() {
+fn parse_cli_args() -> CliArgs {
+    let mut args = CliArgs {
+        path: None,
+        timeout_ms: std::env::var("AXEYUM_TIMEOUT_MS")
+            .ok()
+            .and_then(|v| v.parse().ok()),
+        evidence_mode: std::env::var("AXEYUM_EVIDENCE").is_ok_and(|v| v == "1"),
+        progress_mode: std::env::var("AXEYUM_PROOF_PROGRESS").is_ok_and(|v| v == "1"),
+    };
+    let mut rest = std::env::args().skip(1);
+    while let Some(arg) = rest.next() {
         match arg.as_str() {
             "--timeout-ms" => {
-                timeout_ms = args.next().and_then(|v| v.parse().ok());
+                args.timeout_ms = rest.next().and_then(|v| v.parse().ok());
             }
-            "--evidence" => evidence_mode = true,
+            "--evidence" => args.evidence_mode = true,
+            "--progress" => args.progress_mode = true,
             other if other.starts_with("--") => {
                 // Ignore unknown flags: the competition passes only the file.
             }
             other => {
-                if path.is_none() {
-                    path = Some(other.to_string());
+                if args.path.is_none() {
+                    args.path = Some(other.to_string());
                 }
             }
         }
     }
+    args
+}
+
+fn main() -> ExitCode {
+    let CliArgs {
+        path,
+        timeout_ms,
+        evidence_mode,
+        progress_mode,
+    } = parse_cli_args();
 
     let Some(path) = path else {
         eprintln!("usage: smtcomp_cli <benchmark.smt2> [--timeout-ms N]");
@@ -241,6 +370,8 @@ fn main() -> ExitCode {
         // flag cannot silently do nothing.
         config = config.with_cnf_inprocessing(true).with_cnf_vivify(true);
     }
+
+    let (config, progress_rx) = install_progress_sink(config, progress_mode);
 
     // The configured timeout is a SOFT stop: the deadline is polled inside the
     // solve, but NOT during SMT-LIB ingest (parsing `stp/testcase15.stp.smt2`,
@@ -303,6 +434,14 @@ fn main() -> ExitCode {
         // No wall clock configured: nothing to enforce, so stay on the main
         // thread (its stack is the largest one available).
         let (verdict, evidence) = solve();
+        // Progress lines come FIRST: they describe the search that already
+        // finished producing `verdict`/`evidence`, so printing them after
+        // either would be out of order. Still strictly before the evidence
+        // line and the verdict, both of which must stay exactly where the
+        // rest of this file already puts them.
+        for snapshot in progress_rx.try_iter() {
+            println!("{}", progress_report_line(&snapshot));
+        }
         if let Some(line) = evidence {
             println!("{line}");
         }
@@ -326,8 +465,14 @@ fn main() -> ExitCode {
         Err(_) => ("unknown", None),
     };
 
-    // The evidence line goes FIRST so the verdict stays the final line of stdout,
-    // exactly as the competition interface promises.
+    // Progress lines first (see the no-timeout branch above for why), then the
+    // evidence line, so the verdict stays the final line of stdout, exactly as
+    // the competition interface promises. If the watchdog gave up before the
+    // worker finished, this still prints whatever snapshots the search sent
+    // before the timeout — an honest partial picture, not nothing.
+    for snapshot in progress_rx.try_iter() {
+        println!("{}", progress_report_line(&snapshot));
+    }
     if let Some(line) = evidence {
         println!("{line}");
     }

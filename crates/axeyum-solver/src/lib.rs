@@ -851,8 +851,8 @@ pub use axeyum_fp as fp;
 
 pub use axeyum_cnf::IncrementalCnfStats;
 pub use backend::{
-    BitLoweringMode, Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig,
-    SolverError, UnknownKind, UnknownReason,
+    BitLoweringMode, Capabilities, CheckResult, ProofProgress, SolveStats, SolverBackend,
+    SolverConfig, SolverError, UnknownKind, UnknownReason,
 };
 pub use incremental::{
     AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats,

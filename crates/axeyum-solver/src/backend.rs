@@ -250,6 +250,49 @@ pub struct SolverConfig {
     /// branches from the eager circuit. Only meaningful with `lazy_bv`; off by
     /// default (experimental, gated on a measured win).
     pub lazy_bv_abstract_ite: bool,
+
+    /// Observability hook for the proof-producing DRAT search
+    /// ([`axeyum_cnf::ProofSearchProgress`]): when set, periodic
+    /// [`ProofSearchProgress`] snapshots are sent down `sink` while the
+    /// certificate-producing SAT search on the `QF_BV` path runs (see
+    /// `crate::proof::export_qf_bv_unsat_proof_with_progress`, reached from
+    /// `produce_qf_bv_evidence`'s DRAT-certificate route).
+    ///
+    /// `None` by default, matching every other assurance/perf lever here: a
+    /// progress sink is *output only* — nothing reads it back — so installing
+    /// one cannot change a verdict or the emitted DRAT proof; it can only
+    /// change how often, and to where, a snapshot is reported.
+    pub proof_progress: Option<ProofProgress>,
+}
+
+/// A progress sink installed on [`SolverConfig::proof_progress`]. `sink` is a
+/// channel [`Sender`](std::sync::mpsc::Sender) rather than a boxed closure so
+/// [`SolverConfig`] keeps its ordinary `Clone`/`Debug` derives (a channel
+/// sender is `Clone` and `Debug` unconditionally, without requiring the
+/// message type to be either) and so a caller can drain snapshots from a
+/// different thread than the one running the search — exactly the shape
+/// `smtcomp_cli`'s watchdog-timeout worker thread needs.
+#[derive(Debug, Clone)]
+pub struct ProofProgress {
+    /// Conflict-count cadence between snapshots (forwarded to
+    /// `axeyum_cnf::solve_with_drat_proof_with_limits_and_progress`).
+    pub interval: usize,
+    /// Where snapshots are sent. A closed receiver is not an error: a send
+    /// failure is silently dropped (see the call site), since a progress
+    /// report reaching nobody must never abort or alter the search.
+    pub sink: std::sync::mpsc::Sender<axeyum_cnf::ProofSearchProgress>,
+}
+
+impl ProofProgress {
+    /// Builds a progress config with the given conflict-count `interval`
+    /// (clamped to at least 1 by the underlying search) and channel `sink`.
+    #[must_use]
+    pub fn new(
+        interval: usize,
+        sink: std::sync::mpsc::Sender<axeyum_cnf::ProofSearchProgress>,
+    ) -> Self {
+        Self { interval, sink }
+    }
 }
 
 impl Default for SolverConfig {
@@ -279,6 +322,7 @@ impl Default for SolverConfig {
             lazy_bv: false,
             lazy_bv_abstract_ite: false,
             native_cdcl: false,
+            proof_progress: None,
         }
     }
 }
@@ -465,6 +509,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_native_cdcl(mut self, native_cdcl: bool) -> Self {
         self.native_cdcl = native_cdcl;
+        self
+    }
+
+    /// Installs a progress sink for the proof-producing DRAT search. See
+    /// [`SolverConfig::proof_progress`].
+    #[must_use]
+    pub fn with_proof_progress(mut self, proof_progress: ProofProgress) -> Self {
+        self.proof_progress = Some(proof_progress);
         self
     }
 }
