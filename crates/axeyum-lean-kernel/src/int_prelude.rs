@@ -287,6 +287,22 @@ pub struct IntPrelude {
     /// primitive a sum-of-squares certificate rests on.
     pub sq_nonneg: NameId,
 
+    // --- `Int.pow : Int → Nat → Int` -----------------------------------------
+    /// `Int.pow : Int → Nat → Int` — structural recursion on the natural
+    /// exponent, `pow a zero ≡ one` and `pow a (succ j) ≡ mul (pow a j) a`,
+    /// mirroring `Nat.pow`'s own convention exactly. A checked definition, not
+    /// an axiom.
+    pub pow: NameId,
+    /// `pow_zero : ∀ (a : Int), Eq Int (pow a zero) one` — closes by `Eq.refl`.
+    pub pow_zero: NameId,
+    /// `pow_succ : ∀ (a : Int) (m : Nat), Eq Int (pow a (succ m)) (mul (pow a m) a)`
+    /// — closes by `Eq.refl`. Quantifies over one `Int` and one `Nat`, so it is
+    /// declared by hand rather than through [`ops::IntDev::int_theorem`].
+    pub pow_succ: NameId,
+    /// `pow_add : ∀ (a : Int) (m n : Nat), Eq Int (pow a (add m n)) (mul (pow a m) (pow a n))`
+    /// — induction on `n`, mirroring `Nat.pow_add`'s own proof shape.
+    pub pow_add: NameId,
+
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
     pub no_int_between: NameId,
@@ -397,6 +413,12 @@ pub struct IntPrelude {
     /// ∀ n a, 0 < n → Coprime a n → ∃ b, ModEq n (a*b) one` — the modular
     /// inverse, straight from Bézout ([`Self::gcd_eq_gcd_ab`]).
     pub mod_eq_inverse_exists: NameId,
+    /// `modEq_pow : ∀ n a b k, 0 < n → ModEq n a b → ModEq n (pow a k) (pow b k)`
+    /// — induction on `k`, using [`Self::mod_eq_mul`] at each step. `k` is a
+    /// `Nat` (the exponent), so this quantifies over three `Int`s and one
+    /// `Nat` and is declared by hand rather than through
+    /// [`ops::IntDev::int_theorem`].
+    pub mod_eq_pow: NameId,
     /// `natAbs : Int → Nat` — the magnitude, `ofNat n ↦ n` and `negSucc m ↦ succ m`.
     pub nat_abs: NameId,
     /// `of_nat_nat_abs_of_nonneg : ∀ a, 0 ≤ a → ofNat (natAbs a) = a`.
@@ -599,6 +621,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mul_nonneg: child(kernel, "mul_nonneg"),
         mul_pos: child(kernel, "mul_pos"),
         sq_nonneg: child(kernel, "sq_nonneg"),
+        pow: child(kernel, "pow"),
+        pow_zero: child(kernel, "pow_zero"),
+        pow_succ: child(kernel, "pow_succ"),
+        pow_add: child(kernel, "pow_add"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -631,6 +657,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_mul: child(kernel, "modEq_mul"),
         mod_eq_cancel: child(kernel, "modEq_cancel"),
         mod_eq_inverse_exists: child(kernel, "modEq_inverse_exists"),
+        mod_eq_pow: child(kernel, "modEq_pow"),
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
@@ -719,6 +746,9 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         sign::declare_sign_lemmas(&mut d)?;
         sign::declare_neg_one_mul(&mut d)?;
         sign::declare_mul_assoc(&mut d)?;
+        defs::declare_pow(&mut d)?;
+        defs::declare_pow_equations(&mut d)?;
+        algebra::declare_pow_add(&mut d)?;
         sub_nat_nat::declare_mul_lemmas(&mut d)?;
         algebra::declare_left_distrib(&mut d)?;
         sub::declare_sub_definition(&mut d)?;
@@ -756,6 +786,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modeq::declare_modeq_mul_left(&mut d)?;
         modeq::declare_modeq_mul_right(&mut d)?;
         modeq::declare_modeq_mul(&mut d)?;
+        modeq::declare_modeq_pow(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;

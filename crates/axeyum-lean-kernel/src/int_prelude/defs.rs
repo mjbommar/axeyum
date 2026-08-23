@@ -55,6 +55,9 @@ use crate::nat_prelude::NatOps;
 pub(super) const LEAF_HEIGHT: u16 = 20;
 /// Delta height for definitions that call a leaf one.
 pub(super) const DERIVED_HEIGHT: u16 = 21;
+/// Delta height for `Int.pow`, which calls `Int.mul` (`DERIVED_HEIGHT`, 21):
+/// strictly above it, as the reducibility contract requires.
+pub(super) const POW_HEIGHT: u16 = 22;
 
 /// Admit the inductive carrier `Int` with its two constructors.
 pub(super) fn declare_carrier(d: &mut IntDev<'_>) -> Result<(), KernelError> {
@@ -404,4 +407,123 @@ pub(super) fn declare_order_definitions(d: &mut IntDev<'_>) -> Result<(), Kernel
         &|d, _m, _n| d.true_ty(),
         &|d, m, n| NatOps::lt(d, n, m),
     )
+}
+
+/// Admit `Int.pow : Int → Nat → Int` by structural recursion on the natural
+/// exponent — `Int.pow a Nat.zero ≡ Int.one`,
+/// `Int.pow a (Nat.succ j) ≡ Int.mul (Int.pow a j) a` — mirroring `Nat.pow`'s
+/// own convention exactly (`nat_prelude/defs.rs::declare_arithmetic`:
+/// `pow x zero ≡ 1`, `pow x (succ j) ≡ mul (pow x j) x`): the base is `1`, the
+/// recursion is on the SECOND (exponent) argument, and the recursive factor
+/// multiplies on the left of the fresh copy of the base.
+///
+/// `Int.pow`'s base is an `Int`, closed over across the whole `Nat.rec`
+/// application, which is why this needs its own helper rather than reusing
+/// [`NatOps::define_binary`](crate::nat_prelude::NatOps::define_binary)'s
+/// `Nat → Nat → Nat` shape or [`define_nat_to_int`]'s plain `Nat → Int` shape.
+///
+/// # Errors
+///
+/// Returns the kernel's rejection if the generated definition does not
+/// type-check or the name is already taken.
+pub(super) fn declare_pow(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let motive = d.kernel().lam(anon, nat, int_ty, BinderInfo::Default);
+    let minor_zero = d.ione();
+    let minor_succ = {
+        let j_fv = d.fresh_fvar();
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let body = d.imul(ih, a);
+        let inner = d.lam_fv(ih_fv, int_ty, body);
+        d.lam_fv(j_fv, nat, inner)
+    };
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+    let body = d.apply(rec, &[motive, minor_zero, minor_succ, n]);
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(a_fv, int_ty, with_n)
+    };
+    let ty = {
+        let inner = d.arrow(nat, int_ty);
+        d.arrow(int_ty, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.pow,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(POW_HEIGHT),
+    })
+}
+
+/// The defining equations of `Int.pow`: `pow_zero` and `pow_succ`, each an
+/// `Eq.refl` at `Int` — `Int.pow` computes on both minor premises, exactly as
+/// `Nat.pow`'s own `pow_zero`/`pow_succ` do (`nat_prelude/defs.rs`).
+///
+/// `pow_succ` quantifies over one `Int` (the base) and one `Nat` (the
+/// exponent), so it cannot go through
+/// [`IntDev::int_theorem`](super::ops::IntDev::int_theorem) (which quantifies
+/// only over `Int`) — its `Pi`/`lam` chain is built by hand instead, exactly
+/// as [`define_binary_int`]'s callers build their own.
+///
+/// # Errors
+///
+/// Returns the kernel's rejection if a generated proof does not check.
+pub(super) fn declare_pow_equations(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let int_ty = d.int_ty();
+    let nat = d.nat_ty();
+
+    // pow_zero : ∀ (a : Int), Eq Int (pow a zero) one.
+    d.int_theorem(p.pow_zero, 1, &|d, v| {
+        let a = v[0];
+        let zero = d.zero();
+        let lhs = d.ipow(a, zero);
+        let one = d.ione();
+        let stmt = d.ieq(lhs, one);
+        let proof = d.irefl(one);
+        (stmt, proof)
+    })?;
+
+    // pow_succ : ∀ (a : Int) (m : Nat), Eq Int (pow a (succ m)) (mul (pow a m) a).
+    {
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+
+        let sm = d.succ(m);
+        let lhs = d.ipow(a, sm);
+        let pm = d.ipow(a, m);
+        let rhs = d.imul(pm, a);
+        let stmt_inner = d.ieq(lhs, rhs);
+        let proof_inner = d.irefl(rhs);
+
+        let ty = {
+            let inner = d.pi_fv(m_fv, nat, stmt_inner);
+            d.pi_fv(a_fv, int_ty, inner)
+        };
+        let value = {
+            let inner = d.lam_fv(m_fv, nat, proof_inner);
+            d.lam_fv(a_fv, int_ty, inner)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.pow_succ,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
 }

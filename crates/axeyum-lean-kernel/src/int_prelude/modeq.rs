@@ -817,6 +817,93 @@ pub(super) fn declare_modeq_mul(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     Ok(())
 }
 
+/// `Int.ModEq.pow :
+/// ∀ n a b k, 0 < n → ModEq n a b → ModEq n (pow a k) (pow b k)`.
+///
+/// Induction on `k`: at `zero` both sides are `Int.one` regardless of `a`/`b`
+/// (`ModEq.refl`); at `succ j`, `pow _ (succ j)` computes to `mul (pow _ j) _`,
+/// so `ModEq.mul` applied to the IH (`ModEq n (a^j) (b^j)`) and the outer
+/// hypothesis (`ModEq n a b`) gives exactly `ModEq n (a^j * a) (b^j * b)` —
+/// no explicit `pow_succ` rewrite needed, since that equation is definitional
+/// and the kernel's defeq check sees through it. `k` is a `Nat` (the
+/// exponent), so — like [`super::defs::declare_pow_equations`]'s `pow_succ` —
+/// this quantifies over a mix of `Int` and `Nat` and is declared by hand
+/// rather than through [`IntDev::int_theorem`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_modeq_pow(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let int_ty = d.int_ty();
+    let nat = d.nat_ty();
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let zero = d.izero();
+    let pos_ty = d.ilt(zero, n);
+    let modeq_ab = imodeq(d, n, a, b);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| {
+        let pa = d.ipow(a, x);
+        let pb = d.ipow(b, x);
+        imodeq(d, n, pa, pb)
+    };
+    let conclusion_for_k = motive(d, k);
+
+    let h_pos_fv = d.fresh_fvar();
+    let h_pos = d.kernel().fvar(h_pos_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let proof_body = d.induct(
+        &motive,
+        &|d| {
+            let one = d.ione();
+            d.const_app(p.mod_eq_refl, &[n, one])
+        },
+        &|d, j, ih| {
+            let pa_j = d.ipow(a, j);
+            let pb_j = d.ipow(b, j);
+            d.const_app(p.mod_eq_mul, &[n, pa_j, pb_j, a, b, h_pos, ih, h])
+        },
+        k,
+    );
+
+    let with_h = d.lam_fv(h_fv, modeq_ab, proof_body);
+    let with_h_pos = d.lam_fv(h_pos_fv, pos_ty, with_h);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, with_h_pos);
+        let with_b = d.lam_fv(b_fv, int_ty, with_k);
+        let with_a = d.lam_fv(a_fv, int_ty, with_b);
+        d.lam_fv(n_fv, int_ty, with_a)
+    };
+    let ty = {
+        let inner_arrow = d.arrow(modeq_ab, conclusion_for_k);
+        let with_pos = d.arrow(pos_ty, inner_arrow);
+        let with_k = d.pi_fv(k_fv, nat, with_pos);
+        let with_b = d.pi_fv(b_fv, int_ty, with_k);
+        let with_a = d.pi_fv(a_fv, int_ty, with_b);
+        d.pi_fv(n_fv, int_ty, with_a)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mod_eq_pow,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(())
+}
+
 /// `Int.ModEq.cancel :
 /// ∀ n c a b, 0 < n → Coprime c n → ModEq n (c*a) (c*b) → ModEq n a b`.
 ///

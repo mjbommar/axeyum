@@ -19,6 +19,7 @@ use super::ops::{IntDev, Shape, case_split};
 use super::statements;
 use crate::BinderInfo;
 use crate::KernelError;
+use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
 
@@ -1009,4 +1010,100 @@ pub(super) fn declare_ordered_multiplication(d: &mut IntDev<'_>) -> Result<(), K
         (stmt, proof)
     })?;
     Ok(())
+}
+
+/// `Int.pow_add : ∀ (a : Int) (m n : Nat), Eq Int (pow a (add m n)) (mul (pow a m) (pow a n))`
+/// — induction on `n`, mirroring `Nat.pow_add`'s own proof shape
+/// (`nat_prelude/algebra.rs`) exactly: both `Nat.add` and `Int.pow` recurse on
+/// their SECOND/exponent argument, so the base case is `mul_one` reversed and
+/// the step is IH, `mul_assoc`, then `pow_succ` back — no new proof technique,
+/// only every carrier promoted from `Nat` to `Int`.
+///
+/// Quantifies over one `Int` and two `Nat`s, so — like [`super::defs::declare_pow_equations`]'s
+/// `pow_succ` — it is declared by hand rather than through
+/// [`IntDev::int_theorem`].
+///
+/// # Errors
+///
+/// Returns the kernel's rejection if the constructed proof does not check.
+pub(super) fn declare_pow_add(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let int_ty = d.int_ty();
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| {
+        let sum = NatOps::add(d, m, x);
+        let lhs = d.ipow(a, sum);
+        let pow_m = d.ipow(a, m);
+        let pow_x = d.ipow(a, x);
+        let rhs = d.imul(pow_m, pow_x);
+        d.ieq(lhs, rhs)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            // `a^(m+0)` computes to `a^m`; goal is `a^m = a^m * a^0`, i.e.
+            // `mul_one` reversed (`a^0` is defeq to `Int.one`, so a literal
+            // `one` closes it, exactly as `Nat.pow_add`'s own base case uses a
+            // literal `1` rather than the symbolic `pow_x`).
+            let pow_m = d.ipow(a, m);
+            let one = d.ione();
+            let product = d.imul(pow_m, one);
+            let h = d.const_app(p.mul_one, &[pow_m]);
+            d.isymm(product, pow_m, h)
+        },
+        &|d, j, ih| {
+            // `a^(m + succ j)` computes to `a^(m+j) * a`.
+            let pow_m = d.ipow(a, m);
+            let pow_j = d.ipow(a, j);
+            let sum_mj = NatOps::add(d, m, j);
+            let pow_sum = d.ipow(a, sum_mj);
+            let start = d.imul(pow_sum, a);
+            let ih_applied = d.imul(pow_m, pow_j);
+            let after_ih = d.imul(ih_applied, a);
+            let h_ih = d.icongr(pow_sum, ih_applied, ih, &|d, t| d.imul(t, a));
+            let inner = d.imul(pow_j, a);
+            let associated = d.imul(pow_m, inner);
+            let h_assoc = d.const_app(p.mul_assoc, &[pow_m, pow_j, a]);
+            let succ_j = d.succ(j);
+            let pow_succ_j = d.ipow(a, succ_j);
+            let end = d.imul(pow_m, pow_succ_j);
+            let h_pow = d.const_app(p.pow_succ, &[a, j]);
+            let h_pow_rev = d.isymm(pow_succ_j, inner, h_pow);
+            let h_end = d.icongr(inner, pow_succ_j, h_pow_rev, &|d, t| d.imul(pow_m, t));
+            let (_, proof) = d.ichain(
+                start,
+                &[(after_ih, h_ih), (associated, h_assoc), (end, h_end)],
+            );
+            proof
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let inner2 = d.pi_fv(m_fv, nat, inner);
+        d.pi_fv(a_fv, int_ty, inner2)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let inner2 = d.lam_fv(m_fv, nat, inner);
+        d.lam_fv(a_fv, int_ty, inner2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }

@@ -109,6 +109,12 @@ impl<'k> IntDev<'k> {
         self.const_app(f, &[a, b])
     }
 
+    /// `Int.pow a n` — `a` raised to the natural exponent `n`.
+    pub(crate) fn ipow(&mut self, a: ExprId, n: ExprId) -> ExprId {
+        let f = self.int.pow;
+        self.const_app(f, &[a, n])
+    }
+
     /// `Int.neg a`.
     pub(crate) fn ineg(&mut self, a: ExprId) -> ExprId {
         let f = self.int.neg;
