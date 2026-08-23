@@ -66,10 +66,14 @@ controls, six mutation controls, exits nonzero). Bulk engine: new Rust bin
   big monodromy plus the hook decomposition of the Adams operation. So the
   worst case seen at `(8,2)` and `(12,2)` -- a class of weight exactly
   `n + 2j` -- **cannot occur past the transition**, unconditionally.
-- **Past the transition the top-degree classes do not persist.** Every one of
-  the nine cells with `j >= 4`, `n >= j` that resolves to an exact closed form
-  has `delta in {j, j+1}` -- the `G_m`-forced optimum -- while every exactly
-  resolved `j <= 3` cell with `n >= 2j+1` has `delta in {2j-1, 2j}`. Note 12's
+- **Past the transition the maximal top-degree classes do not persist.** Nine
+  of the ten cells with `j >= 4`, `n >= j` that resolve to an exact closed form
+  have `delta in {j, j+1}` -- the `G_m`-forced optimum -- while every exactly
+  resolved `j <= 3` cell with `n >= 2j+1` has `delta in {2j-1, 2j}`. The tenth,
+  `(12,5)`, resolved only after the late `(5,7)` run (sec. 7.2 addendum), has
+  `delta = 8 = j+3 = 2j-2`: above the optimum, below the `2j-1` law, and at
+  `n = 0 mod 4`, the residue class that was worst at `j = 2`. At `j = 5` the two
+  laws are one integer apart there, so it does not separate them. Note 12's
   own unresolved `(7,4)` is in fact `delta = j+1` with `C = 6`. On the critical
   line, `delta` regressed on `j = 2..7` has slope `1.298 +- 0.193`: the `j+1`
   law (slope 1) is within `1.5 sigma`, the `2j-1` law (slope 2) is `3.6 sigma`
@@ -418,7 +422,7 @@ transform: the last radix-2 generators are split off into a `G_2` whose
 character is a `+-1` sign, giving `j q^{j-1}` machine words.
 
 **Reached cells** (24 threads, minutes each):
-`j = 2: r <= 10`; `j = 3: r <= 8`; `j = 4: r <= 8`; `j = 5: r <= 6`;
+`j = 2: r <= 10`; `j = 3: r <= 8`; `j = 4: r <= 8`; `j = 5: r <= 7`;
 `j = 6: r <= 5`; `j = 7: r <= 4`. The binding constraints are the `q^j`
 character loop (time) and `j q^{j-1}` words (memory).
 
@@ -511,7 +515,8 @@ value, not a bound, whenever the fit is over-determined).
 **Read the last column.** Every exactly resolved row with `j <= 3` and
 `n >= 2j+1` sits at `2j-1` or `2j`. **Every exactly resolved row with
 `j >= 4` sits at `j` or `j+1`** -- i.e. exactly the `i_max = j+1` shape, the
-`G_m`-forced optimum, in all nine such rows across `j = 4, 5, 6, 7`. The rows
+`G_m`-forced optimum, in nine of the ten such rows across `j = 4, 5, 6, 7`
+(the exception, `(12,5)` with `delta = 8`, is discussed in the 7.2 addendum). The rows
 at `j >= 4` are below the critical line (the closed-form fit needs more `r`
 than the critical rows leave), but they are *exact*, and they are on the far
 side of the monodromy transition of sec. 8.
@@ -536,8 +541,8 @@ row is in fact the good shape.
    3   8    2.00  5.17  5.74  5.91  5.96  5.99  5.99  6.00               4    5     6
    4   9    3.64  6.01  6.19  4.96  4.92  5.03  5.07  5.56               5    7     8
    4  10    4.00  6.67  6.16  6.08  5.22  5.34  5.37  5.14               5    7     8
-   5  11    3.64  7.66  7.87  7.31  7.22  7.40                           6    9    10
-   5  12    6.64  7.04  7.97  7.90  8.00  7.99                           6    9    10
+   5  11    3.64  7.66  7.87  7.31  7.22  7.40   7.33                     6    9    10
+   5  12    6.64  7.04  7.97  7.90  8.00  7.99   8.00                     6    9    10
    6  13    9.00  7.78  8.03  8.16  8.19                                 7   11    12
    6  14    2.00  7.91  7.05  8.27  7.48                                 7   11    12
    7  15    8.05  7.92  8.75  6.09                                       8   13    14
@@ -563,6 +568,20 @@ below what the fit needs when `C >= 4`, exactly as note 12 predicted. The
 evidence that they are in the `j+1` shape is (i) the exactly resolved rows of
 7.1 at the same `j`, (ii) the growth estimates above, and (iii) Lemma D, which
 excludes `2j` outright.
+
+**Addendum (coordinator, after the `(5,7)` run landed; `17,401 s`, the
+agent's last job, `2^35` group elements).** With `r = 7` the fitter resolves
+`(12,5)` to an exact closed form `delta = 8` (six modes, ONE spare point --
+the weakest "exact" in this note; `delta_7 = 8.00`), and leaves `(11,5)`
+unresolved (`delta_7 = 7.33`). So the even critical cell at `j = 5` sits
+at `2j-2 = j+3`, not at `j+1`: it is the first resolved `j >= 4` cell above
+the `G_m`-forced optimum, and it lies in the residue class `n = 0 mod 4` that
+carried the `2j` classes at `j = 2`. It does not change the regression above
+(its `r = 6` estimate was already `7.99`) and Lemma D still excludes `2j`; what
+it does is sharpen the honest statement: at `j = 5` the critical line is NOT
+yet in the `j + O(1)` shape, and the evidence for "alive" is the slope across
+`j` (1.30 +- 0.19 vs 2) plus Lemma D, not any single critical cell. The
+decisive computation of sec. 10 (`j = 8..10`) is therefore not optional.
 
 ## 8. The monodromy transition at `p = 2`
 

@@ -375,3 +375,17 @@ note, which was complete through the verdict.
 - **Guidance for angles 1 and 5:** the family has big monodromy from `j = 4`;
   the identity-class question is now (T1w)+(T2) on the quotient `B`; do not
   re-derive Betti-size or shape arguments -- they are settled here.
+
+### Entry 4b addendum (coordinator): the `(5,7)` run
+
+- The agent's last job (`axeyum-lemire-lfunc 5 7 14`, `2^35` elements,
+  17,401 s, 6 GB) finished after the agent was terminated; dump committed,
+  weights table regenerated, script still `ALL CONTROLS PASS`.
+- It resolves `(12,5)` to `delta = 8 = j+3 = 2j-2` (six modes, one spare --
+  weak) and leaves `(11,5)` unresolved (`delta_7 ~ 7.4`). First resolved
+  `j >= 4` cell above the `G_m`-forced optimum `{j, j+1}`; it is the
+  `n = 0 mod 4` endpoint, the class that was worst at `j = 2`. Regression
+  unchanged (its `r = 6` value was already `7.99`); Lemma D still excludes
+  `2j`. Verdict stays "alive, not closed", with the caveat sharpened: at
+  `j = 5` the critical line is not yet in the `j + O(1)` shape, and the
+  `j = 8..10` computation of note 14 sec. 10 is the only thing that decides.
