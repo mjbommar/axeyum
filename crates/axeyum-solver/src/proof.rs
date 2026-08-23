@@ -21,8 +21,8 @@ use web_time::Instant;
 
 use axeyum_bv::{first_unsupported_op, first_unsupported_sort, lower_terms};
 use axeyum_cnf::{
-    ProofSolveOutcome, check_drat, check_lrat, elaborate_drat_to_lrat, parse_dimacs, parse_drat,
-    parse_lrat, solve_with_drat_proof_within, tseitin_encode, write_drat, write_lrat,
+    ProofSolveOutcome, check_drat, check_lrat, parse_dimacs, parse_drat, parse_lrat,
+    solve_with_drat_proof_within, tseitin_encode, write_drat, write_lrat,
 };
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_rewrite::{
@@ -204,14 +204,43 @@ pub fn export_qf_bv_unsat_proof_within(
     export_qf_bv_unsat_proof_impl(arena, assertions, deadline)
 }
 
+/// Like [`export_qf_bv_unsat_proof_within`], but the checking stage that runs
+/// after the search returns `unsat` is bounded/observed per `check_budget`
+/// (see [`CheckBudget`] / [`CheckingProgress`], and
+/// [`export_qf_bv_unsat_proof_with_progress`]'s doc for why this exists).
+///
+/// [`export_qf_bv_unsat_proof_within`] is exactly this function called with
+/// [`CheckBudget::default`] — unbounded, unobserved, the previous behaviour.
+///
+/// # Errors
+///
+/// Returns the same errors as [`export_qf_bv_unsat_proof`].
+pub fn export_qf_bv_unsat_proof_within_with_check_budget(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+    check_budget: CheckBudget<'_>,
+) -> Result<UnsatProofOutcome, SolverError> {
+    let encoding = qf_bv_cnf_encoding(arena, assertions)?;
+    let formula = encoding.formula();
+    finish_unsat_proof_outcome_with_check_budget(
+        formula,
+        solve_with_drat_proof_within(formula, deadline),
+        check_budget,
+    )
+}
+
 fn export_qf_bv_unsat_proof_impl(
     arena: &TermArena,
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<UnsatProofOutcome, SolverError> {
-    let encoding = qf_bv_cnf_encoding(arena, assertions)?;
-    let formula = encoding.formula();
-    finish_unsat_proof_outcome(formula, solve_with_drat_proof_within(formula, deadline))
+    export_qf_bv_unsat_proof_within_with_check_budget(
+        arena,
+        assertions,
+        deadline,
+        CheckBudget::default(),
+    )
 }
 
 /// Like [`export_qf_bv_unsat_proof_within`], but polls `progress` every
@@ -220,12 +249,30 @@ fn export_qf_bv_unsat_proof_impl(
 /// long enough that elapsed time and RSS are otherwise the only signals
 /// available (see [`axeyum_cnf::ProofSearchProgress`]).
 ///
+/// `check_budget` is the SAME kind of observability/bound, but for the stage
+/// that runs *after* the search returns `unsat`: [`axeyum_cnf::check_drat`]
+/// and [`axeyum_cnf::elaborate_drat_to_lrat`], the checking pass
+/// [`finish_unsat_proof_outcome_with_check_budget`] performs to turn a raw
+/// refutation into an
+/// [`UnsatProof`]. That pass has no bound of its own — the 2026-08 incident
+/// motivating this module's checking-progress hooks was exactly this: a
+/// search that finished in 24.2 s followed by a check that ran for nearly six
+/// hours with zero observable output. Pass [`CheckBudget::default`] to get the
+/// previous behaviour back exactly (unbounded, unobserved).
+///
 /// Same soundness/behaviour as [`export_qf_bv_unsat_proof_within`]: this
 /// shares its bit-blast/encode step ([`qf_bv_cnf_encoding`]) and its
-/// outcome-to-certificate mapping ([`finish_unsat_proof_outcome`]) verbatim,
-/// differing only in which `axeyum_cnf` SAT-search entry point runs — and
-/// that entry point's own doc guarantees installing a sink cannot change the
-/// search trajectory or the emitted proof.
+/// outcome-to-certificate mapping ([`finish_unsat_proof_outcome_with_check_budget`])
+/// verbatim, differing only in which `axeyum_cnf` SAT-search entry point runs —
+/// and that entry point's own doc guarantees installing a sink cannot change
+/// the search trajectory or the emitted proof. Likewise, `check_budget`'s
+/// deadline/step budget/progress sink cannot change what the checking stage
+/// ACCEPTS — see `axeyum_cnf::check_drat_streaming_with_limits_and_progress`'s
+/// and `axeyum_cnf::elaborate_drat_to_lrat_with_limits_and_progress`'s own
+/// no-behaviour-change guarantees, which this relies on rather than re-asserts
+/// — only whether/when checking gives up early. A checking stage that gives up
+/// early is reported as [`UnsatProofOutcome::Inconclusive`], never as
+/// [`UnsatProofOutcome::Proved`]: a timeout is not a pass.
 ///
 /// # Errors
 ///
@@ -237,6 +284,7 @@ pub fn export_qf_bv_unsat_proof_with_progress(
     max_conflicts: usize,
     progress_interval: usize,
     progress: &mut dyn FnMut(&axeyum_cnf::ProofSearchProgress),
+    check_budget: CheckBudget<'_>,
 ) -> Result<UnsatProofOutcome, SolverError> {
     let encoding = qf_bv_cnf_encoding(arena, assertions)?;
     let formula = encoding.formula();
@@ -247,7 +295,7 @@ pub fn export_qf_bv_unsat_proof_with_progress(
         progress_interval,
         progress,
     );
-    finish_unsat_proof_outcome(formula, outcome)
+    finish_unsat_proof_outcome_with_check_budget(formula, outcome, check_budget)
 }
 
 /// Bit-blasts `assertions` to a Tseitin `CnfEncoding` — the shared front half
@@ -287,45 +335,182 @@ fn qf_bv_cnf_encoding(
         .map_err(|error| SolverError::Backend(format!("CNF encoding failed: {error}")))
 }
 
+/// One observability snapshot from the checking stage that follows a
+/// proof-producing search's `unsat` — the checking-side counterpart of
+/// [`axeyum_cnf::ProofSearchProgress`] on the search side. Wraps whichever of
+/// the two checking sub-stages is currently running: [`axeyum_cnf::check_drat`]
+/// re-derives the RUP/RAT refutation the search claims; if that verifies, an
+/// independent second pass, [`axeyum_cnf::elaborate_drat_to_lrat`], recovers
+/// explicit hints so the certificate can also be re-checked in linear time via
+/// [`axeyum_cnf::check_lrat`]. Both are re-scans over the SAME proof and were
+/// both found to run for hours with no bound and no output (2026-08 incident:
+/// a 24.2 s search followed by a ~6 h checking pass on
+/// `neg-fp16-add-monotone-rne.smt2`); this type lets a caller watch — and
+/// [`CheckBudget`] lets a caller bound — either one.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CheckingProgress {
+    /// A snapshot from the [`axeyum_cnf::check_drat`]-equivalent pass.
+    DratCheck(axeyum_cnf::DratCheckProgress),
+    /// A snapshot from the [`axeyum_cnf::elaborate_drat_to_lrat`]-equivalent
+    /// pass, which only runs when the DRAT check above already verified.
+    LratElaborate(axeyum_cnf::LratElaborateProgress),
+}
+
+/// Bounds and observability for the checking stage that follows a
+/// proof-producing search's `unsat` (see [`CheckingProgress`]).
+///
+/// `CheckBudget::default()` reproduces the previous, unbounded, unobserved
+/// behaviour exactly: `deadline: None`, `max_steps: None`, `progress: None` —
+/// so passing it changes nothing about what is accepted or how long checking
+/// is allowed to run. That default is also what the internal checking-stage
+/// tail (behind `export_qf_bv_unsat_proof_with_progress` /
+/// `export_qf_bv_unsat_proof_within_with_check_budget`) uses when no explicit
+/// budget is given, which is why installing this type at all is opt-in.
+///
+/// `deadline` and `max_steps` bound BOTH checking sub-stages independently
+/// (each stage gets the SAME deadline and the SAME step budget — they are not
+/// summed or split), mirroring how the search itself takes one `deadline` and
+/// one `max_conflicts`. Either bound firing on either stage is reported as
+/// [`UnsatProofOutcome::Inconclusive`], never [`UnsatProofOutcome::Proved`]: a
+/// timeout is not a pass.
+pub struct CheckBudget<'a> {
+    /// Wall-clock deadline for each checking sub-stage. `None` means
+    /// unbounded (the previous behaviour).
+    pub deadline: Option<Instant>,
+    /// Step budget for each checking sub-stage (DRAT steps for the check
+    /// pass, DRAT steps again for the elaboration pass — the two proofs have
+    /// the same length). `None` means unbounded (the previous behaviour).
+    pub max_steps: Option<usize>,
+    /// Cadence, in checked/processed steps, between [`CheckingProgress`]
+    /// snapshots. Clamped to at least 1 by the underlying checker; irrelevant
+    /// when `progress` is `None`.
+    pub progress_interval: usize,
+    /// Observability sink. `None` (the default) costs nothing beyond an
+    /// `Option::is_none` check per step in the underlying checker — see
+    /// `axeyum_cnf::check_drat_streaming_with_limits_and_progress`'s and
+    /// `axeyum_cnf::elaborate_drat_to_lrat_with_limits_and_progress`'s own
+    /// zero-cost-when-absent guarantees.
+    pub progress: Option<&'a mut dyn FnMut(&CheckingProgress)>,
+}
+
+impl Default for CheckBudget<'_> {
+    fn default() -> Self {
+        Self {
+            deadline: None,
+            max_steps: None,
+            progress_interval: 1,
+            progress: None,
+        }
+    }
+}
+
 /// Maps a [`ProofSolveOutcome`] on `formula` to an [`UnsatProofOutcome`],
 /// including the LRAT elaboration and the DRAT self-check — the shared tail
 /// of every `export_qf_bv_unsat_proof*` variant, so this soundness-critical
 /// logic exists exactly once regardless of which SAT-search entry point (with
-/// or without a progress sink) produced `outcome`.
-fn finish_unsat_proof_outcome(
+/// or without a progress sink) produced `outcome`. The checking stage
+/// ([`axeyum_cnf::check_drat`] then, if that verifies,
+/// [`axeyum_cnf::elaborate_drat_to_lrat`]) is bounded and observed per
+/// `check_budget` (see [`CheckBudget`] / [`CheckingProgress`]).
+///
+/// [`CheckBudget::default`] reproduces the previous unbounded, unobserved
+/// behaviour exactly — "checking never declines to finish, however long that
+/// takes" — so every existing call site keeps that behaviour by passing it.
+///
+/// A checking-stage bound firing (on either sub-stage) is reported as
+/// [`UnsatProofOutcome::Inconclusive`] — the SAME outcome a search-stage
+/// timeout gets. This loses the distinction "the search decided this in
+/// seconds; only checking could not finish in time", but that distinction is
+/// still recoverable from the `CheckingProgress` stream itself (a search that
+/// finished is followed by search-side silence and then a run of checking
+/// snapshots), and collapsing the two here means every existing match on
+/// [`UnsatProofOutcome`] stays exhaustive without a new variant to update at
+/// each of its call sites.
+#[allow(clippy::similar_names)] // drat_sink_fn/lrat_sink_fn mirror the two checking sub-stages
+fn finish_unsat_proof_outcome_with_check_budget(
     formula: &axeyum_cnf::CnfFormula,
     outcome: ProofSolveOutcome,
+    mut check_budget: CheckBudget<'_>,
 ) -> Result<UnsatProofOutcome, SolverError> {
     match outcome {
         ProofSolveOutcome::Sat(_) => Ok(UnsatProofOutcome::Satisfiable),
         ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => {
             Ok(UnsatProofOutcome::Inconclusive)
         }
-        ProofSolveOutcome::Unsat(proof) => match check_drat(formula, &proof) {
-            Ok(true) => {
-                // Elaborate the (RUP) DRAT proof to LRAT for linear re-checking; if
-                // a step is not RUP-elaboratable (RAT), keep DRAT-only. The LRAT, when
-                // present, is self-checked here so a stored certificate cannot carry a
-                // bad LRAT past the exporter.
-                let lrat = match elaborate_drat_to_lrat(formula, &proof) {
-                    Ok(steps) if matches!(check_lrat(formula, &steps), Ok(true)) => {
-                        Some(write_lrat(&steps))
-                    }
-                    _ => None,
-                };
-                Ok(UnsatProofOutcome::Proved(UnsatProof {
-                    dimacs: formula.to_dimacs(),
-                    drat: write_drat(&proof),
-                    lrat,
-                }))
+        ProofSolveOutcome::Unsat(proof) => {
+            let want_progress = check_budget.progress.is_some();
+            let mut drat_sink_fn = |snapshot: &axeyum_cnf::DratCheckProgress| {
+                if let Some(sink) = check_budget.progress.as_mut() {
+                    sink(&CheckingProgress::DratCheck(*snapshot));
+                }
+            };
+            let drat_sink: Option<&mut dyn FnMut(&axeyum_cnf::DratCheckProgress)> = if want_progress
+            {
+                Some(&mut drat_sink_fn)
+            } else {
+                None
+            };
+            let drat_outcome = axeyum_cnf::check_drat_with_limits_and_progress(
+                formula,
+                &proof,
+                check_budget.deadline,
+                check_budget.max_steps,
+                check_budget.progress_interval,
+                drat_sink,
+            )
+            .map_err(|error| {
+                SolverError::Backend(format!("exported unsat proof failed to check: {error}"))
+            })?;
+            match drat_outcome {
+                axeyum_cnf::DratCheckOutcome::Verified(true) => {
+                    // Elaborate the (RUP) DRAT proof to LRAT for linear re-checking; if
+                    // a step is not RUP-elaboratable (RAT), the elaboration is bounded
+                    // out, or the deadline passes, keep DRAT-only. The LRAT, when
+                    // present, is self-checked here so a stored certificate cannot carry
+                    // a bad LRAT past the exporter.
+                    let mut lrat_sink_fn = |snapshot: &axeyum_cnf::LratElaborateProgress| {
+                        if let Some(sink) = check_budget.progress.as_mut() {
+                            sink(&CheckingProgress::LratElaborate(*snapshot));
+                        }
+                    };
+                    let lrat_sink: Option<&mut dyn FnMut(&axeyum_cnf::LratElaborateProgress)> =
+                        if want_progress {
+                            Some(&mut lrat_sink_fn)
+                        } else {
+                            None
+                        };
+                    let lrat = match axeyum_cnf::elaborate_drat_to_lrat_with_limits_and_progress(
+                        formula,
+                        &proof,
+                        check_budget.deadline,
+                        check_budget.max_steps,
+                        check_budget.progress_interval,
+                        lrat_sink,
+                    ) {
+                        Ok(axeyum_cnf::LratElaborateOutcome::Elaborated(steps))
+                            if matches!(check_lrat(formula, &steps), Ok(true)) =>
+                        {
+                            Some(write_lrat(&steps))
+                        }
+                        _ => None,
+                    };
+                    Ok(UnsatProofOutcome::Proved(UnsatProof {
+                        dimacs: formula.to_dimacs(),
+                        drat: write_drat(&proof),
+                        lrat,
+                    }))
+                }
+                axeyum_cnf::DratCheckOutcome::Verified(false) => Err(SolverError::Backend(
+                    "exported unsat proof did not derive the empty clause".to_owned(),
+                )),
+                // A timeout is not a pass: neither bound firing is ever mapped to
+                // `Proved`. The search already found a refutation, but it is
+                // unverified, so this is reported exactly like a search-stage
+                // timeout — undecided, not wrong, never certified.
+                axeyum_cnf::DratCheckOutcome::ResourceOut
+                | axeyum_cnf::DratCheckOutcome::Interrupted => Ok(UnsatProofOutcome::Inconclusive),
             }
-            Ok(false) => Err(SolverError::Backend(
-                "exported unsat proof did not derive the empty clause".to_owned(),
-            )),
-            Err(error) => Err(SolverError::Backend(format!(
-                "exported unsat proof failed to check: {error}"
-            ))),
-        },
+        }
     }
 }
 
@@ -563,5 +748,115 @@ mod tests {
                 "a tampered LRAT must fail the combined re-check"
             );
         }
+    }
+
+    // --- checking-stage progress / bounding (`CheckBudget`) -----------------
+
+    fn contradictory_bv_assertions() -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let a = arena.eq(x, zero).unwrap();
+        let b = arena.eq(x, one).unwrap();
+        (arena, vec![a, b])
+    }
+
+    #[test]
+    fn check_budget_default_matches_the_unbounded_export() {
+        let (arena, assertions) = contradictory_bv_assertions();
+        let plain = export_qf_bv_unsat_proof(&arena, &assertions).unwrap();
+        let budgeted = export_qf_bv_unsat_proof_within_with_check_budget(
+            &arena,
+            &assertions,
+            None,
+            CheckBudget::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            plain, budgeted,
+            "CheckBudget::default() must reproduce the unbounded export exactly"
+        );
+    }
+
+    #[test]
+    fn an_expired_check_deadline_yields_inconclusive_never_proved() {
+        let (arena, assertions) = contradictory_bv_assertions();
+        let expired = Instant::now()
+            .checked_sub(std::time::Duration::from_secs(1))
+            .expect("now is well past the epoch");
+        let outcome = export_qf_bv_unsat_proof_within_with_check_budget(
+            &arena,
+            &assertions,
+            None,
+            CheckBudget {
+                deadline: Some(expired),
+                ..CheckBudget::default()
+            },
+        )
+        .expect("a checking-stage timeout is an outcome, not an error");
+        assert_eq!(
+            outcome,
+            UnsatProofOutcome::Inconclusive,
+            "an expired checking deadline must never be reported as Proved — \
+             a timeout is not a pass"
+        );
+    }
+
+    #[test]
+    fn a_zero_check_step_budget_yields_inconclusive_never_proved() {
+        let (arena, assertions) = contradictory_bv_assertions();
+        let outcome = export_qf_bv_unsat_proof_within_with_check_budget(
+            &arena,
+            &assertions,
+            None,
+            CheckBudget {
+                max_steps: Some(0),
+                ..CheckBudget::default()
+            },
+        )
+        .expect("a checking-stage resource bound is an outcome, not an error");
+        assert_eq!(
+            outcome,
+            UnsatProofOutcome::Inconclusive,
+            "a checking step budget of 0 must never be reported as Proved"
+        );
+    }
+
+    #[test]
+    fn checking_progress_sink_fires_and_does_not_change_the_outcome() {
+        let (arena, assertions) = contradictory_bv_assertions();
+        let plain = export_qf_bv_unsat_proof(&arena, &assertions).unwrap();
+
+        let mut events: Vec<CheckingProgress> = Vec::new();
+        let mut record = |event: &CheckingProgress| events.push(*event);
+        let outcome = export_qf_bv_unsat_proof_within_with_check_budget(
+            &arena,
+            &assertions,
+            None,
+            CheckBudget {
+                progress_interval: 1,
+                progress: Some(&mut record),
+                ..CheckBudget::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            plain, outcome,
+            "installing a checking-progress sink must not change the outcome"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, CheckingProgress::DratCheck(_))),
+            "the DRAT-check sub-stage must have reported at least one snapshot"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, CheckingProgress::LratElaborate(_))),
+            "the elaboration sub-stage must have reported at least one snapshot \
+             (the DRAT check verified, so elaboration must have run)"
+        );
     }
 }

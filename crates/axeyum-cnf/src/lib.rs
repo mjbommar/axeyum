@@ -73,8 +73,10 @@ pub use compact::{CompactMap, compact};
 #[cfg(unix)]
 pub use drat::CacheDroppingWriter;
 pub use drat::{
-    DratError, DratSink, DratStep, DratTextReader, ProofSinkError, TextProofSink, VecProofSink,
-    check_drat, check_drat_streaming, parse_drat, write_drat,
+    DratCheckOutcome, DratCheckProgress, DratError, DratSink, DratStep, DratTextReader,
+    ProofSinkError, TextProofSink, VecProofSink, check_drat, check_drat_streaming,
+    check_drat_streaming_with_limits_and_progress, check_drat_with_limits_and_progress, parse_drat,
+    write_drat,
 };
 pub use drat_backward::{
     check_drat_backward, check_drat_backward_reader, check_drat_backward_reader_within,
@@ -91,8 +93,9 @@ pub use interpolant::{
     propositional_interpolant_certified,
 };
 pub use lrat::{
-    LratError, LratStep, check_lrat, elaborate_drat_to_lrat, elaborate_drat_to_lrat_backward,
-    parse_lrat, write_lrat,
+    LratElaborateOutcome, LratElaborateProgress, LratError, LratStep, check_lrat,
+    elaborate_drat_to_lrat, elaborate_drat_to_lrat_backward,
+    elaborate_drat_to_lrat_with_limits_and_progress, parse_lrat, write_lrat,
 };
 pub use proof_sat::{
     DEFAULT_PROGRESS_CONFLICT_INTERVAL, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSearchProgress,

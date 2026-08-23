@@ -13,6 +13,14 @@
 //! an elaborator input that would require RAT is rejected.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::time::Duration;
+
+// Monotonic clock: on wasm32 the browser has no `std` clock, so use `web-time`'s
+// drop-in `Instant`, exactly like `crate::proof_sat` / `crate::drat` (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
 
 use crate::drat::{DratStep, literal_from_dimacs, sorted};
 use crate::{CnfFormula, CnfLit};
@@ -523,6 +531,203 @@ pub fn elaborate_drat_to_lrat(
     Ok(out)
 }
 
+// --- Observability and bounding for elaboration -----------------------------
+//
+// Same motivation and design as the checking-side hooks in `crate::drat`
+// (`DratCheckProgress` / `check_drat_with_limits_and_progress`), and the
+// search-side ones in `crate::proof_sat` (`ProofSearchProgress`): elaboration
+// re-derives every addition's RUP hints by the same rescan-to-fixpoint
+// propagation `check_drat` uses (see `elaborate_drat_to_lrat`'s doc), so on a
+// large proof it is at least as expensive as checking and had exactly the same
+// blind spot — no deadline, no step budget, no progress. [`elaborate_drat_to_lrat`]
+// above is UNTOUCHED: the bounded engine below reuses the same `rup_hints` /
+// `find_active_id` free functions and the same per-step logic, so a difference
+// in behaviour between the two would be a diff in this file, not a hidden
+// divergence.
+
+/// How many processed steps elapse between wall-clock deadline reads. Smaller
+/// than `crate::drat`'s analogous (private) check-side interval on purpose:
+/// `rup_hints` rescans the whole active set to a fixpoint per call, so a single
+/// elaboration step is typically far more expensive than a single DRAT check
+/// step, and a coarser cadence would let the deadline overshoot by more wall
+/// time per check.
+const LRAT_ELABORATE_DEADLINE_INTERVAL: usize = 64;
+
+/// A point-in-time, cumulative-since-start snapshot of a bounded
+/// [`elaborate_drat_to_lrat_with_limits_and_progress`] run, handed to an
+/// optional callback so a long-running elaboration is observable. Every field
+/// is a running total, not a delta.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LratElaborateProgress {
+    /// DRAT steps (additions and deletions) processed so far.
+    pub steps_processed: usize,
+    /// Total steps in the input DRAT proof (always known: `drat` is a slice).
+    pub steps_total: usize,
+    /// Clauses in the live (post-deletion) active set right now.
+    pub active_clauses: usize,
+    /// LRAT steps emitted so far (one per DRAT addition; deletions that hit an
+    /// already-absent clause emit nothing, so this can be slightly less than
+    /// `steps_processed`).
+    pub lrat_steps_emitted: usize,
+    /// Wall-clock time since this elaboration began.
+    pub elapsed: Duration,
+}
+
+/// Outcome of a bounded, progress-observed elaboration
+/// ([`elaborate_drat_to_lrat_with_limits_and_progress`]).
+///
+/// [`LratElaborateOutcome::Elaborated`] carries exactly what
+/// [`elaborate_drat_to_lrat`] returns on success. The two bounded variants are
+/// **undecided** results, deliberately distinct: a run that hit its deadline or
+/// step budget has not elaborated the whole proof, and its partial `out` is
+/// discarded rather than returned as if it were complete — an incomplete
+/// elaboration must never be handed to [`check_lrat`] and reported as a
+/// checked certificate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LratElaborateOutcome {
+    /// Every DRAT step elaborated; see [`elaborate_drat_to_lrat`] for what the
+    /// `Vec<LratStep>` means.
+    Elaborated(Vec<LratStep>),
+    /// The step budget (`max_steps`) was exhausted before every step was
+    /// processed. Not a complete elaboration.
+    ResourceOut,
+    /// The wall-clock deadline passed before every step was processed. Not a
+    /// complete elaboration.
+    Interrupted,
+}
+
+/// Reports one [`LratElaborateProgress`] snapshot to `progress`, if installed.
+/// A no-op — one `is_none` check, nothing else — when `progress` is `None`.
+fn report_lrat_elaborate_progress(
+    progress: &mut Option<&mut dyn FnMut(&LratElaborateProgress)>,
+    steps_processed: usize,
+    steps_total: usize,
+    active_clauses: usize,
+    lrat_steps_emitted: usize,
+    elapsed: Duration,
+) {
+    let Some(sink) = progress.as_mut() else {
+        return;
+    };
+    sink(&LratElaborateProgress {
+        steps_processed,
+        steps_total,
+        active_clauses,
+        lrat_steps_emitted,
+        elapsed,
+    });
+}
+
+/// Like [`elaborate_drat_to_lrat`], but bounded by an optional wall-clock
+/// `deadline` and an optional step budget `max_steps`, and optionally observed
+/// by a `progress` sink polled every `progress_interval` processed steps (and
+/// once more at the end, whichever way the run finishes).
+///
+/// This reuses the private `rup_hints` and `find_active_id` exactly as
+/// [`elaborate_drat_to_lrat`] does — the same hint-recovery logic, called the
+/// same way — so installing a deadline, a step budget, or a progress sink
+/// cannot change what hints are computed, only whether/when the run gives up
+/// early (see `tests::bounding_and_progress_do_not_change_the_output`).
+///
+/// # Errors
+///
+/// Returns [`LratError::StepNotVerified`] when an addition reached before a
+/// bound fires is not RUP (RAT elaboration remains out of scope, exactly as in
+/// [`elaborate_drat_to_lrat`]), or the same [`LratError::Parse`] this function's
+/// unbounded counterpart can return for an id overflow.
+pub fn elaborate_drat_to_lrat_with_limits_and_progress(
+    formula: &CnfFormula,
+    drat: &[DratStep],
+    deadline: Option<Instant>,
+    max_steps: Option<usize>,
+    progress_interval: usize,
+    mut progress: Option<&mut dyn FnMut(&LratElaborateProgress)>,
+) -> Result<LratElaborateOutcome, LratError> {
+    let progress_interval = progress_interval.max(1);
+    let start = Instant::now();
+    let steps_total = drat.len();
+    let mut active: BTreeMap<u64, Vec<CnfLit>> = BTreeMap::new();
+    for (index, clause) in formula.clauses().iter().enumerate() {
+        let id = u64::try_from(index + 1).map_err(|_| {
+            LratError::Parse(format!("formula clause index {index} does not fit in u64"))
+        })?;
+        active.insert(id, clause.lits().to_vec());
+    }
+    let mut next_id = u64::try_from(formula.clauses().len() + 1)
+        .map_err(|_| LratError::Parse("formula clause count does not fit in u64".to_owned()))?;
+    let mut out = Vec::new();
+    let mut steps_processed: usize = 0;
+
+    for step in drat {
+        if let Some(limit) = max_steps
+            && steps_processed >= limit
+        {
+            report_lrat_elaborate_progress(
+                &mut progress,
+                steps_processed,
+                steps_total,
+                active.len(),
+                out.len(),
+                start.elapsed(),
+            );
+            return Ok(LratElaborateOutcome::ResourceOut);
+        }
+        if let Some(deadline) = deadline
+            && steps_processed.is_multiple_of(LRAT_ELABORATE_DEADLINE_INTERVAL)
+            && Instant::now() >= deadline
+        {
+            report_lrat_elaborate_progress(
+                &mut progress,
+                steps_processed,
+                steps_total,
+                active.len(),
+                out.len(),
+                start.elapsed(),
+            );
+            return Ok(LratElaborateOutcome::Interrupted);
+        }
+        match step {
+            DratStep::Add(clause) => {
+                let hints =
+                    rup_hints(&active, clause).ok_or(LratError::StepNotVerified { id: next_id })?;
+                out.push(LratStep::Add {
+                    id: next_id,
+                    clause: clause.clone(),
+                    hints,
+                });
+                active.insert(next_id, clause.clone());
+                next_id += 1;
+            }
+            DratStep::Delete(clause) => {
+                if let Some(id) = find_active_id(&active, clause) {
+                    out.push(LratStep::Delete { ids: vec![id] });
+                    active.remove(&id);
+                }
+            }
+        }
+        steps_processed += 1;
+        if progress.is_some() && steps_processed.is_multiple_of(progress_interval) {
+            report_lrat_elaborate_progress(
+                &mut progress,
+                steps_processed,
+                steps_total,
+                active.len(),
+                out.len(),
+                start.elapsed(),
+            );
+        }
+    }
+    report_lrat_elaborate_progress(
+        &mut progress,
+        steps_processed,
+        steps_total,
+        active.len(),
+        out.len(),
+        start.elapsed(),
+    );
+    Ok(LratElaborateOutcome::Elaborated(out))
+}
+
 /// Elaborates the *core* of a DRAT proof into LRAT, using the backward checker
 /// as the engine (ADR-0382).
 ///
@@ -780,5 +985,199 @@ mod tests {
             checked += 1;
         }
         assert!(checked >= 20, "expected many UNSAT cases, got {checked}");
+    }
+
+    // --- elaboration progress / bounding ------------------------------------
+
+    use super::{
+        LratElaborateOutcome, LratElaborateProgress,
+        elaborate_drat_to_lrat_with_limits_and_progress,
+    };
+    use std::time::{Duration, Instant};
+
+    fn unsat_2x2() -> CnfFormula {
+        formula(2, &[&[1, 2], &[1, -2], &[-1, 2], &[-1, -2]])
+    }
+
+    /// A real search proof over `unsat_2x2()`, big enough to exercise a step
+    /// budget meaningfully (at least one `Add` before the empty clause).
+    fn multi_step_unsat_drat() -> (CnfFormula, Vec<crate::DratStep>) {
+        let f = unsat_2x2();
+        let drat = drat_of_unsat(&f);
+        assert!(
+            drat.len() >= 2,
+            "need at least one step before the final empty clause to bound meaningfully"
+        );
+        (f, drat)
+    }
+
+    #[test]
+    fn unbounded_matches_elaborate_drat_to_lrat() {
+        let (f, drat) = multi_step_unsat_drat();
+        let expected = elaborate_drat_to_lrat(&f, &drat).expect("elaboration must not error");
+        let bounded =
+            elaborate_drat_to_lrat_with_limits_and_progress(&f, &drat, None, None, 1, None)
+                .expect("elaboration must not error");
+        assert_eq!(bounded, LratElaborateOutcome::Elaborated(expected));
+    }
+
+    #[test]
+    fn a_step_budget_that_is_never_reached_does_not_change_the_output() {
+        let (f, drat) = multi_step_unsat_drat();
+        let generous = drat.len() + 10;
+        let outcome = elaborate_drat_to_lrat_with_limits_and_progress(
+            &f,
+            &drat,
+            None,
+            Some(generous),
+            1,
+            None,
+        )
+        .expect("elaboration must not error");
+        let expected = elaborate_drat_to_lrat(&f, &drat).expect("elaboration must not error");
+        assert_eq!(outcome, LratElaborateOutcome::Elaborated(expected));
+    }
+
+    #[test]
+    fn a_step_budget_smaller_than_the_proof_yields_resource_out_never_output() {
+        let (f, drat) = multi_step_unsat_drat();
+        let outcome =
+            elaborate_drat_to_lrat_with_limits_and_progress(&f, &drat, None, Some(1), 1, None)
+                .expect("a resource bound is an outcome, not an error");
+        assert_eq!(
+            outcome,
+            LratElaborateOutcome::ResourceOut,
+            "a bounded run that ran out must never be reported as Elaborated(_) — \
+             a timeout is not a pass"
+        );
+    }
+
+    #[test]
+    fn an_already_expired_deadline_yields_interrupted_never_output() {
+        let (f, drat) = multi_step_unsat_drat();
+        let expired = Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("now is well past the epoch");
+        let outcome = elaborate_drat_to_lrat_with_limits_and_progress(
+            &f,
+            &drat,
+            Some(expired),
+            None,
+            1,
+            None,
+        )
+        .expect("an expired deadline is an outcome, not an error");
+        assert_eq!(
+            outcome,
+            LratElaborateOutcome::Interrupted,
+            "an expired deadline must never be reported as Elaborated(_)"
+        );
+    }
+
+    #[test]
+    fn a_generous_deadline_does_not_change_the_output() {
+        let (f, drat) = multi_step_unsat_drat();
+        let generous = Instant::now() + Duration::from_secs(60);
+        let outcome = elaborate_drat_to_lrat_with_limits_and_progress(
+            &f,
+            &drat,
+            Some(generous),
+            None,
+            1,
+            None,
+        )
+        .expect("elaboration must not error");
+        let expected = elaborate_drat_to_lrat(&f, &drat).expect("elaboration must not error");
+        assert_eq!(outcome, LratElaborateOutcome::Elaborated(expected));
+    }
+
+    #[test]
+    fn a_non_rup_addition_is_still_rejected_under_generous_bounds() {
+        let f = formula(1, &[&[1]]);
+        let bogus = vec![crate::DratStep::Add(vec![lit(-1), lit(-1)])]; // not RUP
+        let outcome =
+            elaborate_drat_to_lrat_with_limits_and_progress(&f, &bogus, None, None, 1, None);
+        assert_eq!(outcome, Err(LratError::StepNotVerified { id: 2 }));
+    }
+
+    #[test]
+    fn progress_sink_fires_and_reports_totals_matching_the_output() {
+        let (f, drat) = multi_step_unsat_drat();
+        let mut snapshots: Vec<LratElaborateProgress> = Vec::new();
+        let mut record = |p: &LratElaborateProgress| snapshots.push(*p);
+        let outcome = elaborate_drat_to_lrat_with_limits_and_progress(
+            &f,
+            &drat,
+            None,
+            None,
+            1,
+            Some(&mut record),
+        )
+        .expect("elaboration must not error");
+        let LratElaborateOutcome::Elaborated(lrat) = outcome else {
+            panic!("expected Elaborated, got {outcome:?}");
+        };
+        assert!(
+            snapshots.len() >= drat.len(),
+            "interval 1 must poll at least once per processed step"
+        );
+        for snapshot in &snapshots {
+            assert_eq!(snapshot.steps_total, drat.len());
+        }
+        let last = snapshots.last().unwrap();
+        assert_eq!(last.steps_processed, drat.len());
+        assert_eq!(last.lrat_steps_emitted, lrat.len());
+        for pair in snapshots.windows(2) {
+            assert!(pair[1].steps_processed >= pair[0].steps_processed);
+            assert!(pair[1].lrat_steps_emitted >= pair[0].lrat_steps_emitted);
+            assert!(pair[1].elapsed >= pair[0].elapsed);
+        }
+    }
+
+    #[test]
+    fn progress_sink_installed_or_not_does_not_change_the_output() {
+        let (f, drat) = multi_step_unsat_drat();
+        let without =
+            elaborate_drat_to_lrat_with_limits_and_progress(&f, &drat, None, None, 1, None)
+                .expect("elaboration must not error");
+        let mut ticks = 0usize;
+        let mut count = |_: &LratElaborateProgress| ticks += 1;
+        let with_sink = elaborate_drat_to_lrat_with_limits_and_progress(
+            &f,
+            &drat,
+            None,
+            None,
+            1,
+            Some(&mut count),
+        )
+        .expect("elaboration must not error");
+        assert_eq!(
+            without, with_sink,
+            "installing a progress sink must not change the output"
+        );
+        assert!(ticks > 0, "the sink must actually have fired");
+    }
+
+    #[test]
+    fn a_resource_out_still_reports_a_final_progress_snapshot() {
+        let (f, drat) = multi_step_unsat_drat();
+        let mut snapshots: Vec<LratElaborateProgress> = Vec::new();
+        let mut record = |p: &LratElaborateProgress| snapshots.push(*p);
+        let outcome = elaborate_drat_to_lrat_with_limits_and_progress(
+            &f,
+            &drat,
+            None,
+            Some(1),
+            1_000_000,
+            Some(&mut record),
+        )
+        .expect("a resource bound is an outcome, not an error");
+        assert_eq!(outcome, LratElaborateOutcome::ResourceOut);
+        assert_eq!(
+            snapshots.len(),
+            1,
+            "the ResourceOut path must still report a final snapshot"
+        );
+        assert_eq!(snapshots[0].steps_processed, 1);
     }
 }

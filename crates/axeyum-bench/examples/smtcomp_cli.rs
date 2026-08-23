@@ -88,14 +88,42 @@
 //! [`axeyum_cnf::solve_with_drat_proof_with_limits_and_progress`]'s
 //! no-behaviour-change guarantee, which this flag relies on rather than
 //! re-asserts.
+//!
+//! ## Checking-stage progress (same `--progress` flag)
+//!
+//! The lines above cover the SEARCH. The stage that actually got stuck in the
+//! motivating incident was the one AFTER it: `axeyum_cnf::check_drat`
+//! re-deriving the RUP/RAT refutation, then (if that verifies)
+//! `axeyum_cnf::elaborate_drat_to_lrat` recovering explicit hints for the
+//! LRAT certificate — a re-scan measured at ~6 h on the same query the search
+//! decided in 24.2 s, with zero output the whole time. `--progress` now
+//! installs a sink there too (`axeyum_solver::CheckProgress`), printing, every
+//! `AXEYUM_CHECK_PROGRESS_INTERVAL` steps (default 50,000) per sub-stage:
+//!
+//! ```text
+//! ; checking stage=drat_check steps=250000 total=827048 active_clauses=193422 elapsed_ms=41230 steps_per_sec=6063.5
+//! ; checking stage=lrat_elaborate steps=100000 total=827048 active_clauses=193422 lrat_steps=100000 elapsed_ms=88510 steps_per_sec=1129.7
+//! ```
+//!
+//! A distinct `; checking` prefix (never `; progress`) so the two families are
+//! `grep`-separable without parsing fields, and — like every line in this
+//! file — it can never match `^(sat|unsat)$` / `^unknown$`. `stage=` names
+//! which of the two sub-stages produced the line, which is the direct answer
+//! to "is checking or elaboration the one eating the time": compare the two
+//! `steps_per_sec` figures. `AXEYUM_CHECK_STEP_LIMIT`, if set, additionally
+//! bounds each sub-stage by step count; unset, checking is bounded only by
+//! whatever wall-clock deadline `--timeout-ms` implies (it inherits the
+//! search's remaining budget). A checking stage that runs out is reported as
+//! the honest uncertified `; evidence certified=0` line, never a certified
+//! pass — a timeout is not a pass.
 
 use std::process::ExitCode;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use axeyum_solver::{
-    CheckResult, Evidence, EvidenceCheck, ProofProgress, SolverConfig, produce_evidence_smtlib,
-    solve_smtlib,
+    CheckProgress, CheckResult, CheckingProgress, Evidence, EvidenceCheck, ProofProgress,
+    SolverConfig, produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -162,6 +190,95 @@ fn install_progress_sink(
         config = config.with_proof_progress(ProofProgress::new(interval, progress_tx));
     }
     (config, progress_rx)
+}
+
+/// Default step cadence between checking-stage snapshots (see
+/// [`checking_report_line`]), when `--progress` is on and
+/// `AXEYUM_CHECK_PROGRESS_INTERVAL` does not override it. Both checking
+/// sub-stages (`axeyum_cnf::check_drat` and `axeyum_cnf::elaborate_drat_to_lrat`)
+/// use the same cadence — see [`axeyum_solver::CheckProgress`].
+const DEFAULT_CHECK_PROGRESS_INTERVAL: usize = 50_000;
+
+/// Formats one `axeyum_solver::CheckingProgress` snapshot as a `; checking …`
+/// line — the checking-stage counterpart of [`progress_report_line`], and the
+/// direct answer to "is `check_drat` or `elaborate_drat_to_lrat` the one
+/// eating the time": each line names its own `stage`, so the two are never
+/// conflated in the output the way they were indistinguishable before this
+/// existed (search finishes, then silence, then — unlabelled — the checking
+/// stage). A distinct leading token (`; checking` vs `; progress`) rather than
+/// reusing `; progress` with a `stage=` field, so the two families are
+/// trivially separable with `grep '^; checking '` / `grep '^; progress '`
+/// without parsing fields first. Same convention otherwise: `;`-prefixed, so
+/// this can never match `^(sat|unsat)$` / `^unknown$`.
+#[allow(clippy::cast_precision_loss)]
+fn checking_report_line(event: &CheckingProgress) -> String {
+    let (stage, steps, total, extra, elapsed) = match event {
+        CheckingProgress::DratCheck(snapshot) => (
+            "drat_check",
+            snapshot.steps_checked,
+            snapshot.steps_total,
+            format!("active_clauses={}", snapshot.active_clauses),
+            snapshot.elapsed,
+        ),
+        CheckingProgress::LratElaborate(snapshot) => (
+            "lrat_elaborate",
+            snapshot.steps_processed,
+            Some(snapshot.steps_total),
+            format!(
+                "active_clauses={} lrat_steps={}",
+                snapshot.active_clauses, snapshot.lrat_steps_emitted
+            ),
+            snapshot.elapsed,
+        ),
+    };
+    let elapsed_secs = elapsed.as_secs_f64();
+    let steps_per_sec = if elapsed_secs > 0.0 {
+        steps as f64 / elapsed_secs
+    } else {
+        0.0
+    };
+    let total = total.map_or_else(|| "?".to_owned(), |t| t.to_string());
+    format!(
+        "; checking stage={stage} steps={steps} total={total} {extra} elapsed_ms={} \
+         steps_per_sec={steps_per_sec:.1}",
+        elapsed.as_millis(),
+    )
+}
+
+/// Installs the checking-stage progress/bound sink (see
+/// [`checking_report_line`] and the module header's Progress mode section) on
+/// `config` when `progress_mode` is set — the same flag
+/// [`install_progress_sink`] reads, so `--progress` observes BOTH stages: the
+/// proof-producing search (already covered) and, now, the DRAT check +
+/// LRAT elaboration that run after it on `unsat` (the stage the motivating
+/// incident actually got stuck in — the search returned in 24.2 s; checking
+/// ran for ~6 h with zero output). Same "always create the channel, only wire
+/// it up when the flag is on" shape as [`install_progress_sink`], for the same
+/// reason: both branches return the same types, and `check_progress_rx` is a
+/// silent no-op when `progress_mode` is `false`.
+///
+/// `AXEYUM_CHECK_STEP_LIMIT`, if set, bounds each checking sub-stage by step
+/// count in addition to whatever wall-clock deadline `--timeout-ms` implies
+/// (checking inherits the search's deadline — see
+/// `axeyum_solver::proof::CheckBudget`). Unset (the default) means checking is
+/// bounded only by that wall clock, exactly like the search's own
+/// conflict budget is unrelated to its deadline.
+fn install_check_progress_sink(
+    mut config: SolverConfig,
+    progress_mode: bool,
+) -> (SolverConfig, mpsc::Receiver<CheckingProgress>) {
+    let (check_tx, check_rx) = mpsc::channel();
+    if progress_mode {
+        let interval = std::env::var("AXEYUM_CHECK_PROGRESS_INTERVAL")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_CHECK_PROGRESS_INTERVAL);
+        let max_steps = std::env::var("AXEYUM_CHECK_STEP_LIMIT")
+            .ok()
+            .and_then(|v| v.parse().ok());
+        config = config.with_check_progress(CheckProgress::new(interval, max_steps, check_tx));
+    }
+    (config, check_rx)
 }
 
 /// Extra wall clock the watchdog allows past the configured timeout, so the
@@ -372,6 +489,7 @@ fn main() -> ExitCode {
     }
 
     let (config, progress_rx) = install_progress_sink(config, progress_mode);
+    let (config, check_progress_rx) = install_check_progress_sink(config, progress_mode);
 
     // The configured timeout is a SOFT stop: the deadline is polled inside the
     // solve, but NOT during SMT-LIB ingest (parsing `stp/testcase15.stp.smt2`,
@@ -442,6 +560,13 @@ fn main() -> ExitCode {
         for snapshot in progress_rx.try_iter() {
             println!("{}", progress_report_line(&snapshot));
         }
+        // Checking-stage lines (see `install_check_progress_sink`) come right
+        // after the search's own progress lines and before the evidence/verdict
+        // lines, for the same reason: the stage they describe has already run
+        // by the time `verdict`/`evidence` exist.
+        for event in check_progress_rx.try_iter() {
+            println!("{}", checking_report_line(&event));
+        }
         if let Some(line) = evidence {
             println!("{line}");
         }
@@ -472,6 +597,9 @@ fn main() -> ExitCode {
     // before the timeout — an honest partial picture, not nothing.
     for snapshot in progress_rx.try_iter() {
         println!("{}", progress_report_line(&snapshot));
+    }
+    for event in check_progress_rx.try_iter() {
+        println!("{}", checking_report_line(&event));
     }
     if let Some(line) = evidence {
         println!("{line}");

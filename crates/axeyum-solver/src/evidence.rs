@@ -99,8 +99,8 @@ use crate::nra_product_cert::RealProductRefutationCertificate;
 use crate::nra_real_root::{self, SosCertificate};
 use crate::nra_zero_product_cert::RealZeroProductRefutationCertificate;
 use crate::proof::{
-    UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof_with_progress,
-    export_qf_bv_unsat_proof_within,
+    CheckBudget, CheckingProgress, UnsatProof, UnsatProofOutcome,
+    export_qf_bv_unsat_proof_with_progress, export_qf_bv_unsat_proof_within_with_check_budget,
 };
 use crate::quant_affine_growth_cert::IntAffineGrowthRefutationCertificate;
 use crate::quant_bv_alternation_cert::BvAlternationCounterexampleCertificate;
@@ -2068,6 +2068,7 @@ fn check_diophantine_evidence(
 ///
 /// Returns [`SolverError`] from the backend or proof export, including a
 /// soundness alarm if the backend and proof core disagree.
+#[allow(clippy::too_many_lines)] // route dispatch + certificate selection, not one thing growing
 pub fn produce_qf_bv_evidence(
     arena: &TermArena,
     assertions: &[TermId],
@@ -2080,7 +2081,10 @@ pub fn produce_qf_bv_evidence(
     let deadline = config
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
-    let progress = config.proof_progress.as_ref();
+    let (progress, check_progress) = (
+        config.proof_progress.as_ref(),
+        config.check_progress.as_ref(),
+    );
     let mut backend = SatBvBackend::new();
     let provenance = Provenance::for_query(config, backend.capabilities().name, assertions.len());
     if let Some(cert) = crate::set_cardinality::set_cardinality_refutation(arena, assertions) {
@@ -2202,10 +2206,16 @@ pub fn produce_qf_bv_evidence(
                                 ]),
                             )
                         } else {
-                            drat_qf_bv_evidence(arena, assertions, deadline, progress)?
+                            drat_qf_bv_evidence(
+                                arena,
+                                assertions,
+                                deadline,
+                                progress,
+                                check_progress,
+                            )?
                         }
                     } else {
-                        drat_qf_bv_evidence(arena, assertions, deadline, progress)?
+                        drat_qf_bv_evidence(arena, assertions, deadline, progress, check_progress)?
                     }
                 }
             }
@@ -2238,6 +2248,16 @@ pub fn produce_qf_bv_evidence(
 /// cannot change which of the three outcomes below is reached, only how often
 /// a snapshot is reported while getting there.
 ///
+/// `check_progress`, when set, bounds and observes the CHECKING stage that
+/// runs after the search returns `unsat` ([`crate::backend::CheckProgress`] /
+/// [`CheckingProgress`] / [`CheckBudget`]) — the stage that had no bound or
+/// observability at all before this parameter existed. It shares `deadline`
+/// with the search above (checking gets whatever wall-clock budget is left,
+/// exactly like the search does relative to `config.timeout`), so a checking
+/// stage that runs out is reported as [`UnsatProofOutcome::Inconclusive`] —
+/// the honest bare `Evidence::Unsat(None)` below, same as a search timeout —
+/// never as a certified `Proved`.
+///
 /// # Errors
 ///
 /// Returns [`SolverError`] from the proof export, including a soundness alarm if
@@ -2247,6 +2267,7 @@ fn drat_qf_bv_evidence(
     assertions: &[TermId],
     deadline: Option<Instant>,
     progress: Option<&crate::backend::ProofProgress>,
+    check_progress: Option<&crate::backend::CheckProgress>,
 ) -> Result<(Evidence, Vec<TrustStep>), SolverError> {
     // Already out of budget: do not even pay the bit-blast + Tseitin encoding the
     // exporter would redo before consulting the deadline.
@@ -2260,8 +2281,34 @@ fn drat_qf_bv_evidence(
             ]),
         ));
     }
+    // The checking-stage sink: forwards to `check_progress.sink` when set,
+    // else a no-op. Built once and moved into whichever branch below
+    // actually runs, exactly as `send` is for the search-side sink.
+    let want_check_progress = check_progress.is_some();
+    let check_interval = check_progress.map_or(1, |c| c.interval);
+    let check_max_steps = check_progress.and_then(|c| c.max_steps);
+    let mut send_check = |event: &CheckingProgress| {
+        if let Some(check_progress) = check_progress {
+            let _ = check_progress.sink.send(*event);
+        }
+    };
+    let check_budget = CheckBudget {
+        deadline,
+        max_steps: check_max_steps,
+        progress_interval: check_interval,
+        progress: if want_check_progress {
+            Some(&mut send_check as &mut dyn FnMut(&CheckingProgress))
+        } else {
+            None
+        },
+    };
     let outcome = match progress {
-        None => export_qf_bv_unsat_proof_within(arena, assertions, deadline)?,
+        None => export_qf_bv_unsat_proof_within_with_check_budget(
+            arena,
+            assertions,
+            deadline,
+            check_budget,
+        )?,
         Some(progress) => {
             // A closed receiver must never fail, let alone abort, the search: a
             // progress report reaching nobody is not a search error.
@@ -2275,6 +2322,7 @@ fn drat_qf_bv_evidence(
                 axeyum_cnf::DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
                 progress.interval,
                 &mut send,
+                check_budget,
             )?
         }
     };
@@ -4881,9 +4929,10 @@ mod tests {
         let (tx, rx) = std::sync::mpsc::channel();
         let progress = crate::backend::ProofProgress::new(1, tx);
 
-        let (with_progress, _) = drat_qf_bv_evidence(&arena, &assertions, None, Some(&progress))
-            .expect("evidence with a progress sink installed");
-        let (without_progress, _) = drat_qf_bv_evidence(&arena, &assertions, None, None)
+        let (with_progress, _) =
+            drat_qf_bv_evidence(&arena, &assertions, None, Some(&progress), None)
+                .expect("evidence with a progress sink installed");
+        let (without_progress, _) = drat_qf_bv_evidence(&arena, &assertions, None, None, None)
             .expect("evidence with no progress sink");
 
         match (&with_progress, &without_progress) {
@@ -4900,6 +4949,79 @@ mod tests {
         assert!(
             !snapshots.is_empty(),
             "an installed sink must fire at least once (the terminal report)"
+        );
+    }
+
+    /// The checking-stage counterpart of the search-side test above: a
+    /// `check_progress` sink observes `axeyum_cnf::check_drat` and
+    /// `axeyum_cnf::elaborate_drat_to_lrat` (the stage that ran for ~6 h
+    /// unbounded and unobserved on `neg-fp16-add-monotone-rne.smt2`) without
+    /// changing the exported certificate, and installing an already-expired
+    /// checking deadline yields the honest bare `Evidence::Unsat(None)` — a
+    /// timeout is not a pass.
+    #[test]
+    fn check_progress_sink_fires_and_does_not_change_the_certificate() {
+        let (arena, assertions) = unsat_bv_query();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let check_progress = crate::backend::CheckProgress::new(1, None, tx);
+
+        let (with_progress, _) =
+            drat_qf_bv_evidence(&arena, &assertions, None, None, Some(&check_progress))
+                .expect("evidence with a checking-progress sink installed");
+        let (without_progress, _) = drat_qf_bv_evidence(&arena, &assertions, None, None, None)
+            .expect("evidence with no checking-progress sink");
+
+        match (&with_progress, &without_progress) {
+            (Evidence::Unsat(Some(a)), Evidence::Unsat(Some(b))) => {
+                assert_eq!(
+                    a, b,
+                    "installing a checking-progress sink must not change the exported certificate"
+                );
+            }
+            other => panic!("expected a DRAT-certified unsat both ways, got {other:?}"),
+        }
+
+        let snapshots: Vec<crate::proof::CheckingProgress> = rx.try_iter().collect();
+        assert!(
+            !snapshots.is_empty(),
+            "an installed checking-progress sink must fire at least once (the terminal report)"
+        );
+        assert!(
+            snapshots
+                .iter()
+                .any(|event| matches!(event, crate::proof::CheckingProgress::DratCheck(_))),
+            "the DRAT-check sub-stage must have reported at least one snapshot"
+        );
+    }
+
+    /// A checking-stage deadline that has already expired before checking even
+    /// starts must yield the honest, uncertified `Evidence::Unsat(None)` — NOT
+    /// an error, and NOT the certified `Evidence::Unsat(Some(_))` a completed
+    /// check would produce. This is the checking-side half of ADR-0384 (A4)'s
+    /// "a timeout is not a pass" guarantee; `expired_deadline_yields_a_decided_uncertified_unsat`
+    /// covers the search-side half.
+    #[test]
+    fn an_expired_check_deadline_still_decides_but_does_not_certify() {
+        let (arena, assertions) = unsat_bv_query();
+        // Ample time for the search (so it actually reaches `unsat`), but the
+        // checking stage inherits this SAME deadline, so it starts already
+        // spent by the time we tamper with it below via a synthetic path: call
+        // the lower-level exporter directly with an already-expired deadline
+        // dedicated to checking, bypassing the search deadline entirely.
+        let outcome = crate::proof::export_qf_bv_unsat_proof_within_with_check_budget(
+            &arena,
+            &assertions,
+            None,
+            crate::proof::CheckBudget {
+                deadline: Instant::now().checked_sub(Duration::from_secs(1)),
+                ..crate::proof::CheckBudget::default()
+            },
+        )
+        .expect("a checking-stage timeout is an outcome, not an error");
+        assert_eq!(
+            outcome,
+            UnsatProofOutcome::Inconclusive,
+            "an expired checking deadline must never be reported as Proved"
         );
     }
 
@@ -4967,7 +5089,7 @@ mod tests {
             .expect("instant");
 
         let started = Instant::now();
-        let (evidence, steps) = drat_qf_bv_evidence(&arena, &assertions, Some(expired), None)
+        let (evidence, steps) = drat_qf_bv_evidence(&arena, &assertions, Some(expired), None, None)
             .expect("no error on timeout");
         let elapsed = started.elapsed();
 
@@ -5007,7 +5129,7 @@ mod tests {
         let deadline = Instant::now().checked_add(Duration::from_secs(60));
 
         let (evidence, steps) =
-            drat_qf_bv_evidence(&arena, &assertions, deadline, None).expect("evidence");
+            drat_qf_bv_evidence(&arena, &assertions, deadline, None, None).expect("evidence");
 
         assert!(
             evidence.is_certified(),

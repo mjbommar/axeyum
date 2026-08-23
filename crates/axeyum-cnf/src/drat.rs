@@ -25,6 +25,14 @@
 
 use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
+use std::time::Duration;
+
+// Monotonic clock: on wasm32 the browser has no `std` clock, so use `web-time`'s
+// drop-in `Instant`, exactly like `crate::proof_sat` (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
 
 use crate::{CnfFormula, CnfLit, CnfVar};
 
@@ -153,6 +161,215 @@ impl ForwardChecker {
         }
         Ok(())
     }
+}
+
+// --- Observability and bounding for checking (the search side of this has had
+// this since `crate::proof_sat`'s progress hooks landed; checking had nothing,
+// and a checking run can run for hours with zero output — see the module doc
+// of `ProofSearchProgress` for the incident that motivates this). Same design:
+// an optional, borrowed `&mut dyn FnMut` sink that is a no-op (one `is_none`
+// check, nothing more) when absent, plus an explicit `deadline` / `max_steps`
+// so a caller that HAS a wall-clock or step budget can hand it to the checker
+// instead of the checker running unboundedly regardless of what the caller
+// configured.
+//
+// [`check_drat`] / [`check_drat_streaming`] above are UNTOUCHED by this: they
+// call [`ForwardChecker::new`] / [`ForwardChecker::apply`] directly, exactly as
+// before, so their behaviour (including "never declines to finish, however
+// long that takes") is unchanged by construction, not merely by test. The new
+// entry points below reuse the same two methods and therefore run the
+// identical trusted verification logic — no separate, divergent
+// implementation exists for the bounded path.
+
+/// How many checked steps elapse between wall-clock deadline reads, mirroring
+/// [`crate::DEFAULT_PROGRESS_CONFLICT_INTERVAL`]'s rationale in
+/// `proof_sat`: a fixed step cadence (not a per-step clock read) keeps the
+/// bound deterministic w.r.t. the proof and the `Instant::now()` calls cheap
+/// relative to the RUP/RAT search `ForwardChecker::apply` already does per step.
+const DRAT_CHECK_DEADLINE_INTERVAL: usize = 256;
+
+/// A point-in-time, cumulative-since-start snapshot of a [`check_drat`] /
+/// [`check_drat_streaming`]-equivalent bounded check, handed to an optional
+/// callback so a long-running check is observable — the checking-side
+/// counterpart of [`crate::ProofSearchProgress`]. Every field is a running
+/// total, not a delta, so a watcher can compute a rate
+/// (`steps_checked as f64 / elapsed.as_secs_f64()`) from a single snapshot.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DratCheckProgress {
+    /// DRAT steps (additions and deletions) verified so far.
+    pub steps_checked: usize,
+    /// Total steps in the proof, when known up front (always `Some` from the
+    /// slice-based entry points; `None` from a streaming caller that does not
+    /// know its own length, e.g. an unsized reader).
+    pub steps_total: Option<usize>,
+    /// Clauses in the live (post-deletion) active set right now.
+    pub active_clauses: usize,
+    /// Wall-clock time since this check began.
+    pub elapsed: Duration,
+}
+
+/// Outcome of a bounded, progress-observed DRAT check
+/// ([`check_drat_with_limits_and_progress`] /
+/// [`check_drat_streaming_with_limits_and_progress`]).
+///
+/// [`DratCheckOutcome::Verified`] carries exactly the `bool` [`check_drat`]
+/// returns (`true` = the empty clause was derived, UNSAT confirmed; `false` =
+/// every step verified but no empty clause was ever added). The two bounded
+/// variants are **undecided** results, deliberately distinct from both: a run
+/// that hit its deadline or step budget has not verified the whole proof, and
+/// reporting it as `Verified(_)` — of either polarity — would be a timeout
+/// reported as a pass, which this design specifically exists to prevent (see
+/// "A timeout is not a pass" on the calling convention above).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DratCheckOutcome {
+    /// Every step verified; see the field doc above for what `bool` means.
+    Verified(bool),
+    /// The step budget (`max_steps`) was exhausted before every step was
+    /// checked. Not a verdict on the proof.
+    ResourceOut,
+    /// The wall-clock deadline passed before every step was checked. Not a
+    /// verdict on the proof.
+    Interrupted,
+}
+
+/// Reports one [`DratCheckProgress`] snapshot to `progress`, if installed.
+/// A no-op — one `is_none` check, nothing else — when `progress` is `None`,
+/// so a caller that never installs a sink pays nothing beyond that check at
+/// each call site.
+fn report_drat_check_progress(
+    progress: &mut Option<&mut dyn FnMut(&DratCheckProgress)>,
+    steps_checked: usize,
+    steps_total: Option<usize>,
+    active_clauses: usize,
+    elapsed: Duration,
+) {
+    let Some(sink) = progress.as_mut() else {
+        return;
+    };
+    sink(&DratCheckProgress {
+        steps_checked,
+        steps_total,
+        active_clauses,
+        elapsed,
+    });
+}
+
+/// Like [`check_drat_streaming`], but bounded by an optional wall-clock
+/// `deadline` and an optional step budget `max_steps`, and optionally
+/// observed by a `progress` sink polled every `progress_interval` checked
+/// steps (and once more at the end, whichever way the check finishes).
+///
+/// `steps_total`, when known (the slice-based [`check_drat_with_limits_and_progress`]
+/// always knows it; a streaming caller over an unsized source may not), is
+/// carried in every [`DratCheckProgress`] snapshot so a watcher can report a
+/// completion fraction, not just a rate.
+///
+/// This shares the exact verification logic [`check_drat_streaming`] uses
+/// (the private `ForwardChecker::new` / `ForwardChecker::apply`, called
+/// identically): installing a deadline, a step budget, or a progress sink cannot change what
+/// is accepted, only whether/when the check gives up early — the same
+/// no-behaviour-change guarantee `crate::proof_sat`'s progress sink carries for
+/// the search side (see `tests::bounding_and_progress_do_not_change_the_verdict`).
+///
+/// Both bounds are checked *before* the next step is verified, not after: on
+/// the exact step where a bound would fire, that step's own RUP/RAT
+/// verification never runs, so a proof that happens to become invalid on
+/// precisely that step is reported as [`DratCheckOutcome::ResourceOut`] /
+/// [`DratCheckOutcome::Interrupted`] rather than [`DratError::StepNotVerified`].
+/// This is still sound: both are *undecided* results distinct from
+/// `Verified(_)`, never an accept, so a proof this can happen to is never
+/// reported as checked.
+///
+/// # Errors
+///
+/// Returns [`DratError::StepNotVerified`] for an unjustified clause addition
+/// that is reached before a bound fires, or whatever [`DratError`] the step
+/// producer yields.
+pub fn check_drat_streaming_with_limits_and_progress(
+    formula: &CnfFormula,
+    steps: impl Iterator<Item = Result<DratStep, DratError>>,
+    deadline: Option<Instant>,
+    max_steps: Option<usize>,
+    steps_total: Option<usize>,
+    progress_interval: usize,
+    mut progress: Option<&mut dyn FnMut(&DratCheckProgress)>,
+) -> Result<DratCheckOutcome, DratError> {
+    let progress_interval = progress_interval.max(1);
+    let start = Instant::now();
+    let mut checker = ForwardChecker::new(formula);
+    let mut steps_checked: usize = 0;
+    for (index, step) in steps.enumerate() {
+        if let Some(limit) = max_steps
+            && steps_checked >= limit
+        {
+            report_drat_check_progress(
+                &mut progress,
+                steps_checked,
+                steps_total,
+                checker.active.len(),
+                start.elapsed(),
+            );
+            return Ok(DratCheckOutcome::ResourceOut);
+        }
+        if let Some(deadline) = deadline
+            && steps_checked.is_multiple_of(DRAT_CHECK_DEADLINE_INTERVAL)
+            && Instant::now() >= deadline
+        {
+            report_drat_check_progress(
+                &mut progress,
+                steps_checked,
+                steps_total,
+                checker.active.len(),
+                start.elapsed(),
+            );
+            return Ok(DratCheckOutcome::Interrupted);
+        }
+        checker.apply(index, step?)?;
+        steps_checked += 1;
+        if progress.is_some() && steps_checked.is_multiple_of(progress_interval) {
+            report_drat_check_progress(
+                &mut progress,
+                steps_checked,
+                steps_total,
+                checker.active.len(),
+                start.elapsed(),
+            );
+        }
+    }
+    report_drat_check_progress(
+        &mut progress,
+        steps_checked,
+        steps_total,
+        checker.active.len(),
+        start.elapsed(),
+    );
+    Ok(DratCheckOutcome::Verified(checker.derived_empty))
+}
+
+/// Like [`check_drat`], but bounded and progress-observed exactly as
+/// [`check_drat_streaming_with_limits_and_progress`] describes. `steps_total`
+/// is always `Some(proof.len())` since the whole proof is already resident.
+///
+/// # Errors
+///
+/// Returns the same errors as [`check_drat_streaming_with_limits_and_progress`].
+pub fn check_drat_with_limits_and_progress(
+    formula: &CnfFormula,
+    proof: &[DratStep],
+    deadline: Option<Instant>,
+    max_steps: Option<usize>,
+    progress_interval: usize,
+    progress: Option<&mut dyn FnMut(&DratCheckProgress)>,
+) -> Result<DratCheckOutcome, DratError> {
+    check_drat_streaming_with_limits_and_progress(
+        formula,
+        proof.iter().cloned().map(Ok),
+        deadline,
+        max_steps,
+        Some(proof.len()),
+        progress_interval,
+        progress,
+    )
 }
 
 /// Serializes a DRAT proof to the standard textual format: each step is a
@@ -1126,5 +1343,196 @@ mod tests {
             ),
             Ok(false)
         );
+    }
+
+    // --- checking progress / bounding ---------------------------------------
+
+    use super::{DratCheckOutcome, DratCheckProgress, check_drat_with_limits_and_progress};
+    use std::time::{Duration, Instant};
+
+    /// A real, multi-step search proof (search proof, not hand-authored) big
+    /// enough to have at least one non-empty `Add` step before the final empty
+    /// clause — the same one `streaming_checker_agrees_with_check_drat_on_valid_proofs`
+    /// uses for its "real search proof" case.
+    fn multi_step_unsat_proof() -> (CnfFormula, Vec<DratStep>) {
+        let f = unsat_2x2();
+        let proof = match crate::solve_with_drat_proof(&f) {
+            crate::ProofSolveOutcome::Unsat(proof) => proof,
+            other => panic!("expected unsat, got {other:?}"),
+        };
+        assert!(
+            proof.len() >= 2,
+            "need at least one step before the final empty clause to bound meaningfully"
+        );
+        (f, proof)
+    }
+
+    #[test]
+    fn unbounded_matches_check_drat_on_every_existing_case() {
+        // Same table as `streaming_checker_agrees_with_check_drat_on_valid_proofs`,
+        // re-run through the new bounded/progress-capable entry with no bound and
+        // no progress sink: the outcome must be exactly `Verified(check_drat(..))`.
+        let cases: Vec<(CnfFormula, Vec<DratStep>)> = vec![
+            (formula(1, &[&[1], &[-1]]), vec![DratStep::Add(vec![])]),
+            (
+                unsat_2x2(),
+                vec![DratStep::Add(vec![lit(1)]), DratStep::Add(vec![])],
+            ),
+            (formula(2, &[&[1, 2]]), vec![DratStep::Add(vec![lit(1)])]),
+        ];
+        for (index, (f, proof)) in cases.iter().enumerate() {
+            let plain = check_drat(f, proof);
+            let bounded = check_drat_with_limits_and_progress(f, proof, None, None, 1, None);
+            match (plain, bounded) {
+                (Ok(expected), Ok(DratCheckOutcome::Verified(actual))) => {
+                    assert_eq!(expected, actual, "case {index}: verdict must match exactly");
+                }
+                other => panic!("case {index}: unexpected outcome pair {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn a_step_budget_that_is_never_reached_does_not_change_the_verdict() {
+        let (f, proof) = multi_step_unsat_proof();
+        let generous = proof.len() + 10;
+        let outcome =
+            check_drat_with_limits_and_progress(&f, &proof, None, Some(generous), 1, None)
+                .expect("checking must not error");
+        assert_eq!(outcome, DratCheckOutcome::Verified(true));
+    }
+
+    #[test]
+    fn a_step_budget_smaller_than_the_proof_yields_resource_out_never_a_verdict() {
+        let (f, proof) = multi_step_unsat_proof();
+        // Stop after the first step — strictly before the proof's own final
+        // empty-clause addition, so a real refutation exists but is not fully
+        // examined.
+        let outcome = check_drat_with_limits_and_progress(&f, &proof, None, Some(1), 1, None)
+            .expect("a resource bound is an outcome, not an error");
+        assert_eq!(
+            outcome,
+            DratCheckOutcome::ResourceOut,
+            "a bounded run that ran out must never be reported as Verified(_) — \
+             a timeout is not a pass"
+        );
+    }
+
+    #[test]
+    fn an_already_expired_deadline_yields_interrupted_never_a_verdict() {
+        let (f, proof) = multi_step_unsat_proof();
+        // A deadline in the past: the very first deadline check (before step 0)
+        // must fire.
+        let expired = Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("now is well past the epoch");
+        let outcome = check_drat_with_limits_and_progress(&f, &proof, Some(expired), None, 1, None)
+            .expect("an expired deadline is an outcome, not an error");
+        assert_eq!(
+            outcome,
+            DratCheckOutcome::Interrupted,
+            "an expired deadline must never be reported as Verified(_)"
+        );
+    }
+
+    #[test]
+    fn a_generous_deadline_does_not_change_the_verdict() {
+        let (f, proof) = multi_step_unsat_proof();
+        let generous = Instant::now() + Duration::from_secs(60);
+        let outcome =
+            check_drat_with_limits_and_progress(&f, &proof, Some(generous), None, 1, None)
+                .expect("checking must not error");
+        assert_eq!(outcome, DratCheckOutcome::Verified(true));
+    }
+
+    #[test]
+    fn an_invalid_proof_is_still_rejected_under_generous_bounds() {
+        // Bounding/progress must not paper over a proof that does not verify:
+        // a clause that is neither RUP nor RAT is still `StepNotVerified`.
+        let f = formula(1, &[&[1]]);
+        let bogus = vec![DratStep::Add(vec![lit(-1), lit(-1)])]; // not RUP, not RAT
+        let outcome = check_drat_with_limits_and_progress(&f, &bogus, None, None, 1, None);
+        assert_eq!(outcome, Err(DratError::StepNotVerified { step: 0 }));
+    }
+
+    #[test]
+    fn progress_sink_fires_and_reports_totals_matching_the_proof() {
+        let (f, proof) = multi_step_unsat_proof();
+        let mut snapshots: Vec<DratCheckProgress> = Vec::new();
+        let mut record = |p: &DratCheckProgress| snapshots.push(*p);
+        let outcome = check_drat_with_limits_and_progress(
+            &f,
+            &proof,
+            None,
+            None,
+            1, // poll every step
+            Some(&mut record),
+        )
+        .expect("checking must not error");
+        assert_eq!(outcome, DratCheckOutcome::Verified(true));
+        assert!(
+            snapshots.len() >= proof.len(),
+            "interval 1 must poll at least once per checked step, got {} for {} steps",
+            snapshots.len(),
+            proof.len()
+        );
+        for snapshot in &snapshots {
+            assert_eq!(snapshot.steps_total, Some(proof.len()));
+        }
+        assert_eq!(snapshots.last().unwrap().steps_checked, proof.len());
+        // Monotone: cumulative totals never go backward.
+        for pair in snapshots.windows(2) {
+            assert!(pair[1].steps_checked >= pair[0].steps_checked);
+            assert!(pair[1].elapsed >= pair[0].elapsed);
+        }
+    }
+
+    #[test]
+    fn progress_sink_installed_or_not_does_not_change_the_verdict() {
+        // The no-behaviour-change guarantee `crate::proof_sat`'s search-side
+        // progress sink carries, restated for the checking side: whether a sink
+        // is installed, and how often it is polled, must not change what is
+        // accepted.
+        let (f, proof) = multi_step_unsat_proof();
+        let without = check_drat_with_limits_and_progress(&f, &proof, None, None, 1, None)
+            .expect("checking must not error");
+        let mut ticks = 0usize;
+        let mut count = |_: &DratCheckProgress| ticks += 1;
+        let with_sink =
+            check_drat_with_limits_and_progress(&f, &proof, None, None, 1, Some(&mut count))
+                .expect("checking must not error");
+        assert_eq!(
+            without, with_sink,
+            "installing a progress sink must not change the outcome"
+        );
+        assert!(ticks > 0, "the sink must actually have fired");
+    }
+
+    #[test]
+    fn a_resource_out_still_reports_a_final_progress_snapshot() {
+        // The doc promise is "polled every N steps *and once more at the end,
+        // whichever way the check finishes*" — including the ResourceOut path,
+        // so a watcher is never left without a final number.
+        let (f, proof) = multi_step_unsat_proof();
+        let mut snapshots: Vec<DratCheckProgress> = Vec::new();
+        let mut record = |p: &DratCheckProgress| snapshots.push(*p);
+        let outcome = check_drat_with_limits_and_progress(
+            &f,
+            &proof,
+            None,
+            Some(1),
+            // A large interval that would never fire on its own cadence within
+            // one checked step, so the only snapshot possible is the final one.
+            1_000_000,
+            Some(&mut record),
+        )
+        .expect("a resource bound is an outcome, not an error");
+        assert_eq!(outcome, DratCheckOutcome::ResourceOut);
+        assert_eq!(
+            snapshots.len(),
+            1,
+            "the ResourceOut path must still report a final snapshot"
+        );
+        assert_eq!(snapshots[0].steps_checked, 1);
     }
 }

@@ -253,7 +253,7 @@ pub struct SolverConfig {
 
     /// Observability hook for the proof-producing DRAT search
     /// ([`axeyum_cnf::ProofSearchProgress`]): when set, periodic
-    /// [`ProofSearchProgress`] snapshots are sent down `sink` while the
+    /// `ProofSearchProgress` snapshots are sent down `sink` while the
     /// certificate-producing SAT search on the `QF_BV` path runs (see
     /// `crate::proof::export_qf_bv_unsat_proof_with_progress`, reached from
     /// `produce_qf_bv_evidence`'s DRAT-certificate route).
@@ -263,6 +263,21 @@ pub struct SolverConfig {
     /// one cannot change a verdict or the emitted DRAT proof; it can only
     /// change how often, and to where, a snapshot is reported.
     pub proof_progress: Option<ProofProgress>,
+
+    /// Observability and bounding for the CHECKING stage that follows the
+    /// search above on a `QF_BV` `unsat` (`axeyum_cnf::check_drat` then, if
+    /// that verifies, `axeyum_cnf::elaborate_drat_to_lrat` —
+    /// [`crate::proof::CheckingProgress`] / [`crate::proof::CheckBudget`]).
+    ///
+    /// `proof_progress` above watches the SEARCH; this watches what runs
+    /// *after* the search returns `unsat`, which had no bound and no
+    /// observability at all until this field existed — the incident that
+    /// motivates it is a 24.2 s search followed by a ~6 h checking pass with
+    /// zero output on `neg-fp16-add-monotone-rne.smt2`. `None` by default:
+    /// installing a sink or a bound here can only change whether/when
+    /// checking gives up early (reported as `Inconclusive`, never as a
+    /// timeout-shaped `Proved`), never what a completed check accepts.
+    pub check_progress: Option<CheckProgress>,
 }
 
 /// A progress sink installed on [`SolverConfig::proof_progress`]. `sink` is a
@@ -295,6 +310,49 @@ impl ProofProgress {
     }
 }
 
+/// A progress sink installed on [`SolverConfig::check_progress`], plus the
+/// wall-clock deadline and step budget the checking stage should honor.
+/// Mirrors [`ProofProgress`]'s channel-based design so the same
+/// `smtcomp_cli`-style watchdog thread can drain it, and additionally carries
+/// the bound itself: unlike the search (whose deadline lives on
+/// [`SolverConfig::timeout`] and is threaded through separately), checking has
+/// no other budget field to read, so this is the only place a caller can hand
+/// one to it.
+#[derive(Debug, Clone)]
+pub struct CheckProgress {
+    /// Step cadence between snapshots (forwarded to
+    /// `axeyum_cnf::check_drat_with_limits_and_progress` /
+    /// `axeyum_cnf::elaborate_drat_to_lrat_with_limits_and_progress`).
+    pub interval: usize,
+    /// Optional step budget for the checking stage. `None` means checking is
+    /// bounded only by whatever wall-clock deadline the caller derives from
+    /// [`SolverConfig::timeout`] (see `crate::evidence::produce_qf_bv_evidence`),
+    /// which itself is `None` (unbounded) unless the caller set a timeout.
+    pub max_steps: Option<usize>,
+    /// Where snapshots are sent. A closed receiver is not an error: a send
+    /// failure is silently dropped, since a progress report reaching nobody
+    /// must never abort or alter checking.
+    pub sink: std::sync::mpsc::Sender<crate::proof::CheckingProgress>,
+}
+
+impl CheckProgress {
+    /// Builds a checking-progress config with the given step-count `interval`
+    /// (clamped to at least 1 by the underlying checker), an optional step
+    /// budget, and channel `sink`.
+    #[must_use]
+    pub fn new(
+        interval: usize,
+        max_steps: Option<usize>,
+        sink: std::sync::mpsc::Sender<crate::proof::CheckingProgress>,
+    ) -> Self {
+        Self {
+            interval,
+            max_steps,
+            sink,
+        }
+    }
+}
+
 impl Default for SolverConfig {
     /// All assurance/perf levers off and no budgets, **except** word-level
     /// `preprocess`, which defaults **on** (ADR-0037/0034): denotation-preserving
@@ -323,6 +381,7 @@ impl Default for SolverConfig {
             lazy_bv_abstract_ite: false,
             native_cdcl: false,
             proof_progress: None,
+            check_progress: None,
         }
     }
 }
@@ -517,6 +576,15 @@ impl SolverConfig {
     #[must_use]
     pub fn with_proof_progress(mut self, proof_progress: ProofProgress) -> Self {
         self.proof_progress = Some(proof_progress);
+        self
+    }
+
+    /// Installs a progress/bound sink for the checking stage that follows the
+    /// proof-producing search on a `QF_BV` `unsat`. See
+    /// [`SolverConfig::check_progress`].
+    #[must_use]
+    pub fn with_check_progress(mut self, check_progress: CheckProgress) -> Self {
+        self.check_progress = Some(check_progress);
         self
     }
 }

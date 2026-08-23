@@ -851,8 +851,8 @@ pub use axeyum_fp as fp;
 
 pub use axeyum_cnf::IncrementalCnfStats;
 pub use backend::{
-    BitLoweringMode, Capabilities, CheckResult, ProofProgress, SolveStats, SolverBackend,
-    SolverConfig, SolverError, UnknownKind, UnknownReason,
+    BitLoweringMode, Capabilities, CheckProgress, CheckResult, ProofProgress, SolveStats,
+    SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
 };
 pub use incremental::{
     AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats,
@@ -862,8 +862,8 @@ pub use layers::BvLayerStats;
 pub use model::Model;
 #[doc(hidden)]
 pub use proof::{
-    UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof, export_qf_abv_unsat_proof,
-    export_qf_abv_unsat_proof_within, export_qf_aufbv_unsat_proof,
+    CheckBudget, CheckingProgress, UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof,
+    export_qf_abv_unsat_proof, export_qf_abv_unsat_proof_within, export_qf_aufbv_unsat_proof,
     export_qf_aufbv_unsat_proof_within, export_qf_bv_unsat_proof, export_qf_bv_unsat_proof_within,
     export_qf_lia_unsat_proof, export_qf_uf_unsat_proof,
 };
