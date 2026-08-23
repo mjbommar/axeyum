@@ -501,6 +501,53 @@ pub struct LocalDecl {
     pub info: BinderInfo,
 }
 
+/// The cache insertions made while exactly one [`LocalDecl`] was the
+/// innermost one open — i.e. the entries recorded between one
+/// `LocalContext::push` and its matching `pop`.
+///
+/// # Why undoing this frame on `pop` is sound
+///
+/// Every entry recorded here is keyed on an `ExprId` (or a pair of them).
+/// The **only** ways a cached `infer`/`def_eq`/`whnf`/`whnf_core` answer can
+/// depend on the local declaration stack at all are [`LocalContext::type_of`]
+/// (an `FVar`'s type) and [`LocalContext::value_of`] (a let-bound `FVar`'s
+/// value) — audited exhaustively: those two, plus the static
+/// [`LocalContext::scoped_fvar`] table that `push`/`pop` never touch, are the
+/// only local-context reads anywhere in `tc.rs`/`inductive.rs`'s
+/// inference/WHNF/def-eq code (`k_like_major` is documented as "the only
+/// reduction rule that consults `ctx`", and it does so through `infer_core`'s
+/// `FVar` case, i.e. through `type_of`). A given `FVar` id, once minted by
+/// [`LocalContext::fresh_fvar`], is never reused within the life of one
+/// `LocalContext` (the counter is monotone and
+/// [`LocalContext::bump_fresh_above`] only ever raises it), and its
+/// `LocalDecl` — hence its `type_of` answer — is fixed for as long as that id
+/// remains reachable at all: the few call sites that push the *same* id more
+/// than once (the `scoped_fvar` fast path, and shared/mutual-inductive
+/// parameters copied into a fresh sibling context) always re-push a
+/// byte-identical `LocalDecl` built from the same source expression, never a
+/// different one.
+///
+/// So an entry mentioning `FVar(x)` is valid for exactly as long as `x`'s
+/// declaration remains on the stack, i.e. exactly the scope this frame spans.
+/// After `x`'s `pop`, any surviving term that could still be validly queried
+/// was already re-abstracted (turned back into a bound `Pi`/`Lam`) before the
+/// pop happened — nothing legitimately holds an `ExprId` mentioning `x` past
+/// this point — so discarding this frame's entries costs at most a recompute
+/// if anything ever asks again, never a wrong answer. The lookup-before-insert
+/// shape of every one of the four memo functions also rules out an entry EVER
+/// being (re)written into two *simultaneously open* frames: once an insert
+/// lands, every subsequent lookup for that exact key hits it and returns
+/// early, so the same key cannot be journaled again until whichever frame
+/// holds it has actually been popped — which is what makes "each frame undoes
+/// only its own inserts" well defined instead of a race between frames.
+#[derive(Debug, Default)]
+struct CacheFrame {
+    infer: Vec<ExprId>,
+    def_eq: Vec<(ExprId, ExprId)>,
+    whnf: Vec<ExprId>,
+    whnf_core: Vec<ExprId>,
+}
+
 /// A stack of [`LocalDecl`]s for the locals introduced while descending under
 /// binders, plus a monotone counter that mints fresh `FVar` ids.
 ///
@@ -513,12 +560,14 @@ pub struct LocalContext {
     decls: Vec<LocalDecl>,
     next_fvar: u64,
     /// Type-inference results valid for exactly the current local declaration
-    /// stack. Push/pop clear this cache, so open expression DAGs are shared
-    /// without ever reusing a type across binder contexts.
+    /// stack. An entry mentioning a since-popped `FVar` is undone via
+    /// `cache_journal` rather than the whole table being wiped on every
+    /// push/pop — see `CacheFrame` for why that is sound.
     infer_cache: HashMap<ExprId, ExprId>,
     /// Definitional-equality results valid for the current local stack. This is
     /// the local-context analogue of nanoda's equality cache and prevents the
     /// same shared proof/type pair from being compared as an exponential tree.
+    /// Undone per-frame on `pop`, like `infer_cache`.
     def_eq_cache: HashMap<(ExprId, ExprId), bool>,
     /// Weak-head normal forms of expressions that mention free variables, and
     /// so may have been computed by consulting this context's declarations.
@@ -526,12 +575,12 @@ pub struct LocalContext {
     /// This is the context-scoped half of the WHNF cache; the closed half lives
     /// on the kernel (see [`Kernel::whnf_no_unfolding`] for why the split is
     /// where it is). Like `infer_cache` and `def_eq_cache`, it is valid for
-    /// exactly the current declaration stack and is cleared by `push`/`pop`;
+    /// exactly the current declaration stack and is undone per-frame on `pop`;
     /// the `u64` pins the environment revision the entries were computed at.
     whnf_cache: (u64, HashMap<ExprId, ExprId>),
     /// **Full-δ** weak-head normal forms of expressions that mention free
     /// variables — the context-scoped half of the `whnf_core` memo, and the
-    /// exact analogue of `whnf_cache` one layer up. Cleared by `push`/`pop`
+    /// exact analogue of `whnf_cache` one layer up. Undone per-frame on `pop`
     /// with the other three, which is what scopes an entry to the declaration
     /// stack that produced it.
     whnf_core_cache: (u64, HashMap<ExprId, ExprId>),
@@ -540,6 +589,40 @@ pub struct LocalContext {
     /// Lambda nodes in a scoped open skeleton whose bodies already refer to the
     /// associated binder as a free variable.
     scoped_fvars: HashMap<ExprId, u64>,
+    /// One `CacheFrame` per currently-open binder — `cache_journal.len() ==
+    /// decls.len()` is an invariant `push`/`pop` maintain together. Entries
+    /// cached at depth 0 (before any binder is open) are never journaled at
+    /// all, which is correct: nothing ever pops back below depth 0, so they
+    /// should never be undone.
+    cache_journal: Vec<CacheFrame>,
+    /// Counts every [`LocalContext::type_of`]/[`LocalContext::value_of`] call
+    /// that returned `None` — i.e. every observation that some `FVar` is
+    /// *currently undeclared*. A memo entry whose computation touched one of
+    /// these (see `unbound_probes`) is recording "this fvar is
+    /// not yet bound", which a later `push` of exactly that fvar can falsify —
+    /// unlike an entry that only ever observed *bound* fvars, whose
+    /// declarations are immutable for the rest of their reachable lifetime
+    /// (see `CacheFrame`). Such entries are additionally journaled into
+    /// `volatile` rather than trusted to survive any push.
+    unbound_probes: u64,
+    /// Cache entries recorded while `unbound_probes` changed
+    /// during their own (uncached) computation — i.e. entries whose answer
+    /// depended on some `FVar` currently being undeclared. Drained on every
+    /// `push`, regardless of which fvar is being pushed: we cannot cheaply
+    /// tell in general which undeclared-fvar observation a tainted entry
+    /// depended on, so any push is treated as potentially resolving it. This
+    /// is what keeps `pushing_a_local_invalidates_a_memoised_stuck_reduction`
+    /// sound under the new per-frame scheme.
+    volatile: CacheFrame,
+    /// Reference counts of currently-open fvar ids, kept in lockstep with
+    /// `decls` by `push`/`pop`, so [`LocalContext::value_of`] can test "is this
+    /// id declared at all" in O(1) instead of scanning `decls` — needed only to
+    /// classify a let-value miss as "not let-bound" (stable) versus "not
+    /// declared at all" (volatile, see `unbound_probes`) without adding an
+    /// O(depth) scan to every zeta check of an ordinary bound variable. A
+    /// count rather than a set because a scoped fvar id can in principle be
+    /// pushed again before an earlier occurrence's matching pop.
+    open_fvars: HashMap<u64, u32>,
 }
 
 impl LocalContext {
@@ -566,12 +649,75 @@ impl LocalContext {
     }
 
     /// Push a local declaration onto the stack.
+    ///
+    /// Opens a fresh `CacheFrame` rather than wiping the four memo tables:
+    /// see `CacheFrame`'s doc comment for why an unrelated ancestor
+    /// computation's memoized entries do not need to be discarded just
+    /// because *this* binder opened. Also drains `volatile` —
+    /// the entries that recorded some fvar as *undeclared* — since this push
+    /// may be exactly what makes one of those observations stale.
     pub fn push(&mut self, decl: LocalDecl) {
-        self.infer_cache.clear();
-        self.def_eq_cache.clear();
-        self.whnf_cache.1.clear();
-        self.whnf_core_cache.1.clear();
+        self.cache_journal.push(CacheFrame::default());
+        self.drain_volatile();
+        *self.open_fvars.entry(decl.fvar).or_insert(0) += 1;
         self.decls.push(decl);
+    }
+
+    /// Remove every entry one of the `taint_*_if_unbound_probed` methods
+    /// flagged as depending on an undeclared fvar. See the field doc on
+    /// `volatile`.
+    fn drain_volatile(&mut self) {
+        let frame = std::mem::take(&mut self.volatile);
+        for key in frame.infer {
+            self.infer_cache.remove(&key);
+        }
+        for key in frame.def_eq {
+            self.def_eq_cache.remove(&key);
+        }
+        for key in frame.whnf {
+            self.whnf_cache.1.remove(&key);
+        }
+        for key in frame.whnf_core {
+            self.whnf_core_cache.1.remove(&key);
+        }
+    }
+
+    /// Snapshot `unbound_probes` before computing an entry
+    /// that is about to be memoized. Pair with one of the
+    /// `taint_*_if_unbound_probed` methods after the computation.
+    fn unbound_probe_mark(&self) -> u64 {
+        self.unbound_probes
+    }
+
+    /// If `mark` (from [`LocalContext::unbound_probe_mark`]) differs from the
+    /// current counter, some `type_of`/`value_of` call made during the
+    /// just-finished computation observed an undeclared fvar — journal the
+    /// entry just recorded into `volatile` too, in addition to its normal
+    /// per-frame journaling, so the next `push` discards it regardless of
+    /// which frame it lives in.
+    fn taint_infer_if_unbound_probed(&mut self, mark: u64, expression: ExprId) {
+        if self.unbound_probes != mark {
+            self.volatile.infer.push(expression);
+        }
+    }
+
+    fn taint_def_eq_if_unbound_probed(&mut self, mark: u64, left: ExprId, right: ExprId) {
+        if self.unbound_probes != mark {
+            self.volatile.def_eq.push((left, right));
+            self.volatile.def_eq.push((right, left));
+        }
+    }
+
+    fn taint_whnf_if_unbound_probed(&mut self, mark: u64, expression: ExprId) {
+        if self.unbound_probes != mark {
+            self.volatile.whnf.push(expression);
+        }
+    }
+
+    fn taint_whnf_core_if_unbound_probed(&mut self, mark: u64, expression: ExprId) {
+        if self.unbound_probes != mark {
+            self.volatile.whnf_core.push(expression);
+        }
     }
 
     fn push_let(&mut self, decl: LocalDecl, value: ExprId) {
@@ -583,26 +729,75 @@ impl LocalContext {
     }
 
     /// Pop the most recently pushed local declaration (LIFO).
+    ///
+    /// Undoes exactly the cache entries recorded in this binder's own
+    /// `CacheFrame`, leaving every entry an ancestor scope already built
+    /// untouched. `cache_journal` and `decls` are pushed/popped together, so
+    /// a frame is only ever discarded when a real declaration was popped with
+    /// it (mirrors the `let_values` cleanup above it).
     pub fn pop(&mut self) -> Option<LocalDecl> {
         let popped = self.decls.pop();
         if let Some(decl) = popped {
             self.let_values.remove(&decl.fvar);
+            if let std::collections::hash_map::Entry::Occupied(mut entry) =
+                self.open_fvars.entry(decl.fvar)
+            {
+                let count = entry.get_mut();
+                *count -= 1;
+                if *count == 0 {
+                    entry.remove();
+                }
+            }
+            if let Some(frame) = self.cache_journal.pop() {
+                for key in frame.infer {
+                    self.infer_cache.remove(&key);
+                }
+                for key in frame.def_eq {
+                    self.def_eq_cache.remove(&key);
+                }
+                for key in frame.whnf {
+                    self.whnf_cache.1.remove(&key);
+                }
+                for key in frame.whnf_core {
+                    self.whnf_core_cache.1.remove(&key);
+                }
+            }
         }
-        self.infer_cache.clear();
-        self.def_eq_cache.clear();
-        self.whnf_cache.1.clear();
-        self.whnf_core_cache.1.clear();
         popped
     }
 
     /// Look up the type recorded for free variable `id`, if any.
+    ///
+    /// Bumps `unbound_probes` on a miss: "this fvar is not
+    /// currently declared" is itself an observation a memoized answer can
+    /// depend on, and unlike a `Some` answer (permanent for the fvar's
+    /// reachable lifetime, see `CacheFrame`) a `None` answer can flip to
+    /// `Some` on the very next `push`.
     #[must_use]
-    pub fn type_of(&self, id: u64) -> Option<ExprId> {
-        self.decls.iter().rev().find(|d| d.fvar == id).map(|d| d.ty)
+    pub fn type_of(&mut self, id: u64) -> Option<ExprId> {
+        let found = self.decls.iter().rev().find(|d| d.fvar == id).map(|d| d.ty);
+        if found.is_none() {
+            self.unbound_probes += 1;
+        }
+        found
     }
 
-    fn value_of(&self, id: u64) -> Option<ExprId> {
-        self.let_values.get(&id).copied()
+    /// See [`LocalContext::type_of`] for why an *undeclared* miss is counted.
+    ///
+    /// A miss here is ambiguous on its own: `id` may simply be an ordinary
+    /// (non-`let`) declared local, which is the overwhelmingly common case
+    /// every zeta check hits and is a perfectly stable fact for the fvar's
+    /// whole reachable lifetime, not a volatile one. Only a miss where `id`
+    /// is not declared **at all** is the same "may flip on the next push"
+    /// observation `type_of` counts, so only that case bumps
+    /// `unbound_probes` — checked in O(1) via `open_fvars` rather than
+    /// re-scanning `decls` on every ordinary bound-variable zeta check.
+    fn value_of(&mut self, id: u64) -> Option<ExprId> {
+        let found = self.let_values.get(&id).copied();
+        if found.is_none() && !self.open_fvars.contains_key(&id) {
+            self.unbound_probes += 1;
+        }
+        found
     }
 
     fn inferred(&self, expression: ExprId) -> Option<ExprId> {
@@ -634,24 +829,43 @@ impl LocalContext {
 
     /// The revision check here is load-bearing rather than defensive; see
     /// [`Kernel::remember_whnf_core`] for the measurement that says so.
+    ///
+    /// A revision bump's `.clear()` here can make an older frame's journal
+    /// entry for `expression` point at nothing; that is harmless (removing an
+    /// absent key is a no-op) and not a leak either, because by the time that
+    /// older, shallower frame's own `pop` runs, every deeper frame between it
+    /// and here has already popped and undone whatever it (re)inserted —
+    /// `push`/`pop` are strictly LIFO, so no frame can outlive an ancestor
+    /// whose entries it might otherwise clobber.
     fn remember_whnf_core(&mut self, revision: u64, expression: ExprId, normalized: ExprId) {
         if self.whnf_core_cache.0 != revision {
             self.whnf_core_cache.0 = revision;
             self.whnf_core_cache.1.clear();
         }
         self.whnf_core_cache.1.insert(expression, normalized);
+        if let Some(frame) = self.cache_journal.last_mut() {
+            frame.whnf_core.push(expression);
+        }
     }
 
+    /// See [`LocalContext::remember_whnf_core`] for why the revision-bump
+    /// interaction with per-frame undo is sound.
     fn remember_whnf(&mut self, revision: u64, expression: ExprId, normalized: ExprId) {
         if self.whnf_cache.0 != revision {
             self.whnf_cache.0 = revision;
             self.whnf_cache.1.clear();
         }
         self.whnf_cache.1.insert(expression, normalized);
+        if let Some(frame) = self.cache_journal.last_mut() {
+            frame.whnf.push(expression);
+        }
     }
 
     fn remember_inferred(&mut self, expression: ExprId, ty: ExprId) {
         self.infer_cache.insert(expression, ty);
+        if let Some(frame) = self.cache_journal.last_mut() {
+            frame.infer.push(expression);
+        }
     }
 
     fn def_eq_result(&self, left: ExprId, right: ExprId) -> Option<bool> {
@@ -661,6 +875,10 @@ impl LocalContext {
     fn remember_def_eq(&mut self, left: ExprId, right: ExprId, result: bool) {
         self.def_eq_cache.insert((left, right), result);
         self.def_eq_cache.insert((right, left), result);
+        if let Some(frame) = self.cache_journal.last_mut() {
+            frame.def_eq.push((left, right));
+            frame.def_eq.push((right, left));
+        }
     }
 
     fn scoped_fvar(&self, lambda: ExprId) -> Option<u64> {
@@ -744,8 +962,10 @@ impl Kernel {
             if let Some(normalized) = ctx.whnf_result(revision, e) {
                 return normalized;
             }
+            let mark = ctx.unbound_probe_mark();
             let normalized = self.whnf_no_unfolding_uncached(e, ctx);
             ctx.remember_whnf(revision, e, normalized);
+            ctx.taint_whnf_if_unbound_probed(mark, e);
             return normalized;
         }
         if self.whnf_cache.0 != revision {
@@ -1035,6 +1255,7 @@ impl Kernel {
         }
         let reads_before = self.reduction_ctx_reads;
         let entry_closed = !self.has_fvars(e);
+        let mark = ctx.unbound_probe_mark();
 
         // Every link of the δ chain has the SAME full-δ normal form as `e`:
         // `whnf_core` is deterministic and the walk from a link is the tail of
@@ -1109,8 +1330,16 @@ impl Kernel {
             !entry_closed || self.reduction_ctx_reads == reads_before,
             "the per-link tripwire must subsume the entry-closed case"
         );
+        // One shared mark for the whole chain: taint is conservative over
+        // *which* link's reduction touched an undeclared fvar, since any of
+        // them can (`k_like_major`/`structure_eta_major`/the zeta arm all
+        // read `ctx`, and a single walk can pass through several links).
+        let tainted = ctx.unbound_probe_mark() != mark;
         for (link, _) in chain {
             self.remember_whnf_core(revision, link, normalized, ctx);
+            if tainted {
+                ctx.taint_whnf_core_if_unbound_probed(mark, link);
+            }
         }
         normalized
     }
@@ -1844,8 +2073,10 @@ impl Kernel {
         if let Some(result) = ctx.def_eq_result(x, y) {
             return result;
         }
+        let mark = ctx.unbound_probe_mark();
         let result = self.def_eq_core_uncached(x, y, ctx);
         ctx.remember_def_eq(x, y, result);
+        ctx.taint_def_eq_if_unbound_probed(mark, x, y);
         result
     }
 
@@ -2870,6 +3101,7 @@ impl Kernel {
         if !closed && let Some(ty) = ctx.inferred(e) {
             return Ok(ty);
         }
+        let mark = ctx.unbound_probe_mark();
         let inferred = match self.expr_node(e).clone() {
             ExprNode::BVar(index) => Err(KernelError::LooseBVar { index }),
             ExprNode::FVar(id) => ctx.type_of(id).ok_or(KernelError::UnboundFVar { id }),
@@ -2895,6 +3127,7 @@ impl Kernel {
             self.infer_closed_cache.insert(e, inferred);
         } else {
             ctx.remember_inferred(e, inferred);
+            ctx.taint_infer_if_unbound_probed(mark, e);
         }
         Ok(inferred)
     }
