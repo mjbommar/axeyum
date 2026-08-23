@@ -1,0 +1,53 @@
+# The Plancherel template's reach sqrt(NTM_model)/2^(ell-1), model (P4), exact.
+# Sigma = sum_{psi != 1} (cond(psi) - 1) depends on ell alone; no dump needed.
+# reach >= 1 is the ONLY regime in which any vanishing pattern could refute (CYL).
+# bracket = 8 ell^1.5 2^(-ell/2) .. 32 ell^1.5 2^(-ell/2)  (Proposition 5);
+# the run ASSERTS the reach lies inside it at every ell printed.
+ell=   12 n=   25 c= 4 |K|=    64 Sigma=       636 reach=2^+3.16=8.9163e+00 bracket=[5.196e+00,2.078e+01] CAN REFUTE
+ell=   12 n=   26 c= 4 |K|=    64 Sigma=       636 reach=2^+3.66=1.2610e+01 bracket=[5.196e+00,2.078e+01] CAN REFUTE
+ell=   13 n=   27 c= 4 |K|=    64 Sigma=       699 reach=2^+2.72=6.6097e+00 bracket=[4.143e+00,1.657e+01] CAN REFUTE
+ell=   13 n=   28 c= 4 |K|=    64 Sigma=       699 reach=2^+3.22=9.3475e+00 bracket=[4.143e+00,1.657e+01] CAN REFUTE
+ell=   14 n=   29 c= 4 |K|=    64 Sigma=       762 reach=2^+2.29=4.8798e+00 bracket=[3.274e+00,1.310e+01] CAN REFUTE
+ell=   14 n=   30 c= 4 |K|=    64 Sigma=       762 reach=2^+2.79=6.9011e+00 bracket=[3.274e+00,1.310e+01] CAN REFUTE
+ell=   15 n=   31 c= 4 |K|=    64 Sigma=       825 reach=2^+1.84=3.5904e+00 bracket=[2.567e+00,1.027e+01] CAN REFUTE
+ell=   15 n=   32 c= 4 |K|=    64 Sigma=       825 reach=2^+2.34=5.0775e+00 bracket=[2.567e+00,1.027e+01] CAN REFUTE
+ell=   16 n=   33 c= 4 |K|=    64 Sigma=       888 reach=2^+1.40=2.6339e+00 bracket=[2.000e+00,8.000e+00] CAN REFUTE
+ell=   16 n=   34 c= 4 |K|=    64 Sigma=       888 reach=2^+1.90=3.7249e+00 bracket=[2.000e+00,8.000e+00] CAN REFUTE
+ell=   17 n=   35 c= 5 |K|=   128 Sigma=      1912 reach=2^+1.95=3.8649e+00 bracket=[1.549e+00,6.195e+00] CAN REFUTE
+ell=   17 n=   36 c= 5 |K|=   128 Sigma=      1912 reach=2^+2.45=5.4658e+00 bracket=[1.549e+00,6.195e+00] CAN REFUTE
+ell=   18 n=   37 c= 5 |K|=   128 Sigma=      2039 reach=2^+1.50=2.8222e+00 bracket=[1.193e+00,4.773e+00] CAN REFUTE
+ell=   18 n=   38 c= 5 |K|=   128 Sigma=      2039 reach=2^+2.00=3.9912e+00 bracket=[1.193e+00,4.773e+00] CAN REFUTE
+ell=   19 n=   39 c= 5 |K|=   128 Sigma=      2166 reach=2^+1.04=2.0568e+00 bracket=[9.150e-01,3.660e+00] CAN REFUTE
+ell=   19 n=   40 c= 5 |K|=   128 Sigma=      2166 reach=2^+1.54=2.9088e+00 bracket=[9.150e-01,3.660e+00] CAN REFUTE
+ell=   20 n=   41 c= 5 |K|=   128 Sigma=      2293 reach=2^+0.58=1.4964e+00 bracket=[6.988e-01,2.795e+00] CAN REFUTE
+ell=   20 n=   42 c= 5 |K|=   128 Sigma=      2293 reach=2^+1.08=2.1163e+00 bracket=[6.988e-01,2.795e+00] CAN REFUTE
+ell=   21 n=   43 c= 5 |K|=   128 Sigma=      2420 reach=2^+0.12=1.0870e+00 bracket=[5.316e-01,2.126e+00] CAN REFUTE
+ell=   21 n=   44 c= 5 |K|=   128 Sigma=      2420 reach=2^+0.62=1.5373e+00 bracket=[5.316e-01,2.126e+00] CAN REFUTE
+ell=   22 n=   45 c= 5 |K|=   128 Sigma=      2547 reach=2^-0.34=7.8856e-01 bracket=[4.031e-01,1.612e+00] cannot refute
+ell=   22 n=   46 c= 5 |K|=   128 Sigma=      2547 reach=2^+0.16=1.1152e+00 bracket=[4.031e-01,1.612e+00] CAN REFUTE
+ell=   23 n=   47 c= 5 |K|=   128 Sigma=      2674 reach=2^-0.81=5.7133e-01 bracket=[3.047e-01,1.219e+00] cannot refute
+ell=   23 n=   48 c= 5 |K|=   128 Sigma=      2674 reach=2^-0.31=8.0798e-01 bracket=[3.047e-01,1.219e+00] cannot refute
+ell=   24 n=   49 c= 5 |K|=   128 Sigma=      2801 reach=2^-1.27=4.1347e-01 bracket=[2.296e-01,9.186e-01] cannot refute
+ell=   24 n=   50 c= 5 |K|=   128 Sigma=      2801 reach=2^-0.77=5.8474e-01 bracket=[2.296e-01,9.186e-01] cannot refute
+ell=   32 n=   65 c= 5 |K|=   128 Sigma=      3817 reach=2^-5.05=3.0167e-02 bracket=[2.210e-02,8.839e-02] cannot refute
+ell=   32 n=   66 c= 5 |K|=   128 Sigma=      3817 reach=2^-4.55=4.2662e-02 bracket=[2.210e-02,8.839e-02] cannot refute
+ell=   33 n=   67 c= 6 |K|=   256 Sigma=      7913 reach=2^-4.52=4.3435e-02 bracket=[1.636e-02,6.545e-02] cannot refute
+ell=   33 n=   68 c= 6 |K|=   256 Sigma=      7913 reach=2^-4.02=6.1426e-02 bracket=[1.636e-02,6.545e-02] cannot refute
+ell=   48 n=   97 c= 6 |K|=   256 Sigma=     11738 reach=2^-11.74=2.9224e-04 bracket=[1.586e-04,6.343e-04] cannot refute
+ell=   48 n=   98 c= 6 |K|=   256 Sigma=     11738 reach=2^-11.24=4.1329e-04 bracket=[1.586e-04,6.343e-04] cannot refute
+ell=   64 n=  129 c= 6 |K|=   256 Sigma=     15818 reach=2^-19.53=1.3252e-06 bracket=[9.537e-07,3.815e-06] cannot refute
+ell=   64 n=  130 c= 6 |K|=   256 Sigma=     15818 reach=2^-19.03=1.8741e-06 bracket=[9.537e-07,3.815e-06] cannot refute
+ell=   65 n=  131 c= 7 |K|=   512 Sigma=     32202 reach=2^-19.01=1.8908e-06 bracket=[6.902e-07,2.761e-06] cannot refute
+ell=   65 n=  132 c= 7 |K|=   512 Sigma=     32202 reach=2^-18.51=2.6740e-06 bracket=[6.902e-07,2.761e-06] cannot refute
+ell=  100 n=  201 c= 7 |K|=   512 Sigma=     50087 reach=2^-36.19=1.2722e-11 bracket=[7.105e-12,2.842e-11] cannot refute
+ell=  100 n=  202 c= 7 |K|=   512 Sigma=     50087 reach=2^-35.69=1.7991e-11 bracket=[7.105e-12,2.842e-11] cannot refute
+ell=  128 n=  257 c= 7 |K|=   512 Sigma=     64395 reach=2^-50.01=8.8041e-16 bracket=[6.280e-16,2.512e-15] cannot refute
+ell=  128 n=  258 c= 7 |K|=   512 Sigma=     64395 reach=2^-49.51=1.2451e-15 bracket=[6.280e-16,2.512e-15] cannot refute
+ell=  129 n=  259 c= 8 |K|=  1024 Sigma=    129931 reach=2^-49.51=1.2506e-15 bracket=[4.493e-16,1.797e-15] cannot refute
+ell=  129 n=  260 c= 8 |K|=  1024 Sigma=    129931 reach=2^-49.01=1.7686e-15 bracket=[4.493e-16,1.797e-15] cannot refute
+ell=  200 n=  401 c= 8 |K|=  1024 Sigma=    202564 reach=2^-84.69=3.2135e-26 bracket=[1.785e-26,7.140e-26] cannot refute
+ell=  200 n=  402 c= 8 |K|=  1024 Sigma=    202564 reach=2^-84.19=4.5446e-26 bracket=[1.785e-26,7.140e-26] cannot refute
+ell=  512 n= 1025 c= 9 |K|=  2048 Sigma=   1043981 reach=2^-239.00=1.1295e-72 bracket=[8.004e-73,3.202e-72] cannot refute
+ell=  512 n= 1026 c= 9 |K|=  2048 Sigma=   1043981 reach=2^-238.50=1.5973e-72 bracket=[8.004e-73,3.202e-72] cannot refute
+ell= 1024 n= 2049 c=10 |K|=  4096 Sigma=   4185102 reach=2^-493.50=2.7620e-149 bracket=[1.955e-149,7.821e-149] cannot refute
+ell= 1024 n= 2050 c=10 |K|=  4096 Sigma=   4185102 reach=2^-493.00=3.9060e-149 bracket=[1.955e-149,7.821e-149] cannot refute

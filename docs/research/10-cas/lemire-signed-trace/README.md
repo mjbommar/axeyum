@@ -53,6 +53,14 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   barrier: provable irreducibility-preserving constructions multiply the
   degree, so window families are lacunary (density zero) and cannot cover a
   residue class; honest scope (known toolbox, not a logical impossibility).
+- [17-cylinder-plancherel.md](17-cylinder-plancherel.md) -- the Plancherel
+  forcing (disproof) test applied to the cylinder sums `A_psi`: `(CYL)` is
+  **not** refuted, and provably cannot be by this template -- `|K| < 8 ell`, so
+  forcing gains at most `sqrt(8 ell)` against an rms that is
+  `Theta(ell 2^{-ell/2})` of the threshold. `Z = 0` (no vanishing) at all 26
+  endpoints, and from `ell = 22/23` on no vanishing pattern whatever could
+  suffice. Confirms the roadmap PDF's `(CYL)` claim verbatim and extends it to
+  the odd `ell` never computed.
 - [16-large-q-threshold.md](16-large-q-threshold.md) -- verification of the
   `n`-independent large-`q` claim: Bagshaw's arbitrary-modulus level of
   distribution does give Kaser--Lemire for all large `n` once `q > 7101 p^2`,

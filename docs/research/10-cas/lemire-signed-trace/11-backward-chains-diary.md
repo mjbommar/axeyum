@@ -499,3 +499,43 @@ Math. 78 (2026) 302--327), arXiv:1808.04001, arXiv:1204.0708.
 - **Next:** note 15 sec. 2.2, 3(i), 3(iii), 3(iv) and headline answer 2 need
   note 16 sec. 8's corrections (note-15 owner / coordinator). Do NOT propagate
   to notes 00/09 as written. Effective `n_0(q)` is a bounded follow-up.
+
+## Entry 6 -- the Plancherel forcing test on A_psi
+
+- Applied Sawin's sparsity+Plancherel DISPROOF template (arXiv:2209.02170, note
+  15 sec. 2.3) to note 07's `A_psi`, which Entry 5 carried as "one uncounted
+  statistic". Counted; nothing is refuted. [17-cylinder-plancherel.md](17-cylinder-plancherel.md).
+- **It CANNOT refute (CYL), and the reason needs no data.** Plancherel here runs
+  over `K = ker(E_ell -> E_{a-1})`, `|K| = 2^{ceil(log2 ell)+2} < 8 ell`. The
+  forcing gains at most `sqrt(|K|-1)` over the rms, and the rms is
+  `Theta(ell 2^{-ell/2})` times the `(CYL)` threshold. Exact reach
+  `sqrt(NTM)/2^{ell-1}` lies in `[8,32] ell^{3/2} 2^{-ell/2}` (asserted in code
+  for `11 <= ell <= 400`): `< 1` from `ell ~ 21`, `3.2e-26` at `ell = 200`.
+  Sawin's group has `q^{n-1}` characters with `q^{-cn}`-sparse support; ours has
+  `< 8 ell`, and `a` is chosen by the Haar telescope precisely to make it that
+  small. COMPARE THOSE TWO SIZES BEFORE TRANSPLANTING SUCH A TEMPLATE.
+- **Both hypotheses fail independently.** Sparsity: `Z = #{psi != 1 : A_psi = 0}
+  = 0` at ALL 26 endpoints `12 <= ell <= 24`, both `n`; the near-zero set is not
+  a coset either. Mass: `NTM = sum_{psi!=1} A_psi^2 = |K| SSD_id < 2^{2ell-2}`
+  from `ell = 22` (odd) / `23` (even) on, so NO vanishing pattern whatever can
+  force `max |A_psi| >= 2^{ell-1}`. `Z_needed` runs `0` (at `(12,25)`,`(12,26)`,
+  `(13,28)` Plancherel ALONE refutes `(CYL)`) -> `126/127` -> impossible.
+- Exact data for all 26 endpoints, incl. `ell = 12` and the odd `ell = 13..21`
+  never computed here. CONFIRMS the roadmap paper verbatim: `(CYL)` true from
+  `ell=16` (n odd), `ell=18` (n even) on. Nothing to retract; `(REL)` untouched.
+- Random model made exact: `E|A_psi|^2 = (cond psi - 1) 2^{n-a+1}`, with
+  `cond(psi_u) = max_{k in supp u} k 2^{e_k(ell)-1} in [a, ell]`; measured/model
+  in `[0.90,1.22]` at every endpoint. Parity: `A_psi = A_1 (mod 2)`, so `A_1`
+  odd => NO zeros; `A_1` IS odd at `(23,47)`, where `Z = 0` is thus a proof.
+- Part D: the Plancherel identity DOES exist for the TWISTED families
+  `T_{j,s}(g0)` and `A_j(g0) = 2^{j-1} H_j(g0)`, and both are exact controls.
+  But `(HWO)` is a claim at `g0 = 1` and forcing yields SOME `g0`, so it cannot
+  refute `(HWO)`. Measured anyway: required surviving fraction falls like
+  `2^{-ell}` (median `4.4e-3` at `(22,45)`) against a measured `0.9997`, and the
+  identity's rank among the `2^j` twists is generic -- no position anomaly.
+- Byproduct: `|K| SSD_id < 2^{2ell-2} => (CYL) => (REL)`, one second-moment
+  inequality, true at `ell = 22`(odd), `23`, `24`. Does NOT evade Barrier I:
+  note 03 sec. 5's `F` has `A_psi(F) = -c ~ 2^{ell+1}`, violating `(CYL)` by 4-8.
+- TOOL TRAP: `axeyum-gf2-dump-populations 24 49` needs its third argument
+  (`1300000000` table cells); without it the binary PANICS, the shell loop keeps
+  going, and you get a ZERO-BYTE dump that analyses as an empty group.

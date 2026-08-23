@@ -184,6 +184,17 @@ test, roughly 100x slower. Nothing else is required.
   torsion orders `8` / `24` at `j = 2, 3` and none at `j >= 4`), mutation
   controls via `--mutate k`; exits nonzero on any failure.
 
+- `lemire_cylinder_plancherel.py` -- checker for
+  [note 17](../../docs/research/10-cas/lemire-signed-trace/17-cylinder-plancherel.md)
+  (the Plancherel forcing test on the cylinder sums `A_psi`). Needs population
+  dumps: `--dumps <files>` (regenerate with
+  `axeyum-gf2-dump-populations <ell> <degree> 1300000000` -- **the third
+  argument is required**; without it the binary panics on its default table-cell
+  cap and a shell loop leaves a ZERO-BYTE dump that analyses as an empty group).
+  `--model-extrapolation` runs the closed-form reach out to `ell = 1024` with no
+  dumps. `--mutation-controls` runs seven mutants, each tripping exactly one
+  named check. Exits nonzero on any failed control. Data: `data/plancherel-*.txt`.
+
 - `lemire_largeq.py` -- checker for
   [note 16](../../docs/research/10-cas/lemire-signed-trace/16-large-q-threshold.md)
   (the large-`q` threshold claim). Verifies the reversal duality
