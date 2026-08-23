@@ -7,15 +7,16 @@
 |---|---:|---:|---:|---:|
 | `axreal` | 12 | 0 | 12 | 0 |
 | `complex` | 494 | 24 | 494 | 0 |
+| `cpoint` | 489 | 19 | 489 | 0 |
 | `creal` | 470 | 81 | 470 | 0 |
 | `integer` | 270 | 88 | 270 | 0 |
 | `logic` | 12 | 12 | 12 | 0 |
 | `nat` | 182 | 170 | 182 | 0 |
 | `rat` | 389 | 119 | 389 | 0 |
 | `string` | 16 | 4 | 16 | 0 |
-| **distinct** | **498** | **498** | **498** | **0** |
+| **distinct** | **517** | **517** | **517** | **0** |
 
-- **498 distinct theorems**, of which **498 rest on no assumption at all** (0 are axiom-bearing).
+- **517 distinct theorems**, of which **517 rest on no assumption at all** (0 are axiom-bearing).
 
 **Do not sum the second column.** Preludes nest, so `rat` contains every
 Nat and Int theorem beneath it. The *Originated here* column is the one

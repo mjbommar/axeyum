@@ -49,9 +49,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
-    Declaration, Kernel, build_arith_prelude, build_complex_prelude, build_creal_prelude,
-    build_int_prelude, build_logic_prelude, build_nat_prelude, build_rat_prelude,
-    build_string_prelude,
+    Declaration, Kernel, build_arith_prelude, build_complex_prelude, build_cpoint_prelude,
+    build_creal_prelude, build_int_prelude, build_logic_prelude, build_nat_prelude,
+    build_rat_prelude, build_string_prelude,
 };
 
 /// One row: theorem name and the axioms it rests on, both display-rendered.
@@ -170,6 +170,14 @@ fn build_groups(include_constructed: bool) -> Vec<(&'static str, Vec<Row>)> {
         let mut complex = Kernel::new();
         let _ = build_complex_prelude(&mut complex).expect("Complex prelude must build");
         groups.push(("complex", theorems(&complex)));
+
+        // The plane over the CONSTRUCTED reals. Without this row the headline
+        // theorem count silently EXCLUDES the whole geometry development —
+        // Varignon, the inner product, Pythagoras, Thales — and a total that
+        // omits them is indistinguishable from one that includes them.
+        let mut cpoint = Kernel::new();
+        let _ = build_cpoint_prelude(&mut cpoint).expect("CPoint prelude must build");
+        groups.push(("cpoint", theorems(&cpoint)));
     }
     groups
 }

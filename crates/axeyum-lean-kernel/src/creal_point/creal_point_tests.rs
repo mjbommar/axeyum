@@ -48,6 +48,15 @@ fn every_theorem_here_is_axiom_free() {
         ("sum_of_midpoints_perm", p.sum_of_midpoints_perm),
         ("midpoint_vector_swap", p.midpoint_vector_swap),
         ("varignon_vector_parallel", p.varignon_vector_parallel),
+        ("dot_congr", p.dot_congr),
+        ("dot_comm", p.dot_comm),
+        ("dot_add_left", p.dot_add_left),
+        ("dot_add_right", p.dot_add_right),
+        ("dot_sub_left", p.dot_sub_left),
+        ("dot_sub_right", p.dot_sub_right),
+        ("dot_neg_left", p.dot_neg_left),
+        ("pythagoras", p.pythagoras),
+        ("thales", p.thales),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -97,6 +106,18 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.midpoint_vector_swap,
         p.point_sub,
         p.varignon_vector_parallel,
+        p.point_add,
+        p.point_neg,
+        p.dot,
+        p.dot_congr,
+        p.dot_comm,
+        p.dot_add_left,
+        p.dot_add_right,
+        p.dot_sub_left,
+        p.dot_sub_right,
+        p.dot_neg_left,
+        p.pythagoras,
+        p.thales,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -135,5 +156,60 @@ fn varignon_vector_parallel_is_a_sub_statement_not_a_midpoint_statement() {
         "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> \
          CPoint.Equiv (CPoint.sub (CPoint.midpoint x1 x2) (CPoint.midpoint x0 x1)) \
          (CPoint.sub (CPoint.midpoint x2 x3) (CPoint.midpoint x3 x0))))))"
+    );
+}
+
+/// **Elements I.47.** Verbatim-checked for the same reason
+/// `varignon_vector_parallel_is_a_sub_statement_not_a_midpoint_statement`
+/// checks its statement verbatim: an empty axiom footprint on a theorem
+/// stating something WEAKER than intended (e.g. missing the hypothesis, or
+/// concluding `dot(sub A B, sub A B) ~ dot(sub A B, sub A B)`) is this
+/// repository's standing failure mode, and it would still pass a substring
+/// check. `x0,x1,x2 = A,B,C`.
+#[test]
+fn pythagoras_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.pythagoras)
+        .expect("pythagoras must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal.Equiv \
+         (CPoint.dot (CPoint.sub x0 x2) (CPoint.sub x1 x2)) CReal.zero) -> CReal.Equiv \
+         (CPoint.dot (CPoint.sub x0 x1) (CPoint.sub x0 x1)) (CReal.add (CPoint.dot \
+         (CPoint.sub x0 x2) (CPoint.sub x0 x2)) (CPoint.dot (CPoint.sub x1 x2) \
+         (CPoint.sub x1 x2)))))))"
+    );
+}
+
+/// **Elements III.31**, the converse direction. Verbatim-checked for the same
+/// reason as [`pythagoras_statement_is_exact`]. `x0,x1,x2,x3 = A,B,C,O`.
+#[test]
+fn thales_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.thales)
+        .expect("thales must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : \
+         CPoint.Equiv x3 (CPoint.midpoint x0 x1)) -> ((x5 : CReal.Equiv (CPoint.dot \
+         (CPoint.sub x2 x3) (CPoint.sub x2 x3)) (CPoint.dot (CPoint.sub x0 x3) \
+         (CPoint.sub x0 x3))) -> CReal.Equiv (CPoint.dot (CPoint.sub x0 x2) (CPoint.sub \
+         x1 x2)) CReal.zero))))))"
     );
 }

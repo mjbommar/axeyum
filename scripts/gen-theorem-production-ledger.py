@@ -60,6 +60,7 @@ COMMAND = (
 EXPECTED_PRELUDES: tuple[str, ...] = (
     "axreal",
     "complex",
+    "cpoint",
     "creal",
     "integer",
     "logic",

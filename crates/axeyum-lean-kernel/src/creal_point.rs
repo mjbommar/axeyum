@@ -219,6 +219,68 @@ pub struct CPointPrelude {
     /// of two `CReal.Equiv`s the fact's SMT-LIB `and` states, coordinate by
     /// coordinate. No hypothesis, axiom-footprint free.
     pub varignon_vector_parallel: NameId,
+    /// `CPoint.add P Q := CPoint.mk (add (x P) (x Q)) (add (y P) (y Q))` —
+    /// coordinatewise point addition, the sibling [`Self::point_sub`] never
+    /// needed until now: `declare_thales`'s telescoping identity
+    /// `A - C ~ (A - O) + (O - C)` is stated with a genuine point-level `+`.
+    pub point_add: NameId,
+    /// `CPoint.neg P := CPoint.mk (neg (x P)) (neg (y P))`.
+    pub point_neg: NameId,
+    /// `CPoint.dot P Q := CReal.add (CReal.mul (x P) (x Q)) (CReal.mul (y P) (y Q))`
+    /// — the inner product Pythagoras and Thales are both stated over.
+    pub dot: NameId,
+    /// `CPoint.dot_congr : ∀ P P' Q Q', CPoint.Equiv P P' → CPoint.Equiv Q Q' →
+    /// Equiv (dot P Q) (dot P' Q')` — the setoid obligation `dot` needs before
+    /// any point-level rewriting under it is legal (used to transport along
+    /// the diff-of-diffs and telescoping identities below).
+    pub dot_congr: NameId,
+    /// `CPoint.dot_comm : ∀ P Q, Equiv (dot P Q) (dot Q P)`.
+    pub dot_comm: NameId,
+    /// `CPoint.dot_add_left : ∀ P Q R,
+    /// Equiv (dot (add P Q) R) (add (dot P R) (dot Q R))`.
+    pub dot_add_left: NameId,
+    /// `CPoint.dot_add_right : ∀ P Q R,
+    /// Equiv (dot P (add Q R)) (add (dot P Q) (dot P R))`.
+    pub dot_add_right: NameId,
+    /// `CPoint.dot_sub_left : ∀ P Q R,
+    /// Equiv (dot (sub P Q) R) (add (dot P R) (neg (dot Q R)))`.
+    ///
+    /// `declare_pythagoras` is built from: with `U := sub A C`, `V := sub B C`,
+    /// `W := sub U V`, this expands `dot W W` twice (once per slot) into
+    /// `dot U U`/`dot V V`/`dot U V` terms, and the hypothesis `dot U V ~ 0`
+    /// kills the cross terms.
+    pub dot_sub_left: NameId,
+    /// `CPoint.dot_sub_right : ∀ P Q R,
+    /// Equiv (dot P (sub Q R)) (add (dot P Q) (neg (dot P R)))`.
+    pub dot_sub_right: NameId,
+    /// `CPoint.dot_neg_left : ∀ P Q, Equiv (dot (neg P) Q) (neg (dot P Q))`.
+    pub dot_neg_left: NameId,
+    /// **Elements I.47.** `∀ A B C, Equiv (dot (sub A C) (sub B C)) zero →
+    /// Equiv (dot (sub A B) (sub A B))
+    ///        (add (dot (sub A C) (sub A C)) (dot (sub B C) (sub B C)))`.
+    ///
+    /// The hypothesis `(A-C)·(B-C) ~ 0` *is* "the angle at `C` is right"; the
+    /// conclusion *is* `|AB|² = |AC|² + |CB|²`. No square roots, no order, no
+    /// non-degeneracy side condition — pure bilinearity of [`Self::dot`] plus
+    /// the ring identity `A - B ~ (A - C) - (B - C)` (`diff_diff_scalar_proof`,
+    /// applied per coordinate and packaged into a `CPoint.Equiv` transported
+    /// through [`Self::dot_congr`]).
+    pub pythagoras: NameId,
+    /// **Elements III.31**, the converse direction. `∀ A B C O,
+    /// CPoint.Equiv O (point_midpoint A B) →
+    /// Equiv (dot (sub C O) (sub C O)) (dot (sub A O) (sub A O)) →
+    /// Equiv (dot (sub A C) (sub B C)) zero`.
+    ///
+    /// If `C` lies on the circle with diameter `AB` (`O` its centre, so
+    /// `|CO| = |AO|`, the circle's radius), the angle at `C` is right. Proved
+    /// via the telescoping identities `A - C ~ (A-O) + (O-C)` and
+    /// `B - C ~ neg (A-O) + (O-C)` — the second is where `O ~ midpoint A B`
+    /// is actually consumed, through `2 · midpoint a b ~ a + b`
+    /// (`double_midpoint_proof`) — then [`Self::dot_add_left`]/
+    /// [`Self::dot_add_right`]/[`Self::dot_neg_left`] expand
+    /// `dot ((A-O)+(O-C)) (neg(A-O)+(O-C))` into
+    /// `dot(O-C,O-C) - dot(A-O,A-O)`, which the hypothesis makes zero.
+    pub thales: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -255,6 +317,18 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_midpoint_vector_swap(&mut d, p)?;
     declare_point_sub(&mut d, p)?;
     declare_varignon_vector(&mut d, p)?;
+    declare_point_add(&mut d, p)?;
+    declare_point_neg(&mut d, p)?;
+    declare_dot(&mut d, p)?;
+    declare_dot_congr(&mut d, p)?;
+    declare_dot_comm(&mut d, p)?;
+    declare_dot_add_left(&mut d, p)?;
+    declare_dot_add_right(&mut d, p)?;
+    declare_dot_sub_left(&mut d, p)?;
+    declare_dot_sub_right(&mut d, p)?;
+    declare_dot_neg_left(&mut d, p)?;
+    declare_pythagoras(&mut d, p)?;
+    declare_thales(&mut d, p)?;
     Ok(p)
 }
 
@@ -285,6 +359,18 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         midpoint_vector_swap: kernel.name_str(scalar, "midpoint_vector_swap"),
         point_sub: kernel.name_str(point, "sub"),
         varignon_vector_parallel: kernel.name_str(point, "varignon_vector_parallel"),
+        point_add: kernel.name_str(point, "add"),
+        point_neg: kernel.name_str(point, "neg"),
+        dot: kernel.name_str(point, "dot"),
+        dot_congr: kernel.name_str(point, "dot_congr"),
+        dot_comm: kernel.name_str(point, "dot_comm"),
+        dot_add_left: kernel.name_str(point, "dot_add_left"),
+        dot_add_right: kernel.name_str(point, "dot_add_right"),
+        dot_sub_left: kernel.name_str(point, "dot_sub_left"),
+        dot_sub_right: kernel.name_str(point, "dot_sub_right"),
+        dot_neg_left: kernel.name_str(point, "dot_neg_left"),
+        pythagoras: kernel.name_str(point, "pythagoras"),
+        thales: kernel.name_str(point, "thales"),
     }
 }
 
@@ -320,6 +406,26 @@ fn czero(d: &mut IntDev<'_>, p: CPointPrelude) -> ExprId {
 
 fn midpoint(d: &mut IntDev<'_>, p: CPointPrelude, a: ExprId, b: ExprId) -> ExprId {
     d.const_app(p.midpoint, &[a, b])
+}
+
+/// `CPoint.sub P Q`.
+fn psub(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.point_sub, &[x, y])
+}
+
+/// `CPoint.add P Q`.
+fn padd(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.point_add, &[x, y])
+}
+
+/// `CPoint.neg P`.
+fn pneg(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.point_neg, &[x])
+}
+
+/// `CPoint.dot P Q`.
+fn dotp(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.dot, &[x, y])
 }
 
 fn refl(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId) -> ExprId {
@@ -498,6 +604,682 @@ fn sum_swap_proof(
         &[(ce, x_reduce), (ab, symm_h), (big_yz, symm_y)],
     );
     d.lemma(p.add_right_cancel, &[big_x, big_y, big_z, combined])
+}
+
+// --- CReal ring toolkit ------------------------------------------------------
+//
+// Private proof-term builders, not separate kernel declarations: each is
+// short, used only to assemble the `dot` family and the two headline
+// theorems below, and gets fully re-checked by the kernel as part of
+// whichever declaration consumes it — exactly like `zero_add_proof`/
+// `neg_add_cancel_proof`/`sum_swap_proof` above. `add_left_cancel_proof` is
+// the one new *pattern* (the mirror of `add_right_cancel`, needed because
+// several identities below cancel a shared term on the left); everything
+// else is an `add_comm`/`add_assoc`/`add_neg`/`left_distrib`/`mul_comm`
+// chain in the same style.
+
+/// Given `h : Equiv (add z x) (add z y)`, produce `Equiv x y` — the mirror of
+/// [`CPointPrelude::add_right_cancel`] with the shared term on the left.
+fn add_left_cancel_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let zx = cadd(d, p, z, x);
+    let xz = cadd(d, p, x, z);
+    let zy = cadd(d, p, z, y);
+    let yz = cadd(d, p, y, z);
+    let comm_zx = d.lemma(creal.add_comm, &[z, x]); // Equiv(zx, xz)
+    let step1 = symm(d, p, zx, xz, comm_zx); // Equiv(xz, zx)
+    let comm_zy = d.lemma(creal.add_comm, &[z, y]); // Equiv(zy, yz)
+    let combined = chain(d, p, xz, &[(zx, step1), (zy, h), (yz, comm_zy)]);
+    d.lemma(p.add_right_cancel, &[x, y, z, combined])
+}
+
+/// `Equiv (add (add x y) (neg y)) x` — "add `y` then subtract it cancels".
+fn add_sub_cancel_right(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let creal = p.creal;
+    let ny = cneg(d, p, y);
+    let xy = cadd(d, p, x, y);
+    let xy_ny = cadd(d, p, xy, ny);
+    let y_ny = cadd(d, p, y, ny);
+    let x_y_ny = cadd(d, p, x, y_ny);
+    let zero = czero(d, p);
+    let x_zero = cadd(d, p, x, zero);
+    let assoc = d.lemma(creal.add_assoc, &[x, y, ny]); // Equiv(xy_ny, x_y_ny)
+    let an = d.lemma(creal.add_neg, &[y]); // Equiv(y_ny, zero)
+    let refl_x = refl(d, p, x);
+    let congr = d.lemma(creal.add_congr, &[x, x, y_ny, zero, refl_x, an]); // Equiv(x_y_ny, x_zero)
+    let az = d.lemma(creal.add_zero, &[x]); // Equiv(x_zero, x)
+    chain(d, p, xy_ny, &[(x_y_ny, assoc), (x_zero, congr), (x, az)])
+}
+
+/// `Equiv (add (add x y) (neg x)) y` — the mirror, cancelling the left addend.
+fn add_sub_cancel_left(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let creal = p.creal;
+    let xy = cadd(d, p, x, y);
+    let yx = cadd(d, p, y, x);
+    let nx = cneg(d, p, x);
+    let xy_nx = cadd(d, p, xy, nx);
+    let yx_nx = cadd(d, p, yx, nx);
+    let comm = d.lemma(creal.add_comm, &[x, y]); // Equiv(xy, yx)
+    let refl_nx = refl(d, p, nx);
+    let congr = d.lemma(creal.add_congr, &[xy, yx, nx, nx, comm, refl_nx]); // Equiv(xy_nx, yx_nx)
+    let reduce = add_sub_cancel_right(d, p, y, x); // Equiv(yx_nx, y)
+    chain(d, p, xy_nx, &[(yx_nx, congr), (y, reduce)])
+}
+
+/// `Equiv (neg zero) zero`.
+fn neg_zero_proof(d: &mut IntDev<'_>, p: CPointPrelude) -> ExprId {
+    let creal = p.creal;
+    let zero = czero(d, p);
+    let nz = cneg(d, p, zero);
+    let zero_nz = cadd(d, p, zero, nz);
+    let zero_zero = cadd(d, p, zero, zero);
+    let an = d.lemma(creal.add_neg, &[zero]); // Equiv(zero_nz, zero)
+    let az = d.lemma(creal.add_zero, &[zero]); // Equiv(zero_zero, zero)
+    let az_symm = symm(d, p, zero_zero, zero, az); // Equiv(zero, zero_zero)
+    let h = chain(d, p, zero_nz, &[(zero, an), (zero_zero, az_symm)]);
+    add_left_cancel_proof(d, p, nz, zero, zero, h)
+}
+
+/// `Equiv (neg (neg x)) x`.
+fn neg_neg_proof(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId) -> ExprId {
+    let creal = p.creal;
+    let nx = cneg(d, p, x);
+    let nnx = cneg(d, p, nx);
+    let nnx_nx = cadd(d, p, nnx, nx);
+    let x_nx = cadd(d, p, x, nx);
+    let zero = czero(d, p);
+    let cancel1 = neg_add_cancel_proof(d, p, nx); // Equiv(nnx_nx, zero)
+    let cancel2 = d.lemma(creal.add_neg, &[x]); // Equiv(x_nx, zero)
+    let cancel2_symm = symm(d, p, x_nx, zero, cancel2); // Equiv(zero, x_nx)
+    let h = chain(d, p, nnx_nx, &[(zero, cancel1), (x_nx, cancel2_symm)]);
+    // h : Equiv(add nnx nx, add x nx) — the shared term `nx` is on the RIGHT,
+    // so this is `add_right_cancel`'s pattern, not `add_left_cancel_proof`'s.
+    d.lemma(p.add_right_cancel, &[nnx, x, nx, h])
+}
+
+/// `Equiv (neg (add x y)) (add (neg x) (neg y))`.
+fn neg_add_proof(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let creal = p.creal;
+    let zero = czero(d, p);
+    let big_x = cadd(d, p, x, y); // X = x + y
+    let nx = cneg(d, p, x);
+    let ny = cneg(d, p, y);
+    let big_y = cadd(d, p, nx, ny); // Y = -x + -y
+    let n_big_x = cneg(d, p, big_x); // -X
+
+    let xy_sum = cadd(d, p, big_x, big_y); // X + Y
+    let x_nx = cadd(d, p, big_x, nx); // X + -x
+    let lhs1 = cadd(d, p, x_nx, ny); // (X + -x) + -y
+    let assoc = d.lemma(creal.add_assoc, &[big_x, nx, ny]); // Equiv(lhs1, xy_sum)
+    let step_a = symm(d, p, lhs1, xy_sum, assoc); // Equiv(xy_sum, lhs1)
+    let reduce1 = add_sub_cancel_left(d, p, x, y); // Equiv(X + -x, y)
+    let y_ny = cadd(d, p, y, ny);
+    let refl_ny = refl(d, p, ny);
+    let congr_step = d.lemma(creal.add_congr, &[x_nx, y, ny, ny, reduce1, refl_ny]); // Equiv(lhs1, y_ny)
+    let an_y = d.lemma(creal.add_neg, &[y]); // Equiv(y_ny, zero)
+    let xy_sum_zero = chain(
+        d,
+        p,
+        xy_sum,
+        &[(lhs1, step_a), (y_ny, congr_step), (zero, an_y)],
+    );
+
+    let x_nbig_x = cadd(d, p, big_x, n_big_x); // X + -X
+    let an_bigx = d.lemma(creal.add_neg, &[big_x]); // Equiv(x_nbig_x, zero)
+    let xy_sum_zero_symm = symm(d, p, xy_sum, zero, xy_sum_zero); // Equiv(zero, xy_sum)
+    let h = chain(
+        d,
+        p,
+        x_nbig_x,
+        &[(zero, an_bigx), (xy_sum, xy_sum_zero_symm)],
+    );
+    // h : Equiv(add X (-X))(add X Y)
+    add_left_cancel_proof(d, p, n_big_x, big_y, big_x, h)
+}
+
+/// `Equiv (mul a (neg b)) (neg (mul a b))`.
+fn mul_neg_right_proof(d: &mut IntDev<'_>, p: CPointPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let creal = p.creal;
+    let nb = cneg(d, p, b);
+    let big_x = cmul(d, p, a, nb); // X = a * -b
+    let m = cmul(d, p, a, b); // M = a * b
+    let nb_b = cadd(d, p, nb, b); // -b + b
+    let zero = czero(d, p);
+    let cancel = neg_add_cancel_proof(d, p, b); // Equiv(nb_b, zero)
+    let a_nbb = cmul(d, p, a, nb_b); // a * (-b + b)
+    let xm_sum = cadd(d, p, big_x, m);
+    let ld = d.lemma(creal.left_distrib, &[a, nb, b]); // Equiv(a_nbb, xm_sum)
+    let a_zero = cmul(d, p, a, zero);
+    let refl_a = refl(d, p, a);
+    let congr = d.lemma(creal.mul_congr, &[a, a, nb_b, zero, refl_a, cancel]); // Equiv(a_nbb, a_zero)
+    let mz = d.lemma(creal.mul_zero, &[a]); // Equiv(a_zero, zero)
+    let ld_symm = symm(d, p, a_nbb, xm_sum, ld); // Equiv(xm_sum, a_nbb)
+    let xm_zero = chain(
+        d,
+        p,
+        xm_sum,
+        &[(a_nbb, ld_symm), (a_zero, congr), (zero, mz)],
+    );
+
+    let nm = cneg(d, p, m);
+    let nm_m = cadd(d, p, nm, m);
+    let cancel_m = neg_add_cancel_proof(d, p, m); // Equiv(nm_m, zero)
+    let cancel_m_symm = symm(d, p, nm_m, zero, cancel_m); // Equiv(zero, nm_m)
+    let h = chain(d, p, xm_sum, &[(zero, xm_zero), (nm_m, cancel_m_symm)]);
+    // h : Equiv(add X M)(add (neg M) M)
+    d.lemma(p.add_right_cancel, &[big_x, nm, m, h])
+}
+
+/// `Equiv (mul (neg a) b) (neg (mul a b))`.
+fn mul_neg_left_proof(d: &mut IntDev<'_>, p: CPointPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let creal = p.creal;
+    let na = cneg(d, p, a);
+    let na_b = cmul(d, p, na, b);
+    let b_na = cmul(d, p, b, na);
+    let ba = cmul(d, p, b, a);
+    let ab = cmul(d, p, a, b);
+    let neg_ba = cneg(d, p, ba);
+    let neg_ab = cneg(d, p, ab);
+    let comm1 = d.lemma(creal.mul_comm, &[na, b]); // Equiv(na_b, b_na)
+    let b_neg_a = mul_neg_right_proof(d, p, b, a); // Equiv(b_na, neg_ba)
+    let comm2 = d.lemma(creal.mul_comm, &[b, a]); // Equiv(ba, ab)
+    let neg_congr_ba_ab = d.lemma(creal.neg_congr, &[ba, ab, comm2]); // Equiv(neg_ba, neg_ab)
+    chain(
+        d,
+        p,
+        na_b,
+        &[(b_na, comm1), (neg_ba, b_neg_a), (neg_ab, neg_congr_ba_ab)],
+    )
+}
+
+/// `Equiv (mul (add a b) c) (add (mul a c) (mul b c))`.
+fn right_distrib_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let ab = cadd(d, p, a, b);
+    let ab_c = cmul(d, p, ab, c);
+    let c_ab = cmul(d, p, c, ab);
+    let ca = cmul(d, p, c, a);
+    let cb = cmul(d, p, c, b);
+    let ca_cb = cadd(d, p, ca, cb);
+    let ac = cmul(d, p, a, c);
+    let bc = cmul(d, p, b, c);
+    let ac_bc = cadd(d, p, ac, bc);
+    let comm1 = d.lemma(creal.mul_comm, &[ab, c]); // Equiv(ab_c, c_ab)
+    let ld = d.lemma(creal.left_distrib, &[c, a, b]); // Equiv(c_ab, ca_cb)
+    let comm_ca = d.lemma(creal.mul_comm, &[c, a]); // Equiv(ca, ac)
+    let comm_cb = d.lemma(creal.mul_comm, &[c, b]); // Equiv(cb, bc)
+    let congr = d.lemma(creal.add_congr, &[ca, ac, cb, bc, comm_ca, comm_cb]); // Equiv(ca_cb, ac_bc)
+    chain(d, p, ab_c, &[(c_ab, comm1), (ca_cb, ld), (ac_bc, congr)])
+}
+
+/// `Equiv (mul a (add b (neg c))) (add (mul a b) (neg (mul a c)))`.
+fn mul_sub_right_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let nc = cneg(d, p, c);
+    let b_nc = cadd(d, p, b, nc);
+    let a_b_nc = cmul(d, p, a, b_nc);
+    let ab = cmul(d, p, a, b);
+    let ac = cmul(d, p, a, c);
+    let a_nc = cmul(d, p, a, nc);
+    let ab_anc = cadd(d, p, ab, a_nc);
+    let nac = cneg(d, p, ac);
+    let ab_nac = cadd(d, p, ab, nac);
+    let ld = d.lemma(creal.left_distrib, &[a, b, nc]); // Equiv(a_b_nc, ab_anc)
+    let mnr = mul_neg_right_proof(d, p, a, c); // Equiv(a_nc, nac)
+    let refl_ab = refl(d, p, ab);
+    let congr = d.lemma(creal.add_congr, &[ab, ab, a_nc, nac, refl_ab, mnr]); // Equiv(ab_anc, ab_nac)
+    chain(d, p, a_b_nc, &[(ab_anc, ld), (ab_nac, congr)])
+}
+
+/// `Equiv (mul (add a (neg b)) c) (add (mul a c) (neg (mul b c)))`.
+fn mul_sub_left_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let nb = cneg(d, p, b);
+    let a_nb = cadd(d, p, a, nb);
+    let a_nb_c = cmul(d, p, a_nb, c);
+    let ac = cmul(d, p, a, c);
+    let nb_c = cmul(d, p, nb, c);
+    let ac_nbc = cadd(d, p, ac, nb_c);
+    let bc = cmul(d, p, b, c);
+    let nbc = cneg(d, p, bc);
+    let ac_nbc2 = cadd(d, p, ac, nbc);
+    let rd = right_distrib_proof(d, p, a, nb, c); // Equiv(a_nb_c, ac_nbc)
+    let mnl = mul_neg_left_proof(d, p, b, c); // Equiv(nb_c, nbc)
+    let refl_ac = refl(d, p, ac);
+    let congr = d.lemma(creal.add_congr, &[ac, ac, nb_c, nbc, refl_ac, mnl]); // Equiv(ac_nbc, ac_nbc2)
+    chain(d, p, a_nb_c, &[(ac_nbc, rd), (ac_nbc2, congr)])
+}
+
+/// `Equiv (add (add a b) (add c e)) (add (add a c) (add b e))` — the
+/// "middle two swap" 4-term rearrangement.
+fn add_middle_swap_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    e: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let ab = cadd(d, p, a, b);
+    let ce = cadd(d, p, c, e);
+    let s = cadd(d, p, ab, ce); // (a+b)+(c+e)
+    let ac = cadd(d, p, a, c);
+    let be = cadd(d, p, b, e);
+    let t = cadd(d, p, ac, be); // (a+c)+(b+e)
+
+    let bce = cadd(d, p, b, ce);
+    let n1 = cadd(d, p, a, bce); // a+(b+(c+e))
+    let step1 = d.lemma(creal.add_assoc, &[a, b, ce]); // Equiv(s, n1)
+
+    let bc = cadd(d, p, b, c);
+    let bc_e = cadd(d, p, bc, e);
+    let n2 = cadd(d, p, a, bc_e); // a+((b+c)+e)
+    let assoc_bce = d.lemma(creal.add_assoc, &[b, c, e]); // Equiv(bc_e, bce)
+    let assoc_bce_symm = symm(d, p, bc_e, bce, assoc_bce); // Equiv(bce, bc_e)
+    let refl_a = refl(d, p, a);
+    let step2 = d.lemma(creal.add_congr, &[a, a, bce, bc_e, refl_a, assoc_bce_symm]); // Equiv(n1, n2)
+
+    let cb = cadd(d, p, c, b);
+    let cb_e = cadd(d, p, cb, e);
+    let n3 = cadd(d, p, a, cb_e); // a+((c+b)+e)
+    let comm_bc = d.lemma(creal.add_comm, &[b, c]); // Equiv(bc, cb)
+    let refl_e = refl(d, p, e);
+    let congr_cbe = d.lemma(creal.add_congr, &[bc, cb, e, e, comm_bc, refl_e]); // Equiv(bc_e, cb_e)
+    let step3 = d.lemma(creal.add_congr, &[a, a, bc_e, cb_e, refl_a, congr_cbe]); // Equiv(n2, n3)
+
+    let assoc_a_c_be = d.lemma(creal.add_assoc, &[a, c, be]); // Equiv(t, a+(c+be))
+    let c_be = cadd(d, p, c, be);
+    let n4 = cadd(d, p, a, c_be); // a+(c+(b+e))
+    let step4 = symm(d, p, t, n4, assoc_a_c_be); // Equiv(n4, t)
+
+    // n3 = a+((c+b)+e), n4 = a+(c+(b+e)): (c+b)+e ~ c+(b+e) by add_assoc(c,b,e).
+    let assoc_c_b_e = d.lemma(creal.add_assoc, &[c, b, e]); // Equiv(cb_e, c_be)
+    let step3b = d.lemma(creal.add_congr, &[a, a, cb_e, c_be, refl_a, assoc_c_b_e]); // Equiv(n3, n4)
+
+    chain(
+        d,
+        p,
+        s,
+        &[
+            (n1, step1),
+            (n2, step2),
+            (n3, step3),
+            (n4, step3b),
+            (t, step4),
+        ],
+    )
+}
+
+/// `Equiv (add a (neg b)) (add (add a (neg c)) (neg (add b (neg c))))` —
+/// `a - b ~ (a - c) - (b - c)`, the diff-of-diffs identity behind Pythagoras.
+fn diff_diff_scalar_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let nb = cneg(d, p, b);
+    let nc = cneg(d, p, c);
+    let b_nc = cadd(d, p, b, nc); // b - c
+    let n_b_nc = cneg(d, p, b_nc); // -(b-c)
+    let a_nc = cadd(d, p, a, nc); // a - c
+    let rhs = cadd(d, p, a_nc, n_b_nc); // (a-c) + -(b-c)
+
+    let neg_b_nc = neg_add_proof(d, p, b, nc); // Equiv(n_b_nc, add(neg b)(neg nc))
+    let nnc = neg_neg_proof(d, p, c); // Equiv(neg nc, c)
+    let neg_nc = cneg(d, p, nc);
+    let nb_nnc = cadd(d, p, nb, neg_nc);
+
+    let nb_c = cadd(d, p, nb, c); // -b + c
+    let step_inner = {
+        let refl_nb2 = refl(d, p, nb);
+        let congr = d.lemma(creal.add_congr, &[nb, nb, neg_nc, c, refl_nb2, nnc]);
+        chain(d, p, n_b_nc, &[(nb_nnc, neg_b_nc), (nb_c, congr)])
+    };
+    // rhs ~ (a-c) + (-b+c)
+    let refl_a_nc = refl(d, p, a_nc);
+    let rhs_reduce1 = d.lemma(
+        creal.add_congr,
+        &[a_nc, a_nc, n_b_nc, nb_c, refl_a_nc, step_inner],
+    );
+    let target1 = cadd(d, p, a_nc, nb_c);
+
+    // (a-c)+(-b+c) ~ (a+-b)+(-c+c) via add_middle_swap(a,-c,-b,c)
+    let swap = add_middle_swap_proof(d, p, a, nc, nb, c); // Equiv((a+-c)+(-b+c), (a+-b)+(-c+c))
+    let a_nb = cadd(d, p, a, nb);
+    let nc_c = cadd(d, p, nc, c);
+    let target2 = cadd(d, p, a_nb, nc_c);
+
+    let cancel = neg_add_cancel_proof(d, p, c); // Equiv(nc_c, zero)
+    let zero = czero(d, p);
+    let refl_a_nb = refl(d, p, a_nb);
+    let congr2 = d.lemma(
+        creal.add_congr,
+        &[a_nb, a_nb, nc_c, zero, refl_a_nb, cancel],
+    );
+    let a_nb_zero = cadd(d, p, a_nb, zero);
+    let az = d.lemma(creal.add_zero, &[a_nb]); // Equiv(a_nb_zero, a_nb)
+
+    let reduce_chain = chain(
+        d,
+        p,
+        rhs,
+        &[
+            (target1, rhs_reduce1),
+            (target2, swap),
+            (a_nb_zero, congr2),
+            (a_nb, az),
+        ],
+    );
+    // reduce_chain : Equiv(rhs, a_nb) — we want Equiv(a_nb, rhs).
+    symm(d, p, rhs, a_nb, reduce_chain)
+}
+
+/// `Equiv (mul two x) (add x x)`.
+fn two_mul_eq_double_proof(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId) -> ExprId {
+    let creal = p.creal;
+    let two = d.kernel().const_(p.two, vec![]);
+    let one_a = d.kernel().const_(creal.one, vec![]);
+    let one_b = d.kernel().const_(creal.one, vec![]);
+    let mul_two_x = cmul(d, p, two, x);
+    let mul_x_two = cmul(d, p, x, two);
+    let one_one = cadd(d, p, one_a, one_b);
+    let mul_x_one_one = cmul(d, p, x, one_one);
+    let mul_x_one = cmul(d, p, x, one_a);
+    let sum_mul_x_one = cadd(d, p, mul_x_one, mul_x_one);
+    let sum_x_x = cadd(d, p, x, x);
+
+    let step1 = d.lemma(creal.mul_comm, &[two, x]); // Equiv(mul_two_x, mul_x_two)
+    let refl_mxoo = refl(d, p, mul_x_one_one); // mul_x_two =defeq= mul_x_one_one
+    let step2 = d.lemma(creal.left_distrib, &[x, one_a, one_b]); // Equiv(mul_x_one_one, sum_mul_x_one)
+    let mul_one_x = d.lemma(creal.mul_one, &[x]); // Equiv(mul_x_one, x)
+    let step3 = d.lemma(
+        creal.add_congr,
+        &[mul_x_one, x, mul_x_one, x, mul_one_x, mul_one_x],
+    ); // Equiv(sum_mul_x_one, sum_x_x)
+
+    chain(
+        d,
+        p,
+        mul_two_x,
+        &[
+            (mul_x_two, step1),
+            (mul_x_one_one, refl_mxoo),
+            (sum_mul_x_one, step2),
+            (sum_x_x, step3),
+        ],
+    )
+}
+
+/// `Equiv (mul two (midpoint a b)) (add a b)`.
+fn double_midpoint_proof(d: &mut IntDev<'_>, p: CPointPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let creal = p.creal;
+    let two = d.kernel().const_(p.two, vec![]);
+    let inv2 = d.kernel().const_(p.inv2, vec![]);
+    let s = cadd(d, p, a, b);
+    let mid = cmul(d, p, inv2, s); // =defeq= midpoint a b
+    let two_mid = cmul(d, p, two, mid);
+    let two_inv2 = cmul(d, p, two, inv2);
+    let two_inv2_s = cmul(d, p, two_inv2, s);
+    let zero_nat = d.num(0);
+    let h_two = d.kernel().const_(p.two_pos_bound, vec![]);
+
+    let assoc = d.lemma(creal.mul_assoc, &[two, inv2, s]); // Equiv(two_inv2_s, two_mid)
+    let step_a = symm(d, p, two_inv2_s, two_mid, assoc); // Equiv(two_mid, two_inv2_s)
+    let cancel = d.lemma(creal.mul_inv_cancel, &[two, zero_nat, h_two]); // Equiv(two_inv2, one)
+    let one = d.kernel().const_(creal.one, vec![]);
+    let refl_s = refl(d, p, s);
+    let congr1 = d.lemma(creal.mul_congr, &[two_inv2, one, s, s, cancel, refl_s]); // Equiv(two_inv2_s, mul one s)
+    let mul_one_s = cmul(d, p, one, s);
+    let comm = d.lemma(creal.mul_comm, &[one, s]); // Equiv(mul_one_s, mul s one)
+    let mul_s_one = cmul(d, p, s, one);
+    let mo = d.lemma(creal.mul_one, &[s]); // Equiv(mul_s_one, s)
+    let one_mul_s = chain(d, p, mul_one_s, &[(mul_s_one, comm), (s, mo)]); // Equiv(mul_one_s, s)
+
+    chain(
+        d,
+        p,
+        two_mid,
+        &[(two_inv2_s, step_a), (mul_one_s, congr1), (s, one_mul_s)],
+    )
+}
+
+/// `Equiv (add a (neg c)) (add (add a (neg o)) (add o (neg c)))` —
+/// `a - c ~ (a - o) + (o - c)`, true for any `o`.
+fn telescope_scalar_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    o: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let no = cneg(d, p, o);
+    let nc = cneg(d, p, c);
+    let a_no = cadd(d, p, a, no); // a - o
+    let o_nc = cadd(d, p, o, nc); // o - c
+    let rhs = cadd(d, p, a_no, o_nc);
+    let a_nc = cadd(d, p, a, nc);
+
+    let no_o_nc = cadd(d, p, no, o_nc);
+    let assoc1 = d.lemma(creal.add_assoc, &[a, no, o_nc]); // Equiv(rhs, a + (no+o_nc))
+    let a_no_onc = cadd(d, p, a, no_o_nc);
+
+    let no_o = cadd(d, p, no, o);
+    let no_o_nc2 = cadd(d, p, no_o, nc);
+    let assoc2 = d.lemma(creal.add_assoc, &[no, o, nc]); // Equiv(no_o_nc2, no_o_nc)
+    let assoc2_symm = symm(d, p, no_o_nc2, no_o_nc, assoc2); // Equiv(no_o_nc, no_o_nc2)
+
+    let zero = czero(d, p);
+    let cancel = neg_add_cancel_proof(d, p, o); // Equiv(no_o, zero)
+    let refl_nc = refl(d, p, nc);
+    let congr_zero_nc = d.lemma(creal.add_congr, &[no_o, zero, nc, nc, cancel, refl_nc]); // Equiv(no_o_nc2, zero+nc)
+    let zero_nc = cadd(d, p, zero, nc);
+    let za = zero_add_proof(d, p, nc); // Equiv(zero_nc, nc)
+
+    let inner_reduce = chain(
+        d,
+        p,
+        no_o_nc,
+        &[(no_o_nc2, assoc2_symm), (zero_nc, congr_zero_nc), (nc, za)],
+    ); // Equiv(no_o_nc, nc)
+
+    let refl_a = refl(d, p, a);
+    let congr_outer = d.lemma(creal.add_congr, &[a, a, no_o_nc, nc, refl_a, inner_reduce]); // Equiv(a_no_onc, a_nc)
+
+    let combined = chain(d, p, rhs, &[(a_no_onc, assoc1), (a_nc, congr_outer)]);
+    // combined : Equiv(rhs, a_nc); want Equiv(a_nc, rhs).
+    symm(d, p, rhs, a_nc, combined)
+}
+
+/// `Equiv (add o o) (add a b)`, given `ho : Equiv o (midpoint a b)`.
+fn double_o_eq_a_plus_b_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    o: ExprId,
+    ho: ExprId,
+) -> ExprId {
+    let mid = midpoint(d, p, a, b);
+    let o_o = cadd(d, p, o, o);
+    let mid_mid = cadd(d, p, mid, mid);
+    let congr_oo = d.lemma(p.creal.add_congr, &[o, mid, o, mid, ho, ho]); // Equiv(o_o, mid_mid)
+    let two = d.kernel().const_(p.two, vec![]);
+    let two_mid = cmul(d, p, two, mid);
+    let two_mul_eq_double = two_mul_eq_double_proof(d, p, mid); // Equiv(two_mid, mid_mid)
+    let double_eq_two_mul = symm(d, p, two_mid, mid_mid, two_mul_eq_double); // Equiv(mid_mid, two_mid)
+    let dm = double_midpoint_proof(d, p, a, b); // Equiv(two_mid, add a b)
+    let ab = cadd(d, p, a, b);
+    chain(
+        d,
+        p,
+        o_o,
+        &[(mid_mid, congr_oo), (two_mid, double_eq_two_mul), (ab, dm)],
+    )
+}
+
+/// `Equiv (add b (neg c)) (add (neg (add a (neg o))) (add o (neg c)))` —
+/// `b - c ~ neg (a - o) + (o - c)`, given `ho : Equiv o (midpoint a b)`.
+/// This is where `O ~ midpoint A B` is actually consumed (via
+/// [`double_o_eq_a_plus_b_proof`]).
+fn telescope_neg_scalar_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    o: ExprId,
+    c: ExprId,
+    ho: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let no = cneg(d, p, o);
+    let nc = cneg(d, p, c);
+    let na = cneg(d, p, a);
+    let a_no = cadd(d, p, a, no); // a - o
+    let n_a_no = cneg(d, p, a_no); // -(a-o)
+    let o_nc = cadd(d, p, o, nc); // o - c
+    let rhs = cadd(d, p, n_a_no, o_nc);
+    let b_nc = cadd(d, p, b, nc);
+
+    // -(a-o) ~ -a + o
+    let neg_add = neg_add_proof(d, p, a, no); // Equiv(n_a_no, add(-a)(-(-o)))
+    let nno = cneg(d, p, no);
+    let na_nno = cadd(d, p, na, nno);
+    let nno_eq_o = neg_neg_proof(d, p, o); // Equiv(nno, o)
+    let refl_na = refl(d, p, na);
+    let congr_na_o = d.lemma(creal.add_congr, &[na, na, nno, o, refl_na, nno_eq_o]); // Equiv(na_nno, na+o)
+    let na_o = cadd(d, p, na, o);
+    let neg_a_no_reduce = chain(d, p, n_a_no, &[(na_nno, neg_add), (na_o, congr_na_o)]); // Equiv(n_a_no, na_o)
+
+    let refl_o_nc = refl(d, p, o_nc);
+    let rhs_reduce1 = d.lemma(
+        creal.add_congr,
+        &[n_a_no, na_o, o_nc, o_nc, neg_a_no_reduce, refl_o_nc],
+    ); // Equiv(rhs, (na+o)+(o+nc))
+    let target1 = cadd(d, p, na_o, o_nc);
+
+    // (na+o)+(o+nc) ~ na+(o+(o+nc))
+    let assoc1 = d.lemma(creal.add_assoc, &[na, o, o_nc]); // Equiv(target1, na+(o+o_nc))
+    let o_o_nc = cadd(d, p, o, o_nc);
+    let na_o_o_nc = cadd(d, p, na, o_o_nc);
+
+    // o+(o+nc) ~ (o+o)+nc
+    let o_o = cadd(d, p, o, o);
+    let o_o_nc2 = cadd(d, p, o_o, nc);
+    let assoc2 = d.lemma(creal.add_assoc, &[o, o, nc]); // Equiv(o_o_nc2, o_o_nc)
+    let assoc2_symm = symm(d, p, o_o_nc2, o_o_nc, assoc2); // Equiv(o_o_nc, o_o_nc2)
+    let refl_na3 = refl(d, p, na);
+    let step2 = d.lemma(
+        creal.add_congr,
+        &[na, na, o_o_nc, o_o_nc2, refl_na3, assoc2_symm],
+    ); // Equiv(na_o_o_nc, na+(o_o_nc2))
+    let na_oonc2 = cadd(d, p, na, o_o_nc2);
+
+    // o+o ~ a+b
+    let double_oo = double_o_eq_a_plus_b_proof(d, p, a, b, o, ho); // Equiv(o_o, a+b)
+    let ab = cadd(d, p, a, b);
+    let ab_nc = cadd(d, p, ab, nc);
+    let refl_nc2 = refl(d, p, nc);
+    let step3 = d.lemma(creal.add_congr, &[o_o, ab, nc, nc, double_oo, refl_nc2]); // Equiv(o_o_nc2, ab_nc)
+    let refl_na4 = refl(d, p, na);
+    let step3b = d.lemma(creal.add_congr, &[na, na, o_o_nc2, ab_nc, refl_na4, step3]); // Equiv(na_oonc2, na+ab_nc)
+    let na_abnc = cadd(d, p, na, ab_nc);
+
+    // na + (ab + nc) ~ (na + ab) + nc ~ ((na+a)+b) + nc ~ (zero+b)+nc ~ b+nc
+    let assoc3 = d.lemma(creal.add_assoc, &[na, ab, nc]); // Equiv((na+ab)+nc, na+(ab+nc))
+    let na_ab = cadd(d, p, na, ab);
+    let na_ab_nc = cadd(d, p, na_ab, nc);
+    let assoc3_symm = symm(d, p, na_ab_nc, na_abnc, assoc3); // Equiv(na_abnc, na_ab_nc)
+
+    let assoc4 = d.lemma(creal.add_assoc, &[na, a, b]); // Equiv((na+a)+b, na+(a+b)) = Equiv(_, na+ab)
+    let na_a = cadd(d, p, na, a);
+    let na_a_b = cadd(d, p, na_a, b);
+    let assoc4_symm = symm(d, p, na_a_b, na_ab, assoc4); // Equiv(na_ab, na_a_b)
+    let refl_nc3 = refl(d, p, nc);
+    let congr4 = d.lemma(
+        creal.add_congr,
+        &[na_ab, na_a_b, nc, nc, assoc4_symm, refl_nc3],
+    ); // Equiv(na_ab_nc, na_a_b_nc)
+    let na_a_b_nc = cadd(d, p, na_a_b, nc);
+
+    let cancel_na = neg_add_cancel_proof(d, p, a); // Equiv(na_a, zero)
+    let zero = czero(d, p);
+    let refl_b = refl(d, p, b);
+    let congr5 = d.lemma(creal.add_congr, &[na_a, zero, b, b, cancel_na, refl_b]); // Equiv(na_a_b, zero+b)
+    let zero_b = cadd(d, p, zero, b);
+    let za = zero_add_proof(d, p, b); // Equiv(zero_b, b)
+
+    let na_a_b_reduce = chain(d, p, na_a_b, &[(zero_b, congr5), (b, za)]); // Equiv(na_a_b, b)
+    let refl_nc5 = refl(d, p, nc);
+    let congr7 = d.lemma(
+        creal.add_congr,
+        &[na_a_b, b, nc, nc, na_a_b_reduce, refl_nc5],
+    ); // Equiv(na_a_b_nc, b_nc)
+
+    let combined = chain(
+        d,
+        p,
+        rhs,
+        &[
+            (target1, rhs_reduce1),
+            (na_o_o_nc, assoc1),
+            (na_oonc2, step2),
+            (na_abnc, step3b),
+            (na_ab_nc, assoc3_symm),
+            (na_a_b_nc, congr4),
+            (b_nc, congr7),
+        ],
+    );
+    // combined : Equiv(rhs, b_nc) — the function's contract is the reverse.
+    symm(d, p, rhs, b_nc, combined)
+}
+
+/// `Equiv (neg (add x (neg y))) (add y (neg x))` — `neg (x - y) ~ y - x`.
+fn neg_sub_comm_scalar_proof(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let creal = p.creal;
+    let ny = cneg(d, p, y);
+    let x_ny = cadd(d, p, x, ny);
+    let n_x_ny = cneg(d, p, x_ny);
+    let nx = cneg(d, p, x);
+    let nny = cneg(d, p, ny);
+    let na = neg_add_proof(d, p, x, ny); // Equiv(n_x_ny, add nx nny)
+    let nx_nny = cadd(d, p, nx, nny);
+    let nny_eq_y = neg_neg_proof(d, p, y); // Equiv(nny, y)
+    let refl_nx = refl(d, p, nx);
+    let congr = d.lemma(creal.add_congr, &[nx, nx, nny, y, refl_nx, nny_eq_y]); // Equiv(nx_nny, nx+y)
+    let nx_y = cadd(d, p, nx, y);
+    let comm = d.lemma(creal.add_comm, &[nx, y]); // Equiv(nx_y, y+nx)... wait add_comm(nx,y): Equiv(add nx y, add y nx)
+    let y_nx = cadd(d, p, y, nx);
+    chain(d, p, n_x_ny, &[(nx_nny, na), (nx_y, congr), (y_nx, comm)])
 }
 
 // --- the carrier ---------------------------------------------------------
@@ -1488,6 +2270,1133 @@ fn declare_varignon_vector(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), K
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.varignon_vector_parallel,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the inner product ------------------------------------------------------
+
+/// `CPoint.add P Q := CPoint.mk (add (x P) (x Q)) (add (y P) (y Q))`.
+fn declare_point_add(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let sx = cadd(d, p, ax, bx);
+    let sy = cadd(d, p, ay, by);
+    let value_body = d.const_app(p.mk, &[sx, sy]);
+
+    let value = {
+        let inner = d.lam_fv(pb_fv, point, value_body);
+        d.lam_fv(pa_fv, point, inner)
+    };
+    let ty = {
+        let inner = d.arrow(point, point);
+        d.arrow(point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.point_add,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 5),
+    })
+}
+
+/// `CPoint.neg P := CPoint.mk (neg (x P)) (neg (y P))`.
+fn declare_point_neg(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let nx = cneg(d, p, ax);
+    let ny = cneg(d, p, ay);
+    let value_body = d.const_app(p.mk, &[nx, ny]);
+
+    let value = d.lam_fv(pa_fv, point, value_body);
+    let ty = d.arrow(point, point);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.point_neg,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 6),
+    })
+}
+
+/// `CPoint.dot P Q := CReal.add (CReal.mul (x P) (x Q)) (CReal.mul (y P) (y Q))`.
+fn declare_dot(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let carrier = creal_ty(d, p);
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let mx = cmul(d, p, ax, bx);
+    let my = cmul(d, p, ay, by);
+    let value_body = cadd(d, p, mx, my);
+
+    let value = {
+        let inner = d.lam_fv(pb_fv, point, value_body);
+        d.lam_fv(pa_fv, point, inner)
+    };
+    let ty = {
+        let inner = d.arrow(point, carrier);
+        d.arrow(point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.dot,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 7),
+    })
+}
+
+/// `dot_congr : ∀ P P' Q Q', CPoint.Equiv P P' → CPoint.Equiv Q Q' →
+/// Equiv (dot P Q) (dot P' Q')`.
+fn declare_dot_congr(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+    let qa_fv = d.fresh_fvar();
+    let qa = d.kernel().fvar(qa_fv);
+    let qb_fv = d.fresh_fvar();
+    let qb = d.kernel().fvar(qb_fv);
+
+    let pax = d.const_app(p.x, &[pa]);
+    let pay = d.const_app(p.y, &[pa]);
+    let pbx = d.const_app(p.x, &[pb]);
+    let pby = d.const_app(p.y, &[pb]);
+    let qax = d.const_app(p.x, &[qa]);
+    let qay = d.const_app(p.y, &[qa]);
+    let qbx = d.const_app(p.x, &[qb]);
+    let qby = d.const_app(p.y, &[qb]);
+
+    let hp_ty = d.const_app(p.point_equiv, &[pa, pb]);
+    let hq_ty = d.const_app(p.point_equiv, &[qa, qb]);
+    let hp_fv = d.fresh_fvar();
+    let hp = d.kernel().fvar(hp_fv);
+    let hq_fv = d.fresh_fvar();
+    let hq = d.kernel().fvar(hq_fv);
+
+    let ex_ty = equiv(d, p, pax, pbx);
+    let ey_ty = equiv(d, p, pay, pby);
+    let hpx = d.and_left(ex_ty, ey_ty, hp);
+    let hpy = d.and_right(ex_ty, ey_ty, hp);
+    let fx_ty = equiv(d, p, qax, qbx);
+    let fy_ty = equiv(d, p, qay, qby);
+    let hqx = d.and_left(fx_ty, fy_ty, hq);
+    let hqy = d.and_right(fx_ty, fy_ty, hq);
+
+    let mx1 = cmul(d, p, pax, qax);
+    let mx2 = cmul(d, p, pbx, qbx);
+    let my1 = cmul(d, p, pay, qay);
+    let my2 = cmul(d, p, pby, qby);
+    let congr_x = d.lemma(creal.mul_congr, &[pax, pbx, qax, qbx, hpx, hqx]);
+    let congr_y = d.lemma(creal.mul_congr, &[pay, pby, qay, qby, hpy, hqy]);
+    let proof = d.lemma(creal.add_congr, &[mx1, mx2, my1, my2, congr_x, congr_y]);
+
+    let dot_pq = dotp(d, p, pa, qa);
+    let dot_pq2 = dotp(d, p, pb, qb);
+    let ty_body = equiv(d, p, dot_pq, dot_pq2);
+    let ty = {
+        let inner = d.arrow(hq_ty, ty_body);
+        let with_hp = d.arrow(hp_ty, inner);
+        let with_qb = d.pi_fv(qb_fv, point, with_hp);
+        let with_qa = d.pi_fv(qa_fv, point, with_qb);
+        let with_pb = d.pi_fv(pb_fv, point, with_qa);
+        d.pi_fv(pa_fv, point, with_pb)
+    };
+    let value = {
+        let with_hq = d.lam_fv(hq_fv, hq_ty, proof);
+        let with_hp = d.lam_fv(hp_fv, hp_ty, with_hq);
+        let with_qb = d.lam_fv(qb_fv, point, with_hp);
+        let with_qa = d.lam_fv(qa_fv, point, with_qb);
+        let with_pb = d.lam_fv(pb_fv, point, with_qa);
+        d.lam_fv(pa_fv, point, with_pb)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dot_congr,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `dot_comm : ∀ P Q, Equiv (dot P Q) (dot Q P)`.
+fn declare_dot_comm(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let mx1 = cmul(d, p, ax, bx);
+    let mx2 = cmul(d, p, bx, ax);
+    let my1 = cmul(d, p, ay, by);
+    let my2 = cmul(d, p, by, ay);
+    let comm_x = d.lemma(creal.mul_comm, &[ax, bx]);
+    let comm_y = d.lemma(creal.mul_comm, &[ay, by]);
+    let proof = d.lemma(creal.add_congr, &[mx1, mx2, my1, my2, comm_x, comm_y]);
+
+    let dot1 = dotp(d, p, pa, pb);
+    let dot2 = dotp(d, p, pb, pa);
+    let ty_body = equiv(d, p, dot1, dot2);
+    let ty = {
+        let inner = d.pi_fv(pb_fv, point, ty_body);
+        d.pi_fv(pa_fv, point, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(pb_fv, point, proof);
+        d.lam_fv(pa_fv, point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dot_comm,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `dot_add_left : ∀ P Q R, Equiv (dot (add P Q) R) (add (dot P R) (dot Q R))`.
+fn declare_dot_add_left(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+    let pc_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(pc_fv);
+
+    let px = d.const_app(p.x, &[pa]);
+    let py = d.const_app(p.y, &[pa]);
+    let qx = d.const_app(p.x, &[pb]);
+    let qy = d.const_app(p.y, &[pb]);
+    let rx = d.const_app(p.x, &[pc]);
+    let ry = d.const_app(p.y, &[pc]);
+
+    let pq_x = cadd(d, p, px, qx);
+    let pq_y = cadd(d, p, py, qy);
+    let lhs_x = cmul(d, p, pq_x, rx);
+    let lhs_y = cmul(d, p, pq_y, ry);
+    let lhs_raw = cadd(d, p, lhs_x, lhs_y);
+
+    let pxrx = cmul(d, p, px, rx);
+    let qxrx = cmul(d, p, qx, rx);
+    let pyry = cmul(d, p, py, ry);
+    let qyry = cmul(d, p, qy, ry);
+    let rd_x = right_distrib_proof(d, p, px, qx, rx); // Equiv(lhs_x, add pxrx qxrx)
+    let rd_y = right_distrib_proof(d, p, py, qy, ry);
+    let mid_x = cadd(d, p, pxrx, qxrx);
+    let mid_y = cadd(d, p, pyry, qyry);
+    let mid = cadd(d, p, mid_x, mid_y);
+    let combined = d.lemma(creal.add_congr, &[lhs_x, mid_x, lhs_y, mid_y, rd_x, rd_y]);
+
+    let swap = add_middle_swap_proof(d, p, pxrx, qxrx, pyry, qyry);
+    let rhs_left = cadd(d, p, pxrx, pyry);
+    let rhs_right = cadd(d, p, qxrx, qyry);
+    let rhs_raw = cadd(d, p, rhs_left, rhs_right);
+
+    let proof = chain(d, p, lhs_raw, &[(mid, combined), (rhs_raw, swap)]);
+
+    let sum_pq = padd(d, p, pa, pb);
+    let dot_sum_r = dotp(d, p, sum_pq, pc);
+    let dot_p_r = dotp(d, p, pa, pc);
+    let dot_q_r = dotp(d, p, pb, pc);
+    let rhs_named = cadd(d, p, dot_p_r, dot_q_r);
+    let ty_body = equiv(d, p, dot_sum_r, rhs_named);
+    let ty = {
+        let w3 = d.pi_fv(pc_fv, point, ty_body);
+        let w2 = d.pi_fv(pb_fv, point, w3);
+        d.pi_fv(pa_fv, point, w2)
+    };
+    let value = {
+        let w3 = d.lam_fv(pc_fv, point, proof);
+        let w2 = d.lam_fv(pb_fv, point, w3);
+        d.lam_fv(pa_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dot_add_left,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `dot_add_right : ∀ P Q R, Equiv (dot P (add Q R)) (add (dot P Q) (dot P R))`.
+fn declare_dot_add_right(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+    let pc_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(pc_fv);
+
+    let px = d.const_app(p.x, &[pa]);
+    let py = d.const_app(p.y, &[pa]);
+    let qx = d.const_app(p.x, &[pb]);
+    let qy = d.const_app(p.y, &[pb]);
+    let rx = d.const_app(p.x, &[pc]);
+    let ry = d.const_app(p.y, &[pc]);
+
+    let qr_x = cadd(d, p, qx, rx);
+    let qr_y = cadd(d, p, qy, ry);
+    let lhs_x = cmul(d, p, px, qr_x);
+    let lhs_y = cmul(d, p, py, qr_y);
+    let lhs_raw = cadd(d, p, lhs_x, lhs_y);
+
+    let pxqx = cmul(d, p, px, qx);
+    let pxrx = cmul(d, p, px, rx);
+    let pyqy = cmul(d, p, py, qy);
+    let pyry = cmul(d, p, py, ry);
+    let ld_x = d.lemma(creal.left_distrib, &[px, qx, rx]);
+    let ld_y = d.lemma(creal.left_distrib, &[py, qy, ry]);
+    let mid_x = cadd(d, p, pxqx, pxrx);
+    let mid_y = cadd(d, p, pyqy, pyry);
+    let mid = cadd(d, p, mid_x, mid_y);
+    let combined = d.lemma(creal.add_congr, &[lhs_x, mid_x, lhs_y, mid_y, ld_x, ld_y]);
+
+    let swap = add_middle_swap_proof(d, p, pxqx, pxrx, pyqy, pyry);
+    let rhs_left = cadd(d, p, pxqx, pyqy);
+    let rhs_right = cadd(d, p, pxrx, pyry);
+    let rhs_raw = cadd(d, p, rhs_left, rhs_right);
+
+    let proof = chain(d, p, lhs_raw, &[(mid, combined), (rhs_raw, swap)]);
+
+    let sum_qr = padd(d, p, pb, pc);
+    let dot_p_sum = dotp(d, p, pa, sum_qr);
+    let dot_p_q = dotp(d, p, pa, pb);
+    let dot_p_r = dotp(d, p, pa, pc);
+    let rhs_named = cadd(d, p, dot_p_q, dot_p_r);
+    let ty_body = equiv(d, p, dot_p_sum, rhs_named);
+    let ty = {
+        let w3 = d.pi_fv(pc_fv, point, ty_body);
+        let w2 = d.pi_fv(pb_fv, point, w3);
+        d.pi_fv(pa_fv, point, w2)
+    };
+    let value = {
+        let w3 = d.lam_fv(pc_fv, point, proof);
+        let w2 = d.lam_fv(pb_fv, point, w3);
+        d.lam_fv(pa_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dot_add_right,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `dot_sub_left : ∀ P Q R,
+/// Equiv (dot (sub P Q) R) (add (dot P R) (neg (dot Q R)))`.
+fn declare_dot_sub_left(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+    let pc_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(pc_fv);
+
+    let px = d.const_app(p.x, &[pa]);
+    let py = d.const_app(p.y, &[pa]);
+    let qx = d.const_app(p.x, &[pb]);
+    let qy = d.const_app(p.y, &[pb]);
+    let rx = d.const_app(p.x, &[pc]);
+    let ry = d.const_app(p.y, &[pc]);
+
+    let n_qx = cneg(d, p, qx);
+    let n_qy = cneg(d, p, qy);
+    let pq_x = cadd(d, p, px, n_qx);
+    let pq_y = cadd(d, p, py, n_qy);
+    let lhs_x = cmul(d, p, pq_x, rx);
+    let lhs_y = cmul(d, p, pq_y, ry);
+    let lhs_raw = cadd(d, p, lhs_x, lhs_y);
+
+    let pxrx = cmul(d, p, px, rx);
+    let qxrx = cmul(d, p, qx, rx);
+    let pyry = cmul(d, p, py, ry);
+    let qyry = cmul(d, p, qy, ry);
+    let n_qxrx = cneg(d, p, qxrx);
+    let n_qyry = cneg(d, p, qyry);
+    let ms_x = mul_sub_left_proof(d, p, px, qx, rx); // Equiv(lhs_x, add pxrx (neg qxrx))
+    let ms_y = mul_sub_left_proof(d, p, py, qy, ry);
+    let mid_x = cadd(d, p, pxrx, n_qxrx);
+    let mid_y = cadd(d, p, pyry, n_qyry);
+    let mid = cadd(d, p, mid_x, mid_y);
+    let combined = d.lemma(creal.add_congr, &[lhs_x, mid_x, lhs_y, mid_y, ms_x, ms_y]);
+
+    let swap = add_middle_swap_proof(d, p, pxrx, n_qxrx, pyry, n_qyry);
+    let swapped_left = cadd(d, p, pxrx, pyry);
+    let swapped_right = cadd(d, p, n_qxrx, n_qyry);
+    let swapped = cadd(d, p, swapped_left, swapped_right);
+
+    let sum_pxrx_pyry = cadd(d, p, pxrx, pyry);
+    let sum_qxrx_qyry = cadd(d, p, qxrx, qyry);
+    let neg_sum_qxrx_qyry = cneg(d, p, sum_qxrx_qyry);
+    let na = neg_add_proof(d, p, qxrx, qyry); // Equiv(neg_sum_qxrx_qyry, add n_qxrx n_qyry)
+    let na_symm = symm(d, p, neg_sum_qxrx_qyry, swapped_right, na);
+    let refl_sum = refl(d, p, sum_pxrx_pyry);
+    let congr_final = d.lemma(
+        creal.add_congr,
+        &[
+            sum_pxrx_pyry,
+            sum_pxrx_pyry,
+            swapped_right,
+            neg_sum_qxrx_qyry,
+            refl_sum,
+            na_symm,
+        ],
+    );
+    let rhs_raw = cadd(d, p, sum_pxrx_pyry, neg_sum_qxrx_qyry);
+
+    let proof = chain(
+        d,
+        p,
+        lhs_raw,
+        &[(mid, combined), (swapped, swap), (rhs_raw, congr_final)],
+    );
+
+    let sub_pq = psub(d, p, pa, pb);
+    let dot_sub_r = dotp(d, p, sub_pq, pc);
+    let dot_p_r = dotp(d, p, pa, pc);
+    let dot_q_r = dotp(d, p, pb, pc);
+    let neg_dot_q_r = cneg(d, p, dot_q_r);
+    let rhs_named = cadd(d, p, dot_p_r, neg_dot_q_r);
+    let ty_body = equiv(d, p, dot_sub_r, rhs_named);
+    let ty = {
+        let w3 = d.pi_fv(pc_fv, point, ty_body);
+        let w2 = d.pi_fv(pb_fv, point, w3);
+        d.pi_fv(pa_fv, point, w2)
+    };
+    let value = {
+        let w3 = d.lam_fv(pc_fv, point, proof);
+        let w2 = d.lam_fv(pb_fv, point, w3);
+        d.lam_fv(pa_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dot_sub_left,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `dot_sub_right : ∀ P Q R,
+/// Equiv (dot P (sub Q R)) (add (dot P Q) (neg (dot P R)))`.
+fn declare_dot_sub_right(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+    let pc_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(pc_fv);
+
+    let px = d.const_app(p.x, &[pa]);
+    let py = d.const_app(p.y, &[pa]);
+    let qx = d.const_app(p.x, &[pb]);
+    let qy = d.const_app(p.y, &[pb]);
+    let rx = d.const_app(p.x, &[pc]);
+    let ry = d.const_app(p.y, &[pc]);
+
+    let n_rx = cneg(d, p, rx);
+    let n_ry = cneg(d, p, ry);
+    let qr_x = cadd(d, p, qx, n_rx);
+    let qr_y = cadd(d, p, qy, n_ry);
+    let lhs_x = cmul(d, p, px, qr_x);
+    let lhs_y = cmul(d, p, py, qr_y);
+    let lhs_raw = cadd(d, p, lhs_x, lhs_y);
+
+    let pxqx = cmul(d, p, px, qx);
+    let pxrx = cmul(d, p, px, rx);
+    let pyqy = cmul(d, p, py, qy);
+    let pyry = cmul(d, p, py, ry);
+    let n_pxrx = cneg(d, p, pxrx);
+    let n_pyry = cneg(d, p, pyry);
+    let ms_x = mul_sub_right_proof(d, p, px, qx, rx); // Equiv(lhs_x, add pxqx (neg pxrx))
+    let ms_y = mul_sub_right_proof(d, p, py, qy, ry);
+    let mid_x = cadd(d, p, pxqx, n_pxrx);
+    let mid_y = cadd(d, p, pyqy, n_pyry);
+    let mid = cadd(d, p, mid_x, mid_y);
+    let combined = d.lemma(creal.add_congr, &[lhs_x, mid_x, lhs_y, mid_y, ms_x, ms_y]);
+
+    let swap = add_middle_swap_proof(d, p, pxqx, n_pxrx, pyqy, n_pyry);
+    let swapped_left = cadd(d, p, pxqx, pyqy);
+    let swapped_right = cadd(d, p, n_pxrx, n_pyry);
+    let swapped = cadd(d, p, swapped_left, swapped_right);
+
+    let sum_pxqx_pyqy = cadd(d, p, pxqx, pyqy);
+    let sum_pxrx_pyry = cadd(d, p, pxrx, pyry);
+    let neg_sum_pxrx_pyry = cneg(d, p, sum_pxrx_pyry);
+    let na = neg_add_proof(d, p, pxrx, pyry); // Equiv(neg_sum_pxrx_pyry, add n_pxrx n_pyry)
+    let na_symm = symm(d, p, neg_sum_pxrx_pyry, swapped_right, na);
+    let refl_sum = refl(d, p, sum_pxqx_pyqy);
+    let congr_final = d.lemma(
+        creal.add_congr,
+        &[
+            sum_pxqx_pyqy,
+            sum_pxqx_pyqy,
+            swapped_right,
+            neg_sum_pxrx_pyry,
+            refl_sum,
+            na_symm,
+        ],
+    );
+    let rhs_raw = cadd(d, p, sum_pxqx_pyqy, neg_sum_pxrx_pyry);
+
+    let proof = chain(
+        d,
+        p,
+        lhs_raw,
+        &[(mid, combined), (swapped, swap), (rhs_raw, congr_final)],
+    );
+
+    let sub_qr = psub(d, p, pb, pc);
+    let dot_p_sub = dotp(d, p, pa, sub_qr);
+    let dot_p_q = dotp(d, p, pa, pb);
+    let dot_p_r = dotp(d, p, pa, pc);
+    let neg_dot_p_r = cneg(d, p, dot_p_r);
+    let rhs_named = cadd(d, p, dot_p_q, neg_dot_p_r);
+    let ty_body = equiv(d, p, dot_p_sub, rhs_named);
+    let ty = {
+        let w3 = d.pi_fv(pc_fv, point, ty_body);
+        let w2 = d.pi_fv(pb_fv, point, w3);
+        d.pi_fv(pa_fv, point, w2)
+    };
+    let value = {
+        let w3 = d.lam_fv(pc_fv, point, proof);
+        let w2 = d.lam_fv(pb_fv, point, w3);
+        d.lam_fv(pa_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dot_sub_right,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `dot_neg_left : ∀ P Q, Equiv (dot (neg P) Q) (neg (dot P Q))`.
+fn declare_dot_neg_left(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+
+    let px = d.const_app(p.x, &[pa]);
+    let py = d.const_app(p.y, &[pa]);
+    let qx = d.const_app(p.x, &[pb]);
+    let qy = d.const_app(p.y, &[pb]);
+
+    let n_px = cneg(d, p, px);
+    let n_py = cneg(d, p, py);
+    let lhs_x = cmul(d, p, n_px, qx);
+    let lhs_y = cmul(d, p, n_py, qy);
+    let lhs_raw = cadd(d, p, lhs_x, lhs_y);
+
+    let pxqx = cmul(d, p, px, qx);
+    let pyqy = cmul(d, p, py, qy);
+    let n_pxqx = cneg(d, p, pxqx);
+    let n_pyqy = cneg(d, p, pyqy);
+    let mnl_x = mul_neg_left_proof(d, p, px, qx); // Equiv(lhs_x, n_pxqx)
+    let mnl_y = mul_neg_left_proof(d, p, py, qy);
+    let mid = cadd(d, p, n_pxqx, n_pyqy);
+    let combined = d.lemma(
+        creal.add_congr,
+        &[lhs_x, n_pxqx, lhs_y, n_pyqy, mnl_x, mnl_y],
+    );
+
+    let sum_pxqx_pyqy = cadd(d, p, pxqx, pyqy);
+    let neg_sum = cneg(d, p, sum_pxqx_pyqy);
+    let na = neg_add_proof(d, p, pxqx, pyqy); // Equiv(neg_sum, add n_pxqx n_pyqy)
+    let na_symm = symm(d, p, neg_sum, mid, na);
+
+    let proof = chain(d, p, lhs_raw, &[(mid, combined), (neg_sum, na_symm)]);
+
+    let neg_p = pneg(d, p, pa);
+    let dot_negp_q = dotp(d, p, neg_p, pb);
+    let dot_p_q = dotp(d, p, pa, pb);
+    let rhs_named = cneg(d, p, dot_p_q);
+    let ty_body = equiv(d, p, dot_negp_q, rhs_named);
+    let ty = {
+        let inner = d.pi_fv(pb_fv, point, ty_body);
+        d.pi_fv(pa_fv, point, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(pb_fv, point, proof);
+        d.lam_fv(pa_fv, point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dot_neg_left,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// **Elements I.47.** See [`CPointPrelude::pythagoras`].
+fn declare_pythagoras(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+
+    let sub_ab = psub(d, p, pa, pb);
+    let big_u = psub(d, p, pa, pc); // A - C
+    let big_v = psub(d, p, pb, pc); // B - C
+    let big_w = psub(d, p, big_u, big_v); // (A-C) - (B-C)
+
+    let dot_uv = dotp(d, p, big_u, big_v);
+    let zero = czero(d, p);
+    let hyp_ty = equiv(d, p, dot_uv, zero);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // point_sub_diff: CPoint.Equiv (A - B) ((A-C) - (B-C)), per coordinate.
+    let n_bx = cneg(d, p, bx);
+    let n_cx = cneg(d, p, cx);
+    let n_by = cneg(d, p, by);
+    let n_cy = cneg(d, p, cy);
+    let ax_bx = cadd(d, p, ax, n_bx);
+    let ax_cx = cadd(d, p, ax, n_cx);
+    let bx_cx = cadd(d, p, bx, n_cx);
+    let n_bx_cx = cneg(d, p, bx_cx);
+    let ac_bc_x = cadd(d, p, ax_cx, n_bx_cx);
+    let claim_x = equiv(d, p, ax_bx, ac_bc_x);
+    let ay_by = cadd(d, p, ay, n_by);
+    let ay_cy = cadd(d, p, ay, n_cy);
+    let by_cy = cadd(d, p, by, n_cy);
+    let n_by_cy = cneg(d, p, by_cy);
+    let ac_bc_y = cadd(d, p, ay_cy, n_by_cy);
+    let claim_y = equiv(d, p, ay_by, ac_bc_y);
+    let diff_x = diff_diff_scalar_proof(d, p, ax, bx, cx);
+    let diff_y = diff_diff_scalar_proof(d, p, ay, by, cy);
+    let diff_ab_w = and_intro(d, p, claim_x, claim_y, diff_x, diff_y);
+
+    // dot(A-B,A-B) ~ dot(W,W)
+    let dot_ww = dotp(d, p, big_w, big_w);
+    let step1 = d.lemma(
+        p.dot_congr,
+        &[sub_ab, big_w, sub_ab, big_w, diff_ab_w, diff_ab_w],
+    );
+
+    // dot(W,W) ~ add(dot U W)(neg(dot V W))
+    let dot_uw = dotp(d, p, big_u, big_w);
+    let dot_vw = dotp(d, p, big_v, big_w);
+    let neg_dot_vw = cneg(d, p, dot_vw);
+    let mid_expr = cadd(d, p, dot_uw, neg_dot_vw);
+    let step2 = d.lemma(p.dot_sub_left, &[big_u, big_v, big_w]); // Equiv(dot_ww, mid_expr)
+
+    // dot(U,W) ~ add(dot_uu)(neg dot_uv)
+    let dot_uu = dotp(d, p, big_u, big_u);
+    let neg_dot_uv = cneg(d, p, dot_uv);
+    let rhs_step3 = cadd(d, p, dot_uu, neg_dot_uv);
+    let step3 = d.lemma(p.dot_sub_right, &[big_u, big_u, big_v]); // Equiv(dot_uw, rhs_step3)
+
+    // dot(V,W) ~ add(dot_vu)(neg dot_vv) ~ add(dot_uv)(neg dot_vv)
+    let dot_vv = dotp(d, p, big_v, big_v);
+    let dot_vu = dotp(d, p, big_v, big_u);
+    let neg_dot_vv = cneg(d, p, dot_vv);
+    let rhs_step4 = cadd(d, p, dot_vu, neg_dot_vv);
+    let step4 = d.lemma(p.dot_sub_right, &[big_v, big_u, big_v]); // Equiv(dot_vw, rhs_step4)
+    let cvu = d.lemma(p.dot_comm, &[big_v, big_u]); // Equiv(dot_vu, dot_uv)
+    let refl_neg_dot_vv = refl(d, p, neg_dot_vv);
+    let rhs_step4b = cadd(d, p, dot_uv, neg_dot_vv);
+    let step4b = d.lemma(
+        creal.add_congr,
+        &[dot_vu, dot_uv, neg_dot_vv, neg_dot_vv, cvu, refl_neg_dot_vv],
+    ); // Equiv(rhs_step4, rhs_step4b)
+    let dot_vw_reduced = chain(d, p, dot_vw, &[(rhs_step4, step4), (rhs_step4b, step4b)]);
+
+    // Combine: dot(W,W) ~ add(rhs_step3)(neg rhs_step4b)
+    let neg_dot_vw_congr = d.lemma(creal.neg_congr, &[dot_vw, rhs_step4b, dot_vw_reduced]);
+    let neg_rhs_step4b = cneg(d, p, rhs_step4b);
+    let mid_expr2 = cadd(d, p, rhs_step3, neg_rhs_step4b);
+    let combined34 = d.lemma(
+        creal.add_congr,
+        &[
+            dot_uw,
+            rhs_step3,
+            neg_dot_vw,
+            neg_rhs_step4b,
+            step3,
+            neg_dot_vw_congr,
+        ],
+    );
+
+    // Simplify neg(add dot_uv (neg dot_vv)) ~ add(neg dot_uv)(dot_vv)
+    let na = neg_add_proof(d, p, dot_uv, neg_dot_vv);
+    let nn = neg_neg_proof(d, p, dot_vv);
+    let refl_neg_uv = refl(d, p, neg_dot_uv);
+    let neg_neg_dot_vv = cneg(d, p, neg_dot_vv);
+    let congr_nn = d.lemma(
+        creal.add_congr,
+        &[
+            neg_dot_uv,
+            neg_dot_uv,
+            neg_neg_dot_vv,
+            dot_vv,
+            refl_neg_uv,
+            nn,
+        ],
+    );
+    let na_target = cadd(d, p, neg_dot_uv, neg_neg_dot_vv);
+    let nn_target = cadd(d, p, neg_dot_uv, dot_vv);
+    let simplify_neg = chain(
+        d,
+        p,
+        neg_rhs_step4b,
+        &[(na_target, na), (nn_target, congr_nn)],
+    );
+    let refl_first = refl(d, p, rhs_step3);
+    let mid_expr3 = cadd(d, p, rhs_step3, nn_target);
+    let combined_simplify = d.lemma(
+        creal.add_congr,
+        &[
+            rhs_step3,
+            rhs_step3,
+            neg_rhs_step4b,
+            nn_target,
+            refl_first,
+            simplify_neg,
+        ],
+    );
+
+    // Use the hypothesis: neg dot_uv ~ zero.
+    let neg_r_eq_neg_zero = d.lemma(creal.neg_congr, &[dot_uv, zero, h]);
+    let nz = neg_zero_proof(d, p);
+    let neg_zero = cneg(d, p, zero);
+    let neg_r_zero = chain(
+        d,
+        p,
+        neg_dot_uv,
+        &[(neg_zero, neg_r_eq_neg_zero), (zero, nz)],
+    );
+
+    let refl_dotuu = refl(d, p, dot_uu);
+    let congr_p = d.lemma(
+        creal.add_congr,
+        &[dot_uu, dot_uu, neg_dot_uv, zero, refl_dotuu, neg_r_zero],
+    );
+    let dotuu_zero = cadd(d, p, dot_uu, zero);
+    let az_p = d.lemma(creal.add_zero, &[dot_uu]);
+    let p_reduce = chain(d, p, rhs_step3, &[(dotuu_zero, congr_p), (dot_uu, az_p)]);
+
+    let refl_dotvv = refl(d, p, dot_vv);
+    let congr_q = d.lemma(
+        creal.add_congr,
+        &[neg_dot_uv, zero, dot_vv, dot_vv, neg_r_zero, refl_dotvv],
+    );
+    let zero_dotvv = cadd(d, p, zero, dot_vv);
+    let za_q = zero_add_proof(d, p, dot_vv);
+    let q_expr = nn_target;
+    let q_reduce = chain(d, p, q_expr, &[(zero_dotvv, congr_q), (dot_vv, za_q)]);
+
+    let dot_uu_dot_vv = cadd(d, p, dot_uu, dot_vv);
+    let final_combine = d.lemma(
+        creal.add_congr,
+        &[rhs_step3, dot_uu, q_expr, dot_vv, p_reduce, q_reduce],
+    );
+
+    let sub_ab_dot = dotp(d, p, sub_ab, sub_ab);
+    let final_proof = chain(
+        d,
+        p,
+        sub_ab_dot,
+        &[
+            (dot_ww, step1),
+            (mid_expr, step2),
+            (mid_expr2, combined34),
+            (mid_expr3, combined_simplify),
+            (dot_uu_dot_vv, final_combine),
+        ],
+    );
+
+    let ty_body = {
+        let concl = equiv(d, p, sub_ab_dot, dot_uu_dot_vv);
+        d.arrow(hyp_ty, concl)
+    };
+    let ty = {
+        let w3 = d.pi_fv(c_fv, point, ty_body);
+        let w2 = d.pi_fv(b_fv, point, w3);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value = {
+        let inner = d.lam_fv(h_fv, hyp_ty, final_proof);
+        let w3 = d.lam_fv(c_fv, point, inner);
+        let w2 = d.lam_fv(b_fv, point, w3);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pythagoras,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Equiv (dot (neg P) (neg P)) (dot P P)`.
+fn dot_neg_neg_proof(d: &mut IntDev<'_>, p: CPointPrelude, big_p: ExprId) -> ExprId {
+    let creal = p.creal;
+    let neg_p = pneg(d, p, big_p);
+    let dot_pp = dotp(d, p, big_p, big_p);
+    let dot_np_p = dotp(d, p, neg_p, big_p);
+    let dot_p_np = dotp(d, p, big_p, neg_p);
+    let dot_np_np = dotp(d, p, neg_p, neg_p);
+    let neg_dot_pp = cneg(d, p, dot_pp);
+
+    let dnl1 = d.lemma(p.dot_neg_left, &[big_p, big_p]); // Equiv(dot_np_p, neg_dot_pp)
+    let comm1 = d.lemma(p.dot_comm, &[big_p, neg_p]); // Equiv(dot_p_np, dot_np_p)
+    let dot_p_np_reduce = chain(d, p, dot_p_np, &[(dot_np_p, comm1), (neg_dot_pp, dnl1)]);
+
+    let dnl2 = d.lemma(p.dot_neg_left, &[big_p, neg_p]); // Equiv(dot_np_np, neg dot_p_np)
+    let neg_congr1 = d.lemma(creal.neg_congr, &[dot_p_np, neg_dot_pp, dot_p_np_reduce]);
+    let nn = neg_neg_proof(d, p, dot_pp); // Equiv(neg neg_dot_pp, dot_pp)
+
+    let neg_dot_p_np = cneg(d, p, dot_p_np);
+    let neg_neg_dot_pp = cneg(d, p, neg_dot_pp);
+    chain(
+        d,
+        p,
+        dot_np_np,
+        &[
+            (neg_dot_p_np, dnl2),
+            (neg_neg_dot_pp, neg_congr1),
+            (dot_pp, nn),
+        ],
+    )
+}
+
+/// **Elements III.31**, the converse direction. See [`CPointPrelude::thales`].
+fn declare_thales(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    let o_fv = d.fresh_fvar();
+    let po = d.kernel().fvar(o_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+    let ox = d.const_app(p.x, &[po]);
+    let oy = d.const_app(p.y, &[po]);
+
+    // Hypothesis 1: O ~ midpoint A B.
+    let mid_ab = d.const_app(p.point_midpoint, &[pa, pb]);
+    let ho_ty = d.const_app(p.point_equiv, &[po, mid_ab]);
+    let ho_fv = d.fresh_fvar();
+    let ho = d.kernel().fvar(ho_fv);
+
+    let mx = midpoint(d, p, ax, bx);
+    let my = midpoint(d, p, ay, by);
+    let ho_x_ty = equiv(d, p, ox, mx);
+    let ho_y_ty = equiv(d, p, oy, my);
+    let ho_x = d.and_left(ho_x_ty, ho_y_ty, ho);
+    let ho_y = d.and_right(ho_x_ty, ho_y_ty, ho);
+
+    // Hypothesis 2: dot(C-O,C-O) ~ dot(A-O,A-O).
+    let sub_co = psub(d, p, pc, po);
+    let sub_ao = psub(d, p, pa, po);
+    let dot_coco = dotp(d, p, sub_co, sub_co);
+    let dot_aoao = dotp(d, p, sub_ao, sub_ao);
+    let h2_ty = equiv(d, p, dot_coco, dot_aoao);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    // pt_x := A - O, pt_y := O - C, pt_z := neg(pt_x) + pt_y, pt_w := pt_x + pt_y.
+    let pt_x = psub(d, p, pa, po);
+    let pt_y = psub(d, p, po, pc);
+    let neg_pt_x = pneg(d, p, pt_x);
+    let pt_z = padd(d, p, neg_pt_x, pt_y);
+    let pt_w = padd(d, p, pt_x, pt_y);
+
+    // Shared negated/compound coordinate terms.
+    let n_cx = cneg(d, p, cx);
+    let n_cy = cneg(d, p, cy);
+    let n_ox = cneg(d, p, ox);
+    let n_oy = cneg(d, p, oy);
+    let ax_ox = cadd(d, p, ax, n_ox);
+    let ay_oy = cadd(d, p, ay, n_oy);
+    let ox_cx = cadd(d, p, ox, n_cx);
+    let oy_cy = cadd(d, p, oy, n_cy);
+
+    // claim1: A - C ~ (A-O) + (O-C).
+    let ax_cx = cadd(d, p, ax, n_cx);
+    let ax_ox_ox_cx = cadd(d, p, ax_ox, ox_cx);
+    let claim1_x_ty = equiv(d, p, ax_cx, ax_ox_ox_cx);
+    let claim1_x = telescope_scalar_proof(d, p, ax, ox, cx);
+    let ay_cy = cadd(d, p, ay, n_cy);
+    let ay_oy_oy_cy = cadd(d, p, ay_oy, oy_cy);
+    let claim1_y_ty = equiv(d, p, ay_cy, ay_oy_oy_cy);
+    let claim1_y = telescope_scalar_proof(d, p, ay, oy, cy);
+    let claim1 = and_intro(d, p, claim1_x_ty, claim1_y_ty, claim1_x, claim1_y);
+
+    // claim2: B - C ~ neg(A-O) + (O-C).
+    let bx_cx = cadd(d, p, bx, n_cx);
+    let neg_ax_ox = cneg(d, p, ax_ox);
+    let claim2_x_rhs = cadd(d, p, neg_ax_ox, ox_cx);
+    let claim2_x_ty = equiv(d, p, bx_cx, claim2_x_rhs);
+    let claim2_x = telescope_neg_scalar_proof(d, p, ax, bx, ox, cx, ho_x);
+    let by_cy = cadd(d, p, by, n_cy);
+    let neg_ay_oy = cneg(d, p, ay_oy);
+    let claim2_y_rhs = cadd(d, p, neg_ay_oy, oy_cy);
+    let claim2_y_ty = equiv(d, p, by_cy, claim2_y_rhs);
+    let claim2_y = telescope_neg_scalar_proof(d, p, ay, by, oy, cy, ho_y);
+    let claim2 = and_intro(d, p, claim2_x_ty, claim2_y_ty, claim2_x, claim2_y);
+
+    // dot(A-C,B-C) ~ dot(W,Z).
+    let sub_ac = psub(d, p, pa, pc);
+    let sub_bc = psub(d, p, pb, pc);
+    let step1 = d.lemma(p.dot_congr, &[sub_ac, pt_w, sub_bc, pt_z, claim1, claim2]);
+    let dot_wz = dotp(d, p, pt_w, pt_z);
+
+    // dot(W,Z) ~ add(dot(X,Z))(dot(Y,Z))  [dot_add_left]
+    let dot_xz = dotp(d, p, pt_x, pt_z);
+    let dot_yz = dotp(d, p, pt_y, pt_z);
+    let dal = d.lemma(p.dot_add_left, &[pt_x, pt_y, pt_z]); // Equiv(dot_wz, add dot_xz dot_yz)
+
+    // dot(X,Z) ~ T1 + T2, T1 := neg(dot X X), T2 := dot(X,Y)
+    let dot_xx = dotp(d, p, pt_x, pt_x);
+    let dot_xy = dotp(d, p, pt_x, pt_y);
+    let dot_yy = dotp(d, p, pt_y, pt_y);
+    let t1 = cneg(d, p, dot_xx);
+    let t2 = dot_xy;
+    let t3 = cneg(d, p, dot_xy);
+    let t4 = dot_yy;
+
+    let dar_x = d.lemma(p.dot_add_right, &[pt_x, neg_pt_x, pt_y]); // Equiv(dot_xz, add(dot(X,-X))(dot(X,Y)))
+    let dot_x_negx = dotp(d, p, pt_x, neg_pt_x);
+    let comm_a = d.lemma(p.dot_comm, &[pt_x, neg_pt_x]); // Equiv(dot_x_negx, dot(-X,X))
+    let dot_negx_x = dotp(d, p, neg_pt_x, pt_x);
+    let dnl_a = d.lemma(p.dot_neg_left, &[pt_x, pt_x]); // Equiv(dot_negx_x, t1)
+    let dot_x_negx_reduce = chain(d, p, dot_x_negx, &[(dot_negx_x, comm_a), (t1, dnl_a)]);
+    let refl_t2 = refl(d, p, t2);
+    let congr_a = d.lemma(
+        creal.add_congr,
+        &[dot_x_negx, t1, dot_xy, t2, dot_x_negx_reduce, refl_t2],
+    );
+    let mid_a = cadd(d, p, dot_x_negx, dot_xy);
+    let t1_t2 = cadd(d, p, t1, t2);
+    let dot_xz_reduce = chain(d, p, dot_xz, &[(mid_a, dar_x), (t1_t2, congr_a)]);
+
+    // dot(Y,Z) ~ T3 + T4
+    let dar_y = d.lemma(p.dot_add_right, &[pt_y, neg_pt_x, pt_y]); // Equiv(dot_yz, add(dot(Y,-X))(dot(Y,Y)))
+    let dot_y_negx = dotp(d, p, pt_y, neg_pt_x);
+    let comm_b = d.lemma(p.dot_comm, &[pt_y, neg_pt_x]); // Equiv(dot_y_negx, dot(-X,Y))
+    let dot_negx_y = dotp(d, p, neg_pt_x, pt_y);
+    let dnl_b = d.lemma(p.dot_neg_left, &[pt_x, pt_y]); // Equiv(dot_negx_y, t3)
+    let dot_y_negx_reduce = chain(d, p, dot_y_negx, &[(dot_negx_y, comm_b), (t3, dnl_b)]);
+    let refl_t4 = refl(d, p, t4);
+    let congr_b = d.lemma(
+        creal.add_congr,
+        &[dot_y_negx, t3, dot_yy, t4, dot_y_negx_reduce, refl_t4],
+    );
+    let mid_b = cadd(d, p, dot_y_negx, dot_yy);
+    let t3_t4 = cadd(d, p, t3, t4);
+    let dot_yz_reduce = chain(d, p, dot_yz, &[(mid_b, dar_y), (t3_t4, congr_b)]);
+
+    // dot(W,Z) ~ add(t1_t2)(t3_t4)
+    let congr_combine = d.lemma(
+        creal.add_congr,
+        &[dot_xz, t1_t2, dot_yz, t3_t4, dot_xz_reduce, dot_yz_reduce],
+    );
+    let mid_ab_sum = cadd(d, p, dot_xz, dot_yz);
+    let t1t2_t3t4 = cadd(d, p, t1_t2, t3_t4);
+    let dot_wz_expand = chain(
+        d,
+        p,
+        dot_wz,
+        &[(mid_ab_sum, dal), (t1t2_t3t4, congr_combine)],
+    );
+
+    // (T1+T2)+(T3+T4) ~ T1+T4  [T3 = neg T2]
+    let zero = czero(d, p);
+    let t2_t3 = cadd(d, p, t2, t3);
+    let an_t2 = d.lemma(creal.add_neg, &[t2]); // Equiv(t2_t3, zero)
+    let refl_t4b = refl(d, p, t4);
+    let congr_zero_t4 = d.lemma(creal.add_congr, &[t2_t3, zero, t4, t4, an_t2, refl_t4b]);
+    let zero_t4 = cadd(d, p, zero, t4);
+    let za_t4 = zero_add_proof(d, p, t4); // Equiv(zero_t4, t4)
+    let t2_t3_t4 = cadd(d, p, t2_t3, t4);
+    let t3_t4_full = cadd(d, p, t3, t4);
+    let assoc_inner = d.lemma(creal.add_assoc, &[t2, t3, t4]); // Equiv(t2_t3_t4, add t2 t3_t4_full)
+    let t2_t3t4 = cadd(d, p, t2, t3_t4_full);
+    let assoc_inner_symm = symm(d, p, t2_t3_t4, t2_t3t4, assoc_inner); // Equiv(t2_t3t4, t2_t3_t4)
+    let inner_reduce = chain(
+        d,
+        p,
+        t2_t3t4,
+        &[
+            (t2_t3_t4, assoc_inner_symm),
+            (zero_t4, congr_zero_t4),
+            (t4, za_t4),
+        ],
+    );
+    let refl_t1 = refl(d, p, t1);
+    let congr_outer = d.lemma(
+        creal.add_congr,
+        &[t1, t1, t2_t3t4, t4, refl_t1, inner_reduce],
+    );
+    let t1_t2t3t4 = cadd(d, p, t1, t2_t3t4);
+    let assoc_outer = d.lemma(creal.add_assoc, &[t1, t2, t3_t4]); // Equiv(t1t2_t3t4, t1_t2t3t4)
+    let t1_t4 = cadd(d, p, t1, t4);
+    let cancel_middle = chain(
+        d,
+        p,
+        t1t2_t3t4,
+        &[(t1_t2t3t4, assoc_outer), (t1_t4, congr_outer)],
+    );
+
+    // dot(Y,Y) ~ dot(X,X), via hypothesis 2 and O-C ~ neg(C-O).
+    let cx_ox = cadd(d, p, cx, n_ox);
+    let cy_oy = cadd(d, p, cy, n_oy);
+    let neg_cx_ox = cneg(d, p, cx_ox);
+    let neg_cy_oy = cneg(d, p, cy_oy);
+    let nsc_x = {
+        let inner = neg_sub_comm_scalar_proof(d, p, cx, ox); // Equiv(neg_cx_ox, ox_cx)
+        symm(d, p, neg_cx_ox, ox_cx, inner)
+    }; // Equiv(ox_cx, neg_cx_ox)
+    let nsc_y = {
+        let inner = neg_sub_comm_scalar_proof(d, p, cy, oy); // Equiv(neg_cy_oy, oy_cy)
+        symm(d, p, neg_cy_oy, oy_cy, inner)
+    };
+    let neg_sub_co = pneg(d, p, sub_co);
+    let nsc_x_ty = equiv(d, p, ox_cx, neg_cx_ox);
+    let nsc_y_ty = equiv(d, p, oy_cy, neg_cy_oy);
+    let neg_sub_comm_point = and_intro(d, p, nsc_x_ty, nsc_y_ty, nsc_x, nsc_y);
+    // neg_sub_comm_point : CPoint.Equiv pt_y neg_sub_co
+
+    let dyy_congr = d.lemma(
+        p.dot_congr,
+        &[
+            pt_y,
+            neg_sub_co,
+            pt_y,
+            neg_sub_co,
+            neg_sub_comm_point,
+            neg_sub_comm_point,
+        ],
+    ); // Equiv(dot_yy, dot(neg_sub_co, neg_sub_co))
+    let dot_negsubco_negsubco = dotp(d, p, neg_sub_co, neg_sub_co);
+    let dnn = dot_neg_neg_proof(d, p, sub_co); // Equiv(dot(neg sub_co, neg sub_co), dot_coco)
+    let dot_yy_reduce = chain(
+        d,
+        p,
+        dot_yy,
+        &[
+            (dot_negsubco_negsubco, dyy_congr),
+            (dot_coco, dnn),
+            (dot_aoao, h2),
+        ],
+    );
+    // dot_yy_reduce : Equiv(dot_yy, dot_aoao) = Equiv(dot_yy, dot_xx) since sub_ao == pt_x
+
+    // T1 + T4 ~ T1 + dot_xx ~ zero
+    let refl_t1b = refl(d, p, t1);
+    let congr_final = d.lemma(
+        creal.add_congr,
+        &[t1, t1, t4, dot_xx, refl_t1b, dot_yy_reduce],
+    );
+    let t1_dotxx = cadd(d, p, t1, dot_xx);
+    let cancel_final = neg_add_cancel_proof(d, p, dot_xx); // Equiv(add(neg dot_xx) dot_xx, zero) = Equiv(t1_dotxx, zero)
+
+    let sub_ac_bc_dot = dotp(d, p, sub_ac, sub_bc);
+    let final_proof = chain(
+        d,
+        p,
+        sub_ac_bc_dot,
+        &[
+            (dot_wz, step1),
+            (t1t2_t3t4, dot_wz_expand),
+            (t1_t4, cancel_middle),
+            (t1_dotxx, congr_final),
+            (zero, cancel_final),
+        ],
+    );
+
+    let concl = equiv(d, p, sub_ac_bc_dot, zero);
+    let ty_body = {
+        let inner = d.arrow(h2_ty, concl);
+        d.arrow(ho_ty, inner)
+    };
+    let ty = {
+        let w4 = d.pi_fv(o_fv, point, ty_body);
+        let w3 = d.pi_fv(c_fv, point, w4);
+        let w2 = d.pi_fv(b_fv, point, w3);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value = {
+        let inner = d.lam_fv(h2_fv, h2_ty, final_proof);
+        let with_ho = d.lam_fv(ho_fv, ho_ty, inner);
+        let w4 = d.lam_fv(o_fv, point, with_ho);
+        let w3 = d.lam_fv(c_fv, point, w4);
+        let w2 = d.lam_fv(b_fv, point, w3);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.thales,
         uparams: vec![],
         ty,
         value,
