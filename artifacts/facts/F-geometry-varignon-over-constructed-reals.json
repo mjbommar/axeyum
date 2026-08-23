@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-varignon-over-constructed-reals",
+  "title": "Varignon's theorem over the constructed reals: the midpoint quadrilateral is a parallelogram in CPoint",
+  "statement": "For any four points A, B, C, D of the plane CPoint = CReal x CReal over the constructed (Bishop) reals, let P, Q, R, S be the midpoints of AB, BC, CD, DA. Then Q - P and R - S are equal as CPoint vectors, under CPoint.Equiv (the pointwise CReal.Equiv, a DEFINED Prop relation, not Eq). No non-degeneracy condition is required. This is a statement about CPoint and nothing else; it is NOT the classical Euclidean-plane Varignon theorem, which is recorded separately as F:geometry-varignon-midpoint-parallelogram and rests on a coordinatisation assumption this one does not need and does not supply.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CPoint.Equiv (CPoint.sub (CPoint.midpoint x1 x2) (CPoint.midpoint x0 x1)) (CPoint.sub (CPoint.midpoint x2 x3) (CPoint.midpoint x3 x0))))))",
+    "fragment": "CPoint",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.varignon_vector_parallel",
+      "kind": "kernel-term",
+      "supports": "For any four points A, B, C, D, writing P, Q, R, S for the midpoints of AB, BC, CD, DA, the vector Q - P equals the vector R - S -- proved as `CPoint.varignon_vector_parallel` over the constructed reals (`CReal`), matching the ledger statement's vector-difference form exactly (not the weaker midpoint-of-diagonals form `CPoint.varignon_diagonals_bisect` this lane proved first).",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes `build_cpoint_prelude` return `Err` and the test below fail)",
+        "creal_point_tests::varignon_vector_parallel_is_a_sub_statement_not_a_midpoint_statement (asserts the KERNEL-RENDERED type verbatim, so a theorem stating something weaker with the same empty footprint cannot pass silently)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::varignon_vector_parallel_is_a_sub_statement_not_a_midpoint_statement -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/creal_point.rs",
+      "notes": "This re-derives the proof from source every run: the checker command re-builds `CPointPrelude` (which re-typechecks `CReal.add_right_cancel`, `CPoint.Scalar.sum_of_midpoints_perm`, `CPoint.Scalar.midpoint_vector_swap` and `CPoint.varignon_vector_parallel` through the kernel's trusted `add_declaration` gate) and then asserts the resulting theorem's RENDERED TYPE matches the statement above character for character. Anchored on the exact `1 passed; 0 failed` count, so a filter that silently matches nothing cannot read as success. Verified by construction, not by a mutation run: the assert_eq! in that test is exact-string, so any of {wrong argument order, `midpoint` in place of `sub`, a dropped `neg`, a swapped `P`/`Q`} changes the rendered string and fails it."
+    },
+    {
+      "id": "footprint-CPoint.varignon_vector_parallel",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] -- the theorem and everything it is built from (`add_right_cancel`, `sum_of_midpoints_perm`, `midpoint_vector_swap`, `point_sub`, and the `CReal`/`CPoint` prelude beneath them) are all checked declarations with an empty `Kernel::axiom_footprint`, over a trusted surface this lane did not add to.",
+      "check_status": "checked",
+      "checkers": [
+        "creal_point_tests::every_theorem_here_is_axiom_free (reads `Kernel::axiom_footprint` for each declared theorem in this file, `varignon_vector_parallel` included, and requires the empty set)",
+        "creal_point_tests::midpoint_self_and_sum_perm_and_diag_core_are_present_declarations (confirms `add_right_cancel`, `sum_of_midpoints_perm`, `midpoint_vector_swap`, `point_sub` and `varignon_vector_parallel` are all genuinely present in the environment, not silently absent with a vacuously empty footprint)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests:: 2>&1 | grep -qE 'test result: ok\\. 5 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs",
+      "notes": "Counting `Declaration::Axiom` alone would not suffice in this kernel (`Opaque` has no proof body and `Quotient` admits `Quot.sound`); `axiom_footprint` covers all three, and this file introduces none of them -- `CReal.add_right_cancel` is a `Theorem` built from `add_zero`/`add_neg`/`add_assoc`/`add_congr` alone, and `CPoint.sub` is a plain `Definition`. Anchored on the NONZERO, exact test count (5) for this module, so a dropped test cannot silently shrink what 'passed' means."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "lane geometry (2026-08-14): axeyum_cas::geometry_certify (untrusted cofactor-tracked Buchberger search) + axeyum_cas::geometry_check (independent re-derivation) -- the ORIGINAL route, superseded as the recorded proof_route on 2026-08-22 by a geometry lane's `crates/axeyum-lean-kernel/src/creal_point.rs`: `CPoint.varignon_vector_parallel`, a kernel theorem over `CReal` (the constructed reals, ADR-0512) matching this fact's vector-difference statement exactly and admitting with an empty `axiom_footprint`.",
+    "source": "classical; coordinatised by the geometry lane",
+    "prior_art": [
+      {
+        "who": "Pierre Varignon",
+        "what": "the midpoint quadrilateral of an arbitrary quadrilateral is a parallelogram",
+        "year": 1731,
+        "where": "Elemens de mathematique (posthumous, 1731)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "SPLIT OUT 2026-08-22 from `F:geometry-varignon-midpoint-parallelogram`, repairing an error made the same day. That fact was 'upgraded' cas-certificate -> kernel-lean by REPLACING its `formal.statement` \u2014 smtlib2 over `Real` became lean4 over `CPoint` \u2014 and discarding its two checked witness-replay evidence rows. Those are two different propositions over two different carriers, and neither formally implies the other. Rewriting a fact's formal statement to match what was actually proved makes the ledger unfalsifiable: 'we proved X' degrades into 'we proved something we then labelled X'. So the original fact is restored intact with its CAS route and assumptions, and the kernel result is recorded here as its own fact \u2014 an addition, not a substitution. Both are true; neither overwrites the other.\n\nSCOPE CORRECTED 2026-08-22, the same day as the route upgrade below. When this fact moved cas-certificate -> kernel-lean its axiom_footprint correctly emptied -- the kernel theorem rests on nothing -- and `geometry.cartesian-coordinatisation-of-the-euclidean-plane` was dropped with it. But the prose statement still claimed a result about \"the Euclidean plane\" while the formal statement is about `CPoint`. The identification did not vanish when the footprint emptied; it moved into the unnamed gap between prose and formal, which is strictly worse than recording it, because an explicit assumption can be audited and an unstated one cannot. It is also a STRONGER identification than the CAS route required, not a weaker one: CReal is the constructed Bishop reals, not classical R. So the prose now says what the kernel proves and names the bridge instead of deleting it. The empty axiom_footprint is unchanged and remains correct: no axiom is invoked, and the coordinatisation is not an axiom the proof uses but an interpretive step for reading the formal statement as a claim about classical Euclidean geometry.\n\nPROOF ROUTE UPGRADED 2026-08-22, cas-certificate -> kernel-lean. The original `cas-certificate` route (a Nullstellensatz-style cofactor identity over the hypothesis ideal, degenerate in an informative way -- the generator list was EMPTY and the identity was `0 = 0`, exactly what Varignon's theorem IS in coordinates) proved the MIDPOINT-OF-DIAGONALS form first as `CPoint.varignon_diagonals_bisect` (still present in `creal_point.rs`, itself axiom-free but not what this fact states). Closing the gap to the ledger's literal vector-difference statement (`Q - P ~ R - S`) needed one missing algebraic bridge: uniqueness of the additive inverse, proved as `CReal.add_right_cancel` (seven `equiv_trans` steps from `add_zero`/`add_neg`/`add_assoc`/`add_congr`, no analysis) and then a single abstract-group rearrangement (`a+b~c+e => c-a~b-e`, `sum_swap_proof`) applied to a new single-level permutation identity `CPoint.Scalar.sum_of_midpoints_perm`. The three geometry facts this one is filed alongside (F:geometry-centroid-divides-medians, F:geometry-parallelogram-diagonals-bisect) are unaffected and remain on `cas-certificate`; nothing about their non-degeneracy conditions changes."
+}

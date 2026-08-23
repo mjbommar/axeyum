@@ -8,10 +8,10 @@
 
 | | |
 |---|---:|
-| Established facts (`proved` or `computed`) | 139 |
+| Established facts (`proved` or `computed`) | 140 |
 | …via an operation covering **more than one** fact | **3** |
 | …via a single-target operation (a capsule) | 21 |
-| …with no registered operation (hand-constructed or imported) | 115 |
+| …with no registered operation (hand-constructed or imported) | 116 |
 | Registered operations | 25 |
 | …**authoritative** and covering more than one fact | **1** |
 | …fixture-scope covering more than one fact (NOT the metric) | 0 |
@@ -26,7 +26,7 @@ Facts: `F:ml430-nat-descfactorial-one-d4856d4a`, `F:ml430-nat-one-ascfactorial-8
 
 | Route | Multi-target | Capsule | No operation | Meaning |
 |---|---:|---:|---:|---|
-| `cas-certificate` | 0 | 0 | 18 | computer-algebra certificate |
+| `cas-certificate` | 0 | 0 | 19 | computer-algebra certificate |
 | `imported-kernel-lean` | 0 | 0 | 5 | kernel proof imported from an external development |
 | `kernel-lean` | 3 | 20 | 58 | kernel proof, reconstructed and checked here |
 | `search-certificate` | 0 | 0 | 9 | search certificate |
@@ -50,7 +50,7 @@ is no proof-affecting intervention, which this join cannot see. Multi-target
 coverage is the **necessary** condition that is measurable today, and a
 single-target registry fails it without needing a harder test.
 
-Of the 139 established facts, 80 record an
+Of the 140 established facts, 80 record an
 empty axiom footprint. That is a different axis from provenance: a
 hand-written proof can be axiom-free and a produced one need not be.
 
