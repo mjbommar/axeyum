@@ -82,7 +82,7 @@ use crate::CRealPrelude;
 use crate::creal::build_creal_prelude;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
-use crate::int_prelude::ops::IntDev;
+use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 use crate::{Kernel, KernelError};
@@ -92,7 +92,7 @@ mod ring;
 #[cfg(test)]
 mod complex_tests;
 
-use ring::{RExpr, cadd, ceq, cmul, cneg, cone, crefl, ctrans, czero, ring_proof};
+use ring::{RExpr, cadd, cchain, ceq, cmul, cneg, cone, crefl, csymm, ctrans, czero, ring_proof};
 
 /// Delta height for the leaf complex definitions: above every `CReal` one.
 const LEAF_HEIGHT: u16 = 60;
@@ -120,6 +120,11 @@ pub struct ComplexPrelude {
     pub re: NameId,
     /// `Complex.im : Complex → CReal`.
     pub im: NameId,
+
+    /// `Complex.re_congr : ∀ z w, Equiv z w → CReal.Equiv (re z) (re w)`.
+    pub re_congr: NameId,
+    /// `Complex.im_congr : ∀ z w, Equiv z w → CReal.Equiv (im z) (im w)`.
+    pub im_congr: NameId,
 
     /// `Complex.Equiv : Complex → Complex → Prop` — componentwise
     /// `CReal.Equiv`.
@@ -208,6 +213,11 @@ pub struct ComplexPrelude {
     /// `Complex.Equiv` that ignored the imaginary part entirely.
     pub not_zero_i: NameId,
 
+    /// `Complex.re_add_im : ∀ z, Equiv z (add (ofReal (re z)) (mul I (ofReal
+    /// (im z))))` — ℂ **is** ℝ², the reconstruction of `z` from its two real
+    /// projections.
+    pub re_add_im: NameId,
+
     /// `Complex.conj : Complex → Complex`.
     pub conj: NameId,
     /// `Complex.conj_conj : ∀ z, Equiv (conj (conj z)) z` — conjugation is an
@@ -219,6 +229,27 @@ pub struct ComplexPrelude {
     /// `Complex.conj_mul : ∀ z w, Equiv (conj (mul z w)) (mul (conj z) (conj w))`
     /// — conjugation is a ring homomorphism, the multiplicative half.
     pub conj_mul: NameId,
+    /// `Complex.conj_sub : ∀ z w, Equiv (conj (add z (neg w)))
+    /// (add (conj z) (neg (conj w)))` — conjugation is additive over
+    /// subtraction too (`z − w := add z (neg w)`; no separate `Complex.sub` is
+    /// declared, so the statement is over `add`/`neg` directly).
+    pub conj_sub: NameId,
+    /// `Complex.conj_ofReal : ∀ r, Equiv (conj (ofReal r)) (ofReal r)` — the
+    /// embedded reals are conjugation-fixed.
+    pub conj_of_real: NameId,
+    /// `Complex.conj_I : Equiv (conj I) (neg I)`.
+    pub conj_i: NameId,
+    /// `Complex.eq_conj_iff_real : ∀ z, Iff (Equiv z (conj z))
+    /// (CReal.Equiv (im z) CReal.zero)` — `z` is real exactly when it equals
+    /// its own conjugate.
+    ///
+    /// Both directions are proved constructively. The forward direction needs
+    /// `im z ~ CReal.zero` from `im z ~ CReal.neg (im z)`, i.e. that ℝ has no
+    /// 2-torsion; that is proved here (not assumed) via `CReal.inv` at the
+    /// constructed `two := CReal.add CReal.one CReal.one`, itself positive by
+    /// `CReal.zero_lt_one` and `CReal.add_lt_add_of_le_of_lt` — no classical
+    /// reasoning, no apartness convention beyond `CReal.PosBound`.
+    pub eq_conj_iff_real: NameId,
     /// `Complex.normSq : Complex → CReal` — `re z ² + im z ²`, valued in ℝ
     /// because ℂ has no order to be nonneg *in*.
     pub norm_sq: NameId,
@@ -244,6 +275,29 @@ pub struct ComplexPrelude {
     /// calculus as every law above: a degree-4 commutative-ring identity with
     /// no analysis in it, once expanded.
     pub norm_sq_mul: NameId,
+
+    /// `Complex.normSq_eq_zero_of_eq_zero : ∀ z, Equiv z zero →
+    /// CReal.Equiv (normSq z) CReal.zero` — the **easy** half of
+    /// `normSq z ~ 0 ↔ z ~ 0`.
+    ///
+    /// The converse — `normSq z ~ 0 → z ~ 0` — is **not** proved here. It
+    /// reduces to `CReal.mul x x ~ CReal.zero → CReal.Equiv x CReal.zero`
+    /// (apply it twice, at `re z` and `im z`, after the order argument that
+    /// splits a zero sum of two nonnegatives). That reduction is a genuine
+    /// analytic fact — an estimate on the underlying Bishop sequence, not an
+    /// algebraic rearrangement or an order-lemma composition — and needs new
+    /// work inside `creal.rs`/`creal/`, which is out of scope for this
+    /// development and owned by another lane this session.
+    pub norm_sq_eq_zero_of_eq_zero: NameId,
+    /// `Complex.normSq_add : ∀ z w, CReal.Equiv
+    /// (add (normSq (add z w)) (normSq (add z (neg w))))
+    /// (add (add (normSq z) (normSq z)) (add (normSq w) (normSq w)))` — the
+    /// parallelogram law, `‖z+w‖² + ‖z−w‖² = 2‖z‖² + 2‖w‖²`, with `2·normSq z`
+    /// written as `normSq z + normSq z` rather than a literal, to avoid
+    /// inventing a convention for multiplying a `CReal` by a `Nat`. A clean
+    /// unconditional identity, decided by the same ring calculus as
+    /// [`Self::norm_sq_mul`].
+    pub norm_sq_add: NameId,
 
     /// `Complex.no_compatible_order` — **ℂ admits no ordered-ring structure**,
     /// as a theorem. See the module documentation.
@@ -334,6 +388,8 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         rec: kernel.name_str(complex, "rec"),
         re: kernel.name_str(complex, "re"),
         im: kernel.name_str(complex, "im"),
+        re_congr: kernel.name_str(complex, "re_congr"),
+        im_congr: kernel.name_str(complex, "im_congr"),
         equiv,
         equiv_refl: kernel.name_str(equiv, "refl"),
         equiv_symm: kernel.name_str(equiv, "symm"),
@@ -363,15 +419,22 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         i_sq: kernel.name_str(complex, "I_sq"),
         not_zero_one: kernel.name_str(equiv, "not_zero_one"),
         not_zero_i: kernel.name_str(equiv, "not_zero_I"),
+        re_add_im: kernel.name_str(complex, "re_add_im"),
         conj: kernel.name_str(complex, "conj"),
         conj_conj: kernel.name_str(complex, "conj_conj"),
         conj_add: kernel.name_str(complex, "conj_add"),
         conj_mul: kernel.name_str(complex, "conj_mul"),
+        conj_sub: kernel.name_str(complex, "conj_sub"),
+        conj_of_real: kernel.name_str(complex, "conj_ofReal"),
+        conj_i: kernel.name_str(complex, "conj_I"),
+        eq_conj_iff_real: kernel.name_str(complex, "eq_conj_iff_real"),
         norm_sq: kernel.name_str(complex, "normSq"),
         mul_conj: kernel.name_str(complex, "mul_conj"),
         norm_sq_nonneg: kernel.name_str(complex, "normSq_nonneg"),
         norm_sq_conj: kernel.name_str(complex, "normSq_conj"),
         norm_sq_mul: kernel.name_str(complex, "normSq_mul"),
+        norm_sq_eq_zero_of_eq_zero: kernel.name_str(complex, "normSq_eq_zero_of_eq_zero"),
+        norm_sq_add: kernel.name_str(complex, "normSq_add"),
         no_compatible_order: kernel.name_str(complex, "no_compatible_order"),
         inv: kernel.name_str(complex, "inv"),
         mul_inv_cancel: kernel.name_str(complex, "mul_inv_cancel"),
@@ -407,11 +470,17 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_constants(&mut d, prelude)?;
         declare_operations(&mut d, prelude)?;
         declare_congruences(&mut d, prelude)?;
+        declare_projection_congruences(&mut d, prelude)?;
         declare_ring_laws(&mut d, prelude)?;
         declare_pinning(&mut d, prelude)?;
+        declare_re_add_im(&mut d, prelude)?;
         declare_conj_laws(&mut d, prelude)?;
+        declare_conj_sub_ofreal_i(&mut d, prelude)?;
+        declare_eq_conj_iff_real(&mut d, prelude)?;
         declare_norm(&mut d, prelude)?;
         declare_norm_conjugation(&mut d, prelude)?;
+        declare_norm_sq_eq_zero_of_eq_zero(&mut d, prelude)?;
+        declare_norm_sq_add(&mut d, prelude)?;
         declare_no_order(&mut d, prelude)?;
         declare_inv(&mut d, prelude)?;
         declare_complex_mul_inv_cancel(&mut d, prelude)?;
@@ -1162,6 +1231,53 @@ fn declare_congruences(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kern
     unary(d, p.conj_congr, p.conj, false)
 }
 
+/// `re_congr`, `im_congr`: the two projections are congruences on
+/// `Complex.Equiv`.
+///
+/// Immediate from [`equiv_halves`] — its two components already **are** these
+/// propositions, so there is nothing left to derive.
+fn declare_projection_congruences(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let project = |d: &mut IntDev<'_>, name: NameId, real_half: bool| -> Result<(), KernelError> {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let w_fv = d.fresh_fvar();
+        let w = d.kernel().fvar(w_fv);
+        let hypothesis = zeq(d, p, z, w);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let (first, second) = equiv_halves(d, p, z, w, h);
+        let chosen = if real_half { first } else { second };
+        let value = {
+            let with_h = d.lam_fv(h_fv, hypothesis, chosen);
+            let with_w = d.lam_fv(w_fv, carrier, with_h);
+            d.lam_fv(z_fv, carrier, with_w)
+        };
+        let ty = {
+            let proj = if real_half { p.re } else { p.im };
+            let left = d.const_app(proj, &[z]);
+            let right = d.const_app(proj, &[w]);
+            let conclusion = ceq(d, creal, left, right);
+            let inner = d.arrow(hypothesis, conclusion);
+            let with_w = d.pi_fv(w_fv, carrier, inner);
+            d.pi_fv(z_fv, carrier, with_w)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+    };
+    project(d, p.re_congr, true)?;
+    project(d, p.im_congr, false)
+}
+
 /// A universally-quantified `Complex.Equiv` law, `∀ vars, Equiv (lhs vars)
 /// (rhs vars)`, decided by the ring calculus and declared as a `Theorem`.
 ///
@@ -1284,6 +1400,271 @@ fn declare_conj_laws(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kernel
     })
 }
 
+/// `conj_sub`, `conj_ofReal`, `conj_I`: three more corollaries of the same
+/// ring calculus [`declare_conj_laws`] already uses.
+fn declare_conj_sub_ofreal_i(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let real = creal_ty(d, p);
+
+    complex_law(d, p, p.conj_sub, 2, &|d, v| {
+        let z = CExpr::var(d, p, v[0]);
+        let w = CExpr::var(d, p, v[1]);
+        (
+            CExpr::conj(CExpr::add(z.clone(), CExpr::neg(w.clone()))),
+            CExpr::add(CExpr::conj(z), CExpr::neg(CExpr::conj(w))),
+        )
+    })?;
+
+    // conj_ofReal : Equiv (conj (ofReal r)) (ofReal r)
+    {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let lhs = CExpr::conj(CExpr::OfReal(RExpr::Atom(r), r));
+        let rhs = CExpr::OfReal(RExpr::Atom(r), r);
+        let body = ring_law_proof(d, p, &lhs, &rhs);
+        let left = render_c(d, p, &lhs);
+        let right = render_c(d, p, &rhs);
+        let claim = zeq(d, p, left, right);
+        let value = d.lam_fv(r_fv, real, body);
+        let ty = d.pi_fv(r_fv, real, claim);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.conj_of_real,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // conj_I : Equiv (conj I) (neg I)
+    {
+        let lhs = CExpr::conj(CExpr::I);
+        let rhs = CExpr::neg(CExpr::I);
+        let value = ring_law_proof(d, p, &lhs, &rhs);
+        let left = render_c(d, p, &lhs);
+        let right = render_c(d, p, &rhs);
+        let ty = zeq(d, p, left, right);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.conj_i,
+            uparams: vec![],
+            ty,
+            value,
+        })
+    }
+}
+
+/// From `hyp : CReal.Equiv (CReal.add x x) CReal.zero`, conclude
+/// `CReal.Equiv x CReal.zero` — ℝ has no 2-torsion.
+///
+/// Not an algebraic rearrangement: `x + x ~ 0` does not entail `x ~ 0` in an
+/// arbitrary commutative ring (characteristic 2 is a counterexample), so this
+/// genuinely uses that `2 := CReal.add CReal.one CReal.one` is **positive**
+/// (hence invertible via [`CRealPrelude::inv`]) — proved from
+/// `CReal.zero_lt_one` and `CReal.add_lt_add_of_le_of_lt`, not assumed. No
+/// classical reasoning: the modulus `k` separating `two` from `0` is extracted
+/// from `CReal.pos_bound_of_lt`'s `Exists` by [`exists_elim`], exactly
+/// `CReal.PosBound`'s own convention.
+fn double_zero_imp_zero(d: &mut IntDev<'_>, p: ComplexPrelude, x: ExprId, hyp: ExprId) -> ExprId {
+    let creal = p.creal;
+    let nat = d.nat_ty();
+    let zero = czero(d, creal);
+    let one = cone(d, creal);
+    let two = cadd(d, creal, one, one);
+
+    // 0 < two, from 0 ≤ 1 and 0 < 1 shifted by `add_lt_add_of_le_of_lt`.
+    let zero_lt_one = d.kernel().const_(creal.zero_lt_one, vec![]);
+    let le_zero_one = d.lemma(creal.le_of_lt, &[zero, one, zero_lt_one]);
+    let sum_lt = d.lemma(
+        creal.add_lt_add_of_le_of_lt,
+        &[zero, one, zero, one, le_zero_one, zero_lt_one],
+    );
+    let zero_zero = cadd(d, creal, zero, zero);
+    let add_zero_zero = d.lemma(creal.add_zero, &[zero]);
+    let two_refl = crefl(d, creal, two);
+    let lt_zero_two = d.lemma(
+        creal.lt_congr,
+        &[zero_zero, zero, two, two, add_zero_zero, two_refl, sum_lt],
+    );
+
+    // two * x ~ x + x, a pure ring identity once `two` is read as `1 + 1`.
+    let two_x = cmul(d, creal, two, x);
+    let xx = cadd(d, creal, x, x);
+    let two_x_eq_xx = ring_proof(
+        d,
+        creal,
+        &RExpr::mul(RExpr::add(RExpr::One, RExpr::One), RExpr::Atom(x)),
+        &RExpr::add(RExpr::Atom(x), RExpr::Atom(x)),
+    );
+    let two_x_eq_zero = ctrans(d, creal, two_x, xx, zero, two_x_eq_xx, hyp);
+
+    // ∃ k, PosBound two k.
+    let k_fv = d.fresh_fvar();
+    let k_var = d.kernel().fvar(k_fv);
+    let pos_bound_template = d.const_app(creal.pos_bound, &[two, k_var]);
+    let predicate = d.lam_fv(k_fv, nat, pos_bound_template);
+    let witness = d.const_app(creal.pos_bound_of_lt, &[two, lt_zero_two]);
+
+    let target = ceq(d, creal, x, zero);
+
+    let minor = {
+        let k2_fv = d.fresh_fvar();
+        let k2 = d.kernel().fvar(k2_fv);
+        let h_ty = d.const_app(creal.pos_bound, &[two, k2]);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let inv_two = d.const_app(creal.inv, &[two, k2, h]);
+        let cancel = d.lemma(creal.mul_inv_cancel, &[two, k2, h]);
+
+        let inv_two_refl = crefl(d, creal, inv_two);
+        let prod_congr = d.lemma(
+            creal.mul_congr,
+            &[inv_two, inv_two, two_x, zero, inv_two_refl, two_x_eq_zero],
+        );
+
+        let inv_two_two = cmul(d, creal, inv_two, two);
+        let inv_two_two_x = cmul(d, creal, inv_two_two, x);
+        let inv_two_two_x_swapped = cmul(d, creal, inv_two, two_x);
+        let assoc_fwd = d.lemma(creal.mul_assoc, &[inv_two, two, x]);
+        let step1 = csymm(d, creal, inv_two_two_x, inv_two_two_x_swapped, assoc_fwd);
+
+        let two_inv_two = cmul(d, creal, two, inv_two);
+        let mc = d.lemma(creal.mul_comm, &[inv_two, two]);
+        let combined = ctrans(d, creal, inv_two_two, two_inv_two, one, mc, cancel);
+
+        let x_refl = crefl(d, creal, x);
+        let one_x = cmul(d, creal, one, x);
+        let step3 = d.lemma(creal.mul_congr, &[inv_two_two, one, x, x, combined, x_refl]);
+
+        let x_one = cmul(d, creal, x, one);
+        let mc2 = d.lemma(creal.mul_comm, &[one, x]);
+        let mo = d.lemma(creal.mul_one, &[x]);
+        let step4 = ctrans(d, creal, one_x, x_one, x, mc2, mo);
+
+        let step34 = ctrans(d, creal, inv_two_two_x, one_x, x, step3, step4);
+        let lhs_to_x = ctrans(
+            d,
+            creal,
+            inv_two_two_x_swapped,
+            inv_two_two_x,
+            x,
+            step1,
+            step34,
+        );
+
+        let rhs_to_zero = d.lemma(creal.mul_zero, &[inv_two]);
+        let inv_two_zero = cmul(d, creal, inv_two, zero);
+        let x_to_swapped = csymm(d, creal, inv_two_two_x_swapped, x, lhs_to_x);
+
+        let (_, final_proof) = cchain(
+            d,
+            creal,
+            x,
+            &[
+                (inv_two_two_x_swapped, x_to_swapped),
+                (inv_two_zero, prod_congr),
+                (zero, rhs_to_zero),
+            ],
+        );
+
+        let with_h = d.lam_fv(h_fv, h_ty, final_proof);
+        d.lam_fv(k2_fv, nat, with_h)
+    };
+
+    exists_elim(d, predicate, target, witness, minor)
+}
+
+/// `Complex.eq_conj_iff_real`: `z` is real exactly when it equals its own
+/// conjugate.
+///
+/// Both directions turn on the same fact about the *imaginary* half: `im
+/// (conj z)` unfolds (one delta step on `conj`, one iota step over `mk`) to
+/// `CReal.neg (im z)`, so the imaginary component of `z ~ conj z` **is**, up
+/// to that reduction, `im z ~ CReal.neg (im z)`. The real component is free
+/// either way — `re (conj z)` unfolds to `re z`, so `Equiv.refl` closes it
+/// regardless of direction.
+///
+/// The forward direction still needs real work: `im z ~ neg (im z)` only gives
+/// `im z ~ CReal.zero` once ℝ is known to have no 2-torsion, which
+/// [`double_zero_imp_zero`] proves rather than assumes.
+fn declare_eq_conj_iff_real(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let logic = creal.rat.int.logic;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let conj_z = d.const_app(p.conj, &[z]);
+    let re_z = re_of(d, p, z);
+    let im_z = im_of(d, p, z);
+    let zero = czero(d, creal);
+
+    let equiv_stmt = zeq(d, p, z, conj_z);
+    let real_stmt = ceq(d, creal, im_z, zero);
+
+    // mp : Equiv z (conj z) -> CReal.Equiv (im z) CReal.zero
+    let mp_body = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let (_, second) = equiv_halves(d, p, z, conj_z, h);
+        // `second : Equiv (im z) (im (conj z))`, defeq to `Equiv (im z) (neg (im z))`.
+        let im_refl = crefl(d, creal, im_z);
+        let neg_im = cneg(d, creal, im_z);
+        let doubled = d.lemma(
+            creal.add_congr,
+            &[im_z, im_z, im_z, neg_im, im_refl, second],
+        );
+        // doubled : Equiv (add im_z im_z) (add im_z (neg im_z))
+        let cancel = d.lemma(creal.add_neg, &[im_z]);
+        // cancel : Equiv (add im_z (neg im_z)) zero
+        let im_z_im_z = cadd(d, creal, im_z, im_z);
+        let im_z_neg_im = cadd(d, creal, im_z, neg_im);
+        let sum_zero = ctrans(d, creal, im_z_im_z, im_z_neg_im, zero, doubled, cancel);
+        let proof = double_zero_imp_zero(d, p, im_z, sum_zero);
+        d.lam_fv(h_fv, equiv_stmt, proof)
+    };
+
+    // mpr : CReal.Equiv (im z) CReal.zero -> Equiv z (conj z)
+    let mpr_body = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let re_conj = re_of(d, p, conj_z);
+        let im_conj = im_of(d, p, conj_z);
+        let real_claim = ceq(d, creal, re_z, re_conj);
+        let imag_claim = ceq(d, creal, im_z, im_conj);
+        let real_proof = crefl(d, creal, re_z);
+        // imag_proof : Equiv (im z) (neg (im z)), defeq to `Equiv (im z) (im (conj z))`.
+        let neg_im = cneg(d, creal, im_z);
+        let neg_congr_proof = d.lemma(creal.neg_congr, &[im_z, zero, h]);
+        // neg_congr_proof : Equiv (neg im_z) (neg zero)
+        let neg_zero_eq_zero = ring_proof(d, creal, &RExpr::neg(RExpr::Zero), &RExpr::Zero);
+        let neg_zero = cneg(d, creal, zero);
+        let neg_im_zero = ctrans(
+            d,
+            creal,
+            neg_im,
+            neg_zero,
+            zero,
+            neg_congr_proof,
+            neg_zero_eq_zero,
+        );
+        let zero_to_neg_im = csymm(d, creal, neg_im, zero, neg_im_zero);
+        let imag_proof = ctrans(d, creal, im_z, zero, neg_im, h, zero_to_neg_im);
+        let body = and_intro(d, p, real_claim, imag_claim, real_proof, imag_proof);
+        d.lam_fv(h_fv, real_stmt, body)
+    };
+
+    let iff_stmt = d.const_app(logic.iff, &[equiv_stmt, real_stmt]);
+    let iff_proof = d.const_app(logic.iff_intro, &[equiv_stmt, real_stmt, mp_body, mpr_body]);
+
+    let value = d.lam_fv(z_fv, carrier, iff_proof);
+    let ty = d.pi_fv(z_fv, carrier, iff_stmt);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.eq_conj_iff_real,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// The witnesses that pin the operations down, and the two that keep `Equiv`
 /// from being the total relation.
 fn declare_pinning(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
@@ -1379,6 +1760,28 @@ fn declare_pinning(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelEr
     };
     discriminate(d, p.not_zero_one, p.one, true)?;
     discriminate(d, p.not_zero_i, p.i, false)
+}
+
+/// `Complex.re_add_im : ∀ z, Equiv z (add (ofReal (re z)) (mul I (ofReal (im
+/// z))))` — ℂ **is** ℝ², the reconstruction of `z` from its own two real
+/// projections.
+///
+/// Decided by the same ring calculus as every law above: [`parts`] already
+/// knows how `ofReal` and `I` unfold, so the right-hand side's components are
+/// `(re z, 0)` and `(0, im z)`, and `add` finishes the arithmetic to exactly
+/// `(re z, im z)` — `z`'s own components.
+fn declare_re_add_im(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    complex_law(d, p, p.re_add_im, 1, &|d, v| {
+        let z = CExpr::var(d, p, v[0]);
+        let (re_z, im_z) = match &z {
+            CExpr::Var(_, re, im) => (*re, *im),
+            _ => unreachable!("CExpr::var always produces CExpr::Var"),
+        };
+        let real_part = CExpr::OfReal(RExpr::Atom(re_z), re_z);
+        let imag_part = CExpr::OfReal(RExpr::Atom(im_z), im_z);
+        let rhs = CExpr::add(real_part, CExpr::mul(CExpr::I, imag_part));
+        (z, rhs)
+    })
 }
 
 /// `mul_conj` and `normSq_nonneg`: the norm, and where it lands.
@@ -1566,6 +1969,147 @@ fn declare_norm_conjugation(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(),
         })?;
     }
     Ok(())
+}
+
+/// `Complex.normSq_eq_zero_of_eq_zero`: the **easy** half of
+/// `normSq z ~ 0 ↔ z ~ 0`. See
+/// [`ComplexPrelude::norm_sq_eq_zero_of_eq_zero`] for why the converse is not
+/// attempted here.
+fn declare_norm_sq_eq_zero_of_eq_zero(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let hypothesis = zeq(d, p, z, zero_c);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let (re_eq, im_eq) = equiv_halves(d, p, z, zero_c, h);
+    // re_eq : Equiv (re z) (re zero_c), defeq to Equiv (re z) CReal.zero.
+    // im_eq : Equiv (im z) (im zero_c), defeq to Equiv (im z) CReal.zero.
+    let a = re_of(d, p, z);
+    let b = im_of(d, p, z);
+    let zero = czero(d, creal);
+
+    let aa_eq = d.lemma(creal.mul_congr, &[a, zero, a, zero, re_eq, re_eq]);
+    let bb_eq = d.lemma(creal.mul_congr, &[b, zero, b, zero, im_eq, im_eq]);
+    let mul_aa = cmul(d, creal, a, a);
+    let mul_bb = cmul(d, creal, b, b);
+    let mul_zero = cmul(d, creal, zero, zero);
+    let aa_bb_eq = d.lemma(
+        creal.add_congr,
+        &[mul_aa, mul_zero, mul_bb, mul_zero, aa_eq, bb_eq],
+    );
+    // aa_bb_eq : Equiv (add (a*a) (b*b)) (add (zero*zero) (zero*zero)),
+    // and `add (a*a) (b*b)` is defeq to `Complex.normSq z`.
+    let collapse = ring_proof(
+        d,
+        creal,
+        &RExpr::add(
+            RExpr::mul(RExpr::Zero, RExpr::Zero),
+            RExpr::mul(RExpr::Zero, RExpr::Zero),
+        ),
+        &RExpr::Zero,
+    );
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let sum_zz = cadd(d, creal, mul_zero, mul_zero);
+    let proof = ctrans(d, creal, norm_z, sum_zz, zero, aa_bb_eq, collapse);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        d.lam_fv(z_fv, carrier, with_h)
+    };
+    let ty = {
+        let claim = ceq(d, creal, norm_z, zero);
+        let inner = d.arrow(hypothesis, claim);
+        d.pi_fv(z_fv, carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.norm_sq_eq_zero_of_eq_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.normSq_add`: the parallelogram law,
+/// `‖z+w‖² + ‖z−w‖² = 2‖z‖² + 2‖w‖²`, with `2·normSq z` written as
+/// `normSq z + normSq z` to avoid inventing a convention for multiplying a
+/// `CReal` by a `Nat`. A clean unconditional identity — no hypothesis, no
+/// case split — decided by the same ring calculus as [`declare_norm_conjugation`].
+fn declare_norm_sq_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let a = re_of(d, p, z);
+    let b = im_of(d, p, z);
+    let c = re_of(d, p, w);
+    let e = im_of(d, p, w);
+
+    let sum_zw = d.const_app(p.add, &[z, w]);
+    let neg_w = d.const_app(p.neg, &[w]);
+    let diff_zw = d.const_app(p.add, &[z, neg_w]);
+    let norm_sum = d.const_app(p.norm_sq, &[sum_zw]);
+    let norm_diff = d.const_app(p.norm_sq, &[diff_zw]);
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+
+    let sum_re = RExpr::add(RExpr::Atom(a), RExpr::Atom(c));
+    let sum_im = RExpr::add(RExpr::Atom(b), RExpr::Atom(e));
+    let diff_re = RExpr::add(RExpr::Atom(a), RExpr::neg(RExpr::Atom(c)));
+    let diff_im = RExpr::add(RExpr::Atom(b), RExpr::neg(RExpr::Atom(e)));
+    let norm_sum_expr = RExpr::add(
+        RExpr::mul(sum_re.clone(), sum_re),
+        RExpr::mul(sum_im.clone(), sum_im),
+    );
+    let norm_diff_expr = RExpr::add(
+        RExpr::mul(diff_re.clone(), diff_re),
+        RExpr::mul(diff_im.clone(), diff_im),
+    );
+    let lhs = RExpr::add(norm_sum_expr, norm_diff_expr);
+
+    let aa_bb = RExpr::add(
+        RExpr::mul(RExpr::Atom(a), RExpr::Atom(a)),
+        RExpr::mul(RExpr::Atom(b), RExpr::Atom(b)),
+    );
+    let cc_ee = RExpr::add(
+        RExpr::mul(RExpr::Atom(c), RExpr::Atom(c)),
+        RExpr::mul(RExpr::Atom(e), RExpr::Atom(e)),
+    );
+    let rhs = RExpr::add(
+        RExpr::add(aa_bb.clone(), aa_bb),
+        RExpr::add(cc_ee.clone(), cc_ee),
+    );
+
+    let proof = ring_proof(d, creal, &lhs, &rhs);
+    let lhs_term = cadd(d, creal, norm_sum, norm_diff);
+    let norm_z_doubled = cadd(d, creal, norm_z, norm_z);
+    let norm_w_doubled = cadd(d, creal, norm_w, norm_w);
+    let rhs_term = cadd(d, creal, norm_z_doubled, norm_w_doubled);
+    let value = {
+        let with_w = d.lam_fv(w_fv, carrier, proof);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let claim = ceq(d, creal, lhs_term, rhs_term);
+        let with_w = d.pi_fv(w_fv, carrier, claim);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.norm_sq_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 /// **ℂ admits no ordered-ring structure**, proved rather than asserted.
