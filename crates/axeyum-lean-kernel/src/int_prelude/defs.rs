@@ -52,9 +52,9 @@ use crate::nat_prelude::NatOps;
 /// in the environment (the tallest is `Nat.gcd`'s Bézout development at 12), as
 /// the reducibility contract requires: a definition must outrank everything it
 /// unfolds to.
-const LEAF_HEIGHT: u16 = 20;
+pub(super) const LEAF_HEIGHT: u16 = 20;
 /// Delta height for definitions that call a leaf one.
-const DERIVED_HEIGHT: u16 = 21;
+pub(super) const DERIVED_HEIGHT: u16 = 21;
 
 /// Admit the inductive carrier `Int` with its two constructors.
 pub(super) fn declare_carrier(d: &mut IntDev<'_>) -> Result<(), KernelError> {
@@ -205,7 +205,7 @@ pub(super) fn declare_normalizers(d: &mut IntDev<'_>) -> Result<(), KernelError>
 /// where `result` is the codomain and `level` its universe.
 ///
 /// The four builders receive the `Nat` field of each constructor.
-fn define_binary_int(
+pub(super) fn define_binary_int(
     d: &mut IntDev<'_>,
     name: NameId,
     height: u16,

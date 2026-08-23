@@ -77,6 +77,7 @@ use crate::{Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue};
 mod algebra;
 mod decide;
 mod defs;
+mod division;
 mod euclid;
 mod nat_abs;
 pub(crate) mod ops;
@@ -156,6 +157,9 @@ pub struct IntPrelude {
     pub neg_of_nat_add_of_nat: NameId,
     /// `negOfNat_add_negOfNat : ∀ u v, negOfNat u + negOfNat v = negOfNat (u+v)`.
     pub neg_of_nat_add_neg_of_nat: NameId,
+    /// `negOfNat_add_subNatNat : ∀ mag base offset,
+    /// negOfNat mag + subNatNat base offset = subNatNat base (offset+mag)`.
+    pub neg_of_nat_add_sub_nat_nat: NameId,
 
     // --- `Int.mul` against `negOfNat` and `subNatNat` -------------------------
     /// `mul_ofNat_negOfNat : ∀ m k, ofNat m * negOfNat k = negOfNat (m*k)`.
@@ -280,6 +284,30 @@ pub struct IntPrelude {
     ///
     /// The negative branch of [`Self::euclidean_decomposition`].
     pub euclid_neg_succ: NameId,
+
+    // --- Euclidean ("E-rounding") division: `Int.ediv` / `Int.emod` ----------
+    /// `Int.ediv : Int → Int → Int` — the Euclidean quotient, matching Lean 4
+    /// core's `Int.ediv` (`Init.Data.Int.DivMod.Basic`) bit for bit: total,
+    /// `ediv _ 0 = 0`, and for `b ≠ 0` the unique `q` with
+    /// `0 ≤ (a - b*q) < |b|`. A checked structural `Int.rec` definition, not an
+    /// axiom.
+    pub ediv: NameId,
+    /// `Int.emod : Int → Int → Int` — the Euclidean remainder,
+    /// `emod a b = a - b * ediv a b`, matching Lean 4 core's `Int.emod`
+    /// bit for bit: total, `emod a 0 = a`, and `0 ≤ emod a b < natAbs b` for
+    /// `b ≠ 0`.
+    pub emod: NameId,
+    /// `ediv_add_emod : ∀ a b, b * (a / b) + a % b = a` — the division
+    /// algorithm as an equation. The keystone: it turns `Int.ediv`/`Int.emod`
+    /// from "some total functions" into "the Euclidean quotient and
+    /// remainder", and is what `Int.ediv_emod_unique` would pin against.
+    pub ediv_add_emod: NameId,
+    /// `emod_nonneg : ∀ a b, Not (Eq Int b zero) → 0 ≤ a % b` — one of the two
+    /// bounds that make the remainder canonical.
+    pub emod_nonneg: NameId,
+    /// `emod_lt_of_pos : ∀ a b, 0 < b → a % b < b` — the other bound that
+    /// makes the remainder canonical.
+    pub emod_lt_of_pos: NameId,
     /// `natAbs : Int → Nat` — the magnitude, `ofNat n ↦ n` and `negSucc m ↦ succ m`.
     pub nat_abs: NameId,
     /// `of_nat_nat_abs_of_nonneg : ∀ a, 0 ≤ a → ofNat (natAbs a) = a`.
@@ -356,6 +384,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         of_nat_add_neg_of_nat: child(kernel, "ofNat_add_negOfNat"),
         neg_of_nat_add_of_nat: child(kernel, "negOfNat_add_ofNat"),
         neg_of_nat_add_neg_of_nat: child(kernel, "negOfNat_add_negOfNat"),
+        neg_of_nat_add_sub_nat_nat: child(kernel, "negOfNat_add_subNatNat"),
         mul_of_nat_neg_of_nat: child(kernel, "mul_ofNat_negOfNat"),
         mul_neg_of_nat_of_nat: child(kernel, "mul_negOfNat_ofNat"),
         mul_neg_succ_neg_of_nat: child(kernel, "mul_negSucc_negOfNat"),
@@ -404,6 +433,11 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         euclidean_decomposition: child(kernel, "euclidean_decomposition"),
         euclid_of_nat: child(kernel, "euclid_of_nat"),
         euclid_neg_succ: child(kernel, "euclid_neg_succ"),
+        ediv: child(kernel, "ediv"),
+        emod: child(kernel, "emod"),
+        ediv_add_emod: child(kernel, "ediv_add_emod"),
+        emod_nonneg: child(kernel, "emod_nonneg"),
+        emod_lt_of_pos: child(kernel, "emod_lt_of_pos"),
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
@@ -483,6 +517,12 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euclid::declare_of_nat_branch(&mut d)?;
         euclid::declare_neg_succ_branch(&mut d)?;
         euclid::declare_decomposition(&mut d)?;
+        division::declare_ediv(&mut d)?;
+        division::declare_emod(&mut d)?;
+        sub_nat_nat::declare_neg_of_nat_add_sub_nat_nat(&mut d)?;
+        division::declare_ediv_add_emod(&mut d)?;
+        division::declare_emod_nonneg(&mut d)?;
+        division::declare_emod_lt_of_pos(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;

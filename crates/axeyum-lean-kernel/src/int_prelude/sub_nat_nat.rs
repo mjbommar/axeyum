@@ -1059,6 +1059,127 @@ pub(super) fn declare_add_lemmas(d: &mut IntDev<'_>) -> Result<(), KernelError> 
     Ok(())
 }
 
+/// `negOfNat_add_subNatNat : ∀ mag base offset, negOfNat mag + subNatNat base
+/// offset = subNatNat base (offset+mag)`.
+///
+/// The bridge this file was missing: every add lemma above pairs `Int.add`
+/// with a *pure* `ofNat`/`negSucc` operand on one side; this is the first with
+/// a second `negOfNat` landing on a `subNatNat`, which is what
+/// `Int.ediv_add_emod`'s two negative-dividend branches need
+/// (`crates/axeyum-lean-kernel/src/int_prelude/division.rs`). Proved the same
+/// way as everything else here — `sub_nat_nat_elim` via [`by_borrow`] — by
+/// re-anchoring whichever of [`IntPrelude::neg_of_nat_add_of_nat`] or
+/// [`IntPrelude::neg_of_nat_add_neg_of_nat`] the borrow's outcome calls for.
+pub(super) fn declare_neg_of_nat_add_sub_nat_nat(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.neg_of_nat_add_sub_nat_nat, 3, &|d, v| {
+        let (mag, base, offset) = (v[0], v[1], v[2]);
+        let negative = d.neg_of_nat(mag);
+        let shifted_offset = NatOps::add(d, offset, mag);
+        let motive = |d: &mut IntDev<'_>, z: ExprId| {
+            let left = d.iadd(negative, z);
+            let right = d.sub_nat_nat(base, shifted_offset);
+            d.ieq(left, right)
+        };
+        let stmt = {
+            let borrowed = d.sub_nat_nat(base, offset);
+            motive(d, borrowed)
+        };
+        let proof = by_borrow(
+            d,
+            base,
+            offset,
+            &motive,
+            // The borrow did not fire: `offset+i = base`, answer `ofNat i`.
+            &|d, i, hi| {
+                let start = {
+                    let value = d.of_nat(i);
+                    d.iadd(negative, value)
+                };
+                let mid1 = d.sub_nat_nat(i, mag);
+                let step1 = {
+                    let name = d.int().neg_of_nat_add_of_nat;
+                    d.const_app(name, &[mag, i])
+                };
+                let mid2 = {
+                    let a = NatOps::add(d, offset, i);
+                    let b = NatOps::add(d, offset, mag);
+                    d.sub_nat_nat(a, b)
+                };
+                let step2 = {
+                    let name = d.int().sub_nat_nat_add_add_left;
+                    let forward = d.const_app(name, &[offset, i, mag]);
+                    d.isymm(mid2, mid1, forward)
+                };
+                let end = d.sub_nat_nat(base, shifted_offset);
+                let step3 = {
+                    let sum_oi = NatOps::add(d, offset, i);
+                    d.nat_eq_to_int(sum_oi, base, hi, &|d, x| d.sub_nat_nat(x, shifted_offset))
+                };
+                let (_, chained) = d.ichain(start, &[(mid1, step1), (mid2, step2), (end, step3)]);
+                chained
+            },
+            // The borrow fired: `base+(i+1) = offset`, answer `negSucc i`.
+            &|d, i, hi| {
+                let succ_i = d.succ(i);
+                let start = {
+                    let value = d.neg_of_nat(succ_i);
+                    d.iadd(negative, value)
+                };
+                let sum1 = NatOps::add(d, mag, succ_i);
+                let mid1 = d.neg_of_nat(sum1);
+                let step1 = {
+                    let name = d.int().neg_of_nat_add_neg_of_nat;
+                    d.const_app(name, &[mag, succ_i])
+                };
+                let sum2 = NatOps::add(d, succ_i, mag);
+                let mid2 = d.neg_of_nat(sum2);
+                let step2 = {
+                    let h = add_comm(d, mag, succ_i);
+                    d.nat_eq_to_int(sum1, sum2, h, &|d, x| d.neg_of_nat(x))
+                };
+                let anchor_sum = NatOps::add(d, base, sum2);
+                let mid3 = d.sub_nat_nat(base, anchor_sum);
+                let step3 = {
+                    let name = d.int().sub_nat_nat_add_right;
+                    let anchor = d.const_app(name, &[base, sum2]);
+                    d.isymm(mid3, mid2, anchor)
+                };
+                let mid4 = d.sub_nat_nat(base, shifted_offset);
+                let step4 = {
+                    let reindexed = {
+                        let mid_assoc = {
+                            let a = NatOps::add(d, base, succ_i);
+                            NatOps::add(d, a, mag)
+                        };
+                        let h_assoc_fwd = add_assoc(d, base, succ_i, mag);
+                        let h_assoc = d.symm(mid_assoc, anchor_sum, h_assoc_fwd);
+                        let h_congr = {
+                            let sum = NatOps::add(d, base, succ_i);
+                            d.congr(sum, offset, hi, &|d, x| NatOps::add(d, x, mag))
+                        };
+                        let (_, chained) = d.chain(
+                            anchor_sum,
+                            &[(mid_assoc, h_assoc), (shifted_offset, h_congr)],
+                        );
+                        chained
+                    };
+                    d.nat_eq_to_int(anchor_sum, shifted_offset, reindexed, &|d, x| {
+                        d.sub_nat_nat(base, x)
+                    })
+                };
+                let (_, chained) = d.ichain(
+                    start,
+                    &[(mid1, step1), (mid2, step2), (mid3, step3), (mid4, step4)],
+                );
+                chained
+            },
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare the multiplicative lemmas: `Int.mul` against a stuck `subNatNat`.
 pub(super) fn declare_mul_lemmas(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();

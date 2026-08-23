@@ -131,6 +131,8 @@ fn int_prelude_admits_all_declarations() {
         p.lt,
         p.neg_of_nat,
         p.sub_nat_nat,
+        p.ediv,
+        p.emod,
     ] {
         assert!(
             matches!(
@@ -170,12 +172,15 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 33] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 36] {
     [
         p.euclidean_decomposition,
         p.of_nat_nat_abs_of_nonneg,
         p.euclid_of_nat,
         p.euclid_neg_succ,
+        p.ediv_add_emod,
+        p.emod_nonneg,
+        p.emod_lt_of_pos,
         p.le_refl,
         p.le_trans,
         p.lt_irrefl,
@@ -213,7 +218,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 33] {
 /// working parts of five of the laws above, and a footprint that leaked into one
 /// of them would leak into the law. They are checked to exactly the same
 /// standard.
-fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 25] {
+fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 26] {
     [
         p.sub_nat_nat_succ_succ,
         p.sub_nat_nat_add_add,
@@ -230,6 +235,7 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 25] {
         p.of_nat_add_neg_of_nat,
         p.neg_of_nat_add_of_nat,
         p.neg_of_nat_add_neg_of_nat,
+        p.neg_of_nat_add_sub_nat_nat,
         p.mul_of_nat_neg_of_nat,
         p.mul_neg_of_nat_of_nat,
         p.mul_neg_succ_neg_of_nat,
@@ -627,6 +633,151 @@ fn the_operations_compute_their_normal_forms() {
     let one = k.const_(p.one, vec![]);
     let want = numeral(&mut k, &p, 1);
     assert!(k.def_eq(one, want), "Int.one is Int.ofNat 1");
+}
+
+/// `Int.ediv`/`Int.emod` compute the exact values Lean 4 core's `Int.ediv`/
+/// `Int.emod` document for themselves (`Init.Data.Int.DivMod.Basic`), across
+/// every sign combination and the division-by-zero corner — the totality
+/// convention this development chose to match, not a case it happened to get
+/// right. Both are checked `Declaration::Definition`s with an empty axiom
+/// footprint: nothing here was assumed.
+#[test]
+fn ediv_emod_compute_their_normal_forms() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    assert!(
+        k.axiom_footprint(p.ediv).is_empty(),
+        "Int.ediv must rest on no axiom"
+    );
+    assert!(
+        k.axiom_footprint(p.emod).is_empty(),
+        "Int.emod must rest on no axiom"
+    );
+
+    let ediv_cases = [
+        (7, 0, 0),
+        (0, 7, 0),
+        (12, 6, 2),
+        (12, -6, -2),
+        (-12, 6, -2),
+        (-12, -6, 2),
+        (12, 7, 1),
+        (12, -7, -1),
+        (-12, 7, -2),
+        (-12, -7, 2),
+    ];
+    for (left, right, expected) in ediv_cases {
+        let a = numeral(&mut k, &p, left);
+        let b = numeral(&mut k, &p, right);
+        let f = k.const_(p.ediv, vec![]);
+        let applied = k.app(f, a);
+        let applied = k.app(applied, b);
+        let want = numeral(&mut k, &p, expected);
+        assert!(
+            k.def_eq(applied, want),
+            "ediv {left} {right} should be {expected}"
+        );
+    }
+
+    let emod_cases = [
+        (7, 0, 7),
+        (0, 7, 0),
+        (12, 6, 0),
+        (12, -6, 0),
+        (-12, 6, 0),
+        (-12, -6, 0),
+        (12, 7, 5),
+        (12, -7, 5),
+        (-12, 7, 2),
+        (-12, -7, 2),
+    ];
+    for (left, right, expected) in emod_cases {
+        let a = numeral(&mut k, &p, left);
+        let b = numeral(&mut k, &p, right);
+        let f = k.const_(p.emod, vec![]);
+        let applied = k.app(f, a);
+        let applied = k.app(applied, b);
+        let want = numeral(&mut k, &p, expected);
+        assert!(
+            k.def_eq(applied, want),
+            "emod {left} {right} should be {expected}"
+        );
+        // The E-rounding invariant: the remainder is always non-negative.
+        assert!(expected >= 0, "emod {left} {right} should be non-negative");
+    }
+}
+
+/// `Int.ediv_add_emod` — the division algorithm as an equation
+/// (`b*(a/b)+a%b=a`) — genuinely computes, across every sign combination and
+/// the division-by-zero corner, and is a `Theorem` with an empty axiom
+/// footprint: the equation was DERIVED from `Nat.div_mod_exec`, not assumed.
+#[test]
+fn ediv_add_emod_computes_at_concrete_values() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    assert!(
+        k.axiom_footprint(p.ediv_add_emod).is_empty(),
+        "Int.ediv_add_emod must rest on no axiom"
+    );
+
+    let cases = [
+        (7, 0),
+        (0, 7),
+        (12, 6),
+        (12, -6),
+        (-12, 6),
+        (-12, -6),
+        (12, 7),
+        (12, -7),
+        (-12, 7),
+        (-12, -7),
+    ];
+    for (left, right) in cases {
+        let a = numeral(&mut k, &p, left);
+        let b = numeral(&mut k, &p, right);
+        let theorem = k.const_(p.ediv_add_emod, vec![]);
+        let applied = k.app(theorem, a);
+        let proof = k.app(applied, b);
+        let inferred = k
+            .infer(proof)
+            .unwrap_or_else(|e| panic!("ediv_add_emod {left} {right} should type-check: {e:?}"));
+
+        // The stated equation, built directly: `Eq Int (b*(a/b)+a%b) a`.
+        let a = numeral(&mut k, &p, left);
+        let b = numeral(&mut k, &p, right);
+        let ediv = k.const_(p.ediv, vec![]);
+        let ediv_ab_f = k.app(ediv, a);
+        let ediv_ab = k.app(ediv_ab_f, b);
+        let mul = k.const_(p.mul, vec![]);
+        let scaled_f = k.app(mul, b);
+        let scaled = k.app(scaled_f, ediv_ab);
+        let emod = k.const_(p.emod, vec![]);
+        let emod_ab_f = k.app(emod, a);
+        let emod_ab = k.app(emod_ab_f, b);
+        let add = k.const_(p.add, vec![]);
+        let sum_f = k.app(add, scaled);
+        let sum = k.app(sum_f, emod_ab);
+        let zero_level = k.level_zero();
+        let one_level = k.level_succ(zero_level);
+        let eq = k.const_(p.logic.eq, vec![one_level]);
+        let z_ty = k.const_(p.z, vec![]);
+        let eq_ty = k.app(eq, z_ty);
+        let eq_ty_sum = k.app(eq_ty, sum);
+        let expected = k.app(eq_ty_sum, a);
+
+        assert!(
+            k.def_eq(inferred, expected),
+            "ediv_add_emod {left} {right}: inferred type does not match the stated equation"
+        );
+
+        // And it genuinely computes: the reconstruction reduces to `left`.
+        let want = numeral(&mut k, &p, left);
+        assert!(
+            k.def_eq(sum, want),
+            "ediv_add_emod {left} {right}: b*(a/b)+a%b should reduce to {left}"
+        );
+    }
 }
 
 /// The order relations decide the mixed-sign cases outright: a negative integer

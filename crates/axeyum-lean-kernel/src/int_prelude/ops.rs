@@ -115,6 +115,18 @@ impl<'k> IntDev<'k> {
         self.const_app(f, &[a])
     }
 
+    /// `Int.ediv a b` — the Euclidean ("E-rounding") quotient.
+    pub(crate) fn iediv(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let f = self.int.ediv;
+        self.const_app(f, &[a, b])
+    }
+
+    /// `Int.emod a b` — the Euclidean ("E-rounding") remainder.
+    pub(crate) fn iemod(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let f = self.int.emod;
+        self.const_app(f, &[a, b])
+    }
+
     /// `Int.negOfNat n` — the integer `-n`, for a natural `n`.
     pub(crate) fn neg_of_nat(&mut self, n: ExprId) -> ExprId {
         let f = self.int.neg_of_nat;
