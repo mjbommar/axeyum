@@ -133,6 +133,8 @@ fn int_prelude_admits_all_declarations() {
         p.sub_nat_nat,
         p.ediv,
         p.emod,
+        p.dvd,
+        p.mod_eq,
     ] {
         assert!(
             matches!(
@@ -172,7 +174,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 36] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 46] {
     [
         p.euclidean_decomposition,
         p.of_nat_nat_abs_of_nonneg,
@@ -181,6 +183,16 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 36] {
         p.ediv_add_emod,
         p.emod_nonneg,
         p.emod_lt_of_pos,
+        p.ediv_emod_unique,
+        p.dvd_refl,
+        p.dvd_trans,
+        p.dvd_add,
+        p.dvd_mul_right,
+        p.dvd_mul_left,
+        p.emod_eq_zero_iff_dvd,
+        p.mod_eq_refl,
+        p.mod_eq_symm,
+        p.mod_eq_trans,
         p.le_refl,
         p.le_trans,
         p.lt_irrefl,
@@ -576,6 +588,17 @@ fn numeral(k: &mut Kernel, p: &IntPrelude, n: i32) -> crate::ExprId {
     k.app(c, nat)
 }
 
+/// The raw `Nat` numeral `n` (a `zero`/`succ` chain), unwrapped by `Int.ofNat`
+/// — for building `Nat.le`/`Nat.lt` witnesses directly.
+fn numeral_nat(k: &mut Kernel, p: &IntPrelude, n: u32) -> crate::ExprId {
+    let mut nat = k.const_(p.nat.zero, vec![]);
+    for _ in 0..n {
+        let succ = k.const_(p.nat.succ, vec![]);
+        nat = k.app(succ, nat);
+    }
+    nat
+}
+
 /// The construction **computes**. Type-checking the ring laws does not pin the
 /// operations down — a wrong `Int.add` would still satisfy a wrong-but-provable
 /// `add_comm` — so every case of every operation is evaluated against its
@@ -778,6 +801,195 @@ fn ediv_add_emod_computes_at_concrete_values() {
             "ediv_add_emod {left} {right}: b*(a/b)+a%b should reduce to {left}"
         );
     }
+}
+
+/// `Int.ediv_emod_unique` applied at a genuine positive divisor and a genuine
+/// valid decomposition (`13 = 4*3+1`, remainder `1` in `[0,4)`) type-checks
+/// end to end: every one of the six hypothesis proofs is a real `Nat.le`/
+/// `Nat.lt` witness at concrete numerals, not just an abstract variable. The
+/// two decompositions supplied are identical, so the conclusion is trivial
+/// (`3=3 ∧ 1=1`), but reaching it exercises the divisor-pinning
+/// (`Int.lt_dest`) and the `Int.le_total` split on real literals rather than
+/// free variables.
+#[test]
+fn ediv_emod_unique_applies_at_a_concrete_decomposition() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    assert!(
+        k.axiom_footprint(p.ediv_emod_unique).is_empty(),
+        "Int.ediv_emod_unique must rest on no axiom"
+    );
+
+    let a = numeral(&mut k, &p, 13);
+    let b = numeral(&mut k, &p, 4);
+    let q = numeral(&mut k, &p, 3);
+    let r = numeral(&mut k, &p, 1);
+
+    let zero_level = k.level_zero();
+    let one_level = k.level_succ(zero_level);
+    let z_ty = k.const_(p.z, vec![]);
+
+    // 0 < 4 : Nat.le 1 4, from `le_succ_succ 0 3 (zero_le 3)`.
+    let pos_proof = {
+        let base = {
+            let n3 = numeral_nat(&mut k, &p, 3);
+            let f = k.const_(p.nat.zero_le, vec![]);
+            k.app(f, n3)
+        };
+        let n0 = numeral_nat(&mut k, &p, 0);
+        let n3 = numeral_nat(&mut k, &p, 3);
+        let f = k.const_(p.nat.le_succ_succ, vec![]);
+        let f = k.app(f, n0);
+        let f = k.app(f, n3);
+        k.app(f, base)
+    };
+
+    // 13 = 4*3+1, by computation alone.
+    let eq_proof = {
+        let refl = k.const_(p.logic.eq_refl, vec![one_level]);
+        let refl = k.app(refl, z_ty);
+        k.app(refl, a)
+    };
+
+    // 0 ≤ 1 : Nat.le 0 1.
+    let lower_proof = {
+        let n1 = numeral_nat(&mut k, &p, 1);
+        let f = k.const_(p.nat.zero_le, vec![]);
+        k.app(f, n1)
+    };
+
+    // 1 < 4 : Nat.le 2 4, from two `le_succ_succ` steps off `zero_le 2`.
+    let upper_proof = {
+        let n2 = numeral_nat(&mut k, &p, 2);
+        let base = {
+            let f = k.const_(p.nat.zero_le, vec![]);
+            k.app(f, n2)
+        };
+        let n0 = numeral_nat(&mut k, &p, 0);
+        let step1 = {
+            let f = k.const_(p.nat.le_succ_succ, vec![]);
+            let f = k.app(f, n0);
+            let f = k.app(f, n2);
+            k.app(f, base)
+        };
+        let n1 = numeral_nat(&mut k, &p, 1);
+        let n3 = numeral_nat(&mut k, &p, 3);
+        let f = k.const_(p.nat.le_succ_succ, vec![]);
+        let f = k.app(f, n1);
+        let f = k.app(f, n3);
+        k.app(f, step1)
+    };
+
+    let theorem = k.const_(p.ediv_emod_unique, vec![]);
+    let mut proof = theorem;
+    for arg in [a, b, q, r, q, r] {
+        proof = k.app(proof, arg);
+    }
+    for arg in [
+        pos_proof,
+        eq_proof,
+        lower_proof,
+        upper_proof,
+        eq_proof,
+        lower_proof,
+        upper_proof,
+    ] {
+        proof = k.app(proof, arg);
+    }
+    let inferred = k
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("ediv_emod_unique 13 4 3 1 3 1 should type-check: {e:?}"));
+
+    let eq = k.const_(p.logic.eq, vec![one_level]);
+    let eq_q = k.app(eq, z_ty);
+    let eq_q = k.app(eq_q, q);
+    let eq_q = k.app(eq_q, q);
+    let eq_r = k.const_(p.logic.eq, vec![one_level]);
+    let z_ty = k.const_(p.z, vec![]);
+    let eq_r = k.app(eq_r, z_ty);
+    let eq_r = k.app(eq_r, r);
+    let eq_r = k.app(eq_r, r);
+    let and = k.const_(p.logic.and, vec![]);
+    let expected = k.app(and, eq_q);
+    let expected = k.app(expected, eq_r);
+
+    assert!(
+        k.def_eq(inferred, expected),
+        "ediv_emod_unique's conclusion should be exactly q1=q2 ∧ r1=r2"
+    );
+}
+
+/// `Int.emod_eq_zero_iff_dvd`'s `mp` direction, applied at a genuine multiple
+/// (`12 = 4*3`): feeding it the (computed) proof that `12 % 4 = 0` produces a
+/// real divisibility witness of type `Int.dvd 4 12`.
+#[test]
+fn emod_eq_zero_iff_dvd_mp_produces_a_real_witness() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    assert!(
+        k.axiom_footprint(p.emod_eq_zero_iff_dvd).is_empty(),
+        "Int.emod_eq_zero_iff_dvd must rest on no axiom"
+    );
+
+    let a = numeral(&mut k, &p, 12);
+    let b = numeral(&mut k, &p, 4);
+
+    // 0 < 4 : Nat.le 1 4.
+    let pos_proof = {
+        let n3 = numeral_nat(&mut k, &p, 3);
+        let base = {
+            let f = k.const_(p.nat.zero_le, vec![]);
+            k.app(f, n3)
+        };
+        let n0 = numeral_nat(&mut k, &p, 0);
+        let f = k.const_(p.nat.le_succ_succ, vec![]);
+        let f = k.app(f, n0);
+        let f = k.app(f, n3);
+        k.app(f, base)
+    };
+
+    let theorem = k.const_(p.emod_eq_zero_iff_dvd, vec![]);
+    let mut iff_proof = theorem;
+    for arg in [a, b, pos_proof] {
+        iff_proof = k.app(iff_proof, arg);
+    }
+
+    // 12 % 4 = 0, purely by computation.
+    let zero_level = k.level_zero();
+    let one_level = k.level_succ(zero_level);
+    let z_ty = k.const_(p.z, vec![]);
+    let emod = k.const_(p.emod, vec![]);
+    let emod_ab = k.app(emod, a);
+    let emod_ab = k.app(emod_ab, b);
+    let refl = k.const_(p.logic.eq_refl, vec![one_level]);
+    let refl = k.app(refl, z_ty);
+    let zero_remainder_proof = k.app(refl, emod_ab);
+
+    let mp = k.const_(p.logic.iff_mp, vec![]);
+    let zero_eq_ty = {
+        let eq = k.const_(p.logic.eq, vec![one_level]);
+        let eq_ty = k.app(eq, z_ty);
+        let eq_ty = k.app(eq_ty, emod_ab);
+        let zero = k.const_(p.zero, vec![]);
+        k.app(eq_ty, zero)
+    };
+    let dvd_ba = {
+        let dvd = k.const_(p.dvd, vec![]);
+        let dvd_ba = k.app(dvd, b);
+        k.app(dvd_ba, a)
+    };
+    let mp = k.app(mp, zero_eq_ty);
+    let mp = k.app(mp, dvd_ba);
+    let mp = k.app(mp, iff_proof);
+    let witness = k.app(mp, zero_remainder_proof);
+    let inferred = k
+        .infer(witness)
+        .unwrap_or_else(|e| panic!("emod_eq_zero_iff_dvd mp at 12 4 should type-check: {e:?}"));
+
+    assert!(
+        k.def_eq(inferred, dvd_ba),
+        "the witness's type should be exactly Int.dvd 4 12"
+    );
 }
 
 /// The order relations decide the mixed-sign cases outright: a negative integer

@@ -78,7 +78,9 @@ mod algebra;
 mod decide;
 mod defs;
 mod division;
+mod dvd;
 mod euclid;
+mod modeq;
 mod nat_abs;
 pub(crate) mod ops;
 mod order;
@@ -308,6 +310,41 @@ pub struct IntPrelude {
     /// `emod_lt_of_pos : ∀ a b, 0 < b → a % b < b` — the other bound that
     /// makes the remainder canonical.
     pub emod_lt_of_pos: NameId,
+    /// `ediv_emod_unique : ∀ a b q1 r1 q2 r2,
+    /// 0 < b → a = b*q1+r1 → 0 ≤ r1 → r1 < b →
+    /// a = b*q2+r2 → 0 ≤ r2 → r2 < b → q1 = q2 ∧ r1 = r2` — the division
+    /// algorithm's uniqueness for a **positive** divisor: any two
+    /// quotient/remainder pairs reconstructing the same dividend with
+    /// remainders in `[0, b)` agree.
+    pub ediv_emod_unique: NameId,
+
+    // --- divisibility: `Int.dvd a b := ∃ c, b = a * c` -----------------------
+    /// `Int.dvd : Int → Int → Prop`, where `dvd a b := ∃ c, b = a * c`.
+    pub dvd: NameId,
+    /// `dvd_refl : ∀ a, dvd a a`.
+    pub dvd_refl: NameId,
+    /// `dvd_trans : ∀ a b c, dvd a b → dvd b c → dvd a c`.
+    pub dvd_trans: NameId,
+    /// `dvd_add : ∀ a m n, dvd a m → dvd a n → dvd a (m + n)`.
+    pub dvd_add: NameId,
+    /// `dvd_mul_right : ∀ a b, dvd a (a * b)`.
+    pub dvd_mul_right: NameId,
+    /// `dvd_mul_left : ∀ a b, dvd a (b * a)`.
+    pub dvd_mul_left: NameId,
+    /// `emod_eq_zero_iff_dvd : ∀ a b, 0 < b → (a % b = 0 ↔ b ∣ a)` — the
+    /// bridge between `Int.ediv_emod_unique` and `Int.dvd`, for a positive
+    /// divisor.
+    pub emod_eq_zero_iff_dvd: NameId,
+
+    // --- congruence modulo `n`: `Int.ModEq n a b := emod a n = emod b n` ----
+    /// `Int.ModEq : Int → Int → Int → Prop`.
+    pub mod_eq: NameId,
+    /// `ModEq.refl : ∀ n a, ModEq n a a`.
+    pub mod_eq_refl: NameId,
+    /// `ModEq.symm : ∀ n a b, ModEq n a b → ModEq n b a`.
+    pub mod_eq_symm: NameId,
+    /// `ModEq.trans : ∀ n a b c, ModEq n a b → ModEq n b c → ModEq n a c`.
+    pub mod_eq_trans: NameId,
     /// `natAbs : Int → Nat` — the magnitude, `ofNat n ↦ n` and `negSucc m ↦ succ m`.
     pub nat_abs: NameId,
     /// `of_nat_nat_abs_of_nonneg : ∀ a, 0 ≤ a → ofNat (natAbs a) = a`.
@@ -438,6 +475,18 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         ediv_add_emod: child(kernel, "ediv_add_emod"),
         emod_nonneg: child(kernel, "emod_nonneg"),
         emod_lt_of_pos: child(kernel, "emod_lt_of_pos"),
+        ediv_emod_unique: child(kernel, "ediv_emod_unique"),
+        dvd: child(kernel, "dvd"),
+        dvd_refl: child(kernel, "dvd_refl"),
+        dvd_trans: child(kernel, "dvd_trans"),
+        dvd_add: child(kernel, "dvd_add"),
+        dvd_mul_right: child(kernel, "dvd_mul_right"),
+        dvd_mul_left: child(kernel, "dvd_mul_left"),
+        emod_eq_zero_iff_dvd: child(kernel, "emod_eq_zero_iff_dvd"),
+        mod_eq: child(kernel, "ModEq"),
+        mod_eq_refl: child(kernel, "modEq_refl"),
+        mod_eq_symm: child(kernel, "modEq_symm"),
+        mod_eq_trans: child(kernel, "modEq_trans"),
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
@@ -523,6 +572,18 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         division::declare_ediv_add_emod(&mut d)?;
         division::declare_emod_nonneg(&mut d)?;
         division::declare_emod_lt_of_pos(&mut d)?;
+        division::declare_ediv_emod_unique(&mut d)?;
+        dvd::declare_dvd_definition(&mut d)?;
+        dvd::declare_dvd_refl(&mut d)?;
+        dvd::declare_dvd_mul_right(&mut d)?;
+        dvd::declare_dvd_mul_left(&mut d)?;
+        dvd::declare_dvd_trans(&mut d)?;
+        dvd::declare_dvd_add(&mut d)?;
+        dvd::declare_emod_eq_zero_iff_dvd(&mut d)?;
+        modeq::declare_modeq_definition(&mut d)?;
+        modeq::declare_modeq_refl(&mut d)?;
+        modeq::declare_modeq_symm(&mut d)?;
+        modeq::declare_modeq_trans(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;

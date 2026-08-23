@@ -925,3 +925,519 @@ pub(super) fn declare_emod_lt_of_pos(d: &mut IntDev<'_>) -> Result<(), KernelErr
     })?;
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// `Int.ediv_emod_unique` — the division algorithm's uniqueness, for a
+// positive divisor.
+// ---------------------------------------------------------------------------
+//
+// Mirrors `Nat.div_mod_unique`'s shape (`nat_prelude/division.rs`): compare
+// the two quotients via `Int.le_total`, then rule out a strict gap and
+// collapse an equality to a remainder equality. The route differs from the
+// `Nat` proof in one respect — instead of splitting a strict quotient gap via
+// `lt_or_eq_of_le` and closing it with `mul_le_mul_left`, [`solve_le_case`]
+// extracts the gap as an explicit `Nat` witness via `Int.le_dest` and case
+// analyses THAT witness (`Nat.rec`, not `Int.rec`): witness `0` is the
+// equality case, and witness `succ i'` is refuted directly by comparing the
+// two reconstructed dividends against one strict inequality. This sidesteps
+// needing a strict integer multiplication-monotonicity lemma entirely — the
+// only ingredient `Int.rec`/`Nat.rec` case analysis does not already hand us
+// for free is `Nat.mul_succ` + `Nat.le_add_right`, both already proved.
+
+/// The six-hypothesis statement `Int.ediv_emod_unique` proves, for a
+/// **caller-supplied** divisor `bb` (not necessarily yet pinned to a positive
+/// shape): `a = bb*q1+r1 → 0 ≤ r1 → r1 < bb → a = bb*q2+r2 → 0 ≤ r2 → r2 < bb
+/// → q1 = q2 ∧ r1 = r2`.
+///
+/// Parameterized over `bb` so the same builder proves both the final
+/// statement (at `bb = b`, the theorem's own variable) and the pinned
+/// intermediate one (at `bb = ofNat (succ i)`, [`build_core`]'s conclusion) —
+/// exactly the shape [`declare_emod_lt_of_pos`] and
+/// [`super::euclid::declare_decomposition`] already use to pin their own
+/// divisor via `Int.lt_dest`.
+struct UniqueHyps {
+    eq1: ExprId,
+    lower1: ExprId,
+    upper1: ExprId,
+    eq2: ExprId,
+    lower2: ExprId,
+    upper2: ExprId,
+    target: ExprId,
+}
+
+fn unique_hyps(
+    d: &mut IntDev<'_>,
+    bb: ExprId,
+    a: ExprId,
+    q1: ExprId,
+    r1: ExprId,
+    q2: ExprId,
+    r2: ExprId,
+) -> UniqueHyps {
+    let zero = d.izero();
+    let reconstruct = |d: &mut IntDev<'_>, q: ExprId, r: ExprId| -> ExprId {
+        let product = d.imul(bb, q);
+        let sum = d.iadd(product, r);
+        d.ieq(a, sum)
+    };
+    let eq1 = reconstruct(d, q1, r1);
+    let lower1 = d.ile(zero, r1);
+    let upper1 = d.ilt(r1, bb);
+    let eq2 = reconstruct(d, q2, r2);
+    let lower2 = d.ile(zero, r2);
+    let upper2 = d.ilt(r2, bb);
+    let target = {
+        let e1 = d.ieq(q1, q2);
+        let e2 = d.ieq(r1, r2);
+        d.and(e1, e2)
+    };
+    UniqueHyps {
+        eq1,
+        lower1,
+        upper1,
+        eq2,
+        lower2,
+        upper2,
+        target,
+    }
+}
+
+fn unique_goal(
+    d: &mut IntDev<'_>,
+    bb: ExprId,
+    a: ExprId,
+    q1: ExprId,
+    r1: ExprId,
+    q2: ExprId,
+    r2: ExprId,
+) -> ExprId {
+    let h = unique_hyps(d, bb, a, q1, r1, q2, r2);
+    let a6 = d.arrow(h.upper2, h.target);
+    let a5 = d.arrow(h.lower2, a6);
+    let a4 = d.arrow(h.eq2, a5);
+    let a3 = d.arrow(h.upper1, a4);
+    let a2 = d.arrow(h.lower1, a3);
+    d.arrow(h.eq1, a2)
+}
+
+/// `qa ≤ qb → bb*qa+ra = bb*qb+rb → ra < bb → 0 ≤ rb → qa = qb ∧ ra = rb`,
+/// for a **pinned positive** divisor `bb = ofNat k_nat` (`k_nat` supplied
+/// separately from `bb` so the successor branch below can compute with the
+/// `Nat` magnitude directly).
+///
+/// `Int.le_dest` turns `qa ≤ qb` into an explicit `qb = qa + ofNat i`. `i = 0`
+/// forces `qa = qb`, and the remainders then cancel out of `cross`
+/// (`Int.add_neg_cancel_right`). `i = succ i'` is impossible outright: it
+/// would force `bb*qb` at least `bb` above `bb*qa` (`Nat.mul_succ` +
+/// `Nat.le_add_right`, lifted to `Int.le` for free by `Int.le`'s definitional
+/// reduction on two `ofNat`s), but `cross` together with the two bounds
+/// (`ra < bb`, `0 ≤ rb`) forces it strictly *less* — `Int.lt_irrefl` closes
+/// the loop.
+#[allow(clippy::too_many_arguments)]
+fn solve_le_case(
+    d: &mut IntDev<'_>,
+    k_nat: ExprId,
+    bb: ExprId,
+    qa: ExprId,
+    ra: ExprId,
+    h_upper_a: ExprId,
+    qb: ExprId,
+    rb: ExprId,
+    h_lower_b: ExprId,
+    cross: ExprId,
+    hle: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let target = {
+        let e1 = d.ieq(qa, qb);
+        let e2 = d.ieq(ra, rb);
+        d.and(e1, e2)
+    };
+    let prod_a = d.imul(bb, qa);
+    let prod_b = d.imul(bb, qb);
+
+    let motive = |d: &mut IntDev<'_>, t: ExprId| -> ExprId {
+        let oft = d.of_nat(t);
+        let sum = d.iadd(qa, oft);
+        let hyp = d.ieq(qb, sum);
+        d.arrow(hyp, target)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let zero_nat = d.zero();
+        let oft = d.of_nat(zero_nat);
+        let sum = d.iadd(qa, oft);
+        let hyp_ty = d.ieq(qb, sum);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+
+        // qb = qa+ofNat 0 ≡defeq qb = qa+zero, and add_zero closes it.
+        let add_zero_qa = {
+            let name = d.int().add_zero;
+            d.const_app(name, &[qa])
+        };
+        let qb_eq_qa = d.itrans(qb, sum, qa, hi, add_zero_qa);
+        let heq_q = d.isymm(qb, qa, qb_eq_qa);
+
+        // bb*qa = bb*qb, rewritten into `cross` to get bb*qa+ra = bb*qa+rb.
+        let h_bq = d.icongr(qa, qb, heq_q, &|d, x| d.imul(bb, x));
+        let h_bq_rev = d.isymm(prod_a, prod_b, h_bq);
+        let cross2 = d.int_eq_rewrite(prod_b, prod_a, h_bq_rev, cross, &|d, x| {
+            let sum_a_ra = d.iadd(prod_a, ra);
+            let sum_x_rb = d.iadd(x, rb);
+            d.ieq(sum_a_ra, sum_x_rb)
+        });
+
+        // Cancel the common product: ra+P = P+ra = P+rb = rb+P, then strip P
+        // from both ends with `add_neg_cancel_right`.
+        let add_comm_name = d.int().add_comm;
+        let ra_plus_p = d.iadd(ra, prod_a);
+        let p_plus_ra = d.iadd(prod_a, ra);
+        let p_plus_rb = d.iadd(prod_a, rb);
+        let rb_plus_p = d.iadd(rb, prod_a);
+        let step1 = d.const_app(add_comm_name, &[ra, prod_a]);
+        let step3 = d.const_app(add_comm_name, &[prod_a, rb]);
+        let (_, eq_rp) = d.ichain(
+            ra_plus_p,
+            &[(p_plus_ra, step1), (p_plus_rb, cross2), (rb_plus_p, step3)],
+        );
+
+        let neg_p = d.ineg(prod_a);
+        let cancel_step = d.icongr(ra_plus_p, rb_plus_p, eq_rp, &|d, x| {
+            let np = d.ineg(prod_a);
+            d.iadd(x, np)
+        });
+        let cancel_a_name = d.int().add_neg_cancel_right;
+        let cancel_a = d.const_app(cancel_a_name, &[ra, prod_a]);
+        let cancel_b = d.const_app(cancel_a_name, &[rb, prod_a]);
+        let lhs_cancel = d.iadd(ra_plus_p, neg_p);
+        let rhs_cancel = d.iadd(rb_plus_p, neg_p);
+        let cancel_a_rev = d.isymm(lhs_cancel, ra, cancel_a);
+        let (_, heq_r) = d.ichain(
+            ra,
+            &[
+                (lhs_cancel, cancel_a_rev),
+                (rhs_cancel, cancel_step),
+                (rb, cancel_b),
+            ],
+        );
+
+        let and_intro_name = d.int().logic.and_intro;
+        let e1 = d.ieq(qa, qb);
+        let e2 = d.ieq(ra, rb);
+        let result = d.const_app(and_intro_name, &[e1, e2, heq_q, heq_r]);
+        d.lam_fv(hi_fv, hyp_ty, result)
+    };
+
+    let step = |d: &mut IntDev<'_>, ip: ExprId, _ih: ExprId| -> ExprId {
+        let succ_ip = d.succ(ip);
+        let oft = d.of_nat(succ_ip);
+        let sum_q = d.iadd(qa, oft);
+        let hyp_ty = d.ieq(qb, sum_q);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+
+        let m_nat = NatOps::mul(d, k_nat, succ_ip);
+        let of_m = d.of_nat(m_nat);
+
+        // bb*qb = bb*(qa+oft) = bb*qa + bb*oft ≡defeq bb*qa + ofNat M =: T.
+        let step_a = d.icongr(qb, sum_q, hi, &|d, x| d.imul(bb, x));
+        let bb_sum_q = d.imul(bb, sum_q);
+        let dist = {
+            let name = d.int().left_distrib;
+            d.const_app(name, &[bb, qa, oft])
+        };
+        let bb_oft = d.imul(bb, oft);
+        let sum_qa_bboft = d.iadd(prod_a, bb_oft);
+        let sum_qa_ofm = d.iadd(prod_a, of_m);
+        let defeq_step = d.irefl(sum_qa_ofm);
+        let (_, bqb_eq_t) = d.ichain(
+            prod_b,
+            &[
+                (bb_sum_q, step_a),
+                (sum_qa_bboft, dist),
+                (sum_qa_ofm, defeq_step),
+            ],
+        );
+
+        // K ≤ M := K*(succ i'), via Nat.mul_succ + Nat.le_add_right — reused
+        // directly as `Int.le bb (ofNat M)` by Int.le's definitional
+        // reduction on two ofNat's.
+        let mul_succ_proof = {
+            let name = d.int().nat.mul_succ;
+            d.const_app(name, &[k_nat, ip])
+        };
+        let k_times_ip = NatOps::mul(d, k_nat, ip);
+        let base_le = {
+            let name = d.int().nat.le_add_right;
+            d.const_app(name, &[k_nat, k_times_ip])
+        };
+        let commuted = {
+            let name = d.int().nat.add_comm;
+            d.const_app(name, &[k_nat, k_times_ip])
+        };
+        let k_plus_kip = NatOps::add(d, k_nat, k_times_ip);
+        let kip_plus_k = NatOps::add(d, k_times_ip, k_nat);
+        let base_le_commuted = d.nat_rewrite(k_plus_kip, kip_plus_k, commuted, base_le, &|d, x| {
+            NatOps::le(d, k_nat, x)
+        });
+        let mul_succ_rev = d.symm(m_nat, kip_plus_k, mul_succ_proof);
+        let k_le_m = d.nat_rewrite(
+            kip_plus_k,
+            m_nat,
+            mul_succ_rev,
+            base_le_commuted,
+            &|d, x| NatOps::le(d, k_nat, x),
+        );
+
+        // N := bb*qa+bb ≤ bb*qa+ofNat M = T ≡ bb*qb.
+        let n_expr = d.iadd(prod_a, bb);
+        let le_refl_pa = {
+            let name = d.int().le_refl;
+            d.const_app(name, &[prod_a])
+        };
+        let add_le_add_name = d.int().add_le_add;
+        let step_le_nt = d.const_app(
+            add_le_add_name,
+            &[prod_a, prod_a, bb, of_m, le_refl_pa, k_le_m],
+        );
+        let t_expr = sum_qa_ofm;
+        let bqb_eq_t_rev = d.isymm(prod_b, t_expr, bqb_eq_t);
+        let le_n_qb = d.int_eq_rewrite(t_expr, prod_b, bqb_eq_t_rev, step_le_nt, &|d, x| {
+            d.ile(n_expr, x)
+        });
+
+        // bb*qa+ra < N, and cross moves that to bb*qb+rb < N.
+        let add_lt_name = d.int().add_lt_add_of_le_of_lt;
+        let lt_paira_n = d.const_app(
+            add_lt_name,
+            &[prod_a, prod_a, ra, bb, le_refl_pa, h_upper_a],
+        );
+        let sum_a_ra = d.iadd(prod_a, ra);
+        let sum_b_rb = d.iadd(prod_b, rb);
+        let lt_bqbrb_n = d.int_eq_rewrite(sum_a_ra, sum_b_rb, cross, lt_paira_n, &|d, x| {
+            d.ilt(x, n_expr)
+        });
+
+        // N ≤ bb*qb ≤ bb*qb+rb < N — the loop `Int.lt_irrefl` closes.
+        let zero_int = d.izero();
+        let le_refl_pb = {
+            let name = d.int().le_refl;
+            d.const_app(name, &[prod_b])
+        };
+        let raw_le = d.const_app(
+            add_le_add_name,
+            &[prod_b, prod_b, zero_int, rb, le_refl_pb, h_lower_b],
+        );
+        let pb_plus_zero = d.iadd(prod_b, zero_int);
+        let add_zero_pb = {
+            let name = d.int().add_zero;
+            d.const_app(name, &[prod_b])
+        };
+        let le_qb_qbrb = d.int_eq_rewrite(pb_plus_zero, prod_b, add_zero_pb, raw_le, &|d, x| {
+            d.ile(x, sum_b_rb)
+        });
+
+        let le_trans_name = d.int().le_trans;
+        let le_n_sumbrb = d.const_app(
+            le_trans_name,
+            &[n_expr, prod_b, sum_b_rb, le_n_qb, le_qb_qbrb],
+        );
+
+        let lt_of_le_lt_name = d.int().lt_of_le_of_lt;
+        let lt_n_n = d.const_app(
+            lt_of_le_lt_name,
+            &[n_expr, sum_b_rb, n_expr, le_n_sumbrb, lt_bqbrb_n],
+        );
+
+        let lt_irrefl_name = d.int().lt_irrefl;
+        let lt_irrefl_term = d.const_app(lt_irrefl_name, &[n_expr]);
+        let false_proof = d.apply(lt_irrefl_term, &[lt_n_n]);
+
+        let result = d.absurd(target, false_proof);
+        d.lam_fv(hi_fv, hyp_ty, result)
+    };
+
+    let dest = d.const_app(p.le_dest, &[qa, qb, hle]);
+    let predicate = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let oft = d.of_nat(i);
+        let sum = d.iadd(qa, oft);
+        let body = d.ieq(qb, sum);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let minor = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let oft = d.of_nat(i);
+        let sum = d.iadd(qa, oft);
+        let hi_ty = d.ieq(qb, sum);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let impl_proof = d.induct(&motive, &base, &step, i);
+        let applied = d.apply(impl_proof, &[hi]);
+        let with_h = d.lam_fv(hi_fv, hi_ty, applied);
+        d.lam_fv(i_fv, nat, with_h)
+    };
+    exists_elim(d, predicate, target, dest, minor)
+}
+
+/// Proves [`unique_goal`]`(d, bb, a, q1, r1, q2, r2)` for a **pinned
+/// positive** `bb = ofNat k_nat`, by splitting `Int.le_total q1 q2` and
+/// calling [`solve_le_case`] on whichever order holds (the `q2 ≤ q1` branch
+/// swaps its conclusion's two equalities back with `Int.isymm`).
+fn build_core(
+    d: &mut IntDev<'_>,
+    k_nat: ExprId,
+    bb: ExprId,
+    a: ExprId,
+    q1: ExprId,
+    r1: ExprId,
+    q2: ExprId,
+    r2: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let h = unique_hyps(d, bb, a, q1, r1, q2, r2);
+
+    let h_eq1_fv = d.fresh_fvar();
+    let h_eq1 = d.kernel().fvar(h_eq1_fv);
+    let h_lower1_fv = d.fresh_fvar();
+    let h_lower1 = d.kernel().fvar(h_lower1_fv);
+    let h_upper1_fv = d.fresh_fvar();
+    let h_upper1 = d.kernel().fvar(h_upper1_fv);
+    let h_eq2_fv = d.fresh_fvar();
+    let h_eq2 = d.kernel().fvar(h_eq2_fv);
+    let h_lower2_fv = d.fresh_fvar();
+    let h_lower2 = d.kernel().fvar(h_lower2_fv);
+    let h_upper2_fv = d.fresh_fvar();
+    let h_upper2 = d.kernel().fvar(h_upper2_fv);
+
+    let prod1 = d.imul(bb, q1);
+    let sum1 = d.iadd(prod1, r1);
+    let prod2 = d.imul(bb, q2);
+    let sum2 = d.iadd(prod2, r2);
+    let a_eq_sum1_rev = d.isymm(a, sum1, h_eq1);
+    let cross = d.itrans(sum1, a, sum2, a_eq_sum1_rev, h_eq2);
+
+    let le12_ty = d.ile(q1, q2);
+    let le21_ty = d.ile(q2, q1);
+    let total = d.const_app(p.le_total, &[q1, q2]);
+
+    let body = d.or_elim(
+        le12_ty,
+        le21_ty,
+        h.target,
+        total,
+        &|d, h12| solve_le_case(d, k_nat, bb, q1, r1, h_upper1, q2, r2, h_lower2, cross, h12),
+        &|d, h21| {
+            let cross_swapped = d.isymm(sum1, sum2, cross);
+            let p2 = solve_le_case(
+                d,
+                k_nat,
+                bb,
+                q2,
+                r2,
+                h_upper2,
+                q1,
+                r1,
+                h_lower1,
+                cross_swapped,
+                h21,
+            );
+            let eq_q2q1_ty = d.ieq(q2, q1);
+            let eq_r2r1_ty = d.ieq(r2, r1);
+            let eq_q2q1 = d.and_left(eq_q2q1_ty, eq_r2r1_ty, p2);
+            let eq_r2r1 = d.and_right(eq_q2q1_ty, eq_r2r1_ty, p2);
+            let eq_q1q2 = d.isymm(q2, q1, eq_q2q1);
+            let eq_r1r2 = d.isymm(r2, r1, eq_r2r1);
+            let e1 = d.ieq(q1, q2);
+            let e2 = d.ieq(r1, r2);
+            let and_intro_name = d.int().logic.and_intro;
+            d.const_app(and_intro_name, &[e1, e2, eq_q1q2, eq_r1r2])
+        },
+    );
+
+    let mut value = body;
+    value = d.lam_fv(h_upper2_fv, h.upper2, value);
+    value = d.lam_fv(h_lower2_fv, h.lower2, value);
+    value = d.lam_fv(h_eq2_fv, h.eq2, value);
+    value = d.lam_fv(h_upper1_fv, h.upper1, value);
+    value = d.lam_fv(h_lower1_fv, h.lower1, value);
+    value = d.lam_fv(h_eq1_fv, h.eq1, value);
+    value
+}
+
+/// `Int.ediv_emod_unique : ∀ a b q1 r1 q2 r2,
+/// 0 < b → a = b*q1+r1 → 0 ≤ r1 → r1 < b →
+/// a = b*q2+r2 → 0 ≤ r2 → r2 < b → q1 = q2 ∧ r1 = r2`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_ediv_emod_unique(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    d.int_theorem(p.ediv_emod_unique, 6, &|d, v| {
+        let (a, b, q1, r1, q2, r2) = (v[0], v[1], v[2], v[3], v[4], v[5]);
+        let zero = d.izero();
+        let pos_ty = d.ilt(zero, b);
+        let goal = unique_goal(d, b, a, q1, r1, q2, r2);
+        let stmt = d.arrow(pos_ty, goal);
+
+        let h_pos_fv = d.fresh_fvar();
+        let h_pos = d.kernel().fvar(h_pos_fv);
+
+        // `Int.lt_dest 0 b h : ∃ i, b = 0 + ofNat (succ i)` — the same pin
+        // `declare_emod_lt_of_pos`/`declare_decomposition` use.
+        let dest = d.const_app(p.lt_dest, &[zero, b, h_pos]);
+        let shift_body = |d: &mut IntDev<'_>, i: ExprId| {
+            let si = d.succ(i);
+            let value = d.of_nat(si);
+            let shifted = d.iadd(zero, value);
+            d.ieq(b, shifted)
+        };
+        let predicate = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let body = shift_body(d, i);
+            d.lam_fv(i_fv, nat, body)
+        };
+
+        let minor = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let hi_ty = shift_body(d, i);
+            let hi_fv = d.fresh_fvar();
+            let hi = d.kernel().fvar(hi_fv);
+
+            let si = d.succ(i);
+            let value = d.of_nat(si);
+            let shifted = d.iadd(zero, value);
+
+            let nat_zero = d.zero();
+            let sum_nat = NatOps::add(d, nat_zero, si);
+            let zero_add = d.const_app(p.nat.zero_add, &[si]);
+            let normalise = d.nat_eq_to_int(sum_nat, si, zero_add, &|d, x| d.of_nat(x));
+            let b_eq = d.itrans(b, shifted, value, hi, normalise);
+
+            // `Int.rec`/`Nat.rec` never touch `a`; only `bb` moves, from
+            // `value` (`ofNat (succ i)`, magnitude `si`) back to `b`.
+            let core = build_core(d, si, value, a, q1, r1, q2, r2);
+
+            let back = d.isymm(b, value, b_eq);
+            let transported = d.int_eq_rewrite(value, b, back, core, &|d, x| {
+                unique_goal(d, x, a, q1, r1, q2, r2)
+            });
+            let with_h = d.lam_fv(hi_fv, hi_ty, transported);
+            d.lam_fv(i_fv, nat, with_h)
+        };
+
+        let body = exists_elim(d, predicate, goal, dest, minor);
+        let proof = d.lam_fv(h_pos_fv, pos_ty, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
