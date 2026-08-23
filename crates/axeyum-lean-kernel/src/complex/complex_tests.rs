@@ -133,6 +133,11 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.normSq_conj", p.norm_sq_conj),
         ("Complex.normSq_mul", p.norm_sq_mul),
         ("Complex.no_compatible_order", p.no_compatible_order),
+        ("Complex.inv", p.inv),
+        ("Complex.mul_inv_cancel", p.mul_inv_cancel),
+        ("Complex.inv_congr", p.inv_congr),
+        ("Complex.div", p.div),
+        ("Complex.div_self", p.div_self),
     ];
     for (label, name) in named {
         let declaration = kernel
@@ -194,10 +199,16 @@ fn the_nine_ring_laws_are_distinct_checked_theorems() {
 /// [`ComplexPrelude::no_compatible_order`] proves that any such pair satisfying
 /// seven of the `Real` package's order laws is contradictory, so declaring one
 /// here would be declaring something the same module refutes.
+///
+/// `inv`/`div` are deliberately **not** in this list: `Complex.inv` and
+/// `Complex.div` exist and need no order on `Complex` at all, since the
+/// separating witness is `CReal.PosBound (normSq z) k`, phrased over the
+/// already-ordered `CReal.le` rather than any order on `Complex` itself.
+/// `abs` is what an order on `Complex` would actually be needed for.
 #[test]
 fn no_order_relation_is_declared_on_complex() {
     let (kernel, p) = built();
-    for forbidden in ["le", "lt", "abs", "inv", "div"] {
+    for forbidden in ["le", "lt", "abs"] {
         let mut probe = kernel.clone();
         let name = probe.name_str(p.complex, forbidden);
         assert!(
