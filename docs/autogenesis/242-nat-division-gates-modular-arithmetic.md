@@ -78,3 +78,44 @@ lemma is the gate, that most of what surrounds it is order material we plausibly
 already have, and that a partial result — the `ble` bridge alone, with a precise
 statement of what remains — is worth landing even if the division lemma does not
 fall in the same pass.
+
+---
+
+## Outcome, the same day
+
+The whole chain fell within three hours of this being written, and the shape of
+how it fell is the useful part. Each blocker was measured against the real
+archive before the next was attempted, by running `statement_adapter_import`
+against all four `int-modeq-*.ndjson` streams:
+
+| step | blocker | how it fell |
+|---|---|---|
+| 1 | `Nat.div_rec_lemma` | two of three ingredients already existed (`build_sub_lt`, `B::le_trans_at`); new part was `And`/`And.rec` to project the conjunction hypothesis |
+| 2 | `Nat.not_succ_le_zero` | helper already existed and was used internally — one list entry, one dispatch arm |
+| 3 | `Nat.div_rec_fuel_lemma` | **not well-founded recursion at all**, despite the name: a three-fact composition, needing only `And.intro` |
+| 4 | `Nat.le_of_succ_le_succ` | helper already existed and was used internally — one list entry, one dispatch arm |
+| — | **clean** | all eight streams (4 Int train, 4 Nat development) import, exit 0, **0 axioms each** |
+
+Two corrections this document owes its own earlier text:
+
+**"It does not say `Nat.div_rec_lemma` is cheap. Well-founded recursion is not an
+order lemma, and the `brecOn` route may need genuinely new work."** That caution
+was wrong in the direction that matters. `Nat.le.brecOn` was already bridged and
+already wired into the dispatch chain, and `div_rec_fuel_lemma` — the one whose
+name most strongly suggested fuel-based well-founded recursion — had a declared
+type with no recursion in it whatsoever. **The name was the only evidence for
+the difficulty, and names are not evidence.** Reading the stream's own declared
+type took minutes and would have avoided the caution entirely.
+
+**The "check `B::` helpers first" rule is now settled, not a heuristic.** Five of
+the blockers cleared on this family and its neighbours were already reconstructed
+internally and merely unexposed as substitutable names: `Nat.zero_le`,
+`Nat.le_trans`, `Nat.lt_irrefl`, `Nat.not_succ_le_zero`,
+`Nat.le_of_succ_le_succ`. That is not luck. The module reconstructs what its own
+constructions need, and what a Mathlib statement needs overlaps heavily with
+that. Grep before building.
+
+What remains gated is nothing on this family. The twenty open
+`integer-modular-equivalence` facts and twenty `natural-modular-equivalence`
+facts now depend on a PRODUCER existing, not on the adapter.
+
