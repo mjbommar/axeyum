@@ -2,6 +2,30 @@
 
 <!-- plan-section: lane-status -->
 
+**Rung 7 -- backward chains, five angles run as Opus agents (`WIP`,
+lemire-signed-trace, 2026-08-22).** Diary
+[note 11](../../research/10-cas/lemire-signed-trace/11-backward-chains-diary.md);
+notes 12--14. Verdicts: (angle 3) the construction route is a textbook
+theorem applied to the certified seed ledger (`f(x^t)` for any in-window
+seed; 9.3% of composites below `10^5`; never a prime `n`) -- two false
+lemmas in note 09 and a priority error in note 08 (Jerabek, MathOverflow
+2011) corrected, public PDF fixed; (angle 4/4b) Katz's Betti question was
+mis-posed -- a Betti bound alone cannot give `(HWO)`; the real question is a
+cohomological DEGREE statement plus a `~2^{j/2}` Betti bound; big monodromy
+at `p = 2` holds for `j >= 4` by theorem (Katz 2013 Thm 5.1, Gorodetsky
+2019 for `j = 3`), `H^{2j}_c = 0` proved for `j >= 4`, and every exactly
+resolved cell past the transition has top weight `n + j + O(1)` -- the route
+is ALIVE, reduced to the `p = 2` case of Sawin's Hypothesis H plus a Betti
+bound (notes 12, 14); (angle 2) exact Type I to level `|W_n|`, `P_4`/`P_3`
+with large factors and an exact Brun--Titchmarsh proved; the parity barrier
+made exact by LP duality with rational prime-free witnesses `10 <= n <= 15`;
+a sieve proof of Lemire would prove Legendre for `F_2[t]` (note 13).
+**Next:** angles 1 and 5 (Frobenius-angle reformulation + "no averaging
+suffices" lemma; the uniform conjecture) -- now subordinate to 4b; then the
+decisive computation of note 14 sec. 10 (`Z[zeta_16]` engine, `delta(2j+1,j)`
+for `j = 8..10`). Nothing here is a proof of the conjecture.
+
+
 **Bottom rung laid: target pinned, three formulations checked, toolkit
 verified (`WIP`, lemire-signed-trace, 2026-08-21).**
 The sibling roadmap paper (`lemire-half-degree-irreducibles`, 21 Aug 2026)
