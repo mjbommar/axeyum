@@ -137,6 +137,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `2c63637c4` | Derive hash-bound, train/development-only producer outcome observations by reviewed family, statement shape, and abstraction boundary; reject held-out, duplicate, or invented outcome accounting |
 | 2026-08-24 | `913638251` | Preserve the train/development partition on every producer-outcome group and reject an out-of-partition group rather than aggregating away the evaluation boundary |
 | 2026-08-24 | `a4ededc55` | Repair capability-gap and concept-coverage projections so their fact-ID views exclude held-out rows; make the existing generic held-out isolation gate pass without exceptions |
+| 2026-08-24 | `d458725bf` | Derive the deterministic dependency-ready train/development producer frontier and reject out-of-partition or duplicate facts before a producer can receive them |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
@@ -2058,6 +2059,10 @@ their visible fact IDs are restricted to train/development, while the 34
 held-out ready facts and 57 held-out topic facts are reported only as aggregate
 exclusions. The generic held-out isolation gate is green again; it caught the
 earlier unsafe projection rather than being weakened around it.
+The new producer-evaluation frontier turns that boundary into executable input:
+it exposes exactly 98 dependency-ready train/development facts (38 train, 60
+development), while retaining only aggregate counts for 34 held-out and nine
+out-of-population ready facts.
 Next capability work must expand general-producer and adapter coverage over the
 train/development queue, compare it against that fixed observation, and only
 then evaluate an independently sealed held-out partition—not add more

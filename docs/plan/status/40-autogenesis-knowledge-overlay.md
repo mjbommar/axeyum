@@ -29,6 +29,10 @@ their visible fact IDs are restricted to train/development, while the 34
 held-out ready facts and 57 held-out topic facts are reported only as aggregate
 exclusions. The generic held-out isolation gate is green again; it caught the
 earlier unsafe projection rather than being weakened around it.
+The new producer-evaluation frontier turns that boundary into executable input:
+it exposes exactly 98 dependency-ready train/development facts (38 train, 60
+development), while retaining only aggregate counts for 34 held-out and nine
+out-of-population ready facts.
 Next capability work must expand general-producer and adapter coverage over the
 train/development queue, compare it against that fixed observation, and only
 then evaluate an independently sealed held-out partition—not add more
@@ -56,3 +60,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `2c63637c4` | Derive hash-bound, train/development-only producer outcome observations by reviewed family, statement shape, and abstraction boundary; reject held-out, duplicate, or invented outcome accounting |
 | 2026-08-24 | `913638251` | Preserve the train/development partition on every producer-outcome group and reject an out-of-partition group rather than aggregating away the evaluation boundary |
 | 2026-08-24 | `a4ededc55` | Repair capability-gap and concept-coverage projections so their fact-ID views exclude held-out rows; make the existing generic held-out isolation gate pass without exceptions |
+| 2026-08-24 | `d458725bf` | Derive the deterministic dependency-ready train/development producer frontier and reject out-of-partition or duplicate facts before a producer can receive them |
