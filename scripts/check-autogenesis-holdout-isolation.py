@@ -18,12 +18,18 @@ This gate closes that hole from both directions:
 1.  **No held-out fact may be settled in the ledger.** Establishing a held-out
     proposition by ANY route spends it; the operation registry is only one way
     in, so checking the registry alone would leave the others open.
-2.  **No artifact may reference a held-out fact id**, except the two files that
-    define the population itself. A generic walk is used rather than a check on
-    `applicability.fact_ids`: operations already carry fact ids at three
+2.  **No artifact may reference a held-out fact id**, except the files that
+    define a population themselves. A generic walk is used rather than a check
+    on `applicability.fact_ids`: operations already carry fact ids at three
     distinct JSON paths (`applicability.fact_ids[]`, `executor.input_fact_id`,
     `executor.premise_fact_id`), so a field-specific guard was bypassable the
     day it was written, and a schema addition would silently reopen it.
+
+    Since slice A4 the walk covers `artifacts/episodes/` too, including the
+    `*.json.snapshot` sidecars -- transcripts, proposals and transaction
+    proposals. Ten agent episodes were committed on 2026-08-24 while this gate
+    scanned only `artifacts/autogenesis/`; that they were clean was measured by
+    hand, which is exactly the arrangement this file exists to replace.
 
 FAIL-CLOSED. An unreadable manifest, or a held-out population that has somehow
 become empty, is an error rather than a quiet pass -- a guard whose subject has
@@ -41,9 +47,26 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
 FACTS = ROOT / "artifacts/facts"
 ARTIFACTS = ROOT / "artifacts/autogenesis"
+EPISODES = ROOT / "artifacts/episodes"
 
-# The two files that DEFINE the held-out population necessarily name its members.
-POPULATION_FILES = {"nursery-v1.json", "mathlib-nat-int-fact-catalog-v1.json"}
+# The files that DEFINE a population necessarily name its members, and a census
+# that filtered them would fail the very rule that makes it evidence.
+#
+# `nursery-v1.json` and `mathlib-nat-int-fact-catalog-v1.json` are the split
+# manifest and the source catalog. `frontier.json.snapshot` joined them when
+# this gate was extended to `artifacts/episodes/` (slice A4): it is
+# `fact-frontier.py --json`, a census of the WHOLE open ledger which
+# `fact-frontier.py --verify` re-derives entry for entry, so it necessarily
+# enumerates every held-out id exactly as the nursery does. It is exempted BY
+# NAME rather than by directory, and it is the only name under
+# `artifacts/episodes/` that is: an episode document, a transcript, a proposal
+# or a transaction proposal naming a held-out id is a breach, and the whole
+# reason for scanning that tree.
+POPULATION_FILES = {
+    "nursery-v1.json",
+    "mathlib-nat-int-fact-catalog-v1.json",
+    "frontier.json.snapshot",
+}
 SETTLED = {"proved", "computed"}
 
 
@@ -71,6 +94,23 @@ def held_out_facts() -> set[str]:
             "the held-out population is empty; this gate would pass vacuously"
         )
     return held
+
+
+def scan_targets() -> list[pathlib.Path]:
+    """Every file this gate walks for held-out references.
+
+    Two trees, and the episode tree is walked recursively and for two suffixes.
+    `*.json.snapshot` is not decoration: an episode's transcript, its proposals
+    and its transaction proposal all carry that suffix precisely so
+    `check-agent-episode.py` does not read them as malformed episodes, and a
+    walk that only looked at `*.json` would therefore skip every file an agent
+    actually wrote its reasoning into.
+    """
+    targets = list(ARTIFACTS.glob("*.json"))
+    if EPISODES.is_dir():
+        targets += EPISODES.rglob("*.json")
+        targets += EPISODES.rglob("*.json.snapshot")
+    return sorted(set(targets))
 
 
 def strings(value: Any, path: str) -> list[tuple[str, str]]:
@@ -105,17 +145,32 @@ def main() -> int:
 
     # (2) references from anywhere else
     scanned = 0
-    for path in sorted(ARTIFACTS.glob("*.json")):
+    for path in scan_targets():
         if path.name in POPULATION_FILES:
             continue
         try:
-            document = json.loads(path.read_text())
-        except json.JSONDecodeError:
+            raw = path.read_text()
+            document = json.loads(raw)
+        except (OSError, json.JSONDecodeError):
             continue
         scanned += 1
+        named: set[str] = set()
         for value, where in strings(document, ""):
             if value in held:
                 violations.append(f"held-out-reference|{path.name}{where}|{value}")
+                named.add(value)
+        # A second guard, and NOT a duplicate of the one above. That one
+        # compares whole JSON values, which is right for a structured artifact
+        # where a fact id is a field. An episode transcript is PROSE: a model
+        # writing "I will work on F:..." puts the id in a value that is not
+        # equal to it, and the exact walk returns clean. Measured 2026-08-24 --
+        # the first version of the episode scan passed a transcript naming a
+        # held-out fact in a sentence. `episode.assert_no_held_out` had always
+        # used substring containment for exactly this reason; the two gates now
+        # agree about what "names a held-out fact" means.
+        for fact_id in sorted(held):
+            if fact_id not in named and fact_id in raw:
+                violations.append(f"held-out-reference|{path.name}|embedded-in-text|{fact_id}")
 
     verdict = "FAIL" if violations else "PASS"
     print(

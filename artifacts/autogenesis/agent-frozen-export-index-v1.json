@@ -1,0 +1,62 @@
+{
+  "adapter_source": {
+    "path": "scripts/lean/autogenesis_statement_adapter_modeq_family_development_v1.lean",
+    "proof_declarations_allowed": false,
+    "sha256": "779e3bd4761c21505472edb32ea21770e85abdb3ed1b335b2d29be08ba077d43"
+  },
+  "entries": [
+    {
+      "external_artifact": {
+        "bytes": 312438,
+        "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-modeq-family-v1/nat-modeq-refl.ndjson",
+        "sha256": "2fd5f440c1821845c5cd5a17127bdeb6746b46cbe3a10f240b72bf6b3fd68dc7"
+      },
+      "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
+      "producer_tool": "modeq_family",
+      "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqRefl"
+    },
+    {
+      "external_artifact": {
+        "bytes": 312715,
+        "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-modeq-family-v1/nat-modeq-symm.ndjson",
+        "sha256": "d5f417676b1fa3f95998c734f87aba8dcee18ade1a08b4b9c24b231243cbe94c"
+      },
+      "fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
+      "producer_tool": "modeq_family",
+      "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqSymm"
+    },
+    {
+      "external_artifact": {
+        "bytes": 312995,
+        "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-modeq-family-v1/nat-modeq-trans.ndjson",
+        "sha256": "d31e6ccd1c84bde4de48fc5f75559ce35bd818bc1ab18565450b6ef21bd0d169"
+      },
+      "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+      "producer_tool": "modeq_family",
+      "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqTrans"
+    },
+    {
+      "external_artifact": {
+        "bytes": 315460,
+        "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-modeq-family-v1/nat-modeq-comm.ndjson",
+        "sha256": "9ed43e533ed850970cdf1a373cb90c33c65c3cc1f805ecd3a47f56aac047e1fc"
+      },
+      "fact_id": "F:ml430-nat-modeq-comm-24b71e7a",
+      "producer_tool": "modeq_family",
+      "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqComm"
+    }
+  ],
+  "kind": "axeyum-agent-frozen-export-index",
+  "limitations": "F:ml430-nat-modeq-comm-24b71e7a is listed because its export exists, NOT because it is selectable: the ledger makes it depend on the symmetry fact, so it is not dependency-ready and frontier_select never returns it. Listing an export is not selecting a fact.",
+  "schema_version": 1,
+  "state": "resolution-index-only-not-an-operation-registration",
+  "toolchain": {
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "lean4export_version": "3.1.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lean_version": "4.30.0",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f"
+  },
+  "trust_boundary": "This file resolves a fact id to the frozen, proof-free statement export a tier-C agent tool may import. It confers no dispatch, proof, admission or registration authority; the tool re-hashes every export before importing it and refuses on a mismatch, so an entry here cannot make the loop read bytes nobody pinned.",
+  "why_this_file_exists": "Every other frozen export in this repository is reachable because a committed statement-adapter manifest carries `source_fact_id` and `external_artifact`; the tier-C tools resolve through those manifests first and this index is never consulted for them. The four Nat.ModEq development exports have no such manifest: they were produced for the blind development-set generalization probe recorded in docs/autogenesis/242-nat-division-gates-modular-arithmetic.md and never registered, because docs/autogenesis/250-natural-modeq-capability-selection.md deliberately stops at selection. Deriving their paths from a naming convention would be a resolution nobody can audit, so they are named here with the digest that pins them."
+}

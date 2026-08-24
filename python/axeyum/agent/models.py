@@ -408,6 +408,150 @@ class NoGeneralRoute(_Proposal):
 Plan = Annotated[StrategyProposal | NoGeneralRoute, Field(discriminator="route")]
 
 
+# ------------------------------------------------------- tier C: what a producer said
+
+
+#: Decline classes an episode may record, seeded from the AG4.1 taxonomy in
+#: ``docs/autogenesis/02-phased-roadmap.md``, which lists exactly NINE cross-route
+#: classes as prose. Those nine are kebab-cased here and nothing was invented in
+#: that group. The five after them are LOOP-LOCAL: they say why this harness
+#: stopped, not what obstructed the mathematics. Keeping them apart is not
+#: tidiness -- ``no-general-route`` is a *result*, and folding it into
+#: ``missing-plan-rule`` would record a mathematical obstruction nobody observed
+#: and poison the obstruction graph slice A5 derives from exactly this field.
+AG41_DECLINE_CLASSES = (
+    "unsupported-semantics",
+    "missing-lemma",
+    "missing-plan-rule",
+    "missing-certificate",
+    "representation-explosion",
+    "resource-exhaustion",
+    "retrieval-miss",
+    "formalization-mismatch",
+    "operational-failure",
+)
+
+LOOP_DECLINE_CLASSES = (
+    "no-general-route",
+    "gate-refused",
+    "supervisor-denied",
+    "budget-exhausted-before-plan",
+    "budget-exhausted-during-plan",
+)
+
+#: Every value ``outcome.decline_class`` may take in a v2 episode, in the order
+#: the schema lists them. The schema is the authority; this tuple is checked
+#: against it by a test so the two cannot drift.
+DECLINE_CLASSES = AG41_DECLINE_CLASSES + LOOP_DECLINE_CLASSES
+
+
+class ProducerAccepted(_Frozen):
+    """A producer returned a candidate AND a kernel admitted it.
+
+    Every field here is *measured*, never inferred from the fact that admission
+    succeeded. ``axiom_footprint`` in particular comes from
+    :meth:`axeyum.kernel.Kernel.axiom_footprint` on the admitted name -- the
+    Python binding raises ``KeyError`` for an absent name rather than answering
+    with the empty vector, which is what makes an empty list here mean
+    "axiom-free" instead of "nobody looked".
+
+    ``assurance`` is ``checked`` and cannot be anything else. That is the whole
+    difference between tier C and tier P: a tier-P object is what a model said,
+    a tier-C object is what a kernel decided.
+    """
+
+    status: Literal["accepted"] = "accepted"
+    fact_id: str = Field(description="The fact whose adapted goal was closed.")
+    tool: str = Field(description="Which tier-C tool ran: bounded_induction or modeq_family.")
+    target_definition: str = Field(description="The proof-free Lean definition that was imported.")
+    export_path: str = Field(description="The frozen NDJSON export the goal came from.")
+    export_sha256: str = Field(description="Digest of those bytes, re-hashed before importing.")
+    goal_sha256: str = Field(description="sha256 of render_lean(goal), as the drivers stamp it.")
+    proof_sha256: str = Field(description="sha256 of render_lean(proof), comparable to a manifest.")
+    binders_used: int
+    inductions_used: int | None = Field(
+        description="Inductions the search spent, or null for a producer that performs none. "
+        "Null is not zero: the two producers measure different quantities."
+    )
+    admitted_declarations: int
+    axiom_footprint: tuple[str, ...] = Field(
+        description="Measured on the admitted declaration. Empty means axiom-free."
+    )
+    theorem_dependencies: tuple[str, ...]
+    duration_ms: int
+    assurance: Literal["checked"] = "checked"
+
+
+class ProducerDeclined(_Frozen):
+    """The producer refused, and the refusal is a typed value rather than an error.
+
+    ``reason_kind`` is the producer's own Rust enum variant, carried across the
+    language boundary unflattened. ``decline_class`` is where that lands in the
+    taxonomy an episode can aggregate; both are kept because the mapping is a
+    judgement and the raw variant is the evidence for it.
+    """
+
+    status: Literal["declined"] = "declined"
+    fact_id: str
+    tool: str
+    reason_kind: str = Field(description="The producer's typed DeclineReason variant.")
+    detail: str = Field(description="Its payload, verbatim.")
+    decline_class: str = Field(description="Where that lands in the episode taxonomy.")
+    duration_ms: int
+    assurance: Literal["checked"] = "checked"
+
+
+class ProducerError(_Frozen):
+    """The tool could not run at all. Never a silent decline.
+
+    "The export is not on this host" and "the producer refused this goal" are
+    different findings about the world and this repository has been bitten by
+    tools that reported them identically.
+    """
+
+    status: Literal["error"] = "error"
+    fact_id: str
+    tool: str
+    error_kind: str
+    detail: str
+    decline_class: str
+    duration_ms: int
+    assurance: Literal["checked"] = "checked"
+
+
+#: What a tier-C tool returns. Discriminated on ``status`` so the serialized
+#: result says which variant it is without shape-sniffing, exactly as ``route``
+#: does for a proposal.
+ProducerOutcome = Annotated[
+    ProducerAccepted | ProducerDeclined | ProducerError, Field(discriminator="status")
+]
+
+
+class CheckVerified(_Frozen):
+    """A SECOND kernel re-derived the same proof and measured the same footprint."""
+
+    status: Literal["verified"] = "verified"
+    fact_id: str
+    goal_sha256: str
+    proof_sha256: str
+    axiom_footprint: tuple[str, ...]
+    theorem_dependencies: tuple[str, ...]
+    admitted_declarations: int
+
+
+class CheckFailed(_Frozen):
+    """The independent re-check did not agree. This is the finding, not an error."""
+
+    status: Literal["failed"] = "failed"
+    fact_id: str
+    reason: str
+    expected: str | None = None
+    actual: str | None = None
+
+
+CheckOutcome = Annotated[CheckVerified | CheckFailed, Field(discriminator="status")]
+
+
 def glob_match(name: str, pattern: str) -> bool:
     """Case-sensitive glob, with the empty pattern meaning "everything"."""
     return True if not pattern else fnmatch.fnmatchcase(name, pattern)
@@ -421,9 +565,15 @@ def proposal_kind(proposal: Any) -> str:
 
 
 __all__ = [
+    "AG41_DECLINE_CLASSES",
+    "DECLINE_CLASSES",
     "ELIGIBLE_PARTITIONS",
     "FACT_ID_PATTERN",
+    "LOOP_DECLINE_CLASSES",
     "TACTIC_CATALOG",
+    "CheckFailed",
+    "CheckOutcome",
+    "CheckVerified",
     "EvidenceView",
     "FactView",
     "FrontierPage",
@@ -436,6 +586,10 @@ __all__ = [
     "OverlayLinkRow",
     "OverlayPage",
     "Plan",
+    "ProducerAccepted",
+    "ProducerDeclined",
+    "ProducerError",
+    "ProducerOutcome",
     "StrategyProposal",
     "TheoremPage",
     "TheoremRow",

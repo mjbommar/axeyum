@@ -1,0 +1,12 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "NotTerminalEquality",
+  "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
+  "obstruction": "This goal is an implication (a \u2261 b [ZMOD n] \u2192 -a \u2261 -b [ZMOD n]), not a terminal equality or definitional equivalence that can be closed directly. While the tactic catalog includes T:modeq-equivalence-combinators for closing definitional equivalence relations, this requires first transforming the implication structure. The similar ModEq preservation facts on the frontier (add_left, add_right, mul operations) each have the same implication structure and would require operation-specific handling rather than a general combinator approach. No general producer can reach multiple such facts without operation-specific logic.",
+  "producer_id": "close_terminal",
+  "route": "none",
+  "tactic_ids": [
+    "T:modeq-equivalence-combinators"
+  ],
+  "why": "The goal is a definitional equivalence relation (ModEq) preservation under a unary operation (negation), matching the structural precondition for closing with primitive Eq/Iff combinators applied to the ModEq relation."
+}

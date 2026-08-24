@@ -1,15 +1,17 @@
-"""The four-node loop, end to end, offline.
+"""The A2 four-node path, end to end, offline, plus the shape of the A4 graph.
 
-The point of these assertions is what the graph did NOT do. A2 dispatches
-nothing, so the episode it writes must record zero ledger writes, zero search
-invocations, zero target-theorem submissions, and a verdict that does not claim
-a proof -- and there must be no C-tier tool in the toolset that could have made
-any of those nonzero.
+The point of most assertions here is what the graph did NOT do: a v1 episode
+records zero ledger writes, zero search invocations, zero target-theorem
+submissions, and a verdict that does not claim a proof. `EpisodeState.schema_version`
+is 1 for every episode this module runs, which is what keeps that measurement
+meaningful now that the graph can dispatch: the A4 loop is exercised in
+`test_agent_deferred.py`, against tools that are declared `requires_approval`.
 """
 
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 from pathlib import Path
 
@@ -44,12 +46,42 @@ def episode(root, tmp_path_factory):
     return path, json.loads(path.read_text())
 
 
-def test_the_graph_has_exactly_the_four_nodes_this_slice_declares() -> None:
+def test_the_graph_declares_the_dispatching_nodes_and_the_supervisor_has_no_model() -> None:
+    """A2 asserted these nodes were ABSENT and that assertion was deleted on purpose.
+
+    Its replacement is not merely the negation. That `Gate`, `Dispatch`,
+    `Supervise`, `Check` and `StageTransaction` exist is the smaller half; the
+    half worth a test is that `Supervise` takes no model and reads none, because
+    an LLM deciding whether an LLM's plan may run is not a gate, it is the same
+    actor twice. `supervisor_decision` is a pure function of the state, and this
+    asserts that by calling it -- a docstring saying so would survive the change
+    that broke it.
+    """
     rendered = graph_api.build_graph().render()
-    for node in ("Select", "Gather", "Plan", "WriteEpisode"):
-        assert node in rendered
-    for absent in ("Dispatch", "Check", "StageTransaction", "Gate"):
-        assert absent not in rendered, f"{absent} is an A4 node and must not exist yet"
+    for node in (
+        "Select",
+        "Gather",
+        "Plan",
+        "Gate",
+        "Dispatch",
+        "Supervise",
+        "Check",
+        "StageTransaction",
+        "WriteEpisode",
+    ):
+        assert node in rendered, f"{node} is an A4 node and must exist"
+
+    source = inspect.getsource(graph_api.Supervise)
+    for forbidden in ("build_agent(state, for_plan", "state.model", "state.plan_model"):
+        assert forbidden not in source, (
+            f"Supervise must hold no model of its own; found {forbidden!r}"
+        )
+    assert "supervisor_decision" in source
+
+    decision = inspect.signature(graph_api.supervisor_decision)
+    assert list(decision.parameters) == ["state", "call"], (
+        "the supervisor decides from the state and the call, and from nothing else"
+    )
 
 
 def test_an_offline_run_writes_a_complete_episode(episode) -> None:

@@ -1,0 +1,12 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "NotEquivalenceRelationGoal",
+  "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+  "obstruction": "This specific goal is the transitivity property itself. While the tactic T:modeq-equivalence-combinators can close equivalence relation goals, the sibling facts (symm, refl, add_left, add_right) are different equivalence relation properties (symmetry, reflexivity, congruence). Each requires the specific kernel theorem for that property (mod_eq_symm, mod_eq_refl, mod_eq_add_left). The producer would need to dispatch to different kernel theorems for each, making this a dispatch table situation rather than a general route.",
+  "producer_id": "close_terminal",
+  "route": "none",
+  "tactic_ids": [
+    "T:modeq-equivalence-combinators"
+  ],
+  "why": "The goal is a definitional equivalence relation property (ModEq transitivity). The kernel prelude contains Nat.mod_eq_trans which directly proves this theorem. The T:modeq-equivalence-combinators tactic is designed to close such goals using primitive Eq/Iff combinators for equivalence relations."
+}

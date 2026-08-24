@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axeyum.dev/ontology/agent-episode-v2.schema.json",
+  "title": "Axeyum Agent Episode v2",
+  "description": "Schema version 2 of the agent episode (docs/python-2026-08/03-agentic-layer.md, slice A4). v1 stays beside this file and is still the schema for every A2 episode; a document declares which one it is with `schema_version`, and scripts/check-agent-episode.py dispatches on that value. Three things are new, each because A1 measured that v1 could not express them. (1) `selection.ledger_sha256`: `fact-frontier.py --verify` recomputes a frontier from the LIVE ledger, so a committed frontier goes stale the moment any lane adds a fact; v1 could only smuggle the ledger digest into the free-text `eligibility_reason` because `selection` is `additionalProperties: false`. (2) `outcome.checker_runs[]`: A4 dispatches, so an episode now has MORE THAN ONE checker -- an independent kernel re-check and a transaction-proposal run are different findings with different exit statuses, and v1's single `checker_command` collapsed them. The v1 singular fields are retained and required, carrying the PRIMARY run, so every v1 rule still bites on a v2 document. (3) `outcome.decline_class` becomes an enum: a free string is a taxonomy nobody can aggregate. An episode still carries NO admission authority: `outcome.ledger_writes` is pinned to 0 here and again in the checker, and `proposals[].assurance` is pinned to \"proposed\".",
+  "type": "object",
+  "required": [
+    "schema_version", "kind", "episode_id", "git_commit", "created_at",
+    "selection", "policy", "budgets", "transcript", "web_snapshots",
+    "proposals", "outcome", "observed"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 2 },
+    "kind": { "const": "axeyum-agent-episode" },
+    "episode_id": { "type": "string", "pattern": "^E:[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "git_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "created_at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "selection": { "$ref": "#/$defs/selection" },
+    "policy": { "$ref": "#/$defs/policy" },
+    "budgets": { "$ref": "#/$defs/budgets" },
+    "transcript": { "$ref": "#/$defs/transcript" },
+    "web_snapshots": { "type": "array", "items": { "$ref": "#/$defs/webSnapshot" } },
+    "proposals": { "type": "array", "items": { "$ref": "#/$defs/proposal" } },
+    "outcome": { "$ref": "#/$defs/outcome" },
+    "observed": { "$ref": "#/$defs/observed" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "factId": { "type": "string", "pattern": "^F:[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "selection": {
+      "description": "What the loop chose and why. `partition` admits train and development ONLY -- held-out is still not expressible, so an episode cannot even claim to have looked at a blind row -- and `ledger_sha256` is now a field of its own rather than a phrase inside `eligibility_reason`, because a digest a machine cannot read is a digest nobody re-derives.",
+      "type": "object",
+      "required": ["frontier_sha256", "frontier_path", "ledger_sha256", "fact_id", "fact_sha256", "partition", "eligibility_reason"],
+      "additionalProperties": false,
+      "properties": {
+        "frontier_sha256": { "$ref": "#/$defs/sha256" },
+        "frontier_path": { "type": "string", "minLength": 1 },
+        "ledger_sha256": { "$ref": "#/$defs/sha256" },
+        "fact_id": { "$ref": "#/$defs/factId" },
+        "fact_sha256": { "$ref": "#/$defs/sha256" },
+        "partition": { "enum": ["train", "development"] },
+        "eligibility_reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "required": ["model_id", "settings", "prompt_hashes", "toolset_sha256", "agent_code_sha256", "library_versions"],
+      "additionalProperties": false,
+      "properties": {
+        "model_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*:[A-Za-z0-9._-]+$" },
+        "settings": { "$ref": "#/$defs/settings" },
+        "prompt_hashes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/sha256" } },
+        "toolset_sha256": { "$ref": "#/$defs/sha256" },
+        "agent_code_sha256": { "$ref": "#/$defs/sha256" },
+        "library_versions": { "type": "object", "additionalProperties": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "required": ["temperature", "top_p", "max_tokens", "seed"],
+      "additionalProperties": false,
+      "properties": {
+        "temperature": { "type": "number", "minimum": 0 },
+        "top_p": { "type": "number", "minimum": 0, "maximum": 1 },
+        "max_tokens": { "type": "integer", "minimum": 1 },
+        "seed": { "type": ["integer", "null"] }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "required": ["wall_seconds", "request_limit", "tool_calls_limit", "input_tokens_limit", "output_tokens_limit", "cost_limit_usd"],
+      "additionalProperties": false,
+      "properties": {
+        "wall_seconds": { "type": "integer", "minimum": 1 },
+        "request_limit": { "type": "integer", "minimum": 1 },
+        "tool_calls_limit": { "type": "integer", "minimum": 1 },
+        "input_tokens_limit": { "type": "integer", "minimum": 1 },
+        "output_tokens_limit": { "type": "integer", "minimum": 1 },
+        "cost_limit_usd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "transcript": {
+      "description": "`tool_calls` is a PROJECTION of the serialized message list, not a parallel log. `assurance` is read from `axeyum.agent.tools.TOOL_TIERS`, which is the only source for it, and a tier-C call is the ONLY way a `checked` row can appear -- which is what makes the v2 `proved-requires-checked-call` rule mean something.",
+      "type": "object",
+      "required": ["messages_sha256", "messages_path", "tool_calls"],
+      "additionalProperties": false,
+      "properties": {
+        "messages_sha256": { "$ref": "#/$defs/sha256" },
+        "messages_path": { "type": "string", "minLength": 1 },
+        "tool_calls": { "type": "array", "items": { "$ref": "#/$defs/toolCall" } }
+      }
+    },
+    "toolCall": {
+      "type": "object",
+      "required": ["ordinal", "tool", "args_sha256", "result_sha256", "assurance", "duration_ms", "exit_status"],
+      "additionalProperties": false,
+      "properties": {
+        "ordinal": { "type": "integer", "minimum": 0 },
+        "tool": { "type": "string", "minLength": 1 },
+        "args_sha256": { "$ref": "#/$defs/sha256" },
+        "result_sha256": { "$ref": "#/$defs/sha256" },
+        "assurance": { "enum": ["read", "proposed", "checked"] },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "exit_status": { "type": "integer" }
+      }
+    },
+    "webSnapshot": {
+      "type": "object",
+      "required": ["url", "fetched_at", "sha256", "bytes", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string", "minLength": 1 },
+        "fetched_at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "path": { "type": "string", "minLength": 1 }
+      }
+    },
+    "proposal": {
+      "type": "object",
+      "required": ["path", "sha256", "kind", "assurance"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "kind": { "enum": ["strategy", "lemma", "overlay-link"] },
+        "assurance": { "const": "proposed" }
+      }
+    },
+    "checkerRun": {
+      "description": "One checker invocation, with the exit status it actually produced. A run is recorded whether it passed or failed: the transaction-proposal run FAILING because no registered operation covers the fact is a finding the ledger-writing step needs, and an episode that hid it would be reporting a smaller world than it saw. `assurance` is `checked` only for a run whose exit status depends on what it found.",
+      "type": "object",
+      "required": ["command", "exit_status", "output_sha256", "assurance"],
+      "additionalProperties": false,
+      "properties": {
+        "command": { "type": "string", "minLength": 1 },
+        "exit_status": { "type": "integer" },
+        "output_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "assurance": { "enum": ["read", "proposed", "checked"] }
+      }
+    },
+    "declineClass": {
+      "description": "SEEDED FROM THE AG4.1 TAXONOMY in docs/autogenesis/02-phased-roadmap.md, which lists exactly NINE cross-route classes as prose: unsupported semantics, missing lemma, missing plan rule, missing certificate, representation explosion, resource exhaustion, retrieval miss, formalization mismatch, operational failure. Those nine appear here kebab-cased and nothing else was invented in that group. The five that follow them are LOOP-LOCAL and deliberately separate: they describe why THIS harness stopped, not what obstructed the mathematics, and collapsing them into an AG4.1 class would poison the obstruction graph slice A5 builds from exactly this field. In particular `no-general-route` is a RESULT -- the model declining to claim three siblings it cannot name -- and mapping it onto `missing-plan-rule` would record a mathematical obstruction that nobody observed.",
+      "type": ["string", "null"],
+      "enum": [
+        null,
+        "unsupported-semantics",
+        "missing-lemma",
+        "missing-plan-rule",
+        "missing-certificate",
+        "representation-explosion",
+        "resource-exhaustion",
+        "retrieval-miss",
+        "formalization-mismatch",
+        "operational-failure",
+        "no-general-route",
+        "gate-refused",
+        "supervisor-denied",
+        "budget-exhausted-before-plan",
+        "budget-exhausted-during-plan"
+      ]
+    },
+    "outcome": {
+      "description": "The v1 singular `checker_command` / `checker_exit_status` / `checker_output_sha256` are RETAINED and required, carrying the primary run, so every v1 checker rule still bites on a v2 document rather than being silently skipped by the version dispatch. `checker_runs` is the full list. `verdict == \"proved\"` additionally requires a `checked` tool call and a passing checker run -- rule 11 in scripts/check-agent-episode.py, and again at write time in axeyum.agent.episode.",
+      "type": "object",
+      "required": ["verdict", "decline_class", "checker_command", "checker_exit_status", "checker_output_sha256", "checker_runs", "axiom_footprint", "ledger_writes", "search_invocations", "target_theorem_submissions"],
+      "additionalProperties": false,
+      "properties": {
+        "verdict": { "enum": ["proved", "declined", "error", "budget-exhausted"] },
+        "decline_class": { "$ref": "#/$defs/declineClass" },
+        "checker_command": { "type": "string" },
+        "checker_exit_status": { "type": "integer" },
+        "checker_output_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "checker_runs": { "type": "array", "items": { "$ref": "#/$defs/checkerRun" } },
+        "axiom_footprint": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "ledger_writes": { "type": "integer", "minimum": 0, "maximum": 0 },
+        "search_invocations": { "type": "integer", "minimum": 0 },
+        "target_theorem_submissions": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "observed": {
+      "type": "object",
+      "required": ["facts_unlocked", "operations_widened", "overlay_links_proposed"],
+      "additionalProperties": false,
+      "properties": {
+        "facts_unlocked": { "type": "array", "items": { "$ref": "#/$defs/factId" } },
+        "operations_widened": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "overlay_links_proposed": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}
