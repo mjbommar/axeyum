@@ -50,8 +50,9 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
+use crate::rat_prelude::ops::{den, normalize, num, one_le_succ, rat_ty, rzero};
 
-use super::{CRealPrelude, and_intro};
+use super::{CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, sample};
 
 /// `And left right`, as a `Prop`. Generic over what `left`/`right` are —
 /// unlike [`super::equiv`]/[`super::within`], this file's statements are
@@ -364,8 +365,89 @@ fn declare_nat_sqrt_lt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
     Ok(())
 }
 
+/// `CReal.sqrtApprox : CReal → Nat → Rat` — the rational approximant
+/// `CReal.sqrt` will be built from.
+///
+/// ```text
+/// sqrtApprox x n :=
+///   let d := n + 1                                -- Nat
+///   let j := d * d                                 -- Nat, the sample index
+///   let q := Rat.max (CReal.seq x j) Rat.zero        -- Rat, clamped >= 0
+///   let a := Int.natAbs (Rat.num q)                   -- Nat
+///   let b := Rat.den q                                 -- Nat, >= 1
+///   let k := Nat.div (a * j) b                          -- Nat
+///   let s := CReal.natSqrt k                             -- Nat
+///   Rat.normalize (Int.ofNat s) d (one_le_succ n)          -- Rat, "= s/d"
+/// ```
+///
+/// **Why this shape.** Sampling `x` at `j = (n+1)²` rather than `n` puts `q`
+/// within `Rat.natDivSucc 1 j = 1/((n+1)²+1)` of `x` — finer than the
+/// `1/(n+1)²` the non-Lipschitz-at-0 modulus of `√` needs (module docs above)
+/// — with **no `Nat` subtraction**. Clamping with `Rat.max q Rat.zero` needs
+/// no case split on `x`'s sign (`Rat.max` dispatches on the representation,
+/// [`super::lattice`]) and the hypothesis `0 ≤ x` is not consumed here at
+/// all — matching the recorded signature decision that `sqrt`'s hypothesis
+/// is needed only *inside proofs*, never as data driving the construction.
+/// Reusing `j = d*d` as **both** the sample index and the fixed-point scale
+/// (rather than an independent precision parameter) is what keeps this a
+/// bare `Nat.rec`-free definition with no side proof obligation: `a*j` and
+/// `b` are both already-computed naturals, and `Nat.div` is total.
+///
+/// **What this declaration does NOT establish.** `s/d` is within `O(1/d)` of
+/// `√x` — from `natSqrtSpec` (`s² ≤ k < (s+1)²`, so `s/d ≤ √(k/j) < (s+1)/d`
+/// since `j = d²`), plus the `Nat.div` floor error on `k` vs `a*j/b` (also
+/// `O(1/d)` after dividing by `d`, via the same "`√` moves a gap of `ε` to a
+/// gap of `√ε`" fact `ratSqLe`/`ratSqSandwich` already prove at the rational
+/// level), plus `q`'s `O(1/d²)` distance from `x` contributing another
+/// `O(1/d)` through that same non-Lipschitz modulus — but turning that into
+/// the *exact* Bishop bound `CReal.Regular` demands (`|s(m)/d(m) - s(n)/d(n)|
+/// ≤ 1/(m+1) + 1/(n+1)`, no free constant) is a genuine rational-inequality
+/// argument that has not been built. See the module docs' closing paragraph
+/// and this slice's final report for exactly what is missing.
+pub(super) fn declare_sqrt_approx(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rat_carrier = rat_ty(d);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let dd = d.succ(n);
+    let j = NatOps::mul(d, dd, dd);
+    let sample_q = sample(d, p, x, j);
+    let zero_rat = rzero(d, p.rat);
+    let q_pos = d.const_app(p.rat.max, &[sample_q, zero_rat]);
+    let numerator = num(d, q_pos);
+    let a = d.const_app(p.rat.int.nat_abs, &[numerator]);
+    let b = den(d, q_pos);
+    let scaled = NatOps::mul(d, a, j);
+    let k = NatOps::div(d, scaled, b);
+    let s = d.const_app(p.nat_sqrt, &[k]);
+    let s_int = d.of_nat(s);
+    let pos = one_le_succ(d, n);
+    let body = normalize(d, s_int, dd, pos);
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(x_fv, carrier, with_n)
+    };
+    let ty = {
+        let inner = d.arrow(nat, rat_carrier);
+        d.arrow(carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sqrt_approx,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 43),
+    })
+}
+
 /// Admit `CReal.natSqrt`, `CReal.natSqrtSpec`, `CReal.natSqrtLe`,
-/// `CReal.natSqrtLt`.
+/// `CReal.natSqrtLt`, `CReal.sqrtApprox`.
 ///
 /// # Errors
 ///
@@ -374,5 +456,6 @@ pub(super) fn declare_sqrt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     declare_nat_sqrt(d, p)?;
     declare_nat_sqrt_spec(d, p)?;
     declare_nat_sqrt_le(d, p)?;
-    declare_nat_sqrt_lt(d, p)
+    declare_nat_sqrt_lt(d, p)?;
+    declare_sqrt_approx(d, p)
 }

@@ -976,6 +976,11 @@ pub struct CRealPrelude {
     pub nat_sqrt_le: NameId,
     /// `CReal.natSqrtLt : ∀ n, Lt n (succ (natSqrt n) * succ (natSqrt n))`.
     pub nat_sqrt_lt: NameId,
+    /// `CReal.sqrtApprox : CReal → Nat → Rat` — the rational square-root
+    /// approximant `CReal.sqrt` is built from. See `creal/sqrt.rs` for the
+    /// exact schedule; **no `Regular` proof exists for it yet** (that is the
+    /// open obligation `CReal.sqrt` still needs).
+    pub sqrt_approx: NameId,
 
     // --- finite sums over ℝ (creal/series.rs) ---------------------------------
     /// `CReal.sumRange : (Nat → CReal) → Nat → CReal`, by structural `Nat.rec`
@@ -1455,6 +1460,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         nat_sqrt_spec: kernel.name_str(creal, "natSqrtSpec"),
         nat_sqrt_le: kernel.name_str(creal, "natSqrtLe"),
         nat_sqrt_lt: kernel.name_str(creal, "natSqrtLt"),
+        sqrt_approx: kernel.name_str(creal, "sqrtApprox"),
         sum_range: kernel.name_str(creal, "sumRange"),
         sum_range_zero: kernel.name_str(creal, "sumRange_zero"),
         sum_range_succ: kernel.name_str(creal, "sumRange_succ"),
