@@ -1,0 +1,194 @@
+{
+  "census": {
+    "chains": 9,
+    "complete": 9
+  },
+  "chains": [
+    {
+      "adapter_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-one-ascfactorial-statement-adapter-v1.json",
+      "adapter_ndjson_sha256": "298508e24fd7b41bf5d954746027a7a81e8c57b83a3a7ee28aef85cf55ed08f1",
+      "checked_evidence_bindings": [
+        {
+          "binding": "statement-and-goal",
+          "evidence_id": "autogenesis-operation-84ec70bfa6c99145"
+        }
+      ],
+      "checked_evidence_ids": [
+        "autogenesis-operation-84ec70bfa6c99145"
+      ],
+      "id": "T:mathlib-bounded-induction-family-one-ascfactorial-statement-adapter-v1",
+      "imported_goal_sha256": "081f88a78526f992e7e4bae20a309e45ee85626a4700ed126dbd7a6805eb077a",
+      "source_fact_id": "F:ml430-nat-one-ascfactorial-8bacb017",
+      "source_statement_sha256": "6e7c628af6d5606e03edd06d06798fa003c60b60a5735638289b2dc7910b18b0",
+      "status": "complete",
+      "target_content_sha256": "920465cca20920ed378e387293d21b10f198bf2056c0fbfdb737e6fdff181a3d",
+      "trust": "identity-bound-sidecar-not-admission-authority"
+    },
+    {
+      "adapter_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-statement-adapter-v1.json",
+      "adapter_ndjson_sha256": "663fa3ff9f55feb872201dd3511d1427bc31ad9ac910ffff610a52b2a72c720c",
+      "checked_evidence_bindings": [
+        {
+          "binding": "statement-and-goal",
+          "evidence_id": "autogenesis-operation-13843f88b89e9a23"
+        }
+      ],
+      "checked_evidence_ids": [
+        "autogenesis-operation-13843f88b89e9a23"
+      ],
+      "id": "T:mathlib-bounded-induction-family-statement-adapter-v1",
+      "imported_goal_sha256": "29d67ba637045e918b70290a218dfe43db046a97bfc0cadb981d706ed37b56e4",
+      "source_fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
+      "source_statement_sha256": "90324b256e9e14905a4386da129c20ebec1d1a4c86a7c9e8638c2752829f1519",
+      "status": "complete",
+      "target_content_sha256": "a8adc68c502ee2679ce4aef7eedee7f996b015ed7b76b2fee59a586ff5e4263e",
+      "trust": "identity-bound-sidecar-not-admission-authority"
+    },
+    {
+      "adapter_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-zero-ascfactorial-succ-statement-adapter-v1.json",
+      "adapter_ndjson_sha256": "f2d041ef54cc5e82598e7cfb78d41d4c3fd19c198285e1b9b696786a2bb606c5",
+      "checked_evidence_bindings": [
+        {
+          "binding": "statement-and-goal",
+          "evidence_id": "autogenesis-operation-92d918ef678f3e2a"
+        }
+      ],
+      "checked_evidence_ids": [
+        "autogenesis-operation-92d918ef678f3e2a"
+      ],
+      "id": "T:mathlib-bounded-induction-family-zero-ascfactorial-succ-statement-adapter-v1",
+      "imported_goal_sha256": "a7bf5e3930e0b21c23be03d0ceb0f7a18f7fce8a7ac69e3c9e03b32fbe3cc1e0",
+      "source_fact_id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
+      "source_statement_sha256": "65927d0e726c1dfb9e4c37303088496720a4616b9653d00b3f258bc4f3414dd1",
+      "status": "complete",
+      "target_content_sha256": "a01f6a29db0bca15f8e248cbd7a3be4c20d882be04ce0705fcd9df96e2a40f32",
+      "trust": "identity-bound-sidecar-not-admission-authority"
+    },
+    {
+      "adapter_manifest": "artifacts/autogenesis/mathlib-descfactorial-zero-statement-adapter-v1.json",
+      "adapter_ndjson_sha256": "72e1f212f04576caf28bef07d2f291dc9e35444fd6a6757e621ca9c854d2e567",
+      "checked_evidence_bindings": [
+        {
+          "binding": "statement-and-goal",
+          "evidence_id": "autogenesis-operation-3675df4623f421cf"
+        }
+      ],
+      "checked_evidence_ids": [
+        "autogenesis-operation-3675df4623f421cf"
+      ],
+      "id": "T:mathlib-descfactorial-zero-statement-adapter-v1",
+      "imported_goal_sha256": "84c2cb6ba48868786799c28aef4104a845cf9d238ff6786285645562570c5d23",
+      "source_fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+      "source_statement_sha256": "f87b91ee7d953a7188b5ca71e37c370d67a0c26ffba643bdcc6ae2a8c255983f",
+      "status": "complete",
+      "target_content_sha256": "c92518c5aa5532a7583223937b8f355f1ea36187c2c5e399a9ee5b4932a03493",
+      "trust": "identity-bound-sidecar-not-admission-authority"
+    },
+    {
+      "adapter_manifest": "artifacts/autogenesis/mathlib-modeq-family-comm-statement-adapter-v1.json",
+      "adapter_ndjson_sha256": "e3398defb4f35e9e90ecfd8e8d2d774741e1bd4fbe5c480f97db3e452db362b1",
+      "checked_evidence_bindings": [
+        {
+          "binding": "adapter-goal-and-target",
+          "evidence_id": "autogenesis-operation-modeq-220a62a541ea5541"
+        }
+      ],
+      "checked_evidence_ids": [
+        "autogenesis-operation-modeq-220a62a541ea5541"
+      ],
+      "id": "T:mathlib-modeq-family-comm-statement-adapter-v1",
+      "imported_goal_sha256": "f0f46a545eeae5feb94ad83a82a7c6ea4d670e74b8431e2d63226a2b336a76b3",
+      "source_fact_id": "F:ml430-int-modeq-comm-1e4bcc07",
+      "source_statement_sha256": "fc8c080a952a6a0461359cdc97299c19b5dbdcb61465aa23c0e0bddf83b931b5",
+      "status": "complete",
+      "target_content_sha256": "19239be74c3515f7416283ad124fd9afaba0a711d407ebf1c22f038cc3929427",
+      "trust": "identity-bound-sidecar-not-admission-authority"
+    },
+    {
+      "adapter_manifest": "artifacts/autogenesis/mathlib-modeq-family-refl-statement-adapter-v1.json",
+      "adapter_ndjson_sha256": "38d165bb7d274b6d4e38251b4c186cc890904971f9566b483ee301495b964486",
+      "checked_evidence_bindings": [
+        {
+          "binding": "adapter-goal-and-target",
+          "evidence_id": "autogenesis-operation-modeq-509b3ca9c0ba9488"
+        }
+      ],
+      "checked_evidence_ids": [
+        "autogenesis-operation-modeq-509b3ca9c0ba9488"
+      ],
+      "id": "T:mathlib-modeq-family-refl-statement-adapter-v1",
+      "imported_goal_sha256": "594f0839940784028e8601ac462591e19b0144f101b1de6bdd94eef2f68ad858",
+      "source_fact_id": "F:ml430-int-modeq-refl-30e15520",
+      "source_statement_sha256": "5ef1cabc1b44e80e3f1f8be0cef1a5fe42e27736d5f1cc1c41091efda87cedab",
+      "status": "complete",
+      "target_content_sha256": "b3e4c8fc348f90a85c9d2c76a9d689c796ccb22190990678ea0cc9b7f60cf49a",
+      "trust": "identity-bound-sidecar-not-admission-authority"
+    },
+    {
+      "adapter_manifest": "artifacts/autogenesis/mathlib-modeq-family-symm-statement-adapter-v1.json",
+      "adapter_ndjson_sha256": "b6bb7888a3e0141586b83bacbaf6fd49af78209db9ca3cbeeff433cc9e968b8f",
+      "checked_evidence_bindings": [
+        {
+          "binding": "adapter-goal-and-target",
+          "evidence_id": "autogenesis-operation-modeq-4e11288764036321"
+        }
+      ],
+      "checked_evidence_ids": [
+        "autogenesis-operation-modeq-4e11288764036321"
+      ],
+      "id": "T:mathlib-modeq-family-symm-statement-adapter-v1",
+      "imported_goal_sha256": "de73107af7437f69a2f7c3915517dbeacd13046cc8d97a4ebdc03501552297a7",
+      "source_fact_id": "F:ml430-int-modeq-symm-984a6e67",
+      "source_statement_sha256": "6f22633eced9acc8bb496cc59ec39134b8ee68680d991b40121ca46829ce7d6d",
+      "status": "complete",
+      "target_content_sha256": "a0bde352ffd74569c9ed4a20351812e885b57b8871803c78e05fbd463ad57696",
+      "trust": "identity-bound-sidecar-not-admission-authority"
+    },
+    {
+      "adapter_manifest": "artifacts/autogenesis/mathlib-modeq-family-trans-statement-adapter-v1.json",
+      "adapter_ndjson_sha256": "601217d8d57bfeae4ced1896895d193a26c5a8cd22cd66d858971d5465e3f9ad",
+      "checked_evidence_bindings": [
+        {
+          "binding": "adapter-goal-and-target",
+          "evidence_id": "autogenesis-operation-modeq-c5e4388868b7e82a"
+        }
+      ],
+      "checked_evidence_ids": [
+        "autogenesis-operation-modeq-c5e4388868b7e82a"
+      ],
+      "id": "T:mathlib-modeq-family-trans-statement-adapter-v1",
+      "imported_goal_sha256": "8825d9b14d2554a6fddfebbd0de2d43c692d1817e30c5a448e85f9df5e2d2c19",
+      "source_fact_id": "F:ml430-int-modeq-trans-6d7863e0",
+      "source_statement_sha256": "33b42628e1980c850dee00b222191cbec52cf071bf77f567a8f5cebf659dfd3f",
+      "status": "complete",
+      "target_content_sha256": "1d4cb042dea50bd7c14597df1f8900347345c6be927b963877e14d714c38b367",
+      "trust": "identity-bound-sidecar-not-admission-authority"
+    },
+    {
+      "adapter_manifest": "artifacts/autogenesis/mathlib-statement-adapter-v1.json",
+      "adapter_ndjson_sha256": "6aed5b73c80e039900027020cc088c7db67c6ae518c7d031584f3e4cb6e2e685",
+      "checked_evidence_bindings": [
+        {
+          "binding": "statement-and-goal",
+          "evidence_id": "autogenesis-operation-9846be9e23ca3879"
+        }
+      ],
+      "checked_evidence_ids": [
+        "autogenesis-operation-9846be9e23ca3879"
+      ],
+      "id": "T:mathlib-statement-adapter-v1",
+      "imported_goal_sha256": "87e37902bb8b3958514c5a6831b28ebff2824c8a30fb45601ff47736ee3853d7",
+      "source_fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+      "source_statement_sha256": "2482f23d163bb946b92ac456667645047254faa3f575809e45609154b98b5dd7",
+      "status": "complete",
+      "target_content_sha256": "a492e9e2f4b4386d8341eb891a3932298226d74a0472c08cf7f5ae32efa7dabe",
+      "trust": "identity-bound-sidecar-not-admission-authority"
+    }
+  ],
+  "derivation": {
+    "join_policy": "fact id plus either exact statement-and-goal hashes or exact adapter-manifest, goal, and target-content hashes; no declaration-name fallback",
+    "method": "checker-derived"
+  },
+  "kind": "axeyum-autogenesis-transport-projection",
+  "schema_version": 1
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-capability-candidate-selection",
+  "state": "eligible-for-capability-construction-not-an-operation-registration",
+  "trust_boundary": "selection and construction planning only; this artifact cannot dispatch, prove, admit, or change a fact",
+  "candidate_capability": {
+    "id": "K:nat-modeq-equivalence-combinators",
+    "title": "Natural-number modular-equivalence combinator producer",
+    "relation_to_existing_producer": "Evaluate whether the existing target-agnostic Eq/Iff combinator mechanism handles Nat.ModEq under a new independently checked source-bound family contract; do not add target-name dispatch."
+  },
+  "selected_facts": [
+    "F:ml430-nat-modeq-refl-d870c8f5",
+    "F:ml430-nat-modeq-symm-0a3d4d18",
+    "F:ml430-nat-modeq-trans-ef9d1c46"
+  ],
+  "deferred_fact": {
+    "id": "F:ml430-nat-modeq-comm-24b71e7a",
+    "required_dependency": "F:ml430-nat-modeq-symm-0a3d4d18",
+    "reason": "It is not dependency-ready until the selected symmetry fact is settled."
+  },
+  "selection_evidence": {
+    "capability_gap_projection": "artifacts/autogenesis/capability-gap-projection-v1.json",
+    "cluster": {
+      "family": "natural-modular-equivalence",
+      "statement_shape": "unconditional-relation",
+      "ready_fact_count": 7,
+      "direct_unlock_fact_ids": []
+    },
+    "adapter_evidence": "docs/autogenesis/242-nat-division-gates-modular-arithmetic.md: all four Nat development streams imported cleanly with zero axioms; remaining gap is a producer/operation, not the measured adapter closure.",
+    "existing_operation": "authoritative-mathlib-modeq-family-v1"
+  },
+  "construction_constraints": [
+    "Do not modify existing fact schemas or add a required field to an existing fact.",
+    "Do not broaden the existing Int operation's applicability by assertion alone.",
+    "Use new source-bound statement adapters and independently checked receipts for every selected fact.",
+    "Require a fixed producer implementation with no selected fact ID or target theorem name in executable proof logic.",
+    "Keep the deferred commutativity fact out of any initial operation until its ledger dependency is settled and a new frontier measurement is recorded."
+  ]
+}
