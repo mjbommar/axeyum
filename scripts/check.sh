@@ -300,6 +300,7 @@ step autogenesis-kernel-projection python3 -m unittest scripts.tests.test_valida
 step autogenesis-kernel-projection-content python3 scripts/validate-autogenesis-kernel-dependency-projection.py
 step autogenesis-obstruction-projection python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection
 step autogenesis-obstruction-projection-content python3 scripts/validate-autogenesis-obstruction-projection.py
+step autogenesis-transport-projection python3 -m unittest scripts.tests.test_validate_autogenesis_transport_projection
 step autogenesis-transport-projection-content python3 scripts/validate-autogenesis-transport-projection.py
 step autogenesis-capability-gap python3 -m unittest scripts.tests.test_validate_autogenesis_capability_gap_projection
 step autogenesis-capability-gap-content python3 scripts/validate-autogenesis-capability-gap-projection.py

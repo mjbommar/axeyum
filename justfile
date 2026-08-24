@@ -467,6 +467,7 @@ autogenesis-obstruction-projection:
     python3 scripts/gen-autogenesis-obstruction-projection.py --check
 
 autogenesis-transport-projection:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_transport_projection
     python3 scripts/validate-autogenesis-transport-projection.py
     python3 scripts/gen-autogenesis-transport-projection.py --check
 

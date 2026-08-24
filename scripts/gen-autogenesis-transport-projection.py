@@ -11,13 +11,18 @@ def build():
     except:continue
     if d.get('kind')!='axeyum-autogenesis-mathlib-statement-adapter':continue
     fid=d.get('source_fact_id'); fact=facts.get(fid); goal=d.get('independent_import',{}).get('goal_sha256'); statement=d.get('source_statement_sha256')
-    evidence=[]
+    evidence=[]; bindings=[]
     if fact:
       for e in fact[1].get('evidence',[]):
         op=e.get('checker_operation',{})
-        if op.get('formal_statement_sha256')==statement and op.get('goal_sha256')==goal: evidence.append(e.get('id'))
-    chains.append({'id':'T:'+p.stem,'source_fact_id':fid,'adapter_manifest':str(p.relative_to(ROOT)),'source_statement_sha256':statement,'adapter_ndjson_sha256':d.get('external_artifact',{}).get('sha256'),'imported_goal_sha256':goal,'target_content_sha256':d.get('independent_import',{}).get('target_content_sha256'),'checked_evidence_ids':sorted(evidence),'status':'complete' if evidence else 'incomplete-no-matching-fact-evidence','trust':'identity-bound-sidecar-not-admission-authority'})
-  return {'schema_version':1,'kind':'axeyum-autogenesis-transport-projection','derivation':{'method':'checker-derived','join_policy':'fact id plus exact statement and goal sha256; no declaration-name fallback'},'census':{'chains':len(chains),'complete':sum(c['status']=='complete' for c in chains)},'chains':chains}
+        adapter=str(p.relative_to(ROOT)); target=d.get('independent_import',{}).get('target_content_sha256')
+        statement_goal=op.get('formal_statement_sha256')==statement and op.get('goal_sha256')==goal
+        adapter_goal_target=(op.get('statement_adapter_manifest')==adapter and op.get('goal_sha256')==goal and op.get('target_content_sha256')==target)
+        if statement_goal or adapter_goal_target:
+          evidence.append(e.get('id'))
+          bindings.append({'evidence_id':e.get('id'),'binding':'statement-and-goal' if statement_goal else 'adapter-goal-and-target'})
+    chains.append({'id':'T:'+p.stem,'source_fact_id':fid,'adapter_manifest':str(p.relative_to(ROOT)),'source_statement_sha256':statement,'adapter_ndjson_sha256':d.get('external_artifact',{}).get('sha256'),'imported_goal_sha256':goal,'target_content_sha256':d.get('independent_import',{}).get('target_content_sha256'),'checked_evidence_ids':sorted(evidence),'checked_evidence_bindings':sorted(bindings,key=lambda row:(str(row['evidence_id']),row['binding'])),'status':'complete' if evidence else 'incomplete-no-matching-fact-evidence','trust':'identity-bound-sidecar-not-admission-authority'})
+  return {'schema_version':1,'kind':'axeyum-autogenesis-transport-projection','derivation':{'method':'checker-derived','join_policy':'fact id plus either exact statement-and-goal hashes or exact adapter-manifest, goal, and target-content hashes; no declaration-name fallback'},'census':{'chains':len(chains),'complete':sum(c['status']=='complete' for c in chains)},'chains':chains}
 def main():
  p=argparse.ArgumentParser();p.add_argument('--check',action='store_true');a=p.parse_args();r=json.dumps(build(),indent=2,sort_keys=True)+'\n'
  if a.check:
