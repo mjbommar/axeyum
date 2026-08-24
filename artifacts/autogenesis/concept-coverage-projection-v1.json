@@ -1,0 +1,504 @@
+{
+  "census": {
+    "concepts": 18,
+    "excluded_held_out_family_topic_facts": 57,
+    "family_topic_facts": 157,
+    "kernel_semantic_anchors": 9,
+    "qualified_formalization_facts": 10,
+    "with_fact_formalization": 7,
+    "with_family_topic": 6,
+    "with_kernel_semantic_anchor": 5
+  },
+  "concepts": [
+    {
+      "concept_id": "C:binomial-coefficient",
+      "coverage_state": "family-topic-only",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:bit",
+      "coverage_state": "family-topic-only",
+      "family_topic_fact_count": 19,
+      "family_topic_fact_ids": [
+        "F:ml430-mutation-a6dd1759bce60d820292e107",
+        "F:ml430-nat-bitwise-bit-4c4b28a8",
+        "F:ml430-nat-bitwise-comm-1a273bae",
+        "F:ml430-nat-bitwise-swap-7175e90e",
+        "F:ml430-nat-even-xor-78a39432",
+        "F:ml430-nat-land-assoc-ad4775b8",
+        "F:ml430-nat-land-bit-b9ab7475",
+        "F:ml430-nat-land-comm-7e6ad72e",
+        "F:ml430-nat-ldiff-bit-6be49bb8",
+        "F:ml430-nat-lor-assoc-82c4d0fd",
+        "F:ml430-nat-lor-bit-a2f98c7c",
+        "F:ml430-nat-lor-comm-2666d7ef",
+        "F:ml430-nat-lt-of-testbit-72f64ab8",
+        "F:ml430-nat-lt-xor-cases-c43a1e85",
+        "F:ml430-nat-testbit-eq-inth-ffa07392",
+        "F:ml430-nat-testbit-land-dfef7ca4",
+        "F:ml430-nat-testbit-ldiff-16f94162",
+        "F:ml430-nat-testbit-lor-7644e067",
+        "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
+      ],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:circle",
+      "coverage_state": "kernel-semantic-anchor-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 1,
+      "kernel_semantic_anchor_ids": [
+        "CPoint.circumcentre_unique"
+      ],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:complex-number",
+      "coverage_state": "kernel-semantic-anchor-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 1,
+      "kernel_semantic_anchor_ids": [
+        "Complex.normSq_pow"
+      ],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:equivalence-relation",
+      "coverage_state": "fact-formalization-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [
+        {
+          "coverage": "relation-law",
+          "fact_count": 1
+        }
+      ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 1,
+      "qualified_formalization_fact_ids": [
+        "F:ml430-int-modeq-refl-30e15520"
+      ],
+      "qualified_formalization_statuses": {
+        "proved": 1
+      },
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:equivalence-relation@understand",
+      "coverage_state": "fact-formalization-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [
+        {
+          "coverage": "relation-law",
+          "fact_count": 2
+        }
+      ],
+      "kernel_semantic_anchor_count": 3,
+      "kernel_semantic_anchor_ids": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans"
+      ],
+      "qualified_formalization_fact_count": 2,
+      "qualified_formalization_fact_ids": [
+        "F:ml430-int-modeq-symm-984a6e67",
+        "F:ml430-int-modeq-trans-6d7863e0"
+      ],
+      "qualified_formalization_statuses": {
+        "proved": 2
+      },
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:excluded-middle",
+      "coverage_state": "kernel-semantic-anchor-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 1,
+      "kernel_semantic_anchor_ids": [
+        "Decidable.em"
+      ],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:factorial",
+      "coverage_state": "fact-formalization-present",
+      "family_topic_fact_count": 15,
+      "family_topic_fact_ids": [
+        "F:ml430-mutation-7afa5ec620720a1501bf349d",
+        "F:ml430-nat-ascfactorial-zero-fd183202",
+        "F:ml430-nat-descfactorial-le-2b8cc09a",
+        "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+        "F:ml430-nat-descfactorial-one-d4856d4a",
+        "F:ml430-nat-descfactorial-self-899fc0e0",
+        "F:ml430-nat-descfactorial-zero-966b01df",
+        "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+        "F:ml430-nat-factorial-le-d0f4a912",
+        "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
+        "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+        "F:ml430-nat-factorial-pos-f1dd2405",
+        "F:ml430-nat-one-ascfactorial-8bacb017",
+        "F:ml430-nat-self-le-factorial-cfdffc69",
+        "F:ml430-nat-zero-ascfactorial-af4fcdca"
+      ],
+      "formalization_qualifiers": [
+        {
+          "coverage": "supporting-law",
+          "fact_count": 1
+        }
+      ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 1,
+      "qualified_formalization_fact_ids": [
+        "F:ml430-nat-descfactorial-one-d4856d4a"
+      ],
+      "qualified_formalization_statuses": {
+        "proved": 1
+      },
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:factorial@apply",
+      "coverage_state": "fact-formalization-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [
+        {
+          "coverage": "supporting-law",
+          "fact_count": 1
+        }
+      ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 1,
+      "qualified_formalization_fact_ids": [
+        "F:ml430-nat-one-ascfactorial-8bacb017"
+      ],
+      "qualified_formalization_statuses": {
+        "proved": 1
+      },
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:factorial@understand",
+      "coverage_state": "fact-formalization-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [
+        {
+          "coverage": "base-case",
+          "fact_count": 3
+        }
+      ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 3,
+      "qualified_formalization_fact_ids": [
+        "F:ml430-nat-ascfactorial-zero-fd183202",
+        "F:ml430-nat-descfactorial-zero-966b01df",
+        "F:ml430-nat-zero-ascfactorial-af4fcdca"
+      ],
+      "qualified_formalization_statuses": {
+        "proved": 3
+      },
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:fibonacci-sequence",
+      "coverage_state": "family-topic-only",
+      "family_topic_fact_count": 32,
+      "family_topic_fact_ids": [
+        "F:ml430-int-fib-add-181b6a2c",
+        "F:ml430-int-fib-add-one-33f1b748",
+        "F:ml430-int-fib-add-two-739358dd",
+        "F:ml430-int-fib-dvd-ffb3c5c1",
+        "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+        "F:ml430-int-fib-eq-zero-8193c7cb",
+        "F:ml430-int-fib-gcd-3a8bfdec",
+        "F:ml430-int-fib-natcast-d5886be4",
+        "F:ml430-int-fib-neg-b4021d37",
+        "F:ml430-int-fib-of-nonneg-438018c5",
+        "F:ml430-int-fib-of-odd-66560495",
+        "F:ml430-int-fib-two-mul-0e70f3dd",
+        "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+        "F:ml430-int-fib-two-mul-add-two-0ba4a948",
+        "F:ml430-int-gcd-fib-73bdafc2",
+        "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
+        "F:ml430-mutation-aabb80b1f89f0c5847364692",
+        "F:ml430-nat-fastfib-eq-cde11774",
+        "F:ml430-nat-fib-add-two-b86e0c82",
+        "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+        "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+        "F:ml430-nat-fib-dvd-f80f3de1",
+        "F:ml430-nat-fib-eq-zero-61879073",
+        "F:ml430-nat-fib-gcd-d1d98407",
+        "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+        "F:ml430-nat-fib-lt-fib-3582b881",
+        "F:ml430-nat-fib-mono-cc6afe09",
+        "F:ml430-nat-fib-pos-9e67bd8e",
+        "F:ml430-nat-fib-strictmonoon-905810a9",
+        "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+        "F:ml430-nat-le-fib-add-one-5284f0bf",
+        "F:ml430-nat-le-fib-self-0cbccb4d"
+      ],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:greatest-common-divisor",
+      "coverage_state": "family-topic-only",
+      "family_topic_fact_count": 30,
+      "family_topic_fact_ids": [
+        "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
+        "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
+        "F:ml430-int-gcd-div-5e01872f",
+        "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+        "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+        "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+        "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+        "F:ml430-int-gcd-greatest-5b31c5fe",
+        "F:ml430-int-ne-zero-of-gcd-f71f00df",
+        "F:ml430-mutation-48fe130e2b8eadb6f626b66f",
+        "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+        "F:ml430-nat-coprime-add-self-left-5e93448c",
+        "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+        "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+        "F:ml430-nat-coprime-of-dvd-18fcd09f",
+        "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+        "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+        "F:ml430-nat-coprime-one-left-iff-45945e80",
+        "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+        "F:ml430-nat-coprime-self-add-left-51351fa1",
+        "F:ml430-nat-coprime-self-add-right-966e5434",
+        "F:ml430-nat-coprime-symmetric-9b5cfa12",
+        "F:ml430-nat-div-dvd-div-left-b56f6f7c",
+        "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+        "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
+        "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
+        "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
+        "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e",
+        "F:ml430-nat-gcd-greatest-0a04214a",
+        "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8"
+      ],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:logarithm",
+      "coverage_state": "family-topic-only",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:modular-arithmetic",
+      "coverage_state": "fact-formalization-present",
+      "family_topic_fact_count": 40,
+      "family_topic_fact_ids": [
+        "F:ml430-int-add-modeq-left-ee732b5b",
+        "F:ml430-int-add-modeq-right-e58108ee",
+        "F:ml430-int-mod-modeq-6bec7847",
+        "F:ml430-int-modeq-add-left-6e17c69a",
+        "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+        "F:ml430-int-modeq-comm-1e4bcc07",
+        "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+        "F:ml430-int-modeq-neg-d6ff57b6",
+        "F:ml430-int-modeq-neg-f649f6c5",
+        "F:ml430-int-modeq-of-dvd-b9c41fce",
+        "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+        "F:ml430-int-modeq-of-mul-right-c92b7bf0",
+        "F:ml430-int-modeq-one-01d9de39",
+        "F:ml430-int-modeq-refl-30e15520",
+        "F:ml430-int-modeq-sub-3148f130",
+        "F:ml430-int-modeq-symm-984a6e67",
+        "F:ml430-int-modeq-trans-6d7863e0",
+        "F:ml430-int-modulus-modeq-zero-5b57a898",
+        "F:ml430-int-neg-modeq-neg-30d98479",
+        "F:ml430-mutation-aca37b68d3cdf06f0127def9",
+        "F:ml430-mutation-c86940b52af8159ca9b381d6",
+        "F:ml430-nat-add-modeq-left-e3b1fba9",
+        "F:ml430-nat-add-modeq-right-e2f11f21",
+        "F:ml430-nat-mod-lcm-ee6bdd41",
+        "F:ml430-nat-mod-modeq-436e4c10",
+        "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+        "F:ml430-nat-modeq-add-left-e83f0700",
+        "F:ml430-nat-modeq-add-right-8e2ca0cc",
+        "F:ml430-nat-modeq-add-right-cancel-e871facf",
+        "F:ml430-nat-modeq-comm-24b71e7a",
+        "F:ml430-nat-modeq-dvd-iff-8f130450",
+        "F:ml430-nat-modeq-gcd-eq-5167ff4f",
+        "F:ml430-nat-modeq-of-dvd-d75cc374",
+        "F:ml430-nat-modeq-of-mul-left-88d20bca",
+        "F:ml430-nat-modeq-of-mul-right-43078e1c",
+        "F:ml430-nat-modeq-one-516d46e8",
+        "F:ml430-nat-modeq-refl-d870c8f5",
+        "F:ml430-nat-modeq-symm-0a3d4d18",
+        "F:ml430-nat-modeq-trans-ef9d1c46",
+        "F:ml430-nat-modulus-modeq-zero-fd9af096"
+      ],
+      "formalization_qualifiers": [
+        {
+          "coverage": "supporting-law",
+          "fact_count": 1
+        }
+      ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 1,
+      "qualified_formalization_fact_ids": [
+        "F:ml430-int-modeq-refl-30e15520"
+      ],
+      "qualified_formalization_statuses": {
+        "proved": 1
+      },
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:modular-arithmetic@understand",
+      "coverage_state": "fact-formalization-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [
+        {
+          "coverage": "relation-law",
+          "fact_count": 1
+        }
+      ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 1,
+      "qualified_formalization_fact_ids": [
+        "F:ml430-int-modeq-comm-1e4bcc07"
+      ],
+      "qualified_formalization_statuses": {
+        "proved": 1
+      },
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:prime-number",
+      "coverage_state": "family-topic-only",
+      "family_topic_fact_count": 21,
+      "family_topic_fact_ids": [
+        "F:ml430-mutation-5179f333b8333ecff8adc223",
+        "F:ml430-nat-coprime-odd-of-left-ed80ab44",
+        "F:ml430-nat-coprime-odd-of-right-8dc1decc",
+        "F:ml430-nat-coprime-of-dvd-6f652673",
+        "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+        "F:ml430-nat-coprime-of-lt-prime-1978a919",
+        "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
+        "F:ml430-nat-coprime-primes-5769049f",
+        "F:ml430-nat-coprime-two-left-1b47e7c4",
+        "F:ml430-nat-coprime-two-right-7c5a1850",
+        "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
+        "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
+        "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
+        "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439",
+        "F:ml430-nat-prime-dvd-of-dvd-pow-e76f834a",
+        "F:ml430-nat-prime-even-iff-d068ec82",
+        "F:ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786",
+        "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
+        "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
+        "F:ml430-nat-prime-pred-pos-4e67ac4c",
+        "F:ml430-nat-succ-pred-prime-4feb123f"
+      ],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:square-root",
+      "coverage_state": "family-topic-only",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:well-definedness",
+      "coverage_state": "kernel-semantic-anchor-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 3,
+      "kernel_semantic_anchor_ids": [
+        "CReal.add_congr",
+        "CReal.mul_congr",
+        "CReal.neg_congr"
+      ],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    }
+  ],
+  "derivation": {
+    "catalog_sha256": "4a6ac0c9ee34e7c6a09b596e501ba94be4b1d962cf9ed02c7f1ed4dece771117",
+    "crosswalk_sha256": "65a9b89f49f32bea18531ba748f3ff2f55142ecc176e2c01b40f452d3261a456",
+    "evaluation_partitions": [
+      "development",
+      "train"
+    ],
+    "nursery_sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1",
+    "overlay_sha256": "346b2c1d1df0f537db5c8377b8c0e22eac101bd37ec6335018e247d185601d7d",
+    "trust_boundary": "train/development fact coverage and separately reviewed kernel-anchor reporting only; never held-out inspection, proof, operation, or admission authority"
+  },
+  "kind": "axeyum-autogenesis-concept-coverage-projection",
+  "schema_version": 1
+}

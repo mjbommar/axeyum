@@ -129,6 +129,25 @@ ledger authority:
 python3 scripts/check-autogenesis-type-slice-producer-census.py
 ```
 
+`producer-outcome-observations-v1.json` is a generated, outcome-safe view of
+that same pinned census, grouped by reviewed fact family, statement shape, and
+exact-source versus semantic-abstraction boundary. It contains train/development
+rows only, explicitly records zero held-out observations, and grants no
+operation, proof, admission, or scheduling authority:
+
+```sh
+just autogenesis-producer-outcomes
+```
+
+`producer-evaluation-frontier-v1.json` is the deterministic, partition-safe
+input set for a future general-producer run. It selects dependency-ready facts
+only from the frozen train/development partitions and reports held-out or
+out-of-population ready facts only as aggregate exclusions:
+
+```sh
+just autogenesis-producer-evaluation-frontier
+```
+
 `mathlib-factorial-zero-admission-v1.json` binds the second family member's
 clean-commit execution, crash-recovered ledger transition, complete external
 archive, and detached-worktree replay. It uses the same generic admission
