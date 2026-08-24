@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-composition-shape-classification",
+  "title": "Half-degree shape classification under binary polynomial composition",
+  "statement": "Let f and sigma be monic binary polynomials of positive degrees n and k, and suppose deg(f-x^n)<=floor(n/2). Then f(sigma) has no nonleading term above floor(nk/2) if and only if sigma=x^k, or n is a power of two and deg(sigma-x^k)<=floor(k/2).",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"equivalence\":\"shaped(f(sigma)) iff sigma=x^k or (is_power_of_two(n) and shaped(sigma))\",\"field_order\":2,\"format\":\"axeyum-gf2-composition-shape-classification\",\"leading_tail_degree\":\"nk-(k-s)*2^v2(n)\",\"version\":1}",
+    "fragment": "gf2-polynomial-identity",
+    "free_symbols": ["f", "sigma", "n", "k", "s"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "gf2-polynomial-semantics-v1",
+    "characteristic-two-frobenius",
+    "binary-place-decomposition"
+  ],
+  "evidence": [
+    {
+      "id": "gf2-composition-shape-native-check",
+      "kind": "exhaustive-enumeration",
+      "supports": "The arithmetic largest-proper-submask criterion, equivalent power-of-two classification, direct Horner composition, and independence from the shaped source tail.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features composition_shape_classification",
+      "artifact": "crates/axeyum-cas/src/gf2.rs",
+      "notes": "The universal step is the distinct-degree Frobenius expansion recorded in ADR-0566. The 868 map/degree and 5580 varied-source cells are mutation controls, not a replacement for that argument."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "direct characteristic-two polynomial algebra"
+  },
+  "notes": "This theorem classifies shape preservation only. Irreducibility of a permitted composition remains a separate certificate obligation."
+}
