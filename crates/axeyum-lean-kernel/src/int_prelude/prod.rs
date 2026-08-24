@@ -793,3 +793,1342 @@ pub(super) fn declare_prod_range_swap_adjacent(d: &mut IntDev<'_>) -> Result<(),
 
     d.declare_theorem(p.prod_range_swap_adjacent, full_stmt, full_value)
 }
+
+// ---------------------------------------------------------------------------
+// `Int.prodRange_swap` — the general transposition (any `i < j`, not just
+// adjacent indices).
+// ---------------------------------------------------------------------------
+//
+// `Int.prodRange_swap : ∀ f g i j n, Lt i j → Lt j n → Eq Int (g i) (f j) →
+// Eq Int (g j) (f i) → (∀ k, Not (Eq Nat k i) → Not (Eq Nat k j) →
+// Eq Int (f k) (g k)) → Eq Int (prodRange f n) (prodRange g n)` — stated the
+// way `prodRange_swap_adjacent` is (`g` supplied by hypothesis, not computed),
+// for the same reason: it keeps the CALLER free of decidable equality. This
+// proof cannot avoid decidable equality itself, though — unlike
+// `swap_adjacent`, whose caller always already holds the rearranged partner
+// function, THIS theorem has to build one, for two indices that may be
+// arbitrarily far apart. It does so with `point_swap` (below), an explicit
+// `Nat.ble`-cascaded case-split (never `Nat.beq`) generalizing
+// `nat_prelude/finite.rs`'s pigeonhole `compact` from one cut point to two.
+//
+// Route: extract `d` with `Nat.le_dest (succ i) j (Lt i j)`, so
+// `j = add (succ i) d`, and induct on `d` (generalized over `f`, `g` — the
+// recursive call needs a DIFFERENT pair, exactly as the pigeonhole's own
+// induction generalizes over `f`). Base (`d = zero`): `j` is definitionally
+// `succ i`, so the goal literally IS `prod_range_swap_adjacent`'s statement.
+// Step (`d = succ d'`, `j' := add (succ i) d'`, so `j = succ j'`
+// definitionally): conjugate through the identity
+// `(j' j) ∘ (i j') ∘ (j' j) = (i j)` — `A := point_swap f j' j` (adjacent),
+// `prod_range_swap_adjacent(f, A, j', n)`; `B := point_swap A i j'` (gap `d'`,
+// the induction hypothesis's OWN canonical partner for `A`, supplied to it);
+// `C := point_swap B j' j` (adjacent again),
+// `prod_range_swap_adjacent(B, C, j', n)`. `C` and the caller's `g` then agree
+// pointwise everywhere (six live regions relative to `i`, `j'`, `j`, worked
+// out by [`swap_conjugation_agrees_with_g`]; a seventh, `j' < k < j`, is
+// impossible since `j = succ j'` and closes by contradiction), so
+// `Int.prodRange_congr` closes `prodRange C n = prodRange g n`.
+
+/// `Bool.rec.{1}` selecting between two `Int` values — the `Int` counterpart
+/// of `NatOps::bool_select_nat`, which is hardwired to `Nat`.
+fn bool_select_int(
+    d: &mut IntDev<'_>,
+    condition: ExprId,
+    on_true: ExprId,
+    on_false: ExprId,
+) -> ExprId {
+    let bool_ty = d.bool_ty();
+    let int_ty = d.int_ty();
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, bool_ty, int_ty, BinderInfo::Default);
+    let one = d.level_one();
+    let bool_rec = d.int().logic.bool_rec;
+    let rec = d.kernel().const_(bool_rec, vec![one]);
+    d.apply(rec, &[motive, on_false, on_true, condition])
+}
+
+/// `heq : Eq Bool cond true ⊢ Eq Int (bool_select_int cond a b) a`.
+fn select_int_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let true_val = d.bool_true();
+    let symm_hb = d.bool_symm(cond, true_val, heq);
+    let motive = d.bool_eq_motive(true_val, &|d, value| {
+        let sel = bool_select_int(d, value, a, b);
+        d.ieq(sel, a)
+    });
+    let refl_case = d.irefl(a);
+    d.bool_transport(true_val, motive, refl_case, cond, symm_hb)
+}
+
+/// `heq : Eq Bool cond false ⊢ Eq Int (bool_select_int cond a b) b`.
+fn select_int_false(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let false_val = d.bool_false();
+    let symm_hb = d.bool_symm(cond, false_val, heq);
+    let motive = d.bool_eq_motive(false_val, &|d, value| {
+        let sel = bool_select_int(d, value, a, b);
+        d.ieq(sel, b)
+    });
+    let refl_case = d.irefl(b);
+    d.bool_transport(false_val, motive, refl_case, cond, symm_hb)
+}
+
+/// `h : Lt a b ⊢ Le a b` — weaken a strict order fact by one step
+/// (`Nat.le_succ` + `Nat.le_trans`).
+fn nat_le_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let p = d.int();
+    let sa = d.succ(a);
+    let le_a_sa = d.lemma(p.nat.le_succ, &[a]);
+    d.lemma(p.nat.le_trans, &[a, sa, b, le_a_sa, h])
+}
+
+/// `h : Lt b a ⊢ Eq Bool (Nat.ble a b) false` — the "generalize the selector,
+/// then instantiate at `bool_refl(condition)`" trick
+/// `nat_prelude/finite.rs`'s `compact_eq_of_gt` uses, extracted generically:
+/// `point_swap`'s nested selection needs this fact at every level, not once.
+fn ble_eq_false_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h_lt: ExprId) -> ExprId {
+    let p = d.int();
+    let cond = d.ble(a, b);
+    let false_val = d.bool_false();
+    let true_val = d.bool_true();
+    let bool_ty = d.bool_ty();
+
+    let branch_for = |d: &mut IntDev<'_>, selector: ExprId| -> ExprId {
+        let eq_cond_sel = d.bool_eq(cond, selector);
+        let concl = d.bool_eq(selector, false_val);
+        d.arrow(eq_cond_sel, concl)
+    };
+    let false_minor = {
+        let heq_fv = d.fresh_fvar();
+        let heq_ty = d.bool_eq(cond, false_val);
+        let body = d.bool_refl(false_val);
+        d.lam_fv(heq_fv, heq_ty, body)
+    };
+    let true_minor = {
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let heq_ty = d.bool_eq(cond, true_val);
+        let a_le_b = d.lemma(p.nat.le_of_ble_eq_true, &[a, b, heq]);
+        let succ_b = d.succ(b);
+        let succ_b_le_b = d.lemma(p.nat.le_trans, &[succ_b, a, b, h_lt, a_le_b]);
+        let false_pf = d.lemma(p.nat.not_succ_le_self, &[b, succ_b_le_b]);
+        let concl_ty = d.bool_eq(true_val, false_val);
+        let body = d.absurd(concl_ty, false_pf);
+        d.lam_fv(heq_fv, heq_ty, body)
+    };
+    let motive = {
+        let sel_fv = d.fresh_fvar();
+        let sel = d.kernel().fvar(sel_fv);
+        let body = branch_for(d, sel);
+        d.lam_fv(sel_fv, bool_ty, body)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.int().logic.bool_rec;
+    let rec = d.kernel().const_(bool_rec, vec![level_zero]);
+    let selected = d.apply(rec, &[motive, false_minor, true_minor, cond]);
+    let cond_refl = d.bool_refl(cond);
+    d.apply(selected, &[cond_refl])
+}
+
+// --- `point_swap`: the concrete two-point swap `compact` never needed -----
+
+/// `point_swap f p q`'s outermost (4th) layer: for `k > q`, `f k`; for
+/// `k = q`, `f p` — the two cases [`ps_level3`] delegates to.
+fn ps_level4(d: &mut IntDev<'_>, f: ExprId, p_idx: ExprId, q_idx: ExprId, k: ExprId) -> ExprId {
+    let fp = d.apply(f, &[p_idx]);
+    let fk = d.apply(f, &[k]);
+    let le_k_q = d.ble(k, q_idx);
+    bool_select_int(d, le_k_q, fp, fk)
+}
+
+/// `point_swap f p q`'s 3rd layer: for `p < k < q`, `f k`; else [`ps_level4`].
+fn ps_level3(d: &mut IntDev<'_>, f: ExprId, p_idx: ExprId, q_idx: ExprId, k: ExprId) -> ExprId {
+    let fk = d.apply(f, &[k]);
+    let level4 = ps_level4(d, f, p_idx, q_idx, k);
+    let sk = d.succ(k);
+    let lt_k_q = d.ble(sk, q_idx);
+    bool_select_int(d, lt_k_q, fk, level4)
+}
+
+/// `point_swap f p q`'s 2nd layer: for `k = p`, `f q`; else [`ps_level3`].
+fn ps_level2(d: &mut IntDev<'_>, f: ExprId, p_idx: ExprId, q_idx: ExprId, k: ExprId) -> ExprId {
+    let fq = d.apply(f, &[q_idx]);
+    let level3 = ps_level3(d, f, p_idx, q_idx, k);
+    let le_k_p = d.ble(k, p_idx);
+    bool_select_int(d, le_k_p, fq, level3)
+}
+
+/// `point_swap f p q k` — the value at `k` of `f` with the values at `p` and
+/// `q` (`p < q`, supplied by the caller) exchanged: `f q` at `p`, `f p` at
+/// `q`, `f k` everywhere else. Four nested `Nat.ble` case-splits, never
+/// `Nat.beq` — the same convention `nat_prelude/finite.rs`'s pigeonhole
+/// `compact` uses, generalized from one cut point to two.
+///
+/// [`point_swap_eq_lt_p`], [`point_swap_eq_at_p`], [`point_swap_eq_between`],
+/// [`point_swap_eq_at_q`], and [`point_swap_eq_gt_q`] are this function's five
+/// correctness facts, one per region a `k` can fall in relative to `p < q`.
+fn point_swap(d: &mut IntDev<'_>, f: ExprId, p_idx: ExprId, q_idx: ExprId, k: ExprId) -> ExprId {
+    let fk = d.apply(f, &[k]);
+    let level2 = ps_level2(d, f, p_idx, q_idx, k);
+    let sk = d.succ(k);
+    let lt_k_p = d.ble(sk, p_idx);
+    bool_select_int(d, lt_k_p, fk, level2)
+}
+
+/// `h : Lt k p ⊢ Eq Int (point_swap f p q k) (f k)`.
+fn point_swap_eq_lt_p(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    p_idx: ExprId,
+    q_idx: ExprId,
+    k: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let fk = d.apply(f, &[k]);
+    let level2 = ps_level2(d, f, p_idx, q_idx, k);
+    let sk = d.succ(k);
+    let lt_k_p = d.ble(sk, p_idx);
+    let lt_true = d.lemma(p.nat.ble_eq_true_of_le, &[sk, p_idx, h]);
+    select_int_true(d, lt_k_p, fk, level2, lt_true)
+}
+
+/// `Eq Int (point_swap f p q p) (f q)`.
+fn point_swap_eq_at_p(d: &mut IntDev<'_>, f: ExprId, p_idx: ExprId, q_idx: ExprId) -> ExprId {
+    let p = d.int();
+    let fk = d.apply(f, &[p_idx]);
+    let fq = d.apply(f, &[q_idx]);
+    let level2 = ps_level2(d, f, p_idx, q_idx, p_idx);
+    let level3 = ps_level3(d, f, p_idx, q_idx, p_idx);
+    let sp = d.succ(p_idx);
+    let lt_k_p = d.ble(sp, p_idx);
+    let lt_succ_self_p = d.lemma(p.nat.lt_succ_self, &[p_idx]);
+    let lt_false = ble_eq_false_of_lt(d, sp, p_idx, lt_succ_self_p);
+    let step1 = select_int_false(d, lt_k_p, fk, level2, lt_false);
+    let le_k_p = d.ble(p_idx, p_idx);
+    let le_refl_p = d.lemma(p.nat.le_refl, &[p_idx]);
+    let le_true = d.lemma(p.nat.ble_eq_true_of_le, &[p_idx, p_idx, le_refl_p]);
+    let step2 = select_int_true(d, le_k_p, fq, level3, le_true);
+    let start = point_swap(d, f, p_idx, q_idx, p_idx);
+    let (_, proof) = d.ichain(start, &[(level2, step1), (fq, step2)]);
+    proof
+}
+
+/// `h1 : Lt p k, h2 : Lt k q ⊢ Eq Int (point_swap f p q k) (f k)`.
+#[allow(clippy::too_many_arguments)]
+fn point_swap_eq_between(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    p_idx: ExprId,
+    q_idx: ExprId,
+    k: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let fk = d.apply(f, &[k]);
+    let fq = d.apply(f, &[q_idx]);
+    let level2 = ps_level2(d, f, p_idx, q_idx, k);
+    let level3 = ps_level3(d, f, p_idx, q_idx, k);
+    let level4 = ps_level4(d, f, p_idx, q_idx, k);
+    let sk = d.succ(k);
+
+    let le_succ_k = d.lemma(p.nat.le_succ, &[k]);
+    let lt_p_sk = d.lemma(p.nat.lt_of_lt_of_le, &[p_idx, k, sk, h1, le_succ_k]);
+    let lt_k_p = d.ble(sk, p_idx);
+    let lt_k_p_false = ble_eq_false_of_lt(d, sk, p_idx, lt_p_sk);
+    let step1 = select_int_false(d, lt_k_p, fk, level2, lt_k_p_false);
+
+    let le_k_p = d.ble(k, p_idx);
+    let le_k_p_false = ble_eq_false_of_lt(d, k, p_idx, h1);
+    let step2 = select_int_false(d, le_k_p, fq, level3, le_k_p_false);
+
+    let lt_k_q = d.ble(sk, q_idx);
+    let lt_k_q_true = d.lemma(p.nat.ble_eq_true_of_le, &[sk, q_idx, h2]);
+    let step3 = select_int_true(d, lt_k_q, fk, level4, lt_k_q_true);
+
+    let start = point_swap(d, f, p_idx, q_idx, k);
+    let (_, proof) = d.ichain(start, &[(level2, step1), (level3, step2), (fk, step3)]);
+    proof
+}
+
+/// `h_pq : Lt p q ⊢ Eq Int (point_swap f p q q) (f p)`.
+fn point_swap_eq_at_q(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    p_idx: ExprId,
+    q_idx: ExprId,
+    h_pq: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let fk = d.apply(f, &[q_idx]);
+    let fp = d.apply(f, &[p_idx]);
+    let level2 = ps_level2(d, f, p_idx, q_idx, q_idx);
+    let level3 = ps_level3(d, f, p_idx, q_idx, q_idx);
+    let level4 = ps_level4(d, f, p_idx, q_idx, q_idx);
+    let sq = d.succ(q_idx);
+
+    let le_succ_q = d.lemma(p.nat.le_succ, &[q_idx]);
+    let lt_p_sq = d.lemma(p.nat.lt_of_lt_of_le, &[p_idx, q_idx, sq, h_pq, le_succ_q]);
+    let lt_k_p = d.ble(sq, p_idx);
+    let lt_k_p_false = ble_eq_false_of_lt(d, sq, p_idx, lt_p_sq);
+    let step1 = select_int_false(d, lt_k_p, fk, level2, lt_k_p_false);
+
+    let le_k_p = d.ble(q_idx, p_idx);
+    let le_k_p_false = ble_eq_false_of_lt(d, q_idx, p_idx, h_pq);
+    let step2 = select_int_false(d, le_k_p, fk, level3, le_k_p_false);
+
+    let lt_succ_self_q = d.lemma(p.nat.lt_succ_self, &[q_idx]);
+    let lt_k_q = d.ble(sq, q_idx);
+    let lt_k_q_false = ble_eq_false_of_lt(d, sq, q_idx, lt_succ_self_q);
+    let step3 = select_int_false(d, lt_k_q, fk, level4, lt_k_q_false);
+
+    let le_refl_q = d.lemma(p.nat.le_refl, &[q_idx]);
+    let le_k_q = d.ble(q_idx, q_idx);
+    let le_k_q_true = d.lemma(p.nat.ble_eq_true_of_le, &[q_idx, q_idx, le_refl_q]);
+    let step4 = select_int_true(d, le_k_q, fp, fk, le_k_q_true);
+
+    let start = point_swap(d, f, p_idx, q_idx, q_idx);
+    let (_, proof) = d.ichain(
+        start,
+        &[
+            (level2, step1),
+            (level3, step2),
+            (level4, step3),
+            (fp, step4),
+        ],
+    );
+    proof
+}
+
+/// `h_pq : Lt p q, h : Lt q k ⊢ Eq Int (point_swap f p q k) (f k)`.
+#[allow(clippy::too_many_arguments)]
+fn point_swap_eq_gt_q(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    p_idx: ExprId,
+    q_idx: ExprId,
+    k: ExprId,
+    h_pq: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let fk = d.apply(f, &[k]);
+    let fq = d.apply(f, &[q_idx]);
+    let fp = d.apply(f, &[p_idx]);
+    let level2 = ps_level2(d, f, p_idx, q_idx, k);
+    let level3 = ps_level3(d, f, p_idx, q_idx, k);
+    let level4 = ps_level4(d, f, p_idx, q_idx, k);
+    let sk = d.succ(k);
+
+    let le_p_q = nat_le_of_lt(d, p_idx, q_idx, h_pq);
+    let lt_p_k = d.lemma(p.nat.lt_of_le_of_lt, &[p_idx, q_idx, k, le_p_q, h]);
+
+    let le_succ_k = d.lemma(p.nat.le_succ, &[k]);
+    let lt_p_sk = d.lemma(p.nat.lt_of_lt_of_le, &[p_idx, k, sk, lt_p_k, le_succ_k]);
+    let lt_k_p = d.ble(sk, p_idx);
+    let lt_k_p_false = ble_eq_false_of_lt(d, sk, p_idx, lt_p_sk);
+    let step1 = select_int_false(d, lt_k_p, fk, level2, lt_k_p_false);
+
+    let le_k_p = d.ble(k, p_idx);
+    let le_k_p_false = ble_eq_false_of_lt(d, k, p_idx, lt_p_k);
+    let step2 = select_int_false(d, le_k_p, fq, level3, le_k_p_false);
+
+    let lt_q_sk = d.lemma(p.nat.lt_of_lt_of_le, &[q_idx, k, sk, h, le_succ_k]);
+    let lt_k_q = d.ble(sk, q_idx);
+    let lt_k_q_false = ble_eq_false_of_lt(d, sk, q_idx, lt_q_sk);
+    let step3 = select_int_false(d, lt_k_q, fk, level4, lt_k_q_false);
+
+    let le_k_q = d.ble(k, q_idx);
+    let le_k_q_false = ble_eq_false_of_lt(d, k, q_idx, h);
+    let step4 = select_int_false(d, le_k_q, fp, fk, le_k_q_false);
+
+    let start = point_swap(d, f, p_idx, q_idx, k);
+    let (_, proof) = d.ichain(
+        start,
+        &[
+            (level2, step1),
+            (level3, step2),
+            (level4, step3),
+            (fk, step4),
+        ],
+    );
+    proof
+}
+
+// --- order trichotomy, rebuilt for `IntDev` --------------------------------
+
+/// `Or (Lt a b) (Or (Eq Nat a b) (Lt b a))`, via `Nat.le_total` +
+/// `Nat.lt_or_eq_of_le` — the `IntDev` counterpart of
+/// `nat_prelude/finite.rs`'s private `trichotomy` (typed over `NatDev`, so
+/// not reusable here without a signature change to that file).
+fn nat_trichotomy(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+    let p = d.int();
+    let lt_ab = d.lt(a, b);
+    let eq_ab = d.eq(a, b);
+    let lt_ba = d.lt(b, a);
+    let inner = d.or(eq_ab, lt_ba);
+    let target = d.or(lt_ab, inner);
+
+    let total = d.lemma(p.nat.le_total, &[a, b]);
+    let le_ab = d.le(a, b);
+    let le_ba = d.le(b, a);
+
+    let on_left = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+        let sub = d.lemma(p.nat.lt_or_eq_of_le, &[a, b, h]);
+        let on1 = &|d: &mut IntDev<'_>, h2: ExprId| d.or_inl(lt_ab, inner, h2);
+        let on2 = &|d: &mut IntDev<'_>, h2: ExprId| {
+            let mid = d.or_inl(eq_ab, lt_ba, h2);
+            d.or_inr(lt_ab, inner, mid)
+        };
+        d.or_elim(lt_ab, eq_ab, target, sub, on1, on2)
+    };
+    let on_right = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+        let sub = d.lemma(p.nat.lt_or_eq_of_le, &[b, a, h]);
+        let eq_ba = d.eq(b, a);
+        // `sub : Or (Lt b a) (Eq Nat b a)` — LEFT is `Lt b a`, RIGHT is
+        // `Eq Nat b a` (`lt_or_eq_of_le`'s own disjunct order), so `on1` here
+        // must handle `Lt b a` and `on2` must handle `Eq Nat b a`.
+        let on1 = &|d: &mut IntDev<'_>, h2: ExprId| {
+            let mid = d.or_inr(eq_ab, lt_ba, h2);
+            d.or_inr(lt_ab, inner, mid)
+        };
+        let on2 = &|d: &mut IntDev<'_>, h2: ExprId| {
+            let eq_ab_pf = d.symm(b, a, h2);
+            let mid = d.or_inl(eq_ab, lt_ba, eq_ab_pf);
+            d.or_inr(lt_ab, inner, mid)
+        };
+        d.or_elim(lt_ba, eq_ba, target, sub, on1, on2)
+    };
+    d.or_elim(le_ab, le_ba, target, total, on_left, on_right)
+}
+
+/// `tri : Or (Lt a b) (Or (Eq Nat a b) (Lt b a))`, `not_eq : Not (Eq Nat a b)`
+/// `⊢ Or (Lt a b) (Lt b a)` — eliminate the middle case of [`nat_trichotomy`].
+fn nat_two_way(d: &mut IntDev<'_>, a: ExprId, b: ExprId, tri: ExprId, not_eq: ExprId) -> ExprId {
+    let lt_ab = d.lt(a, b);
+    let eq_ab = d.eq(a, b);
+    let lt_ba = d.lt(b, a);
+    let inner = d.or(eq_ab, lt_ba);
+    let target = d.or(lt_ab, lt_ba);
+
+    let on_left = &|d: &mut IntDev<'_>, h: ExprId| d.or_inl(lt_ab, lt_ba, h);
+    let on_right = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+        let sub_left = &|d: &mut IntDev<'_>, h2: ExprId| {
+            let false_pf = d.apply(not_eq, &[h2]);
+            d.absurd(target, false_pf)
+        };
+        let sub_right = &|d: &mut IntDev<'_>, h2: ExprId| d.or_inr(lt_ab, lt_ba, h2);
+        d.or_elim(eq_ab, lt_ba, target, h, sub_left, sub_right)
+    };
+    d.or_elim(lt_ab, inner, target, tri, on_left, on_right)
+}
+
+/// `Not (Eq Nat a b) ⊢ Or (Lt a b) (Lt b a)`.
+fn nat_lt_or_gt_of_ne(d: &mut IntDev<'_>, a: ExprId, b: ExprId, not_eq: ExprId) -> ExprId {
+    let tri = nat_trichotomy(d, a, b);
+    nat_two_way(d, a, b, tri, not_eq)
+}
+
+/// `ne_p : Not (Eq Nat k p), ne_q : Not (Eq Nat k q), h_pq : Lt p q
+/// ⊢ Eq Int (f k) (point_swap f p q k)` — the "elsewhere" agreement
+/// `prod_range_swap_adjacent`'s own `g`-hypothesis wants, proved here for the
+/// CONCRETE `point_swap`-built partner rather than an arbitrarily supplied
+/// one.
+#[allow(clippy::too_many_arguments)]
+fn general_swap_agree(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    p_idx: ExprId,
+    q_idx: ExprId,
+    k: ExprId,
+    ne_p: ExprId,
+    ne_q: ExprId,
+    h_pq: ExprId,
+) -> ExprId {
+    let fk = d.apply(f, &[k]);
+    let swapped = point_swap(d, f, p_idx, q_idx, k);
+    let target = d.ieq(fk, swapped);
+    let dis_p = nat_lt_or_gt_of_ne(d, k, p_idx, ne_p);
+    let lt_kp = d.lt(k, p_idx);
+    let lt_pk = d.lt(p_idx, k);
+
+    let on_lt = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+        let eqp = point_swap_eq_lt_p(d, f, p_idx, q_idx, k, h);
+        d.isymm(swapped, fk, eqp)
+    };
+    let on_gt = &|d: &mut IntDev<'_>, h1: ExprId| -> ExprId {
+        let dis_q = nat_lt_or_gt_of_ne(d, k, q_idx, ne_q);
+        let lt_kq = d.lt(k, q_idx);
+        let lt_qk = d.lt(q_idx, k);
+        let on_between = &|d: &mut IntDev<'_>, h2: ExprId| -> ExprId {
+            let eqp = point_swap_eq_between(d, f, p_idx, q_idx, k, h1, h2);
+            d.isymm(swapped, fk, eqp)
+        };
+        let on_gt_q = &|d: &mut IntDev<'_>, h2: ExprId| -> ExprId {
+            let eqp = point_swap_eq_gt_q(d, f, p_idx, q_idx, k, h_pq, h2);
+            d.isymm(swapped, fk, eqp)
+        };
+        d.or_elim(lt_kq, lt_qk, target, dis_q, on_between, on_gt_q)
+    };
+    d.or_elim(lt_kp, lt_pk, target, dis_p, on_lt, on_gt)
+}
+
+/// The four hypothesis types plus the conclusion of `prod_range_swap`'s
+/// statement, parameterized by explicit `(f, g, i, j, n)` — shared between
+/// [`swap_aux_motive`] (needs it at `j := add (succ i) d`) and
+/// [`swap_aux_step`]'s final wrapping (needs it at `j := succ j'`).
+fn swap_hyp_types(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    g: ExprId,
+    i: ExprId,
+    j: ExprId,
+    n: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId, ExprId) {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let h_jn_ty = d.lt(j, n);
+    let fj = d.apply(f, &[j]);
+    let gi = d.apply(g, &[i]);
+    let hyp_gi_ty = d.ieq(gi, fj);
+    let fi = d.apply(f, &[i]);
+    let gj = d.apply(g, &[j]);
+    let hyp_gj_ty = d.ieq(gj, fi);
+    let hyp_agree_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let eq_ne_ki = d.eq(k, i);
+        let ne_ki = d.not(eq_ne_ki);
+        let eq_ne_kj = d.eq(k, j);
+        let ne_kj = d.not(eq_ne_kj);
+        let fk = d.apply(f, &[k]);
+        let gk = d.apply(g, &[k]);
+        let concl = d.ieq(fk, gk);
+        let inner = d.arrow(ne_kj, concl);
+        let step_ = d.arrow(ne_ki, inner);
+        d.pi_fv(k_fv, nat, step_)
+    };
+    let lhs = d.const_app(p.prod_range, &[f, n]);
+    let rhs = d.const_app(p.prod_range, &[g, n]);
+    let conclusion = d.ieq(lhs, rhs);
+    (h_jn_ty, hyp_gi_ty, hyp_gj_ty, hyp_agree_ty, conclusion)
+}
+
+// --- the six live regions of `swap_conjugation_agrees_with_g` -------------
+
+/// `k < i` (hence `k < j'`): `A k = f k`, `B k = A k`, `C k = B k` (all three
+/// `point_swap`s land in their `lt_p` case), and `f k = g k` from `h_agree`.
+#[allow(clippy::too_many_arguments)]
+fn region_below_i(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    a_fn: ExprId,
+    b_fn: ExprId,
+    c_fn: ExprId,
+    g: ExprId,
+    i: ExprId,
+    j_prime: ExprId,
+    j: ExprId,
+    k: ExprId,
+    le_i_jprime: ExprId,
+    le_jprime_j: ExprId,
+    h_agree: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let lt_k_jprime = d.lemma(p.nat.lt_of_lt_of_le, &[k, i, j_prime, h, le_i_jprime]);
+    let lt_k_j = d.lemma(
+        p.nat.lt_of_lt_of_le,
+        &[k, j_prime, j, lt_k_jprime, le_jprime_j],
+    );
+    let a_fact = point_swap_eq_lt_p(d, f, j_prime, j, k, lt_k_jprime);
+    let b_fact = point_swap_eq_lt_p(d, a_fn, i, j_prime, k, h);
+    let c_fact = point_swap_eq_lt_p(d, b_fn, j_prime, j, k, lt_k_jprime);
+    let ne_ki = ne_of_lt(d, k, i, h);
+    let ne_kj = ne_of_lt(d, k, j, lt_k_j);
+    chain_to_g_via_agree(
+        d, f, g, a_fn, b_fn, c_fn, k, a_fact, b_fact, c_fact, h_agree, ne_ki, ne_kj,
+    )
+}
+
+/// `i < k < j'`: `A k = f k`, `B k = A k` (`point_swap`'s `between` case on
+/// `(i, j')`), `C k = B k`, and `f k = g k` from `h_agree`.
+#[allow(clippy::too_many_arguments)]
+fn region_between_i_jprime(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    a_fn: ExprId,
+    b_fn: ExprId,
+    c_fn: ExprId,
+    g: ExprId,
+    i: ExprId,
+    j_prime: ExprId,
+    j: ExprId,
+    k: ExprId,
+    le_jprime_j: ExprId,
+    h_agree: ExprId,
+    h_i_k: ExprId,
+    h_k_jprime: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let lt_k_j = d.lemma(
+        p.nat.lt_of_lt_of_le,
+        &[k, j_prime, j, h_k_jprime, le_jprime_j],
+    );
+    let a_fact = point_swap_eq_lt_p(d, f, j_prime, j, k, h_k_jprime);
+    let b_fact = point_swap_eq_between(d, a_fn, i, j_prime, k, h_i_k, h_k_jprime);
+    let c_fact = point_swap_eq_lt_p(d, b_fn, j_prime, j, k, h_k_jprime);
+    let ne_ki = ne_of_lt_symm(d, i, k, h_i_k);
+    let ne_kj = ne_of_lt(d, k, j, lt_k_j);
+    chain_to_g_via_agree(
+        d, f, g, a_fn, b_fn, c_fn, k, a_fact, b_fact, c_fact, h_agree, ne_ki, ne_kj,
+    )
+}
+
+/// `k > j`: `A k = f k`, `B k = A k`, `C k = B k` (all three `gt_q` cases),
+/// and `f k = g k` from `h_agree`.
+#[allow(clippy::too_many_arguments)]
+fn region_above_j(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    a_fn: ExprId,
+    b_fn: ExprId,
+    c_fn: ExprId,
+    g: ExprId,
+    i: ExprId,
+    j_prime: ExprId,
+    j: ExprId,
+    k: ExprId,
+    h_i_lt_jprime: ExprId,
+    h_jprime_lt_j: ExprId,
+    h_agree: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let le_j_k = nat_le_of_lt(d, j, k, h);
+    let lt_jprime_k = d.lemma(
+        p.nat.lt_of_lt_of_le,
+        &[j_prime, j, k, h_jprime_lt_j, le_j_k],
+    );
+    let le_jprime_k = nat_le_of_lt(d, j_prime, k, lt_jprime_k);
+    let lt_i_k = d.lemma(
+        p.nat.lt_of_lt_of_le,
+        &[i, j_prime, k, h_i_lt_jprime, le_jprime_k],
+    );
+    let a_fact = point_swap_eq_gt_q(d, f, j_prime, j, k, h_jprime_lt_j, h);
+    let b_fact = point_swap_eq_gt_q(d, a_fn, i, j_prime, k, h_i_lt_jprime, lt_jprime_k);
+    let c_fact = point_swap_eq_gt_q(d, b_fn, j_prime, j, k, h_jprime_lt_j, h);
+    let ne_ki = ne_of_lt_symm(d, i, k, lt_i_k);
+    let ne_kj = ne_of_lt_symm(d, j, k, h);
+    chain_to_g_via_agree(
+        d, f, g, a_fn, b_fn, c_fn, k, a_fact, b_fact, c_fact, h_agree, ne_ki, ne_kj,
+    )
+}
+
+/// Chain `c_fact : Eq Int (C k) (B k)`, `b_fact : Eq Int (B k) (A k)`,
+/// `a_fact : Eq Int (A k) (f k)` into `Eq Int (C k) (f k)`, then close against
+/// `g k` via `h_agree k ne_ki ne_kj : Eq Int (f k) (g k)`.
+#[allow(clippy::too_many_arguments)]
+fn chain_to_g_via_agree(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    g: ExprId,
+    a_fn: ExprId,
+    b_fn: ExprId,
+    c_fn: ExprId,
+    k: ExprId,
+    a_fact: ExprId,
+    b_fact: ExprId,
+    c_fact: ExprId,
+    h_agree: ExprId,
+    ne_ki: ExprId,
+    ne_kj: ExprId,
+) -> ExprId {
+    let ck = d.apply(c_fn, &[k]);
+    let bk = d.apply(b_fn, &[k]);
+    let ak = d.apply(a_fn, &[k]);
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let step_cb = d.itrans(ck, bk, ak, c_fact, b_fact);
+    let step_to_f = d.itrans(ck, ak, fk, step_cb, a_fact);
+    let agree_k = d.apply(h_agree, &[k, ne_ki, ne_kj]);
+    d.itrans(ck, fk, gk, step_to_f, agree_k)
+}
+
+// --- the three exact-index regions, and the impossible one -----------------
+
+/// `Eq Int (C i) (g i)`: `C(i) = B(i) = A(j') = f(j) = g(i)`, the second step
+/// via [`point_swap_eq_at_p`] applied twice (`B` at `i` lands on `A j'`, which
+/// itself needs resolving through `A`'s own pair) and the last via `h_gi`.
+fn c_agrees_with_g_at_i(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    a_fn: ExprId,
+    b_fn: ExprId,
+    c_fn: ExprId,
+    g: ExprId,
+    i: ExprId,
+    j_prime: ExprId,
+    j: ExprId,
+    h_i_lt_jprime: ExprId,
+    h_gi: ExprId,
+) -> ExprId {
+    let b_fact = point_swap_eq_at_p(d, a_fn, i, j_prime);
+    let a_fact_jprime = point_swap_eq_at_p(d, f, j_prime, j);
+    let c_fact = point_swap_eq_lt_p(d, b_fn, j_prime, j, i, h_i_lt_jprime);
+
+    let ci = d.apply(c_fn, &[i]);
+    let bi = d.apply(b_fn, &[i]);
+    let ajprime = d.apply(a_fn, &[j_prime]);
+    let fj = d.apply(f, &[j]);
+    let gi = d.apply(g, &[i]);
+
+    let step1 = d.itrans(ci, bi, ajprime, c_fact, b_fact);
+    let step2 = d.itrans(ci, ajprime, fj, step1, a_fact_jprime);
+    let hgi_rev = d.isymm(gi, fj, h_gi);
+    d.itrans(ci, fj, gi, step2, hgi_rev)
+}
+
+/// `Eq Int (C j') (g j')`: `C(j') = B(j) = A(j) = f(j') = g(j')`, the last
+/// step via `h_agree` (`j'` is neither `i` nor `j`).
+#[allow(clippy::too_many_arguments)]
+fn c_agrees_with_g_at_jprime(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    a_fn: ExprId,
+    b_fn: ExprId,
+    c_fn: ExprId,
+    g: ExprId,
+    i: ExprId,
+    j_prime: ExprId,
+    j: ExprId,
+    h_i_lt_jprime: ExprId,
+    h_jprime_lt_j: ExprId,
+    h_agree: ExprId,
+) -> ExprId {
+    let c_fact = point_swap_eq_at_p(d, b_fn, j_prime, j);
+    let b_fact = point_swap_eq_gt_q(d, a_fn, i, j_prime, j, h_i_lt_jprime, h_jprime_lt_j);
+    let a_fact = point_swap_eq_at_q(d, f, j_prime, j, h_jprime_lt_j);
+
+    let cjp = d.apply(c_fn, &[j_prime]);
+    let bj = d.apply(b_fn, &[j]);
+    let aj = d.apply(a_fn, &[j]);
+    let fjp = d.apply(f, &[j_prime]);
+    let gjp = d.apply(g, &[j_prime]);
+
+    let step1 = d.itrans(cjp, bj, aj, c_fact, b_fact);
+    let step2 = d.itrans(cjp, aj, fjp, step1, a_fact);
+    let ne_jp_i = ne_of_lt_symm(d, i, j_prime, h_i_lt_jprime);
+    let ne_jp_j = ne_of_lt(d, j_prime, j, h_jprime_lt_j);
+    let agree_jp = d.apply(h_agree, &[j_prime, ne_jp_i, ne_jp_j]);
+    d.itrans(cjp, fjp, gjp, step2, agree_jp)
+}
+
+/// `Eq Int (C j) (g j)`: `C(j) = B(j') = A(i) = f(i) = g(j)`, the last step
+/// via `h_gj`.
+#[allow(clippy::too_many_arguments)]
+fn c_agrees_with_g_at_j(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    a_fn: ExprId,
+    b_fn: ExprId,
+    c_fn: ExprId,
+    g: ExprId,
+    i: ExprId,
+    j_prime: ExprId,
+    j: ExprId,
+    h_i_lt_jprime: ExprId,
+    h_jprime_lt_j: ExprId,
+    h_gj: ExprId,
+) -> ExprId {
+    let c_fact = point_swap_eq_at_q(d, b_fn, j_prime, j, h_jprime_lt_j);
+    let b_fact = point_swap_eq_at_q(d, a_fn, i, j_prime, h_i_lt_jprime);
+    let a_fact = point_swap_eq_lt_p(d, f, j_prime, j, i, h_i_lt_jprime);
+
+    let cj = d.apply(c_fn, &[j]);
+    let bjp = d.apply(b_fn, &[j_prime]);
+    let ai = d.apply(a_fn, &[i]);
+    let fi = d.apply(f, &[i]);
+    let gj = d.apply(g, &[j]);
+
+    let step1 = d.itrans(cj, bjp, ai, c_fact, b_fact);
+    let step2 = d.itrans(cj, ai, fi, step1, a_fact);
+    let hgj_rev = d.isymm(gj, fi, h_gj);
+    d.itrans(cj, fi, gj, step2, hgj_rev)
+}
+
+/// `h1 : Lt j' k, h2 : Lt k j ⊢ target` for ANY `target` — the region
+/// `j' < k < j` is impossible since `j = succ j'` (`Nat.le_of_lt_succ` +
+/// `Nat.le_trans` + `Nat.not_succ_le_self`), so it closes by contradiction.
+fn region_impossible(
+    d: &mut IntDev<'_>,
+    j_prime: ExprId,
+    k: ExprId,
+    target: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let p = d.int();
+    // h2 : Lt k j, and j is literally `succ j_prime` at every call site, so
+    // h2 : Le (succ k) (succ j_prime) up to that unfold — `le_of_lt_succ`
+    // wants exactly `Lt k (succ j_prime)`, which `h2` already is.
+    let k_le_jprime = d.lemma(p.nat.le_of_lt_succ, &[k, j_prime, h2]);
+    let succ_jprime = d.succ(j_prime);
+    let succ_jprime_le_jprime =
+        d.lemma(p.nat.le_trans, &[succ_jprime, k, j_prime, h1, k_le_jprime]);
+    let false_pf = d.lemma(p.nat.not_succ_le_self, &[j_prime, succ_jprime_le_jprime]);
+    d.absurd(target, false_pf)
+}
+
+/// From `heq : Eq Nat k m` and `proof_at_m : Eq Int (C m) (g m)`, produce
+/// `Eq Int (C k) (g k)` by transporting along `heq` (reversed).
+fn transport_c_agrees(
+    d: &mut IntDev<'_>,
+    c_fn: ExprId,
+    g: ExprId,
+    k: ExprId,
+    m: ExprId,
+    heq: ExprId,
+    proof_at_m: ExprId,
+) -> ExprId {
+    let rev = d.symm(k, m, heq);
+    d.nat_rewrite(m, k, rev, proof_at_m, &|d, x| {
+        let cx = d.apply(c_fn, &[x]);
+        let gx = d.apply(g, &[x]);
+        d.ieq(cx, gx)
+    })
+}
+
+/// `Eq Int (C k) (g k)` for arbitrary `k`, where
+/// `C := point_swap (point_swap (point_swap f j' j) i j') j' j` is
+/// [`swap_aux_step`]'s conjugated transposition and `g` is the caller's own
+/// partner for `f` at `(i, j)` (`j = succ j'`). Case-splits `k` against `i`,
+/// then `j'`, then `j` (`nat_trichotomy`, nested); the six live regions each
+/// unwind `C`'s three `point_swap` layers back to `f` and close against `g`
+/// via `h_agree`/`h_gi`/`h_gj`; the seventh combination (`j' < k < j`) is
+/// impossible since `j = succ j'` ([`region_impossible`]).
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn swap_conjugation_agrees_with_g(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    a_fn: ExprId,
+    b_fn: ExprId,
+    c_fn: ExprId,
+    g: ExprId,
+    i: ExprId,
+    j_prime: ExprId,
+    j: ExprId,
+    k: ExprId,
+    h_i_lt_jprime: ExprId,
+    h_jprime_lt_j: ExprId,
+    h_gi: ExprId,
+    h_gj: ExprId,
+    h_agree: ExprId,
+) -> ExprId {
+    let ck = d.apply(c_fn, &[k]);
+    let gk = d.apply(g, &[k]);
+    let target = d.ieq(ck, gk);
+
+    let le_i_jprime = nat_le_of_lt(d, i, j_prime, h_i_lt_jprime);
+    let le_jprime_j = nat_le_of_lt(d, j_prime, j, h_jprime_lt_j);
+
+    let tri_i = nat_trichotomy(d, k, i);
+    let lt_ki = d.lt(k, i);
+    let eq_ki = d.eq(k, i);
+    let lt_ik = d.lt(i, k);
+    let inner_i = d.or(eq_ki, lt_ik);
+
+    let on_lt_ki = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+        region_below_i(
+            d,
+            f,
+            a_fn,
+            b_fn,
+            c_fn,
+            g,
+            i,
+            j_prime,
+            j,
+            k,
+            le_i_jprime,
+            le_jprime_j,
+            h_agree,
+            h,
+        )
+    };
+    let on_rest_i = &|d: &mut IntDev<'_>, h_inner: ExprId| -> ExprId {
+        let on_eq_ki = &|d: &mut IntDev<'_>, heq: ExprId| -> ExprId {
+            let proof_at_i = c_agrees_with_g_at_i(
+                d,
+                f,
+                a_fn,
+                b_fn,
+                c_fn,
+                g,
+                i,
+                j_prime,
+                j,
+                h_i_lt_jprime,
+                h_gi,
+            );
+            transport_c_agrees(d, c_fn, g, k, i, heq, proof_at_i)
+        };
+        let on_lt_ik = &|d: &mut IntDev<'_>, h_i_k: ExprId| -> ExprId {
+            let tri_jp = nat_trichotomy(d, k, j_prime);
+            let lt_k_jp = d.lt(k, j_prime);
+            let eq_k_jp = d.eq(k, j_prime);
+            let lt_jp_k = d.lt(j_prime, k);
+            let inner_jp = d.or(eq_k_jp, lt_jp_k);
+
+            let on_lt_k_jp = &|d: &mut IntDev<'_>, h_k_jp: ExprId| -> ExprId {
+                region_between_i_jprime(
+                    d,
+                    f,
+                    a_fn,
+                    b_fn,
+                    c_fn,
+                    g,
+                    i,
+                    j_prime,
+                    j,
+                    k,
+                    le_jprime_j,
+                    h_agree,
+                    h_i_k,
+                    h_k_jp,
+                )
+            };
+            let on_rest_jp = &|d: &mut IntDev<'_>, h_inner2: ExprId| -> ExprId {
+                let on_eq_k_jp = &|d: &mut IntDev<'_>, heq2: ExprId| -> ExprId {
+                    let proof_at_jp = c_agrees_with_g_at_jprime(
+                        d,
+                        f,
+                        a_fn,
+                        b_fn,
+                        c_fn,
+                        g,
+                        i,
+                        j_prime,
+                        j,
+                        h_i_lt_jprime,
+                        h_jprime_lt_j,
+                        h_agree,
+                    );
+                    transport_c_agrees(d, c_fn, g, k, j_prime, heq2, proof_at_jp)
+                };
+                let on_lt_jp_k = &|d: &mut IntDev<'_>, h_jp_k: ExprId| -> ExprId {
+                    let tri_j = nat_trichotomy(d, k, j);
+                    let lt_kj = d.lt(k, j);
+                    let eq_kj = d.eq(k, j);
+                    let lt_jk = d.lt(j, k);
+                    let inner_j = d.or(eq_kj, lt_jk);
+
+                    let on_lt_kj = &|d: &mut IntDev<'_>, h_kj: ExprId| -> ExprId {
+                        region_impossible(d, j_prime, k, target, h_jp_k, h_kj)
+                    };
+                    let on_rest_j = &|d: &mut IntDev<'_>, h_inner3: ExprId| -> ExprId {
+                        let on_eq_kj = &|d: &mut IntDev<'_>, heq3: ExprId| -> ExprId {
+                            let proof_at_j = c_agrees_with_g_at_j(
+                                d,
+                                f,
+                                a_fn,
+                                b_fn,
+                                c_fn,
+                                g,
+                                i,
+                                j_prime,
+                                j,
+                                h_i_lt_jprime,
+                                h_jprime_lt_j,
+                                h_gj,
+                            );
+                            transport_c_agrees(d, c_fn, g, k, j, heq3, proof_at_j)
+                        };
+                        let on_lt_jk = &|d: &mut IntDev<'_>, h_jk: ExprId| -> ExprId {
+                            region_above_j(
+                                d,
+                                f,
+                                a_fn,
+                                b_fn,
+                                c_fn,
+                                g,
+                                i,
+                                j_prime,
+                                j,
+                                k,
+                                h_i_lt_jprime,
+                                h_jprime_lt_j,
+                                h_agree,
+                                h_jk,
+                            )
+                        };
+                        d.or_elim(eq_kj, lt_jk, target, h_inner3, on_eq_kj, on_lt_jk)
+                    };
+                    d.or_elim(lt_kj, inner_j, target, tri_j, on_lt_kj, on_rest_j)
+                };
+                d.or_elim(eq_k_jp, lt_jp_k, target, h_inner2, on_eq_k_jp, on_lt_jp_k)
+            };
+            d.or_elim(lt_k_jp, inner_jp, target, tri_jp, on_lt_k_jp, on_rest_jp)
+        };
+        d.or_elim(eq_ki, lt_ik, target, h_inner, on_eq_ki, on_lt_ik)
+    };
+    d.or_elim(lt_ki, inner_i, target, tri_i, on_lt_ki, on_rest_i)
+}
+
+// --- the auxiliary induction, generalized over `f`, `g` at fixed `i`, `n` --
+
+/// `motive(dd) := ∀ f g, Lt j n → Eq(g i)(f j) → Eq(g j)(f i) →
+/// (∀k,¬k=i→¬k=j→Eq(f k)(g k)) → Eq(prodRange f n)(prodRange g n)`, where
+/// `j := add (succ i) dd`. `i`, `n` are FIXED across the induction (the
+/// recursive call reuses them, only `f`, `g` change); `dd` is what
+/// [`declare_prod_range_swap`] inducts on.
+fn swap_aux_motive(d: &mut IntDev<'_>, i: ExprId, n: ExprId, dd: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+    let fn_ty = d.arrow(nat, int_ty);
+    let succ_i = d.succ(i);
+    let j = d.add(succ_i, dd);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let (h_jn_ty, hyp_gi_ty, hyp_gj_ty, hyp_agree_ty, conclusion) =
+        swap_hyp_types(d, f, g, i, j, n);
+    let inner_stmt = {
+        let w3 = d.arrow(hyp_agree_ty, conclusion);
+        let w2 = d.arrow(hyp_gj_ty, w3);
+        let w1 = d.arrow(hyp_gi_ty, w2);
+        d.arrow(h_jn_ty, w1)
+    };
+    let with_g = d.pi_fv(g_fv, fn_ty, inner_stmt);
+    d.pi_fv(f_fv, fn_ty, with_g)
+}
+
+/// `dd = zero`: `j` is definitionally `succ i`, so `swap_aux_motive(zero)` IS
+/// `prod_range_swap_adjacent`'s statement (applied at `i`, `n`) up to the
+/// kernel's own unfolding of `add i zero`.
+fn swap_aux_base(d: &mut IntDev<'_>, i: ExprId, n: ExprId) -> ExprId {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+    let fn_ty = d.arrow(nat, int_ty);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let body = d.const_app(p.prod_range_swap_adjacent, &[f, g, i, n]);
+    let with_g = d.lam_fv(g_fv, fn_ty, body);
+    d.lam_fv(f_fv, fn_ty, with_g)
+}
+
+/// `dd = succ m`, `ih : swap_aux_motive(m)` ⊢ `swap_aux_motive(succ m)` — see
+/// the module doc's "Route" paragraph above `declare_prod_range_swap` for the
+/// conjugation this builds.
+#[allow(clippy::too_many_lines)]
+fn swap_aux_step(d: &mut IntDev<'_>, i: ExprId, n: ExprId, m: ExprId, ih: ExprId) -> ExprId {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+    let fn_ty = d.arrow(nat, int_ty);
+    let succ_i = d.succ(i);
+    let j_prime = d.add(succ_i, m);
+    let j = d.succ(j_prime);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let jn_fv = d.fresh_fvar();
+    let h_jn = d.kernel().fvar(jn_fv);
+    let gi_fv = d.fresh_fvar();
+    let h_gi = d.kernel().fvar(gi_fv);
+    let gj_fv = d.fresh_fvar();
+    let h_gj = d.kernel().fvar(gj_fv);
+    let agree_fv = d.fresh_fvar();
+    let h_agree = d.kernel().fvar(agree_fv);
+
+    let lt_succ_i = d.lemma(p.nat.lt_succ_self, &[i]);
+    let le_succ_i_jprime = d.lemma(p.nat.le_add_right, &[succ_i, m]);
+    let h_i_lt_jprime = d.lemma(
+        p.nat.lt_of_lt_of_le,
+        &[i, succ_i, j_prime, lt_succ_i, le_succ_i_jprime],
+    );
+    let h_jprime_lt_j = d.lemma(p.nat.lt_succ_self, &[j_prime]);
+
+    // --- A := point_swap f j' j ---
+    let a_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = point_swap(d, f, j_prime, j, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let agree_f_a = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let nej_fv = d.fresh_fvar();
+        let ne_j = d.kernel().fvar(nej_fv);
+        let nesj_fv = d.fresh_fvar();
+        let ne_sj = d.kernel().fvar(nesj_fv);
+        let body = general_swap_agree(d, f, j_prime, j, k, ne_j, ne_sj, h_jprime_lt_j);
+        let eq_ne_j_ty = d.eq(k, j_prime);
+        let ne_j_ty = d.not(eq_ne_j_ty);
+        let eq_ne_sj_ty = d.eq(k, j);
+        let ne_sj_ty = d.not(eq_ne_sj_ty);
+        let with_nesj = d.lam_fv(nesj_fv, ne_sj_ty, body);
+        let with_nej = d.lam_fv(nej_fv, ne_j_ty, with_nesj);
+        d.lam_fv(k_fv, nat, with_nej)
+    };
+    let a_at_jprime = point_swap_eq_at_p(d, f, j_prime, j);
+    let a_at_j = point_swap_eq_at_q(d, f, j_prime, j, h_jprime_lt_j);
+    let step1 = d.const_app(
+        p.prod_range_swap_adjacent,
+        &[f, a_fn, j_prime, n, h_jn, a_at_jprime, a_at_j, agree_f_a],
+    );
+
+    // --- B := point_swap A i j', the induction hypothesis's own partner ---
+    let b_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = point_swap(d, a_fn, i, j_prime, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let b_at_i = point_swap_eq_at_p(d, a_fn, i, j_prime);
+    let b_at_jprime = point_swap_eq_at_q(d, a_fn, i, j_prime, h_i_lt_jprime);
+    let agree_a_b = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let nei_fv = d.fresh_fvar();
+        let ne_i = d.kernel().fvar(nei_fv);
+        let nej_fv = d.fresh_fvar();
+        let ne_j = d.kernel().fvar(nej_fv);
+        let body = general_swap_agree(d, a_fn, i, j_prime, k, ne_i, ne_j, h_i_lt_jprime);
+        let eq_ne_i_ty = d.eq(k, i);
+        let ne_i_ty = d.not(eq_ne_i_ty);
+        let eq_ne_j_ty = d.eq(k, j_prime);
+        let ne_j_ty = d.not(eq_ne_j_ty);
+        let with_nej = d.lam_fv(nej_fv, ne_j_ty, body);
+        let with_nei = d.lam_fv(nei_fv, ne_i_ty, with_nej);
+        d.lam_fv(k_fv, nat, with_nei)
+    };
+    let le_j_n = nat_le_of_lt(d, j, n, h_jn);
+    let h_jprime_n = d.lemma(
+        p.nat.lt_of_lt_of_le,
+        &[j_prime, j, n, h_jprime_lt_j, le_j_n],
+    );
+    let ih_at_ab = d.apply(ih, &[a_fn, b_fn]);
+    let step2 = d.apply(ih_at_ab, &[h_jprime_n, b_at_i, b_at_jprime, agree_a_b]);
+
+    // --- C := point_swap B j' j ---
+    let c_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = point_swap(d, b_fn, j_prime, j, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let c_at_jprime = point_swap_eq_at_p(d, b_fn, j_prime, j);
+    let c_at_j = point_swap_eq_at_q(d, b_fn, j_prime, j, h_jprime_lt_j);
+    let agree_b_c = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let nej_fv = d.fresh_fvar();
+        let ne_j = d.kernel().fvar(nej_fv);
+        let nesj_fv = d.fresh_fvar();
+        let ne_sj = d.kernel().fvar(nesj_fv);
+        let body = general_swap_agree(d, b_fn, j_prime, j, k, ne_j, ne_sj, h_jprime_lt_j);
+        let eq_ne_j_ty = d.eq(k, j_prime);
+        let ne_j_ty = d.not(eq_ne_j_ty);
+        let eq_ne_sj_ty = d.eq(k, j);
+        let ne_sj_ty = d.not(eq_ne_sj_ty);
+        let with_nesj = d.lam_fv(nesj_fv, ne_sj_ty, body);
+        let with_nej = d.lam_fv(nej_fv, ne_j_ty, with_nesj);
+        d.lam_fv(k_fv, nat, with_nej)
+    };
+    let step3 = d.const_app(
+        p.prod_range_swap_adjacent,
+        &[b_fn, c_fn, j_prime, n, h_jn, c_at_jprime, c_at_j, agree_b_c],
+    );
+
+    // --- prodRange C n = prodRange g n, via prod_range_congr ---
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = swap_conjugation_agrees_with_g(
+            d,
+            f,
+            a_fn,
+            b_fn,
+            c_fn,
+            g,
+            i,
+            j_prime,
+            j,
+            k,
+            h_i_lt_jprime,
+            h_jprime_lt_j,
+            h_gi,
+            h_gj,
+            h_agree,
+        );
+        d.lam_fv(k_fv, nat, body)
+    };
+    let step4 = d.const_app(p.prod_range_congr, &[c_fn, g, n, pointwise]);
+
+    let start = d.const_app(p.prod_range, &[f, n]);
+    let a_range = d.const_app(p.prod_range, &[a_fn, n]);
+    let b_range = d.const_app(p.prod_range, &[b_fn, n]);
+    let c_range = d.const_app(p.prod_range, &[c_fn, n]);
+    let (_, chained) = d.ichain(
+        start,
+        &[(a_range, step1), (b_range, step2), (c_range, step3)],
+    );
+    let g_range = d.const_app(p.prod_range, &[g, n]);
+    let full = d.itrans(start, c_range, g_range, chained, step4);
+
+    let (h_jn_ty, hyp_gi_ty, hyp_gj_ty, hyp_agree_ty, _concl) = swap_hyp_types(d, f, g, i, j, n);
+    let with_agree = d.lam_fv(agree_fv, hyp_agree_ty, full);
+    let with_gj = d.lam_fv(gj_fv, hyp_gj_ty, with_agree);
+    let with_gi = d.lam_fv(gi_fv, hyp_gi_ty, with_gj);
+    let with_jn = d.lam_fv(jn_fv, h_jn_ty, with_gi);
+    let with_g = d.lam_fv(g_fv, fn_ty, with_jn);
+    d.lam_fv(f_fv, fn_ty, with_g)
+}
+
+/// Declare `Int.prodRange_swap` — the general transposition. See the module
+/// doc above for the route (`Nat.le_dest` + the aux induction generalized
+/// over `f`, `g`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_prod_range_swap(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+    let fn_ty = d.arrow(nat, int_ty);
+    let one = d.level_one();
+    let anon = d.anon_name();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let h_ij_ty = d.lt(i, j);
+    let (h_jn_ty, hyp_gi_ty, hyp_gj_ty, hyp_agree_ty, conclusion) =
+        swap_hyp_types(d, f, g, i, j, n);
+    let stmt_inner = {
+        let w5 = d.arrow(hyp_agree_ty, conclusion);
+        let w4 = d.arrow(hyp_gj_ty, w5);
+        let w3 = d.arrow(hyp_gi_ty, w4);
+        let w2 = d.arrow(h_jn_ty, w3);
+        d.arrow(h_ij_ty, w2)
+    };
+
+    let range_fv = d.fresh_fvar();
+    let h_range = d.kernel().fvar(range_fv);
+    let jn_fv = d.fresh_fvar();
+    let h_jn = d.kernel().fvar(jn_fv);
+    let gi_fv = d.fresh_fvar();
+    let h_gi = d.kernel().fvar(gi_fv);
+    let gj_fv = d.fresh_fvar();
+    let h_gj = d.kernel().fvar(gj_fv);
+    let agree_fv = d.fresh_fvar();
+    let h_agree = d.kernel().fvar(agree_fv);
+
+    let succ_i = d.succ(i);
+    let existential = d.lemma(p.nat.le_dest, &[succ_i, j, h_range]);
+    let pred = {
+        let dd_fv = d.fresh_fvar();
+        let dd = d.kernel().fvar(dd_fv);
+        let sum = d.add(succ_i, dd);
+        let body = d.eq(sum, j);
+        d.lam_fv(dd_fv, nat, body)
+    };
+    let exists_ty = {
+        let ex = d.kernel().const_(p.logic.exists_, vec![one]);
+        d.apply(ex, &[nat, pred])
+    };
+    let motive_outer = d
+        .kernel()
+        .lam(anon, exists_ty, conclusion, BinderInfo::Default);
+    let minor = {
+        let dd_fv = d.fresh_fvar();
+        let dd = d.kernel().fvar(dd_fv);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let sum = d.add(succ_i, dd);
+        let e_ty = d.eq(sum, j);
+
+        let aux_proof_at_dd = d.induct(
+            &|d, x| swap_aux_motive(d, i, n, x),
+            &|d| swap_aux_base(d, i, n),
+            &|d, mm, ih| swap_aux_step(d, i, n, mm, ih),
+            dd,
+        );
+        let applied_fg = d.apply(aux_proof_at_dd, &[f, g]);
+
+        let e_rev = d.symm(sum, j, e);
+        let h_jn_sum = d.nat_rewrite(j, sum, e_rev, h_jn, &|d, x| d.lt(x, n));
+        let gi = d.apply(g, &[i]);
+        let h_gi_sum = d.nat_rewrite(j, sum, e_rev, h_gi, &|d, x| {
+            let fx = d.apply(f, &[x]);
+            d.ieq(gi, fx)
+        });
+        let fi = d.apply(f, &[i]);
+        let h_gj_sum = d.nat_rewrite(j, sum, e_rev, h_gj, &|d, x| {
+            let gx = d.apply(g, &[x]);
+            d.ieq(gx, fi)
+        });
+        let h_agree_sum = d.nat_rewrite(j, sum, e_rev, h_agree, &|d, x| {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let eq_ne_ki = d.eq(k, i);
+            let ne_ki = d.not(eq_ne_ki);
+            let eq_ne_kx = d.eq(k, x);
+            let ne_kx = d.not(eq_ne_kx);
+            let fk = d.apply(f, &[k]);
+            let gk = d.apply(g, &[k]);
+            let concl = d.ieq(fk, gk);
+            let inner = d.arrow(ne_kx, concl);
+            let step_ = d.arrow(ne_ki, inner);
+            d.pi_fv(k_fv, nat, step_)
+        });
+
+        let final_body = d.apply(applied_fg, &[h_jn_sum, h_gi_sum, h_gj_sum, h_agree_sum]);
+        let with_e = d.lam_fv(e_fv, e_ty, final_body);
+        d.lam_fv(dd_fv, nat, with_e)
+    };
+    let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+    let proof_body = d.apply(exists_rec, &[nat, pred, motive_outer, minor, existential]);
+
+    let value = {
+        let with_agree = d.lam_fv(agree_fv, hyp_agree_ty, proof_body);
+        let with_gj = d.lam_fv(gj_fv, hyp_gj_ty, with_agree);
+        let with_gi = d.lam_fv(gi_fv, hyp_gi_ty, with_gj);
+        let with_jn = d.lam_fv(jn_fv, h_jn_ty, with_gi);
+        d.lam_fv(range_fv, h_ij_ty, with_jn)
+    };
+    let full_stmt = {
+        let with_n = d.pi_fv(n_fv, nat, stmt_inner);
+        let with_j = d.pi_fv(j_fv, nat, with_n);
+        let with_i = d.pi_fv(i_fv, nat, with_j);
+        let with_g = d.pi_fv(g_fv, fn_ty, with_i);
+        d.pi_fv(f_fv, fn_ty, with_g)
+    };
+    let full_value = {
+        let with_n = d.lam_fv(n_fv, nat, value);
+        let with_j = d.lam_fv(j_fv, nat, with_n);
+        let with_i = d.lam_fv(i_fv, nat, with_j);
+        let with_g = d.lam_fv(g_fv, fn_ty, with_i);
+        d.lam_fv(f_fv, fn_ty, with_g)
+    };
+
+    d.declare_theorem(p.prod_range_swap, full_stmt, full_value)
+}

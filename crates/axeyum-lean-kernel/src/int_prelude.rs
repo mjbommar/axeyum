@@ -348,6 +348,17 @@ pub struct IntPrelude {
     /// machinery — see `prod.rs`'s doc comment on
     /// `declare_prod_range_swap_adjacent`.
     pub prod_range_swap_adjacent: NameId,
+    /// `prodRange_swap :
+    ///   ∀ f g i j n, Lt i j → Lt j n → Eq Int (g i) (f j) →
+    ///     Eq Int (g j) (f i) →
+    ///     (∀ k, Not (Eq Nat k i) → Not (Eq Nat k j) → Eq Int (f k) (g k)) →
+    ///     Eq Int (prodRange f n) (prodRange g n)`
+    /// — the general transposition (any `i < j`, not just adjacent): stated
+    /// the way `prod_range_swap_adjacent` is (`g` supplied by hypothesis), by
+    /// `Nat.le_dest` + an auxiliary induction that conjugates through
+    /// `(j' j)(i j')(j' j) = (i j)` using `prod.rs`'s `point_swap` — see
+    /// `declare_prod_range_swap`'s doc comment for the full route.
+    pub prod_range_swap: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -737,6 +748,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_congr: child(kernel, "prodRange_congr"),
         prod_range_congr_lt: child(kernel, "prodRange_congr_lt"),
         prod_range_swap_adjacent: child(kernel, "prodRange_swap_adjacent"),
+        prod_range_swap: child(kernel, "prodRange_swap"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -921,6 +933,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prod::declare_prod_range_congr(&mut d)?;
         prod::declare_prod_range_congr_lt(&mut d)?;
         prod::declare_prod_range_swap_adjacent(&mut d)?;
+        prod::declare_prod_range_swap(&mut d)?;
         prod::declare_modeq_prod_range(&mut d)?;
         wilson::declare_factorial(&mut d)?;
         wilson::declare_factorial_equations(&mut d)?;

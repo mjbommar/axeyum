@@ -29,16 +29,30 @@
 //! all". That is no longer true** (2026-08-23). `Nat.Fin`,
 //! `Nat.injectiveOn` / `surjectiveOn` / `mapsInto`, and the pigeonhole
 //! principle connecting them (`Nat.injective_on_imp_surjective_on`) are all
-//! declared and axiom-free, and `Int.prodRange_swap_adjacent` proves the
-//! transposition case of the rearrangement.
+//! declared and axiom-free; `Int.prodRange_swap_adjacent` proves the
+//! adjacent-transposition case of the rearrangement, and (2026-08-24)
+//! `Int.prodRange_swap` extends that to **any** two indices `i < j`, via
+//! `prod.rs`'s `point_swap` (a `Nat.ble`-cascaded explicit swap function,
+//! never `Nat.beq`) and a conjugation induction
+//! `(j' j)(i j')(j' j) = (i j)` on the gap `j - i`.
 //!
-//! The remaining gap is specific: `prodRange_swap_adjacent` swaps only
-//! *adjacent* indices, while the pigeonhole gives an `i0` with `σ(i0) = n-1`
-//! that may be arbitrarily far from `n-1`. Closing it needs a chain of
-//! adjacent transpositions bubbling `i0` up, plus a "remove `i0` and reindex
-//! the rest" step — the same `compact`-style reindexing the pigeonhole proof
-//! uses, at comparable size. That is a slice of its own, not a small addition,
-//! and no bijection theory is invented here to force it through.
+//! What is STILL missing is the full permutation, not just one transposition.
+//! The pigeonhole gives an `i0` with `σ(i0) = n-1` for the OUTER induction on
+//! `n`; `prodRange_swap` now moves `f`'s value at that `i0` into position
+//! `n-1` in one step (no bubbling needed — `prodRange_swap` already handles
+//! the arbitrary gap). What it does not give is the RECURSIVE CALL's
+//! ingredients: `prodRange_permute`'s induction on `n` needs, after peeling
+//! the last factor via `prodRange_succ`, a permutation of `{0,…,n-2}` — i.e.
+//! `σ` restricted to the domain with `i0` removed and reindexed downward
+//! (`σ'(k) := if k < i0 then σ(k) else σ(k+1)`, or symmetrically on the range,
+//! whichever a `Fin`-free statement makes cheaper) — plus proofs that this
+//! restriction is still injective and maps into `{0,…,n-2}`. That reindexing
+//! is the same shape as `finite.rs`'s `compact` (this module's earlier
+//! drafts already named it as the analogy), but it has not been built for
+//! `σ` here: `compact` reindexes a *value* the pigeonhole proof already
+//! produced, not an *index* into an arbitrary hypothesis-supplied injection.
+//! That reindexing lemma, plus threading it through
+//! `Nat.injectiveOn`/`Nat.mapsInto`'s definitions, is the next slice.
 
 use super::defs::POW_HEIGHT;
 use super::ops::IntDev;
