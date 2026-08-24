@@ -72,7 +72,14 @@ EVIDENCE_KINDS = {"kernel-term", "witness-replay", "unsat-certificate", "cube-co
                   "cube-tree-cover", "exhaustive-enumeration", "published-value-replication",
                   "bound-citation", "instance-pin", "claim-ref"}
 CHECK_STATUSES = {"checked", "replay-only", "not-checked"}
-LANGUAGES_ALL = {"smtlib2", "lean4", "lean4-surface", "axeyum-ir", "cas-term"}
+LANGUAGES_ALL = {
+    "smtlib2",
+    "lean4",
+    "lean4-surface",
+    "axeyum-ir",
+    "cas-term",
+    "certificate-spec",
+}
 # `cas-certificate` is the computer-algebra route: an identity in Q(vars) re-derived
 # by exact polynomial arithmetic that shares no code with the search that found it.
 # It is deliberately NOT `search-certificate`: a replayed witness settles one finite
@@ -132,6 +139,28 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
     if formal.get("language") not in LANGUAGES_ALL:
         fail(errors, f"{fid}: formal.language {formal.get('language')!r} not in "
                      f"{sorted(LANGUAGES_ALL)}")
+    if formal.get("language") == "certificate-spec":
+        statement = formal.get("statement", "")
+        try:
+            certificate_spec = json.loads(statement)
+        except json.JSONDecodeError as error:
+            fail(errors, f"{fid}: certificate-spec statement is not valid JSON: {error}")
+        else:
+            if not isinstance(certificate_spec, dict):
+                fail(errors, f"{fid}: certificate-spec statement must be a JSON object")
+            elif statement != json.dumps(
+                certificate_spec, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+            ):
+                fail(errors, f"{fid}: certificate-spec statement must use canonical JSON")
+            elif (
+                not isinstance(certificate_spec.get("format"), str)
+                or not certificate_spec["format"].strip()
+            ):
+                fail(errors, f"{fid}: certificate-spec requires a non-empty string format")
+            elif not isinstance(certificate_spec.get("version"), int) or isinstance(
+                certificate_spec.get("version"), bool
+            ) or certificate_spec["version"] <= 0:
+                fail(errors, f"{fid}: certificate-spec requires a positive integer version")
 
     for dep in fact["depends_on"]:
         if not ID_RE.match(dep):
