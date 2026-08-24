@@ -2191,3 +2191,397 @@ fn all_iff_all_infers_at_the_stated_type() {
         k.render_lean(applied_ty)
     );
 }
+
+// ---------------------------------------------------------------------------
+// `Str.isPrefixBool` / `Str.isSuffixBool` / `Str.containsBool` — the
+// short-circuit decision procedures, plus both spec directions against
+// `isPrefix`/`isSuffix`/`contains`.
+// ---------------------------------------------------------------------------
+
+/// Presence discipline for the bool decision procedures and their laws: an
+/// unvisited name's `axiom_footprint` is UNMEASURED, not empty, so this is
+/// checked independently of the footprint test below.
+#[test]
+fn bool_predicates_names_are_registered() {
+    let (k, sp) = setup(3);
+    for n in [
+        sp.is_prefix_bool,
+        sp.is_prefix_bool_nil,
+        sp.is_prefix_bool_eq_true_of_is_prefix,
+        sp.is_prefix_of_is_prefix_bool_eq_true,
+        sp.is_suffix_bool,
+        sp.is_suffix_bool_eq_true_of_is_suffix,
+        sp.is_suffix_of_is_suffix_bool_eq_true,
+        sp.contains_bool,
+        sp.contains_of_contains_bool_eq_true,
+    ] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered"
+        );
+    }
+}
+
+/// Same presence discipline at an empty alphabet (`num_chars == 0`): every
+/// declaration here is admitted vacuously, exactly like `char_beq`'s own
+/// empty-alphabet test.
+#[test]
+fn bool_predicates_names_are_registered_at_empty_alphabet() {
+    let (k, sp) = setup(0);
+    for n in [
+        sp.is_prefix_bool,
+        sp.is_prefix_bool_nil,
+        sp.is_prefix_bool_eq_true_of_is_prefix,
+        sp.is_prefix_of_is_prefix_bool_eq_true,
+        sp.is_suffix_bool,
+        sp.is_suffix_bool_eq_true_of_is_suffix,
+        sp.is_suffix_of_is_suffix_bool_eq_true,
+        sp.contains_bool,
+        sp.contains_of_contains_bool_eq_true,
+    ] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered at num_chars == 0"
+        );
+    }
+}
+
+/// The bool decision procedures and their laws must rest on nothing assumed.
+#[test]
+fn bool_predicates_are_axiom_free() {
+    let (k, sp) = setup(3);
+    for n in [
+        sp.is_prefix_bool,
+        sp.is_prefix_bool_nil,
+        sp.is_prefix_bool_eq_true_of_is_prefix,
+        sp.is_prefix_of_is_prefix_bool_eq_true,
+        sp.is_suffix_bool,
+        sp.is_suffix_bool_eq_true_of_is_suffix,
+        sp.is_suffix_of_is_suffix_bool_eq_true,
+        sp.contains_bool,
+        sp.contains_of_contains_bool_eq_true,
+    ] {
+        let footprint = k.axiom_footprint(n);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(n),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// `isPrefixBool` ι-computes on concrete strings: true on `nil`, true on a
+/// genuine prefix, false on a mismatch, false when the candidate prefix is
+/// longer than the target.
+#[test]
+fn is_prefix_bool_iota_computes_on_concrete_strings() {
+    let (mut k, sp) = setup(3);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bfalse = k.const_(sp.logic.bool_false, vec![]);
+
+    // isPrefixBool nil [0,1,2] ↝ true.
+    let nil = sp.nil(&mut k);
+    let s0 = str_of(&mut k, &sp, &[0, 1, 2]);
+    let f0 = k.const_(sp.is_prefix_bool, vec![]);
+    let app0 = {
+        let e = k.app(f0, nil);
+        k.app(e, s0)
+    };
+    assert!(k.def_eq(app0, btrue), "isPrefixBool nil [0,1,2] ↝ true");
+
+    // isPrefixBool [0,1] [0,1,2] ↝ true.
+    let p1 = str_of(&mut k, &sp, &[0, 1]);
+    let s1 = str_of(&mut k, &sp, &[0, 1, 2]);
+    let f1 = k.const_(sp.is_prefix_bool, vec![]);
+    let app1 = {
+        let e = k.app(f1, p1);
+        k.app(e, s1)
+    };
+    assert!(k.def_eq(app1, btrue), "isPrefixBool [0,1] [0,1,2] ↝ true");
+
+    // isPrefixBool [0,1] [0,2] ↝ false (mismatch at position 1).
+    let p2 = str_of(&mut k, &sp, &[0, 1]);
+    let s2 = str_of(&mut k, &sp, &[0, 2]);
+    let f2 = k.const_(sp.is_prefix_bool, vec![]);
+    let app2 = {
+        let e = k.app(f2, p2);
+        k.app(e, s2)
+    };
+    assert!(k.def_eq(app2, bfalse), "isPrefixBool [0,1] [0,2] ↝ false");
+
+    // isPrefixBool [0,1,2] [0,1] ↝ false (candidate prefix longer than target).
+    let p3 = str_of(&mut k, &sp, &[0, 1, 2]);
+    let s3 = str_of(&mut k, &sp, &[0, 1]);
+    let f3 = k.const_(sp.is_prefix_bool, vec![]);
+    let app3 = {
+        let e = k.app(f3, p3);
+        k.app(e, s3)
+    };
+    assert!(k.def_eq(app3, bfalse), "isPrefixBool [0,1,2] [0,1] ↝ false");
+}
+
+/// Both `isPrefixBool` spec directions, exercised together on a concrete
+/// pair: `isPrefixBool_eq_true_of_isPrefix` applied to a genuine `isPrefix`
+/// witness (`isPrefix_append p t : isPrefix p (append p t)`) produces
+/// `isPrefixBool p (append p t) = true`, which genuinely ι-reduces to
+/// `Bool.true`; and `isPrefix_of_isPrefixBool_eq_true` applied to that same
+/// reduction round-trips back to `isPrefix p s`.
+#[test]
+fn is_prefix_bool_directions_round_trip_on_a_concrete_pair() {
+    let (mut k, sp) = setup(3);
+    let p = str_of(&mut k, &sp, &[0, 1]);
+    let t = str_of(&mut k, &sp, &[2]);
+    let s = str_of(&mut k, &sp, &[0, 1, 2]);
+    let bool_ty = k.const_(sp.logic.bool_, vec![]);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+
+    let appended = sp.append_app(&mut k, p, t);
+    assert!(k.def_eq(appended, s), "append [0,1] [2] ↝ [0,1,2]");
+
+    // isPrefix p (append p t), via isPrefix_append.
+    let is_pref = {
+        let lemma = k.const_(sp.is_prefix_append, vec![]);
+        let e = k.app(lemma, p);
+        k.app(e, t)
+    };
+
+    // Direction B (completeness): isPrefixBool_eq_true_of_isPrefix.
+    let forward = {
+        let lemma = k.const_(sp.is_prefix_bool_eq_true_of_is_prefix, vec![]);
+        let e = k.app(lemma, p);
+        let e = k.app(e, appended);
+        k.app(e, is_pref)
+    };
+    let forward_ty = k
+        .infer(forward)
+        .expect("isPrefixBool_eq_true_of_isPrefix applies");
+    let ipb = {
+        let f = k.const_(sp.is_prefix_bool, vec![]);
+        let e = k.app(f, p);
+        k.app(e, appended)
+    };
+    let want_forward = mk_eq(&mut k, &sp, bool_ty, 1, ipb, btrue);
+    assert!(
+        k.def_eq(forward_ty, want_forward),
+        "isPrefixBool_eq_true_of_isPrefix p (append p t) is_pref : \
+         Eq Bool (isPrefixBool p (append p t)) true, got {}",
+        k.render_lean(forward_ty)
+    );
+    assert!(
+        k.def_eq(ipb, btrue),
+        "isPrefixBool p (append p t) ↝ true, not just inferred at the Eq type"
+    );
+
+    // Direction A (soundness): isPrefix_of_isPrefixBool_eq_true, on the
+    // concrete `s` directly (isPrefixBool p s already ι-reduces to true).
+    let refl_true = eq_refl(&mut k, &sp, bool_ty, 1, btrue);
+    let backward = {
+        let lemma = k.const_(sp.is_prefix_of_is_prefix_bool_eq_true, vec![]);
+        let e = k.app(lemma, p);
+        let e = k.app(e, s);
+        k.app(e, refl_true)
+    };
+    let backward_ty = k
+        .infer(backward)
+        .expect("isPrefix_of_isPrefixBool_eq_true applies");
+    let want_backward = {
+        let f = k.const_(sp.is_prefix, vec![]);
+        let e = k.app(f, p);
+        k.app(e, s)
+    };
+    assert!(
+        k.def_eq(backward_ty, want_backward),
+        "isPrefix_of_isPrefixBool_eq_true p s refl_true : isPrefix p s, got {}",
+        k.render_lean(backward_ty)
+    );
+}
+
+/// `isSuffixBool` ι-computes on concrete strings via `isPrefixBool` composed
+/// with `reverse`: true on a genuine suffix, false on a mismatch.
+#[test]
+fn is_suffix_bool_iota_computes_on_concrete_strings() {
+    let (mut k, sp) = setup(3);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bfalse = k.const_(sp.logic.bool_false, vec![]);
+
+    let s1 = str_of(&mut k, &sp, &[1, 2]);
+    let t1 = str_of(&mut k, &sp, &[0, 1, 2]);
+    let f1 = k.const_(sp.is_suffix_bool, vec![]);
+    let app1 = {
+        let e = k.app(f1, s1);
+        k.app(e, t1)
+    };
+    assert!(k.def_eq(app1, btrue), "isSuffixBool [1,2] [0,1,2] ↝ true");
+
+    let s2 = str_of(&mut k, &sp, &[0, 1]);
+    let t2 = str_of(&mut k, &sp, &[0, 1, 2]);
+    let f2 = k.const_(sp.is_suffix_bool, vec![]);
+    let app2 = {
+        let e = k.app(f2, s2);
+        k.app(e, t2)
+    };
+    assert!(k.def_eq(app2, bfalse), "isSuffixBool [0,1] [0,1,2] ↝ false");
+}
+
+/// Both `isSuffixBool` spec directions, on a concrete pair, composed from
+/// `isSuffix_reverse_mpr` and `isPrefixBool`'s own directions (the route the
+/// theorems themselves take).
+#[test]
+fn is_suffix_bool_directions_round_trip_on_a_concrete_pair() {
+    let (mut k, sp) = setup(3);
+    let s = str_of(&mut k, &sp, &[1, 2]);
+    let bool_ty = k.const_(sp.logic.bool_, vec![]);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+
+    // t := append [0] s, so `reverse t` is defeq to `append (reverse s) (reverse [0])`
+    // — the shape `isSuffix_reverse_mpr`'s witness needs.
+    let rs = {
+        let f = k.const_(sp.reverse, vec![]);
+        k.app(f, s)
+    };
+    let zero = str_of(&mut k, &sp, &[0]);
+    let rzero = {
+        let f = k.const_(sp.reverse, vec![]);
+        k.app(f, zero)
+    };
+    let is_pref_rev = {
+        let lemma = k.const_(sp.is_prefix_append, vec![]);
+        let e = k.app(lemma, rs);
+        k.app(e, rzero)
+    };
+    let appended_rev = sp.append_app(&mut k, rs, rzero);
+    let t = {
+        let f = k.const_(sp.append, vec![]);
+        let e = k.app(f, zero);
+        k.app(e, s)
+    };
+    let rt = {
+        let f = k.const_(sp.reverse, vec![]);
+        k.app(f, t)
+    };
+    assert!(
+        k.def_eq(appended_rev, rt),
+        "append (reverse [1,2]) (reverse [0]) ↝ reverse (append [0] [1,2])"
+    );
+    let is_suf = {
+        let lemma = k.const_(sp.is_suffix_reverse_mpr, vec![]);
+        let e = k.app(lemma, s);
+        let e = k.app(e, t);
+        k.app(e, is_pref_rev)
+    };
+
+    let forward = {
+        let lemma = k.const_(sp.is_suffix_bool_eq_true_of_is_suffix, vec![]);
+        let e = k.app(lemma, s);
+        let e = k.app(e, t);
+        k.app(e, is_suf)
+    };
+    let forward_ty = k
+        .infer(forward)
+        .expect("isSuffixBool_eq_true_of_isSuffix applies");
+    let isb = {
+        let f = k.const_(sp.is_suffix_bool, vec![]);
+        let e = k.app(f, s);
+        k.app(e, t)
+    };
+    let want_forward = mk_eq(&mut k, &sp, bool_ty, 1, isb, btrue);
+    assert!(
+        k.def_eq(forward_ty, want_forward),
+        "isSuffixBool_eq_true_of_isSuffix s t is_suf : Eq Bool (isSuffixBool s t) true, got {}",
+        k.render_lean(forward_ty)
+    );
+    assert!(k.def_eq(isb, btrue), "isSuffixBool s t ↝ true");
+
+    let refl_true = eq_refl(&mut k, &sp, bool_ty, 1, btrue);
+    let backward = {
+        let lemma = k.const_(sp.is_suffix_of_is_suffix_bool_eq_true, vec![]);
+        let e = k.app(lemma, s);
+        let e = k.app(e, t);
+        k.app(e, refl_true)
+    };
+    let backward_ty = k
+        .infer(backward)
+        .expect("isSuffix_of_isSuffixBool_eq_true applies");
+    let want_backward = {
+        let f = k.const_(sp.is_suffix, vec![]);
+        let e = k.app(f, s);
+        k.app(e, t)
+    };
+    assert!(
+        k.def_eq(backward_ty, want_backward),
+        "isSuffix_of_isSuffixBool_eq_true s t refl_true : isSuffix s t, got {}",
+        k.render_lean(backward_ty)
+    );
+}
+
+/// `containsBool` ι-computes on concrete strings: finds a genuine
+/// (non-prefix, non-suffix) occurrence, reports false when the needle is
+/// absent, and the empty needle is always found.
+#[test]
+fn contains_bool_iota_computes_on_concrete_strings() {
+    let (mut k, sp) = setup(3);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bfalse = k.const_(sp.logic.bool_false, vec![]);
+
+    let s = str_of(&mut k, &sp, &[0, 1, 2]);
+
+    let u1 = str_of(&mut k, &sp, &[1, 2]);
+    let f1 = k.const_(sp.contains_bool, vec![]);
+    let app1 = {
+        let e = k.app(f1, s);
+        k.app(e, u1)
+    };
+    assert!(k.def_eq(app1, btrue), "containsBool [0,1,2] [1,2] ↝ true");
+
+    let u2 = str_of(&mut k, &sp, &[2, 0]);
+    let f2 = k.const_(sp.contains_bool, vec![]);
+    let app2 = {
+        let e = k.app(f2, s);
+        k.app(e, u2)
+    };
+    assert!(k.def_eq(app2, bfalse), "containsBool [0,1,2] [2,0] ↝ false");
+
+    let nil = sp.nil(&mut k);
+    let f3 = k.const_(sp.contains_bool, vec![]);
+    let app3 = {
+        let e = k.app(f3, s);
+        k.app(e, nil)
+    };
+    assert!(k.def_eq(app3, btrue), "containsBool [0,1,2] nil ↝ true");
+}
+
+/// `contains_of_containsBool_eq_true`, applied at a concrete `s`/`u` where
+/// `containsBool s u` already ι-reduces to `true`, infers at exactly the
+/// stated `contains s u` type.
+#[test]
+fn contains_of_contains_bool_eq_true_infers_at_the_stated_type() {
+    let (mut k, sp) = setup(3);
+    let s = str_of(&mut k, &sp, &[0, 1, 2]);
+    let u = str_of(&mut k, &sp, &[1, 2]);
+    let bool_ty = k.const_(sp.logic.bool_, vec![]);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let refl_true = eq_refl(&mut k, &sp, bool_ty, 1, btrue);
+    let applied = {
+        let lemma = k.const_(sp.contains_of_contains_bool_eq_true, vec![]);
+        let e = k.app(lemma, s);
+        let e = k.app(e, u);
+        k.app(e, refl_true)
+    };
+    let applied_ty = k
+        .infer(applied)
+        .expect("contains_of_containsBool_eq_true applies");
+    let want = {
+        let f = k.const_(sp.contains, vec![]);
+        let e = k.app(f, s);
+        k.app(e, u)
+    };
+    assert!(
+        k.def_eq(applied_ty, want),
+        "contains_of_containsBool_eq_true s u refl_true : contains s u, got {}",
+        k.render_lean(applied_ty)
+    );
+}

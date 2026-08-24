@@ -350,6 +350,42 @@ pub struct StringPrelude {
     /// predicate.
     pub all_iff_all: NameId,
 
+    /// `isPrefixBool : Str → Str → Bool` — the short-circuit decision
+    /// procedure for `isPrefix`, a checked double-`Str.rec` over
+    /// [`Self::char_beq`] (see `bool_predicates.rs`).
+    pub is_prefix_bool: NameId,
+    /// `isPrefixBool_nil : ∀ s, Eq Bool (isPrefixBool nil s) Bool.true`
+    /// (definitional).
+    pub is_prefix_bool_nil: NameId,
+    /// `isPrefixBool_eq_true_of_isPrefix : ∀ p s,
+    /// isPrefix p s → Eq Bool (isPrefixBool p s) Bool.true` — completeness.
+    pub is_prefix_bool_eq_true_of_is_prefix: NameId,
+    /// `isPrefix_of_isPrefixBool_eq_true : ∀ p s,
+    /// Eq Bool (isPrefixBool p s) Bool.true → isPrefix p s` — soundness
+    /// (constructs the existential witness).
+    pub is_prefix_of_is_prefix_bool_eq_true: NameId,
+
+    /// `isSuffixBool : Str → Str → Bool := λ s t, isPrefixBool (reverse s)
+    /// (reverse t)` — not a fresh recursion, a composition (see
+    /// `bool_predicates.rs`).
+    pub is_suffix_bool: NameId,
+    /// `isSuffixBool_eq_true_of_isSuffix : ∀ s t,
+    /// isSuffix s t → Eq Bool (isSuffixBool s t) Bool.true`.
+    pub is_suffix_bool_eq_true_of_is_suffix: NameId,
+    /// `isSuffix_of_isSuffixBool_eq_true : ∀ s t,
+    /// Eq Bool (isSuffixBool s t) Bool.true → isSuffix s t`.
+    pub is_suffix_of_is_suffix_bool_eq_true: NameId,
+
+    /// `containsBool : Str → Str → Bool` — a single `Str.rec` on the
+    /// haystack scanning every suffix via [`Self::is_prefix_bool`] (see
+    /// `bool_predicates.rs`).
+    pub contains_bool: NameId,
+    /// `contains_of_containsBool_eq_true : ∀ s u,
+    /// Eq Bool (containsBool s u) Bool.true → contains s u` — soundness.
+    /// The converse (`contains s u → containsBool s u = true`) is not
+    /// attempted in this slice; see `bool_predicates.rs`'s module doc.
+    pub contains_of_contains_bool_eq_true: NameId,
+
     /// The universe level `1` (so `Char`/`Str : Sort 1 = Type`).
     one: LevelId,
 }
@@ -811,6 +847,60 @@ pub fn build_string_prelude(
             one,
         )?;
 
+        // --- isPrefixBool/isSuffixBool/containsBool: the decision procedures
+        // a string-solver reconstruction actually calls, plus both spec
+        // directions against `isPrefix`/`isSuffix`/`contains`. Declared after
+        // `char_beq` and `predicates` (both required) and after `all_bool`
+        // for placement consistency (no dependency on `All`/`all_bool`
+        // themselves). See `bool_predicates.rs`.
+        let is_prefix_bool = kernel.name_str(namespace, "isPrefixBool");
+        let is_prefix_bool_nil = kernel.name_str(namespace, "isPrefixBool_nil");
+        let is_prefix_bool_eq_true_of_is_prefix =
+            kernel.name_str(namespace, "isPrefixBool_eq_true_of_isPrefix");
+        let is_prefix_of_is_prefix_bool_eq_true =
+            kernel.name_str(namespace, "isPrefix_of_isPrefixBool_eq_true");
+        let is_suffix_bool = kernel.name_str(namespace, "isSuffixBool");
+        let is_suffix_bool_eq_true_of_is_suffix =
+            kernel.name_str(namespace, "isSuffixBool_eq_true_of_isSuffix");
+        let is_suffix_of_is_suffix_bool_eq_true =
+            kernel.name_str(namespace, "isSuffix_of_isSuffixBool_eq_true");
+        let contains_bool = kernel.name_str(namespace, "containsBool");
+        let contains_of_contains_bool_eq_true =
+            kernel.name_str(namespace, "contains_of_containsBool_eq_true");
+        bool_predicates::declare_bool_predicates_and_laws(
+            kernel,
+            &bool_predicates::BoolPredicateNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_cons,
+                str_rec,
+                append,
+                reverse,
+                char_beq,
+                char_beq_refl,
+                char_eq_of_beq_eq_true,
+                is_prefix,
+                is_prefix_nil,
+                is_suffix,
+                is_suffix_reverse_mp,
+                is_suffix_reverse_mpr,
+                contains,
+                contains_of_is_prefix,
+                is_prefix_bool,
+                is_prefix_bool_nil,
+                is_prefix_bool_eq_true_of_is_prefix,
+                is_prefix_of_is_prefix_bool_eq_true,
+                is_suffix_bool,
+                is_suffix_bool_eq_true_of_is_suffix,
+                is_suffix_of_is_suffix_bool_eq_true,
+                contains_bool,
+                contains_of_contains_bool_eq_true,
+            },
+            one,
+        )?;
+
         Ok(StringPrelude {
             logic,
             char_ind,
@@ -895,6 +985,15 @@ pub fn build_string_prelude(
             all_of_is_prefix,
             all_bool,
             all_iff_all,
+            is_prefix_bool,
+            is_prefix_bool_nil,
+            is_prefix_bool_eq_true_of_is_prefix,
+            is_prefix_of_is_prefix_bool_eq_true,
+            is_suffix_bool,
+            is_suffix_bool_eq_true_of_is_suffix,
+            is_suffix_of_is_suffix_bool_eq_true,
+            contains_bool,
+            contains_of_contains_bool_eq_true,
             one,
         })
     })();
@@ -1282,6 +1381,7 @@ impl StringPrelude {
 
 mod all;
 mod all_bool;
+mod bool_predicates;
 mod cancel;
 mod char_beq;
 mod foldr;
