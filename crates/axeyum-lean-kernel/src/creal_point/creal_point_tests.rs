@@ -7,28 +7,62 @@ use crate::Kernel;
 fn built() -> (Kernel, CPointPrelude) {
     use std::sync::OnceLock;
     static TEMPLATE: OnceLock<(Kernel, CPointPrelude)> = OnceLock::new();
+    // The BUILD runs on a deep stack; every other caller clones the memoised
+    // result, so wrapping this one closure covers all 64 call sites.
     let (kernel, prelude) = TEMPLATE.get_or_init(|| {
-        let mut kernel = Kernel::new();
-        let prelude = build_cpoint_prelude(&mut kernel).expect("CPoint prelude must build");
-        (kernel, prelude)
+        on_a_deep_stack(|| {
+            let mut kernel = Kernel::new();
+            let prelude = build_cpoint_prelude(&mut kernel).expect("CPoint prelude must build");
+            (kernel, prelude)
+        })
     });
     (kernel.clone(), *prelude)
 }
 
 /// The build itself, with the kernel's rejection **rendered** rather than
 /// `Debug`-formatted, so a failure says which two types failed to match.
+
+/// Run `f` on a **64 MiB** thread.
+///
+/// The default test-thread stack is 2 MiB, and `built()` constructs the whole
+/// `CPoint` prelude — which recurses deeply enough through
+/// `Kernel::add_declaration` to blow it. This is not a proof bug and it does
+/// not mean anything is wrong with the term: it aborts the PROCESS with
+/// `SIGABRT`, so the harness reports "signal: 6" and no test name, which reads
+/// like a crash rather than a resource limit.
+///
+/// **It appears only as the prelude grows.** `apollonius_…` was fine until
+/// `creal_point.rs` gained ~2,000 lines for Ceva, and it was still fine under a
+/// filtered `--lib creal_point` run — it aborted only in the full `--lib`
+/// sweep. So a narrow per-module run does NOT establish that this is safe, and
+/// the next test to cross the threshold will look like a regression in whatever
+/// change happened to be in flight.
+///
+/// `complex/complex_tests.rs` carries the identical helper for the identical
+/// reason; if a third module needs it, promote it rather than writing it again.
+fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(f)
+        .expect("spawning a deep-stack thread must succeed")
+        .join()
+        .expect("the deep-stack thread must not panic")
+}
+
 #[test]
 fn cpoint_prelude_builds() {
-    let mut kernel = Kernel::new();
-    match build_cpoint_prelude(&mut kernel) {
-        Ok(_) => {}
-        Err(error) => {
-            let nat = crate::build_nat_prelude(&mut kernel).expect("Nat prelude must build");
-            let mut dev = crate::NatDev::new(&mut kernel, nat);
-            let explained = crate::NatOps::explain(&mut dev, &error);
-            panic!("the kernel refused a real proof: {explained}");
+    on_a_deep_stack(|| {
+        let mut kernel = Kernel::new();
+        match build_cpoint_prelude(&mut kernel) {
+            Ok(_) => {}
+            Err(error) => {
+                let nat = crate::build_nat_prelude(&mut kernel).expect("Nat prelude must build");
+                let mut dev = crate::NatDev::new(&mut kernel, nat);
+                let explained = crate::NatOps::explain(&mut dev, &error);
+                panic!("the kernel refused a real proof: {explained}");
+            }
         }
-    }
+    });
 }
 
 /// `midpoint_self`, `sum_perm`, `midpoint_diag_core` and
@@ -144,6 +178,11 @@ fn every_theorem_here_is_axiom_free() {
         (
             "nine_point_centre_equidistant",
             p.nine_point_centre_equidistant,
+        ),
+        ("cevian_pair_meet", p.cevian_pair_meet),
+        (
+            "ceva_concurrent_of_ratio_product",
+            p.ceva_concurrent_of_ratio_product,
         ),
     ] {
         let footprint = kernel.axiom_footprint(name);
@@ -266,6 +305,8 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.nine_point_radius_bc,
         p.nine_point_radius_ab,
         p.nine_point_centre_equidistant,
+        p.cevian_pair_meet,
+        p.ceva_concurrent_of_ratio_product,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -1155,22 +1196,24 @@ fn euler_line_statement_is_exact() {
 /// point of the bridge), not a weaker one.
 #[test]
 fn apollonius_from_stewart_has_the_apollonius_median_statement() {
-    use crate::env::Declaration;
-    let (kernel, p) = built();
-    let ty_of = |name| match kernel
-        .environment()
-        .get(name)
-        .expect("declaration must be present")
-    {
-        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
-        other => panic!("{other:?} is not a theorem or definition"),
-    };
-    let rendered_bridge = kernel.render_lean(ty_of(p.apollonius_from_stewart));
-    let rendered_original = kernel.render_lean(ty_of(p.apollonius_median));
-    assert_eq!(
-        rendered_bridge, rendered_original,
-        "apollonius_from_stewart must prove the exact same statement as apollonius_median"
-    );
+    on_a_deep_stack(|| {
+        use crate::env::Declaration;
+        let (kernel, p) = built();
+        let ty_of = |name| match kernel
+            .environment()
+            .get(name)
+            .expect("declaration must be present")
+        {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        let rendered_bridge = kernel.render_lean(ty_of(p.apollonius_from_stewart));
+        let rendered_original = kernel.render_lean(ty_of(p.apollonius_median));
+        assert_eq!(
+            rendered_bridge, rendered_original,
+            "apollonius_from_stewart must prove the exact same statement as apollonius_median"
+        );
+    });
 }
 
 /// **Positive-semidefiniteness of `dot`.** `x0 = V`. Verbatim-checked for the
