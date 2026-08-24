@@ -1010,6 +1010,39 @@ pub struct RatPrelude {
     /// own unconditional linearity): `Cov[X,Y+Z] = E[X(Y+Z)] − E[X]E[Y+Z] =
     /// (E[XY]+E[XZ]) − (E[X]E[Y]+E[X]E[Z]) = Cov[X,Y]+Cov[X,Z]`.
     pub covariance_add_right: NameId,
+    /// `Rat.covariance_smul_left : ∀ a X Y p n,
+    /// covariance (fun k => a * X k) Y p n = a * covariance X Y p n` —
+    /// bilinearity (the scalar half) of covariance in its FIRST argument.
+    /// Purely algebraic, no `IsDistribution` hypothesis needed (matching
+    /// [`Self::covariance_add_right`]'s own unconditional form):
+    /// `Cov[aX,Y] = E[(aX)Y] − E[aX]E[Y] = a·E[XY] − a·(E[X]E[Y]) =
+    /// a·Cov[X,Y]`, via [`Self::mul_assoc`] on the summand
+    /// (`(a·Xk)·Yk = a·(Xk·Yk)`), [`Self::expectation_smul`] to pull `a`
+    /// through both expectations, and the same `mul_sub_via_comm`
+    /// (`rat_prelude::probability`, private) [`Self::variance_smul`] uses to
+    /// pull `a` out of the resulting difference. The other building block
+    /// [`Self::covariance_sq_le_variance_mul`]'s discriminant argument needs
+    /// (`Var[tX]` already has one, via [`Self::variance_smul`]).
+    pub covariance_smul_left: NameId,
+    /// `Rat.covariance_sq_le_variance_mul : ∀ X Y p n, IsDistribution p n →
+    /// (covariance X Y p n) * (covariance X Y p n) ≤
+    /// (variance X p n) * (variance Y p n)` — the **probabilistic
+    /// Cauchy–Schwarz inequality**, `cov(X,Y)² ≤ var(X)·var(Y)`, in SQUARED
+    /// form (no square root — `ℚ` has none, the same limit
+    /// `creal_point.rs`'s own `cauchy_schwarz` records). Proved by the
+    /// discriminant argument: `Var[tX+Y] ≥ 0` for every rational `t`
+    /// ([`Self::variance_nonneg`] plus [`Self::variance_add_eq`],
+    /// [`Self::variance_smul`], [`Self::covariance_smul_left`]), a genuine
+    /// case split on `variance X p n` and (nested, only when it vanishes) on
+    /// `variance Y p n` via [`Self::lt_trichotomy`]: `0 < variance X p n`
+    /// instantiates `t := −cov·inv(var X)`; `variance X p n = 0 ∧ 0 <
+    /// variance Y p n` swaps roles (`Var[sY+X] ≥ 0`, `s := −cov·inv(var
+    /// Y)`); `variance X p n = 0 ∧ variance Y p n = 0` needs no inverse at
+    /// all — `t := one` and `t := neg one` pin `cov+cov = zero` directly,
+    /// closed by the same "one term ≤ a nonneg sum" bound
+    /// `rat_prelude::probability::term_le_sum_range` uses, applied to
+    /// `add_sq_expand cov cov`.
+    pub covariance_sq_le_variance_mul: NameId,
     /// `Rat.sumVars X m k := sumRange (fun j => X j k) m` — the pointwise sum
     /// of `m` variables `X 0, X 1, …, X (m-1)`, each a `Nat → Rat` sequence
     /// over the same outcome index `k`.
@@ -1074,6 +1107,44 @@ pub struct RatPrelude {
     /// distributed variables this development never assumes — the sum
     /// `Σ_{j<m} Var[X_j]` is left as-is.
     pub chebyshev_sample_mean_uncorrelated: NameId,
+
+    // --- the probabilistic Cauchy–Schwarz inequality (rat_prelude::probability) --
+    /// `Rat.variance_scaled_add_nonneg : ∀ X Y p n, IsDistribution p n → ∀ t,
+    /// le zero (add (mul (mul t t) (variance X p n)) (add (mul t
+    /// (covariance X Y p n)) (add (mul t (covariance X Y p n)) (variance Y p
+    /// n))))` — `Var[tX+Y] ≥ 0`, fully expanded into a quadratic in `t`, for
+    /// every rational `t`. The discriminant fact
+    /// [`Self::covariance_sq_le_variance_mul`] rests on, named once so both
+    /// the direct case (instantiate at `X,Y`) and the role-swapped case
+    /// (instantiate at `Y,X`, via [`Self::covariance_comm`]) reuse it.
+    pub variance_scaled_add_nonneg: NameId,
+    /// `Rat.covariance_sq_le_variance_mul_of_pos : ∀ X Y p n, IsDistribution
+    /// p n → lt zero (variance X p n) → le (mul (covariance X Y p n)
+    /// (covariance X Y p n)) (mul (variance X p n) (variance Y p n))` — the
+    /// probabilistic Cauchy–Schwarz inequality, `cov(X,Y)² ≤ var(X)·var(Y)`,
+    /// closed for the case `variance X p n ≠ 0` (in fact `> 0`, from
+    /// [`Self::variance_nonneg`]). The discriminant argument: instantiate
+    /// [`Self::variance_scaled_add_nonneg`] at `t := neg (covariance X Y p
+    /// n) * inv (variance X p n)`, which makes `variance X p n * t = neg
+    /// (covariance X Y p n)` (via [`Self::mul_inv_cancel_of_ne_zero`]) and
+    /// collapses the quadratic to `0 ≤ variance Y p n − (covariance X Y p
+    /// n)² · inv (variance X p n)`; multiplying through by `variance X p n`
+    /// closes it. [`Self::covariance_sq_le_variance_mul`] still needs the
+    /// symmetric case (`variance X p n = 0`) — see its own doc.
+    pub covariance_sq_le_variance_mul_of_pos: NameId,
+    /// `Rat.covariance_sq_le_variance_mul_of_zero_zero : ∀ X Y p n,
+    /// IsDistribution p n → variance X p n = zero → variance Y p n = zero →
+    /// le (mul (covariance X Y p n) (covariance X Y p n)) (mul (variance X
+    /// p n) (variance Y p n))` — the probabilistic Cauchy–Schwarz
+    /// inequality, closed for the case BOTH variances vanish. No inverse
+    /// needed: [`Self::variance_scaled_add_nonneg`] at `t := one` and `t :=
+    /// neg one` pin `covariance X Y p n + covariance X Y p n = zero`
+    /// directly (`le_antisymm`); squaring and expanding via `add_sq_expand`
+    /// gives `4·(covariance X Y p n)² = zero` as a nested sum, and the same
+    /// "one term ≤ a nonneg sum" bound
+    /// `rat_prelude::probability::term_le_sum_range` uses reads
+    /// `(covariance X Y p n)² ≤ zero` off it.
+    pub covariance_sq_le_variance_mul_of_zero_zero: NameId,
 
     // --- 2x2 linear algebra --------------------------------------------------
     /// `Rat.det2 : Rat → Rat → Rat → Rat → Rat`, `det2 a b c d := a·d − b·c`.
@@ -1370,6 +1441,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         markov_constructed: child(kernel, "markov_constructed"),
         chebyshev_inequality: child(kernel, "chebyshev_inequality"),
         covariance_add_right: child(kernel, "covariance_add_right"),
+        covariance_smul_left: child(kernel, "covariance_smul_left"),
+        covariance_sq_le_variance_mul: child(kernel, "covariance_sq_le_variance_mul"),
         sum_vars: child(kernel, "sumVars"),
         expectation_sum_vars: child(kernel, "expectation_sumVars"),
         covariance_sum_vars_left: child(kernel, "covariance_sumVars_left"),
@@ -1377,6 +1450,12 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         variance_sum_vars: child(kernel, "variance_sumVars"),
         variance_scaled_mean: child(kernel, "variance_scaled_mean"),
         chebyshev_sample_mean_uncorrelated: child(kernel, "chebyshev_sampleMean_uncorrelated"),
+        variance_scaled_add_nonneg: child(kernel, "variance_scaled_add_nonneg"),
+        covariance_sq_le_variance_mul_of_pos: child(kernel, "covariance_sq_le_variance_mul_of_pos"),
+        covariance_sq_le_variance_mul_of_zero_zero: child(
+            kernel,
+            "covariance_sq_le_variance_mul_of_zero_zero",
+        ),
         det2: child(kernel, "det2"),
         det2_swap_rows: child(kernel, "det2_swap_rows"),
         det2_id: child(kernel, "det2_id"),
