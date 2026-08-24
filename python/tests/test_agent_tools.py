@@ -194,9 +194,16 @@ def test_overlay_query_filters_by_relation(ctx) -> None:
 
 
 def test_every_tool_declares_a_tier() -> None:
-    declared = {f.__name__ for f in tools.TIER_R_TOOLS + tools.TIER_C_TOOLS}
+    # `TIER_R_GUARDED_TOOLS` joined the union in slice A6. It is a THIRD tuple
+    # rather than six-plus-two in `TIER_R_TOOLS` because the two axes are
+    # different: those tools are tier R by assurance and guarded by
+    # availability, and only `build_toolset(with_web=True)` offers them.
+    declared = {
+        f.__name__ for f in tools.TIER_R_TOOLS + tools.TIER_R_GUARDED_TOOLS + tools.TIER_C_TOOLS
+    }
     assert declared == set(tools.TOOL_TIERS)
     assert {tools.TOOL_TIERS[f.__name__] for f in tools.TIER_R_TOOLS} == {"read"}
+    assert {tools.TOOL_TIERS[f.__name__] for f in tools.TIER_R_GUARDED_TOOLS} == {"read"}
     assert {tools.TOOL_TIERS[f.__name__] for f in tools.TIER_C_TOOLS} == {"checked"}
 
 

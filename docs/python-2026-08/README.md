@@ -22,6 +22,7 @@ command can check, and lands as slices that pass the gates on their own.
 | 05 | [`05-agent-runbook.md`](05-agent-runbook.md) | install, run offline/live, replay, where episodes go, what the checker enforces | 03 |
 | 06 | [`06-obstruction-graph.md`](06-obstruction-graph.md) | typed declines to an obstruction graph; which capability removes the largest cluster | 03 |
 | 07 | [`07-mobility-census.md`](07-mobility-census.md) | every precondition against every open fact without running a producer; the capability backlog | 03, 04 |
+| 08 | [`08-guarded-tools.md`](08-guarded-tools.md) | the two guarded tier-R tools: the `web_fetch` prefix allowlist, the nursery family rule, the injection fence, and the sandbox that must be shown to bite | 03 |
 
 The measured basis for all three is in two studies written 2026-08-24 and
 reproduced here as [`studies/`](studies/): the PyO3 feasibility probe (PyO3

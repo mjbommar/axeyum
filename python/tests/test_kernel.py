@@ -42,11 +42,24 @@ BUILD_HINT = (
 )
 
 
+KERNEL_SOURCES = REPO_ROOT / "crates" / "axeyum-lean-kernel" / "src"
+
+
 def run_example(name: str, *args: str) -> subprocess.CompletedProcess[str]:
-    """Runs a prebuilt example binary, skipping only when it does not exist."""
+    """Runs a prebuilt example binary, skipping when it is absent OR STALE.
+
+    A binary older than the newest kernel source is a differential against
+    the wrong subject: it reported 139 theorems where the source had 235, and
+    a merge that adds theorems makes it wrong again. Failing there reads as a
+    binding defect; the honest answer is "not looked at", with the rebuild
+    command -- the same distinction the inventory examples themselves draw.
+    """
     binary = EXAMPLES / name
     if not binary.exists():
         pytest.skip(f"{binary} not built; run: {BUILD_HINT}")
+    newest_source = max(path.stat().st_mtime for path in KERNEL_SOURCES.rglob("*.rs"))
+    if binary.stat().st_mtime < newest_source:
+        pytest.skip(f"{binary} is older than the kernel sources; run: {BUILD_HINT}")
     return subprocess.run(
         [str(binary), *args], capture_output=True, text=True, timeout=600, check=False
     )

@@ -77,6 +77,7 @@ from ..knowledge import nursery as nursery_api
 from ..knowledge._paths import read_json, resolve_root
 from . import classify as classify_api
 from . import episode as episode_api
+from . import web as web_api
 from .episode import Budgets, EpisodeWriteError
 from .models import (
     ELIGIBLE_PARTITIONS,
@@ -298,6 +299,16 @@ class EpisodeState:
     gate_reason: str = ""
     #: The tier-C tool the plan's `producer_id` routes to, empty when none does.
     producer_tool: str = ""
+    #: Whether this episode ASKED for the A6 retrieval tools. Default off, and
+    #: off is not the same as refused: `web_reason` records which it was, so an
+    #: episode that never asked and one whose family the guard closed are
+    #: distinguishable afterwards.
+    allow_web: bool = False
+    #: What `web.family_guard` decided in `Gather`, in its own words. Never
+    #: contains a fact id.
+    web_reason: str = "web retrieval was not requested for this episode"
+    #: Whether the `Gather` toolset actually carried `web_fetch`/`python_exec`.
+    web_enabled: bool = False
     #: The pending approval request the deferred tool call ended the run with.
     deferred: Any = None
     #: What the supervisor decided per tool call id: `(approved, reason)`.
@@ -341,6 +352,7 @@ def build_agent(
     *,
     for_plan: bool = False,
     include_tier_c: bool = False,
+    with_web: bool = False,
 ) -> Agent[AgentDeps, str]:
     """One agent, standing instructions, and only the tools the caller asked for.
 
@@ -353,6 +365,13 @@ def build_agent(
     that plans cannot see a tool that dispatches. Only `Dispatch` and
     `Supervise` pass True, and there every tier-C tool is
     `requires_approval=True`.
+
+    `with_web` defaults to False for the same reason and answers a different
+    question: not "may it dispatch" but "may it retrieve". Only `Gather` passes
+    True, only when `state.allow_web` was asked for AND `web.family_guard`
+    allows it for this episode's target. A run that never asks is byte-identical
+    to one from before slice A6, which is what keeps the committed episodes
+    replayable.
     """
     model = state.model
     if for_plan and state.plan_model is not None:
@@ -362,11 +381,30 @@ def build_agent(
     return Agent(
         model,
         deps_type=AgentDeps,
-        toolsets=[build_toolset(include_tier_c=include_tier_c)],
+        toolsets=[build_toolset(include_tier_c=include_tier_c, with_web=with_web)],
         instructions=instructions_text(state.root),
         model_settings=state.settings,
         retries=3,
     )
+
+
+def web_decision(state: EpisodeState) -> web_api.FamilyDecision:
+    """May this episode see the A6 retrieval tools? Two conditions, both required.
+
+    `allow_web` is the REQUEST and `web.family_guard` is the POLICY, and they are
+    kept apart because the two "no"s are different findings: an episode that
+    never asked and an episode whose nursery family the guard closed both run
+    without `web_fetch`, and only one of them is the guard doing its job.
+
+    A module-level function rather than a block inside `Gather.run` so it can be
+    exercised without a model. A guard that can only be observed by running a
+    whole episode is a guard whose branches get tested on the paths that happen
+    to be reachable today -- and today no eligible fact sits in a family with a
+    held-out member, so the disabling branch would never run.
+    """
+    if not state.allow_web:
+        return web_api.Disabled("web retrieval was not requested for this episode")
+    return web_api.family_guard(state.fact_id, state.root)
 
 
 # ------------------------------------------------------------------- the nodes
@@ -394,6 +432,10 @@ class Select(BaseNode[EpisodeState, None, Path]):
         state.frontier_path, _ = episode_api.save_frontier(state.frontier, state.out_dir)
         state.deps.selected_fact_id = state.fact_id
         state.deps.deadline = state.deadline
+        # Pinned here rather than in `Gather`, because `web_fetch` refuses
+        # without it: a snapshot outside the episode directory is a digest
+        # `check-agent-episode.py` rule 4 cannot resolve.
+        state.deps.episode_dir = state.out_dir
         return Gather()
 
 
@@ -406,7 +448,11 @@ class Gather(BaseNode[EpisodeState, None, Path]):
         if state.out_of_time():
             state.verdict, state.decline_class = "budget-exhausted", DECLINE_BUDGET
             return WriteEpisode()
-        agent = build_agent(state)
+        # The A6 guard, evaluated once per episode and recorded either way.
+        decision = web_decision(state)
+        state.web_enabled = bool(decision.allowed)
+        state.web_reason = decision.reason
+        agent = build_agent(state, with_web=state.web_enabled)
         try:
             with capture_run_messages() as captured:
                 result = await agent.run(
@@ -987,6 +1033,11 @@ class WriteEpisode(BaseNode[EpisodeState, None, Path]):
             proposal_rows=proposal_rows,
             verdict=state.verdict,
             decline_class=state.decline_class,
+            # Empty on every episode that did not retrieve, which is all of them
+            # by default. The rows are projected from the fetch log rather than
+            # rebuilt from the snapshot directory, so a file nobody fetched
+            # cannot become a row and a fetch that happened cannot become absent.
+            web_snapshots=web_api.web_snapshot_rows(state.deps.web_documents, state.root),
             **extra,
         )
         state.episode_path = episode_api.write_episode(document, state.out_dir, state.root)
@@ -1064,4 +1115,5 @@ __all__ = [
     "run_episode",
     "run_prepare",
     "supervisor_decision",
+    "web_decision",
 ]
