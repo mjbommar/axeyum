@@ -164,6 +164,13 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             "Complex.mul_eq_zero_not_both_apart_zero",
             p.mul_eq_zero_not_both_apart_zero,
         ),
+        ("Complex.inv_mul_cancel", p.inv_mul_cancel),
+        ("Complex.pos_bound_conj", p.pos_bound_conj),
+        ("Complex.conj_inv", p.conj_inv),
+        ("Complex.pow", p.pow),
+        ("Complex.pow_zero", p.pow_zero),
+        ("Complex.pow_succ", p.pow_succ),
+        ("Complex.pow_add", p.pow_add),
     ];
     for (label, name) in named {
         let declaration = kernel

@@ -429,6 +429,68 @@ pub struct ComplexPrelude {
     /// extracted. `Apart _ zero` is strictly stronger than `Not (Equiv _
     /// zero)`, and only the `Apart` form is proved.
     pub mul_eq_zero_not_both_apart_zero: NameId,
+
+    // --- the other side of the field law, and complex powers ----------------
+    /// `Complex.inv_mul_cancel : ∀ z k (h : CReal.PosBound (normSq z) k),
+    /// Equiv (mul (inv z k h) z) one`.
+    ///
+    /// The other side of [`Self::mul_inv_cancel`], immediate from it and
+    /// [`Self::mul_comm`] by one `Equiv.trans`: no fresh estimate, `inv` is
+    /// not shown to be a *two-sided* inverse from scratch.
+    pub inv_mul_cancel: NameId,
+    /// `Complex.pos_bound_conj : ∀ z k, CReal.PosBound (normSq z) k →
+    /// CReal.PosBound (normSq (conj z)) k`.
+    ///
+    /// **The modulus transports unchanged.** `CReal.PosBound x k` unfolds to
+    /// `CReal.le (CReal.ofRat (Rat.natDivSucc 1 k)) x` — a lower bound that
+    /// depends on `k` alone, not on `x` — so [`Self::norm_sq_conj`] (`normSq
+    /// (conj z) ~ normSq z`) transports the same bound across the same `k` by
+    /// `CReal.le_congr`, with no existential re-derivation through
+    /// `CReal.pos_bound_of_lt` (which would hand back an unrelated modulus).
+    /// This is what [`Self::conj_inv`] needs to state `inv (conj z)` at the
+    /// caller's own `k`, and it is reusable at any other site that transports
+    /// a `PosBound` witness across a `normSq`-`Equiv`.
+    pub pos_bound_conj: NameId,
+    /// `Complex.conj_inv : ∀ z k (h : CReal.PosBound (normSq z) k),
+    /// Equiv (conj (inv z k h)) (inv (conj z) k (pos_bound_conj z k h))`.
+    ///
+    /// **Stated at the same `k`, via [`Self::pos_bound_conj`]** — not at some
+    /// existentially-produced modulus for the conjugate, which would make the
+    /// statement true but useless to a caller already holding `h` at `k`.
+    /// `CReal.inv_congr` (independent-moduli form) relates
+    /// `CReal.inv (normSq z) k h` and `CReal.inv (normSq (conj z)) k h'` via
+    /// [`Self::norm_sq_conj`]; the rest is the ring calculus plus
+    /// `CReal.mul_congr`/`neg_congr` on that one fact, componentwise.
+    pub conj_inv: NameId,
+    /// `Complex.pow : Complex → Nat → Complex`, by structural `Nat.rec` on the
+    /// exponent — `pow z Nat.zero ≡ one`, `pow z (Nat.succ j) ≡ mul (pow z j)
+    /// z` — matching `Int.pow`'s own convention exactly (`int_prelude/defs.rs`):
+    /// recursion on the exponent, the recursive factor on the LEFT of the
+    /// fresh copy of the base.
+    pub pow: NameId,
+    /// `Complex.pow_zero : ∀ z, Eq Complex (pow z Nat.zero) one`.
+    ///
+    /// Stated over `Eq Complex`, not `Complex.Equiv` — this is a fact about
+    /// how `pow`'s *own* definition computes on one representative, the same
+    /// reason `Int.pow_zero`/`Int.pow_succ` are `Eq Int` facts despite `Int`
+    /// carrying its own equality discipline elsewhere. Closes by `Eq.refl`
+    /// alone: `pow`'s `Nat.rec` application ι-reduces on `Nat.zero` with no
+    /// further work.
+    pub pow_zero: NameId,
+    /// `Complex.pow_succ : ∀ z (m : Nat), Eq Complex (pow z (Nat.succ m))
+    /// (mul (pow z m) z)`. Closes by `Eq.refl` alone, exactly as `pow_zero`
+    /// does: `pow`'s `Nat.rec` application ι-reduces on `Nat.succ m` to
+    /// precisely this right-hand side.
+    pub pow_succ: NameId,
+    /// `Complex.pow_add : ∀ z (m n : Nat), Equiv (pow z (Nat.add m n))
+    /// (mul (pow z m) (pow z n))`.
+    ///
+    /// Induction on `n`, mirroring `Int.pow_add`'s own proof shape
+    /// (`int_prelude/algebra.rs`) with every carrier promoted from `Int` to
+    /// `Complex` and every step re-expressed over `Complex.Equiv`: the base
+    /// case is [`Self::mul_one`] reversed, the step is the inductive
+    /// hypothesis lifted by [`Self::mul_congr`] then [`Self::mul_assoc`].
+    pub pow_add: NameId,
 }
 
 impl ComplexPrelude {
@@ -533,6 +595,13 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         mul_apart_zero: kernel.name_str(complex, "mul_apart_zero"),
         mul_eq_zero_not_both_apart_zero: kernel
             .name_str(complex, "mul_eq_zero_not_both_apart_zero"),
+        inv_mul_cancel: kernel.name_str(complex, "inv_mul_cancel"),
+        pos_bound_conj: kernel.name_str(complex, "pos_bound_conj"),
+        conj_inv: kernel.name_str(complex, "conj_inv"),
+        pow: kernel.name_str(complex, "pow"),
+        pow_zero: kernel.name_str(complex, "pow_zero"),
+        pow_succ: kernel.name_str(complex, "pow_succ"),
+        pow_add: kernel.name_str(complex, "pow_add"),
     }
 }
 
@@ -586,7 +655,13 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_apart_symm(&mut d, prelude)?;
         declare_apart_of_normsq_pos(&mut d, prelude)?;
         declare_mul_apart_zero(&mut d, prelude)?;
-        declare_mul_eq_zero_not_both_apart_zero(&mut d, prelude)
+        declare_mul_eq_zero_not_both_apart_zero(&mut d, prelude)?;
+        declare_complex_inv_mul_cancel(&mut d, prelude)?;
+        declare_pos_bound_conj(&mut d, prelude)?;
+        declare_conj_inv(&mut d, prelude)?;
+        declare_pow(&mut d, prelude)?;
+        declare_pow_equations(&mut d, prelude)?;
+        declare_pow_add(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -3385,6 +3460,442 @@ fn declare_mul_eq_zero_not_both_apart_zero(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.mul_eq_zero_not_both_apart_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the other side of the field law, `PosBound` transport, and powers -----
+
+/// `Eq.{1} Complex a b`.
+///
+/// `Complex` lives at the same universe `Int` does (`declare_carrier`'s
+/// `level_one`), so this is exactly [`IntDev`]'s own `ieq` with the carrier
+/// swapped — built by hand here rather than reused because `ieq` is hardwired
+/// to `Int`.
+fn complex_eq(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let one = d.level_one();
+    let logic = p.creal.rat.int.logic;
+    let eq = d.kernel().const_(logic.eq, vec![one]);
+    let carrier = complex_ty(d, p);
+    d.apply(eq, &[carrier, a, b])
+}
+
+/// `Eq.refl.{1} Complex a`.
+fn complex_eq_refl(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId) -> ExprId {
+    let one = d.level_one();
+    let logic = p.creal.rat.int.logic;
+    let refl = d.kernel().const_(logic.eq_refl, vec![one]);
+    let carrier = complex_ty(d, p);
+    d.apply(refl, &[carrier, a])
+}
+
+/// `Complex.inv_mul_cancel : ∀ z k (h : CReal.PosBound (normSq z) k),
+/// Equiv (mul (inv z k h) z) one`.
+///
+/// The other side of [`ComplexPrelude::mul_inv_cancel`] — `mul_comm` at
+/// `(inv z k h, z)` turns `mul (inv z k h) z` into `mul z (inv z k h)`, and
+/// `mul_inv_cancel` itself closes from there. No fresh estimate.
+fn declare_complex_inv_mul_cancel(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm = d.const_app(p.norm_sq, &[z]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let inv_term = d.const_app(p.inv, &[z, k, h]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    let inv_z_mul = d.const_app(p.mul, &[inv_term, z]);
+    let z_inv_mul = d.const_app(p.mul, &[z, inv_term]);
+    let comm = d.lemma(p.mul_comm, &[inv_term, z]); // Equiv (mul inv_term z) (mul z inv_term)
+    let cancel = d.lemma(p.mul_inv_cancel, &[z, k, h]); // Equiv (mul z inv_term) one
+    let proof = d.lemma(p.equiv_trans, &[inv_z_mul, z_inv_mul, one, comm, cancel]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(z_fv, carrier, with_k)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, inv_z_mul, one);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        d.pi_fv(z_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.inv_mul_cancel,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.pos_bound_conj : ∀ z k, CReal.PosBound (normSq z) k →
+/// CReal.PosBound (normSq (conj z)) k`.
+///
+/// `CReal.PosBound x k` unfolds to `CReal.le (CReal.ofRat (Rat.natDivSucc 1
+/// k)) x` — a bound depending on `k` alone — so [`ComplexPrelude::norm_sq_conj`]
+/// transports `h` across the *same* `k` by `CReal.le_congr`, with the bound
+/// term held fixed by reflexivity on both sides. No existential
+/// re-derivation through `CReal.pos_bound_of_lt`, which would hand back an
+/// unrelated modulus instead of the caller's own `k`.
+fn declare_pos_bound_conj(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let conj_z = d.const_app(p.conj, &[z]);
+    let norm_conj_z = d.const_app(p.norm_sq, &[conj_z]);
+
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_z, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // `bound := CReal.ofRat (Rat.natDivSucc 1 k)` -- the same term
+    // `CReal.PosBound`'s own definition uses, built here from the public
+    // `CRealPrelude`/`RatPrelude` fields rather than imported from `creal/`.
+    let one_nat = d.num(1);
+    let gap = d.const_app(creal.rat.nat_div_succ, &[one_nat, k]);
+    let bound = d.const_app(creal.of_rat, &[gap]);
+    let bound_refl = crefl(d, creal, bound);
+
+    let conj_proof = d.lemma(p.norm_sq_conj, &[z]); // Equiv (normSq (conj z)) (normSq z)
+    let swapped = csymm(d, creal, norm_conj_z, norm_z, conj_proof); // Equiv (normSq z) (normSq (conj z))
+
+    // `le_congr : ∀ a b c e, Equiv a b → Equiv c e → le a c → le b e`, at
+    // `a = b = bound`, `c = normSq z`, `e = normSq (conj z)`.
+    let transported = d.lemma(
+        creal.le_congr,
+        &[bound, bound, norm_z, norm_conj_z, bound_refl, swapped, h],
+    );
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, transported);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(z_fv, carrier, with_k)
+    };
+    let ty = {
+        let conclusion = d.const_app(creal.pos_bound, &[norm_conj_z, k]);
+        let inner = d.arrow(hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        d.pi_fv(z_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pos_bound_conj,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.conj_inv : ∀ z k (h : CReal.PosBound (normSq z) k),
+/// Equiv (conj (inv z k h)) (inv (conj z) k (pos_bound_conj z k h))`.
+///
+/// Both sides unfold (delta on `conj`/`inv`, iota over `mk`) to a pair of
+/// `CReal` expressions in `a := re z`, `b := im z`, `u := CReal.inv (normSq z)
+/// k h` and `u' := CReal.inv (normSq (conj z)) k h'`: the left side's
+/// components are `a·u` and `−(−(b·u))`, the right side's are `a·u'` and
+/// `−((−b)·u')`. `CReal.inv_congr` (independent moduli, both at the same `k`
+/// here) relates `u` and `u'` via [`ComplexPrelude::norm_sq_conj`]; the real
+/// component is `mul_congr` on that fact directly, and the imaginary
+/// component chains two `neg_congr` steps with one ring-calculus double
+/// negation.
+fn declare_conj_inv(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_z, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let conj_z = d.const_app(p.conj, &[z]);
+    let norm_conj_z = d.const_app(p.norm_sq, &[conj_z]);
+    let h2 = d.lemma(p.pos_bound_conj, &[z, k, h]); // PosBound (normSq (conj z)) k
+
+    let a = re_of(d, p, z);
+    let b = im_of(d, p, z);
+    let u = d.const_app(creal.inv, &[norm_z, k, h]);
+    let u2 = d.const_app(creal.inv, &[norm_conj_z, k, h2]);
+
+    // `normSq z ~ normSq (conj z)`, then `CReal.inv_congr` at the shared `k`.
+    let conj_norm_proof = d.lemma(p.norm_sq_conj, &[z]); // Equiv (normSq (conj z)) (normSq z)
+    let norm_swapped = csymm(d, creal, norm_conj_z, norm_z, conj_norm_proof);
+    let u_eq = d.lemma(
+        creal.inv_congr,
+        &[norm_z, norm_conj_z, k, k, h, h2, norm_swapped],
+    ); // Equiv u u2
+
+    let refl_a = crefl(d, creal, a);
+    let refl_b = crefl(d, creal, b);
+
+    // Real part: Equiv (mul a u) (mul a u2).
+    let real_proof = d.lemma(creal.mul_congr, &[a, a, u, u2, refl_a, u_eq]);
+    let au = cmul(d, creal, a, u);
+    let au2 = cmul(d, creal, a, u2);
+    let real_claim = ceq(d, creal, au, au2);
+
+    // Imaginary part: Equiv (neg (neg (mul b u))) (neg (mul (neg b) u2)).
+    let mbu_proof = d.lemma(creal.mul_congr, &[b, b, u, u2, refl_b, u_eq]); // Equiv (mul b u)(mul b u2)
+    let bu = cmul(d, creal, b, u);
+    let bu2 = cmul(d, creal, b, u2);
+    let n1 = d.lemma(creal.neg_congr, &[bu, bu2, mbu_proof]); // Equiv (neg bu)(neg bu2)
+    let nbu = cneg(d, creal, bu);
+    let nbu2 = cneg(d, creal, bu2);
+    let n2 = d.lemma(creal.neg_congr, &[nbu, nbu2, n1]); // Equiv (neg(neg bu))(neg(neg bu2))
+    let nnbu = cneg(d, creal, nbu);
+    let nnbu2 = cneg(d, creal, nbu2);
+
+    let neg_b = cneg(d, creal, b);
+    let ring_bridge = ring_proof(
+        d,
+        creal,
+        &RExpr::neg(RExpr::neg(RExpr::mul(RExpr::Atom(b), RExpr::Atom(u2)))),
+        &RExpr::neg(RExpr::mul(RExpr::neg(RExpr::Atom(b)), RExpr::Atom(u2))),
+    );
+    let neg_b_u2 = cmul(d, creal, neg_b, u2);
+    let target_imag = cneg(d, creal, neg_b_u2);
+    let imag_proof = ctrans(d, creal, nnbu, nnbu2, target_imag, n2, ring_bridge);
+    let imag_claim = ceq(d, creal, nnbu, target_imag);
+
+    let body = and_intro(d, p, real_claim, imag_claim, real_proof, imag_proof);
+
+    let inv_z_term = d.const_app(p.inv, &[z, k, h]);
+    let conj_inv_z = d.const_app(p.conj, &[inv_z_term]);
+    let inv_conj_z = d.const_app(p.inv, &[conj_z, k, h2]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, body);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(z_fv, carrier, with_k)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, conj_inv_z, inv_conj_z);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        d.pi_fv(z_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.conj_inv,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.pow : Complex → Nat → Complex`, by structural `Nat.rec` on the
+/// exponent — `pow z Nat.zero ≡ one`, `pow z (Nat.succ j) ≡ mul (pow z j) z`.
+///
+/// Matches `Int.pow`'s convention verbatim (`int_prelude/defs.rs::declare_pow`):
+/// recursion on the exponent, the recursive factor `mul (pow z j) z` with the
+/// fresh copy on the RIGHT and the inductive value on the LEFT. `Complex`'s
+/// own `mk`-carrying base has to be closed over across the whole `Nat.rec`
+/// application, exactly the reason `Int.pow` needed its own helper rather
+/// than [`NatOps::define_binary`](crate::nat_prelude::NatOps::define_binary)'s
+/// `Nat → Nat → Nat` shape.
+fn declare_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let motive = d.kernel().lam(anon, nat, carrier, BinderInfo::Default);
+    let minor_zero = d.kernel().const_(p.one, vec![]);
+    let minor_succ = {
+        let j_fv = d.fresh_fvar();
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let body = d.const_app(p.mul, &[ih, z]);
+        let inner = d.lam_fv(ih_fv, carrier, body);
+        d.lam_fv(j_fv, nat, inner)
+    };
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+    let body = d.apply(rec, &[motive, minor_zero, minor_succ, n]);
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(z_fv, carrier, with_n)
+    };
+    let ty = {
+        let inner = d.arrow(nat, carrier);
+        d.arrow(carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.pow,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 9),
+    })
+}
+
+/// `Complex.pow_zero` and `Complex.pow_succ`: the defining equations of
+/// [`declare_pow`], each closed by `Eq.refl` alone since `pow`'s `Nat.rec`
+/// application ι-reduces on both minor premises — exactly `Int.pow_zero`/
+/// `Int.pow_succ`'s own shape (`int_prelude/defs.rs::declare_pow_equations`),
+/// with `Eq Complex` in place of `Eq Int`.
+fn declare_pow_equations(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    // pow_zero : ∀ z, Eq Complex (pow z Nat.zero) one.
+    {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let zero_n = d.zero();
+        let lhs = d.const_app(p.pow, &[z, zero_n]);
+        let one = d.kernel().const_(p.one, vec![]);
+        let stmt = complex_eq(d, p, lhs, one);
+        let proof = complex_eq_refl(d, p, one);
+        let value = d.lam_fv(z_fv, carrier, proof);
+        let ty = d.pi_fv(z_fv, carrier, stmt);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.pow_zero,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // pow_succ : ∀ z (m : Nat), Eq Complex (pow z (Nat.succ m)) (mul (pow z m) z).
+    {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+
+        let sm = d.succ(m);
+        let lhs = d.const_app(p.pow, &[z, sm]);
+        let pm = d.const_app(p.pow, &[z, m]);
+        let rhs = d.const_app(p.mul, &[pm, z]);
+        let stmt_inner = complex_eq(d, p, lhs, rhs);
+        let proof_inner = complex_eq_refl(d, p, rhs);
+
+        let ty = {
+            let inner = d.pi_fv(m_fv, nat, stmt_inner);
+            d.pi_fv(z_fv, carrier, inner)
+        };
+        let value = {
+            let inner = d.lam_fv(m_fv, nat, proof_inner);
+            d.lam_fv(z_fv, carrier, inner)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.pow_succ,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// `Complex.pow_add : ∀ z (m n : Nat), Equiv (pow z (Nat.add m n))
+/// (mul (pow z m) (pow z n))`.
+///
+/// Induction on `n` via [`NatOps::induct`], mirroring `Int.pow_add`'s own
+/// proof shape (`int_prelude/algebra.rs::declare_pow_add`) with every step
+/// re-expressed over `Complex.Equiv` in place of `Eq Int`: the base case is
+/// [`ComplexPrelude::mul_one`] reversed (`add m Nat.zero` and `pow z
+/// Nat.zero` both ι-reduce away), the step lifts the inductive hypothesis
+/// through [`ComplexPrelude::mul_congr`] and re-associates with
+/// [`ComplexPrelude::mul_assoc`] — no new proof technique.
+fn declare_pow_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let sum = NatOps::add(d, m, x);
+        let lhs = d.const_app(p.pow, &[z, sum]);
+        let pow_m = d.const_app(p.pow, &[z, m]);
+        let pow_x = d.const_app(p.pow, &[z, x]);
+        let rhs = d.const_app(p.mul, &[pow_m, pow_x]);
+        zeq(d, p, lhs, rhs)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            // `pow z (add m 0)` computes to `pow z m`; goal is
+            // `Equiv (pow z m) (mul (pow z m) (pow z 0))`, i.e. `mul_one`
+            // reversed once `pow z 0` computes to `one`.
+            let pow_m = d.const_app(p.pow, &[z, m]);
+            let one = d.kernel().const_(p.one, vec![]);
+            let product = d.const_app(p.mul, &[pow_m, one]);
+            let h = d.lemma(p.mul_one, &[pow_m]); // Equiv (mul pow_m one) pow_m
+            d.lemma(p.equiv_symm, &[product, pow_m, h])
+        },
+        &|d, j, ih| {
+            // `pow z (add m (succ j))` computes to `mul (pow z (add m j)) z`.
+            let pow_m = d.const_app(p.pow, &[z, m]);
+            let pow_j = d.const_app(p.pow, &[z, j]);
+            let sum_mj = NatOps::add(d, m, j);
+            let pow_sum = d.const_app(p.pow, &[z, sum_mj]);
+            let start = d.const_app(p.mul, &[pow_sum, z]);
+
+            let ih_applied = d.const_app(p.mul, &[pow_m, pow_j]);
+            let refl_z = d.lemma(p.equiv_refl, &[z]);
+            let h_ih = d.lemma(p.mul_congr, &[pow_sum, ih_applied, z, z, ih, refl_z]);
+            // h_ih : Equiv (mul pow_sum z) (mul ih_applied z)
+            let after_ih = d.const_app(p.mul, &[ih_applied, z]);
+
+            let h_assoc = d.lemma(p.mul_assoc, &[pow_m, pow_j, z]);
+            // h_assoc : Equiv (mul (mul pow_m pow_j) z) (mul pow_m (mul pow_j z))
+            let inner = d.const_app(p.mul, &[pow_j, z]);
+            let end = d.const_app(p.mul, &[pow_m, inner]);
+
+            d.lemma(p.equiv_trans, &[start, after_ih, end, h_ih, h_assoc])
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let inner2 = d.pi_fv(m_fv, nat, inner);
+        d.pi_fv(z_fv, carrier, inner2)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let inner2 = d.lam_fv(m_fv, nat, inner);
+        d.lam_fv(z_fv, carrier, inner2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_add,
         uparams: vec![],
         ty,
         value,
