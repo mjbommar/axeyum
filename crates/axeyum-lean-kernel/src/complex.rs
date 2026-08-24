@@ -646,6 +646,97 @@ pub struct ComplexPrelude {
     /// `choose_zero_right`) lifted into a `Complex` context via
     /// `nat_eq_to_complex_equiv`.
     pub add_pow: NameId,
+
+    // --- roots of unity and the finite Fourier orthogonality relation -------
+    /// `Complex.IsRootOfUnity : Complex → Nat → Prop := fun z n => Equiv (pow
+    /// z n) one`.
+    ///
+    /// A `Definition`, not a fresh predicate with its own laws: every fact
+    /// below unfolds it by one delta step to `pow z n ~ one` and works with
+    /// that directly, exactly [`Self::apart`]'s own convention.
+    pub is_root_of_unity: NameId,
+    /// `Complex.one_is_root_of_unity : ∀ n, IsRootOfUnity one n` — the
+    /// **non-vacuity** witness shared by every `n`.
+    pub one_is_root_of_unity: NameId,
+    /// `Complex.I_is_fourth_root : IsRootOfUnity I 4`.
+    ///
+    /// The **negative control**: a predicate satisfied only by `one` would be
+    /// nearly vacuous, and `I` is the cheapest genuinely different witness.
+    /// Closed by unfolding `pow I 4` down to `mul (mul (mul (mul one I) I) I)
+    /// I` by iota alone (definitionally what four applications of
+    /// [`Self::pow_succ`] plus one of [`Self::pow_zero`] assert) and then
+    /// deciding that fully-expanded product with the ring calculus, which
+    /// already carries `I`'s components `(0, 1)` — the same fact
+    /// [`Self::i_sq`] states — so no separate appeal to `i_sq` is needed
+    /// beyond what the calculus already knows about `I`.
+    pub i_is_fourth_root: NameId,
+    /// `Complex.pow_mul : ∀ z (m n : Nat), Equiv (pow z (Nat.mul m n)) (pow
+    /// (pow z m) n)`.
+    ///
+    /// Induction on `n`, mirroring `Int.pow_mul`'s own proof shape
+    /// (`int_prelude/algebra.rs::declare_pow_mul`) with every step promoted
+    /// from `Eq Int` to `Complex.Equiv`: the base case computes both sides to
+    /// `one` (`Nat.mul m Nat.zero` and `pow _ Nat.zero` both ι-reduce), the
+    /// step chains [`Self::pow_add`] then the inductive hypothesis, and the
+    /// result of that chain is *already* `pow (pow z m) (Nat.succ j)` up to
+    /// ι-reduction — no closing rearrangement needed, unlike `pow_add`
+    /// itself.
+    pub pow_mul: NameId,
+    /// `Complex.geom_sum_eq_zero_of_root_of_unity : ∀ z n, IsRootOfUnity z n
+    /// → Apart (add one (neg z)) zero → Equiv (sumRange (fun k => pow z k)
+    /// n) zero`.
+    ///
+    /// **The finite Fourier orthogonality relation, `Σ_{k<n} zᵏ = 0` for `z`
+    /// an `n`-th root of unity with `z ≠ 1`.**
+    ///
+    /// The classical hypothesis is `z ≠ 1`; `¬(z ~ one)` **cannot** reach
+    /// `Apart (add one (neg z)) zero` in this kernel — that converse is
+    /// Markov's principle, proved nowhere here — so the hypothesis is stated
+    /// as the positive `Apart (add one (neg z)) zero` directly, exactly
+    /// [`Self::geom_series_div`]'s own convention for the same quantity.
+    ///
+    /// Proof: [`Self::mul_sub_one_geom`] gives `Equiv (mul (add one (neg z))
+    /// S) (add one (neg (pow z n)))`, and the hypothesis `pow z n ~ one`
+    /// rewrites the right side to `zero` (via [`Self::neg_congr`],
+    /// [`Self::add_congr`], [`Self::add_neg`]), so `mul (add one (neg z)) S ~
+    /// zero`. The `Apart` hypothesis is unfolded (the same `normSq`-shift
+    /// used by [`Self::mul_apart_zero`]) into `CReal.lt CReal.zero (normSq
+    /// (add one (neg z)))`, and `CReal.pos_bound_of_lt` extracts a modulus
+    /// `k`/witness `h` existentially (via `exists_elim`, never via `¬¬P →
+    /// P`); `Complex.inv (add one (neg z)) k h` then cancels against the
+    /// product exactly as [`Self::geom_series_div`] cancels its own divisor.
+    pub geom_sum_eq_zero_of_root_of_unity: NameId,
+    /// `Complex.root_of_unity_mul : ∀ z w n, IsRootOfUnity z n →
+    /// IsRootOfUnity w n → IsRootOfUnity (mul z w) n` — the `n`-th roots of
+    /// unity are closed under multiplication.
+    ///
+    /// Needs `(z·w)ⁿ ~ zⁿ·wⁿ`, which is not one of the declared lemmas above;
+    /// proved inline by induction on `n` (the step is a four-atom
+    /// commutative rearrangement `(A·B)·(z·w) ~ (A·z)·(B·w)` decided by the
+    /// ring calculus over the opaque atoms `A := zʲ`, `B := wʲ`, `z`, `w`),
+    /// then `mul_congr` substitutes both hypotheses and [`Self::mul_one`]
+    /// (at `one`) closes `mul one one ~ one`.
+    pub root_of_unity_mul: NameId,
+    /// `Complex.root_of_unity_pow : ∀ z m n, IsRootOfUnity z n →
+    /// IsRootOfUnity (pow z m) n` — the `n`-th roots of unity are closed
+    /// under taking powers.
+    ///
+    /// `(zᵐ)ⁿ ~ z^(m·n) ~ z^(n·m) ~ (zⁿ)ᵐ ~ oneᵐ ~ one`: two uses of
+    /// [`Self::pow_mul`], `Nat.mul_comm` lifted by `nat_eq_to_complex_equiv`,
+    /// a congruence of `pow` in its *base* argument (proved inline by
+    /// induction on the exponent — not one of the declared lemmas above
+    /// either), and [`Self::one_is_root_of_unity`].
+    ///
+    /// Together with [`Self::root_of_unity_mul`] and
+    /// [`Self::one_is_root_of_unity`] this is every group axiom the `n`-th
+    /// roots of unity satisfy that is **statable** here: closure and an
+    /// identity. **Inverses are not** — `Complex.inv` needs a witnessed
+    /// `CReal.PosBound (normSq z) k`, which `IsRootOfUnity z n` does not
+    /// supply (a root of unity is automatically apart from zero, since
+    /// `normSq z` th power is `one`'s norm, but extracting the modulus and
+    /// showing `inv z k h` is again an `n`-th root of unity is a separate
+    /// development, not attempted here).
+    pub root_of_unity_pow: NameId,
 }
 
 impl ComplexPrelude {
@@ -773,6 +864,14 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         sum_range_shift_front: kernel.name_str(complex, "sumRange_shiftFront"),
         sum_range_congr_lt: kernel.name_str(complex, "sumRange_congr_lt"),
         add_pow: kernel.name_str(complex, "add_pow"),
+        is_root_of_unity: kernel.name_str(complex, "IsRootOfUnity"),
+        one_is_root_of_unity: kernel.name_str(complex, "one_is_root_of_unity"),
+        i_is_fourth_root: kernel.name_str(complex, "I_is_fourth_root"),
+        pow_mul: kernel.name_str(complex, "pow_mul"),
+        geom_sum_eq_zero_of_root_of_unity: kernel
+            .name_str(complex, "geom_sum_eq_zero_of_root_of_unity"),
+        root_of_unity_mul: kernel.name_str(complex, "root_of_unity_mul"),
+        root_of_unity_pow: kernel.name_str(complex, "root_of_unity_pow"),
     }
 }
 
@@ -846,7 +945,14 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_sum_range_add(&mut d, prelude)?;
         declare_sum_range_shift_front(&mut d, prelude)?;
         declare_sum_range_congr_lt(&mut d, prelude)?;
-        declare_add_pow(&mut d, prelude)
+        declare_add_pow(&mut d, prelude)?;
+        declare_is_root_of_unity(&mut d, prelude)?;
+        declare_one_is_root_of_unity(&mut d, prelude)?;
+        declare_i_is_fourth_root(&mut d, prelude)?;
+        declare_pow_mul(&mut d, prelude)?;
+        declare_geom_sum_eq_zero_of_root_of_unity(&mut d, prelude)?;
+        declare_root_of_unity_mul(&mut d, prelude)?;
+        declare_root_of_unity_pow(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -6275,6 +6381,609 @@ fn declare_add_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelEr
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.add_pow,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- roots of unity and the finite Fourier orthogonality relation ----------
+
+/// `Complex.IsRootOfUnity z n := Equiv (pow z n) one`.
+fn declare_is_root_of_unity(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let prop = d.kernel().sort_zero();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let pow_zn = d.const_app(p.pow, &[z, n]);
+    let one = d.kernel().const_(p.one, vec![]);
+    let body = zeq(d, p, pow_zn, one);
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(z_fv, carrier, with_n)
+    };
+    let ty = {
+        let inner = d.arrow(nat, prop);
+        d.arrow(carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.is_root_of_unity,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 10),
+    })
+}
+
+/// `Complex.one_is_root_of_unity : ∀ n, IsRootOfUnity one n`.
+fn declare_one_is_root_of_unity(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let pow_one_x = d.const_app(p.pow, &[one_c, x]);
+        zeq(d, p, pow_one_x, one_c)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = d.const_app(p.is_root_of_unity, &[one_c, n]);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| d.lemma(p.equiv_refl, &[one_c]),
+        &|d, j, ih| {
+            let pow_one_j = d.const_app(p.pow, &[one_c, j]);
+            let product = d.const_app(p.mul, &[pow_one_j, one_c]);
+            let refl_one = d.lemma(p.equiv_refl, &[one_c]);
+            let one_one = d.const_app(p.mul, &[one_c, one_c]);
+            let step1 = d.lemma(p.mul_congr, &[pow_one_j, one_c, one_c, one_c, ih, refl_one]);
+            let step2 = d.lemma(p.mul_one, &[one_c]); // Equiv (mul one one) one
+            d.lemma(p.equiv_trans, &[product, one_one, one_c, step1, step2])
+        },
+        n,
+    );
+
+    let ty = d.pi_fv(n_fv, nat, stmt_inner);
+    let value = d.lam_fv(n_fv, nat, proof_inner);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.one_is_root_of_unity,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.I_is_fourth_root : IsRootOfUnity I 4` — the negative control.
+///
+/// `pow I 4` is unfolded down to `mul (mul (mul (mul one I) I) I) I` purely by
+/// iota-reduction (definitionally what [`ComplexPrelude::pow_succ`] applied
+/// four times, plus [`ComplexPrelude::pow_zero`], assert), and the fully
+/// expanded product is then decided by the ring calculus, which already
+/// carries `I`'s components `(0, 1)` — the same fact
+/// [`ComplexPrelude::i_sq`] states — so no separate appeal to `i_sq` as a
+/// named lemma is needed on top of that.
+fn declare_i_is_fourth_root(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let four = d.num(4);
+    let pow_i4 = d.const_app(p.pow, &[i_c, four]);
+
+    let lhs_cexpr = CExpr::mul(
+        CExpr::mul(
+            CExpr::mul(CExpr::mul(CExpr::One, CExpr::I), CExpr::I),
+            CExpr::I,
+        ),
+        CExpr::I,
+    );
+    let nested_term = render_c(d, p, &lhs_cexpr);
+    let eq_fact = complex_eq_refl(d, p, nested_term);
+    let equiv_fact = complex_eq_to_equiv(d, p, pow_i4, nested_term, eq_fact);
+    let ring_fact = ring_law_proof(d, p, &lhs_cexpr, &CExpr::One);
+    let one_term = render_c(d, p, &CExpr::One);
+    let final_proof = d.lemma(
+        p.equiv_trans,
+        &[pow_i4, nested_term, one_term, equiv_fact, ring_fact],
+    );
+
+    let ty = d.const_app(p.is_root_of_unity, &[i_c, four]);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.i_is_fourth_root,
+        uparams: vec![],
+        ty,
+        value: final_proof,
+    })
+}
+
+/// `Complex.pow_mul : ∀ z (m n : Nat), Equiv (pow z (Nat.mul m n)) (pow (pow
+/// z m) n)`.
+fn declare_pow_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let prod = NatOps::mul(d, m, x);
+        let lhs = d.const_app(p.pow, &[z, prod]);
+        let pow_z_m = d.const_app(p.pow, &[z, m]);
+        let rhs = d.const_app(p.pow, &[pow_z_m, x]);
+        zeq(d, p, lhs, rhs)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            let one = d.kernel().const_(p.one, vec![]);
+            d.lemma(p.equiv_refl, &[one])
+        },
+        &|d, j, ih| {
+            let mj = NatOps::mul(d, m, j);
+            let pow_z_mj = d.const_app(p.pow, &[z, mj]);
+            let sum = NatOps::add(d, mj, m);
+            let start = d.const_app(p.pow, &[z, sum]);
+            let pow_z_m = d.const_app(p.pow, &[z, m]);
+            let after_pow_add = d.const_app(p.mul, &[pow_z_mj, pow_z_m]);
+            let h_pow_add = d.lemma(p.pow_add, &[z, mj, m]);
+
+            let pow_pzm_j = d.const_app(p.pow, &[pow_z_m, j]);
+            let after_ih = d.const_app(p.mul, &[pow_pzm_j, pow_z_m]);
+            let refl_pzm = d.lemma(p.equiv_refl, &[pow_z_m]);
+            let h_ih = d.lemma(
+                p.mul_congr,
+                &[pow_z_mj, pow_pzm_j, pow_z_m, pow_z_m, ih, refl_pzm],
+            );
+
+            d.lemma(
+                p.equiv_trans,
+                &[start, after_pow_add, after_ih, h_pow_add, h_ih],
+            )
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let inner2 = d.pi_fv(m_fv, nat, inner);
+        d.pi_fv(z_fv, carrier, inner2)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let inner2 = d.lam_fv(m_fv, nat, inner);
+        d.lam_fv(z_fv, carrier, inner2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// **The finite Fourier orthogonality relation.**
+///
+/// `Complex.geom_sum_eq_zero_of_root_of_unity : ∀ z n, IsRootOfUnity z n →
+/// Apart (add one (neg z)) zero → Equiv (sumRange (fun k => pow z k) n)
+/// zero`.
+fn declare_geom_sum_eq_zero_of_root_of_unity(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let neg_z = d.const_app(p.neg, &[z]);
+    let a = d.const_app(p.add, &[one_c, neg_z]); // a = 1 - z
+
+    let pow_zn = d.const_app(p.pow, &[z, n]);
+    let root_ty = d.const_app(p.is_root_of_unity, &[z, n]);
+    let root_fv = d.fresh_fvar();
+    let root_h = d.kernel().fvar(root_fv);
+
+    let apart_ty = d.const_app(p.apart, &[a, zero_c]);
+    let apart_fv = d.fresh_fvar();
+    let apart_h = d.kernel().fvar(apart_fv);
+
+    let pow_fn = |d: &mut IntDev<'_>| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let body = d.const_app(p.pow, &[z, i]);
+        let nat = d.nat_ty();
+        d.lam_fv(i_fv, nat, body)
+    };
+    let f = pow_fn(d);
+    let s = d.const_app(p.sum_range, &[f, n]); // s = sumRange (pow z .) n
+
+    let target = zeq(d, p, s, zero_c); // Equiv s zero
+
+    // --- h_mul_zero : Equiv (mul a s) zero ---------------------------------
+    let h_geom = d.lemma(p.mul_sub_one_geom, &[z, n]);
+    // h_geom : Equiv (mul a s) (add one (neg pow_zn))
+
+    let neg_pow_zn = d.const_app(p.neg, &[pow_zn]);
+    let rhs_geom = d.const_app(p.add, &[one_c, neg_pow_zn]);
+
+    let neg_one = d.const_app(p.neg, &[one_c]);
+    let add_one_neg_one = d.const_app(p.add, &[one_c, neg_one]);
+
+    let neg_congr_root = d.lemma(p.neg_congr, &[pow_zn, one_c, root_h]);
+    // neg_congr_root : Equiv (neg pow_zn) (neg one)
+    let refl_one = d.lemma(p.equiv_refl, &[one_c]);
+    let rhs_rewrite = d.lemma(
+        p.add_congr,
+        &[one_c, one_c, neg_pow_zn, neg_one, refl_one, neg_congr_root],
+    );
+    // rhs_rewrite : Equiv rhs_geom add_one_neg_one
+
+    let add_neg_h = d.lemma(p.add_neg, &[one_c]); // Equiv add_one_neg_one zero
+    let rhs_to_zero = d.lemma(
+        p.equiv_trans,
+        &[rhs_geom, add_one_neg_one, zero_c, rhs_rewrite, add_neg_h],
+    );
+    // rhs_to_zero : Equiv rhs_geom zero
+
+    let mul_a_s = d.const_app(p.mul, &[a, s]);
+    let h_mul_zero = d.lemma(
+        p.equiv_trans,
+        &[mul_a_s, rhs_geom, zero_c, h_geom, rhs_to_zero],
+    );
+    // h_mul_zero : Equiv (mul a s) zero
+
+    // --- pos_a : CReal.lt CReal.zero (normSq a), from apart_h --------------
+    let neg_zero_c = d.const_app(p.neg, &[zero_c]);
+    let diff_a0 = d.const_app(p.add, &[a, neg_zero_c]);
+    let norm_a0 = d.const_app(p.norm_sq, &[diff_a0]);
+    let norm_a = d.const_app(p.norm_sq, &[a]);
+    let creal_zero = czero(d, creal);
+    let creal_zero_refl = crefl(d, creal, creal_zero);
+
+    let shift_a = normsq_shift_zero_proof(d, p, a); // CReal.Equiv norm_a norm_a0
+    let shift_a_symm = csymm(d, creal, norm_a, norm_a0, shift_a); // CReal.Equiv norm_a0 norm_a
+    let pos_a = d.lemma(
+        creal.lt_congr,
+        &[
+            creal_zero,
+            creal_zero,
+            norm_a0,
+            norm_a,
+            creal_zero_refl,
+            shift_a_symm,
+            apart_h,
+        ],
+    ); // CReal.lt zero norm_a
+
+    // --- extract k, h : PosBound norm_a k -----------------------------------
+    let k_fv = d.fresh_fvar();
+    let k_var = d.kernel().fvar(k_fv);
+    let pos_bound_template = d.const_app(creal.pos_bound, &[norm_a, k_var]);
+    let predicate = d.lam_fv(k_fv, nat, pos_bound_template);
+    let witness = d.const_app(creal.pos_bound_of_lt, &[norm_a, pos_a]);
+
+    let minor = {
+        let k2_fv = d.fresh_fvar();
+        let k2 = d.kernel().fvar(k2_fv);
+        let h_ty = d.const_app(creal.pos_bound, &[norm_a, k2]);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let c = d.const_app(p.inv, &[a, k2, h]); // c = (1 - z)^-1
+        let refl_c = d.lemma(p.equiv_refl, &[c]);
+        let c_zero = d.const_app(p.mul, &[c, zero_c]);
+        let cong_h = d.lemma(p.mul_congr, &[c, c, mul_a_s, zero_c, refl_c, h_mul_zero]);
+        // cong_h : Equiv (mul c (mul a s)) c_zero
+        let c_as = d.const_app(p.mul, &[c, mul_a_s]);
+
+        let c_a = d.const_app(p.mul, &[c, a]);
+        let inv_mul_h = d.lemma(p.inv_mul_cancel, &[a, k2, h]); // Equiv c_a one
+        let ca_s = d.const_app(p.mul, &[c_a, s]);
+        let one_s = d.const_app(p.mul, &[one_c, s]);
+        let refl_s = d.lemma(p.equiv_refl, &[s]);
+        let step_b = d.lemma(p.mul_congr, &[c_a, one_c, s, s, inv_mul_h, refl_s]);
+        // step_b : Equiv ca_s one_s
+
+        let assoc = d.lemma(p.mul_assoc, &[c, a, s]); // Equiv ca_s c_as
+        let assoc_symm = d.lemma(p.equiv_symm, &[ca_s, c_as, assoc]); // Equiv c_as ca_s
+        let collapse = d.lemma(p.equiv_trans, &[c_as, ca_s, one_s, assoc_symm, step_b]);
+        // collapse : Equiv c_as one_s
+
+        let s_one = d.const_app(p.mul, &[s, one_c]);
+        let comm_one_s = d.lemma(p.mul_comm, &[one_c, s]); // Equiv one_s s_one
+        let mul_one_s = d.lemma(p.mul_one, &[s]); // Equiv s_one s
+        let f_step = d.lemma(p.equiv_trans, &[one_s, s_one, s, comm_one_s, mul_one_s]);
+        // f_step : Equiv one_s s
+
+        let reduce = d.lemma(p.equiv_trans, &[c_as, one_s, s, collapse, f_step]);
+        // reduce : Equiv c_as s
+        let reduce_symm = d.lemma(p.equiv_symm, &[c_as, s, reduce]); // Equiv s c_as
+
+        let step_final = d.lemma(p.equiv_trans, &[s, c_as, c_zero, reduce_symm, cong_h]);
+        // step_final : Equiv s c_zero
+
+        let mul_zero_c = d.lemma(p.mul_zero, &[c]); // Equiv c_zero zero
+        let final_proof = d.lemma(p.equiv_trans, &[s, c_zero, zero_c, step_final, mul_zero_c]);
+        // final_proof : Equiv s zero
+
+        let with_h = d.lam_fv(h_fv, h_ty, final_proof);
+        d.lam_fv(k2_fv, nat, with_h)
+    };
+
+    let final_result = exists_elim(d, predicate, target, witness, minor);
+
+    let value = {
+        let with_apart = d.lam_fv(apart_fv, apart_ty, final_result);
+        let with_root = d.lam_fv(root_fv, root_ty, with_apart);
+        let with_n = d.lam_fv(n_fv, nat, with_root);
+        d.lam_fv(z_fv, carrier, with_n)
+    };
+    let ty = {
+        let inner = d.arrow(apart_ty, target);
+        let with_root = d.arrow(root_ty, inner);
+        let with_n = d.pi_fv(n_fv, nat, with_root);
+        d.pi_fv(z_fv, carrier, with_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_sum_eq_zero_of_root_of_unity,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Equiv (pow (mul z w) n) (mul (pow z n) (pow w n))` — not one of the
+/// declared lemmas above; a private induction, needed only by
+/// [`declare_root_of_unity_mul`].
+fn complex_mul_pow(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    z: ExprId,
+    w: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let mul_zw = d.const_app(p.mul, &[z, w]);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let lhs = d.const_app(p.pow, &[mul_zw, x]);
+        let pow_z_x = d.const_app(p.pow, &[z, x]);
+        let pow_w_x = d.const_app(p.pow, &[w, x]);
+        let rhs = d.const_app(p.mul, &[pow_z_x, pow_w_x]);
+        zeq(d, p, lhs, rhs)
+    };
+
+    d.induct(
+        &motive,
+        &|d| {
+            let one_c = d.kernel().const_(p.one, vec![]);
+            let mul_one_one = d.const_app(p.mul, &[one_c, one_c]);
+            let h = d.lemma(p.mul_one, &[one_c]); // Equiv mul_one_one one_c
+            d.lemma(p.equiv_symm, &[mul_one_one, one_c, h])
+        },
+        &|d, j, ih| {
+            // ih : Equiv (pow mul_zw j) (mul (pow z j) (pow w j))
+            let pow_mulzw_j = d.const_app(p.pow, &[mul_zw, j]);
+            let start = d.const_app(p.mul, &[pow_mulzw_j, mul_zw]);
+
+            let pow_z_j = d.const_app(p.pow, &[z, j]);
+            let pow_w_j = d.const_app(p.pow, &[w, j]);
+            let ih_applied = d.const_app(p.mul, &[pow_z_j, pow_w_j]);
+            let refl_mulzw = d.lemma(p.equiv_refl, &[mul_zw]);
+            let h_ih = d.lemma(
+                p.mul_congr,
+                &[pow_mulzw_j, ih_applied, mul_zw, mul_zw, ih, refl_mulzw],
+            );
+            let after_ih = d.const_app(p.mul, &[ih_applied, mul_zw]);
+            // after_ih = mul (mul (pow z j) (pow w j)) (mul z w)
+
+            let a_var = CExpr::var(d, p, pow_z_j);
+            let b_var = CExpr::var(d, p, pow_w_j);
+            let z_var = CExpr::var(d, p, z);
+            let w_var = CExpr::var(d, p, w);
+            let lhs_cexpr = CExpr::mul(
+                CExpr::mul(a_var.clone(), b_var.clone()),
+                CExpr::mul(z_var.clone(), w_var.clone()),
+            );
+            let rhs_cexpr = CExpr::mul(CExpr::mul(a_var, z_var), CExpr::mul(b_var, w_var));
+            let target = render_c(d, p, &rhs_cexpr);
+            // target = mul (mul (pow z j) z) (mul (pow w j) w)
+            //        = mul (pow z (succ j)) (pow w (succ j))  -- definitionally
+            let h_rearrange = ring_law_proof(d, p, &lhs_cexpr, &rhs_cexpr);
+
+            d.lemma(p.equiv_trans, &[start, after_ih, target, h_ih, h_rearrange])
+        },
+        n,
+    )
+}
+
+/// `Complex.root_of_unity_mul : ∀ z w n, IsRootOfUnity z n → IsRootOfUnity w
+/// n → IsRootOfUnity (mul z w) n` — the `n`-th roots of unity are closed
+/// under multiplication.
+fn declare_root_of_unity_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let pow_zn = d.const_app(p.pow, &[z, n]);
+    let pow_wn = d.const_app(p.pow, &[w, n]);
+    let root_z_ty = d.const_app(p.is_root_of_unity, &[z, n]);
+    let root_w_ty = d.const_app(p.is_root_of_unity, &[w, n]);
+    let root_z_fv = d.fresh_fvar();
+    let root_z_h = d.kernel().fvar(root_z_fv);
+    let root_w_fv = d.fresh_fvar();
+    let root_w_h = d.kernel().fvar(root_w_fv);
+
+    let mul_zw = d.const_app(p.mul, &[z, w]);
+    let pow_mulzw_n = d.const_app(p.pow, &[mul_zw, n]);
+    let target = d.const_app(p.is_root_of_unity, &[mul_zw, n]);
+
+    let mul_pow_fact = complex_mul_pow(d, p, z, w, n);
+    // mul_pow_fact : Equiv (pow (mul z w) n) (mul (pow z n) (pow w n))
+    let ih_applied = d.const_app(p.mul, &[pow_zn, pow_wn]);
+
+    let mul_one_one = d.const_app(p.mul, &[one_c, one_c]);
+    let cong = d.lemma(
+        p.mul_congr,
+        &[pow_zn, one_c, pow_wn, one_c, root_z_h, root_w_h],
+    ); // Equiv ih_applied mul_one_one
+
+    let mul_one_h = d.lemma(p.mul_one, &[one_c]); // Equiv mul_one_one one_c
+
+    let step1 = d.lemma(
+        p.equiv_trans,
+        &[pow_mulzw_n, ih_applied, mul_one_one, mul_pow_fact, cong],
+    );
+    let final_proof = d.lemma(
+        p.equiv_trans,
+        &[pow_mulzw_n, mul_one_one, one_c, step1, mul_one_h],
+    );
+
+    let value = {
+        let with_w = d.lam_fv(root_w_fv, root_w_ty, final_proof);
+        let with_z = d.lam_fv(root_z_fv, root_z_ty, with_w);
+        let with_n = d.lam_fv(n_fv, nat, with_z);
+        let with_ww = d.lam_fv(w_fv, carrier, with_n);
+        d.lam_fv(z_fv, carrier, with_ww)
+    };
+    let ty = {
+        let inner = d.arrow(root_w_ty, target);
+        let with_z = d.arrow(root_z_ty, inner);
+        let with_n = d.pi_fv(n_fv, nat, with_z);
+        let with_w = d.pi_fv(w_fv, carrier, with_n);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.root_of_unity_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Equiv a b → Equiv (pow a m) (pow b m)` — congruence of `pow` in its
+/// *base* argument; not one of the declared lemmas above. Induction on `m`,
+/// needed only by [`declare_root_of_unity_pow`].
+fn complex_pow_congr(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    m: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let pow_a_x = d.const_app(p.pow, &[a, x]);
+        let pow_b_x = d.const_app(p.pow, &[b, x]);
+        zeq(d, p, pow_a_x, pow_b_x)
+    };
+
+    d.induct(
+        &motive,
+        &|d| {
+            let one_c = d.kernel().const_(p.one, vec![]);
+            d.lemma(p.equiv_refl, &[one_c])
+        },
+        &|d, j, ih| {
+            let pow_a_j = d.const_app(p.pow, &[a, j]);
+            let pow_b_j = d.const_app(p.pow, &[b, j]);
+            d.lemma(p.mul_congr, &[pow_a_j, pow_b_j, a, b, ih, h])
+        },
+        m,
+    )
+}
+
+/// `Complex.root_of_unity_pow : ∀ z m n, IsRootOfUnity z n → IsRootOfUnity
+/// (pow z m) n` — the `n`-th roots of unity are closed under taking powers.
+fn declare_root_of_unity_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let pow_zn = d.const_app(p.pow, &[z, n]);
+    let root_ty = d.const_app(p.is_root_of_unity, &[z, n]);
+    let root_fv = d.fresh_fvar();
+    let root_h = d.kernel().fvar(root_fv);
+
+    let pow_zm = d.const_app(p.pow, &[z, m]);
+    let pow_zm_n = d.const_app(p.pow, &[pow_zm, n]);
+    let target = d.const_app(p.is_root_of_unity, &[pow_zm, n]);
+
+    // step 1: Equiv (pow (pow z m) n) (pow z (mul m n))
+    let mn = NatOps::mul(d, m, n);
+    let pow_z_mn = d.const_app(p.pow, &[z, mn]);
+    let pm1 = d.lemma(p.pow_mul, &[z, m, n]); // Equiv (pow z (mul m n)) (pow (pow z m) n)
+    let step1 = d.lemma(p.equiv_symm, &[pow_z_mn, pow_zm_n, pm1]);
+    // step1 : Equiv (pow (pow z m) n) (pow z (mul m n))
+
+    // step 2: Equiv (pow z (mul m n)) (pow z (mul n m))
+    let nm = NatOps::mul(d, n, m);
+    let pow_z_nm = d.const_app(p.pow, &[z, nm]);
+    let mul_comm_name = d.prelude().mul_comm;
+    let h_comm = d.lemma(mul_comm_name, &[m, n]); // Eq Nat (mul m n) (mul n m)
+    let step2 = nat_eq_to_complex_equiv(d, p, mn, nm, h_comm, &|d, x| d.const_app(p.pow, &[z, x]));
+    // step2 : Equiv (pow z mn) (pow z nm)
+
+    // step 3: Equiv (pow z (mul n m)) (pow (pow z n) m)
+    let step3 = d.lemma(p.pow_mul, &[z, n, m]);
+
+    // step 4: Equiv (pow (pow z n) m) (pow one m)
+    let pow_zn_m = d.const_app(p.pow, &[pow_zn, m]);
+    let pow_one_m = d.const_app(p.pow, &[one_c, m]);
+    let step4 = complex_pow_congr(d, p, pow_zn, one_c, m, root_h);
+
+    // step 5: Equiv (pow one m) one
+    let step5 = d.lemma(p.one_is_root_of_unity, &[m]);
+
+    let s12 = d.lemma(p.equiv_trans, &[pow_zm_n, pow_z_mn, pow_z_nm, step1, step2]);
+    let s123 = d.lemma(p.equiv_trans, &[pow_zm_n, pow_z_nm, pow_zn_m, s12, step3]);
+    let s1234 = d.lemma(p.equiv_trans, &[pow_zm_n, pow_zn_m, pow_one_m, s123, step4]);
+    let final_proof = d.lemma(p.equiv_trans, &[pow_zm_n, pow_one_m, one_c, s1234, step5]);
+
+    let value = {
+        let with_root = d.lam_fv(root_fv, root_ty, final_proof);
+        let with_n = d.lam_fv(n_fv, nat, with_root);
+        let with_m = d.lam_fv(m_fv, nat, with_n);
+        d.lam_fv(z_fv, carrier, with_m)
+    };
+    let ty = {
+        let inner = d.arrow(root_ty, target);
+        let with_n = d.pi_fv(n_fv, nat, inner);
+        let with_m = d.pi_fv(m_fv, nat, with_n);
+        d.pi_fv(z_fv, carrier, with_m)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.root_of_unity_pow,
         uparams: vec![],
         ty,
         value,

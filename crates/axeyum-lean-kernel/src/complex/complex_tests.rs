@@ -19,27 +19,53 @@ fn built() -> (Kernel, ComplexPrelude) {
     use std::sync::OnceLock;
     static TEMPLATE: OnceLock<(Kernel, ComplexPrelude)> = OnceLock::new();
     let (kernel, prelude) = TEMPLATE.get_or_init(|| {
-        let mut kernel = Kernel::new();
-        let prelude = build_complex_prelude(&mut kernel).expect("Complex prelude must build");
-        (kernel, prelude)
+        on_a_deep_stack(|| {
+            let mut kernel = Kernel::new();
+            let prelude = build_complex_prelude(&mut kernel).expect("Complex prelude must build");
+            (kernel, prelude)
+        })
     });
     (kernel.clone(), *prelude)
+}
+
+/// Run `f` on a thread with a **64 MiB stack**.
+///
+/// The default test-thread stack is 2 MiB, and building this prelude overflows
+/// it in a debug build: the roots-of-unity work pushed the accumulated proof
+/// terms past the limit and `cargo test --lib complex` aborted with
+/// `fatal runtime error: stack overflow` (SIGABRT), before any assertion ran.
+///
+/// This is deliberately **not** solved with `RUST_MIN_STACK`. That would make
+/// the suite pass only for whoever remembers to export it — CI runs a bare
+/// `cargo test`, and a gate that needs an undocumented environment variable to
+/// be green is a gate that reports a false red to everyone else. The recursion
+/// is in the kernel's own type checker over a genuinely large term, not a bug to
+/// fix, so the fix is to give it room where it is exercised.
+fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(f)
+        .expect("spawning a deep-stack thread must succeed")
+        .join()
+        .expect("the deep-stack thread must not panic")
 }
 
 /// The build itself, with the kernel's rejection **rendered**: a `Debug` of
 /// `KernelError` says nothing about what was refused.
 #[test]
 fn complex_prelude_builds() {
-    let mut kernel = Kernel::new();
-    match build_complex_prelude(&mut kernel) {
-        Ok(_) => {}
-        Err(error) => {
-            let nat = crate::build_nat_prelude(&mut kernel).expect("Nat prelude must build");
-            let mut dev = crate::NatDev::new(&mut kernel, nat);
-            let explained = crate::NatOps::explain(&mut dev, &error);
-            panic!("the kernel refused a complex proof: {explained}");
+    on_a_deep_stack(|| {
+        let mut kernel = Kernel::new();
+        match build_complex_prelude(&mut kernel) {
+            Ok(_) => {}
+            Err(error) => {
+                let nat = crate::build_nat_prelude(&mut kernel).expect("Nat prelude must build");
+                let mut dev = crate::NatDev::new(&mut kernel, nat);
+                let explained = crate::NatOps::explain(&mut dev, &error);
+                panic!("the kernel refused a complex proof: {explained}");
+            }
         }
-    }
+    });
 }
 
 /// Building twice is a no-op, not a duplicate-declaration error.
@@ -187,6 +213,16 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.sumRange_shiftFront", p.sum_range_shift_front),
         ("Complex.sumRange_congr_lt", p.sum_range_congr_lt),
         ("Complex.add_pow", p.add_pow),
+        ("Complex.IsRootOfUnity", p.is_root_of_unity),
+        ("Complex.one_is_root_of_unity", p.one_is_root_of_unity),
+        ("Complex.I_is_fourth_root", p.i_is_fourth_root),
+        ("Complex.pow_mul", p.pow_mul),
+        (
+            "Complex.geom_sum_eq_zero_of_root_of_unity",
+            p.geom_sum_eq_zero_of_root_of_unity,
+        ),
+        ("Complex.root_of_unity_mul", p.root_of_unity_mul),
+        ("Complex.root_of_unity_pow", p.root_of_unity_pow),
     ];
     for (label, name) in named {
         let declaration = kernel
