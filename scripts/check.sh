@@ -556,6 +556,36 @@ elif [ "$list_only" != "1" ]; then
   fi
 fi
 
+# The tactic catalog (docs/python-2026-08/04-tactic-catalog.md, slice A3): the
+# strategy vocabulary the agent's Plan node resolves against. Two steps, both
+# printing a COUNT. The validator re-derives every claim the catalog makes about
+# the code (implementing file, symbol, DeclineReason variants, `const` budget
+# values) and then fails on the CENSUS -- fewer than two distinct precondition
+# shapes, or any tactic with zero measured reach rows -- which is the doc-228
+# "an operation registry where every entry names one target is a dispatch table"
+# finding moved one arrow upstream. Read `TACTIC_CATALOG|...`, not the status.
+step tactic-catalog-tests python3 -m unittest scripts.tests.test_validate_tactic_catalog
+step tactic-catalog python3 scripts/validate-tactic-catalog.py
+step tactic-catalog-census python3 scripts/gen-tactic-catalog-census.py --check
+
+# The agent-episode gate (docs/python-2026-08/03-agentic-layer.md, slice A1).
+# `just episodes` runs the same two steps.
+#
+# An episode records one run of the agentic frontier loop, and it is the only
+# thing between "a model ran" and "a model proved something". The checker
+# re-derives what the document claims -- schema, snapshot and proposal digests
+# re-hashed from disk, a generic string walk for held-out fact ids, and
+# `ledger_writes` pinned to 0 -- and its exit status is nonzero when ZERO
+# episodes were checked, because a check that checked nothing is not a pass.
+# Read `EPISODES|checked=N|ok=K|failed=M`.
+#
+# Deliberately WITHOUT `--require-ancestor`: most CI jobs check out at the
+# default `fetch-depth: 1`, where the episode's commit object is absent and
+# every ancestor query answers "cannot resolve". The rule is tested in the
+# unittest suite instead. See artifacts/episodes/README.md.
+step episodes       python3 scripts/check-agent-episode.py artifacts/episodes
+step episode-tests  python3 -m unittest scripts.tests.test_check_agent_episode
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0

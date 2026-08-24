@@ -95,6 +95,29 @@ Divergence is a finding.
 Schema, two hand fixtures (`proved`, `declined`), checker, mutation controls.
 *This is built first because it is what makes everything after it safe.*
 
+### A1 findings that A2 must honour (measured 2026-08-24)
+
+1. **Frontier re-derivation does not survive a live ledger.** `fact-frontier.py
+   --verify` recomputes from `artifacts/facts/`, so a committed per-episode
+   frontier goes stale the moment any lane adds a fact. An episode therefore
+   records `selection.ledger_sha256` (from the frontier's `ledger` block) and
+   the checker compares the frontier file's self-digest; `--verify` is an
+   explicit freshness mode, not the default gate.
+2. **`selection.ready_fact_ids` is not the eligible set** — it includes
+   held-out rows. `frontier_select` filters by **partition** before the model
+   sees a list, and drops `longitudinal` (2 rows) explicitly, since the
+   episode enum admits only `train | development`.
+3. **Multiple checkers per episode.** Schema v1 has one `checker_command`;
+   v2 adds `checker_runs[]{command, exit_status, output_sha256}`. A2 stays on
+   v1 (it dispatches nothing); A4 introduces v2 beside it.
+4. **`proved` requires a checked tool call.** Rule 11: `verdict == "proved"`
+   only if some `tool_calls[].assurance == "checked"` — the C tier is the
+   only route to it.
+5. **`decline_class` becomes an enum** seeded from the AG4.1 taxonomy
+   (`docs/autogenesis/02-phased-roadmap.md`) in A5.
+6. Gates run the checker without `--require-ancestor` (CI clones are
+   shallow); the ancestor rule is opt-in and warns by default.
+
 ### A2 — package extra, six R tools, four-node graph, ten episodes
 `[project.optional-dependencies] agent = [...]`; tools `frontier_select`,
 `fact_get`, `fact_neighbourhood`, `kernel_theorems`, `operation_registry`,

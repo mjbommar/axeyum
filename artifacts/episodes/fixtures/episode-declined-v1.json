@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-agent-episode",
+  "episode_id": "E:fixture-declined-v1",
+  "git_commit": "0874b9e4fc6c738eb776fa94bf39799c58481b7b",
+  "created_at": "2026-08-24T00:00:00Z",
+  "selection": {
+    "frontier_sha256": "874042bd58ad8cf7e6633afbf2910b22e847895bb33f7dedc1d8990f416b1799",
+    "frontier_path": "artifacts/episodes/fixtures/frontier-not-committed-v1.json",
+    "fact_id": "F:ml430-int-fib-of-odd-66560495",
+    "fact_sha256": "4016e257c62f8e57ce5ee0e96ce3aff745524baf55aef68b44ddb707dfcfb9be",
+    "partition": "train",
+    "eligibility_reason": "train partition, epistemic_status open, dependency-ready with no unmet depends_on; fragment Int is proof-route-only so no decision procedure applies"
+  },
+  "policy": {
+    "model_id": "anthropic:claude-illustrative-fixture",
+    "settings": { "temperature": 0.0, "top_p": 1.0, "max_tokens": 8192, "seed": null },
+    "prompt_hashes": {
+      "system": "3ada0a0b63fd54eac3ae42468b4c08074e674474b7fbf13b5b3bf001ae873ed2",
+      "plan": "b41ca592268c40f24722746cae12b040e83f2c32640289048edbf575861992aa"
+    },
+    "toolset_sha256": "a8f51c705d88891a990fa031a2152a30a91ee1ab6388ee96e6ccffaf93fcb383",
+    "agent_code_sha256": "1b1d066eb5590df282347b0f19959e2920d8c9f04aae7bc38e8e6d4180bb0873",
+    "library_versions": { "python": "3.13.0", "axeyum": "0.0.0-fixture" }
+  },
+  "budgets": {
+    "wall_seconds": 600,
+    "request_limit": 20,
+    "tool_calls_limit": 40,
+    "input_tokens_limit": 400000,
+    "output_tokens_limit": 32000,
+    "cost_limit_usd": 2.0
+  },
+  "transcript": {
+    "messages_sha256": "7fee49acbfe87c66a63c0428cba2c4f10ff6ea5dcb21606c5c46a0908f0cb150",
+    "messages_path": "artifacts/episodes/fixtures/messages-not-committed-v1.json",
+    "tool_calls": [
+      {
+        "ordinal": 0,
+        "tool": "frontier_select",
+        "args_sha256": "8beaa0288e431560420a925f1d95dc251ac153a6b7bdbbb9b708208a71d59157",
+        "result_sha256": "effbfa05370e650fb28fb97adb89c035c34b37b68477e17f0e53046c928e312b",
+        "assurance": "read",
+        "duration_ms": 1274,
+        "exit_status": 0
+      },
+      {
+        "ordinal": 1,
+        "tool": "fact_get",
+        "args_sha256": "2e756a8b979e16d5824515cc84fe251135edb297b065d2aa35c44901dade18a6",
+        "result_sha256": "34249d59e3585bf834896923e7702e4b43369e414b2241e65d995e6d0fa1375c",
+        "assurance": "read",
+        "duration_ms": 11,
+        "exit_status": 0
+      },
+      {
+        "ordinal": 2,
+        "tool": "kernel_theorems",
+        "args_sha256": "f111b51c9845570c89bd053cb00a517cb8e5cb4c7341b3b696a1aaccb58bc324",
+        "result_sha256": "355759f0d7746d9c177c64372a06e27107e0ba077fbab9a56cb82b3563abadf5",
+        "assurance": "read",
+        "duration_ms": 842,
+        "exit_status": 0
+      }
+    ]
+  },
+  "web_snapshots": [],
+  "proposals": [],
+  "outcome": {
+    "verdict": "declined",
+    "decline_class": "missing-plan-rule",
+    "checker_command": "",
+    "checker_exit_status": 0,
+    "checker_output_sha256": null,
+    "axiom_footprint": [],
+    "ledger_writes": 0,
+    "search_invocations": 0,
+    "target_theorem_submissions": 0
+  },
+  "observed": {
+    "facts_unlocked": [],
+    "operations_widened": [],
+    "overlay_links_proposed": []
+  }
+}
