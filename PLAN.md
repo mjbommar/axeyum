@@ -148,6 +148,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `abb4a6be4` | Derive a deterministic, non-semantic review queue for all unanchored empty-footprint kernel theorems, with candidate mappings kept out of the reviewed population |
 | 2026-08-24 | `601d17c82` | Review the first graph-central constructive-real equality cluster as three separate reflexive, symmetric, and transitive equivalence-law anchors |
 | 2026-08-24 | `bb74b057c` | Expose active reviewed kernel-theorem semantic anchors as a separately validated concept-coverage dimension without mixing them into fact or held-out populations |
+| 2026-08-24 | pending | Review the representative-independence laws for constructive-real negation, addition, and multiplication as separate partial well-definedness anchors |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
@@ -2102,6 +2103,11 @@ The derived concept-coverage projection now makes kernel anchors visible in a
 third dimension, separate from both family-topic and fact-formalization
 coverage. Its six active anchors span four concepts/encounters, and its
 validator rejects an invented or omitted anchor against the active overlay.
+The next reviewed cluster adds the constructive-real negation, addition, and
+multiplication congruence laws as separate partial well-definedness anchors.
+This is an explicit representative-independence claim for three operations,
+not a claim that all constructed-real operations or all real analysis are
+covered.
 Next capability work must expand general-producer and adapter coverage over the
 train/development queue, compare it against that fixed observation, and only
 then evaluate an independently sealed held-out partition—not add more

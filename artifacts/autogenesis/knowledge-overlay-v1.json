@@ -450,6 +450,39 @@
       "reason": "The accepted theorem proves transitivity of the constructive-real equality relation. It supplies the third required equivalence-relation law, without claiming equivalence classes or full real-number theory.",
       "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-kernel/src/creal.rs", "artifacts/autogenesis/kernel-dependency-projection-v1.json", "../math-education/graph/concepts/equivalence-relation.md"] },
       "qualifiers": { "coverage": "relation-law", "law": "transitive", "relation": "CReal.Equiv", "completeness": "partial" }
+    },
+    {
+      "id": "L:kernel-creal-neg-congr-formalizes-well-definedness",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "CReal.neg_congr" },
+      "target": { "namespace": "math-education", "kind": "concept", "id": "C:well-definedness", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem proves that negation preserves the constructive-real equivalence relation, so its output does not depend on the representative used for the input. It is one unary-operation well-definedness law, not a claim that the full real construction or all operations are well defined.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-kernel/src/creal.rs", "artifacts/autogenesis/kernel-dependency-projection-v1.json", "../math-education/graph/concepts/well-definedness.md"] },
+      "qualifiers": { "coverage": "supporting-law", "operation": "negation", "representation": "CReal.Equiv", "completeness": "partial" }
+    },
+    {
+      "id": "L:kernel-creal-add-congr-formalizes-well-definedness",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "CReal.add_congr" },
+      "target": { "namespace": "math-education", "kind": "concept", "id": "C:well-definedness", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem proves that addition preserves constructive-real equivalence independently in both arguments. It is one binary-operation well-definedness law, not a proof that every operation on constructed reals is representative-independent.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-kernel/src/creal.rs", "artifacts/autogenesis/kernel-dependency-projection-v1.json", "../math-education/graph/concepts/well-definedness.md"] },
+      "qualifiers": { "coverage": "supporting-law", "operation": "addition", "representation": "CReal.Equiv", "completeness": "partial" }
+    },
+    {
+      "id": "L:kernel-creal-mul-congr-formalizes-well-definedness",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "CReal.mul_congr" },
+      "target": { "namespace": "math-education", "kind": "concept", "id": "C:well-definedness", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem proves that multiplication preserves constructive-real equivalence independently in both arguments. It is one binary-operation well-definedness law, not a proof that the whole constructed-real algebra is complete or every operation is well defined.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-kernel/src/creal.rs", "artifacts/autogenesis/kernel-dependency-projection-v1.json", "../math-education/graph/concepts/well-definedness.md"] },
+      "qualifiers": { "coverage": "supporting-law", "operation": "multiplication", "representation": "CReal.Equiv", "completeness": "partial" }
     }
   ]
 }

@@ -101,6 +101,7 @@ compounding, not automation theatre.
 | [Kernel semantic review queue](256-kernel-semantic-review-queue.md) | How can review scale from a hand-picked batch without confusing graph centrality with mathematical meaning? |
 | [First queue-driven review batch](257-kernel-equivalence-relation-batch.md) | What does a high-centrality, three-law kernel batch add when every mapping is still qualified and partial? |
 | [Three-dimensional concept coverage](258-concept-coverage-kernel-anchors.md) | How are topic membership, fact formalization, and kernel semantic anchors reported without collapsing their assurance? |
+| [Constructive-real well-definedness batch](259-kernel-well-definedness-batch.md) | Which representative-independence laws make constructed-real operations meaningful? |
 | [Target architecture](01-target-architecture.md) | What objects, boundaries, and feedback loops must exist? |
 | [Phased roadmap](02-phased-roadmap.md) | What phases and concrete tasks get from here to the horizon? |
 | [Workstreams and sequencing](03-workstreams-and-sequencing.md) | How do bottom-up and top-down work compose without starving each other? |

@@ -1,13 +1,13 @@
 {
   "census": {
-    "concepts": 17,
+    "concepts": 18,
     "excluded_held_out_family_topic_facts": 57,
     "family_topic_facts": 157,
-    "kernel_semantic_anchors": 6,
+    "kernel_semantic_anchors": 9,
     "qualified_formalization_facts": 10,
     "with_fact_formalization": 7,
     "with_family_topic": 6,
-    "with_kernel_semantic_anchor": 4
+    "with_kernel_semantic_anchor": 5
   },
   "concepts": [
     {
@@ -469,6 +469,23 @@
       "qualified_formalization_fact_ids": [],
       "qualified_formalization_statuses": {},
       "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:well-definedness",
+      "coverage_state": "kernel-semantic-anchor-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 3,
+      "kernel_semantic_anchor_ids": [
+        "CReal.add_congr",
+        "CReal.mul_congr",
+        "CReal.neg_congr"
+      ],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     }
   ],
   "derivation": {
@@ -479,7 +496,7 @@
       "train"
     ],
     "nursery_sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1",
-    "overlay_sha256": "8a47aa2dd5e9dc701f78378909af22e4536e618fd145edbb44f2c9c5f9def286",
+    "overlay_sha256": "1805efc790202ac85e113eb2df0f4a92966f01345c5549120eefc099dd1f5602",
     "trust_boundary": "train/development fact coverage and separately reviewed kernel-anchor reporting only; never held-out inspection, proof, operation, or admission authority"
   },
   "kind": "axeyum-autogenesis-concept-coverage-projection",
