@@ -883,6 +883,18 @@ pub struct CRealPrelude {
     /// `CReal.eq_zero_of_mul_self_zero : ∀ x, Equiv (mul x x) zero → Equiv x
     /// zero`. See `creal/mul_self_zero.rs`.
     pub eq_zero_of_mul_self_zero: NameId,
+
+    // --- the integer square root (creal/sqrt.rs) ------------------------------
+    /// `CReal.natSqrt : Nat -> Nat`, the missing computational primitive
+    /// behind `CReal.sqrt`. See `creal/sqrt.rs`.
+    pub nat_sqrt: NameId,
+    /// `CReal.natSqrtSpec : ∀ n, And (Le (natSqrt n * natSqrt n) n)
+    /// (Lt n (succ (natSqrt n) * succ (natSqrt n)))`.
+    pub nat_sqrt_spec: NameId,
+    /// `CReal.natSqrtLe : ∀ n, Le (natSqrt n * natSqrt n) n`.
+    pub nat_sqrt_le: NameId,
+    /// `CReal.natSqrtLt : ∀ n, Lt n (succ (natSqrt n) * succ (natSqrt n))`.
+    pub nat_sqrt_lt: NameId,
 }
 
 impl CRealPrelude {
@@ -1068,6 +1080,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
         rat_unit_eq_one: kernel.name_str(creal, "ratUnitEqOne"),
         eq_zero_of_mul_self_zero: kernel.name_str(creal, "eq_zero_of_mul_self_zero"),
+        nat_sqrt: kernel.name_str(creal, "natSqrt"),
+        nat_sqrt_spec: kernel.name_str(creal, "natSqrtSpec"),
+        nat_sqrt_le: kernel.name_str(creal, "natSqrtLe"),
+        nat_sqrt_lt: kernel.name_str(creal, "natSqrtLt"),
     }
 }
 
@@ -1144,7 +1160,8 @@ pub(crate) fn build_creal_prelude_uncached(
         cotransitivity::declare_cotransitivity(&mut d, prelude)?;
         completeness::declare_completeness(&mut d, prelude)?;
         convergence::declare_convergence(&mut d, prelude)?;
-        mul_self_zero::declare_mul_self_zero(&mut d, prelude)
+        mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
+        sqrt::declare_sqrt(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -2067,6 +2084,7 @@ mod inverse;
 mod lattice;
 mod mul_self_zero;
 mod product;
+mod sqrt;
 
 #[cfg(test)]
 mod creal_tests;
