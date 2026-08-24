@@ -102,6 +102,37 @@ task notification before continuing."* The task notification then arrives with
 **no results in it**, and the lane looks completed. Each costs a `SendMessage`
 round-trip.
 
+**The instruction not to background does not survive contact with a slow gate,
+and six lanes proved that in one day** — including lanes whose brief said, in
+those words, that a check which did not complete is reported as *"did not run"*.
+Telling them harder is not the fix.
+
+The cause is measurable and is not the lane's judgement. At five parallel lanes
+every one of them queues on `scripts/cargo-serialized.sh`'s counting semaphore,
+and a `--lib` sweep that would take 20 s uncontended sits for minutes behind
+four siblings. Measured 2026-08-24: a stalled lane's job was **still alive at
+169 s** with host load at only **1.60** — the box was nearly idle and the job was
+waiting on the lock, not on CPU. A lane watching that has every reason to think
+backgrounding is the way to make progress.
+
+What actually works, in order of effectiveness:
+
+1. **Do not ask the lane to run the expensive gate at all.** The coordinator
+   re-verifies before merging regardless, so a lane's `--lib` sweep is duplicated
+   work that also costs a lock slot. Ask for the narrow one
+   (`--lib <module>::`, seconds) and do the full sweep yourself.
+2. **Point measurement-only work at `target/release/examples/`.** Those binaries
+   run directly and take no cargo lock at all.
+3. Keep the "did not run" instruction — it is still worth having for the lanes it
+   does reach — but treat it as a mitigation, not a guarantee.
+
+When a lane does stall, the recovery is cheap if you check first: look at its
+worktree (`git status --porcelain`, `git diff --stat`) before messaging. The work
+is almost always on disk and complete; what is missing is only the report. Send
+it a message naming the specific questions to answer **from what it already
+observed**, and tell it explicitly not to start another job to fill a gap —
+report the gap.
+
 ## The brief that works
 
 Ten dispatches converged on a shape. The elements that measurably mattered:
