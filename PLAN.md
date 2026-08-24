@@ -151,6 +151,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `32c75dfab` | Review the representative-independence laws for constructive-real negation, addition, and multiplication as separate partial well-definedness anchors |
 | 2026-08-24 | `fb53d3a2f` | Turn four recurring measured obstruction patterns into explicit non-executable candidate capabilities, with output status checked against the overlay |
 | 2026-08-24 | `9ee7c8cc9` | Derive a fail-closed candidate-capability demand ranking from exact retained obstruction-family and episode counts |
+| 2026-08-24 | pending | Python strand: plans 01–03 and the two measured studies under `docs/python-2026-08/` |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
@@ -3372,6 +3373,17 @@ that are pure ℕ schemas (`telescoping`, `parity-argument`, `pigeonhole` at
 fixed hole count). Second, the census wants a third corpus — its two are both
 school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
+
+**WIP (agent-python-layer, 2026-08-24).** New strand
+[`docs/python-2026-08/`](docs/python-2026-08/README.md): three plans in
+dependency order — `01` binding crate + maturin + stub gate, `02` the typed
+Python API over SMT/solver/IR/CAS/kernel/producers/knowledge artifacts, `03`
+the pydantic-ai agent with replayable episodes. Measured basis: PyO3 0.29.2
+compiles under the workspace `unsafe_code = "deny"` + clippy pedantic; abi3
+wheel imports on 3.14.4 with no libpython link; 640 scripts have zero
+third-party imports and stay that way. Next: land 01-S1..S3 (crate, errors,
+`smt.solve` + replay), then 02 by submodule, each slice gated by
+`just py-check` with a nonzero test count.
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
