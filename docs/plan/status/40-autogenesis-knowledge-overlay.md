@@ -39,6 +39,9 @@ successful.”
 The required evaluation protocol is also now pre-registered: it fixes the
 five-stage funnel, four observed stages, seven decline classes, and forbidden
 input boundary before any general-producer outcome exists.
+The matching result contract now rejects incomplete frontiers, non-monotone
+funnels, unbound protocols, and an accepted must-decline control; no producer
+result has yet been claimed.
 Next capability work must expand general-producer and adapter coverage over the
 train/development queue, compare it against that fixed observation, and only
 then evaluate an independently sealed held-out partition—not add more
@@ -70,3 +73,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `3f0545638` | Bind the nine independently recomputed must-decline mutations into the safe producer frontier so any future census has a non-vacuous soundness control |
 | 2026-08-24 | `d3f715af3` | Refresh the generated coverage census after receipt-identity repair: all nine formally mapped facts now have complete hash-bound transport chains |
 | 2026-08-24 | `c9bb67b5a` | Pre-register the general-producer evaluation funnel, stages, decline taxonomy, control-void rule, and forbidden-input boundary before execution |
+| 2026-08-24 | `432dcef75` | Add the fail-closed future-result schema and validator that requires complete safe-frontier accounting and rejects accepted false controls |
