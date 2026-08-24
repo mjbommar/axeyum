@@ -451,6 +451,7 @@ autogenesis-knowledge-controls:
 autogenesis-knowledge-derived-freshness:
     python3 scripts/gen-autogenesis-knowledge-coverage.py --check
     python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
+    python3 scripts/gen-autogenesis-kernel-semantic-review-queue.py --check
     python3 scripts/gen-autogenesis-obstruction-projection.py --check
     python3 scripts/gen-autogenesis-transport-projection.py --check
     python3 scripts/gen-autogenesis-scheduler-observations.py --check
