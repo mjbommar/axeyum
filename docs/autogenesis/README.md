@@ -255,6 +255,7 @@ compounding, not automation theatre.
 | [Capability-gap projection](247-capability-gap-projection-result.md) | Which dependency-ready fact groups lack a registered producer, and why is autonomous dispatch currently refused? |
 | [Family-to-concept crosswalk](248-family-concept-crosswalk.md) | How can frozen statement families receive pinned mathematical-topic labels without being mistaken for fact-level formalizations? |
 | [Separated concept coverage](249-concept-coverage-projection.md) | Which concepts have family-topic or qualified fact-level coverage, with neither mistaken for complete formal coverage? |
+| [Natural ModEq capability selection](250-natural-modeq-capability-selection.md) | Which bounded, dependency-ready natural modular-equivalence core should test whether the existing general mechanism can earn a new source-bound operation? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

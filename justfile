@@ -489,6 +489,10 @@ autogenesis-concept-coverage:
     python3 scripts/validate-autogenesis-concept-coverage-projection.py
     python3 scripts/gen-autogenesis-concept-coverage-projection.py --check
 
+autogenesis-nat-modeq-selection:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_nat_modeq_capability_selection
+    python3 scripts/validate-autogenesis-nat-modeq-capability-selection.py
+
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh
 
