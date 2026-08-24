@@ -32,7 +32,10 @@ earlier unsafe projection rather than being weakened around it.
 The new producer-evaluation frontier turns that boundary into executable input:
 it exposes exactly 98 dependency-ready train/development facts (38 train, 60
 development), while retaining only aggregate counts for 34 held-out and nine
-out-of-population ready facts.
+out-of-population ready facts. Its nine independently refuted mutations are
+now bound as mandatory must-decline controls, leaving 89 ordinary candidate
+facts; a future census admitting any control is void rather than “partly
+successful.”
 Next capability work must expand general-producer and adapter coverage over the
 train/development queue, compare it against that fixed observation, and only
 then evaluate an independently sealed held-out partition—not add more
@@ -61,3 +64,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `913638251` | Preserve the train/development partition on every producer-outcome group and reject an out-of-partition group rather than aggregating away the evaluation boundary |
 | 2026-08-24 | `a4ededc55` | Repair capability-gap and concept-coverage projections so their fact-ID views exclude held-out rows; make the existing generic held-out isolation gate pass without exceptions |
 | 2026-08-24 | `d458725bf` | Derive the deterministic dependency-ready train/development producer frontier and reject out-of-partition or duplicate facts before a producer can receive them |
+| 2026-08-24 | `3f0545638` | Bind the nine independently recomputed must-decline mutations into the safe producer frontier so any future census has a non-vacuous soundness control |
