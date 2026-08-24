@@ -249,6 +249,10 @@ compounding, not automation theatre.
 | [Foundations progress and the generated blockers](237-foundations-progress-and-the-generated-blockers.md) | Twenty-one Nat lemmas moved top-50 coverage 8 → 28; what remains is kernel-generated, not hand-provable. |
 | [The constructed reals became the reals](238-the-constructed-reals-became-the-reals.md) | ℝ gained Archimedean, density, cotransitivity and completeness in one day, all axiom-free — and why each was cheaper than expected. |
 | [Knowledge overlay and fill plan](243-knowledge-overlay-and-fill-plan.md) | How do facts, producers, capabilities, kernel dependencies, and a pinned read-only concept graph become typed scheduler knowledge without changing existing schemas or colliding with theorem construction? |
+| [Kernel dependency projection](244-kernel-dependency-projection-result.md) | Which constructed declarations and direct proof-term dependencies can the scheduler observe without rewriting the fact ledger? |
+| [Obstruction projection](245-obstruction-projection-result.md) | Which retained producer-decline families have measured blockers, without inventing remedies or resolutions? |
+| [Transport projection](246-transport-projection-result.md) | Which source-to-admission chains are hash-bound and complete, rather than merely name-matched? |
+| [Capability-gap projection](247-capability-gap-projection-result.md) | Which dependency-ready fact groups lack a registered producer, and why is autonomous dispatch currently refused? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
