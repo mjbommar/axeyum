@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:natdivsucc-antitone-over-constructed-rationals",
+  "title": "The rational 1/(j+1) is antitone in j, the lemma two independent constructive-analysis developments had stopped at",
+  "statement": "For all naturals j, j' with j <= j', Rat.le (natDivSucc 1 j') (natDivSucc 1 j) -- that is, 1/(j'+1) <= 1/(j+1). Rat here is a NORMALISED num/den pair, not a quotient, so Eq and le are on normalised representatives and Rat.le q r is by definition Int.le (num q * ofNat (den r)) (num r * ofNat (den q)), cross-multiplication. natDivSucc k j is a SINGLE Rat.normalize (Int.ofNat k) (Nat.succ j) call -- the rational k/(j+1) built directly, NOT a product k * (1/(j+1)). WHY THIS PARTICULAR LEMMA IS RECORDED: it is the modulus-comparison step for combining two independently-chosen moduli, and its absence had blocked two separate developments months apart -- CReal.uniformly_continuous_imp_continuous_at (the bridge from uniform continuity to sequential continuity) and CReal.hasDerivative_add (the SUM RULE for the derivative). rat_prelude's own doc on nat_div_succ_scale records that keeping antitonicity off the critical path was DELIBERATE, and nat_div_succ_le_one and nat_div_succ_le_scaled each note in their doc comments that they are still not antitonicity. A NOTE ON AxNat: the Ax is axeyum, not axiom. lean_pp roots the kernel's CONSTRUCTED inductive naturals there so exported terms do not shadow Lean's own Nat. It collides with AxReal, where Ax DOES mean axiomatized and the trusted surface is 30. Both nat and rat measure 0.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Rat.le (Rat.natDivSucc (AxNat.succ AxNat.zero) x1) (Rat.natDivSucc (AxNat.succ AxNat.zero) x0))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.natDivSucc_antitone",
+      "kind": "kernel-term",
+      "supports": "`Rat.natDivSucc_antitone` is admitted with exactly the type in formal.statement. THE PROOF NEVER TOUCHES Rat.inv, which is the point: the route everyone had assumed goes through the reciprocal and needs an inv_inv law this prelude does not have. Reading the two definitions instead settled it -- natDivSucc is a single normalize call and Rat.le is cross-multiplication -- so the proof unfolds le, applies Rat.normalize_cross on each side (Nat.one_mul clearing the ofNat 1 factor), scales the goal by the positive (succ j')*(succ j), regroups with a new length-4 helper iregroup4, substitutes both normalize_cross facts, and cancels the common denominator factor with the already-proved Rat.int_le_of_mul_le_mul_right. The Nat -> Rat order transport that was expected to be needed does not have to exist: Int.le (ofNat m) (ofNat n) unfolds DEFINITIONALLY to Nat.le m n, so Nat.succ_le_succ serves directly.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::nat_div_succ_antitone_is_the_statement_briefed (asserts the whitespace-normalised KERNEL-RENDERED type verbatim with assert_eq!)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_rat_prelude return Err and the test fail)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::nat_div_succ_antitone_is_the_statement_briefed -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/archimedean.rs",
+      "notes": "A footprint check cannot carry this claim: the SAME theorem with the two natDivSucc terms swapped -- i.e. asserting monotonicity, which is FALSE -- has an identically empty footprint. Mutation-verified 2026-08-24 by the coordinating lane: exchanging x0 and x1 in the pinned string (reversing the inequality) makes cargo report `583 passed; 1 failed`, naming this test and no other; restored byte-identically and hash-checked, the suite returns to 584 passed. The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
+    },
+    {
+      "id": "footprint-Rat.natDivSucc_antitone",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for natDivSucc_antitone and everything beneath it, including Rat.normalize_cross and Rat.int_le_of_mul_le_mul_right. The `rat` prelude's trusted surface is 0. The name was added to BOTH the Archimedean axiom sweep AND every_named_declaration_exists in the SAME edit that declared it.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_archimedean_development_is_axiom_free (reads Kernel::axiom_footprint for each name in the Archimedean development and requires the empty set)",
+        "rat_prelude_tests::every_named_declaration_exists (requires each name to be PRESENT in the environment -- the half that catches an omission, since a name interned but never declared has a vacuously empty footprint)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_archimedean_development_is_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
+      "notes": "Presence and footprint are two different checks and both are required here. A lane found five pre-existing rat declarations missing from a sweep on the same day; an unvisited name's footprint is not empty, it is UNMEASURED. Counting Declaration::Axiom alone would also not suffice, since Opaque has no proof body and Quotient admits Quot.sound."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-capability-assurance (2026-08-24). Dispatched specifically because the derivative lane, hours earlier, had traced its own blocker to this lemma and reported that uniform_continuity.rs had hit the identical wall months before. Kernel theorem over the constructed rationals, empty axiom_footprint.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "standard",
+        "what": "antitonicity of the reciprocal on the positive rationals",
+        "year": null,
+        "where": "elementary",
+        "attribution": "Not claimed as new mathematics. What is recorded is that its absence was load-bearing here, that the absence was deliberate on a cost estimate, and that the estimate was wrong."
+      }
+    ]
+  },
+  "notes": "THE RECORDED REASON THIS LEMMA DID NOT EXIST WAS WRONG, and that is the finding worth keeping. It had been left out on the judgement that it was expensive -- reachable only through the reciprocal, needing an inv_inv law the prelude lacks. The direct route through Rat.le's own cross-multiplication definition never touches Rat.inv at all. Two developments stopped for months on a cost estimate that reading two definitions would have corrected. The general lesson is the one this repository keeps relearning: prefer a measurement over a message, including the ones in doc comments written by people who were being careful.\n\nWHAT IS NOT PROVED: Rat.inv_inv still does not exist, so the reciprocal route remains unavailable if anything later wants it. Rat.natDivSucc_pos already existed in field.rs.\n\nThe new iregroup4 helper (a four-factor cross-multiplication regroup, the length-4 analogue of the existing iregroup3) is reusable by any later Rat.le proof of this shape.\n\nThe proof is constructive throughout: no Classical.em, no propext, no funext, no Quot.sound.\n\nexternal_status is `proved`: elementary, formalized. Nothing here is new mathematics; the fact is recorded because it is a dependency edge that two capability strands were blocked on."
+}

@@ -573,6 +573,58 @@ pub(crate) fn iregroup3(d: &mut IntDev<'_>, from: [ExprId; 3], to: [ExprId; 3]) 
     chained
 }
 
+/// `Eq Int (((a*b)*c)*d) (((w*x)*y)*z)` when `[w,x,y,z]` is a permutation of
+/// `[a,b,c,d]` — the length-4 analogue of [`iregroup3`], for arguments that
+/// scale a cross-product of two `natDivSucc`s by *both* denominators at once
+/// and then need all four factors regrouped around two independent
+/// substitutions (one per side of the comparison).
+///
+/// Built the same way as `iregroup3`: two `mul_assoc` steps flatten the
+/// left-nested product to [`iprod`]'s right-nested canonical form, `iprod`
+/// itself is permuted by [`iprod_perm`], and two more `mul_assoc` steps close
+/// the target back up.
+pub(crate) fn iregroup4(d: &mut IntDev<'_>, from: [ExprId; 4], to: [ExprId; 4]) -> ExprId {
+    let int = d.int();
+    let pair_from = d.imul(from[0], from[1]);
+    let tail_from = d.imul(from[2], from[3]);
+    let start = {
+        let head = d.imul(pair_from, from[2]);
+        d.imul(head, from[3])
+    };
+    let mid_from = d.imul(pair_from, tail_from);
+    let open1 = d.lemma(int.mul_assoc, &[pair_from, from[2], from[3]]);
+    let flat_from = iprod(d, &from);
+    let open2 = d.lemma(int.mul_assoc, &[from[0], from[1], tail_from]);
+    let permuted = iprod_perm(d, &from, &to);
+    let flat_to = iprod(d, &to);
+    let pair_to = d.imul(to[0], to[1]);
+    let tail_to = d.imul(to[2], to[3]);
+    let mid_to = d.imul(pair_to, tail_to);
+    let close2 = {
+        let forward = d.lemma(int.mul_assoc, &[to[0], to[1], tail_to]);
+        d.isymm(mid_to, flat_to, forward)
+    };
+    let target = {
+        let head = d.imul(pair_to, to[2]);
+        d.imul(head, to[3])
+    };
+    let close1 = {
+        let forward = d.lemma(int.mul_assoc, &[pair_to, to[2], to[3]]);
+        d.isymm(target, mid_to, forward)
+    };
+    let (_, chained) = d.ichain(
+        start,
+        &[
+            (mid_from, open1),
+            (flat_from, open2),
+            (flat_to, permuted),
+            (mid_to, close2),
+            (target, close1),
+        ],
+    );
+    chained
+}
+
 /// `Eq Int ((iprod xs) * (iprod ys)) (iprod (xs ++ ys))`.
 pub(crate) fn iprod_append(d: &mut IntDev<'_>, xs: &[ExprId], ys: &[ExprId]) -> ExprId {
     let int = d.int();

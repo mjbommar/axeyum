@@ -80,7 +80,14 @@ WANT=$(printf '%s\n' "$@" | LC_ALL=C sort -u)
 
 # A private index, refreshed and staged and committed in ONE process, because a
 # refresh in an earlier shell invocation is already stale (incidents 8 and 9).
-export GIT_INDEX_FILE="$PWD/.git/index-$AXEYUM_AGENT"
+# `git rev-parse --git-dir`, NOT `$PWD/.git`: in a LINKED WORKTREE `.git` is a
+# FILE containing `gitdir: …`, so `$PWD/.git/index-<lane>` is not a path and
+# `read-tree` dies with `Not a directory`. Every dispatched lane runs in a
+# linked worktree, so the documented helper failed for all of them (exit 3) and
+# they fell back to plain `git commit`. `--git-dir` returns the per-worktree
+# gitdir there and `.git` in the main checkout, which is right in both.
+GITDIR=$(git rev-parse --git-dir) || exit 3
+export GIT_INDEX_FILE="$GITDIR/index-$AXEYUM_AGENT"
 git read-tree HEAD || exit 3
 git add -A -- "$@" || exit 3
 
