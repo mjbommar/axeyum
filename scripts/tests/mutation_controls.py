@@ -1580,8 +1580,13 @@ SUITES["kernel-suite-partition"] = (
 #
 # An episode is the ONLY thing separating "a model ran" from "a model proved
 # something", so a rule in it that cannot fail is worse than no rule: it
-# manufactures unfalsifiable claims at the speed of the loop. Fourteen guards,
-# fourteen tests, one each. Two are worth naming here because they are the ones
+# manufactures unfalsifiable claims at the speed of the loop. Eighteen guards,
+# every one with a nonempty killed-set and no two sharing a member -- so each
+# guard is uniquely identified by which tests die and none can be deleted while
+# the suite stays green. (Some killed-sets have more than one member: the schema
+# guard is exercised by five documents, and three v1 rules are exercised on a v2
+# document as well, which is the control that a NEW SCHEMA VERSION did not turn
+# an old rule off.) Two are worth naming here because they are the ones
 # a reader would assume are covered by something else:
 #
 #   `ledger-writes-must-be-zero` overlaps the schema's `maximum: 0`, so the test
@@ -1669,6 +1674,29 @@ SUITES["agent-episode"] = (
             "an unreadable nursery is an error, not an empty held-out set",
             '        print(f"EPISODE_ERROR|held-out-population|{error}", file=sys.stderr)\n        return 2',
             "        held = set()",
+        ),
+        # Slice A4. Rule 11 is TWO guards under one rule name and the split is
+        # deliberate: "a producer nobody re-validated" and "a checker that ran
+        # against nothing" are different defects, and one guard covering both
+        # would be deletable in half while a status-only test stayed green.
+        (
+            "proved requires a tool call that actually dispatched",
+            "        if not checked_calls:",
+            "        if False:",
+        ),
+        (
+            "proved requires a checker run that exited zero",
+            "        if not passing_runs:",
+            "        if False:",
+        ),
+        # The version dispatch itself. Falling back to v1 for an unknown version
+        # is the failure mode a new schema version invites: the document is
+        # still CHECKED, so nothing looks wrong, and it is checked against
+        # constraints nobody wrote for it.
+        (
+            "an unknown schema version is refused, not checked against v1",
+            "        schema = schemas.get(declared) if isinstance(declared, int) else None",
+            "        schema = schemas.get(declared) or schemas[1]",
         ),
     ],
 )

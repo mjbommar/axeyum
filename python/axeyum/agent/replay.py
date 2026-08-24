@@ -17,9 +17,23 @@ What is compared, and why the exit status depends on it:
   the eligibility reason. These come from `Select`, which runs no model. If they
   move, either the ledger moved under the episode or the filter changed; both
   are things a referee needs told.
-* `outcome` -- verdict, decline class, and the three receipt counters including
-  `ledger_writes`. If a replay of a `declined` episode produces anything else,
-  the episode was not a record of what happened.
+* `outcome` -- verdict, decline class, the receipt counters including
+  `ledger_writes`, and in a v2 episode the `checker_runs` too. If a replay of a
+  `declined` episode produces anything else, the episode was not a record of
+  what happened.
+
+A v2 episode replays the **deferred round trip**: the recorded response calls a
+`requires_approval=True` tool, the replayed run ends with the same
+`DeferredToolRequests`, and `Supervise` -- which holds no model and reads only
+the gate, the arguments and the ledger -- re-derives its decision rather than
+replaying a recorded one. That is the stronger check. A recorded approval
+replayed as a fact would make the supervisor unfalsifiable, which is the exact
+defect this repository keeps finding in its own checkers.
+
+`Check` re-runs too, in a fresh kernel, so a v2 replay re-derives
+`outcome.checker_runs[0].output_sha256` from work rather than from the file.
+The recorded `command` strings are deliberately free of episode-directory paths
+so that a replay into a scratch directory compares equal.
 
 `selection.frontier_path` is compared by BASENAME. The replay writes into a
 scratch directory, so the absolute path necessarily differs; the digest, which
@@ -224,6 +238,12 @@ def replay(
             commit=str(document.get("git_commit", "")),
             model=model,
             model_id=str(policy.get("model_id", "test:replay")),
+            # The RECORDED schema version, so a v1 episode replays through the
+            # A2 four-node path and a v2 one through the full A4 loop. Replaying
+            # a v1 transcript through the dispatching nodes would ask it for
+            # responses it never made -- which is `TranscriptExhausted`, an
+            # honest error but the wrong finding.
+            schema_version=int(document.get("schema_version", 1)),
             budgets=budgets,
             # The RECORDED request and tool-call limits, exactly. Relaxing them
             # made every budget-exhausted episode unreplayable: the loop ran past

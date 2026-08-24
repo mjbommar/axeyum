@@ -52,6 +52,9 @@ NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
 FIXTURES = ROOT / "artifacts/episodes/fixtures"
 DECLINED = FIXTURES / "episode-declined-v1.json"
 PROVED = FIXTURES / "episode-proved-v1.json"
+FIXTURES_V2 = ROOT / "artifacts/episodes/fixtures-v2"
+DECLINED_V2 = FIXTURES_V2 / "episode-v2-declined.json"
+PROVED_V2 = FIXTURES_V2 / "episode-v2-proved.json"
 
 BAD_SHA = "0" * 64
 
@@ -305,6 +308,141 @@ class AgentEpisodeTests(unittest.TestCase):
         code, out = run(str(broken))
         self.assertEqual(code, 1, out)
         self.assertRule(out, "unreadable-document")
+
+
+    # ------------------------------------------------- schema v2 (slice A4)
+    #
+    # The v2 rules are the ones that would be easiest to add badly. A new
+    # schema version is an opportunity to turn rules off by accident -- the
+    # dispatch picks a different document and every guard written against the
+    # old one stops firing without anyone noticing -- so the first three tests
+    # below are about the OLD rules still biting, and only then the new one.
+
+    def test_the_v2_fixtures_pass(self) -> None:
+        code, out = run(str(DECLINED_V2), str(PROVED_V2))
+        self.assertEqual(code, 0, out)
+        self.assertIn("EPISODES|checked=2|ok=2|failed=0", out)
+
+    def test_a_v2_directory_argument_is_walked(self) -> None:
+        code, out = run(str(FIXTURES_V2))
+        self.assertEqual(code, 0, out)
+        self.assertIn("EPISODES|checked=2|ok=2|failed=0", out)
+
+    def test_an_unknown_schema_version_is_refused_not_checked_against_the_nearest(
+        self,
+    ) -> None:
+        """A v3 document validated against the v2 schema would be reported on
+        for constraints nobody wrote for it."""
+        path = self.corrupt(DECLINED_V2, lambda d: d.update(schema_version=3))
+        code, out = run(path)
+        self.assertEqual(code, 1)
+        self.assertRule(out, "unknown-schema-version")
+
+    def test_a_v2_document_still_fails_the_v1_ledger_write_rule(self) -> None:
+        """The version dispatch must not turn an old rule off."""
+        path = self.corrupt(DECLINED_V2, lambda d: d["outcome"].update(ledger_writes=1))
+        code, out = run(path)
+        self.assertEqual(code, 1)
+        self.assertRule(out, "ledger-writes-must-be-zero")
+
+    def test_a_v2_document_still_fails_the_v1_held_out_rule(self) -> None:
+        held = self.held_out_id()
+        path = self.corrupt(
+            DECLINED_V2, lambda d: d["observed"].update(facts_unlocked=[held])
+        )
+        code, out = run(path)
+        self.assertEqual(code, 1)
+        self.assertRule(out, "held-out-reference")
+
+    def test_a_v2_document_still_fails_the_v1_empty_transcript_rule(self) -> None:
+        path = self.corrupt(DECLINED_V2, lambda d: d["transcript"].update(tool_calls=[]))
+        code, out = run(path)
+        self.assertEqual(code, 1)
+        self.assertRule(out, "empty-transcript")
+
+    def test_a_v1_document_that_declares_v2_fails_the_schema(self) -> None:
+        """v2 requires `selection.ledger_sha256` and `outcome.checker_runs`."""
+        path = self.corrupt(DECLINED, lambda d: d.update(schema_version=2))
+        code, out = run(path)
+        self.assertEqual(code, 1)
+        self.assertRule(out, "schema")
+
+    def test_a_decline_class_outside_the_enum_fails_the_schema(self) -> None:
+        """A free string is a taxonomy nobody can aggregate."""
+        path = self.corrupt(
+            DECLINED_V2, lambda d: d["outcome"].update(decline_class="the-model-was-tired")
+        )
+        code, out = run(path)
+        self.assertEqual(code, 1)
+        self.assertRule(out, "schema")
+
+    def test_a_v2_decline_class_inside_the_enum_passes(self) -> None:
+        """The discriminating control: a gate that rejected every class would
+        'catch' the breach and be useless."""
+        path = self.corrupt(
+            DECLINED_V2, lambda d: d["outcome"].update(decline_class="retrieval-miss")
+        )
+        code, out = run(path)
+        self.assertEqual(code, 0, out)
+
+    def test_proved_without_a_checked_tool_call_is_a_failure(self) -> None:
+        """The C tier is the only route to `proved`; reads are not evidence."""
+
+        def demote(document: dict) -> None:
+            for call in document["transcript"]["tool_calls"]:
+                call["assurance"] = "read"
+
+        path = self.corrupt(PROVED_V2, demote)
+        code, out = run(path)
+        self.assertEqual(code, 1)
+        self.assertRule(out, "proved-requires-checked-call")
+
+    def test_proved_without_a_passing_checker_run_is_a_failure(self) -> None:
+        """A proof nobody re-validated is not proved. Distinct from the rule
+        above: a `checked` call still present, every re-check failing."""
+
+        def fail_every_run(document: dict) -> None:
+            for run_row in document["outcome"]["checker_runs"]:
+                run_row["exit_status"] = 1
+            document["outcome"]["checker_exit_status"] = 0
+
+        path = self.corrupt(PROVED_V2, fail_every_run)
+        code, out = run(path)
+        self.assertEqual(code, 1)
+        self.assertRule(out, "proved-requires-checked-call")
+
+    def test_a_declined_v2_episode_needs_neither_half_of_rule_eleven(self) -> None:
+        """The rule must bite on `proved` only: a decline legitimately has no
+        checker run at all, and a rule that fired there would push the loop
+        into naming a checker that did not run."""
+        document = json.loads(DECLINED_V2.read_text())
+        self.assertEqual(document["outcome"]["checker_runs"], [])
+        code, out = run(str(DECLINED_V2))
+        self.assertEqual(code, 0, out)
+
+    def test_a_v2_checker_run_must_name_a_command(self) -> None:
+        path = self.corrupt(
+            PROVED_V2,
+            lambda d: d["outcome"]["checker_runs"][0].update(command=""),
+        )
+        code, out = run(path)
+        self.assertEqual(code, 1)
+        self.assertRule(out, "schema")
+
+    def test_a_v2_episode_missing_the_ledger_digest_fails_the_schema(self) -> None:
+        path = self.corrupt(DECLINED_V2, lambda d: d["selection"].pop("ledger_sha256"))
+        code, out = run(path)
+        self.assertEqual(code, 1)
+        self.assertRule(out, "schema")
+
+    def test_the_committed_a4_episodes_pass(self) -> None:
+        """Not a fixture: the live run's own artifacts, checked as committed."""
+        directory = ROOT / "artifacts/episodes/2026-08-24-a4"
+        if not directory.is_dir():
+            self.skipTest(f"{directory} is not committed in this tree")
+        code, out = run(str(directory))
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("|checked=0|", out)
 
 
 if __name__ == "__main__":

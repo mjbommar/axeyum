@@ -1,0 +1,16 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "NotDefinitionalEquivalence",
+  "fact_id": "F:ml430-nat-modeq-one-516d46e8",
+  "producer_id": "close_terminal",
+  "route": "general",
+  "sibling_fact_ids": [
+    "F:ml430-nat-modeq-refl-d870c8f5",
+    "F:ml430-int-modeq-of-dvd-b9c41fce",
+    "F:ml430-nat-modeq-of-dvd-d75cc374"
+  ],
+  "tactic_ids": [
+    "T:modeq-equivalence-combinators"
+  ],
+  "why": "The goal is a definitional equivalence relation (modEq with modulus 1) that holds trivially for all arguments. The modeq-equivalence-combinators tactic closes such goals using primitive Eq/Iff combinators, recognizing that modulo 1 equivalence is definitionally true."
+}

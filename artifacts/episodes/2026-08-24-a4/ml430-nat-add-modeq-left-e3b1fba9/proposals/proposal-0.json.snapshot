@@ -1,0 +1,12 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "NotDefinitionalModEq",
+  "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+  "obstruction": "This specific fact asserts n + a \u2261 a [MOD n], which is a left-addition pattern. While F:ml430-nat-add-modeq-right-e2f11f21 exists for the symmetric right-addition case (a + n \u2261 a [MOD n]), and the integer versions F:ml430-int-add-modeq-left-ee732b5b and F:ml430-int-add-modeq-right-e58108ee exist, the other nat modEq facts on the frontier (F:ml430-nat-modeq-add-left-e83f0700, F:ml430-nat-modeq-add-right-8e2ca0cc) are congruence combinators with different structure requiring existing modEq hypotheses. The specific arithmetic identity n + a - a = n is unique to this left-addition form and its right-addition sibling, preventing generalization to three other facts with the same tactics.",
+  "producer_id": "close_terminal",
+  "route": "none",
+  "tactic_ids": [
+    "T:modeq-equivalence-combinators"
+  ],
+  "why": "The goal is a definitional modular equivalence relation n + a \u2261 a [MOD n] that should be closable by primitive Eq/Iff combinators recognizing that n + a - a = n which is divisible by n."
+}

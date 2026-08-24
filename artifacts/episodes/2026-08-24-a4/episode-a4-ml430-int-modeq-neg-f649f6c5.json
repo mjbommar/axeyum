@@ -1,0 +1,172 @@
+{
+  "budgets": {
+    "cost_limit_usd": 1.0,
+    "input_tokens_limit": 400000,
+    "output_tokens_limit": 32000,
+    "request_limit": 10,
+    "tool_calls_limit": 16,
+    "wall_seconds": 600
+  },
+  "created_at": "2026-08-24T21:19:50Z",
+  "episode_id": "E:a4-ml430-int-modeq-neg-f649f6c5",
+  "git_commit": "5e289fe8cfccab7ba6b230a73cacedf6a485a187",
+  "kind": "axeyum-agent-episode",
+  "observed": {
+    "facts_unlocked": [],
+    "operations_widened": [],
+    "overlay_links_proposed": []
+  },
+  "outcome": {
+    "axiom_footprint": [],
+    "checker_command": "",
+    "checker_exit_status": 0,
+    "checker_output_sha256": null,
+    "checker_runs": [],
+    "decline_class": "gate-refused",
+    "ledger_writes": 0,
+    "search_invocations": 0,
+    "target_theorem_submissions": 0,
+    "verdict": "declined"
+  },
+  "policy": {
+    "agent_code_sha256": "2b8ef777f0298c70b8668f62300f47ca1cdbc34f3aae27363494309f63cc3f97",
+    "library_versions": {
+      "anthropic": "1.0.0",
+      "axeyum": "0.1.0",
+      "httpx2": "2.12.0",
+      "pydantic": "2.13.4",
+      "pydantic-ai-slim": "2.33.0",
+      "pydantic-graph": "2.33.0",
+      "python": "3.12.13"
+    },
+    "model_id": "anthropic:claude-sonnet-4-5",
+    "prompt_hashes": {
+      "dispatch": "8eabdfdc4e1a4f6e90263ead7672d4abf95e5c4f603ca8fa91363dad4094ed70",
+      "gather": "85d42380264f5b6980ff0da34cd4622392c3e5679862b03b9eddbbd58a1ad742",
+      "instructions": "9aaf0f5b0df0c5a65578f8af6dae1e5d6bebeb3bf3b4fffe5e626c93ffbcb9cb",
+      "plan": "62038870861b2d6e3afb4fdfee95fe8a9bba4762d7d0bc5739f3b8b3109fed42"
+    },
+    "settings": {
+      "max_tokens": 8192,
+      "seed": null,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "toolset_sha256": "b9bbb2c0298fbeeb1ec693c8bc806b3aaa714674b47b6140a3e0396d69d10f9c"
+  },
+  "proposals": [
+    {
+      "assurance": "proposed",
+      "kind": "strategy",
+      "path": "artifacts/episodes/2026-08-24-a4/ml430-int-modeq-neg-f649f6c5/proposals/proposal-0.json.snapshot",
+      "sha256": "87f31a6f1fd62373d0466d8bb3b52ade9731ecf48def5b4e9b2ac06d27aaeb41"
+    }
+  ],
+  "schema_version": 2,
+  "selection": {
+    "eligibility_reason": "train partition, epistemic_status open, dependency-ready with no unmet depends_on; fragment Int is proof-route-only; 0 registered operation(s); selected from ledger sha256 ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1",
+    "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
+    "fact_sha256": "8488c90ad65fd9e2a1e95711cbc0bb5e6b437002d7ea0c9ad5685daa5ebbdb5e",
+    "frontier_path": "artifacts/episodes/2026-08-24-a4/frontier.json.snapshot",
+    "frontier_sha256": "bce3d65e2e78c56c40d7058b92c0133d208c66710ba6ee9270189700e4508b7f",
+    "ledger_sha256": "ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1",
+    "partition": "train"
+  },
+  "transcript": {
+    "messages_path": "artifacts/episodes/2026-08-24-a4/ml430-int-modeq-neg-f649f6c5/messages.json.snapshot",
+    "messages_sha256": "836f69a1a302f3790120a3e9ff0845e7c179c0a8f1bbe517f728b13d3019cb94",
+    "tool_calls": [
+      {
+        "args_sha256": "27169bc499f7c84f38361ad766cbe55b380f0d5932bc59356753bdcd9be4f413",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 0,
+        "result_sha256": "665f316f861cd023771ea334441045e14dd5a3ae3a99f042d242bd1526f11799",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "27169bc499f7c84f38361ad766cbe55b380f0d5932bc59356753bdcd9be4f413",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 1,
+        "result_sha256": "6a9c4c40195fa0bf30b1c2f6cbbe948794a6af3a59c4d5cd1069738c03533674",
+        "tool": "fact_neighbourhood"
+      },
+      {
+        "args_sha256": "27169bc499f7c84f38361ad766cbe55b380f0d5932bc59356753bdcd9be4f413",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 2,
+        "result_sha256": "34a0686c72e96e93d35aab23f1f543b485fc8ad6f92838ab78272108ced2ec95",
+        "tool": "operation_registry"
+      },
+      {
+        "args_sha256": "63fb419c5c18f840aa129e7fe641037ba915382ab4fb0adf832c542a0001f01c",
+        "assurance": "read",
+        "duration_ms": 189,
+        "exit_status": 0,
+        "ordinal": 3,
+        "result_sha256": "2e5d09c86731c30299389519e26edf016dd5fa486858fc1b157d5b91dcd40578",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "f679c0f6c272718667537515eac34bf83d162a669ead224cffad20310c3ad7b0",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 4,
+        "result_sha256": "0f9619ecf6de7c798fdea964a90c8dfaf16386312a212617e180e97645a2f712",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "309e24e82de33a653afb17fd06a8fa4c5c1b31bc124aeda857ca6968c139dffd",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 5,
+        "result_sha256": "002d156b74ccceb06b3a086aa22f311fae944ab7dfe854aa8d8b0b71a3e710cc",
+        "tool": "frontier_select"
+      },
+      {
+        "args_sha256": "4ed9e65d7b23f28b7f950bc87433b1ebb2a04c31b177f3441be0156ba235ea6a",
+        "assurance": "read",
+        "duration_ms": 1,
+        "exit_status": 0,
+        "ordinal": 6,
+        "result_sha256": "3b588cfce1cf626ffe612d259ffacd1ef79a72b99f5805f8011b8bc3fd4cbbf1",
+        "tool": "frontier_select"
+      },
+      {
+        "args_sha256": "90783e71ac6e67235f89a9da935cb2eccbec5fba18bc943f696298a48634ac85",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 7,
+        "result_sha256": "5a457ebf131b69ea0954a224071f35ae3e0a1ebc454f77f2a0609920667c7ca7",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "d3dd7412650412c2073e318bb453cc4577684f24b6c89bd538925b9d1ea703e5",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 8,
+        "result_sha256": "ed44e8ad82c9bafdbaeb97979e12222d0c6281ac5b2db6605fcd3d29248d9f92",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "49694109199b29983bdd54210c43582d5baa42875e183fa5cea5941c07fd9c3a",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 9,
+        "result_sha256": "e988b81ad166c2b419cef68eeafbde08a05cb520e9e15fbb7fb67274d896edb4",
+        "tool": "fact_get"
+      }
+    ]
+  },
+  "web_snapshots": []
+}

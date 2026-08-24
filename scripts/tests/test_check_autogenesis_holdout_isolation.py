@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Mutation controls for the held-out isolation gate.
 
-Mutation-verified 2026-08-22, six guards deleted one at a time. The property
+Mutation-verified 2026-08-22 and re-verified 2026-08-24, seven guards deleted
+one at a time. The property
 that holds is not "exactly one test dies" -- two guards are pinned by two tests
 each -- but the stronger one that actually matters: **every guard has a nonempty
 killed-set, and no two guards share a killed-set member.** Each guard is
@@ -9,13 +10,23 @@ therefore uniquely identified by which tests die, so none can be deleted while
 the suite stays green, and none is hiding behind another's check.
 
     settled-check          -> {a_settled_held_out_fact_is_a_violation}
-    reference-check        -> {a_reference_from_any_artifact_is_a_violation,
-                               a_reference_at_an_unexpected_json_path_is_still_caught}
+    reference-check        -> {a_reference_at_an_unexpected_json_path_is_still_caught}
+    embedded-text-check    -> {an_episode_sidecar_naming_a_held_out_fact_is_a_violation}
     vacuity-check          -> {an_empty_held_out_population_is_an_error_not_a_pass}
     missing-manifest       -> {a_missing_manifest_is_an_error_not_a_pass}
     unreadable-manifest    -> {an_unreadable_manifest_is_an_error_not_a_pass}
     population-exemption   -> {the_population_files_are_exempt,
                                the_committed_repository_passes}
+
+Re-measured 2026-08-24 when slice A4 extended the walk to `artifacts/episodes/`.
+Two things changed and both are worth stating. The reference guard's killed-set
+SHRANK, because the new embedded-text guard independently catches a held-out id
+sitting in a JSON value of its own; what still uniquely pins the exact guard is
+that it reports the JSON PATH, which the text scan cannot. And the new guard is
+not a duplicate: an episode transcript is prose, so a model writing
+"I will work on F:..." puts the id inside a value that is not equal to it, and
+the exact walk returns clean. The first version of the episode scan did exactly
+that and passed.
 
 The two-test sets are facets of one guard, not two guards behind one check: the
 reference guard is exercised at an ordinary and an invented JSON path, and the
@@ -161,6 +172,70 @@ class HoldoutIsolationTests(unittest.TestCase):
         code, out, _ = self.run_guard()
         self.assertEqual(code, 0)
         self.assertIn("verdict=PASS", out)
+
+    # --- guard 2b: the episode tree (slice A4) ----------------------------
+    #
+    # Ten agent episodes were committed on 2026-08-24 while this gate scanned
+    # only `artifacts/autogenesis/`. That they were clean was measured by hand,
+    # which is the arrangement this file exists to replace.
+
+    def episodes(self) -> pathlib.Path:
+        """Point the gate at a scratch episode tree, restored afterwards."""
+        saved = guard.EPISODES
+        directory = pathlib.Path(self._tmp.name) / "episodes" / "2026-08-24"
+        directory.mkdir(parents=True)
+        guard.EPISODES = pathlib.Path(self._tmp.name) / "episodes"
+        self.addCleanup(lambda: setattr(guard, "EPISODES", saved))
+        return directory
+
+    def test_an_episode_naming_a_held_out_fact_is_a_violation(self) -> None:
+        directory = self.episodes()
+        (directory / "episode-a4-example.json").write_text(
+            json.dumps({"selection": {"fact_id": HELD}})
+        )
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertIn("verdict=FAIL", out)
+        self.assertIn("held-out-reference", err)
+        self.assertIn("episode-a4-example.json", err)
+
+    def test_an_episode_sidecar_naming_a_held_out_fact_is_a_violation(self) -> None:
+        """`*.json.snapshot` is where a transcript and a proposal live, and it is
+        the suffix a walk restricted to `*.json` would skip entirely."""
+        directory = self.episodes()
+        (directory / "messages.json.snapshot").write_text(
+            json.dumps([{"parts": [{"content": f"I will work on {HELD}"}]}])
+        )
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertIn("verdict=FAIL", out)
+        self.assertIn("messages.json.snapshot", err)
+
+    def test_an_episode_naming_a_train_fact_is_not_a_violation(self) -> None:
+        """The discriminating control: a gate that flagged every fact id would
+        'catch' the breach and be useless."""
+        directory = self.episodes()
+        (directory / "episode-a4-example.json").write_text(
+            json.dumps({"selection": {"fact_id": TRAIN}})
+        )
+        code, out, _ = self.run_guard()
+        self.assertEqual(code, 0)
+        self.assertIn("verdict=PASS", out)
+
+    def test_the_frontier_census_snapshot_is_exempt_by_name(self) -> None:
+        """It is `fact-frontier.py --json`: a census of the WHOLE open ledger,
+        re-derived entry for entry by `--verify`, so it necessarily enumerates
+        every held-out id. A filtered copy would fail the very rule that makes
+        it evidence. Exempted BY NAME, not by directory -- an episode document
+        beside it is still scanned, which the tests above show."""
+        directory = self.episodes()
+        (directory / "frontier.json.snapshot").write_text(
+            json.dumps({"entries": [{"fact_id": HELD}, {"fact_id": TRAIN}]})
+        )
+        code, out, _ = self.run_guard()
+        self.assertEqual(code, 0)
+        self.assertIn("verdict=PASS", out)
+        self.assertIn("frontier.json.snapshot", str(guard.POPULATION_FILES | {"x"}) or "")
 
     # --- guard 3: fail closed --------------------------------------------
     def test_an_empty_held_out_population_is_an_error_not_a_pass(self) -> None:

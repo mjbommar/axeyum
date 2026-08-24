@@ -1,0 +1,181 @@
+{
+  "budgets": {
+    "cost_limit_usd": 1.0,
+    "input_tokens_limit": 400000,
+    "output_tokens_limit": 32000,
+    "request_limit": 10,
+    "tool_calls_limit": 16,
+    "wall_seconds": 600
+  },
+  "created_at": "2026-08-24T21:17:39Z",
+  "episode_id": "E:a4-ml430-nat-modeq-trans-ef9d1c46",
+  "git_commit": "5e289fe8cfccab7ba6b230a73cacedf6a485a187",
+  "kind": "axeyum-agent-episode",
+  "observed": {
+    "facts_unlocked": [],
+    "operations_widened": [],
+    "overlay_links_proposed": []
+  },
+  "outcome": {
+    "axiom_footprint": [],
+    "checker_command": "",
+    "checker_exit_status": 0,
+    "checker_output_sha256": null,
+    "checker_runs": [],
+    "decline_class": "gate-refused",
+    "ledger_writes": 0,
+    "search_invocations": 0,
+    "target_theorem_submissions": 0,
+    "verdict": "declined"
+  },
+  "policy": {
+    "agent_code_sha256": "2b8ef777f0298c70b8668f62300f47ca1cdbc34f3aae27363494309f63cc3f97",
+    "library_versions": {
+      "anthropic": "1.0.0",
+      "axeyum": "0.1.0",
+      "httpx2": "2.12.0",
+      "pydantic": "2.13.4",
+      "pydantic-ai-slim": "2.33.0",
+      "pydantic-graph": "2.33.0",
+      "python": "3.12.13"
+    },
+    "model_id": "anthropic:claude-sonnet-4-5",
+    "prompt_hashes": {
+      "dispatch": "8eabdfdc4e1a4f6e90263ead7672d4abf95e5c4f603ca8fa91363dad4094ed70",
+      "gather": "85d42380264f5b6980ff0da34cd4622392c3e5679862b03b9eddbbd58a1ad742",
+      "instructions": "9aaf0f5b0df0c5a65578f8af6dae1e5d6bebeb3bf3b4fffe5e626c93ffbcb9cb",
+      "plan": "62038870861b2d6e3afb4fdfee95fe8a9bba4762d7d0bc5739f3b8b3109fed42"
+    },
+    "settings": {
+      "max_tokens": 8192,
+      "seed": null,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "toolset_sha256": "b9bbb2c0298fbeeb1ec693c8bc806b3aaa714674b47b6140a3e0396d69d10f9c"
+  },
+  "proposals": [
+    {
+      "assurance": "proposed",
+      "kind": "strategy",
+      "path": "artifacts/episodes/2026-08-24-a4/ml430-nat-modeq-trans-ef9d1c46/proposals/proposal-0.json.snapshot",
+      "sha256": "40439164d4883dd388ba2ba139fb4e2bb72c8250df3a5e739d87ee040dbe89e8"
+    }
+  ],
+  "schema_version": 2,
+  "selection": {
+    "eligibility_reason": "development partition, epistemic_status open, dependency-ready with no unmet depends_on; fragment Nat is proof-route-only; 0 registered operation(s); selected from ledger sha256 ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1",
+    "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+    "fact_sha256": "bf4ccbe16c2fe31b23083db96a833035e0c0ef44f5d176ae7749dae812f7a29e",
+    "frontier_path": "artifacts/episodes/2026-08-24-a4/frontier.json.snapshot",
+    "frontier_sha256": "bce3d65e2e78c56c40d7058b92c0133d208c66710ba6ee9270189700e4508b7f",
+    "ledger_sha256": "ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1",
+    "partition": "development"
+  },
+  "transcript": {
+    "messages_path": "artifacts/episodes/2026-08-24-a4/ml430-nat-modeq-trans-ef9d1c46/messages.json.snapshot",
+    "messages_sha256": "d2864e6cceccec51f2a7d052f164547a10197d9b64a9aaba117727eb9a0693af",
+    "tool_calls": [
+      {
+        "args_sha256": "8039145a0e381ba2eb1b92ed25243f64e87719d896339ecf6dd692205235cdaa",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 0,
+        "result_sha256": "c262fe5aa0257f40deb09a36ebc21b673ced78cdc3af9114785832438c3295f7",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "8039145a0e381ba2eb1b92ed25243f64e87719d896339ecf6dd692205235cdaa",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 1,
+        "result_sha256": "313f44ee6877242d47728552cf8f609519351e2f32e566e2131e2f93eb3ef9f1",
+        "tool": "fact_neighbourhood"
+      },
+      {
+        "args_sha256": "8039145a0e381ba2eb1b92ed25243f64e87719d896339ecf6dd692205235cdaa",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 2,
+        "result_sha256": "34a0686c72e96e93d35aab23f1f543b485fc8ad6f92838ab78272108ced2ec95",
+        "tool": "operation_registry"
+      },
+      {
+        "args_sha256": "60a3e7d0324bbf595bc1a59058f1a402b6b65f6ab5be2759fc518d737d928121",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 3,
+        "result_sha256": "799a96c2a11eb17303a212d01341700cdebd28920c5267bb2e99b37ef9f06f98",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "c9d4e4eea653c949b1e1daa380a9f7d3d40014a714f7c5b14dad28b5c7f41a51",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 4,
+        "result_sha256": "44bb43db74f96a841428faad3b99c4dc66947adf9467de9b603f0735181fd22b",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "4ed9e65d7b23f28b7f950bc87433b1ebb2a04c31b177f3441be0156ba235ea6a",
+        "assurance": "read",
+        "duration_ms": 4,
+        "exit_status": 0,
+        "ordinal": 5,
+        "result_sha256": "3b588cfce1cf626ffe612d259ffacd1ef79a72b99f5805f8011b8bc3fd4cbbf1",
+        "tool": "frontier_select"
+      },
+      {
+        "args_sha256": "752ffab716959ceda2c6ccf68daec517bba01a5534b8e583567c94cf99b9be68",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 6,
+        "result_sha256": "c61e0905f4a357c2c406e6225c934e342d347adef3016161dcb17db9f8f3939e",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "0a41c826f03fbb044203de23157207691a4ac725eb41e4f27247b08324900923",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 7,
+        "result_sha256": "22741e0f26bf043595ad57e20ce5f59a9bbc643d752d25fd917ad9ff0b6bfde3",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "4bc822bde605bf533cdbbc0960b7315d701b76d3f532247c6987363f16d4db6b",
+        "assurance": "read",
+        "duration_ms": 1,
+        "exit_status": 0,
+        "ordinal": 8,
+        "result_sha256": "f917c06df7579d09d17d7ab5cd849e4c06cb86ca23cd0a84564c0309eae25d20",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "c96eecea0324d2c5362a449a672a7a06e3d6845b2437f5c9681ef76778775f14",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 9,
+        "result_sha256": "2331bd92c240530446c6ebfcc194b9b0fc3e5121ee51e743b81aa1f4c3126bbc",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "10a3a5474d345f9242f75056ecdbea57f4c74ecbed7e0920b950b0b9e0ce553c",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 10,
+        "result_sha256": "8512eb6664f84cd6c6435d91c38cf8a2571306f257df4c3752dd211bdd831e2d",
+        "tool": "fact_get"
+      }
+    ]
+  },
+  "web_snapshots": []
+}
