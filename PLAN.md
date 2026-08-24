@@ -158,7 +158,11 @@ now. Nothing was deleted.
 | 2026-08-24 | `0fbe989bc` | **Vandermonde's convolution**, `choose (m+n) k = Σ_{i≤k} choose m i · choose n (k−i)`, plus `Σ choose n i² = choose 2n n`. Hand-checked at `(1,1,1)` and `(2,1,2)` before any kernel code, because `choose n 0 = 1` means the summand does *not* vanish outside range by accident. Induction on `m`: `succ_add` gives Pascal a `succ` shape for free and `succ_sub_succ` is unconditional, where induction on `n` stalls on `succ_sub_of_le` — **and `succ_sub_of_le` was built earlier specifically "for Vandermonde's convolution", per its own doc, and Vandermonde did not need it.** `sumRange_diagonal` was a red herring (double sum over antidiagonals vs a single sum at fixed `k`) and the lane said so rather than forcing it. **Fourth merge hazard today, and the only one the count check would have passed**: both trees pinned `26 + 163` for *different* theorem sets. Caught by the file list, not the count. |
 | 2026-08-24 | `5ca1ecca2` | **σ's two fixed points, named.** `inverseIndex_fixed_point` said the only fixed points on `{0..p−2}` are `0` and `p−2` but not *which element is fixed*, so nothing could instantiate the pairing collapse. `inverseIndex_fixes_zero` / `_fixes_last` / `_interior_fixed_point_free` are that transport, routed through `modEq_inverse_unique` (the forward direction) rather than `self_inverse_mod_prime` (the converse). `derived_laws` 109 → 112. **`restrict_pair` is refuted a second time and I was wrong about it twice**: it supplies only `InjectiveOn`/`MapsInto`, not fixed-point-freeness or the involution, and its builders are private. It is used by nothing. The failure class in pure form: a variable quantified in the STATEMENT but never bound in the PROOF term — `UnboundFVar` broke the prelude build so all 25 tests failed identically and pointed at nothing. |
 | 2026-08-24 | `aa3e8ea24` | **Linear algebra opens** — nothing matched `determinant\|matrix` in any prelude before. `Rat.det2` as a real `Definition`, the four basic laws (incl. `det2_row_add`, the fact that makes Gaussian elimination sound), `det2_mul`, and the four adjugate entries of `A·adj(A) = det(A)·I` with no hypothesis. **`det2_mul` avoided brute expansion**: FOILing needs an ℤ-style factor-multiset reorderer for `Rat.mul` that does not exist, so the lane proved row-linearity + repeated-row-vanishes and derived multiplicativity — Cauchy's own n=2 proof, and it dodges the nine-argument term shape that hides type errors. **A real limit, not a shortcut: `Rat.adj2` is NOT reified** — a function returning four rationals needs a tuple type this kernel does not have. No briefed statement was false this time, which is worth saying after three refutations today. |
-| 2026-08-24 | pending | Python strand: plans 01–03 and the two measured studies under `docs/python-2026-08/` |
+| 2026-08-24 | `537328b3c` | `axeyum.kernel`: epoch-checked handles, nine preludes with generated field tables, footprints/closures raising on absent names, `add_declaration` with typed `KernelError`, Lean rendering and NDJSON export, identity hashes; 57 tests |
+| 2026-08-24 | `df1e7d185` | `axeyum.knowledge`: read-only typed accessors over facts, frontier, operations, overlay, nursery (partition-safe), claims, concepts, pinned `math-education`, autogenesis artifact index; 161 tests mirroring the validators |
+| 2026-08-24 | `9dd2dc82a` | Generated native stubs with a drift gate (fails on drift and on zero compared), `just py-check`, conditional `check.sh` step, fleet-hosts `uv` row, Python user guide |
+| 2026-08-24 | `a8e8d34a9` | `crates/axeyum-py` binding crate, `axeyum.smt.solve` with `unknown` as a value and `Outcome.replay()`, differential vs `smtcomp_cli`, conftest that fails on zero collected tests |
+| 2026-08-24 | `9cfdf86fe` | Python strand: plans 01–03, two measured studies, three API inventories under `docs/python-2026-08/` |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
@@ -3381,16 +3385,22 @@ fixed hole count). Second, the census wants a third corpus — its two are both
 school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
 
-**WIP (agent-python-layer, 2026-08-24).** New strand
-[`docs/python-2026-08/`](docs/python-2026-08/README.md): three plans in
-dependency order — `01` binding crate + maturin + stub gate, `02` the typed
-Python API over SMT/solver/IR/CAS/kernel/producers/knowledge artifacts, `03`
-the pydantic-ai agent with replayable episodes. Measured basis: PyO3 0.29.2
-compiles under the workspace `unsafe_code = "deny"` + clippy pedantic; abi3
-wheel imports on 3.14.4 with no libpython link; 640 scripts have zero
-third-party imports and stay that way. Next: land 01-S1..S3 (crate, errors,
-`smt.solve` + replay), then 02 by submodule, each slice gated by
-`just py-check` with a nonzero test count.
+**WIP (agent-python-layer, 2026-08-24).** Strand
+[`docs/python-2026-08/`](docs/python-2026-08/README.md). Plan 01 is landed
+end to end: `crates/axeyum-py` → `axeyum._native` (PyO3 0.29.2, abi3-py312,
+no libpython link), root `pyproject.toml`, generated stubs with a drift gate
+that fails on zero comparisons, `just py-check`, and a `check.sh` step that
+prints SKIPPED (never passed) without `uv`. Plan 02 landed so far:
+`axeyum.smt.solve` + `Outcome.replay()` (02-A part), `axeyum.knowledge`
+(02-E, 161 tests, validator-mirroring), `axeyum.kernel` (02-C, 57 tests,
+epoch-checked handles, 1,207 generated prelude fields; measured nat 235
+theorems / 0 axioms, axreal 30). In flight in isolated snapshots:
+`axeyum.ir` + `axeyum.solver` (02-A) and `axeyum.cas` + `cas.certify`
+(02-B). Next: producer promotion to `src/producers/` and `axeyum.producers`
+(02-D), then plan 03 A1 (episode schema + fail-closed checker).
+Integration rule learned today: the shared checkout sits on a branch far
+behind `main`; move tracked-file edits as patches, verify Rust slices in a
+`lane-snapshot.sh` tree, commit from the detached worktree.
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
