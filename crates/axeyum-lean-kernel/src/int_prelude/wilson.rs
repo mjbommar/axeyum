@@ -1,6 +1,8 @@
 //! `Int.factorial`, the self-inverse analysis Wilson's theorem needs, and
 //! `Int.factorial_pos` — the assembly slice toward Wilson's theorem
-//! (`p` prime ⟹ `(p-1)! ≡ -1 [p]`).
+//! (`p` prime ⟹ `(p-1)! ≡ -1 [p]`). Also, since 2026-08-24, the coprime form
+//! of Fermat's little theorem (`Int.pow_prime_sub_one_modeq_one`,
+//! `p ∤ a ⟹ a^(p−1) ≡ 1 [p]`) and its bridging lemma `Int.of_nat_pow`.
 //!
 //! ## What lands here, and what does not
 //!
@@ -8,7 +10,11 @@
 //! (the genuinely prime-theoretic heart: `a*a ≡ 1 [p]` forces `a ≡ ±1 [p]`,
 //! via `Int.euclid_lemma` deciding which factor of `(a-1)(a+1)` `p` divides —
 //! a real constructive disjunction, not excluded middle) are both proved
-//! here, axiom-free.
+//! here, axiom-free. So is `Int.pow_prime_sub_one_modeq_one`
+//! (`declare_pow_prime_sub_one_modeq_one`, below) — the headline form of
+//! Fermat every application actually wants, as opposed to the unrestricted
+//! `Nat.pow_prime_modeq_self : prime p → a^p ≡ a [p]` this whole chain rests
+//! on.
 //!
 //! ## What Wilson is blocked on now, measured 2026-08-24
 //!
@@ -24,12 +30,19 @@
 //!   existential does not eliminate into a `Type` target.
 //! - **The Fermat route can**, because `σ(k) := a^(p-2) mod p` is closed form.
 //!
-//! Taking that route needs three pieces, each confirmed absent by inventory:
-//! a `Nat.modEq → Int.ModEq` transport (threading `modEq_iff_dvd`'s `0 < n`);
-//! `prime p → 0 < a < p → Coprime a p`, so `Int.modEq_cancel` applies; and the
-//! `pow_add`/`pow_succ` algebra splitting `a^p` into `a^(p-2)·a·a` in the
-//! multiplication order the inverse lemmas expect — plus the `p = 2` edge case,
-//! where `p - 2 = 0` under TRUNCATED `Nat.sub` and the range is empty.
+//! Taking that route needed three pieces. Two are now landed and reusable —
+//! `Int.modEq_of_nat_modEq` (the `Nat.modEq → Int.ModEq` transport,
+//! `modeq.rs`) and `Nat.coprime_of_lt_prime` (`prime p → 0 < a < p →
+//! Coprime a p`, `nat_prelude/primes.rs`) — and this file now also has
+//! `Int.pow_prime_sub_one_modeq_one`
+//! (`declare_pow_prime_sub_one_modeq_one`, below), the assembled
+//! `a^(p-1) ≡ 1 [p]`, proved from exactly those two plus
+//! `Nat.pow_prime_modeq_self` and `Int.modEq_cancel`. What is **not** yet
+//! built is `σ` itself: splitting one more factor off
+//! (`a^(p-1) = a^(p-2) · a`, so `a · a^(p-2) ≡ 1 [p]`) to get an *executable*
+//! inverse, and the `Nat → Nat` closed form `σ(k) := a^(p-2) mod p` built from
+//! it — plus the `p = 2` edge case, where `p - 2 = 0` under TRUNCATED
+//! `Nat.sub` and the range is empty.
 //!
 //! The indexing, settled: `a := ofNat(k+1)` for `k < n` with
 //! `n := natAbs(p) - 1`, so `{0,…,p-2}` maps onto `{1,…,p-1}` and `n` is the
@@ -484,4 +497,262 @@ pub(super) fn declare_factorial_pos(d: &mut IntDev<'_>) -> Result<(), KernelErro
     let ty = d.pi_fv(n_fv, nat, stmt);
     let value = d.lam_fv(n_fv, nat, proof_body);
     d.declare_theorem(p.factorial_pos, ty, value)
+}
+
+// ============================================================================
+// The coprime form of Fermat's little theorem, and the executable-inverse
+// bridge it unlocks. `p ∤ a ⟹ a^(p−1) ≡ 1 [p]` — every ingredient below it
+// (`Nat.pow_prime_modeq_self`, `Nat.coprime_of_lt_prime`,
+// `Int.modEq_of_nat_modEq`, `Int.modEq_cancel`) landed the same day; this is
+// the assembly.
+// ============================================================================
+
+/// `2 ≤ magnitude`, `∀ x, x ∣ magnitude → x = 1 ∨ x = magnitude` — the two
+/// conjuncts [`prime_condition`] ANDs together, split out so `and_left` can
+/// project `2 ≤ magnitude` back out of a primality proof. A deliberate
+/// duplicate of `prime_condition`'s own construction (not a refactor of it):
+/// identical builder calls in identical order intern to the identical
+/// `ExprId`, so `and_left(two_le, clause, prime_proof)` type-checks against a
+/// `prime_proof` built via [`prime_condition`] without either function
+/// depending on the other's internals.
+fn prime_parts(d: &mut IntDev<'_>, magnitude: ExprId) -> (ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let two_nat = d.num(2);
+    let one_nat = d.num(1);
+    let two_le = d.le(two_nat, magnitude);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hyp = d.dvd(x, magnitude);
+    let is_one = d.eq(x, one_nat);
+    let is_whole = d.eq(x, magnitude);
+    let disjunction = d.or(is_one, is_whole);
+    let inner = d.arrow(hyp, disjunction);
+    let clause = d.pi_fv(x_fv, nat, inner);
+    (two_le, clause)
+}
+
+/// `prime magnitude → Nat.le 1 magnitude` — usable directly (via defeq,
+/// `Nat.lt` unfolding to a `succ`-shifted `Nat.le`) wherever `0 < magnitude`
+/// is wanted too. Mirrors `nat_prelude/fermat.rs`'s private `prime_pos`
+/// exactly (that copy is not reachable from `int_prelude`), extracting
+/// `2 ≤ magnitude` via `and_left` and weakening `1 ≤ 2 ≤ magnitude`.
+fn nat_prime_pos(d: &mut IntDev<'_>, magnitude: ExprId, prime_proof: ExprId) -> ExprId {
+    let p = d.int();
+    let (two_le_ty, clause_ty) = prime_parts(d, magnitude);
+    let two_le = d.and_left(two_le_ty, clause_ty, prime_proof);
+    let one = d.num(1);
+    let two = d.num(2);
+    let one_le_two = d.lemma(p.nat.le_succ, &[one]);
+    d.lemma(p.nat.le_trans, &[one, two, magnitude, one_le_two, two_le])
+}
+
+/// `(ofNat (pow base exp), pow (ofNat base) exp)` — the two sides
+/// [`declare_of_nat_pow`]'s statement (and induction step) equates.
+fn of_nat_pow_sides(d: &mut IntDev<'_>, base: ExprId, exp: ExprId) -> (ExprId, ExprId) {
+    let pow_nat = d.pow(base, exp);
+    let lhs = d.of_nat(pow_nat);
+    let of_base = d.of_nat(base);
+    let rhs = d.ipow(of_base, exp);
+    (lhs, rhs)
+}
+
+/// `Int.of_nat_pow : ∀ (a n : Nat), Eq Int (ofNat (pow a n)) (pow (ofNat a) n)`.
+///
+/// `Int.ofNat` is a ring homomorphism on `+`/`*` at even a *symbolic* pair of
+/// naturals — `Int.add`/`Int.mul` pattern-match on the outer `ofNat`/`negSucc`
+/// constructor of their `Int` arguments, which is already determined for
+/// `ofNat _` regardless of what is nested inside, so the `ofNat`-branch
+/// reduction is `Eq.refl`-transparent even for free variables (the same fact
+/// [`declare_modeq_of_nat_modeq`](super::modeq::declare_modeq_of_nat_modeq)'s
+/// doc comment relies on). `Int.pow` does not get this for free: its
+/// recursion is on the *exponent*, via `Nat.rec`, and a free-variable exponent
+/// is not a constructor application, so no amount of unfolding reaches a
+/// normal form. Hence this needs a genuine induction on `n`, not a `refl`.
+///
+/// Base (`n = zero`): both sides reduce, independently, to `ofNat 1`
+/// (`Nat.pow_zero` then `Int.one := ofNat 1`; `Int.pow_zero` directly) — an
+/// `Eq.refl`-shaped closure, same pattern as `factorial_zero`.
+///
+/// Step (`n = succ j`, `ih : Eq Int (ofNat (pow a j)) (pow (ofNat a) j)`):
+/// `icongr ih (fun x => mul x (ofNat a))` gives `Eq Int (mul (ofNat (pow a j))
+/// (ofNat a)) (mul (pow (ofNat a) j) (ofNat a))`; its left side is defeq to
+/// `ofNat (pow a (succ j))` (`Nat.pow_succ`, then the same ofNat-branch
+/// reduction as the base case) and its right side is defeq to `pow (ofNat a)
+/// (succ j)` (`Int.pow_succ`) — so the `icongr` term, unadjusted, already has
+/// the goal's type up to defeq.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_of_nat_pow(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.of_nat_pow, 2, &|d, v| {
+        let (a, n) = (v[0], v[1]);
+        let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+            let (lhs, rhs) = of_nat_pow_sides(d, a, x);
+            d.ieq(lhs, rhs)
+        };
+        let stmt = motive(d, n);
+
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let one_i = d.ione();
+                d.irefl(one_i)
+            },
+            &|d, j, ih| {
+                let (lhs_j, rhs_j) = of_nat_pow_sides(d, a, j);
+                let of_a = d.of_nat(a);
+                d.icongr(lhs_j, rhs_j, ih, &|d, x| d.imul(x, of_a))
+            },
+            n,
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.pow_prime_sub_one_modeq_one :
+/// ∀ p a, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) → 0 < a → a < p →
+///   ModEq (ofNat p) (pow (ofNat a) (p-1)) one`
+///
+/// The coprime form of Fermat's little theorem: `p ∤ a ⟹ a^(p−1) ≡ 1 [p]`.
+/// Kept over `ℤ` (not `ℕ`) because the one step this needs that `ℕ` cannot
+/// supply is cancellation — `Int.modEq_cancel` — and the transport is
+/// `ℕ → ℤ` only ([`super::modeq::declare_modeq_of_nat_modeq`]'s doc), so
+/// carrying primality and the two range hypotheses in `ℕ` (matching
+/// `Nat.pow_prime_modeq_self`/`Nat.coprime_of_lt_prime` exactly, no
+/// `natAbs` detour) and casting only the *derived* congruence is the cheaper
+/// split: it needed one bridging lemma ([`declare_of_nat_pow`]) instead of
+/// redoing primality/order over `ℤ`.
+///
+/// Route:
+/// 1. `Nat.pow_prime_modeq_self` gives `ModEq p (pow a p) a` over `ℕ`.
+/// 2. `Nat.sub_add_cancel 1 p (1 ≤ p)` gives `Eq Nat (add (p-1) 1) p`, defeq
+///    `Eq Nat (succ (p-1)) p` (`add x 1` reduces to `succ x` by the same
+///    `add_succ`/`add_zero` `Eq.refl` pair `Nat.add`'s own equations use).
+///    `Nat.pow_succ` at `p-1` gives `pow a (succ (p-1)) = pow a (p-1) * a`;
+///    composing rewrites `pow a p` (step 1's exponent) into `pow a (p-1) * a`,
+///    entirely over `ℕ`.
+/// 3. `Int.modEq_of_nat_modEq` casts the rewritten congruence,
+///    `ModEq p (pow a (p-1) * a) a`, to `ℤ` — landing (via the ofNat-branch
+///    defeq [`declare_of_nat_pow`]'s doc comment describes) at
+///    `ModEq (ofNat p) (mul (ofNat (pow a (p-1))) (ofNat a)) (ofNat a)`.
+/// 4. [`declare_of_nat_pow`] reshapes `ofNat (pow a (p-1))` into
+///    `pow (ofNat a) (p-1)` inside that congruence.
+/// 5. `Int.mul_comm`/`Int.mul_one` reshape the congruence into
+///    `ModEq (ofNat p) (mul (ofNat a) (pow (ofNat a) (p-1))) (mul (ofNat a) one)`
+///    — the `c*x ≡ c*y` shape `Int.modEq_cancel` needs, `c := ofNat a`.
+/// 6. `Nat.coprime_of_lt_prime` gives `Eq Nat (gcd a p) 1`, defeq to
+///    `Coprime (ofNat a) (ofNat p)` (`Int.gcd`/`Int.natAbs` both reduce
+///    transparently on an `ofNat` argument, symbolic or not). `Int.modEq_cancel`
+///    then cancels the factor of `a`, landing exactly on the goal.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_pow_prime_sub_one_modeq_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.pow_prime_sub_one_modeq_one, 2, &|d, v| {
+        let (pp, aa) = (v[0], v[1]);
+        let prime_ty = prime_condition(d, pp);
+        let zero = d.zero();
+        let pos_ty = d.lt(zero, aa);
+        let ub_ty = d.lt(aa, pp);
+
+        let one_nat = d.num(1);
+        let pm1 = d.sub(pp, one_nat);
+        let big_p = d.of_nat(pp);
+        let big_a = d.of_nat(aa);
+        let pow_int = d.ipow(big_a, pm1);
+        let one_i = d.ione();
+        let concl = super::modeq::imodeq(d, big_p, pow_int, one_i);
+
+        let stmt = {
+            let inner = d.arrow(ub_ty, concl);
+            let with_pos = d.arrow(pos_ty, inner);
+            d.arrow(prime_ty, with_pos)
+        };
+
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+        let pos_fv = d.fresh_fvar();
+        let pos_proof = d.kernel().fvar(pos_fv);
+        let ub_fv = d.fresh_fvar();
+        let ub_proof = d.kernel().fvar(ub_fv);
+
+        // Step 0: 1 ≤ p (also usable as 0 < p, `Nat.lt` unfolding to a
+        // succ-shifted `Nat.le`).
+        let one_le_pp = nat_prime_pos(d, pp, prime_proof);
+
+        // Step 2: succ(p-1) = p.
+        let cancel = d.lemma(p.nat.sub_add_cancel, &[one_nat, pp, one_le_pp]);
+        let succ_pm1 = d.succ(pm1);
+
+        // Step 1: Nat.ModEq p (pow a p) a.
+        let nat_fermat_fn = d.lemma(p.nat.pow_prime_modeq_self, &[pp, aa]);
+        let nat_fermat = d.apply(nat_fermat_fn, &[prime_proof]);
+
+        // Step 2 (continued): pow a p = pow a (p-1) * a, over Nat.
+        let pow_aa_pp = d.pow(aa, pp);
+        let pow_aa_succpm1 = d.pow(aa, succ_pm1);
+        let pow_aa_pm1 = d.pow(aa, pm1);
+        let mul_term = d.mul(pow_aa_pm1, aa);
+        let pow_succ_pm1 = d.lemma(p.nat.pow_succ, &[aa, pm1]);
+        let congr_exp = d.congr(succ_pm1, pp, cancel, &|d, x| d.pow(aa, x));
+        let rev_congr_exp = d.symm(pow_aa_succpm1, pow_aa_pp, congr_exp);
+        let pow_pp_eq = d.trans(
+            pow_aa_pp,
+            pow_aa_succpm1,
+            mul_term,
+            rev_congr_exp,
+            pow_succ_pm1,
+        );
+
+        let motive_nat = d.eq_motive(pow_aa_pp, &|d, x| d.mod_eq(pp, x, aa));
+        let nat_rewritten = d.transport(pow_aa_pp, motive_nat, nat_fermat, mul_term, pow_pp_eq);
+
+        // Step 3: cast to Int.
+        let int_pre = d.const_app(p.mod_eq_of_nat_mod_eq, &[pp, mul_term, aa]);
+        let int_form = d.apply(int_pre, &[nat_rewritten, one_le_pp]);
+
+        // Step 4: reshape ofNat(pow a (p-1)) into pow (ofNat a) (p-1).
+        let of_nat_powpm1 = d.of_nat(pow_aa_pm1);
+        let bridge = d.const_app(p.of_nat_pow, &[aa, pm1]);
+        let step4 = d.int_eq_rewrite(of_nat_powpm1, pow_int, bridge, int_form, &|d, x| {
+            let mulx = d.imul(x, big_a);
+            super::modeq::imodeq(d, big_p, mulx, big_a)
+        });
+
+        // Step 5: commute, then turn the trailing `a` into `a*1`.
+        let mul_comm_pf = d.const_app(p.mul_comm, &[pow_int, big_a]);
+        let lhs5 = d.imul(pow_int, big_a);
+        let rhs5 = d.imul(big_a, pow_int);
+        let step5a = d.int_eq_rewrite(lhs5, rhs5, mul_comm_pf, step4, &|d, x| {
+            super::modeq::imodeq(d, big_p, x, big_a)
+        });
+
+        let mul_one_pf = d.const_app(p.mul_one, &[big_a]);
+        let a_times_one = d.imul(big_a, one_i);
+        let rev_mul_one = d.isymm(a_times_one, big_a, mul_one_pf);
+        let step5b = d.int_eq_rewrite(big_a, a_times_one, rev_mul_one, step5a, &|d, x| {
+            let lhs = d.imul(big_a, pow_int);
+            super::modeq::imodeq(d, big_p, lhs, x)
+        });
+
+        // Step 6: coprimality, then cancel.
+        let coprime_fn = d.lemma(p.nat.coprime_of_lt_prime, &[pp, aa]);
+        let coprime_proof = d.apply(coprime_fn, &[prime_proof, pos_proof, ub_proof]);
+
+        let cancel_fn = d.const_app(p.mod_eq_cancel, &[big_p, big_a, pow_int, one_i]);
+        let final_proof = d.apply(cancel_fn, &[one_le_pp, coprime_proof, step5b]);
+
+        let with_ub = d.lam_fv(ub_fv, ub_ty, final_proof);
+        let with_pos = d.lam_fv(pos_fv, pos_ty, with_ub);
+        let proof = d.lam_fv(prime_fv, prime_ty, with_pos);
+        (stmt, proof)
+    })?;
+    Ok(())
 }

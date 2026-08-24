@@ -676,6 +676,24 @@ pub struct IntPrelude {
     pub self_inverse_mod_prime: NameId,
     /// `factorial_pos : ∀ n, 0 < factorial n`.
     pub factorial_pos: NameId,
+    /// `of_nat_pow : ∀ (a n : Nat), Eq Int (ofNat (pow a n)) (pow (ofNat a) n)` —
+    /// `Int.ofNat` is a ring homomorphism on `pow` at a **symbolic** exponent,
+    /// which is genuinely a proof (induction on `n`), not a `refl`: the
+    /// `ofNat`-branch reduction that makes `Int.add`/`Int.mul` transparent on
+    /// concrete constructors does not reach through `Nat.rec`'s own scrutinee
+    /// when the exponent is a free variable.
+    pub of_nat_pow: NameId,
+    /// `pow_prime_sub_one_modeq_one :
+    /// ∀ p a, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) → 0 < a → a < p →
+    ///   ModEq (ofNat p) (pow (ofNat a) (p-1)) one` —
+    /// the coprime form of Fermat's little theorem: `p ∤ a ⟹ a^(p−1) ≡ 1 [p]`.
+    /// Route: `Nat.pow_prime_modeq_self` gives `a^p ≡ a [p]` over `ℕ`;
+    /// `Nat.pow_succ` (transported along `Nat.sub_add_cancel`'s `succ(p-1)=p`)
+    /// splits `a^p` into `a^(p-1)*a`; `Int.modEq_of_nat_modEq` casts the whole
+    /// congruence to `ℤ`; `of_nat_pow` reshapes the `ℕ`-side power into
+    /// `Int.pow`; and `Int.modEq_cancel`, fed `Nat.coprime_of_lt_prime`,
+    /// cancels the surviving factor of `a`.
+    pub pow_prime_sub_one_modeq_one: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -850,6 +868,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         factorial_succ: child(kernel, "factorial_succ"),
         self_inverse_mod_prime: child(kernel, "self_inverse_mod_prime"),
         factorial_pos: child(kernel, "factorial_pos"),
+        of_nat_pow: child(kernel, "of_nat_pow"),
+        pow_prime_sub_one_modeq_one: child(kernel, "pow_prime_sub_one_modeq_one"),
     }
 }
 
@@ -985,6 +1005,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_euclid_infinitude(&mut d)?;
         wilson::declare_self_inverse_mod_prime(&mut d)?;
         wilson::declare_factorial_pos(&mut d)?;
+        wilson::declare_of_nat_pow(&mut d)?;
+        wilson::declare_pow_prime_sub_one_modeq_one(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         rat::declare_rat(&mut d)?;
