@@ -273,6 +273,30 @@ fn mul_eq_zero_is_axiom_free() {
     );
 }
 
+/// `Rat.right_distrib` is a **checked** theorem with an empty axiom
+/// footprint, read out of the kernel, not off the diff.
+#[test]
+fn right_distrib_is_axiom_free() {
+    let (kernel, p) = built();
+    let declaration = kernel
+        .environment()
+        .get(p.right_distrib)
+        .expect("Rat.right_distrib was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Theorem { .. }),
+        "Rat.right_distrib must be a checked Theorem, found a different kind"
+    );
+    let footprint: Vec<String> = kernel
+        .axiom_footprint(p.right_distrib)
+        .into_iter()
+        .map(|entry| kernel.display_name(entry).to_string())
+        .collect();
+    assert!(
+        footprint.is_empty(),
+        "Rat.right_distrib rests on {footprint:?}"
+    );
+}
+
 /// ℚ is a model of the whole `Real` axiom package: every one of the 30
 /// declarations is either an interpreted symbol or a law with a
 /// kernel-checked, axiom-free witness.
@@ -1576,6 +1600,12 @@ fn the_probability_toolkit_is_axiom_free() {
         ("IsDistribution", p.is_distribution, false),
         ("prob_le_one", p.prob_le_one, true),
         ("prob_complement", p.prob_complement, true),
+        ("expectation", p.expectation, false),
+        ("expectation_add", p.expectation_add, true),
+        ("expectation_smul", p.expectation_smul, true),
+        ("expectation_const", p.expectation_const, true),
+        ("uniform", p.uniform, false),
+        ("uniform_is_distribution", p.uniform_is_distribution, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
@@ -1600,4 +1630,118 @@ fn the_probability_toolkit_is_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// `Rat.expectation X p n` closes by `Eq.refl` alone against `sumRange (fun k
+/// => X k * p k) n`, over a **symbolic** `X`/`p`/`n` — the same convention
+/// [`sum_range_defining_equations_close_by_refl_alone`] follows, so this
+/// checks the definition itself rather than a fully-computed instance.
+#[test]
+fn expectation_defining_equation_closes_by_refl_alone() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_ty, req, rmul, rrefl, rsum_range};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let summand = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let xk = d.apply(x, &[k]);
+        let pk = d.apply(pf, &[k]);
+        let body = rmul(&mut d, xk, pk);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let lhs = d.const_app(p.expectation, &[x, pf, n]);
+    let rhs = rsum_range(&mut d, p, summand, n);
+    let stmt = req(&mut d, lhs, rhs);
+    let proof = rrefl(&mut d, rhs);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, inner);
+        d.pi_fv(x_fv, fn_ty, with_pf)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, inner);
+        d.lam_fv(x_fv, fn_ty, with_pf)
+    };
+    let name = d.kernel().name_str(anon, "Check.expectation_defn_refl");
+    d.declare_theorem(name, ty, value).unwrap_or_else(|e| {
+        panic!(
+            "Rat.expectation did not reduce to its defining sum by refl alone: {}",
+            d.explain(&e)
+        )
+    });
+}
+
+/// The negative control for
+/// [`expectation_defining_equation_closes_by_refl_alone`]: the same route
+/// pointed at the summand with the multiplication **swapped**
+/// (`p k * X k` instead of `X k * p k`), over the same symbolic `X`/`p`/`n`.
+/// `Rat.mul` is not definitionally commutative (`Rat.mul_comm` is a proved
+/// law, not a reduction rule), so this must be **REJECTED** — otherwise the
+/// computation check above proves nothing.
+#[test]
+fn expectation_wrong_multiplication_order_is_rejected() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_ty, req, rmul, rrefl, rsum_range};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let swapped_summand = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let xk = d.apply(x, &[k]);
+        let pk = d.apply(pf, &[k]);
+        let body = rmul(&mut d, pk, xk); // swapped
+        d.lam_fv(k_fv, nat, body)
+    };
+    let lhs = d.const_app(p.expectation, &[x, pf, n]);
+    let rhs = rsum_range(&mut d, p, swapped_summand, n);
+    let stmt = req(&mut d, lhs, rhs);
+    let proof = rrefl(&mut d, rhs);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, inner);
+        d.pi_fv(x_fv, fn_ty, with_pf)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, inner);
+        d.lam_fv(x_fv, fn_ty, with_pf)
+    };
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.expectation_swapped_mul_order");
+    assert!(
+        d.declare_theorem(name, ty, value).is_err(),
+        "the kernel accepted Rat.expectation's summand with the multiplication \
+         swapped, so the computation check above proves nothing"
+    );
 }

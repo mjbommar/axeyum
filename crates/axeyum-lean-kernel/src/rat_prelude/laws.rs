@@ -19,8 +19,8 @@
 
 use super::RatPrelude;
 use super::ops::{
-    den, den_pos, den_z, int_eq_to_nat, iregroup3, normalize, num, radd, rat_theorem, req, rle,
-    rlt, rmul, rzero,
+    den, den_pos, den_z, int_eq_to_nat, iregroup3, normalize, num, radd, rat_theorem, rchain,
+    rcongr, req, rle, rlt, rmul, rzero,
 };
 use super::statements;
 use crate::KernelError;
@@ -1139,4 +1139,57 @@ fn declare_sign_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelErro
     let _ = normalize;
     let _ = req;
     Ok(())
+}
+
+/// `Rat.right_distrib : ∀ a b c, (a+b)*c = a*c + b*c`, from `left_distrib`
+/// and `mul_comm` — the Rat-level mirror of `int_right_distrib` above, with
+/// no representation reasoning needed since `left_distrib`/`mul_comm` are
+/// already Rat-level facts.
+///
+/// **Not** called from [`declare_ring_laws`]: `left_distrib` itself is not
+/// declared there (it lives in `rat_prelude::scaling`, declared later in
+/// `build_rat_prelude`'s sequence), so this has to run after
+/// `scaling::declare_scaling_laws`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_right_distrib(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.right_distrib, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let sum = radd(d, a, b);
+        let lhs = rmul(d, sum, c);
+        let ac = rmul(d, a, c);
+        let bc = rmul(d, b, c);
+        let rhs = radd(d, ac, bc);
+        let stmt = req(d, lhs, rhs);
+
+        // (a+b)*c = c*(a+b)
+        let flipped = rmul(d, c, sum);
+        let step1 = d.lemma(p.mul_comm, &[sum, c]);
+        // c*(a+b) = c*a + c*b
+        let ca = rmul(d, c, a);
+        let cb = rmul(d, c, b);
+        let expanded = radd(d, ca, cb);
+        let step2 = d.lemma(p.left_distrib, &[c, a, b]);
+        // c*a + c*b = a*c + c*b
+        let ca_comm = d.lemma(p.mul_comm, &[c, a]);
+        let after_head = radd(d, ac, cb);
+        let step3 = rcongr(d, ca, ac, ca_comm, &|d, t| radd(d, t, cb));
+        // a*c + c*b = a*c + b*c
+        let cb_comm = d.lemma(p.mul_comm, &[c, b]);
+        let step4 = rcongr(d, cb, bc, cb_comm, &|d, t| radd(d, ac, t));
+
+        let (_e, proof) = rchain(
+            d,
+            lhs,
+            &[
+                (flipped, step1),
+                (expanded, step2),
+                (after_head, step3),
+                (rhs, step4),
+            ],
+        );
+        (stmt, proof)
+    })
 }

@@ -390,6 +390,15 @@ pub struct RatPrelude {
     /// then `Int.natAbs` and `Nat.mul_eq_zero` decide which numerator
     /// vanishes, and `eq_zero_of_num_zero` lifts that back to `ℚ`.
     pub mul_eq_zero: NameId,
+    /// `Rat.right_distrib : ∀ a b c, (a+b)*c = a*c + b*c`.
+    ///
+    /// Not one of the ring interface's 22 (only `left_distrib` is stated
+    /// there). One `mul_comm`/`left_distrib`/`mul_comm` chain, no
+    /// representation reasoning — the same route `Rat.int_right_distrib`
+    /// takes over `ℤ`, one level down. Every sum distributed on the right —
+    /// starting with [`RatPrelude::expectation_add`]'s pointwise step —
+    /// needs it directly.
+    pub right_distrib: NameId,
 
     // --- the Archimedean property (ADR-0512 phase R1) -------------------------
     /// `Rat.natDivSucc : Nat → Nat → Rat` — the rational `k/(j+1)`, as a single
@@ -795,6 +804,46 @@ pub struct RatPrelude {
     /// sumRange p m + sumRange (fun k => p (m+k)) j = one` — the mass of a
     /// prefix and its complementary tail sum to `1`.
     pub prob_complement: NameId,
+
+    // --- expectation and its linearity (rat_prelude::probability) ----------
+    /// `Rat.expectation X p n := sumRange (fun k => X k * p k) n` — the
+    /// expected value of `X` under the (not-necessarily-normalised) weights
+    /// `p`, over the first `n` outcomes.
+    pub expectation: NameId,
+    /// `Rat.expectation_add : ∀ X Y p n,
+    /// expectation (fun k => X k + Y k) p n = expectation X p n + expectation Y p n`.
+    ///
+    /// Half of linearity — the additive half. [`Self::right_distrib`]
+    /// distributes pointwise (`sumRange_congr`), then [`Self::sum_range_add`]
+    /// splits the sum.
+    pub expectation_add: NameId,
+    /// `Rat.expectation_smul : ∀ a X p n,
+    /// expectation (fun k => a * X k) p n = a * expectation X p n`.
+    ///
+    /// The other half of linearity — the scalar half. [`Self::mul_assoc`]
+    /// regroups pointwise, then [`Self::mul_sum_range`] pulls the constant
+    /// out of the sum. Stated separately from [`Self::expectation_add`]
+    /// rather than as one two-scalar theorem, so each names exactly what it
+    /// proves.
+    pub expectation_smul: NameId,
+    /// `Rat.expectation_const : ∀ c p n, IsDistribution p n →
+    /// expectation (fun _ => c) p n = c` — the expectation of a constant is
+    /// itself, over a genuine distribution. The first theorem in this file
+    /// that *uses* `IsDistribution`'s `sumRange p n = 1` rather than just
+    /// carrying it.
+    pub expectation_const: NameId,
+    /// `Rat.uniform (n k : Nat) := Rat.inv (Rat.natDivSucc n 0)` — the
+    /// uniform distribution on `n` outcomes, each weighted `1/n`.
+    pub uniform: NameId,
+    /// `Rat.uniform_is_distribution : ∀ n, Nat.lt Nat.zero n →
+    /// IsDistribution (uniform n) n`.
+    ///
+    /// **The negative control [`Self::is_distribution`] needs**: without an
+    /// instance, every `IsDistribution` theorem in this kernel is vacuously
+    /// true. `0 < n` (not `n ≠ 0`) because that is exactly the hypothesis
+    /// [`Self::nat_div_succ_pos`] wants, and `Nat.lt Nat.zero n` is
+    /// definitionally `Nat.le 1 n` — no separate conversion lemma needed.
+    pub uniform_is_distribution: NameId,
 }
 
 impl RatPrelude {
@@ -914,6 +963,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         le_antisymm: child(kernel, "le_antisymm"),
         lt_trichotomy: child(kernel, "lt_trichotomy"),
         mul_eq_zero: child(kernel, "mul_eq_zero"),
+        right_distrib: child(kernel, "right_distrib"),
         nat_div_succ: child(kernel, "natDivSucc"),
         int_le_or_lt: child(kernel, "int_le_or_lt"),
         le_or_lt: child(kernel, "le_or_lt"),
@@ -1000,6 +1050,12 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         is_distribution: child(kernel, "IsDistribution"),
         prob_le_one: child(kernel, "prob_le_one"),
         prob_complement: child(kernel, "prob_complement"),
+        expectation: child(kernel, "expectation"),
+        expectation_add: child(kernel, "expectation_add"),
+        expectation_smul: child(kernel, "expectation_smul"),
+        expectation_const: child(kernel, "expectation_const"),
+        uniform: child(kernel, "uniform"),
+        uniform_is_distribution: child(kernel, "uniform_is_distribution"),
     }
 }
 
@@ -1034,6 +1090,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         laws::declare_order_laws(&mut d, prelude)?;
         laws::declare_ring_laws(&mut d, prelude)?;
         scaling::declare_scaling_laws(&mut d, prelude)?;
+        laws::declare_right_distrib(&mut d, prelude)?;
         archimedean::declare_archimedean(&mut d, prelude)?;
         laws::declare_trichotomy(&mut d, prelude)?;
         group::declare_group_laws(&mut d, prelude)?;
