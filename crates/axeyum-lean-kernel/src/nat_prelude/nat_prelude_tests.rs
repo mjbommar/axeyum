@@ -4998,3 +4998,70 @@ fn sum_range_diagonal_computes_at_a_concrete_instance() {
         "sum_range_diagonal must rest on zero axioms"
     );
 }
+
+/// **The rectangle/triangle/corner decomposition says what it claims, character
+/// for character.** An empty axiom footprint cannot carry this claim: a theorem
+/// that dropped the corner term, or that summed the triangle to `x2` instead of
+/// `succ x2` (off by the whole antidiagonal), has an identically empty
+/// footprint. What distinguishes them is the STATEMENT, so the statement is
+/// what is pinned.
+///
+/// Three things to read in the rendered types, none of them cosmetic:
+///
+/// * **`AxNat` IS NOT AN AXIOMATIZED `Nat`.** The `Ax` is `axeyum`, and
+///   `lean_pp` roots the kernel's COMPUTATIONAL naturals there only so they do
+///   not shadow Lean's own `Nat` on export. This is an unhappy collision with
+///   `AxReal`, where `Ax` DOES mean axiomatized and the trusted surface is 30.
+///   `nat` measures 0 and these two theorems are part of that measurement.
+/// * **The corner's inner summand is `AxNat.add (AxNat.sub x1 x2) x3`** — ONE
+///   truncated subtraction, never nested. The reflection parametrization
+///   `(i,j) ↦ (n−1−i, n−1−j)` needs a nested `sub` and was rejected for it.
+/// * **`sumRange_split`'s bound is `AxNat.add x1 x2`, and there is no `Le`
+///   hypothesis anywhere in its type.** Quantifying over the split point and
+///   the tail length instead of over `m ≤ n` is what keeps `Nat.sub` out of the
+///   induction entirely.
+#[test]
+fn the_rectangle_decomposition_is_stated_exactly() {
+    use crate::env::Declaration;
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let rendered = |k: &Kernel, name: crate::NameId| -> String {
+        match k
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{} must be declared", k.display_name(name)))
+        {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => {
+                k.render_lean(*ty)
+            }
+            other => panic!("{other:?} is not a theorem or definition"),
+        }
+    };
+
+    let split = rendered(&k, p.sum_range_split);
+    assert!(
+        !split.contains("AxNat.le") && !split.contains("AxNat.sub"),
+        "sumRange_split must be quantified over the split POINT, not over `m ≤ n`; \
+         a `le` premise or a `sub` in the statement means the other formulation \
+         landed and the induction is no longer sub-free: {split}"
+    );
+    assert_eq!(split, SUM_RANGE_SPLIT_TYPE, "Nat.sumRange_split");
+
+    let rect = rendered(&k, p.sum_range_rect_eq_diag_add_corner);
+    assert!(
+        rect.contains("AxNat.add (AxNat.sub x1 x2) x3"),
+        "the corner must be row i's width-i suffix reindexed from n-i, with ONE \
+         truncated subtraction and no nesting: {rect}"
+    );
+    assert_eq!(
+        rect, RECT_EQ_DIAG_ADD_CORNER_TYPE,
+        "Nat.sumRange_rect_eq_diag_add_corner"
+    );
+}
+
+/// The pinned type of [`NatPrelude::sum_range_split`].
+const SUM_RANGE_SPLIT_TYPE: &str = "((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange x0 (AxNat.add x1 x2)) (AxNat.add (AxNat.sumRange x0 x1) (AxNat.sumRange (fun (x3 : AxNat) => x0 (AxNat.add x1 x3)) x2)))))";
+
+/// The pinned type of [`NatPrelude::sum_range_rect_eq_diag_add_corner`].
+const RECT_EQ_DIAG_ADD_CORNER_TYPE: &str = "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> AxNat))) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => x0 x2 x3) x1) x1) (AxNat.add (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => x0 x3 (AxNat.sub x2 x3)) (AxNat.succ x2)) x1) (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => (fun (x4 : AxNat) => x0 x2 x4) (AxNat.add (AxNat.sub x1 x2) x3)) x2) x1))))";
