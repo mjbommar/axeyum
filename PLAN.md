@@ -154,6 +154,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `51e2a056f` | **The pairing collapse — the induction Wilson's sign needs.** `Int.prod_range_pairing_collapse`: a fixed-point-free involution pairing each factor with its inverse collapses `prodRange F n` to `1 mod p`. `prodRange_permute` removes ONE index at the SAME domain size, so unwound it reconstructs the product from itself — which is exactly why `((p−1)!)² ≡ 1` came free and the SIGN did not. **`WellFounded.fix` was NOT needed, correcting a plan that survived nine rewrites of `wilson.rs`'s module doc**: the step decreases the domain by exactly 2, so proving `And (family n) (family (succ n))` by plain `Nat.rec` suffices. Also a correction to my own dispatch — `setwise_fixed`/`restrict_pair` remove σ's own FIXED points, while this induction removes a matched SWAP pair; they are what the *interior excision* will need, not what this needed. One real bug found by bisection: `InjectiveOn`'s Pi groups VALUES before PROOFS and a draft interleaved them, visible only through the fully assembled term. |
 | 2026-08-24 | `2120333d0` | **Rectangle = triangle + corner — the honest form of the finite Cauchy product, and the repair of a claim I briefed FALSE.** A lane refuted `(Σa)(Σb) = Σ_{k<n} Σ_{i≤k} a_i b_{k−i}` by hand at `n = 2`: the rectangle contains `a₁b₁`, the antidiagonal triangle does not. `Nat.sumRange_rect_eq_diag_add_corner` names and quantifies that exact defect, and its triangle is character-for-character `sumRange_diagonal`'s own LHS so the two compose. The companion `Nat.sumRange_split` is quantified over the **split point and tail length** (bound `:= m+j`), not over `m ≤ n`, which keeps `Nat.sub` out of the induction entirely — ℝ and ℂ had this shape, ℕ did not. Rows are split at `n = (n−i)+i`: **one truncated subtraction, never nested**; the reflection parametrization needs nested `sub` and was rejected for it. `26 + 161` → `26 + 163`. |
 | 2026-08-24 | `51ba3f064`, `d5096751d` | **Two theorems whose FALSE neighbours have identical empty footprints, now pinned.** Delete `∀k<n, σ k ≠ k` from the pairing collapse and it is false at `σ = id`; drop the corner from the rectangle identity and you have the refuted Cauchy claim. Both footprints: still empty. Each pin asserts the load-bearing premise **by name** before comparing verbatim, and the int pin asserts the type does *not* mention `Prime` — the collapse holds for any positive modulus and narrowing it to Wilson's use would be a silent loss nothing else catches. Mutation-verified, one distinct kill each; a filter matching no test exits **1**, so `running 0 tests ... ok` cannot read as success. Also: **`AxNat` is not an axiomatized `Nat`** — the `Ax` is *axeyum*, `lean_pp`'s non-shadowing root for the CONSTRUCTED naturals, while in `AxReal` the same prefix means axiomatized and the surface is 30. I misread my own pin before checking `lean_pp.rs`; now a CLAUDE.md gotcha. |
+| 2026-08-24 | pending | Python strand: plans 01–03 and the two measured studies under `docs/python-2026-08/` |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
@@ -3375,6 +3376,17 @@ that are pure ℕ schemas (`telescoping`, `parity-argument`, `pigeonhole` at
 fixed hole count). Second, the census wants a third corpus — its two are both
 school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
+
+**WIP (agent-python-layer, 2026-08-24).** New strand
+[`docs/python-2026-08/`](docs/python-2026-08/README.md): three plans in
+dependency order — `01` binding crate + maturin + stub gate, `02` the typed
+Python API over SMT/solver/IR/CAS/kernel/producers/knowledge artifacts, `03`
+the pydantic-ai agent with replayable episodes. Measured basis: PyO3 0.29.2
+compiles under the workspace `unsafe_code = "deny"` + clippy pedantic; abi3
+wheel imports on 3.14.4 with no libpython link; 640 scripts have zero
+third-party imports and stay that way. Next: land 01-S1..S3 (crate, errors,
+`smt.solve` + replay), then 02 by submodule, each slice gated by
+`just py-check` with a nonzero test count.
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
