@@ -65,3 +65,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `a4ededc55` | Repair capability-gap and concept-coverage projections so their fact-ID views exclude held-out rows; make the existing generic held-out isolation gate pass without exceptions |
 | 2026-08-24 | `d458725bf` | Derive the deterministic dependency-ready train/development producer frontier and reject out-of-partition or duplicate facts before a producer can receive them |
 | 2026-08-24 | `3f0545638` | Bind the nine independently recomputed must-decline mutations into the safe producer frontier so any future census has a non-vacuous soundness control |
+| 2026-08-24 | `d3f715af3` | Refresh the generated coverage census after receipt-identity repair: all nine formally mapped facts now have complete hash-bound transport chains |
