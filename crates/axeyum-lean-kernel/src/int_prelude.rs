@@ -83,6 +83,7 @@ mod dvd;
 mod euclid;
 mod gcd;
 mod modeq;
+mod modeq_family;
 mod modinv;
 mod nat_abs;
 pub(crate) mod ops;
@@ -461,6 +462,23 @@ pub struct IntPrelude {
     /// this is declared by hand rather than through
     /// `ops::IntDev::int_theorem`.
     pub mod_eq_prod_range: NameId,
+    /// `emod_neg : ∀ a n, emod a (neg n) = emod a n` — negating the modulus
+    /// leaves `emod` unchanged. Purely structural (which `Int.rec` branch of
+    /// `emod`'s own definition a shape of `n` selects), so unlike
+    /// [`Self::mod_eq_iff_dvd`] it needs no positivity hypothesis at all —
+    /// see `int_prelude/modeq_family.rs`.
+    pub emod_neg: NameId,
+    /// `modEq_of_neg_modulus : ∀ n a b, ModEq (neg n) a b → ModEq n a b` —
+    /// the `mp` half of the ledger's `Int.modEq_neg` row (no `Iff` in this
+    /// kernel), via [`Self::emod_neg`].
+    pub mod_eq_of_neg_modulus: NameId,
+    /// `modEq_neg_modulus : ∀ n a b, ModEq n a b → ModEq (neg n) a b` — the
+    /// `mpr` half.
+    pub mod_eq_neg_modulus: NameId,
+    /// `modEq_one : ∀ a b, ModEq one a b` — every integer is congruent mod
+    /// `1`, via the existing positive-divisor bridge at the concrete literal
+    /// `n = 1`.
+    pub mod_eq_one: NameId,
     /// `natAbs : Int → Nat` — the magnitude, `ofNat n ↦ n` and `negSucc m ↦ succ m`.
     pub nat_abs: NameId,
     /// `of_nat_nat_abs_of_nonneg : ∀ a, 0 ≤ a → ofNat (natAbs a) = a`.
@@ -710,6 +728,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_inverse_unique: child(kernel, "modEq_inverse_unique"),
         mod_eq_pow: child(kernel, "modEq_pow"),
         mod_eq_prod_range: child(kernel, "modEq_prodRange"),
+        emod_neg: child(kernel, "emod_neg"),
+        mod_eq_of_neg_modulus: child(kernel, "modEq_of_neg_modulus"),
+        mod_eq_neg_modulus: child(kernel, "modEq_neg_modulus"),
+        mod_eq_one: child(kernel, "modEq_one"),
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
@@ -841,6 +863,10 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modeq::declare_modeq_mul_right(&mut d)?;
         modeq::declare_modeq_mul(&mut d)?;
         modeq::declare_modeq_pow(&mut d)?;
+        modeq_family::declare_emod_neg(&mut d)?;
+        modeq_family::declare_modeq_of_neg_modulus(&mut d)?;
+        modeq_family::declare_modeq_neg_modulus(&mut d)?;
+        modeq_family::declare_modeq_one(&mut d)?;
         prod::declare_prod_range(&mut d)?;
         prod::declare_prod_range_equations(&mut d)?;
         prod::declare_prod_range_congr(&mut d)?;
