@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-stewart-over-constructed-reals",
+  "title": "Stewart's theorem over the constructed reals, in squared-parametric form: the cevian relation in CPoint",
+  "statement": "For any three points A, B, C of the plane CPoint = CReal x CReal over the constructed (Bishop) reals, and any scalar t : CReal, let D = lerp B C t be the point B + t*(C - B) on the cevian line. Then |AD|^2 + t*((1-t)*|BC|^2) = (1-t)*|AB|^2 + t*|AC|^2, where |XY|^2 is CPoint.distSq and equality is CReal.Equiv (a DEFINED Prop relation on the setoid of regular rational sequences, NOT Eq). No non-degeneracy condition is required, and t is unrestricted -- it is not confined to [0,1], so the identity covers points on the whole line BC, not only the segment. THIS IS NOT THE CLASSICAL UNSIGNED-LENGTH STATEMENT BD*DC*BC + AD^2*BC = AB^2*DC + AC^2*BD, and it does not imply it here: that form needs a square root on CReal, which this kernel does not have (only CReal.natSqrt, an integer square root, exists). Dividing the classical identity through by the unsquared factor BC and substituting BD = t*BC, DC = (1-t)*BC yields exactly the statement above; the division is a step this ledger does not have the machinery to take, and is recorded as the gap rather than assumed away.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal) -> CReal.Equiv (CReal.add (CPoint.distSq x0 (CPoint.lerp x1 x2 x3)) (CReal.mul x3 (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CPoint.distSq x1 x2)))) (CReal.add (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CPoint.distSq x0 x1)) (CReal.mul x3 (CPoint.distSq x0 x2)))))))",
+    "fragment": "CPoint",
+    "free_symbols": ["x0", "x1", "x2", "x3"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.stewart",
+      "kind": "kernel-term",
+      "supports": "`CPoint.stewart` is admitted by the kernel with exactly the type in formal.statement, over the constructed reals, and the cevian point it is stated at is `CPoint.lerp` -- the parametrisation introduced in the same commit and tied to the pre-existing `CPoint.midpoint` by `CPoint.lerp_half_is_midpoint`, so the construction is checked against existing mathematics in this file rather than only against itself.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes `build_cpoint_prelude` return `Err` and the test below fail)",
+        "creal_point_tests::stewart_statement_is_exact (asserts the KERNEL-RENDERED type verbatim with assert_eq!, so a theorem proving something weaker -- a swapped (1-t)/t, a distSq with transposed arguments, a dropped cross term -- cannot pass with the same empty footprint)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::stewart_statement_is_exact -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/creal_point.rs",
+      "notes": "Re-derives from source every run: the command rebuilds CPointPrelude, re-typechecking `lerp`, `lerp_dist_sq` and `stewart` through `add_declaration`, then compares the rendered type character for character. Anchored on the exact `1 passed; 0 failed` count, so a filter that silently matches nothing cannot read as success -- verified: the same command with a non-existent test name prints `0 passed` and the grep fails."
+    },
+    {
+      "id": "footprint-CPoint.stewart",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] -- `stewart` and everything beneath it (`lerp`, `lerp_dist_sq`, `dot_self_sub`, the CReal field and order development) are checked declarations with an empty `Kernel::axiom_footprint`. The `cpoint` prelude's trusted surface is 0: no Axiom, no Opaque, no Quotient.",
+      "check_status": "checked",
+      "checkers": [
+        "creal_point_tests::every_theorem_here_is_axiom_free (reads `Kernel::axiom_footprint` for every declared theorem in this file, `stewart` included, and requires the empty set)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::every_theorem_here_is_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs",
+      "notes": "Counting Declaration::Axiom alone would not suffice in this kernel (Opaque has no proof body and Quotient admits Quot.sound); axiom_footprint covers all three. Presence matters as much as the footprint -- axiom_footprint of a name that is interned but never declared is vacuously empty -- which is why the statement test above, which fetches `p.stewart` from the environment and panics if absent, is the companion check and not optional."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-23",
+    "established_by": "lane agent-capability-assurance (2026-08-23), via a dispatched geometry lane: crates/axeyum-lean-kernel/src/creal_point.rs, `CPoint.stewart`, a kernel theorem over CReal (the constructed reals, ADR-0512) admitting with an empty axiom_footprint. The lane was told the unsigned-length form was unavailable for want of a square root, and instructed to state what it could prove and say so rather than restate the classical form.",
+    "source": "classical; parametrised and coordinatised by the geometry lane",
+    "prior_art": [
+      {
+        "who": "Matthew Stewart",
+        "what": "the cevian length relation BD*DC*BC + AD^2*BC = AB^2*DC + AC^2*BD",
+        "year": 1746,
+        "where": "Some General Theorems of Considerable Use in the Higher Parts of Mathematics (Edinburgh, 1746), Proposition II",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source. The relation is older in substance -- it is closely related to results in Apollonius -- and the attribution is to the 1746 statement, not to first discovery."
+      }
+    ]
+  },
+  "notes": "The squared-parametric form is the STATEMENT, not a weakening of one. Recording it as 'Stewart's theorem' without the qualification above would be the error this ledger was gated against on 2026-08-22, when a fact's formal.statement was rewritten to match what had actually been proved: 'we proved X' degrades into 'we proved something we then labelled X'. What is proved is the identity in formal.statement; what is NOT proved is the unsigned-length relation, and the missing ingredient is named (CReal.sqrt).\n\nStewart is the parent of both Apollonius (t = 1/2) and the angle-bisector length formula. `CPoint.apollonius_median` is already in this file by an independent route; the median corollary that would connect them at t = 1/2 is NOT landed -- it needs `1 - inv2 ~ inv2` plus distribution algebra -- and until it is, the two results sit in one file without being tied together. That is recorded here as a known loose end rather than left for a reader to assume.\n\nt is not confined to [0,1]. The classical statement is about a point ON the segment; this one is about the whole line through B and C, and is therefore strictly more general in that respect while being weaker in the length-versus-square respect."
+}

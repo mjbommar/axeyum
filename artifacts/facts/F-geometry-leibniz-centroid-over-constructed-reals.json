@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-leibniz-centroid-over-constructed-reals",
+  "title": "Leibniz's centroid formula over the constructed reals: |PA|^2+|PB|^2+|PC|^2 = 3|PG|^2 + (|GA|^2+|GB|^2+|GC|^2) in CPoint",
+  "statement": "For any four points P, A, B, C of the plane CPoint = CReal x CReal over the constructed (Bishop) reals, with G = CPoint.centroid A B C = (A+B+C)/3, the sum of squared distances from P to the three vertices equals three times the squared distance from P to the centroid plus the sum of squared distances from the centroid to the vertices. Equality is CReal.Equiv, a DEFINED Prop relation on the setoid of regular rational sequences, NOT Eq. The statement is unconditional: no non-degeneracy, no collinearity exclusion, and P is arbitrary and need not lie in any particular position relative to the triangle. The factor 3 appears additively (|PG|^2 + |PG|^2 + |PG|^2), not as multiplication by a constructed scalar, so the statement itself does not depend on the existence of 1/3 -- though the centroid it is stated about does, and that reciprocal is witnessed (see notes).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CReal.Equiv (CReal.add (CPoint.distSq x0 x1) (CReal.add (CPoint.distSq x0 x2) (CPoint.distSq x0 x3))) (CReal.add (CReal.add (CPoint.distSq x0 (CPoint.centroid x1 x2 x3)) (CReal.add (CPoint.distSq x0 (CPoint.centroid x1 x2 x3)) (CPoint.distSq x0 (CPoint.centroid x1 x2 x3)))) (CReal.add (CPoint.distSq (CPoint.centroid x1 x2 x3) x1) (CReal.add (CPoint.distSq (CPoint.centroid x1 x2 x3) x2) (CPoint.distSq (CPoint.centroid x1 x2 x3) x3))))))))",
+    "fragment": "CPoint",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:geometry-stewart-over-constructed-reals"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.centroid_dist_sq",
+      "kind": "kernel-term",
+      "supports": "`CPoint.centroid_dist_sq` is admitted by the kernel with exactly the type in formal.statement. The proof expands each vertex distance around the pivot G via `dot_self_sub`, uses a new `triple_sub_sum_zero` (the three vertex-to-centroid vectors sum to zero, from 3G ~ A+B+C) and `dot_zero_right`, and reassociates twelve terms through the file's existing SumTree / flatten_sum_tree / reorder_right_chain / concat_right_chains machinery.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes `build_cpoint_prelude` return `Err` and the test below fail)",
+        "creal_point_tests::centroid_dist_sq_statement_is_exact (asserts the KERNEL-RENDERED type verbatim with assert_eq!, so a theorem with a wrong multiplicity on |PG|^2, a transposed distSq, or the vertices in the wrong role cannot pass with the same empty footprint)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::centroid_dist_sq_statement_is_exact -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/creal_point.rs",
+      "notes": "Re-derives from source every run: rebuilds CPointPrelude, re-typechecking `Scalar.three`, `inv3`, `threePosBound`, `centroid`, `centroid_median` and `centroid_dist_sq` through `add_declaration`, then compares the rendered type character for character. Anchored on the exact `1 passed; 0 failed` count; verified that substituting a non-existent test name makes the identical command exit 1 rather than 0, so a silently-empty filter cannot read as success."
+    },
+    {
+      "id": "footprint-CPoint.centroid_dist_sq",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] -- the theorem, the centroid it is stated about, and the witnessed reciprocal 1/3 beneath it are all checked declarations with an empty `Kernel::axiom_footprint`. The `cpoint` prelude's trusted surface is 0: no Axiom, no Opaque, no Quotient.",
+      "check_status": "checked",
+      "checkers": [
+        "creal_point_tests::every_theorem_here_is_axiom_free (reads `Kernel::axiom_footprint` for every declared theorem in this file, `centroid_dist_sq` included, and requires the empty set)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::every_theorem_here_is_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs",
+      "notes": "Counting Declaration::Axiom alone would not suffice (Opaque has no proof body and Quotient admits Quot.sound); axiom_footprint covers all three. Presence matters as much as the footprint -- axiom_footprint of a name interned but never declared is vacuously empty -- so the statement test above, which fetches the declaration from the environment and panics if absent, is the companion check."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-23",
+    "established_by": "lane agent-capability-assurance (2026-08-23), via a dispatched geometry lane: crates/axeyum-lean-kernel/src/creal_point.rs, `CPoint.centroid_dist_sq`, a kernel theorem over CReal (the constructed reals, ADR-0512) admitting with an empty axiom_footprint.",
+    "source": "classical; coordinatised by the geometry lane",
+    "prior_art": [
+      {
+        "who": "Gottfried Wilhelm Leibniz",
+        "what": "the relation between the sum of squared distances to the vertices of a triangle and the distance to its centroid",
+        "year": 1700,
+        "where": "attributed in the standard literature as Leibniz's formula; commonly stated for an arbitrary point and the barycentre",
+        "attribution": "conventional attribution only. This lane did not consult a primary source, and the date is approximate; the identity is a special case of a general barycentric relation and its first appearance is not established here."
+      }
+    ]
+  },
+  "notes": "THE WITNESSED RECIPROCAL IS THE PART THAT IS NOT CLASSICAL. `CPoint.centroid` divides by three, and `CReal.inv` in this kernel takes a WITNESSED positive lower bound (`PosBound x k`), not `x != 0`: reaching `Apart` from `Not (x ~ 0)` is Markov's principle, which this kernel neither proves nor assumes. So 1/3 exists here only because `Scalar.threePosBound : PosBound three 0` was proved, by chaining `two`'s own bound through one more `le_add_of_nonneg` step. A classical account would not notice that this costs anything.\n\nThe factor 3 in the statement is additive rather than a multiplication by a constructed scalar. That is a deliberate consequence of stating what is provable without extra machinery, and it means the formal statement is insensitive to how 1/3 is built even though the centroid is not.\n\nDEPENDS_ON is recorded as F:geometry-stewart-over-constructed-reals for curriculum ordering -- both are cevian/centroid facts over the same carrier established by the same lane family, and Stewart's `lerp` at t = 1/2 is the intended future bridge to `apollonius_median`. It is NOT a logical dependency: `centroid_dist_sq` does not invoke `stewart`, and each is proved independently from the dot-product development. Recorded this way because the ledger's depends_on is curriculum metadata and grants no proof authority, but a reader should not infer a proof-level use that does not exist."
+}
