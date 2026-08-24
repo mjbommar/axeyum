@@ -982,6 +982,46 @@ pub struct CRealPrelude {
     /// open obligation `CReal.sqrt` still needs).
     pub sqrt_approx: NameId,
 
+    // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
+    /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
+    /// constant factor: `KRegular f c := ∀ m n, Within (f m − f n)
+    /// (natDivSucc (c+1) m + natDivSucc (c+1) n)`, i.e. `|f m − f n| ≤
+    /// (c+1)/(m+1) + (c+1)/(n+1)`. Parametrized by `c` (so the constant
+    /// factor is `c+1`) for the same reason [`Self::mul_shift`]/
+    /// `product::mul_index` are: it keeps the sampling index `(c+1)·n + c`
+    /// and its read-back (`Rat.natDivSucc_scale`) addition-only, with **no
+    /// `Nat.sub`**.
+    pub k_regular_pred: NameId,
+    /// `CReal.speedup : (Nat → Rat) → Nat → Nat → Rat` —
+    /// `speedup f c n := f ((c+1)·n + c)`, Bishop's speed-up combinator: it
+    /// resamples `f` deep enough that a `KRegular f c` bound reads back as an
+    /// exact `Regular` one. Same index shape as `product::mul_index` (reused
+    /// directly), so every future construction that produces a `KRegular`
+    /// sequence gets `CReal.mk` for free through
+    /// [`Self::regular_of_kregular`].
+    pub speedup: NameId,
+    /// `CReal.regular_of_kregular : ∀ f c, KRegular f c → Regular (speedup f
+    /// c)` — **the headline result**, and exact: `Rat.natDivSucc_scale` reads
+    /// the `KRegular` bound at the speed-up indices back to `Regular`'s own
+    /// modulus with no further estimate, unlike `product::regular_between`
+    /// (which accepts any crude constant because it is comparing samples of
+    /// an **already `Regular`** `CReal` at two different indices — a
+    /// different problem from promoting a raw `KRegular` function, which is
+    /// what this closes).
+    pub regular_of_kregular: NameId,
+    /// `CReal.speedup_close : ∀ f c, KRegular f c → ∀ n, Within (f n −
+    /// speedup f c n) (natDivSucc (c+1) n + natDivSucc 1 n)`.
+    ///
+    /// **A bound, not an equivalence.** It measures how far the original
+    /// sample `f n` sits from the speed-up's sample at the same index (both
+    /// sides are plain rationals — `speedup`'s regularity is not consumed
+    /// here, only `KRegular` itself), and the bound does shrink in `n` but is
+    /// not the exact `Regular` modulus. It does **not** by itself give any
+    /// `CReal.Equiv` between `f` and its speed-up: that needs `f` packaged as
+    /// a `CReal` in the first place, which a bare `KRegular f c` hypothesis
+    /// does not supply.
+    pub speedup_close: NameId,
+
     // --- finite sums over ℝ (creal/series.rs) ---------------------------------
     /// `CReal.sumRange : (Nat → CReal) → Nat → CReal`, by structural `Nat.rec`
     /// on the bound — `sumRange f zero ≡ zero`, `sumRange f (succ j) ≡ add
@@ -1461,6 +1501,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         nat_sqrt_le: kernel.name_str(creal, "natSqrtLe"),
         nat_sqrt_lt: kernel.name_str(creal, "natSqrtLt"),
         sqrt_approx: kernel.name_str(creal, "sqrtApprox"),
+        k_regular_pred: kernel.name_str(creal, "KRegular"),
+        speedup: kernel.name_str(creal, "speedup"),
+        regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
+        speedup_close: kernel.name_str(creal, "speedup_close"),
         sum_range: kernel.name_str(creal, "sumRange"),
         sum_range_zero: kernel.name_str(creal, "sumRange_zero"),
         sum_range_succ: kernel.name_str(creal, "sumRange_succ"),
@@ -1571,6 +1615,7 @@ pub(crate) fn build_creal_prelude_uncached(
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
+        speedup::declare_speedup(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         power::declare_power(&mut d, prelude)
     })();
@@ -2498,6 +2543,7 @@ mod order_extra;
 mod power;
 mod product;
 mod series;
+mod speedup;
 mod sqrt;
 mod uniform_continuity;
 

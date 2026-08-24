@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 168] = [
+    let expected: [(&str, crate::NameId, &str); 172] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -265,6 +265,15 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.natSqrtLe", p.nat_sqrt_le, "theorem"),
         ("CReal.natSqrtLt", p.nat_sqrt_lt, "theorem"),
         ("CReal.sqrtApprox", p.sqrt_approx, "def"),
+        // Bishop's speed-up combinator (creal/speedup.rs).
+        ("CReal.KRegular", p.k_regular_pred, "def"),
+        ("CReal.speedup", p.speedup, "def"),
+        (
+            "CReal.regular_of_kregular",
+            p.regular_of_kregular,
+            "theorem",
+        ),
+        ("CReal.speedup_close", p.speedup_close, "theorem"),
         // Finite sums over ℝ (creal/series.rs). PRESENCE MATTERS AS MUCH AS
         // THE FOOTPRINT here too — see the convergence block's own comment
         // above.
