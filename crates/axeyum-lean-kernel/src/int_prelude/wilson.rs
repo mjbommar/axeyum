@@ -36,23 +36,37 @@
 //! never `Nat.beq`) and a conjugation induction
 //! `(j' j)(i j')(j' j) = (i j)` on the gap `j - i`.
 //!
-//! What is STILL missing is the full permutation, not just one transposition.
-//! The pigeonhole gives an `i0` with `σ(i0) = n-1` for the OUTER induction on
-//! `n`; `prodRange_swap` now moves `f`'s value at that `i0` into position
-//! `n-1` in one step (no bubbling needed — `prodRange_swap` already handles
-//! the arbitrary gap). What it does not give is the RECURSIVE CALL's
-//! ingredients: `prodRange_permute`'s induction on `n` needs, after peeling
-//! the last factor via `prodRange_succ`, a permutation of `{0,…,n-2}` — i.e.
-//! `σ` restricted to the domain with `i0` removed and reindexed downward
-//! (`σ'(k) := if k < i0 then σ(k) else σ(k+1)`, or symmetrically on the range,
-//! whichever a `Fin`-free statement makes cheaper) — plus proofs that this
-//! restriction is still injective and maps into `{0,…,n-2}`. That reindexing
-//! is the same shape as `finite.rs`'s `compact` (this module's earlier
-//! drafts already named it as the analogy), but it has not been built for
-//! `σ` here: `compact` reindexes a *value* the pigeonhole proof already
-//! produced, not an *index* into an arbitrary hypothesis-supplied injection.
-//! That reindexing lemma, plus threading it through
-//! `Nat.injectiveOn`/`Nat.mapsInto`'s definitions, is the next slice.
+//! What is STILL missing is the full permutation, not just one transposition —
+//! but the gap is now three named assembly steps, not a missing construction.
+//!
+//! **Earlier revisions of this paragraph said the recursive call needs `σ`
+//! restricted with `i0` removed and REINDEXED DOWNWARD
+//! (`σ'(k) := if k < i0 then σ(k) else σ(k+1)`). That turned out to be
+//! unnecessary** (2026-08-24), and it is worth recording because three
+//! successive drafts named it as the blocker. Applying `point_swap` to
+//! `g := f ∘ σ` at `(i0, n)` — rather than to `σ` — reduces the recursive
+//! obligation to `prodRange (f ∘ τ) n = prodRange f n` where `τ` is an
+//! **override at `i0`**, not a shift: once the trivial `i0 = n` case is peeled
+//! off, `i0` is already `< n`, so there is nothing to reindex.
+//!
+//! `Nat.restrict_injective` and `Nat.restrict_maps_into` (both in
+//! `nat_prelude/finite.rs`, axiom-free) supply exactly that override's two
+//! closure properties. What remains for `prodRange_permute`:
+//!
+//! 1. The `i0 = n` branch, which needs no restriction at all — just
+//!    bound-weakening `injectiveOn σ (n+1) → injectiveOn σ n`, since `σ`
+//!    already fixes `n`.
+//! 2. The `i0 < n` branch: the `point_swap`-on-`g` application, threading the
+//!    two restriction lemmas into the induction hypothesis.
+//! 3. The `Exists`-elimination on the pigeonhole's result and the two-way case
+//!    split on `i0` versus `n`, assembling both branches.
+//!
+//! Note the induction generalises over **σ, not over `f`** — unlike every
+//! earlier proof in this chain, whose recursive calls took a different
+//! function. Here the hypothesis reuses the same `f` and only `σ` becomes `τ`,
+//! so `f` is quantified outside the `Nat.rec` with motive
+//! `∀ σ, injectiveOn σ x → mapsInto σ x → prodRange f x = prodRange (f ∘ σ) x`.
+//! Copying the earlier shape yields a motive that does not close.
 
 use super::defs::POW_HEIGHT;
 use super::ops::IntDev;
