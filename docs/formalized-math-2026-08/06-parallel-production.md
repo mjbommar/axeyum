@@ -106,12 +106,52 @@ round-trip.
 
 Ten dispatches converged on a shape. The elements that measurably mattered:
 
-**State what already exists, by name.** Seven times today a lane discovered the
-thing it was asked to build already existed internally and was merely unexposed
-— `Nat.zero_le`, `Nat.le_trans`, `Nat.lt_irrefl`, `Nat.not_succ_le_zero`,
-`Nat.le_of_succ_le_succ`, `Nat.sumRange`, and ℂ's `conj`/`normSq`/`mul_conj`.
-**Grepping first is the most reliable prior in this repository.** Put it in the
-brief as an instruction, not a hope.
+**State what already exists, by name — and get that list from the inventory,
+never from grep.** Seven times a lane discovered the thing it was asked to build
+already existed internally and was merely unexposed — `Nat.zero_le`,
+`Nat.le_trans`, `Nat.lt_irrefl`, `Nat.not_succ_le_zero`, `Nat.le_of_succ_le_succ`,
+`Nat.sumRange`, and ℂ's `conj`/`normSq`/`mul_conj`.
+
+An earlier revision of this document said *"grepping first is the most reliable
+prior in this repository."* **That advice is wrong for this kernel and it cost
+two lanes their entire slice.** Declarations go through a `.theorem(name, …)`
+helper over an interned `NameId`, so a quoted name does not appear in the source
+at all. A lane sent after Fermat's little theorem ran the premise check it was
+asked to run, grepped `int_prelude/` for `pow`, got zero hits, and correctly
+rebuilt `Int.pow`, `pow_zero`, `pow_succ`, `pow_add` and `ModEq.pow` from
+scratch. All five existed. It did everything right and the instrument lied.
+
+The instrument that does not:
+
+```sh
+scripts/cargo-serialized.sh run --release -p axeyum-lean-kernel \
+  --example prelude_theorem_inventory -- --include-constructed
+```
+
+`--include-constructed` is **not optional**: without it `creal`, `complex` and
+`cpoint` are absent entirely and you get a clean, confident answer to a question
+the tool was never asked. The coordinator made exactly that mistake the same day
+and nearly reported eight new theorems as missing.
+
+**The coordinator runs it before writing the brief, not the lane after reading
+it.** Three briefs in one afternoon asserted something absent that was present:
+
+| I briefed | The inventory said |
+|---|---|
+| ℂ's apartness family does not exist yet | It did — on a sibling branch, uncommitted |
+| `Int.pow` and `ModEq.pow` landed minutes ago | True, and the lane's merge predated them |
+| Bézout over ℤ, inverse existence and cancellation are missing | All three landed; only uniqueness was |
+
+The third is the instructive one. That brief asked for five things and four
+existed, because the coordinator had run the inventory against `nat` and never
+against `integer` before writing it. **An empty answer from a tool you did not
+point at your subject is indistinguishable from a strong negative result** — the
+repository's own rule, applied to the dispatch step rather than to a gate.
+
+The cheap mitigation, which works even when the coordinator is wrong: make
+step 1 of every brief *"report what already exists, verbatim, before writing
+code."* The lane that did this returned one theorem instead of five duplicates.
+The lane that did not returned six, of which four were already in `main`.
 
 **Stage the slice and say "X alone is a result."** Every brief that named a
 minimum viable deliverable got one. The binomial lane returned a toolkit and a
