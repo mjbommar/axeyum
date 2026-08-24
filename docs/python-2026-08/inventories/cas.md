@@ -328,3 +328,24 @@ Seven `src/bin/axeyum-gf2-*.rs` CLIs show the GF(2) artifact/shard flows.
   the binding must not discard.
 - Skip `RatFunc` (no public surface) and `groebner::{reduce, groebner_basis,
   ideal_contains}` (unbudgeted) for a first cut.
+
+## Corrections measured while binding (2026-08-24, slice 02-B)
+
+- **§0.4 / §0.6 are wrong about `checked_new`.** `axeyum_ir::Rational::checked_new`
+  asserts on `den == 0` exactly as `new` does (`axeyum-ir/src/rational.rs:69`),
+  so wrapping `CasExpr::rat` in it does not remove the panic — it reached
+  Python as `PanicException` until the binding added an explicit `den == 0`
+  test before the call.
+- **§2.3 `Limits::classical()` values are mis-paired.** Actual:
+  `max_order = 2`, `max_certificate_degree = 8`, `max_unknowns = 400`,
+  `max_poly_terms = 4_000`, `max_dispersion = 32`, `max_parameter_degree = 6`.
+- `geometry_corpus::frontier()` is empty today; `rhombus-diagonals-perpendicular`
+  takes ~98 s to certify, every other corpus problem < 1.5 s.
+- `varignon-*` certifies conclusions that are identically zero with empty
+  cofactor lists, so a tamper control there must forge the conclusion
+  polynomial — there is no coefficient to perturb.
+- `SosArtifact` has no public constructor from parts, so the "empty
+  obligation list" branch of the Python guard is unreachable from Python.
+- `sets::Interval` is bound as `cas.certify.sturm.SetInterval`;
+  `axeyum_cas::RealInterval` is a different type that keeps the `RealInterval`
+  name.
