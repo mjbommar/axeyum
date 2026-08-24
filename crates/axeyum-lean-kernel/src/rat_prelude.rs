@@ -859,6 +859,17 @@ pub struct RatPrelude {
     /// multiplied form (no `Rat.inv` needed), with the indicator supplied as
     /// a hypothesis. This project's first genuine probability BOUND.
     pub markov_inequality: NameId,
+    /// `Rat.expectation_indicator_le_one : ∀ ind p n, IsDistribution p n →
+    /// (∀ k, Lt k n → Or (ind k = zero) (ind k = one)) →
+    /// le (expectation ind p n) one` — the expectation of any `{0,1}`-valued
+    /// sequence, under a genuine distribution, is itself at most `1`. `ind` is
+    /// a HYPOTHESIS (any `{0,1}`-valued sequence), the same choice
+    /// [`Self::markov_inequality`] makes for its own `ind` — `Rat.indicator`
+    /// satisfies the hypothesis by construction, but nothing here is tied to
+    /// that specific definition. What makes Markov/Chebyshev over
+    /// `Rat.indicator` READ as a probability bound rather than a bare sum
+    /// inequality.
+    pub expectation_indicator_le_one: NameId,
     /// `Rat.variance X p n := expectation (fun k => sub (X k) (expectation X
     /// p n) * sub (X k) (expectation X p n)) p n` — `Var[X] := E[(X −
     /// E[X])²]`.
@@ -870,6 +881,37 @@ pub struct RatPrelude {
     /// (expectation (fun k => X k * X k) p n) (mul (expectation X p n)
     /// (expectation X p n))` — `Var[X] = E[X²] − E[X]²`.
     pub variance_eq: NameId,
+    /// `Rat.variance_smul : ∀ a X p n, IsDistribution p n →
+    /// variance (fun k => a * X k) p n = (a*a) * variance X p n` — the scaling
+    /// law `Var[a·X] = a²·Var[X]`.
+    pub variance_smul: NameId,
+    /// `Rat.covariance X Y p n := sub (expectation (fun k => X k * Y k) p n)
+    /// (mul (expectation X p n) (expectation Y p n))` — `Cov[X,Y] := E[X·Y] −
+    /// E[X]·E[Y]`.
+    ///
+    /// **There is no independence predicate anywhere in this development.**
+    /// Independence is a statement about a JOINT distribution over a product
+    /// space, and this development has only a single `p` over one index
+    /// range — there is no way to state `P(X=x ∧ Y=y) = P(X=x)·P(Y=y)`.
+    /// `Cov[X,Y] ~ 0` (uncorrelatedness) is the honest, strictly weaker
+    /// hypothesis every theorem here uses instead.
+    pub covariance: NameId,
+    /// `Rat.variance_add_eq : ∀ X Y p n, IsDistribution p n →
+    /// variance (fun k => X k + Y k) p n =
+    /// add (variance X p n)
+    ///     (add (covariance X Y p n) (add (covariance X Y p n) (variance Y p n)))` —
+    /// `Var[X+Y] = Var[X] + (Cov[X,Y] + (Cov[X,Y] + Var[Y]))`, with the two
+    /// copies of `Cov[X,Y]` standing in for the classical `2·Cov[X,Y]` (the
+    /// same reason `rat_prelude::probability::sub_sq_expand` keeps two copies
+    /// of `neg b * a` instead of `neg (2*b) * a`). **The headline: variance of
+    /// a sum, with the cross term named rather than assumed away.**
+    pub variance_add_eq: NameId,
+    /// `Rat.variance_add_of_uncorrelated : ∀ X Y p n, IsDistribution p n →
+    /// covariance X Y p n = zero → variance (fun k => X k + Y k) p n =
+    /// add (variance X p n) (variance Y p n)` — the specialisation
+    /// [`Self::variance_add_eq`] collapses to when the cross term vanishes.
+    /// Uncorrelatedness, not independence — see [`Self::covariance`]'s doc.
+    pub variance_add_of_uncorrelated: NameId,
 
     // --- the constructed indicator (rat_prelude::probability) --------------
     /// `Rat.indicator a X k := if Rat.ble a (X k) then Rat.one else
@@ -1111,9 +1153,14 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         expectation_nonneg: child(kernel, "expectation_nonneg"),
         expectation_le: child(kernel, "expectation_le"),
         markov_inequality: child(kernel, "markov_inequality"),
+        expectation_indicator_le_one: child(kernel, "expectation_indicator_le_one"),
         variance: child(kernel, "variance"),
         variance_nonneg: child(kernel, "variance_nonneg"),
         variance_eq: child(kernel, "variance_eq"),
+        variance_smul: child(kernel, "variance_smul"),
+        covariance: child(kernel, "covariance"),
+        variance_add_eq: child(kernel, "variance_add_eq"),
+        variance_add_of_uncorrelated: child(kernel, "variance_add_of_uncorrelated"),
         indicator: child(kernel, "indicator"),
         indicator_nonneg: child(kernel, "indicator_nonneg"),
         indicator_le: child(kernel, "indicator_le"),

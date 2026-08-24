@@ -1609,9 +1609,22 @@ fn the_probability_toolkit_is_axiom_free() {
         ("expectation_nonneg", p.expectation_nonneg, true),
         ("expectation_le", p.expectation_le, true),
         ("markov_inequality", p.markov_inequality, true),
+        (
+            "expectation_indicator_le_one",
+            p.expectation_indicator_le_one,
+            true,
+        ),
         ("variance", p.variance, false),
         ("variance_nonneg", p.variance_nonneg, true),
         ("variance_eq", p.variance_eq, true),
+        ("variance_smul", p.variance_smul, true),
+        ("covariance", p.covariance, false),
+        ("variance_add_eq", p.variance_add_eq, true),
+        (
+            "variance_add_of_uncorrelated",
+            p.variance_add_of_uncorrelated,
+            true,
+        ),
         ("indicator", p.indicator, false),
         ("indicator_nonneg", p.indicator_nonneg, true),
         ("indicator_le", p.indicator_le, true),
@@ -1872,6 +1885,140 @@ fn variance_swapped_subtraction_order_is_rejected() {
         d.declare_theorem(name, ty, value).is_err(),
         "the kernel accepted Rat.variance's summand with the subtraction \
          swapped, so the computation check above proves nothing"
+    );
+}
+
+/// `Rat.covariance X Y p n` closes by `Eq.refl` alone against `sub
+/// (expectation (fun k => X k * Y k) p n) (mul (expectation X p n)
+/// (expectation Y p n))`, over **symbolic** `X`/`Y`/`p`/`n` — the same
+/// convention [`variance_defining_equation_closes_by_refl_alone`] follows.
+#[test]
+fn covariance_defining_equation_closes_by_refl_alone() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::{rat_ty, req, rmul, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let xy = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let xk = d.apply(x, &[k]);
+        let yk = d.apply(y, &[k]);
+        let body = rmul(&mut d, xk, yk);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let e_xy = d.const_app(p.expectation, &[xy, pf, n]);
+    let ex = d.const_app(p.expectation, &[x, pf, n]);
+    let ey = d.const_app(p.expectation, &[y, pf, n]);
+    let exey = rmul(&mut d, ex, ey);
+
+    let lhs = d.const_app(p.covariance, &[x, y, pf, n]);
+    let rhs = rsub(&mut d, p, e_xy, exey);
+    let stmt = req(&mut d, lhs, rhs);
+    let proof = rrefl(&mut d, rhs);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, inner);
+        let with_y = d.pi_fv(y_fv, fn_ty, with_pf);
+        d.pi_fv(x_fv, fn_ty, with_y)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, inner);
+        let with_y = d.lam_fv(y_fv, fn_ty, with_pf);
+        d.lam_fv(x_fv, fn_ty, with_y)
+    };
+    let name = d.kernel().name_str(anon, "Check.covariance_defn_refl");
+    d.declare_theorem(name, ty, value).unwrap_or_else(|e| {
+        panic!(
+            "Rat.covariance did not reduce to its defining sub-of-expectations \
+             by refl alone: {}",
+            d.explain(&e)
+        )
+    });
+}
+
+/// The negative control for
+/// [`covariance_defining_equation_closes_by_refl_alone`]: the same route with
+/// the subtraction **swapped** (`sub (mul (expectation X p n) (expectation Y
+/// p n)) (expectation (fun k => X k * Y k) p n)` instead of the defined
+/// order). `Rat.sub` is not definitionally anti-commutative, so this must be
+/// **REJECTED** — otherwise the computation check above proves nothing.
+#[test]
+fn covariance_swapped_subtraction_order_is_rejected() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::{rat_ty, req, rmul, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let xy = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let xk = d.apply(x, &[k]);
+        let yk = d.apply(y, &[k]);
+        let body = rmul(&mut d, xk, yk);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let e_xy = d.const_app(p.expectation, &[xy, pf, n]);
+    let ex = d.const_app(p.expectation, &[x, pf, n]);
+    let ey = d.const_app(p.expectation, &[y, pf, n]);
+    let exey = rmul(&mut d, ex, ey);
+
+    let lhs = d.const_app(p.covariance, &[x, y, pf, n]);
+    let swapped_rhs = rsub(&mut d, p, exey, e_xy); // swapped
+    let stmt = req(&mut d, lhs, swapped_rhs);
+    let proof = rrefl(&mut d, swapped_rhs);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, inner);
+        let with_y = d.pi_fv(y_fv, fn_ty, with_pf);
+        d.pi_fv(x_fv, fn_ty, with_y)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, inner);
+        let with_y = d.lam_fv(y_fv, fn_ty, with_pf);
+        d.lam_fv(x_fv, fn_ty, with_y)
+    };
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.covariance_swapped_sub_order");
+    assert!(
+        d.declare_theorem(name, ty, value).is_err(),
+        "the kernel accepted Rat.covariance with the subtraction swapped, \
+         so the computation check above proves nothing"
     );
 }
 
