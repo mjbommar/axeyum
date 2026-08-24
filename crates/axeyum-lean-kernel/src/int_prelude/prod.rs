@@ -1110,7 +1110,7 @@ pub(super) fn declare_prod_range_swap_adjacent(d: &mut IntDev<'_>) -> Result<(),
 
 /// `Bool.rec.{1}` selecting between two `Int` values — the `Int` counterpart
 /// of `NatOps::bool_select_nat`, which is hardwired to `Nat`.
-fn bool_select_int(
+pub(super) fn bool_select_int(
     d: &mut IntDev<'_>,
     condition: ExprId,
     on_true: ExprId,
@@ -1127,7 +1127,13 @@ fn bool_select_int(
 }
 
 /// `heq : Eq Bool cond true ⊢ Eq Int (bool_select_int cond a b) a`.
-fn select_int_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+pub(super) fn select_int_true(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
     let true_val = d.bool_true();
     let symm_hb = d.bool_symm(cond, true_val, heq);
     let motive = d.bool_eq_motive(true_val, &|d, value| {
@@ -1139,7 +1145,13 @@ fn select_int_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: 
 }
 
 /// `heq : Eq Bool cond false ⊢ Eq Int (bool_select_int cond a b) b`.
-fn select_int_false(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+pub(super) fn select_int_false(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
     let false_val = d.bool_false();
     let symm_hb = d.bool_symm(cond, false_val, heq);
     let motive = d.bool_eq_motive(false_val, &|d, value| {
@@ -1152,7 +1164,7 @@ fn select_int_false(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq:
 
 /// `h : Lt a b ⊢ Le a b` — weaken a strict order fact by one step
 /// (`Nat.le_succ` + `Nat.le_trans`).
-fn nat_le_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+pub(super) fn nat_le_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
     let p = d.int();
     let sa = d.succ(a);
     let le_a_sa = d.lemma(p.nat.le_succ, &[a]);
@@ -1163,7 +1175,7 @@ fn nat_le_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
 /// then instantiate at `bool_refl(condition)`" trick
 /// `nat_prelude/finite.rs`'s `compact_eq_of_gt` uses, extracted generically:
 /// `point_swap`'s nested selection needs this fact at every level, not once.
-fn ble_eq_false_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h_lt: ExprId) -> ExprId {
+pub(super) fn ble_eq_false_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h_lt: ExprId) -> ExprId {
     let p = d.int();
     let cond = d.ble(a, b);
     let false_val = d.bool_false();
@@ -1244,7 +1256,13 @@ fn ps_level2(d: &mut IntDev<'_>, f: ExprId, p_idx: ExprId, q_idx: ExprId, k: Exp
 /// [`point_swap_eq_lt_p`], [`point_swap_eq_at_p`], [`point_swap_eq_between`],
 /// [`point_swap_eq_at_q`], and [`point_swap_eq_gt_q`] are this function's five
 /// correctness facts, one per region a `k` can fall in relative to `p < q`.
-fn point_swap(d: &mut IntDev<'_>, f: ExprId, p_idx: ExprId, q_idx: ExprId, k: ExprId) -> ExprId {
+pub(super) fn point_swap(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    p_idx: ExprId,
+    q_idx: ExprId,
+    k: ExprId,
+) -> ExprId {
     let fk = d.apply(f, &[k]);
     let level2 = ps_level2(d, f, p_idx, q_idx, k);
     let sk = d.succ(k);
@@ -1253,7 +1271,7 @@ fn point_swap(d: &mut IntDev<'_>, f: ExprId, p_idx: ExprId, q_idx: ExprId, k: Ex
 }
 
 /// `h : Lt k p ⊢ Eq Int (point_swap f p q k) (f k)`.
-fn point_swap_eq_lt_p(
+pub(super) fn point_swap_eq_lt_p(
     d: &mut IntDev<'_>,
     f: ExprId,
     p_idx: ExprId,
@@ -1271,7 +1289,12 @@ fn point_swap_eq_lt_p(
 }
 
 /// `Eq Int (point_swap f p q p) (f q)`.
-fn point_swap_eq_at_p(d: &mut IntDev<'_>, f: ExprId, p_idx: ExprId, q_idx: ExprId) -> ExprId {
+pub(super) fn point_swap_eq_at_p(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    p_idx: ExprId,
+    q_idx: ExprId,
+) -> ExprId {
     let p = d.int();
     let fk = d.apply(f, &[p_idx]);
     let fq = d.apply(f, &[q_idx]);
@@ -1293,7 +1316,7 @@ fn point_swap_eq_at_p(d: &mut IntDev<'_>, f: ExprId, p_idx: ExprId, q_idx: ExprI
 
 /// `h1 : Lt p k, h2 : Lt k q ⊢ Eq Int (point_swap f p q k) (f k)`.
 #[allow(clippy::too_many_arguments)]
-fn point_swap_eq_between(
+pub(super) fn point_swap_eq_between(
     d: &mut IntDev<'_>,
     f: ExprId,
     p_idx: ExprId,
@@ -1330,7 +1353,7 @@ fn point_swap_eq_between(
 }
 
 /// `h_pq : Lt p q ⊢ Eq Int (point_swap f p q q) (f p)`.
-fn point_swap_eq_at_q(
+pub(super) fn point_swap_eq_at_q(
     d: &mut IntDev<'_>,
     f: ExprId,
     p_idx: ExprId,
@@ -1380,7 +1403,7 @@ fn point_swap_eq_at_q(
 
 /// `h_pq : Lt p q, h : Lt q k ⊢ Eq Int (point_swap f p q k) (f k)`.
 #[allow(clippy::too_many_arguments)]
-fn point_swap_eq_gt_q(
+pub(super) fn point_swap_eq_gt_q(
     d: &mut IntDev<'_>,
     f: ExprId,
     p_idx: ExprId,
@@ -1439,7 +1462,7 @@ fn point_swap_eq_gt_q(
 /// `Nat.lt_or_eq_of_le` — the `IntDev` counterpart of
 /// `nat_prelude/finite.rs`'s private `trichotomy` (typed over `NatDev`, so
 /// not reusable here without a signature change to that file).
-fn nat_trichotomy(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+pub(super) fn nat_trichotomy(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
     let p = d.int();
     let lt_ab = d.lt(a, b);
     let eq_ab = d.eq(a, b);
@@ -1482,7 +1505,13 @@ fn nat_trichotomy(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
 
 /// `tri : Or (Lt a b) (Or (Eq Nat a b) (Lt b a))`, `not_eq : Not (Eq Nat a b)`
 /// `⊢ Or (Lt a b) (Lt b a)` — eliminate the middle case of [`nat_trichotomy`].
-fn nat_two_way(d: &mut IntDev<'_>, a: ExprId, b: ExprId, tri: ExprId, not_eq: ExprId) -> ExprId {
+pub(super) fn nat_two_way(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    tri: ExprId,
+    not_eq: ExprId,
+) -> ExprId {
     let lt_ab = d.lt(a, b);
     let eq_ab = d.eq(a, b);
     let lt_ba = d.lt(b, a);
@@ -1502,7 +1531,12 @@ fn nat_two_way(d: &mut IntDev<'_>, a: ExprId, b: ExprId, tri: ExprId, not_eq: Ex
 }
 
 /// `Not (Eq Nat a b) ⊢ Or (Lt a b) (Lt b a)`.
-fn nat_lt_or_gt_of_ne(d: &mut IntDev<'_>, a: ExprId, b: ExprId, not_eq: ExprId) -> ExprId {
+pub(super) fn nat_lt_or_gt_of_ne(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    not_eq: ExprId,
+) -> ExprId {
     let tri = nat_trichotomy(d, a, b);
     nat_two_way(d, a, b, tri, not_eq)
 }
@@ -1513,7 +1547,7 @@ fn nat_lt_or_gt_of_ne(d: &mut IntDev<'_>, a: ExprId, b: ExprId, not_eq: ExprId) 
 /// CONCRETE `point_swap`-built partner rather than an arbitrarily supplied
 /// one.
 #[allow(clippy::too_many_arguments)]
-fn general_swap_agree(
+pub(super) fn general_swap_agree(
     d: &mut IntDev<'_>,
     f: ExprId,
     p_idx: ExprId,

@@ -719,6 +719,21 @@ pub struct ComplexPrelude {
     /// the RHS template at `Nat.succ j`, so no further rearrangement is
     /// needed, the same "up to iota" pattern `declare_sum_range_split` uses.
     pub sum_range_swap: NameId,
+    /// `Complex.sumRange_diagonal : ∀ F n,
+    ///   Equiv (sumRange (fun k => sumRange (fun i => F i (sub k i)) (succ k)) n)
+    ///     (sumRange (fun i => sumRange (fun j => F i j) (sub n i)) n)`
+    /// — the diagonal reindexing the Cauchy product needs: summing `F i j`
+    /// over the triangle `{(i,j) : i+j < n}` by ANTIDIAGONAL `k = i+j` equals
+    /// summing it by ROW `i`. The `Complex`-level port of
+    /// [`crate::nat_prelude::NatPrelude::sum_range_diagonal`]
+    /// (`nat_prelude/diagonal.rs`), same induction on `n`, `Equiv` in place of
+    /// `Eq` throughout. `Nat.sub` appears in the index arithmetic on both
+    /// sides for exactly the reason the ℕ module doc gives (`Exists`'s
+    /// witness is not exposed by `Exists.rec`); every fact this proof needs
+    /// about it is the public `Nat.succ_sub_of_le`/`Nat.sub_self`, lifted into
+    /// a `Complex` context via `nat_eq_to_complex_equiv` — no induction on
+    /// `sub`'s own recursion here either.
+    pub sum_range_diagonal: NameId,
 
     // --- the binomial theorem -----------------------------------------------
     /// `Complex.add_pow : ∀ a b n, Equiv (pow (add a b) n) (sumRange (fun k =>
@@ -962,6 +977,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         sum_range_congr_lt: kernel.name_str(complex, "sumRange_congr_lt"),
         sum_range_split: kernel.name_str(complex, "sumRange_split"),
         sum_range_swap: kernel.name_str(complex, "sumRange_swap"),
+        sum_range_diagonal: kernel.name_str(complex, "sumRange_diagonal"),
         add_pow: kernel.name_str(complex, "add_pow"),
         is_root_of_unity: kernel.name_str(complex, "IsRootOfUnity"),
         one_is_root_of_unity: kernel.name_str(complex, "one_is_root_of_unity"),
@@ -1050,6 +1066,7 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_sum_range_congr_lt(&mut d, prelude)?;
         declare_sum_range_split(&mut d, prelude)?;
         declare_sum_range_swap(&mut d, prelude)?;
+        declare_sum_range_diagonal(&mut d, prelude)?;
         declare_add_pow(&mut d, prelude)?;
         declare_is_root_of_unity(&mut d, prelude)?;
         declare_one_is_root_of_unity(&mut d, prelude)?;
@@ -6026,6 +6043,359 @@ fn declare_sum_range_swap(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), K
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sum_range_swap,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the diagonal reindexing (Cauchy product prerequisite) ------------------
+//
+// The `Complex` port of `nat_prelude/diagonal.rs`'s `Nat.sumRange_diagonal`:
+// same induction on `n`, `Equiv` in place of `Eq`. The ℕ proof threads its
+// equalities through an explicit `d.chain`; here every peeled `sumRange`
+// successor/zero case is instead left to the kernel's own δι-reduction
+// (mirroring `declare_sum_range_add`/`declare_sum_range_swap`'s own style
+// above), and only the genuine `Nat`-side theorems (`succ_sub_of_le`,
+// `sub_self`) go through an explicit `nat_eq_to_complex_equiv` lift.
+
+/// `fun j => F i j` — `F` partially applied at row `i`.
+fn diag_row_inner_c(d: &mut IntDev<'_>, ff: ExprId, i: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let fij = d.apply(ff, &[i, j]);
+    d.lam_fv(j_fv, nat, fij)
+}
+
+/// `fun i => sumRange (fun j => F i j) (sub bound i)` — one row of the
+/// row-major reindexing, out to `bound`.
+fn diag_row_fn_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId, bound: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let inner = diag_row_inner_c(d, ff, i);
+    let b = d.sub(bound, i);
+    let sr = d.const_app(p.sum_range, &[inner, b]);
+    d.lam_fv(i_fv, nat, sr)
+}
+
+/// `fun i => F i (sub k i)` — the antidiagonal `k`'s per-position summand.
+fn diag_inner_c(d: &mut IntDev<'_>, ff: ExprId, k: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let ki = d.sub(k, i);
+    let fiki = d.apply(ff, &[i, ki]);
+    d.lam_fv(i_fv, nat, fiki)
+}
+
+/// `fun k => sumRange (diag_inner_c F k) (succ k)` — one antidiagonal's sum.
+fn diag_t_fn_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let inner = diag_inner_c(d, ff, k);
+    let sk = d.succ(k);
+    let sr = d.const_app(p.sum_range, &[inner, sk]);
+    d.lam_fv(k_fv, nat, sr)
+}
+
+/// The triangle sum by ANTIDIAGONAL: `sumRange (diag_t_fn_c F) n`.
+fn diag_triangle_sum_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId, n: ExprId) -> ExprId {
+    let t = diag_t_fn_c(d, p, ff);
+    d.const_app(p.sum_range, &[t, n])
+}
+
+/// The triangle sum by ROW: `sumRange (diag_row_fn_c F n) n`.
+fn diag_row_sum_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId, n: ExprId) -> ExprId {
+    let r = diag_row_fn_c(d, p, ff, n);
+    d.const_app(p.sum_range, &[r, n])
+}
+
+/// `fun i => add (apply f i) (apply g i)` — matches [`declare_sum_range_add`]'s
+/// own internal combined-function shape exactly, so a `sumRange_add` instance
+/// against THIS function lines up (up to the kernel's defeq check).
+fn diag_combined_fn_c(d: &mut IntDev<'_>, p: ComplexPrelude, f: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let body = d.const_app(p.add, &[fi, gi]);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `∀ i, Lt i n → Equiv (diag_row_fn_c F (succ n) applied i) (add
+/// (diag_row_fn_c F n applied i) (diag_inner_c F n applied i))`.
+///
+/// For `i < n` (hence `i ≤ n`), `Nat.succ_sub_of_le` gives `sub (succ n) i =
+/// succ (sub n i)`; lifted into a `Complex` context via
+/// `nat_eq_to_complex_equiv`, this term's inferred type IS the pointwise fact
+/// up to the kernel's own δι-reduction of `sumRange`'s successor case — no
+/// separate peeling step is needed, unlike `nat_prelude/diagonal.rs`'s
+/// explicit `Eq` chain (there because `d.chain` is how that file threads `Eq`
+/// through several steps at once, not because the peeling itself needs a
+/// named lemma).
+fn diagonal_pointwise_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId, n: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let sn = d.succ(n);
+    let nat_p = d.prelude();
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hyp_ty = d.lt(i, n);
+    let hi_fv = d.fresh_fvar();
+    let hi = d.kernel().fvar(hi_fv);
+
+    // Le i n, from Lt i n (definitionally Le (succ i) n) via le_succ + le_trans.
+    let si = d.succ(i);
+    let le_succ_i = d.lemma(nat_p.le_succ, &[i]);
+    let le_i_n = d.lemma(nat_p.le_trans, &[i, si, n, le_succ_i, hi]);
+
+    // sub (succ n) i = succ (sub n i)
+    let h_sub = d.lemma(nat_p.succ_sub_of_le, &[n, i, le_i_n]);
+    let sub_n_i = d.sub(n, i);
+    let succ_sub_n_i = d.succ(sub_n_i);
+    let sub_sn_i = d.sub(sn, i);
+
+    let row_inner_i = diag_row_inner_c(d, ff, i);
+    let target_f =
+        |d: &mut IntDev<'_>, x: ExprId| -> ExprId { d.const_app(p.sum_range, &[row_inner_i, x]) };
+    let h_lift = nat_eq_to_complex_equiv(d, p, sub_sn_i, succ_sub_n_i, h_sub, &target_f);
+    // h_lift : Equiv(sumRange(row_inner_i, sub_sn_i), sumRange(row_inner_i, succ_sub_n_i)),
+    // whose RHS is defeq to add(diag_row_fn_c F n applied i, diag_inner_c F n
+    // applied i) by sumRange's own successor ι-rule, so the kernel accepts
+    // h_lift directly as the pointwise fact `sum_range_congr_lt` wants.
+
+    let with_hi = d.lam_fv(hi_fv, hyp_ty, h_lift);
+    d.lam_fv(i_fv, nat, with_hi)
+}
+
+/// `Equiv (diag_row_fn_c F (succ n) applied n) (F n Nat.zero)` — the
+/// row-major side's new `i = n` boundary term collapses to `F n 0`, via
+/// `succ_sub_of_le`/`sub_self` (lifted through `nat_eq_to_complex_equiv`,
+/// exactly as [`diagonal_pointwise_c`]) followed by one `ring_law_proof` step
+/// erasing the resulting leading `Complex.zero` — `Complex.add` has no
+/// standalone `zero_add`, only [`ComplexPrelude::add_zero`], and the ring
+/// calculus already decides `add zero x ~ x` without a hand-derived lemma.
+fn boundary_peel_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId, n: ExprId) -> ExprId {
+    let nat_p = d.prelude();
+    let sn = d.succ(n);
+    let row_inner_n = diag_row_inner_c(d, ff, n);
+
+    let le_refl_n = d.const_app(nat_p.le_refl, &[n]);
+    let h_b1 = d.lemma(nat_p.succ_sub_of_le, &[n, n, le_refl_n]); // sub(sn,n) = succ(sub n n)
+    let sub_nn = d.sub(n, n);
+    let succ_sub_nn = d.succ(sub_nn);
+    let sub_sn_n = d.sub(sn, n);
+
+    let h_b2 = d.lemma(nat_p.sub_self, &[n]); // sub n n = zero
+    let zero_n = d.zero();
+    let h_b2_lift = d.congr(sub_nn, zero_n, h_b2, &|d, x| d.succ(x)); // succ(sub n n) = succ zero
+    let succ_zero = d.succ(zero_n);
+    let h_sub_chain = d.trans(sub_sn_n, succ_sub_nn, succ_zero, h_b1, h_b2_lift);
+
+    let target_f =
+        |d: &mut IntDev<'_>, x: ExprId| -> ExprId { d.const_app(p.sum_range, &[row_inner_n, x]) };
+    let h_lift = nat_eq_to_complex_equiv(d, p, sub_sn_n, succ_zero, h_sub_chain, &target_f);
+    // h_lift : Equiv(sumRange(row_inner_n, sub_sn_n), sumRange(row_inner_n, succ_zero)),
+    // whose RHS is defeq — two nested `sumRange` ι-steps — to
+    // add(Complex.zero, F n Nat.zero).
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let f_n_zero = d.apply(ff, &[n, zero_n]);
+    let mid1 = d.const_app(p.add, &[zero_c, f_n_zero]);
+
+    let lhs_c = CExpr::add(CExpr::Zero, CExpr::var(d, p, f_n_zero));
+    let rhs_c = CExpr::var(d, p, f_n_zero);
+    let ring_step = ring_law_proof(d, p, &lhs_c, &rhs_c);
+
+    let a = d.const_app(p.sum_range, &[row_inner_n, sub_sn_n]);
+    d.lemma(p.equiv_trans, &[a, mid1, f_n_zero, h_lift, ring_step])
+}
+
+/// The successor step: given `ih : Equiv(T(n), R(n))`, prove `Equiv(T(succ
+/// n), R(succ n))` — see [`ComplexPrelude::sum_range_diagonal`] for `T`/`R`.
+///
+/// LHS: two nested `sumRange` successor ι-reductions expose `T(succ n)` as
+/// `add(T(n), add(S(n), F n (sub n n)))` (`S(n) := sumRange (diag_inner_c F
+/// n) n`, the antidiagonal-`n` row short one term); `sub_self` collapses `F n
+/// (sub n n)` to `F n 0`, and `ih` substitutes `T(n)` for `R(n)`, both via
+/// [`ComplexPrelude::add_congr`], landing on `add(R(n), add(S(n), F n 0))`.
+///
+/// RHS: one `sumRange` successor ι-reduction exposes `R(succ n)` as
+/// `add(sumRange(diag_row_fn_c F (succ n), n), diag_row_fn_c F (succ n)
+/// applied n)`; [`diagonal_pointwise_c`] under
+/// [`ComplexPrelude::sum_range_congr_lt`] grows the first summand's rows to
+/// match `diag_row_fn_c F n`'s own shape plus the antidiagonal-`n` row, which
+/// [`ComplexPrelude::sum_range_add`] then splits into `add(R(n), S(n))`;
+/// [`boundary_peel_c`] collapses the second summand to `F n 0`; and
+/// [`ComplexPrelude::add_assoc`] reassociates to the same `add(R(n), add(S(n),
+/// F n 0))` the LHS side reached.
+fn diagonal_step_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    ff: ExprId,
+    n: ExprId,
+    ih: ExprId,
+) -> ExprId {
+    let sn = d.succ(n);
+    let nat_p = d.prelude();
+
+    let t_n = diag_triangle_sum_c(d, p, ff, n);
+    let r_n = diag_row_sum_c(d, p, ff, n);
+
+    let dinner_n = diag_inner_c(d, ff, n);
+    let s_n = d.const_app(p.sum_range, &[dinner_n, n]);
+
+    let zero_n = d.zero();
+    let sub_nn = d.sub(n, n);
+    let f_n_subnn = d.apply(ff, &[n, sub_nn]);
+    let f_n_zero = d.apply(ff, &[n, zero_n]);
+
+    // ===== LHS: T(succ n) [up to ι] = add(T(n), add(S(n), F n (sub n n))) ====
+    let s_n_plus_f = d.const_app(p.add, &[s_n, f_n_subnn]);
+    let t_n_plus = d.const_app(p.add, &[t_n, s_n_plus_f]);
+    // t_n_plus is defeq to T(succ n) by two nested sumRange successor
+    // ι-reductions (the outer over `diag_t_fn_c F`, the inner over
+    // `diag_inner_c F n`).
+
+    // F n (sub n n) ~ F n zero, via sub_self lifted.
+    let h_sub_self = d.lemma(nat_p.sub_self, &[n]); // Eq(sub n n, zero)
+    let f_target = |d: &mut IntDev<'_>, x: ExprId| -> ExprId { d.apply(ff, &[n, x]) };
+    let h_fn = nat_eq_to_complex_equiv(d, p, sub_nn, zero_n, h_sub_self, &f_target);
+    // h_fn : Equiv(F n (sub n n), F n zero)
+
+    let refl_s_n = d.lemma(p.equiv_refl, &[s_n]);
+    let inner_congr = d.lemma(
+        p.add_congr,
+        &[s_n, s_n, f_n_subnn, f_n_zero, refl_s_n, h_fn],
+    );
+    // inner_congr : Equiv(s_n_plus_f, add(s_n, f_n_zero))
+    let s_plus_fn0 = d.const_app(p.add, &[s_n, f_n_zero]);
+    let lhs_target = d.const_app(p.add, &[r_n, s_plus_fn0]);
+
+    let lhs_final = d.lemma(
+        p.add_congr,
+        &[t_n, r_n, s_n_plus_f, s_plus_fn0, ih, inner_congr],
+    );
+    // lhs_final : Equiv(t_n_plus, lhs_target)
+
+    // ===== RHS: R(succ n) [up to ι] chains to the same lhs_target ===========
+    let row_fn_sn = diag_row_fn_c(d, p, ff, sn);
+    let row_fn_n = diag_row_fn_c(d, p, ff, n);
+    let sum_row_sn_n = d.const_app(p.sum_range, &[row_fn_sn, n]);
+    let row_fn_sn_n = d.apply(row_fn_sn, &[n]);
+    let r_start = d.const_app(p.add, &[sum_row_sn_n, row_fn_sn_n]);
+    // r_start is defeq to R(succ n) by one sumRange successor ι-reduction.
+
+    let combined_g = diag_combined_fn_c(d, p, row_fn_n, dinner_n);
+    let pointwise = diagonal_pointwise_c(d, p, ff, n);
+    let h_r2 = d.lemma(p.sum_range_congr_lt, &[row_fn_sn, combined_g, n, pointwise]);
+    let h_r3 = d.lemma(p.sum_range_add, &[row_fn_n, dinner_n, n]);
+    let sum_combined_n = d.const_app(p.sum_range, &[combined_g, n]);
+    let r_plus_s = d.const_app(p.add, &[r_n, s_n]);
+    let h_r_sum = d.lemma(
+        p.equiv_trans,
+        &[sum_row_sn_n, sum_combined_n, r_plus_s, h_r2, h_r3],
+    );
+
+    let refl_row_fn_sn_n = d.lemma(p.equiv_refl, &[row_fn_sn_n]);
+    let h_r1_lift = d.lemma(
+        p.add_congr,
+        &[
+            sum_row_sn_n,
+            r_plus_s,
+            row_fn_sn_n,
+            row_fn_sn_n,
+            h_r_sum,
+            refl_row_fn_sn_n,
+        ],
+    );
+    let r_mid2 = d.const_app(p.add, &[r_plus_s, row_fn_sn_n]);
+    // h_r1_lift : Equiv(r_start, r_mid2)
+
+    let h_bnd = boundary_peel_c(d, p, ff, n);
+    let refl_r_plus_s = d.lemma(p.equiv_refl, &[r_plus_s]);
+    let h_bnd_lift = d.lemma(
+        p.add_congr,
+        &[
+            r_plus_s,
+            r_plus_s,
+            row_fn_sn_n,
+            f_n_zero,
+            refl_r_plus_s,
+            h_bnd,
+        ],
+    );
+    let r_mid3 = d.const_app(p.add, &[r_plus_s, f_n_zero]);
+    // h_bnd_lift : Equiv(r_mid2, r_mid3)
+
+    let h_assoc = d.lemma(p.add_assoc, &[r_n, s_n, f_n_zero]);
+    // h_assoc : Equiv(r_mid3, lhs_target)   [add_assoc(a,b,c): Equiv(add(add(a,b),c), add(a,add(b,c)))]
+
+    let rhs_step1 = d.lemma(
+        p.equiv_trans,
+        &[r_start, r_mid2, r_mid3, h_r1_lift, h_bnd_lift],
+    );
+    let rhs_final = d.lemma(
+        p.equiv_trans,
+        &[r_start, r_mid3, lhs_target, rhs_step1, h_assoc],
+    );
+    // rhs_final : Equiv(r_start, lhs_target)
+    let rhs_final_symm = d.lemma(p.equiv_symm, &[r_start, lhs_target, rhs_final]);
+
+    d.lemma(
+        p.equiv_trans,
+        &[t_n_plus, lhs_target, r_start, lhs_final, rhs_final_symm],
+    )
+}
+
+/// `Complex.sumRange_diagonal`: see [`ComplexPrelude::sum_range_diagonal`]
+/// for the statement. Induction on `n`; the base case has both sides
+/// ι-reduce to `Complex.zero` directly (`sumRange`'s own `zero`-case ι-rule
+/// never evaluates its function argument), so `Equiv.refl zero` closes it,
+/// exactly as [`declare_sum_range_add`]'s own base case does.
+fn declare_sum_range_diagonal(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = complex_ty(d, p);
+    let fn2_ty = {
+        let inner = d.arrow(nat, carrier);
+        d.arrow(nat, inner)
+    };
+    let f_fv = d.fresh_fvar();
+    let ff = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let lhs = diag_triangle_sum_c(d, p, ff, x);
+        let rhs = diag_row_sum_c(d, p, ff, x);
+        zeq(d, p, lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero_c = d.kernel().const_(p.zero, vec![]);
+            d.lemma(p.equiv_refl, &[zero_c])
+        },
+        &|d, j, ih| diagonal_step_c(d, p, ff, j, ih),
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(f_fv, fn2_ty, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(f_fv, fn2_ty, over_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_diagonal,
         uparams: vec![],
         ty,
         value,

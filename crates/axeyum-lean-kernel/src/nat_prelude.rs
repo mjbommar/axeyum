@@ -148,8 +148,9 @@ mod order;
 mod order_extra;
 mod order_more;
 mod primes;
+mod rectangle;
 mod restrict_pair;
-mod transposition;
+pub(crate) mod transposition;
 
 pub use ops::{NatDev, NatOps, NatState};
 
@@ -183,6 +184,7 @@ use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
 use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
+use rectangle::declare_rectangle;
 use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
@@ -935,6 +937,34 @@ pub struct NatPrelude {
     /// further propositions).
     pub sum_range_diagonal: NameId,
 
+    // --- `rectangle = triangle + corner` (`rectangle.rs`) -------------------
+    /// `Nat.sumRange_split : ∀ f m j,
+    ///   sumRange f (add m j) = add (sumRange f m) (sumRange (fun k => f (add m k)) j)`
+    /// — splitting a finite sum at an arbitrary point, quantified over the
+    /// split point `m` and the tail length `j` directly (bound `:= m+j`)
+    /// rather than over `m ≤ n`, so the proof (induction on `j`, `f`/`m` held
+    /// fixed) never touches `Nat.sub` — the same shape
+    /// `Rat.prob_complement`'s private `sum_range_split` uses. ℝ
+    /// (`CRealPrelude::sum_range_split`) and ℂ (`ComplexPrelude::sum_range_split`)
+    /// already had this; ℕ did not.
+    pub sum_range_split: NameId,
+    /// `Nat.sumRange_rect_eq_diag_add_corner : ∀ F n,
+    ///   sumRange (fun i => sumRange (fun j => F i j) n) n
+    ///     = add (sumRange (fun k => sumRange (fun i => F i (sub k i)) (succ k)) n)
+    ///           (sumRange (fun i => sumRange (fun k => F i (add (sub n i) k)) i) n)`
+    /// — `rectangle = triangle + corner`: the RECTANGLE sum `Σ_{i<n} Σ_{j<n}
+    /// F i j` equals the antidiagonal TRIANGLE (`sumRange_diagonal`'s own
+    /// LHS, the sum over `{(i,j) : i+j<n}`) plus the CORNER (the sum over
+    /// `{(i,j) : i<n, j<n, i+j≥n}`, row `i`'s width-`i` suffix reindexed from
+    /// `n−i`). This is the correct replacement for the FALSE naive finite
+    /// Cauchy identity `(Σ a)·(Σ b) = Σ_{k<n} Σ_{i≤k} a i · b(k−i)` — false at
+    /// `n=2` already, where the rectangle's `a1 b1` term is outside the
+    /// triangle. Proved by splitting every row via `sumRange_split` at
+    /// `n=(n−i)+i` (pointwise for `i<n`, lifted via `sumRange_congr_lt`),
+    /// regrouping via `sumRange_add`, then replacing the row-major half by
+    /// the triangle via [`Self::sum_range_diagonal`].
+    pub sum_range_rect_eq_diag_add_corner: NameId,
+
     /// `Nat.restrict_pair_injective : ∀ σ i j n,
     /// InjectiveOn σ (succ (succ n)) → Lt i j → Lt j (succ (succ n)) →
     /// setwise_fixed σ i j →
@@ -1241,6 +1271,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             setwise_fixed: kernel.name_str(nat, "setwise_fixed"),
             add_sub_cancel_of_le: kernel.name_str(nat, "add_sub_cancel_of_le"),
             sum_range_diagonal: kernel.name_str(nat, "sumRange_diagonal"),
+            sum_range_split: kernel.name_str(nat, "sumRange_split"),
+            sum_range_rect_eq_diag_add_corner: kernel
+                .name_str(nat, "sumRange_rect_eq_diag_add_corner"),
             restrict_pair_injective: kernel.name_str(nat, "restrict_pair_injective"),
             restrict_pair_maps_into: kernel.name_str(nat, "restrict_pair_maps_into"),
         };
@@ -1294,6 +1327,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_restrict_pair_injective(&mut d, &p)?;
         declare_restrict_pair_maps_into(&mut d, &p)?;
         declare_diagonal(&mut d, &p)?;
+        declare_rectangle(&mut d, &p)?;
         Ok(p)
     })();
     match built {

@@ -108,7 +108,7 @@ pub(super) fn declare_add_sub_cancel_of_le(
 // ---------------------------------------------------------------------------
 
 /// `fun j => F i j`, i.e. `F` partially applied at the fixed row index `i`.
-fn row_inner(d: &mut NatDev<'_>, ff: ExprId, i: ExprId) -> ExprId {
+pub(super) fn row_inner(d: &mut NatDev<'_>, ff: ExprId, i: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let j_fv = d.fresh_fvar();
     let j = d.kernel().fvar(j_fv);
@@ -118,7 +118,7 @@ fn row_inner(d: &mut NatDev<'_>, ff: ExprId, i: ExprId) -> ExprId {
 
 /// `fun i => sumRange (fun j => F i j) (sub bound i)` — one row of the
 /// row-major reindexing, out to `bound`.
-fn row_fn(d: &mut NatDev<'_>, ff: ExprId, bound: ExprId) -> ExprId {
+pub(super) fn row_fn(d: &mut NatDev<'_>, ff: ExprId, bound: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let i_fv = d.fresh_fvar();
     let i = d.kernel().fvar(i_fv);
@@ -150,13 +150,13 @@ fn t_fn(d: &mut NatDev<'_>, ff: ExprId) -> ExprId {
 }
 
 /// The triangle sum by ANTIDIAGONAL: `sumRange (t_fn F) n`.
-fn triangle_sum(d: &mut NatDev<'_>, ff: ExprId, n: ExprId) -> ExprId {
+pub(super) fn triangle_sum(d: &mut NatDev<'_>, ff: ExprId, n: ExprId) -> ExprId {
     let t = t_fn(d, ff);
     d.sum_range(t, n)
 }
 
 /// The triangle sum by ROW: `sumRange (row_fn F n) n`.
-fn row_sum(d: &mut NatDev<'_>, ff: ExprId, n: ExprId) -> ExprId {
+pub(super) fn row_sum(d: &mut NatDev<'_>, ff: ExprId, n: ExprId) -> ExprId {
     let r = row_fn(d, ff, n);
     d.sum_range(r, n)
 }
@@ -165,7 +165,7 @@ fn row_sum(d: &mut NatDev<'_>, ff: ExprId, n: ExprId) -> ExprId {
 /// internal combined function shape exactly, so a `sumRange_add` instance's
 /// inferred type lines up (up to the kernel's defeq check) with a sum built
 /// against THIS function.
-fn combined_fn(d: &mut NatDev<'_>, f: ExprId, g: ExprId) -> ExprId {
+pub(super) fn combined_fn(d: &mut NatDev<'_>, f: ExprId, g: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let i_fv = d.fresh_fvar();
     let i = d.kernel().fvar(i_fv);

@@ -180,8 +180,9 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 108] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 109] {
     [
+        p.prod_range_pairing_collapse,
         p.factorial_zero,
         p.factorial_succ,
         p.self_inverse_mod_prime,
@@ -1717,3 +1718,50 @@ fn factorial_computes_and_rejects_a_false_value() {
         "the trusted gate accepted a false claim that factorial 4 = 23"
     );
 }
+
+/// **The pairing collapse carries every hypothesis it needs, and no more.**
+/// An empty axiom footprint cannot distinguish this theorem from one that
+/// dropped `∀k<n, σ k ≠ k` — and that one is FALSE: without fixed-point
+/// freedom, `σ = id` satisfies the involution and the pairing premises while
+/// `prodRange F n` is `∏ F k`, not `∏ F k · F (σ k)`. So the statement is
+/// pinned character for character, and the two premises whose loss would make
+/// it false are asserted by name first.
+///
+/// Note also what is NOT here: no primality of `x0`. The collapse is a fact
+/// about involutions without fixed points, and it holds for any positive
+/// modulus. Primality enters only later, when `σ := Nat.inverseIndex p` is
+/// supplied and one has to know the pairing exists.
+#[test]
+fn the_pairing_collapse_keeps_its_fixed_point_free_premise() {
+    use crate::env::Declaration;
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let ty = match k
+        .environment()
+        .get(p.prod_range_pairing_collapse)
+        .expect("Int.prod_range_pairing_collapse must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => k.render_lean(*ty),
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+
+    assert!(
+        ty.contains("Not (Eq.{1} AxNat (x4 x7) x7)"),
+        "dropping fixed-point freedom makes this FALSE at σ = id: {ty}"
+    );
+    assert!(
+        ty.contains("Eq.{1} AxNat (x4 (x4 x8)) x8"),
+        "dropping the involution premise makes the pairing unusable: {ty}"
+    );
+    assert!(
+        !ty.contains("Prime"),
+        "the collapse must NOT require primality -- it is a fact about \
+         fixed-point-free involutions, and requiring a prime modulus would \
+         narrow it to Wilson's own use: {ty}"
+    );
+    assert_eq!(ty, PROD_RANGE_PAIRING_COLLAPSE_TYPE);
+}
+
+/// The pinned type of [`IntPrelude::prod_range_pairing_collapse`].
+const PROD_RANGE_PAIRING_COLLAPSE_TYPE: &str = "((x0 : Int) -> ((x1 : Int.lt Int.zero x0) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> Int)) -> ((x4 : ((x4 : AxNat) -> AxNat)) -> ((x5 : AxNat.injectiveOn x4 x2) -> ((x6 : AxNat.mapsInto x4 x2) -> ((x7 : ((x7 : AxNat) -> ((x8 : AxNat.lt x7 x2) -> Not (Eq.{1} AxNat (x4 x7) x7)))) -> ((x8 : ((x8 : AxNat) -> ((x9 : AxNat.lt x8 x2) -> Eq.{1} AxNat (x4 (x4 x8)) x8))) -> ((x9 : ((x9 : AxNat) -> ((x10 : AxNat.lt x9 x2) -> Int.ModEq x0 (Int.mul (x3 x9) (x3 (x4 x9))) Int.one))) -> Int.ModEq x0 (Int.prodRange x3 x2) Int.one))))))))))";

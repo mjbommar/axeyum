@@ -8,9 +8,12 @@
 //! permutation proof `Nat.inverseIndex_maps_into` /
 //! `Nat.inverseIndex_injective`, the fixed-point characterisation that
 //! decides Wilson's sign — `Nat.inverseIndex_fixed_point` — and, still later
-//! the same day, `Nat.inverseIndex_involutive` (`σ` is its own inverse),
-//! landed as the missing linchpin the interior-collapse induction needs (see
-//! "What Wilson is blocked on now", below).
+//! the same day, `Nat.inverseIndex_involutive` (`σ` is its own inverse). And,
+//! also 2026-08-24: `Int.prod_range_pairing_collapse`, the interior-collapse
+//! induction itself (see "The interior collapse", below) — a fixed-point-free
+//! involution pairing up a domain, with every pair's product `≡ 1`, collapses
+//! the whole `prodRange` to `1`. It does not yet wire into Wilson's own
+//! `σ := Nat.inverseIndex p`; that section says exactly what remains.
 //!
 //! ## What lands here, and what does not
 //!
@@ -105,90 +108,62 @@
 //! the collapse argument below, and every route to that argument this session
 //! explored needed it.
 //!
-//! ## What Wilson is blocked on now, measured 2026-08-24
+//! ## The interior collapse: `Int.prod_range_pairing_collapse`, landed 2026-08-24
 //!
-//! Every ingredient the permutation argument needs is landed and axiom-free:
-//! a concrete `σ := Nat.inverseIndex p`, its `InjectiveOn`/`MapsInto`/
-//! involution proofs, its fixed-point characterisation, and
-//! `Int.prodRange_permute` itself. What is **not** yet built is the
-//! *collapse* argument Wilson's theorem needs on top of the permutation: `σ`
-//! pairs each survivor with its distinct inverse, and the fixed-point lemma
-//! now says in advance which two indices are their own image under `σ`, but
-//! turning "the product over a permuted range, where all but two factors
-//! cancel pairwise against their partner" into a closed form is still a
-//! genuinely new inductive argument — not a data-plumbing exercise like the
-//! pieces above.
+//! The *collapse* argument Wilson's theorem needs on top of the permutation
+//! — "a fixed-point-free involution pairing up `[0,n)`, with every pair's
+//! product `≡ 1`, collapses the whole `prodRange` to `1`" — is now proved,
+//! axiom-free, as its own reusable lemma: `Int.prod_range_pairing_collapse`
+//! (`∀ bigp, 0 < bigp → ∀ n F σ, InjectiveOn σ n → MapsInto σ n →
+//! (∀k<n, σk≠k) → (∀k<n, σ(σk)=k) → (∀k<n, ModEq bigp (F k * F(σ k)) one) →
+//! ModEq bigp (prodRange F n) one`, declared at the bottom of this file).
 //!
-//! **This is harder than "a swap/override induction removing one matched
-//! pair at a time" made it sound**, and the gap is now measured, not just
-//! estimated. `Int.prodRange_permute`'s own induction (`permute_step`,
-//! `prod.rs`) removes exactly **one** index per structural step — pigeonhole
-//! locates `i0` with `σ i0 = n` (the domain's own top index), and the
-//! recursive call is at domain `n` with an *overridden* `τ`, never at domain
-//! `n - 1` with `n` and `i0`'s CONTRIBUTIONS actually gone. That machinery
-//! provably cannot be reused unchanged: unwinding it all the way down (as
-//! this file confirmed by hand-tracing `permute_branch_swap`'s own peeled
-//! factor at every level) reconstructs `prodRange F N` from itself term by
-//! term — a tautology, because `F` never changes and only `σ` does, so it
-//! carries no information about which pairs multiply to `1`. Getting the
-//! *sign* (not just the square, which `factorial_sq_modeq_one` already gets
-//! for free) genuinely requires removing **two** positions' contributions
-//! together, which needs domain `N → N - 2` in one step, not `N → N - 1`.
+//! Two design choices differ from the plan this doc previously carried,
+//! discovered while actually building it:
 //!
-//! The design that closes that gap, worked out and cross-checked against the
-//! existing `prod.rs` machinery this session (not yet built):
+//! - **No `WellFounded.fix`.** The step always decreases the domain by
+//!   exactly 2, so ordinary two-step structural induction suffices: prove
+//!   `And (family n) (family (succ n))` together by plain `Nat.rec`, and the
+//!   step case's `family (succ n)` component is available for free from the
+//!   IH's right half, while the real work — `family (succ (succ m))` from
+//!   `family m` — reads off the IH's LEFT half. No well-founded recursion
+//!   principle, no second induction scheme.
+//! - **No conjugation via `prod.rs`'s `point_swap`+`restrict_pair`.** The
+//!   step (`family_succ_succ_proof`, `case_a_body`/`case_b_body`) locates
+//!   `i0 := σ(succ m)`, the top index's partner (`σ i0 = succ m` for free by
+//!   involution). If `i0 = m` the pair is already at the top: peel it via two
+//!   `prodRange_succ` unfoldings and recurse directly (`peel_and_close`,
+//!   shared by both cases — its `MapsInto`-on-the-smaller-domain half is the
+//!   one genuine closure argument, via injectivity excluding the two removed
+//!   positions). Otherwise (`i0 < m`) conjugate `σ` by a two-point swap
+//!   `τ := tau_raw i0 m` — a **local, `IntDev`-native** copy of
+//!   `Nat.transposition`'s own four-`Nat.ble`-cut construction and its five
+//!   correctness facts (`tau_level2/3/4`, `tau_eq_lt_i`/`_at_i`/`_between`/
+//!   `_at_j`/`_gt_j`, `tau_involutive_forall`, `tau_maps_into_forall`) rather
+//!   than `nat_prelude/transposition.rs`'s own `Nat.transposition`: that
+//!   file's helpers are typed concretely over `NatDev`, not generic over
+//!   `NatOps`, so they are not callable from `IntDev` without a signature
+//!   change to a file another lane may be editing. `σ' := τ∘σ∘τ`'s
+//!   `InjectiveOn`/`MapsInto` come from the PUBLIC, already-generic
+//!   `Nat.conjugate_injective`/`conjugate_maps_into`
+//!   (`nat_prelude/transposition.rs`) fed this local `τ`; its
+//!   fixed-point-freeness, involution, and the conjugated pairwise congruence
+//!   are each a few lines of `τ∘τ = id` cancellation (`case_b_body`). The
+//!   product side reuses `int_prelude/prod.rs`'s existing `Int`-valued
+//!   `point_swap` and its `general_swap_agree` (both exposed `pub(super)` for
+//!   this) plus `Int.prodRange_swap` directly — no new `Int`-valued swap
+//!   machinery was needed, only the `Nat`-valued one for the index side.
 //!
-//! 1. **Strong induction on the domain size**, via `WellFounded.fix` over
-//!    `Nat.lt` exactly as `nat_prelude/gcd.rs`'s `declare_gcd_semantics`
-//!    already does to prove `gcd_dvd` (`p.nat.lt_well_founded` +
-//!    `p.logic.well_founded_fix`, family `fun n => ∀ F σ, [hyps] → ModEq p
-//!    (prodRange F n) 1`, recursive-IH type `∀ m, m < n → family m`) — this
-//!    is what makes "recurse at `n - 2`" a single step instead of needing a
-//!    second bespoke induction principle.
-//! 2. **Global hypotheses, not per-branch ones**: state the lemma for `σ`
-//!    fixed-point-free on the *entire* domain (`∀ k < n, σ k ≠ k`) and the
-//!    pairwise congruence `∀ k < n, ModEq p (F k * F (σ k)) 1` holding for
-//!    *every* `k` (both are what the interior application actually has, via
-//!    `inverseIndex_fixed_point`). This removes the "`i0 = n`" fixed branch
-//!    entirely — it becomes a one-line `absurd` against the global hypothesis
-//!    — leaving only the general case to handle, unlike `permute_step`'s two
-//!    real branches.
-//! 3. **The `N → N - 2` step, using the involution**: pigeonhole for the
-//!    *preimage* of the top index is not needed — `inverseIndex_involutive`
-//!    means the top index `n - 1`'s partner is `i0 := σ (n-1)` directly, and
-//!    `σ i0 = n - 1` for free (no separate search). If `i0 = n - 2`, peel the
-//!    last two factors off `prodRange F n` directly (two `prodRange_succ`
-//!    unfoldings) — their product is `F(n-2) * F(σ(n-2)) = F(n-2)*F(n-1) ≡ 1`
-//!    by involution (`σ(n-2) = σ(σ(n-1)) = n-1`) — and the IH applies to
-//!    `prodRange F (n-2)` with the *same* `F` and `σ` (restricted; injectivity
-//!    alone forces nothing else maps into `{n-2,n-1}`, since `σ` already maps
-//!    both of them there). Otherwise (`i0 < n-2`), conjugate `σ` by the
-//!    transposition `τ := (i0, n-2)` (`prod.rs`'s existing `point_swap`
-//!    machinery builds `τ` and its case-equalities already): `σ' := τ∘σ∘τ`.
-//!    Involution makes `σ'` fix `{n-2,n-1}` **setwise**
-//!    (`σ'(n-2)=n-1,σ'(n-1)=n-2`, a two-line computation from `σ(n-1)=i0` and
-//!    `σ(i0)=n-1`), which is exactly what licenses restricting `σ'` to
-//!    `[0,n-2)`; and `H := F∘τ` (via `Int.prodRange_swap`, already landed,
-//!    giving `prodRange F n = prodRange H n` exactly) satisfies `H(k)*H(σ'
-//!    k) = F(τ k)*F(σ(τ k))` — the *original* pairwise hypothesis at `τ k` —
-//!    so the recursive call is `IH` at `(n-2, H, σ')`.
-//! 4. **What step 3 still needs, unbuilt**: (a) the "conjugating an
-//!    `InjectiveOn`/`MapsInto` self-map by a transposition preserves both"
-//!    lemma (standard, but not present — `Nat.restrict_injective`/
-//!    `restrict_maps_into` are built for *removing the top index via
-//!    override*, a different operation, not reusable here without
-//!    adaptation); (b) "a bijection of `[0,n)` fixing a two-element subset
-//!    setwise restricts to a bijection of the complement" (also standard, also
-//!    not present); (c) that global fixed-point-freeness transports through
-//!    conjugation (needs its own short case split); (d) the interior
-//!    application's *own* setup — showing the shifted `σ` is fixed-point-free
-//!    and `InjectiveOn`/`MapsInto` on the interior domain specifically needs
-//!    `σ 0 = 0` and `σ (p-2) = p-2` as *equations*, which this file's own
-//!    comments have twice noted are "immediate unfoldings this development
-//!    has not needed to name" — they still are not named. None of (a)–(d) is
-//!    large individually, but together they are comparable in size to
-//!    `Nat.restrict_injective`/`restrict_maps_into` combined, i.e. a second
-//!    substantial induction-adjacent development, not a short follow-up.
+//! **Not yet built**: the wiring from this generic lemma to Wilson's own
+//! `σ := Nat.inverseIndex p`. That still needs, per the module doc at the top
+//! of this file, `σ 0 = 0` and `σ (p-2) = p-2` as *equations* (still not
+//! named — task 1's own remaining blocker), plus reindexing the interior
+//! domain `{1,…,p-3}` (peeling the two boundary positions off `prodRange`,
+//! e.g. via `prodRange_succ` applied twice at the front and once at `p-2`,
+//! rather than the general `restrict_pair`/`expand_pair` machinery, which
+//! is unnecessary once the two removed positions are literally the domain's
+//! own first and last index). `Int.factorial_interior_modeq_one` and
+//! `Int.wilson` are **not** declared here.
 //!
 //! Wilson's theorem itself is **not** declared here — that is its own slice —
 //! but the rearrangement principle
@@ -2508,4 +2483,1551 @@ pub(super) fn declare_factorial_sq_modeq_one(d: &mut IntDev<'_>) -> Result<(), K
         (stmt, proof)
     })?;
     Ok(())
+}
+
+// ============================================================================
+// `Int.prod_range_pairing_collapse` — the interior collapse, landed
+// 2026-08-24. This is the "collapse lemma" the module doc above (What Wilson
+// is blocked on now) describes as unbuilt: given a fixed-point-free
+// involution `σ` pairing up `[0,n)`, where every pair's product is `≡ 1
+// [bigp]`, the WHOLE product `prodRange F n` is `≡ 1 [bigp]`.
+//
+// Proved by "two-step" structural induction on `n` — `And (family n) (family
+// (succ n))`, both halves proved together by ordinary `Nat.rec` — which needs
+// no `WellFounded.fix`: the recursive step always decreases the domain by
+// exactly 2, and `family n` is available as the LEFT half of the induction
+// hypothesis one step later, at `succ n`.
+//
+// The step (`family (succ (succ m))`, from `ih_lo : family m`): `σ`'s own
+// involution pairs the top index `succ m` with `i0 := σ (succ m)`. If
+// `i0 = m` the pair is already at the top: peel both factors via two
+// `prodRange_succ` unfoldings and recurse directly (`peel_and_close`, the
+// case-independent closing argument). Otherwise (`i0 < m`) conjugate `σ` by
+// the transposition `τ := transposition i0 m`
+// (`Nat.transposition`/`Nat.conjugate_injective`/`Nat.conjugate_maps_into`,
+// `nat_prelude/transposition.rs`): conjugation moves the swap to the top
+// (`σ' m = succ m`, `σ' (succ m) = m`) and — because `τ` is its own inverse —
+// PRESERVES fixed-point-freeness and involution, and composed with `F` it
+// preserves the pairwise congruence at the conjugated index; this lands back
+// in the direct case with `G := F ∘ τ` and `σ'` in place of `F` and `σ`, and
+// `peel_and_close` finishes it the same way.
+// ============================================================================
+
+// --- small order helpers, local to this section ----------------------------
+
+/// `h : Lt a b ⊢ Le a b`.
+fn le_of_lt_local(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let p = d.int();
+    let sa = d.succ(a);
+    let le_a_sa = d.lemma(p.nat.le_succ, &[a]);
+    d.lemma(p.nat.le_trans, &[a, sa, b, le_a_sa, h])
+}
+
+/// `h : Lt a b ⊢ Not (Eq Nat a b)`.
+fn ne_of_lt_local(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let p = d.int();
+    let heq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(heq_fv);
+    let eq_ty = d.eq(a, b);
+    let motive = d.eq_motive(a, &|d, x| d.lt(x, b));
+    let transported = d.transport(a, motive, h, b, heq); // Lt b b
+    let refuted = d.lemma(p.nat.not_succ_le_self, &[b]); // Not (Le (succ b) b)
+    let false_pf = d.apply(refuted, &[transported]);
+    d.lam_fv(heq_fv, eq_ty, false_pf)
+}
+
+/// `hle : Le x y`, `hne : Not (Eq Nat x y) ⊢ Lt x y`.
+fn lt_of_le_ne(d: &mut IntDev<'_>, x: ExprId, y: ExprId, hle: ExprId, hne: ExprId) -> ExprId {
+    let p = d.int();
+    let case = d.lemma(p.nat.lt_or_eq_of_le, &[x, y, hle]);
+    let lt_ty = d.lt(x, y);
+    let eq_ty = d.eq(x, y);
+    d.or_elim(lt_ty, eq_ty, lt_ty, case, &|_d, h| h, &move |d, h| {
+        let f = d.apply(hne, &[h]);
+        d.absurd(lt_ty, f)
+    })
+}
+
+/// `hkm : Lt k m ⊢ Lt k (succ (succ m))`.
+fn lt_below_n2(d: &mut IntDev<'_>, k: ExprId, m: ExprId, hkm: ExprId) -> ExprId {
+    let p = d.int();
+    let sm = d.succ(m);
+    let n2 = d.succ(sm);
+    let le_m_sm = d.lemma(p.nat.le_succ, &[m]);
+    let le_sm_n2 = d.lemma(p.nat.le_succ, &[sm]);
+    let le_m_n2 = d.lemma(p.nat.le_trans, &[m, sm, n2, le_m_sm, le_sm_n2]);
+    d.lemma(p.nat.lt_of_lt_of_le, &[k, m, n2, hkm, le_m_n2])
+}
+
+/// `hx_lt_n2 : Lt x (succ (succ m))`, `hx_ne_m : Not (Eq Nat x m)`,
+/// `hx_ne_sm : Not (Eq Nat x (succ m)) ⊢ Lt x m`.
+fn closure_lt_m(
+    d: &mut IntDev<'_>,
+    x: ExprId,
+    m: ExprId,
+    hx_lt_n2: ExprId,
+    hx_ne_m: ExprId,
+    hx_ne_sm: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let sm = d.succ(m);
+    let le_x_sm = d.lemma(p.nat.le_of_lt_succ, &[x, sm, hx_lt_n2]);
+    let lt_x_sm = lt_of_le_ne(d, x, sm, le_x_sm, hx_ne_sm);
+    let le_x_m = d.lemma(p.nat.le_of_lt_succ, &[x, m, lt_x_sm]);
+    lt_of_le_ne(d, x, m, le_x_m, hx_ne_m)
+}
+
+/// `heq : Eq Nat (sigma k) target`, `target_eq_sigma_w : Eq Nat (sigma w) target`,
+/// `hk_n2 : Lt k n2`, `hw_n2 : Lt w n2`, `k_lt_w : Lt k w` ⊢ `False` —
+/// `sigma k = sigma w` (both equal `target`) forces `k = w` by injectivity,
+/// contradicting `k < w`.
+#[allow(clippy::too_many_arguments)]
+fn contradiction_via_injectivity(
+    d: &mut IntDev<'_>,
+    sigma: ExprId,
+    inj: ExprId,
+    k: ExprId,
+    w: ExprId,
+    target: ExprId,
+    heq: ExprId,
+    target_eq_sigma_w: ExprId,
+    hk_n2: ExprId,
+    hw_n2: ExprId,
+    k_lt_w: ExprId,
+) -> ExprId {
+    let sw = d.apply(sigma, &[w]);
+    let target_eq_sw_rev = d.symm(sw, target, target_eq_sigma_w);
+    let sk = d.apply(sigma, &[k]);
+    let sk_eq_sw = d.trans(sk, target, sw, heq, target_eq_sw_rev);
+    let k_eq_w = d.apply(inj, &[k, w, hk_n2, hw_n2, sk_eq_sw]);
+    let k_ne_w = ne_of_lt_local(d, k, w, k_lt_w);
+    d.apply(k_ne_w, &[k_eq_w])
+}
+
+// --- statement builders ------------------------------------------------------
+
+/// `Nat → Int`.
+fn nat_to_int_ty(d: &mut IntDev<'_>) -> ExprId {
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+    d.arrow(nat, int_ty)
+}
+
+/// `Nat → Nat`.
+fn nat_to_nat_ty(d: &mut IntDev<'_>) -> ExprId {
+    let nat = d.nat_ty();
+    d.arrow(nat, nat)
+}
+
+/// `∀ k, Lt k bound → prop(k)`.
+fn forall_below(
+    d: &mut IntDev<'_>,
+    bound: ExprId,
+    prop: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk_ty = d.lt(k, bound);
+    let body = prop(d, k);
+    let arrowed = d.arrow(hk_ty, body);
+    d.pi_fv(k_fv, nat, arrowed)
+}
+
+/// `∀ k, Lt k m → Not (Eq Nat (sigma k) k)`.
+fn fpf_ty(d: &mut IntDev<'_>, sigma: ExprId, m: ExprId) -> ExprId {
+    forall_below(d, m, &|d, k| {
+        let sk = d.apply(sigma, &[k]);
+        let eq_ = d.eq(sk, k);
+        d.not(eq_)
+    })
+}
+
+/// `∀ k, Lt k m → Eq Nat (sigma (sigma k)) k`.
+fn invol_ty(d: &mut IntDev<'_>, sigma: ExprId, m: ExprId) -> ExprId {
+    forall_below(d, m, &|d, k| {
+        let sk = d.apply(sigma, &[k]);
+        let ssk = d.apply(sigma, &[sk]);
+        d.eq(ssk, k)
+    })
+}
+
+/// `∀ k, Lt k m → ModEq bigp (mul (f k) (f (sigma k))) one`.
+fn pairwise_ty(d: &mut IntDev<'_>, bigp: ExprId, f: ExprId, sigma: ExprId, m: ExprId) -> ExprId {
+    forall_below(d, m, &|d, k| {
+        let fk = d.apply(f, &[k]);
+        let sk = d.apply(sigma, &[k]);
+        let fsk = d.apply(f, &[sk]);
+        let prod = d.imul(fk, fsk);
+        let one_i = d.ione();
+        super::modeq::imodeq(d, bigp, prod, one_i)
+    })
+}
+
+/// `family(m) : ∀ F σ, InjectiveOn σ m → MapsInto σ m → (fpf) → (invol) →
+/// (pairwise) → ModEq bigp (prodRange F m) one`.
+fn family_stmt(d: &mut IntDev<'_>, bigp: ExprId, m: ExprId) -> ExprId {
+    let p = d.int();
+    let fn_int_ty = nat_to_int_ty(d);
+    let fn_nat_ty = nat_to_nat_ty(d);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+
+    let inj_ty = d.const_app(p.nat.injective_on, &[sigma, m]);
+    let maps_ty = d.const_app(p.nat.maps_into, &[sigma, m]);
+    let fpf = fpf_ty(d, sigma, m);
+    let invol = invol_ty(d, sigma, m);
+    let pairwise = pairwise_ty(d, bigp, f, sigma, m);
+
+    let concl = {
+        let pr = d.const_app(p.prod_range, &[f, m]);
+        let one_i = d.ione();
+        super::modeq::imodeq(d, bigp, pr, one_i)
+    };
+
+    let after_hyps = {
+        let w1 = d.arrow(pairwise, concl);
+        let w2 = d.arrow(invol, w1);
+        let w3 = d.arrow(fpf, w2);
+        let w4 = d.arrow(maps_ty, w3);
+        d.arrow(inj_ty, w4)
+    };
+    let with_sigma = d.pi_fv(sigma_fv, fn_nat_ty, after_hyps);
+    d.pi_fv(f_fv, fn_int_ty, with_sigma)
+}
+
+/// `And (family m) (family (succ m))`.
+fn strengthened_stmt(d: &mut IntDev<'_>, bigp: ExprId, m: ExprId) -> ExprId {
+    let fam_m = family_stmt(d, bigp, m);
+    let sm = d.succ(m);
+    let fam_sm = family_stmt(d, bigp, sm);
+    d.and(fam_m, fam_sm)
+}
+
+// --- base case: family(0), family(1) ----------------------------------------
+
+/// `family(0)` — vacuous: `prodRange F zero` is defeq `one`, so
+/// `ModEq.refl` closes it directly.
+fn family_zero_proof(d: &mut IntDev<'_>, bigp: ExprId) -> ExprId {
+    let p = d.int();
+    let fn_int_ty = nat_to_int_ty(d);
+    let fn_nat_ty = nat_to_nat_ty(d);
+    let zero = d.zero();
+
+    let f_fv = d.fresh_fvar();
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+    let inj_ty = d.const_app(p.nat.injective_on, &[sigma, zero]);
+    let maps_ty = d.const_app(p.nat.maps_into, &[sigma, zero]);
+    let fpf = fpf_ty(d, sigma, zero);
+    let invol = invol_ty(d, sigma, zero);
+    let pairwise = {
+        let f = d.kernel().fvar(f_fv);
+        pairwise_ty(d, bigp, f, sigma, zero)
+    };
+
+    let inj_fv = d.fresh_fvar();
+    let maps_fv = d.fresh_fvar();
+    let fpf_fv = d.fresh_fvar();
+    let invol_fv = d.fresh_fvar();
+    let pairwise_fv = d.fresh_fvar();
+
+    let one_i = d.ione();
+    let body = d.const_app(p.mod_eq_refl, &[bigp, one_i]);
+
+    let with_pairwise = d.lam_fv(pairwise_fv, pairwise, body);
+    let with_invol = d.lam_fv(invol_fv, invol, with_pairwise);
+    let with_fpf = d.lam_fv(fpf_fv, fpf, with_invol);
+    let with_maps = d.lam_fv(maps_fv, maps_ty, with_fpf);
+    let with_inj = d.lam_fv(inj_fv, inj_ty, with_maps);
+    let with_sigma = d.lam_fv(sigma_fv, fn_nat_ty, with_inj);
+    d.lam_fv(f_fv, fn_int_ty, with_sigma)
+}
+
+/// `family(1)` — vacuous by contradiction: `MapsInto σ 1` forces `σ 0 = 0`,
+/// contradicting the fixed-point-free hypothesis at `0`.
+fn family_one_proof(d: &mut IntDev<'_>, bigp: ExprId) -> ExprId {
+    let p = d.int();
+    let fn_int_ty = nat_to_int_ty(d);
+    let fn_nat_ty = nat_to_nat_ty(d);
+    let zero = d.zero();
+    let one_n = d.succ(zero);
+
+    let f_fv = d.fresh_fvar();
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+    let inj_ty = d.const_app(p.nat.injective_on, &[sigma, one_n]);
+    let maps_ty = d.const_app(p.nat.maps_into, &[sigma, one_n]);
+    let fpf = fpf_ty(d, sigma, one_n);
+    let invol = invol_ty(d, sigma, one_n);
+    let pairwise = {
+        let f = d.kernel().fvar(f_fv);
+        pairwise_ty(d, bigp, f, sigma, one_n)
+    };
+
+    let inj_fv = d.fresh_fvar();
+    let maps_fv = d.fresh_fvar();
+    let maps = d.kernel().fvar(maps_fv);
+    let fpf_fv = d.fresh_fvar();
+    let fpf_p = d.kernel().fvar(fpf_fv);
+    let invol_fv = d.fresh_fvar();
+    let pairwise_fv = d.fresh_fvar();
+
+    let sigma_0 = d.apply(sigma, &[zero]);
+    let hz = d.lemma(p.nat.zero_lt_succ, &[zero]); // Lt zero one_n
+    let s0_lt_1 = d.apply(maps, &[zero, hz]); // Lt sigma_0 one_n
+    let le_s0_0 = d.lemma(p.nat.le_of_lt_succ, &[sigma_0, zero, s0_lt_1]); // Le sigma_0 zero
+    let zero_le_s0 = d.lemma(p.nat.zero_le, &[sigma_0]); // Le zero sigma_0
+    let s0_eq_0 = d.lemma(p.nat.le_antisymm, &[sigma_0, zero, le_s0_0, zero_le_s0]);
+    let fpf_at_0 = d.apply(fpf_p, &[zero, hz]); // Not (Eq Nat sigma_0 zero)
+    let false_pf = d.apply(fpf_at_0, &[s0_eq_0]);
+
+    let concl = {
+        let f = d.kernel().fvar(f_fv);
+        let pr = d.const_app(p.prod_range, &[f, one_n]);
+        let one_i = d.ione();
+        super::modeq::imodeq(d, bigp, pr, one_i)
+    };
+    let body = d.absurd(concl, false_pf);
+
+    let with_pairwise = d.lam_fv(pairwise_fv, pairwise, body);
+    let with_invol = d.lam_fv(invol_fv, invol, with_pairwise);
+    let with_fpf = d.lam_fv(fpf_fv, fpf, with_invol);
+    let with_maps = d.lam_fv(maps_fv, maps_ty, with_fpf);
+    let with_inj = d.lam_fv(inj_fv, inj_ty, with_maps);
+    let with_sigma = d.lam_fv(sigma_fv, fn_nat_ty, with_inj);
+    d.lam_fv(f_fv, fn_int_ty, with_sigma)
+}
+
+// --- the closing argument, shared by both branches of the step case --------
+
+/// Given `f`, `sigma` on domain `n2 = succ (succ m)`, the boundary facts
+/// `sigma m = succ m` / `sigma (succ m) = m`, the full-domain hypotheses, and
+/// `ih_lo : family(m)`, produce a proof of `ModEq bigp (prodRange f n2) one`.
+#[allow(clippy::too_many_arguments)]
+fn peel_and_close(
+    d: &mut IntDev<'_>,
+    bigp: ExprId,
+    pos_bigp: ExprId,
+    m: ExprId,
+    f: ExprId,
+    sigma: ExprId,
+    inj: ExprId,
+    maps: ExprId,
+    fpf_p: ExprId,
+    invol_p: ExprId,
+    pairwise_p: ExprId,
+    sigma_m_eq_sm: ExprId,
+    sigma_sm_eq_m: ExprId,
+    ih_lo: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let sm = d.succ(m);
+    let n2 = d.succ(sm);
+    let m_lt_sm = d.lemma(p.nat.lt_succ_self, &[m]);
+    let sm_lt_n2 = d.lemma(p.nat.lt_succ_self, &[sm]);
+    let le_m_sm = le_of_lt_local(d, m, sm, m_lt_sm);
+    let le_sm_n2 = le_of_lt_local(d, sm, n2, sm_lt_n2);
+    let m_lt_n2 = d.lemma(p.nat.lt_of_lt_of_le, &[m, sm, n2, m_lt_sm, le_sm_n2]);
+
+    // --- InjectiveOn sigma m : trivial weakening. ---
+    let inj_m = {
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let ha_fv = d.fresh_fvar();
+        let ha = d.kernel().fvar(ha_fv);
+        let ha_ty = d.lt(a, m);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+        let hb_ty = d.lt(b, m);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let sa = d.apply(sigma, &[a]);
+        let sb = d.apply(sigma, &[b]);
+        let heq_ty = d.eq(sa, sb);
+
+        let ha_n2 = lt_below_n2(d, a, m, ha);
+        let hb_n2 = lt_below_n2(d, b, m, hb);
+        let result = d.apply(inj, &[a, b, ha_n2, hb_n2, heq]);
+
+        // `InjectiveOn`'s Pi structure is `a -> b -> Lt a n -> Lt b n -> Eq
+        // (sigma a)(sigma b) -> Eq a b` (both values before both proofs, per
+        // `nat_prelude/restrict_pair.rs`'s `declare_restrict_pair_injective`),
+        // so the binders here must nest in that same order.
+        let with_heq = d.lam_fv(heq_fv, heq_ty, result);
+        let with_hb = d.lam_fv(hb_fv, hb_ty, with_heq);
+        let with_ha = d.lam_fv(ha_fv, ha_ty, with_hb);
+        let with_b = d.lam_fv(b_fv, nat, with_ha);
+        d.lam_fv(a_fv, nat, with_b)
+    };
+
+    // --- MapsInto sigma m : needs the closure argument. ---
+    let maps_m = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, m);
+
+        let hk_n2 = lt_below_n2(d, k, m, hk);
+        let sk = d.apply(sigma, &[k]);
+        let sk_lt_n2 = d.apply(maps, &[k, hk_n2]);
+
+        let sk_ne_m = {
+            let heq_fv = d.fresh_fvar();
+            let heq = d.kernel().fvar(heq_fv);
+            let eq_ty = d.eq(sk, m);
+            let k_lt_sm = d.lemma(p.nat.lt_of_lt_of_le, &[k, m, sm, hk, le_m_sm]);
+            let false_pf = contradiction_via_injectivity(
+                d,
+                sigma,
+                inj,
+                k,
+                sm,
+                m,
+                heq,
+                sigma_sm_eq_m,
+                hk_n2,
+                sm_lt_n2,
+                k_lt_sm,
+            );
+            d.lam_fv(heq_fv, eq_ty, false_pf)
+        };
+        let sk_ne_sm = {
+            let heq_fv = d.fresh_fvar();
+            let heq = d.kernel().fvar(heq_fv);
+            let eq_ty = d.eq(sk, sm);
+            let false_pf = contradiction_via_injectivity(
+                d,
+                sigma,
+                inj,
+                k,
+                m,
+                sm,
+                heq,
+                sigma_m_eq_sm,
+                hk_n2,
+                m_lt_n2,
+                hk,
+            );
+            d.lam_fv(heq_fv, eq_ty, false_pf)
+        };
+        let result = closure_lt_m(d, sk, m, sk_lt_n2, sk_ne_m, sk_ne_sm);
+
+        let with_hk = d.lam_fv(hk_fv, hk_ty, result);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    // --- fpf/pairwise on domain m : trivial weakening. ---
+    let fpf_m = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, m);
+        let hk_n2 = lt_below_n2(d, k, m, hk);
+        let result = d.apply(fpf_p, &[k, hk_n2]);
+        let with_hk = d.lam_fv(hk_fv, hk_ty, result);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+    let invol_m = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, m);
+        let hk_n2 = lt_below_n2(d, k, m, hk);
+        let result = d.apply(invol_p, &[k, hk_n2]);
+        let with_hk = d.lam_fv(hk_fv, hk_ty, result);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+    let pairwise_m = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, m);
+        let hk_n2 = lt_below_n2(d, k, m, hk);
+        let result = d.apply(pairwise_p, &[k, hk_n2]);
+        let with_hk = d.lam_fv(hk_fv, hk_ty, result);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    // --- apply the recursive hypothesis. ---
+    let ih_applied = d.apply(
+        ih_lo,
+        &[f, sigma, inj_m, maps_m, fpf_m, invol_m, pairwise_m],
+    );
+    // ih_applied : ModEq bigp (prodRange f m) one
+
+    // --- pairwise at m : ModEq bigp (f m * f (sigma m)) one, rewritten
+    // through sigma_m_eq_sm to ModEq bigp (f m * f (succ m)) one. ---
+    let pairwise_at_m = d.apply(pairwise_p, &[m, m_lt_n2]);
+    let f_m = d.apply(f, &[m]);
+    let sigma_m = d.apply(sigma, &[m]);
+    let f_sigma_m = d.apply(f, &[sigma_m]);
+    let f_sm = d.apply(f, &[sm]);
+    let f_sigma_m_eq_f_sm = d.nat_eq_to_int(sigma_m, sm, sigma_m_eq_sm, &|d, x| d.apply(f, &[x]));
+    let boundary_pairwise = d.int_eq_rewrite(
+        f_sigma_m,
+        f_sm,
+        f_sigma_m_eq_f_sm,
+        pairwise_at_m,
+        &|d, x| {
+            let pr = d.imul(f_m, x);
+            let one_i = d.ione();
+            super::modeq::imodeq(d, bigp, pr, one_i)
+        },
+    );
+    // boundary_pairwise : ModEq bigp (f m * f (succ m)) one
+
+    // --- combine via ModEq.mul, then reassociate to the peeled shape. ---
+    let one_i = d.ione();
+    let prod_range_m = d.const_app(p.prod_range, &[f, m]);
+    let fm_fsm = {
+        let fm2 = d.apply(f, &[m]);
+        let fsm2 = d.apply(f, &[sm]);
+        d.imul(fm2, fsm2)
+    };
+    let combined = d.const_app(
+        p.mod_eq_mul,
+        &[
+            bigp,
+            prod_range_m,
+            one_i,
+            fm_fsm,
+            one_i,
+            pos_bigp,
+            ih_applied,
+            boundary_pairwise,
+        ],
+    );
+    // combined : ModEq bigp (prodRange f m * (f m * f sm)) (one * one)
+
+    let lhs_start = {
+        let fm2 = d.apply(f, &[m]);
+        let fsm2 = d.apply(f, &[sm]);
+        let inner = d.imul(fm2, fsm2);
+        d.imul(prod_range_m, inner)
+    };
+    // `target_lhs := (prodRange f m * f m) * f sm`, defeq `prodRange f n2`
+    // via two `prodRange_succ` unfoldings — built to match `mul_assoc`'s own
+    // LHS exactly, so `mul_assoc_pf` below applies without any further
+    // rewriting.
+    let target_lhs = {
+        let fm2 = d.apply(f, &[m]);
+        let fsm2 = d.apply(f, &[sm]);
+        let inner = d.imul(prod_range_m, fm2);
+        d.imul(inner, fsm2)
+    };
+    let mul_assoc_pf = {
+        let fm2 = d.apply(f, &[m]);
+        let fsm2 = d.apply(f, &[sm]);
+        d.const_app(p.mul_assoc, &[prod_range_m, fm2, fsm2])
+    };
+    // mul_assoc_pf : Eq Int ((prodRange f m * f m) * f sm) (prodRange f m * (f m * f sm))
+    let mul_assoc_rev = d.isymm(target_lhs, lhs_start, mul_assoc_pf);
+    let combined_reassoc =
+        d.int_eq_rewrite(lhs_start, target_lhs, mul_assoc_rev, combined, &|d, x| {
+            let rhs = d.imul(one_i, one_i);
+            super::modeq::imodeq(d, bigp, x, rhs)
+        });
+    // combined_reassoc : ModEq bigp (prodRange f n2) (one * one)
+
+    let one_mul_one = d.const_app(p.mul_one, &[one_i]);
+    let rhs_pre = d.imul(one_i, one_i);
+    d.int_eq_rewrite(rhs_pre, one_i, one_mul_one, combined_reassoc, &|d, x| {
+        let pr_n2 = d.const_app(p.prod_range, &[f, n2]);
+        super::modeq::imodeq(d, bigp, pr_n2, x)
+    })
+}
+
+// --- CASE A: `i0 = m` — the pair is already at the top. ---------------------
+
+#[allow(clippy::too_many_arguments)]
+fn case_a_body(
+    d: &mut IntDev<'_>,
+    bigp: ExprId,
+    pos_bigp: ExprId,
+    m: ExprId,
+    f: ExprId,
+    sigma: ExprId,
+    inj: ExprId,
+    maps: ExprId,
+    fpf_p: ExprId,
+    invol_p: ExprId,
+    pairwise_p: ExprId,
+    sigma_i0_eq_sm: ExprId, // Eq Nat (sigma i0) sm
+    i0: ExprId,             // literally `sigma sm`
+    h_i0_eq_m: ExprId,      // Eq Nat i0 m
+    ih_lo: ExprId,
+) -> ExprId {
+    let sm = d.succ(m);
+    // `i0` IS `sigma sm` syntactically, so `h_i0_eq_m` already has type
+    // `Eq Nat (sigma sm) m`.
+    let sigma_sm_eq_m = h_i0_eq_m;
+    let sigma_m_eq_sm = {
+        let motive = d.eq_motive(i0, &|d, x| {
+            let sx = d.apply(sigma, &[x]);
+            d.eq(sx, sm)
+        });
+        d.transport(i0, motive, sigma_i0_eq_sm, m, h_i0_eq_m)
+    };
+    peel_and_close(
+        d,
+        bigp,
+        pos_bigp,
+        m,
+        f,
+        sigma,
+        inj,
+        maps,
+        fpf_p,
+        invol_p,
+        pairwise_p,
+        sigma_m_eq_sm,
+        sigma_sm_eq_m,
+        ih_lo,
+    )
+}
+
+// --- CASE B: `i0 < m` — conjugate by a two-point swap. ----------------------
+//
+// A Nat-valued two-point swap `tau_raw i j k`, built and proved exactly the
+// way `nat_prelude/transposition.rs`'s `Nat.transposition` is (that file's
+// own helpers are typed concretely over `NatDev`, so are not reusable here
+// without a signature change to a file another lane may be editing; this is
+// a self-contained `IntDev` copy, using the same four-`Nat.ble`-cut
+// construction). `int_prelude/prod.rs`'s `point_swap` (the `Int`-valued
+// analogue used by `Int.prodRange_swap`) and its order-trichotomy helpers
+// are reused directly (exposed `pub(super)` in this same module tree).
+
+fn select_nat_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let true_val = d.bool_true();
+    let symm_hb = d.bool_symm(cond, true_val, heq);
+    let motive = d.bool_eq_motive(true_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, a)
+    });
+    let refl_case = d.refl(a);
+    d.bool_transport(true_val, motive, refl_case, cond, symm_hb)
+}
+
+fn select_nat_false(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let false_val = d.bool_false();
+    let symm_hb = d.bool_symm(cond, false_val, heq);
+    let motive = d.bool_eq_motive(false_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, b)
+    });
+    let refl_case = d.refl(b);
+    d.bool_transport(false_val, motive, refl_case, cond, symm_hb)
+}
+
+fn tau_level4(d: &mut IntDev<'_>, i: ExprId, j: ExprId, k: ExprId) -> ExprId {
+    let le_k_j = d.ble(k, j);
+    d.bool_select_nat(le_k_j, i, k)
+}
+fn tau_level3(d: &mut IntDev<'_>, i: ExprId, j: ExprId, k: ExprId) -> ExprId {
+    let level4 = tau_level4(d, i, j, k);
+    let sk = d.succ(k);
+    let lt_k_j = d.ble(sk, j);
+    d.bool_select_nat(lt_k_j, k, level4)
+}
+fn tau_level2(d: &mut IntDev<'_>, i: ExprId, j: ExprId, k: ExprId) -> ExprId {
+    let level3 = tau_level3(d, i, j, k);
+    let le_k_i = d.ble(k, i);
+    d.bool_select_nat(le_k_i, j, level3)
+}
+fn tau_raw(d: &mut IntDev<'_>, i: ExprId, j: ExprId, k: ExprId) -> ExprId {
+    let level2 = tau_level2(d, i, j, k);
+    let sk = d.succ(k);
+    let lt_k_i = d.ble(sk, i);
+    d.bool_select_nat(lt_k_i, k, level2)
+}
+
+/// `h : Lt k i ⊢ Eq Nat (tau_raw i j k) k`.
+fn tau_eq_lt_i(d: &mut IntDev<'_>, i: ExprId, j: ExprId, k: ExprId, h: ExprId) -> ExprId {
+    let p = d.int();
+    let level2 = tau_level2(d, i, j, k);
+    let sk = d.succ(k);
+    let lt_k_i = d.ble(sk, i);
+    let lt_true = d.lemma(p.nat.ble_eq_true_of_le, &[sk, i, h]);
+    select_nat_true(d, lt_k_i, k, level2, lt_true)
+}
+
+/// `Eq Nat (tau_raw i j i) j`.
+fn tau_eq_at_i(d: &mut IntDev<'_>, i: ExprId, j: ExprId) -> ExprId {
+    let p = d.int();
+    let level2 = tau_level2(d, i, j, i);
+    let level3 = tau_level3(d, i, j, i);
+    let si = d.succ(i);
+    let lt_i_i = d.ble(si, i);
+    let lt_succ_self_i = d.lemma(p.nat.lt_succ_self, &[i]);
+    let lt_false = super::prod::ble_eq_false_of_lt(d, si, i, lt_succ_self_i);
+    let step1 = select_nat_false(d, lt_i_i, i, level2, lt_false);
+    let le_i_i = d.ble(i, i);
+    let le_refl_i = d.lemma(p.nat.le_refl, &[i]);
+    let le_true = d.lemma(p.nat.ble_eq_true_of_le, &[i, i, le_refl_i]);
+    let step2 = select_nat_true(d, le_i_i, j, level3, le_true);
+    let start = tau_raw(d, i, j, i);
+    let (_, proof) = d.chain(start, &[(level2, step1), (j, step2)]);
+    proof
+}
+
+/// `h1 : Lt i k, h2 : Lt k j ⊢ Eq Nat (tau_raw i j k) k`.
+fn tau_eq_between(
+    d: &mut IntDev<'_>,
+    i: ExprId,
+    j: ExprId,
+    k: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let level2 = tau_level2(d, i, j, k);
+    let level3 = tau_level3(d, i, j, k);
+    let level4 = tau_level4(d, i, j, k);
+    let sk = d.succ(k);
+
+    let le_succ_k = d.lemma(p.nat.le_succ, &[k]);
+    let lt_i_sk = d.lemma(p.nat.lt_of_lt_of_le, &[i, k, sk, h1, le_succ_k]);
+    let lt_k_i = d.ble(sk, i);
+    let lt_k_i_false = super::prod::ble_eq_false_of_lt(d, sk, i, lt_i_sk);
+    let step1 = select_nat_false(d, lt_k_i, k, level2, lt_k_i_false);
+
+    let le_k_i = d.ble(k, i);
+    let le_k_i_false = super::prod::ble_eq_false_of_lt(d, k, i, h1);
+    let step2 = select_nat_false(d, le_k_i, j, level3, le_k_i_false);
+
+    let lt_k_j = d.ble(sk, j);
+    let lt_k_j_true = d.lemma(p.nat.ble_eq_true_of_le, &[sk, j, h2]);
+    let step3 = select_nat_true(d, lt_k_j, k, level4, lt_k_j_true);
+
+    let start = tau_raw(d, i, j, k);
+    let (_, proof) = d.chain(start, &[(level2, step1), (level3, step2), (k, step3)]);
+    proof
+}
+
+/// `h_ij : Lt i j ⊢ Eq Nat (tau_raw i j j) i`.
+fn tau_eq_at_j(d: &mut IntDev<'_>, i: ExprId, j: ExprId, h_ij: ExprId) -> ExprId {
+    let p = d.int();
+    let level2 = tau_level2(d, i, j, j);
+    let level3 = tau_level3(d, i, j, j);
+    let level4 = tau_level4(d, i, j, j);
+    let sj = d.succ(j);
+
+    let le_succ_j = d.lemma(p.nat.le_succ, &[j]);
+    let lt_i_sj = d.lemma(p.nat.lt_of_lt_of_le, &[i, j, sj, h_ij, le_succ_j]);
+    let lt_j_i = d.ble(sj, i);
+    let lt_j_i_false = super::prod::ble_eq_false_of_lt(d, sj, i, lt_i_sj);
+    let step1 = select_nat_false(d, lt_j_i, j, level2, lt_j_i_false);
+
+    let le_j_i = d.ble(j, i);
+    let le_j_i_false = super::prod::ble_eq_false_of_lt(d, j, i, h_ij);
+    let step2 = select_nat_false(d, le_j_i, j, level3, le_j_i_false);
+
+    let lt_succ_self_j = d.lemma(p.nat.lt_succ_self, &[j]);
+    let lt_j_j = d.ble(sj, j);
+    let lt_j_j_false = super::prod::ble_eq_false_of_lt(d, sj, j, lt_succ_self_j);
+    let step3 = select_nat_false(d, lt_j_j, j, level4, lt_j_j_false);
+
+    let le_refl_j = d.lemma(p.nat.le_refl, &[j]);
+    let le_j_j = d.ble(j, j);
+    let le_j_j_true = d.lemma(p.nat.ble_eq_true_of_le, &[j, j, le_refl_j]);
+    let step4 = select_nat_true(d, le_j_j, i, j, le_j_j_true);
+
+    let start = tau_raw(d, i, j, j);
+    let (_, proof) = d.chain(
+        start,
+        &[
+            (level2, step1),
+            (level3, step2),
+            (level4, step3),
+            (i, step4),
+        ],
+    );
+    proof
+}
+
+/// `h_ij : Lt i j, h : Lt j k ⊢ Eq Nat (tau_raw i j k) k`.
+#[allow(clippy::too_many_arguments)]
+fn tau_eq_gt_j(
+    d: &mut IntDev<'_>,
+    i: ExprId,
+    j: ExprId,
+    k: ExprId,
+    h_ij: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let level2 = tau_level2(d, i, j, k);
+    let level3 = tau_level3(d, i, j, k);
+    let level4 = tau_level4(d, i, j, k);
+    let sk = d.succ(k);
+
+    let le_i_j = le_of_lt_local(d, i, j, h_ij);
+    let lt_i_k = d.lemma(p.nat.lt_of_le_of_lt, &[i, j, k, le_i_j, h]);
+
+    let le_succ_k = d.lemma(p.nat.le_succ, &[k]);
+    let lt_i_sk = d.lemma(p.nat.lt_of_lt_of_le, &[i, k, sk, lt_i_k, le_succ_k]);
+    let lt_k_i = d.ble(sk, i);
+    let lt_k_i_false = super::prod::ble_eq_false_of_lt(d, sk, i, lt_i_sk);
+    let step1 = select_nat_false(d, lt_k_i, k, level2, lt_k_i_false);
+
+    let le_k_i = d.ble(k, i);
+    let le_k_i_false = super::prod::ble_eq_false_of_lt(d, k, i, lt_i_k);
+    let step2 = select_nat_false(d, le_k_i, j, level3, le_k_i_false);
+
+    let lt_j_sk = d.lemma(p.nat.lt_of_lt_of_le, &[j, k, sk, h, le_succ_k]);
+    let lt_k_j = d.ble(sk, j);
+    let lt_k_j_false = super::prod::ble_eq_false_of_lt(d, sk, j, lt_j_sk);
+    let step3 = select_nat_false(d, lt_k_j, k, level4, lt_k_j_false);
+
+    let le_k_j = d.ble(k, j);
+    let le_k_j_false = super::prod::ble_eq_false_of_lt(d, k, j, h);
+    let step4 = select_nat_false(d, le_k_j, i, k, le_k_j_false);
+
+    let start = tau_raw(d, i, j, k);
+    let (_, proof) = d.chain(
+        start,
+        &[
+            (level2, step1),
+            (level3, step2),
+            (level4, step3),
+            (k, step4),
+        ],
+    );
+    proof
+}
+
+fn tau_close_involutive(
+    d: &mut IntDev<'_>,
+    i: ExprId,
+    j: ExprId,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let tx = tau_raw(d, i, j, x);
+    let ty = tau_raw(d, i, j, y);
+    let ttx = tau_raw(d, i, j, tx);
+    let congr_step = d.congr(tx, y, h1, &|d, w| tau_raw(d, i, j, w));
+    d.trans(ttx, ty, z, congr_step, h2)
+}
+
+fn tau_transport_involutive(
+    d: &mut IntDev<'_>,
+    i: ExprId,
+    j: ExprId,
+    k: ExprId,
+    c: ExprId,
+    h: ExprId,
+    at_c: ExprId,
+) -> ExprId {
+    let h_rev = d.symm(k, c, h);
+    let motive = d.eq_motive(c, &|d, x| {
+        let tx = tau_raw(d, i, j, x);
+        let ttx = tau_raw(d, i, j, tx);
+        d.eq(ttx, x)
+    });
+    d.transport(c, motive, at_c, k, h_rev)
+}
+
+/// `h_ij : Lt i j ⊢ ∀ k, Eq Nat (tau_raw i j (tau_raw i j k)) k` — `tau_raw`
+/// is its own inverse, unconditionally in `k` (mirrors
+/// `nat_prelude/transposition.rs`'s `declare_transposition_involutive`).
+#[allow(clippy::too_many_lines)]
+fn tau_involutive_forall(d: &mut IntDev<'_>, i: ExprId, j: ExprId, h_ij: ExprId) -> ExprId {
+    let p = d.int();
+    let nat = d.nat_ty();
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let tk = tau_raw(d, i, j, k);
+    let ttk = tau_raw(d, i, j, tk);
+    let goal = d.eq(ttk, k);
+
+    let lt_k_i = d.lt(k, i);
+    let eq_k_i = d.eq(k, i);
+    let lt_i_k = d.lt(i, k);
+    let lt_k_j = d.lt(k, j);
+    let eq_k_j = d.eq(k, j);
+    let lt_j_k = d.lt(j, k);
+
+    let branch_lt_i = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let fact = tau_eq_lt_i(d, i, j, k, h);
+        let result = tau_close_involutive(d, i, j, k, k, k, fact, fact);
+        d.lam_fv(h_fv, lt_k_i, result)
+    };
+
+    let branch_eq_i = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let fact_at_i = tau_eq_at_i(d, i, j);
+        let fact_at_j = tau_eq_at_j(d, i, j, h_ij);
+        let at_i = tau_close_involutive(d, i, j, i, j, i, fact_at_i, fact_at_j);
+        let result = tau_transport_involutive(d, i, j, k, i, h, at_i);
+        d.lam_fv(h_fv, eq_k_i, result)
+    };
+
+    let branch_gt_i = {
+        let hg_fv = d.fresh_fvar();
+        let hg = d.kernel().fvar(hg_fv);
+
+        let tri_inner = super::prod::nat_trichotomy(d, k, j);
+        let inner_lt_j = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let fact = tau_eq_between(d, i, j, k, hg, h2);
+            let result = tau_close_involutive(d, i, j, k, k, k, fact, fact);
+            d.lam_fv(h2_fv, lt_k_j, result)
+        };
+        let inner_rest = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+
+            let inner_eq_j = {
+                let h3_fv = d.fresh_fvar();
+                let h3 = d.kernel().fvar(h3_fv);
+                let fact_at_j = tau_eq_at_j(d, i, j, h_ij);
+                let fact_at_i = tau_eq_at_i(d, i, j);
+                let at_j = tau_close_involutive(d, i, j, j, i, j, fact_at_j, fact_at_i);
+                let result = tau_transport_involutive(d, i, j, k, j, h3, at_j);
+                d.lam_fv(h3_fv, eq_k_j, result)
+            };
+            let inner_gt_j = {
+                let h3_fv = d.fresh_fvar();
+                let h3 = d.kernel().fvar(h3_fv);
+                let fact = tau_eq_gt_j(d, i, j, k, h_ij, h3);
+                let result = tau_close_involutive(d, i, j, k, k, k, fact, fact);
+                d.lam_fv(h3_fv, lt_j_k, result)
+            };
+
+            let body = d.const_app(
+                p.logic.or_elim,
+                &[eq_k_j, lt_j_k, goal, h2, inner_eq_j, inner_gt_j],
+            );
+            let or_rest2_ty = d.or(eq_k_j, lt_j_k);
+            d.lam_fv(h2_fv, or_rest2_ty, body)
+        };
+
+        let or_rest2_ty = d.or(eq_k_j, lt_j_k);
+        let body = d.const_app(
+            p.logic.or_elim,
+            &[lt_k_j, or_rest2_ty, goal, tri_inner, inner_lt_j, inner_rest],
+        );
+        d.lam_fv(hg_fv, lt_i_k, body)
+    };
+
+    let branch_rest = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = d.const_app(
+            p.logic.or_elim,
+            &[eq_k_i, lt_i_k, goal, h, branch_eq_i, branch_gt_i],
+        );
+        let or_rest_ty = d.or(eq_k_i, lt_i_k);
+        d.lam_fv(h_fv, or_rest_ty, body)
+    };
+
+    let tri_outer = super::prod::nat_trichotomy(d, k, i);
+    let or_rest_ty = d.or(eq_k_i, lt_i_k);
+    let proof_body = d.const_app(
+        p.logic.or_elim,
+        &[
+            lt_k_i,
+            or_rest_ty,
+            goal,
+            tri_outer,
+            branch_lt_i,
+            branch_rest,
+        ],
+    );
+
+    d.lam_fv(k_fv, nat, proof_body)
+}
+
+fn tau_bool_select_lt(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    n: ExprId,
+    ha: ExprId,
+    hb: ExprId,
+) -> ExprId {
+    let bool_ty = d.bool_ty();
+    let p = d.int();
+    let motive = {
+        let sel_fv = d.fresh_fvar();
+        let sel = d.kernel().fvar(sel_fv);
+        let sv = d.bool_select_nat(sel, a, b);
+        let body = d.lt(sv, n);
+        d.lam_fv(sel_fv, bool_ty, body)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
+    d.apply(bool_rec, &[motive, hb, ha, cond])
+}
+
+#[allow(clippy::too_many_arguments)]
+fn tau_level4_lt(
+    d: &mut IntDev<'_>,
+    i: ExprId,
+    j: ExprId,
+    k: ExprId,
+    n: ExprId,
+    hi: ExprId,
+    hk: ExprId,
+) -> ExprId {
+    let cond = d.ble(k, j);
+    tau_bool_select_lt(d, cond, i, k, n, hi, hk)
+}
+#[allow(clippy::too_many_arguments)]
+fn tau_level3_lt(
+    d: &mut IntDev<'_>,
+    i: ExprId,
+    j: ExprId,
+    k: ExprId,
+    n: ExprId,
+    hi: ExprId,
+    hk: ExprId,
+) -> ExprId {
+    let level4 = tau_level4(d, i, j, k);
+    let level4_lt = tau_level4_lt(d, i, j, k, n, hi, hk);
+    let sk = d.succ(k);
+    let cond = d.ble(sk, j);
+    tau_bool_select_lt(d, cond, k, level4, n, hk, level4_lt)
+}
+#[allow(clippy::too_many_arguments)]
+fn tau_level2_lt(
+    d: &mut IntDev<'_>,
+    i: ExprId,
+    j: ExprId,
+    k: ExprId,
+    n: ExprId,
+    hi: ExprId,
+    hj: ExprId,
+    hk: ExprId,
+) -> ExprId {
+    let level3 = tau_level3(d, i, j, k);
+    let level3_lt = tau_level3_lt(d, i, j, k, n, hi, hk);
+    let cond = d.ble(k, i);
+    tau_bool_select_lt(d, cond, j, level3, n, hj, level3_lt)
+}
+#[allow(clippy::too_many_arguments)]
+fn tau_lt(
+    d: &mut IntDev<'_>,
+    i: ExprId,
+    j: ExprId,
+    k: ExprId,
+    n: ExprId,
+    hi: ExprId,
+    hj: ExprId,
+    hk: ExprId,
+) -> ExprId {
+    let level2 = tau_level2(d, i, j, k);
+    let level2_lt = tau_level2_lt(d, i, j, k, n, hi, hj, hk);
+    let sk = d.succ(k);
+    let cond = d.ble(sk, i);
+    tau_bool_select_lt(d, cond, k, level2, n, hk, level2_lt)
+}
+
+/// `h_ij : Lt i j, h_jn : Lt j n ⊢ ∀ k, Lt k n → Lt (tau_raw i j k) n`.
+fn tau_maps_into_forall(
+    d: &mut IntDev<'_>,
+    i: ExprId,
+    j: ExprId,
+    h_ij: ExprId,
+    h_jn: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let le_i_j = le_of_lt_local(d, i, j, h_ij);
+    let hi = d.lemma(p.nat.lt_of_le_of_lt, &[i, j, n, le_i_j, h_jn]);
+    let hj = h_jn;
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk_fv = d.fresh_fvar();
+    let hk = d.kernel().fvar(hk_fv);
+    let hk_ty = d.lt(k, n);
+
+    let result = tau_lt(d, i, j, k, n, hi, hj, hk);
+    let inner = d.lam_fv(hk_fv, hk_ty, result);
+    d.lam_fv(k_fv, nat, inner)
+}
+
+/// `ne_i : Not (Eq Nat k i), ne_j : Not (Eq Nat k j), h_ij : Lt i j ⊢
+/// Eq Int (f k) (g k)`, for `g := fun x => f (tau_raw i j x)` — mirrors
+/// `int_prelude/prod.rs`'s `general_swap_agree`, specialized to `f∘tau_raw`
+/// in place of `point_swap`.
+#[allow(clippy::too_many_arguments)]
+fn tau_agree(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    g: ExprId,
+    i: ExprId,
+    j: ExprId,
+    k: ExprId,
+    ne_i: ExprId,
+    ne_j: ExprId,
+    h_ij: ExprId,
+) -> ExprId {
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let target = d.ieq(fk, gk);
+    let dis_i = super::prod::nat_lt_or_gt_of_ne(d, k, i, ne_i);
+    let lt_ki = d.lt(k, i);
+    let lt_ik = d.lt(i, k);
+
+    let on_lt = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+        let eqp = tau_eq_lt_i(d, i, j, k, h);
+        let traw = tau_raw(d, i, j, k);
+        let cast = d.nat_eq_to_int(traw, k, eqp, &|d, x| d.apply(f, &[x]));
+        d.isymm(gk, fk, cast)
+    };
+    let on_gt = &|d: &mut IntDev<'_>, h1: ExprId| -> ExprId {
+        let dis_j = super::prod::nat_lt_or_gt_of_ne(d, k, j, ne_j);
+        let lt_kj = d.lt(k, j);
+        let lt_jk = d.lt(j, k);
+        let on_between = &|d: &mut IntDev<'_>, h2: ExprId| -> ExprId {
+            let eqp = tau_eq_between(d, i, j, k, h1, h2);
+            let traw = tau_raw(d, i, j, k);
+            let cast = d.nat_eq_to_int(traw, k, eqp, &|d, x| d.apply(f, &[x]));
+            d.isymm(gk, fk, cast)
+        };
+        let on_gt_j = &|d: &mut IntDev<'_>, h2: ExprId| -> ExprId {
+            let eqp = tau_eq_gt_j(d, i, j, k, h_ij, h2);
+            let traw = tau_raw(d, i, j, k);
+            let cast = d.nat_eq_to_int(traw, k, eqp, &|d, x| d.apply(f, &[x]));
+            d.isymm(gk, fk, cast)
+        };
+        d.or_elim(lt_kj, lt_jk, target, dis_j, on_between, on_gt_j)
+    };
+    d.or_elim(lt_ki, lt_ik, target, dis_i, on_lt, on_gt)
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn case_b_body(
+    d: &mut IntDev<'_>,
+    bigp: ExprId,
+    pos_bigp: ExprId,
+    m: ExprId,
+    f: ExprId,
+    sigma: ExprId,
+    inj: ExprId,
+    maps: ExprId,
+    fpf_p: ExprId,
+    invol_p: ExprId,
+    pairwise_p: ExprId,
+    ih_lo: ExprId,
+    i0: ExprId,        // literally `sigma sm`
+    h_i0_lt_m: ExprId, // Lt i0 m
+) -> ExprId {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let sm = d.succ(m);
+    let n2 = d.succ(sm);
+    let m_lt_sm = d.lemma(p.nat.lt_succ_self, &[m]);
+    let sm_lt_n2 = d.lemma(p.nat.lt_succ_self, &[sm]);
+    let le_sm_n2 = le_of_lt_local(d, sm, n2, sm_lt_n2);
+    let m_lt_n2 = d.lemma(p.nat.lt_of_lt_of_le, &[m, sm, n2, m_lt_sm, le_sm_n2]);
+
+    let tau_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = tau_raw(d, i0, m, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let t_inv = tau_involutive_forall(d, i0, m, h_i0_lt_m);
+    let t_maps_n2 = tau_maps_into_forall(d, i0, m, h_i0_lt_m, m_lt_n2, n2);
+
+    let sigma_prime = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let tk = d.apply(tau_fn, &[k]);
+        let stk = d.apply(sigma, &[tk]);
+        let body = d.apply(tau_fn, &[stk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let g = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let tk = d.apply(tau_fn, &[k]);
+        let body = d.apply(f, &[tk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let inj_prime = d.const_app(
+        p.nat.conjugate_injective,
+        &[tau_fn, sigma, n2, t_inv, t_maps_n2, inj],
+    );
+    let maps_prime = d.const_app(
+        p.nat.conjugate_maps_into,
+        &[tau_fn, sigma, n2, t_maps_n2, maps],
+    );
+
+    let fpf_prime = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, n2);
+        let sigma_prime_k = d.apply(sigma_prime, &[k]);
+        let eq_ty = d.eq(sigma_prime_k, k);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        let tk = d.apply(tau_fn, &[k]);
+        let a_val = d.apply(sigma, &[tk]);
+        let b_val = d.apply(tau_fn, &[a_val]);
+        let congr_t_heq = d.congr(b_val, k, heq, &|d, x| d.apply(tau_fn, &[x]));
+        let t_b = d.apply(tau_fn, &[b_val]);
+        let t_inv_a = d.apply(t_inv, &[a_val]);
+        let t_b_rev = d.symm(t_b, a_val, t_inv_a);
+        let a_val_eq_tk = d.trans(a_val, t_b, tk, t_b_rev, congr_t_heq);
+        let tk_lt_n2 = d.apply(t_maps_n2, &[k, hk]);
+        let fpf_at_tk = d.apply(fpf_p, &[tk, tk_lt_n2]);
+        let false_pf = d.apply(fpf_at_tk, &[a_val_eq_tk]);
+
+        let with_heq = d.lam_fv(heq_fv, eq_ty, false_pf);
+        let with_hk = d.lam_fv(hk_fv, hk_ty, with_heq);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    let invol_prime = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, n2);
+
+        let tk = d.apply(tau_fn, &[k]);
+        let a_val = d.apply(sigma, &[tk]);
+        let b_val = d.apply(tau_fn, &[a_val]);
+        let tb_val = d.apply(tau_fn, &[b_val]);
+        let t_inv_a = d.apply(t_inv, &[a_val]);
+        let step2 = d.congr(tb_val, a_val, t_inv_a, &|d, x| d.apply(sigma, &[x]));
+        let sigma_tb = d.apply(sigma, &[tb_val]);
+        let sigma_a = d.apply(sigma, &[a_val]);
+        let tk_lt_n2 = d.apply(t_maps_n2, &[k, hk]);
+        let step4 = d.apply(invol_p, &[tk, tk_lt_n2]);
+        let step5 = d.trans(sigma_tb, sigma_a, tk, step2, step4);
+        let step6 = d.congr(sigma_tb, tk, step5, &|d, x| d.apply(tau_fn, &[x]));
+        let t_sigma_tb = d.apply(tau_fn, &[sigma_tb]);
+        let t_tk = d.apply(tau_fn, &[tk]);
+        let t_inv_k = d.apply(t_inv, &[k]);
+        let step8 = d.trans(t_sigma_tb, t_tk, k, step6, t_inv_k);
+
+        let with_hk = d.lam_fv(hk_fv, hk_ty, step8);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    let pairwise_prime = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, n2);
+
+        let tk = d.apply(tau_fn, &[k]);
+        let a_val = d.apply(sigma, &[tk]);
+        let b_val = d.apply(tau_fn, &[a_val]);
+        let t_b = d.apply(tau_fn, &[b_val]);
+        let t_inv_a = d.apply(t_inv, &[a_val]);
+
+        let tk_lt_n2 = d.apply(t_maps_n2, &[k, hk]);
+        let base_pairwise = d.apply(pairwise_p, &[tk, tk_lt_n2]);
+        let f_tk = d.apply(f, &[tk]);
+        let f_a = d.apply(f, &[a_val]);
+        let f_tb = d.apply(f, &[t_b]);
+        let f_a_eq_f_tb = {
+            let sym = d.symm(t_b, a_val, t_inv_a);
+            d.nat_eq_to_int(a_val, t_b, sym, &|d, x| d.apply(f, &[x]))
+        };
+        let result = d.int_eq_rewrite(f_a, f_tb, f_a_eq_f_tb, base_pairwise, &|d, x| {
+            let pr = d.imul(f_tk, x);
+            let one_i = d.ione();
+            super::modeq::imodeq(d, bigp, pr, one_i)
+        });
+        let with_hk = d.lam_fv(hk_fv, hk_ty, result);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    let sigma_prime_m_eq_sm = {
+        let tau_m_eq_i0 = tau_eq_at_j(d, i0, m, h_i0_lt_m);
+        let traw_m = tau_raw(d, i0, m, m);
+        let congr1 = d.congr(traw_m, i0, tau_m_eq_i0, &|d, x| d.apply(sigma, &[x]));
+        let sigma_i0_eq_sm = d.apply(invol_p, &[sm, sm_lt_n2]);
+        let sigma_traw_m = d.apply(sigma, &[traw_m]);
+        let sigma_i0 = d.apply(sigma, &[i0]);
+        let step2 = d.trans(sigma_traw_m, sigma_i0, sm, congr1, sigma_i0_eq_sm);
+        let tau_sm_eq_sm = tau_eq_gt_j(d, i0, m, sm, h_i0_lt_m, m_lt_sm);
+        let step3 = d.congr(sigma_traw_m, sm, step2, &|d, x| d.apply(tau_fn, &[x]));
+        let tau_fn_sigma_traw_m = d.apply(tau_fn, &[sigma_traw_m]);
+        let tau_fn_sm = d.apply(tau_fn, &[sm]);
+        d.trans(tau_fn_sigma_traw_m, tau_fn_sm, sm, step3, tau_sm_eq_sm)
+    };
+    let sigma_prime_sm_eq_m = {
+        let tau_sm_eq_sm = tau_eq_gt_j(d, i0, m, sm, h_i0_lt_m, m_lt_sm);
+        let traw_sm = tau_raw(d, i0, m, sm);
+        let congr1 = d.congr(traw_sm, sm, tau_sm_eq_sm, &|d, x| d.apply(sigma, &[x]));
+        let sigma_traw_sm = d.apply(sigma, &[traw_sm]);
+        let tau_i0_eq_m = tau_eq_at_i(d, i0, m);
+        let step2 = d.congr(sigma_traw_sm, i0, congr1, &|d, x| d.apply(tau_fn, &[x]));
+        let tau_fn_sigma_traw_sm = d.apply(tau_fn, &[sigma_traw_sm]);
+        let tau_fn_i0 = d.apply(tau_fn, &[i0]);
+        d.trans(tau_fn_sigma_traw_sm, tau_fn_i0, m, step2, tau_i0_eq_m)
+    };
+
+    let peeled = peel_and_close(
+        d,
+        bigp,
+        pos_bigp,
+        m,
+        g,
+        sigma_prime,
+        inj_prime,
+        maps_prime,
+        fpf_prime,
+        invol_prime,
+        pairwise_prime,
+        sigma_prime_m_eq_sm,
+        sigma_prime_sm_eq_m,
+        ih_lo,
+    );
+
+    let g_i0_eq_f_m = {
+        let tau_i0_eq_m = tau_eq_at_i(d, i0, m);
+        let traw_i0 = tau_raw(d, i0, m, i0);
+        d.nat_eq_to_int(traw_i0, m, tau_i0_eq_m, &|d, x| d.apply(f, &[x]))
+    };
+    let g_m_eq_f_i0 = {
+        let tau_m_eq_i0 = tau_eq_at_j(d, i0, m, h_i0_lt_m);
+        let traw_m = tau_raw(d, i0, m, m);
+        d.nat_eq_to_int(traw_m, i0, tau_m_eq_i0, &|d, x| d.apply(f, &[x]))
+    };
+    let elsewhere = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let nei_fv = d.fresh_fvar();
+        let nei = d.kernel().fvar(nei_fv);
+        let nei_ty = {
+            let e = d.eq(k, i0);
+            d.not(e)
+        };
+        let nej_fv = d.fresh_fvar();
+        let nej = d.kernel().fvar(nej_fv);
+        let nej_ty = {
+            let e = d.eq(k, m);
+            d.not(e)
+        };
+        let result = tau_agree(d, f, g, i0, m, k, nei, nej, h_i0_lt_m);
+        let inner = d.lam_fv(nej_fv, nej_ty, result);
+        let with_nei = d.lam_fv(nei_fv, nei_ty, inner);
+        d.lam_fv(k_fv, nat, with_nei)
+    };
+
+    let swap_eq = d.const_app(
+        p.prod_range_swap,
+        &[
+            f,
+            g,
+            i0,
+            m,
+            n2,
+            h_i0_lt_m,
+            m_lt_n2,
+            g_i0_eq_f_m,
+            g_m_eq_f_i0,
+            elsewhere,
+        ],
+    );
+    let f_range = d.const_app(p.prod_range, &[f, n2]);
+    let g_range = d.const_app(p.prod_range, &[g, n2]);
+    let swap_eq_rev = d.isymm(f_range, g_range, swap_eq);
+    d.int_eq_rewrite(g_range, f_range, swap_eq_rev, peeled, &|d, x| {
+        let one_i = d.ione();
+        super::modeq::imodeq(d, bigp, x, one_i)
+    })
+}
+
+// --- assembling the step case: `family (succ (succ m))` from `family m` ----
+
+#[allow(clippy::too_many_lines)]
+fn family_succ_succ_proof(
+    d: &mut IntDev<'_>,
+    bigp: ExprId,
+    pos_bigp: ExprId,
+    m: ExprId,
+    ih_lo: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let fn_int_ty = nat_to_int_ty(d);
+    let fn_nat_ty = nat_to_nat_ty(d);
+
+    let sm = d.succ(m);
+    let n2 = d.succ(sm);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+
+    let inj_ty = d.const_app(p.nat.injective_on, &[sigma, n2]);
+    let maps_ty = d.const_app(p.nat.maps_into, &[sigma, n2]);
+    let fpf = fpf_ty(d, sigma, n2);
+    let invol = invol_ty(d, sigma, n2);
+    let pairwise = pairwise_ty(d, bigp, f, sigma, n2);
+
+    let inj_fv = d.fresh_fvar();
+    let inj = d.kernel().fvar(inj_fv);
+    let maps_fv = d.fresh_fvar();
+    let maps = d.kernel().fvar(maps_fv);
+    let fpf_fv = d.fresh_fvar();
+    let fpf_p = d.kernel().fvar(fpf_fv);
+    let invol_fv = d.fresh_fvar();
+    let invol_p = d.kernel().fvar(invol_fv);
+    let pairwise_fv = d.fresh_fvar();
+    let pairwise_p = d.kernel().fvar(pairwise_fv);
+
+    let concl = {
+        let pr = d.const_app(p.prod_range, &[f, n2]);
+        let one_i = d.ione();
+        super::modeq::imodeq(d, bigp, pr, one_i)
+    };
+
+    let sm_lt_n2 = d.lemma(p.nat.lt_succ_self, &[sm]);
+    let i0 = d.apply(sigma, &[sm]);
+    let sigma_i0_eq_sm = d.apply(invol_p, &[sm, sm_lt_n2]);
+
+    let i0_lt_n2 = d.apply(maps, &[sm, sm_lt_n2]);
+    let i0_ne_sm = d.apply(fpf_p, &[sm, sm_lt_n2]);
+    let le_i0_sm = d.lemma(p.nat.le_of_lt_succ, &[i0, sm, i0_lt_n2]);
+    let lt_i0_sm = lt_of_le_ne(d, i0, sm, le_i0_sm, i0_ne_sm);
+    let le_i0_m = d.lemma(p.nat.le_of_lt_succ, &[i0, m, lt_i0_sm]);
+    let case_pf = d.lemma(p.nat.lt_or_eq_of_le, &[i0, m, le_i0_m]);
+
+    let lt_i0_m_ty = d.lt(i0, m);
+    let eq_i0_m_ty = d.eq(i0, m);
+
+    let body = d.or_elim(
+        lt_i0_m_ty,
+        eq_i0_m_ty,
+        concl,
+        case_pf,
+        &|d, h_i0_lt_m| {
+            case_b_body(
+                d, bigp, pos_bigp, m, f, sigma, inj, maps, fpf_p, invol_p, pairwise_p, ih_lo, i0,
+                h_i0_lt_m,
+            )
+        },
+        &|d, h_i0_eq_m| {
+            case_a_body(
+                d,
+                bigp,
+                pos_bigp,
+                m,
+                f,
+                sigma,
+                inj,
+                maps,
+                fpf_p,
+                invol_p,
+                pairwise_p,
+                sigma_i0_eq_sm,
+                i0,
+                h_i0_eq_m,
+                ih_lo,
+            )
+        },
+    );
+
+    let with_pairwise = d.lam_fv(pairwise_fv, pairwise, body);
+    let with_invol = d.lam_fv(invol_fv, invol, with_pairwise);
+    let with_fpf = d.lam_fv(fpf_fv, fpf, with_invol);
+    let with_maps = d.lam_fv(maps_fv, maps_ty, with_fpf);
+    let with_inj = d.lam_fv(inj_fv, inj_ty, with_maps);
+    let with_sigma = d.lam_fv(sigma_fv, fn_nat_ty, with_inj);
+    d.lam_fv(f_fv, fn_int_ty, with_sigma)
+}
+
+// --- the top-level declaration ---------------------------------------------
+
+/// Admit `Int.prod_range_pairing_collapse`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_prod_range_pairing_collapse(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let int_ty = d.int_ty();
+    let nat = d.nat_ty();
+
+    let bigp_fv = d.fresh_fvar();
+    let bigp = d.kernel().fvar(bigp_fv);
+    let zero_i = d.izero();
+    let pos_ty = d.ilt(zero_i, bigp);
+    let pos_fv = d.fresh_fvar();
+    let pos_bigp = d.kernel().fvar(pos_fv);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let strengthened_motive = |d: &mut IntDev<'_>, x: ExprId| strengthened_stmt(d, bigp, x);
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let p = d.int();
+        let zero = d.zero();
+        let one_n = d.succ(zero);
+        let fam0 = family_zero_proof(d, bigp);
+        let fam1 = family_one_proof(d, bigp);
+        let fam0_ty = family_stmt(d, bigp, zero);
+        let fam1_ty = family_stmt(d, bigp, one_n);
+        d.const_app(p.logic.and_intro, &[fam0_ty, fam1_ty, fam0, fam1])
+    };
+    let step = |d: &mut IntDev<'_>, m: ExprId, ih: ExprId| -> ExprId {
+        let p = d.int();
+        let fam_m_ty = family_stmt(d, bigp, m);
+        let sm = d.succ(m);
+        let fam_sm_ty = family_stmt(d, bigp, sm);
+        let ih_lo = d.and_left(fam_m_ty, fam_sm_ty, ih);
+        let ih_hi = d.and_right(fam_m_ty, fam_sm_ty, ih);
+        let fam_ssm = family_succ_succ_proof(d, bigp, pos_bigp, m, ih_lo);
+        let ssm = d.succ(sm);
+        let fam_ssm_ty = family_stmt(d, bigp, ssm);
+        d.const_app(p.logic.and_intro, &[fam_sm_ty, fam_ssm_ty, ih_hi, fam_ssm])
+    };
+    let strengthened_proof = d.induct(&strengthened_motive, &base, &step, n);
+
+    let fam_n_ty = family_stmt(d, bigp, n);
+    let sn = d.succ(n);
+    let fam_sn_ty = family_stmt(d, bigp, sn);
+    let fam_n = d.and_left(fam_n_ty, fam_sn_ty, strengthened_proof);
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, fam_n);
+        let with_pos = d.lam_fv(pos_fv, pos_ty, with_n);
+        d.lam_fv(bigp_fv, int_ty, with_pos)
+    };
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, fam_n_ty);
+        let with_pos = d.arrow(pos_ty, with_n);
+        d.pi_fv(bigp_fv, int_ty, with_pos)
+    };
+    d.declare_theorem(p.prod_range_pairing_collapse, ty, value)
 }

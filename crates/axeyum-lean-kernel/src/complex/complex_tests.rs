@@ -218,6 +218,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.sumRange_congr_lt", p.sum_range_congr_lt),
         ("Complex.sumRange_split", p.sum_range_split),
         ("Complex.sumRange_swap", p.sum_range_swap),
+        ("Complex.sumRange_diagonal", p.sum_range_diagonal),
         ("Complex.add_pow", p.add_pow),
         ("Complex.IsRootOfUnity", p.is_root_of_unity),
         ("Complex.one_is_root_of_unity", p.one_is_root_of_unity),
