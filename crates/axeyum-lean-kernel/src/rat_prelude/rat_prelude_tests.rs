@@ -107,6 +107,16 @@ fn every_named_declaration_exists() {
         ("ble_refl", p.ble_refl),
         ("ble_trans", p.ble_trans),
         ("ble_total", p.ble_total),
+        ("det2", p.det2),
+        ("det2_swap_rows", p.det2_swap_rows),
+        ("det2_id", p.det2_id),
+        ("det2_scale_row", p.det2_scale_row),
+        ("det2_row_add", p.det2_row_add),
+        ("det2_mul", p.det2_mul),
+        ("mul_adj2_top_left", p.mul_adj2_top_left),
+        ("mul_adj2_top_right", p.mul_adj2_top_right),
+        ("mul_adj2_bottom_left", p.mul_adj2_bottom_left),
+        ("mul_adj2_bottom_right", p.mul_adj2_bottom_right),
     ];
     for (label, name) in expected {
         assert!(
@@ -295,6 +305,53 @@ fn right_distrib_is_axiom_free() {
         footprint.is_empty(),
         "Rat.right_distrib rests on {footprint:?}"
     );
+}
+
+/// `Rat.det2` and its nine theorems — the 2×2 linear algebra `matrix` adds —
+/// are each a **checked** declaration with an empty axiom footprint, read out
+/// of the kernel rather than off the diff. `det2` itself is a `Definition`
+/// (its defining equation holds by `Rat.sub`/`Rat.mul` unfolding, so it needs
+/// no equation lemma); the other nine are `Theorem`s.
+#[test]
+fn matrix_laws_are_axiom_free() {
+    let (kernel, p) = built();
+
+    let declaration = kernel
+        .environment()
+        .get(p.det2)
+        .expect("Rat.det2 was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Definition { .. }),
+        "Rat.det2 must be a Definition, found a different kind"
+    );
+
+    let expected = [
+        ("det2_swap_rows", p.det2_swap_rows),
+        ("det2_id", p.det2_id),
+        ("det2_scale_row", p.det2_scale_row),
+        ("det2_row_add", p.det2_row_add),
+        ("det2_mul", p.det2_mul),
+        ("mul_adj2_top_left", p.mul_adj2_top_left),
+        ("mul_adj2_top_right", p.mul_adj2_top_right),
+        ("mul_adj2_bottom_left", p.mul_adj2_bottom_left),
+        ("mul_adj2_bottom_right", p.mul_adj2_bottom_right),
+    ];
+    for (label, name) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "Rat.{label} must be a checked Theorem, found a different kind"
+        );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
 }
 
 /// ℚ is a model of the whole `Real` axiom package: every one of the 30
