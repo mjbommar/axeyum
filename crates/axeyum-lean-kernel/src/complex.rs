@@ -85,6 +85,7 @@ use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::name::NameId;
 use crate::nat_prelude::{NatOps, NatPrelude};
+use crate::rat_prelude::ops::rat_eq_rewrite;
 use crate::{Kernel, KernelError};
 
 mod ring;
@@ -657,6 +658,45 @@ pub struct ComplexPrelude {
     /// `ofNat (Nat.succ j)`-unfolded right-hand side via
     /// [`Self::left_distrib`] and [`Self::mul_one`].
     pub of_nat_mul: NameId,
+    /// `Complex.ofNat_eq_cast : ∀ n, Equiv (ofNat n) (ofReal (CReal.ofNat n))`
+    /// — the agreement theorem between the **direct** `ofNat` (structural
+    /// `Nat.rec` into `Complex`, [`Self::of_nat`]'s own doc comment) and the
+    /// **cast-chain** embedding `ofReal ∘ CReal.ofNat`, closing the gap that
+    /// doc comment records as known and open.
+    ///
+    /// **The chain is `ofReal ∘ CReal.ofNat`, not `ofReal ∘ CReal.ofRat ∘
+    /// Rat.ofInt ∘ Int.ofNat`** — `Rat.ofInt` does not exist anywhere in this
+    /// kernel (checked by search, not assumed); `CReal.ofNat` is its own
+    /// direct definition,
+    /// `CReal.ofNat n := CReal.ofRat (Rat.natDivSucc n 0)`
+    /// ([`CRealPrelude::of_nat`](crate::CRealPrelude::of_nat)), reusing the
+    /// Archimedean development's `k/(j+1)` embedding at index `0` rather than
+    /// a three-deep integer/rational cast that was never built.
+    ///
+    /// Induction on `n`, entirely at the `Complex.Equiv`/`CReal.Equiv` level
+    /// (never touching `re`/`im` except inside the one local `ofReal`
+    /// congruence this file has to build by hand, since `ComplexPrelude` has
+    /// no `of_real_congr` — `Equiv`'s own definition supplies it: `ofReal a`'s
+    /// `re`/`im` ι-reduce to `a`/`CReal.zero`, so `Equiv (ofReal a) (ofReal
+    /// b)` unfolds to `And (CReal.Equiv a b) (CReal.Equiv CReal.zero
+    /// CReal.zero)`).
+    ///
+    /// - Base: `zero` and `ofReal CReal.zero` are the same `mk CReal.zero
+    ///   CReal.zero` **by definition** (`declare_constants`/[`Self::of_real`]
+    ///   share that shape), so the base case reduces to `CReal.Equiv
+    ///   CReal.zero (CReal.ofNat Nat.zero)` — closed by `CReal.Equiv.refl`
+    ///   alone once `Rat.zero` and `Rat.natDivSucc Nat.zero Nat.zero` are
+    ///   seen to be the same normalised representative by computation
+    ///   (`Nat.gcd`/`Nat.div` at the concrete pair `(0, 1)`).
+    /// - Step: `ofNat (Nat.succ n)` ι-reduces to `add (ofNat n) one`; `one`
+    ///   and `ofReal CReal.one` share the same defeq shape `one` already has
+    ///   with `ofReal`, so [`Self::of_real_add`] turns `add (ofReal (CReal.ofNat
+    ///   n)) one` into `ofReal (CReal.add (CReal.ofNat n) CReal.one)`, and
+    ///   [`CRealPrelude::of_rat_add`](crate::CRealPrelude::of_rat_add) plus
+    ///   [`RatPrelude::nat_div_succ_add`](crate::RatPrelude::nat_div_succ_add)
+    ///   (at `(n, 1, 0)`, with `Nat.add n 1` ι-reducing to `Nat.succ n`) carry
+    ///   that the rest of the way to `CReal.ofNat (Nat.succ n)`.
+    pub of_nat_eq_cast: NameId,
 
     // --- finite sums' additive homomorphism, and a bounded reindex ---------
     /// `Complex.sumRange_add : ∀ f g n, Equiv (sumRange (fun i => add (f i) (g
@@ -1014,6 +1054,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         of_nat_succ: kernel.name_str(complex, "ofNat_succ"),
         of_nat_add: kernel.name_str(complex, "ofNat_add"),
         of_nat_mul: kernel.name_str(complex, "ofNat_mul"),
+        of_nat_eq_cast: kernel.name_str(complex, "ofNat_eq_cast"),
         sum_range_add: kernel.name_str(complex, "sumRange_add"),
         sum_range_shift_front: kernel.name_str(complex, "sumRange_shiftFront"),
         sum_range_congr_lt: kernel.name_str(complex, "sumRange_congr_lt"),
@@ -1107,6 +1148,7 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_of_nat_equations(&mut d, prelude)?;
         declare_of_nat_add(&mut d, prelude)?;
         declare_of_nat_mul(&mut d, prelude)?;
+        declare_of_nat_eq_cast(&mut d, prelude)?;
         declare_sum_range_add(&mut d, prelude)?;
         declare_sum_range_shift_front(&mut d, prelude)?;
         declare_sum_range_congr_lt(&mut d, prelude)?;
@@ -5511,6 +5553,167 @@ fn declare_of_nat_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kerne
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.of_nat_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the two casts agree ------------------------------------------------
+
+/// `Rat.natDivSucc k j`.
+fn nat_div_succ_of(d: &mut IntDev<'_>, p: ComplexPrelude, k: ExprId, j: ExprId) -> ExprId {
+    d.const_app(p.creal.rat.nat_div_succ, &[k, j])
+}
+
+/// `Rat.add a b`.
+fn rat_add_of(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId) -> ExprId {
+    d.const_app(p.creal.rat.int.rat_add, &[a, b])
+}
+
+/// Lift `h : Eq Rat a b` to `CReal.Equiv (CReal.ofRat a) (CReal.ofRat b)` —
+/// ordinary Leibniz congruence for a function out of `Rat`. `RatPrelude`
+/// packages no such combinator (nothing in that development targets
+/// `CReal`), so it is built here from [`rat_eq_rewrite`] rather than
+/// imported.
+fn of_rat_congr_of_eq(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let of_rat_a = d.const_app(creal.of_rat, &[a]);
+    let start = crefl(d, creal, of_rat_a);
+    rat_eq_rewrite(d, a, b, h, start, &|d, t| {
+        let of_rat_t = d.const_app(creal.of_rat, &[t]);
+        ceq(d, creal, of_rat_a, of_rat_t)
+    })
+}
+
+/// Lift `h : CReal.Equiv a b` to `Equiv (ofReal a) (ofReal b)`.
+///
+/// `ComplexPrelude` has no `of_real_congr` — built by hand from `Equiv`'s own
+/// definition instead, the way [`equiv_halves`] reads a proof apart in
+/// reverse: `ofReal a`'s `re`/`im` ι-reduce to `a`/`CReal.zero`, so the two
+/// `And` components needed are `h` itself and `CReal.Equiv.refl CReal.zero`.
+fn of_real_congr_local(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let left_ty = ceq(d, creal, a, b);
+    let zero_v = czero(d, creal);
+    let right_ty = ceq(d, creal, zero_v, zero_v);
+    let right_proof = crefl(d, creal, zero_v);
+    and_intro(d, p, left_ty, right_ty, h, right_proof)
+}
+
+/// `Complex.ofNat_eq_cast : ∀ n, Equiv (ofNat n) (ofReal (CReal.ofNat n))`.
+///
+/// See [`ComplexPrelude::of_nat_eq_cast`] for the proof shape and why the
+/// cast chain is `ofReal ∘ CReal.ofNat`, not the three-deep
+/// `ofReal ∘ CReal.ofRat ∘ Rat.ofInt ∘ Int.ofNat` chain [`declare_of_nat`]'s
+/// own doc comment names (`Rat.ofInt` does not exist in this kernel).
+fn declare_of_nat_eq_cast(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let creal = p.creal;
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let of_nat_x = d.const_app(p.of_nat, &[x]);
+        let creal_of_nat_x = d.const_app(creal.of_nat, &[x]);
+        let of_real_x = d.const_app(p.of_real, &[creal_of_nat_x]);
+        zeq(d, p, of_nat_x, of_real_x)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            // Base: Equiv zero (ofReal (CReal.ofNat Nat.zero)). `zero` and
+            // `ofReal CReal.zero` are the same `mk CReal.zero CReal.zero` by
+            // definition, and `CReal.zero`/`CReal.ofNat Nat.zero` are the
+            // same normalised `Rat` representative by computation
+            // (`Nat.gcd`/`Nat.div` at the concrete pair `(0, 1)`), so
+            // `CReal.Equiv.refl` alone closes it once wrapped by the local
+            // `ofReal` congruence.
+            let zero_c = czero(d, creal);
+            let h_creal = crefl(d, creal, zero_c);
+            of_real_congr_local(d, p, zero_c, zero_c, h_creal)
+        },
+        &|d, j, ih| {
+            // ih : Equiv (ofNat j) (ofReal (CReal.ofNat j))
+            let of_nat_j = d.const_app(p.of_nat, &[j]);
+            let creal_of_nat_j = d.const_app(creal.of_nat, &[j]);
+            let of_real_j = d.const_app(p.of_real, &[creal_of_nat_j]);
+            let one_c = d.kernel().const_(p.one, vec![]);
+
+            let start = d.const_app(p.add, &[of_nat_j, one_c]);
+            let mid1 = d.const_app(p.add, &[of_real_j, one_c]);
+            let refl_one = d.lemma(p.equiv_refl, &[one_c]);
+            let step_ab = d.lemma(
+                p.add_congr,
+                &[of_nat_j, of_real_j, one_c, one_c, ih, refl_one],
+            );
+
+            // CReal side: CReal.Equiv (CReal.add (CReal.ofNat j) CReal.one)
+            // (CReal.ofNat (Nat.succ j)), via `CReal.ofRat_add` and
+            // `Rat.natDivSucc_add`. The one nontrivial defeq this leans on
+            // (twice: here and in the base case) is `Rat.one`/`Rat.zero`
+            // computing to the same normalised representative as
+            // `Rat.natDivSucc 1 0`/`Rat.natDivSucc 0 0`.
+            let zero_nat = d.zero();
+            let one_nat = d.num(1);
+            let succ_j = d.succ(j);
+            let nds_j0 = nat_div_succ_of(d, p, j, zero_nat);
+            let rat_one_v = d.kernel().const_(creal.rat.one, vec![]);
+            let creal_one_v = d.kernel().const_(creal.one, vec![]);
+
+            let creal_x = cadd(d, creal, creal_of_nat_j, creal_one_v);
+            let h_xy = d.lemma(creal.of_rat_add, &[nds_j0, rat_one_v]);
+            let rat_sum = rat_add_of(d, p, nds_j0, rat_one_v);
+            let creal_y = d.const_app(creal.of_rat, &[rat_sum]);
+
+            let nds_succ_j0 = nat_div_succ_of(d, p, succ_j, zero_nat);
+            let h_yz_rat = d.lemma(creal.rat.nat_div_succ_add, &[j, one_nat, zero_nat]);
+            let h_yz = of_rat_congr_of_eq(d, p, rat_sum, nds_succ_j0, h_yz_rat);
+            let creal_succ_j = d.const_app(creal.of_nat, &[succ_j]);
+            let creal_z = d.const_app(creal.of_rat, &[nds_succ_j0]);
+            let _ = creal_z; // creal_z is defeq to creal_succ_j; kept for the doc trail.
+
+            let h_xz = ctrans(d, creal, creal_x, creal_y, creal_succ_j, h_xy, h_yz);
+            let step_bc_complex = of_real_congr_local(d, p, creal_x, creal_succ_j, h_xz);
+
+            let mid2 = d.const_app(p.of_real, &[creal_x]);
+            let target = d.const_app(p.of_real, &[creal_succ_j]);
+
+            let step_bc = {
+                // Bridge `mid1` (`add (ofReal (CReal.ofNat j)) one`) to
+                // `mid2` (`ofReal (CReal.add (CReal.ofNat j) CReal.one)`) via
+                // `Complex.ofReal_add`, then chain into `step_bc_complex`.
+                let of_real_add_proof = d.lemma(p.of_real_add, &[creal_of_nat_j, creal_one_v]);
+                d.lemma(
+                    p.equiv_trans,
+                    &[mid1, mid2, target, of_real_add_proof, step_bc_complex],
+                )
+            };
+
+            d.lemma(p.equiv_trans, &[start, mid1, target, step_ab, step_bc])
+        },
+        n,
+    );
+
+    let ty = d.pi_fv(n_fv, nat, stmt);
+    let value = d.lam_fv(n_fv, nat, proof);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_nat_eq_cast,
         uparams: vec![],
         ty,
         value,
