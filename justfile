@@ -440,6 +440,9 @@ parity-freshness:
     scripts/check-parity-freshness.py
 
 autogenesis-knowledge-controls:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_knowledge
+    python3 scripts/validate-autogenesis-knowledge.py
+    python3 scripts/gen-autogenesis-knowledge-coverage.py --check
     scripts/check-autogenesis-knowledge-controls.sh
 
 autogenesis-proposer-isolation:
