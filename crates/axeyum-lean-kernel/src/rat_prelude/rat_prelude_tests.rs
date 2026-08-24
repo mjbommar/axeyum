@@ -65,6 +65,7 @@ fn every_named_declaration_exists() {
         ("bounds_num", p.bounds_num),
         ("mul_inv_cancel", p.mul_inv_cancel),
         ("mul_inv_cancel_of_neg", p.mul_inv_cancel_of_neg),
+        ("mul_inv_cancel_of_ne_zero", p.mul_inv_cancel_of_ne_zero),
         ("inv_pos", p.inv_pos),
         ("sub_mul", p.sub_mul),
         ("mul_inv_sub_one", p.mul_inv_sub_one),
@@ -118,6 +119,12 @@ fn every_named_declaration_exists() {
         ("mul_adj2_top_right", p.mul_adj2_top_right),
         ("mul_adj2_bottom_left", p.mul_adj2_bottom_left),
         ("mul_adj2_bottom_right", p.mul_adj2_bottom_right),
+        ("inv2_top_left", p.inv2_top_left),
+        ("inv2_top_right", p.inv2_top_right),
+        ("inv2_bottom_left", p.inv2_bottom_left),
+        ("inv2_bottom_right", p.inv2_bottom_right),
+        ("cramer_two_unique_x", p.cramer_two_unique_x),
+        ("cramer_two_unique_y", p.cramer_two_unique_y),
     ];
     for (label, name) in expected {
         assert!(
@@ -336,6 +343,12 @@ fn matrix_laws_are_axiom_free() {
         ("mul_adj2_top_right", p.mul_adj2_top_right),
         ("mul_adj2_bottom_left", p.mul_adj2_bottom_left),
         ("mul_adj2_bottom_right", p.mul_adj2_bottom_right),
+        ("inv2_top_left", p.inv2_top_left),
+        ("inv2_top_right", p.inv2_top_right),
+        ("inv2_bottom_left", p.inv2_bottom_left),
+        ("inv2_bottom_right", p.inv2_bottom_right),
+        ("cramer_two_unique_x", p.cramer_two_unique_x),
+        ("cramer_two_unique_y", p.cramer_two_unique_y),
     ];
     for (label, name) in expected {
         let declaration = kernel
@@ -353,6 +366,63 @@ fn matrix_laws_are_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// `Rat.inv2_top_left`'s statement, asserted verbatim — the same discipline
+/// [`the_rationals_are_a_field_and_the_inverse_is_positive`] applies to
+/// `mul_inv_cancel`: an empty axiom footprint on a theorem *named*
+/// `inv2_top_left` says nothing about which statement it proves.
+#[test]
+fn inv2_top_left_is_the_stated_entry_of_a_inverse_a() {
+    let (kernel, p) = built();
+    let ty = match kernel.environment().get(p.inv2_top_left).expect("declared") {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    let rendered = kernel
+        .render_lean(ty)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert_eq!(
+        rendered,
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> \
+         ((x4 : Not (Eq.{1} Rat (Rat.det2 x0 x1 x2 x3) Rat.zero)) -> \
+         Eq.{1} Rat (Rat.add (Rat.mul (Rat.mul (Rat.inv (Rat.det2 x0 x1 x2 x3)) x3) x0) \
+         (Rat.mul (Rat.mul (Rat.inv (Rat.det2 x0 x1 x2 x3)) (Rat.neg x1)) x2)) Rat.one)))))"
+    );
+}
+
+/// `Rat.cramer_two_unique_x`'s statement, asserted verbatim — same discipline
+/// as [`inv2_top_left_is_the_stated_entry_of_a_inverse_a`]: an empty axiom
+/// footprint on a theorem named `cramer_two_unique_x` says nothing about
+/// which statement it proves, and this is the FORWARD direction only (a
+/// solution must have this form), never a bare existence claim.
+#[test]
+fn cramer_two_unique_x_is_the_stated_forward_direction() {
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.cramer_two_unique_x)
+        .expect("declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    let rendered = kernel
+        .render_lean(ty)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert_eq!(
+        rendered,
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> ((x4 : Rat) -> \
+         ((x5 : Rat) -> ((x6 : Rat) -> ((x7 : Rat) -> \
+         ((x8 : Eq.{1} Rat (Rat.add (Rat.mul x0 x4) (Rat.mul x1 x5)) x6) -> \
+         ((x9 : Eq.{1} Rat (Rat.add (Rat.mul x2 x4) (Rat.mul x3 x5)) x7) -> \
+         ((x10 : Not (Eq.{1} Rat (Rat.det2 x0 x1 x2 x3) Rat.zero)) -> \
+         Eq.{1} Rat x4 (Rat.div (Rat.det2 x6 x1 x7 x3) (Rat.det2 x0 x1 x2 x3)))))))))))))"
+    );
 }
 
 /// ℚ is a model of the whole `Real` axiom package: every one of the 30
@@ -814,10 +884,16 @@ fn the_rationals_are_a_field_and_the_inverse_is_positive() {
         "((x0 : Rat) -> ((x1 : Rat.lt x0 Rat.zero) -> \
          Eq.{1} Rat (Rat.mul x0 (Rat.inv x0)) Rat.one))"
     );
+    assert_eq!(
+        rendered(&mut kernel, p.mul_inv_cancel_of_ne_zero),
+        "((x0 : Rat) -> ((x1 : Not (Eq.{1} Rat x0 Rat.zero)) -> \
+         Eq.{1} Rat (Rat.mul x0 (Rat.inv x0)) Rat.one))"
+    );
     for (label, name) in [
         ("mul_inv_cancel", p.mul_inv_cancel),
         ("inv_pos", p.inv_pos),
         ("mul_inv_cancel_of_neg", p.mul_inv_cancel_of_neg),
+        ("mul_inv_cancel_of_ne_zero", p.mul_inv_cancel_of_ne_zero),
     ] {
         assert!(
             matches!(

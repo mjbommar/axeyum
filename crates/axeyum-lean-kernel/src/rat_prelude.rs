@@ -137,6 +137,14 @@ pub struct RatPrelude {
     /// to `Nat.lt n 0`, refuted uniformly by `Nat.not_lt_zero` — no nested
     /// `Nat.rec` on `n` needed, unlike the positive proof's `n = 0` sub-case.
     pub mul_inv_cancel_of_neg: NameId,
+    /// `Rat.mul_inv_cancel_of_ne_zero : ∀ q, Not (Eq Rat q Rat.zero) →
+    /// Eq Rat (Rat.mul q (Rat.inv q)) Rat.one`.
+    ///
+    /// The `q ≠ 0` unification of [`Self::mul_inv_cancel`] and
+    /// [`Self::mul_inv_cancel_of_neg`], via [`Self::lt_trichotomy`] (which is
+    /// itself constructive — no excluded middle). Useful anywhere a caller has
+    /// only a disequality and not a sign.
+    pub mul_inv_cancel_of_ne_zero: NameId,
     /// `Rat.mul_pos : ∀ a b, Rat.lt Rat.zero a → Rat.lt Rat.zero b →
     /// Rat.lt Rat.zero (Rat.mul a b)`.
     ///
@@ -1101,6 +1109,32 @@ pub struct RatPrelude {
     /// `Rat.mul_adj2_bottom_right : ∀ a b c d, c·(−b) + d·a = det2 a b c d` —
     /// the (2,2) entry.
     pub mul_adj2_bottom_right: NameId,
+    /// `Rat.inv2_top_left : ∀ a b c d, Not (det2 a b c d = 0) →`
+    /// `(invD*d)*a + (invD*(-b))*c = 1`, `invD := Rat.inv (det2 a b c d)` —
+    /// the (1,1) entry of `A⁻¹·A = I`.
+    pub inv2_top_left: NameId,
+    /// `Rat.inv2_top_right : ∀ a b c d, Not (det2 a b c d = 0) →`
+    /// `(invD*d)*b + (invD*(-b))*d = 0` — the (1,2) entry of `A⁻¹·A = I`.
+    pub inv2_top_right: NameId,
+    /// `Rat.inv2_bottom_left : ∀ a b c d, Not (det2 a b c d = 0) →`
+    /// `(invD*(-c))*a + (invD*a)*c = 0` — the (2,1) entry of `A⁻¹·A = I`.
+    pub inv2_bottom_left: NameId,
+    /// `Rat.inv2_bottom_right : ∀ a b c d, Not (det2 a b c d = 0) →`
+    /// `(invD*(-c))*b + (invD*a)*d = 1` — the (2,2) entry of `A⁻¹·A = I`.
+    pub inv2_bottom_right: NameId,
+    /// `Rat.cramer_two_unique_x : ∀ a b c d x y u v,`
+    /// `a*x+b*y=u → c*x+d*y=v → Not (det2 a b c d = 0) →`
+    /// `x = Rat.div (det2 u b v d) (det2 a b c d)`.
+    ///
+    /// The **forward** direction of Cramer's rule for a 2×2 system: a
+    /// solution must have this form. Existence is a different, unattempted
+    /// argument, hence `_unique` rather than a bare `cramer_two_x`.
+    pub cramer_two_unique_x: NameId,
+    /// `Rat.cramer_two_unique_y : ∀ a b c d x y u v,`
+    /// `a*x+b*y=u → c*x+d*y=v → Not (det2 a b c d = 0) →`
+    /// `y = Rat.div (det2 a u c v) (det2 a b c d)` — the `y` companion of
+    /// [`Self::cramer_two_unique_x`].
+    pub cramer_two_unique_y: NameId,
 }
 
 impl RatPrelude {
@@ -1151,6 +1185,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         inv: child(kernel, "inv"),
         mul_inv_cancel: child(kernel, "mul_inv_cancel"),
         mul_inv_cancel_of_neg: child(kernel, "mul_inv_cancel_of_neg"),
+        mul_inv_cancel_of_ne_zero: child(kernel, "mul_inv_cancel_of_ne_zero"),
         inv_pos: child(kernel, "inv_pos"),
         mul_pos: child(kernel, "mul_pos"),
         nat_div_succ_pos: child(kernel, "natDivSucc_pos"),
@@ -1352,6 +1387,12 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         mul_adj2_top_right: child(kernel, "mul_adj2_top_right"),
         mul_adj2_bottom_left: child(kernel, "mul_adj2_bottom_left"),
         mul_adj2_bottom_right: child(kernel, "mul_adj2_bottom_right"),
+        inv2_top_left: child(kernel, "inv2_top_left"),
+        inv2_top_right: child(kernel, "inv2_top_right"),
+        inv2_bottom_left: child(kernel, "inv2_bottom_left"),
+        inv2_bottom_right: child(kernel, "inv2_bottom_right"),
+        cramer_two_unique_x: child(kernel, "cramer_two_unique_x"),
+        cramer_two_unique_y: child(kernel, "cramer_two_unique_y"),
     }
 }
 

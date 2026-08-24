@@ -92,6 +92,7 @@ use crate::nat_prelude::NatOps;
 pub(super) fn declare_field_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     declare_mul_inv_cancel(d, p)?;
     declare_mul_inv_cancel_of_neg(d, p)?;
+    declare_mul_inv_cancel_of_ne_zero(d, p)?;
     declare_inv_pos(d, p)?;
     declare_sub_mul(d, p)?;
     declare_inverse_identities(d, p)?;
@@ -1173,6 +1174,77 @@ fn declare_mul_inv_cancel_of_neg(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     d.kernel()
         .add_declaration(crate::env::Declaration::Theorem {
             name: p.mul_inv_cancel_of_neg,
+            uparams: vec![],
+            ty,
+            value,
+        })
+}
+
+/// `Rat.mul_inv_cancel_of_ne_zero : ∀ q, Not (Eq Rat q Rat.zero) →
+/// Eq Rat (Rat.mul q (Rat.inv q)) Rat.one`.
+///
+/// The single unlock this module was blocked on: `mul_inv_cancel` and
+/// `mul_inv_cancel_of_neg` each cover one sign, and `Rat.lt_trichotomy`
+/// (`declare_trichotomy`, constructive — built from the *proved*
+/// `Rat.le_or_lt` and `Rat.le_antisymm`, no excluded middle) is exactly what
+/// closes the gap. `lt_trichotomy q 0` gives
+/// `Or (lt q 0) (Or (q = 0) (lt 0 q))`: the first disjunct is verbatim
+/// [`declare_mul_inv_cancel_of_neg`]'s hypothesis, the last is verbatim
+/// [`declare_mul_inv_cancel`]'s, and the middle disjunct is refuted by
+/// applying the `q ≠ 0` hypothesis to the equality it supplies.
+fn declare_mul_inv_cancel_of_ne_zero(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let zero = rzero(d, p);
+    let one = rone(d, p);
+
+    let equal = req(d, q, zero);
+    let hypothesis = d.not(equal);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let reciprocal = d.const_app(p.inv, &[q]);
+    let product = rmul(d, q, reciprocal);
+    let conclusion = req(d, product, one);
+
+    let lt_q_zero = rlt(d, p, q, zero);
+    let lt_zero_q = rlt(d, p, zero, q);
+    let right_or = d.or(equal, lt_zero_q);
+    let trichotomy = d.lemma(p.lt_trichotomy, &[q, zero]);
+
+    let body = d.or_elim(
+        lt_q_zero,
+        right_or,
+        conclusion,
+        trichotomy,
+        &|d, h_neg| d.lemma(p.mul_inv_cancel_of_neg, &[q, h_neg]),
+        &|d, h_rest| {
+            d.or_elim(
+                equal,
+                lt_zero_q,
+                conclusion,
+                h_rest,
+                &|d, h_eq| {
+                    let false_proof = d.apply(h, &[h_eq]);
+                    d.absurd(conclusion, false_proof)
+                },
+                &|d, h_pos| d.lemma(p.mul_inv_cancel, &[q, h_pos]),
+            )
+        },
+    );
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, body);
+        d.lam_fv(q_fv, carrier, with_h)
+    };
+    let ty = {
+        let inner = d.arrow(hypothesis, conclusion);
+        d.pi_fv(q_fv, carrier, inner)
+    };
+    d.kernel()
+        .add_declaration(crate::env::Declaration::Theorem {
+            name: p.mul_inv_cancel_of_ne_zero,
             uparams: vec![],
             ty,
             value,

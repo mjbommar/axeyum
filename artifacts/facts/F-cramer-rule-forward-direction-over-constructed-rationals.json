@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "F:cramer-rule-forward-direction-over-constructed-rationals",
+  "title": "Cramer's rule, forward direction: a solution of a 2x2 rational linear system with nonzero determinant must be the quotient of determinants",
+  "statement": "For rationals a,b,c,d,x,y,u,v: if a*x + b*y = u and c*x + d*y = v and det2 a b c d is not zero, then x = det2 u b v d / det2 a b c d (and symmetrically y = det2 a u c v / det2 a b c d). THIS IS THE FORWARD DIRECTION ONLY, AND THE NAME SAYS SO. `cramer_two_unique_x` asserts that a solution MUST have this form -- uniqueness given the system. EXISTENCE is not proved: nothing here asserts that the quotient actually solves the system. Naming it `cramer_two` without the `_unique` would overclaim. The nonzero-determinant hypothesis cannot be dropped and cannot be made implicit: Rat.inv is TOTAL in this kernel (inv 0 = 0), so Rat.div is defined everywhere and a statement without the hypothesis would be FALSE rather than merely ill-formed. Rat is a NORMALISED num/den pair, not a quotient, so Eq Rat is the correct equality throughout -- unlike CReal, where it never is.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> ((x4 : Rat) -> ((x5 : Rat) -> ((x6 : Rat) -> ((x7 : Rat) -> ((x8 : Eq.{1} Rat (Rat.add (Rat.mul x0 x4) (Rat.mul x1 x5)) x6) -> ((x9 : Eq.{1} Rat (Rat.add (Rat.mul x2 x4) (Rat.mul x3 x5)) x7) -> ((x10 : Not (Eq.{1} Rat (Rat.det2 x0 x1 x2 x3) Rat.zero)) -> Eq.{1} Rat x4 (Rat.div (Rat.det2 x6 x1 x7 x3) (Rat.det2 x0 x1 x2 x3)))))))))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8",
+      "x9",
+      "x10"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.cramer_two_unique_x",
+      "kind": "kernel-term",
+      "supports": "`Rat.cramer_two_unique_x` and `_y` are admitted with exactly the types pinned in the tests. Each factors through an UNCONDITIONAL identity (cramer_col1_identity / cramer_col2_identity, no hypothesis at all): substituting the system's left-hand side for one column of the matrix scales the determinant by that unknown. The nonzero hypothesis is then discharged once, by Rat.mul_inv_cancel_of_ne_zero. THAT CANCELLATION LEMMA IS THE ACTUAL UNLOCK AND IT IS NOT ABOUT MATRICES: Rat.inv is total, so the two pre-existing cancellation lemmas are guarded by 0 < q and q < 0 respectively, and nothing had bridged q != 0 to either. It required a Rat.lt_trichotomy case split, and the establishing lane VERIFIED from laws.rs that lt_trichotomy is genuinely constructive here -- built from le_or_lt and le_antisymm through or_elim, with no Classical.em and no double negation -- rather than assuming it.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::cramer_two_unique_x_is_the_stated_forward_direction (asserts the whitespace-normalised KERNEL-RENDERED type verbatim with assert_eq!)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_rat_prelude return Err and the test fail)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::cramer_two_unique_x_is_the_stated_forward_direction -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
+      "notes": "A footprint check cannot carry this claim. The same theorem with the numerator columns TRANSPOSED -- det2 u b v d replaced by det2 a u c v -- is false and has an identically empty footprint, as does one with the nonzero-determinant hypothesis removed. The pin is what separates them, and the establishing lane added it on its own initiative rather than because the brief demanded it. The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
+    },
+    {
+      "id": "footprint-rat-linear-algebra",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for the whole 2x2 development -- Rat.det2 (a real Definition), det2_swap_rows, det2_id, det2_scale_row, det2_row_add, det2_mul, the four mul_adj2_* entries, the four inv2_* entries, mul_inv_cancel_of_ne_zero, and both cramer_two_unique_* -- and everything beneath them. The `rat` prelude's trusted surface is 0. Every name was added to BOTH the matrix axiom sweep AND every_named_declaration_exists in the SAME edit that declared it.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::matrix_laws_are_axiom_free (reads Kernel::axiom_footprint for each matrix declaration and requires the empty set)",
+        "rat_prelude_tests::every_named_declaration_exists (requires each name to be PRESENT in the environment -- the half that catches an omission, since a name interned but never declared has a vacuously empty footprint)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::matrix_laws_are_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
+      "notes": "Presence and footprint are two different checks and both are required. A lane found five pre-existing rat declarations missing from a sweep on the same day; an unvisited name's footprint is not empty, it is UNMEASURED. Counting Declaration::Axiom alone would not suffice either, since Opaque has no proof body and Quotient admits Quot.sound."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-capability-assurance (2026-08-24) across two dispatched lanes. Before them, `grep -ri 'determinant|matrix' crates/axeyum-lean-kernel/src` matched nothing in any prelude: linear algebra did not exist in this kernel. The first lane built det2 and multiplicativity, the second the inverse and Cramer.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "Gabriel Cramer",
+        "what": "the rule for solving linear systems by determinants",
+        "year": 1750,
+        "where": "Introduction a l'analyse des lignes courbes algebriques, Appendix",
+        "attribution": "standard attribution; this lane did not consult the primary source. The 2x2 case is elementary and the general n x n rule is not proved here."
+      },
+      {
+        "who": "Augustin-Louis Cauchy",
+        "what": "the determinant product theorem",
+        "year": 1812,
+        "where": "conventionally attributed",
+        "attribution": "Noted because det2_mul was proved by Cauchy's own route -- row-linearity plus repeated-row-vanishing -- rather than by expanding both sides into eight monomials, which would have needed a factor-multiset reorderer for Rat.mul that does not exist here."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred. (1) EXISTENCE: nothing asserts the quotient actually solves the system, only that a solution must equal it. (2) ANY n x n GENERALISATION: everything here is 2x2 with the four entries as four explicit arguments. (3) `Rat.adj2` AS AN OBJECT: a function returning four rationals needs a product or tuple type, and this kernel has none -- rat_prelude/product.rs is about products of NUMBERS, not pairs. So the adjugate's entries d, -b, -c, a are written directly into each of the four theorems. That is a structural limit of the kernel, not a shortcut, and anything wanting adj as a value needs a tuple type first. (4) det3 and det2_eq_zero_iff_rows_dependent are not attempted.\n\nThe proof is constructive throughout: no Classical.em, no propext, no funext, no Quot.sound. Rat.lt_trichotomy, which the nonzero case split needs, was verified constructive from source rather than assumed.\n\nexternal_status is `proved`: formalization of classical elementary linear algebra, not discovery. What is locally notable is only that the subject did not exist in this kernel this morning."
+}

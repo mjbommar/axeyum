@@ -161,7 +161,7 @@ use algebra::{
     declare_multiplicative_theorems, declare_subtraction_theorems,
 };
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
-use binary::declare_binary_all;
+use binary::{declare_binary_all, declare_size_all};
 use binomial::{
     declare_binomial_theorem, declare_combinatorial_identities, declare_succ_mul_choose_eq,
     declare_succ_sub_of_le,
@@ -1026,6 +1026,45 @@ pub struct NatPrelude {
     /// the partial-sum form: the low `k` bits of `n`, read back as a number,
     /// equal `n mod 2^k`.
     pub sum_test_bit_lt: NameId,
+    /// `Nat.sizeAux : Nat → Nat → Nat`, `sizeAux fuel n`: recursion on the
+    /// FIRST argument (`fuel`, structural — the same fuel route `testBitAux`
+    /// uses), with a zero-check Boolean guard on the SECOND argument so the
+    /// answer stops changing once `n` hits `0`:
+    /// `sizeAux 0 n ≡ 0`; `sizeAux (succ f) n ≡`
+    /// `if beq n 0 then 0 else succ (sizeAux f (n / 2))`. Not the public name;
+    /// [`Self::size`] supplies fuel `n` itself, which
+    /// [`Self::size_aux_lt_pow`] proves is always enough.
+    pub size_aux: NameId,
+    /// `Nat.size n := sizeAux n n` — the number of binary digits of `n`
+    /// (`size 0 = 0`, `size 1 = 1`, `size 13 = 4`, `size 16 = 5`).
+    pub size: NameId,
+    /// `Nat.size_zero : size 0 = 0` (refl).
+    pub size_zero: NameId,
+    /// `Nat.size_aux_lt_pow : ∀ fuel n, Le n fuel → Lt n (pow 2 (sizeAux fuel n))`
+    /// — for any fuel at least as large as `n`, `sizeAux fuel n` reports enough
+    /// bits to bound `n`. This is the fuel-sufficiency fact
+    /// [`Self::size`] relies on (specializing at `fuel := n` via `le_refl`
+    /// both proves [`Self::lt_pow_size`] and witnesses that `n` itself is
+    /// always enough fuel), proved by induction on `fuel` generalized over
+    /// `n`, matching [`Self::test_bit_le_one`]/[`Self::sum_test_bit_lt`]'s
+    /// shape.
+    pub size_aux_lt_pow: NameId,
+    /// `Nat.lt_pow_size : ∀ n, Lt n (pow 2 (size n))` — a natural number is
+    /// strictly bounded by 2 raised to its own bit count. The
+    /// `fuel := n` instance of [`Self::size_aux_lt_pow`].
+    pub lt_pow_size: NameId,
+    /// `Nat.mod_eq_self_of_lt : ∀ n m, Lt n m → mod n m = n` — a general
+    /// division fact (not specific to binary representation), needed as glue
+    /// for [`Self::sum_test_bit_eq`]. Proved by comparing the executable
+    /// `divMod` witness against the hand-built witness `(quotient := 0,
+    /// remainder := n)` via `div_mod_unique`.
+    pub mod_eq_self_of_lt: NameId,
+    /// `Nat.sum_testBit_eq : ∀ n,
+    /// sumRange (fun i => mul (testBit n i) (pow 2 i)) (size n) = n` — a
+    /// natural number IS the sum of its own bits. [`Self::sum_test_bit_lt`]
+    /// at `k := size n`, closed by [`Self::lt_pow_size`] and
+    /// [`Self::mod_eq_self_of_lt`].
+    pub sum_test_bit_eq: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1333,6 +1372,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             test_bit_le_one: kernel.name_str(nat, "testBit_le_one"),
             mod_two_mul_split: kernel.name_str(nat, "mod_two_mul_split"),
             sum_test_bit_lt: kernel.name_str(nat, "sum_testBit_lt"),
+            size_aux: kernel.name_str(nat, "sizeAux"),
+            size: kernel.name_str(nat, "size"),
+            size_zero: kernel.name_str(nat, "size_zero"),
+            size_aux_lt_pow: kernel.name_str(nat, "size_aux_lt_pow"),
+            lt_pow_size: kernel.name_str(nat, "lt_pow_size"),
+            mod_eq_self_of_lt: kernel.name_str(nat, "mod_eq_self_of_lt"),
+            sum_test_bit_eq: kernel.name_str(nat, "sum_testBit_eq"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1387,6 +1433,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_rectangle(&mut d, &p)?;
         declare_vandermonde_all(&mut d, &p)?;
         declare_binary_all(&mut d, &p)?;
+        declare_size_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
