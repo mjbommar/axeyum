@@ -143,6 +143,7 @@ mod fibonacci;
 mod finite;
 mod gcd;
 mod helpers;
+mod lcm;
 mod modular;
 mod no_confusion;
 mod ops;
@@ -184,6 +185,7 @@ use finite::{
     declare_restrict_maps_into,
 };
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
+use lcm::declare_lcm;
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
@@ -583,6 +585,21 @@ pub struct NatPrelude {
     pub dvd_gcd: NameId,
     /// `Nat.dvd_gcd_iff : k | gcd m n ↔ k | m ∧ k | n`.
     pub dvd_gcd_iff: NameId,
+    /// `Nat.lcm a b := div (mul a b) (gcd a b)` — the least common multiple.
+    /// `lcm 0 0 = 0` matches Mathlib's convention: at that one degenerate point
+    /// `gcd a b = 0` too, and `div _ 0 = 0`, so `lcm 0 0` computes to `0` and
+    /// `gcd_mul_lcm` still holds there as `0 * 0 = 0 * 0`.
+    pub lcm: NameId,
+    /// `Nat.lcm_zero_left : ∀ b, lcm zero b = zero` — `zero_mul`/`zero_div`
+    /// collapse the numerator without ever needing `gcd zero b`'s value.
+    pub lcm_zero_left: NameId,
+    /// `Nat.dvd_lcm_left : ∀ a b, dvd a (lcm a b)`.
+    pub dvd_lcm_left: NameId,
+    /// `Nat.dvd_lcm_right : ∀ a b, dvd b (lcm a b)`.
+    pub dvd_lcm_right: NameId,
+    /// `Nat.gcd_mul_lcm : ∀ a b, gcd a b * lcm a b = a * b` — the headline
+    /// identity, unconditional (including at `a = b = 0`).
+    pub gcd_mul_lcm: NameId,
     /// Balanced natural Bézout certificates:
     /// `bezout m n g := ∃ mp mn np nn, g + m*mn + n*nn = m*mp + n*np`.
     pub bezout: NameId,
@@ -1361,6 +1378,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gcd_dvd_right: kernel.name_str(nat, "gcd_dvd_right"),
             dvd_gcd: kernel.name_str(nat, "dvd_gcd"),
             dvd_gcd_iff: kernel.name_str(nat, "dvd_gcd_iff"),
+            lcm: kernel.name_str(nat, "lcm"),
+            lcm_zero_left: kernel.name_str(nat, "lcm_zero_left"),
+            dvd_lcm_left: kernel.name_str(nat, "dvd_lcm_left"),
+            dvd_lcm_right: kernel.name_str(nat, "dvd_lcm_right"),
+            gcd_mul_lcm: kernel.name_str(nat, "gcd_mul_lcm"),
             bezout: kernel.name_str(nat, "bezout"),
             gcd_bezout: kernel.name_str(nat, "gcd_bezout"),
             mod_eq: kernel.name_str(nat, "modEq"),
@@ -1518,6 +1540,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_divisibility(&mut d, &p)?;
         declare_executable_gcd(&mut d, &p)?;
         declare_gcd_semantics(&mut d, &p)?;
+        declare_lcm(&mut d, &p)?;
         declare_gcd_bezout(&mut d, &p)?;
         declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
