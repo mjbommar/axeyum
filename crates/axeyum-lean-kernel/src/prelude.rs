@@ -55,6 +55,37 @@
 //! plain function composition for `mt`) — none needs an axiom, and
 //! `Kernel::axiom_footprint` is empty for every one of them (see
 //! `prelude_tests`).
+//!
+//! ## The negation toolkit, De Morgan, and the classical principles
+//!
+//! This kernel is **intuitionistic**: `Classical.em`, `propext`, and `funext`
+//! are not declared anywhere, so every theorem below had to be proved without
+//! them, using only the connectives above.
+//!
+//! - **`not_not_intro`**, **`not_not_not`** (the triple-negation collapse
+//!   `¬¬¬a → ¬a`), and **`noncontradiction`** (`¬(a ∧ ¬a)`) round out the
+//!   negation toolkit alongside the pre-existing `absurd`/`mt`.
+//! - **De Morgan.** Three of the four directions relating `¬`, `∧`, and `∨`
+//!   are intuitionistically valid and declared here: **`demorgan_not_or`**
+//!   (`¬(a ∨ b) → ¬a ∧ ¬b`), its converse **`demorgan_not_or_converse`**
+//!   (`¬a ∧ ¬b → ¬(a ∨ b)`), and **`demorgan_or_not_and`**
+//!   (`¬a ∨ ¬b → ¬(a ∧ b)`). The fourth direction — the converse of the last,
+//!   `¬(a ∧ b) → ¬a ∨ ¬b` — is **not a theorem of intuitionistic logic**: it
+//!   is classically valid but constructively equivalent to a weak form of
+//!   excluded middle, so deriving it would require assuming a classical
+//!   principle this kernel does not have. It is deliberately not declared,
+//!   stated as an axiom, or approximated by anything in this prelude.
+//! - **The classical principles are interderivable, and none of them is
+//!   assumed.** `Classical.em`'s statement (`∀ P, P ∨ ¬P`), double-negation
+//!   elimination's statement (`∀ P, ¬¬P → P`), and Peirce's law's statement
+//!   (`∀ A B, ((A → B) → A) → A`) are each *hypotheses* of a theorem here,
+//!   never conclusions asserted outright: **`dne_of_em`**, **`em_of_dne`**,
+//!   **`peirce_of_em`**, **`em_of_peirce`**. The standalone
+//!   **`not_not_em : ¬¬(P ∨ ¬P)`** — excluded middle's double negation, which
+//!   *is* an intuitionistic theorem with no hypothesis at all — is what makes
+//!   `em_of_dne` work: instantiate double-negation elimination at `P ∨ ¬P`
+//!   itself and discharge its `¬¬(P ∨ ¬P)` premise with `not_not_em`.
+
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use crate::env::{Declaration, ReducibilityHint};
@@ -203,6 +234,64 @@ pub struct LogicPrelude {
     /// tollens, direct function composition (`fun ha => nb (f ha)`), no
     /// recursor needed.
     pub mt: NameId,
+
+    /// `not_not_intro : Π (a : Prop), a → (a → False) → False` — double
+    /// negation introduction (`¬¬a` from `a`), plain function application
+    /// (`fun a ha hna => hna ha`).
+    pub not_not_intro: NameId,
+    /// `noncontradiction : Π (a : Prop), And a (a → False) → False` —
+    /// `¬(a ∧ ¬a)`, built from [`Self::and_left`]/[`Self::and_right`].
+    pub noncontradiction: NameId,
+    /// `not_not_not : Π (a : Prop), (((a → False) → False) → False) → a → False`
+    /// — the triple-negation collapse `¬¬¬a → ¬a`. Constructively valid (unlike
+    /// its non-existent inverse `¬a → ¬¬¬a`'s converse `¬¬a → a`, which is
+    /// exactly [`Self::dne_of_em`]'s non-constructive hypothesis): built from
+    /// [`Self::not_not_intro`] composed with the given `¬¬¬a`.
+    pub not_not_not: NameId,
+    /// `demorgan_not_or : Π (a b : Prop), (Or a b → False) → And (a → False) (b → False)`
+    /// — `¬(a ∨ b) → ¬a ∧ ¬b`, one of the three intuitionistically valid De
+    /// Morgan directions (see the module doc for the one that is not).
+    pub demorgan_not_or: NameId,
+    /// `demorgan_not_or_converse : Π (a b : Prop), And (a → False) (b → False) → (Or a b → False)`
+    /// — the converse `¬a ∧ ¬b → ¬(a ∨ b)`, built from [`Self::or_elim`].
+    pub demorgan_not_or_converse: NameId,
+    /// `demorgan_or_not_and : Π (a b : Prop), Or (a → False) (b → False) → (And a b → False)`
+    /// — `¬a ∨ ¬b → ¬(a ∧ b)`, built from [`Self::or_elim`] and
+    /// [`Self::and_left`]/[`Self::and_right`]. The converse of this one,
+    /// `¬(a ∧ b) → ¬a ∨ ¬b`, is the De Morgan direction that is **not**
+    /// intuitionistically valid (module doc) and is deliberately not declared.
+    pub demorgan_or_not_and: NameId,
+    /// `not_not_em : Π (p : Prop), ((Or p (p → False)) → False) → False` —
+    /// `¬¬(p ∨ ¬p)`, excluded middle's double negation, provable outright in
+    /// intuitionistic logic with no classical hypothesis: refute `¬(p ∨ ¬p)`
+    /// by building `¬p` from it (any `p` gives `p ∨ ¬p` via `Or.inl`) and then
+    /// closing with `Or.inr` on that very `¬p`. The route [`Self::em_of_dne`]
+    /// uses to derive excluded middle from double-negation elimination.
+    pub not_not_em: NameId,
+    /// `dne_of_em : Π (em : Π (p : Prop), Or p (p → False)), Π (p : Prop), (((p → False) → False) → p)`
+    /// — excluded middle implies double-negation elimination: case-split on
+    /// `em p` via [`Self::or_elim`], the `p` branch is immediate and the `¬p`
+    /// branch is refuted by the given `¬¬p`.
+    pub dne_of_em: NameId,
+    /// `em_of_dne : Π (dne : Π (p : Prop), (((p → False) → False) → p)), Π (p : Prop), Or p (p → False)`
+    /// — double-negation elimination implies excluded middle: apply `dne` to
+    /// `Or p (p → False)` itself, discharging its `¬¬(p ∨ ¬p)` hypothesis with
+    /// [`Self::not_not_em`]. Together with [`Self::dne_of_em`] this is the
+    /// headline result — the classical principle and its converse are
+    /// interderivable *theorems* of this intuitionistic kernel; neither
+    /// principle itself is declared or assumed.
+    pub em_of_dne: NameId,
+    /// `peirce_of_em : Π (em : Π (p : Prop), Or p (p → False)), Π (a b : Prop), (((a → b) → a) → a)`
+    /// — excluded middle implies Peirce's law: case-split on `em a`, the `a`
+    /// branch is immediate and the `¬a` branch builds the needed `a → b` by ex
+    /// falso before applying the hypothesis.
+    pub peirce_of_em: NameId,
+    /// `em_of_peirce : Π (peirce : Π (a b : Prop), (((a → b) → a) → a)), Π (p : Prop), Or p (p → False)`
+    /// — Peirce's law implies excluded middle: instantiate `peirce` at
+    /// `(Or p (p → False), False)`, discharging the resulting
+    /// `(Or p (p → False) → False) → Or p (p → False)` hypothesis with the same
+    /// `Or.inr`-from-refuted-`Or.inl` construction as [`Self::not_not_em`].
+    pub em_of_peirce: NameId,
 
     /// `Bool : Type` (`Sort 1`) — the **computational** two-element type, a
     /// nullary enum `Bool.false | Bool.true`, in official Lean order. This is
@@ -2461,6 +2550,621 @@ pub(crate) fn build_logic_prelude_uncached(
             })?;
         }
 
+        // =====================================================================
+        // The classical principles, made interderivable -- proved
+        // intuitionistically, with none of them assumed (ADR-0036 follow-on).
+        // =====================================================================
+
+        // --- not_not_intro : Π (a : Prop), a → (a → False) → False ----------
+        let not_not_intro = kernel.name_str(anon, "not_not_intro");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_720;
+            let ha_fvar = 23_721;
+            let hna_fvar = 23_722;
+            let a = kernel.fvar(a_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let na_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // a → False
+
+            // type: Π (a : Prop), a → (a → False) → False.
+            let t_inner = kernel.pi(anon, na_ty, false_const, BinderInfo::Default);
+            let t_outer = kernel.pi(anon, a, t_inner, BinderInfo::Default);
+            let not_not_intro_ty = pi_fvar(kernel, a_fvar, prop, t_outer, BinderInfo::Default);
+
+            // value: fun a ha hna => hna ha.
+            let ha = kernel.fvar(ha_fvar);
+            let hna = kernel.fvar(hna_fvar);
+            let hna_ha = kernel.app(hna, ha);
+
+            let with_hna = lam_fvar(kernel, hna_fvar, na_ty, hna_ha, BinderInfo::Default);
+            let with_ha = lam_fvar(kernel, ha_fvar, a, with_hna, BinderInfo::Default);
+            let not_not_intro_value = lam_fvar(kernel, a_fvar, prop, with_ha, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: not_not_intro,
+                uparams: vec![],
+                ty: not_not_intro_ty,
+                value: not_not_intro_value,
+            })?;
+        }
+
+        // --- noncontradiction : Π (a : Prop), And a (a → False) → False -----
+        let noncontradiction = kernel.name_str(anon, "noncontradiction");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_730;
+            let hp_fvar = 23_731;
+            let a = kernel.fvar(a_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let na_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // a → False
+            let and_const = kernel.const_(and, vec![]);
+            let and_a_na = apply_all(kernel, and_const, &[a, na_ty]);
+
+            // type: Π (a : Prop), And a (a → False) → False.
+            let t_outer = kernel.pi(anon, and_a_na, false_const, BinderInfo::Default);
+            let noncontradiction_ty = pi_fvar(kernel, a_fvar, prop, t_outer, BinderInfo::Default);
+
+            // value: fun a hp => And.right a (a → False) hp (And.left a (a → False) hp).
+            let hp = kernel.fvar(hp_fvar);
+            let and_left_const = kernel.const_(and_left, vec![]);
+            let left = apply_all(kernel, and_left_const, &[a, na_ty, hp]);
+            let and_right_const = kernel.const_(and_right, vec![]);
+            let right = apply_all(kernel, and_right_const, &[a, na_ty, hp]);
+            let applied = kernel.app(right, left);
+
+            let with_hp = lam_fvar(kernel, hp_fvar, and_a_na, applied, BinderInfo::Default);
+            let noncontradiction_value =
+                lam_fvar(kernel, a_fvar, prop, with_hp, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: noncontradiction,
+                uparams: vec![],
+                ty: noncontradiction_ty,
+                value: noncontradiction_value,
+            })?;
+        }
+
+        // --- not_not_not : Π (a : Prop), ¬¬¬a → a → False --------------------
+        // The triple-negation collapse: ¬¬¬a → ¬a. Built directly from
+        // `not_not_intro` rather than a fresh recursor derivation.
+        let not_not_not = kernel.name_str(anon, "not_not_not");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_740;
+            let h3_fvar = 23_741;
+            let ha_fvar = 23_742;
+            let a = kernel.fvar(a_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let na_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // a → False
+            let nna_ty = kernel.pi(anon, na_ty, false_const, BinderInfo::Default); // ¬¬a
+            let nnna_ty = kernel.pi(anon, nna_ty, false_const, BinderInfo::Default); // ¬¬¬a
+
+            // type: Π (a : Prop), ¬¬¬a → a → False.
+            let t_outer = kernel.pi(anon, nnna_ty, na_ty, BinderInfo::Default);
+            let not_not_not_ty = pi_fvar(kernel, a_fvar, prop, t_outer, BinderInfo::Default);
+
+            // value: fun a h3 ha => h3 (not_not_intro a ha).
+            let h3 = kernel.fvar(h3_fvar);
+            let ha = kernel.fvar(ha_fvar);
+            let not_not_intro_const = kernel.const_(not_not_intro, vec![]);
+            let nn_a = apply_all(kernel, not_not_intro_const, &[a, ha]);
+            let h3_nn_a = kernel.app(h3, nn_a);
+
+            let with_ha = lam_fvar(kernel, ha_fvar, a, h3_nn_a, BinderInfo::Default);
+            let with_h3 = lam_fvar(kernel, h3_fvar, nnna_ty, with_ha, BinderInfo::Default);
+            let not_not_not_value = lam_fvar(kernel, a_fvar, prop, with_h3, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: not_not_not,
+                uparams: vec![],
+                ty: not_not_not_ty,
+                value: not_not_not_value,
+            })?;
+        }
+
+        // --- demorgan_not_or : ¬(a ∨ b) → ¬a ∧ ¬b -----------------------------
+        let demorgan_not_or = kernel.name_str(anon, "demorgan_not_or");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_750;
+            let b_fvar = 23_751;
+            let h_fvar = 23_752;
+            let ha_fvar = 23_753;
+            let hb_fvar = 23_754;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let or_const = kernel.const_(or, vec![]);
+            let or_ab = apply_all(kernel, or_const, &[a, b]);
+            let na_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // a → False
+            let nb_ty = kernel.pi(anon, b, false_const, BinderInfo::Default); // b → False
+            let and_const = kernel.const_(and, vec![]);
+            let and_na_nb = apply_all(kernel, and_const, &[na_ty, nb_ty]);
+            let or_to_false = kernel.pi(anon, or_ab, false_const, BinderInfo::Default);
+
+            // type: Π (a b : Prop), (Or a b → False) → And (a → False) (b → False).
+            let t_outer = kernel.pi(anon, or_to_false, and_na_nb, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, t_outer, BinderInfo::Default);
+            let demorgan_not_or_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b h =>
+            //   And.intro (a → False) (b → False)
+            //     (fun ha => h (Or.inl a b ha)) (fun hb => h (Or.inr a b hb)).
+            let h = kernel.fvar(h_fvar);
+            let or_inl_const = kernel.const_(or_inl, vec![]);
+            let or_inr_const = kernel.const_(or_inr, vec![]);
+            let left_fn = {
+                let ha = kernel.fvar(ha_fvar);
+                let inl_applied = apply_all(kernel, or_inl_const, &[a, b, ha]);
+                let h_inl = kernel.app(h, inl_applied);
+                lam_fvar(kernel, ha_fvar, a, h_inl, BinderInfo::Default)
+            };
+            let right_fn = {
+                let hb = kernel.fvar(hb_fvar);
+                let inr_applied = apply_all(kernel, or_inr_const, &[a, b, hb]);
+                let h_inr = kernel.app(h, inr_applied);
+                lam_fvar(kernel, hb_fvar, b, h_inr, BinderInfo::Default)
+            };
+            let and_intro_const = kernel.const_(and_intro, vec![]);
+            let applied = apply_all(kernel, and_intro_const, &[na_ty, nb_ty, left_fn, right_fn]);
+
+            let with_h = lam_fvar(kernel, h_fvar, or_to_false, applied, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_h, BinderInfo::Default);
+            let demorgan_not_or_value =
+                lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: demorgan_not_or,
+                uparams: vec![],
+                ty: demorgan_not_or_ty,
+                value: demorgan_not_or_value,
+            })?;
+        }
+
+        // --- demorgan_not_or_converse : ¬a ∧ ¬b → ¬(a ∨ b) -------------------
+        let demorgan_not_or_converse = kernel.name_str(anon, "demorgan_not_or_converse");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_760;
+            let b_fvar = 23_761;
+            let hp_fvar = 23_762;
+            let hor_fvar = 23_763;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let or_const = kernel.const_(or, vec![]);
+            let or_ab = apply_all(kernel, or_const, &[a, b]);
+            let na_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // a → False
+            let nb_ty = kernel.pi(anon, b, false_const, BinderInfo::Default); // b → False
+            let and_const = kernel.const_(and, vec![]);
+            let and_na_nb = apply_all(kernel, and_const, &[na_ty, nb_ty]);
+            let or_to_false = kernel.pi(anon, or_ab, false_const, BinderInfo::Default);
+
+            // type: Π (a b : Prop), And (a → False) (b → False) → (Or a b → False).
+            let t_outer = kernel.pi(anon, and_na_nb, or_to_false, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, t_outer, BinderInfo::Default);
+            let demorgan_not_or_converse_ty =
+                pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b hp hor =>
+            //   Or.elim a b False hor (And.left (a → False) (b → False) hp)
+            //     (And.right (a → False) (b → False) hp).
+            let hp = kernel.fvar(hp_fvar);
+            let hor = kernel.fvar(hor_fvar);
+            let and_left_const = kernel.const_(and_left, vec![]);
+            let and_right_const = kernel.const_(and_right, vec![]);
+            let left_proof = apply_all(kernel, and_left_const, &[na_ty, nb_ty, hp]);
+            let right_proof = apply_all(kernel, and_right_const, &[na_ty, nb_ty, hp]);
+            let or_elim_const = kernel.const_(or_elim, vec![]);
+            let applied = apply_all(
+                kernel,
+                or_elim_const,
+                &[a, b, false_const, hor, left_proof, right_proof],
+            );
+
+            let inner = lam_fvar(kernel, hor_fvar, or_ab, applied, BinderInfo::Default);
+            let with_hp = lam_fvar(kernel, hp_fvar, and_na_nb, inner, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_hp, BinderInfo::Default);
+            let demorgan_not_or_converse_value =
+                lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: demorgan_not_or_converse,
+                uparams: vec![],
+                ty: demorgan_not_or_converse_ty,
+                value: demorgan_not_or_converse_value,
+            })?;
+        }
+
+        // --- demorgan_or_not_and : ¬a ∨ ¬b → ¬(a ∧ b) ------------------------
+        // The converse of THIS one -- ¬(a ∧ b) → ¬a ∨ ¬b -- is the De Morgan
+        // direction that is NOT a theorem of intuitionistic logic (see the
+        // module doc); it is not declared here or anywhere in this prelude.
+        let demorgan_or_not_and = kernel.name_str(anon, "demorgan_or_not_and");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 23_770;
+            let b_fvar = 23_771;
+            let hor_fvar = 23_772;
+            let na_fvar = 23_773;
+            let hab1_fvar = 23_774;
+            let nb_fvar = 23_775;
+            let hab2_fvar = 23_776;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let and_const = kernel.const_(and, vec![]);
+            let and_ab = apply_all(kernel, and_const, &[a, b]);
+            let na_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // a → False
+            let nb_ty = kernel.pi(anon, b, false_const, BinderInfo::Default); // b → False
+            let or_const = kernel.const_(or, vec![]);
+            let or_na_nb = apply_all(kernel, or_const, &[na_ty, nb_ty]);
+            let and_to_false = kernel.pi(anon, and_ab, false_const, BinderInfo::Default);
+
+            // type: Π (a b : Prop), Or (a → False) (b → False) → (And a b → False).
+            let t_outer = kernel.pi(anon, or_na_nb, and_to_false, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, t_outer, BinderInfo::Default);
+            let demorgan_or_not_and_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b hor =>
+            //   Or.elim (a → False) (b → False) (And a b → False) hor
+            //     (fun na hab => na (And.left a b hab))
+            //     (fun nb hab => nb (And.right a b hab)).
+            let and_left_const = kernel.const_(and_left, vec![]);
+            let and_right_const = kernel.const_(and_right, vec![]);
+            let branch1 = {
+                let na = kernel.fvar(na_fvar);
+                let hab = kernel.fvar(hab1_fvar);
+                let al = apply_all(kernel, and_left_const, &[a, b, hab]);
+                let na_al = kernel.app(na, al);
+                let inner = lam_fvar(kernel, hab1_fvar, and_ab, na_al, BinderInfo::Default);
+                lam_fvar(kernel, na_fvar, na_ty, inner, BinderInfo::Default)
+            };
+            let branch2 = {
+                let nb = kernel.fvar(nb_fvar);
+                let hab = kernel.fvar(hab2_fvar);
+                let ar = apply_all(kernel, and_right_const, &[a, b, hab]);
+                let nb_ar = kernel.app(nb, ar);
+                let inner = lam_fvar(kernel, hab2_fvar, and_ab, nb_ar, BinderInfo::Default);
+                lam_fvar(kernel, nb_fvar, nb_ty, inner, BinderInfo::Default)
+            };
+            let hor = kernel.fvar(hor_fvar);
+            let or_elim_const = kernel.const_(or_elim, vec![]);
+            let applied = apply_all(
+                kernel,
+                or_elim_const,
+                &[na_ty, nb_ty, and_to_false, hor, branch1, branch2],
+            );
+
+            let with_hor = lam_fvar(kernel, hor_fvar, or_na_nb, applied, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_hor, BinderInfo::Default);
+            let demorgan_or_not_and_value =
+                lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: demorgan_or_not_and,
+                uparams: vec![],
+                ty: demorgan_or_not_and_ty,
+                value: demorgan_or_not_and_value,
+            })?;
+        }
+
+        // --- not_not_em : Π (p : Prop), ¬¬(Or p (p → False)) ------------------
+        // Excluded middle's double negation, provable outright: build ¬p from
+        // ¬(p ∨ ¬p) (a hp : p would give p ∨ ¬p via Or.inl, contradicting the
+        // hypothesis), then close with Or.inr on that very ¬p.
+        let not_not_em = kernel.name_str(anon, "not_not_em");
+        {
+            let prop = kernel.prop();
+            let p_fvar = 23_780;
+            let h_fvar = 23_781;
+            let hp_fvar = 23_782;
+            let p = kernel.fvar(p_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let np_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let or_const = kernel.const_(or, vec![]);
+            let or_p_np = apply_all(kernel, or_const, &[p, np_ty]);
+            let or_to_false = kernel.pi(anon, or_p_np, false_const, BinderInfo::Default);
+
+            // type: Π (p : Prop), ((Or p (p → False)) → False) → False.
+            let t_outer = kernel.pi(anon, or_to_false, false_const, BinderInfo::Default);
+            let not_not_em_ty = pi_fvar(kernel, p_fvar, prop, t_outer, BinderInfo::Default);
+
+            // value: fun p h => h (Or.inr p (p → False) (fun hp => h (Or.inl p (p → False) hp))).
+            let h = kernel.fvar(h_fvar);
+            let or_inl_const = kernel.const_(or_inl, vec![]);
+            let or_inr_const = kernel.const_(or_inr, vec![]);
+            let np_proof = {
+                let hp = kernel.fvar(hp_fvar);
+                let inl_applied = apply_all(kernel, or_inl_const, &[p, np_ty, hp]);
+                let h_inl = kernel.app(h, inl_applied);
+                lam_fvar(kernel, hp_fvar, p, h_inl, BinderInfo::Default)
+            };
+            let inr_applied = apply_all(kernel, or_inr_const, &[p, np_ty, np_proof]);
+            let h_inr = kernel.app(h, inr_applied);
+
+            let with_h = lam_fvar(kernel, h_fvar, or_to_false, h_inr, BinderInfo::Default);
+            let not_not_em_value = lam_fvar(kernel, p_fvar, prop, with_h, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: not_not_em,
+                uparams: vec![],
+                ty: not_not_em_ty,
+                value: not_not_em_value,
+            })?;
+        }
+
+        // --- dne_of_em : excluded middle → double-negation elimination -------
+        let dne_of_em = kernel.name_str(anon, "dne_of_em");
+        {
+            let prop = kernel.prop();
+            let em_fvar = 23_790;
+            let p_fvar = 23_791;
+            let hnn_fvar = 23_792;
+            let hp_fvar = 23_793;
+            let hnp_fvar = 23_794;
+            let em_p_fvar = 23_795;
+            let dummy_fvar = 23_796;
+            let false_const = kernel.const_(false_, vec![]);
+            let or_const = kernel.const_(or, vec![]);
+
+            // em_ty : Π (p : Prop), Or p (p → False).
+            let em_ty = {
+                let p_for_ty = kernel.fvar(em_p_fvar);
+                let np_for_ty = kernel.pi(anon, p_for_ty, false_const, BinderInfo::Default);
+                let or_p_np_for_ty = apply_all(kernel, or_const, &[p_for_ty, np_for_ty]);
+                pi_fvar(kernel, em_p_fvar, prop, or_p_np_for_ty, BinderInfo::Default)
+            };
+
+            let p = kernel.fvar(p_fvar);
+            let np_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let nnp_ty = kernel.pi(anon, np_ty, false_const, BinderInfo::Default); // ¬¬p
+
+            // type: Π (em : em_ty), Π (p : Prop), ¬¬p → p.
+            let t_inner = kernel.pi(anon, nnp_ty, p, BinderInfo::Default);
+            let with_p = pi_fvar(kernel, p_fvar, prop, t_inner, BinderInfo::Default);
+            let dne_of_em_ty = pi_fvar(kernel, em_fvar, em_ty, with_p, BinderInfo::Default);
+
+            // value: fun em p hnn =>
+            //   Or.elim p (p → False) p (em p) (fun hp => hp)
+            //     (fun hnp => False.rec.{0} (fun _ => p) (hnn hnp)).
+            let em = kernel.fvar(em_fvar);
+            let em_applied = kernel.app(em, p);
+            let branch1 = {
+                let hp = kernel.fvar(hp_fvar);
+                lam_fvar(kernel, hp_fvar, p, hp, BinderInfo::Default)
+            };
+            let branch2 = {
+                let hnn = kernel.fvar(hnn_fvar);
+                let hnp = kernel.fvar(hnp_fvar);
+                let hnn_hnp = kernel.app(hnn, hnp);
+                let false_motive =
+                    lam_fvar(kernel, dummy_fvar, false_const, p, BinderInfo::Default);
+                let zero = kernel.level_zero();
+                let false_rec_const = kernel.const_(false_rec, vec![zero]);
+                let ex_falso = apply_all(kernel, false_rec_const, &[false_motive, hnn_hnp]);
+                lam_fvar(kernel, hnp_fvar, np_ty, ex_falso, BinderInfo::Default)
+            };
+            let or_elim_const = kernel.const_(or_elim, vec![]);
+            let applied = apply_all(
+                kernel,
+                or_elim_const,
+                &[p, np_ty, p, em_applied, branch1, branch2],
+            );
+
+            let with_hnn = lam_fvar(kernel, hnn_fvar, nnp_ty, applied, BinderInfo::Default);
+            let with_p_v = lam_fvar(kernel, p_fvar, prop, with_hnn, BinderInfo::Default);
+            let dne_of_em_value = lam_fvar(kernel, em_fvar, em_ty, with_p_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: dne_of_em,
+                uparams: vec![],
+                ty: dne_of_em_ty,
+                value: dne_of_em_value,
+            })?;
+        }
+
+        // --- em_of_dne : double-negation elimination → excluded middle -------
+        // The interesting direction: instantiate `dne` at `Or p ¬p` itself and
+        // discharge its `¬¬(Or p ¬p)` hypothesis with `not_not_em`.
+        let em_of_dne = kernel.name_str(anon, "em_of_dne");
+        {
+            let prop = kernel.prop();
+            let dne_fvar = 23_800;
+            let p_fvar = 23_801;
+            let dne_p_fvar = 23_802;
+            let false_const = kernel.const_(false_, vec![]);
+            let or_const = kernel.const_(or, vec![]);
+
+            // dne_ty : Π (p : Prop), (((p → False) → False) → p).
+            let dne_ty = {
+                let p_for_ty = kernel.fvar(dne_p_fvar);
+                let np_for_ty = kernel.pi(anon, p_for_ty, false_const, BinderInfo::Default);
+                let nnp_for_ty = kernel.pi(anon, np_for_ty, false_const, BinderInfo::Default);
+                let inner_for_ty = kernel.pi(anon, nnp_for_ty, p_for_ty, BinderInfo::Default);
+                pi_fvar(kernel, dne_p_fvar, prop, inner_for_ty, BinderInfo::Default)
+            };
+
+            let p = kernel.fvar(p_fvar);
+            let np_ty = kernel.pi(anon, p, false_const, BinderInfo::Default);
+            let or_p_np = apply_all(kernel, or_const, &[p, np_ty]);
+
+            // type: Π (dne : dne_ty), Π (p : Prop), Or p (p → False).
+            let with_p = pi_fvar(kernel, p_fvar, prop, or_p_np, BinderInfo::Default);
+            let em_of_dne_ty = pi_fvar(kernel, dne_fvar, dne_ty, with_p, BinderInfo::Default);
+
+            // value: fun dne p => dne (Or p (p → False)) (not_not_em p).
+            let dne = kernel.fvar(dne_fvar);
+            let dne_applied1 = kernel.app(dne, or_p_np);
+            let not_not_em_const = kernel.const_(not_not_em, vec![]);
+            let nnem_p = kernel.app(not_not_em_const, p);
+            let applied = kernel.app(dne_applied1, nnem_p);
+
+            let with_p_v = lam_fvar(kernel, p_fvar, prop, applied, BinderInfo::Default);
+            let em_of_dne_value = lam_fvar(kernel, dne_fvar, dne_ty, with_p_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: em_of_dne,
+                uparams: vec![],
+                ty: em_of_dne_ty,
+                value: em_of_dne_value,
+            })?;
+        }
+
+        // --- peirce_of_em : excluded middle → Peirce's law -------------------
+        let peirce_of_em = kernel.name_str(anon, "peirce_of_em");
+        {
+            let prop = kernel.prop();
+            let em_fvar = 23_810;
+            let a_fvar = 23_811;
+            let b_fvar = 23_812;
+            let h_fvar = 23_813;
+            let hp_fvar = 23_814;
+            let hna_fvar = 23_815;
+            let ha_fvar = 23_816;
+            let em_p_fvar = 23_817;
+            let dummy_fvar = 23_818;
+            let false_const = kernel.const_(false_, vec![]);
+            let or_const = kernel.const_(or, vec![]);
+
+            // em_ty : Π (p : Prop), Or p (p → False).
+            let em_ty = {
+                let p_for_ty = kernel.fvar(em_p_fvar);
+                let np_for_ty = kernel.pi(anon, p_for_ty, false_const, BinderInfo::Default);
+                let or_p_np_for_ty = apply_all(kernel, or_const, &[p_for_ty, np_for_ty]);
+                pi_fvar(kernel, em_p_fvar, prop, or_p_np_for_ty, BinderInfo::Default)
+            };
+
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let ab_arrow = kernel.pi(anon, a, b, BinderInfo::Default); // a → b
+            let h_ty = kernel.pi(anon, ab_arrow, a, BinderInfo::Default); // (a → b) → a
+
+            // type: Π (em : em_ty), Π (a b : Prop), ((a → b) → a) → a.
+            let t_inner = kernel.pi(anon, h_ty, a, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, t_inner, BinderInfo::Default);
+            let with_a = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+            let peirce_of_em_ty = pi_fvar(kernel, em_fvar, em_ty, with_a, BinderInfo::Default);
+
+            // value: fun em a b h =>
+            //   Or.elim a (a → False) a (em a) (fun hp => hp)
+            //     (fun hna => h (fun ha => False.rec.{0} (fun _ => b) (hna ha))).
+            let na_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // a → False
+            let em = kernel.fvar(em_fvar);
+            let em_applied = kernel.app(em, a);
+            let branch1 = {
+                let hp = kernel.fvar(hp_fvar);
+                lam_fvar(kernel, hp_fvar, a, hp, BinderInfo::Default)
+            };
+            let branch2 = {
+                let hna = kernel.fvar(hna_fvar);
+                let ha = kernel.fvar(ha_fvar);
+                let hna_ha = kernel.app(hna, ha);
+                let false_motive =
+                    lam_fvar(kernel, dummy_fvar, false_const, b, BinderInfo::Default);
+                let zero = kernel.level_zero();
+                let false_rec_const = kernel.const_(false_rec, vec![zero]);
+                let ex_falso_b = apply_all(kernel, false_rec_const, &[false_motive, hna_ha]);
+                let ab_proof = lam_fvar(kernel, ha_fvar, a, ex_falso_b, BinderInfo::Default);
+                let h = kernel.fvar(h_fvar);
+                let h_applied = kernel.app(h, ab_proof);
+                lam_fvar(kernel, hna_fvar, na_ty, h_applied, BinderInfo::Default)
+            };
+            let or_elim_const = kernel.const_(or_elim, vec![]);
+            let applied = apply_all(
+                kernel,
+                or_elim_const,
+                &[a, na_ty, a, em_applied, branch1, branch2],
+            );
+
+            let with_h = lam_fvar(kernel, h_fvar, h_ty, applied, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_h, BinderInfo::Default);
+            let with_a_v = lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+            let peirce_of_em_value =
+                lam_fvar(kernel, em_fvar, em_ty, with_a_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: peirce_of_em,
+                uparams: vec![],
+                ty: peirce_of_em_ty,
+                value: peirce_of_em_value,
+            })?;
+        }
+
+        // --- em_of_peirce : Peirce's law → excluded middle -------------------
+        // Instantiate `peirce` at `(Or p ¬p, False)`: the same
+        // Or.inr-from-refuted-Or.inl construction as `not_not_em` discharges
+        // its `(Or p ¬p → False) → Or p ¬p` hypothesis directly.
+        let em_of_peirce = kernel.name_str(anon, "em_of_peirce");
+        {
+            let prop = kernel.prop();
+            let peirce_fvar = 23_820;
+            let p_fvar = 23_821;
+            let h_fvar = 23_822;
+            let hp_fvar = 23_823;
+            let pa_fvar = 23_824;
+            let pb_fvar = 23_825;
+            let false_const = kernel.const_(false_, vec![]);
+            let or_const = kernel.const_(or, vec![]);
+
+            // peirce_ty : Π (a b : Prop), ((a → b) → a) → a.
+            let peirce_ty = {
+                let pa = kernel.fvar(pa_fvar);
+                let pb = kernel.fvar(pb_fvar);
+                let pab_arrow = kernel.pi(anon, pa, pb, BinderInfo::Default);
+                let ph_ty = kernel.pi(anon, pab_arrow, pa, BinderInfo::Default);
+                let p_inner = kernel.pi(anon, ph_ty, pa, BinderInfo::Default);
+                let with_pb = pi_fvar(kernel, pb_fvar, prop, p_inner, BinderInfo::Default);
+                pi_fvar(kernel, pa_fvar, prop, with_pb, BinderInfo::Default)
+            };
+
+            let p = kernel.fvar(p_fvar);
+            let np_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let or_p_np = apply_all(kernel, or_const, &[p, np_ty]);
+
+            // type: Π (peirce : peirce_ty), Π (p : Prop), Or p (p → False).
+            let with_p = pi_fvar(kernel, p_fvar, prop, or_p_np, BinderInfo::Default);
+            let em_of_peirce_ty =
+                pi_fvar(kernel, peirce_fvar, peirce_ty, with_p, BinderInfo::Default);
+
+            // value: fun peirce p =>
+            //   peirce (Or p (p → False)) False
+            //     (fun h => Or.inr p (p → False) (fun hp => h (Or.inl p (p → False) hp))).
+            let peirce = kernel.fvar(peirce_fvar);
+            let peirce_applied1 = apply_all(kernel, peirce, &[or_p_np, false_const]);
+            let h_dom_ty = kernel.pi(anon, or_p_np, false_const, BinderInfo::Default); // A → False
+            let or_inl_const = kernel.const_(or_inl, vec![]);
+            let or_inr_const = kernel.const_(or_inr, vec![]);
+            let inner_proof = {
+                let h = kernel.fvar(h_fvar);
+                let np_proof = {
+                    let hp = kernel.fvar(hp_fvar);
+                    let inl_applied = apply_all(kernel, or_inl_const, &[p, np_ty, hp]);
+                    let h_inl = kernel.app(h, inl_applied);
+                    lam_fvar(kernel, hp_fvar, p, h_inl, BinderInfo::Default)
+                };
+                let inr_applied = apply_all(kernel, or_inr_const, &[p, np_ty, np_proof]);
+                lam_fvar(kernel, h_fvar, h_dom_ty, inr_applied, BinderInfo::Default)
+            };
+            let applied_final = kernel.app(peirce_applied1, inner_proof);
+
+            let with_p_v = lam_fvar(kernel, p_fvar, prop, applied_final, BinderInfo::Default);
+            let em_of_peirce_value = lam_fvar(
+                kernel,
+                peirce_fvar,
+                peirce_ty,
+                with_p_v,
+                BinderInfo::Default,
+            );
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: em_of_peirce,
+                uparams: vec![],
+                ty: em_of_peirce_ty,
+                value: em_of_peirce_value,
+            })?;
+        }
+
         Ok(LogicPrelude {
             true_,
             true_intro,
@@ -2507,6 +3211,17 @@ pub(crate) fn build_logic_prelude_uncached(
             absurd,
             absurd_vparam,
             mt,
+            not_not_intro,
+            noncontradiction,
+            not_not_not,
+            demorgan_not_or,
+            demorgan_not_or_converse,
+            demorgan_or_not_and,
+            not_not_em,
+            dne_of_em,
+            em_of_dne,
+            peirce_of_em,
+            em_of_peirce,
             bool_,
             bool_true,
             bool_false,

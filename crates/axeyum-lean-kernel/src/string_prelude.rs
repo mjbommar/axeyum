@@ -194,7 +194,7 @@ pub fn build_string_prelude(
         let append_assoc = kernel.name_str(namespace, "append_assoc");
         monoid::declare_append_and_laws(
             kernel,
-            monoid::MonoidNames {
+            &monoid::MonoidNames {
                 logic,
                 char_ind,
                 str_ind,

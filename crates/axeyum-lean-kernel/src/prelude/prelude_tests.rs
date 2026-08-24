@@ -276,6 +276,17 @@ fn prelude_admits_all_declarations() {
         p.congr_fun_prime,
         p.absurd,
         p.mt,
+        p.not_not_intro,
+        p.noncontradiction,
+        p.not_not_not,
+        p.demorgan_not_or,
+        p.demorgan_not_or_converse,
+        p.demorgan_or_not_and,
+        p.not_not_em,
+        p.dne_of_em,
+        p.em_of_dne,
+        p.peirce_of_em,
+        p.em_of_peirce,
     ] {
         assert!(
             k.environment().contains(name),
@@ -592,6 +603,49 @@ fn logic_prelude_with_accessibility_declares_no_axioms() {
         })
         .collect();
     assert!(axioms.is_empty(), "logic prelude axioms: {axioms:?}");
+}
+
+/// The negation toolkit, the three valid De Morgan directions, and the
+/// classical-principle interderivability theorems: every one of them must be
+/// **present** (a name interned but never declared would pass an
+/// `axiom_footprint` check vacuously) and every one of them must have an
+/// **empty** `axiom_footprint` -- in particular, none of them may reach
+/// `Classical.em`, `propext`, `funext`, or `Quot.sound`, none of which this
+/// kernel declares anywhere.
+#[test]
+fn classical_equivalences_are_present_and_axiom_free() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
+
+    for name in [
+        p.not_not_intro,
+        p.noncontradiction,
+        p.not_not_not,
+        p.demorgan_not_or,
+        p.demorgan_not_or_converse,
+        p.demorgan_or_not_and,
+        p.not_not_em,
+        p.dne_of_em,
+        p.em_of_dne,
+        p.peirce_of_em,
+        p.em_of_peirce,
+    ] {
+        assert!(
+            k.environment().contains(name),
+            "prelude should declare {}",
+            k.display_name(name)
+        );
+        let footprint = k.axiom_footprint(name);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(name),
+            footprint
+                .iter()
+                .map(|n| k.display_name(*n).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
 }
 
 #[test]
