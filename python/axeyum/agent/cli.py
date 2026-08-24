@@ -43,6 +43,7 @@ from pydantic_ai.usage import RunUsage, UsageLimits
 
 from ..knowledge._paths import resolve_root
 from . import episode as episode_api
+from . import mobility as mobility_api
 from .episode import Budgets
 from .graph import EpisodeState, run_episode
 from .models import set_vocabulary_root
@@ -359,6 +360,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="the sha256 of render_lean(proof) this must reproduce",
     )
     check_parser.set_defaults(handler=check_command)
+
+    # A7: the mobility census. It runs no producer and calls no model, so it
+    # lives beside `run`/`replay`/`check` rather than inside them: what it
+    # measures is the vocabulary's structural reach, which is a property of the
+    # catalog and the ledger and not of any episode.
+    mobility_api.add_parser(sub)
     return parser
 
 

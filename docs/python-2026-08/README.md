@@ -18,6 +18,10 @@ command can check, and lands as slices that pass the gates on their own.
 | 01 | [`01-pyo3-maturin.md`](01-pyo3-maturin.md) | `crates/axeyum-py` + root `pyproject.toml` + `python/axeyum/` package + stub generation + `just py-check` gate | nothing |
 | 02 | [`02-python-api.md`](02-python-api.md) | the typed surface: `axeyum.smt`, `axeyum.solver`, `axeyum.ir`, `axeyum.cas`, `axeyum.kernel`, `axeyum.producers`, `axeyum.knowledge`, `axeyum.evidence` | 01 |
 | 03 | [`03-agentic-layer.md`](03-agentic-layer.md) | pydantic-ai agent over 02, replayable episode artifacts, fail-closed episode checker, the frontier loop | 01, 02 |
+| 04 | [`04-tactic-catalog.md`](04-tactic-catalog.md) | the proof-strategy vocabulary `Plan` resolves against; census rule that rejects a one-shape catalog | 03 |
+| 05 | [`05-agent-runbook.md`](05-agent-runbook.md) | install, run offline/live, replay, where episodes go, what the checker enforces | 03 |
+| 06 | [`06-obstruction-graph.md`](06-obstruction-graph.md) | typed declines to an obstruction graph; which capability removes the largest cluster | 03 |
+| 07 | [`07-mobility-census.md`](07-mobility-census.md) | every precondition against every open fact without running a producer; the capability backlog | 03, 04 |
 
 The measured basis for all three is in two studies written 2026-08-24 and
 reproduced here as [`studies/`](studies/): the PyO3 feasibility probe (PyO3

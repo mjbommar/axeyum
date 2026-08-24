@@ -1791,6 +1791,209 @@ SUITES["tactic-catalog"] = (
     ],
 )
 
+SUITES["mobility-census"] = (
+    "scripts/check-mobility-census.py",
+    "scripts.tests.test_check_mobility_census",
+    [
+        (
+            "schema_version",
+            '    if census.get("schema_version") != SCHEMA_VERSION:',
+            "    if False:",
+        ),
+        (
+            "kind",
+            '    if census.get("kind") != KIND:',
+            "    if False:",
+        ),
+        (
+            "required top-level keys",
+            "        if key not in census:",
+            "        if False:",
+        ),
+        (
+            "pins must match their files",
+            "        if census.get(key) != measured:",
+            "        if False:",
+        ),
+        (
+            "every catalog tactic must be evaluated",
+            "    for missing in sorted(declared - present):",
+            "    for missing in []:",
+        ),
+        (
+            "no tactic the catalog does not declare",
+            "    for extra in sorted(present - declared):",
+            "    for extra in []:",
+        ),
+        (
+            "no held-out id anywhere",
+            "        if fact_id in text",
+            "        if False",
+        ),
+        (
+            "every fact id exists in the ledger",
+            "        if fact_id not in statuses:",
+            "        if False:",
+        ),
+        (
+            "the census is over OPEN facts",
+            '        elif statuses[fact_id] != "open":',
+            "        elif False:",
+        ),
+        (
+            "no duplicated fact row",
+            "        if fact_id in seen:",
+            "        if False:",
+        ),
+        (
+            "a cluster names a known fact",
+            "            if fact_id not in seen:\n                problems.append(f\"cluster names {fact_id}, which has no fact row\")",
+            '            if False:\n                problems.append(f"cluster names {fact_id}, which has no fact row")',
+        ),
+        (
+            "a tactic names a known matched fact",
+            "            if fact_id not in seen:\n                problems.append(f\"{row.get('id')} names matched fact {fact_id} with no fact row\")",
+            "            if False:\n                problems.append(f\"{row.get('id')} names matched fact {fact_id} with no fact row\")",
+        ),
+        (
+            "an empty ledger fails closed",
+            "    if not out:",
+            "    if False:",
+        ),
+        (
+            "a nursery with no held-out rows fails closed",
+            "    if not ids:",
+            "    if False:",
+        ),
+        (
+            "evaluable + unevaluable = open",
+            '    if totals.get("evaluable", 0) + totals.get("unevaluable", 0) != open_facts:',
+            "    if False:",
+        ),
+        (
+            "pairs = facts * tactics",
+            '    if totals.get("pairs") != open_facts * tactics:',
+            "    if False:",
+        ),
+        (
+            "the three verdict counts sum to pairs",
+            '    if pair_sum != totals.get("pairs"):',
+            "    if False:",
+        ),
+        (
+            "written_fact_rows matches the list",
+            '    if totals.get("written_fact_rows") != len(rows):',
+            "    if False:",
+        ),
+        (
+            "written + held-out accounts for every open fact",
+            '    if totals.get("written_fact_rows", 0) + totals.get("held_out_excluded", 0) != open_facts:',
+            "    if False:",
+        ),
+        (
+            "mobility is the matched count",
+            '        if row.get("mobility") != len(matched):',
+            "        if False:",
+        ),
+        (
+            "an unevaluable row may not match",
+            "        elif matched:",
+            "        elif False:",
+        ),
+        (
+            "a tactic carries one verdict",
+            "        if overlap:",
+            "        if False:",
+        ),
+        (
+            "one verdict per tactic per fact",
+            '        if total_verdicts != census["totals"]["tactics"]:',
+            "        if False:",
+        ),
+        (
+            "tactic matched counts agree with the fact rows",
+            "        if named != counted:",
+            "        if False:",
+        ),
+        (
+            "shapes cannot exceed matched facts",
+            "        if shapes > counted:",
+            "        if False:",
+        ),
+        (
+            "a matching tactic reports a shape",
+            "        if counted and not shapes:",
+            "        if False:",
+        ),
+        (
+            "a fact appears in one cluster",
+            "    if len(clustered) != len(set(clustered)):",
+            "    if False:",
+        ),
+        (
+            "the clusters cover the zero-match set",
+            "    if len(clustered) != zero_match_written:",
+            "    if False:",
+        ),
+        (
+            "totals.clusters agrees with the list",
+            '    if totals.get("clusters") != len(census.get("zero_match_clusters") or []):',
+            "    if False:",
+        ),
+        (
+            "a cluster size matches its facts",
+            '        if cluster.get("size") != len(cluster.get("fact_ids") or []):',
+            "        if False:",
+        ),
+        (
+            "a cluster names its reasons",
+            '        if not cluster.get("reasons"):',
+            "        if False:",
+        ),
+        (
+            "the partition table sums to the totals",
+            "        if summed != want:",
+            "        if False:",
+        ),
+        (
+            "a census that evaluated nothing is void",
+            '    if totals.get("evaluable", 0) > 0:',
+            "    if True:",
+        ),
+        (
+            "the sampling block is required",
+            "    if not isinstance(block, dict):",
+            "    if False:",
+        ),
+        (
+            "the sampling block carries every counter",
+            "        if key not in block:",
+            "        if False:",
+        ),
+        (
+            "an empty must-decline population",
+            '    if block["rows"] <= 0:',
+            "    if False:",
+        ),
+        (
+            "sampling counters sum to rows",
+            '    if block["evaluated"] + block["unevaluable"] != block["rows"]:',
+            "    if False:",
+        ),
+        (
+            "a suspect needs a fact behind it",
+            '    if block["suspects"] and not block["suspect_facts"]:',
+            "    if False:",
+        ),
+        (
+            "a suspect voids the census",
+            '    if block["suspects"]:\n        problems.append(\n            f"a tactic precondition admits',
+            '    if False:\n        problems.append(\n            f"a tactic precondition admits',
+        ),
+    ],
+)
+
+
 DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
 DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
 

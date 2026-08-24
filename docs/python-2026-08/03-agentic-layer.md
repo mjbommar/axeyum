@@ -259,6 +259,64 @@ producer; publish matched / zero-match; the zero-match clusters are the
 capability backlog. Draw every Nth episode from the must-decline population
 (9 rows, `check-autogenesis-must-decline-population.py`).
 
+### A7 result (measured 2026-08-24)
+
+Full write-up: [`07-mobility-census.md`](07-mobility-census.md). Artifact:
+`artifacts/autogenesis/mobility-census-v1.json`; dashboard:
+[`docs/plan/generated/mobility-census.md`](../plan/generated/mobility-census.md).
+
+```
+MOBILITY|open=191|evaluable=4|unevaluable=187|tactics=9|matched_pairs=2|zero_match_facts=2|clusters=2|held_out_excluded=57
+```
+
+**The census answers finding 3 and the answer is that finding 2 dominates it.**
+Nine tactic preconditions were evaluated over 191 open facts with no model and
+no producer, three-valued (`matched | unmatched(reason) | unevaluable(reason)`).
+**187 of the 191 have no frozen statement export, so they were never looked at
+at all** — A4 measured 3 of 98 on one page; over the whole ledger it is 4 of
+191, and all four are the same `Nat.ModEq` adapter run. A two-valued census
+would have published those 187 as zero-match and made the capability backlog
+187 entries of fiction. The 57 held-out rows are counted and never named;
+`check-autogenesis-holdout-isolation.py` is `PASS` at `references=0` over 1022
+files.
+
+The three ranked zero-match clusters are therefore only two, both of size 1,
+both `development`, and the ranking is not the finding:
+
+| rank | size | why every tactic declined |
+|---|---|---|
+| 1 | 1 | `F:ml430-nat-modeq-comm-24b71e7a` — `goal-head-is-not-eq-shaped`, `goal-does-not-unfold-to-an-eq-shaped-head`, `no-hypothesis-binder-to-classify` (the goal is an `Iff`; no tactic's precondition admits one) |
+| 2 | 1 | `F:ml430-nat-modeq-refl-d870c8f5` — `goal-head-is-not-eq-shaped`, `no-equation-shaped-hypothesis`, `no-hypothesis-binder-to-classify` (reflexivity has no hypothesis; every combinator precondition demands one) |
+
+The reach cross-check re-evaluates the catalog's own `accepted_goals`:
+`REACH|rows=21|evaluable=16|disagreements=7|initial_goal_disagreements=4`. Three
+are rows citing a `succ`-case sub-goal (a population mismatch, not a defect);
+**four are real** and are reported rather than repaired, because the catalog is
+another lane's file: `T:residual-lemma-splice` on both ascFactorial facts, and
+`T:modeq-equivalence-combinators` on `int-modeq-refl` (no hypothesis) and
+`int-modeq-comm` (an `Iff`). The last is the same shape as zero-match cluster 1
+seen from the other side: a tactic titled "eq-**iff** combinators" whose
+precondition admits only `Eq`.
+
+Must-decline sampling: `MUST_DECLINE|rows=9|evaluable=0|unevaluable=9|suspect=0`.
+None of the nine has an export, so **`suspect = 0` is "not looked at", not
+"clean"** — the command exits **2** in that state, distinct from 1 (a real
+suspect) and 0 (evaluated and clean).
+
+Facts A5 inherits:
+
+- **The largest measured cluster is not a tactic gap.** Any "which capability
+  removes the largest cluster?" dashboard must rank the export pipeline first,
+  or it is ranking the wrong axis. Nine exports for the must-decline rows are
+  the cheapest item on it: they turn a negative control that currently cannot
+  fail into one that can.
+- **`unevaluable` is an obstruction class, not an error.** It maps to
+  `retrieval-miss`, and this census sizes it at two orders of magnitude above
+  everything else.
+- The checker is `scripts/check-mobility-census.py` (standard library only, 39
+  mutation-verified guards, each killing exactly one test); `just check` and
+  `scripts/check.sh` validate the committed file and never regenerate it.
+
 ## Exit criteria for the plan
 
 - ≥ 1 fact proved autonomously end to end with a replayable episode (A4).

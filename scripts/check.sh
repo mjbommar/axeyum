@@ -586,6 +586,23 @@ step tactic-catalog-census python3 scripts/gen-tactic-catalog-census.py --check
 step episodes       python3 scripts/check-agent-episode.py artifacts/episodes
 step episode-tests  python3 -m unittest scripts.tests.test_check_agent_episode
 
+# The mobility census gate (docs/python-2026-08/07-mobility-census.md, slice A7).
+# `just mobility-census` runs the same two steps.
+#
+# The census says which tactic preconditions reach which open facts, and its
+# zero-match clusters are read as the capability backlog -- so it is exactly the
+# artifact CLAUDE.md warns about, where the ledger IS the product. This step
+# VALIDATES the committed file and never regenerates it: regenerating in a gate
+# would make the gate agree with itself by construction, and the census needs a
+# real kernel (it imports frozen Lean exports), which `scripts/` may not.
+#
+# The rule that carries the most weight is `evaluable > 0`: 187 of 191 open
+# facts have no frozen statement export, and a boolean census would have
+# reported all of them as zero-match. Read
+# `MOBILITY_CENSUS|open=N|evaluable=E|...|violations=V`, not the status alone.
+step mobility-census python3 scripts/check-mobility-census.py
+step mobility-census-tests python3 -m unittest scripts.tests.test_check_mobility_census
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0
