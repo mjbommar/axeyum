@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-general-monomial-composition-criterion",
+  "title": "Binary irreducible monomial composition criterion and iteration",
+  "statement": "Let f be irreducible over GF(2) of degree d with root alpha, and let k be a positive integer. Then f(x^k) is irreducible if and only if k is odd and, for every prime p dividing k, alpha^((2^d-1)/p) is not one. If f has no nonleading term above floor(d/2), then every criterion-positive f(x^k) has the same half-degree shape. Moreover, a criterion-positive pair (f,k) iterates to shaped irreducibles f(x^(k^j)) of degree d k^j for every j at least zero.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"criterion\":\"f(x^k) irreducible iff k odd and alpha^((2^d-1)/p)!=1 for every prime p|k\",\"field_order\":2,\"format\":\"axeyum-gf2-general-monomial-composition\",\"iteration\":\"degree d*k^j for every j>=0\",\"shape\":\"deg(f-x^d)<=floor(d/2) implies deg(f(x^k)-x^(dk))<=floor(dk/2)\",\"version\":1}",
+    "fragment": "gf2-finite-field-order",
+    "free_symbols": ["f", "d", "k", "alpha", "p", "j"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "gf2-polynomial-semantics-v1",
+    "finite-field-binomial-irreducibility-criterion",
+    "capell-composition-lemma",
+    "odd-prime-lifting-the-exponent"
+  ],
+  "evidence": [
+    {
+      "id": "gf2-general-monomial-composition-native-check",
+      "kind": "witness-replay",
+      "supports": "Exact prime-local quotient-ring residues, general and legacy-wrapper agreement, odd and composite positive examples, incompatible-power rejection, and independent Rabin checks of bounded outputs.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features general_monomial_criterion && cargo test -p axeyum-cas --all-features cubic_capell_criterion && cargo test -p axeyum-cas --all-features --test gf2_artifact_cli capell_audit",
+      "artifact": "crates/axeyum-cas/src/gf2.rs",
+      "notes": "The universal quantifier is supplied by the classical binomial criterion plus Capell and the displayed valuation argument, not by the finite examples. The native operation checks exactly the source-specific hypotheses consumed by that theorem and declines on malformed sources or resource overflow."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "classical finite-field binomial criterion and Capell composition lemma, generalized internally from the prior cubic-only operation"
+  },
+  "notes": "This proves infinite shaped degree rays, including rays based at odd degrees. It does not prove that their union contains every positive degree and therefore does not by itself prove Lemire's conjecture."
+}
