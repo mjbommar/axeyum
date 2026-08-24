@@ -49,3 +49,12 @@ __pycache__/
 /docs/playground/pkg/
 .claude/
 bench-results/parity-details/
+
+# Python layer (docs/python-2026-08/01-pyo3-maturin.md): the compiled extension
+# `maturin develop` drops into the source package, the wheel output directory,
+# and the uv-managed virtualenv. All three are regenerable with
+# `uv sync --dev && uv run maturin develop`.
+python/axeyum/*.so
+python/axeyum/*.pyd
+/dist/
+/.venv/
