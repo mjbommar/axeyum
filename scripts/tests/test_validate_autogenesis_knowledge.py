@@ -53,6 +53,16 @@ class ValidateAutogenesisKnowledgeTests(unittest.TestCase):
         doc["links"][0]["target"]["id"] = "K:not-registered"
         self.assertTrue(any("unknown overlay entity" in error for error in self.errors_for(doc)))
 
+    def test_false_complete_concept_coverage_fails(self):
+        doc = copy.deepcopy(self.doc)
+        doc["links"][3]["qualifiers"]["completeness"] = "complete"
+        self.assertTrue(any("single formalizes edge must be partial" in error for error in self.errors_for(doc)))
+
+    def test_uncredited_established_by_link_fails(self):
+        doc = copy.deepcopy(self.doc)
+        doc["links"][2]["target"]["id"] = "authoritative-mathlib-modeq-family-v1"
+        self.assertTrue(any("not credited by the fact evidence" in error for error in self.errors_for(doc)))
+
 
 if __name__ == "__main__":
     unittest.main()
