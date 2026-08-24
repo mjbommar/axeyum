@@ -62,6 +62,7 @@ mod field;
 pub(crate) mod group;
 pub(crate) mod lattice;
 mod laws;
+mod matrix;
 mod model;
 pub(crate) mod ops;
 mod probability;
@@ -1049,6 +1050,41 @@ pub struct RatPrelude {
     /// distributed variables this development never assumes — the sum
     /// `Σ_{j<m} Var[X_j]` is left as-is.
     pub chebyshev_sample_mean_uncorrelated: NameId,
+
+    // --- 2x2 linear algebra --------------------------------------------------
+    /// `Rat.det2 : Rat → Rat → Rat → Rat → Rat`, `det2 a b c d := a·d − b·c`.
+    /// The one new **definition** the `matrix` module adds; every other name in
+    /// this section is a theorem about it.
+    pub det2: NameId,
+    /// `Rat.det2_swap_rows : ∀ a b c d, det2 c d a b = neg (det2 a b c d)`.
+    pub det2_swap_rows: NameId,
+    /// `Rat.det2_id : det2 1 0 0 1 = 1`.
+    pub det2_id: NameId,
+    /// `Rat.det2_scale_row : ∀ k a b c d, det2 (k·a) (k·b) c d = k · det2 a b c d`.
+    pub det2_scale_row: NameId,
+    /// `Rat.det2_row_add : ∀ a b c d k, det2 (a + k·c) (b + k·d) c d = det2 a b c d`
+    /// — adding a multiple of row 2 to row 1 leaves the determinant fixed, the
+    /// fact that makes Gaussian elimination sound.
+    pub det2_row_add: NameId,
+    /// `Rat.det2_mul : ∀ a b c d e f g h,`
+    /// `det2 (a·e+b·g) (a·f+b·h) (c·e+d·g) (c·f+d·h) = det2 a b c d · det2 e f g h`
+    /// — multiplicativity of the 2×2 determinant.
+    pub det2_mul: NameId,
+    /// `Rat.mul_adj2_top_left : ∀ a b c d, a·d + b·(−c) = det2 a b c d` — the
+    /// (1,1) entry of `A · adj(A) = det(A) · I`. `adj2` itself is not a kernel
+    /// constant (a function returning four rationals needs a product type the
+    /// kernel does not have), so the adjugate's entries `d, −b, −c, a` are
+    /// written out directly in each of the four `mul_adj2_*` theorems.
+    pub mul_adj2_top_left: NameId,
+    /// `Rat.mul_adj2_top_right : ∀ a b c d, a·(−b) + b·a = 0` — the (1,2)
+    /// entry.
+    pub mul_adj2_top_right: NameId,
+    /// `Rat.mul_adj2_bottom_left : ∀ a b c d, c·d + d·(−c) = 0` — the (2,1)
+    /// entry.
+    pub mul_adj2_bottom_left: NameId,
+    /// `Rat.mul_adj2_bottom_right : ∀ a b c d, c·(−b) + d·a = det2 a b c d` —
+    /// the (2,2) entry.
+    pub mul_adj2_bottom_right: NameId,
 }
 
 impl RatPrelude {
@@ -1289,6 +1325,16 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         variance_sum_vars: child(kernel, "variance_sumVars"),
         variance_scaled_mean: child(kernel, "variance_scaled_mean"),
         chebyshev_sample_mean_uncorrelated: child(kernel, "chebyshev_sampleMean_uncorrelated"),
+        det2: child(kernel, "det2"),
+        det2_swap_rows: child(kernel, "det2_swap_rows"),
+        det2_id: child(kernel, "det2_id"),
+        det2_scale_row: child(kernel, "det2_scale_row"),
+        det2_row_add: child(kernel, "det2_row_add"),
+        det2_mul: child(kernel, "det2_mul"),
+        mul_adj2_top_left: child(kernel, "mul_adj2_top_left"),
+        mul_adj2_top_right: child(kernel, "mul_adj2_top_right"),
+        mul_adj2_bottom_left: child(kernel, "mul_adj2_bottom_left"),
+        mul_adj2_bottom_right: child(kernel, "mul_adj2_bottom_right"),
     }
 }
 
@@ -1329,6 +1375,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         group::declare_group_laws(&mut d, prelude)?;
         product::declare_product_laws(&mut d, prelude)?;
         field::declare_field_laws(&mut d, prelude)?;
+        matrix::declare_matrix_laws(&mut d, prelude)?;
         lattice::declare_lattice(&mut d, prelude)?;
         abs::declare_abs(&mut d, prelude)?;
         decide::declare_decide(&mut d, prelude)?;

@@ -281,6 +281,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sum_range_diagonal,
         p.sum_range_split,
         p.sum_range_rect_eq_diag_add_corner,
+        p.choose_add_convolution,
+        p.sum_choose_sq,
     ]
 }
 
@@ -4000,7 +4002,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        26 + 163,
+        26 + 165,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -5065,3 +5067,112 @@ const SUM_RANGE_SPLIT_TYPE: &str = "((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : Ax
 
 /// The pinned type of [`NatPrelude::sum_range_rect_eq_diag_add_corner`].
 const RECT_EQ_DIAG_ADD_CORNER_TYPE: &str = "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> AxNat))) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => x0 x2 x3) x1) x1) (AxNat.add (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => x0 x3 (AxNat.sub x2 x3)) (AxNat.succ x2)) x1) (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => (fun (x4 : AxNat) => x0 x2 x4) (AxNat.add (AxNat.sub x1 x2) x3)) x2) x1))))";
+
+/// `Nat.choose_add_convolution` (Vandermonde's convolution) at `m = 2, n = 1,
+/// k = 2`: `choose (2+1) 2 = choose 2 0 * choose 1 2 + choose 2 1 * choose 1
+/// 1 + choose 2 2 * choose 1 0 = 1*0 + 2*1 + 1*1 = 3`. The `i=0` term
+/// vanishes because `choose 1 2 = 0` (`k` past `n`), not because of any
+/// `Nat.sub` truncation — a genuine cross-check of the convolution, not just
+/// an admission.
+#[test]
+fn choose_add_convolution_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let one = f.num(1);
+    let three = f.num(3);
+
+    let proof = f.lemma(p.choose_add_convolution, &[two, one, two]);
+    let inferred = f.k.infer(proof).unwrap_or_else(|e| {
+        panic!(
+            "choose_add_convolution(2,1,2) should infer: {}",
+            f.explain(&e)
+        )
+    });
+
+    let lhs = {
+        let add_2_1 = f.add(two, one);
+        f.choose(add_2_1, two)
+    };
+    let rhs = {
+        let summand = {
+            let i_fv = f.fresh_fvar();
+            let i = f.k.fvar(i_fv);
+            let c1 = f.choose(two, i);
+            let ki = f.sub(two, i);
+            let c2 = f.choose(one, ki);
+            let body = f.mul(c1, c2);
+            let nat = f.nat_ty();
+            f.lam_fv(i_fv, nat, body)
+        };
+        let bound = f.succ(two);
+        f.sum_range(summand, bound)
+    };
+
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "choose_add_convolution(2,1,2) should state choose (add 2 1) 2 = sumRange (…) (succ 2)"
+    );
+    assert!(f.k.def_eq(lhs, three), "choose (2+1) 2 must reduce to 3");
+    assert!(
+        f.k.def_eq(rhs, three),
+        "the convolution sum choose 2 0 * choose 1 2 + choose 2 1 * choose 1 1 + choose 2 2 * choose 1 0 must reduce to 3"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.choose_add_convolution).is_empty(),
+        "choose_add_convolution must rest on zero axioms"
+    );
+}
+
+/// `Nat.sum_choose_sq` at `n = 3`: `choose 3 0² + choose 3 1² + choose 3 2² +
+/// choose 3 3² = 1 + 9 + 9 + 1 = 20 = choose 6 3`, the classic
+/// sum-of-squares-of-a-row identity.
+#[test]
+fn sum_choose_sq_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let three = f.num(3);
+    let twenty = f.num(20);
+
+    let proof = f.lemma(p.sum_choose_sq, &[three]);
+    let inferred =
+        f.k.infer(proof)
+            .unwrap_or_else(|e| panic!("sum_choose_sq(3) should infer: {}", f.explain(&e)));
+
+    let lhs = {
+        let summand = {
+            let i_fv = f.fresh_fvar();
+            let i = f.k.fvar(i_fv);
+            let ci = f.choose(three, i);
+            let body = f.mul(ci, ci);
+            let nat = f.nat_ty();
+            f.lam_fv(i_fv, nat, body)
+        };
+        let bound = f.succ(three);
+        f.sum_range(summand, bound)
+    };
+    let rhs = {
+        let add_3_3 = f.add(three, three);
+        f.choose(add_3_3, three)
+    };
+
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "sum_choose_sq(3) should state sumRange (fun i => choose 3 i * choose 3 i) 4 = choose (add 3 3) 3"
+    );
+    assert!(
+        f.k.def_eq(lhs, twenty),
+        "the sum of squared row-3 coefficients must reduce to 20"
+    );
+    assert!(f.k.def_eq(rhs, twenty), "choose 6 3 must reduce to 20");
+
+    assert!(
+        f.k.axiom_footprint(p.sum_choose_sq).is_empty(),
+        "sum_choose_sq must rest on zero axioms"
+    );
+}

@@ -12,7 +12,12 @@
 //! also 2026-08-24: `Int.prod_range_pairing_collapse`, the interior-collapse
 //! induction itself (see "The interior collapse", below) — a fixed-point-free
 //! involution pairing up a domain, with every pair's product `≡ 1`, collapses
-//! the whole `prodRange` to `1`. It does not yet wire into Wilson's own
+//! the whole `prodRange` to `1`. And, still 2026-08-24: the two direct
+//! computations this file's own doc had named but never built —
+//! `Nat.inverseIndex_fixes_zero` (`σ 0 = 0`) and `Nat.inverseIndex_fixes_last`
+//! (`σ (p-2) = p-2`) — plus `Nat.inverseIndex_interior_fixed_point_free`, the
+//! immediate contrapositive of `inverseIndex_fixed_point` on `0 < k < p-2`.
+//! `Int.prod_range_pairing_collapse` does **not yet** wire into Wilson's own
 //! `σ := Nat.inverseIndex p`; that section says exactly what remains.
 //!
 //! ## What lands here, and what does not
@@ -155,15 +160,18 @@
 //!   machinery was needed, only the `Nat`-valued one for the index side.
 //!
 //! **Not yet built**: the wiring from this generic lemma to Wilson's own
-//! `σ := Nat.inverseIndex p`. That still needs, per the module doc at the top
-//! of this file, `σ 0 = 0` and `σ (p-2) = p-2` as *equations* (still not
-//! named — task 1's own remaining blocker), plus reindexing the interior
-//! domain `{1,…,p-3}` (peeling the two boundary positions off `prodRange`,
-//! e.g. via `prodRange_succ` applied twice at the front and once at `p-2`,
-//! rather than the general `restrict_pair`/`expand_pair` machinery, which
-//! is unnecessary once the two removed positions are literally the domain's
-//! own first and last index). `Int.factorial_interior_modeq_one` and
-//! `Int.wilson` are **not** declared here.
+//! `σ := Nat.inverseIndex p`. `σ 0 = 0` and `σ (p-2) = p-2` are now named
+//! equations (`declare_inverse_index_fixes_zero`/`_fixes_last`, below), and
+//! `Nat.inverseIndex_interior_fixed_point_free` gives fixed-point-freeness on
+//! the interior directly. What is still missing is reindexing the interior
+//! domain `{1,…,p-3}` down to `prod_range_pairing_collapse`'s own `[0,n)`
+//! shape (peeling the two boundary positions off `prodRange`, e.g. via
+//! `prodRange_succ` applied twice at the front and once at `p-2`, rather than
+//! the general `restrict_pair`/`expand_pair` machinery, which is unnecessary
+//! once the two removed positions are literally the domain's own first and
+//! last index) and the matching reindex of `σ`'s own fixed-point-free/
+//! involutive/pairwise-congruence facts. `Int.factorial_interior_modeq_one`
+//! and `Int.wilson` are **not** declared here.
 //!
 //! Wilson's theorem itself is **not** declared here — that is its own slice —
 //! but the rearrangement principle
@@ -2142,6 +2150,469 @@ pub(super) fn declare_inverse_index_involutive(d: &mut IntDev<'_>) -> Result<(),
         let result = d.symm(k, sub_mag2, k_eq_result);
 
         let inner_body = d.lam_fv(hk_fv, hk_ty, result);
+        let proof = d.lam_fv(prime_fv, prime_ty, inner_body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `ModEq p (-1) (p-1)`, given `0 < p` — from `Int.dvd_refl p` transported
+/// along `cancel_neg_add p one : (p + (-1)) + 1 = p`. The same standalone
+/// fact [`declare_self_inverse_mod_prime`]'s `on_right` branch builds inline
+/// (there, under a hypothesis it does not actually use to build this piece);
+/// factored out here since [`declare_inverse_index_fixes_last`] needs it
+/// unconditionally.
+fn neg_one_modeq_p_minus_one(d: &mut IntDev<'_>, big_p: ExprId, pos_big_p: ExprId) -> ExprId {
+    let p = d.int();
+    let one_i = d.ione();
+    let neg_one = d.ineg(one_i);
+    let p_minus_one = d.isub(big_p, one_i);
+
+    let dvd_refl_p = d.const_app(p.dvd_refl, &[big_p]);
+    let cna = super::modeq::cancel_neg_add(d, big_p, one_i);
+    let cna_lhs = {
+        let inner = d.iadd(big_p, neg_one);
+        d.iadd(inner, one_i)
+    };
+    let reversed = d.isymm(cna_lhs, big_p, cna);
+    let motive2 = d.ieq_motive(big_p, &|d, x| super::dvd::idvd(d, big_p, x));
+    let result_r2 = d.itransport(big_p, motive2, dvd_refl_p, cna_lhs, reversed);
+
+    let modeq_negone_pm1_ty = super::modeq::imodeq(d, big_p, neg_one, p_minus_one);
+    let pm1_minus_negone = d.isub(p_minus_one, neg_one);
+    let dvd_r2_ty = super::dvd::idvd(d, big_p, pm1_minus_negone);
+    let iff_r2 = d.const_app(p.mod_eq_iff_dvd, &[big_p, neg_one, p_minus_one, pos_big_p]);
+    let mpr_r2 = d.const_app(p.logic.iff_mpr, &[modeq_negone_pm1_ty, dvd_r2_ty, iff_r2]);
+    d.apply(mpr_r2, &[result_r2])
+}
+
+/// `Nat.inverseIndex_fixes_zero :
+/// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) → Eq Nat (inverseIndex p zero) zero`
+///
+/// The direct computation the module doc above and
+/// [`declare_inverse_index_fixed_point`]'s own doc both name but do not
+/// build: `1` is its own modular inverse, i.e. `σ 0 = 0` (`σ :=
+/// Nat.inverseIndex p`). With `a := ofNat one` (`one := succ zero`, the
+/// residue at index `0`) and `pw := a^(p-2)`:
+///
+/// `a` is `Int.one` up to a single delta-unfold (`Int.one := Int.ofNat 1`,
+/// `defs.rs`), so `a*a = a = one` closes by `Int.mul_one` plus that one
+/// bridging step, and `ModEq p (a*a) one` retypes `Int.ModEq.refl` at `one`
+/// directly (the same unfold again, through `Int.ModEq`'s own definitional
+/// layer). [`declare_mul_inv_of_pow`] gives `ModEq p (a*pw) one` at this same
+/// `a`, and `Int.modEq_inverse_unique` (both `pw` and `a` are inverses of
+/// `a`) collapses them to `ModEq p pw a`. `Int.emod` is the identity on both
+/// canonical representatives — `pw`'s own residue and `a` itself
+/// ([`emod_eq_self_of_in_range`]) — so that forces the literal `Eq Int r a`
+/// (`r := emod(pw, ofNat p)`), and the `Int.natAbs` transparency trick
+/// [`declare_inverse_index_fixed_point`] closes with turns it into `Eq Nat
+/// one (natAbs r)` — exactly `inverseIndex p zero`'s own magnitude, so
+/// `1 - 1 = 0` (a closed computation) finishes the goal.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_inverse_index_fixes_zero(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.inverse_index_fixes_zero, 1, &|d, v| {
+        let pp = v[0];
+        let prime_ty = prime_condition(d, pp);
+
+        let one_nat = d.num(1);
+        let two_nat = d.num(2);
+        let zero_nat = d.zero();
+        let sigma_zero = d.const_app(p.inverse_index, &[pp, zero_nat]);
+        let concl = d.eq(sigma_zero, zero_nat);
+        let stmt = d.arrow(prime_ty, concl);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+
+        let one_le_pp = nat_prime_pos(d, pp, prime_proof);
+        let pos_big_p = one_le_pp;
+        let (two_le_ty, clause_ty) = prime_parts(d, pp);
+        let two_le = d.and_left(two_le_ty, clause_ty, prime_proof);
+
+        let big_p = d.of_nat(pp);
+        let one_i = d.ione();
+
+        let sk = one_nat; // succ(zero), literally `d.num(1)`.
+        let a = d.of_nat(sk);
+        let pm2 = d.sub(pp, two_nat);
+        let pw = d.ipow(a, pm2);
+
+        let pos_sk = d.lemma(p.nat.zero_lt_succ, &[zero_nat]); // 0 < 1
+        let ub_sk = two_le; // Lt one_nat pp: `Nat.lt := Nat.le ∘ succ`, `succ one_nat = two_nat`.
+
+        // a = one, via a single delta-unfold of `Int.one := Int.ofNat 1`.
+        let a_eq_one = d.irefl(a);
+
+        // a*a = a = one.
+        let mul_aa = d.imul(a, a);
+        let mul_a_one = d.imul(a, one_i);
+        let step1 = d.icongr(a, one_i, a_eq_one, &|d, x| d.imul(a, x));
+        let step2 = d.const_app(p.mul_one, &[a]);
+        let (_, mul_aa_eq_a) = d.ichain(mul_aa, &[(mul_a_one, step1), (a, step2)]);
+        let mul_aa_eq_one = d.itrans(mul_aa, a, one_i, mul_aa_eq_a, a_eq_one);
+
+        // ModEq p (a*a) one, retyped from ModEq.refl at one through mul_aa_eq_one.
+        let refl_one_modeq = d.const_app(p.mod_eq_refl, &[big_p, one_i]);
+        let mul_aa_eq_one_rev = d.isymm(mul_aa, one_i, mul_aa_eq_one);
+        let sq_modeq_one =
+            d.int_eq_rewrite(one_i, mul_aa, mul_aa_eq_one_rev, refl_one_modeq, &|d, x| {
+                super::modeq::imodeq(d, big_p, x, one_i)
+            });
+
+        // ModEq p (a*pw) one.
+        let mip = d.const_app(p.mul_inv_of_pow, &[pp, sk, prime_proof, pos_sk, ub_sk]);
+
+        // ModEq p pw a.
+        let modeq_pw_a = d.const_app(
+            p.mod_eq_inverse_unique,
+            &[big_p, a, pw, a, pos_big_p, mip, sq_modeq_one],
+        );
+
+        // r := emod(pw, big_p) = a, via canonical residues.
+        let a_nonneg = d.lemma(p.nat.zero_le, &[sk]);
+        let emod_a_eq = emod_eq_self_of_in_range(d, a, big_p, pos_big_p, a_nonneg, ub_sk);
+        let r = d.iemod(pw, big_p);
+        let emod_a_raw = d.iemod(a, big_p);
+        let (_, r_eq_a) = d.ichain(r, &[(emod_a_raw, modeq_pw_a), (a, emod_a_eq)]);
+
+        // Eq Nat sk (natAbs r), via the natAbs-transparency trick.
+        let refl_sk = d.refl(sk);
+        let r_eq_a_rev = d.isymm(r, a, r_eq_a);
+        let nat_eq = d.int_eq_rewrite(a, r, r_eq_a_rev, refl_sk, &|d, x| {
+            let nx = {
+                let f = p.nat_abs;
+                d.const_app(f, &[x])
+            };
+            d.eq(sk, nx)
+        });
+
+        // sub(natAbs r, one_nat) = sub(sk, one_nat) = sub(one_nat, one_nat) = zero.
+        let mag = {
+            let f = p.nat_abs;
+            d.const_app(f, &[r])
+        };
+        let sub_congr = d.congr(sk, mag, nat_eq, &|d, x| d.sub(x, one_nat));
+        let sub_sk_one = d.sub(sk, one_nat);
+        let sub_mag_one = d.sub(mag, one_nat);
+        let concrete_zero = d.refl(zero_nat); // retyped as Eq Nat sub_sk_one zero_nat
+        let sub_congr_rev = d.symm(sub_sk_one, sub_mag_one, sub_congr);
+        let result = d.trans(
+            sub_mag_one,
+            sub_sk_one,
+            zero_nat,
+            sub_congr_rev,
+            concrete_zero,
+        );
+
+        let proof = d.lam_fv(prime_fv, prime_ty, result);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.inverseIndex_fixes_last :
+/// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) → Eq Nat (inverseIndex p (p-2)) (p-2)`
+///
+/// The other direct computation [`declare_inverse_index_fixed_point`]'s doc
+/// names but does not build: `p-1 ≡ -1 [p]` is its own modular inverse, i.e.
+/// `σ (p-2) = p-2` (`σ := Nat.inverseIndex p`). With `sk := succ(p-2)` (so
+/// `sk = p-1`, [`succ_pm2_eq_pm1`]) and `a := ofNat sk`, `pw := a^(p-2)`:
+///
+/// `a ≡ -1 [p]` — via `a = ofNat(p-1) = p - 1` (the same `Int.sub`-unfolding
+/// bridge [`declare_inverse_index_fixed_point`] builds as `sub_eq_pm1`,
+/// rebuilt here) composed with [`neg_one_modeq_p_minus_one`] — so `a*a ≡
+/// (-1)*(-1) = 1 [p]` (`Int.ModEq.mul` at the same hypothesis twice, then the
+/// concrete literal fact `(-1)*(-1) = 1`, the same `rfl` `gcd.rs`'s
+/// `neg_neg`'s own `negone_sq_eq_one` fragment relies on). From there the
+/// route is identical to [`declare_inverse_index_fixes_zero`]:
+/// `Int.modEq_inverse_unique` collapses `a`'s two inverses `pw` and `a` to
+/// `ModEq p pw a`; canonical residues force the literal `Eq Int r a`; the
+/// `Int.natAbs` transparency trick gives `Eq Nat sk (natAbs r)`; and
+/// `sk = p-1` plus `Nat.sub_succ` (twice: `(p-1)-1 = pred(p-1) = p-2`) closes
+/// the goal.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_inverse_index_fixes_last(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.inverse_index_fixes_last, 1, &|d, v| {
+        let pp = v[0];
+        let prime_ty = prime_condition(d, pp);
+
+        let one_nat = d.num(1);
+        let two_nat = d.num(2);
+        let zero_nat = d.zero();
+        let pm1 = d.sub(pp, one_nat);
+        let pm2 = d.sub(pp, two_nat);
+        let sigma_pm2 = d.const_app(p.inverse_index, &[pp, pm2]);
+        let concl = d.eq(sigma_pm2, pm2);
+        let stmt = d.arrow(prime_ty, concl);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+
+        let one_le_pp = nat_prime_pos(d, pp, prime_proof);
+        let pos_big_p = one_le_pp;
+
+        let big_p = d.of_nat(pp);
+        let one_i = d.ione();
+        let neg_one = d.ineg(one_i);
+
+        let sk = d.succ(pm2);
+        let a = d.of_nat(sk);
+        let pw = d.ipow(a, pm2);
+
+        // sk = pm1.
+        let sk_eq_pm1 = succ_pm2_eq_pm1(d, pp, prime_proof);
+
+        // pos_sk, ub_sk.
+        let pos_sk = d.lemma(p.nat.zero_lt_succ, &[pm2]);
+        let one_pos = d.lemma(p.nat.zero_lt_succ, &[zero_nat]);
+        let pm1_lt_pp = d.lemma(p.nat.sub_lt, &[pp, one_nat, one_le_pp, one_pos]);
+        let sk_eq_pm1_rev = d.symm(sk, pm1, sk_eq_pm1);
+        let ub_sk = d.nat_rewrite(pm1, sk, sk_eq_pm1_rev, pm1_lt_pp, &|d, x| d.lt(x, pp));
+
+        // a = ofNat pm1 = big_p - one_i, so ModEq p neg_one a.
+        let ofnat_pm1 = d.of_nat(pm1);
+        let a_eq_ofnat_pm1 = d.nat_eq_to_int(sk, pm1, sk_eq_pm1, &|d, y| d.of_nat(y));
+
+        let succ_pm1 = d.succ(pm1);
+        let cancel1 = d.lemma(p.nat.sub_add_cancel, &[one_nat, pp, one_le_pp]);
+        let key = d.nat_eq_to_int(succ_pm1, pp, cancel1, &|d, y| d.of_nat(y));
+        let sum_pm1_one = d.iadd(ofnat_pm1, one_i);
+        let cancel_right = d.const_app(p.add_neg_cancel_right, &[ofnat_pm1, one_i]);
+        let congr_key = d.icongr(sum_pm1_one, big_p, key, &|d, t| d.iadd(t, neg_one));
+        let lhs_after = d.iadd(big_p, neg_one);
+        let x_term = d.iadd(sum_pm1_one, neg_one);
+        let congr_key_rev = d.isymm(x_term, lhs_after, congr_key);
+        let sub_eq_pm1 = d.itrans(lhs_after, x_term, ofnat_pm1, congr_key_rev, cancel_right);
+        let p_minus_one = d.isub(big_p, one_i);
+
+        let sub_eq_pm1_rev = d.isymm(lhs_after, ofnat_pm1, sub_eq_pm1);
+        let a_eq_p_minus_one = d.itrans(a, ofnat_pm1, p_minus_one, a_eq_ofnat_pm1, sub_eq_pm1_rev);
+
+        let base_modeq = neg_one_modeq_p_minus_one(d, big_p, pos_big_p); // ModEq p neg_one p_minus_one
+        let a_eq_p_minus_one_rev = d.isymm(a, p_minus_one, a_eq_p_minus_one);
+        let modeq_negone_a =
+            d.int_eq_rewrite(p_minus_one, a, a_eq_p_minus_one_rev, base_modeq, &|d, x| {
+                super::modeq::imodeq(d, big_p, neg_one, x)
+            });
+
+        // ModEq p (a*a) one, via neg_one*neg_one = one and mod_eq_mul.
+        let neg_one_sq = d.imul(neg_one, neg_one);
+        let neg_one_sq_eq_one = {
+            let fwd = d.const_app(p.neg_one_mul, &[neg_one]); // neg_one_sq = neg neg_one
+            let neg_neg_one_pf = d.irefl(one_i); // neg (neg one) = one, by rfl
+            let neg_neg_one = d.ineg(neg_one);
+            d.itrans(neg_one_sq, neg_neg_one, one_i, fwd, neg_neg_one_pf)
+        };
+        let mul_aa = d.imul(a, a);
+        let modeq_negsq_aa = d.const_app(
+            p.mod_eq_mul,
+            &[
+                big_p,
+                neg_one,
+                a,
+                neg_one,
+                a,
+                pos_big_p,
+                modeq_negone_a,
+                modeq_negone_a,
+            ],
+        ); // ModEq p (neg_one*neg_one) (a*a)
+        let modeq_one_aa = d.int_eq_rewrite(
+            neg_one_sq,
+            one_i,
+            neg_one_sq_eq_one,
+            modeq_negsq_aa,
+            &|d, x| super::modeq::imodeq(d, big_p, x, mul_aa),
+        );
+        let sq_modeq_one = d.const_app(p.mod_eq_symm, &[big_p, one_i, mul_aa, modeq_one_aa]);
+
+        // ModEq p (a*pw) one.
+        let mip = d.const_app(p.mul_inv_of_pow, &[pp, sk, prime_proof, pos_sk, ub_sk]);
+
+        // ModEq p pw a.
+        let modeq_pw_a = d.const_app(
+            p.mod_eq_inverse_unique,
+            &[big_p, a, pw, a, pos_big_p, mip, sq_modeq_one],
+        );
+
+        // r := emod(pw, big_p) = a.
+        let a_nonneg = d.lemma(p.nat.zero_le, &[sk]);
+        let emod_a_eq = emod_eq_self_of_in_range(d, a, big_p, pos_big_p, a_nonneg, ub_sk);
+        let r = d.iemod(pw, big_p);
+        let emod_a_raw = d.iemod(a, big_p);
+        let (_, r_eq_a) = d.ichain(r, &[(emod_a_raw, modeq_pw_a), (a, emod_a_eq)]);
+
+        // Eq Nat sk (natAbs r).
+        let refl_sk = d.refl(sk);
+        let r_eq_a_rev = d.isymm(r, a, r_eq_a);
+        let nat_eq = d.int_eq_rewrite(a, r, r_eq_a_rev, refl_sk, &|d, x| {
+            let nx = {
+                let f = p.nat_abs;
+                d.const_app(f, &[x])
+            };
+            d.eq(sk, nx)
+        });
+        let mag = {
+            let f = p.nat_abs;
+            d.const_app(f, &[r])
+        };
+
+        // pm1 = mag.
+        let sk_eq_pm1_rev2 = d.symm(sk, pm1, sk_eq_pm1);
+        let pm1_eq_mag = d.trans(pm1, sk, mag, sk_eq_pm1_rev2, nat_eq);
+
+        // sub(pm1, one_nat) = pm2, via `Nat.sub_succ` twice.
+        let sub_succ_1 = d.lemma(p.nat.sub_succ, &[pm1, zero_nat]);
+        let sub_pm1_zero = d.sub(pm1, zero_nat);
+        let sub_zero_pf = d.lemma(p.nat.sub_zero, &[pm1]);
+        let pred_sub_pm1_zero = d.pred(sub_pm1_zero);
+        let pred_pm1 = d.pred(pm1);
+        let congr_pred = d.congr(sub_pm1_zero, pm1, sub_zero_pf, &|d, x| d.pred(x));
+        let sub_pm1_one = d.sub(pm1, one_nat);
+        let (_, sub_pm1_one_eq_pred_pm1) = d.chain(
+            sub_pm1_one,
+            &[(pred_sub_pm1_zero, sub_succ_1), (pred_pm1, congr_pred)],
+        );
+        let sub_succ_2 = d.lemma(p.nat.sub_succ, &[pp, one_nat]);
+        let pred_pm1_eq_pm2 = d.symm(pm2, pred_pm1, sub_succ_2);
+        let sub_pm1_one_eq_pm2 = d.trans(
+            sub_pm1_one,
+            pred_pm1,
+            pm2,
+            sub_pm1_one_eq_pred_pm1,
+            pred_pm1_eq_pm2,
+        );
+
+        // sub(mag, one_nat) = pm2, via pm1 = mag.
+        let sub_mag_one = d.sub(mag, one_nat);
+        let congr_sub = d.congr(pm1, mag, pm1_eq_mag, &|d, x| d.sub(x, one_nat));
+        let congr_sub_rev = d.symm(sub_pm1_one, sub_mag_one, congr_sub);
+        let result = d.trans(
+            sub_mag_one,
+            sub_pm1_one,
+            pm2,
+            congr_sub_rev,
+            sub_pm1_one_eq_pm2,
+        );
+
+        let proof = d.lam_fv(prime_fv, prime_ty, result);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.inverseIndex_interior_fixed_point_free :
+/// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+///   ∀ k, Lt zero k → Lt k (p-2) → Not (Eq Nat (inverseIndex p k) k)`
+///
+/// The immediate contrapositive of [`declare_inverse_index_fixed_point`]: on
+/// the interior `{1,…,p-3}` (`0 < k < p-2`, excluding both of `σ`'s exactly
+/// two fixed points `0` and `p-2` — [`declare_inverse_index_fixes_zero`] /
+/// [`declare_inverse_index_fixes_last`]), `σ := Nat.inverseIndex p` has no
+/// fixed point. `k < p-2 < p-1` (`p-2 = pred(p-1)`, via
+/// [`succ_pm2_eq_pm1`] rewriting `Nat.lt_succ_self`, weakened to `≤` and
+/// chained with `hhi` through `Nat.le_trans` — the same `Lt := Le ∘ succ`
+/// retyping [`le_of_lt_local`] already relies on) supplies
+/// `inverseIndex_fixed_point`'s own bound hypothesis; its conclusion `k=0 ∨
+/// k=p-2` is refuted in both disjuncts directly by `0 < k` / `k < p-2`
+/// ([`ne_of_lt_local`]).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_inverse_index_interior_fixed_point_free(
+    d: &mut IntDev<'_>,
+) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.inverse_index_interior_fixed_point_free, 1, &|d, v| {
+        let pp = v[0];
+        let prime_ty = prime_condition(d, pp);
+        let nat = d.nat_ty();
+
+        let one_nat = d.num(1);
+        let two_nat = d.num(2);
+        let zero_nat = d.zero();
+        let pm1 = d.sub(pp, one_nat);
+        let pm2 = d.sub(pp, two_nat);
+
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hlo_ty = d.lt(zero_nat, k);
+        let hhi_ty = d.lt(k, pm2);
+        let sigma_k = d.const_app(p.inverse_index, &[pp, k]);
+        let heq_ty = d.eq(sigma_k, k);
+        let not_heq_ty = d.not(heq_ty);
+
+        let stmt = {
+            let body = d.arrow(hhi_ty, not_heq_ty);
+            let with_lo = d.arrow(hlo_ty, body);
+            let with_k = d.pi_fv(k_fv, nat, with_lo);
+            d.arrow(prime_ty, with_k)
+        };
+
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+        let hlo_fv = d.fresh_fvar();
+        let hlo = d.kernel().fvar(hlo_fv);
+        let hhi_fv = d.fresh_fvar();
+        let hhi = d.kernel().fvar(hhi_fv);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        // k < p-2 < p-1: `pm2 < succ pm2 = pm1` (`succ_pm2_eq_pm1`), weakened
+        // to `≤` and chained with `hhi` via `Nat.le_trans` (`Lt := Le ∘ succ`
+        // retyping throughout, [`le_of_lt_local`]'s own idiom).
+        let sk_eq_pm1 = succ_pm2_eq_pm1(d, pp, prime_proof); // Eq Nat (succ pm2) pm1
+        let succ_pm2 = d.succ(pm2);
+        let pm2_lt_succ_pm2 = d.lemma(p.nat.lt_succ_self, &[pm2]); // Lt pm2 (succ pm2)
+        let pm2_lt_pm1 = d.nat_rewrite(succ_pm2, pm1, sk_eq_pm1, pm2_lt_succ_pm2, &|d, x| {
+            d.lt(pm2, x)
+        });
+        let le_pm2_pm1 = le_of_lt_local(d, pm2, pm1, pm2_lt_pm1); // Le pm2 pm1
+        let sk_k = d.succ(k);
+        let k_lt_pm1 = d.lemma(p.nat.le_trans, &[sk_k, pm2, pm1, hhi, le_pm2_pm1]); // Le sk_k pm1 ~ Lt k pm1
+
+        let disj = d.const_app(
+            p.inverse_index_fixed_point,
+            &[pp, k, prime_proof, k_lt_pm1, heq],
+        );
+
+        let is_zero = d.eq(k, zero_nat);
+        let is_pm2 = d.eq(k, pm2);
+        let false_ty = d.false_ty();
+
+        let on_left = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+            // h : Eq Nat k zero, contradicts hlo : Lt zero k.
+            let h_rev = d.symm(k, zero_nat, h); // Eq Nat zero k
+            let ne = ne_of_lt_local(d, zero_nat, k, hlo); // Not (Eq Nat zero k)
+            d.apply(ne, &[h_rev])
+        };
+        let on_right = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+            // h : Eq Nat k pm2, contradicts hhi : Lt k pm2.
+            let ne = ne_of_lt_local(d, k, pm2, hhi); // Not (Eq Nat k pm2)
+            d.apply(ne, &[h])
+        };
+
+        let refute = d.or_elim(is_zero, is_pm2, false_ty, disj, on_left, on_right);
+
+        let inner_body = {
+            let with_heq = d.lam_fv(heq_fv, heq_ty, refute);
+            let with_hhi = d.lam_fv(hhi_fv, hhi_ty, with_heq);
+            let with_lo = d.lam_fv(hlo_fv, hlo_ty, with_hhi);
+            d.lam_fv(k_fv, nat, with_lo)
+        };
         let proof = d.lam_fv(prime_fv, prime_ty, inner_body);
         (stmt, proof)
     })?;

@@ -758,6 +758,23 @@ pub struct IntPrelude {
     /// *same* value, hence congruent to each other, hence — being canonical
     /// representatives in `[0,p)` — literally equal).
     pub inverse_index_involutive: NameId,
+    /// `Nat.inverseIndex_fixes_zero :
+    /// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+    ///   Eq Nat (inverseIndex p zero) zero` — the direct computation `σ 0 =
+    /// 0` (`σ := Nat.inverseIndex p`): `1` is its own modular inverse.
+    pub inverse_index_fixes_zero: NameId,
+    /// `Nat.inverseIndex_fixes_last :
+    /// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+    ///   Eq Nat (inverseIndex p (p-2)) (p-2)` — the other direct computation
+    /// `σ (p-2) = p-2`: `p-1 ≡ -1 [p]` is its own modular inverse.
+    pub inverse_index_fixes_last: NameId,
+    /// `Nat.inverseIndex_interior_fixed_point_free :
+    /// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+    ///   ∀ k, Lt zero k → Lt k (p-2) → Not (Eq Nat (inverseIndex p k) k)` —
+    /// the immediate contrapositive of [`Self::inverse_index_fixed_point`]:
+    /// on the interior `{1,…,p-3}` (excluding both of `σ`'s exactly two
+    /// fixed points), `σ` is fixed-point-free.
+    pub inverse_index_interior_fixed_point_free: NameId,
     /// `factorial_sq_modeq_one :
     /// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
     ///   ModEq (ofNat p) (mul (factorial (p-1)) (factorial (p-1))) one` —
@@ -972,6 +989,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         inverse_index_injective: kernel.name_str(nat_root, "inverseIndex_injective"),
         inverse_index_fixed_point: kernel.name_str(nat_root, "inverseIndex_fixed_point"),
         inverse_index_involutive: kernel.name_str(nat_root, "inverseIndex_involutive"),
+        inverse_index_fixes_zero: kernel.name_str(nat_root, "inverseIndex_fixes_zero"),
+        inverse_index_fixes_last: kernel.name_str(nat_root, "inverseIndex_fixes_last"),
+        inverse_index_interior_fixed_point_free: kernel
+            .name_str(nat_root, "inverseIndex_interior_fixed_point_free"),
         factorial_sq_modeq_one: child(kernel, "factorial_sq_modeq_one"),
         prod_range_pairing_collapse: child(kernel, "prod_range_pairing_collapse"),
     }
@@ -1119,6 +1140,9 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         wilson::declare_inverse_index_injective(&mut d)?;
         wilson::declare_inverse_index_fixed_point(&mut d)?;
         wilson::declare_inverse_index_involutive(&mut d)?;
+        wilson::declare_inverse_index_fixes_zero(&mut d)?;
+        wilson::declare_inverse_index_fixes_last(&mut d)?;
+        wilson::declare_inverse_index_interior_fixed_point_free(&mut d)?;
         wilson::declare_factorial_sq_modeq_one(&mut d)?;
         wilson::declare_prod_range_pairing_collapse(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
