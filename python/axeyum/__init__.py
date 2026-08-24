@@ -14,6 +14,7 @@ Two rules are carried across the language boundary verbatim:
 
 from __future__ import annotations
 
+from . import knowledge
 from ._native import (
     AxeyumError,
     BudgetExceeded,
@@ -33,6 +34,7 @@ __all__ = [
     "Outcome",
     "SmtLibParseError",
     "__version__",
+    "knowledge",
     "smt",
     "version",
 ]
