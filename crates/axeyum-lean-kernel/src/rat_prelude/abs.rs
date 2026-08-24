@@ -49,9 +49,11 @@
 //! this file.
 
 use super::RatPrelude;
+use super::group::rsub;
 use super::lattice::rmax;
 use super::ops::{
-    radd, rat_eq_rewrite, rat_theorem, rat_ty, rchain, rcongr, req, rle, rneg, rsymm, rzero,
+    radd, rat_eq_rewrite, rat_theorem, rat_ty, rchain, rcongr, req, rle, rlt, rmul, rneg, rsymm,
+    rtrans, rzero,
 };
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -79,7 +81,10 @@ pub(crate) fn rabs(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId) -> ExprId {
 pub(super) fn declare_abs(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     declare_abs_def(d, p)?;
     declare_basic_laws(d, p)?;
-    declare_abs_add(d, p)
+    declare_abs_add(d, p)?;
+    declare_abs_mul(d, p)?;
+    declare_abs_le(d, p)?;
+    declare_abs_sub_comm(d, p)
 }
 
 /// `Rat.abs a := Rat.max a (Rat.neg a)`.
@@ -250,5 +255,388 @@ fn declare_abs_add(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError>
 
         let proof = d.lemma(p.max_le, &[sum, negated_sum, rhs, upper, lower]);
         (stmt, proof)
+    })
+}
+
+/// `Rat.abs a = a`, given `0 ≤ a`. Private: only [`declare_abs_mul`] and
+/// [`declare_abs_le`] need this and its `_nonpos` twin, not a public law —
+/// Mathlib names them `abs_of_nonneg`/`abs_of_nonpos` but nothing else in this
+/// development consumes them yet.
+///
+/// `neg a ≤ a` (via `neg_nonpos_of_nonneg` then `le_trans` through `0`) makes
+/// `a` the upper bound `max_le` needs; `le_max_left` is the other half of
+/// `le_antisymm`.
+fn abs_of_nonneg(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, ha: ExprId) -> ExprId {
+    let zero = rzero(d, p);
+    let negated = rneg(d, a);
+    let combined = rmax(d, p, a, negated);
+    let neg_le_zero = d.lemma(p.neg_nonpos_of_nonneg, &[a, ha]);
+    let neg_le_a = d.lemma(p.le_trans, &[negated, zero, a, neg_le_zero, ha]);
+    let a_le_a = d.lemma(p.le_refl, &[a]);
+    let upper = d.lemma(p.max_le, &[a, negated, a, a_le_a, neg_le_a]);
+    let lower = d.lemma(p.le_max_left, &[a, negated]);
+    d.lemma(p.le_antisymm, &[combined, a, upper, lower])
+}
+
+/// `Rat.abs a = neg a`, given `a ≤ 0`. The mirror of [`abs_of_nonneg`]: `a ≤
+/// neg a` (via `neg_le_neg` at `(a, 0)`, rewritten along `neg_zero`, then
+/// `le_trans`) makes `neg a` the upper bound, and `le_max_right` the other
+/// half of `le_antisymm`.
+fn abs_of_nonpos(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, ha: ExprId) -> ExprId {
+    let zero = rzero(d, p);
+    let negated = rneg(d, a);
+    let combined = rmax(d, p, a, negated);
+    let flipped = d.lemma(p.neg_le_neg, &[a, zero, ha]);
+    let negated_zero = rneg(d, zero);
+    let collapse = d.lemma(p.neg_zero, &[]);
+    let zero_le_negated = rat_eq_rewrite(d, negated_zero, zero, collapse, flipped, &|d, x| {
+        rle(d, p, x, negated)
+    });
+    let a_le_negated = d.lemma(p.le_trans, &[a, zero, negated, ha, zero_le_negated]);
+    let negated_le_negated = d.lemma(p.le_refl, &[negated]);
+    let upper = d.lemma(
+        p.max_le,
+        &[a, negated, negated, a_le_negated, negated_le_negated],
+    );
+    let lower = d.lemma(p.le_max_right, &[a, negated]);
+    d.lemma(p.le_antisymm, &[combined, negated, upper, lower])
+}
+
+/// `0 ≤ neg a`, given `a ≤ 0` — the fact [`abs_of_nonpos`] derives inline and
+/// the `a < 0, b < 0` branch of [`declare_abs_mul`] needs a second time, for
+/// both factors.
+fn zero_le_neg_of_nonpos(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, ha: ExprId) -> ExprId {
+    let zero = rzero(d, p);
+    let negated = rneg(d, a);
+    let flipped = d.lemma(p.neg_le_neg, &[a, zero, ha]);
+    let negated_zero = rneg(d, zero);
+    let collapse = d.lemma(p.neg_zero, &[]);
+    rat_eq_rewrite(d, negated_zero, zero, collapse, flipped, &|d, x| {
+        rle(d, p, x, negated)
+    })
+}
+
+/// `Rat.abs_mul : |a * b| = |a| * |b|`.
+///
+/// **Not** the lattice route `abs_add` takes: `max` does not commute with
+/// multiplication without sign information, so this needs a genuine case
+/// split. It is a *Prop*-level one — [`RatPrelude::le_or_lt`], nested twice,
+/// giving the four sign combinations of `(a, b)` — never a fresh `Int.rec` on
+/// a numerator; `Rat.abs`'s only representation-level cost is already paid in
+/// `Rat.max`. Each of the four branches is ordinary ordered-ring algebra:
+/// `mul_nonneg`/`mul_neg`/`neg_mul`/`neg_neg` once [`abs_of_nonneg`] or
+/// [`abs_of_nonpos`] pins down what `|a|`, `|b|` and `|a*b|` actually are.
+fn declare_abs_mul(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.abs_mul, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let zero = rzero(d, p);
+        let magnitude_a = rabs(d, p, a);
+        let magnitude_b = rabs(d, p, b);
+        let product = rmul(d, a, b);
+        let magnitude_product = rabs(d, p, product);
+        let rhs = rmul(d, magnitude_a, magnitude_b);
+        let stmt = req(d, magnitude_product, rhs);
+
+        let case_a = rle(d, p, zero, a);
+        let case_na = rlt(d, p, a, zero);
+        let decision_a = d.lemma(p.le_or_lt, &[zero, a]);
+
+        let proof = d.or_elim(
+            case_a,
+            case_na,
+            stmt,
+            decision_a,
+            &|d, ha| {
+                let case_b = rle(d, p, zero, b);
+                let case_nb = rlt(d, p, b, zero);
+                let decision_b = d.lemma(p.le_or_lt, &[zero, b]);
+                d.or_elim(
+                    case_b,
+                    case_nb,
+                    stmt,
+                    decision_b,
+                    &|d, hb| {
+                        // 0 ≤ a, 0 ≤ b: |a*b| = a*b = |a|*|b|.
+                        let ab_nonneg = d.lemma(p.mul_nonneg, &[a, b, ha, hb]);
+                        let abs_ab = abs_of_nonneg(d, p, product, ab_nonneg);
+                        let abs_a = abs_of_nonneg(d, p, a, ha);
+                        let abs_b = abs_of_nonneg(d, p, b, hb);
+                        let mid = rmul(d, a, magnitude_b);
+                        let step1 =
+                            rcongr(d, magnitude_a, a, abs_a, &|d, t| rmul(d, t, magnitude_b));
+                        let step2 = rcongr(d, magnitude_b, b, abs_b, &|d, t| rmul(d, a, t));
+                        let (_, rhs_eq_product) = rchain(d, rhs, &[(mid, step1), (product, step2)]);
+                        let product_eq_rhs = rsymm(d, rhs, product, rhs_eq_product);
+                        rtrans(d, magnitude_product, product, rhs, abs_ab, product_eq_rhs)
+                    },
+                    &|d, hb| {
+                        // 0 ≤ a, b < 0: a*b ≤ 0, so |a*b| = neg(a*b) = |a|*|b|.
+                        let hb_le = d.lemma(p.le_of_lt, &[b, zero, hb]);
+                        let bound = d.lemma(p.mul_le_mul_of_nonneg_left, &[a, b, zero, ha, hb_le]);
+                        let scaled_zero = rmul(d, a, zero);
+                        let vanish = d.lemma(p.mul_zero, &[a]);
+                        let ab_nonpos =
+                            rat_eq_rewrite(d, scaled_zero, zero, vanish, bound, &|d, x| {
+                                rle(d, p, product, x)
+                            });
+                        let abs_ab = abs_of_nonpos(d, p, product, ab_nonpos);
+                        let abs_a = abs_of_nonneg(d, p, a, ha);
+                        let abs_b = abs_of_nonpos(d, p, b, hb_le);
+                        let neg_b = rneg(d, b);
+                        let neg_product = rneg(d, product);
+                        let mid = rmul(d, a, magnitude_b);
+                        let a_neg_b = rmul(d, a, neg_b);
+                        let step1 =
+                            rcongr(d, magnitude_a, a, abs_a, &|d, t| rmul(d, t, magnitude_b));
+                        let step2 = rcongr(d, magnitude_b, neg_b, abs_b, &|d, t| rmul(d, a, t));
+                        let step3 = d.lemma(p.mul_neg, &[a, b]);
+                        let (_, rhs_eq_neg_product) = rchain(
+                            d,
+                            rhs,
+                            &[(mid, step1), (a_neg_b, step2), (neg_product, step3)],
+                        );
+                        let neg_product_eq_rhs = rsymm(d, rhs, neg_product, rhs_eq_neg_product);
+                        rtrans(
+                            d,
+                            magnitude_product,
+                            neg_product,
+                            rhs,
+                            abs_ab,
+                            neg_product_eq_rhs,
+                        )
+                    },
+                )
+            },
+            &|d, ha| {
+                let ha_le = d.lemma(p.le_of_lt, &[a, zero, ha]);
+                let case_b = rle(d, p, zero, b);
+                let case_nb = rlt(d, p, b, zero);
+                let decision_b = d.lemma(p.le_or_lt, &[zero, b]);
+                d.or_elim(
+                    case_b,
+                    case_nb,
+                    stmt,
+                    decision_b,
+                    &|d, hb| {
+                        // a < 0, 0 ≤ b: a*b ≤ 0, so |a*b| = neg(a*b) = |a|*|b|.
+                        let bound = d.lemma(p.mul_le_mul_of_nonneg_right, &[a, zero, b, hb, ha_le]);
+                        let zero_b = rmul(d, zero, b);
+                        let b_zero = rmul(d, b, zero);
+                        let commute = d.lemma(p.mul_comm, &[zero, b]);
+                        let vanish = d.lemma(p.mul_zero, &[b]);
+                        let (_, zero_b_eq_zero) =
+                            rchain(d, zero_b, &[(b_zero, commute), (zero, vanish)]);
+                        let ab_nonpos =
+                            rat_eq_rewrite(d, zero_b, zero, zero_b_eq_zero, bound, &|d, x| {
+                                rle(d, p, product, x)
+                            });
+                        let abs_ab = abs_of_nonpos(d, p, product, ab_nonpos);
+                        let abs_a = abs_of_nonpos(d, p, a, ha_le);
+                        let abs_b = abs_of_nonneg(d, p, b, hb);
+                        let neg_a = rneg(d, a);
+                        let neg_product = rneg(d, product);
+                        let mid = rmul(d, neg_a, magnitude_b);
+                        let neg_a_b = rmul(d, neg_a, b);
+                        let step1 = rcongr(d, magnitude_a, neg_a, abs_a, &|d, t| {
+                            rmul(d, t, magnitude_b)
+                        });
+                        let step2 = rcongr(d, magnitude_b, b, abs_b, &|d, t| rmul(d, neg_a, t));
+                        let step3 = d.lemma(p.neg_mul, &[a, b]);
+                        let (_, rhs_eq_neg_product) = rchain(
+                            d,
+                            rhs,
+                            &[(mid, step1), (neg_a_b, step2), (neg_product, step3)],
+                        );
+                        let neg_product_eq_rhs = rsymm(d, rhs, neg_product, rhs_eq_neg_product);
+                        rtrans(
+                            d,
+                            magnitude_product,
+                            neg_product,
+                            rhs,
+                            abs_ab,
+                            neg_product_eq_rhs,
+                        )
+                    },
+                    &|d, hb| {
+                        // a < 0, b < 0: 0 ≤ (neg a)*(neg b) = a*b, so
+                        // |a*b| = a*b = |a|*|b|.
+                        let hb_le = d.lemma(p.le_of_lt, &[b, zero, hb]);
+                        let neg_a = rneg(d, a);
+                        let neg_b = rneg(d, b);
+                        let neg_a_nonneg = zero_le_neg_of_nonpos(d, p, a, ha_le);
+                        let neg_b_nonneg = zero_le_neg_of_nonpos(d, p, b, hb_le);
+                        let negs_nonneg =
+                            d.lemma(p.mul_nonneg, &[neg_a, neg_b, neg_a_nonneg, neg_b_nonneg]);
+
+                        let negs_product = rmul(d, neg_a, neg_b);
+                        let a_neg_b = rmul(d, a, neg_b);
+                        let neg_a_neg_b = rneg(d, a_neg_b);
+                        let neg_neg_product = {
+                            let neg_product = rneg(d, product);
+                            rneg(d, neg_product)
+                        };
+                        let step_a = d.lemma(p.neg_mul, &[a, neg_b]);
+                        let step_b = {
+                            let inner = d.lemma(p.mul_neg, &[a, b]);
+                            let neg_product = rneg(d, product);
+                            rcongr(d, a_neg_b, neg_product, inner, &|d, t| rneg(d, t))
+                        };
+                        let step_c = d.lemma(p.neg_neg, &[product]);
+                        let (_, negs_eq_product) = rchain(
+                            d,
+                            negs_product,
+                            &[
+                                (neg_a_neg_b, step_a),
+                                (neg_neg_product, step_b),
+                                (product, step_c),
+                            ],
+                        );
+
+                        let ab_nonneg = rat_eq_rewrite(
+                            d,
+                            negs_product,
+                            product,
+                            negs_eq_product,
+                            negs_nonneg,
+                            &|d, x| rle(d, p, zero, x),
+                        );
+                        let abs_ab = abs_of_nonneg(d, p, product, ab_nonneg);
+                        let abs_a = abs_of_nonpos(d, p, a, ha_le);
+                        let abs_b = abs_of_nonpos(d, p, b, hb_le);
+                        let step1 = rcongr(d, magnitude_a, neg_a, abs_a, &|d, t| {
+                            rmul(d, t, magnitude_b)
+                        });
+                        let mid = rmul(d, neg_a, magnitude_b);
+                        let step2 = rcongr(d, magnitude_b, neg_b, abs_b, &|d, t| rmul(d, neg_a, t));
+                        let (_, rhs_eq_product) = rchain(
+                            d,
+                            rhs,
+                            &[
+                                (mid, step1),
+                                (negs_product, step2),
+                                (product, negs_eq_product),
+                            ],
+                        );
+                        let product_eq_rhs = rsymm(d, rhs, product, rhs_eq_product);
+                        rtrans(d, magnitude_product, product, rhs, abs_ab, product_eq_rhs)
+                    },
+                )
+            },
+        );
+        (stmt, proof)
+    })
+}
+
+/// `Rat.abs_le_of_le_of_neg_le`, `Rat.le_of_abs_le`, `Rat.neg_le_of_abs_le` —
+/// the bridge to ADR-0512's `−q ≤ r ∧ r ≤ q` encoding, in both directions.
+/// This development has no `Iff`, so the converse of the introduction rule is
+/// two names rather than one.
+fn declare_abs_le(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    // abs_le_of_le_of_neg_le : neg b ≤ a → a ≤ b → |a| ≤ b.
+    rat_theorem(d, p.abs_le_of_le_of_neg_le, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let negated_b = rneg(d, b);
+        let lower = rle(d, p, negated_b, a);
+        let upper = rle(d, p, a, b);
+        let magnitude = rabs(d, p, a);
+        let conclusion = rle(d, p, magnitude, b);
+        let stmt = {
+            let inner = d.arrow(upper, conclusion);
+            d.arrow(lower, inner)
+        };
+
+        let lower_fv = d.fresh_fvar();
+        let lower_h = d.kernel().fvar(lower_fv);
+        let upper_fv = d.fresh_fvar();
+        let upper_h = d.kernel().fvar(upper_fv);
+
+        // neg a ≤ b: from neg b ≤ a via neg_le_neg, rewritten along neg_neg.
+        let negated_a = rneg(d, a);
+        let flipped = d.lemma(p.neg_le_neg, &[negated_b, a, lower_h]);
+        let double_negated_b = rneg(d, negated_b);
+        let collapse = d.lemma(p.neg_neg, &[b]);
+        let neg_a_le_b = rat_eq_rewrite(d, double_negated_b, b, collapse, flipped, &|d, x| {
+            rle(d, p, negated_a, x)
+        });
+        let body = d.lemma(p.max_le, &[a, negated_a, b, upper_h, neg_a_le_b]);
+        let with_upper = d.lam_fv(upper_fv, upper, body);
+        let proof = d.lam_fv(lower_fv, lower, with_upper);
+        (stmt, proof)
+    })?;
+
+    // le_of_abs_le : |a| ≤ b → a ≤ b.
+    rat_theorem(d, p.le_of_abs_le, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let magnitude = rabs(d, p, a);
+        let hypothesis = rle(d, p, magnitude, b);
+        let conclusion = rle(d, p, a, b);
+        let stmt = d.arrow(hypothesis, conclusion);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let self_le = d.lemma(p.le_abs_self, &[a]);
+        let body = d.lemma(p.le_trans, &[a, magnitude, b, self_le, h]);
+        let proof = d.lam_fv(h_fv, hypothesis, body);
+        (stmt, proof)
+    })?;
+
+    // neg_le_of_abs_le : |a| ≤ b → neg b ≤ a.
+    rat_theorem(d, p.neg_le_of_abs_le, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let magnitude = rabs(d, p, a);
+        let hypothesis = rle(d, p, magnitude, b);
+        let negated_b = rneg(d, b);
+        let conclusion = rle(d, p, negated_b, a);
+        let stmt = d.arrow(hypothesis, conclusion);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let negated_a = rneg(d, a);
+        let neg_le = d.lemma(p.neg_le_abs, &[a]);
+        let neg_a_le_b = d.lemma(p.le_trans, &[negated_a, magnitude, b, neg_le, h]);
+        let flipped = d.lemma(p.neg_le_neg, &[negated_a, b, neg_a_le_b]);
+        let double_negated_a = rneg(d, negated_a);
+        let collapse = d.lemma(p.neg_neg, &[a]);
+        let body = rat_eq_rewrite(d, double_negated_a, a, collapse, flipped, &|d, x| {
+            rle(d, p, negated_b, x)
+        });
+        let proof = d.lam_fv(h_fv, hypothesis, body);
+        (stmt, proof)
+    })
+}
+
+/// `Rat.abs_sub_comm : |a − b| = |b − a|` — `abs_neg` and `neg_sub` alone, no
+/// sign case split (unlike [`declare_abs_mul`]): `sub a b` and `sub b a` are
+/// already related by `neg`.
+fn declare_abs_sub_comm(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.abs_sub_comm, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let forward = rsub(d, p, a, b);
+        let backward = rsub(d, p, b, a);
+        let magnitude_forward = rabs(d, p, forward);
+        let magnitude_backward = rabs(d, p, backward);
+        let stmt = req(d, magnitude_forward, magnitude_backward);
+
+        let negated_forward = rneg(d, forward);
+        let swap = d.lemma(p.neg_sub, &[a, b]); // neg (a-b) = (b-a)
+        let backward_eq_negated = rsymm(d, negated_forward, backward, swap);
+        let magnitude_negated = rabs(d, p, negated_forward);
+        let congr_abs = rcongr(
+            d,
+            backward,
+            negated_forward,
+            backward_eq_negated,
+            &|d, t| rabs(d, p, t),
+        );
+        let abs_neg_law = d.lemma(p.abs_neg, &[forward]);
+        let (_, proof) = rchain(
+            d,
+            magnitude_backward,
+            &[
+                (magnitude_negated, congr_abs),
+                (magnitude_forward, abs_neg_law),
+            ],
+        );
+        let final_proof = rsymm(d, magnitude_backward, magnitude_forward, proof);
+        (stmt, final_proof)
     })
 }

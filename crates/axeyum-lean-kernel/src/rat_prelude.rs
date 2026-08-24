@@ -110,6 +110,29 @@ pub struct RatPrelude {
     /// reals, and stating it positively is what lets `CReal`'s inverse consume
     /// it without a sign decision it cannot make.
     pub mul_inv_cancel: NameId,
+    /// `Rat.mul_inv_cancel_of_neg : ∀ q, Rat.lt q Rat.zero →
+    /// Eq Rat (Rat.mul q (Rat.inv q)) Rat.one` — the companion for `q < 0`.
+    ///
+    /// Over `ℚ` there is no Markov obstruction to a single `q ≠ 0` statement
+    /// (the order is decidable — `le_or_lt`/`lt_trichotomy` are proved — so a
+    /// trichotomy witness would do), but a **companion theorem** is what this
+    /// development actually needed and what stays parallel to
+    /// [`Self::mul_inv_cancel`]'s own hypothesis shape. It is a **second**
+    /// three-way case split on `Rat.num q` — not a reduction to the positive
+    /// case via `Rat.inv (Rat.neg q) = Rat.neg (Rat.inv q)`, because *that*
+    /// identity is exactly as representation-heavy to prove as this theorem
+    /// is directly (both need `Rat.normalize` to know how it interacts with a
+    /// negated numerator), so reducing to it buys nothing. The good branch is
+    /// `num q = negSucc m` (mirrored from `mul_inv_cancel`'s `ofNat (k+1)`);
+    /// unlike the positive proof's two dead branches (needing
+    /// `eq_zero_of_num_zero` and an `ι`-reduction to `False` respectively), the
+    /// single dead branch here — `num q = ofNat n` for *any* `n`, `0` or
+    /// `succ` — collapses in one shot: `Rat.lt q Rat.zero` unfolds (via
+    /// `int.mul_one`/`int_zero_mul`, the same rewrite `int_pos_of_pos` uses)
+    /// to `Int.lt (num q) Int.zero`, and at `num q = ofNat n` that is `ι`-equal
+    /// to `Nat.lt n 0`, refuted uniformly by `Nat.not_lt_zero` — no nested
+    /// `Nat.rec` on `n` needed, unlike the positive proof's `n = 0` sub-case.
+    pub mul_inv_cancel_of_neg: NameId,
     /// `Rat.mul_pos : ∀ a b, Rat.lt Rat.zero a → Rat.lt Rat.zero b →
     /// Rat.lt Rat.zero (Rat.mul a b)`.
     ///
@@ -670,6 +693,38 @@ pub struct RatPrelude {
     /// `−(a+b) ≤ |a| + |b|` is `add_le_add` on [`Self::neg_le_abs`] twice
     /// followed by rewriting along [`Self::neg_add`].
     pub abs_add: NameId,
+    /// `Rat.abs_mul : ∀ a b, Rat.abs (Rat.mul a b) = Rat.mul (Rat.abs a) (Rat.abs b)`.
+    ///
+    /// An `Eq`, not an inequality, so the lattice route `abs_add` takes does
+    /// not carry: `max` does not commute with multiplication without sign
+    /// information. The case split is a **Prop-level** sign decision on `a`
+    /// and `b` via [`Self::le_or_lt`] (nested, four branches), never a fresh
+    /// `Int.rec` on a numerator — `Rat.abs` already carries its
+    /// representation-level cost in [`Self::max`], and every branch here is
+    /// ordinary ordered-ring algebra (`mul_nonneg`, `mul_neg`, `neg_mul`,
+    /// `neg_neg`) once the sign of each factor is in hand.
+    pub abs_mul: NameId,
+    /// `Rat.abs_le_of_le_of_neg_le : ∀ a b, Rat.le (Rat.neg b) a → Rat.le a b →
+    /// Rat.le (Rat.abs a) b` — the introduction rule for a two-sided bound on
+    /// `|a|`, and the bridge to ADR-0512's `−q ≤ r ∧ r ≤ q` encoding of
+    /// closeness: one `max_le` once both `a ≤ b` and `−a ≤ b` (the latter from
+    /// `neg_le_neg` on the hypothesis, rewritten along `neg_neg`) are in hand.
+    pub abs_le_of_le_of_neg_le: NameId,
+    /// `Rat.le_of_abs_le : ∀ a b, Rat.le (Rat.abs a) b → Rat.le a b` — half of
+    /// the converse of [`Self::abs_le_of_le_of_neg_le`], split into two names
+    /// because this development has no `Iff`: `a ≤ |a| ≤ b` via
+    /// [`Self::le_abs_self`] and `le_trans`.
+    pub le_of_abs_le: NameId,
+    /// `Rat.neg_le_of_abs_le : ∀ a b, Rat.le (Rat.abs a) b → Rat.le (Rat.neg b) a`
+    /// — the other half: `−a ≤ |a| ≤ b` via [`Self::neg_le_abs`] gives
+    /// `−a ≤ b`, and `neg_le_neg` plus `neg_neg` turns that into `−b ≤ a`.
+    pub neg_le_of_abs_le: NameId,
+    /// `Rat.abs_sub_comm : ∀ a b, Rat.abs (Rat.sub a b) = Rat.abs (Rat.sub b a)`.
+    ///
+    /// Falls out of [`Self::abs_neg`] and [`Self::neg_sub`] alone — no sign
+    /// case split, unlike [`Self::abs_mul`] — since `sub a b` and `sub b a`
+    /// are already related by `neg`.
+    pub abs_sub_comm: NameId,
 
     // --- boolean decision (`Rat.ble`) ---------------------------------------
     /// `Rat.ble : Rat → Rat → Bool` — decidable `≤`, a genuine `Bool` in
@@ -750,6 +805,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         lt: child(kernel, "lt"),
         inv: child(kernel, "inv"),
         mul_inv_cancel: child(kernel, "mul_inv_cancel"),
+        mul_inv_cancel_of_neg: child(kernel, "mul_inv_cancel_of_neg"),
         inv_pos: child(kernel, "inv_pos"),
         mul_pos: child(kernel, "mul_pos"),
         nat_div_succ_pos: child(kernel, "natDivSucc_pos"),
@@ -868,6 +924,11 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         abs_zero: child(kernel, "abs_zero"),
         abs_neg: child(kernel, "abs_neg"),
         abs_add: child(kernel, "abs_add"),
+        abs_mul: child(kernel, "abs_mul"),
+        abs_le_of_le_of_neg_le: child(kernel, "abs_le_of_le_of_neg_le"),
+        le_of_abs_le: child(kernel, "le_of_abs_le"),
+        neg_le_of_abs_le: child(kernel, "neg_le_of_abs_le"),
+        abs_sub_comm: child(kernel, "abs_sub_comm"),
         max: child(kernel, "max"),
         min: child(kernel, "min"),
         max_cases: child(kernel, "max_cases"),

@@ -64,6 +64,7 @@ fn every_named_declaration_exists() {
         ("int_neg_natAbs_le", p.int_neg_nat_abs_le),
         ("bounds_num", p.bounds_num),
         ("mul_inv_cancel", p.mul_inv_cancel),
+        ("mul_inv_cancel_of_neg", p.mul_inv_cancel_of_neg),
         ("inv_pos", p.inv_pos),
         ("sub_mul", p.sub_mul),
         ("mul_inv_sub_one", p.mul_inv_sub_one),
@@ -95,6 +96,11 @@ fn every_named_declaration_exists() {
         ("abs_zero", p.abs_zero),
         ("abs_neg", p.abs_neg),
         ("abs_add", p.abs_add),
+        ("abs_mul", p.abs_mul),
+        ("abs_le_of_le_of_neg_le", p.abs_le_of_le_of_neg_le),
+        ("le_of_abs_le", p.le_of_abs_le),
+        ("neg_le_of_abs_le", p.neg_le_of_abs_le),
+        ("abs_sub_comm", p.abs_sub_comm),
         ("ble", p.ble),
         ("ble_eq_true_of_le", p.ble_eq_true_of_le),
         ("le_of_ble_eq_true", p.le_of_ble_eq_true),
@@ -693,7 +699,16 @@ fn the_rationals_are_a_field_and_the_inverse_is_positive() {
         rendered(&mut kernel, p.inv_pos),
         "((x0 : Rat) -> ((x1 : Rat.lt Rat.zero x0) -> Rat.lt Rat.zero (Rat.inv x0)))"
     );
-    for (label, name) in [("mul_inv_cancel", p.mul_inv_cancel), ("inv_pos", p.inv_pos)] {
+    assert_eq!(
+        rendered(&mut kernel, p.mul_inv_cancel_of_neg),
+        "((x0 : Rat) -> ((x1 : Rat.lt x0 Rat.zero) -> \
+         Eq.{1} Rat (Rat.mul x0 (Rat.inv x0)) Rat.one))"
+    );
+    for (label, name) in [
+        ("mul_inv_cancel", p.mul_inv_cancel),
+        ("inv_pos", p.inv_pos),
+        ("mul_inv_cancel_of_neg", p.mul_inv_cancel_of_neg),
+    ] {
         assert!(
             matches!(
                 kernel.environment().get(name),
@@ -1103,9 +1118,10 @@ fn the_rational_lattice_is_axiom_free() {
 // --- `Rat.abs` and the triangle inequality -----------------------------
 
 /// Every declaration [`super::abs::declare_abs`] adds — `Rat.abs` itself and
-/// the five/six theorems built on it — is a **checked** definition or
-/// theorem with an empty axiom footprint, read out of the kernel, not off
-/// the diff.
+/// the eleven theorems built on it (the triangle-inequality group, plus
+/// `abs_mul`, the `abs_le` introduction/elimination trio, and
+/// `abs_sub_comm`) — is a **checked** definition or theorem with an empty
+/// axiom footprint, read out of the kernel, not off the diff.
 #[test]
 fn the_absolute_value_is_axiom_free() {
     let (kernel, p) = built();
@@ -1117,6 +1133,11 @@ fn the_absolute_value_is_axiom_free() {
         ("abs_zero", p.abs_zero, true),
         ("abs_neg", p.abs_neg, true),
         ("abs_add", p.abs_add, true),
+        ("abs_mul", p.abs_mul, true),
+        ("abs_le_of_le_of_neg_le", p.abs_le_of_le_of_neg_le, true),
+        ("le_of_abs_le", p.le_of_abs_le, true),
+        ("neg_le_of_abs_le", p.neg_le_of_abs_le, true),
+        ("abs_sub_comm", p.abs_sub_comm, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel

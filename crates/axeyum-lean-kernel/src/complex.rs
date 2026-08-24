@@ -84,7 +84,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::name::NameId;
-use crate::nat_prelude::NatOps;
+use crate::nat_prelude::{NatOps, NatPrelude};
 use crate::{Kernel, KernelError};
 
 mod ring;
@@ -555,6 +555,97 @@ pub struct ComplexPrelude {
     /// [`Self::inv_mul_cancel`], [`Self::mul_assoc`] and [`Self::mul_comm`],
     /// with no fresh analysis beyond [`Self::mul_sub_one_geom`] itself.
     pub geom_series_div: NameId,
+
+    // --- the ℕ → ℂ cast --------------------------------------------------
+    /// `Complex.ofNat : Nat → Complex`, by structural `Nat.rec` on the
+    /// argument — `ofNat Nat.zero ≡ zero`, `ofNat (Nat.succ j) ≡ add (ofNat j)
+    /// one` — matching [`Self::pow`]/[`Self::sum_range`]'s own convention:
+    /// recursion via `Nat.rec` directly, not via the three-deep
+    /// `ofReal ∘ CReal.ofRat ∘ Rat.ofInt ∘ Int.ofNat` chain already available.
+    /// A direct definition needs no lemma about how those three casts compose,
+    /// and makes [`Self::of_nat_add`]/[`Self::of_nat_mul`] themselves plain
+    /// inductions rather than transports across three intermediate carriers.
+    ///
+    /// **Known gap**: this `ofNat` is not shown (and is not claimed) to agree,
+    /// even propositionally, with `ofReal ∘ CReal.ofRat ∘ Rat.ofInt ∘
+    /// Int.ofNat` — a caller needing both casts to coincide needs its own
+    /// bridging lemma, not proved here.
+    pub of_nat: NameId,
+    /// `Complex.ofNat_zero : Eq Complex (ofNat Nat.zero) zero`. Closes by
+    /// `Eq.refl` alone, exactly [`Self::pow_zero`]'s own shape.
+    pub of_nat_zero: NameId,
+    /// `Complex.ofNat_succ : ∀ n, Eq Complex (ofNat (Nat.succ n)) (add (ofNat
+    /// n) one)`. Closes by `Eq.refl` alone, exactly [`Self::pow_succ`]'s own
+    /// shape.
+    pub of_nat_succ: NameId,
+    /// `Complex.ofNat_add : ∀ m n, Equiv (ofNat (Nat.add m n)) (add (ofNat m)
+    /// (ofNat n))` — `ofNat` is an additive homomorphism.
+    ///
+    /// Induction on `n`, mirroring [`Self::pow_add`]'s own proof shape with
+    /// `add`/`add_assoc`/`add_congr` in place of `mul`/`mul_assoc`/
+    /// `mul_congr`, and the base case [`Self::add_zero`] reversed in place of
+    /// [`Self::mul_one`] reversed.
+    pub of_nat_add: NameId,
+    /// `Complex.ofNat_mul : ∀ m n, Equiv (ofNat (Nat.mul m n)) (mul (ofNat m)
+    /// (ofNat n))` — `ofNat` is a multiplicative homomorphism.
+    ///
+    /// Induction on `n`: the base case is [`Self::mul_zero`] reversed; the
+    /// step unfolds `Nat.mul m (Nat.succ j)` to `Nat.add (Nat.mul m j) m`,
+    /// applies [`Self::of_nat_add`] to cast that ℕ-sum, substitutes the
+    /// inductive hypothesis via [`Self::add_congr`], then matches the
+    /// `ofNat (Nat.succ j)`-unfolded right-hand side via
+    /// [`Self::left_distrib`] and [`Self::mul_one`].
+    pub of_nat_mul: NameId,
+
+    // --- finite sums' additive homomorphism, and a bounded reindex ---------
+    /// `Complex.sumRange_add : ∀ f g n, Equiv (sumRange (fun i => add (f i) (g
+    /// i)) n) (add (sumRange f n) (sumRange g n))`.
+    ///
+    /// Induction on `n`, mirroring `Nat.sumRange_add`'s own proof shape
+    /// (`nat_prelude/binomial.rs::declare_sum_range_add`): the successor case
+    /// needs the four-term rearrangement `(A+B)+(C+D) ~ (A+C)+(B+D)`, closed
+    /// here by `ring_law_proof` over the four summands as opaque atoms
+    /// rather than by a hand-built `add_left_comm`/`add_add_add_comm` — the
+    /// decision procedure the ℕ proof did not have available.
+    pub sum_range_add: NameId,
+    /// `Complex.sumRange_shiftFront : ∀ f n, Equiv (sumRange f (Nat.succ n))
+    /// (add (f Nat.zero) (sumRange (fun k => f (Nat.succ k)) n))` — peeling
+    /// the FRONT term off a finite sum ([`Self::sum_range_succ`] already peels
+    /// the back term for free).
+    ///
+    /// Induction on `n`, mirroring `Nat.sumRange_shiftFront`'s own proof shape
+    /// (`nat_prelude/binomial.rs::declare_sum_range_shift_front`); the
+    /// successor step's reassociation closes by `ring_law_proof`.
+    pub sum_range_shift_front: NameId,
+    /// `Complex.sumRange_congr_lt : ∀ f g n, (∀ i, Nat.lt i n → Equiv (f i) (g
+    /// i)) → Equiv (sumRange f n) (sumRange g n)` — [`Self::sum_range_congr`]
+    /// with the hypothesis weakened to indices below the bound, which is what
+    /// a sum with only-conditionally-true summand identities (e.g. involving
+    /// truncated `Nat` subtraction) can actually supply.
+    ///
+    /// Induction on `n`, mirroring `Nat.sumRange_congr_lt`'s own proof shape
+    /// (`nat_prelude/binomial.rs::declare_sum_range_congr_lt`).
+    pub sum_range_congr_lt: NameId,
+
+    // --- the binomial theorem -----------------------------------------------
+    /// `Complex.add_pow : ∀ a b n, Equiv (pow (add a b) n) (sumRange (fun k =>
+    /// mul (mul (ofNat (Nat.choose n k)) (pow a k)) (pow b (Nat.sub n k)))
+    /// (Nat.succ n))` — **the binomial theorem over ℂ**.
+    ///
+    /// The exponent, the summation bound, `Nat.choose` and `Nat.sub` are all
+    /// `Nat`-valued throughout, exactly as `Nat.add_pow`'s own statement is;
+    /// only the coefficient `Nat.choose n k` is cast into `Complex` via
+    /// [`Self::of_nat`], and `a`, `b` range over `Complex`. Sum runs to
+    /// `Nat.succ n` because [`Self::sum_range`] is exclusive
+    /// (`sumRange f n = Σ_{k<n} f k`), matching `Nat.add_pow`'s own index
+    /// convention. Induction on `n`, mirroring `Nat.add_pow`'s own proof shape
+    /// (`nat_prelude/binomial.rs::declare_add_pow`) with every ring step over
+    /// `Complex.Equiv` closed by `ring_law_proof` wherever it is a pure
+    /// algebraic rearrangement, and the `Nat`-side Pascal/`sub` reasoning
+    /// (`choose_succ_succ`, `succ_sub_succ`, `choose_succ_self_eq_zero`,
+    /// `choose_zero_right`) lifted into a `Complex` context via
+    /// `nat_eq_to_complex_equiv`.
+    pub add_pow: NameId,
 }
 
 impl ComplexPrelude {
@@ -673,6 +764,15 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         mul_sum_range: kernel.name_str(complex, "mul_sumRange"),
         mul_sub_one_geom: kernel.name_str(complex, "mul_sub_one_geom"),
         geom_series_div: kernel.name_str(complex, "geom_series_div"),
+        of_nat: kernel.name_str(complex, "ofNat"),
+        of_nat_zero: kernel.name_str(complex, "ofNat_zero"),
+        of_nat_succ: kernel.name_str(complex, "ofNat_succ"),
+        of_nat_add: kernel.name_str(complex, "ofNat_add"),
+        of_nat_mul: kernel.name_str(complex, "ofNat_mul"),
+        sum_range_add: kernel.name_str(complex, "sumRange_add"),
+        sum_range_shift_front: kernel.name_str(complex, "sumRange_shiftFront"),
+        sum_range_congr_lt: kernel.name_str(complex, "sumRange_congr_lt"),
+        add_pow: kernel.name_str(complex, "add_pow"),
     }
 }
 
@@ -738,7 +838,15 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_sum_range_congr(&mut d, prelude)?;
         declare_mul_sum_range(&mut d, prelude)?;
         declare_mul_sub_one_geom(&mut d, prelude)?;
-        declare_geom_series_div(&mut d, prelude)
+        declare_geom_series_div(&mut d, prelude)?;
+        declare_of_nat(&mut d, prelude)?;
+        declare_of_nat_equations(&mut d, prelude)?;
+        declare_of_nat_add(&mut d, prelude)?;
+        declare_of_nat_mul(&mut d, prelude)?;
+        declare_sum_range_add(&mut d, prelude)?;
+        declare_sum_range_shift_front(&mut d, prelude)?;
+        declare_sum_range_congr_lt(&mut d, prelude)?;
+        declare_add_pow(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -2112,7 +2220,7 @@ fn declare_norm(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError
 /// and multiplication.
 ///
 /// Both are stated over `CReal.Equiv` directly rather than `Complex.Equiv` —
-/// `normSq` is `CReal`-valued, so [`ring_law_proof`]'s `And.intro` of two
+/// `normSq` is `CReal`-valued, so `ring_law_proof`'s `And.intro` of two
 /// components does not apply; each is a single call to the underlying
 /// [`ring_proof`] on the unfolded `RExpr` forms, exactly the pattern
 /// [`declare_norm`]'s `mul_conj` already used for its real component.
@@ -4280,7 +4388,7 @@ fn declare_mul_sum_range(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Ke
 ///    [`ComplexPrelude::add_congr`];
 /// 3. closes the remaining identity `(1 − zⁿ) + (1 − z)·zⁿ = 1 − zⁿ·z` — a
 ///    pure ring identity once the hypothesis is in place — by the `ring`
-///    calculus ([`ring_law_proof`]) over the atoms `z` and `zⁿ`, exactly the
+///    calculus (`ring_law_proof`) over the atoms `z` and `zⁿ`, exactly the
 ///    decision procedure [`declare_ring_laws`] uses, applied to one specific
 ///    instance rather than to declare a new named law.
 fn declare_mul_sub_one_geom(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
@@ -4507,6 +4615,1666 @@ fn declare_geom_series_div(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), 
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.geom_series_div,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the ℕ → ℂ cast ----------------------------------------------------------
+
+/// `Complex.ofNat`, by structural `Nat.rec` on the argument, exactly
+/// [`declare_pow`]/[`declare_sum_range`]'s own recursion shape (`d.prelude().rec`
+/// is `Nat.rec`, not [`ComplexPrelude::rec`]).
+fn declare_of_nat(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+
+    let motive = d.kernel().lam(anon, nat, carrier, BinderInfo::Default);
+    let minor_zero = d.kernel().const_(p.zero, vec![]);
+    let minor_succ = {
+        let j_fv = d.fresh_fvar();
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let one = d.kernel().const_(p.one, vec![]);
+        let body = d.const_app(p.add, &[ih, one]);
+        let inner = d.lam_fv(ih_fv, carrier, body);
+        d.lam_fv(j_fv, nat, inner)
+    };
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+    let body = d.apply(rec, &[motive, minor_zero, minor_succ, n]);
+    let value = d.lam_fv(n_fv, nat, body);
+    let ty = d.arrow(nat, carrier);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.of_nat,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 11),
+    })
+}
+
+/// `Complex.ofNat_zero` and `Complex.ofNat_succ`: the defining equations of
+/// [`declare_of_nat`], each closed by `Eq.refl` alone since `ofNat`'s
+/// `Nat.rec` application ι-reduces on both minor premises — exactly
+/// [`declare_pow_equations`]'s own shape.
+fn declare_of_nat_equations(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    // of_nat_zero : Eq Complex (ofNat Nat.zero) zero.
+    {
+        let zero_n = d.zero();
+        let lhs = d.const_app(p.of_nat, &[zero_n]);
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        let stmt = complex_eq(d, p, lhs, zero_c);
+        let proof = complex_eq_refl(d, p, zero_c);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.of_nat_zero,
+            uparams: vec![],
+            ty: stmt,
+            value: proof,
+        })?;
+    }
+
+    // of_nat_succ : ∀ n, Eq Complex (ofNat (Nat.succ n)) (add (ofNat n) one).
+    {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.succ(n);
+        let lhs = d.const_app(p.of_nat, &[sn]);
+        let of_n = d.const_app(p.of_nat, &[n]);
+        let one = d.kernel().const_(p.one, vec![]);
+        let rhs = d.const_app(p.add, &[of_n, one]);
+        let stmt_inner = complex_eq(d, p, lhs, rhs);
+        let proof_inner = complex_eq_refl(d, p, rhs);
+        let ty = d.pi_fv(n_fv, nat, stmt_inner);
+        let value = d.lam_fv(n_fv, nat, proof_inner);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.of_nat_succ,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// `Complex.ofNat_add : ∀ m n, Equiv (ofNat (Nat.add m n)) (add (ofNat m)
+/// (ofNat n))`.
+///
+/// Induction on `n`, mirroring [`declare_pow_add`]'s own proof shape with
+/// `add`/`add_assoc`/`add_congr` in place of `mul`/`mul_assoc`/`mul_congr`:
+/// the base case is [`ComplexPrelude::add_zero`] reversed (`add m Nat.zero`
+/// and `ofNat Nat.zero` both ι-reduce away), the step lifts the inductive
+/// hypothesis through [`ComplexPrelude::add_congr`] then re-associates with
+/// [`ComplexPrelude::add_assoc`].
+fn declare_of_nat_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let sum = NatOps::add(d, m, x);
+        let lhs = d.const_app(p.of_nat, &[sum]);
+        let of_m = d.const_app(p.of_nat, &[m]);
+        let of_x = d.const_app(p.of_nat, &[x]);
+        let rhs = d.const_app(p.add, &[of_m, of_x]);
+        zeq(d, p, lhs, rhs)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            let of_m = d.const_app(p.of_nat, &[m]);
+            let zero_c = d.kernel().const_(p.zero, vec![]);
+            let sum = d.const_app(p.add, &[of_m, zero_c]);
+            let h = d.lemma(p.add_zero, &[of_m]); // Equiv(add(of_m,zero), of_m)
+            d.lemma(p.equiv_symm, &[sum, of_m, h])
+        },
+        &|d, j, ih| {
+            // `ofNat(add m (succ j))` ι-reduces to `add(ofNat(add m j), one)`;
+            // `add(ofNat m, ofNat(succ j))` ι-reduces to
+            // `add(ofNat m, add(ofNat j, one))`.
+            let of_m = d.const_app(p.of_nat, &[m]);
+            let of_j = d.const_app(p.of_nat, &[j]);
+            let one = d.kernel().const_(p.one, vec![]);
+            let sum_mj = NatOps::add(d, m, j);
+            let of_sum_mj = d.const_app(p.of_nat, &[sum_mj]);
+            let start = d.const_app(p.add, &[of_sum_mj, one]);
+
+            let ih_applied = d.const_app(p.add, &[of_m, of_j]);
+            let refl_one = d.lemma(p.equiv_refl, &[one]);
+            let h_ih = d.lemma(
+                p.add_congr,
+                &[of_sum_mj, ih_applied, one, one, ih, refl_one],
+            );
+            let after_ih = d.const_app(p.add, &[ih_applied, one]);
+
+            let h_assoc = d.lemma(p.add_assoc, &[of_m, of_j, one]);
+            let inner = d.const_app(p.add, &[of_j, one]);
+            let end = d.const_app(p.add, &[of_m, inner]);
+
+            d.lemma(p.equiv_trans, &[start, after_ih, end, h_ih, h_assoc])
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        d.pi_fv(m_fv, nat, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        d.lam_fv(m_fv, nat, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_nat_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.ofNat_mul : ∀ m n, Equiv (ofNat (Nat.mul m n)) (mul (ofNat m)
+/// (ofNat n))`.
+///
+/// Induction on `n`. The base case is [`ComplexPrelude::mul_zero`] reversed.
+/// The step unfolds `Nat.mul m (Nat.succ j)` to `Nat.add (Nat.mul m j) m`
+/// (`Nat.mul`'s own ι-step), applies [`ComplexPrelude::of_nat_add`] to cast
+/// that sum, substitutes the inductive hypothesis via
+/// [`ComplexPrelude::add_congr`], then matches the `ofNat (Nat.succ j)`
+/// -unfolded right-hand side via [`ComplexPrelude::left_distrib`] and
+/// [`ComplexPrelude::mul_one`].
+fn declare_of_nat_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let prod = NatOps::mul(d, m, x);
+        let lhs = d.const_app(p.of_nat, &[prod]);
+        let of_m = d.const_app(p.of_nat, &[m]);
+        let of_x = d.const_app(p.of_nat, &[x]);
+        let rhs = d.const_app(p.mul, &[of_m, of_x]);
+        zeq(d, p, lhs, rhs)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            let of_m = d.const_app(p.of_nat, &[m]);
+            let zero_c = d.kernel().const_(p.zero, vec![]);
+            let prod = d.const_app(p.mul, &[of_m, zero_c]);
+            let h = d.lemma(p.mul_zero, &[of_m]); // Equiv(mul(of_m,zero), zero)
+            d.lemma(p.equiv_symm, &[prod, zero_c, h])
+        },
+        &|d, j, ih| {
+            let of_m = d.const_app(p.of_nat, &[m]);
+            let of_j = d.const_app(p.of_nat, &[j]);
+            let one = d.kernel().const_(p.one, vec![]);
+
+            // start ≡ ofNat(mul m (succ j)) by one ι-step of `Nat.mul`.
+            let mul_mj = NatOps::mul(d, m, j);
+            let of_mul_mj = d.const_app(p.of_nat, &[mul_mj]);
+            let sum_nat = NatOps::add(d, mul_mj, m);
+            let start = d.const_app(p.of_nat, &[sum_nat]);
+
+            // Step 1: `of_nat_add` unfolds the cast sum.
+            let h1 = d.lemma(p.of_nat_add, &[mul_mj, m]);
+            let after1 = d.const_app(p.add, &[of_mul_mj, of_m]);
+
+            // Step 2: substitute the inductive hypothesis.
+            let ih_applied = d.const_app(p.mul, &[of_m, of_j]);
+            let refl_of_m = d.lemma(p.equiv_refl, &[of_m]);
+            let h2 = d.lemma(
+                p.add_congr,
+                &[of_mul_mj, ih_applied, of_m, of_m, ih, refl_of_m],
+            );
+            let after2 = d.const_app(p.add, &[ih_applied, of_m]);
+
+            // Right-hand side, reduced: `mul(ofNat m, ofNat(succ j))` ι-reduces
+            // to `mul(of_m, add(of_j, one))`.
+            let of_sj = d.const_app(p.add, &[of_j, one]);
+            let rhs_reduced = d.const_app(p.mul, &[of_m, of_sj]);
+
+            // `left_distrib(of_m, of_j, one)`.
+            let h3 = d.lemma(p.left_distrib, &[of_m, of_j, one]);
+            let mul_of_m_one = d.const_app(p.mul, &[of_m, one]);
+            let after3 = d.const_app(p.add, &[ih_applied, mul_of_m_one]);
+
+            // `mul_one(of_m)` closes the second summand.
+            let h4 = d.lemma(p.mul_one, &[of_m]);
+            let refl_ih_applied = d.lemma(p.equiv_refl, &[ih_applied]);
+            let h5 = d.lemma(
+                p.add_congr,
+                &[
+                    ih_applied,
+                    ih_applied,
+                    mul_of_m_one,
+                    of_m,
+                    refl_ih_applied,
+                    h4,
+                ],
+            );
+            // h5 : Equiv(after3, after2)
+
+            let h5_symm = d.lemma(p.equiv_symm, &[after3, after2, h5]);
+            let h3_symm = d.lemma(p.equiv_symm, &[rhs_reduced, after3, h3]);
+
+            let t1 = d.lemma(p.equiv_trans, &[start, after1, after2, h1, h2]);
+            let t2 = d.lemma(p.equiv_trans, &[start, after2, after3, t1, h5_symm]);
+            d.lemma(p.equiv_trans, &[start, after3, rhs_reduced, t2, h3_symm])
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        d.pi_fv(m_fv, nat, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        d.lam_fv(m_fv, nat, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_nat_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- finite sums' additive homomorphism, and a bounded reindex --------------
+
+/// `Complex.sumRange_add : ∀ f g n, Equiv (sumRange (fun i => add (f i) (g
+/// i)) n) (add (sumRange f n) (sumRange g n))`.
+///
+/// Induction on `n`, mirroring `Nat.sumRange_add`'s own proof shape
+/// (`nat_prelude/binomial.rs::declare_sum_range_add`); the successor case's
+/// four-term rearrangement `(A+B)+(C+D) ~ (A+C)+(B+D)` closes by
+/// `ring_law_proof` over the four summands as opaque atoms, in place of a
+/// hand-built `add_add_add_comm` — the decision procedure the ℕ proof did not
+/// have available.
+fn declare_sum_range_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, carrier);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let combined_fn = |d: &mut IntDev<'_>, f: ExprId, g: ExprId| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let gi = d.apply(g, &[i]);
+        let body = d.const_app(p.add, &[fi, gi]);
+        let nat = d.nat_ty();
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let combined = combined_fn(d, f, g);
+        let lhs = d.const_app(p.sum_range, &[combined, x]);
+        let sf = d.const_app(p.sum_range, &[f, x]);
+        let sg = d.const_app(p.sum_range, &[g, x]);
+        let rhs = d.const_app(p.add, &[sf, sg]);
+        zeq(d, p, lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero_c = d.kernel().const_(p.zero, vec![]);
+            let sum = d.const_app(p.add, &[zero_c, zero_c]);
+            let h = d.lemma(p.add_zero, &[zero_c]); // Equiv(add(zero,zero), zero)
+            d.lemma(p.equiv_symm, &[sum, zero_c, h])
+        },
+        &|d, j, ih| {
+            let combined = combined_fn(d, f, g);
+            let combined_j = d.apply(combined, &[j]);
+            let prior_combined = d.const_app(p.sum_range, &[combined, j]);
+            let start = d.const_app(p.add, &[prior_combined, combined_j]);
+
+            let sf_j = d.const_app(p.sum_range, &[f, j]);
+            let sg_j = d.const_app(p.sum_range, &[g, j]);
+            let sfg = d.const_app(p.add, &[sf_j, sg_j]);
+            let refl_combined_j = d.lemma(p.equiv_refl, &[combined_j]);
+            let h1 = d.lemma(
+                p.add_congr,
+                &[
+                    prior_combined,
+                    sfg,
+                    combined_j,
+                    combined_j,
+                    ih,
+                    refl_combined_j,
+                ],
+            );
+            let after_ih = d.const_app(p.add, &[sfg, combined_j]);
+
+            let fj = d.apply(f, &[j]);
+            let gj = d.apply(g, &[j]);
+
+            let sf_j_v = CExpr::var(d, p, sf_j);
+            let sg_j_v = CExpr::var(d, p, sg_j);
+            let fj_v = CExpr::var(d, p, fj);
+            let gj_v = CExpr::var(d, p, gj);
+            let lhs_c = CExpr::add(
+                CExpr::add(sf_j_v.clone(), sg_j_v.clone()),
+                CExpr::add(fj_v.clone(), gj_v.clone()),
+            );
+            let rhs_c = CExpr::add(CExpr::add(sf_j_v, fj_v), CExpr::add(sg_j_v, gj_v));
+            let end_proof = ring_law_proof(d, p, &lhs_c, &rhs_c);
+            let end_term = render_c(d, p, &rhs_c);
+
+            d.lemma(p.equiv_trans, &[start, after_ih, end_term, h1, end_proof])
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_n);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_n);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.sumRange_shiftFront : ∀ f n, Equiv (sumRange f (Nat.succ n)) (add
+/// (f Nat.zero) (sumRange (fun k => f (Nat.succ k)) n))` — peeling the FRONT
+/// term off a finite sum.
+///
+/// Induction on `n`, mirroring `Nat.sumRange_shiftFront`'s own proof shape
+/// (`nat_prelude/binomial.rs::declare_sum_range_shift_front`). Unlike the ℕ
+/// version's `zero_add`, the base case here needs [`ComplexPrelude::add_comm`]
+/// (not a reversed [`ComplexPrelude::add_zero`]): `Complex.add` is not
+/// structurally recursive, so `add zero_c f0` and `add f0 zero_c` are each
+/// only ι-reduced this far, not to `f0` itself.
+fn declare_sum_range_shift_front(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, carrier);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let shifted_fn = |d: &mut IntDev<'_>, f: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let body = d.apply(f, &[sk]);
+        let nat = d.nat_ty();
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let sx = d.succ(x);
+        let lhs = d.const_app(p.sum_range, &[f, sx]);
+        let zero = d.zero();
+        let f0 = d.apply(f, &[zero]);
+        let shifted = shifted_fn(d, f);
+        let sr = d.const_app(p.sum_range, &[shifted, x]);
+        let rhs = d.const_app(p.add, &[f0, sr]);
+        zeq(d, p, lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero_n = d.zero();
+            let f0 = d.apply(f, &[zero_n]);
+            let zero_c = d.kernel().const_(p.zero, vec![]);
+            d.lemma(p.add_comm, &[zero_c, f0])
+        },
+        &|d, j, ih| {
+            let sj = d.succ(j);
+            let f_prior_succ = d.const_app(p.sum_range, &[f, sj]);
+            let f_sj = d.apply(f, &[sj]);
+            let start = d.const_app(p.add, &[f_prior_succ, f_sj]);
+
+            let zero_n = d.zero();
+            let f0 = d.apply(f, &[zero_n]);
+            let shifted = shifted_fn(d, f);
+            let shifted_j = d.const_app(p.sum_range, &[shifted, j]);
+            let mid1 = d.const_app(p.add, &[f0, shifted_j]);
+            let refl_f_sj = d.lemma(p.equiv_refl, &[f_sj]);
+            let h1 = d.lemma(
+                p.add_congr,
+                &[f_prior_succ, mid1, f_sj, f_sj, ih, refl_f_sj],
+            );
+            let after_ih = d.const_app(p.add, &[mid1, f_sj]);
+
+            let inner = d.const_app(p.add, &[shifted_j, f_sj]);
+            let end = d.const_app(p.add, &[f0, inner]);
+            let h2 = d.lemma(p.add_assoc, &[f0, shifted_j, f_sj]);
+
+            d.lemma(p.equiv_trans, &[start, after_ih, end, h1, h2])
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(f_fv, fn_ty, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(f_fv, fn_ty, over_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_shift_front,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `fun i => Nat.lt i bound → Equiv (f i) (g i)`.
+fn bounded_pointwise_complex(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    f: ExprId,
+    g: ExprId,
+    bound: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hyp = d.lt(i, bound);
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let eqn = zeq(d, p, fi, gi);
+    let body = d.arrow(hyp, eqn);
+    d.pi_fv(i_fv, nat, body)
+}
+
+/// `Complex.sumRange_congr_lt : ∀ f g n, (∀ i, Nat.lt i n → Equiv (f i) (g
+/// i)) → Equiv (sumRange f n) (sumRange g n)` — [`ComplexPrelude::sum_range_congr`]
+/// with the hypothesis weakened to indices below the bound.
+///
+/// Induction on `n`, mirroring `Nat.sumRange_congr_lt`'s own proof shape
+/// (`nat_prelude/binomial.rs::declare_sum_range_congr_lt`).
+fn declare_sum_range_congr_lt(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, carrier);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let hyp = bounded_pointwise_complex(d, p, f, g, x);
+        let lhs = d.const_app(p.sum_range, &[f, x]);
+        let rhs = d.const_app(p.sum_range, &[g, x]);
+        let eqn = zeq(d, p, lhs, rhs);
+        d.arrow(hyp, eqn)
+    };
+    let stmt = motive(d, n);
+
+    let nat_p = d.prelude();
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero = d.zero();
+            let hyp_ty = bounded_pointwise_complex(d, p, f, g, zero);
+            let h_fv = d.fresh_fvar();
+            let zero_c = d.kernel().const_(p.zero, vec![]);
+            let body = d.lemma(p.equiv_refl, &[zero_c]);
+            d.lam_fv(h_fv, hyp_ty, body)
+        },
+        &|d, j, ih| {
+            let sj = d.succ(j);
+            let hyp_ty = bounded_pointwise_complex(d, p, f, g, sj);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let h_lt_j = {
+                let i_fv = d.fresh_fvar();
+                let i = d.kernel().fvar(i_fv);
+                let hi_ty = d.lt(i, j);
+                let hi_fv = d.fresh_fvar();
+                let hi = d.kernel().fvar(hi_fv);
+                let le_succ_j = d.lemma(nat_p.le_succ, &[j]);
+                let lifted = d.lemma(nat_p.lt_of_lt_of_le, &[i, j, sj, hi, le_succ_j]);
+                let applied = d.apply(h, &[i, lifted]);
+                let with_hi = d.lam_fv(hi_fv, hi_ty, applied);
+                d.lam_fv(i_fv, nat, with_hi)
+            };
+            let sub1 = d.apply(ih, &[h_lt_j]);
+
+            let lt_j_sj = d.lemma(nat_p.lt_succ_self, &[j]);
+            let sub2 = d.apply(h, &[j, lt_j_sj]);
+
+            let f_prior = d.const_app(p.sum_range, &[f, j]);
+            let g_prior = d.const_app(p.sum_range, &[g, j]);
+            let fj = d.apply(f, &[j]);
+            let gj = d.apply(g, &[j]);
+            let start = d.const_app(p.add, &[f_prior, fj]);
+            let mid = d.const_app(p.add, &[g_prior, fj]);
+            let refl_fj = d.lemma(p.equiv_refl, &[fj]);
+            let h1 = d.lemma(p.add_congr, &[f_prior, g_prior, fj, fj, sub1, refl_fj]);
+            let end = d.const_app(p.add, &[g_prior, gj]);
+            let refl_g_prior = d.lemma(p.equiv_refl, &[g_prior]);
+            let h2 = d.lemma(p.add_congr, &[g_prior, g_prior, fj, gj, refl_g_prior, sub2]);
+            let body = d.lemma(p.equiv_trans, &[start, mid, end, h1, h2]);
+
+            d.lam_fv(h_fv, hyp_ty, body)
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_n);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_n);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_congr_lt,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the binomial theorem ----------------------------------------------------
+//
+// The exponent, the summation bound, `Nat.choose` and `Nat.sub` are `Nat`
+// throughout, exactly mirroring `nat_prelude/binomial.rs::declare_add_pow`'s
+// own development one layer up: only the coefficient `Nat.choose n k` is cast
+// into `Complex` (via [`ComplexPrelude::of_nat`]), and the ring elements `a`,
+// `b` range over `Complex`. Every `Nat`-side fact the ℕ proof used
+// (`choose_succ_succ`, `succ_sub_succ`, `choose_succ_self_eq_zero`,
+// `choose_zero_right`, and the private `sub_succ_of_lt`, rebuilt here as
+// [`nat_sub_succ_of_lt`] from public primitives since `nat_prelude` is a live
+// lane's directory) is PUBLIC `Nat` prelude surface, lifted into a `Complex`
+// context by `nat_eq_to_complex_equiv`. Every pure algebraic rearrangement
+// the ℕ proof derived by hand (`mul_left_comm`, `add_left_comm`, and the
+// multi-step `mul_assoc`/`mul_comm`/`left_distrib` chains inside
+// `pascal_split_term`/`b_side_term`) is instead decided by `ring_law_proof`
+// over the relevant atoms.
+
+/// `Eq.rec.{0,1} Complex p motive refl_case q h` — the `Complex` counterpart
+/// of `IntDev::itransport` (`int_prelude/ops.rs`), needed because
+/// [`ComplexPrelude::pow_succ`]/[`ComplexPrelude::pow_zero`] are stated over
+/// `Eq Complex`, not `Complex.Equiv`.
+fn complex_transport(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    motive: ExprId,
+    refl_case: ExprId,
+    q: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let zero = d.kernel().level_zero();
+    let one = d.level_one();
+    let name = p.creal.rat.int.logic.eq_rec;
+    let rec = d.kernel().const_(name, vec![zero, one]);
+    let carrier = complex_ty(d, p);
+    d.apply(rec, &[carrier, a, motive, refl_case, q, h])
+}
+
+/// `fun (x : Complex) (_ : Eq Complex a x) => body(x)`.
+fn complex_eq_motive(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    body: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let concl = body(d, x);
+    let hyp = complex_eq(d, p, a, x);
+    let anon = d.anon_name();
+    let inner = d.kernel().lam(anon, hyp, concl, BinderInfo::Default);
+    let carrier = complex_ty(d, p);
+    d.lam_fv(x_fv, carrier, inner)
+}
+
+/// From `h : Eq Complex a b`, derive `Equiv a b`. `Equiv` is reflexive, so
+/// this is `Eq.rec` with motive `fun y _ => Equiv a y`, base case `Equiv.refl
+/// a`.
+fn complex_eq_to_equiv(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let motive = complex_eq_motive(d, p, a, &|d, x| zeq(d, p, a, x));
+    let refl_case = d.lemma(p.equiv_refl, &[a]);
+    complex_transport(d, p, a, motive, refl_case, b, h)
+}
+
+/// From `h : Eq Nat a b`, derive `Equiv (f a) (f b)` for any `Complex`-valued
+/// context `f` over a natural — the Nat-to-Complex analogue of
+/// `IntDev::nat_eq_to_int` (`int_prelude/ops.rs`), built over `Complex.Equiv`
+/// rather than `Eq Int` since `Eq Complex` is not the equality of complex
+/// numbers.
+fn nat_eq_to_complex_equiv(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = d.eq_motive(a, &|d, x| {
+        let fx = f(d, x);
+        zeq(d, p, fa, fx)
+    });
+    let refl_case = d.lemma(p.equiv_refl, &[fa]);
+    d.transport(a, motive, refl_case, b, h)
+}
+
+/// `(ofNat (choose row k) * a^k) * b^(row-k)` — the summand of the binomial
+/// expansion at `row`, at a POINT.
+fn binom_term_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    row: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let c = d.choose(row, k);
+    let of_c = d.const_app(p.of_nat, &[c]);
+    let ak = d.const_app(p.pow, &[a, k]);
+    let c_ak = d.const_app(p.mul, &[of_c, ak]);
+    let sub_rk = d.sub(row, k);
+    let b_pow = d.const_app(p.pow, &[b, sub_rk]);
+    d.const_app(p.mul, &[c_ak, b_pow])
+}
+
+/// `fun k => binom_term_c a b row k`, as a lambda.
+fn binom_term_fn_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    row: ExprId,
+) -> ExprId {
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let body = binom_term_c(d, p, a, b, row, k);
+    let nat = d.nat_ty();
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `sumRange (fun k => binom_term_c a b row k) (succ row)` — the sum-form of
+/// `(a+b)^row`.
+fn binom_sum_c(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId, row: ExprId) -> ExprId {
+    let t = binom_term_fn_c(d, p, a, b, row);
+    let srow = d.succ(row);
+    d.const_app(p.sum_range, &[t, srow])
+}
+
+/// `(choose n (succ k) * a^(succ k)) * b^(n-k)` — the second summand of
+/// Pascal's split of `binom_term_c a b (succ n) (succ k)`.
+fn pascal_tail_term_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    n: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let sk = d.succ(k);
+    let c = d.choose(n, sk);
+    let of_c = d.const_app(p.of_nat, &[c]);
+    let ak = d.const_app(p.pow, &[a, sk]);
+    let c_ak = d.const_app(p.mul, &[of_c, ak]);
+    let sub_nk = d.sub(n, k);
+    let b_pow = d.const_app(p.pow, &[b, sub_nk]);
+    d.const_app(p.mul, &[c_ak, b_pow])
+}
+
+/// `fun k => pascal_tail_term_c a b n k`, built directly (not via `apply`),
+/// so it matches the reduced shape [`pascal_split_term_c`] proves pointwise
+/// identities against.
+fn pascal_tail_fn_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let body = pascal_tail_term_c(d, p, a, b, n, k);
+    let nat = d.nat_ty();
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `Equiv (binom_term_c a b (succ n) (succ k)) (add (mul a (binom_term_c a b
+/// n k)) (pascal_tail_term_c a b n k))`, for ALL `k` — unconditional, needing
+/// only the public `Nat.choose_succ_succ` (Pascal's rule) and
+/// `Nat.succ_sub_succ`.
+///
+/// **This is the content of the binomial theorem over ℂ** — the reindexing
+/// identity that combines the two induction hypotheses the `a`-side and
+/// `b`-side each reduce to. Two `Nat`-side substitutions
+/// (`nat_eq_to_complex_equiv` on `choose_succ_succ`/`succ_sub_succ`) move
+/// Pascal's rule and the exponent identity into a `Complex` context;
+/// [`ComplexPrelude::of_nat_add`] turns the resulting `ofNat` of a `Nat` sum
+/// into a genuine `Complex.add` of the two cast coefficients; and the rest —
+/// distributing that sum through the two products, peeling one factor of `a`
+/// off `pow a (succ k)` via [`ComplexPrelude::pow_succ`], and reassociating —
+/// is decided by `ring_law_proof` over the five opaque atoms `ofNat (choose
+/// n k)`, `ofNat (choose n (succ k))`, `a`, `pow a k`, `pow b (sub n k)`.
+fn pascal_split_term_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    n: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let sn = d.succ(n);
+    let sk = d.succ(k);
+    let lhs = binom_term_c(d, p, a, b, sn, sk);
+
+    let nat_p = d.prelude();
+    let c1 = d.choose(n, k);
+    let c2 = d.choose(n, sk);
+    let c_sn_sk = d.choose(sn, sk);
+    let sum_c1c2 = NatOps::add(d, c1, c2);
+
+    let ak_succ = d.const_app(p.pow, &[a, sk]);
+    let sub_sn_sk = d.sub(sn, sk);
+    let bpow_sn_sk = d.const_app(p.pow, &[b, sub_sn_sk]);
+
+    // Step A: Pascal's rule on the Nat coefficient.
+    let h_pascal_nat = d.lemma(nat_p.choose_succ_succ, &[n, k]); // Eq Nat(c_sn_sk, sum_c1c2)
+    let h_a = nat_eq_to_complex_equiv(d, p, c_sn_sk, sum_c1c2, h_pascal_nat, &|d, c| {
+        let of_c = d.const_app(p.of_nat, &[c]);
+        let c_ak = d.const_app(p.mul, &[of_c, ak_succ]);
+        d.const_app(p.mul, &[c_ak, bpow_sn_sk])
+    });
+    let of_sum = d.const_app(p.of_nat, &[sum_c1c2]);
+    let c_ak_m1 = d.const_app(p.mul, &[of_sum, ak_succ]);
+    let m1a = d.const_app(p.mul, &[c_ak_m1, bpow_sn_sk]);
+    // h_a : Equiv(lhs, m1a)
+
+    // Step B: succ_sub_succ on the Nat exponent.
+    let sub_nk = d.sub(n, k);
+    let h_sub_nat = d.lemma(nat_p.succ_sub_succ, &[n, k]); // Eq Nat(sub_sn_sk, sub_nk)
+    let h_b = nat_eq_to_complex_equiv(d, p, sub_sn_sk, sub_nk, h_sub_nat, &|d, s| {
+        let bpow = d.const_app(p.pow, &[b, s]);
+        d.const_app(p.mul, &[c_ak_m1, bpow])
+    });
+    let bpow_nk = d.const_app(p.pow, &[b, sub_nk]);
+    let m1 = d.const_app(p.mul, &[c_ak_m1, bpow_nk]);
+    // h_b : Equiv(m1a, m1)
+
+    // Step C: `of_nat_add` turns the `ofNat` of a `Nat` sum into a genuine
+    // `Complex.add` of the two cast coefficients.
+    let of_c1 = d.const_app(p.of_nat, &[c1]);
+    let of_c2 = d.const_app(p.of_nat, &[c2]);
+    let h_add = d.lemma(p.of_nat_add, &[c1, c2]); // Equiv(of_sum, add(of_c1,of_c2))
+    let sum_c = d.const_app(p.add, &[of_c1, of_c2]);
+    let refl_ak_succ = d.lemma(p.equiv_refl, &[ak_succ]);
+    let h_c1 = d.lemma(
+        p.mul_congr,
+        &[of_sum, sum_c, ak_succ, ak_succ, h_add, refl_ak_succ],
+    );
+    let c_ak_m2 = d.const_app(p.mul, &[sum_c, ak_succ]);
+    let refl_bpow_nk = d.lemma(p.equiv_refl, &[bpow_nk]);
+    let h_c = d.lemma(
+        p.mul_congr,
+        &[c_ak_m1, c_ak_m2, bpow_nk, bpow_nk, h_c1, refl_bpow_nk],
+    );
+    let m2 = d.const_app(p.mul, &[c_ak_m2, bpow_nk]);
+    // h_c : Equiv(m1, m2)
+
+    // Step ring1: redistribute (C1+C2)*Aksucc*Bp into T1 + T2.
+    let of_c1_v = CExpr::var(d, p, of_c1);
+    let of_c2_v = CExpr::var(d, p, of_c2);
+    let ak_succ_v = CExpr::var(d, p, ak_succ);
+    let bpow_nk_v = CExpr::var(d, p, bpow_nk);
+    let m2_c = CExpr::mul(
+        CExpr::mul(
+            CExpr::add(of_c1_v.clone(), of_c2_v.clone()),
+            ak_succ_v.clone(),
+        ),
+        bpow_nk_v.clone(),
+    );
+    let t1_c = CExpr::mul(CExpr::mul(of_c1_v, ak_succ_v.clone()), bpow_nk_v.clone());
+    let t2_c = CExpr::mul(CExpr::mul(of_c2_v, ak_succ_v), bpow_nk_v);
+    let m2p_c = CExpr::add(t1_c.clone(), t2_c.clone());
+    let h_ring1 = ring_law_proof(d, p, &m2_c, &m2p_c);
+    let t1 = render_c(d, p, &t1_c);
+    let t2 = render_c(d, p, &t2_c);
+    let m2p = render_c(d, p, &m2p_c);
+    // h_ring1 : Equiv(m2, m2p) where m2p = add(t1, t2)
+
+    // Step D: `pow_succ` peels a factor of `a` off `pow a (succ k)`, inside
+    // `t1` only — `t2` already matches `pascal_tail_term_c a b n k` exactly.
+    let h_pow_succ_eq = d.lemma(p.pow_succ, &[a, k]); // Eq Complex(ak_succ, mul(ak,a))
+    let ak = d.const_app(p.pow, &[a, k]);
+    let ak_a = d.const_app(p.mul, &[ak, a]);
+    let h_pow_succ = complex_eq_to_equiv(d, p, ak_succ, ak_a, h_pow_succ_eq);
+    let refl_of_c1 = d.lemma(p.equiv_refl, &[of_c1]);
+    let h_d1 = d.lemma(
+        p.mul_congr,
+        &[of_c1, of_c1, ak_succ, ak_a, refl_of_c1, h_pow_succ],
+    );
+    let c1_aka = d.const_app(p.mul, &[of_c1, ak_a]);
+    let inner_t1 = d.const_app(p.mul, &[of_c1, ak_succ]);
+    let refl_bpow_nk2 = d.lemma(p.equiv_refl, &[bpow_nk]);
+    let h_d = d.lemma(
+        p.mul_congr,
+        &[inner_t1, c1_aka, bpow_nk, bpow_nk, h_d1, refl_bpow_nk2],
+    );
+    let t1p = d.const_app(p.mul, &[c1_aka, bpow_nk]);
+    // h_d : Equiv(t1, t1p)
+
+    // Step ring2: pull `a` out front — `(C1*(Ak*A))*Bp ~ A*((C1*Ak)*Bp)`.
+    let of_c1_v2 = CExpr::var(d, p, of_c1);
+    let ak_v = CExpr::var(d, p, ak);
+    let a_v = CExpr::var(d, p, a);
+    let bpow_nk_v2 = CExpr::var(d, p, bpow_nk);
+    let t1p_c = CExpr::mul(
+        CExpr::mul(of_c1_v2.clone(), CExpr::mul(ak_v.clone(), a_v.clone())),
+        bpow_nk_v2.clone(),
+    );
+    let target2_c = CExpr::mul(a_v, CExpr::mul(CExpr::mul(of_c1_v2, ak_v), bpow_nk_v2));
+    let h_ring2 = ring_law_proof(d, p, &t1p_c, &target2_c);
+    let target2 = render_c(d, p, &target2_c);
+    // h_ring2 : Equiv(t1p, target2) where target2 = mul(a, binom_term_c a b n k)
+
+    let h_t1_to_target2 = d.lemma(p.equiv_trans, &[t1, t1p, target2, h_d, h_ring2]);
+
+    let refl_t2 = d.lemma(p.equiv_refl, &[t2]);
+    let h_final_add = d.lemma(
+        p.add_congr,
+        &[t1, target2, t2, t2, h_t1_to_target2, refl_t2],
+    );
+    let final_target = d.const_app(p.add, &[target2, t2]);
+
+    let step1 = d.lemma(p.equiv_trans, &[lhs, m1a, m1, h_a, h_b]);
+    let step2 = d.lemma(p.equiv_trans, &[lhs, m1, m2, step1, h_c]);
+    let step3 = d.lemma(p.equiv_trans, &[lhs, m2, m2p, step2, h_ring1]);
+    d.lemma(p.equiv_trans, &[lhs, m2p, final_target, step3, h_final_add])
+}
+
+/// `Equiv (binom_term_c a b row 0) (pow b row)` — the front boundary term of
+/// any row's expansion, needed at `row = n` (the `b`-side) and `row = succ n`
+/// (the final front-peel of `S(succ n)`), hence generalized over `row`.
+///
+/// `pow a Nat.zero` and `Nat.sub row Nat.zero` both ι-reduce away (to
+/// `Complex.one` and `row` respectively), so this needs only
+/// `nat_eq_to_complex_equiv` on the public `Nat.choose_zero_right` plus
+/// `ring_law_proof` to collapse the resulting `ofNat 1` (itself
+/// `Complex.add Complex.zero Complex.one` by one ι-step of
+/// [`ComplexPrelude::of_nat`]) against the two multiplicative units.
+fn binom_term_zero_eq_pow_b_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    row: ExprId,
+) -> ExprId {
+    let nat_p = d.prelude();
+    let zero_n = d.zero();
+    let start = binom_term_c(d, p, a, b, row, zero_n);
+
+    let ak0 = d.const_app(p.pow, &[a, zero_n]);
+    let c0 = d.choose(row, zero_n);
+    let bpow_row = d.const_app(p.pow, &[b, row]);
+
+    let h_c0_nat = d.lemma(nat_p.choose_zero_right, &[row]); // Eq Nat(c0, 1)
+    let one_n = d.num(1);
+    let h_lift = nat_eq_to_complex_equiv(d, p, c0, one_n, h_c0_nat, &|d, c| {
+        let of_c = d.const_app(p.of_nat, &[c]);
+        let c_ak0 = d.const_app(p.mul, &[of_c, ak0]);
+        let sub_term = d.sub(row, zero_n);
+        let bp = d.const_app(p.pow, &[b, sub_term]);
+        d.const_app(p.mul, &[c_ak0, bp])
+    });
+    // h_lift : Equiv(start, mul(mul(ofNat 1, ak0), pow(b, sub(row,0))))
+
+    let bp_v = CExpr::var(d, p, bpow_row);
+    let mid_c = CExpr::mul(
+        CExpr::mul(CExpr::add(CExpr::Zero, CExpr::One), CExpr::One),
+        bp_v.clone(),
+    );
+    let target_c = bp_v;
+    let h_ring = ring_law_proof(d, p, &mid_c, &target_c);
+    let mid_term = render_c(d, p, &mid_c);
+
+    d.lemma(p.equiv_trans, &[start, mid_term, bpow_row, h_lift, h_ring])
+}
+
+/// `Nat.lt k m → Eq Nat (Nat.sub m k) (Nat.succ (Nat.sub m (Nat.succ k)))` —
+/// giving a truncated difference known positive a successor shape.
+///
+/// This is `nat_prelude::choose::sub_succ_of_lt`'s own construction (private
+/// to that module, and `nat_prelude` is a live lane's directory), rebuilt
+/// here from PUBLIC `Nat` prelude facts only — `le_dest` +
+/// `add_sub_cancel_left` — exactly as that helper is, so nothing under
+/// `nat_prelude/` is touched or duplicated as new prelude surface.
+fn nat_sub_succ_of_lt(
+    d: &mut IntDev<'_>,
+    np: NatPrelude,
+    m: ExprId,
+    k: ExprId,
+    hlt: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let sk = d.succ(k);
+
+    let represented = d.lemma(np.le_dest, &[sk, m, hlt]);
+    let predicate = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let sum = NatOps::add(d, sk, j);
+        let body = d.eq(sum, m);
+        d.lam_fv(j_fv, nat, body)
+    };
+
+    let sub_mk = d.sub(m, k);
+    let sub_m_sk = d.sub(m, sk);
+    let target = {
+        let s = d.succ(sub_m_sk);
+        d.eq(sub_mk, s)
+    };
+
+    let minor = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let sum = NatOps::add(d, sk, j);
+        let e_ty = d.eq(sum, m);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        let kj = NatOps::add(d, k, j);
+        let succ_kj = d.succ(kj);
+        let sum_eq_succ_kj = d.lemma(np.succ_add, &[k, j]);
+        let sym_e = d.symm(sum, m, e);
+        let m_eq_succ_kj = d.trans(m, sum, succ_kj, sym_e, sum_eq_succ_kj);
+        let succ_kj_eq_m = d.symm(m, succ_kj, m_eq_succ_kj);
+
+        let cancel1 = d.lemma(np.add_sub_cancel_left, &[sk, j]);
+        let sub_m_sk_eq_j = {
+            let motive = d.eq_motive(sum, &|d, x| {
+                let s = d.sub(x, sk);
+                d.eq(s, j)
+            });
+            d.transport(sum, motive, cancel1, m, e)
+        };
+
+        let succ_j = d.succ(j);
+        let k_succ_j = NatOps::add(d, k, succ_j);
+        let cancel2 = d.lemma(np.add_sub_cancel_left, &[k, succ_j]);
+        let sub_m_k_eq_succ_j = {
+            let motive = d.eq_motive(k_succ_j, &|d, x| {
+                let s = d.sub(x, k);
+                d.eq(s, succ_j)
+            });
+            d.transport(k_succ_j, motive, cancel2, m, succ_kj_eq_m)
+        };
+
+        let congr_succ = d.congr(sub_m_sk, j, sub_m_sk_eq_j, &|d, x| d.succ(x));
+        let succ_sub_m_sk = d.succ(sub_m_sk);
+        let rev = d.symm(succ_sub_m_sk, succ_j, congr_succ);
+        let final_ = d.trans(sub_mk, succ_j, succ_sub_m_sk, sub_m_k_eq_succ_j, rev);
+
+        let with_e = d.lam_fv(e_fv, e_ty, final_);
+        d.lam_fv(j_fv, nat, with_e)
+    };
+
+    exists_elim(d, predicate, target, represented, minor)
+}
+
+/// `Equiv (pascal_tail_term_c a b n k) (mul b (binom_term_c a b n (succ
+/// k)))`, for `k < n` — needs [`nat_sub_succ_of_lt`] to give the `b`-exponent
+/// a successor shape, which [`ComplexPrelude::pow_succ`] then peels into a
+/// trailing `* b` matching the `b`-side's `mul_sum_range` reindex.
+fn b_side_term_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    n: ExprId,
+    k: ExprId,
+    hlt: ExprId,
+) -> ExprId {
+    let nat_p = d.prelude();
+    let sk = d.succ(k);
+    let start = pascal_tail_term_c(d, p, a, b, n, k);
+
+    let c2 = d.choose(n, sk);
+    let of_c2 = d.const_app(p.of_nat, &[c2]);
+    let ak_succ = d.const_app(p.pow, &[a, sk]);
+    let c_ak = d.const_app(p.mul, &[of_c2, ak_succ]);
+    let sub_nk = d.sub(n, k);
+    let sub_n_sk = d.sub(n, sk);
+
+    let h_lt_nat = nat_sub_succ_of_lt(d, nat_p, n, k, hlt); // Eq Nat(sub_nk, succ(sub_n_sk))
+    let succ_sub_n_sk = d.succ(sub_n_sk);
+    let h1 = nat_eq_to_complex_equiv(d, p, sub_nk, succ_sub_n_sk, h_lt_nat, &|d, x| {
+        let bp = d.const_app(p.pow, &[b, x]);
+        d.const_app(p.mul, &[c_ak, bp])
+    });
+    let bpow_succ = d.const_app(p.pow, &[b, succ_sub_n_sk]);
+    let mid1 = d.const_app(p.mul, &[c_ak, bpow_succ]);
+    // h1 : Equiv(start, mid1)
+
+    let bpow_n_sk = d.const_app(p.pow, &[b, sub_n_sk]);
+    let bpow_n_sk_b = d.const_app(p.mul, &[bpow_n_sk, b]);
+    let h_pow_succ_eq = d.lemma(p.pow_succ, &[b, sub_n_sk]); // Eq Complex(bpow_succ, bpow_n_sk_b)
+    let h_pow_succ = complex_eq_to_equiv(d, p, bpow_succ, bpow_n_sk_b, h_pow_succ_eq);
+    let refl_c_ak = d.lemma(p.equiv_refl, &[c_ak]);
+    let h2 = d.lemma(
+        p.mul_congr,
+        &[c_ak, c_ak, bpow_succ, bpow_n_sk_b, refl_c_ak, h_pow_succ],
+    );
+    let mid2 = d.const_app(p.mul, &[c_ak, bpow_n_sk_b]);
+    // h2 : Equiv(mid1, mid2)
+
+    let c_ak_v = CExpr::var(d, p, c_ak);
+    let bpow_n_sk_v = CExpr::var(d, p, bpow_n_sk);
+    let b_v = CExpr::var(d, p, b);
+    let lhs3_c = CExpr::mul(c_ak_v.clone(), CExpr::mul(bpow_n_sk_v.clone(), b_v.clone()));
+    let rhs3_c = CExpr::mul(b_v, CExpr::mul(c_ak_v, bpow_n_sk_v));
+    let h3 = ring_law_proof(d, p, &lhs3_c, &rhs3_c);
+    let target = render_c(d, p, &rhs3_c);
+    // h3 : Equiv(mid2, target) where target = mul(b, binom_term_c a b n (succ k))
+
+    let t1 = d.lemma(p.equiv_trans, &[start, mid1, mid2, h1, h2]);
+    d.lemma(p.equiv_trans, &[start, mid2, target, t1, h3])
+}
+
+/// The `a`-side of the induction step: reindex the front-peeled TAIL of
+/// `S(succ n)`'s own sum through [`pascal_split_term_c`] via
+/// [`ComplexPrelude::sum_range_congr`] (unconditional), then split the
+/// resulting sum via [`ComplexPrelude::sum_range_add`] and collapse its first
+/// half via [`ComplexPrelude::mul_sum_range`].
+///
+/// Proves `Equiv (sumRange (fun k => binom_term_c a b (succ n) (succ k))
+/// (succ n)) (add (mul a (binom_sum_c a b n)) (sumRange (pascal_tail_fn_c a b
+/// n) (succ n)))`.
+fn a_side_lemma_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let sn = d.succ(n);
+    let nat = d.nat_ty();
+
+    let f = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let body = binom_term_c(d, p, a, b, sn, sk);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let g = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let term_nk = binom_term_c(d, p, a, b, n, k);
+        let a_term = d.const_app(p.mul, &[a, term_nk]);
+        let tail = pascal_tail_term_c(d, p, a, b, n, k);
+        let body = d.const_app(p.add, &[a_term, tail]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let body = pascal_split_term_c(d, p, a, b, n, i);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let h_congr = d.lemma(p.sum_range_congr, &[f, g, sn, pointwise]);
+    // h_congr : Equiv(sumRange f sn, sumRange g sn)
+
+    let f1 = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let term_nk = binom_term_c(d, p, a, b, n, k);
+        let body = d.const_app(p.mul, &[a, term_nk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let g1 = pascal_tail_fn_c(d, p, a, b, n);
+    let h_sra = d.lemma(p.sum_range_add, &[f1, g1, sn]);
+    // h_sra : Equiv(sumRange g sn, add(sumRange f1 sn, sumRange g1 sn))
+
+    let term_n_fn = binom_term_fn_c(d, p, a, b, n);
+    let s_n = d.const_app(p.sum_range, &[term_n_fn, sn]);
+    let h_msr = d.lemma(p.mul_sum_range, &[a, term_n_fn, sn]);
+    // h_msr : Equiv(mul(a,s_n), sumRange f1 sn)
+    let mul_a_sn = d.const_app(p.mul, &[a, s_n]);
+    let sum_f1_sn = d.const_app(p.sum_range, &[f1, sn]);
+    let h_msr_symm = d.lemma(p.equiv_symm, &[mul_a_sn, sum_f1_sn, h_msr]);
+
+    let sum_g1_sn = d.const_app(p.sum_range, &[g1, sn]);
+    let rhs_sra = d.const_app(p.add, &[sum_f1_sn, sum_g1_sn]);
+    let final_target = d.const_app(p.add, &[mul_a_sn, sum_g1_sn]);
+    let refl_sum_g1_sn = d.lemma(p.equiv_refl, &[sum_g1_sn]);
+    let h_final = d.lemma(
+        p.add_congr,
+        &[
+            sum_f1_sn,
+            mul_a_sn,
+            sum_g1_sn,
+            sum_g1_sn,
+            h_msr_symm,
+            refl_sum_g1_sn,
+        ],
+    );
+
+    let sum_f_sn = d.const_app(p.sum_range, &[f, sn]);
+    let sum_g_sn = d.const_app(p.sum_range, &[g, sn]);
+    let t1 = d.lemma(
+        p.equiv_trans,
+        &[sum_f_sn, sum_g_sn, rhs_sra, h_congr, h_sra],
+    );
+    d.lemma(
+        p.equiv_trans,
+        &[sum_f_sn, rhs_sra, final_target, t1, h_final],
+    )
+}
+
+/// `Equiv (sumRange (pascal_tail_fn_c a b n) (succ n)) (sumRange
+/// (pascal_tail_fn_c a b n) n)` — the tail sum's own boundary term (at `k =
+/// n`) is `Equiv`-zero, since `choose n (succ n) = 0`
+/// (`choose_succ_self_eq_zero`, public).
+fn u_tail_boundary_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let nat_p = d.prelude();
+    let u_fn = pascal_tail_fn_c(d, p, a, b, n);
+    let sn = d.succ(n);
+    let start = d.const_app(p.sum_range, &[u_fn, sn]);
+    let sum_u_n = d.const_app(p.sum_range, &[u_fn, n]);
+    let u_n = pascal_tail_term_c(d, p, a, b, n, n);
+
+    let sn2 = d.succ(n);
+    let c_n_sn = d.choose(n, sn2);
+    let a_sn = d.const_app(p.pow, &[a, sn2]);
+    let sub_nn = d.sub(n, n);
+    let b_pow_nn = d.const_app(p.pow, &[b, sub_nn]);
+
+    let h_czero_nat = d.lemma(nat_p.choose_succ_self_eq_zero, &[n]); // Eq Nat(c_n_sn, 0)
+    let zero_n = d.zero();
+    let h_lift = nat_eq_to_complex_equiv(d, p, c_n_sn, zero_n, h_czero_nat, &|d, c| {
+        let of_c = d.const_app(p.of_nat, &[c]);
+        let c_ak = d.const_app(p.mul, &[of_c, a_sn]);
+        d.const_app(p.mul, &[c_ak, b_pow_nn])
+    });
+    // h_lift : Equiv(u_n, mul(mul(ofNat 0, a_sn), b_pow_nn))
+
+    let a_sn_v = CExpr::var(d, p, a_sn);
+    let b_pow_nn_v = CExpr::var(d, p, b_pow_nn);
+    let mid_c = CExpr::mul(CExpr::mul(CExpr::Zero, a_sn_v), b_pow_nn_v);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let h_ring = ring_law_proof(d, p, &mid_c, &CExpr::Zero);
+    let mid_term = render_c(d, p, &mid_c);
+    // h_ring : Equiv(mid_term, zero_c)
+
+    let u_zero = d.lemma(p.equiv_trans, &[u_n, mid_term, zero_c, h_lift, h_ring]);
+
+    let refl_sum_u_n = d.lemma(p.equiv_refl, &[sum_u_n]);
+    let h3 = d.lemma(
+        p.add_congr,
+        &[sum_u_n, sum_u_n, u_n, zero_c, refl_sum_u_n, u_zero],
+    );
+    let mid1 = d.const_app(p.add, &[sum_u_n, zero_c]);
+    let h_az = d.lemma(p.add_zero, &[sum_u_n]);
+
+    d.lemma(p.equiv_trans, &[start, mid1, sum_u_n, h3, h_az])
+}
+
+/// The `b`-side of the induction step: `Equiv (mul b (binom_sum_c a b n))
+/// (add (pow b (succ n)) (sumRange (pascal_tail_fn_c a b n) n))`.
+///
+/// Front-peels `S(n)` itself ([`ComplexPrelude::sum_range_shift_front`]),
+/// distributes `b` over the peeled front term and the tail sum
+/// ([`ComplexPrelude::left_distrib`]), collapses `b * term_n(0) = b * pow(b,n)
+/// = pow(b,succ n)` via [`binom_term_zero_eq_pow_b_c`], and reindexes the
+/// tail via [`b_side_term_c`] under [`ComplexPrelude::sum_range_congr_lt`]
+/// plus [`ComplexPrelude::mul_sum_range`].
+fn b_side_lemma_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let sn = d.succ(n);
+    let nat = d.nat_ty();
+    let term_n_fn = binom_term_fn_c(d, p, a, b, n);
+    let s_n = d.const_app(p.sum_range, &[term_n_fn, sn]);
+    let start = d.const_app(p.mul, &[b, s_n]);
+
+    let shifted_term_n_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let body = binom_term_c(d, p, a, b, n, sk);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let zero_n = d.zero();
+    let term_n_0 = binom_term_c(d, p, a, b, n, zero_n);
+    let tail_shifted_sum = d.const_app(p.sum_range, &[shifted_term_n_fn, n]);
+    let h_shift = d.lemma(p.sum_range_shift_front, &[term_n_fn, n]);
+    // h_shift : Equiv(s_n, add(term_n_0, tail_shifted_sum))
+    let peeled = d.const_app(p.add, &[term_n_0, tail_shifted_sum]);
+    let refl_b = d.lemma(p.equiv_refl, &[b]);
+    let h1 = d.lemma(p.mul_congr, &[b, b, s_n, peeled, refl_b, h_shift]);
+    let mid1 = d.const_app(p.mul, &[b, peeled]);
+
+    let b_term_n0 = d.const_app(p.mul, &[b, term_n_0]);
+    let b_tail_shifted = d.const_app(p.mul, &[b, tail_shifted_sum]);
+    let distributed = d.const_app(p.add, &[b_term_n0, b_tail_shifted]);
+    let h2 = d.lemma(p.left_distrib, &[b, term_n_0, tail_shifted_sum]);
+
+    let pow_b_n = d.const_app(p.pow, &[b, n]);
+    let h_bnd = binom_term_zero_eq_pow_b_c(d, p, a, b, n); // Equiv(term_n_0, pow_b_n)
+    let b_pow_b_n = d.const_app(p.mul, &[b, pow_b_n]);
+    let refl_b2 = d.lemma(p.equiv_refl, &[b]);
+    let h3a = d.lemma(p.mul_congr, &[b, b, term_n_0, pow_b_n, refl_b2, h_bnd]);
+    let pow_b_sn = d.const_app(p.pow, &[b, sn]);
+    let h_comm = d.lemma(p.mul_comm, &[b, pow_b_n]); // Equiv(b_pow_b_n, mul(pow_b_n,b))
+    let pow_b_n_b = d.const_app(p.mul, &[pow_b_n, b]);
+    let h_pow_succ_eq = d.lemma(p.pow_succ, &[b, n]); // Eq Complex(pow_b_sn, pow_b_n_b)
+    let h_pow_succ = complex_eq_to_equiv(d, p, pow_b_sn, pow_b_n_b, h_pow_succ_eq);
+    let h3b = d.lemma(p.equiv_symm, &[pow_b_sn, pow_b_n_b, h_pow_succ]); // Equiv(pow_b_n_b, pow_b_sn)
+
+    let t3a = d.lemma(
+        p.equiv_trans,
+        &[b_term_n0, b_pow_b_n, pow_b_n_b, h3a, h_comm],
+    );
+    let b_term_n0_chain = d.lemma(p.equiv_trans, &[b_term_n0, pow_b_n_b, pow_b_sn, t3a, h3b]);
+
+    let mid2 = d.const_app(p.add, &[pow_b_sn, b_tail_shifted]);
+    let refl_b_tail = d.lemma(p.equiv_refl, &[b_tail_shifted]);
+    let h3 = d.lemma(
+        p.add_congr,
+        &[
+            b_term_n0,
+            pow_b_sn,
+            b_tail_shifted,
+            b_tail_shifted,
+            b_term_n0_chain,
+            refl_b_tail,
+        ],
+    );
+
+    let u_fn = pascal_tail_fn_c(d, p, a, b, n);
+    let sum_u_n = d.const_app(p.sum_range, &[u_fn, n]);
+
+    let g_bounded = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let term_n_sk = binom_term_c(d, p, a, b, n, sk);
+        let body = d.const_app(p.mul, &[b, term_n_sk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let pointwise_lt = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hlt_ty = d.lt(k, n);
+        let hlt_fv = d.fresh_fvar();
+        let hlt = d.kernel().fvar(hlt_fv);
+        let body = b_side_term_c(d, p, a, b, n, k, hlt);
+        let with_hlt = d.lam_fv(hlt_fv, hlt_ty, body);
+        d.lam_fv(k_fv, nat, with_hlt)
+    };
+    let h_congr_lt = d.lemma(p.sum_range_congr_lt, &[u_fn, g_bounded, n, pointwise_lt]);
+    // h_congr_lt : Equiv(sum_u_n, sumRange g_bounded n)
+
+    let h_msr = d.lemma(p.mul_sum_range, &[b, shifted_term_n_fn, n]);
+    // h_msr : Equiv(b_tail_shifted, sumRange g_bounded n)
+    let sum_g_bounded_n = d.const_app(p.sum_range, &[g_bounded, n]);
+    let h_msr_via_congr_lt = d.lemma(p.equiv_symm, &[sum_u_n, sum_g_bounded_n, h_congr_lt]);
+    let h4 = d.lemma(
+        p.equiv_trans,
+        &[
+            b_tail_shifted,
+            sum_g_bounded_n,
+            sum_u_n,
+            h_msr,
+            h_msr_via_congr_lt,
+        ],
+    );
+
+    let final_target = d.const_app(p.add, &[pow_b_sn, sum_u_n]);
+    let refl_pow_b_sn = d.lemma(p.equiv_refl, &[pow_b_sn]);
+    let h5 = d.lemma(
+        p.add_congr,
+        &[
+            pow_b_sn,
+            pow_b_sn,
+            b_tail_shifted,
+            sum_u_n,
+            refl_pow_b_sn,
+            h4,
+        ],
+    );
+
+    let t1 = d.lemma(p.equiv_trans, &[start, mid1, distributed, h1, h2]);
+    let t2 = d.lemma(p.equiv_trans, &[start, distributed, mid2, t1, h3]);
+    d.lemma(p.equiv_trans, &[start, mid2, final_target, t2, h5])
+}
+
+/// The successor case of [`declare_add_pow`]'s induction: given `ih : Equiv
+/// (pow (add a b) n) (binom_sum_c a b n)`, prove `Equiv (pow (add a b) (succ
+/// n)) (binom_sum_c a b (succ n))`.
+fn add_pow_step_c(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    a: ExprId,
+    b: ExprId,
+    n: ExprId,
+    ih: ExprId,
+) -> ExprId {
+    let sn = d.succ(n);
+    let ab = d.const_app(p.add, &[a, b]);
+
+    // LHS: `pow(ab, succ n)` ι-reduces to `mul(pow(ab,n), ab)` directly
+    // (`Complex.pow`'s own defining equation), so the chain below starts from
+    // `mul_pow_ab` with no explicit bridging step; the kernel accepts the
+    // final proof against the stated goal (whose LHS is `pow(ab, succ n)`) by
+    // defeq.
+    let term_n_fn = binom_term_fn_c(d, p, a, b, n);
+    let s_n = d.const_app(p.sum_range, &[term_n_fn, sn]);
+    let pow_ab_n = d.const_app(p.pow, &[ab, n]);
+    let mul_pow_ab = d.const_app(p.mul, &[pow_ab_n, ab]);
+
+    let refl_ab = d.lemma(p.equiv_refl, &[ab]);
+    let h_ih = d.lemma(p.mul_congr, &[pow_ab_n, s_n, ab, ab, ih, refl_ab]);
+    let mul_sn_ab = d.const_app(p.mul, &[s_n, ab]);
+    // h_ih : Equiv(mul_pow_ab, mul_sn_ab)
+
+    let mul_sn_a = d.const_app(p.mul, &[s_n, a]);
+    let mul_sn_b = d.const_app(p.mul, &[s_n, b]);
+    let distributed = d.const_app(p.add, &[mul_sn_a, mul_sn_b]);
+    let h_ld = d.lemma(p.left_distrib, &[s_n, a, b]);
+    // h_ld : Equiv(mul_sn_ab, distributed)
+
+    let mul_a_sn = d.const_app(p.mul, &[a, s_n]);
+    let intermediate2 = d.const_app(p.add, &[mul_a_sn, mul_sn_b]);
+    let h_comm_a = d.lemma(p.mul_comm, &[s_n, a]); // Equiv(mul_sn_a, mul_a_sn)
+    let refl_mul_sn_b = d.lemma(p.equiv_refl, &[mul_sn_b]);
+    let h_ca = d.lemma(
+        p.add_congr,
+        &[
+            mul_sn_a,
+            mul_a_sn,
+            mul_sn_b,
+            mul_sn_b,
+            h_comm_a,
+            refl_mul_sn_b,
+        ],
+    );
+    // h_ca : Equiv(distributed, intermediate2)
+
+    let mul_b_sn = d.const_app(p.mul, &[b, s_n]);
+    let w = d.const_app(p.add, &[mul_a_sn, mul_b_sn]);
+    let h_comm_b = d.lemma(p.mul_comm, &[s_n, b]); // Equiv(mul_sn_b, mul_b_sn)
+    let refl_mul_a_sn = d.lemma(p.equiv_refl, &[mul_a_sn]);
+    let h_cb = d.lemma(
+        p.add_congr,
+        &[
+            mul_a_sn,
+            mul_a_sn,
+            mul_sn_b,
+            mul_b_sn,
+            refl_mul_a_sn,
+            h_comm_b,
+        ],
+    );
+    // h_cb : Equiv(intermediate2, w)
+
+    let t_lhs1 = d.lemma(
+        p.equiv_trans,
+        &[mul_pow_ab, mul_sn_ab, distributed, h_ih, h_ld],
+    );
+    let t_lhs2 = d.lemma(
+        p.equiv_trans,
+        &[mul_pow_ab, distributed, intermediate2, t_lhs1, h_ca],
+    );
+    let lhs_to_w = d.lemma(p.equiv_trans, &[mul_pow_ab, intermediate2, w, t_lhs2, h_cb]);
+    // lhs_to_w : Equiv(mul_pow_ab, w)
+
+    // --- RHS: S(succ n) ------------------------------------------------
+    let term_sn_fn = binom_term_fn_c(d, p, a, b, sn);
+    let ssn = d.succ(sn);
+    let s_sn = d.const_app(p.sum_range, &[term_sn_fn, ssn]);
+    let zero_n = d.zero();
+    let term_sn_0 = binom_term_c(d, p, a, b, sn, zero_n);
+    let nat = d.nat_ty();
+    let shifted_term_sn_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let body = binom_term_c(d, p, a, b, sn, sk);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let tail_sum = d.const_app(p.sum_range, &[shifted_term_sn_fn, sn]);
+    let h_shift_sn = d.lemma(p.sum_range_shift_front, &[term_sn_fn, sn]);
+    // h_shift_sn : Equiv(s_sn, add(term_sn_0, tail_sum))
+    let peeled_sn = d.const_app(p.add, &[term_sn_0, tail_sum]);
+
+    let pow_b_sn = d.const_app(p.pow, &[b, sn]);
+    let h_bnd_sn = binom_term_zero_eq_pow_b_c(d, p, a, b, sn); // Equiv(term_sn_0, pow_b_sn)
+    let refl_tail_sum = d.lemma(p.equiv_refl, &[tail_sum]);
+    let h_r1 = d.lemma(
+        p.add_congr,
+        &[
+            term_sn_0,
+            pow_b_sn,
+            tail_sum,
+            tail_sum,
+            h_bnd_sn,
+            refl_tail_sum,
+        ],
+    );
+    let mid_r1 = d.const_app(p.add, &[pow_b_sn, tail_sum]);
+    // h_r1 : Equiv(peeled_sn, mid_r1)
+
+    let u_fn = pascal_tail_fn_c(d, p, a, b, n);
+    let sum_u_n_sn = d.const_app(p.sum_range, &[u_fn, sn]);
+    let h_a_side = a_side_lemma_c(d, p, a, b, n);
+    // h_a_side : Equiv(tail_sum, add(mul_a_sn, sum_u_n_sn))
+    let split_tail = d.const_app(p.add, &[mul_a_sn, sum_u_n_sn]);
+    let refl_pow_b_sn = d.lemma(p.equiv_refl, &[pow_b_sn]);
+    let h_r2 = d.lemma(
+        p.add_congr,
+        &[
+            pow_b_sn,
+            pow_b_sn,
+            tail_sum,
+            split_tail,
+            refl_pow_b_sn,
+            h_a_side,
+        ],
+    );
+    let mid_r2 = d.const_app(p.add, &[pow_b_sn, split_tail]);
+    // h_r2 : Equiv(mid_r1, mid_r2)
+
+    let pow_b_sn_v = CExpr::var(d, p, pow_b_sn);
+    let mul_a_sn_v = CExpr::var(d, p, mul_a_sn);
+    let sum_u_n_sn_v = CExpr::var(d, p, sum_u_n_sn);
+    let lhs_lcomm_c = CExpr::add(
+        pow_b_sn_v.clone(),
+        CExpr::add(mul_a_sn_v.clone(), sum_u_n_sn_v.clone()),
+    );
+    let rhs_lcomm_c = CExpr::add(mul_a_sn_v, CExpr::add(pow_b_sn_v, sum_u_n_sn_v));
+    let h_lcomm = ring_law_proof(d, p, &lhs_lcomm_c, &rhs_lcomm_c);
+    let mid_r3 = render_c(d, p, &rhs_lcomm_c);
+    // h_lcomm : Equiv(mid_r2, mid_r3)
+
+    let pow_b_sn_plus_u = d.const_app(p.add, &[pow_b_sn, sum_u_n_sn]);
+    let sum_u_n_n = d.const_app(p.sum_range, &[u_fn, n]);
+    let h_u_bnd = u_tail_boundary_c(d, p, a, b, n); // Equiv(sum_u_n_sn, sum_u_n_n)
+    let h_r3_inner = d.lemma(
+        p.add_congr,
+        &[
+            pow_b_sn,
+            pow_b_sn,
+            sum_u_n_sn,
+            sum_u_n_n,
+            refl_pow_b_sn,
+            h_u_bnd,
+        ],
+    );
+    let b_sn_target = d.const_app(p.add, &[pow_b_sn, sum_u_n_n]);
+    // h_r3_inner : Equiv(pow_b_sn_plus_u, b_sn_target)
+    let refl_mul_a_sn2 = d.lemma(p.equiv_refl, &[mul_a_sn]);
+    let h_r3 = d.lemma(
+        p.add_congr,
+        &[
+            mul_a_sn,
+            mul_a_sn,
+            pow_b_sn_plus_u,
+            b_sn_target,
+            refl_mul_a_sn2,
+            h_r3_inner,
+        ],
+    );
+    let mid_r4 = d.const_app(p.add, &[mul_a_sn, b_sn_target]);
+    // h_r3 : Equiv(mid_r3, mid_r4)
+
+    let h_b_side = b_side_lemma_c(d, p, a, b, n);
+    // h_b_side : Equiv(mul_b_sn, b_sn_target)
+    let h_b_side_symm = d.lemma(p.equiv_symm, &[mul_b_sn, b_sn_target, h_b_side]);
+    let refl_mul_a_sn3 = d.lemma(p.equiv_refl, &[mul_a_sn]);
+    let h_r4 = d.lemma(
+        p.add_congr,
+        &[
+            mul_a_sn,
+            mul_a_sn,
+            b_sn_target,
+            mul_b_sn,
+            refl_mul_a_sn3,
+            h_b_side_symm,
+        ],
+    );
+    // h_r4 : Equiv(mid_r4, w)
+
+    let t_rhs1 = d.lemma(p.equiv_trans, &[s_sn, peeled_sn, mid_r1, h_shift_sn, h_r1]);
+    let t_rhs2 = d.lemma(p.equiv_trans, &[s_sn, mid_r1, mid_r2, t_rhs1, h_r2]);
+    let t_rhs3 = d.lemma(p.equiv_trans, &[s_sn, mid_r2, mid_r3, t_rhs2, h_lcomm]);
+    let t_rhs4 = d.lemma(p.equiv_trans, &[s_sn, mid_r3, mid_r4, t_rhs3, h_r3]);
+    let rhs_to_w = d.lemma(p.equiv_trans, &[s_sn, mid_r4, w, t_rhs4, h_r4]);
+    // rhs_to_w : Equiv(s_sn, w)
+
+    let w_to_rhs = d.lemma(p.equiv_symm, &[s_sn, w, rhs_to_w]);
+    d.lemma(p.equiv_trans, &[mul_pow_ab, w, s_sn, lhs_to_w, w_to_rhs])
+}
+
+/// `Complex.add_pow` — the binomial theorem over ℂ, by induction on `n`.
+///
+/// The base case is a pure computation, decided by `ring_law_proof`
+/// (`pow(ab,0)` and `binom_sum_c a b 0` both ι-reduce to expressions the ring
+/// calculus normalizes to the same value: `Complex.one`). The successor case
+/// is [`add_pow_step_c`].
+fn declare_add_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let ab = d.const_app(p.add, &[a, b]);
+        let lhs = d.const_app(p.pow, &[ab, x]);
+        let rhs = binom_sum_c(d, p, a, b, x);
+        zeq(d, p, lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            // `pow(ab,0)` ι-reduces to `one_c`; `binom_sum_c a b 0` ι-reduces
+            // to `add(zero_c, mul(mul(ofNat(choose 0 0), pow(a,0)), pow(b,
+            // sub(0,0))))`, and `choose 0 0`/`pow(a,0)`/`sub(0,0)`/`pow(b,0)`
+            // are all GROUND `Nat`/`Complex.pow` computations that ι-reduce
+            // fully regardless of `a`, `b`: `ofNat (choose 0 0)` collapses to
+            // `add(zero_c,one_c)` (one ι-step of `ofNat` at the Nat literal
+            // `1`).
+            let lhs_c = CExpr::add(
+                CExpr::Zero,
+                CExpr::mul(
+                    CExpr::mul(CExpr::add(CExpr::Zero, CExpr::One), CExpr::One),
+                    CExpr::One,
+                ),
+            );
+            ring_law_proof(d, p, &CExpr::One, &lhs_c)
+        },
+        &|d, j, ih| add_pow_step_c(d, p, a, b, j, ih),
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_b = d.pi_fv(b_fv, carrier, over_n);
+        d.pi_fv(a_fv, carrier, over_b)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_b = d.lam_fv(b_fv, carrier, over_n);
+        d.lam_fv(a_fv, carrier, over_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.add_pow,
         uparams: vec![],
         ty,
         value,

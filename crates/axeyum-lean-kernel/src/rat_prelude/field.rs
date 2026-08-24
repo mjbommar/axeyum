@@ -61,15 +61,22 @@
 //! positively is what lets the real construction consume it without ever
 //! needing a sign decision it cannot make.
 //!
-//! The negative branch of `Rat.inv` is therefore left unproved, deliberately:
-//! nothing needs it yet, and `inv q = -(inv (-q))` for `q < 0` recovers it when
-//! something does.
+//! `Rat.mul_inv_cancel` itself still only covers `q > 0`.
+//! [`Rat.mul_inv_cancel_of_neg`](super::RatPrelude::mul_inv_cancel_of_neg) is
+//! the companion for `q < 0` — a **second**, independent three-way case split
+//! on `Rat.num q`, not a reduction to this one via
+//! `inv q = -(inv (-q))`: that identity needs `Rat.normalize` to interact with
+//! a negated numerator, which is exactly as representation-heavy to establish
+//! as the companion theorem is directly, so reducing to it buys nothing.
+//! Together the two cover every `q ≠ 0` (decidably, via `Rat.lt_trichotomy`),
+//! and `Rat.inv`'s value at `q = 0` remains the only case with no cancellation
+//! law — the usual total-operator convention, not a gap.
 
 use super::RatPrelude;
 use super::defs::inv_body;
 use super::group::rsub;
 use super::ops::{
-    den, den_pos, nat_eq_to_rat, nat_rewrite_prop, normalize, num, one_le_succ, radd,
+    den, den_pos, den_z, nat_eq_to_rat, nat_rewrite_prop, normalize, num, one_le_succ, radd,
     rat_eq_rewrite, rat_theorem, rat_ty, rchain, rcongr, req, rle, rlt, rmul, rone, rsymm, rzero,
 };
 use crate::KernelError;
@@ -84,6 +91,7 @@ use crate::nat_prelude::NatOps;
 /// Returns the trusted gate's rejection.
 pub(super) fn declare_field_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     declare_mul_inv_cancel(d, p)?;
+    declare_mul_inv_cancel_of_neg(d, p)?;
     declare_inv_pos(d, p)?;
     declare_sub_mul(d, p)?;
     declare_inverse_identities(d, p)?;
@@ -860,6 +868,315 @@ fn cancel_at_positive_numerator(
     let crossed = d.itrans(left, lifted_product_den, right, left_side, back);
 
     d.lemma(p.eq_of_cross, &[product, one, crossed])
+}
+
+/// `Int.lt (num q) Int.zero`, given `q < 0`.
+///
+/// The mirror of `int_pos_of_pos` (`archimedean.rs`): `Rat.lt q Rat.zero`
+/// unfolds to `Int.lt (num q * ofNat (den Rat.zero)) (num Rat.zero * ofNat
+/// (den q))`, and `int.mul_one`/`p.int_zero_mul` collapse the two sides —
+/// exactly the rewrite `int_pos_of_pos` uses, with the two sides swapped
+/// because the zero sits on the other side of `lt` here.
+fn int_neg_of_neg(d: &mut IntDev<'_>, p: RatPrelude, q: ExprId, h: ExprId) -> ExprId {
+    let int = p.int;
+    let numerator = num(d, q);
+    let zero = d.izero();
+    let unit = d.ione();
+    let denominator = den_z(d, q);
+    let left_scaled = d.imul(numerator, unit);
+    let right_scaled = d.imul(zero, denominator);
+    let left_collapse = d.lemma(int.mul_one, &[numerator]);
+    let right_collapse = d.lemma(p.int_zero_mul, &[denominator]);
+    let at_left = d.int_eq_rewrite(left_scaled, numerator, left_collapse, h, &|d, x| {
+        d.ilt(x, right_scaled)
+    });
+    d.int_eq_rewrite(right_scaled, zero, right_collapse, at_left, &|d, x| {
+        d.ilt(numerator, x)
+    })
+}
+
+/// The surviving branch of [`declare_mul_inv_cancel_of_neg`]: `num q =
+/// negSucc m`, so `q⁻¹` **is** `normalize (Int.neg (ofNat (den q))) (m+1) _`.
+///
+/// Unlike [`cancel_at_positive_numerator`], `target` here (`negSucc m`) is
+/// not itself `ofNat` of the magnitude `normalize_cross` multiplies by, so
+/// that lemma cannot be read off the cross-product directly. Instead: scale
+/// both sides of the wanted cross-equation by `ofNat (m+1)` (which *is* the
+/// shape `normalize_cross` wants), collapse `negSucc m * negOfNat (den q)`
+/// with `mul_neg_succ_neg_of_nat` (`Int.neg (ofNat (den q))` is `ι`-equal to
+/// `negOfNat (den q)`, its exact left argument), then cancel the scale factor
+/// back off with `int_mul_right_cancel`. Once `cross_start = scale` is in
+/// hand the rest is identical to the positive branch.
+fn cancel_at_negative_numerator(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    q: ExprId,
+    m: ExprId,
+    equation: ExprId,
+) -> ExprId {
+    let nat = p.int.nat;
+    let int = p.int;
+    let one = rone(d, p);
+    let numerator = num(d, q);
+    let denominator = den(d, q);
+
+    let magnitude = d.succ(m);
+    let target = d.neg_succ(m);
+    let positive = one_le_succ(d, m);
+    let lifted_den = d.of_nat(denominator);
+    let negated_den = d.ineg(lifted_den);
+    let reciprocal = normalize(d, negated_den, magnitude, positive);
+
+    let product = rmul(d, q, reciprocal);
+    let product_num = num(d, product);
+    let product_den = den(d, product);
+    let lifted_product_den = d.of_nat(product_den);
+    let reciprocal_num = num(d, reciprocal);
+    let reciprocal_den = den(d, reciprocal);
+    let lifted_reciprocal_den = d.of_nat(reciprocal_den);
+    let common = NatOps::mul(d, denominator, reciprocal_den);
+    let scale = d.of_nat(common);
+
+    // cross_start = numerator * reciprocal_num, rewritten via the branch
+    // equation to `target * reciprocal_num`.
+    let cross_start = d.imul(numerator, reciprocal_num);
+    let shifted = d.imul(target, reciprocal_num);
+    let by_branch = d.icongr(numerator, target, equation, &|d, t| {
+        d.imul(t, reciprocal_num)
+    });
+
+    // Scale `shifted` by `ofNat magnitude` and reduce it to a plain `Nat`
+    // cast, in lockstep with `scale * ofNat magnitude`.
+    let magnitude_z = d.of_nat(magnitude);
+    let shifted_scaled = d.imul(shifted, magnitude_z);
+
+    let inner1 = d.imul(reciprocal_num, magnitude_z);
+    let regrouped1 = d.imul(target, inner1);
+    let regroup1 = d.lemma(int.mul_assoc, &[target, reciprocal_num, magnitude_z]);
+
+    let inner2 = d.imul(negated_den, lifted_reciprocal_den);
+    let regrouped2 = d.imul(target, inner2);
+    let by_normalize = d.lemma(p.normalize_cross, &[negated_den, magnitude, positive]);
+    let step2 = d.icongr(inner1, inner2, by_normalize, &|d, t| d.imul(target, t));
+
+    let head = d.imul(target, negated_den);
+    let regrouped3 = d.imul(head, lifted_reciprocal_den);
+    let regroup2 = d.lemma(int.mul_assoc, &[target, negated_den, lifted_reciprocal_den]);
+    let regroup2_symm = d.isymm(regrouped3, regrouped2, regroup2);
+
+    let head_value = {
+        let scaled_denominator = NatOps::mul(d, magnitude, denominator);
+        d.of_nat(scaled_denominator)
+    };
+    let head_eq = d.lemma(int.mul_neg_succ_neg_of_nat, &[m, denominator]);
+    let step4 = d.icongr(head, head_value, head_eq, &|d, t| {
+        d.imul(t, lifted_reciprocal_den)
+    });
+    let final_left_raw = d.imul(head_value, lifted_reciprocal_den);
+
+    let nat_grouped = {
+        let scaled_denominator = NatOps::mul(d, magnitude, denominator);
+        NatOps::mul(d, scaled_denominator, reciprocal_den)
+    };
+    let final_left_reduced = d.of_nat(nat_grouped);
+    let fuse_left = d.irefl(final_left_reduced);
+
+    let nat_target = NatOps::mul(d, common, magnitude);
+    let scale_scaled_reduced = d.of_nat(nat_target);
+    let rhs_target = d.imul(scale, magnitude_z);
+
+    // Nat rearrangement: (magnitude*denominator)*reciprocal_den =
+    // magnitude*common = common*magnitude.
+    let magnitude_common = NatOps::mul(d, magnitude, common);
+    let nat_eq1 = d.lemma(nat.mul_assoc, &[magnitude, denominator, reciprocal_den]);
+    let nat_eq2 = d.lemma(nat.mul_comm, &[magnitude, common]);
+    let (_, nat_eq_final) = d.chain(
+        nat_grouped,
+        &[(magnitude_common, nat_eq1), (nat_target, nat_eq2)],
+    );
+    let nat_lift = d.nat_eq_to_int(nat_grouped, nat_target, nat_eq_final, &|d, t| d.of_nat(t));
+    let fuse_right = d.irefl(rhs_target);
+
+    let (_, big_proof) = d.ichain(
+        shifted_scaled,
+        &[
+            (regrouped1, regroup1),
+            (regrouped2, step2),
+            (regrouped3, regroup2_symm),
+            (final_left_raw, step4),
+            (final_left_reduced, fuse_left),
+            (scale_scaled_reduced, nat_lift),
+            (rhs_target, fuse_right),
+        ],
+    );
+
+    let shifted_eq_scale = d.lemma(
+        p.int_mul_right_cancel,
+        &[shifted, scale, magnitude, positive, big_proof],
+    );
+    let to_scale = d.itrans(cross_start, shifted, scale, by_branch, shifted_eq_scale);
+
+    // From here on, identical to `cancel_at_positive_numerator`: cancel the
+    // shared positive denominator factor and close with `eq_of_cross`.
+    let cancel_left = d.imul(product_num, scale);
+    let via_cross = d.lemma(p.mul_cross, &[q, reciprocal]);
+    let cross_image = d.imul(cross_start, lifted_product_den);
+    let scaled_image = d.imul(scale, lifted_product_den);
+    let by_scale = d.icongr(cross_start, scale, to_scale, &|d, t| {
+        d.imul(t, lifted_product_den)
+    });
+    let cancel_right = d.imul(lifted_product_den, scale);
+    let final_commute = d.lemma(int.mul_comm, &[scale, lifted_product_den]);
+    let (_, cancellable) = d.ichain(
+        cancel_left,
+        &[
+            (cross_image, via_cross),
+            (scaled_image, by_scale),
+            (cancel_right, final_commute),
+        ],
+    );
+
+    let den_q_positive = den_pos(d, q);
+    let den_r_positive = den_pos(d, reciprocal);
+    let common_positive = d.lemma(
+        nat.one_le_mul,
+        &[denominator, reciprocal_den, den_q_positive, den_r_positive],
+    );
+    let projections_agree = d.lemma(
+        p.int_mul_right_cancel,
+        &[
+            product_num,
+            lifted_product_den,
+            common,
+            common_positive,
+            cancellable,
+        ],
+    );
+
+    let unit_nat = d.num(1);
+    let unit = d.of_nat(unit_nat);
+    let left = d.imul(product_num, unit);
+    let strip_left = d.lemma(int.mul_one, &[product_num]);
+    let (_, left_side) = d.ichain(
+        left,
+        &[
+            (product_num, strip_left),
+            (lifted_product_den, projections_agree),
+        ],
+    );
+    let right = d.imul(unit, lifted_product_den);
+    let flipped = d.imul(lifted_product_den, unit);
+    let flip = d.lemma(int.mul_comm, &[unit, lifted_product_den]);
+    let strip_right = d.lemma(int.mul_one, &[lifted_product_den]);
+    let (_, right_side) = d.ichain(right, &[(flipped, flip), (lifted_product_den, strip_right)]);
+    let back = d.isymm(right, lifted_product_den, right_side);
+    let crossed = d.itrans(left, lifted_product_den, right, left_side, back);
+
+    d.lemma(p.eq_of_cross, &[product, one, crossed])
+}
+
+/// `Rat.mul_inv_cancel_of_neg : ∀ q, q < 0 → q · q⁻¹ = 1` — the companion of
+/// [`declare_mul_inv_cancel`] for a negative `q`.
+///
+/// A **second** three-way case split on `Rat.num q`, not a reduction to the
+/// positive case via `Rat.inv (Rat.neg q) = Rat.neg (Rat.inv q)`: that
+/// identity is exactly as representation-heavy to establish as this theorem
+/// is directly (both need to know how `Rat.normalize` interacts with a
+/// negated numerator), so reducing to it buys nothing. The good branch is
+/// `num q = negSucc m`; the single dead branch — `num q = ofNat n`, for
+/// *any* `n` — is refuted in one shot by [`int_neg_of_neg`] plus
+/// `Nat.not_lt_zero`, unlike the positive proof's two dead branches (which
+/// need `eq_zero_of_num_zero` for `n = 0` and an `ι`-reduction to `False` for
+/// `negSucc`, i.e. two different arguments).
+fn declare_mul_inv_cancel_of_neg(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let int = p.int;
+    let carrier = rat_ty(d);
+    let nat_ty = d.nat_ty();
+    let int_ty = d.int_ty();
+    let prop_level = d.kernel().level_zero();
+
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let zero = rzero(d, p);
+    let one = rone(d, p);
+    let hypothesis = rlt(d, p, q, zero);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let numerator = num(d, q);
+    let sign = int_neg_of_neg(d, p, q, h);
+
+    // `fun z => num q = z → q · (inv_body q z) = 1`, the motive of the split.
+    let motive = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let equation = d.ieq(numerator, z);
+        let reciprocal = inv_body(d, p, q, z);
+        let product = rmul(d, q, reciprocal);
+        let claim = req(d, product, one);
+        let inner = d.arrow(equation, claim);
+        d.lam_fv(z_fv, int_ty, inner)
+    };
+
+    // `num q = ofNat n`, for any `n`: `Int.lt (ofNat n) Int.zero` is `ι`-equal
+    // to `Nat.lt n 0`, refuted directly — no nested split on `n`.
+    let minor_of_nat = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let target = d.of_nat(n);
+        let equation = d.ieq(numerator, target);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let reciprocal = inv_body(d, p, q, target);
+        let product = rmul(d, q, reciprocal);
+        let claim = req(d, product, one);
+        let impossible = {
+            let izero = d.izero();
+            let shifted = d.int_eq_rewrite(numerator, target, e, sign, &|d, x| d.ilt(x, izero));
+            let refuted = d.lemma(int.nat.not_lt_zero, &[n]);
+            d.apply(refuted, &[shifted])
+        };
+        let body = d.absurd(claim, impossible);
+        let with_e = d.lam_fv(e_fv, equation, body);
+        d.lam_fv(n_fv, nat_ty, with_e)
+    };
+
+    // `num q = negSucc m` — the real proof.
+    let minor_neg_succ = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let target = d.neg_succ(m);
+        let equation = d.ieq(numerator, target);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let body = cancel_at_negative_numerator(d, p, q, m, e);
+        let with_e = d.lam_fv(e_fv, equation, body);
+        d.lam_fv(m_fv, nat_ty, with_e)
+    };
+
+    let rec = d.kernel().const_(int.rec, vec![prop_level]);
+    let split = d.apply(rec, &[motive, minor_of_nat, minor_neg_succ, numerator]);
+    let reflexive = d.irefl(numerator);
+    let applied = d.apply(split, &[reflexive]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, applied);
+        d.lam_fv(q_fv, carrier, with_h)
+    };
+    let ty = {
+        let reciprocal = d.const_app(p.inv, &[q]);
+        let product = rmul(d, q, reciprocal);
+        let claim = req(d, product, one);
+        let inner = d.arrow(hypothesis, claim);
+        d.pi_fv(q_fv, carrier, inner)
+    };
+    d.kernel()
+        .add_declaration(crate::env::Declaration::Theorem {
+            name: p.mul_inv_cancel_of_neg,
+            uparams: vec![],
+            ty,
+            value,
+        })
 }
 
 /// `Rat.inv_pos : ∀ q, 0 < q → 0 < q⁻¹`.

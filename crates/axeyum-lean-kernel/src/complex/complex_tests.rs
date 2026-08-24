@@ -178,6 +178,15 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.mul_sumRange", p.mul_sum_range),
         ("Complex.mul_sub_one_geom", p.mul_sub_one_geom),
         ("Complex.geom_series_div", p.geom_series_div),
+        ("Complex.ofNat", p.of_nat),
+        ("Complex.ofNat_zero", p.of_nat_zero),
+        ("Complex.ofNat_succ", p.of_nat_succ),
+        ("Complex.ofNat_add", p.of_nat_add),
+        ("Complex.ofNat_mul", p.of_nat_mul),
+        ("Complex.sumRange_add", p.sum_range_add),
+        ("Complex.sumRange_shiftFront", p.sum_range_shift_front),
+        ("Complex.sumRange_congr_lt", p.sum_range_congr_lt),
+        ("Complex.add_pow", p.add_pow),
     ];
     for (label, name) in named {
         let declaration = kernel
