@@ -41,6 +41,45 @@
 //! general uniqueness lemma. None of `add4_comm`/`neg_add`/`abs_add_le` are
 //! declared kernel theorems — they are Rust-level proof-term builders, the
 //! same status `add_add_add_comm` has for `Nat`.
+//!
+//! ## Telescoping, splitting, and the comparison test
+//!
+//! [`declare_sum_range_telescope`] and [`declare_sum_range_split`] are the
+//! two facts every convergence argument over a series opens with — the first
+//! collapses `Σ_{k<n} (f(k+1) − f k)` to `f n − f 0`, the second turns a
+//! statement about a *tail* of a sum into a statement about a *difference*
+//! of two partial sums. Both are induction on `n` closed by algebra alone
+//! (no rational estimate): telescoping needs one more cancellation shape,
+//! [`cancel_left`] (`(a+b)+(c+(−a)) ~ c+b`, four terms, via [`add4_comm`]),
+//! and splitting needs only `Nat.add`'s own iota-reduction plus
+//! `add_zero`/`add_assoc`.
+//!
+//! [`declare_sum_range_tail_le`] is the comparison test itself: `f`
+//! pointwise-bounded by `g` in absolute value forces every tail of `f`'s
+//! partial sums to be bounded by the corresponding tail of `g`'s. It is
+//! **not** stated through `CReal.Cauchy` (`creal/convergence.rs`), and that
+//! is a deliberate, considered choice, not an oversight. `CReal.Cauchy`'s
+//! body — see that module's own documentation — compares `seq (h m) m`
+//! against `seq (h n) n`: the *rational* sample each real offers at **its
+//! own canonical index**, the same representative-level machinery
+//! `completeness.rs`/`convergence.rs` build extensively for `CReal.add`'s
+//! single shift. Reaching that shape for `h := sumRange f` needs a
+//! sample-rate law for `sumRange` itself — how `seq (sumRange f n) k`
+//! relates to the individual `f i`'s own samples — and nothing here, or
+//! anywhere else in this development, builds one: every `sumRange` law in
+//! this file, [`declare_sum_range_tail_le`] included, is proved through the
+//! abstract `Equiv`/`le`/`abs` algebra alone and never once inspects `seq`.
+//! Building that sample-rate law is plausibly a module the size of
+//! `completeness.rs` on its own (a finite sum of `n` shifted reals, not one
+//! fixed shift), and is not attempted here.
+//! [`declare_sum_range_tail_le`] is instead the actual mathematical engine
+//! of the comparison test — a genuine real-valued tail bound, via
+//! [`declare_sum_range_split`] to rewrite each tail as a shifted partial sum
+//! ([`cancel_right`]: `(a+b)+(−a) ~ b`), then
+//! [`super::CRealPrelude::abs_sum_range_le`] and
+//! [`super::CRealPrelude::sum_range_le`] to bound it — and reaching the
+//! literal `CReal.Cauchy` predicate from it is future, unbuilt
+//! infrastructure, not a restatement of what is proved here.
 
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, equiv};
 use crate::BinderInfo;
@@ -64,7 +103,10 @@ pub(super) fn declare_series(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     declare_sum_range_add(d, p)?;
     declare_mul_sum_range(d, p)?;
     declare_sum_range_le(d, p)?;
-    declare_abs_sum_range_le(d, p)
+    declare_abs_sum_range_le(d, p)?;
+    declare_sum_range_telescope(d, p)?;
+    declare_sum_range_split(d, p)?;
+    declare_sum_range_tail_le(d, p)
 }
 
 // --- small local term builders ----------------------------------------------
@@ -87,6 +129,20 @@ fn cabs(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
 
 fn cle(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.le, &[x, y])
+}
+
+/// `λ k, f (add m k)` — `f` shifted by `m`, the summand
+/// [`declare_sum_range_split`] and [`declare_sum_range_tail_le`] both build,
+/// as one shared function so the two never drift into structurally distinct
+/// (merely defeq) closures.
+fn shifted_fn(d: &mut IntDev<'_>, m: ExprId, f: ExprId) -> ExprId {
+    let nat_add = d.prelude().add;
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let mk = d.const_app(nat_add, &[m, k]);
+    let body = d.apply(f, &[mk]);
+    let nat = d.nat_ty();
+    d.lam_fv(k_fv, nat, body)
 }
 
 /// `Eq.{1} CReal a b`.
@@ -287,6 +343,103 @@ fn neg_add(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId 
             (t, step_e),
         ],
     )
+}
+
+/// `Equiv (add (add a b) (neg a)) b` — the group cancellation `(a+b)+(−a) ~
+/// b`, via `add_comm`, `add_assoc`, `add_neg`, `add_zero`.
+fn cancel_right(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let na = cneg(d, p, a);
+    let ab = cadd(d, p, a, b);
+    let start = cadd(d, p, ab, na);
+
+    // (a+b)+(-a) ~ (b+a)+(-a)
+    let ba = cadd(d, p, b, a);
+    let comm1 = d.lemma(p.add_comm, &[a, b]); // ab ~ ba
+    let refl_na = d.lemma(p.equiv_refl, &[na]);
+    let s1 = cadd(d, p, ba, na);
+    let h1 = d.lemma(p.add_congr, &[ab, ba, na, na, comm1, refl_na]);
+
+    // (b+a)+(-a) ~ b+(a+(-a))
+    let a_na = cadd(d, p, a, na);
+    let s2 = cadd(d, p, b, a_na);
+    let h2 = d.lemma(p.add_assoc, &[b, a, na]); // s1 ~ s2
+
+    // b+(a+(-a)) ~ b+zero
+    let zero_c = czero(d, p);
+    let h_an = d.lemma(p.add_neg, &[a]); // a_na ~ zero
+    let refl_b = d.lemma(p.equiv_refl, &[b]);
+    let s3 = cadd(d, p, b, zero_c);
+    let h3 = d.lemma(p.add_congr, &[b, b, a_na, zero_c, refl_b, h_an]); // s2 ~ s3
+
+    // b+zero ~ b
+    let h4 = d.lemma(p.add_zero, &[b]); // s3 ~ b
+
+    echain(d, p, start, &[(s1, h1), (s2, h2), (s3, h3), (b, h4)])
+}
+
+/// `(target, proof)` with `target = add c b` and `proof : Equiv (add (add a
+/// b) (add c (neg a))) target` — cancel `a` against its negation across a
+/// four-term sum. Reorders the second pair via `add_comm` so
+/// [`add4_comm`] lines `a` up against `neg a`, then one more `add_neg` /
+/// `add_zero` / `add_comm` collapses the rest, mirroring [`neg_add`]'s own
+/// "witness-specialised inverse" recipe.
+fn cancel_left(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> (ExprId, ExprId) {
+    let na = cneg(d, p, a);
+    let ab = cadd(d, p, a, b);
+    let c_na = cadd(d, p, c, na);
+    let start = cadd(d, p, ab, c_na);
+
+    // c+(-a) ~ (-a)+c
+    let na_c = cadd(d, p, na, c);
+    let comm1 = d.lemma(p.add_comm, &[c, na]); // c_na ~ na_c
+    let refl_ab = d.lemma(p.equiv_refl, &[ab]);
+    let s1 = cadd(d, p, ab, na_c);
+    let h1 = d.lemma(p.add_congr, &[ab, ab, c_na, na_c, refl_ab, comm1]);
+
+    // (a+b)+(na+c) ~ (a+na)+(b+c), via add4_comm(a,b,na,c)
+    let (s2, h2) = add4_comm(d, p, a, b, na, c);
+
+    // a+na ~ zero
+    let a_na = cadd(d, p, a, na);
+    let bc = cadd(d, p, b, c);
+    let zero_c = czero(d, p);
+    let h_an = d.lemma(p.add_neg, &[a]); // a_na ~ zero
+    let refl_bc = d.lemma(p.equiv_refl, &[bc]);
+    let s3 = cadd(d, p, zero_c, bc);
+    let h3 = d.lemma(p.add_congr, &[a_na, zero_c, bc, bc, h_an, refl_bc]); // s2 ~ s3
+
+    // zero+bc ~ bc+zero
+    let bc_zero = cadd(d, p, bc, zero_c);
+    let h4 = d.lemma(p.add_comm, &[zero_c, bc]); // s3 ~ bc_zero
+
+    // bc+zero ~ bc
+    let h5 = d.lemma(p.add_zero, &[bc]); // bc_zero ~ bc
+
+    // bc ~ cb
+    let cb = cadd(d, p, c, b);
+    let h6 = d.lemma(p.add_comm, &[b, c]); // bc ~ cb
+    let target = cb;
+
+    let proof = echain(
+        d,
+        p,
+        start,
+        &[
+            (s1, h1),
+            (s2, h2),
+            (s3, h3),
+            (bc_zero, h4),
+            (bc, h5),
+            (target, h6),
+        ],
+    );
+    (target, proof)
 }
 
 /// `le (abs (add a b)) (add (abs a) (abs b))` — the two-term triangle
@@ -860,6 +1013,341 @@ fn declare_abs_sum_range_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.abs_sum_range_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sumRange_telescope : ∀ f n, Equiv (sumRange (fun k => add (f (succ
+/// k)) (neg (f k))) n) (add (f n) (neg (f Nat.zero)))` — `Σ_{k<n} (f(k+1) −
+/// f k) ~ f n − f 0`. Induction on `n`: the base case is `symm add_neg`; the
+/// successor case rewrites the inductive hypothesis into the accumulated sum
+/// via `add_congr`, then closes with [`cancel_left`].
+fn declare_sum_range_telescope(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let step_fn = |d: &mut IntDev<'_>, f: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let f_sk = d.apply(f, &[sk]);
+        let f_k = d.apply(f, &[k]);
+        let neg_fk = cneg(d, p, f_k);
+        let body = cadd(d, p, f_sk, neg_fk);
+        let nat = d.nat_ty();
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let zero_n = d.zero();
+    let f0 = d.apply(f, &[zero_n]);
+    let neg_f0 = cneg(d, p, f0);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let g = step_fn(d, f);
+        let lhs = d.const_app(p.sum_range, &[g, x]);
+        let fx = d.apply(f, &[x]);
+        let rhs = cadd(d, p, fx, neg_f0);
+        equiv(d, p, lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let target = cadd(d, p, f0, neg_f0);
+            let zero_c = czero(d, p);
+            let h = d.lemma(p.add_neg, &[f0]); // Equiv target zero
+            d.lemma(p.equiv_symm, &[target, zero_c, h])
+        },
+        &|d, j, ih| {
+            // ih : Equiv (sumRange g j) (add (f j) (neg (f 0)))
+            let fj = d.apply(f, &[j]);
+            let neg_fj = cneg(d, p, fj);
+            let sj = d.succ(j);
+            let fsj = d.apply(f, &[sj]);
+            let g = step_fn(d, f);
+            let sum_gj = d.const_app(p.sum_range, &[g, j]);
+            let gj = cadd(d, p, fsj, neg_fj); // = g j, up to beta
+
+            let start = cadd(d, p, sum_gj, gj); // = sumRange g (succ j), up to iota
+
+            let fj_negf0 = cadd(d, p, fj, neg_f0);
+            let refl_gj = d.lemma(p.equiv_refl, &[gj]);
+            let s1 = cadd(d, p, fj_negf0, gj);
+            let h1 = d.lemma(p.add_congr, &[sum_gj, fj_negf0, gj, gj, ih, refl_gj]);
+
+            // s1 = (fj + neg_f0) + (fsj + neg_fj) ~ fsj + neg_f0
+            let (target, h2) = cancel_left(d, p, fj, neg_f0, fsj);
+
+            echain(d, p, start, &[(s1, h1), (target, h2)])
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(f_fv, fn_ty, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(f_fv, fn_ty, over_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_telescope,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sumRange_split : ∀ f m n, Equiv (sumRange f (add m n)) (add
+/// (sumRange f m) (sumRange (fun k => f (add m k)) n))`. Induction on `n`;
+/// both cases close purely by `Nat.add`'s own iota-reduction (`add m
+/// Nat.zero ≡ m`, `add m (succ j) ≡ succ (add m j)`) plus one
+/// `add_zero`/`add_assoc` respectively — no new rational estimate, and the
+/// lemma every "tail of a partial sum" argument opens with.
+fn declare_sum_range_split(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_add = d.prelude().add;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let m_plus_x = d.const_app(nat_add, &[m, x]);
+        let lhs = d.const_app(p.sum_range, &[f, m_plus_x]);
+        let h = shifted_fn(d, m, f);
+        let sum_h_x = d.const_app(p.sum_range, &[h, x]);
+        let rhs = cadd(d, p, sum_f_m, sum_h_x);
+        equiv(d, p, lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero_c = czero(d, p);
+            let padded = cadd(d, p, sum_f_m, zero_c);
+            let h = d.lemma(p.add_zero, &[sum_f_m]); // Equiv padded sum_f_m
+            d.lemma(p.equiv_symm, &[padded, sum_f_m, h])
+        },
+        &|d, j, ih| {
+            // ih : Equiv (sumRange f (add m j)) (add sum_f_m (sumRange h j))
+            let h = shifted_fn(d, m, f);
+            let sum_h_j = d.const_app(p.sum_range, &[h, j]);
+            let m_plus_j = d.const_app(nat_add, &[m, j]);
+            let fmj = d.apply(f, &[m_plus_j]); // = f (add m j) = h j, up to beta
+
+            let sum_f_mj = d.const_app(p.sum_range, &[f, m_plus_j]);
+            let start = cadd(d, p, sum_f_mj, fmj); // = sumRange f (add m (succ j)), up to iota
+
+            let rhs_prior = cadd(d, p, sum_f_m, sum_h_j);
+            let refl_fmj = d.lemma(p.equiv_refl, &[fmj]);
+            let s1 = cadd(d, p, rhs_prior, fmj);
+            let h1 = d.lemma(p.add_congr, &[sum_f_mj, rhs_prior, fmj, fmj, ih, refl_fmj]);
+
+            let sum_h_j_plus_fmj = cadd(d, p, sum_h_j, fmj);
+            let target = cadd(d, p, sum_f_m, sum_h_j_plus_fmj);
+            let h2 = d.lemma(p.add_assoc, &[sum_f_m, sum_h_j, fmj]);
+
+            echain(d, p, start, &[(s1, h1), (target, h2)])
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        d.pi_fv(f_fv, fn_ty, over_m)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        d.lam_fv(f_fv, fn_ty, over_m)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_split,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sumRange_tail_le : ∀ f g m n, (∀ k, le (abs (f k)) (g k)) → le (abs
+/// (add (sumRange f (add m n)) (neg (sumRange f m)))) (add (sumRange g (add m
+/// n)) (neg (sumRange g m)))` — **the comparison test**: an `m`-to-`m+n` tail
+/// of `f`'s partial sums is bounded by the corresponding tail of `g`'s,
+/// whenever `f` is pointwise bounded by `g` in absolute value.
+///
+/// Not stated through `CReal.Cauchy` — see the module documentation for why.
+/// Both tails are rewritten to a shifted partial sum via [`declare_sum_range_split`]
+/// and [`cancel_right`] (`(sumRange f m + sumRange h n) + (-(sumRange f m)) ~
+/// sumRange h n`), then chained through [`CRealPrelude::abs_congr`],
+/// [`CRealPrelude::abs_sum_range_le`] and [`CRealPrelude::sum_range_le`] (the
+/// pointwise hypothesis applied at the shifted index) with three
+/// [`CRealPrelude::le_trans`] steps.
+fn declare_sum_range_tail_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_add = d.prelude().add;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let pointwise_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let fk = d.apply(f, &[k]);
+        let gk = d.apply(g, &[k]);
+        let abs_fk = cabs(d, p, fk);
+        let leq = cle(d, p, abs_fk, gk);
+        d.pi_fv(k_fv, nat, leq)
+    };
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    let m_plus_n = d.const_app(nat_add, &[m, n]);
+    let sum_f_mn = d.const_app(p.sum_range, &[f, m_plus_n]);
+    let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+    let neg_sum_f_m = cneg(d, p, sum_f_m);
+    let tail_f = cadd(d, p, sum_f_mn, neg_sum_f_m);
+
+    let sum_g_mn = d.const_app(p.sum_range, &[g, m_plus_n]);
+    let sum_g_m = d.const_app(p.sum_range, &[g, m]);
+    let neg_sum_g_m = cneg(d, p, sum_g_m);
+    let tail_g = cadd(d, p, sum_g_mn, neg_sum_g_m);
+
+    let abs_tail_f = cabs(d, p, tail_f);
+    let target = cle(d, p, abs_tail_f, tail_g);
+
+    let h_f = shifted_fn(d, m, f);
+    let h_g = shifted_fn(d, m, g);
+    let sum_hf_n = d.const_app(p.sum_range, &[h_f, n]);
+    let sum_hg_n = d.const_app(p.sum_range, &[h_g, n]);
+
+    // tail_f ~ sum_hf_n, via sumRange_split[f,m,n] + cancel_right.
+    let split_f = d.lemma(p.sum_range_split, &[f, m, n]); // Equiv sum_f_mn (add sum_f_m sum_hf_n)
+    let sum_f_m_plus_hf = cadd(d, p, sum_f_m, sum_hf_n);
+    let refl_neg_f = d.lemma(p.equiv_refl, &[neg_sum_f_m]);
+    let step_a = d.lemma(
+        p.add_congr,
+        &[
+            sum_f_mn,
+            sum_f_m_plus_hf,
+            neg_sum_f_m,
+            neg_sum_f_m,
+            split_f,
+            refl_neg_f,
+        ],
+    ); // Equiv tail_f (add sum_f_m_plus_hf neg_sum_f_m)
+    let middle_f = cadd(d, p, sum_f_m_plus_hf, neg_sum_f_m);
+    let cancel_f = cancel_right(d, p, sum_f_m, sum_hf_n); // Equiv middle_f sum_hf_n
+    let tail_f_equiv = d.lemma(
+        p.equiv_trans,
+        &[tail_f, middle_f, sum_hf_n, step_a, cancel_f],
+    );
+
+    // tail_g ~ sum_hg_n, identically.
+    let split_g = d.lemma(p.sum_range_split, &[g, m, n]);
+    let sum_g_m_plus_hg = cadd(d, p, sum_g_m, sum_hg_n);
+    let refl_neg_g = d.lemma(p.equiv_refl, &[neg_sum_g_m]);
+    let step_b = d.lemma(
+        p.add_congr,
+        &[
+            sum_g_mn,
+            sum_g_m_plus_hg,
+            neg_sum_g_m,
+            neg_sum_g_m,
+            split_g,
+            refl_neg_g,
+        ],
+    );
+    let middle_g = cadd(d, p, sum_g_m_plus_hg, neg_sum_g_m);
+    let cancel_g = cancel_right(d, p, sum_g_m, sum_hg_n); // Equiv middle_g sum_hg_n
+    let tail_g_equiv = d.lemma(
+        p.equiv_trans,
+        &[tail_g, middle_g, sum_hg_n, step_b, cancel_g],
+    );
+
+    // r1 : le abs_tail_f (abs sum_hf_n)
+    let abs_sum_hf_n = cabs(d, p, sum_hf_n);
+    let abs_congr_f = d.lemma(p.abs_congr, &[tail_f, sum_hf_n, tail_f_equiv]);
+    let r1 = d.lemma(p.le_of_equiv, &[abs_tail_f, abs_sum_hf_n, abs_congr_f]);
+
+    // r2 : le (abs sum_hf_n) (sumRange |h_f| n)
+    let absf_hf = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hfi = d.apply(h_f, &[i]);
+        let body = cabs(d, p, hfi);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let sum_absf_hf_n = d.const_app(p.sum_range, &[absf_hf, n]);
+    let r2 = d.lemma(p.abs_sum_range_le, &[h_f, n]);
+
+    // r3 : le (sumRange |h_f| n) sum_hg_n, via sumRange_le, pointwise from `hyp`.
+    let pointwise_proof = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lt_fv = d.fresh_fvar();
+        let lt_ty = d.lt(i, n);
+        let mi = d.const_app(nat_add, &[m, i]);
+        let applied = d.apply(hyp, &[mi]); // le (abs (f (add m i))) (g (add m i))
+        let inner = d.lam_fv(lt_fv, lt_ty, applied);
+        d.lam_fv(i_fv, nat, inner)
+    };
+    let r3 = d.lemma(p.sum_range_le, &[absf_hf, h_g, n, pointwise_proof]);
+
+    // r4 : le sum_hg_n tail_g
+    let tail_g_symm = d.lemma(p.equiv_symm, &[tail_g, sum_hg_n, tail_g_equiv]);
+    let r4 = d.lemma(p.le_of_equiv, &[sum_hg_n, tail_g, tail_g_symm]);
+
+    let c1 = d.lemma(
+        p.le_trans,
+        &[abs_tail_f, abs_sum_hf_n, sum_absf_hf_n, r1, r2],
+    );
+    let c2 = d.lemma(p.le_trans, &[abs_tail_f, sum_absf_hf_n, sum_hg_n, c1, r3]);
+    let proof_body = d.lemma(p.le_trans, &[abs_tail_f, sum_hg_n, tail_g, c2, r4]);
+
+    let ty = {
+        let after_hyp = d.arrow(pointwise_ty, target);
+        let over_n = d.pi_fv(n_fv, nat, after_hyp);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_m);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let with_hyp = d.lam_fv(hyp_fv, pointwise_ty, proof_body);
+        let over_n = d.lam_fv(n_fv, nat, with_hyp);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_m);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_tail_le,
         uparams: vec![],
         ty,
         value,

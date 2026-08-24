@@ -1027,6 +1027,41 @@ pub struct CRealPrelude {
     /// `CReal` has no standalone `neg_add` law of its own, so this is proved
     /// inline rather than declared).
     pub abs_sum_range_le: NameId,
+    /// `CReal.sumRange_telescope : ∀ f n, Equiv (sumRange (fun k => add (f
+    /// (succ k)) (neg (f k))) n) (add (f n) (neg (f Nat.zero)))` —
+    /// `Σ_{k<n} (f(k+1) − f k) ~ f n − f 0`. Induction on `n`; the base case
+    /// is `symm add_neg`, the successor step is the four-term cancellation
+    /// `series::cancel_left` (`(a+b)+(c+(−a)) ~ c+b`, built from
+    /// `series::add4_comm` plus one more `add_neg`).
+    pub sum_range_telescope: NameId,
+    /// `CReal.sumRange_split : ∀ f m n, Equiv (sumRange f (add m n)) (add
+    /// (sumRange f m) (sumRange (fun k => f (add m k)) n))` — splitting a sum
+    /// at `m` turns a statement about the tail into a statement about a
+    /// difference of partial sums. Induction on `n`; both cases close by
+    /// `Nat.add`'s own iota-reduction (`add m Nat.zero ≡ m`, `add m (succ j)
+    /// ≡ succ (add m j)`) plus one `add_zero`/`add_assoc` respectively — no
+    /// new rational estimate.
+    pub sum_range_split: NameId,
+    /// `CReal.sumRange_tail_le : ∀ f g m n, (∀ k, le (abs (f k)) (g k)) → le
+    /// (abs (add (sumRange f (add m n)) (neg (sumRange f m)))) (add
+    /// (sumRange g (add m n)) (neg (sumRange g m)))` — **the comparison
+    /// test**: if `f` is pointwise bounded by `g` in absolute value, the
+    /// `m`-to-`m+n` tail of `f`'s partial sums is bounded by the
+    /// corresponding tail of `g`'s. Not stated through `CReal.Cauchy`
+    /// (`creal/convergence.rs`) — see `series.rs`'s module documentation for
+    /// why: `Cauchy`'s body compares `seq (h m) m` against `seq (h n) n`, the
+    /// RATIONAL sample each real offers at *its own canonical index*, and
+    /// bridging that for `h := sumRange f` needs a sample-rate law for
+    /// `sumRange` itself (how `seq (sumRange f n) k` relates to the
+    /// individual `f i`'s samples) that does not exist anywhere in this
+    /// development — every other `sumRange` law here, this one included, is
+    /// proved through the abstract `Equiv`/`le`/`abs` algebra alone, never
+    /// touching `seq`. This theorem is the actual mathematical engine of the
+    /// comparison test (a real-valued tail bound, via `sum_range_split` +
+    /// `abs_sumRange_le` + `sumRange_le`); reaching the literal
+    /// `CReal.Cauchy` predicate from it is a separate, unbuilt piece of
+    /// infrastructure, not a restatement.
+    pub sum_range_tail_le: NameId,
 }
 
 impl CRealPrelude {
@@ -1234,6 +1269,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_sum_range: kernel.name_str(creal, "mul_sumRange"),
         sum_range_le: kernel.name_str(creal, "sumRange_le"),
         abs_sum_range_le: kernel.name_str(creal, "abs_sumRange_le"),
+        sum_range_telescope: kernel.name_str(creal, "sumRange_telescope"),
+        sum_range_split: kernel.name_str(creal, "sumRange_split"),
+        sum_range_tail_le: kernel.name_str(creal, "sumRange_tail_le"),
     }
 }
 
