@@ -10,17 +10,17 @@ has a generated kernel projection at
 It is a sidecar: it changes no theorem source, fact, operation, or admission
 rule.
 
-The current constructed-prelude run contains 1,042 distinct declarations:
+The current constructed-prelude run contains 1,122 distinct declarations:
 
 | Kind | Count |
 |---|---:|
-| Theorem | 793 |
-| Definition | 153 |
+| Theorem | 855 |
+| Definition | 171 |
 | Inductive | 20 |
 | Constructor | 26 |
 | Recursor | 20 |
 | Axiom | 30 |
-| Total direct theorem dependency edges | 3,583 |
+| Total direct theorem dependency edges | 4,035 |
 
 Each declaration retains all constructed preludes in which it is visible, its
 declaration kind, and the size of its kernel-derived axiom footprint. Each
