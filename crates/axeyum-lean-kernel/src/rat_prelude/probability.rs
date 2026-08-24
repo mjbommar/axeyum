@@ -109,9 +109,11 @@ pub(super) fn declare_probability(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_covariance(d, p)?;
     declare_variance_add_eq(d, p)?;
     declare_variance_add_of_uncorrelated(d, p)?;
+    declare_covariance_comm(d, p)?;
     declare_covariance_add_right(d, p)?;
     declare_sum_vars(d, p)?;
     declare_expectation_sum_vars(d, p)?;
+    declare_covariance_sum_vars_left(d, p)?;
     Ok(())
 }
 
@@ -3122,6 +3124,91 @@ fn declare_variance_add_of_uncorrelated(
 // directly rather than by induction). `Rat.covariance_add_right` and
 // `Rat.sumVars`/`Rat.expectation_sumVars` below are that scaffolding.
 
+/// `Rat.covariance_comm : ∀ X Y p n, covariance X Y p n = covariance Y X p n`
+/// — `Cov[X,Y] = Cov[Y,X]`.
+///
+/// Purely algebraic, no `IsDistribution` hypothesis — matching
+/// [`declare_covariance_add_right`]'s own unconditional form: `mul_comm` on
+/// the pointwise product `X k · Y k` (lifted through `sum_range_congr`, at
+/// the `weighted(_, pf)` level `expectation` actually applies) identifies
+/// `E[X·Y]` with `E[Y·X]`, `mul_comm` on the means identifies `E[X]·E[Y]`
+/// with `E[Y]·E[X]`, and the two differences match up directly (no
+/// `sub_add_add` regrouping needed, unlike [`declare_covariance_add_right`]:
+/// both sides are already a plain `sub` of one matched pair).
+fn declare_covariance_comm(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let cov_xy = covariance(d, p, x, y, pf, n);
+    let cov_yx = covariance(d, p, y, x, pf, n);
+    let concl = req(d, cov_xy, cov_yx);
+
+    // --- E[X*Y] = E[Y*X], via sum_range_congr on mul_comm pointwise
+    let xy = weighted(d, x, y);
+    let yx = weighted(d, y, x);
+    let e_xy = expectation(d, p, xy, pf, n);
+    let e_yx = expectation(d, p, yx, pf, n);
+
+    let xy_weighted = weighted(d, xy, pf);
+    let yx_weighted = weighted(d, yx, pf);
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let xk = d.apply(x, &[k]);
+        let yk = d.apply(y, &[k]);
+        let pk = d.apply(pf, &[k]);
+        let xkyk = rmul(d, xk, yk);
+        let ykxk = rmul(d, yk, xk);
+        let step = d.lemma(p.mul_comm, &[xk, yk]);
+        let lifted = rcongr(d, xkyk, ykxk, step, &|d, t| rmul(d, t, pk));
+        d.lam_fv(k_fv, nat, lifted)
+    };
+    let congr = d.lemma(p.sum_range_congr, &[xy_weighted, yx_weighted, n, pointwise]);
+    // congr : Eq(sumRange(xy_weighted,n), sumRange(yx_weighted,n))
+    //   ~ Eq(e_xy, e_yx)                                              [defeq]
+
+    // --- E[X]*E[Y] = E[Y]*E[X], via mul_comm directly
+    let ex = expectation(d, p, x, pf, n);
+    let ey = expectation(d, p, y, pf, n);
+    let exey = rmul(d, ex, ey);
+    let eyex = rmul(d, ey, ex);
+    let comm_means = d.lemma(p.mul_comm, &[ex, ey]);
+
+    // --- combine: sub(e_xy,exey) = sub(e_yx,exey) = sub(e_yx,eyex)
+    let sub_yx_exey = rsub(d, p, e_yx, exey);
+    let d1 = rcongr(d, e_xy, e_yx, congr, &|d, t| rsub(d, p, t, exey));
+    let sub_final = rsub(d, p, e_yx, eyex);
+    let d2 = rcongr(d, exey, eyex, comm_means, &|d, t| rsub(d, p, e_yx, t));
+
+    let sub_start = rsub(d, p, e_xy, exey);
+    let (_e, final_chain) = rchain(d, sub_start, &[(sub_yx_exey, d1), (sub_final, d2)]);
+    // final_chain : Eq(sub_start, sub_final)  ~ Eq(cov_xy, cov_yx)     [defeq]
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, final_chain);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_y = d.lam_fv(y_fv, fn_ty, with_pf);
+        d.lam_fv(x_fv, fn_ty, with_y)
+    };
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, concl);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_y = d.pi_fv(y_fv, fn_ty, with_pf);
+        d.pi_fv(x_fv, fn_ty, with_y)
+    };
+    d.declare_theorem(p.covariance_comm, ty, value)
+}
+
 /// `Rat.covariance_add_right : ∀ X Y Z p n,
 /// covariance X (fun k => Y k + Z k) p n = add (covariance X Y p n)
 /// (covariance X Z p n)` — bilinearity of covariance in its second argument.
@@ -3457,4 +3544,242 @@ fn declare_expectation_sum_vars(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(),
         d.pi_fv(x_fv, x_ty, with_pf)
     };
     d.declare_theorem(p.expectation_sum_vars, ty, value)
+}
+
+/// `Eq Rat (sumRange (weighted (const_fn zero) pf) n) zero` — the expectation
+/// of the identically-zero sequence is zero, for ANY `pf` (no
+/// `IsDistribution` needed): `sumRange_congr` collapses each summand `zero *
+/// pf k` to `zero` pointwise via [`rat_zero_mul`], then [`sum_range_const`]
+/// at `c = zero` plus [`RatPrelude::mul_zero`] collapses the resulting
+/// constant sum. The exact argument [`declare_expectation_sum_vars`]'s own
+/// base case uses, reproduced here (private to
+/// [`declare_covariance_sum_vars_left`]) since it needs the identical fact
+/// about `Rat.covariance`'s first argument rather than `Rat.expectation`'s
+/// own recursion. Returns `(const_fn zero, proof)`.
+fn expectation_zero_eq_zero(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    pf: ExprId,
+    n: ExprId,
+) -> (ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let zero_r = rzero(d, p);
+    let const_zero = const_fn(d, zero_r);
+    let weighted_zero = weighted(d, const_zero, pf);
+    let pointwise_zero = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let pk = d.apply(pf, &[k]);
+        let step = rat_zero_mul(d, p, pk);
+        d.lam_fv(k_fv, nat, step)
+    };
+    let congr1 = d.lemma(
+        p.sum_range_congr,
+        &[weighted_zero, const_zero, n, pointwise_zero],
+    );
+    let (_stmt_sc, proof_sc) = sum_range_const(d, p, zero_r, n);
+    let n_as_rat = nat_as_rat(d, p, n);
+    let n_zero = rmul(d, n_as_rat, zero_r);
+    let mul_zero_step = d.lemma(p.mul_zero, &[n_as_rat]);
+    let sum_weighted_zero = rsum_range(d, p, weighted_zero, n);
+    let sum_const_zero = rsum_range(d, p, const_zero, n);
+    let (_e, chain) = rchain(
+        d,
+        sum_weighted_zero,
+        &[
+            (sum_const_zero, congr1),
+            (n_zero, proof_sc),
+            (zero_r, mul_zero_step),
+        ],
+    );
+    (const_zero, chain)
+}
+
+/// `Rat.covariance_sumVars_left : ∀ X Y p n m,
+/// covariance (sumVars X m) Y p n = sumRange (fun j => covariance (X j) Y p
+/// n) m` — bilinearity of covariance over a FAMILY of variables in its FIRST
+/// argument. **The prerequisite the finite weak law of large numbers has
+/// been missing twice**: `Var[Σ_j X_j] = Σ_j Var[X_j]` under pairwise
+/// uncorrelatedness needs `Cov[Σ_j X_j, Y]` reduced to a sum of covariances
+/// first, which neither [`RatPrelude::covariance_add_right`] (the `m = 2`
+/// case, and in the wrong argument) nor
+/// [`RatPrelude::expectation_sum_vars`] (linearity of `expectation`, not
+/// `covariance`) gives.
+///
+/// Induction on `m`, mirroring [`declare_expectation_sum_vars`]'s own shape.
+///
+/// **Base case** (`m = 0`): `sumVars X 0 k` ι-reduces to `zero` under the
+/// `k`-binder exactly as [`declare_expectation_sum_vars`]'s own base case
+/// documents, so `covariance (sumVars X 0) Y p n` is definitionally
+/// `covariance (fun _ => zero) Y p n`, i.e. `sub (expectation (weighted
+/// (const_fn zero) Y) p n) (mul (expectation (const_fn zero) p n)
+/// (expectation Y p n))`. **No `IsDistribution` hypothesis is needed**:
+/// `weighted (const_fn zero) Y` is definitionally `scale_fn zero Y` (`(const
+/// zero) k` beta-reduces to `zero` directly inside the product, no proof
+/// needed), so [`RatPrelude::expectation_smul`] at the zero scalar plus
+/// [`rat_zero_mul`] collapses the first `expectation` term to `zero`
+/// unconditionally; [`expectation_zero_eq_zero`] collapses the second the
+/// same way [`declare_expectation_sum_vars`]'s base case does; and
+/// [`RatPrelude::sub_self`] closes `sub zero zero = zero`.
+///
+/// **Successor step**: `sumVars X (succ j) k` ι-reduces (again under the
+/// `k`-binder) to `sumVars X j k + X j k`, so the goal is definitionally
+/// about `covariance (fun k => sumVars X j k + X j k) Y p n`. Bilinearity in
+/// the FIRST argument is not directly available — only
+/// [`RatPrelude::covariance_add_right`] (second argument) is proved — so this
+/// derives it as a three-step corollary: [`RatPrelude::covariance_comm`] to
+/// swap `Cov[A+B, Y]` to `Cov[Y, A+B]`, [`RatPrelude::covariance_add_right`]
+/// to split it into `Cov[Y,A] + Cov[Y,B]`, then
+/// [`RatPrelude::covariance_comm`] twice more to swap each term back to
+/// `Cov[A,Y] + Cov[B,Y]`. The inductive hypothesis then rewrites `Cov[sumVars
+/// X j, Y]` to `sumRange (fun jj => covariance (X jj) Y p n) j`, landing
+/// definitionally on `sumRange (…) (succ j)` via `sumRange`'s own `succ`-case
+/// ι-reduction.
+fn declare_covariance_sum_vars_left(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let cov_of_x = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let xj = d.apply(x, &[j]);
+        let cxy = covariance(d, p, xj, y, pf, n);
+        d.lam_fv(j_fv, nat, cxy)
+    };
+
+    let motive = |d: &mut IntDev<'_>, bound: ExprId| -> ExprId {
+        let sv = sum_vars_fn(d, p, x, bound);
+        let lhs = covariance(d, p, sv, y, pf, n);
+        let rhs = rsum_range(d, p, cov_of_x, bound);
+        req(d, lhs, rhs)
+    };
+    let stmt = motive(d, m);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            // --- Base: covariance (const_fn zero) y p n = zero, unconditionally.
+            let zero_r = rzero(d, p);
+            let (z0, piece_b_chain) = expectation_zero_eq_zero(d, p, pf, n);
+            let weighted_z0 = weighted(d, z0, pf);
+            let sum_wz0_raw = rsum_range(d, p, weighted_z0, n);
+
+            // Piece A: expectation (scale_fn zero y) p n = zero.
+            let scaled_y = scale_fn(d, zero_r, y);
+            let smul_a = d.lemma(p.expectation_smul, &[zero_r, y, pf, n]);
+            let ey = expectation(d, p, y, pf, n);
+            let zero_mul_ey = rat_zero_mul(d, p, ey);
+            let e_scaled_y = expectation(d, p, scaled_y, pf, n);
+            let zero_r_times_ey = rmul(d, zero_r, ey);
+            let (_e, piece_a_chain) = rchain(
+                d,
+                e_scaled_y,
+                &[(zero_r_times_ey, smul_a), (zero_r, zero_mul_ey)],
+            );
+
+            // Piece B, multiplied by ey: sum_wz0_raw * ey = zero.
+            let mul_b = rmul(d, sum_wz0_raw, ey);
+            let mul_b_congr = rcongr(d, sum_wz0_raw, zero_r, piece_b_chain, &|d, t| {
+                rmul(d, t, ey)
+            });
+            let zero_mul_ey2 = rat_zero_mul(d, p, ey);
+            let zero_r_times_ey2 = rmul(d, zero_r, ey);
+            let (_e, mul_b_chain) = rchain(
+                d,
+                mul_b,
+                &[(zero_r_times_ey2, mul_b_congr), (zero_r, zero_mul_ey2)],
+            );
+
+            // sub(e_scaled_y, mul_b) = sub(zero,zero) = zero.
+            let sub_start = rsub(d, p, e_scaled_y, mul_b);
+            let after_d1 = rsub(d, p, zero_r, mul_b);
+            let d1 = rcongr(d, e_scaled_y, zero_r, piece_a_chain, &|d, t| {
+                rsub(d, p, t, mul_b)
+            });
+            let zero_sub_zero = rsub(d, p, zero_r, zero_r);
+            let d2 = rcongr(d, mul_b, zero_r, mul_b_chain, &|d, t| rsub(d, p, zero_r, t));
+            let sub_self_zero = d.lemma(p.sub_self, &[zero_r]);
+
+            let (_e, base_chain) = rchain(
+                d,
+                sub_start,
+                &[(after_d1, d1), (zero_sub_zero, d2), (zero_r, sub_self_zero)],
+            );
+            base_chain
+        },
+        &|d, j, ih| {
+            let sv_j = sum_vars_fn(d, p, x, j);
+            let x_j = d.apply(x, &[j]);
+            let combined_fn = combined(d, sv_j, x_j);
+
+            // --- Cov[A+B, Y] = Cov[Y, A+B] = Cov[Y,A]+Cov[Y,B] = Cov[A,Y]+Cov[B,Y]
+            let cov_comb_y = covariance(d, p, combined_fn, y, pf, n);
+            let cov_y_comb = covariance(d, p, y, combined_fn, pf, n);
+            let c1 = d.lemma(p.covariance_comm, &[combined_fn, y, pf, n]);
+
+            let cov_y_svj = covariance(d, p, y, sv_j, pf, n);
+            let cov_y_xj = covariance(d, p, y, x_j, pf, n);
+            let c2 = d.lemma(p.covariance_add_right, &[y, sv_j, x_j, pf, n]);
+            let after_c2 = radd(d, cov_y_svj, cov_y_xj);
+
+            let cov_svj_y = covariance(d, p, sv_j, y, pf, n);
+            let c3 = d.lemma(p.covariance_comm, &[y, sv_j, pf, n]);
+            let mid3 = radd(d, cov_svj_y, cov_y_xj);
+            let lift3 = rcongr(d, cov_y_svj, cov_svj_y, c3, &|d, t| radd(d, t, cov_y_xj));
+
+            let cov_xj_y = covariance(d, p, x_j, y, pf, n);
+            let c4 = d.lemma(p.covariance_comm, &[y, x_j, pf, n]);
+            let target_bilinear = radd(d, cov_svj_y, cov_xj_y);
+            let lift4 = rcongr(d, cov_y_xj, cov_xj_y, c4, &|d, t| radd(d, cov_svj_y, t));
+
+            // --- rewrite Cov[sumVars X j, Y] via the inductive hypothesis
+            let sum_j = rsum_range(d, p, cov_of_x, j);
+            let final_target = radd(d, sum_j, cov_xj_y);
+            let lift_ih = rcongr(d, cov_svj_y, sum_j, ih, &|d, t| radd(d, t, cov_xj_y));
+
+            let (_e, full_chain) = rchain(
+                d,
+                cov_comb_y,
+                &[
+                    (cov_y_comb, c1),
+                    (after_c2, c2),
+                    (mid3, lift3),
+                    (target_bilinear, lift4),
+                    (final_target, lift_ih),
+                ],
+            );
+            full_chain
+        },
+        m,
+    );
+
+    let value = {
+        let with_m = d.lam_fv(m_fv, nat, proof);
+        let with_n = d.lam_fv(n_fv, nat, with_m);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_y = d.lam_fv(y_fv, fn_ty, with_pf);
+        d.lam_fv(x_fv, x_ty, with_y)
+    };
+    let ty = {
+        let with_m = d.pi_fv(m_fv, nat, stmt);
+        let with_n = d.pi_fv(n_fv, nat, with_m);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_y = d.pi_fv(y_fv, fn_ty, with_pf);
+        d.pi_fv(x_fv, x_ty, with_y)
+    };
+    d.declare_theorem(p.covariance_sum_vars_left, ty, value)
 }

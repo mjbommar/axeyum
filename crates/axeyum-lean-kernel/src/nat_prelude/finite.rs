@@ -393,7 +393,12 @@ pub(super) fn declare_injective_surjective(
 // dichotomy.
 
 /// `False.rec (fun _ => target) false_proof : target`.
-fn ex_falso(d: &mut NatDev<'_>, p: &NatPrelude, target: ExprId, false_proof: ExprId) -> ExprId {
+pub(super) fn ex_falso(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    target: ExprId,
+    false_proof: ExprId,
+) -> ExprId {
     let anon = d.anon_name();
     let false_ty = d.kernel().const_(p.logic.false_, vec![]);
     let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
@@ -403,14 +408,14 @@ fn ex_falso(d: &mut NatDev<'_>, p: &NatPrelude, target: ExprId, false_proof: Exp
 }
 
 /// `compact c x := bool_select_nat (Nat.ble x c) x (Nat.pred x)`.
-fn compact(d: &mut NatDev<'_>, c: ExprId, x: ExprId) -> ExprId {
+pub(super) fn compact(d: &mut NatDev<'_>, c: ExprId, x: ExprId) -> ExprId {
     let cond = d.ble(x, c);
     let px = d.pred(x);
     d.bool_select_nat(cond, x, px)
 }
 
 /// `h : Le x c ⊢ Eq Nat (compact c x) x`.
-fn compact_eq_of_le(
+pub(super) fn compact_eq_of_le(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     c: ExprId,
@@ -434,7 +439,7 @@ fn compact_eq_of_le(
 /// `h : Lt c x ⊢ Eq Nat (compact c x) (pred x)`, via the "generalize then
 /// instantiate at `bool_refl(condition)`" trick already used in
 /// `division.rs`'s `executable_division_spec_step`.
-fn compact_eq_of_gt(
+pub(super) fn compact_eq_of_gt(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     c: ExprId,
@@ -506,7 +511,7 @@ pub(super) fn le_of_lt(
 /// `pred (succ m)` reduces to `m` definitionally). `n` may be any `Nat`-typed
 /// expression, not just a bound variable — `Nat.rec` does not require its
 /// target to reduce. A private copy of the identical lemma in `fermat.rs`.
-fn pos_implies_succ_pred(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
+pub(super) fn pos_implies_succ_pred(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
     let p = *p;
     let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
         let zero = d.zero();
@@ -545,7 +550,13 @@ fn pos_implies_succ_pred(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprI
 }
 
 /// `h : Lt c x ⊢ Lt zero x`, from `c ≥ 0` and `c < x`.
-fn zero_lt_via_c(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, x: ExprId, h: ExprId) -> ExprId {
+pub(super) fn zero_lt_via_c(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    c: ExprId,
+    x: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let zero_le_c = d.lemma(p.zero_le, &[c]);
@@ -627,7 +638,7 @@ pub(super) fn trichotomy(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, x: ExprI
 
 /// Eliminate the middle `Eq Nat x c` case of [`trichotomy`] using
 /// `eq_case_false`, producing `Or (Lt x c) (Lt c x)`.
-fn two_way_split(
+pub(super) fn two_way_split(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     c: ExprId,
@@ -734,7 +745,7 @@ fn lift_lt(d: &mut NatDev<'_>, p: &NatPrelude, i: ExprId, m: ExprId, hi: ExprId)
 /// `x ≤ m`, `Or (Lt x c) (Lt c x)` ⊢ `Lt (compact c x) m` — `compact` maps
 /// `{0,…,m} \ {c}` into `{0,…,m-1}` on either side of `c`.
 #[allow(clippy::too_many_arguments)]
-fn compact_lt_of(
+pub(super) fn compact_lt_of(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     c: ExprId,
@@ -916,7 +927,7 @@ fn case_gt_gt(
 /// impossible — `compact` maps `{<c}` into `[0,c)` and `{>c}` into `[c,…)`,
 /// disjoint ranges — and are closed by contradiction.
 #[allow(clippy::too_many_arguments)]
-fn compact_injective(
+pub(super) fn compact_injective(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     c: ExprId,
@@ -1539,7 +1550,13 @@ fn override_eq_at(
 /// `Not (Eq Nat a b)`, from `h : Lt a b` (transport `h` along a reversed
 /// assumed equality to `Lt a a`, then `lt_irrefl`) — the `NatDev` counterpart
 /// of `int_prelude/prod.rs`'s private `ne_of_lt`.
-fn ne_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+pub(super) fn ne_of_lt(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = *p;
     let eq_ab = d.eq(a, b);
     let e_fv = d.fresh_fvar();
@@ -1552,7 +1569,7 @@ fn ne_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, h: ExprId)
 }
 
 /// `Not (Eq Nat b a)`, from `hne : Not (Eq Nat a b)` — flip the equality.
-fn ne_symm(d: &mut NatDev<'_>, a: ExprId, b: ExprId, hne: ExprId) -> ExprId {
+pub(super) fn ne_symm(d: &mut NatDev<'_>, a: ExprId, b: ExprId, hne: ExprId) -> ExprId {
     let eq_ba = d.eq(b, a);
     let e_fv = d.fresh_fvar();
     let e = d.kernel().fvar(e_fv);

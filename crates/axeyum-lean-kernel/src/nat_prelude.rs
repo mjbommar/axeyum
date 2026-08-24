@@ -147,6 +147,7 @@ mod order;
 mod order_extra;
 mod order_more;
 mod primes;
+mod restrict_pair;
 mod transposition;
 
 pub use ops::{NatDev, NatOps, NatState};
@@ -180,6 +181,9 @@ use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
 use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
+use restrict_pair::{
+    declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
+};
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
     declare_transposition_injective, declare_transposition_involutive,
@@ -895,6 +899,26 @@ pub struct NatPrelude {
     /// MapsInto (fun k => t (σ (t k))) n` — the companion closure lemma to
     /// [`Self::conjugate_injective`], needing no involution law.
     pub conjugate_maps_into: NameId,
+
+    // --- `Nat.restrict_pair_*` (`restrict_pair.rs`) — the `N → N-2` step ----
+    /// `Nat.setwise_fixed σ i j := And (Eq Nat (σ i) i) (Eq Nat (σ j) j)` —
+    /// the POINTWISE form of "σ fixes `{i,j}` setwise" (`restrict_pair.rs`'s
+    /// module doc explains why the pointwise form, not the disjunctive
+    /// "swaps or fixes" one, is what the interior-collapse application has).
+    pub setwise_fixed: NameId,
+    /// `Nat.restrict_pair_injective : ∀ σ i j n,
+    /// InjectiveOn σ (succ (succ n)) → Lt i j → Lt j (succ (succ n)) →
+    /// setwise_fixed σ i j →
+    /// InjectiveOn (fun k => compact_pair i j (σ (expand_pair i j k))) n` —
+    /// a bijection of `[0, succ (succ n))` fixing `{i,j}` setwise restricts
+    /// to an injective self-map of the complement, reindexed to `[0,n)`.
+    pub restrict_pair_injective: NameId,
+    /// `Nat.restrict_pair_maps_into : ∀ σ i j n,
+    /// InjectiveOn σ (succ (succ n)) → MapsInto σ (succ (succ n)) →
+    /// Lt i j → Lt j (succ (succ n)) → setwise_fixed σ i j →
+    /// MapsInto (fun k => compact_pair i j (σ (expand_pair i j k))) n` — the
+    /// companion closure lemma to [`Self::restrict_pair_injective`].
+    pub restrict_pair_maps_into: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1185,6 +1209,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             transposition_maps_into: kernel.name_str(nat, "transposition_maps_into"),
             conjugate_injective: kernel.name_str(nat, "conjugate_injective"),
             conjugate_maps_into: kernel.name_str(nat, "conjugate_maps_into"),
+            setwise_fixed: kernel.name_str(nat, "setwise_fixed"),
+            restrict_pair_injective: kernel.name_str(nat, "restrict_pair_injective"),
+            restrict_pair_maps_into: kernel.name_str(nat, "restrict_pair_maps_into"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1232,6 +1259,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_transposition_maps_into(&mut d, &p)?;
         declare_conjugate_injective(&mut d, &p)?;
         declare_conjugate_maps_into(&mut d, &p)?;
+        declare_setwise_fixed(&mut d, &p)?;
+        declare_restrict_pair_injective(&mut d, &p)?;
+        declare_restrict_pair_maps_into(&mut d, &p)?;
         Ok(p)
     })();
     match built {

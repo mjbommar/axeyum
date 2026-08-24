@@ -55,6 +55,7 @@ use crate::{Kernel, KernelError};
 mod abs;
 mod archimedean;
 mod core;
+mod decidable;
 mod decide;
 mod defs;
 mod field;
@@ -768,6 +769,19 @@ pub struct RatPrelude {
     /// restated in `Bool`, via [`Self::le_or_lt`] and [`Self::le_of_lt`].
     pub ble_total: NameId,
 
+    // --- `Decidable` instances (rat_prelude::decidable) ---------------------
+    /// `Rat.decidable_le : ∀ a b, Decidable (Rat.le a b)` — the `logic`
+    /// prelude's `Decidable.ofBool` bridge applied to [`Self::ble`] and its
+    /// two spec directions ([`Self::le_of_ble_eq_true`],
+    /// [`Self::ble_eq_true_of_le`]), the same pattern
+    /// `string_prelude/decidable.rs` uses for `Char.decidable_eq` /
+    /// `Str.decidable_eq` / `Str.decidable_isPrefix`. The negative direction
+    /// (`Rat.ble a b = false → ¬ Rat.le a b`) is derived by contraposition
+    /// against [`Self::ble_eq_true_of_le`], via the generic
+    /// `NatOps::bool_symm`/`bool_trans`/`false_true_elim` combinators — no new
+    /// case split on `Rat`'s representation.
+    pub decidable_le: NameId,
+
     // --- `Rat.sumRange`: finite sums over ℚ (rat_prelude::sum) -------------
     /// `Rat.sumRange : (Nat → Rat) → Nat → Rat`, `Nat.rec` on the bound:
     /// `sumRange f zero ≡ zero`, `sumRange f (succ n) ≡ sumRange f n + f n`.
@@ -896,6 +910,15 @@ pub struct RatPrelude {
     /// `Cov[X,Y] ~ 0` (uncorrelatedness) is the honest, strictly weaker
     /// hypothesis every theorem here uses instead.
     pub covariance: NameId,
+    /// `Rat.covariance_comm : ∀ X Y p n, covariance X Y p n = covariance Y X p
+    /// n` — `Cov[X,Y] = Cov[Y,X]`. Purely equational from `mul_comm` on the
+    /// `E[X·Y]` term and on the `E[X]·E[Y]` term, **no `IsDistribution`
+    /// hypothesis** — matching [`Self::covariance_add_right`]'s own
+    /// unconditional form, and the lemma
+    /// [`Self::covariance_sum_vars_left`] uses (twice, per step) to move
+    /// [`Self::covariance_add_right`]'s bilinearity from `covariance`'s
+    /// second argument to its first.
+    pub covariance_comm: NameId,
     /// `Rat.variance_add_eq : ∀ X Y p n, IsDistribution p n →
     /// variance (fun k => X k + Y k) p n =
     /// add (variance X p n)
@@ -960,6 +983,19 @@ pub struct RatPrelude {
     /// multi-variable statement (the finite weak law of large numbers
     /// included) needs `E[Σ_j X_j] = Σ_j E[X_j]`, not just `E[X+Y]=E[X]+E[Y]`.
     pub expectation_sum_vars: NameId,
+    /// `Rat.covariance_sumVars_left : ∀ X Y p n m,
+    /// covariance (sumVars X m) Y p n = sumRange (fun j => covariance (X j) Y
+    /// p n) m` — bilinearity of covariance over a FAMILY of variables in its
+    /// FIRST argument, by induction on `m` mirroring
+    /// [`Self::expectation_sum_vars`]'s own: the base case needs no
+    /// `IsDistribution` either (`Cov[0,Y] = 0` unconditionally, via
+    /// [`Self::expectation_smul`] at the zero scalar); the successor step
+    /// moves [`Self::covariance_add_right`]'s bilinearity from `covariance`'s
+    /// second argument to its first via [`Self::covariance_comm`] (twice).
+    /// **The prerequisite the finite weak law of large numbers has been
+    /// missing**: `Var[Σ_j X_j] = Σ_j Var[X_j]` under pairwise
+    /// uncorrelatedness needs `Cov[Σ_j X_j, Y]` reduced to a sum first.
+    pub covariance_sum_vars_left: NameId,
 }
 
 impl RatPrelude {
@@ -1155,6 +1191,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         ble_refl: child(kernel, "ble_refl"),
         ble_trans: child(kernel, "ble_trans"),
         ble_total: child(kernel, "ble_total"),
+        decidable_le: child(kernel, "decidable_le"),
         sum_range: child(kernel, "sumRange"),
         sum_range_zero: child(kernel, "sumRange_zero"),
         sum_range_succ: child(kernel, "sumRange_succ"),
@@ -1181,6 +1218,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         variance_eq: child(kernel, "variance_eq"),
         variance_smul: child(kernel, "variance_smul"),
         covariance: child(kernel, "covariance"),
+        covariance_comm: child(kernel, "covariance_comm"),
         variance_add_eq: child(kernel, "variance_add_eq"),
         variance_add_of_uncorrelated: child(kernel, "variance_add_of_uncorrelated"),
         indicator: child(kernel, "indicator"),
@@ -1191,6 +1229,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         covariance_add_right: child(kernel, "covariance_add_right"),
         sum_vars: child(kernel, "sumVars"),
         expectation_sum_vars: child(kernel, "expectation_sumVars"),
+        covariance_sum_vars_left: child(kernel, "covariance_sumVars_left"),
     }
 }
 
@@ -1234,6 +1273,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         lattice::declare_lattice(&mut d, prelude)?;
         abs::declare_abs(&mut d, prelude)?;
         decide::declare_decide(&mut d, prelude)?;
+        decidable::declare_decidable(&mut d, prelude)?;
         sum::declare_sum(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
