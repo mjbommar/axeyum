@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "F:wilson-theorem-over-constructed-integers",
+  "title": "Wilson's theorem: for prime p, (p-1)! is congruent to -1 modulo p, proved constructively with an empty axiom footprint",
+  "statement": "For every natural p satisfying 2 <= p and (for every d, d divides p implies d = 1 or d = p) -- primality spelled out as a CONJUNCTION, not as a negation of compositeness -- Int.ModEq (ofNat p) (factorial (p-1)) (neg one). That is, (p-1)! = -1 mod p. THE SIGN IS THE CONTENT. The weaker ((p-1)!)^2 = 1 mod p was established early and cheaply; it follows from prodRange_permute, which removes ONE index per step at the SAME domain size, so unwound it reconstructs the product from itself and carries no information about which square root is taken. Wilson's theorem is exactly the statement that the square root is -1 and not +1. PRIMALITY IS ALSO THE CONTENT: the theorem is FALSE for composite moduli -- for n = 4, 3! = 6 = 2 mod 4, not -1 -- so weakening the hypothesis to 0 < p or 2 <= p alone gives a false statement. A NOTE ON AxNat, which appears throughout the formal statement: the Ax is axeyum, not axiom. lean_pp roots the kernel's CONSTRUCTED inductive naturals there so exported terms do not shadow Lean's own Nat. It collides with AxReal, where Ax DOES mean axiomatized and the trusted surface is 30. Both nat and integer measure 0.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one)))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:prodrange-collapses-under-a-fixed-point-free-involution"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.wilson",
+      "kind": "kernel-term",
+      "supports": "`Int.wilson` is admitted with exactly the type in formal.statement. The proof assembles ten increments. Int.prod_range_pairing_collapse: a fixed-point-free involution pairing each factor with its inverse collapses prodRange to 1. Nat.inverseIndex_fixed_point: on {0..p-2} the ONLY fixed points of the inverse map are 0 and p-2. Nat.inverseIndex_fixes_zero / _fixes_last: which element each of those two IS -- the transport nothing had, and without which the collapse could not be instantiated. Nat.inverseIndex_interior_fixed_point_free: the interior has none. Int.prodRange_shiftFront: a general front-peel with no side conditions. Int.factorial_interior_modeq_one: the interior, reindexed onto [0,n), collapses to 1. Wilson is then the two survivors 1 and p-1, whose product is p-1 = -1. p = 2 needs its own branch: relating p-2 to p-3 in the front-peel requires p >= 3, so the proof splits by Nat.lt_or_eq_of_le and the p = 2 branch needs no reindex at all (p-2 = 0, closed by prodRange_zero). Injectivity of the reindexed sigma' is derived GENERICALLY from involution rather than transported across the shift, which avoids discharging a truncated-subtraction side condition per index.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::wilson_concludes_the_negative_residue_under_primality (asserts the KERNEL-RENDERED type verbatim with assert_eq!, and separately asserts by substring that the conclusion is Int.neg Int.one and that the hypothesis is full primality)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_int_prelude return Err and every int test fail)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::wilson_concludes_the_negative_residue_under_primality -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/wilson.rs",
+      "notes": "A FOOTPRINT CHECK CANNOT CARRY THIS CLAIM, and for this theorem that is the entire guarantee. A theorem concluding +1 instead of -1, or one with primality weakened to 0 < p, has an IDENTICALLY EMPTY axiom footprint. Both are false: 4! = 24 = -1 mod 5, not 1; 3! = 6 = 2 mod 4, not -1. Mutation-verified 2026-08-24 by the coordinating lane on the merged tree, re-run rather than taken from the establishing lane's report, with the occurrence count of each mutation pattern ASSERTED before applying it: rewriting the pinned conclusion Int.neg Int.one -> Int.one gives `585 passed; 1 failed` naming this test and no other; weakening the primality substring guard from 2 <= p to 0 <= p gives the same; restored and hash-checked, 586 passed. The occurrence assertion is not ceremony -- an earlier sed-based mutation on a different pin silently failed to match (rustfmt had split the constant across lines) and the resulting green suite read as a dead guard. The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
+    },
+    {
+      "id": "footprint-Int.wilson",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for Int.wilson, Int.factorial_interior_modeq_one, Int.prodRange_shiftFront and every one of the ten increments beneath them. The `integer` prelude's trusted surface is 0: no Axiom, no Opaque, no Quotient. Notably the proof does not use WellFounded.fix either -- the pairing collapse's induction decreases the domain by exactly 2, so ordinary two-step structural induction sufficed, correcting a plan that had survived nine rewrites of wilson.rs's module doc.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for each of the 115 derived laws and requires the empty set; the array's size annotation makes an omission a COMPILE error rather than a silent skip)",
+        "prelude_theorem_inventory --include-constructed (independent sweep listing every declared name with its footprint across every constructed carrier)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
+      "notes": "The size annotation on the derived-laws array is what makes PRESENCE checkable: axiom_footprint of a name interned but never DECLARED is vacuously empty, so a sweep that merely iterates whatever is in the array cannot detect an omission. Counting Declaration::Axiom alone would also not suffice in this kernel, since Opaque has no proof body and Quotient admits Quot.sound; axiom_footprint covers all three."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-capability-assurance (2026-08-24), across TEN dispatched lanes in one day. Each was a distinct obstruction rather than a subdivision of one: the pairing collapse, the fixed-point characterization, the two fixes_* transports, the interior fixed-point-freeness, the front-peel, the reindex, and the assembly. Two briefs of mine were corrected along the way -- WellFounded.fix was not needed, and Nat.restrict_pair (which I claimed twice was the right tool) is used by neither the collapse nor the assembly.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "Ibn al-Haytham",
+        "what": "the congruence, stated without proof",
+        "year": 1000,
+        "where": "conventionally attributed; c. 1000 CE",
+        "attribution": "standard attribution; this lane did not consult any primary source."
+      },
+      {
+        "who": "John Wilson and Edward Waring",
+        "what": "the statement as published",
+        "year": 1770,
+        "where": "Waring, Meditationes Algebraicae (1770), attributing the observation to Wilson",
+        "attribution": "conventional. Neither gave a proof."
+      },
+      {
+        "who": "Joseph-Louis Lagrange",
+        "what": "the first proof, and the converse",
+        "year": 1771,
+        "where": "conventionally attributed",
+        "attribution": "The pairing argument isolated here as Int.prod_range_pairing_collapse is the combinatorial core of Lagrange's proof, stated for an arbitrary fixed-point-free involution rather than for the inverse map of a prime residue system."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred: THE CONVERSE. `Int.wilson` is an implication from primality, not a characterization of it. The converse -- that (n-1)! = -1 mod n forces n prime -- is the easier direction mathematically (it is pure divisibility: a proper divisor d of n divides (n-1)!, so if also d divides (n-1)!+1 then d divides 1) but is NOT landed, and it has a constructive subtlety: primality here is a CONJUNCTION with a universally quantified disjunction, so one cannot argue by contradiction from not-prime.\n\nAlso not proved: any efficiency claim. Wilson's criterion is not a practical primality test and nothing here suggests otherwise; the factorial is computed by prodRange over p-1 terms.\n\nThe proof is constructive throughout: no Classical.em, no propext, no funext, no Quot.sound, and no WellFounded.fix.\n\nexternal_status is `proved`: this is formalization of a classical theorem, not discovery. What is locally notable is only that the whole chain from the pairing argument to the assembled theorem was produced by dispatched lanes in one day with no human writing a proof, and that the ledger row is falsifiable by a statement pin rather than by a footprint that cannot distinguish the theorem from its false neighbours."
+}
