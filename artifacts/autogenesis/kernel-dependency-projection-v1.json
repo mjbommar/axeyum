@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1012,
+    "axiom_free_declarations": 1019,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 26,
-      "definition": 153,
+      "definition": 155,
       "inductive": 20,
       "recursor": 20,
-      "theorem": 793
+      "theorem": 798
     },
-    "declarations": 1042,
-    "direct_theorem_dependency_edges": 3583,
-    "theorems": 793
+    "declarations": 1049,
+    "direct_theorem_dependency_edges": 3603,
+    "theorems": 798
   },
   "declarations": [
     {
@@ -13314,6 +13314,65 @@
     },
     {
       "axiom_footprint_size": 0,
+      "declaration_kind": "definition",
+      "direct_theorem_dependencies": [],
+      "id": "Rat.expectation",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Rat.right_distrib",
+        "Rat.sumRange_add",
+        "Rat.sumRange_congr"
+      ],
+      "id": "Rat.expectation_add",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Rat.mul_one",
+        "Rat.mul_sumRange"
+      ],
+      "id": "Rat.expectation_const",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Rat.mul_assoc",
+        "Rat.mul_sumRange",
+        "Rat.sumRange_congr"
+      ],
+      "id": "Rat.expectation_smul",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
         "Rat.den_pos",
@@ -15267,6 +15326,21 @@
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
+        "Rat.left_distrib",
+        "Rat.mul_comm"
+      ],
+      "id": "Rat.right_distrib",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
         "Rat.den_pos",
         "Rat.eq_of_cross",
         "Rat.normalize_cross"
@@ -15542,6 +15616,41 @@
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [],
       "id": "Rat.sumRange_zero",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "definition",
+      "direct_theorem_dependencies": [],
+      "id": "Rat.uniform",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Rat.inv_pos",
+        "Rat.le_of_lt",
+        "Rat.mul_comm",
+        "Rat.mul_inv_cancel",
+        "Rat.mul_one",
+        "Rat.mul_zero",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_pos",
+        "Rat.right_distrib",
+        "Rat.self_normalize"
+      ],
+      "id": "Rat.uniform_is_distribution",
       "visible_in": [
         "complex",
         "cpoint",
@@ -31709,6 +31818,46 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "Rat.expectation_add",
+      "target": "Rat.right_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.expectation_add",
+      "target": "Rat.sumRange_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.expectation_add",
+      "target": "Rat.sumRange_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.expectation_const",
+      "target": "Rat.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.expectation_const",
+      "target": "Rat.mul_sumRange"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.expectation_smul",
+      "target": "Rat.mul_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.expectation_smul",
+      "target": "Rat.mul_sumRange"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.expectation_smul",
+      "target": "Rat.sumRange_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "Rat.ext",
       "target": "Rat.den_pos"
     },
@@ -34049,6 +34198,16 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "Rat.right_distrib",
+      "target": "Rat.left_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.right_distrib",
+      "target": "Rat.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "Rat.self_normalize",
       "target": "Rat.den_pos"
     },
@@ -34331,6 +34490,56 @@
       "relation": "direct-theorem-depends-on",
       "source": "Rat.sumRange_nonneg",
       "target": "Rat.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.uniform_is_distribution",
+      "target": "Rat.inv_pos"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.uniform_is_distribution",
+      "target": "Rat.le_of_lt"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.uniform_is_distribution",
+      "target": "Rat.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.uniform_is_distribution",
+      "target": "Rat.mul_inv_cancel"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.uniform_is_distribution",
+      "target": "Rat.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.uniform_is_distribution",
+      "target": "Rat.mul_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.uniform_is_distribution",
+      "target": "Rat.natDivSucc_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.uniform_is_distribution",
+      "target": "Rat.natDivSucc_pos"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.uniform_is_distribution",
+      "target": "Rat.right_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.uniform_is_distribution",
+      "target": "Rat.self_normalize"
     },
     {
       "relation": "direct-theorem-depends-on",

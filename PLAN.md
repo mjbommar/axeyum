@@ -119,6 +119,7 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-08-24 | `3ba9c1ec6` | Additive Autogenesis knowledge overlay v1 defines typed, qualified, provenance-bearing links across facts, operations, capabilities, and a pinned read-only external concept graph, with eight seed links and four negative controls |
 | 2026-08-24 | `b42ecfd81` | Complete F1's evidence-backed multi-target-producer crosswalk, publish a generated coverage census, and reject uncredited producer or individual complete-coverage claims |
+| 2026-08-24 | `137fef720` | Generate the complete constructed-kernel declaration/dependency projection with exact theorem-edge agreement and negative controls |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
@@ -2021,8 +2022,11 @@ nine have explicitly partial concept/encounter mappings, and seven evidence
 credits are checked against their fact records (the other two were settled by
 earlier one-target operations). The owning fact, operation, claim, and kernel
 schemas are unchanged; local/external endpoints and false complete-coverage or
-uncredited-producer edges are mutation-tested. Next: derive kernel dependency
-links and typed obstructions mechanically rather than hand-authoring them.
+uncredited-producer edges are mutation-tested. F2 now projects 1,042 current
+kernel declarations and 3,583 direct theorem dependencies from accepted terms,
+with theorem/definition/inductive/constructor/recursor kinds and prelude
+visibility kept distinct. Next: normalize producer declines into typed,
+measured obstructions rather than hand-authoring the next bottleneck.
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, `Nat.fib_eq_zero`, and now `Int.fib_eq_zero` are durably proved with empty kernel footprints. An isolated clean replay independently reproduced `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, exactly one ledger write, its proved fact, and the preregistered empty readiness delta.
 
