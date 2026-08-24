@@ -132,6 +132,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `6311bb4e9` | Correct the transport projection to recognize both exact supported receipt identities, turning four ModEq false negatives into hash-bound complete chains |
 | 2026-08-24 | `35804ac27` | Add a reviewed, pinned family-to-concept crosswalk and expose its topic labels in the capability-gap clusters without making fact-level coverage claims |
 | 2026-08-24 | `34c96c9e8` | Publish a derived concept-coverage view that keeps family-topic membership and qualified fact-level formalization counts separate |
+| 2026-08-24 | `5a7edfcfe` | Replace uninformative obstruction remedy status with observed overlay-presence evidence, exposing nine concrete unmodeled capability gaps |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |

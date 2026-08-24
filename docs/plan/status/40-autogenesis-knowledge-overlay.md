@@ -41,3 +41,4 @@ metadata or solver work.
 | 2026-08-24 | `6311bb4e9` | Correct the transport projection to recognize both exact supported receipt identities, turning four ModEq false negatives into hash-bound complete chains |
 | 2026-08-24 | `35804ac27` | Add a reviewed, pinned family-to-concept crosswalk and expose its topic labels in the capability-gap clusters without making fact-level coverage claims |
 | 2026-08-24 | `34c96c9e8` | Publish a derived concept-coverage view that keeps family-topic membership and qualified fact-level formalization counts separate |
+| 2026-08-24 | `5a7edfcfe` | Replace uninformative obstruction remedy status with observed overlay-presence evidence, exposing nine concrete unmodeled capability gaps |
