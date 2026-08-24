@@ -4,7 +4,7 @@
 `authoritative-mathlib-bounded-induction-factorial-family-v1` is the first
 operation in `artifacts/autogenesis/operations.json` whose
 `applicability.fact_ids` names more than one fact. Its producer/checker pair
-(`bounded_induction_support` / `bounded_induction_operation.rs`) is
+(`producers::bounded_induction` / `bounded_induction_operation.rs`) is
 target-agnostic: `Eq.refl`, and where that is stuck, one bounded structural
 induction over a discovered zero/succ binder plus one congruence rewrite
 driven by the induction hypothesis.

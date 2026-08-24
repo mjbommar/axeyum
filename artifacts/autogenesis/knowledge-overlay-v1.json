@@ -201,7 +201,7 @@
       "assurance": "human-reviewed",
       "status": "active",
       "reason": "The producer constructs a base case and successor step through the discovered recursor, matching mathematical induction rather than empirical extrapolation.",
-      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-import/examples/bounded_induction_support/mod.rs", "../math-education/graph/techniques/proof-by-induction.md"] }
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-import/src/producers/bounded_induction.rs", "../math-education/graph/techniques/proof-by-induction.md"] }
     },
     {
       "id": "L:descfactorial-one-established-by-bounded-induction",
@@ -274,7 +274,7 @@
       "assurance": "human-reviewed",
       "status": "active",
       "reason": "The capability discovers a natural-number base and successor structure, then constructs the corresponding induction term under fixed bounds.",
-      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-import/examples/bounded_induction_support/mod.rs", "../math-education/graph/concepts/induction.md"] }
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-import/src/producers/bounded_induction.rs", "../math-education/graph/concepts/induction.md"] }
     },
     {
       "id": "L:bounded-induction-exemplifies-recursion",

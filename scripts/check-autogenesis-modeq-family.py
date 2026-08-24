@@ -4,7 +4,7 @@
 `authoritative-mathlib-modeq-family-v1` is this ledger's SECOND general
 autogenesis operation whose `applicability.fact_ids` names more than one
 fact (the first is `authoritative-mathlib-bounded-induction-factorial-family-v1`).
-Its producer/checker pair (`modeq_family_support` / `modeq_family_operation.rs`)
+Its producer/checker pair (`producers::modeq_family` / `modeq_family_operation.rs`)
 is target-agnostic within one schema: `Int.ModEq n a b` (and `Nat.ModEq`/
 `AxNat.ModEq`) unfolds transparently to `a % n = b % n`, so every one of the
 four `integer-modular-equivalence` laws this operation covers

@@ -1109,8 +1109,36 @@ pub struct PyKernel {
 }
 
 impl PyKernel {
+    /// Wraps an already-checked `Kernel` under a **fresh** epoch.
+    ///
+    /// Used by `crate::producers` for the kernel an NDJSON statement import
+    /// publishes. The epoch is new because the handles that kernel's own
+    /// import minted (`goal`, `target_name`) are re-stamped with it at the
+    /// same moment, so nothing outside this crate ever sees an unstamped one.
+    pub(crate) fn from_kernel(inner: Kernel) -> Self {
+        Self {
+            inner,
+            epoch: next_epoch(),
+        }
+    }
+
+    /// This kernel's handle epoch.
+    pub(crate) fn epoch_value(&self) -> u64 {
+        self.epoch
+    }
+
+    /// The wrapped kernel, for a read-only Rust call.
+    pub(crate) fn inner(&self) -> &Kernel {
+        &self.inner
+    }
+
+    /// The wrapped kernel, for a Rust call that interns or admits.
+    pub(crate) fn inner_mut(&mut self) -> &mut Kernel {
+        &mut self.inner
+    }
+
     /// Validates and unwraps a name handle.
-    fn name_of(&self, handle: PyNameId) -> PyResult<NameId> {
+    pub(crate) fn name_of(&self, handle: PyNameId) -> PyResult<NameId> {
         epoch_guard(self.epoch, handle.epoch, "NameId")?;
         Ok(handle.id)
     }
@@ -1122,7 +1150,7 @@ impl PyKernel {
     }
 
     /// Validates and unwraps an expression handle.
-    fn expr_of(&self, handle: PyExprId) -> PyResult<ExprId> {
+    pub(crate) fn expr_of(&self, handle: PyExprId) -> PyResult<ExprId> {
         epoch_guard(self.epoch, handle.epoch, "ExprId")?;
         Ok(handle.id)
     }
@@ -1138,7 +1166,7 @@ impl PyKernel {
     }
 
     /// Stamps a name handle with this kernel's epoch.
-    fn wrap_name(&self, id: NameId) -> PyNameId {
+    pub(crate) fn wrap_name(&self, id: NameId) -> PyNameId {
         PyNameId {
             epoch: self.epoch,
             id,
@@ -1154,7 +1182,7 @@ impl PyKernel {
     }
 
     /// Stamps an expression handle with this kernel's epoch.
-    fn wrap_expr(&self, id: ExprId) -> PyExprId {
+    pub(crate) fn wrap_expr(&self, id: ExprId) -> PyExprId {
         PyExprId {
             epoch: self.epoch,
             id,

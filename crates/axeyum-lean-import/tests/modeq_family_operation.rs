@@ -1,9 +1,9 @@
-//! Adversarial and positive controls for `modeq_family_support`'s
+//! Adversarial and positive controls for
+//! `axeyum_lean_import::producers::modeq_family`'s
 //! [`support::CircularityAudit`] and end-to-end
 //! [`support::propose_modeq_family`].
 
-#[path = "../examples/modeq_family_support/mod.rs"]
-mod support;
+use axeyum_lean_import::producers::modeq_family as support;
 
 use axeyum_lean_kernel::{BinderInfo, Declaration, Kernel, NameId, ReducibilityHint};
 
@@ -101,7 +101,7 @@ fn circularity_audit_accepts_unrelated_candidate() {
         "a candidate that never mentions target must not be flagged: {audit:?}"
     );
     // This candidate DOES reach an axiom (`other`), which a real
-    // `modeq_family_support` candidate never does (see the end-to-end tests
+    // `modeq_family` candidate never does (see the end-to-end tests
     // below) — `passes()` is false here for a DIFFERENT, correct reason, and
     // that is exactly what distinguishes the two audit fields.
     assert_eq!(audit.axiom_footprint, 1);

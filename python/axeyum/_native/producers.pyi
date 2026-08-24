@@ -9,3 +9,155 @@
 # Parameter and return types are `Any`: PyO3 exposes arity, parameter names
 # and defaults, but no types. Arity and keyword names are therefore checked;
 # types deliberately are not.
+
+from typing import Any
+
+from . import AxeyumError as AxeyumError
+
+FORMAT_VERSION: str
+IDENTITY_VERSION: str
+MAX_BINDERS: int
+MAX_INDUCTIONS: int
+MODEQ_MAX_BINDERS: int
+
+class AxiomIdentity:
+    """One imported axiom bound to TL0.4-compatible name and type identities."""
+
+    name: Any
+    name_sha256: Any
+    type_sha256: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+
+class Candidate:
+    """A bounded-induction candidate: a proposed proof term plus the search shape"""
+
+    binders_used: Any
+    inductions_used: Any
+    proof: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+
+class CircularityAudit:
+    """The mechanical circularity/trust audit an admitted candidate must pass."""
+
+    axiom_footprint: Any
+    target_dependency: Any
+    theorem_dependencies: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+    def passes(self) -> Any: ...
+
+class DeclarationDependency:
+    """One direct dependency bound to the dependency's structural content."""
+
+    content_sha256: Any
+    name: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+
+class DeclarationIdentity:
+    """Canonical identity for one independently admitted declaration."""
+
+    content_sha256: Any
+    dependencies: Any
+    dependency_sha256: Any
+    kind: Any
+    name: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+
+class DeclineReason:
+    """Why a bounded producer declined, as its own typed enum variant."""
+
+    detail: Any
+    kind: Any
+    message: Any
+    producer: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __eq__(self, value: Any, /) -> Any: ...
+    def __ge__(self, value: Any, /) -> Any: ...
+    def __gt__(self, value: Any, /) -> Any: ...
+    def __hash__(self) -> Any: ...
+    def __le__(self, value: Any, /) -> Any: ...
+    def __lt__(self, value: Any, /) -> Any: ...
+    def __ne__(self, value: Any, /) -> Any: ...
+    def __repr__(self) -> Any: ...
+    def __str__(self) -> Any: ...
+
+class Declined(AxeyumError):
+    """A bounded producer declined to propose a candidate."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+
+class ImportLimits:
+    """Resource limits applied before a stream can grow the kernel arenas without"""
+
+    max_line_bytes: Any
+    max_records: Any
+
+    def __init__(self, max_line_bytes: Any = ..., max_records: Any = ...) -> None: ...
+    def __eq__(self, value: Any, /) -> Any: ...
+    def __ge__(self, value: Any, /) -> Any: ...
+    def __gt__(self, value: Any, /) -> Any: ...
+    def __hash__(self) -> Any: ...
+    def __le__(self, value: Any, /) -> Any: ...
+    def __lt__(self, value: Any, /) -> Any: ...
+    def __ne__(self, value: Any, /) -> Any: ...
+    def __repr__(self) -> Any: ...
+
+class ImportReport:
+    """Counts and provenance for a successfully admitted stream."""
+
+    admitted_declarations: Any
+    axiom_identities: Any
+    axioms: Any
+    declaration_identities: Any
+    declaration_records: Any
+    exporter_version: Any
+    expressions: Any
+    format_version: Any
+    identity_version: Any
+    lean_githash: Any
+    lean_version: Any
+    levels: Any
+    names: Any
+    substituted_theorems: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+
+class ModEqCandidate:
+    """A `ModEq`-family candidate: a proposed proof term plus the binder depth the"""
+
+    binders_used: Any
+    proof: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+
+class StatementImport:
+    """One proof-isolated proposition imported as the value of a transparent"""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+    def goal(self) -> Any: ...
+    def kernel(self) -> Any: ...
+    def report(self) -> Any: ...
+    def target_name(self) -> Any: ...
+
+class StatementImportError(AxeyumError):
+    """A `lean4export` NDJSON stream failed the proof-isolated statement contract."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+
+def audit_circularity(kernel: Any, candidate: Any, target: Any) -> Any: ...
+def import_statement_ndjson(source: Any, limits: Any, target: Any) -> Any: ...
+def propose_bounded_induction(kernel: Any, goal: Any) -> Any: ...
+def propose_modeq_family(kernel: Any, goal: Any) -> Any: ...

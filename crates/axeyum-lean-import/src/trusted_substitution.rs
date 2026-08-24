@@ -31,7 +31,7 @@
 //! Every intermediate lambda this module builds closes its own free variable
 //! *immediately*, via [`Kernel::abstract_fvars`] followed by [`Kernel::lam`]/
 //! [`Kernel::pi`] — the same discipline
-//! `bounded_induction_support::build_congr` uses, and for the same reason: a
+//! `producers::bounded_induction::build_congr` uses, and for the same reason: a
 //! lambda that is applied *internally* (as an `Eq.rec` motive is, while this
 //! module is still constructing the surrounding term) must already be a
 //! genuine de Bruijn-indexed binder before that application, or ordinary beta
@@ -233,7 +233,7 @@ pub(crate) fn exact_name(
 
 /// The ambient `Eq`/`Eq.refl`/`Eq.rec` primitives, discovered by exact display
 /// name and checked rather than assumed — the same discipline
-/// `bounded_induction_support::discover_eq_primitives` uses for the same
+/// `producers::bounded_induction::discover_eq_primitives` uses for the same
 /// reason: an isolated statement-import kernel keeps only Definitions and
 /// Inductives, so there is no borrowed `congrArg`/`congr`/`mt` to lean on, and
 /// none of this construction may assume one exists with a particular shape.

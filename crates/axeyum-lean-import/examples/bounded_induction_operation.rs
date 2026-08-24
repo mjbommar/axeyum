@@ -2,21 +2,19 @@
 //! for a proof-isolated statement import: `Eq.refl`, and where that is stuck,
 //! a bounded induction over a discovered zero/succ-shaped binder plus one
 //! congruence rewrite driven by the induction hypothesis. See
-//! `bounded_induction_support` for the full contract.
+//! `axeyum_lean_import::producers::bounded_induction` for the full contract.
 
 use std::fmt::Write;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+use axeyum_lean_import::producers::bounded_induction;
 use axeyum_lean_import::{ImportLimits, import_statement_ndjson};
 use axeyum_lean_kernel::{Declaration, Kernel, NameId};
 use sha2::{Digest, Sha256};
 
-#[path = "bounded_induction_support/mod.rs"]
-mod bounded_induction_support;
-
-use bounded_induction_support::propose_bounded_induction;
+use bounded_induction::propose_bounded_induction;
 
 fn sha256(text: &str) -> String {
     Sha256::digest(text.as_bytes())
@@ -107,8 +105,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         target_identity.content_sha256,
         candidate.binders_used,
         candidate.inductions_used,
-        bounded_induction_support::MAX_BINDERS,
-        bounded_induction_support::MAX_INDUCTIONS,
+        bounded_induction::MAX_BINDERS,
+        bounded_induction::MAX_INDUCTIONS,
         report.declaration_identities.len(),
         footprint.len(),
         theorem_dependencies.len(),

@@ -267,8 +267,16 @@ const FVAR_BASE: u64 = 9_000_000;
 /// "closed by induction" without re-deriving it from the proof term.
 #[derive(Debug)]
 pub struct Candidate {
+    /// The proposed proof term, valid only in the kernel that produced it.
+    ///
+    /// Untrusted until that same kernel re-checks it through
+    /// `Kernel::add_declaration`.
     pub proof: ExprId,
+    /// How many leading `Pi` binders the search peeled, out of
+    /// [`MAX_BINDERS`].
     pub binders_used: usize,
+    /// How many structural inductions the search performed, out of
+    /// [`MAX_INDUCTIONS`]. Zero means the goal closed by plain reflexivity.
     pub inductions_used: usize,
 }
 
@@ -276,10 +284,20 @@ pub struct Candidate {
 /// precise, typed reason rather than a free-form string.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeclineReason {
+    /// The goal has more leading `Pi` binders than [`MAX_BINDERS`] allows.
     BinderBudgetExceeded,
+    /// The terminal, non-`Pi` goal is not an exact `Eq` application, so none
+    /// of this producer's equality machinery applies to it.
     NotEqualityGoal,
+    /// The terminal goal is not definitionally equal and no applicable
+    /// induction-hypothesis rewrite closed the remaining gap.
     TerminalNotDefEqNoRewrite,
+    /// A structural primitive this producer needs (the named declaration)
+    /// occurs in the kernel's environment a number of times other than one —
+    /// either absent, or ambiguous.
     RequiredDeclarationUnavailable(String),
+    /// The discovered recursor has a shape this producer cannot drive; the
+    /// payload describes which expectation failed.
     UnsupportedRecursorShape(String),
 }
 
@@ -3491,6 +3509,13 @@ impl Search {
 /// induction hypothesis. Never dispatches on the target's name or fact id;
 /// every structural fact it uses (the equality primitives, the inductive
 /// shape, the recursor) is discovered from `kernel`'s own declarations.
+///
+/// # Errors
+///
+/// Returns a typed [`DeclineReason`] when the bounded search does not close
+/// the goal. A decline is an ordinary outcome, not a failure: this producer is
+/// untrusted search, and exhausting a budget or meeting an unsupported shape
+/// is exactly what it is supposed to report.
 pub fn propose_bounded_induction(
     kernel: &mut Kernel,
     goal: ExprId,
