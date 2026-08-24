@@ -38,7 +38,7 @@ Named rules, each with a mutation control in
     schema                              the document is not an episode
     git-commit-ancestor                 --require-ancestor and the commit is not one
     frontier-digest                     selection.frontier_sha256 != the file's
-    frontier-reverify                   fact-frontier.py --verify rejects the file
+    frontier-reverify                   --verify-frontier and fact-frontier.py --verify rejects the file
     web-snapshot-digest                 a snapshot's bytes are not what it claims
     ledger-writes-must-be-zero          an episode wrote to the ledger
     held-out-reference                  a blind fact id appears ANYWHERE
@@ -300,6 +300,7 @@ def check_episode(
     held: set[str],
     fact_ids: set[str],
     require_ancestor: bool,
+    verify_frontier: bool = False,
 ) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
     """Return (failures, warnings) as (rule, detail) pairs."""
     failures: list[tuple[str, str]] = []
@@ -352,9 +353,17 @@ def check_episode(
                 fail("frontier-digest", f"{frontier_path} is unreadable: {error}")
             if actual is not None and actual != claimed:
                 fail("frontier-digest", f"episode claims {claimed}, {frontier_path} carries {actual}")
-            ok, detail = reverify_frontier(target)
-            if not ok:
-                fail("frontier-reverify", f"{frontier_path}: {detail}")
+            if verify_frontier:
+                ok, detail = reverify_frontier(target)
+                if not ok:
+                    fail("frontier-reverify", f"{frontier_path}: {detail}")
+            else:
+                # Re-deriving the saved frontier against the LIVE ledger rots the
+                # moment any lane adds a fact (measured 2026-08-24: 16 of 20
+                # committed episodes went red within hours of landing while
+                # every digest still matched). The self-digest above is the
+                # committed claim; freshness is an explicit question.
+                warn("frontier-reverify", f"{frontier_path} not re-derived; --verify-frontier was not given")
 
     # (4) web-snapshot-digest
     for index, snapshot in enumerate(document.get("web_snapshots") or []):
@@ -454,6 +463,8 @@ def ledger_fact_ids(facts: pathlib.Path) -> set[str]:
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="check agent episode artifacts")
     ap.add_argument("episodes", nargs="*", help="episode JSON files or directories")
+    ap.add_argument("--verify-frontier", action="store_true",
+                    help="re-derive each saved frontier against the LIVE ledger (opt-in: it rots as the ledger grows)")
     ap.add_argument("--require-ancestor", action="store_true",
                     help="fail when git_commit is not an ancestor of HEAD (see the module docstring)")
     ap.add_argument("--nursery", type=pathlib.Path, default=NURSERY)
@@ -509,7 +520,8 @@ def main(argv: list[str]) -> int:
             continue
         try:
             failures, warnings = check_episode(
-                path, document, schema, held, fact_ids, args.require_ancestor
+                path, document, schema, held, fact_ids, args.require_ancestor,
+                args.verify_frontier,
             )
         except EpisodeError as error:
             print(f"EPISODE_ERROR|validator|{error}", file=sys.stderr)

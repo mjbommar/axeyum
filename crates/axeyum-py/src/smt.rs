@@ -18,7 +18,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value};
 use axeyum_smtlib::{
-    Script, ScriptCommand, SmtError, decode_packed_string, parse_script, parse_script_within,
+    Script, ScriptCommand, SmtError, decode_packed_string, packed_string_max_len, parse_script,
+    parse_script_within,
 };
 use axeyum_solver::smtlib::{
     solve_smtlib, solve_smtlib_get_assignment, solve_smtlib_get_proof, solve_smtlib_get_value,
@@ -119,6 +120,7 @@ pub struct Outcome {
     detail: String,
     model: Py<PyDict>,
     replay: Option<ReplayState>,
+    replay_unavailable: Option<String>,
 }
 
 #[pymethods]
@@ -177,21 +179,37 @@ impl Outcome {
     /// `corpus/regression` files: 16 `sat` verdicts, of which **1** (a
     /// quantified `LIA` negation, `uflia_induction/unguarded_int_nonneg.smt2`)
     /// had no replay state.
-    /// TODO(plan 02): distinguish "replayed and disagreed" from "no replay
-    /// available" — they are the same `False` today, and only the first is a
-    /// soundness signal.
+    /// `False` has exactly one meaning: the model was replayed and does NOT
+    /// satisfy the assertions -- a soundness signal. When there is nothing to
+    /// replay (`unsat`/`unknown`, or that one quantified route) this RAISES
+    /// [`ReplayUnavailable`]; `replay_available` says so without raising.
     ///
     /// # Errors
     ///
-    /// Raises `AxeyumError` if the evaluator fails on a term it cannot
-    /// interpret; a model that simply does not satisfy the assertions is
-    /// `False`, not an error.
+    /// Raises `ReplayUnavailable` when no replay state exists, and
+    /// `AxeyumError` if the evaluator fails on a term it cannot interpret.
     fn replay(&self, py: Python<'_>) -> PyResult<bool> {
         let Some(state) = self.replay.as_ref() else {
-            return Ok(false);
+            return Err(crate::error::ReplayUnavailable::new_err(
+                self.replay_unavailable.clone().unwrap_or_else(|| {
+                    "no replay state; check `replay_available` first".to_owned()
+                }),
+            ));
         };
         py.detach(|| check_model(&state.arena, &state.assertions, &state.model))
             .map_err(map_solver_error)
+    }
+
+    /// Whether `replay()` has a model and arena to re-check.
+    #[getter]
+    fn replay_available(&self) -> bool {
+        self.replay.is_some()
+    }
+
+    /// Why `replay()` would raise, or `None` when it is available.
+    #[getter]
+    fn replay_unavailable_reason(&self) -> Option<String> {
+        self.replay_unavailable.clone()
     }
 
     fn __repr__(&self) -> String {
@@ -267,20 +285,22 @@ fn solve(
     };
 
     // The front door returns a verdict, not an arena -- and the canonical replay
-    // needs the arena the original terms live in. So on `sat` we re-derive the
-    // model through the same public `solve` the front door dispatches to,
-    // keeping the parsed script alive inside the `Outcome`.
-    // TODO(plan 02): this costs a second solve on `sat`. Removing it needs a
-    // Rust entry point that returns the arena, the active assertions and the
-    // model together; `solve_smtlib_model` does not (it re-parses and re-solves
-    // too, and returns names without the arena).
-    let (replay, named) = if status == "sat" {
+    // needs the arena the original terms live in. So on `sat` the front door's
+    // own model lift (`solve_smtlib_model`, the same route) is run once more and
+    // laid onto the parsed script's arena, kept alive inside the `Outcome`. It
+    // costs a second front-door call on `sat`; removing that needs a Rust entry
+    // point returning verdict, arena, assertions and model together.
+    let (replay, replay_unavailable, named) = if status == "sat" {
         match py.detach(|| build_replay_state(script, &config)) {
-            Some((state, named)) => (Some(state), named),
-            None => (None, Vec::new()),
+            Ok((state, named)) => (Some(state), None, named),
+            Err(reason) => (None, Some(reason), Vec::new()),
         }
     } else {
-        (None, Vec::new())
+        (
+            None,
+            Some(format!("no model to replay for a {status:?} outcome")),
+            Vec::new(),
+        )
     };
 
     Ok(Outcome {
@@ -290,6 +310,7 @@ fn solve(
         detail,
         model: model_dict(py, &named)?.unbind(),
         replay,
+        replay_unavailable,
     })
 }
 
@@ -326,19 +347,68 @@ fn script_config(
 fn build_replay_state(
     input: &str,
     config: &SolverConfig,
-) -> Option<(ReplayState, Vec<(String, Value)>)> {
-    let mut script = parse_script(input).ok()?;
+) -> Result<(ReplayState, Vec<(String, Value)>), String> {
+    let mut script = parse_script(input).map_err(|error| format!("re-parse failed: {error}"))?;
     if script.check_sats > 1 {
-        return None;
+        return Err(
+            "multi-`check-sat` scripts are not replayed through `Outcome`; use `session`".into(),
+        );
     }
     let assertions = active_assertions(&script);
-    let result = axeyum_solver::solve(&mut script.arena, &assertions, config).ok()?;
-    let CheckResult::Sat(model) = result else {
-        return None;
-    };
+    if let Some(term) = assertions
+        .iter()
+        .copied()
+        .find(|&term| contains_quantifier(&script.arena, term))
+    {
+        return Err(format!(
+            "assertion {} is quantified; the ground evaluator cannot decide a quantifier, so a `sat` here is not replayable through `check_model`",
+            axeyum_ir::render(&script.arena, term)
+        ));
+    }
+    // The SAME route the verdict came from (`solve_smtlib_model` is the front
+    // door plus a model lift), not `axeyum_solver::solve`, which can decide a
+    // different way -- measured 2026-08-24: a quantified `LIA` query was `sat`
+    // by both routes, and `solve`'s model, replayed, said `False` for a reason
+    // that had nothing to do with soundness.
+    let lifted = axeyum_solver::smtlib::solve_smtlib_model(input, config)
+        .map_err(|error| format!("front-door model lift failed: {error}"))?
+        .ok_or_else(|| "the front door produced no liftable model for this `sat`".to_owned())?;
+    let mut model = Model::new();
+    for (name, value) in &lifted.constants {
+        let Some(symbol) = script.arena.find_symbol(name) else {
+            return Err(format!(
+                "front-door model names `{name}`, which the parsed script does not declare"
+            ));
+        };
+        let value = lift_onto_arena(&script, symbol, value.clone())?;
+        model.set(symbol, value);
+    }
+    for (name, func) in &lifted.functions {
+        let Some(id) = script.arena.find_function(name) else {
+            return Err(format!(
+                "front-door model names function `{name}`, which the parsed script does not declare"
+            ));
+        };
+        model.set_function(id, func.clone());
+    }
+    // Symbols the front door left unconstrained get the same well-founded
+    // default the solver's own completion uses, so `check_model` sees a total
+    // assignment. A symbol with no well-founded default is left unassigned and
+    // `check_model` reports it, rather than this code inventing a value.
+    let unassigned: Vec<(SymbolId, Sort)> = script
+        .arena
+        .symbols()
+        .filter(|(symbol, _, _)| model.get(*symbol).is_none())
+        .map(|(symbol, _, sort)| (symbol, sort))
+        .collect();
+    for (symbol, sort) in unassigned {
+        if let Some(value) = axeyum_ir::well_founded_default(&script.arena, sort) {
+            model.set(symbol, value);
+        }
+    }
     let named = named_constants(&script, &model);
     let arena = std::mem::take(&mut script.arena);
-    Some((
+    Ok((
         ReplayState {
             arena,
             assertions,
@@ -346,6 +416,88 @@ fn build_replay_state(
         },
         named,
     ))
+}
+
+/// Converts a front-door model value into the representation the parsed
+/// script's arena uses for `symbol`.
+///
+/// The parser lowers a declared `String` to a packed bit-vector (length field
+/// in the low bits, then little-endian bytes), while the front door lifts the
+/// same symbol back to a `Seq` of code points. `check_model` evaluates the
+/// ARENA's terms, so the value must be packed again. The packing is checked
+/// against the public `decode_packed_string` before it is trusted: an encoder
+/// that disagreed with the decoder would replay the wrong string, and that is
+/// refused rather than replayed.
+fn lift_onto_arena(script: &Script, symbol: SymbolId, value: Value) -> Result<Value, String> {
+    let is_declared_string = script.declared_strings.iter().any(|&(s, _)| s == symbol);
+    let (name, sort) = script.arena.symbol(symbol);
+    match (is_declared_string, &value, sort) {
+        (true, Value::Seq(elements), Sort::BitVec(width)) => {
+            let mut bytes = Vec::with_capacity(elements.len());
+            for element in elements {
+                match element {
+                    Value::Bv { value: code, .. } if *code <= 0xff => {
+                        bytes.push(u8::try_from(*code).map_err(|e| e.to_string())?);
+                    }
+                    other => {
+                        return Err(format!(
+                            "string `{name}` carries code point {other:?}, outside the packed encoding"
+                        ));
+                    }
+                }
+            }
+            let packed = encode_packed_string(width, &bytes).ok_or_else(|| {
+                format!(
+                    "string `{name}` ({} bytes) does not fit its packed width {width}",
+                    bytes.len()
+                )
+            })?;
+            if decode_packed_string(width, packed).as_deref() != Some(bytes.as_slice()) {
+                return Err(format!(
+                    "packed encoding of string `{name}` did not round-trip through the decoder"
+                ));
+            }
+            Ok(Value::Bv {
+                width,
+                value: packed,
+            })
+        }
+        _ => Ok(value),
+    }
+}
+
+/// Inverse of `decode_packed_string` for the parser's layout: `len_width`
+/// low bits hold the length, bytes follow little-endian, 8 bits each.
+fn encode_packed_string(width: u32, bytes: &[u8]) -> Option<u128> {
+    let max_len = packed_string_max_len(width)?;
+    let len = u32::try_from(bytes.len()).ok()?;
+    if len > max_len {
+        return None;
+    }
+    let lw = 32 - max_len.leading_zeros();
+    let mut content: u128 = 0;
+    for (i, &b) in bytes.iter().enumerate() {
+        content |= u128::from(b) << (8 * i);
+    }
+    Some((content << lw) | u128::from(len))
+}
+
+/// Whether `term`'s DAG contains a `forall`/`exists` node.
+fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
+    let mut stack = vec![term];
+    let mut seen = std::collections::HashSet::new();
+    while let Some(current) = stack.pop() {
+        if !seen.insert(current) {
+            continue;
+        }
+        if let axeyum_ir::TermNode::App { op, args } = arena.node(current) {
+            if matches!(op, axeyum_ir::Op::Forall(_) | axeyum_ir::Op::Exists(_)) {
+                return true;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
 }
 
 /// The assertion stack active at the script's `check-sat`, honoring

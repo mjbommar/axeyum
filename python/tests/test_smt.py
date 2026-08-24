@@ -93,6 +93,7 @@ def test_sat_replays() -> None:
     assert outcome.detail == ""
     assert set(outcome.model) == {"x", "y"}
     # The canonical check: the model satisfies the ORIGINAL assertions.
+    assert outcome.replay_available is True
     assert outcome.replay() is True
     assert (int(outcome.model["x"]) + int(outcome.model["y"])) % 256 == 10
 
@@ -108,7 +109,9 @@ def test_unsat() -> None:
     )
     assert outcome.status == "unsat"
     assert outcome.model == {}
-    assert outcome.replay() is False
+    assert outcome.replay_available is False
+    with pytest.raises(axeyum.ReplayUnavailable):
+        outcome.replay()
 
 
 def test_unknown_is_a_value_not_an_exception() -> None:
@@ -117,7 +120,9 @@ def test_unknown_is_a_value_not_an_exception() -> None:
     assert outcome.status == "unknown"
     assert outcome.detail != ""
     assert outcome.model == {}
-    assert outcome.replay() is False
+    assert outcome.replay_available is False
+    with pytest.raises(axeyum.ReplayUnavailable):
+        outcome.replay()
 
 
 def test_expected_status_is_echoed_never_consulted() -> None:
@@ -180,16 +185,15 @@ def test_differential_ran_enough_comparisons() -> None:
     assert {"qf_bv", "qf_lia", "qf_lra", "qf_uf"} <= logics
 
 
-def test_replay_false_is_not_a_soundness_signal() -> None:
-    """Pins the one known gap, so it cannot widen unnoticed.
+def test_replay_unavailable_is_distinct_from_replay_failed() -> None:
+    """Pins the one known gap, so it cannot widen unnoticed -- and pins that it
+    is reported as its own state, never as ``False``.
 
     The front door reaches routes ``axeyum_solver::solve`` alone does not, and
     the replay state this binding builds comes from the latter. A quantified
-    query the front door decides ``sat`` therefore has no replay available, and
-    ``replay()`` says ``False`` -- which is NOT "the model is wrong".
-
-    TODO(plan 02): give ``replay()`` a third answer, or build the replay state
-    from the front door itself.
+    query the front door decides ``sat`` therefore has no replay available;
+    ``replay_available`` is ``False`` and ``replay()`` RAISES. ``False`` from
+    ``replay()`` is reserved for "replayed and the model is wrong".
     """
     outcome = smt.solve(
         "(set-logic LIA)\n(assert (not (forall ((n Int)) (>= n 0))))\n(check-sat)",
@@ -197,7 +201,10 @@ def test_replay_false_is_not_a_soundness_signal() -> None:
     )
     assert outcome.status == "sat"
     assert outcome.model == {}
-    assert outcome.replay() is False
+    assert outcome.replay_available is False
+    assert "quantified" in (outcome.replay_unavailable_reason or "")
+    with pytest.raises(axeyum.ReplayUnavailable, match="quantified"):
+        outcome.replay()
 
     # ... while a ground query on the same logic replays fine, so the gap is the
     # quantified route and not the binding's replay wiring.

@@ -78,7 +78,12 @@ handle.
   `.expected_status` (ground truth for cross-checking, never consulted —
   say so in the docstring), `.unknown_reason: (kind, detail)`; `.model` via
   `solve_smtlib_model` (the embedder route that does not require a literal
-  `(get-model)`); `.replay() -> bool` over `check_model`.
+  `(get-model)`); `.replay() -> bool` over `check_model`. **`False` has exactly
+  one meaning — replayed and the model does not satisfy the assertions.** When
+  there is nothing to replay (`unsat`/`unknown`, or the one quantified route
+  the front door decides without leaving a replayable arena) `replay()` raises
+  `ReplayUnavailable` and `.replay_available` is `False`; the two states never
+  share a value (review finding, 2026-08-24).
 - `session(script) -> list[Response]` over `solve_smtlib_session` — one
   typed response per output command; `Unsupported` and `Error` stay distinct
   variants. `incremental(script) -> list[CheckResult]`.
