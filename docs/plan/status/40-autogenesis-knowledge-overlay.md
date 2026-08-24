@@ -17,6 +17,12 @@ visibility kept distinct. Next: normalize producer declines into typed,
 measured obstructions rather than hand-authoring the next bottleneck. F3 now
 normalizes 47 retained decline records into 20 families while preserving unknown
 remedies and unbound resolutions; next is representation/transport lineage.
+F4/F5/F6 now publish hash-bound transport coverage and non-authoritative
+scheduler observations. Live frontier evidence is the limiting result: 144
+facts are dependency-ready but zero are admissible because none has a registered
+applicable operation. Next capability work must expand general-producer and
+adapter coverage over the train/development queue, not add more single-target
+metadata or solver work.
 
 <!-- plan-section: landed-changes -->
 
@@ -24,3 +30,6 @@ remedies and unbound resolutions; next is representation/transport lineage.
 | 2026-08-24 | `b42ecfd81` | Complete F1's evidence-backed multi-target-producer crosswalk, publish a generated coverage census, and reject uncredited producer or individual complete-coverage claims |
 | 2026-08-24 | `137fef720` | Generate the complete constructed-kernel declaration/dependency projection with exact theorem-edge agreement and negative controls |
 | 2026-08-24 | `00cbed24b` | Normalize retained decline records into a generated obstruction projection that rejects lost blockers and invented resolution claims |
+| 2026-08-24 | `c49566743` | Derive hash-bound transport chains with incomplete paths explicit rather than name-matched |
+| 2026-08-24 | `8e78d8e3e` | Publish separated formal, producer-credit, and transport coverage dimensions |
+| 2026-08-24 | `7160fc0bc` | Publish non-authoritative producer observations; current live queue has zero registered admissible candidates |
