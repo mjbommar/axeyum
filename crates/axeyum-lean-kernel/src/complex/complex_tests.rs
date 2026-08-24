@@ -171,6 +171,13 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.pow_zero", p.pow_zero),
         ("Complex.pow_succ", p.pow_succ),
         ("Complex.pow_add", p.pow_add),
+        ("Complex.sumRange", p.sum_range),
+        ("Complex.sumRange_zero", p.sum_range_zero),
+        ("Complex.sumRange_succ", p.sum_range_succ),
+        ("Complex.sumRange_congr", p.sum_range_congr),
+        ("Complex.mul_sumRange", p.mul_sum_range),
+        ("Complex.mul_sub_one_geom", p.mul_sub_one_geom),
+        ("Complex.geom_series_div", p.geom_series_div),
     ];
     for (label, name) in named {
         let declaration = kernel
