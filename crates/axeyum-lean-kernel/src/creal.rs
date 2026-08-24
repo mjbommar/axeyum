@@ -877,6 +877,60 @@ pub struct CRealPrelude {
     /// beta. No rational estimate at all, and no shift bridge: this is a
     /// chain of two existing modulus witnesses, not a new one.
     pub continuous_comp: NameId,
+
+    // --- uniform continuity on an interval (phase R11) -----------------------
+    /// `CReal.UniformlyContinuousOn (F : CReal -> CReal) (a b : CReal) : Type :=
+    /// mk (modulus : Nat -> Nat) (spec : ...)`.
+    ///
+    /// **The modulus is data, not a proof.** [`Self::pos_bound_of_lt`] already
+    /// establishes the house rule this follows: `0 < x` and its Nat-indexed
+    /// witness are the SAME proposition, yet the witness cannot be pulled out of
+    /// the `Exists` and used to build anything in `Type` -- [`Self::inv`] pays
+    /// for exactly this by taking its modulus `k : Nat` as an explicit argument
+    /// rather than deriving it from a `PosBound` proof. A `Prop`-level `forall
+    /// eps, exists delta, ...` has the identical shape and the identical wall: a
+    /// later construction (a partition, a sampling index) needs delta as `Nat`
+    /// DATA, and `Exists.rec`'s target must not depend on the witness when the
+    /// target is a `Type`. So `UniformlyContinuousOn` is declared in `Type`, with
+    /// `modulus : Nat -> Nat` a field exactly like [`Self::seq`] is a field of
+    /// `CReal` itself, and the ONE-constructor inductive shape (`Type`-valued
+    /// data field + `Prop`-valued spec field, large elimination for the first
+    /// projection) is copied from `CReal`'s OWN carrier
+    /// (`declare_carrier` in this same file), not
+    /// invented fresh.
+    ///
+    /// The spec is real-valued, not the `Converges`/`Cauchy` canonical-sample
+    /// idiom this file otherwise prefers: `le (abs (x - y)) (ofRat (1/(modulus
+    /// n + 1))) -> le (abs (F x - F y)) (ofRat (1/(n+1)))`. The canonical-sample
+    /// form ties "which term" to "which accuracy index" as the SAME `n`, and
+    /// every attempt to route a `Converges` witness through it needs the
+    /// hypothesis and the conclusion read at two DIFFERENT indices; the
+    /// real-valued form is index-free in `x, y` and lets the reader unfold `le`
+    /// at whichever sample index the rest of a proof already needs.
+    pub uniformly_continuous_on: NameId,
+    /// `UniformlyContinuousOn.mk`, the one constructor.
+    pub uc_mk: NameId,
+    /// `UniformlyContinuousOn.rec`, the kernel-generated recursor (three leading
+    /// parameters `F a b`, since -- unlike `CReal` itself -- this family is
+    /// genuinely parametric).
+    pub uc_rec: NameId,
+    /// `UniformlyContinuousOn.modulus : forall F a b, UniformlyContinuousOn F a b
+    /// -> Nat -> Nat` -- the data field, by large elimination, exactly
+    /// [`Self::seq`]'s own shape one level up.
+    pub uc_modulus: NameId,
+    /// `UniformlyContinuousOn.spec` -- the Prop-valued field, projected with the
+    /// SAME shape [`Self::regular`] uses to project `CReal`'s own Prop field: the
+    /// motive at a witness `u` mentions `UniformlyContinuousOn.modulus F a b u`,
+    /// not a fresh variable.
+    pub uc_spec: NameId,
+    /// `CReal.uniformly_continuous_id : forall a b, UniformlyContinuousOn (fun r
+    /// => r) a b` -- modulus `fun n => n`: the hypothesis IS the conclusion,
+    /// verbatim.
+    pub uniformly_continuous_id: NameId,
+    /// `CReal.uniformly_continuous_const : forall c a b, UniformlyContinuousOn
+    /// (fun _ => c) a b` -- any modulus works (`fun _ => 0` is used); `c - c` is
+    /// `Equiv`-zero, so the conclusion holds independently of the hypothesis.
+    pub uniformly_continuous_const: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -964,6 +1018,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
     let anon = kernel.anon();
     let creal = kernel.name_str(anon, "CReal");
     let equiv = kernel.name_str(creal, "Equiv");
+    let uniformly_continuous_on = kernel.name_str(creal, "UniformlyContinuousOn");
     CRealPrelude {
         rat,
         within: kernel.name_str(creal, "Within"),
@@ -1094,6 +1149,13 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         continuous_add: kernel.name_str(creal, "continuous_add"),
         continuous_mul: kernel.name_str(creal, "continuous_mul"),
         continuous_comp: kernel.name_str(creal, "continuous_comp"),
+        uniformly_continuous_on,
+        uc_mk: kernel.name_str(uniformly_continuous_on, "mk"),
+        uc_rec: kernel.name_str(uniformly_continuous_on, "rec"),
+        uc_modulus: kernel.name_str(uniformly_continuous_on, "modulus"),
+        uc_spec: kernel.name_str(uniformly_continuous_on, "spec"),
+        uniformly_continuous_id: kernel.name_str(creal, "uniformly_continuous_id"),
+        uniformly_continuous_const: kernel.name_str(creal, "uniformly_continuous_const"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
@@ -1179,6 +1241,7 @@ pub(crate) fn build_creal_prelude_uncached(
         cotransitivity::declare_cotransitivity(&mut d, prelude)?;
         completeness::declare_completeness(&mut d, prelude)?;
         convergence::declare_convergence(&mut d, prelude)?;
+        uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)
     })();
@@ -2104,6 +2167,7 @@ mod lattice;
 mod mul_self_zero;
 mod product;
 mod sqrt;
+mod uniform_continuity;
 
 #[cfg(test)]
 mod creal_tests;
