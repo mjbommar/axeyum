@@ -83,6 +83,7 @@ mod dvd;
 mod euclid;
 mod gcd;
 mod modeq;
+mod modinv;
 mod nat_abs;
 pub(crate) mod ops;
 mod order;
@@ -416,6 +417,15 @@ pub struct IntPrelude {
     /// ∀ n a, 0 < n → Coprime a n → ∃ b, ModEq n (a*b) one` — the modular
     /// inverse, straight from Bézout ([`Self::gcd_eq_gcd_ab`]).
     pub mod_eq_inverse_exists: NameId,
+    /// `modEq_inverse_unique :
+    /// ∀ n a b c, 0 < n → ModEq n (a*b) one → ModEq n (a*c) one → ModEq n b c`
+    /// — *the* inverse mod `n` is unique up to `ModEq`: `b` and `c` are both
+    /// forced to agree with it. `Coprime a n` is not an extra hypothesis —
+    /// it is derived from `ModEq n (a*b) one` itself (the divisibility
+    /// witness `n ∣ (one - a*b)` unpacks to a Bézout certificate for `a`
+    /// and `n`, closed by [`Self::coprime_of_bezout_one`]), then
+    /// [`Self::mod_eq_cancel`] finishes from `ModEq n (a*b) (a*c)`.
+    pub mod_eq_inverse_unique: NameId,
     /// `modEq_pow : ∀ n a b k, 0 < n → ModEq n a b → ModEq n (pow a k) (pow b k)`
     /// — induction on `k`, using [`Self::mod_eq_mul`] at each step. `k` is a
     /// `Nat` (the exponent), so this quantifies over three `Int`s and one
@@ -664,6 +674,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_mul: child(kernel, "modEq_mul"),
         mod_eq_cancel: child(kernel, "modEq_cancel"),
         mod_eq_inverse_exists: child(kernel, "modEq_inverse_exists"),
+        mod_eq_inverse_unique: child(kernel, "modEq_inverse_unique"),
         mod_eq_pow: child(kernel, "modEq_pow"),
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
@@ -815,6 +826,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_gauss_lemma(&mut d)?;
         modeq::declare_modeq_cancel(&mut d)?;
         gcd::declare_modeq_inverse_exists(&mut d)?;
+        modinv::declare_modeq_inverse_unique(&mut d)?;
         gcd::declare_euclid_lemma(&mut d)?;
         gcd::declare_euclid_infinitude(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
