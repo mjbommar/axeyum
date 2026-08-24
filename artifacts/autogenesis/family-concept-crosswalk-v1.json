@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-family-concept-crosswalk",
+  "trust_boundary": "family-topic guidance only; not fact formalization, proof transport, operation applicability, or admission authority",
+  "sources": {
+    "fact_catalog": {
+      "path": "artifacts/autogenesis/mathlib-nat-int-fact-catalog-v1.json",
+      "catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988"
+    },
+    "math_education": {
+      "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c",
+      "path_hint": "../math-education/graph/concepts"
+    }
+  },
+  "mappings": [
+    {"family": "integer-fibonacci", "concept_id": "C:fibonacci-sequence", "assurance": "human-reviewed", "reason": "The catalog family groups statements whose formal surface is Int.fib and its recurrence-derived identities."},
+    {"family": "integer-gcd", "concept_id": "C:greatest-common-divisor", "assurance": "human-reviewed", "reason": "The catalog family groups integer greatest-common-divisor, divisibility, and Bezout-form statements."},
+    {"family": "integer-modular-equivalence", "concept_id": "C:modular-arithmetic", "assurance": "human-reviewed", "reason": "The catalog family groups integer congruence modulo n and its algebraic laws."},
+    {"family": "natural-binomial", "concept_id": "C:binomial-coefficient", "assurance": "human-reviewed", "reason": "The catalog family groups Nat.choose statements and their standard binomial-coefficient laws."},
+    {"family": "natural-bitwise", "concept_id": "C:bit", "assurance": "human-reviewed", "reason": "The catalog family groups Bool-valued bit and bitwise operations on natural-number representations."},
+    {"family": "natural-factorial", "concept_id": "C:factorial", "assurance": "human-reviewed", "reason": "The catalog family groups factorial, ascending factorial, and descending factorial laws."},
+    {"family": "natural-fibonacci", "concept_id": "C:fibonacci-sequence", "assurance": "human-reviewed", "reason": "The catalog family groups Nat.fib recurrence, positivity, and monotonicity statements."},
+    {"family": "natural-gcd", "concept_id": "C:greatest-common-divisor", "assurance": "human-reviewed", "reason": "The catalog family groups Nat.gcd, coprimality, divisibility, and Euclidean-characterization laws."},
+    {"family": "natural-logarithm", "concept_id": "C:logarithm", "assurance": "human-reviewed", "reason": "The catalog family groups Nat.log and Nat.clog identities and order laws."},
+    {"family": "natural-modular-equivalence", "concept_id": "C:modular-arithmetic", "assurance": "human-reviewed", "reason": "The catalog family groups Nat.ModEq and modular arithmetic laws."},
+    {"family": "natural-primes", "concept_id": "C:prime-number", "assurance": "human-reviewed", "reason": "The catalog family groups Nat.Prime, factor, and coprimality consequences."},
+    {"family": "natural-square-root", "concept_id": "C:square-root", "assurance": "human-reviewed", "reason": "The catalog family groups Nat.sqrt identities, bounds, and characterization statements."}
+  ]
+}

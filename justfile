@@ -440,7 +440,79 @@ parity-freshness:
     scripts/check-parity-freshness.py
 
 autogenesis-knowledge-controls:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_knowledge
+    python3 scripts/validate-autogenesis-knowledge.py
     scripts/check-autogenesis-knowledge-controls.sh
+
+# Owner-lane freshness checks for derived Autogenesis knowledge snapshots.
+# These are intentionally not part of `check`: construction lanes may advance
+# the live theorem/fact sources while the additive sidecars lag safely. Run this
+# before committing a knowledge-overlay refresh.
+autogenesis-knowledge-derived-freshness:
+    python3 scripts/gen-autogenesis-knowledge-coverage.py --check
+    python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
+    python3 scripts/gen-autogenesis-obstruction-projection.py --check
+    python3 scripts/gen-autogenesis-transport-projection.py --check
+    python3 scripts/gen-autogenesis-scheduler-observations.py --check
+    python3 scripts/gen-autogenesis-capability-gap-projection.py --check
+    python3 scripts/gen-autogenesis-concept-coverage-projection.py --check
+    python3 scripts/gen-autogenesis-producer-outcome-observations.py --check
+    python3 scripts/gen-autogenesis-producer-evaluation-frontier.py --check
+    python3 scripts/gen-autogenesis-producer-evaluation-protocol.py --check
+
+autogenesis-kernel-projection:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
+    python3 scripts/validate-autogenesis-kernel-dependency-projection.py
+    python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
+
+autogenesis-obstruction-projection:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection
+    python3 scripts/validate-autogenesis-obstruction-projection.py
+    python3 scripts/gen-autogenesis-obstruction-projection.py --check
+
+autogenesis-transport-projection:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_transport_projection
+    python3 scripts/validate-autogenesis-transport-projection.py
+    python3 scripts/gen-autogenesis-transport-projection.py --check
+
+autogenesis-scheduler-observations:
+    python3 scripts/gen-autogenesis-scheduler-observations.py --check
+
+autogenesis-capability-gap:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_capability_gap_projection
+    python3 scripts/validate-autogenesis-capability-gap-projection.py
+    python3 scripts/gen-autogenesis-capability-gap-projection.py --check
+
+autogenesis-family-concepts:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_family_concept_crosswalk
+    python3 scripts/validate-autogenesis-family-concept-crosswalk.py
+
+autogenesis-concept-coverage:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_concept_coverage_projection
+    python3 scripts/validate-autogenesis-concept-coverage-projection.py
+    python3 scripts/gen-autogenesis-concept-coverage-projection.py --check
+
+autogenesis-nat-modeq-selection:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_nat_modeq_capability_selection
+    python3 scripts/validate-autogenesis-nat-modeq-capability-selection.py
+
+autogenesis-producer-outcomes:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_producer_outcome_observations
+    python3 scripts/validate-autogenesis-producer-outcome-observations.py
+    python3 scripts/gen-autogenesis-producer-outcome-observations.py --check
+
+autogenesis-producer-evaluation-frontier:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_frontier
+    python3 scripts/validate-autogenesis-producer-evaluation-frontier.py
+    python3 scripts/gen-autogenesis-producer-evaluation-frontier.py --check
+
+autogenesis-producer-evaluation-protocol:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_protocol
+    python3 scripts/validate-autogenesis-producer-evaluation-protocol.py
+    python3 scripts/gen-autogenesis-producer-evaluation-protocol.py --check
+
+autogenesis-producer-evaluation-result-contract:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_result
 
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh
