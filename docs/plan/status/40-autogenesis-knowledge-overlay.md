@@ -88,4 +88,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `9aa74f0d3` | Gate the producer-result contract's mutation tests in the aggregate knowledge checks without fabricating an execution result |
 | 2026-08-24 | `e256492c2` | Refresh the kernel-derived snapshot after Decidable and CPoint construction: 1,142 declarations, 869 theorems, and 4,127 direct theorem edges |
 | 2026-08-24 | `c514c8350` | Add three manually reviewed, empty-footprint kernel-theorem semantic anchors and reject accidental inflation of fact coverage by the new source population |
-| 2026-08-24 | pending | Derive a deterministic, non-semantic review queue for all unanchored empty-footprint kernel theorems, with candidate mappings kept out of the reviewed population |
+| 2026-08-24 | `abb4a6be4` | Derive a deterministic, non-semantic review queue for all unanchored empty-footprint kernel theorems, with candidate mappings kept out of the reviewed population |
