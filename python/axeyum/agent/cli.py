@@ -1,15 +1,25 @@
-"""`python -m axeyum.agent` -- run episodes, or replay one.
+"""`python -m axeyum.agent` -- run episodes, replay one, or re-check one.
 
-Three commands, and the split between them is the trust boundary:
+Four commands, and the split between them is the trust boundary:
 
     python -m axeyum.agent run     --next --n 10 --model anthropic:claude-sonnet-4-5
     python -m axeyum.agent run     --fact F:... --offline
     python -m axeyum.agent replay  --from-transcript artifacts/episodes/.../episode-....json
+    python -m axeyum.agent check   --fact F:... --producer modeq_family \
+                                   --expect-proof-sha256 <64 hex>
 
-`run` produces episodes and nothing else. It cannot admit a fact, register an
-operation, or invoke a checker -- not by policy but because slice A2 ships no
-tool that does. `replay` produces no artifact at all; its output is an exit
-status that depends on whether the deterministic nodes re-derived.
+`run` produces episodes. Since slice A4 it can dispatch, but only through a
+deferred tool a deterministic supervisor approves, and it still cannot admit a
+fact or write the ledger: `apply-autogenesis-fact-transaction.py` is not
+reachable from this package. `replay` produces no artifact; its output is an
+exit status that depends on whether the deterministic nodes re-derived.
+
+`check` is the command an episode's `outcome.checker_runs[0].command` names, and
+it exists so that field is a thing a referee can run rather than a string. It
+builds a SECOND kernel from the same frozen export, re-runs the producer,
+re-renders the proof term and compares the digest against the one it was given.
+It exits 0 only when they match; a mismatch, a missing export and an absent
+producer route are three distinct nonzero findings, never one.
 
 `--offline` swaps the provider for `TestModel`, which is what the test suite
 and a machine with no API key use. An offline episode says so in its own
@@ -33,11 +43,12 @@ from pydantic_ai.usage import RunUsage, UsageLimits
 
 from ..knowledge._paths import resolve_root
 from . import episode as episode_api
+from . import mobility as mobility_api
 from .episode import Budgets
 from .graph import EpisodeState, run_episode
 from .models import set_vocabulary_root
 from .replay import ReplayError, replay
-from .tools import AgentDeps, eligible_fact_ids
+from .tools import PRODUCER_TOOLS, AgentDeps, eligible_fact_ids, independent_check
 
 #: The offline stand-in's model id. It is a real id shape (provider-prefixed, as
 #: v2 requires) that resolves to no provider, so it cannot be mistaken for a run
@@ -51,6 +62,39 @@ OFFLINE_MODEL_ID = "test:offline"
 #: reason: they REFUSE an unknown id or prelude, which is correct behaviour and
 #: makes them useless to a model that invents its arguments.
 OFFLINE_TOOLS = ["frontier_select", "operation_registry", "overlay_query"]
+
+
+def offline_dispatch_model(fact_id: str, tool: str) -> Any:
+    """A model that calls exactly one tier-C tool with exactly one argument.
+
+    `TestModel` cannot do this: it invents arguments from the JSON schema, so a
+    `fact_id: str` comes back as `"a"` and the supervisor correctly denies the
+    call for targeting a fact other than the selected one. That is a real
+    outcome and a useless demonstration, so the offline dispatch is a
+    `FunctionModel` that emits the call the loop is actually asking for -- and
+    the approval gate in front of it is untouched, which is the whole point:
+    even a model that asks perfectly still cannot run the tool.
+    """
+    from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
+    from pydantic_ai.models.function import AgentInfo, FunctionModel
+
+    state = {"called": False}
+
+    def respond(messages: list[Any], info: AgentInfo) -> ModelResponse:
+        if state["called"]:
+            return ModelResponse(parts=[TextPart(content="offline stand-in: tool call resolved")])
+        state["called"] = True
+        return ModelResponse(
+            parts=[
+                ToolCallPart(
+                    tool_name=tool,
+                    args={"fact_id": fact_id},
+                    tool_call_id=f"offline-{tool}-0",
+                )
+            ]
+        )
+
+    return FunctionModel(respond, model_name="offline-dispatch")
 
 
 def offline_models(root: Path, fact_id: str) -> tuple[Any, Any]:
@@ -132,6 +176,11 @@ def run_command(args: argparse.Namespace) -> int:
     failures = 0
     for fact_id in facts:
         model, plan_model = offline_models(root, fact_id) if args.offline else (args.model, None)
+        dispatch_model = (
+            offline_dispatch_model(fact_id, PRODUCER_TOOLS["close_terminal"])
+            if args.offline
+            else None
+        )
         model_id = OFFLINE_MODEL_ID if args.offline else args.model
         usage = RunUsage()
         state = EpisodeState(
@@ -140,7 +189,9 @@ def run_command(args: argparse.Namespace) -> int:
             commit=commit,
             model=model,
             plan_model=plan_model,
+            dispatch_model=dispatch_model,
             model_id=model_id,
+            schema_version=args.schema_version,
             budgets=budgets,
             limits=UsageLimits(
                 cost_limit=Decimal(str(args.budget_usd)),
@@ -205,6 +256,47 @@ def replay_command(args: argparse.Namespace) -> int:
     return 0 if result.ok else 1
 
 
+def check_command(args: argparse.Namespace) -> int:
+    """Re-derive a proof in a fresh kernel and compare. Exit status IS the finding.
+
+    Nothing here reads the episode that named it. The command carries the fact,
+    the producer and the expected digest, so this re-derives from the frozen
+    export and the committed resolution records alone -- a checker that read its
+    expected answer out of the artifact it is checking would agree with it by
+    construction.
+    """
+    root = resolve_root(args.root)
+    if args.producer not in set(PRODUCER_TOOLS.values()):
+        print(
+            f"EPISODE_CHECK|fact={args.fact}|status=ERROR|no such producer route: "
+            f"{args.producer!r}; this loop runs {sorted(set(PRODUCER_TOOLS.values()))}",
+            file=sys.stderr,
+        )
+        return 2
+    outcome = independent_check(root, args.fact, args.producer, args.expect_proof_sha256)
+    verified = outcome.status == "verified"
+    footprint = ",".join(getattr(outcome, "axiom_footprint", ()) or ())
+    print(
+        f"EPISODE_CHECK|fact={args.fact}|producer={args.producer}"
+        f"|status={'VERIFIED' if verified else 'FAILED'}"
+        f"|proof_sha256={getattr(outcome, 'proof_sha256', '')}"
+        f"|expected={args.expect_proof_sha256}"
+        f"|axiom_footprint={footprint or 'empty'}"
+        f"|axiom_free={'true' if verified and not footprint else 'false'}"
+    )
+    if not verified:
+        print(f"  {outcome.reason}", file=sys.stderr)
+        return 1
+    if footprint:
+        print(
+            "  the re-derived declaration is NOT axiom-free; an admitted theorem "
+            "resting on assumptions is a different claim",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m axeyum.agent",
@@ -244,11 +336,36 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--input-tokens-limit", type=int, default=400000)
     run.add_argument("--output-tokens-limit", type=int, default=32000)
     run.add_argument("--max-tokens", type=int, default=8192)
+    run.add_argument(
+        "--schema-version",
+        type=int,
+        default=2,
+        choices=(1, 2),
+        help="2 runs the full A4 loop; 1 runs the A2 four-node path and writes a v1 episode",
+    )
     run.set_defaults(handler=run_command)
 
     replay_parser = sub.add_parser("replay", help="re-run an episode from its own transcript")
     replay_parser.add_argument("--from-transcript", required=True, help="path to an episode JSON")
     replay_parser.set_defaults(handler=replay_command)
+
+    check_parser = sub.add_parser(
+        "check", help="re-derive a proof in a second kernel and compare its digest"
+    )
+    check_parser.add_argument("--fact", required=True, help="the fact whose goal to re-close")
+    check_parser.add_argument("--producer", required=True, help="bounded_induction or modeq_family")
+    check_parser.add_argument(
+        "--expect-proof-sha256",
+        required=True,
+        help="the sha256 of render_lean(proof) this must reproduce",
+    )
+    check_parser.set_defaults(handler=check_command)
+
+    # A7: the mobility census. It runs no producer and calls no model, so it
+    # lives beside `run`/`replay`/`check` rather than inside them: what it
+    # measures is the vocabulary's structural reach, which is a property of the
+    # catalog and the ledger and not of any episode.
+    mobility_api.add_parser(sub)
     return parser
 
 
@@ -261,7 +378,9 @@ __all__ = [
     "OFFLINE_MODEL_ID",
     "OFFLINE_TOOLS",
     "build_parser",
+    "check_command",
     "main",
+    "offline_dispatch_model",
     "offline_models",
     "pick_facts",
     "replay_command",

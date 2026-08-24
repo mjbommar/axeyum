@@ -15,7 +15,24 @@ failure of all:
 
     EPISODES|checked=0|ok=0|failed=0        -> exit 1
 
-Ten named rules, each with a mutation control in
+Two schema versions are checked, dispatched on the document's own
+`schema_version`. v1 is the A2 episode; v2 (slice A4) adds
+`selection.ledger_sha256`, `outcome.checker_runs[]` and a `decline_class` enum,
+and brings one new rule with it:
+
+    proved-requires-checked-call        v2 `proved` without a `checked` tool
+                                        call, or without a checker run that
+                                        exited 0
+
+Both halves are required and neither implies the other. A `checked` tool call
+with no passing checker is a producer nobody re-validated; a passing checker
+with no `checked` call is a checker that ran against nothing this episode did.
+The v2 schema keeps v1's singular `checker_command` / `checker_exit_status`
+fields and requires them, so every rule below still bites on a v2 document
+rather than being skipped by the version dispatch -- a new schema version that
+quietly turned rules off would be the worst possible way to add one.
+
+Named rules, each with a mutation control in
 `scripts/tests/mutation_controls.py` under the `agent-episode` suite:
 
     schema                              the document is not an episode
@@ -86,6 +103,14 @@ from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCHEMA = ROOT / "artifacts/ontology/agent-episode.schema.json"
+SCHEMA_V2 = ROOT / "artifacts/ontology/agent-episode-v2.schema.json"
+
+# Which schema file each `schema_version` is checked against. A document
+# declaring a version that is not a key here is a FAILURE, not a document
+# checked against the nearest schema: validating a v3 episode against the v2
+# schema would report on constraints nobody wrote for it, and an unknown
+# version silently checked is a version silently trusted.
+SCHEMAS = {1: SCHEMA, 2: SCHEMA_V2}
 NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
 FACTS = ROOT / "artifacts/facts"
 FRONTIER = ROOT / "scripts/fact-frontier.py"
@@ -359,6 +384,34 @@ def check_episode(
         if not (isinstance(command, str) and command.strip()):
             fail("proved-requires-checker-command", "verdict is proved with no checker_command")
 
+    # (11) proved-requires-checked-call -- schema v2 only, because v1 has no
+    # `checker_runs` for the rule to stand on. The C tier is the ONLY producer
+    # of a `checked` assurance, so this is what makes "proved" mean "a tool that
+    # dispatches ran, and something re-validated what it produced".
+    if document.get("schema_version") == 2 and outcome.get("verdict") == "proved":
+        checked_calls = [
+            call
+            for call in (transcript.get("tool_calls") or [])
+            if isinstance(call, dict) and call.get("assurance") == "checked"
+        ]
+        if not checked_calls:
+            fail(
+                "proved-requires-checked-call",
+                "verdict is proved but no tool call carries assurance='checked'; the C "
+                "tier is the only route to proved and nothing in this episode used it",
+            )
+        passing_runs = [
+            run
+            for run in (outcome.get("checker_runs") or [])
+            if isinstance(run, dict) and run.get("exit_status") == 0
+        ]
+        if not passing_runs:
+            fail(
+                "proved-requires-checked-call",
+                "verdict is proved but no checker run exited 0; a proof nobody "
+                "re-validated is not proved",
+            )
+
     # (8) proposal-digest
     for index, proposal in enumerate(document.get("proposals") or []):
         if not isinstance(proposal, dict):
@@ -407,11 +460,13 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--facts", type=pathlib.Path, default=FACTS)
     args = ap.parse_args(argv)
 
-    try:
-        schema = json.loads(SCHEMA.read_text())
-    except (OSError, json.JSONDecodeError) as error:
-        print(f"EPISODE_ERROR|schema|{error}", file=sys.stderr)
-        return 2
+    schemas: dict[int, dict] = {}
+    for version, path in SCHEMAS.items():
+        try:
+            schemas[version] = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError) as error:
+            print(f"EPISODE_ERROR|schema|v{version}|{error}", file=sys.stderr)
+            return 2
 
     isolation = _load_module(ISOLATION, "episode_holdout_isolation")
     isolation.NURSERY = args.nursery
@@ -436,6 +491,21 @@ def main(argv: list[str]) -> int:
             failed += 1
             print(f"EPISODE|path={path}|status=FAIL|rules=unreadable-document")
             print(f"  unreadable-document|{path}|{error}", file=sys.stderr)
+            continue
+        declared = document.get("schema_version") if isinstance(document, dict) else None
+        schema = schemas.get(declared) if isinstance(declared, int) else None
+        if schema is None:
+            failed += 1
+            print(
+                f"EPISODE|path={path}|episode_id=None|verdict=None|status=FAIL"
+                f"|rules=unknown-schema-version"
+            )
+            print(
+                f"  unknown-schema-version|{path}|schema_version={declared!r}; this gate "
+                f"checks {sorted(SCHEMAS)} and refuses to check a document against a "
+                f"schema nobody wrote for it",
+                file=sys.stderr,
+            )
             continue
         try:
             failures, warnings = check_episode(

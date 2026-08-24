@@ -1,0 +1,108 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-agent-episode",
+  "episode_id": "E:fixture-v2-proved",
+  "git_commit": "0874b9e4fc6c738eb776fa94bf39799c58481b7b",
+  "created_at": "2026-08-24T00:00:00Z",
+  "selection": {
+    "frontier_sha256": "874042bd58ad8cf7e6633afbf2910b22e847895bb33f7dedc1d8990f416b1799",
+    "frontier_path": "artifacts/episodes/fixtures/frontier-not-committed-v1.json",
+    "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+    "fact_sha256": "18c9d952d0b4c8426c23c641c50a03750dcc88c23d2dde29669371b1738ec1b1",
+    "partition": "development",
+    "eligibility_reason": "development partition, epistemic_status open, no unmet depends_on; drawn to exercise the development branch of the partition enum",
+    "ledger_sha256": "20dc726db23067ce946fe2614c9ad218359f0abb173c50c644d3b13aa2c1e6b9"
+  },
+  "policy": {
+    "model_id": "anthropic:claude-illustrative-fixture",
+    "settings": {
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "max_tokens": 8192,
+      "seed": 20260824
+    },
+    "prompt_hashes": {
+      "system": "3ada0a0b63fd54eac3ae42468b4c08074e674474b7fbf13b5b3bf001ae873ed2",
+      "plan": "b41ca592268c40f24722746cae12b040e83f2c32640289048edbf575861992aa"
+    },
+    "toolset_sha256": "a8f51c705d88891a990fa031a2152a30a91ee1ab6388ee96e6ccffaf93fcb383",
+    "agent_code_sha256": "1b1d066eb5590df282347b0f19959e2920d8c9f04aae7bc38e8e6d4180bb0873",
+    "library_versions": {
+      "python": "3.13.0",
+      "axeyum": "0.0.0-fixture"
+    }
+  },
+  "budgets": {
+    "wall_seconds": 600,
+    "request_limit": 20,
+    "tool_calls_limit": 40,
+    "input_tokens_limit": 400000,
+    "output_tokens_limit": 32000,
+    "cost_limit_usd": 2.0
+  },
+  "transcript": {
+    "messages_sha256": "4023142a106523c7a63dbb745da1023a2c11ee6b3a84f0dd6ff00714830ae5aa",
+    "messages_path": "artifacts/episodes/fixtures/messages-not-committed-v1.json",
+    "tool_calls": [
+      {
+        "ordinal": 0,
+        "tool": "frontier_select",
+        "args_sha256": "8beaa0288e431560420a925f1d95dc251ac153a6b7bdbbb9b708208a71d59157",
+        "result_sha256": "effbfa05370e650fb28fb97adb89c035c34b37b68477e17f0e53046c928e312b",
+        "assurance": "read",
+        "duration_ms": 1301,
+        "exit_status": 0
+      },
+      {
+        "ordinal": 1,
+        "tool": "fact_get",
+        "args_sha256": "2e756a8b979e16d5824515cc84fe251135edb297b065d2aa35c44901dade18a6",
+        "result_sha256": "34249d59e3585bf834896923e7702e4b43369e414b2241e65d995e6d0fa1375c",
+        "assurance": "read",
+        "duration_ms": 9,
+        "exit_status": 0
+      },
+      {
+        "ordinal": 2,
+        "tool": "modeq_family",
+        "args_sha256": "1816ac8d3afad1020366fd9e5c28badb3d37e2fd26b4a33a4857958f44dd7f4d",
+        "result_sha256": "233fcf0ca65fcf462a72eb3adc231a62e6d54ce8f91b7aadbbcd8c06363bea44",
+        "assurance": "checked",
+        "duration_ms": 41207,
+        "exit_status": 0
+      }
+    ]
+  },
+  "web_snapshots": [],
+  "proposals": [],
+  "outcome": {
+    "verdict": "proved",
+    "decline_class": null,
+    "checker_command": "python -m axeyum.agent check --fact F:ml430-nat-add-modeq-left-e3b1fba9 --producer modeq_family --expect-proof-sha256 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "checker_exit_status": 0,
+    "checker_output_sha256": "941e17afd1f78adc5e7277f51fda302333deb80d1d031f5292395b7565a8106a",
+    "axiom_footprint": [],
+    "ledger_writes": 0,
+    "search_invocations": 3,
+    "target_theorem_submissions": 1,
+    "checker_runs": [
+      {
+        "command": "python -m axeyum.agent check --fact F:ml430-nat-add-modeq-left-e3b1fba9 --producer modeq_family --expect-proof-sha256 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "exit_status": 0,
+        "output_sha256": "941e17afd1f78adc5e7277f51fda302333deb80d1d031f5292395b7565a8106a",
+        "assurance": "checked"
+      },
+      {
+        "command": "python3 scripts/prepare-autogenesis-fact-transaction.py --fact artifacts/facts/F-ml430-nat-add-modeq-left-e3b1fba9.json --output <episode-dir>/transaction.proposal.json.snapshot",
+        "exit_status": 1,
+        "output_sha256": "eafc7c4bd559b2e20aae011d72a1b8b7c6c3526e771b96cd4ea9b9f9c5e16e87",
+        "assurance": "checked"
+      }
+    ]
+  },
+  "observed": {
+    "facts_unlocked": [],
+    "operations_widened": [],
+    "overlay_links_proposed": []
+  }
+}

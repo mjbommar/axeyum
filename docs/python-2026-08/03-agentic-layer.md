@@ -175,12 +175,71 @@ a structural precondition, residual shape, budget, and measured reach
 never targets. `Plan.tactic_ids` resolves here.
 
 ### A4 — C tools behind approval; first autonomous proof
-`bounded_induction`, `plan_check` as deferred tools; `Plan` emits the existing
-bundle JSON with `bundle_sha256`; supervisor approves by policy (never by
-model); `StageTransaction` calls `prepare-autogenesis-fact-transaction.py`
-only. Exit: one fact moved `open → proved` by a plan the model chose and the
-kernel checked, with a committed episode, and the ledger's
-`via_multi_target` counter moved.
+`bounded_induction` and `modeq_family` as deferred tools (`plan_check` was not
+built: the two producers are what the Python binding exposes, and a third tool
+that shelled out to a cargo example would have been the only thing in the tier
+whose result was not a typed object); `Gate` → `Dispatch` → `Supervise` →
+`Check` → `StageTransaction`; supervisor approves by policy, never by model;
+`StageTransaction` calls `prepare-autogenesis-fact-transaction.py` only. Exit:
+one fact moved toward `proved` by a plan the model chose and the kernel
+checked, with a committed, replayable episode.
+
+### A4 result (measured 2026-08-24, live)
+
+**The loop closed.** Six eligible facts on `anthropic:claude-sonnet-4-5` with
+`UsageLimits(cost_limit=1.00, request_limit=10, tool_calls_limit=16)`:
+**$1.551 total, mean $0.259**; **2 `proved`, 4 `declined`** (3 `gate-refused`
+from an honest `NoGeneralRoute`, 1 `retrieval-miss` from the tool itself).
+
+The two are `F:ml430-nat-modeq-refl-d870c8f5` (`proof_sha256` `1c0507f1…`) and
+`F:ml430-nat-modeq-symm-0a3d4d18` (`c3c8334e…`): the model chose
+`T:modeq-equivalence-combinators` / `close_terminal`, named three eligible
+siblings, a deterministic gate passed the plan, a deterministic supervisor
+approved the deferred call, the producer searched, a kernel admitted, and a
+**second kernel** re-derived the same term with an empty measured
+`axiom_footprint`. Neither digest appears in any committed manifest — these are
+results the ledger does not have, not reproductions. `ledger_writes` is 0 in
+every episode and the ledger is byte-unchanged.
+
+What the exit criterion says and what was achieved differ in one place, and it
+matters. The facts moved *toward* `proved`, not into it: `StageTransaction`
+runs the read-only proposal writer and it exits **1** for every A4 target,
+because a transaction is derivable only from a registered authoritative
+operation plus an execution receipt, and **no registered operation covers the
+`Nat.ModEq` family** — which is exactly where
+[`docs/autogenesis/250-natural-modeq-capability-selection.md`](../autogenesis/250-natural-modeq-capability-selection.md)
+deliberately stops. So `via_multi_target` has not moved. The nonzero exit is
+recorded in `checker_runs[]` rather than swallowed, because it is the finding
+the human ledger-writing step needs.
+
+Four findings A5 and A7 inherit:
+
+1. **A2's `NoGeneralRoute` baseline was partly a retrieval artifact.**
+   `frontier_select` capped a page at 60 rows against 98 eligible facts, while
+   the generality rule asks for three siblings *from ids the tools showed you*.
+   The first live A4 episode declined `Nat.ModEq` reflexivity naming only the
+   two ModEq facts its page contained, with symmetry and transitivity eligible,
+   unseen, and closable by the same producer in milliseconds. `MAX_ROWS` is now
+   120; the same fact, model and prompt then closed. A capability census (A7)
+   run against a truncated page would have measured the page.
+2. **`retrieval-miss` is the dominant real obstruction, not a proof failure.**
+   Of 98 eligible facts, exactly **3** have a frozen, proof-free statement
+   export a producer can import — `Nat.ModEq` refl, symm and trans, from the
+   development adapters. The other 95 have none, so no producer in this loop
+   can attack them at all. The bottleneck between here and volume is the Lean
+   export step on s5, not the producers.
+3. **The generality rule produced a measured false negative.** All three
+   exportable facts close, axiom-free, in milliseconds (`propose_modeq_family`,
+   verified directly). The model routed two of them and emitted
+   `NoGeneralRoute` for transitivity — after seeing the whole eligible page.
+   The rule is a filter on the model's *confidence that a route generalizes*,
+   not on whether it does, and the gap between those two is now measurable: it
+   is 1 of 3 here. A7's census answers it properly by running every tactic
+   precondition against every open fact without a model in the loop.
+4. **An operation registry entry is still the gate to admission.** The loop can
+   now manufacture kernel-checked, axiom-free proofs of open facts faster than
+   the registry can be widened to accept them, which inverts the constraint doc
+   228 described.
 
 ### A5 — obstruction graph from typed declines
 *Classify* node maps `Decline` objects to the AG4.1 taxonomy; proposals of
@@ -199,6 +258,64 @@ Run every tactic precondition against every open fact without running a
 producer; publish matched / zero-match; the zero-match clusters are the
 capability backlog. Draw every Nth episode from the must-decline population
 (9 rows, `check-autogenesis-must-decline-population.py`).
+
+### A7 result (measured 2026-08-24)
+
+Full write-up: [`07-mobility-census.md`](07-mobility-census.md). Artifact:
+`artifacts/autogenesis/mobility-census-v1.json`; dashboard:
+[`docs/plan/generated/mobility-census.md`](../plan/generated/mobility-census.md).
+
+```
+MOBILITY|open=191|evaluable=4|unevaluable=187|tactics=9|matched_pairs=2|zero_match_facts=2|clusters=2|held_out_excluded=57
+```
+
+**The census answers finding 3 and the answer is that finding 2 dominates it.**
+Nine tactic preconditions were evaluated over 191 open facts with no model and
+no producer, three-valued (`matched | unmatched(reason) | unevaluable(reason)`).
+**187 of the 191 have no frozen statement export, so they were never looked at
+at all** — A4 measured 3 of 98 on one page; over the whole ledger it is 4 of
+191, and all four are the same `Nat.ModEq` adapter run. A two-valued census
+would have published those 187 as zero-match and made the capability backlog
+187 entries of fiction. The 57 held-out rows are counted and never named;
+`check-autogenesis-holdout-isolation.py` is `PASS` at `references=0` over 1022
+files.
+
+The three ranked zero-match clusters are therefore only two, both of size 1,
+both `development`, and the ranking is not the finding:
+
+| rank | size | why every tactic declined |
+|---|---|---|
+| 1 | 1 | `F:ml430-nat-modeq-comm-24b71e7a` — `goal-head-is-not-eq-shaped`, `goal-does-not-unfold-to-an-eq-shaped-head`, `no-hypothesis-binder-to-classify` (the goal is an `Iff`; no tactic's precondition admits one) |
+| 2 | 1 | `F:ml430-nat-modeq-refl-d870c8f5` — `goal-head-is-not-eq-shaped`, `no-equation-shaped-hypothesis`, `no-hypothesis-binder-to-classify` (reflexivity has no hypothesis; every combinator precondition demands one) |
+
+The reach cross-check re-evaluates the catalog's own `accepted_goals`:
+`REACH|rows=21|evaluable=16|disagreements=7|initial_goal_disagreements=4`. Three
+are rows citing a `succ`-case sub-goal (a population mismatch, not a defect);
+**four are real** and are reported rather than repaired, because the catalog is
+another lane's file: `T:residual-lemma-splice` on both ascFactorial facts, and
+`T:modeq-equivalence-combinators` on `int-modeq-refl` (no hypothesis) and
+`int-modeq-comm` (an `Iff`). The last is the same shape as zero-match cluster 1
+seen from the other side: a tactic titled "eq-**iff** combinators" whose
+precondition admits only `Eq`.
+
+Must-decline sampling: `MUST_DECLINE|rows=9|evaluable=0|unevaluable=9|suspect=0`.
+None of the nine has an export, so **`suspect = 0` is "not looked at", not
+"clean"** — the command exits **2** in that state, distinct from 1 (a real
+suspect) and 0 (evaluated and clean).
+
+Facts A5 inherits:
+
+- **The largest measured cluster is not a tactic gap.** Any "which capability
+  removes the largest cluster?" dashboard must rank the export pipeline first,
+  or it is ranking the wrong axis. Nine exports for the must-decline rows are
+  the cheapest item on it: they turn a negative control that currently cannot
+  fail into one that can.
+- **`unevaluable` is an obstruction class, not an error.** It maps to
+  `retrieval-miss`, and this census sizes it at two orders of magnitude above
+  everything else.
+- The checker is `scripts/check-mobility-census.py` (standard library only, 39
+  mutation-verified guards, each killing exactly one test); `just check` and
+  `scripts/check.sh` validate the committed file and never regenerate it.
 
 ## Exit criteria for the plan
 

@@ -107,8 +107,16 @@ def test_a_checked_directory_that_held_nothing_is_not_a_pass(root, tmp_path) -> 
 
 
 def test_the_writer_refuses_a_verdict_this_slice_cannot_earn(root, episode) -> None:
+    """A schema v1 document cannot say `proved`, and the reason is structural.
+
+    v1 has no `checker_runs`, so rule 11 -- a `checked` tool call AND a checker
+    that exited 0 -- has nothing to stand on there. Slice A4 widened the
+    writer's verdict set, but only for `build_episode_v2`; `build_episode`
+    still refuses, because a version that quietly gained the ability to claim a
+    proof it cannot evidence would be worse than no version at all.
+    """
     document = json.loads(episode.read_text())
-    with pytest.raises(episode_api.EpisodeWriteError, match="not writable by slice A2"):
+    with pytest.raises(episode_api.EpisodeWriteError, match="schema v1 document"):
         episode_api.build_episode(
             root=root,
             commit=document["git_commit"],

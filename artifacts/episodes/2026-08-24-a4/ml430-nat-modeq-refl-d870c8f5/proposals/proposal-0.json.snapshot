@@ -1,0 +1,16 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "NotReflexiveGoal",
+  "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
+  "producer_id": "close_terminal",
+  "route": "general",
+  "sibling_fact_ids": [
+    "F:ml430-nat-coprime-symmetric-9b5cfa12",
+    "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+    "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3"
+  ],
+  "tactic_ids": [
+    "T:refl-closure"
+  ],
+  "why": "The goal is a terminal reflexive equality in the modular equivalence relation (a \u2261 a [MOD n]). The kernel has Nat.mod_eq_refl which directly proves this reflexivity property, making this closable by reflexivity."
+}

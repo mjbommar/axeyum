@@ -1,0 +1,136 @@
+{
+  "budgets": {
+    "cost_limit_usd": 1.0,
+    "input_tokens_limit": 400000,
+    "output_tokens_limit": 32000,
+    "request_limit": 10,
+    "tool_calls_limit": 16,
+    "wall_seconds": 600
+  },
+  "created_at": "2026-08-24T21:19:06Z",
+  "episode_id": "E:a4-ml430-nat-add-modeq-left-e3b1fba9",
+  "git_commit": "5e289fe8cfccab7ba6b230a73cacedf6a485a187",
+  "kind": "axeyum-agent-episode",
+  "observed": {
+    "facts_unlocked": [],
+    "operations_widened": [],
+    "overlay_links_proposed": []
+  },
+  "outcome": {
+    "axiom_footprint": [],
+    "checker_command": "",
+    "checker_exit_status": 0,
+    "checker_output_sha256": null,
+    "checker_runs": [],
+    "decline_class": "gate-refused",
+    "ledger_writes": 0,
+    "search_invocations": 0,
+    "target_theorem_submissions": 0,
+    "verdict": "declined"
+  },
+  "policy": {
+    "agent_code_sha256": "2b8ef777f0298c70b8668f62300f47ca1cdbc34f3aae27363494309f63cc3f97",
+    "library_versions": {
+      "anthropic": "1.0.0",
+      "axeyum": "0.1.0",
+      "httpx2": "2.12.0",
+      "pydantic": "2.13.4",
+      "pydantic-ai-slim": "2.33.0",
+      "pydantic-graph": "2.33.0",
+      "python": "3.12.13"
+    },
+    "model_id": "anthropic:claude-sonnet-4-5",
+    "prompt_hashes": {
+      "dispatch": "8eabdfdc4e1a4f6e90263ead7672d4abf95e5c4f603ca8fa91363dad4094ed70",
+      "gather": "85d42380264f5b6980ff0da34cd4622392c3e5679862b03b9eddbbd58a1ad742",
+      "instructions": "9aaf0f5b0df0c5a65578f8af6dae1e5d6bebeb3bf3b4fffe5e626c93ffbcb9cb",
+      "plan": "62038870861b2d6e3afb4fdfee95fe8a9bba4762d7d0bc5739f3b8b3109fed42"
+    },
+    "settings": {
+      "max_tokens": 8192,
+      "seed": null,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "toolset_sha256": "b9bbb2c0298fbeeb1ec693c8bc806b3aaa714674b47b6140a3e0396d69d10f9c"
+  },
+  "proposals": [
+    {
+      "assurance": "proposed",
+      "kind": "strategy",
+      "path": "artifacts/episodes/2026-08-24-a4/ml430-nat-add-modeq-left-e3b1fba9/proposals/proposal-0.json.snapshot",
+      "sha256": "82dc34eed8143037a2d4b6074ccd7c13b188c7aeeb1cfcf853a32c6f6f50cc73"
+    }
+  ],
+  "schema_version": 2,
+  "selection": {
+    "eligibility_reason": "development partition, epistemic_status open, dependency-ready with no unmet depends_on; fragment Nat is proof-route-only; 0 registered operation(s); selected from ledger sha256 ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1",
+    "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+    "fact_sha256": "18c9d952d0b4c8426c23c641c50a03750dcc88c23d2dde29669371b1738ec1b1",
+    "frontier_path": "artifacts/episodes/2026-08-24-a4/frontier.json.snapshot",
+    "frontier_sha256": "bce3d65e2e78c56c40d7058b92c0133d208c66710ba6ee9270189700e4508b7f",
+    "ledger_sha256": "ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1",
+    "partition": "development"
+  },
+  "transcript": {
+    "messages_path": "artifacts/episodes/2026-08-24-a4/ml430-nat-add-modeq-left-e3b1fba9/messages.json.snapshot",
+    "messages_sha256": "28690d44830fe6d8aad64ff967d8159338e57469bc7bd5ff52ec9975e110e852",
+    "tool_calls": [
+      {
+        "args_sha256": "f7c134092139a2657ea354348416195c0ff1bcde017e22e9f0a394e797b52de6",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 0,
+        "result_sha256": "2734f0e6270a25b23a6e346b311faa8e2e4fcf2cfdf37806216e4dec075cf65f",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "f7c134092139a2657ea354348416195c0ff1bcde017e22e9f0a394e797b52de6",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 1,
+        "result_sha256": "13ce91a4a0878fd4bf406617fbf71122a48df7c1f52cc5baac8a9c1ee0f1b88c",
+        "tool": "fact_neighbourhood"
+      },
+      {
+        "args_sha256": "f7c134092139a2657ea354348416195c0ff1bcde017e22e9f0a394e797b52de6",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 2,
+        "result_sha256": "34a0686c72e96e93d35aab23f1f543b485fc8ad6f92838ab78272108ced2ec95",
+        "tool": "operation_registry"
+      },
+      {
+        "args_sha256": "376a1fe1a4e653f8c9e3c22fc1e84260ad955615a4a3af87a061102b8be29abc",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 3,
+        "result_sha256": "622946e02142bf24242b759975243d7eb432df4139e7cbc0e074e917ab9d7bf7",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "468584aabd9fc42ef5eb6f5ed10e302ec598bba41a7ea89b27a7396cffdb2055",
+        "assurance": "read",
+        "duration_ms": 1,
+        "exit_status": 0,
+        "ordinal": 4,
+        "result_sha256": "22f0b4d3c5e83a2dd37d2383b7aba237a9d63feba1654895e49ee4dc7df0260a",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "4ed9e65d7b23f28b7f950bc87433b1ebb2a04c31b177f3441be0156ba235ea6a",
+        "assurance": "read",
+        "duration_ms": 2,
+        "exit_status": 0,
+        "ordinal": 5,
+        "result_sha256": "3b588cfce1cf626ffe612d259ffacd1ef79a72b99f5805f8011b8bc3fd4cbbf1",
+        "tool": "frontier_select"
+      }
+    ]
+  },
+  "web_snapshots": []
+}

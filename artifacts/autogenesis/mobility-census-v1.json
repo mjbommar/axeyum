@@ -1,0 +1,3026 @@
+{
+  "catalog_path": "artifacts/autogenesis/tactic-catalog-v1.json",
+  "catalog_sha256": "1d753a18084785dc038fd79bd10990498fa0b12bbce0fd5b1bbdfade9a48f935",
+  "export_coverage": {
+    "by_source": {
+      "agent-frozen-export-index-v1": 4
+    },
+    "open_facts_with_export": 4
+  },
+  "export_index_path": "artifacts/autogenesis/agent-frozen-export-index-v1.json",
+  "export_index_sha256": "c12ec48126644b8e35f771cfc8cc4045366d657a46a2d78351aa5c1c41409752",
+  "facts": [
+    {
+      "evaluable": false,
+      "fact_id": "F:continuum-hypothesis-independent",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "not-in-nursery",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:excluded-middle-not-intuitionistic",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "not-in-nursery",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:fermat-last-theorem",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "not-in-nursery",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:fol-validity-undecidable",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "not-in-nursery",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:fp16-add-monotone-rne",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "not-in-nursery",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:godel-first-incompleteness",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "not-in-nursery",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-fib-add-181b6a2c",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-fib-of-odd-66560495",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-fib-two-mul-0e70f3dd",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-fib-two-mul-add-two-0ba4a948",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-gcd-div-5e01872f",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-gcd-greatest-5b31c5fe",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-mod-modeq-6bec7847",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-modeq-add-left-6e17c69a",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-modeq-of-dvd-b9c41fce",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-modeq-of-mul-right-c92b7bf0",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-modeq-sub-3148f130",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-ne-zero-of-gcd-f71f00df",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-int-neg-modeq-neg-30d98479",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-mutation-48fe130e2b8eadb6f626b66f",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-mutation-5179f333b8333ecff8adc223",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-mutation-7afa5ec620720a1501bf349d",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-mutation-aabb80b1f89f0c5847364692",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-mutation-c86940b52af8159ca9b381d6",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-bitwise-comm-1a273bae",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-bitwise-swap-7175e90e",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-add-self-left-5e93448c",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-odd-of-left-ed80ab44",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-odd-of-right-8dc1decc",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-of-dvd-18fcd09f",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-of-dvd-6f652673",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-of-lt-prime-1978a919",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-one-left-iff-45945e80",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-primes-5769049f",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-self-add-left-51351fa1",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-self-add-right-966e5434",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-two-left-1b47e7c4",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-coprime-two-right-7c5a1850",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-even-xor-78a39432",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-factorial-le-d0f4a912",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-fib-lt-fib-3582b881",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-fib-mono-cc6afe09",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-fib-strictmonoon-905810a9",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-land-assoc-ad4775b8",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-land-bit-b9ab7475",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-land-comm-7e6ad72e",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-ldiff-bit-6be49bb8",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-le-fib-add-one-5284f0bf",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-le-fib-self-0cbccb4d",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-lor-assoc-82c4d0fd",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-lor-bit-a2f98c7c",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-lor-comm-2666d7ef",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-lt-of-testbit-72f64ab8",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-lt-xor-cases-c43a1e85",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-mod-lcm-ee6bdd41",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-mod-modeq-436e4c10",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-modeq-add-left-e83f0700",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-modeq-add-right-8e2ca0cc",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-modeq-add-right-cancel-e871facf",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": true,
+      "fact_id": "F:ml430-nat-modeq-comm-24b71e7a",
+      "goal_shape_sha256": "752d6442c7b8d3b4c68f0a924f58e6b4ccc922b2dcb445f4f4a0e10424ff56dd",
+      "goal_source": "agent-frozen-export-index-v1",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {},
+      "unmatched": {
+        "T:absorbing-argument-chaining": "goal-head-is-not-eq-shaped",
+        "T:absurd-elimination": "no-hypothesis-binder-to-classify",
+        "T:bounded-structural-induction": "goal-head-is-not-eq-shaped",
+        "T:case-split-elimination": "goal-head-is-not-eq-shaped",
+        "T:ih-congruence-rewrite": "goal-head-is-not-eq-shaped",
+        "T:modeq-equivalence-combinators": "goal-does-not-unfold-to-an-eq-shaped-head",
+        "T:refl-closure": "goal-head-is-not-eq-shaped",
+        "T:residual-lemma-splice": "goal-head-is-not-eq-shaped",
+        "T:split-congruence-generalization": "goal-head-is-not-eq-shaped"
+      }
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-modeq-dvd-iff-8f130450",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-modeq-gcd-eq-5167ff4f",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-modeq-of-dvd-d75cc374",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-modeq-of-mul-left-88d20bca",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-modeq-of-mul-right-43078e1c",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-modeq-one-516d46e8",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": true,
+      "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
+      "goal_shape_sha256": "6b30f449f696934839c4ad8dfc3a7370ff0dd76d84c1b3c9db2714b4cd372ab5",
+      "goal_source": "agent-frozen-export-index-v1",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {},
+      "unmatched": {
+        "T:absorbing-argument-chaining": "goal-head-is-not-eq-shaped",
+        "T:absurd-elimination": "no-hypothesis-binder-to-classify",
+        "T:bounded-structural-induction": "goal-head-is-not-eq-shaped",
+        "T:case-split-elimination": "goal-head-is-not-eq-shaped",
+        "T:ih-congruence-rewrite": "goal-head-is-not-eq-shaped",
+        "T:modeq-equivalence-combinators": "no-equation-shaped-hypothesis",
+        "T:refl-closure": "goal-head-is-not-eq-shaped",
+        "T:residual-lemma-splice": "goal-head-is-not-eq-shaped",
+        "T:split-congruence-generalization": "goal-head-is-not-eq-shaped"
+      }
+    },
+    {
+      "evaluable": true,
+      "fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
+      "goal_shape_sha256": "723fdb5a963bb58e56f05122e22dff409cd6053a8ce6bfb3821e18698ec5cdcc",
+      "goal_source": "agent-frozen-export-index-v1",
+      "matched": [
+        "T:modeq-equivalence-combinators"
+      ],
+      "mobility": 1,
+      "partition": "development",
+      "unevaluable": {},
+      "unmatched": {
+        "T:absorbing-argument-chaining": "goal-head-is-not-eq-shaped",
+        "T:absurd-elimination": "no-le-shaped-hypothesis",
+        "T:bounded-structural-induction": "goal-head-is-not-eq-shaped",
+        "T:case-split-elimination": "goal-head-is-not-eq-shaped",
+        "T:ih-congruence-rewrite": "goal-head-is-not-eq-shaped",
+        "T:refl-closure": "goal-head-is-not-eq-shaped",
+        "T:residual-lemma-splice": "goal-head-is-not-eq-shaped",
+        "T:split-congruence-generalization": "goal-head-is-not-eq-shaped"
+      }
+    },
+    {
+      "evaluable": true,
+      "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+      "goal_shape_sha256": "d6770067252ce637e24930fcb5050442b754bc3ce6e4c42df64b516766965665",
+      "goal_source": "agent-frozen-export-index-v1",
+      "matched": [
+        "T:modeq-equivalence-combinators"
+      ],
+      "mobility": 1,
+      "partition": "development",
+      "unevaluable": {},
+      "unmatched": {
+        "T:absorbing-argument-chaining": "goal-head-is-not-eq-shaped",
+        "T:absurd-elimination": "no-le-shaped-hypothesis",
+        "T:bounded-structural-induction": "goal-head-is-not-eq-shaped",
+        "T:case-split-elimination": "goal-head-is-not-eq-shaped",
+        "T:ih-congruence-rewrite": "goal-head-is-not-eq-shaped",
+        "T:refl-closure": "goal-head-is-not-eq-shaped",
+        "T:residual-lemma-splice": "goal-head-is-not-eq-shaped",
+        "T:split-congruence-generalization": "goal-head-is-not-eq-shaped"
+      }
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-prime-dvd-of-dvd-pow-e76f834a",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-prime-even-iff-d068ec82",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-prime-pred-pos-4e67ac4c",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-self-le-factorial-cfdffc69",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "train",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-succ-pred-prime-4feb123f",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-testbit-eq-inth-ffa07392",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-testbit-lor-7644e067",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    }
+  ],
+  "generated_by": "python -m axeyum.agent mobility",
+  "git_commit": "2f300656f1fdf91e1f94b31e430aa6760656ef02",
+  "holdout_policy": "Held-out fact ids are never written to this file. Held-out rows are counted in `totals.held_out_excluded` and in `partitions['held-out']` and appear nowhere else; the writer re-scans the serialized document for every held-out id before it lands.",
+  "kind": "axeyum-mobility-census",
+  "ledger_sha256": "ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1",
+  "must_decline_sampling": {
+    "evaluated": 0,
+    "rows": 9,
+    "suspect_facts": [],
+    "suspects": [],
+    "unevaluable": 9,
+    "unevaluable_reasons": {
+      "no-frozen-export": 9
+    }
+  },
+  "nursery_sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1",
+  "partitions": {
+    "development": {
+      "evaluable": 4,
+      "open": 78,
+      "unevaluable": 74,
+      "zero_match": 2
+    },
+    "held-out": {
+      "evaluable": 0,
+      "open": 57,
+      "unevaluable": 57,
+      "zero_match": 0
+    },
+    "not-in-nursery": {
+      "evaluable": 0,
+      "open": 6,
+      "unevaluable": 6,
+      "zero_match": 0
+    },
+    "train": {
+      "evaluable": 0,
+      "open": 50,
+      "unevaluable": 50,
+      "zero_match": 0
+    }
+  },
+  "schema_version": 1,
+  "semantics": {
+    "aggregation": "all_of; an unmatched predicate wins over an unevaluable one.",
+    "evaluation_point": "The fact's INITIAL goal, opened into its Pi telescope. Hypotheses are the leading Pi binders whose domain denotes a proposition.",
+    "goal_source": "A frozen, digest-pinned statement export resolved through agent.tools.resolve_export and imported with import_statement_ndjson. No goal is parsed from ledger text.",
+    "mid_derivation": "residual-gap-shape, and the candidate-argument/expected-argument sites of occurrence-embeds, describe a state that exists only after a move has run; at the initial goal they answer unevaluable('requires-mid-derivation-state').",
+    "shape": "sha256 of a canonical rendering of the goal with every binder NAME erased (mobility.canonical_shape)."
+  },
+  "tactics": [
+    {
+      "catalog_reach_accepted": 1,
+      "catalog_reach_declined": 1,
+      "distinct_goal_shapes_matched": 0,
+      "id": "T:absorbing-argument-chaining",
+      "kind": "rewrite",
+      "matched_fact_ids": [],
+      "matched_facts": 0,
+      "status": "active",
+      "title": "Chain an absorbing argument fact with the operator's own plain fact"
+    },
+    {
+      "catalog_reach_accepted": 2,
+      "catalog_reach_declined": 1,
+      "distinct_goal_shapes_matched": 0,
+      "id": "T:absurd-elimination",
+      "kind": "elimination",
+      "matched_fact_ids": [],
+      "matched_facts": 0,
+      "status": "active",
+      "title": "Close any goal from an uninhabitable order hypothesis"
+    },
+    {
+      "catalog_reach_accepted": 5,
+      "catalog_reach_declined": 2,
+      "distinct_goal_shapes_matched": 0,
+      "id": "T:bounded-structural-induction",
+      "kind": "induction",
+      "matched_fact_ids": [],
+      "matched_facts": 0,
+      "status": "active",
+      "title": "Induct on a zero/succ-shaped leading binder"
+    },
+    {
+      "catalog_reach_accepted": 1,
+      "catalog_reach_declined": 1,
+      "distinct_goal_shapes_matched": 0,
+      "id": "T:case-split-elimination",
+      "kind": "case-split",
+      "matched_fact_ids": [],
+      "matched_facts": 0,
+      "status": "active",
+      "title": "Consume both constructors of an order hypothesis at a succ index"
+    },
+    {
+      "catalog_reach_accepted": 3,
+      "catalog_reach_declined": 2,
+      "distinct_goal_shapes_matched": 0,
+      "id": "T:ih-congruence-rewrite",
+      "kind": "rewrite",
+      "matched_fact_ids": [],
+      "matched_facts": 0,
+      "status": "active",
+      "title": "Bridge a step case by one congruence rewrite driven by the induction hypothesis"
+    },
+    {
+      "catalog_reach_accepted": 4,
+      "catalog_reach_declined": 0,
+      "distinct_goal_shapes_matched": 2,
+      "id": "T:modeq-equivalence-combinators",
+      "kind": "combinator",
+      "matched_fact_ids": [
+        "F:ml430-nat-modeq-symm-0a3d4d18",
+        "F:ml430-nat-modeq-trans-ef9d1c46"
+      ],
+      "matched_facts": 2,
+      "status": "active",
+      "title": "Close a definitional equivalence relation with primitive Eq/Iff combinators"
+    },
+    {
+      "catalog_reach_accepted": 2,
+      "catalog_reach_declined": 1,
+      "distinct_goal_shapes_matched": 0,
+      "id": "T:refl-closure",
+      "kind": "closure",
+      "matched_fact_ids": [],
+      "matched_facts": 0,
+      "status": "active",
+      "title": "Close a terminal equality by reflexivity"
+    },
+    {
+      "catalog_reach_accepted": 2,
+      "catalog_reach_declined": 1,
+      "distinct_goal_shapes_matched": 0,
+      "id": "T:residual-lemma-splice",
+      "kind": "lemma-splice",
+      "matched_fact_ids": [],
+      "matched_facts": 0,
+      "status": "active",
+      "title": "Generalize the leftover gap into its own lemma and splice it with Eq.trans"
+    },
+    {
+      "catalog_reach_accepted": 1,
+      "catalog_reach_declined": 1,
+      "distinct_goal_shapes_matched": 0,
+      "id": "T:split-congruence-generalization",
+      "kind": "generalization",
+      "matched_fact_ids": [],
+      "matched_facts": 0,
+      "status": "active",
+      "title": "Generalize two collapsed occurrence sites independently, then re-specialize"
+    }
+  ],
+  "totals": {
+    "clusters": 2,
+    "evaluable": 4,
+    "held_out_evaluable": 0,
+    "held_out_excluded": 57,
+    "matched_pairs": 2,
+    "open_facts": 191,
+    "pairs": 1719,
+    "tactics": 9,
+    "unevaluable": 187,
+    "unevaluable_pairs": 1683,
+    "unmatched_pairs": 34,
+    "written_fact_rows": 134,
+    "zero_match_facts": 2
+  },
+  "unevaluable_reasons": {
+    "no-frozen-export": 187
+  },
+  "zero_match_clusters": [
+    {
+      "fact_ids": [
+        "F:ml430-nat-modeq-comm-24b71e7a"
+      ],
+      "reasons": [
+        "goal-does-not-unfold-to-an-eq-shaped-head",
+        "goal-head-is-not-eq-shaped",
+        "no-hypothesis-binder-to-classify"
+      ],
+      "size": 1
+    },
+    {
+      "fact_ids": [
+        "F:ml430-nat-modeq-refl-d870c8f5"
+      ],
+      "reasons": [
+        "goal-head-is-not-eq-shaped",
+        "no-equation-shaped-hypothesis",
+        "no-hypothesis-binder-to-classify"
+      ],
+      "size": 1
+    }
+  ]
+}

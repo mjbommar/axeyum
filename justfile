@@ -1384,3 +1384,26 @@ tactic-catalog-controls:
 episodes:
     python3 scripts/check-agent-episode.py artifacts/episodes
     python3 -m unittest scripts.tests.test_check_agent_episode
+
+# The mobility census gate (docs/python-2026-08/07-mobility-census.md, slice A7).
+#
+# Two steps, and neither regenerates. `python -m axeyum.agent mobility --write`
+# is what produces `artifacts/autogenesis/mobility-census-v1.json`; it needs the
+# compiled kernel and the frozen `/nas3` exports, so it is run deliberately by a
+# lane, never by a gate. A gate that regenerated its own subject would agree
+# with itself whatever the tree said.
+#
+# `check-mobility-census.py` recomputes the catalog, nursery and export-index
+# digests, string-walks the document for held-out ids, checks every fact id
+# against `artifacts/facts/`, and voids a census whose `evaluable` is 0. Every
+# guard is mutation-verified to kill exactly one test --
+# `python3 scripts/tests/mutation_controls.py mobility-census`.
+mobility-census:
+    python3 scripts/check-mobility-census.py
+    python3 -m unittest scripts.tests.test_check_mobility_census
+
+# Regenerate the mobility census. Needs `uv sync --dev --extra agent`, a built
+# `axeyum._native` (`uv run maturin develop`) and the frozen exports on this
+# host. NOT part of `just check`.
+mobility-census-regen:
+    uv run --no-sync python -m axeyum.agent mobility --write

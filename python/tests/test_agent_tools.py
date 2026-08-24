@@ -194,8 +194,10 @@ def test_overlay_query_filters_by_relation(ctx) -> None:
 
 
 def test_every_tool_declares_a_tier() -> None:
-    assert {f.__name__ for f in tools.TIER_R_TOOLS} == set(tools.TOOL_TIERS)
-    assert set(tools.TOOL_TIERS.values()) == {"read"}, "A2 ships tier R and nothing else"
+    declared = {f.__name__ for f in tools.TIER_R_TOOLS + tools.TIER_C_TOOLS}
+    assert declared == set(tools.TOOL_TIERS)
+    assert {tools.TOOL_TIERS[f.__name__] for f in tools.TIER_R_TOOLS} == {"read"}
+    assert {tools.TOOL_TIERS[f.__name__] for f in tools.TIER_C_TOOLS} == {"checked"}
 
 
 def test_the_toolset_exposes_exactly_the_six_read_tools() -> None:

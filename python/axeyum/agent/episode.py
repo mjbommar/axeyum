@@ -50,16 +50,36 @@ from ..knowledge import facts as facts_api
 from ..knowledge import frontier as frontier_api
 from ..knowledge import nursery as nursery_api
 from ..knowledge._paths import resolve_root
-from .models import ELIGIBLE_PARTITIONS, NoGeneralRoute, StrategyProposal, proposal_kind
+from .models import (
+    DECLINE_CLASSES,
+    ELIGIBLE_PARTITIONS,
+    NoGeneralRoute,
+    StrategyProposal,
+    proposal_kind,
+)
 from .tools import TOOL_TIERS, ToolCallRecord, is_output_tool, toolset_sha256
 
 SCHEMA_VERSION = 1
+SCHEMA_VERSION_V2 = 2
 KIND = "axeyum-agent-episode"
 
-#: The verdicts slice A2 may write. `proved` needs a `checked` tool call and the
-#: C tier does not exist yet; `error` is reserved for a run that failed, which is
-#: raised rather than recorded so it cannot be mistaken for a finding.
-A2_VERDICTS = ("declined", "budget-exhausted")
+#: The verdicts this writer may produce, widened by slice A4 to include
+#: `proved`.
+#:
+#: The widening is CONDITIONAL and the condition is checked here, at write time,
+#: not left to the gate: `proved` requires at least one `checked` tool call and
+#: at least one checker run that exited 0 (rule 11). A writer that could emit
+#: `proved` on a run that dispatched nothing would be the "checker that cannot
+#: fail" defect moved one step upstream -- into the thing the checker reads.
+#:
+#: `error` is still absent. A run that failed is raised, not recorded, so a
+#: crash cannot be mistaken for a finding.
+A2_VERDICTS = ("declined", "budget-exhausted", "proved")
+
+#: What a schema v1 document may say. Unchanged, deliberately: a v1 episode has
+#: no `checker_runs`, so rule 11 has nothing to stand on there and `proved`
+#: would be a claim the document cannot support.
+V1_VERDICTS = ("declined", "budget-exhausted")
 
 #: Sidecars are named `*.json.snapshot`, NOT `*.json`, and the reason is
 #: mechanical: `check-agent-episode.py` walks a directory argument with
@@ -404,10 +424,11 @@ def build_episode(
     created_at: str | None = None,
 ) -> dict[str, Any]:
     """Assemble the document. Every refusal here is a refusal to lie in a file."""
-    if verdict not in A2_VERDICTS:
+    if verdict not in V1_VERDICTS:
         raise EpisodeWriteError(
-            f"verdict {verdict!r} is not writable by slice A2 (dispatches nothing); "
-            f"admissible: {list(A2_VERDICTS)}"
+            f"verdict {verdict!r} is not writable into a schema v1 document (which "
+            f"dispatches nothing and has no checker_runs to support rule 11); "
+            f"admissible: {list(V1_VERDICTS)}. Use build_episode_v2"
         )
     if partition not in ELIGIBLE_PARTITIONS:
         raise EpisodeWriteError(
@@ -478,6 +499,148 @@ def build_episode(
     }
 
 
+def proved_is_supported(
+    tool_calls: list[dict[str, Any]],
+    checker_runs: list[dict[str, Any]],
+) -> tuple[bool, str]:
+    """Whether this run may be recorded as `proved`, and why not when it may not.
+
+    Rule 11, stated once and enforced twice: here, so a document claiming
+    `proved` without support cannot be BUILT, and again in
+    `scripts/check-agent-episode.py`, so one that was built elsewhere cannot be
+    ADMITTED. The two are deliberately not the same code -- the gate is stdlib
+    only and never imports this package -- and a test cross-checks that they
+    agree.
+
+    Both halves are required and neither implies the other. A `checked` tool
+    call without a passing checker is a producer nobody re-validated; a passing
+    checker without a `checked` call is a checker that ran against nothing this
+    episode did.
+    """
+    checked = [c for c in tool_calls if c.get("assurance") == "checked"]
+    passed = [r for r in checker_runs if r.get("exit_status") == 0]
+    if not checked:
+        return (
+            False,
+            "no tool call carries assurance='checked'; the C tier is the only route to proved",
+        )
+    if not passed:
+        return (False, "no checker run exited 0; a proof nobody re-validated is not proved")
+    return (True, "")
+
+
+def build_episode_v2(
+    *,
+    root: Path,
+    commit: str,
+    fact_id: str,
+    frontier: frontier_api.Frontier,
+    frontier_path: Path,
+    partition: str,
+    model_id: str,
+    settings: dict[str, Any],
+    prompt_hashes: dict[str, str],
+    budgets: Budgets,
+    messages_path: str,
+    messages_sha256: str,
+    tool_calls: list[dict[str, Any]],
+    proposal_rows: list[dict[str, Any]],
+    verdict: str,
+    decline_class: str | None,
+    checker_runs: list[dict[str, Any]] | None = None,
+    axiom_footprint: list[str] | None = None,
+    observed: dict[str, Any] | None = None,
+    created_at: str | None = None,
+) -> dict[str, Any]:
+    """Assemble a schema v2 document. Every refusal here is a refusal to lie in a file.
+
+    The v1 singular checker fields are filled from the FIRST recorded run, which
+    is by construction the independent kernel re-check, so every v1 rule still
+    bites on a v2 document instead of being skipped by the version dispatch.
+    """
+    checker_runs = list(checker_runs or [])
+    if verdict not in A2_VERDICTS:
+        raise EpisodeWriteError(
+            f"verdict {verdict!r} is not writable; admissible: {list(A2_VERDICTS)}"
+        )
+    if verdict == "proved":
+        supported, why = proved_is_supported(tool_calls, checker_runs)
+        if not supported:
+            raise EpisodeWriteError(f"refusing to record verdict 'proved': {why}")
+    if decline_class is not None and decline_class not in DECLINE_CLASSES:
+        raise EpisodeWriteError(
+            f"decline_class {decline_class!r} is not in the v2 taxonomy; the enum is "
+            f"seeded from AG4.1 and a free string is a taxonomy nobody can aggregate"
+        )
+    if partition not in ELIGIBLE_PARTITIONS:
+        raise EpisodeWriteError(
+            f"partition {partition!r} is not recordable; the schema admits "
+            f"{list(ELIGIBLE_PARTITIONS)} and nothing else"
+        )
+    if not tool_calls:
+        raise EpisodeWriteError(
+            "transcript.tool_calls is empty; a run that called nothing is not a clean decline"
+        )
+    entry = frontier.entry(fact_id)
+    fact_sha256 = entry.fact_sha256
+    if not fact_sha256:
+        raise EpisodeWriteError(f"the frontier carries no fact_sha256 for {fact_id}")
+    ledger_sha256 = str(frontier.ledger.get("ledger_sha256", ""))
+    if not ledger_sha256:
+        raise EpisodeWriteError("the frontier carries no ledger digest; selection is unpinnable")
+    primary = checker_runs[0] if checker_runs else None
+    return {
+        "schema_version": SCHEMA_VERSION_V2,
+        "kind": KIND,
+        "episode_id": episode_id_for(fact_id, "a4"),
+        "git_commit": commit,
+        "created_at": created_at or now_utc(),
+        "selection": {
+            "frontier_sha256": frontier.frontier_sha256,
+            "frontier_path": repo_relative(frontier_path, root),
+            "ledger_sha256": ledger_sha256,
+            "fact_id": fact_id,
+            "fact_sha256": fact_sha256,
+            "partition": partition,
+            "eligibility_reason": eligibility_reason(entry, partition, ledger_sha256),
+        },
+        "policy": {
+            "model_id": model_id,
+            "settings": settings,
+            "prompt_hashes": prompt_hashes,
+            "toolset_sha256": toolset_sha256(),
+            "agent_code_sha256": agent_code_sha256(),
+            "library_versions": library_versions(),
+        },
+        "budgets": budgets.as_document(),
+        "transcript": {
+            "messages_sha256": messages_sha256,
+            "messages_path": messages_path,
+            "tool_calls": tool_calls,
+        },
+        "web_snapshots": [],
+        "proposals": proposal_rows,
+        "outcome": {
+            "verdict": verdict,
+            "decline_class": decline_class,
+            "checker_command": str(primary["command"]) if primary else "",
+            "checker_exit_status": int(primary["exit_status"]) if primary else 0,
+            "checker_output_sha256": (primary or {}).get("output_sha256"),
+            "checker_runs": checker_runs,
+            "axiom_footprint": list(axiom_footprint or []),
+            "ledger_writes": 0,
+            "search_invocations": sum(1 for c in tool_calls if c.get("assurance") == "checked"),
+            "target_theorem_submissions": 0,
+        },
+        "observed": observed
+        or {
+            "facts_unlocked": [],
+            "operations_widened": [],
+            "overlay_links_proposed": [],
+        },
+    }
+
+
 def write_episode(document: dict[str, Any], directory: Path, root: Path) -> Path:
     """Write the episode document, refusing anything that would carry a blind id."""
     directory.mkdir(parents=True, exist_ok=True)
@@ -512,13 +675,16 @@ __all__ = [
     "A2_VERDICTS",
     "KIND",
     "SCHEMA_VERSION",
+    "SCHEMA_VERSION_V2",
     "SNAPSHOT_SUFFIX",
+    "V1_VERDICTS",
     "Budgets",
     "EpisodeWriteError",
     "HeldOutLeak",
     "agent_code_sha256",
     "assert_no_held_out",
     "build_episode",
+    "build_episode_v2",
     "canonical",
     "eligibility_reason",
     "episode_id_for",
@@ -528,6 +694,7 @@ __all__ = [
     "library_versions",
     "now_utc",
     "project_tool_calls",
+    "proved_is_supported",
     "repo_relative",
     "save_frontier",
     "sha256_bytes",

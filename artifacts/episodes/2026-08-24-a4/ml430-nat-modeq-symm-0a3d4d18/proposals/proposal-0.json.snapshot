@@ -1,0 +1,16 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "MissingPremise",
+  "fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
+  "producer_id": "close_terminal",
+  "route": "general",
+  "sibling_fact_ids": [
+    "F:ml430-nat-modeq-refl-d870c8f5",
+    "F:ml430-nat-modeq-trans-ef9d1c46",
+    "F:ml430-nat-coprime-symmetric-9b5cfa12"
+  ],
+  "tactic_ids": [
+    "T:modeq-equivalence-combinators"
+  ],
+  "why": "The goal is a definitional equivalence relation property (ModEq symmetry) that can be closed directly using primitive Eq/Iff combinators, since Nat.mod_eq_symm exists in the kernel prelude providing the underlying modEq symmetry."
+}
