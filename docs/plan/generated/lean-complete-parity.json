@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "5ec01789cff0ef72a6c0d5ecf9b57d995edfd9604a5e387a24c293a778c060fb"
+      "sha256": "c488877ce936a446b2171429ba501e6440b4f5fb309773504c8effbdf52097b3"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -44,7 +44,7 @@
     },
     {
       "path": "docs/plan/lean-axiom-ledger-v1.json",
-      "sha256": "510f3e81cf25093a45cd99656ab5c64b0bc386f49f9bbd56fd41d63d05133ac5"
+      "sha256": "1324c5219a1fd04d66897fb2b05af528592cfdcd6a95761b3ccd7f53dec0ef04"
     },
     {
       "path": "docs/plan/lean-compatibility-v1.json",
@@ -666,15 +666,15 @@
       "scope": "selected-family bounded evidence; not terminal paired cells"
     },
     "axiom_ledger": {
-      "rows": 31,
+      "rows": 30,
       "classifications": {
         "derivable-theorem": 3,
         "external-assumption": 19,
-        "primitive-interface": 9
+        "primitive-interface": 8
       },
       "discharge_statuses": {
         "planned": 3,
-        "retained": 28
+        "retained": 27
       }
     },
     "u2_test_authority": {
