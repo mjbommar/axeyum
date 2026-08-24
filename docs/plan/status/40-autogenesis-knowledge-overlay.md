@@ -74,3 +74,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `d3f715af3` | Refresh the generated coverage census after receipt-identity repair: all nine formally mapped facts now have complete hash-bound transport chains |
 | 2026-08-24 | `c9bb67b5a` | Pre-register the general-producer evaluation funnel, stages, decline taxonomy, control-void rule, and forbidden-input boundary before execution |
 | 2026-08-24 | `432dcef75` | Add the fail-closed future-result schema and validator that requires complete safe-frontier accounting and rejects accepted false controls |
+| 2026-08-24 | `9aa74f0d3` | Gate the producer-result contract's mutation tests in the aggregate knowledge checks without fabricating an execution result |

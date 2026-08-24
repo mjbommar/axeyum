@@ -142,6 +142,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `d3f715af3` | Refresh the generated coverage census after receipt-identity repair: all nine formally mapped facts now have complete hash-bound transport chains |
 | 2026-08-24 | `c9bb67b5a` | Pre-register the general-producer evaluation funnel, stages, decline taxonomy, control-void rule, and forbidden-input boundary before execution |
 | 2026-08-24 | `432dcef75` | Add the fail-closed future-result schema and validator that requires complete safe-frontier accounting and rejects accepted false controls |
+| 2026-08-24 | `9aa74f0d3` | Gate the producer-result contract's mutation tests in the aggregate knowledge checks without fabricating an execution result |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
