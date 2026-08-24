@@ -171,6 +171,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `12eccad97` | Cramer in the ledger, named for the direction it proves. Existence is **not** proved — only that a solution must equal the quotient — and `notes` leads with that. Two things a reader would otherwise infer wrongly: the nonzero-determinant hypothesis cannot be made implicit (`Rat.inv` is total, so the statement without it is *false*, not ill-formed); and **`Rat.adj2` is not reified because this kernel has no tuple type** — a limit of the kernel, not a shortcut. |
 | 2026-08-24 | `e332ecfbd` | **Wilson's converse — primality becomes an IFF, constructively.** `Int.wilson_iff : ∀ n, 2 ≤ n → (Prime n ↔ (n−1)! ≡ −1 [n])`. I warned this might only be provable as the contrapositive: primality here is `2 ≤ n ∧ ∀d, d∣n → d=1∨d=n`, so one cannot conclude it by contradiction from not-prime. The lane did not need the fallback — `Nat.lt_or_eq_of_le` gives a genuine constructive disjunction on `d ≤ n`. **And the decidability that mattered was not the one I named**: I pointed at decidable `Nat` *equality*; the proof needed decidable `Nat` *order*, already in scope through `NatOps`. Seventh briefed premise today corrected by a lane reading the source. `Int.dvd_factorial_of_le` had to be proved by direct induction rather than transported from ℕ — `Int.factorial n` and `ofNat (Nat.factorial n)` are **not definitionally equal**, since `Int.factorial` unfolds through `Int.prodRange`. 410 lines against ten lanes for the forward direction. `derived_laws` 115 → 118. |
 | 2026-08-24 | (rejected, NOT landed) | **A lane committed two derivative witnesses verified only by `cargo check --lib`, and the kernel rejects them.** `hasDerivative_neg`/`hasDerivative_add` compiled and were hand-verified term-by-term against real lemma signatures read from the proof-construction code — and `build_creal_prelude` fails: **2 passed, 100 failed**, cascading through `creal_point`, `prelude_cache`, `creal_model`. I reproduced it in my own checkout before believing either report, and reverted; nothing broken reached the branch. **Root cause of the process failure: the real gate is slow** (550 s under contention), which is what tempts an agent to background it. The lane's own ranked risk list puts a sign bug it had already caught once in `hasDerivative_neg` Step 1 — sent back to run it down, with the instruction not to pipe the diagnostic through `tail`, which is why it had raw session-local `ExprId` indices instead of the rendered mismatch. Confirmed separately: **`Rat.natDivSucc_antitone` WAS the real blocker** — the lane traced the obligation and it is applied twice, once per side. |
+| 2026-08-24 | `2f300656f` | Plan 03 A4: schema v2, deferred checker tools, model-free `Supervise`, independent second-kernel `Check`, holdout gate over episodes; live run proved `Nat.ModEq` refl and symm axiom-free (digests new to the ledger), $1.55; 94 tests |
 | 2026-08-24 | `0ba7eaac3` | Frontier agent (plan 03 A2): `[agent]` extra, six read-only partition-filtering tools, `Select -> Gather -> Plan -> WriteEpisode` graph, replay; ten live episodes ($1.635), 8/8 `NoGeneralRoute`; 86 tests |
 | 2026-08-24 | `0f64b8951` | Episode schema + fail-closed `check-agent-episode.py` (A1, 15 mutation-verified guards) and tactic catalog v1 with a dispatch-table-rejecting validator (A3, 13 guards) |
 | 2026-08-24 | `d27f86f5e` | Producers promoted to `axeyum-lean-import::producers` (byte-identical driver output, committed `proof_sha256` reproduced) and bound as `axeyum.producers` with typed `Declined` reasons; 46 tests |
@@ -3404,21 +3405,22 @@ school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
-[`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01 and 02
-are landed on `main` (`smt`, `ir`, `solver`, `cas`/`certify`, `kernel`,
-`producers`, `knowledge`; 796 tests). Plan 03: A1 (episode schema +
-fail-closed checker, 15 guards each killing one test), A3 (tactic catalog
-v1, 9 tactics / 9 precondition shapes / 31 sourced reach rows, validator
-fails on a one-shape catalog) and A2 (the frontier agent: six
-partition-filtering read-only tools, a dispatch-free `pydantic-graph`
-loop, replay with model requests disabled) are landed. **Measured
-baseline:** ten live Sonnet-4.5 episodes, $1.635, `checked=12|ok=12`, and
-8 of 8 completed plans emitted `NoGeneralRoute` -- the model never claimed
-a general route over the current catalog. Next: A4 -- schema v2
-(`checker_runs[]`, `ledger_sha256`), the two checker tools behind
-`requires_approval`, `Gate`/`Dispatch`/`Check` nodes, and the first
-autonomously planned, kernel-checked theorem; then A5 (typed declines to
-the AG4.1 taxonomy) and A7 (the mobility census over all open facts).
+[`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01, 02 and
+03 A1-A4 are landed on `main`. **The loop has closed:** on a live run, the
+agent selected two open facts (`F:ml430-nat-modeq-refl-d870c8f5`,
+`F:ml430-nat-modeq-symm-0a3d4d18`), chose a producer from the tactic
+catalog, dispatched it behind a deferred approval, and an independent
+second kernel re-derived both proofs axiom-free -- digests absent from
+every committed manifest, so they are results the ledger does not have
+(957 tests; 20/20 episodes pass the fail-closed checker; ledger untouched).
+The ledger transition itself is blocked on a human decision: no registered
+authoritative operation covers the `Nat.ModEq` family, and a transaction is
+derivable only from one plus an execution receipt. Measured bottleneck: only
+3 of 98 eligible facts have a frozen Lean export (the s5 export step, not
+the producers). Next: A5 (typed declines to the AG4.1 obstruction graph),
+A7 (the mobility census -- every tactic precondition against every open
+fact without running a producer), and the export-coverage question raised
+above.
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
