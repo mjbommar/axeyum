@@ -747,6 +747,17 @@ pub struct IntPrelude {
     /// mathematical content) transported across the index/residue
     /// correspondence `a := ofNat(k+1)`.
     pub inverse_index_fixed_point: NameId,
+    /// `Nat.inverseIndex_involutive :
+    /// ∀ p k, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) → Lt k (p-1) →
+    ///   Eq Nat (inverseIndex p (inverseIndex p k)) k` — `σ := Nat.inverseIndex
+    /// p` is its own inverse: applying it twice returns the original index,
+    /// for every `k`, fixed points included. Built the same way as
+    /// [`Self::inverse_index_fixed_point`]: [`Self::mul_inv_of_pow`] applied
+    /// at both `k`'s own residue and its image, glued by
+    /// [`Self::mod_eq_inverse_unique`] (both residues are inverses of the
+    /// *same* value, hence congruent to each other, hence — being canonical
+    /// representatives in `[0,p)` — literally equal).
+    pub inverse_index_involutive: NameId,
     /// `factorial_sq_modeq_one :
     /// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
     ///   ModEq (ofNat p) (mul (factorial (p-1)) (factorial (p-1))) one` —
@@ -942,6 +953,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         inverse_index_maps_into: kernel.name_str(nat_root, "inverseIndex_maps_into"),
         inverse_index_injective: kernel.name_str(nat_root, "inverseIndex_injective"),
         inverse_index_fixed_point: kernel.name_str(nat_root, "inverseIndex_fixed_point"),
+        inverse_index_involutive: kernel.name_str(nat_root, "inverseIndex_involutive"),
         factorial_sq_modeq_one: child(kernel, "factorial_sq_modeq_one"),
     }
 }
@@ -1087,6 +1099,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         wilson::declare_inverse_index_maps_into(&mut d)?;
         wilson::declare_inverse_index_injective(&mut d)?;
         wilson::declare_inverse_index_fixed_point(&mut d)?;
+        wilson::declare_inverse_index_involutive(&mut d)?;
         wilson::declare_factorial_sq_modeq_one(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;

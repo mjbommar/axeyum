@@ -118,6 +118,15 @@ fn every_theorem_here_is_axiom_free() {
         ("cross_self_left", p.cross_self_left),
         ("cross_self_right", p.cross_self_right),
         ("cross_swap_bc", p.cross_swap_bc),
+        (
+            "circumcentre_difference_dots",
+            p.circumcentre_difference_dots,
+        ),
+        (
+            "cross_annihilates_difference",
+            p.cross_annihilates_difference,
+        ),
+        ("circumcentre_unique", p.circumcentre_unique),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -1393,5 +1402,70 @@ fn non_collinear_statement_is_exact() {
         rendered,
         "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : AxNat) -> \
          Prop))))"
+    );
+}
+
+/// **Two circumcentres' difference is orthogonal to every side.** See
+/// [`CPointPrelude::circumcentre_difference_dots`]. `x0,x1,x2,x3,x4 =
+/// O,O',A,B,C`.
+#[test]
+fn circumcentre_difference_dots_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.circumcentre_difference_dots)
+        .expect("circumcentre_difference_dots must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : CPoint) -> ((x5 : CReal.Equiv (CPoint.distSq x0 x2) (CPoint.distSq x0 x3)) -> ((x6 : CReal.Equiv (CPoint.distSq x0 x3) (CPoint.distSq x0 x4)) -> ((x7 : CReal.Equiv (CPoint.distSq x1 x2) (CPoint.distSq x1 x3)) -> ((x8 : CReal.Equiv (CPoint.distSq x1 x3) (CPoint.distSq x1 x4)) -> And (CReal.Equiv (CPoint.dot (CPoint.sub x0 x1) (CPoint.sub x3 x2)) CReal.zero) (CReal.Equiv (CPoint.dot (CPoint.sub x0 x1) (CPoint.sub x4 x3)) CReal.zero))))))))))"
+    );
+}
+
+/// **The 2×2 elimination.** See
+/// [`CPointPrelude::cross_annihilates_difference`]. `x0,x1,x2,x3 = V,A,B,C`.
+#[test]
+fn cross_annihilates_difference_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.cross_annihilates_difference)
+        .expect("cross_annihilates_difference must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : CReal.Equiv (CPoint.dot x0 (CPoint.sub x2 x1)) CReal.zero) -> ((x5 : CReal.Equiv (CPoint.dot x0 (CPoint.sub x3 x2)) CReal.zero) -> And (CReal.Equiv (CReal.mul (CPoint.x x0) (CPoint.cross x1 x2 x3)) CReal.zero) (CReal.Equiv (CReal.mul (CPoint.y x0) (CPoint.cross x1 x2 x3)) CReal.zero)))))))"
+    );
+}
+
+/// **The headline: three non-collinear points determine a unique
+/// circumcentre.** See [`CPointPrelude::circumcentre_unique`]. `x0,...,x5 =
+/// k,A,B,C,O,O'`.
+#[test]
+fn circumcentre_unique_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.circumcentre_unique)
+        .expect("circumcentre_unique must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : AxNat) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : CPoint) -> ((x5 : CPoint) -> ((x6 : CPoint.NonCollinear x1 x2 x3 x0) -> ((x7 : CReal.Equiv (CPoint.distSq x4 x1) (CPoint.distSq x4 x2)) -> ((x8 : CReal.Equiv (CPoint.distSq x4 x2) (CPoint.distSq x4 x3)) -> ((x9 : CReal.Equiv (CPoint.distSq x5 x1) (CPoint.distSq x5 x2)) -> ((x10 : CReal.Equiv (CPoint.distSq x5 x2) (CPoint.distSq x5 x3)) -> CPoint.Equiv x4 x5)))))))))))"
     );
 }

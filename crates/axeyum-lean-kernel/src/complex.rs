@@ -276,6 +276,20 @@ pub struct ComplexPrelude {
     /// no analysis in it, once expanded.
     pub norm_sq_mul: NameId,
 
+    /// `Complex.normSq_pow : ∀ z (n : Nat), CReal.Equiv (normSq (pow z n))
+    /// (CReal.pow (normSq z) n)` — the norm commutes with integer powers.
+    ///
+    /// Induction on `n`, mirroring [`Self::pow_add`]'s own shape: the base
+    /// case reduces `normSq (pow z Nat.zero)` to `normSq Complex.one` by iota
+    /// alone and closes the resulting `CReal` algebraic identity `one·one +
+    /// zero·zero ~ one` with the ring calculus (the same move
+    /// [`Self::i_is_fourth_root`] uses); the step chains [`Self::norm_sq_mul`]
+    /// against the inductive hypothesis via `CReal.mul_congr`, landing
+    /// exactly on `CReal.pow (normSq z) (Nat.succ j)`'s own iota-reduced
+    /// shape (`CReal.mul (CReal.pow (normSq z) j) (normSq z)`) with no
+    /// closing rearrangement needed.
+    pub norm_sq_pow: NameId,
+
     /// `Complex.normSq_eq_zero_of_eq_zero : ∀ z, Equiv z zero →
     /// CReal.Equiv (normSq z) CReal.zero` — the **easy** half of
     /// `normSq z ~ 0 ↔ z ~ 0`.
@@ -626,6 +640,19 @@ pub struct ComplexPrelude {
     /// Induction on `n`, mirroring `Nat.sumRange_congr_lt`'s own proof shape
     /// (`nat_prelude/binomial.rs::declare_sum_range_congr_lt`).
     pub sum_range_congr_lt: NameId,
+    /// `Complex.sumRange_split : ∀ f m n, Equiv (sumRange f (Nat.add m n))
+    /// (add (sumRange f m) (sumRange (fun k => f (Nat.add m k)) n))`.
+    ///
+    /// ℝ already has this ([`CRealPrelude::sum_range_split`]); ℂ did not.
+    /// Induction on `n`, mirroring `CReal.sumRange_split`'s own proof shape
+    /// (`creal/series.rs::declare_sum_range_split`) verbatim with every step
+    /// promoted from `CReal.Equiv` to `Complex.Equiv`: both cases close
+    /// purely by `Nat.add`'s own iota-reduction (`add m Nat.zero ≡ m`, `add m
+    /// (Nat.succ j) ≡ Nat.succ (add m j)`) plus one
+    /// [`Self::add_zero`]/[`Self::add_assoc`] respectively — no ring calculus
+    /// needed, the same reason the `CReal` original needs none. This is what
+    /// turns any statement about a series tail into one about partial sums.
+    pub sum_range_split: NameId,
 
     // --- the binomial theorem -----------------------------------------------
     /// `Complex.add_pow : ∀ a b n, Equiv (pow (add a b) n) (sumRange (fun k =>
@@ -824,6 +851,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         norm_sq_nonneg: kernel.name_str(complex, "normSq_nonneg"),
         norm_sq_conj: kernel.name_str(complex, "normSq_conj"),
         norm_sq_mul: kernel.name_str(complex, "normSq_mul"),
+        norm_sq_pow: kernel.name_str(complex, "normSq_pow"),
         norm_sq_eq_zero_of_eq_zero: kernel.name_str(complex, "normSq_eq_zero_of_eq_zero"),
         eq_zero_of_norm_sq_eq_zero: kernel.name_str(complex, "eq_zero_of_normSq_eq_zero"),
         norm_sq_eq_zero_iff: kernel.name_str(complex, "normSq_eq_zero_iff"),
@@ -863,6 +891,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         sum_range_add: kernel.name_str(complex, "sumRange_add"),
         sum_range_shift_front: kernel.name_str(complex, "sumRange_shiftFront"),
         sum_range_congr_lt: kernel.name_str(complex, "sumRange_congr_lt"),
+        sum_range_split: kernel.name_str(complex, "sumRange_split"),
         add_pow: kernel.name_str(complex, "add_pow"),
         is_root_of_unity: kernel.name_str(complex, "IsRootOfUnity"),
         one_is_root_of_unity: kernel.name_str(complex, "one_is_root_of_unity"),
@@ -932,6 +961,7 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_pow(&mut d, prelude)?;
         declare_pow_equations(&mut d, prelude)?;
         declare_pow_add(&mut d, prelude)?;
+        declare_norm_sq_pow(&mut d, prelude)?;
         declare_sum_range(&mut d, prelude)?;
         declare_sum_range_equations(&mut d, prelude)?;
         declare_sum_range_congr(&mut d, prelude)?;
@@ -945,6 +975,7 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_sum_range_add(&mut d, prelude)?;
         declare_sum_range_shift_front(&mut d, prelude)?;
         declare_sum_range_congr_lt(&mut d, prelude)?;
+        declare_sum_range_split(&mut d, prelude)?;
         declare_add_pow(&mut d, prelude)?;
         declare_is_root_of_unity(&mut d, prelude)?;
         declare_one_is_root_of_unity(&mut d, prelude)?;
@@ -4193,6 +4224,102 @@ fn declare_pow_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelEr
     })
 }
 
+/// `Complex.normSq_pow : ∀ z (n : Nat), CReal.Equiv (normSq (pow z n))
+/// (CReal.pow (normSq z) n)`.
+///
+/// Induction on `n` via [`NatOps::induct`], mirroring [`declare_pow_add`]'s
+/// own shape but over `CReal.Equiv`: the base case's goal is, up to iota
+/// (`pow z Nat.zero ≡ Complex.one`, `CReal.pow (normSq z) Nat.zero ≡
+/// CReal.one`), the pure ring identity `CReal.Equiv (CReal.add (CReal.mul
+/// CReal.one CReal.one) (CReal.mul CReal.zero CReal.zero)) CReal.one` —
+/// `normSq Complex.one` unfolded through `Complex.one`'s own `(one, zero)`
+/// pair — closed by [`ring_proof`] exactly as [`ComplexPrelude::i_is_fourth_root`]
+/// closes its own fully-iota-reduced product. The step chains
+/// [`ComplexPrelude::norm_sq_mul`] (`normSq (mul (pow z j) z) ~ normSq (pow z
+/// j) · normSq z`) against the inductive hypothesis via `CReal.mul_congr`,
+/// landing exactly on `CReal.pow (normSq z) (Nat.succ j)`'s own iota-reduced
+/// shape (`CReal.mul (CReal.pow (normSq z) j) (normSq z)`) with no closing
+/// rearrangement needed — the same "no fresh estimate" shape
+/// [`ComplexPrelude::root_of_unity_pow`]'s own `pow_mul`-based proof has.
+fn declare_norm_sq_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let pow_z_x = d.const_app(p.pow, &[z, x]);
+        let norm_pow = d.const_app(p.norm_sq, &[pow_z_x]);
+        let norm_z = d.const_app(p.norm_sq, &[z]);
+        let pow_norm = d.const_app(creal.pow, &[norm_z, x]);
+        ceq(d, creal, norm_pow, pow_norm)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let lhs = RExpr::add(
+                RExpr::mul(RExpr::One, RExpr::One),
+                RExpr::mul(RExpr::Zero, RExpr::Zero),
+            );
+            let rhs = RExpr::One;
+            ring_proof(d, creal, &lhs, &rhs)
+        },
+        &|d, j, ih| {
+            // ih : CReal.Equiv (normSq (pow z j)) (CReal.pow (normSq z) j)
+            let pow_z_j = d.const_app(p.pow, &[z, j]);
+            let norm_pow_j = d.const_app(p.norm_sq, &[pow_z_j]);
+            let norm_z = d.const_app(p.norm_sq, &[z]);
+            let pow_norm_j = d.const_app(creal.pow, &[norm_z, j]);
+
+            // start = normSq (mul (pow z j) z), which is `normSq (pow z
+            // (succ j))` up to iota.
+            let mul_pow_z = d.const_app(p.mul, &[pow_z_j, z]);
+            let start = d.const_app(p.norm_sq, &[mul_pow_z]);
+
+            // Step 1: normSq (mul (pow z j) z) ~ CReal.mul (normSq (pow z j))
+            // (normSq z), via `norm_sq_mul`.
+            let h1 = d.lemma(p.norm_sq_mul, &[pow_z_j, z]);
+            let mid = cmul(d, creal, norm_pow_j, norm_z);
+
+            // Step 2: CReal.mul (normSq (pow z j)) (normSq z) ~
+            // CReal.mul (CReal.pow (normSq z) j) (normSq z), via `ih`.
+            let refl_norm_z = crefl(d, creal, norm_z);
+            let h2 = d.lemma(
+                creal.mul_congr,
+                &[norm_pow_j, pow_norm_j, norm_z, norm_z, ih, refl_norm_z],
+            );
+            // end = CReal.mul (CReal.pow (normSq z) j) (normSq z), which is
+            // `CReal.pow (normSq z) (succ j)` up to iota.
+            let end = cmul(d, creal, pow_norm_j, norm_z);
+
+            ctrans(d, creal, start, mid, end, h1, h2)
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(z_fv, carrier, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(z_fv, carrier, over_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.norm_sq_pow,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 // --- finite sums over ℂ, and the geometric series identity ------------------
 
 /// `Complex.sumRange : (Nat → Complex) → Nat → Complex`, structural
@@ -5317,6 +5444,99 @@ fn declare_sum_range_congr_lt(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sum_range_congr_lt,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.sumRange_split : ∀ f m n, Equiv (sumRange f (Nat.add m n)) (add
+/// (sumRange f m) (sumRange (fun k => f (Nat.add m k)) n))`.
+///
+/// Induction on `n`, mirroring [`CRealPrelude::sum_range_split`]'s own proof
+/// shape (`creal/series.rs::declare_sum_range_split`) verbatim with every
+/// step promoted from `CReal.Equiv` to `Complex.Equiv`: both cases close
+/// purely by `Nat.add`'s own iota-reduction (`add m Nat.zero ≡ m`, `add m
+/// (Nat.succ j) ≡ Nat.succ (add m j)`) plus one
+/// [`ComplexPrelude::add_zero`]/[`ComplexPrelude::add_assoc`] respectively —
+/// no ring calculus needed, the same reason the `CReal` original needs none.
+fn declare_sum_range_split(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let shifted_fn = |d: &mut IntDev<'_>, m: ExprId, f: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let m_plus_k = NatOps::add(d, m, k);
+        let body = d.apply(f, &[m_plus_k]);
+        let nat = d.nat_ty();
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let m_plus_x = NatOps::add(d, m, x);
+        let lhs = d.const_app(p.sum_range, &[f, m_plus_x]);
+        let h = shifted_fn(d, m, f);
+        let sum_h_x = d.const_app(p.sum_range, &[h, x]);
+        let rhs = d.const_app(p.add, &[sum_f_m, sum_h_x]);
+        zeq(d, p, lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero_c = d.kernel().const_(p.zero, vec![]);
+            let padded = d.const_app(p.add, &[sum_f_m, zero_c]);
+            let h = d.lemma(p.add_zero, &[sum_f_m]); // Equiv padded sum_f_m
+            d.lemma(p.equiv_symm, &[padded, sum_f_m, h])
+        },
+        &|d, j, ih| {
+            // ih : Equiv (sumRange f (add m j)) (add sum_f_m (sumRange h j))
+            let h = shifted_fn(d, m, f);
+            let sum_h_j = d.const_app(p.sum_range, &[h, j]);
+            let m_plus_j = NatOps::add(d, m, j);
+            let fmj = d.apply(f, &[m_plus_j]); // = f (add m j) = h j, up to beta
+
+            let sum_f_mj = d.const_app(p.sum_range, &[f, m_plus_j]);
+            let start = d.const_app(p.add, &[sum_f_mj, fmj]); // = sumRange f (add m (succ j)), up to iota
+
+            let rhs_prior = d.const_app(p.add, &[sum_f_m, sum_h_j]);
+            let refl_fmj = d.lemma(p.equiv_refl, &[fmj]);
+            let h1 = d.lemma(p.add_congr, &[sum_f_mj, rhs_prior, fmj, fmj, ih, refl_fmj]);
+            let after_ih = d.const_app(p.add, &[rhs_prior, fmj]);
+
+            let sum_h_j_plus_fmj = d.const_app(p.add, &[sum_h_j, fmj]);
+            let target = d.const_app(p.add, &[sum_f_m, sum_h_j_plus_fmj]);
+            let h2 = d.lemma(p.add_assoc, &[sum_f_m, sum_h_j, fmj]);
+
+            d.lemma(p.equiv_trans, &[start, after_ih, target, h1, h2])
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        d.pi_fv(f_fv, fn_ty, over_m)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        d.lam_fv(f_fv, fn_ty, over_m)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_split,
         uparams: vec![],
         ty,
         value,

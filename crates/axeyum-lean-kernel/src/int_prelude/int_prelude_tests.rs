@@ -180,7 +180,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 107] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 108] {
     [
         p.factorial_zero,
         p.factorial_succ,
@@ -192,6 +192,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 107] {
         p.inverse_index_maps_into,
         p.inverse_index_injective,
         p.inverse_index_fixed_point,
+        p.inverse_index_involutive,
         p.factorial_sq_modeq_one,
         p.prod_range_mul,
         p.mod_eq_prod_range_lt,

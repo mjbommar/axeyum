@@ -165,6 +165,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.normSq_nonneg", p.norm_sq_nonneg),
         ("Complex.normSq_conj", p.norm_sq_conj),
         ("Complex.normSq_mul", p.norm_sq_mul),
+        ("Complex.normSq_pow", p.norm_sq_pow),
         (
             "Complex.normSq_eq_zero_of_eq_zero",
             p.norm_sq_eq_zero_of_eq_zero,
@@ -212,6 +213,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.sumRange_add", p.sum_range_add),
         ("Complex.sumRange_shiftFront", p.sum_range_shift_front),
         ("Complex.sumRange_congr_lt", p.sum_range_congr_lt),
+        ("Complex.sumRange_split", p.sum_range_split),
         ("Complex.add_pow", p.add_pow),
         ("Complex.IsRootOfUnity", p.is_root_of_unity),
         ("Complex.one_is_root_of_unity", p.one_is_root_of_unity),

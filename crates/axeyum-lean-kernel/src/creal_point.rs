@@ -880,6 +880,66 @@ pub struct CPointPrelude {
     /// something `PosBound` can state at all: `(cross A B C)²` is
     /// nonnegative regardless of the determinant's own sign.
     pub non_collinear: NameId,
+    /// **Two circumcentres' difference is orthogonal to every side.** `∀ O
+    /// O' A B C, Equiv (distSq O A) (distSq O B) → Equiv (distSq O B) (distSq
+    /// O C) → Equiv (distSq O' A) (distSq O' B) → Equiv (distSq O' B) (distSq
+    /// O' C) → And (Equiv (dot (sub O O') (sub B A)) CReal.zero) (Equiv (dot
+    /// (sub O O') (sub C B)) CReal.zero)`.
+    ///
+    /// **Unconditional — no non-degeneracy anywhere.** [`Self::circumcentre_on_perp_bisectors`]
+    /// applied at `O` and at `O'` gives, via [`Self::perp_bisector_iff_dot`]'s
+    /// `mp` half, `dot (O − M) W ~ 0` and `dot (O' − M) W ~ 0` at `M :=
+    /// point_midpoint A B`, `W := sub B A` (and the mirror pair at `M :=
+    /// point_midpoint B C`, `W := sub C B`). [`Self::dot_sub_left`] expands
+    /// both into `dot O W − dot M W ~ 0` and `dot O' W − dot M W ~ 0`; the
+    /// shared `dot M W` cancels (`equiv_of_sub_eq_zero`/`sub_eq_zero_of_equiv`,
+    /// the same pair [`Self::eq_zero_of_dist_sq_eq_zero`] uses), leaving `dot
+    /// O W ~ dot O' W`, and [`Self::dot_sub_left`] again folds that back into
+    /// `dot (sub O O') W ~ 0`.
+    pub circumcentre_difference_dots: NameId,
+    /// **The 2×2 elimination: a vector orthogonal to two non-parallel sides
+    /// is annihilated by their determinant.** `∀ V A B C, Equiv (dot V (sub B
+    /// A)) CReal.zero → Equiv (dot V (sub C B)) CReal.zero → And (Equiv (mul
+    /// (x V) (cross A B C)) CReal.zero) (Equiv (mul (y V) (cross A B C))
+    /// CReal.zero)`.
+    ///
+    /// **The real content, reusable well beyond circumcentres.** `V` is
+    /// completely free — nothing here assumes it is a difference of
+    /// circumcentres, only that it is orthogonal to `B−A` and to `C−B`.
+    /// Unfolding `dot V (sub B A)` via [`Self::dot_sub_right`] and `dot V B`,
+    /// `dot V A` (both free-point applications, pure delta) gives the raw
+    /// scalar system `vx·(Bx−Ax) + vy·(By−Ay) ~ 0`, `vx·(Cx−Bx) + vy·(Cy−By)
+    /// ~ 0` — the same `u,v,w,z` factors `declare_cross`'s own `cross_raw`
+    /// builds. Multiplying the first equation by `(Cy−By)` and the second by
+    /// `(By−Ay)`, subtracting, and cancelling the shared cross term (`mul
+    /// vx u v ~ mul vx z w` after `mul_assoc`/`mul_comm`, the standard
+    /// 2×2-determinant elimination) isolates `vx·(cross A B C) ~ 0`; the
+    /// mirror combination (multiply by `(Cx−Bx)` and `(Bx−Ax)`) isolates
+    /// `vy·(cross A B C) ~ 0`. Proved directly over points (not over six raw
+    /// scalars) so it composes with [`Self::circumcentre_difference_dots`]
+    /// without any unfolding glue: `V := sub O O'` substitutes straight in.
+    pub cross_annihilates_difference: NameId,
+    /// **The headline: three non-collinear points determine a unique
+    /// circumcentre.** `∀ k A B C O O', NonCollinear A B C k → Equiv (distSq
+    /// O A) (distSq O B) → Equiv (distSq O B) (distSq O C) → Equiv (distSq O'
+    /// A) (distSq O' B) → Equiv (distSq O' B) (distSq O' C) → CPoint.Equiv O
+    /// O'`.
+    ///
+    /// [`Self::circumcentre_difference_dots`] gives `dot (sub O O') (sub B
+    /// A) ~ 0` and `dot (sub O O') (sub C B) ~ 0`; [`Self::cross_annihilates_difference`]
+    /// at `V := sub O O'` turns those into `(x (sub O O'))·D ~ 0` and `(y
+    /// (sub O O'))·D ~ 0`, `D := cross A B C`. `NonCollinear A B C k` unfolds
+    /// (delta) to `PosBound (mul D D) k`, so `CReal.inv (mul D D) k _`
+    /// exists; multiplying each equation by `D` and then by that inverse
+    /// (`mul_assoc` twice, [`CRealPrelude::mul_inv_cancel`],
+    /// [`CRealPrelude::mul_one`]) cancels `D` and leaves `x (sub O O') ~
+    /// CReal.zero` and `y (sub O O') ~ CReal.zero` — which
+    /// `equiv_of_sub_eq_zero` (the same helper
+    /// [`Self::eq_zero_of_dist_sq_eq_zero`] uses, relying on the same `x (sub
+    /// P Q)` defeq-to-`add (x P) (neg (x Q))` reduction that theorem already
+    /// exercises) reads back as `Equiv (x O) (x O')` and `Equiv (y O) (y
+    /// O')`, i.e. `CPoint.Equiv O O'`.
+    pub circumcentre_unique: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -987,6 +1047,9 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_cross_self_right(&mut d, p)?;
     declare_cross_swap_bc(&mut d, p)?;
     declare_non_collinear(&mut d, p)?;
+    declare_circumcentre_difference_dots(&mut d, p)?;
+    declare_cross_annihilates_difference(&mut d, p)?;
+    declare_circumcentre_unique(&mut d, p)?;
     Ok(p)
 }
 
@@ -1090,6 +1153,9 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         cross_self_right: kernel.name_str(point, "cross_self_right"),
         cross_swap_bc: kernel.name_str(point, "cross_swap_bc"),
         non_collinear: kernel.name_str(point, "NonCollinear"),
+        circumcentre_difference_dots: kernel.name_str(point, "circumcentre_difference_dots"),
+        cross_annihilates_difference: kernel.name_str(point, "cross_annihilates_difference"),
+        circumcentre_unique: kernel.name_str(point, "circumcentre_unique"),
     }
 }
 
@@ -14207,6 +14273,812 @@ fn declare_non_collinear(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), Ker
         ty,
         value,
         hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 18),
+    })
+}
+
+// --- circumcentre_unique: helpers ------------------------------------------
+
+/// `Equiv x (neg y)`, given `h : Equiv (add x y) CReal.zero` — "if two things
+/// sum to zero, each is the negation of the other." The single-value cousin
+/// of [`sub_eq_zero_of_equiv`]/[`equiv_of_sub_eq_zero`]: those relate `x ~ y`
+/// to `x − y ~ 0`; this relates `x + y ~ 0` to `x ~ −y`, the shape the
+/// elimination steps below actually produce (raw sums, not differences).
+fn neg_of_add_zero_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    x: ExprId,
+    y: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let xy = cadd(d, p, x, y);
+    let neg_y = cneg(d, p, y);
+    let ascr = add_sub_cancel_right(d, p, x, y); // Equiv(add xy neg_y, x)
+    let xy_negy = cadd(d, p, xy, neg_y);
+    let ascr_symm = symm(d, p, xy_negy, x, ascr); // Equiv(x, xy_negy)
+    let zero = czero(d, p);
+    let refl_negy = refl(d, p, neg_y);
+    let congr1 = d.lemma(creal.add_congr, &[xy, zero, neg_y, neg_y, h, refl_negy]);
+    let zero_negy = cadd(d, p, zero, neg_y);
+    let za = zero_add_proof(d, p, neg_y); // Equiv(zero_negy, neg_y)
+    chain(
+        d,
+        p,
+        x,
+        &[(xy_negy, ascr_symm), (zero_negy, congr1), (neg_y, za)],
+    )
+}
+
+/// `Equiv (mul (mul t a) b) (mul (mul t b) a)` — `(t·a)·b ~ (t·b)·a`, pure
+/// `mul_assoc`/`mul_comm`. Both halves of
+/// [`declare_cross_annihilates_difference`]'s 2×2 elimination use this to
+/// recognise a term produced by multiplying one hypothesis by `a` as the
+/// same term produced by multiplying the other by `b`.
+fn mul_swap_inner_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    t: ExprId,
+    a: ExprId,
+    b: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let ta = cmul(d, p, t, a);
+    let ta_b = cmul(d, p, ta, b);
+    let ab = cmul(d, p, a, b);
+    let t_ab = cmul(d, p, t, ab);
+    let assoc1 = d.lemma(creal.mul_assoc, &[t, a, b]); // Equiv(ta_b, t_ab)
+    let ba = cmul(d, p, b, a);
+    let t_ba = cmul(d, p, t, ba);
+    let comm_ab = d.lemma(creal.mul_comm, &[a, b]); // Equiv(ab, ba)
+    let refl_t = refl(d, p, t);
+    let congr1 = d.lemma(creal.mul_congr, &[t, t, ab, ba, refl_t, comm_ab]); // Equiv(t_ab, t_ba)
+    let tb = cmul(d, p, t, b);
+    let tb_a = cmul(d, p, tb, a);
+    let assoc2 = d.lemma(creal.mul_assoc, &[t, b, a]); // Equiv(tb_a, t_ba)
+    let assoc2_symm = symm(d, p, tb_a, t_ba, assoc2); // Equiv(t_ba, tb_a)
+    chain(
+        d,
+        p,
+        ta_b,
+        &[(t_ab, assoc1), (t_ba, congr1), (tb_a, assoc2_symm)],
+    )
+}
+
+/// Given `hab : Equiv (add a b) CReal.zero`, `hcd : Equiv (add c dd)
+/// CReal.zero` and `hbd : Equiv b dd`, proves `Equiv a c` — "subtract two
+/// zero-sums that share an addend (up to `hbd`); the other addends agree."
+/// The generic step both halves of
+/// [`declare_cross_annihilates_difference`]'s elimination are built from.
+fn elim_step_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    dd: ExprId,
+    hab: ExprId,
+    hcd: ExprId,
+    hbd: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let ha = neg_of_add_zero_proof(d, p, a, b, hab); // Equiv(a, neg b)
+    let hc = neg_of_add_zero_proof(d, p, c, dd, hcd); // Equiv(c, neg dd)
+    let neg_b = cneg(d, p, b);
+    let neg_d = cneg(d, p, dd);
+    let hbd_neg = d.lemma(creal.neg_congr, &[b, dd, hbd]); // Equiv(neg b, neg dd)
+    let hc_symm = symm(d, p, c, neg_d, hc); // Equiv(neg dd, c)
+    chain(d, p, a, &[(neg_b, ha), (neg_d, hbd_neg), (c, hc_symm)])
+}
+
+/// Given `h_vd : Equiv (mul v big_d) CReal.zero` and `hpb : PosBound (mul
+/// big_d big_d) k` (consumed directly at its unfolded `Equiv`-of-`inv` type,
+/// the way [`declare_perp_bisector_iff_dot`] consumes an `OnPerpBisector`
+/// hypothesis directly), proves `Equiv v CReal.zero`. Multiply the
+/// hypothesis by `big_d` (`v·(D·D) ~ 0`), then by `CReal.inv (mul big_d
+/// big_d) k hpb` (`mul_inv_cancel` cancels `D·D`, `mul_one` finishes) —
+/// [`declare_circumcentre_unique`]'s only route from "annihilated by the
+/// determinant" to "is zero", used once per coordinate of `sub O O'`.
+fn cancel_via_pos_bound_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    v: ExprId,
+    big_d: ExprId,
+    k: ExprId,
+    hpb: ExprId,
+    h_vd: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let zero = czero(d, p);
+    let one = d.kernel().const_(creal.one, vec![]);
+    let dd = cmul(d, p, big_d, big_d);
+    let inv_dd = d.const_app(creal.inv, &[dd, k, hpb]);
+    let cancel_dd = d.lemma(creal.mul_inv_cancel, &[dd, k, hpb]); // Equiv(mul dd inv_dd, one)
+
+    // Step 1: (v*D)*D ~ zero.
+    let vd = cmul(d, p, v, big_d);
+    let vd_d = cmul(d, p, vd, big_d);
+    let zero_d = cmul(d, p, zero, big_d);
+    let refl_d = refl(d, p, big_d);
+    let congr1 = d.lemma(creal.mul_congr, &[vd, zero, big_d, big_d, h_vd, refl_d]);
+    let zmd = zero_mul_proof(d, p, big_d);
+    let step1 = chain(d, p, vd_d, &[(zero_d, congr1), (zero, zmd)]); // Equiv(vd_d, zero)
+
+    // Step 2: v*(D*D) ~ zero.
+    let v_dd = cmul(d, p, v, dd);
+    let assoc1 = d.lemma(creal.mul_assoc, &[v, big_d, big_d]); // Equiv(vd_d, v_dd)
+    let assoc1_symm = symm(d, p, vd_d, v_dd, assoc1);
+    let step2 = chain(d, p, v_dd, &[(vd_d, assoc1_symm), (zero, step1)]); // Equiv(v_dd, zero)
+
+    // Step 3: (v*(D*D))*inv_dd ~ zero.
+    let vdd_invdd = cmul(d, p, v_dd, inv_dd);
+    let zero_invdd = cmul(d, p, zero, inv_dd);
+    let refl_invdd = refl(d, p, inv_dd);
+    let congr3 = d.lemma(
+        creal.mul_congr,
+        &[v_dd, zero, inv_dd, inv_dd, step2, refl_invdd],
+    );
+    let zmi = zero_mul_proof(d, p, inv_dd);
+    let step3 = chain(d, p, vdd_invdd, &[(zero_invdd, congr3), (zero, zmi)]); // Equiv(vdd_invdd, zero)
+
+    // Step 4: v*(dd*inv_dd) ~ zero.
+    let dd_invdd = cmul(d, p, dd, inv_dd);
+    let v_dd_invdd = cmul(d, p, v, dd_invdd);
+    let assoc2 = d.lemma(creal.mul_assoc, &[v, dd, inv_dd]); // Equiv(vdd_invdd, v_dd_invdd)
+    let assoc2_symm = symm(d, p, vdd_invdd, v_dd_invdd, assoc2);
+    let step4 = chain(d, p, v_dd_invdd, &[(vdd_invdd, assoc2_symm), (zero, step3)]); // Equiv(v_dd_invdd, zero)
+
+    // Step 5: v*one ~ zero, via mul_inv_cancel.
+    let v_one = cmul(d, p, v, one);
+    let refl_v = refl(d, p, v);
+    let congr5 = d.lemma(creal.mul_congr, &[v, v, dd_invdd, one, refl_v, cancel_dd]); // Equiv(v_dd_invdd, v_one)
+    let congr5_symm = symm(d, p, v_dd_invdd, v_one, congr5);
+    let step5 = chain(d, p, v_one, &[(v_dd_invdd, congr5_symm), (zero, step4)]); // Equiv(v_one, zero)
+
+    // Step 6: v ~ v*one ~ zero.
+    let mo = d.lemma(creal.mul_one, &[v]); // Equiv(v_one, v)
+    let mo_symm = symm(d, p, v_one, v, mo); // Equiv(v, v_one)
+    chain(d, p, v, &[(v_one, mo_symm), (zero, step5)])
+}
+
+/// Given `h_o : Equiv (dot (sub po m) w) CReal.zero` and `h_op : Equiv (dot
+/// (sub pop m) w) CReal.zero`, proves `Equiv (dot (sub po pop) w)
+/// CReal.zero` — "two points both orthogonal (relative to `m`) to `w` have a
+/// difference orthogonal to `w` too." [`declare_circumcentre_difference_dots`]
+/// applies this once per side, at `m := point_midpoint A B`/`w := sub B A`
+/// and `m := point_midpoint B C`/`w := sub C B`.
+fn circumcentre_dot_diff_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    po: ExprId,
+    pop: ExprId,
+    m: ExprId,
+    w: ExprId,
+    h_o: ExprId,
+    h_op: ExprId,
+) -> ExprId {
+    let zero = czero(d, p);
+
+    let dsl_o = d.lemma(p.dot_sub_left, &[po, m, w]); // Equiv(dot(sub po m) w, add(dot po w)(neg(dot m w)))
+    let sub_po_m = psub(d, p, po, m);
+    let dot_po_m_w = dotp(d, p, sub_po_m, w);
+    let dot_po_w = dotp(d, p, po, w);
+    let dot_m_w = dotp(d, p, m, w);
+    let neg_dot_m_w = cneg(d, p, dot_m_w);
+    let rhs_o = cadd(d, p, dot_po_w, neg_dot_m_w);
+    let dsl_o_symm = symm(d, p, dot_po_m_w, rhs_o, dsl_o);
+    let eq_a = chain(d, p, rhs_o, &[(dot_po_m_w, dsl_o_symm), (zero, h_o)]); // Equiv(rhs_o, zero)
+
+    let dsl_op = d.lemma(p.dot_sub_left, &[pop, m, w]);
+    let sub_pop_m = psub(d, p, pop, m);
+    let dot_pop_m_w = dotp(d, p, sub_pop_m, w);
+    let dot_pop_w = dotp(d, p, pop, w);
+    let rhs_op = cadd(d, p, dot_pop_w, neg_dot_m_w);
+    let dsl_op_symm = symm(d, p, dot_pop_m_w, rhs_op, dsl_op);
+    let eq_b = chain(d, p, rhs_op, &[(dot_pop_m_w, dsl_op_symm), (zero, h_op)]); // Equiv(rhs_op, zero)
+
+    let hxz = equiv_of_sub_eq_zero(d, p, dot_po_w, dot_m_w, eq_a); // Equiv(dot_po_w, dot_m_w)
+    let hyz = equiv_of_sub_eq_zero(d, p, dot_pop_w, dot_m_w, eq_b); // Equiv(dot_pop_w, dot_m_w)
+    let hyz_symm = symm(d, p, dot_pop_w, dot_m_w, hyz); // Equiv(dot_m_w, dot_pop_w)
+    let hxy = chain(d, p, dot_po_w, &[(dot_m_w, hxz), (dot_pop_w, hyz_symm)]); // Equiv(dot_po_w, dot_pop_w)
+    let sez = sub_eq_zero_of_equiv(d, p, dot_po_w, dot_pop_w, hxy); // Equiv(add dot_po_w (neg dot_pop_w), zero)
+
+    let dsl_diff = d.lemma(p.dot_sub_left, &[po, pop, w]); // Equiv(dot(sub po pop) w, add(dot po w)(neg(dot pop w)))
+    let sub_po_pop = psub(d, p, po, pop);
+    let dot_diff = dotp(d, p, sub_po_pop, w);
+    let neg_dot_pop_w = cneg(d, p, dot_pop_w);
+    let rhs_diff = cadd(d, p, dot_po_w, neg_dot_pop_w);
+    chain(d, p, dot_diff, &[(rhs_diff, dsl_diff), (zero, sez)])
+}
+
+/// **Two circumcentres' difference is orthogonal to every side.** See
+/// [`CPointPrelude::circumcentre_difference_dots`].
+fn declare_circumcentre_difference_dots(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let logic = p.creal.rat.int.logic;
+
+    let o_fv = d.fresh_fvar();
+    let po = d.kernel().fvar(o_fv);
+    let op_fv = d.fresh_fvar();
+    let pop = d.kernel().fvar(op_fv);
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let dsq_oa = d.const_app(p.dist_sq, &[po, pa]);
+    let dsq_ob = d.const_app(p.dist_sq, &[po, pb]);
+    let dsq_oc = d.const_app(p.dist_sq, &[po, pc]);
+    let dsq_opa = d.const_app(p.dist_sq, &[pop, pa]);
+    let dsq_opb = d.const_app(p.dist_sq, &[pop, pb]);
+    let dsq_opc = d.const_app(p.dist_sq, &[pop, pc]);
+
+    let h1_ty = equiv(d, p, dsq_oa, dsq_ob);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_ty = equiv(d, p, dsq_ob, dsq_oc);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let h1p_ty = equiv(d, p, dsq_opa, dsq_opb);
+    let h1p_fv = d.fresh_fvar();
+    let h1p = d.kernel().fvar(h1p_fv);
+    let h2p_ty = equiv(d, p, dsq_opb, dsq_opc);
+    let h2p_fv = d.fresh_fvar();
+    let h2p = d.kernel().fvar(h2p_fv);
+
+    let cop_o = d.lemma(p.circumcentre_on_perp_bisectors, &[po, pa, pb, pc, h1, h2]);
+    let cop_op = d.lemma(
+        p.circumcentre_on_perp_bisectors,
+        &[pop, pa, pb, pc, h1p, h2p],
+    );
+
+    let on_o_ab = d.const_app(p.on_perp_bisector, &[po, pa, pb]);
+    let on_o_bc = d.const_app(p.on_perp_bisector, &[po, pb, pc]);
+    let on_o_ac = d.const_app(p.on_perp_bisector, &[po, pa, pc]);
+    let and_o_bc_ac = d.and(on_o_bc, on_o_ac);
+    let h_o_ab = d.and_left(on_o_ab, and_o_bc_ac, cop_o);
+    let rest_o = d.and_right(on_o_ab, and_o_bc_ac, cop_o);
+    let h_o_bc = d.and_left(on_o_bc, on_o_ac, rest_o);
+
+    let on_op_ab = d.const_app(p.on_perp_bisector, &[pop, pa, pb]);
+    let on_op_bc = d.const_app(p.on_perp_bisector, &[pop, pb, pc]);
+    let on_op_ac = d.const_app(p.on_perp_bisector, &[pop, pa, pc]);
+    let and_op_bc_ac = d.and(on_op_bc, on_op_ac);
+    let h_op_ab = d.and_left(on_op_ab, and_op_bc_ac, cop_op);
+    let rest_op = d.and_right(on_op_ab, and_op_bc_ac, cop_op);
+    let h_op_bc = d.and_left(on_op_bc, on_op_ac, rest_op);
+
+    let zero = czero(d, p);
+    let m_ab = d.const_app(p.point_midpoint, &[pa, pb]);
+    let sub_ba = psub(d, p, pb, pa);
+    let m_bc = d.const_app(p.point_midpoint, &[pb, pc]);
+    let sub_cb = psub(d, p, pc, pb);
+
+    let sub_o_mab = psub(d, p, po, m_ab);
+    let dot_o_ab_raw = dotp(d, p, sub_o_mab, sub_ba);
+    let dot_o_ab_stmt = equiv(d, p, dot_o_ab_raw, zero);
+    let iff_o_ab = d.lemma(p.perp_bisector_iff_dot, &[po, pa, pb]);
+    let mp_o_ab = d.const_app(logic.iff_mp, &[on_o_ab, dot_o_ab_stmt, iff_o_ab]);
+    let h_o_ab_dot = d.apply(mp_o_ab, &[h_o_ab]);
+
+    let sub_op_mab = psub(d, p, pop, m_ab);
+    let dot_op_ab_raw = dotp(d, p, sub_op_mab, sub_ba);
+    let dot_op_ab_stmt = equiv(d, p, dot_op_ab_raw, zero);
+    let iff_op_ab = d.lemma(p.perp_bisector_iff_dot, &[pop, pa, pb]);
+    let mp_op_ab = d.const_app(logic.iff_mp, &[on_op_ab, dot_op_ab_stmt, iff_op_ab]);
+    let h_op_ab_dot = d.apply(mp_op_ab, &[h_op_ab]);
+
+    let sub_o_mbc = psub(d, p, po, m_bc);
+    let dot_o_bc_raw = dotp(d, p, sub_o_mbc, sub_cb);
+    let dot_o_bc_stmt = equiv(d, p, dot_o_bc_raw, zero);
+    let iff_o_bc = d.lemma(p.perp_bisector_iff_dot, &[po, pb, pc]);
+    let mp_o_bc = d.const_app(logic.iff_mp, &[on_o_bc, dot_o_bc_stmt, iff_o_bc]);
+    let h_o_bc_dot = d.apply(mp_o_bc, &[h_o_bc]);
+
+    let sub_op_mbc = psub(d, p, pop, m_bc);
+    let dot_op_bc_raw = dotp(d, p, sub_op_mbc, sub_cb);
+    let dot_op_bc_stmt = equiv(d, p, dot_op_bc_raw, zero);
+    let iff_op_bc = d.lemma(p.perp_bisector_iff_dot, &[pop, pb, pc]);
+    let mp_op_bc = d.const_app(logic.iff_mp, &[on_op_bc, dot_op_bc_stmt, iff_op_bc]);
+    let h_op_bc_dot = d.apply(mp_op_bc, &[h_op_bc]);
+
+    let result_ab =
+        circumcentre_dot_diff_proof(d, p, po, pop, m_ab, sub_ba, h_o_ab_dot, h_op_ab_dot);
+    let result_bc =
+        circumcentre_dot_diff_proof(d, p, po, pop, m_bc, sub_cb, h_o_bc_dot, h_op_bc_dot);
+
+    let sub_oop = psub(d, p, po, pop);
+    let dot_oop_ba = dotp(d, p, sub_oop, sub_ba);
+    let concl_ab_ty = equiv(d, p, dot_oop_ba, zero);
+    let dot_oop_cb = dotp(d, p, sub_oop, sub_cb);
+    let concl_bc_ty = equiv(d, p, dot_oop_cb, zero);
+    let body = and_intro(d, p, concl_ab_ty, concl_bc_ty, result_ab, result_bc);
+    let concl = d.and(concl_ab_ty, concl_bc_ty);
+
+    let ty_body = {
+        let inner3 = d.arrow(h2p_ty, concl);
+        let inner2 = d.arrow(h1p_ty, inner3);
+        let inner1 = d.arrow(h2_ty, inner2);
+        d.arrow(h1_ty, inner1)
+    };
+    let ty = {
+        let w5 = d.pi_fv(c_fv, point, ty_body);
+        let w4 = d.pi_fv(b_fv, point, w5);
+        let w3 = d.pi_fv(a_fv, point, w4);
+        let w2 = d.pi_fv(op_fv, point, w3);
+        d.pi_fv(o_fv, point, w2)
+    };
+    let value = {
+        let inner3 = d.lam_fv(h2p_fv, h2p_ty, body);
+        let inner2 = d.lam_fv(h1p_fv, h1p_ty, inner3);
+        let inner1 = d.lam_fv(h2_fv, h2_ty, inner2);
+        let with_h1 = d.lam_fv(h1_fv, h1_ty, inner1);
+        let w5 = d.lam_fv(c_fv, point, with_h1);
+        let w4 = d.lam_fv(b_fv, point, w5);
+        let w3 = d.lam_fv(a_fv, point, w4);
+        let w2 = d.lam_fv(op_fv, point, w3);
+        d.lam_fv(o_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.circumcentre_difference_dots,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Equiv (add (add (mul vx bx) (mul vy by)) (neg (add (mul vx ax) (mul vy
+/// ay)))) (add (mul vx diff_x) (mul vy diff_y))`, `diff_x := add bx (neg
+/// ax)`, `diff_y := add by (neg ay)` — `(vx·bx+vy·by) − (vx·ax+vy·ay) ~
+/// vx·(bx−ax) + vy·(by−ay)`, the "distribute the subtraction, then factor
+/// `vx`/`vy` back out" regrouping [`declare_cross_annihilates_difference`]
+/// needs to turn `dot V B − dot V A` into the raw `cross_raw`-shaped
+/// factors. Returns `diff_x`/`diff_y` too so the caller reuses the exact
+/// terms (rather than reconstructing structurally-identical copies) when
+/// assembling `cross A B C`'s own `u`/`v`/`w`/`z`.
+fn regroup_dot_diff_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    vx: ExprId,
+    vy: ExprId,
+    bx: ExprId,
+    by: ExprId,
+    ax: ExprId,
+    ay: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let creal = p.creal;
+    let vxbx = cmul(d, p, vx, bx);
+    let vyby = cmul(d, p, vy, by);
+    let vxax = cmul(d, p, vx, ax);
+    let vyay = cmul(d, p, vy, ay);
+    let sum_b = cadd(d, p, vxbx, vyby);
+    let sum_a = cadd(d, p, vxax, vyay);
+    let neg_sum_a = cneg(d, p, sum_a);
+    let lhs = cadd(d, p, sum_b, neg_sum_a);
+
+    let na = neg_add_proof(d, p, vxax, vyay); // Equiv(neg_sum_a, add(neg vxax)(neg vyay))
+    let neg_vxax = cneg(d, p, vxax);
+    let neg_vyay = cneg(d, p, vyay);
+    let split_a = cadd(d, p, neg_vxax, neg_vyay);
+    let refl_sum_b = refl(d, p, sum_b);
+    let congr1 = d.lemma(
+        creal.add_congr,
+        &[sum_b, sum_b, neg_sum_a, split_a, refl_sum_b, na],
+    );
+    let mid1 = cadd(d, p, sum_b, split_a);
+
+    let swap = add_middle_swap_proof(d, p, vxbx, vyby, neg_vxax, neg_vyay);
+    let group_x = cadd(d, p, vxbx, neg_vxax);
+    let group_y = cadd(d, p, vyby, neg_vyay);
+    let mid2 = cadd(d, p, group_x, group_y);
+
+    let neg_ax = cneg(d, p, ax);
+    let neg_ay = cneg(d, p, ay);
+    let diff_x = cadd(d, p, bx, neg_ax);
+    let diff_y = cadd(d, p, by, neg_ay);
+    let msr_x = mul_sub_right_proof(d, p, vx, bx, ax); // Equiv(mul vx diff_x, group_x)
+    let msr_y = mul_sub_right_proof(d, p, vy, by, ay);
+    let target_x = cmul(d, p, vx, diff_x);
+    let target_y = cmul(d, p, vy, diff_y);
+    let msr_x_symm = symm(d, p, target_x, group_x, msr_x);
+    let msr_y_symm = symm(d, p, target_y, group_y, msr_y);
+    let congr3 = d.lemma(
+        creal.add_congr,
+        &[group_x, target_x, group_y, target_y, msr_x_symm, msr_y_symm],
+    );
+    let target = cadd(d, p, target_x, target_y);
+
+    let proof = chain(d, p, lhs, &[(mid1, congr1), (mid2, swap), (target, congr3)]);
+    (proof, diff_x, diff_y)
+}
+
+/// **The 2×2 elimination.** See
+/// [`CPointPrelude::cross_annihilates_difference`].
+fn declare_cross_annihilates_difference(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let point = point_ty(d, p);
+
+    let v_fv = d.fresh_fvar();
+    let pv = d.kernel().fvar(v_fv);
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+    let vx = d.const_app(p.x, &[pv]);
+    let vy = d.const_app(p.y, &[pv]);
+
+    let zero = czero(d, p);
+
+    let sub_ba = psub(d, p, pb, pa);
+    let sub_cb = psub(d, p, pc, pb);
+    let dot_v_ba_stmt = dotp(d, p, pv, sub_ba);
+    let h1_ty = equiv(d, p, dot_v_ba_stmt, zero);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let dot_v_cb_stmt = dotp(d, p, pv, sub_cb);
+    let h2_ty = equiv(d, p, dot_v_cb_stmt, zero);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    // Unfold h1, h2 through dot_sub_right into folded-dot sums ~ 0.
+    let dsr1 = d.lemma(p.dot_sub_right, &[pv, pb, pa]);
+    let dot_v_ba = dotp(d, p, pv, sub_ba);
+    let dot_vb = dotp(d, p, pv, pb);
+    let dot_va = dotp(d, p, pv, pa);
+    let neg_dot_va = cneg(d, p, dot_va);
+    let rhs1 = cadd(d, p, dot_vb, neg_dot_va);
+    let dsr1_symm = symm(d, p, dot_v_ba, rhs1, dsr1);
+    let eq1_dots = chain(d, p, rhs1, &[(dot_v_ba, dsr1_symm), (zero, h1)]); // Equiv(rhs1, zero)
+
+    let dsr2 = d.lemma(p.dot_sub_right, &[pv, pc, pb]);
+    let dot_v_cb = dotp(d, p, pv, sub_cb);
+    let dot_vc = dotp(d, p, pv, pc);
+    let neg_dot_vb = cneg(d, p, dot_vb);
+    let rhs2 = cadd(d, p, dot_vc, neg_dot_vb);
+    let dsr2_symm = symm(d, p, dot_v_cb, rhs2, dsr2);
+    let eq2_dots = chain(d, p, rhs2, &[(dot_v_cb, dsr2_symm), (zero, h2)]); // Equiv(rhs2, zero)
+
+    // Regroup into raw factored form matching `cross_raw`'s u,v,w,z.
+    let (regroup1, u, w) = regroup_dot_diff_proof(d, p, vx, vy, bx, by, ax, ay);
+    let (regroup2, z, v_factor) = regroup_dot_diff_proof(d, p, vx, vy, cx, cy, bx, by);
+
+    let vxu = cmul(d, p, vx, u);
+    let vyw = cmul(d, p, vy, w);
+    let vxz = cmul(d, p, vx, z);
+    let vyv = cmul(d, p, vy, v_factor);
+    let eq1_target = cadd(d, p, vxu, vyw);
+    let eq2_target = cadd(d, p, vxz, vyv);
+
+    let regroup1_symm = symm(d, p, rhs1, eq1_target, regroup1);
+    let eq1_f = chain(d, p, eq1_target, &[(rhs1, regroup1_symm), (zero, eq1_dots)]); // Equiv(eq1_target, zero)
+    let regroup2_symm = symm(d, p, rhs2, eq2_target, regroup2);
+    let eq2_f = chain(d, p, eq2_target, &[(rhs2, regroup2_symm), (zero, eq2_dots)]); // Equiv(eq2_target, zero)
+
+    // D_raw := u*v - w*z, matching `cross A B C`'s own `cross_raw` shape.
+    let uv = cmul(d, p, u, v_factor);
+    let wz = cmul(d, p, w, z);
+    let zw = cmul(d, p, z, w);
+    let neg_wz = cneg(d, p, wz);
+    let d_raw = cadd(d, p, uv, neg_wz);
+
+    // --- vx * D_raw ~ 0. ---
+    // multiply eq1_f by v_factor: (vx*u)*v + (vy*w)*v ~ 0.
+    let big_a = cmul(d, p, vxu, v_factor);
+    let big_b = cmul(d, p, vyw, v_factor);
+    let sum_ab = cadd(d, p, big_a, big_b);
+    let rd1 = right_distrib_proof(d, p, vxu, vyw, v_factor); // Equiv(eq1_target*v, sum_ab)
+    let eq1_target_v = cmul(d, p, eq1_target, v_factor);
+    let zero_v = cmul(d, p, zero, v_factor);
+    let refl_v = refl(d, p, v_factor);
+    let congr_e1v = d.lemma(
+        creal.mul_congr,
+        &[eq1_target, zero, v_factor, v_factor, eq1_f, refl_v],
+    );
+    let zmv = zero_mul_proof(d, p, v_factor);
+    let e1v_zero = chain(d, p, eq1_target_v, &[(zero_v, congr_e1v), (zero, zmv)]);
+    let rd1_symm = symm(d, p, eq1_target_v, sum_ab, rd1);
+    let hab = chain(d, p, sum_ab, &[(eq1_target_v, rd1_symm), (zero, e1v_zero)]);
+
+    // multiply eq2_f by w: (vx*z)*w + (vy*v)*w ~ 0.
+    let big_c = cmul(d, p, vxz, w);
+    let big_d_ = cmul(d, p, vyv, w);
+    let sum_cd = cadd(d, p, big_c, big_d_);
+    let rd2 = right_distrib_proof(d, p, vxz, vyv, w);
+    let eq2_target_w = cmul(d, p, eq2_target, w);
+    let zero_w = cmul(d, p, zero, w);
+    let refl_w = refl(d, p, w);
+    let congr_e2w = d.lemma(creal.mul_congr, &[eq2_target, zero, w, w, eq2_f, refl_w]);
+    let zmw = zero_mul_proof(d, p, w);
+    let e2w_zero = chain(d, p, eq2_target_w, &[(zero_w, congr_e2w), (zero, zmw)]);
+    let rd2_symm = symm(d, p, eq2_target_w, sum_cd, rd2);
+    let hcd = chain(d, p, sum_cd, &[(eq2_target_w, rd2_symm), (zero, e2w_zero)]);
+
+    let h_bd = mul_swap_inner_proof(d, p, vy, w, v_factor); // Equiv(big_b, big_d_)
+    let h_ac = elim_step_proof(d, p, big_a, big_b, big_c, big_d_, hab, hcd, h_bd); // Equiv(big_a, big_c)
+
+    let a_prime = cmul(d, p, vx, uv);
+    let assoc_a = d.lemma(creal.mul_assoc, &[vx, u, v_factor]); // Equiv(big_a, a_prime)
+    let c_pre = cmul(d, p, vx, zw);
+    let assoc_c = d.lemma(creal.mul_assoc, &[vx, z, w]); // Equiv(big_c, c_pre)
+    let comm_zw = d.lemma(creal.mul_comm, &[z, w]); // Equiv(zw, wz)
+    let refl_vx = refl(d, p, vx);
+    let congr_c = d.lemma(creal.mul_congr, &[vx, vx, zw, wz, refl_vx, comm_zw]); // Equiv(c_pre, c_pp)
+    let c_pp = cmul(d, p, vx, wz);
+
+    let assoc_a_symm = symm(d, p, big_a, a_prime, assoc_a);
+    let a_to_cpp = chain(
+        d,
+        p,
+        a_prime,
+        &[
+            (big_a, assoc_a_symm),
+            (big_c, h_ac),
+            (c_pre, assoc_c),
+            (c_pp, congr_c),
+        ],
+    ); // Equiv(a_prime, c_pp)
+
+    let msr_vx = mul_sub_right_proof(d, p, vx, uv, wz); // Equiv(vx*D_raw, add a_prime (neg c_pp))
+    let cpn_vx = cancel_pos_neg(d, p, a_prime, c_pp, a_to_cpp); // Equiv(add a_prime(neg c_pp), zero)
+    let mul_vx_draw = cmul(d, p, vx, d_raw);
+    let neg_c_pp = cneg(d, p, c_pp);
+    let add_ap_negcpp = cadd(d, p, a_prime, neg_c_pp);
+    let result_vx = chain(
+        d,
+        p,
+        mul_vx_draw,
+        &[(add_ap_negcpp, msr_vx), (zero, cpn_vx)],
+    );
+
+    // --- vy * D_raw ~ 0. ---
+    // multiply eq1_f by z: (vx*u)*z + (vy*w)*z ~ 0.
+    let big_e = cmul(d, p, vxu, z);
+    let big_f = cmul(d, p, vyw, z);
+    let sum_ef = cadd(d, p, big_e, big_f);
+    let rd3 = right_distrib_proof(d, p, vxu, vyw, z);
+    let eq1_target_z = cmul(d, p, eq1_target, z);
+    let zero_z = cmul(d, p, zero, z);
+    let refl_z = refl(d, p, z);
+    let congr_e1z = d.lemma(creal.mul_congr, &[eq1_target, zero, z, z, eq1_f, refl_z]);
+    let zmz = zero_mul_proof(d, p, z);
+    let e1z_zero = chain(d, p, eq1_target_z, &[(zero_z, congr_e1z), (zero, zmz)]);
+    let rd3_symm = symm(d, p, eq1_target_z, sum_ef, rd3);
+    let hef = chain(d, p, sum_ef, &[(eq1_target_z, rd3_symm), (zero, e1z_zero)]);
+
+    // multiply eq2_f by u: (vx*z)*u + (vy*v)*u ~ 0.
+    let big_g = cmul(d, p, vxz, u);
+    let big_h = cmul(d, p, vyv, u);
+    let sum_gh = cadd(d, p, big_g, big_h);
+    let rd4 = right_distrib_proof(d, p, vxz, vyv, u);
+    let eq2_target_u = cmul(d, p, eq2_target, u);
+    let zero_u = cmul(d, p, zero, u);
+    let refl_u = refl(d, p, u);
+    let congr_e2u = d.lemma(creal.mul_congr, &[eq2_target, zero, u, u, eq2_f, refl_u]);
+    let zmu = zero_mul_proof(d, p, u);
+    let e2u_zero = chain(d, p, eq2_target_u, &[(zero_u, congr_e2u), (zero, zmu)]);
+    let rd4_symm = symm(d, p, eq2_target_u, sum_gh, rd4);
+    let hgh = chain(d, p, sum_gh, &[(eq2_target_u, rd4_symm), (zero, e2u_zero)]);
+
+    let h_eg = mul_swap_inner_proof(d, p, vx, u, z); // Equiv(big_e, big_g)
+
+    let comm_ef = d.lemma(creal.add_comm, &[big_f, big_e]); // Equiv(add F E, add E F) = Equiv(sum_fe, sum_ef)
+    let sum_fe = cadd(d, p, big_f, big_e);
+    let h_fe = chain(d, p, sum_fe, &[(sum_ef, comm_ef), (zero, hef)]);
+
+    let comm_gh = d.lemma(creal.add_comm, &[big_h, big_g]); // Equiv(sum_hg, sum_gh)
+    let sum_hg = cadd(d, p, big_h, big_g);
+    let h_hg = chain(d, p, sum_hg, &[(sum_gh, comm_gh), (zero, hgh)]);
+
+    let h_fh = elim_step_proof(d, p, big_f, big_e, big_h, big_g, h_fe, h_hg, h_eg); // Equiv(big_f, big_h)
+
+    let f_prime = cmul(d, p, vy, wz);
+    let assoc_f = d.lemma(creal.mul_assoc, &[vy, w, z]); // Equiv(big_f, f_prime)
+    let vu = cmul(d, p, v_factor, u);
+    let h_pre = cmul(d, p, vy, vu);
+    let assoc_h = d.lemma(creal.mul_assoc, &[vy, v_factor, u]); // Equiv(big_h, h_pre)
+    let comm_vu = d.lemma(creal.mul_comm, &[v_factor, u]); // Equiv(vu, uv)
+    let refl_vy = refl(d, p, vy);
+    let congr_h = d.lemma(creal.mul_congr, &[vy, vy, vu, uv, refl_vy, comm_vu]); // Equiv(h_pre, h_pp)
+    let h_pp = cmul(d, p, vy, uv);
+
+    let h_to_hpp = chain(d, p, big_h, &[(h_pre, assoc_h), (h_pp, congr_h)]); // Equiv(big_h, h_pp)
+    let h_pp_to_h = symm(d, p, big_h, h_pp, h_to_hpp); // Equiv(h_pp, big_h)
+    let h_to_f = symm(d, p, big_f, big_h, h_fh); // Equiv(big_h, big_f)
+    let final_vy_pre = chain(
+        d,
+        p,
+        h_pp,
+        &[(big_h, h_pp_to_h), (big_f, h_to_f), (f_prime, assoc_f)],
+    );
+    // final_vy_pre : Equiv(h_pp, f_prime)
+
+    let msr_vy = mul_sub_right_proof(d, p, vy, uv, wz); // Equiv(vy*D_raw, add h_pp (neg f_prime))
+    let cpn_vy = cancel_pos_neg(d, p, h_pp, f_prime, final_vy_pre);
+    let mul_vy_draw = cmul(d, p, vy, d_raw);
+    let neg_f_prime = cneg(d, p, f_prime);
+    let add_hpp_negfprime = cadd(d, p, h_pp, neg_f_prime);
+    let result_vy = chain(
+        d,
+        p,
+        mul_vy_draw,
+        &[(add_hpp_negfprime, msr_vy), (zero, cpn_vy)],
+    );
+
+    // Package as the folded-cross-typed conclusion.
+    let cross_abc = d.const_app(p.cross, &[pa, pb, pc]);
+    let mul_vx_cross = cmul(d, p, vx, cross_abc);
+    let concl_x_ty = equiv(d, p, mul_vx_cross, zero);
+    let mul_vy_cross = cmul(d, p, vy, cross_abc);
+    let concl_y_ty = equiv(d, p, mul_vy_cross, zero);
+    let body = and_intro(d, p, concl_x_ty, concl_y_ty, result_vx, result_vy);
+    let concl = d.and(concl_x_ty, concl_y_ty);
+
+    let ty_body = {
+        let inner = d.arrow(h2_ty, concl);
+        d.arrow(h1_ty, inner)
+    };
+    let ty = {
+        let w4 = d.pi_fv(c_fv, point, ty_body);
+        let w3 = d.pi_fv(b_fv, point, w4);
+        let w2 = d.pi_fv(a_fv, point, w3);
+        d.pi_fv(v_fv, point, w2)
+    };
+    let value = {
+        let inner = d.lam_fv(h2_fv, h2_ty, body);
+        let with_h1 = d.lam_fv(h1_fv, h1_ty, inner);
+        let w4 = d.lam_fv(c_fv, point, with_h1);
+        let w3 = d.lam_fv(b_fv, point, w4);
+        let w2 = d.lam_fv(a_fv, point, w3);
+        d.lam_fv(v_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cross_annihilates_difference,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// **The headline: three non-collinear points determine a unique
+/// circumcentre.** See [`CPointPrelude::circumcentre_unique`].
+fn declare_circumcentre_unique(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let nat = d.nat_ty();
+
+    let k_fv = d.fresh_fvar();
+    let pk = d.kernel().fvar(k_fv);
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    let o_fv = d.fresh_fvar();
+    let po = d.kernel().fvar(o_fv);
+    let op_fv = d.fresh_fvar();
+    let pop = d.kernel().fvar(op_fv);
+
+    let nc_ty = d.const_app(p.non_collinear, &[pa, pb, pc, pk]);
+    let nc_fv = d.fresh_fvar();
+    let hnc = d.kernel().fvar(nc_fv);
+
+    let dsq_oa = d.const_app(p.dist_sq, &[po, pa]);
+    let dsq_ob = d.const_app(p.dist_sq, &[po, pb]);
+    let dsq_oc = d.const_app(p.dist_sq, &[po, pc]);
+    let dsq_opa = d.const_app(p.dist_sq, &[pop, pa]);
+    let dsq_opb = d.const_app(p.dist_sq, &[pop, pb]);
+    let dsq_opc = d.const_app(p.dist_sq, &[pop, pc]);
+
+    let h1_ty = equiv(d, p, dsq_oa, dsq_ob);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_ty = equiv(d, p, dsq_ob, dsq_oc);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let h1p_ty = equiv(d, p, dsq_opa, dsq_opb);
+    let h1p_fv = d.fresh_fvar();
+    let h1p = d.kernel().fvar(h1p_fv);
+    let h2p_ty = equiv(d, p, dsq_opb, dsq_opc);
+    let h2p_fv = d.fresh_fvar();
+    let h2p = d.kernel().fvar(h2p_fv);
+
+    // Step 1: dot(O-O', B-A) ~ 0, dot(O-O', C-B) ~ 0.
+    let hdiff = d.lemma(
+        p.circumcentre_difference_dots,
+        &[po, pop, pa, pb, pc, h1, h2, h1p, h2p],
+    );
+    let sub_ba = psub(d, p, pb, pa);
+    let sub_cb = psub(d, p, pc, pb);
+    let sub_oop = psub(d, p, po, pop);
+    let zero = czero(d, p);
+    let dot_oop_ba = dotp(d, p, sub_oop, sub_ba);
+    let concl_ab_ty = equiv(d, p, dot_oop_ba, zero);
+    let dot_oop_cb = dotp(d, p, sub_oop, sub_cb);
+    let concl_bc_ty = equiv(d, p, dot_oop_cb, zero);
+    let hd1 = d.and_left(concl_ab_ty, concl_bc_ty, hdiff);
+    let hd2 = d.and_right(concl_ab_ty, concl_bc_ty, hdiff);
+
+    // Step 2: annihilated by the determinant.
+    let hca = d.lemma(
+        p.cross_annihilates_difference,
+        &[sub_oop, pa, pb, pc, hd1, hd2],
+    );
+    let vx = d.const_app(p.x, &[sub_oop]);
+    let vy = d.const_app(p.y, &[sub_oop]);
+    let cross_abc = d.const_app(p.cross, &[pa, pb, pc]);
+    let mul_vx_cross = cmul(d, p, vx, cross_abc);
+    let concl_x_ty = equiv(d, p, mul_vx_cross, zero);
+    let mul_vy_cross = cmul(d, p, vy, cross_abc);
+    let concl_y_ty = equiv(d, p, mul_vy_cross, zero);
+    let hvx_d = d.and_left(concl_x_ty, concl_y_ty, hca);
+    let hvy_d = d.and_right(concl_x_ty, concl_y_ty, hca);
+
+    // Step 3: cancel the determinant via the witnessed inverse.
+    let vx_zero = cancel_via_pos_bound_proof(d, p, vx, cross_abc, pk, hnc, hvx_d);
+    let vy_zero = cancel_via_pos_bound_proof(d, p, vy, cross_abc, pk, hnc, hvy_d);
+
+    // Step 4: read back as CPoint.Equiv O O'.
+    let ox = d.const_app(p.x, &[po]);
+    let oy = d.const_app(p.y, &[po]);
+    let opx = d.const_app(p.x, &[pop]);
+    let opy = d.const_app(p.y, &[pop]);
+    let ox_eq_opx = equiv_of_sub_eq_zero(d, p, ox, opx, vx_zero);
+    let oy_eq_opy = equiv_of_sub_eq_zero(d, p, oy, opy, vy_zero);
+
+    let claim_x = equiv(d, p, ox, opx);
+    let claim_y = equiv(d, p, oy, opy);
+    let body = and_intro(d, p, claim_x, claim_y, ox_eq_opx, oy_eq_opy);
+    let concl_final = d.const_app(p.point_equiv, &[po, pop]);
+
+    let ty_body = {
+        let inner = d.arrow(h2p_ty, concl_final);
+        let with_h1p = d.arrow(h1p_ty, inner);
+        let with_h2 = d.arrow(h2_ty, with_h1p);
+        let with_h1 = d.arrow(h1_ty, with_h2);
+        d.arrow(nc_ty, with_h1)
+    };
+    let ty = {
+        let w6 = d.pi_fv(op_fv, point, ty_body);
+        let w5 = d.pi_fv(o_fv, point, w6);
+        let w4 = d.pi_fv(c_fv, point, w5);
+        let w3 = d.pi_fv(b_fv, point, w4);
+        let w2 = d.pi_fv(a_fv, point, w3);
+        d.pi_fv(k_fv, nat, w2)
+    };
+    let value = {
+        let inner = d.lam_fv(h2p_fv, h2p_ty, body);
+        let with_h1p = d.lam_fv(h1p_fv, h1p_ty, inner);
+        let with_h2 = d.lam_fv(h2_fv, h2_ty, with_h1p);
+        let with_h1 = d.lam_fv(h1_fv, h1_ty, with_h2);
+        let with_nc = d.lam_fv(nc_fv, nc_ty, with_h1);
+        let w6 = d.lam_fv(op_fv, point, with_nc);
+        let w5 = d.lam_fv(o_fv, point, w6);
+        let w4 = d.lam_fv(c_fv, point, w5);
+        let w3 = d.lam_fv(b_fv, point, w4);
+        let w2 = d.lam_fv(a_fv, point, w3);
+        d.lam_fv(k_fv, nat, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.circumcentre_unique,
+        uparams: vec![],
+        ty,
+        value,
     })
 }
 
