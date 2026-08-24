@@ -122,7 +122,7 @@ zero-byte dump) produces the exact class populations for
 `12 <= ell <= 22`, both degrees. An embedded pure-Python Hayes-character engine
 -- `E_j = prod_{k odd} <1+x^k>` with `ord(1+x^k) = 2^{e_k}`,
 `e_k = floor(log2(j/k))+1`, exact discrete log, `c_m(chi) = sum_{v in V_m}chi(v)`
-in `Z[zeta_{2^E}]`, `S_n = [u^n](uL'/L)` -- runs live in every checker
+in `Z[zeta_{2^E}]`, `S_n` = the `u^n` coefficient of `u L'/L` -- runs live in every checker
 invocation for `ell <= 11`. It reproduces `D_n` **exactly** at all 20 endpoints
 `2 <= ell <= 11`, and reproduces note 18's independently flint-enumerated
 `Theta_ell(1)` at all 11 of its even endpoints.

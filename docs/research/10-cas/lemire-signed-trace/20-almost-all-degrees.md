@@ -516,7 +516,7 @@ Q-transform into the window, and Barrier III's reach is not enlarged by it.
 
 CHECK A: an independent Python engine (Hayes group structure `E_j = prod_{k odd}
 <1+x^k>` with `e_k = floor(log2(j/k))+1`, exact discrete log, `L(u,chi) =
-sum_{m<j} c_m u^m` with `c_m = sum_{v in V_m} chi(v)`, `S_n = [u^n](uL'/L)`)
+sum_{m<j} c_m u^m` with `c_m = sum_{v in V_m} chi(v)`, `S_n = the u^n coefficient of u L'/L`)
 reproduces the branch CAS `axeyum-gf2-hayes-endpoints` discrepancies `D_n`
 **exactly** at all 18 endpoints `2 <= ell <= 10`, both degrees, with worst RH
 deviation `9.05e-09`. CHECK H additionally cross-checks the CAS's
