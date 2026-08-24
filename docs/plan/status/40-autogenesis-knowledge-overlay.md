@@ -10,8 +10,8 @@ nine have explicitly partial concept/encounter mappings, and seven evidence
 credits are checked against their fact records (the other two were settled by
 earlier one-target operations). The owning fact, operation, claim, and kernel
 schemas are unchanged; local/external endpoints and false complete-coverage or
-uncredited-producer edges are mutation-tested. F2 now projects 1,122 current
-kernel declarations and 4,035 direct theorem dependencies from accepted terms,
+uncredited-producer edges are mutation-tested. F2 now projects 1,142 current
+kernel declarations and 4,127 direct theorem dependencies from accepted terms,
 with theorem/definition/inductive/constructor/recursor kinds and prelude
 visibility kept distinct. Next: normalize producer declines into typed,
 measured obstructions rather than hand-authoring the next bottleneck. F3 now
@@ -75,3 +75,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `c9bb67b5a` | Pre-register the general-producer evaluation funnel, stages, decline taxonomy, control-void rule, and forbidden-input boundary before execution |
 | 2026-08-24 | `432dcef75` | Add the fail-closed future-result schema and validator that requires complete safe-frontier accounting and rejects accepted false controls |
 | 2026-08-24 | `9aa74f0d3` | Gate the producer-result contract's mutation tests in the aggregate knowledge checks without fabricating an execution result |
+| 2026-08-24 | `e256492c2` | Refresh the kernel-derived snapshot after Decidable and CPoint construction: 1,142 declarations, 869 theorems, and 4,127 direct theorem edges |
