@@ -26,6 +26,12 @@ search-space reduction: a proposed producer can be evaluated against a family
 shape cluster without treating neighboring proof bodies or target outcomes as
 available information.
 
+Those clusters are now labeled through a separately reviewed, pinned
+[family-to-concept crosswalk](248-family-concept-crosswalk.md). The label is
+family-topic guidance only; the graph still requires a distinct qualified
+`formalizes` edge before it can claim anything about an individual theorem's
+formal coverage of that concept.
+
 Each reviewed cluster also carries the exact set of its immediate ledger
 descendants and its count. This is measured leverage, not a value judgement:
 it lets a scheduler compare the potential local fan-out of candidate producer

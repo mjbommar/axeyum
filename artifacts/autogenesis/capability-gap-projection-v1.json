@@ -11,7 +11,8 @@
       "ready_fact_ids": [
         "F:ml430-mutation-aabb80b1f89f0c5847364692"
       ],
-      "statement_shape": "biconditional"
+      "statement_shape": "biconditional",
+      "topic_concept_id": "C:fibonacci-sequence"
     },
     {
       "dependency_component_ids": [
@@ -24,7 +25,8 @@
       "ready_fact_ids": [
         "F:ml430-int-fib-of-odd-66560495"
       ],
-      "statement_shape": "conditional-proposition"
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:fibonacci-sequence"
     },
     {
       "dependency_component_ids": [
@@ -39,7 +41,8 @@
       "ready_fact_ids": [
         "F:ml430-int-fib-add-181b6a2c"
       ],
-      "statement_shape": "unconditional-equality"
+      "statement_shape": "unconditional-equality",
+      "topic_concept_id": "C:fibonacci-sequence"
     },
     {
       "dependency_component_ids": [
@@ -52,7 +55,8 @@
       "ready_fact_ids": [
         "F:ml430-int-fib-two-mul-add-one-pos-8977f65f"
       ],
-      "statement_shape": "unconditional-relation"
+      "statement_shape": "unconditional-relation",
+      "topic_concept_id": "C:fibonacci-sequence"
     },
     {
       "dependency_component_ids": [
@@ -76,7 +80,8 @@
         "F:ml430-int-ne-zero-of-gcd-f71f00df",
         "F:ml430-mutation-48fe130e2b8eadb6f626b66f"
       ],
-      "statement_shape": "conditional-proposition"
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:greatest-common-divisor"
     },
     {
       "dependency_component_ids": [
@@ -89,7 +94,8 @@
       "ready_fact_ids": [
         "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e"
       ],
-      "statement_shape": "existential-witness"
+      "statement_shape": "existential-witness",
+      "topic_concept_id": "C:greatest-common-divisor"
     },
     {
       "dependency_component_ids": [
@@ -104,7 +110,8 @@
       "ready_fact_ids": [
         "F:ml430-int-gcd-eq-gcd-ab-63005aef"
       ],
-      "statement_shape": "unconditional-equality"
+      "statement_shape": "unconditional-equality",
+      "topic_concept_id": "C:greatest-common-divisor"
     },
     {
       "dependency_component_ids": [
@@ -119,7 +126,8 @@
         "F:ml430-int-modeq-dvd-iff-b7ffeff8",
         "F:ml430-int-neg-modeq-neg-30d98479"
       ],
-      "statement_shape": "biconditional"
+      "statement_shape": "biconditional",
+      "topic_concept_id": "C:modular-arithmetic"
     },
     {
       "dependency_component_ids": [
@@ -141,7 +149,8 @@
         "F:ml430-int-modeq-of-dvd-b9c41fce",
         "F:ml430-int-modeq-of-mul-left-c4ccd51e"
       ],
-      "statement_shape": "conditional-proposition"
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:modular-arithmetic"
     },
     {
       "dependency_component_ids": [
@@ -163,7 +172,8 @@
         "F:ml430-int-modulus-modeq-zero-5b57a898",
         "F:ml430-mutation-aca37b68d3cdf06f0127def9"
       ],
-      "statement_shape": "unconditional-relation"
+      "statement_shape": "unconditional-relation",
+      "topic_concept_id": "C:modular-arithmetic"
     },
     {
       "dependency_component_ids": [
@@ -183,7 +193,8 @@
         "F:ml430-nat-choose-ne-zero-49c3d3cb",
         "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20"
       ],
-      "statement_shape": "conditional-proposition"
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:binomial-coefficient"
     },
     {
       "dependency_component_ids": [
@@ -209,7 +220,8 @@
         "F:ml430-nat-choose-zero-succ-62c6520b",
         "F:ml430-nat-multichoose-zero-right-6ef827c8"
       ],
-      "statement_shape": "unconditional-equality"
+      "statement_shape": "unconditional-equality",
+      "topic_concept_id": "C:binomial-coefficient"
     },
     {
       "dependency_component_ids": [
@@ -228,7 +240,8 @@
         "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
         "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f"
       ],
-      "statement_shape": "unconditional-relation"
+      "statement_shape": "unconditional-relation",
+      "topic_concept_id": "C:binomial-coefficient"
     },
     {
       "dependency_component_ids": [
@@ -241,7 +254,8 @@
       "ready_fact_ids": [
         "F:ml430-nat-even-xor-78a39432"
       ],
-      "statement_shape": "biconditional"
+      "statement_shape": "biconditional",
+      "topic_concept_id": "C:bit"
     },
     {
       "dependency_component_ids": [
@@ -258,7 +272,8 @@
         "F:ml430-nat-lt-xor-cases-c43a1e85",
         "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
       ],
-      "statement_shape": "conditional-proposition"
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:bit"
     },
     {
       "dependency_component_ids": [
@@ -273,7 +288,8 @@
       "ready_fact_ids": [
         "F:ml430-nat-bitwise-bit-4c4b28a8"
       ],
-      "statement_shape": "higher-order-property"
+      "statement_shape": "higher-order-property",
+      "topic_concept_id": "C:bit"
     },
     {
       "dependency_component_ids": [
@@ -301,7 +317,8 @@
         "F:ml430-nat-testbit-ldiff-16f94162",
         "F:ml430-nat-testbit-lor-7644e067"
       ],
-      "statement_shape": "unconditional-equality"
+      "statement_shape": "unconditional-equality",
+      "topic_concept_id": "C:bit"
     },
     {
       "dependency_component_ids": [
@@ -322,7 +339,8 @@
         "F:ml430-nat-factorial-dvd-factorial-e9d14845",
         "F:ml430-nat-factorial-lt-of-lt-d6c2125d"
       ],
-      "statement_shape": "conditional-proposition"
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:factorial"
     },
     {
       "dependency_component_ids": [
@@ -337,7 +355,8 @@
         "F:ml430-mutation-7afa5ec620720a1501bf349d",
         "F:ml430-nat-descfactorial-self-899fc0e0"
       ],
-      "statement_shape": "unconditional-equality"
+      "statement_shape": "unconditional-equality",
+      "topic_concept_id": "C:factorial"
     },
     {
       "dependency_component_ids": [
@@ -354,7 +373,8 @@
       "ready_fact_ids": [
         "F:ml430-nat-factorial-pos-f1dd2405"
       ],
-      "statement_shape": "unconditional-relation"
+      "statement_shape": "unconditional-relation",
+      "topic_concept_id": "C:factorial"
     },
     {
       "dependency_component_ids": [
@@ -367,7 +387,8 @@
       "ready_fact_ids": [
         "F:ml430-mutation-1432b2277cf2cc26c1d11cd6"
       ],
-      "statement_shape": "biconditional"
+      "statement_shape": "biconditional",
+      "topic_concept_id": "C:fibonacci-sequence"
     },
     {
       "dependency_component_ids": [
@@ -382,7 +403,8 @@
       "ready_fact_ids": [
         "F:ml430-nat-le-fib-self-0cbccb4d"
       ],
-      "statement_shape": "conditional-proposition"
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:fibonacci-sequence"
     },
     {
       "dependency_component_ids": [
@@ -397,7 +419,8 @@
       "ready_fact_ids": [
         "F:ml430-nat-fib-add-two-strictmono-c1e86d4d"
       ],
-      "statement_shape": "higher-order-property"
+      "statement_shape": "higher-order-property",
+      "topic_concept_id": "C:fibonacci-sequence"
     },
     {
       "dependency_component_ids": [
@@ -410,7 +433,8 @@
       "ready_fact_ids": [
         "F:ml430-nat-fastfib-eq-cde11774"
       ],
-      "statement_shape": "unconditional-equality"
+      "statement_shape": "unconditional-equality",
+      "topic_concept_id": "C:fibonacci-sequence"
     },
     {
       "dependency_component_ids": [
@@ -425,7 +449,8 @@
       "ready_fact_ids": [
         "F:ml430-nat-fib-le-fib-succ-d1ef4a3d"
       ],
-      "statement_shape": "unconditional-relation"
+      "statement_shape": "unconditional-relation",
+      "topic_concept_id": "C:fibonacci-sequence"
     },
     {
       "dependency_component_ids": [
@@ -450,7 +475,8 @@
         "F:ml430-nat-coprime-one-right-iff-42fed4ce",
         "F:ml430-nat-coprime-self-add-left-51351fa1"
       ],
-      "statement_shape": "biconditional"
+      "statement_shape": "biconditional",
+      "topic_concept_id": "C:greatest-common-divisor"
     },
     {
       "dependency_component_ids": [
@@ -476,7 +502,8 @@
         "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
         "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60"
       ],
-      "statement_shape": "conditional-proposition"
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:greatest-common-divisor"
     },
     {
       "dependency_component_ids": [
@@ -489,7 +516,8 @@
       "ready_fact_ids": [
         "F:ml430-nat-coprime-symmetric-9b5cfa12"
       ],
-      "statement_shape": "higher-order-property"
+      "statement_shape": "higher-order-property",
+      "topic_concept_id": "C:greatest-common-divisor"
     },
     {
       "dependency_component_ids": [
@@ -502,7 +530,8 @@
       "ready_fact_ids": [
         "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8"
       ],
-      "statement_shape": "negated-proposition"
+      "statement_shape": "negated-proposition",
+      "topic_concept_id": "C:greatest-common-divisor"
     },
     {
       "dependency_component_ids": [
@@ -515,7 +544,8 @@
       "ready_fact_ids": [
         "F:ml430-mutation-c20db9b4c60b816ce738bdf2"
       ],
-      "statement_shape": "unconditional-relation"
+      "statement_shape": "unconditional-relation",
+      "topic_concept_id": "C:greatest-common-divisor"
     },
     {
       "dependency_component_ids": [
@@ -537,7 +567,8 @@
         "F:ml430-nat-log-lt-self-529f89fa",
         "F:ml430-nat-log-of-lt-89eaf42e"
       ],
-      "statement_shape": "conditional-proposition"
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:logarithm"
     },
     {
       "dependency_component_ids": [
@@ -556,7 +587,8 @@
         "F:ml430-nat-log-antitone-left-20d1326c",
         "F:ml430-nat-log-monotone-52fad774"
       ],
-      "statement_shape": "higher-order-property"
+      "statement_shape": "higher-order-property",
+      "topic_concept_id": "C:logarithm"
     },
     {
       "dependency_component_ids": [
@@ -587,7 +619,8 @@
         "F:ml430-nat-log-zero-left-9ec8541e",
         "F:ml430-nat-log-zero-right-8ea186db"
       ],
-      "statement_shape": "unconditional-equality"
+      "statement_shape": "unconditional-equality",
+      "topic_concept_id": "C:logarithm"
     },
     {
       "dependency_component_ids": [
@@ -600,7 +633,8 @@
       "ready_fact_ids": [
         "F:ml430-mutation-e8583599cfae2d40cefae3f0"
       ],
-      "statement_shape": "unconditional-relation"
+      "statement_shape": "unconditional-relation",
+      "topic_concept_id": "C:logarithm"
     },
     {
       "dependency_component_ids": [
@@ -628,7 +662,8 @@
         "F:ml430-nat-modeq-symm-0a3d4d18",
         "F:ml430-nat-modeq-trans-ef9d1c46"
       ],
-      "statement_shape": "conditional-proposition"
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:modular-arithmetic"
     },
     {
       "dependency_component_ids": [
@@ -653,7 +688,8 @@
         "F:ml430-nat-modeq-refl-d870c8f5",
         "F:ml430-nat-modulus-modeq-zero-fd9af096"
       ],
-      "statement_shape": "unconditional-relation"
+      "statement_shape": "unconditional-relation",
+      "topic_concept_id": "C:modular-arithmetic"
     },
     {
       "dependency_component_ids": [
@@ -677,7 +713,8 @@
         "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
         "F:ml430-nat-prime-even-iff-d068ec82"
       ],
-      "statement_shape": "biconditional"
+      "statement_shape": "biconditional",
+      "topic_concept_id": "C:prime-number"
     },
     {
       "dependency_component_ids": [
@@ -709,7 +746,8 @@
         "F:ml430-nat-prime-pred-pos-4e67ac4c",
         "F:ml430-nat-succ-pred-prime-4feb123f"
       ],
-      "statement_shape": "conditional-proposition"
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:prime-number"
     },
     {
       "dependency_component_ids": [
@@ -727,7 +765,8 @@
       "ready_fact_ids": [
         "F:ml430-nat-sqrt-lt-4909537f"
       ],
-      "statement_shape": "biconditional"
+      "statement_shape": "biconditional",
+      "topic_concept_id": "C:square-root"
     },
     {
       "dependency_component_ids": [
@@ -744,7 +783,8 @@
         "F:ml430-nat-sqrt-eq-79ae8eae",
         "F:ml430-nat-sqrt-eq-c036815b"
       ],
-      "statement_shape": "unconditional-equality"
+      "statement_shape": "unconditional-equality",
+      "topic_concept_id": "C:square-root"
     },
     {
       "dependency_component_ids": [
@@ -763,7 +803,8 @@
         "F:ml430-nat-lt-succ-sqrt-39389df2",
         "F:ml430-nat-sqrt-le-7918582b"
       ],
-      "statement_shape": "unconditional-relation"
+      "statement_shape": "unconditional-relation",
+      "topic_concept_id": "C:square-root"
     }
   ],
   "census": {
@@ -788,6 +829,7 @@
     "uncataloged_ready_facts": 9
   },
   "derivation": {
+    "family_concept_crosswalk_path": "artifacts/autogenesis/family-concept-crosswalk-v1.json",
     "frontier_sha256": "45d9d6e41f955c8ad8ea302b3e3e88d5b0c2822f1c9dd73cc30f685195df6758",
     "ledger_sha256": "b69482b7a56d5941be5d7f17c14e5e6cfeba6c847dc92bbf27dbed23ebfc0528",
     "operation_registry_sha256": "9f4de92b1b2596aaf8665644a34c0ef024a8ee9f3e2ce77682d24973908fd404",

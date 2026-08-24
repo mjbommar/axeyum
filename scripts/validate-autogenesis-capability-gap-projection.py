@@ -97,6 +97,9 @@ def validate(data: dict[str, Any]) -> list[str]:
         if not all(isinstance(part, str) and part for part in key):
             errors.append("catalog cluster has invalid family or shape")
         cluster_keys.append(key)  # type: ignore[arg-type]
+        topic = cluster.get("topic_concept_id")
+        if not isinstance(topic, str) or not topic.startswith("C:"):
+            errors.append(f"{key}: cluster lacks a reviewed topic concept")
         ids = cluster.get("ready_fact_ids")
         components = cluster.get("dependency_component_ids")
         unlocked = cluster.get("direct_unlock_fact_ids")

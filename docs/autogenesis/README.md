@@ -253,6 +253,7 @@ compounding, not automation theatre.
 | [Obstruction projection](245-obstruction-projection-result.md) | Which retained producer-decline families have measured blockers, without inventing remedies or resolutions? |
 | [Transport projection](246-transport-projection-result.md) | Which source-to-admission chains are hash-bound and complete, rather than merely name-matched? |
 | [Capability-gap projection](247-capability-gap-projection-result.md) | Which dependency-ready fact groups lack a registered producer, and why is autonomous dispatch currently refused? |
+| [Family-to-concept crosswalk](248-family-concept-crosswalk.md) | How can frozen statement families receive pinned mathematical-topic labels without being mistaken for fact-level formalizations? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

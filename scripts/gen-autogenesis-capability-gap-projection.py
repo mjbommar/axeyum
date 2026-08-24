@@ -22,6 +22,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "artifacts/autogenesis/capability-gap-projection-v1.json"
 FRONTIER_SCRIPT = ROOT / "scripts/fact-frontier.py"
 CATALOG = ROOT / "artifacts/autogenesis/mathlib-nat-int-fact-catalog-v1.json"
+CROSSWALK = ROOT / "artifacts/autogenesis/family-concept-crosswalk-v1.json"
 
 
 class CapabilityGapError(RuntimeError):
@@ -55,6 +56,15 @@ def build() -> dict[str, Any]:
         row["fact_id"]: row for row in catalog_rows
         if isinstance(row, dict) and isinstance(row.get("fact_id"), str)
     }
+    try:
+        crosswalk = json.loads(CROSSWALK.read_text())
+        concept_by_family = {
+            row["family"]: row["concept_id"]
+            for row in crosswalk["mappings"]
+            if isinstance(row, dict)
+        }
+    except (OSError, json.JSONDecodeError, KeyError) as error:
+        raise CapabilityGapError(f"cannot read reviewed family-concept crosswalk: {error}") from error
     rejected_by = {
         row["fact_id"]: row["rejected_by"]
         for row in machine["selection"]["rationale"]
@@ -105,6 +115,7 @@ def build() -> dict[str, Any]:
             {
                 "family": family,
                 "statement_shape": statement_shape,
+                "topic_concept_id": concept_by_family.get(family),
                 "ready_fact_ids": ids,
                 "ready_fact_count": len(ids),
                 "dependency_component_ids": components,
@@ -123,6 +134,7 @@ def build() -> dict[str, Any]:
             "ledger_sha256": machine["ledger"]["ledger_sha256"],
             "operation_registry_sha256": machine["policy"]["operation_registry_sha256"],
             "reviewed_fact_catalog_sha256": catalog.get("catalog_sha256"),
+            "family_concept_crosswalk_path": str(CROSSWALK.relative_to(ROOT)),
             "trust_boundary": "ranking and producer-investigation input only; never proof or admission authority",
         },
         "census": {

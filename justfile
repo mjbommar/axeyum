@@ -479,6 +479,10 @@ autogenesis-capability-gap:
     python3 scripts/validate-autogenesis-capability-gap-projection.py
     python3 scripts/gen-autogenesis-capability-gap-projection.py --check
 
+autogenesis-family-concepts:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_family_concept_crosswalk
+    python3 scripts/validate-autogenesis-family-concept-crosswalk.py
+
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh
 
