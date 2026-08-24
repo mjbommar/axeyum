@@ -37,3 +37,4 @@ metadata or solver work.
 | 2026-08-24 | `c4cfde641` | Refresh the kernel-derived declaration/dependency snapshot to the latest 1,122 declarations, 855 theorems, and 4,035 direct theorem edges without touching construction sources |
 | 2026-08-24 | `a8c08220a` | Derive a fail-closed capability-gap projection that groups all dependency-ready facts by typed surface and reports why autonomous dispatch is refused |
 | 2026-08-24 | `685d22efb` | Enrich the capability-gap view with frozen outcome-blind Mathlib family and statement-shape clusters while preserving dependency-component boundaries |
+| 2026-08-24 | `8f92809dc` | Add measured immediate descendant fan-out to each ready fact cluster as an explicitly non-authoritative scheduling observation |
