@@ -4,9 +4,10 @@
 //! of Fermat's little theorem (`Int.pow_prime_sub_one_modeq_one`,
 //! `p ∤ a ⟹ a^(p−1) ≡ 1 [p]`) and its bridging lemma `Int.of_nat_pow`; and,
 //! later the same day, the *executable* modular inverse this whole chain was
-//! built to reach — `Int.mul_inv_of_pow`, `Nat.inverseIndex`, and its
+//! built to reach — `Int.mul_inv_of_pow`, `Nat.inverseIndex`, its
 //! permutation proof `Nat.inverseIndex_maps_into` /
-//! `Nat.inverseIndex_injective`.
+//! `Nat.inverseIndex_injective`, and — the fixed-point characterisation that
+//! decides Wilson's sign — `Nat.inverseIndex_fixed_point`.
 //!
 //! ## What lands here, and what does not
 //!
@@ -64,19 +65,40 @@
 //! difference the same as any other), and the lone index `k = 0` is covered
 //! by exactly the same argument as every other prime.
 //!
+//! ## The fixed-point characterisation, landed 2026-08-24
+//!
+//! `Nat.inverseIndex_fixed_point` (`declare_inverse_index_fixed_point`):
+//! `p` prime, `k < p-1`, `σ k = k` (`σ := Nat.inverseIndex p`) ⟹ `k = 0 ∨
+//! k = p-2` — the converse of the two direct computations `σ 0 = 0` /
+//! `σ (p-2) = p-2` (neither is built here; both are immediate unfoldings this
+//! development has not needed to name). Equivalently: the only residues that
+//! are their own modular inverse are `1` and `p-1`. This is the theorem that
+//! says a pairing argument over `σ` has exactly two exceptions, and it is the
+//! genuine mathematical content of Wilson's theorem — `Int.self_inverse_mod_prime`
+//! (`a*a ≡ 1 [p] ⟹ a ≡ ±1 [p]`, via `Int.euclid_lemma`) transported across
+//! the index/residue correspondence `a := ofNat(k+1)`. The transport needed
+//! one genuinely new piece: `Int.sub (ofNat p) one = ofNat (p-1)`, built from
+//! `Int.add_neg_cancel_right` rather than the `subNatNat` borrow development
+//! (`Int.sub` unfolds transparently to `add a (neg b)`, so no case split on
+//! the symbolic magnitude is needed — cheaper than reaching for the borrow
+//! machinery `sub_nat_nat.rs` built for exactly this kind of question).
+//!
 //! ## What Wilson is blocked on now, measured 2026-08-24
 //!
 //! Every ingredient the permutation argument needs is landed and axiom-free:
 //! a concrete `σ := Nat.inverseIndex p`, its `InjectiveOn`/`MapsInto` proofs,
-//! and `Int.prodRange_permute` itself. What is **not** yet built is the
-//! *collapse* argument Wilson's theorem needs on top of the permutation: `σ`
-//! pairs each survivor with its distinct inverse, but `Int.self_inverse_mod_prime`
-//! says exactly two indices are their own image under `σ` (those with
-//! `a ≡ ±1 [p]`), and turning "the product over a permuted range, where all
-//! but two factors cancel pairwise against their partner" into a closed
-//! form is a genuinely new inductive argument — not a data-plumbing
-//! exercise like the pieces above. Wilson's theorem itself is **not**
-//! declared here — that is its own slice — but the rearrangement principle
+//! its fixed-point characterisation, and `Int.prodRange_permute` itself.
+//! What is **not** yet built is the *collapse* argument Wilson's theorem
+//! needs on top of the permutation: `σ` pairs each survivor with its distinct
+//! inverse, and the fixed-point lemma now says in advance which two indices
+//! are their own image under `σ`, but turning "the product over a permuted
+//! range, where all but two factors cancel pairwise against their partner"
+//! into a closed form is still a genuinely new inductive argument — not a
+//! data-plumbing exercise like the pieces above (a swap/override induction
+//! removing one matched pair from the range at a time, the same difficulty
+//! `Int.prodRange_permute` itself took three drafts to close). Wilson's
+//! theorem itself is **not** declared here — that is its own slice — but the
+//! rearrangement principle
 //! it needs is now fully proved and axiom-free: `Int.prodRange_permute`
 //! (`prod.rs`) : `∀ f σ n, InjectiveOn σ n → MapsInto σ n →
 //! prodRange f n = prodRange (fun k => f (σ k)) n`. The classical proof of
@@ -1543,6 +1565,301 @@ pub(super) fn declare_inverse_index_injective(d: &mut IntDev<'_>) -> Result<(), 
     Ok(())
 }
 
+/// `Eq Nat (succ (sub pp two)) (sub pp one)`, given a primality proof for
+/// `pp` — `succ(p-2) = p-1`. The same two-`Nat.sub_add_cancel`s-glued-by-
+/// `Nat.succ_injective` derivation [`declare_mul_inv_of_pow`] already builds
+/// inline; duplicated here (five lines) rather than extracted from under an
+/// already-landed proof.
+fn succ_pm2_eq_pm1(d: &mut IntDev<'_>, pp: ExprId, prime_proof: ExprId) -> ExprId {
+    let p = d.int();
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let (two_le_ty, clause_ty) = prime_parts(d, pp);
+    let two_le = d.and_left(two_le_ty, clause_ty, prime_proof);
+    let one_le_pp = nat_prime_pos(d, pp, prime_proof);
+
+    let pm2 = d.sub(pp, two_nat);
+    let succ_pm2 = d.succ(pm2);
+    let succ_succ_pm2 = d.succ(succ_pm2);
+    let cancel2 = d.lemma(p.nat.sub_add_cancel, &[two_nat, pp, two_le]);
+    let pm1 = d.sub(pp, one_nat);
+    let succ_pm1 = d.succ(pm1);
+    let cancel1 = d.lemma(p.nat.sub_add_cancel, &[one_nat, pp, one_le_pp]);
+    let cancel1_rev = d.symm(succ_pm1, pp, cancel1);
+    let combined = d.trans(succ_succ_pm2, pp, succ_pm1, cancel2, cancel1_rev);
+    let succ_injective_fn = d.lemma(p.nat.succ_injective, &[succ_pm2, pm1]);
+    d.apply(succ_injective_fn, &[combined])
+}
+
+/// `Nat.inverseIndex_fixed_point :
+/// ∀ p k, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) → Lt k (p-1) →
+///   Eq Nat (inverseIndex p k) k → Or (Eq Nat k zero) (Eq Nat k (p-2))`
+///
+/// **The fixed-point characterisation**: the only residues that are their own
+/// modular inverse are `1` and `p-1` — equivalently, the only fixed indices
+/// of `σ := Nat.inverseIndex p` are `0` and `p-2`. This is the converse of
+/// the two direct computations `σ 0 = 0` / `σ (p-2) = p-2` (neither of which
+/// is built here; both are immediate unfoldings this development has not
+/// needed to name), and it is the theorem that says a pairing argument over
+/// `σ` has exactly two exceptions — every route to Wilson's theorem needs it.
+///
+/// `Int.self_inverse_mod_prime` is the entire mathematical content
+/// (`a*a ≡ 1 [p] ⟹ a ≡ ±1 [p]`, via `Int.euclid_lemma`); this transports it
+/// across the index/residue correspondence `a := ofNat(k+1)`, `n := p-1`, the
+/// same correspondence [`declare_inverse_index`] and
+/// [`declare_inverse_index_injective`] already use.
+///
+/// Route: with `sk := succ k`, `a := ofNat sk`, `pw := a^(p-2)`,
+/// `r := emod(pw, ofNat p)`, `mag := natAbs r` — exactly `inverseIndex`'s own
+/// body at `(p, k)`, so the hypothesis `σ k = k` is definitionally
+/// `mag - 1 = k`:
+///
+/// 1. `mag ≠ 0` ([`mag_ne_zero`], the same fact
+///    [`declare_inverse_index_injective`] needs), hence `succ(mag-1) = mag`
+///    (`Nat.sub_add_cancel`); combined with the hypothesis, `sk = mag`.
+/// 2. `a = ofNat mag = r` (`Int.of_nat_nat_abs_of_nonneg`), and `r ≡ pw [p]`
+///    always ([`emod_modeq_self`]), so `a ≡ pw [p]`; scaling
+///    `Int.mul_inv_of_pow`'s `a*pw ≡ 1 [p]` by `a` on the left gives
+///    `a*a ≡ 1 [p]`.
+/// 3. `Int.self_inverse_mod_prime` at `(ofNat p, a)` needs `1 ≤ a ≤ p-1` over
+///    `ℤ`: the lower bound is `Nat.zero_lt_succ` directly (`Int.le`/`Int.lt`
+///    on `ofNat`-headed arguments reduce structurally to `Nat.le`/`Nat.lt`,
+///    the same fact [`declare_inverse_index_maps_into`]'s doc records); the
+///    upper bound needs the one genuinely new piece — `Eq Int (ofNat p - one)
+///    (ofNat (p-1))` — built from `Int.add_neg_cancel_right` and
+///    `Nat.sub_add_cancel` rather than the `subNatNat` borrow machinery,
+///    since `Int.sub` unfolds transparently to `add a (neg b)` and needs no
+///    case split on the (symbolic) magnitude.
+/// 4. The conclusion `ModEq p a one ∨ ModEq p a (p-1)` decides which: each
+///    canonical residue (`a`, `one`, and the rewritten `ofNat(p-1)`) is
+///    already `emod`-idempotent in range ([`emod_eq_self_of_in_range`]), so
+///    each disjunct collapses a `ModEq` into a literal `Eq Int`, then an
+///    `Int.natAbs` congruence turns it into `Eq Nat sk 1` or `Eq Nat sk
+///    (p-1)` — and `Nat.succ_injective` (the second case composed with
+///    [`succ_pm2_eq_pm1`]) closes `Eq Nat k 0` or `Eq Nat k (p-2)`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_inverse_index_fixed_point(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.inverse_index_fixed_point, 2, &|d, v| {
+        let (pp, k) = (v[0], v[1]);
+        let prime_ty = prime_condition(d, pp);
+
+        let one_nat = d.num(1);
+        let two_nat = d.num(2);
+        let pm1 = d.sub(pp, one_nat);
+        let pm2 = d.sub(pp, two_nat);
+        let hk_ty = d.lt(k, pm1);
+        let sigma_k = d.const_app(p.inverse_index, &[pp, k]);
+        let heq_ty = d.eq(sigma_k, k);
+        let zero_nat = d.zero();
+        let is_zero = d.eq(k, zero_nat);
+        let is_pm2 = d.eq(k, pm2);
+        let concl = d.or(is_zero, is_pm2);
+
+        let stmt = {
+            let inner = d.arrow(heq_ty, concl);
+            let with_hk = d.arrow(hk_ty, inner);
+            d.arrow(prime_ty, with_hk)
+        };
+
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        let one_le_pp = nat_prime_pos(d, pp, prime_proof);
+        let pos_big_p = one_le_pp;
+        let succ_pm1 = d.succ(pm1);
+        let cancel1 = d.lemma(p.nat.sub_add_cancel, &[one_nat, pp, one_le_pp]);
+        let (two_le_ty, clause_ty) = prime_parts(d, pp);
+        let two_le = d.and_left(two_le_ty, clause_ty, prime_proof);
+
+        let big_p = d.of_nat(pp);
+        let one_i = d.ione();
+
+        // ub_k : Lt (succ k) pp, from hk : Lt k pm1.
+        let sk = d.succ(k);
+        let mono_fn = d.lemma(p.nat.succ_le_succ, &[sk, pm1]);
+        let mono = d.apply(mono_fn, &[hk]);
+        let ub_k = d.nat_rewrite(succ_pm1, pp, cancel1, mono, &|d, x| {
+            let s = d.succ(sk);
+            d.le(s, x)
+        });
+        let pos_sk = d.lemma(p.nat.zero_lt_succ, &[k]);
+
+        // a, pw, r, mag — exactly `inverseIndex`'s own body at (pp, k).
+        let a = d.of_nat(sk);
+        let pw = d.ipow(a, pm2);
+        let r = d.iemod(pw, big_p);
+        let mag = {
+            let f = p.nat_abs;
+            d.const_app(f, &[r])
+        };
+
+        // mag ≠ 0, hence positive; succ(mag-1) = mag.
+        let mag_ne = mag_ne_zero(d, pp, sk, prime_proof, pos_sk, ub_k);
+        let mag_pos = pos_of_ne_zero(d, mag, mag_ne);
+        let sub_mag = d.sub(mag, one_nat);
+        let succ_sub_mag = d.succ(sub_mag);
+        let cancel_mag = d.lemma(p.nat.sub_add_cancel, &[one_nat, mag, mag_pos]);
+
+        // sk = mag, from heq : Eq Nat (inverseIndex pp k) k, defeq Eq Nat sub_mag k.
+        let succ_congr = d.congr(sub_mag, k, heq, &|d, x| d.succ(x));
+        let congr_rev = d.symm(succ_sub_mag, sk, succ_congr);
+        let sk_eq_mag = d.trans(sk, succ_sub_mag, mag, congr_rev, cancel_mag);
+
+        // a = ofNat mag = r.
+        let a_eq_ofnat_mag = d.nat_eq_to_int(sk, mag, sk_eq_mag, &|d, y| d.of_nat(y));
+        let ne_big_p = int_ne_zero_of_pos(d, big_p, pos_big_p);
+        let r_nonneg = d.const_app(p.emod_nonneg, &[pw, big_p, ne_big_p]);
+        let bridge = d.const_app(p.of_nat_nat_abs_of_nonneg, &[r, r_nonneg]);
+        let ofnat_mag = d.of_nat(mag);
+        let a_eq_r = d.itrans(a, ofnat_mag, r, a_eq_ofnat_mag, bridge);
+
+        // a ≡ pw [p]: pw ≡ r [p] always, rewritten through a = r.
+        let modeq_pw_r = emod_modeq_self(d, pw, big_p, pos_big_p);
+        let r_eq_a = d.isymm(a, r, a_eq_r);
+        let modeq_pw_a = d.int_eq_rewrite(r, a, r_eq_a, modeq_pw_r, &|d, x| {
+            super::modeq::imodeq(d, big_p, pw, x)
+        });
+        let modeq_a_pw = d.const_app(p.mod_eq_symm, &[big_p, pw, a, modeq_pw_a]);
+
+        // a*a ≡ 1 [p].
+        let mip = d.const_app(p.mul_inv_of_pow, &[pp, sk, prime_proof, pos_sk, ub_k]);
+        let scaled = d.const_app(p.mod_eq_mul_left, &[big_p, a, pw, a, pos_big_p, modeq_a_pw]);
+        let aa = d.imul(a, a);
+        let a_pw = d.imul(a, pw);
+        let sq_modeq = d.const_app(p.mod_eq_trans, &[big_p, aa, a_pw, one_i, scaled, mip]);
+
+        // Int.sub big_p one_i = ofNat pm1 — the one genuinely new piece: not a
+        // `subNatNat` borrow (no case split on the symbolic magnitude), just
+        // `Int.add_neg_cancel_right` applied to the Nat-derived `ofNat pm1 +
+        // one_i = big_p`.
+        let ofnat_pm1 = d.of_nat(pm1);
+        let key = d.nat_eq_to_int(succ_pm1, pp, cancel1, &|d, y| d.of_nat(y));
+        let sum_pm1_one = d.iadd(ofnat_pm1, one_i);
+        let neg_one = d.ineg(one_i);
+        let cancel_right = d.const_app(p.add_neg_cancel_right, &[ofnat_pm1, one_i]);
+        let congr_key = d.icongr(sum_pm1_one, big_p, key, &|d, t| d.iadd(t, neg_one));
+        let lhs_after = d.iadd(big_p, neg_one);
+        let x_term = d.iadd(sum_pm1_one, neg_one);
+        let congr_key_rev = d.isymm(x_term, lhs_after, congr_key);
+        let sub_eq_pm1 = d.itrans(lhs_after, x_term, ofnat_pm1, congr_key_rev, cancel_right);
+        let sub_big_p_one = d.isub(big_p, one_i);
+
+        // ub_proof : Int.le a (Isub big_p one_i), from sk ≤ pm1 (Nat).
+        let cancel1_rev = d.symm(succ_pm1, pp, cancel1);
+        let ub_k_succ = d.nat_rewrite(pp, succ_pm1, cancel1_rev, ub_k, &|d, x| d.lt(sk, x));
+        let le_fn = d.lemma(p.nat.le_of_lt_succ, &[sk, pm1]);
+        let sk_le_pm1 = d.apply(le_fn, &[ub_k_succ]);
+        let sub_eq_pm1_rev = d.isymm(sub_big_p_one, ofnat_pm1, sub_eq_pm1);
+        let ub_proof = d.int_eq_rewrite(
+            ofnat_pm1,
+            sub_big_p_one,
+            sub_eq_pm1_rev,
+            sk_le_pm1,
+            &|d, x| d.ile(a, x),
+        );
+
+        // Canonical-residue facts both branches need.
+        let a_nonneg = d.lemma(p.nat.zero_le, &[sk]);
+        let emod_a_eq = emod_eq_self_of_in_range(d, a, big_p, pos_big_p, a_nonneg, ub_k);
+        let emod_a_raw = d.iemod(a, big_p);
+        let emod_a_rev = d.isymm(emod_a_raw, a, emod_a_eq);
+        let one_nonneg = d.lemma(p.nat.zero_le, &[one_nat]);
+        let emod_one_eq = emod_eq_self_of_in_range(d, one_i, big_p, pos_big_p, one_nonneg, two_le);
+        let emod_one_raw = d.iemod(one_i, big_p);
+        let pm1_nonneg = d.lemma(p.nat.zero_le, &[pm1]);
+        let one_pos = d.lemma(p.nat.zero_lt_succ, &[zero_nat]);
+        let pm1_lt_pp = d.lemma(p.nat.sub_lt, &[pp, one_nat, one_le_pp, one_pos]);
+        let emod_pm1_eq =
+            emod_eq_self_of_in_range(d, ofnat_pm1, big_p, pos_big_p, pm1_nonneg, pm1_lt_pp);
+        let emod_pm1_raw = d.iemod(ofnat_pm1, big_p);
+
+        let disj = d.const_app(
+            p.self_inverse_mod_prime,
+            &[big_p, a, prime_proof, pos_big_p, pos_sk, ub_proof, sq_modeq],
+        );
+        let modeq_a_one_ty = super::modeq::imodeq(d, big_p, a, one_i);
+        let modeq_a_pm1_ty = super::modeq::imodeq(d, big_p, a, sub_big_p_one);
+
+        let on_left = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+            let (_, a_eq_one) = d.ichain(
+                a,
+                &[
+                    (emod_a_raw, emod_a_rev),
+                    (emod_one_raw, h),
+                    (one_i, emod_one_eq),
+                ],
+            );
+            let refl_sk = d.refl(sk);
+            let nat_eq_sk1 = d.int_eq_rewrite(a, one_i, a_eq_one, refl_sk, &|d, x| {
+                let nx = {
+                    let f = p.nat_abs;
+                    d.const_app(f, &[x])
+                };
+                d.eq(sk, nx)
+            });
+            let succ_inj_fn = d.lemma(p.nat.succ_injective, &[k, zero_nat]);
+            let k_eq_zero = d.apply(succ_inj_fn, &[nat_eq_sk1]);
+            d.or_inl(is_zero, is_pm2, k_eq_zero)
+        };
+
+        let on_right = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+            let h_pm1 = d.int_eq_rewrite(sub_big_p_one, ofnat_pm1, sub_eq_pm1, h, &|d, x| {
+                super::modeq::imodeq(d, big_p, a, x)
+            });
+            let (_, a_eq_pm1) = d.ichain(
+                a,
+                &[
+                    (emod_a_raw, emod_a_rev),
+                    (emod_pm1_raw, h_pm1),
+                    (ofnat_pm1, emod_pm1_eq),
+                ],
+            );
+            let refl_sk = d.refl(sk);
+            let nat_eq_sk_pm1 = d.int_eq_rewrite(a, ofnat_pm1, a_eq_pm1, refl_sk, &|d, x| {
+                let nx = {
+                    let f = p.nat_abs;
+                    d.const_app(f, &[x])
+                };
+                d.eq(sk, nx)
+            });
+            let succ_pm2 = d.succ(pm2);
+            let succ_pm2_pm1 = succ_pm2_eq_pm1(d, pp, prime_proof);
+            let succ_pm2_pm1_rev = d.symm(succ_pm2, pm1, succ_pm2_pm1);
+            let sk_eq_succ_pm2 = d.trans(sk, pm1, succ_pm2, nat_eq_sk_pm1, succ_pm2_pm1_rev);
+            let succ_inj_fn = d.lemma(p.nat.succ_injective, &[k, pm2]);
+            let k_eq_pm2 = d.apply(succ_inj_fn, &[sk_eq_succ_pm2]);
+            d.or_inr(is_zero, is_pm2, k_eq_pm2)
+        };
+
+        let result = d.or_elim(
+            modeq_a_one_ty,
+            modeq_a_pm1_ty,
+            concl,
+            disj,
+            on_left,
+            on_right,
+        );
+
+        let inner_body = {
+            let with_heq = d.lam_fv(heq_fv, heq_ty, result);
+            d.lam_fv(hk_fv, hk_ty, with_heq)
+        };
+        let proof = d.lam_fv(prime_fv, prime_ty, inner_body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 // ============================================================================
 // The collapse lemma, landed 2026-08-24 — and what it does NOT close.
 //
@@ -1554,11 +1871,13 @@ pub(super) fn declare_inverse_index_injective(d: &mut IntDev<'_>) -> Result<(), 
 // induction that removes a matched pair from the range at a time — the same
 // difficulty `Int.prodRange_permute` itself took three drafts to close
 // (`point_override` + `prodRange_swap` + `Nat.restrict_injective`/
-// `restrict_maps_into`, generalizing the motive over an EVOLVING self-map) —
-// plus a still-unbuilt characterization lemma (`σ k = k → k = 0 ∨ k = p-2`,
-// the converse of the two direct computations `σ 0 = 0` / `σ (p-2) = p-2`)
-// to know in advance which index is which case. That is a second induction
-// of comparable size to `prodRange_permute`'s own, and it is NOT built here.
+// `restrict_maps_into`, generalizing the motive over an EVOLVING self-map).
+// The characterization lemma this needed to know in advance which index is
+// which case — `σ k = k → k = 0 ∨ k = p-2`, the converse of the two direct
+// computations `σ 0 = 0` / `σ (p-2) = p-2` — is now built and axiom-free:
+// `Nat.inverseIndex_fixed_point` (`declare_inverse_index_fixed_point`, above).
+// The swap/override induction itself is a SECOND induction of comparable
+// size to `prodRange_permute`'s own, and it is NOT built here.
 //
 // What IS built, and is genuinely new inductive content rather than
 // plumbing: `Int.prodRange_mul` (`prod.rs`) and `Int.modEq_prodRange_lt`

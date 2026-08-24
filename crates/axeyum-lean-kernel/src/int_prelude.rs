@@ -737,6 +737,16 @@ pub struct IntPrelude {
     ///   InjectiveOn (fun k => inverseIndex p k) (p-1)` — two indices with
     /// the same inverse are the same index, via `Int.modEq_inverse_unique`.
     pub inverse_index_injective: NameId,
+    /// `Nat.inverseIndex_fixed_point :
+    /// ∀ p k, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) → Lt k (p-1) →
+    ///   Eq Nat (inverseIndex p k) k → Or (Eq Nat k zero) (Eq Nat k (p-2))` —
+    /// the converse of the two direct computations `σ 0 = 0` / `σ (p-2) =
+    /// p-2`: the only residues that are their own modular inverse are `1`
+    /// and `p-1`, i.e. the only fixed indices of `σ := Nat.inverseIndex p`
+    /// are `0` and `p-2`. Built from [`Self::self_inverse_mod_prime`] (the
+    /// mathematical content) transported across the index/residue
+    /// correspondence `a := ofNat(k+1)`.
+    pub inverse_index_fixed_point: NameId,
     /// `factorial_sq_modeq_one :
     /// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
     ///   ModEq (ofNat p) (mul (factorial (p-1)) (factorial (p-1))) one` —
@@ -931,6 +941,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         inverse_index: kernel.name_str(nat_root, "inverseIndex"),
         inverse_index_maps_into: kernel.name_str(nat_root, "inverseIndex_maps_into"),
         inverse_index_injective: kernel.name_str(nat_root, "inverseIndex_injective"),
+        inverse_index_fixed_point: kernel.name_str(nat_root, "inverseIndex_fixed_point"),
         factorial_sq_modeq_one: child(kernel, "factorial_sq_modeq_one"),
     }
 }
@@ -1075,6 +1086,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         wilson::declare_inverse_index(&mut d)?;
         wilson::declare_inverse_index_maps_into(&mut d)?;
         wilson::declare_inverse_index_injective(&mut d)?;
+        wilson::declare_inverse_index_fixed_point(&mut d)?;
         wilson::declare_factorial_sq_modeq_one(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
