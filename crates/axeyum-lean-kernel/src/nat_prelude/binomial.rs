@@ -1590,23 +1590,25 @@ fn declare_choose_le_two_pow(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
 /// so `sub (succ n) i` does not reduce for a bound `i`, unlike `sub n
 /// (succ i)`, which peels for free.
 ///
-/// The identity that supplies the missing successor shape is provable but not
-/// yet built:
+/// The identity that supplies the missing successor shape IS now built —
+/// [`declare_succ_sub_of_le`], `Nat.succ_sub_of_le`:
 ///
 ///   `succ_sub_of_le : Le i m → sub (succ m) i = succ (sub m i)`
 ///
 /// (needed at `m := k'`, the induction's own bound, for every `i ≤ k'` inside
-/// its sum). Sketch, mirroring [`choose::sub_succ_of_lt`]'s use of `le_dest`:
-/// from `Le i m`, `le_dest` gives a witness `j` with `add i j = m`. Substitute
-/// `m` by `add i j`. Then `sub (succ (add i j)) i` is DEFINITIONALLY `sub (add
-/// i (succ j)) i` (`succ (add i j) ≡ add i (succ j)` is just `add`'s own
-/// defining equation read backwards), so `add_sub_cancel_left i (succ j)`
-/// gives it directly as `succ j`; symmetrically `add_sub_cancel_left i j`
-/// gives `sub (add i j) i = j`, so `succ (sub m i) = succ j` too. Both sides
-/// land on `succ j`; `exists_rec` (as in `sub_succ_of_lt`) lifts the result
-/// from the witnessed `add i j` back to the general `m`.
+/// its sum), by [`succ_sub_of_le_proof`], mirroring
+/// [`choose::sub_succ_of_lt`]'s use of `le_dest`: from `Le i m`, `le_dest`
+/// gives a witness `j` with `add i j = m`. Substitute `m` by `add i j`. Then
+/// `sub (succ (add i j)) i` is DEFINITIONALLY `sub (add i (succ j)) i` (`succ
+/// (add i j) ≡ add i (succ j)` is just `add`'s own defining equation read
+/// backwards), so `add_sub_cancel_left i (succ j)` gives it directly as
+/// `succ j`; symmetrically `add_sub_cancel_left i j` gives `sub (add i j) i =
+/// j`, so `succ (sub m i) = succ j` too. Both sides land on `succ j`;
+/// `exists_rec` (as in `sub_succ_of_lt`) lifts the result from the witnessed
+/// `add i j` back to the general `m`.
 ///
-/// With `succ_sub_of_le` in hand, the outer induction (on `n`, `k`
+/// The assembly beyond it is NOT attempted here. With `succ_sub_of_le` in
+/// hand, the outer induction (on `n`, `k`
 /// generalized inside the motive as in [`declare_le_sum_range_of_lt`]) still
 /// needs its successor case to split on `k = 0` vs `k = succ k'` (Pascal
 /// needs the FIRST convolution index `k` succ-shaped too, and `k=0` has no
@@ -1626,5 +1628,144 @@ pub(super) fn declare_combinatorial_identities(
     declare_le_sum_range_of_lt(d, p)?;
     declare_sum_choose_row(d, p)?;
     declare_choose_le_two_pow(d, p)?;
+    Ok(())
+}
+
+// ============================================================================
+// Vandermonde's convolution — stage 1 only: `succ_sub_of_le`.
+//
+// The assembly (`k=0` base case, the `m`-side Pascal reindex, the `n`-side
+// `succ_sub_of_le` reindex, and their combination) is NOT attempted here; see
+// the doc comment on `declare_combinatorial_identities` above for exactly
+// where it would continue and why it is sized comparably to `add_pow`.
+// ============================================================================
+
+/// `Le i m → sub (succ m) i = succ (sub m i)` — the proof term behind
+/// [`declare_succ_sub_of_le`]/[`NatPrelude::succ_sub_of_le`].
+///
+/// Derived from `le_dest` exactly as [`super::choose::sub_succ_of_lt`] is:
+/// `hle` gives a witness `j` with `add i j = m`. Substituting `m` by `add i
+/// j`, `sub (succ (add i j)) i` is DEFINITIONALLY `sub (add i (succ j)) i`
+/// (`succ (add i j) ≡ add i (succ j)` is `add`'s own defining equation read
+/// backwards), so `add_sub_cancel_left i (succ j)` gives it directly as
+/// `succ j`; symmetrically `add_sub_cancel_left i j` gives `sub (add i j) i =
+/// j`, so `succ (sub m i) = succ j` too. Both sides land on `succ j`;
+/// `exists_rec` lifts the result from the witnessed `add i j` back to the
+/// general `m`.
+fn succ_sub_of_le_proof(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    m: ExprId,
+    i: ExprId,
+    hle: ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+
+    let represented = d.lemma(p.le_dest, &[i, m, hle]);
+    let pred = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let sum = d.add(i, j);
+        let body = d.eq(sum, m);
+        d.lam_fv(j_fv, nat, body)
+    };
+
+    let sm = d.succ(m);
+    let target_lhs = d.sub(sm, i);
+    let sub_mi = d.sub(m, i);
+    let target_rhs = d.succ(sub_mi);
+    let conclusion = d.eq(target_lhs, target_rhs);
+
+    let represented_ty = {
+        let one = d.level_one();
+        let exists_ = d.kernel().const_(p.logic.exists_, vec![one]);
+        d.apply(exists_, &[nat, pred])
+    };
+    let motive = d
+        .kernel()
+        .lam(anon, represented_ty, conclusion, BinderInfo::Default);
+
+    let minor = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let sum = d.add(i, j); // add i j
+        let e_ty = d.eq(sum, m);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        // succ m = add i (succ j): succ(add i j) ≡ add i (succ j), definitionally.
+        let succ_sum = d.succ(sum); // succ (add i j)
+        let sj = d.succ(j);
+        let add_i_sj = d.add(i, sj); // add i (succ j), defeq to succ_sum
+        let h_congr_succ = d.congr(sum, m, e, &|d, x| d.succ(x)); // succ_sum = sm
+        let h_bridge = d.refl(add_i_sj); // add_i_sj = succ_sum, via the defeq above
+        let e2 = d.trans(add_i_sj, succ_sum, sm, h_bridge, h_congr_succ); // add_i_sj = sm
+
+        // sub (add i (succ j)) i = succ j.
+        let cancel_sj = d.lemma(p.add_sub_cancel_left, &[i, sj]);
+
+        // Rewrite along e2 to land on sub (succ m) i = succ j.
+        let sub_add_i_sj_i = d.sub(add_i_sj, i);
+        let h_congr_sub = d.congr(add_i_sj, sm, e2, &|d, x| d.sub(x, i));
+        let rev_congr_sub = d.symm(sub_add_i_sj_i, target_lhs, h_congr_sub);
+        let target_lhs_eq_sj = d.trans(target_lhs, sub_add_i_sj_i, sj, rev_congr_sub, cancel_sj);
+
+        // sub (add i j) i = j, transported along e to sub m i = j.
+        let cancel_j = d.lemma(p.add_sub_cancel_left, &[i, j]);
+        let sub_m_i_eq_j = {
+            let motive2 = d.eq_motive(sum, &|d, x| {
+                let s = d.sub(x, i);
+                d.eq(s, j)
+            });
+            d.transport(sum, motive2, cancel_j, m, e)
+        };
+
+        // succ (sub m i) = succ j, i.e. target_rhs = sj.
+        let target_rhs_eq_sj = d.congr(sub_mi, j, sub_m_i_eq_j, &|d, x| d.succ(x));
+        let sj_eq_target_rhs = d.symm(target_rhs, sj, target_rhs_eq_sj);
+
+        let final_ = d.trans(
+            target_lhs,
+            sj,
+            target_rhs,
+            target_lhs_eq_sj,
+            sj_eq_target_rhs,
+        );
+
+        let with_e = d.lam_fv(e_fv, e_ty, final_);
+        d.lam_fv(j_fv, nat, with_e)
+    };
+
+    let one = d.level_one();
+    let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+    d.apply(rec, &[nat, pred, motive, minor, represented])
+}
+
+/// `Nat.succ_sub_of_le : ∀ m i, Le i m → sub (succ m) i = succ (sub m i)`. See
+/// [`NatPrelude::succ_sub_of_le`] for the statement's role in Vandermonde's
+/// convolution and [`succ_sub_of_le_proof`] for the derivation.
+pub(super) fn declare_succ_sub_of_le(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.succ_sub_of_le, 2, &|d, v| {
+        let (m, i) = (v[0], v[1]);
+        let hyp_ty = d.le(i, m);
+        let sm = d.succ(m);
+        let lhs = d.sub(sm, i);
+        let sub_mi = d.sub(m, i);
+        let rhs = d.succ(sub_mi);
+        let conclusion = d.eq(lhs, rhs);
+        let stmt = d.arrow(hyp_ty, conclusion);
+
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+        let body = succ_sub_of_le_proof(d, &p, m, i, hyp);
+        let with_hyp = d.lam_fv(hyp_fv, hyp_ty, body);
+        (stmt, with_hyp)
+    })?;
     Ok(())
 }

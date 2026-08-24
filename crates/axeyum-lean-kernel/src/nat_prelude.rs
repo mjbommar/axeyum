@@ -153,7 +153,9 @@ use algebra::{
     declare_multiplicative_theorems, declare_subtraction_theorems,
 };
 use bezout::{declare_euclid_lemma, declare_gcd_bezout};
-use binomial::{declare_binomial_theorem, declare_combinatorial_identities};
+use binomial::{
+    declare_binomial_theorem, declare_combinatorial_identities, declare_succ_sub_of_le,
+};
 use ble::declare_boolean_le;
 use choose::declare_choose_all;
 use defs::{
@@ -755,6 +757,19 @@ pub struct NatPrelude {
     /// [`sum_choose_row`](Self::sum_choose_row) and
     /// [`le_sum_range_of_lt`](Self::le_sum_range_of_lt).
     pub choose_le_two_pow: NameId,
+
+    // --- Vandermonde's convolution prep (`binomial.rs`) ---------------------
+    /// `Nat.succ_sub_of_le : ∀ m i, Le i m → sub (succ m) i = succ (sub m i)`
+    /// — gives the truncated difference a successor shape once its subtrahend
+    /// is known to be at most the minuend. `Nat.sub` recurses on its SECOND
+    /// argument, so `sub (succ m) i` does not reduce for a bound `i` the way
+    /// `sub m (succ i)` does; this is the lemma that supplies the missing
+    /// successor shape Vandermonde's convolution needs to drive Pascal's rule
+    /// on the `n`-side index. See the doc comment on
+    /// `declare_combinatorial_identities` in `binomial.rs` for the stall this
+    /// unblocks. Proved via `le_dest` + `add_sub_cancel_left`, mirroring
+    /// [`super::choose::sub_succ_of_lt`]'s use of `le_dest`/`exists_rec`.
+    pub succ_sub_of_le: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1018,6 +1033,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             le_sum_range_of_lt: kernel.name_str(nat, "le_sumRange_of_lt"),
             sum_choose_row: kernel.name_str(nat, "sum_choose_row"),
             choose_le_two_pow: kernel.name_str(nat, "choose_le_two_pow"),
+            succ_sub_of_le: kernel.name_str(nat, "succ_sub_of_le"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1049,6 +1065,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_choose_all(&mut d, &p)?;
         declare_binomial_theorem(&mut d, &p)?;
         declare_combinatorial_identities(&mut d, &p)?;
+        declare_succ_sub_of_le(&mut d, &p)?;
         Ok(p)
     })();
     match built {

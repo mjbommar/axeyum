@@ -246,6 +246,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_sum_range_of_lt,
         p.sum_choose_row,
         p.choose_le_two_pow,
+        p.succ_sub_of_le,
     ]
 }
 
@@ -789,6 +790,50 @@ fn row_sum_and_term_bound_hold_at_concrete_points() {
             f.k.display_name(name)
         );
     }
+}
+
+/// `Nat.succ_sub_of_le` — Vandermonde's convolution's named stall point —
+/// checked at a concrete point: `i=3 ≤ m=5` gives
+/// `sub (succ 5) 3 = succ (sub 5 3)`, i.e. `sub 6 3 = succ 2`, both sides `3`.
+#[test]
+fn succ_sub_of_le_holds_at_a_concrete_point() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let three = f.num(3);
+    let five = f.num(5);
+    let two_witness = f.num(2);
+    let add_3_2 = f.add(three, two_witness);
+    let sum_eq = f.refl(add_3_2); // add(3,2) is definitionally 5
+    let le_3_5 = f.lemma(p.le_intro, &[three, five, two_witness, sum_eq]);
+
+    let proof = f.lemma(p.succ_sub_of_le, &[five, three, le_3_5]);
+    let inferred =
+        f.k.infer(proof)
+            .unwrap_or_else(|e| panic!("succ_sub_of_le(5,3,_) should infer: {}", f.explain(&e)));
+
+    let sm = f.succ(five);
+    let lhs = f.sub(sm, three);
+    let sub_5_3 = f.sub(five, three);
+    let rhs = f.succ(sub_5_3);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "succ_sub_of_le(5,3,_) should state sub (succ 5) 3 = succ (sub 5 3)"
+    );
+
+    let three_lit = f.num(3);
+    assert!(f.k.def_eq(lhs, three_lit), "sub 6 3 must reduce to 3");
+    assert!(
+        f.k.def_eq(rhs, three_lit),
+        "succ (sub 5 3) must reduce to 3"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.succ_sub_of_le).is_empty(),
+        "{} must rest on zero axioms",
+        f.k.display_name(p.succ_sub_of_le)
+    );
 }
 
 /// Checked predecessor elimination supports successor injectivity and both
@@ -3880,7 +3925,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        20 + 138,
+        20 + 139,
         "every promised definition and theorem must be rendered"
     );
 }
