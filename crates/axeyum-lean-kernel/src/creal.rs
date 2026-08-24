@@ -966,6 +966,67 @@ pub struct CRealPrelude {
     pub nat_sqrt_le: NameId,
     /// `CReal.natSqrtLt : ∀ n, Lt n (succ (natSqrt n) * succ (natSqrt n))`.
     pub nat_sqrt_lt: NameId,
+
+    // --- finite sums over ℝ (creal/series.rs) ---------------------------------
+    /// `CReal.sumRange : (Nat → CReal) → Nat → CReal`, by structural `Nat.rec`
+    /// on the bound — `sumRange f zero ≡ zero`, `sumRange f (succ j) ≡ add
+    /// (sumRange f j) (f j)` — matching `Nat.sumRange`'s own convention
+    /// (`nat_prelude/defs.rs::declare_finite_ranges`) and
+    /// `Complex.sumRange`'s (`complex.rs::declare_sum_range`): recursion on
+    /// the bound, the new term added on the **right** of the prior sum.
+    /// `sumRange f n` is `Σ_{k<n} f k`.
+    pub sum_range: NameId,
+    /// `CReal.sumRange_zero : Eq CReal (sumRange f Nat.zero) zero`.
+    ///
+    /// Closes by `Eq.refl` alone, exactly as
+    /// [`Complex.sumRange_zero`](crate::ComplexPrelude::sum_range_zero) does:
+    /// `sumRange`'s `Nat.rec` application ι-reduces to the literal term
+    /// `zero` at the base case, with no `CReal.add`/`CReal.mul` internals
+    /// ever unfolded.
+    pub sum_range_zero: NameId,
+    /// `CReal.sumRange_succ : Eq CReal (sumRange f (Nat.succ n)) (add
+    /// (sumRange f n) (f n))`. Closes by `Eq.refl` alone, for the same
+    /// reason [`Self::sum_range_zero`] does.
+    pub sum_range_succ: NameId,
+    /// `CReal.sumRange_congr : ∀ f g n, (∀ i, Equiv (f i) (g i)) → Equiv
+    /// (sumRange f n) (sumRange g n)`.
+    ///
+    /// **Load-bearing, and not skippable**: `CReal.Equiv` is a *defined*
+    /// `Prop` relation, not `Eq`, so nothing rewrites under a `sumRange` for
+    /// free and `funext` is not available (nor permitted). Induction on `n`,
+    /// mirroring `Complex.sumRange_congr`'s own proof shape.
+    pub sum_range_congr: NameId,
+    /// `CReal.sumRange_add : ∀ f g n, Equiv (sumRange (fun i => add (f i) (g
+    /// i)) n) (add (sumRange f n) (sumRange g n))`.
+    ///
+    /// Induction on `n`; the successor case needs the four-term
+    /// rearrangement `(A+B)+(C+D) ~ (A+C)+(B+D)`, proved inline
+    /// (`series::add4_comm`) the way `nat_prelude/binomial.rs::
+    /// add_add_add_comm` does for `Eq Nat`, promoted to `Equiv` throughout.
+    pub sum_range_add: NameId,
+    /// `CReal.mul_sumRange : ∀ w f n, Equiv (mul w (sumRange f n))
+    /// (sumRange (fun i => mul w (f i)) n)` — a constant distributes through
+    /// a finite sum. Induction on `n`, mirroring `Complex.mul_sumRange`'s own
+    /// proof shape (`left_distrib` at the step, `mul_zero` at the base).
+    pub mul_sum_range: NameId,
+    /// `CReal.sumRange_le : ∀ f g n, (∀ i, Nat.lt i n → le (f i) (g i)) → le
+    /// (sumRange f n) (sumRange g n)` — monotonicity of a finite sum, with the
+    /// pointwise hypothesis restricted to indices below the bound (mirroring
+    /// `Nat.sumRange_congr_lt`'s hypothesis-threading shape,
+    /// `nat_prelude/binomial.rs::declare_sum_range_congr_lt`, promoted from
+    /// `Eq` to `CReal.le`). The first genuinely analytic fact in this file,
+    /// and what every comparison argument over a finite sum needs.
+    pub sum_range_le: NameId,
+    /// `CReal.abs_sumRange_le : ∀ f n, le (abs (sumRange f n)) (sumRange
+    /// (fun k => abs (f k)) n)` — the triangle inequality for finite sums,
+    /// `|Σf| ≤ Σ|f|`. Induction on `n`, closing each step through an inline
+    /// two-term triangle-inequality helper (`series::abs_add_le`) built from
+    /// [`Self::abs_le`], [`Self::le_abs_self`] and [`Self::neg_le_abs`], which
+    /// in turn needs `neg(add a b) ~ add (neg a) (neg b)` (`series::neg_add`,
+    /// derived from `series::add4_comm` and the additive-inverse laws —
+    /// `CReal` has no standalone `neg_add` law of its own, so this is proved
+    /// inline rather than declared).
+    pub abs_sum_range_le: NameId,
 }
 
 impl CRealPrelude {
@@ -1165,6 +1226,14 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         nat_sqrt_spec: kernel.name_str(creal, "natSqrtSpec"),
         nat_sqrt_le: kernel.name_str(creal, "natSqrtLe"),
         nat_sqrt_lt: kernel.name_str(creal, "natSqrtLt"),
+        sum_range: kernel.name_str(creal, "sumRange"),
+        sum_range_zero: kernel.name_str(creal, "sumRange_zero"),
+        sum_range_succ: kernel.name_str(creal, "sumRange_succ"),
+        sum_range_congr: kernel.name_str(creal, "sumRange_congr"),
+        sum_range_add: kernel.name_str(creal, "sumRange_add"),
+        mul_sum_range: kernel.name_str(creal, "mul_sumRange"),
+        sum_range_le: kernel.name_str(creal, "sumRange_le"),
+        abs_sum_range_le: kernel.name_str(creal, "abs_sumRange_le"),
     }
 }
 
@@ -1243,7 +1312,8 @@ pub(crate) fn build_creal_prelude_uncached(
         convergence::declare_convergence(&mut d, prelude)?;
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
-        sqrt::declare_sqrt(&mut d, prelude)
+        sqrt::declare_sqrt(&mut d, prelude)?;
+        series::declare_series(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -2166,6 +2236,7 @@ mod inverse;
 mod lattice;
 mod mul_self_zero;
 mod product;
+mod series;
 mod sqrt;
 mod uniform_continuity;
 

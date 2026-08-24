@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 137] = [
+    let expected: [(&str, crate::NameId, &str); 145] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -259,6 +259,17 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.natSqrtSpec", p.nat_sqrt_spec, "theorem"),
         ("CReal.natSqrtLe", p.nat_sqrt_le, "theorem"),
         ("CReal.natSqrtLt", p.nat_sqrt_lt, "theorem"),
+        // Finite sums over ℝ (creal/series.rs). PRESENCE MATTERS AS MUCH AS
+        // THE FOOTPRINT here too — see the convergence block's own comment
+        // above.
+        ("CReal.sumRange", p.sum_range, "def"),
+        ("CReal.sumRange_zero", p.sum_range_zero, "theorem"),
+        ("CReal.sumRange_succ", p.sum_range_succ, "theorem"),
+        ("CReal.sumRange_congr", p.sum_range_congr, "theorem"),
+        ("CReal.sumRange_add", p.sum_range_add, "theorem"),
+        ("CReal.mul_sumRange", p.mul_sum_range, "theorem"),
+        ("CReal.sumRange_le", p.sum_range_le, "theorem"),
+        ("CReal.abs_sumRange_le", p.abs_sum_range_le, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
