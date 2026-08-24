@@ -305,6 +305,7 @@ step autogenesis-obstruction-projection-content python3 scripts/validate-autogen
 step autogenesis-obstruction-projection-fresh python3 scripts/gen-autogenesis-obstruction-projection.py --check
 step autogenesis-transport-projection-content python3 scripts/validate-autogenesis-transport-projection.py
 step autogenesis-transport-projection-fresh python3 scripts/gen-autogenesis-transport-projection.py --check
+step autogenesis-scheduler-observations python3 scripts/gen-autogenesis-scheduler-observations.py --check
 step autogenesis-proposer-isolation ./scripts/check-autogenesis-proposer-isolation.sh
 step autogenesis-induction-search ./scripts/check-autogenesis-induction-search.sh
 step autogenesis-apply-search ./scripts/check-autogenesis-apply-search.sh

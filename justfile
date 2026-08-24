@@ -459,6 +459,9 @@ autogenesis-transport-projection:
     python3 scripts/validate-autogenesis-transport-projection.py
     python3 scripts/gen-autogenesis-transport-projection.py --check
 
+autogenesis-scheduler-observations:
+    python3 scripts/gen-autogenesis-scheduler-observations.py --check
+
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh
 
