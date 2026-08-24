@@ -939,6 +939,30 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   that it ran. (`nat_axiom_inventory` now covers `nat`/`logic` and the full
   trusted surface — `Axiom` alone is not it, since `Opaque` has no proof body and
   `Quotient` admits `Quot.sound`.)
+- **`prelude_theorem_inventory` MUST BE RUN `--release`. In debug it SIGABRTs,
+  and that looks like a broken tool or an absent subject.** This is the
+  repository's primary instrument for reading theorem counts and axiom
+  footprints, so agents reach for it constantly. Measured 2026-08-24 on the same
+  tree, same flags, same moment:
+
+      cargo run --release -p axeyum-lean-kernel --example prelude_theorem_inventory \
+        -- --include-constructed   ->  exit 0, 3,924 rows
+      cargo run           -p axeyum-lean-kernel --example prelude_theorem_inventory \
+        -- --include-constructed   ->  exit 134, "has overflowed its stack"
+
+  Building the full constructed environment recurses deeply through
+  `Kernel::add_declaration`, and the debug build's larger stack frames blow the
+  default thread stack. **Nothing is wrong with the kernel or with any term** —
+  it is a resource limit wearing a crash's clothes, the same one that makes
+  `complex_tests.rs` and `creal_point_tests.rs` carry `on_a_deep_stack` helpers.
+
+  A lane hit this and reported the inventory as "stack-overflows unrelated to
+  this work", which is a reasonable reading and a wrong one: it had simply
+  omitted `--release`. The failure mode that matters is the quieter one — an
+  agent runs the debug form, gets no rows, and concludes a declaration is
+  ABSENT. That is the coverage trap below, with the tool broken rather than
+  misaimed.
+
 - **`AxNat` IS NOT AN AXIOMATIZED `Nat` — the `Ax` is *axeyum*, and the prefix
   means the opposite of what it means in `AxReal`.** Every rendered type in this
   kernel prints the naturals as `AxNat`: `AxNat.sumRange`, `AxNat.injectiveOn`,

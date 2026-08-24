@@ -185,7 +185,7 @@ use finite::{
     declare_restrict_maps_into,
 };
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
-use lcm::declare_lcm;
+use lcm::{declare_gauss_lemma, declare_lcm};
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
@@ -600,6 +600,13 @@ pub struct NatPrelude {
     /// `Nat.gcd_mul_lcm : ∀ a b, gcd a b * lcm a b = a * b` — the headline
     /// identity, unconditional (including at `a = b = 0`).
     pub gcd_mul_lcm: NameId,
+    /// `Nat.gauss_lemma : ∀ x y z, gcd x y = 1 → x ∣ y*z → x ∣ z` — a
+    /// coprime divisor of a product divides the other factor. Built from
+    /// `gcd_bezout` by induction on `x`: `x = 0` forces `y = 1` via
+    /// `gcd_zero_left`, and `x = succ k` scales the Bézout identity by `z`
+    /// and cancels through `dvd_add_right_cancel_of_pos`, exactly the `g = 1`
+    /// branch of `euclid_lemma` with the primality side condition dropped.
+    pub gauss_lemma: NameId,
     /// Balanced natural Bézout certificates:
     /// `bezout m n g := ∃ mp mn np nn, g + m*mn + n*nn = m*mp + n*np`.
     pub bezout: NameId,
@@ -1383,6 +1390,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_lcm_left: kernel.name_str(nat, "dvd_lcm_left"),
             dvd_lcm_right: kernel.name_str(nat, "dvd_lcm_right"),
             gcd_mul_lcm: kernel.name_str(nat, "gcd_mul_lcm"),
+            gauss_lemma: kernel.name_str(nat, "gauss_lemma"),
             bezout: kernel.name_str(nat, "bezout"),
             gcd_bezout: kernel.name_str(nat, "gcd_bezout"),
             mod_eq: kernel.name_str(nat, "modEq"),
@@ -1542,6 +1550,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_gcd_semantics(&mut d, &p)?;
         declare_lcm(&mut d, &p)?;
         declare_gcd_bezout(&mut d, &p)?;
+        declare_gauss_lemma(&mut d, &p)?;
         declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
         declare_primes(&mut d, &p)?;
