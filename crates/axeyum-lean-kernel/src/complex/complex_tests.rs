@@ -213,6 +213,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.ofNat_succ", p.of_nat_succ),
         ("Complex.ofNat_add", p.of_nat_add),
         ("Complex.ofNat_mul", p.of_nat_mul),
+        ("Complex.ofNat_eq_cast", p.of_nat_eq_cast),
         ("Complex.sumRange_add", p.sum_range_add),
         ("Complex.sumRange_shiftFront", p.sum_range_shift_front),
         ("Complex.sumRange_congr_lt", p.sum_range_congr_lt),

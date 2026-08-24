@@ -1796,6 +1796,7 @@ fn the_probability_toolkit_is_axiom_free() {
         ("chebyshev_inequality", p.chebyshev_inequality, true),
         ("covariance_comm", p.covariance_comm, true),
         ("covariance_add_right", p.covariance_add_right, true),
+        ("covariance_smul_left", p.covariance_smul_left, true),
         ("sumVars", p.sum_vars, false),
         ("expectation_sumVars", p.expectation_sum_vars, true),
         ("covariance_sumVars_left", p.covariance_sum_vars_left, true),
@@ -1805,6 +1806,26 @@ fn the_probability_toolkit_is_axiom_free() {
         (
             "chebyshev_sampleMean_uncorrelated",
             p.chebyshev_sample_mean_uncorrelated,
+            true,
+        ),
+        (
+            "variance_scaled_add_nonneg",
+            p.variance_scaled_add_nonneg,
+            true,
+        ),
+        (
+            "covariance_sq_le_variance_mul_of_pos",
+            p.covariance_sq_le_variance_mul_of_pos,
+            true,
+        ),
+        (
+            "covariance_sq_le_variance_mul_of_zero_zero",
+            p.covariance_sq_le_variance_mul_of_zero_zero,
+            true,
+        ),
+        (
+            "covariance_sq_le_variance_mul",
+            p.covariance_sq_le_variance_mul,
             true,
         ),
     ];

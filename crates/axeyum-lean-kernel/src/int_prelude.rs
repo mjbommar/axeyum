@@ -840,6 +840,35 @@ pub struct IntPrelude {
     /// argument. See `wilson.rs`'s module doc above `declare_wilson` for the
     /// full route.
     pub wilson: NameId,
+    /// `dvd_factorial_of_le : ∀ (dd n : Nat), Le 1 dd → Le dd n →
+    ///   dvd (ofNat dd) (factorial n)` — a positive `dd ≤ n` divides `n!`,
+    /// transported to `ℤ`. Proved by direct induction over `Int.factorial`
+    /// (mirrors `Nat.dvd_factorial_of_le`'s own induction; not derived FROM
+    /// it, since `Int.factorial n` and `ofNat (Nat.factorial n)` are not
+    /// definitionally equal). The workhorse [`Self::wilson_converse`] needs.
+    pub dvd_factorial_of_le: NameId,
+    /// `wilson_converse : ∀ n, Le 2 n →
+    ///   ModEq (ofNat n) (factorial (n-1)) (neg one) →
+    ///   (2 ≤ n ∧ ∀ d, d ∣ n → d = 1 ∨ d = n)` — **the converse of Wilson's
+    /// theorem**: `(n-1)! ≡ -1 [n]` (with `n ≥ 2`) forces `n` prime. Proved
+    /// fully constructively (no `Classical.em`) in the conjunctive `Prime n`
+    /// form directly, not a contrapositive: for an arbitrary divisor `d` of
+    /// `n`, `Nat.lt_or_eq_of_le` splits `d ≤ n` into `d < n` or `d = n`; the
+    /// `d = n` branch is immediate, and the `d < n` branch derives `d = 1`
+    /// from `d ∣ (n-1)!` ([`Self::dvd_factorial_of_le`]) and
+    /// `n ∣ (-1 - (n-1)!)` ([`Self::mod_eq_iff_dvd`]'s `mp` applied to the
+    /// hypothesis): `Int.dvd_add` combines the two into `d ∣ -1`, and
+    /// `Nat.eq_one_of_dvd_one` closes it. See `wilson.rs`'s
+    /// `declare_wilson_converse` for the full route.
+    pub wilson_converse: NameId,
+    /// `wilson_iff : ∀ n, Le 2 n →
+    ///   ((2 ≤ n ∧ ∀ d, d ∣ n → d = 1 ∨ d = n) ↔
+    ///     ModEq (ofNat n) (factorial (n-1)) (neg one))` — Wilson's theorem
+    /// AND its converse combined: for `n ≥ 2`, primality is EQUIVALENT to
+    /// `(n-1)! ≡ -1 [n]`, a genuine decision criterion for primality, not
+    /// merely a necessary condition. `Iff.intro` of [`Self::wilson`] (mp)
+    /// and [`Self::wilson_converse`] (mpr).
+    pub wilson_iff: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1034,6 +1063,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_pairing_collapse: child(kernel, "prod_range_pairing_collapse"),
         factorial_interior_modeq_one: child(kernel, "factorial_interior_modeq_one"),
         wilson: child(kernel, "wilson"),
+        dvd_factorial_of_le: child(kernel, "dvd_factorial_of_le"),
+        wilson_converse: child(kernel, "wilson_converse"),
+        wilson_iff: child(kernel, "wilson_iff"),
     }
 }
 
@@ -1187,6 +1219,9 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         wilson::declare_prod_range_pairing_collapse(&mut d)?;
         wilson::declare_factorial_interior_modeq_one(&mut d)?;
         wilson::declare_wilson(&mut d)?;
+        wilson::declare_dvd_factorial_of_le(&mut d)?;
+        wilson::declare_wilson_converse(&mut d)?;
+        wilson::declare_wilson_iff(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         rat::declare_rat(&mut d)?;
