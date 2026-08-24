@@ -837,6 +837,49 @@ pub struct CPointPrelude {
     /// statement's other direction, already proved), this is the full
     /// biconditional form of Thales' theorem / Elements III.31.
     pub thales_converse: NameId,
+    /// `CPoint.cross A B C := CReal.add (CReal.mul (sub Bx Ax) (sub Cy By))
+    /// (CReal.neg (CReal.mul (sub By Ay) (sub Cx Bx)))` — twice the signed
+    /// area of triangle `ABC`, the 2×2 determinant every orientation,
+    /// collinearity and area fact in the plane routes through. Definitional,
+    /// not asserted: no hypothesis, no `sqrt` (there is none), a bare
+    /// `CReal`.
+    pub cross: NameId,
+    /// `CPoint.cross_self_left : ∀ A B, Equiv (cross A A B) CReal.zero` — one
+    /// of the two structurally cheap degenerate cases (the other is
+    /// [`Self::cross_self_right`]): repeating the first point collapses both
+    /// factors of the first product to `CReal.add_neg`-zero, and the second
+    /// product follows it down for the same reason.
+    pub cross_self_left: NameId,
+    /// `CPoint.cross_self_right : ∀ A B, Equiv (cross A B B) CReal.zero` —
+    /// the mirror degenerate case, repeating the *last* point.
+    pub cross_self_right: NameId,
+    /// **The `B ↔ C` swap negates `cross`.** `∀ A B C,
+    /// Equiv (cross A C B) (CReal.neg (cross A B C))`.
+    ///
+    /// Proved by relating `cross A C B`'s four factors back to `cross A B
+    /// C`'s via `telescope_scalar_proof`/`neg_sub_comm_scalar_proof`,
+    /// expanding both products with `right_distrib_proof`/
+    /// `mul_neg_right_proof`, and cancelling the shared cross term with
+    /// `add_middle_swap_proof` — pure ring algebra, no non-degeneracy
+    /// hypothesis anywhere. The `A ↔ B` swap is provable the same way but is
+    /// not built here (see the module doc / build notes for why only this
+    /// one shipped).
+    pub cross_swap_bc: NameId,
+    /// `CPoint.NonCollinear A B C k := CReal.PosBound (mul (cross A B C)
+    /// (cross A B C)) k` — non-collinearity as a **witnessed** predicate,
+    /// carrying the modulus `k` that makes `(cross A B C)²` usable as the
+    /// input to `CReal.inv`.
+    ///
+    /// Not `Not (Equiv (cross A B C) CReal.zero)` (unreachable without
+    /// Markov's principle: this kernel proves and assumes neither), and not
+    /// `CReal.Apart (cross A B C) CReal.zero` either — `CReal.inv` consumes a
+    /// `PosBound` proof, not an `Apart` one (see [`CRealPrelude::inv`]'s own
+    /// doc: an `Apart`-indexed inverse would have to eliminate a disjunction
+    /// into a `Type`, which `Or.rec` does not permit). Squaring is what turns
+    /// "the determinant is nonzero" (which could witness either sign) into
+    /// something `PosBound` can state at all: `(cross A B C)²` is
+    /// nonnegative regardless of the determinant's own sign.
+    pub non_collinear: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -939,6 +982,11 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_on_circle(&mut d, p)?;
     declare_circumcentre_on_perp_bisectors(&mut d, p)?;
     declare_thales_converse(&mut d, p)?;
+    declare_cross(&mut d, p)?;
+    declare_cross_self_left(&mut d, p)?;
+    declare_cross_self_right(&mut d, p)?;
+    declare_cross_swap_bc(&mut d, p)?;
+    declare_non_collinear(&mut d, p)?;
     Ok(p)
 }
 
@@ -1037,6 +1085,11 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         on_circle: kernel.name_str(point, "OnCircle"),
         circumcentre_on_perp_bisectors: kernel.name_str(point, "circumcentre_on_perp_bisectors"),
         thales_converse: kernel.name_str(point, "thales_converse"),
+        cross: kernel.name_str(point, "cross"),
+        cross_self_left: kernel.name_str(point, "cross_self_left"),
+        cross_self_right: kernel.name_str(point, "cross_self_right"),
+        cross_swap_bc: kernel.name_str(point, "cross_swap_bc"),
+        non_collinear: kernel.name_str(point, "NonCollinear"),
     }
 }
 
@@ -13624,6 +13677,536 @@ fn declare_thales_converse(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), K
         uparams: vec![],
         ty,
         value,
+    })
+}
+
+// --- `cross`: the 2x2 determinant / twice the signed area ------------------
+
+/// The raw (unfolded) value of `cross X Y Z` given the six projected
+/// coordinates, plus its four algebraic factors `u := Yx-Xx, v := Zy-Yy,
+/// w := Yy-Xy, z := Zx-Yx` (so `cross X Y Z = u*v - w*z`). Returned as a
+/// tuple so callers proving facts about `cross` at a *permuted* argument
+/// triple can relate the new factors back to an already-computed set without
+/// re-deriving the shared sub-terms (interning makes the two constructions
+/// structurally identical, so this is safe to call more than once with the
+/// same coordinate `ExprId`s).
+fn cross_raw(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    px: ExprId,
+    py: ExprId,
+    qx: ExprId,
+    qy: ExprId,
+    rx: ExprId,
+    ry: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId, ExprId) {
+    let neg_px = cneg(d, p, px);
+    let neg_py = cneg(d, p, py);
+    let neg_qy = cneg(d, p, qy);
+    let neg_qx = cneg(d, p, qx);
+    let u = cadd(d, p, qx, neg_px); // Qx - Px
+    let v = cadd(d, p, ry, neg_qy); // Ry - Qy
+    let w = cadd(d, p, qy, neg_py); // Qy - Py
+    let z = cadd(d, p, rx, neg_qx); // Rx - Qx
+    let uv = cmul(d, p, u, v);
+    let wz = cmul(d, p, w, z);
+    let neg_wz = cneg(d, p, wz);
+    let value = cadd(d, p, uv, neg_wz);
+    (value, u, v, w, z)
+}
+
+/// `CPoint.cross A B C`. See [`CPointPrelude::cross`].
+fn declare_cross(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let carrier = creal_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+
+    let (value_body, _u, _v, _w, _z) = cross_raw(d, p, ax, ay, bx, by, cx, cy);
+
+    let value = {
+        let inner2 = d.lam_fv(c_fv, point, value_body);
+        let inner1 = d.lam_fv(b_fv, point, inner2);
+        d.lam_fv(a_fv, point, inner1)
+    };
+    let ty = {
+        let inner2 = d.arrow(point, carrier);
+        let inner1 = d.arrow(point, inner2);
+        d.arrow(point, inner1)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.cross,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 17),
+    })
+}
+
+/// `Equiv (cross A A B) CReal.zero`. See [`CPointPrelude::cross_self_left`].
+fn declare_cross_self_left(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let point = point_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+
+    let (value_body, u, v, w, z) = cross_raw(d, p, ax, ay, ax, ay, bx, by);
+    // u = ax-ax, w = ay-ay: both directly `add_neg`-zero.
+
+    let zero = czero(d, p);
+    let eq_u = d.lemma(creal.add_neg, &[ax]); // Equiv(u, zero)
+    let eq_w = d.lemma(creal.add_neg, &[ay]); // Equiv(w, zero)
+
+    let uv = cmul(d, p, u, v);
+    let refl_v = refl(d, p, v);
+    let congr_uv = d.lemma(creal.mul_congr, &[u, zero, v, v, eq_u, refl_v]); // Equiv(uv, mul zero v)
+    let zero_v = cmul(d, p, zero, v);
+    let zmv = zero_mul_proof(d, p, v); // Equiv(zero_v, zero)
+    let uv_zero = chain(d, p, uv, &[(zero_v, congr_uv), (zero, zmv)]);
+
+    let wz = cmul(d, p, w, z);
+    let refl_z = refl(d, p, z);
+    let congr_wz = d.lemma(creal.mul_congr, &[w, zero, z, z, eq_w, refl_z]); // Equiv(wz, mul zero z)
+    let zero_z = cmul(d, p, zero, z);
+    let zmz = zero_mul_proof(d, p, z); // Equiv(zero_z, zero)
+    let wz_zero = chain(d, p, wz, &[(zero_z, congr_wz), (zero, zmz)]);
+
+    let neg_wz = cneg(d, p, wz);
+    let neg_zero = cneg(d, p, zero);
+    let neg_congr_wz = d.lemma(creal.neg_congr, &[wz, zero, wz_zero]); // Equiv(neg_wz, neg_zero)
+
+    let zero_neg_zero = cadd(d, p, zero, neg_zero);
+    let congr_final = d.lemma(
+        creal.add_congr,
+        &[uv, zero, neg_wz, neg_zero, uv_zero, neg_congr_wz],
+    ); // Equiv(value_body, zero_neg_zero)
+    let an_zero = d.lemma(creal.add_neg, &[zero]); // Equiv(zero_neg_zero, zero)
+
+    let proof = chain(
+        d,
+        p,
+        value_body,
+        &[(zero_neg_zero, congr_final), (zero, an_zero)],
+    );
+
+    let cross_aab = d.const_app(p.cross, &[pa, pa, pb]);
+    let ty_body = equiv(d, p, cross_aab, zero);
+    let ty = {
+        let inner = d.pi_fv(b_fv, point, ty_body);
+        d.pi_fv(a_fv, point, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(b_fv, point, proof);
+        d.lam_fv(a_fv, point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cross_self_left,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Equiv (cross A B B) CReal.zero`. See [`CPointPrelude::cross_self_right`].
+fn declare_cross_self_right(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let point = point_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+
+    let (value_body, u, v, w, z) = cross_raw(d, p, ax, ay, bx, by, bx, by);
+    // v = by-by, z = bx-bx: both directly `add_neg`-zero.
+
+    let zero = czero(d, p);
+    let eq_v = d.lemma(creal.add_neg, &[by]); // Equiv(v, zero)
+    let eq_z = d.lemma(creal.add_neg, &[bx]); // Equiv(z, zero)
+
+    let uv = cmul(d, p, u, v);
+    let refl_u = refl(d, p, u);
+    let congr_uv = d.lemma(creal.mul_congr, &[u, u, v, zero, refl_u, eq_v]); // Equiv(uv, mul u zero)
+    let u_zero = cmul(d, p, u, zero);
+    let muz = d.lemma(creal.mul_zero, &[u]); // Equiv(u_zero, zero)
+    let uv_zero = chain(d, p, uv, &[(u_zero, congr_uv), (zero, muz)]);
+
+    let wz = cmul(d, p, w, z);
+    let refl_w = refl(d, p, w);
+    let congr_wz = d.lemma(creal.mul_congr, &[w, w, z, zero, refl_w, eq_z]); // Equiv(wz, mul w zero)
+    let w_zero = cmul(d, p, w, zero);
+    let mwz = d.lemma(creal.mul_zero, &[w]); // Equiv(w_zero, zero)
+    let wz_zero = chain(d, p, wz, &[(w_zero, congr_wz), (zero, mwz)]);
+
+    let neg_wz = cneg(d, p, wz);
+    let neg_zero = cneg(d, p, zero);
+    let neg_congr_wz = d.lemma(creal.neg_congr, &[wz, zero, wz_zero]); // Equiv(neg_wz, neg_zero)
+
+    let zero_neg_zero = cadd(d, p, zero, neg_zero);
+    let congr_final = d.lemma(
+        creal.add_congr,
+        &[uv, zero, neg_wz, neg_zero, uv_zero, neg_congr_wz],
+    ); // Equiv(value_body, zero_neg_zero)
+    let an_zero = d.lemma(creal.add_neg, &[zero]); // Equiv(zero_neg_zero, zero)
+
+    let proof = chain(
+        d,
+        p,
+        value_body,
+        &[(zero_neg_zero, congr_final), (zero, an_zero)],
+    );
+
+    let cross_abb = d.const_app(p.cross, &[pa, pb, pb]);
+    let ty_body = equiv(d, p, cross_abb, zero);
+    let ty = {
+        let inner = d.pi_fv(b_fv, point, ty_body);
+        d.pi_fv(a_fv, point, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(b_fv, point, proof);
+        d.lam_fv(a_fv, point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cross_self_right,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// **The `B ↔ C` swap negates `cross`.** See
+/// [`CPointPrelude::cross_swap_bc`]: `∀ A B C, Equiv (cross A C B) (neg
+/// (cross A B C))`.
+fn declare_cross_swap_bc(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let point = point_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+
+    // value1 := raw `cross A B C`; u,v,w,z its four factors.
+    let (value1, u, v, w, z) = cross_raw(d, p, ax, ay, bx, by, cx, cy);
+    // value2 := raw `cross A C B`; up,vp,wp,zp its four factors.
+    let (value2, up, vp, wp, zp) = cross_raw(d, p, ax, ay, cx, cy, bx, by);
+
+    // --- Step 1: relate up,vp,wp,zp back to u,v,w,z. ---
+    let z_plus_u = cadd(d, p, z, u);
+    let step_up = telescope_scalar_proof(d, p, cx, bx, ax); // Equiv(up, z+u) [up = cx-ax]
+
+    let neg_v = cneg(d, p, v);
+    let step_vp_inv = neg_sub_comm_scalar_proof(d, p, cy, by); // Equiv(neg v, vp) [vp = by-cy]
+    let step_vp = symm(d, p, neg_v, vp, step_vp_inv); // Equiv(vp, neg v)
+
+    let v_plus_w = cadd(d, p, v, w);
+    let step_wp = telescope_scalar_proof(d, p, cy, by, ay); // Equiv(wp, v+w) [wp = cy-ay]
+
+    let neg_z = cneg(d, p, z);
+    let step_zp_inv = neg_sub_comm_scalar_proof(d, p, cx, bx); // Equiv(neg z, zp) [zp = bx-cx]
+    let step_zp = symm(d, p, neg_z, zp, step_zp_inv); // Equiv(zp, neg z)
+
+    // --- Step 2: substitute into value2 = add(mul up vp)(neg(mul wp zp)). ---
+    let up_vp = cmul(d, p, up, vp);
+    let zu_negv = cmul(d, p, z_plus_u, neg_v);
+    let congr1 = d.lemma(
+        creal.mul_congr,
+        &[up, z_plus_u, vp, neg_v, step_up, step_vp],
+    ); // Equiv(up_vp, zu_negv)
+
+    let wp_zp = cmul(d, p, wp, zp);
+    let vw_negz = cmul(d, p, v_plus_w, neg_z);
+    let congr2 = d.lemma(
+        creal.mul_congr,
+        &[wp, v_plus_w, zp, neg_z, step_wp, step_zp],
+    ); // Equiv(wp_zp, vw_negz)
+
+    let neg_wp_zp = cneg(d, p, wp_zp);
+    let neg_vw_negz = cneg(d, p, vw_negz);
+    let neg_congr2 = d.lemma(creal.neg_congr, &[wp_zp, vw_negz, congr2]); // Equiv(neg_wp_zp, neg_vw_negz)
+
+    let congr_outer = d.lemma(
+        creal.add_congr,
+        &[up_vp, zu_negv, neg_wp_zp, neg_vw_negz, congr1, neg_congr2],
+    ); // Equiv(value2, stage2)
+    let stage2 = cadd(d, p, zu_negv, neg_vw_negz);
+
+    // --- Step 3: expand `zu_negv = mul (z+u) (neg v)`. ---
+    let rd1 = right_distrib_proof(d, p, z, u, neg_v);
+    // rd1 : Equiv(zu_negv, add(mul z neg_v)(mul u neg_v))
+    let mz_negv = cmul(d, p, z, neg_v);
+    let mu_negv = cmul(d, p, u, neg_v);
+    let mid3 = cadd(d, p, mz_negv, mu_negv);
+
+    let mnr_zv = mul_neg_right_proof(d, p, z, v); // Equiv(mz_negv, neg(mul z v))
+    let mnr_uv = mul_neg_right_proof(d, p, u, v); // Equiv(mu_negv, neg(mul u v))
+    let mul_zv = cmul(d, p, z, v);
+    let mul_uv = cmul(d, p, u, v);
+    let neg_zv = cneg(d, p, mul_zv);
+    let neg_uv = cneg(d, p, mul_uv);
+    let congr3 = d.lemma(
+        creal.add_congr,
+        &[mz_negv, neg_zv, mu_negv, neg_uv, mnr_zv, mnr_uv],
+    ); // Equiv(mid3, target3)
+    let target3 = cadd(d, p, neg_zv, neg_uv);
+    let zu_negv_reduce = chain(d, p, zu_negv, &[(mid3, rd1), (target3, congr3)]);
+    // zu_negv_reduce : Equiv(zu_negv, target3)
+
+    // --- Step 4: expand `vw_negz = mul (v+w) (neg z)`. ---
+    let rd2 = right_distrib_proof(d, p, v, w, neg_z);
+    let mv_negz = cmul(d, p, v, neg_z);
+    let mw_negz = cmul(d, p, w, neg_z);
+    let mid4 = cadd(d, p, mv_negz, mw_negz);
+
+    let mnr_vz = mul_neg_right_proof(d, p, v, z); // Equiv(mv_negz, neg(mul v z))
+    let mnr_wz = mul_neg_right_proof(d, p, w, z); // Equiv(mw_negz, neg(mul w z))
+    let mul_vz = cmul(d, p, v, z);
+    let mul_wz = cmul(d, p, w, z);
+    let neg_vz = cneg(d, p, mul_vz);
+    let neg_wz = cneg(d, p, mul_wz);
+    let congr4 = d.lemma(
+        creal.add_congr,
+        &[mv_negz, neg_vz, mw_negz, neg_wz, mnr_vz, mnr_wz],
+    ); // Equiv(mid4, target4)
+    let target4 = cadd(d, p, neg_vz, neg_wz);
+    let vw_negz_reduce = chain(d, p, vw_negz, &[(mid4, rd2), (target4, congr4)]);
+    // vw_negz_reduce : Equiv(vw_negz, target4)
+
+    let neg_target4 = cneg(d, p, target4);
+    let neg_congr4 = d.lemma(creal.neg_congr, &[vw_negz, target4, vw_negz_reduce]);
+    // neg_congr4 : Equiv(neg_vw_negz, neg_target4)
+
+    let na4 = neg_add_proof(d, p, neg_vz, neg_wz);
+    // na4 : Equiv(neg_target4, add(neg neg_vz)(neg neg_wz))
+    let neg_neg_vz = cneg(d, p, neg_vz);
+    let neg_neg_wz = cneg(d, p, neg_wz);
+    let mid4b = cadd(d, p, neg_neg_vz, neg_neg_wz);
+
+    let nn_vz = neg_neg_proof(d, p, mul_vz); // Equiv(neg_neg_vz, mul_vz)
+    let nn_wz = neg_neg_proof(d, p, mul_wz); // Equiv(neg_neg_wz, mul_wz)
+    let target4b = cadd(d, p, mul_vz, mul_wz);
+    let congr4b = d.lemma(
+        creal.add_congr,
+        &[neg_neg_vz, mul_vz, neg_neg_wz, mul_wz, nn_vz, nn_wz],
+    ); // Equiv(mid4b, target4b)
+
+    let neg_vw_negz_reduce = chain(
+        d,
+        p,
+        neg_vw_negz,
+        &[(neg_target4, neg_congr4), (mid4b, na4), (target4b, congr4b)],
+    );
+    // neg_vw_negz_reduce : Equiv(neg_vw_negz, target4b)
+
+    // --- Step 5: assemble `stage2 ~ add(target3)(target4b)` and cancel the
+    // shared cross term (mul v z ~ mul z v) via `add_middle_swap_proof`. ---
+    let congr_stage2 = d.lemma(
+        creal.add_congr,
+        &[
+            zu_negv,
+            target3,
+            neg_vw_negz,
+            target4b,
+            zu_negv_reduce,
+            neg_vw_negz_reduce,
+        ],
+    ); // Equiv(stage2, stage3)
+    let stage3 = cadd(d, p, target3, target4b);
+
+    let comm_zv = d.lemma(creal.mul_comm, &[z, v]); // Equiv(mul_zv, mul_vz)
+    let neg_mul_vz = cneg(d, p, mul_vz);
+    let neg_congr_zv = d.lemma(creal.neg_congr, &[mul_zv, mul_vz, comm_zv]); // Equiv(neg_zv, neg_mul_vz)
+    let refl_neg_uv = refl(d, p, neg_uv);
+    let congr_target3 = d.lemma(
+        creal.add_congr,
+        &[
+            neg_zv,
+            neg_mul_vz,
+            neg_uv,
+            neg_uv,
+            neg_congr_zv,
+            refl_neg_uv,
+        ],
+    ); // Equiv(target3, target3b)
+    let target3b = cadd(d, p, neg_mul_vz, neg_uv);
+    let refl_target4b = refl(d, p, target4b);
+    let congr_stage3 = d.lemma(
+        creal.add_congr,
+        &[
+            target3,
+            target3b,
+            target4b,
+            target4b,
+            congr_target3,
+            refl_target4b,
+        ],
+    ); // Equiv(stage3, stage4)
+    let stage4 = cadd(d, p, target3b, target4b);
+
+    // (A1+A2)+(A3+A4) ~ (A1+A3)+(A2+A4), A1=neg_mul_vz,A2=neg_uv,A3=mul_vz,A4=mul_wz.
+    let swap = add_middle_swap_proof(d, p, neg_mul_vz, neg_uv, mul_vz, mul_wz);
+    let a1_a3 = cadd(d, p, neg_mul_vz, mul_vz);
+    let a2_a4 = cadd(d, p, neg_uv, mul_wz);
+    let stage5 = cadd(d, p, a1_a3, a2_a4);
+
+    let cancel = neg_add_cancel_proof(d, p, mul_vz); // Equiv(a1_a3, zero)
+    let zero = czero(d, p);
+    let refl_a2_a4 = refl(d, p, a2_a4);
+    let congr_stage5 = d.lemma(
+        creal.add_congr,
+        &[a1_a3, zero, a2_a4, a2_a4, cancel, refl_a2_a4],
+    ); // Equiv(stage5, zero_a2a4)
+    let zero_a2a4 = cadd(d, p, zero, a2_a4);
+    let za = zero_add_proof(d, p, a2_a4); // Equiv(zero_a2a4, a2_a4)
+
+    let value2_reduce = chain(
+        d,
+        p,
+        value2,
+        &[
+            (stage2, congr_outer),
+            (stage3, congr_stage2),
+            (stage4, congr_stage3),
+            (stage5, swap),
+            (zero_a2a4, congr_stage5),
+            (a2_a4, za),
+        ],
+    );
+    // value2_reduce : Equiv(value2, a2_a4), a2_a4 = add(neg(mul u v))(mul w z)
+
+    // --- Now show `neg(value1) ~ a2_a4` too, so `value2 ~ neg(value1)`. ---
+    // value1 = add(mul_uv, neg_wz) exactly, by construction of `cross_raw`.
+    let neg_value1 = cneg(d, p, value1);
+    let na_v1 = neg_add_proof(d, p, mul_uv, neg_wz);
+    // na_v1 : Equiv(neg_value1, add(neg mul_uv)(neg neg_wz))
+    let neg_neg_wz_via_step4 = cneg(d, p, neg_wz); // == neg_neg_wz from step 4
+    let add_neguv_negnegwz = cadd(d, p, neg_uv, neg_neg_wz_via_step4);
+    let refl_neg_uv2 = refl(d, p, neg_uv);
+    let congr_nv1 = d.lemma(
+        creal.add_congr,
+        &[
+            neg_uv,
+            neg_uv,
+            neg_neg_wz_via_step4,
+            mul_wz,
+            refl_neg_uv2,
+            nn_wz,
+        ],
+    ); // Equiv(add_neguv_negnegwz, a2_a4)
+
+    let neg_value1_reduce = chain(
+        d,
+        p,
+        neg_value1,
+        &[(add_neguv_negnegwz, na_v1), (a2_a4, congr_nv1)],
+    );
+    // neg_value1_reduce : Equiv(neg_value1, a2_a4)
+    let neg_value1_reduce_symm = symm(d, p, neg_value1, a2_a4, neg_value1_reduce);
+    // Equiv(a2_a4, neg_value1)
+
+    let final_proof = chain(
+        d,
+        p,
+        value2,
+        &[(a2_a4, value2_reduce), (neg_value1, neg_value1_reduce_symm)],
+    );
+    // final_proof : Equiv(value2, neg_value1) = Equiv(cross A C B, neg(cross A B C))
+
+    let cross_acb = d.const_app(p.cross, &[pa, pc, pb]);
+    let cross_abc = d.const_app(p.cross, &[pa, pb, pc]);
+    let neg_cross_abc = cneg(d, p, cross_abc);
+    let ty_body = equiv(d, p, cross_acb, neg_cross_abc);
+
+    let ty = {
+        let w2 = d.pi_fv(c_fv, point, ty_body);
+        let w1 = d.pi_fv(b_fv, point, w2);
+        d.pi_fv(a_fv, point, w1)
+    };
+    let value = {
+        let w2 = d.lam_fv(c_fv, point, final_proof);
+        let w1 = d.lam_fv(b_fv, point, w2);
+        d.lam_fv(a_fv, point, w1)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cross_swap_bc,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CPoint.NonCollinear A B C k := CReal.PosBound (mul (cross A B C) (cross
+/// A B C)) k`. See [`CPointPrelude::non_collinear`].
+fn declare_non_collinear(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let nat = d.nat_ty();
+    let prop = d.kernel().sort_zero();
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    let k_fv = d.fresh_fvar();
+    let pk = d.kernel().fvar(k_fv);
+
+    let cross_abc = d.const_app(p.cross, &[pa, pb, pc]);
+    let cross_sq = cmul(d, p, cross_abc, cross_abc);
+    let claim = d.const_app(p.creal.pos_bound, &[cross_sq, pk]);
+
+    let value = {
+        let w3 = d.lam_fv(k_fv, nat, claim);
+        let w2 = d.lam_fv(c_fv, point, w3);
+        let w1 = d.lam_fv(b_fv, point, w2);
+        d.lam_fv(a_fv, point, w1)
+    };
+    let ty = {
+        let w3 = d.arrow(nat, prop);
+        let w2 = d.arrow(point, w3);
+        let w1 = d.arrow(point, w2);
+        d.arrow(point, w1)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.non_collinear,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 18),
     })
 }
 

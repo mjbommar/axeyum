@@ -115,6 +115,9 @@ fn every_theorem_here_is_axiom_free() {
             p.circumcentre_on_perp_bisectors,
         ),
         ("thales_converse", p.thales_converse),
+        ("cross_self_left", p.cross_self_left),
+        ("cross_self_right", p.cross_self_right),
+        ("cross_swap_bc", p.cross_swap_bc),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -221,6 +224,11 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.on_circle,
         p.circumcentre_on_perp_bisectors,
         p.thales_converse,
+        p.cross,
+        p.cross_self_left,
+        p.cross_self_right,
+        p.cross_swap_bc,
+        p.non_collinear,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -1272,5 +1280,118 @@ fn circumcentre_on_perp_bisectors_statement_is_exact() {
          (CPoint.distSq x0 x2) (CPoint.distSq x0 x3)) -> And (CPoint.OnPerpBisector x0 \
          x1 x2) (And (CPoint.OnPerpBisector x0 x2 x3) (CPoint.OnPerpBisector x0 x1 \
          x3))))))))"
+    );
+}
+
+/// `CPoint.cross`'s own type — three `CPoint`s to a `CReal`, no hypothesis.
+/// Not a `Theorem`, so it is checked here rather than the axiom-free list
+/// (this file's convention: `Definition`s are checked for presence and, when
+/// their statement is the interesting part, for an exact render — a
+/// `Theorem`'s *proof* is what the axiom-free list is guarding).
+#[test]
+fn cross_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.cross)
+        .expect("cross must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal)))"
+    );
+}
+
+/// `CPoint.cross_self_left`, one of the two structurally cheap degenerate
+/// cases. See [`CPointPrelude::cross_self_left`].
+#[test]
+fn cross_self_left_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.cross_self_left)
+        .expect("cross_self_left must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> CReal.Equiv (CPoint.cross x0 x0 x1) \
+         CReal.zero))"
+    );
+}
+
+/// `CPoint.cross_self_right`, the mirror degenerate case. See
+/// [`CPointPrelude::cross_self_right`].
+#[test]
+fn cross_self_right_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.cross_self_right)
+        .expect("cross_self_right must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> CReal.Equiv (CPoint.cross x0 x1 x1) \
+         CReal.zero))"
+    );
+}
+
+/// **The `B ↔ C` swap negates `cross`.** See
+/// [`CPointPrelude::cross_swap_bc`]. `x0,x1,x2 = A,B,C`.
+#[test]
+fn cross_swap_bc_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.cross_swap_bc)
+        .expect("cross_swap_bc must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.Equiv \
+         (CPoint.cross x0 x2 x1) (CReal.neg (CPoint.cross x0 x1 x2)))))"
+    );
+}
+
+/// `CPoint.NonCollinear`'s own type — three `CPoint`s and a witness modulus
+/// `k : Nat` (rendered `AxNat`, this kernel's `Nat`) to a `Prop`. See
+/// [`CPointPrelude::non_collinear`].
+#[test]
+fn non_collinear_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.non_collinear)
+        .expect("non_collinear must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : AxNat) -> \
+         Prop))))"
     );
 }
