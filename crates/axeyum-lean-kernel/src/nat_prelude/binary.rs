@@ -28,7 +28,7 @@
 
 use super::NatPrelude;
 use super::finite::pos_implies_succ_pred;
-use super::helpers::{and_left, and_right};
+use super::helpers::{and_left, and_right, iff_forward};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -634,5 +634,486 @@ pub(super) fn declare_binary_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_test_bit_le_one(d, p)?;
     declare_mod_two_mul_split(d, p)?;
     declare_sum_test_bit_lt(d, p)?;
+    Ok(())
+}
+
+/// `sizeAux`, `size`, and `size_zero` — the number-of-binary-digits function.
+///
+/// `sizeAux` has the SAME fuel-recursion shape as `testBitAux` (`Nat.rec` on
+/// the first argument with a `Nat -> Nat` motive, the second argument riding
+/// through as an ordinary parameter), but adds the zero-check Boolean guard
+/// `testBitAux` does not need: `sizeAux (succ f) n` must stop growing once
+/// `n` itself hits `0`, or `size n := sizeAux n n` would overcount (e.g.
+/// `size 0` would recurse `0` more steps regardless — actually the base case
+/// alone already fixes `n = 0`, but the guard is what keeps `sizeAux fuel 0
+/// = 0` true for every `fuel`, not just `fuel = 0`, which is what makes "is
+/// `n` itself enough fuel" a provable, fuel-independent-once-past-zero
+/// statement rather than a coincidence of `size`'s particular choice
+/// `fuel := n`).
+fn declare_size_defs(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let fn_ty = d.arrow(nat, nat);
+
+    // sizeAux 0 n ≡ 0 ;
+    // sizeAux (succ f) n ≡ if beq n 0 then 0 else succ (sizeAux f (n / 2))
+    {
+        let base_term = {
+            let n_fv = d.fresh_fvar();
+            let zero = d.zero();
+            d.lam_fv(n_fv, nat, zero)
+        };
+        let step_term = {
+            let f_fv = d.fresh_fvar();
+            let ih_fv = d.fresh_fvar();
+            let ih = d.kernel().fvar(ih_fv);
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let zero = d.zero();
+            let two = d.num(2);
+            let condition = d.beq(n, zero);
+            let half = d.div(n, two);
+            let recursed = d.apply(ih, &[half]);
+            let succ_recursed = d.succ(recursed);
+            let selected = d.bool_select_nat(condition, zero, succ_recursed);
+            let inner = d.lam_fv(n_fv, nat, selected);
+            let with_ih = d.lam_fv(ih_fv, fn_ty, inner);
+            d.lam_fv(f_fv, nat, with_ih)
+        };
+        let motive = d.kernel().lam(anon, nat, fn_ty, BinderInfo::Default);
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let one = d.level_one();
+        let rec = d.kernel().const_(p.rec, vec![one]);
+        let body = d.apply(rec, &[motive, base_term, step_term, f]);
+        let value = d.lam_fv(f_fv, nat, body);
+        let ty = d.arrow(nat, fn_ty);
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.size_aux,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(6),
+        })?;
+    }
+
+    // size n := sizeAux n n
+    {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let value = {
+            let applied = d.const_app(p.size_aux, &[n, n]);
+            d.lam_fv(n_fv, nat, applied)
+        };
+        let ty = d.arrow(nat, nat);
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.size,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(7),
+        })?;
+    }
+
+    // size_zero : size 0 = 0
+    // size 0 ≡ sizeAux 0 0, and sizeAux's base case is `fun n => 0` applied
+    // to any n — including 0 — so this is refl.
+    d.theorem(p.size_zero, 0, &|d, _v| {
+        let zero = d.zero();
+        let lhs = d.const_app(p.size, &[zero]);
+        (d.eq(lhs, zero), d.refl(zero))
+    })?;
+
+    Ok(())
+}
+
+/// `h : Lt zero n ⊢ Eq Nat n (add n n) → derive Lt n (mul two n)`... in fact
+/// this builds `Lt n (mul two n)` directly (with `two` supplied by the
+/// caller, so the result's stated multiplier matches whatever `two` the
+/// surrounding proof already uses — the kernel's final `def_eq` check bridges
+/// any residual mismatch against a literal `succ (succ zero)`, the same way
+/// `mod_two_mul_split` already relies on `succ one ≡ two`).
+///
+/// `n < n+n` from `0 < n` via `add_lt_add_left` (at `add n zero`, restored to
+/// `n` by `add_zero`), then `n+n = mul (succ one) n` via `succ_mul`/`one_mul`
+/// (`mul two n` and `mul (succ one) n` being the same term up to `def_eq`).
+fn n_lt_mul_two(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, pos: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let add_n_zero = d.add(n, zero);
+    let add_n_n = d.add(n, n);
+    let step1 = d.lemma(p.add_lt_add_left, &[n, zero, n, pos]);
+    let eq1 = d.lemma(p.add_zero, &[n]);
+    let motive1 = d.eq_motive(add_n_zero, &|d, x| {
+        let add_n_n_inner = d.add(n, n);
+        d.lt(x, add_n_n_inner)
+    });
+    let n_lt_add_n_n = d.transport(add_n_zero, motive1, step1, n, eq1);
+
+    let one = d.num(1);
+    let succ_one = d.succ(one);
+    let mul_succ_one_n = d.mul(succ_one, n);
+    let mul_one_n = d.mul(one, n);
+    let add_mul_one_n_n = d.add(mul_one_n, n);
+    let succ_mul_eq = d.lemma(p.succ_mul, &[one, n]);
+    let one_mul_eq = d.lemma(p.one_mul, &[n]);
+    let congr_step = d.congr(mul_one_n, n, one_mul_eq, &|d, x| d.add(x, n));
+    let (_, mul_two_n_eq_add_n_n) = d.chain(
+        mul_succ_one_n,
+        &[(add_mul_one_n_n, succ_mul_eq), (add_n_n, congr_step)],
+    );
+    let rev_eq = d.symm(mul_succ_one_n, add_n_n, mul_two_n_eq_add_n_n);
+    let motive2 = d.eq_motive(add_n_n, &|d, x| d.lt(n, x));
+    d.transport(add_n_n, motive2, n_lt_add_n_n, mul_succ_one_n, rev_eq)
+}
+
+/// `size_aux_lt_pow : ∀ fuel n, Le n fuel → Lt n (pow 2 (sizeAux fuel n))`.
+///
+/// Induction on `fuel`, generalized over `n` (the same "generalize the OTHER
+/// variable" shape as `testBit_le_one`/`sum_testBit_lt`, since the step needs
+/// the hypothesis at `n/2`, not at `n`).
+///
+/// This is deliberately NOT the `sizeAux n n = sizeAux (succ n) n` equality
+/// the handover sketched. That statement is about two ADJACENT fuel values
+/// and says nothing about why `n` itself is enough fuel to begin with — and
+/// it is not actually what `lt_pow_size` needs. This bound (`Le n fuel`
+/// suffices, for ANY sufficient fuel, not just adjacent pairs) is what
+/// `lt_pow_size` needs, and specializing it at `fuel := n` (via `le_refl`)
+/// both proves `lt_pow_size` and witnesses that `n` itself is sufficient
+/// fuel for `size n := sizeAux n n` — the fuel-sufficiency fact item 2 of the
+/// handover asked for, restated as a bound rather than an equation because
+/// the bound is what the rest of the development actually consumes.
+///
+/// The base case (`fuel = 0`) needs `Le n 0 → Lt n 1`, via `lt_of_le_of_lt`
+/// through `Lt 0 1`. The step case splits on `beq n 0` exactly like
+/// `sizeAux`'s own definition does (mirroring
+/// `division.rs::executable_division_spec_step`'s `Bool.rec` case-split
+/// pattern): at `n = 0` the target is `Lt n 1`, immediate from `n = 0`; away
+/// from `0`, `n/2 < f` follows from `n ≤ succ f` and `n/2 < n` (itself from
+/// `n < 2*n` at positive `n`, via `div_mod_lt_mul_iff`), the induction
+/// hypothesis at `n/2` gives `n/2 < 2^(sizeAux f (n/2))`, and reassembling
+/// `n = 2*(n/2) + (n mod 2)` with `n mod 2 ≤ 1` bounds `n` below
+/// `2 * 2^(sizeAux f (n/2)) = 2^(succ (sizeAux f (n/2)))` via `pow_succ`.
+fn declare_size_aux_lt_pow(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+
+    let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let bound_ty = d.le(n, x);
+        let sz = d.const_app(p.size_aux, &[x, n]);
+        let two = d.num(2);
+        let pw = d.pow(two, sz);
+        let concl = d.lt(n, pw);
+        let body = d.arrow(bound_ty, concl);
+        d.pi_fv(n_fv, nat, body)
+    };
+
+    let base = |d: &mut NatDev<'_>| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let zero = d.zero();
+        let bound_ty = d.le(n, zero);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+        let one = d.num(1);
+        let zero_lt_one = d.zero_lt_succ(zero);
+        let concl = d.lemma(p.lt_of_le_of_lt, &[n, zero, one, bound, zero_lt_one]);
+        let with_bound = d.lam_fv(bound_fv, bound_ty, concl);
+        d.lam_fv(n_fv, nat, with_bound)
+    };
+
+    let step = |d: &mut NatDev<'_>, f: ExprId, ih: ExprId| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sf = d.succ(f);
+        let bound_ty = d.le(n, sf);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+
+        let zero = d.zero();
+        let two = d.num(2);
+        let condition = d.beq(n, zero);
+        let half = d.div(n, two);
+        let sz_f_half = d.const_app(p.size_aux, &[f, half]);
+        let succ_recursed = d.succ(sz_f_half);
+
+        let target_for = |d: &mut NatDev<'_>, selector: ExprId| {
+            let selected = d.bool_select_nat(selector, zero, succ_recursed);
+            let pw = d.pow(two, selected);
+            d.lt(n, pw)
+        };
+        let branch_for = |d: &mut NatDev<'_>, selector: ExprId| {
+            let equality = d.bool_eq(condition, selector);
+            let target = target_for(d, selector);
+            d.arrow(equality, target)
+        };
+
+        let false_value = d.bool_false();
+        let true_value = d.bool_true();
+
+        // beq n 0 = false ⟹ n ≠ 0 ⟹ 0 < n, and n/2 < f from n ≤ succ f.
+        let false_minor = {
+            let false_equality_ty = d.bool_eq(condition, false_value);
+            let false_equality_fv = d.fresh_fvar();
+            let false_equality = d.kernel().fvar(false_equality_fv);
+
+            let not_eq = d.lemma(p.ne_of_beq_eq_false, &[n, zero, false_equality]);
+            let pos = d.lemma(p.zero_lt_of_ne_zero, &[n, not_eq]);
+
+            let one = d.num(1);
+            let h_exec = d.lemma(p.div_mod_exec, &[one, n]);
+            let r1 = d.modulo(n, two);
+            let mul_two_half = d.mul(two, half);
+            let recon = d.add(mul_two_half, r1);
+            let eq_ty = d.eq(n, recon);
+            let bound_r_ty = d.lt(r1, two);
+            let eq_n_recon = and_left(d, eq_ty, bound_r_ty, h_exec);
+            let r1_lt_two = and_right(d, eq_ty, bound_r_ty, h_exec);
+
+            // half < n, via `n < 2*n` (positivity) through `div_mod_lt_mul_iff`.
+            let iff_fn = d.lemma(p.div_mod_lt_mul_iff, &[two, n, half, r1, n]);
+            let the_iff = d.apply(iff_fn, &[h_exec]);
+            let mul_two_n = d.mul(two, n);
+            let lt_n_2n_ty = d.lt(n, mul_two_n);
+            let lt_half_n_ty = d.lt(half, n);
+            let forward = iff_forward(d, lt_n_2n_ty, lt_half_n_ty, the_iff);
+            let n_lt_2n = n_lt_mul_two(d, &p, n, pos);
+            let half_lt_n = d.apply(forward, &[n_lt_2n]);
+
+            // half < succ f (from half < n ≤ succ f), so half ≤ f.
+            let half_lt_sf = d.lemma(p.lt_of_lt_of_le, &[half, n, sf, half_lt_n, bound]);
+            let half_le_f = d.lemma(p.le_of_succ_le_succ, &[half, f, half_lt_sf]);
+
+            // IH at half : Lt half (pow 2 (sizeAux f half))
+            let ih_at_half = d.apply(ih, &[half]);
+            let half_lt_x = d.apply(ih_at_half, &[half_le_f]);
+            let pow_x = d.pow(two, sz_f_half);
+
+            // n ≤ 2*half + 1 (from n = 2*half + r1, r1 < 2 ⟹ r1 ≤ 1).
+            let r1_le_one = d.lemma(p.le_of_succ_le_succ, &[r1, one, r1_lt_two]);
+            let recon_le_bound1 = d.lemma(p.add_le_add_left, &[mul_two_half, r1, one, r1_le_one]);
+            let eq_recon_n = d.symm(n, recon, eq_n_recon);
+            let add_bound1 = d.add(mul_two_half, one);
+            let motive_a = d.eq_motive(recon, &|d, x| d.le(x, add_bound1));
+            let n_le_bound1 = d.transport(recon, motive_a, recon_le_bound1, n, eq_recon_n);
+
+            // 2*half + 1 < 2*half + 2 (from 1 < 2, i.e. le_refl two).
+            let one_lt_two = d.lemma(p.le_refl, &[two]);
+            let lt_from_b = d.lemma(p.add_lt_add_left, &[mul_two_half, one, two, one_lt_two]);
+            let add_bound2 = d.add(mul_two_half, two);
+            let n_lt_bound2 = d.lemma(
+                p.lt_of_le_of_lt,
+                &[n, add_bound1, add_bound2, n_le_bound1, lt_from_b],
+            );
+
+            // 2*half + 2 = 2*(succ half) ≤ 2*(pow 2 (sizeAux f half)) = 2*pow_x.
+            let succ_half = d.succ(half);
+            let mul_two_succ_half = d.mul(two, succ_half);
+            let mul_le = d.lemma(p.mul_le_mul_left, &[two, succ_half, pow_x, half_lt_x]);
+            let two_succ_half_eq = d.lemma(p.mul_succ, &[two, half]);
+            let mul_two_pow_x = d.mul(two, pow_x);
+            let motive_e = d.eq_motive(mul_two_succ_half, &|d, x| d.le(x, mul_two_pow_x));
+            let bound2_le_mulx = d.transport(
+                mul_two_succ_half,
+                motive_e,
+                mul_le,
+                add_bound2,
+                two_succ_half_eq,
+            );
+
+            let n_lt_mul_two_x = d.lemma(
+                p.lt_of_lt_of_le,
+                &[n, add_bound2, mul_two_pow_x, n_lt_bound2, bound2_le_mulx],
+            );
+
+            // 2*pow_x = pow_x*2 = pow 2 (succ (sizeAux f half)) via mul_comm/pow_succ.
+            let mul_comm_eq = d.lemma(p.mul_comm, &[two, pow_x]);
+            let mul_pow_x_two = d.mul(pow_x, two);
+            let motive_g = d.eq_motive(mul_two_pow_x, &|d, x| d.lt(n, x));
+            let n_lt_mul_x_two = d.transport(
+                mul_two_pow_x,
+                motive_g,
+                n_lt_mul_two_x,
+                mul_pow_x_two,
+                mul_comm_eq,
+            );
+
+            let pow_succ_target = d.pow(two, succ_recursed);
+            let pow_succ_eq = d.lemma(p.pow_succ, &[two, sz_f_half]);
+            let pow_succ_eq_rev = d.symm(pow_succ_target, mul_pow_x_two, pow_succ_eq);
+            let motive_h = d.eq_motive(mul_pow_x_two, &|d, x| d.lt(n, x));
+            let final_false = d.transport(
+                mul_pow_x_two,
+                motive_h,
+                n_lt_mul_x_two,
+                pow_succ_target,
+                pow_succ_eq_rev,
+            );
+
+            d.lam_fv(false_equality_fv, false_equality_ty, final_false)
+        };
+
+        // beq n 0 = true ⟹ n = 0 ⟹ Lt n 1 = Lt n (pow 2 0).
+        let true_minor = {
+            let true_equality_ty = d.bool_eq(condition, true_value);
+            let true_equality_fv = d.fresh_fvar();
+            let true_equality = d.kernel().fvar(true_equality_fv);
+            let eq_n_zero = d.lemma(p.eq_of_beq_eq_true, &[n, zero, true_equality]);
+            let eq_zero_n = d.symm(n, zero, eq_n_zero);
+            let one = d.num(1);
+            let zero_lt_one = d.zero_lt_succ(zero);
+            let motive_t = d.eq_motive(zero, &|d, x| d.lt(x, one));
+            let final_true = d.transport(zero, motive_t, zero_lt_one, n, eq_zero_n);
+            d.lam_fv(true_equality_fv, true_equality_ty, final_true)
+        };
+
+        let motive_bool = {
+            let selector_fv = d.fresh_fvar();
+            let selector = d.kernel().fvar(selector_fv);
+            let body = branch_for(d, selector);
+            d.lam_fv(selector_fv, bool_ty, body)
+        };
+        let level_zero = d.kernel().level_zero();
+        let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
+        let selected = d.apply(bool_rec, &[motive_bool, false_minor, true_minor, condition]);
+        let condition_refl = d.bool_refl(condition);
+        let step_result = d.apply(selected, &[condition_refl]);
+
+        let with_bound = d.lam_fv(bound_fv, bound_ty, step_result);
+        d.lam_fv(n_fv, nat, with_bound)
+    };
+
+    let fuel_fv = d.fresh_fvar();
+    let fuel = d.kernel().fvar(fuel_fv);
+    let proof_fn = d.induct(&motive, &base, &step, fuel);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let proof = d.apply(proof_fn, &[n]);
+    let stmt = {
+        let bound_ty = d.le(n, fuel);
+        let sz = d.const_app(p.size_aux, &[fuel, n]);
+        let two = d.num(2);
+        let pw = d.pow(two, sz);
+        let concl = d.lt(n, pw);
+        d.arrow(bound_ty, concl)
+    };
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(fuel_fv, nat, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(fuel_fv, nat, over_n)
+    };
+    d.declare_theorem(p.size_aux_lt_pow, ty, value)
+}
+
+/// `lt_pow_size : ∀ n, Lt n (pow 2 (size n))` — the `fuel := n` instance of
+/// [`declare_size_aux_lt_pow`], via `le_refl`.
+fn declare_lt_pow_size(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.lt_pow_size, 1, &|d, v| {
+        let n = v[0];
+        let le_refl_n = d.lemma(p.le_refl, &[n]);
+        let bound_proof = d.lemma(p.size_aux_lt_pow, &[n, n, le_refl_n]);
+        let sz = d.const_app(p.size, &[n]);
+        let two = d.num(2);
+        let pw = d.pow(two, sz);
+        let stmt = d.lt(n, pw);
+        (stmt, bound_proof)
+    })?;
+    Ok(())
+}
+
+/// `mod_eq_self_of_lt : ∀ n m, Lt n m → mod n m = n`.
+///
+/// A GENERAL division fact, not specific to binary representation (per the
+/// handover: it belongs promoted out of `binary.rs` if another prelude wants
+/// it, but this is where the theorem was needed first). `Lt n m` gives
+/// `0 < m` (via `zero_le n` and transitivity), so `div_mod_positive` builds
+/// the executable witness `divMod m n (n/m) (n%m)`. Comparing it against the
+/// hand-built witness `divMod m n 0 n` (valid since `n = m*0+n` and `n < m`
+/// is exactly the hypothesis) via `div_mod_unique` forces `n%m = n`.
+fn declare_mod_eq_self_of_lt(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.mod_eq_self_of_lt, 2, &|d, v| {
+        let (n, m) = (v[0], v[1]);
+        let hyp_ty = d.lt(n, m);
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+        let zero = d.zero();
+
+        let zero_le_n = d.lemma(p.zero_le, &[n]);
+        let pos = d.lemma(p.lt_of_le_of_lt, &[zero, n, m, zero_le_n, hyp]);
+        let h_exec = div_mod_positive(d, &p, n, m, pos);
+
+        let mul_m_zero = d.mul(m, zero);
+        let mul_zero_eq = d.lemma(p.mul_zero, &[m]);
+        let recon = d.add(mul_m_zero, n);
+        let add_zero_n = d.add(zero, n);
+        let zero_add_eq = d.lemma(p.zero_add, &[n]);
+        let congr1 = d.congr(mul_m_zero, zero, mul_zero_eq, &|d, x| d.add(x, n));
+        let (_, recon_eq_n) = d.chain(recon, &[(add_zero_n, congr1), (n, zero_add_eq)]);
+        let eq_n_recon = d.symm(recon, n, recon_eq_n);
+
+        let eq_ty = d.eq(n, recon);
+        let h_hand = d.const_app(p.logic.and_intro, &[eq_ty, hyp_ty, eq_n_recon, hyp]);
+
+        let q_exec = d.div(n, m);
+        let r_exec = d.modulo(n, m);
+        let unique = d.lemma(
+            p.div_mod_unique,
+            &[m, n, q_exec, r_exec, zero, n, h_exec, h_hand],
+        );
+        let eq_q_ty = d.eq(q_exec, zero);
+        let eq_r_ty = d.eq(r_exec, n);
+        let r_eq = and_right(d, eq_q_ty, eq_r_ty, unique);
+
+        let stmt = d.arrow(hyp_ty, eq_r_ty);
+        let proof = d.lam_fv(hyp_fv, hyp_ty, r_eq);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `sum_testBit_eq : ∀ n,
+/// sumRange (fun i => mul (testBit n i) (pow 2 i)) (size n) = n` — a natural
+/// number IS the sum of its own bits. [`declare_sum_test_bit_lt`] at
+/// `k := size n`, closed by `lt_pow_size` and `mod_eq_self_of_lt`.
+fn declare_sum_test_bit_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.sum_test_bit_eq, 1, &|d, v| {
+        let n = v[0];
+        let sz = d.const_app(p.size, &[n]);
+        let two = d.num(2);
+        let pow_sz = d.pow(two, sz);
+
+        let f_n = term_fn(d, &p, n);
+        let start = d.sum_range(f_n, sz);
+        let mod_val = d.modulo(n, pow_sz);
+
+        let step1 = d.lemma(p.sum_test_bit_lt, &[sz, n]);
+        let lt_proof = d.lemma(p.lt_pow_size, &[n]);
+        let step2 = d.lemma(p.mod_eq_self_of_lt, &[n, pow_sz, lt_proof]);
+
+        let (_, combined) = d.chain(start, &[(mod_val, step1), (n, step2)]);
+        let stmt = d.eq(start, n);
+        (stmt, combined)
+    })?;
+    Ok(())
+}
+
+/// Everything this module's `size` addendum declares, in dependency order.
+pub(super) fn declare_size_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    declare_size_defs(d, p)?;
+    declare_size_aux_lt_pow(d, p)?;
+    declare_lt_pow_size(d, p)?;
+    declare_mod_eq_self_of_lt(d, p)?;
+    declare_sum_test_bit_eq(d, p)?;
     Ok(())
 }

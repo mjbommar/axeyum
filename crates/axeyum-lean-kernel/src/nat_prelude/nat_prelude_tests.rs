@@ -111,6 +111,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.setwise_fixed,
         p.test_bit_aux,
         p.test_bit,
+        p.size_aux,
+        p.size,
     ]
 }
 
@@ -290,6 +292,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.test_bit_le_one,
         p.mod_two_mul_split,
         p.sum_test_bit_lt,
+        p.size_zero,
+        p.size_aux_lt_pow,
+        p.lt_pow_size,
+        p.mod_eq_self_of_lt,
+        p.sum_test_bit_eq,
     ]
 }
 
@@ -478,6 +485,228 @@ fn test_bit_computes_thirteen_in_binary() {
     let four = f.num(4);
     let bit4 = f.const_app(p.test_bit, &[thirteen, four]);
     assert!(f.k.def_eq(bit4, zero), "testBit 13 4 must reduce to 0");
+}
+
+/// `Nat.size` computes the binary digit count by pure reduction on numerals:
+/// `size 0 = 0`, `size 1 = 1`, `size 13 = 4` (`13 = 1101₂`), `size 16 = 5`
+/// (`16 = 10000₂`). This is the mandatory concrete instance the handover
+/// asked for — a fuel-recursive definition that type-checks but computes the
+/// wrong size has an empty axiom footprint and would pass every other sweep
+/// here.
+#[test]
+fn size_computes_binary_digit_counts() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let four = f.num(4);
+    let five = f.num(5);
+    let thirteen = f.num(13);
+    let sixteen = f.num(16);
+
+    let size_zero_val = f.const_app(p.size, &[zero]);
+    let size_one_val = f.const_app(p.size, &[one]);
+    let size_thirteen_val = f.const_app(p.size, &[thirteen]);
+    let size_sixteen_val = f.const_app(p.size, &[sixteen]);
+
+    assert!(f.k.def_eq(size_zero_val, zero), "size 0 must reduce to 0");
+    assert!(f.k.def_eq(size_one_val, one), "size 1 must reduce to 1");
+    assert!(
+        f.k.def_eq(size_thirteen_val, four),
+        "size 13 must reduce to 4 (13 = 1101 in binary)"
+    );
+    assert!(
+        f.k.def_eq(size_sixteen_val, five),
+        "size 16 must reduce to 5 (16 = 10000 in binary)"
+    );
+
+    // NEGATIVE reduction controls — a checker that can't fail is worse than
+    // none.
+    assert!(
+        !f.k.def_eq(size_thirteen_val, five),
+        "size 13 must NOT be def-eq to 5"
+    );
+    assert!(
+        !f.k.def_eq(size_sixteen_val, four),
+        "size 16 must NOT be def-eq to 4"
+    );
+    assert!(
+        !f.k.def_eq(size_one_val, zero),
+        "size 1 must NOT be def-eq to 0"
+    );
+    let two = f.num(2);
+    assert!(
+        !f.k.def_eq(size_zero_val, two),
+        "size 0 must NOT be def-eq to a nonzero numeral"
+    );
+
+    for name in [p.size_aux, p.size, p.size_zero] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
+
+/// `Nat.lt_pow_size` holds at several concrete instances, checked by reducing
+/// its instantiated statement to the numeral both sides of `Lt` compute to —
+/// not just admission. `size_aux_lt_pow`'s underlying bound is what makes
+/// `n` itself always enough fuel for `size n := sizeAux n n`.
+#[test]
+fn lt_pow_size_holds_at_concrete_points() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    for (n_val, expected_size) in [(0u32, 0u32), (1, 1), (13, 4), (16, 5), (63, 6)] {
+        let n = f.num(n_val);
+        let proof = f.lemma(p.lt_pow_size, &[n]);
+        let inferred =
+            f.k.infer(proof)
+                .unwrap_or_else(|e| panic!("lt_pow_size({n_val}) should infer: {}", f.explain(&e)));
+        let size_n = f.const_app(p.size, &[n]);
+        let expected_size_val = f.num(expected_size);
+        assert!(
+            f.k.def_eq(size_n, expected_size_val),
+            "size {n_val} must reduce to {expected_size}"
+        );
+        let two = f.num(2);
+        let pow_n = f.pow(two, size_n);
+        let expected_ty = f.lt(n, pow_n);
+        assert!(
+            f.k.def_eq(inferred, expected_ty),
+            "lt_pow_size({n_val}) should state n < 2^(size n)"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.size_aux_lt_pow).is_empty(),
+        "size_aux_lt_pow must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.lt_pow_size).is_empty(),
+        "lt_pow_size must rest on zero axioms"
+    );
+}
+
+/// `Nat.mod_eq_self_of_lt` applies at concrete points, and both sides of its
+/// conclusion compute to the same numeral.
+#[test]
+fn mod_eq_self_of_lt_applies_at_concrete_points() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // `Lt n m` for concrete numerals is `Le (succ n) m`, witnessed directly
+    // via `le_intro (succ n) m k proof` with `k := m - n - 1`: the witness
+    // `succ n + k` reduces to `m` on literal numerals, so `refl` closes it.
+    for (n_val, m_val) in [(0u32, 1u32), (3, 5), (4, 5), (0, 7)] {
+        let n = f.num(n_val);
+        let m = f.num(m_val);
+        let sn = f.succ(n);
+        let k = f.num(m_val - n_val - 1);
+        let sn_plus_k = f.add(sn, k);
+        let witness = f.refl(sn_plus_k);
+        let lt_proof = f.lemma(p.le_intro, &[sn, m, k, witness]);
+        let inferred_lt = f.k.infer(lt_proof).unwrap_or_else(|e| {
+            panic!(
+                "le_intro should infer for n={n_val} m={m_val}: {}",
+                f.explain(&e)
+            )
+        });
+        let expected_lt_ty = f.lt(n, m);
+        assert!(
+            f.k.def_eq(inferred_lt, expected_lt_ty),
+            "le_intro instance should witness Lt {n_val} {m_val}"
+        );
+
+        let proof = f.lemma(p.mod_eq_self_of_lt, &[n, m, lt_proof]);
+        let inferred = f.k.infer(proof).unwrap_or_else(|e| {
+            panic!(
+                "mod_eq_self_of_lt({n_val},{m_val}) should infer: {}",
+                f.explain(&e)
+            )
+        });
+        let mod_val = f.modulo(n, m);
+        let expected = f.eq(mod_val, n);
+        assert!(
+            f.k.def_eq(inferred, expected),
+            "mod_eq_self_of_lt({n_val},{m_val}) should state mod {n_val} {m_val} = {n_val}"
+        );
+        assert!(
+            f.k.def_eq(mod_val, n),
+            "mod {n_val} {m_val} must actually reduce to {n_val}"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.mod_eq_self_of_lt).is_empty(),
+        "mod_eq_self_of_lt must rest on zero axioms"
+    );
+}
+
+/// `Nat.sum_testBit_eq` — the headline result, "a natural number IS the sum
+/// of its own bits" — checked by reducing both sides at several concrete
+/// numerals, not just admitted.
+#[test]
+fn sum_test_bit_eq_holds_at_concrete_points() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    for n_val in [0u32, 1, 2, 13, 16, 63] {
+        let n = f.num(n_val);
+        let proof = f.lemma(p.sum_test_bit_eq, &[n]);
+        let inferred = f
+            .k
+            .infer(proof)
+            .unwrap_or_else(|e| panic!("sum_testBit_eq({n_val}) should infer: {}", f.explain(&e)));
+
+        let size_n = f.const_app(p.size, &[n]);
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let nat = f.nat_ty();
+        let tb = f.const_app(p.test_bit, &[n, i]);
+        let two = f.num(2);
+        let p2i = f.pow(two, i);
+        let body = f.mul(tb, p2i);
+        let term = f.lam_fv(i_fv, nat, body);
+        let lhs = f.sum_range(term, size_n);
+        let expected = f.eq(lhs, n);
+        assert!(
+            f.k.def_eq(inferred, expected),
+            "sum_testBit_eq({n_val}) should state sumRange (bit-term n) (size n) = {n_val}"
+        );
+        assert!(
+            f.k.def_eq(lhs, n),
+            "the reconstructed bit sum for {n_val} must actually reduce to {n_val}"
+        );
+    }
+
+    // NEGATIVE reduction control.
+    let thirteen = f.num(13);
+    let proof13 = f.lemma(p.sum_test_bit_eq, &[thirteen]);
+    let inferred13 = f.k.infer(proof13).unwrap();
+    let size13 = f.const_app(p.size, &[thirteen]);
+    let i_fv = f.fresh_fvar();
+    let i = f.k.fvar(i_fv);
+    let nat = f.nat_ty();
+    let tb = f.const_app(p.test_bit, &[thirteen, i]);
+    let two = f.num(2);
+    let p2i = f.pow(two, i);
+    let body = f.mul(tb, p2i);
+    let term13 = f.lam_fv(i_fv, nat, body);
+    let lhs13 = f.sum_range(term13, size13);
+    let fourteen = f.num(14);
+    let wrong_expected = f.eq(lhs13, fourteen);
+    assert!(
+        !f.k.def_eq(inferred13, wrong_expected),
+        "sum_testBit_eq(13) must NOT be def-eq to a statement about 14"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.sum_test_bit_eq).is_empty(),
+        "sum_testBit_eq must rest on zero axioms"
+    );
 }
 
 /// `Nat.choose` computes Pascal's triangle by pure reduction on numerals, and
@@ -4047,7 +4276,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        28 + 170,
+        30 + 175,
         "every promised definition and theorem must be rendered"
     );
 }
