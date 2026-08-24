@@ -125,6 +125,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `8e78d8e3e` | Publish separated formal, producer-credit, and transport coverage dimensions |
 | 2026-08-24 | `7160fc0bc` | Publish non-authoritative producer observations; current live queue has zero registered admissible candidates |
 | 2026-08-24 | `d076da943` | Correct branch-containment guidance and move derived-snapshot freshness out of the global construction gate into an explicit knowledge-owner check |
+| 2026-08-24 | `c4cfde641` | Refresh the kernel-derived declaration/dependency snapshot to the latest 1,122 declarations, 855 theorems, and 4,035 direct theorem edges without touching construction sources |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
@@ -2027,8 +2028,8 @@ nine have explicitly partial concept/encounter mappings, and seven evidence
 credits are checked against their fact records (the other two were settled by
 earlier one-target operations). The owning fact, operation, claim, and kernel
 schemas are unchanged; local/external endpoints and false complete-coverage or
-uncredited-producer edges are mutation-tested. F2 now projects 1,049 current
-kernel declarations and 3,603 direct theorem dependencies from accepted terms,
+uncredited-producer edges are mutation-tested. F2 now projects 1,122 current
+kernel declarations and 4,035 direct theorem dependencies from accepted terms,
 with theorem/definition/inductive/constructor/recursor kinds and prelude
 visibility kept distinct. Next: normalize producer declines into typed,
 measured obstructions rather than hand-authoring the next bottleneck. F3 now
