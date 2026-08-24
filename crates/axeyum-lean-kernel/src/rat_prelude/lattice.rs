@@ -62,10 +62,19 @@
 //!
 //! ## What is deliberately not here
 //!
-//! - **No `Rat.abs`.** `crate::creal` writes `|r| ≤ q` as the pair
-//!   `−q ≤ r ∧ r ≤ q` and has no use for an absolute value on `ℚ`;
-//!   `CReal.abs` is `max x (neg x)` one level up, so the only `ℚ` fact it
-//!   needs is [`zero_le_max_neg`](super::RatPrelude::zero_le_max_neg).
+//! - ~~**No `Rat.abs`.**~~ **It is here now** — [`super::abs`], defined as
+//!   `max a (neg a)`, with the triangle inequality. This entry used to say the
+//!   absolute value was deliberately absent because `crate::creal` writes
+//!   `|r| ≤ q` as the pair `−q ≤ r ∧ r ≤ q` (ADR-0512) and had no use for one.
+//!   That reason was true and is why nothing needed `abs` for a long time; it
+//!   was never a reason `abs` could not exist. The pair encoding is unchanged
+//!   and `CReal.abs` is still `max x (neg x)` one level up, still needing only
+//!   [`zero_le_max_neg`](super::RatPrelude::zero_le_max_neg) from here.
+//!
+//!   Kept rather than deleted: a doc that said a construction was deliberately
+//!   omitted, when it was merely unbuilt, is the exact shape
+//!   `scripts/check-stale-negative-claims.py` exists to catch, and six of them
+//!   were found false in this crate in one day.
 //! - **No `max a a = a`, no associativity, no distributivity over `add`.**
 //!   Nothing consumes them yet, and each is another `max_cases` when it does.
 //! - **No decidability claim.** `max_cases` is an elimination *into `Prop`*.

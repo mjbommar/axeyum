@@ -70,8 +70,10 @@
 //!
 //! ## What is not here
 //!
-//! **`Rat.abs`** is not attempted in this file. It is a separate, independent
-//! piece of the assigned slice and gets its own module if it lands.
+//! **`Rat.abs`** is not attempted in this file. It landed as its own module,
+//! [`super::abs`] — `Rat.abs a := Rat.max a (Rat.neg a)`, with the triangle
+//! inequality (`Rat.abs_add`) proved from `max_le` and `add_le_add`, no
+//! further case split needed.
 
 use super::RatPrelude;
 use super::ops::{den_z, num, rat_theorem, rat_ty, rle, rlt};

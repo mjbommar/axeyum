@@ -88,6 +88,13 @@ fn every_named_declaration_exists() {
         ("sub_max_le", p.sub_max_le),
         ("sub_min_le", p.sub_min_le),
         ("zero_le_max_neg", p.zero_le_max_neg),
+        ("abs", p.abs),
+        ("abs_nonneg", p.abs_nonneg),
+        ("le_abs_self", p.le_abs_self),
+        ("neg_le_abs", p.neg_le_abs),
+        ("abs_zero", p.abs_zero),
+        ("abs_neg", p.abs_neg),
+        ("abs_add", p.abs_add),
         ("ble", p.ble),
         ("ble_eq_true_of_le", p.ble_eq_true_of_le),
         ("le_of_ble_eq_true", p.le_of_ble_eq_true),
@@ -1091,6 +1098,143 @@ fn the_rational_lattice_is_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+// --- `Rat.abs` and the triangle inequality -----------------------------
+
+/// Every declaration [`super::abs::declare_abs`] adds — `Rat.abs` itself and
+/// the five/six theorems built on it — is a **checked** definition or
+/// theorem with an empty axiom footprint, read out of the kernel, not off
+/// the diff.
+#[test]
+fn the_absolute_value_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("abs", p.abs, false),
+        ("abs_nonneg", p.abs_nonneg, true),
+        ("le_abs_self", p.le_abs_self, true),
+        ("neg_le_abs", p.neg_le_abs, true),
+        ("abs_zero", p.abs_zero, true),
+        ("abs_neg", p.abs_neg, true),
+        ("abs_add", p.abs_add, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// `Rat.abs_add` is the **unweakened** triangle inequality — `|a+b| ≤ |a| +
+/// |b|` verbatim, not, say, an equality or a one-sided estimate that would
+/// still have an empty footprint while proving something weaker.
+#[test]
+fn abs_add_is_the_triangle_inequality_unweakened() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.abs_add),
+        "((x0 : Rat) -> ((x1 : Rat) -> Rat.le (Rat.abs (Rat.add x0 x1)) \
+         (Rat.add (Rat.abs x0) (Rat.abs x1))))"
+    );
+}
+
+/// **`Rat.abs` computes**, on both a positive and a negative literal, by
+/// `Eq.refl` — not by trusting the spec theorems to be about the definition
+/// this file actually declared. `|3| = 3` exercises the branch where `max`
+/// returns its first argument outright; `|−3| = 3` additionally exercises
+/// `Rat.neg` reducing twice (`neg (neg 3)` inside the gap computation).
+#[test]
+fn rat_abs_computes_on_both_signs() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // |3| = 3.
+    {
+        let three = literal(&mut d, 3);
+        let magnitude = d.const_app(p.abs, &[three]);
+        let stmt = crate::rat_prelude::ops::req(&mut d, magnitude, three);
+        let proof = crate::rat_prelude::ops::rrefl(&mut d, magnitude);
+        let name = d.kernel().name_str(anon, "Check.abs_three");
+        d.declare_theorem(name, stmt, proof)
+            .unwrap_or_else(|e| panic!("Rat.abs did not reduce on |3|: {e:?}"));
+    }
+
+    // |−3| = 3.
+    {
+        let three = literal(&mut d, 3);
+        let negated = crate::rat_prelude::ops::rneg(&mut d, three);
+        let magnitude = d.const_app(p.abs, &[negated]);
+        let three_again = literal(&mut d, 3);
+        let stmt = crate::rat_prelude::ops::req(&mut d, magnitude, three_again);
+        let proof = crate::rat_prelude::ops::rrefl(&mut d, magnitude);
+        let name = d.kernel().name_str(anon, "Check.abs_neg_three");
+        d.declare_theorem(name, stmt, proof)
+            .unwrap_or_else(|e| panic!("Rat.abs did not reduce on |-3|: {e:?}"));
+    }
+}
+
+/// The negative control for [`rat_abs_computes_on_both_signs`]: `|3| = 1`
+/// must be REFUSED, or the reduction checks above measure nothing.
+#[test]
+fn rat_abs_reduction_check_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let index = d.num(0);
+    let three_num = d.num(3);
+    let one_num = d.num(1);
+    let three = d.const_app(p.nat_div_succ, &[three_num, index]);
+    let one = d.const_app(p.nat_div_succ, &[one_num, index]);
+
+    let magnitude = d.const_app(p.abs, &[three]);
+    let stmt = crate::rat_prelude::ops::req(&mut d, magnitude, one);
+    let proof = crate::rat_prelude::ops::rrefl(&mut d, magnitude);
+    let name = d.kernel().name_str(anon, "Check.abs_three_is_not_one");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `Rat.abs 3 = 1`, so the abs reduction check proves nothing"
+    );
 }
 
 // --- `Rat.ble`, the decidable `≤` -------------------------------------------

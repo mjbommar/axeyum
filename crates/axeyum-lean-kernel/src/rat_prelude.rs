@@ -52,6 +52,7 @@ use crate::int_prelude::{IntPrelude, build_int_prelude};
 use crate::name::NameId;
 use crate::{Kernel, KernelError};
 
+mod abs;
 mod archimedean;
 mod core;
 mod decide;
@@ -639,6 +640,37 @@ pub struct RatPrelude {
     /// ADR-0512 computes it.
     pub bounds_num: NameId,
 
+    // --- absolute value and the triangle inequality (`rat_prelude::abs`) ----
+    /// `Rat.abs : Rat → Rat`, defined `Rat.abs a := Rat.max a (Rat.neg a)` —
+    /// the same "define on the representation, do not derive from the order"
+    /// move [`Self::max`]/[`Self::min`] make, so every law below is a lattice
+    /// argument (`max_le`, `le_max_left`, `le_max_right`, `le_antisymm`)
+    /// rather than a fresh case split on the sign of `a`.
+    pub abs: NameId,
+    /// `Rat.abs_nonneg : ∀ a, Rat.le Rat.zero (Rat.abs a)` — literally
+    /// [`Self::zero_le_max_neg`] at `a`, restated through the new constant.
+    pub abs_nonneg: NameId,
+    /// `Rat.le_abs_self : ∀ a, Rat.le a (Rat.abs a)` — [`Self::le_max_left`]
+    /// at `(a, Rat.neg a)`.
+    pub le_abs_self: NameId,
+    /// `Rat.neg_le_abs : ∀ a, Rat.le (Rat.neg a) (Rat.abs a)` —
+    /// [`Self::le_max_right`] at `(a, Rat.neg a)`.
+    pub neg_le_abs: NameId,
+    /// `Rat.abs_zero : Rat.abs Rat.zero = Rat.zero`.
+    pub abs_zero: NameId,
+    /// `Rat.abs_neg : ∀ a, Rat.abs (Rat.neg a) = Rat.abs a` — `neg_neg`
+    /// collapses the double negation, then a locally-built `max_comm`
+    /// (`lattice` deliberately has none; nothing consumed it before this
+    /// file) puts the arguments back in order.
+    pub abs_neg: NameId,
+    /// `Rat.abs_add : ∀ a b, Rat.le (Rat.abs (Rat.add a b))
+    /// (Rat.add (Rat.abs a) (Rat.abs b))` — **the triangle inequality.** One
+    /// `max_le` closes it once the two branches are in hand: `a + b ≤ |a| +
+    /// |b|` is `add_le_add` on [`Self::le_abs_self`] twice, and
+    /// `−(a+b) ≤ |a| + |b|` is `add_le_add` on [`Self::neg_le_abs`] twice
+    /// followed by rewriting along [`Self::neg_add`].
+    pub abs_add: NameId,
+
     // --- boolean decision (`Rat.ble`) ---------------------------------------
     /// `Rat.ble : Rat → Rat → Bool` — decidable `≤`, a genuine `Bool` in
     /// `Type`, computable. Defined on the representation exactly like
@@ -829,6 +861,13 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         int_le_nat_abs: child(kernel, "int_le_natAbs"),
         int_neg_nat_abs_le: child(kernel, "int_neg_natAbs_le"),
         bounds_num: child(kernel, "bounds_num"),
+        abs: child(kernel, "abs"),
+        abs_nonneg: child(kernel, "abs_nonneg"),
+        le_abs_self: child(kernel, "le_abs_self"),
+        neg_le_abs: child(kernel, "neg_le_abs"),
+        abs_zero: child(kernel, "abs_zero"),
+        abs_neg: child(kernel, "abs_neg"),
+        abs_add: child(kernel, "abs_add"),
         max: child(kernel, "max"),
         min: child(kernel, "min"),
         max_cases: child(kernel, "max_cases"),
@@ -890,6 +929,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         product::declare_product_laws(&mut d, prelude)?;
         field::declare_field_laws(&mut d, prelude)?;
         lattice::declare_lattice(&mut d, prelude)?;
+        abs::declare_abs(&mut d, prelude)?;
         decide::declare_decide(&mut d, prelude)?;
         Ok(())
     })();
