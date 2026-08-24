@@ -139,6 +139,7 @@ mod diagonal;
 mod divisibility;
 mod division;
 mod fermat;
+mod fibonacci;
 mod finite;
 mod gcd;
 mod helpers;
@@ -177,6 +178,7 @@ use diagonal::declare_diagonal;
 use divisibility::declare_divisibility;
 use division::declare_euclidean_division;
 use fermat::declare_fermat;
+use fibonacci::declare_fib_all;
 use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
     declare_restrict_maps_into,
@@ -1114,6 +1116,54 @@ pub struct NatPrelude {
     /// at `k := size n`, closed by [`Self::lt_pow_size`] and
     /// [`Self::mod_eq_self_of_lt`].
     pub sum_test_bit_eq: NameId,
+
+    // --- Fibonacci numbers (`fibonacci.rs`) ----------------------------------
+    /// `Nat.fibAux : Nat -> Nat -> Nat -> Nat`, `fibAux i a b`: recursion on
+    /// the FIRST argument `i` (the fuel/step-count — structural), threading
+    /// TWO ordinary curried `Nat` parameters `a b` through as the accumulator
+    /// pair (there is no tuple type in this kernel; two curried parameters
+    /// serve the same purpose without one — see `fibonacci.rs`'s module doc
+    /// for why the `And`-pairing trick used to prove properties TOGETHER by
+    /// ordinary `Nat.rec` does not by itself give a way to DEFINE a
+    /// `Nat`-valued function). `fibAux 0 a b ≡ a`; `fibAux (succ i) a b ≡
+    /// fibAux i b (add a b)`. Not the public name; [`Self::fib`] supplies the
+    /// seed `(0, 1)`.
+    pub fib_aux: NameId,
+    /// `Nat.fib n := fibAux n 0 1` — the Fibonacci numbers. `fib 0 ≡ 0`,
+    /// `fib 1 ≡ 1` by pure `δ`/`ι` reduction (no theorem needed);
+    /// `fib (n+2) = fib (n+1) + fib n` is [`Self::fib_add_two`], which is
+    /// NOT a bare `δ`/`ι` fact (see its own doc).
+    pub fib: NameId,
+    /// `Nat.fib_add_two : ∀ n, fib (succ (succ n)) = add (fib (succ n)) (fib n)`
+    /// — the defining recurrence, stated over `fib` rather than `fibAux`.
+    /// Proved from a STRONGER internal fact generalized over the accumulator
+    /// seed (`∀ i a b, fibAux (succ (succ i)) a b = add (fibAux (succ i) a b)
+    /// (fibAux i a b)`, built by `fibonacci.rs`'s private
+    /// `fib_aux_add_two_gen` and specialized at `a=0, b=1` — the general
+    /// statement's induction step closes by defeq alone (the induction
+    /// hypothesis applied at the shifted seed `(b, a+b)` already has the
+    /// exact type the goal unfolds to); only the base case needs an actual
+    /// rewrite, `add_comm`.
+    pub fib_add_two: NameId,
+    /// `Nat.fib_le_succ : ∀ n, Le (fib n) (fib (succ n))` — the Fibonacci
+    /// sequence is non-decreasing. By induction on `n`; the base case is
+    /// `zero_le`, and the step needs no induction hypothesis at all —
+    /// `fib_add_two` plus `le_add_right` gives it unconditionally.
+    pub fib_le_succ: NameId,
+    /// `Nat.fib_pos_of_pos : ∀ n, Lt zero n → Lt zero (fib n)` — every `fib`
+    /// value past the zeroth is positive. From the unconditional `∀ i, Lt
+    /// zero (fib (succ i))` (induction on `i`, base `le_refl`, step
+    /// `fib_le_succ` chained through `lt_of_lt_of_le`), transported along
+    /// `pos_implies_succ_pred` (`finite.rs`) to discharge the hypothesis.
+    pub fib_pos_of_pos: NameId,
+    /// `Nat.sum_fib : ∀ n, sumRange fib n = sub (fib (succ n)) one` —
+    /// `Σ_{i<n} fib i = fib(n+1) - 1`. Proved from the SUBTRACTION-FREE
+    /// internal fact `∀ n, add (sumRange fib n) 1 = fib (succ n)`
+    /// (`sum_fib_add_one_gen`, straight induction using `add_right_comm` and
+    /// `fib_add_two`), converted to the truncated-subtraction form by
+    /// `add_comm` + `add_sub_cancel_left` — `Nat.sub` never drives an
+    /// induction step here, only the final one-line conversion.
+    pub sum_fib: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1439,6 +1489,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lt_pow_size: kernel.name_str(nat, "lt_pow_size"),
             mod_eq_self_of_lt: kernel.name_str(nat, "mod_eq_self_of_lt"),
             sum_test_bit_eq: kernel.name_str(nat, "sum_testBit_eq"),
+            fib_aux: kernel.name_str(nat, "fibAux"),
+            fib: kernel.name_str(nat, "fib"),
+            fib_add_two: kernel.name_str(nat, "fib_add_two"),
+            fib_le_succ: kernel.name_str(nat, "fib_le_succ"),
+            fib_pos_of_pos: kernel.name_str(nat, "fib_pos_of_pos"),
+            sum_fib: kernel.name_str(nat, "sum_fib"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1495,6 +1551,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_vandermonde_all(&mut d, &p)?;
         declare_binary_all(&mut d, &p)?;
         declare_size_all(&mut d, &p)?;
+        declare_fib_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
