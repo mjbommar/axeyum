@@ -256,6 +256,7 @@ compounding, not automation theatre.
 | [Family-to-concept crosswalk](248-family-concept-crosswalk.md) | How can frozen statement families receive pinned mathematical-topic labels without being mistaken for fact-level formalizations? |
 | [Separated concept coverage](249-concept-coverage-projection.md) | Which concepts have family-topic or qualified fact-level coverage, with neither mistaken for complete formal coverage? |
 | [Natural ModEq capability selection](250-natural-modeq-capability-selection.md) | Which bounded, dependency-ready natural modular-equivalence core should test whether the existing general mechanism can earn a new source-bound operation? |
+| [Outcome-safe producer observations](251-producer-outcome-observations.md) | What did the fixed producer actually do across the sealed train/development corpus, grouped by reviewed family, statement shape, and abstraction boundary without reading held-out outcomes? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

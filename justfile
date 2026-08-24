@@ -456,6 +456,7 @@ autogenesis-knowledge-derived-freshness:
     python3 scripts/gen-autogenesis-scheduler-observations.py --check
     python3 scripts/gen-autogenesis-capability-gap-projection.py --check
     python3 scripts/gen-autogenesis-concept-coverage-projection.py --check
+    python3 scripts/gen-autogenesis-producer-outcome-observations.py --check
 
 autogenesis-kernel-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
@@ -492,6 +493,11 @@ autogenesis-concept-coverage:
 autogenesis-nat-modeq-selection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_nat_modeq_capability_selection
     python3 scripts/validate-autogenesis-nat-modeq-capability-selection.py
+
+autogenesis-producer-outcomes:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_producer_outcome_observations
+    python3 scripts/validate-autogenesis-producer-outcome-observations.py
+    python3 scripts/gen-autogenesis-producer-outcome-observations.py --check
 
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh
