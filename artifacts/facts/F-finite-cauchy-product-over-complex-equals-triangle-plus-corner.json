@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": "F:finite-cauchy-product-over-complex-equals-triangle-plus-corner",
+  "title": "The product of two finite complex partial sums equals the diagonal-grouped convolution plus a corner term, which the naive Cauchy identity omits",
+  "statement": "For f, g : Nat -> Complex and any n, with F i j := f i * g j: (sum_{i<n} f i) * (sum_{j<n} g j) ~ TRIANGLE(F,n) + CORNER(F,n), where TRIANGLE is the antidiagonal sum sum_{k<n} sum_{i<=k} F i (k-i) and CORNER is sum_{i<n} sum_{j<i} F i ((n-i)+j), the sum over {(i,j) : i<n, j<n, i+j>=n}. Equivalence is Complex.Equiv, a DEFINED Prop relation on a setoid, never Eq. THIS EXISTS BECAUSE THE NAIVE FINITE CAUCHY IDENTITY IS FALSE. The claim (sum a)(sum b) = sum_{k<n} sum_{i<=k} a_i * b_{k-i} was dispatched as a target and REFUTED by hand at n = 2: the left side contains a_1*b_1 and the right, being only the antidiagonal triangle, does not. This theorem is not a weaker replacement -- it names and quantifies the exact defect, and the CORNER at n = 2 is exactly the missing a_1*b_1. A NOTE ON `AxNat`, which appears throughout the formal statement: the `Ax` is `axeyum`, not `axiom`. `lean_pp` roots the kernel's CONSTRUCTED inductive naturals there only so exported terms do not shadow Lean's own `Nat`. It collides badly with `AxReal`, where `Ax` DOES mean axiomatized and the trusted surface is 30. Every prelude involved here -- nat, rat, creal, complex -- measures 0.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : ((x1 : AxNat) -> Complex)) -> ((x2 : AxNat) -> Complex.Equiv (Complex.mul (Complex.sumRange x0 x2) (Complex.sumRange x1 x2)) (Complex.add (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => fun (x6 : AxNat) => Complex.mul (x0 x5) (x1 x6)) x4 (AxNat.sub x3 x4)) (AxNat.succ x3)) x2) (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => (fun (x6 : AxNat) => fun (x7 : AxNat) => Complex.mul (x0 x6) (x1 x7)) x3 x5) (AxNat.add (AxNat.sub x2 x3) x4)) x3) x2)))))",
+    "fragment": "Complex",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:finite-double-sum-rectangle-eq-triangle-plus-corner"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Complex.sumRange_mul_eq_diag_add_corner",
+      "kind": "kernel-term",
+      "supports": "`Complex.sumRange_mul_eq_diag_add_corner` is admitted with exactly the type in formal.statement. It composes `Complex.sumRange_mul_double[f,g,n,n]` -- which turns a product of partial sums into the RECTANGLE sum over {(i,j) : i<n, j<n} -- with `Complex.sumRange_rect_eq_diag_add_corner`, via Equiv.trans. The rectangle decomposition is itself the Equiv-port of Nat.sumRange_rect_eq_diag_add_corner, same induction structure. THE PORT IS NOT MECHANICAL: Complex.Equiv has no free single-sided congruence, so every rewrite under `add` needs an explicit add_congr paired with Equiv.refl on the untouched side, where over Nat it is just Eq and a rewrite chain.",
+      "check_status": "checked",
+      "checkers": [
+        "complex_tests::the_rectangle_decomposition_is_stated_exactly (renders both theorem types via Kernel::render_lean, asserts the corner substring is PRESENT, then compares each full type verbatim with assert_eq!)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_complex_prelude return Err and complex_prelude_builds fail)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib complex::complex_tests::the_rectangle_decomposition_is_stated_exactly -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/complex.rs",
+      "notes": "A footprint check cannot carry this claim: the theorem with the CORNER TERM DROPPED is precisely the refuted naive identity, and it would have an identically empty footprint. Mutation-verified by the establishing lane: a single-character mutation of the pinned constant took the suite from 10 passed to 9 passed / 1 failed, naming this test and no other; the file was then restored and hash-verified against the committed blob, and the suite returned to 10 passed. The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success. Note that complex_tests.rs OVERFLOWS the default 2 MiB stack and aborts with SIGABRT; the suite runs bodies on a 64 MiB thread via its own on_a_deep_stack helper, so a SIGABRT here is an environment fact and not a proof failure."
+    },
+    {
+      "id": "footprint-complex-cauchy",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for both Complex.sumRange_mul_eq_diag_add_corner and Complex.sumRange_rect_eq_diag_add_corner and everything beneath them. The `complex` prelude's trusted surface is 0: no Axiom, no Opaque, no Quotient. Both names were added to the complex sweep in the SAME edit that declared them.",
+      "check_status": "checked",
+      "checkers": [
+        "complex_tests::every_named_complex_declaration_is_checked_and_footprint_free (reads Kernel::axiom_footprint for every named declaration and requires the empty set; also requires each name to be PRESENT in the environment, which is the half that catches an omission)",
+        "prelude_theorem_inventory --include-constructed (independent sweep listing every declared name with its footprint)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib complex::complex_tests::every_named_complex_declaration_is_checked_and_footprint_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/complex/complex_tests.rs",
+      "notes": "Presence matters as much as the footprint: axiom_footprint of a name interned but never DECLARED is vacuously empty. Counting Declaration::Axiom alone would also not suffice in this kernel, since Opaque has no proof body and Quotient admits Quot.sound; axiom_footprint covers all three."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-capability-assurance (2026-08-24) across three dispatched lanes: one refuted the naive identity at n = 2, one built the Nat repair (Nat.sumRange_rect_eq_diag_add_corner plus the sub-free Nat.sumRange_split), and one ported both to Complex and composed with sumRange_mul_double. Kernel theorems over the constructed complex numbers, all with empty axiom_footprint.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "Augustin-Louis Cauchy",
+        "what": "the Cauchy product of series",
+        "year": 1821,
+        "where": "Cours d'Analyse",
+        "attribution": "standard attribution; this lane did not consult the primary source. Cauchy's theorem concerns INFINITE series under absolute convergence. The finite-partial-sum statement proved here is the elementary index-set decomposition underneath it, and the corner term is exactly what vanishes in the limit under Cauchy's hypotheses."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred: Mertens' theorem, or any statement that the corner term VANISHES in the limit. That is the analytic content of the Cauchy product and it needs absolute convergence and an estimate on the corner, neither of which is here. This is the finite, purely combinatorial identity.\n\nA CONSTRUCTION DETAIL WORTH RECORDING because it is the failure mode this kernel keeps hitting: the two `rectangle(F,n)` terms arrive in beta-equivalent but syntactically DIFFERENT shapes (an un-curried double_fn versus F applied through curried helpers), so the composition leans on the kernel's own beta-reduction under nested binders during type-checking. That is the same class of reliance diagonal_step_c already places on iota-reduction. It type-checked cleanly, but a term merely beta-equivalent to what a lemma expects is the shape that produces this family's ~180 s rejections.\n\nThe proof is constructive throughout: no Classical.em, no propext, no funext, no Quot.sound.\n\nexternal_status is `proved`: elementary classical combinatorics, formalized. What is locally notable is the direction of travel -- the claim entered the queue FALSE, a lane refuted it by hand rather than proving something adjacent under the briefed name, and the repair is what got recorded, over Nat first and then here."
+}
