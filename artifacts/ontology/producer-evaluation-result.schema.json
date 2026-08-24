@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Axeyum general-producer evaluation result",
+  "type": "object",
+  "required": ["schema_version", "kind", "protocol_sha256", "rows", "funnel"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "axeyum-autogenesis-producer-evaluation-result"},
+    "protocol_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "rows": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["fact_id", "adapter", "producer", "reconstruction", "checker"], "properties": {"fact_id": {"type": "string", "pattern": "^F:"}, "adapter": {"type": "string"}, "producer": {"type": "string"}, "reconstruction": {"type": "string"}, "checker": {"type": "string"}}, "additionalProperties": false}},
+    "funnel": {"type": "object", "required": ["eligible", "proposals", "kernel_accepted", "cleanly_reproduced", "admitted"], "properties": {"eligible": {"type": "integer", "minimum": 0}, "proposals": {"type": "integer", "minimum": 0}, "kernel_accepted": {"type": "integer", "minimum": 0}, "cleanly_reproduced": {"type": "integer", "minimum": 0}, "admitted": {"type": "integer", "minimum": 0}}, "additionalProperties": false}},
+  "additionalProperties": false
+}

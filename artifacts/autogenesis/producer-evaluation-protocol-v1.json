@@ -1,0 +1,70 @@
+{
+  "forbidden_inputs": [
+    "held-out fact identifiers",
+    "target-name dispatch tables",
+    "manually supplied proof plans",
+    "upstream proof bodies"
+  ],
+  "funnel": [
+    "eligible",
+    "proposals",
+    "kernel_accepted",
+    "cleanly_reproduced",
+    "admitted"
+  ],
+  "inputs": {
+    "candidate_fact_count": 89,
+    "evaluation_frontier_path": "artifacts/autogenesis/producer-evaluation-frontier-v1.json",
+    "evaluation_frontier_sha256": "cf27452b7ade7b38540205bd56fd08b39a4aaa4569ce41d730ca1f22e12af47e",
+    "evaluation_partitions": [
+      "development",
+      "train"
+    ],
+    "must_decline_control_count": 9
+  },
+  "kind": "axeyum-autogenesis-producer-evaluation-protocol",
+  "outcome_contract": {
+    "decline_taxonomy": [
+      {
+        "id": "unsupported-statement-shape",
+        "status": "preregistered"
+      },
+      {
+        "id": "missing-reusable-theorem",
+        "status": "preregistered"
+      },
+      {
+        "id": "missing-algebraic-normalization",
+        "status": "preregistered"
+      },
+      {
+        "id": "binder-or-generalization-failure",
+        "status": "preregistered"
+      },
+      {
+        "id": "search-budget-exhausted",
+        "status": "preregistered"
+      },
+      {
+        "id": "reconstruction-failure",
+        "status": "preregistered"
+      },
+      {
+        "id": "nonempty-axiom-footprint",
+        "status": "preregistered"
+      }
+    ],
+    "must_decline_policy": "every listed control must have a declined outcome; any admitted, kernel-accepted, reproduced, or admitted-to-ledger control voids the entire census",
+    "one_row_per_input_fact": true,
+    "required_stages": [
+      "adapter",
+      "producer",
+      "reconstruction",
+      "checker"
+    ],
+    "success_policy": "every kernel-accepted proposal requires independent checking and clean replay before it can count as reproduced; only an authorized fact transition can count as admitted"
+  },
+  "schema_version": 1,
+  "state": "preregistered-before-general-producer-execution",
+  "trust_boundary": "evaluation protocol only; it does not register an operation, authorize proof search, prove a fact, or admit a ledger transition"
+}
