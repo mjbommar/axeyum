@@ -180,8 +180,10 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 112] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 115] {
     [
+        p.wilson,
+        p.factorial_interior_modeq_one,
         p.prod_range_pairing_collapse,
         p.inverse_index_fixes_zero,
         p.inverse_index_fixes_last,
@@ -210,6 +212,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 112] {
         p.pow_mul,
         p.prod_range_zero,
         p.prod_range_succ,
+        p.prod_range_shift_front,
         p.prod_range_congr,
         p.prod_range_congr_lt,
         p.prod_range_swap_adjacent,
@@ -1768,3 +1771,50 @@ fn the_pairing_collapse_keeps_its_fixed_point_free_premise() {
 
 /// The pinned type of [`IntPrelude::prod_range_pairing_collapse`].
 const PROD_RANGE_PAIRING_COLLAPSE_TYPE: &str = "((x0 : Int) -> ((x1 : Int.lt Int.zero x0) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> Int)) -> ((x4 : ((x4 : AxNat) -> AxNat)) -> ((x5 : AxNat.injectiveOn x4 x2) -> ((x6 : AxNat.mapsInto x4 x2) -> ((x7 : ((x7 : AxNat) -> ((x8 : AxNat.lt x7 x2) -> Not (Eq.{1} AxNat (x4 x7) x7)))) -> ((x8 : ((x8 : AxNat) -> ((x9 : AxNat.lt x8 x2) -> Eq.{1} AxNat (x4 (x4 x8)) x8))) -> ((x9 : ((x9 : AxNat) -> ((x10 : AxNat.lt x9 x2) -> Int.ModEq x0 (Int.mul (x3 x9) (x3 (x4 x9))) Int.one))) -> Int.ModEq x0 (Int.prodRange x3 x2) Int.one))))))))))";
+
+/// **Wilson's theorem carries the NEGATIVE conclusion, and primality, not a
+/// weakened `0 < p`.**
+///
+/// An empty axiom footprint cannot tell `(p-1)! ≡ -1 [p]` apart from `(p-1)!
+/// ≡ +1 [p]` (both would type-check as SOME theorem over the same
+/// declarations), and it cannot tell "for every prime `p`" apart from "for
+/// every `p` with `0 < p`" (composite moduli would sail through a positivity
+/// hypothesis, which is precisely the case Wilson's theorem's actual content
+/// excludes: `(n-1)! ≡ -1 [n]` is FALSE for composite `n`, e.g. `n=4`:
+/// `3! = 6 ≡ 2 [4]`). So the statement itself is pinned character for
+/// character, and the two distinctions that matter are asserted by name
+/// first.
+#[test]
+fn wilson_concludes_the_negative_residue_under_primality() {
+    use crate::env::Declaration;
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let ty = match k
+        .environment()
+        .get(p.wilson)
+        .expect("Int.wilson must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => k.render_lean(*ty),
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+
+    assert!(
+        ty.contains("Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one)"),
+        "the conclusion must be the NEGATIVE residue `-1`, not `+1` -- a \
+         theorem concluding `+1` would have an identically empty axiom \
+         footprint and is simply FALSE (e.g. p=5: 4! = 24 ≡ 4 ≡ -1 [5], not \
+         1): {ty}"
+    );
+    assert!(
+        ty.contains("AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0")
+            && ty.contains("AxNat.dvd x1 x0"),
+        "the hypothesis must be PRIMALITY (2 <= p and every divisor is 1 or \
+         p), not a weakened `0 < p` -- Wilson's theorem is false for \
+         composite moduli (e.g. n=4: 3! = 6 = 2 [4], not -1): {ty}"
+    );
+    assert_eq!(ty, WILSON_TYPE);
+}
+
+/// The pinned type of [`IntPrelude::wilson`].
+const WILSON_TYPE: &str = "((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one)))";

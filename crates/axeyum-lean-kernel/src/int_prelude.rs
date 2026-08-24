@@ -324,6 +324,18 @@ pub struct IntPrelude {
     /// `prodRange_succ : ∀ f n, Eq Int (prodRange f (succ n)) (mul (prodRange f n) (f n))`
     /// — closes by `Eq.refl`.
     pub prod_range_succ: NameId,
+    /// `prodRange_shiftFront : ∀ f n, Eq Int (prodRange f (succ n))
+    ///   (mul (f zero) (prodRange (fun k => f (succ k)) n))` — peels the FRONT
+    /// term off a finite product (`prodRange_succ` already peels the BACK term
+    /// for free). Induction on `n`, mirroring `Nat.sumRange_shiftFront`'s own
+    /// proof shape (`nat_prelude/binomial.rs::declare_sum_range_shift_front`)
+    /// with `Int.mul`/`mul_assoc` in place of `Nat.add`/`add_assoc` — and,
+    /// unlike that Nat proof, the base case needs an explicit `mul_one`/
+    /// `one_mul` pair rather than a single `zero_add`, since `Int.mul` does not
+    /// reduce definitionally on a symbolic argument the way `Nat.add` does.
+    /// Built for `wilson.rs`'s reindex of the interior product over
+    /// `Nat.inverseIndex`'s two fixed points.
+    pub prod_range_shift_front: NameId,
     /// `prodRange_congr : ∀ f g n, (∀ k, Eq Int (f k) (g k)) → Eq Int (prodRange f n) (prodRange g n)`
     /// — pointwise-equal factors give equal products, by induction on `n`.
     pub prod_range_congr: NameId,
@@ -804,6 +816,30 @@ pub struct IntPrelude {
     /// `Int.prodRange_swap` for the value side) when they are not. See
     /// `wilson.rs`'s module doc above this declaration for the full route.
     pub prod_range_pairing_collapse: NameId,
+    /// `factorial_interior_modeq_one :
+    /// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+    ///   ModEq (ofNat p) (prodRange (fun i => ofNat (succ (succ i))) (p-3)) one` —
+    /// the interior of Wilson's product (indices `{2,…,p-2}` reindexed down to
+    /// `[0,p-3)`) collapses to `1`, by `prod_range_pairing_collapse` applied to
+    /// the reindexed `σ' i := (Nat.inverseIndex p (succ i)) - 1`. Statement is
+    /// clean (no side condition beyond primality); the *proof* case-splits
+    /// nowhere either — every fact `σ'` needs is derived from a hypothesis
+    /// `i < p-3` that is already in hand, so `p = 2`/`p = 3` (where the
+    /// interior is empty) fall out vacuously rather than needing separate
+    /// handling. See `wilson.rs`'s module doc for the full route and what
+    /// still remains (`Int.wilson` itself).
+    pub factorial_interior_modeq_one: NameId,
+    /// `wilson : ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+    ///   ModEq (ofNat p) (factorial (p-1)) (neg one)` — **Wilson's theorem**:
+    /// `p` prime ⟹ `(p-1)! ≡ -1 [p]`. `factorial (p-1) = mul (prodRange F
+    /// (p-2)) (F (p-2))`, and `F (p-2) = ofNat(p-1) ≡ -1 [p]` unconditionally;
+    /// `prodRange F (p-2) ≡ 1 [p]` case-splits on `p ≥ 3` (via
+    /// `prodRange_shiftFront` and `factorial_interior_modeq_one`) vs `p = 2`
+    /// (`p-2 = 0` directly, so the interior is empty and `prodRange_zero`
+    /// closes it) — the ONE place in the whole assembly `p = 2` needs its own
+    /// argument. See `wilson.rs`'s module doc above `declare_wilson` for the
+    /// full route.
+    pub wilson: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -894,6 +930,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range: child(kernel, "prodRange"),
         prod_range_zero: child(kernel, "prodRange_zero"),
         prod_range_succ: child(kernel, "prodRange_succ"),
+        prod_range_shift_front: child(kernel, "prodRange_shiftFront"),
         prod_range_congr: child(kernel, "prodRange_congr"),
         prod_range_congr_lt: child(kernel, "prodRange_congr_lt"),
         prod_range_swap_adjacent: child(kernel, "prodRange_swap_adjacent"),
@@ -995,6 +1032,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
             .name_str(nat_root, "inverseIndex_interior_fixed_point_free"),
         factorial_sq_modeq_one: child(kernel, "factorial_sq_modeq_one"),
         prod_range_pairing_collapse: child(kernel, "prod_range_pairing_collapse"),
+        factorial_interior_modeq_one: child(kernel, "factorial_interior_modeq_one"),
+        wilson: child(kernel, "wilson"),
     }
 }
 
@@ -1098,6 +1137,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modeq_family::declare_modeq_one(&mut d)?;
         prod::declare_prod_range(&mut d)?;
         prod::declare_prod_range_equations(&mut d)?;
+        prod::declare_prod_range_shift_front(&mut d)?;
         prod::declare_prod_range_congr(&mut d)?;
         prod::declare_prod_range_congr_lt(&mut d)?;
         prod::declare_prod_range_swap_adjacent(&mut d)?;
@@ -1145,6 +1185,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         wilson::declare_inverse_index_interior_fixed_point_free(&mut d)?;
         wilson::declare_factorial_sq_modeq_one(&mut d)?;
         wilson::declare_prod_range_pairing_collapse(&mut d)?;
+        wilson::declare_factorial_interior_modeq_one(&mut d)?;
+        wilson::declare_wilson(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         rat::declare_rat(&mut d)?;

@@ -156,6 +156,118 @@ pub(super) fn declare_prod_range_equations(d: &mut IntDev<'_>) -> Result<(), Ker
     Ok(())
 }
 
+/// `Int.prodRange_shiftFront :
+///   ∀ f n, Eq Int (prodRange f (succ n))
+///     (mul (f zero) (prodRange (fun k => f (succ k)) n))`
+///
+/// Peels the FRONT term off a finite product — `prodRange_succ` (the defining
+/// equation) already peels the BACK term for free; this direction needs
+/// induction, because the front term stays fixed while the bound moves.
+///
+/// Induction on `n`, mirroring `Nat.sumRange_shiftFront`'s own proof shape
+/// (`nat_prelude/binomial.rs::declare_sum_range_shift_front`) exactly, with
+/// `Int.mul`/`Int.mul_assoc` standing in for `Nat.add`/`Nat.add_assoc`. One
+/// genuine difference from the `Nat` proof:
+/// there, the base case closes with a single `zero_add` because `Nat.add`
+/// reduces definitionally to its left argument when the right argument is
+/// `zero`. `Int.mul` has no such definitional identity on a symbolic
+/// argument (its recursor needs to match on the actual constructor of *both*
+/// operands), so the base case here needs both `Int.one_mul` and
+/// `Int.mul_one` chained together rather than one computation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_prod_range_shift_front(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+    let fn_ty = d.arrow(nat, int_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    // `fun k => f (succ k)`, built fresh each time it is needed (the fvar it
+    // binds must not escape).
+    let shifted_of = |d: &mut IntDev<'_>, f: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let body = d.apply(f, &[sk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let sx = d.succ(x);
+        let lhs = d.const_app(p.prod_range, &[f, sx]);
+        let zero = d.zero();
+        let f0 = d.apply(f, &[zero]);
+        let shifted_f = shifted_of(d, f);
+        let pr = d.const_app(p.prod_range, &[shifted_f, x]);
+        let rhs = d.imul(f0, pr);
+        d.ieq(lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let p = d.int();
+            let zero = d.zero();
+            let f0 = d.apply(f, &[zero]);
+            let one_i = d.ione();
+
+            // LHS unfolds (prodRange_succ, prodRange_zero) to `mul one f0`.
+            let mul_one_f0 = d.imul(one_i, f0);
+            let step1 = d.const_app(p.one_mul, &[f0]); // one * f0 = f0
+
+            // RHS unfolds (prodRange_zero of the shifted function) to
+            // `mul f0 one`.
+            let mul_f0_one = d.imul(f0, one_i);
+            let step2 = d.const_app(p.mul_one, &[f0]); // f0 * one = f0
+            let step2_rev = d.isymm(mul_f0_one, f0, step2);
+
+            d.itrans(mul_one_f0, f0, mul_f0_one, step1, step2_rev)
+        },
+        &|d, j, ih| {
+            let p = d.int();
+            let sj = d.succ(j);
+            let f_prior_succ = d.const_app(p.prod_range, &[f, sj]);
+            let f_sj = d.apply(f, &[sj]);
+            let start = d.imul(f_prior_succ, f_sj);
+
+            let zero = d.zero();
+            let f0 = d.apply(f, &[zero]);
+            let shifted_f = shifted_of(d, f);
+            let shifted_j = d.const_app(p.prod_range, &[shifted_f, j]);
+            let mid1 = d.imul(f0, shifted_j);
+            let h1 = d.icongr(f_prior_succ, mid1, ih, &|d, t| d.imul(t, f_sj));
+            let after_ih = d.imul(mid1, f_sj);
+
+            let inner = d.imul(shifted_j, f_sj);
+            let end_ = d.imul(f0, inner);
+            let h2 = d.const_app(p.mul_assoc, &[f0, shifted_j, f_sj]);
+
+            let (_e, proof) = d.ichain(start, &[(after_ih, h1), (end_, h2)]);
+            proof
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(f_fv, fn_ty, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(f_fv, fn_ty, over_n)
+    };
+    d.declare_theorem(p.prod_range_shift_front, ty, value)
+}
+
 /// `Int.prodRange_congr :
 ///   ∀ f g n, (∀ k, Eq Int (f k) (g k)) → Eq Int (prodRange f n) (prodRange g n)`
 /// — pointwise-equal factors give equal products.
