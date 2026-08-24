@@ -87,6 +87,7 @@ mod modinv;
 mod nat_abs;
 pub(crate) mod ops;
 mod order;
+mod prod;
 mod rat;
 mod sign;
 mod statements;
@@ -307,6 +308,24 @@ pub struct IntPrelude {
     /// Eq Int (pow a (m*n)) (pow (pow a m) n)`.
     pub pow_mul: NameId,
 
+    // --- `Int.prodRange : (Nat → Int) → Nat → Int` ---------------------------
+    /// `Int.prodRange : (Nat → Int) → Nat → Int` — structural recursion on the
+    /// `Nat` bound, `prodRange f zero ≡ one` and
+    /// `prodRange f (succ n) ≡ mul (prodRange f n) (f n)`, mirroring
+    /// `Nat.sumRange`'s own convention exactly (exclusive bound, new factor
+    /// multiplied onto the right of the prior product). A checked definition,
+    /// not an axiom.
+    pub prod_range: NameId,
+    /// `prodRange_zero : ∀ f, Eq Int (prodRange f zero) one` — closes by
+    /// `Eq.refl`.
+    pub prod_range_zero: NameId,
+    /// `prodRange_succ : ∀ f n, Eq Int (prodRange f (succ n)) (mul (prodRange f n) (f n))`
+    /// — closes by `Eq.refl`.
+    pub prod_range_succ: NameId,
+    /// `prodRange_congr : ∀ f g n, (∀ k, Eq Int (f k) (g k)) → Eq Int (prodRange f n) (prodRange g n)`
+    /// — pointwise-equal factors give equal products, by induction on `n`.
+    pub prod_range_congr: NameId,
+
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
     pub no_int_between: NameId,
@@ -432,6 +451,16 @@ pub struct IntPrelude {
     /// `Nat` and is declared by hand rather than through
     /// [`ops::IntDev::int_theorem`].
     pub mod_eq_pow: NameId,
+    /// `modEq_prodRange :
+    /// ∀ n f g m, 0 < n → (∀ k, ModEq n (f k) (g k)) →
+    ///   ModEq n (prodRange f m) (prodRange g m)`
+    /// — a product reduces modulo `n` factor by factor. Induction on `m`,
+    /// using [`Self::mod_eq_mul`] at each step — [`Self::mod_eq_pow`] is the
+    /// special case where `f`/`g` are the constant functions `pow` folds.
+    /// Quantifies over one `Int`, two `Nat → Int` functions and one `Nat`, so
+    /// this is declared by hand rather than through
+    /// [`ops::IntDev::int_theorem`].
+    pub mod_eq_prod_range: NameId,
     /// `natAbs : Int → Nat` — the magnitude, `ofNat n ↦ n` and `negSucc m ↦ succ m`.
     pub nat_abs: NameId,
     /// `of_nat_nat_abs_of_nonneg : ∀ a, 0 ≤ a → ofNat (natAbs a) = a`.
@@ -642,6 +671,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         pow_succ: child(kernel, "pow_succ"),
         pow_add: child(kernel, "pow_add"),
         pow_mul: child(kernel, "pow_mul"),
+        prod_range: child(kernel, "prodRange"),
+        prod_range_zero: child(kernel, "prodRange_zero"),
+        prod_range_succ: child(kernel, "prodRange_succ"),
+        prod_range_congr: child(kernel, "prodRange_congr"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -676,6 +709,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_inverse_exists: child(kernel, "modEq_inverse_exists"),
         mod_eq_inverse_unique: child(kernel, "modEq_inverse_unique"),
         mod_eq_pow: child(kernel, "modEq_pow"),
+        mod_eq_prod_range: child(kernel, "modEq_prodRange"),
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
@@ -807,6 +841,10 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modeq::declare_modeq_mul_right(&mut d)?;
         modeq::declare_modeq_mul(&mut d)?;
         modeq::declare_modeq_pow(&mut d)?;
+        prod::declare_prod_range(&mut d)?;
+        prod::declare_prod_range_equations(&mut d)?;
+        prod::declare_prod_range_congr(&mut d)?;
+        prod::declare_modeq_prod_range(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
