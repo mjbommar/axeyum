@@ -1135,7 +1135,7 @@ pub struct CPointPrelude {
     /// **Unconditional pure ring algebra**, verified exactly over the six raw
     /// coordinates before being encoded (`Fraction` trials, zero residual --
     /// no `sympy` in this environment): `heron_scalar_proof` builds `cross`
-    /// via [`rn_cross`] (the same `RnExpr` mirror of `cross_raw` the
+    /// via `rn_cross` (the same `RnExpr` mirror of `cross_raw` the
     /// Menelaus/Ceva development already established) and each `a^2`/`b^2`/
     /// `c^2` via the new `rn_dist_sq` (the analogous mirror of
     /// [`Self::dist_sq`]'s own delta/iota unfolding through `dot`, `sub`, and
