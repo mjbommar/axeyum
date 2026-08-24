@@ -254,6 +254,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // it is unmeasured, and the two look identical in a green run.
         p.euclid_lemma,
         p.prime_dvd_choose,
+        p.mod_eq_pow,
+        p.dvd_sum_range_of_forall_lt,
+        p.add_pow_modeq_prime,
+        p.pow_prime_modeq_self,
     ]
 }
 
@@ -3932,7 +3936,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        20 + 142,
+        20 + 146,
         "every promised definition and theorem must be rendered"
     );
 }

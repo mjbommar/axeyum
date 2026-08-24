@@ -364,7 +364,13 @@ fn declare_sum_range_congr_lt(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
 
 /// `fun k => (choose row k * a^k) * b^(row-k)` — the summand of the binomial
 /// expansion at `row`, at a POINT (not the lambda; see [`binom_term_fn`]).
-fn binom_term(d: &mut NatDev<'_>, a: ExprId, b: ExprId, row: ExprId, k: ExprId) -> ExprId {
+pub(super) fn binom_term(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    row: ExprId,
+    k: ExprId,
+) -> ExprId {
     let c = d.choose(row, k);
     let ak = d.pow(a, k);
     let c_ak = d.mul(c, ak);
@@ -374,7 +380,7 @@ fn binom_term(d: &mut NatDev<'_>, a: ExprId, b: ExprId, row: ExprId, k: ExprId) 
 }
 
 /// `fun k => choose row k * a^k * b^(row-k)`, as a lambda.
-fn binom_term_fn(d: &mut NatDev<'_>, a: ExprId, b: ExprId, row: ExprId) -> ExprId {
+pub(super) fn binom_term_fn(d: &mut NatDev<'_>, a: ExprId, b: ExprId, row: ExprId) -> ExprId {
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
     let body = binom_term(d, a, b, row, k);
@@ -384,7 +390,7 @@ fn binom_term_fn(d: &mut NatDev<'_>, a: ExprId, b: ExprId, row: ExprId) -> ExprI
 
 /// `sumRange (fun k => choose row k * a^k * b^(row-k)) (succ row)` — the
 /// sum-form of `(a+b)^row`.
-fn binom_sum(d: &mut NatDev<'_>, a: ExprId, b: ExprId, row: ExprId) -> ExprId {
+pub(super) fn binom_sum(d: &mut NatDev<'_>, a: ExprId, b: ExprId, row: ExprId) -> ExprId {
     let t = binom_term_fn(d, a, b, row);
     let srow = d.succ(row);
     d.sum_range(t, srow)
@@ -484,7 +490,7 @@ fn a_scaled_binom_term_fn(d: &mut NatDev<'_>, a: ExprId, b: ExprId, n: ExprId) -
 /// expansion, needed at `row = n` (the `b`-side) and `row = succ n` (the final
 /// front-peel of `S(succ n)`), hence generalized over `row` rather than
 /// specialized to either use site.
-fn binom_term_zero_eq_pow_b(
+pub(super) fn binom_term_zero_eq_pow_b(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     a: ExprId,

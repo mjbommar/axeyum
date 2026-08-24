@@ -136,6 +136,7 @@ mod choose;
 mod defs;
 mod divisibility;
 mod division;
+mod fermat;
 mod gcd;
 mod helpers;
 mod modular;
@@ -165,6 +166,7 @@ use defs::{
 };
 use divisibility::declare_divisibility;
 use division::declare_euclidean_division;
+use fermat::declare_fermat;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
@@ -787,6 +789,19 @@ pub struct NatPrelude {
     /// generalized over `k`; the successor step splits on `k` too (Pascal
     /// needs a `succ` shape there as well).
     pub succ_mul_choose_eq: NameId,
+
+    // --- Fermat's little theorem (`fermat.rs`) ------------------------------
+    /// `Nat.modEq_pow : ∀ d a b k, modEq d a b → modEq d (pow a k) (pow b k)`.
+    pub mod_eq_pow: NameId,
+    /// `Nat.dvd_sum_range_of_forall_lt :
+    ///   ∀ d f n, (∀ k, Lt k n → dvd d (f k)) → dvd d (sumRange f n)`.
+    pub dvd_sum_range_of_forall_lt: NameId,
+    /// `Nat.add_pow_modeq_prime : prime p → (a+b)^p ≡ a^p + b^p [p]` — the
+    /// Frobenius endomorphism / "freshman's dream" over ℕ.
+    pub add_pow_modeq_prime: NameId,
+    /// `Nat.pow_prime_modeq_self : prime p → a^p ≡ a [p]` — Fermat's little
+    /// theorem.
+    pub pow_prime_modeq_self: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1053,6 +1068,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             choose_le_two_pow: kernel.name_str(nat, "choose_le_two_pow"),
             succ_sub_of_le: kernel.name_str(nat, "succ_sub_of_le"),
             succ_mul_choose_eq: kernel.name_str(nat, "succ_mul_choose_eq"),
+            mod_eq_pow: kernel.name_str(nat, "modEq_pow"),
+            dvd_sum_range_of_forall_lt: kernel.name_str(nat, "dvd_sumRange_of_forall_lt"),
+            add_pow_modeq_prime: kernel.name_str(nat, "add_pow_modeq_prime"),
+            pow_prime_modeq_self: kernel.name_str(nat, "pow_prime_modeq_self"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1087,6 +1106,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_succ_sub_of_le(&mut d, &p)?;
         declare_succ_mul_choose_eq(&mut d, &p)?;
         declare_prime_dvd_choose(&mut d, &p)?;
+        declare_fermat(&mut d, &p)?;
         Ok(p)
     })();
     match built {
