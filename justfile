@@ -455,6 +455,10 @@ autogenesis-obstruction-projection:
     python3 scripts/validate-autogenesis-obstruction-projection.py
     python3 scripts/gen-autogenesis-obstruction-projection.py --check
 
+autogenesis-transport-projection:
+    python3 scripts/validate-autogenesis-transport-projection.py
+    python3 scripts/gen-autogenesis-transport-projection.py --check
+
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh
 
