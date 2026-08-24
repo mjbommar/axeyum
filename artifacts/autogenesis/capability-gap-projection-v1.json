@@ -177,74 +177,6 @@
     },
     {
       "dependency_component_ids": [
-        "mathlib-v4.30.0-21034a8981d599dd",
-        "mathlib-v4.30.0-52448fed5f91002d",
-        "mathlib-v4.30.0-784b337733caaefb"
-      ],
-      "direct_unlock_fact_count": 2,
-      "direct_unlock_fact_ids": [
-        "F:ml430-nat-choose-succ-self-e396f6c2",
-        "F:ml430-nat-choose-symm-add-e4b68161"
-      ],
-      "family": "natural-binomial",
-      "ready_fact_count": 3,
-      "ready_fact_ids": [
-        "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
-        "F:ml430-nat-choose-ne-zero-49c3d3cb",
-        "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20"
-      ],
-      "statement_shape": "conditional-proposition",
-      "topic_concept_id": "C:binomial-coefficient"
-    },
-    {
-      "dependency_component_ids": [
-        "mathlib-v4.30.0-3149d7f9cd050cac",
-        "mathlib-v4.30.0-6f230047ce83981a",
-        "mathlib-v4.30.0-772791fcb89127a3",
-        "mathlib-v4.30.0-9556aecf1bb98439",
-        "mathlib-v4.30.0-be1c3ada4fef6ea6"
-      ],
-      "direct_unlock_fact_count": 3,
-      "direct_unlock_fact_ids": [
-        "F:ml430-nat-choose-one-right-7eda8e39",
-        "F:ml430-nat-multichoose-one-b210386a",
-        "F:ml430-nat-multichoose-one-right-7755072d"
-      ],
-      "family": "natural-binomial",
-      "ready_fact_count": 6,
-      "ready_fact_ids": [
-        "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
-        "F:ml430-nat-choose-self-25bb9fb8",
-        "F:ml430-nat-choose-succ-succ-671856b6",
-        "F:ml430-nat-choose-zero-right-1ed2802a",
-        "F:ml430-nat-choose-zero-succ-62c6520b",
-        "F:ml430-nat-multichoose-zero-right-6ef827c8"
-      ],
-      "statement_shape": "unconditional-equality",
-      "topic_concept_id": "C:binomial-coefficient"
-    },
-    {
-      "dependency_component_ids": [
-        "mathlib-v4.30.0-03318a97f5d9c067",
-        "mathlib-v4.30.0-841c7d52cf03e6e4",
-        "mathlib-v4.30.0-b92098ec339263f0"
-      ],
-      "direct_unlock_fact_count": 1,
-      "direct_unlock_fact_ids": [
-        "F:ml430-nat-choose-le-add-9c463139"
-      ],
-      "family": "natural-binomial",
-      "ready_fact_count": 3,
-      "ready_fact_ids": [
-        "F:ml430-nat-choose-le-succ-62ae968b",
-        "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
-        "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f"
-      ],
-      "statement_shape": "unconditional-relation",
-      "topic_concept_id": "C:binomial-coefficient"
-    },
-    {
-      "dependency_component_ids": [
         "mathlib-v4.30.0-b413bfcde9767d29"
       ],
       "direct_unlock_fact_count": 0,
@@ -549,95 +481,6 @@
     },
     {
       "dependency_component_ids": [
-        "mathlib-v4.30.0-67733b1101973f6f",
-        "mathlib-v4.30.0-7a0f0e674194da44",
-        "mathlib-v4.30.0-bf20046ab52424dd",
-        "mathlib-v4.30.0-d48a520ede3cd1e8"
-      ],
-      "direct_unlock_fact_count": 2,
-      "direct_unlock_fact_ids": [
-        "F:ml430-nat-clog-monotone-48fe50c6",
-        "F:ml430-nat-log-le-self-da387172"
-      ],
-      "family": "natural-logarithm",
-      "ready_fact_count": 4,
-      "ready_fact_ids": [
-        "F:ml430-nat-clog-mono-right-8d87a410",
-        "F:ml430-nat-clog-pos-00852cb8",
-        "F:ml430-nat-log-lt-self-529f89fa",
-        "F:ml430-nat-log-of-lt-89eaf42e"
-      ],
-      "statement_shape": "conditional-proposition",
-      "topic_concept_id": "C:logarithm"
-    },
-    {
-      "dependency_component_ids": [
-        "mathlib-v4.30.0-0e70ff905b4e67d7",
-        "mathlib-v4.30.0-7d1d4a6a6f597955",
-        "mathlib-v4.30.0-9da63bd4e59d00f6"
-      ],
-      "direct_unlock_fact_count": 1,
-      "direct_unlock_fact_ids": [
-        "F:ml430-nat-log-mono-right-b8939fee"
-      ],
-      "family": "natural-logarithm",
-      "ready_fact_count": 3,
-      "ready_fact_ids": [
-        "F:ml430-nat-clog-antitone-left-44a87771",
-        "F:ml430-nat-log-antitone-left-20d1326c",
-        "F:ml430-nat-log-monotone-52fad774"
-      ],
-      "statement_shape": "higher-order-property",
-      "topic_concept_id": "C:logarithm"
-    },
-    {
-      "dependency_component_ids": [
-        "mathlib-v4.30.0-04b5992203855fc2",
-        "mathlib-v4.30.0-1f0eac984fc2e8b7",
-        "mathlib-v4.30.0-32d9b36c9de57a64",
-        "mathlib-v4.30.0-754b540be332facb",
-        "mathlib-v4.30.0-bf20046ab52424dd",
-        "mathlib-v4.30.0-c851a7fdd6dacbde",
-        "mathlib-v4.30.0-f9d5f5029ac8431f",
-        "mathlib-v4.30.0-fc2d188b8c710774"
-      ],
-      "direct_unlock_fact_count": 3,
-      "direct_unlock_fact_ids": [
-        "F:ml430-nat-log-le-clog-ac8ab2d4",
-        "F:ml430-nat-log-le-self-da387172",
-        "F:ml430-nat-log2-eq-log-two-28085932"
-      ],
-      "family": "natural-logarithm",
-      "ready_fact_count": 8,
-      "ready_fact_ids": [
-        "F:ml430-nat-clog-one-left-b496af12",
-        "F:ml430-nat-clog-one-right-1ce3d52f",
-        "F:ml430-nat-clog-zero-left-1c61a5bf",
-        "F:ml430-nat-clog-zero-right-d42d47b1",
-        "F:ml430-nat-log-one-left-73efc119",
-        "F:ml430-nat-log-one-right-282332ef",
-        "F:ml430-nat-log-zero-left-9ec8541e",
-        "F:ml430-nat-log-zero-right-8ea186db"
-      ],
-      "statement_shape": "unconditional-equality",
-      "topic_concept_id": "C:logarithm"
-    },
-    {
-      "dependency_component_ids": [
-        "mathlib-v4.30.0-bf20046ab52424dd"
-      ],
-      "direct_unlock_fact_count": 0,
-      "direct_unlock_fact_ids": [],
-      "family": "natural-logarithm",
-      "ready_fact_count": 1,
-      "ready_fact_ids": [
-        "F:ml430-mutation-e8583599cfae2d40cefae3f0"
-      ],
-      "statement_shape": "unconditional-relation",
-      "topic_concept_id": "C:logarithm"
-    },
-    {
-      "dependency_component_ids": [
         "mathlib-v4.30.0-c0029d24c3bb7a7f",
         "mathlib-v4.30.0-c2635744801654c7",
         "mathlib-v4.30.0-d4e21b6b7acdcecb",
@@ -748,135 +591,43 @@
       ],
       "statement_shape": "conditional-proposition",
       "topic_concept_id": "C:prime-number"
-    },
-    {
-      "dependency_component_ids": [
-        "mathlib-v4.30.0-09459741d0b79459"
-      ],
-      "direct_unlock_fact_count": 4,
-      "direct_unlock_fact_ids": [
-        "F:ml430-nat-le-three-of-sqrt-eq-one-0c48a868",
-        "F:ml430-nat-sqrt-eq-zero-53666a3b",
-        "F:ml430-nat-sqrt-lt-self-ff7a155a",
-        "F:ml430-nat-sqrt-succ-le-succ-sqrt-6b041183"
-      ],
-      "family": "natural-square-root",
-      "ready_fact_count": 1,
-      "ready_fact_ids": [
-        "F:ml430-nat-sqrt-lt-4909537f"
-      ],
-      "statement_shape": "biconditional",
-      "topic_concept_id": "C:square-root"
-    },
-    {
-      "dependency_component_ids": [
-        "mathlib-v4.30.0-3625c080cb3916be",
-        "mathlib-v4.30.0-a39a4e278c870ecd"
-      ],
-      "direct_unlock_fact_count": 1,
-      "direct_unlock_fact_ids": [
-        "F:ml430-nat-exists-mul-self-e73ca9fa"
-      ],
-      "family": "natural-square-root",
-      "ready_fact_count": 2,
-      "ready_fact_ids": [
-        "F:ml430-nat-sqrt-eq-79ae8eae",
-        "F:ml430-nat-sqrt-eq-c036815b"
-      ],
-      "statement_shape": "unconditional-equality",
-      "topic_concept_id": "C:square-root"
-    },
-    {
-      "dependency_component_ids": [
-        "mathlib-v4.30.0-73522f76a61eb5b5"
-      ],
-      "direct_unlock_fact_count": 3,
-      "direct_unlock_fact_ids": [
-        "F:ml430-nat-le-sqrt-e6996680",
-        "F:ml430-nat-sqrt-le-self-1ed5eb85",
-        "F:ml430-nat-sqrt-le-sqrt-6e2bfc47"
-      ],
-      "family": "natural-square-root",
-      "ready_fact_count": 3,
-      "ready_fact_ids": [
-        "F:ml430-mutation-2086302b3a338591b3179871",
-        "F:ml430-nat-lt-succ-sqrt-39389df2",
-        "F:ml430-nat-sqrt-le-7918582b"
-      ],
-      "statement_shape": "unconditional-relation",
-      "topic_concept_id": "C:square-root"
     }
   ],
   "census": {
     "admissible_facts": 0,
-    "cataloged_ready_facts": 132,
-    "dependency_ready_facts": 141,
-    "groups": 6,
+    "cataloged_ready_facts": 98,
+    "dependency_ready_facts": 98,
+    "excluded_held_out_ready_facts": 34,
+    "excluded_outside_evaluation_ready_facts": 9,
+    "global_dependency_ready_facts": 141,
+    "groups": 2,
     "rejection_reasons": [
       {
-        "fact_count": 2,
+        "fact_count": 5,
         "reason": "gate-coupling-review-required"
       },
       {
-        "fact_count": 141,
+        "fact_count": 98,
         "reason": "no-registered-operation"
-      },
-      {
-        "fact_count": 6,
-        "reason": "no-supported-route"
       }
     ],
-    "uncataloged_ready_facts": 9
+    "uncataloged_ready_facts": 0
   },
   "derivation": {
+    "evaluation_partitions": [
+      "development",
+      "train"
+    ],
     "family_concept_crosswalk_path": "artifacts/autogenesis/family-concept-crosswalk-v1.json",
-    "frontier_sha256": "45d9d6e41f955c8ad8ea302b3e3e88d5b0c2822f1c9dd73cc30f685195df6758",
+    "frontier_sha256": "b41f0b65a8bffdff308cbd62ff57f471b6a96b661432ee70ca0681df8d890838",
     "ledger_sha256": "b69482b7a56d5941be5d7f17c14e5e6cfeba6c847dc92bbf27dbed23ebfc0528",
+    "nursery_sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1",
     "operation_registry_sha256": "9f4de92b1b2596aaf8665644a34c0ef024a8ee9f3e2ce77682d24973908fd404",
     "reviewed_fact_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
     "source": "scripts/fact-frontier.py build_machine_frontier",
-    "trust_boundary": "ranking and producer-investigation input only; never proof or admission authority"
+    "trust_boundary": "train/development ranking and producer-investigation input only; never held-out inspection, proof, or admission authority"
   },
   "groups": [
-    {
-      "admissible_fact_ids": [],
-      "formal_language": "lean4",
-      "fragment": "Nat",
-      "ready_fact_count": 2,
-      "ready_fact_ids": [
-        "F:goldbach-strong",
-        "F:twin-prime-unbounded"
-      ],
-      "registered_operation_ids": [],
-      "rejection_reasons": [
-        {
-          "fact_count": 2,
-          "reason": "no-registered-operation"
-        }
-      ],
-      "route_class": "proof-route-only"
-    },
-    {
-      "admissible_fact_ids": [],
-      "formal_language": "lean4",
-      "fragment": "none",
-      "ready_fact_count": 1,
-      "ready_fact_ids": [
-        "F:collatz-reaches-one"
-      ],
-      "registered_operation_ids": [],
-      "rejection_reasons": [
-        {
-          "fact_count": 1,
-          "reason": "no-registered-operation"
-        },
-        {
-          "fact_count": 1,
-          "reason": "no-supported-route"
-        }
-      ],
-      "route_class": "no-route"
-    },
     {
       "admissible_fact_ids": [],
       "formal_language": "lean4-surface",
@@ -927,35 +678,17 @@
       "admissible_fact_ids": [],
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "ready_fact_count": 106,
+      "ready_fact_count": 72,
       "ready_fact_ids": [
         "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
-        "F:ml430-mutation-2086302b3a338591b3179871",
         "F:ml430-mutation-5179f333b8333ecff8adc223",
         "F:ml430-mutation-7afa5ec620720a1501bf349d",
         "F:ml430-mutation-a6dd1759bce60d820292e107",
         "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
         "F:ml430-mutation-c86940b52af8159ca9b381d6",
-        "F:ml430-mutation-e8583599cfae2d40cefae3f0",
-        "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
         "F:ml430-nat-add-modeq-left-e3b1fba9",
         "F:ml430-nat-add-modeq-right-e2f11f21",
         "F:ml430-nat-bitwise-bit-4c4b28a8",
-        "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
-        "F:ml430-nat-choose-le-succ-62ae968b",
-        "F:ml430-nat-choose-ne-zero-49c3d3cb",
-        "F:ml430-nat-choose-self-25bb9fb8",
-        "F:ml430-nat-choose-succ-succ-671856b6",
-        "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
-        "F:ml430-nat-choose-zero-right-1ed2802a",
-        "F:ml430-nat-choose-zero-succ-62c6520b",
-        "F:ml430-nat-clog-antitone-left-44a87771",
-        "F:ml430-nat-clog-mono-right-8d87a410",
-        "F:ml430-nat-clog-one-left-b496af12",
-        "F:ml430-nat-clog-one-right-1ce3d52f",
-        "F:ml430-nat-clog-pos-00852cb8",
-        "F:ml430-nat-clog-zero-left-1c61a5bf",
-        "F:ml430-nat-clog-zero-right-d42d47b1",
         "F:ml430-nat-coprime-add-self-left-5e93448c",
         "F:ml430-nat-coprime-add-self-right-c3ed0f45",
         "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
@@ -979,8 +712,6 @@
         "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
         "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
         "F:ml430-nat-even-xor-78a39432",
-        "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
-        "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
         "F:ml430-nat-factorial-dvd-factorial-e9d14845",
         "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
         "F:ml430-nat-factorial-pos-f1dd2405",
@@ -990,17 +721,8 @@
         "F:ml430-nat-land-bit-b9ab7475",
         "F:ml430-nat-ldiff-bit-6be49bb8",
         "F:ml430-nat-le-fib-self-0cbccb4d",
-        "F:ml430-nat-log-antitone-left-20d1326c",
-        "F:ml430-nat-log-lt-self-529f89fa",
-        "F:ml430-nat-log-monotone-52fad774",
-        "F:ml430-nat-log-of-lt-89eaf42e",
-        "F:ml430-nat-log-one-left-73efc119",
-        "F:ml430-nat-log-one-right-282332ef",
-        "F:ml430-nat-log-zero-left-9ec8541e",
-        "F:ml430-nat-log-zero-right-8ea186db",
         "F:ml430-nat-lor-bit-a2f98c7c",
         "F:ml430-nat-lt-of-testbit-72f64ab8",
-        "F:ml430-nat-lt-succ-sqrt-39389df2",
         "F:ml430-nat-lt-xor-cases-c43a1e85",
         "F:ml430-nat-mod-lcm-ee6bdd41",
         "F:ml430-nat-mod-modeq-436e4c10",
@@ -1015,7 +737,6 @@
         "F:ml430-nat-modeq-symm-0a3d4d18",
         "F:ml430-nat-modeq-trans-ef9d1c46",
         "F:ml430-nat-modulus-modeq-zero-fd9af096",
-        "F:ml430-nat-multichoose-zero-right-6ef827c8",
         "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
         "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
         "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
@@ -1025,10 +746,6 @@
         "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
         "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
         "F:ml430-nat-prime-pred-pos-4e67ac4c",
-        "F:ml430-nat-sqrt-eq-79ae8eae",
-        "F:ml430-nat-sqrt-eq-c036815b",
-        "F:ml430-nat-sqrt-le-7918582b",
-        "F:ml430-nat-sqrt-lt-4909537f",
         "F:ml430-nat-succ-pred-prime-4feb123f",
         "F:ml430-nat-testbit-eq-inth-ffa07392",
         "F:ml430-nat-testbit-land-dfef7ca4",
@@ -1039,70 +756,18 @@
       "registered_operation_ids": [],
       "rejection_reasons": [
         {
-          "fact_count": 1,
+          "fact_count": 4,
           "reason": "gate-coupling-review-required"
         },
         {
-          "fact_count": 106,
+          "fact_count": 72,
           "reason": "no-registered-operation"
         }
       ],
       "route_class": "proof-route-only"
-    },
-    {
-      "admissible_fact_ids": [],
-      "formal_language": "smtlib2",
-      "fragment": "QF_FP",
-      "ready_fact_count": 1,
-      "ready_fact_ids": [
-        "F:fp16-add-monotone-rne"
-      ],
-      "registered_operation_ids": [],
-      "rejection_reasons": [
-        {
-          "fact_count": 1,
-          "reason": "no-registered-operation"
-        }
-      ],
-      "route_class": "decidable"
-    },
-    {
-      "admissible_fact_ids": [],
-      "formal_language": "smtlib2",
-      "fragment": "none",
-      "ready_fact_count": 5,
-      "ready_fact_ids": [
-        "F:continuum-hypothesis-independent",
-        "F:excluded-middle-not-intuitionistic",
-        "F:fermat-last-theorem",
-        "F:fol-validity-undecidable",
-        "F:godel-first-incompleteness"
-      ],
-      "registered_operation_ids": [],
-      "rejection_reasons": [
-        {
-          "fact_count": 5,
-          "reason": "no-registered-operation"
-        },
-        {
-          "fact_count": 5,
-          "reason": "no-supported-route"
-        }
-      ],
-      "route_class": "no-route"
     }
   ],
   "kind": "axeyum-autogenesis-capability-gap-projection",
   "schema_version": 1,
-  "uncataloged_ready_fact_ids": [
-    "F:collatz-reaches-one",
-    "F:continuum-hypothesis-independent",
-    "F:excluded-middle-not-intuitionistic",
-    "F:fermat-last-theorem",
-    "F:fol-validity-undecidable",
-    "F:fp16-add-monotone-rne",
-    "F:godel-first-incompleteness",
-    "F:goldbach-strong",
-    "F:twin-prime-unbounded"
-  ]
+  "uncataloged_ready_fact_ids": []
 }

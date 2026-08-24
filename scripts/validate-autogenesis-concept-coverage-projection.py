@@ -5,6 +5,8 @@ ROOT=pathlib.Path(__file__).resolve().parents[1];P=ROOT/'artifacts/autogenesis/c
 def validate(d):
  errors=[]
  if d.get('kind')!='axeyum-autogenesis-concept-coverage-projection':return ['invalid projection kind']
+ derivation=d.get('derivation',{})
+ if not isinstance(derivation,dict) or derivation.get('evaluation_partitions')!=['development','train'] or 'never held-out' not in derivation.get('trust_boundary',''):errors.append('missing held-out isolation boundary')
  rows=d.get('concepts',[]);seen=set();topic=formal=0;topic_facts=formal_facts=0
  for r in rows:
   ident=r.get('concept_id')
@@ -19,6 +21,7 @@ def validate(d):
   topic+=bool(t);formal+=bool(f);topic_facts+=len(t);formal_facts+=len(f)
  census=d.get('census',{})
  if (census.get('concepts'),census.get('with_family_topic'),census.get('with_fact_formalization'),census.get('family_topic_facts'),census.get('qualified_formalization_facts'))!=(len(rows),topic,formal,topic_facts,formal_facts):errors.append('coverage census disagrees with concepts')
+ if not isinstance(census.get('excluded_held_out_family_topic_facts'),int) or census['excluded_held_out_family_topic_facts'] < 0:errors.append('invalid excluded held-out count')
  return errors
 def main():
  d=json.loads(P.read_text());errors=validate(d)

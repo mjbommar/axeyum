@@ -47,6 +47,17 @@ class CapabilityGapProjectionControls(unittest.TestCase):
         data["catalog_clusters"][0]["direct_unlock_fact_count"] += 1
         self.assertTrue(any("direct unlock count" in error for error in CG.validate(data)))
 
+    def test_projection_never_names_held_out_fact(self):
+        nursery = json.loads((ROOT / "artifacts/autogenesis/nursery-v1.json").read_text())
+        held_out = {row["fact_id"] for row in nursery["entries"] if row["partition"] == "held-out"}
+        def strings(value):
+            if isinstance(value, dict):
+                return [item for child in value.values() for item in strings(child)]
+            if isinstance(value, list):
+                return [item for child in value for item in strings(child)]
+            return [value] if isinstance(value, str) else []
+        self.assertFalse(held_out.intersection(strings(self.data)))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -23,9 +23,11 @@ def validate(data: dict[str, Any]) -> list[str]:
     derivation = data.get("derivation")
     if not isinstance(derivation, dict) or not all(
         isinstance(derivation.get(key), str) and derivation[key]
-        for key in ("frontier_sha256", "ledger_sha256", "operation_registry_sha256", "reviewed_fact_catalog_sha256", "trust_boundary")
+        for key in ("frontier_sha256", "ledger_sha256", "operation_registry_sha256", "reviewed_fact_catalog_sha256", "nursery_sha256", "trust_boundary")
     ):
         errors.append("missing source identities or trust boundary")
+    elif derivation.get("evaluation_partitions") != ["development", "train"] or "never held-out" not in derivation["trust_boundary"]:
+        errors.append("missing held-out isolation boundary")
     groups = data.get("groups")
     if not isinstance(groups, list):
         return errors + ["groups must be a list"]

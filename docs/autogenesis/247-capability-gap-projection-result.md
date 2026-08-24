@@ -6,13 +6,15 @@ dispatch. It is derived from the same content-addressed frontier used for
 selection; it adds no operation applicability, fact status, or admission
 authority.
 
-The current snapshot records **141 dependency-ready facts**, **zero
-admissible facts**, and six `(formal language, fragment, route class)` groups.
-Every ready fact lacks a registered authoritative operation. Six also have no
-supported route at all, while two require a gate-coupling review before any
-future dispatch. The dominant actionable gap is therefore not a solver score or
-a theorem count: it is a general producer or adapter that can be registered
-against a reviewed portion of the ready `lean4-surface` Nat/Int population.
+The current global frontier records **141 dependency-ready facts** and zero
+admissible facts. The projection exposes only its **98 train/development**
+facts (in two typed-surface groups), excludes 34 held-out facts and nine facts
+outside the nursery evaluation population, and still finds no registered
+authoritative operation. The exclusion is a hard safety boundary, not a claim
+that held-out facts are unimportant or unavailable: an artifact that names one
+spends its blind-evaluation value. The dominant actionable gap is therefore a
+general producer or adapter registered against the reviewed `lean4-surface`
+Nat/Int evaluation population.
 
 The artifact retains the exact fact-frontier, fact-ledger, and operation
 registry digests used for the observation. Its grouping is a ranking and
@@ -32,10 +34,10 @@ family-topic guidance only; the graph still requires a distinct qualified
 `formalizes` edge before it can claim anything about an individual theorem's
 formal coverage of that concept.
 
-Each reviewed cluster also carries the exact set of its immediate ledger
-descendants and its count. This is measured leverage, not a value judgement:
-it lets a scheduler compare the potential local fan-out of candidate producer
-work while keeping the ranking policy explicit and untrusted.
+Each reviewed cluster also carries only the immediate descendants inside the
+same evaluation partitions. This is measured leverage, not a value judgement:
+it lets a scheduler compare potential local fan-out without disclosing
+held-out targets, while keeping ranking explicit and untrusted.
 
 ```sh
 python3 scripts/validate-autogenesis-capability-gap-projection.py
@@ -44,7 +46,8 @@ python3 scripts/gen-autogenesis-capability-gap-projection.py --check
 just autogenesis-capability-gap
 ```
 
-The negative controls reject an invented group count and a fact that is counted
-twice. The structural validator deliberately does not demand fresh source
+The negative controls reject an invented group count, a fact counted twice, and
+the aggregate held-out-isolation gate rejects any accidental held-out ID. The
+structural validator deliberately does not demand fresh source
 inputs in shared aggregate gates; the knowledge-overlay owner performs the
 freshness check before publishing a new snapshot.

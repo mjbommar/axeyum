@@ -10,6 +10,7 @@ surface and records why each group cannot currently be dispatched.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import pathlib
@@ -23,6 +24,7 @@ OUTPUT = ROOT / "artifacts/autogenesis/capability-gap-projection-v1.json"
 FRONTIER_SCRIPT = ROOT / "scripts/fact-frontier.py"
 CATALOG = ROOT / "artifacts/autogenesis/mathlib-nat-int-fact-catalog-v1.json"
 CROSSWALK = ROOT / "artifacts/autogenesis/family-concept-crosswalk-v1.json"
+NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
 
 
 class CapabilityGapError(RuntimeError):
@@ -57,6 +59,16 @@ def build() -> dict[str, Any]:
         if isinstance(row, dict) and isinstance(row.get("fact_id"), str)
     }
     try:
+        nursery = json.loads(NURSERY.read_text())
+        partition_by_fact = {
+            row["fact_id"]: row["partition"]
+            for row in nursery["entries"]
+            if isinstance(row, dict) and isinstance(row.get("fact_id"), str) and isinstance(row.get("partition"), str)
+        }
+    except (OSError, json.JSONDecodeError, KeyError) as error:
+        raise CapabilityGapError(f"cannot read nursery partition manifest: {error}") from error
+    evaluation_partitions = {"train", "development"}
+    try:
         crosswalk = json.loads(CROSSWALK.read_text())
         concept_by_family = {
             row["family"]: row["concept_id"]
@@ -69,8 +81,12 @@ def build() -> dict[str, Any]:
         row["fact_id"]: row["rejected_by"]
         for row in machine["selection"]["rationale"]
     }
+    ready = machine["selection"]["ready_fact_ids"]
+    visible_ready = [fact_id for fact_id in ready if partition_by_fact.get(fact_id) in evaluation_partitions]
+    held_out_ready = [fact_id for fact_id in ready if partition_by_fact.get(fact_id) == "held-out"]
+    outside_ready = [fact_id for fact_id in ready if fact_id not in partition_by_fact]
     groups: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
-    for fact_id in machine["selection"]["ready_fact_ids"]:
+    for fact_id in visible_ready:
         entry = entries[fact_id]
         groups[(entry["formal_language"] if "formal_language" in entry else facts[fact_id]["formal"]["language"], entry["fragment"], entry["route_class"])].append(entry)
 
@@ -98,11 +114,10 @@ def build() -> dict[str, Any]:
             }
         )
 
-    ready = machine["selection"]["ready_fact_ids"]
-    admissible = machine["selection"]["admissible_fact_ids"]
-    reasons = Counter(reason for row in machine["selection"]["rationale"] for reason in row["rejected_by"])
+    admissible = [fact_id for fact_id in machine["selection"]["admissible_fact_ids"] if fact_id in visible_ready]
+    reasons = Counter(reason for fact_id in visible_ready for reason in rejected_by[fact_id])
     clusters: dict[tuple[str, str], list[str]] = defaultdict(list)
-    for fact_id in ready:
+    for fact_id in visible_ready:
         row = catalog_by_fact.get(fact_id)
         if row is not None:
             clusters[(row["family"], row["statement_shape"])].append(fact_id)
@@ -110,7 +125,7 @@ def build() -> dict[str, Any]:
     for (family, statement_shape), fact_ids in sorted(clusters.items()):
         ids = sorted(fact_ids)
         components = sorted({catalog_by_fact[fact_id]["dependency_component_id"] for fact_id in ids})
-        unlocked = sorted({child for fact_id in ids for child in entries[fact_id]["would_unlock"]})
+        unlocked = sorted({child for fact_id in ids for child in entries[fact_id]["would_unlock"] if partition_by_fact.get(child) in evaluation_partitions})
         catalog_clusters.append(
             {
                 "family": family,
@@ -123,8 +138,8 @@ def build() -> dict[str, Any]:
                 "direct_unlock_fact_count": len(unlocked),
             }
         )
-    cataloged = sorted(fact_id for fact_id in ready if fact_id in catalog_by_fact)
-    uncataloged = sorted(set(ready).difference(cataloged))
+    cataloged = sorted(fact_id for fact_id in visible_ready if fact_id in catalog_by_fact)
+    uncataloged = sorted(set(visible_ready).difference(cataloged))
     return {
         "schema_version": 1,
         "kind": "axeyum-autogenesis-capability-gap-projection",
@@ -135,10 +150,15 @@ def build() -> dict[str, Any]:
             "operation_registry_sha256": machine["policy"]["operation_registry_sha256"],
             "reviewed_fact_catalog_sha256": catalog.get("catalog_sha256"),
             "family_concept_crosswalk_path": str(CROSSWALK.relative_to(ROOT)),
-            "trust_boundary": "ranking and producer-investigation input only; never proof or admission authority",
+            "nursery_sha256": hashlib.sha256(NURSERY.read_bytes()).hexdigest(),
+            "evaluation_partitions": sorted(evaluation_partitions),
+            "trust_boundary": "train/development ranking and producer-investigation input only; never held-out inspection, proof, or admission authority",
         },
         "census": {
-            "dependency_ready_facts": len(ready),
+            "global_dependency_ready_facts": len(ready),
+            "excluded_held_out_ready_facts": len(held_out_ready),
+            "excluded_outside_evaluation_ready_facts": len(outside_ready),
+            "dependency_ready_facts": len(visible_ready),
             "admissible_facts": len(admissible),
             "groups": len(rendered_groups),
             "rejection_reasons": [

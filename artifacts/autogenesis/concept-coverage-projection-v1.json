@@ -1,38 +1,18 @@
 {
   "census": {
     "concepts": 14,
-    "family_topic_facts": 214,
+    "excluded_held_out_family_topic_facts": 57,
+    "family_topic_facts": 157,
     "qualified_formalization_facts": 10,
     "with_fact_formalization": 7,
-    "with_family_topic": 9
+    "with_family_topic": 6
   },
   "concepts": [
     {
       "concept_id": "C:binomial-coefficient",
       "coverage_state": "family-topic-only",
-      "family_topic_fact_count": 20,
-      "family_topic_fact_ids": [
-        "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
-        "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
-        "F:ml430-nat-choose-le-add-9c463139",
-        "F:ml430-nat-choose-le-choose-907b5042",
-        "F:ml430-nat-choose-le-succ-62ae968b",
-        "F:ml430-nat-choose-mono-a1af9c18",
-        "F:ml430-nat-choose-ne-zero-49c3d3cb",
-        "F:ml430-nat-choose-one-right-7eda8e39",
-        "F:ml430-nat-choose-self-25bb9fb8",
-        "F:ml430-nat-choose-succ-self-e396f6c2",
-        "F:ml430-nat-choose-succ-succ-671856b6",
-        "F:ml430-nat-choose-symm-add-e4b68161",
-        "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
-        "F:ml430-nat-choose-zero-right-1ed2802a",
-        "F:ml430-nat-choose-zero-succ-62c6520b",
-        "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
-        "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
-        "F:ml430-nat-multichoose-one-b210386a",
-        "F:ml430-nat-multichoose-one-right-7755072d",
-        "F:ml430-nat-multichoose-zero-right-6ef827c8"
-      ],
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
       "formalization_qualifiers": [],
       "qualified_formalization_fact_count": 0,
       "qualified_formalization_fact_ids": [],
@@ -278,30 +258,8 @@
     {
       "concept_id": "C:logarithm",
       "coverage_state": "family-topic-only",
-      "family_topic_fact_count": 21,
-      "family_topic_fact_ids": [
-        "F:ml430-mutation-e8583599cfae2d40cefae3f0",
-        "F:ml430-nat-clog-antitone-left-44a87771",
-        "F:ml430-nat-clog-mono-right-8d87a410",
-        "F:ml430-nat-clog-monotone-48fe50c6",
-        "F:ml430-nat-clog-one-left-b496af12",
-        "F:ml430-nat-clog-one-right-1ce3d52f",
-        "F:ml430-nat-clog-pos-00852cb8",
-        "F:ml430-nat-clog-zero-left-1c61a5bf",
-        "F:ml430-nat-clog-zero-right-d42d47b1",
-        "F:ml430-nat-log-antitone-left-20d1326c",
-        "F:ml430-nat-log-le-clog-ac8ab2d4",
-        "F:ml430-nat-log-le-self-da387172",
-        "F:ml430-nat-log-lt-self-529f89fa",
-        "F:ml430-nat-log-mono-right-b8939fee",
-        "F:ml430-nat-log-monotone-52fad774",
-        "F:ml430-nat-log-of-lt-89eaf42e",
-        "F:ml430-nat-log-one-left-73efc119",
-        "F:ml430-nat-log-one-right-282332ef",
-        "F:ml430-nat-log-zero-left-9ec8541e",
-        "F:ml430-nat-log-zero-right-8ea186db",
-        "F:ml430-nat-log2-eq-log-two-28085932"
-      ],
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
       "formalization_qualifiers": [],
       "qualified_formalization_fact_count": 0,
       "qualified_formalization_fact_ids": [],
@@ -425,25 +383,8 @@
     {
       "concept_id": "C:square-root",
       "coverage_state": "family-topic-only",
-      "family_topic_fact_count": 16,
-      "family_topic_fact_ids": [
-        "F:ml430-mutation-2086302b3a338591b3179871",
-        "F:ml430-nat-exists-mul-self-e73ca9fa",
-        "F:ml430-nat-le-sqrt-e6996680",
-        "F:ml430-nat-le-sqrt-of-eq-mul-503c5afe",
-        "F:ml430-nat-le-three-of-sqrt-eq-one-0c48a868",
-        "F:ml430-nat-lt-succ-sqrt-39389df2",
-        "F:ml430-nat-sqrt-eq-79ae8eae",
-        "F:ml430-nat-sqrt-eq-c036815b",
-        "F:ml430-nat-sqrt-eq-zero-53666a3b",
-        "F:ml430-nat-sqrt-le-7918582b",
-        "F:ml430-nat-sqrt-le-self-1ed5eb85",
-        "F:ml430-nat-sqrt-le-sqrt-6e2bfc47",
-        "F:ml430-nat-sqrt-lt-4909537f",
-        "F:ml430-nat-sqrt-lt-self-ff7a155a",
-        "F:ml430-nat-sqrt-pos-f75e5114",
-        "F:ml430-nat-sqrt-succ-le-succ-sqrt-6b041183"
-      ],
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
       "formalization_qualifiers": [],
       "qualified_formalization_fact_count": 0,
       "qualified_formalization_fact_ids": [],
@@ -454,8 +395,13 @@
   "derivation": {
     "catalog_sha256": "4a6ac0c9ee34e7c6a09b596e501ba94be4b1d962cf9ed02c7f1ed4dece771117",
     "crosswalk_sha256": "65a9b89f49f32bea18531ba748f3ff2f55142ecc176e2c01b40f452d3261a456",
+    "evaluation_partitions": [
+      "development",
+      "train"
+    ],
+    "nursery_sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1",
     "overlay_sha256": "71392d08005133933a210191b37d973cb1347155615e2f7c9a1882ae51b87260",
-    "trust_boundary": "coverage reporting only; never proof, operation, or admission authority"
+    "trust_boundary": "train/development coverage reporting only; never held-out inspection, proof, operation, or admission authority"
   },
   "kind": "axeyum-autogenesis-concept-coverage-projection",
   "schema_version": 1
