@@ -152,9 +152,10 @@ use algebra::{
     declare_additive_theorems, declare_finite_sum_theorems, declare_mul_no_zero_divisors,
     declare_multiplicative_theorems, declare_subtraction_theorems,
 };
-use bezout::{declare_euclid_lemma, declare_gcd_bezout};
+use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
 use binomial::{
-    declare_binomial_theorem, declare_combinatorial_identities, declare_succ_sub_of_le,
+    declare_binomial_theorem, declare_combinatorial_identities, declare_succ_mul_choose_eq,
+    declare_succ_sub_of_le,
 };
 use ble::declare_boolean_le;
 use choose::declare_choose_all;
@@ -621,6 +622,15 @@ pub struct NatPrelude {
     /// ledger's `F:nat-euclid-lemma` states and a fact is only closed by the
     /// statement it actually makes.
     pub euclid_lemma: NameId,
+    /// `Nat.prime_dvd_choose : ∀ p k, prime p → 0 < k → k < p → p ∣ choose p
+    /// k` — a live lane's blocker on the way to Fermat's little theorem.
+    /// Primality is spelled inline, matching `euclid_lemma`'s own convention.
+    /// From `euclid_lemma` plus `succ_mul_choose_eq`: the absorption identity
+    /// gives `k * choose p k = p * choose (p-1) (k-1)`, so `p ∣ k * choose p
+    /// k`; `euclid_lemma` splits that into `p ∣ k ∨ p ∣ choose p k`, and
+    /// `0 < k < p` rules out the first disjunct (`le_of_dvd` would force
+    /// `p ≤ k`).
+    pub prime_dvd_choose: NameId,
     /// `Nat.one_le_factorial : ∀ n, Le one (factorial n)`.
     pub one_le_factorial: NameId,
     /// `Nat.exists_prime_gt : ∀ n, ∃ p, n < p ∧ (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p)`.
@@ -770,6 +780,13 @@ pub struct NatPrelude {
     /// unblocks. Proved via `le_dest` + `add_sub_cancel_left`, mirroring
     /// [`super::choose::sub_succ_of_lt`]'s use of `le_dest`/`exists_rec`.
     pub succ_sub_of_le: NameId,
+    /// `Nat.succ_mul_choose_eq : ∀ n k, succ k * choose (succ n)(succ k) =
+    /// succ n * choose n k` — multiplying a row of Pascal's triangle by its
+    /// column index reindexes it one row up. The absorption identity behind
+    /// [`prime_dvd_choose`](Self::prime_dvd_choose). Induction on `n`,
+    /// generalized over `k`; the successor step splits on `k` too (Pascal
+    /// needs a `succ` shape there as well).
+    pub succ_mul_choose_eq: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -996,6 +1013,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_add: kernel.name_str(nat, "dvd_add"),
             dvd_add_right_cancel_of_pos: kernel.name_str(nat, "dvd_add_right_cancel_of_pos"),
             euclid_lemma: kernel.name_str(nat, "euclid_lemma"),
+            prime_dvd_choose: kernel.name_str(nat, "prime_dvd_choose"),
             one_le_factorial: kernel.name_str(nat, "one_le_factorial"),
             exists_prime_gt: kernel.name_str(nat, "exists_prime_gt"),
             not_dvd_one_of_two_le: kernel.name_str(nat, "not_dvd_one_of_two_le"),
@@ -1034,6 +1052,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_choose_row: kernel.name_str(nat, "sum_choose_row"),
             choose_le_two_pow: kernel.name_str(nat, "choose_le_two_pow"),
             succ_sub_of_le: kernel.name_str(nat, "succ_sub_of_le"),
+            succ_mul_choose_eq: kernel.name_str(nat, "succ_mul_choose_eq"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1066,6 +1085,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_binomial_theorem(&mut d, &p)?;
         declare_combinatorial_identities(&mut d, &p)?;
         declare_succ_sub_of_le(&mut d, &p)?;
+        declare_succ_mul_choose_eq(&mut d, &p)?;
+        declare_prime_dvd_choose(&mut d, &p)?;
         Ok(p)
     })();
     match built {

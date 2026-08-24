@@ -1509,3 +1509,232 @@ pub(super) fn declare_euclid_lemma(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
     })?;
     Ok(())
 }
+
+/// Eliminate `one_le_x : Le one x` into `target` (a fixed, `x`-independent
+/// goal type), handing `minor` a witness `n` and a proof `x = succ n`.
+///
+/// `le_dest(one, x, one_le_x)` gives `∃ j, 1+j=x`; the only work here beyond
+/// the standard `Exists.rec` shape (see [`bezout_elim`] for the same pattern
+/// with four nested witnesses) is converting `1+j=x` to `x = succ j` via
+/// `succ_add`/`zero_add`, since `Nat.add` recurses on its second argument and
+pub(super) fn succ_witness_elim<D: NatOps>(
+    d: &mut D,
+    x: ExprId,
+    target: ExprId,
+    one_le_x: ExprId,
+    minor: &dyn Fn(&mut D, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one_lvl = d.level_one();
+    let anon = d.anon_name();
+    let one = d.num(1);
+    let zero = d.zero();
+    let p = d.prelude();
+
+    let represented = d.lemma(p.le_dest, &[one, x, one_le_x]); // ∃ j, 1+j=x
+
+    let pred = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let sum = d.add(one, j);
+        let body = d.eq(sum, x);
+        d.lam_fv(j_fv, nat, body)
+    };
+    let exists_const = d.kernel().const_(p.logic.exists_, vec![one_lvl]);
+    let represented_ty = d.apply(exists_const, &[nat, pred]);
+    let motive = d
+        .kernel()
+        .lam(anon, represented_ty, target, BinderInfo::Default);
+
+    let minor_term = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let sum = d.add(one, j);
+        let e_ty = d.eq(sum, x);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        // 1+j = succ(0+j) = succ j, via succ_add then zero_add.
+        let succ_add_h = d.lemma(p.succ_add, &[zero, j]);
+        let zero_add_h = d.lemma(p.zero_add, &[j]);
+        let zero_plus_j = d.add(zero, j);
+        let succ_zero_plus_j = d.succ(zero_plus_j);
+        let succ_j = d.succ(j);
+        let zero_add_congr = d.congr(zero_plus_j, j, zero_add_h, &|d, t| d.succ(t));
+        let (_e2, sum_eq_succ_j) = d.chain(
+            sum,
+            &[(succ_zero_plus_j, succ_add_h), (succ_j, zero_add_congr)],
+        );
+        // x = 1+j = succ j.
+        let e_rev = d.symm(sum, x, e);
+        let x_eq_succ_j = d.trans(x, sum, succ_j, e_rev, sum_eq_succ_j);
+
+        let body = minor(d, j, x_eq_succ_j);
+        let with_e = d.lam_fv(e_fv, e_ty, body);
+        d.lam_fv(j_fv, nat, with_e)
+    };
+
+    let rec = d.kernel().const_(p.logic.exists_rec, vec![one_lvl]);
+    d.apply(rec, &[nat, pred, motive, minor_term, represented])
+}
+
+/// `Nat.prime_dvd_choose : ∀ p k, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+/// 0 < k → k < p → p ∣ choose p k`.
+///
+/// `k = succ kp` (from `0 < k`) and `p = succ n` (from `0 < p`, itself from
+/// `0 < k < p`) via [`succ_witness_elim`], then `succ_mul_choose_eq(n, kp)`
+/// rewritten along both witnesses gives `k * choose p k = p * choose n kp`.
+/// `dvd_mul` shows `p ∣ p * choose n kp`, hence `p ∣ k * choose p k`, and
+/// `euclid_lemma` splits that into `p ∣ k ∨ p ∣ choose p k`. The first
+/// disjunct is impossible: `le_of_dvd` would give `p ≤ k`, contradicting
+/// `k < p` via `lt_of_le_of_lt` + `lt_irrefl`. So the second disjunct holds —
+/// decided by actually eliminating the `Or` `euclid_lemma` hands back, not by
+/// excluded middle.
+pub(super) fn declare_prime_dvd_choose(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.prime_dvd_choose, 2, &|d, v| {
+        let (pp, k) = (v[0], v[1]);
+        let nat = d.nat_ty();
+        let two = d.num(2);
+        let one = d.num(1);
+        let zero = d.zero();
+
+        // Primality, spelled exactly as `euclid_lemma`'s own hypothesis.
+        let divisor_clause = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hyp = d.dvd(x, pp);
+            let is_one = d.eq(x, one);
+            let is_pp = d.eq(x, pp);
+            let disjunction = d.const_app(p.logic.or, &[is_one, is_pp]);
+            let inner = d.arrow(hyp, disjunction);
+            d.pi_fv(x_fv, nat, inner)
+        };
+        let two_le_pp = d.le(two, pp);
+        let prime_ty = d.const_app(p.logic.and, &[two_le_pp, divisor_clause]);
+
+        let pos_ty = d.lt(zero, k);
+        let lt_ty = d.lt(k, pp);
+        let choose_pp_k = d.choose(pp, k);
+        let conclusion = d.dvd(pp, choose_pp_k);
+
+        let inner1 = d.arrow(lt_ty, conclusion);
+        let inner2 = d.arrow(pos_ty, inner1);
+        let stmt = d.arrow(prime_ty, inner2);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+        let pos_fv = d.fresh_fvar();
+        let pos_hyp = d.kernel().fvar(pos_fv);
+        let lt_fv = d.fresh_fvar();
+        let lt_hyp = d.kernel().fvar(lt_fv);
+
+        // 0 < pp, from 0 ≤ k and k < pp.
+        let zero_le_k = d.lemma(p.zero_le, &[k]);
+        let zero_lt_pp = d.lemma(p.lt_of_le_of_lt, &[zero, k, pp, zero_le_k, lt_hyp]);
+
+        let body = succ_witness_elim(d, k, conclusion, pos_hyp, &|d, kp, k_eq_succ_kp| {
+            succ_witness_elim(d, pp, conclusion, zero_lt_pp, &|d, n, pp_eq_succ_n| {
+                let succ_n = d.succ(n);
+                let succ_kp = d.succ(kp);
+                let absorb = d.lemma(p.succ_mul_choose_eq, &[n, kp]);
+                // absorb : mul(succ_kp, choose(succ_n, succ_kp)) = mul(succ_n, choose(n, kp))
+
+                let succ_kp_eq_k = d.symm(k, succ_kp, k_eq_succ_kp);
+                let succ_n_eq_pp = d.symm(pp, succ_n, pp_eq_succ_n);
+
+                let choose_succ_n_succ_kp = d.choose(succ_n, succ_kp);
+                let lhs0 = d.mul(succ_kp, choose_succ_n_succ_kp);
+                let step_a = d.congr(succ_kp, k, succ_kp_eq_k, &|d, t| {
+                    let c = d.choose(succ_n, t);
+                    d.mul(t, c)
+                });
+
+                let choose_succ_n_k = d.choose(succ_n, k);
+                let lhs1 = d.mul(k, choose_succ_n_k);
+
+                let lhs2 = d.mul(k, choose_pp_k);
+                let step_b = d.congr(succ_n, pp, succ_n_eq_pp, &|d, t| {
+                    let c = d.choose(t, k);
+                    d.mul(k, c)
+                });
+
+                let choose_n_kp = d.choose(n, kp);
+                let rhs0 = d.mul(succ_n, choose_n_kp);
+                let rhs1 = d.mul(pp, choose_n_kp);
+                let step_c = d.congr(succ_n, pp, succ_n_eq_pp, &|d, t| d.mul(t, choose_n_kp));
+
+                let lhs1_rev = d.symm(lhs1, lhs2, step_b);
+                let lhs0_rev = d.symm(lhs0, lhs1, step_a);
+                let (_e, absorb_pp_k) = d.chain(
+                    lhs2,
+                    &[
+                        (lhs1, lhs1_rev),
+                        (lhs0, lhs0_rev),
+                        (rhs0, absorb),
+                        (rhs1, step_c),
+                    ],
+                );
+                // absorb_pp_k : mul(k, choose(pp,k)) = mul(pp, choose(n,kp))
+
+                let dvd_rhs = d.lemma(p.dvd_mul, &[pp, choose_n_kp]); // Dvd pp (mul(pp, choose_n_kp))
+                let motive_dvd = d.eq_motive(rhs1, &|d, t| d.dvd(pp, t));
+                let rhs1_eq_lhs2 = d.symm(lhs2, rhs1, absorb_pp_k);
+                let dvd_lhs2 = d.transport(rhs1, motive_dvd, dvd_rhs, lhs2, rhs1_eq_lhs2);
+                // dvd_lhs2 : Dvd pp (mul(k, choose_pp_k))
+
+                let or_result = d.lemma(p.euclid_lemma, &[pp, k, choose_pp_k, prime_hyp, dvd_lhs2]);
+                // or_result : Or (Dvd pp k) (Dvd pp choose_pp_k)
+
+                // Left disjunct is impossible: 0 < k < pp rules out pp ∣ k.
+                let dvd_pp_k_ty = d.dvd(pp, k);
+                let h_dvd_fv = d.fresh_fvar();
+                let h_dvd = d.kernel().fvar(h_dvd_fv);
+                let le_pp_k = d.lemma(p.le_of_dvd, &[pp, k, pos_hyp, h_dvd]);
+                let lt_pp_pp = d.lemma(p.lt_of_le_of_lt, &[pp, k, pp, le_pp_k, lt_hyp]);
+                let lt_irrefl_pp = d.lemma(p.lt_irrefl, &[pp]);
+                let false_proof = d.apply(lt_irrefl_pp, &[lt_pp_pp]);
+                let anon1 = d.anon_name();
+                let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                let z_lvl = d.kernel().level_zero();
+                let false_motive = d
+                    .kernel()
+                    .lam(anon1, false_ty, conclusion, BinderInfo::Default);
+                let false_rec = d.kernel().const_(p.logic.false_rec, vec![z_lvl]);
+                let absurd_proof = d.apply(false_rec, &[false_motive, false_proof]);
+                let left_case = d.lam_fv(h_dvd_fv, dvd_pp_k_ty, absurd_proof);
+
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let right_case = d.lam_fv(h_fv, conclusion, h);
+
+                let anon2 = d.anon_name();
+                let or_ty = d.const_app(p.logic.or, &[dvd_pp_k_ty, conclusion]);
+                let or_motive = d
+                    .kernel()
+                    .lam(anon2, or_ty, conclusion, BinderInfo::Default);
+                let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+                d.apply(
+                    or_rec,
+                    &[
+                        dvd_pp_k_ty,
+                        conclusion,
+                        or_motive,
+                        left_case,
+                        right_case,
+                        or_result,
+                    ],
+                )
+            })
+        });
+
+        let with_lt = d.lam_fv(lt_fv, lt_ty, body);
+        let with_pos = d.lam_fv(pos_fv, pos_ty, with_lt);
+        let proof = d.lam_fv(prime_fv, prime_ty, with_pos);
+        (stmt, proof)
+    })?;
+    Ok(())
+}

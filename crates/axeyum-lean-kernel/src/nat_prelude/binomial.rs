@@ -1769,3 +1769,385 @@ pub(super) fn declare_succ_sub_of_le(
     })?;
     Ok(())
 }
+
+// ============================================================================
+// The absorption identity: `Nat.succ_mul_choose_eq`.
+//
+// `(k+1) * choose (n+1) (k+1) = (n+1) * choose n k` — multiplying a row of
+// Pascal's triangle by its column index reindexes it one row up. This is the
+// algebraic half of `Nat.prime_dvd_choose` (`bezout.rs`); primality never
+// enters here.
+//
+// Induction on `n`, generalized over `k` inside the motive. The successor
+// step ALSO splits on `k` (Pascal needs a `succ` shape on that side too), so
+// the whole proof is really a case tree of depth two: `n = 0`/`succ n`, and
+// within the `succ n` step, `k = 0`/`succ k`. The `k = 0` sub-case of the
+// successor step reads `choose (succ n) (succ 0) = succ n` off the outer IH
+// at `k = 0` via `one_mul`; the `k = succ k'` sub-case uses the outer IH at
+// both `k'` and `succ k'`, plus `succ_mul`/`left_distrib` to reassemble the
+// two contributions into `succ (succ n) * choose (succ n) (succ k')`.
+// ============================================================================
+
+/// The `k = 0` case of [`succ_mul_choose_succ_all_k`]'s inner split: given the
+/// outer induction hypothesis `ih : ∀ k, succ k * choose (succ n) (succ k) =
+/// succ n * choose n k`, prove `succ zero * choose (succ (succ n)) (succ
+/// zero) = succ (succ n) * choose (succ n) zero`.
+fn succ_mul_choose_case_zero(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, ih: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let sz = d.succ(zero);
+    let sn = d.succ(n);
+    let ssn = d.succ(sn);
+    let one = d.num(1);
+
+    // RHS: succ(succ n) * choose (succ n) 0 = succ(succ n) * 1 = succ(succ n).
+    let choose_sn_0 = d.choose(sn, zero);
+    let c_sn_0 = d.lemma(p.choose_zero_right, &[sn]);
+    let rhs0 = d.mul(ssn, choose_sn_0);
+    let rhs_mid = d.mul(ssn, one);
+    let rhs_step1 = d.congr(choose_sn_0, one, c_sn_0, &|d, t| d.mul(ssn, t));
+    let rhs_step2 = d.lemma(p.mul_one, &[ssn]);
+    let (_e, rhs_eq_ssn) = d.chain(rhs0, &[(rhs_mid, rhs_step1), (ssn, rhs_step2)]);
+
+    // ih at 0, read through choose_zero_right + mul_one:
+    // succ n * choose n zero = succ n * 1 = succ n.
+    let choose_n_0 = d.choose(n, zero);
+    let c_n_0 = d.lemma(p.choose_zero_right, &[n]);
+    let ih0 = d.apply(ih, &[zero]);
+    let ih0_rhs = d.mul(sn, choose_n_0);
+    let ih0_rhs_mid = d.mul(sn, one);
+    let ih0_step1 = d.congr(choose_n_0, one, c_n_0, &|d, t| d.mul(sn, t));
+    let ih0_step2 = d.lemma(p.mul_one, &[sn]);
+    let (_e2, ih0_rhs_eq_sn) = d.chain(ih0_rhs, &[(ih0_rhs_mid, ih0_step1), (sn, ih0_step2)]);
+
+    let csn1 = d.choose(sn, sz);
+    let ih0_lhs = d.mul(sz, csn1);
+    // ih0 : ih0_lhs = ih0_rhs
+    let (_e3, ih0_lhs_eq_sn) = d.chain(ih0_lhs, &[(ih0_rhs, ih0), (sn, ih0_rhs_eq_sn)]);
+
+    // choose (succ n)(succ zero) = succ n, via one_mul cancelling the succ-zero coefficient.
+    let one_mul_h = d.lemma(p.one_mul, &[csn1]);
+    let ih0_lhs_eq_csn1 = d.symm(ih0_lhs, csn1, one_mul_h);
+    let (_e4, csn1_eq_sn) = d.chain(csn1, &[(ih0_lhs, ih0_lhs_eq_csn1), (sn, ih0_lhs_eq_sn)]);
+
+    // Pascal: choose (succ(succ n))(succ zero) = choose(succ n) zero + choose(succ n)(succ zero).
+    let pascal = d.lemma(p.choose_succ_succ, &[sn, zero]);
+    let c_ssn_sz = d.choose(ssn, sz);
+    let sum0 = d.add(choose_sn_0, csn1);
+    let step_a = d.congr(choose_sn_0, one, c_sn_0, &|d, t| d.add(t, csn1));
+    let sum1 = d.add(one, csn1);
+    let step_b = d.congr(csn1, sn, csn1_eq_sn, &|d, t| d.add(one, t));
+    let sum2 = d.add(one, sn);
+
+    // 1 + succ n = succ(succ n), via succ_add + zero_add.
+    let succ_add_h = d.lemma(p.succ_add, &[zero, sn]);
+    let zero_add_h = d.lemma(p.zero_add, &[sn]);
+    let zero_plus_sn = d.add(zero, sn);
+    let succ_zero_plus_sn = d.succ(zero_plus_sn);
+    let zero_add_congr = d.congr(zero_plus_sn, sn, zero_add_h, &|d, t| d.succ(t));
+    let (_e5, sum2_eq_ssn) = d.chain(
+        sum2,
+        &[(succ_zero_plus_sn, succ_add_h), (ssn, zero_add_congr)],
+    );
+
+    let (_e6, c_ssn_sz_eq_ssn) = d.chain(
+        c_ssn_sz,
+        &[
+            (sum0, pascal),
+            (sum1, step_a),
+            (sum2, step_b),
+            (ssn, sum2_eq_ssn),
+        ],
+    );
+
+    // LHS: succ zero * choose(succ(succ n))(succ zero) = succ zero * succ(succ n) = succ(succ n).
+    let lhs0 = d.mul(sz, c_ssn_sz);
+    let lhs_mid = d.mul(sz, ssn);
+    let lhs_step = d.congr(c_ssn_sz, ssn, c_ssn_sz_eq_ssn, &|d, t| d.mul(sz, t));
+    let one_mul_ssn = d.lemma(p.one_mul, &[ssn]);
+    let (_e7, lhs_eq_ssn) = d.chain(lhs0, &[(lhs_mid, lhs_step), (ssn, one_mul_ssn)]);
+
+    let rhs_eq_ssn_rev = d.symm(rhs0, ssn, rhs_eq_ssn);
+    let (_e8, proof) = d.chain(lhs0, &[(ssn, lhs_eq_ssn), (rhs0, rhs_eq_ssn_rev)]);
+    proof
+}
+
+/// The `k = succ kp` case of [`succ_mul_choose_succ_all_k`]'s inner split:
+/// given the outer IH `ih`, prove `succ(succ kp) * choose(succ(succ
+/// n))(succ(succ kp)) = succ(succ n) * choose(succ n)(succ kp)`.
+///
+/// Pascal splits `choose(succ(succ n))(succ(succ kp))` into `X = choose(succ
+/// n)(succ kp)` and `Y = choose(succ n)(succ(succ kp))`; `ih` at `kp` relates
+/// `X` to `Z = choose n kp` and `ih` at `succ kp` relates `Y` to `W = choose n
+/// (succ kp)` directly. `succ_mul` peels one copy of `X` off the `succ(succ
+/// kp)` coefficient so the `Z`/`W` contributions combine via `left_distrib`
+/// and Pascal's rule (read backwards) into `succ n * X`, and a final
+/// `succ_mul` reassembles `succ n * X + X` into `succ(succ n) * X`.
+fn succ_mul_choose_case_succ(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    n: ExprId,
+    ih: ExprId,
+    kp: ExprId,
+) -> ExprId {
+    let p = *p;
+    let skp = d.succ(kp);
+    let sskp = d.succ(skp);
+    let sn = d.succ(n);
+    let ssn = d.succ(sn);
+
+    let x = d.choose(sn, skp);
+    let y = d.choose(sn, sskp);
+    let z = d.choose(n, kp);
+    let w = d.choose(n, skp);
+
+    // Pascal at (succ n, succ kp): choose(succ(succ n))(succ(succ kp)) = X + Y.
+    let p1 = d.lemma(p.choose_succ_succ, &[sn, skp]);
+    // Pascal at (n, kp): choose(succ n)(succ kp) = choose n kp + choose n (succ kp), i.e. X = Z+W.
+    let p2 = d.lemma(p.choose_succ_succ, &[n, kp]);
+
+    // ih at kp: succ kp * X = succ n * Z.
+    let ih1 = d.apply(ih, &[kp]);
+    // ih at succ kp: succ(succ kp) * Y = succ n * W.
+    let ih2 = d.apply(ih, &[skp]);
+
+    // T1: sskp*X = sn*Z + X, via succ_mul(skp,X) then rewriting skp*X by ih1.
+    let succ_mul_skp_x = d.lemma(p.succ_mul, &[skp, x]);
+    let skp_x = d.mul(skp, x);
+    let sn_z = d.mul(sn, z);
+    let sskp_x = d.mul(sskp, x);
+    let skp_x_plus_x = d.add(skp_x, x);
+    let sn_z_plus_x = d.add(sn_z, x);
+    let ih1_congr = d.congr(skp_x, sn_z, ih1, &|d, t| d.add(t, x));
+    let (_e1, t1) = d.chain(
+        sskp_x,
+        &[(skp_x_plus_x, succ_mul_skp_x), (sn_z_plus_x, ih1_congr)],
+    );
+
+    let sn_w = d.mul(sn, w);
+    let c_ssn_sskp = d.choose(ssn, sskp);
+    let start = d.mul(sskp, c_ssn_sskp);
+    let xy = d.add(x, y);
+    let sskp_xy = d.mul(sskp, xy);
+    let sskp_y = d.mul(sskp, y);
+    let sskp_x_plus_sskp_y = d.add(sskp_x, sskp_y);
+    let sn_z_plus_x_plus_sskp_y = d.add(sn_z_plus_x, sskp_y);
+    let sn_z_plus_x_plus_sn_w = d.add(sn_z_plus_x, sn_w);
+    let x_plus_sn_w = d.add(x, sn_w);
+    let sn_w_plus_x = d.add(sn_w, x);
+    let sn_z_plus_open = d.add(sn_z, x_plus_sn_w);
+    let sn_z_plus_swapped = d.add(sn_z, sn_w_plus_x);
+    let sn_z_plus_sn_w = d.add(sn_z, sn_w);
+    let sn_z_plus_sn_w_plus_x = d.add(sn_z_plus_sn_w, x);
+    let zw = d.add(z, w);
+    let sn_zw = d.mul(sn, zw);
+    let sn_zw_plus_x = d.add(sn_zw, x);
+    let sn_x = d.mul(sn, x);
+    let sn_x_plus_x = d.add(sn_x, x);
+    let ssn_x = d.mul(ssn, x);
+
+    let step1 = d.congr(c_ssn_sskp, xy, p1, &|d, t| d.mul(sskp, t));
+    let left_distrib_h = d.lemma(p.left_distrib, &[sskp, x, y]);
+    let step3 = d.congr(sskp_x, sn_z_plus_x, t1, &|d, t| d.add(t, sskp_y));
+    let step4 = d.congr(sskp_y, sn_w, ih2, &|d, t| d.add(sn_z_plus_x, t));
+    let add_assoc1 = d.lemma(p.add_assoc, &[sn_z, x, sn_w]);
+    let add_comm_h = d.lemma(p.add_comm, &[x, sn_w]);
+    let step6 = d.congr(x_plus_sn_w, sn_w_plus_x, add_comm_h, &|d, t| d.add(sn_z, t));
+    let add_assoc2 = d.lemma(p.add_assoc, &[sn_z, sn_w, x]);
+    let step7 = d.symm(sn_z_plus_sn_w_plus_x, sn_z_plus_swapped, add_assoc2);
+    let left_distrib2 = d.lemma(p.left_distrib, &[sn, z, w]);
+    let left_distrib2_rev = d.symm(sn_zw, sn_z_plus_sn_w, left_distrib2);
+    let step8 = d.congr(sn_z_plus_sn_w, sn_zw, left_distrib2_rev, &|d, t| {
+        d.add(t, x)
+    });
+    let p2_rev = d.symm(x, zw, p2);
+    let step9_inner = d.congr(zw, x, p2_rev, &|d, t| d.mul(sn, t));
+    let step9 = d.congr(sn_zw, sn_x, step9_inner, &|d, t| d.add(t, x));
+    let succ_mul_sn_x = d.lemma(p.succ_mul, &[sn, x]);
+    let step10 = d.symm(ssn_x, sn_x_plus_x, succ_mul_sn_x);
+
+    let (_e2, proof) = d.chain(
+        start,
+        &[
+            (sskp_xy, step1),
+            (sskp_x_plus_sskp_y, left_distrib_h),
+            (sn_z_plus_x_plus_sskp_y, step3),
+            (sn_z_plus_x_plus_sn_w, step4),
+            (sn_z_plus_open, add_assoc1),
+            (sn_z_plus_swapped, step6),
+            (sn_z_plus_sn_w_plus_x, step7),
+            (sn_zw_plus_x, step8),
+            (sn_x_plus_x, step9),
+            (ssn_x, step10),
+        ],
+    );
+    proof
+}
+
+/// The successor step of [`declare_succ_mul_choose_eq`]'s outer induction on
+/// `n`: given `ih : ∀ k, succ k * choose (succ n)(succ k) = succ n * choose n
+/// k`, produce `∀ k, succ k * choose (succ(succ n))(succ k) = succ(succ n) *
+/// choose (succ n) k`, by an inner case-split on `k`
+/// ([`succ_mul_choose_case_zero`]/[`succ_mul_choose_case_succ`]).
+fn succ_mul_choose_succ_all_k(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, ih: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let sn = d.succ(n);
+    let ssn = d.succ(sn);
+
+    let case_motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let sx = d.succ(x);
+        let choose_ssn_sx = d.choose(ssn, sx);
+        let lhs = d.mul(sx, choose_ssn_sx);
+        let choose_sn_x = d.choose(sn, x);
+        let rhs = d.mul(ssn, choose_sn_x);
+        d.eq(lhs, rhs)
+    };
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let body = d.induct(
+        &case_motive,
+        &|d| succ_mul_choose_case_zero(d, &p, n, ih),
+        &|d, kp, _ih2| succ_mul_choose_case_succ(d, &p, n, ih, kp),
+        k,
+    );
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// The base case (`n = 0`) of [`declare_succ_mul_choose_eq`]'s outer
+/// induction: `∀ k, succ k * choose (succ zero)(succ k) = succ zero * choose
+/// zero k`, by a case-split on `k` alone (no induction hypothesis is needed
+/// at `n = 0`).
+fn succ_mul_choose_base_all_k(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let zero = d.zero();
+    let sz = d.succ(zero);
+
+    let case_motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let sx = d.succ(x);
+        let choose_sz_sx = d.choose(sz, sx);
+        let lhs = d.mul(sx, choose_sz_sx);
+        let choose_zero_x = d.choose(zero, x);
+        let rhs = d.mul(sz, choose_zero_x);
+        d.eq(lhs, rhs)
+    };
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let body = d.induct(
+        &case_motive,
+        &|d| {
+            // k = 0: succ zero * choose(succ zero)(succ zero) = succ zero * choose zero zero,
+            // both sides collapsing to succ zero * 1 via choose_self.
+            let h1 = d.lemma(p.choose_self, &[sz]);
+            let h2 = d.lemma(p.choose_self, &[zero]);
+            let one = d.num(1);
+            let choose_sz_sz = d.choose(sz, sz);
+            let choose_zero_zero = d.choose(zero, zero);
+            let lhs0 = d.mul(sz, choose_sz_sz);
+            let rhs0 = d.mul(sz, choose_zero_zero);
+            let mid = d.mul(sz, one);
+            let step1 = d.congr(choose_sz_sz, one, h1, &|d, t| d.mul(sz, t));
+            let step2 = d.congr(choose_zero_zero, one, h2, &|d, t| d.mul(sz, t));
+            let step2_rev = d.symm(rhs0, mid, step2);
+            let (_e, proof) = d.chain(lhs0, &[(mid, step1), (rhs0, step2_rev)]);
+            proof
+        },
+        &|d, np, _ih| {
+            // k = succ np: choose zero (succ np) = choose zero (succ (succ np)) = 0, and
+            // Pascal collapses choose(succ zero)(succ(succ np)) to 0+0 = 0 too.
+            let skp = d.succ(np);
+            let sskp = d.succ(skp);
+            let zero0 = d.zero();
+            let zc1 = d.lemma(p.zero_choose_succ, &[np]);
+            let zc2 = d.lemma(p.zero_choose_succ, &[skp]);
+            let pascal = d.lemma(p.choose_succ_succ, &[zero0, skp]);
+
+            let choose_zero_skp = d.choose(zero0, skp);
+            let choose_zero_sskp = d.choose(zero0, sskp);
+            let c_sz_sskp = d.choose(sz, sskp);
+            let sum0 = d.add(choose_zero_skp, choose_zero_sskp);
+            let sum1 = d.add(zero0, choose_zero_sskp);
+            let sum2 = d.add(zero0, zero0);
+            let step_a = d.congr(choose_zero_skp, zero0, zc1, &|d, t| {
+                d.add(t, choose_zero_sskp)
+            });
+            let step_b = d.congr(choose_zero_sskp, zero0, zc2, &|d, t| d.add(zero0, t));
+            let step_c = d.refl(zero0);
+            let (_e, c_eq_zero) = d.chain(
+                c_sz_sskp,
+                &[
+                    (sum0, pascal),
+                    (sum1, step_a),
+                    (sum2, step_b),
+                    (zero0, step_c),
+                ],
+            );
+
+            let lhs0 = d.mul(sskp, c_sz_sskp);
+            let lhs_mid = d.mul(sskp, zero0);
+            let mul_zero_sskp = d.lemma(p.mul_zero, &[sskp]);
+            let lhs_step = d.congr(c_sz_sskp, zero0, c_eq_zero, &|d, t| d.mul(sskp, t));
+            let (_e2, lhs_eq_zero) = d.chain(lhs0, &[(lhs_mid, lhs_step), (zero0, mul_zero_sskp)]);
+
+            let rhs0 = d.mul(sz, choose_zero_skp);
+            let rhs_mid = d.mul(sz, zero0);
+            let mul_zero_sz = d.lemma(p.mul_zero, &[sz]);
+            let rhs_step = d.congr(choose_zero_skp, zero0, zc1, &|d, t| d.mul(sz, t));
+            let (_e3, rhs_eq_zero) = d.chain(rhs0, &[(rhs_mid, rhs_step), (zero0, mul_zero_sz)]);
+
+            let rhs_eq_zero_rev = d.symm(rhs0, zero0, rhs_eq_zero);
+            let (_e4, proof) = d.chain(lhs0, &[(zero0, lhs_eq_zero), (rhs0, rhs_eq_zero_rev)]);
+            proof
+        },
+        k,
+    );
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `Nat.succ_mul_choose_eq : ∀ n k, succ k * choose (succ n)(succ k) = succ n * choose n k`.
+///
+/// See the module-level doc comment above for the proof shape.
+pub(super) fn declare_succ_mul_choose_eq(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    let motive = |d: &mut NatDev<'_>, n: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let sn = d.succ(n);
+        let choose_sn_sk = d.choose(sn, sk);
+        let lhs = d.mul(sk, choose_sn_sk);
+        let choose_n_k = d.choose(n, k);
+        let rhs = d.mul(sn, choose_n_k);
+        let eqn = d.eq(lhs, rhs);
+        d.pi_fv(k_fv, nat, eqn)
+    };
+
+    d.theorem(p.succ_mul_choose_eq, 2, &|d, v| {
+        let (n, k) = (v[0], v[1]);
+        let sk = d.succ(k);
+        let sn = d.succ(n);
+        let choose_sn_sk = d.choose(sn, sk);
+        let lhs = d.mul(sk, choose_sn_sk);
+        let choose_n_k = d.choose(n, k);
+        let rhs = d.mul(sn, choose_n_k);
+        let stmt = d.eq(lhs, rhs);
+
+        let all_k = d.induct(
+            &motive,
+            &|d| succ_mul_choose_base_all_k(d, &p),
+            &|d, np, ih| succ_mul_choose_succ_all_k(d, &p, np, ih),
+            n,
+        );
+        let proof = d.apply(all_k, &[k]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
