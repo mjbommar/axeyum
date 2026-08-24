@@ -1323,3 +1323,30 @@ references:
 # Fetch public benchmark corpora into corpus/public/ (large downloads).
 corpus:
     ./scripts/fetch-corpus.sh
+
+# The Python binding gate (docs/python-2026-08/01-pyo3-maturin.md, S5).
+#
+# Five steps, and EVERY ONE PRINTS A COUNT, because a Python gate is the
+# easiest place in this repository to build something that exits 0 while
+# examining nothing: `pytest` prints "no tests ran" and exits 5, and a stub
+# drift check with no floor reports "nothing differed" over an empty
+# directory. `python/tests/conftest.py` fails a session that collected zero
+# tests, and `tools/gen_native_stub.py --check` exits 1 when it compared zero
+# stubs -- both verified by deleting the guard and watching exactly one test
+# die. Read `PYTEST|collected=N` and `STUBS|compared=M`, not the exit status.
+#
+# `--no-sync`: the gate must not silently mutate `uv.lock` or the venv as a
+# side effect of being run. `uv sync --dev` is the setup step, run once.
+#
+# TMPDIR: `maturin develop` writes a wheel there on every rebuild, and `/tmp`
+# on this fleet is a 62 G RAM tmpfs already implicated in OOM kills
+# (strand rule 5, docs/python-2026-08/README.md).
+
+# Build the extension, run the Python tests, check stub drift and lint.
+py-check:
+    mkdir -p "${TMPDIR:-/data0/axeyum/scratch/py-tmp-$USER}"
+    TMPDIR="${TMPDIR:-/data0/axeyum/scratch/py-tmp-$USER}" uv run --no-sync maturin develop
+    uv run --no-sync pytest python/tests -q
+    uv run --no-sync python tools/gen_native_stub.py --check
+    uv run --no-sync ruff check python/ tools/
+    uv run --no-sync ruff format --check python/ tools/
