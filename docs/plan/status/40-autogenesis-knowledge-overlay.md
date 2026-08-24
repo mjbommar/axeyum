@@ -24,6 +24,11 @@ applicable operation. The frozen producer census is now also projected into
 partitioned family/statement-shape/abstraction outcome groups across its 138 sealed
 train/development facts, with zero held-out outcomes and no scheduler link;
 that is evidence for evaluating a general producer, not target authority.
+The capability-gap and concept-coverage views now enforce the same boundary:
+their visible fact IDs are restricted to train/development, while the 34
+held-out ready facts and 57 held-out topic facts are reported only as aggregate
+exclusions. The generic held-out isolation gate is green again; it caught the
+earlier unsafe projection rather than being weakened around it.
 Next capability work must expand general-producer and adapter coverage over the
 train/development queue, compare it against that fixed observation, and only
 then evaluate an independently sealed held-out partition—not add more
@@ -50,3 +55,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `3f42c3b2d` | Select and bind the three dependency-ready Nat.ModEq core laws as a non-authoritative next capability target, with commutativity deferred on its actual dependency |
 | 2026-08-24 | `2c63637c4` | Derive hash-bound, train/development-only producer outcome observations by reviewed family, statement shape, and abstraction boundary; reject held-out, duplicate, or invented outcome accounting |
 | 2026-08-24 | `913638251` | Preserve the train/development partition on every producer-outcome group and reject an out-of-partition group rather than aggregating away the evaluation boundary |
+| 2026-08-24 | `a4ededc55` | Repair capability-gap and concept-coverage projections so their fact-ID views exclude held-out rows; make the existing generic held-out isolation gate pass without exceptions |
