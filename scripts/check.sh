@@ -310,6 +310,8 @@ step autogenesis-producer-outcomes python3 -m unittest scripts.tests.test_valida
 step autogenesis-producer-outcomes-content python3 scripts/validate-autogenesis-producer-outcome-observations.py
 step autogenesis-producer-evaluation-frontier python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_frontier
 step autogenesis-producer-evaluation-frontier-content python3 scripts/validate-autogenesis-producer-evaluation-frontier.py
+step autogenesis-producer-evaluation-protocol python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_protocol
+step autogenesis-producer-evaluation-protocol-content python3 scripts/validate-autogenesis-producer-evaluation-protocol.py
 step autogenesis-proposer-isolation ./scripts/check-autogenesis-proposer-isolation.sh
 step autogenesis-induction-search ./scripts/check-autogenesis-induction-search.sh
 step autogenesis-apply-search ./scripts/check-autogenesis-apply-search.sh

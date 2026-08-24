@@ -258,6 +258,7 @@ compounding, not automation theatre.
 | [Natural ModEq capability selection](250-natural-modeq-capability-selection.md) | Which bounded, dependency-ready natural modular-equivalence core should test whether the existing general mechanism can earn a new source-bound operation? |
 | [Outcome-safe producer observations](251-producer-outcome-observations.md) | What did the fixed producer actually do across the sealed train/development corpus, grouped by reviewed family, statement shape, and abstraction boundary without reading held-out outcomes? |
 | [Partition-safe producer evaluation frontier](252-producer-evaluation-frontier.md) | Which dependency-ready train/development facts may a future general producer receive, with held-out facts excluded before dispatch? |
+| [General-producer evaluation protocol](253-producer-evaluation-protocol.md) | Which funnel, decline taxonomy, negative-control rule, and forbidden inputs must be fixed before a general producer can be evaluated? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

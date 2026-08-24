@@ -458,6 +458,7 @@ autogenesis-knowledge-derived-freshness:
     python3 scripts/gen-autogenesis-concept-coverage-projection.py --check
     python3 scripts/gen-autogenesis-producer-outcome-observations.py --check
     python3 scripts/gen-autogenesis-producer-evaluation-frontier.py --check
+    python3 scripts/gen-autogenesis-producer-evaluation-protocol.py --check
 
 autogenesis-kernel-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
@@ -504,6 +505,11 @@ autogenesis-producer-evaluation-frontier:
     python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_frontier
     python3 scripts/validate-autogenesis-producer-evaluation-frontier.py
     python3 scripts/gen-autogenesis-producer-evaluation-frontier.py --check
+
+autogenesis-producer-evaluation-protocol:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_protocol
+    python3 scripts/validate-autogenesis-producer-evaluation-protocol.py
+    python3 scripts/gen-autogenesis-producer-evaluation-protocol.py --check
 
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh
