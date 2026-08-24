@@ -23,7 +23,7 @@ def validate(data: dict[str, Any]) -> list[str]:
     derivation = data.get("derivation")
     if not isinstance(derivation, dict) or not all(
         isinstance(derivation.get(key), str) and derivation[key]
-        for key in ("frontier_sha256", "ledger_sha256", "operation_registry_sha256", "trust_boundary")
+        for key in ("frontier_sha256", "ledger_sha256", "operation_registry_sha256", "reviewed_fact_catalog_sha256", "trust_boundary")
     ):
         errors.append("missing source identities or trust boundary")
     groups = data.get("groups")
@@ -83,6 +83,44 @@ def validate(data: dict[str, Any]) -> list[str]:
     ]
     if census.get("rejection_reasons") != expected_reasons:
         errors.append("rejection-reason census disagrees with groups")
+    catalog_clusters = data.get("catalog_clusters")
+    uncataloged = data.get("uncataloged_ready_fact_ids")
+    if not isinstance(catalog_clusters, list) or not isinstance(uncataloged, list):
+        return errors + ["catalog clusters and uncataloged facts must be lists"]
+    cataloged_ids: list[str] = []
+    cluster_keys: list[tuple[str, str]] = []
+    for cluster in catalog_clusters:
+        if not isinstance(cluster, dict):
+            errors.append("catalog cluster is not an object")
+            continue
+        key = (cluster.get("family"), cluster.get("statement_shape"))
+        if not all(isinstance(part, str) and part for part in key):
+            errors.append("catalog cluster has invalid family or shape")
+        cluster_keys.append(key)  # type: ignore[arg-type]
+        ids = cluster.get("ready_fact_ids")
+        components = cluster.get("dependency_component_ids")
+        if not isinstance(ids, list) or ids != sorted(set(ids)):
+            errors.append(f"{key}: catalog facts must be sorted and unique")
+            continue
+        if cluster.get("ready_fact_count") != len(ids):
+            errors.append(f"{key}: catalog count disagrees with ids")
+        if not isinstance(components, list) or components != sorted(set(components)):
+            errors.append(f"{key}: dependency components must be sorted and unique")
+        cataloged_ids.extend(ids)
+    if cluster_keys != sorted(set(cluster_keys)):
+        errors.append("catalog clusters are not uniquely sorted")
+    if len(cataloged_ids) != len(set(cataloged_ids)):
+        errors.append("a cataloged fact appears in more than one cluster")
+    if not set(cataloged_ids).issubset(all_ready):
+        errors.append("cataloged fact is not dependency-ready")
+    if not isinstance(uncataloged, list) or uncataloged != sorted(set(uncataloged)):
+        errors.append("uncataloged facts must be sorted and unique")
+    elif set(uncataloged).intersection(cataloged_ids) or set(uncataloged).union(cataloged_ids) != set(all_ready):
+        errors.append("cataloged and uncataloged facts do not partition ready facts")
+    if census.get("cataloged_ready_facts") != len(cataloged_ids):
+        errors.append("cataloged-ready census disagrees with clusters")
+    if census.get("uncataloged_ready_facts") != len(uncataloged):
+        errors.append("uncataloged-ready census disagrees with ids")
     return errors
 
 

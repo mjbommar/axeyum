@@ -21,6 +21,7 @@ from typing import Any
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "artifacts/autogenesis/capability-gap-projection-v1.json"
 FRONTIER_SCRIPT = ROOT / "scripts/fact-frontier.py"
+CATALOG = ROOT / "artifacts/autogenesis/mathlib-nat-int-fact-catalog-v1.json"
 
 
 class CapabilityGapError(RuntimeError):
@@ -45,6 +46,15 @@ def build() -> dict[str, Any]:
         raise CapabilityGapError(str(error)) from error
 
     entries = {entry["fact_id"]: entry for entry in machine["entries"]}
+    try:
+        catalog = json.loads(CATALOG.read_text())
+        catalog_rows = catalog["facts"]
+    except (OSError, json.JSONDecodeError, KeyError) as error:
+        raise CapabilityGapError(f"cannot read reviewed fact catalog: {error}") from error
+    catalog_by_fact = {
+        row["fact_id"]: row for row in catalog_rows
+        if isinstance(row, dict) and isinstance(row.get("fact_id"), str)
+    }
     rejected_by = {
         row["fact_id"]: row["rejected_by"]
         for row in machine["selection"]["rationale"]
@@ -81,6 +91,26 @@ def build() -> dict[str, Any]:
     ready = machine["selection"]["ready_fact_ids"]
     admissible = machine["selection"]["admissible_fact_ids"]
     reasons = Counter(reason for row in machine["selection"]["rationale"] for reason in row["rejected_by"])
+    clusters: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for fact_id in ready:
+        row = catalog_by_fact.get(fact_id)
+        if row is not None:
+            clusters[(row["family"], row["statement_shape"])].append(fact_id)
+    catalog_clusters = []
+    for (family, statement_shape), fact_ids in sorted(clusters.items()):
+        ids = sorted(fact_ids)
+        components = sorted({catalog_by_fact[fact_id]["dependency_component_id"] for fact_id in ids})
+        catalog_clusters.append(
+            {
+                "family": family,
+                "statement_shape": statement_shape,
+                "ready_fact_ids": ids,
+                "ready_fact_count": len(ids),
+                "dependency_component_ids": components,
+            }
+        )
+    cataloged = sorted(fact_id for fact_id in ready if fact_id in catalog_by_fact)
+    uncataloged = sorted(set(ready).difference(cataloged))
     return {
         "schema_version": 1,
         "kind": "axeyum-autogenesis-capability-gap-projection",
@@ -89,6 +119,7 @@ def build() -> dict[str, Any]:
             "frontier_sha256": machine["frontier_sha256"],
             "ledger_sha256": machine["ledger"]["ledger_sha256"],
             "operation_registry_sha256": machine["policy"]["operation_registry_sha256"],
+            "reviewed_fact_catalog_sha256": catalog.get("catalog_sha256"),
             "trust_boundary": "ranking and producer-investigation input only; never proof or admission authority",
         },
         "census": {
@@ -99,8 +130,12 @@ def build() -> dict[str, Any]:
                 {"reason": reason, "fact_count": reasons[reason]}
                 for reason in sorted(reasons)
             ],
+            "cataloged_ready_facts": len(cataloged),
+            "uncataloged_ready_facts": len(uncataloged),
         },
         "groups": rendered_groups,
+        "catalog_clusters": catalog_clusters,
+        "uncataloged_ready_fact_ids": uncataloged,
     }
 
 

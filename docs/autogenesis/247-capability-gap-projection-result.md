@@ -19,6 +19,13 @@ registry digests used for the observation. Its grouping is a ranking and
 producer-investigation input only; it cannot authorize proof search, theorem
 admission, or a ledger transition.
 
+For the reviewed Mathlib population it additionally groups ready facts by the
+outcome-blind `family` and `statement_shape` labels already pinned in the fact
+catalog, retaining dependency-component identities. This supplies a safe first
+search-space reduction: a proposed producer can be evaluated against a family
+shape cluster without treating neighboring proof bodies or target outcomes as
+available information.
+
 ```sh
 python3 scripts/validate-autogenesis-capability-gap-projection.py
 python3 -m unittest scripts.tests.test_validate_autogenesis_capability_gap_projection

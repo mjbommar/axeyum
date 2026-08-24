@@ -36,6 +36,12 @@ class CapabilityGapProjectionControls(unittest.TestCase):
         data["groups"][0]["ready_fact_ids"].append(data["groups"][0]["ready_fact_ids"][0])
         self.assertTrue(any("sorted and unique" in error for error in CG.validate(data)))
 
+    def test_catalog_coverage_must_partition_ready_facts(self):
+        data = copy.deepcopy(self.data)
+        data["uncataloged_ready_fact_ids"].append(data["catalog_clusters"][0]["ready_fact_ids"][0])
+        data["uncataloged_ready_fact_ids"].sort()
+        self.assertTrue(any("partition" in error for error in CG.validate(data)))
+
 
 if __name__ == "__main__":
     unittest.main()
