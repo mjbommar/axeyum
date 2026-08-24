@@ -234,6 +234,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.two_le_succ_or_eq_one,
         p.least_divisor_search,
         p.exists_prime_dvd,
+        p.coprime_of_lt_prime,
         p.choose_zero_right,
         p.choose_succ_succ,
         p.zero_choose_succ,
@@ -3986,7 +3987,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        24 + 151,
+        24 + 152,
         "every promised definition and theorem must be rendered"
     );
 }

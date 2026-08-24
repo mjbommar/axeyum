@@ -460,6 +460,14 @@ pub struct IntPrelude {
     /// [`Self::emod_eq_zero_iff_dvd`] is: no proved bound on `emod`'s magnitude
     /// for a negative modulus exists yet.
     pub mod_eq_iff_dvd: NameId,
+    /// `modEq_of_nat_modEq : ∀ (d a b : Nat), Nat.modEq d a b → 0 < d →
+    /// ModEq (ofNat d) (ofNat a) (ofNat b)` — transport a `Nat.modEq`
+    /// congruence (balanced witnesses) into `Int.ModEq`, the ℕ→ℤ direction
+    /// (the reverse needs `emod`'s magnitude bound for a witness pointing the
+    /// other way, which is not what this route builds). The `0 < d`
+    /// hypothesis is threaded through to `modEq_iff_dvd`, which needs it for
+    /// the same reason every congruence in this module does.
+    pub mod_eq_of_nat_mod_eq: NameId,
     /// `ModEq.add_right : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (a+c) (b+c)`.
     pub mod_eq_add_right: NameId,
     /// `ModEq.add_left : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (c+a) (c+b)`.
@@ -787,6 +795,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_symm: child(kernel, "modEq_symm"),
         mod_eq_trans: child(kernel, "modEq_trans"),
         mod_eq_iff_dvd: child(kernel, "modEq_iff_dvd"),
+        mod_eq_of_nat_mod_eq: child(kernel, "modEq_of_nat_modEq"),
         mod_eq_add_right: child(kernel, "modEq_add_right"),
         mod_eq_add_left: child(kernel, "modEq_add_left"),
         mod_eq_mul_left: child(kernel, "modEq_mul_left"),
@@ -931,6 +940,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modeq::declare_modeq_symm(&mut d)?;
         modeq::declare_modeq_trans(&mut d)?;
         modeq::declare_modeq_iff_dvd(&mut d)?;
+        modeq::declare_modeq_of_nat_modeq(&mut d)?;
         modeq::declare_modeq_add_right(&mut d)?;
         modeq::declare_modeq_add_left(&mut d)?;
         modeq::declare_modeq_mul_left(&mut d)?;

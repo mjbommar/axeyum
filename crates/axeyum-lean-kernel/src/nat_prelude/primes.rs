@@ -957,3 +957,108 @@ pub(super) fn declare_euclid(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
 
     Ok(())
 }
+
+/// `Nat.coprime_of_lt_prime :
+/// ∀ p a, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) → 0 < a → a < p → gcd a p = 1`.
+///
+/// Every nonzero residue below a prime is invertible modulo it — the fact
+/// that makes ℤ/p a field. `Coprime` has no separate name over `Nat` in this
+/// prelude, matching `coprime_of_bezout_one`'s own convention: it is spelled
+/// `gcd a p = 1` directly.
+///
+/// Route: `g := gcd a p` divides `p` (`gcd_dvd_right`), so primality's
+/// divisor clause forces `g = 1 ∨ g = p`. The `g = 1` branch is the goal
+/// directly. The `g = p` branch transports `g ∣ a` (`gcd_dvd_left`) along
+/// `g = p` into `p ∣ a`, which with `0 < a` (defeq `1 ≤ a`, `Nat.lt`
+/// unfolding to `Nat.le` composed with `succ`) gives `p ≤ a` via
+/// `le_of_dvd` — contradicting `a < p` through `lt_of_le_of_lt` and
+/// `lt_irrefl`, so that branch is vacuous (`False.rec`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_coprime_of_lt_prime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_of_lt_prime, 2, &|d, v| {
+        let (p_var, a_var) = (v[0], v[1]);
+        let zero = d.zero();
+        let one = d.num(1);
+
+        let prime_ty = prime_condition(d, &p, p_var);
+        let pos_ty = d.lt(zero, a_var);
+        let ub_ty = d.lt(a_var, p_var);
+
+        let common = d.gcd(a_var, p_var);
+        let concl = d.eq(common, one);
+
+        let stmt = {
+            let inner = d.arrow(ub_ty, concl);
+            let with_pos = d.arrow(pos_ty, inner);
+            d.arrow(prime_ty, with_pos)
+        };
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+        let pos_fv = d.fresh_fvar();
+        let pos_hyp = d.kernel().fvar(pos_fv);
+        let ub_fv = d.fresh_fvar();
+        let ub_hyp = d.kernel().fvar(ub_fv);
+
+        let two_le = {
+            let two = d.num(2);
+            d.le(two, p_var)
+        };
+        let clause = {
+            // Rebuilt to match `prime_condition`'s own inner shape exactly.
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hyp = d.dvd(x, p_var);
+            let is_one = d.eq(x, one);
+            let is_p = d.eq(x, p_var);
+            let disjunction = d.const_app(p.logic.or, &[is_one, is_p]);
+            let inner = d.arrow(hyp, disjunction);
+            let nat = d.nat_ty();
+            d.pi_fv(x_fv, nat, inner)
+        };
+        let clause_proof = and_right(d, two_le, clause, prime_hyp);
+
+        let dvd_g_p = d.lemma(p.gcd_dvd_right, &[a_var, p_var]);
+        let disj = d.apply(clause_proof, &[common, dvd_g_p]);
+
+        let is_one_ty = d.eq(common, one);
+        let is_p_ty = d.eq(common, p_var);
+
+        let on_one = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            d.lam_fv(h_fv, is_one_ty, h)
+        };
+
+        let on_p = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let dvd_g_a = d.lemma(p.gcd_dvd_left, &[a_var, p_var]);
+            let motive = d.eq_motive(common, &|d, x| d.dvd(x, a_var));
+            let dvd_p_a = d.transport(common, motive, dvd_g_a, p_var, h);
+
+            let p_le_a = d.lemma(p.le_of_dvd, &[p_var, a_var, pos_hyp, dvd_p_a]);
+            let contra = d.lemma(p.lt_of_le_of_lt, &[p_var, a_var, p_var, p_le_a, ub_hyp]);
+            let false_pf = d.lemma(p.lt_irrefl, &[p_var, contra]);
+            let body = absurd(d, &p, concl, false_pf);
+            d.lam_fv(h_fv, is_p_ty, body)
+        };
+
+        let proof_body = or_cases(d, &p, is_one_ty, is_p_ty, concl, on_one, on_p, disj);
+
+        let with_ub = d.lam_fv(ub_fv, ub_ty, proof_body);
+        let with_pos = d.lam_fv(pos_fv, pos_ty, with_ub);
+        let proof = d.lam_fv(prime_fv, prime_ty, with_pos);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
