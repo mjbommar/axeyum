@@ -453,6 +453,7 @@ autogenesis-knowledge-derived-freshness:
     python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
     python3 scripts/gen-autogenesis-kernel-semantic-review-queue.py --check
     python3 scripts/gen-autogenesis-obstruction-projection.py --check
+    python3 scripts/gen-autogenesis-capability-candidate-demand.py --check
     python3 scripts/gen-autogenesis-transport-projection.py --check
     python3 scripts/gen-autogenesis-scheduler-observations.py --check
     python3 scripts/gen-autogenesis-capability-gap-projection.py --check

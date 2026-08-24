@@ -71,6 +71,11 @@ The obstruction graph now distinguishes four explicitly candidate capabilities
 from absent or active mechanisms: checked declaration import, typed transport,
 bounded reproducible export, and checked declaration reuse. They account for
 nine measured obstruction families but grant no producer or admission authority.
+The derived demand view now ranks those candidates only by retained obstruction
+family and episode counts: declaration/package import addresses three families
+and eleven episodes, while reproducible export addresses three and seven.
+This is investigative evidence, not an implementation mandate or proof-yield
+forecast.
 Next capability work must expand general-producer and adapter coverage over the
 train/development queue, compare it against that fixed observation, and only
 then evaluate an independently sealed held-out partition—not add more
@@ -111,3 +116,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `bb74b057c` | Expose active reviewed kernel-theorem semantic anchors as a separately validated concept-coverage dimension without mixing them into fact or held-out populations |
 | 2026-08-24 | `32c75dfab` | Review the representative-independence laws for constructive-real negation, addition, and multiplication as separate partial well-definedness anchors |
 | 2026-08-24 | `fb53d3a2f` | Turn four recurring measured obstruction patterns into explicit non-executable candidate capabilities, with output status checked against the overlay |
+| 2026-08-24 | pending | Derive a fail-closed candidate-capability demand ranking from exact retained obstruction-family and episode counts |

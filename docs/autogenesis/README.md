@@ -103,6 +103,7 @@ compounding, not automation theatre.
 | [Three-dimensional concept coverage](258-concept-coverage-kernel-anchors.md) | How are topic membership, fact formalization, and kernel semantic anchors reported without collapsing their assurance? |
 | [Constructive-real well-definedness batch](259-kernel-well-definedness-batch.md) | Which representative-independence laws make constructed-real operations meaningful? |
 | [Obstruction capability candidates](260-obstruction-capability-candidates.md) | Which measured producer blockers require a proposed capability rather than another isolated theorem? |
+| [Candidate capability demand](261-capability-candidate-demand.md) | Which proposed capability removes the largest observed obstruction cluster without converting that count into authority? |
 | [Target architecture](01-target-architecture.md) | What objects, boundaries, and feedback loops must exist? |
 | [Phased roadmap](02-phased-roadmap.md) | What phases and concrete tasks get from here to the horizon? |
 | [Workstreams and sequencing](03-workstreams-and-sequencing.md) | How do bottom-up and top-down work compose without starving each other? |
