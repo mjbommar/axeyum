@@ -97,6 +97,7 @@ compounding, not automation theatre.
 | Document | Question answered |
 |---|---|
 | [Current state and gaps](00-current-state-and-gaps.md) | What exists now, and what is genuinely absent? |
+| [Kernel semantic anchors](255-kernel-semantic-anchor-batch.md) | How do a few reviewed kernel theorems enrich the graph without pretending the whole library is classified? |
 | [Target architecture](01-target-architecture.md) | What objects, boundaries, and feedback loops must exist? |
 | [Phased roadmap](02-phased-roadmap.md) | What phases and concrete tasks get from here to the horizon? |
 | [Workstreams and sequencing](03-workstreams-and-sequencing.md) | How do bottom-up and top-down work compose without starving each other? |

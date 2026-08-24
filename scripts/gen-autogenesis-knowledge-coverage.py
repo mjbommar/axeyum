@@ -43,22 +43,32 @@ def main() -> int:
         if link["relation"] == "established-by"
         and endpoint(link, "target")[2] in multi_ids
     }
+    # F1/F5 remain fact-ledger coverage measures.  Kernel theorem anchors are
+    # deliberately separate: their presence must not turn a declaration name
+    # into a fact, inflate producer credit, or imply it has a transport chain.
     formalizes = [link for link in links if link["relation"] == "formalizes"]
-    mapped_facts = {endpoint(link, "source")[2] for link in formalizes}
+    fact_formalizes = [
+        link for link in formalizes if endpoint(link, "source")[1] == "fact"
+    ]
+    kernel_formalizes = [
+        link for link in formalizes
+        if endpoint(link, "source")[1] == "kernel-declaration"
+    ]
+    mapped_facts = {endpoint(link, "source")[2] for link in fact_formalizes}
     mapped_applicable = applicable & mapped_facts
     concepts = {
         endpoint(link, "target")[2]
-        for link in formalizes if endpoint(link, "target")[1] == "concept"
+        for link in fact_formalizes if endpoint(link, "target")[1] == "concept"
     }
     encounters = {
         endpoint(link, "target")[2]
-        for link in formalizes if endpoint(link, "target")[1] == "encounter"
+        for link in fact_formalizes if endpoint(link, "target")[1] == "encounter"
     }
     techniques = {
         endpoint(link, "target")[2]
         for link in links if link["relation"] == "uses-technique"
     }
-    coverage = Counter(link.get("qualifiers", {}).get("coverage", "unqualified") for link in formalizes)
+    coverage = Counter(link.get("qualifiers", {}).get("coverage", "unqualified") for link in fact_formalizes)
     complete = sum(
         link.get("qualifiers", {}).get("completeness") == "complete" for link in formalizes
     )
@@ -66,8 +76,8 @@ def main() -> int:
     transport_complete = {
         row["source_fact_id"] for row in transport["chains"] if row["status"] == "complete"
     }
-    exact = sum(link.get("qualifiers", {}).get("coverage") == "exact-formalization" for link in formalizes)
-    supporting = sum(link.get("qualifiers", {}).get("coverage") == "supporting-law" for link in formalizes)
+    exact = sum(link.get("qualifiers", {}).get("coverage") == "exact-formalization" for link in fact_formalizes)
+    supporting = sum(link.get("qualifiers", {}).get("coverage") == "supporting-law" for link in fact_formalizes)
     autonomous = mapped_facts & credited
     lines = [
         "# Generated Autogenesis knowledge coverage",
@@ -99,6 +109,7 @@ def main() -> int:
         f"| Formally mapped facts credited to a reusable producer | {len(autonomous)} |",
         f"| Formally mapped facts with a complete hash-bound transport chain | {len(mapped_facts & transport_complete)} |",
         f"| Formally mapped facts without a complete transport chain | {len(mapped_facts - transport_complete)} |",
+        f"| Reviewed kernel-theorem semantic anchors (separate population) | {len(kernel_formalizes)} |",
         "",
         "## Formal-content qualifiers",
         "",

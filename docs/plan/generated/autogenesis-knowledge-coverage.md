@@ -27,6 +27,7 @@
 | Formally mapped facts credited to a reusable producer | 7 |
 | Formally mapped facts with a complete hash-bound transport chain | 9 |
 | Formally mapped facts without a complete transport chain | 0 |
+| Reviewed kernel-theorem semantic anchors (separate population) | 3 |
 
 ## Formal-content qualifiers
 

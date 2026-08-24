@@ -73,9 +73,9 @@
     },
     {
       "id": "formalizes",
-      "source_kinds": ["fact"],
+      "source_kinds": ["fact", "kernel-declaration"],
       "target_kinds": ["concept", "encounter"],
-      "semantics": "The formal proposition supplies exact or qualified formal content for the referenced educational concept or encounter."
+      "semantics": "A checked fact or accepted kernel theorem supplies exact or qualified formal content for the referenced educational concept or encounter. A kernel declaration source must be a theorem; definitions and declarations with a nonempty axiom footprint are not eligible for this relation."
     },
     {
       "id": "uses-technique",
@@ -384,6 +384,39 @@
       "reason": "The theorem gives a checked symmetric congruence law, a specific structural property of modular arithmetic rather than complete topic coverage.",
       "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-comm-1e4bcc07.json", "../math-education/graph/concepts/modular-arithmetic.md"] },
       "qualifiers": { "coverage": "relation-law", "law": "symmetric", "completeness": "partial" }
+    },
+    {
+      "id": "L:kernel-decidable-em-formalizes-excluded-middle",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Decidable.em" },
+      "target": { "namespace": "math-education", "kind": "concept", "id": "C:excluded-middle", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The accepted theorem proves p ∨ ¬p only when an explicit Decidable p witness is supplied. It is a constructive, decidability-scoped instance of excluded middle, not a global classical axiom.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-kernel/src/prelude.rs", "artifacts/autogenesis/kernel-dependency-projection-v1.json", "../math-education/graph/concepts/excluded-middle.md"] },
+      "qualifiers": { "coverage": "supporting-law", "scope": "propositions with an explicit Decidable witness", "excludes": "unrestricted classical excluded middle", "completeness": "partial" }
+    },
+    {
+      "id": "L:kernel-complex-normsq-pow-formalizes-complex-number",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Complex.normSq_pow" },
+      "target": { "namespace": "math-education", "kind": "concept", "id": "C:complex-number", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The accepted theorem states that complex squared norm commutes with natural powers. This is one algebraic law of the constructed complex-number representation, not coverage of the full concept or its analytic applications.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-kernel/src/complex.rs", "artifacts/autogenesis/kernel-dependency-projection-v1.json", "../math-education/graph/concepts/complex-number.md"] },
+      "qualifiers": { "coverage": "supporting-law", "topic": "squared norm and powers", "completeness": "partial" }
+    },
+    {
+      "id": "L:kernel-circumcentre-unique-formalizes-circle",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "CPoint.circumcentre_unique" },
+      "target": { "namespace": "math-education", "kind": "concept", "id": "C:circle", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "For three non-collinear constructed points, the accepted theorem proves uniqueness of a point equidistant from all three. It is one formal circumcentre law supporting the equal-distance characterization of circles, not a formalization of elementary circle geometry as a whole.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs", "artifacts/autogenesis/kernel-dependency-projection-v1.json", "../math-education/graph/concepts/circle.md"] },
+      "qualifiers": { "coverage": "supporting-law", "topic": "unique circumcentre of a non-collinear triple", "completeness": "partial" }
     }
   ]
 }

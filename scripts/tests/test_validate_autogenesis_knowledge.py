@@ -63,6 +63,18 @@ class ValidateAutogenesisKnowledgeTests(unittest.TestCase):
         doc["links"][2]["target"]["id"] = "authoritative-mathlib-modeq-family-v1"
         self.assertTrue(any("not credited by the fact evidence" in error for error in self.errors_for(doc)))
 
+    def test_unknown_kernel_formalization_source_fails(self):
+        doc = copy.deepcopy(self.doc)
+        link = next(link for link in doc["links"] if link["id"] == "L:kernel-decidable-em-formalizes-excluded-middle")
+        link["source"]["id"] = "Kernel.not_a_declaration"
+        self.assertTrue(any("unknown kernel declaration" in error for error in self.errors_for(doc)))
+
+    def test_non_theorem_kernel_formalization_source_fails(self):
+        doc = copy.deepcopy(self.doc)
+        link = next(link for link in doc["links"] if link["id"] == "L:kernel-decidable-em-formalizes-excluded-middle")
+        link["source"]["id"] = "Decidable.byCases"
+        self.assertTrue(any("kernel formalizes source must be a theorem" in error for error in self.errors_for(doc)))
+
 
 if __name__ == "__main__":
     unittest.main()

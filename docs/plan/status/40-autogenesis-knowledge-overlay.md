@@ -42,6 +42,12 @@ input boundary before any general-producer outcome exists.
 The matching result contract now rejects incomplete frontiers, non-monotone
 funnels, unbound protocols, and an accepted must-decline control; no producer
 result has yet been claimed.
+Three newly constructed kernel theorems now have narrowly reviewed, explicitly
+partial concept anchors: decidability-scoped excluded middle, a complex
+squared-norm power law, and unique circumcentre geometry. The overlay rejects
+a missing, non-theorem, or assumption-bearing kernel source; the coverage census
+keeps these kernel anchors separate so they cannot inflate fact, producer-credit,
+or transport coverage.
 Next capability work must expand general-producer and adapter coverage over the
 train/development queue, compare it against that fixed observation, and only
 then evaluate an independently sealed held-out partition—not add more
@@ -76,3 +82,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `432dcef75` | Add the fail-closed future-result schema and validator that requires complete safe-frontier accounting and rejects accepted false controls |
 | 2026-08-24 | `9aa74f0d3` | Gate the producer-result contract's mutation tests in the aggregate knowledge checks without fabricating an execution result |
 | 2026-08-24 | `e256492c2` | Refresh the kernel-derived snapshot after Decidable and CPoint construction: 1,142 declarations, 869 theorems, and 4,127 direct theorem edges |
+| 2026-08-24 | pending | Add three manually reviewed, empty-footprint kernel-theorem semantic anchors and reject accidental inflation of fact coverage by the new source population |

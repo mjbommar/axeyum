@@ -13,7 +13,7 @@
     {
       "admission_authority": false,
       "applicable_facts": 4,
-      "complete_transport_chains": 0,
+      "complete_transport_chains": 4,
       "evidence_credited_facts": 4,
       "observation_kind": "mechanically-observed",
       "operation_id": "authoritative-mathlib-modeq-family-v1",

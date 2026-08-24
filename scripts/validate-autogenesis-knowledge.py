@@ -260,6 +260,23 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
                         f"link {link_id}: a single formalizes edge must be partial; "
                         "complete concept coverage belongs only in a derived census"
                     )
+            if source.get("kind") == "kernel-declaration":
+                declaration = next(
+                    (
+                        row for row in (kernel_projection or {}).get("declarations", [])
+                        if isinstance(row, dict) and row.get("id") == source.get("id")
+                    ),
+                    None,
+                )
+                if declaration is not None and declaration.get("declaration_kind") != "theorem":
+                    errors.append(
+                        f"link {link_id}: kernel formalizes source must be a theorem, "
+                        f"not {declaration.get('declaration_kind')!r}"
+                    )
+                if declaration is not None and declaration.get("axiom_footprint_size") != 0:
+                    errors.append(
+                        f"link {link_id}: kernel formalizes source must have an empty axiom footprint"
+                    )
 
     return errors, warnings
 
