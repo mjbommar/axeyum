@@ -97,6 +97,13 @@ compounding, not automation theatre.
 | Document | Question answered |
 |---|---|
 | [Current state and gaps](00-current-state-and-gaps.md) | What exists now, and what is genuinely absent? |
+| [Kernel semantic anchors](255-kernel-semantic-anchor-batch.md) | How do a few reviewed kernel theorems enrich the graph without pretending the whole library is classified? |
+| [Kernel semantic review queue](256-kernel-semantic-review-queue.md) | How can review scale from a hand-picked batch without confusing graph centrality with mathematical meaning? |
+| [First queue-driven review batch](257-kernel-equivalence-relation-batch.md) | What does a high-centrality, three-law kernel batch add when every mapping is still qualified and partial? |
+| [Three-dimensional concept coverage](258-concept-coverage-kernel-anchors.md) | How are topic membership, fact formalization, and kernel semantic anchors reported without collapsing their assurance? |
+| [Constructive-real well-definedness batch](259-kernel-well-definedness-batch.md) | Which representative-independence laws make constructed-real operations meaningful? |
+| [Obstruction capability candidates](260-obstruction-capability-candidates.md) | Which measured producer blockers require a proposed capability rather than another isolated theorem? |
+| [Candidate capability demand](261-capability-candidate-demand.md) | Which proposed capability removes the largest observed obstruction cluster without converting that count into authority? |
 | [Target architecture](01-target-architecture.md) | What objects, boundaries, and feedback loops must exist? |
 | [Phased roadmap](02-phased-roadmap.md) | What phases and concrete tasks get from here to the horizon? |
 | [Workstreams and sequencing](03-workstreams-and-sequencing.md) | How do bottom-up and top-down work compose without starving each other? |
@@ -248,6 +255,18 @@ compounding, not automation theatre.
 | [The real adapter closure and what it costs](236-the-real-adapter-closure-and-what-it-costs.md) | Median 86 trusted theorems per statement, 1,615 distinct; a greedy curve showing 200 theorems buys 75% of the population and the last 28 rows cost 1,400 more. |
 | [Foundations progress and the generated blockers](237-foundations-progress-and-the-generated-blockers.md) | Twenty-one Nat lemmas moved top-50 coverage 8 → 28; what remains is kernel-generated, not hand-provable. |
 | [The constructed reals became the reals](238-the-constructed-reals-became-the-reals.md) | ℝ gained Archimedean, density, cotransitivity and completeness in one day, all axiom-free — and why each was cheaper than expected. |
+| [Knowledge overlay and fill plan](243-knowledge-overlay-and-fill-plan.md) | How do facts, producers, capabilities, kernel dependencies, and a pinned read-only concept graph become typed scheduler knowledge without changing existing schemas or colliding with theorem construction? |
+| [Kernel dependency projection](244-kernel-dependency-projection-result.md) | Which constructed declarations and direct proof-term dependencies can the scheduler observe without rewriting the fact ledger? |
+| [Obstruction projection](245-obstruction-projection-result.md) | Which retained producer-decline families have measured blockers, without inventing remedies or resolutions? |
+| [Transport projection](246-transport-projection-result.md) | Which source-to-admission chains are hash-bound and complete, rather than merely name-matched? |
+| [Capability-gap projection](247-capability-gap-projection-result.md) | Which dependency-ready fact groups lack a registered producer, and why is autonomous dispatch currently refused? |
+| [Family-to-concept crosswalk](248-family-concept-crosswalk.md) | How can frozen statement families receive pinned mathematical-topic labels without being mistaken for fact-level formalizations? |
+| [Separated concept coverage](249-concept-coverage-projection.md) | Which concepts have family-topic or qualified fact-level coverage, with neither mistaken for complete formal coverage? |
+| [Natural ModEq capability selection](250-natural-modeq-capability-selection.md) | Which bounded, dependency-ready natural modular-equivalence core should test whether the existing general mechanism can earn a new source-bound operation? |
+| [Outcome-safe producer observations](251-producer-outcome-observations.md) | What did the fixed producer actually do across the sealed train/development corpus, grouped by reviewed family, statement shape, and abstraction boundary without reading held-out outcomes? |
+| [Partition-safe producer evaluation frontier](252-producer-evaluation-frontier.md) | Which dependency-ready train/development facts may a future general producer receive, with held-out facts excluded before dispatch? |
+| [General-producer evaluation protocol](253-producer-evaluation-protocol.md) | Which funnel, decline taxonomy, negative-control rule, and forbidden inputs must be fixed before a general producer can be evaluated? |
+| [Producer-evaluation result contract](254-producer-evaluation-result-contract.md) | What must a future producer result account for before its funnel or successes can be trusted? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

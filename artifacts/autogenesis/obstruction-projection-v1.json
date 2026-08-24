@@ -1,0 +1,1105 @@
+{
+  "census": {
+    "candidate_capability_statuses": {
+      "candidate-in-knowledge-overlay": 9,
+      "not-applicable": 11
+    },
+    "episodes": 47,
+    "obstructions": 20
+  },
+  "derivation": {
+    "knowledge_overlay_path": "artifacts/autogenesis/knowledge-overlay-v1.json",
+    "method": "mechanically-observed",
+    "scope": "retained top-level decline objects under artifacts/autogenesis",
+    "trust_boundary": "obstructions rank investigation only; they never authorize proof admission"
+  },
+  "episodes": [
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "coprime-factor-cancellation-generic",
+      "first_stage": "module-resolution-before-elaboration",
+      "goal": "axeyum-autogenesis-coprime-factor-cancellation-generic-result",
+      "id": "E:coprime-factor-cancellation-generic-result-v1",
+      "observed_class": "unclassified",
+      "obstruction_category": "unclassified",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/coprime-factor-cancellation-generic-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-clean-instance-composition",
+      "first_stage": "official-target-composition-after-clean-support-composition",
+      "goal": "Int.fib_neg_natCast",
+      "id": "E:int-fib-neg-clean-instance-composition-result-v3",
+      "observed_class": "TypeShapeMismatch",
+      "obstruction_category": "typeshapemismatch",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-clean-instance-composition-result-v3.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-clean-outer-residual-composition",
+      "first_stage": "outer-residual-composition-after-clean-natcast-support",
+      "goal": "Lean.RArray",
+      "id": "E:int-fib-neg-clean-outer-residual-composition-result-v1",
+      "observed_class": "UnsupportedMissingDeclaration",
+      "obstruction_category": "unsupportedmissingdeclaration",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-clean-outer-residual-composition-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-concrete-branches-composition",
+      "first_stage": "input-assurance",
+      "goal": "axeyum-autogenesis-int-fib-neg-concrete-branches-composition-result",
+      "id": "E:int-fib-neg-concrete-branches-composition-result-v2",
+      "observed_class": "unclassified",
+      "obstruction_category": "unclassified",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-result-v2.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-concrete-parity-composition",
+      "first_stage": "natural-double-negation-composition",
+      "goal": "Axeyum.Autogenesis.intNegNatDoubleV2",
+      "id": "E:int-fib-neg-concrete-parity-composition-result-v3",
+      "observed_class": "NoAdditions",
+      "obstruction_category": "noadditions",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-result-v3.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-function-residual-clean-composition",
+      "first_stage": "function-residual-composition-after-clean-natcast-support",
+      "goal": "Lean.RArray",
+      "id": "E:int-fib-neg-function-residual-clean-composition-result-v1",
+      "observed_class": "UnsupportedMissingDeclaration",
+      "obstruction_category": "unsupportedmissingdeclaration",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-function-residual",
+      "first_stage": "lean-project-root-preflight",
+      "goal": "axeyum-autogenesis-int-fib-neg-function-residual-result",
+      "id": "E:int-fib-neg-function-residual-result-v1",
+      "observed_class": "unclassified",
+      "obstruction_category": "unclassified",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-function-residual-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-natcast-decision-free",
+      "first_stage": "first-residual-export-module-resolution",
+      "goal": "axeyum-autogenesis-int-fib-neg-natcast-decision-free-join-result",
+      "id": "E:int-fib-neg-natcast-decision-free-result-v1",
+      "observed_class": "ExporterModuleSearchPath",
+      "obstruction_category": "exportermodulesearchpath",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-natcast-exact-composition",
+      "first_stage": "bridge-import-resolution-before-elaboration",
+      "goal": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-result",
+      "id": "E:int-fib-neg-natcast-exact-composition-result-v1",
+      "observed_class": "LeanModuleSearchPath",
+      "obstruction_category": "leanmodulesearchpath",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-natcast-exact-composition",
+      "first_stage": "bridge-input-root-validation-before-elaboration",
+      "goal": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-result",
+      "id": "E:int-fib-neg-natcast-exact-composition-result-v2",
+      "observed_class": "LeanPackageRoot",
+      "obstruction_category": "leanpackageroot",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v2.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-natcast-exact-composition",
+      "first_stage": "bridge-elaboration",
+      "goal": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-result",
+      "id": "E:int-fib-neg-natcast-exact-composition-result-v3",
+      "observed_class": "MissingTargetOwnedDefinition",
+      "obstruction_category": "missingtargetowneddefinition",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v3.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-natcast-exact-composition",
+      "first_stage": "bridge-footprint-gate-before-driver-code",
+      "goal": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-result",
+      "id": "E:int-fib-neg-natcast-exact-composition-result-v4",
+      "observed_class": "PropextBearingDecisionProvider",
+      "obstruction_category": "propextbearingdecisionprovider",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v4.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "int-fib-neg-natcast-exact-composition",
+      "first_stage": "bridge-elaboration",
+      "goal": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-result",
+      "id": "E:int-fib-neg-natcast-exact-composition-result-v6",
+      "observed_class": "DecisionWitnessDependentTypeShape",
+      "obstruction_category": "decisionwitnessdependenttypeshape",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v6.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "mathlib-int-fib-recurrence-corollary-composition",
+      "first_stage": "compose recurrence closure into residual base",
+      "goal": "Nat.le",
+      "id": "E:mathlib-int-fib-recurrence-corollary-composition-result-v1",
+      "observed_class": "unclassified",
+      "obstruction_category": "unclassified",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-composition-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "mathlib-int-fib-recurrence-corollary-composition",
+      "first_stage": "post-specialization direct-dependency assertion",
+      "goal": "axeyum-autogenesis-exact-theorem-composition-result",
+      "id": "E:mathlib-int-fib-recurrence-corollary-composition-result-v2",
+      "observed_class": "unclassified",
+      "obstruction_category": "unclassified",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-composition-result-v2.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "mathlib-nat-fib-pos-exact",
+      "first_stage": "recurrence composition into core-support base",
+      "goal": "Nat.fib",
+      "id": "E:mathlib-nat-fib-pos-exact-result-v11",
+      "observed_class": "RootIsNotTheorem",
+      "obstruction_category": "rootisnottheorem",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/mathlib-nat-fib-pos-exact-result-v11.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "mathlib-nat-fib-pos-exact",
+      "first_stage": "target capsule write",
+      "goal": "axeyum-nat-fib-pos-exact-result-v13",
+      "id": "E:mathlib-nat-fib-pos-exact-result-v13",
+      "observed_class": "NotFound",
+      "obstruction_category": "notfound",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/mathlib-nat-fib-pos-exact-result-v13.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "mathlib-nat-fib-pos-exact",
+      "first_stage": "core positivity composition into recurrence base",
+      "goal": "Nat.le",
+      "id": "E:mathlib-nat-fib-pos-exact-result-v9",
+      "observed_class": "UnsupportedMissingDeclaration",
+      "obstruction_category": "unsupportedmissingdeclaration",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/mathlib-nat-fib-pos-exact-result-v9.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "mathlib-nat-gcd-greatest",
+      "first_stage": "post-input-import-development-helper-initialization",
+      "goal": "axeyum-autogenesis-mathlib-nat-gcd-greatest-result-v1",
+      "id": "E:mathlib-nat-gcd-greatest-result-v1",
+      "observed_class": "MissingUnrelatedDevelopmentRoot",
+      "obstruction_category": "missingunrelateddevelopmentroot",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/mathlib-nat-gcd-greatest-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "mathlib-nat-gcd-greatest",
+      "first_stage": "post-input-import-required-root-resolution",
+      "goal": "axeyum-autogenesis-mathlib-nat-gcd-greatest-result-v2",
+      "id": "E:mathlib-nat-gcd-greatest-result-v2",
+      "observed_class": "MissingSeparatelySealedProofRoot",
+      "obstruction_category": "missingseparatelysealedproofroot",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/mathlib-nat-gcd-greatest-result-v2.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-clean-dvd-antisymm",
+      "first_stage": "not-recorded",
+      "goal": "declare clean divisibility antisymmetry in the imported r091 kernel using NatPrelude handles created in a distinct native kernel",
+      "id": "E:nat-gcd-fib-add-self-clean-dvd-antisymm-result-v1",
+      "observed_class": "UnknownConst",
+      "obstruction_category": "unknownconst",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-clean-dvd-antisymm",
+      "first_stage": "not-recorded",
+      "goal": "construct clean divisibility antisymmetry wholly in the preregistered native kernel",
+      "id": "E:nat-gcd-fib-add-self-clean-dvd-antisymm-result-v2",
+      "observed_class": "MissingDeclaration",
+      "obstruction_category": "missingdeclaration",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-result-v2.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-clean-dvd-antisymm",
+      "first_stage": "not-recorded",
+      "goal": "construct clean divisibility antisymmetry wholly in the preregistered native kernel",
+      "id": "E:nat-gcd-fib-add-self-clean-dvd-antisymm-result-v3",
+      "observed_class": "MissingDeclaration",
+      "obstruction_category": "missingdeclaration",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-result-v3.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-clean-dvd-antisymm",
+      "first_stage": "not-recorded",
+      "goal": "submit clean divisibility antisymmetry after inline native successor positivity",
+      "id": "E:nat-gcd-fib-add-self-clean-dvd-antisymm-result-v4",
+      "observed_class": "TypeMismatch",
+      "obstruction_category": "typemismatch",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-result-v4.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-exact",
+      "first_stage": "rust-clippy-before-executable",
+      "goal": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result",
+      "id": "E:nat-gcd-fib-add-self-exact-result-v1",
+      "observed_class": "unclassified",
+      "obstruction_category": "unclassified",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-exact",
+      "first_stage": "rust-clippy-before-executable",
+      "goal": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v2",
+      "id": "E:nat-gcd-fib-add-self-exact-result-v2",
+      "observed_class": "unclassified",
+      "obstruction_category": "unclassified",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v2.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-exact",
+      "first_stage": "second-capsule-composition-before-local-or-target-submission",
+      "goal": "Nat.mul_zero",
+      "id": "E:nat-gcd-fib-add-self-exact-result-v3",
+      "observed_class": "TypeShapeMismatch",
+      "obstruction_category": "typeshapemismatch",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v3.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-exact",
+      "first_stage": "driver-input-identity-check-before-import",
+      "goal": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v4",
+      "id": "E:nat-gcd-fib-add-self-exact-result-v4",
+      "observed_class": "StaleExecutable",
+      "obstruction_category": "staleexecutable",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v4.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-exact",
+      "first_stage": "fourth-capsule-composition-before-local-or-target-submission",
+      "goal": "Axeyum.Autogenesis.gcdModel_succ",
+      "id": "E:nat-gcd-fib-add-self-exact-result-v5",
+      "observed_class": "TypeShapeMismatch",
+      "obstruction_category": "typeshapemismatch",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v5.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-exact",
+      "first_stage": "coprimality-target-leaf-composition-after-exact-gcd-successor-cut",
+      "goal": "WellFounded.fix",
+      "id": "E:nat-gcd-fib-add-self-exact-result-v6",
+      "observed_class": "TypeShapeMismatch",
+      "obstruction_category": "typeshapemismatch",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v6.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-exact",
+      "first_stage": "official-gcd-zero-left-composition",
+      "goal": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v7",
+      "id": "E:nat-gcd-fib-add-self-exact-result-v7",
+      "observed_class": "NoAdditions",
+      "obstruction_category": "noadditions",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v7.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-exact",
+      "first_stage": "post-check-public-zero-left-compatibility-policy",
+      "goal": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v8",
+      "id": "E:nat-gcd-fib-add-self-exact-result-v8",
+      "observed_class": "CompatibilityClassPolicyMismatch",
+      "obstruction_category": "compatibilityclasspolicymismatch",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v8.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "nat-gcd-fib-add-self-exact",
+      "first_stage": "coprimality-two-target-leaf-composition",
+      "goal": "WellFounded.fix",
+      "id": "E:nat-gcd-fib-add-self-exact-result-v9",
+      "observed_class": "TypeShapeMismatch",
+      "obstruction_category": "typeshapemismatch",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v9.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-coprime-factor-cancellation-composition",
+      "first_stage": "not-recorded",
+      "goal": "compose both clean multiplication leaves into the closed generic kernel",
+      "id": "E:official-coprime-factor-cancellation-composition-result-v1",
+      "observed_class": "NoAdditions",
+      "obstruction_category": "noadditions",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-coprime-factor-cancellation-composition-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-gcd-balanced-bezout-closed",
+      "first_stage": "not-recorded",
+      "goal": "compose accepted generic balanced-Bezout theorem into accepted target-owned gcd support kernel",
+      "id": "E:official-gcd-balanced-bezout-closed-result-v1",
+      "observed_class": "type-shape-mismatch",
+      "obstruction_category": "type-shape-mismatch",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-gcd-balanced-bezout-closed-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-gcd-balanced-bezout-generic-base",
+      "first_stage": "not-recorded",
+      "goal": "compose Nat.mod_lt from r082 into the accepted generic balanced-Bezout kernel",
+      "id": "E:official-gcd-balanced-bezout-generic-base-result-v1",
+      "observed_class": "no-additions",
+      "obstruction_category": "no-additions",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-gcd-balanced-bezout-generic-base-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-gcd-balanced-bezout-official-kernel",
+      "first_stage": "not-recorded",
+      "goal": "compose the accepted generic balanced-Bezout theorem into the official r082 base after both gcd leaves and modulo adapter",
+      "id": "E:official-gcd-balanced-bezout-official-kernel-result-v1",
+      "observed_class": "unsupported-missing-declaration",
+      "obstruction_category": "unsupported-missing-declaration",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-gcd-balanced-bezout-official-kernel-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-gcd-zero-left-reconstruction",
+      "first_stage": "not-recorded",
+      "goal": "independently import the complete-module export",
+      "id": "E:official-gcd-zero-left-reconstruction-result-v1",
+      "observed_class": "resource-limit",
+      "obstruction_category": "resource-limit",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-gcd-zero-left-reconstruction-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-r091-clean-dvd-antisymm",
+      "first_stage": "official-kernel-name-resolution-before-support-submission",
+      "goal": "Nat.mul",
+      "id": "E:official-r091-clean-dvd-antisymm-result-v1",
+      "observed_class": "DeclarationAbsent",
+      "obstruction_category": "declarationabsent",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v1.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-r091-clean-dvd-antisymm",
+      "first_stage": "official-cancellation-composition-before-support-submission",
+      "goal": "Acc",
+      "id": "E:official-r091-clean-dvd-antisymm-result-v2",
+      "observed_class": "UnsupportedMissingDeclaration",
+      "obstruction_category": "unsupportedmissingdeclaration",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v2.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-r091-clean-dvd-antisymm",
+      "first_stage": "bootstrap-composition-before-cancellation-or-support",
+      "goal": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result-v3",
+      "id": "E:official-r091-clean-dvd-antisymm-result-v3",
+      "observed_class": "NoAdditions",
+      "obstruction_category": "noadditions",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v3.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-r091-clean-dvd-antisymm",
+      "first_stage": "official-cancellation-target-leaf-composition-before-support-submission",
+      "goal": "Acc",
+      "id": "E:official-r091-clean-dvd-antisymm-result-v4",
+      "observed_class": "UnsupportedMissingDeclaration",
+      "obstruction_category": "unsupportedmissingdeclaration",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v4.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-r091-clean-dvd-antisymm",
+      "first_stage": "support-builder-initialization-after-successful-cancellation-composition",
+      "goal": "Iff",
+      "id": "E:official-r091-clean-dvd-antisymm-result-v5",
+      "observed_class": "MissingDeclaration",
+      "obstruction_category": "missingdeclaration",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v5.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-r091-clean-dvd-antisymm",
+      "first_stage": "official-le-of-dvd-handle-resolution-after-eq-zero-ready",
+      "goal": "Nat.one_le_right_of_mul",
+      "id": "E:official-r091-clean-dvd-antisymm-result-v6",
+      "observed_class": "MissingDeclaration",
+      "obstruction_category": "missingdeclaration",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v6.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-r091-clean-dvd-antisymm",
+      "first_stage": "official-le-of-dvd-handle-resolution-after-positive-factor-ready",
+      "goal": "Nat.mul_le_mul_left",
+      "id": "E:official-r091-clean-dvd-antisymm-result-v7",
+      "observed_class": "MissingDeclaration",
+      "obstruction_category": "missingdeclaration",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v7.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-r091-clean-dvd-antisymm",
+      "first_stage": "official-multiplicative-monotonicity-submission",
+      "goal": "Nat.le.rec",
+      "id": "E:official-r091-clean-dvd-antisymm-result-v8",
+      "observed_class": "UniverseArityMismatch",
+      "obstruction_category": "universearitymismatch",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v8.json"
+    },
+    {
+      "adapter_outcome": "not-recorded",
+      "checker_outcome": "not-reached",
+      "family": "official-r091-clean-dvd-antisymm",
+      "first_stage": "official-order-antisymmetry-submission",
+      "goal": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result-v9",
+      "id": "E:official-r091-clean-dvd-antisymm-result-v9",
+      "observed_class": "TypeMismatch",
+      "obstruction_category": "typemismatch",
+      "partial_kernel_published": false,
+      "producer_outcome": "declined",
+      "reconstruction_outcome": "not-reached",
+      "source_artifact": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v9.json"
+    }
+  ],
+  "kind": "axeyum-autogenesis-obstruction-projection",
+  "obstructions": [
+    {
+      "affected_episodes": [
+        "E:coprime-factor-cancellation-generic-result-v1"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": null,
+      "candidate_capability_internal_status": "not-applicable",
+      "complete_known_blocker_set": [
+        "unclassified"
+      ],
+      "family": "coprime-factor-cancellation-generic",
+      "first_observed_blocker": "unclassified",
+      "id": "O:coprime-factor-cancellation-generic",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:int-fib-neg-clean-instance-composition-result-v3"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": "K:typed-transport-composition",
+      "candidate_capability_internal_status": "candidate-in-knowledge-overlay",
+      "complete_known_blocker_set": [
+        "typeshapemismatch"
+      ],
+      "family": "int-fib-neg-clean-instance-composition",
+      "first_observed_blocker": "typeshapemismatch",
+      "id": "O:int-fib-neg-clean-instance-composition",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:int-fib-neg-clean-outer-residual-composition-result-v1"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": "K:declaration-or-inductive-import",
+      "candidate_capability_internal_status": "candidate-in-knowledge-overlay",
+      "complete_known_blocker_set": [
+        "unsupportedmissingdeclaration"
+      ],
+      "family": "int-fib-neg-clean-outer-residual-composition",
+      "first_observed_blocker": "unsupportedmissingdeclaration",
+      "id": "O:int-fib-neg-clean-outer-residual-composition",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:int-fib-neg-concrete-branches-composition-result-v2"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": null,
+      "candidate_capability_internal_status": "not-applicable",
+      "complete_known_blocker_set": [
+        "unclassified"
+      ],
+      "family": "int-fib-neg-concrete-branches-composition",
+      "first_observed_blocker": "unclassified",
+      "id": "O:int-fib-neg-concrete-branches-composition",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:int-fib-neg-concrete-parity-composition-result-v3"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": "K:checked-declaration-reuse",
+      "candidate_capability_internal_status": "candidate-in-knowledge-overlay",
+      "complete_known_blocker_set": [
+        "noadditions"
+      ],
+      "family": "int-fib-neg-concrete-parity-composition",
+      "first_observed_blocker": "noadditions",
+      "id": "O:int-fib-neg-concrete-parity-composition",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:int-fib-neg-function-residual-result-v1"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": null,
+      "candidate_capability_internal_status": "not-applicable",
+      "complete_known_blocker_set": [
+        "unclassified"
+      ],
+      "family": "int-fib-neg-function-residual",
+      "first_observed_blocker": "unclassified",
+      "id": "O:int-fib-neg-function-residual",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:int-fib-neg-function-residual-clean-composition-result-v1"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": "K:declaration-or-inductive-import",
+      "candidate_capability_internal_status": "candidate-in-knowledge-overlay",
+      "complete_known_blocker_set": [
+        "unsupportedmissingdeclaration"
+      ],
+      "family": "int-fib-neg-function-residual-clean-composition",
+      "first_observed_blocker": "unsupportedmissingdeclaration",
+      "id": "O:int-fib-neg-function-residual-clean-composition",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:int-fib-neg-natcast-decision-free-result-v1"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": "K:bounded-reproducible-export",
+      "candidate_capability_internal_status": "candidate-in-knowledge-overlay",
+      "complete_known_blocker_set": [
+        "exportermodulesearchpath"
+      ],
+      "family": "int-fib-neg-natcast-decision-free",
+      "first_observed_blocker": "exportermodulesearchpath",
+      "id": "O:int-fib-neg-natcast-decision-free",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:int-fib-neg-natcast-exact-composition-result-v1",
+        "E:int-fib-neg-natcast-exact-composition-result-v2",
+        "E:int-fib-neg-natcast-exact-composition-result-v3",
+        "E:int-fib-neg-natcast-exact-composition-result-v4",
+        "E:int-fib-neg-natcast-exact-composition-result-v6"
+      ],
+      "affected_population": {
+        "episodes": 5,
+        "facts": []
+      },
+      "candidate_capability": "K:bounded-reproducible-export",
+      "candidate_capability_internal_status": "candidate-in-knowledge-overlay",
+      "complete_known_blocker_set": [
+        "decisionwitnessdependenttypeshape",
+        "leanmodulesearchpath",
+        "leanpackageroot",
+        "missingtargetowneddefinition",
+        "propextbearingdecisionprovider"
+      ],
+      "family": "int-fib-neg-natcast-exact-composition",
+      "first_observed_blocker": "leanmodulesearchpath",
+      "id": "O:int-fib-neg-natcast-exact-composition",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:mathlib-int-fib-recurrence-corollary-composition-result-v1",
+        "E:mathlib-int-fib-recurrence-corollary-composition-result-v2"
+      ],
+      "affected_population": {
+        "episodes": 2,
+        "facts": []
+      },
+      "candidate_capability": null,
+      "candidate_capability_internal_status": "not-applicable",
+      "complete_known_blocker_set": [
+        "unclassified"
+      ],
+      "family": "mathlib-int-fib-recurrence-corollary-composition",
+      "first_observed_blocker": "unclassified",
+      "id": "O:mathlib-int-fib-recurrence-corollary-composition",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:mathlib-nat-fib-pos-exact-result-v11",
+        "E:mathlib-nat-fib-pos-exact-result-v13",
+        "E:mathlib-nat-fib-pos-exact-result-v9"
+      ],
+      "affected_population": {
+        "episodes": 3,
+        "facts": []
+      },
+      "candidate_capability": null,
+      "candidate_capability_internal_status": "not-applicable",
+      "complete_known_blocker_set": [
+        "notfound",
+        "rootisnottheorem",
+        "unsupportedmissingdeclaration"
+      ],
+      "family": "mathlib-nat-fib-pos-exact",
+      "first_observed_blocker": "rootisnottheorem",
+      "id": "O:mathlib-nat-fib-pos-exact",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:mathlib-nat-gcd-greatest-result-v1",
+        "E:mathlib-nat-gcd-greatest-result-v2"
+      ],
+      "affected_population": {
+        "episodes": 2,
+        "facts": []
+      },
+      "candidate_capability": null,
+      "candidate_capability_internal_status": "not-applicable",
+      "complete_known_blocker_set": [
+        "missingseparatelysealedproofroot",
+        "missingunrelateddevelopmentroot"
+      ],
+      "family": "mathlib-nat-gcd-greatest",
+      "first_observed_blocker": "missingunrelateddevelopmentroot",
+      "id": "O:mathlib-nat-gcd-greatest",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:nat-gcd-fib-add-self-clean-dvd-antisymm-result-v1",
+        "E:nat-gcd-fib-add-self-clean-dvd-antisymm-result-v2",
+        "E:nat-gcd-fib-add-self-clean-dvd-antisymm-result-v3",
+        "E:nat-gcd-fib-add-self-clean-dvd-antisymm-result-v4"
+      ],
+      "affected_population": {
+        "episodes": 4,
+        "facts": []
+      },
+      "candidate_capability": null,
+      "candidate_capability_internal_status": "not-applicable",
+      "complete_known_blocker_set": [
+        "missingdeclaration",
+        "typemismatch",
+        "unknownconst"
+      ],
+      "family": "nat-gcd-fib-add-self-clean-dvd-antisymm",
+      "first_observed_blocker": "unknownconst",
+      "id": "O:nat-gcd-fib-add-self-clean-dvd-antisymm",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:nat-gcd-fib-add-self-exact-result-v1",
+        "E:nat-gcd-fib-add-self-exact-result-v2",
+        "E:nat-gcd-fib-add-self-exact-result-v3",
+        "E:nat-gcd-fib-add-self-exact-result-v4",
+        "E:nat-gcd-fib-add-self-exact-result-v5",
+        "E:nat-gcd-fib-add-self-exact-result-v6",
+        "E:nat-gcd-fib-add-self-exact-result-v7",
+        "E:nat-gcd-fib-add-self-exact-result-v8",
+        "E:nat-gcd-fib-add-self-exact-result-v9"
+      ],
+      "affected_population": {
+        "episodes": 9,
+        "facts": []
+      },
+      "candidate_capability": null,
+      "candidate_capability_internal_status": "not-applicable",
+      "complete_known_blocker_set": [
+        "compatibilityclasspolicymismatch",
+        "noadditions",
+        "staleexecutable",
+        "typeshapemismatch",
+        "unclassified"
+      ],
+      "family": "nat-gcd-fib-add-self-exact",
+      "first_observed_blocker": "unclassified",
+      "id": "O:nat-gcd-fib-add-self-exact",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:official-coprime-factor-cancellation-composition-result-v1"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": "K:checked-declaration-reuse",
+      "candidate_capability_internal_status": "candidate-in-knowledge-overlay",
+      "complete_known_blocker_set": [
+        "noadditions"
+      ],
+      "family": "official-coprime-factor-cancellation-composition",
+      "first_observed_blocker": "noadditions",
+      "id": "O:official-coprime-factor-cancellation-composition",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:official-gcd-balanced-bezout-closed-result-v1"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": null,
+      "candidate_capability_internal_status": "not-applicable",
+      "complete_known_blocker_set": [
+        "type-shape-mismatch"
+      ],
+      "family": "official-gcd-balanced-bezout-closed",
+      "first_observed_blocker": "type-shape-mismatch",
+      "id": "O:official-gcd-balanced-bezout-closed",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:official-gcd-balanced-bezout-generic-base-result-v1"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": null,
+      "candidate_capability_internal_status": "not-applicable",
+      "complete_known_blocker_set": [
+        "no-additions"
+      ],
+      "family": "official-gcd-balanced-bezout-generic-base",
+      "first_observed_blocker": "no-additions",
+      "id": "O:official-gcd-balanced-bezout-generic-base",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:official-gcd-balanced-bezout-official-kernel-result-v1"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": null,
+      "candidate_capability_internal_status": "not-applicable",
+      "complete_known_blocker_set": [
+        "unsupported-missing-declaration"
+      ],
+      "family": "official-gcd-balanced-bezout-official-kernel",
+      "first_observed_blocker": "unsupported-missing-declaration",
+      "id": "O:official-gcd-balanced-bezout-official-kernel",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:official-gcd-zero-left-reconstruction-result-v1"
+      ],
+      "affected_population": {
+        "episodes": 1,
+        "facts": []
+      },
+      "candidate_capability": "K:bounded-reproducible-export",
+      "candidate_capability_internal_status": "candidate-in-knowledge-overlay",
+      "complete_known_blocker_set": [
+        "resource-limit"
+      ],
+      "family": "official-gcd-zero-left-reconstruction",
+      "first_observed_blocker": "resource-limit",
+      "id": "O:official-gcd-zero-left-reconstruction",
+      "measured_before_after": null,
+      "resolution_commit": null
+    },
+    {
+      "affected_episodes": [
+        "E:official-r091-clean-dvd-antisymm-result-v1",
+        "E:official-r091-clean-dvd-antisymm-result-v2",
+        "E:official-r091-clean-dvd-antisymm-result-v3",
+        "E:official-r091-clean-dvd-antisymm-result-v4",
+        "E:official-r091-clean-dvd-antisymm-result-v5",
+        "E:official-r091-clean-dvd-antisymm-result-v6",
+        "E:official-r091-clean-dvd-antisymm-result-v7",
+        "E:official-r091-clean-dvd-antisymm-result-v8",
+        "E:official-r091-clean-dvd-antisymm-result-v9"
+      ],
+      "affected_population": {
+        "episodes": 9,
+        "facts": []
+      },
+      "candidate_capability": "K:declaration-or-inductive-import",
+      "candidate_capability_internal_status": "candidate-in-knowledge-overlay",
+      "complete_known_blocker_set": [
+        "declarationabsent",
+        "missingdeclaration",
+        "noadditions",
+        "typemismatch",
+        "universearitymismatch",
+        "unsupportedmissingdeclaration"
+      ],
+      "family": "official-r091-clean-dvd-antisymm",
+      "first_observed_blocker": "declarationabsent",
+      "id": "O:official-r091-clean-dvd-antisymm",
+      "measured_before_after": null,
+      "resolution_commit": null
+    }
+  ],
+  "schema_version": 1
+}

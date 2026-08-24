@@ -1,0 +1,89 @@
+{
+  "candidates": [
+    {
+      "affected_episodes": 11,
+      "affected_obstruction_families": 3,
+      "capability_id": "K:declaration-or-inductive-import",
+      "observed_blocker_categories": [
+        "declarationabsent",
+        "missingdeclaration",
+        "noadditions",
+        "typemismatch",
+        "universearitymismatch",
+        "unsupportedmissingdeclaration"
+      ],
+      "obstruction_ids": [
+        "O:int-fib-neg-clean-outer-residual-composition",
+        "O:int-fib-neg-function-residual-clean-composition",
+        "O:official-r091-clean-dvd-antisymm"
+      ],
+      "overlay_status": "candidate",
+      "ranking_basis": "distinct retained obstruction families, then affected retained episodes; no proof, implementation, or admission authority",
+      "title": "Checked declaration or inductive-package import"
+    },
+    {
+      "affected_episodes": 7,
+      "affected_obstruction_families": 3,
+      "capability_id": "K:bounded-reproducible-export",
+      "observed_blocker_categories": [
+        "decisionwitnessdependenttypeshape",
+        "exportermodulesearchpath",
+        "leanmodulesearchpath",
+        "leanpackageroot",
+        "missingtargetowneddefinition",
+        "propextbearingdecisionprovider",
+        "resource-limit"
+      ],
+      "obstruction_ids": [
+        "O:int-fib-neg-natcast-decision-free",
+        "O:int-fib-neg-natcast-exact-composition",
+        "O:official-gcd-zero-left-reconstruction"
+      ],
+      "overlay_status": "candidate",
+      "ranking_basis": "distinct retained obstruction families, then affected retained episodes; no proof, implementation, or admission authority",
+      "title": "Bounded reproducible export environment"
+    },
+    {
+      "affected_episodes": 2,
+      "affected_obstruction_families": 2,
+      "capability_id": "K:checked-declaration-reuse",
+      "observed_blocker_categories": [
+        "noadditions"
+      ],
+      "obstruction_ids": [
+        "O:int-fib-neg-concrete-parity-composition",
+        "O:official-coprime-factor-cancellation-composition"
+      ],
+      "overlay_status": "candidate",
+      "ranking_basis": "distinct retained obstruction families, then affected retained episodes; no proof, implementation, or admission authority",
+      "title": "Checked declaration reuse"
+    },
+    {
+      "affected_episodes": 1,
+      "affected_obstruction_families": 1,
+      "capability_id": "K:typed-transport-composition",
+      "observed_blocker_categories": [
+        "typeshapemismatch"
+      ],
+      "obstruction_ids": [
+        "O:int-fib-neg-clean-instance-composition"
+      ],
+      "overlay_status": "candidate",
+      "ranking_basis": "distinct retained obstruction families, then affected retained episodes; no proof, implementation, or admission authority",
+      "title": "Typed transport and composition"
+    }
+  ],
+  "census": {
+    "affected_episodes": 21,
+    "affected_obstruction_families": 9,
+    "candidate_capabilities_with_measured_demand": 4
+  },
+  "derivation": {
+    "candidate_rule": "overlay capability entity with status candidate and at least one obstruction candidate_capability reference",
+    "knowledge_overlay_sha256": "346b2c1d1df0f537db5c8377b8c0e22eac101bd37ec6335018e247d185601d7d",
+    "obstruction_projection_sha256": "f9e55a85d2f3cbc5c5b02a69c21a04b0a15e4017ea29fb177b92c6c7683901d4",
+    "trust_boundary": "investigation ranking only; never producer selection, proof construction, admission, or trust authority"
+  },
+  "kind": "axeyum-capability-candidate-demand",
+  "schema_version": 1
+}
