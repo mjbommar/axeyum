@@ -3,25 +3,28 @@
 <!-- plan-section: lane-status -->
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
-[`docs/python-2026-08/`](../../python-2026-08/README.md). Plans 01, 02 and
-03 A1-A4 are landed on `main`. **The loop has closed:** on a live run, the
-agent selected two open facts (`F:ml430-nat-modeq-refl-d870c8f5`,
-`F:ml430-nat-modeq-symm-0a3d4d18`), chose a producer from the tactic
-catalog, dispatched it behind a deferred approval, and an independent
-second kernel re-derived both proofs axiom-free -- digests absent from
-every committed manifest, so they are results the ledger does not have
-(957 tests; 20/20 episodes pass the fail-closed checker; ledger untouched).
-The ledger transition itself is blocked on a human decision: no registered
-authoritative operation covers the `Nat.ModEq` family, and a transaction is
-derivable only from one plus an execution receipt. Measured bottleneck: only
-3 of 98 eligible facts have a frozen Lean export (the s5 export step, not
-the producers). Next: A5 (typed declines to the AG4.1 obstruction graph),
-A7 (the mobility census -- every tactic precondition against every open
-fact without running a producer), and the export-coverage question raised
-above.
+[`docs/python-2026-08/`](../../python-2026-08/README.md). Plans 01-03 are
+landed on `main` through A7: the binding crate, the seven Python
+submodules (1,026 tests), the fail-closed episode checker, the tactic
+catalog, the frontier agent, the deferred-approval checker loop that
+**closed the loop** (two `Nat.ModEq` facts proved by a model-chosen plan and
+re-derived in a second kernel), the obstruction graph (12 clusters / 19
+facts; largest removable by an existing capability), and the mobility
+census (only 4 of 191 open facts have a frozen export -- the measured
+bottleneck). A review's four blockers are fixed: `replay()` never
+conflates unavailable with failed and replays the front door's OWN model;
+documented submodule imports resolve; a CI Python job on 3.12-3.14; the S1
+clippy gate is green on nightly as well as stable. Open for a human: register
+an operation for the `Nat.ModEq` family so the two proofs can land in the
+ledger; the s5 export step; four real tactic-catalog reach disagreements
+(preconditions narrower than their accepted rows); joining the two
+obstruction populations (F3).
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-24 | `27c601025` | Review fixes: `ReplayUnavailable` and front-door-model replay (P0), forwarding modules for `axeyum.smt/ir/solver` (P1), CI `python` job 3.12-3.14 (P1), nightly clippy green (P1); frontier re-verification opt-in |
+| 2026-08-24 | `00a0803f7` | Plan 03 A5: obstruction graph derived from 16 episodes + 11 decline records, 12 clusters / 19 facts, F3 answered both ways; 26 guards |
+| 2026-08-24 | `b44cf88da` | Plan 03 A7: mobility census -- three-valued precondition evaluation over every open fact; 4 of 191 evaluable; 4 real catalog reach disagreements reported |
 | 2026-08-24 | `2f300656f` | Plan 03 A4: schema v2, deferred checker tools, model-free `Supervise`, independent second-kernel `Check`, holdout gate over episodes; live run proved `Nat.ModEq` refl and symm axiom-free (digests new to the ledger), $1.55; 94 tests |
 | 2026-08-24 | `0ba7eaac3` | Frontier agent (plan 03 A2): `[agent]` extra, six read-only partition-filtering tools, `Select -> Gather -> Plan -> WriteEpisode` graph, replay; ten live episodes ($1.635), 8/8 `NoGeneralRoute`; 86 tests |
 | 2026-08-24 | `0f64b8951` | Episode schema + fail-closed `check-agent-episode.py` (A1, 15 mutation-verified guards) and tactic catalog v1 with a dispatch-table-rejecting validator (A3, 13 guards) |

@@ -186,6 +186,9 @@ now. Nothing was deleted.
 | 2026-08-24 | `194ae06e6` | **Bernoulli's law of large numbers, with a fair coin computed end to end.** `variance_indicator` did not exist. **The `IsDistribution` split is the finding**: two of the three statements need it, but `variance_indicator_le_quarter` correctly needs *none* — it is a fact about any rational. I once briefed Markov without that hypothesis and it was outright FALSE, so the standing instruction is to check each statement; here the answer was "one genuinely does not". The numeric instance is **tight** — `4·(1/2)·(1/2) = 1` exactly — so it sits on the bound rather than comfortably inside it. |
 | 2026-08-24 | `31eb693b3` | **The least common multiple, and `gcd·lcm = a·b` unconditionally.** I asked whether it needs positivity; it does not — the `a = 0` case collapses through `zero_mul` + `zero_div` **without ever touching `gcd 0 b`'s value**, so a `gcd_zero_right` lemma was never needed, and `lcm` being delta-equal to its quotient means no rewriting anywhere. Two facts reported rather than assumed: **`Nat.gcd` is a checked `WellFounded.fix`**, so its equations need `well_founded_fix_eq` and are not definitional; while **`div`/`mod` recurse on the DIVISOR**, so `div n 0 = 0` and `mod n 0 = n` hold by bare `refl` — which is what makes the `lcm 0 0 = 0` convention free. **`lcm_dvd` did not land and the lane checked for a shortcut before saying so**: it needs Gauss's lemma, and a well-founded route on `c` gets stuck exactly when `lcm a b > c`, needing the same fact. So `lcm` has half its universal property, and nothing is named to suggest otherwise. |
 | 2026-08-24 | `755f8e35d` | **Cassini's identity**, `fib(n+2)·fib(n) − fib(n+1)² = (−1)^(n+1)`, every index a literal successor so truncated `Nat.sub` never appears. **`Int.pow (neg one) n` works directly — the parity split I offered was not needed**: `Int.pow` recurses structurally on the NATURAL exponent with the base closed over, so it is total at a negative base. Different obstruction from `euler_criterion_pm_one`, which genuinely needed the `p−1 = m+m` device to dodge division. **And the ℕ→ℤ transport is FREE here, contradicting the precedent I warned about**: `Int.add`/`Int.mul` compute definitionally on two `ofNat` arguments, so no `Int.fib` and no homomorphism lemma were needed. `Int.factorial` differs because it is a ℤ-side DEFINITION unfolding through `prodRange`, not a cast. The rule is "check which side the definition lives on", not a blanket answer either way. |
+| 2026-08-24 | `27c601025` | Review fixes: `ReplayUnavailable` and front-door-model replay (P0), forwarding modules for `axeyum.smt/ir/solver` (P1), CI `python` job 3.12-3.14 (P1), nightly clippy green (P1); frontier re-verification opt-in |
+| 2026-08-24 | `00a0803f7` | Plan 03 A5: obstruction graph derived from 16 episodes + 11 decline records, 12 clusters / 19 facts, F3 answered both ways; 26 guards |
+| 2026-08-24 | `b44cf88da` | Plan 03 A7: mobility census -- three-valued precondition evaluation over every open fact; 4 of 191 evaluable; 4 real catalog reach disagreements reported |
 | 2026-08-24 | `2f300656f` | Plan 03 A4: schema v2, deferred checker tools, model-free `Supervise`, independent second-kernel `Check`, holdout gate over episodes; live run proved `Nat.ModEq` refl and symm axiom-free (digests new to the ledger), $1.55; 94 tests |
 | 2026-08-24 | `0ba7eaac3` | Frontier agent (plan 03 A2): `[agent]` extra, six read-only partition-filtering tools, `Select -> Gather -> Plan -> WriteEpisode` graph, replay; ten live episodes ($1.635), 8/8 `NoGeneralRoute`; 86 tests |
 | 2026-08-24 | `0f64b8951` | Episode schema + fail-closed `check-agent-episode.py` (A1, 15 mutation-verified guards) and tactic catalog v1 with a dispatch-table-rejecting validator (A3, 13 guards) |
@@ -3420,22 +3423,22 @@ school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
-[`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01, 02 and
-03 A1-A4 are landed on `main`. **The loop has closed:** on a live run, the
-agent selected two open facts (`F:ml430-nat-modeq-refl-d870c8f5`,
-`F:ml430-nat-modeq-symm-0a3d4d18`), chose a producer from the tactic
-catalog, dispatched it behind a deferred approval, and an independent
-second kernel re-derived both proofs axiom-free -- digests absent from
-every committed manifest, so they are results the ledger does not have
-(957 tests; 20/20 episodes pass the fail-closed checker; ledger untouched).
-The ledger transition itself is blocked on a human decision: no registered
-authoritative operation covers the `Nat.ModEq` family, and a transaction is
-derivable only from one plus an execution receipt. Measured bottleneck: only
-3 of 98 eligible facts have a frozen Lean export (the s5 export step, not
-the producers). Next: A5 (typed declines to the AG4.1 obstruction graph),
-A7 (the mobility census -- every tactic precondition against every open
-fact without running a producer), and the export-coverage question raised
-above.
+[`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01-03 are
+landed on `main` through A7: the binding crate, the seven Python
+submodules (1,026 tests), the fail-closed episode checker, the tactic
+catalog, the frontier agent, the deferred-approval checker loop that
+**closed the loop** (two `Nat.ModEq` facts proved by a model-chosen plan and
+re-derived in a second kernel), the obstruction graph (12 clusters / 19
+facts; largest removable by an existing capability), and the mobility
+census (only 4 of 191 open facts have a frozen export -- the measured
+bottleneck). A review's four blockers are fixed: `replay()` never
+conflates unavailable with failed and replays the front door's OWN model;
+documented submodule imports resolve; a CI Python job on 3.12-3.14; the S1
+clippy gate is green on nightly as well as stable. Open for a human: register
+an operation for the `Nat.ModEq` family so the two proofs can land in the
+ledger; the s5 export step; four real tactic-catalog reach disagreements
+(preconditions narrower than their accepted rows); joining the two
+obstruction populations (F3).
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
