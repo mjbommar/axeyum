@@ -2072,7 +2072,10 @@ fn declare_has_derivative_neg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
             d,
             p,
             error_neg,
-            &[(rhs_target, error_neg_to_rhs), (neg_error_f, rhs_to_neg_error_f)],
+            &[
+                (rhs_target, error_neg_to_rhs),
+                (neg_error_f, rhs_to_neg_error_f),
+            ],
         );
 
         let hax = d.kernel().fvar(hax_fv);
@@ -2302,7 +2305,14 @@ fn declare_has_derivative_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
         let triangle = abs_add_le(d, p, error_f, error_g); // le (abs combined_error) (add abs_error_f abs_error_g)
         let sum_bounds = d.lemma(
             p.add_le_add,
-            &[abs_error_f, q_bound, abs_error_g, q_bound, error_f_bound, error_g_bound],
+            &[
+                abs_error_f,
+                q_bound,
+                abs_error_g,
+                q_bound,
+                error_f_bound,
+                error_g_bound,
+            ],
         ); // le (add abs_error_f abs_error_g) (add q_bound q_bound)
         let abs_combined_error = cabs(d, p, combined_error);
         let abs_error_f_plus_g = cadd(d, p, abs_error_f, abs_error_g);
@@ -2341,10 +2351,11 @@ fn declare_has_derivative_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
             },
         ); // Equiv (add q_prime q_prime) (ofRat two_e_prime)
         let eq2 = d.lemma(p.rat.nat_div_succ_halve, &[e]); // Eq two_e_prime (natDivSucc 1 e)
-        let sum_equiv_target_rat = rat_eq_rewrite(d, two_e_prime, out_bound_rat, eq2, step_a, &|d, t| {
-            let oft = d.const_app(p.of_rat, &[t]);
-            d.const_app(p.equiv, &[q_prime_plus_q_prime, oft])
-        }); // Equiv (add q_prime q_prime) ofr_out
+        let sum_equiv_target_rat =
+            rat_eq_rewrite(d, two_e_prime, out_bound_rat, eq2, step_a, &|d, t| {
+                let oft = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[q_prime_plus_q_prime, oft])
+            }); // Equiv (add q_prime q_prime) ofr_out
 
         let mul_q_prime_sum_abs_diff = cmul(d, p, q_prime_plus_q_prime, abs_diff);
         let rd = right_distrib(d, p, q_prime, q_prime, abs_diff); // Equiv (mul (add q_prime q_prime) abs_diff) (add q_bound q_bound)
@@ -2365,10 +2376,7 @@ fn declare_has_derivative_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
             d,
             p,
             q_bound_plus_q_bound,
-            &[
-                (mul_q_prime_sum_abs_diff, rd_symm),
-                (out_bound, mul_step),
-            ],
+            &[(mul_q_prime_sum_abs_diff, rd_symm), (out_bound, mul_step)],
         ); // Equiv (add q_bound q_bound) out_bound
 
         let combined_error_bound = {
