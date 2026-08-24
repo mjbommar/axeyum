@@ -1326,3 +1326,750 @@ pub(super) fn declare_pigeonhole(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     })?;
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// `Nat.restrict_injective` / `Nat.restrict_maps_into` — the piece
+// `Int.prodRange_permute` needs beyond the pigeonhole: restricting an
+// injective self-map of `{0,…,n}` to `{0,…,n-1}` by overriding the value at
+// one interior index `i0 < n` with `σ n` (the value index `n` carried, before
+// `n` itself is dropped from the domain), keeping both `InjectiveOn` and
+// `MapsInto`.
+//
+// `point_override σ i0 v k := if k < i0 then σ k else if i0 < k then σ k
+// else v` — an order-based (never `Nat.beq`) single-point override, the same
+// cascaded-`Nat.ble` convention this file's own `compact` and
+// `int_prelude/prod.rs`'s `point_swap` both use. Unlike `point_swap` this
+// touches only ONE index (`i0`), substituting an externally supplied value
+// `v` rather than swapping two positions against each other.
+//
+// Once the pigeonhole gives `i0 < succ n` with `σ i0 = n`, and the trivial
+// case `i0 = n` is handled separately (no override needed — `σ` already
+// fixes `n`), `i0 < n` holds and `i0` is already WITHIN the smaller domain
+// `{0,…,n-1}`: no index-shifting "compact"-style reindexing is needed, only
+// this one-point override of `σ n`'s value onto `i0`'s slot.
+
+/// `point_override σ i0 v k`'s inner layer: `σ k` when `i0 < k`, else `v`.
+fn po_inner(d: &mut NatDev<'_>, sigma: ExprId, i0: ExprId, v: ExprId, k: ExprId) -> ExprId {
+    let sk = d.apply(sigma, &[k]);
+    let succ_i0 = d.succ(i0);
+    let above_cond = d.ble(succ_i0, k);
+    d.bool_select_nat(above_cond, sk, v)
+}
+
+/// `point_override σ i0 v k := if k < i0 then σ k else po_inner(σ, i0, v, k)`.
+fn point_override(d: &mut NatDev<'_>, sigma: ExprId, i0: ExprId, v: ExprId, k: ExprId) -> ExprId {
+    let sk = d.apply(sigma, &[k]);
+    let inner = po_inner(d, sigma, i0, v, k);
+    let succ_k = d.succ(k);
+    let below_cond = d.ble(succ_k, i0);
+    d.bool_select_nat(below_cond, sk, inner)
+}
+
+/// `heq : Eq Bool cond true ⊢ Eq Nat (bool_select_nat cond a b) a`.
+fn select_nat_true(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let true_val = d.bool_true();
+    let symm_hb = d.bool_symm(cond, true_val, heq);
+    let motive = d.bool_eq_motive(true_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, a)
+    });
+    let refl_case = d.refl(a);
+    d.bool_transport(true_val, motive, refl_case, cond, symm_hb)
+}
+
+/// `heq : Eq Bool cond false ⊢ Eq Nat (bool_select_nat cond a b) b`.
+fn select_nat_false(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let false_val = d.bool_false();
+    let symm_hb = d.bool_symm(cond, false_val, heq);
+    let motive = d.bool_eq_motive(false_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, b)
+    });
+    let refl_case = d.refl(b);
+    d.bool_transport(false_val, motive, refl_case, cond, symm_hb)
+}
+
+/// `h : Lt b a ⊢ Eq Bool (Nat.ble a b) false` — the "generalize the selector,
+/// then instantiate at `bool_refl(condition)`" trick, needed again here
+/// (mirrors `int_prelude/prod.rs`'s identically-shaped private helper,
+/// specialized there to `IntDev`) because `point_override`'s nested
+/// selection uses it at two different points.
+fn restrict_ble_eq_false_of_lt(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    h_lt: ExprId,
+) -> ExprId {
+    let p = *p;
+    let cond = d.ble(a, b);
+    let false_val = d.bool_false();
+    let true_val = d.bool_true();
+    let bool_ty = d.bool_ty();
+
+    let branch_for = |d: &mut NatDev<'_>, selector: ExprId| -> ExprId {
+        let eq_cond_sel = d.bool_eq(cond, selector);
+        let concl = d.bool_eq(selector, false_val);
+        d.arrow(eq_cond_sel, concl)
+    };
+    let false_minor = {
+        let heq_fv = d.fresh_fvar();
+        let heq_ty = d.bool_eq(cond, false_val);
+        let body = d.bool_refl(false_val);
+        d.lam_fv(heq_fv, heq_ty, body)
+    };
+    let true_minor = {
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let heq_ty = d.bool_eq(cond, true_val);
+        let a_le_b = d.lemma(p.le_of_ble_eq_true, &[a, b, heq]);
+        let succ_b = d.succ(b);
+        let succ_b_le_b = d.lemma(p.le_trans, &[succ_b, a, b, h_lt, a_le_b]);
+        let false_pf = d.lemma(p.not_succ_le_self, &[b, succ_b_le_b]);
+        let concl_ty = d.bool_eq(true_val, false_val);
+        let body = ex_falso(d, &p, concl_ty, false_pf);
+        d.lam_fv(heq_fv, heq_ty, body)
+    };
+    let motive = {
+        let sel_fv = d.fresh_fvar();
+        let sel = d.kernel().fvar(sel_fv);
+        let body = branch_for(d, sel);
+        d.lam_fv(sel_fv, bool_ty, body)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = p.logic.bool_rec;
+    let rec = d.kernel().const_(bool_rec, vec![level_zero]);
+    let selected = d.apply(rec, &[motive, false_minor, true_minor, cond]);
+    let cond_refl = d.bool_refl(cond);
+    d.apply(selected, &[cond_refl])
+}
+
+/// `h : Lt k i0 ⊢ Eq Nat (point_override σ i0 v k) (σ k)`.
+fn override_eq_lt(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    sigma: ExprId,
+    i0: ExprId,
+    v: ExprId,
+    k: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = *p;
+    let sk = d.apply(sigma, &[k]);
+    let inner = po_inner(d, sigma, i0, v, k);
+    let succ_k = d.succ(k);
+    let below_cond = d.ble(succ_k, i0);
+    let below_true = d.lemma(p.ble_eq_true_of_le, &[succ_k, i0, h]);
+    select_nat_true(d, below_cond, sk, inner, below_true)
+}
+
+/// `h : Lt i0 k ⊢ Eq Nat (point_override σ i0 v k) (σ k)`.
+fn override_eq_gt(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    sigma: ExprId,
+    i0: ExprId,
+    v: ExprId,
+    k: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = *p;
+    let sk = d.apply(sigma, &[k]);
+    let inner = po_inner(d, sigma, i0, v, k);
+    let succ_k = d.succ(k);
+    let below_cond = d.ble(succ_k, i0);
+
+    let succ_i0 = d.succ(i0);
+    let le_k_succ_k = d.lemma(p.le_succ, &[k]);
+    let lt_i0_succ_k = d.lemma(p.le_trans, &[succ_i0, k, succ_k, h, le_k_succ_k]);
+    let below_false = restrict_ble_eq_false_of_lt(d, &p, succ_k, i0, lt_i0_succ_k);
+    let step1 = select_nat_false(d, below_cond, sk, inner, below_false);
+
+    let above_cond = d.ble(succ_i0, k);
+    let above_true = d.lemma(p.ble_eq_true_of_le, &[succ_i0, k, h]);
+    let step2 = select_nat_true(d, above_cond, sk, v, above_true);
+
+    let start = point_override(d, sigma, i0, v, k);
+    d.trans(start, inner, sk, step1, step2)
+}
+
+/// `Eq Nat (point_override σ i0 v i0) v`.
+fn override_eq_at(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    sigma: ExprId,
+    i0: ExprId,
+    v: ExprId,
+) -> ExprId {
+    let p = *p;
+    let si0 = d.apply(sigma, &[i0]);
+    let inner = po_inner(d, sigma, i0, v, i0);
+    let succ_i0 = d.succ(i0);
+    let below_cond = d.ble(succ_i0, i0);
+
+    let lt_i0_succ_i0 = d.lemma(p.lt_succ_self, &[i0]);
+    let below_false = restrict_ble_eq_false_of_lt(d, &p, succ_i0, i0, lt_i0_succ_i0);
+    let step1 = select_nat_false(d, below_cond, si0, inner, below_false);
+
+    let above_cond = d.ble(succ_i0, i0);
+    let step2 = select_nat_false(d, above_cond, si0, v, below_false);
+
+    let start = point_override(d, sigma, i0, v, i0);
+    d.trans(start, inner, v, step1, step2)
+}
+
+/// `Not (Eq Nat a b)`, from `h : Lt a b` (transport `h` along a reversed
+/// assumed equality to `Lt a a`, then `lt_irrefl`) — the `NatDev` counterpart
+/// of `int_prelude/prod.rs`'s private `ne_of_lt`.
+fn ne_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let p = *p;
+    let eq_ab = d.eq(a, b);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let h_rev = d.symm(a, b, e);
+    let motive = d.eq_motive(b, &|d, x| d.lt(a, x));
+    let laa = d.transport(b, motive, h, a, h_rev);
+    let contra = d.lemma(p.lt_irrefl, &[a, laa]);
+    d.lam_fv(e_fv, eq_ab, contra)
+}
+
+/// `Not (Eq Nat b a)`, from `hne : Not (Eq Nat a b)` — flip the equality.
+fn ne_symm(d: &mut NatDev<'_>, a: ExprId, b: ExprId, hne: ExprId) -> ExprId {
+    let eq_ba = d.eq(b, a);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let flipped = d.symm(b, a, e);
+    let contra = d.apply(hne, &[flipped]);
+    d.lam_fv(e_fv, eq_ba, contra)
+}
+
+/// `off : Or (Lt k i0) (Lt i0 k) ⊢ Not (Eq Nat k i0)`.
+fn ne_from_off(d: &mut NatDev<'_>, p: &NatPrelude, i0: ExprId, k: ExprId, off: ExprId) -> ExprId {
+    let p = *p;
+    let logic = p.logic;
+    let lt_k_i0 = d.lt(k, i0);
+    let lt_i0_k = d.lt(i0, k);
+    let eq_k_i0 = d.eq(k, i0);
+    let false_ty = d.kernel().const_(logic.false_, vec![]);
+    let target = d.arrow(eq_k_i0, false_ty);
+    let on_lt = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = ne_of_lt(d, &p, k, i0, h);
+        d.lam_fv(h_fv, lt_k_i0, body)
+    };
+    let on_gt = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let ne_i0k = ne_of_lt(d, &p, i0, k, h);
+        let body = ne_symm(d, i0, k, ne_i0k);
+        d.lam_fv(h_fv, lt_i0_k, body)
+    };
+    d.const_app(
+        logic.or_elim,
+        &[lt_k_i0, lt_i0_k, target, off, on_lt, on_gt],
+    )
+}
+
+/// `split : Or (Lt k i0) (Lt i0 k) ⊢ Eq Nat (point_override σ i0 v k) (σ k)`.
+fn restrict_off(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    sigma: ExprId,
+    i0: ExprId,
+    v: ExprId,
+    k: ExprId,
+    split: ExprId,
+) -> ExprId {
+    let p = *p;
+    let logic = p.logic;
+    let lt_k_i0 = d.lt(k, i0);
+    let lt_i0_k = d.lt(i0, k);
+    let sk = d.apply(sigma, &[k]);
+    let ov = point_override(d, sigma, i0, v, k);
+    let target = d.eq(ov, sk);
+    let on_lt = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = override_eq_lt(d, &p, sigma, i0, v, k, h);
+        d.lam_fv(h_fv, lt_k_i0, body)
+    };
+    let on_gt = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = override_eq_gt(d, &p, sigma, i0, v, k, h);
+        d.lam_fv(h_fv, lt_i0_k, body)
+    };
+    d.const_app(
+        logic.or_elim,
+        &[lt_k_i0, lt_i0_k, target, split, on_lt, on_gt],
+    )
+}
+
+/// `Or (Eq Nat j i0) (Or (Lt j i0) (Lt i0 j))` — [`trichotomy`] reshuffled so
+/// the "equals `i0`" case stands alone, separated from the two "off `i0`"
+/// cases (which [`restrict_off`] and [`ne_from_off`] both handle uniformly).
+fn eq_or_off(d: &mut NatDev<'_>, p: &NatPrelude, i0: ExprId, j: ExprId) -> ExprId {
+    let p = *p;
+    let logic = p.logic;
+    let lt_j_i0 = d.lt(j, i0);
+    let eq_j_i0 = d.eq(j, i0);
+    let lt_i0_j = d.lt(i0, j);
+    let off = d.const_app(logic.or, &[lt_j_i0, lt_i0_j]);
+    let target = d.const_app(logic.or, &[eq_j_i0, off]);
+
+    let tri = trichotomy(d, &p, i0, j);
+    let inner = d.const_app(logic.or, &[eq_j_i0, lt_i0_j]);
+
+    let on_lt = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let off_pf = d.const_app(logic.or_inl, &[lt_j_i0, lt_i0_j, h]);
+        let body = d.const_app(logic.or_inr, &[eq_j_i0, off, off_pf]);
+        d.lam_fv(h_fv, lt_j_i0, body)
+    };
+    let on_rest = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let on_eq = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let body = d.const_app(logic.or_inl, &[eq_j_i0, off, h2]);
+            d.lam_fv(h2_fv, eq_j_i0, body)
+        };
+        let on_gt = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let off_pf = d.const_app(logic.or_inr, &[lt_j_i0, lt_i0_j, h2]);
+            let body = d.const_app(logic.or_inr, &[eq_j_i0, off, off_pf]);
+            d.lam_fv(h2_fv, lt_i0_j, body)
+        };
+        let body = d.const_app(logic.or_elim, &[eq_j_i0, lt_i0_j, target, h, on_eq, on_gt]);
+        d.lam_fv(h_fv, inner, body)
+    };
+    d.const_app(
+        logic.or_elim,
+        &[lt_j_i0, inner, target, tri, on_lt, on_rest],
+    )
+}
+
+/// `h2 : Eq Nat j i0 ⊢ Eq Nat (point_override σ i0 v j) v` — transport
+/// [`override_eq_at`] along the assumed equality.
+fn restrict_at_via_eq(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    sigma: ExprId,
+    i0: ExprId,
+    v: ExprId,
+    j: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let base = override_eq_at(d, p, sigma, i0, v);
+    let rev = d.symm(j, i0, h2);
+    let motive = d.eq_motive(i0, &|d, x| {
+        let ovx = point_override(d, sigma, i0, v, x);
+        d.eq(ovx, v)
+    });
+    d.transport(i0, motive, base, j, rev)
+}
+
+/// Declare `Nat.restrict_injective`:
+///
+/// `∀ σ i0 n, InjectiveOn σ (succ n) → Lt i0 n →
+///   InjectiveOn (fun k => point_override σ i0 (σ n) k) n`.
+///
+/// Case-splits both `j` and `k` (each via [`eq_or_off`]) against `i0`: when
+/// both are off `i0`, [`restrict_off`] reduces the goal directly to `σ`'s own
+/// injectivity on `succ n`; when exactly one equals `i0`, the override value
+/// there is `σ n`, and equating it with the other side's `σ`-value forces
+/// (via injectivity on `succ n`) that `n` equals an index known `< n`,
+/// refuted by `lt_irrefl`; when both equal `i0`, `j = i0 = k` directly.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_restrict_injective(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let logic = p.logic;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+    let i0_fv = d.fresh_fvar();
+    let i0 = d.kernel().fvar(i0_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let sn = d.succ(n);
+    let inj_ty = d.const_app(p.injective_on, &[sigma, sn]);
+    let lt_i0n_ty = d.lt(i0, n);
+
+    let v = d.apply(sigma, &[n]);
+    let restrict_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = point_override(d, sigma, i0, v, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let concl_ty = d.const_app(p.injective_on, &[restrict_fn, n]);
+
+    let inj_fv = d.fresh_fvar();
+    let inj = d.kernel().fvar(inj_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let _ = h; // `Lt i0 n` is not needed by this direction's proof, only threaded for the statement's symmetry with `restrict_maps_into`.
+
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hj_fv = d.fresh_fvar();
+    let hj = d.kernel().fvar(hj_fv);
+    let hk_fv = d.fresh_fvar();
+    let hk = d.kernel().fvar(hk_fv);
+
+    let rj = point_override(d, sigma, i0, v, j);
+    let rk = point_override(d, sigma, i0, v, k);
+    let heq_ty = d.eq(rj, rk);
+    let heq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(heq_fv);
+    let target = d.eq(j, k);
+
+    let dj = eq_or_off(d, &p, i0, j);
+    let dk = eq_or_off(d, &p, i0, k);
+
+    let eq_j_i0 = d.eq(j, i0);
+    let lt_j_i0 = d.lt(j, i0);
+    let lt_i0_j = d.lt(i0, j);
+    let off_j = d.const_app(logic.or, &[lt_j_i0, lt_i0_j]);
+
+    let eq_k_i0 = d.eq(k, i0);
+    let lt_k_i0 = d.lt(k, i0);
+    let lt_i0_k = d.lt(i0, k);
+    let off_k = d.const_app(logic.or, &[lt_k_i0, lt_i0_k]);
+
+    let n_lt_sn = d.lemma(p.lt_succ_self, &[n]);
+
+    let on_j_eq = {
+        let hj2_fv = d.fresh_fvar();
+        let hj2 = d.kernel().fvar(hj2_fv);
+
+        let on_k_eq = {
+            let hk2_fv = d.fresh_fvar();
+            let hk2 = d.kernel().fvar(hk2_fv);
+            let i0_eq_k = d.symm(k, i0, hk2);
+            let result = d.trans(j, i0, k, hj2, i0_eq_k);
+            d.lam_fv(hk2_fv, eq_k_i0, result)
+        };
+        let on_k_off = {
+            let hk2_fv = d.fresh_fvar();
+            let hk2 = d.kernel().fvar(hk2_fv);
+            let rj_eq_v = restrict_at_via_eq(d, &p, sigma, i0, v, j, hj2);
+            let rk_eq_sk = restrict_off(d, &p, sigma, i0, v, k, hk2);
+            let sk = d.apply(sigma, &[k]);
+            let rj_eq_v_rev = d.symm(rj, v, rj_eq_v);
+            let v_eq_rk = d.trans(v, rj, rk, rj_eq_v_rev, heq);
+            let v_eq_sk = d.trans(v, rk, sk, v_eq_rk, rk_eq_sk);
+            let k_lt_sn = lift_lt(d, &p, k, n, hk);
+            let n_eq_k = d.apply(inj, &[n, k, n_lt_sn, k_lt_sn, v_eq_sk]);
+            let motive2 = d.eq_motive(n, &|d, x| d.lt(k, x));
+            let k_lt_k = d.transport(n, motive2, hk, k, n_eq_k);
+            let false_pf = d.lemma(p.lt_irrefl, &[k, k_lt_k]);
+            let result = ex_falso(d, &p, target, false_pf);
+            d.lam_fv(hk2_fv, off_k, result)
+        };
+        let dk_elim = d.const_app(
+            logic.or_elim,
+            &[eq_k_i0, off_k, target, dk, on_k_eq, on_k_off],
+        );
+        d.lam_fv(hj2_fv, eq_j_i0, dk_elim)
+    };
+
+    let on_j_off = {
+        let hj2_fv = d.fresh_fvar();
+        let hj2 = d.kernel().fvar(hj2_fv);
+        let rj_eq_sj = restrict_off(d, &p, sigma, i0, v, j, hj2);
+        let sj = d.apply(sigma, &[j]);
+
+        let on_k_eq = {
+            let hk2_fv = d.fresh_fvar();
+            let hk2 = d.kernel().fvar(hk2_fv);
+            let rk_eq_v = restrict_at_via_eq(d, &p, sigma, i0, v, k, hk2);
+            let rj_eq_sj_rev = d.symm(rj, sj, rj_eq_sj);
+            let sj_eq_rk = d.trans(sj, rj, rk, rj_eq_sj_rev, heq);
+            let sj_eq_v = d.trans(sj, rk, v, sj_eq_rk, rk_eq_v);
+            let j_lt_sn = lift_lt(d, &p, j, n, hj);
+            let j_eq_n = d.apply(inj, &[j, n, j_lt_sn, n_lt_sn, sj_eq_v]);
+            let motive2 = d.eq_motive(j, &|d, x| d.lt(x, n));
+            let n_lt_n = d.transport(j, motive2, hj, n, j_eq_n);
+            let false_pf = d.lemma(p.lt_irrefl, &[n, n_lt_n]);
+            let result = ex_falso(d, &p, target, false_pf);
+            d.lam_fv(hk2_fv, eq_k_i0, result)
+        };
+        let on_k_off = {
+            let hk2_fv = d.fresh_fvar();
+            let hk2 = d.kernel().fvar(hk2_fv);
+            let rk_eq_sk = restrict_off(d, &p, sigma, i0, v, k, hk2);
+            let sk = d.apply(sigma, &[k]);
+            let rj_eq_sj_rev = d.symm(rj, sj, rj_eq_sj);
+            let sj_eq_rk = d.trans(sj, rj, rk, rj_eq_sj_rev, heq);
+            let sj_eq_sk = d.trans(sj, rk, sk, sj_eq_rk, rk_eq_sk);
+            let j_lt_sn = lift_lt(d, &p, j, n, hj);
+            let k_lt_sn = lift_lt(d, &p, k, n, hk);
+            let result = d.apply(inj, &[j, k, j_lt_sn, k_lt_sn, sj_eq_sk]);
+            d.lam_fv(hk2_fv, off_k, result)
+        };
+        let dk_elim = d.const_app(
+            logic.or_elim,
+            &[eq_k_i0, off_k, target, dk, on_k_eq, on_k_off],
+        );
+        d.lam_fv(hj2_fv, off_j, dk_elim)
+    };
+
+    let dj_elim = d.const_app(
+        logic.or_elim,
+        &[eq_j_i0, off_j, target, dj, on_j_eq, on_j_off],
+    );
+
+    let with_heq = d.lam_fv(heq_fv, heq_ty, dj_elim);
+    let hk_ty = d.lt(k, n);
+    let with_hk = d.lam_fv(hk_fv, hk_ty, with_heq);
+    let hj_ty = d.lt(j, n);
+    let with_hj = d.lam_fv(hj_fv, hj_ty, with_hk);
+    let with_k = d.lam_fv(k_fv, nat, with_hj);
+    let inj_body = d.lam_fv(j_fv, nat, with_k);
+
+    let with_h = d.lam_fv(h_fv, lt_i0n_ty, inj_body);
+    let with_inj = d.lam_fv(inj_fv, inj_ty, with_h);
+
+    let stmt_inner = {
+        let with_h_ty = d.arrow(lt_i0n_ty, concl_ty);
+        d.arrow(inj_ty, with_h_ty)
+    };
+
+    let full_stmt = {
+        let with_n = d.pi_fv(n_fv, nat, stmt_inner);
+        let with_i0 = d.pi_fv(i0_fv, nat, with_n);
+        d.pi_fv(sigma_fv, fn_ty, with_i0)
+    };
+    let full_value = {
+        let with_n = d.lam_fv(n_fv, nat, with_inj);
+        let with_i0 = d.lam_fv(i0_fv, nat, with_n);
+        d.lam_fv(sigma_fv, fn_ty, with_i0)
+    };
+
+    d.declare_theorem(p.restrict_injective, full_stmt, full_value)
+}
+
+/// Declare `Nat.restrict_maps_into`:
+///
+/// `∀ σ i0 n, InjectiveOn σ (succ n) → MapsInto σ (succ n) → Lt i0 n →
+///   Eq Nat (σ i0) n → MapsInto (fun k => point_override σ i0 (σ n) k) n`.
+///
+/// `σ n < n`: `MapsInto` gives `σ n ≤ n`, and `σ n ≠ n` (else injectivity at
+/// `(i0, n)` — using `σ i0 = n` — forces `i0 = n`, contradicting `i0 < n`).
+/// For `k < n` off `i0`, [`restrict_off`] reduces to `σ k < n` by the same
+/// route (`σ k ≤ n` from `MapsInto`, `σ k ≠ n` from injectivity against
+/// `σ i0 = n` and `k ≠ i0`). At `k = i0` the override value is `σ n`, already
+/// shown `< n`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_restrict_maps_into(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let logic = p.logic;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+    let i0_fv = d.fresh_fvar();
+    let i0 = d.kernel().fvar(i0_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let sn = d.succ(n);
+    let inj_ty = d.const_app(p.injective_on, &[sigma, sn]);
+    let maps_ty = d.const_app(p.maps_into, &[sigma, sn]);
+    let lt_i0n_ty = d.lt(i0, n);
+    let sigma_i0 = d.apply(sigma, &[i0]);
+    let sigma_i0_eq_n_ty = d.eq(sigma_i0, n);
+
+    let v = d.apply(sigma, &[n]);
+    let restrict_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = point_override(d, sigma, i0, v, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let concl_ty = d.const_app(p.maps_into, &[restrict_fn, n]);
+
+    let inj_fv = d.fresh_fvar();
+    let inj = d.kernel().fvar(inj_fv);
+    let maps_fv = d.fresh_fvar();
+    let maps = d.kernel().fvar(maps_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let heq0_fv = d.fresh_fvar();
+    let heq0 = d.kernel().fvar(heq0_fv);
+
+    let n_lt_sn = d.lemma(p.lt_succ_self, &[n]);
+    let i0_lt_sn = lift_lt(d, &p, i0, n, h);
+
+    // v ≠ n: else injectivity at (i0, n) forces i0 = n, contradicting `h`.
+    let v_ne_n = {
+        let eq_vn = d.eq(v, n);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let n_eq_v = d.symm(v, n, e);
+        let si0_eq_v = d.trans(sigma_i0, n, v, heq0, n_eq_v);
+        let i0_eq_n = d.apply(inj, &[i0, n, i0_lt_sn, n_lt_sn, si0_eq_v]);
+        let motive = d.eq_motive(i0, &|d, x| d.lt(x, n));
+        let n_lt_n = d.transport(i0, motive, h, n, i0_eq_n);
+        let false_pf = d.lemma(p.lt_irrefl, &[n, n_lt_n]);
+        d.lam_fv(e_fv, eq_vn, false_pf)
+    };
+    let v_lt_sn = d.apply(maps, &[n, n_lt_sn]);
+    let v_le_n = d.lemma(p.le_of_succ_le_succ, &[v, n, v_lt_sn]);
+    let v_lt_n = {
+        let disj = d.lemma(p.lt_or_eq_of_le, &[v, n, v_le_n]);
+        let lt_vn = d.lt(v, n);
+        let eq_vn = d.eq(v, n);
+        let target = d.lt(v, n);
+        let on_lt = {
+            let hh_fv = d.fresh_fvar();
+            let hh = d.kernel().fvar(hh_fv);
+            d.lam_fv(hh_fv, lt_vn, hh)
+        };
+        let on_eq = {
+            let hh_fv = d.fresh_fvar();
+            let hh = d.kernel().fvar(hh_fv);
+            let false_pf = d.apply(v_ne_n, &[hh]);
+            let body = ex_falso(d, &p, target, false_pf);
+            d.lam_fv(hh_fv, eq_vn, body)
+        };
+        d.const_app(logic.or_elim, &[lt_vn, eq_vn, target, disj, on_lt, on_eq])
+    };
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk_fv = d.fresh_fvar();
+    let hk = d.kernel().fvar(hk_fv);
+
+    let dk = eq_or_off(d, &p, i0, k);
+    let rk = point_override(d, sigma, i0, v, k);
+    let target2 = d.lt(rk, n);
+
+    let eq_k_i0 = d.eq(k, i0);
+    let lt_k_i0 = d.lt(k, i0);
+    let lt_i0_k = d.lt(i0, k);
+    let off_k = d.const_app(logic.or, &[lt_k_i0, lt_i0_k]);
+
+    let on_eq = {
+        let hk2_fv = d.fresh_fvar();
+        let hk2 = d.kernel().fvar(hk2_fv);
+        let ov_i0_expr = point_override(d, sigma, i0, v, i0);
+        let ov_i0 = override_eq_at(d, &p, sigma, i0, v);
+        let motive_a = d.eq_motive(v, &|d, x| d.lt(x, n));
+        let h_rev = d.symm(ov_i0_expr, v, ov_i0);
+        let lt_ovi0_n = d.transport(v, motive_a, v_lt_n, ov_i0_expr, h_rev);
+        let motive_b = d.eq_motive(i0, &|d, x| {
+            let ovx = point_override(d, sigma, i0, v, x);
+            d.lt(ovx, n)
+        });
+        let h2 = d.symm(k, i0, hk2);
+        let lt_rk_n = d.transport(i0, motive_b, lt_ovi0_n, k, h2);
+        d.lam_fv(hk2_fv, eq_k_i0, lt_rk_n)
+    };
+    let on_off = {
+        let hk2_fv = d.fresh_fvar();
+        let hk2 = d.kernel().fvar(hk2_fv);
+        let rk_eq_sk = restrict_off(d, &p, sigma, i0, v, k, hk2);
+        let sk = d.apply(sigma, &[k]);
+        let ne_k_i0 = ne_from_off(d, &p, i0, k, hk2);
+        let k_lt_sn = lift_lt(d, &p, k, n, hk);
+
+        let sk_ne_n = {
+            let eq_skn = d.eq(sk, n);
+            let e_fv = d.fresh_fvar();
+            let e = d.kernel().fvar(e_fv);
+            let n_eq_sk = d.symm(sk, n, e);
+            let si0_eq_sk = d.trans(sigma_i0, n, sk, heq0, n_eq_sk);
+            let i0_eq_k = d.apply(inj, &[i0, k, i0_lt_sn, k_lt_sn, si0_eq_sk]);
+            let k_eq_i0 = d.symm(i0, k, i0_eq_k);
+            let false_pf = d.apply(ne_k_i0, &[k_eq_i0]);
+            d.lam_fv(e_fv, eq_skn, false_pf)
+        };
+        let sk_lt_sn = d.apply(maps, &[k, k_lt_sn]);
+        let sk_le_n = d.lemma(p.le_of_succ_le_succ, &[sk, n, sk_lt_sn]);
+        let sk_lt_n = {
+            let disj = d.lemma(p.lt_or_eq_of_le, &[sk, n, sk_le_n]);
+            let lt_skn = d.lt(sk, n);
+            let eq_skn = d.eq(sk, n);
+            let target3 = d.lt(sk, n);
+            let on_lt2 = {
+                let hh_fv = d.fresh_fvar();
+                let hh = d.kernel().fvar(hh_fv);
+                d.lam_fv(hh_fv, lt_skn, hh)
+            };
+            let on_eq2 = {
+                let hh_fv = d.fresh_fvar();
+                let hh = d.kernel().fvar(hh_fv);
+                let false_pf = d.apply(sk_ne_n, &[hh]);
+                let body = ex_falso(d, &p, target3, false_pf);
+                d.lam_fv(hh_fv, eq_skn, body)
+            };
+            d.const_app(
+                logic.or_elim,
+                &[lt_skn, eq_skn, target3, disj, on_lt2, on_eq2],
+            )
+        };
+        let motive_c = d.eq_motive(sk, &|d, x| d.lt(x, n));
+        let rev_rk = d.symm(rk, sk, rk_eq_sk);
+        let lt_rk_n = d.transport(sk, motive_c, sk_lt_n, rk, rev_rk);
+        d.lam_fv(hk2_fv, off_k, lt_rk_n)
+    };
+
+    let dk_elim = d.const_app(logic.or_elim, &[eq_k_i0, off_k, target2, dk, on_eq, on_off]);
+
+    let hk_ty = d.lt(k, n);
+    let with_hk = d.lam_fv(hk_fv, hk_ty, dk_elim);
+    let maps_body = d.lam_fv(k_fv, nat, with_hk);
+
+    let with_heq0 = d.lam_fv(heq0_fv, sigma_i0_eq_n_ty, maps_body);
+    let with_h = d.lam_fv(h_fv, lt_i0n_ty, with_heq0);
+    let with_maps = d.lam_fv(maps_fv, maps_ty, with_h);
+    let with_inj = d.lam_fv(inj_fv, inj_ty, with_maps);
+
+    let stmt_inner = {
+        let with_heq0_ty = d.arrow(sigma_i0_eq_n_ty, concl_ty);
+        let with_h_ty = d.arrow(lt_i0n_ty, with_heq0_ty);
+        let with_maps_ty = d.arrow(maps_ty, with_h_ty);
+        d.arrow(inj_ty, with_maps_ty)
+    };
+
+    let full_stmt = {
+        let with_n = d.pi_fv(n_fv, nat, stmt_inner);
+        let with_i0 = d.pi_fv(i0_fv, nat, with_n);
+        d.pi_fv(sigma_fv, fn_ty, with_i0)
+    };
+    let full_value = {
+        let with_n = d.lam_fv(n_fv, nat, with_inj);
+        let with_i0 = d.lam_fv(i0_fv, nat, with_n);
+        d.lam_fv(sigma_fv, fn_ty, with_i0)
+    };
+
+    d.declare_theorem(p.restrict_maps_into, full_stmt, full_value)
+}

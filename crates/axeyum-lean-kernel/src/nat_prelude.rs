@@ -168,7 +168,10 @@ use defs::{
 use divisibility::declare_divisibility;
 use division::declare_euclidean_division;
 use fermat::declare_fermat;
-use finite::{declare_fin, declare_injective_surjective, declare_pigeonhole};
+use finite::{
+    declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
+    declare_restrict_maps_into,
+};
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
@@ -839,6 +842,18 @@ pub struct NatPrelude {
     /// `Nat.injective_on_imp_surjective_on : ∀ f n, InjectiveOn f n →
     /// MapsInto f n → SurjectiveOn f n` — the finite pigeonhole principle.
     pub injective_on_imp_surjective_on: NameId,
+    /// `Nat.restrict_injective : ∀ σ i0 n, InjectiveOn σ (succ n) → Lt i0 n →
+    /// InjectiveOn (fun k => point_override σ i0 (σ n) k) n` — restricting an
+    /// injective self-map of `{0,…,n}` to `{0,…,n-1}` by overriding the
+    /// value at interior index `i0` with `σ n`, one of the two pieces
+    /// `Int.prodRange_permute` needs (`finite.rs`'s module doc,
+    /// `point_override`).
+    pub restrict_injective: NameId,
+    /// `Nat.restrict_maps_into : ∀ σ i0 n, InjectiveOn σ (succ n) →
+    /// MapsInto σ (succ n) → Lt i0 n → Eq Nat (σ i0) n →
+    /// MapsInto (fun k => point_override σ i0 (σ n) k) n` — the companion
+    /// closure lemma to [`Self::restrict_injective`].
+    pub restrict_maps_into: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1120,6 +1135,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             surjective_on: kernel.name_str(nat, "surjectiveOn"),
             maps_into: kernel.name_str(nat, "mapsInto"),
             injective_on_imp_surjective_on: kernel.name_str(nat, "injective_on_imp_surjective_on"),
+            restrict_injective: kernel.name_str(nat, "restrict_injective"),
+            restrict_maps_into: kernel.name_str(nat, "restrict_maps_into"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1158,6 +1175,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_fin(&mut d, &p)?;
         declare_injective_surjective(&mut d, &p)?;
         declare_pigeonhole(&mut d, &p)?;
+        declare_restrict_injective(&mut d, &p)?;
+        declare_restrict_maps_into(&mut d, &p)?;
         Ok(p)
     })();
     match built {

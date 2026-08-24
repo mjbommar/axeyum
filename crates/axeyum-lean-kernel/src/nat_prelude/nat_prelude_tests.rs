@@ -265,6 +265,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.fin_is_lt,
         p.fin_val_mk,
         p.injective_on_imp_surjective_on,
+        p.restrict_injective,
+        p.restrict_maps_into,
     ]
 }
 
@@ -3984,7 +3986,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        24 + 149,
+        24 + 151,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -4818,3 +4820,54 @@ fn fermat_and_frobenius_are_stated_over_primes_not_merely_positive_moduli() {
 
 /// The kernel-rendered type of `Nat.pow_prime_modeq_self`, pinned by value.
 const FERMAT_LITTLE_THEOREM: &str = "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x0) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x0))))) -> AxNat.modEq x0 (AxNat.pow x1 x0) x1)))";
+
+/// `Nat.restrict_injective` / `Nat.restrict_maps_into` apply at a concrete
+/// swap (`sigma(k) := if k < 1 then 1 else 0`, i.e. `sigma(0)=1`,
+/// `sigma(1)=0`, the transposition of `{0,1}`) and rest on zero axioms.
+/// Neither hypothesis (`InjectiveOn`, `MapsInto`, `Lt i0 n`, `sigma i0 = n`)
+/// is discharged here — the partial application's INFERRED TYPE is what is
+/// checked, the same "apply, then infer" style
+/// `succ_mul_choose_eq_holds_at_a_concrete_point` uses above.
+#[test]
+fn restrict_injective_and_maps_into_apply_at_a_concrete_swap() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    let sigma = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let one = f.num(1);
+        let zero = f.num(0);
+        let succ_k = f.succ(k);
+        let cond = f.ble(succ_k, one);
+        let body = f.bool_select_nat(cond, one, zero);
+        f.lam_fv(k_fv, nat, body)
+    };
+    let i0 = f.num(0);
+    let n = f.num(1);
+
+    let proof_inj = f.lemma(p.restrict_injective, &[sigma, i0, n]);
+    f.k.infer(proof_inj).unwrap_or_else(|e| {
+        panic!(
+            "restrict_injective(sigma, 0, 1) should infer: {}",
+            f.explain(&e)
+        )
+    });
+
+    let proof_maps = f.lemma(p.restrict_maps_into, &[sigma, i0, n]);
+    f.k.infer(proof_maps).unwrap_or_else(|e| {
+        panic!(
+            "restrict_maps_into(sigma, 0, 1) should infer: {}",
+            f.explain(&e)
+        )
+    });
+
+    for name in [p.restrict_injective, p.restrict_maps_into] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
