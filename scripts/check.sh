@@ -297,6 +297,9 @@ step autogenesis-knowledge-overlay-tests python3 -m unittest scripts.tests.test_
 step autogenesis-knowledge-overlay python3 scripts/validate-autogenesis-knowledge.py
 step autogenesis-knowledge-coverage python3 scripts/gen-autogenesis-knowledge-coverage.py --check
 step autogenesis-knowledge-controls ./scripts/check-autogenesis-knowledge-controls.sh
+step autogenesis-kernel-projection python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
+step autogenesis-kernel-projection-content python3 scripts/validate-autogenesis-kernel-dependency-projection.py
+step autogenesis-kernel-projection-fresh python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
 step autogenesis-proposer-isolation ./scripts/check-autogenesis-proposer-isolation.sh
 step autogenesis-induction-search ./scripts/check-autogenesis-induction-search.sh
 step autogenesis-apply-search ./scripts/check-autogenesis-apply-search.sh

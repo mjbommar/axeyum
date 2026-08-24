@@ -41,6 +41,14 @@
       "path": "artifacts/autogenesis/operations.json"
     },
     {
+      "id": "axeyum-kernel",
+      "source_id": "axeyum",
+      "entity_kinds": ["kernel-declaration"],
+      "resolution": "local-required",
+      "path": "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+      "notes": "Generated kernel-observed declaration projection. Direct theorem edges remain separate from fact-ledger planning dependencies."
+    },
+    {
       "id": "math-education",
       "source_id": "math-education",
       "entity_kinds": ["concept", "encounter", "technique"],
@@ -80,6 +88,12 @@
       "source_kinds": ["fact", "operation", "capability"],
       "target_kinds": ["concept", "encounter", "technique"],
       "semantics": "The checked source is a concrete worked instance of the target; it does not assert complete concept coverage."
+    },
+    {
+      "id": "direct-theorem-depends-on",
+      "source_kinds": ["kernel-declaration"],
+      "target_kinds": ["kernel-declaration"],
+      "semantics": "A direct theorem reference read from an accepted kernel theorem term. This is neither a transitive closure nor a fact-ledger planning dependency."
     },
     {
       "id": "blocked-by",

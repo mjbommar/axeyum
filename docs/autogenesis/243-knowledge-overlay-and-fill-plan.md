@@ -248,6 +248,14 @@ Required distinctions:
 The existing `check-fact-depends-derived.py` proves that this distinction is not
 theoretical: deriving dependencies already found missing ledger edges.
 
+**F2 result (2026-08-24):** the generated
+[`kernel-dependency-projection-v1.json`](../../artifacts/autogenesis/kernel-dependency-projection-v1.json)
+now records the full constructed-prelude surface as canonical declaration nodes
+and direct theorem-dependency edges. See the
+[projection result](244-kernel-dependency-projection-result.md). It deliberately
+does not rewrite the fact ledger: the next phase is typed producer-obstruction
+data, not hand-transcribing the kernel graph into planning edges.
+
 ### F3 — Turn decline records into an obstruction graph
 
 Normalize each producer episode into:

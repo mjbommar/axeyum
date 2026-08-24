@@ -161,6 +161,13 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
     operation_ids = {
         row.get("id") for row in (operation_doc or {}).get("operations", [])
     }
+    kernel_projection = load_json(
+        root / "artifacts/autogenesis/kernel-dependency-projection-v1.json", errors
+    )
+    kernel_declaration_ids = {
+        row.get("id") for row in (kernel_projection or {}).get("declarations", [])
+        if isinstance(row, dict)
+    }
 
     external_source = source_by_id.get("math-education", {})
     external_root = root.parent / "math-education"
@@ -200,6 +207,8 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
                 errors.append(f"link {link_id} {side}: unknown fact {ident!r}")
         elif namespace_id == "axeyum-operation" and ident not in operation_ids:
             errors.append(f"link {link_id} {side}: unknown operation {ident!r}")
+        elif namespace_id == "axeyum-kernel" and ident not in kernel_declaration_ids:
+            errors.append(f"link {link_id} {side}: unknown kernel declaration {ident!r}")
         elif resolution == "external-pinned":
             source = source_by_id.get(namespace.get("source_id"), {})
             expected = source.get("revision")

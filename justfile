@@ -445,6 +445,11 @@ autogenesis-knowledge-controls:
     python3 scripts/gen-autogenesis-knowledge-coverage.py --check
     scripts/check-autogenesis-knowledge-controls.sh
 
+autogenesis-kernel-projection:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
+    python3 scripts/validate-autogenesis-kernel-dependency-projection.py
+    python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
+
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh
 
