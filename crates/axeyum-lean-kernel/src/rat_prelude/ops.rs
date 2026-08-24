@@ -133,6 +133,11 @@ pub(crate) fn rone(d: &mut IntDev<'_>, p: RatPrelude) -> ExprId {
     d.kernel().const_(p.one, vec![])
 }
 
+/// `Rat.sumRange f n`.
+pub(crate) fn rsum_range(d: &mut IntDev<'_>, p: RatPrelude, f: ExprId, n: ExprId) -> ExprId {
+    d.const_app(p.sum_range, &[f, n])
+}
+
 /// `Rat.le a b`.
 pub(crate) fn rle(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, b: ExprId) -> ExprId {
     d.const_app(p.le, &[a, b])

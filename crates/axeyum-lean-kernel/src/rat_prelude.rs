@@ -63,9 +63,11 @@ pub(crate) mod lattice;
 mod laws;
 mod model;
 pub(crate) mod ops;
+mod probability;
 mod product;
 mod scaling;
 mod statements;
+mod sum;
 
 pub use model::{RatModel, RatModelLaw, build_rat_model_of_arith};
 
@@ -756,6 +758,43 @@ pub struct RatPrelude {
     /// data (it is `Or (le a b) (lt b a)`, a `Prop`): this is the same fact
     /// restated in `Bool`, via [`Self::le_or_lt`] and [`Self::le_of_lt`].
     pub ble_total: NameId,
+
+    // --- `Rat.sumRange`: finite sums over ℚ (rat_prelude::sum) -------------
+    /// `Rat.sumRange : (Nat → Rat) → Nat → Rat`, `Nat.rec` on the bound:
+    /// `sumRange f zero ≡ zero`, `sumRange f (succ n) ≡ sumRange f n + f n`.
+    pub sum_range: NameId,
+    /// `Rat.sumRange_zero : ∀ f, sumRange f zero = zero` — `Eq.refl`.
+    pub sum_range_zero: NameId,
+    /// `Rat.sumRange_succ : ∀ f n, sumRange f (succ n) = sumRange f n + f n`
+    /// — `Eq.refl`.
+    pub sum_range_succ: NameId,
+    /// `Rat.sumRange_congr : ∀ f g n, (∀ i, f i = g i) → sumRange f n =
+    /// sumRange g n`.
+    pub sum_range_congr: NameId,
+    /// `Rat.sumRange_add : ∀ f g n, sumRange (fun i => f i + g i) n =
+    /// sumRange f n + sumRange g n`.
+    pub sum_range_add: NameId,
+    /// `Rat.mul_sumRange : ∀ c f n, c * sumRange f n = sumRange (fun i => c *
+    /// f i) n`.
+    pub mul_sum_range: NameId,
+    /// `Rat.sumRange_le : ∀ f g n, (∀ i, Lt i n → le (f i) (g i)) → le
+    /// (sumRange f n) (sumRange g n)` — monotonicity.
+    pub sum_range_le: NameId,
+    /// `Rat.sumRange_nonneg : ∀ f n, (∀ i, Lt i n → le zero (f i)) → le zero
+    /// (sumRange f n)`.
+    pub sum_range_nonneg: NameId,
+
+    // --- finite probability distributions (rat_prelude::probability) -------
+    /// `Rat.IsDistribution p n := (∀ k, Lt k n → le zero (p k)) ∧ sumRange p
+    /// n = one`.
+    pub is_distribution: NameId,
+    /// `Rat.prob_le_one : ∀ p n, IsDistribution p n → ∀ k, Lt k n → le (p k)
+    /// one` — every individual probability is at most `1`.
+    pub prob_le_one: NameId,
+    /// `Rat.prob_complement : ∀ p m j, IsDistribution p (m+j) →
+    /// sumRange p m + sumRange (fun k => p (m+k)) j = one` — the mass of a
+    /// prefix and its complementary tail sum to `1`.
+    pub prob_complement: NameId,
 }
 
 impl RatPrelude {
@@ -950,6 +989,17 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         ble_refl: child(kernel, "ble_refl"),
         ble_trans: child(kernel, "ble_trans"),
         ble_total: child(kernel, "ble_total"),
+        sum_range: child(kernel, "sumRange"),
+        sum_range_zero: child(kernel, "sumRange_zero"),
+        sum_range_succ: child(kernel, "sumRange_succ"),
+        sum_range_congr: child(kernel, "sumRange_congr"),
+        sum_range_add: child(kernel, "sumRange_add"),
+        mul_sum_range: child(kernel, "mul_sumRange"),
+        sum_range_le: child(kernel, "sumRange_le"),
+        sum_range_nonneg: child(kernel, "sumRange_nonneg"),
+        is_distribution: child(kernel, "IsDistribution"),
+        prob_le_one: child(kernel, "prob_le_one"),
+        prob_complement: child(kernel, "prob_complement"),
     }
 }
 
@@ -992,6 +1042,8 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         lattice::declare_lattice(&mut d, prelude)?;
         abs::declare_abs(&mut d, prelude)?;
         decide::declare_decide(&mut d, prelude)?;
+        sum::declare_sum(&mut d, prelude)?;
+        probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
     match built {

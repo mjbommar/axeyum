@@ -1396,3 +1396,208 @@ fn ble_refl_trans_total_are_built_on_the_spec() {
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
 }
+
+// --- `Rat.sumRange` and its algebra (`rat_prelude::sum`) -------------------
+
+/// Every declaration `sum::declare_sum` adds — `Rat.sumRange` itself and the
+/// six theorems built on it — is a **checked** definition or theorem with an
+/// empty axiom footprint, read out of the kernel, not off the diff.
+#[test]
+fn the_finite_sum_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("sumRange", p.sum_range, false),
+        ("sumRange_zero", p.sum_range_zero, true),
+        ("sumRange_succ", p.sum_range_succ, true),
+        ("sumRange_congr", p.sum_range_congr, true),
+        ("sumRange_add", p.sum_range_add, true),
+        ("mul_sumRange", p.mul_sum_range, true),
+        ("sumRange_le", p.sum_range_le, true),
+        ("sumRange_nonneg", p.sum_range_nonneg, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// `Rat.sumRange_zero`/`Rat.sumRange_succ` close by `Eq.refl` alone — checked
+/// directly here, independent of [`super::sum`]'s own construction, over a
+/// **symbolic** `f`/`n` (an opaque bound variable, not a concrete literal):
+/// with a concrete `f` every subterm is ground and can fully compute, which
+/// would hide whether the equation holds definitionally or only because
+/// everything reduced to the same value regardless of shape (see
+/// [`sum_range_succ_wrong_order_is_rejected`] for exactly that trap).
+#[test]
+fn sum_range_defining_equations_close_by_refl_alone() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, req, rrefl, rsum_range};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = crate::rat_prelude::ops::rat_ty(&mut d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    // sumRange_zero : Eq Rat (sumRange f zero) zero, by Eq.refl.
+    {
+        let zero_n = d.zero();
+        let lhs = rsum_range(&mut d, p, f, zero_n);
+        let zero_r = crate::rat_prelude::ops::rzero(&mut d, p);
+        let stmt = req(&mut d, lhs, zero_r);
+        let zero_r2 = crate::rat_prelude::ops::rzero(&mut d, p);
+        let proof = rrefl(&mut d, zero_r2);
+        let ty = d.pi_fv(f_fv, fn_ty, stmt);
+        let value = d.lam_fv(f_fv, fn_ty, proof);
+        let name = d.kernel().name_str(anon, "Check.sum_range_zero_refl");
+        d.declare_theorem(name, ty, value).unwrap_or_else(|e| {
+            panic!(
+                "sumRange_zero did not close by refl alone: {}",
+                d.explain(&e)
+            )
+        });
+    }
+
+    // sumRange_succ : Eq Rat (sumRange f (succ n)) (sumRange f n + f n), by
+    // Eq.refl — the addend order the definition actually produces.
+    {
+        let sn = d.succ(n);
+        let lhs = rsum_range(&mut d, p, f, sn);
+        let prior = rsum_range(&mut d, p, f, n);
+        let fn_applied = d.apply(f, &[n]);
+        let rhs = radd(&mut d, prior, fn_applied);
+        let stmt = req(&mut d, lhs, rhs);
+        let proof = rrefl(&mut d, rhs);
+        let ty = {
+            let inner = d.pi_fv(n_fv, nat, stmt);
+            d.pi_fv(f_fv, fn_ty, inner)
+        };
+        let value = {
+            let inner = d.lam_fv(n_fv, nat, proof);
+            d.lam_fv(f_fv, fn_ty, inner)
+        };
+        let name = d.kernel().name_str(anon, "Check.sum_range_succ_refl");
+        d.declare_theorem(name, ty, value).unwrap_or_else(|e| {
+            panic!(
+                "sumRange_succ did not close by refl alone: {}",
+                d.explain(&e)
+            )
+        });
+    }
+}
+
+/// The negative control for
+/// [`sum_range_defining_equations_close_by_refl_alone`]: swapping the
+/// addends in `sumRange_succ`'s RHS (`f n + sumRange f n` instead of
+/// `sumRange f n + f n`) over the same symbolic `f`/`n` must be **REJECTED**
+/// by `Eq.refl` — `Rat.add` is not definitionally commutative
+/// (`Rat.add_comm` is a proved LAW, not a reduction rule, and for a
+/// symbolic/opaque `f`/`n` neither addend reduces any further), so if this
+/// succeeded the computation check above would prove nothing.
+#[test]
+fn sum_range_succ_wrong_order_is_rejected() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, req, rrefl, rsum_range};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = crate::rat_prelude::ops::rat_ty(&mut d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let sn = d.succ(n);
+    let lhs = rsum_range(&mut d, p, f, sn);
+    let prior = rsum_range(&mut d, p, f, n);
+    let fn_applied = d.apply(f, &[n]);
+    let wrong_rhs = radd(&mut d, fn_applied, prior); // swapped
+    let stmt = req(&mut d, lhs, wrong_rhs);
+    let proof = rrefl(&mut d, wrong_rhs);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(f_fv, fn_ty, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(f_fv, fn_ty, inner)
+    };
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.sum_range_succ_wrong_order");
+    assert!(
+        d.declare_theorem(name, ty, value).is_err(),
+        "the kernel accepted the swapped-order sumRange_succ equation by \
+         Eq.refl, so the computation check above proves nothing"
+    );
+}
+
+// --- finite probability distributions (`rat_prelude::probability`) --------
+
+/// Every declaration `probability::declare_probability` adds —
+/// `Rat.IsDistribution` itself and the two theorems built on it — is a
+/// **checked** definition or theorem with an empty axiom footprint, read out
+/// of the kernel, not off the diff.
+#[test]
+fn the_probability_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("IsDistribution", p.is_distribution, false),
+        ("prob_le_one", p.prob_le_one, true),
+        ("prob_complement", p.prob_complement, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
