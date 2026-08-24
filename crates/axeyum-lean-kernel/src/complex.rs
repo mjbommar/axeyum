@@ -361,6 +361,74 @@ pub struct ComplexPrelude {
     /// [`Self::mul_inv_cancel`] since `div z z k h` unfolds by one delta step
     /// to exactly `mul z (inv z k h)`.
     pub div_self: NameId,
+
+    // --- apartness, and the constructive shape of "no zero divisors" --------
+    //
+    // ℂ has no order ([`Self::no_compatible_order`]), so `Complex.Apart`
+    // cannot mirror `CReal.Apart`'s own *shape* (`lt x y ∨ lt y x`) — there is
+    // no `lt` on `Complex` to disjoin. It mirrors `CReal.Apart`'s *role*
+    // instead: a `Prop` strictly stronger than `Not Equiv`, built from a
+    // strict positivity that already lives in the ordered `CReal` the
+    // components are drawn from — [`Self::norm_sq`] of the difference.
+    /// `Complex.Apart z w := CReal.lt CReal.zero (normSq (add z (neg w)))`.
+    ///
+    /// The one real quantity ℂ's missing order can still certify: `normSq` is
+    /// always `CReal.le`-nonneg ([`Self::norm_sq_nonneg`]), so **strict**
+    /// positivity of the difference's norm is exactly the separation
+    /// `CReal.Apart` phrases via `lt` directly, ported across the one
+    /// dimension where ℂ still has an order to borrow — `CReal`'s.
+    pub apart: NameId,
+    /// `Complex.apart_irrefl : ∀ z, Not (Apart z z)`.
+    ///
+    /// `add z (neg z)` has `normSq` computably `CReal.zero` (a pure
+    /// commutative-ring identity, no analysis), so `Apart z z` would need
+    /// `CReal.lt CReal.zero CReal.zero`, which `CReal.lt_irrefl` refuses.
+    pub apart_irrefl: NameId,
+    /// `Complex.apart_symm : ∀ z w, Apart z w → Apart w z`.
+    ///
+    /// `normSq (add w (neg z))` and `normSq (add z (neg w))` are the *same*
+    /// degree-2 polynomial in the four real components — `(c−a)² = (a−c)²`
+    /// monomial for monomial — so the ring calculus decides the bridging
+    /// `CReal.Equiv` directly and `CReal.lt_congr` carries the hypothesis
+    /// across it. No case split, no new estimate.
+    pub apart_symm: NameId,
+    /// `Complex.apart_of_normSq_pos : ∀ z, CReal.lt CReal.zero (normSq z) →
+    /// Apart z Complex.zero`.
+    ///
+    /// The **linking** lemma between a positive norm and apartness from the
+    /// origin — not definitionally free, because `Apart z zero` unfolds to
+    /// positivity of `normSq (add z (neg zero))`, a *different* term from
+    /// `normSq z` (though ring-equal to it: `add z (neg zero)` needs
+    /// `add_zero`/pure rearrangement, not defeq). `CReal.lt_congr` carries the
+    /// hypothesis across that ring identity.
+    pub apart_of_normsq_pos: NameId,
+    /// `Complex.mul_apart_zero : ∀ z w, Apart z zero → Apart w zero →
+    /// Apart (mul z w) zero`.
+    ///
+    /// **The constructive shape of "ℂ has no zero divisors."** Both
+    /// hypotheses give a positive norm ([`Self::apart_of_normSq_pos`]'s
+    /// converse, inlined); `CReal.mul_pos` gives their product positive;
+    /// [`Self::norm_sq_mul`] identifies that product with `normSq (mul z
+    /// w)`; [`Self::apart_of_normSq_pos`]'s own bridging step closes it. See
+    /// the module documentation for why the *disjunctive* form (`mul z w ~ 0
+    /// → z ~ 0 ∨ w ~ 0`) is not attempted: `CReal`'s order is not decidable,
+    /// so that disjunction is not known to be extractable, and this
+    /// contrapositive-shaped statement is what *is* constructively available.
+    pub mul_apart_zero: NameId,
+    /// `Complex.mul_eq_zero_not_both_apart_zero : ∀ z w, Equiv (mul z w) zero
+    /// → Not (And (Apart z zero) (Apart w zero))`.
+    ///
+    /// **The intuitionistically valid half of "no zero divisors."**
+    /// `(A → ¬B) ↔ (B → ¬A)` holds without excluded middle (both are `A ∧ B →
+    /// False`, curried), so this is [`Self::mul_apart_zero`] transposed
+    /// against [`Self::norm_sq_eq_zero_of_eq_zero`] — no classical step
+    /// anywhere. It is deliberately **not** stated as `¬(z ~ 0) ∧ ¬(w ~ 0) →
+    /// ¬(mul z w ~ 0)`: that direction is the *contrapositive of the
+    /// unavailable* disjunctive `mul_eq_zero`, and proving it here would
+    /// silently recover what the module documentation says cannot be
+    /// extracted. `Apart _ zero` is strictly stronger than `Not (Equiv _
+    /// zero)`, and only the `Apart` form is proved.
+    pub mul_eq_zero_not_both_apart_zero: NameId,
 }
 
 impl ComplexPrelude {
@@ -458,6 +526,13 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         inv_congr: kernel.name_str(complex, "inv_congr"),
         div: kernel.name_str(complex, "div"),
         div_self: kernel.name_str(complex, "div_self"),
+        apart: kernel.name_str(complex, "Apart"),
+        apart_irrefl: kernel.name_str(complex, "apart_irrefl"),
+        apart_symm: kernel.name_str(complex, "apart_symm"),
+        apart_of_normsq_pos: kernel.name_str(complex, "apart_of_normSq_pos"),
+        mul_apart_zero: kernel.name_str(complex, "mul_apart_zero"),
+        mul_eq_zero_not_both_apart_zero: kernel
+            .name_str(complex, "mul_eq_zero_not_both_apart_zero"),
     }
 }
 
@@ -505,7 +580,13 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_complex_mul_inv_cancel(&mut d, prelude)?;
         declare_complex_inv_congr(&mut d, prelude)?;
         declare_div(&mut d, prelude)?;
-        declare_div_self(&mut d, prelude)
+        declare_div_self(&mut d, prelude)?;
+        declare_apart(&mut d, prelude)?;
+        declare_apart_irrefl(&mut d, prelude)?;
+        declare_apart_symm(&mut d, prelude)?;
+        declare_apart_of_normsq_pos(&mut d, prelude)?;
+        declare_mul_apart_zero(&mut d, prelude)?;
+        declare_mul_eq_zero_not_both_apart_zero(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -2834,6 +2915,476 @@ fn declare_div_self(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelE
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.div_self,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- apartness, and the constructive shape of "no zero divisors" -----------
+//
+// ℂ has no order ([`declare_no_order`]), so `Complex.Apart` cannot mirror
+// `CReal.Apart`'s *shape* (`lt x y ∨ lt y x`): there is no `lt` on `Complex`
+// to disjoin. It mirrors `CReal.Apart`'s *role* — a `Prop` strictly stronger
+// than `Not Equiv` — through the one order ℂ's components still have: `normSq
+// (z − w)` is always `CReal.le`-nonneg, so its **strict** positivity is
+// exactly the separation `Apart` needs, ported through `CReal.lt` directly.
+
+/// `CReal.Equiv (normSq v) (normSq (add v (neg Complex.zero)))`.
+///
+/// The bridging identity every `Apart _ Complex.zero` proof goes through:
+/// `Apart v zero` unfolds to positivity of `normSq (add v (neg zero))`, a
+/// *different* term from `normSq v` (though ring-equal — `add v (neg zero)`
+/// needs a rearrangement, not defeq, since `CReal.add`/`neg` do not compute
+/// syntactically on an opaque variable). Both sides are built already
+/// unfolded one delta step past `normSq`/`add`/`neg`/`Complex.zero`, exactly
+/// the pattern [`declare_norm_conjugation`]'s `normSq_mul` uses, so the ring
+/// calculus's output type-checks against the folded target by the kernel's
+/// own defeq.
+fn normsq_shift_zero_proof(d: &mut IntDev<'_>, p: ComplexPrelude, v: ExprId) -> ExprId {
+    let creal = p.creal;
+    let a = re_of(d, p, v);
+    let b = im_of(d, p, v);
+    let lhs = RExpr::add(
+        RExpr::mul(RExpr::Atom(a), RExpr::Atom(a)),
+        RExpr::mul(RExpr::Atom(b), RExpr::Atom(b)),
+    );
+    let rhs = RExpr::add(
+        RExpr::mul(
+            RExpr::add(RExpr::Atom(a), RExpr::neg(RExpr::Zero)),
+            RExpr::add(RExpr::Atom(a), RExpr::neg(RExpr::Zero)),
+        ),
+        RExpr::mul(
+            RExpr::add(RExpr::Atom(b), RExpr::neg(RExpr::Zero)),
+            RExpr::add(RExpr::Atom(b), RExpr::neg(RExpr::Zero)),
+        ),
+    );
+    ring_proof(d, creal, &lhs, &rhs)
+}
+
+/// `CReal.Equiv (normSq (add w (neg z))) (normSq (add z (neg w)))`.
+///
+/// `(c−a)² + (e−b)²` and `(a−c)² + (b−e)²` are the *same* multiset of degree-2
+/// monomials — the ring calculus's atom-sorted normal form does not
+/// distinguish `a·c` from `c·a`, so the two expand to identical canonical
+/// forms with no `CReal.neg_mul_neg`-style side lemma needed.
+fn normsq_swap_proof(d: &mut IntDev<'_>, p: ComplexPrelude, z: ExprId, w: ExprId) -> ExprId {
+    let creal = p.creal;
+    let a = re_of(d, p, z);
+    let b = im_of(d, p, z);
+    let c = re_of(d, p, w);
+    let e = im_of(d, p, w);
+    let lhs = RExpr::add(
+        RExpr::mul(
+            RExpr::add(RExpr::Atom(c), RExpr::neg(RExpr::Atom(a))),
+            RExpr::add(RExpr::Atom(c), RExpr::neg(RExpr::Atom(a))),
+        ),
+        RExpr::mul(
+            RExpr::add(RExpr::Atom(e), RExpr::neg(RExpr::Atom(b))),
+            RExpr::add(RExpr::Atom(e), RExpr::neg(RExpr::Atom(b))),
+        ),
+    );
+    let rhs = RExpr::add(
+        RExpr::mul(
+            RExpr::add(RExpr::Atom(a), RExpr::neg(RExpr::Atom(c))),
+            RExpr::add(RExpr::Atom(a), RExpr::neg(RExpr::Atom(c))),
+        ),
+        RExpr::mul(
+            RExpr::add(RExpr::Atom(b), RExpr::neg(RExpr::Atom(e))),
+            RExpr::add(RExpr::Atom(b), RExpr::neg(RExpr::Atom(e))),
+        ),
+    );
+    ring_proof(d, creal, &lhs, &rhs)
+}
+
+/// `Complex.Apart z w := CReal.lt CReal.zero (normSq (add z (neg w)))`.
+fn declare_apart(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let prop = d.kernel().sort_zero();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+
+    let neg_w = d.const_app(p.neg, &[w]);
+    let diff = d.const_app(p.add, &[z, neg_w]);
+    let norm_diff = d.const_app(p.norm_sq, &[diff]);
+    let zero = czero(d, creal);
+    let body = d.const_app(creal.lt, &[zero, norm_diff]);
+
+    let value = {
+        let with_w = d.lam_fv(w_fv, carrier, body);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let inner = d.arrow(carrier, prop);
+        d.arrow(carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.apart,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 8),
+    })
+}
+
+/// `Complex.apart_irrefl : ∀ z, Not (Apart z z)`.
+fn declare_apart_irrefl(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+
+    let a = re_of(d, p, z);
+    let b = im_of(d, p, z);
+    let lhs = RExpr::add(
+        RExpr::mul(
+            RExpr::add(RExpr::Atom(a), RExpr::neg(RExpr::Atom(a))),
+            RExpr::add(RExpr::Atom(a), RExpr::neg(RExpr::Atom(a))),
+        ),
+        RExpr::mul(
+            RExpr::add(RExpr::Atom(b), RExpr::neg(RExpr::Atom(b))),
+            RExpr::add(RExpr::Atom(b), RExpr::neg(RExpr::Atom(b))),
+        ),
+    );
+    let zero_eq_proof = ring_proof(d, creal, &lhs, &RExpr::Zero);
+
+    let neg_z = d.const_app(p.neg, &[z]);
+    let diff = d.const_app(p.add, &[z, neg_z]);
+    let norm_diff = d.const_app(p.norm_sq, &[diff]);
+    let zero = czero(d, creal);
+    let zero_refl = crefl(d, creal, zero);
+
+    let apart_zz = d.const_app(p.apart, &[z, z]);
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    let contradiction = d.lemma(
+        creal.lt_congr,
+        &[zero, zero, norm_diff, zero, zero_refl, zero_eq_proof, hyp],
+    );
+    let irrefl_zero = d.lemma(creal.lt_irrefl, &[zero]);
+    let absurd = d.apply(irrefl_zero, &[contradiction]);
+
+    let value = {
+        let with_hyp = d.lam_fv(hyp_fv, apart_zz, absurd);
+        d.lam_fv(z_fv, carrier, with_hyp)
+    };
+    let ty = {
+        let not_apart = d.not(apart_zz);
+        d.pi_fv(z_fv, carrier, not_apart)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.apart_irrefl,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.apart_symm : ∀ z w, Apart z w → Apart w z`.
+fn declare_apart_symm(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+
+    let apart_zw = d.const_app(p.apart, &[z, w]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let zero = czero(d, creal);
+    let zero_refl = crefl(d, creal, zero);
+
+    let neg_w = d.const_app(p.neg, &[w]);
+    let diff_zw = d.const_app(p.add, &[z, neg_w]);
+    let norm_zw = d.const_app(p.norm_sq, &[diff_zw]);
+
+    let neg_z = d.const_app(p.neg, &[z]);
+    let diff_wz = d.const_app(p.add, &[w, neg_z]);
+    let norm_wz = d.const_app(p.norm_sq, &[diff_wz]);
+
+    let swap = normsq_swap_proof(d, p, z, w);
+    let swap_symm = csymm(d, creal, norm_wz, norm_zw, swap);
+
+    let conclusion = d.lemma(
+        creal.lt_congr,
+        &[zero, zero, norm_zw, norm_wz, zero_refl, swap_symm, h],
+    );
+
+    let apart_wz = d.const_app(p.apart, &[w, z]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, apart_zw, conclusion);
+        let with_w = d.lam_fv(w_fv, carrier, with_h);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let inner = d.arrow(apart_zw, apart_wz);
+        let with_w = d.pi_fv(w_fv, carrier, inner);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.apart_symm,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.apart_of_normSq_pos : ∀ z, CReal.lt CReal.zero (normSq z) →
+/// Apart z Complex.zero`.
+fn declare_apart_of_normsq_pos(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let zero = czero(d, creal);
+    let hyp_ty = d.const_app(creal.lt, &[zero, norm_z]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let shift = normsq_shift_zero_proof(d, p, z);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let neg_zero_c = d.const_app(p.neg, &[zero_c]);
+    let diff_z0 = d.const_app(p.add, &[z, neg_zero_c]);
+    let norm_z0 = d.const_app(p.norm_sq, &[diff_z0]);
+
+    let zero_refl = crefl(d, creal, zero);
+    let conclusion = d.lemma(
+        creal.lt_congr,
+        &[zero, zero, norm_z, norm_z0, zero_refl, shift, h],
+    );
+
+    let apart_z_zero = d.const_app(p.apart, &[z, zero_c]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, conclusion);
+        d.lam_fv(z_fv, carrier, with_h)
+    };
+    let ty = {
+        let inner = d.arrow(hyp_ty, apart_z_zero);
+        d.pi_fv(z_fv, carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.apart_of_normsq_pos,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.mul_apart_zero : ∀ z w, Apart z zero → Apart w zero →
+/// Apart (mul z w) zero` — the constructive shape of "ℂ has no zero
+/// divisors".
+fn declare_mul_apart_zero(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let apart_z0 = d.const_app(p.apart, &[z, zero_c]);
+    let apart_w0 = d.const_app(p.apart, &[w, zero_c]);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let zero = czero(d, creal);
+    let zero_refl = crefl(d, creal, zero);
+    let neg_zero_c = d.const_app(p.neg, &[zero_c]);
+
+    // pos_z : CReal.lt zero (normSq z), from h1 : Apart z zero.
+    let diff_z0 = d.const_app(p.add, &[z, neg_zero_c]);
+    let norm_z0 = d.const_app(p.norm_sq, &[diff_z0]);
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let shift_z = normsq_shift_zero_proof(d, p, z);
+    let shift_z_symm = csymm(d, creal, norm_z, norm_z0, shift_z);
+    let pos_z = d.lemma(
+        creal.lt_congr,
+        &[zero, zero, norm_z0, norm_z, zero_refl, shift_z_symm, h1],
+    );
+
+    // pos_w : CReal.lt zero (normSq w), from h2 : Apart w zero.
+    let diff_w0 = d.const_app(p.add, &[w, neg_zero_c]);
+    let norm_w0 = d.const_app(p.norm_sq, &[diff_w0]);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+    let shift_w = normsq_shift_zero_proof(d, p, w);
+    let shift_w_symm = csymm(d, creal, norm_w, norm_w0, shift_w);
+    let pos_w = d.lemma(
+        creal.lt_congr,
+        &[zero, zero, norm_w0, norm_w, zero_refl, shift_w_symm, h2],
+    );
+
+    // prod_pos : CReal.lt zero (CReal.mul (normSq z) (normSq w)).
+    let prod_pos = d.lemma(creal.mul_pos, &[norm_z, norm_w, pos_z, pos_w]);
+
+    // pos_mul : CReal.lt zero (normSq (mul z w)), via normSq_mul.
+    let mul_zw = d.const_app(p.mul, &[z, w]);
+    let norm_mul = d.const_app(p.norm_sq, &[mul_zw]);
+    let norm_prod = cmul(d, creal, norm_z, norm_w);
+    let norm_sq_mul_proof = d.lemma(p.norm_sq_mul, &[z, w]);
+    let norm_sq_mul_symm = csymm(d, creal, norm_mul, norm_prod, norm_sq_mul_proof);
+    let pos_mul = d.lemma(
+        creal.lt_congr,
+        &[
+            zero,
+            zero,
+            norm_prod,
+            norm_mul,
+            zero_refl,
+            norm_sq_mul_symm,
+            prod_pos,
+        ],
+    );
+
+    // final : Apart (mul z w) zero.
+    let shift_mul = normsq_shift_zero_proof(d, p, mul_zw);
+    let diff_mul0 = d.const_app(p.add, &[mul_zw, neg_zero_c]);
+    let norm_mul0 = d.const_app(p.norm_sq, &[diff_mul0]);
+    let final_proof = d.lemma(
+        creal.lt_congr,
+        &[
+            zero, zero, norm_mul, norm_mul0, zero_refl, shift_mul, pos_mul,
+        ],
+    );
+
+    let apart_mul0 = d.const_app(p.apart, &[mul_zw, zero_c]);
+
+    let value = {
+        let with_h2 = d.lam_fv(h2_fv, apart_w0, final_proof);
+        let with_h1 = d.lam_fv(h1_fv, apart_z0, with_h2);
+        let with_w = d.lam_fv(w_fv, carrier, with_h1);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let after2 = d.arrow(apart_w0, apart_mul0);
+        let after1 = d.arrow(apart_z0, after2);
+        let with_w = d.pi_fv(w_fv, carrier, after1);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mul_apart_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Not (Complex.Equiv v Complex.zero)`, given `apart_v : Apart v
+/// Complex.zero`.
+///
+/// The bridge [`declare_mul_eq_zero_not_both_apart_zero`] needs and no other
+/// caller does, so it stays a private proof-term builder rather than a named
+/// declaration — exactly [`double_zero_imp_zero`]'s convention.
+fn not_equiv_zero_of_apart_zero(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    v: ExprId,
+    apart_v: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let hyp_ty = zeq(d, p, v, zero_c);
+
+    // From `v ~ zero`: `normSq v ~ CReal.zero` (the easy half already proved).
+    let normsq_zero = d.lemma(p.norm_sq_eq_zero_of_eq_zero, &[v, h]);
+
+    let shift = normsq_shift_zero_proof(d, p, v);
+    let norm_v = d.const_app(p.norm_sq, &[v]);
+    let neg_zero_c = d.const_app(p.neg, &[zero_c]);
+    let diff_v0 = d.const_app(p.add, &[v, neg_zero_c]);
+    let norm_v0 = d.const_app(p.norm_sq, &[diff_v0]);
+    let zero_r = czero(d, creal);
+
+    let shift_symm = csymm(d, creal, norm_v, norm_v0, shift);
+    let combined = ctrans(d, creal, norm_v0, norm_v, zero_r, shift_symm, normsq_zero);
+
+    let zero_refl = crefl(d, creal, zero_r);
+    let contradiction = d.lemma(
+        creal.lt_congr,
+        &[
+            zero_r, zero_r, norm_v0, zero_r, zero_refl, combined, apart_v,
+        ],
+    );
+    let irrefl = d.lemma(creal.lt_irrefl, &[zero_r]);
+    let absurd = d.apply(irrefl, &[contradiction]);
+
+    d.lam_fv(h_fv, hyp_ty, absurd)
+}
+
+/// `Complex.mul_eq_zero_not_both_apart_zero : ∀ z w, Equiv (mul z w) zero →
+/// Not (And (Apart z zero) (Apart w zero))`.
+///
+/// **The intuitionistically valid half of "no zero divisors."**
+/// `(A → ¬B) ↔ (B → ¬A)` holds without excluded middle (both sides are `A ∧ B
+/// → False`, curried), so this is [`declare_mul_apart_zero`] transposed
+/// against [`ComplexPrelude::norm_sq_eq_zero_of_eq_zero`] — no `Classical.em`,
+/// no `Decidable` instance, nowhere. **Not attempted**: the full disjunctive
+/// `mul z w ~ 0 → z ~ 0 ∨ w ~ 0` — `CReal`'s order is not decidable, so that
+/// disjunction is not known to be extractable from these hypotheses, and this
+/// contrapositive-shaped statement is the constructively available substitute.
+fn declare_mul_eq_zero_not_both_apart_zero(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+
+    let mul_zw = d.const_app(p.mul, &[z, w]);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let eq_hyp_ty = zeq(d, p, mul_zw, zero_c);
+    let eq_fv = d.fresh_fvar();
+    let eq_h = d.kernel().fvar(eq_fv);
+
+    let apart_z0 = d.const_app(p.apart, &[z, zero_c]);
+    let apart_w0 = d.const_app(p.apart, &[w, zero_c]);
+    let and_ty = d.and(apart_z0, apart_w0);
+    let and_fv = d.fresh_fvar();
+    let and_h = d.kernel().fvar(and_fv);
+
+    let a1 = d.and_left(apart_z0, apart_w0, and_h);
+    let a2 = d.and_right(apart_z0, apart_w0, and_h);
+
+    let apart_mul = d.lemma(p.mul_apart_zero, &[z, w, a1, a2]);
+    let contra = not_equiv_zero_of_apart_zero(d, p, mul_zw, apart_mul);
+    let absurd = d.apply(contra, &[eq_h]);
+
+    let value = {
+        let with_and = d.lam_fv(and_fv, and_ty, absurd);
+        let with_eq = d.lam_fv(eq_fv, eq_hyp_ty, with_and);
+        let with_w = d.lam_fv(w_fv, carrier, with_eq);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let not_and = d.not(and_ty);
+        let inner = d.arrow(eq_hyp_ty, not_and);
+        let with_w = d.pi_fv(w_fv, carrier, inner);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mul_eq_zero_not_both_apart_zero,
         uparams: vec![],
         ty,
         value,
