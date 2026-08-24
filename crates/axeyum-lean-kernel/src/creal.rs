@@ -1180,6 +1180,80 @@ pub struct CRealPrelude {
     /// inverse identity for `Rat.natDivSucc`, none of which this development
     /// builds; see the module documentation for the precise blocker.
     pub geom_tail_bounded: NameId,
+    /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
+    /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
+    /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
+    /// proof: `pow`'s recursive factor `mul (pow x j) x` already has the
+    /// accumulator on the **left**, matching [`Self::mul_le_mul_of_nonneg_left`]'s
+    /// `c := pow x j` slot directly, so no final `mul_comm` is needed.
+    pub one_le_pow_of_one_le: NameId,
+    /// `CReal.pow_le_pow_of_one_le : ∀ x, le one x → ∀ n, le (pow x n) (pow x
+    /// (Nat.succ n))` — the mirror of [`Self::pow_le_pow_of_le_one`]: the
+    /// powers are non-decreasing when the base is at least `1`. Not an
+    /// induction, one step for an arbitrary fixed `n`, exactly like its
+    /// mirror — and needs only the one hypothesis `1 ≤ x`, since `0 ≤ x`
+    /// ([`Self::pow_nonneg`]'s own hypothesis) follows from it via
+    /// [`Self::zero_lt_one`] and [`Self::le_trans`] rather than being taken
+    /// as a separate parameter.
+    pub pow_le_pow_of_one_le: NameId,
+    /// `CReal.pow_pos : ∀ x, lt zero x → ∀ n, lt zero (pow x n)` — strict
+    /// positivity is preserved by `pow`. Induction on `n`: the base case is
+    /// [`Self::zero_lt_one`] up to `pow`'s ι-reduction, the step is
+    /// [`Self::mul_pos`] applied to the inductive hypothesis and the outer
+    /// `0 < x`.
+    pub pow_pos: NameId,
+    /// `CReal.pow_succ_lt_one : ∀ x, le zero x → lt x one → ∀ m, lt (pow x
+    /// (Nat.succ m)) one` — **the strict half of [`Self::pow_le_one`]** that
+    /// file lacked: a base strictly below `1` stays strictly below `1` at
+    /// every positive power (stated over `Nat.succ m` rather than a bare `n`
+    /// with a separate `0 < n` hypothesis, since `pow x 0 ≡ one` is not `<
+    /// one` and every downstream use already has a successor in hand).
+    ///
+    /// Induction on `m`, and structurally [`Self::pow_le_one`]'s own proof
+    /// with the closing step swapped: base case rewrites `mul one x ~ x`
+    /// along the hypothesis `x < one` via [`Self::lt_congr`]; the step
+    /// multiplies the *strict* inductive hypothesis `pow x (succ j) < one`
+    /// by `x ≤ one` on the right
+    /// ([`Self::mul_le_mul_of_nonneg_left`] at `c := pow x (succ j)`,
+    /// nonnegative via [`Self::pow_nonneg`], giving `mul (pow x (succ j)) x ≤
+    /// mul (pow x (succ j)) one ~ pow x (succ j)`) and chains that `≤` against
+    /// the strict IH with [`Self::lt_of_le_of_lt`] — no [`Self::mul_pos`], no
+    /// rational-gap algebra, needed anywhere.
+    pub pow_succ_lt_one: NameId,
+    /// `CReal.pow_succ_gt_one : ∀ x, lt one x → ∀ m, lt one (pow x (Nat.succ
+    /// m))` — the mirror of [`Self::pow_succ_lt_one`]: a base strictly above
+    /// `1` stays strictly above `1` at every positive power. Same proof shape
+    /// with the inequalities flipped and [`Self::lt_of_lt_of_le`] closing the
+    /// step instead of [`Self::lt_of_le_of_lt`]; `0 ≤ x` is derived from `1 <
+    /// x` rather than taken as a hypothesis, exactly as in
+    /// [`Self::pow_le_pow_of_one_le`].
+    pub pow_succ_gt_one: NameId,
+    /// `CReal.not_apart_one_of_pow_succ_eq_one : ∀ x, le zero x → ∀ m, Equiv
+    /// (pow x (Nat.succ m)) one → Not (Apart x one)`.
+    ///
+    /// **This is the honest shape of the inversion the module doc's
+    /// "obstruction" section names, not the `Equiv x one` a reader might
+    /// expect.** The route: assume `Apart x one`, i.e. `lt x one ∨ lt one x`
+    /// ([`Self::apart`]'s own definition, consumed by `Or`-elimination with
+    /// no case split manufactured from nothing — the disjunction is
+    /// *given*). In the first branch, [`Self::pow_succ_lt_one`] turns `x <
+    /// one` into `pow x (succ m) < one`; the hypothesis `Equiv (pow x (succ
+    /// m)) one` gives the opposite `le one (pow x (succ m))`
+    /// ([`Self::le_of_equiv`] on the symmetrised equivalence); chaining the
+    /// two with [`Self::lt_of_le_of_lt`] produces `lt one one`, refuted by
+    /// [`Self::lt_irrefl`]. The second branch mirrors this with
+    /// [`Self::pow_succ_gt_one`] and [`Self::lt_of_lt_of_le`].
+    ///
+    /// **Why this cannot be strengthened to `Equiv x one` here**:
+    /// [`Self::apart`]'s own doc block states the wall directly — `Apart x y`
+    /// is *strictly stronger* than `Not (Equiv x y)`, and the converse
+    /// (tightness, `Not (Apart x y) → Equiv x y`) is Markov's principle,
+    /// "neither proved nor assumed" anywhere in this development. This
+    /// theorem's conclusion is exactly `Not (Apart x one)` — tightness is
+    /// the one missing step from here to `Equiv x one`, and it is a
+    /// genuinely different (classically-flavoured) proposition, not a
+    /// missing lemma this file failed to look up.
+    pub not_apart_one_of_pow_succ_eq_one: NameId,
 }
 
 impl CRealPrelude {
@@ -1404,6 +1478,13 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pow_le_pow_of_le_one: kernel.name_str(creal, "pow_le_pow_of_le_one"),
         mul_sub_one_geom_tail: kernel.name_str(creal, "mul_sub_one_geom_tail"),
         geom_tail_bounded: kernel.name_str(creal, "geom_tail_bounded"),
+        one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
+        pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
+        pow_pos: kernel.name_str(creal, "pow_pos"),
+        pow_succ_lt_one: kernel.name_str(creal, "pow_succ_lt_one"),
+        pow_succ_gt_one: kernel.name_str(creal, "pow_succ_gt_one"),
+        not_apart_one_of_pow_succ_eq_one: kernel
+            .name_str(creal, "not_apart_one_of_pow_succ_eq_one"),
     }
 }
 

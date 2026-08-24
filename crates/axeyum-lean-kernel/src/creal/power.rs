@@ -60,7 +60,7 @@
 //! on `Σ xᵏ` alone (rather than on `(1−x)·Σ xᵏ`) does not appear in this
 //! statement because this statement does not reach that claim.
 
-use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, equiv};
+use super::{CRealPrelude, DERIVED_HEIGHT, clt, creal_ty, equiv};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -87,7 +87,13 @@ pub(super) fn declare_power(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     declare_geom_sum_bounded(d, p)?;
     declare_pow_le_pow_of_le_one(d, p)?;
     declare_mul_sub_one_geom_tail(d, p)?;
-    declare_geom_tail_bounded(d, p)
+    declare_geom_tail_bounded(d, p)?;
+    declare_one_le_pow_of_one_le(d, p)?;
+    declare_pow_le_pow_of_one_le(d, p)?;
+    declare_pow_pos(d, p)?;
+    declare_pow_succ_lt_one(d, p)?;
+    declare_pow_succ_gt_one(d, p)?;
+    declare_not_apart_one_of_pow_succ_eq_one(d, p)
 }
 
 // --- small local term builders ----------------------------------------------
@@ -1534,6 +1540,496 @@ fn declare_geom_tail_bounded(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.geom_tail_bounded,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the reverse-direction monotonicity lemmas -------------------------------
+//
+// `declare_pow_le_one`/`declare_pow_le_pow_of_le_one` above take the base's
+// relation to `one` as a *hypothesis*; every growth argument (this includes
+// the strict lemmas and the headline below) needs the mirror direction, which
+// this file did not have.
+
+/// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)`.
+/// Mirror of [`declare_pow_le_one`]: induction on `n`, base case `le_refl
+/// one` up to `pow`'s ι-reduction. The step rewrites the inductive
+/// hypothesis `one ≤ pow x j` across `mul_one` (symm) to `one ≤ mul (pow x j)
+/// one`, then chains with [`CRealPrelude::mul_le_mul_of_nonneg_left`] at `c
+/// := pow x j` against the outer `one ≤ x`. Unlike [`declare_pow_le_one`],
+/// `pow x j` already sits in `mul_le_mul_of_nonneg_left`'s **left** (`c`)
+/// slot, matching `pow`'s own right-recursive shape `mul (pow x j) x`
+/// directly, so no closing `mul_comm` is needed.
+fn declare_one_le_pow_of_one_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let one = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+
+    let lt01 = d.lemma(p.zero_lt_one, &[]);
+    let le01 = d.lemma(p.le_of_lt, &[zero_c, one, lt01]);
+    let h0 = d.lemma(p.le_trans, &[zero_c, one, x, le01, h1]);
+
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let px = d.const_app(p.pow, &[x, v]);
+        cle(d, p, one, px)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| d.lemma(p.le_refl, &[one]),
+        &|d, j, ih| {
+            let px_j = d.const_app(p.pow, &[x, j]);
+            let mul_pxj_one = d.const_app(p.mul, &[px_j, one]);
+            let mul_pxj_x = d.const_app(p.mul, &[px_j, x]);
+
+            let mul_one_h = d.lemma(p.mul_one, &[px_j]); // Equiv mul_pxj_one px_j
+            let mul_one_symm = d.lemma(p.equiv_symm, &[mul_pxj_one, px_j, mul_one_h]); // Equiv px_j mul_pxj_one
+            let refl_one = d.lemma(p.equiv_refl, &[one]);
+            let step_a = d.lemma(
+                p.le_congr,
+                &[one, one, px_j, mul_pxj_one, refl_one, mul_one_symm, ih],
+            );
+            // step_a : le one mul_pxj_one
+
+            let h_nonneg = d.lemma(p.pow_nonneg, &[x, h0, j]);
+            let step_b = d.lemma(p.mul_le_mul_of_nonneg_left, &[px_j, one, x, h_nonneg, h1]);
+            // step_b : le mul_pxj_one mul_pxj_x
+
+            d.lemma(p.le_trans, &[one, mul_pxj_one, mul_pxj_x, step_a, step_b])
+            // : le one mul_pxj_x, defeq to le one (pow x (succ j))
+        },
+        n,
+    );
+
+    let hyp1 = cle(d, p, one, x);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let with_h1 = d.arrow(hyp1, inner);
+        d.pi_fv(x_fv, carrier, with_h1)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let with_h1 = d.lam_fv(h1_fv, hyp1, inner);
+        d.lam_fv(x_fv, carrier, with_h1)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.one_le_pow_of_one_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.pow_le_pow_of_one_le : ∀ x, le one x → ∀ n, le (pow x n) (pow x
+/// (Nat.succ n))`. Mirror of [`declare_pow_le_pow_of_le_one`], not an
+/// induction: [`CRealPrelude::mul_le_mul_of_nonneg_left`] at `c := pow x n`
+/// against `one ≤ x` gives `mul (pow x n) one ≤ mul (pow x n) x`, and
+/// [`CRealPrelude::mul_one`] folds the left side back to `pow x n`. Needs
+/// only the one hypothesis `one ≤ x` — `zero ≤ x`
+/// ([`CRealPrelude::pow_nonneg`]'s own hypothesis) is derived from it via
+/// [`CRealPrelude::zero_lt_one`] and [`CRealPrelude::le_trans`] rather than
+/// taken as a separate parameter.
+fn declare_pow_le_pow_of_one_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let pow_n = d.const_app(p.pow, &[x, n]);
+    let one = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+
+    let lt01 = d.lemma(p.zero_lt_one, &[]);
+    let le01 = d.lemma(p.le_of_lt, &[zero_c, one, lt01]);
+    let h0 = d.lemma(p.le_trans, &[zero_c, one, x, le01, h1]);
+
+    let h_nonneg = d.lemma(p.pow_nonneg, &[x, h0, n]);
+    let base_le = d.lemma(p.mul_le_mul_of_nonneg_left, &[pow_n, one, x, h_nonneg, h1]);
+    // base_le : le (mul pow_n one) (mul pow_n x)
+    let mul_pn_one = d.const_app(p.mul, &[pow_n, one]);
+    let mul_pn_x = d.const_app(p.mul, &[pow_n, x]);
+    let mul_one_h = d.lemma(p.mul_one, &[pow_n]); // Equiv mul_pn_one pow_n
+    let refl_rhs = d.lemma(p.equiv_refl, &[mul_pn_x]);
+    let proof_inner = d.lemma(
+        p.le_congr,
+        &[
+            mul_pn_one, pow_n, mul_pn_x, mul_pn_x, mul_one_h, refl_rhs, base_le,
+        ],
+    );
+    // proof_inner : le pow_n mul_pn_x, defeq to le (pow x n) (pow x (succ n))
+
+    let sn = d.succ(n);
+    let pow_sn = d.const_app(p.pow, &[x, sn]);
+    let hyp1 = cle(d, p, one, x);
+    let stmt_inner = cle(d, p, pow_n, pow_sn);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let with_h1 = d.arrow(hyp1, inner);
+        d.pi_fv(x_fv, carrier, with_h1)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let with_h1 = d.lam_fv(h1_fv, hyp1, inner);
+        d.lam_fv(x_fv, carrier, with_h1)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_le_pow_of_one_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.pow_pos : ∀ x, lt zero x → ∀ n, lt zero (pow x n)`. Mirror of
+/// [`declare_pow_nonneg`], strict: induction on `n`, base case
+/// [`CRealPrelude::zero_lt_one`] up to `pow`'s ι-reduction, step
+/// [`CRealPrelude::mul_pos`] applied to the inductive hypothesis and the
+/// outer `0 < x`.
+fn declare_pow_pos(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let px = d.const_app(p.pow, &[x, v]);
+        let zero_c = czero(d, p);
+        clt(d, p, zero_c, px)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| d.lemma(p.zero_lt_one, &[]),
+        &|d, j, ih| {
+            let px_j = d.const_app(p.pow, &[x, j]);
+            d.lemma(p.mul_pos, &[px_j, x, ih, h])
+        },
+        n,
+    );
+
+    let hyp = {
+        let zero_c = czero(d, p);
+        clt(d, p, zero_c, x)
+    };
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let with_h = d.arrow(hyp, inner);
+        d.pi_fv(x_fv, carrier, with_h)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let with_h = d.lam_fv(h_fv, hyp, inner);
+        d.lam_fv(x_fv, carrier, with_h)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_pos,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the strict halves, and the honest shape of the headline ---------------
+//
+// `eq_one_of_pow_eq_one` as originally framed (`x^n ~ 1 → x ~ 1`) needs
+// tightness of `Apart` (`Not (Apart x y) → Equiv x y`), which is Markov's
+// principle and is exactly the wall `CRealPrelude::apart`'s own doc block
+// names as neither proved nor assumed anywhere in this development. What
+// **is** reachable constructively is `Not (Apart x one)`: assume `Apart x
+// one` (a *given* disjunction, not one manufactured from nothing — `Or`-
+// elimination needs no excluded middle), derive a strict pow bound in
+// whichever branch the disjunction handed over, and contradict it against
+// the hypothesis `pow x (succ m) ~ one` via `lt_irrefl`. The two branches
+// need a STRICT pow bound in each direction, which is what
+// `pow_succ_lt_one`/`pow_succ_gt_one` below supply — and, contrary to the
+// route this file's earlier sketch assumed, neither needs `mul_pos`,
+// `right_distrib`/`neg_mul_left`, or any rational-gap algebra: both are
+// [`declare_pow_le_one`]'s own induction with the closing step swapped from
+// `le_trans` to `lt_of_le_of_lt`/`lt_of_lt_of_le` against a *strict*
+// inductive hypothesis.
+
+/// `CReal.pow_succ_lt_one : ∀ x, le zero x → lt x one → ∀ m, lt (pow x
+/// (Nat.succ m)) one`. See [`CRealPrelude::pow_succ_lt_one`] for the shape
+/// and the proof sketch.
+fn declare_pow_succ_lt_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h0_fv = d.fresh_fvar();
+    let h0 = d.kernel().fvar(h0_fv);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let sv = d.succ(v);
+        let pxsv = d.const_app(p.pow, &[x, sv]);
+        clt(d, p, pxsv, one)
+    };
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let stmt_inner = motive(d, m);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            // Base: lt (pow x (succ zero)) one, i.e. lt (mul one x) one.
+            let mul_one_x = d.const_app(p.mul, &[one, x]);
+            let mul_x_one = d.const_app(p.mul, &[x, one]);
+            let step1 = d.lemma(p.mul_comm, &[one, x]); // Equiv mul_one_x mul_x_one
+            let step2 = d.lemma(p.mul_one, &[x]); // Equiv mul_x_one x
+            let chain = d.lemma(p.equiv_trans, &[mul_one_x, mul_x_one, x, step1, step2]);
+            // chain : Equiv mul_one_x x
+            let eq_ab = d.lemma(p.equiv_symm, &[mul_one_x, x, chain]); // Equiv x mul_one_x
+            let refl_one = d.lemma(p.equiv_refl, &[one]);
+            d.lemma(p.lt_congr, &[x, mul_one_x, one, one, eq_ab, refl_one, hlt])
+        },
+        &|d, j, ih| {
+            // Step: ih : lt (pow x (succ j)) one =: lt a one.
+            // Want: lt (mul a x) one = lt (pow x (succ (succ j))) one.
+            let sj = d.succ(j);
+            let a = d.const_app(p.pow, &[x, sj]);
+            let mul_a_x = d.const_app(p.mul, &[a, x]);
+            let mul_a_one = d.const_app(p.mul, &[a, one]);
+
+            let h_nonneg_a = d.lemma(p.pow_nonneg, &[x, h0, sj]);
+            let hle = d.lemma(p.le_of_lt, &[x, one, hlt]); // le x one
+            let mul_le = d.lemma(p.mul_le_mul_of_nonneg_left, &[a, x, one, h_nonneg_a, hle]);
+            // mul_le : le mul_a_x mul_a_one
+            let mul_one_h = d.lemma(p.mul_one, &[a]); // Equiv mul_a_one a
+            let refl_max = d.lemma(p.equiv_refl, &[mul_a_x]);
+            let le_a = d.lemma(
+                p.le_congr,
+                &[mul_a_x, mul_a_x, mul_a_one, a, refl_max, mul_one_h, mul_le],
+            );
+            // le_a : le mul_a_x a
+            d.lemma(p.lt_of_le_of_lt, &[mul_a_x, a, one, le_a, ih])
+            // : lt mul_a_x one
+        },
+        m,
+    );
+
+    let h0_ty = {
+        let zero_c = czero(d, p);
+        cle(d, p, zero_c, x)
+    };
+    let hlt_ty = clt(d, p, x, one);
+    let ty = {
+        let inner = d.pi_fv(m_fv, nat, stmt_inner);
+        let with_hlt = d.arrow(hlt_ty, inner);
+        let with_h0 = d.arrow(h0_ty, with_hlt);
+        d.pi_fv(x_fv, carrier, with_h0)
+    };
+    let value = {
+        let inner = d.lam_fv(m_fv, nat, proof_inner);
+        let with_hlt = d.lam_fv(hlt_fv, hlt_ty, inner);
+        let with_h0 = d.lam_fv(h0_fv, h0_ty, with_hlt);
+        d.lam_fv(x_fv, carrier, with_h0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_succ_lt_one,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.pow_succ_gt_one : ∀ x, lt one x → ∀ m, lt one (pow x (Nat.succ
+/// m))`. Mirror of [`declare_pow_succ_lt_one`]; `zero ≤ x` is derived from
+/// `one < x` rather than taken as a hypothesis, exactly as in
+/// [`declare_pow_le_pow_of_one_le`].
+fn declare_pow_succ_gt_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+    let one = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+
+    let lt01 = d.lemma(p.zero_lt_one, &[]);
+    let le01 = d.lemma(p.le_of_lt, &[zero_c, one, lt01]);
+    let hle_one_x = d.lemma(p.le_of_lt, &[one, x, hlt]); // le one x
+    let h0 = d.lemma(p.le_trans, &[zero_c, one, x, le01, hle_one_x]);
+
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let sv = d.succ(v);
+        let pxsv = d.const_app(p.pow, &[x, sv]);
+        clt(d, p, one, pxsv)
+    };
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let stmt_inner = motive(d, m);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            // Base: lt one (pow x (succ zero)) = lt one (mul one x).
+            let mul_one_x = d.const_app(p.mul, &[one, x]);
+            let mul_x_one = d.const_app(p.mul, &[x, one]);
+            let step1 = d.lemma(p.mul_comm, &[one, x]);
+            let step2 = d.lemma(p.mul_one, &[x]);
+            let chain = d.lemma(p.equiv_trans, &[mul_one_x, mul_x_one, x, step1, step2]);
+            // chain : Equiv mul_one_x x
+            let eq_ce = d.lemma(p.equiv_symm, &[mul_one_x, x, chain]); // Equiv x mul_one_x
+            let refl_one = d.lemma(p.equiv_refl, &[one]);
+            d.lemma(p.lt_congr, &[one, one, x, mul_one_x, refl_one, eq_ce, hlt])
+        },
+        &|d, j, ih| {
+            // Step: ih : lt one (pow x (succ j)) =: lt one a.
+            // Want: lt one (mul a x) = lt one (pow x (succ (succ j))).
+            let sj = d.succ(j);
+            let a = d.const_app(p.pow, &[x, sj]);
+            let mul_a_one = d.const_app(p.mul, &[a, one]);
+            let mul_a_x = d.const_app(p.mul, &[a, x]);
+
+            let h_nonneg_a = d.lemma(p.pow_nonneg, &[x, h0, sj]);
+            let hle = d.lemma(p.le_of_lt, &[one, x, hlt]); // le one x
+            let mul_le = d.lemma(p.mul_le_mul_of_nonneg_left, &[a, one, x, h_nonneg_a, hle]);
+            // mul_le : le mul_a_one mul_a_x
+            let mul_one_h = d.lemma(p.mul_one, &[a]); // Equiv mul_a_one a
+            let refl_max = d.lemma(p.equiv_refl, &[mul_a_x]);
+            let le_a = d.lemma(
+                p.le_congr,
+                &[mul_a_one, a, mul_a_x, mul_a_x, mul_one_h, refl_max, mul_le],
+            );
+            // le_a : le a mul_a_x
+            d.lemma(p.lt_of_lt_of_le, &[one, a, mul_a_x, ih, le_a])
+            // : lt one mul_a_x
+        },
+        m,
+    );
+
+    let hlt_ty = clt(d, p, one, x);
+    let ty = {
+        let inner = d.pi_fv(m_fv, nat, stmt_inner);
+        let with_hlt = d.arrow(hlt_ty, inner);
+        d.pi_fv(x_fv, carrier, with_hlt)
+    };
+    let value = {
+        let inner = d.lam_fv(m_fv, nat, proof_inner);
+        let with_hlt = d.lam_fv(hlt_fv, hlt_ty, inner);
+        d.lam_fv(x_fv, carrier, with_hlt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_succ_gt_one,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.Apart x y`, rebuilt privately exactly as every other file in this
+/// directory does (`field.rs::apart`, `cotransitivity.rs::apart`) rather
+/// than sharing one helper.
+fn apart(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.apart, &[x, y])
+}
+
+/// `CReal.not_apart_one_of_pow_succ_eq_one : ∀ x, le zero x → ∀ m, Equiv (pow
+/// x (Nat.succ m)) one → Not (Apart x one)`. See
+/// [`CRealPrelude::not_apart_one_of_pow_succ_eq_one`] for the proof sketch
+/// and for exactly why `Equiv x one` is out of reach here.
+fn declare_not_apart_one_of_pow_succ_eq_one(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let one = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h0_fv = d.fresh_fvar();
+    let h0 = d.kernel().fvar(h0_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let sm = d.succ(m);
+    let pow_sm = d.const_app(p.pow, &[x, sm]);
+    let hn_fv = d.fresh_fvar();
+    let hn = d.kernel().fvar(hn_fv);
+    let hn_ty = equiv(d, p, pow_sm, one);
+
+    let lt_x_one = clt(d, p, x, one);
+    let lt_one_x = clt(d, p, one, x);
+    let apart_ty = apart(d, p, x, one);
+    let false_ty = d.false_ty();
+
+    let apart_fv = d.fresh_fvar();
+    let apart_h = d.kernel().fvar(apart_fv);
+
+    let contradiction = d.or_elim(
+        lt_x_one,
+        lt_one_x,
+        false_ty,
+        apart_h,
+        &|d, hlt| {
+            // hlt : lt x one.
+            let strict = d.lemma(p.pow_succ_lt_one, &[x, h0, hlt, m]);
+            // strict : lt pow_sm one
+            let hn_symm = d.lemma(p.equiv_symm, &[pow_sm, one, hn]); // Equiv one pow_sm
+            let ge = d.lemma(p.le_of_equiv, &[one, pow_sm, hn_symm]); // le one pow_sm
+            let lt_one_one = d.lemma(p.lt_of_le_of_lt, &[one, pow_sm, one, ge, strict]);
+            d.lemma(p.lt_irrefl, &[one, lt_one_one])
+        },
+        &|d, hlt| {
+            // hlt : lt one x.
+            let strict = d.lemma(p.pow_succ_gt_one, &[x, hlt, m]);
+            // strict : lt one pow_sm
+            let le_eq = d.lemma(p.le_of_equiv, &[pow_sm, one, hn]); // le pow_sm one
+            let lt_one_one = d.lemma(p.lt_of_lt_of_le, &[one, pow_sm, one, strict, le_eq]);
+            d.lemma(p.lt_irrefl, &[one, lt_one_one])
+        },
+    );
+
+    let h0_ty = cle(d, p, zero_c, x);
+    let not_apart_ty = d.not(apart_ty);
+    let ty = {
+        let after_hn = d.arrow(hn_ty, not_apart_ty);
+        let with_m = d.pi_fv(m_fv, nat, after_hn);
+        let with_h0 = d.arrow(h0_ty, with_m);
+        d.pi_fv(x_fv, carrier, with_h0)
+    };
+    let value = {
+        let with_apart = d.lam_fv(apart_fv, apart_ty, contradiction);
+        let with_hn = d.lam_fv(hn_fv, hn_ty, with_apart);
+        let with_m = d.lam_fv(m_fv, nat, with_hn);
+        let with_h0 = d.lam_fv(h0_fv, h0_ty, with_m);
+        d.lam_fv(x_fv, carrier, with_h0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.not_apart_one_of_pow_succ_eq_one,
         uparams: vec![],
         ty,
         value,
