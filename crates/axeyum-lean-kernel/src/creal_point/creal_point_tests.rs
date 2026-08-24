@@ -19,9 +19,6 @@ fn built() -> (Kernel, CPointPrelude) {
     (kernel.clone(), *prelude)
 }
 
-/// The build itself, with the kernel's rejection **rendered** rather than
-/// `Debug`-formatted, so a failure says which two types failed to match.
-
 /// Run `f` on a **64 MiB** thread.
 ///
 /// The default test-thread stack is 2 MiB, and `built()` constructs the whole
@@ -49,6 +46,8 @@ fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) ->
         .expect("the deep-stack thread must not panic")
 }
 
+/// The build itself, with the kernel's rejection **rendered** rather than
+/// `Debug`-formatted, so a failure says which two types failed to match.
 #[test]
 fn cpoint_prelude_builds() {
     on_a_deep_stack(|| {
