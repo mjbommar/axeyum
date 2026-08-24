@@ -1345,15 +1345,14 @@ pub struct CRealPrelude {
     /// `Equiv`-zero unconditionally (`mul_one`/`mul_comm`), any modulus
     /// works.
     ///
-    /// **Not landed here** (see `creal/derivative.rs`'s own module
-    /// documentation for the precise blocker on each): the sum rule
-    /// (`hasDerivative_add`, blocked on a missing general antitonicity
-    /// lemma for `Rat.natDivSucc` in its index — needed to combine two
-    /// independently-arbitrary moduli, and absent from this development by
-    /// design, per `RatPrelude::nat_div_succ_scale`'s own doc), the
-    /// scalar-multiple rule (`hasDerivative_smul`, no blocker found — an
-    /// exact rescaling via `Rat.natDivSucc_scale`/`Rat.natDivSucc_mul`, just
-    /// not built in this slice), and the product rule.
+    /// The sum rule (`hasDerivative_add`, [`Self::has_derivative_add`]) and
+    /// `hasDerivative_neg` ([`Self::has_derivative_neg`]) are landed in a
+    /// later pass — see `creal/derivative.rs`'s own module documentation.
+    /// **Still not landed here**: the scalar-multiple rule (`hasDerivative_smul`,
+    /// no blocker found — an exact rescaling via
+    /// `Rat.natDivSucc_scale`/`Rat.natDivSucc_mul`, just not built in this
+    /// slice), and the product rule (which additionally needs the
+    /// scalar-multiple rule's own two-variable product-of-bounds lemma).
     pub has_derivative_id: NameId,
     /// `CReal.hasDerivative_sq : forall a b, HasDerivativeOn (fun r => mul r
     /// r) (fun x => add x x) a b` — the first **nonlinear** derivative in
@@ -1363,6 +1362,30 @@ pub struct CRealPrelude {
     /// (`creal/derivative.rs`'s `diff_of_squares`/`sq_le_abs_sq`) built for
     /// this slice, since none of it existed in [`CRealPrelude`] beforehand.
     pub has_derivative_sq: NameId,
+    /// `CReal.hasDerivative_neg : forall F F' a b, HasDerivativeOn F F' a b
+    /// -> HasDerivativeOn (fun r => neg (F r)) (fun x => neg (F' x)) a b` —
+    /// `neg`'s error term is exactly `neg` of `F`'s own error term (the
+    /// scaling factor is `-1`, so no rescaled modulus is needed: the SAME
+    /// modulus `F` already carries works unchanged), via
+    /// `creal/derivative.rs`'s `neg_mul_equiv_left`/`double_neg`/
+    /// `neg_add_distrib` ring toolkit plus a new general
+    /// `le_abs_neg_of_le_abs` combinator.
+    pub has_derivative_neg: NameId,
+    /// `CReal.hasDerivative_add : forall F F' G G' a b, HasDerivativeOn F F'
+    /// a b -> HasDerivativeOn G G' a b -> HasDerivativeOn (fun r => add (F
+    /// r) (G r)) (fun x => add (F' x) (G' x)) a b` — **the sum rule**,
+    /// unblocked by `Rat.natDivSucc_antitone`
+    /// ([`RatPrelude::nat_div_succ_antitone`]) after months on that one
+    /// missing lemma: the combined modulus is `fun e => mF (2e+1) + mG
+    /// (2e+1)` (`Nat.add`, not `max` — `nat_prelude` has no `Nat.max`, and
+    /// `Nat.le_add_right`/`Nat.add_comm` give both `<=` directions just as
+    /// well), antitonicity reads the combined hypothesis back down to each
+    /// sub-derivative's own modulus at `2e+1`, and
+    /// `Rat.natDivSucc_add`/`Rat.natDivSucc_halve` fuse the two `1/(2e+2)`
+    /// error bounds back into the single target `1/(e+1)` — the "each error
+    /// bounded by HALF the target" arithmetic the module documentation
+    /// verifies against `natDivSucc`'s actual definition.
+    pub has_derivative_add: NameId,
 }
 
 impl CRealPrelude {
@@ -1608,6 +1631,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_const: kernel.name_str(creal, "hasDerivative_const"),
         has_derivative_id: kernel.name_str(creal, "hasDerivative_id"),
         has_derivative_sq: kernel.name_str(creal, "hasDerivative_sq"),
+        has_derivative_neg: kernel.name_str(creal, "hasDerivative_neg"),
+        has_derivative_add: kernel.name_str(creal, "hasDerivative_add"),
     }
 }
 

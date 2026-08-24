@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 180] = [
+    let expected: [(&str, crate::NameId, &str); 182] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -344,6 +344,8 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ),
         ("CReal.hasDerivative_id", p.has_derivative_id, "theorem"),
         ("CReal.hasDerivative_sq", p.has_derivative_sq, "theorem"),
+        ("CReal.hasDerivative_neg", p.has_derivative_neg, "theorem"),
+        ("CReal.hasDerivative_add", p.has_derivative_add, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel

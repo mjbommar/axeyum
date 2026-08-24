@@ -42,12 +42,26 @@
 //! 0` — one nonneg-product identity, no sign case-split, since `CReal.le` is
 //! undecidable) gets the bound. Modulus is the identity, matching `id`'s.
 //!
-//! **Not landed: the sum rule, the scalar-multiple rule, and the product
-//! rule.** All three were attempted; none is force-fit, for a concrete,
-//! verified reason recorded here.
+//! **Landed in a later pass still: `hasDerivative_neg` and `hasDerivative_add`
+//! (the sum rule).** `hasDerivative_add` WAS blocked (below) and is unblocked
+//! by [`RatPrelude::nat_div_succ_antitone`]; `hasDerivative_neg` was simply
+//! not attempted before and turns out to need no new blocking lemma at all.
+//! **Not landed: the scalar-multiple rule and the product rule** — see below
+//! for why, unchanged from the earlier pass.
 //!
-//! **The sum rule (`hasDerivative_add`) is blocked on a missing rational
-//! lemma, not on anything about `CReal`.** Given `HasDerivativeOn F F' a b`
+//! **`hasDerivative_neg` needed no new blocker at all.** `neg`'s scaling
+//! factor is exactly `-1`, so `neg`'s error term at accuracy `e` is
+//! **exactly** `neg` of `F`'s own error term at the SAME `e` — no rescaled
+//! modulus, hence no antitonicity, hence no product-of-bounds lemma. The only
+//! new fact needed is structural (`|-x| = |x|`, [`le_abs_neg_of_le_abs`]
+//! below), plus the mirror-image multiplication law [`neg_mul_equiv_left`].
+//!
+//! **The sum rule (`hasDerivative_add`) WAS blocked on a missing rational
+//! lemma, and the module documentation below is kept as it was written while
+//! blocked** (the reasoning that follows is what a later pass, holding
+//! [`RatPrelude::nat_div_succ_antitone`], used to unblock it — see
+//! [`declare_has_derivative_add`]'s own doc comment for the closing
+//! argument). Given `HasDerivativeOn F F' a b`
 //! with modulus `mF` and `HasDerivativeOn G G' a b` with modulus `mG`, a
 //! witness for `F + G` needs ONE combined modulus `mSum` such that, from a
 //! single hypothesis `Within (y-x) (natDivSucc 1 (mSum e))`, BOTH `F`'s and
@@ -55,8 +69,9 @@
 //! e)`, `mF e + mG e`, or any other combination that dominates both), this
 //! step needs: from `Nat.le j j'`, derive `Rat.le (natDivSucc 1 j')
 //! (natDivSucc 1 j)` — **`Rat.natDivSucc` antitone in its index, for two
-//! arbitrary indices.** This lemma does not exist anywhere in this
-//! development. `rat_prelude.rs`'s own field documentation says so
+//! arbitrary indices.** This lemma did not exist anywhere in this
+//! development at the time this paragraph was written. `rat_prelude.rs`'s own
+//! field documentation says so
 //! explicitly, twice, independently: the comment on
 //! [`RatPrelude::nat_div_succ_scale`] states outright that keeping
 //! `natDivSucc` "antitone in its index... off the critical path" is the
@@ -67,9 +82,10 @@
 //! module documentation hits the identical wall for the identical reason
 //! (closing `uniformly_continuous_imp_continuous_at` needs "a `Nat` `k`... with
 //! `K/(n+1) <= 1/(modulus k + 1)`... a genuine `Nat`-division search", and
-//! reports it as not built).
+//! reports it as not built — that bridge is still not built).
 //!
-//! Checked before giving up on it: [`RatPrelude::inv_le_of_pos_le`] (the
+//! Checked before giving up on it (before it was unblocked):
+//! [`RatPrelude::inv_le_of_pos_le`] (the
 //! reciprocal is antitone on the positives) is close, but bridging it to two
 //! `natDivSucc` VALUES needs `natDivSucc 1 j = inv (ofNat (j+1))` as an
 //! equation, an `inv_inv` law for positive rationals, and a `Nat -> Rat`
@@ -80,8 +96,11 @@
 //! [`RatPrelude::nat_div_succ_le_scaled`] looked like a shortcut (it DOES
 //! compare two different indices) but only for one SPECIFIC shape, `(c+1)*n +
 //! c` against `n`, which is exactly what makes the scalar-multiple rule
-//! below tractable and the sum rule not: combining two INDEPENDENT, ARBITRARY
-//! moduli `mF`, `mG` has no such shared shape to exploit.
+//! below tractable and the sum rule not (by itself — `nat_div_succ_antitone`
+//! is what actually closed it): combining two INDEPENDENT, ARBITRARY
+//! moduli `mF`, `mG` has no such shared shape to exploit, and the fix used
+//! `Nat.add` (`mF (2e+1) + mG (2e+1)`) plus antitonicity rather than any
+//! shared-shape trick — see [`declare_has_derivative_add`].
 //!
 //! **The scalar-multiple rule (`hasDerivative_smul`) does NOT hit the
 //! antitonicity wall, but it hits a DIFFERENT one, found while verifying the
@@ -115,13 +134,17 @@
 //!
 //! **The product rule (`hasDerivative_mul`)** additionally needs boundedness
 //! of `F`, `G`, `F'`, `G'` on the interval and continuity of `F`
-//! (`UniformlyContinuousOn` is exactly the tool for the last one), and was
-//! not attempted once the sum rule's blocker was found, since a difference
-//! quotient for a product decomposes into a sum of two error terms exactly
-//! the way the sum rule's does (`(FG)(y) - (FG)(x) - (F'G+FG')(x)(y-x) =
-//! G(x)*[F(y)-F(x)-F'(x)(y-x)] + F(y)*[G(y)-G(x)-G'(x)(y-x)] + [G(x)-G(y)]*...`
-//! — worked out on paper to the point of seeing the same two-independent-moduli
-//! combination appear, not built).
+//! (`UniformlyContinuousOn` is exactly the tool for the last one). It was not
+//! attempted once the sum rule's antitonicity blocker was found, since a
+//! difference quotient for a product decomposes into a sum of two error terms
+//! exactly the way the sum rule's does (`(FG)(y) - (FG)(x) - (F'G+FG')(x)(y-x)
+//! = G(x)*[F(y)-F(x)-F'(x)(y-x)] + F(y)*[G(y)-G(x)-G'(x)(y-x)] +
+//! [G(x)-G(y)]*...` — worked out on paper to the point of seeing the same
+//! two-independent-moduli combination appear, not built). **That combination
+//! is unblocked now** ([`declare_has_derivative_add`] closes it), but the
+//! product rule additionally needs the scalar-multiple rule's own two-variable
+//! product-of-bounds lemma, described above — still not built — so it remains
+//! open for that reason, not the modulus arithmetic.
 
 #![allow(
     clippy::doc_markdown,
@@ -137,6 +160,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
+use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite};
 
 /// Admit `CReal.HasDerivativeOn` (the carrier and its two projections) and
 /// two witnesses: `hasDerivative_const` and `hasDerivative_id`. See the
@@ -152,7 +176,9 @@ pub(super) fn declare_derivative(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     declare_projections(d, p)?;
     declare_has_derivative_const(d, p)?;
     declare_has_derivative_id(d, p)?;
-    declare_has_derivative_sq(d, p)
+    declare_has_derivative_sq(d, p)?;
+    declare_has_derivative_neg(d, p)?;
+    declare_has_derivative_add(d, p)
 }
 
 // --- shared term builders ----------------------------------------------------
@@ -863,6 +889,213 @@ fn sq_le_abs_sq(d: &mut IntDev<'_>, p: CRealPrelude, t: ExprId) -> ExprId {
     );
 
     le_of_nonneg_sub(d, p, mul_t_t, mul_abst_abst, h_diffsq_nonneg)
+}
+
+/// `Equiv (mul (neg a) b) (neg (mul a b))` — the mirror of [`mul_neg_equiv`]
+/// (which negates the *second* factor), built the same way: commute, apply
+/// [`mul_neg_equiv`], commute back under `neg_congr`.
+fn neg_mul_equiv_left(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let na = cneg(d, p, a);
+    let lhs = cmul(d, p, na, b);
+    let b_na = cmul(d, p, b, na);
+    let c1 = d.lemma(p.mul_comm, &[na, b]); // lhs ~ b_na
+
+    let ba = cmul(d, p, b, a);
+    let neg_ba = cneg(d, p, ba);
+    let c2 = mul_neg_equiv(d, p, b, a); // b_na ~ neg_ba
+
+    let ab = cmul(d, p, a, b);
+    let neg_ab = cneg(d, p, ab);
+    let c3a = d.lemma(p.mul_comm, &[b, a]); // ba ~ ab
+    let c3 = d.lemma(p.neg_congr, &[ba, ab, c3a]); // neg_ba ~ neg_ab
+
+    echain(d, p, lhs, &[(b_na, c1), (neg_ba, c2), (neg_ab, c3)])
+}
+
+/// `Equiv (mul (add a b) c) (add (mul a c) (mul b c))` — the missing
+/// distributivity direction, the sum on the **left** of the product.
+/// `CReal.left_distrib` only distributes a sum on the right; this is built
+/// from it plus `mul_comm` on all three products, copied from
+/// `creal/power.rs`'s own private `right_distrib` (rebuilt here rather than
+/// imported, the same convention this file already follows for
+/// `neg_zero_equiv`/`mul_neg_equiv`).
+fn right_distrib(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+    let ab = cadd(d, p, a, b);
+    let lhs = cmul(d, p, ab, c);
+    let c_ab = cmul(d, p, c, ab);
+    let h1 = d.lemma(p.mul_comm, &[ab, c]); // lhs ~ c_ab
+
+    let ca = cmul(d, p, c, a);
+    let cb = cmul(d, p, c, b);
+    let dist = cadd(d, p, ca, cb);
+    let h2 = d.lemma(p.left_distrib, &[c, a, b]); // c_ab ~ dist
+
+    let ac = cmul(d, p, a, c);
+    let bc = cmul(d, p, b, c);
+    let target = cadd(d, p, ac, bc);
+    let h3a = d.lemma(p.mul_comm, &[c, a]); // ca ~ ac
+    let h3b = d.lemma(p.mul_comm, &[c, b]); // cb ~ bc
+    let h3 = d.lemma(p.add_congr, &[ca, ac, cb, bc, h3a, h3b]); // dist ~ target
+
+    echain(d, p, lhs, &[(c_ab, h1), (dist, h2), (target, h3)])
+}
+
+/// `Equiv (add (add a b) (add c dd)) (add (add a c) (add b dd))` — swap the
+/// middle two of a four-term sum. Copied from `creal/series.rs`'s own
+/// private `add4_comm` (same convention as `right_distrib` above). Returns
+/// `(target, proof)`.
+fn add4_comm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    dd: ExprId,
+) -> (ExprId, ExprId) {
+    let cd = cadd(d, p, c, dd);
+    let bd = cadd(d, p, b, dd);
+    let ab = cadd(d, p, a, b);
+    let start = cadd(d, p, ab, cd);
+
+    // start ~ a + (b + (c+d))
+    let bcd = cadd(d, p, b, cd);
+    let s1 = cadd(d, p, a, bcd);
+    let h1 = d.lemma(p.add_assoc, &[a, b, cd]);
+
+    // b+(c+d) ~ (b+c)+d
+    let bc = cadd(d, p, b, c);
+    let bc_d = cadd(d, p, bc, dd);
+    let s2 = cadd(d, p, a, bc_d);
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    let h_bcd = d.lemma(p.add_assoc, &[b, c, dd]); // (b+c)+d ~ b+(c+d)
+    let h2_inner = d.lemma(p.equiv_symm, &[bc_d, bcd, h_bcd]); // b+(c+d) ~ (b+c)+d
+    let h2 = d.lemma(p.add_congr, &[a, a, bcd, bc_d, refl_a, h2_inner]);
+
+    // (b+c) ~ (c+b)
+    let cb = cadd(d, p, c, b);
+    let cb_d = cadd(d, p, cb, dd);
+    let s3 = cadd(d, p, a, cb_d);
+    let h_comm = d.lemma(p.add_comm, &[b, c]); // b+c ~ c+b
+    let refl_dd = d.lemma(p.equiv_refl, &[dd]);
+    let h_comm_d = d.lemma(p.add_congr, &[bc, cb, dd, dd, h_comm, refl_dd]); // (b+c)+d ~ (c+b)+d
+    let h3 = d.lemma(p.add_congr, &[a, a, bc_d, cb_d, refl_a, h_comm_d]);
+
+    // (c+b)+d ~ c+(b+d)
+    let cbd = cadd(d, p, c, bd);
+    let s4 = cadd(d, p, a, cbd);
+    let h_assoc2 = d.lemma(p.add_assoc, &[c, b, dd]); // (c+b)+d ~ c+(b+d)
+    let h4 = d.lemma(p.add_congr, &[a, a, cb_d, cbd, refl_a, h_assoc2]);
+
+    // a+(c+(b+d)) ~ (a+c)+(b+d)
+    let ac = cadd(d, p, a, c);
+    let target = cadd(d, p, ac, bd);
+    let h_assoc3 = d.lemma(p.add_assoc, &[a, c, bd]); // target ~ s4
+    let h5 = d.lemma(p.equiv_symm, &[target, s4, h_assoc3]); // s4 ~ target
+
+    let proof = echain(
+        d,
+        p,
+        start,
+        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (target, h5)],
+    );
+    (target, proof)
+}
+
+/// `le (abs (add a b)) (add (abs a) (abs b))` — the two-term triangle
+/// inequality, from [`CRealPrelude::abs_le`] with
+/// [`CRealPrelude::add_le_add`]/[`CRealPrelude::le_abs_self`] for the lower
+/// branch and [`neg_add_distrib`] plus [`CRealPrelude::neg_le_abs`] for the
+/// upper (negated) branch. Copied from `creal/series.rs`'s own private
+/// `abs_add_le`, using this file's own `neg_add_distrib` in place of
+/// `series.rs`'s `neg_add` (the identical statement, built earlier in this
+/// file for `sq_le_abs_sq`).
+fn abs_add_le(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let s = cadd(d, p, a, b);
+    let abs_a = cabs(d, p, a);
+    let abs_b = cabs(d, p, b);
+    let bound = cadd(d, p, abs_a, abs_b);
+
+    // premise1 : le (add a b) (add (abs a) (abs b))
+    let le_a = d.lemma(p.le_abs_self, &[a]);
+    let le_b = d.lemma(p.le_abs_self, &[b]);
+    let premise1 = d.lemma(p.add_le_add, &[a, abs_a, b, abs_b, le_a, le_b]);
+
+    // premise2 : le (neg (add a b)) (add (abs a) (abs b))
+    let na = cneg(d, p, a);
+    let nb = cneg(d, p, b);
+    let t = cadd(d, p, na, nb);
+    let ns = cneg(d, p, s);
+    let na_eq = neg_add_distrib(d, p, a, b); // ns ~ t
+    let step1 = d.lemma(p.le_of_equiv, &[ns, t, na_eq]); // le ns t
+    let nle_a = d.lemma(p.neg_le_abs, &[a]); // le na abs_a
+    let nle_b = d.lemma(p.neg_le_abs, &[b]); // le nb abs_b
+    let step2 = d.lemma(p.add_le_add, &[na, abs_a, nb, abs_b, nle_a, nle_b]); // le t bound
+    let premise2 = d.lemma(p.le_trans, &[ns, t, bound, step1, step2]);
+
+    d.lemma(p.abs_le, &[s, bound, premise1, premise2])
+}
+
+/// From `eq_vw : Equiv v w` and `h_w : le (abs w) bound`, derive `le (abs v)
+/// bound` — [`CRealPrelude::abs_congr`] plus [`CRealPrelude::le_congr`],
+/// the general "the bound transports along an `Equiv` on the value" step
+/// every witness in this file that reduces its own error term to a simpler
+/// shape needs at least once.
+fn abs_le_of_equiv(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    v: ExprId,
+    w: ExprId,
+    bound: ExprId,
+    eq_vw: ExprId,
+    h_w: ExprId,
+) -> ExprId {
+    let abs_v = cabs(d, p, v);
+    let abs_w = cabs(d, p, w);
+    let abs_eq = d.lemma(p.abs_congr, &[v, w, eq_vw]); // Equiv abs_v abs_w
+    let abs_eq_symm = esymm(d, p, abs_v, abs_w, abs_eq); // Equiv abs_w abs_v
+    let refl_bound = erefl(d, p, bound);
+    d.lemma(
+        p.le_congr,
+        &[abs_w, abs_v, bound, bound, abs_eq_symm, refl_bound, h_w],
+    )
+}
+
+/// From `h : le (abs x) bound`, derive `le (abs (neg x)) bound` — `|−x| =
+/// |x|` is a structural identity (true regardless of `x`'s sign, never
+/// decided), so this is NOT an instance of [`abs_le_of_equiv`] (`neg x` is
+/// not `Equiv`-equal to `x` in general): it goes through [`abs_le`] directly,
+/// bounding `neg x` (via [`CRealPrelude::neg_le_abs`]) and `neg (neg x)`
+/// (via [`double_neg`] transporting [`CRealPrelude::le_abs_self`]) each
+/// against the same `bound` `h` already supplies for `abs x`.
+fn le_abs_neg_of_le_abs(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    bound: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let abs_x = cabs(d, p, x);
+    let nx = cneg(d, p, x);
+    let nnx = cneg(d, p, nx);
+
+    // le (neg x) bound
+    let nle = d.lemma(p.neg_le_abs, &[x]); // le nx abs_x
+    let upper = d.lemma(p.le_trans, &[nx, abs_x, bound, nle, h]);
+
+    // le (neg (neg x)) bound, via double_neg transporting `le x bound`.
+    let le_x_bound = {
+        let sle = d.lemma(p.le_abs_self, &[x]); // le x abs_x
+        d.lemma(p.le_trans, &[x, abs_x, bound, sle, h])
+    };
+    let nn = double_neg(d, p, x); // Equiv nnx x
+    let nn_symm = esymm(d, p, nnx, x, nn); // Equiv x nnx
+    let refl_bound = erefl(d, p, bound);
+    let lower = d.lemma(
+        p.le_congr,
+        &[x, nnx, bound, bound, nn_symm, refl_bound, le_x_bound],
+    );
+
+    d.lemma(p.abs_le, &[nx, bound, upper, lower])
 }
 
 // --- the carrier --------------------------------------------------------------
@@ -1674,6 +1907,625 @@ fn declare_has_derivative_sq(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.has_derivative_sq,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- witness: `neg` -----------------------------------------------------------
+
+/// `CReal.hasDerivative_neg : ∀ F F' a b, HasDerivativeOn F F' a b →
+/// HasDerivativeOn (fun r => neg (F r)) (fun x => neg (F' x)) a b`.
+///
+/// `neg`'s scaling factor is exactly `-1`, so — unlike the sum rule below —
+/// it needs no rescaled modulus at all: `neg`'s error term at accuracy `e` is
+/// **exactly** `neg` of `F`'s own error term at the SAME `e`
+/// ([`neg_error_equiv_neg`]), so `F`'s own hypothesis at `e` is already
+/// exactly what `F`'s own spec needs, and [`le_abs_neg_of_le_abs`] turns
+/// `F`'s own bound into the bound `neg`'s error needs, transported along that
+/// `Equiv` by [`abs_le_of_equiv`].
+fn declare_has_derivative_neg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hf_ty = hd_ty(d, p, f, fp, a, b);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+
+    let neg_f = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let fr = d.apply(f, &[r]);
+        let nfr = cneg(d, p, fr);
+        d.lam_fv(r_fv, carrier, nfr)
+    };
+    let neg_fp = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fpx = d.apply(fp, &[x]);
+        let nfpx = cneg(d, p, fpx);
+        d.lam_fv(x_fv, carrier, nfpx)
+    };
+    // Reuse F's own modulus verbatim: `neg`'s error is exactly `neg` of F's,
+    // so no rescaling is needed.
+    let modulus = d.const_app(p.hd_modulus, &[f, fp, a, b, hf]);
+
+    let spec = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hax_fv = d.fresh_fvar();
+        let hxb_fv = d.fresh_fvar();
+        let hay_fv = d.fresh_fvar();
+        let hyb_fv = d.fresh_fvar();
+        let h_fv = d.fresh_fvar();
+
+        let range_ax = d.const_app(p.le, &[a, x]);
+        let range_xb = d.const_app(p.le, &[x, b]);
+        let range_ay = d.const_app(p.le, &[a, y]);
+        let range_yb = d.const_app(p.le, &[y, b]);
+
+        let diff_yx = cdiff(d, p, y, x);
+        let abs_diff = cabs(d, p, diff_yx);
+
+        let mod_e = d.apply(modulus, &[e]);
+        let in_bound = div_succ(d, p, 1, mod_e);
+        let ofr_in = d.const_app(p.of_rat, &[in_bound]);
+        let hyp = within_real(d, p, diff_yx, ofr_in);
+        let h_fv_expr = d.kernel().fvar(h_fv);
+
+        let fx = d.apply(f, &[x]);
+        let fy = d.apply(f, &[y]);
+        let fpx = d.apply(fp, &[x]);
+        let deriv_term_f = cmul(d, p, fpx, diff_yx);
+        let fy_fx_f = cdiff(d, p, fy, fx);
+        let error_f = cdiff(d, p, fy_fx_f, deriv_term_f);
+
+        let neg_fy = cneg(d, p, fy);
+        let neg_fx = cneg(d, p, fx);
+        let neg_neg_fx = cneg(d, p, neg_fx);
+        let neg_fpx = cneg(d, p, fpx);
+        let fy_fx_neg = cadd(d, p, neg_fy, neg_neg_fx);
+        let deriv_term_neg = cmul(d, p, neg_fpx, diff_yx);
+        let neg_deriv_term_neg = cneg(d, p, deriv_term_neg);
+        let error_neg = cadd(d, p, fy_fx_neg, neg_deriv_term_neg);
+
+        let out_bound_rat = div_succ(d, p, 1, e);
+        let ofr_out = d.const_app(p.of_rat, &[out_bound_rat]);
+        let out_bound = cmul(d, p, ofr_out, abs_diff);
+
+        // Step 1: `neg error_f ~ add(add(neg fy, neg(neg fx)), mul fpx diff)`.
+        // `error_f = add(fy_fx_f, neg(deriv_term_f))` (a DIFFERENCE, not a
+        // sum), so the outer split is over `(fy_fx_f, neg_deriv_term_f)`,
+        // and the second component needs `double_neg` to fold the resulting
+        // `neg(neg(deriv_term_f))` back to `deriv_term_f`.
+        let neg_p_step = neg_add_distrib(d, p, fy, neg_fx); // neg(fy-fx) ~ (-fy)+(-(-fx))
+        let neg_q_step = double_neg(d, p, deriv_term_f); // -(-(mul fpx diff)) ~ mul fpx diff
+        let rhs_target = cadd(d, p, fy_fx_neg, deriv_term_f);
+        let neg_error_f = cneg(d, p, error_f);
+        let neg_deriv_term_f = cneg(d, p, deriv_term_f);
+        let neg_fy_fx_f = cneg(d, p, fy_fx_f);
+        let neg_error_f_split = neg_add_distrib(d, p, fy_fx_f, neg_deriv_term_f); // -error_f ~ (-fy_fx_f)+(-(-deriv_term_f))
+        let neg_neg_deriv_term_f = cneg(d, p, neg_deriv_term_f);
+        let step1_congr = d.lemma(
+            p.add_congr,
+            &[
+                neg_fy_fx_f,
+                fy_fx_neg,
+                neg_neg_deriv_term_f,
+                deriv_term_f,
+                neg_p_step,
+                neg_q_step,
+            ],
+        );
+        let neg_error_f_split_target = cadd(d, p, neg_fy_fx_f, neg_neg_deriv_term_f);
+        let neg_error_f_to_rhs = echain(
+            d,
+            p,
+            neg_error_f,
+            &[
+                (neg_error_f_split_target, neg_error_f_split),
+                (rhs_target, step1_congr),
+            ],
+        );
+
+        // Step 2: `error_neg ~ rhs_target` (first component is syntactically
+        // identical; second needs `neg(mul(neg fpx, diff)) ~ mul fpx diff`).
+        let nmel = neg_mul_equiv_left(d, p, fpx, diff_yx); // mul(neg fpx, diff) ~ neg(mul fpx diff)
+        let neg_congr_nmel = d.lemma(p.neg_congr, &[deriv_term_neg, neg_deriv_term_f, nmel]);
+        let dn2 = double_neg(d, p, deriv_term_f); // neg(neg(mul fpx diff)) ~ mul fpx diff
+        let second_component = echain(
+            d,
+            p,
+            neg_deriv_term_neg,
+            &[(neg_neg_deriv_term_f, neg_congr_nmel), (deriv_term_f, dn2)],
+        );
+        let refl_fst = erefl(d, p, fy_fx_neg);
+        let error_neg_to_rhs = d.lemma(
+            p.add_congr,
+            &[
+                fy_fx_neg,
+                fy_fx_neg,
+                neg_deriv_term_neg,
+                deriv_term_f,
+                refl_fst,
+                second_component,
+            ],
+        );
+
+        // Step 3: combine.
+        let rhs_to_neg_error_f = esymm(d, p, neg_error_f, rhs_target, neg_error_f_to_rhs);
+        let error_neg_equiv_neg_error_f = echain(
+            d,
+            p,
+            error_neg,
+            &[(rhs_target, error_neg_to_rhs), (neg_error_f, rhs_to_neg_error_f)],
+        );
+
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb = d.kernel().fvar(hxb_fv);
+        let hay = d.kernel().fvar(hay_fv);
+        let hyb = d.kernel().fvar(hyb_fv);
+        let error_f_bound = d.lemma(
+            p.hd_spec,
+            &[f, fp, a, b, hf, e, x, y, hax, hxb, hay, hyb, h_fv_expr],
+        ); // le (abs error_f) out_bound
+        let neg_error_f_bound = le_abs_neg_of_le_abs(d, p, error_f, out_bound, error_f_bound);
+        let conclusion = abs_le_of_equiv(
+            d,
+            p,
+            error_neg,
+            neg_error_f,
+            out_bound,
+            error_neg_equiv_neg_error_f,
+            neg_error_f_bound,
+        );
+
+        let with_h = d.lam_fv(h_fv, hyp, conclusion);
+        let with_hyb = d.lam_fv(hyb_fv, range_yb, with_h);
+        let with_hay = d.lam_fv(hay_fv, range_ay, with_hyb);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, with_hay);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        d.lam_fv(e_fv, nat, with_x)
+    };
+
+    let mk_applied = d.const_app(p.hd_mk, &[neg_f, neg_fp, a, b, modulus, spec]);
+    let value = {
+        let with_hf = d.lam_fv(hf_fv, hf_ty, mk_applied);
+        let with_b = d.lam_fv(b_fv, carrier, with_hf);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_fp = d.lam_fv(fp_fv, func_ty, with_a);
+        d.lam_fv(f_fv, func_ty, with_fp)
+    };
+    let ty = {
+        let applied = hd_ty(d, p, neg_f, neg_fp, a, b);
+        let with_hf = d.arrow(hf_ty, applied);
+        let with_b = d.pi_fv(b_fv, carrier, with_hf);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_fp = d.pi_fv(fp_fv, func_ty, with_a);
+        d.pi_fv(f_fv, func_ty, with_fp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.has_derivative_neg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- witness: `add` (the sum rule) --------------------------------------------
+
+/// `CReal.hasDerivative_add : ∀ F F' G G' a b, HasDerivativeOn F F' a b →
+/// HasDerivativeOn G G' a b → HasDerivativeOn (fun r => add (F r) (G r))
+/// (fun x => add (F' x) (G' x)) a b`.
+///
+/// **The sum rule**, unblocked by [`RatPrelude::nat_div_succ_antitone`]
+/// (see the module documentation). The combined modulus at accuracy `e` is
+/// `mF (2e+1) + mG (2e+1)` (`Nat.add`, not `max` — `nat_prelude` has no
+/// `Nat.max`, and `Nat.le_add_right`/`Nat.add_comm` give both `<=`
+/// directions just as well: `mF(2e+1) <= mF(2e+1)+mG(2e+1)` directly, and
+/// `mG(2e+1) <= mG(2e+1)+mF(2e+1) = mF(2e+1)+mG(2e+1)` after one
+/// commutation). Antitonicity reads the hypothesis at the combined modulus
+/// back down to each sub-derivative's own hypothesis at `2e+1`;
+/// `F`'s/`G`'s own specs at `2e+1` each bound their error by `1/(2e+2) ·
+/// |y-x|`; and `Rat.natDivSucc_add` + `Rat.natDivSucc_halve` fuse the two
+/// `1/(2e+2)` bounds into the single target `1/(e+1)` (`1/(2e+2) +
+/// 1/(2e+2) = 2/(2e+2) = 1/(e+1)`). The combined error term itself needs a
+/// six-term commutative/associative regroup ([`add4_comm`], applied twice)
+/// plus [`neg_add_distrib`]/[`right_distrib`] to see that it IS `F`'s error
+/// plus `G`'s error, exactly.
+fn declare_has_derivative_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let gp_fv = d.fresh_fvar();
+    let gp = d.kernel().fvar(gp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hf_ty = hd_ty(d, p, f, fp, a, b);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+    let hg_ty = hd_ty(d, p, g, gp, a, b);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    let fsum = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let fr = d.apply(f, &[r]);
+        let gr = d.apply(g, &[r]);
+        let sum = cadd(d, p, fr, gr);
+        d.lam_fv(r_fv, carrier, sum)
+    };
+    let fsum_p = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fpx = d.apply(fp, &[x]);
+        let gpx = d.apply(gp, &[x]);
+        let sum = cadd(d, p, fpx, gpx);
+        d.lam_fv(x_fv, carrier, sum)
+    };
+    let mf = d.const_app(p.hd_modulus, &[f, fp, a, b, hf]);
+    let mg = d.const_app(p.hd_modulus, &[g, gp, a, b, hg]);
+    // `modulus_sum e := mF (2e+1) + mG (2e+1)`.
+    let modulus_sum = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let two = d.num(2);
+        let two_e = d.mul(two, e);
+        let e_prime = d.succ(two_e);
+        let mf_e2 = d.apply(mf, &[e_prime]);
+        let mg_e2 = d.apply(mg, &[e_prime]);
+        let sum = d.add(mf_e2, mg_e2);
+        d.lam_fv(e_fv, nat, sum)
+    };
+
+    let spec = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hax_fv = d.fresh_fvar();
+        let hxb_fv = d.fresh_fvar();
+        let hay_fv = d.fresh_fvar();
+        let hyb_fv = d.fresh_fvar();
+        let h_fv = d.fresh_fvar();
+
+        let range_ax = d.const_app(p.le, &[a, x]);
+        let range_xb = d.const_app(p.le, &[x, b]);
+        let range_ay = d.const_app(p.le, &[a, y]);
+        let range_yb = d.const_app(p.le, &[y, b]);
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb = d.kernel().fvar(hxb_fv);
+        let hay = d.kernel().fvar(hay_fv);
+        let hyb = d.kernel().fvar(hyb_fv);
+
+        let diff_yx = cdiff(d, p, y, x);
+        let abs_diff = cabs(d, p, diff_yx);
+
+        let mod_e = d.apply(modulus_sum, &[e]);
+        let in_bound = div_succ(d, p, 1, mod_e);
+        let ofr_in = d.const_app(p.of_rat, &[in_bound]);
+        let hyp = within_real(d, p, diff_yx, ofr_in);
+        let h = d.kernel().fvar(h_fv);
+
+        // --- the index/modulus arithmetic ------------------------------------
+        let two = d.num(2);
+        let two_e = d.mul(two, e);
+        let e_prime = d.succ(two_e);
+        let mf_e2 = d.apply(mf, &[e_prime]);
+        let mg_e2 = d.apply(mg, &[e_prime]);
+        let modulus_sum_e = d.add(mf_e2, mg_e2);
+        let mg_plus_mf = d.add(mg_e2, mf_e2);
+
+        let nat_p = p.rat.int.nat;
+        let h_le_f = d.lemma(nat_p.le_add_right, &[mf_e2, mg_e2]); // Le mf_e2 (add mf_e2 mg_e2)
+        let raw_g = d.lemma(nat_p.le_add_right, &[mg_e2, mf_e2]); // Le mg_e2 (add mg_e2 mf_e2)
+        let comm_eq = d.lemma(nat_p.add_comm, &[mg_e2, mf_e2]); // Eq (add mg_e2 mf_e2) (add mf_e2 mg_e2)
+        let h_le_g = nat_rewrite_prop(d, mg_plus_mf, modulus_sum_e, comm_eq, raw_g, &|d, t| {
+            d.le(mg_e2, t)
+        });
+
+        let r_f = div_succ(d, p, 1, mf_e2);
+        let r_g = div_succ(d, p, 1, mg_e2);
+        let r_sum = div_succ(d, p, 1, modulus_sum_e);
+        let rat_f = d.lemma(p.rat.nat_div_succ_antitone, &[mf_e2, modulus_sum_e, h_le_f]); // Rat.le r_sum r_f
+        let rat_g = d.lemma(p.rat.nat_div_succ_antitone, &[mg_e2, modulus_sum_e, h_le_g]); // Rat.le r_sum r_g
+
+        let ofr_sum = d.const_app(p.of_rat, &[r_sum]);
+        let ofr_f = d.const_app(p.of_rat, &[r_f]);
+        let ofr_g = d.const_app(p.of_rat, &[r_g]);
+        let creal_f = d.lemma(p.of_rat_le, &[r_sum, r_f, rat_f]); // le ofr_sum ofr_f
+        let creal_g = d.lemma(p.of_rat_le, &[r_sum, r_g, rat_g]); // le ofr_sum ofr_g
+
+        let hyp_f = d.lemma(p.le_trans, &[abs_diff, ofr_sum, ofr_f, h, creal_f]); // le abs_diff ofr_f
+        let hyp_g = d.lemma(p.le_trans, &[abs_diff, ofr_sum, ofr_g, h, creal_g]); // le abs_diff ofr_g
+
+        // --- F's and G's own error terms and bounds, at accuracy `2e+1` -----
+        let fx = d.apply(f, &[x]);
+        let fy = d.apply(f, &[y]);
+        let fpx = d.apply(fp, &[x]);
+        let gx = d.apply(g, &[x]);
+        let gy = d.apply(g, &[y]);
+        let gpx = d.apply(gp, &[x]);
+
+        let mfxd = cmul(d, p, fpx, diff_yx);
+        let mgxd = cmul(d, p, gpx, diff_yx);
+        let fy_fx_f = cdiff(d, p, fy, fx);
+        let fy_fx_g = cdiff(d, p, gy, gx);
+        let error_f = cdiff(d, p, fy_fx_f, mfxd);
+        let error_g = cdiff(d, p, fy_fx_g, mgxd);
+
+        let error_f_bound = d.lemma(
+            p.hd_spec,
+            &[f, fp, a, b, hf, e_prime, x, y, hax, hxb, hay, hyb, hyp_f],
+        ); // le (abs error_f) (mul (ofRat r_prime') abs_diff)
+        let error_g_bound = d.lemma(
+            p.hd_spec,
+            &[g, gp, a, b, hg, e_prime, x, y, hax, hxb, hay, hyb, hyp_g],
+        );
+
+        let r_prime = div_succ(d, p, 1, e_prime);
+        let q_prime = d.const_app(p.of_rat, &[r_prime]);
+        let q_bound = cmul(d, p, q_prime, abs_diff);
+
+        // --- combine the two bounds via the triangle inequality -------------
+        let combined_error = cadd(d, p, error_f, error_g);
+        let abs_error_f = cabs(d, p, error_f);
+        let abs_error_g = cabs(d, p, error_g);
+        let triangle = abs_add_le(d, p, error_f, error_g); // le (abs combined_error) (add abs_error_f abs_error_g)
+        let sum_bounds = d.lemma(
+            p.add_le_add,
+            &[abs_error_f, q_bound, abs_error_g, q_bound, error_f_bound, error_g_bound],
+        ); // le (add abs_error_f abs_error_g) (add q_bound q_bound)
+        let abs_combined_error = cabs(d, p, combined_error);
+        let abs_error_f_plus_g = cadd(d, p, abs_error_f, abs_error_g);
+        let q_bound_plus_q_bound = cadd(d, p, q_bound, q_bound);
+        let combined_le = d.lemma(
+            p.le_trans,
+            &[
+                abs_combined_error,
+                abs_error_f_plus_g,
+                q_bound_plus_q_bound,
+                triangle,
+                sum_bounds,
+            ],
+        ); // le (abs combined_error) (add q_bound q_bound)
+
+        // --- fuse `add q_bound q_bound` down to the single target bound -----
+        let out_bound_rat = div_succ(d, p, 1, e);
+        let ofr_out = d.const_app(p.of_rat, &[out_bound_rat]);
+        let out_bound = cmul(d, p, ofr_out, abs_diff);
+
+        let one_nat = d.num(1);
+        let of_rat_add_proof = d.lemma(p.of_rat_add, &[r_prime, r_prime]); // Equiv (add q_prime q_prime) (ofRat (Rat.add r_prime r_prime))
+        let eq1 = d.lemma(p.rat.nat_div_succ_add, &[one_nat, one_nat, e_prime]); // Eq (Rat.add r_prime r_prime) (natDivSucc (add 1 1) e_prime)
+        let two_e_prime = div_succ(d, p, 2, e_prime);
+        let radd_r_prime_r_prime = radd(d, r_prime, r_prime);
+        let q_prime_plus_q_prime = cadd(d, p, q_prime, q_prime);
+        let step_a = rat_eq_rewrite(
+            d,
+            radd_r_prime_r_prime,
+            two_e_prime,
+            eq1,
+            of_rat_add_proof,
+            &|d, t| {
+                let oft = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[q_prime_plus_q_prime, oft])
+            },
+        ); // Equiv (add q_prime q_prime) (ofRat two_e_prime)
+        let eq2 = d.lemma(p.rat.nat_div_succ_halve, &[e]); // Eq two_e_prime (natDivSucc 1 e)
+        let sum_equiv_target_rat = rat_eq_rewrite(d, two_e_prime, out_bound_rat, eq2, step_a, &|d, t| {
+            let oft = d.const_app(p.of_rat, &[t]);
+            d.const_app(p.equiv, &[q_prime_plus_q_prime, oft])
+        }); // Equiv (add q_prime q_prime) ofr_out
+
+        let mul_q_prime_sum_abs_diff = cmul(d, p, q_prime_plus_q_prime, abs_diff);
+        let rd = right_distrib(d, p, q_prime, q_prime, abs_diff); // Equiv (mul (add q_prime q_prime) abs_diff) (add q_bound q_bound)
+        let rd_symm = esymm(d, p, mul_q_prime_sum_abs_diff, q_bound_plus_q_bound, rd); // Equiv (add q_bound q_bound) (mul (add q_prime q_prime) abs_diff)
+        let refl_abs_diff = erefl(d, p, abs_diff);
+        let mul_step = d.lemma(
+            p.mul_congr,
+            &[
+                q_prime_plus_q_prime,
+                ofr_out,
+                abs_diff,
+                abs_diff,
+                sum_equiv_target_rat,
+                refl_abs_diff,
+            ],
+        ); // Equiv (mul (add q_prime q_prime) abs_diff) out_bound
+        let bound_equiv = echain(
+            d,
+            p,
+            q_bound_plus_q_bound,
+            &[
+                (mul_q_prime_sum_abs_diff, rd_symm),
+                (out_bound, mul_step),
+            ],
+        ); // Equiv (add q_bound q_bound) out_bound
+
+        let combined_error_bound = {
+            let abs_combined = cabs(d, p, combined_error);
+            let refl_abs = erefl(d, p, abs_combined);
+            d.lemma(
+                p.le_congr,
+                &[
+                    abs_combined,
+                    abs_combined,
+                    q_bound_plus_q_bound,
+                    out_bound,
+                    refl_abs,
+                    bound_equiv,
+                    combined_le,
+                ],
+            )
+        }; // le (abs combined_error) out_bound
+
+        // --- the actual error term IS F's error plus G's, exactly -----------
+        let fsum_y = d.apply(fsum, &[y]);
+        let fsum_x = d.apply(fsum, &[x]);
+        let fsum_p_x = d.apply(fsum_p, &[x]);
+        let deriv_term_sum = cmul(d, p, fsum_p_x, diff_yx);
+        let fy_fx_sum = cdiff(d, p, fsum_y, fsum_x);
+        let actual_error = cdiff(d, p, fy_fx_sum, deriv_term_sum);
+
+        let neg_fx = cneg(d, p, fx);
+        let neg_gx = cneg(d, p, gx);
+        let neg_mfxd = cneg(d, p, mfxd);
+        let neg_mgxd = cneg(d, p, mgxd);
+
+        // Step A: `neg (add fx gx) ~ add (neg fx) (neg gx)`.
+        let step_a_eq = neg_add_distrib(d, p, fx, gx);
+        // Step B: `neg (mul (add fpx gpx) diff) ~ add (neg mfxd) (neg mgxd)`.
+        let fpx_plus_gpx = cadd(d, p, fpx, gpx);
+        let rd_fg = right_distrib(d, p, fpx, gpx, diff_yx); // Equiv (mul (add fpx gpx) diff) (add mfxd mgxd)
+        let deriv_sum_raw = cmul(d, p, fpx_plus_gpx, diff_yx);
+        let mfxd_plus_mgxd = cadd(d, p, mfxd, mgxd);
+        let neg_congr_rdfg = d.lemma(p.neg_congr, &[deriv_sum_raw, mfxd_plus_mgxd, rd_fg]); // Equiv (neg deriv_sum_raw) (neg (add mfxd mgxd))
+        let step_b_split = neg_add_distrib(d, p, mfxd, mgxd); // Equiv (neg (add mfxd mgxd)) (add (neg mfxd) (neg mgxd))
+        let neg_deriv_sum_raw = cneg(d, p, deriv_sum_raw);
+        let neg_mfxd_plus_mgxd = cneg(d, p, mfxd_plus_mgxd);
+        let neg_mfxd_neg_mgxd = cadd(d, p, neg_mfxd, neg_mgxd);
+        let step_b_eq = echain(
+            d,
+            p,
+            neg_deriv_sum_raw,
+            &[
+                (neg_mfxd_plus_mgxd, neg_congr_rdfg),
+                (neg_mfxd_neg_mgxd, step_b_split),
+            ],
+        );
+
+        // Step C: `actual_error ~ intermediate`.
+        let p1 = cadd(d, p, fy, gy);
+        let fx_plus_gx = cadd(d, p, fx, gx);
+        let neg_fx_plus_gx = cneg(d, p, fx_plus_gx);
+        let neg_fx_neg_gx = cadd(d, p, neg_fx, neg_gx);
+        let refl_p1 = erefl(d, p, p1);
+        let fst_lift = d.lemma(
+            p.add_congr,
+            &[p1, p1, neg_fx_plus_gx, neg_fx_neg_gx, refl_p1, step_a_eq],
+        ); // Equiv fy_fx_sum (add p1 (add (neg fx) (neg gx)))
+        let intermediate_fst = cadd(d, p, p1, neg_fx_neg_gx);
+        let intermediate = cadd(d, p, intermediate_fst, neg_mfxd_neg_mgxd);
+        let step_c_eq = d.lemma(
+            p.add_congr,
+            &[
+                fy_fx_sum,
+                intermediate_fst,
+                neg_deriv_sum_raw,
+                neg_mfxd_neg_mgxd,
+                fst_lift,
+                step_b_eq,
+            ],
+        ); // Equiv actual_error intermediate
+
+        // Step D: `add4_comm` on the first four terms.
+        let (target1, proof1) = add4_comm(d, p, fy, gy, neg_fx, neg_gx);
+        // target1 = add (add fy (neg fx)) (add gy (neg gx))
+        let refl_neg_mfxd_neg_mgxd = erefl(d, p, neg_mfxd_neg_mgxd);
+        let intermediate2_congr = d.lemma(
+            p.add_congr,
+            &[
+                intermediate_fst,
+                target1,
+                neg_mfxd_neg_mgxd,
+                neg_mfxd_neg_mgxd,
+                proof1,
+                refl_neg_mfxd_neg_mgxd,
+            ],
+        ); // Equiv intermediate (add target1 (add neg_mfxd neg_mgxd))
+
+        // Step E: `add4_comm` again, on `target1`'s two halves against the
+        // negated derivative terms — lands exactly on `add error_f error_g`.
+        let a0 = cadd(d, p, fy, neg_fx);
+        let b0 = cadd(d, p, gy, neg_gx);
+        let (target2, proof2) = add4_comm(d, p, a0, b0, neg_mfxd, neg_mgxd);
+        // target2 = add (add a0 neg_mfxd) (add b0 neg_mgxd) = add error_f error_g
+
+        let target1_plus_neg_mfxd_neg_mgxd = cadd(d, p, target1, neg_mfxd_neg_mgxd);
+        let ring_chain = echain(
+            d,
+            p,
+            actual_error,
+            &[
+                (intermediate, step_c_eq),
+                (target1_plus_neg_mfxd_neg_mgxd, intermediate2_congr),
+                (target2, proof2),
+            ],
+        ); // Equiv actual_error combined_error (target2 == combined_error, definitionally)
+
+        let conclusion = abs_le_of_equiv(
+            d,
+            p,
+            actual_error,
+            combined_error,
+            out_bound,
+            ring_chain,
+            combined_error_bound,
+        );
+
+        let with_h = d.lam_fv(h_fv, hyp, conclusion);
+        let with_hyb = d.lam_fv(hyb_fv, range_yb, with_h);
+        let with_hay = d.lam_fv(hay_fv, range_ay, with_hyb);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, with_hay);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        d.lam_fv(e_fv, nat, with_x)
+    };
+
+    let mk_applied = d.const_app(p.hd_mk, &[fsum, fsum_p, a, b, modulus_sum, spec]);
+    let value = {
+        let with_hg = d.lam_fv(hg_fv, hg_ty, mk_applied);
+        let with_hf = d.lam_fv(hf_fv, hf_ty, with_hg);
+        let with_b = d.lam_fv(b_fv, carrier, with_hf);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_gp = d.lam_fv(gp_fv, func_ty, with_a);
+        let with_g = d.lam_fv(g_fv, func_ty, with_gp);
+        let with_fp = d.lam_fv(fp_fv, func_ty, with_g);
+        d.lam_fv(f_fv, func_ty, with_fp)
+    };
+    let ty = {
+        let applied = hd_ty(d, p, fsum, fsum_p, a, b);
+        let with_hg = d.arrow(hg_ty, applied);
+        let with_hf = d.arrow(hf_ty, with_hg);
+        let with_b = d.pi_fv(b_fv, carrier, with_hf);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_gp = d.pi_fv(gp_fv, func_ty, with_a);
+        let with_g = d.pi_fv(g_fv, func_ty, with_gp);
+        let with_fp = d.pi_fv(fp_fv, func_ty, with_g);
+        d.pi_fv(f_fv, func_ty, with_fp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.has_derivative_add,
         uparams: vec![],
         ty,
         value,
