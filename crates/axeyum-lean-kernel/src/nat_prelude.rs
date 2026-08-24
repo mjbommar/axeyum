@@ -849,6 +849,17 @@ pub struct NatPrelude {
     pub count_range_succ: NameId,
     /// `Nat.countRange_le : ∀ p n, countRange p n ≤ n`.
     pub count_range_le: NameId,
+    /// `Nat.countRange_congr : ∀ f g n, (∀ i, Eq Bool (f i) (g i)) →
+    /// countRange f n = countRange g n` — two predicates that agree
+    /// pointwise (everywhere, not just below `n`) count the same subset of
+    /// `[0,n)`. Mirrors `sumRange_congr` (`algebra.rs`), the unconditional
+    /// congruence law for `sumRange`.
+    pub count_range_congr: NameId,
+    /// `Nat.countRange_split : ∀ f m j, countRange f (add m j) =
+    /// add (countRange f m) (countRange (fun k => f (add m k)) j)` — the
+    /// `countRange` analogue of `sumRange_split` (`rectangle.rs`), by
+    /// induction on `j` alone (`f`, `m` held fixed).
+    pub count_range_split: NameId,
     /// `Nat.beq_eq_false_of_ne : ∀ a b, Not (Eq Nat a b) → beq a b = false` —
     /// the converse of `ne_of_beq_eq_false`, closing the boolean/propositional
     /// bridge from the other side. Proved by deciding `beq a b` itself
@@ -1379,6 +1390,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_zero: kernel.name_str(nat, "countRange_zero"),
             count_range_succ: kernel.name_str(nat, "countRange_succ"),
             count_range_le: kernel.name_str(nat, "countRange_le"),
+            count_range_congr: kernel.name_str(nat, "countRange_congr"),
+            count_range_split: kernel.name_str(nat, "countRange_split"),
             beq_eq_false_of_ne: kernel.name_str(nat, "beq_eq_false_of_ne"),
             totient: kernel.name_str(nat, "totient"),
             count_range_eq_pred_of_only_zero_false: kernel

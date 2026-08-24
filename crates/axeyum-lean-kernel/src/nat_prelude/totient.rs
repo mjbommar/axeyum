@@ -21,6 +21,22 @@
 //! `totient 1 = 1` (the range is `{0}`, `gcd 0 1 = 1`), `totient 6 = 2`
 //! (`{1,5}` of `{0,..,5}` are coprime to 6), `totient 9 = 6` (`{1,2,4,5,7,8}`).
 //!
+//! [`declare_count_range_congr`] is `countRange_congr : (∀ i, f i = g i) →
+//! countRange f n = countRange g n` — the unconditional pointwise congruence
+//! `sumRange_congr` (`algebra.rs`) already has, ported to `countRange`'s
+//! `Bool`-valued predicate via [`bool_congr_nat`] (below) at each induction
+//! step's `bool_select_nat` term. Landed first, per the task's own
+//! instruction to land `countRange` companions alone if nothing else does:
+//! `countRange` was hours old and had almost no laws.
+//!
+//! [`declare_count_range_split`] is `countRange_split : countRange f (m+j) =
+//! countRange f m + countRange (fun k => f (m+k)) j` — the `countRange`
+//! analogue of `sumRange_split` (`rectangle.rs`), copied proof-shape and
+//! all: induction on `j` alone, `f`/`m` held fixed, never touching
+//! `Nat.sub`. This is the range-splitting building block a subset
+//! enumeration would need to reason about `countRange` over a shifted
+//! sub-range.
+//!
 //! [`declare_beq_eq_false_of_ne`] is the converse of the existing
 //! `ne_of_beq_eq_false`: `Not (Eq a b) → beq a b = false`. It closes the
 //! boolean/propositional bridge from the other side, by *deciding* `beq a b`
@@ -344,6 +360,203 @@ pub(super) fn declare_count_range_le(
         d.lam_fv(f_fv, pred_ty, with_n)
     };
     d.declare_theorem(p.count_range_le, ty, value)
+}
+
+/// `Nat.countRange_congr : ∀ f g n, (∀ i, Eq Bool (f i) (g i)) →
+/// Eq Nat (countRange f n) (countRange g n)`.
+///
+/// By induction on `n`, exactly `sumRange_congr`'s shape (`algebra.rs`): base
+/// case `Eq.refl zero`; step combines the IH (`countRange f j = countRange g
+/// j`, congr'd through `add _ (bool_select_nat (f j) 1 0)`) with the
+/// pointwise hypothesis at `j` pushed through `bool_select_nat` via
+/// [`bool_congr_nat`] — the Bool-domain, Nat-codomain congruence this file
+/// already built for `countRange_eq_pred_of_only_zero_false`. Unconditional
+/// (needs `f i = g i` at every `i`, not just `i < n`): nothing downstream so
+/// far needs the bounded form `sumRange` also carries
+/// (`sumRange_congr_lt`) — add it if a future proof does.
+pub(super) fn declare_count_range_congr(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let gi = d.apply(g, &[i]);
+        let eq = d.bool_eq(fi, gi);
+        d.pi_fv(i_fv, nat, eq)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let motive = |d: &mut NatDev<'_>, x: ExprId| {
+        let lhs = count_range(d, &p, f, x);
+        let rhs = count_range(d, &p, g, x);
+        d.eq(lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero = d.zero();
+            d.refl(zero)
+        },
+        &|d, j, ih| {
+            let f_prior = count_range(d, &p, f, j);
+            let g_prior = count_range(d, &p, g, j);
+            let fj = d.apply(f, &[j]);
+            let gj = d.apply(g, &[j]);
+            let one = d.num(1);
+            let zero = d.zero();
+            let f_sel = d.bool_select_nat(fj, one, zero);
+
+            let start = d.add(f_prior, f_sel);
+            let mid = d.add(g_prior, f_sel);
+            let h1 = d.congr(f_prior, g_prior, ih, &|d, t| d.add(t, f_sel));
+
+            let one2 = d.num(1);
+            let zero2 = d.zero();
+            let g_sel = d.bool_select_nat(gj, one2, zero2);
+            let end = d.add(g_prior, g_sel);
+            let pointwise_j = d.apply(h, &[j]);
+            let h2 = bool_congr_nat(d, fj, gj, pointwise_j, &|d, x| {
+                let one_inner = d.num(1);
+                let zero_inner = d.zero();
+                let sv = d.bool_select_nat(x, one_inner, zero_inner);
+                d.add(g_prior, sv)
+            });
+
+            let (_e, proof) = d.chain(start, &[(mid, h1), (end, h2)]);
+            proof
+        },
+        n,
+    );
+
+    let ty = {
+        let with_h = d.pi_fv(h_fv, pointwise, stmt);
+        let over_n = d.pi_fv(n_fv, nat, with_h);
+        let over_g = d.pi_fv(g_fv, pred_ty, over_n);
+        d.pi_fv(f_fv, pred_ty, over_g)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, pointwise, proof);
+        let over_n = d.lam_fv(n_fv, nat, with_h);
+        let over_g = d.lam_fv(g_fv, pred_ty, over_n);
+        d.lam_fv(f_fv, pred_ty, over_g)
+    };
+    d.declare_theorem(p.count_range_congr, ty, value)
+}
+
+/// `fun k => f (add m k)` — `f` shifted so its own zero sits at `m`. Local
+/// copy of `rectangle.rs`'s `shifted`, generic in codomain — that file's own
+/// convention: private per-file copies rather than a shared module.
+fn shifted_pred(d: &mut NatDev<'_>, f: ExprId, m: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let mk = d.add(m, k);
+    let fmk = d.apply(f, &[mk]);
+    d.lam_fv(k_fv, nat, fmk)
+}
+
+/// `Nat.countRange_split : ∀ f m j,
+///   Eq Nat (countRange f (add m j)) (add (countRange f m) (countRange (fun k => f (add m k)) j))`.
+///
+/// By induction on `j`, `f` and `m` held fixed — exactly `sumRange_split`'s
+/// shape (`rectangle.rs`), substituting each `sumRange` step for its
+/// `countRange` counterpart (`add _ (bool_select_nat (f _) 1 0)` in place of
+/// `add _ (f _)`). The step's two `bool_select_nat` conditions — `f (add m
+/// k)` directly, and `(shifted f m) k` — are the SAME term up to defeq (pure
+/// β-reduction of the shifted lambda), so unlike `countRange_congr` this
+/// proof needs no `bool_congr_nat` bridge: both sides of the succ case's
+/// defining equation unfold to the identical `bool_select_nat` application,
+/// exactly as `sumRange_split`'s own proof never separately names the
+/// shifted function's value.
+pub(super) fn declare_count_range_split(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let g = shifted_pred(d, f, m);
+    let count_f_m = count_range(d, &p, f, m);
+
+    let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let bound = d.add(m, x);
+        let lhs = count_range(d, &p, f, bound);
+        let tail = count_range(d, &p, g, x);
+        let rhs = d.add(count_f_m, tail);
+        d.eq(lhs, rhs)
+    };
+    let stmt = motive(d, j);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero = d.zero();
+            let rhs = d.add(count_f_m, zero);
+            let h = d.lemma(p.add_zero, &[count_f_m]);
+            d.symm(rhs, count_f_m, h)
+        },
+        &|d, k, ih| {
+            let mk = d.add(m, k);
+            let fmk = d.apply(f, &[mk]);
+            let one = d.num(1);
+            let zero = d.zero();
+            let f_sel = d.bool_select_nat(fmk, one, zero);
+
+            let count_f_mk = count_range(d, &p, f, mk);
+            let count_g_k = count_range(d, &p, g, k);
+            let count_f_m_g_k = d.add(count_f_m, count_g_k);
+
+            let start = d.add(count_f_mk, f_sel);
+            let mid = d.add(count_f_m_g_k, f_sel);
+            let h1 = d.congr(count_f_mk, count_f_m_g_k, ih, &|d, t| d.add(t, f_sel));
+
+            let inner = d.add(count_g_k, f_sel);
+            let end = d.add(count_f_m, inner);
+            let h2 = d.lemma(p.add_assoc, &[count_f_m, count_g_k, f_sel]);
+
+            let (_e, chained) = d.chain(start, &[(mid, h1), (end, h2)]);
+            chained
+        },
+        j,
+    );
+
+    let ty = {
+        let over_j = d.pi_fv(j_fv, nat, stmt);
+        let over_m = d.pi_fv(m_fv, nat, over_j);
+        d.pi_fv(f_fv, pred_ty, over_m)
+    };
+    let value = {
+        let over_j = d.lam_fv(j_fv, nat, proof);
+        let over_m = d.lam_fv(m_fv, nat, over_j);
+        d.lam_fv(f_fv, pred_ty, over_m)
+    };
+    d.declare_theorem(p.count_range_split, ty, value)
 }
 
 // ============================================================================
@@ -826,6 +1039,8 @@ pub(super) fn declare_totient_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     declare_count_range(d, p)?;
     declare_count_range_defining_equations(d, p)?;
     declare_count_range_le(d, p)?;
+    declare_count_range_congr(d, p)?;
+    declare_count_range_split(d, p)?;
     declare_totient(d, p)?;
     declare_beq_eq_false_of_ne(d, p)?;
     declare_count_range_eq_pred_of_only_zero_false(d, p)?;
