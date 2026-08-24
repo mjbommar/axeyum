@@ -1,0 +1,47 @@
+[package]
+name = "axeyum-py"
+description = "Python bindings for the Axeyum automated reasoning stack (the `axeyum._native` extension module)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[lib]
+# The built artifact is imported as `axeyum._native`; `module-name` in the root
+# `pyproject.toml` places it inside the pure-Python package.
+name = "_native"
+# `rlib` keeps `cargo test --workspace` able to compile and link this crate as an
+# ordinary library; `cdylib` is what maturin turns into the wheel's `.so`.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+axeyum-aig = { path = "../axeyum-aig", version = "0.1.0" }
+axeyum-bv = { path = "../axeyum-bv", version = "0.1.0" }
+axeyum-cas = { path = "../axeyum-cas", version = "0.1.0" }
+axeyum-cnf = { path = "../axeyum-cnf", version = "0.1.0" }
+axeyum-egraph = { path = "../axeyum-egraph", version = "0.1.0" }
+axeyum-fp = { path = "../axeyum-fp", version = "0.1.0" }
+axeyum-ir.workspace = true
+axeyum-lean-import = { path = "../axeyum-lean-import", version = "0.1.0" }
+axeyum-lean-kernel = { path = "../axeyum-lean-kernel", version = "0.1.0" }
+axeyum-query = { path = "../axeyum-query", version = "0.1.0" }
+axeyum-smtlib = { path = "../axeyum-smtlib", version = "0.1.0" }
+# `full` is the profile the SMT-LIB front door (ADR-0052) needs; it is pure Rust
+# (the C/C++ `z3` backend is a separate feature and stays off), so the
+# no-C-dependency promise (ADR-0002) is untouched.
+axeyum-solver = { path = "../axeyum-solver", version = "0.1.0", default-features = false, features = [
+    "full",
+] }
+# EXACT pin: the surface uses `#[pymodule(gil_used = ...)]` and `Python::detach`,
+# both of which moved recently. `pyo3/extension-module` is deliberately NOT a
+# default feature here -- as a Cargo default it makes `cargo test --workspace`
+# fail to link, so it is supplied only by `[tool.maturin] features`.
+pyo3 = { version = "=0.29.2", features = ["abi3-py312"] }
+
+[lints]
+workspace = true

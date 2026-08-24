@@ -40,13 +40,27 @@ fallback is not the gate, and nothing in the failure says so.
 
 Every row below was produced by **executing the binary**, not by `command -v`:
 
-| host | role | rustc | just | cargo-deny | lean |
-|---|---|---|---|---|---|
-| `s4` | dev box, 16 c / 123 G — the shared multi-lane checkout | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` |
-| `s5` | compute, 16 c | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` |
-| `s6` | compute, 16 c | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` |
-| `s7` | compute, 16 c, largest disk | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` |
-| `s2` | compute, **4 c** — smallest; prefer it for Python/ledger/NAS-IO | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` |
+| host | role | rustc | just | cargo-deny | lean | uv |
+|---|---|---|---|---|---|---|
+| `s4` | dev box, 16 c / 123 G — the shared multi-lane checkout | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` | 0.11.1 |
+| `s5` | compute, 16 c | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` | unmeasured |
+| `s6` | compute, 16 c | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` | unmeasured |
+| `s7` | compute, 16 c, largest disk | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` | unmeasured |
+| `s2` | compute, **4 c** — smallest; prefer it for Python/ledger/NAS-IO | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` | unmeasured |
+
+The `uv` column was measured **2026-08-24 on the shared checkout host only**
+(`uv --version` → `uv 0.11.1`, from `~/.local/bin`, which is not on the
+non-interactive ssh `PATH` by default the way `~/.cargo/bin` is). The other four
+rows say *unmeasured* rather than a blank or a `?`, because this file's own
+lesson is that an unmeasured cell read as a measured absence is how a whole
+capability gets reported as impossible — `command -v lean` returning nothing on
+a host that has Lean cost exactly that. Nobody has run `uv --version` on s5, s6,
+s7 or s2; when someone does, replace the word with what the binary printed.
+
+Consequence for the gate: `scripts/check.sh` runs the Python steps only when
+`uv` **and** a `.venv` are both present, and otherwise prints
+`py-check: SKIPPED (no uv)` — skipped, never passed. `just py-check` has no such
+guard: it is the deliberate Python gate and fails loudly if `uv` is missing.
 
 **All five** hosts report the identical `clippy 0.1.99 (be8e82435e 2026-07-11)`
 and `rustfmt 1.9.0-nightly (be8e82435e 2026-07-11)`, so a lint result is now
@@ -74,6 +88,7 @@ reports a result from one.
 | `just` | `just check` is the only full aggregate gate | `just --version` |
 | `cargo-deny` | `cargo deny check` is a `just check` step | `cargo-deny --version` |
 | `bubblewrap` | Autogenesis proposers receive a catalog without gaining checkout, proof-body, or network access | `bwrap --version`; provisioning also executes a minimal sandbox |
+| `uv` | `just py-check` — the Python binding gate (build, pytest, stub drift, ruff); `scripts/check.sh` SKIPS its Python steps without it | `uv --version`; then `uv sync --dev` for the `.venv` the steps need |
 | Lean at the **repo pin** (`lean-toolchain`) | the axiom ledger, `check-lean-gate.sh`, and export verification all shell out to a real `lean` | run the binary — see the two layouts below |
 | `core.hooksPath=hooks` in the checkout | `hooks/commit-msg` stamps the `Agent:` trailer; `hooks/pre-push` is the pre-merge gate | `git config --get core.hooksPath` |
 | `/nas3/data` mounted read-write | shared artifacts, logs, staged binaries | `[ -w /nas3/data ]` |
@@ -163,6 +178,7 @@ the left column must run on a host that satisfies the right one.
 | ledgers, claims, facts | `validate-facts.py`, `validate-claims.py`, `check-links.sh` | Python only — runs anywhere |
 | **anything merged to `main`** | `scripts/local-ci.sh` — hosted CI calls this *the authoritative gate for main* | `cargo-nextest`, rust **stable**, rust **1.88.0**, `z3` |
 | Autogenesis proposer isolation | `scripts/check-autogenesis-proposer-isolation.sh` | Python + `bubblewrap` |
+| the Python bindings (`crates/axeyum-py`, `python/`) | `just py-check` | `uv`, a synced `.venv` (`uv sync --dev`), and a writable `TMPDIR` off `/tmp` |
 
 The `local-ci.sh` row was added on 2026-08-18, after measuring that **no host in
 this fleet could run it** — including the dev box. `cargo nextest --version`

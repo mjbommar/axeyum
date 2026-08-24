@@ -69,3 +69,8 @@ just-only:     scripts/check-clippy-complete.sh --toolchain stable
 just-only:     scripts/check-glaurung-qfbv-regular.sh
 just-only:     scripts/check-qfbv-profile.sh
 just-only:     warnings" cargo doc --workspace --all-features --no-deps
+check.sh-only: uv run --no-sync maturin develop
+check.sh-only: uv run --no-sync pytest python/tests -q
+check.sh-only: uv run --no-sync python tools/gen_native_stub.py --check
+check.sh-only: uv run --no-sync ruff check python/ tools/
+check.sh-only: uv run --no-sync ruff format --check python/ tools/
