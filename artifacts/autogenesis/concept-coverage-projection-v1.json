@@ -1,11 +1,13 @@
 {
   "census": {
-    "concepts": 14,
+    "concepts": 17,
     "excluded_held_out_family_topic_facts": 57,
     "family_topic_facts": 157,
+    "kernel_semantic_anchors": 6,
     "qualified_formalization_facts": 10,
     "with_fact_formalization": 7,
-    "with_family_topic": 6
+    "with_family_topic": 6,
+    "with_kernel_semantic_anchor": 4
   },
   "concepts": [
     {
@@ -14,10 +16,12 @@
       "family_topic_fact_count": 0,
       "family_topic_fact_ids": [],
       "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 0,
       "qualified_formalization_fact_ids": [],
       "qualified_formalization_statuses": {},
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:bit",
@@ -45,10 +49,42 @@
         "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
       ],
       "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 0,
       "qualified_formalization_fact_ids": [],
       "qualified_formalization_statuses": {},
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:circle",
+      "coverage_state": "kernel-semantic-anchor-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 1,
+      "kernel_semantic_anchor_ids": [
+        "CPoint.circumcentre_unique"
+      ],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:complex-number",
+      "coverage_state": "kernel-semantic-anchor-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 1,
+      "kernel_semantic_anchor_ids": [
+        "Complex.normSq_pow"
+      ],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:equivalence-relation",
@@ -61,6 +97,8 @@
           "fact_count": 1
         }
       ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 1,
       "qualified_formalization_fact_ids": [
         "F:ml430-int-modeq-refl-30e15520"
@@ -68,7 +106,7 @@
       "qualified_formalization_statuses": {
         "proved": 1
       },
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:equivalence-relation@understand",
@@ -81,6 +119,12 @@
           "fact_count": 2
         }
       ],
+      "kernel_semantic_anchor_count": 3,
+      "kernel_semantic_anchor_ids": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans"
+      ],
       "qualified_formalization_fact_count": 2,
       "qualified_formalization_fact_ids": [
         "F:ml430-int-modeq-symm-984a6e67",
@@ -89,7 +133,22 @@
       "qualified_formalization_statuses": {
         "proved": 2
       },
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
+    },
+    {
+      "concept_id": "C:excluded-middle",
+      "coverage_state": "kernel-semantic-anchor-present",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 1,
+      "kernel_semantic_anchor_ids": [
+        "Decidable.em"
+      ],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "qualified_formalization_statuses": {},
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:factorial",
@@ -118,6 +177,8 @@
           "fact_count": 1
         }
       ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 1,
       "qualified_formalization_fact_ids": [
         "F:ml430-nat-descfactorial-one-d4856d4a"
@@ -125,7 +186,7 @@
       "qualified_formalization_statuses": {
         "proved": 1
       },
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:factorial@apply",
@@ -138,6 +199,8 @@
           "fact_count": 1
         }
       ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 1,
       "qualified_formalization_fact_ids": [
         "F:ml430-nat-one-ascfactorial-8bacb017"
@@ -145,7 +208,7 @@
       "qualified_formalization_statuses": {
         "proved": 1
       },
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:factorial@understand",
@@ -158,6 +221,8 @@
           "fact_count": 3
         }
       ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 3,
       "qualified_formalization_fact_ids": [
         "F:ml430-nat-ascfactorial-zero-fd183202",
@@ -167,7 +232,7 @@
       "qualified_formalization_statuses": {
         "proved": 3
       },
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:fibonacci-sequence",
@@ -208,10 +273,12 @@
         "F:ml430-nat-le-fib-self-0cbccb4d"
       ],
       "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 0,
       "qualified_formalization_fact_ids": [],
       "qualified_formalization_statuses": {},
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:greatest-common-divisor",
@@ -250,10 +317,12 @@
         "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8"
       ],
       "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 0,
       "qualified_formalization_fact_ids": [],
       "qualified_formalization_statuses": {},
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:logarithm",
@@ -261,10 +330,12 @@
       "family_topic_fact_count": 0,
       "family_topic_fact_ids": [],
       "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 0,
       "qualified_formalization_fact_ids": [],
       "qualified_formalization_statuses": {},
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:modular-arithmetic",
@@ -318,6 +389,8 @@
           "fact_count": 1
         }
       ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 1,
       "qualified_formalization_fact_ids": [
         "F:ml430-int-modeq-refl-30e15520"
@@ -325,7 +398,7 @@
       "qualified_formalization_statuses": {
         "proved": 1
       },
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:modular-arithmetic@understand",
@@ -338,6 +411,8 @@
           "fact_count": 1
         }
       ],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 1,
       "qualified_formalization_fact_ids": [
         "F:ml430-int-modeq-comm-1e4bcc07"
@@ -345,7 +420,7 @@
       "qualified_formalization_statuses": {
         "proved": 1
       },
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:prime-number",
@@ -375,10 +450,12 @@
         "F:ml430-nat-succ-pred-prime-4feb123f"
       ],
       "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 0,
       "qualified_formalization_fact_ids": [],
       "qualified_formalization_statuses": {},
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     },
     {
       "concept_id": "C:square-root",
@@ -386,10 +463,12 @@
       "family_topic_fact_count": 0,
       "family_topic_fact_ids": [],
       "formalization_qualifiers": [],
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
       "qualified_formalization_fact_count": 0,
       "qualified_formalization_fact_ids": [],
       "qualified_formalization_statuses": {},
-      "trust": "family-topic and fact-formalization dimensions remain separate"
+      "trust": "family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate"
     }
   ],
   "derivation": {
@@ -401,7 +480,7 @@
     ],
     "nursery_sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1",
     "overlay_sha256": "8a47aa2dd5e9dc701f78378909af22e4536e618fd145edbb44f2c9c5f9def286",
-    "trust_boundary": "train/development coverage reporting only; never held-out inspection, proof, operation, or admission authority"
+    "trust_boundary": "train/development fact coverage and separately reviewed kernel-anchor reporting only; never held-out inspection, proof, operation, or admission authority"
   },
   "kind": "axeyum-autogenesis-concept-coverage-projection",
   "schema_version": 1

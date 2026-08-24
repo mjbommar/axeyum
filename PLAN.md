@@ -147,6 +147,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `c514c8350` | Add three manually reviewed, empty-footprint kernel-theorem semantic anchors and reject accidental inflation of fact coverage by the new source population |
 | 2026-08-24 | `abb4a6be4` | Derive a deterministic, non-semantic review queue for all unanchored empty-footprint kernel theorems, with candidate mappings kept out of the reviewed population |
 | 2026-08-24 | `601d17c82` | Review the first graph-central constructive-real equality cluster as three separate reflexive, symmetric, and transitive equivalence-law anchors |
+| 2026-08-24 | pending | Expose active reviewed kernel-theorem semantic anchors as a separately validated concept-coverage dimension without mixing them into fact or held-out populations |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
@@ -2097,6 +2098,10 @@ transitive `CReal.Equiv` theorems as separate partial equivalence-relation law
 anchors. Six active kernel anchors now leave 863 explicitly unreviewed
 empty-footprint theorems; this is a review-state count, not a completeness
 claim.
+The derived concept-coverage projection now makes kernel anchors visible in a
+third dimension, separate from both family-topic and fact-formalization
+coverage. Its six active anchors span four concepts/encounters, and its
+validator rejects an invented or omitted anchor against the active overlay.
 Next capability work must expand general-producer and adapter coverage over the
 train/development queue, compare it against that fixed observation, and only
 then evaluate an independently sealed held-out partition—not add more

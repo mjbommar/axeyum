@@ -15,16 +15,20 @@ def build():
  for row in catalog['facts']:families[row['family']].append(row['fact_id'])
  topic=defaultdict(list)
  for row in crosswalk['mappings']:topic[row['concept_id']].extend(f for f in families[row['family']] if partition.get(f) in visible)
- formal=defaultdict(list); qualifiers=defaultdict(Counter)
+ formal=defaultdict(list);qualifiers=defaultdict(Counter);kernel=defaultdict(list)
  for link in overlay['links']:
-  if link['relation']=='formalizes' and partition.get(link['source']['id']) in visible:
-   concept=link['target']['id']; formal[concept].append(link['source']['id']); qualifiers[concept][link['qualifiers']['coverage']]+=1
+  if link['relation']!='formalizes' or link['status']!='active':continue
+  source=link['source'];concept=link['target']['id']
+  if source['kind']=='fact' and partition.get(source['id']) in visible:
+   formal[concept].append(source['id']);qualifiers[concept][link['qualifiers']['coverage']]+=1
+  elif source['namespace']=='axeyum-kernel' and source['kind']=='kernel-declaration':kernel[concept].append(source['id'])
  rows=[]
- for concept in sorted(set(topic)|set(formal)):
-  topic_ids=sorted(set(topic[concept]));formal_ids=sorted(set(formal[concept]))
+ for concept in sorted(set(topic)|set(formal)|set(kernel)):
+  topic_ids=sorted(set(topic[concept]));formal_ids=sorted(set(formal[concept]));kernel_ids=sorted(set(kernel[concept]))
   statuses=Counter(facts[f]['epistemic_status'] for f in formal_ids if f in facts)
-  rows.append({'concept_id':concept,'family_topic_fact_ids':topic_ids,'family_topic_fact_count':len(topic_ids),'qualified_formalization_fact_ids':formal_ids,'qualified_formalization_fact_count':len(formal_ids),'qualified_formalization_statuses':dict(sorted(statuses.items())),'formalization_qualifiers':[{'coverage':k,'fact_count':qualifiers[concept][k]} for k in sorted(qualifiers[concept])],'coverage_state':'fact-formalization-present' if formal_ids else 'family-topic-only','trust':'family-topic and fact-formalization dimensions remain separate'})
- return {'schema_version':1,'kind':'axeyum-autogenesis-concept-coverage-projection','derivation':{'catalog_sha256':sha(catalog_path),'crosswalk_sha256':sha(crosswalk_path),'overlay_sha256':sha(overlay_path),'nursery_sha256':sha(nursery_path),'evaluation_partitions':['development','train'],'trust_boundary':'train/development coverage reporting only; never held-out inspection, proof, operation, or admission authority'},'census':{'concepts':len(rows),'with_family_topic':sum(bool(r['family_topic_fact_ids']) for r in rows),'with_fact_formalization':sum(bool(r['qualified_formalization_fact_ids']) for r in rows),'family_topic_facts':sum(r['family_topic_fact_count'] for r in rows),'qualified_formalization_facts':sum(r['qualified_formalization_fact_count'] for r in rows),'excluded_held_out_family_topic_facts':sum(1 for r in catalog['facts'] if partition.get(r['fact_id'])=='held-out')},'concepts':rows}
+  state='fact-formalization-present' if formal_ids else ('kernel-semantic-anchor-present' if kernel_ids else 'family-topic-only')
+  rows.append({'concept_id':concept,'family_topic_fact_ids':topic_ids,'family_topic_fact_count':len(topic_ids),'qualified_formalization_fact_ids':formal_ids,'qualified_formalization_fact_count':len(formal_ids),'qualified_formalization_statuses':dict(sorted(statuses.items())),'formalization_qualifiers':[{'coverage':k,'fact_count':qualifiers[concept][k]} for k in sorted(qualifiers[concept])],'kernel_semantic_anchor_ids':kernel_ids,'kernel_semantic_anchor_count':len(kernel_ids),'coverage_state':state,'trust':'family-topic, fact-formalization, and kernel-semantic-anchor dimensions remain separate'})
+ return {'schema_version':1,'kind':'axeyum-autogenesis-concept-coverage-projection','derivation':{'catalog_sha256':sha(catalog_path),'crosswalk_sha256':sha(crosswalk_path),'overlay_sha256':sha(overlay_path),'nursery_sha256':sha(nursery_path),'evaluation_partitions':['development','train'],'trust_boundary':'train/development fact coverage and separately reviewed kernel-anchor reporting only; never held-out inspection, proof, operation, or admission authority'},'census':{'concepts':len(rows),'with_family_topic':sum(bool(r['family_topic_fact_ids']) for r in rows),'with_fact_formalization':sum(bool(r['qualified_formalization_fact_ids']) for r in rows),'with_kernel_semantic_anchor':sum(bool(r['kernel_semantic_anchor_ids']) for r in rows),'family_topic_facts':sum(r['family_topic_fact_count'] for r in rows),'qualified_formalization_facts':sum(r['qualified_formalization_fact_count'] for r in rows),'kernel_semantic_anchors':sum(r['kernel_semantic_anchor_count'] for r in rows),'excluded_held_out_family_topic_facts':sum(1 for r in catalog['facts'] if partition.get(r['fact_id'])=='held-out')},'concepts':rows}
 def main():
  p=argparse.ArgumentParser();p.add_argument('--check',action='store_true');a=p.parse_args();rendered=json.dumps(build(),indent=2,sort_keys=True)+'\n'
  if a.check:
