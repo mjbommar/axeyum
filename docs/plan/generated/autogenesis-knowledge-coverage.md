@@ -17,6 +17,17 @@
 | Mathematical techniques reached | 2 |
 | Single-edge claims of complete concept coverage | 0 |
 
+## F5: derived coverage dimensions
+
+| Measure | Count |
+|---|---:|
+| Exact-formalization links | 0 |
+| Supporting-law links | 3 |
+| Facts with qualified formal content | 9 |
+| Formally mapped facts credited to a reusable producer | 7 |
+| Formally mapped facts with a complete hash-bound transport chain | 5 |
+| Formally mapped facts without a complete transport chain | 4 |
+
 ## Formal-content qualifiers
 
 | Qualifier | Links |

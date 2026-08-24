@@ -12,6 +12,7 @@ from collections import Counter
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OVERLAY = ROOT / "artifacts/autogenesis/knowledge-overlay-v1.json"
 OPERATIONS = ROOT / "artifacts/autogenesis/operations.json"
+TRANSPORT = ROOT / "artifacts/autogenesis/transport-projection-v1.json"
 OUTPUT = ROOT / "docs/plan/generated/autogenesis-knowledge-coverage.md"
 
 
@@ -61,6 +62,13 @@ def main() -> int:
     complete = sum(
         link.get("qualifiers", {}).get("completeness") == "complete" for link in formalizes
     )
+    transport = json.loads(TRANSPORT.read_text())
+    transport_complete = {
+        row["source_fact_id"] for row in transport["chains"] if row["status"] == "complete"
+    }
+    exact = sum(link.get("qualifiers", {}).get("coverage") == "exact-formalization" for link in formalizes)
+    supporting = sum(link.get("qualifiers", {}).get("coverage") == "supporting-law" for link in formalizes)
+    autonomous = mapped_facts & credited
     lines = [
         "# Generated Autogenesis knowledge coverage",
         "",
@@ -80,6 +88,17 @@ def main() -> int:
         f"| External encounters reached | {len(encounters)} |",
         f"| Mathematical techniques reached | {len(techniques)} |",
         f"| Single-edge claims of complete concept coverage | {complete} |",
+        "",
+        "## F5: derived coverage dimensions",
+        "",
+        "| Measure | Count |",
+        "|---|---:|",
+        f"| Exact-formalization links | {exact} |",
+        f"| Supporting-law links | {supporting} |",
+        f"| Facts with qualified formal content | {len(mapped_facts)} |",
+        f"| Formally mapped facts credited to a reusable producer | {len(autonomous)} |",
+        f"| Formally mapped facts with a complete hash-bound transport chain | {len(mapped_facts & transport_complete)} |",
+        f"| Formally mapped facts without a complete transport chain | {len(mapped_facts - transport_complete)} |",
         "",
         "## Formal-content qualifiers",
         "",
