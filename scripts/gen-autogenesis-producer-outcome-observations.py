@@ -120,14 +120,15 @@ def build() -> dict[str, Any]:
         raise ObservationError("outcomes disagree with producer census coverage")
     if sum(partitions.values()) != census.get("population", {}).get("train_development"):
         raise ObservationError("population disagrees with producer census")
-    grouped: dict[tuple[str, str, str, str], list[str]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str, str, str], list[str]] = defaultdict(list)
     for row in rendered_rows:
         shape = row["statement_shape"]
         if not isinstance(shape, str) or not shape:
             raise ObservationError(f"catalog statement shape missing for {row['fact_id']}")
-        grouped[(row["family"], shape, row["abstraction_class"], row["outcome"])].append(row["fact_id"])
+        grouped[(row["partition"], row["family"], shape, row["abstraction_class"], row["outcome"])].append(row["fact_id"])
     groups = [
         {
+            "partition": partition,
             "family": family,
             "statement_shape": shape,
             "abstraction_class": abstraction_class,
@@ -135,7 +136,7 @@ def build() -> dict[str, Any]:
             "observed_fact_ids": sorted(ids),
             "observed_fact_count": len(ids),
         }
-        for (family, shape, abstraction_class, outcome), ids in sorted(grouped.items())
+        for (partition, family, shape, abstraction_class, outcome), ids in sorted(grouped.items())
     ]
     return {
         "schema_version": 1,

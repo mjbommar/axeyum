@@ -2,8 +2,11 @@
 
 The knowledge overlay now has a reproducible view of what the fixed bounded
 reflexivity producer actually did on its sealed Mathlib 4.30 train/development
-census. It joins each retained outcome to the reviewed fact family, statement
-shape, and whether the goal was exact-source or semantically abstracted.
+census. It joins each retained outcome to its partition, reviewed fact family,
+statement shape, and whether the goal was exact-source or semantically
+abstracted. Keeping train and development separate is necessary: one may guide
+implementation iteration, while the other remains a non-held-out check on that
+iteration.
 
 The current observation covers 138 facts: 24 exact-source and 114
 semantic-abstraction rows, split 78 train / 60 development. It retains the

@@ -32,167 +32,13 @@
   "groups": [
     {
       "abstraction_class": "semantic-abstraction",
-      "family": "integer-fibonacci",
-      "observed_fact_count": 2,
-      "observed_fact_ids": [
-        "F:ml430-int-fib-eq-zero-8193c7cb",
-        "F:ml430-mutation-aabb80b1f89f0c5847364692"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "biconditional"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "integer-fibonacci",
-      "observed_fact_count": 2,
-      "observed_fact_ids": [
-        "F:ml430-int-fib-of-nonneg-438018c5",
-        "F:ml430-int-fib-of-odd-66560495"
-      ],
-      "outcome": "kernel-rejection:candidate-typecheck-failed",
-      "statement_shape": "conditional-proposition"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "integer-fibonacci",
-      "observed_fact_count": 1,
-      "observed_fact_ids": [
-        "F:ml430-int-fib-dvd-ffb3c5c1"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "conditional-proposition"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "integer-fibonacci",
-      "observed_fact_count": 10,
-      "observed_fact_ids": [
-        "F:ml430-int-fib-add-181b6a2c",
-        "F:ml430-int-fib-add-one-33f1b748",
-        "F:ml430-int-fib-add-two-739358dd",
-        "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
-        "F:ml430-int-fib-gcd-3a8bfdec",
-        "F:ml430-int-fib-natcast-d5886be4",
-        "F:ml430-int-fib-neg-b4021d37",
-        "F:ml430-int-fib-two-mul-0e70f3dd",
-        "F:ml430-int-fib-two-mul-add-two-0ba4a948",
-        "F:ml430-int-gcd-fib-73bdafc2"
-      ],
-      "outcome": "kernel-rejection:candidate-typecheck-failed",
-      "statement_shape": "unconditional-equality"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "integer-fibonacci",
-      "observed_fact_count": 1,
-      "observed_fact_ids": [
-        "F:ml430-int-fib-two-mul-add-one-pos-8977f65f"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "unconditional-relation"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "integer-gcd",
-      "observed_fact_count": 5,
-      "observed_fact_ids": [
-        "F:ml430-int-gcd-div-5e01872f",
-        "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
-        "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
-        "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
-        "F:ml430-int-gcd-greatest-5b31c5fe"
-      ],
-      "outcome": "kernel-rejection:candidate-typecheck-failed",
-      "statement_shape": "conditional-proposition"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "integer-gcd",
-      "observed_fact_count": 4,
-      "observed_fact_ids": [
-        "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
-        "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
-        "F:ml430-int-ne-zero-of-gcd-f71f00df",
-        "F:ml430-mutation-48fe130e2b8eadb6f626b66f"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "conditional-proposition"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "integer-gcd",
-      "observed_fact_count": 1,
-      "observed_fact_ids": [
-        "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "existential-witness"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "integer-gcd",
-      "observed_fact_count": 1,
-      "observed_fact_ids": [
-        "F:ml430-int-gcd-eq-gcd-ab-63005aef"
-      ],
-      "outcome": "kernel-rejection:candidate-typecheck-failed",
-      "statement_shape": "unconditional-equality"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "integer-modular-equivalence",
-      "observed_fact_count": 4,
-      "observed_fact_ids": [
-        "F:ml430-int-modeq-comm-1e4bcc07",
-        "F:ml430-int-modeq-dvd-iff-b7ffeff8",
-        "F:ml430-int-modeq-neg-d6ff57b6",
-        "F:ml430-int-neg-modeq-neg-30d98479"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "biconditional"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "integer-modular-equivalence",
-      "observed_fact_count": 8,
-      "observed_fact_ids": [
-        "F:ml430-int-modeq-add-left-6e17c69a",
-        "F:ml430-int-modeq-add-left-cancel-062ad5fe",
-        "F:ml430-int-modeq-neg-f649f6c5",
-        "F:ml430-int-modeq-of-dvd-b9c41fce",
-        "F:ml430-int-modeq-of-mul-left-c4ccd51e",
-        "F:ml430-int-modeq-of-mul-right-c92b7bf0",
-        "F:ml430-int-modeq-symm-984a6e67",
-        "F:ml430-int-modeq-trans-6d7863e0"
-      ],
-      "outcome": "producer-decline:terminal-not-constant-headed-equality",
-      "statement_shape": "conditional-proposition"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "integer-modular-equivalence",
-      "observed_fact_count": 8,
-      "observed_fact_ids": [
-        "F:ml430-int-add-modeq-left-ee732b5b",
-        "F:ml430-int-add-modeq-right-e58108ee",
-        "F:ml430-int-mod-modeq-6bec7847",
-        "F:ml430-int-modeq-one-01d9de39",
-        "F:ml430-int-modeq-refl-30e15520",
-        "F:ml430-int-modeq-sub-3148f130",
-        "F:ml430-int-modulus-modeq-zero-5b57a898",
-        "F:ml430-mutation-aca37b68d3cdf06f0127def9"
-      ],
-      "outcome": "producer-decline:terminal-not-constant-headed-equality",
-      "statement_shape": "unconditional-relation"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
       "family": "natural-bitwise",
       "observed_fact_count": 1,
       "observed_fact_ids": [
         "F:ml430-nat-even-xor-78a39432"
       ],
       "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "development",
       "statement_shape": "biconditional"
     },
     {
@@ -203,6 +49,7 @@
         "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
       ],
       "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "development",
       "statement_shape": "conditional-proposition"
     },
     {
@@ -214,6 +61,7 @@
         "F:ml430-nat-lt-xor-cases-c43a1e85"
       ],
       "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "development",
       "statement_shape": "conditional-proposition"
     },
     {
@@ -226,6 +74,7 @@
         "F:ml430-nat-bitwise-swap-7175e90e"
       ],
       "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "development",
       "statement_shape": "higher-order-property"
     },
     {
@@ -247,146 +96,8 @@
         "F:ml430-nat-testbit-lor-7644e067"
       ],
       "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "development",
       "statement_shape": "unconditional-equality"
-    },
-    {
-      "abstraction_class": "exact-source",
-      "family": "natural-factorial",
-      "observed_fact_count": 1,
-      "observed_fact_ids": [
-        "F:ml430-nat-descfactorial-of-lt-fbcf5d26"
-      ],
-      "outcome": "kernel-rejection:candidate-typecheck-failed",
-      "statement_shape": "conditional-proposition"
-    },
-    {
-      "abstraction_class": "exact-source",
-      "family": "natural-factorial",
-      "observed_fact_count": 4,
-      "observed_fact_ids": [
-        "F:ml430-nat-descfactorial-le-2b8cc09a",
-        "F:ml430-nat-factorial-dvd-factorial-e9d14845",
-        "F:ml430-nat-factorial-le-d0f4a912",
-        "F:ml430-nat-factorial-lt-of-lt-d6c2125d"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "conditional-proposition"
-    },
-    {
-      "abstraction_class": "exact-source",
-      "family": "natural-factorial",
-      "observed_fact_count": 2,
-      "observed_fact_ids": [
-        "F:ml430-nat-ascfactorial-zero-fd183202",
-        "F:ml430-nat-descfactorial-zero-966b01df"
-      ],
-      "outcome": "admissible-proof",
-      "statement_shape": "unconditional-equality"
-    },
-    {
-      "abstraction_class": "exact-source",
-      "family": "natural-factorial",
-      "observed_fact_count": 5,
-      "observed_fact_ids": [
-        "F:ml430-mutation-7afa5ec620720a1501bf349d",
-        "F:ml430-nat-descfactorial-one-d4856d4a",
-        "F:ml430-nat-descfactorial-self-899fc0e0",
-        "F:ml430-nat-one-ascfactorial-8bacb017",
-        "F:ml430-nat-zero-ascfactorial-af4fcdca"
-      ],
-      "outcome": "kernel-rejection:candidate-typecheck-failed",
-      "statement_shape": "unconditional-equality"
-    },
-    {
-      "abstraction_class": "exact-source",
-      "family": "natural-factorial",
-      "observed_fact_count": 3,
-      "observed_fact_ids": [
-        "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
-        "F:ml430-nat-factorial-pos-f1dd2405",
-        "F:ml430-nat-self-le-factorial-cfdffc69"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "unconditional-relation"
-    },
-    {
-      "abstraction_class": "exact-source",
-      "family": "natural-fibonacci",
-      "observed_fact_count": 4,
-      "observed_fact_ids": [
-        "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
-        "F:ml430-nat-fib-eq-zero-61879073",
-        "F:ml430-nat-fib-lt-fib-3582b881",
-        "F:ml430-nat-fib-pos-9e67bd8e"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "biconditional"
-    },
-    {
-      "abstraction_class": "exact-source",
-      "family": "natural-fibonacci",
-      "observed_fact_count": 2,
-      "observed_fact_ids": [
-        "F:ml430-nat-fib-dvd-f80f3de1",
-        "F:ml430-nat-le-fib-self-0cbccb4d"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "conditional-proposition"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "natural-fibonacci",
-      "observed_fact_count": 3,
-      "observed_fact_ids": [
-        "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
-        "F:ml430-nat-fib-mono-cc6afe09",
-        "F:ml430-nat-fib-strictmonoon-905810a9"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "higher-order-property"
-    },
-    {
-      "abstraction_class": "exact-source",
-      "family": "natural-fibonacci",
-      "observed_fact_count": 1,
-      "observed_fact_ids": [
-        "F:ml430-nat-fib-add-two-b86e0c82"
-      ],
-      "outcome": "kernel-rejection:candidate-typecheck-failed",
-      "statement_shape": "unconditional-equality"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "natural-fibonacci",
-      "observed_fact_count": 3,
-      "observed_fact_ids": [
-        "F:ml430-nat-fastfib-eq-cde11774",
-        "F:ml430-nat-fib-gcd-d1d98407",
-        "F:ml430-nat-gcd-fib-add-self-5a92d5e3"
-      ],
-      "outcome": "kernel-rejection:candidate-typecheck-failed",
-      "statement_shape": "unconditional-equality"
-    },
-    {
-      "abstraction_class": "exact-source",
-      "family": "natural-fibonacci",
-      "observed_fact_count": 2,
-      "observed_fact_ids": [
-        "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
-        "F:ml430-nat-le-fib-add-one-5284f0bf"
-      ],
-      "outcome": "producer-decline:terminal-not-exact-equality",
-      "statement_shape": "unconditional-relation"
-    },
-    {
-      "abstraction_class": "semantic-abstraction",
-      "family": "natural-fibonacci",
-      "observed_fact_count": 1,
-      "observed_fact_ids": [
-        "F:ml430-nat-fib-coprime-fib-succ-162fc738"
-      ],
-      "outcome": "producer-decline:terminal-not-constant-headed-equality",
-      "statement_shape": "unconditional-relation"
     },
     {
       "abstraction_class": "semantic-abstraction",
@@ -397,6 +108,7 @@
         "F:ml430-nat-modeq-dvd-iff-8f130450"
       ],
       "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "development",
       "statement_shape": "biconditional"
     },
     {
@@ -407,6 +119,7 @@
         "F:ml430-nat-modeq-gcd-eq-5167ff4f"
       ],
       "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "development",
       "statement_shape": "conditional-proposition"
     },
     {
@@ -426,6 +139,7 @@
         "F:ml430-nat-modeq-trans-ef9d1c46"
       ],
       "outcome": "producer-decline:terminal-not-constant-headed-equality",
+      "partition": "development",
       "statement_shape": "conditional-proposition"
     },
     {
@@ -442,6 +156,7 @@
         "F:ml430-nat-modulus-modeq-zero-fd9af096"
       ],
       "outcome": "producer-decline:terminal-not-constant-headed-equality",
+      "partition": "development",
       "statement_shape": "unconditional-relation"
     },
     {
@@ -456,6 +171,7 @@
         "F:ml430-nat-prime-even-iff-d068ec82"
       ],
       "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "development",
       "statement_shape": "biconditional"
     },
     {
@@ -466,6 +182,7 @@
         "F:ml430-nat-succ-pred-prime-4feb123f"
       ],
       "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "development",
       "statement_shape": "conditional-proposition"
     },
     {
@@ -476,6 +193,7 @@
         "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439"
       ],
       "outcome": "producer-decline:binder-budget-exceeded",
+      "partition": "development",
       "statement_shape": "conditional-proposition"
     },
     {
@@ -491,6 +209,7 @@
         "F:ml430-nat-prime-odd-of-ne-two-91e1195f"
       ],
       "outcome": "producer-decline:terminal-not-constant-headed-equality",
+      "partition": "development",
       "statement_shape": "conditional-proposition"
     },
     {
@@ -508,7 +227,326 @@
         "F:ml430-nat-prime-pred-pos-4e67ac4c"
       ],
       "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "development",
       "statement_shape": "conditional-proposition"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-fibonacci",
+      "observed_fact_count": 2,
+      "observed_fact_ids": [
+        "F:ml430-int-fib-eq-zero-8193c7cb",
+        "F:ml430-mutation-aabb80b1f89f0c5847364692"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "biconditional"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-fibonacci",
+      "observed_fact_count": 2,
+      "observed_fact_ids": [
+        "F:ml430-int-fib-of-nonneg-438018c5",
+        "F:ml430-int-fib-of-odd-66560495"
+      ],
+      "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "train",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-fibonacci",
+      "observed_fact_count": 1,
+      "observed_fact_ids": [
+        "F:ml430-int-fib-dvd-ffb3c5c1"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-fibonacci",
+      "observed_fact_count": 10,
+      "observed_fact_ids": [
+        "F:ml430-int-fib-add-181b6a2c",
+        "F:ml430-int-fib-add-one-33f1b748",
+        "F:ml430-int-fib-add-two-739358dd",
+        "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+        "F:ml430-int-fib-gcd-3a8bfdec",
+        "F:ml430-int-fib-natcast-d5886be4",
+        "F:ml430-int-fib-neg-b4021d37",
+        "F:ml430-int-fib-two-mul-0e70f3dd",
+        "F:ml430-int-fib-two-mul-add-two-0ba4a948",
+        "F:ml430-int-gcd-fib-73bdafc2"
+      ],
+      "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "train",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-fibonacci",
+      "observed_fact_count": 1,
+      "observed_fact_ids": [
+        "F:ml430-int-fib-two-mul-add-one-pos-8977f65f"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-gcd",
+      "observed_fact_count": 5,
+      "observed_fact_ids": [
+        "F:ml430-int-gcd-div-5e01872f",
+        "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+        "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+        "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+        "F:ml430-int-gcd-greatest-5b31c5fe"
+      ],
+      "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "train",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-gcd",
+      "observed_fact_count": 4,
+      "observed_fact_ids": [
+        "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
+        "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
+        "F:ml430-int-ne-zero-of-gcd-f71f00df",
+        "F:ml430-mutation-48fe130e2b8eadb6f626b66f"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-gcd",
+      "observed_fact_count": 1,
+      "observed_fact_ids": [
+        "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "existential-witness"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-gcd",
+      "observed_fact_count": 1,
+      "observed_fact_ids": [
+        "F:ml430-int-gcd-eq-gcd-ab-63005aef"
+      ],
+      "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "train",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-modular-equivalence",
+      "observed_fact_count": 4,
+      "observed_fact_ids": [
+        "F:ml430-int-modeq-comm-1e4bcc07",
+        "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+        "F:ml430-int-modeq-neg-d6ff57b6",
+        "F:ml430-int-neg-modeq-neg-30d98479"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "biconditional"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-modular-equivalence",
+      "observed_fact_count": 8,
+      "observed_fact_ids": [
+        "F:ml430-int-modeq-add-left-6e17c69a",
+        "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+        "F:ml430-int-modeq-neg-f649f6c5",
+        "F:ml430-int-modeq-of-dvd-b9c41fce",
+        "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+        "F:ml430-int-modeq-of-mul-right-c92b7bf0",
+        "F:ml430-int-modeq-symm-984a6e67",
+        "F:ml430-int-modeq-trans-6d7863e0"
+      ],
+      "outcome": "producer-decline:terminal-not-constant-headed-equality",
+      "partition": "train",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "integer-modular-equivalence",
+      "observed_fact_count": 8,
+      "observed_fact_ids": [
+        "F:ml430-int-add-modeq-left-ee732b5b",
+        "F:ml430-int-add-modeq-right-e58108ee",
+        "F:ml430-int-mod-modeq-6bec7847",
+        "F:ml430-int-modeq-one-01d9de39",
+        "F:ml430-int-modeq-refl-30e15520",
+        "F:ml430-int-modeq-sub-3148f130",
+        "F:ml430-int-modulus-modeq-zero-5b57a898",
+        "F:ml430-mutation-aca37b68d3cdf06f0127def9"
+      ],
+      "outcome": "producer-decline:terminal-not-constant-headed-equality",
+      "partition": "train",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "abstraction_class": "exact-source",
+      "family": "natural-factorial",
+      "observed_fact_count": 1,
+      "observed_fact_ids": [
+        "F:ml430-nat-descfactorial-of-lt-fbcf5d26"
+      ],
+      "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "train",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "abstraction_class": "exact-source",
+      "family": "natural-factorial",
+      "observed_fact_count": 4,
+      "observed_fact_ids": [
+        "F:ml430-nat-descfactorial-le-2b8cc09a",
+        "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+        "F:ml430-nat-factorial-le-d0f4a912",
+        "F:ml430-nat-factorial-lt-of-lt-d6c2125d"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "abstraction_class": "exact-source",
+      "family": "natural-factorial",
+      "observed_fact_count": 2,
+      "observed_fact_ids": [
+        "F:ml430-nat-ascfactorial-zero-fd183202",
+        "F:ml430-nat-descfactorial-zero-966b01df"
+      ],
+      "outcome": "admissible-proof",
+      "partition": "train",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "abstraction_class": "exact-source",
+      "family": "natural-factorial",
+      "observed_fact_count": 5,
+      "observed_fact_ids": [
+        "F:ml430-mutation-7afa5ec620720a1501bf349d",
+        "F:ml430-nat-descfactorial-one-d4856d4a",
+        "F:ml430-nat-descfactorial-self-899fc0e0",
+        "F:ml430-nat-one-ascfactorial-8bacb017",
+        "F:ml430-nat-zero-ascfactorial-af4fcdca"
+      ],
+      "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "train",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "abstraction_class": "exact-source",
+      "family": "natural-factorial",
+      "observed_fact_count": 3,
+      "observed_fact_ids": [
+        "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+        "F:ml430-nat-factorial-pos-f1dd2405",
+        "F:ml430-nat-self-le-factorial-cfdffc69"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "abstraction_class": "exact-source",
+      "family": "natural-fibonacci",
+      "observed_fact_count": 4,
+      "observed_fact_ids": [
+        "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
+        "F:ml430-nat-fib-eq-zero-61879073",
+        "F:ml430-nat-fib-lt-fib-3582b881",
+        "F:ml430-nat-fib-pos-9e67bd8e"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "biconditional"
+    },
+    {
+      "abstraction_class": "exact-source",
+      "family": "natural-fibonacci",
+      "observed_fact_count": 2,
+      "observed_fact_ids": [
+        "F:ml430-nat-fib-dvd-f80f3de1",
+        "F:ml430-nat-le-fib-self-0cbccb4d"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "natural-fibonacci",
+      "observed_fact_count": 3,
+      "observed_fact_ids": [
+        "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+        "F:ml430-nat-fib-mono-cc6afe09",
+        "F:ml430-nat-fib-strictmonoon-905810a9"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "higher-order-property"
+    },
+    {
+      "abstraction_class": "exact-source",
+      "family": "natural-fibonacci",
+      "observed_fact_count": 1,
+      "observed_fact_ids": [
+        "F:ml430-nat-fib-add-two-b86e0c82"
+      ],
+      "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "train",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "natural-fibonacci",
+      "observed_fact_count": 3,
+      "observed_fact_ids": [
+        "F:ml430-nat-fastfib-eq-cde11774",
+        "F:ml430-nat-fib-gcd-d1d98407",
+        "F:ml430-nat-gcd-fib-add-self-5a92d5e3"
+      ],
+      "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "partition": "train",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "abstraction_class": "exact-source",
+      "family": "natural-fibonacci",
+      "observed_fact_count": 2,
+      "observed_fact_ids": [
+        "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+        "F:ml430-nat-le-fib-add-one-5284f0bf"
+      ],
+      "outcome": "producer-decline:terminal-not-exact-equality",
+      "partition": "train",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "abstraction_class": "semantic-abstraction",
+      "family": "natural-fibonacci",
+      "observed_fact_count": 1,
+      "observed_fact_ids": [
+        "F:ml430-nat-fib-coprime-fib-succ-162fc738"
+      ],
+      "outcome": "producer-decline:terminal-not-constant-headed-equality",
+      "partition": "train",
+      "statement_shape": "unconditional-relation"
     }
   ],
   "kind": "axeyum-autogenesis-producer-outcome-observations",

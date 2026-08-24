@@ -16,22 +16,23 @@ def validate(data:dict[str,Any])->list[str]:
   if not isinstance(derivation,dict) or not isinstance(derivation.get(k),str) or len(derivation[k])!=64:errors.append(f'missing digest: {k}')
  groups=data.get('groups')
  if not isinstance(groups,list):return errors+['groups must be a list']
- facts=[];keys=[];outcomes=Counter();classes=Counter()
+ facts=[];keys=[];outcomes=Counter();classes=Counter();partitions=Counter()
  for g in groups:
   if not isinstance(g,dict):errors.append('group is not an object');continue
-  key=tuple(g.get(k) for k in ('family','statement_shape','abstraction_class','outcome'));keys.append(key)
+  key=tuple(g.get(k) for k in ('partition','family','statement_shape','abstraction_class','outcome'));keys.append(key)
   if not all(isinstance(v,str) and v for v in key):errors.append('group has invalid identity');continue
-  if key[2] not in {'exact-source','semantic-abstraction'}:errors.append(f'{key}: invalid abstraction class')
+  if key[0] not in {'train','development'}:errors.append(f'{key}: group is outside train/development')
+  if key[3] not in {'exact-source','semantic-abstraction'}:errors.append(f'{key}: invalid abstraction class')
   ids=g.get('observed_fact_ids')
   if not isinstance(ids,list) or ids!=sorted(set(ids)) or not all(isinstance(i,str) and i.startswith('F:') for i in ids):errors.append(f'{key}: facts must be sorted unique fact ids');continue
   if g.get('observed_fact_count')!=len(ids):errors.append(f'{key}: observed count disagrees with ids')
-  facts.extend(ids);outcomes[key[3]]+=len(ids);classes[key[2]]+=len(ids)
+  facts.extend(ids);outcomes[key[4]]+=len(ids);classes[key[3]]+=len(ids);partitions[key[0]]+=len(ids)
  if keys!=sorted(set(keys)):errors.append('groups are not uniquely sorted')
  if len(facts)!=len(set(facts)):errors.append('fact occurs in more than one outcome group')
  census=data.get('census',{})
  if census.get('observed_facts')!=len(facts):errors.append('observed fact census disagrees with groups')
  if census.get('held_out_observed_facts')!=0:errors.append('held-out observations are forbidden')
- if census.get('partitions')!= {'development':census.get('partitions',{}).get('development',0),'train':census.get('partitions',{}).get('train',0)} or sum(census.get('partitions',{}).values())!=len(facts):errors.append('partition census is invalid')
+ if census.get('partitions')!=dict(sorted(partitions.items())):errors.append('partition census disagrees with groups')
  if census.get('outcomes')!=dict(sorted(outcomes.items())):errors.append('outcome census disagrees with groups')
  if census.get('exact_source_facts')!=classes['exact-source'] or census.get('semantic_abstraction_facts')!=classes['semantic-abstraction']:errors.append('abstraction census disagrees with groups')
  if census.get('groups')!=len(groups):errors.append('group census disagrees with groups')

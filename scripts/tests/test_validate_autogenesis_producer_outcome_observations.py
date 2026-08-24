@@ -9,6 +9,8 @@ class Controls(unittest.TestCase):
  def test_current_valid(self):self.assertEqual(PO.validate(self.data),[])
  def test_held_out_census_rejected(self):
   d=copy.deepcopy(self.data);d['census']['held_out_observed_facts']=1;self.assertTrue(any('held-out' in e for e in PO.validate(d)))
+ def test_group_partition_outside_train_development_rejected(self):
+  d=copy.deepcopy(self.data);d['groups'][0]['partition']='held-out';self.assertTrue(any('outside train/development' in e for e in PO.validate(d)))
  def test_duplicate_fact_rejected(self):
   d=copy.deepcopy(self.data);d['groups'][1]['observed_fact_ids'].append(d['groups'][0]['observed_fact_ids'][0]);d['groups'][1]['observed_fact_ids'].sort();d['groups'][1]['observed_fact_count']+=1;d['census']['observed_facts']+=1;self.assertTrue(any('more than one' in e for e in PO.validate(d)))
  def test_invented_outcome_count_rejected(self):
