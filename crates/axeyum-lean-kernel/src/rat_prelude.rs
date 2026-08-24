@@ -806,6 +806,20 @@ pub struct RatPrelude {
     /// `Rat.sumRange_nonneg : ∀ f n, (∀ i, Lt i n → le zero (f i)) → le zero
     /// (sumRange f n)`.
     pub sum_range_nonneg: NameId,
+    /// `Rat.sumRange_congr_lt : ∀ f g n, (∀ i, Lt i n → f i = g i) →
+    /// sumRange f n = sumRange g n` — [`Self::sum_range_congr`]'s pointwise
+    /// hypothesis weakened to indices below the bound, exactly
+    /// `Nat.sumRange_congr_lt`'s own shape carried over to `ℚ`. A
+    /// general-purpose gap in `ℚ`'s sum development: what a sum whose
+    /// summand identity holds only on a bounded range can actually supply.
+    pub sum_range_congr_lt: NameId,
+    /// `Rat.sumRange_eq_zero_of_lt : ∀ f n, (∀ i, Lt i n → f i = zero) →
+    /// sumRange f n = zero` — "a sum of pointwise, bounded zeros is zero".
+    /// The prerequisite [`Self::covariance_sum_vars_left`]'s successor step
+    /// needs when specialised at `PairwiseUncorrelated`'s zero facts (which
+    /// are supplied for `i ≠ j` within a range, never universally, so
+    /// [`Self::sum_range_congr`]'s UNRESTRICTED hypothesis cannot be used).
+    pub sum_range_eq_zero_of_lt: NameId,
 
     // --- finite probability distributions (rat_prelude::probability) -------
     /// `Rat.IsDistribution p n := (∀ k, Lt k n → le zero (p k)) ∧ sumRange p
@@ -996,6 +1010,45 @@ pub struct RatPrelude {
     /// missing**: `Var[Σ_j X_j] = Σ_j Var[X_j]` under pairwise
     /// uncorrelatedness needs `Cov[Σ_j X_j, Y]` reduced to a sum first.
     pub covariance_sum_vars_left: NameId,
+    /// `Rat.PairwiseUncorrelated X m p n := ∀ i j, Lt i m → Lt j m → Not (Eq
+    /// i j) → covariance (X i) (X j) p n = zero` — **the honest, strictly
+    /// weaker hypothesis in place of independence, now over a whole
+    /// FAMILY**: a JOINT distribution over a product space is not
+    /// expressible in this development (see [`Self::covariance`]'s own
+    /// doc), only `Cov ~ 0` for every pair.
+    pub pairwise_uncorrelated: NameId,
+    /// `Rat.variance_sumVars : ∀ X p n, IsDistribution p n → ∀ m,
+    /// PairwiseUncorrelated X m p n → variance (sumVars X m) p n =
+    /// sumRange (fun j => variance (X j) p n) m` — **the headline**:
+    /// `Var[Σ_{j<m} X_j] = Σ_{j<m} Var[X_j]` under pairwise
+    /// uncorrelatedness, by induction on `m` from
+    /// [`Self::variance_add_of_uncorrelated`] (the two-variable step),
+    /// [`Self::covariance_sum_vars_left`] (reducing the needed cross term to
+    /// a sum of covariances) and [`Self::sum_range_eq_zero_of_lt`]
+    /// (collapsing that sum to zero from `PairwiseUncorrelated`'s own
+    /// bounded zero facts).
+    pub variance_sum_vars: NameId,
+    /// `Rat.variance_scaled_mean : ∀ X p n m, IsDistribution p n →
+    /// variance (fun k => inv (natDivSucc m 0) * X k) p n = (inv
+    /// (natDivSucc m 0) * inv (natDivSucc m 0)) * variance X p n` —
+    /// `Var[a·X] = a²·Var[X]` specialised at the sample-mean scalar `a :=
+    /// 1/m`, a direct corollary of [`Self::variance_smul`] (`Rat.inv` is
+    /// TOTAL, so this needs no `m ≠ 0` side condition).
+    pub variance_scaled_mean: NameId,
+    /// `Rat.chebyshev_sampleMean_uncorrelated : ∀ X eps p n m,
+    /// IsDistribution p n → PairwiseUncorrelated X m p n → lt zero eps → le
+    /// ((eps times eps) times expectation (indicator (eps times eps) (fun k
+    /// => (Y k minus expectation Y p n) times (Y k minus expectation Y p
+    /// n))) p n) ((a times a) times sumRange (fun j => variance (X j) p n)
+    /// m)`, where `Y := fun k => a times sumVars X m k`, `a := inv
+    /// (natDivSucc m 0)` —
+    /// [`Self::chebyshev_inequality`] applied to the sample mean of `m`
+    /// pairwise-uncorrelated variables, composing
+    /// [`Self::variance_scaled_mean`] and [`Self::variance_sum_vars`]. NOT
+    /// the classical `P(|X̄ − μ| ≥ ε) ≤ Var/(mε²)`, which needs identically
+    /// distributed variables this development never assumes — the sum
+    /// `Σ_{j<m} Var[X_j]` is left as-is.
+    pub chebyshev_sample_mean_uncorrelated: NameId,
 }
 
 impl RatPrelude {
@@ -1200,6 +1253,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         mul_sum_range: child(kernel, "mul_sumRange"),
         sum_range_le: child(kernel, "sumRange_le"),
         sum_range_nonneg: child(kernel, "sumRange_nonneg"),
+        sum_range_congr_lt: child(kernel, "sumRange_congr_lt"),
+        sum_range_eq_zero_of_lt: child(kernel, "sumRange_eq_zero_of_lt"),
         is_distribution: child(kernel, "IsDistribution"),
         prob_le_one: child(kernel, "prob_le_one"),
         prob_complement: child(kernel, "prob_complement"),
@@ -1230,6 +1285,10 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sum_vars: child(kernel, "sumVars"),
         expectation_sum_vars: child(kernel, "expectation_sumVars"),
         covariance_sum_vars_left: child(kernel, "covariance_sumVars_left"),
+        pairwise_uncorrelated: child(kernel, "PairwiseUncorrelated"),
+        variance_sum_vars: child(kernel, "variance_sumVars"),
+        variance_scaled_mean: child(kernel, "variance_scaled_mean"),
+        chebyshev_sample_mean_uncorrelated: child(kernel, "chebyshev_sampleMean_uncorrelated"),
     }
 }
 

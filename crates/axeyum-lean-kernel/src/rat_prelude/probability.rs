@@ -27,8 +27,8 @@
 use super::RatPrelude;
 use super::group::rsub;
 use super::ops::{
-    nat_eq_to_rat, radd, rat_eq_rewrite, rat_ty, rchain, rcongr, req, rle, rlt, rmul, rneg, rone,
-    rrefl, rsum_range, rsymm, rtrans, rzero,
+    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rat_ty, rchain, rcongr, req, rle, rlt,
+    rmul, rneg, rone, rrefl, rsum_range, rsymm, rtrans, rzero,
 };
 use super::sum::{bounded_nonneg, bounded_pointwise_le};
 use crate::BinderInfo;
@@ -75,6 +75,11 @@ const COVARIANCE_HEIGHT: u16 = 39;
 /// sequence over the whole prelude, and `declare_sum_vars` runs last.
 const SUM_VARS_HEIGHT: u16 = 40;
 
+/// Delta height for `Rat.PairwiseUncorrelated`: above `Rat.sumVars`
+/// ([`SUM_VARS_HEIGHT`], 40) and every other height declared in this
+/// prelude so far.
+const PAIRWISE_UNCORRELATED_HEIGHT: u16 = 41;
+
 /// Declare `Rat.IsDistribution`, `Rat.expectation`, `Rat.uniform`,
 /// `Rat.variance`, Markov's and (in spirit) Chebyshev's inequalities, and
 /// everything this file proves about them.
@@ -114,6 +119,10 @@ pub(super) fn declare_probability(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_sum_vars(d, p)?;
     declare_expectation_sum_vars(d, p)?;
     declare_covariance_sum_vars_left(d, p)?;
+    declare_pairwise_uncorrelated(d, p)?;
+    declare_variance_sum_vars(d, p)?;
+    declare_variance_scaled_mean(d, p)?;
+    declare_chebyshev_sample_mean_uncorrelated(d, p)?;
     Ok(())
 }
 
@@ -3782,4 +3791,594 @@ fn declare_covariance_sum_vars_left(d: &mut IntDev<'_>, p: RatPrelude) -> Result
         d.pi_fv(x_fv, x_ty, with_y)
     };
     d.declare_theorem(p.covariance_sum_vars_left, ty, value)
+}
+
+// --- pairwise uncorrelatedness and the variance of a sum of variables ------
+//
+// `Rat.covariance_sumVars_left` reduces `Cov[Σ_j X_j, Y]` to a sum of
+// covariances; `Rat.variance_add_of_uncorrelated` gives the two-variable
+// variance-of-a-sum step. Together with the bounded sum lemmas
+// `Rat.sumRange_congr_lt`/`Rat.sumRange_eq_zero_of_lt` (`rat_prelude::sum`,
+// needed because `PairwiseUncorrelated` only ever supplies zero facts
+// bounded by the family's own range, never universally), this is everything
+// `Rat.variance_sumVars` needs.
+
+/// `Rat.PairwiseUncorrelated X m p n`, i.e. `d.const_app(p.pairwise_uncorrelated,
+/// &[x, m, pf, n])`.
+fn pairwise_uncorrelated(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    x: ExprId,
+    m: ExprId,
+    pf: ExprId,
+    n: ExprId,
+) -> ExprId {
+    d.const_app(p.pairwise_uncorrelated, &[x, m, pf, n])
+}
+
+/// `∀ i j, Lt i m → Lt j m → Not (Eq i j) → Eq Rat (covariance (X i) (X j) p
+/// n) zero` — the body [`declare_pairwise_uncorrelated`] admits
+/// `Rat.PairwiseUncorrelated` as, rebuilt here so [`declare_variance_sum_vars`]
+/// can reconstruct the exact literal Pi shape it unfolds to (mirroring
+/// [`is_distribution_parts`]'s own reason) and apply an `h :
+/// PairwiseUncorrelated X m p n` hypothesis directly as a function — the
+/// kernel's `infer_app` whnf-unfolds a `Regular` `Definition` like this one
+/// to find the underlying `Pi`, so a bound `h` can be applied to concrete
+/// indices/proofs without any separate destructuring step.
+fn pairwise_uncorrelated_body(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    x: ExprId,
+    m: ExprId,
+    pf: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let hi_ty = d.lt(i, m);
+    let hj_ty = d.lt(j, m);
+    let eq_ij = d.eq(i, j);
+    let hne_ty = d.not(eq_ij);
+
+    let xi = d.apply(x, &[i]);
+    let xj = d.apply(x, &[j]);
+    let cov_ij = covariance(d, p, xi, xj, pf, n);
+    let zero_r = rzero(d, p);
+    let concl = req(d, cov_ij, zero_r);
+
+    let inner = d.arrow(hne_ty, concl);
+    let with_hj = d.arrow(hj_ty, inner);
+    let with_hi = d.arrow(hi_ty, with_hj);
+    let with_j = d.pi_fv(j_fv, nat, with_hi);
+    d.pi_fv(i_fv, nat, with_j)
+}
+
+/// Admit `Rat.PairwiseUncorrelated : (Nat → Nat → Rat) → Nat → (Nat → Rat) →
+/// Nat → Prop := fun X m p n => ∀ i j, Lt i m → Lt j m → Not (Eq i j) →
+/// covariance (X i) (X j) p n = zero` — **the honest, strictly weaker
+/// hypothesis in place of independence** (see [`RatPrelude::covariance`]'s
+/// own doc and this module's header): a JOINT distribution over a product
+/// space is not expressible here, only `Cov ~ 0`, now over a whole FAMILY.
+fn declare_pairwise_uncorrelated(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+    let fn_ty = d.arrow(nat, carrier);
+    let prop = d.kernel().sort_zero();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let body = pairwise_uncorrelated_body(d, p, x, m, pf, n);
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_m = d.lam_fv(m_fv, nat, with_pf);
+        d.lam_fv(x_fv, x_ty, with_m)
+    };
+    let ty = {
+        let over_n = d.arrow(nat, prop);
+        let over_pf = d.arrow(fn_ty, over_n);
+        let over_m = d.arrow(nat, over_pf);
+        d.arrow(x_ty, over_m)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.pairwise_uncorrelated,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(PAIRWISE_UNCORRELATED_HEIGHT),
+    })
+}
+
+/// From `hlt : Lt a b` (over `Nat`), derive `Not (Eq a b)`: assume `heq : Eq
+/// a b`, rewrite `hlt`'s type along `heq` (`Nat`-indexed [`nat_rewrite_prop`])
+/// to get `Lt b b`, then close by `Nat.lt_irrefl`. `PairwiseUncorrelated`'s
+/// own `Ne i j` hypothesis is exactly what [`declare_variance_sum_vars`]'s
+/// successor step must manufacture from an ordinary `Lt`, since every
+/// pairing it actually has on hand (`jj < j`, so `jj ≠ j`) is a strict order
+/// fact, never a disequality directly.
+fn ne_of_lt_nat(d: &mut IntDev<'_>, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId {
+    let np = d.prelude();
+    let eq_ty = d.eq(a, b);
+    let heq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(heq_fv);
+    let lt_bb = nat_rewrite_prop(d, a, b, heq, hlt, &|d, x| d.lt(x, b));
+    let false_proof = d.lemma(np.lt_irrefl, &[b, lt_bb]);
+    d.lam_fv(heq_fv, eq_ty, false_proof)
+}
+
+/// `Eq Rat (variance (const_fn zero) p n) zero`, for ANY `p`, `n` (no
+/// `IsDistribution` needed) — the base case
+/// [`declare_variance_sum_vars`] needs, since `sumVars X Nat.zero` ι-reduces
+/// to `const_fn zero` exactly as [`declare_expectation_sum_vars`]'s and
+/// [`declare_covariance_sum_vars_left`]'s own base cases document. Returns
+/// `(const_fn zero, proof)`.
+///
+/// [`expectation_zero_eq_zero`] collapses the mean `E[0]` to `zero`
+/// unconditionally; substituting that into `variance`'s own definition
+/// (`E[(X−E[X])²]`) leaves `E[(0−0)·(0−0)]`, itself a sum of
+/// pointwise-zero (via [`RatPrelude::sub_self`] then [`rat_zero_mul`] twice)
+/// terms — closed by [`RatPrelude::sum_range_eq_zero_of_lt`] rather than
+/// [`sum_range_const`]/[`RatPrelude::mul_zero`], since the summand here is
+/// not literally the constant-zero function (only pointwise equal to it).
+fn variance_of_const_zero_eq_zero(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    pf: ExprId,
+    n: ExprId,
+) -> (ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let zero_r = rzero(d, p);
+    let (const_zero, mu_eq) = expectation_zero_eq_zero(d, p, pf, n);
+    // mu_eq : Eq(expectation(const_zero, pf, n), zero_r)
+    let mu_r = expectation(d, p, const_zero, pf, n);
+
+    let summand_mu = variance_summand(d, p, const_zero, mu_r);
+    let e_summand_mu = expectation(d, p, summand_mu, pf, n);
+    // e_summand_mu ~ variance(const_zero, pf, n)                      [defeq]
+
+    let vs_zero_zero = variance_summand(d, p, const_zero, zero_r);
+    let e_vs_zero_zero = expectation(d, p, vs_zero_zero, pf, n);
+    let step_a = rcongr(d, mu_r, zero_r, mu_eq, &|d, t| {
+        let vs = variance_summand(d, p, const_zero, t);
+        expectation(d, p, vs, pf, n)
+    });
+    // step_a : Eq(e_summand_mu, e_vs_zero_zero)
+
+    let weighted_vs = weighted(d, vs_zero_zero, pf);
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let klt_fv = d.fresh_fvar();
+        let klt_ty = d.lt(k, n);
+
+        let const_zero_k = d.apply(const_zero, &[k]);
+        let gap = rsub(d, p, const_zero_k, zero_r);
+        let gap_zero = d.lemma(p.sub_self, &[zero_r]);
+        let vs_k = rmul(d, gap, gap);
+        let zz = rmul(d, zero_r, zero_r);
+        let step1 = rcongr(d, gap, zero_r, gap_zero, &|d, t| rmul(d, t, t));
+        let step2 = rat_zero_mul(d, p, zero_r);
+        let (_e, vs_k_zero) = rchain(d, vs_k, &[(zz, step1), (zero_r, step2)]);
+
+        let pk = d.apply(pf, &[k]);
+        let weighted_vs_k = rmul(d, vs_k, pk);
+        let zero_pk = rmul(d, zero_r, pk);
+        let step3 = rcongr(d, vs_k, zero_r, vs_k_zero, &|d, t| rmul(d, t, pk));
+        let step4 = rat_zero_mul(d, p, pk);
+        let (_e2, weighted_vs_k_zero) =
+            rchain(d, weighted_vs_k, &[(zero_pk, step3), (zero_r, step4)]);
+
+        let with_klt = d.lam_fv(klt_fv, klt_ty, weighted_vs_k_zero);
+        d.lam_fv(k_fv, nat, with_klt)
+    };
+    let step_b = d.lemma(p.sum_range_eq_zero_of_lt, &[weighted_vs, n, pointwise]);
+    // step_b : Eq(sumRange(weighted_vs, n), zero_r) ~ Eq(e_vs_zero_zero, zero_r) [defeq]
+
+    let final_proof = rtrans(d, e_summand_mu, e_vs_zero_zero, zero_r, step_a, step_b);
+    (const_zero, final_proof)
+}
+
+/// `Rat.variance_sumVars : ∀ X p n, IsDistribution p n → ∀ m,
+/// PairwiseUncorrelated X m p n → variance (sumVars X m) p n = sumRange (fun
+/// j => variance (X j) p n) m` — **the headline**: `Var[Σ_{j<m} X_j] =
+/// Σ_{j<m} Var[X_j]` under pairwise uncorrelatedness. Two prior lanes stopped
+/// one lemma short of this — `Rat.sumRange_eq_zero_of_lt`
+/// (`rat_prelude::sum`) is that lemma.
+///
+/// Induction on `m`. **Base case**: [`variance_of_const_zero_eq_zero`],
+/// using `sumVars X 0`'s ι-reduction to `const_fn zero`.
+///
+/// **Successor step**: weaken `h : PairwiseUncorrelated X (succ j) p n` to
+/// `PairwiseUncorrelated X j p n` (lifting both index bounds via
+/// `Nat.lt_of_lt_of_le`/`Nat.le_succ`, the same weakening
+/// [`declare_sum_range_le`](super::sum) and every bounded induction in this
+/// prelude uses) to feed the inductive hypothesis. The cross term
+/// `Cov[sumVars X j, X j]` needed for
+/// [`RatPrelude::variance_add_of_uncorrelated`] is derived, not assumed:
+/// [`RatPrelude::covariance_sum_vars_left`] reduces it to `sumRange (fun jj
+/// => Cov[X jj, X j]) j`, and every term of that sum is zero by `h` applied
+/// at `(jj, j)` — `jj < j` gives `jj < succ j` (weakened) and `jj ≠ j` (via
+/// [`ne_of_lt_nat`]), `j < succ j` is [`RatPrelude`]'s own `lt_succ_self` —
+/// so [`RatPrelude::sum_range_eq_zero_of_lt`] collapses the sum, exactly the
+/// prerequisite this repository's `sumRange_congr` (unrestricted) could
+/// never supply. `sumVars X (succ j)`'s ι-reduction to `combined (sumVars X
+/// j) (X j)` then lands `variance_add_of_uncorrelated`'s conclusion
+/// definitionally on `sumRange (…) (succ j)`.
+fn declare_variance_sum_vars(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+
+    let var_of_x = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let xj = d.apply(x, &[j]);
+        let vxj = variance(d, p, xj, pf, n);
+        d.lam_fv(j_fv, nat, vxj)
+    };
+
+    let motive = |d: &mut IntDev<'_>, bound: ExprId| -> ExprId {
+        let hpw = pairwise_uncorrelated(d, p, x, bound, pf, n);
+        let sv = sum_vars_fn(d, p, x, bound);
+        let lhs = variance(d, p, sv, pf, n);
+        let rhs = rsum_range(d, p, var_of_x, bound);
+        let concl = req(d, lhs, rhs);
+        d.arrow(hpw, concl)
+    };
+    let stmt = motive(d, m);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero_n = d.zero();
+            let hpw_ty = pairwise_uncorrelated_body(d, p, x, zero_n, pf, n);
+            let h_fv = d.fresh_fvar();
+            let (_cz, vzero_proof) = variance_of_const_zero_eq_zero(d, p, pf, n);
+            d.lam_fv(h_fv, hpw_ty, vzero_proof)
+        },
+        &|d, j, ih| {
+            let sj = d.succ(j);
+            let hpw_ty = pairwise_uncorrelated_body(d, p, x, sj, pf, n);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let np = d.prelude();
+
+            // h_at_j : PairwiseUncorrelated X j p n, weakened from `h`.
+            let h_at_j = {
+                let i_fv = d.fresh_fvar();
+                let i = d.kernel().fvar(i_fv);
+                let jj_fv = d.fresh_fvar();
+                let jj = d.kernel().fvar(jj_fv);
+                let hi_ty = d.lt(i, j);
+                let hi_fv = d.fresh_fvar();
+                let hi = d.kernel().fvar(hi_fv);
+                let hjj_ty = d.lt(jj, j);
+                let hjj_fv = d.fresh_fvar();
+                let hjj = d.kernel().fvar(hjj_fv);
+                let eq_i_jj = d.eq(i, jj);
+                let hne_ty = d.not(eq_i_jj);
+                let hne_fv = d.fresh_fvar();
+                let hne = d.kernel().fvar(hne_fv);
+
+                let le_succ_j = d.lemma(np.le_succ, &[j]);
+                let hi_lifted = d.lemma(np.lt_of_lt_of_le, &[i, j, sj, hi, le_succ_j]);
+                let le_succ_j2 = d.lemma(np.le_succ, &[j]);
+                let hjj_lifted = d.lemma(np.lt_of_lt_of_le, &[jj, j, sj, hjj, le_succ_j2]);
+                let applied = d.apply(h, &[i, jj, hi_lifted, hjj_lifted, hne]);
+
+                let with_hne = d.lam_fv(hne_fv, hne_ty, applied);
+                let with_hjj = d.lam_fv(hjj_fv, hjj_ty, with_hne);
+                let with_hi = d.lam_fv(hi_fv, hi_ty, with_hjj);
+                let with_jj = d.lam_fv(jj_fv, nat, with_hi);
+                d.lam_fv(i_fv, nat, with_jj)
+            };
+            let ih_applied = d.apply(ih, &[h_at_j]);
+            // ih_applied : Eq(variance(sumVars X j,p,n), sumRange(var_of_x,j))
+
+            let sv_j = sum_vars_fn(d, p, x, j);
+            let x_j = d.apply(x, &[j]);
+            let combined_fn = combined(d, sv_j, x_j);
+
+            // hcov : Eq(covariance(sumVars X j, X j, p, n), zero)
+            let cov_of_x_j = {
+                let jj_fv = d.fresh_fvar();
+                let jj = d.kernel().fvar(jj_fv);
+                let x_jj = d.apply(x, &[jj]);
+                let cov = covariance(d, p, x_jj, x_j, pf, n);
+                d.lam_fv(jj_fv, nat, cov)
+            };
+            let zero_r = rzero(d, p);
+            let cov_sv_j_lemma = d.lemma(p.covariance_sum_vars_left, &[x, x_j, pf, n, j]);
+            // cov_sv_j_lemma : Eq(covariance(sv_j,x_j,p,n), sumRange(cov_of_x_j,j))
+
+            let pointwise_cov_zero = {
+                let jj_fv = d.fresh_fvar();
+                let jj = d.kernel().fvar(jj_fv);
+                let hjj_lt_fv = d.fresh_fvar();
+                let hjj_lt_ty = d.lt(jj, j);
+                let hjj_lt = d.kernel().fvar(hjj_lt_fv);
+
+                let hjj_lt_sj = {
+                    let le_succ_j3 = d.lemma(np.le_succ, &[j]);
+                    d.lemma(np.lt_of_lt_of_le, &[jj, j, sj, hjj_lt, le_succ_j3])
+                };
+                let hj_lt_sj = d.lemma(np.lt_succ_self, &[j]);
+                let hne_jj_j = ne_of_lt_nat(d, jj, j, hjj_lt);
+
+                let cov_zero = d.apply(h, &[jj, j, hjj_lt_sj, hj_lt_sj, hne_jj_j]);
+                // cov_zero : Eq(covariance(X jj, x_j, p, n), zero) ~ Eq(cov_of_x_j jj, zero) [defeq]
+
+                let with_hjj_lt = d.lam_fv(hjj_lt_fv, hjj_lt_ty, cov_zero);
+                d.lam_fv(jj_fv, nat, with_hjj_lt)
+            };
+            let sum_eq_zero = d.lemma(
+                p.sum_range_eq_zero_of_lt,
+                &[cov_of_x_j, j, pointwise_cov_zero],
+            );
+            // sum_eq_zero : Eq(sumRange(cov_of_x_j,j), zero)
+
+            let cov_svj_xj = covariance(d, p, sv_j, x_j, pf, n);
+            let sum_j_expr = rsum_range(d, p, cov_of_x_j, j);
+            let hcov = rtrans(
+                d,
+                cov_svj_xj,
+                sum_j_expr,
+                zero_r,
+                cov_sv_j_lemma,
+                sum_eq_zero,
+            );
+
+            let headline = d.lemma(
+                p.variance_add_of_uncorrelated,
+                &[sv_j, x_j, pf, n, hd, hcov],
+            );
+            // headline : Eq(variance(combined_fn,p,n), add(variance(sv_j,p,n), variance(x_j,p,n)))
+
+            let var_svj = variance(d, p, sv_j, pf, n);
+            let var_xj = variance(d, p, x_j, pf, n);
+            let sum_j2 = rsum_range(d, p, var_of_x, j);
+            let mid = radd(d, var_svj, var_xj);
+            let end = radd(d, sum_j2, var_xj);
+            let lift_ih = rcongr(d, var_svj, sum_j2, ih_applied, &|d, t| radd(d, t, var_xj));
+
+            let lhs_expr = variance(d, p, combined_fn, pf, n);
+            let final_chain = rtrans(d, lhs_expr, mid, end, headline, lift_ih);
+
+            d.lam_fv(h_fv, hpw_ty, final_chain)
+        },
+        m,
+    );
+
+    let value = {
+        let with_m = d.lam_fv(m_fv, nat, proof);
+        let with_hd = d.lam_fv(hd_fv, dist_ty, with_m);
+        let with_n = d.lam_fv(n_fv, nat, with_hd);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        d.lam_fv(x_fv, x_ty, with_pf)
+    };
+    let ty = {
+        let with_m = d.pi_fv(m_fv, nat, stmt);
+        let with_hd = d.arrow(dist_ty, with_m);
+        let with_n = d.pi_fv(n_fv, nat, with_hd);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        d.pi_fv(x_fv, x_ty, with_pf)
+    };
+    d.declare_theorem(p.variance_sum_vars, ty, value)
+}
+
+/// `Rat.variance_scaled_mean : ∀ X p n m, IsDistribution p n →
+/// variance (fun k => inv (natDivSucc m 0) * X k) p n = (inv (natDivSucc m
+/// 0) * inv (natDivSucc m 0)) * variance X p n` — `Var[a·X] = a²·Var[X]`
+/// specialised at the sample-mean scalar `a := 1/m` (`Rat.uniform`'s own
+/// weight, `inv (natDivSucc m 0)`). `X` is generic (any `Nat → Rat`
+/// sequence, not tied to `Rat.sumVars`), so a caller applies this at `X :=
+/// sumVars X' m` for the sample-mean-of-a-sum reading.
+///
+/// A direct corollary of [`RatPrelude::variance_smul`], not a new proof:
+/// **unlike ℝ, `Rat.inv` is TOTAL (`inv zero = zero`) and ℚ's order is
+/// decidable, so there is no witnessed-modulus obstruction** — verified
+/// here, not assumed, by the fact that [`RatPrelude::variance_smul`] itself
+/// carries no hypothesis on its scalar `a`. This holds for EVERY `m`,
+/// including `m = 0` (where `a` collapses to `zero` and both sides collapse
+/// to `zero`), with no `m ≠ 0` side condition anywhere.
+fn declare_variance_scaled_mean(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let m_as_rat = nat_as_rat(d, p, m);
+    let a = d.const_app(p.inv, &[m_as_rat]);
+    let scaled_x = scale_fn(d, a, x);
+    let variance_ax = variance(d, p, scaled_x, pf, n);
+    let variance_x = variance(d, p, x, pf, n);
+    let a_sq = rmul(d, a, a);
+    let rhs = rmul(d, a_sq, variance_x);
+    let concl = req(d, variance_ax, rhs);
+
+    let proof = d.lemma(p.variance_smul, &[a, x, pf, n, hd]);
+
+    let value = {
+        let with_hd = d.lam_fv(hd_fv, dist_ty, proof);
+        let with_m = d.lam_fv(m_fv, nat, with_hd);
+        let with_n = d.lam_fv(n_fv, nat, with_m);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        d.lam_fv(x_fv, fn_ty, with_pf)
+    };
+    let ty = {
+        let with_hd = d.arrow(dist_ty, concl);
+        let with_m = d.pi_fv(m_fv, nat, with_hd);
+        let with_n = d.pi_fv(n_fv, nat, with_m);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        d.pi_fv(x_fv, fn_ty, with_pf)
+    };
+    d.declare_theorem(p.variance_scaled_mean, ty, value)
+}
+
+/// `Rat.chebyshev_sampleMean_uncorrelated : ∀ X eps p n m, IsDistribution p
+/// n → PairwiseUncorrelated X m p n → lt zero eps → le ((eps times eps)
+/// times expectation (Rat.indicator (eps times eps) (fun k => (Y k minus
+/// expectation Y p n) times (Y k minus expectation Y p n))) p n) ((a times
+/// a) times sumRange (fun j => variance (X j) p n) m)`, where `Y := fun k
+/// => a times sumVars X m k` and `a := inv (natDivSucc m 0)` —
+/// [`RatPrelude::chebyshev_inequality`] applied to the SAMPLE MEAN of `m`
+/// pairwise-uncorrelated variables, in the same multiplied-through form
+/// `chebyshev_inequality` itself uses (the only `Rat.inv` here is the SAME
+/// scaling factor already needed to state a mean at all, not a division
+/// introduced by this theorem).
+///
+/// Composes three already-proved facts, no new proof technique:
+/// [`RatPrelude::chebyshev_inequality`] applied directly to `Y`;
+/// [`RatPrelude::variance_scaled_mean`] rewriting `Var[Y]` to `a²·Var[Σ]`;
+/// [`RatPrelude::variance_sum_vars`] rewriting `Var[Σ]` to `Σ_{j<m}
+/// Var[X_j]` (needing the `PairwiseUncorrelated` hypothesis this theorem
+/// carries for exactly that reason).
+///
+/// **Not the classical `P(|X̄ − μ| ≥ ε) ≤ Var/(mε²)`.** That form assumes
+/// IDENTICALLY distributed variables, collapsing `Σ_{j<m} Var[X_j]` to
+/// `m·v`; this development has no such hypothesis (only pairwise
+/// uncorrelatedness — see [`RatPrelude::covariance`]'s own doc on why there
+/// is no independence predicate here either), so the bound is left with the
+/// SUM `Σ_{j<m} Var[X_j]` exactly as [`RatPrelude::variance_sum_vars`]
+/// produces it, over whatever variance each `X_j` actually has.
+fn declare_chebyshev_sample_mean_uncorrelated(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let eps_fv = d.fresh_fvar();
+    let eps = d.kernel().fvar(eps_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+    let hpw_fv = d.fresh_fvar();
+    let hpw = d.kernel().fvar(hpw_fv);
+    let heps_fv = d.fresh_fvar();
+    let heps = d.kernel().fvar(heps_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let hpw_ty = pairwise_uncorrelated(d, p, x, m, pf, n);
+    let zero_r = rzero(d, p);
+    let heps_ty = rlt(d, p, zero_r, eps);
+
+    let sv = sum_vars_fn(d, p, x, m);
+    let m_as_rat = nat_as_rat(d, p, m);
+    let a = d.const_app(p.inv, &[m_as_rat]);
+    let y = scale_fn(d, a, sv);
+
+    let var_of_x = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let xj = d.apply(x, &[j]);
+        let vxj = variance(d, p, xj, pf, n);
+        d.lam_fv(j_fv, nat, vxj)
+    };
+
+    let a_sq = rmul(d, a, a);
+    let sum_var = rsum_range(d, p, var_of_x, m);
+    let rhs = rmul(d, a_sq, sum_var);
+
+    let mu_y = expectation(d, p, y, pf, n);
+    let dev_y = variance_summand(d, p, y, mu_y);
+    let eps_sq = rmul(d, eps, eps);
+    let ind_y = d.const_app(p.indicator, &[eps_sq, dev_y]);
+    let e_ind_y = expectation(d, p, ind_y, pf, n);
+    let lhs = rmul(d, eps_sq, e_ind_y);
+    let concl = rle(d, p, lhs, rhs);
+
+    let cheb = d.lemma(p.chebyshev_inequality, &[eps, y, pf, n, hd, heps]);
+    // cheb : le lhs (variance(y, pf, n))
+
+    let vsm = d.lemma(p.variance_scaled_mean, &[sv, pf, n, m, hd]);
+    // vsm : Eq(variance(scale_fn(a,sv),pf,n), a_sq*variance(sv,pf,n))
+    //     ~ Eq(variance(y,pf,n), a_sq*variance(sv,pf,n))               [defeq]
+
+    let vsv = d.lemma(p.variance_sum_vars, &[x, pf, n, hd, m, hpw]);
+    // vsv : Eq(variance(sv,pf,n), sum_var)
+
+    let var_sv = variance(d, p, sv, pf, n);
+    let rw = rcongr(d, var_sv, sum_var, vsv, &|d, t| rmul(d, a_sq, t));
+    // rw : Eq(a_sq*var_sv, rhs)
+
+    let a_sq_var_sv = rmul(d, a_sq, var_sv);
+    let var_y = variance(d, p, y, pf, n);
+    let combined_eq = rtrans(d, var_y, a_sq_var_sv, rhs, vsm, rw);
+    // combined_eq : Eq(var_y, rhs)
+
+    let final_proof = rat_eq_rewrite(d, var_y, rhs, combined_eq, cheb, &|d, t| rle(d, p, lhs, t));
+
+    let value = {
+        let with_heps = d.lam_fv(heps_fv, heps_ty, final_proof);
+        let with_hpw = d.lam_fv(hpw_fv, hpw_ty, with_heps);
+        let with_hd = d.lam_fv(hd_fv, dist_ty, with_hpw);
+        let with_m = d.lam_fv(m_fv, nat, with_hd);
+        let with_n = d.lam_fv(n_fv, nat, with_m);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_eps = d.lam_fv(eps_fv, carrier, with_pf);
+        d.lam_fv(x_fv, x_ty, with_eps)
+    };
+    let ty = {
+        let with_heps = d.arrow(heps_ty, concl);
+        let with_hpw = d.arrow(hpw_ty, with_heps);
+        let with_hd = d.arrow(dist_ty, with_hpw);
+        let with_m = d.pi_fv(m_fv, nat, with_hd);
+        let with_n = d.pi_fv(n_fv, nat, with_m);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_eps = d.pi_fv(eps_fv, carrier, with_pf);
+        d.pi_fv(x_fv, x_ty, with_eps)
+    };
+    d.declare_theorem(p.chebyshev_sample_mean_uncorrelated, ty, value)
 }

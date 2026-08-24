@@ -49,6 +49,8 @@ pub(super) fn declare_sum(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kerne
     declare_mul_sum_range(d, p)?;
     declare_sum_range_le(d, p)?;
     declare_sum_range_nonneg(d, p)?;
+    declare_sum_range_congr_lt(d, p)?;
+    declare_sum_range_eq_zero_of_lt(d, p)?;
     Ok(())
 }
 
@@ -655,4 +657,220 @@ fn declare_sum_range_nonneg(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ker
         d.lam_fv(f_fv, fn_ty, over_n)
     };
     d.declare_theorem(p.sum_range_nonneg, ty, value)
+}
+
+/// `fun i => Lt i bound -> Eq Rat (f i) (g i)`.
+fn bounded_pointwise_eq(d: &mut IntDev<'_>, f: ExprId, g: ExprId, bound: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hyp = d.lt(i, bound);
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let eqn = req(d, fi, gi);
+    let body = d.arrow(hyp, eqn);
+    d.pi_fv(i_fv, nat, body)
+}
+
+/// `Rat.sumRange_congr_lt : ∀ f g n, (∀ i, Lt i n → Eq Rat (f i) (g i)) → Eq
+/// Rat (sumRange f n) (sumRange g n)` — [`declare_sum_range_congr`]'s
+/// UNRESTRICTED pointwise congruence, weakened to indices below the bound —
+/// what a sum whose summand identity holds only on a bounded range (e.g. a
+/// zero fact a `PairwiseUncorrelated`-style hypothesis supplies only for `i ≠
+/// j`, never universally) can actually provide. Missing from ℚ's own sum
+/// development even though `Nat`/`Complex` both have it
+/// (`nat_prelude/binomial.rs::declare_sum_range_congr_lt`,
+/// `complex::declare_sum_range_congr_lt`) — this repairs that gap, a
+/// general-purpose one, not a single call site's one-off.
+///
+/// Mirrors [`declare_sum_range_le`]'s bounded-hypothesis induction shape with
+/// the closing `Rat.add_le_add` step replaced by two `Eq` congruences
+/// (`rcongr`/`rchain`), exactly [`declare_sum_range_congr`]'s own successor
+/// step.
+fn declare_sum_range_congr_lt(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let hyp = bounded_pointwise_eq(d, f, g, x);
+        let lhs = rsum_range(d, p, f, x);
+        let rhs = rsum_range(d, p, g, x);
+        let concl = req(d, lhs, rhs);
+        d.arrow(hyp, concl)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero_n = d.zero();
+            let hyp_ty = bounded_pointwise_eq(d, f, g, zero_n);
+            let h_fv = d.fresh_fvar();
+            let zero_r = rzero(d, p);
+            let body = rrefl(d, zero_r);
+            d.lam_fv(h_fv, hyp_ty, body)
+        },
+        &|d, j, ih| {
+            let sj = d.succ(j);
+            let hyp_ty = bounded_pointwise_eq(d, f, g, sj);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let np = d.prelude();
+            let h_lt_j = {
+                let i_fv = d.fresh_fvar();
+                let i = d.kernel().fvar(i_fv);
+                let hi_ty = d.lt(i, j);
+                let hi_fv = d.fresh_fvar();
+                let hi = d.kernel().fvar(hi_fv);
+                let le_succ_j = d.lemma(np.le_succ, &[j]);
+                let lifted = d.lemma(np.lt_of_lt_of_le, &[i, j, sj, hi, le_succ_j]);
+                let applied = d.apply(h, &[i, lifted]);
+                let with_hi = d.lam_fv(hi_fv, hi_ty, applied);
+                d.lam_fv(i_fv, nat, with_hi)
+            };
+            let sub1 = d.apply(ih, &[h_lt_j]);
+
+            let lt_j_sj = d.lemma(np.lt_succ_self, &[j]);
+            let sub2 = d.apply(h, &[j, lt_j_sj]);
+
+            let f_prior = rsum_range(d, p, f, j);
+            let g_prior = rsum_range(d, p, g, j);
+            let fj = d.apply(f, &[j]);
+            let gj = d.apply(g, &[j]);
+            let start = radd(d, f_prior, fj);
+            let mid = radd(d, g_prior, fj);
+            let h1 = rcongr(d, f_prior, g_prior, sub1, &|d, t| radd(d, t, fj));
+            let end = radd(d, g_prior, gj);
+            let h2 = rcongr(d, fj, gj, sub2, &|d, t| radd(d, g_prior, t));
+            let (_e, chain) = rchain(d, start, &[(mid, h1), (end, h2)]);
+            d.lam_fv(h_fv, hyp_ty, chain)
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_n);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_n);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.declare_theorem(p.sum_range_congr_lt, ty, value)
+}
+
+/// `fun i => Lt i bound -> Eq Rat (f i) Rat.zero`.
+fn bounded_eq_zero(d: &mut IntDev<'_>, p: RatPrelude, f: ExprId, bound: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hyp = d.lt(i, bound);
+    let fi = d.apply(f, &[i]);
+    let zero_r = rzero(d, p);
+    let eqn = req(d, fi, zero_r);
+    let body = d.arrow(hyp, eqn);
+    d.pi_fv(i_fv, nat, body)
+}
+
+/// `Rat.sumRange_eq_zero_of_lt : ∀ f n, (∀ i, Lt i n → Eq Rat (f i) Rat.zero)
+/// → Eq Rat (sumRange f n) Rat.zero` — "a sum of pointwise, bounded-below-`n`
+/// zeros is zero". The bounded fact
+/// [`super::probability::declare_covariance_sum_vars_left`]'s own successor
+/// step (via [`super::probability`]'s `variance_sumVars` route) needs and
+/// [`RatPrelude::sum_range_congr`] alone cannot give: that one wants an
+/// UNRESTRICTED `∀i, f i = g i`, while `PairwiseUncorrelated` only ever
+/// supplies zero facts bounded by the range, never universally.
+///
+/// Same bounded-hypothesis induction shape as [`declare_sum_range_congr_lt`],
+/// nested directly here rather than derived from it (so this needs no
+/// auxiliary "sum of the literal-zero function is zero" side lemma): the
+/// successor step's two `Eq` congruences collapse `sumRange f j` via the
+/// inductive hypothesis and `f j` via the hypothesis applied at `j`, then
+/// [`RatPrelude::zero_add`] closes `zero + zero = zero`.
+fn declare_sum_range_eq_zero_of_lt(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let hyp = bounded_eq_zero(d, p, f, x);
+        let lhs = rsum_range(d, p, f, x);
+        let zero_r = rzero(d, p);
+        let concl = req(d, lhs, zero_r);
+        d.arrow(hyp, concl)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero_n = d.zero();
+            let hyp_ty = bounded_eq_zero(d, p, f, zero_n);
+            let h_fv = d.fresh_fvar();
+            let zero_r = rzero(d, p);
+            let body = rrefl(d, zero_r);
+            d.lam_fv(h_fv, hyp_ty, body)
+        },
+        &|d, j, ih| {
+            let sj = d.succ(j);
+            let hyp_ty = bounded_eq_zero(d, p, f, sj);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let np = d.prelude();
+            let h_lt_j = {
+                let i_fv = d.fresh_fvar();
+                let i = d.kernel().fvar(i_fv);
+                let hi_ty = d.lt(i, j);
+                let hi_fv = d.fresh_fvar();
+                let hi = d.kernel().fvar(hi_fv);
+                let le_succ_j = d.lemma(np.le_succ, &[j]);
+                let lifted = d.lemma(np.lt_of_lt_of_le, &[i, j, sj, hi, le_succ_j]);
+                let applied = d.apply(h, &[i, lifted]);
+                let with_hi = d.lam_fv(hi_fv, hi_ty, applied);
+                d.lam_fv(i_fv, nat, with_hi)
+            };
+            let sub1 = d.apply(ih, &[h_lt_j]);
+
+            let lt_j_sj = d.lemma(np.lt_succ_self, &[j]);
+            let sub2 = d.apply(h, &[j, lt_j_sj]);
+
+            let f_prior = rsum_range(d, p, f, j);
+            let fj = d.apply(f, &[j]);
+            let zero_r = rzero(d, p);
+            let start = radd(d, f_prior, fj);
+            let mid = radd(d, zero_r, fj);
+            let h1 = rcongr(d, f_prior, zero_r, sub1, &|d, t| radd(d, t, fj));
+            let after_h2 = radd(d, zero_r, zero_r);
+            let h2 = rcongr(d, fj, zero_r, sub2, &|d, t| radd(d, zero_r, t));
+            let z_add = d.lemma(p.zero_add, &[zero_r]);
+            let (_e, chain) = rchain(d, start, &[(mid, h1), (after_h2, h2), (zero_r, z_add)]);
+            d.lam_fv(h_fv, hyp_ty, chain)
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(f_fv, fn_ty, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(f_fv, fn_ty, over_n)
+    };
+    d.declare_theorem(p.sum_range_eq_zero_of_lt, ty, value)
 }

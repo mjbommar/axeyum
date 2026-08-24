@@ -1438,6 +1438,8 @@ fn the_finite_sum_toolkit_is_axiom_free() {
         ("mul_sumRange", p.mul_sum_range, true),
         ("sumRange_le", p.sum_range_le, true),
         ("sumRange_nonneg", p.sum_range_nonneg, true),
+        ("sumRange_congr_lt", p.sum_range_congr_lt, true),
+        ("sumRange_eq_zero_of_lt", p.sum_range_eq_zero_of_lt, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
@@ -1630,6 +1632,19 @@ fn the_probability_toolkit_is_axiom_free() {
         ("indicator_le", p.indicator_le, true),
         ("markov_constructed", p.markov_constructed, true),
         ("chebyshev_inequality", p.chebyshev_inequality, true),
+        ("covariance_comm", p.covariance_comm, true),
+        ("covariance_add_right", p.covariance_add_right, true),
+        ("sumVars", p.sum_vars, false),
+        ("expectation_sumVars", p.expectation_sum_vars, true),
+        ("covariance_sumVars_left", p.covariance_sum_vars_left, true),
+        ("PairwiseUncorrelated", p.pairwise_uncorrelated, false),
+        ("variance_sumVars", p.variance_sum_vars, true),
+        ("variance_scaled_mean", p.variance_scaled_mean, true),
+        (
+            "chebyshev_sampleMean_uncorrelated",
+            p.chebyshev_sample_mean_uncorrelated,
+            true,
+        ),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
