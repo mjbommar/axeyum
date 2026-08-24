@@ -1576,3 +1576,66 @@ fn rat_add_renormalises_and_neg_is_an_involution() {
     let origin = rational(&mut k, 0, 1);
     assert!(k.def_eq(cancelled, origin), "1/2 + (-1/2) is not 0");
 }
+
+/// **The two `Int.ModEq` ledger rows say what the ledger says they say.**
+///
+/// `derived_laws_have_no_axiom_footprint` covers these three names already, and
+/// it is not enough on its own: a theorem stating something *weaker* — the
+/// `0 < n` hypothesis that every other congruence lemma in `modeq.rs` carries,
+/// a swapped `a`/`b`, `emod b n` where `emod a n` belongs — has exactly the same
+/// empty footprint and passes that test unchanged. What is being recorded in
+/// `artifacts/facts/F-ml430-int-modeq-one-01d9de39.json` and
+/// `F-ml430-int-modeq-neg-d6ff57b6.json` is a *statement*, so a statement is
+/// what has to be pinned.
+///
+/// The `-d6ff57b6` row is a biconditional and this kernel has no `Iff` at the
+/// `Int` layer, so it is closed only by BOTH halves; both are asserted here, and
+/// dropping either one fails this test rather than quietly halving the claim.
+///
+/// Asserted against `render_lean`, character for character. Note what is
+/// deliberately absent from all three: any `Int.lt Int.zero` premise.
+#[test]
+fn the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis() {
+    use crate::env::Declaration;
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let rendered = |k: &Kernel, name: crate::NameId| -> String {
+        match k
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{} must be declared", k.display_name(name)))
+        {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => {
+                k.render_lean(*ty)
+            }
+            other => panic!("{other:?} is not a theorem or definition"),
+        }
+    };
+
+    for (name, expected) in [
+        (
+            p.mod_eq_one,
+            "((x0 : Int) -> ((x1 : Int) -> Int.ModEq Int.one x0 x1))",
+        ),
+        (
+            p.mod_eq_of_neg_modulus,
+            "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.ModEq (Int.neg x0) x1 x2) \
+             -> Int.ModEq x0 x1 x2))))",
+        ),
+        (
+            p.mod_eq_neg_modulus,
+            "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.ModEq x0 x1 x2) -> \
+             Int.ModEq (Int.neg x0) x1 x2))))",
+        ),
+    ] {
+        let got = rendered(&k, name);
+        assert!(
+            !got.contains("Int.lt Int.zero"),
+            "{} must hold for EVERY modulus -- the ledger row carries no positivity \
+             hypothesis, and a proof that needs one closes a different proposition: {got}",
+            k.display_name(name)
+        );
+        assert_eq!(got, expected, "{}", k.display_name(name));
+    }
+}

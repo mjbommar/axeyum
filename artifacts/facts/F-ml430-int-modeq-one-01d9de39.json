@@ -8,13 +8,40 @@
     "statement": "∀ {a b : ℤ}, a ≡ b [ZMOD 1]",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "statement-Int.modEq_one",
+      "kind": "kernel-term",
+      "supports": "`Int.modEq_one` is admitted with the kernel-rendered type `((x0 : Int) -> ((x1 : Int) -> Int.ModEq Int.one x0 x1))`, which is this ledger row's statement with the binders made explicit -- Mathlib's `{a b}` are implicit, a surface-syntax difference with no mathematical content. `Int.ModEq n a b` is defined here as `Int.emod a n = Int.emod b n`, which is Mathlib's `a % n = b % n`. CRUCIALLY, the rendered type carries NO `Int.lt Int.zero` premise: the ledger row quantifies over all arguments with no positivity hypothesis, and so does the theorem.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis (asserts the KERNEL-RENDERED type of each name verbatim with assert_eq!, and separately asserts the rendered type contains no `Int.lt Int.zero` premise)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs",
+      "notes": "The statement pin exists because the footprint check cannot carry this claim: a theorem stating something WEAKER -- carrying the `0 < n` hypothesis that every other congruence lemma in `modeq.rs` carries, or with `a`/`b` swapped -- has exactly the same empty footprint and passes the footprint sweep unchanged. Mutation-verified: changing `Int.one` to `Int.zero` in the pinned string kills exactly one test, this one, and nothing else (23 passed / 1 failed). Anchored on the exact `1 passed; 0 failed` count."
+    },
+    {
+      "id": "footprint-modEq_one",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for `Int.modEq_one` and for `Int.emod_neg` beneath them. The `integer` prelude's trusted surface is 0: no Axiom, no Opaque, no Quotient. Presence is checked in the same sweep -- axiom_footprint of a name that is interned but never DECLARED is vacuously empty, so a footprint check alone cannot distinguish an axiom-free theorem from an absent one.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for each of the 89 derived laws, these names included, and requires the empty set)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks each proof term against its stated type at build time; a rejected proof makes build_int_prelude return Err and the test fail)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
+      "notes": "Counting Declaration::Axiom alone would not suffice in this kernel (Opaque has no proof body and Quotient admits Quot.sound); axiom_footprint covers all three. Anchored on the exact `1 passed; 0 failed` count -- verified that an unmatched filter prints `0 passed` and makes the identical command exit 1 rather than reporting a vacuous pass."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-23",
+    "established_by": "lane agent-capability-assurance (2026-08-23) via a dispatched int_prelude lane: `Int.modEq_one` in crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs, proved by instantiating the existing `Int.modEq_iff_dvd` bridge at the literal modulus 1 -- `0 < 1` is `Int.zero_lt_one`, already proved -- and supplying the divisibility witness `b - a = 1 * (b - a)` from `Int.one_mul`. Kernel theorem, empty axiom_footprint.",
     "source": "statement-only extraction of `Int.modEq_one` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +53,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "Closed by ROUTING AROUND a restriction rather than lifting it. `Int.modEq_iff_dvd` is `forall n a b, 0 < n -> (ModEq n a b <-> n | (b - a))`, and every congruence lemma in `modeq.rs` -- add_left, add_right, mul, cancel -- carries the same `0 < n`. The fifteen ml430 ModEq rows carry none. This row closes only because its modulus is the literal 1, where the hypothesis is discharged by a proved fact rather than assumed. Thirteen sibling rows remain open for exactly that reason, and the single missing ingredient is a natAbs-based bound on `emod`'s magnitude generalising `emod_lt_of_pos`; `int_prelude/division.rs`'s own header already flags it as not yet built. Recording that here so the thirteen are not read as merely unattempted.\n\nexternal_status stays `proved`: Mathlib has this row, and matching it is formalization, not discovery.\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

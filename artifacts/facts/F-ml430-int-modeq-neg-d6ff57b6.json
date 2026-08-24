@@ -8,13 +8,40 @@
     "statement": "∀ {n a b : ℤ}, a ≡ b [ZMOD -n] ↔ a ≡ b [ZMOD n]",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "statement-Int.modEq_neg_modulus-both-halves",
+      "kind": "kernel-term",
+      "supports": "This row is a BICONDITIONAL and this kernel has no `Iff` at the `Int` layer, so it is closed only by both halves, and both are admitted: `Int.modEq_of_neg_modulus : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.ModEq (Int.neg x0) x1 x2) -> Int.ModEq x0 x1 x2))))` (mp) and `Int.modEq_neg_modulus : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.ModEq x0 x1 x2) -> Int.ModEq (Int.neg x0) x1 x2))))` (mpr). Both are pinned by the same test, so dropping either half fails it rather than quietly halving the claim. Neither carries an `Int.lt Int.zero` premise, matching the row's unrestricted quantification.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis (asserts the KERNEL-RENDERED type of each name verbatim with assert_eq!, and separately asserts the rendered type contains no `Int.lt Int.zero` premise)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs",
+      "notes": "The statement pin exists because the footprint check cannot carry this claim: a theorem stating something WEAKER -- carrying the `0 < n` hypothesis that every other congruence lemma in `modeq.rs` carries, or with `a`/`b` swapped -- has exactly the same empty footprint and passes the footprint sweep unchanged. Mutation-verified: changing `Int.one` to `Int.zero` in the pinned string kills exactly one test, this one, and nothing else (23 passed / 1 failed). Anchored on the exact `1 passed; 0 failed` count."
+    },
+    {
+      "id": "footprint-modEq_of_neg_modulus-modEq_neg_modulus",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for `Int.modEq_of_neg_modulus`, `Int.modEq_neg_modulus` and for `Int.emod_neg` beneath them. The `integer` prelude's trusted surface is 0: no Axiom, no Opaque, no Quotient. Presence is checked in the same sweep -- axiom_footprint of a name that is interned but never DECLARED is vacuously empty, so a footprint check alone cannot distinguish an axiom-free theorem from an absent one.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for each of the 89 derived laws, these names included, and requires the empty set)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks each proof term against its stated type at build time; a rejected proof makes build_int_prelude return Err and the test fail)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
+      "notes": "Counting Declaration::Axiom alone would not suffice in this kernel (Opaque has no proof body and Quotient admits Quot.sound); axiom_footprint covers all three. Anchored on the exact `1 passed; 0 failed` count -- verified that an unmatched filter prints `0 passed` and makes the identical command exit 1 rather than reporting a vacuous pass."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-23",
+    "established_by": "lane agent-capability-assurance (2026-08-23) via a dispatched int_prelude lane: `Int.modEq_of_neg_modulus` and `Int.modEq_neg_modulus` in crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs, both corollaries of a new structural lemma `Int.emod_neg : forall a n, emod a (neg n) = emod a n` proved by case-splitting on n's Int.rec constructor shape. Kernel theorems, empty axiom_footprint.",
     "source": "statement-only extraction of `Int.modEq_neg` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +53,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "THE REASON THIS ROW CLOSED WHILE THIRTEEN SIBLINGS DID NOT is worth recording. Every congruence lemma in `modeq.rs` is proved only under `0 < n`, because the sole bound on `emod`'s magnitude, `emod_lt_of_pos`, needs a positive divisor; the ml430 rows carry no such hypothesis. `Int.emod_neg` needs NO positivity at all -- it is a constructor case split, not an inequality argument -- which is precisely why it reaches an unrestricted statement where the existing machinery cannot. It is also the intended lever for several of the remaining rows, since it folds the n < 0 case back onto the positive bridge; what is still missing for those is a natAbs-based generalisation of `emod_lt_of_pos`, flagged as not yet built in `int_prelude/division.rs`'s own header.\n\nThe two halves are recorded as one fact because the ledger row is one biconditional. Splitting them into two facts would let half the row read as closed.\n\nexternal_status stays `proved`: Mathlib has this row, and matching it is formalization, not discovery.\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
