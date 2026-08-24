@@ -180,9 +180,12 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 115] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 118] {
     [
         p.wilson,
+        p.dvd_factorial_of_le,
+        p.wilson_converse,
+        p.wilson_iff,
         p.factorial_interior_modeq_one,
         p.prod_range_pairing_collapse,
         p.inverse_index_fixes_zero,
@@ -1818,3 +1821,90 @@ fn wilson_concludes_the_negative_residue_under_primality() {
 
 /// The pinned type of [`IntPrelude::wilson`].
 const WILSON_TYPE: &str = "((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one)))";
+
+/// The converse of [`wilson_concludes_the_negative_residue_under_primality`]:
+/// `Int.wilson_converse` must conclude PRIMALITY (`2 ≤ n ∧ ∀ d, d ∣ n → d = 1
+/// ∨ d = n`), not merely `2 ≤ n` alone — a converse that only echoed its own
+/// `2 ≤ n` hypothesis back would have an identically empty axiom footprint
+/// and would assert nothing about `(n-1)! ≡ -1 [n]` at all. And it must take
+/// the NEGATIVE residue as its hypothesis, not `+1` (which is simply false
+/// for a prime modulus, e.g. `p=5`: `4! = 24 ≡ 4 ≡ -1 [5]`, not `1`) — a
+/// theorem hypothesizing the false statement would prove nothing and could
+/// still have an empty footprint. So the statement itself is pinned
+/// character for character, and the two distinctions that matter are
+/// asserted by name first.
+#[test]
+fn wilson_converse_concludes_primality_from_the_negative_residue() {
+    use crate::env::Declaration;
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let ty = match k
+        .environment()
+        .get(p.wilson_converse)
+        .expect("Int.wilson_converse must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => k.render_lean(*ty),
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+
+    assert!(
+        ty.contains("Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one)"),
+        "the hypothesis must be the NEGATIVE residue `-1`, not `+1` -- a \
+         theorem hypothesizing `+1` would be vacuous for every prime modulus \
+         (e.g. p=5: 4! = 24 ≡ 4 ≡ -1 [5], not 1) and could still carry an \
+         empty axiom footprint: {ty}"
+    );
+    assert!(
+        ty.contains("And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0)")
+            && ty.contains("AxNat.dvd x3 x0")
+            && ty.contains("Or (Eq.{1} AxNat x3 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x3 x0)"),
+        "the CONCLUSION must be full primality (2 <= n and every divisor is \
+         1 or n), not a weakened restatement of the `2 <= n` hypothesis -- \
+         that would leave the converse asserting nothing about the \
+         factorial hypothesis at all: {ty}"
+    );
+    assert_eq!(ty, WILSON_CONVERSE_TYPE);
+}
+
+/// The pinned type of [`IntPrelude::wilson_converse`].
+const WILSON_CONVERSE_TYPE: &str = "((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> ((x2 : Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one)) -> And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x3 : AxNat) -> ((x4 : AxNat.dvd x3 x0) -> Or (Eq.{1} AxNat x3 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x3 x0)))))))";
+
+/// `Int.wilson_iff` must state an `Iff`, and each side must be the FULL
+/// statement (not, e.g., only the `2 ≤ n` conjunct or a `+1` residue) --
+/// otherwise this "combined" theorem would be strictly weaker than either
+/// direction it is supposed to combine.
+#[test]
+fn wilson_iff_states_the_full_equivalence() {
+    use crate::env::Declaration;
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let ty = match k
+        .environment()
+        .get(p.wilson_iff)
+        .expect("Int.wilson_iff must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => k.render_lean(*ty),
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+
+    assert!(
+        ty.contains("Iff"),
+        "wilson_iff must state an Iff, not two one-way implications glued \
+         together by name alone: {ty}"
+    );
+    assert!(
+        ty.contains("Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one)"),
+        "the equivalence must be with the NEGATIVE residue `-1`: {ty}"
+    );
+    assert!(
+        ty.contains("Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x0)"),
+        "the primality side must carry the full divisor clause, not just \
+         `2 <= n`: {ty}"
+    );
+    assert_eq!(ty, WILSON_IFF_TYPE);
+}
+
+/// The pinned type of [`IntPrelude::wilson_iff`].
+const WILSON_IFF_TYPE: &str = "((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> Iff (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x0) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x0))))) (Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one))))";

@@ -5468,3 +5468,413 @@ pub(super) fn declare_wilson(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     })?;
     Ok(())
 }
+
+// ============================================================================
+// `Int.wilson_converse` — Wilson's theorem run backwards, landed 2026-08-24.
+//
+// The easy direction: if `dd ∣ n` with `1 ≤ dd < n`, then `dd ≤ n-1`, so
+// `dd ∣ (n-1)!` (`Int.dvd_factorial_of_le`, below — built fresh rather than
+// transported from `Nat.dvd_factorial_of_le`, since `Int.factorial n` and
+// `ofNat (Nat.factorial n)` are not definitionally equal: `Int.factorial`
+// unfolds via `Int.prodRange`, not `Nat.factorial`'s own recursion). Combined
+// with `n ∣ (-1 - (n-1)!)` (from the hypothesis `(n-1)! ≡ -1 [n]` via
+// `Int.modEq_iff_dvd`, composed with `dd ∣ n` via `Int.dvd_trans`),
+// `Int.dvd_add` gives `dd ∣ ((n-1)! + (-1 - (n-1)!))`, and
+// `add_sub_self_cancel` (below) rewrites the sum to exactly `-1`, so
+// `dd ∣ -1`, and `Nat.eq_one_of_dvd_one` (via `natAbs`) forces `dd = 1`.
+//
+// Unlike the forward direction, this needs no permutation, no pairing, no
+// modular inverse, and — because the target is the CONJUNCTIVE `Prime n`
+// (`2 ≤ n ∧ ∀ d, d ∣ n → d = 1 ∨ d = n)`, not a negation — no excluded
+// middle: `Nat.lt_or_eq_of_le` supplies a genuine constructive disjunction
+// on `dd ≤ n`, and every other step is divisibility arithmetic.
+// ============================================================================
+
+/// `Eq Int (add a (sub b a)) b` — `a + (b - a) = b`. `Int.sub b a` unfolds
+/// transparently to `add b (neg a)` (`Int.sub` is `add a (neg b)` by
+/// definition, so no case split on either argument's magnitude is needed —
+/// the same transparency [`declare_wilson`]'s own `ofnat_pm1_eq_sub_one`
+/// leans on), so the chain runs entirely over `Int.add`/`Int.neg`:
+/// reassociate `a + (b + (-a))` to `(a+b) + (-a)`, commute the inner sum to
+/// `(b+a) + (-a)`, reassociate to `b + (a + (-a))`, collapse `a + (-a)` via
+/// `add_neg`, and close with `add_zero`.
+fn add_sub_self_cancel(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+    let p = d.int();
+    let sub_ba = d.isub(b, a);
+    let start = d.iadd(a, sub_ba); // a + (b - a), the shape `Int.dvd_add` hands back
+    let neg_a = d.ineg(a);
+    let b_plus_neg_a = d.iadd(b, neg_a);
+    let unfolded = d.iadd(a, b_plus_neg_a); // a + (b + (-a)), defeq to `start`
+    let start_eq_unfolded = d.irefl(start); // typed as `Eq Int start unfolded`, via defeq
+
+    let ab = d.iadd(a, b);
+    let step1_rhs = d.iadd(ab, neg_a); // (a+b) + (-a)
+    let assoc1 = d.const_app(p.add_assoc, &[a, b, neg_a]); // Eq Int step1_rhs unfolded
+    let step1_proof = d.isymm(step1_rhs, unfolded, assoc1); // Eq Int unfolded step1_rhs
+
+    let ba = d.iadd(b, a);
+    let comm_ab = d.const_app(p.add_comm, &[a, b]); // Eq Int ab ba
+    let step2_rhs = d.iadd(ba, neg_a); // (b+a) + (-a)
+    let step2_proof = d.icongr(ab, ba, comm_ab, &|d, t| d.iadd(t, neg_a)); // Eq Int step1_rhs step2_rhs
+
+    let a_neg_a = d.iadd(a, neg_a); // a + (-a)
+    let step3_rhs = d.iadd(b, a_neg_a); // b + (a + (-a))
+    let assoc3 = d.const_app(p.add_assoc, &[b, a, neg_a]); // Eq Int step2_rhs step3_rhs
+
+    let zero = d.izero();
+    let add_neg_a = d.const_app(p.add_neg, &[a]); // Eq Int a_neg_a zero
+    let step4_rhs = d.iadd(b, zero); // b + 0
+    let step4_proof = d.icongr(a_neg_a, zero, add_neg_a, &|d, t| d.iadd(b, t)); // Eq Int step3_rhs step4_rhs
+
+    let add_zero_b = d.const_app(p.add_zero, &[b]); // Eq Int step4_rhs b
+
+    let (_, proof) = d.ichain(
+        start,
+        &[
+            (unfolded, start_eq_unfolded),
+            (step1_rhs, step1_proof),
+            (step2_rhs, step2_proof),
+            (step3_rhs, assoc3),
+            (step4_rhs, step4_proof),
+            (b, add_zero_b),
+        ],
+    );
+    proof
+}
+
+/// `Int.dvd_factorial_of_le : ∀ (dd n : Nat), Le 1 dd → Le dd n →
+///   dvd (ofNat dd) (factorial n)`.
+///
+/// The workhorse [`declare_wilson_converse`] needs: a positive `dd ≤ n`
+/// divides `n!`, transported to `ℤ`. Mirrors `Nat.dvd_factorial_of_le`
+/// (`nat_prelude/divisibility.rs`) bit for bit, built fresh here rather than
+/// transported through it — see this module's doc section above for why no
+/// cheap defeq bridge between `Int.factorial n` and `ofNat (Nat.factorial n)`
+/// exists.
+///
+/// Induction on `n`:
+///   zero    `1 ≤ dd ≤ 0` chains (`Nat.le_trans`) to `1 ≤ 0`, refuted by
+///           `Nat.not_succ_le_zero` (`Int.absurd`, i.e. `False.rec`, supplies
+///           the goal).
+///   succ j  `Nat.lt_or_eq_of_le` splits `dd ≤ succ j` into `dd < succ j` or
+///           `dd = succ j`. `factorial (succ j) ≡ mul (factorial j)
+///           (ofNat (succ j))` holds DEFINITIONALLY (the same unfold
+///           `Int.factorial_succ`'s own `Eq.refl` proof relies on), so
+///           neither branch rewrites the goal to reach it:
+///             * `dd < succ j` is `succ dd ≤ succ j`, so
+///               `le_of_succ_le_succ` gives `dd ≤ j`; the IH gives
+///               `dvd (ofNat dd) (factorial j)`, and `Int.dvd_trans` against
+///               `Int.dvd_mul_right (factorial j) (ofNat (succ j))` extends
+///               it across the new factor;
+///             * `dd = succ j` uses `Int.dvd_mul_left (ofNat (succ j))
+///               (factorial j) : dvd (ofNat (succ j)) (mul (factorial j)
+///               (ofNat (succ j)))` directly, then transports `ofNat
+///               (succ j)` back to `ofNat dd` along the branch equation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_dvd_factorial_of_le(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.dvd_factorial_of_le, 2, &|d, values| {
+        let (divisor, bound) = (values[0], values[1]);
+        let zero = d.zero();
+        let unit = d.succ(zero);
+        let positive_ty = d.le(unit, divisor);
+        let order_ty = d.le(divisor, bound);
+        let conclusion = {
+            let of_divisor = d.of_nat(divisor);
+            let factorial = d.const_app(p.factorial, &[bound]);
+            super::dvd::idvd(d, of_divisor, factorial)
+        };
+        let stmt = {
+            let inner = d.arrow(order_ty, conclusion);
+            d.arrow(positive_ty, inner)
+        };
+
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+
+        let claim = |d: &mut IntDev<'_>, x: ExprId| {
+            let hypothesis = d.le(divisor, x);
+            let of_divisor = d.of_nat(divisor);
+            let factorial = d.const_app(p.factorial, &[x]);
+            let target = super::dvd::idvd(d, of_divisor, factorial);
+            d.arrow(hypothesis, target)
+        };
+
+        let at_zero = |d: &mut IntDev<'_>| {
+            let zero = d.zero();
+            let hypothesis_ty = d.le(divisor, zero);
+            let goal = {
+                let of_divisor = d.of_nat(divisor);
+                let factorial = d.const_app(p.factorial, &[zero]);
+                super::dvd::idvd(d, of_divisor, factorial)
+            };
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let unit = d.succ(zero);
+            let one_le_zero = d.lemma(p.nat.le_trans, &[unit, divisor, zero, positive, h]);
+            let contradiction = d.lemma(p.nat.not_succ_le_zero, &[zero, one_le_zero]);
+            let body = d.absurd(goal, contradiction);
+            d.lam_fv(h_fv, hypothesis_ty, body)
+        };
+
+        let at_succ = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| {
+            let successor = d.succ(j);
+            let hypothesis_ty = d.le(divisor, successor);
+            let of_divisor = d.of_nat(divisor);
+            let target = {
+                let factorial = d.const_app(p.factorial, &[successor]);
+                super::dvd::idvd(d, of_divisor, factorial)
+            };
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let strict_ty = d.lt(divisor, successor);
+            let equal_ty = d.eq(divisor, successor);
+            let split = d.lemma(p.nat.lt_or_eq_of_le, &[divisor, successor, h]);
+
+            let body = d.or_elim(
+                strict_ty,
+                equal_ty,
+                target,
+                split,
+                &|d, hstrict| {
+                    // `dd < succ j` unfolds to `succ dd ≤ succ j`, so the bound drops to `j`.
+                    let smaller = d.lemma(p.nat.le_of_succ_le_succ, &[divisor, j, hstrict]);
+                    let inherited = d.apply(ih, &[smaller]); // dvd of_divisor (factorial j)
+                    let prior = d.const_app(p.factorial, &[j]);
+                    let of_succ = d.of_nat(successor);
+                    // `factorial j * succ j` IS `factorial (succ j)` definitionally.
+                    let step = d.const_app(p.dvd_mul_right, &[prior, of_succ]); // dvd prior (prior*of_succ)
+                    let prod = d.imul(prior, of_succ);
+                    d.const_app(p.dvd_trans, &[of_divisor, prior, prod, inherited, step])
+                },
+                &|d, hequal| {
+                    // `dd = succ j`: the last factor of `factorial (succ j)` is the divisor.
+                    let prior = d.const_app(p.factorial, &[j]);
+                    let of_succ = d.of_nat(successor);
+                    let prod = d.imul(prior, of_succ);
+                    let canonical = d.const_app(p.dvd_mul_left, &[of_succ, prior]); // dvd of_succ prod
+                    // `hequal : dd = succ j`, and the transport replaces `succ j` by
+                    // `dd`, so it needs the equation the OTHER way round.
+                    let reverse = d.symm(divisor, successor, hequal); // Eq Nat successor divisor
+                    let of_eq = d.nat_eq_to_int(successor, divisor, reverse, &|d, y| d.of_nat(y)); // Eq Int of_succ of_divisor
+                    d.int_eq_rewrite(of_succ, of_divisor, of_eq, canonical, &|d, x| {
+                        super::dvd::idvd(d, x, prod)
+                    })
+                },
+            );
+            d.lam_fv(h_fv, hypothesis_ty, body)
+        };
+
+        let selected = d.induct(&claim, &at_zero, &at_succ, bound);
+        let proof = d.lam_fv(positive_fv, positive_ty, selected);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.wilson_converse : ∀ n, Le 2 n →
+///   ModEq (ofNat n) (factorial (n-1)) (neg one) →
+///   (2 ≤ n ∧ ∀ d, d ∣ n → d = 1 ∨ d = n)` — **the converse of Wilson's
+/// theorem**, turning it into a characterization of primality: `n ≥ 2` and
+/// `(n-1)! ≡ -1 [n]` together force `n` prime. Proved DIRECTLY in the
+/// conjunctive `Prime n` form (not a contrapositive) — see this module's doc
+/// section above for the route and why no excluded middle is needed.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_wilson_converse(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.wilson_converse, 1, &|d, v| {
+        let nn = v[0];
+        let two_nat = d.num(2);
+        let one_nat = d.num(1);
+        let two_le_ty = d.le(two_nat, nn);
+        let nm1 = d.sub(nn, one_nat);
+        let big_n = d.of_nat(nn);
+        let one_i = d.ione();
+        let neg_one = d.ineg(one_i);
+        let factorial_nm1 = d.const_app(p.factorial, &[nm1]);
+        let modeq_ty = super::modeq::imodeq(d, big_n, factorial_nm1, neg_one);
+        let prime_ty = prime_condition(d, nn);
+        let stmt = {
+            let inner = d.arrow(modeq_ty, prime_ty);
+            d.arrow(two_le_ty, inner)
+        };
+
+        let two_le_fv = d.fresh_fvar();
+        let two_le = d.kernel().fvar(two_le_fv);
+        let modeq_fv = d.fresh_fvar();
+        let hmodeq = d.kernel().fvar(modeq_fv);
+
+        // 1 ≤ nn, from 2 ≤ nn.
+        let one_le_two = d.lemma(p.nat.le_succ, &[one_nat]);
+        let one_le_nn = d.lemma(p.nat.le_trans, &[one_nat, two_nat, nn, one_le_two, two_le]);
+        // `Int.lt zero big_n` reduces structurally to `Nat.lt zero nn` = `Nat.le 1 nn`
+        // on two `ofNat`-headed arguments (`int_prelude/defs.rs`'s four-case table),
+        // so the SAME term serves both roles — the same trick `declare_wilson`'s own
+        // `pos_big_p := one_le_pp` relies on.
+        let pos_big_n = one_le_nn;
+
+        let (two_le_out, clause_ty) = prime_parts(d, nn);
+
+        let clause_proof = {
+            let dvar_fv = d.fresh_fvar();
+            let dvar = d.kernel().fvar(dvar_fv);
+            let hdvd_ty = d.dvd(dvar, nn);
+            let is_one = d.eq(dvar, one_nat);
+            let is_whole = d.eq(dvar, nn);
+            let target = d.or(is_one, is_whole);
+
+            let hdvd_fv = d.fresh_fvar();
+            let hdvd = d.kernel().fvar(hdvd_fv);
+
+            let le_d_nn = d.lemma(p.nat.le_of_dvd, &[dvar, nn, one_le_nn, hdvd]);
+            let split = d.lemma(p.nat.lt_or_eq_of_le, &[dvar, nn, le_d_nn]);
+            let lt_ty = d.lt(dvar, nn);
+            let eq_ty = d.eq(dvar, nn);
+
+            let body = d.or_elim(
+                lt_ty,
+                eq_ty,
+                target,
+                split,
+                &|d, hlt| {
+                    // `dd < nn`: derive `dd = 1`.
+                    let one_le_d = d.lemma(p.nat.one_le_of_dvd_pos, &[dvar, nn, one_le_nn, hdvd]);
+
+                    // nn = succ(nn-1), so `dd < nn` peels down to `dd ≤ nn-1`.
+                    let succ_nm1_eq_nn = d.lemma(p.nat.sub_add_cancel, &[one_nat, nn, one_le_nn]);
+                    let succ_nm1 = d.succ(nm1);
+                    let nn_eq_succ_nm1 = d.symm(succ_nm1, nn, succ_nm1_eq_nn);
+                    let succ_dvar = d.succ(dvar);
+                    let hlt_rewritten =
+                        d.nat_rewrite(nn, succ_nm1, nn_eq_succ_nm1, hlt, &|d, x| {
+                            d.le(succ_dvar, x)
+                        });
+                    let d_le_nm1 = d.lemma(p.nat.le_of_succ_le_succ, &[dvar, nm1, hlt_rewritten]);
+
+                    // dd ∣ (nn-1)!
+                    let dvd_d_fact =
+                        d.lemma(p.dvd_factorial_of_le, &[dvar, nm1, one_le_d, d_le_nm1]);
+
+                    // dd ∣ nn, transported to ℤ.
+                    let of_dvar = d.of_nat(dvar);
+                    let dvd_d_n = d.const_app(p.dvd_of_nat_abs_dvd, &[of_dvar, big_n, hdvd]);
+
+                    // nn ∣ (-1 - (nn-1)!), from the ModEq hypothesis.
+                    let sub_ba = d.isub(neg_one, factorial_nm1);
+                    let dvd_ty2 = super::dvd::idvd(d, big_n, sub_ba);
+                    let iff_ty = d.const_app(
+                        p.mod_eq_iff_dvd,
+                        &[big_n, factorial_nm1, neg_one, pos_big_n],
+                    );
+                    let mp = d.const_app(p.logic.iff_mp, &[modeq_ty, dvd_ty2, iff_ty]);
+                    let dvd_n_diff = d.apply(mp, &[hmodeq]);
+
+                    // dd ∣ (-1 - (nn-1)!), by transitivity through `dd ∣ nn`.
+                    let dvd_d_diff =
+                        d.const_app(p.dvd_trans, &[of_dvar, big_n, sub_ba, dvd_d_n, dvd_n_diff]);
+
+                    // dd ∣ ((nn-1)! + (-1 - (nn-1)!)), by `Int.dvd_add`.
+                    let dvd_sum = d.const_app(
+                        p.dvd_add,
+                        &[of_dvar, factorial_nm1, sub_ba, dvd_d_fact, dvd_d_diff],
+                    );
+
+                    // The sum collapses to exactly `-1`, so `dd ∣ -1`.
+                    let sum_term = d.iadd(factorial_nm1, sub_ba);
+                    let identity = add_sub_self_cancel(d, factorial_nm1, neg_one);
+                    let dvd_d_negone =
+                        d.int_eq_rewrite(sum_term, neg_one, identity, dvd_sum, &|d, x| {
+                            super::dvd::idvd(d, of_dvar, x)
+                        });
+
+                    // dd ∣ -1  =>  dd ∣ 1 (Nat, via natAbs)  =>  dd = 1.
+                    let nat_dvd_one = d.const_app(
+                        p.nat_abs_dvd_nat_abs_of_dvd,
+                        &[of_dvar, neg_one, dvd_d_negone],
+                    );
+                    let d_eq_one = d.lemma(p.nat.eq_one_of_dvd_one, &[dvar, nat_dvd_one]);
+
+                    d.or_inl(is_one, is_whole, d_eq_one)
+                },
+                &|d, heq| d.or_inr(is_one, is_whole, heq),
+            );
+
+            let inner_lam = d.lam_fv(hdvd_fv, hdvd_ty, body);
+            let nat_ty = d.nat_ty();
+            d.lam_fv(dvar_fv, nat_ty, inner_lam)
+        };
+
+        let and_proof = d.const_app(
+            p.logic.and_intro,
+            &[two_le_out, clause_ty, two_le, clause_proof],
+        );
+        let with_modeq = d.lam_fv(modeq_fv, modeq_ty, and_proof);
+        let proof = d.lam_fv(two_le_fv, two_le_ty, with_modeq);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.wilson_iff : ∀ n, Le 2 n →
+///   ((2 ≤ n ∧ ∀ d, d ∣ n → d = 1 ∨ d = n) ↔
+///     ModEq (ofNat n) (factorial (n-1)) (neg one))` — Wilson's theorem AND
+/// its converse combined: for `n ≥ 2`, primality is EQUIVALENT to
+/// `(n-1)! ≡ -1 [n]`. `Iff.intro` of [`declare_wilson`] (mp) and
+/// [`declare_wilson_converse`] (mpr).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_wilson_iff(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.wilson_iff, 1, &|d, v| {
+        let nn = v[0];
+        let two_nat = d.num(2);
+        let one_nat = d.num(1);
+        let two_le_ty = d.le(two_nat, nn);
+        let nm1 = d.sub(nn, one_nat);
+        let big_n = d.of_nat(nn);
+        let one_i = d.ione();
+        let neg_one = d.ineg(one_i);
+        let factorial_nm1 = d.const_app(p.factorial, &[nm1]);
+        let modeq_ty = super::modeq::imodeq(d, big_n, factorial_nm1, neg_one);
+        let prime_ty = prime_condition(d, nn);
+        let iff_ty = {
+            let name = p.logic.iff;
+            d.const_app(name, &[prime_ty, modeq_ty])
+        };
+        let stmt = d.arrow(two_le_ty, iff_ty);
+
+        let two_le_fv = d.fresh_fvar();
+        let two_le = d.kernel().fvar(two_le_fv);
+
+        let mp = {
+            let hp_fv = d.fresh_fvar();
+            let hp = d.kernel().fvar(hp_fv);
+            let body = d.const_app(p.wilson, &[nn, hp]);
+            d.lam_fv(hp_fv, prime_ty, body)
+        };
+        let mpr = {
+            let hm_fv = d.fresh_fvar();
+            let hm = d.kernel().fvar(hm_fv);
+            let body = d.const_app(p.wilson_converse, &[nn, two_le, hm]);
+            d.lam_fv(hm_fv, modeq_ty, body)
+        };
+        let iff_proof = d.const_app(p.logic.iff_intro, &[prime_ty, modeq_ty, mp, mpr]);
+        let proof = d.lam_fv(two_le_fv, two_le_ty, iff_proof);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
