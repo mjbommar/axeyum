@@ -103,6 +103,10 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.valuation_at,
         p.lt_well_founded,
         p.choose,
+        p.fin_val,
+        p.injective_on,
+        p.surjective_on,
+        p.maps_into,
     ]
 }
 
@@ -258,6 +262,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_sum_range_of_forall_lt,
         p.add_pow_modeq_prime,
         p.pow_prime_modeq_self,
+        p.fin_is_lt,
+        p.fin_val_mk,
     ]
 }
 
@@ -319,7 +325,8 @@ fn every_promised_name_is_admitted_with_the_expected_kind() {
 
     // The inductive machinery the definitions and proofs ride on.
     for name in [
-        p.nat, p.zero, p.succ, p.rec, p.le, p.le_refl, p.le_step, p.le_rec,
+        p.nat, p.zero, p.succ, p.rec, p.le, p.le_refl, p.le_step, p.le_rec, p.fin, p.fin_mk,
+        p.fin_rec,
     ] {
         let display = f.k.display_name(name).to_string();
         assert!(
@@ -3913,7 +3920,47 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 61, "every negative control must be rejected");
+    // NC62 — `Fin.mk`'s defining equation must retain its data field's actual
+    // value, not a nearby one. `Fin.val n (Fin.mk n val h)` ι-reduces to
+    // `val`; claim it equals `succ val` instead and supply the (correct,
+    // now-mismatched) `Eq.refl val` proof.
+    {
+        let name = f.name("nc62_fin_val_mk_wrong_value");
+        let nat = f.nat_ty();
+        let n_fv = f.fresh_fvar();
+        let n = f.k.fvar(n_fv);
+        let val_fv = f.fresh_fvar();
+        let val = f.k.fvar(val_fv);
+        let h_fv = f.fresh_fvar();
+        let h = f.k.fvar(h_fv);
+        let bound = f.lt(val, n);
+        let mk_nvh = f.const_app(p.fin_mk, &[n, val, h]);
+        let lhs = f.const_app(p.fin_val, &[n, mk_nvh]);
+        let wrong_rhs = f.succ(val);
+        let bad = f.eq(lhs, wrong_rhs);
+        let proof = f.refl(val);
+        let ty = {
+            let with_h = f.pi_fv(h_fv, bound, bad);
+            let with_val = f.pi_fv(val_fv, nat, with_h);
+            f.pi_fv(n_fv, nat, with_val)
+        };
+        let value = {
+            let with_h = f.lam_fv(h_fv, bound, proof);
+            let with_val = f.lam_fv(val_fv, nat, with_h);
+            f.lam_fv(n_fv, nat, with_val)
+        };
+        let err = f
+            .declare_theorem(name, ty, value)
+            .expect_err("NC62: Fin.mk's defining equation must retain its actual value");
+        println!(
+            "NC62 (wrong Fin.val_mk value) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 62, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -3936,7 +3983,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        20 + 146,
+        24 + 148,
         "every promised definition and theorem must be rendered"
     );
 }

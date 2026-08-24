@@ -327,6 +327,27 @@ pub struct IntPrelude {
     /// `prodRange_congr : ∀ f g n, (∀ k, Eq Int (f k) (g k)) → Eq Int (prodRange f n) (prodRange g n)`
     /// — pointwise-equal factors give equal products, by induction on `n`.
     pub prod_range_congr: NameId,
+    /// `prodRange_congr_lt : ∀ f g n, (∀ k, Lt k n → Eq Int (f k) (g k)) →
+    /// Eq Int (prodRange f n) (prodRange g n)` — `prod_range_congr` with the
+    /// hypothesis weakened to indices below the bound (mirrors
+    /// `Nat.sumRange_congr_lt`), which is what `prodRange_swap_adjacent`'s base
+    /// case actually has (agreement everywhere *except* two points, which
+    /// `prodRange f i`/`prodRange g i` never reach).
+    pub prod_range_congr_lt: NameId,
+    /// `prodRange_swap_adjacent :
+    ///   ∀ f g i n, Lt (succ i) n → Eq Int (g i) (f (succ i)) →
+    ///     Eq Int (g (succ i)) (f i) →
+    ///     (∀ k, Not (Eq Nat k i) → Not (Eq Nat k (succ i)) → Eq Int (f k) (g k)) →
+    ///     Eq Int (prodRange f n) (prodRange g n)`
+    /// — swapping `f`'s values at one adjacent pair of indices, with `g`
+    /// supplied (not computed) and agreeing with `f` everywhere else, leaves
+    /// the product unchanged: the transposition case of permutation
+    /// invariance (`docs`/the finite-index brief), and the germ of
+    /// `prodRange_permute`. `g` is a parameter rather than a computed
+    /// swap-function specifically so the proof needs no decidable-equality
+    /// machinery — see `prod.rs`'s doc comment on
+    /// `declare_prod_range_swap_adjacent`.
+    pub prod_range_swap_adjacent: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -714,6 +735,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_zero: child(kernel, "prodRange_zero"),
         prod_range_succ: child(kernel, "prodRange_succ"),
         prod_range_congr: child(kernel, "prodRange_congr"),
+        prod_range_congr_lt: child(kernel, "prodRange_congr_lt"),
+        prod_range_swap_adjacent: child(kernel, "prodRange_swap_adjacent"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -896,6 +919,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prod::declare_prod_range(&mut d)?;
         prod::declare_prod_range_equations(&mut d)?;
         prod::declare_prod_range_congr(&mut d)?;
+        prod::declare_prod_range_congr_lt(&mut d)?;
+        prod::declare_prod_range_swap_adjacent(&mut d)?;
         prod::declare_modeq_prod_range(&mut d)?;
         wilson::declare_factorial(&mut d)?;
         wilson::declare_factorial_equations(&mut d)?;

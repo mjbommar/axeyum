@@ -137,6 +137,7 @@ mod defs;
 mod divisibility;
 mod division;
 mod fermat;
+mod finite;
 mod gcd;
 mod helpers;
 mod modular;
@@ -167,6 +168,7 @@ use defs::{
 use divisibility::declare_divisibility;
 use division::declare_euclidean_division;
 use fermat::declare_fermat;
+use finite::{declare_fin, declare_injective_surjective};
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
@@ -802,6 +804,38 @@ pub struct NatPrelude {
     /// `Nat.pow_prime_modeq_self : prime p → a^p ≡ a [p]` — Fermat's little
     /// theorem.
     pub pow_prime_modeq_self: NameId,
+
+    // --- `Fin`, and the pigeonhole notions (`finite.rs`) --------------------
+    /// `Nat.Fin : Nat → Type 0` — the canonical finite index type
+    /// `{0, …, n-1}`, the subtype form `⟨val : Nat, isLt : val < n⟩` declared
+    /// as a one-parameter, one-constructor inductive family (the same
+    /// data-field-plus-dependent-`Prop`-field shape `CReal` carries, with `n`
+    /// as a genuine shared parameter — see `finite.rs`'s module doc).
+    pub fin: NameId,
+    /// `Nat.Fin.mk : Π (n val : Nat), Lt val n → Fin n`.
+    pub fin_mk: NameId,
+    /// `Nat.Fin.rec` — the kernel-generated recursor `Fin.val`/`Fin.isLt`
+    /// project through.
+    pub fin_rec: NameId,
+    /// `Nat.Fin.val : Π (n : Nat), Fin n → Nat` — the underlying index.
+    pub fin_val: NameId,
+    /// `Nat.Fin.isLt : Π (n : Nat) (x : Fin n), Lt (val n x) n`.
+    pub fin_is_lt: NameId,
+    /// `Nat.Fin.val_mk : ∀ n val (h : Lt val n), Eq Nat (val n (mk n val h)) val`
+    /// — `Fin.mk`'s defining equation for its data field, closed by `Eq.refl`
+    /// (the recursor ι-reduces on the literal constructor).
+    pub fin_val_mk: NameId,
+    /// `Nat.injectiveOn f n := ∀ i j, i < n → j < n → f i = f j → i = j` —
+    /// injectivity restricted to `{0, …, n-1}`, stated directly over a plain
+    /// `Nat → Nat` function (no `Fin` needed: `finite.rs`'s module doc).
+    pub injective_on: NameId,
+    /// `Nat.surjectiveOn f n := ∀ k, k < n → ∃ i, i < n ∧ f i = k`.
+    pub surjective_on: NameId,
+    /// `Nat.mapsInto f n := ∀ i, i < n → f i < n` — `f` is a self-map of
+    /// `{0, …, n-1}`. The pigeonhole principle needs this hypothesis
+    /// explicitly: an injective function into a *larger* codomain need not be
+    /// surjective onto a smaller one.
+    pub maps_into: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -848,6 +882,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // Intern every name up front so the `NatPrelude` (which the proof scripts
         // below consult for lemma handles) exists before anything is declared.
         let le = kernel.name_str(nat, "le");
+        let fin = kernel.name_str(nat, "Fin");
         let p = NatPrelude {
             logic,
             nat,
@@ -1072,6 +1107,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_sum_range_of_forall_lt: kernel.name_str(nat, "dvd_sumRange_of_forall_lt"),
             add_pow_modeq_prime: kernel.name_str(nat, "add_pow_modeq_prime"),
             pow_prime_modeq_self: kernel.name_str(nat, "pow_prime_modeq_self"),
+            fin,
+            fin_mk: kernel.name_str(fin, "mk"),
+            fin_rec: kernel.name_str(fin, "rec"),
+            fin_val: kernel.name_str(fin, "val"),
+            fin_is_lt: kernel.name_str(fin, "isLt"),
+            fin_val_mk: kernel.name_str(fin, "val_mk"),
+            injective_on: kernel.name_str(nat, "injectiveOn"),
+            surjective_on: kernel.name_str(nat, "surjectiveOn"),
+            maps_into: kernel.name_str(nat, "mapsInto"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1107,6 +1151,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_succ_mul_choose_eq(&mut d, &p)?;
         declare_prime_dvd_choose(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
+        declare_fin(&mut d, &p)?;
+        declare_injective_surjective(&mut d, &p)?;
         Ok(p)
     })();
     match built {
