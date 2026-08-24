@@ -104,6 +104,37 @@ pub struct StringPrelude {
     /// proved by `Str.rec` induction.
     pub append_assoc: NameId,
 
+    /// `length : Str → Nat` — the size measure, `Str.rec` structural
+    /// recursion into the `Nat` inductive already carried by [`LogicPrelude`]
+    /// (not `nat_prelude`'s arithmetic — see `length.rs`).
+    pub length: NameId,
+    /// `length_nil : Eq Nat (length nil) Nat.zero` (definitional; citable by
+    /// name).
+    pub length_nil: NameId,
+    /// `length_cons : ∀ (h : Char) (t : Str),
+    /// Eq Nat (length (cons h t)) (Nat.succ (length t))` (definitional).
+    pub length_cons: NameId,
+
+    /// `reverse : Str → Str`, a checked structural recursion built from
+    /// `append` (see `reverse.rs`).
+    pub reverse: NameId,
+    /// `reverse_nil : Eq Str (reverse nil) nil` (definitional).
+    pub reverse_nil: NameId,
+    /// `reverse_append : ∀ (s t : Str),
+    /// Eq Str (reverse (append s t)) (append (reverse t) (reverse s))` — note
+    /// the order flip; proved by `Str.rec` induction using `append_assoc`.
+    pub reverse_append: NameId,
+    /// `reverse_reverse : ∀ (s : Str), Eq Str (reverse (reverse s)) s` —
+    /// involution, proved via `reverse_append`.
+    pub reverse_reverse: NameId,
+
+    /// `append_left_cancel : ∀ (a t u : Str),
+    /// Eq Str (append a t) (append a u) → Eq Str t u` — left cancellation,
+    /// proved by `Str.rec` induction using the `tail` selector's congruence
+    /// (see `cancel.rs`). Right cancellation is not attempted — see the
+    /// module doc comment there.
+    pub append_left_cancel: NameId,
+
     /// The universe level `1` (so `Char`/`Str : Sort 1 = Type`).
     one: LevelId,
 }
@@ -126,6 +157,7 @@ pub struct StringPrelude {
 /// Returns a logic-package mismatch, alphabet-key overflow, trusted-gate
 /// rejection, or exact-package conflict. A failed string build leaves the
 /// pre-call environment unchanged.
+#[allow(clippy::too_many_lines)] // straight-line prelude construction; see nat_prelude.rs's same allow.
 pub fn build_string_prelude(
     kernel: &mut Kernel,
     logic: LogicPrelude,
@@ -210,6 +242,72 @@ pub fn build_string_prelude(
             one,
         )?;
 
+        // --- length : Str → Nat, and its defining equations -------------------
+        // Self-contained over the bare `Nat` inductive in `logic` — no
+        // `nat_prelude` arithmetic needed. See `length.rs`.
+        let length = kernel.name_str(namespace, "length");
+        let length_nil = kernel.name_str(namespace, "length_nil");
+        let length_cons = kernel.name_str(namespace, "length_cons");
+        length::declare_length(
+            kernel,
+            &length::LengthNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_cons,
+                str_rec,
+                length,
+                length_nil,
+                length_cons,
+            },
+            one,
+        )?;
+
+        // --- reverse : Str → Str, and its laws --------------------------------
+        // See `reverse.rs`.
+        let reverse = kernel.name_str(namespace, "reverse");
+        let reverse_nil = kernel.name_str(namespace, "reverse_nil");
+        let reverse_append = kernel.name_str(namespace, "reverse_append");
+        let reverse_reverse = kernel.name_str(namespace, "reverse_reverse");
+        reverse::declare_reverse_and_laws(
+            kernel,
+            &reverse::ReverseNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_cons,
+                str_rec,
+                append,
+                append_nil,
+                append_assoc,
+                reverse,
+                reverse_nil,
+                reverse_append,
+                reverse_reverse,
+            },
+            one,
+        )?;
+
+        // --- append_left_cancel ------------------------------------------------
+        // See `cancel.rs`.
+        let append_left_cancel = kernel.name_str(namespace, "append_left_cancel");
+        cancel::declare_append_left_cancel(
+            kernel,
+            &cancel::CancelNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_cons,
+                str_rec,
+                append,
+                append_left_cancel,
+            },
+            one,
+        )?;
+
         Ok(StringPrelude {
             logic,
             char_ind,
@@ -224,6 +322,14 @@ pub fn build_string_prelude(
             cons_append,
             append_nil,
             append_assoc,
+            length,
+            length_nil,
+            length_cons,
+            reverse,
+            reverse_nil,
+            reverse_append,
+            reverse_reverse,
+            append_left_cancel,
             one,
         })
     })();
@@ -547,7 +653,13 @@ impl StringPrelude {
     }
 }
 
+mod cancel;
+mod length;
+mod length_append;
 mod monoid;
+mod reverse;
+
+pub use length_append::{StringLengthArithmetic, build_string_length_append};
 
 #[cfg(test)]
 mod tests;

@@ -111,7 +111,9 @@ pub use prelude::{
 pub use rat_prelude::{
     RatModel, RatModelLaw, RatPrelude, build_rat_model_of_arith, build_rat_prelude,
 };
-pub use string_prelude::{StringPrelude, build_string_prelude};
+pub use string_prelude::{
+    StringLengthArithmetic, StringPrelude, build_string_length_append, build_string_prelude,
+};
 pub use tc::{KernelError, LocalContext, LocalDecl};
 
 use expr::ExprMeta;

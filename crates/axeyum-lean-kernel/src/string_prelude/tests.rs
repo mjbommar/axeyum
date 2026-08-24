@@ -4,8 +4,8 @@
 //! concrete constructors).
 
 use crate::prelude::build_logic_prelude;
-use crate::string_prelude::build_string_prelude;
-use crate::{BinderInfo, Kernel};
+use crate::string_prelude::{build_string_length_append, build_string_prelude};
+use crate::{BinderInfo, Kernel, build_nat_prelude};
 
 /// A kernel with the logical + string prelude over a `num_chars` alphabet.
 fn setup(num_chars: usize) -> (Kernel, crate::StringPrelude) {
@@ -36,6 +36,32 @@ fn prelude_admits_and_registers() {
     assert_eq!(sp.char_ctors.len(), 3);
     for &c in &sp.char_ctors {
         assert!(k.environment().contains(c));
+    }
+}
+
+/// Every declaration this slice adds must actually be REGISTERED in the
+/// environment, not just interned as a name — an unvisited name's
+/// `axiom_footprint` is UNMEASURED, not empty, and the two are
+/// indistinguishable in a green run (`Nat.euclid_lemma` was hit by exactly
+/// this gap). This is presence, checked independently of the footprint test
+/// below.
+#[test]
+fn length_reverse_and_cancel_names_are_registered() {
+    let (k, sp) = setup(2);
+    for n in [
+        sp.length,
+        sp.length_nil,
+        sp.length_cons,
+        sp.reverse,
+        sp.reverse_nil,
+        sp.reverse_append,
+        sp.reverse_reverse,
+        sp.append_left_cancel,
+    ] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered"
+        );
     }
 }
 
@@ -680,5 +706,264 @@ fn lex_lt_iota_reduces_at_clash_ignoring_opaque_tail() {
     assert!(
         k.def_eq(app, bfalse),
         "lt (c2 c1 …) (c2 c0 …) ↝ false regardless of opaque tails"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// `length`, `reverse`, and `append_left_cancel` (P3.7 strings, slice 2).
+// ---------------------------------------------------------------------------
+
+/// `Nat.succ^n Nat.zero`, for checking `length`'s ι-computation against a
+/// concrete count.
+fn nat_of(k: &mut Kernel, sp: &crate::StringPrelude, n: usize) -> crate::ExprId {
+    let mut acc = k.const_(sp.logic.nat_zero, vec![]);
+    let succ = k.const_(sp.logic.nat_succ, vec![]);
+    for _ in 0..n {
+        acc = k.app(succ, acc);
+    }
+    acc
+}
+
+#[test]
+fn length_nil_and_cons_iota_compute() {
+    // `length_nil`/`length_cons` close by `Eq.refl` alone: the definition
+    // reduces the LEFT-hand side, and `Eq.refl` of the right-hand side is
+    // accepted only because the kernel sees them as definitionally equal.
+    let (mut k, sp) = setup(2);
+    let length = k.const_(sp.length, vec![]);
+
+    let nil = sp.nil(&mut k);
+    let len_nil = k.app(length, nil);
+    let zero = nat_of(&mut k, &sp, 0);
+    assert!(k.def_eq(len_nil, zero), "length nil ↝ 0");
+
+    let c0 = sp.char(&mut k, 0);
+    let singleton = sp.cons(&mut k, c0, nil);
+    let len_singleton = k.app(length, singleton);
+    let one = nat_of(&mut k, &sp, 1);
+    assert!(k.def_eq(len_singleton, one), "length [c0] ↝ 1");
+}
+
+#[test]
+fn length_iota_computes_on_concrete_strings() {
+    let (mut k, sp) = setup(2);
+    let length = k.const_(sp.length, vec![]);
+    let s = str_of(&mut k, &sp, &[0, 1, 1, 0]);
+    let len_s = k.app(length, s);
+    let four = nat_of(&mut k, &sp, 4);
+    assert!(k.def_eq(len_s, four), "length [0,1,1,0] ↝ 4");
+}
+
+#[test]
+fn length_cons_instantiates_at_an_opaque_word() {
+    // The theorem is usable as a lemma, not just a restatement of ι: apply it
+    // at an opaque tail and check the kernel infers the stated equation.
+    let (mut k, sp) = setup(2);
+    let v = opaque_str(&mut k, &sp, "w_v");
+    let c0 = sp.char(&mut k, 0);
+    let lemma = k.const_(sp.length_cons, vec![]);
+    let applied = {
+        let e = k.app(lemma, c0);
+        k.app(e, v)
+    };
+    let inferred = k.infer(applied).expect("length_cons c0 v infers");
+    let length = k.const_(sp.length, vec![]);
+    let lhs = {
+        let consed = sp.cons(&mut k, c0, v);
+        k.app(length, consed)
+    };
+    let rhs = {
+        let succ = k.const_(sp.logic.nat_succ, vec![]);
+        let len_v = k.app(length, v);
+        k.app(succ, len_v)
+    };
+    let nat_ty = k.const_(sp.logic.nat, vec![]);
+    let one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let eq = k.const_(sp.logic.eq, vec![one]);
+    let want = {
+        let e = k.app(eq, nat_ty);
+        let e = k.app(e, lhs);
+        k.app(e, rhs)
+    };
+    assert!(
+        k.def_eq(inferred, want),
+        "length_cons c0 v : length (cons c0 v) = succ (length v)"
+    );
+}
+
+#[test]
+fn reverse_iota_computes_on_concrete_strings() {
+    let (mut k, sp) = setup(3);
+    let reverse = k.const_(sp.reverse, vec![]);
+    let s = str_of(&mut k, &sp, &[0, 1, 2]);
+    let reversed = k.app(reverse, s);
+    let want = str_of(&mut k, &sp, &[2, 1, 0]);
+    assert!(k.def_eq(reversed, want), "reverse [0,1,2] ↝ [2,1,0]");
+
+    let nil = sp.nil(&mut k);
+    let rev_nil = k.app(reverse, nil);
+    let nil2 = sp.nil(&mut k);
+    assert!(k.def_eq(rev_nil, nil2), "reverse [] ↝ []");
+}
+
+#[test]
+fn reverse_append_instantiates_at_opaque_words() {
+    let (mut k, sp) = setup(2);
+    let x = opaque_str(&mut k, &sp, "w_x");
+    let y = opaque_str(&mut k, &sp, "w_y");
+    let lemma = k.const_(sp.reverse_append, vec![]);
+    let applied = {
+        let e = k.app(lemma, x);
+        k.app(e, y)
+    };
+    let inferred = k.infer(applied).expect("reverse_append x y infers");
+    let str_ty = sp.str_const(&mut k);
+    let reverse = k.const_(sp.reverse, vec![]);
+    let want = {
+        let lhs = {
+            let inner = sp.append_app(&mut k, x, y);
+            k.app(reverse, inner)
+        };
+        let rhs = {
+            let ry = k.app(reverse, y);
+            let rx = k.app(reverse, x);
+            sp.append_app(&mut k, ry, rx)
+        };
+        mk_eq(&mut k, &sp, str_ty, 1, lhs, rhs)
+    };
+    assert!(
+        k.def_eq(inferred, want),
+        "reverse_append x y : reverse (x ++ y) = reverse y ++ reverse x, got {}",
+        k.render_lean(inferred)
+    );
+}
+
+#[test]
+fn reverse_reverse_instantiates_at_an_opaque_word() {
+    let (mut k, sp) = setup(2);
+    let v = opaque_str(&mut k, &sp, "w_v");
+    let lemma = k.const_(sp.reverse_reverse, vec![]);
+    let applied = k.app(lemma, v);
+    let inferred = k.infer(applied).expect("reverse_reverse v infers");
+    let str_ty = sp.str_const(&mut k);
+    let reverse = k.const_(sp.reverse, vec![]);
+    let want = {
+        let rv = k.app(reverse, v);
+        let rrv = k.app(reverse, rv);
+        mk_eq(&mut k, &sp, str_ty, 1, rrv, v)
+    };
+    assert!(
+        k.def_eq(inferred, want),
+        "reverse_reverse v : reverse (reverse v) = v, got {}",
+        k.render_lean(inferred)
+    );
+}
+
+#[test]
+fn append_left_cancel_derives_equal_tails_from_an_opaque_hypothesis() {
+    // Build h : Eq Str (append a t) (append a u) as an opaque hypothesis (an
+    // Axiom, exactly the `distinct_singletons_refute_to_false` pattern) and
+    // check `append_left_cancel a t u h` infers to `Eq Str t u`.
+    let (mut k, sp) = setup(2);
+    let anon = k.anon();
+    let a = str_of(&mut k, &sp, &[0, 1]);
+    let t = opaque_str(&mut k, &sp, "w_t");
+    let u = opaque_str(&mut k, &sp, "w_u");
+    let lhs = sp.append_app(&mut k, a, t);
+    let rhs = sp.append_app(&mut k, a, u);
+    let str_ty = sp.str_const(&mut k);
+    let h_name = {
+        let n = k.name_str(anon, "h_cancel");
+        let ty = mk_eq(&mut k, &sp, str_ty, 1, lhs, rhs);
+        k.add_declaration(crate::Declaration::Axiom {
+            name: n,
+            uparams: vec![],
+            ty,
+        })
+        .expect("cancel hypothesis admits");
+        n
+    };
+    let h = k.const_(h_name, vec![]);
+    let lemma = k.const_(sp.append_left_cancel, vec![]);
+    let applied = {
+        let e = k.app(lemma, a);
+        let e = k.app(e, t);
+        let e = k.app(e, u);
+        k.app(e, h)
+    };
+    let inferred = k.infer(applied).expect("append_left_cancel a t u h infers");
+    let want = mk_eq(&mut k, &sp, str_ty, 1, t, u);
+    assert!(
+        k.def_eq(inferred, want),
+        "append_left_cancel a t u h : Eq Str t u, got {}",
+        k.render_lean(inferred)
+    );
+}
+
+/// `length_append` needs `nat_prelude`'s `Nat.add`/`zero_add`/`succ_add` in
+/// the SAME kernel — the one composition [`build_string_prelude`] does not
+/// do unconditionally (see `length_append.rs`'s module doc). Build both
+/// preludes together, as `prelude_composition.rs` already establishes is a
+/// supported order, then check admission, axiom-freedom, and usability.
+#[test]
+fn length_append_composes_with_nat_prelude_and_is_axiom_free() {
+    let mut k = Kernel::new();
+    let nat = build_nat_prelude(&mut k).expect("nat prelude must build");
+    let sp = build_string_prelude(&mut k, nat.logic, 2).expect("string prelude must build");
+    let la = build_string_length_append(&mut k, &sp, &nat).expect("length_append must admit");
+
+    assert!(
+        k.environment().contains(la.length_append),
+        "length_append must be registered"
+    );
+    let footprint = k.axiom_footprint(la.length_append);
+    assert!(
+        footprint.is_empty(),
+        "length_append must rest on nothing assumed, found {:?}",
+        footprint
+            .iter()
+            .map(|a| k.display_name(*a).to_string())
+            .collect::<Vec<_>>()
+    );
+
+    // Usable as a lemma at opaque words.
+    let x = opaque_str(&mut k, &sp, "w_x");
+    let y = opaque_str(&mut k, &sp, "w_y");
+    let lemma = k.const_(la.length_append, vec![]);
+    let applied = {
+        let e = k.app(lemma, x);
+        k.app(e, y)
+    };
+    let inferred = k.infer(applied).expect("length_append x y infers");
+    let nat_ty = k.const_(nat.nat, vec![]);
+    let length = k.const_(sp.length, vec![]);
+    let add = k.const_(nat.add, vec![]);
+    let one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let eq = k.const_(sp.logic.eq, vec![one]);
+    let want = {
+        let lhs = {
+            let inner = sp.append_app(&mut k, x, y);
+            k.app(length, inner)
+        };
+        let rhs = {
+            let lx = k.app(length, x);
+            let ly = k.app(length, y);
+            let e = k.app(add, lx);
+            k.app(e, ly)
+        };
+        let e = k.app(eq, nat_ty);
+        let e = k.app(e, lhs);
+        k.app(e, rhs)
+    };
+    assert!(
+        k.def_eq(inferred, want),
+        "length_append x y : length (x ++ y) = length x + length y, got {}",
+        k.render_lean(inferred)
     );
 }
