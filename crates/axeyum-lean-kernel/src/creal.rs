@@ -1386,6 +1386,25 @@ pub struct CRealPrelude {
     /// bounded by HALF the target" arithmetic the module documentation
     /// verifies against `natDivSucc`'s actual definition.
     pub has_derivative_add: NameId,
+    /// `CReal.abs_mul_le_of_bounds : ∀ c t B b, le (abs c) B → le (abs t) b →
+    /// le (abs (mul c t)) (mul B b)` — the two-variable product-of-bounds
+    /// lemma `creal/derivative.rs`'s own module documentation identifies as
+    /// the single blocker standing between this kernel and both
+    /// `hasDerivative_smul` and `hasDerivative_mul` (the product rule).
+    ///
+    /// `0 ≤ B` and `0 ≤ b` are **not** separate hypotheses — `abs_nonneg`
+    /// plus `le_trans` gets both for free from `le (abs c) B` and
+    /// `le (abs t) b`, so requiring them would only weaken the statement.
+    ///
+    /// Closed case-split-free (`CReal.le` is undecidable, so nothing here
+    /// ever branches on a real comparison) via two nonneg-product identities,
+    /// one per direction: `2·(B·b − c·t) = (B−c)·(b+t) + (B+c)·(b−t)` and,
+    /// applying the same fact at `c := neg c`, the mirror identity for the
+    /// lower bound. The factor of `2` is discharged by
+    /// `creal/derivative.rs::nonneg_of_double_nonneg`, which multiplies
+    /// through by the literal `CReal.ofRat (Rat.natDivSucc 1 1)` rather than
+    /// deciding any sign.
+    pub abs_mul_le_of_bounds: NameId,
 }
 
 impl CRealPrelude {
@@ -1633,6 +1652,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_sq: kernel.name_str(creal, "hasDerivative_sq"),
         has_derivative_neg: kernel.name_str(creal, "hasDerivative_neg"),
         has_derivative_add: kernel.name_str(creal, "hasDerivative_add"),
+        abs_mul_le_of_bounds: kernel.name_str(creal, "abs_mul_le_of_bounds"),
     }
 }
 

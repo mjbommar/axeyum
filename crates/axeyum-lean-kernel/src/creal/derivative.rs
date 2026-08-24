@@ -178,7 +178,8 @@ pub(super) fn declare_derivative(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     declare_has_derivative_id(d, p)?;
     declare_has_derivative_sq(d, p)?;
     declare_has_derivative_neg(d, p)?;
-    declare_has_derivative_add(d, p)
+    declare_has_derivative_add(d, p)?;
+    declare_abs_mul_le_of_bounds(d, p)
 }
 
 // --- shared term builders ----------------------------------------------------
@@ -1096,6 +1097,659 @@ fn le_abs_neg_of_le_abs(
     );
 
     d.lemma(p.abs_le, &[nx, bound, upper, lower])
+}
+
+// --- the two-variable product-of-bounds lemma ---------------------------------
+//
+// `CReal.abs_mul_le_of_bounds` — see the module documentation's "product
+// rule" section and [`CRealPrelude::abs_mul_le_of_bounds`] for the argument.
+// The helpers below are private to this block; nothing outside
+// `declare_abs_mul_le_of_bounds` calls them.
+
+/// From `h : le (neg x) bound`, derive `le zero (add bound x)` — the
+/// `bound + x >= 0` half of a magnitude bound, mirroring [`sub_nonneg_of_le`]
+/// (`bound - x >= 0` from `le x bound`) through [`double_neg`].
+fn plus_nonneg_of_neg_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    bound: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let nx = cneg(d, p, x);
+    let pre = sub_nonneg_of_le(d, p, nx, bound, h); // le zero (add bound (neg (neg x)))
+    let nnx = cneg(d, p, nx);
+    let nn = double_neg(d, p, x); // Equiv nnx x
+    let refl_bound = erefl(d, p, bound);
+    let congr = d.lemma(p.add_congr, &[bound, bound, nnx, x, refl_bound, nn]);
+    let zero_c = czero(d, p);
+    let refl_zero = erefl(d, p, zero_c);
+    let add_bound_nnx = cadd(d, p, bound, nnx);
+    let add_bound_x = cadd(d, p, bound, x);
+    d.lemma(
+        p.le_congr,
+        &[
+            zero_c,
+            zero_c,
+            add_bound_nnx,
+            add_bound_x,
+            refl_zero,
+            congr,
+            pre,
+        ],
+    )
+}
+
+/// `Equiv (add (add x (neg y)) (add x y)) (add x x)` — `(x−y)+(x+y) ~ x+x`,
+/// the `y`-cancelling half of the two-variable product-of-bounds identity
+/// [`abs_mul_le_of_bounds_body`] needs. Same style as [`cancel_middle`].
+fn double_first(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let ny = cneg(d, p, y);
+    let x_ny = cadd(d, p, x, ny);
+    let x_y = cadd(d, p, x, y);
+    let lhs = cadd(d, p, x_ny, x_y);
+    let ny_xy = cadd(d, p, ny, x_y);
+    let x_plus_nyxy = cadd(d, p, x, ny_xy);
+    let x_x = cadd(d, p, x, x);
+
+    // lhs ~ x + (ny + x_y)
+    let step_assoc = d.lemma(p.add_assoc, &[x, ny, x_y]);
+
+    // ny_xy ~ x
+    let ny_x = cadd(d, p, ny, x);
+    let ny_x_y = cadd(d, p, ny_x, y);
+    let assoc2 = d.lemma(p.add_assoc, &[ny, x, y]); // ny_x_y ~ ny_xy
+    let step_b1 = esymm(d, p, ny_x_y, ny_xy, assoc2); // ny_xy ~ ny_x_y
+
+    let comm1 = d.lemma(p.add_comm, &[ny, x]); // ny_x ~ x_ny
+    let refl_y = erefl(d, p, y);
+    let x_ny_y = cadd(d, p, x_ny, y);
+    let congr1 = d.lemma(p.add_congr, &[ny_x, x_ny, y, y, comm1, refl_y]); // ny_x_y ~ x_ny_y
+
+    let ny_y = cadd(d, p, ny, y);
+    let x_plus_nyy = cadd(d, p, x, ny_y);
+    let assoc3 = d.lemma(p.add_assoc, &[x, ny, y]); // x_ny_y ~ x_plus_nyy
+
+    let zero_c = czero(d, p);
+    let nas = neg_add_self(d, p, y); // Equiv ny_y zero
+    let refl_x = erefl(d, p, x);
+    let x_zero = cadd(d, p, x, zero_c);
+    let congr2 = d.lemma(p.add_congr, &[x, x, ny_y, zero_c, refl_x, nas]); // x_plus_nyy ~ x_zero
+
+    let az = d.lemma(p.add_zero, &[x]); // x_zero ~ x
+
+    let ny_xy_to_x = echain(
+        d,
+        p,
+        ny_xy,
+        &[
+            (ny_x_y, step_b1),
+            (x_ny_y, congr1),
+            (x_plus_nyy, assoc3),
+            (x_zero, congr2),
+            (x, az),
+        ],
+    );
+
+    let congr_final = d.lemma(p.add_congr, &[x, x, ny_xy, x, refl_x, ny_xy_to_x]); // x_plus_nyxy ~ x_x
+
+    echain(d, p, lhs, &[(x_plus_nyxy, step_assoc), (x_x, congr_final)])
+}
+
+/// `Equiv (add (add x y) (add (neg x) y)) (add y y)` — `(x+y)+(−x+y) ~ y+y`,
+/// [`double_first`] with the two summands and the two addends each commuted.
+fn double_second(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let nx = cneg(d, p, x);
+    let x_y = cadd(d, p, x, y);
+    let nx_y = cadd(d, p, nx, y);
+    let lhs = cadd(d, p, x_y, nx_y);
+
+    let y_x = cadd(d, p, y, x);
+    let y_nx = cadd(d, p, y, nx);
+    let comm_a = d.lemma(p.add_comm, &[x, y]); // x_y ~ y_x
+    let comm_b = d.lemma(p.add_comm, &[nx, y]); // nx_y ~ y_nx
+    let rhs1 = cadd(d, p, y_x, y_nx);
+    let step1 = d.lemma(p.add_congr, &[x_y, y_x, nx_y, y_nx, comm_a, comm_b]); // lhs ~ rhs1
+
+    let rhs2 = cadd(d, p, y_nx, y_x);
+    let comm_outer = d.lemma(p.add_comm, &[y_x, y_nx]); // rhs1 ~ rhs2
+
+    let df = double_first(d, p, y, x); // Equiv rhs2 (add y y)
+    let y_y = cadd(d, p, y, y);
+
+    echain(d, p, lhs, &[(rhs1, step1), (rhs2, comm_outer), (y_y, df)])
+}
+
+/// `(half, half_nonneg, proof)` — `half := ofRat (natDivSucc 1 1)`, a proof
+/// it is nonnegative ([`nonneg_rat_bound`]), and `proof : Equiv (add half
+/// half) CReal.one`.
+///
+/// Closed through `Rat.natDivSucc_add`/`Rat.natDivSucc_halve` — the same
+/// fusion [`declare_has_derivative_add`] uses for `1/(2e+2)+1/(2e+2) ~
+/// 1/(e+1)`, here at the literal `e := 0` — plus the kernel's own reduction
+/// of `Rat.natDivSucc 1 0` against `Rat.one`: `CReal.one` is *defined* as
+/// `CReal.ofRat Rat.one` with a `Regular` (unfoldable) reducibility hint
+/// (`declare_constants`), so the closing step needs no separate
+/// `Rat.natDivSucc 1 0 = Rat.one` lemma.
+fn half_and_double_one(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId, ExprId) {
+    let one_nat = d.num(1);
+    let (half, half_nonneg) = nonneg_rat_bound(d, p, 1, one_nat);
+    let q = div_succ(d, p, 1, one_nat); // natDivSucc 1 1
+
+    let half_half = cadd(d, p, half, half);
+    let radd_qq = radd(d, q, q);
+    let of_rat_add_proof = d.lemma(p.of_rat_add, &[q, q]);
+    // Equiv half_half (ofRat radd_qq)
+
+    let eq1 = d.lemma(p.rat.nat_div_succ_add, &[one_nat, one_nat, one_nat]);
+    // Eq (radd q q) (natDivSucc (add 1 1) 1)
+    let combined = d.add(one_nat, one_nat);
+    let two_over_1 = d.const_app(p.rat.nat_div_succ, &[combined, one_nat]);
+    let step_a = rat_eq_rewrite(d, radd_qq, two_over_1, eq1, of_rat_add_proof, &|d, t| {
+        let oft = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[half_half, oft])
+    });
+    // Equiv half_half (ofRat two_over_1)
+
+    let zero_nat = d.num(0);
+    let eq2 = d.lemma(p.rat.nat_div_succ_halve, &[zero_nat]);
+    // Eq (natDivSucc 2 (succ (mul 2 0))) (natDivSucc 1 0)
+    let one_over_0 = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+    let step_b = rat_eq_rewrite(d, two_over_1, one_over_0, eq2, step_a, &|d, t| {
+        let oft = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[half_half, oft])
+    });
+    // Equiv half_half (ofRat one_over_0); `ofRat one_over_0` is defeq
+    // `CReal.one` (see the doc comment above), so this is used directly
+    // wherever `Equiv (add half half) one` is needed.
+
+    (half, half_nonneg, step_b)
+}
+
+/// From `h : le zero (add v v)`, derive `le zero v` — halving a
+/// nonnegativity fact by multiplying through by the literal constant `1/2`
+/// ([`half_and_double_one`]), never deciding `v`'s sign.
+fn nonneg_of_double_nonneg(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, h: ExprId) -> ExprId {
+    let (half, half_nonneg, half_double_one) = half_and_double_one(d, p);
+    let v_v = cadd(d, p, v, v);
+    let zero_c = czero(d, p);
+
+    let step1 = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[half, zero_c, v_v, half_nonneg, h],
+    );
+    // le (mul half zero) (mul half v_v)
+    let mul_half_zero = cmul(d, p, half, zero_c);
+    let mz = d.lemma(p.mul_zero, &[half]); // Equiv mul_half_zero zero
+    let mul_half_vv = cmul(d, p, half, v_v);
+    let refl_mhv = erefl(d, p, mul_half_vv);
+    let transported = d.lemma(
+        p.le_congr,
+        &[
+            mul_half_zero,
+            zero_c,
+            mul_half_vv,
+            mul_half_vv,
+            mz,
+            refl_mhv,
+            step1,
+        ],
+    ); // le zero mul_half_vv
+
+    // mul_half_vv ~ v
+    let ld = d.lemma(p.left_distrib, &[half, v, v]);
+    // Equiv mul_half_vv (add (mul half v) (mul half v))
+    let mul_half_v = cmul(d, p, half, v);
+    let sum_mhv = cadd(d, p, mul_half_v, mul_half_v);
+
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let half_half = cadd(d, p, half, half);
+    let rd = right_distrib(d, p, half, half, v);
+    // Equiv (mul half_half v) sum_mhv
+    let mul_double_v = cmul(d, p, half_half, v);
+    let rd_symm = esymm(d, p, mul_double_v, sum_mhv, rd); // Equiv sum_mhv mul_double_v
+
+    let mul_one_v = cmul(d, p, one_c, v);
+    let refl_v = erefl(d, p, v);
+    let congr_one = d.lemma(
+        p.mul_congr,
+        &[half_half, one_c, v, v, half_double_one, refl_v],
+    ); // Equiv mul_double_v mul_one_v
+
+    let mul_v_one = cmul(d, p, v, one_c);
+    let comm_v1 = d.lemma(p.mul_comm, &[one_c, v]); // Equiv mul_one_v mul_v_one
+    let mo = d.lemma(p.mul_one, &[v]); // Equiv mul_v_one v
+
+    let sum_to_v = echain(
+        d,
+        p,
+        sum_mhv,
+        &[
+            (mul_double_v, rd_symm),
+            (mul_one_v, congr_one),
+            (mul_v_one, comm_v1),
+            (v, mo),
+        ],
+    );
+
+    let mhv_to_v = echain(d, p, mul_half_vv, &[(sum_mhv, ld), (v, sum_to_v)]);
+
+    let refl_zero = erefl(d, p, zero_c);
+    d.lemma(
+        p.le_congr,
+        &[
+            zero_c,
+            zero_c,
+            mul_half_vv,
+            v,
+            refl_zero,
+            mhv_to_v,
+            transported,
+        ],
+    )
+}
+
+/// `P1 := mul (add big_b (neg x)) (add small_b t)`, expanded:
+/// `Equiv P1 (add (add (mul big_b small_b) (neg (mul x small_b))) (add (mul
+/// big_b t) (neg (mul x t))))` — via [`p.left_distrib`]/[`right_distrib`]/
+/// [`neg_mul_equiv_left`]. Returns `(P1, a_term, b_term, proof)`.
+#[allow(clippy::similar_names)]
+fn expand_p1(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    big_b: ExprId,
+    x: ExprId,
+    small_b: ExprId,
+    t: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let neg_x = cneg(d, p, x);
+    let big_a = cadd(d, p, big_b, neg_x); // B - x
+    let b_plus_t = cadd(d, p, small_b, t);
+    let p1 = cmul(d, p, big_a, b_plus_t);
+
+    let mul_biga_b = cmul(d, p, big_a, small_b);
+    let mul_biga_t = cmul(d, p, big_a, t);
+    let ld = d.lemma(p.left_distrib, &[big_a, small_b, t]);
+    // Equiv p1 (add mul_biga_b mul_biga_t)
+
+    // mul_biga_b ~ a_term := add (mul B b) (neg (mul x b))
+    let mul_bb = cmul(d, p, big_b, small_b);
+    let mul_xb = cmul(d, p, x, small_b);
+    let neg_mul_xb = cneg(d, p, mul_xb);
+    let a_term = cadd(d, p, mul_bb, neg_mul_xb);
+    let rd_b = right_distrib(d, p, big_b, neg_x, small_b);
+    // Equiv mul_biga_b (add mul_bb (mul neg_x small_b))
+    let mul_negx_b = cmul(d, p, neg_x, small_b);
+    let nme_b = neg_mul_equiv_left(d, p, x, small_b); // Equiv mul_negx_b neg_mul_xb
+    let refl_bb = erefl(d, p, mul_bb);
+    let congr_b = d.lemma(
+        p.add_congr,
+        &[mul_bb, mul_bb, mul_negx_b, neg_mul_xb, refl_bb, nme_b],
+    );
+    let chain_b_target = cadd(d, p, mul_bb, mul_negx_b);
+    let chain_b = echain(
+        d,
+        p,
+        mul_biga_b,
+        &[(chain_b_target, rd_b), (a_term, congr_b)],
+    );
+
+    // mul_biga_t ~ b_term := add (mul B t) (neg (mul x t))
+    let mul_bt = cmul(d, p, big_b, t);
+    let mul_xt = cmul(d, p, x, t);
+    let neg_mul_xt = cneg(d, p, mul_xt);
+    let b_term = cadd(d, p, mul_bt, neg_mul_xt);
+    let rd_t = right_distrib(d, p, big_b, neg_x, t);
+    let mul_negx_t = cmul(d, p, neg_x, t);
+    let nme_t = neg_mul_equiv_left(d, p, x, t);
+    let refl_bt = erefl(d, p, mul_bt);
+    let congr_t = d.lemma(
+        p.add_congr,
+        &[mul_bt, mul_bt, mul_negx_t, neg_mul_xt, refl_bt, nme_t],
+    );
+    let chain_t_target = cadd(d, p, mul_bt, mul_negx_t);
+    let chain_t = echain(
+        d,
+        p,
+        mul_biga_t,
+        &[(chain_t_target, rd_t), (b_term, congr_t)],
+    );
+
+    let full_congr = d.lemma(
+        p.add_congr,
+        &[mul_biga_b, a_term, mul_biga_t, b_term, chain_b, chain_t],
+    );
+    let expanded = cadd(d, p, a_term, b_term);
+    let ld_target = cadd(d, p, mul_biga_b, mul_biga_t);
+    let proof = echain(d, p, p1, &[(ld_target, ld), (expanded, full_congr)]);
+
+    (p1, a_term, b_term, proof)
+}
+
+/// `P2 := mul (add big_b x) (add small_b (neg t))`, expanded: `Equiv P2 (add
+/// (add (mul big_b small_b) (mul x small_b)) (add (neg (mul big_b t)) (neg
+/// (mul x t))))`. Returns `(P2, c_term, d_term, proof)`.
+#[allow(clippy::similar_names)]
+fn expand_p2(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    big_b: ExprId,
+    x: ExprId,
+    small_b: ExprId,
+    t: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let big_c = cadd(d, p, big_b, x); // B + x
+    let neg_t = cneg(d, p, t);
+    let b_minus_t = cadd(d, p, small_b, neg_t);
+    let p2 = cmul(d, p, big_c, b_minus_t);
+
+    let mul_bigc_b = cmul(d, p, big_c, small_b);
+    let mul_bigc_negt = cmul(d, p, big_c, neg_t);
+    let ld = d.lemma(p.left_distrib, &[big_c, small_b, neg_t]);
+    // Equiv p2 (add mul_bigc_b mul_bigc_negt)
+
+    // mul_bigc_b ~ c_term := add (mul B b) (mul x b)  -- right_distrib lands
+    // exactly here, no further congruence step needed.
+    let mul_bb = cmul(d, p, big_b, small_b);
+    let mul_xb = cmul(d, p, x, small_b);
+    let c_term = cadd(d, p, mul_bb, mul_xb);
+    let chain_b = right_distrib(d, p, big_b, x, small_b); // Equiv mul_bigc_b c_term
+
+    // mul_bigc_negt ~ d_term := add (neg (mul B t)) (neg (mul x t))
+    let mul_bt = cmul(d, p, big_b, t);
+    let mul_xt = cmul(d, p, x, t);
+    let neg_bt = cneg(d, p, mul_bt);
+    let neg_xt = cneg(d, p, mul_xt);
+    let d_term = cadd(d, p, neg_bt, neg_xt);
+    let rd_negt = right_distrib(d, p, big_b, x, neg_t);
+    // Equiv mul_bigc_negt (add (mul B neg_t) (mul x neg_t))
+    let mul_b_negt = cmul(d, p, big_b, neg_t);
+    let mul_x_negt = cmul(d, p, x, neg_t);
+    let mne_b = mul_neg_equiv(d, p, big_b, t); // Equiv mul_b_negt neg_bt
+    let mne_x = mul_neg_equiv(d, p, x, t); // Equiv mul_x_negt neg_xt
+    let congr_negt = d.lemma(
+        p.add_congr,
+        &[mul_b_negt, neg_bt, mul_x_negt, neg_xt, mne_b, mne_x],
+    );
+    let rd_negt_target = cadd(d, p, mul_b_negt, mul_x_negt);
+    let chain_negt = echain(
+        d,
+        p,
+        mul_bigc_negt,
+        &[(rd_negt_target, rd_negt), (d_term, congr_negt)],
+    );
+
+    let full_congr = d.lemma(
+        p.add_congr,
+        &[
+            mul_bigc_b,
+            c_term,
+            mul_bigc_negt,
+            d_term,
+            chain_b,
+            chain_negt,
+        ],
+    );
+    let expanded = cadd(d, p, c_term, d_term);
+    let ld_target = cadd(d, p, mul_bigc_b, mul_bigc_negt);
+    let proof = echain(d, p, p2, &[(ld_target, ld), (expanded, full_congr)]);
+
+    (p2, c_term, d_term, proof)
+}
+
+/// `le (mul x t) (mul big_b small_b)` from `le x big_b`, `le (neg x)
+/// big_b`, `le t small_b`, `le (neg t) small_b` — the one-sided half of
+/// [`abs_mul_le_of_bounds_body`], built from the two-identity route: `2·(B·b
+/// − x·t) = (B−x)·(b+t) + (B+x)·(b−t)`, each summand a product of two
+/// nonnegatives ([`expand_p1`]/[`expand_p2`] plus [`double_first`]/
+/// [`double_second`] to cancel the cross terms), halved by
+/// [`nonneg_of_double_nonneg`], never deciding `x`'s or `t`'s sign.
+#[allow(clippy::too_many_arguments, clippy::similar_names)]
+fn upper_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    t: ExprId,
+    big_b: ExprId,
+    small_b: ExprId,
+    x_le_b: ExprId,
+    negx_le_b: ExprId,
+    t_le_b: ExprId,
+    negt_le_b: ExprId,
+) -> ExprId {
+    let b_minus_x_nonneg = sub_nonneg_of_le(d, p, x, big_b, x_le_b);
+    let b_plus_x_nonneg = plus_nonneg_of_neg_le(d, p, x, big_b, negx_le_b);
+    let smallb_minus_t_nonneg = sub_nonneg_of_le(d, p, t, small_b, t_le_b);
+    let smallb_plus_t_nonneg = plus_nonneg_of_neg_le(d, p, t, small_b, negt_le_b);
+
+    let (p1, a_term, b_term, p1_expand) = expand_p1(d, p, big_b, x, small_b, t);
+    let (p2, c_term, d_term, p2_expand) = expand_p2(d, p, big_b, x, small_b, t);
+
+    let neg_x = cneg(d, p, x);
+    let big_a = cadd(d, p, big_b, neg_x);
+    let b_plus_t = cadd(d, p, small_b, t);
+    let p1_nonneg = d.lemma(
+        p.mul_nonneg,
+        &[big_a, b_plus_t, b_minus_x_nonneg, smallb_plus_t_nonneg],
+    );
+
+    let big_c = cadd(d, p, big_b, x);
+    let neg_t = cneg(d, p, t);
+    let b_minus_t = cadd(d, p, small_b, neg_t);
+    let p2_nonneg = d.lemma(
+        p.mul_nonneg,
+        &[big_c, b_minus_t, b_plus_x_nonneg, smallb_minus_t_nonneg],
+    );
+
+    let zero_c = czero(d, p);
+    let sum_le = d.lemma(
+        p.add_le_add,
+        &[zero_c, p1, zero_c, p2, p1_nonneg, p2_nonneg],
+    );
+    // le (add zero zero) (add p1 p2)
+    let zero_zero = cadd(d, p, zero_c, zero_c);
+    let az = d.lemma(p.add_zero, &[zero_c]); // Equiv zero_zero zero_c
+    let p1p2 = cadd(d, p, p1, p2);
+    let refl_p1p2 = erefl(d, p, p1p2);
+    let p1p2_nonneg = d.lemma(
+        p.le_congr,
+        &[zero_zero, zero_c, p1p2, p1p2, az, refl_p1p2, sum_le],
+    ); // le zero p1p2
+
+    let mul_bb = cmul(d, p, big_b, small_b);
+    let mul_xt = cmul(d, p, x, t);
+    let neg_xt = cneg(d, p, mul_xt);
+    let v = cadd(d, p, mul_bb, neg_xt);
+
+    // p1p2 ~ add (add a_term b_term) (add c_term d_term)
+    let ab_sum = cadd(d, p, a_term, b_term);
+    let cd_sum = cadd(d, p, c_term, d_term);
+    let stage1 = cadd(d, p, ab_sum, cd_sum);
+    let congr1 = d.lemma(p.add_congr, &[p1, ab_sum, p2, cd_sum, p1_expand, p2_expand]);
+
+    // ~ add (add a_term c_term) (add b_term d_term)
+    let (stage2, proof_ac1) = add4_comm(d, p, a_term, b_term, c_term, d_term);
+
+    // a_term + c_term ~ add mul_bb mul_bb ; b_term + d_term ~ add neg_xt neg_xt
+    let mul_xb = cmul(d, p, x, small_b);
+    let mul_bt = cmul(d, p, big_b, t);
+    let df1 = double_first(d, p, mul_bb, mul_xb); // Equiv (add a_term c_term) (add mul_bb mul_bb)
+    let df2 = double_second(d, p, mul_bt, neg_xt); // Equiv (add b_term d_term) (add neg_xt neg_xt)
+
+    let ac_sum = cadd(d, p, a_term, c_term);
+    let bd_sum = cadd(d, p, b_term, d_term);
+    let bb_bb = cadd(d, p, mul_bb, mul_bb);
+    let negxt_negxt = cadd(d, p, neg_xt, neg_xt);
+    let stage3 = cadd(d, p, bb_bb, negxt_negxt);
+    let congr2 = d.lemma(p.add_congr, &[ac_sum, bb_bb, bd_sum, negxt_negxt, df1, df2]);
+
+    // ~ add (add mul_bb neg_xt) (add mul_bb neg_xt) = add v v
+    let (stage4, proof_ac2) = add4_comm(d, p, mul_bb, mul_bb, neg_xt, neg_xt);
+
+    let double_identity = echain(
+        d,
+        p,
+        p1p2,
+        &[
+            (stage1, congr1),
+            (stage2, proof_ac1),
+            (stage3, congr2),
+            (stage4, proof_ac2),
+        ],
+    );
+
+    let v_v = cadd(d, p, v, v);
+    let refl_zero = erefl(d, p, zero_c);
+    let v_v_nonneg = d.lemma(
+        p.le_congr,
+        &[
+            zero_c,
+            zero_c,
+            p1p2,
+            v_v,
+            refl_zero,
+            double_identity,
+            p1p2_nonneg,
+        ],
+    );
+
+    let v_nonneg = nonneg_of_double_nonneg(d, p, v, v_v_nonneg);
+
+    le_of_nonneg_sub(d, p, mul_xt, mul_bb, v_nonneg)
+}
+
+/// `le (abs (mul c t)) (mul big_b small_b)` from `le (abs c) big_b` and `le
+/// (abs t) small_b` — [`CRealPrelude::abs_mul_le_of_bounds`]'s body. Gets the
+/// lower bound for free from [`upper_bound`] applied at `neg c` in place of
+/// `c`, transported through [`neg_mul_equiv_left`], rather than re-deriving a
+/// second two-identity argument.
+fn abs_mul_le_of_bounds_body(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    c: ExprId,
+    t: ExprId,
+    big_b: ExprId,
+    small_b: ExprId,
+    h_c: ExprId,
+    h_t: ExprId,
+) -> ExprId {
+    let abs_c = cabs(d, p, c);
+    let c_le_absc = d.lemma(p.le_abs_self, &[c]);
+    let c_le_b = d.lemma(p.le_trans, &[c, abs_c, big_b, c_le_absc, h_c]);
+    let neg_c = cneg(d, p, c);
+    let negc_le_absc = d.lemma(p.neg_le_abs, &[c]);
+    let negc_le_b = d.lemma(p.le_trans, &[neg_c, abs_c, big_b, negc_le_absc, h_c]);
+
+    let abs_t = cabs(d, p, t);
+    let t_le_abst = d.lemma(p.le_abs_self, &[t]);
+    let t_le_b = d.lemma(p.le_trans, &[t, abs_t, small_b, t_le_abst, h_t]);
+    let neg_t = cneg(d, p, t);
+    let negt_le_abst = d.lemma(p.neg_le_abs, &[t]);
+    let negt_le_b = d.lemma(p.le_trans, &[neg_t, abs_t, small_b, negt_le_abst, h_t]);
+
+    let upper = upper_bound(
+        d, p, c, t, big_b, small_b, c_le_b, negc_le_b, t_le_b, negt_le_b,
+    );
+    // le (mul c t) (mul big_b small_b)
+
+    // le (neg c) big_b [= negc_le_b] and le (neg (neg c)) big_b [needed].
+    let nnc = cneg(d, p, neg_c);
+    let nn = double_neg(d, p, c); // Equiv nnc c
+    let nn_symm = esymm(d, p, nnc, c, nn); // Equiv c nnc
+    let refl_b = erefl(d, p, big_b);
+    let neg_neg_c_le_b = d.lemma(p.le_congr, &[c, nnc, big_b, big_b, nn_symm, refl_b, c_le_b]);
+
+    let upper_neg = upper_bound(
+        d,
+        p,
+        neg_c,
+        t,
+        big_b,
+        small_b,
+        negc_le_b,
+        neg_neg_c_le_b,
+        t_le_b,
+        negt_le_b,
+    );
+    // le (mul neg_c t) (mul big_b small_b)
+
+    let mul_negc_t = cmul(d, p, neg_c, t);
+    let mul_bb = cmul(d, p, big_b, small_b);
+    // upper_neg : le mul_negc_t mul_bb, directly -- upper_bound returns `le
+    // (mul x t) (mul B b)` with no `abs` in it, so no `le_abs_self`/`le_trans`
+    // detour through `abs mul_negc_t` is needed (or well-typed) here.
+
+    let mul_ct = cmul(d, p, c, t);
+    let neg_mul_ct = cneg(d, p, mul_ct);
+    let nme = neg_mul_equiv_left(d, p, c, t); // Equiv mul_negc_t neg_mul_ct
+    let refl_bb = erefl(d, p, mul_bb);
+    let lower = d.lemma(
+        p.le_congr,
+        &[
+            mul_negc_t, neg_mul_ct, mul_bb, mul_bb, nme, refl_bb, upper_neg,
+        ],
+    ); // le neg_mul_ct mul_bb
+
+    d.lemma(p.abs_le, &[mul_ct, mul_bb, upper, lower])
+}
+
+/// `CReal.abs_mul_le_of_bounds : forall c t B b, le (abs c) B -> le (abs t)
+/// b -> le (abs (mul c t)) (mul B b)`. See
+/// [`CRealPrelude::abs_mul_le_of_bounds`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_abs_mul_le_of_bounds(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let big_b_fv = d.fresh_fvar();
+    let big_b = d.kernel().fvar(big_b_fv);
+    let small_b_fv = d.fresh_fvar();
+    let small_b = d.kernel().fvar(small_b_fv);
+
+    let abs_c = cabs(d, p, c);
+    let abs_t = cabs(d, p, t);
+    let hc_ty = d.const_app(p.le, &[abs_c, big_b]);
+    let hc_fv = d.fresh_fvar();
+    let hc = d.kernel().fvar(hc_fv);
+    let ht_ty = d.const_app(p.le, &[abs_t, small_b]);
+    let ht_fv = d.fresh_fvar();
+    let ht = d.kernel().fvar(ht_fv);
+
+    let body = abs_mul_le_of_bounds_body(d, p, c, t, big_b, small_b, hc, ht);
+
+    let value = {
+        let with_ht = d.lam_fv(ht_fv, ht_ty, body);
+        let with_hc = d.lam_fv(hc_fv, hc_ty, with_ht);
+        let with_smallb = d.lam_fv(small_b_fv, carrier, with_hc);
+        let with_bigb = d.lam_fv(big_b_fv, carrier, with_smallb);
+        let with_t = d.lam_fv(t_fv, carrier, with_bigb);
+        d.lam_fv(c_fv, carrier, with_t)
+    };
+    let ty = {
+        let mul_ct = cmul(d, p, c, t);
+        let mul_bb = cmul(d, p, big_b, small_b);
+        let abs_mul_ct = cabs(d, p, mul_ct);
+        let conclusion = d.const_app(p.le, &[abs_mul_ct, mul_bb]);
+        let after_ht = d.arrow(ht_ty, conclusion);
+        let after_hc = d.arrow(hc_ty, after_ht);
+        let with_smallb = d.pi_fv(small_b_fv, carrier, after_hc);
+        let with_bigb = d.pi_fv(big_b_fv, carrier, with_smallb);
+        let with_t = d.pi_fv(t_fv, carrier, with_bigb);
+        d.pi_fv(c_fv, carrier, with_t)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_mul_le_of_bounds,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 // --- the carrier --------------------------------------------------------------
