@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-witt-shifted-degree-seven-closed-form",
+  "title": "Degree-seven joint Witt shifted-trace closed form",
+  "statement": "For every q=2^r, r>=1, at (ell,n,c)=(3,7,2) the complete high-character correlation summed over exact low-twist conductor one is zero, while the exact-conductor-two high-character trace is q^9(q-1)^2. Its q-degree is 11, exactly one below the formal top degree 12.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"field_order\":\"q=2^r\",\"format\":\"axeyum-gf2-witt-shifted-degree-seven-closed-form\",\"parameters\":{\"coarse_level\":2,\"ell\":3,\"n\":7,\"r\":\"r>=1\"},\"trace_layer_1\":0,\"trace_layer_2\":\"q^9*(q-1)^2\",\"version\":1}",
+    "fragment": "gf2-extension-polynomial-identity",
+    "free_symbols": ["q", "r"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "finite-field-polynomial-semantics-v1",
+    "characteristic-two-degree-seven-population-formula",
+    "finite-abelian-fourier-orthogonality"
+  ],
+  "evidence": [
+    {
+      "id": "gf2-witt-shifted-degree-seven-native-check",
+      "kind": "exhaustive-enumeration",
+      "supports": "The q-ary conditional-covariance derivation, both exact-conductor layers, their high-character normalization, and independent full enumeration over GF(2) and GF(4).",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features witt_shifted_trace",
+      "artifact": "crates/axeyum-cas/src/gf2_extension.rs",
+      "notes": "The universal step substitutes the two-valued degree-seven class population into the exact conditional covariance. Enumeration at q=2 and q=4 is a mutation control, not quantifier evidence."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-21",
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "exact characteristic-two extension-field class populations and q-ary Fourier orthogonality"
+  },
+  "notes": "This proves that affine-shell dimension alone cannot yield repeated weight drops in the joint Witt shifted trace. It does not refute a growing-conductor WITT-LOW estimate using cross-layer or Mobius cancellation and supplies no Lemire theorem credit."
+}
