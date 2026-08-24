@@ -125,6 +125,12 @@ pub struct CPointPrelude {
     pub two_pos_bound: NameId,
     /// `CPoint.Scalar.inv2 := CReal.inv two 0 twoPosBound` — division by two.
     pub inv2: NameId,
+    /// `CPoint.Scalar.one_sub_inv2 : Equiv (add CReal.one (neg inv2)) inv2`
+    /// — `1 - 1/2 = 1/2`. Isolated because [`Self::stewart`]'s `t := inv2`
+    /// specialisation carries a `mul (add one (neg t)) …` factor that must be
+    /// rewritten to `mul inv2 …` before it reads as a median-length relation
+    /// ([`Self::stewart_median`]).
+    pub one_sub_inv2: NameId,
     /// `CPoint.Scalar.midpoint a b := CReal.mul inv2 (CReal.add a b)`.
     pub midpoint: NameId,
     /// `CPoint.Scalar.midpoint_comm : ∀ a b, Equiv (midpoint a b) (midpoint b a)`.
@@ -355,8 +361,8 @@ pub struct CPointPrelude {
     /// that identity would reduce to, each independently a real (and
     /// independently checkable) instance of the parallelogram law.
     /// `CD ~ -(AB)` follows from the hypothesis directly
-    /// ([`opposite_side_neg_scalar_proof`]), `DA ~ -(BC)` from that plus pure
-    /// ring algebra ([`diag_side_neg_scalar_proof`]); `dot(X,X) ~ dot(-X,-X)`
+    /// (`opposite_side_neg_scalar_proof`), `DA ~ -(BC)` from that plus pure
+    /// ring algebra (`diag_side_neg_scalar_proof`); `dot(X,X) ~ dot(-X,-X)`
     /// ([`dot_neg_neg_proof`]) turns each into a `distSq` equality.
     pub parallelogram_opposite_sides_eq: NameId,
     /// `CPoint.dot_self_add : ∀ U V,
@@ -510,6 +516,18 @@ pub struct CPointPrelude {
     /// (`3G ~ A+(B+C)`) and `2M ~ B+C` (`double_midpoint_proof`), no
     /// hypothesis, unconditional for every configuration.
     pub centroid_median: NameId,
+    /// **The centroid divides each median 2:1, difference form.** `∀ A B C,
+    /// Equiv (add (add (sub G A) (sub G A)) (sub G A)) (add (sub M A) (sub M A))`,
+    /// where `G := centroid A B C`, `M := point_midpoint B C`, i.e.
+    /// `3(G−A) ~ 2(M−A)` (`2X`/`3X` spelled `X+X`/`(X+X)+X`, same convention
+    /// as [`Self::centroid_median`]).
+    ///
+    /// Derived from [`Self::centroid_median`] by subtracting `3A` from both
+    /// sides at the scalar level (`mul_sub_right_proof` plus the
+    /// `mul three a ~ mul two a + a` bridge, `add_middle_swap_proof` for the
+    /// final rearrangement), not restated or reproved from scratch. No
+    /// hypothesis, no `inv3`, unconditional for every configuration.
+    pub centroid_ratio: NameId,
     /// **Leibniz's centroid formula.** `∀ P A B C,
     /// Equiv (add (distSq P A) (add (distSq P B) (distSq P C)))
     ///       (add (add (add (distSq P G) (distSq P G)) (distSq P G))
@@ -575,6 +593,48 @@ pub struct CPointPrelude {
     /// `distSq A C`, then pure `CReal` ring algebra in the four opaque
     /// quantities `distSq A B`, `dot (sub A B) (sub C B)`, `distSq B C`, `t`.
     pub stewart: NameId,
+    /// **The median corollary of Stewart.** `∀ A B C,
+    /// Equiv (add (distSq A M) (mul inv2 (mul inv2 (distSq B C))))
+    ///       (add (mul inv2 (distSq A B)) (mul inv2 (distSq A C)))`,
+    /// where `M := point_midpoint B C`.
+    ///
+    /// [`Self::stewart`] instantiated at `t := inv2`, then rewritten through
+    /// [`Self::lerp_half_is_midpoint`] (`lerp B C inv2 ~ M`) and
+    /// [`Self::one_sub_inv2`] (`1 − inv2 ~ inv2`, applied to both `mul (add
+    /// one (neg inv2)) …` factors `stewart` produces at this `t`). **Not
+    /// textually [`Self::apollonius_median`]**: doubling this identity and
+    /// eliminating `distSq A M`'s sibling `distSq B M` through the (unbuilt)
+    /// identity `distSq B M ~ mul inv2 (mul inv2 (distSq B C))` recovers
+    /// `apollonius_median` exactly (`BM² = ¼BC²` is what bridges "distance to
+    /// the midpoint" and "distance between the endpoints") — the two
+    /// theorems are the same fact under that bridge, not proved one from the
+    /// other in this file.
+    pub stewart_median: NameId,
+    /// **The circumcentre identity, unconditional.** `∀ O A B C,
+    /// Equiv (add (add (distSq O A) (neg (distSq O B))) (add (add (distSq O B)
+    /// (neg (distSq O C))) (add (distSq O C) (neg (distSq O A)))))
+    /// CReal.zero`.
+    ///
+    /// Mirrors [`Self::orthocentre_identity`]'s shape exactly: a
+    /// hypothesis-free 3-term cyclic sum, always zero, purely because `(x-y) +
+    /// ((y-z)+(z-x)) ~ 0` for any three `CReal`s — here `x,y,z :=` the three
+    /// squared distances from `O`. [`Self::circumcentre_third_distance`] is
+    /// what makes it usable the way [`Self::orthocentre_third_altitude`] uses
+    /// `orthocentre_identity`.
+    pub circumcentre_identity: NameId,
+    /// **Concurrence of the two circumcentre equalities.** `∀ O A B C,
+    /// Equiv (distSq O A) (distSq O B) → Equiv (distSq O B) (distSq O C) →
+    /// Equiv (distSq O A) (distSq O C)`.
+    ///
+    /// Immediate from [`Self::circumcentre_identity`] exactly the way
+    /// [`Self::orthocentre_third_altitude`] is immediate from
+    /// `orthocentre_identity`: the two hypotheses make the first two summands
+    /// of that cyclic sum vanish, so the third must too, and unwinding the
+    /// third summand (`distSq O C − distSq O A ~ 0`) gives the stated
+    /// conclusion. (A direct `CReal.Equiv` transitivity proof would be
+    /// shorter; this route is taken to keep the same two-lemma shape as the
+    /// orthocentre pair.)
+    pub circumcentre_third_distance: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -599,6 +659,7 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_point_equiv(&mut d, p)?;
     declare_two(&mut d, p)?;
     declare_inv2(&mut d, p)?;
+    declare_one_sub_inv2(&mut d, p)?;
     declare_midpoint(&mut d, p)?;
     declare_midpoint_comm(&mut d, p)?;
     declare_midpoint_self(&mut d, p)?;
@@ -629,6 +690,8 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_dist_sq_congr(&mut d, p)?;
     declare_dist_sq_comm(&mut d, p)?;
     declare_dist_sq_self_zero(&mut d, p)?;
+    declare_circumcentre_identity(&mut d, p)?;
+    declare_circumcentre_third_distance(&mut d, p)?;
     declare_pythagoras_dist_sq(&mut d, p)?;
     declare_parallelogram_diagonals_bisect(&mut d, p)?;
     declare_parallelogram_opposite_sides_eq(&mut d, p)?;
@@ -644,6 +707,7 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_centroid_scalar_self(&mut d, p)?;
     declare_centroid(&mut d, p)?;
     declare_centroid_median(&mut d, p)?;
+    declare_centroid_ratio(&mut d, p)?;
     declare_centroid_dist_sq(&mut d, p)?;
     declare_lerp_scalar(&mut d, p)?;
     declare_point_lerp(&mut d, p)?;
@@ -652,6 +716,7 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_lerp_half_is_midpoint(&mut d, p)?;
     declare_lerp_dist_sq(&mut d, p)?;
     declare_stewart(&mut d, p)?;
+    declare_stewart_median(&mut d, p)?;
     Ok(p)
 }
 
@@ -670,6 +735,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         two: kernel.name_str(scalar, "two"),
         two_pos_bound: kernel.name_str(scalar, "twoPosBound"),
         inv2: kernel.name_str(scalar, "inv2"),
+        one_sub_inv2: kernel.name_str(scalar, "one_sub_inv2"),
         midpoint: kernel.name_str(scalar, "midpoint"),
         midpoint_comm: kernel.name_str(scalar, "midpoint_comm"),
         midpoint_self: kernel.name_str(scalar, "midpoint_self"),
@@ -716,6 +782,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         centroid_scalar_self: kernel.name_str(scalar, "centroid_self"),
         centroid: kernel.name_str(point, "centroid"),
         centroid_median: kernel.name_str(point, "centroid_median"),
+        centroid_ratio: kernel.name_str(point, "centroid_ratio"),
         centroid_dist_sq: kernel.name_str(point, "centroid_distSq"),
         lerp_scalar: kernel.name_str(scalar, "lerp"),
         point_lerp: kernel.name_str(point, "lerp"),
@@ -724,6 +791,9 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         lerp_half_is_midpoint: kernel.name_str(point, "lerp_half_is_midpoint"),
         lerp_dist_sq: kernel.name_str(point, "lerp_dist_sq"),
         stewart: kernel.name_str(point, "stewart"),
+        stewart_median: kernel.name_str(point, "stewart_median"),
+        circumcentre_identity: kernel.name_str(point, "circumcentre_identity"),
+        circumcentre_third_distance: kernel.name_str(point, "circumcentre_third_distance"),
     }
 }
 
@@ -1131,13 +1201,13 @@ fn opposite_side_neg_scalar_proof(
 
 /// `Equiv (add dx (neg ax)) (neg (add bx (neg cx)))` — `D - A ~ -(B - C)`,
 /// given `hw : Equiv (add cx (neg dx)) (neg (add ax (neg bx)))`
-/// [`C - D ~ -(A - B)`, i.e. [`opposite_side_neg_scalar_proof`]'s conclusion
+/// [`C - D ~ -(A - B)`, i.e. `opposite_side_neg_scalar_proof`'s conclusion
 /// on the same four coordinates] — the scalar content behind
 /// [`CPointPrelude::parallelogram_opposite_sides_eq`]'s `DA ~ -(BC)` step.
 ///
 /// Pure ring algebra plus `hw`: `A - D ~ (A-C)+(C-D) ~ (A-B)+(B-C)+(C-D)`
-/// ([`telescope_scalar_proof`] twice), the last summand cancels the first
-/// against `hw` ([`add_sub_cancel_left`]) leaving `B - C`, then
+/// (`telescope_scalar_proof` twice), the last summand cancels the first
+/// against `hw` (`add_sub_cancel_left`) leaving `B - C`, then
 /// `neg_sub_comm_scalar_proof` turns `D - A ~ -(A - D)` into the claim.
 fn diag_side_neg_scalar_proof(
     d: &mut IntDev<'_>,
@@ -2120,6 +2190,278 @@ fn centroid_median_scalar_proof(
     )
 }
 
+/// `Equiv (add (add (sub g a) (sub g a)) (sub g a)) (add (sub m a) (sub m a))`
+/// — `3(g-a) ~ 2(m-a)`, `g := ccentroid_raw a b c`, `m := midpoint b c` (raw).
+/// Derived from [`centroid_median_scalar_proof`]'s `Equiv((g+g)+g, a+(m+m))`
+/// by subtracting `3a` from both sides: `mul_sub_right_proof` turns `mul
+/// three (sub g a)` into `mul three g − mul three a`, the bridge `mul three a
+/// ~ mul two a + a` (via [`three_mul_eq_triple_proof`]/[`two_mul_eq_double_proof`])
+/// lets `add_middle_swap_proof` cancel the shared `a`, and what remains is
+/// `mul two m − mul two a = mul two (sub m a)` (`mul_sub_right_proof` again).
+fn centroid_ratio_scalar_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let g = ccentroid_raw(d, p, a, b, c);
+    let inv2 = d.kernel().const_(p.inv2, vec![]);
+    let bc = cadd(d, p, b, c);
+    let m = cmul(d, p, inv2, bc); // raw =defeq= midpoint b c
+
+    let three = d.kernel().const_(p.three, vec![]);
+    let two = d.kernel().const_(p.two, vec![]);
+
+    // mul three g ~ (g+g)+g ~ a+(m+m) ~ a + mul two m.
+    let h_cm = centroid_median_scalar_proof(d, p, a, b, c); // Equiv((g+g)+g, a+(m+m))
+    let gg = cadd(d, p, g, g);
+    let gg_g = cadd(d, p, gg, g);
+    let mm = cadd(d, p, m, m);
+    let a_mm = cadd(d, p, a, mm);
+    let mul_three_g = cmul(d, p, three, g);
+    let mte_g = three_mul_eq_triple_proof(d, p, g); // Equiv(mul_three_g, gg_g)
+    let mg_a_mm = chain(d, p, mul_three_g, &[(gg_g, mte_g), (a_mm, h_cm)]); // Equiv(mul_three_g, a_mm)
+
+    let mul_two_m = cmul(d, p, two, m);
+    let tm = two_mul_eq_double_proof(d, p, m); // Equiv(mul_two_m, m+m)
+    let tm_symm = symm(d, p, mul_two_m, mm, tm); // Equiv(mm, mul_two_m)
+    let refl_a = refl(d, p, a);
+    let congr_a_mm = d.lemma(creal.add_congr, &[a, a, mm, mul_two_m, refl_a, tm_symm]); // Equiv(a_mm, a+mul_two_m)
+    let a_mul_two_m = cadd(d, p, a, mul_two_m);
+    let mg2 = chain(
+        d,
+        p,
+        mul_three_g,
+        &[(a_mm, mg_a_mm), (a_mul_two_m, congr_a_mm)],
+    ); // Equiv(mul_three_g, a+mul_two_m)
+
+    // mul three (sub g a) ~ mul_three_g + neg(mul three a) ~ (a+mul_two_m) + neg(mul three a).
+    let neg_a = cneg(d, p, a);
+    let sub_ga = cadd(d, p, g, neg_a);
+    let mul_three_sub_ga = cmul(d, p, three, sub_ga);
+    let msr_g = mul_sub_right_proof(d, p, three, g, a); // Equiv(mul_three_sub_ga, add mul_three_g (neg (mul three a)))
+    let mul_three_a = cmul(d, p, three, a);
+    let neg_mta = cneg(d, p, mul_three_a);
+    let mul_three_g_neg_mta = cadd(d, p, mul_three_g, neg_mta);
+    let refl_neg_mta = refl(d, p, neg_mta);
+    let step_replace = d.lemma(
+        creal.add_congr,
+        &[
+            mul_three_g,
+            a_mul_two_m,
+            neg_mta,
+            neg_mta,
+            mg2,
+            refl_neg_mta,
+        ],
+    ); // Equiv(mul_three_g_neg_mta, a_mul_two_m+neg_mta)
+    let a_mul_two_m_neg_mta = cadd(d, p, a_mul_two_m, neg_mta);
+    let phase1 = chain(
+        d,
+        p,
+        mul_three_sub_ga,
+        &[
+            (mul_three_g_neg_mta, msr_g),
+            (a_mul_two_m_neg_mta, step_replace),
+        ],
+    ); // Equiv(mul_three_sub_ga, a_mul_two_m_neg_mta)
+
+    // mul three a ~ mul two a + a.
+    let mte_a = three_mul_eq_triple_proof(d, p, a); // Equiv(mul_three_a, (a+a)+a)
+    let aa = cadd(d, p, a, a);
+    let aa_a = cadd(d, p, aa, a);
+    let mul_two_a = cmul(d, p, two, a);
+    let tm_a = two_mul_eq_double_proof(d, p, a); // Equiv(mul_two_a, a+a)
+    let tm_a_symm = symm(d, p, mul_two_a, aa, tm_a); // Equiv(aa, mul_two_a)
+    let refl_a2 = refl(d, p, a);
+    let congr_replace = d.lemma(creal.add_congr, &[aa, mul_two_a, a, a, tm_a_symm, refl_a2]); // Equiv(aa_a, mul_two_a+a)
+    let mul_two_a_a = cadd(d, p, mul_two_a, a);
+    let y_eq_za = chain(
+        d,
+        p,
+        mul_three_a,
+        &[(aa_a, mte_a), (mul_two_a_a, congr_replace)],
+    ); // Equiv(mul_three_a, mul_two_a+a)
+
+    // neg(mul three a) ~ neg a + neg(mul two a).
+    let neg_congr_y = d.lemma(creal.neg_congr, &[mul_three_a, mul_two_a_a, y_eq_za]); // Equiv(neg_mta, neg(mul_two_a_a))
+    let neg_mul_two_a_a = cneg(d, p, mul_two_a_a);
+    let na1 = neg_add_proof(d, p, mul_two_a, a); // Equiv(neg(mul_two_a_a), add(neg mul_two_a)(neg a))
+    let neg_mul_two_a = cneg(d, p, mul_two_a);
+    let neg_z_neg_a = cadd(d, p, neg_mul_two_a, neg_a);
+    let comm_zn = d.lemma(creal.add_comm, &[neg_mul_two_a, neg_a]); // Equiv(negZ+negA, negA+negZ)
+    let neg_a_neg_z = cadd(d, p, neg_a, neg_mul_two_a);
+    let neg_mta_final = chain(
+        d,
+        p,
+        neg_mta,
+        &[
+            (neg_mul_two_a_a, neg_congr_y),
+            (neg_z_neg_a, na1),
+            (neg_a_neg_z, comm_zn),
+        ],
+    ); // Equiv(neg_mta, neg_a_neg_z)
+
+    // (a+mul_two_m) + neg_mta ~ (a+mul_two_m) + (negA+negZ) ~ (a+negA)+(mul_two_m+negZ).
+    let refl_a_x = refl(d, p, a_mul_two_m);
+    let step2 = d.lemma(
+        creal.add_congr,
+        &[
+            a_mul_two_m,
+            a_mul_two_m,
+            neg_mta,
+            neg_a_neg_z,
+            refl_a_x,
+            neg_mta_final,
+        ],
+    ); // Equiv(a_mul_two_m_neg_mta, a_mul_two_m + neg_a_neg_z)
+    let a_x_neg_a_neg_z = cadd(d, p, a_mul_two_m, neg_a_neg_z);
+
+    let swap = add_middle_swap_proof(d, p, a, mul_two_m, neg_a, neg_mul_two_a); // Equiv(a_x_neg_a_neg_z, (a+negA)+(mul_two_m+negZ))
+    let a_neg_a = cadd(d, p, a, neg_a);
+    let x_neg_z = cadd(d, p, mul_two_m, neg_mul_two_a);
+    let swapped = cadd(d, p, a_neg_a, x_neg_z);
+
+    let an_a = d.lemma(creal.add_neg, &[a]); // Equiv(a_neg_a, zero)
+    let zero = czero(d, p);
+    let refl_xz = refl(d, p, x_neg_z);
+    let congr_zero = d.lemma(
+        creal.add_congr,
+        &[a_neg_a, zero, x_neg_z, x_neg_z, an_a, refl_xz],
+    ); // Equiv(swapped, zero+x_neg_z)
+    let zero_xz = cadd(d, p, zero, x_neg_z);
+    let za = zero_add_proof(d, p, x_neg_z); // Equiv(zero_xz, x_neg_z)
+
+    // x_neg_z ~ mul two (sub m a).
+    let neg_a3 = cneg(d, p, a);
+    let sub_ma = cadd(d, p, m, neg_a3);
+    let mul_two_ma = cmul(d, p, two, sub_ma);
+    let msr_m = mul_sub_right_proof(d, p, two, m, a); // Equiv(mul_two_ma, add mul_two_m (neg mul_two_a)) = Equiv(mul_two_ma, x_neg_z)
+    let msr_m_symm = symm(d, p, mul_two_ma, x_neg_z, msr_m); // Equiv(x_neg_z, mul_two_ma)
+
+    let final_to_mul_two_ma = chain(
+        d,
+        p,
+        swapped,
+        &[
+            (zero_xz, congr_zero),
+            (x_neg_z, za),
+            (mul_two_ma, msr_m_symm),
+        ],
+    ); // Equiv(swapped, mul_two_ma)
+
+    let mte_ratio = chain(
+        d,
+        p,
+        mul_three_sub_ga,
+        &[
+            (a_mul_two_m_neg_mta, phase1),
+            (a_x_neg_a_neg_z, step2),
+            (swapped, swap),
+            (mul_two_ma, final_to_mul_two_ma),
+        ],
+    ); // Equiv(mul_three_sub_ga, mul_two_ma)
+
+    // Convert to the "(X+X)+X ~ Y+Y" additive form.
+    let ga_ga = cadd(d, p, sub_ga, sub_ga);
+    let x3 = cadd(d, p, ga_ga, sub_ga);
+    let three_mte_ga = three_mul_eq_triple_proof(d, p, sub_ga); // Equiv(mul_three_sub_ga, x3)
+    let three_mte_ga_symm = symm(d, p, mul_three_sub_ga, x3, three_mte_ga); // Equiv(x3, mul_three_sub_ga)
+
+    let y2 = cadd(d, p, sub_ma, sub_ma);
+    let two_mte_ma = two_mul_eq_double_proof(d, p, sub_ma); // Equiv(mul_two_ma, y2)
+
+    chain(
+        d,
+        p,
+        x3,
+        &[
+            (mul_three_sub_ga, three_mte_ga_symm),
+            (mul_two_ma, mte_ratio),
+            (y2, two_mte_ma),
+        ],
+    )
+}
+
+/// **The centroid divides each median 2:1, difference form.** See
+/// [`CPointPrelude::centroid_ratio`].
+fn declare_centroid_ratio(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+
+    let proof_x = centroid_ratio_scalar_proof(d, p, ax, bx, cx);
+    let proof_y = centroid_ratio_scalar_proof(d, p, ay, by, cy);
+
+    let gx = ccentroid_raw(d, p, ax, bx, cx);
+    let gy = ccentroid_raw(d, p, ay, by, cy);
+    let inv2 = d.kernel().const_(p.inv2, vec![]);
+    let bcx = cadd(d, p, bx, cx);
+    let mx = cmul(d, p, inv2, bcx);
+    let bcy = cadd(d, p, by, cy);
+    let my = cmul(d, p, inv2, bcy);
+
+    let claim_x = {
+        let neg_ax = cneg(d, p, ax);
+        let ga_x = cadd(d, p, gx, neg_ax);
+        let ga_ga_x = cadd(d, p, ga_x, ga_x);
+        let lhs_x = cadd(d, p, ga_ga_x, ga_x);
+        let ma_x = cadd(d, p, mx, neg_ax);
+        let rhs_x = cadd(d, p, ma_x, ma_x);
+        equiv(d, p, lhs_x, rhs_x)
+    };
+    let claim_y = {
+        let neg_ay = cneg(d, p, ay);
+        let ga_y = cadd(d, p, gy, neg_ay);
+        let ga_ga_y = cadd(d, p, ga_y, ga_y);
+        let lhs_y = cadd(d, p, ga_ga_y, ga_y);
+        let ma_y = cadd(d, p, my, neg_ay);
+        let rhs_y = cadd(d, p, ma_y, ma_y);
+        equiv(d, p, lhs_y, rhs_y)
+    };
+    let proof = and_intro(d, p, claim_x, claim_y, proof_x, proof_y);
+
+    let big_g = d.const_app(p.centroid, &[pa, pb, pc]);
+    let big_m = d.const_app(p.point_midpoint, &[pb, pc]);
+    let sub_g_a = psub(d, p, big_g, pa);
+    let sub_m_a = psub(d, p, big_m, pa);
+    let gg_point = padd(d, p, sub_g_a, sub_g_a);
+    let ggg_point = padd(d, p, gg_point, sub_g_a);
+    let mm_point = padd(d, p, sub_m_a, sub_m_a);
+    let ty_body = d.const_app(p.point_equiv, &[ggg_point, mm_point]);
+
+    let ty = {
+        let w2 = d.pi_fv(c_fv, point, ty_body);
+        let w1 = d.pi_fv(b_fv, point, w2);
+        d.pi_fv(a_fv, point, w1)
+    };
+    let value = {
+        let w2 = d.lam_fv(c_fv, point, proof);
+        let w1 = d.lam_fv(b_fv, point, w2);
+        d.lam_fv(a_fv, point, w1)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.centroid_ratio,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `Equiv (add (add a (neg g)) (add (add b (neg g)) (add c (neg g)))) CReal.zero`
 /// — `(a-g)+((b-g)+(c-g)) ~ 0`, given `hg : Equiv (add g (add g g)) (add a
 /// (add b c))` (`3g ~ a+b+c`). The per-coordinate content behind
@@ -2473,6 +2815,58 @@ fn declare_inv2(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError>
         ty: carrier,
         value,
         hint: ReducibilityHint::Regular(LEAF_HEIGHT + 1),
+    })
+}
+
+/// `Scalar.one_sub_inv2 : Equiv (add CReal.one (neg inv2)) inv2`. See
+/// [`CPointPrelude::one_sub_inv2`].
+fn declare_one_sub_inv2(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let inv2 = d.kernel().const_(p.inv2, vec![]);
+    let two = d.kernel().const_(p.two, vec![]);
+    let one = d.kernel().const_(creal.one, vec![]);
+    let zero_nat = d.num(0);
+    let h_two = d.kernel().const_(p.two_pos_bound, vec![]);
+
+    // inv2 + inv2 ~ mul two inv2 ~ one.
+    let double_inv2 = two_mul_eq_double_proof(d, p, inv2); // Equiv(mul two inv2, add inv2 inv2)
+    let mul_two_inv2 = cmul(d, p, two, inv2);
+    let inv2_inv2 = cadd(d, p, inv2, inv2);
+    let cancel = d.lemma(creal.mul_inv_cancel, &[two, zero_nat, h_two]); // Equiv(mul_two_inv2, one)
+    let inv2_inv2_symm = symm(d, p, mul_two_inv2, inv2_inv2, double_inv2); // Equiv(inv2_inv2, mul_two_inv2)
+    let h_ii = chain(
+        d,
+        p,
+        inv2_inv2,
+        &[(mul_two_inv2, inv2_inv2_symm), (one, cancel)],
+    ); // Equiv(inv2_inv2, one)
+
+    // (inv2+inv2) - inv2 ~ inv2.
+    let cancel_step = add_sub_cancel_left(d, p, inv2, inv2); // Equiv(add inv2_inv2 (neg inv2), inv2)
+
+    let neg_inv2 = cneg(d, p, inv2);
+    let one_neg_inv2 = cadd(d, p, one, neg_inv2);
+    let ii_neg_inv2 = cadd(d, p, inv2_inv2, neg_inv2);
+    let h_ii_symm = symm(d, p, inv2_inv2, one, h_ii); // Equiv(one, inv2_inv2)
+    let refl_neg_inv2 = refl(d, p, neg_inv2);
+    let congr = d.lemma(
+        creal.add_congr,
+        &[one, inv2_inv2, neg_inv2, neg_inv2, h_ii_symm, refl_neg_inv2],
+    ); // Equiv(one_neg_inv2, ii_neg_inv2)
+
+    let final_proof = chain(
+        d,
+        p,
+        one_neg_inv2,
+        &[(ii_neg_inv2, congr), (inv2, cancel_step)],
+    );
+
+    let ty = equiv(d, p, one_neg_inv2, inv2);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.one_sub_inv2,
+        uparams: vec![],
+        ty,
+        value: final_proof,
     })
 }
 
@@ -4749,8 +5143,8 @@ fn declare_thales(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelErro
 /// coordinates of `m` and `pt` — the "`P - A ~ neg (A - P)`" shape consumed
 /// three times in [`declare_orthocentre_identity`] (for `A`, `B`, `C` in turn
 /// as `m`, always against the shared vertex `pt` as `P`). Per-coordinate
-/// `symm` of [`neg_sub_comm_scalar_proof`], packaged via [`and_intro`] the
-/// same way [`declare_pythagoras`] packages [`diff_diff_scalar_proof`].
+/// `symm` of `neg_sub_comm_scalar_proof`, packaged via [`and_intro`] the
+/// same way [`declare_pythagoras`] packages `diff_diff_scalar_proof`.
 fn point_sub_eq_neg_sub_fact(
     d: &mut IntDev<'_>,
     p: CPointPrelude,
@@ -4785,7 +5179,7 @@ fn point_sub_eq_neg_sub_fact(
 /// `CPoint.Equiv (sub a b) (sub (sub a c) (sub b c))`, generic over the raw
 /// coordinates of `a`, `b`, `c` — the "`A - B ~ (A-P) - (B-P)`" shape consumed
 /// three times in [`declare_orthocentre_identity`]. Per-coordinate
-/// [`diff_diff_scalar_proof`], packaged via [`and_intro`] exactly the way
+/// `diff_diff_scalar_proof`, packaged via [`and_intro`] exactly the way
 /// [`declare_pythagoras`]'s `diff_ab_w` is.
 fn point_diff_diff_fact(
     d: &mut IntDev<'_>,
@@ -5465,6 +5859,230 @@ fn declare_dist_sq_self_zero(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(),
     let value = d.lam_fv(pa_fv, point, proof);
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.dist_sq_self_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Equiv (build_right_chain [x, neg x, y, neg y, z, neg z]) CReal.zero` —
+/// three cancelling pairs, chained right-associatively. The reassociation
+/// target [`declare_circumcentre_identity`] reaches via
+/// [`reorder_right_chain`] after flattening its own (differently grouped)
+/// statement.
+fn six_term_cancel_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let nx = cneg(d, p, x);
+    let ny = cneg(d, p, y);
+    let nz = cneg(d, p, z);
+    let zero = czero(d, p);
+
+    // Innermost: z + nz ~ zero.
+    let l5 = d.lemma(creal.add_neg, &[z]);
+    let z_nz = cadd(d, p, z, nz);
+
+    // ny + (z+nz) ~ ny + zero ~ ny.
+    let refl_ny = refl(d, p, ny);
+    let c4 = d.lemma(creal.add_congr, &[ny, ny, z_nz, zero, refl_ny, l5]);
+    let ny_zero = cadd(d, p, ny, zero);
+    let az_ny = d.lemma(creal.add_zero, &[ny]);
+    let ny_znz = cadd(d, p, ny, z_nz);
+    let l4 = chain(d, p, ny_znz, &[(ny_zero, c4), (ny, az_ny)]);
+
+    // y + (ny+(z+nz)) ~ y+ny ~ zero.
+    let refl_y = refl(d, p, y);
+    let c3 = d.lemma(creal.add_congr, &[y, y, ny_znz, ny, refl_y, l4]);
+    let y_ny = cadd(d, p, y, ny);
+    let an_y = d.lemma(creal.add_neg, &[y]);
+    let y_nyznz = cadd(d, p, y, ny_znz);
+    let l3 = chain(d, p, y_nyznz, &[(y_ny, c3), (zero, an_y)]);
+
+    // nx + (y+(ny+(z+nz))) ~ nx+zero ~ nx.
+    let refl_nx = refl(d, p, nx);
+    let c2 = d.lemma(creal.add_congr, &[nx, nx, y_nyznz, zero, refl_nx, l3]);
+    let nx_zero = cadd(d, p, nx, zero);
+    let az_nx = d.lemma(creal.add_zero, &[nx]);
+    let nx_ynyznz = cadd(d, p, nx, y_nyznz);
+    let l2 = chain(d, p, nx_ynyznz, &[(nx_zero, c2), (nx, az_nx)]);
+
+    // Outermost: x + (nx+(y+(ny+(z+nz)))) ~ x+nx ~ zero.
+    let refl_x = refl(d, p, x);
+    let c1 = d.lemma(creal.add_congr, &[x, x, nx_ynyznz, nx, refl_x, l2]);
+    let x_nx = cadd(d, p, x, nx);
+    let an_x = d.lemma(creal.add_neg, &[x]);
+    let x_nxynyznz = cadd(d, p, x, nx_ynyznz);
+    chain(d, p, x_nxynyznz, &[(x_nx, c1), (zero, an_x)])
+}
+
+/// **The circumcentre identity, unconditional.** See
+/// [`CPointPrelude::circumcentre_identity`].
+fn declare_circumcentre_identity(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let o_fv = d.fresh_fvar();
+    let po = d.kernel().fvar(o_fv);
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let x_ = d.const_app(p.dist_sq, &[po, pa]);
+    let y_ = d.const_app(p.dist_sq, &[po, pb]);
+    let z_ = d.const_app(p.dist_sq, &[po, pc]);
+    let nx = cneg(d, p, x_);
+    let ny = cneg(d, p, y_);
+    let nz = cneg(d, p, z_);
+
+    // lhs_tree = ((x+ny)+(y+nz)) + (z+nx) = (ta+tb)+tc.
+    let lhs_tree = sadd(
+        sadd(
+            sadd(SumTree::Leaf(x_), SumTree::Leaf(ny)),
+            sadd(SumTree::Leaf(y_), SumTree::Leaf(nz)),
+        ),
+        sadd(SumTree::Leaf(z_), SumTree::Leaf(nx)),
+    );
+    let lhs = sum_tree_build(d, p, &lhs_tree);
+    let (lhs_chain, lhs_flatten) = flatten_sum_tree(d, p, &lhs_tree); // Equiv(lhs, lhs_chain)
+
+    let mut lhs_leaves = Vec::new();
+    sum_tree_leaves(&lhs_tree, &mut lhs_leaves); // [x, ny, y, nz, z, nx]
+    let to_leaves = vec![x_, nx, y_, ny, z_, nz];
+    let reorder = reorder_right_chain(d, p, &lhs_leaves, &to_leaves); // Equiv(lhs_chain, to_chain)
+    let to_chain = build_right_chain(d, p, &to_leaves);
+
+    let cancel = six_term_cancel_proof(d, p, x_, y_, z_); // Equiv(to_chain, zero)
+    let zero = czero(d, p);
+
+    let final_proof = chain(
+        d,
+        p,
+        lhs,
+        &[
+            (lhs_chain, lhs_flatten),
+            (to_chain, reorder),
+            (zero, cancel),
+        ],
+    );
+
+    let ty_body = equiv(d, p, lhs, zero);
+    let ty = {
+        let w3 = d.pi_fv(c_fv, point, ty_body);
+        let w2 = d.pi_fv(b_fv, point, w3);
+        let w1 = d.pi_fv(a_fv, point, w2);
+        d.pi_fv(o_fv, point, w1)
+    };
+    let value = {
+        let w3 = d.lam_fv(c_fv, point, final_proof);
+        let w2 = d.lam_fv(b_fv, point, w3);
+        let w1 = d.lam_fv(a_fv, point, w2);
+        d.lam_fv(o_fv, point, w1)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.circumcentre_identity,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// **Concurrence of the two circumcentre equalities.** See
+/// [`CPointPrelude::circumcentre_third_distance`].
+fn declare_circumcentre_third_distance(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let o_fv = d.fresh_fvar();
+    let po = d.kernel().fvar(o_fv);
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let x_ = d.const_app(p.dist_sq, &[po, pa]);
+    let y_ = d.const_app(p.dist_sq, &[po, pb]);
+    let z_ = d.const_app(p.dist_sq, &[po, pc]);
+
+    let h1_ty = equiv(d, p, x_, y_);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_ty = equiv(d, p, y_, z_);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    // ta := x + neg y ~ 0, from h1; tb := y + neg z ~ 0, from h2.
+    let ta = cancel_pos_neg(d, p, x_, y_, h1);
+    let tb = cancel_pos_neg(d, p, y_, z_, h2);
+
+    let neg_y = cneg(d, p, y_);
+    let neg_z = cneg(d, p, z_);
+    let neg_x = cneg(d, p, x_);
+    let ta_raw = cadd(d, p, x_, neg_y);
+    let tb_raw = cadd(d, p, y_, neg_z);
+    let tc_raw = cadd(d, p, z_, neg_x);
+
+    let zero = czero(d, p);
+    let zz = d.lemma(creal.add_zero, &[zero]); // Equiv(add zero zero, zero)
+    let c12 = d.lemma(creal.add_congr, &[ta_raw, zero, tb_raw, zero, ta, tb]);
+    let ta_tb_raw = cadd(d, p, ta_raw, tb_raw);
+    let zero_zero = cadd(d, p, zero, zero);
+    let c12_reduced = chain(d, p, ta_tb_raw, &[(zero_zero, c12), (zero, zz)]); // Equiv(ta_tb_raw, zero)
+
+    let refl_tc = refl(d, p, tc_raw);
+    let s0 = cadd(d, p, ta_tb_raw, tc_raw);
+    let c3 = d.lemma(
+        creal.add_congr,
+        &[ta_tb_raw, zero, tc_raw, tc_raw, c12_reduced, refl_tc],
+    ); // Equiv(s0, zero_tc)
+    let zero_tc = cadd(d, p, zero, tc_raw);
+    let za = zero_add_proof(d, p, tc_raw); // Equiv(zero_tc, tc_raw)
+    let reduced = chain(d, p, s0, &[(zero_tc, c3), (tc_raw, za)]); // Equiv(s0, tc_raw)
+    let reduced_symm = symm(d, p, s0, tc_raw, reduced); // Equiv(tc_raw, s0)
+
+    let ident_inst = d.lemma(p.circumcentre_identity, &[po, pa, pb, pc]); // Equiv(s0, zero)
+    let tc_zero = chain(d, p, tc_raw, &[(s0, reduced_symm), (zero, ident_inst)]); // Equiv(tc_raw, zero)
+
+    // tc_raw = z + neg x ~ zero  =>  z ~ x  =>  x ~ z.
+    let x_negx = cadd(d, p, x_, neg_x);
+    let an_x = d.lemma(creal.add_neg, &[x_]); // Equiv(x_negx, zero)
+    let an_x_symm = symm(d, p, x_negx, zero, an_x); // Equiv(zero, x_negx)
+    let combined = chain(d, p, tc_raw, &[(zero, tc_zero), (x_negx, an_x_symm)]); // Equiv(tc_raw, x_negx)
+    let zx_eq = d.lemma(p.add_right_cancel, &[z_, x_, neg_x, combined]); // Equiv(z_, x_)
+    let final_proof = symm(d, p, z_, x_, zx_eq); // Equiv(x_, z_)
+
+    let concl = equiv(d, p, x_, z_);
+    let ty_body = {
+        let inner = d.arrow(h2_ty, concl);
+        d.arrow(h1_ty, inner)
+    };
+    let ty = {
+        let w3 = d.pi_fv(c_fv, point, ty_body);
+        let w2 = d.pi_fv(b_fv, point, w3);
+        let w1 = d.pi_fv(a_fv, point, w2);
+        d.pi_fv(o_fv, point, w1)
+    };
+    let value = {
+        let inner = d.lam_fv(h2_fv, h2_ty, final_proof);
+        let with_h1 = d.lam_fv(h1_fv, h1_ty, inner);
+        let w3 = d.lam_fv(c_fv, point, with_h1);
+        let w2 = d.lam_fv(b_fv, point, w3);
+        let w1 = d.lam_fv(a_fv, point, w2);
+        d.lam_fv(o_fv, point, w1)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.circumcentre_third_distance,
         uparams: vec![],
         ty,
         value,
@@ -9347,6 +9965,157 @@ fn declare_stewart(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelErr
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.stewart,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// **The median corollary of Stewart.** See [`CPointPrelude::stewart_median`].
+///
+/// [`CPointPrelude::stewart`] instantiated at `t := inv2`, then rewritten:
+/// `distSq A (lerp B C inv2) ~ distSq A M` via [`CPointPrelude::dist_sq_congr`]
+/// and [`CPointPrelude::lerp_half_is_midpoint`], and both `mul (add one (neg
+/// inv2)) …` factors rewritten to `mul inv2 …` via
+/// [`CPointPrelude::one_sub_inv2`].
+fn declare_stewart_median(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let inv2 = d.kernel().const_(p.inv2, vec![]);
+    let one = d.kernel().const_(creal.one, vec![]);
+
+    // stewart A B C inv2 : Equiv(lhs_orig, rhs_orig).
+    let stewart_inst = d.lemma(p.stewart, &[pa, pb, pc, inv2]);
+
+    let lerp_bc_inv2 = d.const_app(p.point_lerp, &[pb, pc, inv2]);
+    let dsq_a_lerp = d.const_app(p.dist_sq, &[pa, lerp_bc_inv2]);
+    let neg_inv2 = cneg(d, p, inv2);
+    let one_neg_inv2 = cadd(d, p, one, neg_inv2);
+    let dsq_bc = d.const_app(p.dist_sq, &[pb, pc]);
+    let mul_one_neg_inv2_bc = cmul(d, p, one_neg_inv2, dsq_bc);
+    let mul_inv2_that = cmul(d, p, inv2, mul_one_neg_inv2_bc);
+    let lhs_orig = cadd(d, p, dsq_a_lerp, mul_inv2_that);
+
+    let dsq_ab = d.const_app(p.dist_sq, &[pa, pb]);
+    let mul_one_neg_inv2_ab = cmul(d, p, one_neg_inv2, dsq_ab);
+    let dsq_ac = d.const_app(p.dist_sq, &[pa, pc]);
+    let mul_inv2_ac = cmul(d, p, inv2, dsq_ac);
+    let rhs_orig = cadd(d, p, mul_one_neg_inv2_ab, mul_inv2_ac);
+
+    // distSq A (lerp B C inv2) ~ distSq A M.
+    let lerp_half = d.lemma(p.lerp_half_is_midpoint, &[pb, pc]); // Equiv(lerp_bc_inv2, M)
+    let big_m = d.const_app(p.point_midpoint, &[pb, pc]);
+    let refl_pa = point_equiv_refl(d, p, pa);
+    let dsq_congr_am = d.lemma(
+        p.dist_sq_congr,
+        &[pa, pa, lerp_bc_inv2, big_m, refl_pa, lerp_half],
+    ); // Equiv(dsq_a_lerp, dsq_a_m)
+    let dsq_a_m = d.const_app(p.dist_sq, &[pa, big_m]);
+
+    let one_sub_inv2 = d.kernel().const_(p.one_sub_inv2, vec![]); // Equiv(one_neg_inv2, inv2)
+
+    // Rewrite the BC factor: mul_one_neg_inv2_bc ~ mul inv2 dsq_bc.
+    let refl_dsq_bc = refl(d, p, dsq_bc);
+    let congr_bc = d.lemma(
+        creal.mul_congr,
+        &[
+            one_neg_inv2,
+            inv2,
+            dsq_bc,
+            dsq_bc,
+            one_sub_inv2,
+            refl_dsq_bc,
+        ],
+    );
+    let mul_inv2_bc = cmul(d, p, inv2, dsq_bc);
+    let refl_inv2 = refl(d, p, inv2);
+    let congr_inner = d.lemma(
+        creal.mul_congr,
+        &[
+            inv2,
+            inv2,
+            mul_one_neg_inv2_bc,
+            mul_inv2_bc,
+            refl_inv2,
+            congr_bc,
+        ],
+    );
+    let mul_inv2_mul_inv2_bc = cmul(d, p, inv2, mul_inv2_bc);
+
+    let lhs_congr = d.lemma(
+        creal.add_congr,
+        &[
+            dsq_a_lerp,
+            dsq_a_m,
+            mul_inv2_that,
+            mul_inv2_mul_inv2_bc,
+            dsq_congr_am,
+            congr_inner,
+        ],
+    ); // Equiv(lhs_orig, lhs_new)
+    let lhs_new = cadd(d, p, dsq_a_m, mul_inv2_mul_inv2_bc);
+
+    // Rewrite the AB factor: mul_one_neg_inv2_ab ~ mul inv2 dsq_ab.
+    let refl_dsq_ab = refl(d, p, dsq_ab);
+    let congr_ab = d.lemma(
+        creal.mul_congr,
+        &[
+            one_neg_inv2,
+            inv2,
+            dsq_ab,
+            dsq_ab,
+            one_sub_inv2,
+            refl_dsq_ab,
+        ],
+    );
+    let mul_inv2_ab = cmul(d, p, inv2, dsq_ab);
+    let refl_mul_inv2_ac = refl(d, p, mul_inv2_ac);
+    let rhs_congr = d.lemma(
+        creal.add_congr,
+        &[
+            mul_one_neg_inv2_ab,
+            mul_inv2_ab,
+            mul_inv2_ac,
+            mul_inv2_ac,
+            congr_ab,
+            refl_mul_inv2_ac,
+        ],
+    ); // Equiv(rhs_orig, rhs_new)
+    let rhs_new = cadd(d, p, mul_inv2_ab, mul_inv2_ac);
+
+    let lhs_congr_symm = symm(d, p, lhs_orig, lhs_new, lhs_congr); // Equiv(lhs_new, lhs_orig)
+    let final_proof = chain(
+        d,
+        p,
+        lhs_new,
+        &[
+            (lhs_orig, lhs_congr_symm),
+            (rhs_orig, stewart_inst),
+            (rhs_new, rhs_congr),
+        ],
+    );
+
+    let ty_body = equiv(d, p, lhs_new, rhs_new);
+    let ty = {
+        let w2 = d.pi_fv(c_fv, point, ty_body);
+        let w1 = d.pi_fv(b_fv, point, w2);
+        d.pi_fv(a_fv, point, w1)
+    };
+    let value = {
+        let w2 = d.lam_fv(c_fv, point, final_proof);
+        let w1 = d.lam_fv(b_fv, point, w2);
+        d.lam_fv(a_fv, point, w1)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.stewart_median,
         uparams: vec![],
         ty,
         value,

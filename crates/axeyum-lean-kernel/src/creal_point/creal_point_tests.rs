@@ -86,6 +86,11 @@ fn every_theorem_here_is_axiom_free() {
         ("lerp_half_is_midpoint", p.lerp_half_is_midpoint),
         ("lerp_dist_sq", p.lerp_dist_sq),
         ("stewart", p.stewart),
+        ("one_sub_inv2", p.one_sub_inv2),
+        ("centroid_ratio", p.centroid_ratio),
+        ("stewart_median", p.stewart_median),
+        ("circumcentre_identity", p.circumcentre_identity),
+        ("circumcentre_third_distance", p.circumcentre_third_distance),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -177,6 +182,11 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.lerp_half_is_midpoint,
         p.lerp_dist_sq,
         p.stewart,
+        p.one_sub_inv2,
+        p.centroid_ratio,
+        p.stewart_median,
+        p.circumcentre_identity,
+        p.circumcentre_third_distance,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -839,5 +849,120 @@ fn stewart_statement_is_exact() {
     assert_eq!(
         rendered,
         "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal) -> CReal.Equiv (CReal.add (CPoint.distSq x0 (CPoint.lerp x1 x2 x3)) (CReal.mul x3 (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CPoint.distSq x1 x2)))) (CReal.add (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CPoint.distSq x0 x1)) (CReal.mul x3 (CPoint.distSq x0 x2)))))))"
+    );
+}
+
+/// `Scalar.one_sub_inv2`, verbatim: `1 - 1/2 ~ 1/2`.
+#[test]
+fn one_sub_inv2_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.one_sub_inv2)
+        .expect("one_sub_inv2 must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "CReal.Equiv (CReal.add CReal.one (CReal.neg CPoint.Scalar.inv2)) CPoint.Scalar.inv2"
+    );
+}
+
+/// **The median corollary of Stewart.** Verbatim-checked. `x0,x1,x2 = A,B,C`.
+#[test]
+fn stewart_median_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.stewart_median)
+        .expect("stewart_median must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.Equiv (CReal.add \
+         (CPoint.distSq x0 (CPoint.midpoint x1 x2)) (CReal.mul CPoint.Scalar.inv2 (CReal.mul \
+         CPoint.Scalar.inv2 (CPoint.distSq x1 x2)))) (CReal.add (CReal.mul CPoint.Scalar.inv2 \
+         (CPoint.distSq x0 x1)) (CReal.mul CPoint.Scalar.inv2 (CPoint.distSq x0 x2))))))"
+    );
+}
+
+/// **The centroid divides each median 2:1, difference form.**
+/// Verbatim-checked. `x0,x1,x2 = A,B,C`.
+#[test]
+fn centroid_ratio_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.centroid_ratio)
+        .expect("centroid_ratio must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CPoint.Equiv (CPoint.add \
+         (CPoint.add (CPoint.sub (CPoint.centroid x0 x1 x2) x0) (CPoint.sub (CPoint.centroid x0 \
+         x1 x2) x0)) (CPoint.sub (CPoint.centroid x0 x1 x2) x0)) (CPoint.add (CPoint.sub \
+         (CPoint.midpoint x1 x2) x0) (CPoint.sub (CPoint.midpoint x1 x2) x0)))))"
+    );
+}
+
+/// **The circumcentre identity, unconditional.** Verbatim-checked.
+/// `x0,x1,x2,x3 = O,A,B,C`.
+#[test]
+fn circumcentre_identity_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.circumcentre_identity)
+        .expect("circumcentre_identity must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CReal.Equiv \
+         (CReal.add (CReal.add (CReal.add (CPoint.distSq x0 x1) (CReal.neg (CPoint.distSq x0 \
+         x2))) (CReal.add (CPoint.distSq x0 x2) (CReal.neg (CPoint.distSq x0 x3)))) (CReal.add \
+         (CPoint.distSq x0 x3) (CReal.neg (CPoint.distSq x0 x1)))) CReal.zero))))"
+    );
+}
+
+/// **Concurrence of the two circumcentre equalities.** Verbatim-checked.
+/// `x0,x1,x2,x3 = O,A,B,C`.
+#[test]
+fn circumcentre_third_distance_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.circumcentre_third_distance)
+        .expect("circumcentre_third_distance must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : \
+         CReal.Equiv (CPoint.distSq x0 x1) (CPoint.distSq x0 x2)) -> ((x5 : CReal.Equiv \
+         (CPoint.distSq x0 x2) (CPoint.distSq x0 x3)) -> CReal.Equiv (CPoint.distSq x0 x1) \
+         (CPoint.distSq x0 x3)))))))"
     );
 }
