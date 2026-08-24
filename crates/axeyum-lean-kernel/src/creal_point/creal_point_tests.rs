@@ -81,6 +81,11 @@ fn every_theorem_here_is_axiom_free() {
         ("centroid_scalar_self", p.centroid_scalar_self),
         ("centroid_median", p.centroid_median),
         ("centroid_dist_sq", p.centroid_dist_sq),
+        ("lerp_zero", p.lerp_zero),
+        ("lerp_one", p.lerp_one),
+        ("lerp_half_is_midpoint", p.lerp_half_is_midpoint),
+        ("lerp_dist_sq", p.lerp_dist_sq),
+        ("stewart", p.stewart),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -165,6 +170,13 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.centroid,
         p.centroid_median,
         p.centroid_dist_sq,
+        p.lerp_scalar,
+        p.point_lerp,
+        p.lerp_zero,
+        p.lerp_one,
+        p.lerp_half_is_midpoint,
+        p.lerp_dist_sq,
+        p.stewart,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -709,5 +721,123 @@ fn centroid_dist_sq_statement_is_exact() {
          x3)))) (CReal.add (CPoint.distSq (CPoint.centroid x1 x2 x3) x1) (CReal.add \
          (CPoint.distSq (CPoint.centroid x1 x2 x3) x2) (CPoint.distSq (CPoint.centroid x1 x2 \
          x3) x3))))))))"
+    );
+}
+
+/// **The cevian parametrisation, `t = 0` endpoint.** Verbatim-checked for the
+/// same reason as `pythagoras_statement_is_exact`: an empty axiom footprint
+/// on a theorem concluding `CPoint.Equiv (CPoint.lerp x0 x1 CReal.zero) x1`
+/// (the wrong endpoint) or some other point entirely would still pass a
+/// substring check. `x0,x1 = B,C`.
+#[test]
+fn lerp_zero_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.lerp_zero)
+        .expect("lerp_zero must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> CPoint.Equiv (CPoint.lerp x0 x1 CReal.zero) x0))"
+    );
+}
+
+/// **The cevian parametrisation, `t = 1` endpoint.** `x0,x1 = B,C`.
+#[test]
+fn lerp_one_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.lerp_one)
+        .expect("lerp_one must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> CPoint.Equiv (CPoint.lerp x0 x1 CReal.one) x1))"
+    );
+}
+
+/// **`lerp` at `t = 1/2` is `midpoint`** — the check that the definition is
+/// right, not just some interpolation of `B` and `C`. `x0,x1 = B,C`.
+#[test]
+fn lerp_half_is_midpoint_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.lerp_half_is_midpoint)
+        .expect("lerp_half_is_midpoint must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> CPoint.Equiv (CPoint.lerp x0 x1 CPoint.Scalar.inv2) (CPoint.midpoint x0 x1)))"
+    );
+}
+
+/// **The algebraic engine.** Verbatim-checked for the same reason as
+/// `pythagoras_statement_is_exact`: `|PD|^2 = |PB|^2 - 2t*(P-B)*(C-B) +
+/// t^2*|BC|^2` where `D := lerp B C t` -- an empty axiom footprint on a
+/// theorem missing the doubling, with a swapped cross-term argument order, or
+/// with the wrong power of `t` would still pass a substring check.
+/// `x0,x1,x2,x3 = P,B,C,t`.
+#[test]
+fn lerp_dist_sq_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.lerp_dist_sq)
+        .expect("lerp_dist_sq must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal) -> CReal.Equiv (CPoint.distSq x0 (CPoint.lerp x1 x2 x3)) (CReal.add (CPoint.distSq x0 x1) (CReal.add (CReal.neg (CReal.mul x3 (CPoint.dot (CPoint.sub x0 x1) (CPoint.sub x2 x1)))) (CReal.add (CReal.neg (CReal.mul x3 (CPoint.dot (CPoint.sub x0 x1) (CPoint.sub x2 x1)))) (CReal.mul x3 (CReal.mul x3 (CPoint.distSq x1 x2))))))))))"
+    );
+}
+
+/// **Stewart's theorem, squared/parametric form -- the headline result.**
+/// Verbatim-checked for the same reason as `pythagoras_statement_is_exact`:
+/// `|AD|^2 + t(1-t)|BC|^2 ~ (1-t)|AB|^2 + t|AC|^2` where `D := lerp B C t`.
+/// This kernel has no `CReal.sqrt` (only `natSqrt`), so this
+/// squared/parametric identity -- not the classical unsigned-length
+/// `BD*DC*BC + AD^2*BC ~ AB^2*DC + AC^2*BD` -- is the honest statement:
+/// multiplying this identity through by the unsquared `BC` at `t := BD/BC`
+/// recovers the classical form, but that multiplication is not performed
+/// here. `x0,x1,x2,x3 = A,B,C,t`.
+#[test]
+fn stewart_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.stewart)
+        .expect("stewart must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal) -> CReal.Equiv (CReal.add (CPoint.distSq x0 (CPoint.lerp x1 x2 x3)) (CReal.mul x3 (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CPoint.distSq x1 x2)))) (CReal.add (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CPoint.distSq x0 x1)) (CReal.mul x3 (CPoint.distSq x0 x2)))))))"
     );
 }
