@@ -169,6 +169,8 @@ now. Nothing was deleted.
 | 2026-08-24 | `f599e95f5` | **Cramer's rule and the 2×2 inverse — the determinant slice closes.** The actual unlock is `Rat.mul_inv_cancel_of_ne_zero` and it is not about matrices: `Rat.inv` is TOTAL (`inv 0 = 0`), so the two existing cancellation lemmas are guarded by `0 < q` and `q < 0` and nothing had bridged `q ≠ 0` to either. **The lane verified `Rat.lt_trichotomy` is genuinely constructive here** rather than assuming it — built from `le_or_lt` + `le_antisymm` through `or_elim`, no `Classical.em`. Cramer is the **forward direction only** and the name says so (`cramer_two_unique_x`/`_y`): a solution must have the quotient form; existence is unattempted. Each factors through an unconditional column identity, no hypothesis. Two rendered-verbatim pins added on the lane's own initiative — a Cramer statement with the numerator columns transposed is false and equally axiom-free. Every term type-checked first try. |
 | 2026-08-24 | `a7ac623d7` | **A natural number IS the sum of its own bits** — `Nat.sum_testBit_eq`, closing binary representation. **The lane refused my fuel-invariance sketch and was right**: I asked for `sizeAux n n = sizeAux (succ n) n`, which says nothing about *why* `n` is enough fuel; it proved instead that the bound holds for ANY sufficient fuel (`Le n fuel → n < 2^(sizeAux fuel n)`), strictly stronger and what the headline actually consumes. Sixth briefed premise today corrected rather than worked around. **Both lemmas I suggested might already exist do not**: nothing `n < 2^n`-shaped exists under any name, and ℕ has no analogue of `emod_eq_self_of_in_range`, so `mod_eq_self_of_lt` was built here and flagged for promotion to `division.rs`. Computation checked by kernel `def_eq`, not inspection — a `size` that type-checks but computes wrong is axiom-free and passes every sweep. `28+170 → 30+175`. |
 | 2026-08-24 | `12eccad97` | Cramer in the ledger, named for the direction it proves. Existence is **not** proved — only that a solution must equal the quotient — and `notes` leads with that. Two things a reader would otherwise infer wrongly: the nonzero-determinant hypothesis cannot be made implicit (`Rat.inv` is total, so the statement without it is *false*, not ill-formed); and **`Rat.adj2` is not reified because this kernel has no tuple type** — a limit of the kernel, not a shortcut. |
+| 2026-08-24 | `0ba7eaac3` | Frontier agent (plan 03 A2): `[agent]` extra, six read-only partition-filtering tools, `Select -> Gather -> Plan -> WriteEpisode` graph, replay; ten live episodes ($1.635), 8/8 `NoGeneralRoute`; 86 tests |
+| 2026-08-24 | `0f64b8951` | Episode schema + fail-closed `check-agent-episode.py` (A1, 15 mutation-verified guards) and tactic catalog v1 with a dispatch-table-rejecting validator (A3, 13 guards) |
 | 2026-08-24 | `d27f86f5e` | Producers promoted to `axeyum-lean-import::producers` (byte-identical driver output, committed `proof_sha256` reproduced) and bound as `axeyum.producers` with typed `Declined` reasons; 46 tests |
 | 2026-08-24 | `4e56f777a` | `axeyum.cas` (~80 pure functions, `ZeroTest` certificates) and `cas.certify` (groebner, geometry, telescoping, sos, gf2, sturm as producer/certificate/checker triples with report counts; tampered certificates rejected); 350 tests |
 | 2026-08-24 | `552c29766` | `axeyum.ir` (epoch-checked `Arena`, full constructor set, trusted `eval`, bv preflight, fp, query) and `axeyum.solver` (`Config`, `CheckResult`, `Incremental`, three-valued `check_outcome`, proofs, cnf); smt sessions; typed `Value` variants; 157 tests |
@@ -3401,23 +3403,20 @@ school-and-olympiad, adversarial along the *shape* axis but not the
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
 [`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01 and 02
-are landed on `main`: `crates/axeyum-py` -> `axeyum._native` (PyO3 0.29.2,
-abi3-py312, no libpython link) with `smt`, `ir`, `solver` (+ `proofs`,
-`cnf`), `cas` + `cas.certify` (six producer/certificate/checker routes),
-`kernel` (epoch-checked handles, nine preludes), `producers` (promoted from
-`examples/` to `axeyum-lean-import::producers`, driver output byte-identical
-on the frozen exports), and `knowledge` (validator-mirroring read-only
-accessors over every knowledge artifact). Worktree gate at `d27f86f5e`:
-clippy 0 warnings, pytest **796 passed / 11 skipped**, stubs `compared=7`,
-autogenesis validators OK. Plan 03 in flight: A1 (episode schema +
-fail-closed checker with mutation controls) and A3 (tactic catalog v1 whose
-validator fails when every entry matches one shape). Next: A2 -- the
-`[agent]` extra, six read-only tools, the four-node graph, ten committed
-episodes over the 104 open dependency-ready non-held-out facts. Integration
-rule learned today: the shared checkout sits on a branch far behind `main`;
-tracked-file edits move as three-way merges (`git merge-file`), Rust slices
-are verified in `lane-snapshot.sh` trees, commits come from the detached
-worktree.
+are landed on `main` (`smt`, `ir`, `solver`, `cas`/`certify`, `kernel`,
+`producers`, `knowledge`; 796 tests). Plan 03: A1 (episode schema +
+fail-closed checker, 15 guards each killing one test), A3 (tactic catalog
+v1, 9 tactics / 9 precondition shapes / 31 sourced reach rows, validator
+fails on a one-shape catalog) and A2 (the frontier agent: six
+partition-filtering read-only tools, a dispatch-free `pydantic-graph`
+loop, replay with model requests disabled) are landed. **Measured
+baseline:** ten live Sonnet-4.5 episodes, $1.635, `checked=12|ok=12`, and
+8 of 8 completed plans emitted `NoGeneralRoute` -- the model never claimed
+a general route over the current catalog. Next: A4 -- schema v2
+(`checker_runs[]`, `ledger_sha256`), the two checker tools behind
+`requires_approval`, `Gate`/`Dispatch`/`Check` nodes, and the first
+autonomously planned, kernel-checked theorem; then A5 (typed declines to
+the AG4.1 taxonomy) and A7 (the mobility census over all open facts).
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
