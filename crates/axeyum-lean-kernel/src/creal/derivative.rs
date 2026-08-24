@@ -154,6 +154,7 @@
     clippy::too_many_lines
 )]
 
+use super::ring_helpers::{add4_comm, right_distrib};
 use super::{CRealPrelude, creal_ty};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -913,94 +914,13 @@ fn neg_mul_equiv_left(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId)
     echain(d, p, lhs, &[(b_na, c1), (neg_ba, c2), (neg_ab, c3)])
 }
 
-/// `Equiv (mul (add a b) c) (add (mul a c) (mul b c))` — the missing
-/// distributivity direction, the sum on the **left** of the product.
-/// `CReal.left_distrib` only distributes a sum on the right; this is built
-/// from it plus `mul_comm` on all three products, copied from
-/// `creal/power.rs`'s own private `right_distrib` (rebuilt here rather than
-/// imported, the same convention this file already follows for
-/// `neg_zero_equiv`/`mul_neg_equiv`).
-fn right_distrib(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
-    let ab = cadd(d, p, a, b);
-    let lhs = cmul(d, p, ab, c);
-    let c_ab = cmul(d, p, c, ab);
-    let h1 = d.lemma(p.mul_comm, &[ab, c]); // lhs ~ c_ab
-
-    let ca = cmul(d, p, c, a);
-    let cb = cmul(d, p, c, b);
-    let dist = cadd(d, p, ca, cb);
-    let h2 = d.lemma(p.left_distrib, &[c, a, b]); // c_ab ~ dist
-
-    let ac = cmul(d, p, a, c);
-    let bc = cmul(d, p, b, c);
-    let target = cadd(d, p, ac, bc);
-    let h3a = d.lemma(p.mul_comm, &[c, a]); // ca ~ ac
-    let h3b = d.lemma(p.mul_comm, &[c, b]); // cb ~ bc
-    let h3 = d.lemma(p.add_congr, &[ca, ac, cb, bc, h3a, h3b]); // dist ~ target
-
-    echain(d, p, lhs, &[(c_ab, h1), (dist, h2), (target, h3)])
-}
-
-/// `Equiv (add (add a b) (add c dd)) (add (add a c) (add b dd))` — swap the
-/// middle two of a four-term sum. Copied from `creal/series.rs`'s own
-/// private `add4_comm` (same convention as `right_distrib` above). Returns
-/// `(target, proof)`.
-fn add4_comm(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-    a: ExprId,
-    b: ExprId,
-    c: ExprId,
-    dd: ExprId,
-) -> (ExprId, ExprId) {
-    let cd = cadd(d, p, c, dd);
-    let bd = cadd(d, p, b, dd);
-    let ab = cadd(d, p, a, b);
-    let start = cadd(d, p, ab, cd);
-
-    // start ~ a + (b + (c+d))
-    let bcd = cadd(d, p, b, cd);
-    let s1 = cadd(d, p, a, bcd);
-    let h1 = d.lemma(p.add_assoc, &[a, b, cd]);
-
-    // b+(c+d) ~ (b+c)+d
-    let bc = cadd(d, p, b, c);
-    let bc_d = cadd(d, p, bc, dd);
-    let s2 = cadd(d, p, a, bc_d);
-    let refl_a = d.lemma(p.equiv_refl, &[a]);
-    let h_bcd = d.lemma(p.add_assoc, &[b, c, dd]); // (b+c)+d ~ b+(c+d)
-    let h2_inner = d.lemma(p.equiv_symm, &[bc_d, bcd, h_bcd]); // b+(c+d) ~ (b+c)+d
-    let h2 = d.lemma(p.add_congr, &[a, a, bcd, bc_d, refl_a, h2_inner]);
-
-    // (b+c) ~ (c+b)
-    let cb = cadd(d, p, c, b);
-    let cb_d = cadd(d, p, cb, dd);
-    let s3 = cadd(d, p, a, cb_d);
-    let h_comm = d.lemma(p.add_comm, &[b, c]); // b+c ~ c+b
-    let refl_dd = d.lemma(p.equiv_refl, &[dd]);
-    let h_comm_d = d.lemma(p.add_congr, &[bc, cb, dd, dd, h_comm, refl_dd]); // (b+c)+d ~ (c+b)+d
-    let h3 = d.lemma(p.add_congr, &[a, a, bc_d, cb_d, refl_a, h_comm_d]);
-
-    // (c+b)+d ~ c+(b+d)
-    let cbd = cadd(d, p, c, bd);
-    let s4 = cadd(d, p, a, cbd);
-    let h_assoc2 = d.lemma(p.add_assoc, &[c, b, dd]); // (c+b)+d ~ c+(b+d)
-    let h4 = d.lemma(p.add_congr, &[a, a, cb_d, cbd, refl_a, h_assoc2]);
-
-    // a+(c+(b+d)) ~ (a+c)+(b+d)
-    let ac = cadd(d, p, a, c);
-    let target = cadd(d, p, ac, bd);
-    let h_assoc3 = d.lemma(p.add_assoc, &[a, c, bd]); // target ~ s4
-    let h5 = d.lemma(p.equiv_symm, &[target, s4, h_assoc3]); // s4 ~ target
-
-    let proof = echain(
-        d,
-        p,
-        start,
-        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (target, h5)],
-    );
-    (target, proof)
-}
+// `right_distrib` (`Equiv (mul (add a b) c) (add (mul a c) (mul b c))`) and
+// `add4_comm` (`Equiv (add (add a b) (add c dd)) (add (add a c) (add b dd))`)
+// used to be rebuilt here, byte-for-byte identical to `creal/power.rs`'s and
+// `creal/series.rs`'s own private copies respectively — each one duplicated
+// only because the other file's copy was private to that module. Both are
+// now `pub(super)` in `creal/ring_helpers.rs`, imported above, and this file
+// calls the shared versions directly.
 
 /// `le (abs (add a b)) (add (abs a) (abs b))` — the two-term triangle
 /// inequality, from [`CRealPrelude::abs_le`] with

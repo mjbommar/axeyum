@@ -2662,6 +2662,7 @@ mod mul_self_zero;
 mod order_extra;
 mod power;
 mod product;
+mod ring_helpers;
 mod series;
 mod speedup;
 mod sqrt;
