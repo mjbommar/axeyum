@@ -1612,6 +1612,11 @@ fn the_probability_toolkit_is_axiom_free() {
         ("variance", p.variance, false),
         ("variance_nonneg", p.variance_nonneg, true),
         ("variance_eq", p.variance_eq, true),
+        ("indicator", p.indicator, false),
+        ("indicator_nonneg", p.indicator_nonneg, true),
+        ("indicator_le", p.indicator_le, true),
+        ("markov_constructed", p.markov_constructed, true),
+        ("chebyshev_inequality", p.chebyshev_inequality, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
@@ -1867,5 +1872,140 @@ fn variance_swapped_subtraction_order_is_rejected() {
         d.declare_theorem(name, ty, value).is_err(),
         "the kernel accepted Rat.variance's summand with the subtraction \
          swapped, so the computation check above proves nothing"
+    );
+}
+
+// --- the constructed indicator (`rat_prelude::probability`) ----------------
+
+/// Every declaration `probability::declare_probability` adds in its
+/// indicator section — `Rat.indicator` itself and the four theorems built on
+/// it — is a **checked** definition or theorem with an empty axiom footprint,
+/// read out of the kernel, not off the diff.
+#[test]
+fn the_indicator_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("indicator", p.indicator, false),
+        ("indicator_nonneg", p.indicator_nonneg, true),
+        ("indicator_le", p.indicator_le, true),
+        ("markov_constructed", p.markov_constructed, true),
+        ("chebyshev_inequality", p.chebyshev_inequality, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// `Rat.indicator` **computes**, on both branches of the `Rat.ble` it
+/// dispatches on — the same standard [`rat_ble_computes_on_both_branches`]
+/// holds `Rat.ble` itself to, checked by `Eq.refl` alone rather than by
+/// trusting [`declare_indicator_nonneg`]/[`declare_indicator_le`] to be
+/// about the definition this file actually declared.
+#[test]
+fn rat_indicator_computes_on_both_branches() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rone, rrefl, rzero};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+    let const_x = |d: &mut IntDev<'_>, value: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let nat = d.nat_ty();
+        d.lam_fv(k_fv, nat, value)
+    };
+
+    // (label, a, X's constant value, ble a (X k) expected)
+    let cases: [(&str, u32, u32, bool); 2] =
+        [("selected", 3, 5, true), ("not_selected", 7, 5, false)];
+    for (label, av, xv, expected) in cases {
+        let a = literal(&mut d, av);
+        let x_val = literal(&mut d, xv);
+        let x = const_x(&mut d, x_val);
+        let k = d.num(0);
+        let indicator_val = d.const_app(p.indicator, &[a, x, k]);
+        let expected_value = if expected {
+            rone(&mut d, p)
+        } else {
+            rzero(&mut d, p)
+        };
+        let stmt = req(&mut d, indicator_val, expected_value);
+        let proof = rrefl(&mut d, indicator_val);
+        let name = d
+            .kernel()
+            .name_str(anon, format!("Check.indicator_{label}"));
+        d.declare_theorem(name, stmt, proof)
+            .unwrap_or_else(|e| panic!("Rat.indicator did not reduce for {label}: {e:?}"));
+    }
+}
+
+/// The negative control for [`rat_indicator_computes_on_both_branches`]:
+/// `Rat.indicator 7 (fun _ => 5) 0` returning `Rat.one` on the **false**
+/// branch (`Rat.ble 7 5 = false`). `Rat.indicator`'s whole point is
+/// discharging `markov_inequality`'s pointwise hypothesis
+/// ([`declare_indicator_le`]); a definition that quietly returned `1` when
+/// `Rat.ble` is `false` would make that hypothesis false for any `a > X k`.
+/// This must be REFUSED, or the computation check above proves nothing.
+#[test]
+fn rat_indicator_reduction_check_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rone, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+    let a = literal(&mut d, 7);
+    let x_val = literal(&mut d, 5);
+    let x = {
+        let k_fv = d.fresh_fvar();
+        let nat = d.nat_ty();
+        d.lam_fv(k_fv, nat, x_val)
+    };
+    let k = d.num(0);
+    let indicator_val = d.const_app(p.indicator, &[a, x, k]);
+    let one = rone(&mut d, p);
+    let stmt = req(&mut d, indicator_val, one);
+    let proof = rrefl(&mut d, one);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.indicator_false_branch_is_not_one");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `Rat.indicator 7 (fun _ => 5) 0 = 1`, so the \
+         computation check above proves nothing"
     );
 }

@@ -870,6 +870,32 @@ pub struct RatPrelude {
     /// (expectation (fun k => X k * X k) p n) (mul (expectation X p n)
     /// (expectation X p n))` — `Var[X] = E[X²] − E[X]²`.
     pub variance_eq: NameId,
+
+    // --- the constructed indicator (rat_prelude::probability) --------------
+    /// `Rat.indicator a X k := if Rat.ble a (X k) then Rat.one else
+    /// Rat.zero` — the `{0,1}`-valued indicator `Rat.ble` was built to make
+    /// constructible, discharging what [`Self::markov_inequality`] had to
+    /// take as a hypothesis.
+    pub indicator: NameId,
+    /// `Rat.indicator_nonneg : ∀ a X k, le zero (Rat.indicator a X k)`.
+    pub indicator_nonneg: NameId,
+    /// `Rat.indicator_le : ∀ a X k, le zero (X k) → le (a * Rat.indicator a X
+    /// k) (X k)` — exactly [`Self::markov_inequality`]'s fourth hypothesis,
+    /// now discharged rather than assumed.
+    pub indicator_le: NameId,
+    /// `Rat.markov_constructed : ∀ a X p n, IsDistribution p n → (∀ k, Lt k n
+    /// → le zero (X k)) → lt zero a → le (a * expectation (Rat.indicator a
+    /// X) p n) (expectation X p n)` — [`Self::markov_inequality`] with the
+    /// indicator supplied rather than hypothesised: an unconditional
+    /// statement.
+    pub markov_constructed: NameId,
+    /// `Rat.chebyshev_inequality : ∀ a X p n, IsDistribution p n → lt zero a
+    /// → le ((a*a) * expectation (Rat.indicator (a*a) (fun k => (X k −
+    /// expectation X p n) * (X k − expectation X p n))) p n) (variance X p
+    /// n)` — [`Self::markov_constructed`] applied to the squared deviation at
+    /// threshold `a²`, in the multiplied-through form that needs no
+    /// `Rat.inv`.
+    pub chebyshev_inequality: NameId,
 }
 
 impl RatPrelude {
@@ -1088,6 +1114,11 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         variance: child(kernel, "variance"),
         variance_nonneg: child(kernel, "variance_nonneg"),
         variance_eq: child(kernel, "variance_eq"),
+        indicator: child(kernel, "indicator"),
+        indicator_nonneg: child(kernel, "indicator_nonneg"),
+        indicator_le: child(kernel, "indicator_le"),
+        markov_constructed: child(kernel, "markov_constructed"),
+        chebyshev_inequality: child(kernel, "chebyshev_inequality"),
     }
 }
 

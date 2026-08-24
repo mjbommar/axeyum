@@ -28,7 +28,7 @@ use super::RatPrelude;
 use super::group::rsub;
 use super::ops::{
     nat_eq_to_rat, radd, rat_eq_rewrite, rat_ty, rchain, rcongr, req, rle, rlt, rmul, rneg, rone,
-    rsum_range, rsymm, rtrans, rzero,
+    rrefl, rsum_range, rsymm, rtrans, rzero,
 };
 use super::sum::{bounded_nonneg, bounded_pointwise_le};
 use crate::BinderInfo;
@@ -52,6 +52,14 @@ const EXPECTATION_HEIGHT: u16 = 36;
 /// Delta height for `Rat.variance`: above `Rat.expectation`
 /// ([`EXPECTATION_HEIGHT`], 36), which its own definition calls.
 const VARIANCE_HEIGHT: u16 = 37;
+
+/// Delta height for `Rat.indicator`: above `Rat.ble`
+/// (`decide.rs::BLE_HEIGHT`, 33) and every other height declared in this
+/// prelude so far, including [`VARIANCE_HEIGHT`] — `Rat.indicator` itself
+/// only calls `Rat.ble`/`Rat.one`/`Rat.zero`, but this file's convention is a
+/// single monotone sequence over the whole prelude, not just over each
+/// definition's own callees.
+const INDICATOR_HEIGHT: u16 = 38;
 
 /// Declare `Rat.IsDistribution`, `Rat.expectation`, `Rat.uniform`,
 /// `Rat.variance`, Markov's and (in spirit) Chebyshev's inequalities, and
@@ -77,6 +85,11 @@ pub(super) fn declare_probability(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_variance(d, p)?;
     declare_variance_nonneg(d, p)?;
     declare_variance_eq(d, p)?;
+    declare_indicator(d, p)?;
+    declare_indicator_nonneg(d, p)?;
+    declare_indicator_le(d, p)?;
+    declare_markov_constructed(d, p)?;
+    declare_chebyshev_inequality(d, p)?;
     Ok(())
 }
 
@@ -1744,6 +1757,487 @@ fn declare_variance_eq(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelEr
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.variance_eq,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the constructed indicator (Rat.ble → {0,1}) ----------------------------
+//
+// `declare_markov_inequality` above takes `ind` as a HYPOTHESIS because there
+// was no way to build one when it was proved: `Rat.le` is `Prop`-valued and
+// cannot be branched on. `Rat.ble` (`rat_prelude/decide.rs`) changes that —
+// it is a genuine `Bool`-valued decision, dispatching on the same integer
+// cross-multiplication gap `Rat.max`/`Rat.min` use, so `Bool.rec` can select
+// between two `Rat` values on it. This section builds that indicator and the
+// two facts that make it usable, then reproves Markov (as
+// [`declare_markov_constructed`]) and Chebyshev
+// ([`declare_chebyshev_inequality`]) with it supplied rather than assumed —
+// turning a conditional statement into an unconditional one.
+
+/// `Bool.rec.{1}` selecting between two `Rat` values — the `Rat` counterpart
+/// of `IntDev`'s own `bool_select_int` (`int_prelude/prod.rs`, private
+/// there) and `NatOps::bool_select_nat`.
+fn bool_select_rat(
+    d: &mut IntDev<'_>,
+    condition: ExprId,
+    on_true: ExprId,
+    on_false: ExprId,
+) -> ExprId {
+    let bool_ty = d.bool_ty();
+    let carrier = rat_ty(d);
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, bool_ty, carrier, BinderInfo::Default);
+    let one = d.level_one();
+    let bool_rec = d.int().logic.bool_rec;
+    let rec = d.kernel().const_(bool_rec, vec![one]);
+    d.apply(rec, &[motive, on_false, on_true, condition])
+}
+
+/// `heq : Eq Bool cond true ⊢ Eq Rat (bool_select_rat cond a b) a`.
+fn select_rat_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let true_val = d.bool_true();
+    let symm_hb = d.bool_symm(cond, true_val, heq);
+    let motive = d.bool_eq_motive(true_val, &|d, value| {
+        let sel = bool_select_rat(d, value, a, b);
+        req(d, sel, a)
+    });
+    let refl_case = rrefl(d, a);
+    d.bool_transport(true_val, motive, refl_case, cond, symm_hb)
+}
+
+/// `heq : Eq Bool cond false ⊢ Eq Rat (bool_select_rat cond a b) b`.
+fn select_rat_false(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let false_val = d.bool_false();
+    let symm_hb = d.bool_symm(cond, false_val, heq);
+    let motive = d.bool_eq_motive(false_val, &|d, value| {
+        let sel = bool_select_rat(d, value, a, b);
+        req(d, sel, b)
+    });
+    let refl_case = rrefl(d, b);
+    d.bool_transport(false_val, motive, refl_case, cond, symm_hb)
+}
+
+/// Case-split a symbolic `cond : Bool` into `false`/`true`, proving a single
+/// fixed `target : Prop` in each branch — the "generalise the selector, then
+/// instantiate at `bool_refl(cond)`" trick `nat_prelude/finite.rs`'s
+/// `compact_eq_of_gt` and `int_prelude/prod.rs`'s `ble_eq_false_of_lt` both
+/// use, extracted here since [`declare_indicator_nonneg`] and
+/// [`declare_indicator_le`] both need it. `on_false`/`on_true` receive the
+/// equation (`cond = false`/`cond = true`) so they can unfold
+/// `bool_select_rat` via [`select_rat_false`]/[`select_rat_true`].
+fn ble_cases(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    target: ExprId,
+    on_false: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+    on_true: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let bool_ty = d.bool_ty();
+    let false_val = d.bool_false();
+    let true_val = d.bool_true();
+
+    let branch_for = |d: &mut IntDev<'_>, selector: ExprId| -> ExprId {
+        let eq_cond_sel = d.bool_eq(cond, selector);
+        d.arrow(eq_cond_sel, target)
+    };
+    let false_minor = {
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let heq_ty = d.bool_eq(cond, false_val);
+        let body = on_false(d, heq);
+        d.lam_fv(heq_fv, heq_ty, body)
+    };
+    let true_minor = {
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let heq_ty = d.bool_eq(cond, true_val);
+        let body = on_true(d, heq);
+        d.lam_fv(heq_fv, heq_ty, body)
+    };
+    let motive = {
+        let sel_fv = d.fresh_fvar();
+        let sel = d.kernel().fvar(sel_fv);
+        let body = branch_for(d, sel);
+        d.lam_fv(sel_fv, bool_ty, body)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.int().logic.bool_rec;
+    let rec = d.kernel().const_(bool_rec, vec![level_zero]);
+    let selected = d.apply(rec, &[motive, false_minor, true_minor, cond]);
+    let cond_refl = d.bool_refl(cond);
+    d.apply(selected, &[cond_refl])
+}
+
+/// `Rat.ble a (X k)` — the condition [`declare_indicator`] dispatches on.
+fn indicator_cond(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, xk: ExprId) -> ExprId {
+    d.const_app(p.ble, &[a, xk])
+}
+
+/// `Rat.indicator a X k`, i.e. `d.const_app(p.indicator, &[a, x, k])`.
+fn indicator(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, x: ExprId, k: ExprId) -> ExprId {
+    d.const_app(p.indicator, &[a, x, k])
+}
+
+/// Admit `Rat.indicator : Rat → (Nat → Rat) → Nat → Rat := fun a X k =>
+/// bool_select_rat (Rat.ble a (X k)) Rat.one Rat.zero` — `𝟙[a ≤ X k]`.
+fn declare_indicator(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let xk = d.apply(x, &[k]);
+    let cond = indicator_cond(d, p, a, xk);
+    let one_r = rone(d, p);
+    let zero_r = rzero(d, p);
+    let body = bool_select_rat(d, cond, one_r, zero_r);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, body);
+        let with_x = d.lam_fv(x_fv, fn_ty, with_k);
+        d.lam_fv(a_fv, carrier, with_x)
+    };
+    let ty = {
+        let over_k = d.arrow(nat, carrier);
+        let over_x = d.arrow(fn_ty, over_k);
+        d.arrow(carrier, over_x)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.indicator,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(INDICATOR_HEIGHT),
+    })
+}
+
+/// `Rat.indicator_nonneg : ∀ a X k, le zero (Rat.indicator a X k)`.
+///
+/// Case-split on `Rat.ble a (X k)`: `false` selects `Rat.zero` (`0 ≤ 0` by
+/// `le_refl`), `true` selects `Rat.one` (`0 ≤ 1` from `zero_lt_one` +
+/// `le_of_lt`).
+fn declare_indicator_nonneg(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let xk = d.apply(x, &[k]);
+    let cond = indicator_cond(d, p, a, xk);
+    let one_r = rone(d, p);
+    let zero_r = rzero(d, p);
+    let ind_val = indicator(d, p, a, x, k);
+    let concl = rle(d, p, zero_r, ind_val);
+
+    let proof = ble_cases(
+        d,
+        cond,
+        concl,
+        &|d, heq| {
+            let sel = bool_select_rat(d, cond, one_r, zero_r);
+            let sel_eq_zero = select_rat_false(d, cond, one_r, zero_r, heq);
+            let zero_eq_sel = rsymm(d, sel, zero_r, sel_eq_zero);
+            let base = d.lemma(p.le_refl, &[zero_r]);
+            rat_eq_rewrite(d, zero_r, sel, zero_eq_sel, base, &|d, t| {
+                rle(d, p, zero_r, t)
+            })
+        },
+        &|d, heq| {
+            let sel = bool_select_rat(d, cond, one_r, zero_r);
+            let sel_eq_one = select_rat_true(d, cond, one_r, zero_r, heq);
+            let one_eq_sel = rsymm(d, sel, one_r, sel_eq_one);
+            let zlt1 = d.lemma(p.zero_lt_one, &[]);
+            let base = d.lemma(p.le_of_lt, &[zero_r, one_r, zlt1]);
+            rat_eq_rewrite(d, one_r, sel, one_eq_sel, base, &|d, t| {
+                rle(d, p, zero_r, t)
+            })
+        },
+    );
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_x = d.lam_fv(x_fv, fn_ty, with_k);
+        d.lam_fv(a_fv, carrier, with_x)
+    };
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, concl);
+        let with_x = d.pi_fv(x_fv, fn_ty, with_k);
+        d.pi_fv(a_fv, carrier, with_x)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.indicator_nonneg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.indicator_le : ∀ a X k, le zero (X k) → le (a * Rat.indicator a X k)
+/// (X k)` — exactly [`RatPrelude::markov_inequality`]'s fourth hypothesis,
+/// now discharged from the constructed indicator instead of assumed.
+///
+/// Case-split on `Rat.ble a (X k)`: `false` selects `Rat.zero`, so `a *
+/// indicator = a * 0 = 0 ≤ X k` is exactly the `0 ≤ X k` hypothesis
+/// (`mul_zero`); `true` selects `Rat.one`, so `a * indicator = a * 1 = a ≤ X
+/// k` is exactly `le_of_ble_eq_true` applied to the branch equation
+/// (`mul_one`) — the `0 ≤ X k` hypothesis is not even needed in this branch.
+fn declare_indicator_le(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hx_fv = d.fresh_fvar();
+    let hx = d.kernel().fvar(hx_fv);
+
+    let xk = d.apply(x, &[k]);
+    let cond = indicator_cond(d, p, a, xk);
+    let one_r = rone(d, p);
+    let zero_r = rzero(d, p);
+    let ind_val = indicator(d, p, a, x, k);
+    let a_ind = rmul(d, a, ind_val);
+    let hx_ty = rle(d, p, zero_r, xk);
+    let concl = rle(d, p, a_ind, xk);
+
+    let proof_body = ble_cases(
+        d,
+        cond,
+        concl,
+        &|d, heq| {
+            let sel = bool_select_rat(d, cond, one_r, zero_r);
+            let sel_eq_zero = select_rat_false(d, cond, one_r, zero_r, heq);
+            let a_sel = rmul(d, a, sel);
+            let a_zero = rmul(d, a, zero_r);
+            let step1 = rcongr(d, sel, zero_r, sel_eq_zero, &|d, t| rmul(d, a, t));
+            let mul_zero_step = d.lemma(p.mul_zero, &[a]);
+            let a_sel_eq_zero = rtrans(d, a_sel, a_zero, zero_r, step1, mul_zero_step);
+            let zero_eq_a_sel = rsymm(d, a_sel, zero_r, a_sel_eq_zero);
+            rat_eq_rewrite(d, zero_r, a_sel, zero_eq_a_sel, hx, &|d, t| {
+                rle(d, p, t, xk)
+            })
+        },
+        &|d, heq| {
+            let sel = bool_select_rat(d, cond, one_r, zero_r);
+            let sel_eq_one = select_rat_true(d, cond, one_r, zero_r, heq);
+            let a_sel = rmul(d, a, sel);
+            let a_one = rmul(d, a, one_r);
+            let step1 = rcongr(d, sel, one_r, sel_eq_one, &|d, t| rmul(d, a, t));
+            let mul_one_step = d.lemma(p.mul_one, &[a]);
+            let a_sel_eq_a = rtrans(d, a_sel, a_one, a, step1, mul_one_step);
+            let a_eq_a_sel = rsymm(d, a_sel, a, a_sel_eq_a);
+            let a_le_xk = d.lemma(p.le_of_ble_eq_true, &[a, xk, heq]);
+            rat_eq_rewrite(d, a, a_sel, a_eq_a_sel, a_le_xk, &|d, t| rle(d, p, t, xk))
+        },
+    );
+
+    let value = {
+        let with_hx = d.lam_fv(hx_fv, hx_ty, proof_body);
+        let with_k = d.lam_fv(k_fv, nat, with_hx);
+        let with_x = d.lam_fv(x_fv, fn_ty, with_k);
+        d.lam_fv(a_fv, carrier, with_x)
+    };
+    let ty = {
+        let inner = d.arrow(hx_ty, concl);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let with_x = d.pi_fv(x_fv, fn_ty, with_k);
+        d.pi_fv(a_fv, carrier, with_x)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.indicator_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.markov_constructed : ∀ a X p n, IsDistribution p n → (∀ k, Lt k n →
+/// le zero (X k)) → lt zero a → le (a * expectation (Rat.indicator a X) p n)
+/// (expectation X p n)` — [`RatPrelude::markov_inequality`] with the
+/// indicator SUPPLIED rather than hypothesised: [`declare_indicator_le`]
+/// discharges the fourth hypothesis from exactly the `0 ≤ X k` this theorem
+/// already carries, turning the conditional statement into an unconditional
+/// one. **This is the headline this file exists for.**
+fn declare_markov_constructed(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+    let hx_fv = d.fresh_fvar();
+    let hx = d.kernel().fvar(hx_fv);
+    let ha_fv = d.fresh_fvar();
+    let ha = d.kernel().fvar(ha_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let hx_ty = bounded_nonneg(d, p, x, n);
+    let zero_r = rzero(d, p);
+    let ha_ty = rlt(d, p, zero_r, a);
+
+    let ind_fn = d.const_app(p.indicator, &[a, x]);
+
+    let concl = {
+        let eind = expectation(d, p, ind_fn, pf, n);
+        let lhs = rmul(d, a, eind);
+        let rhs = expectation(d, p, x, pf, n);
+        rle(d, p, lhs, rhs)
+    };
+
+    let hind_proof = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let klt_fv = d.fresh_fvar();
+        let klt = d.kernel().fvar(klt_fv);
+        let klt_ty = d.lt(k, n);
+        let hxk = d.apply(hx, &[k, klt]);
+        let step = d.lemma(p.indicator_le, &[a, x, k, hxk]);
+        let with_klt = d.lam_fv(klt_fv, klt_ty, step);
+        d.lam_fv(k_fv, nat, with_klt)
+    };
+
+    let markov_result = d.lemma(
+        p.markov_inequality,
+        &[a, x, ind_fn, pf, n, hd, hx, ha, hind_proof],
+    );
+
+    let value = {
+        let with_ha = d.lam_fv(ha_fv, ha_ty, markov_result);
+        let with_hx = d.lam_fv(hx_fv, hx_ty, with_ha);
+        let with_hd = d.lam_fv(hd_fv, dist_ty, with_hx);
+        let with_n = d.lam_fv(n_fv, nat, with_hd);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_x = d.lam_fv(x_fv, fn_ty, with_pf);
+        d.lam_fv(a_fv, carrier, with_x)
+    };
+    let ty = {
+        let with_ha = d.arrow(ha_ty, concl);
+        let with_hx = d.arrow(hx_ty, with_ha);
+        let with_hd = d.arrow(dist_ty, with_hx);
+        let with_n = d.pi_fv(n_fv, nat, with_hd);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_x = d.pi_fv(x_fv, fn_ty, with_pf);
+        d.pi_fv(a_fv, carrier, with_x)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.markov_constructed,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.chebyshev_inequality : ∀ a X p n, IsDistribution p n → lt zero a →
+/// le ((a*a) * expectation (Rat.indicator (a*a) (fun k => (X k − expectation
+/// X p n) * (X k − expectation X p n))) p n) (variance X p n)` —
+/// [`declare_markov_constructed`] applied to the squared deviation `(X −
+/// E[X])²` at threshold `a²`, in the multiplied-through form that needs no
+/// `Rat.inv`. The classical statement divides through by `a²` to read `P(|X
+/// − E[X]| ≥ a) ≤ Var[X]/a²`; this is the same content before that division.
+///
+/// The conclusion's right side is stated as `variance X p n` rather than the
+/// `expectation` [`declare_markov_constructed`] actually produces: the two
+/// are definitionally equal (`Rat.variance` unfolds to exactly this
+/// `expectation` application, over the same `mu`), so the kernel's defeq
+/// check closes the gap — no `variance_eq` rewrite needed.
+fn declare_chebyshev_inequality(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+    let ha_fv = d.fresh_fvar();
+    let ha = d.kernel().fvar(ha_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let zero_r = rzero(d, p);
+    let ha_ty = rlt(d, p, zero_r, a);
+
+    let mu = expectation(d, p, x, pf, n);
+    let y = variance_summand(d, p, x, mu);
+    let a_sq = rmul(d, a, a);
+    let ind_y = d.const_app(p.indicator, &[a_sq, y]);
+
+    let concl = {
+        let ey = expectation(d, p, ind_y, pf, n);
+        let lhs = rmul(d, a_sq, ey);
+        let variance_xpn = variance(d, p, x, pf, n);
+        rle(d, p, lhs, variance_xpn)
+    };
+
+    let hy_nonneg = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let klt_fv = d.fresh_fvar();
+        let klt_ty = d.lt(k, n);
+        let xk = d.apply(x, &[k]);
+        let gap = rsub(d, p, xk, mu);
+        let sqnn = d.lemma(p.sq_nonneg, &[gap]);
+        let with_klt = d.lam_fv(klt_fv, klt_ty, sqnn);
+        d.lam_fv(k_fv, nat, with_klt)
+    };
+    let ha_sq = d.lemma(p.mul_pos, &[a, a, ha, ha]);
+
+    let markov_result = d.lemma(
+        p.markov_constructed,
+        &[a_sq, y, pf, n, hd, hy_nonneg, ha_sq],
+    );
+
+    let value = {
+        let with_ha = d.lam_fv(ha_fv, ha_ty, markov_result);
+        let with_hd = d.lam_fv(hd_fv, dist_ty, with_ha);
+        let with_n = d.lam_fv(n_fv, nat, with_hd);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_x = d.lam_fv(x_fv, fn_ty, with_pf);
+        d.lam_fv(a_fv, carrier, with_x)
+    };
+    let ty = {
+        let with_ha = d.arrow(ha_ty, concl);
+        let with_hd = d.arrow(dist_ty, with_ha);
+        let with_n = d.pi_fv(n_fv, nat, with_hd);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_x = d.pi_fv(x_fv, fn_ty, with_pf);
+        d.pi_fv(a_fv, carrier, with_x)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.chebyshev_inequality,
         uparams: vec![],
         ty,
         value,
