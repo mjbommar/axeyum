@@ -511,6 +511,9 @@ autogenesis-producer-evaluation-protocol:
     python3 scripts/validate-autogenesis-producer-evaluation-protocol.py
     python3 scripts/gen-autogenesis-producer-evaluation-protocol.py --check
 
+autogenesis-producer-evaluation-result-contract:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_result
+
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh
 
