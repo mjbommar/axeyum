@@ -691,6 +691,43 @@ pub struct CPointPrelude {
     /// connecting them; this is the bridge, landed under its own name rather
     /// than replacing either.
     pub apollonius_from_stewart: NameId,
+    /// **Positive-semidefiniteness of `dot`.** `∀ V, CReal.le CReal.zero (dot
+    /// V V)`. From `sq_nonneg` on each coordinate plus `add_le_add` — the
+    /// first inequality this file proves about `dot`, and the one everything
+    /// below needs.
+    pub dot_self_nonneg: NameId,
+    /// **Lagrange's identity, in the plane.** `∀ a b c e : CReal,
+    /// Equiv (add (mul (add (mul a a)(mul b b))(add (mul c c)(mul e e)))
+    ///            (neg (mul (add (mul a c)(mul b e))(add (mul a c)(mul b e)))))
+    ///       (mul (add (mul a e)(neg (mul b c)))(add (mul a e)(neg (mul b c))))`
+    /// — `(a²+b²)(c²+e²) − (ac+be)² = (ae−bc)²`. Pure ring algebra: the
+    /// difference is exactly `(ae−bc)²`, `Lagrange's` identity for two pairs
+    /// of scalars. [`CPointPrelude::cauchy_schwarz`] is this plus
+    /// `sq_nonneg`.
+    pub lagrange_identity: NameId,
+    /// **Cauchy–Schwarz, squared.** `∀ U V,
+    /// CReal.le (mul (dot U V)(dot U V)) (mul (dot U U)(dot V V))`.
+    ///
+    /// Stated squared and deliberately not as `|⟨u,v⟩| ≤ ‖u‖·‖v‖`: this
+    /// kernel has `CReal.natSqrt` but no `CReal.sqrt`, so the norm form is
+    /// not expressible, let alone provable, here. The squared form is what
+    /// `lagrange_identity_scalar_proof` plus [`CPointPrelude::dot_self_nonneg`]
+    /// (via `le_of_sub_nonneg`) actually delivers, and it is
+    /// equivalent-modulo-`sqrt` to the familiar statement.
+    pub cauchy_schwarz: NameId,
+    /// **The triangle inequality for `distSq`, factor-2 form.** `∀ A B C,
+    /// CReal.le (distSq A C) (add (add (distSq A B)(distSq B C)) (add (distSq A B)(distSq B C)))`
+    /// — `distSq A C ≤ 2·(distSq A B + distSq B C)`.
+    ///
+    /// **Not** the classical `d(A,C) ≤ d(A,B) + d(B,C)`: that statement is
+    /// about unsquared distances, and squaring it is not equivalent (this
+    /// kernel has no `CReal.sqrt` to state the unsquared form at all — see
+    /// [`Self::cauchy_schwarz`]'s doc comment). This is the honest reachable
+    /// statement, from `(x+y)² ≤ 2(x²+y²)` (`sq_nonneg (x−y)`) applied to
+    /// `dot`-vectors via [`Self::dot_self_nonneg`] and [`Self::dot_self_sub`]
+    /// rather than per-coordinate — named for exactly what it is, not
+    /// `triangle_inequality`.
+    pub dist_sq_double_sum_bound: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -777,6 +814,10 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_euler_line(&mut d, p)?;
     declare_midpoint_dist_sq_quarter(&mut d, p)?;
     declare_apollonius_from_stewart(&mut d, p)?;
+    declare_dot_self_nonneg(&mut d, p)?;
+    declare_lagrange_identity(&mut d, p)?;
+    declare_cauchy_schwarz(&mut d, p)?;
+    declare_dist_sq_double_sum_bound(&mut d, p)?;
     Ok(p)
 }
 
@@ -859,6 +900,10 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         euler_line: kernel.name_str(point, "euler_line"),
         midpoint_dist_sq_quarter: kernel.name_str(point, "midpoint_dist_sq_quarter"),
         apollonius_from_stewart: kernel.name_str(point, "apollonius_from_stewart"),
+        dot_self_nonneg: kernel.name_str(point, "dot_self_nonneg"),
+        lagrange_identity: kernel.name_str(point, "lagrange_identity"),
+        cauchy_schwarz: kernel.name_str(point, "cauchy_schwarz"),
+        dist_sq_double_sum_bound: kernel.name_str(point, "distSq_double_sum_bound"),
     }
 }
 
@@ -11057,6 +11102,881 @@ fn declare_apollonius_from_stewart(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.apollonius_from_stewart,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- Cauchy-Schwarz and the triangle inequality -----------------------------
+//
+// The inner-product-space axioms `dot` was always missing: positive
+// semidefiniteness ([`declare_dot_self_nonneg`]), the squared Cauchy-Schwarz
+// inequality ([`declare_cauchy_schwarz`], via [`declare_lagrange_identity`]),
+// and the factor-2 triangle inequality for `distSq`
+// ([`declare_dist_sq_double_sum_bound`]). No square root is introduced
+// anywhere here (this kernel has `CReal.natSqrt` but no `CReal.sqrt`), so
+// every statement below is either squared or carries an explicit factor of 2
+// in place of a division this development cannot perform on an arbitrary
+// term.
+
+/// `Equiv (mul (mul x y) (mul z w)) (mul (mul x z) (mul y w))` — swap the
+/// middle two factors of a four-fold product. The multiplicative analogue of
+/// [`add_middle_swap_proof`], and the one new *pattern* the Lagrange-identity
+/// proof needs: every monomial-matching step there is an instance of it.
+fn four_factor_swap_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+    w: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let zw = cmul(d, p, z, w);
+    let xy = cmul(d, p, x, y);
+    let xy_zw = cmul(d, p, xy, zw);
+    let y_zw = cmul(d, p, y, zw);
+    let x_yzw = cmul(d, p, x, y_zw);
+    let step1 = d.lemma(creal.mul_assoc, &[x, y, zw]); // Equiv(xy_zw, x_yzw)
+
+    let yz = cmul(d, p, y, z);
+    let yz_w = cmul(d, p, yz, w);
+    let assoc_a = d.lemma(creal.mul_assoc, &[y, z, w]); // Equiv(yz_w, y_zw)
+    let assoc_a_symm = symm(d, p, yz_w, y_zw, assoc_a); // Equiv(y_zw, yz_w)
+    let zy = cmul(d, p, z, y);
+    let comm_yz = d.lemma(creal.mul_comm, &[y, z]); // Equiv(yz, zy)
+    let refl_w = refl(d, p, w);
+    let congr_zy_w = d.lemma(creal.mul_congr, &[yz, zy, w, w, comm_yz, refl_w]); // Equiv(yz_w, zy_w)
+    let zy_w = cmul(d, p, zy, w);
+    let yw = cmul(d, p, y, w);
+    let assoc_b = d.lemma(creal.mul_assoc, &[z, y, w]); // Equiv(zy_w, z_yw)
+    let z_yw = cmul(d, p, z, yw);
+    let y_to_z_yw = chain(
+        d,
+        p,
+        y_zw,
+        &[(yz_w, assoc_a_symm), (zy_w, congr_zy_w), (z_yw, assoc_b)],
+    ); // Equiv(y_zw, z_yw)
+
+    let refl_x = refl(d, p, x);
+    let congr_x = d.lemma(creal.mul_congr, &[x, x, y_zw, z_yw, refl_x, y_to_z_yw]); // Equiv(x_yzw, x_zyw)
+    let x_zyw = cmul(d, p, x, z_yw);
+
+    let xz = cmul(d, p, x, z);
+    let xz_yw = cmul(d, p, xz, yw);
+    let assoc_c = d.lemma(creal.mul_assoc, &[x, z, yw]); // Equiv(xz_yw, x_zyw)
+    let assoc_c_symm = symm(d, p, xz_yw, x_zyw, assoc_c); // Equiv(x_zyw, xz_yw)
+
+    chain(
+        d,
+        p,
+        xy_zw,
+        &[(x_yzw, step1), (x_zyw, congr_x), (xz_yw, assoc_c_symm)],
+    )
+}
+
+/// Expand `mul (add x1 x2) (add y1 y2)` into the right-associated 4-term
+/// chain `x1*y1 + (x1*y2 + (x2*y1 + x2*y2))`. Returns `(original, chain,
+/// proof : Equiv(original, chain))`.
+fn expand_mul_sum2(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    x1: ExprId,
+    x2: ExprId,
+    y1: ExprId,
+    y2: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let creal = p.creal;
+    let sum_x = cadd(d, p, x1, x2);
+    let sum_y = cadd(d, p, y1, y2);
+    let original = cmul(d, p, sum_x, sum_y);
+
+    let step1 = right_distrib_proof(d, p, x1, x2, sum_y); // Equiv(original, add(x1*sy)(x2*sy))
+    let x1_sy = cmul(d, p, x1, sum_y);
+    let x2_sy = cmul(d, p, x2, sum_y);
+    let mid = cadd(d, p, x1_sy, x2_sy);
+
+    let x1y1 = cmul(d, p, x1, y1);
+    let x1y2 = cmul(d, p, x1, y2);
+    let x2y1 = cmul(d, p, x2, y1);
+    let x2y2 = cmul(d, p, x2, y2);
+    let ld1 = d.lemma(creal.left_distrib, &[x1, y1, y2]); // Equiv(x1_sy, add x1y1 x1y2)
+    let ld2 = d.lemma(creal.left_distrib, &[x2, y1, y2]); // Equiv(x2_sy, add x2y1 x2y2)
+    let left_pair = cadd(d, p, x1y1, x1y2);
+    let right_pair = cadd(d, p, x2y1, x2y2);
+    let congr = d.lemma(
+        creal.add_congr,
+        &[x1_sy, left_pair, x2_sy, right_pair, ld1, ld2],
+    );
+    let nested = cadd(d, p, left_pair, right_pair);
+
+    let tree = sadd(
+        sadd(SumTree::Leaf(x1y1), SumTree::Leaf(x1y2)),
+        sadd(SumTree::Leaf(x2y1), SumTree::Leaf(x2y2)),
+    );
+    let (chain_result, flatten_proof) = flatten_sum_tree(d, p, &tree);
+    let full = chain(
+        d,
+        p,
+        original,
+        &[(mid, step1), (nested, congr), (chain_result, flatten_proof)],
+    );
+    (original, chain_result, full)
+}
+
+/// Given `Equiv(li, mi)` for `i=0..3`, produce
+/// `Equiv (build_right_chain [l0,l1,l2,l3]) (build_right_chain [m0,m1,m2,m3])`.
+#[allow(clippy::too_many_arguments)]
+fn rewrite_right_chain4(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    l0: ExprId,
+    l1: ExprId,
+    l2: ExprId,
+    l3: ExprId,
+    m0: ExprId,
+    m1: ExprId,
+    m2: ExprId,
+    m3: ExprId,
+    p0: ExprId,
+    p1: ExprId,
+    p2: ExprId,
+    p3: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let l23 = cadd(d, p, l2, l3);
+    let m23 = cadd(d, p, m2, m3);
+    let c23 = d.lemma(creal.add_congr, &[l2, m2, l3, m3, p2, p3]); // Equiv(l23, m23)
+    let l123 = cadd(d, p, l1, l23);
+    let m123 = cadd(d, p, m1, m23);
+    let c123 = d.lemma(creal.add_congr, &[l1, m1, l23, m23, p1, c23]); // Equiv(l123, m123)
+    d.lemma(creal.add_congr, &[l0, m0, l123, m123, p0, c123])
+}
+
+/// `Equiv (neg (build_right_chain [x0,x1,x2,x3])) (build_right_chain [neg x0,
+/// neg x1, neg x2, neg x3])`.
+fn neg_distribute_chain4(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    x0: ExprId,
+    x1: ExprId,
+    x2: ExprId,
+    x3: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let x23 = cadd(d, p, x2, x3);
+    let x123 = cadd(d, p, x1, x23);
+    let chain0 = cadd(d, p, x0, x123);
+
+    let n0 = cneg(d, p, x0);
+    let n1 = cneg(d, p, x1);
+    let n2 = cneg(d, p, x2);
+    let n3 = cneg(d, p, x3);
+
+    let step23 = neg_add_proof(d, p, x2, x3); // Equiv(neg x23, add n2 n3)
+    let n23 = cneg(d, p, x23);
+    let n2n3 = cadd(d, p, n2, n3);
+
+    let step123_pre = neg_add_proof(d, p, x1, x23); // Equiv(neg x123, add n1 (neg x23))
+    let neg_x123 = cneg(d, p, x123);
+    let n1_n23 = cadd(d, p, n1, n23);
+    let refl_n1 = refl(d, p, n1);
+    let congr1 = d.lemma(creal.add_congr, &[n1, n1, n23, n2n3, refl_n1, step23]); // Equiv(n1_n23, n1_n2n3)
+    let n1_n2n3 = cadd(d, p, n1, n2n3);
+    let step123 = chain(d, p, neg_x123, &[(n1_n23, step123_pre), (n1_n2n3, congr1)]);
+    // step123: Equiv(neg x123, n1_n2n3)
+
+    let step0_pre = neg_add_proof(d, p, x0, x123); // Equiv(neg chain0, add n0 (neg x123))
+    let neg_chain0 = cneg(d, p, chain0);
+    let n0_negx123 = cadd(d, p, n0, neg_x123);
+    let refl_n0 = refl(d, p, n0);
+    let congr0 = d.lemma(
+        creal.add_congr,
+        &[n0, n0, neg_x123, n1_n2n3, refl_n0, step123],
+    ); // Equiv(n0_negx123, n0_n1n2n3)
+    let n0_n1n2n3 = cadd(d, p, n0, n1_n2n3);
+    chain(
+        d,
+        p,
+        neg_chain0,
+        &[(n0_negx123, step0_pre), (n0_n1n2n3, congr0)],
+    )
+}
+
+/// `Equiv (add x (add (neg x) (add y (add (neg y) rest)))) rest` — two
+/// cancelling pairs at the front of a chain, absorbed into whatever `rest`
+/// is (opaque, not necessarily flattened further).
+fn cancel_two_pairs_prefix(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    x: ExprId,
+    y: ExprId,
+    rest: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let nx = cneg(d, p, x);
+    let ny = cneg(d, p, y);
+    let zero = czero(d, p);
+    let refl_rest = refl(d, p, rest);
+
+    let ny_rest = cadd(d, p, ny, rest);
+    let y_nyrest = cadd(d, p, y, ny_rest);
+    let y_ny = cadd(d, p, y, ny);
+    let y_ny_rest = cadd(d, p, y_ny, rest);
+    let assoc_y = d.lemma(creal.add_assoc, &[y, ny, rest]); // Equiv(y_ny_rest, y_nyrest)
+    let assoc_y_symm = symm(d, p, y_ny_rest, y_nyrest, assoc_y); // Equiv(y_nyrest, y_ny_rest)
+    let an_y = d.lemma(creal.add_neg, &[y]); // Equiv(y_ny, zero)
+    let zero_rest = cadd(d, p, zero, rest);
+    let congr_y = d.lemma(creal.add_congr, &[y_ny, zero, rest, rest, an_y, refl_rest]); // Equiv(y_ny_rest, zero_rest)
+    let za_y = zero_add_proof(d, p, rest); // Equiv(zero_rest, rest)
+    let inner = chain(
+        d,
+        p,
+        y_nyrest,
+        &[
+            (y_ny_rest, assoc_y_symm),
+            (zero_rest, congr_y),
+            (rest, za_y),
+        ],
+    );
+    // inner : Equiv(y_nyrest, rest)
+
+    let x_nx_y_nyrest = cadd(d, p, nx, y_nyrest);
+    let outer_lhs = cadd(d, p, x, x_nx_y_nyrest);
+    let refl_nx = refl(d, p, nx);
+    let nx_rest = cadd(d, p, nx, rest);
+    let congr_inner = d.lemma(creal.add_congr, &[nx, nx, y_nyrest, rest, refl_nx, inner]); // Equiv(x_nx_y_nyrest, nx_rest)
+    let x_nx_rest = cadd(d, p, x, nx_rest);
+    let refl_x = refl(d, p, x);
+    let congr_outer1 = d.lemma(
+        creal.add_congr,
+        &[x, x, x_nx_y_nyrest, nx_rest, refl_x, congr_inner],
+    ); // Equiv(outer_lhs, x_nx_rest)
+    let x_nx = cadd(d, p, x, nx);
+    let x_nx_rest2 = cadd(d, p, x_nx, rest);
+    let assoc_x = d.lemma(creal.add_assoc, &[x, nx, rest]); // Equiv(x_nx_rest2, x_nx_rest)
+    let assoc_x_symm = symm(d, p, x_nx_rest2, x_nx_rest, assoc_x); // Equiv(x_nx_rest, x_nx_rest2)
+    let an_x = d.lemma(creal.add_neg, &[x]); // Equiv(x_nx, zero)
+    let congr_x = d.lemma(creal.add_congr, &[x_nx, zero, rest, rest, an_x, refl_rest]); // Equiv(x_nx_rest2, zero_rest2)
+    let zero_rest2 = cadd(d, p, zero, rest);
+    let za_x = zero_add_proof(d, p, rest); // Equiv(zero_rest2, rest)
+    chain(
+        d,
+        p,
+        outer_lhs,
+        &[
+            (x_nx_rest, congr_outer1),
+            (x_nx_rest2, assoc_x_symm),
+            (zero_rest2, congr_x),
+            (rest, za_x),
+        ],
+    )
+}
+
+/// The scalar content of [`CPointPrelude::lagrange_identity`]. Returns
+/// `(s1, s2, s3, proof)` where `s1 = (a²+b²)(c²+e²)`, `s2 = (ac+be)²`,
+/// `s3 = (ae−bc)²`, and `proof : Equiv (add s1 (neg s2)) s3`.
+fn lagrange_identity_scalar_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    e: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let creal = p.creal;
+    let aa = cmul(d, p, a, a);
+    let bb = cmul(d, p, b, b);
+    let cc = cmul(d, p, c, c);
+    let ee = cmul(d, p, e, e);
+    let ac = cmul(d, p, a, c);
+    let be = cmul(d, p, b, e);
+    let ae = cmul(d, p, a, e);
+    let bc = cmul(d, p, b, c);
+    let nbc = cneg(d, p, bc);
+
+    let (s1, chain1, proof_s1) = expand_mul_sum2(d, p, aa, bb, cc, ee);
+    let (s2, chain2, proof_s2) = expand_mul_sum2(d, p, ac, be, ac, be);
+    let (s3, chain3, proof_s3) = expand_mul_sum2(d, p, ae, nbc, ae, nbc);
+
+    // chain1's leaves are already canonical: [a2c2, a2e2, b2c2, b2e2].
+    let a2c2 = cmul(d, p, aa, cc);
+    let a2e2 = cmul(d, p, aa, ee);
+    let b2c2 = cmul(d, p, bb, cc);
+    let b2e2 = cmul(d, p, bb, ee);
+
+    let ab = cmul(d, p, a, b);
+    let ce = cmul(d, p, c, e);
+    let abce = cmul(d, p, ab, ce);
+    let nabce = cneg(d, p, abce);
+
+    // chain2's leaves: [ac*ac, ac*be, be*ac, be*be] -> canonical form.
+    let ac_ac = cmul(d, p, ac, ac);
+    let ac_be = cmul(d, p, ac, be);
+    let be_ac = cmul(d, p, be, ac);
+    let be_be = cmul(d, p, be, be);
+
+    let p0_s2 = four_factor_swap_proof(d, p, a, c, a, c); // Equiv(ac_ac, a2c2)
+    let p1_s2 = four_factor_swap_proof(d, p, a, c, b, e); // Equiv(ac_be, abce)
+    let comm_be_ac = d.lemma(creal.mul_comm, &[be, ac]); // Equiv(be_ac, ac_be)
+    let p2_s2 = chain(d, p, be_ac, &[(ac_be, comm_be_ac), (abce, p1_s2)]); // Equiv(be_ac, abce)
+    let p3_s2 = four_factor_swap_proof(d, p, b, e, b, e); // Equiv(be_be, b2e2)
+
+    let chain2_canon = rewrite_right_chain4(
+        d, p, ac_ac, ac_be, be_ac, be_be, a2c2, abce, abce, b2e2, p0_s2, p1_s2, p2_s2, p3_s2,
+    ); // Equiv(chain2, [a2c2,abce,abce,b2e2])
+    let chain2_target = build_right_chain(d, p, &[a2c2, abce, abce, b2e2]);
+
+    // chain3's leaves: [ae*ae, ae*nbc, nbc*ae, nbc*nbc] -> canonical form.
+    let ae_ae = cmul(d, p, ae, ae);
+    let ae_nbc = cmul(d, p, ae, nbc);
+    let nbc_ae = cmul(d, p, nbc, ae);
+    let nbc_nbc = cmul(d, p, nbc, nbc);
+
+    let p0_s3 = four_factor_swap_proof(d, p, a, e, a, e); // Equiv(ae_ae, a2e2)
+
+    let ae_bc = cmul(d, p, ae, bc);
+    let mnr = mul_neg_right_proof(d, p, ae, bc); // Equiv(ae_nbc, neg ae_bc)
+    let neg_ae_bc = cneg(d, p, ae_bc);
+    let swap_ae_bc = four_factor_swap_proof(d, p, a, e, b, c); // Equiv(ae_bc, ab*ec)
+    let ec = cmul(d, p, e, c);
+    let ab_ec = cmul(d, p, ab, ec);
+    let comm_ec = d.lemma(creal.mul_comm, &[e, c]); // Equiv(ec, ce)
+    let refl_ab = refl(d, p, ab);
+    let congr_ab = d.lemma(creal.mul_congr, &[ab, ab, ec, ce, refl_ab, comm_ec]); // Equiv(ab_ec, abce)
+    let ae_bc_to_abce = chain(d, p, ae_bc, &[(ab_ec, swap_ae_bc), (abce, congr_ab)]); // Equiv(ae_bc, abce)
+    let neg_congr_aebc = d.lemma(creal.neg_congr, &[ae_bc, abce, ae_bc_to_abce]); // Equiv(neg ae_bc, nabce)
+    let p1_s3 = chain(d, p, ae_nbc, &[(neg_ae_bc, mnr), (nabce, neg_congr_aebc)]); // Equiv(ae_nbc, nabce)
+
+    let comm_nbc_ae = d.lemma(creal.mul_comm, &[nbc, ae]); // Equiv(nbc_ae, ae_nbc)
+    let p2_s3 = chain(d, p, nbc_ae, &[(ae_nbc, comm_nbc_ae), (nabce, p1_s3)]); // Equiv(nbc_ae, nabce)
+
+    let nmn_step = d.lemma(creal.neg_mul_neg, &[bc]); // Equiv(nbc_nbc, bc*bc)
+    let bc_bc = cmul(d, p, bc, bc);
+    let swap_bcbc = four_factor_swap_proof(d, p, b, c, b, c); // Equiv(bc_bc, b2c2)
+    let p3_s3 = chain(d, p, nbc_nbc, &[(bc_bc, nmn_step), (b2c2, swap_bcbc)]);
+
+    let chain3_canon = rewrite_right_chain4(
+        d, p, ae_ae, ae_nbc, nbc_ae, nbc_nbc, a2e2, nabce, nabce, b2c2, p0_s3, p1_s3, p2_s3, p3_s3,
+    ); // Equiv(chain3, [a2e2,nabce,nabce,b2c2])
+    let chain3_target = build_right_chain(d, p, &[a2e2, nabce, nabce, b2c2]);
+
+    let proof_s2_full = chain(
+        d,
+        p,
+        s2,
+        &[(chain2, proof_s2), (chain2_target, chain2_canon)],
+    ); // Equiv(s2, chain2_target)
+    let proof_s3_full = chain(
+        d,
+        p,
+        s3,
+        &[(chain3, proof_s3), (chain3_target, chain3_canon)],
+    ); // Equiv(s3, chain3_target)
+
+    let neg_s2 = cneg(d, p, s2);
+    let neg_chain2_target = cneg(d, p, chain2_target);
+    let neg_s2_congr = d.lemma(creal.neg_congr, &[s2, chain2_target, proof_s2_full]); // Equiv(neg_s2, neg_chain2_target)
+    let refl_chain1 = refl(d, p, chain1);
+    let add_congr_1 = d.lemma(
+        creal.add_congr,
+        &[
+            s1,
+            chain1,
+            neg_s2,
+            neg_chain2_target,
+            proof_s1,
+            neg_s2_congr,
+        ],
+    ); // Equiv(add s1 neg_s2, add chain1 neg_chain2_target)
+    let outer = cadd(d, p, chain1, neg_chain2_target);
+
+    let neg_dist2 = neg_distribute_chain4(d, p, a2c2, abce, abce, b2e2);
+    // Equiv(neg_chain2_target, [na2c2, nabce, nabce, nb2e2])
+    let na2c2 = cneg(d, p, a2c2);
+    let nb2e2 = cneg(d, p, b2e2);
+    let neg_chain2_leaves = build_right_chain(d, p, &[na2c2, nabce, nabce, nb2e2]);
+    let congr_outer_neg = d.lemma(
+        creal.add_congr,
+        &[
+            chain1,
+            chain1,
+            neg_chain2_target,
+            neg_chain2_leaves,
+            refl_chain1,
+            neg_dist2,
+        ],
+    ); // Equiv(outer, outer2)
+    let outer2 = cadd(d, p, chain1, neg_chain2_leaves);
+
+    let (concat_result, concat_proof) =
+        concat_right_chains(d, p, &[a2c2, a2e2, b2c2, b2e2], neg_chain2_leaves);
+    // concat_proof : Equiv(outer2, concat_result)
+
+    let from_leaves = [a2c2, a2e2, b2c2, b2e2, na2c2, nabce, nabce, nb2e2];
+    let to_leaves = [a2c2, na2c2, b2e2, nb2e2, a2e2, nabce, nabce, b2c2];
+    let reorder_proof = reorder_right_chain(d, p, &from_leaves, &to_leaves);
+    let reordered = build_right_chain(d, p, &to_leaves);
+
+    let reduce_to_chain3 = cancel_two_pairs_prefix(d, p, a2c2, b2e2, chain3_target);
+    // Equiv(reordered, chain3_target)
+
+    let s3_from_chain3 = symm(d, p, s3, chain3_target, proof_s3_full); // Equiv(chain3_target, s3)
+
+    let s1_diff = cadd(d, p, s1, neg_s2);
+    let full = chain(
+        d,
+        p,
+        s1_diff,
+        &[
+            (outer, add_congr_1),
+            (outer2, congr_outer_neg),
+            (concat_result, concat_proof),
+            (reordered, reorder_proof),
+            (chain3_target, reduce_to_chain3),
+            (s3, s3_from_chain3),
+        ],
+    );
+    (s1, s2, s3, full)
+}
+
+/// **Positive-semidefiniteness of `dot`.** See
+/// [`CPointPrelude::dot_self_nonneg`].
+fn declare_dot_self_nonneg(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let v_fv = d.fresh_fvar();
+    let pv = d.kernel().fvar(v_fv);
+    let vx = d.const_app(p.x, &[pv]);
+    let vy = d.const_app(p.y, &[pv]);
+
+    let vxvx = cmul(d, p, vx, vx);
+    let vyvy = cmul(d, p, vy, vy);
+    let sqx = d.lemma(creal.sq_nonneg, &[vx]); // le zero vxvx
+    let sqy = d.lemma(creal.sq_nonneg, &[vy]); // le zero vyvy
+
+    let zero = czero(d, p);
+    let zero_zero = cadd(d, p, zero, zero);
+    let az = d.lemma(creal.add_zero, &[zero]); // Equiv(zero_zero, zero)
+    let az_symm = symm(d, p, zero_zero, zero, az); // Equiv(zero, zero_zero)
+    let le_zero_zerozero = d.lemma(creal.le_of_equiv, &[zero, zero_zero, az_symm]); // le zero zero_zero
+
+    let sum = cadd(d, p, vxvx, vyvy);
+    let le_sum = d.lemma(creal.add_le_add, &[zero, vxvx, zero, vyvy, sqx, sqy]); // le zero_zero sum
+    let result = d.lemma(
+        creal.le_trans,
+        &[zero, zero_zero, sum, le_zero_zerozero, le_sum],
+    );
+    // result : le zero sum, sum == dot pv pv by defeq of `dot`.
+
+    let dot_vv = dotp(d, p, pv, pv);
+    let ty_body = d.const_app(creal.le, &[zero, dot_vv]);
+    let ty = d.pi_fv(v_fv, point, ty_body);
+    let value = d.lam_fv(v_fv, point, result);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dot_self_nonneg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// **Lagrange's identity, in the plane.** See
+/// [`CPointPrelude::lagrange_identity`].
+fn declare_lagrange_identity(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    let (s1, s2, s3, proof) = lagrange_identity_scalar_proof(d, p, a, b, c, e);
+    let neg_s2 = cneg(d, p, s2);
+    let lhs = cadd(d, p, s1, neg_s2);
+
+    let ty_body = equiv(d, p, lhs, s3);
+    let ty = {
+        let w4 = d.pi_fv(e_fv, carrier, ty_body);
+        let w3 = d.pi_fv(c_fv, carrier, w4);
+        let w2 = d.pi_fv(b_fv, carrier, w3);
+        d.pi_fv(a_fv, carrier, w2)
+    };
+    let value = {
+        let w4 = d.lam_fv(e_fv, carrier, proof);
+        let w3 = d.lam_fv(c_fv, carrier, w4);
+        let w2 = d.lam_fv(b_fv, carrier, w3);
+        d.lam_fv(a_fv, carrier, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.lagrange_identity,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Equiv (add (add x (neg y)) y) x`.
+fn sub_add_cancel_proof(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let creal = p.creal;
+    let ny = cneg(d, p, y);
+    let x_ny = cadd(d, p, x, ny);
+    let lhs = cadd(d, p, x_ny, y);
+    let ny_y = cadd(d, p, ny, y);
+    let x_nyy = cadd(d, p, x, ny_y);
+    let assoc = d.lemma(creal.add_assoc, &[x, ny, y]); // Equiv(lhs, x_nyy)
+    let cancel = neg_add_cancel_proof(d, p, y); // Equiv(ny_y, zero)
+    let refl_x = refl(d, p, x);
+    let zero = czero(d, p);
+    let congr = d.lemma(creal.add_congr, &[x, x, ny_y, zero, refl_x, cancel]); // Equiv(x_nyy, x_zero)
+    let x_zero = cadd(d, p, x, zero);
+    let az = d.lemma(creal.add_zero, &[x]); // Equiv(x_zero, x)
+    chain(d, p, lhs, &[(x_nyy, assoc), (x_zero, congr), (x, az)])
+}
+
+/// Given `h : le zero (add x (neg y))`, produce `le y x`.
+fn le_of_sub_nonneg(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    x: ExprId,
+    y: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let ny = cneg(d, p, y);
+    let x_ny = cadd(d, p, x, ny);
+    let refl_y = d.lemma(creal.le_refl, &[y]);
+    let zero = czero(d, p);
+    let h2 = d.lemma(creal.add_le_add, &[zero, x_ny, y, y, h, refl_y]); // le (zero+y) (x_ny+y)
+    let zero_y = cadd(d, p, zero, y);
+    let x_ny_y = cadd(d, p, x_ny, y);
+    let eq_left = zero_add_proof(d, p, y); // Equiv(zero_y, y)
+    let eq_left_symm = symm(d, p, zero_y, y, eq_left); // Equiv(y, zero_y)
+    let le_y_zeroy = d.lemma(creal.le_of_equiv, &[y, zero_y, eq_left_symm]); // le y zero_y
+    let step1 = d.lemma(creal.le_trans, &[y, zero_y, x_ny_y, le_y_zeroy, h2]); // le y x_ny_y
+    let eq_right = sub_add_cancel_proof(d, p, x, y); // Equiv(x_ny_y, x)
+    let le_xnyy_x = d.lemma(creal.le_of_equiv, &[x_ny_y, x, eq_right]); // le x_ny_y x
+    d.lemma(creal.le_trans, &[y, x_ny_y, x, step1, le_xnyy_x]) // le y x
+}
+
+/// **Cauchy-Schwarz, squared.** See [`CPointPrelude::cauchy_schwarz`].
+fn declare_cauchy_schwarz(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let u_fv = d.fresh_fvar();
+    let pu = d.kernel().fvar(u_fv);
+    let v_fv = d.fresh_fvar();
+    let pv = d.kernel().fvar(v_fv);
+
+    let ux = d.const_app(p.x, &[pu]);
+    let uy = d.const_app(p.y, &[pu]);
+    let vx = d.const_app(p.x, &[pv]);
+    let vy = d.const_app(p.y, &[pv]);
+
+    let (s1, s2, s3, lagrange) = lagrange_identity_scalar_proof(d, p, ux, uy, vx, vy);
+
+    let ae = cmul(d, p, ux, vy);
+    let bc = cmul(d, p, uy, vx);
+    let nbc = cneg(d, p, bc);
+    let w = cadd(d, p, ae, nbc);
+    let sq_w = d.lemma(creal.sq_nonneg, &[w]); // le zero s3 (s3 == mul w w)
+
+    let neg_s2 = cneg(d, p, s2);
+    let diff = cadd(d, p, s1, neg_s2);
+    let lagrange_symm = symm(d, p, diff, s3, lagrange); // Equiv(s3, diff)
+    let le_s3_diff = d.lemma(creal.le_of_equiv, &[s3, diff, lagrange_symm]); // le s3 diff
+    let zero = czero(d, p);
+    let le_zero_diff = d.lemma(creal.le_trans, &[zero, s3, diff, sq_w, le_s3_diff]); // le zero diff
+    let le_s2_s1 = le_of_sub_nonneg(d, p, s1, s2, le_zero_diff); // le s2 s1
+
+    let dot_uv = dotp(d, p, pu, pv);
+    let dot_uu = dotp(d, p, pu, pu);
+    let dot_vv = dotp(d, p, pv, pv);
+    let lhs_ty = cmul(d, p, dot_uv, dot_uv);
+    let rhs_ty = cmul(d, p, dot_uu, dot_vv);
+    let ty_body = d.const_app(creal.le, &[lhs_ty, rhs_ty]);
+    let ty = {
+        let inner = d.pi_fv(v_fv, point, ty_body);
+        d.pi_fv(u_fv, point, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(v_fv, point, le_s2_s1);
+        d.lam_fv(u_fv, point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cauchy_schwarz,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CPoint.Equiv (sub A C) (add (sub A B) (sub B C))` — point-level
+/// telescoping, per-coordinate via [`telescope_scalar_proof`] and
+/// [`and_intro`].
+fn point_sub_telescope_fact(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    pa: ExprId,
+    pb: ExprId,
+    pc: ExprId,
+) -> ExprId {
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+
+    let core_x = telescope_scalar_proof(d, p, ax, bx, cx);
+    let core_y = telescope_scalar_proof(d, p, ay, by, cy);
+
+    let claim_x = {
+        let neg_cx = cneg(d, p, cx);
+        let lhs = cadd(d, p, ax, neg_cx);
+        let neg_bx = cneg(d, p, bx);
+        let ab_x = cadd(d, p, ax, neg_bx);
+        let bc_x = cadd(d, p, bx, neg_cx);
+        let rhs = cadd(d, p, ab_x, bc_x);
+        equiv(d, p, lhs, rhs)
+    };
+    let claim_y = {
+        let neg_cy = cneg(d, p, cy);
+        let lhs = cadd(d, p, ay, neg_cy);
+        let neg_by = cneg(d, p, by);
+        let ab_y = cadd(d, p, ay, neg_by);
+        let bc_y = cadd(d, p, by, neg_cy);
+        let rhs = cadd(d, p, ab_y, bc_y);
+        equiv(d, p, lhs, rhs)
+    };
+    and_intro(d, p, claim_x, claim_y, core_x, core_y)
+}
+
+/// Given `uu = dot U U`, `uv = dot U V`, `vv = dot V V`, and
+/// `h0 : le zero (add uu (add (neg uv) (add (neg uv) vv)))`, produce
+/// `le (add uv uv) (add uu vv)` — `2·(U·V) ≤ U·U + V·V`.
+fn two_uv_le_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    uu: ExprId,
+    uv: ExprId,
+    vv: ExprId,
+    h0: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let nuv = cneg(d, p, uv);
+    let big_q = cadd(d, p, uv, uv);
+    let big_p = cadd(d, p, uu, vv);
+    let neg_q = cneg(d, p, big_q);
+    let p_negq = cadd(d, p, big_p, neg_q);
+
+    let nd = neg_add_proof(d, p, uv, uv); // Equiv(neg_q, add nuv nuv)
+    let nuv_nuv = cadd(d, p, nuv, nuv);
+    let refl_p = refl(d, p, big_p);
+    let step_a = d.lemma(creal.add_congr, &[big_p, big_p, neg_q, nuv_nuv, refl_p, nd]); // Equiv(p_negq, nested)
+    let nested = cadd(d, p, big_p, nuv_nuv);
+
+    let tree = sadd(
+        sadd(SumTree::Leaf(uu), SumTree::Leaf(vv)),
+        sadd(SumTree::Leaf(nuv), SumTree::Leaf(nuv)),
+    );
+    let (chain_res, flat_proof) = flatten_sum_tree(d, p, &tree); // Equiv(nested, chain_res)
+
+    let target_leaves = [uu, nuv, nuv, vv];
+    let reorder_proof = reorder_right_chain(d, p, &[uu, vv, nuv, nuv], &target_leaves);
+    let target_chain = build_right_chain(d, p, &target_leaves);
+
+    let rearrange_fwd = chain(
+        d,
+        p,
+        p_negq,
+        &[
+            (nested, step_a),
+            (chain_res, flat_proof),
+            (target_chain, reorder_proof),
+        ],
+    ); // Equiv(p_negq, target_chain)
+    let rearrange = symm(d, p, p_negq, target_chain, rearrange_fwd); // Equiv(target_chain, p_negq)
+
+    let zero = czero(d, p);
+    let le_of_equiv_step = d.lemma(creal.le_of_equiv, &[target_chain, p_negq, rearrange]); // le target_chain p_negq
+    let le_zero_pnegq = d.lemma(
+        creal.le_trans,
+        &[zero, target_chain, p_negq, h0, le_of_equiv_step],
+    ); // le zero p_negq
+
+    le_of_sub_nonneg(d, p, big_p, big_q, le_zero_pnegq) // le big_q big_p
+}
+
+/// **The triangle inequality for `distSq`, factor-2 form.** See
+/// [`CPointPrelude::dist_sq_double_sum_bound`].
+fn declare_dist_sq_double_sum_bound(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let u = psub(d, p, pa, pb); // U = A - B
+    let v = psub(d, p, pb, pc); // V = B - C
+    let w = psub(d, p, u, v); // W = U - V
+
+    let uu = dotp(d, p, u, u);
+    let uv = dotp(d, p, u, v);
+    let vv = dotp(d, p, v, v);
+
+    // 0 <= dot W W
+    let dsn = d.lemma(p.dot_self_nonneg, &[w]); // le zero (dot W W)
+    let dss = d.lemma(p.dot_self_sub, &[u, v]); // Equiv(dot W W, add uu (add (neg uv)(add (neg uv) vv)))
+    let neg_uv = cneg(d, p, uv);
+    let neg_uv_vv = cadd(d, p, neg_uv, vv);
+    let neg_uv_neg_uv_vv = cadd(d, p, neg_uv, neg_uv_vv);
+    let target0 = cadd(d, p, uu, neg_uv_neg_uv_vv);
+    let dot_ww = dotp(d, p, w, w);
+    let le_of_equiv_dss = d.lemma(creal.le_of_equiv, &[dot_ww, target0, dss]); // le dot_ww target0
+    let zero = czero(d, p);
+    let h0 = d.lemma(
+        creal.le_trans,
+        &[zero, dot_ww, target0, dsn, le_of_equiv_dss],
+    ); // le zero target0
+
+    let le_2uv = two_uv_le_proof(d, p, uu, uv, vv, h0); // le (add uv uv) (add uu vv)
+
+    // distSq A C ~ dot(sub A C)(sub A C) ~ dot(add U V)(add U V)
+    //            ~ add uu (add uv (add uv vv))  [dot_self_add]
+    let ac_sub = psub(d, p, pa, pc);
+    let add_uv = padd(d, p, u, v);
+    let telescope = point_sub_telescope_fact(d, p, pa, pb, pc); // CPoint.Equiv (sub A C) (add U V)
+    let dot_congr_step = d.lemma(
+        p.dot_congr,
+        &[ac_sub, add_uv, ac_sub, add_uv, telescope, telescope],
+    ); // Equiv(dot(ac_sub,ac_sub), dot(add_uv,add_uv))
+    let dsa = d.lemma(p.dot_self_add, &[u, v]); // Equiv(dot(add_uv,add_uv), add uu (add uv (add uv vv)))
+    let dist_ac = d.const_app(p.dist_sq, &[pa, pc]);
+    let dot_acac = dotp(d, p, ac_sub, ac_sub);
+    let dot_uvuv = dotp(d, p, add_uv, add_uv);
+    let uv_vv = cadd(d, p, uv, vv);
+    let uv_uv_vv = cadd(d, p, uv, uv_vv);
+    let expanded = cadd(d, p, uu, uv_uv_vv);
+    let dist_ac_to_expanded = chain(
+        d,
+        p,
+        dot_acac,
+        &[(dot_uvuv, dot_congr_step), (expanded, dsa)],
+    ); // Equiv(dist_ac, expanded)  (dist_ac defeq dot_acac)
+
+    // le expanded (add (add uu vv) (add uu vv))
+    // expanded = uu + (uv + (uv + vv)); rearrange to (uv+uv) + (uu+vv), then bound uv+uv.
+    let sum_uu_vv = cadd(d, p, uu, vv);
+    let double_sum = cadd(d, p, sum_uu_vv, sum_uu_vv);
+    let uv_uv = cadd(d, p, uv, uv);
+
+    let expand_tree = sadd(
+        SumTree::Leaf(uu),
+        sadd(
+            SumTree::Leaf(uv),
+            sadd(SumTree::Leaf(uv), SumTree::Leaf(vv)),
+        ),
+    );
+    let (expand_chain, expand_flat) = flatten_sum_tree(d, p, &expand_tree);
+    // expand_chain leaves: [uu, uv, uv, vv]
+    let reordered_leaves = [uv, uv, uu, vv];
+    let reorder_expand = reorder_right_chain(d, p, &[uu, uv, uv, vv], &reordered_leaves);
+    let reordered_expand_chain = build_right_chain(d, p, &reordered_leaves);
+    let expanded_to_reordered = chain(
+        d,
+        p,
+        expanded,
+        &[
+            (expand_chain, expand_flat),
+            (reordered_expand_chain, reorder_expand),
+        ],
+    ); // Equiv(expanded, uv+(uv+(uu+vv)))
+
+    // uv + (uv + (uu+vv)) ~ (uv+uv) + (uu+vv)  [add_assoc, reversed]
+    let uu_vv = cadd(d, p, uu, vv);
+    let uv_uv_uuvv = cadd(d, p, uv_uv, uu_vv);
+    let assoc_final = d.lemma(creal.add_assoc, &[uv, uv, uu_vv]); // Equiv(uv_uv_uuvv, reordered_expand_chain)
+    let assoc_final_symm = symm(d, p, uv_uv_uuvv, reordered_expand_chain, assoc_final);
+
+    let expanded_to_grouped = chain(
+        d,
+        p,
+        expanded,
+        &[
+            (reordered_expand_chain, expanded_to_reordered),
+            (uv_uv_uuvv, assoc_final_symm),
+        ],
+    ); // Equiv(expanded, uv_uv_uuvv)
+
+    let le_refl_uuvv = d.lemma(creal.le_refl, &[uu_vv]);
+    let le_grouped = d.lemma(
+        creal.add_le_add,
+        &[uv_uv, uu_vv, uu_vv, uu_vv, le_2uv, le_refl_uuvv],
+    ); // le uv_uv_uuvv (uu_vv + uu_vv) = le uv_uv_uuvv double_sum
+
+    let le_of_equiv_expanded = d.lemma(
+        creal.le_of_equiv,
+        &[expanded, uv_uv_uuvv, expanded_to_grouped],
+    );
+    let le_expanded_double = d.lemma(
+        creal.le_trans,
+        &[
+            expanded,
+            uv_uv_uuvv,
+            double_sum,
+            le_of_equiv_expanded,
+            le_grouped,
+        ],
+    ); // le expanded double_sum
+
+    let le_of_equiv_dist = d.lemma(creal.le_of_equiv, &[dist_ac, expanded, dist_ac_to_expanded]); // le dist_ac expanded
+    let result = d.lemma(
+        creal.le_trans,
+        &[
+            dist_ac,
+            expanded,
+            double_sum,
+            le_of_equiv_dist,
+            le_expanded_double,
+        ],
+    ); // le dist_ac double_sum
+
+    // State the type via the named `distSq`, not the raw `dot`/`sub` shape
+    // `double_sum` is built from; `value` (built over `uu`/`vv`) still
+    // type-checks against it by the same defeq unfolding
+    // `declare_pythagoras_dist_sq` relies on.
+    let dist_ab = d.const_app(p.dist_sq, &[pa, pb]);
+    let dist_bc = d.const_app(p.dist_sq, &[pb, pc]);
+    let sum_dist_ty = cadd(d, p, dist_ab, dist_bc);
+    let double_sum_ty = cadd(d, p, sum_dist_ty, sum_dist_ty);
+    let ty_body = d.const_app(creal.le, &[dist_ac, double_sum_ty]);
+    let ty = {
+        let w2 = d.pi_fv(c_fv, point, ty_body);
+        let w1 = d.pi_fv(b_fv, point, w2);
+        d.pi_fv(a_fv, point, w1)
+    };
+    let value = {
+        let w2 = d.lam_fv(c_fv, point, result);
+        let w1 = d.lam_fv(b_fv, point, w2);
+        d.lam_fv(a_fv, point, w1)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dist_sq_double_sum_bound,
         uparams: vec![],
         ty,
         value,

@@ -98,6 +98,10 @@ fn every_theorem_here_is_axiom_free() {
         ("euler_line", p.euler_line),
         ("midpoint_dist_sq_quarter", p.midpoint_dist_sq_quarter),
         ("apollonius_from_stewart", p.apollonius_from_stewart),
+        ("dot_self_nonneg", p.dot_self_nonneg),
+        ("lagrange_identity", p.lagrange_identity),
+        ("cauchy_schwarz", p.cauchy_schwarz),
+        ("dist_sq_double_sum_bound", p.dist_sq_double_sum_bound),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -1053,5 +1057,105 @@ fn apollonius_from_stewart_has_the_apollonius_median_statement() {
     assert_eq!(
         rendered_bridge, rendered_original,
         "apollonius_from_stewart must prove the exact same statement as apollonius_median"
+    );
+}
+
+/// **Positive-semidefiniteness of `dot`.** `x0 = V`. Verbatim-checked for the
+/// same reason as [`pythagoras_statement_is_exact`].
+#[test]
+fn dot_self_nonneg_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.dot_self_nonneg)
+        .expect("dot_self_nonneg must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> CReal.le CReal.zero (CPoint.dot x0 x0))"
+    );
+}
+
+/// **Lagrange's identity, in the plane.** `x0,x1,x2,x3 = a,b,c,e`:
+/// `(a²+b²)(c²+e²) − (ac+be)² = (ae−bc)²`. Verbatim-checked so a wrong sign
+/// or a dropped cross term cannot hide behind an empty axiom footprint.
+#[test]
+fn lagrange_identity_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.lagrange_identity)
+        .expect("lagrange_identity must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> CReal.Equiv \
+         (CReal.add (CReal.mul (CReal.add (CReal.mul x0 x0) (CReal.mul x1 x1)) (CReal.add \
+         (CReal.mul x2 x2) (CReal.mul x3 x3))) (CReal.neg (CReal.mul (CReal.add (CReal.mul x0 \
+         x2) (CReal.mul x1 x3)) (CReal.add (CReal.mul x0 x2) (CReal.mul x1 x3))))) (CReal.mul \
+         (CReal.add (CReal.mul x0 x3) (CReal.neg (CReal.mul x1 x2))) (CReal.add (CReal.mul x0 \
+         x3) (CReal.neg (CReal.mul x1 x2))))))))"
+    );
+}
+
+/// **Cauchy-Schwarz, squared.** `x0,x1 = U,V`: `(U·V)² ≤ (U·U)(V·V)`. Stated
+/// squared, deliberately: this kernel has `CReal.natSqrt` but no
+/// `CReal.sqrt`, so the norm form `|⟨u,v⟩| ≤ ‖u‖·‖v‖` is not expressible
+/// here. Verbatim-checked for the same reason as the two tests above.
+#[test]
+fn cauchy_schwarz_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.cauchy_schwarz)
+        .expect("cauchy_schwarz must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> CReal.le (CReal.mul (CPoint.dot x0 x1) (CPoint.dot \
+         x0 x1)) (CReal.mul (CPoint.dot x0 x0) (CPoint.dot x1 x1))))"
+    );
+}
+
+/// **The triangle inequality for `distSq`, factor-2 form.** `x0,x1,x2 =
+/// A,B,C`: `distSq A C ≤ 2·(distSq A B + distSq B C)`, written as
+/// `(distSq A B + distSq B C) + (distSq A B + distSq B C)` (this
+/// development has no `Nat`-scalar multiplication of `CReal`). **Not** the
+/// classical unsquared triangle inequality — see
+/// [`CPointPrelude::dist_sq_double_sum_bound`]'s doc comment for why that
+/// form is unreachable here (no `CReal.sqrt`).
+#[test]
+fn dist_sq_double_sum_bound_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.dist_sq_double_sum_bound)
+        .expect("dist_sq_double_sum_bound must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.le (CPoint.distSq x0 x2) \
+         (CReal.add (CReal.add (CPoint.distSq x0 x1) (CPoint.distSq x1 x2)) (CReal.add \
+         (CPoint.distSq x0 x1) (CPoint.distSq x1 x2))))))"
     );
 }
