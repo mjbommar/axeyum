@@ -1792,6 +1792,12 @@ fn the_probability_toolkit_is_axiom_free() {
         ("indicator", p.indicator, false),
         ("indicator_nonneg", p.indicator_nonneg, true),
         ("indicator_le", p.indicator_le, true),
+        ("variance_indicator", p.variance_indicator, true),
+        (
+            "variance_indicator_le_quarter",
+            p.variance_indicator_le_quarter,
+            true,
+        ),
         ("markov_constructed", p.markov_constructed, true),
         ("chebyshev_inequality", p.chebyshev_inequality, true),
         ("covariance_comm", p.covariance_comm, true),
@@ -1816,6 +1822,11 @@ fn the_probability_toolkit_is_axiom_free() {
         (
             "weak_law_of_large_numbers",
             p.weak_law_of_large_numbers,
+            true,
+        ),
+        (
+            "bernoulli_law_of_large_numbers",
+            p.bernoulli_law_of_large_numbers,
             true,
         ),
         (
@@ -1862,6 +1873,161 @@ fn the_probability_toolkit_is_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// A CONCRETE Bernoulli instance, checked by `Eq.refl` alone against the
+/// DEFINITIONS themselves — not against [`RatPrelude::variance_indicator`]'s
+/// proof, which could be internally consistent yet prove a statement off by
+/// a factor this check would catch. A fair coin: `a := 1`, `X k := k`, `p :=
+/// const 1/2`, `n := 2` (`X 0 = 0 < 1`, `X 1 = 1 ≤ 1`, so the indicator
+/// selects exactly outcome `1`). Hand computation: `E[𝟙] = 0·(1/2) +
+/// 1·(1/2) = 1/2`; `Var[𝟙] = E[𝟙²] − E[𝟙]² = E[𝟙] − E[𝟙]² = 1/2 − 1/4 =
+/// 1/4` (using `𝟙² = 𝟙`, [`indicator_sq_eq_self`](super::probability)).
+#[test]
+fn bernoulli_variance_at_one_half_reduces_to_one_quarter() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, num: u32, idx: u32| -> ExprId {
+        let numerator = d.num(num);
+        let index = d.num(idx);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let a = literal(&mut d, 1, 0); // 1
+    let half = literal(&mut d, 1, 1); // 1/2
+    let quarter = literal(&mut d, 1, 3); // 1/4
+
+    let x = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zero_nat = d.num(0);
+        let val = d.const_app(p.nat_div_succ, &[k, zero_nat]);
+        d.lam_fv(k_fv, nat, val)
+    };
+    let ind = d.const_app(p.indicator, &[a, x]);
+
+    let pf = {
+        let k_fv = d.fresh_fvar();
+        d.lam_fv(k_fv, nat, half)
+    };
+    let n = d.num(2);
+
+    let mu = d.const_app(p.expectation, &[ind, pf, n]);
+    let mu_stmt = req(&mut d, mu, half);
+    let mu_proof = rrefl(&mut d, mu);
+    let mu_name = d
+        .kernel()
+        .name_str(anon, "Check.bernoulli_half_expectation");
+    d.declare_theorem(mu_name, mu_stmt, mu_proof)
+        .unwrap_or_else(|e| panic!("expectation did not reduce to 1/2: {e:?}"));
+
+    let variance = d.const_app(p.variance, &[ind, pf, n]);
+    let var_stmt = req(&mut d, variance, quarter);
+    let var_proof = rrefl(&mut d, variance);
+    let var_name = d.kernel().name_str(anon, "Check.bernoulli_half_variance");
+    d.declare_theorem(var_name, var_stmt, var_proof)
+        .unwrap_or_else(|e| panic!("variance did not reduce to 1/4: {e:?}"));
+}
+
+/// The negative control for
+/// [`bernoulli_variance_at_one_half_reduces_to_one_quarter`]: the SAME
+/// variance is NOT `1/2` (the mean itself — the off-by-`p`-instead-of-
+/// `p(1-p)` bug a wrong `variance` definition could have). Must be REFUSED,
+/// or the positive check above proves nothing.
+#[test]
+fn bernoulli_variance_at_one_half_is_not_one_half() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, num: u32, idx: u32| -> ExprId {
+        let numerator = d.num(num);
+        let index = d.num(idx);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let a = literal(&mut d, 1, 0);
+    let half = literal(&mut d, 1, 1);
+
+    let x = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zero_nat = d.num(0);
+        let val = d.const_app(p.nat_div_succ, &[k, zero_nat]);
+        d.lam_fv(k_fv, nat, val)
+    };
+    let ind = d.const_app(p.indicator, &[a, x]);
+
+    let pf = {
+        let k_fv = d.fresh_fvar();
+        d.lam_fv(k_fv, nat, half)
+    };
+    let n = d.num(2);
+
+    let variance = d.const_app(p.variance, &[ind, pf, n]);
+    let stmt = req(&mut d, variance, half);
+    let proof = rrefl(&mut d, half);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.bernoulli_variance_is_not_the_mean");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted Var[fair coin] = 1/2 (the MEAN, not p(1-p)=1/4), \
+         so the reduction check above proves nothing"
+    );
+}
+
+/// The quarter bound is TIGHT at `q = 1/2` — the fair coin is the unique
+/// maximiser of `q(1-q)`: `4·(1/2)·(1/2) = 1` exactly, checked as an
+/// EQUALITY by `Eq.refl` alone (not merely that
+/// [`RatPrelude::variance_indicator_le_quarter`] admits `≤`, which would
+/// also accept a bound that is off by a wide margin).
+#[test]
+fn quarter_bound_is_tight_at_one_half() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::{radd, req, rmul, rone, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, num: u32, idx: u32| -> ExprId {
+        let numerator = d.num(num);
+        let index = d.num(idx);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+    let half = literal(&mut d, 1, 1);
+    let one_r = rone(&mut d, p);
+    let two_r = radd(&mut d, one_r, one_r);
+    let three_r = radd(&mut d, two_r, one_r);
+    let four_r = radd(&mut d, three_r, one_r);
+
+    let half_sq = rmul(&mut d, half, half);
+    let four_half = rmul(&mut d, four_r, half);
+    let four_half_sq = rmul(&mut d, four_r, half_sq);
+    let bound_expr = rsub(&mut d, p, four_half, four_half_sq);
+
+    let stmt = req(&mut d, bound_expr, one_r);
+    let proof = rrefl(&mut d, bound_expr);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.quarter_bound_tight_at_half");
+    d.declare_theorem(name, stmt, proof)
+        .unwrap_or_else(|e| panic!("4*(1/2)*(1/2) did not reduce to 1: {e:?}"));
 }
 
 /// `Rat.chebyshev_sampleMean_uncorrelated`'s rendered type, verbatim — this
@@ -2341,7 +2507,7 @@ fn covariance_swapped_subtraction_order_is_rejected() {
 // --- the constructed indicator (`rat_prelude::probability`) ----------------
 
 /// Every declaration `probability::declare_probability` adds in its
-/// indicator section — `Rat.indicator` itself and the four theorems built on
+/// indicator section — `Rat.indicator` itself and the six theorems built on
 /// it — is a **checked** definition or theorem with an empty axiom footprint,
 /// read out of the kernel, not off the diff.
 #[test]
@@ -2351,6 +2517,12 @@ fn the_indicator_toolkit_is_axiom_free() {
         ("indicator", p.indicator, false),
         ("indicator_nonneg", p.indicator_nonneg, true),
         ("indicator_le", p.indicator_le, true),
+        ("variance_indicator", p.variance_indicator, true),
+        (
+            "variance_indicator_le_quarter",
+            p.variance_indicator_le_quarter,
+            true,
+        ),
         ("markov_constructed", p.markov_constructed, true),
         ("chebyshev_inequality", p.chebyshev_inequality, true),
     ];
