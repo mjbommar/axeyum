@@ -151,6 +151,7 @@ mod primes;
 mod rectangle;
 mod restrict_pair;
 pub(crate) mod transposition;
+mod vandermonde;
 
 pub use ops::{NatDev, NatOps, NatState};
 
@@ -193,6 +194,7 @@ use transposition::{
     declare_transposition_injective, declare_transposition_involutive,
     declare_transposition_maps_into,
 };
+use vandermonde::declare_vandermonde_all;
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
 /// and its constructors/recursor (re-exported from the [`LogicPrelude`] for
@@ -965,6 +967,20 @@ pub struct NatPrelude {
     /// the triangle via [`Self::sum_range_diagonal`].
     pub sum_range_rect_eq_diag_add_corner: NameId,
 
+    // --- Vandermonde's convolution (`vandermonde.rs`) -----------------------
+    /// `Nat.choose_add_convolution : ∀ m n k, choose (add m n) k = sumRange
+    /// (fun i => choose m i * choose n (sub k i)) (succ k)` — Vandermonde's
+    /// convolution: binomial coefficients as a convolution algebra. By
+    /// induction on `m` (not `n`, and not `m+n`); see `vandermonde.rs`'s
+    /// module doc for why that avoids the successor-shape obstruction an
+    /// induction on `n` runs into.
+    pub choose_add_convolution: NameId,
+    /// `Nat.sum_choose_sq : ∀ n, sumRange (fun i => choose n i * choose n i)
+    /// (succ n) = choose (add n n) n` — the `m = n = k = n` instance of
+    /// [`Self::choose_add_convolution`], via `choose_symm` collapsing
+    /// `choose n (sub n i)` to `choose n i` for `i ≤ n`.
+    pub sum_choose_sq: NameId,
+
     /// `Nat.restrict_pair_injective : ∀ σ i j n,
     /// InjectiveOn σ (succ (succ n)) → Lt i j → Lt j (succ (succ n)) →
     /// setwise_fixed σ i j →
@@ -1274,6 +1290,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_range_split: kernel.name_str(nat, "sumRange_split"),
             sum_range_rect_eq_diag_add_corner: kernel
                 .name_str(nat, "sumRange_rect_eq_diag_add_corner"),
+            choose_add_convolution: kernel.name_str(nat, "choose_add_convolution"),
+            sum_choose_sq: kernel.name_str(nat, "sum_choose_sq"),
             restrict_pair_injective: kernel.name_str(nat, "restrict_pair_injective"),
             restrict_pair_maps_into: kernel.name_str(nat, "restrict_pair_maps_into"),
         };
@@ -1328,6 +1346,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_restrict_pair_maps_into(&mut d, &p)?;
         declare_diagonal(&mut d, &p)?;
         declare_rectangle(&mut d, &p)?;
+        declare_vandermonde_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
