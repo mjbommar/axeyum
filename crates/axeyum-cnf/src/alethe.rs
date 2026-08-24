@@ -689,7 +689,7 @@ fn write_atom(term: &AletheTerm) -> String {
 /// flag, and `rare_rewrite` resolves against cvc5's external RARE database which
 /// we do not ship. An artifact whose steps Carcara can only hole is not an
 /// externally-checked artifact, and counting it as one is the precise error
-/// [`crate::alethe`]'s consumers exist to avoid.
+/// this module's consumers exist to avoid.
 ///
 /// Sorted, so [`is_carcara_checked_rule`] can binary-search it and so a diff
 /// against a newer Carcara is readable.

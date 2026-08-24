@@ -288,7 +288,7 @@ pub struct CPointPrelude {
     ///
     /// Pure bilinearity: writing `u := A-P, v := B-P, w := C-P`, each summand
     /// telescopes (`P-A ~ neg u`, `C-B ~ w-v`, …, via
-    /// [`diff_diff_scalar_proof`] and [`neg_sub_comm_scalar_proof`]) into a
+    /// `diff_diff_scalar_proof` and `neg_sub_comm_scalar_proof`) into a
     /// difference of two raw dot products, and the three differences form a
     /// 3-cycle `(u·v - v·u) + (v·w - w·v) + (w·u - u·w)` that cancels term by
     /// term via [`Self::dot_comm`]. No hypothesis, for every configuration —
@@ -337,7 +337,7 @@ pub struct CPointPrelude {
     /// `B − A ~ C − D` is the vector form of "`ABDC`... — concretely,
     /// `AB` and `DC` are the same displacement — is a parallelogram"; the
     /// conclusion is its two diagonals `AC`/`BD` sharing a midpoint. Pure
-    /// midpoint algebra ([`diag_bisect_midpoint_scalar_proof`]), the same
+    /// midpoint algebra (`diag_bisect_midpoint_scalar_proof`), the same
     /// `add_assoc`/`add_comm`/`add_congr` toolkit as
     /// [`Self::varignon_diagonals_bisect`], no hypothesis beyond the
     /// parallelogram condition itself.
@@ -404,8 +404,8 @@ pub struct CPointPrelude {
     /// This is the identity [`Self::parallelogram_opposite_sides_eq`]'s doc
     /// comment named as unreached. Writing `u := sub A B`, `v := sub B C`:
     /// the hypothesis gives `sub C D ~ neg u`
-    /// ([`opposite_side_neg_scalar_proof`], as before) and `sub D A ~ neg v`
-    /// ([`diag_side_neg_scalar_proof`]); the diagonals telescope
+    /// (`opposite_side_neg_scalar_proof`, as before) and `sub D A ~ neg v`
+    /// (`diag_side_neg_scalar_proof`); the diagonals telescope
     /// *unconditionally* (no hypothesis needed for this half) to `sub A C ~
     /// add u v` and `sub B D ~ sub v u`. Expanding both diagonals' squared
     /// length via [`Self::dot_self_add`]/[`Self::dot_self_sub`] and folding
@@ -435,7 +435,7 @@ pub struct CPointPrelude {
     ///
     /// No hypothesis: writing `u := sub A B`, `v := sub B C`, `w := sub C D`,
     /// the diagonals telescope unconditionally to `sub A C ~ add u v` and
-    /// `sub B D ~ add v w` ([`telescope_scalar_proof`], reused directly —
+    /// `sub B D ~ add v w` (`telescope_scalar_proof`, reused directly —
     /// unlike [`Self::parallelogram_law`]'s `sub B D`, this one needs no
     /// hypothesis at all), and `sub D A ~ neg (add (add u v) w)` (the same
     /// telescope plus one `neg`/`neg_sub_comm` step). Expanding `distSq D A`
@@ -460,8 +460,8 @@ pub struct CPointPrelude {
     /// down, unlike [`Self::thales`]'s `O`).
     ///
     /// Writing `vp := sub A M` and `vq := sub B M`: `sub A B ~ sub vp vq` and
-    /// `sub A C ~ add vp vq` ([`diff_diff_scalar_proof`] plus a `2·midpoint b
-    /// c ~ b + c` bridge, [`apollonius_neg_swap_scalar_proof`]), so `distSq A
+    /// `sub A C ~ add vp vq` (`diff_diff_scalar_proof` plus a `2·midpoint b
+    /// c ~ b + c` bridge, `apollonius_neg_swap_scalar_proof`), so `distSq A
     /// B + distSq A C` expands via
     /// [`Self::dot_self_sub`]/[`Self::dot_self_add`] into an eight-term sum
     /// in `dot vp vp`, `dot vp vq`, `dot vq vq` (four of them negated), and
@@ -506,7 +506,7 @@ pub struct CPointPrelude {
     /// This is the additive form of "the centroid lies two-thirds of the way
     /// from each vertex to the midpoint of the opposite side": subtracting
     /// `3A` from both sides (not done here) gives the more familiar
-    /// `3(G−A) ~ 2(M−A)`. Proved directly from [`Self::triple_g_eq_sum_proof`]
+    /// `3(G−A) ~ 2(M−A)`. Proved directly from `Self::triple_g_eq_sum_proof`
     /// (`3G ~ A+(B+C)`) and `2M ~ B+C` (`double_midpoint_proof`), no
     /// hypothesis, unconditional for every configuration.
     pub centroid_median: NameId,
@@ -550,9 +550,9 @@ pub struct CPointPrelude {
     ///                  (mul t (mul t (distSq B C))))))`,
     /// i.e. `|PD|² = |PB|² − 2t·(P−B)·(C−B) + t²·|BC|²` where `D := lerp B C
     /// t`. Proved by telescoping `P − D ~ (P−B) − (D−B)` through `B`
-    /// ([`diff_diff_scalar_proof`]) and expanding via [`Self::dot_self_sub`];
+    /// (`diff_diff_scalar_proof`) and expanding via [`Self::dot_self_sub`];
     /// the `t²`/`t·` coefficients come from `D − B ~ t·(C−B)`
-    /// ([`add_sub_cancel_left`] applied to `lerp`'s own definition) pulled
+    /// (`add_sub_cancel_left` applied to `lerp`'s own definition) pulled
     /// through `dot`'s bilinearity. No hypothesis on `t` — this holds for
     /// every scalar, not just `t ∈ [0,1]`.
     pub lerp_dist_sq: NameId,

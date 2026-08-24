@@ -673,7 +673,7 @@ pub struct CRealPrelude {
     ///
     /// `seq x n` plus one modulus is an upper rational bound on `x`, proved
     /// directly from regularity at `(k, n)` with **no** `CReal.add`,
-    /// `CReal.neg` or `CReal.abs` — see [`density`](self::density) for why
+    /// `CReal.neg` or `CReal.abs` — see `density` for why
     /// that shortcut is available here and not for `CReal.add`'s own laws.
     pub rat_approx_upper: NameId,
     /// `CReal.rat_approx_lower : ∀ x n, CReal.le (CReal.ofRat (Rat.sub
@@ -739,7 +739,7 @@ pub struct CRealPrelude {
     /// `Equiv.trans`/`le_trans` — because [`Self::regular_seq`]'s hypothesis
     /// is already stated at the two *fixed* diagonal indices `shift m` and
     /// `shift n`; from there it is one instantiation of `RegularSeq` plus
-    /// [`weaken`] against the rational fact `modulus (shift m) (shift n) ≤
+    /// `weaken` against the rational fact `modulus (shift m) (shift n) ≤
     /// modulus m n`.
     pub limit_seq_regular: NameId,
     /// `CReal.limit : (X : Nat → CReal) → RegularSeq X → CReal := fun X h =>
@@ -769,7 +769,7 @@ pub struct CRealPrelude {
     /// ∃ (K : Nat), ∀ n, Within (seq (f n) n − seq L n) (Rat.natDivSucc K n)`.
     ///
     /// The canonical-sample, free-constant formulation — see
-    /// [`convergence`](self::convergence)'s module documentation for why this
+    /// `convergence`'s module documentation for why this
     /// was chosen over the textbook `∀ k, ∃ N, ∀ n ≥ N, …` (that form needs an
     /// antitonicity-in-the-index lemma for `Rat.natDivSucc` this development
     /// deliberately never proves).
@@ -798,7 +798,7 @@ pub struct CRealPrelude {
     /// blocker was about: `add`'s Bishop shift means `seq (add (f n) (g n)) n`
     /// samples `f n` and `g n` at `shift n`, not at `n`, so each summand needs
     /// bridging through its own regularity before `Converges`'s hypotheses
-    /// apply. See [`convergence`](self::convergence)'s module documentation
+    /// apply. See `convergence`'s module documentation
     /// for the bridge and the rate constant it costs.
     pub converges_add: NameId,
     /// `CReal.converges_neg : ∀ f L, Converges f L → Converges (fun n => neg
@@ -822,7 +822,7 @@ pub struct CRealPrelude {
     ///
     /// The canonical-sample boundedness a product's variable shift needs
     /// (`CReal.mulShift` scales by a bound on each multiplicand — see
-    /// [`convergence`](self::convergence)'s module documentation on
+    /// `convergence`'s module documentation on
     /// `converges_mul`), stated the same way [`Self::converges`] states its
     /// own modulus: a free `Nat` constant, at the sample's own index.
     pub bounded: NameId,
@@ -842,7 +842,7 @@ pub struct CRealPrelude {
     /// arbitrary-third-index estimate [`Self::mul_congr`]/
     /// [`Self::left_distrib`]/[`Self::mul_assoc`] needed —
     /// [`Self::equiv_of_bounded`]'s machinery, reused rather than
-    /// re-derived. See [`convergence`](self::convergence)'s module
+    /// re-derived. See `convergence`'s module
     /// documentation for the two reusable pieces (`bounded_at_index`,
     /// `converges_gap_at`) this took.
     pub converges_mul: NameId,
