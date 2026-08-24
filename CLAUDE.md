@@ -939,6 +939,28 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   that it ran. (`nat_axiom_inventory` now covers `nat`/`logic` and the full
   trusted surface — `Axiom` alone is not it, since `Opaque` has no proof body and
   `Quotient` admits `Quot.sound`.)
+- **`AxNat` IS NOT AN AXIOMATIZED `Nat` — the `Ax` is *axeyum*, and the prefix
+  means the opposite of what it means in `AxReal`.** Every rendered type in this
+  kernel prints the naturals as `AxNat`: `AxNat.sumRange`, `AxNat.injectiveOn`,
+  `Eq.{1} AxNat`. That is `lean_pp`'s non-shadowing root for the kernel's
+  **computational, inductive, constructed** naturals, chosen so an exported term
+  does not collide with Lean's own `Nat`, and `nat` measures **0** — no `Axiom`,
+  no `Opaque`, no `Quotient`.
+
+  In `AxReal` the same prefix does mean axiomatized, and that package is this
+  repository's only nonzero row at **30**. So the two names differ by one letter
+  and disagree about the headline metric, and a reader who sees `AxNat` in a
+  pinned type and infers an assumed carrier has axiom-freedom exactly backwards.
+
+  The rule this generalizes: **read a carrier's trusted surface from
+  `Kernel::axiom_footprint`, never from its rendered name.**
+  `nat_axiom_inventory` covers `nat`/`logic`; `prelude_theorem_inventory
+  --include-constructed` lists every declared name with its footprint. And note
+  that `lean_pp` rewrites names on export for two reasons at once — the other is
+  that a numeric component becomes `_0`, since `foo.0` parses as a projection —
+  so matching display names against module text reports "not covered" for
+  artefacts that are perfectly correct.
+
 - **`AxReal` and `CReal` are different things and one is a substring of the
   other.** `CReal` is the CONSTRUCTED reals — a Bishop setoid over the
   constructed rationals, trusted surface 0 (ADR-0512) — and it is what the
