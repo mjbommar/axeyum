@@ -442,8 +442,18 @@ parity-freshness:
 autogenesis-knowledge-controls:
     python3 -m unittest scripts.tests.test_validate_autogenesis_knowledge
     python3 scripts/validate-autogenesis-knowledge.py
-    python3 scripts/gen-autogenesis-knowledge-coverage.py --check
     scripts/check-autogenesis-knowledge-controls.sh
+
+# Owner-lane freshness checks for derived Autogenesis knowledge snapshots.
+# These are intentionally not part of `check`: construction lanes may advance
+# the live theorem/fact sources while the additive sidecars lag safely. Run this
+# before committing a knowledge-overlay refresh.
+autogenesis-knowledge-derived-freshness:
+    python3 scripts/gen-autogenesis-knowledge-coverage.py --check
+    python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
+    python3 scripts/gen-autogenesis-obstruction-projection.py --check
+    python3 scripts/gen-autogenesis-transport-projection.py --check
+    python3 scripts/gen-autogenesis-scheduler-observations.py --check
 
 autogenesis-kernel-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection

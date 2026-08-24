@@ -367,6 +367,35 @@ Until that lane finishes:
 The sidecar can lag construction safely. It cannot lead construction by
 asserting nonexistent local entities.
 
+### Branch containment and gate ownership
+
+Do not infer that a topic branch is unmerged merely because its tip is far
+behind `origin/main`. A branch that was merged by fast-forward or whose commit
+is an ancestor of later work should be behind. Use containment as the merge
+test:
+
+```sh
+git fetch origin --prune
+git merge-base --is-ancestor <topic-commit> origin/main
+git branch -r --contains <topic-commit>
+```
+
+`git rev-list --left-right --count <topic>...origin/main` measures divergence;
+it does not distinguish an abandoned branch from an already-landed ancestor.
+If commit identity changed through a rebase or cherry-pick, inspect patch
+equivalence with `git cherry origin/main <topic>` and verify the owned paths on
+`origin/main` before reporting missing work.
+
+Derived knowledge artifacts are owner-lane snapshots, not global construction
+ratchets. The aggregate gate validates committed overlays and projections for
+schema integrity, resolvable endpoints, and fail-closed negative controls, but
+it deliberately does not require every snapshot to equal the latest moving
+theorem/fact sources. The knowledge-overlay owner runs
+`just autogenesis-knowledge-derived-freshness` before publishing a refreshed
+snapshot. Unrelated construction lanes neither regenerate these artifacts nor
+fail merely because they advanced the frontier. This preserves the rule above:
+the sidecar may lag, but any links it does publish must remain valid.
+
 ## ADR disposition
 
 No ADR is required for version 1 because it adds optional planning metadata and
