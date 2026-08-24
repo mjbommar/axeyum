@@ -247,6 +247,13 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sum_choose_row,
         p.choose_le_two_pow,
         p.succ_sub_of_le,
+        p.succ_mul_choose_eq,
+        // Euclid's lemma (Elements VII.30) was admitted and axiom-free but named
+        // by NOTHING in this list, so the presence/footprint sweep never saw it.
+        // `axiom_footprint` of a name the sweep does not visit is not "empty" —
+        // it is unmeasured, and the two look identical in a green run.
+        p.euclid_lemma,
+        p.prime_dvd_choose,
     ]
 }
 
@@ -3925,7 +3932,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        20 + 139,
+        20 + 142,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -4571,4 +4578,139 @@ fn every_number_at_least_two_has_a_prime_divisor() {
         f.const_app(p.logic.or, &[big, small])
     };
     assert!(f.k.def_eq(dichotomy_ty, expected_dichotomy));
+}
+
+/// `Nat.succ_mul_choose_eq` at a concrete point: `n = 3, k = 1` gives
+/// `succ 1 * choose 4 2 = succ 3 * choose 3 1`, i.e. `2 * 6 = 4 * 3`, both
+/// sides reducing to `12`.
+#[test]
+fn succ_mul_choose_eq_holds_at_a_concrete_point() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let three = f.num(3);
+    let one = f.num(1);
+    let proof = f.lemma(p.succ_mul_choose_eq, &[three, one]);
+    let inferred =
+        f.k.infer(proof)
+            .unwrap_or_else(|e| panic!("succ_mul_choose_eq(3,1) should infer: {}", f.explain(&e)));
+
+    let two = f.num(2);
+    let four = f.num(4);
+    let choose_4_2 = f.choose(four, two);
+    let lhs = f.mul(two, choose_4_2);
+    let choose_3_1 = f.choose(three, one);
+    let rhs = f.mul(four, choose_3_1);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "succ_mul_choose_eq(3,1) should state succ 1 * choose 4 2 = succ 3 * choose 3 1"
+    );
+
+    let twelve = f.num(12);
+    assert!(f.k.def_eq(lhs, twelve), "2 * choose 4 2 must reduce to 12");
+    assert!(f.k.def_eq(rhs, twelve), "4 * choose 3 1 must reduce to 12");
+
+    assert!(
+        f.k.axiom_footprint(p.succ_mul_choose_eq).is_empty(),
+        "{} must rest on zero axioms",
+        f.k.display_name(p.succ_mul_choose_eq)
+    );
+}
+
+/// `Nat.prime_dvd_choose`'s statement, checked against an independently built
+/// type, plus its shape and reduction at a concrete `p = 5, k = 2`
+/// (`choose 5 2` reduces to `10`). Primality itself is left as the
+/// hypothesis's TYPE rather than a discharged proof — mirroring
+/// `every_number_at_least_two_has_a_prime_divisor`'s own treatment of a found
+/// prime — since manufacturing a from-scratch primality certificate for a
+/// literal numeral is a separate concern from what this theorem proves.
+#[test]
+fn prime_dvd_choose_matches_its_statement_at_a_concrete_point() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one = f.num(1);
+    let two = f.num(2);
+
+    let prime_ty_of = |f: &mut Fixture, pp: ExprId| -> ExprId {
+        let lower = f.le(two, pp);
+        let c_fv = f.fresh_fvar();
+        let c = f.k.fvar(c_fv);
+        let hyp = f.dvd(c, pp);
+        let is_one = f.eq(c, one);
+        let is_pp = f.eq(c, pp);
+        let disjunction = f.const_app(p.logic.or, &[is_one, is_pp]);
+        let body = f.arrow(hyp, disjunction);
+        let divisors = f.pi_fv(c_fv, nat, body);
+        f.const_app(p.logic.and, &[lower, divisors])
+    };
+
+    // --- the STATEMENT, compared against an independent build ---------------
+    let declared = {
+        let theorem = f.k.const_(p.prime_dvd_choose, vec![]);
+        f.k.infer(theorem)
+            .expect("`Nat.prime_dvd_choose` must be in the environment")
+    };
+    let expected = {
+        let pp_fv = f.fresh_fvar();
+        let pp = f.k.fvar(pp_fv);
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let prime_ty = prime_ty_of(&mut f, pp);
+        let zero = f.zero();
+        let pos_ty = f.lt(zero, k);
+        let lt_ty = f.lt(k, pp);
+        let choose_pp_k = f.choose(pp, k);
+        let conclusion = f.dvd(pp, choose_pp_k);
+        let inner1 = f.arrow(lt_ty, conclusion);
+        let inner2 = f.arrow(pos_ty, inner1);
+        let body_ty = f.arrow(prime_ty, inner2);
+        let with_k = f.pi_fv(k_fv, nat, body_ty);
+        f.pi_fv(pp_fv, nat, with_k)
+    };
+    assert!(
+        f.k.def_eq(declared, expected),
+        "the admitted type is not \
+         `∀ p k, (2 <= p ∧ ∀ d, d|p -> d=1 ∨ d=p) -> 0<k -> k<p -> p|choose p k`"
+    );
+
+    // --- applied at a concrete p=5, k=2 --------------------------------------
+    let five = f.num(5);
+    let partial = {
+        let theorem = f.k.const_(p.prime_dvd_choose, vec![]);
+        let at_p = f.k.app(theorem, five);
+        f.k.app(at_p, two)
+    };
+    let partial_ty = f.k.infer(partial).unwrap_or_else(|e| {
+        panic!(
+            "prime_dvd_choose should apply at p=5, k=2: {}",
+            f.explain(&e)
+        )
+    });
+    let expected_partial = {
+        let prime_ty = prime_ty_of(&mut f, five);
+        let zero = f.zero();
+        let pos_ty = f.lt(zero, two);
+        let lt_ty = f.lt(two, five);
+        let choose_5_2 = f.choose(five, two);
+        let conclusion = f.dvd(five, choose_5_2);
+        let inner1 = f.arrow(lt_ty, conclusion);
+        let inner2 = f.arrow(pos_ty, inner1);
+        f.arrow(prime_ty, inner2)
+    };
+    assert!(
+        f.k.def_eq(partial_ty, expected_partial),
+        "prime_dvd_choose(5,2) should await (prime 5) -> 0<2 -> 2<5 -> 5 | choose 5 2"
+    );
+
+    let choose_5_2 = f.choose(five, two);
+    let ten = f.num(10);
+    assert!(f.k.def_eq(choose_5_2, ten), "choose 5 2 must reduce to 10");
+
+    assert!(
+        f.k.axiom_footprint(p.prime_dvd_choose).is_empty(),
+        "{} must rest on zero axioms",
+        f.k.display_name(p.prime_dvd_choose)
+    );
 }

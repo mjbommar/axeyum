@@ -429,6 +429,132 @@ pub struct ComplexPrelude {
     /// extracted. `Apart _ zero` is strictly stronger than `Not (Equiv _
     /// zero)`, and only the `Apart` form is proved.
     pub mul_eq_zero_not_both_apart_zero: NameId,
+
+    // --- the other side of the field law, and complex powers ----------------
+    /// `Complex.inv_mul_cancel : ∀ z k (h : CReal.PosBound (normSq z) k),
+    /// Equiv (mul (inv z k h) z) one`.
+    ///
+    /// The other side of [`Self::mul_inv_cancel`], immediate from it and
+    /// [`Self::mul_comm`] by one `Equiv.trans`: no fresh estimate, `inv` is
+    /// not shown to be a *two-sided* inverse from scratch.
+    pub inv_mul_cancel: NameId,
+    /// `Complex.pos_bound_conj : ∀ z k, CReal.PosBound (normSq z) k →
+    /// CReal.PosBound (normSq (conj z)) k`.
+    ///
+    /// **The modulus transports unchanged.** `CReal.PosBound x k` unfolds to
+    /// `CReal.le (CReal.ofRat (Rat.natDivSucc 1 k)) x` — a lower bound that
+    /// depends on `k` alone, not on `x` — so [`Self::norm_sq_conj`] (`normSq
+    /// (conj z) ~ normSq z`) transports the same bound across the same `k` by
+    /// `CReal.le_congr`, with no existential re-derivation through
+    /// `CReal.pos_bound_of_lt` (which would hand back an unrelated modulus).
+    /// This is what [`Self::conj_inv`] needs to state `inv (conj z)` at the
+    /// caller's own `k`, and it is reusable at any other site that transports
+    /// a `PosBound` witness across a `normSq`-`Equiv`.
+    pub pos_bound_conj: NameId,
+    /// `Complex.conj_inv : ∀ z k (h : CReal.PosBound (normSq z) k),
+    /// Equiv (conj (inv z k h)) (inv (conj z) k (pos_bound_conj z k h))`.
+    ///
+    /// **Stated at the same `k`, via [`Self::pos_bound_conj`]** — not at some
+    /// existentially-produced modulus for the conjugate, which would make the
+    /// statement true but useless to a caller already holding `h` at `k`.
+    /// `CReal.inv_congr` (independent-moduli form) relates
+    /// `CReal.inv (normSq z) k h` and `CReal.inv (normSq (conj z)) k h'` via
+    /// [`Self::norm_sq_conj`]; the rest is the ring calculus plus
+    /// `CReal.mul_congr`/`neg_congr` on that one fact, componentwise.
+    pub conj_inv: NameId,
+    /// `Complex.pow : Complex → Nat → Complex`, by structural `Nat.rec` on the
+    /// exponent — `pow z Nat.zero ≡ one`, `pow z (Nat.succ j) ≡ mul (pow z j)
+    /// z` — matching `Int.pow`'s own convention exactly (`int_prelude/defs.rs`):
+    /// recursion on the exponent, the recursive factor on the LEFT of the
+    /// fresh copy of the base.
+    pub pow: NameId,
+    /// `Complex.pow_zero : ∀ z, Eq Complex (pow z Nat.zero) one`.
+    ///
+    /// Stated over `Eq Complex`, not `Complex.Equiv` — this is a fact about
+    /// how `pow`'s *own* definition computes on one representative, the same
+    /// reason `Int.pow_zero`/`Int.pow_succ` are `Eq Int` facts despite `Int`
+    /// carrying its own equality discipline elsewhere. Closes by `Eq.refl`
+    /// alone: `pow`'s `Nat.rec` application ι-reduces on `Nat.zero` with no
+    /// further work.
+    pub pow_zero: NameId,
+    /// `Complex.pow_succ : ∀ z (m : Nat), Eq Complex (pow z (Nat.succ m))
+    /// (mul (pow z m) z)`. Closes by `Eq.refl` alone, exactly as `pow_zero`
+    /// does: `pow`'s `Nat.rec` application ι-reduces on `Nat.succ m` to
+    /// precisely this right-hand side.
+    pub pow_succ: NameId,
+    /// `Complex.pow_add : ∀ z (m n : Nat), Equiv (pow z (Nat.add m n))
+    /// (mul (pow z m) (pow z n))`.
+    ///
+    /// Induction on `n`, mirroring `Int.pow_add`'s own proof shape
+    /// (`int_prelude/algebra.rs`) with every carrier promoted from `Int` to
+    /// `Complex` and every step re-expressed over `Complex.Equiv`: the base
+    /// case is [`Self::mul_one`] reversed, the step is the inductive
+    /// hypothesis lifted by [`Self::mul_congr`] then [`Self::mul_assoc`].
+    pub pow_add: NameId,
+
+    // --- finite sums over ℂ, and the geometric series identity -------------
+    /// `Complex.sumRange : (Nat → Complex) → Nat → Complex`, by structural
+    /// `Nat.rec` on the bound — `sumRange f Nat.zero ≡ zero`, `sumRange f
+    /// (Nat.succ j) ≡ add (sumRange f j) (f j)` — matching `Nat.sumRange`'s
+    /// own convention exactly (`nat_prelude/defs.rs::declare_finite_ranges`):
+    /// recursion on the bound, the new term added on the right of the prior
+    /// sum. `sumRange f n` is `Σ_{k<n} f k`.
+    pub sum_range: NameId,
+    /// `Complex.sumRange_zero : ∀ f, Eq Complex (sumRange f Nat.zero) zero`.
+    ///
+    /// Closes by `Eq.refl` alone: `sumRange`'s `Nat.rec` application
+    /// ι-reduces on `Nat.zero` with no further work, exactly
+    /// [`Self::pow_zero`]'s own shape.
+    pub sum_range_zero: NameId,
+    /// `Complex.sumRange_succ : ∀ f (n : Nat), Eq Complex (sumRange f
+    /// (Nat.succ n)) (add (sumRange f n) (f n))`. Closes by `Eq.refl` alone,
+    /// exactly as [`Self::sum_range_zero`] does.
+    pub sum_range_succ: NameId,
+    /// `Complex.sumRange_congr : ∀ f g n, (∀ i, Equiv (f i) (g i)) → Equiv
+    /// (sumRange f n) (sumRange g n)`.
+    ///
+    /// Induction on `n` — `Complex.Equiv` is a *defined* relation, not `Eq`,
+    /// so nothing rewrites under the sum for free, and this proof is the only
+    /// route to moving a pointwise fact under a `Complex.sumRange`. Mirrors
+    /// `Nat.sumRange_congr`'s own proof shape (`nat_prelude/algebra.rs`) with
+    /// every step promoted from `Eq Nat` to `Complex.Equiv`.
+    pub sum_range_congr: NameId,
+    /// `Complex.mul_sumRange : ∀ w f n, Equiv (mul w (sumRange f n))
+    /// (sumRange (fun i => mul w (f i)) n)` — a constant distributes through
+    /// a finite sum. Induction on `n` plus [`Self::left_distrib`], mirroring
+    /// `Nat.mul_sumRange`'s own proof shape.
+    pub mul_sum_range: NameId,
+    /// `Complex.mul_sub_one_geom : ∀ z (n : Nat), Equiv (mul (add one (neg z))
+    /// (sumRange (fun k => pow z k) n)) (add one (neg (pow z n)))` — **the
+    /// geometric series identity**, `(1 − z) · Σ_{k<n} z^k = 1 − z^n`, holding
+    /// for every `z : Complex` including `z ~ 1` (where the corresponding
+    /// quotient identity is meaningless).
+    ///
+    /// Stated multiplied through rather than as a quotient: the quotient form
+    /// needs `inv (add one (neg z)) k h` for a witnessed `CReal.PosBound
+    /// (normSq (add one (neg z))) k`, which is not available for an
+    /// arbitrary `z` — reaching it from `z ≁ 1` alone would be Markov's
+    /// principle, which this kernel neither proves nor assumes. Induction on
+    /// `n`, telescoping: the base case erases the sum via `mul_zero` and
+    /// `add_neg`; the step distributes over the freshly extended sum with
+    /// `left_distrib`, substitutes the inductive hypothesis via
+    /// [`Self::add_congr`], then closes the remaining two-term identity
+    /// `(1 − zⁿ) + (1 − z)·zⁿ = 1 − zⁿ·z` — a pure ring identity once the
+    /// hypothesis is in place — by the `ring` calculus over the atoms `z` and
+    /// `zⁿ`.
+    pub mul_sub_one_geom: NameId,
+    /// `Complex.geom_series_div : ∀ z (n k : Nat) (h : CReal.PosBound (normSq
+    /// (add one (neg z))) k), Equiv (sumRange (fun j => pow z j) n) (div (add
+    /// one (neg (pow z n))) (add one (neg z)) k h)`.
+    ///
+    /// The quotient corollary of [`Self::mul_sub_one_geom`], stated
+    /// **honestly**: the modulus witness `k`/`h` for `1 − z` is an explicit
+    /// argument, exactly as [`Self::inv`] and [`Self::conj_inv`] take theirs
+    /// — never derived from `z ≁ 1` alone, which this kernel cannot do without
+    /// Markov's principle. Cancels `(1 − z)` against its own inverse via
+    /// [`Self::inv_mul_cancel`], [`Self::mul_assoc`] and [`Self::mul_comm`],
+    /// with no fresh analysis beyond [`Self::mul_sub_one_geom`] itself.
+    pub geom_series_div: NameId,
 }
 
 impl ComplexPrelude {
@@ -533,6 +659,20 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         mul_apart_zero: kernel.name_str(complex, "mul_apart_zero"),
         mul_eq_zero_not_both_apart_zero: kernel
             .name_str(complex, "mul_eq_zero_not_both_apart_zero"),
+        inv_mul_cancel: kernel.name_str(complex, "inv_mul_cancel"),
+        pos_bound_conj: kernel.name_str(complex, "pos_bound_conj"),
+        conj_inv: kernel.name_str(complex, "conj_inv"),
+        pow: kernel.name_str(complex, "pow"),
+        pow_zero: kernel.name_str(complex, "pow_zero"),
+        pow_succ: kernel.name_str(complex, "pow_succ"),
+        pow_add: kernel.name_str(complex, "pow_add"),
+        sum_range: kernel.name_str(complex, "sumRange"),
+        sum_range_zero: kernel.name_str(complex, "sumRange_zero"),
+        sum_range_succ: kernel.name_str(complex, "sumRange_succ"),
+        sum_range_congr: kernel.name_str(complex, "sumRange_congr"),
+        mul_sum_range: kernel.name_str(complex, "mul_sumRange"),
+        mul_sub_one_geom: kernel.name_str(complex, "mul_sub_one_geom"),
+        geom_series_div: kernel.name_str(complex, "geom_series_div"),
     }
 }
 
@@ -586,7 +726,19 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_apart_symm(&mut d, prelude)?;
         declare_apart_of_normsq_pos(&mut d, prelude)?;
         declare_mul_apart_zero(&mut d, prelude)?;
-        declare_mul_eq_zero_not_both_apart_zero(&mut d, prelude)
+        declare_mul_eq_zero_not_both_apart_zero(&mut d, prelude)?;
+        declare_complex_inv_mul_cancel(&mut d, prelude)?;
+        declare_pos_bound_conj(&mut d, prelude)?;
+        declare_conj_inv(&mut d, prelude)?;
+        declare_pow(&mut d, prelude)?;
+        declare_pow_equations(&mut d, prelude)?;
+        declare_pow_add(&mut d, prelude)?;
+        declare_sum_range(&mut d, prelude)?;
+        declare_sum_range_equations(&mut d, prelude)?;
+        declare_sum_range_congr(&mut d, prelude)?;
+        declare_mul_sum_range(&mut d, prelude)?;
+        declare_mul_sub_one_geom(&mut d, prelude)?;
+        declare_geom_series_div(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -3385,6 +3537,976 @@ fn declare_mul_eq_zero_not_both_apart_zero(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.mul_eq_zero_not_both_apart_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the other side of the field law, `PosBound` transport, and powers -----
+
+/// `Eq.{1} Complex a b`.
+///
+/// `Complex` lives at the same universe `Int` does (`declare_carrier`'s
+/// `level_one`), so this is exactly [`IntDev`]'s own `ieq` with the carrier
+/// swapped — built by hand here rather than reused because `ieq` is hardwired
+/// to `Int`.
+fn complex_eq(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let one = d.level_one();
+    let logic = p.creal.rat.int.logic;
+    let eq = d.kernel().const_(logic.eq, vec![one]);
+    let carrier = complex_ty(d, p);
+    d.apply(eq, &[carrier, a, b])
+}
+
+/// `Eq.refl.{1} Complex a`.
+fn complex_eq_refl(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId) -> ExprId {
+    let one = d.level_one();
+    let logic = p.creal.rat.int.logic;
+    let refl = d.kernel().const_(logic.eq_refl, vec![one]);
+    let carrier = complex_ty(d, p);
+    d.apply(refl, &[carrier, a])
+}
+
+/// `Complex.inv_mul_cancel : ∀ z k (h : CReal.PosBound (normSq z) k),
+/// Equiv (mul (inv z k h) z) one`.
+///
+/// The other side of [`ComplexPrelude::mul_inv_cancel`] — `mul_comm` at
+/// `(inv z k h, z)` turns `mul (inv z k h) z` into `mul z (inv z k h)`, and
+/// `mul_inv_cancel` itself closes from there. No fresh estimate.
+fn declare_complex_inv_mul_cancel(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm = d.const_app(p.norm_sq, &[z]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let inv_term = d.const_app(p.inv, &[z, k, h]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    let inv_z_mul = d.const_app(p.mul, &[inv_term, z]);
+    let z_inv_mul = d.const_app(p.mul, &[z, inv_term]);
+    let comm = d.lemma(p.mul_comm, &[inv_term, z]); // Equiv (mul inv_term z) (mul z inv_term)
+    let cancel = d.lemma(p.mul_inv_cancel, &[z, k, h]); // Equiv (mul z inv_term) one
+    let proof = d.lemma(p.equiv_trans, &[inv_z_mul, z_inv_mul, one, comm, cancel]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(z_fv, carrier, with_k)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, inv_z_mul, one);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        d.pi_fv(z_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.inv_mul_cancel,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.pos_bound_conj : ∀ z k, CReal.PosBound (normSq z) k →
+/// CReal.PosBound (normSq (conj z)) k`.
+///
+/// `CReal.PosBound x k` unfolds to `CReal.le (CReal.ofRat (Rat.natDivSucc 1
+/// k)) x` — a bound depending on `k` alone — so [`ComplexPrelude::norm_sq_conj`]
+/// transports `h` across the *same* `k` by `CReal.le_congr`, with the bound
+/// term held fixed by reflexivity on both sides. No existential
+/// re-derivation through `CReal.pos_bound_of_lt`, which would hand back an
+/// unrelated modulus instead of the caller's own `k`.
+fn declare_pos_bound_conj(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let conj_z = d.const_app(p.conj, &[z]);
+    let norm_conj_z = d.const_app(p.norm_sq, &[conj_z]);
+
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_z, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // `bound := CReal.ofRat (Rat.natDivSucc 1 k)` -- the same term
+    // `CReal.PosBound`'s own definition uses, built here from the public
+    // `CRealPrelude`/`RatPrelude` fields rather than imported from `creal/`.
+    let one_nat = d.num(1);
+    let gap = d.const_app(creal.rat.nat_div_succ, &[one_nat, k]);
+    let bound = d.const_app(creal.of_rat, &[gap]);
+    let bound_refl = crefl(d, creal, bound);
+
+    let conj_proof = d.lemma(p.norm_sq_conj, &[z]); // Equiv (normSq (conj z)) (normSq z)
+    let swapped = csymm(d, creal, norm_conj_z, norm_z, conj_proof); // Equiv (normSq z) (normSq (conj z))
+
+    // `le_congr : ∀ a b c e, Equiv a b → Equiv c e → le a c → le b e`, at
+    // `a = b = bound`, `c = normSq z`, `e = normSq (conj z)`.
+    let transported = d.lemma(
+        creal.le_congr,
+        &[bound, bound, norm_z, norm_conj_z, bound_refl, swapped, h],
+    );
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, transported);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(z_fv, carrier, with_k)
+    };
+    let ty = {
+        let conclusion = d.const_app(creal.pos_bound, &[norm_conj_z, k]);
+        let inner = d.arrow(hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        d.pi_fv(z_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pos_bound_conj,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.conj_inv : ∀ z k (h : CReal.PosBound (normSq z) k),
+/// Equiv (conj (inv z k h)) (inv (conj z) k (pos_bound_conj z k h))`.
+///
+/// Both sides unfold (delta on `conj`/`inv`, iota over `mk`) to a pair of
+/// `CReal` expressions in `a := re z`, `b := im z`, `u := CReal.inv (normSq z)
+/// k h` and `u' := CReal.inv (normSq (conj z)) k h'`: the left side's
+/// components are `a·u` and `−(−(b·u))`, the right side's are `a·u'` and
+/// `−((−b)·u')`. `CReal.inv_congr` (independent moduli, both at the same `k`
+/// here) relates `u` and `u'` via [`ComplexPrelude::norm_sq_conj`]; the real
+/// component is `mul_congr` on that fact directly, and the imaginary
+/// component chains two `neg_congr` steps with one ring-calculus double
+/// negation.
+fn declare_conj_inv(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_z, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let conj_z = d.const_app(p.conj, &[z]);
+    let norm_conj_z = d.const_app(p.norm_sq, &[conj_z]);
+    let h2 = d.lemma(p.pos_bound_conj, &[z, k, h]); // PosBound (normSq (conj z)) k
+
+    let a = re_of(d, p, z);
+    let b = im_of(d, p, z);
+    let u = d.const_app(creal.inv, &[norm_z, k, h]);
+    let u2 = d.const_app(creal.inv, &[norm_conj_z, k, h2]);
+
+    // `normSq z ~ normSq (conj z)`, then `CReal.inv_congr` at the shared `k`.
+    let conj_norm_proof = d.lemma(p.norm_sq_conj, &[z]); // Equiv (normSq (conj z)) (normSq z)
+    let norm_swapped = csymm(d, creal, norm_conj_z, norm_z, conj_norm_proof);
+    let u_eq = d.lemma(
+        creal.inv_congr,
+        &[norm_z, norm_conj_z, k, k, h, h2, norm_swapped],
+    ); // Equiv u u2
+
+    let refl_a = crefl(d, creal, a);
+    let refl_b = crefl(d, creal, b);
+
+    // Real part: Equiv (mul a u) (mul a u2).
+    let real_proof = d.lemma(creal.mul_congr, &[a, a, u, u2, refl_a, u_eq]);
+    let au = cmul(d, creal, a, u);
+    let au2 = cmul(d, creal, a, u2);
+    let real_claim = ceq(d, creal, au, au2);
+
+    // Imaginary part: Equiv (neg (neg (mul b u))) (neg (mul (neg b) u2)).
+    let mbu_proof = d.lemma(creal.mul_congr, &[b, b, u, u2, refl_b, u_eq]); // Equiv (mul b u)(mul b u2)
+    let bu = cmul(d, creal, b, u);
+    let bu2 = cmul(d, creal, b, u2);
+    let n1 = d.lemma(creal.neg_congr, &[bu, bu2, mbu_proof]); // Equiv (neg bu)(neg bu2)
+    let nbu = cneg(d, creal, bu);
+    let nbu2 = cneg(d, creal, bu2);
+    let n2 = d.lemma(creal.neg_congr, &[nbu, nbu2, n1]); // Equiv (neg(neg bu))(neg(neg bu2))
+    let nnbu = cneg(d, creal, nbu);
+    let nnbu2 = cneg(d, creal, nbu2);
+
+    let neg_b = cneg(d, creal, b);
+    let ring_bridge = ring_proof(
+        d,
+        creal,
+        &RExpr::neg(RExpr::neg(RExpr::mul(RExpr::Atom(b), RExpr::Atom(u2)))),
+        &RExpr::neg(RExpr::mul(RExpr::neg(RExpr::Atom(b)), RExpr::Atom(u2))),
+    );
+    let neg_b_u2 = cmul(d, creal, neg_b, u2);
+    let target_imag = cneg(d, creal, neg_b_u2);
+    let imag_proof = ctrans(d, creal, nnbu, nnbu2, target_imag, n2, ring_bridge);
+    let imag_claim = ceq(d, creal, nnbu, target_imag);
+
+    let body = and_intro(d, p, real_claim, imag_claim, real_proof, imag_proof);
+
+    let inv_z_term = d.const_app(p.inv, &[z, k, h]);
+    let conj_inv_z = d.const_app(p.conj, &[inv_z_term]);
+    let inv_conj_z = d.const_app(p.inv, &[conj_z, k, h2]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, body);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(z_fv, carrier, with_k)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, conj_inv_z, inv_conj_z);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        d.pi_fv(z_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.conj_inv,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.pow : Complex → Nat → Complex`, by structural `Nat.rec` on the
+/// exponent — `pow z Nat.zero ≡ one`, `pow z (Nat.succ j) ≡ mul (pow z j) z`.
+///
+/// Matches `Int.pow`'s convention verbatim (`int_prelude/defs.rs::declare_pow`):
+/// recursion on the exponent, the recursive factor `mul (pow z j) z` with the
+/// fresh copy on the RIGHT and the inductive value on the LEFT. `Complex`'s
+/// own `mk`-carrying base has to be closed over across the whole `Nat.rec`
+/// application, exactly the reason `Int.pow` needed its own helper rather
+/// than [`NatOps::define_binary`](crate::nat_prelude::NatOps::define_binary)'s
+/// `Nat → Nat → Nat` shape.
+fn declare_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let motive = d.kernel().lam(anon, nat, carrier, BinderInfo::Default);
+    let minor_zero = d.kernel().const_(p.one, vec![]);
+    let minor_succ = {
+        let j_fv = d.fresh_fvar();
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let body = d.const_app(p.mul, &[ih, z]);
+        let inner = d.lam_fv(ih_fv, carrier, body);
+        d.lam_fv(j_fv, nat, inner)
+    };
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+    let body = d.apply(rec, &[motive, minor_zero, minor_succ, n]);
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(z_fv, carrier, with_n)
+    };
+    let ty = {
+        let inner = d.arrow(nat, carrier);
+        d.arrow(carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.pow,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 9),
+    })
+}
+
+/// `Complex.pow_zero` and `Complex.pow_succ`: the defining equations of
+/// [`declare_pow`], each closed by `Eq.refl` alone since `pow`'s `Nat.rec`
+/// application ι-reduces on both minor premises — exactly `Int.pow_zero`/
+/// `Int.pow_succ`'s own shape (`int_prelude/defs.rs::declare_pow_equations`),
+/// with `Eq Complex` in place of `Eq Int`.
+fn declare_pow_equations(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    // pow_zero : ∀ z, Eq Complex (pow z Nat.zero) one.
+    {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let zero_n = d.zero();
+        let lhs = d.const_app(p.pow, &[z, zero_n]);
+        let one = d.kernel().const_(p.one, vec![]);
+        let stmt = complex_eq(d, p, lhs, one);
+        let proof = complex_eq_refl(d, p, one);
+        let value = d.lam_fv(z_fv, carrier, proof);
+        let ty = d.pi_fv(z_fv, carrier, stmt);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.pow_zero,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // pow_succ : ∀ z (m : Nat), Eq Complex (pow z (Nat.succ m)) (mul (pow z m) z).
+    {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+
+        let sm = d.succ(m);
+        let lhs = d.const_app(p.pow, &[z, sm]);
+        let pm = d.const_app(p.pow, &[z, m]);
+        let rhs = d.const_app(p.mul, &[pm, z]);
+        let stmt_inner = complex_eq(d, p, lhs, rhs);
+        let proof_inner = complex_eq_refl(d, p, rhs);
+
+        let ty = {
+            let inner = d.pi_fv(m_fv, nat, stmt_inner);
+            d.pi_fv(z_fv, carrier, inner)
+        };
+        let value = {
+            let inner = d.lam_fv(m_fv, nat, proof_inner);
+            d.lam_fv(z_fv, carrier, inner)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.pow_succ,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// `Complex.pow_add : ∀ z (m n : Nat), Equiv (pow z (Nat.add m n))
+/// (mul (pow z m) (pow z n))`.
+///
+/// Induction on `n` via [`NatOps::induct`], mirroring `Int.pow_add`'s own
+/// proof shape (`int_prelude/algebra.rs::declare_pow_add`) with every step
+/// re-expressed over `Complex.Equiv` in place of `Eq Int`: the base case is
+/// [`ComplexPrelude::mul_one`] reversed (`add m Nat.zero` and `pow z
+/// Nat.zero` both ι-reduce away), the step lifts the inductive hypothesis
+/// through [`ComplexPrelude::mul_congr`] and re-associates with
+/// [`ComplexPrelude::mul_assoc`] — no new proof technique.
+fn declare_pow_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let sum = NatOps::add(d, m, x);
+        let lhs = d.const_app(p.pow, &[z, sum]);
+        let pow_m = d.const_app(p.pow, &[z, m]);
+        let pow_x = d.const_app(p.pow, &[z, x]);
+        let rhs = d.const_app(p.mul, &[pow_m, pow_x]);
+        zeq(d, p, lhs, rhs)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            // `pow z (add m 0)` computes to `pow z m`; goal is
+            // `Equiv (pow z m) (mul (pow z m) (pow z 0))`, i.e. `mul_one`
+            // reversed once `pow z 0` computes to `one`.
+            let pow_m = d.const_app(p.pow, &[z, m]);
+            let one = d.kernel().const_(p.one, vec![]);
+            let product = d.const_app(p.mul, &[pow_m, one]);
+            let h = d.lemma(p.mul_one, &[pow_m]); // Equiv (mul pow_m one) pow_m
+            d.lemma(p.equiv_symm, &[product, pow_m, h])
+        },
+        &|d, j, ih| {
+            // `pow z (add m (succ j))` computes to `mul (pow z (add m j)) z`.
+            let pow_m = d.const_app(p.pow, &[z, m]);
+            let pow_j = d.const_app(p.pow, &[z, j]);
+            let sum_mj = NatOps::add(d, m, j);
+            let pow_sum = d.const_app(p.pow, &[z, sum_mj]);
+            let start = d.const_app(p.mul, &[pow_sum, z]);
+
+            let ih_applied = d.const_app(p.mul, &[pow_m, pow_j]);
+            let refl_z = d.lemma(p.equiv_refl, &[z]);
+            let h_ih = d.lemma(p.mul_congr, &[pow_sum, ih_applied, z, z, ih, refl_z]);
+            // h_ih : Equiv (mul pow_sum z) (mul ih_applied z)
+            let after_ih = d.const_app(p.mul, &[ih_applied, z]);
+
+            let h_assoc = d.lemma(p.mul_assoc, &[pow_m, pow_j, z]);
+            // h_assoc : Equiv (mul (mul pow_m pow_j) z) (mul pow_m (mul pow_j z))
+            let inner = d.const_app(p.mul, &[pow_j, z]);
+            let end = d.const_app(p.mul, &[pow_m, inner]);
+
+            d.lemma(p.equiv_trans, &[start, after_ih, end, h_ih, h_assoc])
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let inner2 = d.pi_fv(m_fv, nat, inner);
+        d.pi_fv(z_fv, carrier, inner2)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let inner2 = d.lam_fv(m_fv, nat, inner);
+        d.lam_fv(z_fv, carrier, inner2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- finite sums over ℂ, and the geometric series identity ------------------
+
+/// `Complex.sumRange : (Nat → Complex) → Nat → Complex`, structural
+/// `Nat.rec` on the bound, matching `Nat.sumRange`'s own convention exactly
+/// (`nat_prelude/defs.rs::declare_finite_ranges`): `sumRange f zero ≡ zero`,
+/// `sumRange f (succ j) ≡ add (sumRange f j) (f j)` — recursion on the
+/// bound, the new term added on the right of the prior sum.
+fn declare_sum_range(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let motive = d.kernel().lam(anon, nat, carrier, BinderInfo::Default);
+    let minor_zero = d.kernel().const_(p.zero, vec![]);
+    let minor_succ = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let fj = d.apply(f, &[j]);
+        let body = d.const_app(p.add, &[ih, fj]);
+        let inner = d.lam_fv(ih_fv, carrier, body);
+        d.lam_fv(j_fv, nat, inner)
+    };
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+    let body = d.apply(rec, &[motive, minor_zero, minor_succ, n]);
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(f_fv, fn_ty, with_n)
+    };
+    let ty = {
+        let over_n = d.arrow(nat, carrier);
+        d.arrow(fn_ty, over_n)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sum_range,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 10),
+    })
+}
+
+/// `Complex.sumRange_zero` and `Complex.sumRange_succ`: the defining
+/// equations of [`declare_sum_range`], each closed by `Eq.refl` alone since
+/// `sumRange`'s `Nat.rec` application ι-reduces on both minor premises —
+/// exactly [`declare_pow_equations`]'s own shape, with `Complex.sumRange` in
+/// place of `Complex.pow`.
+fn declare_sum_range_equations(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = complex_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    // sumRange_zero : ∀ f, Eq Complex (sumRange f Nat.zero) zero.
+    {
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let zero_n = d.zero();
+        let lhs = d.const_app(p.sum_range, &[f, zero_n]);
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        let stmt = complex_eq(d, p, lhs, zero_c);
+        let proof = complex_eq_refl(d, p, zero_c);
+        let value = d.lam_fv(f_fv, fn_ty, proof);
+        let ty = d.pi_fv(f_fv, fn_ty, stmt);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.sum_range_zero,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // sumRange_succ : ∀ f (n : Nat),
+    //   Eq Complex (sumRange f (succ n)) (add (sumRange f n) (f n)).
+    {
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.succ(n);
+        let lhs = d.const_app(p.sum_range, &[f, sn]);
+        let prior = d.const_app(p.sum_range, &[f, n]);
+        let fj = d.apply(f, &[n]);
+        let rhs = d.const_app(p.add, &[prior, fj]);
+        let stmt_inner = complex_eq(d, p, lhs, rhs);
+        let proof_inner = complex_eq_refl(d, p, rhs);
+        let ty = {
+            let inner = d.pi_fv(n_fv, nat, stmt_inner);
+            d.pi_fv(f_fv, fn_ty, inner)
+        };
+        let value = {
+            let inner = d.lam_fv(n_fv, nat, proof_inner);
+            d.lam_fv(f_fv, fn_ty, inner)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.sum_range_succ,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// `Complex.sumRange_congr : ∀ f g n, (∀ i, Equiv (f i) (g i)) → Equiv
+/// (sumRange f n) (sumRange g n)`.
+///
+/// Induction on `n` via [`NatOps::induct`], mirroring `Nat.sumRange_congr`'s
+/// own proof shape (`nat_prelude/algebra.rs::declare_finite_sum_theorems`)
+/// with every step promoted from `Eq Nat` to `Complex.Equiv`: the base case
+/// is `Equiv.refl` at `zero` (both sides ι-reduce to it), the step chains a
+/// congruence on the prior sums (from the inductive hypothesis) with a
+/// congruence on the new terms (from the pointwise hypothesis applied at
+/// `j`), both through [`ComplexPrelude::add_congr`].
+fn declare_sum_range_congr(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = complex_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let gi = d.apply(g, &[i]);
+        let eqv = zeq(d, p, fi, gi);
+        d.pi_fv(i_fv, nat, eqv)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let lhs = d.const_app(p.sum_range, &[f, x]);
+        let rhs = d.const_app(p.sum_range, &[g, x]);
+        zeq(d, p, lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero_c = d.kernel().const_(p.zero, vec![]);
+            d.lemma(p.equiv_refl, &[zero_c])
+        },
+        &|d, j, ih| {
+            let f_prior = d.const_app(p.sum_range, &[f, j]);
+            let g_prior = d.const_app(p.sum_range, &[g, j]);
+            let fj = d.apply(f, &[j]);
+            let gj = d.apply(g, &[j]);
+
+            // start = add f_prior fj  ~  mid = add g_prior fj  [congr on ih]
+            let start = d.const_app(p.add, &[f_prior, fj]);
+            let mid = d.const_app(p.add, &[g_prior, fj]);
+            let refl_fj = d.lemma(p.equiv_refl, &[fj]);
+            let h1 = d.lemma(p.add_congr, &[f_prior, g_prior, fj, fj, ih, refl_fj]);
+
+            // mid  ~  end = add g_prior gj  [congr on the pointwise hyp at j]
+            let end = d.const_app(p.add, &[g_prior, gj]);
+            let pointwise_j = d.apply(h, &[j]);
+            let refl_g_prior = d.lemma(p.equiv_refl, &[g_prior]);
+            let h2 = d.lemma(
+                p.add_congr,
+                &[g_prior, g_prior, fj, gj, refl_g_prior, pointwise_j],
+            );
+
+            d.lemma(p.equiv_trans, &[start, mid, end, h1, h2])
+        },
+        n,
+    );
+
+    let ty = {
+        let with_h = d.pi_fv(h_fv, pointwise, stmt);
+        let over_n = d.pi_fv(n_fv, nat, with_h);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_n);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, pointwise, proof);
+        let over_n = d.lam_fv(n_fv, nat, with_h);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_n);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_congr,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.mul_sumRange : ∀ w f n, Equiv (mul w (sumRange f n)) (sumRange
+/// (fun i => mul w (f i)) n)` — a constant distributes through a finite sum.
+///
+/// Induction on `n`, mirroring `Nat.mul_sumRange`'s own proof shape
+/// (`nat_prelude/algebra.rs::declare_finite_sum_theorems`): the base case is
+/// [`ComplexPrelude::mul_zero`] (both sides ι-reduce to `mul w zero` /
+/// `zero` respectively), the step distributes with
+/// [`ComplexPrelude::left_distrib`] then lifts the inductive hypothesis
+/// through [`ComplexPrelude::add_congr`].
+fn declare_mul_sum_range(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, carrier);
+
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let scaled_fn = |d: &mut IntDev<'_>| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let body = d.const_app(p.mul, &[w, fi]);
+        let nat = d.nat_ty();
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let lhs_sum = d.const_app(p.sum_range, &[f, x]);
+        let lhs = d.const_app(p.mul, &[w, lhs_sum]);
+        let scaled = scaled_fn(d);
+        let rhs = d.const_app(p.sum_range, &[scaled, x]);
+        zeq(d, p, lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| d.lemma(p.mul_zero, &[w]),
+        &|d, j, ih| {
+            let prior = d.const_app(p.sum_range, &[f, j]);
+            let fj = d.apply(f, &[j]);
+            let extended = d.const_app(p.add, &[prior, fj]);
+            let start = d.const_app(p.mul, &[w, extended]);
+
+            let w_prior = d.const_app(p.mul, &[w, prior]);
+            let w_fj = d.const_app(p.mul, &[w, fj]);
+            let distributed = d.const_app(p.add, &[w_prior, w_fj]);
+            let h1 = d.lemma(p.left_distrib, &[w, prior, fj]);
+
+            let scaled = scaled_fn(d);
+            let scaled_prior = d.const_app(p.sum_range, &[scaled, j]);
+            let end = d.const_app(p.add, &[scaled_prior, w_fj]);
+            let refl_wfj = d.lemma(p.equiv_refl, &[w_fj]);
+            let h2 = d.lemma(
+                p.add_congr,
+                &[w_prior, scaled_prior, w_fj, w_fj, ih, refl_wfj],
+            );
+
+            d.lemma(p.equiv_trans, &[start, distributed, end, h1, h2])
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_f = d.pi_fv(f_fv, fn_ty, over_n);
+        d.pi_fv(w_fv, carrier, over_f)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_f = d.lam_fv(f_fv, fn_ty, over_n);
+        d.lam_fv(w_fv, carrier, over_f)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mul_sum_range,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.mul_sub_one_geom : ∀ z (n : Nat), Equiv (mul (add one (neg z))
+/// (sumRange (fun k => pow z k) n)) (add one (neg (pow z n)))` — **the
+/// geometric series identity**, `(1 − z) · Σ_{k<n} z^k = 1 − z^n`.
+///
+/// Induction on `n`, telescoping. The base case erases the sum
+/// (`sumRange`'s own ι-reduction) and closes with [`ComplexPrelude::mul_zero`]
+/// then [`ComplexPrelude::add_neg`] reversed. The step:
+///
+/// 1. distributes `(1 − z)` over the freshly extended sum with
+///    [`ComplexPrelude::left_distrib`];
+/// 2. substitutes the inductive hypothesis into the first summand via
+///    [`ComplexPrelude::add_congr`];
+/// 3. closes the remaining identity `(1 − zⁿ) + (1 − z)·zⁿ = 1 − zⁿ·z` — a
+///    pure ring identity once the hypothesis is in place — by the `ring`
+///    calculus ([`ring_law_proof`]) over the atoms `z` and `zⁿ`, exactly the
+///    decision procedure [`declare_ring_laws`] uses, applied to one specific
+///    instance rather than to declare a new named law.
+fn declare_mul_sub_one_geom(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let neg_z = d.const_app(p.neg, &[z]);
+    let a = d.const_app(p.add, &[one, neg_z]); // a = 1 - z
+
+    let pow_fn = |d: &mut IntDev<'_>| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let body = d.const_app(p.pow, &[z, i]);
+        let nat = d.nat_ty();
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let f = pow_fn(d);
+        let sum = d.const_app(p.sum_range, &[f, x]);
+        let lhs = d.const_app(p.mul, &[a, sum]);
+        let pow_x = d.const_app(p.pow, &[z, x]);
+        let neg_pow_x = d.const_app(p.neg, &[pow_x]);
+        let rhs = d.const_app(p.add, &[one, neg_pow_x]);
+        zeq(d, p, lhs, rhs)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            // Goal, after ι on both `sumRange f zero` and `pow z zero`:
+            // Equiv (mul a zero) (add one (neg one)).
+            let zero_c = d.kernel().const_(p.zero, vec![]);
+            let neg_one = d.const_app(p.neg, &[one]);
+            let add_one_neg_one = d.const_app(p.add, &[one, neg_one]);
+            let mul_a_zero = d.const_app(p.mul, &[a, zero_c]);
+
+            let mul_zero_h = d.lemma(p.mul_zero, &[a]); // Equiv mul_a_zero zero_c
+            let add_neg_h = d.lemma(p.add_neg, &[one]); // Equiv add_one_neg_one zero_c
+            let sym = d.lemma(p.equiv_symm, &[add_one_neg_one, zero_c, add_neg_h]);
+            d.lemma(
+                p.equiv_trans,
+                &[mul_a_zero, zero_c, add_one_neg_one, mul_zero_h, sym],
+            )
+        },
+        &|d, j, ih| {
+            // ih : Equiv (mul a (sumRange f j)) (add one (neg (pow z j)))
+            let zn = d.const_app(p.pow, &[z, j]);
+            let s_j = {
+                let f = pow_fn(d);
+                d.const_app(p.sum_range, &[f, j])
+            };
+            let extended = d.const_app(p.add, &[s_j, zn]);
+            let start = d.const_app(p.mul, &[a, extended]);
+
+            // start ~ distributed = add (mul a s_j) (mul a zn)  [left_distrib]
+            let a_s_j = d.const_app(p.mul, &[a, s_j]);
+            let a_zn = d.const_app(p.mul, &[a, zn]);
+            let distributed = d.const_app(p.add, &[a_s_j, a_zn]);
+            let h1 = d.lemma(p.left_distrib, &[a, s_j, zn]);
+
+            // distributed ~ after_ih = add (add one (neg zn)) (mul a zn)
+            //   [substitute ih into the first summand]
+            let neg_zn = d.const_app(p.neg, &[zn]);
+            let one_minus_zn = d.const_app(p.add, &[one, neg_zn]);
+            let after_ih = d.const_app(p.add, &[one_minus_zn, a_zn]);
+            let refl_a_zn = d.lemma(p.equiv_refl, &[a_zn]);
+            let h2 = d.lemma(
+                p.add_congr,
+                &[a_s_j, one_minus_zn, a_zn, a_zn, ih, refl_a_zn],
+            );
+
+            // after_ih ~ end = add one (neg (mul zn z))  [pure ring identity]
+            let z_cexpr = CExpr::var(d, p, z);
+            let zn_cexpr = CExpr::var(d, p, zn);
+            let a_cexpr = CExpr::add(CExpr::One, CExpr::neg(z_cexpr.clone()));
+            let lhs_cexpr = CExpr::add(
+                CExpr::add(CExpr::One, CExpr::neg(zn_cexpr.clone())),
+                CExpr::mul(a_cexpr, zn_cexpr.clone()),
+            );
+            let rhs_cexpr = CExpr::add(
+                CExpr::One,
+                CExpr::neg(CExpr::mul(zn_cexpr.clone(), z_cexpr.clone())),
+            );
+            let end_final = render_c(d, p, &rhs_cexpr);
+            let h3 = ring_law_proof(d, p, &lhs_cexpr, &rhs_cexpr);
+
+            let h_mid = d.lemma(p.equiv_trans, &[start, distributed, after_ih, h1, h2]);
+            d.lemma(p.equiv_trans, &[start, after_ih, end_final, h_mid, h3])
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        d.pi_fv(z_fv, carrier, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        d.lam_fv(z_fv, carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mul_sub_one_geom,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.geom_series_div : ∀ z (n k : Nat) (h : CReal.PosBound (normSq
+/// (add one (neg z))) k), Equiv (sumRange (fun j => pow z j) n) (div (add one
+/// (neg (pow z n))) (add one (neg z)) k h)` — the quotient form of
+/// [`declare_mul_sub_one_geom`], with the modulus witness for `1 − z` taken as
+/// an explicit argument (never derived from `z ≁ 1`, which this kernel cannot
+/// do without Markov's principle).
+///
+/// Cancels `a := 1 − z` against `c := inv a k h` on the left of `mul a
+/// (sumRange …)`: `c·(a·S) ~ (c·a)·S ~ 1·S ~ S` via
+/// [`ComplexPrelude::inv_mul_cancel`]/[`ComplexPrelude::mul_assoc`]/
+/// [`ComplexPrelude::mul_comm`]/[`ComplexPrelude::mul_one`], then substitutes
+/// [`ComplexPrelude::mul_sub_one_geom`] for `a·S` and reads the result
+/// backwards, closing at `div`'s own definitional unfolding
+/// (`div x y k h ≡ mul x (inv y k h)`).
+fn declare_geom_series_div(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let neg_z = d.const_app(p.neg, &[z]);
+    let a = d.const_app(p.add, &[one, neg_z]); // a = 1 - z
+    let norm_a = d.const_app(p.norm_sq, &[a]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_a, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let c = d.const_app(p.inv, &[a, k, h]); // c = (1 - z)^-1
+
+    let pow_fn = |d: &mut IntDev<'_>| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let body = d.const_app(p.pow, &[z, i]);
+        let nat = d.nat_ty();
+        d.lam_fv(i_fv, nat, body)
+    };
+    let f = pow_fn(d);
+    let s = d.const_app(p.sum_range, &[f, n]); // s = sumRange (pow z .) n
+
+    let pow_n = d.const_app(p.pow, &[z, n]);
+    let neg_pow_n = d.const_app(p.neg, &[pow_n]);
+    let rhs_geom = d.const_app(p.add, &[one, neg_pow_n]); // 1 - z^n
+
+    let div_term = d.const_app(p.div, &[rhs_geom, a, k, h]);
+    let stmt = zeq(d, p, s, div_term);
+
+    // h_geom : Equiv (mul a s) rhs_geom
+    let h_geom = d.lemma(p.mul_sub_one_geom, &[z, n]);
+
+    let a_s = d.const_app(p.mul, &[a, s]);
+    let c_as = d.const_app(p.mul, &[c, a_s]);
+    let c_rhs = d.const_app(p.mul, &[c, rhs_geom]);
+    let refl_c = d.lemma(p.equiv_refl, &[c]);
+    let cong_h = d.lemma(p.mul_congr, &[c, c, a_s, rhs_geom, refl_c, h_geom]);
+    // cong_h : Equiv c_as c_rhs
+
+    let c_a = d.const_app(p.mul, &[c, a]);
+    let inv_mul_h = d.lemma(p.inv_mul_cancel, &[a, k, h]); // Equiv c_a one
+    let ca_s = d.const_app(p.mul, &[c_a, s]);
+    let one_s = d.const_app(p.mul, &[one, s]);
+    let refl_s = d.lemma(p.equiv_refl, &[s]);
+    let step_b = d.lemma(p.mul_congr, &[c_a, one, s, s, inv_mul_h, refl_s]);
+    // step_b : Equiv ca_s one_s
+
+    let assoc = d.lemma(p.mul_assoc, &[c, a, s]); // Equiv ca_s c_as
+    let assoc_symm = d.lemma(p.equiv_symm, &[ca_s, c_as, assoc]); // Equiv c_as ca_s
+
+    let collapse = d.lemma(p.equiv_trans, &[c_as, ca_s, one_s, assoc_symm, step_b]);
+    // collapse : Equiv c_as one_s
+
+    let s_one = d.const_app(p.mul, &[s, one]);
+    let comm_one_s = d.lemma(p.mul_comm, &[one, s]); // Equiv one_s s_one
+    let mul_one_s = d.lemma(p.mul_one, &[s]); // Equiv s_one s
+    let f_step = d.lemma(p.equiv_trans, &[one_s, s_one, s, comm_one_s, mul_one_s]);
+    // f_step : Equiv one_s s
+
+    let reduce = d.lemma(p.equiv_trans, &[c_as, one_s, s, collapse, f_step]);
+    // reduce : Equiv c_as s
+    let reduce_symm = d.lemma(p.equiv_symm, &[c_as, s, reduce]); // Equiv s c_as
+
+    let step_i = d.lemma(p.equiv_trans, &[s, c_as, c_rhs, reduce_symm, cong_h]);
+    // step_i : Equiv s c_rhs
+
+    let rhs_c = d.const_app(p.mul, &[rhs_geom, c]);
+    let comm_final = d.lemma(p.mul_comm, &[c, rhs_geom]); // Equiv c_rhs rhs_c
+    let final_proof = d.lemma(p.equiv_trans, &[s, c_rhs, rhs_c, step_i, comm_final]);
+    // final_proof : Equiv s rhs_c, and div_term ≡ rhs_c by δ/β on `div`.
+
+    let ty = {
+        let inner = d.pi_fv(h_fv, hypothesis, stmt);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let with_n = d.pi_fv(n_fv, nat, with_k);
+        d.pi_fv(z_fv, carrier, with_n)
+    };
+    let value = {
+        let inner = d.lam_fv(h_fv, hypothesis, final_proof);
+        let with_k = d.lam_fv(k_fv, nat, inner);
+        let with_n = d.lam_fv(n_fv, nat, with_k);
+        d.lam_fv(z_fv, carrier, with_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_series_div,
         uparams: vec![],
         ty,
         value,

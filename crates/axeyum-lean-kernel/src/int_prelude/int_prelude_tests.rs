@@ -24,7 +24,7 @@
 
 use crate::ExprId;
 use crate::env::Declaration;
-use crate::{IntPrelude, Kernel, build_int_prelude};
+use crate::{BinderInfo, IntPrelude, Kernel, build_int_prelude};
 
 /// A fixture: a kernel with the integer prelude plus an abstract point `x : Z`;
 /// hypotheses are added per-test.
@@ -125,6 +125,7 @@ fn int_prelude_admits_all_declarations() {
         p.add,
         p.mul,
         p.pow,
+        p.prod_range,
         p.neg,
         p.zero,
         p.one,
@@ -177,12 +178,18 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 78] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 85] {
     [
         p.pow_zero,
         p.pow_succ,
         p.pow_add,
+        p.pow_mul,
+        p.prod_range_zero,
+        p.prod_range_succ,
+        p.prod_range_congr,
+        p.nat_abs_pow,
         p.mod_eq_pow,
+        p.mod_eq_prod_range,
         p.nat_abs_mul,
         p.dvd_of_nat_abs_dvd,
         p.nat_abs_dvd_nat_abs_of_dvd,
@@ -224,6 +231,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 78] {
         p.mod_eq_mul,
         p.mod_eq_cancel,
         p.mod_eq_inverse_exists,
+        p.mod_eq_inverse_unique,
         p.mul_neg,
         p.mul_sub,
         p.le_refl,
@@ -691,6 +699,72 @@ fn the_operations_compute_their_normal_forms() {
     let one = k.const_(p.one, vec![]);
     let want = numeral(&mut k, &p, 1);
     assert!(k.def_eq(one, want), "Int.one is Int.ofNat 1");
+}
+
+/// `Int.prodRange` computes its normal form — `prodRange (fun _ => 2) 3`
+/// reduces to `8` by β/δ/ι, the same computational claim
+/// [`the_operations_compute_their_normal_forms`] makes for the ring
+/// operations — and, symmetrically, the trusted gate REJECTS the false claim
+/// that the same product is `7`. A checker that only ever confirms a
+/// computation is a checker that cannot fail; this pairs the positive with a
+/// negative the kernel must refuse.
+#[test]
+fn prod_range_computes_and_rejects_a_false_product() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+
+    // f := fun (_ : Nat) => 2, so prodRange f 3 = 2 * 2 * 2 = 8.
+    let two = numeral(&mut k, &p, 2);
+    let f = k.lam(anon, nat_ty, two, BinderInfo::Default);
+    let three = numeral_nat(&mut k, &p, 3);
+    let prod_range = k.const_(p.prod_range, vec![]);
+    let applied_f = k.app(prod_range, f);
+    let lhs = k.app(applied_f, three);
+
+    let eight = numeral(&mut k, &p, 8);
+    assert!(
+        k.def_eq(lhs, eight),
+        "prodRange (fun _ => 2) 3 should compute to 8"
+    );
+
+    // Negative control: the trusted gate must REFUSE the false claim that
+    // `prodRange (fun _ => 2) 3 = 7`. Build the (mis-typed) proof the same
+    // way `int_theorem`/`declare_theorem` build every real theorem in this
+    // module — a `Theorem` declaration whose `value` the kernel re-checks
+    // against `ty` — so a bug that made this pass would be the same bug that
+    // could smuggle a false theorem into the prelude itself.
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let seven = numeral(&mut k, &p, 7);
+    let int_ty = k.const_(p.z, vec![]);
+    let eq = k.const_(p.logic.eq, vec![level_one]);
+    let false_stmt = {
+        let e = k.app(eq, int_ty);
+        let e = k.app(e, lhs);
+        k.app(e, seven)
+    };
+    let refl = k.const_(p.logic.eq_refl, vec![level_one]);
+    // `Eq.refl Int 8` genuinely proves `Eq Int 8 8`, not `Eq Int lhs 7` — the
+    // kernel must catch the mismatch, not merely trust the annotation.
+    let false_proof = {
+        let r = k.app(refl, int_ty);
+        k.app(r, eight)
+    };
+    let scratch_name = k.name_str(anon, "prod_range_false_claim_scratch");
+    let result = k.add_declaration(Declaration::Theorem {
+        name: scratch_name,
+        uparams: vec![],
+        ty: false_stmt,
+        value: false_proof,
+    });
+    assert!(
+        result.is_err(),
+        "the trusted gate accepted a false claim that prodRange (fun _ => 2) 3 = 7"
+    );
 }
 
 /// `Int.ediv`/`Int.emod` compute the exact values Lean 4 core's `Int.ediv`/

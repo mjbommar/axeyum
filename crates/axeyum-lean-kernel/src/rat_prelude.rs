@@ -52,8 +52,10 @@ use crate::int_prelude::{IntPrelude, build_int_prelude};
 use crate::name::NameId;
 use crate::{Kernel, KernelError};
 
+mod abs;
 mod archimedean;
 mod core;
+mod decide;
 mod defs;
 mod field;
 pub(crate) mod group;
@@ -637,6 +639,68 @@ pub struct RatPrelude {
     /// Mathlib's `CauSeq`) has to extract that number; the fixed modulus of
     /// ADR-0512 computes it.
     pub bounds_num: NameId,
+
+    // --- absolute value and the triangle inequality (`rat_prelude::abs`) ----
+    /// `Rat.abs : Rat → Rat`, defined `Rat.abs a := Rat.max a (Rat.neg a)` —
+    /// the same "define on the representation, do not derive from the order"
+    /// move [`Self::max`]/[`Self::min`] make, so every law below is a lattice
+    /// argument (`max_le`, `le_max_left`, `le_max_right`, `le_antisymm`)
+    /// rather than a fresh case split on the sign of `a`.
+    pub abs: NameId,
+    /// `Rat.abs_nonneg : ∀ a, Rat.le Rat.zero (Rat.abs a)` — literally
+    /// [`Self::zero_le_max_neg`] at `a`, restated through the new constant.
+    pub abs_nonneg: NameId,
+    /// `Rat.le_abs_self : ∀ a, Rat.le a (Rat.abs a)` — [`Self::le_max_left`]
+    /// at `(a, Rat.neg a)`.
+    pub le_abs_self: NameId,
+    /// `Rat.neg_le_abs : ∀ a, Rat.le (Rat.neg a) (Rat.abs a)` —
+    /// [`Self::le_max_right`] at `(a, Rat.neg a)`.
+    pub neg_le_abs: NameId,
+    /// `Rat.abs_zero : Rat.abs Rat.zero = Rat.zero`.
+    pub abs_zero: NameId,
+    /// `Rat.abs_neg : ∀ a, Rat.abs (Rat.neg a) = Rat.abs a` — `neg_neg`
+    /// collapses the double negation, then a locally-built `max_comm`
+    /// (`lattice` deliberately has none; nothing consumed it before this
+    /// file) puts the arguments back in order.
+    pub abs_neg: NameId,
+    /// `Rat.abs_add : ∀ a b, Rat.le (Rat.abs (Rat.add a b))
+    /// (Rat.add (Rat.abs a) (Rat.abs b))` — **the triangle inequality.** One
+    /// `max_le` closes it once the two branches are in hand: `a + b ≤ |a| +
+    /// |b|` is `add_le_add` on [`Self::le_abs_self`] twice, and
+    /// `−(a+b) ≤ |a| + |b|` is `add_le_add` on [`Self::neg_le_abs`] twice
+    /// followed by rewriting along [`Self::neg_add`].
+    pub abs_add: NameId,
+
+    // --- boolean decision (`Rat.ble`) ---------------------------------------
+    /// `Rat.ble : Rat → Rat → Bool` — decidable `≤`, a genuine `Bool` in
+    /// `Type`, computable. Defined on the representation exactly like
+    /// [`Self::max`]/[`Self::min`]: `Int.rec` (motive `Bool`) on the sign of
+    /// the same cross-multiplication gap `num b · den a − num a · den b`,
+    /// dispatching to `true` on `Int.ofNat` and `false` on `Int.negSucc`. No
+    /// `Prop` is eliminated into `Type` and [`Self::le_or_lt`] is never
+    /// consulted — which is exactly what makes this a genuine *decision*
+    /// rather than a case split on an already-proved disjunction.
+    pub ble: NameId,
+    /// `Rat.ble_eq_true_of_le : ∀ a b, Rat.le a b → Rat.ble a b = true`.
+    pub ble_eq_true_of_le: NameId,
+    /// `Rat.le_of_ble_eq_true : ∀ a b, Rat.ble a b = true → Rat.le a b` — the
+    /// converse, ruling out the `Int.negSucc` branch by `Bool.false ≠ true`.
+    /// Together with [`Self::ble_eq_true_of_le`] this is the full spec —
+    /// `Rat.ble a b = true ↔ Rat.le a b` — split into two names because this
+    /// development has no `Iff`.
+    pub le_of_ble_eq_true: NameId,
+    /// `Rat.ble_refl : ∀ a, Rat.ble a a = true` — one application of
+    /// [`Self::ble_eq_true_of_le`] to [`Self::le_refl`].
+    pub ble_refl: NameId,
+    /// `Rat.ble_trans : ∀ a b c, Rat.ble a b = true → Rat.ble b c = true →
+    /// Rat.ble a c = true` — [`Self::le_of_ble_eq_true`] twice,
+    /// [`Self::le_trans`] once, [`Self::ble_eq_true_of_le`] once.
+    pub ble_trans: NameId,
+    /// `Rat.ble_total : ∀ a b, Or (Rat.ble a b = true) (Rat.ble b a = true)` —
+    /// the constructive decision [`Self::le_or_lt`] does not itself give as
+    /// data (it is `Or (le a b) (lt b a)`, a `Prop`): this is the same fact
+    /// restated in `Bool`, via [`Self::le_or_lt`] and [`Self::le_of_lt`].
+    pub ble_total: NameId,
 }
 
 impl RatPrelude {
@@ -797,6 +861,13 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         int_le_nat_abs: child(kernel, "int_le_natAbs"),
         int_neg_nat_abs_le: child(kernel, "int_neg_natAbs_le"),
         bounds_num: child(kernel, "bounds_num"),
+        abs: child(kernel, "abs"),
+        abs_nonneg: child(kernel, "abs_nonneg"),
+        le_abs_self: child(kernel, "le_abs_self"),
+        neg_le_abs: child(kernel, "neg_le_abs"),
+        abs_zero: child(kernel, "abs_zero"),
+        abs_neg: child(kernel, "abs_neg"),
+        abs_add: child(kernel, "abs_add"),
         max: child(kernel, "max"),
         min: child(kernel, "min"),
         max_cases: child(kernel, "max_cases"),
@@ -812,6 +883,12 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sub_max_le: child(kernel, "sub_max_le"),
         sub_min_le: child(kernel, "sub_min_le"),
         zero_le_max_neg: child(kernel, "zero_le_max_neg"),
+        ble: child(kernel, "ble"),
+        ble_eq_true_of_le: child(kernel, "ble_eq_true_of_le"),
+        le_of_ble_eq_true: child(kernel, "le_of_ble_eq_true"),
+        ble_refl: child(kernel, "ble_refl"),
+        ble_trans: child(kernel, "ble_trans"),
+        ble_total: child(kernel, "ble_total"),
     }
 }
 
@@ -852,6 +929,8 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         product::declare_product_laws(&mut d, prelude)?;
         field::declare_field_laws(&mut d, prelude)?;
         lattice::declare_lattice(&mut d, prelude)?;
+        abs::declare_abs(&mut d, prelude)?;
+        decide::declare_decide(&mut d, prelude)?;
         Ok(())
     })();
     match built {

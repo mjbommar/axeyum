@@ -234,3 +234,94 @@ pub(super) fn declare_nat_abs_neg(d: &mut IntDev<'_>) -> Result<(), KernelError>
     })?;
     Ok(())
 }
+
+/// `nat_abs_pow : ∀ (a : Int) (k : Nat), Eq Nat (natAbs (pow a k)) (Nat.pow
+/// (natAbs a) k)` — the magnitude of a power is the power of the magnitude,
+/// by induction on `k` through [`super::gcd`]'s `nat_abs_mul` and `Nat`'s own
+/// `pow_succ`.
+///
+/// A `Nat`-typed equation (both sides are `Nat`), unlike every other law in
+/// this module. Quantifies over one `Int` and one `Nat`, so it is declared
+/// by hand rather than through
+/// [`IntDev::int_theorem`](super::ops::IntDev::int_theorem), the same reason
+/// `Int.pow_succ`/`Int.pow_add` are (`defs.rs`, `algebra.rs`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_nat_abs_pow(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let int_ty = d.int_ty();
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| {
+        let pow_a_x = d.ipow(a, x);
+        let lhs = d.nat_abs(pow_a_x);
+        let nat_abs_a = d.nat_abs(a);
+        let rhs = d.pow(nat_abs_a, x);
+        d.eq(lhs, rhs)
+    };
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let stmt_inner = motive(d, k);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            let one = d.num(1);
+            d.refl(one)
+        },
+        &|d, j, ih| {
+            // `natAbs (a^(succ j))` computes to `natAbs (a^j * a)`.
+            let pow_a_j = d.ipow(a, j);
+            let mul_term = d.imul(pow_a_j, a);
+            let start = d.nat_abs(mul_term);
+            let nat_abs_pow_j = d.nat_abs(pow_a_j);
+            let nat_abs_a = d.nat_abs(a);
+            let after_split = d.mul(nat_abs_pow_j, nat_abs_a);
+            let h_split = d.const_app(p.nat_abs_mul, &[pow_a_j, a]);
+
+            let nat_abs_a_pow_j = d.pow(nat_abs_a, j);
+            let after_ih = d.mul(nat_abs_a_pow_j, nat_abs_a);
+            let h_ih = d.congr(nat_abs_pow_j, nat_abs_a_pow_j, ih, &|d, t| {
+                d.mul(t, nat_abs_a)
+            });
+
+            let succ_j = d.succ(j);
+            let end_term = d.pow(nat_abs_a, succ_j);
+            let pow_succ_name = d.prelude().pow_succ;
+            let h_pow_succ = d.const_app(pow_succ_name, &[nat_abs_a, j]);
+            let h_pow_succ_rev = d.symm(end_term, after_ih, h_pow_succ);
+
+            let (_, proof) = d.chain(
+                start,
+                &[
+                    (after_split, h_split),
+                    (after_ih, h_ih),
+                    (end_term, h_pow_succ_rev),
+                ],
+            );
+            proof
+        },
+        k,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(k_fv, nat, stmt_inner);
+        d.pi_fv(a_fv, int_ty, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(k_fv, nat, proof_inner);
+        d.lam_fv(a_fv, int_ty, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.nat_abs_pow,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}

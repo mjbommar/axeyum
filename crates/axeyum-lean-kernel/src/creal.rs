@@ -860,6 +860,23 @@ pub struct CRealPrelude {
     /// `CReal.continuous_add : ∀ F G x, ContinuousAt F x → ContinuousAt G x →
     /// ContinuousAt (fun r => add (F r) (G r)) x`.
     pub continuous_add: NameId,
+    /// `CReal.continuous_mul : ∀ F G x, ContinuousAt F x → ContinuousAt G x →
+    /// ContinuousAt (fun r => mul (F r) (G r)) x`.
+    ///
+    /// The product's closure law, transferred from [`Self::converges_mul`]
+    /// exactly as [`Self::continuous_add`] transfers
+    /// [`Self::converges_add`] — no new rational estimate, only the
+    /// substitution `L := F x`, `M := G x`.
+    pub continuous_mul: NameId,
+    /// `CReal.continuous_comp : ∀ F G x, ContinuousAt F x →
+    /// ContinuousAt G (F x) → ContinuousAt (fun r => G (F r)) x`.
+    ///
+    /// Composition. For `g` converging to `x`, `hF` gives `Converges (fun n
+    /// => F (g n)) (F x)`, and applying `hG` to *that* sequence gives
+    /// `Converges (fun n => G (F (g n))) (G (F x))` — the target, up to
+    /// beta. No rational estimate at all, and no shift bridge: this is a
+    /// chain of two existing modulus witnesses, not a new one.
+    pub continuous_comp: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -1075,6 +1092,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         continuous_id: kernel.name_str(creal, "continuous_id"),
         continuous_const: kernel.name_str(creal, "continuous_const"),
         continuous_add: kernel.name_str(creal, "continuous_add"),
+        continuous_mul: kernel.name_str(creal, "continuous_mul"),
+        continuous_comp: kernel.name_str(creal, "continuous_comp"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),

@@ -77,6 +77,10 @@ fn every_theorem_here_is_axiom_free() {
         ("parallelogram_law", p.parallelogram_law),
         ("euler_quadrilateral", p.euler_quadrilateral),
         ("apollonius_median", p.apollonius_median),
+        ("three_pos_bound", p.three_pos_bound),
+        ("centroid_scalar_self", p.centroid_scalar_self),
+        ("centroid_median", p.centroid_median),
+        ("centroid_dist_sq", p.centroid_dist_sq),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -153,6 +157,14 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.parallelogram_law,
         p.euler_quadrilateral,
         p.apollonius_median,
+        p.three,
+        p.three_pos_bound,
+        p.inv3,
+        p.centroid_scalar,
+        p.centroid_scalar_self,
+        p.centroid,
+        p.centroid_median,
+        p.centroid_dist_sq,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -615,5 +627,87 @@ fn euler_quadrilateral_statement_is_exact() {
          (CPoint.distSq x2 x3) (CPoint.distSq x3 x0)))) (CReal.add (CReal.add (CPoint.distSq x0 \
          x2) (CPoint.distSq x1 x3)) (CPoint.dot (CPoint.add (CPoint.sub x0 x1) (CPoint.sub x2 \
          x3)) (CPoint.add (CPoint.sub x0 x1) (CPoint.sub x2 x3))))))))"
+    );
+}
+
+/// `Scalar.centroid_self`, verbatim. `x0 = a`. The discrimination witness for
+/// `inv3`, mirroring `midpoint_self`'s role for `inv2`: an empty axiom
+/// footprint alone would not distinguish `inv3` genuinely being `1/3` from
+/// some other ternary scalar built the same way.
+#[test]
+fn centroid_scalar_self_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.centroid_scalar_self)
+        .expect("centroid_scalar_self must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CReal) -> CReal.Equiv (CPoint.Scalar.centroid x0 x0 x0) x0)"
+    );
+}
+
+/// **The centroid divides each median, additive form: `3G ~ A + 2M`.**
+/// Verbatim-checked for the same reason as `pythagoras_statement_is_exact`:
+/// this is `centroid A B C` and `point_midpoint B C`, unconditional, not some
+/// weaker or hypothesis-carrying restatement. `x0,x1,x2 = A,B,C`.
+#[test]
+fn centroid_median_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.centroid_median)
+        .expect("centroid_median must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CPoint.Equiv (CPoint.add \
+         (CPoint.add (CPoint.centroid x0 x1 x2) (CPoint.centroid x0 x1 x2)) (CPoint.centroid x0 \
+         x1 x2)) (CPoint.add x0 (CPoint.add (CPoint.midpoint x1 x2) (CPoint.midpoint x1 \
+         x2))))))"
+    );
+}
+
+/// **Leibniz's centroid formula, unconditional.** Verbatim-checked for the
+/// same reason as `pythagoras_statement_is_exact`: this is the literal
+/// `distSq P A + (distSq P B + distSq P C) ~ (distSq P G + (distSq P G +
+/// distSq P G)) + (distSq G A + (distSq G B + distSq G C))` sum with `G :=
+/// centroid A B C` substituted directly — an empty axiom footprint on a
+/// theorem missing the doubling/tripling, with a swapped `distSq` argument
+/// order, or with some other point entirely in place of `G`, would still pass
+/// a substring check. `x0,x1,x2,x3 = P,A,B,C`.
+#[test]
+fn centroid_dist_sq_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.centroid_dist_sq)
+        .expect("centroid_dist_sq must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CReal.Equiv \
+         (CReal.add (CPoint.distSq x0 x1) (CReal.add (CPoint.distSq x0 x2) (CPoint.distSq x0 \
+         x3))) (CReal.add (CReal.add (CPoint.distSq x0 (CPoint.centroid x1 x2 x3)) (CReal.add \
+         (CPoint.distSq x0 (CPoint.centroid x1 x2 x3)) (CPoint.distSq x0 (CPoint.centroid x1 x2 \
+         x3)))) (CReal.add (CPoint.distSq (CPoint.centroid x1 x2 x3) x1) (CReal.add \
+         (CPoint.distSq (CPoint.centroid x1 x2 x3) x2) (CPoint.distSq (CPoint.centroid x1 x2 \
+         x3) x3))))))))"
     );
 }
