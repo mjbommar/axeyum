@@ -166,6 +166,9 @@ now. Nothing was deleted.
 | 2026-08-24 | `db346e2ea` | **The first nonlinear derivative**, `(r·r)' = x+x`, modulus the identity. Needed a ring-algebra toolkit that did not exist in `CRealPrelude` — including **`mul_neg_equiv`, the exact fact `uniform_continuity.rs`'s doc flagged as missing and nobody had built**. `sq_le_abs_sq` is the one to read: a single nonneg-product identity, never deciding `t`'s sign, because `CReal.le` is undecidable here. **And `hasDerivative_smul` does NOT close as I scouted it** — bounding `\|c·error_F\|` needs a genuinely two-variable product-of-bounds lemma, two nonneg identities, roughly double the algebra. Fourth briefed route today corrected rather than force-fit. |
 | 2026-08-24 | `6d47f75ae` | **Binary representation** — computer science had no foundation in this kernel. `testBit`, `testBit_le_one`, `mod_two_mul_split`, and the real theorem `sum_testBit_lt : Σ_{i<k} bit_i·2^i = n mod 2^k`. **Two of my briefed premises were wrong**: `Nat.div`/`mod` recurse structurally on the *dividend*, so `div_rec_lemma`'s trap does not apply to them (it does to the `n → n/2` shift, handled by recursing on the bit index with a `Nat → Nat` motive); and **`Nat.div_add_mod` does not exist** — `div_mod_unique` is what worked. Concrete computation test is part of the slice: a definition that type-checks but computes the wrong digit passes every sweep here. `size`/`sum_testBit_eq` deliberately left at a verified checkpoint. |
 | 2026-08-24 | `3972b08d6` | Wilson in the ledger, designed around the fact that **a footprint cannot carry it**: `+1` instead of `−1`, or primality weakened to `0 < p`, are both false and both equally axiom-free. Mutation controls re-run by me on the merged tree with **the occurrence count of each pattern asserted before applying it** — an earlier `sed` mutation silently failed to match (rustfmt had split the constant across lines) and the green suite read as a dead guard. `notes` records the converse as unproved, with its constructive subtlety: primality is a conjunction with a ∀-quantified disjunction, so one cannot argue by contradiction from not-prime. |
+| 2026-08-24 | `d27f86f5e` | Producers promoted to `axeyum-lean-import::producers` (byte-identical driver output, committed `proof_sha256` reproduced) and bound as `axeyum.producers` with typed `Declined` reasons; 46 tests |
+| 2026-08-24 | `4e56f777a` | `axeyum.cas` (~80 pure functions, `ZeroTest` certificates) and `cas.certify` (groebner, geometry, telescoping, sos, gf2, sturm as producer/certificate/checker triples with report counts; tampered certificates rejected); 350 tests |
+| 2026-08-24 | `552c29766` | `axeyum.ir` (epoch-checked `Arena`, full constructor set, trusted `eval`, bv preflight, fp, query) and `axeyum.solver` (`Config`, `CheckResult`, `Incremental`, three-valued `check_outcome`, proofs, cnf); smt sessions; typed `Value` variants; 157 tests |
 | 2026-08-24 | `537328b3c` | `axeyum.kernel`: epoch-checked handles, nine preludes with generated field tables, footprints/closures raising on absent names, `add_declaration` with typed `KernelError`, Lean rendering and NDJSON export, identity hashes; 57 tests |
 | 2026-08-24 | `df1e7d185` | `axeyum.knowledge`: read-only typed accessors over facts, frontier, operations, overlay, nursery (partition-safe), claims, concepts, pinned `math-education`, autogenesis artifact index; 161 tests mirroring the validators |
 | 2026-08-24 | `9dd2dc82a` | Generated native stubs with a drift gate (fails on drift and on zero compared), `just py-check`, conditional `check.sh` step, fleet-hosts `uv` row, Python user guide |
@@ -3394,21 +3397,24 @@ school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
-[`docs/python-2026-08/`](docs/python-2026-08/README.md). Plan 01 is landed
-end to end: `crates/axeyum-py` → `axeyum._native` (PyO3 0.29.2, abi3-py312,
-no libpython link), root `pyproject.toml`, generated stubs with a drift gate
-that fails on zero comparisons, `just py-check`, and a `check.sh` step that
-prints SKIPPED (never passed) without `uv`. Plan 02 landed so far:
-`axeyum.smt.solve` + `Outcome.replay()` (02-A part), `axeyum.knowledge`
-(02-E, 161 tests, validator-mirroring), `axeyum.kernel` (02-C, 57 tests,
-epoch-checked handles, 1,207 generated prelude fields; measured nat 235
-theorems / 0 axioms, axreal 30). In flight in isolated snapshots:
-`axeyum.ir` + `axeyum.solver` (02-A) and `axeyum.cas` + `cas.certify`
-(02-B). Next: producer promotion to `src/producers/` and `axeyum.producers`
-(02-D), then plan 03 A1 (episode schema + fail-closed checker).
-Integration rule learned today: the shared checkout sits on a branch far
-behind `main`; move tracked-file edits as patches, verify Rust slices in a
-`lane-snapshot.sh` tree, commit from the detached worktree.
+[`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01 and 02
+are landed on `main`: `crates/axeyum-py` -> `axeyum._native` (PyO3 0.29.2,
+abi3-py312, no libpython link) with `smt`, `ir`, `solver` (+ `proofs`,
+`cnf`), `cas` + `cas.certify` (six producer/certificate/checker routes),
+`kernel` (epoch-checked handles, nine preludes), `producers` (promoted from
+`examples/` to `axeyum-lean-import::producers`, driver output byte-identical
+on the frozen exports), and `knowledge` (validator-mirroring read-only
+accessors over every knowledge artifact). Worktree gate at `d27f86f5e`:
+clippy 0 warnings, pytest **796 passed / 11 skipped**, stubs `compared=7`,
+autogenesis validators OK. Plan 03 in flight: A1 (episode schema +
+fail-closed checker with mutation controls) and A3 (tactic catalog v1 whose
+validator fails when every entry matches one shape). Next: A2 -- the
+`[agent]` extra, six read-only tools, the four-node graph, ten committed
+episodes over the 104 open dependency-ready non-held-out facts. Integration
+rule learned today: the shared checkout sits on a branch far behind `main`;
+tracked-file edits move as three-way merges (`git merge-file`), Rust slices
+are verified in `lane-snapshot.sh` trees, commits come from the detached
+worktree.
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
