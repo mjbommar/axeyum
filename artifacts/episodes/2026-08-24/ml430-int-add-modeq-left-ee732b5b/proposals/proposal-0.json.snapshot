@@ -1,0 +1,12 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "NotDefinitionalEquivalence",
+  "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+  "obstruction": "While there are three structurally similar facts (F:ml430-int-add-modeq-right-e58108ee for the commuted Int version, and F:ml430-nat-add-modeq-left-e3b1fba9 and F:ml430-nat-add-modeq-right-e2f11f21 for Nat versions), they are in different type domains (Int vs Nat) with different modEq predicates (ZMOD vs MOD). The Int.add_modEq_right sibling differs only by commutativity of addition, making it the sole Int-domain sibling. A general route would require at least three Int facts with the same n+a\u2261a pattern, but only two exist in the eligible set.",
+  "producer_id": "close_terminal",
+  "route": "none",
+  "tactic_ids": [
+    "T:modeq-equivalence-combinators"
+  ],
+  "why": "The goal is a definitional modular equivalence n + a \u2261 a [ZMOD n] that should close by unfolding the ModEq definition and applying reflexivity or basic equivalence combinators, since adding the modulus to any value is definitionally congruent to that value modulo the modulus."
+}

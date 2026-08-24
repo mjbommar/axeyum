@@ -1,0 +1,151 @@
+{
+  "budgets": {
+    "cost_limit_usd": 0.5,
+    "input_tokens_limit": 400000,
+    "output_tokens_limit": 32000,
+    "request_limit": 8,
+    "tool_calls_limit": 12,
+    "wall_seconds": 600
+  },
+  "created_at": "2026-08-24T20:11:40Z",
+  "episode_id": "E:a2-ml430-nat-fastfib-eq-cde11774",
+  "git_commit": "5e289fe8cfccab7ba6b230a73cacedf6a485a187",
+  "kind": "axeyum-agent-episode",
+  "observed": {
+    "facts_unlocked": [],
+    "operations_widened": [],
+    "overlay_links_proposed": []
+  },
+  "outcome": {
+    "axiom_footprint": [],
+    "checker_command": "",
+    "checker_exit_status": 0,
+    "checker_output_sha256": null,
+    "decline_class": "no-general-route",
+    "ledger_writes": 0,
+    "search_invocations": 0,
+    "target_theorem_submissions": 0,
+    "verdict": "declined"
+  },
+  "policy": {
+    "agent_code_sha256": "7eb6638d9f3e8b0c9103f26fd35ff752f0ee817830ad9cb74581bbf5a001ffb2",
+    "library_versions": {
+      "anthropic": "1.0.0",
+      "axeyum": "0.1.0",
+      "httpx2": "2.12.0",
+      "pydantic": "2.13.4",
+      "pydantic-ai-slim": "2.33.0",
+      "pydantic-graph": "2.33.0",
+      "python": "3.12.13"
+    },
+    "model_id": "anthropic:claude-sonnet-4-5",
+    "prompt_hashes": {
+      "gather": "85d42380264f5b6980ff0da34cd4622392c3e5679862b03b9eddbbd58a1ad742",
+      "instructions": "555d62412ae2344b180c17fcd04ad5ced748e79b5a49b4b70ee09fb9b5cb8ce1",
+      "plan": "62038870861b2d6e3afb4fdfee95fe8a9bba4762d7d0bc5739f3b8b3109fed42"
+    },
+    "settings": {
+      "max_tokens": 8192,
+      "seed": null,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "toolset_sha256": "1b34db8ae045a8174b35e7eb0e15ec6e56326b0f35feaec3d5a80508e78a6f0d"
+  },
+  "proposals": [
+    {
+      "assurance": "proposed",
+      "kind": "strategy",
+      "path": "artifacts/episodes/2026-08-24/ml430-nat-fastfib-eq-cde11774/proposals/proposal-0.json.snapshot",
+      "sha256": "d7ded1b72415aa0eb09771411e1cf73278e720bad89b9002b4ea984ed97d8f87"
+    }
+  ],
+  "schema_version": 1,
+  "selection": {
+    "eligibility_reason": "train partition, epistemic_status open, dependency-ready with no unmet depends_on; fragment Nat is proof-route-only; 0 registered operation(s); selected from ledger sha256 ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1",
+    "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
+    "fact_sha256": "8a337349ff1830569d434251a792e43501c4066da2e558226998169f026c03fb",
+    "frontier_path": "artifacts/episodes/2026-08-24/frontier.json.snapshot",
+    "frontier_sha256": "bce3d65e2e78c56c40d7058b92c0133d208c66710ba6ee9270189700e4508b7f",
+    "partition": "train"
+  },
+  "transcript": {
+    "messages_path": "artifacts/episodes/2026-08-24/ml430-nat-fastfib-eq-cde11774/messages.json.snapshot",
+    "messages_sha256": "9c1e7d4b35243737deb2118e6e5096dbd543b99d468cf3963f5bdfcefdd8e250",
+    "tool_calls": [
+      {
+        "args_sha256": "41fe7da1bbc12a1da27dff84a4138101452b685ef1ac3f8b58aa0eade818167b",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 0,
+        "result_sha256": "09e4f5f690932056096c06497ace1f07b325d0c6dfb40cdce06e58559b5275cf",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "41fe7da1bbc12a1da27dff84a4138101452b685ef1ac3f8b58aa0eade818167b",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 1,
+        "result_sha256": "9d11776db7999c3a34174798213a6bc72c1bc3d455019c7448c1efddfdaa8f2b",
+        "tool": "fact_neighbourhood"
+      },
+      {
+        "args_sha256": "41fe7da1bbc12a1da27dff84a4138101452b685ef1ac3f8b58aa0eade818167b",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 2,
+        "result_sha256": "34a0686c72e96e93d35aab23f1f543b485fc8ad6f92838ab78272108ced2ec95",
+        "tool": "operation_registry"
+      },
+      {
+        "args_sha256": "4f9962ba42aba0bcfbe84f9eac9703e15fa9c1f7ce3d156fb9056c2806bd40c6",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 3,
+        "result_sha256": "484a16017f8536062fc5ac5b72dd284ac9d84b199c160a40120a1da8ed0ce9c4",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "d69d614d36029dc753625e2bfccf046749e0c97f655afff59c55313299936e5a",
+        "assurance": "read",
+        "duration_ms": 2,
+        "exit_status": 0,
+        "ordinal": 4,
+        "result_sha256": "e2782cee9f4f2b63a4e23543b8d555fa99b45d4eb43a62dee9d03610a19ae67c",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "abaf21d5ab5566b7b4c7c41ba435916d704d0d6e84759ad33572fe5a2cc3896e",
+        "assurance": "read",
+        "duration_ms": 3,
+        "exit_status": 0,
+        "ordinal": 5,
+        "result_sha256": "002d156b74ccceb06b3a086aa22f311fae944ab7dfe854aa8d8b0b71a3e710cc",
+        "tool": "frontier_select"
+      },
+      {
+        "args_sha256": "6926ea4cf6ae88530da5847c27c2f111d44dbe7d012a7a3a2b5a058bf1be63a5",
+        "assurance": "read",
+        "duration_ms": 2,
+        "exit_status": 0,
+        "ordinal": 6,
+        "result_sha256": "4782e0265703fd7ee84cfdb10138b45c7427e5f5c87ff266603c5005b6adafd1",
+        "tool": "frontier_select"
+      },
+      {
+        "args_sha256": "0b5bf011a9f1128d013eef98eb3a530edfa37ca62e855ab72a07fc4e45ebf80e",
+        "assurance": "read",
+        "duration_ms": 7,
+        "exit_status": 0,
+        "ordinal": 7,
+        "result_sha256": "87fc402ebae8b992c3b30eda4da12962effb656a8031fb18f8c0b772eb4ef652",
+        "tool": "kernel_theorems"
+      }
+    ]
+  },
+  "web_snapshots": []
+}

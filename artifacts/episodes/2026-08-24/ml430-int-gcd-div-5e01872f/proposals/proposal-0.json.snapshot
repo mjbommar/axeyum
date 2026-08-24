@@ -1,0 +1,12 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "NotDefinitionallyEqual",
+  "fact_id": "F:ml430-int-gcd-div-5e01872f",
+  "obstruction": "This theorem requires a non-trivial algebraic argument about how GCD interacts with division under divisibility hypotheses (c \u2223 a and c \u2223 b). The equality is not definitional\u2014it depends on the mathematical properties that when c divides both arguments, factoring out c from the GCD arguments is equivalent to dividing the GCD result. While there are other Int GCD theorems on the frontier (F:ml430-int-gcd-div-gcd-div-gcd-2db608dc, F:ml430-int-gcd-greatest-5b31c5fe, F:ml430-int-gcd-eq-gcd-ab-63005aef), each has a distinct structural form: one involves nested GCD-division operations, another is about GCD being the greatest common divisor, and the third is the B\u00e9zout identity. None share the specific pattern of this theorem (GCD of quotients equals quotient of GCD under divisibility). The proof likely requires lemmas about GCD properties, divisibility, and division that are not yet available in the kernel prelude.",
+  "producer_id": "close_terminal",
+  "route": "none",
+  "tactic_ids": [
+    "T:refl-closure"
+  ],
+  "why": "The goal is a terminal equality involving GCD and division operations. The statement (a / c).gcd (b / c) = a.gcd b / c.natAbs requires proving an equality between two natural number expressions (since Int.gcd returns \u2124 \u2192 \u2124 \u2192 \u2115). This could potentially be closed by reflexivity if the kernel can normalize both sides to definitionally equal terms using the GCD and division computation rules."
+}

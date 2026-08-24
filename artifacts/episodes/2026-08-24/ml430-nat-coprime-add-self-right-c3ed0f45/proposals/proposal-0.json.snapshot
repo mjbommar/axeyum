@@ -1,0 +1,12 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "NotDefinitionalEquivalence",
+  "fact_id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+  "obstruction": "While there is one sibling fact F:ml430-nat-coprime-add-self-left-5e93448c with the symmetric pattern (left-side addition), I cannot identify three other eligible facts that would be reached by the same combinator-based approach. The coprime facts in the frontier involve fundamentally different structural patterns: F:ml430-nat-coprime-of-dvd-6f652673 requires handling universal quantification over primes, F:ml430-nat-coprime-of-dvd-left-b0e2aa94 and F:ml430-nat-coprime-of-dvd-right-a640bd56 involve implication chains with divisibility hypotheses rather than biconditionals about addition. The specific obstruction is that this particular addition-preservation pattern for coprimality appears only twice in the eligible frontier (left and right variants), not the minimum three times required for generality.",
+  "producer_id": "close_terminal",
+  "route": "none",
+  "tactic_ids": [
+    "T:modeq-equivalence-combinators"
+  ],
+  "why": "The goal is a biconditional (iff) statement about a definitional equivalence relation (coprimality, defined as gcd = 1). The Nat.Coprime predicate is definitionally equivalent across the addition transformation, making this closable by primitive Iff combinators that exploit the definitional equality of the underlying gcd expressions."
+}
