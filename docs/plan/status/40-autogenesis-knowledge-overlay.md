@@ -14,10 +14,13 @@ uncredited-producer edges are mutation-tested. F2 now projects 1,042 current
 kernel declarations and 3,583 direct theorem dependencies from accepted terms,
 with theorem/definition/inductive/constructor/recursor kinds and prelude
 visibility kept distinct. Next: normalize producer declines into typed,
-measured obstructions rather than hand-authoring the next bottleneck.
+measured obstructions rather than hand-authoring the next bottleneck. F3 now
+normalizes 47 retained decline records into 20 families while preserving unknown
+remedies and unbound resolutions; next is representation/transport lineage.
 
 <!-- plan-section: landed-changes -->
 
 | 2026-08-24 | `3ba9c1ec6` | Additive Autogenesis knowledge overlay v1 defines typed, qualified, provenance-bearing links across facts, operations, capabilities, and a pinned read-only external concept graph, with eight seed links and four negative controls |
 | 2026-08-24 | `b42ecfd81` | Complete F1's evidence-backed multi-target-producer crosswalk, publish a generated coverage census, and reject uncredited producer or individual complete-coverage claims |
 | 2026-08-24 | `137fef720` | Generate the complete constructed-kernel declaration/dependency projection with exact theorem-edge agreement and negative controls |
+| 2026-08-24 | `00cbed24b` | Normalize retained decline records into a generated obstruction projection that rejects lost blockers and invented resolution claims |
