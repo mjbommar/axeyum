@@ -149,7 +149,7 @@ mod order_extra;
 mod order_more;
 mod primes;
 mod restrict_pair;
-mod transposition;
+pub(crate) mod transposition;
 
 pub use ops::{NatDev, NatOps, NatState};
 

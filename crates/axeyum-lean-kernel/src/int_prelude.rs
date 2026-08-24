@@ -769,6 +769,24 @@ pub struct IntPrelude {
     /// NOT establish (the sign is not decided, so `Int.wilson` does not
     /// follow from this alone).
     pub factorial_sq_modeq_one: NameId,
+    /// `prod_range_pairing_collapse :
+    /// ∀ bigp, Lt zero bigp → ∀ n F σ,
+    ///   InjectiveOn σ n → MapsInto σ n →
+    ///   (∀ k, Lt k n → Not (Eq Nat (σ k) k)) →
+    ///   (∀ k, Lt k n → Eq Nat (σ (σ k)) k) →
+    ///   (∀ k, Lt k n → ModEq bigp (mul (F k) (F (σ k))) one) →
+    ///   ModEq bigp (prodRange F n) one` —
+    /// **the interior collapse**: a fixed-point-free involution pairing up
+    /// `[0,n)`, with every pair's product `≡ 1`, collapses the whole
+    /// `prodRange` to `1`. Proved by a two-step induction (`And (family n)
+    /// (family (succ n))` by ordinary `Nat.rec`, no `WellFounded.fix`
+    /// needed): the step peels the top two indices directly when they are
+    /// already paired with each other, or conjugates `σ` by a two-point
+    /// swap first (`wilson.rs`'s local `tau_raw`, mirroring
+    /// `Nat.transposition`, plus `int_prelude/prod.rs`'s `point_swap` and
+    /// `Int.prodRange_swap` for the value side) when they are not. See
+    /// `wilson.rs`'s module doc above this declaration for the full route.
+    pub prod_range_pairing_collapse: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -955,6 +973,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         inverse_index_fixed_point: kernel.name_str(nat_root, "inverseIndex_fixed_point"),
         inverse_index_involutive: kernel.name_str(nat_root, "inverseIndex_involutive"),
         factorial_sq_modeq_one: child(kernel, "factorial_sq_modeq_one"),
+        prod_range_pairing_collapse: child(kernel, "prod_range_pairing_collapse"),
     }
 }
 
@@ -1101,6 +1120,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         wilson::declare_inverse_index_fixed_point(&mut d)?;
         wilson::declare_inverse_index_involutive(&mut d)?;
         wilson::declare_factorial_sq_modeq_one(&mut d)?;
+        wilson::declare_prod_range_pairing_collapse(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         rat::declare_rat(&mut d)?;

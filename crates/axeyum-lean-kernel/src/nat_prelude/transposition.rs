@@ -149,7 +149,7 @@ pub(super) fn declare_transposition(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
 // ---------------------------------------------------------------------------
 
 /// `h : Lt k i ⊢ Eq Nat (transposition i j k) k`.
-fn transposition_eq_lt_i(
+pub(crate) fn transposition_eq_lt_i(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     i: ExprId,
@@ -165,7 +165,12 @@ fn transposition_eq_lt_i(
 }
 
 /// `Eq Nat (transposition i j i) j` — unconditional.
-fn transposition_eq_at_i(d: &mut NatDev<'_>, p: &NatPrelude, i: ExprId, j: ExprId) -> ExprId {
+pub(crate) fn transposition_eq_at_i(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    i: ExprId,
+    j: ExprId,
+) -> ExprId {
     let level2 = t_level2(d, i, j, i);
     let level3 = t_level3(d, i, j, i);
     let si = d.succ(i);
@@ -183,7 +188,7 @@ fn transposition_eq_at_i(d: &mut NatDev<'_>, p: &NatPrelude, i: ExprId, j: ExprI
 }
 
 /// `h1 : Lt i k, h2 : Lt k j ⊢ Eq Nat (transposition i j k) k`.
-fn transposition_eq_between(
+pub(crate) fn transposition_eq_between(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     i: ExprId,
@@ -217,7 +222,7 @@ fn transposition_eq_between(
 }
 
 /// `h_ij : Lt i j ⊢ Eq Nat (transposition i j j) i`.
-fn transposition_eq_at_j(
+pub(crate) fn transposition_eq_at_j(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     i: ExprId,
@@ -264,7 +269,7 @@ fn transposition_eq_at_j(
 
 /// `h_ij : Lt i j, h : Lt j k ⊢ Eq Nat (transposition i j k) k`.
 #[allow(clippy::too_many_arguments)]
-fn transposition_eq_gt_j(
+pub(crate) fn transposition_eq_gt_j(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     i: ExprId,
