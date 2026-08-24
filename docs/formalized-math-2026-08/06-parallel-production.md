@@ -219,6 +219,43 @@ sharper than the original**:
 The last one generalises: **a name is not evidence.** Reading the stream's own
 declared type took minutes and would have avoided the wrong caution entirely.
 
+## The failure that actually costs slices
+
+Three consecutive lanes on 2026-08-24 spent more effort debugging than proving,
+and all three failures were the same shape: **a term was handed something that
+was not quite its type**, and the mismatch surfaced far from its cause.
+
+| What was passed | What was needed | How it surfaced |
+|---|---|---|
+| `isymm` given the PRE-congruence pair | the congruence term's actual inferred type | `TypeMismatch` on the full build |
+| `d.lemma(p.pow_nonneg, &[x, n, h])` | `&[x, h, n]` — the Pi binds the hypothesis BEFORE the index | all 27 tests down |
+| `Eq.rec` motive as `λ z, goal z` | `λ z, Eq _ a z → Sort` — the proof parameter is mandatory even when unused | `build_string_prelude` broken for every test in the file |
+
+Two things generalise.
+
+**A line estimate sizes the proof, not the search for a one-argument slip inside
+it.** The fixed-point characterisation was estimated at 150-250 lines and landed
+at ~230 — the estimate was accurate and irrelevant, because the debugging
+dominated. Size the proof if you like; do not treat that number as the slice.
+
+**The kernel reports these late and loudly.** One bad declaration takes the whole
+suite down, because the test template is built once and shared, so "every test in
+the file fails" says nothing about which declaration is wrong. The technique that
+works, used successfully by three lanes:
+
+- Bisect the `declare_*` call sequence one step at a time against the fast
+  build-only test, not the full suite.
+- Build temporary checkpoint sub-theorems inside the session with
+  `Kernel::infer_in` / `LocalContext`, and tear them down before landing.
+- **Name intermediate terms explicitly rather than passing what you believe
+  their type to be.** All three failures above were a belief about a type that
+  was never written down and therefore never checked.
+
+And the diagnostic that tells you which kind of problem you have: a mismatched
+type in a LARGE term costs ~180 s before the checker rejects, while an ordinary
+type error rejects in about a second. **A fast `TypeMismatch` is a real bug to
+read; a multi-minute hang is a swapped argument.**
+
 ## Model selection
 
 | | Use for | Evidence |
