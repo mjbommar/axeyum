@@ -1107,6 +1107,33 @@ pub struct RatPrelude {
     /// distributed variables this development never assumes — the sum
     /// `Σ_{j<m} Var[X_j]` is left as-is.
     pub chebyshev_sample_mean_uncorrelated: NameId,
+    /// `Rat.variance_sampleMean_uncorrelated : ∀ X p n, IsDistribution p n →
+    /// ∀ m, PairwiseUncorrelated X m p n → variance (fun k => inv
+    /// (natDivSucc m 0) * sumVars X m k) p n = (inv (natDivSucc m 0) * inv
+    /// (natDivSucc m 0)) * sumRange (fun j => variance (X j) p n) m` — the
+    /// QUANTITATIVE HEART of the weak law of large numbers, named on its
+    /// own: `Var[sample mean] = (1/m)² · Σ_{j<m} Var[X_j]`. Composes
+    /// [`Self::variance_scaled_mean`] and [`Self::variance_sum_vars`] —
+    /// exactly the `combined_eq` step
+    /// [`Self::chebyshev_sample_mean_uncorrelated`] already builds
+    /// internally, now exposed standalone rather than buried inside the
+    /// larger Chebyshev bound. [`Self::variance_sum_vars`] alone does NOT
+    /// give this: it is the variance of the unscaled SUM, not of the mean.
+    pub variance_sample_mean_uncorrelated: NameId,
+    /// `Rat.weak_law_of_large_numbers` — a RENAMING, not a new result: the
+    /// type is identical to
+    /// [`Self::chebyshev_sample_mean_uncorrelated`]'s, registered under the
+    /// name a reader searching for "the weak law of large numbers" will
+    /// look for, with a proof that forwards directly to that theorem. This
+    /// IS the weak law of large numbers in its standard finite-sample
+    /// Chebyshev-bound shape: `ε²·E[𝟙(ε² ≤ (M−E[M])²)] ≤ Var[M]`, where `M`
+    /// is the sample mean of `m` pairwise-uncorrelated variables and `Var[M]
+    /// = (1/m)²·Σ_{j<m} Var[X_j]` shrinks as `m` grows whenever the
+    /// individual variances stay bounded — stated at each finite `m` rather
+    /// than as a limit. NOT the classical i.i.d. form (`Σ_{j<m} Var[X_j]`
+    /// is left unsummed, a strictly more general hypothesis than a common
+    /// variance `σ²`).
+    pub weak_law_of_large_numbers: NameId,
 
     // --- the probabilistic Cauchy–Schwarz inequality (rat_prelude::probability) --
     /// `Rat.variance_scaled_add_nonneg : ∀ X Y p n, IsDistribution p n → ∀ t,
@@ -1450,6 +1477,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         variance_sum_vars: child(kernel, "variance_sumVars"),
         variance_scaled_mean: child(kernel, "variance_scaled_mean"),
         chebyshev_sample_mean_uncorrelated: child(kernel, "chebyshev_sampleMean_uncorrelated"),
+        variance_sample_mean_uncorrelated: child(kernel, "variance_sampleMean_uncorrelated"),
+        weak_law_of_large_numbers: child(kernel, "weak_law_of_large_numbers"),
         variance_scaled_add_nonneg: child(kernel, "variance_scaled_add_nonneg"),
         covariance_sq_le_variance_mul_of_pos: child(kernel, "covariance_sq_le_variance_mul_of_pos"),
         covariance_sq_le_variance_mul_of_zero_zero: child(

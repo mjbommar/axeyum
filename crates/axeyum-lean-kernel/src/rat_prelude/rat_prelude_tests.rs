@@ -1809,6 +1809,16 @@ fn the_probability_toolkit_is_axiom_free() {
             true,
         ),
         (
+            "variance_sampleMean_uncorrelated",
+            p.variance_sample_mean_uncorrelated,
+            true,
+        ),
+        (
+            "weak_law_of_large_numbers",
+            p.weak_law_of_large_numbers,
+            true,
+        ),
+        (
             "variance_scaled_add_nonneg",
             p.variance_scaled_add_nonneg,
             true,
@@ -1852,6 +1862,114 @@ fn the_probability_toolkit_is_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// `Rat.chebyshev_sampleMean_uncorrelated`'s rendered type, verbatim — this
+/// IS the weak law of large numbers in its standard finite-sample
+/// Chebyshev-bound shape (a bound on the ε²-weighted probability mass where
+/// the sample mean of `m` pairwise-uncorrelated variables deviates from its
+/// expectation by at least `ε`), and this pin exists so a future edit that
+/// weakens it (drops the `IsDistribution` hypothesis, drops
+/// `PairwiseUncorrelated`, or changes which quantity the bound is against)
+/// is caught by a rendered-type diff rather than an unread doc comment. See
+/// [`RatPrelude::chebyshev_sample_mean_uncorrelated`]'s own doc for the full
+/// reading.
+#[test]
+fn chebyshev_sample_mean_uncorrelated_is_the_weak_law_of_large_numbers() {
+    let (kernel, p) = built();
+    let rendered = match kernel
+        .environment()
+        .get(p.chebyshev_sample_mean_uncorrelated)
+        .expect("Rat.chebyshev_sampleMean_uncorrelated must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("Rat.chebyshev_sampleMean_uncorrelated must be a Theorem, found {other:?}"),
+    };
+    let text = kernel.render_lean(rendered);
+    let normalised: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert_eq!(
+        normalised,
+        "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : Rat) -> \
+         ((x2 : ((x2 : AxNat) -> Rat)) -> ((x3 : AxNat) -> ((x4 : AxNat) -> \
+         ((x5 : Rat.IsDistribution x2 x3) -> ((x6 : Rat.PairwiseUncorrelated x0 x4 x2 x3) -> \
+         ((x7 : Rat.lt Rat.zero x1) -> Rat.le (Rat.mul (Rat.mul x1 x1) \
+         (Rat.expectation (Rat.indicator (Rat.mul x1 x1) (fun (x8 : AxNat) => Rat.mul \
+         (Rat.sub ((fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) \
+         (Rat.sumVars x0 x4 x9)) x8) (Rat.expectation (fun (x9 : AxNat) => Rat.mul \
+         (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x2 x3)) \
+         (Rat.sub ((fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) \
+         (Rat.sumVars x0 x4 x9)) x8) (Rat.expectation (fun (x9 : AxNat) => Rat.mul \
+         (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x2 x3)))) x2 x3)) \
+         (Rat.mul (Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) \
+         (Rat.inv (Rat.natDivSucc x4 AxNat.zero))) (Rat.sumRange (fun (x8 : AxNat) => \
+         Rat.variance (x0 x8) x2 x3) x4))))))))))",
+        "Rat.chebyshev_sampleMean_uncorrelated's statement drifted from the weak-law reading"
+    );
+}
+
+/// `Rat.weak_law_of_large_numbers` is a RENAMING, not a new result — its
+/// rendered type must be BYTE-IDENTICAL to
+/// [`RatPrelude::chebyshev_sample_mean_uncorrelated`]'s, checked directly
+/// rather than trusted from the doc comment or the commit message.
+#[test]
+fn weak_law_of_large_numbers_is_byte_identical_to_the_theorem_it_renames() {
+    let (kernel, p) = built();
+    let cheb_ty = match kernel
+        .environment()
+        .get(p.chebyshev_sample_mean_uncorrelated)
+        .expect("Rat.chebyshev_sampleMean_uncorrelated must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("Rat.chebyshev_sampleMean_uncorrelated must be a Theorem, found {other:?}"),
+    };
+    let wlln_ty = match kernel
+        .environment()
+        .get(p.weak_law_of_large_numbers)
+        .expect("Rat.weak_law_of_large_numbers must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("Rat.weak_law_of_large_numbers must be a Theorem, found {other:?}"),
+    };
+    assert_eq!(
+        kernel.render_lean(cheb_ty),
+        kernel.render_lean(wlln_ty),
+        "Rat.weak_law_of_large_numbers must be the SAME statement as \
+         Rat.chebyshev_sampleMean_uncorrelated, byte for byte — it is a \
+         renaming for discoverability, not a new theorem"
+    );
+}
+
+/// `Rat.variance_sampleMean_uncorrelated`'s rendered type, verbatim — the
+/// quantitative heart of the weak law named on its own: `Var[sample mean] =
+/// (1/m)² · Σ_{j<m} Var[X_j]` under `IsDistribution` and
+/// `PairwiseUncorrelated`, composing
+/// [`RatPrelude::variance_scaled_mean`] and [`RatPrelude::variance_sumVars`].
+#[test]
+fn variance_sample_mean_uncorrelated_is_the_statement_briefed() {
+    let (kernel, p) = built();
+    let rendered = match kernel
+        .environment()
+        .get(p.variance_sample_mean_uncorrelated)
+        .expect("Rat.variance_sampleMean_uncorrelated must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("Rat.variance_sampleMean_uncorrelated must be a Theorem, found {other:?}"),
+    };
+    let text = kernel.render_lean(rendered);
+    let normalised: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert_eq!(
+        normalised,
+        "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> \
+         ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : AxNat) -> \
+         ((x3 : Rat.IsDistribution x1 x2) -> ((x4 : AxNat) -> \
+         ((x5 : Rat.PairwiseUncorrelated x0 x4 x1 x2) -> \
+         Eq.{1} Rat (Rat.variance (fun (x6 : AxNat) => Rat.mul \
+         (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x6)) x1 x2) \
+         (Rat.mul (Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) \
+         (Rat.inv (Rat.natDivSucc x4 AxNat.zero))) (Rat.sumRange (fun (x6 : AxNat) => \
+         Rat.variance (x0 x6) x1 x2) x4))))))))",
+        "Rat.variance_sampleMean_uncorrelated's statement drifted from the briefed one"
+    );
 }
 
 /// `Rat.expectation X p n` closes by `Eq.refl` alone against `sumRange (fun k

@@ -124,6 +124,8 @@ pub(super) fn declare_probability(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_variance_sum_vars(d, p)?;
     declare_variance_scaled_mean(d, p)?;
     declare_chebyshev_sample_mean_uncorrelated(d, p)?;
+    declare_variance_sample_mean_uncorrelated(d, p)?;
+    declare_weak_law_of_large_numbers(d, p)?;
     declare_variance_scaled_add_nonneg(d, p)?;
     declare_covariance_sq_le_variance_mul_of_pos(d, p)?;
     declare_covariance_sq_le_variance_mul_of_zero_zero(d, p)?;
@@ -4513,6 +4515,212 @@ fn declare_chebyshev_sample_mean_uncorrelated(
         d.pi_fv(x_fv, x_ty, with_eps)
     };
     d.declare_theorem(p.chebyshev_sample_mean_uncorrelated, ty, value)
+}
+
+/// `Rat.variance_sampleMean_uncorrelated : ∀ X p n, IsDistribution p n → ∀
+/// m, PairwiseUncorrelated X m p n → variance (fun k => inv (natDivSucc m 0)
+/// times sumVars X m k) p n = (inv (natDivSucc m 0) times inv (natDivSucc m
+/// 0)) times sumRange (fun j => variance (X j) p n) m` — **the quantitative
+/// heart of the weak law of large numbers, named on its own**: the variance
+/// of the sample mean of `m` pairwise-uncorrelated variables is `(1/m)²
+/// times Σ_{j<m} Var[X_j]`.
+///
+/// [`RatPrelude::variance_sumVars`] alone does NOT give this: it gives
+/// `Var[Σ_j X_j] = Σ_j Var[X_j]` for the unscaled SUM, not the sample MEAN
+/// (which divides the sum by `m`). This theorem is exactly the composition
+/// [`RatPrelude::chebyshev_sample_mean_uncorrelated`] already builds
+/// internally as its own `combined_eq` — [`RatPrelude::variance_scaled_mean`]
+/// rewriting `Var[a·Σ] = a²·Var[Σ]` at `a := inv (natDivSucc m 0)`, then
+/// [`RatPrelude::variance_sumVars`] rewriting `Var[Σ]` — now exposed as a
+/// standalone, freestanding result rather than a step buried inside a larger
+/// Chebyshev bound. No new proof technique; every lemma call here is a call
+/// [`declare_chebyshev_sample_mean_uncorrelated`] already makes.
+fn declare_variance_sample_mean_uncorrelated(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+    let hpw_fv = d.fresh_fvar();
+    let hpw = d.kernel().fvar(hpw_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let hpw_ty = pairwise_uncorrelated(d, p, x, m, pf, n);
+
+    let sv = sum_vars_fn(d, p, x, m);
+    let m_as_rat = nat_as_rat(d, p, m);
+    let a = d.const_app(p.inv, &[m_as_rat]);
+    let y = scale_fn(d, a, sv);
+
+    let var_of_x = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let xj = d.apply(x, &[j]);
+        let vxj = variance(d, p, xj, pf, n);
+        d.lam_fv(j_fv, nat, vxj)
+    };
+
+    let a_sq = rmul(d, a, a);
+    let sum_var = rsum_range(d, p, var_of_x, m);
+    let rhs = rmul(d, a_sq, sum_var);
+
+    let var_y = variance(d, p, y, pf, n);
+    let concl = req(d, var_y, rhs);
+
+    let vsm = d.lemma(p.variance_scaled_mean, &[sv, pf, n, m, hd]);
+    // vsm : Eq(variance(scale_fn(a,sv),pf,n), a_sq*variance(sv,pf,n))
+    //     ~ Eq(var_y, a_sq*variance(sv,pf,n))                          [defeq]
+
+    let vsv = d.lemma(p.variance_sum_vars, &[x, pf, n, hd, m, hpw]);
+    // vsv : Eq(variance(sv,pf,n), sum_var)
+
+    let var_sv = variance(d, p, sv, pf, n);
+    let rw = rcongr(d, var_sv, sum_var, vsv, &|d, t| rmul(d, a_sq, t));
+    // rw : Eq(a_sq*var_sv, rhs)
+
+    let a_sq_var_sv = rmul(d, a_sq, var_sv);
+    let combined_eq = rtrans(d, var_y, a_sq_var_sv, rhs, vsm, rw);
+    // combined_eq : Eq(var_y, rhs)
+
+    let value = {
+        let with_hpw = d.lam_fv(hpw_fv, hpw_ty, combined_eq);
+        let with_m = d.lam_fv(m_fv, nat, with_hpw);
+        let with_hd = d.lam_fv(hd_fv, dist_ty, with_m);
+        let with_n = d.lam_fv(n_fv, nat, with_hd);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        d.lam_fv(x_fv, x_ty, with_pf)
+    };
+    let ty = {
+        let with_hpw = d.arrow(hpw_ty, concl);
+        let with_m = d.pi_fv(m_fv, nat, with_hpw);
+        let with_hd = d.arrow(dist_ty, with_m);
+        let with_n = d.pi_fv(n_fv, nat, with_hd);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        d.pi_fv(x_fv, x_ty, with_pf)
+    };
+    d.declare_theorem(p.variance_sample_mean_uncorrelated, ty, value)
+}
+
+/// `Rat.weak_law_of_large_numbers` — **a renaming, not a new result**:
+/// registered under the name a reader searching for "the weak law of large
+/// numbers" will actually look for. The type is IDENTICAL to
+/// [`RatPrelude::chebyshev_sample_mean_uncorrelated`]'s, and the proof is a
+/// direct forward to that theorem — nothing new is proved here, and nothing
+/// about the statement changes.
+///
+/// This IS the weak law of large numbers, in the standard finite-sample
+/// Chebyshev-bound shape the classical proof of the law goes through: for
+/// `m` pairwise-uncorrelated variables `X_0, …, X_{m-1}` over a distribution
+/// `p`, `ε²·E[𝟙(ε² ≤ (M − E[M])²)] ≤ Var[M]` where `M` is the sample mean —
+/// i.e. the (ε²-weighted) probability mass where the sample mean deviates
+/// from its expectation by at least `ε` is bounded by `Var[M] = (1/m)² ·
+/// Σ_{j<m} Var[X_j]` ([`RatPrelude::variance_sample_mean_uncorrelated`]),
+/// which shrinks as `m` grows whenever the individual variances stay
+/// bounded — exactly the content the classical statement asserts as a
+/// limit, stated here at each finite `m` rather than as a limit statement.
+///
+/// **Not the classical i.i.d. form** `P(|X̄ − μ| ≥ ε) ≤ Var/(mε²)`: this
+/// development assumes only pairwise uncorrelatedness (see
+/// [`RatPrelude::covariance`]'s own doc on why there is no independence
+/// predicate here), so the bound is left with the SUM `Σ_{j<m} Var[X_j]`
+/// rather than collapsed to `m·σ²` under a common-variance hypothesis — a
+/// strictly MORE general statement than the textbook one, not a weaker one.
+fn declare_weak_law_of_large_numbers(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let eps_fv = d.fresh_fvar();
+    let eps = d.kernel().fvar(eps_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+    let hpw_fv = d.fresh_fvar();
+    let hpw = d.kernel().fvar(hpw_fv);
+    let heps_fv = d.fresh_fvar();
+    let heps = d.kernel().fvar(heps_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let hpw_ty = pairwise_uncorrelated(d, p, x, m, pf, n);
+    let zero_r = rzero(d, p);
+    let heps_ty = rlt(d, p, zero_r, eps);
+
+    let sv = sum_vars_fn(d, p, x, m);
+    let m_as_rat = nat_as_rat(d, p, m);
+    let a = d.const_app(p.inv, &[m_as_rat]);
+    let y = scale_fn(d, a, sv);
+
+    let var_of_x = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let xj = d.apply(x, &[j]);
+        let vxj = variance(d, p, xj, pf, n);
+        d.lam_fv(j_fv, nat, vxj)
+    };
+
+    let a_sq = rmul(d, a, a);
+    let sum_var = rsum_range(d, p, var_of_x, m);
+    let rhs = rmul(d, a_sq, sum_var);
+
+    let mu_y = expectation(d, p, y, pf, n);
+    let dev_y = variance_summand(d, p, y, mu_y);
+    let eps_sq = rmul(d, eps, eps);
+    let ind_y = d.const_app(p.indicator, &[eps_sq, dev_y]);
+    let e_ind_y = expectation(d, p, ind_y, pf, n);
+    let lhs = rmul(d, eps_sq, e_ind_y);
+    let concl = rle(d, p, lhs, rhs);
+
+    let forward = d.lemma(
+        p.chebyshev_sample_mean_uncorrelated,
+        &[x, eps, pf, n, m, hd, hpw, heps],
+    );
+
+    let value = {
+        let with_heps = d.lam_fv(heps_fv, heps_ty, forward);
+        let with_hpw = d.lam_fv(hpw_fv, hpw_ty, with_heps);
+        let with_hd = d.lam_fv(hd_fv, dist_ty, with_hpw);
+        let with_m = d.lam_fv(m_fv, nat, with_hd);
+        let with_n = d.lam_fv(n_fv, nat, with_m);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_eps = d.lam_fv(eps_fv, carrier, with_pf);
+        d.lam_fv(x_fv, x_ty, with_eps)
+    };
+    let ty = {
+        let with_heps = d.arrow(heps_ty, concl);
+        let with_hpw = d.arrow(hpw_ty, with_heps);
+        let with_hd = d.arrow(dist_ty, with_hpw);
+        let with_m = d.pi_fv(m_fv, nat, with_hd);
+        let with_n = d.pi_fv(n_fv, nat, with_m);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_eps = d.pi_fv(eps_fv, carrier, with_pf);
+        d.pi_fv(x_fv, x_ty, with_eps)
+    };
+    d.declare_theorem(p.weak_law_of_large_numbers, ty, value)
 }
 
 // --- the probabilistic Cauchy–Schwarz inequality ----------------------------
