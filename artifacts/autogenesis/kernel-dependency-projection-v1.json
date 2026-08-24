@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1092,
+    "axiom_free_declarations": 1112,
     "declaration_kinds": {
       "axiom": 30,
-      "constructor": 26,
-      "definition": 171,
-      "inductive": 20,
-      "recursor": 20,
-      "theorem": 855
+      "constructor": 28,
+      "definition": 173,
+      "inductive": 21,
+      "recursor": 21,
+      "theorem": 869
     },
-    "declarations": 1122,
-    "direct_theorem_dependency_edges": 4035,
-    "theorems": 855
+    "declarations": 1142,
+    "direct_theorem_dependency_edges": 4127,
+    "theorems": 869
   },
   "declarations": [
     {
@@ -473,6 +473,23 @@
     },
     {
       "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [],
+      "id": "Bool.false_ne_true",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "declaration_kind": "recursor",
       "direct_theorem_dependencies": [],
       "id": "Bool.rec",
@@ -493,6 +510,26 @@
       "declaration_kind": "constructor",
       "direct_theorem_dependencies": [],
       "id": "Bool.true",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Bool.false_ne_true",
+        "Eq.symm"
+      ],
+      "id": "Bool.true_ne_false",
       "visible_in": [
         "axreal",
         "complex",
@@ -978,6 +1015,28 @@
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
+        "CPoint.circumcentre_on_perp_bisectors",
+        "CPoint.dot_sub_left",
+        "CPoint.perp_bisector_iff_dot",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "Iff.mp"
+      ],
+      "id": "CPoint.circumcentre_difference_dots",
+      "visible_in": [
+        "cpoint"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
         "CReal.Equiv.refl",
         "CReal.Equiv.symm",
         "CReal.Equiv.trans",
@@ -1051,9 +1110,61 @@
     },
     {
       "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CPoint.circumcentre_difference_dots",
+        "CPoint.cross_annihilates_difference",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_inv_cancel",
+        "CReal.mul_one",
+        "CReal.mul_zero"
+      ],
+      "id": "CPoint.circumcentre_unique",
+      "visible_in": [
+        "cpoint"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "declaration_kind": "definition",
       "direct_theorem_dependencies": [],
       "id": "CPoint.cross",
+      "visible_in": [
+        "cpoint"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CPoint.dot_sub_right",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_right_cancel",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_zero",
+        "CReal.neg_congr"
+      ],
+      "id": "CPoint.cross_annihilates_difference",
       "visible_in": [
         "cpoint"
       ]
@@ -6003,6 +6114,26 @@
     },
     {
       "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_congr",
+        "CReal.add_zero",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_one",
+        "CReal.mul_zero",
+        "Complex.normSq_mul"
+      ],
+      "id": "Complex.normSq_pow",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "declaration_kind": "definition",
       "direct_theorem_dependencies": [],
       "id": "Complex.ofNat",
@@ -6374,6 +6505,22 @@
     {
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Complex.Equiv.refl",
+        "Complex.Equiv.symm",
+        "Complex.Equiv.trans",
+        "Complex.add_assoc",
+        "Complex.add_congr",
+        "Complex.add_zero"
+      ],
+      "id": "Complex.sumRange_split",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
       "direct_theorem_dependencies": [],
       "id": "Complex.sumRange_succ",
       "visible_in": [
@@ -6396,6 +6543,163 @@
       "id": "Complex.zero",
       "visible_in": [
         "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "inductive",
+      "direct_theorem_dependencies": [],
+      "id": "Decidable",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "definition",
+      "direct_theorem_dependencies": [],
+      "id": "Decidable.byCases",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "definition",
+      "direct_theorem_dependencies": [],
+      "id": "Decidable.decide",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [],
+      "id": "Decidable.em",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "constructor",
+      "direct_theorem_dependencies": [],
+      "id": "Decidable.isFalse",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "constructor",
+      "direct_theorem_dependencies": [],
+      "id": "Decidable.isTrue",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Bool.true_ne_false"
+      ],
+      "id": "Decidable.of_decide_eq_false",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Bool.false_ne_true"
+      ],
+      "id": "Decidable.of_decide_eq_true",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "recursor",
+      "direct_theorem_dependencies": [],
+      "id": "Decidable.rec",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
       ]
     },
     {
@@ -11014,6 +11318,47 @@
         "Nat.zero_lt_succ"
       ],
       "id": "Nat.inverseIndex_injective",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Int.add_comm",
+        "Int.add_zero",
+        "Int.ediv_add_emod",
+        "Int.ediv_emod_unique",
+        "Int.emod_lt_of_pos",
+        "Int.emod_nonneg",
+        "Int.le_of_lt",
+        "Int.le_refl",
+        "Int.lt_irrefl",
+        "Int.modEq_inverse_unique",
+        "Int.modEq_mul_left",
+        "Int.modEq_symm",
+        "Int.modEq_trans",
+        "Int.mul_comm",
+        "Int.mul_inv_of_pow",
+        "Int.mul_zero",
+        "Int.of_nat_nat_abs_of_nonneg",
+        "Int.zero_lt_one",
+        "Nat.le_succ",
+        "Nat.le_trans",
+        "Nat.lt_or_eq_of_le",
+        "Nat.sub_add_cancel",
+        "Nat.succ_injective",
+        "Nat.succ_le_succ",
+        "Nat.succ_ne_zero",
+        "Nat.zero_le",
+        "Nat.zero_lt_succ"
+      ],
+      "id": "Nat.inverseIndex_involutive",
       "visible_in": [
         "complex",
         "cpoint",
@@ -17969,7 +18314,41 @@
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [],
+      "id": "not_not_and",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [],
       "id": "not_not_em",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [],
+      "id": "not_not_imp",
       "visible_in": [
         "axreal",
         "complex",
@@ -18022,6 +18401,25 @@
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
+        "not_not_intro"
+      ],
+      "id": "not_not_not_intro",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
         "Or.elim"
       ],
       "id": "peirce_of_em",
@@ -18046,6 +18444,16 @@
     "scope": "all constructed Axeyum kernel preludes"
   },
   "direct_theorem_dependency_edges": [
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Bool.true_ne_false",
+      "target": "Bool.false_ne_true"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Bool.true_ne_false",
+      "target": "Eq.symm"
+    },
     {
       "relation": "direct-theorem-depends-on",
       "source": "CPoint.Scalar.centroid_self",
@@ -18963,6 +19371,66 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "CPoint.circumcentre_on_perp_bisectors"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "CPoint.dot_sub_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "CPoint.perp_bisector_iff_dot"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_difference_dots",
+      "target": "Iff.mp"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "CPoint.circumcentre_identity",
       "target": "CReal.Equiv.refl"
     },
@@ -19134,6 +19602,166 @@
     {
       "relation": "direct-theorem-depends-on",
       "source": "CPoint.circumcentre_third_distance",
+      "target": "CReal.neg_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CPoint.circumcentre_difference_dots"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CPoint.cross_annihilates_difference"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.mul_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.mul_inv_cancel"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.circumcentre_unique",
+      "target": "CReal.mul_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CPoint.dot_sub_right"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.add_right_cancel"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.left_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.mul_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
+      "target": "CReal.mul_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CPoint.cross_annihilates_difference",
       "target": "CReal.neg_congr"
     },
     {
@@ -27948,6 +28576,56 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "Complex.normSq_pow",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.normSq_pow",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.normSq_pow",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.normSq_pow",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.normSq_pow",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.normSq_pow",
+      "target": "CReal.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.normSq_pow",
+      "target": "CReal.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.normSq_pow",
+      "target": "CReal.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.normSq_pow",
+      "target": "CReal.mul_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.normSq_pow",
+      "target": "Complex.normSq_mul"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "Complex.ofNat_add",
       "target": "Complex.Equiv.refl"
     },
@@ -28505,6 +29183,46 @@
       "relation": "direct-theorem-depends-on",
       "source": "Complex.sumRange_shiftFront",
       "target": "Complex.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.sumRange_split",
+      "target": "Complex.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.sumRange_split",
+      "target": "Complex.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.sumRange_split",
+      "target": "Complex.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.sumRange_split",
+      "target": "Complex.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.sumRange_split",
+      "target": "Complex.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.sumRange_split",
+      "target": "Complex.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Decidable.of_decide_eq_false",
+      "target": "Bool.true_ne_false"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Decidable.of_decide_eq_true",
+      "target": "Bool.false_ne_true"
     },
     {
       "relation": "direct-theorem-depends-on",
@@ -32729,6 +33447,141 @@
     {
       "relation": "direct-theorem-depends-on",
       "source": "Nat.inverseIndex_injective",
+      "target": "Nat.zero_lt_succ"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.ediv_add_emod"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.ediv_emod_unique"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.emod_lt_of_pos"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.emod_nonneg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.le_of_lt"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.lt_irrefl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.modEq_inverse_unique"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.modEq_mul_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.modEq_symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.modEq_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.mul_inv_of_pow"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.mul_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.of_nat_nat_abs_of_nonneg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Int.zero_lt_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Nat.le_succ"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Nat.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Nat.lt_or_eq_of_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Nat.sub_add_cancel"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Nat.succ_injective"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Nat.succ_le_succ"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Nat.succ_ne_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
+      "target": "Nat.zero_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.inverseIndex_involutive",
       "target": "Nat.zero_lt_succ"
     },
     {
@@ -38214,6 +39067,11 @@
     {
       "relation": "direct-theorem-depends-on",
       "source": "not_not_not",
+      "target": "not_not_intro"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "not_not_not_intro",
       "target": "not_not_intro"
     },
     {
