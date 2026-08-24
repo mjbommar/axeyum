@@ -1355,6 +1355,14 @@ pub struct CRealPrelude {
     /// exact rescaling via `Rat.natDivSucc_scale`/`Rat.natDivSucc_mul`, just
     /// not built in this slice), and the product rule.
     pub has_derivative_id: NameId,
+    /// `CReal.hasDerivative_sq : forall a b, HasDerivativeOn (fun r => mul r
+    /// r) (fun x => add x x) a b` — the first **nonlinear** derivative in
+    /// this kernel. The error term is `Equiv`-exactly `(y-x)*(y-x)` (not
+    /// merely zero), so the modulus is the identity and the bound closes via
+    /// a from-scratch "difference of squares" toolkit
+    /// (`creal/derivative.rs`'s `diff_of_squares`/`sq_le_abs_sq`) built for
+    /// this slice, since none of it existed in [`CRealPrelude`] beforehand.
+    pub has_derivative_sq: NameId,
 }
 
 impl CRealPrelude {
@@ -1599,6 +1607,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         hd_spec: kernel.name_str(has_derivative_on, "spec"),
         has_derivative_const: kernel.name_str(creal, "hasDerivative_const"),
         has_derivative_id: kernel.name_str(creal, "hasDerivative_id"),
+        has_derivative_sq: kernel.name_str(creal, "hasDerivative_sq"),
     }
 }
 

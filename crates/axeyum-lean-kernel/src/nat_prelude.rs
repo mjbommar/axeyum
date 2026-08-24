@@ -130,6 +130,7 @@ use crate::name::NameId;
 
 mod algebra;
 mod bezout;
+mod binary;
 mod binomial;
 mod ble;
 mod choose;
@@ -160,6 +161,7 @@ use algebra::{
     declare_multiplicative_theorems, declare_subtraction_theorems,
 };
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
+use binary::declare_binary_all;
 use binomial::{
     declare_binomial_theorem, declare_combinatorial_identities, declare_succ_mul_choose_eq,
     declare_succ_sub_of_le,
@@ -994,6 +996,36 @@ pub struct NatPrelude {
     /// MapsInto (fun k => compact_pair i j (σ (expand_pair i j k))) n` — the
     /// companion closure lemma to [`Self::restrict_pair_injective`].
     pub restrict_pair_maps_into: NameId,
+
+    // --- Binary representation (`binary.rs`) ---------------------------------
+    /// `Nat.testBitAux : Nat → Nat → Nat`, recursion on the FIRST argument
+    /// (the bit index — structural, the fuel route), carrying the second
+    /// argument (the number) through unchanged: `testBitAux 0 n ≡ mod n 2`,
+    /// `testBitAux (succ i) n ≡ testBitAux i (div n 2)`. Not the public name;
+    /// [`Self::test_bit`] flips the argument order to Lean's convention.
+    pub test_bit_aux: NameId,
+    /// `Nat.testBit n i := testBitAux i n` — the `i`-th binary digit of `n`,
+    /// `0` or `1`.
+    pub test_bit: NameId,
+    /// `Nat.testBit_zero : ∀ n, testBit n 0 = mod n 2` (refl).
+    pub test_bit_zero: NameId,
+    /// `Nat.testBit_succ : ∀ n i, testBit n (succ i) = testBit (div n 2) i`
+    /// (refl — the defining recursion, exposed by name).
+    pub test_bit_succ: NameId,
+    /// `Nat.testBit_le_one : ∀ n i, Le (testBit n i) 1` — every bit is `0` or
+    /// `1`.
+    pub test_bit_le_one: NameId,
+    /// `Nat.mod_two_mul_split : ∀ n m, Lt 0 m →
+    /// add (mul 2 (mod (div n 2) m)) (mod n 2) = mod n (mul m 2)` — peeling
+    /// the low bit of `n` before dividing by `m`, the reusable arithmetic
+    /// fact `sum_testBit_lt`'s step needs (a general fact, not specific to
+    /// `testBit`).
+    pub mod_two_mul_split: NameId,
+    /// `Nat.sum_testBit_lt : ∀ k n,
+    /// sumRange (fun i => mul (testBit n i) (pow 2 i)) k = mod n (pow 2 k)` —
+    /// the partial-sum form: the low `k` bits of `n`, read back as a number,
+    /// equal `n mod 2^k`.
+    pub sum_test_bit_lt: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1294,6 +1326,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_choose_sq: kernel.name_str(nat, "sum_choose_sq"),
             restrict_pair_injective: kernel.name_str(nat, "restrict_pair_injective"),
             restrict_pair_maps_into: kernel.name_str(nat, "restrict_pair_maps_into"),
+            test_bit_aux: kernel.name_str(nat, "testBitAux"),
+            test_bit: kernel.name_str(nat, "testBit"),
+            test_bit_zero: kernel.name_str(nat, "testBit_zero"),
+            test_bit_succ: kernel.name_str(nat, "testBit_succ"),
+            test_bit_le_one: kernel.name_str(nat, "testBit_le_one"),
+            mod_two_mul_split: kernel.name_str(nat, "mod_two_mul_split"),
+            sum_test_bit_lt: kernel.name_str(nat, "sum_testBit_lt"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1347,6 +1386,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_diagonal(&mut d, &p)?;
         declare_rectangle(&mut d, &p)?;
         declare_vandermonde_all(&mut d, &p)?;
+        declare_binary_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
