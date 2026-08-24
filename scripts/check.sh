@@ -293,7 +293,14 @@ step axiom-freedom-generalized cargo run --release -q -p axeyum-solver --feature
     --example ordered_ring_refutation -- --require-empty
 step axiom-freedom-constructed cargo run --release -q -p axeyum-solver --features full \
     --example ordered_ring_refutation -- --constructed-reals
+step autogenesis-knowledge-overlay-tests python3 -m unittest scripts.tests.test_validate_autogenesis_knowledge
+step autogenesis-knowledge-overlay python3 scripts/validate-autogenesis-knowledge.py
 step autogenesis-knowledge-controls ./scripts/check-autogenesis-knowledge-controls.sh
+step autogenesis-kernel-projection python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
+step autogenesis-kernel-projection-content python3 scripts/validate-autogenesis-kernel-dependency-projection.py
+step autogenesis-obstruction-projection python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection
+step autogenesis-obstruction-projection-content python3 scripts/validate-autogenesis-obstruction-projection.py
+step autogenesis-transport-projection-content python3 scripts/validate-autogenesis-transport-projection.py
 step autogenesis-proposer-isolation ./scripts/check-autogenesis-proposer-isolation.sh
 step autogenesis-induction-search ./scripts/check-autogenesis-induction-search.sh
 step autogenesis-apply-search ./scripts/check-autogenesis-apply-search.sh
