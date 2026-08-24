@@ -1,0 +1,178 @@
+{
+  "budgets": {
+    "cost_limit_usd": 0.5,
+    "input_tokens_limit": 400000,
+    "output_tokens_limit": 32000,
+    "request_limit": 8,
+    "tool_calls_limit": 12,
+    "wall_seconds": 600
+  },
+  "created_at": "2026-08-24T20:09:41Z",
+  "episode_id": "E:a2-ml430-int-add-modeq-left-ee732b5b",
+  "git_commit": "5e289fe8cfccab7ba6b230a73cacedf6a485a187",
+  "kind": "axeyum-agent-episode",
+  "observed": {
+    "facts_unlocked": [],
+    "operations_widened": [],
+    "overlay_links_proposed": []
+  },
+  "outcome": {
+    "axiom_footprint": [],
+    "checker_command": "",
+    "checker_exit_status": 0,
+    "checker_output_sha256": null,
+    "decline_class": "no-general-route",
+    "ledger_writes": 0,
+    "search_invocations": 0,
+    "target_theorem_submissions": 0,
+    "verdict": "declined"
+  },
+  "policy": {
+    "agent_code_sha256": "7eb6638d9f3e8b0c9103f26fd35ff752f0ee817830ad9cb74581bbf5a001ffb2",
+    "library_versions": {
+      "anthropic": "1.0.0",
+      "axeyum": "0.1.0",
+      "httpx2": "2.12.0",
+      "pydantic": "2.13.4",
+      "pydantic-ai-slim": "2.33.0",
+      "pydantic-graph": "2.33.0",
+      "python": "3.12.13"
+    },
+    "model_id": "anthropic:claude-sonnet-4-5",
+    "prompt_hashes": {
+      "gather": "85d42380264f5b6980ff0da34cd4622392c3e5679862b03b9eddbbd58a1ad742",
+      "instructions": "555d62412ae2344b180c17fcd04ad5ced748e79b5a49b4b70ee09fb9b5cb8ce1",
+      "plan": "62038870861b2d6e3afb4fdfee95fe8a9bba4762d7d0bc5739f3b8b3109fed42"
+    },
+    "settings": {
+      "max_tokens": 8192,
+      "seed": null,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "toolset_sha256": "1b34db8ae045a8174b35e7eb0e15ec6e56326b0f35feaec3d5a80508e78a6f0d"
+  },
+  "proposals": [
+    {
+      "assurance": "proposed",
+      "kind": "strategy",
+      "path": "artifacts/episodes/2026-08-24/ml430-int-add-modeq-left-ee732b5b/proposals/proposal-0.json.snapshot",
+      "sha256": "1b8b2b9a17254b5c98785478a6d9197df6fba0761b62a3fd358e7756d7889e52"
+    }
+  ],
+  "schema_version": 1,
+  "selection": {
+    "eligibility_reason": "train partition, epistemic_status open, dependency-ready with no unmet depends_on; fragment Int is proof-route-only; 0 registered operation(s); selected from ledger sha256 ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1",
+    "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+    "fact_sha256": "94f72ddeea1776a3dff1f6f597a131d93e578a9e262720162b426a450a187562",
+    "frontier_path": "artifacts/episodes/2026-08-24/frontier.json.snapshot",
+    "frontier_sha256": "bce3d65e2e78c56c40d7058b92c0133d208c66710ba6ee9270189700e4508b7f",
+    "partition": "train"
+  },
+  "transcript": {
+    "messages_path": "artifacts/episodes/2026-08-24/ml430-int-add-modeq-left-ee732b5b/messages.json.snapshot",
+    "messages_sha256": "f1ad316c855f484bdb16482e081e9606ac4dd7a6a3bce3ab5958c05f3930913b",
+    "tool_calls": [
+      {
+        "args_sha256": "ed9abfb322f08d5e0da532473dd41e47c87f6ac55de506ea681dfa835f6a4b01",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 0,
+        "result_sha256": "3e812b84e98ff7553908d26e3a544f93bbd414e54cd1b6cfca568cf754ae4abc",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "ed9abfb322f08d5e0da532473dd41e47c87f6ac55de506ea681dfa835f6a4b01",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 1,
+        "result_sha256": "41643300b259b3d8e0c00ce051e5318be0480489a34721e8380a7f92665dab20",
+        "tool": "fact_neighbourhood"
+      },
+      {
+        "args_sha256": "ed9abfb322f08d5e0da532473dd41e47c87f6ac55de506ea681dfa835f6a4b01",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 2,
+        "result_sha256": "34a0686c72e96e93d35aab23f1f543b485fc8ad6f92838ab78272108ced2ec95",
+        "tool": "operation_registry"
+      },
+      {
+        "args_sha256": "532c156e62c49ca0d1e0ec65deaef08365bf339368f561a3745be48d7737bae3",
+        "assurance": "read",
+        "duration_ms": 2,
+        "exit_status": 0,
+        "ordinal": 3,
+        "result_sha256": "b1543ab42543e17e48b0d6f6d15dfd35502c03aadc7fe1bcbeaf640d57051a6b",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "5f5180fa62b84cef9f1b3501c63c94fc940c3a8010e84b04ff198c3d0ff11e94",
+        "assurance": "read",
+        "duration_ms": 6,
+        "exit_status": 0,
+        "ordinal": 4,
+        "result_sha256": "8c625549c20ec4a6f671589b5ee9d0dcce838f893e2bb9df28361ea86e956d0e",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "abaf21d5ab5566b7b4c7c41ba435916d704d0d6e84759ad33572fe5a2cc3896e",
+        "assurance": "read",
+        "duration_ms": 3,
+        "exit_status": 0,
+        "ordinal": 5,
+        "result_sha256": "002d156b74ccceb06b3a086aa22f311fae944ab7dfe854aa8d8b0b71a3e710cc",
+        "tool": "frontier_select"
+      },
+      {
+        "args_sha256": "6143369b50152ad0c8e9a0bd081565707ed5774ccc92d25f48beccc66f536b6a",
+        "assurance": "read",
+        "duration_ms": 2,
+        "exit_status": 0,
+        "ordinal": 6,
+        "result_sha256": "f5bd23e02b0a846a5e8cc66fde72f73a626f98794d4607db40f8281829f34913",
+        "tool": "frontier_select"
+      },
+      {
+        "args_sha256": "426e391271ab8657bac4bc908ecf9f18ae2a58904b17d9b148f57dd006bb1eb0",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 7,
+        "result_sha256": "07efb34f629544e954094bf7a8d41ac9a4c6ac97d43a325b563c9d1c7ed23f84",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "d3dd7412650412c2073e318bb453cc4577684f24b6c89bd538925b9d1ea703e5",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 8,
+        "result_sha256": "ed44e8ad82c9bafdbaeb97979e12222d0c6281ac5b2db6605fcd3d29248d9f92",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "f7c134092139a2657ea354348416195c0ff1bcde017e22e9f0a394e797b52de6",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 9,
+        "result_sha256": "2734f0e6270a25b23a6e346b311faa8e2e4fcf2cfdf37806216e4dec075cf65f",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "1378aedebe7512c2acaae2c9a60fd0fb4158a281bc560638e34f44f9578a8b77",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 10,
+        "result_sha256": "5d1a2058f923fd58ec1f740f2a044789256a59ca2606b7e9e18314f8024c99a2",
+        "tool": "fact_get"
+      }
+    ]
+  },
+  "web_snapshots": []
+}

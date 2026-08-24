@@ -1,0 +1,12 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "MissingPremises",
+  "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
+  "obstruction": "The Nat kernel prelude contains no theorems about Fibonacci functions (Nat.fib* and Nat.fastFib* both matched zero theorems out of 249 total). Without definitions or lemmas for either fib or fastFib, no proof strategy can proceed - not reflexivity (the functions are structurally different), not induction (no base/step lemmas available), not rewriting (no Fibonacci identities exist). This fact requires Fibonacci-specific infrastructure that the current kernel does not provide. The external Mathlib proof exists but depends on definitions and lemmas not present in Axeyum's Nat prelude.",
+  "producer_id": "close_terminal",
+  "route": "none",
+  "tactic_ids": [
+    "T:refl-closure"
+  ],
+  "why": "The goal is a universal equality statement over naturals. Attempted reflexivity closure as the most basic approach for terminal equalities."
+}

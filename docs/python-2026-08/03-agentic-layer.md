@@ -129,6 +129,41 @@ over the 104 open, dependency-ready, non-held-out facts (measured 2026-08-24;
 Exit: checker green on ten, red on ten corrupt fixtures; **at least one
 episode honestly emits `NoGeneralRoute`**.
 
+### A2 result (measured 2026-08-24, live)
+
+Ten episodes on `anthropic:claude-sonnet-4-5` with
+`UsageLimits(cost_limit=0.50, request_limit=8, tool_calls_limit=12)` over
+ten distinct eligible facts (9 nursery families, 5 train / 5 development):
+**$1.635 total, mean $0.163**; 8 `declined`, 2 `budget-exhausted`; 96 tool
+calls, all tier R; all 12 documents pass `check-agent-episode.py`; every
+episode replays with model requests disabled. **8 of 8 completed plans
+emitted `NoGeneralRoute`; zero emitted a `StrategyProposal`.** Not forced:
+with the three-sibling rule in force, the model never claimed a general
+route over the nine-tactic catalog. That is the baseline A4 and A7 must
+move, and it is the first agent output in this repository whose failure
+mode is a typed value rather than an absent success.
+
+Facts A4 inherits from A2:
+
+- Sidecars are `*.json.snapshot`, because the checker walks a directory
+  with `rglob("*.json")` and treats every match as an episode. Only episode
+  documents carry a bare `.json` under `artifacts/episodes/`.
+- The committed `frontier.json.snapshot` is a census of the whole open
+  ledger and therefore contains held-out ids — the same category as
+  `nursery-v1.json`, which the isolation gate exempts. The episode
+  documents, transcripts and proposals carry zero held-out ids (grepped
+  with a positive control). `check-autogenesis-holdout-isolation.py` does
+  not scan `artifacts/episodes/`; extending it, with the census snapshot
+  exempted by name, is A4 work.
+- Schema v1 `selection` cannot carry `ledger_sha256`
+  (`additionalProperties: false`); v2 adds it beside `checker_runs[]`.
+- Anthropic rejects a request carrying both `temperature` and `top_p`;
+  only `temperature` is sent and `top_p` is recorded as the provider default.
+- `TOOL_TIERS` is the single source of `tool_calls[].assurance` and the
+  projection raises on an undeclared tool; `episode.A2_VERDICTS` refuses
+  `proved`; `test_agent_graph.py` asserts the `Gate`/`Dispatch`/`Check`
+  nodes are absent — A4 deletes that assertion deliberately.
+
 ### A3 — tactic catalog v1
 `artifacts/autogenesis/tactic-catalog-v1.json` + schema + validator: the eight
 tactics already described in `bounded_induction_support/mod.rs`'s module doc

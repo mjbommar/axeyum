@@ -1,0 +1,12 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "InsufficientModEqInfrastructure",
+  "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+  "obstruction": "The nat prelude lacks the foundational modEq infrastructure needed to prove this class of theorems. While I found one sibling fact (F:ml430-nat-add-modeq-right-e2f11f21) with the same Nat fragment and modEq structure, the kernel only provides Nat.modEq_pow and no definition or basic properties of modEq itself. The Int fragment siblings (F:ml430-int-add-modeq-left-ee732b5b, F:ml430-int-add-modeq-right-e58108ee) use ZMOD not MOD and belong to a different type system. Without access to modEq's definition, reflexivity, or construction lemmas in the Nat prelude, no general producer can reach even the two Nat modEq facts, let alone three siblings.",
+  "producer_id": "close_terminal",
+  "route": "none",
+  "tactic_ids": [
+    "T:modeq-equivalence-combinators"
+  ],
+  "why": "The goal is a definitional modular equivalence relation that should close with primitive Eq/Iff combinators if the modEq relation unfolds to show n + a - a = 0 or equivalent divisibility statement."
+}

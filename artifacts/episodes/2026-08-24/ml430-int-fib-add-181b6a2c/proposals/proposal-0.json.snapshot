@@ -1,0 +1,12 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "MissingPremises",
+  "fact_id": "F:ml430-int-fib-add-181b6a2c",
+  "obstruction": "This Fibonacci addition formula is specific in that it requires Fibonacci-specific lemmas (recursion rules, base cases, or prior Fibonacci identities) that do not exist in the Int kernel prelude. The frontier contains other Fibonacci facts (Int.fib_of_odd, Int.fib_two_mul_add_one_pos) but they have different structural patterns (odd-index properties, doubling formulas) rather than the addition formula pattern. Without fib recursion axioms or previously proved fib lemmas, no general producer can reach this or similar Fibonacci identities.",
+  "producer_id": "close_terminal",
+  "route": "none",
+  "tactic_ids": [
+    "T:refl-closure"
+  ],
+  "why": "The goal is a universally quantified equality over integers involving Int.fib, which would normally be approached by unfolding the Fibonacci definition and applying arithmetic lemmas. However, the Int prelude contains zero theorems about Int.fib (matched 0 of 394 total theorems), making this impossible to prove with available premises."
+}

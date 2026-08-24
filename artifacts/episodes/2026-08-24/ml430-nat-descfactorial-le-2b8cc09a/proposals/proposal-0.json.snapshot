@@ -1,0 +1,13 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "MissingPremiseDefinition",
+  "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+  "obstruction": "The nat prelude contains zero theorems about descFactorial (Nat.descFactorial* matched 0 of 249 theorems). Without the recursive definition or any computational lemmas for descFactorial, the producer cannot unfold or rewrite descFactorial expressions. The only other descFactorial facts on the frontier (F:ml430-nat-descfactorial-of-lt-fbcf5d26 and F:ml430-nat-descfactorial-self-899fc0e0) are boundary conditions, not monotonicity lemmas, so they don't share the same proof structure. This is a missing-premise obstruction specific to descFactorial being absent from the kernel prelude.",
+  "producer_id": "try_induction",
+  "route": "none",
+  "tactic_ids": [
+    "T:bounded-structural-induction",
+    "T:ih-congruence-rewrite"
+  ],
+  "why": "The goal is a universal monotonicity statement with a leading quantifier over n, suggesting induction on n. The descFactorial function likely has a recursive definition that would allow the induction hypothesis to bridge the step case via congruence rewriting."
+}

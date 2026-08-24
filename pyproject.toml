@@ -17,6 +17,26 @@ classifiers = [
 # maturin fills this from `crates/axeyum-py/Cargo.toml`.
 dynamic = ["version"]
 
+[project.optional-dependencies]
+# The agentic layer (docs/python-2026-08/03-agentic-layer.md), exact-pinned.
+#
+# Exact pins, not ranges, and the reason is measured: pydantic-ai 2.33.0 exists
+# BECAUSE `anthropic` 1.0.0 landed on 2026-08-20 and broke unpinned installs,
+# and `pydantic-ai-slim` depends on `httpx2`, not `httpx` -- a custom
+# `http_client` for `AnthropicProvider` must be an `httpx2.AsyncClient`.
+#
+# This is an EXTRA and not a dependency group on purpose. Nothing under
+# `scripts/` may import it: every gate in `just check` runs on the standard
+# library, so a checker that imported `pydantic` would make a fresh-machine
+# `./scripts/check.sh` require a network install. The episode artifact crosses
+# that boundary as JSON on disk, checked by a stdlib-only
+# `scripts/check-agent-episode.py`.
+agent = [
+    "pydantic-ai-slim[anthropic]==2.33.0",
+    "pydantic-graph==2.33.0",
+    "pydantic-evals==2.33.0",
+]
+
 [project.urls]
 Repository = "https://github.com/mjbommar/axeyum"
 
