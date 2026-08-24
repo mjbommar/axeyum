@@ -7,7 +7,12 @@
     "language": "lean4",
     "statement": "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal) -> CReal.Equiv (CReal.add (CPoint.distSq x0 (CPoint.lerp x1 x2 x3)) (CReal.mul x3 (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CPoint.distSq x1 x2)))) (CReal.add (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CPoint.distSq x0 x1)) (CReal.mul x3 (CPoint.distSq x0 x2)))))))",
     "fragment": "CPoint",
-    "free_symbols": ["x0", "x1", "x2", "x3"]
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ]
   },
   "epistemic_status": "proved",
   "external_status": "proved",
@@ -55,5 +60,5 @@
       }
     ]
   },
-  "notes": "The squared-parametric form is the STATEMENT, not a weakening of one. Recording it as 'Stewart's theorem' without the qualification above would be the error this ledger was gated against on 2026-08-22, when a fact's formal.statement was rewritten to match what had actually been proved: 'we proved X' degrades into 'we proved something we then labelled X'. What is proved is the identity in formal.statement; what is NOT proved is the unsigned-length relation, and the missing ingredient is named (CReal.sqrt).\n\nStewart is the parent of both Apollonius (t = 1/2) and the angle-bisector length formula. `CPoint.apollonius_median` is already in this file by an independent route; the median corollary that would connect them at t = 1/2 is NOT landed -- it needs `1 - inv2 ~ inv2` plus distribution algebra -- and until it is, the two results sit in one file without being tied together. That is recorded here as a known loose end rather than left for a reader to assume.\n\nt is not confined to [0,1]. The classical statement is about a point ON the segment; this one is about the whole line through B and C, and is therefore strictly more general in that respect while being weaker in the length-versus-square respect."
+  "notes": "The squared-parametric form is the STATEMENT, not a weakening of one. Recording it as 'Stewart's theorem' without the qualification above would be the error this ledger was gated against on 2026-08-22, when a fact's formal.statement was rewritten to match what had actually been proved: 'we proved X' degrades into 'we proved something we then labelled X'. What is proved is the identity in formal.statement; what is NOT proved is the unsigned-length relation, and the missing ingredient is named (CReal.sqrt).\n\nStewart is the parent of both Apollonius (t = 1/2) and the angle-bisector length formula. THE LOOSE END THIS ENTRY ORIGINALLY RECORDED IS NOW CLOSED (2026-08-23, same day): `CPoint.stewart_median` instantiates Stewart at t = 1/2 through `Scalar.one_sub_inv2` and `lerp_half_is_midpoint`, and `CPoint.apollonius_from_stewart` then derives the pre-existing `CPoint.apollonius_median` from it, using the new `CPoint.midpoint_dist_sq_quarter` (BM^2 = BC^2/4) to eliminate `distSq B M`. The two are not merely equivalent in substance: `creal_point_tests::apollonius_from_stewart_has_the_apollonius_median_statement` compares the two `render_lean` outputs BYTE FOR BYTE, so the derived theorem is the identical proposition reached by an independent route. Two theorems proving the same fact with nothing connecting them is how a library rots; the connection is now a checked theorem.\n\nt is not confined to [0,1]. The classical statement is about a point ON the segment; this one is about the whole line through B and C, and is therefore strictly more general in that respect while being weaker in the length-versus-square respect."
 }
