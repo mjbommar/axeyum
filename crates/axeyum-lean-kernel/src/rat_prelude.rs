@@ -610,6 +610,22 @@ pub struct RatPrelude {
     /// the index `j`, and [`Self::nat_div_succ_scale`] at `m = 0` says
     /// `(j+1)/(j+1)` is `1/1`. Both steps compare at one denominator.
     pub nat_div_succ_le_one: NameId,
+    /// `Rat.natDivSucc_antitone : ∀ (j j' : Nat), Nat.le j j' →
+    /// Rat.le (natDivSucc 1 j') (natDivSucc 1 j)`.
+    ///
+    /// **Antitonicity, at last** — the lemma [`Self::nat_div_succ_scale`]'s doc
+    /// says was kept off the critical path. Direct route, not the reciprocal
+    /// one: unfold `Rat.le` to its cross-multiplication definition and cancel
+    /// the (positive) product of the two denominators via
+    /// [`Self::int_le_of_mul_le_mul_right`], after regrouping both sides
+    /// through [`Self::normalize_cross`] applied at each `natDivSucc`
+    /// separately. No `Rat.inv` is touched, so this needs neither `inv_inv`
+    /// (which this prelude still does not have) nor a `Nat → Rat`
+    /// order-transport lemma — `Int.le (ofNat m) (ofNat n)` already unfolds to
+    /// `Nat.le m n` definitionally (the four-case table in `int_prelude`'s
+    /// definitions module), so `Nat.succ_le_succ` on the hypothesis serves
+    /// directly wherever `Int.le` on the two successor denominators is needed.
+    pub nat_div_succ_antitone: NameId,
     /// `Rat.int_le_natAbs : ∀ (x : Int), Int.le x (Int.ofNat (Int.natAbs x))`.
     pub int_le_nat_abs: NameId,
     /// `Rat.int_neg_natAbs_le : ∀ (x : Int),
@@ -1244,6 +1260,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         nat_index_symm: child(kernel, "nat_index_symm"),
         nat_div_succ_le_scaled: child(kernel, "natDivSucc_le_scaled"),
         nat_div_succ_le_one: child(kernel, "natDivSucc_le_one"),
+        nat_div_succ_antitone: child(kernel, "natDivSucc_antitone"),
         int_le_nat_abs: child(kernel, "int_le_natAbs"),
         int_neg_nat_abs_le: child(kernel, "int_neg_natAbs_le"),
         bounds_num: child(kernel, "bounds_num"),

@@ -52,8 +52,8 @@
 
 use super::RatPrelude;
 use super::ops::{
-    den, den_pos, den_z, iregroup3, normalize, num, one_le_succ, radd, rat_eq_rewrite, rchain,
-    rcongr, rle, rlt, rneg, rsymm, rzero,
+    den, den_pos, den_z, iregroup3, iregroup4, normalize, num, one_le_succ, radd, rat_eq_rewrite,
+    rchain, rcongr, rle, rlt, rneg, rsymm, rzero,
 };
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -111,6 +111,7 @@ pub(super) fn declare_archimedean(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_decidable_order(d, p)?;
     declare_positive_bridges(d, p)?;
     declare_witness(d, p)?;
+    declare_nat_div_succ_antitone(d, p)?;
     declare_archimedean_property(d, p)
 }
 
@@ -482,6 +483,188 @@ fn declare_witness(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError>
             &[left_side, right_side, denominator, positive, at_right],
         );
         let proof = d.lam_fv(h_fv, hypothesis, body);
+        (stmt, proof)
+    })
+}
+
+/// `Rat.natDivSucc_antitone : ∀ j j', Nat.le j j' →
+/// Rat.le (natDivSucc 1 j') (natDivSucc 1 j)`.
+///
+/// **Antitonicity, at last.** The direct route, not the reciprocal one:
+/// `natDivSucc 1 m` is `normalize (ofNat 1) (succ m) _`, so
+/// [`RatPrelude::normalize_cross`] at each side gives `num · (succ m) = den`
+/// (after cancelling the `ofNat 1` factor with `Nat.one_mul`). Scaling the
+/// goal `num_a · den_b ≤ num_b · den_a` by `(succ j') · (succ j)` and
+/// regrouping with [`iregroup4`] turns each side into `den_a · den_b` times
+/// one successor denominator — exactly `Nat.succ_le_succ` on the hypothesis,
+/// scaled by the (positive) `den_a · den_b` and read back through
+/// [`RatPrelude::int_le_of_mul_le_mul_right`].
+///
+/// No `Rat.inv` is touched, so this needs neither an `inv_inv` law (this
+/// prelude still has none) nor a dedicated `Nat → Rat` order-transport lemma:
+/// `Int.le (ofNat m) (ofNat n)` already unfolds to `Nat.le m n` definitionally
+/// (the four-case table `int_prelude`'s definitions module builds `Int.le`
+/// from), so `Nat.succ_le_succ` applied to the hypothesis serves directly
+/// wherever an `Int.le` between the two successor denominators is needed.
+#[allow(clippy::too_many_lines)]
+fn declare_nat_div_succ_antitone(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let int = p.int;
+    let nat = p.int.nat;
+    let nat_ty = d.nat_ty();
+
+    mixed_theorem(d, p.nat_div_succ_antitone, &[nat_ty, nat_ty], &|d, v| {
+        let (j, jp) = (v[0], v[1]);
+        let hyp_ty = NatOps::le(d, j, jp);
+
+        let one_nat = d.num(1);
+        let one_z = d.of_nat(one_nat);
+        let a = d.const_app(p.nat_div_succ, &[one_nat, jp]);
+        let b = d.const_app(p.nat_div_succ, &[one_nat, j]);
+        let concl = rle(d, p, a, b);
+        let stmt = d.arrow(hyp_ty, concl);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let ea = d.succ(jp);
+        let eb = d.succ(j);
+        let eaz = d.of_nat(ea);
+        let ebz = d.of_nat(eb);
+        let pos_a = one_le_succ(d, jp);
+        let pos_b = one_le_succ(d, j);
+
+        // The two representatives, built directly rather than through
+        // `Rat.natDivSucc` so `normalize_cross` applies to them without a
+        // detour through `a`/`b`'s unfolding (proof irrelevance + delta
+        // bridges the two back together at the very end, where `body`'s
+        // inferred type is checked against `concl`).
+        let rep_a = normalize(d, one_z, ea, pos_a);
+        let rep_b = normalize(d, one_z, eb, pos_b);
+        let na = num(d, rep_a);
+        let da = den(d, rep_a);
+        let daz = den_z(d, rep_a);
+        let nb = num(d, rep_b);
+        let db = den(d, rep_b);
+        let dbz = den_z(d, rep_b);
+
+        // Eq-A : na * eaz = daz.
+        let cross_a = d.lemma(p.normalize_cross, &[one_z, ea, pos_a]);
+        let one_z_daz = d.imul(one_z, daz);
+        let one_mul_da_nat = d.lemma(nat.one_mul, &[da]);
+        let one_mul_da_product = NatOps::mul(d, one_nat, da);
+        let one_mul_da =
+            d.nat_eq_to_int(one_mul_da_product, da, one_mul_da_nat, &|d, t| d.of_nat(t));
+        let na_eaz = d.imul(na, eaz);
+        let (_, eqa) = d.ichain(na_eaz, &[(one_z_daz, cross_a), (daz, one_mul_da)]);
+
+        // Eq-B : nb * ebz = dbz.
+        let cross_b = d.lemma(p.normalize_cross, &[one_z, eb, pos_b]);
+        let one_z_dbz = d.imul(one_z, dbz);
+        let one_mul_db_nat = d.lemma(nat.one_mul, &[db]);
+        let one_mul_db_product = NatOps::mul(d, one_nat, db);
+        let one_mul_db =
+            d.nat_eq_to_int(one_mul_db_product, db, one_mul_db_nat, &|d, t| d.of_nat(t));
+        let nb_ebz = d.imul(nb, ebz);
+        let (_, eqb) = d.ichain(nb_ebz, &[(one_z_dbz, cross_b), (dbz, one_mul_db)]);
+
+        // `Nat.le eb ea`, which IS `Int.le ebz eaz` (both `ofNat`s).
+        let hyp_e = d.lemma(nat.succ_le_succ, &[j, jp, h]);
+
+        // Scale by the (positive) product of the two denominators.
+        let da_db = NatOps::mul(d, da, db);
+        let scaled_hyp = d.lemma(p.int_mul_le_mul_right, &[ebz, eaz, da_db, hyp_e]);
+
+        let dadbz = d.imul(daz, dbz);
+        let source_lhs = d.imul(ebz, dadbz);
+        let source_rhs = d.imul(eaz, dadbz);
+
+        let ea_eb = d.imul(eaz, ebz);
+        let na_dbz = d.imul(na, dbz);
+        let nb_daz = d.imul(nb, daz);
+        let goal_lhs = d.imul(na_dbz, ea_eb);
+        let goal_rhs = d.imul(nb_daz, ea_eb);
+
+        // --- LHS: (na*dbz)*(eaz*ebz) = ebz*(daz*dbz) ---
+        let goal_lhs_left_head = d.imul(na_dbz, eaz);
+        let goal_lhs_left = d.imul(goal_lhs_left_head, ebz);
+        let bridge_lhs_forward = d.lemma(int.mul_assoc, &[na_dbz, eaz, ebz]);
+        let bridge_lhs = d.isymm(goal_lhs_left, goal_lhs, bridge_lhs_forward);
+
+        let regroup_lhs = iregroup4(d, [na, dbz, eaz, ebz], [na, eaz, dbz, ebz]);
+        let regrouped_lhs_head = d.imul(na_eaz, dbz);
+        let regrouped_lhs = d.imul(regrouped_lhs_head, ebz);
+
+        let subst_lhs = d.icongr(na_eaz, daz, eqa, &|d, t| {
+            let head = d.imul(t, dbz);
+            d.imul(head, ebz)
+        });
+        let subst_lhs_result = d.imul(dadbz, ebz);
+
+        let commute_lhs = d.lemma(int.mul_comm, &[dadbz, ebz]);
+
+        let (_, lhs_chain) = d.ichain(
+            goal_lhs,
+            &[
+                (goal_lhs_left, bridge_lhs),
+                (regrouped_lhs, regroup_lhs),
+                (subst_lhs_result, subst_lhs),
+                (source_lhs, commute_lhs),
+            ],
+        );
+
+        // --- RHS: (nb*daz)*(eaz*ebz) = eaz*(daz*dbz) ---
+        let goal_rhs_left_head = d.imul(nb_daz, eaz);
+        let goal_rhs_left = d.imul(goal_rhs_left_head, ebz);
+        let bridge_rhs_forward = d.lemma(int.mul_assoc, &[nb_daz, eaz, ebz]);
+        let bridge_rhs = d.isymm(goal_rhs_left, goal_rhs, bridge_rhs_forward);
+
+        let regroup_rhs = iregroup4(d, [nb, daz, eaz, ebz], [nb, ebz, daz, eaz]);
+        let regrouped_rhs_head = d.imul(nb_ebz, daz);
+        let regrouped_rhs = d.imul(regrouped_rhs_head, eaz);
+
+        let subst_rhs = d.icongr(nb_ebz, dbz, eqb, &|d, t| {
+            let head = d.imul(t, daz);
+            d.imul(head, eaz)
+        });
+        let dbz_daz = d.imul(dbz, daz);
+        let subst_rhs_mid = d.imul(dbz_daz, eaz);
+
+        let swap_db_da = d.lemma(int.mul_comm, &[dbz, daz]);
+        let commute_inner_rhs = d.icongr(dbz_daz, dadbz, swap_db_da, &|d, t| d.imul(t, eaz));
+        let subst_rhs_final = d.imul(dadbz, eaz);
+
+        let commute_rhs = d.lemma(int.mul_comm, &[dadbz, eaz]);
+
+        let (_, rhs_chain) = d.ichain(
+            goal_rhs,
+            &[
+                (goal_rhs_left, bridge_rhs),
+                (regrouped_rhs, regroup_rhs),
+                (subst_rhs_mid, subst_rhs),
+                (subst_rhs_final, commute_inner_rhs),
+                (source_rhs, commute_rhs),
+            ],
+        );
+
+        // Transport `scaled_hyp` along both chains onto the scaled goal.
+        let back_lhs = d.isymm(goal_lhs, source_lhs, lhs_chain);
+        let at_lhs = d.int_eq_rewrite(source_lhs, goal_lhs, back_lhs, scaled_hyp, &|d, z| {
+            d.ile(z, source_rhs)
+        });
+        let back_rhs = d.isymm(goal_rhs, source_rhs, rhs_chain);
+        let scaled_goal = d.int_eq_rewrite(source_rhs, goal_rhs, back_rhs, at_lhs, &|d, z| {
+            d.ile(goal_lhs, z)
+        });
+
+        // Cancel the common (positive) factor `(succ j') * (succ j)`.
+        let ea_eb_nat = NatOps::mul(d, ea, eb);
+        let one_le_ea_eb = d.lemma(nat.one_le_mul, &[ea, eb, pos_a, pos_b]);
+        let body = d.lemma(
+            p.int_le_of_mul_le_mul_right,
+            &[na_dbz, nb_daz, ea_eb_nat, one_le_ea_eb, scaled_goal],
+        );
+
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
         (stmt, proof)
     })
 }

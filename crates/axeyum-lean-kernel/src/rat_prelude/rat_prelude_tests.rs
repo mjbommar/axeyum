@@ -73,6 +73,7 @@ fn every_named_declaration_exists() {
         ("mul_pos", p.mul_pos),
         ("natDivSucc_pos", p.nat_div_succ_pos),
         ("inv_natDivSucc", p.inv_nat_div_succ),
+        ("natDivSucc_antitone", p.nat_div_succ_antitone),
         ("nat_index_symm", p.nat_index_symm),
         ("max", p.max),
         ("min", p.min),
@@ -414,6 +415,7 @@ fn the_archimedean_development_is_axiom_free() {
         ("int_one_le_of_pos", p.int_one_le_of_pos, true),
         ("natDivSucc_lt_of_pos", p.nat_div_succ_lt_of_pos, true),
         ("le_of_le_add_natDivSucc", p.le_of_le_add_nat_div_succ, true),
+        ("natDivSucc_antitone", p.nat_div_succ_antitone, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
@@ -438,6 +440,33 @@ fn the_archimedean_development_is_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// `Rat.natDivSucc_antitone` is antitonicity **exactly as briefed**: the
+/// hypothesis is `Nat.le j j'` (not a fixed pair, not `Nat.lt`), and the
+/// conclusion swaps `j`/`j'` on `Rat.natDivSucc 1 _` — the wider index gives
+/// the smaller bound — rather than leaving the direction to an empty
+/// footprint's word.
+#[test]
+fn nat_div_succ_antitone_is_the_statement_briefed() {
+    let (kernel, p) = built();
+    let rendered = match kernel
+        .environment()
+        .get(p.nat_div_succ_antitone)
+        .expect("Rat.natDivSucc_antitone must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("Rat.natDivSucc_antitone must be a Theorem, found {other:?}"),
+    };
+    let text = kernel.render_lean(rendered);
+    let normalised: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert_eq!(
+        normalised,
+        "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> \
+         Rat.le (Rat.natDivSucc (AxNat.succ AxNat.zero) x1) \
+         (Rat.natDivSucc (AxNat.succ AxNat.zero) x0))))",
+        "Rat.natDivSucc_antitone's statement drifted from the briefed one"
+    );
 }
 
 /// The Archimedean statement is the one ADR-0512 asks for, **verbatim**.
