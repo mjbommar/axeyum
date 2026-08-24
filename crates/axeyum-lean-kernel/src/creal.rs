@@ -954,6 +954,16 @@ pub struct CRealPrelude {
     /// `CReal.eq_zero_of_mul_self_zero : ∀ x, Equiv (mul x x) zero → Equiv x
     /// zero`. See `creal/mul_self_zero.rs`.
     pub eq_zero_of_mul_self_zero: NameId,
+    /// `CReal.eq_zero_of_add_eq_zero_of_nonneg : ∀ a b, le zero a → le zero b →
+    /// Equiv (add a b) zero → Equiv a zero`.
+    ///
+    /// Nonnegative summands of a zero sum are each zero — an ordinary
+    /// ordered-field fact this development was missing. Route: `a ≤ a + b`
+    /// from `0 ≤ b` (`add_le_add` at `add a zero`/`add a b`, transported
+    /// across `add_zero` by `le_congr`); `a + b ~ 0` gives `a + b ≤ 0`
+    /// (`le_of_equiv`); `le_trans` gives `a ≤ 0`; with `0 ≤ a` and
+    /// `equiv_of_le_le`, `a ~ 0`. See `creal/order_extra.rs`.
+    pub eq_zero_of_add_eq_zero_of_nonneg: NameId,
 
     // --- the integer square root (creal/sqrt.rs) ------------------------------
     /// `CReal.natSqrt : Nat -> Nat`, the missing computational primitive
@@ -1257,6 +1267,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
         rat_unit_eq_one: kernel.name_str(creal, "ratUnitEqOne"),
         eq_zero_of_mul_self_zero: kernel.name_str(creal, "eq_zero_of_mul_self_zero"),
+        eq_zero_of_add_eq_zero_of_nonneg: kernel
+            .name_str(creal, "eq_zero_of_add_eq_zero_of_nonneg"),
         nat_sqrt: kernel.name_str(creal, "natSqrt"),
         nat_sqrt_spec: kernel.name_str(creal, "natSqrtSpec"),
         nat_sqrt_le: kernel.name_str(creal, "natSqrtLe"),
@@ -1339,6 +1351,7 @@ pub(crate) fn build_creal_prelude_uncached(
         declare_order(&mut d, prelude)?;
         declare_neg_le_neg(&mut d, prelude)?;
         declare_strict_order(&mut d, prelude)?;
+        order_extra::declare_order_extra(&mut d, prelude)?;
         product::declare_product(&mut d, prelude)?;
         field::declare_field(&mut d, prelude)?;
         inverse::declare_inverse(&mut d, prelude)?;
@@ -2273,6 +2286,7 @@ mod field;
 mod inverse;
 mod lattice;
 mod mul_self_zero;
+mod order_extra;
 mod product;
 mod series;
 mod sqrt;

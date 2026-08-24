@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 148] = [
+    let expected: [(&str, crate::NameId, &str); 149] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -253,6 +253,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.eq_zero_of_mul_self_zero",
             p.eq_zero_of_mul_self_zero,
+            "theorem",
+        ),
+        (
+            "CReal.eq_zero_of_add_eq_zero_of_nonneg",
+            p.eq_zero_of_add_eq_zero_of_nonneg,
             "theorem",
         ),
         ("CReal.natSqrt", p.nat_sqrt, "def"),

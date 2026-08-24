@@ -728,6 +728,75 @@ pub struct CPointPrelude {
     /// rather than per-coordinate — named for exactly what it is, not
     /// `triangle_inequality`.
     pub dist_sq_double_sum_bound: NameId,
+    /// **Positive-definiteness of `dot`, converse half.** `∀ V,
+    /// CPoint.Equiv V (CPoint.mk CReal.zero CReal.zero) → Equiv (dot V V)
+    /// CReal.zero`.
+    ///
+    /// The cheap direction: from `V`'s coordinates each `Equiv`-zero,
+    /// `mul_congr`/`add_congr` push the fact through `dot V V = x V·x V +
+    /// y V·y V` to `zero·zero + zero·zero`, and `mul_zero`/`add_zero` collapse
+    /// that to `zero`. See [`Self::dot_self_zero_iff`] for the combined
+    /// biconditional, and `Complex.normSq_eq_zero_of_eq_zero` in `complex.rs`
+    /// for the sibling proof this one mirrors coordinate-for-coordinate.
+    pub dot_self_zero_of_eq_zero: NameId,
+    /// **Positive-definiteness of `dot`, forward half — the content.** `∀ V,
+    /// Equiv (dot V V) CReal.zero → CPoint.Equiv V (CPoint.mk CReal.zero
+    /// CReal.zero)`.
+    ///
+    /// `dot V V ~ 0` is `x V·x V + y V·y V ~ 0` by defeq, both summands
+    /// `CReal.sq_nonneg`-nonnegative, so
+    /// [`CRealPrelude::eq_zero_of_add_eq_zero_of_nonneg`](crate::CRealPrelude::eq_zero_of_add_eq_zero_of_nonneg)
+    /// (applied once directly and once after `add_comm` swaps the summand
+    /// order) gives each square `Equiv`-zero, and
+    /// [`CRealPrelude::eq_zero_of_mul_self_zero`](crate::CRealPrelude::eq_zero_of_mul_self_zero)
+    /// closes each coordinate. Mirrors
+    /// `Complex.eq_zero_of_normSq_eq_zero` in `complex.rs`, with the local
+    /// `nonneg_sum_zero_left` helper that file needed replaced by the kernel
+    /// theorem `eq_zero_of_add_eq_zero_of_nonneg` this development added to
+    /// `creal/order_extra.rs`.
+    pub eq_zero_of_dot_self_zero: NameId,
+    /// **Positive-definiteness of `dot`, the full biconditional.** `∀ V,
+    /// Iff (Equiv (dot V V) CReal.zero) (CPoint.Equiv V (CPoint.mk CReal.zero
+    /// CReal.zero))`, from [`Self::eq_zero_of_dot_self_zero`] (`mp`) and
+    /// [`Self::dot_self_zero_of_eq_zero`] (`mpr`) — a restatement, not a new
+    /// proof, in the style [`Self::pythagoras_dist_sq`] uses.
+    ///
+    /// With this, `dot` satisfies all three inner-product axioms:
+    /// symmetry ([`Self::dot_comm`]), bilinearity (the `dot_add_*`/`dot_sub_*`
+    /// family), and positive-definiteness (this one) — with
+    /// [`Self::cauchy_schwarz`] proved on top.
+    pub dot_self_zero_iff: NameId,
+    /// **Identity of indiscernibles, converse half.** `∀ A B,
+    /// CPoint.Equiv A B → Equiv (distSq A B) CReal.zero`.
+    ///
+    /// A specialization of [`Self::dot_self_zero_of_eq_zero`] at `V := sub A
+    /// B`: componentwise, `Equiv (x A) (x B)` gives `Equiv (add (x A) (neg
+    /// (x B))) CReal.zero` (a ring fact, not `CReal`-specific — see the local
+    /// `sub_eq_zero_of_equiv` helper), which is exactly `CPoint.Equiv (sub A
+    /// B) (mk zero zero)` per coordinate.
+    pub dist_sq_eq_zero_of_equiv: NameId,
+    /// **Identity of indiscernibles, forward half — the content.** `∀ A B,
+    /// Equiv (distSq A B) CReal.zero → CPoint.Equiv A B`.
+    ///
+    /// A specialization of [`Self::eq_zero_of_dot_self_zero`] at `V := sub A
+    /// B`, read back through the local `equiv_of_sub_eq_zero` helper (`add u
+    /// (neg v) ~ 0 → u ~ v`, from `sub_add_cancel_proof` and
+    /// `zero_add_proof`, both already in this file).
+    pub eq_zero_of_dist_sq_eq_zero: NameId,
+    /// **Identity of indiscernibles, the full biconditional.** `∀ A B,
+    /// Iff (Equiv (distSq A B) CReal.zero) (CPoint.Equiv A B)`, from
+    /// [`Self::eq_zero_of_dist_sq_eq_zero`] (`mp`) and
+    /// [`Self::dist_sq_eq_zero_of_equiv`] (`mpr`) — a restatement, in the
+    /// same style as [`Self::dot_self_zero_iff`].
+    ///
+    /// With [`Self::dist_sq_comm`] (symmetry) and
+    /// [`Self::dist_sq_double_sum_bound`] (the reachable triangle-inequality
+    /// substitute — see that field's doc for why the classical unsquared
+    /// form is not expressible here), `distSq` is as much of a metric space
+    /// as this kernel — with no `CReal.sqrt` — can state.
+    /// [`Self::dist_sq_self_zero`] already gave the `A = B` direction of
+    /// this; this is the general biconditional.
+    pub dist_sq_eq_zero_iff: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -818,6 +887,12 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_lagrange_identity(&mut d, p)?;
     declare_cauchy_schwarz(&mut d, p)?;
     declare_dist_sq_double_sum_bound(&mut d, p)?;
+    declare_dot_self_zero_of_eq_zero(&mut d, p)?;
+    declare_eq_zero_of_dot_self_zero(&mut d, p)?;
+    declare_dot_self_zero_iff(&mut d, p)?;
+    declare_dist_sq_eq_zero_of_equiv(&mut d, p)?;
+    declare_eq_zero_of_dist_sq_eq_zero(&mut d, p)?;
+    declare_dist_sq_eq_zero_iff(&mut d, p)?;
     Ok(p)
 }
 
@@ -904,6 +979,12 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         lagrange_identity: kernel.name_str(point, "lagrange_identity"),
         cauchy_schwarz: kernel.name_str(point, "cauchy_schwarz"),
         dist_sq_double_sum_bound: kernel.name_str(point, "distSq_double_sum_bound"),
+        dot_self_zero_of_eq_zero: kernel.name_str(point, "dot_self_zero_of_eq_zero"),
+        eq_zero_of_dot_self_zero: kernel.name_str(point, "eq_zero_of_dot_self_zero"),
+        dot_self_zero_iff: kernel.name_str(point, "dot_self_zero_iff"),
+        dist_sq_eq_zero_of_equiv: kernel.name_str(point, "distSq_eq_zero_of_equiv"),
+        eq_zero_of_dist_sq_eq_zero: kernel.name_str(point, "eq_zero_of_distSq_eq_zero"),
+        dist_sq_eq_zero_iff: kernel.name_str(point, "distSq_eq_zero_iff"),
     }
 }
 
@@ -11977,6 +12058,432 @@ fn declare_dist_sq_double_sum_bound(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.dist_sq_double_sum_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CPoint.mk CReal.zero CReal.zero` — the zero point, built directly from
+/// the constructor rather than a named constant (there is no `CPoint.zero`
+/// in this prelude): `x`/`y` applied to it reduce by iota to `CReal.zero`,
+/// which is what lets the theorems below state their conclusion over it and
+/// have a per-coordinate `Equiv _ CReal.zero` proof close it by defeq — the
+/// same maneuver `complex.rs`'s `eq_zero_of_normSq_eq_zero` uses against its
+/// own `zero_c`.
+fn zero_point(d: &mut IntDev<'_>, p: CPointPrelude) -> ExprId {
+    let zero = czero(d, p);
+    d.const_app(p.mk, &[zero, zero])
+}
+
+/// `CPoint.dot_self_zero_of_eq_zero`: the **easy** half of `dot V V ~ 0 ↔ V ~
+/// 0`. The converse is [`declare_eq_zero_of_dot_self_zero`], just below.
+/// Mirrors `declare_norm_sq_eq_zero_of_eq_zero` in `complex.rs`.
+fn declare_dot_self_zero_of_eq_zero(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let point = point_ty(d, p);
+
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+    let zp = zero_point(d, p);
+    let hypothesis = d.const_app(p.point_equiv, &[v, zp]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let vx = d.const_app(p.x, &[v]);
+    let vy = d.const_app(p.y, &[v]);
+    let zx = d.const_app(p.x, &[zp]);
+    let zy = d.const_app(p.y, &[zp]);
+    let ex_ty = equiv(d, p, vx, zx);
+    let ey_ty = equiv(d, p, vy, zy);
+    let hx = d.and_left(ex_ty, ey_ty, h);
+    let hy = d.and_right(ex_ty, ey_ty, h);
+    // hx : Equiv vx zx, hy : Equiv vy zy, both defeq Equiv _ CReal.zero.
+
+    let zero = czero(d, p);
+    let aa_eq = d.lemma(creal.mul_congr, &[vx, zero, vx, zero, hx, hx]);
+    let bb_eq = d.lemma(creal.mul_congr, &[vy, zero, vy, zero, hy, hy]);
+    let vxvx = cmul(d, p, vx, vx);
+    let vyvy = cmul(d, p, vy, vy);
+    let mul_zero_term = cmul(d, p, zero, zero);
+    let sum_eq = d.lemma(
+        creal.add_congr,
+        &[vxvx, mul_zero_term, vyvy, mul_zero_term, aa_eq, bb_eq],
+    );
+    // sum_eq : Equiv (add vxvx vyvy) (add mul_zero_term mul_zero_term)
+
+    let mz = d.lemma(creal.mul_zero, &[zero]); // Equiv mul_zero_term zero
+    let add_cong = d.lemma(
+        creal.add_congr,
+        &[mul_zero_term, zero, mul_zero_term, zero, mz, mz],
+    ); // Equiv (add mul_zero_term mul_zero_term) (add zero zero)
+    let az = d.lemma(creal.add_zero, &[zero]); // Equiv (add zero zero) zero
+    let zero_zero = cadd(d, p, zero, zero);
+    let collapse = d.lemma(
+        creal.equiv_trans,
+        &[mul_zero_term, zero_zero, zero, add_cong, az],
+    );
+    // collapse : Equiv (add mul_zero_term mul_zero_term) zero
+
+    let sum = cadd(d, p, vxvx, vyvy);
+    let mul_zero_sum = cadd(d, p, mul_zero_term, mul_zero_term);
+    let proof = d.lemma(
+        creal.equiv_trans,
+        &[sum, mul_zero_sum, zero, sum_eq, collapse],
+    );
+    // proof : Equiv (add vxvx vyvy) zero, and `dot V V` is defeq to that sum.
+
+    let dot_vv = dotp(d, p, v, v);
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        d.lam_fv(v_fv, point, with_h)
+    };
+    let ty = {
+        let claim = equiv(d, p, dot_vv, zero);
+        let inner = d.arrow(hypothesis, claim);
+        d.pi_fv(v_fv, point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dot_self_zero_of_eq_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CPoint.eq_zero_of_dot_self_zero`: the **converse** half of `dot V V ~ 0
+/// ↔ V ~ 0` — the content. Mirrors `declare_eq_zero_of_norm_sq_eq_zero` in
+/// `complex.rs`, but where that file needed its own `nonneg_sum_zero_left`
+/// helper, this one uses the kernel theorem
+/// [`CRealPrelude::eq_zero_of_add_eq_zero_of_nonneg`](crate::CRealPrelude::eq_zero_of_add_eq_zero_of_nonneg)
+/// directly.
+fn declare_eq_zero_of_dot_self_zero(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let point = point_ty(d, p);
+
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+    let vx = d.const_app(p.x, &[v]);
+    let vy = d.const_app(p.y, &[v]);
+    let zero = czero(d, p);
+
+    let vxvx = cmul(d, p, vx, vx);
+    let vyvy = cmul(d, p, vy, vy);
+    let dot_vv = dotp(d, p, v, v); // defeq to `add vxvx vyvy`
+
+    let hypothesis = equiv(d, p, dot_vv, zero);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let aa_nonneg = d.lemma(creal.sq_nonneg, &[vx]); // le zero vxvx
+    let bb_nonneg = d.lemma(creal.sq_nonneg, &[vy]); // le zero vyvy
+
+    let vxvx_zero = d.lemma(
+        creal.eq_zero_of_add_eq_zero_of_nonneg,
+        &[vxvx, vyvy, aa_nonneg, bb_nonneg, h],
+    ); // Equiv vxvx zero
+
+    // For vyvy, the sum needs to be read in the other order.
+    let vyvy_vxvx = cadd(d, p, vyvy, vxvx);
+    let vxvx_vyvy = cadd(d, p, vxvx, vyvy);
+    let comm = d.lemma(creal.add_comm, &[vyvy, vxvx]); // Equiv(add vyvy vxvx, add vxvx vyvy)
+    let h_swapped = d.lemma(creal.equiv_trans, &[vyvy_vxvx, vxvx_vyvy, zero, comm, h]);
+    let vyvy_zero = d.lemma(
+        creal.eq_zero_of_add_eq_zero_of_nonneg,
+        &[vyvy, vxvx, bb_nonneg, aa_nonneg, h_swapped],
+    ); // Equiv vyvy zero
+
+    let vx_zero = d.lemma(creal.eq_zero_of_mul_self_zero, &[vx, vxvx_zero]);
+    let vy_zero = d.lemma(creal.eq_zero_of_mul_self_zero, &[vy, vyvy_zero]);
+
+    let zp = zero_point(d, p);
+    let zx = d.const_app(p.x, &[zp]);
+    let zy = d.const_app(p.y, &[zp]);
+    let left_claim = equiv(d, p, vx, zx);
+    let right_claim = equiv(d, p, vy, zy);
+    let body = and_intro(d, p, left_claim, right_claim, vx_zero, vy_zero);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, body);
+        d.lam_fv(v_fv, point, with_h)
+    };
+    let ty = {
+        let claim = d.const_app(p.point_equiv, &[v, zp]);
+        let inner = d.arrow(hypothesis, claim);
+        d.pi_fv(v_fv, point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.eq_zero_of_dot_self_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CPoint.dot_self_zero_iff`: the biconditional, from
+/// [`declare_eq_zero_of_dot_self_zero`] (`mp`) and
+/// [`declare_dot_self_zero_of_eq_zero`] (`mpr`) — a restatement, not a new
+/// proof, in the style [`declare_pythagoras_dist_sq`] uses: each half is the
+/// existing theorem re-applied as a value. Mirrors
+/// `declare_norm_sq_eq_zero_iff` in `complex.rs`.
+fn declare_dot_self_zero_iff(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let logic = creal.rat.int.logic;
+    let point = point_ty(d, p);
+
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+    let zero = czero(d, p);
+    let zp = zero_point(d, p);
+    let dot_vv = dotp(d, p, v, v);
+
+    let dot_stmt = equiv(d, p, dot_vv, zero);
+    let point_stmt = d.const_app(p.point_equiv, &[v, zp]);
+
+    // mp : Equiv (dot V V) zero -> CPoint.Equiv V zero_point
+    let mp_body = d.lemma(p.eq_zero_of_dot_self_zero, &[v]);
+    // mpr : CPoint.Equiv V zero_point -> Equiv (dot V V) zero
+    let mpr_body = d.lemma(p.dot_self_zero_of_eq_zero, &[v]);
+
+    let iff_stmt = d.const_app(logic.iff, &[dot_stmt, point_stmt]);
+    let iff_proof = d.const_app(logic.iff_intro, &[dot_stmt, point_stmt, mp_body, mpr_body]);
+
+    let value = d.lam_fv(v_fv, point, iff_proof);
+    let ty = d.pi_fv(v_fv, point, iff_stmt);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dot_self_zero_iff,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Equiv (add u (neg v)) CReal.zero`, from `h : Equiv u v` — a ring fact,
+/// not `CReal`-specific: `add_congr h (refl (neg v))` gives `Equiv (add u
+/// (neg v)) (add v (neg v))`, and `add_neg` collapses the right side.
+fn sub_eq_zero_of_equiv(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    u: ExprId,
+    v: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let neg_v = cneg(d, p, v);
+    let refl_negv = refl(d, p, neg_v);
+    let u_negv = cadd(d, p, u, neg_v);
+    let v_negv = cadd(d, p, v, neg_v);
+    let congr = d.lemma(creal.add_congr, &[u, v, neg_v, neg_v, h, refl_negv]);
+    // congr : Equiv u_negv v_negv
+    let an = d.lemma(creal.add_neg, &[v]); // Equiv v_negv zero
+    let zero = czero(d, p);
+    chain(d, p, u_negv, &[(v_negv, congr), (zero, an)])
+}
+
+/// `Equiv u v`, from `h : Equiv (add u (neg v)) CReal.zero` — the converse
+/// of [`sub_eq_zero_of_equiv`]. Route: `u ~ (add u (neg v)) + v`
+/// ([`sub_add_cancel_proof`], reversed) `~ zero + v` (`add_congr h (refl
+/// v)`) `~ v` ([`zero_add_proof`]).
+fn equiv_of_sub_eq_zero(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    u: ExprId,
+    v: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let neg_v = cneg(d, p, v);
+    let u_negv = cadd(d, p, u, neg_v);
+    let u_negv_v = cadd(d, p, u_negv, v);
+    let cancel = sub_add_cancel_proof(d, p, u, v); // Equiv u_negv_v u
+    let cancel_symm = symm(d, p, u_negv_v, u, cancel); // Equiv u u_negv_v
+    let refl_v = refl(d, p, v);
+    let zero = czero(d, p);
+    let congr = d.lemma(creal.add_congr, &[u_negv, zero, v, v, h, refl_v]);
+    // congr : Equiv u_negv_v (add zero v)
+    let zero_v = cadd(d, p, zero, v);
+    let za = zero_add_proof(d, p, v); // Equiv zero_v v
+    chain(
+        d,
+        p,
+        u,
+        &[(u_negv_v, cancel_symm), (zero_v, congr), (v, za)],
+    )
+}
+
+/// `CPoint.distSq_eq_zero_of_equiv`: the **easy** half of `distSq A B ~ 0 ↔
+/// A ~ B`. A specialization of [`declare_dot_self_zero_of_eq_zero`] at
+/// `V := CPoint.sub A B`.
+fn declare_dist_sq_eq_zero_of_equiv(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+
+    let hypothesis = d.const_app(p.point_equiv, &[pa, pb]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let ex_ty = equiv(d, p, ax, bx);
+    let ey_ty = equiv(d, p, ay, by);
+    let hx = d.and_left(ex_ty, ey_ty, h);
+    let hy = d.and_right(ex_ty, ey_ty, h);
+
+    let dx_zero = sub_eq_zero_of_equiv(d, p, ax, bx, hx); // Equiv (x (sub A B)) zero, defeq
+    let dy_zero = sub_eq_zero_of_equiv(d, p, ay, by, hy); // Equiv (y (sub A B)) zero, defeq
+
+    let sub_ab = psub(d, p, pa, pb);
+    let dx = d.const_app(p.x, &[sub_ab]);
+    let dy = d.const_app(p.y, &[sub_ab]);
+    let zp = zero_point(d, p);
+    let zx = d.const_app(p.x, &[zp]);
+    let zy = d.const_app(p.y, &[zp]);
+    let left_claim = equiv(d, p, dx, zx);
+    let right_claim = equiv(d, p, dy, zy);
+    let point_h = and_intro(d, p, left_claim, right_claim, dx_zero, dy_zero);
+    // point_h : CPoint.Equiv sub_ab zero_point
+
+    let proof = d.lemma(p.dot_self_zero_of_eq_zero, &[sub_ab, point_h]);
+    // proof : Equiv (dot sub_ab sub_ab) zero, and `distSq A B` is defeq to
+    // that.
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        let with_pb = d.lam_fv(pb_fv, point, with_h);
+        d.lam_fv(pa_fv, point, with_pb)
+    };
+    let ty = {
+        let dist_ab = d.const_app(p.dist_sq, &[pa, pb]);
+        let zero = czero(d, p);
+        let claim = equiv(d, p, dist_ab, zero);
+        let inner = d.arrow(hypothesis, claim);
+        let with_pb = d.pi_fv(pb_fv, point, inner);
+        d.pi_fv(pa_fv, point, with_pb)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dist_sq_eq_zero_of_equiv,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CPoint.eq_zero_of_distSq_eq_zero`: the **converse** half of `distSq A B
+/// ~ 0 ↔ A ~ B` — the content. A specialization of
+/// [`declare_eq_zero_of_dot_self_zero`] at `V := CPoint.sub A B`.
+fn declare_eq_zero_of_dist_sq_eq_zero(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+
+    let sub_ab = psub(d, p, pa, pb);
+    let dist_ab = d.const_app(p.dist_sq, &[pa, pb]); // defeq (dot sub_ab sub_ab)
+    let zero = czero(d, p);
+    let hypothesis = equiv(d, p, dist_ab, zero);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let mp_body = d.lemma(p.eq_zero_of_dot_self_zero, &[sub_ab, h]);
+    // mp_body : CPoint.Equiv sub_ab zero_point
+
+    let zp = zero_point(d, p);
+    let dx = d.const_app(p.x, &[sub_ab]);
+    let dy = d.const_app(p.y, &[sub_ab]);
+    let zx = d.const_app(p.x, &[zp]);
+    let zy = d.const_app(p.y, &[zp]);
+    let ex_ty = equiv(d, p, dx, zx);
+    let ey_ty = equiv(d, p, dy, zy);
+    let hx = d.and_left(ex_ty, ey_ty, mp_body); // Equiv dx zx, defeq Equiv(x(sub A B)) zero
+    let hy = d.and_right(ex_ty, ey_ty, mp_body); // Equiv dy zy, defeq Equiv(y(sub A B)) zero
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let ax_eq_bx = equiv_of_sub_eq_zero(d, p, ax, bx, hx); // Equiv ax bx
+    let ay_eq_by = equiv_of_sub_eq_zero(d, p, ay, by, hy); // Equiv ay by
+
+    let left_claim = equiv(d, p, ax, bx);
+    let right_claim = equiv(d, p, ay, by);
+    let body = and_intro(d, p, left_claim, right_claim, ax_eq_bx, ay_eq_by);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, body);
+        let with_pb = d.lam_fv(pb_fv, point, with_h);
+        d.lam_fv(pa_fv, point, with_pb)
+    };
+    let ty = {
+        let claim = d.const_app(p.point_equiv, &[pa, pb]);
+        let inner = d.arrow(hypothesis, claim);
+        let with_pb = d.pi_fv(pb_fv, point, inner);
+        d.pi_fv(pa_fv, point, with_pb)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.eq_zero_of_dist_sq_eq_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CPoint.distSq_eq_zero_iff`: the biconditional, from
+/// [`declare_eq_zero_of_dist_sq_eq_zero`] (`mp`) and
+/// [`declare_dist_sq_eq_zero_of_equiv`] (`mpr`) — a restatement, in the same
+/// style as [`declare_dot_self_zero_iff`].
+fn declare_dist_sq_eq_zero_iff(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let logic = creal.rat.int.logic;
+    let point = point_ty(d, p);
+
+    let pa_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(pa_fv);
+    let pb_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(pb_fv);
+
+    let zero = czero(d, p);
+    let dist_ab = d.const_app(p.dist_sq, &[pa, pb]);
+    let dist_stmt = equiv(d, p, dist_ab, zero);
+    let point_stmt = d.const_app(p.point_equiv, &[pa, pb]);
+
+    // mp : Equiv (distSq A B) zero -> CPoint.Equiv A B
+    let mp_body = d.lemma(p.eq_zero_of_dist_sq_eq_zero, &[pa, pb]);
+    // mpr : CPoint.Equiv A B -> Equiv (distSq A B) zero
+    let mpr_body = d.lemma(p.dist_sq_eq_zero_of_equiv, &[pa, pb]);
+
+    let iff_stmt = d.const_app(logic.iff, &[dist_stmt, point_stmt]);
+    let iff_proof = d.const_app(logic.iff_intro, &[dist_stmt, point_stmt, mp_body, mpr_body]);
+
+    let value = {
+        let with_pb = d.lam_fv(pb_fv, point, iff_proof);
+        d.lam_fv(pa_fv, point, with_pb)
+    };
+    let ty = {
+        let with_pb = d.pi_fv(pb_fv, point, iff_stmt);
+        d.pi_fv(pa_fv, point, with_pb)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dist_sq_eq_zero_iff,
         uparams: vec![],
         ty,
         value,

@@ -102,6 +102,12 @@ fn every_theorem_here_is_axiom_free() {
         ("lagrange_identity", p.lagrange_identity),
         ("cauchy_schwarz", p.cauchy_schwarz),
         ("dist_sq_double_sum_bound", p.dist_sq_double_sum_bound),
+        ("dot_self_zero_of_eq_zero", p.dot_self_zero_of_eq_zero),
+        ("eq_zero_of_dot_self_zero", p.eq_zero_of_dot_self_zero),
+        ("dot_self_zero_iff", p.dot_self_zero_iff),
+        ("dist_sq_eq_zero_of_equiv", p.dist_sq_eq_zero_of_equiv),
+        ("eq_zero_of_dist_sq_eq_zero", p.eq_zero_of_dist_sq_eq_zero),
+        ("dist_sq_eq_zero_iff", p.dist_sq_eq_zero_iff),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
