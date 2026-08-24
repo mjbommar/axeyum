@@ -84,7 +84,10 @@ pub(super) fn declare_power(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     declare_pow_nonneg(d, p)?;
     declare_pow_le_one(d, p)?;
     declare_mul_sub_one_geom(d, p)?;
-    declare_geom_sum_bounded(d, p)
+    declare_geom_sum_bounded(d, p)?;
+    declare_pow_le_pow_of_le_one(d, p)?;
+    declare_mul_sub_one_geom_tail(d, p)?;
+    declare_geom_tail_bounded(d, p)
 }
 
 // --- small local term builders ----------------------------------------------
@@ -1059,6 +1062,478 @@ fn declare_geom_sum_bounded(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.geom_sum_bounded,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- monotonicity of the powers on `[0,1]`, and the geometric tail ---------
+
+/// `CReal.pow_le_pow_of_le_one : ∀ x, le zero x → le x one → ∀ n, le (pow x
+/// (Nat.succ n)) (pow x n)`. Not an induction: for a fixed `n`, `pow`'s own
+/// ι-reduction identifies `pow x (succ n)` with `mul (pow x n) x`
+/// definitionally, so [`CRealPrelude::mul_le_mul_of_nonneg_left`] at `a := pow
+/// x n` (nonnegative via [`declare_pow_nonneg`]) against the outer `x ≤ one`
+/// gives `mul (pow x n) x ≤ mul (pow x n) one`, and
+/// [`CRealPrelude::mul_one`] folds the right side back to `pow x n`.
+fn declare_pow_le_pow_of_le_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h0_fv = d.fresh_fvar();
+    let h0 = d.kernel().fvar(h0_fv);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let pow_n = d.const_app(p.pow, &[x, n]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    let h_nonneg = d.lemma(p.pow_nonneg, &[x, h0, n]);
+    let base_le = d.lemma(p.mul_le_mul_of_nonneg_left, &[pow_n, x, one, h_nonneg, h1]);
+    // base_le : le (mul pow_n x) (mul pow_n one)
+    let mul_pn_x = d.const_app(p.mul, &[pow_n, x]);
+    let mul_pn_one = d.const_app(p.mul, &[pow_n, one]);
+    let mul_one_h = d.lemma(p.mul_one, &[pow_n]); // Equiv mul_pn_one pow_n
+    let refl_lhs = d.lemma(p.equiv_refl, &[mul_pn_x]);
+    let proof_inner = d.lemma(
+        p.le_congr,
+        &[
+            mul_pn_x, mul_pn_x, mul_pn_one, pow_n, refl_lhs, mul_one_h, base_le,
+        ],
+    );
+    // proof_inner : le mul_pn_x pow_n, defeq to le (pow x (succ n)) pow_n
+
+    let sn = d.succ(n);
+    let pow_sn = d.const_app(p.pow, &[x, sn]);
+    let hyp0 = {
+        let zero_c = czero(d, p);
+        cle(d, p, zero_c, x)
+    };
+    let hyp1 = cle(d, p, x, one);
+    let stmt_inner = cle(d, p, pow_sn, pow_n);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let with_h1 = d.arrow(hyp1, inner);
+        let with_h0 = d.arrow(hyp0, with_h1);
+        d.pi_fv(x_fv, carrier, with_h0)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let with_h1 = d.lam_fv(h1_fv, hyp1, inner);
+        let with_h0 = d.lam_fv(h0_fv, hyp0, with_h1);
+        d.lam_fv(x_fv, carrier, with_h0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_le_pow_of_le_one,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Equiv (add (add a b) (neg a)) b` — group cancellation, rebuilt here since
+/// `series.rs::cancel_right` is private to that module.
+fn cancel_right(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let na = cneg(d, p, a);
+    let ab = cadd(d, p, a, b);
+    let start = cadd(d, p, ab, na);
+
+    let ba = cadd(d, p, b, a);
+    let comm1 = d.lemma(p.add_comm, &[a, b]); // ab ~ ba
+    let refl_na = d.lemma(p.equiv_refl, &[na]);
+    let s1 = cadd(d, p, ba, na);
+    let h1 = d.lemma(p.add_congr, &[ab, ba, na, na, comm1, refl_na]);
+
+    let a_na = cadd(d, p, a, na);
+    let s2 = cadd(d, p, b, a_na);
+    let h2 = d.lemma(p.add_assoc, &[b, a, na]); // s1 ~ s2
+
+    let zero_c = czero(d, p);
+    let h_an = d.lemma(p.add_neg, &[a]); // a_na ~ zero
+    let refl_b = d.lemma(p.equiv_refl, &[b]);
+    let s3 = cadd(d, p, b, zero_c);
+    let h3 = d.lemma(p.add_congr, &[b, b, a_na, zero_c, refl_b, h_an]); // s2 ~ s3
+
+    let h4 = d.lemma(p.add_zero, &[b]); // s3 ~ b
+
+    echain(d, p, start, &[(s1, h1), (s2, h2), (s3, h3), (b, h4)])
+}
+
+/// `λ k, pow x (add m k)` — the shifted power sequence
+/// [`declare_mul_sub_one_geom_tail`] needs, matching `sumRange_split`'s own
+/// internal construction (`series.rs::shifted_fn`) up to beta, which is all
+/// the kernel's own defeq check needs when the two are combined.
+fn shifted_pow_fn(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId, x: ExprId) -> ExprId {
+    let nat_add = d.prelude().add;
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let mk = d.const_app(nat_add, &[m, k]);
+    let body = d.const_app(p.pow, &[x, mk]);
+    let nat = d.nat_ty();
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `Equiv (mul a_ (sumRange (shifted_pow_fn m x) n)) (add base (neg (pow x
+/// (add m n))))`, for fixed `x`, `m`, `a_ := add one (neg x)` and `base :=
+/// pow x m` — the shifted-partial-sum shape [`declare_mul_sub_one_geom_tail`]
+/// proves by induction on `n`, then converts.
+///
+/// This is [`declare_mul_sub_one_geom`]'s own successor-step algebra,
+/// verbatim, with the accumulator generalised from the constant `one` to the
+/// caller-supplied `base` and `pow x j` generalised to `pow x (add m j)` —
+/// every step below that manipulates the *ring identity* `mul (add one (neg
+/// x)) xn ~ add xn (neg (mul x xn))` ([`right_distrib`], [`neg_mul_left`],
+/// [`telescope_cancel`]) is unchanged, because that identity never mentions
+/// the accumulator.
+fn mul_a_shifted_sum(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    m: ExprId,
+    a_: ExprId,
+    base: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let nat_add = d.prelude().add;
+
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let f = shifted_pow_fn(d, p, m, x);
+        let sum = d.const_app(p.sum_range, &[f, v]);
+        let lhs = d.const_app(p.mul, &[a_, sum]);
+        let mv = d.const_app(nat_add, &[m, v]);
+        let pow_mv = d.const_app(p.pow, &[x, mv]);
+        let neg_pow_mv = d.const_app(p.neg, &[pow_mv]);
+        let rhs = d.const_app(p.add, &[base, neg_pow_mv]);
+        equiv(d, p, lhs, rhs)
+    };
+
+    d.induct(
+        &motive,
+        &|d| {
+            let zero_c = czero(d, p);
+            let neg_base = cneg(d, p, base);
+            let add_base_neg_base = cadd(d, p, base, neg_base);
+            let mul_a_zero = d.const_app(p.mul, &[a_, zero_c]);
+            let mul_zero_h = d.lemma(p.mul_zero, &[a_]); // mul_a_zero ~ zero
+            let add_neg_h = d.lemma(p.add_neg, &[base]); // add_base_neg_base ~ zero
+            let sym = d.lemma(p.equiv_symm, &[add_base_neg_base, zero_c, add_neg_h]);
+            d.lemma(
+                p.equiv_trans,
+                &[mul_a_zero, zero_c, add_base_neg_base, mul_zero_h, sym],
+            )
+        },
+        &|d, j, ih| {
+            // ih : Equiv (mul a_ (sumRange shifted j)) (add base (neg (pow x (add m j))))
+            let mj = d.const_app(nat_add, &[m, j]);
+            let xn = d.const_app(p.pow, &[x, mj]);
+            let s_j = {
+                let f = shifted_pow_fn(d, p, m, x);
+                d.const_app(p.sum_range, &[f, j])
+            };
+            let extended = d.const_app(p.add, &[s_j, xn]);
+            let start = d.const_app(p.mul, &[a_, extended]);
+
+            let a_s_j = d.const_app(p.mul, &[a_, s_j]);
+            let a_xn = d.const_app(p.mul, &[a_, xn]);
+            let distributed = d.const_app(p.add, &[a_s_j, a_xn]);
+            let h1 = d.lemma(p.left_distrib, &[a_, s_j, xn]);
+
+            let neg_xn = d.const_app(p.neg, &[xn]);
+            let base_minus_xn = d.const_app(p.add, &[base, neg_xn]);
+            let after_ih = d.const_app(p.add, &[base_minus_xn, a_xn]);
+            let refl_a_xn = d.lemma(p.equiv_refl, &[a_xn]);
+            let h2 = d.lemma(
+                p.add_congr,
+                &[a_s_j, base_minus_xn, a_xn, a_xn, ih, refl_a_xn],
+            );
+
+            let neg_x = cneg(d, p, x);
+            let one = d.kernel().const_(p.one, vec![]);
+            let x_xn = d.const_app(p.mul, &[x, xn]);
+            let neg_x_xn = d.const_app(p.neg, &[x_xn]);
+            let mul_one_xn = d.const_app(p.mul, &[one, xn]);
+            let mul_negx_xn = d.const_app(p.mul, &[neg_x, xn]);
+            let expanded = d.const_app(p.add, &[mul_one_xn, mul_negx_xn]);
+            let h_rd = right_distrib(d, p, one, neg_x, xn);
+
+            let h_one_xn = {
+                let xn_one = d.const_app(p.mul, &[xn, one]);
+                let comm = d.lemma(p.mul_comm, &[one, xn]); // mul_one_xn ~ xn_one
+                let mo = d.lemma(p.mul_one, &[xn]); // xn_one ~ xn
+                echain(d, p, mul_one_xn, &[(xn_one, comm), (xn, mo)])
+            };
+            let h_negx_xn = {
+                let raw = neg_mul_left(d, p, x, xn); // Equiv neg_x_xn mul_negx_xn
+                d.lemma(p.equiv_symm, &[neg_x_xn, mul_negx_xn, raw])
+                // Equiv mul_negx_xn neg_x_xn
+            };
+
+            let simplified = d.const_app(p.add, &[xn, neg_x_xn]);
+            let h_simplify = d.lemma(
+                p.add_congr,
+                &[mul_one_xn, xn, mul_negx_xn, neg_x_xn, h_one_xn, h_negx_xn],
+            );
+            let h_a_xn = echain(d, p, a_xn, &[(expanded, h_rd), (simplified, h_simplify)]);
+
+            let mid = d.const_app(p.add, &[base_minus_xn, simplified]);
+            let refl_bmx = d.lemma(p.equiv_refl, &[base_minus_xn]);
+            let h_mid = d.lemma(
+                p.add_congr,
+                &[
+                    base_minus_xn,
+                    base_minus_xn,
+                    a_xn,
+                    simplified,
+                    refl_bmx,
+                    h_a_xn,
+                ],
+            );
+
+            let xn_x = d.const_app(p.mul, &[xn, x]);
+            let neg_xn_x = d.const_app(p.neg, &[xn_x]);
+            let end = d.const_app(p.add, &[base, neg_xn_x]);
+            let end_x_xn = d.const_app(p.add, &[base, neg_x_xn]);
+            let h_telescope = telescope_cancel(d, p, base, xn, x_xn);
+
+            let x_xn_comm = d.lemma(p.mul_comm, &[x, xn]); // Equiv x_xn xn_x
+            let neg_comm = d.lemma(p.neg_congr, &[x_xn, xn_x, x_xn_comm]);
+            let refl_base2 = d.lemma(p.equiv_refl, &[base]);
+            let h_fix = d.lemma(
+                p.add_congr,
+                &[base, base, neg_x_xn, neg_xn_x, refl_base2, neg_comm],
+            );
+
+            let h_end = d.lemma(p.equiv_trans, &[mid, end_x_xn, end, h_telescope, h_fix]);
+            let h_final_mid = d.lemma(p.equiv_trans, &[after_ih, mid, end, h_mid, h_end]);
+            let h_start_distributed =
+                d.lemma(p.equiv_trans, &[start, distributed, after_ih, h1, h2]);
+            d.lemma(
+                p.equiv_trans,
+                &[start, after_ih, end, h_start_distributed, h_final_mid],
+            )
+        },
+        n,
+    )
+}
+
+/// `CReal.mul_sub_one_geom_tail : ∀ x m n, Equiv (mul (add one (neg x)) (add
+/// (sumRange (fun k => pow x k) (add m n)) (neg (sumRange (fun k => pow x k)
+/// m)))) (add (pow x m) (neg (pow x (add m n))))`. See the module
+/// documentation for the derivation: [`mul_a_shifted_sum`] proves the
+/// shifted-partial-sum form by induction, and [`CRealPrelude::sum_range_split`]
+/// plus [`cancel_right`] convert it into the direct tail above — the same
+/// conversion `series.rs::declare_sum_range_tail_le` performs.
+fn declare_mul_sub_one_geom_tail(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let nat_add = d.prelude().add;
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let neg_x = cneg(d, p, x);
+    let a_ = cadd(d, p, one, neg_x);
+    let base = d.const_app(p.pow, &[x, m]);
+
+    let shifted_proof = mul_a_shifted_sum(d, p, x, m, a_, base, n);
+    // shifted_proof : Equiv (mul a_ (sumRange (shifted_pow_fn m x) n))
+    //                       (add base (neg (pow x (add m n))))
+
+    let f = pow_fn(d, p, x);
+    let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+    let mn = d.const_app(nat_add, &[m, n]);
+    let sum_f_mn = d.const_app(p.sum_range, &[f, mn]);
+    let neg_sum_f_m = cneg(d, p, sum_f_m);
+    let tail_direct = cadd(d, p, sum_f_mn, neg_sum_f_m);
+
+    let shifted_f = shifted_pow_fn(d, p, m, x);
+    let sum_shifted_n = d.const_app(p.sum_range, &[shifted_f, n]);
+
+    let split = d.lemma(p.sum_range_split, &[f, m, n]);
+    // split : Equiv sum_f_mn (add sum_f_m sum_shifted_n)
+    let sum_f_m_plus_shifted = cadd(d, p, sum_f_m, sum_shifted_n);
+    let refl_neg = d.lemma(p.equiv_refl, &[neg_sum_f_m]);
+    let step_a = d.lemma(
+        p.add_congr,
+        &[
+            sum_f_mn,
+            sum_f_m_plus_shifted,
+            neg_sum_f_m,
+            neg_sum_f_m,
+            split,
+            refl_neg,
+        ],
+    );
+    // step_a : Equiv tail_direct (add sum_f_m_plus_shifted neg_sum_f_m)
+    let middle = cadd(d, p, sum_f_m_plus_shifted, neg_sum_f_m);
+    let cancel = cancel_right(d, p, sum_f_m, sum_shifted_n); // Equiv middle sum_shifted_n
+    let tail_equiv = d.lemma(
+        p.equiv_trans,
+        &[tail_direct, middle, sum_shifted_n, step_a, cancel],
+    );
+    // tail_equiv : Equiv tail_direct sum_shifted_n
+
+    let refl_a = d.lemma(p.equiv_refl, &[a_]);
+    let mul_congr_h = d.lemma(
+        p.mul_congr,
+        &[a_, a_, tail_direct, sum_shifted_n, refl_a, tail_equiv],
+    );
+    let lhs_direct = d.const_app(p.mul, &[a_, tail_direct]);
+    let lhs_shifted = d.const_app(p.mul, &[a_, sum_shifted_n]);
+    // mul_congr_h : Equiv lhs_direct lhs_shifted
+
+    let pow_mn = d.const_app(p.pow, &[x, mn]);
+    let neg_pow_mn = cneg(d, p, pow_mn);
+    let rhs = cadd(d, p, base, neg_pow_mn);
+
+    let proof_inner = d.lemma(
+        p.equiv_trans,
+        &[lhs_direct, lhs_shifted, rhs, mul_congr_h, shifted_proof],
+    );
+
+    let stmt_inner = equiv(d, p, lhs_direct, rhs);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let inner2 = d.pi_fv(m_fv, nat, inner);
+        d.pi_fv(x_fv, carrier, inner2)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let inner2 = d.lam_fv(m_fv, nat, inner);
+        d.lam_fv(x_fv, carrier, inner2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mul_sub_one_geom_tail,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.geom_tail_bounded : ∀ x, le zero x → ∀ m n, le (mul (add one (neg
+/// x)) (add (sumRange (fun k => pow x k) (add m n)) (neg (sumRange (fun k =>
+/// pow x k) m)))) (pow x m)`. Mirrors [`declare_geom_sum_bounded`]'s own proof
+/// shape verbatim: [`declare_pow_nonneg`] bounds the dropped `−(pow x (add m
+/// n))` term below by `zero`, and [`declare_mul_sub_one_geom_tail`] transports
+/// the resulting `le` back across the ring identity. See the module
+/// documentation for why `0 ≤ x` alone suffices (no `x ≤ one`).
+fn declare_geom_tail_bounded(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let nat_add = d.prelude().add;
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let neg_x = cneg(d, p, x);
+    let a_ = cadd(d, p, one, neg_x);
+    let f = pow_fn(d, p, x);
+    let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+    let mn = d.const_app(nat_add, &[m, n]);
+    let sum_f_mn = d.const_app(p.sum_range, &[f, mn]);
+    let neg_sum_f_m = cneg(d, p, sum_f_m);
+    let tail_direct = cadd(d, p, sum_f_mn, neg_sum_f_m);
+    let lhs = d.const_app(p.mul, &[a_, tail_direct]);
+    let pow_m = d.const_app(p.pow, &[x, m]);
+    let pow_mn = d.const_app(p.pow, &[x, mn]);
+
+    // pow_nonneg x h (add m n) : le zero pow_mn
+    let h_nonneg = d.lemma(p.pow_nonneg, &[x, h, mn]);
+    let zero_c = czero(d, p);
+    let neg_pow_mn = cneg(d, p, pow_mn);
+    let neg_zero = cneg(d, p, zero_c);
+    let h_negle = d.lemma(p.neg_le_neg, &[zero_c, pow_mn, h_nonneg]);
+    // h_negle : le neg_pow_mn neg_zero
+    let h_negzero = neg_zero_equiv(d, p); // Equiv neg_zero zero_c
+    let refl_negpmn = d.lemma(p.equiv_refl, &[neg_pow_mn]);
+    let h_negle_zero = d.lemma(
+        p.le_congr,
+        &[
+            neg_pow_mn,
+            neg_pow_mn,
+            neg_zero,
+            zero_c,
+            refl_negpmn,
+            h_negzero,
+            h_negle,
+        ],
+    );
+    // h_negle_zero : le neg_pow_mn zero
+
+    let h_refl_pow_m = d.lemma(p.le_refl, &[pow_m]);
+    let h_add = d.lemma(
+        p.add_le_add,
+        &[pow_m, pow_m, neg_pow_mn, zero_c, h_refl_pow_m, h_negle_zero],
+    );
+    // h_add : le (add pow_m neg_pow_mn) (add pow_m zero)
+    let pow_m_minus_pmn = cadd(d, p, pow_m, neg_pow_mn);
+    let pow_m_plus_zero = cadd(d, p, pow_m, zero_c);
+    let h_addzero = d.lemma(p.add_zero, &[pow_m]); // pow_m_plus_zero ~ pow_m
+    let refl_pmmp = d.lemma(p.equiv_refl, &[pow_m_minus_pmn]);
+    let h_bound = d.lemma(
+        p.le_congr,
+        &[
+            pow_m_minus_pmn,
+            pow_m_minus_pmn,
+            pow_m_plus_zero,
+            pow_m,
+            refl_pmmp,
+            h_addzero,
+            h_add,
+        ],
+    );
+    // h_bound : le pow_m_minus_pmn pow_m
+
+    let h_geom = d.lemma(p.mul_sub_one_geom_tail, &[x, m, n]);
+    // h_geom : Equiv lhs pow_m_minus_pmn
+    let h_geom_symm = d.lemma(p.equiv_symm, &[lhs, pow_m_minus_pmn, h_geom]);
+    let refl_pow_m = d.lemma(p.equiv_refl, &[pow_m]);
+    let proof_inner = d.lemma(
+        p.le_congr,
+        &[
+            pow_m_minus_pmn,
+            lhs,
+            pow_m,
+            pow_m,
+            h_geom_symm,
+            refl_pow_m,
+            h_bound,
+        ],
+    );
+
+    let hyp = cle(d, p, zero_c, x);
+    let stmt_inner = cle(d, p, lhs, pow_m);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let with_m = d.pi_fv(m_fv, nat, inner);
+        let with_h = d.arrow(hyp, with_m);
+        d.pi_fv(x_fv, carrier, with_h)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let with_m = d.lam_fv(m_fv, nat, inner);
+        let with_h = d.lam_fv(h_fv, hyp, with_m);
+        d.lam_fv(x_fv, carrier, with_h)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_tail_bounded,
         uparams: vec![],
         ty,
         value,

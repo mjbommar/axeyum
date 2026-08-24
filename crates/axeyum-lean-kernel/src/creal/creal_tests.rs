@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 158] = [
+    let expected: [(&str, crate::NameId, &str); 161] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -290,6 +290,17 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.pow_le_one", p.pow_le_one, "theorem"),
         ("CReal.mul_sub_one_geom", p.mul_sub_one_geom, "theorem"),
         ("CReal.geom_sum_bounded", p.geom_sum_bounded, "theorem"),
+        (
+            "CReal.pow_le_pow_of_le_one",
+            p.pow_le_pow_of_le_one,
+            "theorem",
+        ),
+        (
+            "CReal.mul_sub_one_geom_tail",
+            p.mul_sub_one_geom_tail,
+            "theorem",
+        ),
+        ("CReal.geom_tail_bounded", p.geom_tail_bounded, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel

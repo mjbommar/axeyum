@@ -1139,6 +1139,47 @@ pub struct CRealPrelude {
     /// for `x > 1` the multiplier `1 − x` is negative and the product is
     /// bounded by `1` even more trivially.
     pub geom_sum_bounded: NameId,
+    /// `CReal.pow_le_pow_of_le_one : ∀ x, le zero x → le x one → ∀ n, le (pow
+    /// x (Nat.succ n)) (pow x n)` — the powers are non-increasing on `[0,1]`.
+    ///
+    /// Not an induction: `pow`'s own ι-reduction identifies `pow x (succ n)`
+    /// with `mul (pow x n) x` definitionally, so
+    /// [`Self::mul_le_mul_of_nonneg_left`] at `a := pow x n` (nonnegative via
+    /// [`Self::pow_nonneg`]) against the outer `x ≤ one` gives `mul (pow x n)
+    /// x ≤ mul (pow x n) one`, and [`Self::mul_one`] folds the right side
+    /// back to `pow x n` — one step, for an arbitrary fixed `n`.
+    pub pow_le_pow_of_le_one: NameId,
+    /// `CReal.mul_sub_one_geom_tail : ∀ x m n, Equiv (mul (add one (neg x))
+    /// (add (sumRange (fun k => pow x k) (Nat.add m n)) (neg (sumRange (fun k
+    /// => pow x k) m)))) (add (pow x m) (neg (pow x (Nat.add m n))))` — the
+    /// geometric series identity applied to a **tail**: `(1−x)·(Σ_{k<m+n} xᵏ
+    /// − Σ_{k<m} xᵏ) = xᵐ − xᵐ⁺ⁿ`.
+    ///
+    /// By induction on `n` with `m` fixed, reusing
+    /// [`Self::mul_sub_one_geom`]'s own successor-step algebra verbatim (the
+    /// accumulator generalised from the constant `one` to the variable `pow x
+    /// m`), then converted from the shifted-partial-sum shape that induction
+    /// produces into the direct tail above via [`Self::sum_range_split`] and
+    /// one group cancellation — the same conversion
+    /// [`Self::sum_range_tail_le`]'s own proof performs. Holds for **every**
+    /// `x`, no hypothesis at all: this is the "multiplied through" form, for
+    /// the same reason [`Self::mul_sub_one_geom`] is stated that way rather
+    /// than as a quotient.
+    pub mul_sub_one_geom_tail: NameId,
+    /// `CReal.geom_tail_bounded : ∀ x, le zero x → ∀ m n, le (mul (add one
+    /// (neg x)) (add (sumRange (fun k => pow x k) (Nat.add m n)) (neg
+    /// (sumRange (fun k => pow x k) m)))) (pow x m)` — the real-valued tail
+    /// bound: the multiplied-through tail is at most `xᵐ`, from
+    /// [`Self::mul_sub_one_geom_tail`] plus [`Self::pow_nonneg`] (to drop the
+    /// nonnegative `−xᵐ⁺ⁿ` term), mirroring [`Self::geom_sum_bounded`]'s own
+    /// proof shape and its own decision to need only `0 ≤ x`.
+    ///
+    /// **Not** a bound on the tail `Σ_{k<m+n} xᵏ − Σ_{k<m} xᵏ` alone — that
+    /// needs `inv (1−x)` with a witnessed `PosBound`, a nonnegativity lemma
+    /// for `sumRange` of a pointwise-nonnegative function, and a rational
+    /// inverse identity for `Rat.natDivSucc`, none of which this development
+    /// builds; see the module documentation for the precise blocker.
+    pub geom_tail_bounded: NameId,
 }
 
 impl CRealPrelude {
@@ -1360,6 +1401,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pow_le_one: kernel.name_str(creal, "pow_le_one"),
         mul_sub_one_geom: kernel.name_str(creal, "mul_sub_one_geom"),
         geom_sum_bounded: kernel.name_str(creal, "geom_sum_bounded"),
+        pow_le_pow_of_le_one: kernel.name_str(creal, "pow_le_pow_of_le_one"),
+        mul_sub_one_geom_tail: kernel.name_str(creal, "mul_sub_one_geom_tail"),
+        geom_tail_bounded: kernel.name_str(creal, "geom_tail_bounded"),
     }
 }
 
