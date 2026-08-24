@@ -25,11 +25,12 @@
 //! (`Nat.add m (succ j) ≡ succ (Nat.add m j)`) for free.
 
 use super::RatPrelude;
+use super::group::rsub;
 use super::ops::{
-    nat_eq_to_rat, radd, rat_eq_rewrite, rat_ty, rchain, rcongr, req, rle, rmul, rone, rsum_range,
-    rsymm, rtrans, rzero,
+    nat_eq_to_rat, radd, rat_eq_rewrite, rat_ty, rchain, rcongr, req, rle, rlt, rmul, rneg, rone,
+    rsum_range, rsymm, rtrans, rzero,
 };
-use super::sum::bounded_nonneg;
+use super::sum::{bounded_nonneg, bounded_pointwise_le};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -48,7 +49,12 @@ const PROB_HEIGHT: u16 = 35;
 /// declared so far.
 const EXPECTATION_HEIGHT: u16 = 36;
 
-/// Declare `Rat.IsDistribution`, `Rat.expectation`, `Rat.uniform`, and
+/// Delta height for `Rat.variance`: above `Rat.expectation`
+/// ([`EXPECTATION_HEIGHT`], 36), which its own definition calls.
+const VARIANCE_HEIGHT: u16 = 37;
+
+/// Declare `Rat.IsDistribution`, `Rat.expectation`, `Rat.uniform`,
+/// `Rat.variance`, Markov's and (in spirit) Chebyshev's inequalities, and
 /// everything this file proves about them.
 ///
 /// # Errors
@@ -65,6 +71,12 @@ pub(super) fn declare_probability(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_expectation_const(d, p)?;
     declare_uniform(d, p)?;
     declare_uniform_is_distribution(d, p)?;
+    declare_expectation_nonneg(d, p)?;
+    declare_expectation_le(d, p)?;
+    declare_markov_inequality(d, p)?;
+    declare_variance(d, p)?;
+    declare_variance_nonneg(d, p)?;
+    declare_variance_eq(d, p)?;
     Ok(())
 }
 
@@ -1042,6 +1054,696 @@ fn declare_uniform_is_distribution(d: &mut IntDev<'_>, p: RatPrelude) -> Result<
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.uniform_is_distribution,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- expectation is nonnegative and monotone --------------------------------
+
+/// `Rat.expectation_nonneg : ∀ X p n, (∀ k, Lt k n → le zero (X k)) →
+/// IsDistribution p n → le zero (expectation X p n)`.
+///
+/// Every bound the rest of this file proves rests on this and
+/// [`declare_expectation_le`]: a nonnegative sequence weighted by a
+/// nonnegative distribution sums to something nonnegative, via
+/// [`RatPrelude::mul_nonneg`] pointwise and [`RatPrelude::sum_range_nonneg`].
+/// Only `IsDistribution`'s nonnegativity component is used — the `sumRange p
+/// n = one` half is not needed here.
+fn declare_expectation_nonneg(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hx_fv = d.fresh_fvar();
+    let hx = d.kernel().fvar(hx_fv);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    let hx_ty = bounded_nonneg(d, p, x, n);
+    let dist_ty = is_distribution(d, p, pf, n);
+    let zero_r = rzero(d, p);
+    let ex = expectation(d, p, x, pf, n);
+    let concl = rle(d, p, zero_r, ex);
+
+    let (nonneg_part, sum_part) = is_distribution_parts(d, p, pf, n);
+    let hp_nonneg = d.and_left(nonneg_part, sum_part, hd);
+
+    let summand = weighted(d, x, pf);
+    let summand_nonneg_proof = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let klt_fv = d.fresh_fvar();
+        let klt = d.kernel().fvar(klt_fv);
+        let klt_ty = d.lt(k, n);
+        let hxk = d.apply(hx, &[k, klt]);
+        let hpk = d.apply(hp_nonneg, &[k, klt]);
+        let xk = d.apply(x, &[k]);
+        let pk = d.apply(pf, &[k]);
+        let mul_nn = d.lemma(p.mul_nonneg, &[xk, pk, hxk, hpk]);
+        let with_klt = d.lam_fv(klt_fv, klt_ty, mul_nn);
+        d.lam_fv(k_fv, nat, with_klt)
+    };
+    let sum_nonneg = d.lemma(p.sum_range_nonneg, &[summand, n, summand_nonneg_proof]);
+
+    let value = {
+        let with_hd = d.lam_fv(hd_fv, dist_ty, sum_nonneg);
+        let with_hx = d.lam_fv(hx_fv, hx_ty, with_hd);
+        let with_n = d.lam_fv(n_fv, nat, with_hx);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        d.lam_fv(x_fv, fn_ty, with_pf)
+    };
+    let ty = {
+        let with_hd = d.arrow(dist_ty, concl);
+        let with_hx = d.arrow(hx_ty, with_hd);
+        let with_n = d.pi_fv(n_fv, nat, with_hx);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        d.pi_fv(x_fv, fn_ty, with_pf)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.expectation_nonneg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.expectation_le : ∀ X Y p n, (∀ k, Lt k n → le (X k) (Y k)) →
+/// IsDistribution p n → le (expectation X p n) (expectation Y p n)` —
+/// monotonicity. [`RatPrelude::mul_le_mul_of_nonneg_right`] lifts the
+/// pointwise bound through the (nonnegative) weight, then
+/// [`RatPrelude::sum_range_le`] lifts it through the sum.
+fn declare_expectation_le(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hxy_fv = d.fresh_fvar();
+    let hxy = d.kernel().fvar(hxy_fv);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    let hxy_ty = bounded_pointwise_le(d, p, x, y, n);
+    let dist_ty = is_distribution(d, p, pf, n);
+    let ex = expectation(d, p, x, pf, n);
+    let ey = expectation(d, p, y, pf, n);
+    let concl = rle(d, p, ex, ey);
+
+    let (nonneg_part, sum_part) = is_distribution_parts(d, p, pf, n);
+    let hp_nonneg = d.and_left(nonneg_part, sum_part, hd);
+
+    let fx = weighted(d, x, pf);
+    let fy = weighted(d, y, pf);
+    let pointwise_proof = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let klt_fv = d.fresh_fvar();
+        let klt = d.kernel().fvar(klt_fv);
+        let klt_ty = d.lt(k, n);
+        let hxyk = d.apply(hxy, &[k, klt]);
+        let hpk = d.apply(hp_nonneg, &[k, klt]);
+        let xk = d.apply(x, &[k]);
+        let yk = d.apply(y, &[k]);
+        let pk = d.apply(pf, &[k]);
+        let step = d.lemma(p.mul_le_mul_of_nonneg_right, &[xk, yk, pk, hpk, hxyk]);
+        let with_klt = d.lam_fv(klt_fv, klt_ty, step);
+        d.lam_fv(k_fv, nat, with_klt)
+    };
+    let sum_le = d.lemma(p.sum_range_le, &[fx, fy, n, pointwise_proof]);
+
+    let value = {
+        let with_hd = d.lam_fv(hd_fv, dist_ty, sum_le);
+        let with_hxy = d.lam_fv(hxy_fv, hxy_ty, with_hd);
+        let with_n = d.lam_fv(n_fv, nat, with_hxy);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_y = d.lam_fv(y_fv, fn_ty, with_pf);
+        d.lam_fv(x_fv, fn_ty, with_y)
+    };
+    let ty = {
+        let with_hd = d.arrow(dist_ty, concl);
+        let with_hxy = d.arrow(hxy_ty, with_hd);
+        let with_n = d.pi_fv(n_fv, nat, with_hxy);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_y = d.pi_fv(y_fv, fn_ty, with_pf);
+        d.pi_fv(x_fv, fn_ty, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.expectation_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- Markov's inequality -----------------------------------------------------
+
+/// `Rat.markov_inequality : ∀ a X ind p n,
+///   IsDistribution p n → (∀ k, Lt k n → le zero (X k)) → lt zero a →
+///   (∀ k, Lt k n → le (a * ind k) (X k)) →
+///   le (a * expectation ind p n) (expectation X p n)`.
+///
+/// The multiplied form of Markov's inequality — `a·E[ind] ≤ E[X]`, the same
+/// statement as the classical `E[ind] ≤ E[X]/a` over an ordered field, but
+/// needing no `Rat.inv`. `ind` is supplied as a HYPOTHESIS (`a·ind k ≤ X k`
+/// pointwise, i.e. `ind` is `≥ 1` wherever `X` clears the threshold `a`, and
+/// nonnegative always suffices) rather than constructed from `Rat.ble`:
+/// building a genuine `{0,1}`-valued indicator and discharging this same
+/// hypothesis from it is a short case split on `Rat.ble a (X k)`
+/// (`mul_zero` when it is `false`, `mul_one`/`le_of_ble_eq_true` when it is
+/// `true`) that can be layered on top as a corollary without changing this
+/// statement.
+///
+/// [`RatPrelude::is_distribution`] is a genuine addition beyond the task's
+/// sketch, and load-bearing: without `0 ≤ p k`, multiplying the pointwise
+/// hypothesis by `p k` need not preserve the inequality direction, and the
+/// conclusion is false the moment a weight goes negative. `0 ≤ X k` is
+/// carried (matching the classical hypothesis) even though this particular
+/// proof route does not need it — only `0 ≤ p k` and the pointwise bound do.
+fn declare_markov_inequality(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let ind_fv = d.fresh_fvar();
+    let ind = d.kernel().fvar(ind_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+    let hx_fv = d.fresh_fvar();
+    let ha_fv = d.fresh_fvar();
+    let hind_fv = d.fresh_fvar();
+    let hind = d.kernel().fvar(hind_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let hx_ty = bounded_nonneg(d, p, x, n);
+    let zero_r = rzero(d, p);
+    let ha_ty = rlt(d, p, zero_r, a);
+    let scaled_ind = scale_fn(d, a, ind);
+    let hind_ty = bounded_pointwise_le(d, p, scaled_ind, x, n);
+
+    let concl = {
+        let eind = expectation(d, p, ind, pf, n);
+        let lhs = rmul(d, a, eind);
+        let rhs = expectation(d, p, x, pf, n);
+        rle(d, p, lhs, rhs)
+    };
+
+    let (nonneg_part, sum_part) = is_distribution_parts(d, p, pf, n);
+    let hp_nonneg = d.and_left(nonneg_part, sum_part, hd);
+
+    let scaled_summand = weighted(d, scaled_ind, pf);
+    let x_summand = weighted(d, x, pf);
+    let pointwise_proof = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let klt_fv = d.fresh_fvar();
+        let klt = d.kernel().fvar(klt_fv);
+        let klt_ty = d.lt(k, n);
+        let hpk = d.apply(hp_nonneg, &[k, klt]);
+        let hindk = d.apply(hind, &[k, klt]);
+        let ind_k = d.apply(ind, &[k]);
+        let a_ind_k = rmul(d, a, ind_k);
+        let xk = d.apply(x, &[k]);
+        let pk = d.apply(pf, &[k]);
+        let step = d.lemma(p.mul_le_mul_of_nonneg_right, &[a_ind_k, xk, pk, hpk, hindk]);
+        let with_klt = d.lam_fv(klt_fv, klt_ty, step);
+        d.lam_fv(k_fv, nat, with_klt)
+    };
+    let sum_le = d.lemma(
+        p.sum_range_le,
+        &[scaled_summand, x_summand, n, pointwise_proof],
+    );
+
+    // sum_le : sumRange (weighted scaled_ind pf) n ≤ sumRange (weighted x pf) n
+    //   ~ expectation scaled_ind pf n ≤ expectation x pf n              [defeq]
+    let smul_eq = d.lemma(p.expectation_smul, &[a, ind, pf, n]);
+    // smul_eq : expectation scaled_ind pf n = a * expectation ind pf n
+    let scaled_expectation = expectation(d, p, scaled_ind, pf, n);
+    let eind2 = expectation(d, p, ind, pf, n);
+    let target_lhs = rmul(d, a, eind2);
+    let x_expectation = expectation(d, p, x, pf, n);
+    let final_proof = rat_eq_rewrite(
+        d,
+        scaled_expectation,
+        target_lhs,
+        smul_eq,
+        sum_le,
+        &|d, t| rle(d, p, t, x_expectation),
+    );
+
+    let value = {
+        let with_hind = d.lam_fv(hind_fv, hind_ty, final_proof);
+        let with_ha = d.lam_fv(ha_fv, ha_ty, with_hind);
+        let with_hx = d.lam_fv(hx_fv, hx_ty, with_ha);
+        let with_hd = d.lam_fv(hd_fv, dist_ty, with_hx);
+        let with_n = d.lam_fv(n_fv, nat, with_hd);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_ind = d.lam_fv(ind_fv, fn_ty, with_pf);
+        let with_x = d.lam_fv(x_fv, fn_ty, with_ind);
+        d.lam_fv(a_fv, carrier, with_x)
+    };
+    let ty = {
+        let with_hind = d.arrow(hind_ty, concl);
+        let with_ha = d.arrow(ha_ty, with_hind);
+        let with_hx = d.arrow(hx_ty, with_ha);
+        let with_hd = d.arrow(dist_ty, with_hx);
+        let with_n = d.pi_fv(n_fv, nat, with_hd);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_ind = d.pi_fv(ind_fv, fn_ty, with_pf);
+        let with_x = d.pi_fv(x_fv, fn_ty, with_ind);
+        d.pi_fv(a_fv, carrier, with_x)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.markov_inequality,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- variance ----------------------------------------------------------------
+
+/// `Rat.variance X p n`, i.e. `d.const_app(p.variance, &[x, pf, n])`.
+fn variance(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, pf: ExprId, n: ExprId) -> ExprId {
+    d.const_app(p.variance, &[x, pf, n])
+}
+
+/// `fun k => sub (x k) mu * sub (x k) mu` — the summand [`declare_variance`]
+/// admits `Rat.variance` as, rebuilt here so [`declare_variance_nonneg`] and
+/// [`declare_variance_eq`] can reconstruct the exact literal shape it
+/// unfolds to (mirroring [`weighted`]/[`is_distribution_parts`]'s own
+/// reason).
+fn variance_summand(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, mu: ExprId) -> ExprId {
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let xk = d.apply(x, &[k]);
+    let gap = rsub(d, p, xk, mu);
+    let body = rmul(d, gap, gap);
+    let nat = d.nat_ty();
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// Admit `Rat.variance : (Nat → Rat) → (Nat → Rat) → Nat → Rat := fun X p n =>
+/// expectation (fun k => sub (X k) (expectation X p n) * sub (X k)
+/// (expectation X p n)) p n` — `Var[X] := E[(X − E[X])²]`.
+fn declare_variance(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let mu = expectation(d, p, x, pf, n);
+    let summand = variance_summand(d, p, x, mu);
+    let body = expectation(d, p, summand, pf, n);
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        d.lam_fv(x_fv, fn_ty, with_pf)
+    };
+    let ty = {
+        let inner = d.arrow(nat, carrier);
+        let over_pf = d.arrow(fn_ty, inner);
+        d.arrow(fn_ty, over_pf)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.variance,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(VARIANCE_HEIGHT),
+    })
+}
+
+/// `Rat.variance_nonneg : ∀ X p n, IsDistribution p n → le zero (variance X p
+/// n)` — immediate from [`RatPrelude::expectation_nonneg`] and
+/// [`RatPrelude::sq_nonneg`], since every summand is a square.
+fn declare_variance_nonneg(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let zero_r = rzero(d, p);
+    let variance_xpn = variance(d, p, x, pf, n);
+    let concl = rle(d, p, zero_r, variance_xpn);
+
+    let mu = expectation(d, p, x, pf, n);
+    let summand = variance_summand(d, p, x, mu);
+
+    let nonneg_proof = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let klt_fv = d.fresh_fvar();
+        let klt_ty = d.lt(k, n);
+        let xk = d.apply(x, &[k]);
+        let gap = rsub(d, p, xk, mu);
+        let sqnn = d.lemma(p.sq_nonneg, &[gap]);
+        let with_klt = d.lam_fv(klt_fv, klt_ty, sqnn);
+        d.lam_fv(k_fv, nat, with_klt)
+    };
+    let ev_nonneg = d.lemma(p.expectation_nonneg, &[summand, pf, n, nonneg_proof, hd]);
+
+    let value = {
+        let with_hd = d.lam_fv(hd_fv, dist_ty, ev_nonneg);
+        let with_n = d.lam_fv(n_fv, nat, with_hd);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        d.lam_fv(x_fv, fn_ty, with_pf)
+    };
+    let ty = {
+        let with_hd = d.arrow(dist_ty, concl);
+        let with_n = d.pi_fv(n_fv, nat, with_hd);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        d.pi_fv(x_fv, fn_ty, with_pf)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.variance_nonneg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `(a-b)*(a-b) = a*a + (neg b*a + (neg b*a + b*b))`, over generic `a`, `b :
+/// Rat`.
+///
+/// Returned as `(start, target, proof)` so [`declare_variance_eq`] can reuse
+/// the two endpoints directly rather than re-deriving them from the `Eq`'s
+/// own type. Two copies of `neg b * a` rather than one `neg (2*b) * a`, so no
+/// literal `2` is needed: [`declare_variance_eq`] matches each copy against
+/// a *separate* application of [`RatPrelude::expectation_add`]. Kept
+/// private: only [`declare_variance_eq`] needs it.
+fn sub_sq_expand(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    a: ExprId,
+    b: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let neg_b = rneg(d, b);
+    let w = rsub(d, p, a, b);
+    let start = rmul(d, w, w);
+
+    // (a + neg_b) * w = a*w + neg_b*w                        [right_distrib]
+    let aw = rmul(d, a, w);
+    let nbw = rmul(d, neg_b, w);
+    let step1_rhs = radd(d, aw, nbw);
+    let step1 = d.lemma(p.right_distrib, &[a, neg_b, w]);
+
+    // a*w = a*a + a*neg_b                                     [left_distrib]
+    let aa = rmul(d, a, a);
+    let a_negb = rmul(d, a, neg_b);
+    let aw_expanded = radd(d, aa, a_negb);
+    let step2a = d.lemma(p.left_distrib, &[a, a, neg_b]);
+    let mid1 = radd(d, aw_expanded, nbw);
+    let h_mid1 = rcongr(d, aw, aw_expanded, step2a, &|d, t| radd(d, t, nbw));
+
+    // neg_b*w = neg_b*a + neg_b*neg_b                         [left_distrib]
+    let nba = rmul(d, neg_b, a);
+    let nbnb = rmul(d, neg_b, neg_b);
+    let nbw_expanded = radd(d, nba, nbnb);
+    let step2b = d.lemma(p.left_distrib, &[neg_b, a, neg_b]);
+    let mid2 = radd(d, aw_expanded, nbw_expanded);
+    let h_mid2 = rcongr(d, nbw, nbw_expanded, step2b, &|d, t| {
+        radd(d, aw_expanded, t)
+    });
+
+    // a*neg_b -> neg_b*a                                          [mul_comm]
+    let comm1 = d.lemma(p.mul_comm, &[a, neg_b]);
+    let aa_nba = radd(d, aa, nba);
+    let mid3 = radd(d, aa_nba, nbw_expanded);
+    let h_mid3 = rcongr(d, a_negb, nba, comm1, &|d, t| {
+        let inner = radd(d, aa, t);
+        radd(d, inner, nbw_expanded)
+    });
+
+    // neg_b*neg_b -> b*b                          [neg_mul, mul_neg, neg_neg]
+    let bb = rmul(d, b, b);
+    let neg_bb = rneg(d, bb);
+    let b_negb = rmul(d, b, neg_b);
+    let step_nm1 = d.lemma(p.neg_mul, &[b, neg_b]); // Eq(nbnb, -(b*neg_b))
+    let neg_b_negb = rneg(d, b_negb);
+    let step_nm2 = d.lemma(p.mul_neg, &[b, b]); // Eq(b*neg_b, -(b*b))
+    let h_nm2 = rcongr(d, b_negb, neg_bb, step_nm2, &|d, t| rneg(d, t));
+    let neg_neg_bb = rneg(d, neg_bb);
+    let step_nn = d.lemma(p.neg_neg, &[bb]); // Eq(-(-(b*b)), b*b)
+    let (_e, nbnb_to_bb) = rchain(
+        d,
+        nbnb,
+        &[(neg_b_negb, step_nm1), (neg_neg_bb, h_nm2), (bb, step_nn)],
+    );
+    let nba_bb = radd(d, nba, bb);
+    let nba_nba_bb = radd(d, nba, nba_bb);
+    let target = radd(d, aa, nba_nba_bb);
+    let mid4 = radd(d, aa_nba, nba_bb);
+    let h_mid4 = rcongr(d, nbnb, bb, nbnb_to_bb, &|d, t| {
+        let inner = radd(d, nba, t);
+        radd(d, aa_nba, inner)
+    });
+
+    // (aa+nba) + (nba+bb) -> aa + (nba + (nba+bb))              [add_assoc]
+    let step_assoc = d.lemma(p.add_assoc, &[aa, nba, nba_bb]);
+
+    let (_e, proof) = rchain(
+        d,
+        start,
+        &[
+            (step1_rhs, step1),
+            (mid1, h_mid1),
+            (mid2, h_mid2),
+            (mid3, h_mid3),
+            (mid4, h_mid4),
+            (target, step_assoc),
+        ],
+    );
+    (start, target, proof)
+}
+
+/// `Rat.variance_eq : ∀ X p n, IsDistribution p n → variance X p n =
+/// sub (expectation (fun k => X k * X k) p n) (mul (expectation X p n)
+/// (expectation X p n))` — `Var[X] = E[X²] − E[X]²`, the identity every
+/// variance computation uses.
+///
+/// [`RatPrelude::expectation_add`] (twice, nested) splits the three-term
+/// pointwise expansion [`sub_sq_expand`] produces; [`RatPrelude::expectation_smul`]
+/// collapses each `−E[X]·X` piece; [`RatPrelude::expectation_const`] — the
+/// ONLY place in this file that needs `IsDistribution`'s `sumRange p n = 1`
+/// component rather than just its nonnegativity — collapses the constant
+/// `E[X]²` piece.
+fn declare_variance_eq(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let mu = expectation(d, p, x, pf, n);
+    let mumu = rmul(d, mu, mu);
+    let xx = weighted(d, x, x); // fun k => X k * X k
+    let e_xx = expectation(d, p, xx, pf, n);
+    let target_rhs = rsub(d, p, e_xx, mumu);
+    let variance_xpn = variance(d, p, x, pf, n);
+    let concl = req(d, variance_xpn, target_rhs);
+
+    // --- pointwise: (X k - mu)*(X k - mu) = X k*X k + (negmu*Xk + (negmu*Xk + mu*mu))
+    let neg_mu = rneg(d, mu);
+    let t2_fn = scale_fn(d, neg_mu, x); // fun k => neg_mu * X k
+    let t4_fn = const_fn(d, mumu); // fun _ => mu*mu
+    let rest2_fn = combined(d, t2_fn, t4_fn);
+    let rest1_fn = combined(d, t2_fn, rest2_fn);
+    let abc_fn = combined(d, xx, rest1_fn);
+
+    let variance_summand_fn = variance_summand(d, p, x, mu);
+
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let xk = d.apply(x, &[k]);
+        let (start_k, target_k, proof_k) = sub_sq_expand(d, p, xk, mu);
+        let pk = d.apply(pf, &[k]);
+        let lifted = rcongr(d, start_k, target_k, proof_k, &|d, t| rmul(d, t, pk));
+        d.lam_fv(k_fv, nat, lifted)
+    };
+
+    let variance_weighted = weighted(d, variance_summand_fn, pf);
+    let abc_weighted = weighted(d, abc_fn, pf);
+    let congr_step = d.lemma(
+        p.sum_range_congr,
+        &[variance_weighted, abc_weighted, n, pointwise],
+    );
+    // congr_step : sumRange(variance_weighted,n) = sumRange(abc_weighted,n)
+    //   ~ variance X p n = expectation abc_fn p n                    [defeq]
+
+    let e_abc = expectation(d, p, abc_fn, pf, n);
+
+    // expectation_add, nested twice:
+    //   E[ABC] = E[XX] + (E[T2] + (E[T2]+E[T4]))
+    let e_t2 = expectation(d, p, t2_fn, pf, n);
+    let e_t4 = expectation(d, p, t4_fn, pf, n);
+    let e_rest2 = expectation(d, p, rest2_fn, pf, n);
+    let e_rest1 = expectation(d, p, rest1_fn, pf, n);
+
+    let eq1 = d.lemma(p.expectation_add, &[xx, rest1_fn, pf, n]);
+    // Eq(e_abc, radd(e_xx, e_rest1))
+    let eq2 = d.lemma(p.expectation_add, &[t2_fn, rest2_fn, pf, n]);
+    // Eq(e_rest1, radd(e_t2, e_rest2))
+    let eq3 = d.lemma(p.expectation_add, &[t2_fn, t4_fn, pf, n]);
+    // Eq(e_rest2, radd(e_t2, e_t4))
+
+    let after_eq1 = radd(d, e_xx, e_rest1);
+    let step_rest2 = radd(d, e_t2, e_rest2);
+    let lift2 = rcongr(d, e_rest1, step_rest2, eq2, &|d, t| radd(d, e_xx, t));
+    let after_lift2 = radd(d, e_xx, step_rest2);
+    let step_t4 = radd(d, e_t2, e_t4);
+    let lift3 = rcongr(d, e_rest2, step_t4, eq3, &|d, t| {
+        let inner = radd(d, e_t2, t);
+        radd(d, e_xx, inner)
+    });
+    let e_t2_step_t4 = radd(d, e_t2, step_t4);
+    let after_lift3 = radd(d, e_xx, e_t2_step_t4);
+
+    // E[T2] = neg_mu * mu                                     [expectation_smul]
+    let smul_eq = d.lemma(p.expectation_smul, &[neg_mu, x, pf, n]);
+    let negmu_mu = rmul(d, neg_mu, mu);
+
+    // E[T4] = mu*mu                          [expectation_const, needs IsDistribution]
+    let const_eq = d.lemma(p.expectation_const, &[mumu, pf, n, hd]);
+
+    let e_t2_mumu = radd(d, e_t2, mumu);
+    let e_t2_e_t2_mumu = radd(d, e_t2, e_t2_mumu);
+    let after_step_a = radd(d, e_xx, e_t2_e_t2_mumu);
+    let step_a = rcongr(d, e_t4, mumu, const_eq, &|d, t| {
+        let inner1 = radd(d, e_t2, t);
+        let inner2 = radd(d, e_t2, inner1);
+        radd(d, e_xx, inner2)
+    });
+
+    let negmu_mu_mumu = radd(d, negmu_mu, mumu);
+    let negmu_mu_negmu_mu_mumu = radd(d, negmu_mu, negmu_mu_mumu);
+    let after_step_b = radd(d, e_xx, negmu_mu_negmu_mu_mumu);
+    let step_b = rcongr(d, e_t2, negmu_mu, smul_eq, &|d, t| {
+        let inner1 = radd(d, t, mumu);
+        let inner2 = radd(d, t, inner1);
+        radd(d, e_xx, inner2)
+    });
+
+    // negmu_mu = -(mumu)                                              [neg_mul]
+    let neg_mumu = rneg(d, mumu);
+    let step_negmul = d.lemma(p.neg_mul, &[mu, mu]); // Eq(negmu_mu, neg_mumu)
+    let inner_collapsed = rcongr(d, negmu_mu, neg_mumu, step_negmul, &|d, t| {
+        let inner = radd(d, t, mumu);
+        radd(d, t, inner)
+    });
+    let neg_mumu_mumu = radd(d, neg_mumu, mumu);
+    let neg_mumu_neg_mumu_mumu = radd(d, neg_mumu, neg_mumu_mumu);
+    let after_step_c = radd(d, e_xx, neg_mumu_neg_mumu_mumu);
+    let step_c = rcongr(
+        d,
+        negmu_mu_negmu_mu_mumu,
+        neg_mumu_neg_mumu_mumu,
+        inner_collapsed,
+        &|d, t| radd(d, e_xx, t),
+    );
+
+    // neg_mumu + mumu = 0                                       [neg_add_cancel]
+    let zero_r = rzero(d, p);
+    let cancel = d.lemma(p.neg_add_cancel, &[mumu]); // Eq(radd(neg_mumu,mumu), zero)
+    let inner_cancelled = rcongr(d, neg_mumu_mumu, zero_r, cancel, &|d, t| {
+        radd(d, neg_mumu, t)
+    });
+    let neg_mumu_zero = radd(d, neg_mumu, zero_r);
+    let after_step_d = radd(d, e_xx, neg_mumu_zero);
+    let step_d = rcongr(
+        d,
+        neg_mumu_neg_mumu_mumu,
+        neg_mumu_zero,
+        inner_cancelled,
+        &|d, t| radd(d, e_xx, t),
+    );
+
+    // neg_mumu + zero = neg_mumu                                        [add_zero]
+    let add_zero_eq = d.lemma(p.add_zero, &[neg_mumu]);
+    let after_step_e = radd(d, e_xx, neg_mumu);
+    let step_e = rcongr(d, neg_mumu_zero, neg_mumu, add_zero_eq, &|d, t| {
+        radd(d, e_xx, t)
+    });
+
+    let (_e, tail_proof) = rchain(
+        d,
+        e_abc,
+        &[
+            (after_eq1, eq1),
+            (after_lift2, lift2),
+            (after_lift3, lift3),
+            (after_step_a, step_a),
+            (after_step_b, step_b),
+            (after_step_c, step_c),
+            (after_step_d, step_d),
+            (after_step_e, step_e),
+        ],
+    );
+    // tail_proof : Eq(e_abc, radd(e_xx, neg_mumu))   [= E[X²] - mu*mu, unfolded]
+
+    let final_proof = rtrans(d, variance_xpn, e_abc, after_step_e, congr_step, tail_proof);
+
+    let value = {
+        let with_hd = d.lam_fv(hd_fv, dist_ty, final_proof);
+        let with_n = d.lam_fv(n_fv, nat, with_hd);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        d.lam_fv(x_fv, fn_ty, with_pf)
+    };
+    let ty = {
+        let with_hd = d.arrow(dist_ty, concl);
+        let with_n = d.pi_fv(n_fv, nat, with_hd);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        d.pi_fv(x_fv, fn_ty, with_pf)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.variance_eq,
         uparams: vec![],
         ty,
         value,

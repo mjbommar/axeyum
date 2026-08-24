@@ -1606,6 +1606,12 @@ fn the_probability_toolkit_is_axiom_free() {
         ("expectation_const", p.expectation_const, true),
         ("uniform", p.uniform, false),
         ("uniform_is_distribution", p.uniform_is_distribution, true),
+        ("expectation_nonneg", p.expectation_nonneg, true),
+        ("expectation_le", p.expectation_le, true),
+        ("markov_inequality", p.markov_inequality, true),
+        ("variance", p.variance, false),
+        ("variance_nonneg", p.variance_nonneg, true),
+        ("variance_eq", p.variance_eq, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
@@ -1742,6 +1748,124 @@ fn expectation_wrong_multiplication_order_is_rejected() {
     assert!(
         d.declare_theorem(name, ty, value).is_err(),
         "the kernel accepted Rat.expectation's summand with the multiplication \
+         swapped, so the computation check above proves nothing"
+    );
+}
+
+/// `Rat.variance X p n` closes by `Eq.refl` alone against `expectation (fun k
+/// => sub (X k) (expectation X p n) * sub (X k) (expectation X p n)) p n`,
+/// over a **symbolic** `X`/`p`/`n` — the same convention
+/// [`expectation_defining_equation_closes_by_refl_alone`] follows.
+#[test]
+fn variance_defining_equation_closes_by_refl_alone() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::{rat_ty, req, rmul, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let mu = d.const_app(p.expectation, &[x, pf, n]);
+    let summand = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let xk = d.apply(x, &[k]);
+        let gap = rsub(&mut d, p, xk, mu);
+        let body = rmul(&mut d, gap, gap);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let lhs = d.const_app(p.variance, &[x, pf, n]);
+    let rhs = d.const_app(p.expectation, &[summand, pf, n]);
+    let stmt = req(&mut d, lhs, rhs);
+    let proof = rrefl(&mut d, rhs);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, inner);
+        d.pi_fv(x_fv, fn_ty, with_pf)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, inner);
+        d.lam_fv(x_fv, fn_ty, with_pf)
+    };
+    let name = d.kernel().name_str(anon, "Check.variance_defn_refl");
+    d.declare_theorem(name, ty, value).unwrap_or_else(|e| {
+        panic!(
+            "Rat.variance did not reduce to its defining expectation by refl alone: {}",
+            d.explain(&e)
+        )
+    });
+}
+
+/// The negative control for
+/// [`variance_defining_equation_closes_by_refl_alone`]: the same route with
+/// the subtraction **swapped** (`sub (expectation X p n) (X k)` instead of
+/// `sub (X k) (expectation X p n)`) inside the squared summand. `Rat.sub` is
+/// not definitionally anti-commutative (`(a-b)² = (b-a)²` is a proved
+/// identity, not a reduction rule), so this must be **REJECTED** — otherwise
+/// the computation check above proves nothing.
+#[test]
+fn variance_swapped_subtraction_order_is_rejected() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::{rat_ty, req, rmul, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let mu = d.const_app(p.expectation, &[x, pf, n]);
+    let swapped_summand = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let xk = d.apply(x, &[k]);
+        let gap = rsub(&mut d, p, mu, xk); // swapped
+        let body = rmul(&mut d, gap, gap);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let lhs = d.const_app(p.variance, &[x, pf, n]);
+    let rhs = d.const_app(p.expectation, &[swapped_summand, pf, n]);
+    let stmt = req(&mut d, lhs, rhs);
+    let proof = rrefl(&mut d, rhs);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, inner);
+        d.pi_fv(x_fv, fn_ty, with_pf)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, inner);
+        d.lam_fv(x_fv, fn_ty, with_pf)
+    };
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.variance_swapped_sub_order");
+    assert!(
+        d.declare_theorem(name, ty, value).is_err(),
+        "the kernel accepted Rat.variance's summand with the subtraction \
          swapped, so the computation check above proves nothing"
     );
 }

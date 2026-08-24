@@ -844,6 +844,32 @@ pub struct RatPrelude {
     /// [`Self::nat_div_succ_pos`] wants, and `Nat.lt Nat.zero n` is
     /// definitionally `Nat.le 1 n` — no separate conversion lemma needed.
     pub uniform_is_distribution: NameId,
+
+    // --- probability bounds (rat_prelude::probability) ---------------------
+    /// `Rat.expectation_nonneg : ∀ X p n, (∀ k, Lt k n → le zero (X k)) →
+    /// IsDistribution p n → le zero (expectation X p n)`.
+    pub expectation_nonneg: NameId,
+    /// `Rat.expectation_le : ∀ X Y p n, (∀ k, Lt k n → le (X k) (Y k)) →
+    /// IsDistribution p n → le (expectation X p n) (expectation Y p n)` —
+    /// monotonicity.
+    pub expectation_le: NameId,
+    /// `Rat.markov_inequality : ∀ a X ind p n, IsDistribution p n → (∀ k, Lt
+    /// k n → le zero (X k)) → lt zero a → (∀ k, Lt k n → le (a * ind k) (X
+    /// k)) → le (a * expectation ind p n) (expectation X p n)` — the
+    /// multiplied form (no `Rat.inv` needed), with the indicator supplied as
+    /// a hypothesis. This project's first genuine probability BOUND.
+    pub markov_inequality: NameId,
+    /// `Rat.variance X p n := expectation (fun k => sub (X k) (expectation X
+    /// p n) * sub (X k) (expectation X p n)) p n` — `Var[X] := E[(X −
+    /// E[X])²]`.
+    pub variance: NameId,
+    /// `Rat.variance_nonneg : ∀ X p n, IsDistribution p n → le zero (variance
+    /// X p n)`.
+    pub variance_nonneg: NameId,
+    /// `Rat.variance_eq : ∀ X p n, IsDistribution p n → variance X p n = sub
+    /// (expectation (fun k => X k * X k) p n) (mul (expectation X p n)
+    /// (expectation X p n))` — `Var[X] = E[X²] − E[X]²`.
+    pub variance_eq: NameId,
 }
 
 impl RatPrelude {
@@ -1056,6 +1082,12 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         expectation_const: child(kernel, "expectation_const"),
         uniform: child(kernel, "uniform"),
         uniform_is_distribution: child(kernel, "uniform_is_distribution"),
+        expectation_nonneg: child(kernel, "expectation_nonneg"),
+        expectation_le: child(kernel, "expectation_le"),
+        markov_inequality: child(kernel, "markov_inequality"),
+        variance: child(kernel, "variance"),
+        variance_nonneg: child(kernel, "variance_nonneg"),
+        variance_eq: child(kernel, "variance_eq"),
     }
 }
 
