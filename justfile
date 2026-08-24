@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census
 
 fmt:
     cargo fmt --all --check
@@ -1407,3 +1407,22 @@ mobility-census:
 # host. NOT part of `just check`.
 mobility-census-regen:
     uv run --no-sync python -m axeyum.agent mobility --write
+
+# The obstruction graph gate (docs/python-2026-08/06-obstruction-graph.md, slice
+# A5; Autogenesis F3 in docs/autogenesis/243-knowledge-overlay-and-fill-plan.md).
+#
+# Four steps, and the regeneration is FIRST because everything after it rests on
+# the artifact being derived rather than authored. The validator is separate
+# from the generator on purpose: it recomputes every obstruction id from its own
+# cluster key, re-hashes every evidence file from disk, and re-measures every
+# `candidate_capability.exists` against the knowledge overlay, so a generator
+# that was wrong does not get to certify itself. Every guard is mutation-verified
+# to kill exactly one test -- `python3 scripts/tests/mutation_controls.py
+# obstruction-graph` (26 anchors, 26 killed).
+#
+# Derive, validate and rank the typed-decline obstruction graph.
+obstruction-graph:
+    python3 scripts/gen-obstruction-graph.py --check
+    python3 scripts/validate-obstruction-graph.py
+    python3 scripts/gen-obstruction-dashboard.py --check
+    python3 -m unittest scripts.tests.test_obstruction_graph

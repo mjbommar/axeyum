@@ -603,6 +603,21 @@ step episode-tests  python3 -m unittest scripts.tests.test_check_agent_episode
 step mobility-census python3 scripts/check-mobility-census.py
 step mobility-census-tests python3 -m unittest scripts.tests.test_check_mobility_census
 
+# The obstruction graph (docs/python-2026-08/06-obstruction-graph.md, slice A5;
+# Autogenesis F3). `just obstruction-graph` runs the same four steps.
+#
+# The graph is DERIVED from the committed episodes and decline records, so the
+# first step is the one that can go red on a healthy-looking tree: `--check`
+# fails when the committed artifact is not a regeneration, which is how a
+# hand-edited cluster is caught. The generator also exits 1 when no obstruction
+# was derived, when a decline record's shape matches no predicate, and when any
+# held-out fact id reaches a population or the rendered bytes. Read
+# `OBSTRUCTIONS|...` and `OBSTRUCTION_GRAPH_OK|...`, not the status alone.
+step obstruction-graph        python3 scripts/gen-obstruction-graph.py --check
+step obstruction-graph-valid  python3 scripts/validate-obstruction-graph.py
+step obstruction-dashboard    python3 scripts/gen-obstruction-dashboard.py --check
+step obstruction-graph-tests  python3 -m unittest scripts.tests.test_obstruction_graph
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0

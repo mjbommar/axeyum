@@ -1,0 +1,1917 @@
+{
+  "entities": [
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": false,
+        "id": "K:proposed-axiom-free-recursion-scheme",
+        "reason": "The kernel accepted the declaration and the measured axiom footprint was not empty. Every record in this cluster asks for the same thing in its own words: a route whose induction principle is explicit in the authored term, so the target does not depend on Lean's generated well-founded-recursion theorem."
+      },
+      "cluster_key": "axiom-footprint-nonempty|propext",
+      "decline_classes": [],
+      "evidence": [
+        {
+          "kind": "decline-record",
+          "path": "artifacts/autogenesis/euclidean-bounded-induction-decline-v1.json",
+          "sha256": "2c7d1a812042c9df6c14b854647d4ad7586c39f51e91d35d2ea5260dbba91b68"
+        },
+        {
+          "kind": "decline-record",
+          "path": "artifacts/autogenesis/euclidean-joint-div-mod-proof-decline-v1.json",
+          "sha256": "70bcd809a42774c75956c7f9cf0a89db0f847a2d03be3fb309fcd8084e8798ce"
+        },
+        {
+          "kind": "decline-record",
+          "path": "artifacts/autogenesis/euclidean-public-recursion-decline-v1.json",
+          "sha256": "dfe447c8c33dacb7ed28323f4201f7c15783d02926e827840bc46f61adc91d60"
+        }
+      ],
+      "facts_blocked": 0,
+      "first_blocker": {
+        "detail": "propext",
+        "kind": "axiom-footprint-nonempty",
+        "observed_in": "artifacts/autogenesis/euclidean-bounded-induction-decline-v1.json",
+        "source": "decline-record-observation"
+      },
+      "id": "O:axiom-footprint-nonempty-5b475427",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "propext",
+          "kind": "axiom-footprint-nonempty",
+          "observed_in": "artifacts/autogenesis/euclidean-bounded-induction-decline-v1.json",
+          "source": "decline-record-observation"
+        }
+      ],
+      "population": {
+        "fact_ids": [],
+        "families": [],
+        "partitions": {}
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 0,
+          "obstruction": 0,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [],
+      "title": "axiom-footprint-nonempty: propext"
+    },
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": false,
+        "id": "K:proposed-retrieval-budget-policy",
+        "reason": "The run spent its request and tool-call limits on tier-R gathering and never reached, or never finished, a plan. Budget exhaustion is a verdict rather than an error here, so the measurable fix is an allocation policy between retrieval and planning, not a larger ceiling."
+      },
+      "cluster_key": "budget|before-plan",
+      "decline_classes": [
+        "budget-exhausted-before-plan"
+      ],
+      "evidence": [
+        {
+          "decline_class": "budget-exhausted-before-plan",
+          "fact_id": "F:ml430-nat-coprime-of-dvd-6f652673",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-of-dvd-6f652673.json",
+          "sha256": "b5bf0d848ea3fdc317bd7a1237bcffd40425c3c337fb4353ed6d7fb0291ab1a5"
+        }
+      ],
+      "facts_blocked": 1,
+      "first_blocker": {
+        "detail": "before-plan",
+        "kind": "budget",
+        "observed_in": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-of-dvd-6f652673.json",
+        "source": "episode-decline-class"
+      },
+      "id": "O:budget-b9e4cb5c",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "before-plan",
+          "kind": "budget",
+          "observed_in": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-of-dvd-6f652673.json",
+          "source": "episode-decline-class"
+        }
+      ],
+      "population": {
+        "fact_ids": [
+          "F:ml430-nat-coprime-of-dvd-6f652673"
+        ],
+        "families": [
+          "natural-primes"
+        ],
+        "partitions": {
+          "development": 1
+        }
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 1,
+          "obstruction": 1,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [],
+      "title": "budget: before-plan"
+    },
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": false,
+        "id": "K:proposed-retrieval-budget-policy",
+        "reason": "The run spent its request and tool-call limits on tier-R gathering and never reached, or never finished, a plan. Budget exhaustion is a verdict rather than an error here, so the measurable fix is an allocation policy between retrieval and planning, not a larger ceiling."
+      },
+      "cluster_key": "budget|during-plan",
+      "decline_classes": [
+        "budget-exhausted-during-plan"
+      ],
+      "evidence": [
+        {
+          "decline_class": "budget-exhausted-during-plan",
+          "fact_id": "F:ml430-nat-coprime-add-self-left-5e93448c",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-left-5e93448c.json",
+          "sha256": "7c0baf15c48eabaced33cb343f6f67133beaf574a2621626b911dbd99339c85b"
+        }
+      ],
+      "facts_blocked": 1,
+      "first_blocker": {
+        "detail": "during-plan",
+        "kind": "budget",
+        "observed_in": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-left-5e93448c.json",
+        "source": "episode-decline-class"
+      },
+      "id": "O:budget-822ced37",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "during-plan",
+          "kind": "budget",
+          "observed_in": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-left-5e93448c.json",
+          "source": "episode-decline-class"
+        }
+      ],
+      "population": {
+        "fact_ids": [
+          "F:ml430-nat-coprime-add-self-left-5e93448c"
+        ],
+        "families": [
+          "natural-gcd"
+        ],
+        "partitions": {
+          "development": 1
+        }
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 1,
+          "obstruction": 1,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [],
+      "title": "budget: during-plan"
+    },
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": false,
+        "id": "K:proposed-explicit-term-construction",
+        "reason": "The Lean elaborator refused the authored term -- it would not unfold an opaque public definition, or left a combinator metavariable-polymorphic. Both records ask for the same remedy: construct the term explicitly from proof-free statements rather than relying on the elaborator to resolve it."
+      },
+      "cluster_key": "elaboration-blocked|lean-elaboration",
+      "decline_classes": [],
+      "evidence": [
+        {
+          "kind": "decline-record",
+          "path": "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v1.json",
+          "sha256": "ae42fc1294b39b03d44192ab888ac8fb525563d5f3be625a6b29cba59ecf679f"
+        }
+      ],
+      "facts_blocked": 0,
+      "first_blocker": {
+        "detail": "declined-at-first-lean-elaboration-before-export",
+        "kind": "elaboration-blocked",
+        "observed_in": "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v1.json",
+        "source": "decline-record-observation"
+      },
+      "id": "O:elaboration-blocked-15e95bb0",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "declined-at-first-lean-elaboration-before-export",
+          "kind": "elaboration-blocked",
+          "observed_in": "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v1.json",
+          "source": "decline-record-observation"
+        }
+      ],
+      "population": {
+        "fact_ids": [],
+        "families": [],
+        "partitions": {}
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 0,
+          "obstruction": 0,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [],
+      "title": "elaboration-blocked: declined-at-first-lean-elaboration-before-export"
+    },
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": false,
+        "id": "K:proposed-explicit-term-construction",
+        "reason": "The Lean elaborator refused the authored term -- it would not unfold an opaque public definition, or left a combinator metavariable-polymorphic. Both records ask for the same remedy: construct the term explicitly from proof-free statements rather than relying on the elaborator to resolve it."
+      },
+      "cluster_key": "elaboration-blocked|unfold Nat.div",
+      "decline_classes": [],
+      "evidence": [
+        {
+          "kind": "decline-record",
+          "path": "artifacts/autogenesis/euclidean-public-div-add-mod-lift-decline-v1.json",
+          "sha256": "06f9250a3491e27106c447eb06bdd2f0292f454e3499fc2da0308f90463bda0f"
+        }
+      ],
+      "facts_blocked": 0,
+      "first_blocker": {
+        "detail": "unfold Nat.div",
+        "kind": "elaboration-blocked",
+        "observed_in": "artifacts/autogenesis/euclidean-public-div-add-mod-lift-decline-v1.json",
+        "source": "decline-record-observation"
+      },
+      "id": "O:elaboration-blocked-594d8301",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "unfold Nat.div",
+          "kind": "elaboration-blocked",
+          "observed_in": "artifacts/autogenesis/euclidean-public-div-add-mod-lift-decline-v1.json",
+          "source": "decline-record-observation"
+        }
+      ],
+      "population": {
+        "fact_ids": [],
+        "families": [],
+        "partitions": {}
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 0,
+          "obstruction": 0,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [],
+      "title": "elaboration-blocked: unfold Nat.div"
+    },
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": true,
+        "id": "K:bounded-reproducible-export",
+        "reason": "The producer had no frozen, proof-free statement export to import. Plan 03's A4 finding 2 measured that exactly 3 of 98 eligible facts have one, so this is the bottleneck between the loop and volume; the overlay already carries this candidate capability on the evidence of retained exporter/module/root decline records."
+      },
+      "cluster_key": "export-missing|frozen-statement-export",
+      "decline_classes": [
+        "retrieval-miss"
+      ],
+      "evidence": [
+        {
+          "kind": "decline-record",
+          "path": "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v2.json",
+          "sha256": "f74a690c147a6b35ee0ffa2c1f9726fd8e6992c13da0725a094140cfa2bbbbdd"
+        },
+        {
+          "decline_class": "retrieval-miss",
+          "fact_id": "F:ml430-nat-modeq-one-516d46e8",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-one-516d46e8.json",
+          "sha256": "5b190e00e39ba73d3d8c8a516c046ecfed3726b132146c41509d526e6d82373b"
+        }
+      ],
+      "facts_blocked": 1,
+      "first_blocker": {
+        "detail": "frozen-statement-export",
+        "kind": "export-missing",
+        "observed_in": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-one-516d46e8.json",
+        "source": "episode-decline-class"
+      },
+      "id": "O:export-missing-f9710624",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "frozen-statement-export",
+          "kind": "export-missing",
+          "observed_in": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-one-516d46e8.json",
+          "source": "episode-decline-class"
+        },
+        {
+          "detail": "unknown module prefix AxeyumAutogenesisIntFibEqZeroV1",
+          "kind": "export-missing",
+          "observed_in": "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v2.json",
+          "source": "decline-record-observation"
+        }
+      ],
+      "population": {
+        "fact_ids": [
+          "F:ml430-nat-modeq-one-516d46e8"
+        ],
+        "families": [
+          "natural-modular-equivalence"
+        ],
+        "partitions": {
+          "development": 1
+        }
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 1,
+          "obstruction": 1,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [
+        "T:modeq-equivalence-combinators"
+      ],
+      "title": "export-missing: frozen-statement-export"
+    },
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": false,
+        "id": "K:proposed-tactic-precondition-mobility-census",
+        "reason": "The model declined to claim a route generalizes, having seen the whole eligible page. Plan 03's A4 finding 3 measured that this rule filters the model's CONFIDENCE that a route generalizes, not whether it does -- 1 of 3 exportable ModEq facts was a false negative. Running every tactic precondition against every open fact with no model in the loop (slice A7) supplies the sibling evidence mechanically, which is what the three-sibling rule is asking for."
+      },
+      "cluster_key": "no-general-route|T:bounded-structural-induction+T:ih-congruence-rewrite",
+      "decline_classes": [
+        "no-general-route"
+      ],
+      "evidence": [
+        {
+          "decline_class": "no-general-route",
+          "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json",
+          "sha256": "a391bd737698f8689077e91e5cbd61976ca14a3056a5fb9a1b24b8bc809666cf"
+        }
+      ],
+      "facts_blocked": 1,
+      "first_blocker": {
+        "detail": "T:bounded-structural-induction+T:ih-congruence-rewrite",
+        "kind": "no-general-route",
+        "observed_in": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json",
+        "source": "episode-proposal-route"
+      },
+      "id": "O:no-general-route-83fa7820",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "T:bounded-structural-induction+T:ih-congruence-rewrite",
+          "kind": "no-general-route",
+          "observed_in": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json",
+          "source": "episode-proposal-route"
+        }
+      ],
+      "population": {
+        "fact_ids": [
+          "F:ml430-nat-descfactorial-le-2b8cc09a"
+        ],
+        "families": [
+          "natural-factorial"
+        ],
+        "partitions": {
+          "train": 1
+        }
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 1,
+          "obstruction": 1,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [
+        "T:bounded-structural-induction",
+        "T:ih-congruence-rewrite"
+      ],
+      "title": "no-general-route: T:bounded-structural-induction+T:ih-congruence-rewrite"
+    },
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": false,
+        "id": "K:proposed-tactic-precondition-mobility-census",
+        "reason": "The model declined to claim a route generalizes, having seen the whole eligible page. Plan 03's A4 finding 3 measured that this rule filters the model's CONFIDENCE that a route generalizes, not whether it does -- 1 of 3 exportable ModEq facts was a false negative. Running every tactic precondition against every open fact with no model in the loop (slice A7) supplies the sibling evidence mechanically, which is what the three-sibling rule is asking for."
+      },
+      "cluster_key": "no-general-route|T:modeq-equivalence-combinators",
+      "decline_classes": [
+        "gate-refused",
+        "no-general-route"
+      ],
+      "evidence": [
+        {
+          "decline_class": "gate-refused",
+          "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+          "sha256": "45e5b5210dcae29f409e3026c4a0d45911eedd2dbd7d6d5f20baec0531e4b863"
+        },
+        {
+          "decline_class": "gate-refused",
+          "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "sha256": "2399d97444a93d454d1c43718f3cd1a52103f2ac65d07f2a413d9d56dc772bb6"
+        },
+        {
+          "decline_class": "gate-refused",
+          "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+          "sha256": "a64598743f311ade55dc88e4e8fd8cdfd4a89e7896d68d69b5be2b1d25b54fbd"
+        },
+        {
+          "decline_class": "no-general-route",
+          "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+          "sha256": "676e8f8f6a476deb87ddf033f601150081b8c59299be001b32642e3e933e535b"
+        },
+        {
+          "decline_class": "no-general-route",
+          "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "sha256": "4074e7ff7d6e5df564f1b5bd42e95a7bf008058f6ad63d1b577a831ad3b6031d"
+        },
+        {
+          "decline_class": "no-general-route",
+          "fact_id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json",
+          "sha256": "46c724c256dd9eb1f4a289b13b05937cc254f5c726a9cb4ac41762132a82a3ad"
+        }
+      ],
+      "facts_blocked": 5,
+      "first_blocker": {
+        "detail": "T:modeq-equivalence-combinators",
+        "kind": "no-general-route",
+        "observed_in": "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+        "source": "episode-proposal-route"
+      },
+      "id": "O:no-general-route-1ce01077",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "the deterministic gate refuses a NoGeneralRoute plan",
+          "kind": "gate-refused",
+          "observed_in": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+          "source": "episode-decline-class"
+        },
+        {
+          "detail": "T:modeq-equivalence-combinators",
+          "kind": "no-general-route",
+          "observed_in": "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+          "source": "episode-proposal-route"
+        }
+      ],
+      "population": {
+        "fact_ids": [
+          "F:ml430-int-add-modeq-left-ee732b5b",
+          "F:ml430-int-modeq-neg-f649f6c5",
+          "F:ml430-nat-add-modeq-left-e3b1fba9",
+          "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+          "F:ml430-nat-modeq-trans-ef9d1c46"
+        ],
+        "families": [
+          "integer-modular-equivalence",
+          "natural-gcd",
+          "natural-modular-equivalence"
+        ],
+        "partitions": {
+          "development": 3,
+          "train": 2
+        }
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 6,
+          "obstruction": 6,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [
+        "T:modeq-equivalence-combinators"
+      ],
+      "title": "no-general-route: T:modeq-equivalence-combinators"
+    },
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": false,
+        "id": "K:proposed-tactic-precondition-mobility-census",
+        "reason": "The model declined to claim a route generalizes, having seen the whole eligible page. Plan 03's A4 finding 3 measured that this rule filters the model's CONFIDENCE that a route generalizes, not whether it does -- 1 of 3 exportable ModEq facts was a false negative. Running every tactic precondition against every open fact with no model in the loop (slice A7) supplies the sibling evidence mechanically, which is what the three-sibling rule is asking for."
+      },
+      "cluster_key": "no-general-route|T:refl-closure",
+      "decline_classes": [
+        "no-general-route"
+      ],
+      "evidence": [
+        {
+          "decline_class": "no-general-route",
+          "fact_id": "F:ml430-int-fib-add-181b6a2c",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+          "sha256": "9a333bb686d59eb5f6f03d595fabfd6679960709d3edcce5de71db4630d7d154"
+        },
+        {
+          "decline_class": "no-general-route",
+          "fact_id": "F:ml430-int-gcd-div-5e01872f",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+          "sha256": "f1a5d97fdbeefa23a77ad3b9182d55518ebffc182c0ae9780a2c1615e7e3edd8"
+        },
+        {
+          "decline_class": "no-general-route",
+          "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+          "sha256": "d634dc5782df97fd1318ab594cd4584ff0bf7ce44f586b0d8f8771d400c4fc06"
+        },
+        {
+          "decline_class": "no-general-route",
+          "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
+          "kind": "episode",
+          "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json",
+          "sha256": "0c9ef56bd83ea54ead6eb5382121ae7514b06fe43917f4de40ecde7d5decce9d"
+        }
+      ],
+      "facts_blocked": 4,
+      "first_blocker": {
+        "detail": "T:refl-closure",
+        "kind": "no-general-route",
+        "observed_in": "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+        "source": "episode-proposal-route"
+      },
+      "id": "O:no-general-route-d6fb274b",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "T:refl-closure",
+          "kind": "no-general-route",
+          "observed_in": "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+          "source": "episode-proposal-route"
+        }
+      ],
+      "population": {
+        "fact_ids": [
+          "F:ml430-int-fib-add-181b6a2c",
+          "F:ml430-int-gcd-div-5e01872f",
+          "F:ml430-nat-bitwise-bit-4c4b28a8",
+          "F:ml430-nat-fastfib-eq-cde11774"
+        ],
+        "families": [
+          "integer-fibonacci",
+          "integer-gcd",
+          "natural-bitwise",
+          "natural-fibonacci"
+        ],
+        "partitions": {
+          "development": 1,
+          "train": 3
+        }
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 4,
+          "obstruction": 4,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [
+        "T:refl-closure"
+      ],
+      "title": "no-general-route: T:refl-closure"
+    },
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": false,
+        "id": "K:proposed-hermetic-replay-checkout",
+        "reason": "The replay driver verified retained readiness against a checkout whose gate surface had moved. Both records' next step is to run the unchanged driver from a clean detached checkout of the exact transition commit."
+      },
+      "cluster_key": "replay-readiness-mismatch|readiness-precondition",
+      "decline_classes": [],
+      "evidence": [
+        {
+          "kind": "decline-record",
+          "path": "artifacts/autogenesis/mathlib-nat-fib-eq-zero-admission-replay-decline-v1.json",
+          "sha256": "0c4279bcaf510ce84dd139d06e1954085ef5e4b5b918a55f8f4d22e6037f5d43"
+        },
+        {
+          "kind": "decline-record",
+          "path": "artifacts/autogenesis/mathlib-nat-fib-eq-zero-admission-replay-decline-v2.json",
+          "sha256": "9c65c7addff3ed6c07a86895cb55d3cfc70348749ebcc81fee52fbaed195d305"
+        }
+      ],
+      "facts_blocked": 0,
+      "first_blocker": {
+        "detail": "before frontier does not match the reconstructed pre-state",
+        "kind": "replay-readiness-mismatch",
+        "observed_in": "artifacts/autogenesis/mathlib-nat-fib-eq-zero-admission-replay-decline-v1.json",
+        "source": "decline-record-observation"
+      },
+      "id": "O:replay-readiness-mismatch-9699493b",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "authoritative pre/post fact identity is inconsistent",
+          "kind": "replay-readiness-mismatch",
+          "observed_in": "artifacts/autogenesis/mathlib-nat-fib-eq-zero-admission-replay-decline-v2.json",
+          "source": "decline-record-observation"
+        },
+        {
+          "detail": "before frontier does not match the reconstructed pre-state",
+          "kind": "replay-readiness-mismatch",
+          "observed_in": "artifacts/autogenesis/mathlib-nat-fib-eq-zero-admission-replay-decline-v1.json",
+          "source": "decline-record-observation"
+        }
+      ],
+      "population": {
+        "fact_ids": [],
+        "families": [],
+        "partitions": {}
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 0,
+          "obstruction": 0,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [],
+      "title": "replay-readiness-mismatch: before frontier does not match the reconstructed pre-state"
+    },
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": true,
+        "id": "K:bounded-structural-induction",
+        "reason": "The record states what would close the cluster: a producer that can discharge one step of Nat.zero_add / Nat.add_zero / Nat.mul_one beyond bare Eq.refl, using facts this ledger's own Nat prelude has already proved. That is bounded induction with IH-congruence rewriting, which is an ACTIVE capability in the overlay -- the finding is that it has not been pointed at this population, not that it is missing."
+      },
+      "cluster_key": "tactic-precondition-unmatched|kernel-rejection:candidate-typecheck-failed",
+      "decline_classes": [],
+      "evidence": [
+        {
+          "kind": "decline-record",
+          "path": "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json",
+          "sha256": "74a6a56e5e29da57d9d33796a61cf1c653c1895759475b1bce8ac364b96727ed"
+        }
+      ],
+      "facts_blocked": 6,
+      "first_blocker": {
+        "detail": "kernel-rejection:candidate-typecheck-failed",
+        "kind": "tactic-precondition-unmatched",
+        "observed_in": "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json",
+        "source": "decline-record-observation"
+      },
+      "id": "O:tactic-precondition-unmatched-b14d25ec",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "kernel-rejection:candidate-typecheck-failed",
+          "kind": "tactic-precondition-unmatched",
+          "observed_in": "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json",
+          "source": "decline-record-observation"
+        }
+      ],
+      "population": {
+        "fact_ids": [
+          "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+          "F:ml430-nat-descfactorial-one-d4856d4a",
+          "F:ml430-nat-descfactorial-self-899fc0e0",
+          "F:ml430-nat-fib-add-two-b86e0c82",
+          "F:ml430-nat-one-ascfactorial-8bacb017",
+          "F:ml430-nat-zero-ascfactorial-af4fcdca"
+        ],
+        "families": [
+          "natural-factorial",
+          "natural-fibonacci"
+        ],
+        "partitions": {
+          "train": 6
+        }
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 0,
+          "obstruction": 0,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [],
+      "title": "tactic-precondition-unmatched: kernel-rejection:candidate-typecheck-failed"
+    },
+    {
+      "assurance": "mechanically-observed",
+      "candidate_capability": {
+        "exists": false,
+        "id": "K:proposed-producer-driver-scaffold",
+        "reason": "This repository's own lint gate refused the producer driver before it read a single stream. Both records' next step is to extract the same helper, so the obstruction is the absence of a shared driver scaffold rather than either defect."
+      },
+      "cluster_key": "tooling-gate-refused|producer-driver-lint",
+      "decline_classes": [],
+      "evidence": [
+        {
+          "kind": "decline-record",
+          "path": "artifacts/autogenesis/mathlib-int-fib-eq-zero-exact-decline-v1.json",
+          "sha256": "6a655d21572b07eee4a9e97260cd4f2b8c7b0b58c6228f33cb5ac388ac5bbb03"
+        },
+        {
+          "kind": "decline-record",
+          "path": "artifacts/autogenesis/mathlib-int-fib-eq-zero-exact-decline-v2.json",
+          "sha256": "65a5ff5ba8ec82ca440c321bcdeb21bfe0798b075598693c9e48bc752a2a1d6f"
+        }
+      ],
+      "facts_blocked": 0,
+      "first_blocker": {
+        "detail": "run has too many lines (105/100)",
+        "kind": "tooling-gate-refused",
+        "observed_in": "artifacts/autogenesis/mathlib-int-fib-eq-zero-exact-decline-v1.json",
+        "source": "decline-record-observation"
+      },
+      "id": "O:tooling-gate-refused-93c979c1",
+      "kind": "obstruction",
+      "known_blockers": [
+        {
+          "detail": "run has too many lines (105/100)",
+          "kind": "tooling-gate-refused",
+          "observed_in": "artifacts/autogenesis/mathlib-int-fib-eq-zero-exact-decline-v1.json",
+          "source": "decline-record-observation"
+        },
+        {
+          "detail": "write_result target_evidence is passed by value but only borrowed by serialization",
+          "kind": "tooling-gate-refused",
+          "observed_in": "artifacts/autogenesis/mathlib-int-fib-eq-zero-exact-decline-v2.json",
+          "source": "decline-record-observation"
+        }
+      ],
+      "population": {
+        "fact_ids": [],
+        "families": [],
+        "partitions": {}
+      },
+      "resolution": {
+        "after": null,
+        "before": {
+          "adapter": 0,
+          "checker": 0,
+          "goal": 0,
+          "obstruction": 0,
+          "producer": 0,
+          "reconstruction": 0
+        },
+        "commit": null
+      },
+      "status": "open",
+      "tactic_ids": [],
+      "title": "tooling-gate-refused: run has too many lines (105/100)"
+    }
+  ],
+  "funnel": {
+    "adapter": 2,
+    "checker": 0,
+    "episodes_contributing": 14,
+    "episodes_read": 16,
+    "goal": 16,
+    "obstruction": 14,
+    "producer": 2,
+    "reconstruction": 2
+  },
+  "generated_by": "scripts/gen-obstruction-graph.py",
+  "inputs": [
+    {
+      "kind": "decline-record",
+      "path": "artifacts/autogenesis/euclidean-bounded-induction-decline-v1.json",
+      "sha256": "2c7d1a812042c9df6c14b854647d4ad7586c39f51e91d35d2ea5260dbba91b68"
+    },
+    {
+      "kind": "decline-record",
+      "path": "artifacts/autogenesis/euclidean-joint-div-mod-proof-decline-v1.json",
+      "sha256": "70bcd809a42774c75956c7f9cf0a89db0f847a2d03be3fb309fcd8084e8798ce"
+    },
+    {
+      "kind": "decline-record",
+      "path": "artifacts/autogenesis/euclidean-public-div-add-mod-lift-decline-v1.json",
+      "sha256": "06f9250a3491e27106c447eb06bdd2f0292f454e3499fc2da0308f90463bda0f"
+    },
+    {
+      "kind": "decline-record",
+      "path": "artifacts/autogenesis/euclidean-public-recursion-decline-v1.json",
+      "sha256": "dfe447c8c33dacb7ed28323f4201f7c15783d02926e827840bc46f61adc91d60"
+    },
+    {
+      "kind": "manifest",
+      "path": "artifacts/autogenesis/knowledge-overlay-v1.json",
+      "sha256": "818c36d85fc2768de4ba4a86beeb1d8d2da8e9b4ecf184b3a8b696b0d37f184e"
+    },
+    {
+      "kind": "decline-record",
+      "path": "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v1.json",
+      "sha256": "ae42fc1294b39b03d44192ab888ac8fb525563d5f3be625a6b29cba59ecf679f"
+    },
+    {
+      "kind": "decline-record",
+      "path": "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v2.json",
+      "sha256": "f74a690c147a6b35ee0ffa2c1f9726fd8e6992c13da0725a094140cfa2bbbbdd"
+    },
+    {
+      "kind": "decline-record",
+      "path": "artifacts/autogenesis/mathlib-int-fib-eq-zero-exact-decline-v1.json",
+      "sha256": "6a655d21572b07eee4a9e97260cd4f2b8c7b0b58c6228f33cb5ac388ac5bbb03"
+    },
+    {
+      "kind": "decline-record",
+      "path": "artifacts/autogenesis/mathlib-int-fib-eq-zero-exact-decline-v2.json",
+      "sha256": "65a5ff5ba8ec82ca440c321bcdeb21bfe0798b075598693c9e48bc752a2a1d6f"
+    },
+    {
+      "kind": "decline-record",
+      "path": "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json",
+      "sha256": "74a6a56e5e29da57d9d33796a61cf1c653c1895759475b1bce8ac364b96727ed"
+    },
+    {
+      "kind": "decline-record",
+      "path": "artifacts/autogenesis/mathlib-nat-fib-eq-zero-admission-replay-decline-v1.json",
+      "sha256": "0c4279bcaf510ce84dd139d06e1954085ef5e4b5b918a55f8f4d22e6037f5d43"
+    },
+    {
+      "kind": "decline-record",
+      "path": "artifacts/autogenesis/mathlib-nat-fib-eq-zero-admission-replay-decline-v2.json",
+      "sha256": "9c65c7addff3ed6c07a86895cb55d3cfc70348749ebcc81fee52fbaed195d305"
+    },
+    {
+      "kind": "manifest",
+      "path": "artifacts/autogenesis/must-decline-mutations-v1.json",
+      "sha256": "30a59e1da446a7b74de172641cf94549150d577f3a837004d896b0de1baad233"
+    },
+    {
+      "kind": "manifest",
+      "path": "artifacts/autogenesis/nursery-v1.json",
+      "sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1"
+    },
+    {
+      "kind": "manifest",
+      "path": "artifacts/autogenesis/tactic-catalog-v1.json",
+      "sha256": "1d753a18084785dc038fd79bd10990498fa0b12bbce0fd5b1bbdfade9a48f935"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+      "sha256": "45e5b5210dcae29f409e3026c4a0d45911eedd2dbd7d6d5f20baec0531e4b863"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+      "sha256": "2399d97444a93d454d1c43718f3cd1a52103f2ac65d07f2a413d9d56dc772bb6"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-one-516d46e8.json",
+      "sha256": "5b190e00e39ba73d3d8c8a516c046ecfed3726b132146c41509d526e6d82373b"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-refl-d870c8f5.json",
+      "sha256": "c9891643a335a0141cccdcbc25c693efcb205ddbb11734e22efceb59ef119cc1"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-symm-0a3d4d18.json",
+      "sha256": "9b46f5f8e978538c20ee6dcdca5a9060a658b6c64d28e5ca4b98580b59ce8059"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+      "sha256": "a64598743f311ade55dc88e4e8fd8cdfd4a89e7896d68d69b5be2b1d25b54fbd"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+      "sha256": "676e8f8f6a476deb87ddf033f601150081b8c59299be001b32642e3e933e535b"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+      "sha256": "9a333bb686d59eb5f6f03d595fabfd6679960709d3edcce5de71db4630d7d154"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+      "sha256": "f1a5d97fdbeefa23a77ad3b9182d55518ebffc182c0ae9780a2c1615e7e3edd8"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+      "sha256": "4074e7ff7d6e5df564f1b5bd42e95a7bf008058f6ad63d1b577a831ad3b6031d"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+      "sha256": "d634dc5782df97fd1318ab594cd4584ff0bf7ce44f586b0d8f8771d400c4fc06"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-left-5e93448c.json",
+      "sha256": "7c0baf15c48eabaced33cb343f6f67133beaf574a2621626b911dbd99339c85b"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json",
+      "sha256": "46c724c256dd9eb1f4a289b13b05937cc254f5c726a9cb4ac41762132a82a3ad"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-of-dvd-6f652673.json",
+      "sha256": "b5bf0d848ea3fdc317bd7a1237bcffd40425c3c337fb4353ed6d7fb0291ab1a5"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json",
+      "sha256": "a391bd737698f8689077e91e5cbd61976ca14a3056a5fb9a1b24b8bc809666cf"
+    },
+    {
+      "kind": "episode",
+      "path": "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json",
+      "sha256": "0c9ef56bd83ea54ead6eb5382121ae7514b06fe43917f4de40ecde7d5decce9d"
+    }
+  ],
+  "kind": "axeyum-obstruction-graph",
+  "links": [
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+      ],
+      "id": "L:obs-08d34c6a8681",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+        ]
+      },
+      "reason": "F:ml430-nat-descfactorial-one-d4856d4a is in the measured population of O:tactic-precondition-unmatched-b14d25ec; the first observed blocker was tactic-precondition-unmatched.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-descfactorial-one-d4856d4a",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:tactic-precondition-unmatched-b14d25ec",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+      ],
+      "id": "L:obs-1ad402a0188d",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+        ]
+      },
+      "reason": "T:refl-closure was the tactic a plan named when O:no-general-route-d6fb274b was observed. This records what was in flight, not that the tactic is wrong.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "T:refl-closure",
+        "kind": "tactic",
+        "namespace": "axeyum-tactic"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-d6fb274b",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+      ],
+      "id": "L:obs-21daa74652c4",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+        ]
+      },
+      "reason": "F:ml430-int-fib-add-181b6a2c is in the measured population of O:no-general-route-d6fb274b; the first observed blocker was no-general-route.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-int-fib-add-181b6a2c",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-d6fb274b",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+      ],
+      "id": "L:obs-310909bca9dd",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+        ]
+      },
+      "reason": "F:ml430-nat-fib-add-two-b86e0c82 is in the measured population of O:tactic-precondition-unmatched-b14d25ec; the first observed blocker was tactic-precondition-unmatched.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-fib-add-two-b86e0c82",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:tactic-precondition-unmatched-b14d25ec",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+      ],
+      "id": "L:obs-3509aac89c47",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+        ]
+      },
+      "reason": "F:ml430-nat-descfactorial-self-899fc0e0 is in the measured population of O:tactic-precondition-unmatched-b14d25ec; the first observed blocker was tactic-precondition-unmatched.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-descfactorial-self-899fc0e0",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:tactic-precondition-unmatched-b14d25ec",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v2.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-one-516d46e8.json"
+      ],
+      "id": "L:obs-35ea2b23a639",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v2.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-one-516d46e8.json"
+        ]
+      },
+      "reason": "T:modeq-equivalence-combinators was the tactic a plan named when O:export-missing-f9710624 was observed. This records what was in flight, not that the tactic is wrong.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "T:modeq-equivalence-combinators",
+        "kind": "tactic",
+        "namespace": "axeyum-tactic"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:export-missing-f9710624",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+      ],
+      "id": "L:obs-3c72c8b6ce5d",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+        ]
+      },
+      "reason": "K:bounded-structural-induction is what the tactic catalog says the in-flight tactics realize, so this capability did not reach the population of O:no-general-route-d6fb274b.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "K:bounded-structural-induction",
+        "kind": "capability",
+        "namespace": "axeyum-knowledge"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-d6fb274b",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+      ],
+      "id": "L:obs-4869d7d9c112",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+        ]
+      },
+      "reason": "T:modeq-equivalence-combinators was the tactic a plan named when O:no-general-route-1ce01077 was observed. This records what was in flight, not that the tactic is wrong.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "T:modeq-equivalence-combinators",
+        "kind": "tactic",
+        "namespace": "axeyum-tactic"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-1ce01077",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json"
+      ],
+      "id": "L:obs-6159aec1c688",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json"
+        ]
+      },
+      "reason": "T:ih-congruence-rewrite was the tactic a plan named when O:no-general-route-83fa7820 was observed. This records what was in flight, not that the tactic is wrong.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "T:ih-congruence-rewrite",
+        "kind": "tactic",
+        "namespace": "axeyum-tactic"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-83fa7820",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-of-dvd-6f652673.json"
+      ],
+      "id": "L:obs-7881b952090e",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-of-dvd-6f652673.json"
+        ]
+      },
+      "reason": "F:ml430-nat-coprime-of-dvd-6f652673 is in the measured population of O:budget-b9e4cb5c; the first observed blocker was budget.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-coprime-of-dvd-6f652673",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:budget-b9e4cb5c",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json"
+      ],
+      "id": "L:obs-7959eac5d56c",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json"
+        ]
+      },
+      "reason": "K:bounded-structural-induction is what the tactic catalog says the in-flight tactics realize, so this capability did not reach the population of O:no-general-route-83fa7820.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "K:bounded-structural-induction",
+        "kind": "capability",
+        "namespace": "axeyum-knowledge"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-83fa7820",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+      ],
+      "id": "L:obs-809f40f0821e",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+        ]
+      },
+      "reason": "F:ml430-nat-zero-ascfactorial-af4fcdca is in the measured population of O:tactic-precondition-unmatched-b14d25ec; the first observed blocker was tactic-precondition-unmatched.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:tactic-precondition-unmatched-b14d25ec",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+      ],
+      "id": "L:obs-826bcc564f36",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+        ]
+      },
+      "reason": "F:ml430-int-add-modeq-left-ee732b5b is in the measured population of O:no-general-route-1ce01077; the first observed blocker was no-general-route.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-int-add-modeq-left-ee732b5b",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-1ce01077",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+      ],
+      "id": "L:obs-8edc4f63dd91",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+        ]
+      },
+      "reason": "F:ml430-int-gcd-div-5e01872f is in the measured population of O:no-general-route-d6fb274b; the first observed blocker was no-general-route.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-int-gcd-div-5e01872f",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-d6fb274b",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+      ],
+      "id": "L:obs-94a2558e1a5d",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+        ]
+      },
+      "reason": "F:ml430-int-modeq-neg-f649f6c5 is in the measured population of O:no-general-route-1ce01077; the first observed blocker was no-general-route.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-int-modeq-neg-f649f6c5",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-1ce01077",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json"
+      ],
+      "id": "L:obs-94cd56f91a9f",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json"
+        ]
+      },
+      "reason": "F:ml430-nat-descfactorial-le-2b8cc09a is in the measured population of O:no-general-route-83fa7820; the first observed blocker was no-general-route.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-83fa7820",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v2.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-one-516d46e8.json"
+      ],
+      "id": "L:obs-9769df1dd3cc",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v2.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-one-516d46e8.json"
+        ]
+      },
+      "reason": "F:ml430-nat-modeq-one-516d46e8 is in the measured population of O:export-missing-f9710624; the first observed blocker was export-missing.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-modeq-one-516d46e8",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:export-missing-f9710624",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+      ],
+      "id": "L:obs-a10c000cb3a7",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+        ]
+      },
+      "reason": "F:ml430-nat-fastfib-eq-cde11774 is in the measured population of O:no-general-route-d6fb274b; the first observed blocker was no-general-route.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-fastfib-eq-cde11774",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-d6fb274b",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+      ],
+      "id": "L:obs-b7fa268a888f",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+        ]
+      },
+      "reason": "F:ml430-nat-modeq-trans-ef9d1c46 is in the measured population of O:no-general-route-1ce01077; the first observed blocker was no-general-route.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-modeq-trans-ef9d1c46",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-1ce01077",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-left-5e93448c.json"
+      ],
+      "id": "L:obs-bce507970999",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-left-5e93448c.json"
+        ]
+      },
+      "reason": "F:ml430-nat-coprime-add-self-left-5e93448c is in the measured population of O:budget-822ced37; the first observed blocker was budget.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-coprime-add-self-left-5e93448c",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:budget-822ced37",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json"
+      ],
+      "id": "L:obs-bff10f88899c",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-descfactorial-le-2b8cc09a.json"
+        ]
+      },
+      "reason": "T:bounded-structural-induction was the tactic a plan named when O:no-general-route-83fa7820 was observed. This records what was in flight, not that the tactic is wrong.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "T:bounded-structural-induction",
+        "kind": "tactic",
+        "namespace": "axeyum-tactic"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-83fa7820",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+      ],
+      "id": "L:obs-c8c5e00bd07e",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+        ]
+      },
+      "reason": "F:ml430-nat-one-ascfactorial-8bacb017 is in the measured population of O:tactic-precondition-unmatched-b14d25ec; the first observed blocker was tactic-precondition-unmatched.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-one-ascfactorial-8bacb017",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:tactic-precondition-unmatched-b14d25ec",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+      ],
+      "id": "L:obs-ca0cddf50fc9",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json"
+        ]
+      },
+      "reason": "F:ml430-nat-descfactorial-of-lt-fbcf5d26 is in the measured population of O:tactic-precondition-unmatched-b14d25ec; the first observed blocker was tactic-precondition-unmatched.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:tactic-precondition-unmatched-b14d25ec",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+      ],
+      "id": "L:obs-e71b38b507b8",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+        ]
+      },
+      "reason": "F:ml430-nat-add-modeq-left-e3b1fba9 is in the measured population of O:no-general-route-1ce01077; the first observed blocker was no-general-route.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-1ce01077",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+      ],
+      "id": "L:obs-e88cb13600e9",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+        ]
+      },
+      "reason": "K:modeq-equivalence-combinators is what the tactic catalog says the in-flight tactics realize, so this capability did not reach the population of O:no-general-route-1ce01077.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "K:modeq-equivalence-combinators",
+        "kind": "capability",
+        "namespace": "axeyum-knowledge"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-1ce01077",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+      ],
+      "id": "L:obs-ec95d8fedcbc",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-int-modeq-neg-f649f6c5.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-trans-ef9d1c46.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-add-modeq-left-ee732b5b.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-add-modeq-left-e3b1fba9.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-coprime-add-self-right-c3ed0f45.json"
+        ]
+      },
+      "reason": "F:ml430-nat-coprime-add-self-right-c3ed0f45 is in the measured population of O:no-general-route-1ce01077; the first observed blocker was no-general-route.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-1ce01077",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v2.json",
+        "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-one-516d46e8.json"
+      ],
+      "id": "L:obs-eddfea2f7793",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/autogenesis/mathlib-int-fib-eq-zero-construction-decline-v2.json",
+          "artifacts/episodes/2026-08-24-a4/episode-a4-ml430-nat-modeq-one-516d46e8.json"
+        ]
+      },
+      "reason": "K:modeq-equivalence-combinators is what the tactic catalog says the in-flight tactics realize, so this capability did not reach the population of O:export-missing-f9710624.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "K:modeq-equivalence-combinators",
+        "kind": "capability",
+        "namespace": "axeyum-knowledge"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:export-missing-f9710624",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    },
+    {
+      "assurance": "mechanically-observed",
+      "evidence": [
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+        "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+      ],
+      "id": "L:obs-f14a897c90e2",
+      "provenance": {
+        "method": "mechanically-observed",
+        "sources": [
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-fib-add-181b6a2c.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-int-gcd-div-5e01872f.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-bitwise-bit-4c4b28a8.json",
+          "artifacts/episodes/2026-08-24/episode-a2-ml430-nat-fastfib-eq-cde11774.json"
+        ]
+      },
+      "reason": "F:ml430-nat-bitwise-bit-4c4b28a8 is in the measured population of O:no-general-route-d6fb274b; the first observed blocker was no-general-route.",
+      "relation": "blocked-by",
+      "source": {
+        "id": "F:ml430-nat-bitwise-bit-4c4b28a8",
+        "kind": "fact",
+        "namespace": "axeyum-fact"
+      },
+      "status": "open",
+      "target": {
+        "id": "O:no-general-route-d6fb274b",
+        "kind": "obstruction",
+        "namespace": "axeyum-obstruction"
+      }
+    }
+  ],
+  "namespaces": [
+    {
+      "endpoint_kinds": [
+        "obstruction"
+      ],
+      "id": "axeyum-obstruction",
+      "notes": "Obstruction ids are defined by THIS document. The overlay declares `obstruction` as an entity kind and has no obstruction entities.",
+      "resolution": "sidecar-entity"
+    },
+    {
+      "endpoint_kinds": [
+        "fact"
+      ],
+      "id": "axeyum-fact",
+      "notes": "Every id must resolve to artifacts/facts/F-<slug>.json.",
+      "path": "artifacts/facts",
+      "resolution": "local-required"
+    },
+    {
+      "endpoint_kinds": [
+        "tactic"
+      ],
+      "id": "axeyum-tactic",
+      "notes": "`tactic` is NOT an overlay entity kind. A link with this namespace is a sidecar view and cannot be copied into the overlay.",
+      "path": "artifacts/autogenesis/tactic-catalog-v1.json",
+      "resolution": "local-required"
+    },
+    {
+      "endpoint_kinds": [
+        "capability"
+      ],
+      "id": "axeyum-knowledge",
+      "notes": "A `K:` id must resolve in the overlay unless it is spelled `K:proposed-...`, which is how a candidate says out loud that it does not exist yet.",
+      "path": "artifacts/autogenesis/knowledge-overlay-v1.json",
+      "resolution": "overlay-required"
+    }
+  ],
+  "relation_types": [
+    {
+      "id": "blocked-by",
+      "semantics": "The source was observed not to progress because of the target obstruction. This is an observation about one or more committed runs. It is NOT a claim that the source is unreachable, that the fact is false, or that removing the obstruction would close it.",
+      "source_kinds": [
+        "fact",
+        "tactic",
+        "capability",
+        "operation"
+      ],
+      "target_kinds": [
+        "obstruction"
+      ]
+    }
+  ],
+  "schema_version": 1
+}

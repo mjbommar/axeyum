@@ -246,6 +246,59 @@ Four findings A5 and A7 inherit:
 `blocked-by` overlay links; a generated dashboard answering "which capability
 removes the largest measured cluster?"
 
+### A5 result (measured 2026-08-24)
+
+The census, from `scripts/gen-obstruction-graph.py`:
+
+```text
+OBSTRUCTIONS|entities=12|links=28|facts_blocked=19|from_episodes=16|
+from_decline_records=11|largest_cluster=O:tactic-precondition-unmatched-b14d25ec:6
+```
+
+F3's funnel over the sixteen episodes: **goal 16 -> adapter 2 -> producer 2 ->
+reconstruction 2 -> checker 0 -> obstruction 14.** Three episodes dispatched a
+tier-C producer and one of those three came back `retrieval-miss`, so `adapter`
+is 2 and not 3. `checker` is the registry/transaction stage and it is **0** --
+both proofs were kernel-checked with an empty axiom footprint and neither had a
+registered operation to land in, which is A4's finding 4 now visible as a stage
+rather than as prose.
+
+The ranked answer to F3's question has two halves and both matter:
+
+* **By capability:** `K:proposed-tactic-precondition-mobility-census` -- named
+  for 3 clusters covering **10 of 19 blocked facts**, and it does not exist. It
+  is slice A7: run every tactic precondition against every open fact with no
+  model in the loop. A4's finding 3 already measured why -- the three-sibling
+  rule filters the model's *confidence* that a route generalizes, not whether it
+  does, and the gap was 1 in 3 on the exportable ModEq facts.
+* **By single cluster:** `O:tactic-precondition-unmatched-b14d25ec`, 6 facts,
+  removed by `K:bounded-structural-induction` -- which **already exists and is
+  `active` in the overlay**. That is a scheduling finding, not an engineering
+  one: the capability is built and has not been pointed at the population. The
+  cluster's own decline record names what would close it, in its own words.
+
+Two findings A7 inherits:
+
+1. **`no-general-route` and `gate-refused` are one obstruction, not two.** A4's
+   gate refuses a `NoGeneralRoute` plan, so the identical model behaviour that
+   A2 recorded as `no-general-route` A4 records as `gate-refused`. The
+   classifier reads the *proposal variant* as the first blocker and lets the
+   decline class join the known set; keying on `decline_class` alone would split
+   one cluster in two and blame the mathematics for a change in our own graph.
+2. **A single decline record can declare a larger population than six episodes
+   assemble.** The top cluster rests on one record's `generalization.sibling_fact_ids`
+   (7 rows, 6 after the must-decline filter) while the runner-up was built one
+   episode at a time. The dashboard prints the evidence count beside every
+   cluster for exactly this reason, and A7's census is what would settle which
+   of the two is the better estimate.
+
+*Classify* is **deterministic**, though plan 03's node list draws it in italics.
+Its inputs are already typed values, a model call would put the cluster keys
+outside the replay guarantee, and the same mapping has to re-derive in
+standard-library code under `scripts/`. Rationale and the agreement test:
+[`06-obstruction-graph.md`](06-obstruction-graph.md). No field was added to
+episode schema v2.
+
 ### A6 — guarded web and Python tools
 `web_fetch` restricted to arXiv / Semantic Scholar metadata and the pinned
 `math-education` sibling; disabled entirely when the target's **family**
