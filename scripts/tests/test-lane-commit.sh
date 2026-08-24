@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Controls for `scripts/lane-commit.sh`, in a throwaway repo.
 #
-# Three cases, one per failure this session actually produced:
+# Six cases, one per failure this session actually produced:
 #
 #   1. a rename with only ONE side named  -> refused    (the too-NARROW pathspec
 #      that committed four ADR deletions without their replacements)
@@ -94,6 +94,32 @@ esac
 out=$("$HELPER" --dry-run -- shared/mine2.txt shared/sibling2.txt 2>&1); rc=$?
 [ "$rc" = 0 ] && ok "5b naming both explicitly is accepted" \
   || bad "5b explicit naming refused: $out"
+
+# --- 6. the helper works inside a LINKED WORKTREE ---------------------------
+# `.git` there is a FILE (`gitdir: …`), not a directory, so a private-index path
+# built as `$PWD/.git/index-<lane>` is not a path at all and `read-tree` fails
+# with `Not a directory`. EVERY dispatched lane runs in a linked worktree, so
+# this was not an edge case: the documented helper exited 3 for all of them and
+# they silently fell back to plain `git commit`, which is the shared-index
+# hazard the helper exists to remove. Discovered by a lane reporting it as an
+# aside, not by any gate.
+cd "$WORK" || exit 2
+git worktree add -q --detach "$WORK/wt" HEAD 2>/dev/null
+cd "$WORK/wt" || exit 2
+echo linked >> a.txt
+out=$("$HELPER" -m "$WORK/msg" -- a.txt 2>&1); rc=$?
+if [ "$rc" = 0 ] && git log --oneline -1 | grep -qv base; then
+  ok "6 lane-commit works in a linked worktree"
+else
+  bad "6 lane-commit failed in a linked worktree (rc=$rc): $out"
+fi
+# and the private index landed in the WORKTREE's own gitdir, not a bogus path
+if [ -f "$(git rev-parse --git-dir)/index-$AXEYUM_AGENT" ]; then
+  ok "6b private index lives in the worktree's own gitdir"
+else
+  bad "6b private index was not created in the worktree gitdir"
+fi
+cd "$WORK" || exit 2
 
 if [ "$fail" = 0 ]; then echo "LANE_COMMIT_CONTROLS|ok"; else echo "LANE_COMMIT_CONTROLS|FAILED" >&2; fi
 exit "$fail"
