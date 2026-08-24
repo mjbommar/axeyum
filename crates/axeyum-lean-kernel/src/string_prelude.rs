@@ -198,6 +198,65 @@ pub struct StringPrelude {
     /// (definitional; closes by `Eq.refl` alone).
     pub at_cons_zero: NameId,
 
+    /// `isPrefix : Str → Str → Prop := λ p s, ∃ t, append p t = s` — the
+    /// existential prefix predicate (see `predicates.rs`).
+    pub is_prefix: NameId,
+    /// `isPrefix_nil : ∀ (s : Str), isPrefix nil s` — witness `s`, via
+    /// `nil_append`.
+    pub is_prefix_nil: NameId,
+    /// `isPrefix_refl : ∀ (s : Str), isPrefix s s` — witness `nil`, via
+    /// `append_nil`.
+    pub is_prefix_refl: NameId,
+    /// `isPrefix_append : ∀ (p t : Str), isPrefix p (append p t)` — witness
+    /// `t`, via `Eq.refl`.
+    pub is_prefix_append: NameId,
+    /// `isPrefix_trans : ∀ (p s u : Str),
+    /// isPrefix p s → isPrefix s u → isPrefix p u` — witness composition via
+    /// `append_assoc`.
+    pub is_prefix_trans: NameId,
+    /// `isPrefix_take : ∀ (n : Nat) (s : Str), isPrefix (take n s) s` —
+    /// witness `drop n s`, exactly `take_append_drop`; the bridge from the
+    /// existential predicate to the computable `take`/`drop`.
+    pub is_prefix_take: NameId,
+
+    /// `isSuffix : Str → Str → Prop := λ s t, ∃ p, append p s = t` — the
+    /// existential suffix predicate (see `predicates.rs`).
+    pub is_suffix: NameId,
+    /// `isSuffix_nil : ∀ (s : Str), isSuffix nil s` — witness `s`, via
+    /// `append_nil`.
+    pub is_suffix_nil: NameId,
+    /// `isSuffix_refl : ∀ (s : Str), isSuffix s s` — witness `nil`, via
+    /// `nil_append`.
+    pub is_suffix_refl: NameId,
+    /// `isSuffix_drop : ∀ (n : Nat) (s : Str), isSuffix (drop n s) s` —
+    /// witness `take n s`, exactly `take_append_drop`.
+    pub is_suffix_drop: NameId,
+    /// `isSuffix_reverse_mp : ∀ (s t : Str),
+    /// isSuffix s t → isPrefix (reverse s) (reverse t)` — one direction of
+    /// `isSuffix s t ↔ isPrefix (reverse s) (reverse t)`, stated as a named
+    /// implication (this development does not use `Iff`; see `predicates.rs`).
+    pub is_suffix_reverse_mp: NameId,
+    /// `isSuffix_reverse_mpr : ∀ (s t : Str),
+    /// isPrefix (reverse s) (reverse t) → isSuffix s t` — the other direction.
+    pub is_suffix_reverse_mpr: NameId,
+
+    /// `contains : Str → Str → Prop := λ s u, ∃ p t, append (append p u) t = s`
+    /// — the existential containment predicate (see `predicates.rs`).
+    pub contains: NameId,
+    /// `contains_nil : ∀ (s : Str), contains s nil` — the empty string is
+    /// contained in everything.
+    pub contains_nil: NameId,
+    /// `contains_refl : ∀ (s : Str), contains s s`.
+    pub contains_refl: NameId,
+    /// `contains_of_isPrefix : ∀ (p s : Str), isPrefix p s → contains s p`.
+    pub contains_of_is_prefix: NameId,
+    /// `contains_of_isSuffix : ∀ (p s : Str), isSuffix p s → contains s p`.
+    pub contains_of_is_suffix: NameId,
+    /// `contains_substr : ∀ (n m : Nat) (s : Str), contains s (substr n m s)`
+    /// — from two applications of `take_append_drop`, re-associated by
+    /// `append_assoc`.
+    pub contains_substr: NameId,
+
     /// The universe level `1` (so `Char`/`Str : Sort 1 = Type`).
     one: LevelId,
 }
@@ -438,6 +497,67 @@ pub fn build_string_prelude(
             one,
         )?;
 
+        // --- isPrefix/isSuffix/contains : the SMT-LIB string predicates -------
+        // See `predicates.rs`. Self-contained over `append`/`take`/`drop`/
+        // `take_append_drop`/`reverse`/`reverse_append`/`reverse_reverse` and
+        // `LogicPrelude`'s `Exists` — no `nat_prelude` arithmetic needed.
+        let is_prefix = kernel.name_str(namespace, "isPrefix");
+        let is_prefix_nil = kernel.name_str(namespace, "isPrefix_nil");
+        let is_prefix_refl = kernel.name_str(namespace, "isPrefix_refl");
+        let is_prefix_append = kernel.name_str(namespace, "isPrefix_append");
+        let is_prefix_trans = kernel.name_str(namespace, "isPrefix_trans");
+        let is_prefix_take = kernel.name_str(namespace, "isPrefix_take");
+        let is_suffix = kernel.name_str(namespace, "isSuffix");
+        let is_suffix_nil = kernel.name_str(namespace, "isSuffix_nil");
+        let is_suffix_refl = kernel.name_str(namespace, "isSuffix_refl");
+        let is_suffix_drop = kernel.name_str(namespace, "isSuffix_drop");
+        let is_suffix_reverse_mp = kernel.name_str(namespace, "isSuffix_reverse_mp");
+        let is_suffix_reverse_mpr = kernel.name_str(namespace, "isSuffix_reverse_mpr");
+        let contains = kernel.name_str(namespace, "contains");
+        let contains_nil = kernel.name_str(namespace, "contains_nil");
+        let contains_refl = kernel.name_str(namespace, "contains_refl");
+        let contains_of_is_prefix = kernel.name_str(namespace, "contains_of_isPrefix");
+        let contains_of_is_suffix = kernel.name_str(namespace, "contains_of_isSuffix");
+        let contains_substr = kernel.name_str(namespace, "contains_substr");
+        predicates::declare_predicates_and_laws(
+            kernel,
+            &predicates::PredicateNames {
+                logic,
+                str_ind,
+                str_nil,
+                append,
+                nil_append,
+                append_nil,
+                append_assoc,
+                take,
+                drop,
+                take_append_drop,
+                substr,
+                reverse,
+                reverse_append,
+                reverse_reverse,
+                is_prefix,
+                is_prefix_nil,
+                is_prefix_refl,
+                is_prefix_append,
+                is_prefix_trans,
+                is_prefix_take,
+                is_suffix,
+                is_suffix_nil,
+                is_suffix_refl,
+                is_suffix_drop,
+                is_suffix_reverse_mp,
+                is_suffix_reverse_mpr,
+                contains,
+                contains_nil,
+                contains_refl,
+                contains_of_is_prefix,
+                contains_of_is_suffix,
+                contains_substr,
+            },
+            one,
+        )?;
+
         Ok(StringPrelude {
             logic,
             char_ind,
@@ -476,6 +596,24 @@ pub fn build_string_prelude(
             at,
             at_nil,
             at_cons_zero,
+            is_prefix,
+            is_prefix_nil,
+            is_prefix_refl,
+            is_prefix_append,
+            is_prefix_trans,
+            is_prefix_take,
+            is_suffix,
+            is_suffix_nil,
+            is_suffix_refl,
+            is_suffix_drop,
+            is_suffix_reverse_mp,
+            is_suffix_reverse_mpr,
+            contains,
+            contains_nil,
+            contains_refl,
+            contains_of_is_prefix,
+            contains_of_is_suffix,
+            contains_substr,
             one,
         })
     })();
@@ -567,6 +705,31 @@ impl StringPrelude {
         let f = kernel.const_(self.at, vec![]);
         let e = kernel.app(f, n);
         kernel.app(e, s)
+    }
+
+    /// `isPrefix p s` — the existential prefix predicate `∃ t, append p t = s`.
+    #[must_use]
+    pub fn is_prefix_app(&self, kernel: &mut Kernel, p: ExprId, s: ExprId) -> ExprId {
+        let f = kernel.const_(self.is_prefix, vec![]);
+        let e = kernel.app(f, p);
+        kernel.app(e, s)
+    }
+
+    /// `isSuffix s t` — the existential suffix predicate `∃ p, append p s = t`.
+    #[must_use]
+    pub fn is_suffix_app(&self, kernel: &mut Kernel, s: ExprId, t: ExprId) -> ExprId {
+        let f = kernel.const_(self.is_suffix, vec![]);
+        let e = kernel.app(f, s);
+        kernel.app(e, t)
+    }
+
+    /// `contains s u` — the existential containment predicate
+    /// `∃ p t, append (append p u) t = s`.
+    #[must_use]
+    pub fn contains_app(&self, kernel: &mut Kernel, s: ExprId, u: ExprId) -> ExprId {
+        let f = kernel.const_(self.contains, vec![]);
+        let e = kernel.app(f, s);
+        kernel.app(e, u)
     }
 
     /// The `tail : Str → Str` selector, a closed `Str.rec` application:
@@ -836,6 +999,7 @@ mod cancel;
 mod length;
 mod length_append;
 mod monoid;
+mod predicates;
 mod reverse;
 mod substr;
 mod substr_arithmetic;

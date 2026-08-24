@@ -167,6 +167,78 @@ fn take_drop_are_axiom_free() {
     }
 }
 
+/// Same presence discipline for `isPrefix`/`isSuffix`/`contains` and their
+/// laws (P3.7 strings, the SMT-LIB string predicates): an unvisited name's
+/// `axiom_footprint` is UNMEASURED, not empty, so this is checked
+/// independently of the footprint test below.
+#[test]
+fn predicates_names_are_registered() {
+    let (k, sp) = setup(2);
+    for n in [
+        sp.is_prefix,
+        sp.is_prefix_nil,
+        sp.is_prefix_refl,
+        sp.is_prefix_append,
+        sp.is_prefix_trans,
+        sp.is_prefix_take,
+        sp.is_suffix,
+        sp.is_suffix_nil,
+        sp.is_suffix_refl,
+        sp.is_suffix_drop,
+        sp.is_suffix_reverse_mp,
+        sp.is_suffix_reverse_mpr,
+        sp.contains,
+        sp.contains_nil,
+        sp.contains_refl,
+        sp.contains_of_is_prefix,
+        sp.contains_of_is_suffix,
+        sp.contains_substr,
+    ] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered"
+        );
+    }
+}
+
+/// `isPrefix`/`isSuffix`/`contains` and their laws must rest on nothing
+/// assumed.
+#[test]
+fn predicates_are_axiom_free() {
+    let (k, sp) = setup(2);
+    for n in [
+        sp.is_prefix,
+        sp.is_prefix_nil,
+        sp.is_prefix_refl,
+        sp.is_prefix_append,
+        sp.is_prefix_trans,
+        sp.is_prefix_take,
+        sp.is_suffix,
+        sp.is_suffix_nil,
+        sp.is_suffix_refl,
+        sp.is_suffix_drop,
+        sp.is_suffix_reverse_mp,
+        sp.is_suffix_reverse_mpr,
+        sp.contains,
+        sp.contains_nil,
+        sp.contains_refl,
+        sp.contains_of_is_prefix,
+        sp.contains_of_is_suffix,
+        sp.contains_substr,
+    ] {
+        let footprint = k.axiom_footprint(n);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(n),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
 #[test]
 fn empty_alphabet_admits() {
     // A pure equality/disequality reconstruction needs no concrete character.
