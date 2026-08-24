@@ -76,6 +76,18 @@ pub struct StringPrelude {
     /// `Char.rec` — the alphabet eliminator (used to build the is-testers).
     pub char_rec: NameId,
 
+    /// `Char.beq : Char → Char → Bool` — decidable equality on the alphabet
+    /// enum, a checked double-`Char.rec` truth table (see `char_beq.rs`).
+    pub char_beq: NameId,
+    /// `char_beq_refl : ∀ a, Eq Bool (char_beq a a) Bool.true`.
+    pub char_beq_refl: NameId,
+    /// `char_eq_of_beq_eq_true : ∀ a b,
+    /// Eq Bool (char_beq a b) Bool.true → Eq Char a b` — soundness.
+    pub char_eq_of_beq_eq_true: NameId,
+    /// `char_beq_eq_true_of_eq : ∀ a b,
+    /// Eq Char a b → Eq Bool (char_beq a b) Bool.true` — completeness.
+    pub char_beq_eq_true_of_eq: NameId,
+
     /// `Str : Type` (`Sort 1`) — the recursive `List Char` inductive.
     pub str_ind: NameId,
     /// `Str.nil : Str`.
@@ -84,6 +96,19 @@ pub struct StringPrelude {
     pub str_cons: NameId,
     /// `Str.rec` — the list eliminator (used to build `head` / `tail`).
     pub str_rec: NameId,
+
+    /// `Str.beq : Str → Str → Bool` — structural decidable equality on
+    /// words, a checked double-`Str.rec` recursion over [`Self::char_beq`]
+    /// (see `str_beq.rs`).
+    pub str_beq: NameId,
+    /// `str_beq_refl : ∀ s, Eq Bool (str_beq s s) Bool.true`.
+    pub str_beq_refl: NameId,
+    /// `str_eq_of_beq_eq_true : ∀ a b,
+    /// Eq Bool (str_beq a b) Bool.true → Eq Str a b` — soundness.
+    pub str_eq_of_beq_eq_true: NameId,
+    /// `str_beq_eq_true_of_eq : ∀ a b,
+    /// Eq Str a b → Eq Bool (str_beq a b) Bool.true` — completeness.
+    pub str_beq_eq_true_of_eq: NameId,
 
     /// `append : Str → Str → Str` — the monoid multiplication, a **checked
     /// definition** by structural recursion on its first argument (not an
@@ -315,6 +340,16 @@ pub struct StringPrelude {
     /// isPrefix pfx s → All p s → All p pfx`.
     pub all_of_is_prefix: NameId,
 
+    /// `all_bool : (Char → Bool) → Str → Bool` — the `Bool`-valued twin of
+    /// [`Self::all_`], a checked structural recursion folding short-circuit
+    /// `Bool` "and" over the word (see `all_bool.rs`).
+    pub all_bool: NameId,
+    /// `all_iff_All : ∀ q s,
+    /// Iff (Eq Bool (all_bool q s) Bool.true) (All (λ c, Eq Bool (q c) Bool.true) s)`
+    /// — the bridge between the `Bool` decision procedure and the `Prop`
+    /// predicate.
+    pub all_iff_all: NameId,
+
     /// The universe level `1` (so `Char`/`Str : Sort 1 = Type`).
     one: LevelId,
 }
@@ -351,7 +386,7 @@ pub fn build_string_prelude(
         .map_err(|_| KernelError::StringAlphabetSizeOverflow { num_chars })?;
     let key = PreludeKey::String(alphabet_size);
     if let Some(PreludeValue::String(prelude)) = kernel.cached_prelude(key)? {
-        return Ok(prelude);
+        return Ok(*prelude);
     }
     let checkpoint = kernel.prelude_checkpoint();
     let built = (|| -> Result<StringPrelude, KernelError> {
@@ -379,6 +414,29 @@ pub fn build_string_prelude(
         }
         let char_rec = kernel.name_str(char_ind, "rec");
 
+        // --- Char.beq : Char → Char → Bool, and its soundness/completeness ---
+        // See `char_beq.rs`. Self-contained over the bare `Char` enum and
+        // `logic` — no `Str` needed yet, so this is declared right after
+        // `Char` itself.
+        let char_beq = kernel.name_str(namespace, "char_beq");
+        let char_beq_refl = kernel.name_str(namespace, "char_beq_refl");
+        let char_eq_of_beq_eq_true = kernel.name_str(namespace, "char_eq_of_beq_eq_true");
+        let char_beq_eq_true_of_eq = kernel.name_str(namespace, "char_beq_eq_true_of_eq");
+        char_beq::declare_char_beq_and_laws(
+            kernel,
+            &char_beq::CharBeqNames {
+                logic,
+                char_ind,
+                char_ctors: char_ctors.clone(),
+                char_rec,
+                char_beq,
+                char_beq_refl,
+                char_eq_of_beq_eq_true,
+                char_beq_eq_true_of_eq,
+            },
+            one,
+        )?;
+
         // --- Str : Type, Str.nil | Str.cons (Char) (Str) ---------------------
         // The recursive `List Char`: `cons` has a carrier field (`head : Char`) and a
         // direct recursive field (`tail : Str`), exactly the slice-5 shape the
@@ -395,6 +453,33 @@ pub fn build_string_prelude(
             kernel.add_recursive_datatype_family(str_ind, char_carrier, one, &ctors)?
         };
         let str_rec = family.rec;
+
+        // --- Str.beq : Str → Str → Bool, and its soundness/completeness ------
+        // See `str_beq.rs`. Built over `char_beq` (already declared above) and
+        // `str_rec` — no `nat_prelude` arithmetic needed.
+        let str_beq = kernel.name_str(namespace, "str_beq");
+        let str_beq_refl = kernel.name_str(namespace, "str_beq_refl");
+        let str_eq_of_beq_eq_true = kernel.name_str(namespace, "str_eq_of_beq_eq_true");
+        let str_beq_eq_true_of_eq = kernel.name_str(namespace, "str_beq_eq_true_of_eq");
+        str_beq::declare_str_beq_and_laws(
+            kernel,
+            &str_beq::StrBeqNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_cons,
+                str_rec,
+                char_beq,
+                char_beq_refl,
+                char_eq_of_beq_eq_true,
+                str_beq,
+                str_beq_refl,
+                str_eq_of_beq_eq_true,
+                str_beq_eq_true_of_eq,
+            },
+            one,
+        )?;
 
         // --- append : Str → Str → Str, and the free-monoid laws --------------
         // A checked structural recursion over `Str.rec`, plus four theorems the
@@ -707,15 +792,42 @@ pub fn build_string_prelude(
             one,
         )?;
 
+        // --- Str.all_bool : (Char → Bool) → Str → Bool, and all_iff_All ------
+        // Declared after `All` (the bridge theorem cites it). See `all_bool.rs`.
+        let all_bool = kernel.name_str(namespace, "all_bool");
+        let all_iff_all = kernel.name_str(namespace, "all_iff_All");
+        all_bool::declare_all_bool_and_iff(
+            kernel,
+            &all_bool::AllBoolNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_rec,
+                all_,
+                all_bool,
+                all_iff_all,
+            },
+            one,
+        )?;
+
         Ok(StringPrelude {
             logic,
             char_ind,
             char_ctors,
             char_rec,
+            char_beq,
+            char_beq_refl,
+            char_eq_of_beq_eq_true,
+            char_beq_eq_true_of_eq,
             str_ind,
             str_nil,
             str_cons,
             str_rec,
+            str_beq,
+            str_beq_refl,
+            str_eq_of_beq_eq_true,
+            str_beq_eq_true_of_eq,
             append,
             nil_append,
             cons_append,
@@ -781,12 +893,18 @@ pub fn build_string_prelude(
             all_nil,
             all_append,
             all_of_is_prefix,
+            all_bool,
+            all_iff_all,
             one,
         })
     })();
     match built {
         Ok(prelude) => {
-            kernel.register_prelude(key, PreludeValue::String(prelude.clone()), checkpoint);
+            kernel.register_prelude(
+                key,
+                PreludeValue::String(Box::new(prelude.clone())),
+                checkpoint,
+            );
             Ok(prelude)
         }
         Err(error) => {
@@ -1163,7 +1281,9 @@ impl StringPrelude {
 }
 
 mod all;
+mod all_bool;
 mod cancel;
+mod char_beq;
 mod foldr;
 mod length;
 mod length_append;
@@ -1171,6 +1291,7 @@ mod map;
 mod monoid;
 mod predicates;
 mod reverse;
+mod str_beq;
 mod substr;
 mod substr_arithmetic;
 mod take_drop;

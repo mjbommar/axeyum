@@ -141,7 +141,10 @@ pub(crate) enum PreludeValue {
     /// Boxed: `CRealPrelude` is by far the widest package here, and an unboxed
     /// variant would set every other variant's footprint to its size.
     CReal(Box<CRealPrelude>),
-    String(StringPrelude),
+    /// Boxed since `Char.beq`/`Str.beq`/`Str.all_bool` grew `StringPrelude`
+    /// past `ArithPrelude`'s footprint (`large_enum_variant`); an unboxed
+    /// variant would set every other variant's footprint to its size.
+    String(Box<StringPrelude>),
 }
 
 #[derive(Debug, Clone)]

@@ -1708,3 +1708,486 @@ fn at_cons_zero_instantiates_at_an_opaque_tail() {
         k.render_lean(inferred)
     );
 }
+
+// ---------------------------------------------------------------------------
+// `Char.beq` — decidable equality on the alphabet enum.
+// ---------------------------------------------------------------------------
+
+/// Presence discipline for `char_beq` and its laws: an unvisited name's
+/// `axiom_footprint` is UNMEASURED, not empty, so this is checked
+/// independently of the footprint test below.
+#[test]
+fn char_beq_names_are_registered() {
+    let (k, sp) = setup(3);
+    for n in [
+        sp.char_beq,
+        sp.char_beq_refl,
+        sp.char_eq_of_beq_eq_true,
+        sp.char_beq_eq_true_of_eq,
+    ] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered"
+        );
+    }
+}
+
+/// `char_beq` and its laws must rest on nothing assumed.
+#[test]
+fn char_beq_is_axiom_free() {
+    let (k, sp) = setup(3);
+    for n in [
+        sp.char_beq,
+        sp.char_beq_refl,
+        sp.char_eq_of_beq_eq_true,
+        sp.char_beq_eq_true_of_eq,
+    ] {
+        let footprint = k.axiom_footprint(n);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(n),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// Presence and axiom-freedom must ALSO hold at the empty alphabet
+/// (`num_chars == 0`), where every law is admitted vacuously — `Char.rec`
+/// has zero minor premises there, exactly like `False.rec`.
+#[test]
+fn char_beq_names_are_registered_at_empty_alphabet() {
+    let (k, sp) = setup(0);
+    assert!(sp.char_ctors.is_empty());
+    for n in [
+        sp.char_beq,
+        sp.char_beq_refl,
+        sp.char_eq_of_beq_eq_true,
+        sp.char_beq_eq_true_of_eq,
+    ] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered even at num_chars == 0"
+        );
+        let footprint = k.axiom_footprint(n);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free at num_chars == 0: {:?}",
+            k.display_name(n),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+#[test]
+fn char_beq_iota_folds_to_bool() {
+    let (mut k, sp) = setup(3);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bfalse = k.const_(sp.logic.bool_false, vec![]);
+    for i in 0..3 {
+        for j in 0..3 {
+            let a = sp.char(&mut k, i);
+            let b = sp.char(&mut k, j);
+            let f = k.const_(sp.char_beq, vec![]);
+            let app = {
+                let e = k.app(f, a);
+                k.app(e, b)
+            };
+            let want = if i == j { btrue } else { bfalse };
+            assert!(k.def_eq(app, want), "char_beq c{i} c{j} ↝ {}", i == j);
+        }
+    }
+}
+
+#[test]
+fn char_beq_refl_infers_at_the_stated_type() {
+    let (mut k, sp) = setup(2);
+    let char_ty = k.const_(sp.char_ind, vec![]);
+    let anon = k.anon();
+    let lemma = k.const_(sp.char_beq_refl, vec![]);
+    let a = k.bvar(0);
+    let cb = {
+        let f = k.const_(sp.char_beq, vec![]);
+        let e = k.app(f, a);
+        k.app(e, a)
+    };
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bool_ty = k.const_(sp.logic.bool_, vec![]);
+    let stmt_body = mk_eq(&mut k, &sp, bool_ty, 1, cb, btrue);
+    let want = k.pi(anon, char_ty, stmt_body, BinderInfo::Default);
+    let inferred = k.infer(lemma).expect("char_beq_refl infers");
+    assert!(
+        k.def_eq(inferred, want),
+        "char_beq_refl : ∀ a, Eq Bool (char_beq a a) Bool.true, got {}",
+        k.render_lean(inferred)
+    );
+}
+
+/// `char_eq_of_beq_eq_true`/`char_beq_eq_true_of_eq` compose into a genuine
+/// decision procedure: instantiated at two DISTINCT concrete characters, the
+/// soundness direction refutes the (false) premise `char_beq c0 c1 = true`
+/// by deriving `Eq Char c0 c1` — which is impossible for a `beq`-value-true
+/// premise it is never handed, but the point of this test is that
+/// `char_beq_eq_true_of_eq` applied to a REFL equality genuinely round-trips
+/// through `char_eq_of_beq_eq_true`.
+#[test]
+fn char_beq_directions_round_trip_on_a_concrete_character() {
+    let (mut k, sp) = setup(3);
+    let c1 = sp.char(&mut k, 1);
+    let c1b = sp.char(&mut k, 1);
+    let char_ty = k.const_(sp.char_ind, vec![]);
+    let eq_c1 = eq_refl(&mut k, &sp, char_ty, 1, c1);
+    // char_beq_eq_true_of_eq c1 c1 (Eq.refl c1) : Eq Bool (char_beq c1 c1) true
+    let forward = {
+        let lemma = k.const_(sp.char_beq_eq_true_of_eq, vec![]);
+        let e = k.app(lemma, c1);
+        let e = k.app(e, c1b);
+        k.app(e, eq_c1)
+    };
+    let cb = {
+        let f = k.const_(sp.char_beq, vec![]);
+        let e = k.app(f, c1);
+        k.app(e, c1b)
+    };
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bool_ty = k.const_(sp.logic.bool_, vec![]);
+    let want = mk_eq(&mut k, &sp, bool_ty, 1, cb, btrue);
+    let inferred = k.infer(forward).expect("char_beq_eq_true_of_eq applies");
+    assert!(k.def_eq(inferred, want));
+
+    // char_eq_of_beq_eq_true c1 c1 forward : Eq Char c1 c1
+    let back = {
+        let lemma = k.const_(sp.char_eq_of_beq_eq_true, vec![]);
+        let e = k.app(lemma, c1);
+        let e = k.app(e, c1b);
+        k.app(e, forward)
+    };
+    let char_ty = k.const_(sp.char_ind, vec![]);
+    let want2 = mk_eq(&mut k, &sp, char_ty, 1, c1, c1b);
+    let inferred2 = k.infer(back).expect("char_eq_of_beq_eq_true applies");
+    assert!(k.def_eq(inferred2, want2));
+}
+
+// ---------------------------------------------------------------------------
+// `Str.beq` — structural decidable equality on words.
+// ---------------------------------------------------------------------------
+
+/// Presence discipline for `str_beq` and its laws: an unvisited name's
+/// `axiom_footprint` is UNMEASURED, not empty, so this is checked
+/// independently of the footprint test below.
+#[test]
+fn str_beq_names_are_registered() {
+    let (k, sp) = setup(3);
+    for n in [
+        sp.str_beq,
+        sp.str_beq_refl,
+        sp.str_eq_of_beq_eq_true,
+        sp.str_beq_eq_true_of_eq,
+    ] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered"
+        );
+    }
+}
+
+/// `str_beq` and its laws must rest on nothing assumed.
+#[test]
+fn str_beq_is_axiom_free() {
+    let (k, sp) = setup(3);
+    for n in [
+        sp.str_beq,
+        sp.str_beq_refl,
+        sp.str_eq_of_beq_eq_true,
+        sp.str_beq_eq_true_of_eq,
+    ] {
+        let footprint = k.axiom_footprint(n);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(n),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// `str_beq` ι-computes on concrete strings, testing the diagonal (equal),
+/// a differing-tail-length pair, and a differing-head pair.
+#[test]
+fn str_beq_iota_computes_on_concrete_strings() {
+    let (mut k, sp) = setup(3);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bfalse = k.const_(sp.logic.bool_false, vec![]);
+    let f = k.const_(sp.str_beq, vec![]);
+
+    // Equal words.
+    let a = str_of(&mut k, &sp, &[0, 1, 2]);
+    let b = str_of(&mut k, &sp, &[0, 1, 2]);
+    let app = {
+        let e = k.app(f, a);
+        k.app(e, b)
+    };
+    assert!(k.def_eq(app, btrue), "str_beq [0,1,2] [0,1,2] ↝ true");
+
+    // Different lengths.
+    let f2 = k.const_(sp.str_beq, vec![]);
+    let a2 = str_of(&mut k, &sp, &[0, 1]);
+    let b2 = str_of(&mut k, &sp, &[0, 1, 2]);
+    let app2 = {
+        let e = k.app(f2, a2);
+        k.app(e, b2)
+    };
+    assert!(k.def_eq(app2, bfalse), "str_beq [0,1] [0,1,2] ↝ false");
+
+    // Same length, differing head.
+    let f3 = k.const_(sp.str_beq, vec![]);
+    let a3 = str_of(&mut k, &sp, &[0, 1]);
+    let b3 = str_of(&mut k, &sp, &[2, 1]);
+    let app3 = {
+        let e = k.app(f3, a3);
+        k.app(e, b3)
+    };
+    assert!(k.def_eq(app3, bfalse), "str_beq [0,1] [2,1] ↝ false");
+
+    // The nil/nil case.
+    let f4 = k.const_(sp.str_beq, vec![]);
+    let nil_a = sp.nil(&mut k);
+    let nil_b = sp.nil(&mut k);
+    let app4 = {
+        let e = k.app(f4, nil_a);
+        k.app(e, nil_b)
+    };
+    assert!(k.def_eq(app4, btrue), "str_beq nil nil ↝ true");
+}
+
+#[test]
+fn str_beq_refl_infers_at_the_stated_type() {
+    let (mut k, sp) = setup(2);
+    let str_ty = sp.str_const(&mut k);
+    let anon = k.anon();
+    let lemma = k.const_(sp.str_beq_refl, vec![]);
+    let s = k.bvar(0);
+    let sb = {
+        let f = k.const_(sp.str_beq, vec![]);
+        let e = k.app(f, s);
+        k.app(e, s)
+    };
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bool_ty = k.const_(sp.logic.bool_, vec![]);
+    let stmt_body = mk_eq(&mut k, &sp, bool_ty, 1, sb, btrue);
+    let want = k.pi(anon, str_ty, stmt_body, BinderInfo::Default);
+    let inferred = k.infer(lemma).expect("str_beq_refl infers");
+    assert!(
+        k.def_eq(inferred, want),
+        "str_beq_refl : ∀ s, Eq Bool (str_beq s s) Bool.true, got {}",
+        k.render_lean(inferred)
+    );
+}
+
+/// The decision-procedure round trip on a concrete pair of EQUAL words: the
+/// completeness direction (`str_beq_eq_true_of_eq`) applied to `Eq.refl`
+/// produces `str_beq a a = true`, and the soundness direction
+/// (`str_eq_of_beq_eq_true`) applied back to that recovers `Eq Str a a` —
+/// exercising the `cons`/`cons` case of the soundness proof (the one that
+/// needs `bool_cases_remember`) on a genuine multi-character word, not just
+/// `nil`.
+#[test]
+fn str_beq_directions_round_trip_on_a_concrete_word() {
+    let (mut k, sp) = setup(3);
+    let a = str_of(&mut k, &sp, &[0, 1, 2]);
+    let b = str_of(&mut k, &sp, &[0, 1, 2]);
+    let str_ty = sp.str_const(&mut k);
+    let eq_a = eq_refl(&mut k, &sp, str_ty, 1, a);
+
+    // str_beq_eq_true_of_eq a b eq_a : Eq Bool (str_beq a b) true
+    let forward = {
+        let lemma = k.const_(sp.str_beq_eq_true_of_eq, vec![]);
+        let e = k.app(lemma, a);
+        let e = k.app(e, b);
+        k.app(e, eq_a)
+    };
+    let sb = {
+        let f = k.const_(sp.str_beq, vec![]);
+        let e = k.app(f, a);
+        k.app(e, b)
+    };
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bool_ty = k.const_(sp.logic.bool_, vec![]);
+    let want = mk_eq(&mut k, &sp, bool_ty, 1, sb, btrue);
+    let inferred = k.infer(forward).expect("str_beq_eq_true_of_eq applies");
+    assert!(k.def_eq(inferred, want));
+
+    // str_eq_of_beq_eq_true a b forward : Eq Str a b
+    let back = {
+        let lemma = k.const_(sp.str_eq_of_beq_eq_true, vec![]);
+        let e = k.app(lemma, a);
+        let e = k.app(e, b);
+        k.app(e, forward)
+    };
+    let want2 = mk_eq(&mut k, &sp, str_ty, 1, a, b);
+    let inferred2 = k.infer(back).expect("str_eq_of_beq_eq_true applies");
+    assert!(k.def_eq(inferred2, want2));
+}
+
+/// `str_eq_of_beq_eq_true` at the empty alphabet (`num_chars == 0`): only
+/// `nil` exists, so the only reachable case is `nil`/`nil` — pins that this
+/// theorem is admitted (and usable) even when `Char`'s `cons`/`cons` case is
+/// unreachable.
+#[test]
+fn str_beq_directions_hold_at_empty_alphabet() {
+    let (mut k, sp) = setup(0);
+    let str_ty = sp.str_const(&mut k);
+    let nil = sp.nil(&mut k);
+    let nil2 = sp.nil(&mut k);
+    let eq_nil = eq_refl(&mut k, &sp, str_ty, 1, nil);
+    let forward = {
+        let lemma = k.const_(sp.str_beq_eq_true_of_eq, vec![]);
+        let e = k.app(lemma, nil);
+        let e = k.app(e, nil2);
+        k.app(e, eq_nil)
+    };
+    let sb = {
+        let f = k.const_(sp.str_beq, vec![]);
+        let e = k.app(f, nil);
+        k.app(e, nil2)
+    };
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bool_ty = k.const_(sp.logic.bool_, vec![]);
+    let want = mk_eq(&mut k, &sp, bool_ty, 1, sb, btrue);
+    let inferred = k.infer(forward).expect("str_beq_eq_true_of_eq applies");
+    assert!(k.def_eq(inferred, want));
+}
+
+// ---------------------------------------------------------------------------
+// `Str.all_bool` — the `Bool`-valued twin of `All`, plus `all_iff_All`.
+// ---------------------------------------------------------------------------
+
+/// Presence discipline for `all_bool`/`all_iff_All`: an unvisited name's
+/// `axiom_footprint` is UNMEASURED, not empty, so this is checked
+/// independently of the footprint test below.
+#[test]
+fn all_bool_names_are_registered() {
+    let (k, sp) = setup(3);
+    for n in [sp.all_bool, sp.all_iff_all] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered"
+        );
+    }
+}
+
+/// `all_bool` and `all_iff_All` must rest on nothing assumed.
+#[test]
+fn all_bool_is_axiom_free() {
+    let (k, sp) = setup(3);
+    for n in [sp.all_bool, sp.all_iff_all] {
+        let footprint = k.axiom_footprint(n);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(n),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// `all_bool` ι-computes on concrete strings: true when every character
+/// satisfies the predicate, false as soon as one does not, true on `nil`.
+#[test]
+fn all_bool_iota_computes_on_concrete_strings() {
+    let (mut k, sp) = setup(3);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bfalse = k.const_(sp.logic.bool_false, vec![]);
+
+    // all_bool is_c1 [c1,c1] ↝ true.
+    let q = sp.char_is_tester(&mut k, 1);
+    let f = k.const_(sp.all_bool, vec![]);
+    let s = str_of(&mut k, &sp, &[1, 1]);
+    let app = {
+        let e = k.app(f, q);
+        k.app(e, s)
+    };
+    assert!(k.def_eq(app, btrue), "all_bool is_c1 [c1,c1] ↝ true");
+
+    // all_bool is_c1 [c1,c0] ↝ false.
+    let q2 = sp.char_is_tester(&mut k, 1);
+    let f2 = k.const_(sp.all_bool, vec![]);
+    let s2 = str_of(&mut k, &sp, &[1, 0]);
+    let app2 = {
+        let e = k.app(f2, q2);
+        k.app(e, s2)
+    };
+    assert!(k.def_eq(app2, bfalse), "all_bool is_c1 [c1,c0] ↝ false");
+
+    // all_bool is_c1 nil ↝ true.
+    let q3 = sp.char_is_tester(&mut k, 1);
+    let f3 = k.const_(sp.all_bool, vec![]);
+    let nil = sp.nil(&mut k);
+    let app3 = {
+        let e = k.app(f3, q3);
+        k.app(e, nil)
+    };
+    assert!(k.def_eq(app3, btrue), "all_bool is_c1 nil ↝ true");
+}
+
+/// `all_iff_All`, applied at a concrete `q`/`s`, infers at exactly the
+/// stated `Iff` type — re-deriving the statement rather than trusting the
+/// kernel's bare acceptance, so weakening or misstating it would fail here.
+#[test]
+fn all_iff_all_infers_at_the_stated_type() {
+    let (mut k, sp) = setup(2);
+    let q = sp.char_is_tester(&mut k, 0);
+    let s = str_of(&mut k, &sp, &[0]);
+
+    let lemma = k.const_(sp.all_iff_all, vec![]);
+    let applied = {
+        let e = k.app(lemma, q);
+        k.app(e, s)
+    };
+    let applied_ty = k.infer(applied).expect("all_iff_All q s infers");
+
+    let ab = {
+        let f = k.const_(sp.all_bool, vec![]);
+        let e = k.app(f, q);
+        k.app(e, s)
+    };
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bool_ty = k.const_(sp.logic.bool_, vec![]);
+    let lhs = mk_eq(&mut k, &sp, bool_ty, 1, ab, btrue);
+
+    let pred = {
+        let anon = k.anon();
+        let char_ty = k.const_(sp.char_ind, vec![]);
+        let c = k.bvar(0);
+        let qc = k.app(q, c);
+        let body = mk_eq(&mut k, &sp, bool_ty, 1, qc, btrue);
+        k.lam(anon, char_ty, body, BinderInfo::Default)
+    };
+    let all_s = {
+        let f = k.const_(sp.all_, vec![]);
+        let e = k.app(f, pred);
+        k.app(e, s)
+    };
+    let want = {
+        let iff = k.const_(sp.logic.iff, vec![]);
+        let e = k.app(iff, lhs);
+        k.app(e, all_s)
+    };
+    assert!(
+        k.def_eq(applied_ty, want),
+        "all_iff_All q s : Iff (Eq Bool (all_bool q s) true) (All pred s), got {}",
+        k.render_lean(applied_ty)
+    );
+}
