@@ -406,10 +406,10 @@ pub struct ComplexPrelude {
     /// Apart (mul z w) zero`.
     ///
     /// **The constructive shape of "ℂ has no zero divisors."** Both
-    /// hypotheses give a positive norm ([`Self::apart_of_normSq_pos`]'s
+    /// hypotheses give a positive norm (`Self::apart_of_normSq_pos`'s
     /// converse, inlined); `CReal.mul_pos` gives their product positive;
     /// [`Self::norm_sq_mul`] identifies that product with `normSq (mul z
-    /// w)`; [`Self::apart_of_normSq_pos`]'s own bridging step closes it. See
+    /// w)`; `Self::apart_of_normSq_pos`'s own bridging step closes it. See
     /// the module documentation for why the *disjunctive* form (`mul z w ~ 0
     /// → z ~ 0 ∨ w ~ 0`) is not attempted: `CReal`'s order is not decidable,
     /// so that disjunction is not known to be extractable, and this

@@ -31,7 +31,8 @@ pub const DEFAULT_PROOF_SAT_CONFLICT_LIMIT: usize = 2_000_000;
 /// Default number of conflicts between progress-sink polls, when a sink is
 /// installed (see [`ProofSearchProgress`]). A conflict-count cadence — not a
 /// wall-clock timer — keeps polling deterministic w.r.t. the search, mirroring
-/// [`DEADLINE_CHECK_INTERVAL`]'s rationale: the search trajectory up to any
+/// `DEADLINE_CHECK_INTERVAL`'s rationale (private to this module): the search
+/// trajectory up to any
 /// point does not depend on when the sink happens to be polled, only on
 /// whether it is installed at all (and it never is, on the default path).
 pub const DEFAULT_PROGRESS_CONFLICT_INTERVAL: usize = 5_000;
@@ -301,7 +302,7 @@ pub fn solve_with_drat_proof_streaming(
 /// conflicts, learned clauses, restarts, reductions, or the emitted DRAT
 /// proof, only when and how often this function is told about them. That
 /// property is asserted directly in
-/// [`tests::progress_sink_does_not_change_the_verdict_or_proof`].
+/// `tests::progress_sink_does_not_change_the_verdict_or_proof`.
 ///
 /// `progress_interval` is clamped to at least 1 (an interval of 0 would never
 /// fire the modulo test).

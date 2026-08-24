@@ -299,7 +299,7 @@ pub struct IntPrelude {
     pub pow_zero: NameId,
     /// `pow_succ : ∀ (a : Int) (m : Nat), Eq Int (pow a (succ m)) (mul (pow a m) a)`
     /// — closes by `Eq.refl`. Quantifies over one `Int` and one `Nat`, so it is
-    /// declared by hand rather than through [`ops::IntDev::int_theorem`].
+    /// declared by hand rather than through `ops::IntDev::int_theorem`.
     pub pow_succ: NameId,
     /// `pow_add : ∀ (a : Int) (m n : Nat), Eq Int (pow a (add m n)) (mul (pow a m) (pow a n))`
     /// — induction on `n`, mirroring `Nat.pow_add`'s own proof shape.
@@ -449,7 +449,7 @@ pub struct IntPrelude {
     /// — induction on `k`, using [`Self::mod_eq_mul`] at each step. `k` is a
     /// `Nat` (the exponent), so this quantifies over three `Int`s and one
     /// `Nat` and is declared by hand rather than through
-    /// [`ops::IntDev::int_theorem`].
+    /// `ops::IntDev::int_theorem`.
     pub mod_eq_pow: NameId,
     /// `modEq_prodRange :
     /// ∀ n f g m, 0 < n → (∀ k, ModEq n (f k) (g k)) →
@@ -459,7 +459,7 @@ pub struct IntPrelude {
     /// special case where `f`/`g` are the constant functions `pow` folds.
     /// Quantifies over one `Int`, two `Nat → Int` functions and one `Nat`, so
     /// this is declared by hand rather than through
-    /// [`ops::IntDev::int_theorem`].
+    /// `ops::IntDev::int_theorem`.
     pub mod_eq_prod_range: NameId,
     /// `natAbs : Int → Nat` — the magnitude, `ofNat n ↦ n` and `negSucc m ↦ succ m`.
     pub nat_abs: NameId,

@@ -778,7 +778,7 @@ pub struct NatPrelude {
     /// on the `n`-side index. See the doc comment on
     /// `declare_combinatorial_identities` in `binomial.rs` for the stall this
     /// unblocks. Proved via `le_dest` + `add_sub_cancel_left`, mirroring
-    /// [`super::choose::sub_succ_of_lt`]'s use of `le_dest`/`exists_rec`.
+    /// `super::choose::sub_succ_of_lt`'s use of `le_dest`/`exists_rec`.
     pub succ_sub_of_le: NameId,
     /// `Nat.succ_mul_choose_eq : ∀ n k, succ k * choose (succ n)(succ k) =
     /// succ n * choose n k` — multiplying a row of Pascal's triangle by its

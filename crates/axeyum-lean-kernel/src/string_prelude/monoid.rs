@@ -80,7 +80,11 @@ const FVAR_BASE: u64 = 1_000;
 /// rejected** the definition or a proof.
 pub(super) fn declare_append_and_laws(
     kernel: &mut Kernel,
-    names: MonoidNames,
+    // By reference, not by value: `MonoidNames` embeds `LogicNames`, which grew
+    // past clippy's 256-byte `large_types_passed_by_value` limit (252 -> 296) when
+    // the logic prelude gained its eleven classical-equivalence theorems. It is
+    // `Copy`, so the struct itself is unchanged and `Dev` still owns a copy.
+    names: &MonoidNames,
     one: LevelId,
 ) -> Result<(), KernelError> {
     let mut dev = Dev::new(kernel, names, one);
@@ -104,14 +108,14 @@ struct Dev<'k> {
 }
 
 impl<'k> Dev<'k> {
-    fn new(k: &'k mut Kernel, n: MonoidNames, one: LevelId) -> Self {
+    fn new(k: &'k mut Kernel, n: &MonoidNames, one: LevelId) -> Self {
         let anon = k.anon();
         let zero = k.level_zero();
         let str_ty = k.const_(n.str_ind, vec![]);
         let char_ty = k.const_(n.char_ind, vec![]);
         Self {
             k,
-            n,
+            n: *n,
             anon,
             zero,
             one,

@@ -31,6 +31,19 @@
 //! been returning early for as long as the file existed; five of them failed the
 //! first time one ran. Confirm the binary is found before believing a green run.
 #![cfg(feature = "full")]
+// `similar_names` fires on `fa_abs`/`fb_abs`, `fa_abs`/`fc_abs` and
+// `fga_abs`/`fgb_abs`/`ga_abs`/`gb_abs`. Those bindings deliberately mirror the
+// terms they abstract -- `f(a)`, `f(b)`, `f(g(a))`, `g(b)` -- and the tests read
+// against the emitted Alethe proof by exactly that correspondence. Renaming them
+// to widen the edit distance would make the check harder to audit, which is the
+// opposite of what this suite is for.
+//
+// This suite's clippy failure had been on `main` since 2026-08-21 and nothing
+// caught it: `hooks/pre-push` does not run clippy (it only mentions it in a
+// comment), so the documented gate
+// `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+// was red for two days while every push reported green.
+#![allow(clippy::similar_names)]
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
