@@ -18,7 +18,7 @@
 //! `Int.rec`.
 
 use super::defs::POW_HEIGHT;
-use super::ops::IntDev;
+use super::ops::{IntDev, exists_elim};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -2131,4 +2131,658 @@ pub(super) fn declare_prod_range_swap(d: &mut IntDev<'_>) -> Result<(), KernelEr
     };
 
     d.declare_theorem(p.prod_range_swap, full_stmt, full_value)
+}
+
+// ---------------------------------------------------------------------------
+// `Int.prodRange_permute` — the general permutation, the assembly named in
+// `wilson.rs`'s module doc: any `InjectiveOn`/`MapsInto` self-map of
+// `{0,…,n-1}` rearranges `prodRange f n` without changing its value.
+// ---------------------------------------------------------------------------
+//
+// `Int.prodRange_permute : ∀ f σ n, InjectiveOn σ n → MapsInto σ n →
+// Eq Int (prodRange f n) (prodRange (fun k => f (σ k)) n)`.
+//
+// Induction on `n`, with `f` quantified OUTSIDE the `Nat.rec` and motive
+// `∀ σ, InjectiveOn σ x → MapsInto σ x → prodRange f x = prodRange (f∘σ) x`
+// — generalized over `σ`, NOT over `f` (copying the earlier chain's shape,
+// generalizing over `f`, yields a motive that does not close: the recursive
+// call here reuses the SAME `f` and only `σ` changes to the restricted `τ`).
+//
+// At `n+1`, `Nat.injective_on_imp_surjective_on` (the pigeonhole) gives
+// `i0 < n+1` with `σ i0 = n`. [`permute_branch_fixed`] handles `i0 = n`
+// (bound-weakening only, no restriction needed); [`permute_branch_swap`]
+// handles `i0 < n` (`point_swap` on `f∘σ` at `(i0, n)`, plus
+// `Nat.restrict_injective`/`Nat.restrict_maps_into`'s override
+// `τ := point_override σ i0 (σ n)` feeding the induction hypothesis).
+
+/// `fun k => f (g k)`.
+fn compose(d: &mut IntDev<'_>, f: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let gk = d.apply(g, &[k]);
+    let body = d.apply(f, &[gk]);
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `h : Lt i n ⊢ Lt i (succ n)`.
+fn lift_lt_succ(d: &mut IntDev<'_>, i: ExprId, n: ExprId, h: ExprId) -> ExprId {
+    let p = d.int();
+    let sn = d.succ(n);
+    let le_n_sn = d.lemma(p.nat.le_succ, &[n]);
+    d.lemma(p.nat.lt_of_lt_of_le, &[i, n, sn, h, le_n_sn])
+}
+
+// --- `point_override`, the `IntDev` counterpart of `nat_prelude/finite.rs`'s
+// private `NatDev`-typed version, needed here because `prodRange_permute`'s
+// restriction step is built over `IntDev`. Same order-based (never
+// `Nat.beq`) single-point override.
+
+/// `point_override σ i0 v k`'s inner layer: `σ k` when `i0 < k`, else `v`.
+fn po_inner(d: &mut IntDev<'_>, sigma: ExprId, i0: ExprId, v: ExprId, k: ExprId) -> ExprId {
+    let sk = d.apply(sigma, &[k]);
+    let succ_i0 = d.succ(i0);
+    let above_cond = d.ble(succ_i0, k);
+    d.bool_select_nat(above_cond, sk, v)
+}
+
+/// `point_override σ i0 v k := if k < i0 then σ k else po_inner(σ, i0, v, k)`.
+fn point_override(d: &mut IntDev<'_>, sigma: ExprId, i0: ExprId, v: ExprId, k: ExprId) -> ExprId {
+    let sk = d.apply(sigma, &[k]);
+    let inner = po_inner(d, sigma, i0, v, k);
+    let succ_k = d.succ(k);
+    let below_cond = d.ble(succ_k, i0);
+    d.bool_select_nat(below_cond, sk, inner)
+}
+
+/// `heq : Eq Bool cond true ⊢ Eq Nat (bool_select_nat cond a b) a`.
+fn select_nat_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let true_val = d.bool_true();
+    let symm_hb = d.bool_symm(cond, true_val, heq);
+    let motive = d.bool_eq_motive(true_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, a)
+    });
+    let refl_case = d.refl(a);
+    d.bool_transport(true_val, motive, refl_case, cond, symm_hb)
+}
+
+/// `heq : Eq Bool cond false ⊢ Eq Nat (bool_select_nat cond a b) b`.
+fn select_nat_false(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let false_val = d.bool_false();
+    let symm_hb = d.bool_symm(cond, false_val, heq);
+    let motive = d.bool_eq_motive(false_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, b)
+    });
+    let refl_case = d.refl(b);
+    d.bool_transport(false_val, motive, refl_case, cond, symm_hb)
+}
+
+/// `h : Lt k i0 ⊢ Eq Nat (point_override σ i0 v k) (σ k)`.
+fn override_eq_lt(
+    d: &mut IntDev<'_>,
+    sigma: ExprId,
+    i0: ExprId,
+    v: ExprId,
+    k: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let sk = d.apply(sigma, &[k]);
+    let inner = po_inner(d, sigma, i0, v, k);
+    let succ_k = d.succ(k);
+    let below_cond = d.ble(succ_k, i0);
+    let below_true = d.lemma(p.nat.ble_eq_true_of_le, &[succ_k, i0, h]);
+    select_nat_true(d, below_cond, sk, inner, below_true)
+}
+
+/// `h : Lt i0 k ⊢ Eq Nat (point_override σ i0 v k) (σ k)`.
+fn override_eq_gt(
+    d: &mut IntDev<'_>,
+    sigma: ExprId,
+    i0: ExprId,
+    v: ExprId,
+    k: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let sk = d.apply(sigma, &[k]);
+    let inner = po_inner(d, sigma, i0, v, k);
+    let succ_k = d.succ(k);
+    let below_cond = d.ble(succ_k, i0);
+
+    let succ_i0 = d.succ(i0);
+    let le_k_succ_k = d.lemma(p.nat.le_succ, &[k]);
+    let lt_i0_succ_k = d.lemma(p.nat.le_trans, &[succ_i0, k, succ_k, h, le_k_succ_k]);
+    let below_false = ble_eq_false_of_lt(d, succ_k, i0, lt_i0_succ_k);
+    let step1 = select_nat_false(d, below_cond, sk, inner, below_false);
+
+    let above_cond = d.ble(succ_i0, k);
+    let above_true = d.lemma(p.nat.ble_eq_true_of_le, &[succ_i0, k, h]);
+    let step2 = select_nat_true(d, above_cond, sk, v, above_true);
+
+    let start = point_override(d, sigma, i0, v, k);
+    d.trans(start, inner, sk, step1, step2)
+}
+
+/// `Eq Nat (point_override σ i0 v i0) v`.
+fn override_eq_at(d: &mut IntDev<'_>, sigma: ExprId, i0: ExprId, v: ExprId) -> ExprId {
+    let p = d.int();
+    let si0 = d.apply(sigma, &[i0]);
+    let inner = po_inner(d, sigma, i0, v, i0);
+    let succ_i0 = d.succ(i0);
+    let below_cond = d.ble(succ_i0, i0);
+
+    let lt_i0_succ_i0 = d.lemma(p.nat.lt_succ_self, &[i0]);
+    let below_false = ble_eq_false_of_lt(d, succ_i0, i0, lt_i0_succ_i0);
+    let step1 = select_nat_false(d, below_cond, si0, inner, below_false);
+
+    let above_cond = d.ble(succ_i0, i0);
+    let step2 = select_nat_false(d, above_cond, si0, v, below_false);
+
+    let start = point_override(d, sigma, i0, v, i0);
+    d.trans(start, inner, v, step1, step2)
+}
+
+/// `motive(x) := ∀ σ, InjectiveOn σ x → MapsInto σ x →
+///   Eq Int (prodRange f x) (prodRange (f ∘ σ) x)` — `f` fixed (captured from
+/// the enclosing scope), generalized over `σ`.
+fn permute_motive(d: &mut IntDev<'_>, f: ExprId, x: ExprId) -> ExprId {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+    let inj_ty = d.const_app(p.nat.injective_on, &[sigma, x]);
+    let maps_ty = d.const_app(p.nat.maps_into, &[sigma, x]);
+
+    let f_comp_sigma = compose(d, f, sigma);
+    let lhs = d.const_app(p.prod_range, &[f, x]);
+    let rhs = d.const_app(p.prod_range, &[f_comp_sigma, x]);
+    let concl = d.ieq(lhs, rhs);
+
+    let inner = d.arrow(maps_ty, concl);
+    let with_inj = d.arrow(inj_ty, inner);
+    d.pi_fv(sigma_fv, fn_ty, with_inj)
+}
+
+/// `motive(zero)`: both sides reduce to `Int.one` regardless of `σ`.
+fn permute_base(d: &mut IntDev<'_>, f: ExprId) -> ExprId {
+    let _ = f;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+    let zero = d.zero();
+    let p = d.int();
+
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+    let inj_ty = d.const_app(p.nat.injective_on, &[sigma, zero]);
+    let maps_ty = d.const_app(p.nat.maps_into, &[sigma, zero]);
+
+    let one = d.ione();
+    let body = d.irefl(one);
+    let inj_fv = d.fresh_fvar();
+    let maps_fv = d.fresh_fvar();
+    let with_maps = d.lam_fv(maps_fv, maps_ty, body);
+    let with_inj = d.lam_fv(inj_fv, inj_ty, with_maps);
+    d.lam_fv(sigma_fv, fn_ty, with_inj)
+}
+
+/// Branch `i0 = n` of [`permute_step`]: no restriction is needed at all —
+/// `σ i0 = n` and `i0 = n` combine to `σ n = n`, so `InjectiveOn σ n` is pure
+/// bound-weakening from `InjectiveOn σ (succ n)`, and `MapsInto σ n` follows
+/// from `MapsInto σ (succ n)` plus `σ i ≠ n` for `i < n` (else injectivity at
+/// `(i, n)`, using `σ n = n`, would force `i = n`).
+#[allow(clippy::too_many_arguments)]
+fn permute_branch_fixed(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    n: ExprId,
+    sigma: ExprId,
+    inj_sigma: ExprId,
+    maps_sigma: ExprId,
+    i0: ExprId,
+    heq: ExprId,
+    sigma_i0_eq_n: ExprId,
+    ih: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let nat = d.nat_ty();
+
+    let sigma_n_eq_n = d.nat_rewrite(i0, n, heq, sigma_i0_eq_n, &|d, x| {
+        let sx = d.apply(sigma, &[x]);
+        d.eq(sx, n)
+    });
+    let sigma_n = d.apply(sigma, &[n]);
+    let n_eq_sigma_n = d.symm(sigma_n, n, sigma_n_eq_n);
+
+    // InjectiveOn σ n : pure bound-weakening.
+    let inj_n = {
+        let i_fv = d.fresh_fvar();
+        let ivar = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let jvar = d.kernel().fvar(j_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hj_fv = d.fresh_fvar();
+        let hj = d.kernel().fvar(hj_fv);
+        let heq2_fv = d.fresh_fvar();
+        let heq2 = d.kernel().fvar(heq2_fv);
+        let si = d.apply(sigma, &[ivar]);
+        let sj = d.apply(sigma, &[jvar]);
+        let heq2_ty = d.eq(si, sj);
+        let i_lt_sn = lift_lt_succ(d, ivar, n, hi);
+        let j_lt_sn = lift_lt_succ(d, jvar, n, hj);
+        let result = d.apply(inj_sigma, &[ivar, jvar, i_lt_sn, j_lt_sn, heq2]);
+        let with_heq2 = d.lam_fv(heq2_fv, heq2_ty, result);
+        let hj_ty = d.lt(jvar, n);
+        let with_hj = d.lam_fv(hj_fv, hj_ty, with_heq2);
+        let hi_ty = d.lt(ivar, n);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hj);
+        let with_j = d.lam_fv(j_fv, nat, with_hi);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+
+    // MapsInto σ n.
+    let maps_n = {
+        let i_fv = d.fresh_fvar();
+        let ivar = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hi_ty = d.lt(ivar, n);
+        let i_lt_sn = lift_lt_succ(d, ivar, n, hi);
+        let si = d.apply(sigma, &[ivar]);
+        let si_lt_sn = d.apply(maps_sigma, &[ivar, i_lt_sn]);
+        let si_le_n = d.lemma(p.nat.le_of_lt_succ, &[si, n, si_lt_sn]);
+
+        let si_ne_n = {
+            let e_fv = d.fresh_fvar();
+            let e = d.kernel().fvar(e_fv);
+            let eq_sin_ty = d.eq(si, n);
+            let si_eq_sigma_n = d.trans(si, n, sigma_n, e, n_eq_sigma_n);
+            let n_lt_sn = d.lemma(p.nat.lt_succ_self, &[n]);
+            let i_eq_n = d.apply(inj_sigma, &[ivar, n, i_lt_sn, n_lt_sn, si_eq_sigma_n]);
+            let motive = d.eq_motive(ivar, &|d, x| d.lt(x, n));
+            let n_lt_n = d.transport(ivar, motive, hi, n, i_eq_n);
+            let false_pf = d.lemma(p.nat.lt_irrefl, &[n, n_lt_n]);
+            d.lam_fv(e_fv, eq_sin_ty, false_pf)
+        };
+        let si_lt_n = {
+            let disj = d.lemma(p.nat.lt_or_eq_of_le, &[si, n, si_le_n]);
+            let lt_sin = d.lt(si, n);
+            let eq_sin = d.eq(si, n);
+            let target = d.lt(si, n);
+            d.or_elim(lt_sin, eq_sin, target, disj, &|_d, hh| hh, &|d, hh| {
+                let false_pf = d.apply(si_ne_n, &[hh]);
+                d.absurd(target, false_pf)
+            })
+        };
+        let with_hi = d.lam_fv(hi_fv, hi_ty, si_lt_n);
+        d.lam_fv(i_fv, nat, with_hi)
+    };
+
+    let ih_result = d.apply(ih, &[sigma, inj_n, maps_n]);
+
+    let f_comp_sigma = compose(d, f, sigma);
+    let f_prior = d.const_app(p.prod_range, &[f, n]);
+    let g_prior = d.const_app(p.prod_range, &[f_comp_sigma, n]);
+    let fn_ = d.apply(f, &[n]);
+    let f_sigma_n = d.apply(f, &[sigma_n]);
+
+    let start = d.imul(f_prior, fn_);
+    let mid = d.imul(g_prior, fn_);
+    let h1 = d.icongr(f_prior, g_prior, ih_result, &|d, t| d.imul(t, fn_));
+    let end_ = d.imul(g_prior, f_sigma_n);
+    let fn_eq_fsigman = d.nat_eq_to_int(n, sigma_n, n_eq_sigma_n, &|d, x| d.apply(f, &[x]));
+    let h2 = d.icongr(fn_, f_sigma_n, fn_eq_fsigman, &|d, t| d.imul(g_prior, t));
+    let (_e, proof) = d.ichain(start, &[(mid, h1), (end_, h2)]);
+    proof
+}
+
+/// Branch `i0 < n` of [`permute_step`]: apply `point_swap` to `g := f ∘ σ` at
+/// `(i0, n)`, moving `g i0 = f (σ i0) = f n` onto the top slot; the remaining
+/// product over `[0, n)` is then reindexed through `Nat.restrict_injective`/
+/// `Nat.restrict_maps_into`'s override `τ := point_override σ i0 (σ n)`,
+/// closing with the induction hypothesis applied to `τ` (see `wilson.rs`'s
+/// module doc: this is an override, not a downward reindex — `i0 < n` already
+/// puts `i0` inside the smaller domain).
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn permute_branch_swap(
+    d: &mut IntDev<'_>,
+    f: ExprId,
+    n: ExprId,
+    sigma: ExprId,
+    inj_sigma: ExprId,
+    maps_sigma: ExprId,
+    i0: ExprId,
+    h_i0_lt_n: ExprId,
+    sigma_i0_eq_n: ExprId,
+    ih: ExprId,
+) -> ExprId {
+    let _ = inj_sigma;
+    let _ = maps_sigma;
+    let p = d.int();
+    let nat = d.nat_ty();
+    let sn = d.succ(n);
+    let g = compose(d, f, sigma);
+
+    // h := point_swap g i0 n.
+    let h_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = point_swap(d, g, i0, n, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let at_p_fact = point_swap_eq_at_p(d, g, i0, n);
+    let at_q_fact = point_swap_eq_at_q(d, g, i0, n, h_i0_lt_n);
+
+    let agree_g_h = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let nei0_fv = d.fresh_fvar();
+        let ne_i0 = d.kernel().fvar(nei0_fv);
+        let nen_fv = d.fresh_fvar();
+        let ne_n = d.kernel().fvar(nen_fv);
+        let body = general_swap_agree(d, g, i0, n, k, ne_i0, ne_n, h_i0_lt_n);
+        let eq_ne_n_ty = d.eq(k, n);
+        let ne_n_ty = d.not(eq_ne_n_ty);
+        let eq_ne_i0_ty = d.eq(k, i0);
+        let ne_i0_ty = d.not(eq_ne_i0_ty);
+        let with_nen = d.lam_fv(nen_fv, ne_n_ty, body);
+        let with_nei0 = d.lam_fv(nei0_fv, ne_i0_ty, with_nen);
+        d.lam_fv(k_fv, nat, with_nei0)
+    };
+
+    let n_lt_sn = d.lemma(p.nat.lt_succ_self, &[n]);
+    let swap_result = d.const_app(
+        p.prod_range_swap,
+        &[
+            g, h_fn, i0, n, sn, h_i0_lt_n, n_lt_sn, at_p_fact, at_q_fact, agree_g_h,
+        ],
+    );
+
+    // h n = g i0 = f (σ i0) = f n.
+    let h_n = d.apply(h_fn, &[n]);
+    let g_i0 = d.apply(g, &[i0]);
+    let f_n = d.apply(f, &[n]);
+    let sigma_i0 = d.apply(sigma, &[i0]);
+    let fsi0_eq_fn = d.nat_eq_to_int(sigma_i0, n, sigma_i0_eq_n, &|d, x| d.apply(f, &[x]));
+    let h_n_eq_f_n = d.itrans(h_n, g_i0, f_n, at_q_fact, fsi0_eq_fn);
+
+    let h_range_n = d.const_app(p.prod_range, &[h_fn, n]);
+    let mid2 = d.imul(h_range_n, f_n);
+    let step_hn = d.icongr(h_n, f_n, h_n_eq_f_n, &|d, t| d.imul(h_range_n, t));
+    let prod_range_g_sn = d.const_app(p.prod_range, &[g, sn]);
+    let start2 = d.imul(h_range_n, h_n);
+    let combined = d.itrans(prod_range_g_sn, start2, mid2, swap_result, step_hn);
+
+    // τ := point_override σ i0 (σ n).
+    let sigma_n = d.apply(sigma, &[n]);
+    let tau_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = point_override(d, sigma, i0, sigma_n, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let inj_tau_n = d.const_app(
+        p.nat.restrict_injective,
+        &[sigma, i0, n, inj_sigma, h_i0_lt_n],
+    );
+    let maps_tau_n = d.const_app(
+        p.nat.restrict_maps_into,
+        &[
+            sigma,
+            i0,
+            n,
+            inj_sigma,
+            maps_sigma,
+            h_i0_lt_n,
+            sigma_i0_eq_n,
+        ],
+    );
+    let ih_result = d.apply(ih, &[tau_fn, inj_tau_n, maps_tau_n]);
+
+    let f_comp_tau = compose(d, f, tau_fn);
+    let prod_range_ftau_n = d.const_app(p.prod_range, &[f_comp_tau, n]);
+    let prod_range_f_n = d.const_app(p.prod_range, &[f, n]);
+
+    // pointwise_h_tau : ∀ k, Lt k n → Eq Int (h k) ((f∘τ) k).
+    let pointwise_h_tau = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, n);
+
+        let h_k = d.apply(h_fn, &[k]);
+        let ftau_k = d.apply(f_comp_tau, &[k]);
+        let target = d.ieq(h_k, ftau_k);
+
+        let lt_k_i0 = d.lt(k, i0);
+        let eq_k_i0 = d.eq(k, i0);
+        let lt_i0_k = d.lt(i0, k);
+        let inner_or = d.or(eq_k_i0, lt_i0_k);
+        let tri = nat_trichotomy(d, k, i0);
+
+        let on_lt = &|d: &mut IntDev<'_>, h_k_lt_i0: ExprId| -> ExprId {
+            let hk_eq_gk = point_swap_eq_lt_p(d, g, i0, n, k, h_k_lt_i0);
+            let tau_k_eq_sigma_k = override_eq_lt(d, sigma, i0, sigma_n, k, h_k_lt_i0);
+            let tau_k = d.apply(tau_fn, &[k]);
+            let sigma_k = d.apply(sigma, &[k]);
+            let f_tauk_eq_f_sigmak =
+                d.nat_eq_to_int(tau_k, sigma_k, tau_k_eq_sigma_k, &|d, x| d.apply(f, &[x]));
+            let f_tau_k_pt = d.apply(f, &[tau_k]);
+            let f_sigma_k_pt = d.apply(f, &[sigma_k]);
+            let f_sigmak_eq_f_tauk = d.isymm(f_tau_k_pt, f_sigma_k_pt, f_tauk_eq_f_sigmak);
+            let g_k = d.apply(g, &[k]);
+            d.itrans(h_k, g_k, ftau_k, hk_eq_gk, f_sigmak_eq_f_tauk)
+        };
+        let on_eq = &|d: &mut IntDev<'_>, heq: ExprId| -> ExprId {
+            let tau_i0_eq_sigma_n = override_eq_at(d, sigma, i0, sigma_n);
+            let tau_i0 = d.apply(tau_fn, &[i0]);
+            let f_tau_i0_eq_f_sigma_n =
+                d.nat_eq_to_int(tau_i0, sigma_n, tau_i0_eq_sigma_n, &|d, x| d.apply(f, &[x]));
+            let f_tau_i0_pt = d.apply(f, &[tau_i0]);
+            let f_sigma_n_pt = d.apply(f, &[sigma_n]);
+            let f_sigman_eq_ftaui0 = d.isymm(f_tau_i0_pt, f_sigma_n_pt, f_tau_i0_eq_f_sigma_n);
+            let g_n = d.apply(g, &[n]);
+            let h_i0 = d.apply(h_fn, &[i0]);
+            let ftau_i0 = d.apply(f_comp_tau, &[i0]);
+            let proof_at_i0 = d.itrans(h_i0, g_n, ftau_i0, at_p_fact, f_sigman_eq_ftaui0);
+            let heq_rev = d.symm(k, i0, heq);
+            let motive = d.eq_motive(i0, &|d, x| {
+                let hx = d.apply(h_fn, &[x]);
+                let ftaux = d.apply(f_comp_tau, &[x]);
+                d.ieq(hx, ftaux)
+            });
+            d.transport(i0, motive, proof_at_i0, k, heq_rev)
+        };
+        let on_gt = &|d: &mut IntDev<'_>, h_i0_lt_k: ExprId| -> ExprId {
+            let hk_eq_gk = point_swap_eq_between(d, g, i0, n, k, h_i0_lt_k, hk);
+            let tau_k_eq_sigma_k = override_eq_gt(d, sigma, i0, sigma_n, k, h_i0_lt_k);
+            let tau_k = d.apply(tau_fn, &[k]);
+            let sigma_k = d.apply(sigma, &[k]);
+            let f_tauk_eq_f_sigmak =
+                d.nat_eq_to_int(tau_k, sigma_k, tau_k_eq_sigma_k, &|d, x| d.apply(f, &[x]));
+            let f_tau_k_pt = d.apply(f, &[tau_k]);
+            let f_sigma_k_pt = d.apply(f, &[sigma_k]);
+            let f_sigmak_eq_f_tauk = d.isymm(f_tau_k_pt, f_sigma_k_pt, f_tauk_eq_f_sigmak);
+            let g_k = d.apply(g, &[k]);
+            d.itrans(h_k, g_k, ftau_k, hk_eq_gk, f_sigmak_eq_f_tauk)
+        };
+
+        let body = d.or_elim(lt_k_i0, inner_or, target, tri, on_lt, &|d, h_inner| {
+            d.or_elim(eq_k_i0, lt_i0_k, target, h_inner, on_eq, on_gt)
+        });
+
+        let with_hk = d.lam_fv(hk_fv, hk_ty, body);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    let cong_h_tau = d.const_app(
+        p.prod_range_congr_lt,
+        &[h_fn, f_comp_tau, n, pointwise_h_tau],
+    );
+    let ih_result_rev = d.isymm(prod_range_f_n, prod_range_ftau_n, ih_result);
+    let h_range_eq_f_range = d.itrans(
+        h_range_n,
+        prod_range_ftau_n,
+        prod_range_f_n,
+        cong_h_tau,
+        ih_result_rev,
+    );
+    let f_n_range_times_fn = d.imul(prod_range_f_n, f_n);
+    let step_final = d.icongr(h_range_n, prod_range_f_n, h_range_eq_f_range, &|d, t| {
+        d.imul(t, f_n)
+    });
+    let whole = d.itrans(
+        prod_range_g_sn,
+        mid2,
+        f_n_range_times_fn,
+        combined,
+        step_final,
+    );
+    d.isymm(prod_range_g_sn, f_n_range_times_fn, whole)
+}
+
+/// The successor step of `Int.prodRange_permute`'s induction: given
+/// `ih : permute_motive(f, n)`, produce a proof of `permute_motive(f, succ n)`.
+/// The pigeonhole (`Nat.injective_on_imp_surjective_on`) locates `i0 < succ n`
+/// with `σ i0 = n`; [`permute_branch_fixed`] handles `i0 = n`,
+/// [`permute_branch_swap`] handles `i0 < n`.
+fn permute_step(d: &mut IntDev<'_>, f: ExprId, n: ExprId, ih: ExprId) -> ExprId {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+    let sn = d.succ(n);
+
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+    let inj_ty = d.const_app(p.nat.injective_on, &[sigma, sn]);
+    let inj_fv = d.fresh_fvar();
+    let inj_sigma = d.kernel().fvar(inj_fv);
+    let maps_ty = d.const_app(p.nat.maps_into, &[sigma, sn]);
+    let maps_fv = d.fresh_fvar();
+    let maps_sigma = d.kernel().fvar(maps_fv);
+
+    let f_comp_sigma = compose(d, f, sigma);
+    let lhs = d.const_app(p.prod_range, &[f, sn]);
+    let rhs = d.const_app(p.prod_range, &[f_comp_sigma, sn]);
+    let target = d.ieq(lhs, rhs);
+
+    // Pigeonhole: SurjectiveOn σ (succ n), applied at n.
+    let surj = d.const_app(
+        p.nat.injective_on_imp_surjective_on,
+        &[sn, sigma, inj_sigma, maps_sigma],
+    );
+    let n_lt_sn = d.lemma(p.nat.lt_succ_self, &[n]);
+    let ex = d.apply(surj, &[n, n_lt_sn]);
+
+    let predicate = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let bound = d.lt(i, sn);
+        let si = d.apply(sigma, &[i]);
+        let eqn = d.eq(si, n);
+        let body = d.and(bound, eqn);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let minor = {
+        let i0_fv = d.fresh_fvar();
+        let i0 = d.kernel().fvar(i0_fv);
+        let hand_fv = d.fresh_fvar();
+        let hand = d.kernel().fvar(hand_fv);
+        let bound_ty = d.lt(i0, sn);
+        let si0 = d.apply(sigma, &[i0]);
+        let eqn_ty = d.eq(si0, n);
+        let hand_ty = d.and(bound_ty, eqn_ty);
+        let h_i0_lt_sn = d.and_left(bound_ty, eqn_ty, hand);
+        let sigma_i0_eq_n = d.and_right(bound_ty, eqn_ty, hand);
+
+        let le_i0_n = d.lemma(p.nat.le_of_lt_succ, &[i0, n, h_i0_lt_sn]);
+        let disj = d.lemma(p.nat.lt_or_eq_of_le, &[i0, n, le_i0_n]);
+        let lt_i0_n = d.lt(i0, n);
+        let eq_i0_n = d.eq(i0, n);
+
+        let on_lt = &|d: &mut IntDev<'_>, h_i0_lt_n: ExprId| -> ExprId {
+            permute_branch_swap(
+                d,
+                f,
+                n,
+                sigma,
+                inj_sigma,
+                maps_sigma,
+                i0,
+                h_i0_lt_n,
+                sigma_i0_eq_n,
+                ih,
+            )
+        };
+        let on_eq = &|d: &mut IntDev<'_>, heq: ExprId| -> ExprId {
+            permute_branch_fixed(
+                d,
+                f,
+                n,
+                sigma,
+                inj_sigma,
+                maps_sigma,
+                i0,
+                heq,
+                sigma_i0_eq_n,
+                ih,
+            )
+        };
+        let body = d.or_elim(lt_i0_n, eq_i0_n, target, disj, on_lt, on_eq);
+        let with_hand = d.lam_fv(hand_fv, hand_ty, body);
+        d.lam_fv(i0_fv, nat, with_hand)
+    };
+
+    let final_for_sigma = exists_elim(d, predicate, target, ex, minor);
+
+    let with_maps = d.lam_fv(maps_fv, maps_ty, final_for_sigma);
+    let with_inj = d.lam_fv(inj_fv, inj_ty, with_maps);
+    d.lam_fv(sigma_fv, fn_ty, with_inj)
+}
+
+/// Declare `Int.prodRange_permute` — the assembly `wilson.rs`'s module doc
+/// names as the last step toward Wilson's theorem's permutation argument.
+/// Induction on `n`, with `f` quantified OUTSIDE the recursion and the
+/// motive generalized over `σ` (see the module doc above [`permute_step`]).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_prod_range_permute(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+    let fn_ty_int = d.arrow(nat, int_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let stmt_at_n = permute_motive(d, f, n);
+    let proof = d.induct(
+        &|d, x| permute_motive(d, f, x),
+        &|d| permute_base(d, f),
+        &|d, m, ih| permute_step(d, f, m, ih),
+        n,
+    );
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(f_fv, fn_ty_int, with_n)
+    };
+    let full_stmt = {
+        let with_n = d.pi_fv(n_fv, nat, stmt_at_n);
+        d.pi_fv(f_fv, fn_ty_int, with_n)
+    };
+
+    d.declare_theorem(p.prod_range_permute, full_stmt, value)
 }

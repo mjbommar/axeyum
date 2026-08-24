@@ -178,7 +178,7 @@ use no_confusion::declare_no_confusion;
 use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
-use primes::{declare_euclid, declare_primes};
+use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
 /// and its constructors/recursor (re-exported from the [`LogicPrelude`] for
@@ -717,6 +717,14 @@ pub struct NatPrelude {
     /// [`least_divisor_search`](Self::least_divisor_search); minimality is
     /// exactly what makes it prime.
     pub exists_prime_dvd: NameId,
+    /// `Nat.coprime_of_lt_prime : ∀ p a, (Le two p ∧ ∀ d, dvd d p → Or (Eq d one) (Eq d p)) → Lt zero a → Lt a p → Eq (gcd a p) one`.
+    ///
+    /// Every nonzero residue below a prime is invertible modulo it — the fact
+    /// that makes ℤ/p a field, proved here as: `gcd a p` divides `p`, so
+    /// primality forces it to be `1` or `p`; it also divides `a`, and `a < p`
+    /// rules out `p` (`le_of_dvd` would force `p ≤ a`, contradicting `a < p`
+    /// via `lt_of_le_of_lt`/`lt_irrefl`), so it is `1`.
+    pub coprime_of_lt_prime: NameId,
 
     // --- binomial coefficients (`choose.rs`) --------------------------------
     /// `Nat.choose : Nat → Nat → Nat`, by structural recursion on both
@@ -1102,6 +1110,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             two_le_succ_or_eq_one: kernel.name_str(nat, "two_le_succ_or_eq_one"),
             least_divisor_search: kernel.name_str(nat, "least_divisor_search"),
             exists_prime_dvd: kernel.name_str(nat, "exists_prime_dvd"),
+            coprime_of_lt_prime: kernel.name_str(nat, "coprime_of_lt_prime"),
             choose: kernel.name_str(nat, "choose"),
             choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
             choose_succ_succ: kernel.name_str(nat, "choose_succ_succ"),
@@ -1164,6 +1173,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
         declare_primes(&mut d, &p)?;
+        declare_coprime_of_lt_prime(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
         declare_binomial_theorem(&mut d, &p)?;

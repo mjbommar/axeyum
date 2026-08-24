@@ -359,6 +359,18 @@ pub struct IntPrelude {
     /// `(j' j)(i j')(j' j) = (i j)` using `prod.rs`'s `point_swap` — see
     /// `declare_prod_range_swap`'s doc comment for the full route.
     pub prod_range_swap: NameId,
+    /// `prodRange_permute :
+    ///   ∀ f σ n, InjectiveOn σ n → MapsInto σ n →
+    ///     Eq Int (prodRange f n) (prodRange (fun k => f (σ k)) n)`
+    /// — the general permutation: any `InjectiveOn`/`MapsInto` self-map of
+    /// `{0,…,n-1}` rearranges the product without changing its value.
+    /// Induction on `n` with `f` fixed and the motive generalized over `σ`;
+    /// at `succ n` the pigeonhole (`Nat.injective_on_imp_surjective_on`)
+    /// locates `i0` with `σ i0 = n`, then either bound-weakens (`i0 = n`) or
+    /// applies `prodRange_swap` plus `Nat.restrict_injective`/
+    /// `Nat.restrict_maps_into`'s override (`i0 < n`) — see `prod.rs`'s
+    /// module doc above `declare_prod_range_permute` for the full route.
+    pub prod_range_permute: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -448,6 +460,14 @@ pub struct IntPrelude {
     /// [`Self::emod_eq_zero_iff_dvd`] is: no proved bound on `emod`'s magnitude
     /// for a negative modulus exists yet.
     pub mod_eq_iff_dvd: NameId,
+    /// `modEq_of_nat_modEq : ∀ (d a b : Nat), Nat.modEq d a b → 0 < d →
+    /// ModEq (ofNat d) (ofNat a) (ofNat b)` — transport a `Nat.modEq`
+    /// congruence (balanced witnesses) into `Int.ModEq`, the ℕ→ℤ direction
+    /// (the reverse needs `emod`'s magnitude bound for a witness pointing the
+    /// other way, which is not what this route builds). The `0 < d`
+    /// hypothesis is threaded through to `modEq_iff_dvd`, which needs it for
+    /// the same reason every congruence in this module does.
+    pub mod_eq_of_nat_mod_eq: NameId,
     /// `ModEq.add_right : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (a+c) (b+c)`.
     pub mod_eq_add_right: NameId,
     /// `ModEq.add_left : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (c+a) (c+b)`.
@@ -749,6 +769,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_congr_lt: child(kernel, "prodRange_congr_lt"),
         prod_range_swap_adjacent: child(kernel, "prodRange_swap_adjacent"),
         prod_range_swap: child(kernel, "prodRange_swap"),
+        prod_range_permute: child(kernel, "prodRange_permute"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -774,6 +795,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_symm: child(kernel, "modEq_symm"),
         mod_eq_trans: child(kernel, "modEq_trans"),
         mod_eq_iff_dvd: child(kernel, "modEq_iff_dvd"),
+        mod_eq_of_nat_mod_eq: child(kernel, "modEq_of_nat_modEq"),
         mod_eq_add_right: child(kernel, "modEq_add_right"),
         mod_eq_add_left: child(kernel, "modEq_add_left"),
         mod_eq_mul_left: child(kernel, "modEq_mul_left"),
@@ -918,6 +940,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modeq::declare_modeq_symm(&mut d)?;
         modeq::declare_modeq_trans(&mut d)?;
         modeq::declare_modeq_iff_dvd(&mut d)?;
+        modeq::declare_modeq_of_nat_modeq(&mut d)?;
         modeq::declare_modeq_add_right(&mut d)?;
         modeq::declare_modeq_add_left(&mut d)?;
         modeq::declare_modeq_mul_left(&mut d)?;
@@ -934,6 +957,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prod::declare_prod_range_congr_lt(&mut d)?;
         prod::declare_prod_range_swap_adjacent(&mut d)?;
         prod::declare_prod_range_swap(&mut d)?;
+        prod::declare_prod_range_permute(&mut d)?;
         prod::declare_modeq_prod_range(&mut d)?;
         wilson::declare_factorial(&mut d)?;
         wilson::declare_factorial_equations(&mut d)?;

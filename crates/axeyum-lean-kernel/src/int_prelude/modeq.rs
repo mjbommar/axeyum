@@ -983,3 +983,213 @@ pub(super) fn declare_modeq_cancel(d: &mut IntDev<'_>) -> Result<(), KernelError
     })?;
     Ok(())
 }
+
+/// `Eq Int (sub y x) (sub du dv)`, from `h : Eq Int (add x du) (add y dv)` —
+/// pure abelian-group rearrangement. Cancel `x` off the left (commute, then
+/// `add_neg_cancel_right`), leaving `du = (y+dv)+(-x)`; add `-dv` to both
+/// sides, reassociate the right side with a `swap_tail`
+/// (`add_assoc`/`add_comm`/`add_assoc`) so `dv`'s cancellation lines up with
+/// `add_neg_cancel_right` again, then flip.
+///
+/// [`declare_modeq_of_nat_modeq`] is the only caller: it needs `Y - X = D*U -
+/// D*V` from the balanced Bezout-shaped witness equation `X + D*U = Y + D*V`
+/// that `Nat.modEq`'s own existential unpacks to.
+fn nat_witness_gap(
+    d: &mut IntDev<'_>,
+    x: ExprId,
+    y: ExprId,
+    du: ExprId,
+    dv: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let neg_x = d.ineg(x);
+    let neg_dv = d.ineg(dv);
+
+    // Step 1: reorder the left side, x+du = du+x.
+    let x_du = d.iadd(x, du);
+    let du_x = d.iadd(du, x);
+    let comm1 = d.const_app(p.add_comm, &[x, du]);
+    let y_dv = d.iadd(y, dv);
+    let h_reordered = {
+        let back = d.isymm(x_du, du_x, comm1);
+        d.itrans(du_x, x_du, y_dv, back, h)
+    };
+
+    // Step 2: cancel x, giving du = (y+dv)+(-x).
+    let cancel1 = d.const_app(p.add_neg_cancel_right, &[du, x]); // (du+x)+(-x) = du
+    let du_x_negx = d.iadd(du_x, neg_x);
+    let r1 = d.iadd(y_dv, neg_x);
+    let h3 = {
+        let back = d.isymm(du_x_negx, du, cancel1);
+        let congr = d.icongr(du_x, y_dv, h_reordered, &|d, t| d.iadd(t, neg_x));
+        d.itrans(du, du_x_negx, r1, back, congr)
+    };
+
+    // Step 3: add -dv to both sides, then reassociate the right side so its
+    // `dv` cancellation matches `add_neg_cancel_right`'s shape.
+    let du_negdv = d.iadd(du, neg_dv);
+    let r1_negdv = d.iadd(r1, neg_dv);
+    let h4 = d.icongr(du, r1, h3, &|d, t| d.iadd(t, neg_dv));
+
+    // swap_tail : (p+b)+c = (p+c)+b, with p = y_dv, b = -x, c = -dv.
+    let p_plus_negdv = d.iadd(y_dv, neg_dv);
+    let target_swapped = d.iadd(p_plus_negdv, neg_x);
+    let swap = {
+        let bc = d.iadd(neg_x, neg_dv);
+        let cb = d.iadd(neg_dv, neg_x);
+        let step_a = d.const_app(p.add_assoc, &[y_dv, neg_x, neg_dv]); // (p+b)+c = p+(b+c)
+        let rhs_a = d.iadd(y_dv, bc);
+        let comm_bc = d.const_app(p.add_comm, &[neg_x, neg_dv]);
+        let step_b = d.icongr(bc, cb, comm_bc, &|d, t| d.iadd(y_dv, t));
+        let rhs_b = d.iadd(y_dv, cb);
+        let step_c_fwd = d.const_app(p.add_assoc, &[y_dv, neg_dv, neg_x]); // (p+c)+b = p+(c+b)
+        let step_c = d.isymm(target_swapped, rhs_b, step_c_fwd);
+        let (_, chained) = d.ichain(
+            r1_negdv,
+            &[(rhs_a, step_a), (rhs_b, step_b), (target_swapped, step_c)],
+        );
+        chained
+    };
+
+    // Cancel dv on the swapped side: (y+dv)+(-dv) = y.
+    let cancel2 = d.const_app(p.add_neg_cancel_right, &[y, dv]);
+    let y_negx = d.iadd(y, neg_x);
+    let congr2 = d.icongr(p_plus_negdv, y, cancel2, &|d, t| d.iadd(t, neg_x));
+
+    let h5 = {
+        let (_, chained) = d.ichain(r1_negdv, &[(target_swapped, swap), (y_negx, congr2)]);
+        chained
+    };
+
+    let h6 = d.itrans(du_negdv, r1_negdv, y_negx, h4, h5);
+    d.isymm(du_negdv, y_negx, h6)
+}
+
+/// `Int.modEq_of_nat_modEq :
+/// ∀ (d a b : Nat), Nat.modEq d a b → 0 < d →
+/// Int.ModEq (ofNat d) (ofNat a) (ofNat b)`.
+///
+/// Transports a `Nat.modEq` congruence (balanced witnesses: `∃ u v, a+d*u =
+/// b+d*v`) into `Int.ModEq`. Only the N-to-Z direction is built: the witness
+/// equation, read through `Int.ofNat`, is already exactly the shape
+/// `modEq_iff_dvd`'s `mpr` consumes (`d ∣ (b-a)`, witness `u-v`), with no
+/// magnitude bound on `emod` needed. The reverse direction would need to
+/// recover a *balanced* Nat witness pair from an `Int.ModEq` (an `emod`
+/// equality), which is a different, harder construction this slice does not
+/// attempt.
+///
+/// Route: eliminate the double existential (`exists_elim` twice) to get
+/// `u, v : Nat` and `eq : a+d*u = b+d*v`; lift `eq` to `Int` via
+/// `NatOps::nat_rewrite` (`congrArg Int.ofNat`, defeq-transparent through
+/// `Int.add`/`Int.mul` on the `ofNat` branches — the same "closes by
+/// `Eq.refl`-shaped congruence" pattern `Int.factorial_succ` uses); then
+/// `nat_witness_gap` turns that into `(ofNat b) - (ofNat a) = (ofNat d)*u -
+/// (ofNat d)*v`, and `Int.mul_sub` folds the right side into `(ofNat d)*(u-v)`
+/// — exactly the witness `modEq_iff_dvd`'s `mpr` needs.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_modeq_of_nat_modeq(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.mod_eq_of_nat_mod_eq, 3, &|d, v| {
+        let (dm, a, b) = (v[0], v[1], v[2]);
+        let nat = d.nat_ty();
+
+        let modeq_nat_ty = d.mod_eq(dm, a, b);
+        let zero_nat = d.zero();
+        let pos_ty = d.lt(zero_nat, dm);
+
+        let big_d = d.of_nat(dm);
+        let big_a = d.of_nat(a);
+        let big_b = d.of_nat(b);
+        let concl = imodeq(d, big_d, big_a, big_b);
+
+        let stmt = {
+            let inner = d.arrow(pos_ty, concl);
+            d.arrow(modeq_nat_ty, inner)
+        };
+
+        let modeq_fv = d.fresh_fvar();
+        let modeq_hyp = d.kernel().fvar(modeq_fv);
+        let pos_fv = d.fresh_fvar();
+        let pos_hyp = d.kernel().fvar(pos_fv);
+
+        let outer_pred = d.mod_eq_outer_predicate(dm, a, b);
+
+        let minor1 = {
+            let u_fv = d.fresh_fvar();
+            let u = d.kernel().fvar(u_fv);
+            let inner_ty = d.mod_eq_inner_exists(dm, a, b, u);
+            let inner_pred = d.mod_eq_inner_predicate(dm, a, b, u);
+            let inner_fv = d.fresh_fvar();
+            let inner_hyp = d.kernel().fvar(inner_fv);
+
+            let minor2 = {
+                let vv_fv = d.fresh_fvar();
+                let vv = d.kernel().fvar(vv_fv);
+                let sum_a_nat = d.mod_eq_sum(dm, a, u);
+                let sum_b_nat = d.mod_eq_sum(dm, b, vv);
+                let eq_ty = d.eq(sum_a_nat, sum_b_nat);
+                let eq_fv = d.fresh_fvar();
+                let eq_hyp = d.kernel().fvar(eq_fv);
+
+                // Lift the Nat witness equation to Int via congrArg ofNat.
+                let of_nat_sum_a = d.of_nat(sum_a_nat);
+                let base_proof = d.irefl(of_nat_sum_a);
+                let motive = &|d: &mut IntDev<'_>, y: ExprId| {
+                    let of_nat_y = d.of_nat(y);
+                    d.ieq(of_nat_sum_a, of_nat_y)
+                };
+                let eq_int = d.nat_rewrite(sum_a_nat, sum_b_nat, eq_hyp, base_proof, motive);
+
+                let big_u = d.of_nat(u);
+                let big_v = d.of_nat(vv);
+                let du = d.imul(big_d, big_u);
+                let dv = d.imul(big_d, big_v);
+
+                // eq_int, up to defeq (Int.add/Int.mul on ofNat branches),
+                // has type `Eq Int (add big_a du) (add big_b dv)`.
+                let gap = nat_witness_gap(d, big_a, big_b, du, dv, eq_int);
+
+                // du - dv = D*(u-v), by symm(mul_sub).
+                let uv_diff = d.isub(big_u, big_v);
+                let d_uv = d.imul(big_d, uv_diff);
+                let mul_sub_pf = d.const_app(p.mul_sub, &[big_d, big_u, big_v]); // D*(u-v) = D*u-D*v
+                let du_dv = d.isub(du, dv);
+                let reversed = d.isymm(d_uv, du_dv, mul_sub_pf);
+
+                let b_minus_a = d.isub(big_b, big_a);
+                let witness_eq = d.itrans(b_minus_a, du_dv, d_uv, gap, reversed);
+
+                // Build the `Int.dvd` proof: witness `u - v`.
+                let predicate = super::dvd::dvd_predicate(d, big_d, b_minus_a);
+                let one_level = d.level_one();
+                let intro_name = d.int().logic.exists_intro;
+                let intro = d.kernel().const_(intro_name, vec![one_level]);
+                let int_ty = d.int_ty();
+                let dvd_proof = d.apply(intro, &[int_ty, predicate, uv_diff, witness_eq]);
+                let dvd_ty = super::dvd::idvd(d, big_d, b_minus_a);
+
+                // ModEq_iff_dvd's mpr.
+                let iff_pf = d.const_app(p.mod_eq_iff_dvd, &[big_d, big_a, big_b, pos_hyp]);
+                let mpr = d.const_app(p.logic.iff_mpr, &[concl, dvd_ty, iff_pf]);
+                let result = d.apply(mpr, &[dvd_proof]);
+
+                let body = d.lam_fv(eq_fv, eq_ty, result);
+                d.lam_fv(vv_fv, nat, body)
+            };
+            let inner_elim = super::ops::exists_elim(d, inner_pred, concl, inner_hyp, minor2);
+            let body = d.lam_fv(inner_fv, inner_ty, inner_elim);
+            d.lam_fv(u_fv, nat, body)
+        };
+        let elim_body = super::ops::exists_elim(d, outer_pred, concl, modeq_hyp, minor1);
+
+        let with_pos = d.lam_fv(pos_fv, pos_ty, elim_body);
+        let proof = d.lam_fv(modeq_fv, modeq_nat_ty, with_pos);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
