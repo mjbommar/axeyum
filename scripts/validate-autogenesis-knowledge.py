@@ -41,6 +41,10 @@ METHODS = {
     "kernel-derived", "checker-derived", "registry-derived",
     "mechanically-observed", "human-reviewed", "heuristic", "proposed",
 }
+FORMAL_COVERAGE = {
+    "exact-formalization", "supporting-law", "base-case", "recurrence-law",
+    "relation-law", "finite-instance", "counterexample", "representation-bridge",
+}
 
 
 def load_json(path: Path, errors: list[str]) -> Any:
@@ -149,6 +153,11 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
                 errors.append(f"namespace {namespace['id']}: invalid id_pattern: {exc}")
 
     operation_doc = load_json(root / "artifacts/autogenesis/operations.json", errors)
+    fact_docs = {}
+    for path in sorted((root / "artifacts/facts").glob("*.json")):
+        document = load_json(path, errors)
+        if isinstance(document, dict) and isinstance(document.get("id"), str):
+            fact_docs[document["id"]] = document
     operation_ids = {
         row.get("id") for row in (operation_doc or {}).get("operations", [])
     }
@@ -187,8 +196,7 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
             elif entity.get("kind") != kind:
                 errors.append(f"link {link_id} {side}: overlay entity kind mismatch for {ident}")
         elif namespace_id == "axeyum-fact":
-            candidates = list((root / "artifacts/facts").glob("*.json"))
-            if not any(load_json(path, errors).get("id") == ident for path in candidates):
+            if ident not in fact_docs:
                 errors.append(f"link {link_id} {side}: unknown fact {ident!r}")
         elif namespace_id == "axeyum-operation" and ident not in operation_ids:
             errors.append(f"link {link_id} {side}: unknown operation {ident!r}")
@@ -223,8 +231,40 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
             errors.append(f"link {link_id}: source kind is outside relation domain")
         if target.get("kind") not in relation.get("target_kinds", []):
             errors.append(f"link {link_id}: target kind is outside relation range")
+        if link.get("relation") == "established-by":
+            fact = fact_docs.get(source.get("id"))
+            credited = operation_ids_for_fact(fact) if fact else set()
+            if target.get("id") not in credited:
+                errors.append(
+                    f"link {link_id}: established-by target is not credited by the fact evidence"
+                )
+        if link.get("relation") == "formalizes":
+            qualifiers = link.get("qualifiers")
+            if not isinstance(qualifiers, dict):
+                errors.append(f"link {link_id}: formalizes requires qualifiers")
+            else:
+                coverage = qualifiers.get("coverage")
+                if coverage not in FORMAL_COVERAGE:
+                    errors.append(f"link {link_id}: unknown formal coverage {coverage!r}")
+                if qualifiers.get("completeness") != "partial":
+                    errors.append(
+                        f"link {link_id}: a single formalizes edge must be partial; "
+                        "complete concept coverage belongs only in a derived census"
+                    )
 
     return errors, warnings
+
+
+def operation_ids_for_fact(fact: dict[str, Any]) -> set[str]:
+    """Read operation credit from evidence; never trust a sidecar assertion."""
+    found = set()
+    for evidence in fact.get("evidence", []) or []:
+        if not isinstance(evidence, dict):
+            continue
+        checker = evidence.get("checker_operation")
+        if isinstance(checker, dict) and isinstance(checker.get("id"), str):
+            found.add(checker["id"])
+    return found
 
 
 def main() -> int:

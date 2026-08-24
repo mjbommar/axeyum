@@ -377,7 +377,15 @@ An ADR becomes mandatory before any of these later changes:
 
 ## Immediate next batch
 
-The next useful bounded increment is F1 over the current multi-target facts:
+F1 is now complete for the current multi-target facts. Its generated,
+reproducible [coverage census](../plan/generated/autogenesis-knowledge-coverage.md)
+reports two authoritative multi-target operations, nine applicable facts, all
+nine with qualified `formalizes` mappings, and seven fact-evidence-backed
+`established-by` credits. The remaining two applicability entries were settled
+by earlier one-target operations, so the census deliberately does not misstate
+them as credits to the later reusable producer.
+
+The completed bounded batch was:
 
 1. regenerate the production provenance ledger first, because its committed
    value was recently stale;
@@ -389,7 +397,7 @@ The next useful bounded increment is F1 over the current multi-target facts:
 6. publish a coverage census from the overlay and add mutation controls for a
    false “complete concept coverage” edge.
 
-After that, F2 should consume the kernel's actual dependency inventory rather
+F2 should now consume the kernel's actual dependency inventory rather
 than manually mapping hundreds of declarations. The sequence is intentional:
 first prove the link semantics on nine well-understood facts, then scale the
 mechanical parts without scaling ambiguity.
