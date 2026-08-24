@@ -126,6 +126,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `7160fc0bc` | Publish non-authoritative producer observations; current live queue has zero registered admissible candidates |
 | 2026-08-24 | `d076da943` | Correct branch-containment guidance and move derived-snapshot freshness out of the global construction gate into an explicit knowledge-owner check |
 | 2026-08-24 | `c4cfde641` | Refresh the kernel-derived declaration/dependency snapshot to the latest 1,122 declarations, 855 theorems, and 4,035 direct theorem edges without touching construction sources |
+| 2026-08-24 | `a8c08220a` | Derive a fail-closed capability-gap projection that groups all dependency-ready facts by typed surface and reports why autonomous dispatch is refused |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
@@ -2035,9 +2036,9 @@ visibility kept distinct. Next: normalize producer declines into typed,
 measured obstructions rather than hand-authoring the next bottleneck. F3 now
 normalizes 47 retained decline records into 20 families while preserving unknown
 remedies and unbound resolutions; next is representation/transport lineage.
-F4/F5/F6 now publish hash-bound transport coverage and non-authoritative
-scheduler observations. Live frontier evidence is the limiting result: 144
-facts are dependency-ready but zero are admissible because none has a registered
+F4/F5/F6 now publish hash-bound transport coverage, non-authoritative scheduler
+observations, and a capability-gap projection. Live frontier evidence is the
+limiting result: 141 facts are dependency-ready but zero are admissible because none has a registered
 applicable operation. Next capability work must expand general-producer and
 adapter coverage over the train/development queue, not add more single-target
 metadata or solver work.
