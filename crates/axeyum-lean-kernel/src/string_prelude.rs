@@ -135,6 +135,37 @@ pub struct StringPrelude {
     /// module doc comment there.
     pub append_left_cancel: NameId,
 
+    /// `take : Nat → Str → Str`, a checked structural recursion on the count
+    /// (see `take_drop.rs`): `take 0 s ≡ nil`,
+    /// `take (n+1) nil ≡ nil`, `take (n+1) (cons h t) ≡ cons h (take n t)`.
+    pub take: NameId,
+    /// `drop : Nat → Str → Str`, the mirror recursion: `drop 0 s ≡ s`,
+    /// `drop (n+1) nil ≡ nil`, `drop (n+1) (cons h t) ≡ drop n t`.
+    pub drop: NameId,
+    /// `take_zero : ∀ (s : Str), Eq Str (take Nat.zero s) nil` (definitional;
+    /// closes by `Eq.refl` alone).
+    pub take_zero: NameId,
+    /// `take_succ_nil : ∀ (n : Nat), Eq Str (take (Nat.succ n) nil) nil`
+    /// (definitional).
+    pub take_succ_nil: NameId,
+    /// `take_succ_cons : ∀ (n : Nat) (h : Char) (t : Str),
+    /// Eq Str (take (Nat.succ n) (cons h t)) (cons h (take n t))`
+    /// (definitional).
+    pub take_succ_cons: NameId,
+    /// `drop_zero : ∀ (s : Str), Eq Str (drop Nat.zero s) s` (definitional).
+    pub drop_zero: NameId,
+    /// `drop_succ_nil : ∀ (n : Nat), Eq Str (drop (Nat.succ n) nil) nil`
+    /// (definitional).
+    pub drop_succ_nil: NameId,
+    /// `drop_succ_cons : ∀ (n : Nat) (h : Char) (t : Str),
+    /// Eq Str (drop (Nat.succ n) (cons h t)) (drop n t)` (definitional).
+    pub drop_succ_cons: NameId,
+    /// `take_append_drop : ∀ (n : Nat) (s : Str),
+    /// Eq Str (append (take n s) (drop n s)) s` — the splitting law tying
+    /// `take`/`drop` to `append`; every substring argument a string solver
+    /// makes is a rearrangement of it.
+    pub take_append_drop: NameId,
+
     /// The universe level `1` (so `Char`/`Str : Sort 1 = Type`).
     one: LevelId,
 }
@@ -308,6 +339,42 @@ pub fn build_string_prelude(
             one,
         )?;
 
+        // --- take/drop : Nat → Str → Str, and take_append_drop ----------------
+        // See `take_drop.rs`. Self-contained over the bare `Nat` inductive in
+        // `logic`, exactly like `length` — no `nat_prelude` arithmetic needed.
+        let take = kernel.name_str(namespace, "take");
+        let drop = kernel.name_str(namespace, "drop");
+        let take_zero = kernel.name_str(namespace, "take_zero");
+        let take_succ_nil = kernel.name_str(namespace, "take_succ_nil");
+        let take_succ_cons = kernel.name_str(namespace, "take_succ_cons");
+        let drop_zero = kernel.name_str(namespace, "drop_zero");
+        let drop_succ_nil = kernel.name_str(namespace, "drop_succ_nil");
+        let drop_succ_cons = kernel.name_str(namespace, "drop_succ_cons");
+        let take_append_drop = kernel.name_str(namespace, "take_append_drop");
+        take_drop::declare_take_drop_and_laws(
+            kernel,
+            &take_drop::TakeDropNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_cons,
+                str_rec,
+                append,
+                nil_append,
+                take,
+                drop,
+                take_zero,
+                take_succ_nil,
+                take_succ_cons,
+                drop_zero,
+                drop_succ_nil,
+                drop_succ_cons,
+                take_append_drop,
+            },
+            one,
+        )?;
+
         Ok(StringPrelude {
             logic,
             char_ind,
@@ -330,6 +397,15 @@ pub fn build_string_prelude(
             reverse_append,
             reverse_reverse,
             append_left_cancel,
+            take,
+            drop,
+            take_zero,
+            take_succ_nil,
+            take_succ_cons,
+            drop_zero,
+            drop_succ_nil,
+            drop_succ_cons,
+            take_append_drop,
             one,
         })
     })();
@@ -388,6 +464,22 @@ impl StringPrelude {
         let f = kernel.const_(self.append, vec![]);
         let e = kernel.app(f, a);
         kernel.app(e, b)
+    }
+
+    /// `take n s`.
+    #[must_use]
+    pub fn take_app(&self, kernel: &mut Kernel, n: ExprId, s: ExprId) -> ExprId {
+        let f = kernel.const_(self.take, vec![]);
+        let e = kernel.app(f, n);
+        kernel.app(e, s)
+    }
+
+    /// `drop n s`.
+    #[must_use]
+    pub fn drop_app(&self, kernel: &mut Kernel, n: ExprId, s: ExprId) -> ExprId {
+        let f = kernel.const_(self.drop, vec![]);
+        let e = kernel.app(f, n);
+        kernel.app(e, s)
     }
 
     /// The `tail : Str → Str` selector, a closed `Str.rec` application:
@@ -658,6 +750,7 @@ mod length;
 mod length_append;
 mod monoid;
 mod reverse;
+mod take_drop;
 
 pub use length_append::{StringLengthArithmetic, build_string_length_append};
 

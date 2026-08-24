@@ -65,6 +65,58 @@ fn length_reverse_and_cancel_names_are_registered() {
     }
 }
 
+/// Same presence discipline for `take`/`drop`/`take_append_drop` (P3.7
+/// strings, slice 3): an unvisited name's `axiom_footprint` is UNMEASURED,
+/// not empty, so this is checked independently of the footprint test below.
+#[test]
+fn take_drop_names_are_registered() {
+    let (k, sp) = setup(2);
+    for n in [
+        sp.take,
+        sp.drop,
+        sp.take_zero,
+        sp.take_succ_nil,
+        sp.take_succ_cons,
+        sp.drop_zero,
+        sp.drop_succ_nil,
+        sp.drop_succ_cons,
+        sp.take_append_drop,
+    ] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered"
+        );
+    }
+}
+
+/// `take`/`drop`/`take_append_drop` must rest on nothing assumed.
+#[test]
+fn take_drop_are_axiom_free() {
+    let (k, sp) = setup(2);
+    for n in [
+        sp.take,
+        sp.drop,
+        sp.take_zero,
+        sp.take_succ_nil,
+        sp.take_succ_cons,
+        sp.drop_zero,
+        sp.drop_succ_nil,
+        sp.drop_succ_cons,
+        sp.take_append_drop,
+    ] {
+        let footprint = k.axiom_footprint(n);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(n),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
 #[test]
 fn empty_alphabet_admits() {
     // A pure equality/disequality reconstruction needs no concrete character.
@@ -964,6 +1016,170 @@ fn length_append_composes_with_nat_prelude_and_is_axiom_free() {
     assert!(
         k.def_eq(inferred, want),
         "length_append x y : length (x ++ y) = length x + length y, got {}",
+        k.render_lean(inferred)
+    );
+}
+
+// ---------------------------------------------------------------------------
+// `take` / `drop` / `take_append_drop` (P3.7 strings, slice 3).
+// ---------------------------------------------------------------------------
+
+#[test]
+fn take_and_drop_iota_compute_on_concrete_strings() {
+    let (mut k, sp) = setup(4);
+    let s = str_of(&mut k, &sp, &[0, 1, 2, 3]);
+
+    // take 2 [0,1,2,3] ↝ [0,1]
+    let two = nat_of(&mut k, &sp, 2);
+    let took = sp.take_app(&mut k, two, s);
+    let want_take = str_of(&mut k, &sp, &[0, 1]);
+    assert!(k.def_eq(took, want_take), "take 2 [0,1,2,3] ↝ [0,1]");
+
+    // drop 2 [0,1,2,3] ↝ [2,3]
+    let dropped = sp.drop_app(&mut k, two, s);
+    let want_drop = str_of(&mut k, &sp, &[2, 3]);
+    assert!(k.def_eq(dropped, want_drop), "drop 2 [0,1,2,3] ↝ [2,3]");
+
+    // take 0 s ↝ nil ; drop 0 s ↝ s.
+    let zero = nat_of(&mut k, &sp, 0);
+    let take0 = sp.take_app(&mut k, zero, s);
+    let nil = sp.nil(&mut k);
+    assert!(k.def_eq(take0, nil), "take 0 s ↝ nil");
+    let drop0 = sp.drop_app(&mut k, zero, s);
+    assert!(k.def_eq(drop0, s), "drop 0 s ↝ s");
+
+    // Count past the end: take/drop are total (SMT-LIB-shaped totality, not
+    // a partial operator like `str.at` — the count simply runs out when the
+    // string does).
+    let ten = nat_of(&mut k, &sp, 10);
+    let take_over = sp.take_app(&mut k, ten, s);
+    assert!(
+        k.def_eq(take_over, s),
+        "take 10 [0,1,2,3] ↝ the whole string"
+    );
+    let drop_over = sp.drop_app(&mut k, ten, s);
+    assert!(k.def_eq(drop_over, nil), "drop 10 [0,1,2,3] ↝ nil");
+}
+
+#[test]
+fn take_and_drop_iota_compute_on_nil() {
+    let (mut k, sp) = setup(2);
+    let nil = sp.nil(&mut k);
+    let three = nat_of(&mut k, &sp, 3);
+    let took = sp.take_app(&mut k, three, nil);
+    let nil2 = sp.nil(&mut k);
+    assert!(k.def_eq(took, nil2), "take (n+1) nil ↝ nil");
+    let dropped = sp.drop_app(&mut k, three, nil);
+    let nil3 = sp.nil(&mut k);
+    assert!(k.def_eq(dropped, nil3), "drop (n+1) nil ↝ nil");
+}
+
+/// The defining-equation theorems are usable as LEMMAS at opaque arguments,
+/// not just restatements of ι at concrete ones — mirrors
+/// `length_cons_instantiates_at_an_opaque_word`.
+#[test]
+fn take_succ_cons_and_drop_succ_cons_instantiate_at_opaque_args() {
+    let (mut k, sp) = setup(2);
+    let anon = k.anon();
+    let nat_ty = k.const_(sp.logic.nat, vec![]);
+    let n_name = {
+        let name = k.name_str(anon, "n_opaque");
+        k.add_declaration(crate::Declaration::Axiom {
+            name,
+            uparams: vec![],
+            ty: nat_ty,
+        })
+        .expect("opaque Nat axiom admits");
+        name
+    };
+    let n = k.const_(n_name, vec![]);
+    let h = sp.char(&mut k, 0);
+    let t = opaque_str(&mut k, &sp, "w_t");
+    let str_ty = sp.str_const(&mut k);
+
+    // take_succ_cons n h t : Eq Str (take (succ n) (cons h t)) (cons h (take n t))
+    let take_lemma = k.const_(sp.take_succ_cons, vec![]);
+    let take_applied = {
+        let e = k.app(take_lemma, n);
+        let e = k.app(e, h);
+        k.app(e, t)
+    };
+    let take_inferred = k.infer(take_applied).expect("take_succ_cons n h t infers");
+    let succ_n = {
+        let succ = k.const_(sp.logic.nat_succ, vec![]);
+        k.app(succ, n)
+    };
+    let take_want = {
+        let consed = sp.cons(&mut k, h, t);
+        let lhs = sp.take_app(&mut k, succ_n, consed);
+        let take_n_t = sp.take_app(&mut k, n, t);
+        let rhs = sp.cons(&mut k, h, take_n_t);
+        mk_eq(&mut k, &sp, str_ty, 1, lhs, rhs)
+    };
+    assert!(
+        k.def_eq(take_inferred, take_want),
+        "take_succ_cons n h t : take (succ n) (cons h t) = cons h (take n t), got {}",
+        k.render_lean(take_inferred)
+    );
+
+    // drop_succ_cons n h t : Eq Str (drop (succ n) (cons h t)) (drop n t)
+    let drop_lemma = k.const_(sp.drop_succ_cons, vec![]);
+    let drop_applied = {
+        let e = k.app(drop_lemma, n);
+        let e = k.app(e, h);
+        k.app(e, t)
+    };
+    let drop_inferred = k.infer(drop_applied).expect("drop_succ_cons n h t infers");
+    let drop_want = {
+        let consed = sp.cons(&mut k, h, t);
+        let lhs = sp.drop_app(&mut k, succ_n, consed);
+        let rhs = sp.drop_app(&mut k, n, t);
+        mk_eq(&mut k, &sp, str_ty, 1, lhs, rhs)
+    };
+    assert!(
+        k.def_eq(drop_inferred, drop_want),
+        "drop_succ_cons n h t : drop (succ n) (cons h t) = drop n t, got {}",
+        k.render_lean(drop_inferred)
+    );
+}
+
+#[test]
+fn take_append_drop_instantiates_at_an_opaque_word() {
+    // The headline law: `append (take n s) (drop n s) = s`, checked usable as
+    // a lemma at an opaque `n` and an opaque `s` (never concretely evaluated),
+    // exactly like `reverse_reverse_instantiates_at_an_opaque_word` above.
+    let (mut k, sp) = setup(2);
+    let anon = k.anon();
+    let nat_ty = k.const_(sp.logic.nat, vec![]);
+    let n_name = {
+        let name = k.name_str(anon, "n_opaque");
+        k.add_declaration(crate::Declaration::Axiom {
+            name,
+            uparams: vec![],
+            ty: nat_ty,
+        })
+        .expect("opaque Nat axiom admits");
+        name
+    };
+    let n = k.const_(n_name, vec![]);
+    let v = opaque_str(&mut k, &sp, "w_v");
+
+    let lemma = k.const_(sp.take_append_drop, vec![]);
+    let applied = {
+        let e = k.app(lemma, n);
+        k.app(e, v)
+    };
+    let inferred = k.infer(applied).expect("take_append_drop n v infers");
+    let str_ty = sp.str_const(&mut k);
+    let want = {
+        let took = sp.take_app(&mut k, n, v);
+        let dropped = sp.drop_app(&mut k, n, v);
+        let lhs = sp.append_app(&mut k, took, dropped);
+        mk_eq(&mut k, &sp, str_ty, 1, lhs, v)
+    };
+    assert!(
+        k.def_eq(inferred, want),
+        "take_append_drop n v : append (take n v) (drop n v) = v, got {}",
         k.render_lean(inferred)
     );
 }
