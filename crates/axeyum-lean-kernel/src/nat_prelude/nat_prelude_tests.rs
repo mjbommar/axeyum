@@ -113,6 +113,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.test_bit,
         p.size_aux,
         p.size,
+        p.count_range,
+        p.totient,
     ]
 }
 
@@ -269,6 +271,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_sum_range_of_forall_lt,
         p.add_pow_modeq_prime,
         p.pow_prime_modeq_self,
+        p.count_range_zero,
+        p.count_range_succ,
+        p.count_range_le,
+        p.beq_eq_false_of_ne,
+        p.count_range_eq_pred_of_only_zero_false,
+        p.totient_prime,
         p.fin_is_lt,
         p.fin_val_mk,
         p.injective_on_imp_surjective_on,
@@ -446,6 +454,52 @@ fn arithmetic_reduces_on_numerals() {
     assert!(
         !f.k.def_eq(seven_sub_three, five),
         "7 - 3 must NOT be def-eq to 5"
+    );
+}
+
+/// `Nat.totient` **computes** by pure reduction on numerals, matching
+/// `totient.rs`'s module doc (hand-checked before any kernel work):
+/// `totient 1 = 1` — the range is `{0}`, and `gcd 0 1 = 1`;
+/// `totient 6 = 2` — of `{0,..,5}`, only `1` and `5` are coprime to `6`
+/// (`0,2,3,4` share a factor: `2,4` with `2`, `3` with `3`, `0` with `6`
+/// itself);
+/// `totient 9 = 6` — of `{0,..,8}`, `{1,2,4,5,7,8}` are coprime to `9`,
+/// excluding `0,3,6` (multiples of `3`).
+/// A definition that type-checks but counts wrong has an empty axiom
+/// footprint and passes every sweep in this repository, so this negative
+/// half matters as much as the positive one.
+#[test]
+fn totient_computes_on_small_numerals() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let one = f.num(1);
+    let totient_one = f.const_app(p.totient, &[one]);
+    assert!(f.k.def_eq(totient_one, one), "totient 1 must reduce to 1");
+
+    let six = f.num(6);
+    let two = f.num(2);
+    let totient_six = f.const_app(p.totient, &[six]);
+    assert!(f.k.def_eq(totient_six, two), "totient 6 must reduce to 2");
+
+    let nine = f.num(9);
+    let six_again = f.num(6);
+    let totient_nine = f.const_app(p.totient, &[nine]);
+    assert!(
+        f.k.def_eq(totient_nine, six_again),
+        "totient 9 must reduce to 6"
+    );
+
+    // NEGATIVE reduction controls.
+    let three = f.num(3);
+    assert!(
+        !f.k.def_eq(totient_six, three),
+        "totient 6 must NOT be def-eq to 3"
+    );
+    let five = f.num(5);
+    assert!(
+        !f.k.def_eq(totient_nine, five),
+        "totient 9 must NOT be def-eq to 5"
     );
 }
 
@@ -4276,7 +4330,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        30 + 175,
+        32 + 181,
         "every promised definition and theorem must be rendered"
     );
 }

@@ -151,6 +151,7 @@ mod order_more;
 mod primes;
 mod rectangle;
 mod restrict_pair;
+mod totient;
 pub(crate) mod transposition;
 mod vandermonde;
 
@@ -191,6 +192,7 @@ use rectangle::declare_rectangle;
 use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
+use totient::declare_totient_all;
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
     declare_transposition_injective, declare_transposition_involutive,
@@ -834,6 +836,42 @@ pub struct NatPrelude {
     /// theorem.
     pub pow_prime_modeq_self: NameId,
 
+    // --- Euler's totient (`totient.rs`) -------------------------------------
+    /// `Nat.countRange p n := |{k < n : p k = true}|` — the count of a
+    /// decidable (`Bool`-valued) predicate over `[0,n)`, by structural
+    /// recursion on `n`. Nothing in this prelude could count a decidable
+    /// subset before this.
+    pub count_range: NameId,
+    /// `Nat.countRange_zero : ∀ p, countRange p 0 = 0`.
+    pub count_range_zero: NameId,
+    /// `Nat.countRange_succ : ∀ p n, countRange p (succ n) =
+    /// countRange p n + (if p n then 1 else 0)`.
+    pub count_range_succ: NameId,
+    /// `Nat.countRange_le : ∀ p n, countRange p n ≤ n`.
+    pub count_range_le: NameId,
+    /// `Nat.beq_eq_false_of_ne : ∀ a b, Not (Eq Nat a b) → beq a b = false` —
+    /// the converse of `ne_of_beq_eq_false`, closing the boolean/propositional
+    /// bridge from the other side. Proved by deciding `beq a b` itself
+    /// (`Bool.rec` into `Or (Eq Bool _ true) (Eq Bool _ false)`, fully
+    /// constructive) and refuting the `true` branch via `eq_of_beq_eq_true`.
+    pub beq_eq_false_of_ne: NameId,
+    /// `Nat.totient n := countRange (fun k => beq (gcd k n) 1) n` — Euler's
+    /// totient, the count of residues in `[0,n)` coprime to `n`. `k = 0` is
+    /// never counted for `n > 1` (`gcd 0 n = n ≠ 1`), so this matches the
+    /// textbook `[1,n]` convention (`n` itself is out of range but was never
+    /// coprime to itself for `n > 1` either).
+    pub totient: NameId,
+    /// `Nat.countRange_eq_pred_of_only_zero_false : ∀ f n, (∀ k, 0 < k → k <
+    /// succ n → f k = true) → f 0 = false → countRange f (succ n) = n` — the
+    /// counting lemma `totient_prime` rests on: a predicate false at exactly
+    /// one endpoint and true everywhere else in the range counts one short of
+    /// the range's length.
+    pub count_range_eq_pred_of_only_zero_false: NameId,
+    /// `Nat.totient_prime : Prime p → totient p = sub p 1` — the bridge that
+    /// makes Euler's theorem generalize Fermat's: every prime's totient is
+    /// `p - 1`.
+    pub totient_prime: NameId,
+
     // --- `Fin`, and the pigeonhole notions (`finite.rs`) --------------------
     /// `Nat.Fin : Nat → Type 0` — the canonical finite index type
     /// `{0, …, n-1}`, the subtype form `⟨val : Nat, isLt : val < n⟩` declared
@@ -1337,6 +1375,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_sum_range_of_forall_lt: kernel.name_str(nat, "dvd_sumRange_of_forall_lt"),
             add_pow_modeq_prime: kernel.name_str(nat, "add_pow_modeq_prime"),
             pow_prime_modeq_self: kernel.name_str(nat, "pow_prime_modeq_self"),
+            count_range: kernel.name_str(nat, "countRange"),
+            count_range_zero: kernel.name_str(nat, "countRange_zero"),
+            count_range_succ: kernel.name_str(nat, "countRange_succ"),
+            count_range_le: kernel.name_str(nat, "countRange_le"),
+            beq_eq_false_of_ne: kernel.name_str(nat, "beq_eq_false_of_ne"),
+            totient: kernel.name_str(nat, "totient"),
+            count_range_eq_pred_of_only_zero_false: kernel
+                .name_str(nat, "countRange_eq_pred_of_only_zero_false"),
+            totient_prime: kernel.name_str(nat, "totient_prime"),
             fin,
             fin_mk: kernel.name_str(fin, "mk"),
             fin_rec: kernel.name_str(fin, "rec"),
@@ -1415,6 +1462,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_succ_mul_choose_eq(&mut d, &p)?;
         declare_prime_dvd_choose(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
+        declare_totient_all(&mut d, &p)?;
         declare_fin(&mut d, &p)?;
         declare_injective_surjective(&mut d, &p)?;
         declare_pigeonhole(&mut d, &p)?;
