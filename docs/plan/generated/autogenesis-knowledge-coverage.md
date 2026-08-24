@@ -25,8 +25,8 @@
 | Supporting-law links | 3 |
 | Facts with qualified formal content | 9 |
 | Formally mapped facts credited to a reusable producer | 7 |
-| Formally mapped facts with a complete hash-bound transport chain | 5 |
-| Formally mapped facts without a complete transport chain | 4 |
+| Formally mapped facts with a complete hash-bound transport chain | 9 |
+| Formally mapped facts without a complete transport chain | 0 |
 
 ## Formal-content qualifiers
 
