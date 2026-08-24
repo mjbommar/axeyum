@@ -10,6 +10,32 @@
 //! a real constructive disjunction, not excluded middle) are both proved
 //! here, axiom-free.
 //!
+//! ## What Wilson is blocked on now, measured 2026-08-24
+//!
+//! The rearrangement principle is done, so the remaining gap has moved. To use
+//! `prodRange_permute` the pairing needs a **concrete `σ : Nat → Nat`** — the
+//! `injectiveOn`/`mapsInto` predicates quantify over a function, not over a
+//! proof that one exists. Two routes, and the obvious one does not work:
+//!
+//! - **Bézout cannot supply it.** `Int.gcd_eq_gcd_ab` and `Nat.gcd_bezout`
+//!   produce EXISTENTIAL witnesses, extracted by `exists_elim` inside a proof.
+//!   They never yield a closed-form function, so they cannot instantiate `σ`.
+//!   This is the same wall `CReal.inv` and `pos_bound_of_lt` hit: a `Prop`-level
+//!   existential does not eliminate into a `Type` target.
+//! - **The Fermat route can**, because `σ(k) := a^(p-2) mod p` is closed form.
+//!
+//! Taking that route needs three pieces, each confirmed absent by inventory:
+//! a `Nat.modEq → Int.ModEq` transport (threading `modEq_iff_dvd`'s `0 < n`);
+//! `prime p → 0 < a < p → Coprime a p`, so `Int.modEq_cancel` applies; and the
+//! `pow_add`/`pow_succ` algebra splitting `a^p` into `a^(p-2)·a·a` in the
+//! multiplication order the inverse lemmas expect — plus the `p = 2` edge case,
+//! where `p - 2 = 0` under TRUNCATED `Nat.sub` and the range is empty.
+//!
+//! The indexing, settled: `a := ofNat(k+1)` for `k < n` with
+//! `n := natAbs(p) - 1`, so `{0,…,p-2}` maps onto `{1,…,p-1}` and `n` is the
+//! same `Nat` that `Int.factorial` already consumes for `(p-1)!` — no
+//! reindexing gap against the rest of the chain.
+//!
 //! Wilson's theorem itself is **not** declared here — that is its own slice —
 //! but the rearrangement principle it needs is now fully proved and
 //! axiom-free: `Int.prodRange_permute`
