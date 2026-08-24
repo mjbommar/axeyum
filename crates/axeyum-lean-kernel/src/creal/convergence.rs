@@ -151,6 +151,56 @@
 //! the `Converges`-hypothesis analogue of [`product::cross_gap`]'s
 //! `Equiv`-hypothesis telescope. See the comment immediately above
 //! [`declare_converges_mul`] for the full derivation and the raw witness.
+//!
+//! ## `CReal.continuous_mul`, `CReal.continuous_comp`, and why the
+//! trisection step for the approximate IVT is **not** in this file
+//!
+//! [`declare_continuous_mul`] and [`declare_continuous_comp`] transfer
+//! straight from [`converges_mul`](Self::converges_mul) and from chaining
+//! two [`ContinuousAt`](Self::continuous_at) witnesses respectively — no new
+//! rational estimate in either, exactly like [`declare_continuous_add`].
+//!
+//! The intended next step was the single-step trisection lemma for the
+//! approximate intermediate value theorem: from `f p < 0`, `0 < f q` and
+//! `p ≤ m₁ < m₂ ≤ q`, decide `f m₁ < 0 ∨ 0 < f m₂` via
+//! [`CReal.lt_cotrans`](Self::lt_cotrans), producing a subinterval of `2/3`
+//! the width on which `f` still changes sign. **This exact disjunction is
+//! false**, and not merely hard to formalise: take `f p = −1`, `f q = 1`,
+//! and `f m₁ = f m₂ = 0` (a legitimate, perfectly continuous instance — a
+//! straight line from `−1` to `1` passes through `0` at an interior point).
+//! Neither `f m₁ < 0` nor `0 < f m₂` holds, so the disjunction is false for
+//! this instance, so it cannot be a theorem for arbitrary `m₁, m₂`.
+//!
+//! Concretely, `lt_cotrans` applied to `f p < 0` at `z := f m₁` and to
+//! `0 < f q` at `z := f m₂` (the two calls that would decide the two
+//! interior points) each reduce, per
+//! [`cotransitivity`](super::cotransitivity)'s own module documentation, to
+//! comparing a *rational* sample of `z` against a threshold fixed by the
+//! **source** hypothesis's gap (`f p` vs. `0`, or `0` vs. `f q`) — not
+//! against `0` itself. At the instance above both calls return their
+//! "uninformative" disjunct (`f p < f m₁` and `f m₂ < f q`, both trivially
+//! true), and neither says anything about the sign of `f m₁` or `f m₂`. No
+//! chaining of further `lt_cotrans` calls against `f p`, `f q`, `f m₁` or
+//! `f m₂` alone recovers the sign, because the instance above is consistent
+//! with every such comparison — deciding a real's sign against a fixed
+//! external threshold is exactly what cotransitivity does *not* give you
+//! (that is `lt_cotrans`'s whole point: it is not `∀ x, lt x 0 ∨ lt 0 x`).
+//!
+//! This is consistent with (not a rediscovery of) the reason the *exact*
+//! IVT fails: the degenerate instance above is precisely a case where the
+//! root is already sitting at `m₁` and `m₂` (`f m₁ = f m₂ = 0`), and no
+//! finite decision at those two points can distinguish "the root is exactly
+//! here" from "the root is on one side, and this pair of samples happened
+//! to land exactly on the old threshold". The **approximate** IVT is still
+//! presumably true — a construction that carries the target `ε` through
+//! the recursion from the start (rather than testing against literal `0`
+//! at every step) should route around this instance, since `f m₁ = f m₂ =
+//! 0` is already a valid witness for *any* `ε > 0` — but completing that
+//! construction needs more than a bare `lt_cotrans` call at `0`, and this
+//! slice did not find and verify a sound version of it. Nothing about
+//! `CReal.ContinuousAt`'s sequential (modulus-free) shape was needed to
+//! reach this obstruction — it is a fact about `CReal.lt`/`lt_cotrans`
+//! alone, prior to any use of continuity.
 
 #![allow(
     clippy::doc_markdown,
@@ -200,7 +250,9 @@ pub(super) fn declare_convergence(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     declare_continuous_at(d, p)?;
     declare_continuous_id(d, p)?;
     declare_continuous_const(d, p)?;
-    declare_continuous_add(d, p)
+    declare_continuous_add(d, p)?;
+    declare_continuous_mul(d, p)?;
+    declare_continuous_comp(d, p)
 }
 
 // --- shared term builders ----------------------------------------------------
@@ -2333,6 +2385,166 @@ fn declare_continuous_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.continuous_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.continuous_mul : ∀ F G x, ContinuousAt F x → ContinuousAt G x →
+///   ContinuousAt (fun r => mul (F r) (G r)) x`.
+///
+/// Closure under products, transferred straight from
+/// [`CReal.converges_mul`](CRealPrelude::converges_mul) exactly as
+/// [`declare_continuous_add`] transfers `converges_add`: given `g`
+/// converging to `x`, `hF g h` and `hG g h` give `Converges (fun n => F (g
+/// n)) (F x)` and `Converges (fun n => G (g n)) (G x)`, and `converges_mul`
+/// combines them into the (beta-equal) target. No new estimate — the
+/// arbitrary-third-index machinery `converges_mul` itself needed is entirely
+/// hidden behind that one lemma call.
+fn declare_continuous_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+    let func_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let big_g_fv = d.fresh_fvar();
+    let big_g = d.kernel().fvar(big_g_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let prod_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let fr = d.apply(f, &[r]);
+        let gr = d.apply(big_g, &[r]);
+        let multiplied = cmul(d, p, fr, gr);
+        d.lam_fv(r_fv, carrier, multiplied)
+    };
+
+    let continuous_f = continuous_at_applied(d, p, f, x);
+    let continuous_g = continuous_at_applied(d, p, big_g, x);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let converges_gx = converges_applied(d, p, g, x);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let hf_applied = d.apply(hf, &[g, h]);
+    let hg_applied = d.apply(hg, &[g, h]);
+
+    let composed_f = compose_seq(d, p, f, g);
+    let composed_g = compose_seq(d, p, big_g, g);
+    let fx = d.apply(f, &[x]);
+    let gx = d.apply(big_g, &[x]);
+
+    let combined = d.lemma(
+        p.converges_mul,
+        &[composed_f, composed_g, fx, gx, hf_applied, hg_applied],
+    );
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, converges_gx, combined);
+        let with_g = d.lam_fv(g_fv, seq_ty, with_h);
+        let with_hg = d.lam_fv(hg_fv, continuous_g, with_g);
+        let with_hf = d.lam_fv(hf_fv, continuous_f, with_hg);
+        let with_x = d.lam_fv(x_fv, carrier, with_hf);
+        let with_big_g = d.lam_fv(big_g_fv, func_ty, with_x);
+        d.lam_fv(f_fv, func_ty, with_big_g)
+    };
+    let ty = {
+        let applied = continuous_at_applied(d, p, prod_fn, x);
+        let after_hg = d.arrow(continuous_g, applied);
+        let after_hf = d.arrow(continuous_f, after_hg);
+        let with_x = d.pi_fv(x_fv, carrier, after_hf);
+        let with_big_g = d.pi_fv(big_g_fv, func_ty, with_x);
+        d.pi_fv(f_fv, func_ty, with_big_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.continuous_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.continuous_comp : ∀ F G x, ContinuousAt F x → ContinuousAt G (F x)
+///   → ContinuousAt (fun r => G (F r)) x`.
+///
+/// Composition. For `g` converging to `x`, `hF g h : Converges (fun n => F
+/// (g n)) (F x)` — call this sequence `composed_f`, converging to `F x`.
+/// Applying `hG` (continuity of `G` **at `F x`**, not at `x`) to
+/// `composed_f` and `hF g h` gives `Converges (fun n => G (composed_f n))
+/// (G (F x))`, which is exactly the target `Converges (fun n => (G∘F) (g
+/// n)) ((G∘F) x)` up to beta. No modulus chases a shift here either: this
+/// composes two existing sequential witnesses rather than building a new
+/// rational estimate.
+fn declare_continuous_comp(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+    let func_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let big_g_fv = d.fresh_fvar();
+    let big_g = d.kernel().fvar(big_g_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let fx = d.apply(f, &[x]);
+
+    let comp_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let fr = d.apply(f, &[r]);
+        let gfr = d.apply(big_g, &[fr]);
+        d.lam_fv(r_fv, carrier, gfr)
+    };
+
+    let continuous_f = continuous_at_applied(d, p, f, x);
+    let continuous_g = continuous_at_applied(d, p, big_g, fx);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let converges_gx = converges_applied(d, p, g, x);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // `hf_applied : Converges (fun n => f (g n)) (f x)`.
+    let hf_applied = d.apply(hf, &[g, h]);
+    let composed_f = compose_seq(d, p, f, g);
+    // `hg_applied : Converges (fun n => big_g (composed_f n)) (big_g fx)`.
+    let hg_applied = d.apply(hg, &[composed_f, hf_applied]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, converges_gx, hg_applied);
+        let with_g = d.lam_fv(g_fv, seq_ty, with_h);
+        let with_hg = d.lam_fv(hg_fv, continuous_g, with_g);
+        let with_hf = d.lam_fv(hf_fv, continuous_f, with_hg);
+        let with_x = d.lam_fv(x_fv, carrier, with_hf);
+        let with_big_g = d.lam_fv(big_g_fv, func_ty, with_x);
+        d.lam_fv(f_fv, func_ty, with_big_g)
+    };
+    let ty = {
+        let applied = continuous_at_applied(d, p, comp_fn, x);
+        let after_hg = d.arrow(continuous_g, applied);
+        let after_hf = d.arrow(continuous_f, after_hg);
+        let with_x = d.pi_fv(x_fv, carrier, after_hf);
+        let with_big_g = d.pi_fv(big_g_fv, func_ty, with_x);
+        d.pi_fv(f_fv, func_ty, with_big_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.continuous_comp,
         uparams: vec![],
         ty,
         value,
