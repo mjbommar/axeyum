@@ -2,7 +2,11 @@
 //! `Int.factorial_pos` — the assembly slice toward Wilson's theorem
 //! (`p` prime ⟹ `(p-1)! ≡ -1 [p]`). Also, since 2026-08-24, the coprime form
 //! of Fermat's little theorem (`Int.pow_prime_sub_one_modeq_one`,
-//! `p ∤ a ⟹ a^(p−1) ≡ 1 [p]`) and its bridging lemma `Int.of_nat_pow`.
+//! `p ∤ a ⟹ a^(p−1) ≡ 1 [p]`) and its bridging lemma `Int.of_nat_pow`; and,
+//! later the same day, the *executable* modular inverse this whole chain was
+//! built to reach — `Int.mul_inv_of_pow`, `Nat.inverseIndex`, and its
+//! permutation proof `Nat.inverseIndex_maps_into` /
+//! `Nat.inverseIndex_injective`.
 //!
 //! ## What lands here, and what does not
 //!
@@ -16,42 +20,64 @@
 //! `Nat.pow_prime_modeq_self : prime p → a^p ≡ a [p]` this whole chain rests
 //! on.
 //!
-//! ## What Wilson is blocked on now, measured 2026-08-24
+//! ## The executable inverse, landed 2026-08-24
 //!
-//! The rearrangement principle is done, so the remaining gap has moved. To use
-//! `prodRange_permute` the pairing needs a **concrete `σ : Nat → Nat`** — the
-//! `injectiveOn`/`mapsInto` predicates quantify over a function, not over a
-//! proof that one exists. Two routes, and the obvious one does not work:
+//! To use `prodRange_permute` the pairing needs a **concrete `σ : Nat → Nat`**
+//! — the `injectiveOn`/`mapsInto` predicates quantify over a function, not
+//! over a proof that one exists, and `Int.gcd_eq_gcd_ab`/`Nat.gcd_bezout`
+//! cannot supply it: their witnesses are `Prop`-level existentials,
+//! extracted by `exists_elim` *inside* a proof, and a `Prop`-level
+//! existential does not eliminate into a `Type` target (the same wall
+//! `CReal.inv` and `pos_bound_of_lt` hit). The Fermat route can, because
+//! `σ(k) := a^(p-2) mod p` is closed form, and every piece it needs is now
+//! landed:
 //!
-//! - **Bézout cannot supply it.** `Int.gcd_eq_gcd_ab` and `Nat.gcd_bezout`
-//!   produce EXISTENTIAL witnesses, extracted by `exists_elim` inside a proof.
-//!   They never yield a closed-form function, so they cannot instantiate `σ`.
-//!   This is the same wall `CReal.inv` and `pos_bound_of_lt` hit: a `Prop`-level
-//!   existential does not eliminate into a `Type` target.
-//! - **The Fermat route can**, because `σ(k) := a^(p-2) mod p` is closed form.
-//!
-//! Taking that route needed three pieces. Two are now landed and reusable —
-//! `Int.modEq_of_nat_modEq` (the `Nat.modEq → Int.ModEq` transport,
-//! `modeq.rs`) and `Nat.coprime_of_lt_prime` (`prime p → 0 < a < p →
-//! Coprime a p`, `nat_prelude/primes.rs`) — and this file now also has
-//! `Int.pow_prime_sub_one_modeq_one`
-//! (`declare_pow_prime_sub_one_modeq_one`, below), the assembled
-//! `a^(p-1) ≡ 1 [p]`, proved from exactly those two plus
-//! `Nat.pow_prime_modeq_self` and `Int.modEq_cancel`. What is **not** yet
-//! built is `σ` itself: splitting one more factor off
-//! (`a^(p-1) = a^(p-2) · a`, so `a · a^(p-2) ≡ 1 [p]`) to get an *executable*
-//! inverse, and the `Nat → Nat` closed form `σ(k) := a^(p-2) mod p` built from
-//! it — plus the `p = 2` edge case, where `p - 2 = 0` under TRUNCATED
-//! `Nat.sub` and the range is empty.
+//! - `Int.mul_inv_of_pow` (`declare_mul_inv_of_pow`) — one more split of
+//!   `Int.pow_prime_sub_one_modeq_one`: `a^(p-1) = a^(p-2)·a` via
+//!   `Int.pow_succ` and `succ(p-2) = p-1` (two `Nat.sub_add_cancel`s glued by
+//!   `Nat.succ_injective`), giving `a · a^(p-2) ≡ 1 [p]`.
+//! - `Nat.inverseIndex` (`declare_inverse_index`) — the checked `Definition`
+//!   `fun p k => natAbs (emod (pow (ofNat (succ k)) (p-2)) (ofNat p)) - 1`.
+//! - `Nat.inverseIndex_maps_into` — `Int.emod` always lands in
+//!   `[0, ofNat p)`, and that bound transports to `ℕ` for free: `Int.lt` on
+//!   two `ofNat`-headed arguments reduces *structurally* to `Nat.lt`
+//!   (`int_prelude/defs.rs`'s four-case table), so no separate
+//!   order-transfer lemma was needed. The closing `- 1` (truncated
+//!   `Nat.sub`) needs a case split on whether the residue is `0`, not a
+//!   proof that it never is — `Nat.lt_or_eq_of_le` covers both outcomes.
+//! - `Nat.inverseIndex_injective` — the harder half: does need the residue
+//!   to be nonzero (`mag_ne_zero`, a local helper — if it were `0`,
+//!   `mul_inv_of_pow` plus `Int.emod` being the identity on `0` and `1`
+//!   (`emod_eq_self_of_in_range`, another local helper, built from
+//!   `Int.ediv_emod_unique`) would force `1 = 0`) to cancel the `- 1`
+//!   cleanly, then `Int.modEq_inverse_unique` collapses two indices with the
+//!   same inverse residue to the same source residue, and
+//!   `emod_eq_self_of_in_range` again (this time on the two *sources*, which
+//!   are already canonical representatives) turns that congruence into
+//!   literal equality.
 //!
 //! The indexing, settled: `a := ofNat(k+1)` for `k < n` with
 //! `n := natAbs(p) - 1`, so `{0,…,p-2}` maps onto `{1,…,p-1}` and `n` is the
 //! same `Nat` that `Int.factorial` already consumes for `(p-1)!` — no
-//! reindexing gap against the rest of the chain.
+//! reindexing gap against the rest of the chain. `p = 2` needed no special
+//! case: `p - 2 = 0` exactly (`Nat.sub_add_cancel` applies to the truncated
+//! difference the same as any other), and the lone index `k = 0` is covered
+//! by exactly the same argument as every other prime.
 //!
-//! Wilson's theorem itself is **not** declared here — that is its own slice —
-//! but the rearrangement principle it needs is now fully proved and
-//! axiom-free: `Int.prodRange_permute`
+//! ## What Wilson is blocked on now, measured 2026-08-24
+//!
+//! Every ingredient the permutation argument needs is landed and axiom-free:
+//! a concrete `σ := Nat.inverseIndex p`, its `InjectiveOn`/`MapsInto` proofs,
+//! and `Int.prodRange_permute` itself. What is **not** yet built is the
+//! *collapse* argument Wilson's theorem needs on top of the permutation: `σ`
+//! pairs each survivor with its distinct inverse, but `Int.self_inverse_mod_prime`
+//! says exactly two indices are their own image under `σ` (those with
+//! `a ≡ ±1 [p]`), and turning "the product over a permuted range, where all
+//! but two factors cancel pairwise against their partner" into a closed
+//! form is a genuinely new inductive argument — not a data-plumbing
+//! exercise like the pieces above. Wilson's theorem itself is **not**
+//! declared here — that is its own slice — but the rearrangement principle
+//! it needs is now fully proved and axiom-free: `Int.prodRange_permute`
 //! (`prod.rs`) : `∀ f σ n, InjectiveOn σ n → MapsInto σ n →
 //! prodRange f n = prodRange (fun k => f (σ k)) n`. The classical proof of
 //! Wilson's theorem collapses `prodRange` over `2..p-2` by pairing each
@@ -752,6 +778,766 @@ pub(super) fn declare_pow_prime_sub_one_modeq_one(d: &mut IntDev<'_>) -> Result<
         let with_ub = d.lam_fv(ub_fv, ub_ty, final_proof);
         let with_pos = d.lam_fv(pos_fv, pos_ty, with_ub);
         let proof = d.lam_fv(prime_fv, prime_ty, with_pos);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// The executable inverse: `Int.mul_inv_of_pow` (one more split of Fermat) and
+// `Nat.inverseIndex` (the closed-form `Nat → Nat` map), the pieces
+// `Int.prodRange_permute` needs a concrete `σ` from.
+// ============================================================================
+
+/// `Int.mul_inv_of_pow :
+/// ∀ p a, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) → 0 < a → a < p →
+///   ModEq (ofNat p) (mul (ofNat a) (pow (ofNat a) (p-2))) one`
+///
+/// One more split of [`declare_pow_prime_sub_one_modeq_one`]:
+/// `a^(p-1) = a^(p-2)*a`, so `a*a^(p-2) ≡ 1 [p]`. The closed form `a^(p-2)`
+/// is what makes an *executable* inverse possible: `Int.modEq_inverse_exists`
+/// only gives a `Prop`-level existential, which cannot eliminate into the
+/// `Type`-valued function [`Nat.inverseIndex`] below — the same wall
+/// `CReal.inv` and `pos_bound_of_lt` hit, and worth naming as a pattern: four
+/// separate things in this development have needed a closed form for exactly
+/// this reason.
+///
+/// Route: `succ(p-2) = p-1` from two `Nat.sub_add_cancel`s (at `2` and at
+/// `1`) glued by `Nat.succ_injective` (both applied to the SAME prime `p`, so
+/// they land on a common `p = succ _` shape without ever pattern-matching
+/// `p` itself — `p` stays a free variable throughout, only the two `sub`
+/// results are related). `Int.pow_succ` then splits `a^(p-1)` into
+/// `a^(p-2)*a`, [`declare_pow_prime_sub_one_modeq_one`]'s congruence is
+/// rewritten through that split, and `Int.mul_comm` moves the base `a` to
+/// the front.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_mul_inv_of_pow(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.mul_inv_of_pow, 2, &|d, v| {
+        let (pp, aa) = (v[0], v[1]);
+        let prime_ty = prime_condition(d, pp);
+        let zero = d.zero();
+        let pos_ty = d.lt(zero, aa);
+        let ub_ty = d.lt(aa, pp);
+
+        let one_nat = d.num(1);
+        let two_nat = d.num(2);
+        let pm2 = d.sub(pp, two_nat);
+        let big_p = d.of_nat(pp);
+        let big_a = d.of_nat(aa);
+        let pow_pm2 = d.ipow(big_a, pm2);
+        let one_i = d.ione();
+        let concl_lhs = d.imul(big_a, pow_pm2);
+        let concl = super::modeq::imodeq(d, big_p, concl_lhs, one_i);
+
+        let stmt = {
+            let inner = d.arrow(ub_ty, concl);
+            let with_pos = d.arrow(pos_ty, inner);
+            d.arrow(prime_ty, with_pos)
+        };
+
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+        let pos_fv = d.fresh_fvar();
+        let pos_proof = d.kernel().fvar(pos_fv);
+        let ub_fv = d.fresh_fvar();
+        let ub_proof = d.kernel().fvar(ub_fv);
+
+        // succ(p-2) = p-1, via two `sub_add_cancel`s glued by `succ_injective`.
+        let (two_le_ty, clause_ty) = prime_parts(d, pp);
+        let two_le = d.and_left(two_le_ty, clause_ty, prime_proof);
+        let one_le_pp = nat_prime_pos(d, pp, prime_proof);
+
+        let succ_pm2 = d.succ(pm2);
+        let succ_succ_pm2 = d.succ(succ_pm2);
+        let cancel2 = d.lemma(p.nat.sub_add_cancel, &[two_nat, pp, two_le]);
+        let pm1 = d.sub(pp, one_nat);
+        let succ_pm1 = d.succ(pm1);
+        let cancel1 = d.lemma(p.nat.sub_add_cancel, &[one_nat, pp, one_le_pp]);
+        let cancel1_rev = d.symm(succ_pm1, pp, cancel1);
+        let combined = d.trans(succ_succ_pm2, pp, succ_pm1, cancel2, cancel1_rev);
+        let succ_injective_fn = d.lemma(p.nat.succ_injective, &[succ_pm2, pm1]);
+        let succ_pm2_eq_pm1 = d.apply(succ_injective_fn, &[combined]);
+
+        // a^(p-1) = a^(p-2) * a, over Int.
+        let pow_pm1 = d.ipow(big_a, pm1);
+        let ipow_succ_pm2 = d.ipow(big_a, succ_pm2);
+        let pow_succ_congr =
+            d.nat_eq_to_int(succ_pm2, pm1, succ_pm2_eq_pm1, &|d, x| d.ipow(big_a, x));
+        let pow_succ_pf = d.const_app(p.pow_succ, &[big_a, pm2]);
+        let mul_term = d.imul(pow_pm2, big_a);
+        let step_a = d.isymm(ipow_succ_pm2, pow_pm1, pow_succ_congr);
+        let step1_eq = d.itrans(pow_pm1, ipow_succ_pm2, mul_term, step_a, pow_succ_pf);
+
+        // The base Fermat congruence, rewritten through that split.
+        let base_fermat = d.const_app(
+            p.pow_prime_sub_one_modeq_one,
+            &[pp, aa, prime_proof, pos_proof, ub_proof],
+        );
+        let rewritten = d.int_eq_rewrite(pow_pm1, mul_term, step1_eq, base_fermat, &|d, x| {
+            super::modeq::imodeq(d, big_p, x, one_i)
+        });
+
+        // Commute to put the base first.
+        let mul_comm_pf = d.const_app(p.mul_comm, &[pow_pm2, big_a]);
+        let final_proof = d.int_eq_rewrite(mul_term, concl_lhs, mul_comm_pf, rewritten, &|d, x| {
+            super::modeq::imodeq(d, big_p, x, one_i)
+        });
+
+        let with_ub = d.lam_fv(ub_fv, ub_ty, final_proof);
+        let with_pos = d.lam_fv(pos_fv, pos_ty, with_ub);
+        let proof = d.lam_fv(prime_fv, prime_ty, with_pos);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// Delta height for `Nat.inverseIndex`, strictly above `Int.pow`'s own height
+/// (it calls `Int.pow` via `Int.emod`'s argument, transitively through
+/// `Int.ofNat`/`Int.emod`/`Int.natAbs`/`Nat.sub`).
+const INVERSE_INDEX_HEIGHT: u16 = FACTORIAL_HEIGHT + 1;
+
+/// Admit `Nat.inverseIndex : Nat → Nat → Nat :=
+/// fun p k => natAbs (emod (pow (ofNat (succ k)) (p-2)) (ofNat p)) - 1`.
+///
+/// The settled indexing (this file's module doc): `a := ofNat(k+1)` for
+/// `k < n` with `n := p - 1`, so `k` ranging over `{0,…,p-2}` puts `a` over
+/// `{1,…,p-1}`. `a^(p-2) mod p` (`Int.emod`, always in `[0,p)`) is `a`'s
+/// modular inverse's representative — [`declare_mul_inv_of_pow`] is exactly
+/// `a * a^(p-2) ≡ 1 [p]` — and since that representative is itself in
+/// `{1,…,p-1}` (never `0`: `a` is coprime to `p`, so `a^(p-2)` is too), the
+/// closing `- 1` (truncated `Nat.sub`) puts the *result* back into
+/// `{0,…,p-2}` — the same index range `k` came from, which is what
+/// `[declare_inverse_index_maps_into]` and `[declare_inverse_index_injective]`
+/// (both still open) need to state `MapsInto`/`InjectiveOn` at.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the generated definition does not
+/// type-check or the name is already taken.
+pub(super) fn declare_inverse_index(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+
+    let pp_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(pp_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let sk = d.succ(k);
+    let base = d.of_nat(sk);
+    let pm2 = d.sub(pp, two_nat);
+    let pw = d.ipow(base, pm2);
+    let big_p = d.of_nat(pp);
+    let r = d.iemod(pw, big_p);
+    let mag = {
+        let f = p.nat_abs;
+        d.const_app(f, &[r])
+    };
+    let body = d.sub(mag, one_nat);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, body);
+        d.lam_fv(pp_fv, nat, with_k)
+    };
+    let ty = {
+        let with_k = d.arrow(nat, nat);
+        d.arrow(nat, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.inverse_index,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(INVERSE_INDEX_HEIGHT),
+    })
+}
+
+/// `pos : Lt zero_i x  ⊢  Not (Eq Int x zero_i)` — a positive integer is
+/// nonzero: assume `x = 0`, rewrite `pos` along it to `Lt zero_i zero_i`,
+/// refute with `Int.lt_irrefl`.
+fn int_ne_zero_of_pos(d: &mut IntDev<'_>, x: ExprId, pos: ExprId) -> ExprId {
+    let p = d.int();
+    let zero_i = d.izero();
+    let eq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(eq_fv);
+    let rewritten = d.int_eq_rewrite(x, zero_i, heq, pos, &|d, y| {
+        let z = d.izero();
+        d.ilt(z, y)
+    });
+    let irrefl = d.const_app(p.lt_irrefl, &[zero_i]);
+    let false_pf = d.apply(irrefl, &[rewritten]);
+    let eq_ty = d.ieq(x, zero_i);
+    d.lam_fv(eq_fv, eq_ty, false_pf)
+}
+
+/// `prime_proof : (prime condition on pp)  ⊢  Le one (sub pp one)`, i.e.
+/// `0 < p - 1` (`Nat.lt` unfolds to a `succ`-shifted `Nat.le`, so this
+/// doubles as `Lt zero (sub pp one)`).
+///
+/// From `2 ≤ p` (the first conjunct of primality) and `succ(p-1) = p`
+/// (`Nat.sub_add_cancel` at `1`), transported and peeled by
+/// `Nat.le_of_succ_le_succ`.
+fn one_le_pred(d: &mut IntDev<'_>, pp: ExprId, pm1: ExprId, prime_proof: ExprId) -> ExprId {
+    let p = d.int();
+    let one_nat = d.num(1);
+    let (two_le_ty, clause_ty) = prime_parts(d, pp);
+    let two_le = d.and_left(two_le_ty, clause_ty, prime_proof);
+    let one_le_pp = nat_prime_pos(d, pp, prime_proof);
+    let succ_pm1 = d.succ(pm1);
+    let cancel1 = d.lemma(p.nat.sub_add_cancel, &[one_nat, pp, one_le_pp]);
+    let cancel1_rev = d.symm(succ_pm1, pp, cancel1);
+    let transported = d.nat_rewrite(pp, succ_pm1, cancel1_rev, two_le, &|d, x| {
+        let two = d.num(2);
+        d.le(two, x)
+    });
+    let peel = d.lemma(p.nat.le_of_succ_le_succ, &[one_nat, pm1]);
+    d.apply(peel, &[transported])
+}
+
+/// `Nat.inverseIndex_maps_into :
+/// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+///   MapsInto (fun k => inverseIndex p k) (p-1)`
+///
+/// The inverse of a residue is a residue: `Int.emod` always lands in
+/// `[0, ofNat p)` (`Int.emod_nonneg` / `Int.emod_lt_of_pos`, needing only
+/// `ofNat p ≠ 0` / `0 < ofNat p`, both from primality — no need to touch
+/// [`declare_mul_inv_of_pow`] or coprimality at all). `Int.lt` on two
+/// `ofNat`-headed arguments reduces STRUCTURALLY to `Nat.lt`
+/// (`int_prelude/defs.rs`'s four-case table for `Int.le`/`Int.lt`), so once
+/// `r`'s `Int.emod` bound is rewritten from `r` to `ofNat (natAbs r)` (via
+/// `Int.of_nat_nat_abs_of_nonneg`), the resulting `Lt (ofNat (natAbs r))
+/// (ofNat p)` **is** `Nat.lt (natAbs r) p` up to defeq — no extra
+/// order-transfer lemma needed. From there, `natAbs r ≤ p - 1`
+/// (`Nat.le_of_lt_succ` after rewriting `p` to `succ (p-1)`).
+///
+/// The closing `- 1` (truncated `Nat.sub`) needs a case split on whether
+/// `natAbs r` is `0`: if so, truncation floors the result at `0`, and
+/// `0 < p - 1` (`one_le_pred`, primality again) closes it; otherwise
+/// `Nat.sub_lt` gives the strict step directly and `Nat.lt_of_lt_of_le`
+/// composes it with the bound above. Landing this needed **no** argument
+/// that `natAbs r ≠ 0` (which would need coprimality) — `Nat.lt_or_eq_of_le`
+/// covers both outcomes, the same truncation safety net this file's module
+/// doc already flagged for `p = 2`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_inverse_index_maps_into(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    d.theorem(p.inverse_index_maps_into, 1, &|d, v| {
+        let pp = v[0];
+        let prime_ty = prime_condition(d, pp);
+
+        let one_nat = d.num(1);
+        let two_nat = d.num(2);
+        let pm1 = d.sub(pp, one_nat);
+        let sigma = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let body = d.const_app(p.inverse_index, &[pp, k]);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let concl = d.const_app(p.nat.maps_into, &[sigma, pm1]);
+        let stmt = d.arrow(prime_ty, concl);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+
+        let succ_pm1 = d.succ(pm1);
+        let one_le_pp = nat_prime_pos(d, pp, prime_proof);
+        let cancel1 = d.lemma(p.nat.sub_add_cancel, &[one_nat, pp, one_le_pp]);
+        let cancel1_rev = d.symm(succ_pm1, pp, cancel1);
+        let pm1_pos = one_le_pred(d, pp, pm1, prime_proof);
+
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hyp_fv = d.fresh_fvar();
+        let hyp_ty = d.lt(i, pm1);
+
+        let sk_i = d.succ(i);
+        let base_a = d.of_nat(sk_i);
+        let big_p = d.of_nat(pp);
+        let pos_big_p = one_le_pp;
+        let ne_big_p = int_ne_zero_of_pos(d, big_p, pos_big_p);
+
+        let pm2 = d.sub(pp, two_nat);
+        let pw = d.ipow(base_a, pm2);
+        let r = d.iemod(pw, big_p);
+        let mag = {
+            let f = p.nat_abs;
+            d.const_app(f, &[r])
+        };
+
+        let r_nonneg = d.const_app(p.emod_nonneg, &[pw, big_p, ne_big_p]);
+        let r_lt = d.const_app(p.emod_lt_of_pos, &[pw, big_p, pos_big_p]);
+        let bridge = d.const_app(p.of_nat_nat_abs_of_nonneg, &[r, r_nonneg]);
+        let ofnat_mag = d.of_nat(mag);
+        let bridge_rev = d.isymm(ofnat_mag, r, bridge);
+        let mag_lt_pp = d.int_eq_rewrite(r, ofnat_mag, bridge_rev, r_lt, &|d, x| d.ilt(x, big_p));
+
+        let mag_lt_succ_pm1 =
+            d.nat_rewrite(pp, succ_pm1, cancel1_rev, mag_lt_pp, &|d, x| d.lt(mag, x));
+        let peel = d.lemma(p.nat.le_of_lt_succ, &[mag, pm1]);
+        let mag_le_pm1 = d.apply(peel, &[mag_lt_succ_pm1]);
+
+        let zero_nat = d.zero();
+        let zero_le_mag = d.lemma(p.nat.zero_le, &[mag]);
+        let case_pf = d.lemma(p.nat.lt_or_eq_of_le, &[zero_nat, mag, zero_le_mag]);
+
+        let result_ty = {
+            let sm = d.sub(mag, one_nat);
+            d.lt(sm, pm1)
+        };
+        let mag_pos_ty = d.lt(zero_nat, mag);
+        let mag_zero_ty = d.eq(zero_nat, mag);
+
+        let on_pos = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+            let z = d.zero();
+            let one_pos = d.lemma(p.nat.zero_lt_succ, &[z]);
+            let sub_lt_pf = d.lemma(p.nat.sub_lt, &[mag, one_nat, h, one_pos]);
+            let sm = d.sub(mag, one_nat);
+            d.lemma(p.nat.lt_of_lt_of_le, &[sm, mag, pm1, sub_lt_pf, mag_le_pm1])
+        };
+        let on_zero = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+            d.nat_rewrite(zero_nat, mag, h, pm1_pos, &|d, x| {
+                let s = d.sub(x, one_nat);
+                d.lt(s, pm1)
+            })
+        };
+        let result = d.or_elim(mag_pos_ty, mag_zero_ty, result_ty, case_pf, on_pos, on_zero);
+
+        let inner_body = {
+            let with_hyp = d.lam_fv(hyp_fv, hyp_ty, result);
+            d.lam_fv(i_fv, nat, with_hyp)
+        };
+        let proof = d.lam_fv(prime_fv, prime_ty, inner_body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `0 < n → 0 ≤ x → x < n  ⊢  Eq Int (emod x n) x` — `Int.emod` is the
+/// identity on an already-reduced nonnegative representative. `x` is a
+/// `(q,r)`-decomposition of itself against `n` with `q := 0, r := x`
+/// (bounds given), and `Int.ediv_add_emod` supplies the OTHER decomposition
+/// `x = n*(x/n) + x%n` with `Int.emod_nonneg`/`Int.emod_lt_of_pos` bounding
+/// its remainder; `Int.ediv_emod_unique` forces the two remainders equal.
+fn emod_eq_self_of_in_range(
+    d: &mut IntDev<'_>,
+    x: ExprId,
+    n: ExprId,
+    n_pos: ExprId,
+    x_nonneg: ExprId,
+    x_lt: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let zero_i = d.izero();
+    let ediv_xn = d.iediv(x, n);
+    let emod_xn = d.iemod(x, n);
+
+    // decomp1 : x = n*zero + x.
+    let n_zero = d.imul(n, zero_i);
+    let mul_zero_pf = d.const_app(p.mul_zero, &[n]);
+    let sum1 = d.iadd(n_zero, x);
+    let sum1b = d.iadd(zero_i, x);
+    let zero_add_pf = d.icongr(n_zero, zero_i, mul_zero_pf, &|d, t| d.iadd(t, x));
+    let add_comm_pf = d.const_app(p.add_comm, &[zero_i, x]);
+    let x_zero = d.iadd(x, zero_i);
+    let add_zero_pf = d.const_app(p.add_zero, &[x]);
+    let (_, sum1_eq_x) = d.ichain(
+        sum1,
+        &[
+            (sum1b, zero_add_pf),
+            (x_zero, add_comm_pf),
+            (x, add_zero_pf),
+        ],
+    );
+    let decomp1 = d.isymm(sum1, x, sum1_eq_x);
+
+    // decomp2 : x = n*(x/n) + x%n.
+    let n_ediv = d.imul(n, ediv_xn);
+    let sum2 = d.iadd(n_ediv, emod_xn);
+    let ediv_add_emod_pf = d.const_app(p.ediv_add_emod, &[x, n]);
+    let decomp2 = d.isymm(sum2, x, ediv_add_emod_pf);
+
+    let ne_n = int_ne_zero_of_pos(d, n, n_pos);
+    let r2_nonneg = d.const_app(p.emod_nonneg, &[x, n, ne_n]);
+    let r2_lt = d.const_app(p.emod_lt_of_pos, &[x, n, n_pos]);
+
+    let uniq = d.const_app(
+        p.ediv_emod_unique,
+        &[
+            x, n, zero_i, x, ediv_xn, emod_xn, n_pos, decomp1, x_nonneg, x_lt, decomp2, r2_nonneg,
+            r2_lt,
+        ],
+    );
+    let q_ty = d.ieq(zero_i, ediv_xn);
+    let r_ty = d.ieq(x, emod_xn);
+    let r_eq = d.and_right(q_ty, r_ty, uniq);
+    d.isymm(x, emod_xn, r_eq)
+}
+
+/// `hne : Le zero n  ⊢  Lt zero n`, given `hne : Not (Eq Nat n zero)` — a
+/// nonzero natural is positive. `Nat.zero_le` always gives `0 ≤ n`;
+/// `Nat.lt_or_eq_of_le` splits that into the wanted `0 < n` or `0 = n`, and
+/// the second branch contradicts `hne` directly.
+fn pos_of_ne_zero(d: &mut IntDev<'_>, n: ExprId, hne: ExprId) -> ExprId {
+    let p = d.int();
+    let zero_nat = d.zero();
+    let zero_le_n = d.lemma(p.nat.zero_le, &[n]);
+    let case_pf = d.lemma(p.nat.lt_or_eq_of_le, &[zero_nat, n, zero_le_n]);
+    let pos_ty = d.lt(zero_nat, n);
+    let eq_ty = d.eq(zero_nat, n);
+    let on_pos = &|_d: &mut IntDev<'_>, h: ExprId| -> ExprId { h };
+    let on_eq = &|d: &mut IntDev<'_>, h: ExprId| -> ExprId {
+        let h_rev = d.symm(zero_nat, n, h);
+        let false_pf = d.apply(hne, &[h_rev]);
+        let target = d.lt(zero_nat, n);
+        d.absurd(target, false_pf)
+    };
+    d.or_elim(pos_ty, eq_ty, pos_ty, case_pf, on_pos, on_eq)
+}
+
+/// `prime_proof, 0 < sx, sx < pp  ⊢  Not (Eq Nat mag zero)`, where
+/// `mag := natAbs (emod (pow (ofNat sx) (pp-2)) (ofNat pp))` — the modular
+/// inverse of a residue coprime to `p` is never `0`.
+///
+/// If it were, [`declare_mul_inv_of_pow`] plus `Int.mod_eq_mul_left` and
+/// `Int.mul_zero` would give `ModEq p 1 0`; `Int.emod` is the identity on
+/// both canonical representatives `0` and `1`
+/// ([`emod_eq_self_of_in_range`]), so that forces `Eq Int 1 0` — refuted by
+/// `Nat.succ_ne_zero` after an `Int.natAbs` congruence turns it into
+/// `Eq Nat 1 0`.
+fn mag_ne_zero(
+    d: &mut IntDev<'_>,
+    pp: ExprId,
+    sx: ExprId,
+    prime_proof: ExprId,
+    pos_sx: ExprId,
+    ub_sx: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let two_nat = d.num(2);
+    let one_nat = d.num(1);
+    let zero_nat = d.zero();
+    let zero_i = d.izero();
+    let one_i = d.ione();
+
+    let one_le_pp = nat_prime_pos(d, pp, prime_proof);
+    let pos_big_p = one_le_pp;
+    let (two_le_ty, clause_ty) = prime_parts(d, pp);
+    let two_le = d.and_left(two_le_ty, clause_ty, prime_proof);
+
+    let big_p = d.of_nat(pp);
+    let ax = d.of_nat(sx);
+    let pm2 = d.sub(pp, two_nat);
+    let pw_x = d.ipow(ax, pm2);
+    let r_x = d.iemod(pw_x, big_p);
+    let mag_x = {
+        let f = p.nat_abs;
+        d.const_app(f, &[r_x])
+    };
+
+    let mag_fv = d.fresh_fvar();
+    let h0 = d.kernel().fvar(mag_fv);
+
+    let ne_big_p = int_ne_zero_of_pos(d, big_p, pos_big_p);
+    let r_nonneg = d.const_app(p.emod_nonneg, &[pw_x, big_p, ne_big_p]);
+    let bridge = d.const_app(p.of_nat_nat_abs_of_nonneg, &[r_x, r_nonneg]);
+    let congr0 = d.nat_eq_to_int(mag_x, zero_nat, h0, &|d, y| d.of_nat(y));
+    let ofnat_mag = d.of_nat(mag_x);
+    let bridge_rev = d.isymm(ofnat_mag, r_x, bridge);
+    let r_eq_zero = d.itrans(r_x, ofnat_mag, zero_i, bridge_rev, congr0);
+
+    let le_refl_zero = d.const_app(p.le_refl, &[zero_i]);
+    let emod_zero_eq =
+        emod_eq_self_of_in_range(d, zero_i, big_p, pos_big_p, le_refl_zero, pos_big_p);
+    let zero_lt_one = d.const_app(p.zero_lt_one, &[]);
+    let one_nonneg = d.const_app(p.le_of_lt, &[zero_i, one_i, zero_lt_one]);
+    let emod_one_eq = emod_eq_self_of_in_range(d, one_i, big_p, pos_big_p, one_nonneg, two_le);
+
+    let emod_pwx = d.iemod(pw_x, big_p);
+    let emod_zero_raw = d.iemod(zero_i, big_p);
+    let emod_zero_raw_rev = d.isymm(emod_zero_raw, zero_i, emod_zero_eq);
+    let modeq_pw_zero = d.itrans(
+        emod_pwx,
+        zero_i,
+        emod_zero_raw,
+        r_eq_zero,
+        emod_zero_raw_rev,
+    );
+
+    let mip_x = d.const_app(p.mul_inv_of_pow, &[pp, sx, prime_proof, pos_sx, ub_sx]);
+    let cong = d.const_app(
+        p.mod_eq_mul_left,
+        &[big_p, pw_x, zero_i, ax, pos_big_p, modeq_pw_zero],
+    );
+    let mul_zero_ax = d.const_app(p.mul_zero, &[ax]);
+    let ax_pwx = d.imul(ax, pw_x);
+    let ax_zero = d.imul(ax, zero_i);
+    let cong_rewritten = d.int_eq_rewrite(ax_zero, zero_i, mul_zero_ax, cong, &|d, y| {
+        super::modeq::imodeq(d, big_p, ax_pwx, y)
+    });
+    let mip_symm = d.const_app(p.mod_eq_symm, &[big_p, ax_pwx, one_i, mip_x]);
+    let modeq_one_zero = d.const_app(
+        p.mod_eq_trans,
+        &[big_p, one_i, ax_pwx, zero_i, mip_symm, cong_rewritten],
+    );
+
+    let emod_one_p = d.iemod(one_i, big_p);
+    let emod_zero_p = d.iemod(zero_i, big_p);
+    let emod_one_p_rev = d.isymm(emod_one_p, one_i, emod_one_eq);
+    let (_, one_eq_zero) = d.ichain(
+        one_i,
+        &[
+            (emod_one_p, emod_one_p_rev),
+            (emod_zero_p, modeq_one_zero),
+            (zero_i, emod_zero_eq),
+        ],
+    );
+
+    let refl_one = d.refl(one_nat);
+    let nat_eq = d.int_eq_rewrite(one_i, zero_i, one_eq_zero, refl_one, &|d, x| {
+        let nx = {
+            let f = p.nat_abs;
+            d.const_app(f, &[x])
+        };
+        d.eq(one_nat, nx)
+    });
+    let sne = d.lemma(p.nat.succ_ne_zero, &[zero_nat]);
+    let false_pf = d.apply(sne, &[nat_eq]);
+
+    let eq_ty = d.eq(mag_x, zero_nat);
+    d.lam_fv(mag_fv, eq_ty, false_pf)
+}
+
+/// `Nat.inverseIndex_injective :
+/// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+///   InjectiveOn (fun k => inverseIndex p k) (p-1)`
+///
+/// If two indices have the same inverse, their inverses' inverses coincide:
+/// `mag_ne_zero` (both indices) plus `Nat.sub_add_cancel` cancels the
+/// closing `- 1` in `inverseIndex`'s definition, giving `mag i = mag j`
+/// (Nat), hence `r i = r j` (Int, via `Int.of_nat_nat_abs_of_nonneg`), hence
+/// `ModEq p (a_i^(p-2)) (a_j^(p-2))` (definitionally — `r` **is** that
+/// `emod`). [`declare_mul_inv_of_pow`] commuted plus `Int.modEq_mul_right`/
+/// `Int.modEq_trans` turns that into two congruences `ModEq p (a_i^(p-2) *
+/// a_i) one` / `ModEq p (a_i^(p-2) * a_j) one`, and `Int.modEq_inverse_unique`
+/// collapses them to `ModEq p a_i a_j`. `Int.emod` is the identity on both
+/// (`emod_eq_self_of_in_range`, bounds from the same `Int.lt`-on-`ofNat`
+/// structural reduction [`declare_inverse_index_maps_into`] uses), so that
+/// forces `Eq Int a_i a_j`, and `Int.natAbs` congruence plus
+/// `Nat.succ_injective` closes `Eq Nat i j`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_inverse_index_injective(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    d.theorem(p.inverse_index_injective, 1, &|d, v| {
+        let pp = v[0];
+        let prime_ty = prime_condition(d, pp);
+
+        let one_nat = d.num(1);
+        let two_nat = d.num(2);
+        let pm1 = d.sub(pp, one_nat);
+        let sigma = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let body = d.const_app(p.inverse_index, &[pp, k]);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let concl = d.const_app(p.nat.injective_on, &[sigma, pm1]);
+        let stmt = d.arrow(prime_ty, concl);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+
+        let succ_pm1 = d.succ(pm1);
+        let one_le_pp = nat_prime_pos(d, pp, prime_proof);
+        let pos_big_p = one_le_pp;
+        let cancel1 = d.lemma(p.nat.sub_add_cancel, &[one_nat, pp, one_le_pp]);
+        let big_p = d.of_nat(pp);
+        let ne_big_p = int_ne_zero_of_pos(d, big_p, pos_big_p);
+        let one_i = d.ione();
+
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hi_ty = d.lt(i, pm1);
+        let hj_fv = d.fresh_fvar();
+        let hj = d.kernel().fvar(hj_fv);
+        let hj_ty = d.lt(j, pm1);
+
+        let sk_i = d.succ(i);
+        let sk_j = d.succ(j);
+        let a_i = d.of_nat(sk_i);
+        let a_j = d.of_nat(sk_j);
+        let pm2 = d.sub(pp, two_nat);
+        let pw_i = d.ipow(a_i, pm2);
+        let pw_j = d.ipow(a_j, pm2);
+        let r_i = d.iemod(pw_i, big_p);
+        let r_j = d.iemod(pw_j, big_p);
+        let mag_i = {
+            let f = p.nat_abs;
+            d.const_app(f, &[r_i])
+        };
+        let mag_j = {
+            let f = p.nat_abs;
+            d.const_app(f, &[r_j])
+        };
+
+        let heq_ty = {
+            let sm_i = d.sub(mag_i, one_nat);
+            let sm_j = d.sub(mag_j, one_nat);
+            d.eq(sm_i, sm_j)
+        };
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        // succ i < pp, succ j < pp — from `i < pm1`/`j < pm1` and `succ pm1 = pp`.
+        let mono_i_fn = d.lemma(p.nat.succ_le_succ, &[sk_i, pm1]);
+        let mono_i = d.apply(mono_i_fn, &[hi]);
+        let ub_i = d.nat_rewrite(succ_pm1, pp, cancel1, mono_i, &|d, x| {
+            let s = d.succ(sk_i);
+            d.le(s, x)
+        });
+        let mono_j_fn = d.lemma(p.nat.succ_le_succ, &[sk_j, pm1]);
+        let mono_j = d.apply(mono_j_fn, &[hj]);
+        let ub_j = d.nat_rewrite(succ_pm1, pp, cancel1, mono_j, &|d, x| {
+            let s = d.succ(sk_j);
+            d.le(s, x)
+        });
+        let pos_i = d.lemma(p.nat.zero_lt_succ, &[i]);
+        let pos_j = d.lemma(p.nat.zero_lt_succ, &[j]);
+
+        // mag_i, mag_j ≠ 0, hence positive.
+        let mag_i_ne = mag_ne_zero(d, pp, sk_i, prime_proof, pos_i, ub_i);
+        let mag_j_ne = mag_ne_zero(d, pp, sk_j, prime_proof, pos_j, ub_j);
+        let mag_i_pos = pos_of_ne_zero(d, mag_i, mag_i_ne);
+        let mag_j_pos = pos_of_ne_zero(d, mag_j, mag_j_ne);
+
+        // Cancel the closing `- 1`: mag_i = mag_j.
+        let sub_i = d.sub(mag_i, one_nat);
+        let sub_j = d.sub(mag_j, one_nat);
+        let succ_sub_i = d.succ(sub_i);
+        let succ_sub_j = d.succ(sub_j);
+        let cancel_i = d.lemma(p.nat.sub_add_cancel, &[one_nat, mag_i, mag_i_pos]);
+        let cancel_j = d.lemma(p.nat.sub_add_cancel, &[one_nat, mag_j, mag_j_pos]);
+        let succ_congr = d.congr(sub_i, sub_j, heq, &|d, x| d.succ(x));
+        let cancel_i_rev = d.symm(succ_sub_i, mag_i, cancel_i);
+        let (_, mag_eq) = d.chain(
+            mag_i,
+            &[
+                (succ_sub_i, cancel_i_rev),
+                (succ_sub_j, succ_congr),
+                (mag_j, cancel_j),
+            ],
+        );
+
+        // r_i = r_j (Int), hence `ModEq p pw_i pw_j` (definitionally).
+        let r_i_nonneg = d.const_app(p.emod_nonneg, &[pw_i, big_p, ne_big_p]);
+        let r_j_nonneg = d.const_app(p.emod_nonneg, &[pw_j, big_p, ne_big_p]);
+        let bridge_i = d.const_app(p.of_nat_nat_abs_of_nonneg, &[r_i, r_i_nonneg]);
+        let bridge_j = d.const_app(p.of_nat_nat_abs_of_nonneg, &[r_j, r_j_nonneg]);
+        let ofnat_mag_i = d.of_nat(mag_i);
+        let ofnat_mag_j = d.of_nat(mag_j);
+        let congr_mag = d.nat_eq_to_int(mag_i, mag_j, mag_eq, &|d, y| d.of_nat(y));
+        let bridge_i_rev = d.isymm(ofnat_mag_i, r_i, bridge_i);
+        let (_, r_i_eq_r_j) = d.ichain(
+            r_i,
+            &[
+                (ofnat_mag_i, bridge_i_rev),
+                (ofnat_mag_j, congr_mag),
+                (r_j, bridge_j),
+            ],
+        );
+
+        // ModEq p (pw_i*a_i) one and ModEq p (pw_j*a_j) one, commuted.
+        let mip_i = d.const_app(p.mul_inv_of_pow, &[pp, sk_i, prime_proof, pos_i, ub_i]);
+        let mip_j = d.const_app(p.mul_inv_of_pow, &[pp, sk_j, prime_proof, pos_j, ub_j]);
+        let comm_i = d.const_app(p.mul_comm, &[a_i, pw_i]);
+        let ai_pwi = d.imul(a_i, pw_i);
+        let pwi_ai = d.imul(pw_i, a_i);
+        let mip_i_comm = d.int_eq_rewrite(ai_pwi, pwi_ai, comm_i, mip_i, &|d, x| {
+            super::modeq::imodeq(d, big_p, x, one_i)
+        });
+        let comm_j = d.const_app(p.mul_comm, &[a_j, pw_j]);
+        let aj_pwj = d.imul(a_j, pw_j);
+        let pwj_aj = d.imul(pw_j, a_j);
+        let mip_j_comm = d.int_eq_rewrite(aj_pwj, pwj_aj, comm_j, mip_j, &|d, x| {
+            super::modeq::imodeq(d, big_p, x, one_i)
+        });
+
+        // ModEq p (pw_i*a_j)(pw_j*a_j), then trans with mip_j_comm.
+        let pwi_aj = d.imul(pw_i, a_j);
+        let pwj_aj = d.imul(pw_j, a_j);
+        let cong2 = d.const_app(
+            p.mod_eq_mul_right,
+            &[big_p, pw_i, pw_j, a_j, pos_big_p, r_i_eq_r_j],
+        );
+        let mip_j_shifted = d.const_app(
+            p.mod_eq_trans,
+            &[big_p, pwi_aj, pwj_aj, one_i, cong2, mip_j_comm],
+        );
+
+        let uniq = d.const_app(
+            p.mod_eq_inverse_unique,
+            &[big_p, pw_i, a_i, a_j, pos_big_p, mip_i_comm, mip_j_shifted],
+        );
+
+        // Int.emod is the identity on both a_i and a_j: `uniq` forces
+        // `Eq Int a_i a_j`.
+        let a_i_nonneg = d.lemma(p.nat.zero_le, &[sk_i]);
+        let a_j_nonneg = d.lemma(p.nat.zero_le, &[sk_j]);
+        let emod_ai_eq = emod_eq_self_of_in_range(d, a_i, big_p, pos_big_p, a_i_nonneg, ub_i);
+        let emod_aj_eq = emod_eq_self_of_in_range(d, a_j, big_p, pos_big_p, a_j_nonneg, ub_j);
+        let emod_ai_raw = d.iemod(a_i, big_p);
+        let emod_aj_raw = d.iemod(a_j, big_p);
+        let emod_ai_rev = d.isymm(emod_ai_raw, a_i, emod_ai_eq);
+        let (_, a_i_eq_a_j) = d.ichain(
+            a_i,
+            &[
+                (emod_ai_raw, emod_ai_rev),
+                (emod_aj_raw, uniq),
+                (a_j, emod_aj_eq),
+            ],
+        );
+
+        // `Int.natAbs` congruence: `succ i = succ j`, then `Nat.succ_injective`.
+        let refl_sk_i = d.refl(sk_i);
+        let nat_eq_final = d.int_eq_rewrite(a_i, a_j, a_i_eq_a_j, refl_sk_i, &|d, x| {
+            let nx = {
+                let f = p.nat_abs;
+                d.const_app(f, &[x])
+            };
+            d.eq(sk_i, nx)
+        });
+        let succ_inj_fn = d.lemma(p.nat.succ_injective, &[i, j]);
+        let i_eq_j = d.apply(succ_inj_fn, &[nat_eq_final]);
+
+        let inner_body = {
+            let with_heq = d.lam_fv(heq_fv, heq_ty, i_eq_j);
+            let with_hj = d.lam_fv(hj_fv, hj_ty, with_heq);
+            let with_hi = d.lam_fv(hi_fv, hi_ty, with_hj);
+            let with_j = d.lam_fv(j_fv, nat, with_hi);
+            d.lam_fv(i_fv, nat, with_j)
+        };
+        let proof = d.lam_fv(prime_fv, prime_ty, inner_body);
         (stmt, proof)
     })?;
     Ok(())

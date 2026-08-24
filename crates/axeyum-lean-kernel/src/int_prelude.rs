@@ -694,6 +694,32 @@ pub struct IntPrelude {
     /// `Int.pow`; and `Int.modEq_cancel`, fed `Nat.coprime_of_lt_prime`,
     /// cancels the surviving factor of `a`.
     pub pow_prime_sub_one_modeq_one: NameId,
+    /// `mul_inv_of_pow :
+    /// ∀ p a, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) → 0 < a → a < p →
+    ///   ModEq (ofNat p) (mul (ofNat a) (pow (ofNat a) (p-2))) one` — one more
+    /// split of [`Self::pow_prime_sub_one_modeq_one`]: `a * a^(p-2) ≡ 1 [p]`,
+    /// the executable-inverse form Fermat's coprime congruence unlocks.
+    pub mul_inv_of_pow: NameId,
+    /// `Nat.inverseIndex : Nat → Nat → Nat :=
+    /// fun p k => natAbs (emod (pow (ofNat (succ k)) (p-2)) (ofNat p)) - 1` —
+    /// the closed-form `Nat → Nat` modular-inverse index map
+    /// `Int.prodRange_permute` needs a concrete `σ` from. Declared under the
+    /// `Nat` namespace (not `Int`), even though its body computes through
+    /// `Int.pow`/`Int.emod`/`Int.natAbs`, because its type is `Nat → Nat → Nat`
+    /// — see `wilson.rs`'s doc comment on `declare_inverse_index`.
+    pub inverse_index: NameId,
+    /// `Nat.inverseIndex_maps_into :
+    /// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+    ///   MapsInto (fun k => inverseIndex p k) (p-1)` — the inverse of a
+    /// residue is a residue: `Int.emod` always lands in `[0, ofNat p)`, and
+    /// that bound transports to `ℕ` for free (`Int.lt` on two
+    /// `ofNat`-headed arguments reduces structurally to `Nat.lt`).
+    pub inverse_index_maps_into: NameId,
+    /// `Nat.inverseIndex_injective :
+    /// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+    ///   InjectiveOn (fun k => inverseIndex p k) (p-1)` — two indices with
+    /// the same inverse are the same index, via `Int.modEq_inverse_unique`.
+    pub inverse_index_injective: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -703,6 +729,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
     let anon = kernel.anon();
     let z = kernel.name_str(anon, "Int");
     let child = |kernel: &mut Kernel, name: &str| kernel.name_str(z, name);
+    let nat_root = nat.nat;
     let rat = kernel.name_str(anon, "Rat");
     IntPrelude {
         logic: nat.logic,
@@ -870,6 +897,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         factorial_pos: child(kernel, "factorial_pos"),
         of_nat_pow: child(kernel, "of_nat_pow"),
         pow_prime_sub_one_modeq_one: child(kernel, "pow_prime_sub_one_modeq_one"),
+        mul_inv_of_pow: child(kernel, "mul_inv_of_pow"),
+        inverse_index: kernel.name_str(nat_root, "inverseIndex"),
+        inverse_index_maps_into: kernel.name_str(nat_root, "inverseIndex_maps_into"),
+        inverse_index_injective: kernel.name_str(nat_root, "inverseIndex_injective"),
     }
 }
 
@@ -1007,6 +1038,10 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         wilson::declare_factorial_pos(&mut d)?;
         wilson::declare_of_nat_pow(&mut d)?;
         wilson::declare_pow_prime_sub_one_modeq_one(&mut d)?;
+        wilson::declare_mul_inv_of_pow(&mut d)?;
+        wilson::declare_inverse_index(&mut d)?;
+        wilson::declare_inverse_index_maps_into(&mut d)?;
+        wilson::declare_inverse_index_injective(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         rat::declare_rat(&mut d)?;
