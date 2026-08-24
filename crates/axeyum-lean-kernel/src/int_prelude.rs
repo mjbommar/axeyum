@@ -371,6 +371,13 @@ pub struct IntPrelude {
     /// `Nat.restrict_maps_into`'s override (`i0 < n`) — see `prod.rs`'s
     /// module doc above `declare_prod_range_permute` for the full route.
     pub prod_range_permute: NameId,
+    /// `prodRange_mul :
+    ///   ∀ f g n, Eq Int (prodRange (fun k => mul (f k) (g k)) n)
+    ///     (mul (prodRange f n) (prodRange g n))` — a product of pointwise
+    /// products is the product of the two products. Induction on `n`,
+    /// closing the successor step with a `mul_assoc`/`mul_comm`
+    /// rearrangement of the four factors (`prod.rs`'s `mul_swap_inner`).
+    pub prod_range_mul: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -515,6 +522,16 @@ pub struct IntPrelude {
     /// this is declared by hand rather than through
     /// `ops::IntDev::int_theorem`.
     pub mod_eq_prod_range: NameId,
+    /// `modEq_prodRange_lt :
+    /// ∀ n f g m, 0 < n → (∀ k, Lt k m → ModEq n (f k) (g k)) →
+    ///   ModEq n (prodRange f m) (prodRange g m)` — [`Self::mod_eq_prod_range`]'s
+    /// pointwise hypothesis weakened to indices below the bound, mirroring
+    /// [`Self::prod_range_congr_lt`]'s own weakening of `prod_range_congr`.
+    /// Needed because a per-index congruence built from
+    /// [`Self::mul_inv_of_pow`] only holds for indices inside a bounded range
+    /// (`0 < a`, `a < p`), so the unrestricted `mod_eq_prod_range` cannot be
+    /// fed it directly.
+    pub mod_eq_prod_range_lt: NameId,
     /// `emod_neg : ∀ a n, emod a (neg n) = emod a n` — negating the modulus
     /// leaves `emod` unchanged. Purely structural (which `Int.rec` branch of
     /// `emod`'s own definition a shape of `n` selects), so unlike
@@ -720,6 +737,17 @@ pub struct IntPrelude {
     ///   InjectiveOn (fun k => inverseIndex p k) (p-1)` — two indices with
     /// the same inverse are the same index, via `Int.modEq_inverse_unique`.
     pub inverse_index_injective: NameId,
+    /// `factorial_sq_modeq_one :
+    /// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+    ///   ModEq (ofNat p) (mul (factorial (p-1)) (factorial (p-1))) one` —
+    /// **the collapse lemma**: `((p-1)!)^2 ≡ 1 [p]`, for every prime `p`.
+    /// Built from `Int.prodRange_permute` at `σ := Nat.inverseIndex p`, the
+    /// new `Int.prodRange_mul`/`Int.modEq_prodRange_lt` (`prod.rs`), and
+    /// `Int.mul_inv_of_pow`; see `wilson.rs`'s doc section right above
+    /// `declare_factorial_sq_modeq_one` for exactly what this does and does
+    /// NOT establish (the sign is not decided, so `Int.wilson` does not
+    /// follow from this alone).
+    pub factorial_sq_modeq_one: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -815,6 +843,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_swap_adjacent: child(kernel, "prodRange_swap_adjacent"),
         prod_range_swap: child(kernel, "prodRange_swap"),
         prod_range_permute: child(kernel, "prodRange_permute"),
+        prod_range_mul: child(kernel, "prodRange_mul"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -851,6 +880,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_inverse_unique: child(kernel, "modEq_inverse_unique"),
         mod_eq_pow: child(kernel, "modEq_pow"),
         mod_eq_prod_range: child(kernel, "modEq_prodRange"),
+        mod_eq_prod_range_lt: child(kernel, "modEq_prodRange_lt"),
         emod_neg: child(kernel, "emod_neg"),
         mod_eq_of_neg_modulus: child(kernel, "modEq_of_neg_modulus"),
         mod_eq_neg_modulus: child(kernel, "modEq_neg_modulus"),
@@ -901,6 +931,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         inverse_index: kernel.name_str(nat_root, "inverseIndex"),
         inverse_index_maps_into: kernel.name_str(nat_root, "inverseIndex_maps_into"),
         inverse_index_injective: kernel.name_str(nat_root, "inverseIndex_injective"),
+        factorial_sq_modeq_one: child(kernel, "factorial_sq_modeq_one"),
     }
 }
 
@@ -1009,7 +1040,9 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prod::declare_prod_range_swap_adjacent(&mut d)?;
         prod::declare_prod_range_swap(&mut d)?;
         prod::declare_prod_range_permute(&mut d)?;
+        prod::declare_prod_range_mul(&mut d)?;
         prod::declare_modeq_prod_range(&mut d)?;
+        prod::declare_modeq_prod_range_lt(&mut d)?;
         wilson::declare_factorial(&mut d)?;
         wilson::declare_factorial_equations(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
@@ -1042,6 +1075,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         wilson::declare_inverse_index(&mut d)?;
         wilson::declare_inverse_index_maps_into(&mut d)?;
         wilson::declare_inverse_index_injective(&mut d)?;
+        wilson::declare_factorial_sq_modeq_one(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         rat::declare_rat(&mut d)?;

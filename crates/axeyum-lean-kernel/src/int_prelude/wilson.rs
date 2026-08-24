@@ -1542,3 +1542,338 @@ pub(super) fn declare_inverse_index_injective(d: &mut IntDev<'_>) -> Result<(), 
     })?;
     Ok(())
 }
+
+// ============================================================================
+// The collapse lemma, landed 2026-08-24 — and what it does NOT close.
+//
+// The module doc above promised the *pairing* collapse: every index other
+// than the two fixed points (`k=0`, i.e. `a=1`, and `k=p-2`, i.e. `a=p-1`)
+// pairs with a DISTINCT partner under `σ := Nat.inverseIndex p`, the pair's
+// product is `1 [p]`, and the interior product collapses to `1 [p]`, leaving
+// `factorial(p-1) ≡ 1*(p-1) ≡ -1 [p]`. Landing THAT argument needs a fresh
+// induction that removes a matched pair from the range at a time — the same
+// difficulty `Int.prodRange_permute` itself took three drafts to close
+// (`point_override` + `prodRange_swap` + `Nat.restrict_injective`/
+// `restrict_maps_into`, generalizing the motive over an EVOLVING self-map) —
+// plus a still-unbuilt characterization lemma (`σ k = k → k = 0 ∨ k = p-2`,
+// the converse of the two direct computations `σ 0 = 0` / `σ (p-2) = p-2`)
+// to know in advance which index is which case. That is a second induction
+// of comparable size to `prodRange_permute`'s own, and it is NOT built here.
+//
+// What IS built, and is genuinely new inductive content rather than
+// plumbing: `Int.prodRange_mul` (`prod.rs`) and `Int.modEq_prodRange_lt`
+// (`prod.rs`) are both fresh inductions, and together with
+// `Int.prodRange_permute` (already landed) and [`declare_mul_inv_of_pow`]
+// they prove `Int.factorial_sq_modeq_one` below: **`((p-1)!)^2 ≡ 1 [p]`**,
+// for every prime `p`. The route sidesteps the pairing/fixed-point argument
+// entirely by using a fact the pairing argument does NOT need: for every
+// `k < p-1`, `a_(σ k) = emod(a_k^(p-2), p)` EXACTLY (from `inverseIndex`'s
+// own definition, no case split on whether `k` is a fixed point), so
+// `a_k * a_(σ k) ≡ 1 [p]` holds for literally every index, fixed points
+// included — squaring the *whole* permuted product costs no fixed-point
+// bookkeeping at all.
+//
+// `((p-1)!)^2 ≡ 1 [p]` is real progress — combined with
+// [`declare_self_inverse_mod_prime`] (applied to `emod(factorial(p-1), p)`,
+// which is what actually satisfies that lemma's `1 ≤ a ≤ p-1` bound; the
+// factorial itself does not) it would pin `factorial(p-1) ≡ ±1 [p]` — but a
+// square root has two signs, and squaring is EXACTLY the operation that
+// forgets which one. `Int.wilson` needs `factorial(p-1) ≡ -1 [p]`
+// specifically, not `≡ ±1`; nothing below decides the sign, and the sign is
+// where the actual mathematical content of Wilson's theorem lives (a
+// composite `n` has no such obstruction, so `(n-1)! ≡ -1 [n]`'s FAILURE for
+// composite `n` is precisely what a sign-blind fact could never certify).
+// `Int.wilson` is NOT declared here; see this module's doc above for what
+// full closure would still need.
+// ============================================================================
+
+/// `ModEq n x (emod x n)`, given `0 < n` — a value is always congruent to its
+/// own canonical remainder. `emod x n` is already in `[0, n)`
+/// (`emod_nonneg`/`emod_lt_of_pos`), so [`emod_eq_self_of_in_range`] applied
+/// to `emod x n` itself gives `emod (emod x n) n = emod x n`; `ModEq n x
+/// (emod x n)` unfolds (by `Int.ModEq`'s own definition) to exactly the
+/// `Eq Int (emod x n) (emod (emod x n) n)` that is the `symm` of that fact.
+fn emod_modeq_self(d: &mut IntDev<'_>, x: ExprId, n: ExprId, n_pos: ExprId) -> ExprId {
+    let p = d.int();
+    let ne_n = int_ne_zero_of_pos(d, n, n_pos);
+    let exn = d.iemod(x, n);
+    let r_nonneg = d.const_app(p.emod_nonneg, &[x, n, ne_n]);
+    let r_lt = d.const_app(p.emod_lt_of_pos, &[x, n, n_pos]);
+    let idem = emod_eq_self_of_in_range(d, exn, n, n_pos, r_nonneg, r_lt); // Eq Int (emod exn n) exn
+    let emod_exn_n = d.iemod(exn, n);
+    d.isymm(emod_exn_n, exn, idem)
+}
+
+/// `Eq Int (prodRange one_fn n) one`, for `one_fn := fun _ => Int.one` — a
+/// constant-one product is `one`. Induction on `n`: the base case is
+/// `prodRange_zero`'s own `Eq.refl`; the successor step is `mul_one` applied
+/// to the induction hypothesis (`prodRange one_fn (succ j)` unfolds to
+/// `mul (prodRange one_fn j) (one_fn j)`, and `one_fn j` is defeq `one`
+/// regardless of `j`, the same beta-transparency
+/// [`declare_prod_range_mul`](super::prod::declare_prod_range_mul)'s base
+/// case leans on).
+fn prod_range_const_one(d: &mut IntDev<'_>, one_fn: ExprId, n: ExprId) -> ExprId {
+    let p = d.int();
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let pr = d.const_app(p.prod_range, &[one_fn, x]);
+        let one_i = d.ione();
+        d.ieq(pr, one_i)
+    };
+    d.induct(
+        &motive,
+        &|d| {
+            let one_i = d.ione();
+            d.irefl(one_i)
+        },
+        &|d, j, ih| {
+            let one_i = d.ione();
+            let pr_j = d.const_app(p.prod_range, &[one_fn, j]);
+            let start = d.imul(pr_j, one_i);
+            let mid = d.imul(one_i, one_i);
+            let step1 = d.icongr(pr_j, one_i, ih, &|d, t| d.imul(t, one_i));
+            let mul_one_pf = d.const_app(p.mul_one, &[one_i]);
+            let (_e, proof) = d.ichain(start, &[(mid, step1), (one_i, mul_one_pf)]);
+            proof
+        },
+        n,
+    )
+}
+
+/// `Int.factorial_sq_modeq_one :
+/// ∀ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) →
+///   ModEq (ofNat p) (mul (factorial (p-1)) (factorial (p-1))) one`
+///
+/// **The collapse lemma this slice lands** — see the module section above
+/// this declaration for what it proves, why it sidesteps the pairing
+/// argument, and exactly what is still missing for `Int.wilson`.
+///
+/// Route, with `n := p-1`, `σ := Nat.inverseIndex p`, `F := fun k =>
+/// ofNat(succ k)` (the lambda `Int.factorial` itself unfolds to), `G := fun
+/// k => F(σ k)`:
+///
+/// 1. `Int.prodRange_permute` at `F`, `σ`, `n` (fed
+///    [`declare_inverse_index_injective`]/[`declare_inverse_index_maps_into`]):
+///    `Eq Int (prodRange F n) (prodRange G n)`.
+/// 2. For every `k < n`: `mag_k := natAbs(emod(F(k)^(p-2), ofNat p))` is
+///    positive ([`mag_ne_zero`] + [`pos_of_ne_zero`]), so `succ(mag_k - 1) =
+///    mag_k` (`Nat.sub_add_cancel`) — and `σ k` UNFOLDS to exactly
+///    `mag_k - 1`, so `F(σ k) = ofNat(mag_k) = emod(F(k)^(p-2), ofNat p)`
+///    (`of_nat_nat_abs_of_nonneg`), i.e. `G k` is EXACTLY that canonical
+///    remainder, no case split on whether `k` is a fixed point. Combined
+///    with [`emod_modeq_self`] (`emod(F(k)^(p-2),p) ≡ F(k)^(p-2) [p]`) and
+///    [`declare_mul_inv_of_pow`] (`F(k) * F(k)^(p-2) ≡ 1 [p]`):
+///    `ModEq (ofNat p) (mul (F k) (G k)) one`, for every `k < n`.
+/// 3. `Int.prodRange_mul` at `F`, `G`, `n`: `Eq Int (prodRange (fun k => mul
+///    (F k) (G k)) n) (mul (prodRange F n) (prodRange G n))`.
+/// 4. `Int.modEq_prodRange_lt` at step 2's pointwise congruence:
+///    `ModEq (ofNat p) (prodRange (fun k => mul (F k)(G k)) n) (prodRange
+///    (fun _ => one) n)`, and [`prod_range_const_one`] collapses the RHS to
+///    `one` exactly.
+/// 5. Chaining 1, 3, 4 (rewriting `G`'s range back to `F`'s via step 1's
+///    equality) gives `ModEq (ofNat p) (mul (prodRange F n) (prodRange F n))
+///    one`, which is the goal up to the `Int.factorial`/`Int.prodRange`
+///    defeq [`declare_factorial`] already relies on.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_factorial_sq_modeq_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    d.theorem(p.factorial_sq_modeq_one, 1, &|d, v| {
+        let pp = v[0];
+        let prime_ty = prime_condition(d, pp);
+
+        let one_nat = d.num(1);
+        let two_nat = d.num(2);
+        let n = d.sub(pp, one_nat); // p - 1
+        let big_p = d.of_nat(pp);
+        let one_i = d.ione();
+        let factorial_n = d.const_app(p.factorial, &[n]);
+        let sq = d.imul(factorial_n, factorial_n);
+        let concl = super::modeq::imodeq(d, big_p, sq, one_i);
+        let stmt = d.arrow(prime_ty, concl);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+
+        // F := fun k => ofNat (succ k) — the lambda `Int.factorial` unfolds to.
+        let f_lambda = |d: &mut IntDev<'_>| -> ExprId {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sk = d.succ(k);
+            let body = d.of_nat(sk);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let big_f = f_lambda(d);
+
+        // sigma := fun k => Nat.inverseIndex pp k.
+        let sigma = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let body = d.const_app(p.inverse_index, &[pp, k]);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let inj_sigma = d.const_app(p.inverse_index_injective, &[pp, prime_proof]);
+        let maps_sigma = d.const_app(p.inverse_index_maps_into, &[pp, prime_proof]);
+
+        // G := fun k => F (sigma k).
+        let big_g = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sk = d.apply(sigma, &[k]);
+            let body = d.apply(big_f, &[sk]);
+            d.lam_fv(k_fv, nat, body)
+        };
+
+        // Step 1: prodRange F n = prodRange G n.
+        let permute_eq = d.const_app(
+            p.prod_range_permute,
+            &[big_f, n, sigma, inj_sigma, maps_sigma],
+        );
+
+        let one_le_pp = nat_prime_pos(d, pp, prime_proof); // also `Int.lt zero_i big_p`, by defeq
+        let pos_big_p = one_le_pp;
+        let succ_n = d.succ(n);
+        let cancel1 = d.lemma(p.nat.sub_add_cancel, &[one_nat, pp, one_le_pp]); // Eq Nat succ_n pp
+
+        // Step 2: pointwise congruence, ∀ k, Lt k n → ModEq big_p (mul (F k) (G k)) one.
+        let pointwise_pf = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let hk_fv = d.fresh_fvar();
+            let hk = d.kernel().fvar(hk_fv);
+            let hk_ty = d.lt(k, n);
+
+            let sk = d.succ(k);
+            let fk = d.of_nat(sk);
+
+            // ub_k : Lt (succ k) pp ; pos_sk : Lt zero (succ k).
+            let mono_fn = d.lemma(p.nat.succ_le_succ, &[sk, n]);
+            let mono = d.apply(mono_fn, &[hk]);
+            let ub_k = d.nat_rewrite(succ_n, pp, cancel1, mono, &|d, x| {
+                let s = d.succ(sk);
+                d.le(s, x)
+            });
+            let pos_sk = d.lemma(p.nat.zero_lt_succ, &[k]);
+
+            // mip_k : ModEq big_p (mul fk pw_k) one.
+            let mip_k = d.const_app(p.mul_inv_of_pow, &[pp, sk, prime_proof, pos_sk, ub_k]);
+
+            let pm2 = d.sub(pp, two_nat);
+            let pw_k = d.ipow(fk, pm2);
+            let r_k = d.iemod(pw_k, big_p);
+            let mag_k = {
+                let f = p.nat_abs;
+                d.const_app(f, &[r_k])
+            };
+
+            // mag_k ≠ 0, hence positive; succ(mag_k - 1) = mag_k.
+            let mag_k_ne = mag_ne_zero(d, pp, sk, prime_proof, pos_sk, ub_k);
+            let mag_k_pos = pos_of_ne_zero(d, mag_k, mag_k_ne);
+            let sk_raw = d.sub(mag_k, one_nat);
+            let succ_sk_raw = d.succ(sk_raw);
+            let cancel_k = d.lemma(p.nat.sub_add_cancel, &[one_nat, mag_k, mag_k_pos]);
+            // cancel_k : Eq Nat succ_sk_raw mag_k
+
+            let ne_big_p = int_ne_zero_of_pos(d, big_p, pos_big_p);
+            let r_k_nonneg = d.const_app(p.emod_nonneg, &[pw_k, big_p, ne_big_p]);
+
+            let ofnat_succ_sk_raw = d.of_nat(succ_sk_raw);
+            let ofnat_mag_k = d.of_nat(mag_k);
+            let bridge_a = d.nat_eq_to_int(succ_sk_raw, mag_k, cancel_k, &|d, y| d.of_nat(y));
+            let bridge_b = d.const_app(p.of_nat_nat_abs_of_nonneg, &[r_k, r_k_nonneg]);
+            // F(sigma k) = ofNat(succ_sk_raw) = ofNat(mag_k) = r_k.
+            let f_sk_eq_rk = d.itrans(ofnat_succ_sk_raw, ofnat_mag_k, r_k, bridge_a, bridge_b);
+
+            // pw_k ≡ r_k [p] (emod is always congruent to its argument); rewrite
+            // to get F(sigma k) ≡ pw_k [p].
+            let modeq_pwk_rk = emod_modeq_self(d, pw_k, big_p, pos_big_p);
+            let f_sk_eq_rk_rev = d.isymm(ofnat_succ_sk_raw, r_k, f_sk_eq_rk);
+            let modeq_pwk_fsk = d.int_eq_rewrite(
+                r_k,
+                ofnat_succ_sk_raw,
+                f_sk_eq_rk_rev,
+                modeq_pwk_rk,
+                &|d, x| super::modeq::imodeq(d, big_p, pw_k, x),
+            );
+            let modeq_fsk_pwk = d.const_app(
+                p.mod_eq_symm,
+                &[big_p, pw_k, ofnat_succ_sk_raw, modeq_pwk_fsk],
+            );
+
+            // Scale by fk on the left: ModEq big_p (mul fk (F(sigma k))) (mul fk pw_k).
+            let scaled = d.const_app(
+                p.mod_eq_mul_left,
+                &[big_p, ofnat_succ_sk_raw, pw_k, fk, pos_big_p, modeq_fsk_pwk],
+            );
+            let lhs_scaled = d.imul(fk, ofnat_succ_sk_raw);
+            let mid_scaled = d.imul(fk, pw_k);
+            let final_pf = d.const_app(
+                p.mod_eq_trans,
+                &[big_p, lhs_scaled, mid_scaled, one_i, scaled, mip_k],
+            );
+
+            let with_hk = d.lam_fv(hk_fv, hk_ty, final_pf);
+            d.lam_fv(k_fv, nat, with_hk)
+        };
+
+        // Step 3: prodRange (fun k => F k * G k) n = mul (prodRange F n) (prodRange G n).
+        let prod_mul_eq = d.const_app(p.prod_range_mul, &[big_f, big_g, n]);
+
+        // Step 4: prodRange (fun k => F k * G k) n ≡ prodRange (fun _ => one) n [p], = one.
+        let one_lambda = {
+            let k_fv = d.fresh_fvar();
+            d.lam_fv(k_fv, nat, one_i)
+        };
+        let big_h = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let fk = d.apply(big_f, &[k]);
+            let gk = d.apply(big_g, &[k]);
+            let body = d.imul(fk, gk);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let const_one_pf = d.const_app(
+            p.mod_eq_prod_range_lt,
+            &[big_p, big_h, one_lambda, n, pos_big_p, pointwise_pf],
+        );
+        let prod_range_one_eq_one = prod_range_const_one(d, one_lambda, n);
+        let h_range = d.const_app(p.prod_range, &[big_h, n]);
+        let one_range = d.const_app(p.prod_range, &[one_lambda, n]);
+        let modeq_h_one = d.int_eq_rewrite(
+            one_range,
+            one_i,
+            prod_range_one_eq_one,
+            const_one_pf,
+            &|d, x| super::modeq::imodeq(d, big_p, h_range, x),
+        );
+
+        // Step 5: assemble, rewriting H's range to F*G's range and G's range
+        // back to F's range.
+        let f_range = d.const_app(p.prod_range, &[big_f, n]);
+        let g_range = d.const_app(p.prod_range, &[big_g, n]);
+        let mul_fg = d.imul(f_range, g_range);
+        let modeq_mulfg_one =
+            d.int_eq_rewrite(h_range, mul_fg, prod_mul_eq, modeq_h_one, &|d, x| {
+                super::modeq::imodeq(d, big_p, x, one_i)
+            });
+        let permute_eq_rev = d.isymm(f_range, g_range, permute_eq);
+        let modeq_ff_one = d.int_eq_rewrite(
+            g_range,
+            f_range,
+            permute_eq_rev,
+            modeq_mulfg_one,
+            &|d, x| {
+                let lhs = d.imul(f_range, x);
+                super::modeq::imodeq(d, big_p, lhs, one_i)
+            },
+        );
+
+        let proof = d.lam_fv(prime_fv, prime_ty, modeq_ff_one);
+        (stmt, proof)
+    })?;
+    Ok(())
+}

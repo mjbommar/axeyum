@@ -495,6 +495,286 @@ pub(super) fn declare_prod_range_congr_lt(d: &mut IntDev<'_>) -> Result<(), Kern
     d.declare_theorem(p.prod_range_congr_lt, ty, value)
 }
 
+/// Proves `Eq Int (mul (mul a b) (mul x y)) (mul (mul a x) (mul b y))` — the
+/// pure ring rearrangement [`declare_prod_range_mul`]'s successor step needs
+/// to match the two ways of grouping four factors. Five steps, all
+/// `mul_assoc`/`mul_comm`, mirroring [`super::wilson::diff_of_squares`]'s
+/// nested-`icongr` idiom: `(a*b)*(x*y) = a*(b*(x*y)) = a*((b*x)*y) =
+/// a*((x*b)*y) = a*(x*(b*y)) = (a*x)*(b*y)`.
+fn mul_swap_inner(d: &mut IntDev<'_>, a: ExprId, b: ExprId, x: ExprId, y: ExprId) -> ExprId {
+    let p = d.int();
+    let ab = d.imul(a, b);
+    let xy = d.imul(x, y);
+    let start = d.imul(ab, xy);
+
+    // (a*b)*(x*y) = a*(b*(x*y))
+    let bxy = d.imul(b, xy);
+    let t1 = d.imul(a, bxy);
+    let p1 = d.const_app(p.mul_assoc, &[a, b, xy]);
+
+    // a*(b*(x*y)) = a*((b*x)*y)
+    let bx = d.imul(b, x);
+    let bx_y = d.imul(bx, y);
+    let t2 = d.imul(a, bx_y);
+    let assoc_bxy = d.const_app(p.mul_assoc, &[b, x, y]); // Eq (b*x)*y (b*(x*y))
+    let assoc_bxy_rev = d.isymm(bx_y, bxy, assoc_bxy);
+    let p2 = d.icongr(bxy, bx_y, assoc_bxy_rev, &|d, t| d.imul(a, t));
+
+    // a*((b*x)*y) = a*((x*b)*y)
+    let xb = d.imul(x, b);
+    let xb_y = d.imul(xb, y);
+    let t3 = d.imul(a, xb_y);
+    let comm_bx = d.const_app(p.mul_comm, &[b, x]); // Eq (b*x) (x*b)
+    let p3 = d.icongr(bx, xb, comm_bx, &|d, t| {
+        let ty_ = d.imul(t, y);
+        d.imul(a, ty_)
+    });
+
+    // a*((x*b)*y) = a*(x*(b*y))
+    let by = d.imul(b, y);
+    let x_by = d.imul(x, by);
+    let t4 = d.imul(a, x_by);
+    let assoc_xby = d.const_app(p.mul_assoc, &[x, b, y]); // Eq (x*b)*y (x*(b*y))
+    let p4 = d.icongr(xb_y, x_by, assoc_xby, &|d, t| d.imul(a, t));
+
+    // a*(x*(b*y)) = (a*x)*(b*y)
+    let ax = d.imul(a, x);
+    let end_ = d.imul(ax, by);
+    let assoc_axby = d.const_app(p.mul_assoc, &[a, x, by]); // Eq (a*x)*(b*y) (a*(x*(b*y)))
+    let assoc_axby_rev = d.isymm(end_, t4, assoc_axby);
+
+    let (_e, proof) = d.ichain(
+        start,
+        &[
+            (t1, p1),
+            (t2, p2),
+            (t3, p3),
+            (t4, p4),
+            (end_, assoc_axby_rev),
+        ],
+    );
+    proof
+}
+
+/// `Int.prodRange_mul :
+///   ∀ f g n, Eq Int (prodRange (fun k => mul (f k) (g k)) n)
+///     (mul (prodRange f n) (prodRange g n))`
+/// — a product of pointwise products is the product of the two products.
+/// Induction on `n`: the base case is `mul_one` (both sides reduce to
+/// `Int.one`, matching via `Int.mul_one one`); the successor step rewrites
+/// the pointwise-product prior (`prodRange (fun k=>f k*g k) j`) through the
+/// induction hypothesis and then regroups the four factors
+/// `(Pf_j*Pg_j)*(f_j*g_j) = (Pf_j*f_j)*(Pg_j*g_j)` via [`mul_swap_inner`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_prod_range_mul(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+    let fn_ty = d.arrow(nat, int_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    // fg := fun k => mul (f k) (g k).
+    let fg_lambda = |d: &mut IntDev<'_>| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let fk = d.apply(f, &[k]);
+        let gk = d.apply(g, &[k]);
+        let body = d.imul(fk, gk);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let fg = fg_lambda(d);
+        let lhs = d.const_app(p.prod_range, &[fg, x]);
+        let pf = d.const_app(p.prod_range, &[f, x]);
+        let pg = d.const_app(p.prod_range, &[g, x]);
+        let rhs = d.imul(pf, pg);
+        d.ieq(lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let one_i = d.ione();
+            let one_one = d.imul(one_i, one_i);
+            let mul_one_pf = d.const_app(p.mul_one, &[one_i]); // Eq (one*one) one
+            d.isymm(one_one, one_i, mul_one_pf)
+        },
+        &|d, j, ih| {
+            // ih : Eq Int (prodRange fg j) (mul (prodRange f j) (prodRange g j))
+            let pf_j = d.const_app(p.prod_range, &[f, j]);
+            let pg_j = d.const_app(p.prod_range, &[g, j]);
+            let fj = d.apply(f, &[j]);
+            let gj = d.apply(g, &[j]);
+            let fj_gj = d.imul(fj, gj);
+
+            let pfg_j = {
+                let fg = fg_lambda(d);
+                d.const_app(p.prod_range, &[fg, j])
+            };
+            let start = d.imul(pfg_j, fj_gj);
+            let pf_pg = d.imul(pf_j, pg_j);
+            let mid = d.imul(pf_pg, fj_gj);
+            let step1 = d.icongr(pfg_j, pf_pg, ih, &|d, t| d.imul(t, fj_gj));
+
+            let end_ = mul_swap_inner(d, pf_j, pg_j, fj, gj);
+            let (_e, proof) = d.ichain(start, &[(mid, step1)]);
+            let pf_fj = d.imul(pf_j, fj);
+            let pg_gj = d.imul(pg_j, gj);
+            let final_target = d.imul(pf_fj, pg_gj);
+            d.itrans(start, mid, final_target, proof, end_)
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_n);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_n);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.declare_theorem(p.prod_range_mul, ty, value)
+}
+
+/// `Int.modEq_prodRange_lt :
+///   ∀ n f g m, 0 < n → (∀ k, Lt k m → ModEq n (f k) (g k)) →
+///     ModEq n (prodRange f m) (prodRange g m)`
+/// — [`declare_modeq_prod_range`]'s pointwise hypothesis weakened to indices
+/// below the bound, mirroring [`declare_prod_range_congr_lt`]'s own
+/// weakening of `declare_prod_range_congr` (`Eq Int` swapped for `ModEq n`,
+/// `Int.ModEq.mul` in place of `icongr`). Needed because
+/// [`super::wilson::declare_factorial_sq_modeq_one`]'s pointwise congruence
+/// only holds for indices inside the factorial's own range — `Nat.inverseIndex`
+/// composed with `Int.mul_inv_of_pow` needs `0 < a` and `a < p`, so the
+/// unrestricted `declare_modeq_prod_range` cannot be fed it directly.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_modeq_prod_range_lt(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let int_ty = d.int_ty();
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, int_ty);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let zero = d.izero();
+    let pos_ty = d.ilt(zero, n);
+
+    let bounded_pointwise = |d: &mut IntDev<'_>, bound: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hyp = d.lt(k, bound);
+        let fk = d.apply(f, &[k]);
+        let gk = d.apply(g, &[k]);
+        let eqn = super::modeq::imodeq(d, n, fk, gk);
+        let body = d.arrow(hyp, eqn);
+        d.pi_fv(k_fv, nat, body)
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let hyp = bounded_pointwise(d, x);
+        let pf = d.const_app(p.prod_range, &[f, x]);
+        let pg = d.const_app(p.prod_range, &[g, x]);
+        let concl = super::modeq::imodeq(d, n, pf, pg);
+        d.arrow(hyp, concl)
+    };
+    let stmt_at_m = motive(d, m);
+
+    let h_pos_fv = d.fresh_fvar();
+    let h_pos = d.kernel().fvar(h_pos_fv);
+
+    let proof_body = d.induct(
+        &motive,
+        &|d| {
+            let zero_n = d.zero();
+            let hyp_ty = bounded_pointwise(d, zero_n);
+            let h_fv = d.fresh_fvar();
+            let one_i = d.ione();
+            let body = d.const_app(p.mod_eq_refl, &[n, one_i]);
+            d.lam_fv(h_fv, hyp_ty, body)
+        },
+        &|d, j, ih| {
+            let sj = d.succ(j);
+            let hyp_ty = bounded_pointwise(d, sj);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let h_lt_j = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let hk_ty = d.lt(k, j);
+                let hk_fv = d.fresh_fvar();
+                let hk = d.kernel().fvar(hk_fv);
+                let le_succ_j = d.lemma(p.nat.le_succ, &[j]);
+                let lifted = d.lemma(p.nat.lt_of_lt_of_le, &[k, j, sj, hk, le_succ_j]);
+                let applied = d.apply(h, &[k, lifted]);
+                let with_hk = d.lam_fv(hk_fv, hk_ty, applied);
+                d.lam_fv(k_fv, nat, with_hk)
+            };
+            let sub1 = d.apply(ih, &[h_lt_j]);
+
+            let lt_j_sj = d.lemma(p.nat.lt_succ_self, &[j]);
+            let sub2 = d.apply(h, &[j, lt_j_sj]);
+
+            let pf_j = d.const_app(p.prod_range, &[f, j]);
+            let pg_j = d.const_app(p.prod_range, &[g, j]);
+            let fj = d.apply(f, &[j]);
+            let gj = d.apply(g, &[j]);
+            let body = d.const_app(p.mod_eq_mul, &[n, pf_j, pg_j, fj, gj, h_pos, sub1, sub2]);
+
+            d.lam_fv(h_fv, hyp_ty, body)
+        },
+        m,
+    );
+
+    let with_h_pos = d.lam_fv(h_pos_fv, pos_ty, proof_body);
+
+    let value = {
+        let with_m = d.lam_fv(m_fv, nat, with_h_pos);
+        let with_g = d.lam_fv(g_fv, fn_ty, with_m);
+        let with_f = d.lam_fv(f_fv, fn_ty, with_g);
+        d.lam_fv(n_fv, int_ty, with_f)
+    };
+    let ty = {
+        let inner = d.arrow(pos_ty, stmt_at_m);
+        let with_m = d.pi_fv(m_fv, nat, inner);
+        let with_g = d.pi_fv(g_fv, fn_ty, with_m);
+        let with_f = d.pi_fv(f_fv, fn_ty, with_g);
+        d.pi_fv(n_fv, int_ty, with_f)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mod_eq_prod_range_lt,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `Int.prodRange_swap_adjacent` — swapping `f`'s values at one adjacent pair
 /// of indices `(i, succ i)` leaves the product unchanged, given `g` supplied
 /// (not computed) with the two matching values and full agreement elsewhere.
