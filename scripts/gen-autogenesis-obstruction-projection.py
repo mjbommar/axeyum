@@ -7,6 +7,7 @@ from collections import defaultdict
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "artifacts/autogenesis"
 OUTPUT = SOURCE / "obstruction-projection-v1.json"
+OVERLAY = SOURCE / "knowledge-overlay-v1.json"
 
 def canonical(value: object) -> str:
     raw = str(value or "unclassified")
@@ -26,6 +27,14 @@ def candidate(category: str) -> str | None:
     return None
 
 def build() -> dict:
+    try:
+        overlay = json.loads(OVERLAY.read_text())
+        registered_capabilities = {
+            row["id"] for row in overlay.get("entities", [])
+            if isinstance(row, dict) and row.get("kind") == "capability"
+        }
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"cannot read knowledge overlay: {error}") from error
     episodes=[]
     for path in sorted(SOURCE.glob("*.json")):
         try: doc=json.loads(path.read_text())
@@ -40,8 +49,10 @@ def build() -> dict:
     for name, rows in sorted(groups.items()):
         categories=sorted({r["obstruction_category"] for r in rows})
         first=rows[0]
-        obstructions.append({"id":f"O:{name}","family":name,"first_observed_blocker":first["obstruction_category"],"complete_known_blocker_set":categories,"affected_episodes":[r["id"] for r in rows],"affected_population":{"episodes":len(rows),"facts":[]},"candidate_capability":candidate(first["obstruction_category"]),"candidate_capability_internal_status":"unknown","resolution_commit":None,"measured_before_after":None})
-    return {"schema_version":1,"kind":"axeyum-autogenesis-obstruction-projection","derivation":{"method":"mechanically-observed","scope":"retained top-level decline objects under artifacts/autogenesis","trust_boundary":"obstructions rank investigation only; they never authorize proof admission"},"census":{"episodes":len(episodes),"obstructions":len(obstructions)},"episodes":episodes,"obstructions":obstructions}
+        proposed=candidate(first["obstruction_category"])
+        status="not-applicable" if proposed is None else ("present-in-knowledge-overlay" if proposed in registered_capabilities else "not-present-in-knowledge-overlay")
+        obstructions.append({"id":f"O:{name}","family":name,"first_observed_blocker":first["obstruction_category"],"complete_known_blocker_set":categories,"affected_episodes":[r["id"] for r in rows],"affected_population":{"episodes":len(rows),"facts":[]},"candidate_capability":proposed,"candidate_capability_internal_status":status,"resolution_commit":None,"measured_before_after":None})
+    return {"schema_version":1,"kind":"axeyum-autogenesis-obstruction-projection","derivation":{"method":"mechanically-observed","scope":"retained top-level decline objects under artifacts/autogenesis","knowledge_overlay_path":"artifacts/autogenesis/knowledge-overlay-v1.json","trust_boundary":"obstructions rank investigation only; they never authorize proof admission"},"census":{"episodes":len(episodes),"obstructions":len(obstructions),"candidate_capability_statuses":{status:sum(o['candidate_capability_internal_status']==status for o in obstructions) for status in sorted({o['candidate_capability_internal_status'] for o in obstructions})}},"episodes":episodes,"obstructions":obstructions}
 
 def main()->int:
     check=argparse.ArgumentParser(); check.add_argument('--check',action='store_true'); args=check.parse_args()

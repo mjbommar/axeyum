@@ -11,4 +11,6 @@ class Controls(unittest.TestCase):
     d=copy.deepcopy(self.data); d['obstructions'][0]['resolution_commit']='deadbeef'; self.assertTrue(any('unbound resolution' in e for e in OP.validate(d)))
   def test_lost_episode_blocker_rejected(self):
     d=copy.deepcopy(self.data); d['obstructions'][0]['complete_known_blocker_set']=[]; self.assertTrue(any('blocker set' in e for e in OP.validate(d)))
+  def test_candidate_status_must_match_candidate(self):
+    d=copy.deepcopy(self.data); o=next(o for o in d['obstructions'] if o['candidate_capability'] is not None); o['candidate_capability_internal_status']='not-applicable'; self.assertTrue(any('candidate capability and status disagree' in e for e in OP.validate(d)))
 if __name__=='__main__': unittest.main()

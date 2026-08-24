@@ -14,7 +14,12 @@ def validate(data):
         if known!=observed: errors.append(f"{o.get('id')}: blocker set does not match episodes")
         if o.get('first_observed_blocker')!=episodes[ids[0]]['obstruction_category']: errors.append(f"{o.get('id')}: first blocker is not first observed")
         if o.get('resolution_commit') is not None or o.get('measured_before_after') is not None: errors.append(f"{o.get('id')}: generator cannot claim unbound resolution")
+        status=o.get('candidate_capability_internal_status')
+        if status not in {'not-applicable','present-in-knowledge-overlay','not-present-in-knowledge-overlay'}: errors.append(f"{o.get('id')}: invalid candidate capability status")
+        if (o.get('candidate_capability') is None)!=(status=='not-applicable'): errors.append(f"{o.get('id')}: candidate capability and status disagree")
     if data.get('census',{}).get('episodes')!=len(episodes): errors.append('episode census mismatch')
+    expected={status:sum(o.get('candidate_capability_internal_status')==status for o in data.get('obstructions',[])) for status in sorted({o.get('candidate_capability_internal_status') for o in data.get('obstructions',[])})}
+    if data.get('census',{}).get('candidate_capability_statuses')!=expected: errors.append('candidate capability census mismatch')
     return errors
 def main():
     data=json.loads(PATH.read_text()); errors=validate(data)

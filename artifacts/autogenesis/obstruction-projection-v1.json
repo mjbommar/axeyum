@@ -1,9 +1,14 @@
 {
   "census": {
+    "candidate_capability_statuses": {
+      "not-applicable": 11,
+      "not-present-in-knowledge-overlay": 9
+    },
     "episodes": 47,
     "obstructions": 20
   },
   "derivation": {
+    "knowledge_overlay_path": "artifacts/autogenesis/knowledge-overlay-v1.json",
     "method": "mechanically-observed",
     "scope": "retained top-level decline objects under artifacts/autogenesis",
     "trust_boundary": "obstructions rank investigation only; they never authorize proof admission"
@@ -679,7 +684,7 @@
         "facts": []
       },
       "candidate_capability": null,
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-applicable",
       "complete_known_blocker_set": [
         "unclassified"
       ],
@@ -698,7 +703,7 @@
         "facts": []
       },
       "candidate_capability": "K:typed-transport-composition",
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-present-in-knowledge-overlay",
       "complete_known_blocker_set": [
         "typeshapemismatch"
       ],
@@ -717,7 +722,7 @@
         "facts": []
       },
       "candidate_capability": "K:declaration-or-inductive-import",
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-present-in-knowledge-overlay",
       "complete_known_blocker_set": [
         "unsupportedmissingdeclaration"
       ],
@@ -736,7 +741,7 @@
         "facts": []
       },
       "candidate_capability": null,
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-applicable",
       "complete_known_blocker_set": [
         "unclassified"
       ],
@@ -755,7 +760,7 @@
         "facts": []
       },
       "candidate_capability": "K:checked-declaration-reuse",
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-present-in-knowledge-overlay",
       "complete_known_blocker_set": [
         "noadditions"
       ],
@@ -774,7 +779,7 @@
         "facts": []
       },
       "candidate_capability": null,
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-applicable",
       "complete_known_blocker_set": [
         "unclassified"
       ],
@@ -793,7 +798,7 @@
         "facts": []
       },
       "candidate_capability": "K:declaration-or-inductive-import",
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-present-in-knowledge-overlay",
       "complete_known_blocker_set": [
         "unsupportedmissingdeclaration"
       ],
@@ -812,7 +817,7 @@
         "facts": []
       },
       "candidate_capability": "K:bounded-reproducible-export",
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-present-in-knowledge-overlay",
       "complete_known_blocker_set": [
         "exportermodulesearchpath"
       ],
@@ -835,7 +840,7 @@
         "facts": []
       },
       "candidate_capability": "K:bounded-reproducible-export",
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-present-in-knowledge-overlay",
       "complete_known_blocker_set": [
         "decisionwitnessdependenttypeshape",
         "leanmodulesearchpath",
@@ -859,7 +864,7 @@
         "facts": []
       },
       "candidate_capability": null,
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-applicable",
       "complete_known_blocker_set": [
         "unclassified"
       ],
@@ -880,7 +885,7 @@
         "facts": []
       },
       "candidate_capability": null,
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-applicable",
       "complete_known_blocker_set": [
         "notfound",
         "rootisnottheorem",
@@ -902,7 +907,7 @@
         "facts": []
       },
       "candidate_capability": null,
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-applicable",
       "complete_known_blocker_set": [
         "missingseparatelysealedproofroot",
         "missingunrelateddevelopmentroot"
@@ -925,7 +930,7 @@
         "facts": []
       },
       "candidate_capability": null,
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-applicable",
       "complete_known_blocker_set": [
         "missingdeclaration",
         "typemismatch",
@@ -954,7 +959,7 @@
         "facts": []
       },
       "candidate_capability": null,
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-applicable",
       "complete_known_blocker_set": [
         "compatibilityclasspolicymismatch",
         "noadditions",
@@ -977,7 +982,7 @@
         "facts": []
       },
       "candidate_capability": "K:checked-declaration-reuse",
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-present-in-knowledge-overlay",
       "complete_known_blocker_set": [
         "noadditions"
       ],
@@ -996,7 +1001,7 @@
         "facts": []
       },
       "candidate_capability": null,
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-applicable",
       "complete_known_blocker_set": [
         "type-shape-mismatch"
       ],
@@ -1015,7 +1020,7 @@
         "facts": []
       },
       "candidate_capability": null,
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-applicable",
       "complete_known_blocker_set": [
         "no-additions"
       ],
@@ -1034,7 +1039,7 @@
         "facts": []
       },
       "candidate_capability": null,
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-applicable",
       "complete_known_blocker_set": [
         "unsupported-missing-declaration"
       ],
@@ -1053,7 +1058,7 @@
         "facts": []
       },
       "candidate_capability": "K:bounded-reproducible-export",
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-present-in-knowledge-overlay",
       "complete_known_blocker_set": [
         "resource-limit"
       ],
@@ -1080,7 +1085,7 @@
         "facts": []
       },
       "candidate_capability": "K:declaration-or-inductive-import",
-      "candidate_capability_internal_status": "unknown",
+      "candidate_capability_internal_status": "not-present-in-knowledge-overlay",
       "complete_known_blocker_set": [
         "declarationabsent",
         "missingdeclaration",
