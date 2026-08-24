@@ -1,0 +1,375 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-knowledge-overlay",
+  "sources": [
+    {
+      "id": "axeyum",
+      "kind": "local-repository",
+      "revision_policy": "live-worktree",
+      "path_hint": "."
+    },
+    {
+      "id": "math-education",
+      "kind": "external-repository",
+      "revision_policy": "pinned",
+      "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c",
+      "path_hint": "../math-education",
+      "license_note": "Reference corpus owned by the Axeyum project owner; Axeyum copies or adapts selected metadata, never mutates the sibling repository."
+    }
+  ],
+  "namespaces": [
+    {
+      "id": "axeyum-knowledge",
+      "source_id": "axeyum",
+      "entity_kinds": ["capability", "obstruction", "episode", "representation"],
+      "resolution": "overlay-entity",
+      "path": "artifacts/autogenesis/knowledge-overlay-v1.json"
+    },
+    {
+      "id": "axeyum-fact",
+      "source_id": "axeyum",
+      "entity_kinds": ["fact"],
+      "resolution": "local-required",
+      "path": "artifacts/facts",
+      "id_pattern": "^F:[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    {
+      "id": "axeyum-operation",
+      "source_id": "axeyum",
+      "entity_kinds": ["operation"],
+      "resolution": "local-required",
+      "path": "artifacts/autogenesis/operations.json"
+    },
+    {
+      "id": "math-education",
+      "source_id": "math-education",
+      "entity_kinds": ["concept", "encounter", "technique"],
+      "resolution": "external-pinned",
+      "path": "graph",
+      "id_pattern": "^(?:C:[a-z0-9]+(?:-[a-z0-9]+)*(?:@(remember|understand|apply|analyze|evaluate|create))?|TQ:[a-z0-9]+(?:-[a-z0-9]+)*)$",
+      "notes": "The sibling checkout is optional. Every endpoint carries the pinned source revision so CI does not require or vendor that repository."
+    }
+  ],
+  "relation_types": [
+    {
+      "id": "realizes-capability",
+      "source_kinds": ["operation"],
+      "target_kinds": ["capability"],
+      "semantics": "The registered operation is an executable realization of the reusable capability."
+    },
+    {
+      "id": "established-by",
+      "source_kinds": ["fact"],
+      "target_kinds": ["operation"],
+      "semantics": "The authoritative fact transition is credited to this registered operation."
+    },
+    {
+      "id": "formalizes",
+      "source_kinds": ["fact"],
+      "target_kinds": ["concept", "encounter"],
+      "semantics": "The formal proposition supplies exact or qualified formal content for the referenced educational concept or encounter."
+    },
+    {
+      "id": "uses-technique",
+      "source_kinds": ["capability", "operation"],
+      "target_kinds": ["technique"],
+      "semantics": "The proof-producing mechanism implements the named mathematical technique."
+    },
+    {
+      "id": "exemplifies",
+      "source_kinds": ["fact", "operation", "capability"],
+      "target_kinds": ["concept", "encounter", "technique"],
+      "semantics": "The checked source is a concrete worked instance of the target; it does not assert complete concept coverage."
+    },
+    {
+      "id": "blocked-by",
+      "source_kinds": ["fact", "operation", "capability"],
+      "target_kinds": ["obstruction", "capability", "fact", "kernel-declaration"],
+      "semantics": "The source cannot currently advance without resolving the target under the stated qualifiers."
+    },
+    {
+      "id": "unlocks",
+      "source_kinds": ["fact", "capability"],
+      "target_kinds": ["fact", "capability", "concept", "encounter"],
+      "semantics": "Establishing the source makes the target newly reachable or measurably cheaper; readiness and solution are distinct."
+    }
+  ],
+  "entities": [
+    {
+      "id": "K:bounded-structural-induction",
+      "kind": "capability",
+      "title": "Bounded structural induction producer",
+      "description": "Discovers a zero/successor inductive shape and constructs a bounded induction proof with congruence rewriting, without target-name dispatch.",
+      "status": "active",
+      "attributes": {
+        "max_binders": 8,
+        "max_inductions": 2,
+        "assurance_floor": "kernel-lean-empty-axiom-footprint"
+      }
+    },
+    {
+      "id": "K:modeq-equivalence-combinators",
+      "kind": "capability",
+      "title": "Definitional equivalence-relation combinator producer",
+      "description": "Unfolds a transparent relation and constructs reflexive, symmetric, transitive, and commutative equivalence proofs from primitive equality and iff eliminators.",
+      "status": "active",
+      "attributes": {
+        "max_binders": 8,
+        "assurance_floor": "kernel-lean-empty-axiom-footprint",
+        "blind_development_result": "4/4 Nat.ModEq siblings closed without changing the producer"
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "L:bounded-induction-operation-capability",
+      "relation": "realizes-capability",
+      "source": { "namespace": "axeyum-operation", "kind": "operation", "id": "authoritative-mathlib-bounded-induction-factorial-family-v1" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "capability", "id": "K:bounded-structural-induction" },
+      "assurance": "registry-derived",
+      "status": "active",
+      "reason": "The operation registry names the bounded-induction producer, its exact budgets, checker, and five-fact applicability set.",
+      "provenance": { "method": "registry-derived", "sources": ["artifacts/autogenesis/operations.json"] }
+    },
+    {
+      "id": "L:bounded-induction-technique",
+      "relation": "uses-technique",
+      "source": { "namespace": "axeyum-knowledge", "kind": "capability", "id": "K:bounded-structural-induction" },
+      "target": { "namespace": "math-education", "kind": "technique", "id": "TQ:proof-by-induction", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The producer constructs a base case and successor step through the discovered recursor, matching mathematical induction rather than empirical extrapolation.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-import/examples/bounded_induction_support/mod.rs", "../math-education/graph/techniques/proof-by-induction.md"] }
+    },
+    {
+      "id": "L:descfactorial-one-established-by-bounded-induction",
+      "relation": "established-by",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-descfactorial-one-d4856d4a" },
+      "target": { "namespace": "axeyum-operation", "kind": "operation", "id": "authoritative-mathlib-bounded-induction-factorial-family-v1" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The fact's checked evidence credits this multi-target operation and records an empty kernel axiom footprint.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/facts/F-ml430-nat-descfactorial-one-d4856d4a.json", "scripts/check-autogenesis-bounded-induction-family.py"] }
+    },
+    {
+      "id": "L:descfactorial-one-formalizes-factorial",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-descfactorial-one-d4856d4a" },
+      "target": { "namespace": "math-education", "kind": "concept", "id": "C:factorial", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The proposition is a falling-factorial identity and therefore formalizes one precise law within the broader factorial concept; it does not claim complete concept coverage.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-descfactorial-one-d4856d4a.json", "../math-education/graph/concepts/factorial.md"] },
+      "qualifiers": { "coverage": "supporting-law", "completeness": "partial" }
+    },
+    {
+      "id": "L:modeq-operation-capability",
+      "relation": "realizes-capability",
+      "source": { "namespace": "axeyum-operation", "kind": "operation", "id": "authoritative-mathlib-modeq-family-v1" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "capability", "id": "K:modeq-equivalence-combinators" },
+      "assurance": "registry-derived",
+      "status": "active",
+      "reason": "The operation registry binds one implementation and checker to four integer targets and records the same fixed producer's development-family evaluation.",
+      "provenance": { "method": "registry-derived", "sources": ["artifacts/autogenesis/operations.json", "docs/autogenesis/242-nat-division-gates-modular-arithmetic.md"] }
+    },
+    {
+      "id": "L:modeq-refl-established-by-family",
+      "relation": "established-by",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-refl-30e15520" },
+      "target": { "namespace": "axeyum-operation", "kind": "operation", "id": "authoritative-mathlib-modeq-family-v1" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The fact's checked evidence credits the general ModEq family operation and records an empty kernel axiom footprint.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/facts/F-ml430-int-modeq-refl-30e15520.json", "scripts/check-autogenesis-modeq-family.py"] }
+    },
+    {
+      "id": "L:modeq-refl-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-refl-30e15520" },
+      "target": { "namespace": "math-education", "kind": "concept", "id": "C:modular-arithmetic", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "Reflexivity of integer congruence is one exact formal law of modular arithmetic, not evidence that the full concept is covered.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-refl-30e15520.json", "../math-education/graph/concepts/modular-arithmetic.md"] },
+      "qualifiers": { "coverage": "supporting-law", "completeness": "partial" }
+    },
+    {
+      "id": "L:modeq-capability-formalizes-equivalence",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-refl-30e15520" },
+      "target": { "namespace": "math-education", "kind": "concept", "id": "C:equivalence-relation", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "Together with the separately established symmetry and transitivity siblings, the family supplies the three characteristic relation laws; this individual edge credits only reflexivity.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-refl-30e15520.json", "artifacts/autogenesis/operations.json", "../math-education/graph/concepts/equivalence-relation.md"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "completeness": "partial" }
+    },
+    {
+      "id": "L:bounded-induction-exemplifies-induction",
+      "relation": "exemplifies",
+      "source": { "namespace": "axeyum-knowledge", "kind": "capability", "id": "K:bounded-structural-induction" },
+      "target": { "namespace": "math-education", "kind": "concept", "id": "C:induction", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The capability discovers a natural-number base and successor structure, then constructs the corresponding induction term under fixed bounds.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-import/examples/bounded_induction_support/mod.rs", "../math-education/graph/concepts/induction.md"] }
+    },
+    {
+      "id": "L:bounded-induction-exemplifies-recursion",
+      "relation": "exemplifies",
+      "source": { "namespace": "axeyum-knowledge", "kind": "capability", "id": "K:bounded-structural-induction" },
+      "target": { "namespace": "math-education", "kind": "encounter", "id": "C:recursion@understand", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The first family it closes consists of recursive factorial functions, and the producer's induction proof follows their zero/successor structure.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/operations.json", "../math-education/graph/concepts/recursion.md"] }
+    },
+    {
+      "id": "L:bounded-induction-exemplifies-base-case",
+      "relation": "exemplifies",
+      "source": { "namespace": "axeyum-knowledge", "kind": "capability", "id": "K:bounded-structural-induction" },
+      "target": { "namespace": "math-education", "kind": "concept", "id": "C:base-case", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The generated induction proof explicitly constructs its zero branch before composing the successor branch.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-import/examples/bounded_induction_operation.rs", "../math-education/graph/concepts/base-case.md"] }
+    },
+    {
+      "id": "L:ascfactorial-zero-formalizes-factorial-base",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-ascfactorial-zero-fd183202" },
+      "target": { "namespace": "math-education", "kind": "encounter", "id": "C:factorial@understand", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The zero-length rising factorial identity is a checked base convention for the factorial family.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json", "../math-education/graph/concepts/factorial.md"] },
+      "qualifiers": { "coverage": "base-case", "completeness": "partial" }
+    },
+    {
+      "id": "L:descfactorial-zero-formalizes-factorial-base",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-descfactorial-zero-966b01df" },
+      "target": { "namespace": "math-education", "kind": "encounter", "id": "C:factorial@understand", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The zero-length falling factorial identity is a checked base convention for the factorial family.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-descfactorial-zero-966b01df.json", "../math-education/graph/concepts/factorial.md"] },
+      "qualifiers": { "coverage": "base-case", "completeness": "partial" }
+    },
+    {
+      "id": "L:zero-ascfactorial-formalizes-factorial-base",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-zero-ascfactorial-af4fcdca" },
+      "target": { "namespace": "math-education", "kind": "encounter", "id": "C:factorial@understand", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem gives a checked zero-input boundary law for rising factorial.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-zero-ascfactorial-af4fcdca.json", "../math-education/graph/concepts/factorial.md"] },
+      "qualifiers": { "coverage": "base-case", "completeness": "partial" }
+    },
+    {
+      "id": "L:one-ascfactorial-formalizes-factorial-law",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-one-ascfactorial-8bacb017" },
+      "target": { "namespace": "math-education", "kind": "encounter", "id": "C:factorial@apply", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem gives a checked one-input rising-factorial law at the point where factorial notation becomes operational.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-one-ascfactorial-8bacb017.json", "../math-education/graph/concepts/factorial.md"] },
+      "qualifiers": { "coverage": "supporting-law", "completeness": "partial" }
+    },
+    {
+      "id": "L:zero-ascfactorial-established-by-bounded-induction",
+      "relation": "established-by",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-zero-ascfactorial-af4fcdca" },
+      "target": { "namespace": "axeyum-operation", "kind": "operation", "id": "authoritative-mathlib-bounded-induction-factorial-family-v1" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The fact evidence credits the checked bounded-induction family operation.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/facts/F-ml430-nat-zero-ascfactorial-af4fcdca.json", "scripts/check-autogenesis-bounded-induction-family.py"] }
+    },
+    {
+      "id": "L:one-ascfactorial-established-by-bounded-induction",
+      "relation": "established-by",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-one-ascfactorial-8bacb017" },
+      "target": { "namespace": "axeyum-operation", "kind": "operation", "id": "authoritative-mathlib-bounded-induction-factorial-family-v1" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The fact evidence credits the checked bounded-induction family operation.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/facts/F-ml430-nat-one-ascfactorial-8bacb017.json", "scripts/check-autogenesis-bounded-induction-family.py"] }
+    },
+    {
+      "id": "L:modeq-capability-uses-direct-proof",
+      "relation": "uses-technique",
+      "source": { "namespace": "axeyum-knowledge", "kind": "capability", "id": "K:modeq-equivalence-combinators" },
+      "target": { "namespace": "math-education", "kind": "technique", "id": "TQ:direct-proof", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The producer builds explicit congruence witnesses and composes them directly; it is not a general symmetry-search procedure.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-import/examples/modeq_family_operation.rs", "../math-education/graph/techniques/direct-proof.md"] }
+    },
+    {
+      "id": "L:modeq-symm-established-by-family",
+      "relation": "established-by",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-symm-984a6e67" },
+      "target": { "namespace": "axeyum-operation", "kind": "operation", "id": "authoritative-mathlib-modeq-family-v1" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The fact evidence credits the checked general ModEq family operation.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/facts/F-ml430-int-modeq-symm-984a6e67.json", "scripts/check-autogenesis-modeq-family.py"] }
+    },
+    {
+      "id": "L:modeq-trans-established-by-family",
+      "relation": "established-by",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-trans-6d7863e0" },
+      "target": { "namespace": "axeyum-operation", "kind": "operation", "id": "authoritative-mathlib-modeq-family-v1" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The fact evidence credits the checked general ModEq family operation.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/facts/F-ml430-int-modeq-trans-6d7863e0.json", "scripts/check-autogenesis-modeq-family.py"] }
+    },
+    {
+      "id": "L:modeq-comm-established-by-family",
+      "relation": "established-by",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-comm-1e4bcc07" },
+      "target": { "namespace": "axeyum-operation", "kind": "operation", "id": "authoritative-mathlib-modeq-family-v1" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The fact evidence credits the checked general ModEq family operation.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/facts/F-ml430-int-modeq-comm-1e4bcc07.json", "scripts/check-autogenesis-modeq-family.py"] }
+    },
+    {
+      "id": "L:modeq-symm-formalizes-equivalence",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-symm-984a6e67" },
+      "target": { "namespace": "math-education", "kind": "encounter", "id": "C:equivalence-relation@understand", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem formally supplies the symmetry law for integer congruence, one component of an equivalence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-symm-984a6e67.json", "../math-education/graph/concepts/equivalence-relation.md"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "completeness": "partial" }
+    },
+    {
+      "id": "L:modeq-trans-formalizes-equivalence",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-trans-6d7863e0" },
+      "target": { "namespace": "math-education", "kind": "encounter", "id": "C:equivalence-relation@understand", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem formally supplies the transitivity law for integer congruence, one component of an equivalence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-trans-6d7863e0.json", "../math-education/graph/concepts/equivalence-relation.md"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "completeness": "partial" }
+    },
+    {
+      "id": "L:modeq-comm-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-comm-1e4bcc07" },
+      "target": { "namespace": "math-education", "kind": "encounter", "id": "C:modular-arithmetic@understand", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem gives a checked symmetric congruence law, a specific structural property of modular arithmetic rather than complete topic coverage.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-comm-1e4bcc07.json", "../math-education/graph/concepts/modular-arithmetic.md"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "completeness": "partial" }
+    }
+  ]
+}
