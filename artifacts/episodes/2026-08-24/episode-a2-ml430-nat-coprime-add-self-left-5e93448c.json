@@ -1,0 +1,198 @@
+{
+  "budgets": {
+    "cost_limit_usd": 0.5,
+    "input_tokens_limit": 400000,
+    "output_tokens_limit": 32000,
+    "request_limit": 8,
+    "tool_calls_limit": 12,
+    "wall_seconds": 600
+  },
+  "created_at": "2026-08-24T20:17:17Z",
+  "episode_id": "E:a2-ml430-nat-coprime-add-self-left-5e93448c",
+  "git_commit": "5e289fe8cfccab7ba6b230a73cacedf6a485a187",
+  "kind": "axeyum-agent-episode",
+  "observed": {
+    "facts_unlocked": [],
+    "operations_widened": [],
+    "overlay_links_proposed": []
+  },
+  "outcome": {
+    "axiom_footprint": [],
+    "checker_command": "",
+    "checker_exit_status": 0,
+    "checker_output_sha256": null,
+    "decline_class": "budget-exhausted-during-plan",
+    "ledger_writes": 0,
+    "search_invocations": 0,
+    "target_theorem_submissions": 0,
+    "verdict": "budget-exhausted"
+  },
+  "policy": {
+    "agent_code_sha256": "17a2474af436558fa323ce4a3981e6c72d28b5e3f711f6600d40f9355f51fc0c",
+    "library_versions": {
+      "anthropic": "1.0.0",
+      "axeyum": "0.1.0",
+      "httpx2": "2.12.0",
+      "pydantic": "2.13.4",
+      "pydantic-ai-slim": "2.33.0",
+      "pydantic-graph": "2.33.0",
+      "python": "3.12.13"
+    },
+    "model_id": "anthropic:claude-sonnet-4-5",
+    "prompt_hashes": {
+      "gather": "85d42380264f5b6980ff0da34cd4622392c3e5679862b03b9eddbbd58a1ad742",
+      "instructions": "555d62412ae2344b180c17fcd04ad5ced748e79b5a49b4b70ee09fb9b5cb8ce1",
+      "plan": "62038870861b2d6e3afb4fdfee95fe8a9bba4762d7d0bc5739f3b8b3109fed42"
+    },
+    "settings": {
+      "max_tokens": 8192,
+      "seed": null,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "toolset_sha256": "1b34db8ae045a8174b35e7eb0e15ec6e56326b0f35feaec3d5a80508e78a6f0d"
+  },
+  "proposals": [],
+  "schema_version": 1,
+  "selection": {
+    "eligibility_reason": "development partition, epistemic_status open, dependency-ready with no unmet depends_on; fragment Nat is proof-route-only; 0 registered operation(s); selected from ledger sha256 ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1",
+    "fact_id": "F:ml430-nat-coprime-add-self-left-5e93448c",
+    "fact_sha256": "1022446440edce85dea7c1ae3187ba0944cf14318d21fd6d446853353c7189ed",
+    "frontier_path": "artifacts/episodes/2026-08-24/frontier.json.snapshot",
+    "frontier_sha256": "bce3d65e2e78c56c40d7058b92c0133d208c66710ba6ee9270189700e4508b7f",
+    "partition": "development"
+  },
+  "transcript": {
+    "messages_path": "artifacts/episodes/2026-08-24/ml430-nat-coprime-add-self-left-5e93448c/messages.json.snapshot",
+    "messages_sha256": "a6a120a8af737fc8cdaa8220312060e8733de9d3e1c8a72bf65bbf473fbb7da4",
+    "tool_calls": [
+      {
+        "args_sha256": "46c36a4fe219523ad6476dd927347e48f5d2b2f0f95b93443dd4f83bbfe1d983",
+        "assurance": "read",
+        "duration_ms": 10,
+        "exit_status": 0,
+        "ordinal": 0,
+        "result_sha256": "cbbe944f4ca396706ce3fa0cebc2b612572ecbfa87bec30a5e3c9051d3f7ed36",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "46c36a4fe219523ad6476dd927347e48f5d2b2f0f95b93443dd4f83bbfe1d983",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 1,
+        "result_sha256": "39d4dbb11bcc538781ad548f8b9fab843fc9af5629bc05e24ee7037fd8d30ad4",
+        "tool": "fact_neighbourhood"
+      },
+      {
+        "args_sha256": "46c36a4fe219523ad6476dd927347e48f5d2b2f0f95b93443dd4f83bbfe1d983",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 2,
+        "result_sha256": "34a0686c72e96e93d35aab23f1f543b485fc8ad6f92838ab78272108ced2ec95",
+        "tool": "operation_registry"
+      },
+      {
+        "args_sha256": "cf7ee084a416dd0c74cd573e3ebbdfd5c3c216f51f50120766cfeb30fe04d46e",
+        "assurance": "read",
+        "duration_ms": 883,
+        "exit_status": 0,
+        "ordinal": 3,
+        "result_sha256": "3f9ade659f1bfb0e1827b9d2eaa22e39a5f00ebab9e53b99cc3b0d016447ac52",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "cfb17a461393b38989a1a378bf5d2ae460312eeca3259315e916b90f9950c56f",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 4,
+        "result_sha256": "18428a5e64b47fae823208b250144567298f718f8367fe55338e42aab629e9dc",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "a587a90256b99cf8a80d28eaa69ba2e01d97ea3ec6f65683116c2d6a83aaf7e7",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 5,
+        "result_sha256": "21957b0f3aad705823e2263f21c1c96e769ee71f463bd3eaf46d9ee389355516",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "bd23bf72746845f4cebebf57c03a75a3d713eac18425c1c6b727dcb036adc2cc",
+        "assurance": "read",
+        "duration_ms": 1,
+        "exit_status": 0,
+        "ordinal": 6,
+        "result_sha256": "2dedeb9aa21551a207647e6dee64ea694687f1cf01eea1448a7decdd63d12e62",
+        "tool": "kernel_theorems"
+      },
+      {
+        "args_sha256": "abaf21d5ab5566b7b4c7c41ba435916d704d0d6e84759ad33572fe5a2cc3896e",
+        "assurance": "read",
+        "duration_ms": 2,
+        "exit_status": 0,
+        "ordinal": 7,
+        "result_sha256": "002d156b74ccceb06b3a086aa22f311fae944ab7dfe854aa8d8b0b71a3e710cc",
+        "tool": "frontier_select"
+      },
+      {
+        "args_sha256": "6143369b50152ad0c8e9a0bd081565707ed5774ccc92d25f48beccc66f536b6a",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 0,
+        "ordinal": 8,
+        "result_sha256": "f5bd23e02b0a846a5e8cc66fde72f73a626f98794d4607db40f8281829f34913",
+        "tool": "frontier_select"
+      },
+      {
+        "args_sha256": "dedd3bd1d5258fc08080d5c1e62dd6abdced8049a93b8d6b36e30c2c666bd6fc",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 1,
+        "ordinal": 9,
+        "result_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "2aebced20365be48383fc2a4e162d4f954f110e5c7204fca956280e8c04a1403",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 1,
+        "ordinal": 10,
+        "result_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "a4284717aac5128c37ea816370c8cb56abf8dade76b685568b5e382edc58739b",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 1,
+        "ordinal": 11,
+        "result_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "f975df74df98bd4904d67121830900e48b7e33fdd7bb025b7f5c0a89d05d092d",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 1,
+        "ordinal": 12,
+        "result_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tool": "fact_get"
+      },
+      {
+        "args_sha256": "126f59819e8c8a6742183fc790e1be91b38f1f27ee25e744c7ebd8fa222314bb",
+        "assurance": "read",
+        "duration_ms": 0,
+        "exit_status": 1,
+        "ordinal": 13,
+        "result_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tool": "fact_get"
+      }
+    ]
+  },
+  "web_snapshots": []
+}

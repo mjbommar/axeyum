@@ -1,0 +1,12 @@
+{
+  "assurance": "proposed",
+  "expected_decline_class": "NotDefinitionalEquality",
+  "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",
+  "obstruction": "This theorem requires bitwise operation lemmas (Nat.bitwise and Nat.bit) that do not exist in the nat prelude kernel (0 matches for both Nat.bitwise* and Nat.bit* globs out of 249 total theorems). The goal involves a specific computational property of bitwise operations distributing over bit constructors with boolean function application. No other facts in the visible frontier (98 eligible facts sampled) involve bitwise operations - they are predominantly about modular arithmetic, gcd, coprimality, and factorials. The structural pattern of bitwise distribution over constructors is unique to this domain and cannot generalize to the number-theoretic facts that dominate the frontier.",
+  "producer_id": "close_terminal",
+  "route": "none",
+  "tactic_ids": [
+    "T:refl-closure"
+  ],
+  "why": "The goal is a universally quantified equality statement about Nat.bitwise and Nat.bit operations. The standard approach would be to introduce the universal quantifiers and attempt reflexivity closure if the equality is definitional, or apply induction on the natural number arguments if structural recursion is needed."
+}

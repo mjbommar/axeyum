@@ -1,0 +1,1662 @@
+[
+  {
+    "parts": [
+      {
+        "content": "Target fact: F:ml430-nat-descfactorial-le-2b8cc09a\n\nInvestigate it with the read tools, then summarize in at most 200 words.\nSuggested moves, in order, but use your judgement and stop when you have\nenough:\n  1. fact_get on the target -- read its formal statement and fragment.\n  2. fact_neighbourhood -- what it rests on and what it would free.\n  3. kernel_theorems on the prelude its fragment names -- the premises you\n     would actually have. Use a glob; an empty result for a glob means the\n     lookup FAILED, not that the prelude is empty.\n  4. frontier_select -- other eligible facts of the same shape.\n  5. operation_registry -- whether anything already targets it.\n\nReport: the goal's structural shape, which premises exist, and which other\neligible facts share the shape. Do not propose a plan yet.",
+        "timestamp": "2026-08-24T20:10:11.841057Z",
+        "part_kind": "user-prompt"
+      }
+    ],
+    "timestamp": "2026-08-24T20:10:11.841186Z",
+    "instructions": "You are the proposer in Axeyum's autonomous frontier loop.\n\nAxeyum is a Rust automated-reasoning stack with a Lean kernel. Its fact\nledger records open mathematical propositions; a producer proposes a proof\nplan and a FRESH kernel process decides whether it worked. You are the\nproposer and nothing else.\n\nWHAT YOU CAN DO. You have six read-only tools and no others. You cannot\nrun a producer, invoke a checker, admit a declaration, or write to the\nledger. Nothing you emit is evidence: every proposal you make is recorded\nwith assurance='proposed' and a human or a trusted process decides later.\nDo not claim a fact is proved, and do not describe your plan as verified.\n\nTHE BLIND POPULATION. Some facts are held out for evaluation. The tools\nfilter them out before you see them, so work only with ids the tools\nreturned to you. Never invent or guess a fact id.\n\nTHE VOCABULARY. A plan names tactics from this catalog, by id:\n  T:refl-closure  (closure)  Close a terminal equality by reflexivity\n  T:bounded-structural-induction  (induction)  Induct on a zero/succ-shaped leading binder\n  T:ih-congruence-rewrite  (rewrite)  Bridge a step case by one congruence rewrite driven by the induction hypothesis\n  T:residual-lemma-splice  (lemma-splice)  Generalize the leftover gap into its own lemma and splice it with Eq.trans\n  T:absurd-elimination  (elimination)  Close any goal from an uninhabitable order hypothesis\n  T:case-split-elimination  (case-split)  Consume both constructors of an order hypothesis at a succ index\n  T:split-congruence-generalization  (generalization)  Generalize two collapsed occurrence sites independently, then re-specialize\n  T:absorbing-argument-chaining  (rewrite)  Chain an absorbing argument fact with the operator's own plain fact\n  T:modeq-equivalence-combinators  (combinator)  Close a definitional equivalence relation with primitive Eq/Iff combinators\n\nand a producer_id that is either a registered operation id (see\noperation_registry) or a producer symbol the catalog names\n(close_terminal, try_induction, try_congr_rewrite, try_residual_lemma,\ntry_absurd_elimination, try_case_split_elimination, try_split_congruence,\ntry_absorbing_argument).\n\nTHE GENERALITY RULE. An operation that reaches exactly one theorem is a\ndispatch-table entry, not a producer: 24 of 26 registered operations were\nmeasured to name exactly one fact, and that is the defect this loop\nexists to fix. So a StrategyProposal must name at least THREE other\neligible facts the same tactics and producer would reach, chosen from ids\nthe tools showed you. If you cannot honestly name three, emit\nNoGeneralRoute instead and say what is specific to this goal. Emitting\nNoGeneralRoute is a RESULT, not a failure -- it is the datapoint the\nobstruction graph is built from. Inventing siblings to satisfy the rule\ndestroys exactly the measurement this loop is for.",
+    "kind": "request",
+    "run_id": "01a03565-1400-7550-bd8a-f6a44a5f21e8",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "content": "I'll investigate this target fact systematically using the read tools.",
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "text"
+      },
+      {
+        "tool_name": "fact_get",
+        "args": {
+          "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a"
+        },
+        "tool_call_id": "toolu_01ANGz6FiRm6afixrE9CtHgD",
+        "tool_kind": null,
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "tool-call"
+      },
+      {
+        "tool_name": "fact_neighbourhood",
+        "args": {
+          "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a"
+        },
+        "tool_call_id": "toolu_01BySeQ9fBYdsSHydu4niejU",
+        "tool_kind": null,
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "tool-call"
+      },
+      {
+        "tool_name": "operation_registry",
+        "args": {
+          "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a"
+        },
+        "tool_call_id": "toolu_011KGoB5SGW4kpZVq86F2e3E",
+        "tool_kind": null,
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "tool-call"
+      }
+    ],
+    "usage": {
+      "input_tokens": 2367,
+      "cache_write_tokens": 0,
+      "cache_read_tokens": 0,
+      "output_tokens": 202,
+      "input_audio_tokens": 0,
+      "cache_audio_read_tokens": 0,
+      "output_audio_tokens": 0,
+      "details": {
+        "input_tokens": 2367,
+        "output_tokens": 202,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+      },
+      "cost": "0.010131"
+    },
+    "model_name": "claude-sonnet-4-5-20250929",
+    "timestamp": "2026-08-24T20:10:15.346599Z",
+    "kind": "response",
+    "provider_name": "anthropic",
+    "provider_url": "https://api.anthropic.com",
+    "provider_details": {
+      "finish_reason": "tool_use"
+    },
+    "provider_response_id": "msg_011CeNBRt4sjfpiKEXphJrLr",
+    "finish_reason": "tool_call",
+    "run_id": "01a03565-1400-7550-bd8a-f6a44a5f21e8",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "tool_name": "fact_get",
+        "content": {
+          "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+          "title": "Mathlib v4.30 source proposition Nat.descFactorial_le",
+          "statement": "The proposition declared as `Nat.descFactorial_le` in the pinned Mathlib v4.30 source.",
+          "formal_language": "lean4-surface",
+          "formal_statement": "∀ (n : ℕ) {k m : ℕ}, k ≤ m → k.descFactorial n ≤ m.descFactorial n",
+          "fragment": "Nat",
+          "epistemic_status": "open",
+          "external_status": "proved",
+          "proof_route": null,
+          "depends_on": [],
+          "axiom_footprint": null,
+          "evidence": [],
+          "partition": "train",
+          "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+        },
+        "tool_call_id": "toolu_01ANGz6FiRm6afixrE9CtHgD",
+        "tool_kind": null,
+        "metadata": null,
+        "timestamp": "2026-08-24T20:10:15.350651Z",
+        "outcome": "success",
+        "part_kind": "tool-return"
+      },
+      {
+        "tool_name": "fact_neighbourhood",
+        "content": {
+          "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+          "depends_on": [],
+          "would_unlock": [],
+          "unmet_dependencies": []
+        },
+        "tool_call_id": "toolu_01BySeQ9fBYdsSHydu4niejU",
+        "tool_kind": null,
+        "metadata": null,
+        "timestamp": "2026-08-24T20:10:15.352429Z",
+        "outcome": "success",
+        "part_kind": "tool-return"
+      },
+      {
+        "tool_name": "operation_registry",
+        "content": {
+          "total": 26,
+          "multi_target": 2,
+          "single_target": 24,
+          "rows": []
+        },
+        "tool_call_id": "toolu_011KGoB5SGW4kpZVq86F2e3E",
+        "tool_kind": null,
+        "metadata": null,
+        "timestamp": "2026-08-24T20:10:15.353956Z",
+        "outcome": "success",
+        "part_kind": "tool-return"
+      }
+    ],
+    "timestamp": "2026-08-24T20:10:15.355356Z",
+    "instructions": "You are the proposer in Axeyum's autonomous frontier loop.\n\nAxeyum is a Rust automated-reasoning stack with a Lean kernel. Its fact\nledger records open mathematical propositions; a producer proposes a proof\nplan and a FRESH kernel process decides whether it worked. You are the\nproposer and nothing else.\n\nWHAT YOU CAN DO. You have six read-only tools and no others. You cannot\nrun a producer, invoke a checker, admit a declaration, or write to the\nledger. Nothing you emit is evidence: every proposal you make is recorded\nwith assurance='proposed' and a human or a trusted process decides later.\nDo not claim a fact is proved, and do not describe your plan as verified.\n\nTHE BLIND POPULATION. Some facts are held out for evaluation. The tools\nfilter them out before you see them, so work only with ids the tools\nreturned to you. Never invent or guess a fact id.\n\nTHE VOCABULARY. A plan names tactics from this catalog, by id:\n  T:refl-closure  (closure)  Close a terminal equality by reflexivity\n  T:bounded-structural-induction  (induction)  Induct on a zero/succ-shaped leading binder\n  T:ih-congruence-rewrite  (rewrite)  Bridge a step case by one congruence rewrite driven by the induction hypothesis\n  T:residual-lemma-splice  (lemma-splice)  Generalize the leftover gap into its own lemma and splice it with Eq.trans\n  T:absurd-elimination  (elimination)  Close any goal from an uninhabitable order hypothesis\n  T:case-split-elimination  (case-split)  Consume both constructors of an order hypothesis at a succ index\n  T:split-congruence-generalization  (generalization)  Generalize two collapsed occurrence sites independently, then re-specialize\n  T:absorbing-argument-chaining  (rewrite)  Chain an absorbing argument fact with the operator's own plain fact\n  T:modeq-equivalence-combinators  (combinator)  Close a definitional equivalence relation with primitive Eq/Iff combinators\n\nand a producer_id that is either a registered operation id (see\noperation_registry) or a producer symbol the catalog names\n(close_terminal, try_induction, try_congr_rewrite, try_residual_lemma,\ntry_absurd_elimination, try_case_split_elimination, try_split_congruence,\ntry_absorbing_argument).\n\nTHE GENERALITY RULE. An operation that reaches exactly one theorem is a\ndispatch-table entry, not a producer: 24 of 26 registered operations were\nmeasured to name exactly one fact, and that is the defect this loop\nexists to fix. So a StrategyProposal must name at least THREE other\neligible facts the same tactics and producer would reach, chosen from ids\nthe tools showed you. If you cannot honestly name three, emit\nNoGeneralRoute instead and say what is specific to this goal. Emitting\nNoGeneralRoute is a RESULT, not a failure -- it is the datapoint the\nobstruction graph is built from. Inventing siblings to satisfy the rule\ndestroys exactly the measurement this loop is for.",
+    "kind": "request",
+    "run_id": "01a03565-1400-7550-bd8a-f6a44a5f21e8",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "tool_name": "kernel_theorems",
+        "args": {
+          "prelude": "nat",
+          "name_glob": "Nat.descFactorial*"
+        },
+        "tool_call_id": "toolu_01FAdQz1GdsMsJuwdXoptXnz",
+        "tool_kind": null,
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "tool-call"
+      },
+      {
+        "tool_name": "kernel_theorems",
+        "args": {
+          "prelude": "nat",
+          "name_glob": "Nat.*le*"
+        },
+        "tool_call_id": "toolu_013oDR1bxKHLD1xf6ASKKNkT",
+        "tool_kind": null,
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "tool-call"
+      },
+      {
+        "tool_name": "frontier_select",
+        "args": {
+          "band": "research",
+          "limit": 40
+        },
+        "tool_call_id": "toolu_01JDS9L4LZAL2orTN23rod89",
+        "tool_kind": null,
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "tool-call"
+      }
+    ],
+    "usage": {
+      "input_tokens": 2993,
+      "cache_write_tokens": 0,
+      "cache_read_tokens": 0,
+      "output_tokens": 194,
+      "input_audio_tokens": 0,
+      "cache_audio_read_tokens": 0,
+      "output_audio_tokens": 0,
+      "details": {
+        "input_tokens": 2993,
+        "output_tokens": 194,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+      },
+      "cost": "0.011889"
+    },
+    "model_name": "claude-sonnet-4-5-20250929",
+    "timestamp": "2026-08-24T20:10:18.481115Z",
+    "kind": "response",
+    "provider_name": "anthropic",
+    "provider_url": "https://api.anthropic.com",
+    "provider_details": {
+      "finish_reason": "tool_use"
+    },
+    "provider_response_id": "msg_011CeNBSA7GvDhqD6zQXorpG",
+    "finish_reason": "tool_call",
+    "run_id": "01a03565-1400-7550-bd8a-f6a44a5f21e8",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "tool_name": "kernel_theorems",
+        "content": {
+          "prelude": "nat",
+          "name_glob": "Nat.descFactorial*",
+          "matched": 0,
+          "total_theorems": 249,
+          "rows": []
+        },
+        "tool_call_id": "toolu_01FAdQz1GdsMsJuwdXoptXnz",
+        "tool_kind": null,
+        "metadata": null,
+        "timestamp": "2026-08-24T20:10:18.485515Z",
+        "outcome": "success",
+        "part_kind": "tool-return"
+      },
+      {
+        "tool_name": "kernel_theorems",
+        "content": {
+          "prelude": "nat",
+          "name_glob": "Nat.*le*",
+          "matched": 70,
+          "total_theorems": 249,
+          "rows": [
+            {
+              "name": "Nat.add_le_add_left",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> AxNat.le (AxNat.add x0 x1) (AxNat.add x0 x2)))))"
+            },
+            {
+              "name": "Nat.add_le_add_right",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> AxNat.le (AxNat.add x1 x0) (AxNat.add x2 x0)))))"
+            },
+            {
+              "name": "Nat.add_left_cancel",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} AxNat (AxNat.add x0 x1) (AxNat.add x0 x2)) -> Eq.{1} AxNat x1 x2))))"
+            },
+            {
+              "name": "Nat.add_lt_add_left",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.lt x1 x2) -> AxNat.lt (AxNat.add x0 x1) (AxNat.add x0 x2)))))"
+            },
+            {
+              "name": "Nat.add_sub_cancel_left",
+              "binders": 2,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sub (AxNat.add x0 x1) x0) x1))"
+            },
+            {
+              "name": "Nat.add_sub_cancel_of_le",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Eq.{1} AxNat (AxNat.add x0 (AxNat.sub x1 x0)) x1)))"
+            },
+            {
+              "name": "Nat.bezout_of_scaled",
+              "binders": 5,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x4 : AxNat.bezout (AxNat.mul x0 x1) (AxNat.mul x0 x2) x0) -> AxNat.bezout x1 x2 (AxNat.succ AxNat.zero))))))"
+            },
+            {
+              "name": "Nat.ble_eq_true_of_le",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Eq.{1} Bool (AxNat.ble x0 x1) Bool.true)))"
+            },
+            {
+              "name": "Nat.ble_self_eq_true",
+              "binders": 1,
+              "type": "((x0 : AxNat) -> Eq.{1} Bool (AxNat.ble x0 x0) Bool.true)"
+            },
+            {
+              "name": "Nat.ble_succ_eq_true",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} Bool (AxNat.ble x0 x1) Bool.true) -> Eq.{1} Bool (AxNat.ble x0 (AxNat.succ x1)) Bool.true)))"
+            },
+            {
+              "name": "Nat.choose_le_two_pow",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x1 x0) -> AxNat.le (AxNat.choose x0 x1) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x0))))"
+            },
+            {
+              "name": "Nat.div_mod_add_multiple",
+              "binders": 6,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.divMod x0 x1 x2 x3) -> AxNat.divMod x0 (AxNat.add x1 (AxNat.mul x0 x4)) (AxNat.add x2 x4) x3))))))"
+            },
+            {
+              "name": "Nat.div_mod_mul_le_iff",
+              "binders": 6,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.divMod x0 x1 x2 x3) -> Iff (AxNat.le (AxNat.mul x0 x4) x1) (AxNat.le x4 x2)))))))"
+            },
+            {
+              "name": "Nat.dvd_factorial_of_le",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x3 : AxNat.le x0 x1) -> AxNat.dvd x0 (AxNat.factorial x1)))))"
+            },
+            {
+              "name": "Nat.euclid_lemma",
+              "binders": 7,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x3 : AxNat) -> ((x4 : AxNat.dvd x3 x0) -> Or (Eq.{1} AxNat x3 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x3 x0))))) -> ((x4 : AxNat.dvd x0 (AxNat.mul x1 x2)) -> Or (AxNat.dvd x0 x1) (AxNat.dvd x0 x2))))))"
+            },
+            {
+              "name": "Nat.gcd_dvd_left",
+              "binders": 2,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.dvd (AxNat.gcd x0 x1) x0))"
+            },
+            {
+              "name": "Nat.gcd_zero_left",
+              "binders": 1,
+              "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.gcd AxNat.zero x0) x0)"
+            },
+            {
+              "name": "Nat.le_add_right",
+              "binders": 2,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.le x0 (AxNat.add x0 x1)))"
+            },
+            {
+              "name": "Nat.le_antisymm",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> ((x3 : AxNat.le x1 x0) -> Eq.{1} AxNat x0 x1))))"
+            },
+            {
+              "name": "Nat.le_dest",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Exists.{1} AxNat (fun (x3 : AxNat) => Eq.{1} AxNat (AxNat.add x0 x3) x1))))"
+            },
+            {
+              "name": "Nat.le_intro",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} AxNat (AxNat.add x0 x2) x1) -> AxNat.le x0 x1))))"
+            },
+            {
+              "name": "Nat.le_of_add_le_add_left",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.add x0 x1) (AxNat.add x0 x2)) -> AxNat.le x1 x2))))"
+            },
+            {
+              "name": "Nat.le_of_add_le_add_right",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.add x1 x0) (AxNat.add x2 x0)) -> AxNat.le x1 x2))))"
+            },
+            {
+              "name": "Nat.le_of_ble_eq_true",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} Bool (AxNat.ble x0 x1) Bool.true) -> AxNat.le x0 x1)))"
+            },
+            {
+              "name": "Nat.le_of_dvd",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x1) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.le x0 x1))))"
+            },
+            {
+              "name": "Nat.le_of_lt_add_one",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt x0 (AxNat.add x1 (AxNat.succ AxNat.zero))) -> AxNat.le x0 x1)))"
+            },
+            {
+              "name": "Nat.le_of_lt_succ",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt x0 (AxNat.succ x1)) -> AxNat.le x0 x1)))"
+            },
+            {
+              "name": "Nat.le_of_mul_le_mul_left",
+              "binders": 5,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x4 : AxNat.le (AxNat.mul x0 x1) (AxNat.mul x0 x2)) -> AxNat.le x1 x2)))))"
+            },
+            {
+              "name": "Nat.le_of_mul_le_mul_left_succ",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.mul (AxNat.succ x0) x1) (AxNat.mul (AxNat.succ x0) x2)) -> AxNat.le x1 x2))))"
+            },
+            {
+              "name": "Nat.le_of_succ_le_succ",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ x0) (AxNat.succ x1)) -> AxNat.le x0 x1)))"
+            },
+            {
+              "name": "Nat.le_refl",
+              "binders": 1,
+              "type": "((x0 : AxNat) -> AxNat.le x0 x0)"
+            },
+            {
+              "name": "Nat.le_succ",
+              "binders": 1,
+              "type": "((x0 : AxNat) -> AxNat.le x0 (AxNat.succ x0))"
+            },
+            {
+              "name": "Nat.le_succ_of_le",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le x0 (AxNat.succ x1))))"
+            },
+            {
+              "name": "Nat.le_succ_succ",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le (AxNat.succ x0) (AxNat.succ x1))))"
+            },
+            {
+              "name": "Nat.le_sumRange_of_lt",
+              "binders": 5,
+              "type": "((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.lt x2 x1) -> AxNat.le (x0 x2) (AxNat.sumRange x0 x1)))))"
+            },
+            {
+              "name": "Nat.le_total",
+              "binders": 2,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Or (AxNat.le x0 x1) (AxNat.le x1 x0)))"
+            },
+            {
+              "name": "Nat.le_trans",
+              "binders": 5,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x0 x1) -> ((x4 : AxNat.le x1 x2) -> AxNat.le x0 x2)))))"
+            },
+            {
+              "name": "Nat.least_divisor_search",
+              "binders": 8,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Or (Exists.{1} AxNat (fun (x2 : AxNat) => And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x2) (And (AxNat.dvd x2 x1) (((x3 : AxNat) -> ((x4 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x3) -> ((x5 : AxNat.lt x3 x2) -> Not (AxNat.dvd x3 x1)))))))) (((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x2) -> ((x4 : AxNat.le x2 x0) -> Not (AxNat.dvd x2 x1)))))))"
+            },
+            {
+              "name": "Nat.left_distrib",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.add x1 x2)) (AxNat.add (AxNat.mul x0 x1) (AxNat.mul x0 x2)))))"
+            },
+            {
+              "name": "Nat.lt_of_le_of_lt",
+              "binders": 5,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x0 x1) -> ((x4 : AxNat.lt x1 x2) -> AxNat.lt x0 x2)))))"
+            },
+            {
+              "name": "Nat.lt_of_lt_of_le",
+              "binders": 5,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.lt x0 x1) -> ((x4 : AxNat.le x1 x2) -> AxNat.lt x0 x2)))))"
+            },
+            {
+              "name": "Nat.lt_of_not_le",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : ((x2 : AxNat.le x0 x1) -> False)) -> AxNat.lt x1 x0)))"
+            },
+            {
+              "name": "Nat.lt_or_eq_of_le",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Or (AxNat.lt x0 x1) (Eq.{1} AxNat x0 x1))))"
+            },
+            {
+              "name": "Nat.lt_succ_of_le",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.lt x0 (AxNat.succ x1))))"
+            },
+            {
+              "name": "Nat.mod_eq_add_left",
+              "binders": 5,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.modEq x0 x1 x2) -> AxNat.modEq x0 (AxNat.add x3 x1) (AxNat.add x3 x2))))))"
+            },
+            {
+              "name": "Nat.mod_eq_mul_left",
+              "binders": 5,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.modEq x0 x1 x2) -> AxNat.modEq x0 (AxNat.mul x3 x1) (AxNat.mul x3 x2))))))"
+            },
+            {
+              "name": "Nat.mul_le_mul_left",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> AxNat.le (AxNat.mul x0 x1) (AxNat.mul x0 x2)))))"
+            },
+            {
+              "name": "Nat.mul_left_cancel_of_pos",
+              "binders": 5,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x4 : Eq.{1} AxNat (AxNat.mul x0 x1) (AxNat.mul x0 x2)) -> Eq.{1} AxNat x1 x2)))))"
+            },
+            {
+              "name": "Nat.mul_sub_left_distrib",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x2 x1) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.sub x1 x2)) (AxNat.sub (AxNat.mul x0 x1) (AxNat.mul x0 x2))))))"
+            },
+            {
+              "name": "Nat.mul_sub_left_distrib_total",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.sub x1 x2)) (AxNat.sub (AxNat.mul x0 x1) (AxNat.mul x0 x2)))))"
+            },
+            {
+              "name": "Nat.not_dvd_one_add_mul_of_two_le",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> Not (AxNat.dvd x0 (AxNat.add (AxNat.succ AxNat.zero) (AxNat.mul x0 x1))))))"
+            },
+            {
+              "name": "Nat.not_dvd_one_of_two_le",
+              "binders": 2,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> Not (AxNat.dvd x0 (AxNat.succ AxNat.zero))))"
+            },
+            {
+              "name": "Nat.not_le_of_not_ble_eq_true",
+              "binders": 5,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : ((x2 : Eq.{1} Bool (AxNat.ble x0 x1) Bool.true) -> False)) -> ((x3 : AxNat.le x0 x1) -> False))))"
+            },
+            {
+              "name": "Nat.not_succ_le_self",
+              "binders": 2,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ x0) x0) -> False))"
+            },
+            {
+              "name": "Nat.not_succ_le_zero",
+              "binders": 2,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ x0) AxNat.zero) -> False))"
+            },
+            {
+              "name": "Nat.one_le_factorial",
+              "binders": 1,
+              "type": "((x0 : AxNat) -> AxNat.le (AxNat.succ AxNat.zero) (AxNat.factorial x0))"
+            },
+            {
+              "name": "Nat.one_le_left_of_mul",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) (AxNat.mul x0 x1)) -> AxNat.le (AxNat.succ AxNat.zero) x0)))"
+            },
+            {
+              "name": "Nat.one_le_mul",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x1) -> AxNat.le (AxNat.succ AxNat.zero) (AxNat.mul x0 x1)))))"
+            },
+            {
+              "name": "Nat.one_le_of_dvd_pos",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x1) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.le (AxNat.succ AxNat.zero) x0))))"
+            },
+            {
+              "name": "Nat.one_le_right_of_mul",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) (AxNat.mul x0 x1)) -> AxNat.le (AxNat.succ AxNat.zero) x1)))"
+            }
+          ]
+        },
+        "tool_call_id": "toolu_013oDR1bxKHLD1xf6ASKKNkT",
+        "tool_kind": null,
+        "metadata": null,
+        "timestamp": "2026-08-24T20:10:18.492142Z",
+        "outcome": "success",
+        "part_kind": "tool-return"
+      },
+      {
+        "tool_name": "frontier_select",
+        "content": {
+          "eligible_total": 0,
+          "returned": 0,
+          "dropped_held_out": 34,
+          "dropped_longitudinal": 0,
+          "dropped_unpartitioned": 6,
+          "frontier_sha256": "bce3d65e2e78c56c40d7058b92c0133d208c66710ba6ee9270189700e4508b7f",
+          "rows": []
+        },
+        "tool_call_id": "toolu_01JDS9L4LZAL2orTN23rod89",
+        "tool_kind": null,
+        "metadata": null,
+        "timestamp": "2026-08-24T20:10:18.493365Z",
+        "outcome": "success",
+        "part_kind": "tool-return"
+      }
+    ],
+    "timestamp": "2026-08-24T20:10:18.494431Z",
+    "instructions": "You are the proposer in Axeyum's autonomous frontier loop.\n\nAxeyum is a Rust automated-reasoning stack with a Lean kernel. Its fact\nledger records open mathematical propositions; a producer proposes a proof\nplan and a FRESH kernel process decides whether it worked. You are the\nproposer and nothing else.\n\nWHAT YOU CAN DO. You have six read-only tools and no others. You cannot\nrun a producer, invoke a checker, admit a declaration, or write to the\nledger. Nothing you emit is evidence: every proposal you make is recorded\nwith assurance='proposed' and a human or a trusted process decides later.\nDo not claim a fact is proved, and do not describe your plan as verified.\n\nTHE BLIND POPULATION. Some facts are held out for evaluation. The tools\nfilter them out before you see them, so work only with ids the tools\nreturned to you. Never invent or guess a fact id.\n\nTHE VOCABULARY. A plan names tactics from this catalog, by id:\n  T:refl-closure  (closure)  Close a terminal equality by reflexivity\n  T:bounded-structural-induction  (induction)  Induct on a zero/succ-shaped leading binder\n  T:ih-congruence-rewrite  (rewrite)  Bridge a step case by one congruence rewrite driven by the induction hypothesis\n  T:residual-lemma-splice  (lemma-splice)  Generalize the leftover gap into its own lemma and splice it with Eq.trans\n  T:absurd-elimination  (elimination)  Close any goal from an uninhabitable order hypothesis\n  T:case-split-elimination  (case-split)  Consume both constructors of an order hypothesis at a succ index\n  T:split-congruence-generalization  (generalization)  Generalize two collapsed occurrence sites independently, then re-specialize\n  T:absorbing-argument-chaining  (rewrite)  Chain an absorbing argument fact with the operator's own plain fact\n  T:modeq-equivalence-combinators  (combinator)  Close a definitional equivalence relation with primitive Eq/Iff combinators\n\nand a producer_id that is either a registered operation id (see\noperation_registry) or a producer symbol the catalog names\n(close_terminal, try_induction, try_congr_rewrite, try_residual_lemma,\ntry_absurd_elimination, try_case_split_elimination, try_split_congruence,\ntry_absorbing_argument).\n\nTHE GENERALITY RULE. An operation that reaches exactly one theorem is a\ndispatch-table entry, not a producer: 24 of 26 registered operations were\nmeasured to name exactly one fact, and that is the defect this loop\nexists to fix. So a StrategyProposal must name at least THREE other\neligible facts the same tactics and producer would reach, chosen from ids\nthe tools showed you. If you cannot honestly name three, emit\nNoGeneralRoute instead and say what is specific to this goal. Emitting\nNoGeneralRoute is a RESULT, not a failure -- it is the datapoint the\nobstruction graph is built from. Inventing siblings to satisfy the rule\ndestroys exactly the measurement this loop is for.",
+    "kind": "request",
+    "run_id": "01a03565-1400-7550-bd8a-f6a44a5f21e8",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "tool_name": "frontier_select",
+        "args": {
+          "band": "",
+          "limit": 60
+        },
+        "tool_call_id": "toolu_01FwMBh941bVymrVDJHs2L87",
+        "tool_kind": null,
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "tool-call"
+      }
+    ],
+    "usage": {
+      "input_tokens": 9864,
+      "cache_write_tokens": 0,
+      "cache_read_tokens": 0,
+      "output_tokens": 68,
+      "input_audio_tokens": 0,
+      "cache_audio_read_tokens": 0,
+      "output_audio_tokens": 0,
+      "details": {
+        "input_tokens": 9864,
+        "output_tokens": 68,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+      },
+      "cost": "0.030612"
+    },
+    "model_name": "claude-sonnet-4-5-20250929",
+    "timestamp": "2026-08-24T20:10:20.226060Z",
+    "kind": "response",
+    "provider_name": "anthropic",
+    "provider_url": "https://api.anthropic.com",
+    "provider_details": {
+      "finish_reason": "tool_use"
+    },
+    "provider_response_id": "msg_011CeNBSNKjz9cnQ3LYmKics",
+    "finish_reason": "tool_call",
+    "run_id": "01a03565-1400-7550-bd8a-f6a44a5f21e8",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "tool_name": "frontier_select",
+        "content": {
+          "eligible_total": 98,
+          "returned": 60,
+          "dropped_held_out": 34,
+          "dropped_longitudinal": 0,
+          "dropped_unpartitioned": 6,
+          "frontier_sha256": "bce3d65e2e78c56c40d7058b92c0133d208c66710ba6ee9270189700e4508b7f",
+          "rows": [
+            {
+              "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-fib-add-181b6a2c",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": [
+                "F:ml430-int-fib-two-mul-0e70f3dd"
+              ]
+            },
+            {
+              "fact_id": "F:ml430-int-fib-of-odd-66560495",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-gcd-div-5e01872f",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": [
+                "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b"
+              ]
+            },
+            {
+              "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-gcd-greatest-5b31c5fe",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-mod-modeq-6bec7847",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-modeq-add-left-6e17c69a",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-modeq-of-dvd-b9c41fce",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": [
+                "F:ml430-int-modeq-of-mul-right-c92b7bf0"
+              ]
+            },
+            {
+              "fact_id": "F:ml430-int-modeq-sub-3148f130",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-ne-zero-of-gcd-f71f00df",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-int-neg-modeq-neg-30d98479",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "unknown",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-mutation-48fe130e2b8eadb6f626b66f",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "unknown",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-mutation-5179f333b8333ecff8adc223",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "unknown",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-mutation-7afa5ec620720a1501bf349d",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "unknown",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "unknown",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-mutation-aabb80b1f89f0c5847364692",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "unknown",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "unknown",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "unknown",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-mutation-c86940b52af8159ca9b381d6",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "unknown",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": [
+                "F:ml430-nat-bitwise-swap-7175e90e"
+              ]
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-add-self-left-5e93448c",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": [
+                "F:ml430-nat-coprime-self-add-right-966e5434"
+              ]
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-of-dvd-6f652673",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": [
+                "F:ml430-nat-coprime-of-dvd-18fcd09f"
+              ]
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": [
+                "F:ml430-nat-coprime-of-dvd-18fcd09f"
+              ]
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-one-left-iff-45945e80",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-primes-5769049f",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": [
+                "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439"
+              ]
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-self-add-left-51351fa1",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-coprime-two-left-1b47e7c4",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": [
+                "F:ml430-nat-coprime-odd-of-left-ed80ab44",
+                "F:ml430-nat-coprime-two-right-7c5a1850"
+              ]
+            },
+            {
+              "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-even-xor-78a39432",
+              "partition": "development",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Int",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            },
+            {
+              "fact_id": "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": [
+                "F:ml430-nat-factorial-le-d0f4a912"
+              ]
+            },
+            {
+              "fact_id": "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
+              "partition": "train",
+              "band": "backlog",
+              "fragment": "Nat",
+              "route_class": "proof-route-only",
+              "epistemic_status": "open",
+              "external_status": "proved",
+              "registered_operation_ids": [],
+              "would_unlock": []
+            }
+          ]
+        },
+        "tool_call_id": "toolu_01FwMBh941bVymrVDJHs2L87",
+        "tool_kind": null,
+        "metadata": null,
+        "timestamp": "2026-08-24T20:10:20.230942Z",
+        "outcome": "success",
+        "part_kind": "tool-return"
+      }
+    ],
+    "timestamp": "2026-08-24T20:10:20.231982Z",
+    "instructions": "You are the proposer in Axeyum's autonomous frontier loop.\n\nAxeyum is a Rust automated-reasoning stack with a Lean kernel. Its fact\nledger records open mathematical propositions; a producer proposes a proof\nplan and a FRESH kernel process decides whether it worked. You are the\nproposer and nothing else.\n\nWHAT YOU CAN DO. You have six read-only tools and no others. You cannot\nrun a producer, invoke a checker, admit a declaration, or write to the\nledger. Nothing you emit is evidence: every proposal you make is recorded\nwith assurance='proposed' and a human or a trusted process decides later.\nDo not claim a fact is proved, and do not describe your plan as verified.\n\nTHE BLIND POPULATION. Some facts are held out for evaluation. The tools\nfilter them out before you see them, so work only with ids the tools\nreturned to you. Never invent or guess a fact id.\n\nTHE VOCABULARY. A plan names tactics from this catalog, by id:\n  T:refl-closure  (closure)  Close a terminal equality by reflexivity\n  T:bounded-structural-induction  (induction)  Induct on a zero/succ-shaped leading binder\n  T:ih-congruence-rewrite  (rewrite)  Bridge a step case by one congruence rewrite driven by the induction hypothesis\n  T:residual-lemma-splice  (lemma-splice)  Generalize the leftover gap into its own lemma and splice it with Eq.trans\n  T:absurd-elimination  (elimination)  Close any goal from an uninhabitable order hypothesis\n  T:case-split-elimination  (case-split)  Consume both constructors of an order hypothesis at a succ index\n  T:split-congruence-generalization  (generalization)  Generalize two collapsed occurrence sites independently, then re-specialize\n  T:absorbing-argument-chaining  (rewrite)  Chain an absorbing argument fact with the operator's own plain fact\n  T:modeq-equivalence-combinators  (combinator)  Close a definitional equivalence relation with primitive Eq/Iff combinators\n\nand a producer_id that is either a registered operation id (see\noperation_registry) or a producer symbol the catalog names\n(close_terminal, try_induction, try_congr_rewrite, try_residual_lemma,\ntry_absurd_elimination, try_case_split_elimination, try_split_congruence,\ntry_absorbing_argument).\n\nTHE GENERALITY RULE. An operation that reaches exactly one theorem is a\ndispatch-table entry, not a producer: 24 of 26 registered operations were\nmeasured to name exactly one fact, and that is the defect this loop\nexists to fix. So a StrategyProposal must name at least THREE other\neligible facts the same tactics and producer would reach, chosen from ids\nthe tools showed you. If you cannot honestly name three, emit\nNoGeneralRoute instead and say what is specific to this goal. Emitting\nNoGeneralRoute is a RESULT, not a failure -- it is the datapoint the\nobstruction graph is built from. Inventing siblings to satisfy the rule\ndestroys exactly the measurement this loop is for.",
+    "kind": "request",
+    "run_id": "01a03565-1400-7550-bd8a-f6a44a5f21e8",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "content": "Now let me look at similar descFactorial facts and check for more patterns:",
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "text"
+      },
+      {
+        "tool_name": "fact_get",
+        "args": {
+          "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26"
+        },
+        "tool_call_id": "toolu_01S1XNfgMHqu6WKUMYUjxVEC",
+        "tool_kind": null,
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "tool-call"
+      },
+      {
+        "tool_name": "fact_get",
+        "args": {
+          "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0"
+        },
+        "tool_call_id": "toolu_014W2tfh8pxikxqNxWZJMGCs",
+        "tool_kind": null,
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "tool-call"
+      },
+      {
+        "tool_name": "kernel_theorems",
+        "args": {
+          "prelude": "nat",
+          "name_glob": "Nat.mul*le*"
+        },
+        "tool_call_id": "toolu_01MGGQWBDSUnYJmNo86gHpND",
+        "tool_kind": null,
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "tool-call"
+      }
+    ],
+    "usage": {
+      "input_tokens": 14947,
+      "cache_write_tokens": 0,
+      "cache_read_tokens": 0,
+      "output_tokens": 212,
+      "input_audio_tokens": 0,
+      "cache_audio_read_tokens": 0,
+      "output_audio_tokens": 0,
+      "details": {
+        "input_tokens": 14947,
+        "output_tokens": 212,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+      },
+      "cost": "0.048021"
+    },
+    "model_name": "claude-sonnet-4-5-20250929",
+    "timestamp": "2026-08-24T20:10:26.955023Z",
+    "kind": "response",
+    "provider_name": "anthropic",
+    "provider_url": "https://api.anthropic.com",
+    "provider_details": {
+      "finish_reason": "tool_use"
+    },
+    "provider_response_id": "msg_011CeNBSX27sxPSG1MRTitwi",
+    "finish_reason": "tool_call",
+    "run_id": "01a03565-1400-7550-bd8a-f6a44a5f21e8",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "tool_name": "fact_get",
+        "content": {
+          "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+          "title": "Mathlib v4.30 source proposition Nat.descFactorial_of_lt",
+          "statement": "The proposition declared as `Nat.descFactorial_of_lt` in the pinned Mathlib v4.30 source.",
+          "formal_language": "lean4-surface",
+          "formal_statement": "∀ {n k : ℕ}, n < k → n.descFactorial k = 0",
+          "fragment": "Nat",
+          "epistemic_status": "open",
+          "external_status": "proved",
+          "proof_route": null,
+          "depends_on": [],
+          "axiom_footprint": null,
+          "evidence": [],
+          "partition": "train",
+          "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+        },
+        "tool_call_id": "toolu_01S1XNfgMHqu6WKUMYUjxVEC",
+        "tool_kind": null,
+        "metadata": null,
+        "timestamp": "2026-08-24T20:10:26.956793Z",
+        "outcome": "success",
+        "part_kind": "tool-return"
+      },
+      {
+        "tool_name": "fact_get",
+        "content": {
+          "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
+          "title": "Mathlib v4.30 source proposition Nat.descFactorial_self",
+          "statement": "The proposition declared as `Nat.descFactorial_self` in the pinned Mathlib v4.30 source.",
+          "formal_language": "lean4-surface",
+          "formal_statement": "∀ (n : ℕ), n.descFactorial n = n.factorial",
+          "fragment": "Nat",
+          "epistemic_status": "open",
+          "external_status": "proved",
+          "proof_route": null,
+          "depends_on": [],
+          "axiom_footprint": null,
+          "evidence": [],
+          "partition": "train",
+          "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+        },
+        "tool_call_id": "toolu_014W2tfh8pxikxqNxWZJMGCs",
+        "tool_kind": null,
+        "metadata": null,
+        "timestamp": "2026-08-24T20:10:26.957313Z",
+        "outcome": "success",
+        "part_kind": "tool-return"
+      },
+      {
+        "tool_name": "kernel_theorems",
+        "content": {
+          "prelude": "nat",
+          "name_glob": "Nat.mul*le*",
+          "matched": 4,
+          "total_theorems": 249,
+          "rows": [
+            {
+              "name": "Nat.mul_le_mul_left",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> AxNat.le (AxNat.mul x0 x1) (AxNat.mul x0 x2)))))"
+            },
+            {
+              "name": "Nat.mul_left_cancel_of_pos",
+              "binders": 5,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x4 : Eq.{1} AxNat (AxNat.mul x0 x1) (AxNat.mul x0 x2)) -> Eq.{1} AxNat x1 x2)))))"
+            },
+            {
+              "name": "Nat.mul_sub_left_distrib",
+              "binders": 4,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x2 x1) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.sub x1 x2)) (AxNat.sub (AxNat.mul x0 x1) (AxNat.mul x0 x2))))))"
+            },
+            {
+              "name": "Nat.mul_sub_left_distrib_total",
+              "binders": 3,
+              "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.sub x1 x2)) (AxNat.sub (AxNat.mul x0 x1) (AxNat.mul x0 x2)))))"
+            }
+          ]
+        },
+        "tool_call_id": "toolu_01MGGQWBDSUnYJmNo86gHpND",
+        "tool_kind": null,
+        "metadata": null,
+        "timestamp": "2026-08-24T20:10:26.961230Z",
+        "outcome": "success",
+        "part_kind": "tool-return"
+      }
+    ],
+    "timestamp": "2026-08-24T20:10:26.962339Z",
+    "instructions": "You are the proposer in Axeyum's autonomous frontier loop.\n\nAxeyum is a Rust automated-reasoning stack with a Lean kernel. Its fact\nledger records open mathematical propositions; a producer proposes a proof\nplan and a FRESH kernel process decides whether it worked. You are the\nproposer and nothing else.\n\nWHAT YOU CAN DO. You have six read-only tools and no others. You cannot\nrun a producer, invoke a checker, admit a declaration, or write to the\nledger. Nothing you emit is evidence: every proposal you make is recorded\nwith assurance='proposed' and a human or a trusted process decides later.\nDo not claim a fact is proved, and do not describe your plan as verified.\n\nTHE BLIND POPULATION. Some facts are held out for evaluation. The tools\nfilter them out before you see them, so work only with ids the tools\nreturned to you. Never invent or guess a fact id.\n\nTHE VOCABULARY. A plan names tactics from this catalog, by id:\n  T:refl-closure  (closure)  Close a terminal equality by reflexivity\n  T:bounded-structural-induction  (induction)  Induct on a zero/succ-shaped leading binder\n  T:ih-congruence-rewrite  (rewrite)  Bridge a step case by one congruence rewrite driven by the induction hypothesis\n  T:residual-lemma-splice  (lemma-splice)  Generalize the leftover gap into its own lemma and splice it with Eq.trans\n  T:absurd-elimination  (elimination)  Close any goal from an uninhabitable order hypothesis\n  T:case-split-elimination  (case-split)  Consume both constructors of an order hypothesis at a succ index\n  T:split-congruence-generalization  (generalization)  Generalize two collapsed occurrence sites independently, then re-specialize\n  T:absorbing-argument-chaining  (rewrite)  Chain an absorbing argument fact with the operator's own plain fact\n  T:modeq-equivalence-combinators  (combinator)  Close a definitional equivalence relation with primitive Eq/Iff combinators\n\nand a producer_id that is either a registered operation id (see\noperation_registry) or a producer symbol the catalog names\n(close_terminal, try_induction, try_congr_rewrite, try_residual_lemma,\ntry_absurd_elimination, try_case_split_elimination, try_split_congruence,\ntry_absorbing_argument).\n\nTHE GENERALITY RULE. An operation that reaches exactly one theorem is a\ndispatch-table entry, not a producer: 24 of 26 registered operations were\nmeasured to name exactly one fact, and that is the defect this loop\nexists to fix. So a StrategyProposal must name at least THREE other\neligible facts the same tactics and producer would reach, chosen from ids\nthe tools showed you. If you cannot honestly name three, emit\nNoGeneralRoute instead and say what is specific to this goal. Emitting\nNoGeneralRoute is a RESULT, not a failure -- it is the datapoint the\nobstruction graph is built from. Inventing siblings to satisfy the rule\ndestroys exactly the measurement this loop is for.",
+    "kind": "request",
+    "run_id": "01a03565-1400-7550-bd8a-f6a44a5f21e8",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "content": "## Summary\n\n**Target fact**: `F:ml430-nat-descfactorial-le-2b8cc09a` states `∀ (n : ℕ) {k m : ℕ}, k ≤ m → k.descFactorial n ≤ m.descFactorial n`\n\n**Structural shape**: This is a monotonicity lemma showing that descending factorial (`descFactorial`) preserves order in its second argument when the first argument is fixed. The goal has the form: given `k ≤ m`, prove `k.descFactorial n ≤ m.descFactorial n`.\n\n**Dependencies**: The fact has no dependencies and unlocks nothing. No operations currently target it.\n\n**Available premises**: The nat prelude contains NO theorems about `descFactorial` itself (the glob `Nat.descFactorial*` matched 0 theorems). However, it has 70 theorems about `le` including:\n- `Nat.mul_le_mul_left`: monotonicity of multiplication\n- `Nat.le_trans`, `Nat.le_refl`: order properties\n- Various lemmas about `add`, `sub`, `factorial`, and order\n\n**Similar eligible facts**: Two other `descFactorial` facts exist on the frontier:\n- `F:ml430-nat-descfactorial-of-lt-fbcf5d26`: `n < k → n.descFactorial k = 0`\n- `F:ml430-nat-descfactorial-self-899fc0e0`: `n.descFactorial n = n.factorial`\n\nThese share the `descFactorial` operator but have different structural patterns (boundary conditions vs monotonicity).",
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "text"
+      }
+    ],
+    "usage": {
+      "input_tokens": 16308,
+      "cache_write_tokens": 0,
+      "cache_read_tokens": 0,
+      "output_tokens": 399,
+      "input_audio_tokens": 0,
+      "cache_audio_read_tokens": 0,
+      "output_audio_tokens": 0,
+      "details": {
+        "input_tokens": 16308,
+        "output_tokens": 399,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+      },
+      "cost": "0.054909"
+    },
+    "model_name": "claude-sonnet-4-5-20250929",
+    "timestamp": "2026-08-24T20:10:37.389816Z",
+    "kind": "response",
+    "provider_name": "anthropic",
+    "provider_url": "https://api.anthropic.com",
+    "provider_details": {
+      "finish_reason": "end_turn"
+    },
+    "provider_response_id": "msg_011CeNBSzeneGAxbfRBz46Yq",
+    "finish_reason": "stop",
+    "run_id": "01a03565-1400-7550-bd8a-f6a44a5f21e8",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "content": "Now emit your plan for F:ml430-nat-descfactorial-le-2b8cc09a as a structured result.\n\nChoose StrategyProposal only if you can name at least three OTHER eligible\nfact ids -- ids the tools actually returned -- that these same tactics and\nthis same producer would reach. Otherwise choose NoGeneralRoute and state\nthe obstruction. Do not invent fact ids or tactic ids; both are checked\nagainst the ledger and the catalog and an unknown id is rejected.",
+        "timestamp": "2026-08-24T20:10:37.400448Z",
+        "part_kind": "user-prompt"
+      }
+    ],
+    "timestamp": "2026-08-24T20:10:37.400577Z",
+    "instructions": "You are the proposer in Axeyum's autonomous frontier loop.\n\nAxeyum is a Rust automated-reasoning stack with a Lean kernel. Its fact\nledger records open mathematical propositions; a producer proposes a proof\nplan and a FRESH kernel process decides whether it worked. You are the\nproposer and nothing else.\n\nWHAT YOU CAN DO. You have six read-only tools and no others. You cannot\nrun a producer, invoke a checker, admit a declaration, or write to the\nledger. Nothing you emit is evidence: every proposal you make is recorded\nwith assurance='proposed' and a human or a trusted process decides later.\nDo not claim a fact is proved, and do not describe your plan as verified.\n\nTHE BLIND POPULATION. Some facts are held out for evaluation. The tools\nfilter them out before you see them, so work only with ids the tools\nreturned to you. Never invent or guess a fact id.\n\nTHE VOCABULARY. A plan names tactics from this catalog, by id:\n  T:refl-closure  (closure)  Close a terminal equality by reflexivity\n  T:bounded-structural-induction  (induction)  Induct on a zero/succ-shaped leading binder\n  T:ih-congruence-rewrite  (rewrite)  Bridge a step case by one congruence rewrite driven by the induction hypothesis\n  T:residual-lemma-splice  (lemma-splice)  Generalize the leftover gap into its own lemma and splice it with Eq.trans\n  T:absurd-elimination  (elimination)  Close any goal from an uninhabitable order hypothesis\n  T:case-split-elimination  (case-split)  Consume both constructors of an order hypothesis at a succ index\n  T:split-congruence-generalization  (generalization)  Generalize two collapsed occurrence sites independently, then re-specialize\n  T:absorbing-argument-chaining  (rewrite)  Chain an absorbing argument fact with the operator's own plain fact\n  T:modeq-equivalence-combinators  (combinator)  Close a definitional equivalence relation with primitive Eq/Iff combinators\n\nand a producer_id that is either a registered operation id (see\noperation_registry) or a producer symbol the catalog names\n(close_terminal, try_induction, try_congr_rewrite, try_residual_lemma,\ntry_absurd_elimination, try_case_split_elimination, try_split_congruence,\ntry_absorbing_argument).\n\nTHE GENERALITY RULE. An operation that reaches exactly one theorem is a\ndispatch-table entry, not a producer: 24 of 26 registered operations were\nmeasured to name exactly one fact, and that is the defect this loop\nexists to fix. So a StrategyProposal must name at least THREE other\neligible facts the same tactics and producer would reach, chosen from ids\nthe tools showed you. If you cannot honestly name three, emit\nNoGeneralRoute instead and say what is specific to this goal. Emitting\nNoGeneralRoute is a RESULT, not a failure -- it is the datapoint the\nobstruction graph is built from. Inventing siblings to satisfy the rule\ndestroys exactly the measurement this loop is for.",
+    "kind": "request",
+    "run_id": "01a03565-77d7-733b-99e3-a78365ebe313",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "tool_name": "final_result_NoGeneralRoute",
+        "args": {
+          "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+          "tactic_ids": [
+            "T:bounded-structural-induction",
+            "T:ih-congruence-rewrite"
+          ],
+          "producer_id": "try_induction",
+          "why": "The goal is a universal monotonicity statement with a leading quantifier over n, suggesting induction on n. The descFactorial function likely has a recursive definition that would allow the induction hypothesis to bridge the step case via congruence rewriting.",
+          "expected_decline_class": "MissingPremiseDefinition",
+          "obstruction": "The nat prelude contains zero theorems about descFactorial (Nat.descFactorial* matched 0 of 249 theorems). Without the recursive definition or any computational lemmas for descFactorial, the producer cannot unfold or rewrite descFactorial expressions. The only other descFactorial facts on the frontier (F:ml430-nat-descfactorial-of-lt-fbcf5d26 and F:ml430-nat-descfactorial-self-899fc0e0) are boundary conditions, not monotonicity lemmas, so they don't share the same proof structure. This is a missing-premise obstruction specific to descFactorial being absent from the kernel prelude."
+        },
+        "tool_call_id": "toolu_01KTu7tKZQTX6o2C8ucQAwoH",
+        "tool_kind": null,
+        "id": null,
+        "provider_name": null,
+        "provider_details": null,
+        "part_kind": "tool-call"
+      }
+    ],
+    "usage": {
+      "input_tokens": 17865,
+      "cache_write_tokens": 0,
+      "cache_read_tokens": 0,
+      "output_tokens": 393,
+      "input_audio_tokens": 0,
+      "cache_audio_read_tokens": 0,
+      "output_audio_tokens": 0,
+      "details": {
+        "input_tokens": 17865,
+        "output_tokens": 393,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+      },
+      "cost": "0.059490"
+    },
+    "model_name": "claude-sonnet-4-5-20250929",
+    "timestamp": "2026-08-24T20:10:47.340953Z",
+    "kind": "response",
+    "provider_name": "anthropic",
+    "provider_url": "https://api.anthropic.com",
+    "provider_details": {
+      "finish_reason": "tool_use"
+    },
+    "provider_response_id": "msg_011CeNBTnM9BSFhMmLQxBkXQ",
+    "finish_reason": "tool_call",
+    "run_id": "01a03565-77d7-733b-99e3-a78365ebe313",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  },
+  {
+    "parts": [
+      {
+        "tool_name": "final_result_NoGeneralRoute",
+        "content": "Final result processed.",
+        "tool_call_id": "toolu_01KTu7tKZQTX6o2C8ucQAwoH",
+        "tool_kind": null,
+        "metadata": null,
+        "timestamp": "2026-08-24T20:10:47.343307Z",
+        "outcome": "success",
+        "part_kind": "tool-return"
+      }
+    ],
+    "timestamp": "2026-08-24T20:10:47.343373Z",
+    "instructions": null,
+    "kind": "request",
+    "run_id": "01a03565-77d7-733b-99e3-a78365ebe313",
+    "conversation_id": "01a03565-1400-7550-bd8a-f6a562ade1a0",
+    "metadata": null,
+    "state": "complete"
+  }
+]

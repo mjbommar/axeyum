@@ -4,26 +4,25 @@
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
 [`docs/python-2026-08/`](../../python-2026-08/README.md). Plans 01 and 02
-are landed on `main`: `crates/axeyum-py` -> `axeyum._native` (PyO3 0.29.2,
-abi3-py312, no libpython link) with `smt`, `ir`, `solver` (+ `proofs`,
-`cnf`), `cas` + `cas.certify` (six producer/certificate/checker routes),
-`kernel` (epoch-checked handles, nine preludes), `producers` (promoted from
-`examples/` to `axeyum-lean-import::producers`, driver output byte-identical
-on the frozen exports), and `knowledge` (validator-mirroring read-only
-accessors over every knowledge artifact). Worktree gate at `d27f86f5e`:
-clippy 0 warnings, pytest **796 passed / 11 skipped**, stubs `compared=7`,
-autogenesis validators OK. Plan 03 in flight: A1 (episode schema +
-fail-closed checker with mutation controls) and A3 (tactic catalog v1 whose
-validator fails when every entry matches one shape). Next: A2 -- the
-`[agent]` extra, six read-only tools, the four-node graph, ten committed
-episodes over the 104 open dependency-ready non-held-out facts. Integration
-rule learned today: the shared checkout sits on a branch far behind `main`;
-tracked-file edits move as three-way merges (`git merge-file`), Rust slices
-are verified in `lane-snapshot.sh` trees, commits come from the detached
-worktree.
+are landed on `main` (`smt`, `ir`, `solver`, `cas`/`certify`, `kernel`,
+`producers`, `knowledge`; 796 tests). Plan 03: A1 (episode schema +
+fail-closed checker, 15 guards each killing one test), A3 (tactic catalog
+v1, 9 tactics / 9 precondition shapes / 31 sourced reach rows, validator
+fails on a one-shape catalog) and A2 (the frontier agent: six
+partition-filtering read-only tools, a dispatch-free `pydantic-graph`
+loop, replay with model requests disabled) are landed. **Measured
+baseline:** ten live Sonnet-4.5 episodes, $1.635, `checked=12|ok=12`, and
+8 of 8 completed plans emitted `NoGeneralRoute` -- the model never claimed
+a general route over the current catalog. Next: A4 -- schema v2
+(`checker_runs[]`, `ledger_sha256`), the two checker tools behind
+`requires_approval`, `Gate`/`Dispatch`/`Check` nodes, and the first
+autonomously planned, kernel-checked theorem; then A5 (typed declines to
+the AG4.1 taxonomy) and A7 (the mobility census over all open facts).
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-24 | `0ba7eaac3` | Frontier agent (plan 03 A2): `[agent]` extra, six read-only partition-filtering tools, `Select -> Gather -> Plan -> WriteEpisode` graph, replay; ten live episodes ($1.635), 8/8 `NoGeneralRoute`; 86 tests |
+| 2026-08-24 | `0f64b8951` | Episode schema + fail-closed `check-agent-episode.py` (A1, 15 mutation-verified guards) and tactic catalog v1 with a dispatch-table-rejecting validator (A3, 13 guards) |
 | 2026-08-24 | `d27f86f5e` | Producers promoted to `axeyum-lean-import::producers` (byte-identical driver output, committed `proof_sha256` reproduced) and bound as `axeyum.producers` with typed `Declined` reasons; 46 tests |
 | 2026-08-24 | `4e56f777a` | `axeyum.cas` (~80 pure functions, `ZeroTest` certificates) and `cas.certify` (groebner, geometry, telescoping, sos, gf2, sturm as producer/certificate/checker triples with report counts; tampered certificates rejected); 350 tests |
 | 2026-08-24 | `552c29766` | `axeyum.ir` (epoch-checked `Arena`, full constructor set, trusted `eval`, bv preflight, fp, query) and `axeyum.solver` (`Config`, `CheckResult`, `Incremental`, three-valued `check_outcome`, proofs, cnf); smt sessions; typed `Value` variants; 157 tests |

@@ -1,0 +1,4489 @@
+{
+  "authority": "artifacts/facts",
+  "capabilities": {
+    "decidable_fragments": [
+      "LIA",
+      "LRA",
+      "NRA",
+      "QF_ABV",
+      "QF_BV",
+      "QF_FP",
+      "QF_LIA",
+      "QF_LRA",
+      "QF_NIA",
+      "QF_NRA",
+      "QF_SLIA",
+      "QF_UF",
+      "QF_UFLIA",
+      "UF",
+      "finite-gf2-enumeration",
+      "gf2-extension-polynomial-identity",
+      "gf2-finite-field-order",
+      "gf2-polynomial-identity",
+      "hypergeometric-summation"
+    ],
+    "demonstrated_by": {
+      "LIA": "F:loadplan-hazmat-iis",
+      "LRA": "F:schedule-deadline-iis",
+      "NRA": "F:geometry-centroid-divides-medians",
+      "QF_FP": "F:fp16-bf16-roundtrip-not-identity",
+      "finite-gf2-enumeration": "F:gf2-degree-eight-octuple-two-step-chain",
+      "gf2-extension-polynomial-identity": "F:gf2-witt-shifted-degree-seven-closed-form",
+      "gf2-finite-field-order": "F:gf2-general-monomial-composition-criterion",
+      "gf2-polynomial-identity": "F:gf2-composition-shape-classification",
+      "hypergeometric-summation": "F:alternating-binomial-row-sum-zero"
+    }
+  },
+  "entries": [
+    {
+      "band": "research",
+      "dependency_ready": true,
+      "epistemic_status": "conjectured",
+      "external_status": "open",
+      "fact_id": "F:collatz-reaches-one",
+      "fact_sha256": "821d773a4056a9d3c7b730e3aee8b7da136c8708064332085de7471f7455ff91",
+      "fragment": "none",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "no-route",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:continuum-hypothesis-independent",
+      "fact_sha256": "e1a799a282b31cb7d00e5823baf6ce71058e47a069ba1d99d780a1ece95cab58",
+      "fragment": "none",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "no-route",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:excluded-middle-not-intuitionistic",
+      "fact_sha256": "8fc188b85f5e9576d859b7b8848134e2086f573bf0990b070ab934a0f0bdb3b3",
+      "fragment": "none",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "no-route",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:fermat-last-theorem",
+      "fact_sha256": "c139d671f5e4504f330c296393de27541051f20b7859e0eaa503053bd3d4be77",
+      "fragment": "none",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "no-route",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:fol-validity-undecidable",
+      "fact_sha256": "70d6a9c101482da6672c7cf846e1fa63c11b39a3850852029450dd74c1494929",
+      "fragment": "none",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "no-route",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:fp16-add-monotone-rne",
+      "fact_sha256": "f9efbf8c279d157c99d6e7b9ad87d053df60679bd11ce21aa2249b578592965f",
+      "fragment": "QF_FP",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "decidable",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:godel-first-incompleteness",
+      "fact_sha256": "99dc5137b58cae1fbc8e186be9c4f5e032605ba7fcaf7e7c9409dd20d72abb36",
+      "fragment": "none",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "no-route",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "research",
+      "dependency_ready": true,
+      "epistemic_status": "conjectured",
+      "external_status": "open",
+      "fact_id": "F:goldbach-strong",
+      "fact_sha256": "943f4e8c3f00e952d511f845843e893ea14732c65dcabe482d1465cd89fc9dec",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+      "fact_sha256": "94f72ddeea1776a3dff1f6f597a131d93e578a9e262720162b426a450a187562",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
+      "fact_sha256": "0aead1146b6da05fcde0babbb3bbf32db110f9b99bcd3de07941d950bd76dc3f",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
+      "fact_sha256": "b14977382b62b3a3dd38d2a5c6e96af733c882425f83c0ece3507ce4c148960f",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-int-gcd-eq-gcd-ab-63005aef"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
+      "fact_sha256": "f93507155e2665b2785ceae3b41d08325493785cc40a0584a336e2026e5da4d1",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-fib-add-181b6a2c",
+      "fact_sha256": "ce9f41b78286ee285c6057cf83a8cb976eacaa6cc35a19a0d29e40dfc89bc5d3",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-int-fib-two-mul-0e70f3dd"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-fib-of-odd-66560495",
+      "fact_sha256": "4016e257c62f8e57ce5ee0e96ce3aff745524baf55aef68b44ddb707dfcfb9be",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-fib-two-mul-0e70f3dd",
+      "fact_sha256": "44eae00bd0d25561d707f408a98c1453b2229c36214c0f03615b87c7b365356b",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-int-fib-add-181b6a2c"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-int-fib-two-mul-add-two-0ba4a948"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+      "fact_sha256": "192c9e245e29d21476a7714f363022622521d9261990370e17f3cc273fc3afd4",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-fib-two-mul-add-two-0ba4a948",
+      "fact_sha256": "3a3a5a03b2f34068c8196f93964bc1527c23263d97c71ea2e5a92f0c44dfb1b9",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-int-fib-two-mul-0e70f3dd"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-gcd-div-5e01872f",
+      "fact_sha256": "ff7eb62d1c5a1930a282d04225785d5f142afeaaf77301369f14279ca5dfd1d7",
+      "fragment": "Int",
+      "gate_mentions": [
+        "check-autogenesis-semantic-contract-target-census.py"
+      ],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [
+        "check-autogenesis-semantic-contract-target-census.py"
+      ],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+      "fact_sha256": "a5e59b1a03879f4d894c2db5113bc1b2b105fc7027c6b416f34b8394ad480d7e",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+      "fact_sha256": "0cee5a8d7bd0fd26fc12458e004d88311f3a0f94e7e3ce1238ee4e4a7d75109e",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+      "fact_sha256": "becf54ea529233b55eb61a8d42d80e9398678fbaaf8d4621e0e657818a217e10",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+      "fact_sha256": "006112a8dadf768d4f6f05ac1fd66b7fb8f4b0c17d0ff3e4f9ba37a563573644",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-gcd-greatest-5b31c5fe",
+      "fact_sha256": "cc90891812e0f7d14e19b03de68de92ad7dd74617bc1809b482d39f9260aed1f",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-mod-modeq-6bec7847",
+      "fact_sha256": "b89226dbcfbb4d70304ae51755ca396e93e9961191adbfe1083e810aaf5acaf6",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-modeq-add-left-6e17c69a",
+      "fact_sha256": "d5d58e6297ce8862b41bf8378ae626ac694fc4f9be12697c04130d4034941a05",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+      "fact_sha256": "14fe1473050f1e2a6604cef998ea7ec32e4ec3ac7a9f03efd3ad190cab31af35",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+      "fact_sha256": "8237126235717339a81fc891b956a8a962e8ce67037deadc0deafbf553121518",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
+      "fact_sha256": "8488c90ad65fd9e2a1e95711cbc0bb5e6b437002d7ea0c9ad5685daa5ebbdb5e",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-modeq-of-dvd-b9c41fce",
+      "fact_sha256": "3f1634f10a059c07334535fc453e89b99b12e406f757897b99b4044f1e862877",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+      "fact_sha256": "b7af9b855ccce2c476841ff92432500891d89b04692ab993154dfe53904dcd93",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-int-modeq-of-mul-right-c92b7bf0"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-modeq-of-mul-right-c92b7bf0",
+      "fact_sha256": "9e021f132a5a60f458bc6a56072c80fee8c21427b98c0a1a72417988685954e2",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-int-modeq-of-mul-left-c4ccd51e"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-modeq-sub-3148f130",
+      "fact_sha256": "7448409c3abd3cc6d7111d5a97a9b609709955f4da62f7b1e7a49104c1ef24b7",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
+      "fact_sha256": "5e9f9f6353e69aa306c7ef4fbfe1e56cb1726350d991ce7583275a9211457d59",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-ne-zero-of-gcd-f71f00df",
+      "fact_sha256": "b4e71a070f6a29c6f9838b4ad2858d2272c37038301f63e95052e665039dfb83",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-int-neg-modeq-neg-30d98479",
+      "fact_sha256": "c5cfdb7b9ec9181e9360631372b62a867c98ebdcaa55357ef25f7954430f91d2",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
+      "fact_sha256": "f9cef4f855fbdf83cd64c51e6a63764b43b03c309db9cadf5ebc582428602ee8",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-2086302b3a338591b3179871",
+      "fact_sha256": "a35b354b58a3dd893033be69adfa4059bb603f57848aa3daf4a9f0decf12c187",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-48fe130e2b8eadb6f626b66f",
+      "fact_sha256": "889a81a1bd293124943ad979fdd9f050b2b473e552c1d80c8491a4c59c4e035b",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-5179f333b8333ecff8adc223",
+      "fact_sha256": "1acaddb4d29ca148b0f99ec7dd759df7f95ac31ed088626e5e891f826f542537",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-7afa5ec620720a1501bf349d",
+      "fact_sha256": "559d5f197725b10b272c8209110155c61f2c0f3e35ec76b882b4cdef409c5653",
+      "fragment": "Nat",
+      "gate_mentions": [
+        "check-autogenesis-bounded-induction-family.py"
+      ],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [
+        "check-autogenesis-bounded-induction-family.py"
+      ],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
+      "fact_sha256": "ae212dadfd78e0a4526430b00e354cc51ee9760fa23e335975aa9d32138bb7b4",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-aabb80b1f89f0c5847364692",
+      "fact_sha256": "934af5554e9f544db720fe537bc61745bb18598e9ba75e0ad820a63240524046",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
+      "fact_sha256": "91a0b2a0d53a9b3cbbbe7cebba6e501eef77c86ee5f3ba19ac70071db90a43e4",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+      "fact_sha256": "09992181b7a1f2aae85b90bb80ed530ce558ff69b78cb99607246b0312176201",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-c86940b52af8159ca9b381d6",
+      "fact_sha256": "e6cbc862cd8a3fd4de89272800a7079d4b2ad8e25f338577e8d8d6e3bacc402d",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-e8583599cfae2d40cefae3f0",
+      "fact_sha256": "965f61ad3657524f739a677ac4d66bdad652afbf9ba5436657d3d15802160a57",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "unknown",
+      "fact_id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+      "fact_sha256": "3fac9d1bc5ed894c54c86400411abd73c4a4d1e8c04c2ccdb347865015d404b7",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+      "fact_sha256": "18c9d952d0b4c8426c23c641c50a03750dcc88c23d2dde29669371b1738ec1b1",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+      "fact_sha256": "81dc48e53bcd515370306ab076d31c685212d76e0fc3eeb86b9b789c866e5644",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",
+      "fact_sha256": "b725ea6847af63d4e1c247ebd6aa4cbaebd69e4bda65fc69434086a4af263190",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-bitwise-swap-7175e90e"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-bitwise-comm-1a273bae",
+      "fact_sha256": "d47e2699555b505d7e27c04534549daba0633b82a91e2577a0e4eeffa3b3d004",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-bitwise-swap-7175e90e"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-land-comm-7e6ad72e",
+        "F:ml430-nat-lor-comm-2666d7ef"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-bitwise-swap-7175e90e",
+      "fact_sha256": "8212c6e7aed37bd72c376faf41a8598d0e48e3ad518ba546f45d4bbb80cc9ae1",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-bitwise-bit-4c4b28a8"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-bitwise-comm-1a273bae"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+      "fact_sha256": "b82187003ca29f10dfb8963070ae00bbc3edb0c43652e5644dc9301ca4332845",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-choose-succ-self-e396f6c2"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-le-add-9c463139",
+      "fact_sha256": "719aba2e30b41a5630bdaf63848fa002685b247710f44143f73ffa0a51765ada",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-choose-le-succ-62ae968b"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-choose-le-choose-907b5042"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-le-choose-907b5042",
+      "fact_sha256": "6130cf40d8f3870d660c7d3562463cb12eda9a247b748b057a6eb850a8ef676e",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-choose-le-add-9c463139"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-choose-mono-a1af9c18"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-le-succ-62ae968b",
+      "fact_sha256": "9517f32f4478e392f0e94a2a1fff595f26d232dcc202e8c6d473f451ddb44e8d",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-choose-le-add-9c463139"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-mono-a1af9c18",
+      "fact_sha256": "703e33011ab510e7169740786dadc36fe277b60a795c8e1cdd7cb7b48a4b5946",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-choose-le-choose-907b5042"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-ne-zero-49c3d3cb",
+      "fact_sha256": "0c921549fc9e898ecfa575364a4d241eed74e0ad8033d58b80f1a9298e60e36f",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-one-right-7eda8e39",
+      "fact_sha256": "39b4ea498b1946590b3b2ccb46d587989ac3412fcfe8d83c5222eafc1f3439af",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-choose-zero-right-1ed2802a"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+      "fact_sha256": "4ca873910df6ce4103ffdc202e5d9cd5d6f6826daa79a0660117c52ccfbf4ef8",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
+      "fact_sha256": "6ba14bc9f97bbf8a0d4a43e7861a7cf2fe32e25366d8d1ad406b9221f6ec8a5d",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-choose-eq-zero-of-lt-92ebab29"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
+      "fact_sha256": "18a7c7220acdb38f72bcc573cbd525e5d8aeac7cf6f637e18a49444ef68c69d8",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-symm-add-e4b68161",
+      "fact_sha256": "98f0d44c21ccd2afe50cbe9641dd0dbaecba1d893cd085d429e830c1134eff23",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+      "fact_sha256": "d58210a26da6e333572ad4bc6dcd1aac13d67e62c8f674d3a4afdb7941708609",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-choose-symm-add-e4b68161"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+      "fact_sha256": "88d444adf9131a2fe21c61bcc5d8199b0935eda2df51bd5c76a2304c7bcdb9ea",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-choose-one-right-7eda8e39"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
+      "fact_sha256": "b1936c360fa077b87f3cde0e4c5bec9cfdd3d6f9d8637dcf8f02cc6dbf3e397d",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-clog-antitone-left-44a87771",
+      "fact_sha256": "4a4e4e269ebc8b6f1eac87989b778f9b6493fbbfae465e1130aa7c702b1c511f",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-clog-mono-right-8d87a410",
+      "fact_sha256": "c7104228154b720439975ca039223bbf29b8347d775859d2e93e71103c1d6d95",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-clog-monotone-48fe50c6"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-clog-monotone-48fe50c6",
+      "fact_sha256": "147576ee99fd112b4674f0e738f5f89f967a4c913b46026af6ecf4de73a3511f",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-clog-mono-right-8d87a410"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-clog-one-left-b496af12",
+      "fact_sha256": "e6233826134ec08e02860e54ebf8a1980efb752ec0ec48fa475c18d52ce4a177",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-clog-one-right-1ce3d52f",
+      "fact_sha256": "20337de1f86d8b063513364502b0909207bbefc78a33b7d70d6680479847d29a",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-clog-pos-00852cb8",
+      "fact_sha256": "41fc15ab9fe92f8a68e9d294b1ddd9794f775ec6a3835e63c50f916700d4054a",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-clog-zero-left-1c61a5bf",
+      "fact_sha256": "bdffbf42407d4ee2d0a2db5029e5b7d3bc0f85389f1427ba60f21276e80fa8ff",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-clog-zero-right-d42d47b1",
+      "fact_sha256": "5791e55cbe250425ad5349f8d5e48c44f61966003ac7eaaad80169a15c988ec5",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-add-self-left-5e93448c",
+      "fact_sha256": "1022446440edce85dea7c1ae3187ba0944cf14318d21fd6d446853353c7189ed",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+      "fact_sha256": "5060f8610a9e83e15aa3424b902882fe38424a961cb4c053dbe28a7e0a3420ac",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-coprime-self-add-right-966e5434"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+      "fact_sha256": "edb9a8acbf514064918d562548a199f1e03258ff8d1ffb99783b91be33ff6a60",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-odd-of-left-ed80ab44",
+      "fact_sha256": "d7006eb558204abefbf6f14f956dca2f3972ad9f42e0f0d09d65f55e40122bca",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-coprime-two-left-1b47e7c4"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-odd-of-right-8dc1decc",
+      "fact_sha256": "eff1bf25374fc8cfdcb3eb5cdd15e5c4727010a4ffe2cc6dbc8a3ac5b0390bfd",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-coprime-two-right-7c5a1850"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-of-dvd-18fcd09f",
+      "fact_sha256": "247f552f05811ab8ccbd138a3b88ed5cec07d5efcb81ebf7af30eb4df535f03a",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+        "F:ml430-nat-coprime-of-dvd-right-a640bd56"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-of-dvd-6f652673",
+      "fact_sha256": "00b84f83440275b289f4f9c26e09f905f4bcc57ca0f18ffe9bcbfc125f1d6de4",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+      "fact_sha256": "f79b4c4727faa9cf19f836371a314c4be506165966bf99df685999053d432dcd",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-coprime-of-dvd-18fcd09f"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+      "fact_sha256": "b755b1be639eb2ed76e67291692d48ffcc72f19795c298df217ffa0c6f4572b9",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-coprime-of-dvd-18fcd09f"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+      "fact_sha256": "b455f71e9536a2c961675f883e708d904a221d95139512056b7a8671559e2509",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-of-lt-prime-1978a919",
+      "fact_sha256": "59c54ac1274df7b67179e6624879469a6d14cbfdcf70c3683c8535302d86df84",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-coprime-or-dvd-of-prime-65f47114"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-one-left-iff-45945e80",
+      "fact_sha256": "545c9825cc2f644dd816ed79fc5f80e3bae708916ec6f72407120df4fdcde048",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+      "fact_sha256": "0611004bbafbd3931847aac5307f1db2b4e104e6c71e8e3949df576a7add191b",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
+      "fact_sha256": "6ebb63e3099230b3869650763623907a43c3eafd29f067003f76e4c350c49520",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-prime-dvd-iff-not-coprime-77854741"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-coprime-of-lt-prime-1978a919"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-primes-5769049f",
+      "fact_sha256": "2095dae4944aa4ca0ba1772bb125388a09187d7570077bf04839bf267be9513f",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-self-add-left-51351fa1",
+      "fact_sha256": "cf613fa64b93995cb8a77f8337365f5f3adedd99d2ec932373f55afc1f21d83c",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-self-add-right-966e5434",
+      "fact_sha256": "3b14a89be77cb69a26607ab023563959f7cf8deb8942b37689bf9600b2882bbe",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-coprime-add-self-right-c3ed0f45"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+      "fact_sha256": "b7d2c065be54b7af6e6443f53738986e3c709290ade8d08c7e9b5578e1d20a03",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-two-left-1b47e7c4",
+      "fact_sha256": "5455d140754c5714e2408f34a87547899d56766ec80850d9dd5a8747efacdbe0",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-coprime-odd-of-left-ed80ab44",
+        "F:ml430-nat-coprime-two-right-7c5a1850"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-coprime-two-right-7c5a1850",
+      "fact_sha256": "029583b9e03156fe91e2b520e8fed35ddbbfd38b4c867d67d67fa74b54c06eae",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-coprime-two-left-1b47e7c4"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-coprime-odd-of-right-8dc1decc"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+      "fact_sha256": "4b478632e0ddfdabfe70c64e6c1f0d671eaab0dc1320838162c5ef98d41b2fec",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+      "fact_sha256": "931fc50025c75be9936abe76d9a1ee06dd684011086abf4454b6b430557ce50d",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
+      "fact_sha256": "e449d4b3782addddeac14e90ed0ad1685949c40333fa9b046b6961d664c7af60",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",
+      "fact_sha256": "951acaa431953f7665e42b13b5625d4f927cde838f74a413b37ae89286fa83a2",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+      "fact_sha256": "faeab1f86fc0ee645dbec55ef1d50554aa87e27a941c0f14a524ef0243446469",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
+      "fact_sha256": "40cd8d0c835c90cf1743ae144ef2502ee53710535e72035f227ccf721d6e8b14",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
+      "fact_sha256": "ebe2aed00e7600d815ac5737dfcee92c4a7c42047337cfbc34f458479949a93f",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
+      "fact_sha256": "4df3676b3ab0eff901514b9725c91cc64a343f0fdb9f066f59b466288d090a97",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
+      "fact_sha256": "88b6da07e40b0b3c56c3eda960df37d144bd292eb92f4e0639d85b6833b34dab",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-even-xor-78a39432",
+      "fact_sha256": "5d2f1c7c60d85d3c9c2c530954b8da47e5894586b19017c75f6c13078a57b8be",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e",
+      "fact_sha256": "9900edce6423b4c5f7fd7a42e04366d20ee12e24ffc2fa826daa17ed5e6794be",
+      "fragment": "Int",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-exists-mul-self-e73ca9fa",
+      "fact_sha256": "d864bd3ced768da5c460c54e81a9790303f77d03ca0a9ab04c04462b875cd90e",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-sqrt-eq-79ae8eae"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+      "fact_sha256": "fa1067e3b7cfc51d6a75d1f2f2b3e93537c5ca9b2557458e0e0518f8bd2b5d11",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
+      "fact_sha256": "6827d5f526f00b2d18330b8653e1d49a791a46f7938954a514223dc2366c21ed",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+      "fact_sha256": "486838c86930abaae041b69777ba22e2aba7d9711623b86e4b22ea9ea81d2c01",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-factorial-le-d0f4a912"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-factorial-le-d0f4a912",
+      "fact_sha256": "8ff171d63760de558f03160a7475c546c15366c9c32264146bce3ac01f5b2dd9",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+        "F:ml430-nat-factorial-pos-f1dd2405"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
+      "fact_sha256": "8a50bb8f65796246fc8e8134902fa6d8fd904bf66e16568566f62cbfb9fcbb52",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+      "fact_sha256": "0593cac6b2266e1a2a628dd37f435bb07877d64489fc7e3a7fe533f11791a69c",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-factorial-pos-f1dd2405"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
+      "fact_sha256": "81877372cc34eaa5a0d2b6c12461ca24f7731c528998a2ede446e99adc8b41e9",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-factorial-le-d0f4a912",
+        "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+        "F:ml430-nat-self-le-factorial-cfdffc69"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
+      "fact_sha256": "8a337349ff1830569d434251a792e43501c4066da2e558226998169f026c03fb",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+      "fact_sha256": "50d2088752e8e7c744a0f95e5cc8217d9c850a4afeea0f35682cc1c14a936f7a",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-fib-strictmonoon-905810a9"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+      "fact_sha256": "4305ccdc7d2d92108db4556c648dbbf0789d4e60816e91caf767df60922c4388",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-fib-mono-cc6afe09"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-fib-lt-fib-3582b881",
+      "fact_sha256": "0f6b28df400251b6bd8ea5b77b8ea32220257ca08836b05c08d3c6d74d80334a",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-fib-strictmonoon-905810a9"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-fib-mono-cc6afe09",
+      "fact_sha256": "47f39804ab4759d265988e7ee54ee9bc9e0eaeda1a31cbf872ed06b86e8dc192",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-fib-le-fib-succ-d1ef4a3d"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-fib-strictmonoon-905810a9",
+      "fact_sha256": "a4404ecd6be0e7563ca646f428416228e6d976e121268cc4eae7a87784021265",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-fib-add-two-strictmono-c1e86d4d"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-fib-lt-fib-3582b881"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-land-assoc-ad4775b8",
+      "fact_sha256": "6a2f50fc1e6a28231c4aa56c8b816daf0e1f2d763604bfad597fbdfdb38be424",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-land-bit-b9ab7475"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-land-bit-b9ab7475",
+      "fact_sha256": "eb86cc4ddef1be98bad6f35ca8a3b4f2becaee65df9e79d4deab468e9eecc35f",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-land-assoc-ad4775b8"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-land-comm-7e6ad72e",
+      "fact_sha256": "68f71517f650e93af0582ca76c4957e4a0b631b763bee5c4e379c5125ef8de65",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-bitwise-comm-1a273bae"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-ldiff-bit-6be49bb8",
+      "fact_sha256": "19548d066af4b05101db8563d055afaf3f0a1ac7364b4dbc0e416fecccb08b8c",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-le-fib-add-one-5284f0bf",
+      "fact_sha256": "b39bab3081f6a4d733d1034000855a63b41e67cd90b8b4be814b5f80ae0bf9db",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-le-fib-self-0cbccb4d"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-le-fib-self-0cbccb4d",
+      "fact_sha256": "9990560b7777be594d14ceee2cba417ee21c549a0c9d49eb6f5c63fc1a21bf78",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-le-fib-add-one-5284f0bf"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-le-sqrt-e6996680",
+      "fact_sha256": "bd98dec9c9ec3e4ea1251e7ba095e9c8293744904399560dc5eb43c91f519b6b",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-lt-succ-sqrt-39389df2",
+        "F:ml430-nat-sqrt-le-7918582b"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-le-sqrt-of-eq-mul-503c5afe",
+        "F:ml430-nat-sqrt-le-sqrt-6e2bfc47",
+        "F:ml430-nat-sqrt-pos-f75e5114"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-le-sqrt-of-eq-mul-503c5afe",
+      "fact_sha256": "9b6d93e2dd70e2a8b12f48dc08bf0561be9dca7256b90e93b1a8b03524d3b4b2",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-le-sqrt-e6996680"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-le-three-of-sqrt-eq-one-0c48a868",
+      "fact_sha256": "7daf892dbefc453a7875f661beb1272a67695772dc8779aed9740b17ef0b930e",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-sqrt-lt-4909537f"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log-antitone-left-20d1326c",
+      "fact_sha256": "87bd2330a06d4a94b8feb3584e8d7145ca0c7dc9cdd6d66a76dfadb9db629705",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log-le-clog-ac8ab2d4",
+      "fact_sha256": "baaba16d3669932c74fa73c0b38e83fe4d143f8468146b0e47cadd9a8b48f9f4",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-log-zero-right-8ea186db"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log-le-self-da387172",
+      "fact_sha256": "35acdab7c408369a0e03b9beee66b70b56d3b2c0eb63159bd8551b3120f02c87",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-log-lt-self-529f89fa",
+        "F:ml430-nat-log-zero-right-8ea186db"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log-lt-self-529f89fa",
+      "fact_sha256": "b22b3bf7a4eb0010ba7891df5f2b5eb7185fc7b28cfab656ed226ed92bdd0d2a",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-log-le-self-da387172"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log-mono-right-b8939fee",
+      "fact_sha256": "4ded3ed2bf382547786330b431819b68143fc356b9024dc5bfe5fe35f4c7f122",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-log-monotone-52fad774"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log-monotone-52fad774",
+      "fact_sha256": "fffb571e83923f5f2c9decb94f6cec0acfd54745b7743b0748e8bf44fc269f05",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-log-mono-right-b8939fee"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log-of-lt-89eaf42e",
+      "fact_sha256": "0c34d940c55a29f39fd74bfa7585fee65a5471151863ecce3fe0bdb3c9e33b6a",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log-one-left-73efc119",
+      "fact_sha256": "ea01476a3d342a997b442a8205906e46efc10c97630c54410c7704e2686818a2",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log-one-right-282332ef",
+      "fact_sha256": "0eb3fdce0eb6eacdfbf9345b15120e26857d51cfee6f5de897abc735e174d739",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log-zero-left-9ec8541e",
+      "fact_sha256": "fa8fd7a9c843f0fc9f0bcf6f6f1cb348db8274259731dc31647391d5699f33e8",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log-zero-right-8ea186db",
+      "fact_sha256": "9449c0bd680975f14eb3cd90367747a24c50726072f0dfd6a6e8c335e02878da",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-log-le-clog-ac8ab2d4",
+        "F:ml430-nat-log-le-self-da387172",
+        "F:ml430-nat-log2-eq-log-two-28085932"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-log2-eq-log-two-28085932",
+      "fact_sha256": "9cf344e81e3bcf8a91b9e061534ed7635e2a059958585717ef1941ece4adfc78",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-log-zero-right-8ea186db"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-lor-assoc-82c4d0fd",
+      "fact_sha256": "2cd097e08ae95e66950fa7b6a4871f87461e5a1374f20a9575a8ec18a21ebe51",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-lor-bit-a2f98c7c"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-lor-bit-a2f98c7c",
+      "fact_sha256": "b8e301c9df773669711c0cd13b36af2321c5deb38c3438965c4c1aaeb86625f0",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-lor-assoc-82c4d0fd"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-lor-comm-2666d7ef",
+      "fact_sha256": "1f05cff1fdc660d54ac5bb66b58c901855d601e1dd2c76f178fc705ae634844c",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-bitwise-comm-1a273bae"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-lt-of-testbit-72f64ab8",
+      "fact_sha256": "d32ea5d1e24bf07e8e9b15b5c187e39200c99178ef37694818fe9b622c10d7e0",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-lt-succ-sqrt-39389df2",
+      "fact_sha256": "c317223a1985f550261ebea7a424aafab4f627bd9d1bb7a2ceab28719ffc09e0",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-le-sqrt-e6996680"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-lt-xor-cases-c43a1e85",
+      "fact_sha256": "bc11677ec554915d60b38c67d5164e75ab0bf7907cb885196afb49d55734807c",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-mod-lcm-ee6bdd41",
+      "fact_sha256": "d8cbbdf66c6135398157f1505b95cb181fbf1a265f87d8404828d620aad37482",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-mod-modeq-436e4c10",
+      "fact_sha256": "6d7d1f80a7044e358f9c12c80a7057f888bb8ecc6e66e4093a896fbcce7d8712",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+      "fact_sha256": "2c7da51060cbf982593d33513902a35d54ad272ce93d77d2e7df3cd1c57037fa",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-add-left-e83f0700",
+      "fact_sha256": "58e9c51777ac169f0f78c2f4e073aaad0c57df0fa851f228b4c6f7dc6f6ba79c",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-add-right-8e2ca0cc",
+      "fact_sha256": "0fe323e4704892f2025dff7aa23e64d8dd04d885e841e552a964ab89d0a66b3a",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-add-right-cancel-e871facf",
+      "fact_sha256": "28af179f229033b807099af2218916064b939251779ec72fb2872470a8654523",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-comm-24b71e7a",
+      "fact_sha256": "ff91e57349c720ae12c59b062080cd82c8a75ed2975b883a098b3e3fe82796d3",
+      "fragment": "Nat",
+      "gate_mentions": [
+        "validate-autogenesis-nat-modeq-capability-selection.py"
+      ],
+      "missing_dependencies": [
+        "F:ml430-nat-modeq-symm-0a3d4d18"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [
+        "validate-autogenesis-nat-modeq-capability-selection.py"
+      ],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-dvd-iff-8f130450",
+      "fact_sha256": "6ebe9294312cba069b4488596daefb3d6c8b7f45ba279a2a8f14f8c55a47ed8e",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-modeq-of-dvd-d75cc374",
+        "F:ml430-nat-modeq-symm-0a3d4d18",
+        "F:ml430-nat-modeq-trans-ef9d1c46"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-modeq-gcd-eq-5167ff4f"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-gcd-eq-5167ff4f",
+      "fact_sha256": "732b4bc55f2071e18eab9d0f9853ee28e5cfb12e2492d27ac27159948ed75ea5",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-modeq-dvd-iff-8f130450"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-of-dvd-d75cc374",
+      "fact_sha256": "12f308406d92494d8e7881f1182db64181447d188f001423e97c6e3edaab8810",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-modeq-dvd-iff-8f130450"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-of-mul-left-88d20bca",
+      "fact_sha256": "dc023f1d0f93564e2d214f6e478858ff2040eb794b2c47c3ba34f99f03b65fe0",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-modeq-of-mul-right-43078e1c"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-of-mul-right-43078e1c",
+      "fact_sha256": "f9117ec14f173a15f1330eeb30f159179e6ece0787a9e0aec6d7924ca5805cc1",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-modeq-of-mul-left-88d20bca"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-one-516d46e8",
+      "fact_sha256": "254ef63c3e10ec4b3a4256b3879adf05ac2cd554e9a7d865661c6106474d18f3",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
+      "fact_sha256": "cc06a968f5b8549c78265cb63ddd3d39d484f6473c3b26922fbafac0ce300b4e",
+      "fragment": "Nat",
+      "gate_mentions": [
+        "validate-autogenesis-nat-modeq-capability-selection.py"
+      ],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [
+        "validate-autogenesis-nat-modeq-capability-selection.py"
+      ],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
+      "fact_sha256": "36df9fd173448e9a76f6303e4c9acdf7a91437deaaec5889ec399ae94baed9c7",
+      "fragment": "Nat",
+      "gate_mentions": [
+        "validate-autogenesis-nat-modeq-capability-selection.py"
+      ],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [
+        "validate-autogenesis-nat-modeq-capability-selection.py"
+      ],
+      "would_unlock": [
+        "F:ml430-nat-modeq-comm-24b71e7a",
+        "F:ml430-nat-modeq-dvd-iff-8f130450"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+      "fact_sha256": "bf4ccbe16c2fe31b23083db96a833035e0c0ef44f5d176ae7749dae812f7a29e",
+      "fragment": "Nat",
+      "gate_mentions": [
+        "validate-autogenesis-nat-modeq-capability-selection.py"
+      ],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [
+        "validate-autogenesis-nat-modeq-capability-selection.py"
+      ],
+      "would_unlock": [
+        "F:ml430-nat-modeq-dvd-iff-8f130450"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+      "fact_sha256": "89663204e7d2791cff5770a4bc1062b60b108acba8269841321761e07eef45fc",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-multichoose-one-b210386a",
+      "fact_sha256": "48845b7ce2ee692adf6e03579c8fb5c23ce4945c618bdc0111cd394e3c90aebe",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-multichoose-zero-right-6ef827c8"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-multichoose-one-right-7755072d",
+      "fact_sha256": "9653dfc17d1883f9d266acbbf97a3e1fbf6eeef780f9588ba5bfc7c87acceebc",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-multichoose-zero-right-6ef827c8"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-multichoose-zero-right-6ef827c8",
+      "fact_sha256": "5b07d644d70ee665bf40427d8f0f8a9f80912d8a5401f09b5160bc09fd27d808",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-multichoose-one-b210386a",
+        "F:ml430-nat-multichoose-one-right-7755072d"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+      "fact_sha256": "c5c6398636891bda269608a9a18c1cc627bbea26ff22c61da581c1331699121e",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
+      "fact_sha256": "249055158b85e2ba1eb993cfb7395ebb6aa1c5d5c387564b54d877dd32234349",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
+      "fact_sha256": "a2020161816ad7fdb6f9ff930e9987c92477e2e4435dbc0a74c7d97574c3b8c5",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-coprime-or-dvd-of-prime-65f47114"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439",
+      "fact_sha256": "897fb8fbe41edec5f11213d982d78e00ca726d3875575fef220fcf123faf9008",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-coprime-primes-5769049f"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-prime-dvd-of-dvd-pow-e76f834a",
+      "fact_sha256": "a413ba1e064fa7b38a9648d0bbf6687fe1f562d43cf9423a1e1d267c4a73f3e9",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-prime-even-iff-d068ec82",
+      "fact_sha256": "a3a3c7080176c87f62fd13bae7299148d8f43ecf3561095869b8aeeaac511b52",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786",
+      "fact_sha256": "7823a0a569d6f35918bbdebbb27c8ef97d5e2f43b2445edbddca22f9b9452441",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
+      "fact_sha256": "1602da38f90eb06fd636bc6cc90b3b773d5c0efefb67c91bbf41dde53070a633",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
+      "fact_sha256": "2162a3fc51a051cce38f32d575edd279c57c87260d09181e2422de124e4fdc62",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-prime-pred-pos-4e67ac4c",
+      "fact_sha256": "2a007eaec6b934298080e8e14d81adf8cbf02491a43e0556425a3d015bf922ea",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-self-le-factorial-cfdffc69",
+      "fact_sha256": "f56b95a6cbb4b20896add44e83451a1b74158604cf4c33be5b912131dc24c813",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-factorial-pos-f1dd2405"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-sqrt-eq-79ae8eae",
+      "fact_sha256": "de6093aaa134141295bc7aa091a2e85b0df6f57f824952aedd039db26c1e7829",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-exists-mul-self-e73ca9fa"
+      ]
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-sqrt-eq-c036815b",
+      "fact_sha256": "5acb5f5a9af83d318ee7c40122d7bab7758b9fed9747bc249f7cfaada0732f75",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-sqrt-eq-zero-53666a3b",
+      "fact_sha256": "c92ff4fba0e89d3977eea5ae6772178d8a74348238777948ace018dcd527e80e",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-sqrt-lt-4909537f"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-sqrt-le-7918582b",
+      "fact_sha256": "9578d38f7fc84a05b08e60691f109457fd2dc1f03506f32b78fa24f9bfa8e77a",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-le-sqrt-e6996680",
+        "F:ml430-nat-sqrt-le-self-1ed5eb85",
+        "F:ml430-nat-sqrt-le-sqrt-6e2bfc47"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-sqrt-le-self-1ed5eb85",
+      "fact_sha256": "8aae963d7fd08a665e8ed19449e6355128ccdb4641a61f1ee2aa355e5df5adf1",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-sqrt-le-7918582b"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-sqrt-le-sqrt-6e2bfc47",
+      "fact_sha256": "37fb127fa8bdd62dd0df99910dc5665f4fcfaa8658ef0d687a993ebdf7efb161",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-le-sqrt-e6996680",
+        "F:ml430-nat-sqrt-le-7918582b"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-sqrt-lt-4909537f",
+      "fact_sha256": "482c734c6f600791497d882b041b81830b24df2e8058d655632f1a32a24b9853",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": [
+        "F:ml430-nat-le-three-of-sqrt-eq-one-0c48a868",
+        "F:ml430-nat-sqrt-eq-zero-53666a3b",
+        "F:ml430-nat-sqrt-lt-self-ff7a155a",
+        "F:ml430-nat-sqrt-succ-le-succ-sqrt-6b041183"
+      ]
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-sqrt-lt-self-ff7a155a",
+      "fact_sha256": "32e91a59ab2b82abff7bf20f8e7dc9aa1dfbe422270da848ac51eff7040375ca",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-sqrt-lt-4909537f"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-sqrt-pos-f75e5114",
+      "fact_sha256": "a243ce425288c35a2e688f2056850e93abaeaf85e103746a82d3670c6e3b4b46",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-le-sqrt-e6996680"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "blocked",
+      "dependency_ready": false,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-sqrt-succ-le-succ-sqrt-6b041183",
+      "fact_sha256": "2e003599fbab366ce263ccc5489f3f5b214f081d34fb8b380e27b19219ccae3d",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [
+        "F:ml430-nat-sqrt-lt-4909537f"
+      ],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-succ-pred-prime-4feb123f",
+      "fact_sha256": "358e7d8020130fb824d020230e42a680d93a87a89152dc861d19306193d0cc81",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-testbit-eq-inth-ffa07392",
+      "fact_sha256": "3597647201faa225e0c9c536a64ea332ee8313642e1f64f21b828cfcf26f081b",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
+      "fact_sha256": "011626c86a8a91ec1725e4c918e0c457fbd40dde4ec4e0b0b47d52cdfc8892fb",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
+      "fact_sha256": "f4b6d30d41856026eb56cc742c179294722347a2a776ae8213afdbf982d17083",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-testbit-lor-7644e067",
+      "fact_sha256": "9703704cd45773b1a2a9a9ea2d5f3f786bea8893d1e66f449096fa5ec4fb6572",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "backlog",
+      "dependency_ready": true,
+      "epistemic_status": "open",
+      "external_status": "proved",
+      "fact_id": "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1",
+      "fact_sha256": "2537208630d707863c9c267c8c0a7736f69aa6101c79ec53288adfb8b0433c9c",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "novel",
+      "dependency_ready": true,
+      "epistemic_status": "computed",
+      "external_status": "open",
+      "fact_id": "F:rado-r4-a5-b3",
+      "fact_sha256": "fffe3a2206de31bb24770f58d3bafda9cada9f61f815eadfc21472626d728a51",
+      "fragment": "QF_BV",
+      "gate_mentions": [
+        "close-fact.py"
+      ],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "decidable",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [
+        "close-fact.py"
+      ],
+      "would_unlock": []
+    },
+    {
+      "band": "novel",
+      "dependency_ready": true,
+      "epistemic_status": "computed",
+      "external_status": "open",
+      "fact_id": "F:rado-r4-a5-b4",
+      "fact_sha256": "1d5df62f46aa6b6361e390e0aa31e3f777c36061e46463daa68f967c550404f4",
+      "fragment": "QF_BV",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "decidable",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    },
+    {
+      "band": "research",
+      "dependency_ready": true,
+      "epistemic_status": "conjectured",
+      "external_status": "open",
+      "fact_id": "F:twin-prime-unbounded",
+      "fact_sha256": "6220983f6acc6710493fdc0f0c8ec7cf5c1e4a9da939c9d179d64ced95ab256d",
+      "fragment": "Nat",
+      "gate_mentions": [],
+      "missing_dependencies": [],
+      "registered_operation_ids": [],
+      "route_class": "proof-route-only",
+      "stale_reviewed_gate_mentions": [],
+      "unreviewed_gate_mentions": [],
+      "would_unlock": []
+    }
+  ],
+  "frontier_sha256": "bce3d65e2e78c56c40d7058b92c0133d208c66710ba6ee9270189700e4508b7f",
+  "kind": "axeyum-fact-frontier",
+  "ledger": {
+    "fact_count": 357,
+    "ledger_sha256": "ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1"
+  },
+  "policy": {
+    "autonomous_dispatch_requires_registered_operation": true,
+    "band_order": [
+      "research",
+      "backlog"
+    ],
+    "fact_order": "lexicographic-fact-id",
+    "operation_registry_sha256": "c6e7ca008749d5871d74db6b887366ea8399bd9e3544c144c59773c45490c4f3",
+    "proof_route_fragments": [
+      "Int",
+      "Nat",
+      "Real"
+    ],
+    "registered_operations": [
+      "authoritative-kernel-nat-mul-one-episode-apply-v1",
+      "authoritative-kernel-nat-zero-add-induction-v1",
+      "authoritative-mathlib-bounded-induction-factorial-family-v1",
+      "authoritative-mathlib-int-fib-add-one-kernel-capsule-v1",
+      "authoritative-mathlib-int-fib-add-two-kernel-capsule-v1",
+      "authoritative-mathlib-int-fib-dvd-kernel-capsule-v1",
+      "authoritative-mathlib-int-fib-eq-zero-kernel-capsule-v1",
+      "authoritative-mathlib-int-fib-gcd-kernel-capsule-v1",
+      "authoritative-mathlib-int-fib-natcast-kernel-capsule-v1",
+      "authoritative-mathlib-int-fib-neg-kernel-capsule-v1",
+      "authoritative-mathlib-int-fib-of-nonneg-kernel-capsule-v1",
+      "authoritative-mathlib-int-fib-recurrence-corollary-kernel-capsule-v1",
+      "authoritative-mathlib-int-gcd-fib-kernel-capsule-v1",
+      "authoritative-mathlib-modeq-family-v1",
+      "authoritative-mathlib-nat-descfactorial-zero-reflexivity-v1",
+      "authoritative-mathlib-nat-fib-add-two-receipt-v1",
+      "authoritative-mathlib-nat-fib-coprime-dependency-receipt-v1",
+      "authoritative-mathlib-nat-fib-dvd-kernel-capsule-v1",
+      "authoritative-mathlib-nat-fib-eq-zero-kernel-capsule-v1",
+      "authoritative-mathlib-nat-fib-gcd-kernel-capsule-v1",
+      "authoritative-mathlib-nat-fib-pos-kernel-capsule-v1",
+      "authoritative-mathlib-nat-gcd-fib-add-self-kernel-capsule-v1",
+      "authoritative-mathlib-nat-gcd-greatest-kernel-capsule-v1",
+      "authoritative-mathlib-statement-reflexivity-v1",
+      "autogenesis-kernel-premise-evidence-v1",
+      "smt-int-quadratic-negative-discriminant-v1"
+    ],
+    "settled_statuses": [
+      "axiom",
+      "computed",
+      "proved",
+      "refuted"
+    ],
+    "terminating_routes": [
+      "cas-certificate",
+      "search-certificate",
+      "smt-clausal",
+      "smt-term-level"
+    ]
+  },
+  "schema_version": 1,
+  "selection": {
+    "admissible_fact_ids": [],
+    "outcome": "refused-no-admissible-candidate",
+    "rationale": [
+      {
+        "fact_id": "F:collatz-reaches-one",
+        "rejected_by": [
+          "no-supported-route",
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:goldbach-strong",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:twin-prime-unbounded",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:continuum-hypothesis-independent",
+        "rejected_by": [
+          "no-supported-route",
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:excluded-middle-not-intuitionistic",
+        "rejected_by": [
+          "no-supported-route",
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:fermat-last-theorem",
+        "rejected_by": [
+          "no-supported-route",
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:fol-validity-undecidable",
+        "rejected_by": [
+          "no-supported-route",
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:fp16-add-monotone-rne",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:godel-first-incompleteness",
+        "rejected_by": [
+          "no-supported-route",
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-fib-add-181b6a2c",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-fib-of-odd-66560495",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-gcd-div-5e01872f",
+        "rejected_by": [
+          "no-registered-operation",
+          "gate-coupling-review-required"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-gcd-greatest-5b31c5fe",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-mod-modeq-6bec7847",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-modeq-add-left-6e17c69a",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-modeq-of-dvd-b9c41fce",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-modeq-sub-3148f130",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-ne-zero-of-gcd-f71f00df",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-int-neg-modeq-neg-30d98479",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-2086302b3a338591b3179871",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-48fe130e2b8eadb6f626b66f",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-5179f333b8333ecff8adc223",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-7afa5ec620720a1501bf349d",
+        "rejected_by": [
+          "no-registered-operation",
+          "gate-coupling-review-required"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-aabb80b1f89f0c5847364692",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-c86940b52af8159ca9b381d6",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-e8583599cfae2d40cefae3f0",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-choose-le-succ-62ae968b",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-choose-ne-zero-49c3d3cb",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-clog-antitone-left-44a87771",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-clog-mono-right-8d87a410",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-clog-one-left-b496af12",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-clog-one-right-1ce3d52f",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-clog-pos-00852cb8",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-clog-zero-left-1c61a5bf",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-clog-zero-right-d42d47b1",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-add-self-left-5e93448c",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-of-dvd-6f652673",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-one-left-iff-45945e80",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-primes-5769049f",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-self-add-left-51351fa1",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-coprime-two-left-1b47e7c4",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-even-xor-78a39432",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-land-bit-b9ab7475",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-ldiff-bit-6be49bb8",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-le-fib-self-0cbccb4d",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-log-antitone-left-20d1326c",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-log-lt-self-529f89fa",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-log-monotone-52fad774",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-log-of-lt-89eaf42e",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-log-one-left-73efc119",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-log-one-right-282332ef",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-log-zero-left-9ec8541e",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-log-zero-right-8ea186db",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-lor-bit-a2f98c7c",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-lt-of-testbit-72f64ab8",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-lt-succ-sqrt-39389df2",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-lt-xor-cases-c43a1e85",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-mod-lcm-ee6bdd41",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-mod-modeq-436e4c10",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-modeq-add-left-e83f0700",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-modeq-add-right-8e2ca0cc",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-modeq-add-right-cancel-e871facf",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-modeq-of-dvd-d75cc374",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-modeq-of-mul-left-88d20bca",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-modeq-one-516d46e8",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
+        "rejected_by": [
+          "no-registered-operation",
+          "gate-coupling-review-required"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
+        "rejected_by": [
+          "no-registered-operation",
+          "gate-coupling-review-required"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+        "rejected_by": [
+          "no-registered-operation",
+          "gate-coupling-review-required"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-multichoose-zero-right-6ef827c8",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-prime-dvd-of-dvd-pow-e76f834a",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-prime-even-iff-d068ec82",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-prime-pred-pos-4e67ac4c",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-sqrt-eq-79ae8eae",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-sqrt-eq-c036815b",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-sqrt-le-7918582b",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-sqrt-lt-4909537f",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-succ-pred-prime-4feb123f",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-testbit-eq-inth-ffa07392",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-testbit-lor-7644e067",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      },
+      {
+        "fact_id": "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1",
+        "rejected_by": [
+          "no-registered-operation"
+        ]
+      }
+    ],
+    "ready_fact_ids": [
+      "F:collatz-reaches-one",
+      "F:goldbach-strong",
+      "F:twin-prime-unbounded",
+      "F:continuum-hypothesis-independent",
+      "F:excluded-middle-not-intuitionistic",
+      "F:fermat-last-theorem",
+      "F:fol-validity-undecidable",
+      "F:fp16-add-monotone-rne",
+      "F:godel-first-incompleteness",
+      "F:ml430-int-add-modeq-left-ee732b5b",
+      "F:ml430-int-add-modeq-right-e58108ee",
+      "F:ml430-int-fib-add-181b6a2c",
+      "F:ml430-int-fib-of-odd-66560495",
+      "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+      "F:ml430-int-gcd-div-5e01872f",
+      "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+      "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+      "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+      "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+      "F:ml430-int-gcd-greatest-5b31c5fe",
+      "F:ml430-int-mod-modeq-6bec7847",
+      "F:ml430-int-modeq-add-left-6e17c69a",
+      "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+      "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+      "F:ml430-int-modeq-neg-f649f6c5",
+      "F:ml430-int-modeq-of-dvd-b9c41fce",
+      "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+      "F:ml430-int-modeq-sub-3148f130",
+      "F:ml430-int-modulus-modeq-zero-5b57a898",
+      "F:ml430-int-ne-zero-of-gcd-f71f00df",
+      "F:ml430-int-neg-modeq-neg-30d98479",
+      "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
+      "F:ml430-mutation-2086302b3a338591b3179871",
+      "F:ml430-mutation-48fe130e2b8eadb6f626b66f",
+      "F:ml430-mutation-5179f333b8333ecff8adc223",
+      "F:ml430-mutation-7afa5ec620720a1501bf349d",
+      "F:ml430-mutation-a6dd1759bce60d820292e107",
+      "F:ml430-mutation-aabb80b1f89f0c5847364692",
+      "F:ml430-mutation-aca37b68d3cdf06f0127def9",
+      "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+      "F:ml430-mutation-c86940b52af8159ca9b381d6",
+      "F:ml430-mutation-e8583599cfae2d40cefae3f0",
+      "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+      "F:ml430-nat-add-modeq-left-e3b1fba9",
+      "F:ml430-nat-add-modeq-right-e2f11f21",
+      "F:ml430-nat-bitwise-bit-4c4b28a8",
+      "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+      "F:ml430-nat-choose-le-succ-62ae968b",
+      "F:ml430-nat-choose-ne-zero-49c3d3cb",
+      "F:ml430-nat-choose-self-25bb9fb8",
+      "F:ml430-nat-choose-succ-succ-671856b6",
+      "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+      "F:ml430-nat-choose-zero-right-1ed2802a",
+      "F:ml430-nat-choose-zero-succ-62c6520b",
+      "F:ml430-nat-clog-antitone-left-44a87771",
+      "F:ml430-nat-clog-mono-right-8d87a410",
+      "F:ml430-nat-clog-one-left-b496af12",
+      "F:ml430-nat-clog-one-right-1ce3d52f",
+      "F:ml430-nat-clog-pos-00852cb8",
+      "F:ml430-nat-clog-zero-left-1c61a5bf",
+      "F:ml430-nat-clog-zero-right-d42d47b1",
+      "F:ml430-nat-coprime-add-self-left-5e93448c",
+      "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+      "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+      "F:ml430-nat-coprime-of-dvd-6f652673",
+      "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+      "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+      "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+      "F:ml430-nat-coprime-one-left-iff-45945e80",
+      "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+      "F:ml430-nat-coprime-primes-5769049f",
+      "F:ml430-nat-coprime-self-add-left-51351fa1",
+      "F:ml430-nat-coprime-symmetric-9b5cfa12",
+      "F:ml430-nat-coprime-two-left-1b47e7c4",
+      "F:ml430-nat-descfactorial-le-2b8cc09a",
+      "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+      "F:ml430-nat-descfactorial-self-899fc0e0",
+      "F:ml430-nat-div-dvd-div-left-b56f6f7c",
+      "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+      "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
+      "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
+      "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
+      "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
+      "F:ml430-nat-even-xor-78a39432",
+      "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e",
+      "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+      "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
+      "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+      "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
+      "F:ml430-nat-factorial-pos-f1dd2405",
+      "F:ml430-nat-fastfib-eq-cde11774",
+      "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+      "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+      "F:ml430-nat-land-bit-b9ab7475",
+      "F:ml430-nat-ldiff-bit-6be49bb8",
+      "F:ml430-nat-le-fib-self-0cbccb4d",
+      "F:ml430-nat-log-antitone-left-20d1326c",
+      "F:ml430-nat-log-lt-self-529f89fa",
+      "F:ml430-nat-log-monotone-52fad774",
+      "F:ml430-nat-log-of-lt-89eaf42e",
+      "F:ml430-nat-log-one-left-73efc119",
+      "F:ml430-nat-log-one-right-282332ef",
+      "F:ml430-nat-log-zero-left-9ec8541e",
+      "F:ml430-nat-log-zero-right-8ea186db",
+      "F:ml430-nat-lor-bit-a2f98c7c",
+      "F:ml430-nat-lt-of-testbit-72f64ab8",
+      "F:ml430-nat-lt-succ-sqrt-39389df2",
+      "F:ml430-nat-lt-xor-cases-c43a1e85",
+      "F:ml430-nat-mod-lcm-ee6bdd41",
+      "F:ml430-nat-mod-modeq-436e4c10",
+      "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+      "F:ml430-nat-modeq-add-left-e83f0700",
+      "F:ml430-nat-modeq-add-right-8e2ca0cc",
+      "F:ml430-nat-modeq-add-right-cancel-e871facf",
+      "F:ml430-nat-modeq-of-dvd-d75cc374",
+      "F:ml430-nat-modeq-of-mul-left-88d20bca",
+      "F:ml430-nat-modeq-one-516d46e8",
+      "F:ml430-nat-modeq-refl-d870c8f5",
+      "F:ml430-nat-modeq-symm-0a3d4d18",
+      "F:ml430-nat-modeq-trans-ef9d1c46",
+      "F:ml430-nat-modulus-modeq-zero-fd9af096",
+      "F:ml430-nat-multichoose-zero-right-6ef827c8",
+      "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+      "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
+      "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
+      "F:ml430-nat-prime-dvd-of-dvd-pow-e76f834a",
+      "F:ml430-nat-prime-even-iff-d068ec82",
+      "F:ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786",
+      "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
+      "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
+      "F:ml430-nat-prime-pred-pos-4e67ac4c",
+      "F:ml430-nat-sqrt-eq-79ae8eae",
+      "F:ml430-nat-sqrt-eq-c036815b",
+      "F:ml430-nat-sqrt-le-7918582b",
+      "F:ml430-nat-sqrt-lt-4909537f",
+      "F:ml430-nat-succ-pred-prime-4feb123f",
+      "F:ml430-nat-testbit-eq-inth-ffa07392",
+      "F:ml430-nat-testbit-land-dfef7ca4",
+      "F:ml430-nat-testbit-ldiff-16f94162",
+      "F:ml430-nat-testbit-lor-7644e067",
+      "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
+    ],
+    "selected_fact_id": null
+  }
+}

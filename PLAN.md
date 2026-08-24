@@ -175,6 +175,8 @@ now. Nothing was deleted.
 | 2026-08-24 | `160761bbf` | **Ceva's theorem — and the non-degeneracy hypothesis I insisted on is not needed.** I told the lane non-degeneracy was where my brief was most likely wrong and to hand-check `A = B = C`. It checked, with `sympy`, and the answer went the other way: `D := (1−q) + p·q` depends **only on the ratios**, never on the coordinates, so `NonCollinear A B C k` plays no part. The real condition is `PosBound (D·D) k` on the ratios. `cevian_pair_meet` is unconditional given that witness — two cevians always meet if not parallel; the ratio condition enters only for the third. Exhibiting direction only; the converse is not built and the name does not claim it. **A bug that looked like a kernel limitation and was not**: the lane's first hypothesis was "defeq cannot bridge a nested `lerp`", disproved by a throwaway probe; the real defect was `rn_cevian_t(pp, …)` for `rn_cevian_t(qq, …)`. Fourth argument-swap of the day. |
 | 2026-08-24 | `6bb3b9b17` | **Counting, the totient, and φ(p) = p−1.** Nothing in this kernel could count a decidable subset — no `countRange`, no filter, nothing; that gap is wider than the totient and `countRange` is the reusable half. **Euler's theorem is NOT proved and the reason is structural, not budgetary**: `a^φ(n) ≡ 1 [n]` needs a pairing argument over a *filtered subset*, and both proofs we have (Fermat's Frobenius route, Wilson's `prod_range_pairing_collapse`) pair a full CONTIGUOUS range. Recorded as an open slice in the module doc rather than hand-waved. Values hand-computed before any kernel work, then confirmed by `def_eq` — a `totient` that type-checks but counts wrong is axiom-free and passes every sweep. |
 | 2026-08-24 | (process) | **Three times today I read the outcome I wanted from a command that had already told me otherwise.** A push loop that grepped for `remote rejected` reported a failed push (`error: failed to push some refs`) as PUSHED; a merge where I skipped the fmt check landed unformatted and the hook refused the batch; and a commit where clippy printed `2` in the same command and I read the commit result instead of the number above it. All three are the banned-idiom class CLAUDE.md already records — a success check that cannot distinguish the failure modes — committed by me, hours after quoting that rule to a subagent. Push loop now checks the push's own exit status; gate outputs are now labelled (`clippy_errors=`, `fmt_diffs=`) so a nonzero cannot be skimmed past. |
+| 2026-08-24 | `0ba7eaac3` | Frontier agent (plan 03 A2): `[agent]` extra, six read-only partition-filtering tools, `Select -> Gather -> Plan -> WriteEpisode` graph, replay; ten live episodes ($1.635), 8/8 `NoGeneralRoute`; 86 tests |
+| 2026-08-24 | `0f64b8951` | Episode schema + fail-closed `check-agent-episode.py` (A1, 15 mutation-verified guards) and tactic catalog v1 with a dispatch-table-rejecting validator (A3, 13 guards) |
 | 2026-08-24 | `d27f86f5e` | Producers promoted to `axeyum-lean-import::producers` (byte-identical driver output, committed `proof_sha256` reproduced) and bound as `axeyum.producers` with typed `Declined` reasons; 46 tests |
 | 2026-08-24 | `4e56f777a` | `axeyum.cas` (~80 pure functions, `ZeroTest` certificates) and `cas.certify` (groebner, geometry, telescoping, sos, gf2, sturm as producer/certificate/checker triples with report counts; tampered certificates rejected); 350 tests |
 | 2026-08-24 | `552c29766` | `axeyum.ir` (epoch-checked `Arena`, full constructor set, trusted `eval`, bv preflight, fp, query) and `axeyum.solver` (`Config`, `CheckResult`, `Incremental`, three-valued `check_outcome`, proofs, cnf); smt sessions; typed `Value` variants; 157 tests |
@@ -3407,23 +3409,20 @@ school-and-olympiad, adversarial along the *shape* axis but not the
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
 [`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01 and 02
-are landed on `main`: `crates/axeyum-py` -> `axeyum._native` (PyO3 0.29.2,
-abi3-py312, no libpython link) with `smt`, `ir`, `solver` (+ `proofs`,
-`cnf`), `cas` + `cas.certify` (six producer/certificate/checker routes),
-`kernel` (epoch-checked handles, nine preludes), `producers` (promoted from
-`examples/` to `axeyum-lean-import::producers`, driver output byte-identical
-on the frozen exports), and `knowledge` (validator-mirroring read-only
-accessors over every knowledge artifact). Worktree gate at `d27f86f5e`:
-clippy 0 warnings, pytest **796 passed / 11 skipped**, stubs `compared=7`,
-autogenesis validators OK. Plan 03 in flight: A1 (episode schema +
-fail-closed checker with mutation controls) and A3 (tactic catalog v1 whose
-validator fails when every entry matches one shape). Next: A2 -- the
-`[agent]` extra, six read-only tools, the four-node graph, ten committed
-episodes over the 104 open dependency-ready non-held-out facts. Integration
-rule learned today: the shared checkout sits on a branch far behind `main`;
-tracked-file edits move as three-way merges (`git merge-file`), Rust slices
-are verified in `lane-snapshot.sh` trees, commits come from the detached
-worktree.
+are landed on `main` (`smt`, `ir`, `solver`, `cas`/`certify`, `kernel`,
+`producers`, `knowledge`; 796 tests). Plan 03: A1 (episode schema +
+fail-closed checker, 15 guards each killing one test), A3 (tactic catalog
+v1, 9 tactics / 9 precondition shapes / 31 sourced reach rows, validator
+fails on a one-shape catalog) and A2 (the frontier agent: six
+partition-filtering read-only tools, a dispatch-free `pydantic-graph`
+loop, replay with model requests disabled) are landed. **Measured
+baseline:** ten live Sonnet-4.5 episodes, $1.635, `checked=12|ok=12`, and
+8 of 8 completed plans emitted `NoGeneralRoute` -- the model never claimed
+a general route over the current catalog. Next: A4 -- schema v2
+(`checker_runs[]`, `ledger_sha256`), the two checker tools behind
+`requires_approval`, `Gate`/`Dispatch`/`Check` nodes, and the first
+autonomously planned, kernel-checked theorem; then A5 (typed declines to
+the AG4.1 taxonomy) and A7 (the mobility census over all open facts).
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
