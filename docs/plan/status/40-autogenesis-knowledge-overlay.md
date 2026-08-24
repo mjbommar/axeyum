@@ -99,4 +99,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `c514c8350` | Add three manually reviewed, empty-footprint kernel-theorem semantic anchors and reject accidental inflation of fact coverage by the new source population |
 | 2026-08-24 | `abb4a6be4` | Derive a deterministic, non-semantic review queue for all unanchored empty-footprint kernel theorems, with candidate mappings kept out of the reviewed population |
 | 2026-08-24 | `601d17c82` | Review the first graph-central constructive-real equality cluster as three separate reflexive, symmetric, and transitive equivalence-law anchors |
-| 2026-08-24 | pending | Expose active reviewed kernel-theorem semantic anchors as a separately validated concept-coverage dimension without mixing them into fact or held-out populations |
+| 2026-08-24 | `bb74b057c` | Expose active reviewed kernel-theorem semantic anchors as a separately validated concept-coverage dimension without mixing them into fact or held-out populations |
