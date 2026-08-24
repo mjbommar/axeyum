@@ -1299,6 +1299,62 @@ pub struct CRealPrelude {
     /// genuinely different (classically-flavoured) proposition, not a
     /// missing lemma this file failed to look up.
     pub not_apart_one_of_pow_succ_eq_one: NameId,
+
+    // --- the derivative, on an interval (creal/derivative.rs) ----------------
+    /// `CReal.HasDerivativeOn (F F' : CReal -> CReal) (a b : CReal) : Type :=
+    /// mk (modulus : Nat -> Nat) (spec : ...)` — the FIRST derivative in this
+    /// kernel. Bishop's UNIFORM differentiability on a closed interval, one
+    /// parameter over [`Self::uniformly_continuous_on`]'s own shape (`F'` is
+    /// now part of the family, so there are four leading parameters rather
+    /// than three); see that field's doc for why the modulus has to be a
+    /// `Type`-valued data field rather than a `Prop`-level `forall e, exists
+    /// delta, ...`, which applies here verbatim.
+    ///
+    /// `spec : forall (e : Nat) (x y : CReal), le a x -> le x b -> le a y ->
+    /// le y b -> le (abs (add y (neg x))) (ofRat (natDivSucc 1 (modulus e)))
+    /// -> le (abs (add (add (F y) (neg (F x))) (neg (mul (F' x) (add y (neg
+    /// x)))))) (mul (ofRat (natDivSucc 1 e)) (abs (add y (neg x))))` —
+    /// `|F y - F x - F' x * (y - x)| <= (1/(e+1)) * |y - x|` whenever `|y -
+    /// x|` is within the modulus's own threshold. The four range hypotheses
+    /// are [`Self::uniformly_continuous_on`]'s own, reused verbatim rather
+    /// than a bundled interval predicate (there is none in this file). The
+    /// bound is `CReal`-valued (a product, not a rational constant), so this
+    /// is not [`Self::within`] (which bounds a `Rat`).
+    pub has_derivative_on: NameId,
+    /// `HasDerivativeOn.mk`, the one constructor.
+    pub hd_mk: NameId,
+    /// `HasDerivativeOn.rec`, the kernel-generated recursor (four leading
+    /// parameters `F F' a b`).
+    pub hd_rec: NameId,
+    /// `HasDerivativeOn.modulus : forall F F' a b, HasDerivativeOn F F' a b
+    /// -> Nat -> Nat` — the data field, by large elimination,
+    /// [`Self::uc_modulus`]'s own shape one parameter over.
+    pub hd_modulus: NameId,
+    /// `HasDerivativeOn.spec` — the Prop-valued field, projected the same
+    /// shape [`Self::uc_spec`] uses: the motive at a witness `u` mentions
+    /// `HasDerivativeOn.modulus F F' a b u`, not a fresh variable.
+    pub hd_spec: NameId,
+    /// `CReal.hasDerivative_const : forall c a b, HasDerivativeOn (fun _ =>
+    /// c) (fun _ => zero) a b` — the error term `c - c - 0*(y-x)` is
+    /// `Equiv`-zero unconditionally (`add_neg` plus `mul`-by-zero), so any
+    /// modulus works (`fun _ => 0` is used), mirroring
+    /// [`Self::uniformly_continuous_const`].
+    pub has_derivative_const: NameId,
+    /// `CReal.hasDerivative_id : forall a b, HasDerivativeOn (fun r => r)
+    /// (fun _ => one) a b` — the error term `(y-x) - 1*(y-x)` is
+    /// `Equiv`-zero unconditionally (`mul_one`/`mul_comm`), any modulus
+    /// works.
+    ///
+    /// **Not landed here** (see `creal/derivative.rs`'s own module
+    /// documentation for the precise blocker on each): the sum rule
+    /// (`hasDerivative_add`, blocked on a missing general antitonicity
+    /// lemma for `Rat.natDivSucc` in its index — needed to combine two
+    /// independently-arbitrary moduli, and absent from this development by
+    /// design, per `RatPrelude::nat_div_succ_scale`'s own doc), the
+    /// scalar-multiple rule (`hasDerivative_smul`, no blocker found — an
+    /// exact rescaling via `Rat.natDivSucc_scale`/`Rat.natDivSucc_mul`, just
+    /// not built in this slice), and the product rule.
+    pub has_derivative_id: NameId,
 }
 
 impl CRealPrelude {
@@ -1352,6 +1408,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
     let creal = kernel.name_str(anon, "CReal");
     let equiv = kernel.name_str(creal, "Equiv");
     let uniformly_continuous_on = kernel.name_str(creal, "UniformlyContinuousOn");
+    let has_derivative_on = kernel.name_str(creal, "HasDerivativeOn");
     CRealPrelude {
         rat,
         within: kernel.name_str(creal, "Within"),
@@ -1535,6 +1592,13 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pow_succ_gt_one: kernel.name_str(creal, "pow_succ_gt_one"),
         not_apart_one_of_pow_succ_eq_one: kernel
             .name_str(creal, "not_apart_one_of_pow_succ_eq_one"),
+        has_derivative_on,
+        hd_mk: kernel.name_str(has_derivative_on, "mk"),
+        hd_rec: kernel.name_str(has_derivative_on, "rec"),
+        hd_modulus: kernel.name_str(has_derivative_on, "modulus"),
+        hd_spec: kernel.name_str(has_derivative_on, "spec"),
+        has_derivative_const: kernel.name_str(creal, "hasDerivative_const"),
+        has_derivative_id: kernel.name_str(creal, "hasDerivative_id"),
     }
 }
 
@@ -1613,6 +1677,7 @@ pub(crate) fn build_creal_prelude_uncached(
         completeness::declare_completeness(&mut d, prelude)?;
         convergence::declare_convergence(&mut d, prelude)?;
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
+        derivative::declare_derivative(&mut d, prelude)?;
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
@@ -2535,6 +2600,7 @@ mod completeness;
 mod convergence;
 mod cotransitivity;
 mod density;
+mod derivative;
 mod field;
 mod inverse;
 mod lattice;
