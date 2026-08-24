@@ -1962,6 +1962,55 @@ sha `35d3fd6b1`): 169/169 audited decided, **85 certified, 85 checked, 85
 Lean-checked (81 reasoning / 4 attestation)**, 0 mismatches, 0 audit errors —
 per-instance identical to the committed artifact.
 
+**The GF(2) machinery is on `main`; the Kaser--Lemire attack is not** (`landed`,
+lemire-integration, 2026-08-23, ADR-0544, `b99d715bc`). Two lanes had produced
+~1.3 M lines across four artifacts, and neither was mergeable whole: `main` was
+57 commits ahead and **694 behind** origin, and `agent/gf2/lemire-proof` carried
+the entire attack alongside the machinery.
+
+Three things this cost, worth carrying forward:
+
+**Sixty ADR numbers were double-allocated and `git merge-tree` reported no
+conflict on any of them.** The branch allocated `adr-0484`--`0592` while
+`origin/main` independently allocated `0484`--`0543`; the *filenames* differ, so
+both sets merge clean and land side by side under one numbering. The generated
+index would then render two different decisions as one sequence. A clean
+`merge-tree` is evidence about content, not about a shared namespace — and this
+repository has two such namespaces (ADR numbers, fact ids) that no merge check
+covers.
+
+**A module's size is not evidence that it is load-bearing.** `gf2_hayes.rs` is
+26,655 lines and 266 public items, the largest module in `axeyum-cas`, and it is
+a leaf: it imports nothing from the rest of the crate, and the only inbound
+references from the keep-set were six in `gf2_extension.rs`, every one a doc
+comment or `#[cfg(test)]`. The extraction that looked infeasible was four test
+assertions.
+
+**Grepping the module path missed a coupling that only failed at link time.**
+`tests/gf2_artifact_cli.rs` reports clean for `gf2_hayes` and still reaches it,
+through `env!("CARGO_BIN_EXE_axeyum-gf2-hayes-conditional-variance")`. When
+cutting a module out of a crate the coverage surface is module paths **and**
+`CARGO_BIN_EXE_*` names **and** `Cargo.toml` target declarations; a clean grep
+over the first says nothing about the other two.
+
+Which facts stayed was decided mechanically rather than editorially: a fact stays
+iff every `evidence.artifact` it cites resolves under a retained path and no
+checker command reaches `gf2_hayes` or `artifacts/gf2`. Exactly four of 45
+qualify, `depends_on`-closed. The other 41 would have left the ledger asserting
+evidence this repository can no longer produce.
+
+Verified: 694 `axeyum-cas` tests (690 pass, 4 ignored, 48 of them gf2); clippy
+clean under `-D warnings`; `cargo check --workspace --all-features` clean;
+`validate-facts.py` 347 facts / 0 errors; each retained fact's own
+`checker_command` runs a nonzero passing count; the four `certificate-spec`
+guards each mutation-verified to kill exactly one test (`__pycache__` cleared
+between mutants); the new pre-push caller-safety assertion shown to fire on a
+HEAD move, a staged file, and an untracked leftover, and to stay quiet otherwise.
+
+Not pushed. The research record is exported to
+`../lemire-half-degree-irreducibles` (`f7181da`, 768 files) and every source tip
+is pinned under `archive/*` in this repository.
+
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, `Nat.fib_eq_zero`, and now `Int.fib_eq_zero` are durably proved with empty kernel footprints. An isolated clean replay independently reproduced `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, exactly one ledger write, its proved fact, and the preregistered empty readiness delta.
 
 **Next:** preregister exact `Int.fib_add` specialization over sealed recurrence uniqueness, exact constructive induction, admitted `Int.fib_add_two`, and the smallest clean algebra/base-value supports.
