@@ -13,10 +13,10 @@
 | `logic` | 23 | 23 | 23 | 0 |
 | `nat` | 211 | 188 | 211 | 0 |
 | `rat` | 473 | 139 | 473 | 0 |
-| `string` | 33 | 10 | 33 | 0 |
-| **distinct** | **709** | **709** | **709** | **0** |
+| `string` | 40 | 17 | 40 | 0 |
+| **distinct** | **716** | **716** | **716** | **0** |
 
-- **709 distinct theorems**, of which **709 rest on no assumption at all** (0 are axiom-bearing).
+- **716 distinct theorems**, of which **716 rest on no assumption at all** (0 are axiom-bearing).
 
 **Do not sum the second column.** Preludes nest, so `rat` contains every
 Nat and Int theorem beneath it. The *Originated here* column is the one
