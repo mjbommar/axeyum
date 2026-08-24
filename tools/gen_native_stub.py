@@ -213,6 +213,28 @@ def _receiver(text_signature: str | None) -> str | None:
     return None
 
 
+LINE_LENGTH = 88  # ruff's `line-length`; a generated line past it fails `ruff format --check`
+
+
+def _def_line(indent: str, name: str, params: str, ret: str = "Any") -> list[str]:
+    """``def name(params) -> Any: ...``, wrapped one-parameter-per-line past LINE_LENGTH.
+
+    The wrapped form is exactly what ``ruff format`` produces for a call that
+    overflows (magic trailing comma), so generated output never needs a
+    formatter pass -- a stub that ``ruff format --check`` would rewrite is a
+    drift the check cannot tell from a real one.
+    """
+    flat = f"{indent}def {name}({params}) -> {ret}: ..."
+    if len(flat) <= LINE_LENGTH or not params:
+        return [flat]
+    inner = indent + "    "
+    return [
+        f"{indent}def {name}(",
+        *[f"{inner}{param.strip()}," for param in params.split(", ")],
+        f"{indent}) -> {ret}: ...",
+    ]
+
+
 def _func_lines(name: str, obj: object, *, in_class: bool, indent: str) -> list[str]:
     sig = getattr(obj, "__text_signature__", None)
     if in_class:
@@ -224,13 +246,13 @@ def _func_lines(name: str, obj: object, *, in_class: bool, indent: str) -> list[
             ):
                 lines = [f"{indent}@staticmethod"]
                 params = _render_params(sig, self_name=None)
-                return lines + [f"{indent}def {name}({params}) -> Any: ..."]
+                return lines + _def_line(indent, name, params)
             recv = "self"
         lines = [f"{indent}@classmethod"] if recv == "cls" else []
         params = _render_params(sig, self_name=recv)
-        return lines + [f"{indent}def {name}({params}) -> Any: ..."]
+        return lines + _def_line(indent, name, params)
     params = _render_params(sig, self_name=None)
-    return [f"{indent}def {name}({params}) -> Any: ..."]
+    return _def_line(indent, name, params)
 
 
 def _class_lines(name: str, cls: type, *, level: int = 0) -> list[str]:
@@ -296,7 +318,7 @@ def _class_lines(name: str, cls: type, *, level: int = 0) -> list[str]:
     # Without it every constructor call would be checked against
     # `object.__init__` and reported as too many positional arguments.
     ctor = getattr(cls, "__text_signature__", None)
-    body.append(f"{inner}def __init__({_render_params(ctor, self_name='self')}) -> None: ...")
+    body.extend(_def_line(inner, "__init__", _render_params(ctor, self_name="self"), ret="None"))
 
     methods = sorted(
         k
@@ -334,7 +356,22 @@ def _module_source(mod: types.ModuleType, submodules: list[str]) -> str:
     body_start = len(lines)
     for sub in submodules:
         lines.append(f"from . import {sub} as {sub}")
-    if submodules:
+    foreign_bases = sorted(
+        {
+            b.__name__
+            for v in members.values()
+            if inspect.isclass(v)
+            for b in v.__bases__
+            if b is not object and b.__module__ != "builtins" and b.__name__ not in members
+        }
+    )
+    for base in foreign_bases:
+        # `create_exception!` stamps `__module__ = "axeyum"`, not the defining
+        # `axeyum._native` path, so the test is "not defined here", never a
+        # module-name prefix. Bases so far all come from the parent module; a
+        # base from a sibling submodule would need its own relative path.
+        lines.append(f"from . import {base} as {base}")
+    if submodules or foreign_bases:
         lines.append("")
 
     public = {
