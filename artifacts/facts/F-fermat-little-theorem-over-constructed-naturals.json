@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:fermat-little-theorem-over-constructed-naturals",
+  "title": "Fermat's little theorem over the axiom-free naturals: a^p is congruent to a modulo any prime p",
+  "statement": "For every natural number p that is prime -- primality spelled inline as the conjunction of 2 <= p and (for all d, d divides p implies d = 1 or d = p), there being no `Prime` name in this kernel -- and every natural a, a^p is congruent to a modulo p. Congruence is Nat.modEq, defined here as `modEq d a b := exists u v, a + d*u = b + d*v`, an existential over natural witnesses rather than a statement about a remainder operation. The carrier renders as `AxNat`; despite the name it is an INDUCTIVE type, not an assumed one, and the `nat` prelude's trusted surface measures 0 (axiom=0, opaque=0, quotient=0). The proof is constructive throughout: no excluded middle, no propext, no funext, no Quot.sound. This is the unrestricted form a^p = a, NOT the coprime form a^(p-1) = 1, which is not established here and needs cancellation by a modulo p (see notes).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x0) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x0))))) -> AxNat.modEq x0 (AxNat.pow x1 x0) x1)))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.pow_prime_modeq_self",
+      "kind": "kernel-term",
+      "supports": "`Nat.pow_prime_modeq_self` is admitted by the kernel with exactly the type in formal.statement, and `Nat.add_pow_modeq_prime` -- the Frobenius identity (a+b)^p = a^p + b^p mod p that Fermat's induction rests on -- is admitted alongside it. Both are pinned by the same test, so the identity Fermat depends on cannot drift while Fermat's own statement stays fixed.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude_tests::fermat_and_frobenius_are_stated_over_primes_not_merely_positive_moduli (asserts the KERNEL-RENDERED type of Nat.pow_prime_modeq_self verbatim with assert_eq!, and separately asserts both theorems mention AxNat.dvd -- the primality predicate -- and conclude an AxNat.modEq)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks every proof term against its stated type at build time; a rejected proof makes build_nat_prelude return Err and the test fail)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib fermat_and_frobenius_are_stated_over_primes_not_merely_positive_moduli 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/fermat.rs",
+      "notes": "A footprint check cannot carry this claim: a theorem stating something weaker -- primality replaced by 0 < p, or the vacuous a = a -- has exactly the same empty footprint. Mutation-verified rather than assumed: transposing the exponent in the pinned string (AxNat.pow x1 x0 -> AxNat.pow x0 x1) makes cargo report `43 passed; 1 failed`, naming this test and no other; restored, 44/44 green. The test re-derives from source on every run, rebuilding the whole Nat prelude through add_declaration. Anchored on the exact `1 passed; 0 failed` count, so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
+    },
+    {
+      "id": "footprint-Nat.pow_prime_modeq_self",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for Nat.pow_prime_modeq_self, Nat.add_pow_modeq_prime, Nat.modEq_pow and Nat.dvd_sumRange_of_forall_lt, and for everything beneath them: Nat.prime_dvd_choose, Nat.succ_mul_choose_eq, Nat.add_pow (the binomial theorem), Nat.euclid_lemma and the gcd/Bezout development. The `nat` prelude's trusted surface is 0 -- axiom=0, opaque=0, quotient=0 -- measured by nat_axiom_inventory, not asserted.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude_tests::the_nat_prelude_declares_no_axioms (the prelude declares no Axiom, Opaque or Quotient at all)",
+        "nat_prelude_tests::the_build_is_deterministic (renders every promised definition and theorem from two independent kernels and requires 20+146 entries, so a name that is interned but never DECLARED fails the count rather than passing with a vacuously empty footprint)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_nat_prelude_declares_no_axioms -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "notes": "Presence and footprint are separate properties and both are needed. Nat.euclid_lemma was admitted and axiom-free but named by NOTHING in this prelude's sweep until 2026-08-23, so it was never visited -- axiom_footprint of an unvisited name is not empty, it is unmeasured, and the two are indistinguishable in a green run. It is registered now, and Fermat depends on it transitively. The pinned count in the_build_is_deterministic is a live guard: changing 20+142 to 20+143 killed exactly one test when checked."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-23",
+    "established_by": "lane agent-capability-assurance (2026-08-23) coordinating five dispatched nat_prelude lanes: Nat.pow_prime_modeq_self and Nat.add_pow_modeq_prime in crates/axeyum-lean-kernel/src/nat_prelude/fermat.rs, kernel theorems with empty axiom_footprint. The chain was Nat.succ_sub_of_le (Vandermonde lane) -> Nat.succ_mul_choose_eq and Nat.prime_dvd_choose (Euclid lane) -> Nat.modEq_pow, Nat.dvd_sumRange_of_forall_lt, the Frobenius identity and Fermat (Fermat lane), with an earlier lane's route scout establishing that the permutation proof was unreachable.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "Pierre de Fermat",
+        "what": "the congruence a^p = a (mod p) for p prime",
+        "year": 1640,
+        "where": "letter to Frenicle de Bessy, 18 October 1640; stated without proof",
+        "attribution": "standard attribution. Fermat stated it and did not publish a proof; the first published proof is Euler's (1736). This lane consulted no primary source."
+      },
+      {
+        "who": "Gottfried Wilhelm Leibniz",
+        "what": "an unpublished proof by the multinomial/Frobenius route",
+        "year": 1683,
+        "where": "unpublished manuscript, cited in the standard histories",
+        "attribution": "conventional; noted because the route proved here -- via (a+b)^p = a^p + b^p mod p -- is the one attributed to Leibniz and later Euler, not Fermat's own."
+      }
+    ]
+  },
+  "notes": "WHICH FORM THIS IS. The unrestricted a^p = a (mod p), true for every a including multiples of p. The coprime form a^(p-1) = 1 (mod p) is NOT established here and does not follow without cancellation by a modulo p -- a Nat analogue of Int.modEq_cancel, itself an Euclid's-lemma development. The lane flagged that as a blocker rather than starting one in the last stretch of a slice. Recorded so the two forms are not conflated.\n\nTHE ROUTE WAS CHOSEN BY MEASUREMENT, NOT PREFERENCE. A lane sent at Fermat earlier the same day scouted both classical proofs and reported the permutation argument -- x |-> a*x permutes the nonzero residues mod p -- UNREACHABLE in this kernel: there is no Finset, no bijection, and no injective-on-a-type notion, which is a subsystem rather than a lemma. That report is why no effort went into the dead route, and why the binomial route's single missing piece (Nat.prime_dvd_choose) was identified and dispatched instead.\n\nThe Frobenius identity Nat.add_pow_modeq_prime is a result in its own right and is pinned by the same test. It is where primality actually enters: every interior binomial coefficient C(p,k) with 0 < k < p is divisible by p, so the whole interior of the expansion vanishes modulo p and only the two end terms survive.\n\nexternal_status is `proved`: this is formalization of a known theorem, not discovery."
+}

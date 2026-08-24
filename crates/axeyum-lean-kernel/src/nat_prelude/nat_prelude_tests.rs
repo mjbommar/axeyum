@@ -4718,3 +4718,55 @@ fn prime_dvd_choose_matches_its_statement_at_a_concrete_point() {
         f.k.display_name(p.prime_dvd_choose)
     );
 }
+
+/// **Fermat's little theorem says what the ledger says it says.**
+///
+/// `the_nat_prelude_declares_no_axioms` and `the_build_is_deterministic` cover
+/// these names already, and neither can carry this claim: a theorem stating
+/// something *weaker* — primality replaced by `0 < p`, `a^p ≡ a` replaced by
+/// the vacuous `a ≡ a`, the modulus and the base transposed — has exactly the
+/// same empty footprint and renders into the same deterministic list, whose
+/// assertion is on the *count* of entries and not on any one of them.
+///
+/// `artifacts/facts/` records a *statement*, so a statement is what is pinned.
+/// Both the Frobenius identity and Fermat proper are asserted, because Fermat
+/// alone would leave the identity it rests on free to drift.
+#[test]
+fn fermat_and_frobenius_are_stated_over_primes_not_merely_positive_moduli() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+    let rendered = |k: &Kernel, name: crate::NameId| -> String {
+        k.render_lean(
+            k.environment()
+                .get(name)
+                .unwrap_or_else(|| panic!("{} must be declared", k.display_name(name)))
+                .ty(),
+        )
+    };
+    for name in [p.add_pow_modeq_prime, p.pow_prime_modeq_self] {
+        let got = rendered(&k, name);
+        assert!(
+            got.contains("AxNat.dvd"),
+            "{} must quantify over PRIMES -- the primality predicate is spelled \
+             inline as `2 <= p and forall d, d | p -> d = 1 or d = p`, so a statement \
+             with no `AxNat.dvd` in it has dropped it. Note the carrier renders as \
+             `AxNat` -- an INDUCTIVE type whose trusted surface measures 0, despite the \
+             name -- and matching the bare substring `Nat.dvd` would be satisfied by \
+             `AxNat.dvd` for the wrong reason: {got}",
+            k.display_name(name)
+        );
+        assert!(
+            got.contains("AxNat.modEq"),
+            "{} must conclude a congruence: {got}",
+            k.display_name(name)
+        );
+    }
+    assert_eq!(
+        rendered(&k, p.pow_prime_modeq_self),
+        FERMAT_LITTLE_THEOREM,
+        "Fermat's little theorem"
+    );
+}
+
+/// The kernel-rendered type of `Nat.pow_prime_modeq_self`, pinned by value.
+const FERMAT_LITTLE_THEOREM: &str = "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x0) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x0))))) -> AxNat.modEq x0 (AxNat.pow x1 x0) x1)))";
