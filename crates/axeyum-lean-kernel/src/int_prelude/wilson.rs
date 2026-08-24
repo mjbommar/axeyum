@@ -10,63 +10,43 @@
 //! a real constructive disjunction, not excluded middle) are both proved
 //! here, axiom-free.
 //!
-//! Wilson's theorem itself is **not** declared, and the reason has narrowed
-//! twice since this module was written. The classical proof collapses
-//! `prodRange` over `2..p-2` by pairing each survivor with its distinct
-//! inverse — a permutation argument. `Int.prodRange : (Nat → Int) → Nat → Int`
-//! folds over a fixed *initial segment* `{0,…,n-1}`; the set of not-yet-paired
-//! survivors is in general not an initial segment (the partner of a small
-//! index can be a large one), so the induction hypothesis the collapse needs —
-//! "the product over the remaining unpaired elements is `1`" — cannot even be
-//! *stated* as a `prodRange` term, let alone proved by it.
+//! Wilson's theorem itself is **not** declared here — that is its own slice —
+//! but the rearrangement principle it needs is now fully proved and
+//! axiom-free: `Int.prodRange_permute`
+//! (`prod.rs`) : `∀ f σ n, InjectiveOn σ n → MapsInto σ n →
+//! prodRange f n = prodRange (fun k => f (σ k)) n`. The classical proof of
+//! Wilson's theorem collapses `prodRange` over `2..p-2` by pairing each
+//! survivor with its distinct inverse — a permutation argument — and
+//! `prodRange_permute` is exactly the rearrangement step that argument needs:
+//! `Int.prodRange : (Nat → Int) → Nat → Int` folds over a fixed *initial
+//! segment* `{0,…,n-1}`, so reasoning about "the product over the remaining
+//! unpaired elements" has to go through a `σ` that moves each survivor's
+//! partner into its slot, and `prodRange_permute` is what licenses that move
+//! for an arbitrary `InjectiveOn`/`MapsInto` self-map, not just one swap.
 //!
-//! What is missing is the rearrangement principle
-//! `prodRange f n = prodRange (f ∘ σ) n` for `σ` a permutation of
-//! `{0,…,n-1}`.
-//!
-//! **An earlier revision of this paragraph said the kernel has "no `Finset`,
-//! no `Fin n`, no `Equiv`, and no notion of a bijection of a finite range at
-//! all". That is no longer true** (2026-08-23). `Nat.Fin`,
-//! `Nat.injectiveOn` / `surjectiveOn` / `mapsInto`, and the pigeonhole
-//! principle connecting them (`Nat.injective_on_imp_surjective_on`) are all
-//! declared and axiom-free; `Int.prodRange_swap_adjacent` proves the
-//! adjacent-transposition case of the rearrangement, and (2026-08-24)
-//! `Int.prodRange_swap` extends that to **any** two indices `i < j`, via
-//! `prod.rs`'s `point_swap` (a `Nat.ble`-cascaded explicit swap function,
-//! never `Nat.beq`) and a conjugation induction
-//! `(j' j)(i j')(j' j) = (i j)` on the gap `j - i`.
-//!
-//! What is STILL missing is the full permutation, not just one transposition —
-//! but the gap is now three named assembly steps, not a missing construction.
-//!
-//! **Earlier revisions of this paragraph said the recursive call needs `σ`
-//! restricted with `i0` removed and REINDEXED DOWNWARD
-//! (`σ'(k) := if k < i0 then σ(k) else σ(k+1)`). That turned out to be
-//! unnecessary** (2026-08-24), and it is worth recording because three
-//! successive drafts named it as the blocker. Applying `point_swap` to
-//! `g := f ∘ σ` at `(i0, n)` — rather than to `σ` — reduces the recursive
-//! obligation to `prodRange (f ∘ τ) n = prodRange f n` where `τ` is an
-//! **override at `i0`**, not a shift: once the trivial `i0 = n` case is peeled
-//! off, `i0` is already `< n`, so there is nothing to reindex.
-//!
-//! `Nat.restrict_injective` and `Nat.restrict_maps_into` (both in
-//! `nat_prelude/finite.rs`, axiom-free) supply exactly that override's two
-//! closure properties. What remains for `prodRange_permute`:
-//!
-//! 1. The `i0 = n` branch, which needs no restriction at all — just
-//!    bound-weakening `injectiveOn σ (n+1) → injectiveOn σ n`, since `σ`
-//!    already fixes `n`.
-//! 2. The `i0 < n` branch: the `point_swap`-on-`g` application, threading the
-//!    two restriction lemmas into the induction hypothesis.
-//! 3. The `Exists`-elimination on the pigeonhole's result and the two-way case
-//!    split on `i0` versus `n`, assembling both branches.
-//!
-//! Note the induction generalises over **σ, not over `f`** — unlike every
-//! earlier proof in this chain, whose recursive calls took a different
-//! function. Here the hypothesis reuses the same `f` and only `σ` becomes `τ`,
-//! so `f` is quantified outside the `Nat.rec` with motive
-//! `∀ σ, injectiveOn σ x → mapsInto σ x → prodRange f x = prodRange (f ∘ σ) x`.
-//! Copying the earlier shape yields a motive that does not close.
+//! It was built in three stages, the last landing 2026-08-24:
+//! `Nat.Fin`, `Nat.injectiveOn` / `surjectiveOn` / `mapsInto`, and the
+//! pigeonhole principle connecting them
+//! (`Nat.injective_on_imp_surjective_on`, `nat_prelude/finite.rs`);
+//! `Int.prodRange_swap_adjacent` (one adjacent transposition) and
+//! `Int.prodRange_swap` (any two indices `i < j`, via `prod.rs`'s
+//! `point_swap` — a `Nat.ble`-cascaded explicit swap function, never
+//! `Nat.beq` — and a conjugation induction `(j' j)(i j')(j' j) = (i j)` on the
+//! gap `j - i`); and finally `prodRange_permute` itself, induction on `n`
+//! with `f` quantified OUTSIDE the `Nat.rec` and the motive generalized over
+//! **`σ`, not `f`** (motive `∀ σ, injectiveOn σ x → mapsInto σ x →
+//! prodRange f x = prodRange (f ∘ σ) x`; three earlier drafts generalized over
+//! `f` instead, copying every earlier proof in this chain, and that shape does
+//! not close — the recursive call here reuses the same `f` and only `σ`
+//! changes). At `n+1` the pigeonhole locates `i0 < n+1` with `σ i0 = n`: the
+//! `i0 = n` branch is pure bound-weakening (`σ` already fixes `n`), and the
+//! `i0 < n` branch applies `point_swap` to `g := f ∘ σ` at `(i0, n)` — not to
+//! `σ` — reducing the recursive obligation to `prodRange (f ∘ τ) n =
+//! prodRange f n` for the OVERRIDE `τ := point_override σ i0 (σ n)` (never a
+//! downward reindex: once `i0 = n` is peeled off, `i0` is already `< n`, so
+//! there is nothing to shift), with `Nat.restrict_injective` /
+//! `Nat.restrict_maps_into` (`nat_prelude/finite.rs`) supplying `τ`'s two
+//! closure properties.
 
 use super::defs::POW_HEIGHT;
 use super::ops::IntDev;
