@@ -134,6 +134,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `34c96c9e8` | Publish a derived concept-coverage view that keeps family-topic membership and qualified fact-level formalization counts separate |
 | 2026-08-24 | `5a7edfcfe` | Replace uninformative obstruction remedy status with observed overlay-presence evidence, exposing nine concrete unmodeled capability gaps |
 | 2026-08-24 | `3f42c3b2d` | Select and bind the three dependency-ready Nat.ModEq core laws as a non-authoritative next capability target, with commutativity deferred on its actual dependency |
+| 2026-08-24 | `2c63637c4` | Derive hash-bound, train/development-only producer outcome observations by reviewed family, statement shape, and abstraction boundary; reject held-out, duplicate, or invented outcome accounting |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
@@ -2046,9 +2047,14 @@ remedies and unbound resolutions; next is representation/transport lineage.
 F4/F5/F6 now publish hash-bound transport coverage, non-authoritative scheduler
 observations, and a capability-gap projection. Live frontier evidence is the
 limiting result: 141 facts are dependency-ready but zero are admissible because none has a registered
-applicable operation. Next capability work must expand general-producer and
-adapter coverage over the train/development queue, not add more single-target
-metadata or solver work.
+applicable operation. The frozen producer census is now also projected into
+38 family/statement-shape/abstraction outcome groups across its 138 sealed
+train/development facts, with zero held-out outcomes and no scheduler link;
+that is evidence for evaluating a general producer, not target authority.
+Next capability work must expand general-producer and adapter coverage over the
+train/development queue, compare it against that fixed observation, and only
+then evaluate an independently sealed held-out partition—not add more
+single-target metadata or solver work.
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, `Nat.fib_eq_zero`, and now `Int.fib_eq_zero` are durably proved with empty kernel footprints. An isolated clean replay independently reproduced `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, exactly one ledger write, its proved fact, and the preregistered empty readiness delta.
 
