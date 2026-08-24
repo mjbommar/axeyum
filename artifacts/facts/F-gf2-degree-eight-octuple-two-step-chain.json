@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-degree-eight-octuple-two-step-chain",
+  "title": "A shaped degree-eight source has a two-step degree-eight composition chain",
+  "statement": "There exist a shaped irreducible binary polynomial f of degree 8 and nonmonomial shaped binary polynomials sigma_1 and sigma_2 of degree 8 such that f(sigma_1) and f(sigma_1)(sigma_2) are irreducible.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"exists\":\"shaped irreducible f degree 8 and shaped nonmonomial sigma_1,sigma_2 degree 8 with f(sigma_1),f(sigma_1)(sigma_2) irreducible\",\"field_order\":2,\"format\":\"axeyum-gf2-degree-eight-octuple-two-step-chain\",\"version\":1}",
+    "fragment": "finite-gf2-enumeration",
+    "free_symbols": ["f", "sigma_1", "sigma_2"]
+  },
+  "epistemic_status": "refuted",
+  "external_status": "unknown",
+  "depends_on": ["F:gf2-composition-shape-classification"],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "gf2-polynomial-semantics-v1",
+    "rabin-irreducibility-criterion"
+  ],
+  "evidence": [
+    {
+      "id": "gf2-degree-eight-octuple-two-step-exhaustion",
+      "kind": "exhaustive-enumeration",
+      "supports": "Complete enumeration of the two shaped irreducible degree-eight sources and all 31 nonmonomial shaped degree-eight substitutions at both stages; four certified first-stage outputs and zero certified continuations.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features no_degree_eight_source_has_a_two_step_octuple_composition_chain",
+      "artifact": "crates/axeyum-cas/src/gf2.rs",
+      "notes": "This refutes only the stated repeated degree-eight chain. It does not refute isolated degree-64-to-512 compositions or chains using a different substitution degree."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "bounded exhaustive native search with replayed Rabin certificates"
+  },
+  "notes": "The review sweep's positive degree-64 and degree-512 examples used unrelated source selections and therefore did not establish the existential chain refuted here."
+}
