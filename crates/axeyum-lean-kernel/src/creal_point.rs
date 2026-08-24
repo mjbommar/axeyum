@@ -1117,6 +1117,34 @@ pub struct CPointPrelude {
     /// `defect² ~ 0`, and `eq_zero_of_mul_self_zero` finishes at `defect ~
     /// 0`, i.e. the Ceva ratio equation.
     pub ceva_ratio_product_of_concurrent: NameId,
+    /// **Heron's formula, squared -- no `CReal.sqrt` needed anywhere.** `∀ A
+    /// B C, Equiv (mul (add cross cross) (add cross cross)) (add (mul (add
+    /// a2 a2) (add b2 b2)) (neg (mul diff diff)))`, `cross := CPoint.cross A
+    /// B C`, `a2 := distSq B C`, `b2 := distSq C A`, `c2 := distSq A B`,
+    /// `diff := add a2 (add b2 (neg c2))`.
+    ///
+    /// `cross` is [`Self::cross`]'s own doc: twice the *signed* area of
+    /// triangle `ABC`. So `add cross cross` is `4*Area`, and the left side is
+    /// `16*Area^2` -- the theorem is `16*Area^2 = 4a^2b^2 - (a^2+b^2-c^2)^2`
+    /// written division-free (`add x x` rather than `mul CPoint.Scalar.two
+    /// x`, purely to avoid a second folded constant in the statement). No
+    /// hypothesis, for every configuration of `A, B, C`, degenerate or not --
+    /// squaring away the sign of `cross` is exactly what makes that
+    /// possible.
+    ///
+    /// **Unconditional pure ring algebra**, verified exactly over the six raw
+    /// coordinates before being encoded (`Fraction` trials, zero residual --
+    /// no `sympy` in this environment): `heron_scalar_proof` builds `cross`
+    /// via [`rn_cross`] (the same `RnExpr` mirror of `cross_raw` the
+    /// Menelaus/Ceva development already established) and each `a^2`/`b^2`/
+    /// `c^2` via the new `rn_dist_sq` (the analogous mirror of
+    /// [`Self::dist_sq`]'s own delta/iota unfolding through `dot`, `sub`, and
+    /// the `x`/`y` projections of `sub`'s `mk` constructor -- precedent for
+    /// the kernel accepting exactly this depth already exists in this file:
+    /// `declare_dist_sq_self_zero`'s own `sum` local is the same shape at
+    /// `P = Q`), then discharges the resulting six-variable identity with
+    /// `rn_ring_proof`.
+    pub heron_sixteen_area_sq: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -1241,6 +1269,7 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_ceva_concurrent_of_ratio_product(&mut d, p)?;
     declare_menelaus_collinear_of_ratio_product(&mut d, p)?;
     declare_ceva_ratio_product_of_concurrent(&mut d, p)?;
+    declare_heron_sixteen_area_sq(&mut d, p)?;
     Ok(p)
 }
 
@@ -1365,6 +1394,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
             .name_str(point, "menelaus_collinear_of_ratio_product"),
         ceva_ratio_product_of_concurrent: kernel
             .name_str(point, "ceva_ratio_product_of_concurrent"),
+        heron_sixteen_area_sq: kernel.name_str(point, "heron_sixteen_area_sq"),
     }
 }
 
@@ -19001,6 +19031,21 @@ fn rn_cross(px: RnExpr, py: RnExpr, qx: RnExpr, qy: RnExpr, rx: RnExpr, ry: RnEx
     RnExpr::add(uv, RnExpr::neg(wz))
 }
 
+/// The `RnExpr` mirror of [`CPointPrelude::dist_sq`]'s own full delta/iota
+/// unfolding: `distSq P Q` reduces -- through `dist_sq`'s definition, then
+/// `dot`'s, then `sub`'s, then the `x`/`y` projections of `sub`'s `mk`
+/// constructor -- to exactly `(px-qx)*(px-qx) + (py-qy)*(py-qy)`. Mirrors
+/// [`rn_cross`]'s role for [`CPointPrelude::cross`]. Already-proven
+/// precedent that the kernel accepts exactly this depth of unfolding when
+/// checking a `dist_sq`-headed declared type against a raw-coordinate
+/// value: `declare_dist_sq_self_zero`'s own `sum` local (`== dot(sub pa pa,
+/// sub pa pa) == distSq pa pa`) is the identical shape at `P = Q`.
+fn rn_dist_sq(px: RnExpr, py: RnExpr, qx: RnExpr, qy: RnExpr) -> RnExpr {
+    let dx = rn_diff(px, qx);
+    let dy = rn_diff(py, qy);
+    RnExpr::add(RnExpr::mul(dx.clone(), dx), RnExpr::mul(dy.clone(), dy))
+}
+
 /// The `RnExpr` for the Menelaus ratio defect `p*q*r + (1-p)*(1-q)*(1-r)`
 /// (the SUM, not [`rn_ceva_defect`]'s difference -- see the module note on
 /// the sign flip). Built from [`rn_ceva_lhs`]/[`rn_ceva_rhs`] so a term
@@ -19753,6 +19798,377 @@ fn declare_ceva_ratio_product_of_concurrent(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.ceva_ratio_product_of_concurrent,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// Heron's formula, squared: the area of a triangle from its three squared
+// side lengths, with no `CReal.sqrt` anywhere (this kernel has none -- see
+// the module doc). See [`CPointPrelude::heron_sixteen_area_sq`] for the
+// statement and the reasoning route.
+//
+// The identity was checked exactly with `Fraction` arithmetic (no `sympy` in
+// this environment), 8 independent random rational triangles, zero residual
+// every time:
+//
+//     4*cross(A,B,C)^2 == 4*a2*b2 - (a2+b2-c2)^2
+//
+// with `a2 = distSq B C, b2 = distSq C A, c2 = distSq A B` -- i.e.
+// `16*Area^2 = 4a^2b^2 - (a^2+b^2-c^2)^2`, the standard law-of-cosines form
+// of Heron's formula. Both sides expand (by hand, cross-checked against the
+// trials) to the symmetric `2a^2b^2 + 2b^2c^2 + 2c^2a^2 - a^4 - b^4 - c^4`,
+// so this is the SAME identity regardless of which side plays the odd one
+// out -- the statement below is the `a^2b^2`/`(a^2+b^2-c^2)^2` pairing the
+// fact ledger's convention names, matching `cross A B C`'s own `(B-A)`,
+// `(C-B)` construction directly (no cyclic-permutation lemma needed).
+// ============================================================================
+
+/// `Equiv (mul (add x x) (add x x)) (add xx (add xx (add xx xx)))`,
+/// `xx := mul x x` -- `(2x)^2 = x^2+x^2+x^2+x^2`, with `x` as ONE opaque
+/// atom. Tiny (degree 2, one atom) regardless of what raw structure `x`
+/// itself carries, so this is safe to call on a large compound `x`.
+fn heron_double_square(d: &mut IntDev<'_>, creal: CRealPrelude, x: ExprId) -> ExprId {
+    let lhs = RnExpr::mul(
+        RnExpr::add(RnExpr::Atom(x), RnExpr::Atom(x)),
+        RnExpr::add(RnExpr::Atom(x), RnExpr::Atom(x)),
+    );
+    let xx = RnExpr::mul(RnExpr::Atom(x), RnExpr::Atom(x));
+    let rhs = RnExpr::add(
+        xx.clone(),
+        RnExpr::add(xx.clone(), RnExpr::add(xx.clone(), xx)),
+    );
+    rn_ring_proof(d, creal, &lhs, &rhs)
+}
+
+/// Given `h : Equiv x y`, lifts it through 4-fold repeated addition:
+/// `Equiv (add x (add x (add x x))) (add y (add y (add y y)))`, via
+/// `add_congr` three times. Cheap (no ring-normalizer call) regardless of
+/// `x`/`y`'s own size.
+fn heron_repeat4(d: &mut IntDev<'_>, p: CPointPrelude, x: ExprId, y: ExprId, h: ExprId) -> ExprId {
+    let creal = p.creal;
+    let h2 = rn_op_congr(d, creal, RnOp::Add, x, y, x, y, h, h);
+    let xx = cadd(d, p, x, x);
+    let yy = cadd(d, p, y, y);
+    let h3 = rn_op_congr(d, creal, RnOp::Add, x, y, xx, yy, h, h2);
+    let xxx = cadd(d, p, x, xx);
+    let yyy = cadd(d, p, y, yy);
+    rn_op_congr(d, creal, RnOp::Add, x, y, xxx, yyy, h, h3)
+}
+
+/// See the module note above and [`CPointPrelude::heron_sixteen_area_sq`].
+///
+/// Built in stages, each individually small, rather than as one flat
+/// six-atom degree-4-times-2 ring identity: a first cut at this proof
+/// (`4*(cross+cross)... ` fully expanded through `rn_ring_proof` in one
+/// shot) overflowed a 64 MiB deep-stack thread during
+/// `Kernel::add_declaration` -- the raw monomial count before cancellation
+/// runs into the hundreds once `distSq`'s own two-binomial expansion is
+/// squared and multiplied out together with `cross`'s.
+///
+/// The staging routes around that through **two** genuinely small ring
+/// facts (each verified exactly with `Fraction` trials before being
+/// encoded, zero residual):
+///
+///   * Fact A: `cross^2 ~ a2*b2 - dot2^2`, `dot2 := (B-C)Â·(A-C)` (raw) --
+///     this is exactly Lagrange's identity for the vectors `B-C, A-C`, and
+///     unlike the two-vector pairing `cross`'s own `u,v,w,z` naturally
+///     produces (`c2*a2`, not `a2*b2`), this one lands on the ledger's own
+///     `a2*b2` pairing directly, with **no** extra pairing-conversion
+///     lemma needed.
+///   * Fact B: `2*dot2 ~ a2 + b2 - c2` -- from `2u.v = |u|^2+|v|^2-|u-v|^2`
+///     at `u := B-C, v := A-C, u-v = B-A`.
+///
+/// The final identity is then assembled from A and B by **congruence and
+/// transitivity alone** (`heron_repeat4`, `mul_congr`/`add_congr`,
+/// `heron_double_square`) -- no further call to the ring normalizer, so no
+/// further blowup risk, regardless of how large `cross`/`distSq`'s own raw
+/// forms are.
+fn heron_scalar_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    ax: ExprId,
+    ay: ExprId,
+    bx: ExprId,
+    by: ExprId,
+    cx: ExprId,
+    cy: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+
+    let a2_rn = rn_dist_sq(
+        RnExpr::Atom(bx),
+        RnExpr::Atom(by),
+        RnExpr::Atom(cx),
+        RnExpr::Atom(cy),
+    );
+    let b2_rn = rn_dist_sq(
+        RnExpr::Atom(cx),
+        RnExpr::Atom(cy),
+        RnExpr::Atom(ax),
+        RnExpr::Atom(ay),
+    );
+    let c2_rn = rn_dist_sq(
+        RnExpr::Atom(ax),
+        RnExpr::Atom(ay),
+        RnExpr::Atom(bx),
+        RnExpr::Atom(by),
+    );
+    let a2_val = rn_render(d, creal, &a2_rn);
+    let b2_val = rn_render(d, creal, &b2_rn);
+
+    let cross_rn = rn_cross(
+        RnExpr::Atom(ax),
+        RnExpr::Atom(ay),
+        RnExpr::Atom(bx),
+        RnExpr::Atom(by),
+        RnExpr::Atom(cx),
+        RnExpr::Atom(cy),
+    );
+    let cross_val = rn_render(d, creal, &cross_rn);
+
+    // dot2 := (B-C).(A-C), raw.
+    let dot2_rn = RnExpr::add(
+        RnExpr::mul(
+            rn_diff(RnExpr::Atom(bx), RnExpr::Atom(cx)),
+            rn_diff(RnExpr::Atom(ax), RnExpr::Atom(cx)),
+        ),
+        RnExpr::mul(
+            rn_diff(RnExpr::Atom(by), RnExpr::Atom(cy)),
+            rn_diff(RnExpr::Atom(ay), RnExpr::Atom(cy)),
+        ),
+    );
+    let dot2_val = rn_render(d, creal, &dot2_rn);
+
+    // Fact A: cross^2 ~ a2*b2 - dot2^2.
+    let fact_a = {
+        let lhs = RnExpr::mul(cross_rn.clone(), cross_rn);
+        let rhs = RnExpr::add(
+            RnExpr::mul(a2_rn.clone(), b2_rn.clone()),
+            RnExpr::neg(RnExpr::mul(dot2_rn.clone(), dot2_rn.clone())),
+        );
+        rn_ring_proof(d, creal, &lhs, &rhs)
+    };
+    let ab_val = cmul(d, p, a2_val, b2_val);
+    let dd_val = cmul(d, p, dot2_val, dot2_val);
+    let cross_sq_val = cmul(d, p, cross_val, cross_val);
+    let neg_dd_val = cneg(d, p, dd_val);
+    let rhs_a_val = cadd(d, p, ab_val, neg_dd_val);
+    // fact_a : Equiv cross_sq_val rhs_a_val
+
+    // Fact B: 2*dot2 ~ a2 + b2 - c2 =: diff.
+    let diff_rn = RnExpr::add(a2_rn, RnExpr::add(b2_rn, RnExpr::neg(c2_rn)));
+    let fact_b = {
+        let lhs = RnExpr::add(dot2_rn.clone(), dot2_rn.clone());
+        rn_ring_proof(d, creal, &lhs, &diff_rn)
+    };
+    let diff_val = rn_render(d, creal, &diff_rn);
+    let two_dot2 = cadd(d, p, dot2_val, dot2_val);
+    // fact_b : Equiv two_dot2 diff_val
+
+    // (2*dot2)^2 ~ diff^2, bridged through the repeated-add-of-squares form.
+    let diff_sq_val = cmul(d, p, diff_val, diff_val);
+    let sq_fact_b = rn_op_congr(
+        d,
+        creal,
+        RnOp::Mul,
+        two_dot2,
+        diff_val,
+        two_dot2,
+        diff_val,
+        fact_b,
+        fact_b,
+    );
+    // sq_fact_b : Equiv (mul two_dot2 two_dot2) diff_sq_val
+    let dbl_sq_dot2 = heron_double_square(d, creal, dot2_val);
+    let two_dot2_sq_val = cmul(d, p, two_dot2, two_dot2);
+    // dbl_sq_dot2 : Equiv two_dot2_sq_val (dd+dd+dd+dd)
+    let dd_val_pair = cadd(d, p, dd_val, dd_val);
+    let dd_val_triple = cadd(d, p, dd_val, dd_val_pair);
+    let dd4_val = cadd(d, p, dd_val, dd_val_triple);
+    let dd4_eq_two_dot2_sq = symm(d, p, two_dot2_sq_val, dd4_val, dbl_sq_dot2);
+    let dd4_eq_diffsq = chain(
+        d,
+        p,
+        dd4_val,
+        &[
+            (two_dot2_sq_val, dd4_eq_two_dot2_sq),
+            (diff_sq_val, sq_fact_b),
+        ],
+    );
+    // dd4_eq_diffsq : Equiv dd4_val diff_sq_val
+
+    // 4*cross^2 (repeated-add form) ~ 4*(a2*b2 - dot2^2), from fact_a.
+    let rhs_a_val_pair = cadd(d, p, rhs_a_val, rhs_a_val);
+    let rhs_a_val_triple = cadd(d, p, rhs_a_val, rhs_a_val_pair);
+    let rhs_a4_val = cadd(d, p, rhs_a_val, rhs_a_val_triple);
+    let four_cross_sq_eq_rhs_a4 = heron_repeat4(d, p, cross_sq_val, rhs_a_val, fact_a);
+    // : Equiv (cross_sq+cross_sq+cross_sq+cross_sq) rhs_a4_val
+
+    // rhs_a4 ~ ab4 + neg(dd4) -- pure regrouping over 2 opaque atoms.
+    let ab_val_pair = cadd(d, p, ab_val, ab_val);
+    let ab_val_triple = cadd(d, p, ab_val, ab_val_pair);
+    let ab4_val = cadd(d, p, ab_val, ab_val_triple);
+    let neg_dd4_val = cneg(d, p, dd4_val);
+    let ab4_plus_neg_dd4_val = cadd(d, p, ab4_val, neg_dd4_val);
+    let regroup4 = {
+        let rhs_a_rn = RnExpr::add(RnExpr::Atom(ab_val), RnExpr::neg(RnExpr::Atom(dd_val)));
+        let lhs = RnExpr::add(
+            rhs_a_rn.clone(),
+            RnExpr::add(rhs_a_rn.clone(), RnExpr::add(rhs_a_rn.clone(), rhs_a_rn)),
+        );
+        let ab_rn = RnExpr::Atom(ab_val);
+        let dd_rn = RnExpr::Atom(dd_val);
+        let ab4_rn = RnExpr::add(
+            ab_rn.clone(),
+            RnExpr::add(ab_rn.clone(), RnExpr::add(ab_rn.clone(), ab_rn)),
+        );
+        let dd4_rn = RnExpr::add(
+            dd_rn.clone(),
+            RnExpr::add(dd_rn.clone(), RnExpr::add(dd_rn.clone(), dd_rn)),
+        );
+        let rhs = RnExpr::add(ab4_rn, RnExpr::neg(dd4_rn));
+        rn_ring_proof(d, creal, &lhs, &rhs)
+    };
+
+    // ab4 + neg(dd4) ~ ab4 + neg(diff_sq), substituting `dd4_eq_diffsq`.
+    let neg_dd4_eq_neg_diffsq = d.lemma(creal.neg_congr, &[dd4_val, diff_sq_val, dd4_eq_diffsq]);
+    let neg_diffsq_val = cneg(d, p, diff_sq_val);
+    let ab4_plus_neg_diffsq_val = cadd(d, p, ab4_val, neg_diffsq_val);
+    let ab4_refl = refl(d, p, ab4_val);
+    let dd4_to_diffsq = rn_op_congr(
+        d,
+        creal,
+        RnOp::Add,
+        ab4_val,
+        ab4_val,
+        neg_dd4_val,
+        neg_diffsq_val,
+        ab4_refl,
+        neg_dd4_eq_neg_diffsq,
+    );
+
+    // ab4 ~ (2*a2)*(2*b2) -- pure regrouping over 2 opaque atoms.
+    let two_a2_val = cadd(d, p, a2_val, a2_val);
+    let two_b2_val = cadd(d, p, b2_val, b2_val);
+    let two_a2_two_b2_val = cmul(d, p, two_a2_val, two_b2_val);
+    let dbl_prod_ab = {
+        let a2_atom = RnExpr::Atom(a2_val);
+        let b2_atom = RnExpr::Atom(b2_val);
+        let lhs = RnExpr::mul(
+            RnExpr::add(a2_atom.clone(), a2_atom),
+            RnExpr::add(b2_atom.clone(), b2_atom),
+        );
+        let ab_rn = RnExpr::mul(RnExpr::Atom(a2_val), RnExpr::Atom(b2_val));
+        let rhs = RnExpr::add(
+            ab_rn.clone(),
+            RnExpr::add(ab_rn.clone(), RnExpr::add(ab_rn.clone(), ab_rn)),
+        );
+        rn_ring_proof(d, creal, &lhs, &rhs)
+    };
+    let two_a2_two_b2_eq_ab4 = symm(d, p, two_a2_two_b2_val, ab4_val, dbl_prod_ab);
+    let neg_diffsq_refl = refl(d, p, neg_diffsq_val);
+    let ab4_to_two_a2_two_b2 = rn_op_congr(
+        d,
+        creal,
+        RnOp::Add,
+        ab4_val,
+        two_a2_two_b2_val,
+        neg_diffsq_val,
+        neg_diffsq_val,
+        two_a2_two_b2_eq_ab4,
+        neg_diffsq_refl,
+    );
+
+    let final_rhs_val = cadd(d, p, two_a2_two_b2_val, neg_diffsq_val);
+    let cross_sq_val_pair = cadd(d, p, cross_sq_val, cross_sq_val);
+    let cross_sq_val_triple = cadd(d, p, cross_sq_val, cross_sq_val_pair);
+    let cross_sq4_val = cadd(d, p, cross_sq_val, cross_sq_val_triple);
+    let cross_sq4_to_final_rhs = chain(
+        d,
+        p,
+        cross_sq4_val,
+        &[
+            (rhs_a4_val, four_cross_sq_eq_rhs_a4),
+            (ab4_plus_neg_dd4_val, regroup4),
+            (ab4_plus_neg_diffsq_val, dd4_to_diffsq),
+            (final_rhs_val, ab4_to_two_a2_two_b2),
+        ],
+    );
+
+    // Finally, bridge `cross_sq4` back to `(cross+cross)*(cross+cross)`.
+    let dbl_sq_cross = heron_double_square(d, creal, cross_val);
+    let two_cross_val = cadd(d, p, cross_val, cross_val);
+    let two_cross_sq_val = cmul(d, p, two_cross_val, two_cross_val);
+    chain(
+        d,
+        p,
+        two_cross_sq_val,
+        &[
+            (cross_sq4_val, dbl_sq_cross),
+            (final_rhs_val, cross_sq4_to_final_rhs),
+        ],
+    )
+}
+
+/// `CPoint.heron_sixteen_area_sq`. See
+/// [`CPointPrelude::heron_sixteen_area_sq`].
+fn declare_heron_sixteen_area_sq(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+
+    let proof = heron_scalar_proof(d, p, ax, ay, bx, by, cx, cy);
+
+    // The folded, readable type -- `CPoint.cross`/`CPoint.distSq` heads, not
+    // raw coordinates. The kernel accepts `proof` against it by delta/iota
+    // unfolding those (plus `dot`, `sub`, `x`, `y`) back down to the exact
+    // raw shape `proof` was built over -- see `heron_scalar_proof`'s doc for
+    // the precedent this depth of unfolding already has in this file.
+    let cross_abc = d.const_app(p.cross, &[pa, pb, pc]);
+    let double_cross = cadd(d, p, cross_abc, cross_abc);
+    let lhs_ty = cmul(d, p, double_cross, double_cross);
+
+    let a2 = d.const_app(p.dist_sq, &[pb, pc]);
+    let b2 = d.const_app(p.dist_sq, &[pc, pa]);
+    let c2 = d.const_app(p.dist_sq, &[pa, pb]);
+    let double_a2 = cadd(d, p, a2, a2);
+    let double_b2 = cadd(d, p, b2, b2);
+    let neg_c2 = cneg(d, p, c2);
+    let b2_minus_c2 = cadd(d, p, b2, neg_c2);
+    let diff_ty = cadd(d, p, a2, b2_minus_c2);
+    let diff_sq_ty = cmul(d, p, diff_ty, diff_ty);
+    let neg_diff_sq_ty = cneg(d, p, diff_sq_ty);
+    let ab_ty = cmul(d, p, double_a2, double_b2);
+    let rhs_ty = cadd(d, p, ab_ty, neg_diff_sq_ty);
+
+    let ty_body = equiv(d, p, lhs_ty, rhs_ty);
+    let ty = {
+        let w1 = d.pi_fv(c_fv, point, ty_body);
+        let w2 = d.pi_fv(b_fv, point, w1);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value = {
+        let w1 = d.lam_fv(c_fv, point, proof);
+        let w2 = d.lam_fv(b_fv, point, w1);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.heron_sixteen_area_sq,
         uparams: vec![],
         ty,
         value,
