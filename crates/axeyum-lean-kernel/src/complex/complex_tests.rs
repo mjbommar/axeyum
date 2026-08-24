@@ -219,6 +219,14 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.sumRange_split", p.sum_range_split),
         ("Complex.sumRange_swap", p.sum_range_swap),
         ("Complex.sumRange_diagonal", p.sum_range_diagonal),
+        (
+            "Complex.sumRange_rect_eq_diag_add_corner",
+            p.sum_range_rect_eq_diag_add_corner,
+        ),
+        (
+            "Complex.sumRange_mul_eq_diag_add_corner",
+            p.sum_range_mul_eq_diag_add_corner,
+        ),
         ("Complex.add_pow", p.add_pow),
         ("Complex.IsRootOfUnity", p.is_root_of_unity),
         ("Complex.one_is_root_of_unity", p.one_is_root_of_unity),
@@ -389,3 +397,59 @@ fn the_ring_calculus_proves_a_true_identity() {
         "the calculus must prove exactly the stated identity"
     );
 }
+
+/// **The rectangle/triangle/corner decomposition says what it claims,
+/// character for character** — the `Complex` counterpart of
+/// `nat_prelude_tests::the_rectangle_decomposition_is_stated_exactly`. An
+/// empty axiom footprint cannot carry this claim: a theorem that dropped the
+/// corner term (i.e. the naive, FALSE finite Cauchy identity refuted in
+/// `nat_prelude/rectangle.rs`'s module doc) has an identically empty
+/// footprint too. What distinguishes them is the STATEMENT, so the statement
+/// is what is pinned, for both the rectangle decomposition itself and the
+/// headline Cauchy-product theorem that composes it with
+/// `sumRange_mul_double`.
+#[test]
+fn the_rectangle_decomposition_is_stated_exactly() {
+    let (kernel, p) = built();
+
+    let rendered = |kernel: &Kernel, name: crate::NameId| -> String {
+        match kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{} must be declared", kernel.display_name(name)))
+        {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => {
+                kernel.render_lean(*ty)
+            }
+            other => panic!("{other:?} is not a theorem or definition"),
+        }
+    };
+
+    let rect = rendered(&kernel, p.sum_range_rect_eq_diag_add_corner);
+    assert!(
+        rect.contains("AxNat.add (AxNat.sub x1 x2) x3"),
+        "the corner must be row i's width-i suffix reindexed from n-i, with ONE \
+         truncated subtraction and no nesting: {rect}"
+    );
+    assert_eq!(
+        rect, RECT_EQ_DIAG_ADD_CORNER_TYPE,
+        "Complex.sumRange_rect_eq_diag_add_corner"
+    );
+
+    let cauchy = rendered(&kernel, p.sum_range_mul_eq_diag_add_corner);
+    assert!(
+        cauchy.contains("AxNat.add (AxNat.sub x2 x3) x4"),
+        "the corner in the headline Cauchy-product theorem must carry the same \
+         single-subtraction shift as the rectangle decomposition it composes: {cauchy}"
+    );
+    assert_eq!(
+        cauchy, SUM_RANGE_MUL_EQ_DIAG_ADD_CORNER_TYPE,
+        "Complex.sumRange_mul_eq_diag_add_corner"
+    );
+}
+
+/// The pinned type of [`ComplexPrelude::sum_range_rect_eq_diag_add_corner`].
+const RECT_EQ_DIAG_ADD_CORNER_TYPE: &str = "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Complex))) -> ((x1 : AxNat) -> Complex.Equiv (Complex.sumRange (fun (x2 : AxNat) => Complex.sumRange (fun (x3 : AxNat) => x0 x2 x3) x1) x1) (Complex.add (Complex.sumRange (fun (x2 : AxNat) => Complex.sumRange (fun (x3 : AxNat) => x0 x3 (AxNat.sub x2 x3)) (AxNat.succ x2)) x1) (Complex.sumRange (fun (x2 : AxNat) => Complex.sumRange (fun (x3 : AxNat) => (fun (x4 : AxNat) => x0 x2 x4) (AxNat.add (AxNat.sub x1 x2) x3)) x2) x1))))";
+
+/// The pinned type of [`ComplexPrelude::sum_range_mul_eq_diag_add_corner`].
+const SUM_RANGE_MUL_EQ_DIAG_ADD_CORNER_TYPE: &str = "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : ((x1 : AxNat) -> Complex)) -> ((x2 : AxNat) -> Complex.Equiv (Complex.mul (Complex.sumRange x0 x2) (Complex.sumRange x1 x2)) (Complex.add (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => fun (x6 : AxNat) => Complex.mul (x0 x5) (x1 x6)) x4 (AxNat.sub x3 x4)) (AxNat.succ x3)) x2) (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => (fun (x6 : AxNat) => fun (x7 : AxNat) => Complex.mul (x0 x6) (x1 x7)) x3 x5) (AxNat.add (AxNat.sub x2 x3) x4)) x3) x2)))))";

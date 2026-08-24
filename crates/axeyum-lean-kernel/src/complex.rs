@@ -734,6 +734,48 @@ pub struct ComplexPrelude {
     /// a `Complex` context via `nat_eq_to_complex_equiv` — no induction on
     /// `sub`'s own recursion here either.
     pub sum_range_diagonal: NameId,
+    /// `Complex.sumRange_rect_eq_diag_add_corner : ∀ F n,
+    ///   Equiv (sumRange (fun i => sumRange (fun j => F i j) n) n)
+    ///     (add (sumRange (fun k => sumRange (fun i => F i (sub k i)) (succ k)) n)
+    ///          (sumRange (fun i => sumRange (fun k => F i (add (sub n i) k)) i) n))`
+    /// — the `Complex` port of `Nat.sumRange_rect_eq_diag_add_corner`
+    /// (`nat_prelude/rectangle.rs`), `Equiv` in place of `Eq` throughout:
+    /// rectangle = (antidiagonal triangle) + corner, the honest three-way
+    /// decomposition that REPLACES the naive finite Cauchy identity. That
+    /// naive identity (`(Σ a)(Σ b) = Σ_k Σ_{i≤k} a_i b_{k-i}`) is FALSE —
+    /// refuted by hand at `n = 2`, see the ℕ module's doc comment for the
+    /// counterexample (`a₁b₁` sits in the rectangle, not the antidiagonal
+    /// triangle). Never restate the naive identity under any name.
+    ///
+    /// Route: `declare_sum_range_diagonal`'s own headline gives row_sum ~
+    /// triangle_sum; a pointwise row split via [`ComplexPrelude::sum_range_split`]
+    /// (lifted from the `Nat`-level restoration `add (sub n i) i = n`, valid
+    /// for `i < n`, via `nat_eq_to_complex_equiv`) plus
+    /// [`ComplexPrelude::sum_range_congr_lt`] and [`ComplexPrelude::sum_range_add`]
+    /// gives rectangle ~ row_sum + corner_sum; [`ComplexPrelude::add_congr`]
+    /// substitutes the diagonal fact under the outer `add`, and `Equiv.trans`
+    /// composes the two.
+    pub sum_range_rect_eq_diag_add_corner: NameId,
+    /// `Complex.sumRange_mul_eq_diag_add_corner : ∀ f g n,
+    ///   Equiv (mul (sumRange f n) (sumRange g n))
+    ///     (add (sumRange (fun k => sumRange (fun i => mul (f i) (g (sub k i))) (succ k)) n)
+    ///          (sumRange (fun i => sumRange (fun k => mul (f i) (g (add (sub n i) k))) i) n))`
+    /// — the finite Cauchy product's HONEST form: a product of two partial
+    /// sums equals the antidiagonal-grouped convolution plus a corner term
+    /// that the naive (false) identity silently drops.
+    ///
+    /// Composes [`Self::sum_range_mul_double`] instantiated at `[f, g, n, n]`
+    /// (`mul (sumRange f n) (sumRange g n) ~ rectangle(F, n)` for
+    /// `F i j := mul (f i) (g j)`) with [`Self::sum_range_rect_eq_diag_add_corner`]
+    /// instantiated at `[F, n]` (`rectangle(F, n) ~ triangle(F, n) +
+    /// corner(F, n)`) via `Equiv.trans`. The two `rectangle(F, n)` terms are
+    /// built in different — beta-equivalent — shapes (`sum_range_mul_double`'s
+    /// own un-curried summand versus `F` applied through the curried helpers
+    /// this module already uses for the diagonal); the kernel's own beta
+    /// reduction under the two nested binders bridges them, exactly the same
+    /// reliance `diagonal_step_c` already places on iota-reduction for
+    /// `sumRange`'s successor case.
+    pub sum_range_mul_eq_diag_add_corner: NameId,
 
     // --- the binomial theorem -----------------------------------------------
     /// `Complex.add_pow : ∀ a b n, Equiv (pow (add a b) n) (sumRange (fun k =>
@@ -978,6 +1020,10 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         sum_range_split: kernel.name_str(complex, "sumRange_split"),
         sum_range_swap: kernel.name_str(complex, "sumRange_swap"),
         sum_range_diagonal: kernel.name_str(complex, "sumRange_diagonal"),
+        sum_range_rect_eq_diag_add_corner: kernel
+            .name_str(complex, "sumRange_rect_eq_diag_add_corner"),
+        sum_range_mul_eq_diag_add_corner: kernel
+            .name_str(complex, "sumRange_mul_eq_diag_add_corner"),
         add_pow: kernel.name_str(complex, "add_pow"),
         is_root_of_unity: kernel.name_str(complex, "IsRootOfUnity"),
         one_is_root_of_unity: kernel.name_str(complex, "one_is_root_of_unity"),
@@ -1067,6 +1113,8 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_sum_range_split(&mut d, prelude)?;
         declare_sum_range_swap(&mut d, prelude)?;
         declare_sum_range_diagonal(&mut d, prelude)?;
+        declare_sum_range_rect_eq_diag_add_corner(&mut d, prelude)?;
+        declare_sum_range_mul_eq_diag_add_corner(&mut d, prelude)?;
         declare_add_pow(&mut d, prelude)?;
         declare_is_root_of_unity(&mut d, prelude)?;
         declare_one_is_root_of_unity(&mut d, prelude)?;
@@ -6396,6 +6444,301 @@ fn declare_sum_range_diagonal(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sum_range_diagonal,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- rectangle = triangle + corner (the finite Cauchy product's honest form) -
+//
+// The `Complex` port of `nat_prelude/rectangle.rs`. Same route: split every
+// row (pointwise, via `Complex.sumRange_split` at the split point `sub n i`,
+// lifted from the `Nat`-level restoration `add (sub n i) i = n`), regroup via
+// `sumRange_congr_lt`/`sumRange_add`, then replace the row-major half by the
+// antidiagonal triangle via [`declare_sum_range_diagonal`]'s own headline.
+
+/// `fun i => sumRange (fun j => F i j) n` — one row of the RECTANGLE sum, at
+/// its full width `n` (unlike [`diag_row_fn_c`], which stops at `n−i`).
+fn rect_row_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId, n: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let inner = diag_row_inner_c(d, ff, i);
+    let sr = d.const_app(p.sum_range, &[inner, n]);
+    d.lam_fv(i_fv, nat, sr)
+}
+
+/// The rectangle sum `Σ_{i<n} Σ_{j<n} F i j`.
+fn rectangle_sum_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId, n: ExprId) -> ExprId {
+    let r = rect_row_c(d, p, ff, n);
+    d.const_app(p.sum_range, &[r, n])
+}
+
+/// `fun k => f (add m k)` — `f` shifted so its own zero sits at `m`. Matches
+/// [`declare_sum_range_split`]'s own private `shifted_fn` shape exactly, so a
+/// `sumRange_split` instance's inferred shifted-tail function lines up (up to
+/// the kernel's defeq check) with a sum built against THIS function.
+fn shifted_c(d: &mut IntDev<'_>, f: ExprId, m: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let mk = NatOps::add(d, m, k);
+    let fmk = d.apply(f, &[mk]);
+    d.lam_fv(k_fv, nat, fmk)
+}
+
+/// Row `i`'s corner summand: `shifted_c(row_inner F i, sub n i)`, i.e.
+/// `fun k => F i (add (sub n i) k)` — the suffix of row `i` beyond the
+/// [`diag_row_fn_c`] prefix, reindexed to start at `0`.
+fn corner_inner_c(d: &mut IntDev<'_>, ff: ExprId, i: ExprId, n: ExprId) -> ExprId {
+    let row_inner_i = diag_row_inner_c(d, ff, i);
+    let sub_ni = d.sub(n, i);
+    shifted_c(d, row_inner_i, sub_ni)
+}
+
+/// `fun i => sumRange (corner_inner_c F i n) i` — row `i`'s corner mass,
+/// width `i` (row `i`'s full width `n` minus the [`diag_row_fn_c`] prefix's
+/// width `n−i`).
+fn corner_row_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId, n: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let inner = corner_inner_c(d, ff, i, n);
+    let sr = d.const_app(p.sum_range, &[inner, i]);
+    d.lam_fv(i_fv, nat, sr)
+}
+
+/// The corner sum `Σ_{i<n} Σ_{k<i} F i ((n−i)+k)`, i.e. the mass of
+/// `{(i,j) : i<n, j<n, i+j ≥ n}`.
+fn corner_sum_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId, n: ExprId) -> ExprId {
+    let c = corner_row_c(d, p, ff, n);
+    d.const_app(p.sum_range, &[c, n])
+}
+
+/// `∀ i, Nat.lt i n → Equiv (sumRange (diag_row_inner_c F i) n)
+///   (add (sumRange (diag_row_inner_c F i) (sub n i))
+///        (sumRange (corner_inner_c F i n) i))`
+/// — row `i`'s full width splits into the [`diag_row_fn_c`] prefix and the
+/// corner suffix, for `i < n` (hence `i ≤ n`, which `Complex.sumRange_split`'s
+/// split point `n = (n−i)+i` needs via `Nat.sub_add_cancel`).
+///
+/// The `Nat`-level restoration `add (sub n i) i = n` is lifted into a
+/// `Complex.Equiv` fact about `sumRange (diag_row_inner_c F i)` at the two
+/// bounds via `nat_eq_to_complex_equiv`, then composed with
+/// `Complex.sumRange_split` (instantiated at the split point `sub n i`) via
+/// `Equiv.trans` — the `Complex` port of `nat_prelude/rectangle.rs`'s
+/// `rect_pointwise`.
+fn rect_pointwise_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId, n: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let nat_p = d.prelude();
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hyp_ty = d.lt(i, n);
+    let hi_fv = d.fresh_fvar();
+    let hi = d.kernel().fvar(hi_fv);
+
+    // Le i n, from Lt i n (definitionally Le (succ i) n) via le_succ + le_trans.
+    let si = d.succ(i);
+    let le_succ_i = d.lemma(nat_p.le_succ, &[i]);
+    let le_i_n = d.lemma(nat_p.le_trans, &[i, si, n, le_succ_i, hi]);
+
+    let row_inner_i = diag_row_inner_c(d, ff, i);
+    let sub_ni = d.sub(n, i);
+
+    // sub_add_cancel i n le_i_n : Eq(add(sub n i, i), n)
+    let h_restore = d.lemma(nat_p.sub_add_cancel, &[i, n, le_i_n]);
+    let add_sub_i = NatOps::add(d, sub_ni, i);
+    let n_eq = d.symm(add_sub_i, n, h_restore); // Eq(n, add_sub_i)
+
+    let target_f =
+        |d: &mut IntDev<'_>, x: ExprId| -> ExprId { d.const_app(p.sum_range, &[row_inner_i, x]) };
+    let h_lift = nat_eq_to_complex_equiv(d, p, n, add_sub_i, n_eq, &target_f);
+    // h_lift : Equiv(sumRange(row_inner_i, n), sumRange(row_inner_i, add_sub_i))
+
+    let h_split = d.lemma(p.sum_range_split, &[row_inner_i, sub_ni, i]);
+    // h_split : Equiv(sumRange(row_inner_i, add(sub_ni,i)),
+    //                 add(sumRange(row_inner_i,sub_ni), sumRange(corner_inner_i,i)))
+
+    let sum_row_i_n = d.const_app(p.sum_range, &[row_inner_i, n]);
+    let sum_row_i_addsubi = d.const_app(p.sum_range, &[row_inner_i, add_sub_i]);
+    let sum_row_i_subni = d.const_app(p.sum_range, &[row_inner_i, sub_ni]);
+    let corner_i = corner_inner_c(d, ff, i, n);
+    let sum_corner_i = d.const_app(p.sum_range, &[corner_i, i]);
+    let rhs = d.const_app(p.add, &[sum_row_i_subni, sum_corner_i]);
+
+    let body = d.lemma(
+        p.equiv_trans,
+        &[sum_row_i_n, sum_row_i_addsubi, rhs, h_lift, h_split],
+    );
+
+    let with_hi = d.lam_fv(hi_fv, hyp_ty, body);
+    d.lam_fv(i_fv, nat, with_hi)
+}
+
+/// `Equiv (rectangle_sum_c F n) (add (diag_row_sum_c F n) (corner_sum_c F n))`
+/// — split every row (via [`rect_pointwise_c`] + `Complex.sumRange_congr_lt`),
+/// then regroup the two halves (via `Complex.sumRange_add`). The `Complex`
+/// port of `nat_prelude/rectangle.rs`'s `rectangle_split_step`.
+fn rectangle_split_step_c(d: &mut IntDev<'_>, p: ComplexPrelude, ff: ExprId, n: ExprId) -> ExprId {
+    let rect_row_n = rect_row_c(d, p, ff, n);
+    let row_fn_n = diag_row_fn_c(d, p, ff, n);
+    let corner_row_n = corner_row_c(d, p, ff, n);
+    let combined = diag_combined_fn_c(d, p, row_fn_n, corner_row_n);
+
+    let pointwise = rect_pointwise_c(d, p, ff, n);
+    let h1 = d.lemma(p.sum_range_congr_lt, &[rect_row_n, combined, n, pointwise]);
+    let h2 = d.lemma(p.sum_range_add, &[row_fn_n, corner_row_n, n]);
+
+    let rect_sum = d.const_app(p.sum_range, &[rect_row_n, n]);
+    let sum_combined = d.const_app(p.sum_range, &[combined, n]);
+    let row_sum_n = d.const_app(p.sum_range, &[row_fn_n, n]);
+    let corner_sum_n = d.const_app(p.sum_range, &[corner_row_n, n]);
+    let final_rhs = d.const_app(p.add, &[row_sum_n, corner_sum_n]);
+
+    d.lemma(p.equiv_trans, &[rect_sum, sum_combined, final_rhs, h1, h2])
+}
+
+/// `Complex.sumRange_rect_eq_diag_add_corner`: see
+/// [`ComplexPrelude::sum_range_rect_eq_diag_add_corner`] for the statement and
+/// route. The `Complex` port of `nat_prelude/rectangle.rs`'s
+/// `declare_sum_range_rect_eq_diag_add_corner`, `Equiv` in place of `Eq`
+/// throughout.
+fn declare_sum_range_rect_eq_diag_add_corner(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = complex_ty(d, p);
+    let fn2_ty = {
+        let inner = d.arrow(nat, carrier);
+        d.arrow(nat, inner)
+    };
+    let f_fv = d.fresh_fvar();
+    let ff = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let rect = rectangle_sum_c(d, p, ff, n);
+    let tri = diag_triangle_sum_c(d, p, ff, n);
+    let corner = corner_sum_c(d, p, ff, n);
+    let rhs_stmt = d.const_app(p.add, &[tri, corner]);
+    let stmt = zeq(d, p, rect, rhs_stmt);
+
+    // split_proof : Equiv(rect, add(row_sum_n, corner_sum_n))
+    let split_proof = rectangle_split_step_c(d, p, ff, n);
+
+    let row_sum_n = diag_row_sum_c(d, p, ff, n);
+    let corner_sum_n = corner_sum_c(d, p, ff, n);
+    let mid = d.const_app(p.add, &[row_sum_n, corner_sum_n]);
+
+    // h_diag : Equiv(tri, row_sum_n)   [Complex.sumRange_diagonal ff n]
+    let h_diag = d.lemma(p.sum_range_diagonal, &[ff, n]);
+    // h_diag_symm : Equiv(row_sum_n, tri)
+    let h_diag_symm = d.lemma(p.equiv_symm, &[tri, row_sum_n, h_diag]);
+
+    let refl_corner = d.lemma(p.equiv_refl, &[corner_sum_n]);
+    // h_lift : Equiv(mid, rhs_stmt)
+    let h_lift = d.lemma(
+        p.add_congr,
+        &[
+            row_sum_n,
+            tri,
+            corner_sum_n,
+            corner_sum_n,
+            h_diag_symm,
+            refl_corner,
+        ],
+    );
+
+    let proof = d.lemma(p.equiv_trans, &[rect, mid, rhs_stmt, split_proof, h_lift]);
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(f_fv, fn2_ty, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(f_fv, fn2_ty, over_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_rect_eq_diag_add_corner,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.sumRange_mul_eq_diag_add_corner`: see
+/// [`ComplexPrelude::sum_range_mul_eq_diag_add_corner`] for the statement and
+/// route — the finite Cauchy product's honest form, composing
+/// [`ComplexPrelude::sum_range_mul_double`] with
+/// [`declare_sum_range_rect_eq_diag_add_corner`]'s headline via `Equiv.trans`.
+fn declare_sum_range_mul_eq_diag_add_corner(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    // F := fun i j => mul (f i) (g j), the curried two-argument summand
+    // `sum_range_rect_eq_diag_add_corner`'s `F` quantifier expects.
+    let big_f = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let gj = d.apply(g, &[j]);
+        let body = d.const_app(p.mul, &[fi, gj]);
+        let inner = d.lam_fv(j_fv, nat, body);
+        d.lam_fv(i_fv, nat, inner)
+    };
+
+    let sf = d.const_app(p.sum_range, &[f, n]);
+    let sg = d.const_app(p.sum_range, &[g, n]);
+    let lhs = d.const_app(p.mul, &[sf, sg]);
+
+    let tri = diag_triangle_sum_c(d, p, big_f, n);
+    let corner = corner_sum_c(d, p, big_f, n);
+    let rhs_stmt = d.const_app(p.add, &[tri, corner]);
+    let stmt = zeq(d, p, lhs, rhs_stmt);
+
+    // h1 : Equiv(lhs, <sum_range_mul_double's own un-curried rectangle shape>)
+    let h1 = d.lemma(p.sum_range_mul_double, &[f, g, n, n]);
+
+    // rect_applied : sumRange(fun i => sumRange(fun j => big_f i j) n) n) --
+    // beta-equivalent to sum_range_mul_double's un-curried shape (two beta
+    // steps resolve `big_f i j` to `mul (f i) (g j)`), which the kernel's own
+    // defeq check performs when it type-checks `h1` against this `b` argument
+    // of `equiv_trans` below.
+    let rect_applied = rectangle_sum_c(d, p, big_f, n);
+    // h2 : Equiv(rect_applied, add(tri, corner))
+    let h2 = d.lemma(p.sum_range_rect_eq_diag_add_corner, &[big_f, n]);
+
+    let proof = d.lemma(p.equiv_trans, &[lhs, rect_applied, rhs_stmt, h1, h2]);
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_n);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_n);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_mul_eq_diag_add_corner,
         uparams: vec![],
         ty,
         value,
