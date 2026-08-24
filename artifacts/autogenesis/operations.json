@@ -1283,7 +1283,7 @@
       },
       "producer": {
         "operation": "bounded-induction-reflexivity-v1",
-        "implementation": "crates/axeyum-lean-import/examples/bounded_induction_support/mod.rs",
+        "implementation": "crates/axeyum-lean-import/src/producers/bounded_induction.rs",
         "input_kind": "axeyum-proof-isolated-kernel-goal",
         "output_kind": "axeyum-bounded-induction-candidate"
       },
@@ -1370,7 +1370,7 @@
       },
       "producer": {
         "operation": "modeq-family-eq-iff-combinators-v1",
-        "implementation": "crates/axeyum-lean-import/examples/modeq_family_support/mod.rs",
+        "implementation": "crates/axeyum-lean-import/src/producers/modeq_family.rs",
         "input_kind": "axeyum-proof-isolated-kernel-goal",
         "output_kind": "axeyum-modeq-family-candidate"
       },

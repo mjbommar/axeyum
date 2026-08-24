@@ -1,5 +1,6 @@
 //! Produce and independently check one bounded Eq/Iff-combinator candidate
-//! (see `modeq_family_support`) for a proof-isolated statement import, then
+//! (see `axeyum_lean_import::producers::modeq_family`) for a proof-isolated
+//! statement import, then
 //! mechanically audit that the candidate does not cite the target theorem
 //! itself or any named sibling — never by doc comment, never by head symbol,
 //! only over `Kernel::declaration_dependency_closure`.
@@ -9,14 +10,12 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+use axeyum_lean_import::producers::modeq_family;
 use axeyum_lean_import::{ImportLimits, import_statement_ndjson};
 use axeyum_lean_kernel::{Declaration, Kernel, NameId};
 use sha2::{Digest, Sha256};
 
-#[path = "modeq_family_support/mod.rs"]
-mod modeq_family_support;
-
-use modeq_family_support::propose_modeq_family;
+use modeq_family::propose_modeq_family;
 
 fn sha256(text: &str) -> String {
     Sha256::digest(text.as_bytes())
@@ -78,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             format!("independent kernel rejected modeq-family candidate: {error:?}")
         })?;
 
-    // Mechanical circularity guard — `modeq_family_support::audit_circularity`,
+    // Mechanical circularity guard — `modeq_family::audit_circularity`,
     // computed only from `Kernel::declaration_dependency_closure` /
     // `Kernel::axiom_footprint` / `Kernel::theorem_dependencies`, never a doc
     // comment, never a head-symbol text match. `crates/axeyum-lean-import/
@@ -86,7 +85,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // proving this exact function actually rejects a candidate built to cite
     // its own target, and a positive control proving it does not
     // false-positive on a genuine derivation.
-    let audit = modeq_family_support::audit_circularity(&kernel, candidate_name, target_name);
+    let audit = modeq_family::audit_circularity(&kernel, candidate_name, target_name);
     if !audit.passes() {
         return Err(format!("candidate dependency audit failed: {audit:?}").into());
     }
@@ -99,7 +98,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "MODEQ_FAMILY_OK|target={target}|goal_sha256={goal_sha256}|proof_sha256={proof_sha256}|target_content_sha256={}|binders_used={}|max_binders={}|declarations={}|axioms={}|theorem_dependencies={}|target_dependency={}|ledger_writes=0",
         target_identity.content_sha256,
         candidate.binders_used,
-        modeq_family_support::MAX_BINDERS,
+        modeq_family::MAX_BINDERS,
         report.declaration_identities.len(),
         audit.axiom_footprint,
         audit.theorem_dependencies,

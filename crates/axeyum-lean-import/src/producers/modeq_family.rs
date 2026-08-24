@@ -5,7 +5,7 @@
 //! never names `Int`, `Nat`, `ModEq`, `%`, or any target/sibling declaration:
 //! it peels every leading `Pi` binder into a fresh free variable (an ordinary
 //! hypothesis, exactly like a domain binder — there is no dependent/induction
-//! distinction to make here, unlike `bounded_induction_support`), and at the
+//! distinction to make here, unlike `producers::bounded_induction`), and at the
 //! terminal, non-`Pi` goal it `whnf`s to see through whatever the goal's own
 //! head symbol transparently unfolds to, then closes an `Eq`-headed goal by
 //! reflexivity, symmetry, or transitivity over the retained hypotheses, and
@@ -49,17 +49,35 @@ pub const MAX_BINDERS: usize = 8;
 /// One fully constructed candidate.
 #[derive(Debug)]
 pub struct Candidate {
+    /// The proposed proof term, valid only in the kernel that produced it.
+    ///
+    /// Untrusted until that same kernel re-checks it through
+    /// `Kernel::add_declaration`.
     pub proof: ExprId,
+    /// How many leading `Pi` binders the search peeled, out of
+    /// [`MAX_BINDERS`].
     pub binders_used: usize,
 }
 
 /// Why the bounded search declined, tagged by stage.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeclineReason {
+    /// The goal has more leading `Pi` binders than [`MAX_BINDERS`] allows.
     BinderBudgetExceeded,
+    /// A structural primitive this producer needs (the named declaration)
+    /// occurs in the kernel's environment a number of times other than one —
+    /// either absent, or ambiguous.
     RequiredDeclarationUnavailable(String),
+    /// `Eq`'s discovered recursor has a shape this producer cannot drive; the
+    /// payload describes which expectation failed.
     UnsupportedRecursorShape(String),
+    /// `Iff` was found but its constructor does not have the two-field shape
+    /// this producer's `Iff.intro` reconstruction needs; the payload describes
+    /// which expectation failed.
     UnsupportedIffShape(String),
+    /// The terminal goal is `Eq`- or `Iff`-headed but none of the
+    /// refl/symm/trans/`Iff.intro` combinators over the retained hypotheses
+    /// closed it.
     TerminalNotClosed,
 }
 
@@ -128,7 +146,7 @@ fn lam_fv(
 
 /// The ambient `Eq`/`Eq.refl`/`Eq.rec` primitives, discovered by exact
 /// display name and checked rather than assumed — same discipline as
-/// `bounded_induction_support::discover_eq_primitives` and
+/// `producers::bounded_induction::discover_eq_primitives` and
 /// `trusted_substitution::discover_eq`, independently re-derived here since
 /// both of those are private to their own modules.
 struct EqPrimitives {
@@ -314,7 +332,7 @@ fn build_eq_trans(
 /// `q`) are the constructor's leading positional arguments at the term level
 /// regardless of their surface binder-info, exactly like every other
 /// constructor application this codebase builds by hand (e.g.
-/// `bounded_induction_support::build_eq_refl` applies `Eq`'s own carrier
+/// `producers::bounded_induction::build_eq_refl` applies `Eq`'s own carrier
 /// positionally). `Iff` is `Prop`-valued with no polymorphism, so
 /// `Iff.intro` takes no universe arguments.
 #[allow(clippy::similar_names)]
@@ -527,7 +545,7 @@ impl Search {
 }
 
 /// First free-variable id this producer mints. Chosen far above anything an
-/// import stream, `bounded_induction_support` (`9_000_000`), or
+/// import stream, `producers::bounded_induction` (`9_000_000`), or
 /// `trusted_substitution` (`900_000_000`) would use, so this producer's free
 /// variables cannot collide with any of them within one process.
 const FVAR_BASE: u64 = 9_500_000_000;
@@ -537,6 +555,13 @@ const FVAR_BASE: u64 = 9_500_000_000;
 /// whenever the goal is not entirely built from `Pi` binders over an
 /// eventual `Eq`- or `Iff`-headed terminal this schema's refl/symm/trans/
 /// `Iff.intro` combinators can close.
+///
+/// # Errors
+///
+/// Returns a typed [`DeclineReason`] when the bounded search does not close
+/// the goal. A decline is an ordinary outcome, not a failure: this producer is
+/// untrusted search, and exhausting a budget or meeting an unsupported shape
+/// is exactly what it is supposed to report.
 pub fn propose_modeq_family(kernel: &mut Kernel, goal: ExprId) -> Result<Candidate, DeclineReason> {
     let eqp = discover_eq(kernel)?;
     let iffp = discover_iff(kernel).ok();

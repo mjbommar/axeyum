@@ -46,6 +46,7 @@ mod identity;
 mod nat_le_brecon_substitution;
 mod nat_no_confusion_substitution;
 mod nat_order_substitution;
+pub mod producers;
 mod semantic_contract_receipt;
 mod source_delta_trace;
 mod theorem_composition;
