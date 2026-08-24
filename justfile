@@ -455,6 +455,7 @@ autogenesis-knowledge-derived-freshness:
     python3 scripts/gen-autogenesis-transport-projection.py --check
     python3 scripts/gen-autogenesis-scheduler-observations.py --check
     python3 scripts/gen-autogenesis-capability-gap-projection.py --check
+    python3 scripts/gen-autogenesis-concept-coverage-projection.py --check
 
 autogenesis-kernel-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
@@ -482,6 +483,11 @@ autogenesis-capability-gap:
 autogenesis-family-concepts:
     python3 -m unittest scripts.tests.test_validate_autogenesis_family_concept_crosswalk
     python3 scripts/validate-autogenesis-family-concept-crosswalk.py
+
+autogenesis-concept-coverage:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_concept_coverage_projection
+    python3 scripts/validate-autogenesis-concept-coverage-projection.py
+    python3 scripts/gen-autogenesis-concept-coverage-projection.py --check
 
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh

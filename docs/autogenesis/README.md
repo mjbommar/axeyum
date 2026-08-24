@@ -254,6 +254,7 @@ compounding, not automation theatre.
 | [Transport projection](246-transport-projection-result.md) | Which source-to-admission chains are hash-bound and complete, rather than merely name-matched? |
 | [Capability-gap projection](247-capability-gap-projection-result.md) | Which dependency-ready fact groups lack a registered producer, and why is autonomous dispatch currently refused? |
 | [Family-to-concept crosswalk](248-family-concept-crosswalk.md) | How can frozen statement families receive pinned mathematical-topic labels without being mistaken for fact-level formalizations? |
+| [Separated concept coverage](249-concept-coverage-projection.md) | Which concepts have family-topic or qualified fact-level coverage, with neither mistaken for complete formal coverage? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

@@ -304,6 +304,8 @@ step autogenesis-transport-projection python3 -m unittest scripts.tests.test_val
 step autogenesis-transport-projection-content python3 scripts/validate-autogenesis-transport-projection.py
 step autogenesis-capability-gap python3 -m unittest scripts.tests.test_validate_autogenesis_capability_gap_projection
 step autogenesis-capability-gap-content python3 scripts/validate-autogenesis-capability-gap-projection.py
+step autogenesis-concept-coverage python3 -m unittest scripts.tests.test_validate_autogenesis_concept_coverage_projection
+step autogenesis-concept-coverage-content python3 scripts/validate-autogenesis-concept-coverage-projection.py
 step autogenesis-proposer-isolation ./scripts/check-autogenesis-proposer-isolation.sh
 step autogenesis-induction-search ./scripts/check-autogenesis-induction-search.sh
 step autogenesis-apply-search ./scripts/check-autogenesis-apply-search.sh
