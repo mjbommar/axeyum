@@ -10,6 +10,11 @@ fn apply2(kernel: &mut Kernel, function: ExprId, lhs: ExprId, rhs: ExprId) -> Ex
     kernel.app(applied, rhs)
 }
 
+// `LogicPrelude` grew past clippy's by-value size threshold once the
+// `Decidable` infrastructure was added to the logic prelude; it is `Copy`
+// and cheap to move, so this is a size-lint override, not a real
+// inefficiency.
+#[allow(clippy::large_types_passed_by_value)]
 fn reflexivity(
     kernel: &mut Kernel,
     logic: LogicPrelude,

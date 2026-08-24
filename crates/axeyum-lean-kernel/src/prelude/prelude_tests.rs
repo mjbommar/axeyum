@@ -44,6 +44,10 @@ fn pi_fvar(k: &mut Kernel, fvar: u64, ty: crate::ExprId, body: crate::ExprId) ->
     k.pi(anon, ty, body, BinderInfo::Default)
 }
 
+// `LogicPrelude` grew past clippy's by-value size threshold once the
+// `Decidable` infrastructure was added; it is `Copy` and cheap to move, so
+// this is a size-lint override, not a real inefficiency.
+#[allow(clippy::large_types_passed_by_value)]
 fn empty_relation(k: &mut Kernel, p: LogicPrelude, carrier: crate::ExprId) -> crate::ExprId {
     let anon = k.anon();
     let false_prop = k.const_(p.false_, vec![]);
@@ -51,6 +55,7 @@ fn empty_relation(k: &mut Kernel, p: LogicPrelude, carrier: crate::ExprId) -> cr
     k.lam(anon, carrier, inner, BinderInfo::Default)
 }
 
+#[allow(clippy::large_types_passed_by_value)]
 fn empty_well_founded(
     k: &mut Kernel,
     p: LogicPrelude,
@@ -287,6 +292,20 @@ fn prelude_admits_all_declarations() {
         p.em_of_dne,
         p.peirce_of_em,
         p.em_of_peirce,
+        p.not_not_not_intro,
+        p.not_not_and,
+        p.not_not_imp,
+        p.bool_false_ne_true,
+        p.bool_true_ne_false,
+        p.decidable,
+        p.decidable_is_false,
+        p.decidable_is_true,
+        p.decidable_rec,
+        p.decide,
+        p.of_decide_eq_true,
+        p.of_decide_eq_false,
+        p.decidable_em,
+        p.decidable_by_cases,
     ] {
         assert!(
             k.environment().contains(name),
@@ -396,6 +415,25 @@ fn prelude_admits_all_declarations() {
             }
             _ => panic!("expected recursor"),
         }
+    }
+
+    // Decidable has 1 param, 0 indices, 2 minors (isFalse, isTrue), and
+    // retains large elimination -- it lives in `Type`, not `Prop`, unlike
+    // `Or` above.
+    match k.environment().get(p.decidable_rec).unwrap() {
+        Declaration::Recursor {
+            num_params,
+            num_indices,
+            num_minors,
+            uparams,
+            ..
+        } => {
+            assert_eq!(*num_params, 1);
+            assert_eq!(*num_indices, 0);
+            assert_eq!(*num_minors, 2);
+            assert_eq!(uparams.len(), 1, "Decidable retains large elimination");
+        }
+        _ => panic!("Decidable.rec should be a recursor"),
     }
 }
 
@@ -2398,5 +2436,263 @@ fn absurd_and_mt_check() {
     assert!(
         f.k.def_eq(mt_applied, expected_applied),
         "mt A B f nb ha = nb hb"
+    );
+}
+
+/// The double-negation toolkit and the `Decidable` infrastructure: every one
+/// of them must be **present** (a name interned but never declared would
+/// pass an `axiom_footprint` check vacuously) and every one of them must
+/// have an **empty** `axiom_footprint` -- in particular, none of them may
+/// reach `Classical.em`, `propext`, `funext`, or `Quot.sound`.
+#[test]
+fn double_negation_and_decidable_are_present_and_axiom_free() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
+
+    for name in [
+        p.not_not_not_intro,
+        p.not_not_and,
+        p.not_not_imp,
+        p.bool_false_ne_true,
+        p.bool_true_ne_false,
+        p.decidable,
+        p.decidable_is_false,
+        p.decidable_is_true,
+        p.decidable_rec,
+        p.decide,
+        p.of_decide_eq_true,
+        p.of_decide_eq_false,
+        p.decidable_em,
+        p.decidable_by_cases,
+    ] {
+        assert!(
+            k.environment().contains(name),
+            "prelude should declare {}",
+            k.display_name(name)
+        );
+        let footprint = k.axiom_footprint(name);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(name),
+            footprint
+                .iter()
+                .map(|n| k.display_name(*n).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// `Decidable.decide` genuinely computes: `decide A (isTrue A ha) ≡ Bool.true`
+/// and `decide A (isFalse A na) ≡ Bool.false`, both by ι-reduction through
+/// `Decidable.rec` (checked with `def_eq`, mirroring
+/// `computational_bool_has_two_distinct_values`).
+#[test]
+fn decidable_decide_computes_on_both_constructors() {
+    let mut f = fixture();
+    let anon = f.k.anon();
+    let a = f.a_const();
+    let ha = f.ha_const();
+    let false_const = f.k.const_(f.p.false_, vec![]);
+
+    // na : A → False, a fresh axiom (the fixture has no negative witness).
+    let na_ty = f.k.pi(anon, a, false_const, BinderInfo::Default);
+    let na_name = f.k.name_str(anon, "na");
+    f.k.add_declaration(Declaration::Axiom {
+        name: na_name,
+        uparams: vec![],
+        ty: na_ty,
+    })
+    .unwrap();
+    let na = f.k.const_(na_name, vec![]);
+
+    let is_true_const = f.k.const_(f.p.decidable_is_true, vec![]);
+    let d_true = apply_all(&mut f.k, is_true_const, &[a, ha]);
+    let is_false_const = f.k.const_(f.p.decidable_is_false, vec![]);
+    let d_false = apply_all(&mut f.k, is_false_const, &[a, na]);
+
+    let decide_const = f.k.const_(f.p.decide, vec![]);
+    let decide_true = apply_all(&mut f.k, decide_const, &[a, d_true]);
+    let decide_const2 = f.k.const_(f.p.decide, vec![]);
+    let decide_false = apply_all(&mut f.k, decide_const2, &[a, d_false]);
+
+    let bool_true = f.k.const_(f.p.bool_true, vec![]);
+    let bool_false = f.k.const_(f.p.bool_false, vec![]);
+
+    assert!(
+        f.k.def_eq(decide_true, bool_true),
+        "decide A (isTrue A ha) = Bool.true"
+    );
+    assert!(
+        f.k.def_eq(decide_false, bool_false),
+        "decide A (isFalse A na) = Bool.false"
+    );
+    assert!(
+        !f.k.def_eq(decide_true, decide_false),
+        "the two branches must remain distinct"
+    );
+}
+
+/// `Decidable.em` selects the matching `Or` branch by ι-reduction: on
+/// `isTrue A ha` it is `Or.inl A (A→False) ha`, on `isFalse A na` it is
+/// `Or.inr A (A→False) na`.
+#[test]
+fn decidable_em_selects_the_correct_branch() {
+    let mut f = fixture();
+    let anon = f.k.anon();
+    let a = f.a_const();
+    let ha = f.ha_const();
+    let false_const = f.k.const_(f.p.false_, vec![]);
+    let na_ty = f.k.pi(anon, a, false_const, BinderInfo::Default);
+    let na_name = f.k.name_str(anon, "na");
+    f.k.add_declaration(Declaration::Axiom {
+        name: na_name,
+        uparams: vec![],
+        ty: na_ty,
+    })
+    .unwrap();
+    let na = f.k.const_(na_name, vec![]);
+
+    let is_true_const = f.k.const_(f.p.decidable_is_true, vec![]);
+    let d_true = apply_all(&mut f.k, is_true_const, &[a, ha]);
+    let is_false_const = f.k.const_(f.p.decidable_is_false, vec![]);
+    let d_false = apply_all(&mut f.k, is_false_const, &[a, na]);
+
+    let em_const = f.k.const_(f.p.decidable_em, vec![]);
+    let em_true = apply_all(&mut f.k, em_const, &[a, d_true]);
+    let em_const2 = f.k.const_(f.p.decidable_em, vec![]);
+    let em_false = apply_all(&mut f.k, em_const2, &[a, d_false]);
+
+    let or_inl_const = f.k.const_(f.p.or_inl, vec![]);
+    let expected_true = apply_all(&mut f.k, or_inl_const, &[a, na_ty, ha]);
+    let or_inr_const = f.k.const_(f.p.or_inr, vec![]);
+    let expected_false = apply_all(&mut f.k, or_inr_const, &[a, na_ty, na]);
+
+    assert!(
+        f.k.def_eq(em_true, expected_true),
+        "Decidable.em A (isTrue A ha) = Or.inl A (A→False) ha"
+    );
+    assert!(
+        f.k.def_eq(em_false, expected_false),
+        "Decidable.em A (isFalse A na) = Or.inr A (A→False) na"
+    );
+}
+
+/// `Decidable.of_decide_eq_true`/`of_decide_eq_false` genuinely extract a
+/// proof of (the negation of) `A` from a computed `Bool.true`/`Bool.false`
+/// equality, at both `Decidable` constructors -- the "spec direction" that
+/// ties `decide` back to the proposition it decided.
+#[test]
+fn of_decide_eq_true_and_false_apply_at_both_constructors() {
+    let mut f = fixture();
+    let anon = f.k.anon();
+    let a = f.a_const();
+    let ha = f.ha_const();
+    let false_const = f.k.const_(f.p.false_, vec![]);
+    let na_ty = f.k.pi(anon, a, false_const, BinderInfo::Default);
+    let na_name = f.k.name_str(anon, "na");
+    f.k.add_declaration(Declaration::Axiom {
+        name: na_name,
+        uparams: vec![],
+        ty: na_ty,
+    })
+    .unwrap();
+    let na = f.k.const_(na_name, vec![]);
+
+    let is_true_const = f.k.const_(f.p.decidable_is_true, vec![]);
+    let d_true = apply_all(&mut f.k, is_true_const, &[a, ha]);
+    let is_false_const = f.k.const_(f.p.decidable_is_false, vec![]);
+    let d_false = apply_all(&mut f.k, is_false_const, &[a, na]);
+
+    let bool_const = f.k.const_(f.p.bool_, vec![]);
+    let bool_true = f.k.const_(f.p.bool_true, vec![]);
+    let bool_false = f.k.const_(f.p.bool_false, vec![]);
+    let one = {
+        let z = f.k.level_zero();
+        f.k.level_succ(z)
+    };
+    let eq_refl_const = f.k.const_(f.p.eq_refl, vec![one]);
+
+    // of_decide_eq_true A d_true (Eq.refl Bool Bool.true) : A -- the
+    // hypothesis type-checks against `Eq Bool (decide A d_true) Bool.true`
+    // only because `decide A d_true` reduces to `Bool.true`.
+    let refl_true = apply_all(&mut f.k, eq_refl_const, &[bool_const, bool_true]);
+    let of_true_const = f.k.const_(f.p.of_decide_eq_true, vec![]);
+    let applied_true = apply_all(&mut f.k, of_true_const, &[a, d_true, refl_true]);
+    let inferred_true = f.k.infer(applied_true).expect("of_decide_eq_true checks");
+    assert!(
+        f.k.def_eq(inferred_true, a),
+        "of_decide_eq_true A d_true refl : A"
+    );
+
+    // of_decide_eq_false A d_false (Eq.refl Bool Bool.false) : A → False.
+    let refl_false = apply_all(&mut f.k, eq_refl_const, &[bool_const, bool_false]);
+    let of_false_const = f.k.const_(f.p.of_decide_eq_false, vec![]);
+    let applied_false = apply_all(&mut f.k, of_false_const, &[a, d_false, refl_false]);
+    let inferred_false = f.k.infer(applied_false).expect("of_decide_eq_false checks");
+    assert!(
+        f.k.def_eq(inferred_false, na_ty),
+        "of_decide_eq_false A d_false refl : A → False"
+    );
+}
+
+/// `Decidable.byCases` selects the matching branch by ι-reduction, at a
+/// `Type`-valued motive (`Bool`) -- exactly the "select data" capability
+/// `Or.rec` structurally cannot offer.
+#[test]
+fn decidable_by_cases_selects_data_at_a_type_valued_motive() {
+    let mut f = fixture();
+    let anon = f.k.anon();
+    let a = f.a_const();
+    let ha = f.ha_const();
+    let false_const = f.k.const_(f.p.false_, vec![]);
+    let na_ty = f.k.pi(anon, a, false_const, BinderInfo::Default);
+    let na_name = f.k.name_str(anon, "na");
+    f.k.add_declaration(Declaration::Axiom {
+        name: na_name,
+        uparams: vec![],
+        ty: na_ty,
+    })
+    .unwrap();
+    let na = f.k.const_(na_name, vec![]);
+
+    let is_true_const = f.k.const_(f.p.decidable_is_true, vec![]);
+    let d_true = apply_all(&mut f.k, is_true_const, &[a, ha]);
+    let is_false_const = f.k.const_(f.p.decidable_is_false, vec![]);
+    let d_false = apply_all(&mut f.k, is_false_const, &[a, na]);
+
+    let bool_const = f.k.const_(f.p.bool_, vec![]);
+    let bool_true = f.k.const_(f.p.bool_true, vec![]);
+    let bool_false = f.k.const_(f.p.bool_false, vec![]);
+
+    // hpos := fun (_:A) => Bool.true ; hneg := fun (_:A→False) => Bool.false.
+    let dummy1 = 98_100u64;
+    let hpos = lam_fvar(&mut f.k, dummy1, a, bool_true);
+    let dummy2 = 98_101u64;
+    let hneg = lam_fvar(&mut f.k, dummy2, na_ty, bool_false);
+
+    let zero = f.k.level_zero();
+    let by_cases_const = f.k.const_(f.p.decidable_by_cases, vec![zero]);
+    let applied_true = apply_all(
+        &mut f.k,
+        by_cases_const,
+        &[a, bool_const, d_true, hpos, hneg],
+    );
+    let by_cases_const2 = f.k.const_(f.p.decidable_by_cases, vec![zero]);
+    let hpos2 = lam_fvar(&mut f.k, dummy1, a, bool_true);
+    let hneg2 = lam_fvar(&mut f.k, dummy2, na_ty, bool_false);
+    let applied_false = apply_all(
+        &mut f.k,
+        by_cases_const2,
+        &[a, bool_const, d_false, hpos2, hneg2],
+    );
+
+    assert!(
+        f.k.def_eq(applied_true, bool_true),
+        "byCases A Bool d_true hpos hneg = Bool.true"
+    );
+    assert!(
+        f.k.def_eq(applied_false, bool_false),
+        "byCases A Bool d_false hpos hneg = Bool.false"
     );
 }

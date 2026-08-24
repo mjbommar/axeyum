@@ -162,7 +162,7 @@ fn exercise_composition_controls(kernel: &mut Kernel) -> Result<ControlObservati
     let mut native = Kernel::new();
     let prelude = build_nat_prelude(&mut native)
         .map_err(|error| format!("native Nat prelude failed to build: {error:?}"))?;
-    let singleton_root = add_exists_control_theorem(&mut native, prelude.logic)?;
+    let singleton_root = add_exists_control_theorem(&mut native, &prelude.logic)?;
     let mod_lt_compatibility =
         checked_reused_declaration_compatibility(&native, kernel, "Nat.mod_lt")
             .map_err(|error| format!("Nat.mod_lt compatibility failed: {error:?}"))?;
@@ -246,9 +246,15 @@ fn receipt_kernel_submissions(receipt: &CheckedTheoremCompositionReceipt) -> usi
             .sum::<usize>()
 }
 
+// By reference, not by value: `LogicPrelude` crossed clippy's 256-byte
+// `large_types_passed_by_value` limit (252 -> 316) when the logic prelude gained
+// `Decidable` and the double-negation fragments. It is `Copy`, so this is a
+// size-lint accommodation and not a real inefficiency — but the lint fires
+// across crate boundaries, and this example is the only site outside
+// `axeyum-lean-kernel` that takes the prelude by value.
 fn add_exists_control_theorem(
     kernel: &mut Kernel,
-    logic: axeyum_lean_kernel::LogicPrelude,
+    logic: &axeyum_lean_kernel::LogicPrelude,
 ) -> Result<&'static str, String> {
     let zero = kernel.level_zero();
     let true_type = kernel.const_(logic.true_, vec![]);

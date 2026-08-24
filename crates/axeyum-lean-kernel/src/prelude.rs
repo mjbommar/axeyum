@@ -293,6 +293,67 @@ pub struct LogicPrelude {
     /// `Or.inr`-from-refuted-`Or.inl` construction as [`Self::not_not_em`].
     pub em_of_peirce: NameId,
 
+    /// `not_not_not_intro : Π (a : Prop), (a → False) → ¬¬¬a` — the other
+    /// half of the `¬¬¬a ↔ ¬a` pair ([`Self::not_not_not`] is `¬¬¬a → ¬a`):
+    /// [`Self::not_not_intro`] instantiated at `¬a` itself.
+    pub not_not_not_intro: NameId,
+    /// `not_not_and : Π (a b : Prop), ¬¬a → ¬¬b → ¬¬(And a b)` — the
+    /// conjunction case of the Gödel–Gentzen negative translation.
+    pub not_not_and: NameId,
+    /// `not_not_imp : Π (a b : Prop), (a → b) → ¬¬a → ¬¬b` — functoriality
+    /// (equivalently, monotonicity) of double negation.
+    pub not_not_imp: NameId,
+
+    /// `Bool.false_ne_true : Eq Bool Bool.false Bool.true → False` — Bool's
+    /// disjointness discriminator, built by transporting `True.intro`
+    /// through a type-valued `Bool.rec` discriminator along a hypothetical
+    /// `false = true`. The prerequisite for [`Self::of_decide_eq_true`]/
+    /// [`Self::of_decide_eq_false`] to rule out the impossible branch of a
+    /// computed `Bool`.
+    pub bool_false_ne_true: NameId,
+    /// `Bool.true_ne_false : Eq Bool Bool.true Bool.false → False` — the
+    /// mirror image of [`Self::bool_false_ne_true`], via [`Self::eq_symm`].
+    pub bool_true_ne_false: NameId,
+
+    /// `Decidable.{0} (p : Prop) : Type` — the `Type`-valued decision.
+    /// Unlike `Or` (a two-constructor `Prop` that eliminates only into
+    /// `Prop`), `Decidable` lives at `Sort 1` and its recursor eliminates
+    /// into an arbitrary `Sort v` ([`Self::decidable_by_cases`]).
+    pub decidable: NameId,
+    /// `Decidable.isFalse : Π (p : Prop) (h : p → False), Decidable p`.
+    pub decidable_is_false: NameId,
+    /// `Decidable.isTrue : Π (p : Prop) (h : p), Decidable p`.
+    pub decidable_is_true: NameId,
+    /// `Decidable.rec` — the `Decidable` eliminator; unlike `Or.rec`, this
+    /// one carries a genuine elimination-level parameter.
+    pub decidable_rec: NameId,
+    /// `Decidable.decide : Π (p : Prop), Decidable p → Bool` — a
+    /// [`Declaration::Definition`] (its codomain `Bool` is not `Prop`, the
+    /// same reason [`Self::absurd`] is a `Definition`). The missing
+    /// abstraction under `Nat.ble`/`Rat.ble`/`Char.beq`/`Str.beq`'s four
+    /// independent hand-rolled decision procedures.
+    pub decide: NameId,
+    /// `Decidable.of_decide_eq_true : Π (p : Prop) (d : Decidable p), Eq Bool
+    /// (decide p d) Bool.true → p` — one spec direction tying `decide` to
+    /// `p`: a `Decidable` witness that computed `true` proves `p`.
+    pub of_decide_eq_true: NameId,
+    /// `Decidable.of_decide_eq_false : Π (p : Prop) (d : Decidable p), Eq
+    /// Bool (decide p d) Bool.false → (p → False)` — the other spec
+    /// direction: a witness that computed `false` refutes `p`.
+    pub of_decide_eq_false: NameId,
+    /// `Decidable.em : Π (p : Prop), Decidable p → Or p (p → False)` —
+    /// excluded middle exactly where a decision procedure exists, and
+    /// nowhere else: the point of the whole `Decidable` design.
+    pub decidable_em: NameId,
+    /// `Decidable.byCases.{v} : Π (p : Prop) (C : Sort v) (d : Decidable p),
+    /// (p → C) → ((p → False) → C) → C` — a [`Declaration::Definition`]
+    /// (codomain an arbitrary `Sort v`, not `Prop`, like [`Self::decide`]).
+    /// Case-split with a `Type`-valued result, exactly what `Or.rec`
+    /// structurally cannot offer.
+    pub decidable_by_cases: NameId,
+    /// The universe parameter `v` of [`Self::decidable_by_cases`].
+    pub decidable_by_cases_vparam: NameId,
+
     /// `Bool : Type` (`Sort 1`) — the **computational** two-element type, a
     /// nullary enum `Bool.false | Bool.true`, in official Lean order. This is
     /// *not* the `Prop`-valued
@@ -3165,6 +3226,689 @@ pub(crate) fn build_logic_prelude_uncached(
             })?;
         }
 
+        // --- not_not_not_intro : Π (a : Prop), ¬a → ¬¬¬a ---------------------
+        // The other half of the ¬¬¬a ↔ ¬a pair (`not_not_not` above is
+        // ¬¬¬a → ¬a): `not_not_intro` instantiated at `¬a` itself.
+        let not_not_not_intro = kernel.name_str(anon, "not_not_not_intro");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 24_000;
+            let na_fvar = 24_001;
+            let a = kernel.fvar(a_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let na_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // ¬a
+            let nna_ty = kernel.pi(anon, na_ty, false_const, BinderInfo::Default); // ¬¬a
+            let nnna_ty = kernel.pi(anon, nna_ty, false_const, BinderInfo::Default); // ¬¬¬a
+
+            // type: Π (a : Prop), ¬a → ¬¬¬a.
+            let with_na = kernel.pi(anon, na_ty, nnna_ty, BinderInfo::Default);
+            let not_not_not_intro_ty = pi_fvar(kernel, a_fvar, prop, with_na, BinderInfo::Default);
+
+            // value: fun a na => not_not_intro (a → False) na.
+            let not_not_intro_const = kernel.const_(not_not_intro, vec![]);
+            let na = kernel.fvar(na_fvar);
+            let applied = apply_all(kernel, not_not_intro_const, &[na_ty, na]);
+            let with_na_v = lam_fvar(kernel, na_fvar, na_ty, applied, BinderInfo::Default);
+            let not_not_not_intro_value =
+                lam_fvar(kernel, a_fvar, prop, with_na_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: not_not_not_intro,
+                uparams: vec![],
+                ty: not_not_not_intro_ty,
+                value: not_not_not_intro_value,
+            })?;
+        }
+
+        // --- not_not_and : Π (a b : Prop), ¬¬a → ¬¬b → ¬¬(And a b) ----------
+        // The conjunction case of the Gödel–Gentzen negative translation:
+        // `fun ha => nnb (fun hb => hnab (And.intro a b ha hb))` refutes
+        // `¬a` using `nnb`/`hnab`, closing `nna`'s own `¬¬a` obligation.
+        let not_not_and = kernel.name_str(anon, "not_not_and");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 24_010;
+            let b_fvar = 24_011;
+            let nna_fvar = 24_012;
+            let nnb_fvar = 24_013;
+            let hnab_fvar = 24_014;
+            let ha_fvar = 24_015;
+            let hb_fvar = 24_016;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let na_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // ¬a
+            let nna_ty = kernel.pi(anon, na_ty, false_const, BinderInfo::Default); // ¬¬a
+            let nb_ty = kernel.pi(anon, b, false_const, BinderInfo::Default); // ¬b
+            let nnb_ty = kernel.pi(anon, nb_ty, false_const, BinderInfo::Default); // ¬¬b
+            let and_const = kernel.const_(and, vec![]);
+            let and_ab = apply_all(kernel, and_const, &[a, b]);
+            let nab_ty = kernel.pi(anon, and_ab, false_const, BinderInfo::Default); // ¬(a∧b)
+            let nnab_ty = kernel.pi(anon, nab_ty, false_const, BinderInfo::Default); // ¬¬(a∧b)
+
+            // type: Π (a b : Prop), ¬¬a → ¬¬b → ¬¬(And a b).
+            let t3 = kernel.pi(anon, nnb_ty, nnab_ty, BinderInfo::Default);
+            let t2 = kernel.pi(anon, nna_ty, t3, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, t2, BinderInfo::Default);
+            let not_not_and_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b nna nnb hnab =>
+            //   nna (fun ha => nnb (fun hb => hnab (And.intro a b ha hb))).
+            let and_intro_const = kernel.const_(and_intro, vec![]);
+            let hnab = kernel.fvar(hnab_fvar);
+            let nnb = kernel.fvar(nnb_fvar);
+            let nna = kernel.fvar(nna_fvar);
+            let inner_body = {
+                let ha = kernel.fvar(ha_fvar);
+                let hb = kernel.fvar(hb_fvar);
+                let intro = apply_all(kernel, and_intro_const, &[a, b, ha, hb]);
+                let hnab_applied = kernel.app(hnab, intro);
+                let f_hb = lam_fvar(kernel, hb_fvar, b, hnab_applied, BinderInfo::Default);
+                let nnb_applied = kernel.app(nnb, f_hb);
+                lam_fvar(kernel, ha_fvar, a, nnb_applied, BinderInfo::Default)
+            };
+            let nna_applied = kernel.app(nna, inner_body);
+
+            let with_hnab = lam_fvar(kernel, hnab_fvar, nab_ty, nna_applied, BinderInfo::Default);
+            let with_nnb = lam_fvar(kernel, nnb_fvar, nnb_ty, with_hnab, BinderInfo::Default);
+            let with_nna = lam_fvar(kernel, nna_fvar, nna_ty, with_nnb, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_nna, BinderInfo::Default);
+            let not_not_and_value = lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: not_not_and,
+                uparams: vec![],
+                ty: not_not_and_ty,
+                value: not_not_and_value,
+            })?;
+        }
+
+        // --- not_not_imp : Π (a b : Prop), (a → b) → ¬¬a → ¬¬b ---------------
+        // Functoriality of double negation: `fun ha => hnb (f ha)` refutes `a`
+        // from a refutation of `b`, closing `nna`'s `¬¬a` obligation. This is
+        // also the monotonicity form (`a → b` monotone gives `¬¬a → ¬¬b`
+        // monotone), so no separate `not_not_mono` is declared.
+        let not_not_imp = kernel.name_str(anon, "not_not_imp");
+        {
+            let prop = kernel.prop();
+            let a_fvar = 24_020;
+            let b_fvar = 24_021;
+            let f_fvar = 24_022;
+            let nna_fvar = 24_023;
+            let hnb_fvar = 24_024;
+            let ha_fvar = 24_025;
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let ab_ty = kernel.pi(anon, a, b, BinderInfo::Default); // a → b
+            let na_ty = kernel.pi(anon, a, false_const, BinderInfo::Default); // ¬a
+            let nna_ty = kernel.pi(anon, na_ty, false_const, BinderInfo::Default); // ¬¬a
+            let nb_ty = kernel.pi(anon, b, false_const, BinderInfo::Default); // ¬b
+            let nnb_ty = kernel.pi(anon, nb_ty, false_const, BinderInfo::Default); // ¬¬b
+
+            // type: Π (a b : Prop), (a → b) → ¬¬a → ¬¬b.
+            let t3 = kernel.pi(anon, nna_ty, nnb_ty, BinderInfo::Default);
+            let t2 = kernel.pi(anon, ab_ty, t3, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, prop, t2, BinderInfo::Default);
+            let not_not_imp_ty = pi_fvar(kernel, a_fvar, prop, with_b, BinderInfo::Default);
+
+            // value: fun a b f nna hnb => nna (fun ha => hnb (f ha)).
+            let f = kernel.fvar(f_fvar);
+            let nna = kernel.fvar(nna_fvar);
+            let hnb = kernel.fvar(hnb_fvar);
+            let inner = {
+                let ha = kernel.fvar(ha_fvar);
+                let f_ha = kernel.app(f, ha);
+                let hnb_f_ha = kernel.app(hnb, f_ha);
+                lam_fvar(kernel, ha_fvar, a, hnb_f_ha, BinderInfo::Default)
+            };
+            let nna_applied = kernel.app(nna, inner);
+            let with_hnb = lam_fvar(kernel, hnb_fvar, nb_ty, nna_applied, BinderInfo::Default);
+            let with_nna = lam_fvar(kernel, nna_fvar, nna_ty, with_hnb, BinderInfo::Default);
+            let with_f = lam_fvar(kernel, f_fvar, ab_ty, with_nna, BinderInfo::Default);
+            let with_b_v = lam_fvar(kernel, b_fvar, prop, with_f, BinderInfo::Default);
+            let not_not_imp_value = lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: not_not_imp,
+                uparams: vec![],
+                ty: not_not_imp_ty,
+                value: not_not_imp_value,
+            })?;
+        }
+
+        // --- Bool.false_ne_true : Eq Bool Bool.false Bool.true → False -------
+        // Bool's disjointness discriminator (Lean's `Bool.noConfusion`,
+        // specialised to `False`): transport the trivial `True.intro : D
+        // Bool.false` along a hypothetical `false = true` through the
+        // type-VALUED discriminator `D := fun b => Bool.rec.{1}
+        // (motive := fun _ => Prop) True False b` (`D Bool.false ≡ True`,
+        // `D Bool.true ≡ False` by ι), landing on `D Bool.true ≡ False`. This
+        // is what makes the `Decidable.of_decide_eq_*` spec lemmas below
+        // possible: ruling out the impossible branch of a computed `Bool`
+        // needs Bool's two values to be provably distinct, and nothing in the
+        // prelude supplied that before this declaration.
+        let bool_false_ne_true = kernel.name_str(bool_, "false_ne_true");
+        {
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
+            let h_fvar = 24_030;
+            let x_fvar = 24_031;
+            let dummy_fvar = 24_032;
+
+            let bool_const = kernel.const_(bool_, vec![]);
+            let bool_false_v = kernel.const_(bool_false, vec![]);
+            let bool_true_v = kernel.const_(bool_true, vec![]);
+            let false_const = kernel.const_(false_, vec![]);
+            let true_const = kernel.const_(true_, vec![]);
+            let prop = kernel.prop();
+
+            // type: Eq Bool Bool.false Bool.true → False.
+            let heq_ty = eq_app(kernel, eq, one, bool_const, bool_false_v, bool_true_v);
+            let bool_false_ne_true_ty = kernel.pi(anon, heq_ty, false_const, BinderInfo::Default);
+
+            // D := fun (_ : Bool) => Prop, via Bool.rec.{1};
+            // D Bool.false ≡ True, D Bool.true ≡ False.
+            let d_motive = lam_fvar(kernel, dummy_fvar, bool_const, prop, BinderInfo::Default);
+            let bool_rec_one = kernel.const_(bool_rec, vec![one]);
+
+            // motive for the transport: fun (x:Bool) (_:Eq Bool false x) => D x.
+            let x = kernel.fvar(x_fvar);
+            let eq_false_x_ty = eq_app(kernel, eq, one, bool_const, bool_false_v, x);
+            let d_x = apply_all(
+                kernel,
+                bool_rec_one,
+                &[d_motive, true_const, false_const, x],
+            );
+            let eq_motive_inner = kernel.lam(anon, eq_false_x_ty, d_x, BinderInfo::Default);
+            let eq_motive = lam_fvar(
+                kernel,
+                x_fvar,
+                bool_const,
+                eq_motive_inner,
+                BinderInfo::Default,
+            );
+
+            // refl case: True.intro : D Bool.false ≡ True.
+            let true_intro_const = kernel.const_(true_intro, vec![]);
+
+            // value: fun h => Eq.rec.{0,1} Bool Bool.false eq_motive True.intro Bool.true h.
+            let eq_rec_const = kernel.const_(eq_rec, vec![zero, one]);
+            let h = kernel.fvar(h_fvar);
+            let applied = apply_all(
+                kernel,
+                eq_rec_const,
+                &[
+                    bool_const,
+                    bool_false_v,
+                    eq_motive,
+                    true_intro_const,
+                    bool_true_v,
+                    h,
+                ],
+            );
+            let bool_false_ne_true_value =
+                lam_fvar(kernel, h_fvar, heq_ty, applied, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: bool_false_ne_true,
+                uparams: vec![],
+                ty: bool_false_ne_true_ty,
+                value: bool_false_ne_true_value,
+            })?;
+        }
+
+        // --- Bool.true_ne_false : Eq Bool Bool.true Bool.false → False -------
+        let bool_true_ne_false = kernel.name_str(bool_, "true_ne_false");
+        {
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
+            let h_fvar = 24_040;
+
+            let bool_const = kernel.const_(bool_, vec![]);
+            let bool_false_v = kernel.const_(bool_false, vec![]);
+            let bool_true_v = kernel.const_(bool_true, vec![]);
+            let false_const = kernel.const_(false_, vec![]);
+
+            let heq_ty = eq_app(kernel, eq, one, bool_const, bool_true_v, bool_false_v);
+            let bool_true_ne_false_ty = kernel.pi(anon, heq_ty, false_const, BinderInfo::Default);
+
+            // value: fun h => Bool.false_ne_true (Eq.symm Bool Bool.true Bool.false h).
+            let eq_symm_const = kernel.const_(eq_symm, vec![one]);
+            let h = kernel.fvar(h_fvar);
+            let symm_h = apply_all(
+                kernel,
+                eq_symm_const,
+                &[bool_const, bool_true_v, bool_false_v, h],
+            );
+            let bool_false_ne_true_const = kernel.const_(bool_false_ne_true, vec![]);
+            let applied = kernel.app(bool_false_ne_true_const, symm_h);
+            let bool_true_ne_false_value =
+                lam_fvar(kernel, h_fvar, heq_ty, applied, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: bool_true_ne_false,
+                uparams: vec![],
+                ty: bool_true_ne_false_ty,
+                value: bool_true_ne_false_value,
+            })?;
+        }
+
+        // --- Decidable (p : Prop) : Type, Decidable.isFalse | isTrue --------
+        // The `Type`-valued decision: unlike `Or` (a two-constructor `Prop`
+        // that eliminates only into `Prop` — see the module doc), `Decidable`
+        // lives at `Sort 1` and so its generated recursor gets a genuine
+        // elimination-level parameter and eliminates into an arbitrary
+        // `Sort v` (`Decidable.byCases` below). Constructor order follows the
+        // `isFalse`-before-`isTrue` convention already used for
+        // `Bool.false`/`Bool.true`.
+        let decidable = kernel.name_str(anon, "Decidable");
+        let decidable_is_false = kernel.name_str(decidable, "isFalse");
+        let decidable_is_true = kernel.name_str(decidable, "isTrue");
+        {
+            let prop = kernel.prop();
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
+            let sort1 = kernel.sort(one);
+            // ty := Π (p : Prop), Sort 1.
+            let decidable_ty = kernel.pi(anon, prop, sort1, BinderInfo::Default);
+
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let false_const = kernel.const_(false_, vec![]);
+
+            // isFalse : Π (p : Prop) (h : p → False), Decidable p.
+            let is_false_ty = {
+                let p1 = kernel.bvar(1); // p, under [p, h]
+                let dec_p = kernel.app(decidable_const, p1);
+                let p0 = kernel.bvar(0); // p, under [p] (h's own domain)
+                let h_ty = kernel.pi(anon, p0, false_const, BinderInfo::Default);
+                let inner = kernel.pi(anon, h_ty, dec_p, BinderInfo::Default);
+                kernel.pi(anon, prop, inner, BinderInfo::Default)
+            };
+            // isTrue : Π (p : Prop) (h : p), Decidable p.
+            let is_true_ty = {
+                let p1 = kernel.bvar(1);
+                let dec_p = kernel.app(decidable_const, p1);
+                let p0 = kernel.bvar(0);
+                let inner = kernel.pi(anon, p0, dec_p, BinderInfo::Default);
+                kernel.pi(anon, prop, inner, BinderInfo::Default)
+            };
+            kernel.add_inductive(
+                decidable,
+                &[],
+                1,
+                decidable_ty,
+                &[
+                    (decidable_is_false, is_false_ty),
+                    (decidable_is_true, is_true_ty),
+                ],
+            )?;
+        }
+        let decidable_rec = kernel.name_str(decidable, "rec");
+
+        // --- Decidable.decide : Π (p : Prop), Decidable p → Bool -------------
+        // A `Definition`, not a `Theorem`: its codomain `Bool` is not `Prop`
+        // (the same reason `absurd` above is a `Definition`, and the same
+        // real-Lean-kernel divergence that comment documents).
+        let decide = kernel.name_str(decidable, "decide");
+        {
+            let prop = kernel.prop();
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
+            let p_fvar = 24_050;
+            let d_fvar = 24_051;
+            let dummy_fvar = 24_052;
+            let hf_fvar = 24_053;
+            let ht_fvar = 24_054;
+
+            let p = kernel.fvar(p_fvar);
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let dec_p = kernel.app(decidable_const, p);
+            let false_const = kernel.const_(false_, vec![]);
+            let hf_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let bool_const = kernel.const_(bool_, vec![]);
+
+            // type: Π (p : Prop) (d : Decidable p), Bool.
+            let t_outer = kernel.pi(anon, dec_p, bool_const, BinderInfo::Default);
+            let decide_ty = pi_fvar(kernel, p_fvar, prop, t_outer, BinderInfo::Default);
+
+            // value: fun p d => Decidable.rec.{1} p (motive := fun _ => Bool)
+            //   (fun _ => Bool.false) (fun _ => Bool.true) d.
+            let motive = lam_fvar(kernel, dummy_fvar, dec_p, bool_const, BinderInfo::Default);
+            let bool_false_v = kernel.const_(bool_false, vec![]);
+            let bool_true_v = kernel.const_(bool_true, vec![]);
+            let minor_is_false =
+                lam_fvar(kernel, hf_fvar, hf_ty, bool_false_v, BinderInfo::Default);
+            let minor_is_true = lam_fvar(kernel, ht_fvar, p, bool_true_v, BinderInfo::Default);
+            let decidable_rec_const = kernel.const_(decidable_rec, vec![one]);
+            let d = kernel.fvar(d_fvar);
+            let applied = apply_all(
+                kernel,
+                decidable_rec_const,
+                &[p, motive, minor_is_false, minor_is_true, d],
+            );
+
+            let with_d = lam_fvar(kernel, d_fvar, dec_p, applied, BinderInfo::Default);
+            let decide_value = lam_fvar(kernel, p_fvar, prop, with_d, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Definition {
+                name: decide,
+                uparams: vec![],
+                ty: decide_ty,
+                value: decide_value,
+                hint: ReducibilityHint::Regular(0),
+            })?;
+        }
+
+        // --- Decidable.of_decide_eq_true : Π (p : Prop) (d : Decidable p), ---
+        //     Eq Bool (decide p d) Bool.true → p --------------------------
+        let of_decide_eq_true = kernel.name_str(decidable, "of_decide_eq_true");
+        {
+            let prop = kernel.prop();
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
+            let p_fvar = 24_060;
+            let d_fvar = 24_061;
+            let dvar_fvar = 24_062;
+            let hf_fvar = 24_063;
+            let ht_fvar = 24_064;
+            let heq_fvar = 24_065;
+
+            let p = kernel.fvar(p_fvar);
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let dec_p = kernel.app(decidable_const, p);
+            let false_const = kernel.const_(false_, vec![]);
+            let hf_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let bool_const = kernel.const_(bool_, vec![]);
+            let bool_true_v = kernel.const_(bool_true, vec![]);
+            let bool_false_v = kernel.const_(bool_false, vec![]);
+            let decide_const = kernel.const_(decide, vec![]);
+
+            let d = kernel.fvar(d_fvar);
+            let decide_p_d = apply_all(kernel, decide_const, &[p, d]);
+            let eq_true_d_ty = eq_app(kernel, eq, one, bool_const, decide_p_d, bool_true_v);
+
+            // type: Π (p : Prop) (d : Decidable p), Eq Bool (decide p d) Bool.true → p.
+            let t_outer = kernel.pi(anon, eq_true_d_ty, p, BinderInfo::Default);
+            let with_d = pi_fvar(kernel, d_fvar, dec_p, t_outer, BinderInfo::Default);
+            let of_decide_eq_true_ty = pi_fvar(kernel, p_fvar, prop, with_d, BinderInfo::Default);
+
+            // value: fun p d => Decidable.rec.{0} p
+            //   (motive := fun dvar => Eq Bool (decide p dvar) Bool.true → p)
+            //   (fun h heq => False.rec p (Bool.false_ne_true heq))
+            //   (fun h _ => h)
+            //   d.
+            let decide_const2 = kernel.const_(decide, vec![]);
+            let dvar = kernel.fvar(dvar_fvar);
+            let decide_p_dvar = apply_all(kernel, decide_const2, &[p, dvar]);
+            let eq_true_dvar_ty = eq_app(kernel, eq, one, bool_const, decide_p_dvar, bool_true_v);
+            let motive_inner = kernel.pi(anon, eq_true_dvar_ty, p, BinderInfo::Default);
+            let motive = lam_fvar(kernel, dvar_fvar, dec_p, motive_inner, BinderInfo::Default);
+
+            // minor_isFalse, built at the reduced type
+            // (decide p (isFalse p h) ≡ Bool.false).
+            let minor_is_false = {
+                let heq_ty = eq_app(kernel, eq, one, bool_const, bool_false_v, bool_true_v);
+                let bool_false_ne_true_const = kernel.const_(bool_false_ne_true, vec![]);
+                let heq = kernel.fvar(heq_fvar);
+                let contradiction = kernel.app(bool_false_ne_true_const, heq);
+                let false_rec_const = kernel.const_(false_rec, vec![zero]);
+                let false_motive = {
+                    let dummy_fvar = 24_066;
+                    lam_fvar(kernel, dummy_fvar, false_const, p, BinderInfo::Default)
+                };
+                let body = apply_all(kernel, false_rec_const, &[false_motive, contradiction]);
+                let with_heq = lam_fvar(kernel, heq_fvar, heq_ty, body, BinderInfo::Default);
+                lam_fvar(kernel, hf_fvar, hf_ty, with_heq, BinderInfo::Default)
+            };
+
+            // minor_isTrue, trivial: decide p (isTrue p h) ≡ Bool.true, so the
+            // (now-refl) equality is simply discarded.
+            let minor_is_true = {
+                let ht = kernel.fvar(ht_fvar);
+                let eq_refl_ty = eq_app(kernel, eq, one, bool_const, bool_true_v, bool_true_v);
+                let discard_fvar = 24_067;
+                let inner = lam_fvar(kernel, discard_fvar, eq_refl_ty, ht, BinderInfo::Default);
+                lam_fvar(kernel, ht_fvar, p, inner, BinderInfo::Default)
+            };
+
+            let decidable_rec_const = kernel.const_(decidable_rec, vec![zero]);
+            let applied = apply_all(
+                kernel,
+                decidable_rec_const,
+                &[p, motive, minor_is_false, minor_is_true, d],
+            );
+
+            let with_d_v = lam_fvar(kernel, d_fvar, dec_p, applied, BinderInfo::Default);
+            let of_decide_eq_true_value =
+                lam_fvar(kernel, p_fvar, prop, with_d_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: of_decide_eq_true,
+                uparams: vec![],
+                ty: of_decide_eq_true_ty,
+                value: of_decide_eq_true_value,
+            })?;
+        }
+
+        // --- Decidable.of_decide_eq_false : Π (p : Prop) (d : Decidable p), --
+        //     Eq Bool (decide p d) Bool.false → (p → False) -----------------
+        let of_decide_eq_false = kernel.name_str(decidable, "of_decide_eq_false");
+        {
+            let prop = kernel.prop();
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
+            let p_fvar = 24_070;
+            let d_fvar = 24_071;
+            let dvar_fvar = 24_072;
+            let hf_fvar = 24_073;
+            let ht_fvar = 24_074;
+            let heq_fvar = 24_075;
+
+            let p = kernel.fvar(p_fvar);
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let dec_p = kernel.app(decidable_const, p);
+            let false_const = kernel.const_(false_, vec![]);
+            let hf_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let bool_const = kernel.const_(bool_, vec![]);
+            let bool_true_v = kernel.const_(bool_true, vec![]);
+            let bool_false_v = kernel.const_(bool_false, vec![]);
+            let decide_const = kernel.const_(decide, vec![]);
+
+            let d = kernel.fvar(d_fvar);
+            let decide_p_d = apply_all(kernel, decide_const, &[p, d]);
+            let eq_false_d_ty = eq_app(kernel, eq, one, bool_const, decide_p_d, bool_false_v);
+
+            // type: Π (p : Prop) (d : Decidable p),
+            //   Eq Bool (decide p d) Bool.false → (p → False).
+            let t_outer = kernel.pi(anon, eq_false_d_ty, hf_ty, BinderInfo::Default);
+            let with_d = pi_fvar(kernel, d_fvar, dec_p, t_outer, BinderInfo::Default);
+            let of_decide_eq_false_ty = pi_fvar(kernel, p_fvar, prop, with_d, BinderInfo::Default);
+
+            // value: fun p d => Decidable.rec.{0} p
+            //   (motive := fun dvar => Eq Bool (decide p dvar) Bool.false → (p → False))
+            //   (fun h _ => h)
+            //   (fun h heq => False.rec (p → False) (Bool.true_ne_false heq))
+            //   d.
+            let decide_const2 = kernel.const_(decide, vec![]);
+            let dvar = kernel.fvar(dvar_fvar);
+            let decide_p_dvar = apply_all(kernel, decide_const2, &[p, dvar]);
+            let eq_false_dvar_ty = eq_app(kernel, eq, one, bool_const, decide_p_dvar, bool_false_v);
+            let motive_inner = kernel.pi(anon, eq_false_dvar_ty, hf_ty, BinderInfo::Default);
+            let motive = lam_fvar(kernel, dvar_fvar, dec_p, motive_inner, BinderInfo::Default);
+
+            // minor_isFalse, trivial: decide p (isFalse p h) ≡ Bool.false, so
+            // the (now-refl) equality is simply discarded.
+            let minor_is_false = {
+                let hf = kernel.fvar(hf_fvar);
+                let eq_refl_ty = eq_app(kernel, eq, one, bool_const, bool_false_v, bool_false_v);
+                let discard_fvar = 24_076;
+                let inner = lam_fvar(kernel, discard_fvar, eq_refl_ty, hf, BinderInfo::Default);
+                lam_fvar(kernel, hf_fvar, hf_ty, inner, BinderInfo::Default)
+            };
+
+            // minor_isTrue, built at the reduced type
+            // (decide p (isTrue p h) ≡ Bool.true).
+            let minor_is_true = {
+                let heq_ty = eq_app(kernel, eq, one, bool_const, bool_true_v, bool_false_v);
+                let bool_true_ne_false_const = kernel.const_(bool_true_ne_false, vec![]);
+                let heq = kernel.fvar(heq_fvar);
+                let contradiction = kernel.app(bool_true_ne_false_const, heq);
+                let false_rec_const = kernel.const_(false_rec, vec![zero]);
+                let false_motive = {
+                    let dummy_fvar = 24_077;
+                    lam_fvar(kernel, dummy_fvar, false_const, hf_ty, BinderInfo::Default)
+                };
+                let body = apply_all(kernel, false_rec_const, &[false_motive, contradiction]);
+                let with_heq = lam_fvar(kernel, heq_fvar, heq_ty, body, BinderInfo::Default);
+                lam_fvar(kernel, ht_fvar, p, with_heq, BinderInfo::Default)
+            };
+
+            let decidable_rec_const = kernel.const_(decidable_rec, vec![zero]);
+            let applied = apply_all(
+                kernel,
+                decidable_rec_const,
+                &[p, motive, minor_is_false, minor_is_true, d],
+            );
+
+            let with_d_v = lam_fvar(kernel, d_fvar, dec_p, applied, BinderInfo::Default);
+            let of_decide_eq_false_value =
+                lam_fvar(kernel, p_fvar, prop, with_d_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: of_decide_eq_false,
+                uparams: vec![],
+                ty: of_decide_eq_false_ty,
+                value: of_decide_eq_false_value,
+            })?;
+        }
+
+        // --- Decidable.em : Π (p : Prop), Decidable p → Or p (p → False) -----
+        // Excluded middle, exactly where a `Decidable` witness exists: case
+        // split on `d` (into `Prop`, so `Or.rec`'s restriction to `Prop`
+        // never bites) and re-pack with `Or.inl`/`Or.inr`.
+        let decidable_em = kernel.name_str(decidable, "em");
+        {
+            let prop = kernel.prop();
+            let zero = kernel.level_zero();
+            let p_fvar = 24_080;
+            let d_fvar = 24_081;
+            let dummy_fvar = 24_082;
+            let hf_fvar = 24_083;
+            let ht_fvar = 24_084;
+
+            let p = kernel.fvar(p_fvar);
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let dec_p = kernel.app(decidable_const, p);
+            let false_const = kernel.const_(false_, vec![]);
+            let hf_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let or_const = kernel.const_(or, vec![]);
+            let or_p_np = apply_all(kernel, or_const, &[p, hf_ty]);
+
+            // type: Π (p : Prop) (d : Decidable p), Or p (p → False).
+            let t_outer = kernel.pi(anon, dec_p, or_p_np, BinderInfo::Default);
+            let decidable_em_ty = pi_fvar(kernel, p_fvar, prop, t_outer, BinderInfo::Default);
+
+            // value: fun p d => Decidable.rec.{0} p (motive := fun _ => Or p (p→False))
+            //   (fun h => Or.inr p (p→False) h) (fun h => Or.inl p (p→False) h) d.
+            let motive = lam_fvar(kernel, dummy_fvar, dec_p, or_p_np, BinderInfo::Default);
+            let or_inl_const = kernel.const_(or_inl, vec![]);
+            let or_inr_const = kernel.const_(or_inr, vec![]);
+            let minor_is_false = {
+                let hf = kernel.fvar(hf_fvar);
+                let body = apply_all(kernel, or_inr_const, &[p, hf_ty, hf]);
+                lam_fvar(kernel, hf_fvar, hf_ty, body, BinderInfo::Default)
+            };
+            let minor_is_true = {
+                let ht = kernel.fvar(ht_fvar);
+                let body = apply_all(kernel, or_inl_const, &[p, hf_ty, ht]);
+                lam_fvar(kernel, ht_fvar, p, body, BinderInfo::Default)
+            };
+            let decidable_rec_const = kernel.const_(decidable_rec, vec![zero]);
+            let d = kernel.fvar(d_fvar);
+            let applied = apply_all(
+                kernel,
+                decidable_rec_const,
+                &[p, motive, minor_is_false, minor_is_true, d],
+            );
+
+            let with_d = lam_fvar(kernel, d_fvar, dec_p, applied, BinderInfo::Default);
+            let decidable_em_value = lam_fvar(kernel, p_fvar, prop, with_d, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: decidable_em,
+                uparams: vec![],
+                ty: decidable_em_ty,
+                value: decidable_em_value,
+            })?;
+        }
+
+        // --- Decidable.byCases.{v} : Π (p : Prop) (C : Sort v) ---------------
+        //     (d : Decidable p), (p → C) → ((p → False) → C) → C ------------
+        // Case-split with an ARBITRARY-sort result: unlike `Decidable.em`
+        // (whose conclusion is the `Prop` `Or p (p → False)`), this lands in
+        // any `Sort v` -- exactly what `Or.rec` structurally cannot offer
+        // (module doc), and exactly the wall named in the assignment: a
+        // `Decidable` hypothesis lets a construction SELECT data, not just
+        // prove a proposition. A `Definition`, not a `Theorem`, for the same
+        // reason `decide` above is (its codomain is an arbitrary `Sort v`,
+        // not `Prop`).
+        let decidable_by_cases_vparam = kernel.name_str(anon, "v");
+        let decidable_by_cases = kernel.name_str(decidable, "byCases");
+        {
+            let prop = kernel.prop();
+            let v_lvl = kernel.level_param(decidable_by_cases_vparam);
+            let sort_v = kernel.sort(v_lvl);
+
+            let p_fvar = 24_090;
+            let c_fvar = 24_091;
+            let d_fvar = 24_092;
+            let dummy_fvar = 24_093;
+            let hpos_fvar = 24_094;
+            let hneg_fvar = 24_095;
+
+            let p = kernel.fvar(p_fvar);
+            let c = kernel.fvar(c_fvar);
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let dec_p = kernel.app(decidable_const, p);
+            let false_const = kernel.const_(false_, vec![]);
+            let hf_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let pc_ty = kernel.pi(anon, p, c, BinderInfo::Default); // p → C
+            let nc_ty = kernel.pi(anon, hf_ty, c, BinderInfo::Default); // (p → False) → C
+
+            // type: Π (p : Prop) (C : Sort v) (d : Decidable p),
+            //   (p → C) → ((p → False) → C) → C.
+            let t_inner = kernel.pi(anon, nc_ty, c, BinderInfo::Default);
+            let t_mid = kernel.pi(anon, pc_ty, t_inner, BinderInfo::Default);
+            let t_outer = kernel.pi(anon, dec_p, t_mid, BinderInfo::Default);
+            let with_c = pi_fvar(kernel, c_fvar, sort_v, t_outer, BinderInfo::Default);
+            let decidable_by_cases_ty = pi_fvar(kernel, p_fvar, prop, with_c, BinderInfo::Default);
+
+            // value: fun p C d hpos hneg => Decidable.rec.{v} p
+            //   (motive := fun _ => C) hneg hpos d.
+            let motive = lam_fvar(kernel, dummy_fvar, dec_p, c, BinderInfo::Default);
+            let decidable_rec_const = kernel.const_(decidable_rec, vec![v_lvl]);
+            let d = kernel.fvar(d_fvar);
+            let hpos = kernel.fvar(hpos_fvar);
+            let hneg = kernel.fvar(hneg_fvar);
+            let applied = apply_all(kernel, decidable_rec_const, &[p, motive, hneg, hpos, d]);
+
+            let with_hneg = lam_fvar(kernel, hneg_fvar, nc_ty, applied, BinderInfo::Default);
+            let with_hpos = lam_fvar(kernel, hpos_fvar, pc_ty, with_hneg, BinderInfo::Default);
+            let with_d = lam_fvar(kernel, d_fvar, dec_p, with_hpos, BinderInfo::Default);
+            let with_c_v = lam_fvar(kernel, c_fvar, sort_v, with_d, BinderInfo::Default);
+            let decidable_by_cases_value =
+                lam_fvar(kernel, p_fvar, prop, with_c_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Definition {
+                name: decidable_by_cases,
+                uparams: vec![decidable_by_cases_vparam],
+                ty: decidable_by_cases_ty,
+                value: decidable_by_cases_value,
+                hint: ReducibilityHint::Regular(0),
+            })?;
+        }
+
         Ok(LogicPrelude {
             true_,
             true_intro,
@@ -3222,6 +3966,21 @@ pub(crate) fn build_logic_prelude_uncached(
             em_of_dne,
             peirce_of_em,
             em_of_peirce,
+            not_not_not_intro,
+            not_not_and,
+            not_not_imp,
+            bool_false_ne_true,
+            bool_true_ne_false,
+            decidable,
+            decidable_is_false,
+            decidable_is_true,
+            decidable_rec,
+            decide,
+            of_decide_eq_true,
+            of_decide_eq_false,
+            decidable_em,
+            decidable_by_cases,
+            decidable_by_cases_vparam,
             bool_,
             bool_true,
             bool_false,
