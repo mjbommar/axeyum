@@ -1185,13 +1185,48 @@ at all 26 endpoints (a proof, not a measurement, where `A_1` is odd), and
 `Theta(ell 2^{-ell/2})` of the threshold (`3e25` short at `ell = 200`). The
 public PDF's `(CYL)` claim is confirmed verbatim and extended to `ell >= 12`.
 
-**Next:** the lane is at a natural stopping point -- every route now ends at a
-named open statement, and the deliverable is the map plus the re-posed
-specialist question (notes 10, 14 sec. 10--11). If work resumes, the one
-decisive computation is note 14 sec. 10 (`Z[zeta_16]` engine, `delta(2j+1,j)`
-for `j = 8..10`), which separates the alive law `delta ~ j` from the dead
-`delta ~ 2j`; angles 1 and 5 remain unrun and are subordinate to it. Nothing
-in this lane is a proof of the conjecture.
+**Rung 9 -- the weakening programme; project wrapped (2026-08-23).** Four
+strategies weaker than the conjecture, each run to a verdict.
+[Note 18](docs/research/10-cas/lemire-signed-trace/18-savings-scale.md):
+(HWO) restated as a DIAL -- a saving `F` over Weil gives window slack
+`k = log_2((ell-2)/F)`, so doubling `F` buys one coefficient and any
+unconditional `F > 1` at `q = 2` is new; and the roadmap's `4 ell` was
+overstated by `5.7-8.1x` (true aggregate target `(ell-2)/kappa`). No
+unconditional saving exists, and the negative is FORCED (all candidates are
+moduli-only inputs; Barrier I's boundary coincides with Weil's at 22 of 26
+endpoints).
+[Note 19](docs/research/10-cas/lemire-signed-trace/19-effective-large-q.md):
+the large-`q` ineffectivity is pure bookkeeping, but one POINTWISE divisor
+bound gives `n_0(3^11) ~ 10^{344.5}`; the exact averaged identity that fixes
+it is known and the rewrite is not done. `F_{3^11}` closed for even
+`n <= 354292`, odd `n <= 839`, plus 363 certified witnesses.
+[Note 20](docs/research/10-cas/lemire-signed-trace/20-almost-all-degrees.md):
+almost-all-degrees is unreachable by averaging -- the Montgomery--Vaughan
+bound always contains the trivial bound, vacuous by `8565x` at `ell = 200`;
+what survives is fixed-`q` pair correlation, the same wall from a new side.
+[Note 21](docs/research/10-cas/lemire-signed-trace/21-probabilistic-face.md):
+(VAR) stated in its necessarily `j`-dependent form; the anti-correlation
+SOLVED (eighth-root repeats weighted by `m^2`; a `mod 8` sign law at 42/45
+endpoints); and **the identity class is NOT typical, at 3 sigma** -- note 20's
+`rms z = 1.400` was that signal read as agreement.
+
+**Public deliverables** (github.com/mjbommar/lemire-half-degree-irreducibles):
+a two-paragraph README summary, the 3-page note (restructured; the dial and
+the corrected constant landed), the 27-page barriers-and-attempts companion,
+and an applied section recording that the measured minimal subdegree is
+`~log_2 L` (never above 13 to `L = 3000`), that AES-GCM's subdegree-7
+pentanomial is optimal at `L = 128`, that Swan's `8 | L` obstruction is the
+constraint that actually binds, and therefore that proving the conjecture
+would not improve any deployed system.
+
+**Status: wrapped.** Every route ends at a named open statement; the
+deliverable is the map plus the re-posed specialist question (notes 10, 14).
+If work resumes, in order: (1) the unexplained near-cancellation of note 21
+sec. (f) -- a growing atomic term cancelled ever more precisely by the
+residual, the only place the data show structure nobody can explain; (2) the
+`Z[zeta_16]` computation of note 14 sec. 10 (`delta(2j+1,j)`, `j = 8..10`);
+(3) the averaged-divisor rewrite of note 19. Nothing in this lane is a proof
+of the conjecture.
 
 
 **Bottom rung laid: target pinned, three formulations checked, toolkit
