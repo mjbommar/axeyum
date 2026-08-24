@@ -153,7 +153,7 @@ use algebra::{
     declare_multiplicative_theorems, declare_subtraction_theorems,
 };
 use bezout::{declare_euclid_lemma, declare_gcd_bezout};
-use binomial::declare_binomial_theorem;
+use binomial::{declare_binomial_theorem, declare_combinatorial_identities};
 use ble::declare_boolean_le;
 use choose::declare_choose_all;
 use defs::{
@@ -739,6 +739,22 @@ pub struct NatPrelude {
     /// `Nat.add_pow : ∀ a b n, (a+b)^n = sumRange (fun k => choose n k * a^k * b^(n-k)) (succ n)`
     /// — the binomial theorem, by induction on `n`.
     pub add_pow: NameId,
+
+    // --- row sum, term bound (`binomial.rs`) --------------------------------
+    /// `Nat.one_pow : ∀ m, pow 1 m = 1`. Collapses every `1^k`/`1^(n-k)`
+    /// factor of `add_pow`'s summand when specialized at `a = b = 1`.
+    pub one_pow: NameId,
+    /// `Nat.le_sumRange_of_lt : ∀ f n k, Lt k n → Le (f k) (sumRange f n)` —
+    /// a term inside a finite sum's range is at most the sum.
+    pub le_sum_range_of_lt: NameId,
+    /// `Nat.sum_choose_row : ∀ n, sumRange (fun k => choose n k) (succ n) = pow 2 n`
+    /// — the row sum, via `add_pow` at `a = b = 1`.
+    pub sum_choose_row: NameId,
+    /// `Nat.choose_le_two_pow : ∀ n k, Le k n → Le (choose n k) (pow 2 n)` —
+    /// a binomial coefficient is at most `2^n`, an immediate consequence of
+    /// [`sum_choose_row`](Self::sum_choose_row) and
+    /// [`le_sum_range_of_lt`](Self::le_sum_range_of_lt).
+    pub choose_le_two_pow: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -998,6 +1014,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             add_pow_zero: kernel.name_str(nat, "add_pow_zero"),
             add_pow_one: kernel.name_str(nat, "add_pow_one"),
             add_pow: kernel.name_str(nat, "add_pow"),
+            one_pow: kernel.name_str(nat, "one_pow"),
+            le_sum_range_of_lt: kernel.name_str(nat, "le_sumRange_of_lt"),
+            sum_choose_row: kernel.name_str(nat, "sum_choose_row"),
+            choose_le_two_pow: kernel.name_str(nat, "choose_le_two_pow"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1028,6 +1048,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_euclid(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
         declare_binomial_theorem(&mut d, &p)?;
+        declare_combinatorial_identities(&mut d, &p)?;
         Ok(p)
     })();
     match built {

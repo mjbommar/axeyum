@@ -242,6 +242,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.add_pow_zero,
         p.add_pow_one,
         p.add_pow,
+        p.one_pow,
+        p.le_sum_range_of_lt,
+        p.sum_choose_row,
+        p.choose_le_two_pow,
     ]
 }
 
@@ -690,6 +694,101 @@ fn add_pow_holds_at_n_equals_two_and_three() {
         "{} must rest on zero axioms",
         f.k.display_name(p.add_pow)
     );
+}
+
+/// The row sum (`Nat.sum_choose_row`, via `add_pow` at `a=b=1`) and the term
+/// bound (`Nat.choose_le_two_pow`, via `Nat.le_sumRange_of_lt`), checked
+/// numerically: `sumRange (choose 4 ·) 5 = 16 = 2^4`, and
+/// `choose 4 2 = 6 ≤ 16 = 2^4`. `Nat.one_pow` is checked directly first
+/// (`1^5 = 1`), since both later theorems are built on it.
+#[test]
+fn row_sum_and_term_bound_hold_at_concrete_points() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    // one_pow(5) : 1^5 = 1.
+    let one = f.num(1);
+    let five = f.num(5);
+    let one_pow_proof = f.lemma(p.one_pow, &[five]);
+    let one_pow_inferred =
+        f.k.infer(one_pow_proof)
+            .unwrap_or_else(|e| panic!("one_pow(5) should infer: {}", f.explain(&e)));
+    let one_pow_expected = {
+        let lhs = f.pow(one, five);
+        f.eq(lhs, one)
+    };
+    assert!(
+        f.k.def_eq(one_pow_inferred, one_pow_expected),
+        "one_pow(5) should state 1^5 = 1"
+    );
+
+    // sum_choose_row(4) : sumRange (fun k => choose 4 k) 5 = 2^4 = 16 (the
+    // row 1,4,6,4,1). Folding the numeral into the expected equation's own
+    // RHS (rather than a separate def_eq check) forces both the theorem's
+    // abstract shape AND the underlying computation to agree, the same style
+    // `add_pow_holds_at_n_equals_two_and_three` uses.
+    let four = f.num(4);
+    let two = f.num(2);
+    let sixteen = f.num(16);
+    let row_proof = f.lemma(p.sum_choose_row, &[four]);
+    let row_inferred =
+        f.k.infer(row_proof)
+            .unwrap_or_else(|e| panic!("sum_choose_row(4) should infer: {}", f.explain(&e)));
+    let g = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let body = f.choose(four, k);
+        f.lam_fv(k_fv, nat, body)
+    };
+    let five_terms = f.num(5);
+    let row_expected = {
+        let lhs = f.sum_range(g, five_terms);
+        f.eq(lhs, sixteen)
+    };
+    assert!(
+        f.k.def_eq(row_inferred, row_expected),
+        "sum_choose_row(4) should state sumRange(choose 4 .)5 = 16 (1+4+6+4+1), \
+         and both sides must compute to 16"
+    );
+
+    // choose_le_two_pow(4,2), under Le 2 4 (witness 2+2=4): choose 4 2 = 6 ≤
+    // 2^4 = 16.
+    let two_witness = f.num(2);
+    let add_2_2 = f.add(two_witness, two_witness);
+    let sum_eq = f.refl(add_2_2);
+    let le_2_4 = f.lemma(p.le_intro, &[two_witness, four, two_witness, sum_eq]);
+    let bound_proof = f.lemma(p.choose_le_two_pow, &[four, two_witness, le_2_4]);
+    let bound_inferred =
+        f.k.infer(bound_proof)
+            .unwrap_or_else(|e| panic!("choose_le_two_pow(4,2,_) should infer: {}", f.explain(&e)));
+    let six = f.num(6);
+    let bound_expected = {
+        let lhs = f.choose(four, two_witness);
+        let rhs = f.pow(two, four);
+        f.le(lhs, rhs)
+    };
+    assert!(
+        f.k.def_eq(bound_inferred, bound_expected),
+        "choose_le_two_pow(4,2,_) should state Le (choose 4 2) (2^4)"
+    );
+    let choose_4_2 = f.choose(four, two_witness);
+    assert!(f.k.def_eq(choose_4_2, six), "choose 4 2 must reduce to 6");
+    let pow_2_4 = f.pow(two, four);
+    assert!(f.k.def_eq(pow_2_4, sixteen), "2^4 must reduce to 16");
+
+    for name in [
+        p.one_pow,
+        p.le_sum_range_of_lt,
+        p.sum_choose_row,
+        p.choose_le_two_pow,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
 }
 
 /// Checked predecessor elimination supports successor injectivity and both
@@ -3781,7 +3880,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        20 + 134,
+        20 + 138,
         "every promised definition and theorem must be rendered"
     );
 }

@@ -39,6 +39,7 @@
 use super::NatPrelude;
 use super::choose::sub_succ_of_lt;
 use super::ops::{NatDev, NatOps};
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -1215,5 +1216,415 @@ pub(super) fn declare_binomial_theorem(
     declare_sum_range_congr_lt(d, p)?;
     declare_add_pow_sanity(d, p)?;
     declare_add_pow(d, p)?;
+    Ok(())
+}
+
+// ============================================================================
+// The row sum and the term bound.
+//
+// `sum_choose_row` takes the CHEAP route the module docs promise: instantiate
+// `add_pow` at `a = b = 1`. Every `1^k` and `1^(n-k)` factor of the summand
+// collapses via `one_pow` (built here — no existing lemma covers it), leaving
+// exactly `sumRange (fun k => choose n k) (succ n)` on the left and
+// `(1+1)^n`, definitionally `2^n` (`add`'s recursion is on its second
+// argument, so `add 1 1` reduces to `2` by two `ι`-steps with no lemma
+// needed), on the right.
+//
+// `choose_le_two_pow` is then the promised "immediate consequence" of the row
+// sum plus "a term is at most the sum" — `le_sumRange_of_lt`, built here as a
+// named reusable lemma since no prior module needed one. Its proof mirrors
+// `choose_symm`'s successor case exactly: induct on the sum's bound with the
+// index generalized inside the motive, and split the successor step on
+// `lt_or_eq_of_le`.
+//
+// Vandermonde's convolution is NOT attempted here — see the doc comment on
+// this section's end for the precise stall point.
+// ============================================================================
+
+/// `False.rec (fun _ => target) false_proof : target` — ex falso into an
+/// arbitrary target from a proof of `False`. A local copy of
+/// `order_more::ex_falso` (private to that module).
+fn ex_falso(d: &mut NatDev<'_>, p: &NatPrelude, target: ExprId, false_proof: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+    let level_zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+    d.apply(rec, &[motive, false_proof])
+}
+
+/// `h : Le a b`, `heq : Eq b c ⊢ Le a c` — transport a `Le` fact along an
+/// equality of its right-hand side. Built from the same generic
+/// `eq_motive`/`transport` combinators `symm`/`trans`/`congr` are (`ops.rs`);
+/// `Le` is just another `Nat`-indexed family they work uniformly over.
+fn rewrite_le_rhs(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    heq: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let motive = d.eq_motive(b, &|d, x| d.le(a, x));
+    d.transport(b, motive, h, c, heq)
+}
+
+/// `h : Le a b`, `heq : Eq a a2 ⊢ Le a2 b` — the left-hand-side counterpart of
+/// [`rewrite_le_rhs`].
+fn rewrite_le_lhs(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    a2: ExprId,
+    b: ExprId,
+    heq: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let motive = d.eq_motive(a, &|d, x| d.le(x, b));
+    d.transport(a, motive, h, a2, heq)
+}
+
+/// `fun k => choose n k`, as a lambda — the row-`n` function
+/// [`declare_sum_choose_row`] and [`declare_choose_le_two_pow`] both state
+/// their bound over, built once so the two theorems' instantiations line up
+/// structurally.
+fn choose_row_fn(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let body = d.choose(n, k);
+    let nat = d.nat_ty();
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `Nat.one_pow : ∀ m, pow 1 m = 1`. `pow_zero`/`pow_succ` are both definitional
+/// unfoldings, so the base case is `refl` and the successor case is `mul_one`
+/// away from the induction hypothesis.
+fn declare_one_pow(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.one_pow, 1, &|d, v| {
+        let m = v[0];
+        let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+            let one = d.num(1);
+            let lhs = d.pow(one, x);
+            d.eq(lhs, one)
+        };
+        let stmt = motive(d, m);
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let one = d.num(1);
+                d.refl(one)
+            },
+            &|d, j, ih| {
+                let one = d.num(1);
+                let sj = d.succ(j);
+                let lhs = d.pow(one, sj);
+                let pow_j = d.pow(one, j);
+                let mul_pow_j_one = d.mul(pow_j, one);
+                let h_start = d.refl(mul_pow_j_one); // pow_succ, definitional
+                let mul_one_one = d.mul(one, one);
+                let h_ih = d.congr(pow_j, one, ih, &|d, t| d.mul(t, one));
+                let h_mul_one = d.lemma(p.mul_one, &[one]); // mul(1,1) = 1
+                let (_e, proof) = d.chain(
+                    lhs,
+                    &[
+                        (mul_pow_j_one, h_start),
+                        (mul_one_one, h_ih),
+                        (one, h_mul_one),
+                    ],
+                );
+                proof
+            },
+            m,
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.le_sumRange_of_lt : ∀ f n k, Lt k n → Le (f k) (sumRange f n)` — a
+/// term inside a finite sum's range is at most the sum, by induction on `n`
+/// with `k` generalized inside the motive (the same shape `choose_symm`
+/// needs, for the same reason: the induction hypothesis must be usable at a
+/// DIFFERENT `k` than the outer one). The successor case splits on
+/// `lt_or_eq_of_le` exactly as `choose_symm`'s successor case does: the
+/// strict branch extends the outer induction hypothesis past the new
+/// boundary term via `le_add_right`/`le_trans`; the equal branch rewrites `f
+/// k` to `f m` and reads the bound off `le_add_right` directly (after
+/// commuting, since `le_add_right` only gives `a ≤ a+b`, not `b ≤ a+b`).
+fn declare_le_sum_range_of_lt(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let stmt_at = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hyp = d.lt(k, x);
+        let fk = d.apply(f, &[k]);
+        let sx = d.sum_range(f, x);
+        let concl = d.le(fk, sx);
+        let body = d.arrow(hyp, concl);
+        d.pi_fv(k_fv, nat, body)
+    };
+    let stmt = stmt_at(d, n);
+
+    let proof = d.induct(
+        &stmt_at,
+        &|d| {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let zero = d.zero();
+            let hyp_ty = d.lt(k, zero);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let fk = d.apply(f, &[k]);
+            let s0 = d.sum_range(f, zero);
+            let target = d.le(fk, s0);
+            let not_lt = d.lemma(p.not_lt_zero, &[k]);
+            let false_proof = d.apply(not_lt, &[h]);
+            let body = ex_falso(d, &p, target, false_proof);
+            let with_h = d.lam_fv(h_fv, hyp_ty, body);
+            d.lam_fv(k_fv, nat, with_h)
+        },
+        &|d, m, ih| {
+            let sm = d.succ(m);
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let hyp_ty = d.lt(k, sm);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            // Lt k (succ m) is definitionally Le (succ k) (succ m);
+            // le_of_succ_le_succ peels it to Le k m.
+            let h_le_km = d.lemma(p.le_of_succ_le_succ, &[k, m, h]);
+            let split = d.lemma(p.lt_or_eq_of_le, &[k, m, h_le_km]);
+
+            let strict_ty = d.lt(k, m);
+            let equal_ty = d.eq(k, m);
+            let fk = d.apply(f, &[k]);
+            let s_sm = d.sum_range(f, sm);
+            let target = d.le(fk, s_sm);
+
+            let s_m = d.sum_range(f, m);
+            let fm = d.apply(f, &[m]);
+
+            let minor_strict = {
+                let hlt_fv = d.fresh_fvar();
+                let hlt = d.kernel().fvar(hlt_fv);
+                let ih_k = d.apply(ih, &[k, hlt]); // Le (f k) (sumRange f m)
+                let ext = d.lemma(p.le_add_right, &[s_m, fm]); // Le(sumRange f m)(sumRange f m + f m)
+                let body = d.lemma(p.le_trans, &[fk, s_m, s_sm, ih_k, ext]);
+                d.lam_fv(hlt_fv, strict_ty, body)
+            };
+            let minor_equal = {
+                let heq_fv = d.fresh_fvar();
+                let heq = d.kernel().fvar(heq_fv);
+                let fk_eq_fm = d.congr(k, m, heq, &|d, x| d.apply(f, &[x]));
+                let h1 = d.lemma(p.le_add_right, &[fm, s_m]); // Le(f m)(f m + sumRange f m)
+                let h_comm = d.lemma(p.add_comm, &[fm, s_m]); // f m+sumRange f m = sumRange f m+f m
+                let add_fm_sm = d.add(fm, s_m);
+                let add_sm_fm = d.add(s_m, fm);
+                let h2 = rewrite_le_rhs(d, fm, add_fm_sm, add_sm_fm, h_comm, h1);
+                let fm_eq_fk = d.symm(fk, fm, fk_eq_fm);
+                let body = rewrite_le_lhs(d, fm, fk, add_sm_fm, fm_eq_fk, h2);
+                d.lam_fv(heq_fv, equal_ty, body)
+            };
+            let selected = d.const_app(
+                p.logic.or_elim,
+                &[
+                    strict_ty,
+                    equal_ty,
+                    target,
+                    split,
+                    minor_strict,
+                    minor_equal,
+                ],
+            );
+            let with_h = d.lam_fv(h_fv, hyp_ty, selected);
+            d.lam_fv(k_fv, nat, with_h)
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(f_fv, fn_ty, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(f_fv, fn_ty, over_n)
+    };
+    d.declare_theorem(p.le_sum_range_of_lt, ty, value)
+}
+
+/// `Nat.sum_choose_row : ∀ n, sumRange (fun k => choose n k) (succ n) = pow 2 n`
+/// — the row sum, via `add_pow` at `a = b = 1`.
+fn declare_sum_choose_row(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.sum_choose_row, 1, &|d, v| {
+        let n = v[0];
+        let one = d.num(1);
+        let two = d.num(2);
+        let sn = d.succ(n);
+
+        let f_one = binom_term_fn(d, one, one, n);
+        let g = choose_row_fn(d, n);
+
+        // Pointwise: choose n k * 1^k * 1^(n-k) = choose n k, for every k.
+        let pointwise = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let c = d.choose(n, k);
+            let ak = d.pow(one, k);
+            let sub_nk = d.sub(n, k);
+            let bk = d.pow(one, sub_nk);
+
+            let start = binom_term(d, one, one, n, k);
+            let h1 = d.lemma(p.one_pow, &[k]); // ak = one
+            let c_one = d.mul(c, one);
+            let mid1 = d.mul(c_one, bk);
+            let h1c = d.congr(ak, one, h1, &|d, t| {
+                let ct = d.mul(c, t);
+                d.mul(ct, bk)
+            });
+
+            let h2 = d.lemma(p.mul_one, &[c]); // mul(c,1) = c
+            let mid2 = d.mul(c, bk);
+            let h2c = d.congr(c_one, c, h2, &|d, t| d.mul(t, bk));
+
+            let h3 = d.lemma(p.one_pow, &[sub_nk]); // bk = one
+            let mid3 = d.mul(c, one);
+            let h3c = d.congr(bk, one, h3, &|d, t| d.mul(c, t));
+
+            let h4 = d.lemma(p.mul_one, &[c]); // mul(c,1) = c
+
+            let (_e, body) = d.chain(start, &[(mid1, h1c), (mid2, h2c), (mid3, h3c), (c, h4)]);
+            let nat = d.nat_ty();
+            d.lam_fv(k_fv, nat, body)
+        };
+
+        let h_congr = d.lemma(p.sum_range_congr, &[f_one, g, sn, pointwise]);
+        // h_congr : sumRange f_one sn = sumRange g sn
+
+        let h_add_pow = d.lemma(p.add_pow, &[one, one, n]);
+        // h_add_pow : pow(add(one,one), n) = sumRange f_one sn
+
+        let one_one = d.add(one, one);
+        let pow_oo_n = d.pow(one_one, n);
+        let sum_f_sn = d.sum_range(f_one, sn);
+        let sum_g_sn = d.sum_range(g, sn);
+        let (_e, forward) = d.chain(pow_oo_n, &[(sum_f_sn, h_add_pow), (sum_g_sn, h_congr)]);
+        // forward : pow(one_one, n) = sumRange g sn
+
+        let backward = d.symm(pow_oo_n, sum_g_sn, forward);
+        // backward : sumRange g sn = pow(one_one, n) -- and add(one,one) is
+        // definitionally 2 (add's recursion is on the second argument), so
+        // this is accepted against the `pow(two, n)` statement below by def_eq.
+
+        let stmt = {
+            let lhs = d.sum_range(g, sn);
+            let rhs = d.pow(two, n);
+            d.eq(lhs, rhs)
+        };
+        (stmt, backward)
+    })?;
+    Ok(())
+}
+
+/// `Nat.choose_le_two_pow : ∀ n k, Le k n → Le (choose n k) (pow 2 n)` — a
+/// binomial coefficient is at most `2^n`: `choose n k` is the sum's own term
+/// at index `k` ([`declare_le_sum_range_of_lt`]), and the sum is `2^n`
+/// ([`declare_sum_choose_row`]).
+fn declare_choose_le_two_pow(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.choose_le_two_pow, 2, &|d, v| {
+        let (n, k) = (v[0], v[1]);
+        let two = d.num(2);
+        let hyp_ty = d.le(k, n);
+        let conclusion = {
+            let c = d.choose(n, k);
+            let bound = d.pow(two, n);
+            d.le(c, bound)
+        };
+        let stmt = d.arrow(hyp_ty, conclusion);
+
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+
+        let sn = d.succ(n);
+        let h_lt = d.lemma(p.lt_succ_of_le, &[k, n, hyp]); // Lt k (succ n)
+
+        let g = choose_row_fn(d, n);
+        let h_bound = d.lemma(p.le_sum_range_of_lt, &[g, sn, k, h_lt]);
+        // h_bound : Le (apply g k) (sumRange g sn) -- apply g k is defeq choose n k
+
+        let h_row = d.lemma(p.sum_choose_row, &[n]); // sumRange g sn = pow(two, n)
+
+        let ck = d.choose(n, k);
+        let sum_g_sn = d.sum_range(g, sn);
+        let pow_two_n = d.pow(two, n);
+        let final_proof = rewrite_le_rhs(d, ck, sum_g_sn, pow_two_n, h_row, h_bound);
+
+        let with_hyp = d.lam_fv(hyp_fv, hyp_ty, final_proof);
+        (stmt, with_hyp)
+    })?;
+    Ok(())
+}
+
+/// Declare the row sum, the term bound, and their shared toolkit
+/// (`Nat.one_pow`, `Nat.le_sumRange_of_lt`).
+///
+/// # Vandermonde's convolution — not attempted; the precise stall point
+///
+/// `choose (m+n) k = sumRange (fun i => choose m i * choose n (k-i)) (succ k)`
+/// needs an induction Pascal's rule alone cannot drive, and the reason is
+/// worth recording exactly rather than re-discovering: `choose_succ_succ` is
+/// unconditional (`choose (succ n)(succ j) = choose n j + choose n (succ j)`
+/// for EVERY `n,j`, no case split), so the obstruction is not Pascal's rule
+/// itself but getting the SECOND argument of `choose (succ n) (k-i)` into a
+/// literal `succ _` shape — `sub` recurses on its second argument (`i` here),
+/// so `sub (succ n) i` does not reduce for a bound `i`, unlike `sub n
+/// (succ i)`, which peels for free.
+///
+/// The identity that supplies the missing successor shape is provable but not
+/// yet built:
+///
+///   `succ_sub_of_le : Le i m → sub (succ m) i = succ (sub m i)`
+///
+/// (needed at `m := k'`, the induction's own bound, for every `i ≤ k'` inside
+/// its sum). Sketch, mirroring [`choose::sub_succ_of_lt`]'s use of `le_dest`:
+/// from `Le i m`, `le_dest` gives a witness `j` with `add i j = m`. Substitute
+/// `m` by `add i j`. Then `sub (succ (add i j)) i` is DEFINITIONALLY `sub (add
+/// i (succ j)) i` (`succ (add i j) ≡ add i (succ j)` is just `add`'s own
+/// defining equation read backwards), so `add_sub_cancel_left i (succ j)`
+/// gives it directly as `succ j`; symmetrically `add_sub_cancel_left i j`
+/// gives `sub (add i j) i = j`, so `succ (sub m i) = succ j` too. Both sides
+/// land on `succ j`; `exists_rec` (as in `sub_succ_of_lt`) lifts the result
+/// from the witnessed `add i j` back to the general `m`.
+///
+/// With `succ_sub_of_le` in hand, the outer induction (on `n`, `k`
+/// generalized inside the motive as in [`declare_le_sum_range_of_lt`]) still
+/// needs its successor case to split on `k = 0` vs `k = succ k'` (Pascal
+/// needs the FIRST convolution index `k` succ-shaped too, and `k=0` has no
+/// predecessor for the sum's own front term at `i=0`) — and `k=0` needs its
+/// own one-term-sum collapse (`choose (succ(m+n)) 0 = 1`, matched against a
+/// sum of length `1`), a smaller sibling of [`declare_add_pow_sanity`]'s
+/// `n=0` case. The `k = succ k'` branch then reindexes a DOUBLE sum (both the
+/// `m`-side index via Pascal and the `n`-side index via `succ_sub_of_le`),
+/// the same shape of work [`a_side_lemma`]/[`b_side_lemma`] did for
+/// `add_pow`, but with two independent shifts instead of one — sized
+/// comparably to the whole binomial theorem, not a small addition to it.
+pub(super) fn declare_combinatorial_identities(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    declare_one_pow(d, p)?;
+    declare_le_sum_range_of_lt(d, p)?;
+    declare_sum_choose_row(d, p)?;
+    declare_choose_le_two_pow(d, p)?;
     Ok(())
 }
