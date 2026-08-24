@@ -53,6 +53,11 @@ empty-footprint theorems, three active reviewed anchors, and 866 unreviewed
 entries ordered only by direct graph observations. Candidate mappings do not
 remove a theorem from review, and queue order has no producer or admission
 authority.
+The first queue-driven review batch adds the reflexive, symmetric, and
+transitive `CReal.Equiv` theorems as separate partial equivalence-relation law
+anchors. Six active kernel anchors now leave 863 explicitly unreviewed
+empty-footprint theorems; this is a review-state count, not a completeness
+claim.
 Next capability work must expand general-producer and adapter coverage over the
 train/development queue, compare it against that fixed observation, and only
 then evaluate an independently sealed held-out partition—not add more
@@ -89,3 +94,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `e256492c2` | Refresh the kernel-derived snapshot after Decidable and CPoint construction: 1,142 declarations, 869 theorems, and 4,127 direct theorem edges |
 | 2026-08-24 | `c514c8350` | Add three manually reviewed, empty-footprint kernel-theorem semantic anchors and reject accidental inflation of fact coverage by the new source population |
 | 2026-08-24 | `abb4a6be4` | Derive a deterministic, non-semantic review queue for all unanchored empty-footprint kernel theorems, with candidate mappings kept out of the reviewed population |
+| 2026-08-24 | pending | Review the first graph-central constructive-real equality cluster as three separate reflexive, symmetric, and transitive equivalence-law anchors |

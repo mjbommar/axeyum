@@ -417,6 +417,39 @@
       "reason": "For three non-collinear constructed points, the accepted theorem proves uniqueness of a point equidistant from all three. It is one formal circumcentre law supporting the equal-distance characterization of circles, not a formalization of elementary circle geometry as a whole.",
       "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs", "artifacts/autogenesis/kernel-dependency-projection-v1.json", "../math-education/graph/concepts/circle.md"] },
       "qualifiers": { "coverage": "supporting-law", "topic": "unique circumcentre of a non-collinear triple", "completeness": "partial" }
+    },
+    {
+      "id": "L:kernel-creal-equiv-refl-formalizes-equivalence",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "CReal.Equiv.refl" },
+      "target": { "namespace": "math-education", "kind": "encounter", "id": "C:equivalence-relation@understand", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The accepted theorem proves reflexivity of the constructive-real equality relation. It supplies one required equivalence-relation law, not equivalence classes, quotient construction, or complete coverage.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-kernel/src/creal.rs", "artifacts/autogenesis/kernel-dependency-projection-v1.json", "../math-education/graph/concepts/equivalence-relation.md"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "relation": "CReal.Equiv", "completeness": "partial" }
+    },
+    {
+      "id": "L:kernel-creal-equiv-symm-formalizes-equivalence",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "CReal.Equiv.symm" },
+      "target": { "namespace": "math-education", "kind": "encounter", "id": "C:equivalence-relation@understand", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The accepted theorem proves symmetry of the constructive-real equality relation. It supplies one required equivalence-relation law, not a complete equivalence-relation or quotient-development claim.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-kernel/src/creal.rs", "artifacts/autogenesis/kernel-dependency-projection-v1.json", "../math-education/graph/concepts/equivalence-relation.md"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "relation": "CReal.Equiv", "completeness": "partial" }
+    },
+    {
+      "id": "L:kernel-creal-equiv-trans-formalizes-equivalence",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "CReal.Equiv.trans" },
+      "target": { "namespace": "math-education", "kind": "encounter", "id": "C:equivalence-relation@understand", "source_revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The accepted theorem proves transitivity of the constructive-real equality relation. It supplies the third required equivalence-relation law, without claiming equivalence classes or full real-number theory.",
+      "provenance": { "method": "human-reviewed", "sources": ["crates/axeyum-lean-kernel/src/creal.rs", "artifacts/autogenesis/kernel-dependency-projection-v1.json", "../math-education/graph/concepts/equivalence-relation.md"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "relation": "CReal.Equiv", "completeness": "partial" }
     }
   ]
 }

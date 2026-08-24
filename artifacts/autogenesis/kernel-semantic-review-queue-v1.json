@@ -2,60 +2,27 @@
   "census": {
     "empty_footprint_theorems": 869,
     "kernel_theorems": 869,
-    "reviewed_kernel_semantic_anchors": 3,
-    "unreviewed_queue_entries": 866
+    "reviewed_kernel_semantic_anchors": 6,
+    "unreviewed_queue_entries": 863
   },
   "derivation": {
     "candidate_rule": "theorem with empty recorded axiom footprint and no active kernel-source formalizes link",
     "kernel_projection_sha256": "13b143f0c2ef5bfeefd592a209bc803b1aa75a163d7cb8ab3fb674cff5faa00b",
-    "knowledge_overlay_sha256": "f22fabc48a8f907f912514c4599e027079b5381baea1f16a48b04a96239f062c",
+    "knowledge_overlay_sha256": "8a47aa2dd5e9dc701f78378909af22e4536e618fd145edbb44f2c9c5f9def286",
     "ordering": "descending direct reverse theorem-reference count, descending direct theorem-dependency count, ascending declaration id",
     "trust_boundary": "review planning only; never concept classification, producer dispatch, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-semantic-review-queue",
   "reviewed_kernel_semantic_anchor_ids": [
     "CPoint.circumcentre_unique",
+    "CReal.Equiv.refl",
+    "CReal.Equiv.symm",
+    "CReal.Equiv.trans",
     "Complex.normSq_pow",
     "Decidable.em"
   ],
   "schema_version": 1,
   "unreviewed_entries": [
-    {
-      "direct_reverse_theorem_reference_count": 124,
-      "direct_theorem_dependency_count": 3,
-      "kernel_declaration_id": "CReal.Equiv.refl",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 120,
-      "direct_theorem_dependency_count": 10,
-      "kernel_declaration_id": "CReal.Equiv.trans",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 112,
-      "direct_theorem_dependency_count": 2,
-      "kernel_declaration_id": "CReal.Equiv.symm",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal"
-      ]
-    },
     {
       "direct_reverse_theorem_reference_count": 109,
       "direct_theorem_dependency_count": 4,
