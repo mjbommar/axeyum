@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 149] = [
+    let expected: [(&str, crate::NameId, &str); 158] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -278,6 +278,18 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.sumRange_telescope", p.sum_range_telescope, "theorem"),
         ("CReal.sumRange_split", p.sum_range_split, "theorem"),
         ("CReal.sumRange_tail_le", p.sum_range_tail_le, "theorem"),
+        // Powers, and the geometric series over ℝ (creal/power.rs).
+        // PRESENCE MATTERS AS MUCH AS THE FOOTPRINT here too — see the
+        // convergence block's own comment above.
+        ("CReal.pow", p.pow, "def"),
+        ("CReal.pow_zero", p.pow_zero, "theorem"),
+        ("CReal.pow_succ", p.pow_succ, "theorem"),
+        ("CReal.pow_add", p.pow_add, "theorem"),
+        ("CReal.pow_congr", p.pow_congr, "theorem"),
+        ("CReal.pow_nonneg", p.pow_nonneg, "theorem"),
+        ("CReal.pow_le_one", p.pow_le_one, "theorem"),
+        ("CReal.mul_sub_one_geom", p.mul_sub_one_geom, "theorem"),
+        ("CReal.geom_sum_bounded", p.geom_sum_bounded, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel

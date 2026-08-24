@@ -1072,6 +1072,73 @@ pub struct CRealPrelude {
     /// `CReal.Cauchy` predicate from it is a separate, unbuilt piece of
     /// infrastructure, not a restatement.
     pub sum_range_tail_le: NameId,
+
+    // --- powers, and the geometric series over ℝ (creal/power.rs) -----------
+    /// `CReal.pow : CReal → Nat → CReal`, by structural `Nat.rec` on the
+    /// exponent — `pow x Nat.zero ≡ one`, `pow x (Nat.succ j) ≡ mul (pow x
+    /// j) x` — matching `Int.pow`/`Complex.pow`'s own convention verbatim
+    /// (`int_prelude/defs.rs::declare_pow`, `complex.rs::declare_pow`):
+    /// recursion on the exponent, the recursive factor `mul (pow x j) x`
+    /// with the fresh copy on the **right** and the inductive value on the
+    /// **left**.
+    pub pow: NameId,
+    /// `CReal.pow_zero : Eq CReal (pow x Nat.zero) one`. Closes by `Eq.refl`
+    /// alone: `pow`'s `Nat.rec` application ι-reduces to the literal term
+    /// `one` at the base case, with no `CReal.mul` internals ever unfolded.
+    pub pow_zero: NameId,
+    /// `CReal.pow_succ : ∀ x (m : Nat), Eq CReal (pow x (Nat.succ m)) (mul
+    /// (pow x m) x)`. Closes by `Eq.refl` alone, for the same reason
+    /// [`Self::pow_zero`] does.
+    pub pow_succ: NameId,
+    /// `CReal.pow_add : ∀ x (m n : Nat), Equiv (pow x (Nat.add m n)) (mul
+    /// (pow x m) (pow x n))`. Induction on `n`, mirroring `Complex.pow_add`'s
+    /// own proof shape (`complex.rs::declare_pow_add`) verbatim.
+    pub pow_add: NameId,
+    /// `CReal.pow_congr : ∀ x y, Equiv x y → ∀ n, Equiv (pow x n) (pow y
+    /// n)`.
+    ///
+    /// **Load-bearing, and not skippable**: `CReal.Equiv` is a *defined*
+    /// `Prop` relation, so nothing rewrites under `pow` for free and
+    /// `funext` is unavailable. Induction on `n`, closing the step with
+    /// [`Self::mul_congr`] against the outer `Equiv x y` hypothesis and the
+    /// inductive hypothesis.
+    pub pow_congr: NameId,
+    /// `CReal.pow_nonneg : ∀ x, le zero x → ∀ n, le zero (pow x n)`.
+    /// Induction on `n`: the base case is `le_of_lt zero_lt_one` up to
+    /// `pow`'s ι-reduction, the step is [`Self::mul_nonneg`] against the
+    /// inductive hypothesis and the outer hypothesis.
+    pub pow_nonneg: NameId,
+    /// `CReal.pow_le_one : ∀ x, le zero x → le x one → ∀ n, le (pow x n)
+    /// one`. Induction on `n`: the base case is `le_refl one`, the step
+    /// multiplies the inductive hypothesis `pow x j ≤ one` by the
+    /// nonnegative `x` on the **left** ([`Self::mul_le_mul_of_nonneg_left`],
+    /// giving `x·(pow x j) ≤ x·one ~ x`), chains through `x ≤ one`
+    /// ([`Self::le_trans`]), and commutes the product back into `pow`'s own
+    /// right-recursive shape (`mul_comm`+`le_congr`).
+    pub pow_le_one: NameId,
+    /// `CReal.mul_sub_one_geom : ∀ x (n : Nat), Equiv (mul (add one (neg x))
+    /// (sumRange (fun k => pow x k) n)) (add one (neg (pow x n)))` — **the
+    /// geometric series identity**, `(1 − x) · Σ_{k<n} xᵏ = 1 − xⁿ`, mirroring
+    /// `Complex.mul_sub_one_geom` (`complex.rs::declare_mul_sub_one_geom`).
+    ///
+    /// Stated multiplied through, deliberately: the quotient form `Σ xᵏ ~
+    /// (1−xⁿ)/(1−x)` needs `inv (1 − x)` with a *witnessed* `PosBound`, which
+    /// no theorem can supply for an arbitrary `x`, and reaching it from `x ≁
+    /// 1` would need Markov's principle, which this kernel neither proves nor
+    /// assumes. The multiplied form holds for every `x`, including `x ~ 1`,
+    /// where the quotient form is meaningless.
+    pub mul_sub_one_geom: NameId,
+    /// `CReal.geom_sum_bounded : ∀ x, le zero x → ∀ n, le (mul (add one (neg
+    /// x)) (sumRange (fun k => pow x k) n)) one` — from [`Self::mul_sub_one_geom`]
+    /// plus [`Self::pow_nonneg`].
+    ///
+    /// **Not** a bound on the partial sum `Σ xᵏ` itself (that needs `inv` and
+    /// a witnessed modulus, exactly as the quotient form of
+    /// [`Self::mul_sub_one_geom`] would), and **not** conditioned on `x ≤
+    /// one`: only `0 ≤ x` is needed (to get `0 ≤ xⁿ`, hence `1 − xⁿ ≤ 1`) —
+    /// for `x > 1` the multiplier `1 − x` is negative and the product is
+    /// bounded by `1` even more trivially.
+    pub geom_sum_bounded: NameId,
 }
 
 impl CRealPrelude {
@@ -1284,6 +1351,15 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_telescope: kernel.name_str(creal, "sumRange_telescope"),
         sum_range_split: kernel.name_str(creal, "sumRange_split"),
         sum_range_tail_le: kernel.name_str(creal, "sumRange_tail_le"),
+        pow: kernel.name_str(creal, "pow"),
+        pow_zero: kernel.name_str(creal, "pow_zero"),
+        pow_succ: kernel.name_str(creal, "pow_succ"),
+        pow_add: kernel.name_str(creal, "pow_add"),
+        pow_congr: kernel.name_str(creal, "pow_congr"),
+        pow_nonneg: kernel.name_str(creal, "pow_nonneg"),
+        pow_le_one: kernel.name_str(creal, "pow_le_one"),
+        mul_sub_one_geom: kernel.name_str(creal, "mul_sub_one_geom"),
+        geom_sum_bounded: kernel.name_str(creal, "geom_sum_bounded"),
     }
 }
 
@@ -1364,7 +1440,8 @@ pub(crate) fn build_creal_prelude_uncached(
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
-        series::declare_series(&mut d, prelude)
+        series::declare_series(&mut d, prelude)?;
+        power::declare_power(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -2287,6 +2364,7 @@ mod inverse;
 mod lattice;
 mod mul_self_zero;
 mod order_extra;
+mod power;
 mod product;
 mod series;
 mod sqrt;
