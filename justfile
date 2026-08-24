@@ -450,6 +450,11 @@ autogenesis-kernel-projection:
     python3 scripts/validate-autogenesis-kernel-dependency-projection.py
     python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
 
+autogenesis-obstruction-projection:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection
+    python3 scripts/validate-autogenesis-obstruction-projection.py
+    python3 scripts/gen-autogenesis-obstruction-projection.py --check
+
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh
 
