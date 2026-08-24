@@ -100,6 +100,7 @@ def build() -> dict[str, Any]:
     for (family, statement_shape), fact_ids in sorted(clusters.items()):
         ids = sorted(fact_ids)
         components = sorted({catalog_by_fact[fact_id]["dependency_component_id"] for fact_id in ids})
+        unlocked = sorted({child for fact_id in ids for child in entries[fact_id]["would_unlock"]})
         catalog_clusters.append(
             {
                 "family": family,
@@ -107,6 +108,8 @@ def build() -> dict[str, Any]:
                 "ready_fact_ids": ids,
                 "ready_fact_count": len(ids),
                 "dependency_component_ids": components,
+                "direct_unlock_fact_ids": unlocked,
+                "direct_unlock_fact_count": len(unlocked),
             }
         )
     cataloged = sorted(fact_id for fact_id in ready if fact_id in catalog_by_fact)

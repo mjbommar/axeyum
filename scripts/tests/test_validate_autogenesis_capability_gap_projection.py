@@ -42,6 +42,11 @@ class CapabilityGapProjectionControls(unittest.TestCase):
         data["uncataloged_ready_fact_ids"].sort()
         self.assertTrue(any("partition" in error for error in CG.validate(data)))
 
+    def test_invented_unlock_count_is_rejected(self):
+        data = copy.deepcopy(self.data)
+        data["catalog_clusters"][0]["direct_unlock_fact_count"] += 1
+        self.assertTrue(any("direct unlock count" in error for error in CG.validate(data)))
+
 
 if __name__ == "__main__":
     unittest.main()

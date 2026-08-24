@@ -99,6 +99,7 @@ def validate(data: dict[str, Any]) -> list[str]:
         cluster_keys.append(key)  # type: ignore[arg-type]
         ids = cluster.get("ready_fact_ids")
         components = cluster.get("dependency_component_ids")
+        unlocked = cluster.get("direct_unlock_fact_ids")
         if not isinstance(ids, list) or ids != sorted(set(ids)):
             errors.append(f"{key}: catalog facts must be sorted and unique")
             continue
@@ -106,6 +107,10 @@ def validate(data: dict[str, Any]) -> list[str]:
             errors.append(f"{key}: catalog count disagrees with ids")
         if not isinstance(components, list) or components != sorted(set(components)):
             errors.append(f"{key}: dependency components must be sorted and unique")
+        if not isinstance(unlocked, list) or unlocked != sorted(set(unlocked)):
+            errors.append(f"{key}: direct unlock facts must be sorted and unique")
+        elif cluster.get("direct_unlock_fact_count") != len(unlocked):
+            errors.append(f"{key}: direct unlock count disagrees with ids")
         cataloged_ids.extend(ids)
     if cluster_keys != sorted(set(cluster_keys)):
         errors.append("catalog clusters are not uniquely sorted")

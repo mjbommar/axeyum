@@ -26,6 +26,11 @@ search-space reduction: a proposed producer can be evaluated against a family
 shape cluster without treating neighboring proof bodies or target outcomes as
 available information.
 
+Each reviewed cluster also carries the exact set of its immediate ledger
+descendants and its count. This is measured leverage, not a value judgement:
+it lets a scheduler compare the potential local fan-out of candidate producer
+work while keeping the ranking policy explicit and untrusted.
+
 ```sh
 python3 scripts/validate-autogenesis-capability-gap-projection.py
 python3 -m unittest scripts.tests.test_validate_autogenesis_capability_gap_projection
