@@ -29,8 +29,8 @@ def candidate(category: str) -> str | None:
 def build() -> dict:
     try:
         overlay = json.loads(OVERLAY.read_text())
-        registered_capabilities = {
-            row["id"] for row in overlay.get("entities", [])
+        capability_status = {
+            row["id"]: row.get("status") for row in overlay.get("entities", [])
             if isinstance(row, dict) and row.get("kind") == "capability"
         }
     except (OSError, json.JSONDecodeError) as error:
@@ -50,7 +50,7 @@ def build() -> dict:
         categories=sorted({r["obstruction_category"] for r in rows})
         first=rows[0]
         proposed=candidate(first["obstruction_category"])
-        status="not-applicable" if proposed is None else ("present-in-knowledge-overlay" if proposed in registered_capabilities else "not-present-in-knowledge-overlay")
+        status="not-applicable" if proposed is None else ({"active":"active-in-knowledge-overlay","candidate":"candidate-in-knowledge-overlay"}.get(capability_status.get(proposed),"not-present-in-knowledge-overlay"))
         obstructions.append({"id":f"O:{name}","family":name,"first_observed_blocker":first["obstruction_category"],"complete_known_blocker_set":categories,"affected_episodes":[r["id"] for r in rows],"affected_population":{"episodes":len(rows),"facts":[]},"candidate_capability":proposed,"candidate_capability_internal_status":status,"resolution_commit":None,"measured_before_after":None})
     return {"schema_version":1,"kind":"axeyum-autogenesis-obstruction-projection","derivation":{"method":"mechanically-observed","scope":"retained top-level decline objects under artifacts/autogenesis","knowledge_overlay_path":"artifacts/autogenesis/knowledge-overlay-v1.json","trust_boundary":"obstructions rank investigation only; they never authorize proof admission"},"census":{"episodes":len(episodes),"obstructions":len(obstructions),"candidate_capability_statuses":{status:sum(o['candidate_capability_internal_status']==status for o in obstructions) for status in sorted({o['candidate_capability_internal_status'] for o in obstructions})}},"episodes":episodes,"obstructions":obstructions}
 

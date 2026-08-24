@@ -13,4 +13,8 @@ class Controls(unittest.TestCase):
     d=copy.deepcopy(self.data); d['obstructions'][0]['complete_known_blocker_set']=[]; self.assertTrue(any('blocker set' in e for e in OP.validate(d)))
   def test_candidate_status_must_match_candidate(self):
     d=copy.deepcopy(self.data); o=next(o for o in d['obstructions'] if o['candidate_capability'] is not None); o['candidate_capability_internal_status']='not-applicable'; self.assertTrue(any('candidate capability and status disagree' in e for e in OP.validate(d)))
+  def test_candidate_capability_status_is_accepted(self):
+    self.assertTrue(any(o['candidate_capability_internal_status']=='candidate-in-knowledge-overlay' for o in self.data['obstructions']))
+  def test_candidate_status_must_match_overlay(self):
+    d=copy.deepcopy(self.data); o=next(o for o in d['obstructions'] if o['candidate_capability_internal_status']=='candidate-in-knowledge-overlay'); o['candidate_capability_internal_status']='active-in-knowledge-overlay'; self.assertTrue(any('does not match knowledge overlay' in e for e in OP.validate(d)))
 if __name__=='__main__': unittest.main()

@@ -67,6 +67,10 @@ multiplication congruence laws as separate partial well-definedness anchors.
 This is an explicit representative-independence claim for three operations,
 not a claim that all constructed-real operations or all real analysis are
 covered.
+The obstruction graph now distinguishes four explicitly candidate capabilities
+from absent or active mechanisms: checked declaration import, typed transport,
+bounded reproducible export, and checked declaration reuse. They account for
+nine measured obstruction families but grant no producer or admission authority.
 Next capability work must expand general-producer and adapter coverage over the
 train/development queue, compare it against that fixed observation, and only
 then evaluate an independently sealed held-out partition—not add more
@@ -106,3 +110,4 @@ single-target metadata or solver work.
 | 2026-08-24 | `601d17c82` | Review the first graph-central constructive-real equality cluster as three separate reflexive, symmetric, and transitive equivalence-law anchors |
 | 2026-08-24 | `bb74b057c` | Expose active reviewed kernel-theorem semantic anchors as a separately validated concept-coverage dimension without mixing them into fact or held-out populations |
 | 2026-08-24 | `32c75dfab` | Review the representative-independence laws for constructive-real negation, addition, and multiplication as separate partial well-definedness anchors |
+| 2026-08-24 | pending | Turn four recurring measured obstruction patterns into explicit non-executable candidate capabilities, with output status checked against the overlay |

@@ -132,6 +132,54 @@
         "assurance_floor": "kernel-lean-empty-axiom-footprint",
         "blind_development_result": "4/4 Nat.ModEq siblings closed without changing the producer"
       }
+    },
+    {
+      "id": "K:declaration-or-inductive-import",
+      "kind": "capability",
+      "title": "Checked declaration or inductive-package import",
+      "description": "Candidate capability to select, transport, and independently check one demanded target-owned declaration or atomic inductive package, with exact identity and footprint controls. It is not an implemented import operation.",
+      "status": "candidate",
+      "attributes": {
+        "evidence_basis": "repeated retained MissingTargetOwnedDefinition and unsupported-missing-declaration declines",
+        "assurance_floor": "kernel-lean-empty-axiom-footprint",
+        "admission_authority": false
+      }
+    },
+    {
+      "id": "K:typed-transport-composition",
+      "kind": "capability",
+      "title": "Typed transport and composition",
+      "description": "Candidate capability to compose checked declarations across compatible dependent type shapes while retaining exact source/target identities. It is not a license to name-match or erase a type mismatch.",
+      "status": "candidate",
+      "attributes": {
+        "evidence_basis": "retained TypeShapeMismatch and decision-witness-dependent type-shape declines",
+        "assurance_floor": "kernel-checked-transport-receipt",
+        "admission_authority": false
+      }
+    },
+    {
+      "id": "K:bounded-reproducible-export",
+      "kind": "capability",
+      "title": "Bounded reproducible export environment",
+      "description": "Candidate capability to stage and replay a proof-isolated export with fixed module roots, search paths, and resource bounds. It is environment reproducibility support, not proof construction.",
+      "status": "candidate",
+      "attributes": {
+        "evidence_basis": "retained exporter/module/root/resource decline records",
+        "assurance_floor": "byte-identical-export-and-fresh-import",
+        "admission_authority": false
+      }
+    },
+    {
+      "id": "K:checked-declaration-reuse",
+      "kind": "capability",
+      "title": "Checked declaration reuse",
+      "description": "Candidate capability to reuse a previously checked target-owned declaration only through an exact dependency contract and fresh kernel check. It does not permit source-proof leakage or undeclared dependency grafting.",
+      "status": "candidate",
+      "attributes": {
+        "evidence_basis": "retained NoAdditions and official-composition declines",
+        "assurance_floor": "exact-dependency-contract-and-fresh-kernel-check",
+        "admission_authority": false
+      }
     }
   ],
   "links": [
