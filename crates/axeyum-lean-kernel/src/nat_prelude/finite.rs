@@ -410,7 +410,13 @@ fn compact(d: &mut NatDev<'_>, c: ExprId, x: ExprId) -> ExprId {
 }
 
 /// `h : Le x c ⊢ Eq Nat (compact c x) x`.
-fn compact_eq_of_le(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, x: ExprId, h_le: ExprId) -> ExprId {
+fn compact_eq_of_le(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    c: ExprId,
+    x: ExprId,
+    h_le: ExprId,
+) -> ExprId {
     let p = *p;
     let cond = d.ble(x, c);
     let true_val = d.bool_true();
@@ -428,7 +434,13 @@ fn compact_eq_of_le(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, x: ExprId, h_
 /// `h : Lt c x ⊢ Eq Nat (compact c x) (pred x)`, via the "generalize then
 /// instantiate at `bool_refl(condition)`" trick already used in
 /// `division.rs`'s `executable_division_spec_step`.
-fn compact_eq_of_gt(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, x: ExprId, h_gt: ExprId) -> ExprId {
+fn compact_eq_of_gt(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    c: ExprId,
+    x: ExprId,
+    h_gt: ExprId,
+) -> ExprId {
     let p = *p;
     let cond = d.ble(x, c);
     let px = d.pred(x);
@@ -569,8 +581,10 @@ fn trichotomy(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, x: ExprId) -> ExprI
             let body = d.const_app(logic.or_inr, &[lt_xc, inner, mid]);
             d.lam_fv(h2_fv, eq_xc, body)
         };
-        let body =
-            d.const_app(logic.or_elim, &[lt_xc, eq_xc, target, sub, sub_on_left, sub_on_right]);
+        let body = d.const_app(
+            logic.or_elim,
+            &[lt_xc, eq_xc, target, sub, sub_on_left, sub_on_right],
+        );
         d.lam_fv(h_fv, le_xc, body)
     };
     let on_right = {
@@ -593,11 +607,16 @@ fn trichotomy(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, x: ExprId) -> ExprI
             let body = d.const_app(logic.or_inr, &[lt_xc, inner, mid]);
             d.lam_fv(h2_fv, eq_cx, body)
         };
-        let body =
-            d.const_app(logic.or_elim, &[lt_cx, eq_cx, target, sub, sub_on_left, sub_on_right]);
+        let body = d.const_app(
+            logic.or_elim,
+            &[lt_cx, eq_cx, target, sub, sub_on_left, sub_on_right],
+        );
         d.lam_fv(h_fv, le_cx, body)
     };
-    d.const_app(logic.or_elim, &[le_xc, le_cx, target, total, on_left, on_right])
+    d.const_app(
+        logic.or_elim,
+        &[le_xc, le_cx, target, total, on_left, on_right],
+    )
 }
 
 /// Eliminate the middle `Eq Nat x c` case of [`trichotomy`] using
@@ -640,10 +659,16 @@ fn two_way_split(
             let body = d.const_app(logic.or_inr, &[lt_xc, lt_cx, h2]);
             d.lam_fv(h2_fv, lt_cx, body)
         };
-        let body = d.const_app(logic.or_elim, &[eq_xc, lt_cx, target, h, sub_on_left, sub_on_right]);
+        let body = d.const_app(
+            logic.or_elim,
+            &[eq_xc, lt_cx, target, h, sub_on_left, sub_on_right],
+        );
         d.lam_fv(h_fv, inner, body)
     };
-    d.const_app(logic.or_elim, &[lt_xc, inner, target, tri, on_left, on_right])
+    d.const_app(
+        logic.or_elim,
+        &[lt_xc, inner, target, tri, on_left, on_right],
+    )
 }
 
 /// `heq : Eq Nat (f i) (f m) ⊢ False`, from `hi : Lt i m` and `f`'s
@@ -749,7 +774,10 @@ fn compact_lt_of(
         let result = d.transport(px, motive3, px_lt_m, gx, sym_eq2);
         d.lam_fv(h_fv, lt_cx, result)
     };
-    d.const_app(logic.or_elim, &[lt_xc, lt_cx, target, split, on_left, on_right])
+    d.const_app(
+        logic.or_elim,
+        &[lt_xc, lt_cx, target, split, on_left, on_right],
+    )
 }
 
 // x < c, y < c: compact is the identity on both.
@@ -917,7 +945,10 @@ fn compact_injective(
             let result = case_lt_gt(d, &p, c, x, y, cx, cy, h, h2, heq, target);
             d.lam_fv(h2_fv, lt_cy, result)
         };
-        let body = d.const_app(logic.or_elim, &[lt_yc, lt_cy, target, hy, sub_left, sub_right]);
+        let body = d.const_app(
+            logic.or_elim,
+            &[lt_yc, lt_cy, target, hy, sub_left, sub_right],
+        );
         d.lam_fv(h_fv, lt_xc, body)
     };
     let branch_given_c_lt_x = {
@@ -935,10 +966,23 @@ fn compact_injective(
             let result = case_gt_gt(d, &p, c, x, y, cx, cy, h, h2, heq);
             d.lam_fv(h2_fv, lt_cy, result)
         };
-        let body = d.const_app(logic.or_elim, &[lt_yc, lt_cy, target, hy, sub_left, sub_right]);
+        let body = d.const_app(
+            logic.or_elim,
+            &[lt_yc, lt_cy, target, hy, sub_left, sub_right],
+        );
         d.lam_fv(h_fv, lt_cx, body)
     };
-    d.const_app(logic.or_elim, &[lt_xc, lt_cx, target, hx, branch_given_x_lt_c, branch_given_c_lt_x])
+    d.const_app(
+        logic.or_elim,
+        &[
+            lt_xc,
+            lt_cx,
+            target,
+            hx,
+            branch_given_x_lt_c,
+            branch_given_c_lt_x,
+        ],
+    )
 }
 
 /// Given `k ≤ m` and `Or (Lt k c) (Lt c k)`, recover a witness for
@@ -1247,7 +1291,10 @@ fn pigeonhole_step_case(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, ih: ExprI
             let body = d.const_app(logic.or_elim, &[eq_kc, lt_ck, target, h, sub_eq, sub_gt]);
             d.lam_fv(h_fv, inner_ty, body)
         };
-        let body = d.const_app(logic.or_elim, &[lt_kc, inner_ty, target, tri, case_lt, case_mid]);
+        let body = d.const_app(
+            logic.or_elim,
+            &[lt_kc, inner_ty, target, tri, case_lt, case_mid],
+        );
         let with_hk = d.lam_fv(hk_fv, hk_ty, body);
         d.lam_fv(k_fv, nat, with_hk)
     };

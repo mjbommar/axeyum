@@ -1119,8 +1119,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             injective_on: kernel.name_str(nat, "injectiveOn"),
             surjective_on: kernel.name_str(nat, "surjectiveOn"),
             maps_into: kernel.name_str(nat, "mapsInto"),
-            injective_on_imp_surjective_on: kernel
-                .name_str(nat, "injective_on_imp_surjective_on"),
+            injective_on_imp_surjective_on: kernel.name_str(nat, "injective_on_imp_surjective_on"),
         };
 
         let mut d = NatDev::new(kernel, p);
