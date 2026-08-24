@@ -1576,6 +1576,193 @@ SUITES["kernel-suite-partition"] = (
 )
 
 
+# The agent-episode gate (docs/python-2026-08/03-agentic-layer.md, slice A1).
+#
+# An episode is the ONLY thing separating "a model ran" from "a model proved
+# something", so a rule in it that cannot fail is worse than no rule: it
+# manufactures unfalsifiable claims at the speed of the loop. Fourteen guards,
+# fourteen tests, one each. Two are worth naming here because they are the ones
+# a reader would assume are covered by something else:
+#
+#   `ledger-writes-must-be-zero` overlaps the schema's `maximum: 0`, so the test
+#   asserts the RULE NAME rather than the exit status. Delete the rule and the
+#   document still fails -- on `schema` -- and a status-only test would survive.
+#
+#   `no-episodes-is-not-a-pass` is the audited defect itself (40 of 162 checker
+#   runs exiting 0 on completion alone, CLAUDE.md 2026-08-15). Removing it makes
+#   `check-agent-episode.py <nothing>` exit 0.
+SUITES["agent-episode"] = (
+    "scripts/check-agent-episode.py",
+    "scripts.tests.test_check_agent_episode",
+    [
+        (
+            "schema violations are reported",
+            "    for message in validate(document, schema, schema):",
+            "    for message in []:",
+        ),
+        (
+            "--require-ancestor actually fails",
+            '                fail("git-commit-ancestor", f"{commit} {reason}")',
+            "                pass",
+        ),
+        (
+            "frontier digest must match the saved frontier",
+            "            if actual is not None and actual != claimed:",
+            "            if False:",
+        ),
+        (
+            "the saved frontier must re-verify against the live ledger",
+            "            if not ok:",
+            "            if False:",
+        ),
+        (
+            "a web snapshot's bytes must hash to what it claims",
+            '        if digest != snapshot.get("sha256"):',
+            "        if False:",
+        ),
+        (
+            "ledger_writes must be zero",
+            "    if writes != 0:",
+            "    if False:",
+        ),
+        (
+            "a held-out id anywhere in the document is a violation",
+            "        if value in held:",
+            "        if False:",
+        ),
+        (
+            "proved requires a checker that exited zero",
+            "        if status != 0:",
+            "        if False:",
+        ),
+        (
+            "proved requires a named checker command",
+            "        if not (isinstance(command, str) and command.strip()):",
+            "        if False:",
+        ),
+        (
+            "a proposal's bytes must hash to what it claims",
+            '        if digest != proposal.get("sha256"):',
+            "        if False:",
+        ),
+        (
+            "a run that called nothing is not a clean decline",
+            "    if not calls:",
+            "    if False:",
+        ),
+        (
+            "the selected fact must exist in the ledger",
+            "    if fact_id not in fact_ids:",
+            "    if False:",
+        ),
+        (
+            "checking zero episodes is not a pass",
+            "    if checked == 0:",
+            "    if False:",
+        ),
+        (
+            "an empty fact ledger is an error, not a pass",
+            "    if not fact_ids:",
+            "    if False:",
+        ),
+        (
+            "an unreadable nursery is an error, not an empty held-out set",
+            '        print(f"EPISODE_ERROR|held-out-population|{error}", file=sys.stderr)\n        return 2',
+            "        held = set()",
+        ),
+    ],
+)
+
+
+# The tactic catalog (docs/python-2026-08/04-tactic-catalog.md, slice A3).
+#
+# The catalog is what a plan resolves against, so a rule in it that cannot fail
+# lets the agent name a strategy the code does not have. Thirteen guards,
+# thirteen tests, one each. Three are worth naming:
+#
+#   `precondition-shapes` and `reach-empty` are the doc-228 finding as a gate:
+#   a catalog whose entries each match one goal shape is a dispatch table, and a
+#   tactic with no measured accepted or declined goal is a name. Neither can be
+#   caught by validating fields; both are census properties of the whole file.
+#
+#   `technique` is covered by a HERMETIC fixture (a stand-in sibling checkout
+#   with a patched revision), not by the live `../math-education`. Under this
+#   harness the subject runs from a scratch copy where the real sibling is not
+#   beside it, so a live-sibling test would SKIP here and report the guard as a
+#   survivor -- the "an empty result from a tool never pointed at your subject"
+#   trap, one level up.
+SUITES["tactic-catalog"] = (
+    "scripts/validate-tactic-catalog.py",
+    "scripts.tests.test_validate_tactic_catalog",
+    [
+        (
+            "duplicate tactic ids",
+            "        if ident in seen:",
+            "        if False:",
+        ),
+        (
+            "implemented_by.path must exist",
+            "        if source_path is None or not source_path.is_file():",
+            "        if False:",
+        ),
+        (
+            "the symbol must be declared in that file",
+            "            if re.search(pattern, text) is None:",
+            "            if False:",
+        ),
+        (
+            "decline reasons must be that file's own variants",
+            "                if reason not in variants:",
+            "                if False:",
+        ),
+        (
+            "budget constants must equal the Rust const",
+            "                elif consts[name] != value:",
+            "                elif False:",
+        ),
+        (
+            "realizes must resolve in the knowledge overlay",
+            "        if realizes not in capabilities:",
+            "        if False:",
+        ),
+        (
+            "the technique pin must be the overlay's pin",
+            "        if overlay_pin is not None and revision != overlay_pin:",
+            "        if False:",
+        ),
+        (
+            "a pinned technique must resolve to a file",
+            "            if not target.is_file():",
+            "            if False:",
+        ),
+        (
+            "residual shape and measure are \"none\" together",
+            "        if shape_none != measure_none:",
+            "        if False:",
+        ),
+        (
+            "a tactic with zero reach rows",
+            "        if rows_accepted + rows_declined == 0:",
+            "        if False:",
+        ),
+        (
+            "one precondition shape is a dispatch table",
+            "    if len(shapes) < 2:",
+            "    if False:",
+        ),
+        (
+            "the tactic kind enum",
+            '    if tactic.get("kind") not in TACTIC_KINDS:',
+            "    if False:",
+        ),
+        (
+            "the precondition predicate vocabulary",
+            '    if kind not in PREDICATES:\n        err(errors, "schema", f"{where}: unknown predicate kind {kind!r}")\n        return',
+            "    if kind not in PREDICATES:\n        return",
+        ),
+    ],
+)
+
 DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
 DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
 

@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axeyum.dev/ontology/tactic-catalog.schema.json",
+  "title": "Axeyum Tactic Catalog",
+  "description": "The proof-strategy vocabulary an agent plan resolves against. A tactic is a named, precondition-guarded move over a kernel goal: what shape it accepts, which kernel primitives it builds with, what residual it leaves and which well-founded measure that residual decreases, what it costs, how it can decline, and the MEASURED goals it has accepted and declined. Preconditions are typed structural predicates over the goal, never regexes over declaration names -- a tactic that dispatches on a name is a dispatch table entry, not a producer.",
+  "type": "object",
+  "required": ["schema_version", "kind", "tactics"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "axeyum-tactic-catalog" },
+    "notes": { "type": "string", "minLength": 1 },
+    "tactics": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/tactic" }
+    }
+  },
+  "$defs": {
+    "assurance": {
+      "description": "Same enum as the knowledge overlay's link assurance; a tactic's reach is a qualified claim exactly as an overlay edge is.",
+      "enum": [
+        "formal-derived", "independently-checked", "registry-derived",
+        "mechanically-observed", "human-reviewed", "heuristic", "proposed"
+      ]
+    },
+    "status": { "enum": ["active", "candidate", "deprecated"] },
+    "declarationName": {
+      "description": "A kernel declaration the move builds with. Angle brackets mark a structurally DISCOVERED family whose name the producer never writes down (`<inductive>.rec` is whatever zero/succ-shaped inductive the goal's own binder turned out to name).",
+      "type": "string",
+      "pattern": "^(?:<[a-z-]+>|[A-Za-z_][A-Za-z0-9_]*)(?:\\.(?:<[a-z-]+>|[A-Za-z_][A-Za-z0-9_]*))*$"
+    },
+    "predicate": {
+      "description": "One typed structural predicate over the current goal and the hypotheses retained along the derivation. The `kind` fixes which `args` object is legal; there is no free-form predicate and no name matching.",
+      "type": "object",
+      "required": ["kind", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string" },
+        "args": { "type": "object" }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "kind": { "const": "goal-head" },
+            "args": {
+              "type": "object",
+              "required": ["head"],
+              "additionalProperties": false,
+              "properties": {
+                "head": {
+                  "description": "The head symbol class of the terminal (non-Pi) goal, discovered structurally. `any-prop` means the tactic never inspects the goal at all.",
+                  "enum": ["Eq", "Iff", "any-prop"]
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": { "const": "sides-definitionally-equal" },
+            "args": {
+              "type": "object",
+              "required": ["value"],
+              "additionalProperties": false,
+              "properties": { "value": { "type": "boolean" } }
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": { "const": "binder-shape" },
+            "args": {
+              "type": "object",
+              "required": ["shape"],
+              "additionalProperties": false,
+              "properties": {
+                "shape": {
+                  "description": "The shape of a leading Pi binder. `zero-succ` is a structurally discovered nullary/unary-constructor inductive, never a named type.",
+                  "enum": ["zero-succ", "ordinary-pi", "hypothesis-pi"]
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": { "const": "hypothesis-family" },
+            "args": {
+              "type": "object",
+              "required": ["family", "index"],
+              "additionalProperties": false,
+              "properties": {
+                "family": {
+                  "description": "The shape a retained hypothesis's type unfolds to. `le-shaped` is a structurally discovered indexed family with a reflexive-at-parameter constructor and a step constructor.",
+                  "enum": ["le-shaped", "eq-shaped"]
+                },
+                "index": { "enum": ["zero", "succ", "any"] },
+                "parameter": { "enum": ["zero", "succ", "any"] }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": { "const": "hypothesis-state" },
+            "args": {
+              "type": "object",
+              "required": ["state"],
+              "additionalProperties": false,
+              "properties": {
+                "state": {
+                  "description": "`available`: an induction hypothesis parses to the same Eq shape as the goal. `stuck`: it was retained unapplied because a binder domain did not agree. `absent`: the tactic must work without one.",
+                  "enum": ["available", "stuck", "absent"]
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": { "const": "occurrence-embeds" },
+            "args": {
+              "type": "object",
+              "required": ["needle", "haystack", "via"],
+              "additionalProperties": false,
+              "properties": {
+                "needle": { "enum": ["hypothesis-lhs", "hypothesis-rhs", "candidate-argument"] },
+                "haystack": { "enum": ["goal-lhs-whnf", "goal-rhs-whnf", "expected-argument"] },
+                "via": {
+                  "description": "`kabstract-occurrences` searches every subterm reachable through App/Proj/binder types; `app-spine` only top-level argument positions.",
+                  "enum": ["kabstract-occurrences", "app-spine"]
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": { "const": "residual-gap-shape" },
+            "args": {
+              "type": "object",
+              "required": ["shape"],
+              "additionalProperties": false,
+              "properties": {
+                "shape": {
+                  "description": "The shape of the leftover `Eq(candidate, expected)` a congruence wrap did not close.",
+                  "enum": [
+                    "single-argument-diff",
+                    "multi-argument-diff-same-head",
+                    "collapsed-occurrence-site"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": { "const": "spine-argument-matches" },
+            "args": {
+              "type": "object",
+              "required": ["position", "target"],
+              "additionalProperties": false,
+              "properties": {
+                "position": { "enum": ["any-top-level"] },
+                "target": { "enum": ["goal-rhs"] }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": { "const": "head-unfolds" },
+            "args": {
+              "type": "object",
+              "required": ["via", "to"],
+              "additionalProperties": false,
+              "properties": {
+                "via": { "enum": ["whnf-delta"] },
+                "to": { "enum": ["Eq", "Iff"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "tactic": {
+      "type": "object",
+      "required": [
+        "id", "title", "kind", "precondition", "move", "residual", "budget",
+        "decline_reasons", "implemented_by", "realizes", "uses_technique",
+        "reach", "assurance", "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^T:[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "title": { "type": "string", "minLength": 1 },
+        "kind": {
+          "enum": [
+            "closure", "induction", "rewrite", "lemma-splice",
+            "elimination", "case-split", "generalization", "combinator"
+          ]
+        },
+        "precondition": {
+          "type": "object",
+          "required": ["description", "structural"],
+          "additionalProperties": false,
+          "properties": {
+            "description": { "type": "string", "minLength": 1 },
+            "structural": {
+              "type": "object",
+              "required": ["all_of"],
+              "additionalProperties": false,
+              "properties": {
+                "all_of": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": { "$ref": "#/$defs/predicate" }
+                }
+              }
+            }
+          }
+        },
+        "move": {
+          "type": "object",
+          "required": ["description", "kernel_primitives"],
+          "additionalProperties": false,
+          "properties": {
+            "description": { "type": "string", "minLength": 1 },
+            "kernel_primitives": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/declarationName" }
+            }
+          }
+        },
+        "residual": {
+          "description": "What is left to prove after the move, and the measure that makes the recursion terminate. `shape` and `measure` are both \"none\" exactly when the move closes the goal outright.",
+          "type": "object",
+          "required": ["description", "shape", "measure"],
+          "additionalProperties": false,
+          "properties": {
+            "description": { "type": "string", "minLength": 1 },
+            "shape": { "type": "string", "minLength": 1 },
+            "measure": { "type": "string", "minLength": 1 }
+          }
+        },
+        "budget": {
+          "description": "Named Rust constants that bound this tactic, with their committed values. Every entry is checked against the `const` in the implementing file; a budget nobody checks is decoration.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "pattern": "^[A-Z][A-Z0-9_]*$" },
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "decline_reasons": {
+          "description": "Variants of the implementing file's own `DeclineReason` enum this tactic can emit.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" }
+        },
+        "implemented_by": {
+          "type": "object",
+          "required": ["crate", "path", "symbol"],
+          "additionalProperties": false,
+          "properties": {
+            "crate": { "type": "string", "minLength": 1 },
+            "path": { "type": "string", "minLength": 1 },
+            "symbol": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }
+          }
+        },
+        "realizes": {
+          "description": "The capability entity in the knowledge overlay this tactic realizes.",
+          "type": "string",
+          "pattern": "^K:[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "uses_technique": {
+          "description": "The external mathematical technique, pinned to the sibling corpus revision the overlay pins.",
+          "type": "object",
+          "required": ["id", "source", "revision"],
+          "additionalProperties": false,
+          "properties": {
+            "id": { "type": "string", "pattern": "^TQ:[a-z0-9]+(?:-[a-z0-9]+)*$" },
+            "source": { "const": "math-education" },
+            "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+          }
+        },
+        "reach": {
+          "description": "MEASURED reach only. Every row cites where the measurement comes from: the producer's module doc, a committed candidate/decline artifact, or a named test.",
+          "type": "object",
+          "required": ["accepted_goals", "declined_goals"],
+          "additionalProperties": false,
+          "properties": {
+            "accepted_goals": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/acceptedGoal" }
+            },
+            "declined_goals": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/declinedGoal" }
+            }
+          }
+        },
+        "assurance": { "$ref": "#/$defs/assurance" },
+        "status": { "$ref": "#/$defs/status" }
+      }
+    },
+    "acceptedGoal": {
+      "type": "object",
+      "required": ["goal", "evidence"],
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["fact_id"] },
+        { "required": ["source"] }
+      ],
+      "properties": {
+        "goal": { "type": "string", "minLength": 1 },
+        "fact_id": { "type": "string", "pattern": "^F:[A-Za-z0-9:_-]+$" },
+        "source": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "string", "minLength": 1 }
+      }
+    },
+    "declinedGoal": {
+      "type": "object",
+      "required": ["goal", "reason", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "goal": { "type": "string", "minLength": 1 },
+        "fact_id": { "type": "string", "pattern": "^F:[A-Za-z0-9:_-]+$" },
+        "reason": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -1,0 +1,613 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-tactic-catalog",
+  "notes": "Tactic catalog v1 (docs/python-2026-08/04-tactic-catalog.md). Every entry is extracted from a producer that already exists and has been run against a kernel: eight moves from the bounded structural induction producer and one definitional equivalence-relation combinator from the ModEq family producer. Reach is measured, never asserted -- each row cites the producer's own module doc or a committed candidate/decline artifact. The two producers currently live under crates/axeyum-lean-import/examples/; a move to src/producers/ must update implemented_by.path in the same change, because the validator resolves the path and greps the symbol.",
+  "tactics": [
+    {
+      "id": "T:refl-closure",
+      "title": "Close a terminal equality by reflexivity",
+      "kind": "closure",
+      "precondition": {
+        "description": "The terminal (fully binder-peeled) goal parses as an exact Eq application whose two sides are already definitionally equal to the kernel. Nothing about either side is inspected: the tactic succeeds exactly when unfolding alone closes the gap.",
+        "structural": {
+          "all_of": [
+            { "kind": "goal-head", "args": { "head": "Eq" } },
+            { "kind": "sides-definitionally-equal", "args": { "value": true } }
+          ]
+        }
+      },
+      "move": {
+        "description": "Emit `Eq.refl carrier lhs` at the goal's own universe level and carrier, wrapped back under whatever lambda binders were peeled. The `Eq` and `Eq.refl` constants are discovered structurally from the kernel handed in, never named by the producer.",
+        "kernel_primitives": ["Eq", "Eq.refl"]
+      },
+      "residual": {
+        "description": "None: the move closes the goal outright.",
+        "shape": "none",
+        "measure": "none"
+      },
+      "budget": { "MAX_BINDERS": 8 },
+      "decline_reasons": [
+        "NotEqualityGoal",
+        "TerminalNotDefEqNoRewrite",
+        "RequiredDeclarationUnavailable"
+      ],
+      "implemented_by": {
+        "crate": "axeyum-lean-import",
+        "path": "crates/axeyum-lean-import/src/producers/bounded_induction.rs",
+        "symbol": "close_terminal"
+      },
+      "realizes": "K:bounded-structural-induction",
+      "uses_technique": {
+        "id": "TQ:direct-proof",
+        "source": "math-education",
+        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+      },
+      "reach": {
+        "accepted_goals": [
+          {
+            "goal": "∀ (n : ℕ), n.ascFactorial 0 = 1",
+            "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+            "evidence": "artifacts/autogenesis/mathlib-factorial-zero-family-v1.json (state two-target-proof-isolated-reflexivity-checked; member operation authoritative-mathlib-statement-reflexivity-v1)"
+          },
+          {
+            "goal": "∀ (n : ℕ), n.descFactorial 0 = 1",
+            "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+            "evidence": "artifacts/autogenesis/mathlib-descfactorial-zero-reflexivity-v1.json (operation.binders 1, constructed_nodes 4, axioms 0, kernel checked)"
+          }
+        ],
+        "declined_goals": [
+          {
+            "goal": "∀ (n : ℕ), n.descFactorial 1 = n",
+            "fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
+            "reason": "The two sides are externally equal but not definitionally so; the kernel rejected the Eq.refl candidate with DeclarationValueMismatch.",
+            "source": "artifacts/autogenesis/mathlib-nat-descfactorial-one-reflexivity-decline-v1.json (state declined-not-defeq-kernel-confirmed)"
+          }
+        ]
+      },
+      "assurance": "independently-checked",
+      "status": "active"
+    },
+    {
+      "id": "T:bounded-structural-induction",
+      "title": "Induct on a zero/succ-shaped leading binder",
+      "kind": "induction",
+      "precondition": {
+        "description": "A leading Pi binder whose domain is a structurally discovered inductive with one nullary and one unary constructor (the zero/succ shape), and a goal that parses as an Eq application under it. The inductive, its constructors and its recursor are found by shape; no declaration name is matched.",
+        "structural": {
+          "all_of": [
+            { "kind": "binder-shape", "args": { "shape": "zero-succ" } },
+            { "kind": "goal-head", "args": { "head": "Eq" } }
+          ]
+        }
+      },
+      "move": {
+        "description": "Build `<inductive>.rec {motive} case_zero case_succ` from the binder's own motive and apply it to the binder's bound value without leaving the Pi, so the base and step goals are posed in the same scope. The step case carries the induction hypothesis for the predecessor.",
+        "kernel_primitives": ["<inductive>.rec", "<inductive>.zero", "<inductive>.succ", "Eq"]
+      },
+      "residual": {
+        "description": "Two subgoals: the motive at the nullary constructor, and the motive at the unary constructor with the induction hypothesis for the predecessor in scope.",
+        "shape": "motive(zero) and motive(succ k) with induction hypothesis motive(k)",
+        "measure": "constructor depth of the induction variable: each subgoal is posed at a strictly smaller constructor depth than the goal it came from, and the number of inductions on one derivation is capped by MAX_INDUCTIONS"
+      },
+      "budget": { "MAX_BINDERS": 8, "MAX_INDUCTIONS": 2 },
+      "decline_reasons": [
+        "BinderBudgetExceeded",
+        "UnsupportedRecursorShape",
+        "NotEqualityGoal",
+        "TerminalNotDefEqNoRewrite"
+      ],
+      "implemented_by": {
+        "crate": "axeyum-lean-import",
+        "path": "crates/axeyum-lean-import/src/producers/bounded_induction.rs",
+        "symbol": "try_induction"
+      },
+      "realizes": "K:bounded-structural-induction",
+      "uses_technique": {
+        "id": "TQ:proof-by-induction",
+        "source": "math-education",
+        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+      },
+      "reach": {
+        "accepted_goals": [
+          {
+            "goal": "∀ (n : ℕ), n.descFactorial 1 = n",
+            "fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
+            "evidence": "artifacts/autogenesis/mathlib-bounded-induction-family-descfactorial-one-v1.json (binders_used 1, inductions_used 1, axioms 0)"
+          },
+          {
+            "goal": "∀ (n : ℕ), n.ascFactorial 0 = 1",
+            "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+            "evidence": "artifacts/autogenesis/mathlib-bounded-induction-family-ascfactorial-zero-v1.json (binders_used 1, inductions_used 1, axioms 0)"
+          },
+          {
+            "goal": "∀ (n : ℕ), n.descFactorial 0 = 1",
+            "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+            "evidence": "artifacts/autogenesis/mathlib-bounded-induction-family-descfactorial-zero-v1.json (binders_used 1, inductions_used 1, axioms 0)"
+          },
+          {
+            "goal": "∀ (k : ℕ), Nat.ascFactorial 0 k.succ = 0",
+            "fact_id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
+            "evidence": "artifacts/autogenesis/mathlib-bounded-induction-family-zero-ascfactorial-succ-v1.json (binders_used 1, inductions_used 1, axioms 0)"
+          },
+          {
+            "goal": "∀ (k : ℕ), Nat.ascFactorial 1 k = k.factorial",
+            "fact_id": "F:ml430-nat-one-ascfactorial-8bacb017",
+            "evidence": "artifacts/autogenesis/mathlib-bounded-induction-family-one-ascfactorial-v1.json (binders_used 1, inductions_used 1, axioms 0)"
+          }
+        ],
+        "declined_goals": [
+          {
+            "goal": "∀ (n : ℕ), n.descFactorial n = n.factorial",
+            "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
+            "reason": "The induction variable occurs in two positions at once -- a diagonal recursion whose induction hypothesis does not relate descFactorial (n+1) n back to descFactorial n n, so no rewrite chain closes the step case.",
+            "source": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Known reach\" paragraph"
+          },
+          {
+            "goal": "∀ {n k : ℕ}, n < k → n.descFactorial k = 0",
+            "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+            "reason": "Declines as a whole (measured 2026-08-22): the step case's second chain half needs 0 * descFactorial (succ q) (succ q) = 0, and WHNF cannot expose that operand without forcing the recursive value's own brecOn/below structure. Not a budget shortfall.",
+            "source": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Measured 2026-08-22\" paragraph"
+          }
+        ]
+      },
+      "assurance": "independently-checked",
+      "status": "active"
+    },
+    {
+      "id": "T:ih-congruence-rewrite",
+      "title": "Bridge a step case by one congruence rewrite driven by the induction hypothesis",
+      "kind": "rewrite",
+      "precondition": {
+        "description": "The goal is an Eq application, an induction hypothesis is available and itself parses to an Eq of the same shape, and every occurrence of the hypothesis's right-hand side can be abstracted out of the WHNF-reduced goal side -- searching every subterm reachable through App/Proj/binder types, not only application-spine positions, so a course-of-values (brecOn/below) projection is still found. The symmetric direction is tried from the goal's other side.",
+        "structural": {
+          "all_of": [
+            { "kind": "goal-head", "args": { "head": "Eq" } },
+            { "kind": "hypothesis-state", "args": { "state": "available" } },
+            {
+              "kind": "occurrence-embeds",
+              "args": {
+                "needle": "hypothesis-rhs",
+                "haystack": "goal-rhs-whnf",
+                "via": "kabstract-occurrences"
+              }
+            }
+          ]
+        }
+      },
+      "move": {
+        "description": "Abstract the occurrences into a wrap `f` and emit the congrArg-shaped proof `congrArg f h`. congrArg is not borrowed from the environment: it is reconstructed here from the kernel's generated `Eq.rec` with a motive built on the spot.",
+        "kernel_primitives": ["Eq.rec", "congrArg", "Eq.refl"]
+      },
+      "residual": {
+        "description": "Whatever gap the wrap did not close: `Eq(candidate, expected)` where candidate is `f` applied to the hypothesis's other side.",
+        "shape": "Eq(candidate, expected) with the same head on both sides",
+        "measure": "the number of differing subterm positions between candidate and expected, which find_diff descends only when strictly fewer positions differ (bounded by MAX_DIFF_NODES)"
+      },
+      "budget": { "MAX_KABSTRACT_NODES": 4096, "MAX_DIFF_NODES": 256, "MAX_BETA_STEPS": 64 },
+      "decline_reasons": ["TerminalNotDefEqNoRewrite"],
+      "implemented_by": {
+        "crate": "axeyum-lean-import",
+        "path": "crates/axeyum-lean-import/src/producers/bounded_induction.rs",
+        "symbol": "try_congr_rewrite"
+      },
+      "realizes": "K:bounded-structural-induction",
+      "uses_technique": {
+        "id": "TQ:substitution-technique",
+        "source": "math-education",
+        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+      },
+      "reach": {
+        "accepted_goals": [
+          {
+            "goal": "succ case of ∀ (n : ℕ), n.descFactorial 1 = n",
+            "fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
+            "evidence": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc: \"single induction, one congrArg-with-hypothesis rewrite bridges the succ-case\"; candidate artifacts/autogenesis/mathlib-bounded-induction-family-descfactorial-one-v1.json"
+          },
+          {
+            "goal": "succ case of ∀ (n : ℕ), n.ascFactorial 0 = 1",
+            "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+            "evidence": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Known reach\" paragraph; candidate artifacts/autogenesis/mathlib-bounded-induction-family-ascfactorial-zero-v1.json"
+          },
+          {
+            "goal": "succ case of ∀ (n : ℕ), n.descFactorial 0 = 1",
+            "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+            "evidence": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Known reach\" paragraph; candidate artifacts/autogenesis/mathlib-bounded-induction-family-descfactorial-zero-v1.json"
+          }
+        ],
+        "declined_goals": [
+          {
+            "goal": "step case of Nat.sub_self: succ n' - succ n' = 0 from induction hypothesis n' - n' = 0",
+            "reason": "The induction hypothesis's left-hand side has no occurrence anywhere in the goal's reduced form (Nat.sub recurses on its second argument, so succ n' - succ n' unfolds to pred (succ n' - n'), a term about succ n' and never about n' alone), so no wrap exists.",
+            "source": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Case-split elimination and diagonal generalization\" section"
+          },
+          {
+            "goal": "∀ (n : ℕ), n.descFactorial n = n.factorial",
+            "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
+            "reason": "Needs more than a rewrite chain: the induction hypothesis's shape does not relate descFactorial (n+1) n back to descFactorial n n.",
+            "source": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Known reach\" paragraph"
+          }
+        ]
+      },
+      "assurance": "independently-checked",
+      "status": "active"
+    },
+    {
+      "id": "T:residual-lemma-splice",
+      "title": "Generalize the leftover gap into its own lemma and splice it with Eq.trans",
+      "kind": "lemma-splice",
+      "precondition": {
+        "description": "A congruence wrap left a residual `Eq(candidate, expected)` that differs at a single argument position, and every free variable occurring in either side has a recorded type (a variable whose type was never recorded declines this path rather than being guessed at).",
+        "structural": {
+          "all_of": [
+            { "kind": "goal-head", "args": { "head": "Eq" } },
+            { "kind": "hypothesis-state", "args": { "state": "available" } },
+            { "kind": "residual-gap-shape", "args": { "shape": "single-argument-diff" } }
+          ]
+        }
+      },
+      "move": {
+        "description": "Re-pose the residual as a standalone universally quantified goal over those free variables, prove it by a nested budget-sharing call to the same search, re-apply the proved lemma to the original values, and compose it with the primary congruence step using Eq.trans (with Eq.symm on the side that needs it). Eq.symm and Eq.trans are reconstructed from Eq.rec, not imported.",
+        "kernel_primitives": ["Eq.rec", "congrArg", "Eq.symm", "Eq.trans"]
+      },
+      "residual": {
+        "description": "The auxiliary universal identity itself, proved by the same bounded search; on success nothing remains.",
+        "shape": "∀ (generalized free variables), Eq(candidate, expected)",
+        "measure": "residual chain depth, capped by MAX_RESIDUAL_CHAIN_DEPTH, together with MAX_RESIDUAL_LEMMAS decremented on every attempt regardless of outcome"
+      },
+      "budget": {
+        "MAX_RESIDUAL_LEMMAS": 300,
+        "MAX_RESIDUAL_CHAIN_DEPTH": 6,
+        "MIN_RESIDUAL_INDUCTIONS": 1,
+        "MIN_RESIDUAL_BINDERS": 4,
+        "MAX_DIFF_NODES": 256
+      },
+      "decline_reasons": ["TerminalNotDefEqNoRewrite", "BinderBudgetExceeded"],
+      "implemented_by": {
+        "crate": "axeyum-lean-import",
+        "path": "crates/axeyum-lean-import/src/producers/bounded_induction.rs",
+        "symbol": "try_residual_lemma"
+      },
+      "realizes": "K:bounded-structural-induction",
+      "uses_technique": {
+        "id": "TQ:divide-and-conquer",
+        "source": "math-education",
+        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+      },
+      "reach": {
+        "accepted_goals": [
+          {
+            "goal": "∀ (k : ℕ), Nat.ascFactorial 0 k.succ = 0",
+            "fact_id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
+            "evidence": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc: closed \"via the residual-lemma extension\", with the induction hypothesis occurrence found behind a brecOn/below structure projection; candidate artifacts/autogenesis/mathlib-bounded-induction-family-zero-ascfactorial-succ-v1.json"
+          },
+          {
+            "goal": "∀ (k : ℕ), Nat.ascFactorial 1 k = k.factorial",
+            "fact_id": "F:ml430-nat-one-ascfactorial-8bacb017",
+            "evidence": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc: the step-case bridge needs the auxiliary identity 1 + n = n.succ, \"proved as its own nested, budget-sharing induction and composed with the primary congruence via Eq.trans\"; candidate artifacts/autogenesis/mathlib-bounded-induction-family-one-ascfactorial-v1.json"
+          }
+        ],
+        "declined_goals": [
+          {
+            "goal": "step case of Nat.sub_self: succ n' - succ n' = 0",
+            "reason": "The narrowing collapses every occurrence of the same free variable into one Pi, so the auxiliary goal it poses is the identical diagonal statement one level down -- self-similar under induction and never simpler.",
+            "source": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, try_split_congruence rationale"
+          }
+        ]
+      },
+      "assurance": "independently-checked",
+      "status": "active"
+    },
+    {
+      "id": "T:absurd-elimination",
+      "title": "Close any goal from an uninhabitable order hypothesis",
+      "kind": "elimination",
+      "precondition": {
+        "description": "A retained ordinary (non-induction) Pi-bound hypothesis whose type unfolds to an application of a structurally discovered le-shaped indexed family at index zero with a succ-shaped parameter. Such a hypothesis can never be inhabited. The goal itself is never inspected.",
+        "structural": {
+          "all_of": [
+            { "kind": "goal-head", "args": { "head": "any-prop" } },
+            {
+              "kind": "hypothesis-family",
+              "args": { "family": "le-shaped", "index": "zero", "parameter": "succ" }
+            }
+          ]
+        }
+      },
+      "move": {
+        "description": "Instantiate that hypothesis's OWN recursor with a vacuous motive -- one depending only on the family's index, never on the hypothesis or on the goal's head symbol -- so the eliminator produces a proof of the current goal directly, without first isolating a standalone False.",
+        "kernel_primitives": ["<le-family>.rec"]
+      },
+      "residual": {
+        "description": "None: the move closes the goal outright, whatever the goal says.",
+        "shape": "none",
+        "measure": "none"
+      },
+      "budget": { "MAX_ABSURD_HYPOTHESES": 8, "MAX_BINDERS": 8 },
+      "decline_reasons": ["TerminalNotDefEqNoRewrite"],
+      "implemented_by": {
+        "crate": "axeyum-lean-import",
+        "path": "crates/axeyum-lean-import/src/producers/bounded_induction.rs",
+        "symbol": "try_absurd_elimination"
+      },
+      "realizes": "K:bounded-structural-induction",
+      "uses_technique": {
+        "id": "TQ:reductio-ad-absurdum",
+        "source": "math-education",
+        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+      },
+      "reach": {
+        "accepted_goals": [
+          {
+            "goal": "n < 0 → n.descFactorial 0 = 0, for the literal n = 0",
+            "source": "base case of F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+            "evidence": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Absurd elimination\" section: \"This genuinely closes the induction's base case ... for both the literal n = 0 and a fully generic n\""
+          },
+          {
+            "goal": "n < 0 → n.descFactorial 0 = 0, for a fully generic n",
+            "source": "base case of F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+            "evidence": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Absurd elimination\" section"
+          }
+        ],
+        "declined_goals": [
+          {
+            "goal": "n < succ k' → n.descFactorial (succ k') = 0",
+            "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+            "reason": "The step case's hypothesis sits at a succ-shaped index, so the family CAN be inhabited and ruling one constructor out is unsound; that shape needs a genuine case split instead.",
+            "source": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Absurd elimination\" section, second paragraph"
+          }
+        ]
+      },
+      "assurance": "mechanically-observed",
+      "status": "active"
+    },
+    {
+      "id": "T:case-split-elimination",
+      "title": "Consume both constructors of an order hypothesis at a succ index",
+      "kind": "case-split",
+      "precondition": {
+        "description": "A retained hypothesis whose type unfolds to a le-shaped indexed family at a SUCC-shaped index (so, unlike absurd elimination, the family can be inhabited either way), together with an induction hypothesis that was retained unapplied because its own domain named a different index.",
+        "structural": {
+          "all_of": [
+            { "kind": "goal-head", "args": { "head": "Eq" } },
+            {
+              "kind": "hypothesis-family",
+              "args": { "family": "le-shaped", "index": "succ", "parameter": "any" }
+            },
+            { "kind": "hypothesis-state", "args": { "state": "stuck" } }
+          ]
+        }
+      },
+      "move": {
+        "description": "Consume both of the family's constructors. The at-param branch recovers the equality between the parameter's predecessor and the index (via the family's refl shape) and transports a proof of the goal's own predecessor instance along it; the step branch recovers a strictly smaller instance of the family and re-applies the stuck induction hypothesis that was waiting for exactly that predecessor.",
+        "kernel_primitives": ["<le-family>.rec", "Eq.rec", "Eq.refl"]
+      },
+      "residual": {
+        "description": "Two branch obligations, each posed as its own nested budget-sharing proof: the transported predecessor instance and the re-applied induction hypothesis's own remaining gap.",
+        "shape": "goal at the at-param branch (with the recovered equality in scope) and goal at the step branch (family index one succ smaller)",
+        "measure": "the le-shaped family's index: each branch is posed at a strictly smaller index than the hypothesis it was split from, and the forced ascent that closes a literal gap is capped by MAX_LE_ASCENT_STEPS"
+      },
+      "budget": { "MAX_CASE_SPLIT_HYPOTHESES": 8, "MAX_LE_ASCENT_STEPS": 16 },
+      "decline_reasons": ["TerminalNotDefEqNoRewrite"],
+      "implemented_by": {
+        "crate": "axeyum-lean-import",
+        "path": "crates/axeyum-lean-import/src/producers/bounded_induction.rs",
+        "symbol": "try_case_split_elimination"
+      },
+      "realizes": "K:bounded-structural-induction",
+      "uses_technique": {
+        "id": "TQ:proof-by-cases",
+        "source": "math-education",
+        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+      },
+      "reach": {
+        "accepted_goals": [
+          {
+            "goal": "n < succ k' → n.descFactorial (succ k') = 0, reduced to needing n - n = 0 on the n = k' branch",
+            "source": "step case of F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+            "evidence": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Case-split elimination and diagonal generalization\" section: \"This closes descFactorial_of_lt's step case down to needing n - n = 0 at the n = k' branch, exactly as diagnosed\""
+          }
+        ],
+        "declined_goals": [
+          {
+            "goal": "∀ {n k : ℕ}, n < k → n.descFactorial k = 0",
+            "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+            "reason": "The case split closes the step case only down to its branch obligations; the theorem as a whole still declines on the second half of the absorbing chain.",
+            "source": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Measured 2026-08-22\" paragraph"
+          }
+        ]
+      },
+      "assurance": "mechanically-observed",
+      "status": "active"
+    },
+    {
+      "id": "T:split-congruence-generalization",
+      "title": "Generalize two collapsed occurrence sites independently, then re-specialize",
+      "kind": "generalization",
+      "precondition": {
+        "description": "A residual gap whose two sides share the same head applied to the same number of arguments but differ at more than one position, with the SAME free variable standing at each differing site (the diagonal shape single-variable narrowing cannot make smaller). Every differing position must additionally embed the candidate's side inside the expected side, or the path declines rather than building a mismatched candidate.",
+        "structural": {
+          "all_of": [
+            { "kind": "goal-head", "args": { "head": "Eq" } },
+            { "kind": "residual-gap-shape", "args": { "shape": "collapsed-occurrence-site" } },
+            {
+              "kind": "occurrence-embeds",
+              "args": {
+                "needle": "candidate-argument",
+                "haystack": "expected-argument",
+                "via": "kabstract-occurrences"
+              }
+            }
+          ]
+        }
+      },
+      "move": {
+        "description": "Generalize the occurrence SITES independently rather than by shared free-variable identity, posing the strictly more general ∀ x y, f(x, y) = f(g(x), g(y)); prove it by ordinary induction on one variable with the other fixed; re-specialize both fresh variables back to the single original value. The general statement is independently kernel-checked before it is ever instantiated, so a split that happens to be FALSE simply fails to prove.",
+        "kernel_primitives": ["Eq.rec", "congrArg", "Eq.trans"]
+      },
+      "residual": {
+        "description": "The independently generalized universal identity, proved by the same bounded search.",
+        "shape": "∀ x y, f(x, y) = f(g(x), g(y))",
+        "measure": "the number of occurrence sites still collapsed onto one variable: the generalized statement has strictly more independent variables than the diagonal instance, so induction on one of them terminates where the diagonal did not"
+      },
+      "budget": { "MAX_SPLIT_ARGS": 8, "MAX_KABSTRACT_NODES": 4096 },
+      "decline_reasons": ["TerminalNotDefEqNoRewrite"],
+      "implemented_by": {
+        "crate": "axeyum-lean-import",
+        "path": "crates/axeyum-lean-import/src/producers/bounded_induction.rs",
+        "symbol": "try_split_congruence"
+      },
+      "realizes": "K:bounded-structural-induction",
+      "uses_technique": {
+        "id": "TQ:generalize-then-specialize",
+        "source": "math-education",
+        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+      },
+      "reach": {
+        "accepted_goals": [
+          {
+            "goal": "n - n = 0, with ∀ n m, n - m = succ n - succ m proved en route",
+            "source": "residual of F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+            "evidence": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Measured 2026-08-22 against F:ml430-nat-descfactorial-of-lt-fbcf5d26\": \"both new mechanisms close their own instances -- n - n = 0 (with the ∀ n m, n - m = succ n - succ m generalization proved en route)\""
+          }
+        ],
+        "declined_goals": [
+          {
+            "goal": "descFactorial y0 y1 = descFactorial (succ y0) (succ y1)",
+            "reason": "The generalized statement is simply false, so the nested proof fails; the mechanism declines rather than fabricating a witness. Tried when this path fires from an unrelated degenerate match.",
+            "source": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, try_split_congruence bullet (\"tried and declined when this fires from an unrelated degenerate match\")"
+          }
+        ]
+      },
+      "assurance": "mechanically-observed",
+      "status": "active"
+    },
+    {
+      "id": "T:absorbing-argument-chaining",
+      "title": "Chain an absorbing argument fact with the operator's own plain fact",
+      "kind": "rewrite",
+      "precondition": {
+        "description": "A terminal Eq goal the induction hypothesis cannot reach at all -- the needed facts have nothing to do with the induction in progress -- where some top-level argument position of the goal's WHNF-reduced application spine can itself be proved equal to the goal's right-hand side.",
+        "structural": {
+          "all_of": [
+            { "kind": "goal-head", "args": { "head": "Eq" } },
+            { "kind": "hypothesis-state", "args": { "state": "absent" } },
+            {
+              "kind": "spine-argument-matches",
+              "args": { "position": "any-top-level", "target": "goal-rhs" }
+            }
+          ]
+        }
+      },
+      "move": {
+        "description": "Prove Eq(arg_i, goal.rhs) by a nested hypothesis-independent side quest, then ask for the OPERATOR's plain fact with position i fixed at the target value and every other top-level argument generalized to a fresh opaque variable -- the plain operator fact (0 * x = 0), never a claim tied to what this term's other operand happens to be built from. Both steps chain via Eq.trans, and the composed term's inferred type is confirmed against the goal before it is returned.",
+        "kernel_primitives": ["Eq.rec", "congrArg", "Eq.trans"]
+      },
+      "residual": {
+        "description": "Two independent obligations: the argument-position identity and the operator's generalized plain fact.",
+        "shape": "Eq(arg_i, goal.rhs) and Eq(head(..., goal.rhs, ...), goal.rhs) with every other top-level argument opaque",
+        "measure": "the number of top-level argument positions of the goal's application spine not yet fixed, tried in turn; each nested side quest spends the shared residual budget so the chain is bounded by MAX_RESIDUAL_LEMMAS and MAX_RESIDUAL_CHAIN_DEPTH"
+      },
+      "budget": { "MAX_RESIDUAL_LEMMAS": 300, "MAX_RESIDUAL_CHAIN_DEPTH": 6, "MAX_BETA_STEPS": 64 },
+      "decline_reasons": ["TerminalNotDefEqNoRewrite"],
+      "implemented_by": {
+        "crate": "axeyum-lean-import",
+        "path": "crates/axeyum-lean-import/src/producers/bounded_induction.rs",
+        "symbol": "try_absorbing_argument"
+      },
+      "realizes": "K:bounded-structural-induction",
+      "uses_technique": {
+        "id": "TQ:algebraic-manipulation",
+        "source": "math-education",
+        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+      },
+      "reach": {
+        "accepted_goals": [
+          {
+            "goal": "0 - x = 0",
+            "source": "residual of F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+            "evidence": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Measured 2026-08-22\" paragraph: \"and, separately, 0 - x = 0 via try_absorbing_argument\""
+          }
+        ],
+        "declined_goals": [
+          {
+            "goal": "0 * descFactorial (succ q) (succ q) = 0",
+            "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+            "reason": "This kernel compiles descFactorial's course-of-values recursion so that WHNF-reducing the goal to expose the multiplication's second operand as a separable top-level argument also forces the recursive value's own brecOn/below structure, which re-entangles the operand with the variable being generalized. Not a budget shortfall.",
+            "source": "crates/axeyum-lean-import/src/producers/bounded_induction.rs module doc, \"Measured 2026-08-22\" paragraph"
+          }
+        ]
+      },
+      "assurance": "mechanically-observed",
+      "status": "active"
+    },
+    {
+      "id": "T:modeq-equivalence-combinators",
+      "title": "Close a definitional equivalence relation with primitive Eq/Iff combinators",
+      "kind": "combinator",
+      "precondition": {
+        "description": "Every leading Pi binder (no dependent/induction distinction is drawn) is peeled into a fresh hypothesis, and the terminal goal's own head symbol transparently unfolds to an Eq application. An Iff-headed goal is split by Iff.intro into two nested closures, one per direction with the other side's hypothesis freshly introduced, each of which meets this same Eq precondition.",
+        "structural": {
+          "all_of": [
+            { "kind": "head-unfolds", "args": { "via": "whnf-delta", "to": "Eq" } },
+            { "kind": "hypothesis-state", "args": { "state": "available" } }
+          ]
+        }
+      },
+      "move": {
+        "description": "Close the unfolded Eq goal by reflexivity, symmetry, or transitivity over the retained hypotheses, and an Iff goal by the structurally discovered two-field Iff constructor composed from the two directions. Eq.symm and Eq.trans are NOT borrowed from the environment -- an isolated statement-import kernel holds no proof-combinator theorems -- they are reconstructed here from Eq.rec, so every Const node this producer builds names only Eq, Eq.refl, Eq.rec, Iff, or Iff's constructor.",
+        "kernel_primitives": ["Eq", "Eq.refl", "Eq.rec", "Eq.symm", "Eq.trans", "Iff", "Iff.intro"]
+      },
+      "residual": {
+        "description": "For an Iff goal, one nested Eq closure per direction with the other side's hypothesis in scope; for an Eq goal, nothing.",
+        "shape": "one nested Eq goal per Iff direction",
+        "measure": "the number of unpeeled leading Pi binders, strictly decreasing at every peel and at every Iff direction, bounded by MAX_BINDERS"
+      },
+      "budget": { "MAX_BINDERS": 8 },
+      "decline_reasons": [
+        "TerminalNotClosed",
+        "BinderBudgetExceeded",
+        "UnsupportedIffShape",
+        "UnsupportedRecursorShape",
+        "RequiredDeclarationUnavailable"
+      ],
+      "implemented_by": {
+        "crate": "axeyum-lean-import",
+        "path": "crates/axeyum-lean-import/src/producers/modeq_family.rs",
+        "symbol": "close_terminal"
+      },
+      "realizes": "K:modeq-equivalence-combinators",
+      "uses_technique": {
+        "id": "TQ:change-representation",
+        "source": "math-education",
+        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+      },
+      "reach": {
+        "accepted_goals": [
+          {
+            "goal": "∀ {n : ℤ} (a : ℤ), a ≡ a [ZMOD n]",
+            "fact_id": "F:ml430-int-modeq-refl-30e15520",
+            "evidence": "artifacts/autogenesis/mathlib-modeq-family-refl-v1.json (binders_used 2, axioms 0, kernel checked)"
+          },
+          {
+            "goal": "∀ {n a b : ℤ}, a ≡ b [ZMOD n] → b ≡ a [ZMOD n]",
+            "fact_id": "F:ml430-int-modeq-symm-984a6e67",
+            "evidence": "artifacts/autogenesis/mathlib-modeq-family-symm-v1.json (binders_used 4, axioms 0, kernel checked)"
+          },
+          {
+            "goal": "∀ {n a b c : ℤ}, a ≡ b [ZMOD n] → b ≡ c [ZMOD n] → a ≡ c [ZMOD n]",
+            "fact_id": "F:ml430-int-modeq-trans-6d7863e0",
+            "evidence": "artifacts/autogenesis/mathlib-modeq-family-trans-v1.json (binders_used 6, axioms 0, kernel checked)"
+          },
+          {
+            "goal": "∀ {n a b : ℤ}, a ≡ b [ZMOD n] ↔ b ≡ a [ZMOD n]",
+            "fact_id": "F:ml430-int-modeq-comm-1e4bcc07",
+            "evidence": "artifacts/autogenesis/mathlib-modeq-family-comm-v1.json (binders_used 5, the Iff route, axioms 0, kernel checked)"
+          }
+        ],
+        "declined_goals": []
+      },
+      "assurance": "independently-checked",
+      "status": "active"
+    }
+  ]
+}

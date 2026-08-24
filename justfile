@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes
 
 fmt:
     cargo fmt --all --check
@@ -1350,3 +1350,37 @@ py-check:
     uv run --no-sync python tools/gen_native_stub.py --check
     uv run --no-sync ruff check python/ tools/
     uv run --no-sync ruff format --check python/ tools/
+
+# The tactic catalog gate (docs/python-2026-08/04-tactic-catalog.md, slice A3).
+#
+# Three steps. The unit suite is FIRST because the validator's own rules are
+# what the census rests on, and the census is the rule that can fail on a
+# healthy-looking file: fewer than two distinct precondition shapes means the
+# catalog is a dispatch table, and a tactic with zero reach rows is a name
+# rather than a capability. Every guard is mutation-verified to kill exactly
+# one test -- `python3 scripts/tests/mutation_controls.py tactic-catalog`.
+tactic-catalog-controls:
+    python3 -m unittest scripts.tests.test_validate_tactic_catalog
+    python3 scripts/validate-tactic-catalog.py
+    python3 scripts/gen-tactic-catalog-census.py --check
+
+# The agent-episode gate (docs/python-2026-08/03-agentic-layer.md, slice A1).
+#
+# `check-agent-episode.py` is the only thing between "a model ran" and "a model
+# proved something": every episode is re-checked against the schema, its
+# snapshot and proposal digests are re-hashed from disk, and the whole document
+# is string-walked for held-out fact ids. Read `EPISODES|checked=N|ok=K|failed=M`,
+# not the exit status -- though the exit status is nonzero when N is 0, because
+# a check that checked nothing is not a pass.
+#
+# NO `--require-ancestor` here on purpose. The rule is real and tested, but most
+# CI jobs check out at the default `fetch-depth: 1`, where the episode's commit
+# object does not exist and every ancestor query answers "cannot resolve". A
+# gate that is red on every CI run gets switched off. Default prints
+# `EPISODE_WARN|...|rule=git-commit-ancestor`; pass the flag by hand in a full
+# checkout to make it bite. Rationale: artifacts/episodes/README.md.
+
+# Check every committed agent episode, then its own control suite.
+episodes:
+    python3 scripts/check-agent-episode.py artifacts/episodes
+    python3 -m unittest scripts.tests.test_check_agent_episode
