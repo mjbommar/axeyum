@@ -10,22 +10,35 @@
 //! a real constructive disjunction, not excluded middle) are both proved
 //! here, axiom-free.
 //!
-//! Wilson's theorem itself is **not** declared. The classical proof collapses
+//! Wilson's theorem itself is **not** declared, and the reason has narrowed
+//! twice since this module was written. The classical proof collapses
 //! `prodRange` over `2..p-2` by pairing each survivor with its distinct
-//! inverse — a permutation/quotient argument — and this kernel has no
-//! `Finset`, no `Fin n`, no `Equiv`, and no notion of "a bijection of a finite
-//! range" at all. `Int.prodRange : (Nat → Int) → Nat → Int` folds over a
-//! fixed *initial segment* `{0,…,n-1}`; the set of not-yet-paired survivors
-//! at any point in the pairing is, in general, not an initial segment (the
-//! partner of a small index can be a large one), so the induction hypothesis
-//! the collapse needs — "the product over the remaining unpaired elements is
-//! `1`" — cannot even be *stated* as a `prodRange` term, let alone proved by
-//! it. What is missing is not one lemma but a rearrangement/permutation
-//! principle for `prodRange` (`prodRange f n = prodRange (f ∘ σ) n` for `σ` a
-//! bijection of `{0,…,n-1}`), and that principle needs exactly the
-//! finite-bijection theory this development does not have. See the
-//! module-level report for the concrete induction attempted and where it
-//! stalls; no bijection theory is invented here to force it through.
+//! inverse — a permutation argument. `Int.prodRange : (Nat → Int) → Nat → Int`
+//! folds over a fixed *initial segment* `{0,…,n-1}`; the set of not-yet-paired
+//! survivors is in general not an initial segment (the partner of a small
+//! index can be a large one), so the induction hypothesis the collapse needs —
+//! "the product over the remaining unpaired elements is `1`" — cannot even be
+//! *stated* as a `prodRange` term, let alone proved by it.
+//!
+//! What is missing is the rearrangement principle
+//! `prodRange f n = prodRange (f ∘ σ) n` for `σ` a permutation of
+//! `{0,…,n-1}`.
+//!
+//! **An earlier revision of this paragraph said the kernel has "no `Finset`,
+//! no `Fin n`, no `Equiv`, and no notion of a bijection of a finite range at
+//! all". That is no longer true** (2026-08-23). `Nat.Fin`,
+//! `Nat.injectiveOn` / `surjectiveOn` / `mapsInto`, and the pigeonhole
+//! principle connecting them (`Nat.injective_on_imp_surjective_on`) are all
+//! declared and axiom-free, and `Int.prodRange_swap_adjacent` proves the
+//! transposition case of the rearrangement.
+//!
+//! The remaining gap is specific: `prodRange_swap_adjacent` swaps only
+//! *adjacent* indices, while the pigeonhole gives an `i0` with `σ(i0) = n-1`
+//! that may be arbitrarily far from `n-1`. Closing it needs a chain of
+//! adjacent transpositions bubbling `i0` up, plus a "remove `i0` and reindex
+//! the rest" step — the same `compact`-style reindexing the pigeonhole proof
+//! uses, at comparable size. That is a slice of its own, not a small addition,
+//! and no bijection theory is invented here to force it through.
 
 use super::defs::POW_HEIGHT;
 use super::ops::IntDev;

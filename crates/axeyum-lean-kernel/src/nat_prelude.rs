@@ -168,7 +168,7 @@ use defs::{
 use divisibility::declare_divisibility;
 use division::declare_euclidean_division;
 use fermat::declare_fermat;
-use finite::{declare_fin, declare_injective_surjective};
+use finite::{declare_fin, declare_injective_surjective, declare_pigeonhole};
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
@@ -836,6 +836,9 @@ pub struct NatPrelude {
     /// explicitly: an injective function into a *larger* codomain need not be
     /// surjective onto a smaller one.
     pub maps_into: NameId,
+    /// `Nat.injective_on_imp_surjective_on : ∀ f n, InjectiveOn f n →
+    /// MapsInto f n → SurjectiveOn f n` — the finite pigeonhole principle.
+    pub injective_on_imp_surjective_on: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1116,6 +1119,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             injective_on: kernel.name_str(nat, "injectiveOn"),
             surjective_on: kernel.name_str(nat, "surjectiveOn"),
             maps_into: kernel.name_str(nat, "mapsInto"),
+            injective_on_imp_surjective_on: kernel
+                .name_str(nat, "injective_on_imp_surjective_on"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1153,6 +1158,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_fermat(&mut d, &p)?;
         declare_fin(&mut d, &p)?;
         declare_injective_surjective(&mut d, &p)?;
+        declare_pigeonhole(&mut d, &p)?;
         Ok(p)
     })();
     match built {

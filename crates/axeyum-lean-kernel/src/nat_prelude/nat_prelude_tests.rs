@@ -264,6 +264,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_prime_modeq_self,
         p.fin_is_lt,
         p.fin_val_mk,
+        p.injective_on_imp_surjective_on,
     ]
 }
 
@@ -3983,7 +3984,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        24 + 148,
+        24 + 149,
         "every promised definition and theorem must be rendered"
     );
 }
