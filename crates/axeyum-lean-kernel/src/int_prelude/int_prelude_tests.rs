@@ -141,6 +141,7 @@ fn int_prelude_admits_all_declarations() {
         p.mod_eq,
         p.gcd,
         p.coprime,
+        p.is_quadratic_residue,
     ] {
         assert!(
             matches!(
@@ -180,8 +181,11 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 118] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 121] {
     [
+        p.is_quadratic_residue_one,
+        p.is_quadratic_residue_mul,
+        p.euler_criterion_pm_one,
         p.wilson,
         p.dvd_factorial_of_le,
         p.wilson_converse,

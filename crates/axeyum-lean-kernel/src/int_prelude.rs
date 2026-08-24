@@ -81,6 +81,7 @@ mod defs;
 mod division;
 mod dvd;
 mod euclid;
+mod euler;
 mod gcd;
 mod modeq;
 mod modeq_family;
@@ -869,6 +870,31 @@ pub struct IntPrelude {
     /// merely a necessary condition. `Iff.intro` of [`Self::wilson`] (mp)
     /// and [`Self::wilson_converse`] (mpr).
     pub wilson_iff: NameId,
+
+    // --- quadratic residues, and Euler's criterion's unconditional half ----
+    /// `IsQuadraticResidue : Int → Int → Prop :=
+    /// fun p a => ∃ x, ModEq p (x*x) a` — `a` is a quadratic residue mod `p`.
+    pub is_quadratic_residue: NameId,
+    /// `is_quadratic_residue_one : ∀ p, IsQuadraticResidue p one` —
+    /// `1` is always a residue, witness `x := one`.
+    pub is_quadratic_residue_one: NameId,
+    /// `is_quadratic_residue_mul :
+    /// ∀ p a b, 0 < p → IsQuadraticResidue p a → IsQuadraticResidue p b →
+    ///   IsQuadraticResidue p (mul a b)` — residues are closed under
+    /// multiplication, witness `x*y` from `a`'s and `b`'s own witnesses.
+    pub is_quadratic_residue_mul: NameId,
+    /// `euler_criterion_pm_one :
+    /// ∀ pp aa m, (2 ≤ pp ∧ ∀ d, d ∣ pp → d = 1 ∨ d = pp) →
+    ///   Eq Nat (pp-1) (m+m) → 0 < aa → aa < pp →
+    ///   Or (ModEq (ofNat pp) (pow (ofNat aa) m) one)
+    ///      (ModEq (ofNat pp) (pow (ofNat aa) m) (neg one))` — Euler's
+    /// criterion's unconditional half: `a^((p-1)/2) ≡ ±1 [p]`, with the
+    /// half-exponent `m` supplied via the hypothesis `p-1 = m+m` rather than
+    /// computed by division (see `euler.rs`'s module doc for why). Does NOT
+    /// decide which sign holds, or relate the sign to `IsQuadraticResidue` —
+    /// that direction needs a primitive root or a counting argument this
+    /// prelude does not build.
+    pub euler_criterion_pm_one: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1066,6 +1092,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         dvd_factorial_of_le: child(kernel, "dvd_factorial_of_le"),
         wilson_converse: child(kernel, "wilson_converse"),
         wilson_iff: child(kernel, "wilson_iff"),
+        is_quadratic_residue: child(kernel, "is_quadratic_residue"),
+        is_quadratic_residue_one: child(kernel, "is_quadratic_residue_one"),
+        is_quadratic_residue_mul: child(kernel, "is_quadratic_residue_mul"),
+        euler_criterion_pm_one: child(kernel, "euler_criterion_pm_one"),
     }
 }
 
@@ -1222,6 +1252,10 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         wilson::declare_dvd_factorial_of_le(&mut d)?;
         wilson::declare_wilson_converse(&mut d)?;
         wilson::declare_wilson_iff(&mut d)?;
+        euler::declare_is_quadratic_residue(&mut d)?;
+        euler::declare_is_quadratic_residue_one(&mut d)?;
+        euler::declare_is_quadratic_residue_mul(&mut d)?;
+        euler::declare_euler_criterion_pm_one(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         rat::declare_rat(&mut d)?;
