@@ -31,6 +31,11 @@ def validate(d):
  for k in ('global_dependency_ready_facts','excluded_held_out_ready_facts','excluded_outside_evaluation_ready_facts'):
   if not isinstance(c.get(k),int) or c[k]<0:e.append(f'invalid census field: {k}')
  if c.get('global_dependency_ready_facts')!=len(ids)+c.get('excluded_held_out_ready_facts',0)+c.get('excluded_outside_evaluation_ready_facts',0):e.append('global ready census does not partition selection')
+ controls=d.get('must_decline_control_fact_ids')
+ if not isinstance(controls,list) or controls!=sorted(set(controls)) or not controls:e.append('must-decline controls must be nonempty sorted unique ids')
+ elif not set(controls).issubset(ids):e.append('must-decline control is outside evaluation frontier')
+ if c.get('must_decline_controls')!=(len(controls) if isinstance(controls,list) else None):e.append('must-decline control census disagrees with ids')
+ if c.get('candidate_facts')!=len(ids)-(len(controls) if isinstance(controls,list) else 0):e.append('candidate census disagrees with control set')
  return e
 def main():
  try:d=json.loads(P.read_text())
