@@ -277,6 +277,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.conjugate_maps_into,
         p.restrict_pair_injective,
         p.restrict_pair_maps_into,
+        p.add_sub_cancel_of_le,
+        p.sum_range_diagonal,
     ]
 }
 
@@ -3996,7 +3998,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        26 + 159,
+        26 + 161,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -4880,4 +4882,117 @@ fn restrict_injective_and_maps_into_apply_at_a_concrete_swap() {
             f.k.display_name(name)
         );
     }
+}
+
+/// `Nat.add_sub_cancel_of_le` at a concrete point: `i=3 ≤ k=7` gives
+/// `add 3 (sub 7 3) = 7`, i.e. `add 3 4 = 7`.
+#[test]
+fn add_sub_cancel_of_le_holds_at_a_concrete_point() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let three = f.num(3);
+    let four = f.num(4);
+    let seven = f.num(7);
+
+    let three_le_seven = f.lemma(p.le_add_right, &[three, four]);
+    let proof = f.lemma(p.add_sub_cancel_of_le, &[three, seven, three_le_seven]);
+    let inferred = f.k.infer(proof).unwrap_or_else(|e| {
+        panic!(
+            "add_sub_cancel_of_le(3,7,_) should infer: {}",
+            f.explain(&e)
+        )
+    });
+
+    let difference = f.sub(seven, three);
+    let lhs = f.add(three, difference);
+    let expected = f.eq(lhs, seven);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "add_sub_cancel_of_le(3,7,_) should state add 3 (sub 7 3) = 7"
+    );
+    assert!(f.k.def_eq(lhs, seven), "add 3 (sub 7 3) must reduce to 7");
+
+    assert!(
+        f.k.axiom_footprint(p.add_sub_cancel_of_le).is_empty(),
+        "add_sub_cancel_of_le must rest on zero axioms"
+    );
+}
+
+/// `Nat.sumRange_diagonal` at a concrete instance: `F i j := add i j`, `n =
+/// 3`. Both the antidiagonal grouping (`Σ_{k<3} Σ_{i≤k} F i (k−i)`) and the
+/// row grouping (`Σ_{i<3} Σ_{j<3−i} F i j`) sum `i+j` over the SAME triangle
+/// `{(i,j) : i+j<3}` — `(0,0),(1,0),(0,1),(2,0),(1,1),(0,2)` — and both must
+/// independently compute to `8`, so this is a genuine reindexing check, not
+/// just an admission.
+#[test]
+fn sum_range_diagonal_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    // F := fun i j => add i j
+    let ff = {
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let j_fv = f.fresh_fvar();
+        let j = f.k.fvar(j_fv);
+        let body = f.add(i, j);
+        let inner = f.lam_fv(j_fv, nat, body);
+        f.lam_fv(i_fv, nat, inner)
+    };
+    let three = f.num(3);
+    let eight = f.num(8);
+
+    let proof = f.lemma(p.sum_range_diagonal, &[ff, three]);
+    let inferred =
+        f.k.infer(proof)
+            .unwrap_or_else(|e| panic!("sum_range_diagonal(F,3) should infer: {}", f.explain(&e)));
+
+    // The antidiagonal (triangle) sum, built independently of `diagonal.rs`'s
+    // own helpers.
+    let triangle = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let ki = f.sub(k, i);
+        let fiki = f.apply(ff, &[i, ki]);
+        let diag_inner = f.lam_fv(i_fv, nat, fiki);
+        let sk = f.succ(k);
+        let diag_sum = f.sum_range(diag_inner, sk);
+        let t_fn = f.lam_fv(k_fv, nat, diag_sum);
+        f.sum_range(t_fn, three)
+    };
+    // The row-major sum, likewise independently built.
+    let rows = {
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let j_fv = f.fresh_fvar();
+        let j = f.k.fvar(j_fv);
+        let fij = f.apply(ff, &[i, j]);
+        let row_inner = f.lam_fv(j_fv, nat, fij);
+        let ni = f.sub(three, i);
+        let row_sum_i = f.sum_range(row_inner, ni);
+        let row_fn = f.lam_fv(i_fv, nat, row_sum_i);
+        f.sum_range(row_fn, three)
+    };
+
+    let expected = f.eq(triangle, rows);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "sum_range_diagonal(F,3) should state the antidiagonal sum equals the row-major sum"
+    );
+    assert!(
+        f.k.def_eq(triangle, eight),
+        "the antidiagonal (triangle) sum of i+j over {{(i,j):i+j<3}} must reduce to 8"
+    );
+    assert!(
+        f.k.def_eq(rows, eight),
+        "the row-major sum of i+j over {{(i,j):i+j<3}} must reduce to 8"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.sum_range_diagonal).is_empty(),
+        "sum_range_diagonal must rest on zero axioms"
+    );
 }

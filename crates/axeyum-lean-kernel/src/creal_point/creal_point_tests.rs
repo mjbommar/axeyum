@@ -135,6 +135,16 @@ fn every_theorem_here_is_axiom_free() {
             "two_circles_meet_on_radical_axis",
             p.two_circles_meet_on_radical_axis,
         ),
+        (
+            "nine_point_centre_on_euler_line",
+            p.nine_point_centre_on_euler_line,
+        ),
+        ("nine_point_radius_bc", p.nine_point_radius_bc),
+        ("nine_point_radius_ab", p.nine_point_radius_ab),
+        (
+            "nine_point_centre_equidistant",
+            p.nine_point_centre_equidistant,
+        ),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -252,6 +262,10 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.radical_axis_iff_dot,
         p.power_difference_linear,
         p.two_circles_meet_on_radical_axis,
+        p.nine_point_centre_on_euler_line,
+        p.nine_point_radius_bc,
+        p.nine_point_radius_ab,
+        p.nine_point_centre_equidistant,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -1611,5 +1625,105 @@ fn two_circles_meet_on_radical_axis_statement_is_exact() {
     assert_eq!(
         rendered,
         "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CPoint) -> ((x5 : CPoint.OnCircle x4 x0 x2) -> ((x6 : CPoint.OnCircle x4 x1 x3) -> CReal.Equiv (CPoint.dot (CPoint.sub x4 (CPoint.midpoint x0 x1)) (CPoint.sub x1 x0)) (CReal.mul CPoint.Scalar.inv2 (CReal.add x2 (CReal.neg x3))))))))))"
+    );
+}
+
+/// **The nine-point centre lies on the (additive) Euler line.** See
+/// [`CPointPrelude::nine_point_centre_on_euler_line`]. `x0,x1,x2,x3 =
+/// O,A,B,C`.
+#[test]
+fn nine_point_centre_on_euler_line_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.nine_point_centre_on_euler_line)
+        .expect("nine_point_centre_on_euler_line must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CPoint.Equiv \
+         (CPoint.add (CPoint.add (CPoint.midpoint x0 (CPoint.sub (CPoint.add (CPoint.add x1 x2) \
+         x3) (CPoint.add x0 x0))) (CPoint.midpoint x0 (CPoint.sub (CPoint.add (CPoint.add x1 x2) \
+         x3) (CPoint.add x0 x0)))) x0) (CPoint.add (CPoint.add (CPoint.centroid x1 x2 x3) \
+         (CPoint.centroid x1 x2 x3)) (CPoint.centroid x1 x2 x3))))))"
+    );
+}
+
+/// **The nine-point radius relation, `BC`-midpoint case.** See
+/// [`CPointPrelude::nine_point_radius_bc`]. `x0,x1,x2,x3 = O,A,B,C`.
+#[test]
+fn nine_point_radius_bc_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.nine_point_radius_bc)
+        .expect("nine_point_radius_bc must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CReal.Equiv \
+         (CPoint.distSq (CPoint.midpoint x0 (CPoint.sub (CPoint.add (CPoint.add x1 x2) x3) \
+         (CPoint.add x0 x0))) (CPoint.midpoint x2 x3)) (CReal.mul CPoint.Scalar.inv2 (CReal.mul \
+         CPoint.Scalar.inv2 (CPoint.distSq x1 x0)))))))"
+    );
+}
+
+/// **The nine-point radius relation, `AB`-midpoint case.** See
+/// [`CPointPrelude::nine_point_radius_ab`]. `x0,x1,x2,x3 = O,A,B,C`.
+#[test]
+fn nine_point_radius_ab_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.nine_point_radius_ab)
+        .expect("nine_point_radius_ab must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CReal.Equiv \
+         (CPoint.distSq (CPoint.midpoint x0 (CPoint.sub (CPoint.add (CPoint.add x1 x2) x3) \
+         (CPoint.add x0 x0))) (CPoint.midpoint x1 x2)) (CReal.mul CPoint.Scalar.inv2 (CReal.mul \
+         CPoint.Scalar.inv2 (CPoint.distSq x3 x0)))))))"
+    );
+}
+
+/// **The nine-point circle's easy half, the headline.** See
+/// [`CPointPrelude::nine_point_centre_equidistant`]. `x0,x1,x2,x3 = O,A,B,C`.
+#[test]
+fn nine_point_centre_equidistant_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.nine_point_centre_equidistant)
+        .expect("nine_point_centre_equidistant must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : \
+         CReal.Equiv (CPoint.distSq x0 x1) (CPoint.distSq x0 x2)) -> ((x5 : CReal.Equiv \
+         (CPoint.distSq x0 x2) (CPoint.distSq x0 x3)) -> CReal.Equiv (CPoint.distSq \
+         (CPoint.midpoint x0 (CPoint.sub (CPoint.add (CPoint.add x1 x2) x3) (CPoint.add x0 x0))) \
+         (CPoint.midpoint x1 x2)) (CPoint.distSq (CPoint.midpoint x0 (CPoint.sub (CPoint.add \
+         (CPoint.add x1 x2) x3) (CPoint.add x0 x0))) (CPoint.midpoint x2 x3))))))))"
     );
 }

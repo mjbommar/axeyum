@@ -134,6 +134,7 @@ mod binomial;
 mod ble;
 mod choose;
 mod defs;
+mod diagonal;
 mod divisibility;
 mod division;
 mod fermat;
@@ -167,6 +168,7 @@ use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
     declare_executable_division, declare_finite_ranges, declare_subtraction,
 };
+use diagonal::declare_diagonal;
 use divisibility::declare_divisibility;
 use division::declare_euclidean_division;
 use fermat::declare_fermat;
@@ -906,6 +908,33 @@ pub struct NatPrelude {
     /// module doc explains why the pointwise form, not the disjunctive
     /// "swaps or fixes" one, is what the interior-collapse application has).
     pub setwise_fixed: NameId,
+    /// `Nat.add_sub_cancel_of_le : ∀ i k, Le i k → add i (sub k i) = k` — the
+    /// round trip the OTHER way from `sub_add_cancel`: `i` plus its
+    /// complement-to-`k` restores `k`, for `i ≤ k`. Immediate from
+    /// `sub_add_cancel` plus `add_comm`, but stated on its own because this is
+    /// exactly the diagonal pairing `(i, k−i)` over `{(i,j) : i+j=k, i ≤ k}`
+    /// — the fact `Nat.sumRange_diagonal`'s antidiagonal index `i` never
+    /// appears un-paired with the fact that it, plus its `sub`-computed
+    /// partner, IS `k`.
+    pub add_sub_cancel_of_le: NameId,
+    /// `Nat.sumRange_diagonal : ∀ F n,
+    ///   sumRange (fun k => sumRange (fun i => F i (sub k i)) (succ k)) n
+    ///     = sumRange (fun i => sumRange (fun j => F i j) (sub n i)) n`
+    /// — the Cauchy-product diagonal reindexing: summing `F i j` over the
+    /// triangle `{(i,j) : i+j < n}` by ANTIDIAGONAL `k = i+j` (outer bound
+    /// `n`, inner index `i` ranging `0..=k` with its partner `k−i`) equals
+    /// summing it by ROW `i` (outer bound `n`, inner `j` ranging `0..(n−i)`).
+    /// `Nat.sub` appears in both sides' index arithmetic — the diagonal's
+    /// partner `k−i` for `i ≤ k`, and the row's remaining budget `n−i` for
+    /// `i < n` — but every equation the PROOF uses about it goes through
+    /// `succ_sub_of_le`/`sub_self` (the additive round-trip), never through
+    /// induction on `sub`'s own recursion. Proved by induction on `n`; see
+    /// `nat_prelude/diagonal.rs`'s module doc for why a computationally
+    /// subtraction-free statement is not available here (`Exists`'s witness
+    /// is not exposed by `Exists.rec`, so `le_dest` cannot supply a VALUE, only
+    /// further propositions).
+    pub sum_range_diagonal: NameId,
+
     /// `Nat.restrict_pair_injective : ∀ σ i j n,
     /// InjectiveOn σ (succ (succ n)) → Lt i j → Lt j (succ (succ n)) →
     /// setwise_fixed σ i j →
@@ -1210,6 +1239,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             conjugate_injective: kernel.name_str(nat, "conjugate_injective"),
             conjugate_maps_into: kernel.name_str(nat, "conjugate_maps_into"),
             setwise_fixed: kernel.name_str(nat, "setwise_fixed"),
+            add_sub_cancel_of_le: kernel.name_str(nat, "add_sub_cancel_of_le"),
+            sum_range_diagonal: kernel.name_str(nat, "sumRange_diagonal"),
             restrict_pair_injective: kernel.name_str(nat, "restrict_pair_injective"),
             restrict_pair_maps_into: kernel.name_str(nat, "restrict_pair_maps_into"),
         };
@@ -1262,6 +1293,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_setwise_fixed(&mut d, &p)?;
         declare_restrict_pair_injective(&mut d, &p)?;
         declare_restrict_pair_maps_into(&mut d, &p)?;
+        declare_diagonal(&mut d, &p)?;
         Ok(p)
     })();
     match built {
