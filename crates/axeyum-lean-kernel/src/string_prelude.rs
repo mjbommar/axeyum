@@ -166,6 +166,38 @@ pub struct StringPrelude {
     /// makes is a rearrangement of it.
     pub take_append_drop: NameId,
 
+    /// `substr : Nat → Nat → Str → Str := λ n m s, take m (drop n s)` — SMT-LIB's
+    /// `str.substr` (offset `n`, length `m`), a checked definition over
+    /// `take`/`drop` (see `substr.rs`). Total for free: no `Nat.min`/`Nat.sub`.
+    pub substr: NameId,
+    /// `substr_zero_zero : ∀ (s : Str), Eq Str (substr Nat.zero Nat.zero s) nil`
+    /// (definitional; closes by `Eq.refl` alone).
+    pub substr_zero_zero: NameId,
+    /// `substr_zero_len : ∀ (n : Nat) (s : Str), Eq Str (substr n Nat.zero s) nil`
+    /// (definitional; closes by `Eq.refl` alone — `take Nat.zero` discards its
+    /// `Str` argument regardless of what `drop n s` is stuck on).
+    pub substr_zero_len: NameId,
+    /// `substr_nil : ∀ (n m : Nat), Eq Str (substr n m nil) nil` — NOT
+    /// definitional (both counts free); proved via two internal `Nat.rec`
+    /// case splits chained by congruence and transitivity.
+    pub substr_nil: NameId,
+
+    /// `at : Nat → Str → Str := λ n s, take (Nat.succ Nat.zero) (drop n s)` —
+    /// SMT-LIB's `str.at`, a **partial** operator made total by the SMT-LIB
+    /// convention: out of range returns the **empty string** (`Char` may have
+    /// zero constructors, so a `Char`-valued signature with a default
+    /// character is not just worse but sometimes impossible — see
+    /// `substr.rs`'s module doc).
+    pub at: NameId,
+    /// `at_nil : ∀ (n : Nat), Eq Str (at n nil) nil` — the out-of-range
+    /// convention at the empty string. NOT definitional for a free `n`;
+    /// proved via the same `drop n nil = nil` case split `substr_nil` uses.
+    pub at_nil: NameId,
+    /// `at_cons_zero : ∀ (c : Char) (t : Str),
+    /// Eq Str (at Nat.zero (cons c t)) (cons c nil)` — the in-range case
+    /// (definitional; closes by `Eq.refl` alone).
+    pub at_cons_zero: NameId,
+
     /// The universe level `1` (so `Char`/`Str : Sort 1 = Type`).
     one: LevelId,
 }
@@ -375,6 +407,37 @@ pub fn build_string_prelude(
             one,
         )?;
 
+        // --- substr/at : built directly on take/drop --------------------------
+        // See `substr.rs`. Self-contained over `take`/`drop` — no `nat_prelude`
+        // arithmetic needed (no `Nat.min`/`Nat.sub` either).
+        let substr = kernel.name_str(namespace, "substr");
+        let substr_zero_zero = kernel.name_str(namespace, "substr_zero_zero");
+        let substr_zero_len = kernel.name_str(namespace, "substr_zero_len");
+        let substr_nil = kernel.name_str(namespace, "substr_nil");
+        let at = kernel.name_str(namespace, "at");
+        let at_nil = kernel.name_str(namespace, "at_nil");
+        let at_cons_zero = kernel.name_str(namespace, "at_cons_zero");
+        substr::declare_substr_and_at(
+            kernel,
+            &substr::SubstrNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_cons,
+                take,
+                drop,
+                substr,
+                substr_zero_zero,
+                substr_zero_len,
+                substr_nil,
+                at,
+                at_nil,
+                at_cons_zero,
+            },
+            one,
+        )?;
+
         Ok(StringPrelude {
             logic,
             char_ind,
@@ -406,6 +469,13 @@ pub fn build_string_prelude(
             drop_succ_nil,
             drop_succ_cons,
             take_append_drop,
+            substr,
+            substr_zero_zero,
+            substr_zero_len,
+            substr_nil,
+            at,
+            at_nil,
+            at_cons_zero,
             one,
         })
     })();
@@ -478,6 +548,23 @@ impl StringPrelude {
     #[must_use]
     pub fn drop_app(&self, kernel: &mut Kernel, n: ExprId, s: ExprId) -> ExprId {
         let f = kernel.const_(self.drop, vec![]);
+        let e = kernel.app(f, n);
+        kernel.app(e, s)
+    }
+
+    /// `substr n m s` — SMT-LIB's `str.substr` (offset `n`, length `m`).
+    #[must_use]
+    pub fn substr_app(&self, kernel: &mut Kernel, n: ExprId, m: ExprId, s: ExprId) -> ExprId {
+        let f = kernel.const_(self.substr, vec![]);
+        let e = kernel.app(f, n);
+        let e = kernel.app(e, m);
+        kernel.app(e, s)
+    }
+
+    /// `at n s` — SMT-LIB's `str.at`; out-of-range `n` gives `nil`.
+    #[must_use]
+    pub fn at_app(&self, kernel: &mut Kernel, n: ExprId, s: ExprId) -> ExprId {
+        let f = kernel.const_(self.at, vec![]);
         let e = kernel.app(f, n);
         kernel.app(e, s)
     }
@@ -750,9 +837,12 @@ mod length;
 mod length_append;
 mod monoid;
 mod reverse;
+mod substr;
+mod substr_arithmetic;
 mod take_drop;
 
 pub use length_append::{StringLengthArithmetic, build_string_length_append};
+pub use substr_arithmetic::{StringSubstrArithmetic, build_string_substr_arithmetic};
 
 #[cfg(test)]
 mod tests;

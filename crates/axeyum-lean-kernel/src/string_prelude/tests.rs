@@ -4,7 +4,9 @@
 //! concrete constructors).
 
 use crate::prelude::build_logic_prelude;
-use crate::string_prelude::{build_string_length_append, build_string_prelude};
+use crate::string_prelude::{
+    build_string_length_append, build_string_prelude, build_string_substr_arithmetic,
+};
 use crate::{BinderInfo, Kernel, build_nat_prelude};
 
 /// A kernel with the logical + string prelude over a `num_chars` alphabet.
@@ -61,6 +63,54 @@ fn length_reverse_and_cancel_names_are_registered() {
         assert!(
             k.environment().contains(n),
             "declaration must be registered"
+        );
+    }
+}
+
+/// Same presence discipline for `substr`/`at` (P3.7 strings, slice 4): an
+/// unvisited name's `axiom_footprint` is UNMEASURED, not empty, so this is
+/// checked independently of the footprint test below.
+#[test]
+fn substr_and_at_names_are_registered() {
+    let (k, sp) = setup(2);
+    for n in [
+        sp.substr,
+        sp.substr_zero_zero,
+        sp.substr_zero_len,
+        sp.substr_nil,
+        sp.at,
+        sp.at_nil,
+        sp.at_cons_zero,
+    ] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered"
+        );
+    }
+}
+
+/// `substr`/`at` and their laws must rest on nothing assumed.
+#[test]
+fn substr_and_at_are_axiom_free() {
+    let (k, sp) = setup(2);
+    for n in [
+        sp.substr,
+        sp.substr_zero_zero,
+        sp.substr_zero_len,
+        sp.substr_nil,
+        sp.at,
+        sp.at_nil,
+        sp.at_cons_zero,
+    ] {
+        let footprint = k.axiom_footprint(n);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(n),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
         );
     }
 }
@@ -1180,6 +1230,283 @@ fn take_append_drop_instantiates_at_an_opaque_word() {
     assert!(
         k.def_eq(inferred, want),
         "take_append_drop n v : append (take n v) (drop n v) = v, got {}",
+        k.render_lean(inferred)
+    );
+}
+
+// ---------------------------------------------------------------------------
+// `substr` / `at` (P3.7 strings, slice 4).
+// ---------------------------------------------------------------------------
+
+#[test]
+fn substr_iota_computes_on_concrete_strings() {
+    let (mut k, sp) = setup(4);
+    let s = str_of(&mut k, &sp, &[0, 1, 2, 3]);
+
+    // substr 1 2 [0,1,2,3] ↝ [1,2]  (offset 1, length 2).
+    let one = nat_of(&mut k, &sp, 1);
+    let two = nat_of(&mut k, &sp, 2);
+    let sub = sp.substr_app(&mut k, one, two, s);
+    let want = str_of(&mut k, &sp, &[1, 2]);
+    assert!(k.def_eq(sub, want), "substr 1 2 [0,1,2,3] ↝ [1,2]");
+
+    // substr 0 0 s ↝ nil, substr 2 0 s ↝ nil (any offset, zero length).
+    let zero = nat_of(&mut k, &sp, 0);
+    let two_b = nat_of(&mut k, &sp, 2);
+    let sub_zero_len = sp.substr_app(&mut k, two_b, zero, s);
+    let nil = sp.nil(&mut k);
+    assert!(k.def_eq(sub_zero_len, nil), "substr 2 0 s ↝ nil");
+
+    // substr requesting past the end is bounded by the string, exactly like
+    // `take` (SMT-LIB-shaped totality): substr 2 10 [0,1,2,3] ↝ [2,3].
+    let ten = nat_of(&mut k, &sp, 10);
+    let sub_over = sp.substr_app(&mut k, two_b, ten, s);
+    let want_over = str_of(&mut k, &sp, &[2, 3]);
+    assert!(
+        k.def_eq(sub_over, want_over),
+        "substr 2 10 [0,1,2,3] ↝ [2,3]"
+    );
+}
+
+#[test]
+fn substr_zero_zero_instantiates_at_an_opaque_word() {
+    let (mut k, sp) = setup(2);
+    let v = opaque_str(&mut k, &sp, "w_v");
+    let lemma = k.const_(sp.substr_zero_zero, vec![]);
+    let applied = k.app(lemma, v);
+    let inferred = k.infer(applied).expect("substr_zero_zero v infers");
+    let str_ty = sp.str_const(&mut k);
+    let zero = nat_of(&mut k, &sp, 0);
+    let want = {
+        let lhs = sp.substr_app(&mut k, zero, zero, v);
+        let nil = sp.nil(&mut k);
+        mk_eq(&mut k, &sp, str_ty, 1, lhs, nil)
+    };
+    assert!(
+        k.def_eq(inferred, want),
+        "substr_zero_zero v : substr 0 0 v = nil, got {}",
+        k.render_lean(inferred)
+    );
+}
+
+#[test]
+fn substr_nil_instantiates_at_opaque_counts() {
+    // `substr_nil` is the non-definitional one: check it as a usable lemma at
+    // OPAQUE n/m, not just concrete counts (which would iota-reduce anyway
+    // for a different reason and hide a broken proof term).
+    let (mut k, sp) = setup(2);
+    let anon = k.anon();
+    let nat_ty = k.const_(sp.logic.nat, vec![]);
+    let mk_opaque_nat = |k: &mut Kernel, tag: &str| -> crate::ExprId {
+        let name = k.name_str(anon, tag);
+        k.add_declaration(crate::Declaration::Axiom {
+            name,
+            uparams: vec![],
+            ty: nat_ty,
+        })
+        .expect("opaque Nat axiom admits");
+        k.const_(name, vec![])
+    };
+    let n = mk_opaque_nat(&mut k, "n_opaque_substr_nil");
+    let m = mk_opaque_nat(&mut k, "m_opaque_substr_nil");
+
+    let lemma = k.const_(sp.substr_nil, vec![]);
+    let applied = {
+        let e = k.app(lemma, n);
+        k.app(e, m)
+    };
+    let inferred = k.infer(applied).expect("substr_nil n m infers");
+    let str_ty = sp.str_const(&mut k);
+    let want = {
+        let nil = sp.nil(&mut k);
+        let lhs = sp.substr_app(&mut k, n, m, nil);
+        let nil2 = sp.nil(&mut k);
+        mk_eq(&mut k, &sp, str_ty, 1, lhs, nil2)
+    };
+    assert!(
+        k.def_eq(inferred, want),
+        "substr_nil n m : substr n m nil = nil, got {}",
+        k.render_lean(inferred)
+    );
+}
+
+#[test]
+fn at_iota_computes_on_concrete_strings() {
+    let (mut k, sp) = setup(3);
+    let s = str_of(&mut k, &sp, &[0, 1, 2]);
+
+    // at 1 [0,1,2] ↝ [1].
+    let one = nat_of(&mut k, &sp, 1);
+    let a = sp.at_app(&mut k, one, s);
+    let want = str_of(&mut k, &sp, &[1]);
+    assert!(k.def_eq(a, want), "at 1 [0,1,2] ↝ [1]");
+
+    // at 0 [0,1,2] ↝ [0].
+    let zero = nat_of(&mut k, &sp, 0);
+    let a0 = sp.at_app(&mut k, zero, s);
+    let want0 = str_of(&mut k, &sp, &[0]);
+    assert!(k.def_eq(a0, want0), "at 0 [0,1,2] ↝ [0]");
+}
+
+/// THE degenerate-case test CLAUDE.md requires for a partial/underspecified
+/// operator: `str.at` out of range must be exercised at `n ≥ length s`, not
+/// merely `n = 0` (which would never distinguish "out of range" from
+/// "in range at the start"). Both the exact boundary (`n == length s`) and a
+/// strictly-past-the-end `n` are checked, on a NON-EMPTY string, all by pure
+/// kernel ι-reduction (the same totality `take`/`drop` already give — mirrors
+/// `take_drop.rs`'s `take_and_drop_iota_compute_on_concrete_strings`).
+#[test]
+fn at_out_of_range_beyond_length() {
+    let (mut k, sp) = setup(3);
+    let s = str_of(&mut k, &sp, &[0, 1, 2]); // length 3
+    let nil = sp.nil(&mut k);
+
+    // n == length s (the tight boundary: one past the last valid index).
+    let three = nat_of(&mut k, &sp, 3);
+    let at_boundary = sp.at_app(&mut k, three, s);
+    assert!(
+        k.def_eq(at_boundary, nil),
+        "at 3 [0,1,2] ↝ nil (n == length s)"
+    );
+
+    // n > length s (comfortably out of range).
+    let seven = nat_of(&mut k, &sp, 7);
+    let at_over = sp.at_app(&mut k, seven, s);
+    assert!(k.def_eq(at_over, nil), "at 7 [0,1,2] ↝ nil (n > length s)");
+}
+
+#[test]
+fn at_nil_instantiates_at_an_opaque_count() {
+    let (mut k, sp) = setup(2);
+    let anon = k.anon();
+    let nat_ty = k.const_(sp.logic.nat, vec![]);
+    let n_name = {
+        let name = k.name_str(anon, "n_opaque_at_nil");
+        k.add_declaration(crate::Declaration::Axiom {
+            name,
+            uparams: vec![],
+            ty: nat_ty,
+        })
+        .expect("opaque Nat axiom admits");
+        name
+    };
+    let n = k.const_(n_name, vec![]);
+    let lemma = k.const_(sp.at_nil, vec![]);
+    let applied = k.app(lemma, n);
+    let inferred = k.infer(applied).expect("at_nil n infers");
+    let str_ty = sp.str_const(&mut k);
+    let want = {
+        let nil = sp.nil(&mut k);
+        let lhs = sp.at_app(&mut k, n, nil);
+        let nil2 = sp.nil(&mut k);
+        mk_eq(&mut k, &sp, str_ty, 1, lhs, nil2)
+    };
+    assert!(
+        k.def_eq(inferred, want),
+        "at_nil n : at n nil = nil, got {}",
+        k.render_lean(inferred)
+    );
+}
+
+/// `substr_append_split` needs `nat_prelude`'s `Nat.add`/`zero_add`/`succ_add`
+/// in the SAME kernel — the opt-in composition, exactly like
+/// `length_append_composes_with_nat_prelude_and_is_axiom_free` above.
+#[test]
+fn substr_append_split_composes_with_nat_prelude_and_is_axiom_free() {
+    let mut k = Kernel::new();
+    let nat = build_nat_prelude(&mut k).expect("nat prelude must build");
+    let sp = build_string_prelude(&mut k, nat.logic, 2).expect("string prelude must build");
+    let sa =
+        build_string_substr_arithmetic(&mut k, &sp, &nat).expect("substr_append_split must admit");
+
+    assert!(
+        k.environment().contains(sa.substr_append_split),
+        "substr_append_split must be registered"
+    );
+    let footprint = k.axiom_footprint(sa.substr_append_split);
+    assert!(
+        footprint.is_empty(),
+        "substr_append_split must rest on nothing assumed, found {:?}",
+        footprint
+            .iter()
+            .map(|a| k.display_name(*a).to_string())
+            .collect::<Vec<_>>()
+    );
+
+    // Usable as a lemma at opaque n, m, s.
+    let anon = k.anon();
+    let nat_ty = k.const_(nat.nat, vec![]);
+    let mk_opaque_nat = |k: &mut Kernel, tag: &str| -> crate::ExprId {
+        let name = k.name_str(anon, tag);
+        k.add_declaration(crate::Declaration::Axiom {
+            name,
+            uparams: vec![],
+            ty: nat_ty,
+        })
+        .expect("opaque Nat axiom admits");
+        k.const_(name, vec![])
+    };
+    let n = mk_opaque_nat(&mut k, "n_opaque_substr_split");
+    let m = mk_opaque_nat(&mut k, "m_opaque_substr_split");
+    let s = opaque_str(&mut k, &sp, "w_s_substr_split");
+
+    let lemma = k.const_(sa.substr_append_split, vec![]);
+    let applied = {
+        let e = k.app(lemma, n);
+        let e = k.app(e, m);
+        k.app(e, s)
+    };
+    let inferred = k.infer(applied).expect("substr_append_split n m s infers");
+    let str_ty = sp.str_const(&mut k);
+    let add = k.const_(nat.add, vec![]);
+    let one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let eq = k.const_(sp.logic.eq, vec![one]);
+    let want = {
+        let took = sp.take_app(&mut k, n, s);
+        let sub = sp.substr_app(&mut k, n, m, s);
+        let lhs = sp.append_app(&mut k, took, sub);
+        let sum = {
+            let e = k.app(add, n);
+            k.app(e, m)
+        };
+        let rhs = sp.take_app(&mut k, sum, s);
+        let e = k.app(eq, str_ty);
+        let e = k.app(e, lhs);
+        k.app(e, rhs)
+    };
+    assert!(
+        k.def_eq(inferred, want),
+        "substr_append_split n m s : append (take n s) (substr n m s) = take (n + m) s, got {}",
+        k.render_lean(inferred)
+    );
+}
+
+#[test]
+fn at_cons_zero_instantiates_at_an_opaque_tail() {
+    let (mut k, sp) = setup(2);
+    let c0 = sp.char(&mut k, 0);
+    let t = opaque_str(&mut k, &sp, "w_t_at_cons_zero");
+    let lemma = k.const_(sp.at_cons_zero, vec![]);
+    let applied = {
+        let e = k.app(lemma, c0);
+        k.app(e, t)
+    };
+    let inferred = k.infer(applied).expect("at_cons_zero c0 t infers");
+    let str_ty = sp.str_const(&mut k);
+    let want = {
+        let zero = nat_of(&mut k, &sp, 0);
+        let consed = sp.cons(&mut k, c0, t);
+        let lhs = sp.at_app(&mut k, zero, consed);
+        let nil = sp.nil(&mut k);
+        let rhs = sp.cons(&mut k, c0, nil);
+        mk_eq(&mut k, &sp, str_ty, 1, lhs, rhs)
+    };
+    assert!(
+        k.def_eq(inferred, want),
+        "at_cons_zero c0 t : at 0 (cons c0 t) = cons c0 nil, got {}",
         k.render_lean(inferred)
     );
 }
