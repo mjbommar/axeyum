@@ -108,6 +108,13 @@ fn every_theorem_here_is_axiom_free() {
         ("dist_sq_eq_zero_of_equiv", p.dist_sq_eq_zero_of_equiv),
         ("eq_zero_of_dist_sq_eq_zero", p.eq_zero_of_dist_sq_eq_zero),
         ("dist_sq_eq_zero_iff", p.dist_sq_eq_zero_iff),
+        ("perp_bisector_midpoint", p.perp_bisector_midpoint),
+        ("perp_bisector_iff_dot", p.perp_bisector_iff_dot),
+        (
+            "circumcentre_on_perp_bisectors",
+            p.circumcentre_on_perp_bisectors,
+        ),
+        ("thales_converse", p.thales_converse),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -208,6 +215,12 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.euler_line,
         p.midpoint_dist_sq_quarter,
         p.apollonius_from_stewart,
+        p.on_perp_bisector,
+        p.perp_bisector_midpoint,
+        p.perp_bisector_iff_dot,
+        p.on_circle,
+        p.circumcentre_on_perp_bisectors,
+        p.thales_converse,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -301,6 +314,55 @@ fn thales_statement_is_exact() {
          (CPoint.sub x2 x3) (CPoint.sub x2 x3)) (CPoint.dot (CPoint.sub x0 x3) \
          (CPoint.sub x0 x3))) -> CReal.Equiv (CPoint.dot (CPoint.sub x0 x2) (CPoint.sub \
          x1 x2)) CReal.zero))))))"
+    );
+}
+
+/// **Elements III.31, the converse — the headline.** Verbatim-checked for the
+/// same reason as [`pythagoras_statement_is_exact`]: an empty axiom
+/// footprint on a theorem stating something WEAKER than intended would still
+/// pass a substring check. `x0,x1,x2 = A,B,P`.
+#[test]
+fn thales_converse_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.thales_converse)
+        .expect("thales_converse must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal.Equiv \
+         (CPoint.dot (CPoint.sub x0 x2) (CPoint.sub x1 x2)) CReal.zero) -> CReal.Equiv \
+         (CPoint.distSq x2 (CPoint.midpoint x0 x1)) (CPoint.distSq x0 (CPoint.midpoint \
+         x0 x1))))))"
+    );
+}
+
+/// **The perpendicular-bisector characterisation.** Verbatim-checked for the
+/// same reason. `x0,x1,x2 = P,A,B`.
+#[test]
+fn perp_bisector_iff_dot_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.perp_bisector_iff_dot)
+        .expect("perp_bisector_iff_dot must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> Iff (CPoint.OnPerpBisector \
+         x0 x1 x2) (CReal.Equiv (CPoint.dot (CPoint.sub x0 (CPoint.midpoint x1 x2)) \
+         (CPoint.sub x2 x1)) CReal.zero))))"
     );
 }
 
@@ -1163,5 +1225,52 @@ fn dist_sq_double_sum_bound_statement_is_exact() {
         "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.le (CPoint.distSq x0 x2) \
          (CReal.add (CReal.add (CPoint.distSq x0 x1) (CPoint.distSq x1 x2)) (CReal.add \
          (CPoint.distSq x0 x1) (CPoint.distSq x1 x2))))))"
+    );
+}
+
+/// **The midpoint lies on its own perpendicular bisector.** Verbatim-checked
+/// for the same reason as [`pythagoras_statement_is_exact`]. `x0,x1 = A,B`.
+#[test]
+fn perp_bisector_midpoint_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.perp_bisector_midpoint)
+        .expect("perp_bisector_midpoint must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> CPoint.OnPerpBisector (CPoint.midpoint x0 x1) \
+         x0 x1))"
+    );
+}
+
+/// **A circumcentre lies on all three perpendicular bisectors.**
+/// Verbatim-checked for the same reason. `x0,x1,x2,x3 = O,A,B,C`.
+#[test]
+fn circumcentre_on_perp_bisectors_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.circumcentre_on_perp_bisectors)
+        .expect("circumcentre_on_perp_bisectors must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : \
+         CReal.Equiv (CPoint.distSq x0 x1) (CPoint.distSq x0 x2)) -> ((x5 : CReal.Equiv \
+         (CPoint.distSq x0 x2) (CPoint.distSq x0 x3)) -> And (CPoint.OnPerpBisector x0 \
+         x1 x2) (And (CPoint.OnPerpBisector x0 x2 x3) (CPoint.OnPerpBisector x0 x1 \
+         x3))))))))"
     );
 }
