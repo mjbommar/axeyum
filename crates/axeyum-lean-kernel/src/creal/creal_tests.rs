@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 179] = [
+    let expected: [(&str, crate::NameId, &str); 180] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -343,6 +343,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             "theorem",
         ),
         ("CReal.hasDerivative_id", p.has_derivative_id, "theorem"),
+        ("CReal.hasDerivative_sq", p.has_derivative_sq, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -1915,3 +1916,74 @@ fn the_lattice_route_cannot_prove_the_one_token_mutations() {
         );
     }
 }
+
+/// **The derivative says what it claims, character for character** — the
+/// carrier's `spec` and the one nonlinear witness.
+///
+/// An empty axiom footprint cannot carry either claim. A `spec` whose bound
+/// were `1/(e+1)` alone, WITHOUT the `·|y−x|` factor, is a different and much
+/// weaker notion (it would not force differentiability at all, only a crude
+/// closeness), and it is equally axiom-free. A `hasDerivative_sq` concluding
+/// `fun x => x` instead of `fun x => x + x` is simply the wrong derivative and
+/// is likewise axiom-free. What separates them is the STATEMENT.
+///
+/// Three things to read in the pinned `spec`, all load-bearing:
+///
+/// * **The modulus is a FIELD of the carrier**, appearing in the hypothesis as
+///   `HasDerivativeOn.modulus x0 x1 x2 x3 x4 x5`. This is uniform
+///   differentiability on `[a,b]`, not a pointwise limit. That is forced, not
+///   stylistic: Markov's principle is unavailable here, `Apart` is an `Or`, and
+///   `Or`'s recursor does not eliminate into `Type`, so nothing can branch on a
+///   real comparison to compute a modulus.
+/// * **Four `CReal.le` premises confine BOTH points to `[a,b]`.** Dropping the
+///   ones about `y` would make the conclusion a statement about a half-open
+///   region and the witnesses would not survive.
+/// * **The error bound is `(1/(e+1)) · |y−x|`, a PRODUCT.** This is why the
+///   carrier could not reuse `UniformlyContinuousOn`'s rational-constant
+///   closeness bound unchanged.
+#[test]
+fn the_derivative_is_stated_exactly() {
+    use crate::env::Declaration;
+    let mut k = Kernel::new();
+    let p = build_creal_prelude(&mut k).expect("CReal prelude must build");
+
+    let rendered = |k: &Kernel, name: crate::NameId| -> String {
+        match k
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{} must be declared", k.display_name(name)))
+        {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => {
+                k.render_lean(*ty)
+            }
+            other => panic!("{other:?} is not a theorem or definition"),
+        }
+    };
+
+    let spec = rendered(&k, p.hd_spec);
+    assert!(
+        spec.contains(
+            "CReal.mul (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5)) \
+                       (CReal.abs (CReal.add x7 (CReal.neg x6)))"
+        ),
+        "the error bound must be (1/(e+1))*|y-x|; without the |y-x| factor this \
+         is a crude closeness condition, not differentiability: {spec}"
+    );
+    assert_eq!(
+        spec, HAS_DERIVATIVE_ON_SPEC_TYPE,
+        "CReal.HasDerivativeOn.spec"
+    );
+
+    let sq = rendered(&k, p.has_derivative_sq);
+    assert!(
+        sq.contains("CReal.add x2 x2"),
+        "the derivative of r*r is x+x, not x: {sq}"
+    );
+    assert_eq!(sq, HAS_DERIVATIVE_SQ_TYPE, "CReal.hasDerivative_sq");
+}
+
+/// The pinned type of `CReal.HasDerivativeOn.spec`.
+const HAS_DERIVATIVE_ON_SPEC_TYPE: &str = "((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.HasDerivativeOn x0 x1 x2 x3) -> ((x5 : AxNat) -> ((x6 : CReal) -> ((x7 : CReal) -> ((x8 : CReal.le x2 x6) -> ((x9 : CReal.le x6 x3) -> ((x10 : CReal.le x2 x7) -> ((x11 : CReal.le x7 x3) -> ((x12 : CReal.le (CReal.abs (CReal.add x7 (CReal.neg x6))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (CReal.HasDerivativeOn.modulus x0 x1 x2 x3 x4 x5)))) -> CReal.le (CReal.abs (CReal.add (CReal.add (x0 x7) (CReal.neg (x0 x6))) (CReal.neg (CReal.mul (x1 x6) (CReal.add x7 (CReal.neg x6)))))) (CReal.mul (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5)) (CReal.abs (CReal.add x7 (CReal.neg x6)))))))))))))))))";
+
+/// The pinned type of `CReal.hasDerivative_sq`.
+const HAS_DERIVATIVE_SQ_TYPE: &str = "((x0 : CReal) -> ((x1 : CReal) -> CReal.HasDerivativeOn (fun (x2 : CReal) => CReal.mul x2 x2) (fun (x2 : CReal) => CReal.add x2 x2) x0 x1))";
