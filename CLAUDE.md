@@ -814,6 +814,22 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   *completed* to the coordinator — the task notification arrives with a
   no-content result and nothing indicates the work is done but unreported.
 
+  **THREE MORE STALLED ON 2026-08-24, AND THE COORDINATOR HAD THE ANSWER IN
+  THIS PARAGRAPH THE WHOLE TIME.** Every one of those briefs said, in bold, to
+  run checks in the FOREGROUND and that "a check which did not complete is
+  reported as 'did not run'". All three backgrounded the kernel gate anyway and
+  returned a holding message with finished work in hand; each needed a
+  `SendMessage` to resume. The gate they were told to run takes 550 s under lane
+  contention, and no amount of instruction survives that.
+
+  The paragraph below already says what to do — *"tell it not to measure at all
+  and do the measuring yourself"* — and it was not followed, because asking for a
+  narrow per-module check feels cheap and reads as diligence. It is neither. The
+  coordinator re-runs the full gate in its own checkout before every merge
+  regardless, so a lane's narrow run is **duplicated work that gates nothing**
+  and is the single largest source of stalls. Do not ask a lane to run
+  `cargo test` at all. Ask it to commit and report; verify it yourself.
+
   **Telling it not to is not enough — measured 2026-08-22, a fourth lane stalled
   after the brief explicitly said "foreground with bounded timeouts, report
   partial results rather than holding them".** The instruction does not survive
