@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "F:cauchy-schwarz-over-constructed-plane",
+  "title": "The Cauchy-Schwarz inequality over the constructed reals, in squared form, with the dot product a genuine inner product",
+  "statement": "For any two points (vectors) U, V of the plane CPoint = CReal x CReal over the constructed (Bishop) reals, (U.V)^2 <= (U.U)(V.V), where U.V is CPoint.dot and <= is CReal.le. THIS IS THE SQUARED FORM AND IT IS NOT A WEAKENING: the familiar |<U,V>| <= ||U||*||V|| requires a square root on CReal, which this kernel does not have -- only CReal.natSqrt, an integer square root -- so the norm form is not expressible here at all, not merely inconvenient. The squared form is equivalent to it modulo sqrt and is what every downstream estimate uses. Alongside it, CPoint.dot satisfies all three inner-product axioms over this carrier: symmetry (CPoint.dot_comm), bilinearity (the dot_add_left/right, dot_sub_left/right, dot_neg_left family), and positive-definiteness (CPoint.dot_self_zero_iff : dot V V ~ 0 <-> V ~ 0). Equality throughout is CReal.Equiv / CPoint.Equiv, DEFINED Prop relations on a setoid, never Eq.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : CPoint) -> ((x1 : CPoint) -> CReal.le (CReal.mul (CPoint.dot x0 x1) (CPoint.dot x0 x1)) (CReal.mul (CPoint.dot x0 x0) (CPoint.dot x1 x1))))",
+    "fragment": "CPoint",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.cauchy_schwarz",
+      "kind": "kernel-term",
+      "supports": "`CPoint.cauchy_schwarz` is admitted with exactly the type in formal.statement. The proof is ALGEBRA, not analysis: `CPoint.lagrange_identity` establishes (a^2+b^2)(c^2+e^2) - (ac+be)^2 = (ae-bc)^2 as a ring identity over CReal, so the gap between the two sides of Cauchy-Schwarz is a square, and one application of CReal.sq_nonneg closes it. Landing Lagrange's identity as its own named theorem rather than inlining it records WHERE the inequality comes from.",
+      "check_status": "checked",
+      "checkers": [
+        "creal_point_tests::cauchy_schwarz_statement_is_exact (asserts the KERNEL-RENDERED type verbatim with assert_eq!)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_cpoint_prelude return Err and the test fail)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::cauchy_schwarz_statement_is_exact -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/creal_point.rs",
+      "notes": "A footprint check cannot carry this claim: a theorem stating something weaker -- the two factors on the right transposed, or a different inequality direction -- has exactly the same empty footprint. Mutation-verified: changing `CPoint.dot x0 x0` to `CPoint.dot x0 x1` in the pinned string makes cargo report `40 passed; 1 failed`, naming this test and no other; restored, 41/41 green. The command re-derives from source every run, rebuilding CPointPrelude through add_declaration, and is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
+    },
+    {
+      "id": "footprint-CPoint.cauchy_schwarz",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for cauchy_schwarz, lagrange_identity, dot_self_nonneg, dot_self_zero_iff and everything beneath them -- the CReal ordered field, sq_nonneg, and the dot bilinearity family. The `cpoint` prelude's trusted surface is 0: no Axiom, no Opaque, no Quotient.",
+      "check_status": "checked",
+      "checkers": [
+        "creal_point_tests::every_theorem_here_is_axiom_free (reads Kernel::axiom_footprint for every declared theorem in this file and requires the empty set)",
+        "prelude_theorem_inventory --include-constructed (independent sweep showing each name with axiom footprint 0; guards the unvisited-is-not-empty trap)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::every_theorem_here_is_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs",
+      "notes": "Counting Declaration::Axiom alone would not suffice in this kernel (Opaque has no proof body and Quotient admits Quot.sound); axiom_footprint covers all three. Presence matters as much as the footprint -- axiom_footprint of a name interned but never DECLARED is vacuously empty -- which is why the statement pin, which fetches the declaration from the environment and panics if absent, is the companion check and not optional."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-capability-assurance (2026-08-24) via two dispatched lanes: CPoint.cauchy_schwarz and CPoint.lagrange_identity in creal_point.rs, then CPoint.dot_self_zero_iff and CReal.eq_zero_of_add_eq_zero_of_nonneg completing the inner-product axioms. Kernel theorems over CReal (the constructed reals, ADR-0512), all with empty axiom_footprint.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "Augustin-Louis Cauchy",
+        "what": "the inequality for finite sums",
+        "year": 1821,
+        "where": "Cours d'Analyse de l'Ecole Royale Polytechnique, Note II",
+        "attribution": "standard attribution; this lane did not consult the primary source."
+      },
+      {
+        "who": "Viktor Bunyakovsky and Hermann Schwarz",
+        "what": "the integral forms",
+        "year": 1859,
+        "where": "Bunyakovsky 1859; Schwarz 1888",
+        "attribution": "conventional. The plane case proved here is Cauchy's finite-sum version at n = 2 and does not require the integral generalisation."
+      },
+      {
+        "who": "Joseph-Louis Lagrange",
+        "what": "the identity (a^2+b^2)(c^2+e^2) - (ac+be)^2 = (ae-bc)^2",
+        "year": 1773,
+        "where": "conventionally attributed; the two-square case is older in substance",
+        "attribution": "noted because the proof here goes through the identity rather than through an analytic argument, so the identity is the load-bearing prior art."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred: the norm form |<U,V>| <= ||U|| ||V||. It needs CReal.sqrt, which does not exist -- only the integer natSqrt landed 2026-08-23 -- so it is not statable over this carrier, and the squared form does not formally imply it here. Recording the squared form under the name 'Cauchy-Schwarz' without this paragraph would be the error this ledger was gated against on 2026-08-22, when a fact's formal.statement was rewritten to match what had been proved.\n\nTHE TRIANGLE INEQUALITY IS LIKEWISE NOT PROVED. CPoint.dist_sq_double_sum_bound gives |AC|^2 <= 2(|AB|^2 + |BC|^2), the factor-2 bound reachable without a square root, and it is deliberately NOT named triangle_inequality -- its doc comment says so in as many words. The classical d(A,C) <= d(A,B) + d(B,C) is about unsquared distances and squaring it is not equivalent.\n\nThe proof is constructive throughout: no Classical.em, no propext, no funext, no Quot.sound. The inequality is reached from a ring identity plus one nonnegativity, which is why no order-theoretic completeness or excluded middle is needed anywhere.\n\nexternal_status is `proved`: this is formalization of a classical theorem, not discovery."
+}
