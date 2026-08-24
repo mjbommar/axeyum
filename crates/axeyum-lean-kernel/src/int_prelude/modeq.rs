@@ -259,7 +259,11 @@ fn neg_add(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
 
 /// `Eq Int (add (add x r) (neg (add y r))) (add x (neg y))` — `(X+r)-(Y+r) =
 /// X-Y`, the common-addend cancellation [`declare_modeq_add_right`] needs.
-fn cancel_common_addend(d: &mut IntDev<'_>, x: ExprId, y: ExprId, r: ExprId) -> ExprId {
+///
+/// `pub(super)`, not private: `wilson.rs`'s difference-of-squares expansion
+/// needs exactly this shape and reuses it rather than duplicating a
+/// ~40-line derivation.
+pub(super) fn cancel_common_addend(d: &mut IntDev<'_>, x: ExprId, y: ExprId, r: ExprId) -> ExprId {
     let p = d.int();
     let xr = d.iadd(x, r);
     let yr = d.iadd(y, r);

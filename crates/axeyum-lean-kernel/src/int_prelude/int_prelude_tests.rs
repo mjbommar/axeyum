@@ -126,6 +126,7 @@ fn int_prelude_admits_all_declarations() {
         p.mul,
         p.pow,
         p.prod_range,
+        p.factorial,
         p.neg,
         p.zero,
         p.one,
@@ -178,8 +179,12 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 89] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 93] {
     [
+        p.factorial_zero,
+        p.factorial_succ,
+        p.self_inverse_mod_prime,
+        p.factorial_pos,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,
         p.mod_eq_neg_modulus,
@@ -1638,4 +1643,61 @@ fn the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis() {
         );
         assert_eq!(got, expected, "{}", k.display_name(name));
     }
+}
+
+/// `Int.factorial` computes its normal form — `factorial 4` reduces to `24`
+/// by β/δ/ι through `prodRange`'s own `Nat.rec` — and, symmetrically, the
+/// trusted gate REJECTS the false claim that `factorial 4 = 23`. Same
+/// discipline as [`prod_range_computes_and_rejects_a_false_product`]: a
+/// checker that only ever confirms a computation is a checker that cannot
+/// fail.
+///
+/// `4 = 5 - 1` is not incidental: `4! = 24 ≡ -1 [5]` is Wilson's theorem's
+/// own headline instance (`5` prime), the concrete case
+/// `self_inverse_mod_prime` and `factorial` exist to eventually assemble.
+#[test]
+fn factorial_computes_and_rejects_a_false_value() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+
+    let four_nat = numeral_nat(&mut k, &p, 4);
+    let factorial = k.const_(p.factorial, vec![]);
+    let lhs = k.app(factorial, four_nat);
+
+    let twenty_four = numeral(&mut k, &p, 24);
+    assert!(
+        k.def_eq(lhs, twenty_four),
+        "factorial 4 should compute to 24"
+    );
+
+    // Negative control: the trusted gate must REFUSE `factorial 4 = 23`.
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let twenty_three = numeral(&mut k, &p, 23);
+    let int_ty = k.const_(p.z, vec![]);
+    let eq = k.const_(p.logic.eq, vec![level_one]);
+    let false_stmt = {
+        let e = k.app(eq, int_ty);
+        let e = k.app(e, lhs);
+        k.app(e, twenty_three)
+    };
+    let refl = k.const_(p.logic.eq_refl, vec![level_one]);
+    let false_proof = {
+        let r = k.app(refl, int_ty);
+        k.app(r, twenty_four)
+    };
+    let scratch_name = k.name_str(anon, "factorial_false_claim_scratch");
+    let result = k.add_declaration(Declaration::Theorem {
+        name: scratch_name,
+        uparams: vec![],
+        ty: false_stmt,
+        value: false_proof,
+    });
+    assert!(
+        result.is_err(),
+        "the trusted gate accepted a false claim that factorial 4 = 23"
+    );
 }

@@ -94,6 +94,7 @@ mod sign;
 mod statements;
 mod sub;
 mod sub_nat_nat;
+mod wilson;
 
 use ops::IntDev;
 
@@ -603,6 +604,26 @@ pub struct IntPrelude {
     pub rat_add: NameId,
     /// `eq_em : ∀ (a b : Int), Or (Eq Int a b) (Not (Eq Int a b))`.
     pub eq_em: NameId,
+
+    // --- `Int.factorial`, and the self-inverse step toward Wilson's theorem --
+    /// `Int.factorial : Nat → Int := Int.prodRange (fun k => Int.ofNat (Nat.succ k))`
+    /// — `factorial n = 1 * 2 * … * n`, mirroring `Nat.factorial`'s own
+    /// right-multiplying convention.
+    pub factorial: NameId,
+    /// `factorial_zero : Eq Int (factorial zero) one` — closes by `Eq.refl`.
+    pub factorial_zero: NameId,
+    /// `factorial_succ : ∀ n, Eq Int (factorial (succ n)) (mul (factorial n) (ofNat (succ n)))`
+    /// — closes by `Eq.refl`.
+    pub factorial_succ: NameId,
+    /// `self_inverse_mod_prime :
+    /// ∀ p a, (2 ≤ natAbs p ∧ ∀ d, d ∣ natAbs p → d = 1 ∨ d = natAbs p) →
+    ///   0 < p → 1 ≤ a → a ≤ p-1 → ModEq p (a*a) one →
+    ///   Or (ModEq p a one) (ModEq p a (p-one))` — an element that is its own
+    /// modular inverse is congruent to `1` or `-1`, via `Int.euclid_lemma`
+    /// deciding which factor of `(a-1)(a+1)` `p` divides.
+    pub self_inverse_mod_prime: NameId,
+    /// `factorial_pos : ∀ n, 0 < factorial n`.
+    pub factorial_pos: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -767,6 +788,11 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         rat_neg: kernel.name_str(rat, "neg"),
         rat_add: kernel.name_str(rat, "add"),
         eq_em: child(kernel, "eq_em"),
+        factorial: child(kernel, "factorial"),
+        factorial_zero: child(kernel, "factorial_zero"),
+        factorial_succ: child(kernel, "factorial_succ"),
+        self_inverse_mod_prime: child(kernel, "self_inverse_mod_prime"),
+        factorial_pos: child(kernel, "factorial_pos"),
     }
 }
 
@@ -871,6 +897,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prod::declare_prod_range_equations(&mut d)?;
         prod::declare_prod_range_congr(&mut d)?;
         prod::declare_modeq_prod_range(&mut d)?;
+        wilson::declare_factorial(&mut d)?;
+        wilson::declare_factorial_equations(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
@@ -893,6 +921,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modinv::declare_modeq_inverse_unique(&mut d)?;
         gcd::declare_euclid_lemma(&mut d)?;
         gcd::declare_euclid_infinitude(&mut d)?;
+        wilson::declare_self_inverse_mod_prime(&mut d)?;
+        wilson::declare_factorial_pos(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         rat::declare_rat(&mut d)?;
