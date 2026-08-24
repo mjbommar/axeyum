@@ -1,0 +1,9 @@
+# witness verification summary (all rows re-verified by two
+# independent irreducibility routines; see CHECK 5)
+# tier|range|condition|count
+dense|[841, 1199]|every odd n|180
+sparse|[1201, 1601]|odd n, 11 does not divide n|183
+#
+# total witnesses|363   verified|363   of which carrier F_{3^11}|17
+# unresolved (search budget exhausted, NOT proved absent):
+(none)

@@ -195,6 +195,17 @@ test, roughly 100x slower. Nothing else is required.
   dumps. `--mutation-controls` runs seven mutants, each tripping exactly one
   named check. Exits nonzero on any failed control. Data: `data/plancherel-*.txt`.
 
+- `lemire_effective_largeq.py` -- checker for
+  [note 19](../../docs/research/10-cas/lemire-signed-trace/19-effective-large-q.md)
+  (effectivising the large-`q` theorem). Verifies the Hsu/Cohen reach at
+  `q = 3^11` both parities, the divisor-bound audit that locates the single
+  ineffective step, the `omega`/slack trade-off table, and all 363 in-window
+  witnesses over `F_{3^11}` (each re-verified by two independent
+  irreducibility routines). Exits nonzero on failure. Data: `data/effq-*.txt`.
+  **Note:** the witness tiers are dense on odd `[841,1199]` and sparse on
+  `[1201,1601]` (odd, `11` not dividing `n`); the 18 odd multiples of 11 there
+  are excluded by construction, not unresolved.
+
 - `lemire_largeq.py` -- checker for
   [note 16](../../docs/research/10-cas/lemire-signed-trace/16-large-q-threshold.md)
   (the large-`q` threshold claim). Verifies the reversal duality

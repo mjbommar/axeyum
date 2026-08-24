@@ -53,6 +53,13 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   barrier: provable irreducibility-preserving constructions multiply the
   degree, so window families are lacunary (density zero) and cannot cover a
   residue class; honest scope (known toolbox, not a logical impossibility).
+- [19-effective-large-q.md](19-effective-large-q.md) -- effectivising the
+  large-`q` theorem. The ineffectivity is pure bookkeeping (no Siegel
+  mechanism), but as written it gives `n_0(3^11) ~ 10^{344.5}`, from a single
+  POINTWISE divisor bound where the exact averaged identity
+  `sum_{deg x = m} tau(x) = (m+1)q^m` applies. Closed unconditionally over
+  `F_{3^11}`: even `n <= 354292`, odd `n <= 839`, plus 363 certified
+  witnesses (dense to odd 1199, sparse to 1601).
 - [17-cylinder-plancherel.md](17-cylinder-plancherel.md) -- the Plancherel
   forcing (disproof) test applied to the cylinder sums `A_psi`: `(CYL)` is
   **not** refuted, and provably cannot be by this template -- `|K| < 8 ell`, so

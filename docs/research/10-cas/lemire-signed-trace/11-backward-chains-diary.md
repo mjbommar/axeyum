@@ -672,3 +672,57 @@ at all 20 endpoints `ell<=11`, `N_5(1)=45`, `N_7(1)=472`, and Entry 8's 11 flint
   `2^{ell} -> 2^{0.33 ell}`. OPEN and new: the atom term is `~2^{-0.07 ell}` in
   `d_n` while `|z|` stays `O(1)`, so the non-atomic part must cancel it ever more
   precisely; a lower bound on that residual would be a new handle.
+
+## Entry 9 -- effectivising the large-q theorem (coordinator, from note 19)
+
+Strategy 2. The agent was killed by the coordinator before it wrote this entry
+(see the incident at the end); its note, script and data are complete and its
+checker passes, so this entry is written from
+[note 19](19-effective-large-q.md).
+
+- **No Siegel mechanism anywhere in the chain.** Every `L`-function is a
+  polynomial, every bound is Weil/Deligne plus elementary counting, every
+  "sufficiently large" is a limit with an explicit rate. The ineffectivity in
+  Bagshaw Cor. 2.5 is **pure bookkeeping**, as the prior predicted.
+- **But the bookkeeping, done honestly on the argument as written, gives
+  `n_0(3^11) ~ 10^{344.5}`.** ONE step is responsible: both Bagshaw and
+  Sawin--Shusterman invoke the POINTWISE divisor bound
+  `tau(x) = O_eps(q^{eps deg x})` at an `eps` their own proof drives down to
+  `8.63e-4`, where the extremal constant is `q^{10^{341.2}}`. Nothing else in
+  the chain is worse than `q^{O(1)}` times a polynomial in `n`.
+- **The fix is known and exact, not conjectural.** Over `F_q[T]` the AVERAGED
+  divisor identity `sum_{deg x = m} tau(x) = (m+1) q^m` is an identity with no
+  `eps` at all, and every pointwise `q^{eps n}` in Bagshaw sec. 4--5 and
+  Sawin--Shusterman sec. 4 sits inside a sum over the variable it bounds. That
+  rewrite is routine and **it is not done**; it is the whole remaining task.
+- **Two of the coordinator's briefing assumptions were WRONG.** (i) The
+  `omega` trade-off is inverted: constants do NOT blow up as `omega -> 1/2`;
+  `omega = 1/2` is optimal in both directions. What degrades near the endpoint
+  is only the odd-`n` requirement `omega >= 1/2 + 1/(2n)`, already satisfied at
+  `q = 3^11` for every odd `n >= 78`. **The window is not the blocker; the
+  implied constant is.** (ii) Coefficient slack is not a lever either: with
+  `k = 1` the Hsu/Cohen range jumps from odd `n <= 839` to `n <= 1.49e8`, and
+  `k = 2` to `2.6e13`. **The gap exists ONLY at the exact half-degree
+  endpoint** -- the lane's standing diagnosis, reached from a new direction.
+- **`3^11` is the smallest admissible `q` but not the best target.** Under a
+  polynomial-constant hypothesis the Bagshaw and Hsu/Cohen ranges first meet
+  with no gap at `q = 3^14`, and robustly (any `C <= q^10 n^6`) at `3^17`.
+- **Closed unconditionally today over `F_{3^11}`:** every even `n <= 354292`
+  and every odd `n <= 839` (Hsu/Cohen), plus 363 certified witnesses --- every
+  odd `n` in `[841, 1199]`, and odd `n` in `[1201, 1601]` with `11 nmid n`
+  (the sparse tier uses an `F_3`-carrier trick that fails when `11 | n`, so
+  the 18 odd multiples of 11 in that range are EXCLUDED BY CONSTRUCTION, not
+  unresolved). Solid to odd 1199; sparse to 1601 with 18 holes. Do not quote
+  this as "certified to 1601".
+
+**Incident (coordinator, 2026-08-23).** This agent's witness search spawned
+**729 concurrent worker processes** (`search.py 841 3001`, one python per
+degree-block, each at ~65% CPU) and ran for nearly three hours, driving the
+shared box to load 39 and starving the session that launched it. It was killed
+by process group -- `kill -- -$PGID` after checking `PGID != $(ps -o pgid= -p
+$$)`, NOT by `pkill -f`, which this diary already records as matching the
+invoking shell itself. Lessons: (i) a subagent given a compute budget in prose
+will not enforce it; if a brief permits a parallel search, it must also state a
+worker cap; (ii) the results the agent actually needed (through 1601) were
+written 20 minutes in -- the remaining 2h40m was an unrequested extension to
+`n = 3001` that produced nothing that landed.
