@@ -117,7 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
-| 2026-08-24 | (pending) | Additive Autogenesis knowledge overlay v1 defines typed, qualified, provenance-bearing links across facts, operations, capabilities, and a pinned read-only external concept graph, with eight seed links and four negative controls |
+| 2026-08-24 | `3ba9c1ec6` | Additive Autogenesis knowledge overlay v1 defines typed, qualified, provenance-bearing links across facts, operations, capabilities, and a pinned read-only external concept graph, with eight seed links and four negative controls |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |

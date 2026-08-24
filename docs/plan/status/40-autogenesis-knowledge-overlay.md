@@ -13,4 +13,4 @@ obstructions mechanically rather than hand-authoring them.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-24 | (pending) | Additive Autogenesis knowledge overlay v1 defines typed, qualified, provenance-bearing links across facts, operations, capabilities, and a pinned read-only external concept graph, with eight seed links and four negative controls |
+| 2026-08-24 | `3ba9c1ec6` | Additive Autogenesis knowledge overlay v1 defines typed, qualified, provenance-bearing links across facts, operations, capabilities, and a pinned read-only external concept graph, with eight seed links and four negative controls |
