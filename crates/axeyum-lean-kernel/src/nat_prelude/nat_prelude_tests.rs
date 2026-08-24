@@ -109,6 +109,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.maps_into,
         p.transposition,
         p.setwise_fixed,
+        p.test_bit_aux,
+        p.test_bit,
     ]
 }
 
@@ -283,6 +285,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sum_range_rect_eq_diag_add_corner,
         p.choose_add_convolution,
         p.sum_choose_sq,
+        p.test_bit_zero,
+        p.test_bit_succ,
+        p.test_bit_le_one,
+        p.mod_two_mul_split,
+        p.sum_test_bit_lt,
     ]
 }
 
@@ -433,6 +440,44 @@ fn arithmetic_reduces_on_numerals() {
         !f.k.def_eq(seven_sub_three, five),
         "7 - 3 must NOT be def-eq to 5"
     );
+}
+
+/// `Nat.testBit` computes the binary digits of `13 = 1101₂` by pure reduction
+/// on numerals: bit 0 and bit 2 and bit 3 are `1`, bit 1 is `0`. This is the
+/// mandatory concrete instance — a definition that type-checks but computes
+/// the wrong digit is exactly what an axiom-footprint check cannot see.
+#[test]
+fn test_bit_computes_thirteen_in_binary() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let thirteen = f.num(13);
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+
+    let bit0 = f.const_app(p.test_bit, &[thirteen, zero]);
+    let bit1 = f.const_app(p.test_bit, &[thirteen, one]);
+    let bit2 = f.const_app(p.test_bit, &[thirteen, two]);
+    let bit3 = f.const_app(p.test_bit, &[thirteen, three]);
+
+    assert!(f.k.def_eq(bit0, one), "testBit 13 0 must reduce to 1");
+    assert!(f.k.def_eq(bit1, zero), "testBit 13 1 must reduce to 0");
+    assert!(f.k.def_eq(bit2, one), "testBit 13 2 must reduce to 1");
+    assert!(f.k.def_eq(bit3, one), "testBit 13 3 must reduce to 1");
+
+    // NEGATIVE reduction controls — a checker that can't fail is worse than
+    // none.
+    assert!(!f.k.def_eq(bit0, zero), "testBit 13 0 must NOT be 0");
+    assert!(!f.k.def_eq(bit1, one), "testBit 13 1 must NOT be 1");
+    assert!(!f.k.def_eq(bit2, zero), "testBit 13 2 must NOT be 0");
+    assert!(!f.k.def_eq(bit3, zero), "testBit 13 3 must NOT be 0");
+
+    // Bit 4 and beyond are 0 (13 < 16), and every bit is Le _ 1.
+    let four = f.num(4);
+    let bit4 = f.const_app(p.test_bit, &[thirteen, four]);
+    assert!(f.k.def_eq(bit4, zero), "testBit 13 4 must reduce to 0");
 }
 
 /// `Nat.choose` computes Pascal's triangle by pure reduction on numerals, and
@@ -4002,7 +4047,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        26 + 165,
+        28 + 170,
         "every promised definition and theorem must be rendered"
     );
 }
