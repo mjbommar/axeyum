@@ -109,6 +109,8 @@ pub(super) fn declare_probability(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_indicator(d, p)?;
     declare_indicator_nonneg(d, p)?;
     declare_indicator_le(d, p)?;
+    declare_variance_indicator(d, p)?;
+    declare_variance_indicator_le_quarter(d, p)?;
     declare_markov_constructed(d, p)?;
     declare_chebyshev_inequality(d, p)?;
     declare_covariance(d, p)?;
@@ -124,6 +126,9 @@ pub(super) fn declare_probability(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_variance_sum_vars(d, p)?;
     declare_variance_scaled_mean(d, p)?;
     declare_chebyshev_sample_mean_uncorrelated(d, p)?;
+    declare_variance_sample_mean_uncorrelated(d, p)?;
+    declare_weak_law_of_large_numbers(d, p)?;
+    declare_bernoulli_law_of_large_numbers(d, p)?;
     declare_variance_scaled_add_nonneg(d, p)?;
     declare_covariance_sq_le_variance_mul_of_pos(d, p)?;
     declare_covariance_sq_le_variance_mul_of_zero_zero(d, p)?;
@@ -2463,6 +2468,511 @@ fn declare_indicator_le(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelE
     })
 }
 
+// --- the Bernoulli variable (rat_prelude::probability, Rado lane) ----------
+//
+// `Rat.indicator a X k` is already `{0,1}`-valued ([`declare_indicator_nonneg`],
+// [`declare_indicator_le`]); this section adds the one pointwise fact those
+// two don't give — `ind*ind = ind` — and uses it to compute the Bernoulli
+// variable's variance exactly (`p(1-p)`, [`declare_variance_indicator`]) and
+// bound it (`≤ 1/4`, [`declare_variance_indicator_le_quarter`]), the two
+// pieces `Rat.bernoulli_law_of_large_numbers` composes from
+// `Rat.weak_law_of_large_numbers`.
+
+/// `Eq Rat (mul (indicator a X k) (indicator a X k)) (indicator a X k)` —
+/// `𝟙² = 𝟙`, the fact that makes the Bernoulli variable's second moment
+/// collapse to its first. Case-split on `Rat.ble a (X k)` exactly like
+/// [`declare_indicator_nonneg`]/[`declare_indicator_le`]: `false` selects
+/// `Rat.zero` (`0*0=0`, `mul_zero`), `true` selects `Rat.one` (`1*1=1`,
+/// `mul_one`).
+fn indicator_sq_eq_self(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    a: ExprId,
+    x: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let xk = d.apply(x, &[k]);
+    let cond = indicator_cond(d, p, a, xk);
+    let one_r = rone(d, p);
+    let zero_r = rzero(d, p);
+    let ind_val = indicator(d, p, a, x, k);
+    let ind_val_sq = rmul(d, ind_val, ind_val);
+    let concl = req(d, ind_val_sq, ind_val);
+
+    ble_cases(
+        d,
+        cond,
+        concl,
+        &|d, heq| {
+            let sel = bool_select_rat(d, cond, one_r, zero_r);
+            let sel_eq_zero = select_rat_false(d, cond, one_r, zero_r, heq);
+            let cong_step = rcongr(d, sel, zero_r, sel_eq_zero, &|d, t| rmul(d, t, t));
+            let sel_sel = rmul(d, sel, sel);
+            let zz = rmul(d, zero_r, zero_r);
+            let mul_zero_step = d.lemma(p.mul_zero, &[zero_r]);
+            let chain = rtrans(d, sel_sel, zz, zero_r, cong_step, mul_zero_step);
+            let zero_eq_sel = rsymm(d, sel, zero_r, sel_eq_zero);
+            rat_eq_rewrite(d, zero_r, sel, zero_eq_sel, chain, &|d, t| {
+                let sel_sq = rmul(d, sel, sel);
+                req(d, sel_sq, t)
+            })
+        },
+        &|d, heq| {
+            let sel = bool_select_rat(d, cond, one_r, zero_r);
+            let sel_eq_one = select_rat_true(d, cond, one_r, zero_r, heq);
+            let cong_step = rcongr(d, sel, one_r, sel_eq_one, &|d, t| rmul(d, t, t));
+            let sel_sel = rmul(d, sel, sel);
+            let oo = rmul(d, one_r, one_r);
+            let mul_one_step = d.lemma(p.mul_one, &[one_r]);
+            let chain = rtrans(d, sel_sel, oo, one_r, cong_step, mul_one_step);
+            let one_eq_sel = rsymm(d, sel, one_r, sel_eq_one);
+            rat_eq_rewrite(d, one_r, sel, one_eq_sel, chain, &|d, t| {
+                let sel_sq = rmul(d, sel, sel);
+                req(d, sel_sq, t)
+            })
+        },
+    )
+}
+
+/// `Rat.variance_indicator : ∀ a X p n, IsDistribution p n →
+/// variance (Rat.indicator a X) p n =
+/// mul (expectation (Rat.indicator a X) p n)
+///     (sub Rat.one (expectation (Rat.indicator a X) p n))` — the Bernoulli
+/// variable's variance is `p·(1−p)` where `p := E[𝟙[a≤X]]`. **The
+/// `IsDistribution` hypothesis is load-bearing**, exactly as in
+/// [`RatPrelude::variance_eq`] this proof reuses: without `sumRange p n = 1`
+/// there is no reason `E[ind·ind]` collapses to `E[ind]` weighted correctly,
+/// let alone that the result is a genuine probability.
+///
+/// [`indicator_sq_eq_self`] gives `ind*ind = ind` pointwise, so
+/// [`RatPrelude::sum_range_congr`] collapses `E[ind·ind]` to `E[ind]`
+/// directly — no case split beyond the one already inside
+/// `indicator_sq_eq_self`; [`RatPrelude::variance_eq`] then gives `Var[ind] =
+/// E[ind] − E[ind]²`, and `mul_sub_via_comm` (built for
+/// [`declare_variance_smul`], reused here unchanged) turns `sub(mu, mu·mu)`
+/// into `mu·(1−mu)`.
+fn declare_variance_indicator(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let ind = d.const_app(p.indicator, &[a, x]);
+    let mu = expectation(d, p, ind, pf, n);
+    let one_r = rone(d, p);
+    let one_minus_mu = rsub(d, p, one_r, mu);
+    let rhs = rmul(d, mu, one_minus_mu);
+    let variance_ind = variance(d, p, ind, pf, n);
+    let concl = req(d, variance_ind, rhs);
+
+    let veq = d.lemma(p.variance_eq, &[ind, pf, n, hd]);
+    let ind_ind = weighted(d, ind, ind);
+    let e_indind = expectation(d, p, ind_ind, pf, n);
+    let mu_sq = rmul(d, mu, mu);
+    let veq_rhs = rsub(d, p, e_indind, mu_sq);
+
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let pk = d.apply(pf, &[k]);
+        let sq_eq_self = indicator_sq_eq_self(d, p, a, x, k); // Eq(ind_val*ind_val, ind_val)
+        let ind_val = indicator(d, p, a, x, k);
+        let ind_sq = rmul(d, ind_val, ind_val);
+        let body = rcongr(d, ind_sq, ind_val, sq_eq_self, &|d, t| rmul(d, t, pk));
+        // body : Eq((ind_val*ind_val)*pk, ind_val*pk) — the WEIGHTED pointwise
+        // fact sum_range_congr actually wants, not the bare `ind*ind=ind`.
+        d.lam_fv(k_fv, nat, body)
+    };
+    let indind_weighted = weighted(d, ind_ind, pf);
+    let ind_weighted = weighted(d, ind, pf);
+    let congr_step = d.lemma(
+        p.sum_range_congr,
+        &[indind_weighted, ind_weighted, n, pointwise],
+    );
+    // congr_step : Eq(sumRange(indind_weighted,n), sumRange(ind_weighted,n))
+    //   ~ Eq(e_indind, mu)                                              [defeq]
+
+    let after_congr = rcongr(d, e_indind, mu, congr_step, &|d, t| rsub(d, p, t, mu_sq));
+    let mu_musq = rsub(d, p, mu, mu_sq);
+
+    let mul_one_step = d.lemma(p.mul_one, &[mu]); // Eq(mul(mu,one_r), mu)
+    let mu_one_r = rmul(d, mu, one_r);
+    let mu_one_eq = rsymm(d, mu_one_r, mu, mul_one_step); // Eq(mu, mu_one_r)
+    let lift = rcongr(d, mu, mu_one_r, mu_one_eq, &|d, t| rsub(d, p, t, mu_sq));
+
+    let (mul_start, mul_target, mul_proof) = mul_sub_via_comm(d, p, mu, one_r, mu);
+    // mul_start = sub(mu*one_r, mu*mu); mul_target = mu*(one_r-mu) = rhs
+
+    let (_e1, chain1) = rchain(d, mu_musq, &[(mul_start, lift), (mul_target, mul_proof)]);
+
+    let (_e2, final_proof) = rchain(
+        d,
+        variance_ind,
+        &[(veq_rhs, veq), (mu_musq, after_congr), (mul_target, chain1)],
+    );
+
+    let value = {
+        let with_hd = d.lam_fv(hd_fv, dist_ty, final_proof);
+        let with_n = d.lam_fv(n_fv, nat, with_hd);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_x = d.lam_fv(x_fv, fn_ty, with_pf);
+        d.lam_fv(a_fv, carrier, with_x)
+    };
+    let ty = {
+        let with_hd = d.arrow(dist_ty, concl);
+        let with_n = d.pi_fv(n_fv, nat, with_hd);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_x = d.pi_fv(x_fv, fn_ty, with_pf);
+        d.pi_fv(a_fv, carrier, with_x)
+    };
+    d.declare_theorem(p.variance_indicator, ty, value)
+}
+
+// --- the quarter bound (`p(1-p) ≤ 1/4`, in multiplied form) ----------------
+//
+// Stated as `4q − 4q² ≤ 1` rather than `q(1-q) ≤ 1/4`, the same choice
+// [`RatPrelude::markov_inequality`]'s own doc explains: the same content over
+// an ordered field, needing no `Rat.inv`. `4 := ((1+1)+1)+1` is built inline
+// (not a prelude constant) so the whole discriminant argument stays local to
+// this one theorem.
+
+/// `add(add(x,x),add(x,x))` — four copies of `x`.
+fn quad(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
+    let xx = radd(d, x, x);
+    radd(d, xx, xx)
+}
+
+/// `Eq Rat (mul Rat.one x) x`.
+fn one_mul_r(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
+    let one_r = rone(d, p);
+    let comm = d.lemma(p.mul_comm, &[one_r, x]); // Eq(mul(one_r,x), mul(x,one_r))
+    let mul_one_step = d.lemma(p.mul_one, &[x]); // Eq(mul(x,one_r), x)
+    let mul_one_r_x = rmul(d, one_r, x);
+    let x_one_r = rmul(d, x, one_r);
+    rtrans(d, mul_one_r_x, x_one_r, x, comm, mul_one_step)
+}
+
+/// `Eq Rat (mul ((1+1)+1)+1) x) (quad x)` — `4·x = x+x+x+x`: peel `4 =
+/// ((1+1)+1)+1` apart with three `right_distrib`s, then collapse the
+/// resulting four `1*x`'s to `x` (one `congr` using [`one_mul_r`] four
+/// times, mirroring [`declare_variance_eq`]'s trick of rewriting a repeated
+/// subterm through a motive that mentions it more than once), then one
+/// `add_assoc` to match [`quad`]'s bracketing.
+fn four_mul_eq_quad(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
+    let one_r = rone(d, p);
+    let two_r = radd(d, one_r, one_r);
+    let three_r = radd(d, two_r, one_r);
+    let four_r = radd(d, three_r, one_r);
+
+    let one_x = rmul(d, one_r, x);
+    let two_x = rmul(d, two_r, x);
+    let three_x = rmul(d, three_r, x);
+    let four_x = rmul(d, four_r, x);
+
+    let step1 = d.lemma(p.right_distrib, &[three_r, one_r, x]);
+    let after1 = radd(d, three_x, one_x);
+
+    let eq2 = d.lemma(p.right_distrib, &[two_r, one_r, x]);
+    let after2_inner = radd(d, two_x, one_x);
+    let lift2 = rcongr(d, three_x, after2_inner, eq2, &|d, t| radd(d, t, one_x));
+    let after2 = radd(d, after2_inner, one_x);
+
+    let eq3 = d.lemma(p.right_distrib, &[one_r, one_r, x]);
+    let after3_inner = radd(d, one_x, one_x);
+    let lift3 = rcongr(d, two_x, after3_inner, eq3, &|d, t| {
+        let inner = radd(d, t, one_x);
+        radd(d, inner, one_x)
+    });
+    let after3 = {
+        let inner = radd(d, after3_inner, one_x);
+        radd(d, inner, one_x)
+    };
+
+    let om = one_mul_r(d, p, x);
+    let step4 = rcongr(d, one_x, x, om, &|d, t| {
+        let i1 = radd(d, t, t);
+        let i2 = radd(d, i1, t);
+        radd(d, i2, t)
+    });
+    let after4 = {
+        let i1 = radd(d, x, x);
+        let i2 = radd(d, i1, x);
+        radd(d, i2, x)
+    };
+
+    let xx = radd(d, x, x);
+    let assoc_step = d.lemma(p.add_assoc, &[xx, x, x]);
+    let quad_x = radd(d, xx, xx);
+
+    let (_e, chained) = rchain(
+        d,
+        four_x,
+        &[
+            (after1, step1),
+            (after2, lift2),
+            (after3, lift3),
+            (after4, step4),
+            (quad_x, assoc_step),
+        ],
+    );
+    chained
+}
+
+/// `Eq Rat (mul (add q q) (add q q)) (quad (mul q q))` — `(q+q)·(q+q) = 4·q²`
+/// expanded as four copies of `q·q`. One `right_distrib`, one `left_distrib`
+/// (applied to both resulting `q·(q+q)` occurrences via a single `congr`,
+/// the same repeated-subterm trick [`four_mul_eq_quad`] uses).
+fn double_sq(d: &mut IntDev<'_>, p: RatPrelude, q: ExprId) -> ExprId {
+    let qq_sum = radd(d, q, q);
+    let start = rmul(d, qq_sum, qq_sum);
+
+    let step1 = d.lemma(p.right_distrib, &[q, q, qq_sum]);
+    let q_qqsum = rmul(d, q, qq_sum);
+    let after1 = radd(d, q_qqsum, q_qqsum);
+
+    let step2 = d.lemma(p.left_distrib, &[q, q, q]);
+    let qq = rmul(d, q, q);
+    let qq_qq = radd(d, qq, qq);
+    let lift2 = rcongr(d, q_qqsum, qq_qq, step2, &|d, t| radd(d, t, t));
+    let quad_qq = radd(d, qq_qq, qq_qq);
+
+    let (_e, chained) = rchain(d, start, &[(after1, step1), (quad_qq, lift2)]);
+    chained
+}
+
+/// `Rat.variance_indicator_le_quarter : ∀ q,
+/// le (sub (mul four q) (mul four (mul q q))) one` — `4q − 4q² ≤ 1`, i.e.
+/// `q(1−q) ≤ 1/4` with the division cleared, where `four := ((1+1)+1)+1`.
+///
+/// Elementary and constructive, via the nonneg-square identity `0 ≤
+/// (2q−1)·(2q−1)`, never a case split: [`RatPrelude::sq_nonneg`] on `w :=
+/// sub (add q q) one`, then [`sub_sq_expand`] (already built for
+/// [`declare_variance_eq`]) expands `w·w` into `(q+q)·(q+q) + (neg(1)·(q+q) +
+/// (neg(1)·(q+q) + 1·1))`. [`double_sq`]/[`four_mul_eq_quad`] turn the
+/// quadratic and linear pieces into `4·q²` and `4·q`; `neg_mul`/`neg_add`
+/// collapse the two `neg(1)·(q+q)` copies and the `1·1`; a final
+/// `add_assoc`/`add_comm` shuffle and [`le_of_nonneg_sub`] finish it.
+fn declare_variance_indicator_le_quarter(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+
+    let one_r = rone(d, p);
+    let two_r = radd(d, one_r, one_r);
+    let three_r = radd(d, two_r, one_r);
+    let four_r = radd(d, three_r, one_r);
+
+    let qq = rmul(d, q, q);
+    let four_q = rmul(d, four_r, q);
+    let four_qq = rmul(d, four_r, qq);
+    let x_val = rsub(d, p, four_q, four_qq);
+    let concl = rle(d, p, x_val, one_r);
+
+    // w := sub(add(q,q), one_r); sq_nonneg(w) : 0 ≤ w*w
+    let a_val = radd(d, q, q);
+    let w = rsub(d, p, a_val, one_r);
+    let w_sq = rmul(d, w, w);
+    let sqnn = d.lemma(p.sq_nonneg, &[w]);
+
+    // sub_sq_expand(a_val, one_r) : Eq(w*w, aa + (nba + (nba + bb)))
+    let (start, mid_target, expand_proof) = sub_sq_expand(d, p, a_val, one_r);
+    let neg_one = rneg(d, one_r);
+    let aa = rmul(d, a_val, a_val);
+    let nba = rmul(d, neg_one, a_val);
+    let bb = rmul(d, one_r, one_r);
+    let nba_bb = radd(d, nba, bb);
+    let nba_nba_bb = radd(d, nba, nba_bb);
+    let target0 = radd(d, aa, nba_nba_bb);
+    let _ = mid_target; // == target0, reconstructed for named access below
+    let _ = start; // == w_sq
+
+    // Step A: bb -> one_r                                          [mul_one]
+    let bb_eq_one = d.lemma(p.mul_one, &[one_r]);
+    let step_a = rcongr(d, bb, one_r, bb_eq_one, &|d, t| {
+        let inner = radd(d, nba, t);
+        let inner2 = radd(d, nba, inner);
+        radd(d, aa, inner2)
+    });
+    let target1 = {
+        let inner = radd(d, nba, one_r);
+        let inner2 = radd(d, nba, inner);
+        radd(d, aa, inner2)
+    };
+
+    // Step B: both `nba` -> neg(a_val)                    [neg_mul, one_mul_r]
+    let neg_mul_step = d.lemma(p.neg_mul, &[one_r, a_val]); // Eq(nba, neg(mul(one_r,a_val)))
+    let one_a = rmul(d, one_r, a_val);
+    let neg_one_a = rneg(d, one_a);
+    let om_a = one_mul_r(d, p, a_val); // Eq(one_a, a_val)
+    let neg_a = rneg(d, a_val);
+    let neg_congr = rcongr(d, one_a, a_val, om_a, &|d, t| rneg(d, t));
+    let (_e_nba, nba_chain) = rchain(d, nba, &[(neg_one_a, neg_mul_step), (neg_a, neg_congr)]);
+    // nba_chain : Eq(nba, neg_a)
+
+    let step_b = rcongr(d, nba, neg_a, nba_chain, &|d, t| {
+        let inner = radd(d, t, one_r);
+        let inner2 = radd(d, t, inner);
+        radd(d, aa, inner2)
+    });
+    let target2 = {
+        let inner = radd(d, neg_a, one_r);
+        let inner2 = radd(d, neg_a, inner);
+        radd(d, aa, inner2)
+    };
+
+    // Step D: regroup add(X, add(X,one_r)) -> add(add(X,X),one_r)  [add_assoc]
+    let assoc_lemma = d.lemma(p.add_assoc, &[neg_a, neg_a, one_r]);
+    // Eq(add(add(X,X),one_r), add(X,add(X,one_r)))
+    let xx_sum = radd(d, neg_a, neg_a);
+    let xx_one = radd(d, xx_sum, one_r);
+    let x_inner = radd(d, neg_a, one_r);
+    let x_xinner = radd(d, neg_a, x_inner);
+    let assoc_rev = rsymm(d, xx_one, x_xinner, assoc_lemma); // Eq(x_xinner, xx_one)
+    let step_d = rcongr(d, x_xinner, xx_one, assoc_rev, &|d, t| radd(d, aa, t));
+    let target3 = radd(d, aa, xx_one);
+
+    // Step E: neg_a + neg_a -> neg(quad(q))                          [neg_add]
+    let quad_q = quad(d, q);
+    let neg_add_lemma = d.lemma(p.neg_add, &[a_val, a_val]);
+    // Eq(neg(add(a_val,a_val)), add(neg_a,neg_a))
+    let neg_quad_q = rneg(d, quad_q);
+    let xx_eq_neg_quad = rsymm(d, neg_quad_q, xx_sum, neg_add_lemma);
+    // xx_eq_neg_quad : Eq(xx_sum, neg_quad_q)
+    let step_e = rcongr(d, xx_sum, neg_quad_q, xx_eq_neg_quad, &|d, t| {
+        let inner = radd(d, t, one_r);
+        radd(d, aa, inner)
+    });
+    let target4 = {
+        let inner = radd(d, neg_quad_q, one_r);
+        radd(d, aa, inner)
+    };
+
+    // Step F: aa -> mul(four_r, qq)                    [double_sq, four_mul_eq_quad]
+    let double_sq_proof = double_sq(d, p, q); // Eq(aa, quad(qq))
+    let quad_qq = quad(d, qq);
+    let four_mul_qq = four_mul_eq_quad(d, p, qq); // Eq(four_qq, quad_qq)
+    let four_mul_qq_rev = rsymm(d, four_qq, quad_qq, four_mul_qq); // Eq(quad_qq, four_qq)
+    let aa_to_four = rtrans(d, aa, quad_qq, four_qq, double_sq_proof, four_mul_qq_rev);
+    let step_f = rcongr(d, aa, four_qq, aa_to_four, &|d, t| {
+        let inner = radd(d, neg_quad_q, one_r);
+        radd(d, t, inner)
+    });
+    let target5 = {
+        let inner = radd(d, neg_quad_q, one_r);
+        radd(d, four_qq, inner)
+    };
+
+    // Step G: quad_q (inside the neg) -> mul(four_r, q)         [four_mul_eq_quad]
+    let four_mul_q = four_mul_eq_quad(d, p, q); // Eq(four_q, quad_q)
+    let quad_q_to_four = rsymm(d, four_q, quad_q, four_mul_q); // Eq(quad_q, four_q)
+    let neg_step = rcongr(d, quad_q, four_q, quad_q_to_four, &|d, t| rneg(d, t));
+    // neg_step : Eq(neg_quad_q, neg(four_q))
+    let neg_four_q = rneg(d, four_q);
+    let step_g = rcongr(d, neg_quad_q, neg_four_q, neg_step, &|d, t| {
+        let inner = radd(d, t, one_r);
+        radd(d, four_qq, inner)
+    });
+    let target6 = {
+        let inner = radd(d, neg_four_q, one_r);
+        radd(d, four_qq, inner)
+    };
+
+    // Reshuffle: A+(B+C) -> (A+B)+C -> (B+A)+C -> C+(B+A)
+    let a_term = four_qq;
+    let b_term = neg_four_q;
+    let c_term = one_r;
+    let assoc_x1 = d.lemma(p.add_assoc, &[a_term, b_term, c_term]);
+    // Eq(add(add(A,B),C), add(A,add(B,C)))
+    let ab = radd(d, a_term, b_term);
+    let ab_c = radd(d, ab, c_term);
+    let step_x1 = rsymm(d, ab_c, target6, assoc_x1); // Eq(target6, ab_c)
+
+    let comm_ab = d.lemma(p.add_comm, &[a_term, b_term]); // Eq(add(A,B), add(B,A))
+    let ba = radd(d, b_term, a_term);
+    let step_x2 = rcongr(d, ab, ba, comm_ab, &|d, t| radd(d, t, c_term));
+    let ba_c = radd(d, ba, c_term);
+
+    let comm_bac = d.lemma(p.add_comm, &[ba, c_term]); // Eq(add(ba,C), add(C,ba))
+    let c_ba = radd(d, c_term, ba);
+    let step_x3 = comm_bac;
+
+    // add(neg_four_q, four_qq) = neg(sub(four_q,four_qq)) = neg(x_val)
+    let neg_four_qq = rneg(d, four_qq);
+    let neg_add_x = d.lemma(p.neg_add, &[four_q, neg_four_qq]);
+    // Eq(neg(add(four_q,neg_four_qq)), add(neg(four_q),neg(neg_four_qq)))
+    let neg_neg_qq = d.lemma(p.neg_neg, &[four_qq]); // Eq(neg(neg_four_qq), four_qq)
+    let neg_four_q_2 = rneg(d, four_q);
+    let neg_neg_four_qq = rneg(d, neg_four_qq);
+    let rhs_na = radd(d, neg_four_q_2, neg_neg_four_qq);
+    let cong_nn = rcongr(d, neg_neg_four_qq, four_qq, neg_neg_qq, &|d, t| {
+        radd(d, neg_four_q_2, t)
+    });
+    let ba_form = radd(d, neg_four_q_2, four_qq);
+    let x_lit = radd(d, four_q, neg_four_qq);
+    let neg_x_lit = rneg(d, x_lit);
+    let (_e_na, na_chain) = rchain(d, neg_x_lit, &[(rhs_na, neg_add_x), (ba_form, cong_nn)]);
+    // na_chain : Eq(neg_x_lit, ba_form)     where ba_form == ba (same shape)
+    let na_chain_rev = rsymm(d, neg_x_lit, ba_form, na_chain); // Eq(ba_form, neg_x_lit)
+
+    let step_final = rcongr(d, ba, neg_x_lit, na_chain_rev, &|d, t| radd(d, c_term, t));
+    let final_target = radd(d, c_term, neg_x_lit);
+
+    let (_ey, target6_to_final) = rchain(
+        d,
+        target6,
+        &[
+            (ab_c, step_x1),
+            (ba_c, step_x2),
+            (c_ba, step_x3),
+            (final_target, step_final),
+        ],
+    );
+
+    // Assemble: w*w = target0 = target1 = target2 = target3 = target4
+    //   = target5 = target6 = final_target = add(one_r, neg(x_lit))
+    let (_ez, full_chain) = rchain(
+        d,
+        w_sq,
+        &[
+            (target0, expand_proof),
+            (target1, step_a),
+            (target2, step_b),
+            (target3, step_d),
+            (target4, step_e),
+            (target5, step_f),
+            (target6, step_g),
+            (final_target, target6_to_final),
+        ],
+    );
+
+    let nonneg_final = rat_eq_rewrite(d, w_sq, final_target, full_chain, sqnn, &|d, t| {
+        let zero_r = rzero(d, p);
+        rle(d, p, zero_r, t)
+    });
+    // nonneg_final : le zero (add(one_r, neg(x_lit)))  ~  le zero (sub one_r x_val)  [defeq]
+
+    let final_proof = le_of_nonneg_sub(d, p, one_r, x_val, nonneg_final);
+
+    let ty = d.pi_fv(q_fv, carrier, concl);
+    let value = d.lam_fv(q_fv, carrier, final_proof);
+    d.declare_theorem(p.variance_indicator_le_quarter, ty, value)
+}
+
 /// `Rat.markov_constructed : ∀ a X p n, IsDistribution p n → (∀ k, Lt k n →
 /// le zero (X k)) → lt zero a → le (a * expectation (Rat.indicator a X) p n)
 /// (expectation X p n)` — [`RatPrelude::markov_inequality`] with the
@@ -4513,6 +5023,650 @@ fn declare_chebyshev_sample_mean_uncorrelated(
         d.pi_fv(x_fv, x_ty, with_eps)
     };
     d.declare_theorem(p.chebyshev_sample_mean_uncorrelated, ty, value)
+}
+
+/// `Rat.variance_sampleMean_uncorrelated : ∀ X p n, IsDistribution p n → ∀
+/// m, PairwiseUncorrelated X m p n → variance (fun k => inv (natDivSucc m 0)
+/// times sumVars X m k) p n = (inv (natDivSucc m 0) times inv (natDivSucc m
+/// 0)) times sumRange (fun j => variance (X j) p n) m` — **the quantitative
+/// heart of the weak law of large numbers, named on its own**: the variance
+/// of the sample mean of `m` pairwise-uncorrelated variables is `(1/m)²
+/// times Σ_{j<m} Var[X_j]`.
+///
+/// [`RatPrelude::variance_sumVars`] alone does NOT give this: it gives
+/// `Var[Σ_j X_j] = Σ_j Var[X_j]` for the unscaled SUM, not the sample MEAN
+/// (which divides the sum by `m`). This theorem is exactly the composition
+/// [`RatPrelude::chebyshev_sample_mean_uncorrelated`] already builds
+/// internally as its own `combined_eq` — [`RatPrelude::variance_scaled_mean`]
+/// rewriting `Var[a·Σ] = a²·Var[Σ]` at `a := inv (natDivSucc m 0)`, then
+/// [`RatPrelude::variance_sumVars`] rewriting `Var[Σ]` — now exposed as a
+/// standalone, freestanding result rather than a step buried inside a larger
+/// Chebyshev bound. No new proof technique; every lemma call here is a call
+/// [`declare_chebyshev_sample_mean_uncorrelated`] already makes.
+fn declare_variance_sample_mean_uncorrelated(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+    let hpw_fv = d.fresh_fvar();
+    let hpw = d.kernel().fvar(hpw_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let hpw_ty = pairwise_uncorrelated(d, p, x, m, pf, n);
+
+    let sv = sum_vars_fn(d, p, x, m);
+    let m_as_rat = nat_as_rat(d, p, m);
+    let a = d.const_app(p.inv, &[m_as_rat]);
+    let y = scale_fn(d, a, sv);
+
+    let var_of_x = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let xj = d.apply(x, &[j]);
+        let vxj = variance(d, p, xj, pf, n);
+        d.lam_fv(j_fv, nat, vxj)
+    };
+
+    let a_sq = rmul(d, a, a);
+    let sum_var = rsum_range(d, p, var_of_x, m);
+    let rhs = rmul(d, a_sq, sum_var);
+
+    let var_y = variance(d, p, y, pf, n);
+    let concl = req(d, var_y, rhs);
+
+    let vsm = d.lemma(p.variance_scaled_mean, &[sv, pf, n, m, hd]);
+    // vsm : Eq(variance(scale_fn(a,sv),pf,n), a_sq*variance(sv,pf,n))
+    //     ~ Eq(var_y, a_sq*variance(sv,pf,n))                          [defeq]
+
+    let vsv = d.lemma(p.variance_sum_vars, &[x, pf, n, hd, m, hpw]);
+    // vsv : Eq(variance(sv,pf,n), sum_var)
+
+    let var_sv = variance(d, p, sv, pf, n);
+    let rw = rcongr(d, var_sv, sum_var, vsv, &|d, t| rmul(d, a_sq, t));
+    // rw : Eq(a_sq*var_sv, rhs)
+
+    let a_sq_var_sv = rmul(d, a_sq, var_sv);
+    let combined_eq = rtrans(d, var_y, a_sq_var_sv, rhs, vsm, rw);
+    // combined_eq : Eq(var_y, rhs)
+
+    let value = {
+        let with_hpw = d.lam_fv(hpw_fv, hpw_ty, combined_eq);
+        let with_m = d.lam_fv(m_fv, nat, with_hpw);
+        let with_hd = d.lam_fv(hd_fv, dist_ty, with_m);
+        let with_n = d.lam_fv(n_fv, nat, with_hd);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        d.lam_fv(x_fv, x_ty, with_pf)
+    };
+    let ty = {
+        let with_hpw = d.arrow(hpw_ty, concl);
+        let with_m = d.pi_fv(m_fv, nat, with_hpw);
+        let with_hd = d.arrow(dist_ty, with_m);
+        let with_n = d.pi_fv(n_fv, nat, with_hd);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        d.pi_fv(x_fv, x_ty, with_pf)
+    };
+    d.declare_theorem(p.variance_sample_mean_uncorrelated, ty, value)
+}
+
+/// `Rat.weak_law_of_large_numbers` — **a renaming, not a new result**:
+/// registered under the name a reader searching for "the weak law of large
+/// numbers" will actually look for. The type is IDENTICAL to
+/// [`RatPrelude::chebyshev_sample_mean_uncorrelated`]'s, and the proof is a
+/// direct forward to that theorem — nothing new is proved here, and nothing
+/// about the statement changes.
+///
+/// This IS the weak law of large numbers, in the standard finite-sample
+/// Chebyshev-bound shape the classical proof of the law goes through: for
+/// `m` pairwise-uncorrelated variables `X_0, …, X_{m-1}` over a distribution
+/// `p`, `ε²·E[𝟙(ε² ≤ (M − E[M])²)] ≤ Var[M]` where `M` is the sample mean —
+/// i.e. the (ε²-weighted) probability mass where the sample mean deviates
+/// from its expectation by at least `ε` is bounded by `Var[M] = (1/m)² ·
+/// Σ_{j<m} Var[X_j]` ([`RatPrelude::variance_sample_mean_uncorrelated`]),
+/// which shrinks as `m` grows whenever the individual variances stay
+/// bounded — exactly the content the classical statement asserts as a
+/// limit, stated here at each finite `m` rather than as a limit statement.
+///
+/// **Not the classical i.i.d. form** `P(|X̄ − μ| ≥ ε) ≤ Var/(mε²)`: this
+/// development assumes only pairwise uncorrelatedness (see
+/// [`RatPrelude::covariance`]'s own doc on why there is no independence
+/// predicate here), so the bound is left with the SUM `Σ_{j<m} Var[X_j]`
+/// rather than collapsed to `m·σ²` under a common-variance hypothesis — a
+/// strictly MORE general statement than the textbook one, not a weaker one.
+fn declare_weak_law_of_large_numbers(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let eps_fv = d.fresh_fvar();
+    let eps = d.kernel().fvar(eps_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+    let hpw_fv = d.fresh_fvar();
+    let hpw = d.kernel().fvar(hpw_fv);
+    let heps_fv = d.fresh_fvar();
+    let heps = d.kernel().fvar(heps_fv);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let hpw_ty = pairwise_uncorrelated(d, p, x, m, pf, n);
+    let zero_r = rzero(d, p);
+    let heps_ty = rlt(d, p, zero_r, eps);
+
+    let sv = sum_vars_fn(d, p, x, m);
+    let m_as_rat = nat_as_rat(d, p, m);
+    let a = d.const_app(p.inv, &[m_as_rat]);
+    let y = scale_fn(d, a, sv);
+
+    let var_of_x = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let xj = d.apply(x, &[j]);
+        let vxj = variance(d, p, xj, pf, n);
+        d.lam_fv(j_fv, nat, vxj)
+    };
+
+    let a_sq = rmul(d, a, a);
+    let sum_var = rsum_range(d, p, var_of_x, m);
+    let rhs = rmul(d, a_sq, sum_var);
+
+    let mu_y = expectation(d, p, y, pf, n);
+    let dev_y = variance_summand(d, p, y, mu_y);
+    let eps_sq = rmul(d, eps, eps);
+    let ind_y = d.const_app(p.indicator, &[eps_sq, dev_y]);
+    let e_ind_y = expectation(d, p, ind_y, pf, n);
+    let lhs = rmul(d, eps_sq, e_ind_y);
+    let concl = rle(d, p, lhs, rhs);
+
+    let forward = d.lemma(
+        p.chebyshev_sample_mean_uncorrelated,
+        &[x, eps, pf, n, m, hd, hpw, heps],
+    );
+
+    let value = {
+        let with_heps = d.lam_fv(heps_fv, heps_ty, forward);
+        let with_hpw = d.lam_fv(hpw_fv, hpw_ty, with_heps);
+        let with_hd = d.lam_fv(hd_fv, dist_ty, with_hpw);
+        let with_m = d.lam_fv(m_fv, nat, with_hd);
+        let with_n = d.lam_fv(n_fv, nat, with_m);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_eps = d.lam_fv(eps_fv, carrier, with_pf);
+        d.lam_fv(x_fv, x_ty, with_eps)
+    };
+    let ty = {
+        let with_heps = d.arrow(heps_ty, concl);
+        let with_hpw = d.arrow(hpw_ty, with_heps);
+        let with_hd = d.arrow(dist_ty, with_hpw);
+        let with_m = d.pi_fv(m_fv, nat, with_hd);
+        let with_n = d.pi_fv(n_fv, nat, with_m);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_eps = d.pi_fv(eps_fv, carrier, with_pf);
+        d.pi_fv(x_fv, x_ty, with_eps)
+    };
+    d.declare_theorem(p.weak_law_of_large_numbers, ty, value)
+}
+
+// --- Bernoulli's law of large numbers (rat_prelude::probability, Rado lane) -
+//
+// The instance: `n` pairwise-uncorrelated indicator variables sharing one
+// expectation `q` (a common Bernoulli parameter). Assembled from
+// `weak_law_of_large_numbers` (the general theorem, above),
+// `variance_indicator` (step 1 — each variable's variance is `q(1-q)`) and
+// `variance_indicator_le_quarter` (step 2 — `4q(1-q) ≤ 1`), so nothing here
+// re-proves either.
+
+/// `fun j => Rat.indicator (A j) (Y j)` — a family of Bernoulli variables,
+/// one per index `j`, each thresholding its own underlying sequence `Y j`
+/// against its own threshold `A j`.
+fn bernoulli_family(d: &mut IntDev<'_>, p: RatPrelude, cap_a: ExprId, cap_y: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let aj = d.apply(cap_a, &[j]);
+    let yj = d.apply(cap_y, &[j]);
+    let body = d.const_app(p.indicator, &[aj, yj]);
+    d.lam_fv(j_fv, nat, body)
+}
+
+/// `Eq Rat (mul a (sub one a)) (add a (neg (mul a a)))` — `a·(1−a) = a − a²`,
+/// via `left_distrib` (`a*(one+neg_a) = a*one + a*neg_a`), `mul_one` and
+/// `mul_neg`. The distributivity bridge between [`declare_variance_indicator`]'s
+/// `p(1−p)` output and [`declare_variance_indicator_le_quarter`]'s `q−q²`
+/// input shape — the two are related by an actual ring law, not a
+/// definitional unfolding, so this cannot be skipped.
+fn mul_one_minus_eq_sub_sq(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId) -> ExprId {
+    let one_r = rone(d, p);
+    let neg_a = rneg(d, a);
+    let step1 = d.lemma(p.left_distrib, &[a, one_r, neg_a]);
+    let a_one = rmul(d, a, one_r);
+    let a_nega = rmul(d, a, neg_a);
+    let after1 = radd(d, a_one, a_nega);
+
+    let mul_one_step = d.lemma(p.mul_one, &[a]);
+    let a_congr = rcongr(d, a_one, a, mul_one_step, &|d, t| radd(d, t, a_nega));
+    let after2 = radd(d, a, a_nega);
+
+    let aa = rmul(d, a, a);
+    let neg_aa = rneg(d, aa);
+    let mul_neg_step = d.lemma(p.mul_neg, &[a, a]);
+    let b_congr = rcongr(d, a_nega, neg_aa, mul_neg_step, &|d, t| radd(d, a, t));
+    let after3 = radd(d, a, neg_aa);
+
+    let one_minus_a = rsub(d, p, one_r, a);
+    let start = rmul(d, a, one_minus_a);
+    let (_e, chained) = rchain(
+        d,
+        start,
+        &[(after1, step1), (after2, a_congr), (after3, b_congr)],
+    );
+    chained
+}
+
+/// `Eq Rat (mul four (mul q (sub one q))) (sub (mul four q) (mul four (mul q
+/// q)))` — `4·q(1−q) = 4q − 4q²`, the shape
+/// [`declare_variance_indicator_le_quarter`]'s conclusion is already in,
+/// reached from [`declare_variance_indicator`]'s `p(1−p)` output via
+/// [`mul_one_minus_eq_sub_sq`] then one more `left_distrib` to pull `four`
+/// through the resulting difference.
+fn four_mul_one_minus_eq(d: &mut IntDev<'_>, p: RatPrelude, four_r: ExprId, q: ExprId) -> ExprId {
+    let one_r = rone(d, p);
+    let one_minus_q = rsub(d, p, one_r, q);
+    let w = rmul(d, q, one_minus_q);
+    let start = rmul(d, four_r, w);
+
+    let w_eq = mul_one_minus_eq_sub_sq(d, p, q); // Eq(w, add(q, neg(qq)))
+    let qq = rmul(d, q, q);
+    let neg_qq = rneg(d, qq);
+    let q_minus_qq = radd(d, q, neg_qq);
+    let step1 = rcongr(d, w, q_minus_qq, w_eq, &|d, t| rmul(d, four_r, t));
+    let after1 = rmul(d, four_r, q_minus_qq);
+
+    let step2 = d.lemma(p.left_distrib, &[four_r, q, neg_qq]);
+    let four_q = rmul(d, four_r, q);
+    let four_negqq = rmul(d, four_r, neg_qq);
+    let after2 = radd(d, four_q, four_negqq);
+
+    let mul_neg_step = d.lemma(p.mul_neg, &[four_r, qq]);
+    let four_qq = rmul(d, four_r, qq);
+    let neg_four_qq = rneg(d, four_qq);
+    let step3 = rcongr(d, four_negqq, neg_four_qq, mul_neg_step, &|d, t| {
+        radd(d, four_q, t)
+    });
+    let after3 = radd(d, four_q, neg_four_qq);
+
+    let (_e, chained) = rchain(
+        d,
+        start,
+        &[(after1, step1), (after2, step2), (after3, step3)],
+    );
+    chained
+}
+
+/// `Eq Rat (mul a (mul b c)) (mul b (mul a c))` — commuting the OUTER factor
+/// of a right-associated triple product past the inner one, via `mul_assoc`
+/// (twice) and `mul_comm` (once): `a*(b*c) = (a*b)*c = (b*a)*c = b*(a*c)`.
+fn left_commute(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+    let bc = rmul(d, b, c);
+    let start = rmul(d, a, bc);
+
+    let assoc1 = d.lemma(p.mul_assoc, &[a, b, c]); // Eq((a*b)*c, a*(b*c))
+    let ab = rmul(d, a, b);
+    let ab_c = rmul(d, ab, c);
+    let step1 = rsymm(d, ab_c, start, assoc1); // Eq(start, ab_c)
+
+    let comm = d.lemma(p.mul_comm, &[a, b]); // Eq(a*b, b*a)
+    let ba = rmul(d, b, a);
+    let step2 = rcongr(d, ab, ba, comm, &|d, t| rmul(d, t, c));
+    let ba_c = rmul(d, ba, c);
+
+    let assoc2 = d.lemma(p.mul_assoc, &[b, a, c]); // Eq((b*a)*c, b*(a*c))
+    let ac = rmul(d, a, c);
+    let target = rmul(d, b, ac);
+
+    let (_e, chained) = rchain(d, start, &[(ab_c, step1), (ba_c, step2), (target, assoc2)]);
+    chained
+}
+
+/// `Eq Rat zero four` companion: `le zero four`, built from `zero_lt_one`
+/// (`0 ≤ 1`, via `le_of_lt`) doubled twice with `add_nonneg` — `four :=
+/// ((1+1)+1)+1` is never negative, no matter how it is built.
+fn four_nonneg(d: &mut IntDev<'_>, p: RatPrelude) -> (ExprId, ExprId) {
+    let one_r = rone(d, p);
+    let zero_r = rzero(d, p);
+    let zlt1 = d.lemma(p.zero_lt_one, &[]);
+    let h1 = d.lemma(p.le_of_lt, &[zero_r, one_r, zlt1]); // le zero one_r
+
+    let two_r = radd(d, one_r, one_r);
+    let h2 = d.lemma(p.add_nonneg, &[one_r, one_r, h1, h1]); // le zero two_r
+
+    let three_r = radd(d, two_r, one_r);
+    let h3 = d.lemma(p.add_nonneg, &[two_r, one_r, h2, h1]); // le zero three_r
+
+    let four_r = radd(d, three_r, one_r);
+    let h4 = d.lemma(p.add_nonneg, &[three_r, one_r, h3, h1]); // le zero four_r
+    (four_r, h4)
+}
+
+/// `Rat.bernoulli_law_of_large_numbers` — the instance: `n` pairwise-
+/// uncorrelated Bernoulli variables sharing one expectation `q`. Composes
+/// [`RatPrelude::weak_law_of_large_numbers`] (scaled by the nonneg constant
+/// `four`), [`RatPrelude::variance_indicator`] (each `Var[X_j] = q(1-q)`,
+/// pointwise, then [`RatPrelude::sum_range_congr_lt`] +
+/// `sum_range_const` collapse `Σ_{j<m} Var[X_j]` to `m·q(1-q)`) and
+/// [`RatPrelude::variance_indicator_le_quarter`] (`4q(1-q) ≤ 1`, scaled by
+/// the nonneg `m`): `four·(eps²·E[𝟙]) ≤ four·(a²·Σ Var[X_j]) =
+/// a²·(four·Σ Var[X_j]) = a²·(four·(m·q(1-q))) = a²·(m·(four·q(1-q))) ≤
+/// a²·(m·one) = a²·m`, where `a := inv(natDivSucc m 0)`.
+fn declare_bernoulli_law_of_large_numbers(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let cap_a_ty = fn_ty;
+    let cap_y_ty = d.arrow(nat, fn_ty);
+
+    let cap_a_fv = d.fresh_fvar();
+    let cap_a = d.kernel().fvar(cap_a_fv);
+    let cap_y_fv = d.fresh_fvar();
+    let cap_y = d.kernel().fvar(cap_y_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let eps_fv = d.fresh_fvar();
+    let eps = d.kernel().fvar(eps_fv);
+
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+    let hpw_fv = d.fresh_fvar();
+    let hpw = d.kernel().fvar(hpw_fv);
+    let hq_fv = d.fresh_fvar();
+    let hq = d.kernel().fvar(hq_fv);
+    let heps_fv = d.fresh_fvar();
+    let heps = d.kernel().fvar(heps_fv);
+
+    let x_bernoulli = bernoulli_family(d, p, cap_a, cap_y);
+
+    let dist_ty = is_distribution(d, p, pf, n);
+    let hpw_ty = pairwise_uncorrelated(d, p, x_bernoulli, m, pf, n);
+
+    let one_r = rone(d, p);
+    let hq_ty = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let jlt_ty = d.lt(j, m);
+        let aj = d.apply(cap_a, &[j]);
+        let yj = d.apply(cap_y, &[j]);
+        let ind_aj_yj = d.const_app(p.indicator, &[aj, yj]);
+        let mu_j = expectation(d, p, ind_aj_yj, pf, n);
+        let eq_ty = req(d, mu_j, q);
+        let inner = d.arrow(jlt_ty, eq_ty);
+        d.pi_fv(j_fv, nat, inner)
+    };
+
+    let zero_r = rzero(d, p);
+    let heps_ty = rlt(d, p, zero_r, eps);
+
+    // --- reconstruct weak_law_of_large_numbers's own terms, at X := x_bernoulli
+    let sv = sum_vars_fn(d, p, x_bernoulli, m);
+    let m_as_rat = nat_as_rat(d, p, m);
+    let a = d.const_app(p.inv, &[m_as_rat]);
+    let y = scale_fn(d, a, sv);
+
+    let var_of_x = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let xj = d.apply(x_bernoulli, &[j]);
+        let vxj = variance(d, p, xj, pf, n);
+        d.lam_fv(j_fv, nat, vxj)
+    };
+
+    let a_sq = rmul(d, a, a);
+    let sum_var = rsum_range(d, p, var_of_x, m);
+    let rhs0 = rmul(d, a_sq, sum_var);
+
+    let mu_y = expectation(d, p, y, pf, n);
+    let dev_y = variance_summand(d, p, y, mu_y);
+    let eps_sq = rmul(d, eps, eps);
+    let ind_y = d.const_app(p.indicator, &[eps_sq, dev_y]);
+    let e_ind_y = expectation(d, p, ind_y, pf, n);
+    let lhs = rmul(d, eps_sq, e_ind_y);
+    let concl_stmt = rle(d, p, lhs, rhs0);
+    let _ = concl_stmt; // documents wl_proof's own conclusion shape
+
+    let wl_proof = d.lemma(
+        p.weak_law_of_large_numbers,
+        &[x_bernoulli, eps, pf, n, m, hd, hpw, heps],
+    );
+    // wl_proof : le lhs rhs0
+
+    // --- Σ_{j<m} Var[X_j] = m_as_rat * (q*(1-q))
+    let one_minus_q = rsub(d, p, one_r, q);
+    let q1mq = rmul(d, q, one_minus_q);
+
+    let pointwise = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let jlt_fv = d.fresh_fvar();
+        let jlt = d.kernel().fvar(jlt_fv);
+        let jlt_ty = d.lt(j, m);
+
+        let aj = d.apply(cap_a, &[j]);
+        let yj = d.apply(cap_y, &[j]);
+        let ind_aj_yj = d.const_app(p.indicator, &[aj, yj]);
+        let mu_j = expectation(d, p, ind_aj_yj, pf, n);
+
+        let vi = d.lemma(p.variance_indicator, &[aj, yj, pf, n, hd]);
+        // vi : Eq(variance(ind_aj_yj,pf,n), mu_j*(1-mu_j))
+
+        let hqj = d.apply(hq, &[j, jlt]);
+        // hqj : Eq(mu_j, q)
+
+        let mu_j_one_minus = rsub(d, p, one_r, mu_j);
+        let mu_j_rhs = rmul(d, mu_j, mu_j_one_minus);
+
+        let rw = rcongr(d, mu_j, q, hqj, &|d, t| {
+            let one_minus_t = rsub(d, p, one_r, t);
+            rmul(d, t, one_minus_t)
+        });
+        // rw : Eq(mu_j_rhs, q1mq)
+
+        let var_xj = variance(d, p, ind_aj_yj, pf, n);
+        let (_e, chain) = rchain(d, var_xj, &[(mu_j_rhs, vi), (q1mq, rw)]);
+        // chain : Eq(var_xj, q1mq)
+
+        let with_jlt = d.lam_fv(jlt_fv, jlt_ty, chain);
+        d.lam_fv(j_fv, nat, with_jlt)
+    };
+
+    let const_q1mq = const_fn(d, q1mq);
+    let congr_step = d.lemma(p.sum_range_congr_lt, &[var_of_x, const_q1mq, m, pointwise]);
+    // congr_step : Eq(sumRange(var_of_x,m), sumRange(const_q1mq,m)) ~ Eq(sum_var, sumRange(const_q1mq,m))  [defeq]
+
+    let (_stmt_sc, proof_sc) = sum_range_const(d, p, q1mq, m);
+    // proof_sc : Eq(sumRange(const_q1mq,m), m_as_rat*q1mq)
+
+    let m_as_rat_q1mq = rmul(d, m_as_rat, q1mq);
+    let sum_const_q1mq = rsum_range(d, p, const_q1mq, m);
+    let (_e_sum, sum_eq) = rchain(
+        d,
+        sum_var,
+        &[(sum_const_q1mq, congr_step), (m_as_rat_q1mq, proof_sc)],
+    );
+    // sum_eq : Eq(sum_var, m_as_rat_q1mq)
+
+    // --- 4*q*(1-q) ≤ 1, in the shape variance_indicator produces
+    let qb = d.lemma(p.variance_indicator_le_quarter, &[q]);
+    // qb : le (sub(four_r*q, four_r*qq)) one_r
+    let (four_r, four_ge0) = four_nonneg(d, p);
+    let bridge = four_mul_one_minus_eq(d, p, four_r, q);
+    // bridge : Eq(four_r*q1mq, sub(four_r*q,four_r*qq))
+    let four_q1mq = rmul(d, four_r, q1mq);
+    let qq = rmul(d, q, q);
+    let four_q = rmul(d, four_r, q);
+    let four_qq = rmul(d, four_r, qq);
+    let sub_form = rsub(d, p, four_q, four_qq);
+    let bridge_rev = rsymm(d, four_q1mq, sub_form, bridge); // Eq(sub_form, four_q1mq)
+    let qb2 = rat_eq_rewrite(d, sub_form, four_q1mq, bridge_rev, qb, &|d, t| {
+        rle(d, p, t, one_r)
+    });
+    // qb2 : le four_q1mq one_r
+
+    // --- scale qb2 by nonneg m_as_rat, then rearrange to `four_r*sum_var ≤ m_as_rat`
+    let zero_nat = d.num(0);
+    let hm_nonneg = d.lemma(p.zero_le_nat_div_succ, &[m, zero_nat]);
+    // hm_nonneg : le zero_r m_as_rat
+
+    let scaled_qb2 = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[m_as_rat, four_q1mq, one_r, hm_nonneg, qb2],
+    );
+    // scaled_qb2 : le (m_as_rat*four_q1mq) (m_as_rat*one_r)
+
+    let m_as_rat_one = rmul(d, m_as_rat, one_r);
+
+    let commute1 = left_commute(d, p, m_as_rat, four_r, q1mq);
+    // commute1 : Eq(m_as_rat*(four_r*q1mq), four_r*(m_as_rat*q1mq))
+    let m_as_rat_four_q1mq = rmul(d, m_as_rat, four_q1mq);
+    let four_m_as_rat_q1mq = rmul(d, four_r, m_as_rat_q1mq);
+    let step_commute1 = rat_eq_rewrite(
+        d,
+        m_as_rat_four_q1mq,
+        four_m_as_rat_q1mq,
+        commute1,
+        scaled_qb2,
+        &|d, t| rle(d, p, t, m_as_rat_one),
+    );
+    // step_commute1 : le four_m_as_rat_q1mq (m_as_rat*one_r)
+
+    let sum_eq_rev = rsymm(d, sum_var, m_as_rat_q1mq, sum_eq); // Eq(m_as_rat_q1mq, sum_var)
+    let four_sum_var = rmul(d, four_r, sum_var);
+    let step_rewrite_sum = rat_eq_rewrite(
+        d,
+        m_as_rat_q1mq,
+        sum_var,
+        sum_eq_rev,
+        step_commute1,
+        &|d, t| {
+            let ft = rmul(d, four_r, t);
+            rle(d, p, ft, m_as_rat_one)
+        },
+    );
+    // step_rewrite_sum : le four_sum_var (m_as_rat*one_r)
+
+    let m_one_step = d.lemma(p.mul_one, &[m_as_rat]); // Eq(m_as_rat*one_r, m_as_rat)
+    let key_bound = rat_eq_rewrite(
+        d,
+        m_as_rat_one,
+        m_as_rat,
+        m_one_step,
+        step_rewrite_sum,
+        &|d, t| rle(d, p, four_sum_var, t),
+    );
+    // key_bound : le four_sum_var m_as_rat
+
+    // --- scale wl_proof by nonneg four_r, then close via key_bound
+    let scaled_wl = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[four_r, lhs, rhs0, four_ge0, wl_proof],
+    );
+    // scaled_wl : le (four_r*lhs) (four_r*rhs0)
+
+    let commute2 = left_commute(d, p, four_r, a_sq, sum_var);
+    // commute2 : Eq(four_r*(a_sq*sum_var), a_sq*(four_r*sum_var))
+    let four_lhs = rmul(d, four_r, lhs);
+    let four_rhs0 = rmul(d, four_r, rhs0);
+    let a_sq_four_sum_var = rmul(d, a_sq, four_sum_var);
+    let step_commute2 = rat_eq_rewrite(
+        d,
+        four_rhs0,
+        a_sq_four_sum_var,
+        commute2,
+        scaled_wl,
+        &|d, t| rle(d, p, four_lhs, t),
+    );
+    // step_commute2 : le four_lhs a_sq_four_sum_var
+
+    let ha_sq_nonneg = d.lemma(p.sq_nonneg, &[a]); // le zero a_sq
+    let scaled_key = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[a_sq, four_sum_var, m_as_rat, ha_sq_nonneg, key_bound],
+    );
+    // scaled_key : le (a_sq*four_sum_var) (a_sq*m_as_rat)
+
+    let a_sq_m_as_rat = rmul(d, a_sq, m_as_rat);
+    let final_proof = d.lemma(
+        p.le_trans,
+        &[
+            four_lhs,
+            a_sq_four_sum_var,
+            a_sq_m_as_rat,
+            step_commute2,
+            scaled_key,
+        ],
+    );
+    // final_proof : le four_lhs a_sq_m_as_rat
+
+    let concl = rle(d, p, four_lhs, a_sq_m_as_rat);
+
+    let value = {
+        let with_heps = d.lam_fv(heps_fv, heps_ty, final_proof);
+        let with_eps = d.lam_fv(eps_fv, carrier, with_heps);
+        let with_hq = d.lam_fv(hq_fv, hq_ty, with_eps);
+        let with_hpw = d.lam_fv(hpw_fv, hpw_ty, with_hq);
+        let with_hd = d.lam_fv(hd_fv, dist_ty, with_hpw);
+        let with_q = d.lam_fv(q_fv, carrier, with_hd);
+        let with_m = d.lam_fv(m_fv, nat, with_q);
+        let with_n = d.lam_fv(n_fv, nat, with_m);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_y = d.lam_fv(cap_y_fv, cap_y_ty, with_pf);
+        d.lam_fv(cap_a_fv, cap_a_ty, with_y)
+    };
+    let ty = {
+        let with_heps = d.arrow(heps_ty, concl);
+        let with_eps = d.pi_fv(eps_fv, carrier, with_heps);
+        let with_hq = d.arrow(hq_ty, with_eps);
+        let with_hpw = d.arrow(hpw_ty, with_hq);
+        let with_hd = d.arrow(dist_ty, with_hpw);
+        let with_q = d.pi_fv(q_fv, carrier, with_hd);
+        let with_m = d.pi_fv(m_fv, nat, with_q);
+        let with_n = d.pi_fv(n_fv, nat, with_m);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_y = d.pi_fv(cap_y_fv, cap_y_ty, with_pf);
+        d.pi_fv(cap_a_fv, cap_a_ty, with_y)
+    };
+    d.declare_theorem(p.bernoulli_law_of_large_numbers, ty, value)
 }
 
 // --- the probabilistic Cauchy–Schwarz inequality ----------------------------

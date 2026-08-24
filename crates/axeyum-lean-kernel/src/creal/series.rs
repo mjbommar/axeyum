@@ -81,6 +81,7 @@
 //! literal `CReal.Cauchy` predicate from it is future, unbuilt
 //! infrastructure, not a restatement of what is proved here.
 
+use super::ring_helpers::add4_comm;
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, equiv};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -184,63 +185,6 @@ fn echain(
 /// `(a+b)+(c+d) ~ (a+c)+(b+d)`, returned as a `(target, proof)` chain step
 /// (the proof's source is `add(add(a,b),add(c,d))`) — the `Equiv` promotion
 /// of `nat_prelude/binomial.rs::add_add_add_comm`.
-fn add4_comm(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-    a: ExprId,
-    b: ExprId,
-    c: ExprId,
-    dd: ExprId,
-) -> (ExprId, ExprId) {
-    let cd = cadd(d, p, c, dd);
-    let bd = cadd(d, p, b, dd);
-    let ab = cadd(d, p, a, b);
-    let start = cadd(d, p, ab, cd);
-
-    // start ~ a + (b + (c+d))
-    let bcd = cadd(d, p, b, cd);
-    let s1 = cadd(d, p, a, bcd);
-    let h1 = d.lemma(p.add_assoc, &[a, b, cd]);
-
-    // b+(c+d) ~ (b+c)+d
-    let bc = cadd(d, p, b, c);
-    let bc_d = cadd(d, p, bc, dd);
-    let s2 = cadd(d, p, a, bc_d);
-    let refl_a = d.lemma(p.equiv_refl, &[a]);
-    let h_bcd = d.lemma(p.add_assoc, &[b, c, dd]); // (b+c)+d ~ b+(c+d)
-    let h2_inner = d.lemma(p.equiv_symm, &[bc_d, bcd, h_bcd]); // b+(c+d) ~ (b+c)+d
-    let h2 = d.lemma(p.add_congr, &[a, a, bcd, bc_d, refl_a, h2_inner]);
-
-    // (b+c) ~ (c+b)
-    let cb = cadd(d, p, c, b);
-    let cb_d = cadd(d, p, cb, dd);
-    let s3 = cadd(d, p, a, cb_d);
-    let h_comm = d.lemma(p.add_comm, &[b, c]); // b+c ~ c+b
-    let refl_dd = d.lemma(p.equiv_refl, &[dd]);
-    let h_comm_d = d.lemma(p.add_congr, &[bc, cb, dd, dd, h_comm, refl_dd]); // (b+c)+d ~ (c+b)+d
-    let h3 = d.lemma(p.add_congr, &[a, a, bc_d, cb_d, refl_a, h_comm_d]);
-
-    // (c+b)+d ~ c+(b+d)
-    let cbd = cadd(d, p, c, bd);
-    let s4 = cadd(d, p, a, cbd);
-    let h_assoc2 = d.lemma(p.add_assoc, &[c, b, dd]); // (c+b)+d ~ c+(b+d)
-    let h4 = d.lemma(p.add_congr, &[a, a, cb_d, cbd, refl_a, h_assoc2]);
-
-    // a+(c+(b+d)) ~ (a+c)+(b+d)
-    let ac = cadd(d, p, a, c);
-    let target = cadd(d, p, ac, bd);
-    let h_assoc3 = d.lemma(p.add_assoc, &[a, c, bd]); // target ~ s4
-    let h5 = d.lemma(p.equiv_symm, &[target, s4, h_assoc3]); // s4 ~ target
-
-    let proof = echain(
-        d,
-        p,
-        start,
-        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (target, h5)],
-    );
-    (target, proof)
-}
-
 /// `Equiv (neg zero) zero`, as a proof term — the group identity `−0 = 0`,
 /// from [`CRealPrelude::add_zero`]/[`CRealPrelude::add_comm`]/
 /// [`CRealPrelude::add_neg`] rather than any `Rat`-level fact (`CReal` has no

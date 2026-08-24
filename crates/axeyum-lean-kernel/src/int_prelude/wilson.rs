@@ -331,7 +331,7 @@ pub(super) fn declare_factorial_equations(d: &mut IntDev<'_>) -> Result<(), Kern
 /// prelude has no `Prime` name over either carrier). Spelled out again here
 /// rather than imported: `gcd.rs`'s copy (`int_prime_condition`) is not
 /// `pub(super)`, and this is five lines.
-fn prime_condition(d: &mut IntDev<'_>, magnitude: ExprId) -> ExprId {
+pub(super) fn prime_condition(d: &mut IntDev<'_>, magnitude: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let two_nat = d.num(2);
     let one_nat = d.num(1);
@@ -659,7 +659,7 @@ pub(super) fn declare_factorial_pos(d: &mut IntDev<'_>) -> Result<(), KernelErro
 /// `ExprId`, so `and_left(two_le, clause, prime_proof)` type-checks against a
 /// `prime_proof` built via [`prime_condition`] without either function
 /// depending on the other's internals.
-fn prime_parts(d: &mut IntDev<'_>, magnitude: ExprId) -> (ExprId, ExprId) {
+pub(super) fn prime_parts(d: &mut IntDev<'_>, magnitude: ExprId) -> (ExprId, ExprId) {
     let nat = d.nat_ty();
     let two_nat = d.num(2);
     let one_nat = d.num(1);
@@ -680,7 +680,7 @@ fn prime_parts(d: &mut IntDev<'_>, magnitude: ExprId) -> (ExprId, ExprId) {
 /// is wanted too. Mirrors `nat_prelude/fermat.rs`'s private `prime_pos`
 /// exactly (that copy is not reachable from `int_prelude`), extracting
 /// `2 ≤ magnitude` via `and_left` and weakening `1 ≤ 2 ≤ magnitude`.
-fn nat_prime_pos(d: &mut IntDev<'_>, magnitude: ExprId, prime_proof: ExprId) -> ExprId {
+pub(super) fn nat_prime_pos(d: &mut IntDev<'_>, magnitude: ExprId, prime_proof: ExprId) -> ExprId {
     let p = d.int();
     let (two_le_ty, clause_ty) = prime_parts(d, magnitude);
     let two_le = d.and_left(two_le_ty, clause_ty, prime_proof);
@@ -1080,7 +1080,7 @@ pub(super) fn declare_inverse_index(d: &mut IntDev<'_>) -> Result<(), KernelErro
 /// `pos : Lt zero_i x  ⊢  Not (Eq Int x zero_i)` — a positive integer is
 /// nonzero: assume `x = 0`, rewrite `pos` along it to `Lt zero_i zero_i`,
 /// refute with `Int.lt_irrefl`.
-fn int_ne_zero_of_pos(d: &mut IntDev<'_>, x: ExprId, pos: ExprId) -> ExprId {
+pub(super) fn int_ne_zero_of_pos(d: &mut IntDev<'_>, x: ExprId, pos: ExprId) -> ExprId {
     let p = d.int();
     let zero_i = d.izero();
     let eq_fv = d.fresh_fvar();
@@ -1249,7 +1249,7 @@ pub(super) fn declare_inverse_index_maps_into(d: &mut IntDev<'_>) -> Result<(), 
 /// (bounds given), and `Int.ediv_add_emod` supplies the OTHER decomposition
 /// `x = n*(x/n) + x%n` with `Int.emod_nonneg`/`Int.emod_lt_of_pos` bounding
 /// its remainder; `Int.ediv_emod_unique` forces the two remainders equal.
-fn emod_eq_self_of_in_range(
+pub(super) fn emod_eq_self_of_in_range(
     d: &mut IntDev<'_>,
     x: ExprId,
     n: ExprId,
@@ -1308,7 +1308,7 @@ fn emod_eq_self_of_in_range(
 /// nonzero natural is positive. `Nat.zero_le` always gives `0 ≤ n`;
 /// `Nat.lt_or_eq_of_le` splits that into the wanted `0 < n` or `0 = n`, and
 /// the second branch contradicts `hne` directly.
-fn pos_of_ne_zero(d: &mut IntDev<'_>, n: ExprId, hne: ExprId) -> ExprId {
+pub(super) fn pos_of_ne_zero(d: &mut IntDev<'_>, n: ExprId, hne: ExprId) -> ExprId {
     let p = d.int();
     let zero_nat = d.zero();
     let zero_le_n = d.lemma(p.nat.zero_le, &[n]);
@@ -2182,7 +2182,11 @@ pub(super) fn declare_inverse_index_involutive(d: &mut IntDev<'_>) -> Result<(),
 /// (there, under a hypothesis it does not actually use to build this piece);
 /// factored out here since [`declare_inverse_index_fixes_last`] needs it
 /// unconditionally.
-fn neg_one_modeq_p_minus_one(d: &mut IntDev<'_>, big_p: ExprId, pos_big_p: ExprId) -> ExprId {
+pub(super) fn neg_one_modeq_p_minus_one(
+    d: &mut IntDev<'_>,
+    big_p: ExprId,
+    pos_big_p: ExprId,
+) -> ExprId {
     let p = d.int();
     let one_i = d.ione();
     let neg_one = d.ineg(one_i);
@@ -2698,7 +2702,7 @@ pub(super) fn declare_inverse_index_interior_fixed_point_free(
 /// to `emod x n` itself gives `emod (emod x n) n = emod x n`; `ModEq n x
 /// (emod x n)` unfolds (by `Int.ModEq`'s own definition) to exactly the
 /// `Eq Int (emod x n) (emod (emod x n) n)` that is the `symm` of that fact.
-fn emod_modeq_self(d: &mut IntDev<'_>, x: ExprId, n: ExprId, n_pos: ExprId) -> ExprId {
+pub(super) fn emod_modeq_self(d: &mut IntDev<'_>, x: ExprId, n: ExprId, n_pos: ExprId) -> ExprId {
     let p = d.int();
     let ne_n = int_ne_zero_of_pos(d, n, n_pos);
     let exn = d.iemod(x, n);
@@ -5148,7 +5152,7 @@ pub(super) fn declare_factorial_interior_modeq_one(d: &mut IntDev<'_>) -> Result
 /// symbolic magnitude), extracted here as its own function since
 /// [`declare_wilson`] needs it standalone rather than as one step inside a
 /// longer inline chain.
-fn ofnat_pm1_eq_sub_one(d: &mut IntDev<'_>, pp: ExprId, one_le_pp: ExprId) -> ExprId {
+pub(super) fn ofnat_pm1_eq_sub_one(d: &mut IntDev<'_>, pp: ExprId, one_le_pp: ExprId) -> ExprId {
     let p = d.int();
     let one_nat = d.num(1);
     let one_i = d.ione();

@@ -7,28 +7,61 @@ use crate::Kernel;
 fn built() -> (Kernel, CPointPrelude) {
     use std::sync::OnceLock;
     static TEMPLATE: OnceLock<(Kernel, CPointPrelude)> = OnceLock::new();
+    // The BUILD runs on a deep stack; every other caller clones the memoised
+    // result, so wrapping this one closure covers all 64 call sites.
     let (kernel, prelude) = TEMPLATE.get_or_init(|| {
-        let mut kernel = Kernel::new();
-        let prelude = build_cpoint_prelude(&mut kernel).expect("CPoint prelude must build");
-        (kernel, prelude)
+        on_a_deep_stack(|| {
+            let mut kernel = Kernel::new();
+            let prelude = build_cpoint_prelude(&mut kernel).expect("CPoint prelude must build");
+            (kernel, prelude)
+        })
     });
     (kernel.clone(), *prelude)
+}
+
+/// Run `f` on a **64 MiB** thread.
+///
+/// The default test-thread stack is 2 MiB, and `built()` constructs the whole
+/// `CPoint` prelude — which recurses deeply enough through
+/// `Kernel::add_declaration` to blow it. This is not a proof bug and it does
+/// not mean anything is wrong with the term: it aborts the PROCESS with
+/// `SIGABRT`, so the harness reports "signal: 6" and no test name, which reads
+/// like a crash rather than a resource limit.
+///
+/// **It appears only as the prelude grows.** `apollonius_…` was fine until
+/// `creal_point.rs` gained ~2,000 lines for Ceva, and it was still fine under a
+/// filtered `--lib creal_point` run — it aborted only in the full `--lib`
+/// sweep. So a narrow per-module run does NOT establish that this is safe, and
+/// the next test to cross the threshold will look like a regression in whatever
+/// change happened to be in flight.
+///
+/// `complex/complex_tests.rs` carries the identical helper for the identical
+/// reason; if a third module needs it, promote it rather than writing it again.
+fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(f)
+        .expect("spawning a deep-stack thread must succeed")
+        .join()
+        .expect("the deep-stack thread must not panic")
 }
 
 /// The build itself, with the kernel's rejection **rendered** rather than
 /// `Debug`-formatted, so a failure says which two types failed to match.
 #[test]
 fn cpoint_prelude_builds() {
-    let mut kernel = Kernel::new();
-    match build_cpoint_prelude(&mut kernel) {
-        Ok(_) => {}
-        Err(error) => {
-            let nat = crate::build_nat_prelude(&mut kernel).expect("Nat prelude must build");
-            let mut dev = crate::NatDev::new(&mut kernel, nat);
-            let explained = crate::NatOps::explain(&mut dev, &error);
-            panic!("the kernel refused a real proof: {explained}");
+    on_a_deep_stack(|| {
+        let mut kernel = Kernel::new();
+        match build_cpoint_prelude(&mut kernel) {
+            Ok(_) => {}
+            Err(error) => {
+                let nat = crate::build_nat_prelude(&mut kernel).expect("Nat prelude must build");
+                let mut dev = crate::NatDev::new(&mut kernel, nat);
+                let explained = crate::NatOps::explain(&mut dev, &error);
+                panic!("the kernel refused a real proof: {explained}");
+            }
         }
-    }
+    });
 }
 
 /// `midpoint_self`, `sum_perm`, `midpoint_diag_core` and
@@ -144,6 +177,19 @@ fn every_theorem_here_is_axiom_free() {
         (
             "nine_point_centre_equidistant",
             p.nine_point_centre_equidistant,
+        ),
+        ("cevian_pair_meet", p.cevian_pair_meet),
+        (
+            "ceva_concurrent_of_ratio_product",
+            p.ceva_concurrent_of_ratio_product,
+        ),
+        (
+            "menelaus_collinear_of_ratio_product",
+            p.menelaus_collinear_of_ratio_product,
+        ),
+        (
+            "ceva_ratio_product_of_concurrent",
+            p.ceva_ratio_product_of_concurrent,
         ),
     ] {
         let footprint = kernel.axiom_footprint(name);
@@ -266,6 +312,10 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.nine_point_radius_bc,
         p.nine_point_radius_ab,
         p.nine_point_centre_equidistant,
+        p.cevian_pair_meet,
+        p.ceva_concurrent_of_ratio_product,
+        p.menelaus_collinear_of_ratio_product,
+        p.ceva_ratio_product_of_concurrent,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -1155,22 +1205,24 @@ fn euler_line_statement_is_exact() {
 /// point of the bridge), not a weaker one.
 #[test]
 fn apollonius_from_stewart_has_the_apollonius_median_statement() {
-    use crate::env::Declaration;
-    let (kernel, p) = built();
-    let ty_of = |name| match kernel
-        .environment()
-        .get(name)
-        .expect("declaration must be present")
-    {
-        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
-        other => panic!("{other:?} is not a theorem or definition"),
-    };
-    let rendered_bridge = kernel.render_lean(ty_of(p.apollonius_from_stewart));
-    let rendered_original = kernel.render_lean(ty_of(p.apollonius_median));
-    assert_eq!(
-        rendered_bridge, rendered_original,
-        "apollonius_from_stewart must prove the exact same statement as apollonius_median"
-    );
+    on_a_deep_stack(|| {
+        use crate::env::Declaration;
+        let (kernel, p) = built();
+        let ty_of = |name| match kernel
+            .environment()
+            .get(name)
+            .expect("declaration must be present")
+        {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        let rendered_bridge = kernel.render_lean(ty_of(p.apollonius_from_stewart));
+        let rendered_original = kernel.render_lean(ty_of(p.apollonius_median));
+        assert_eq!(
+            rendered_bridge, rendered_original,
+            "apollonius_from_stewart must prove the exact same statement as apollonius_median"
+        );
+    });
 }
 
 /// **Positive-semidefiniteness of `dot`.** `x0 = V`. Verbatim-checked for the
@@ -1725,5 +1777,98 @@ fn nine_point_centre_equidistant_statement_is_exact() {
          (CPoint.midpoint x0 (CPoint.sub (CPoint.add (CPoint.add x1 x2) x3) (CPoint.add x0 x0))) \
          (CPoint.midpoint x1 x2)) (CPoint.distSq (CPoint.midpoint x0 (CPoint.sub (CPoint.add \
          (CPoint.add x1 x2) x3) (CPoint.add x0 x0))) (CPoint.midpoint x2 x3))))))))"
+    );
+}
+
+/// **Menelaus' theorem, verbatim.** The distinguishing substring against
+/// [`ceva_concurrent_of_ratio_product`]'s statement is the extra `CReal.neg`
+/// wrapping the right-hand side of the ratio-product hypothesis -- Ceva
+/// states `Equiv (mul p (mul q r)) (mul (1-p) (mul (1-q) (1-r)))`, Menelaus
+/// `Equiv (mul p (mul q r)) (CReal.neg (mul (1-p) (mul (1-q) (1-r))))`, and
+/// the conclusion's head symbol is `CPoint.cross`, never `CPoint.Equiv` on
+/// two `CPoint.lerp` applications (that shape is Ceva's, not this one's).
+#[test]
+fn menelaus_collinear_of_ratio_product_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.menelaus_collinear_of_ratio_product)
+        .expect("menelaus_collinear_of_ratio_product must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal) -> ((x4 : CReal) -> \
+         ((x5 : CReal) -> ((x6 : CReal.Equiv (CReal.mul x3 (CReal.mul x4 x5)) (CReal.neg \
+         (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CReal.mul (CReal.add CReal.one \
+         (CReal.neg x4)) (CReal.add CReal.one (CReal.neg x5)))))) -> CReal.Equiv (CPoint.cross \
+         (CPoint.lerp x1 x2 x3) (CPoint.lerp x2 x0 x4) (CPoint.lerp x0 x1 x5)) \
+         CReal.zero)))))))"
+    );
+    // Mutation-verified substring: the sign-flip that distinguishes this
+    // statement from Ceva's. Occurrence count asserted BEFORE relying on it
+    // (a `sed` that silently fails to match a shape that was never there
+    // reads as a dead guard, not a red flag).
+    let neg_occurrences = rendered.matches("CReal.neg (CReal.mul").count();
+    assert_eq!(
+        neg_occurrences, 1,
+        "expected exactly one negated ratio-product factor in {rendered:?}"
+    );
+}
+
+/// **Ceva's converse, verbatim.** Two more binders than the exhibiting
+/// direction (`k2`, the `distSq A B` witness, and the `hab`/`hmeet`
+/// hypotheses) and the conclusion is the SAME shape as
+/// [`ceva_concurrent_of_ratio_product`]'s hypothesis
+/// (`Equiv (mul p (mul q r)) (mul (1-p) (mul (1-q) (1-r)))`), making the
+/// converse relationship syntactically visible: forward's hypothesis is
+/// this theorem's conclusion, and vice versa.
+#[test]
+fn ceva_ratio_product_of_concurrent_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.ceva_ratio_product_of_concurrent)
+        .expect("ceva_ratio_product_of_concurrent must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal) -> ((x4 : CReal) -> \
+         ((x5 : CReal) -> ((x6 : AxNat) -> ((x7 : AxNat) -> ((x8 : CReal.PosBound (CReal.mul \
+         (CReal.add (CReal.add CReal.one (CReal.neg x4)) (CReal.mul x3 x4)) (CReal.add (CReal.add \
+         CReal.one (CReal.neg x4)) (CReal.mul x3 x4))) x6) -> ((x9 : CReal.PosBound (CPoint.distSq \
+         x0 x1) x7) -> ((x10 : CPoint.Equiv (CPoint.lerp x1 (CPoint.lerp x2 x0 x4) (CReal.mul x3 \
+         (CReal.mul (CReal.add (CReal.add CReal.one (CReal.neg x4)) (CReal.mul x3 x4)) (CReal.inv \
+         (CReal.mul (CReal.add (CReal.add CReal.one (CReal.neg x4)) (CReal.mul x3 x4)) (CReal.add \
+         (CReal.add CReal.one (CReal.neg x4)) (CReal.mul x3 x4))) x6 x8)))) (CPoint.lerp x2 \
+         (CPoint.lerp x0 x1 x5) (CReal.mul (CReal.add (CReal.add (CReal.add CReal.one (CReal.neg \
+         x3)) (CReal.neg x4)) (CReal.add (CReal.mul x3 x4) (CReal.mul x3 x4))) (CReal.mul \
+         (CReal.add (CReal.add CReal.one (CReal.neg x4)) (CReal.mul x3 x4)) (CReal.inv (CReal.mul \
+         (CReal.add (CReal.add CReal.one (CReal.neg x4)) (CReal.mul x3 x4)) (CReal.add (CReal.add \
+         CReal.one (CReal.neg x4)) (CReal.mul x3 x4))) x6 x8))))) -> CReal.Equiv (CReal.mul x3 \
+         (CReal.mul x4 x5)) (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CReal.mul (CReal.add \
+         CReal.one (CReal.neg x4)) (CReal.add CReal.one \
+         (CReal.neg x5)))))))))))))))"
+    );
+    // The conclusion (last `->` target) must be the bare ratio-product
+    // equation, not wrapped in `CReal.neg` (that would make this Menelaus,
+    // not Ceva) and not itself an implication (that would mean a hypothesis
+    // leaked into the conclusion).
+    assert!(
+        rendered.ends_with(
+            "-> CReal.Equiv (CReal.mul x3 (CReal.mul x4 x5)) (CReal.mul (CReal.add CReal.one \
+             (CReal.neg x3)) (CReal.mul (CReal.add CReal.one (CReal.neg x4)) (CReal.add CReal.one \
+             (CReal.neg x5)))))))))))))))"
+        ),
+        "conclusion shape drifted: {rendered:?}"
     );
 }

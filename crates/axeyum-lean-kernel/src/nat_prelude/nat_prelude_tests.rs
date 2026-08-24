@@ -113,6 +113,10 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.test_bit,
         p.size_aux,
         p.size,
+        p.count_range,
+        p.totient,
+        p.fib_aux,
+        p.fib,
     ]
 }
 
@@ -269,6 +273,14 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_sum_range_of_forall_lt,
         p.add_pow_modeq_prime,
         p.pow_prime_modeq_self,
+        p.count_range_zero,
+        p.count_range_succ,
+        p.count_range_le,
+        p.count_range_congr,
+        p.count_range_split,
+        p.beq_eq_false_of_ne,
+        p.count_range_eq_pred_of_only_zero_false,
+        p.totient_prime,
         p.fin_is_lt,
         p.fin_val_mk,
         p.injective_on_imp_surjective_on,
@@ -297,6 +309,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.lt_pow_size,
         p.mod_eq_self_of_lt,
         p.sum_test_bit_eq,
+        p.fib_add_two,
+        p.fib_le_succ,
+        p.fib_pos_of_pos,
+        p.sum_fib,
     ]
 }
 
@@ -446,6 +462,52 @@ fn arithmetic_reduces_on_numerals() {
     assert!(
         !f.k.def_eq(seven_sub_three, five),
         "7 - 3 must NOT be def-eq to 5"
+    );
+}
+
+/// `Nat.totient` **computes** by pure reduction on numerals, matching
+/// `totient.rs`'s module doc (hand-checked before any kernel work):
+/// `totient 1 = 1` — the range is `{0}`, and `gcd 0 1 = 1`;
+/// `totient 6 = 2` — of `{0,..,5}`, only `1` and `5` are coprime to `6`
+/// (`0,2,3,4` share a factor: `2,4` with `2`, `3` with `3`, `0` with `6`
+/// itself);
+/// `totient 9 = 6` — of `{0,..,8}`, `{1,2,4,5,7,8}` are coprime to `9`,
+/// excluding `0,3,6` (multiples of `3`).
+/// A definition that type-checks but counts wrong has an empty axiom
+/// footprint and passes every sweep in this repository, so this negative
+/// half matters as much as the positive one.
+#[test]
+fn totient_computes_on_small_numerals() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let one = f.num(1);
+    let totient_one = f.const_app(p.totient, &[one]);
+    assert!(f.k.def_eq(totient_one, one), "totient 1 must reduce to 1");
+
+    let six = f.num(6);
+    let two = f.num(2);
+    let totient_six = f.const_app(p.totient, &[six]);
+    assert!(f.k.def_eq(totient_six, two), "totient 6 must reduce to 2");
+
+    let nine = f.num(9);
+    let six_again = f.num(6);
+    let totient_nine = f.const_app(p.totient, &[nine]);
+    assert!(
+        f.k.def_eq(totient_nine, six_again),
+        "totient 9 must reduce to 6"
+    );
+
+    // NEGATIVE reduction controls.
+    let three = f.num(3);
+    assert!(
+        !f.k.def_eq(totient_six, three),
+        "totient 6 must NOT be def-eq to 3"
+    );
+    let five = f.num(5);
+    assert!(
+        !f.k.def_eq(totient_nine, five),
+        "totient 9 must NOT be def-eq to 5"
     );
 }
 
@@ -4276,7 +4338,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        30 + 175,
+        34 + 187,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -5448,5 +5510,151 @@ fn sum_choose_sq_computes_at_a_concrete_instance() {
     assert!(
         f.k.axiom_footprint(p.sum_choose_sq).is_empty(),
         "sum_choose_sq must rest on zero axioms"
+    );
+}
+
+/// `Nat.fib` computes: the kernel's own `def_eq` (`δ`/`β`/`ι`) reduces `fib
+/// 0..10` to the literal Fibonacci numerals. The negative half matters as
+/// much as the positive one (`arithmetic_reduces_on_numerals` says so above,
+/// and it applies here just as much): a `fib` that type-checks but reduces
+/// wrong has an EMPTY axiom footprint and passes every sweep in this
+/// repository, so `def_eq` must also be shown to REJECT a wrong value.
+#[test]
+fn fib_reduces_on_numerals_with_a_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let expected: [u32; 11] = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55];
+    for (n, &want) in expected.iter().enumerate() {
+        let n_u32 = u32::try_from(n).expect("small test index fits in u32");
+        let arg = f.num(n_u32);
+        let fib_n = f.const_app(p.fib, &[arg]);
+        let want_lit = f.num(want);
+        assert!(f.k.def_eq(fib_n, want_lit), "fib {n} must reduce to {want}");
+    }
+
+    // Negative control: def_eq must not be vacuously true.
+    let seven = f.num(7);
+    let fib_seven = f.const_app(p.fib, &[seven]);
+    let wrong = f.num(14);
+    assert!(
+        !f.k.def_eq(fib_seven, wrong),
+        "fib 7 must NOT reduce to 14 -- def_eq must not be vacuously true"
+    );
+    // fib 6 = 8, not 7 -- a second, independent negative control at a
+    // DIFFERENT wrong numeral, so this is not just an off-by-one that
+    // happens to always fail.
+    let six = f.num(6);
+    let fib_six = f.const_app(p.fib, &[six]);
+    let seven_lit = f.num(7);
+    assert!(
+        !f.k.def_eq(fib_six, seven_lit),
+        "fib 6 must NOT reduce to 7 -- it is 8"
+    );
+}
+
+/// `Nat.fib_add_two` applies at a concrete `n`, matches direct numeral
+/// computation, and rests on zero axioms.
+#[test]
+fn fib_add_two_holds_at_a_concrete_point_and_is_axiom_free() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let five = f.num(5);
+    let proof = f.lemma(p.fib_add_two, &[five]);
+    let inferred =
+        f.k.infer(proof)
+            .unwrap_or_else(|e| panic!("fib_add_two(5) should infer: {}", f.explain(&e)));
+
+    let six = f.succ(five);
+    let seven = f.succ(six);
+    let lhs = f.const_app(p.fib, &[seven]);
+    let fib_six = f.const_app(p.fib, &[six]);
+    let fib_five = f.const_app(p.fib, &[five]);
+    let rhs = f.add(fib_six, fib_five);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "fib_add_two(5) should state fib 7 = add (fib 6) (fib 5)"
+    );
+
+    let thirteen = f.num(13);
+    assert!(f.k.def_eq(lhs, thirteen), "fib 7 must reduce to 13");
+    let eight = f.num(8);
+    let five_lit = f.num(5);
+    assert!(f.k.def_eq(fib_six, eight), "fib 6 must reduce to 8");
+    assert!(f.k.def_eq(fib_five, five_lit), "fib 5 must reduce to 5");
+
+    assert!(
+        f.k.axiom_footprint(p.fib_add_two).is_empty(),
+        "fib_add_two must rest on zero axioms"
+    );
+}
+
+/// `Nat.fib_le_succ`, `Nat.fib_pos_of_pos`, and `Nat.sum_fib` each rest on
+/// zero axioms and apply at a concrete point.
+#[test]
+fn fib_le_succ_pos_of_pos_and_sum_fib_apply_and_are_axiom_free() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let four = f.num(4);
+    let le_proof = f.lemma(p.fib_le_succ, &[four]);
+    f.k.infer(le_proof)
+        .unwrap_or_else(|e| panic!("fib_le_succ(4) should infer: {}", f.explain(&e)));
+    assert!(
+        f.k.axiom_footprint(p.fib_le_succ).is_empty(),
+        "fib_le_succ must rest on zero axioms"
+    );
+
+    let hyp_ty = {
+        let zero = f.zero();
+        f.lt(zero, four)
+    };
+    let pos_partial = f.lemma(p.fib_pos_of_pos, &[four]);
+    let pos_partial_ty =
+        f.k.infer(pos_partial)
+            .unwrap_or_else(|e| panic!("fib_pos_of_pos(4) should infer: {}", f.explain(&e)));
+    let expected_partial = {
+        let fib_four = f.const_app(p.fib, &[four]);
+        let zero = f.zero();
+        let concl = f.lt(zero, fib_four);
+        f.arrow(hyp_ty, concl)
+    };
+    assert!(
+        f.k.def_eq(pos_partial_ty, expected_partial),
+        "fib_pos_of_pos(4) should await 0 < 4 -> 0 < fib 4"
+    );
+    assert!(
+        f.k.axiom_footprint(p.fib_pos_of_pos).is_empty(),
+        "fib_pos_of_pos must rest on zero axioms"
+    );
+
+    let sum_proof = f.lemma(p.sum_fib, &[four]);
+    let sum_inferred =
+        f.k.infer(sum_proof)
+            .unwrap_or_else(|e| panic!("sum_fib(4) should infer: {}", f.explain(&e)));
+    let fib_fn = f.k.const_(p.fib, vec![]);
+    let sr4 = f.sum_range(fib_fn, four);
+    let five = f.succ(four);
+    let fib5 = f.const_app(p.fib, &[five]);
+    let one = f.num(1);
+    let sub = f.sub(fib5, one);
+    let expected_sum = f.eq(sr4, sub);
+    assert!(
+        f.k.def_eq(sum_inferred, expected_sum),
+        "sum_fib(4) should state sumRange fib 4 = sub (fib 5) 1"
+    );
+    // sum_{i<4} fib i = fib0+fib1+fib2+fib3 = 0+1+1+2 = 4; fib 5 - 1 = 5-1 = 4.
+    let four_lit = f.num(4);
+    assert!(
+        f.k.def_eq(sr4, four_lit),
+        "sumRange fib 4 = fib0+fib1+fib2+fib3 = 0+1+1+2 = 4"
+    );
+    assert!(f.k.def_eq(sub, four_lit), "fib 5 - 1 = 5 - 1 = 4");
+
+    assert!(
+        f.k.axiom_footprint(p.sum_fib).is_empty(),
+        "sum_fib must rest on zero axioms"
     );
 }

@@ -987,6 +987,19 @@ pub struct RatPrelude {
     /// k) (X k)` — exactly [`Self::markov_inequality`]'s fourth hypothesis,
     /// now discharged rather than assumed.
     pub indicator_le: NameId,
+    /// `Rat.variance_indicator : ∀ a X p n, IsDistribution p n →
+    /// variance (Rat.indicator a X) p n =
+    /// mul (expectation (Rat.indicator a X) p n)
+    ///     (sub Rat.one (expectation (Rat.indicator a X) p n))` — the
+    /// Bernoulli variable's variance, `p·(1−p)` where `p := E[𝟙[a≤X]]`.
+    pub variance_indicator: NameId,
+    /// `Rat.variance_indicator_le_quarter : ∀ q,
+    /// le (sub (mul four q) (mul four (mul q q))) one` — `4q − 4q² ≤ 1`, i.e.
+    /// `q(1−q) ≤ 1/4` with the division cleared (the same "no `Rat.inv`"
+    /// choice [`Self::markov_inequality`] makes), where `four :=
+    /// ((1+1)+1)+1`. Elementary, via the nonneg-square identity `0 ≤
+    /// (2q−1)²`, no case split.
+    pub variance_indicator_le_quarter: NameId,
     /// `Rat.markov_constructed : ∀ a X p n, IsDistribution p n → (∀ k, Lt k n
     /// → le zero (X k)) → lt zero a → le (a * expectation (Rat.indicator a
     /// X) p n) (expectation X p n)` — [`Self::markov_inequality`] with the
@@ -1107,6 +1120,45 @@ pub struct RatPrelude {
     /// distributed variables this development never assumes — the sum
     /// `Σ_{j<m} Var[X_j]` is left as-is.
     pub chebyshev_sample_mean_uncorrelated: NameId,
+    /// `Rat.variance_sampleMean_uncorrelated : ∀ X p n, IsDistribution p n →
+    /// ∀ m, PairwiseUncorrelated X m p n → variance (fun k => inv
+    /// (natDivSucc m 0) * sumVars X m k) p n = (inv (natDivSucc m 0) * inv
+    /// (natDivSucc m 0)) * sumRange (fun j => variance (X j) p n) m` — the
+    /// QUANTITATIVE HEART of the weak law of large numbers, named on its
+    /// own: `Var[sample mean] = (1/m)² · Σ_{j<m} Var[X_j]`. Composes
+    /// [`Self::variance_scaled_mean`] and [`Self::variance_sum_vars`] —
+    /// exactly the `combined_eq` step
+    /// [`Self::chebyshev_sample_mean_uncorrelated`] already builds
+    /// internally, now exposed standalone rather than buried inside the
+    /// larger Chebyshev bound. [`Self::variance_sum_vars`] alone does NOT
+    /// give this: it is the variance of the unscaled SUM, not of the mean.
+    pub variance_sample_mean_uncorrelated: NameId,
+    /// `Rat.weak_law_of_large_numbers` — a RENAMING, not a new result: the
+    /// type is identical to
+    /// [`Self::chebyshev_sample_mean_uncorrelated`]'s, registered under the
+    /// name a reader searching for "the weak law of large numbers" will
+    /// look for, with a proof that forwards directly to that theorem. This
+    /// IS the weak law of large numbers in its standard finite-sample
+    /// Chebyshev-bound shape: `ε²·E[𝟙(ε² ≤ (M−E[M])²)] ≤ Var[M]`, where `M`
+    /// is the sample mean of `m` pairwise-uncorrelated variables and `Var[M]
+    /// = (1/m)²·Σ_{j<m} Var[X_j]` shrinks as `m` grows whenever the
+    /// individual variances stay bounded — stated at each finite `m` rather
+    /// than as a limit. NOT the classical i.i.d. form (`Σ_{j<m} Var[X_j]`
+    /// is left unsummed, a strictly more general hypothesis than a common
+    /// variance `σ²`).
+    pub weak_law_of_large_numbers: NameId,
+    /// `Rat.bernoulli_law_of_large_numbers : ∀ A Y p n m q, IsDistribution p n
+    /// → PairwiseUncorrelated (fun j => indicator (A j) (Y j)) m p n → (∀ j,
+    /// Lt j m → expectation (indicator (A j) (Y j)) p n = q) → ∀ eps, lt zero
+    /// eps → le (four * (eps*eps * expectation (indicator (eps*eps) devM) p
+    /// n)) ((inv (natDivSucc m 0) * inv (natDivSucc m 0)) * natDivSucc m 0)`
+    /// — Bernoulli's law of large numbers, assembled from
+    /// [`Self::weak_law_of_large_numbers`] (the general theorem),
+    /// [`Self::variance_indicator`] (each variable's variance is `q(1-q)`)
+    /// and [`Self::variance_indicator_le_quarter`] (`4q(1-q) ≤ 1`). The
+    /// right side is `(1/m)·1`, i.e. `1/m`, once `m > 0`; left unsimplified
+    /// here to avoid a second `Rat.inv` identity this slice does not need.
+    pub bernoulli_law_of_large_numbers: NameId,
 
     // --- the probabilistic Cauchy–Schwarz inequality (rat_prelude::probability) --
     /// `Rat.variance_scaled_add_nonneg : ∀ X Y p n, IsDistribution p n → ∀ t,
@@ -1438,6 +1490,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         indicator: child(kernel, "indicator"),
         indicator_nonneg: child(kernel, "indicator_nonneg"),
         indicator_le: child(kernel, "indicator_le"),
+        variance_indicator: child(kernel, "variance_indicator"),
+        variance_indicator_le_quarter: child(kernel, "variance_indicator_le_quarter"),
         markov_constructed: child(kernel, "markov_constructed"),
         chebyshev_inequality: child(kernel, "chebyshev_inequality"),
         covariance_add_right: child(kernel, "covariance_add_right"),
@@ -1450,6 +1504,9 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         variance_sum_vars: child(kernel, "variance_sumVars"),
         variance_scaled_mean: child(kernel, "variance_scaled_mean"),
         chebyshev_sample_mean_uncorrelated: child(kernel, "chebyshev_sampleMean_uncorrelated"),
+        variance_sample_mean_uncorrelated: child(kernel, "variance_sampleMean_uncorrelated"),
+        weak_law_of_large_numbers: child(kernel, "weak_law_of_large_numbers"),
+        bernoulli_law_of_large_numbers: child(kernel, "bernoulli_law_of_large_numbers"),
         variance_scaled_add_nonneg: child(kernel, "variance_scaled_add_nonneg"),
         covariance_sq_le_variance_mul_of_pos: child(kernel, "covariance_sq_le_variance_mul_of_pos"),
         covariance_sq_le_variance_mul_of_zero_zero: child(

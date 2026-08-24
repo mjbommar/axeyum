@@ -1345,14 +1345,16 @@ pub struct CRealPrelude {
     /// `Equiv`-zero unconditionally (`mul_one`/`mul_comm`), any modulus
     /// works.
     ///
-    /// The sum rule (`hasDerivative_add`, [`Self::has_derivative_add`]) and
-    /// `hasDerivative_neg` ([`Self::has_derivative_neg`]) are landed in a
-    /// later pass — see `creal/derivative.rs`'s own module documentation.
-    /// **Still not landed here**: the scalar-multiple rule (`hasDerivative_smul`,
-    /// no blocker found — an exact rescaling via
-    /// `Rat.natDivSucc_scale`/`Rat.natDivSucc_mul`, just not built in this
-    /// slice), and the product rule (which additionally needs the
-    /// scalar-multiple rule's own two-variable product-of-bounds lemma).
+    /// The sum rule (`hasDerivative_add`, [`Self::has_derivative_add`]),
+    /// `hasDerivative_neg` ([`Self::has_derivative_neg`]),
+    /// `hasDerivative_smul` ([`Self::has_derivative_smul`]) and
+    /// `hasDerivative_sub` ([`Self::has_derivative_sub`]) are all landed —
+    /// see `creal/derivative.rs`'s own module documentation. **Still not
+    /// landed**: the product rule, which needs a genuinely three-way
+    /// (unequally weighted) accuracy fusion beyond what `smul`/`add` built,
+    /// plus wiring `UniformlyContinuousOn`'s own modulus/spec into this file
+    /// — see the module documentation's corrected, numerically re-verified
+    /// error decomposition.
     pub has_derivative_id: NameId,
     /// `CReal.hasDerivative_sq : forall a b, HasDerivativeOn (fun r => mul r
     /// r) (fun x => add x x) a b` — the first **nonlinear** derivative in
@@ -1386,6 +1388,50 @@ pub struct CRealPrelude {
     /// bounded by HALF the target" arithmetic the module documentation
     /// verifies against `natDivSucc`'s actual definition.
     pub has_derivative_add: NameId,
+    /// `CReal.abs_mul_le_of_bounds : ∀ c t B b, le (abs c) B → le (abs t) b →
+    /// le (abs (mul c t)) (mul B b)` — the two-variable product-of-bounds
+    /// lemma `creal/derivative.rs`'s own module documentation identifies as
+    /// the single blocker standing between this kernel and both
+    /// `hasDerivative_smul` and `hasDerivative_mul` (the product rule).
+    ///
+    /// `0 ≤ B` and `0 ≤ b` are **not** separate hypotheses — `abs_nonneg`
+    /// plus `le_trans` gets both for free from `le (abs c) B` and
+    /// `le (abs t) b`, so requiring them would only weaken the statement.
+    ///
+    /// Closed case-split-free (`CReal.le` is undecidable, so nothing here
+    /// ever branches on a real comparison) via two nonneg-product identities,
+    /// one per direction: `2·(B·b − c·t) = (B−c)·(b+t) + (B+c)·(b−t)` and,
+    /// applying the same fact at `c := neg c`, the mirror identity for the
+    /// lower bound. The factor of `2` is discharged by
+    /// `creal/derivative.rs::nonneg_of_double_nonneg`, which multiplies
+    /// through by the literal `CReal.ofRat (Rat.natDivSucc 1 1)` rather than
+    /// deciding any sign.
+    pub abs_mul_le_of_bounds: NameId,
+    /// `CReal.hasDerivative_smul : ∀ c F F' a b, HasDerivativeOn F F' a b →
+    /// ∀ (k : Nat), le (abs c) (ofRat (natDivSucc (Nat.succ k) 0)) →
+    /// HasDerivativeOn (fun r => mul c (F r)) (fun x => mul c (F' x)) a b` —
+    /// **the scalar-multiple rule**, unblocked by
+    /// [`Self::abs_mul_le_of_bounds`]. The modulus is `fun e => mF ((k+1)·e +
+    /// k)` (F's own modulus, read at the rescaled accuracy; no combination,
+    /// so no antitonicity is needed — the rescaled hypothesis at `e` is
+    /// definitionally F's own hypothesis at `e'`). The output bound needs
+    /// `abs_mul_le_of_bounds` (`|c|<=k+1`, `|error_F|<=1/(e'+1)·|y-x|` gives
+    /// `|c·error_F| <= (k+1)·(1/(e'+1))·|y-x|`) plus the rational identity
+    /// `(k+1)·(1/(e'+1)) = 1/(e+1)`, via `Rat.natDivSucc_mul` (folding the
+    /// literal product `(k+1)·1`) and `Rat.natDivSucc_scale` (reading the
+    /// deep factor back to `e`) — `k+1` carries a real `Nat.mul _ 1`, closed
+    /// by `Nat.mul_one` and transported through `natDivSucc`'s numerator via
+    /// `nat_eq_to_rat` (private to `rat_prelude::ops`) rather than relying on
+    /// any definitional reduction (`Nat.mul` is stuck on a free second
+    /// argument, so there is none to rely on).
+    pub has_derivative_smul: NameId,
+    /// `CReal.hasDerivative_sub : ∀ F F' G G' a b, HasDerivativeOn F F' a b →
+    /// HasDerivativeOn G G' a b → HasDerivativeOn (fun r => add (F r) (neg
+    /// (G r))) (fun x => add (F' x) (neg (G' x))) a b` — cheap composition of
+    /// [`Self::has_derivative_neg`] and [`Self::has_derivative_add`]: no new
+    /// ring algebra, just `hasDerivative_add F (neg∘G) hf (hasDerivative_neg
+    /// G hg)`.
+    pub has_derivative_sub: NameId,
 }
 
 impl CRealPrelude {
@@ -1633,6 +1679,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_sq: kernel.name_str(creal, "hasDerivative_sq"),
         has_derivative_neg: kernel.name_str(creal, "hasDerivative_neg"),
         has_derivative_add: kernel.name_str(creal, "hasDerivative_add"),
+        abs_mul_le_of_bounds: kernel.name_str(creal, "abs_mul_le_of_bounds"),
+        has_derivative_smul: kernel.name_str(creal, "hasDerivative_smul"),
+        has_derivative_sub: kernel.name_str(creal, "hasDerivative_sub"),
     }
 }
 
@@ -2642,6 +2691,7 @@ mod mul_self_zero;
 mod order_extra;
 mod power;
 mod product;
+mod ring_helpers;
 mod series;
 mod speedup;
 mod sqrt;

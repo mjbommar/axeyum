@@ -1017,6 +1017,106 @@ pub struct CPointPrelude {
     /// [`Self::circumcentre_third_distance`] and two [`Self::dist_sq_comm`]
     /// flips, which make those two "quarter" targets equal.
     pub nine_point_centre_equidistant: NameId,
+    /// **Ceva's theorem, first slice: the `AX`/`BY` cevian pair meets.**
+    /// `∀ A B C p q k, PosBound (mul D D) k → CPoint.Equiv (lerp A (lerp B
+    /// C p) t) (lerp B (lerp C A q) u)`, `D := (1-q)+p*q`, `t := (1-q)*z`,
+    /// `u := p*z`, `z := D * CReal.inv (mul D D) k _` — the point where
+    /// cevians `AX` (`X := lerp B C p`) and `BY` (`Y := lerp C A q`) meet,
+    /// exhibited explicitly, whenever the ratios `p, q` are witnessed not
+    /// to make the two cevians parallel (`D ≠ 0`, squared per
+    /// [`Self::non_collinear`]'s own idiom — see that field's doc for why
+    /// `PosBound` rather than `Not (Equiv D CReal.zero)`).
+    ///
+    /// `D` depends only on `p, q`, not on `A, B, C`: no
+    /// [`Self::non_collinear`] hypothesis anywhere, and none is needed —
+    /// two cevians with given ratios fail to meet iff `D = 0`, whatever the
+    /// triangle's own shape. Proved by `rn_ring_proof` (the ported
+    /// `complex::ring` decision procedure) discharging the pure polynomial
+    /// identity `lerp a (lerp b c p) t − lerp b (lerp c a q) u ~ (D*z −
+    /// 1)*(b−a)` per coordinate (verified exactly with `sympy` before being
+    /// encoded — see the module note above
+    /// `cevian_pair_ax_by_scalar_proof`), then cancelling the correction
+    /// term via the `D*z ~ 1` witness.
+    pub cevian_pair_meet: NameId,
+    /// **Ceva's theorem, exhibiting direction — the headline.** `∀ A B C p
+    /// q r k, PosBound (mul D D) k → Equiv (mul p (mul q r)) (mul (1-p)
+    /// (mul (1-q) (1-r))) → And (CPoint.Equiv (lerp A X t) (lerp B Y u))
+    /// (CPoint.Equiv (lerp B Y u) (lerp C Z v))`, `X := lerp B C p, Y :=
+    /// lerp C A q, Z := lerp A B r`, `D, t, u` as in
+    /// [`Self::cevian_pair_meet`], `v := (1-p-q+2*p*q)*z`.
+    ///
+    /// The classical `(BX/XC)*(CY/YA)*(AZ/ZB) = 1` concurrency criterion,
+    /// division-free (`BX/XC = p/(1-p)` etc., and the product-equals-one
+    /// condition cross-multiplies to `p*q*r ~ (1-p)*(1-q)*(1-r)`) and in
+    /// the constructive **exhibiting** direction: the two `And` conjuncts
+    /// pin down one common point on all three cevians by transitivity
+    /// (`lerp A X t ~ lerp B Y u ~ lerp C Z v`), given explicitly by its
+    /// `t, u, v` parameters — not proved by contradiction, and not
+    /// asserting a bare existential.
+    ///
+    /// The first conjunct is exactly [`Self::cevian_pair_meet`] (proved
+    /// independently in this file, reused conceptually but not literally
+    /// re-applied — this theorem re-derives it inline so its `z, D`
+    /// match the second conjunct's by construction, see the module note
+    /// above `cevian_pair_ax_by_scalar_proof`). The second needs the
+    /// Ceva ratio hypothesis: `cevian_pair_by_cz_scalar_proof` discharges
+    /// the pure ring identity `lerp b (lerp c a q) u − lerp c (lerp a b r)
+    /// v ~ (D*z−1)*(c−b) + (z*(a−b))*(p*q*r−(1−p)*(1−q)*(1−r))` (again
+    /// checked exactly with `sympy` before encoding), and the Ceva
+    /// hypothesis is exactly what makes the second summand's `defect`
+    /// factor vanish.
+    ///
+    /// Only `D`'s non-degeneracy is hypothesised (`PosBound (mul D D) k`,
+    /// same idiom as [`Self::non_collinear`]) — **no**
+    /// [`Self::non_collinear`] hypothesis on `A, B, C` anywhere, since `D`
+    /// depends only on `p, q` (see [`Self::cevian_pair_meet`]'s doc). The
+    /// converse direction (concurrency implies the ratio product) is
+    /// [`Self::ceva_ratio_product_of_concurrent`].
+    pub ceva_concurrent_of_ratio_product: NameId,
+    /// **Menelaus' theorem, the sign-flipped analogue of
+    /// [`Self::ceva_concurrent_of_ratio_product`].** `∀ A B C p q r, Equiv
+    /// (mul p (mul q r)) (neg (mul (1-p) (mul (1-q) (1-r)))) → Equiv (cross
+    /// X Y Z) CReal.zero`, `X := lerp B C p, Y := lerp C A q, Z := lerp A B
+    /// r` — the classical `(BX/XC)*(CY/YA)*(AZ/ZB) = -1` transversal
+    /// criterion, division-free, in the **collinear-of-ratio-product**
+    /// direction.
+    ///
+    /// Unlike Ceva, this is a **pure polynomial identity with no
+    /// non-degeneracy hypothesis whatsoever**, not even `D ≠ 0`: `cross X Y
+    /// Z ~ (mul p (mul q r) + mul (1-p) (mul (1-q) (1-r))) * cross A B C`
+    /// holds identically (checked exactly with `sympy`, see the module
+    /// note), so when the ratio-product hypothesis makes the left factor
+    /// vanish, `cross X Y Z` vanishes regardless of `cross A B C` — even a
+    /// degenerate `A, B, C` triangle satisfies the conclusion trivially,
+    /// since then `cross A B C` is already `~ 0`.
+    pub menelaus_collinear_of_ratio_product: NameId,
+    /// **Ceva's theorem, the converse: concurrency implies the ratio
+    /// product.** `∀ A B C p q r k k2, PosBound (mul D D) k → PosBound
+    /// (distSq A B) k2 → CPoint.Equiv (lerp B Y u) (lerp C Z v) → Equiv (mul
+    /// p (mul q r)) (mul (1-p) (mul (1-q) (1-r)))`, `D, Y, Z, u, v` as in
+    /// [`Self::ceva_concurrent_of_ratio_product`].
+    ///
+    /// Two non-degeneracy hypotheses the exhibiting direction did not need:
+    /// `D ≠ 0` (so the canonical `BY`/`CZ` parametrisation via `z := D⁻¹`
+    /// is available at all — the same witnessed-squared idiom as
+    /// [`Self::cevian_pair_meet`]) and `A ≠ B` (`distSq A B` witnessed
+    /// `PosBound`, since `cevian_pair_by_cz_scalar_proof`'s ring identity
+    /// puts the Ceva defect on a factor of `(x A − x B)` and `(y A − y B)`
+    /// jointly — if `A ~ B` the concurrency hypothesis carries no
+    /// information about the defect at all).
+    ///
+    /// Route: the same ring identity `cevian_pair_by_cz_scalar_proof`
+    /// discharges (`lerp b Y u − lerp c Z v ~ (D*z−1)*(c−b) +
+    /// (z*(a−b))*defect`) runs in reverse — the hypothesis makes the left
+    /// side `~ 0`, the first summand is `~ 0` unconditionally (from `D*z ~
+    /// 1`), so the second summand is `~ 0`; multiplying through by `D`
+    /// cancels the shared `z` factor via `D*z ~ 1` (no need for `z` to be
+    /// independently invertible), leaving `(a−b)*defect ~ 0` at **both**
+    /// coordinates. Squaring and summing the two gives `distSq A B *
+    /// defect² ~ 0`; `distSq A B` invertible (from `PosBound`) cancels it to
+    /// `defect² ~ 0`, and `eq_zero_of_mul_self_zero` finishes at `defect ~
+    /// 0`, i.e. the Ceva ratio equation.
+    pub ceva_ratio_product_of_concurrent: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -1137,6 +1237,10 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_nine_point_radius_bc(&mut d, p)?;
     declare_nine_point_radius_ab(&mut d, p)?;
     declare_nine_point_centre_equidistant(&mut d, p)?;
+    declare_cevian_pair_meet(&mut d, p)?;
+    declare_ceva_concurrent_of_ratio_product(&mut d, p)?;
+    declare_menelaus_collinear_of_ratio_product(&mut d, p)?;
+    declare_ceva_ratio_product_of_concurrent(&mut d, p)?;
     Ok(p)
 }
 
@@ -1254,6 +1358,13 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         nine_point_radius_bc: kernel.name_str(point, "nine_point_radius_bc"),
         nine_point_radius_ab: kernel.name_str(point, "nine_point_radius_ab"),
         nine_point_centre_equidistant: kernel.name_str(point, "nine_point_centre_equidistant"),
+        cevian_pair_meet: kernel.name_str(point, "cevian_pair_meet"),
+        ceva_concurrent_of_ratio_product: kernel
+            .name_str(point, "ceva_concurrent_of_ratio_product"),
+        menelaus_collinear_of_ratio_product: kernel
+            .name_str(point, "menelaus_collinear_of_ratio_product"),
+        ceva_ratio_product_of_concurrent: kernel
+            .name_str(point, "ceva_ratio_product_of_concurrent"),
     }
 }
 
@@ -16879,6 +16990,2769 @@ fn declare_nine_point_centre_equidistant(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.nine_point_centre_equidistant,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// Local commutative-ring calculus over CReal, ported from `complex/ring.rs`
+// (functions `rn_*`, types `Rn*`). That module is `pub(crate)` but declared
+// via a private `mod ring;` inside `complex.rs`, so it is not reachable from
+// here without editing `complex.rs` -- off limits for this lane. `ring_proof`
+// and its support have zero `ComplexPrelude` dependency (they take
+// `CRealPrelude` directly, see that file's own doc comment), so this is a
+// mechanical copy with every identifier prefixed `Rn`/`rn_` to avoid
+// colliding with this file's own `cadd`/`cmul`/`cneg`/`czero`
+// (CPointPrelude-typed, a different signature for the same names). Used by
+// the Ceva concurrency proofs below to discharge the underlying polynomial
+// identities in `a, b, c, p, q, r` and the cevian-parameter inverse
+// mechanically, rather than by a hand-composed `add_comm`/`add_assoc`/
+// `mul_comm`/`mul_assoc`/`left_distrib` chain (those identities have too many
+// monomials across too many variables for a hand chain to be a safe bet).
+// Consider promoting `complex::ring` to a shared, crate-visible module
+// instead of this duplication, next time nobody else is mid-edit on
+// `complex.rs`.
+// ============================================================================
+
+// --- the raw CReal operations ------------------------------------------------
+
+/// `CReal.add a b`.
+pub(crate) fn rn_cadd(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    d.const_app(p.add, &[a, b])
+}
+
+/// `CReal.mul a b`.
+pub(crate) fn rn_cmul(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    d.const_app(p.mul, &[a, b])
+}
+
+/// `CReal.neg a`.
+pub(crate) fn rn_cneg(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+    d.const_app(p.neg, &[a])
+}
+
+/// `CReal.zero`.
+pub(crate) fn rn_czero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    d.kernel().const_(p.zero, vec![])
+}
+
+/// `CReal.one`.
+pub(crate) fn rn_cone(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    d.kernel().const_(p.one, vec![])
+}
+
+/// The proposition `CReal.Equiv a b`. Unused by the Ceva proofs below (which
+/// only ever need `rn_ring_proof`'s own `Equiv` conclusion), kept for
+/// fidelity with the ported `complex/ring.rs` source (see the module
+/// banner) rather than trimmed to only what is currently called.
+#[allow(dead_code)]
+pub(crate) fn rn_ceq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    d.const_app(p.equiv, &[a, b])
+}
+
+/// `CReal.Equiv.refl a`.
+pub(crate) fn rn_crefl(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+    d.lemma(p.equiv_refl, &[a])
+}
+
+/// `CReal.Equiv.symm`.
+pub(crate) fn rn_csymm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
+    d.lemma(p.equiv_symm, &[a, b, h])
+}
+
+/// `CReal.Equiv.trans`.
+pub(crate) fn rn_ctrans(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    first: ExprId,
+    second: ExprId,
+) -> ExprId {
+    d.lemma(p.equiv_trans, &[a, b, c, first, second])
+}
+
+/// Fold a chain of `Equiv` steps from `start`, returning the endpoint and the
+/// composite proof. The mirror of `rchain` at `CReal.Equiv`.
+pub(crate) fn rn_cchain(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    start: ExprId,
+    steps: &[(ExprId, ExprId)],
+) -> (ExprId, ExprId) {
+    let mut current = start;
+    let mut proof = rn_crefl(d, p, start);
+    for &(next, step) in steps {
+        proof = rn_ctrans(d, p, start, current, next, proof, step);
+        current = next;
+    }
+    (current, proof)
+}
+
+// --- the two commutative monoids, as one ------------------------------------
+
+/// Which commutative monoid a rn_fold is over.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum RnOp {
+    /// `CReal.add`, unit `CReal.zero`.
+    Add,
+    /// `CReal.mul`, unit `CReal.one`.
+    Mul,
+}
+
+fn rn_op_term(d: &mut IntDev<'_>, p: CRealPrelude, op: RnOp, a: ExprId, b: ExprId) -> ExprId {
+    match op {
+        RnOp::Add => rn_cadd(d, p, a, b),
+        RnOp::Mul => rn_cmul(d, p, a, b),
+    }
+}
+
+fn rn_op_unit(d: &mut IntDev<'_>, p: CRealPrelude, op: RnOp) -> ExprId {
+    match op {
+        RnOp::Add => rn_czero(d, p),
+        RnOp::Mul => rn_cone(d, p),
+    }
+}
+
+/// `Equiv (op a b) (op b a)`.
+fn rn_op_comm(d: &mut IntDev<'_>, p: CRealPrelude, op: RnOp, a: ExprId, b: ExprId) -> ExprId {
+    let name = match op {
+        RnOp::Add => p.add_comm,
+        RnOp::Mul => p.mul_comm,
+    };
+    d.lemma(name, &[a, b])
+}
+
+/// `Equiv (op (op a b) c) (op a (op b c))`.
+fn rn_op_assoc(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    op: RnOp,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let name = match op {
+        RnOp::Add => p.add_assoc,
+        RnOp::Mul => p.mul_assoc,
+    };
+    d.lemma(name, &[a, b, c])
+}
+
+/// `Equiv a a' → Equiv b b' → Equiv (op a b) (op a' b')`.
+fn rn_op_congr(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    op: RnOp,
+    a: ExprId,
+    a2: ExprId,
+    b: ExprId,
+    b2: ExprId,
+    left: ExprId,
+    right: ExprId,
+) -> ExprId {
+    let name = match op {
+        RnOp::Add => p.add_congr,
+        RnOp::Mul => p.mul_congr,
+    };
+    d.lemma(name, &[a, a2, b, b2, left, right])
+}
+
+/// `Equiv (op a unit) a` — `add_zero` / `mul_one`.
+fn rn_op_unit_right(d: &mut IntDev<'_>, p: CRealPrelude, op: RnOp, a: ExprId) -> ExprId {
+    let name = match op {
+        RnOp::Add => p.add_zero,
+        RnOp::Mul => p.mul_one,
+    };
+    d.lemma(name, &[a])
+}
+
+/// `Equiv (op unit a) a` — one `comm` away from [`rn_op_unit_right`], and the
+/// orientation neither package states.
+fn rn_op_unit_left(d: &mut IntDev<'_>, p: CRealPrelude, op: RnOp, a: ExprId) -> ExprId {
+    let unit = rn_op_unit(d, p, op);
+    let flipped = rn_op_term(d, p, op, a, unit);
+    let start = rn_op_term(d, p, op, unit, a);
+    let commute = rn_op_comm(d, p, op, unit, a);
+    let collapse = rn_op_unit_right(d, p, op, a);
+    rn_ctrans(d, p, start, flipped, a, commute, collapse)
+}
+
+/// `a0 op (a1 op (… op a_{n-1}))`, right-nested, with the **unit** for the
+/// empty list.
+pub(crate) fn rn_fold(d: &mut IntDev<'_>, p: CRealPrelude, op: RnOp, atoms: &[ExprId]) -> ExprId {
+    let Some((&last, front)) = atoms.split_last() else {
+        return rn_op_unit(d, p, op);
+    };
+    let mut acc = last;
+    for &atom in front.iter().rev() {
+        acc = rn_op_term(d, p, op, atom, acc);
+    }
+    acc
+}
+
+/// `Equiv (op (rn_fold xs) (rn_fold ys)) (rn_fold (xs ++ ys))`.
+fn rn_fold_append(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    op: RnOp,
+    xs: &[ExprId],
+    ys: &[ExprId],
+) -> ExprId {
+    if xs.is_empty() {
+        let right = rn_fold(d, p, op, ys);
+        return rn_op_unit_left(d, p, op, right);
+    }
+    if ys.is_empty() {
+        let left = rn_fold(d, p, op, xs);
+        return rn_op_unit_right(d, p, op, left);
+    }
+    if xs.len() == 1 {
+        // `op xs[0] (rn_fold ys)` IS `rn_fold (xs ++ ys)`, syntactically.
+        let whole = rn_fold(d, p, op, ys);
+        let joined = rn_op_term(d, p, op, xs[0], whole);
+        return rn_crefl(d, p, joined);
+    }
+    let head = xs[0];
+    let rest = &xs[1..];
+    let rest_fold = rn_fold(d, p, op, rest);
+    let ys_fold = rn_fold(d, p, op, ys);
+    let start = {
+        let left = rn_op_term(d, p, op, head, rest_fold);
+        rn_op_term(d, p, op, left, ys_fold)
+    };
+    let regrouped = {
+        let inner = rn_op_term(d, p, op, rest_fold, ys_fold);
+        rn_op_term(d, p, op, head, inner)
+    };
+    let assoc = rn_op_assoc(d, p, op, head, rest_fold, ys_fold);
+    let mut joined: Vec<ExprId> = rest.to_vec();
+    joined.extend_from_slice(ys);
+    let joined_fold = rn_fold(d, p, op, &joined);
+    let inner_proof = rn_fold_append(d, p, op, rest, ys);
+    let inner_start = rn_op_term(d, p, op, rest_fold, ys_fold);
+    let head_refl = rn_crefl(d, p, head);
+    let lifted = rn_op_congr(
+        d,
+        p,
+        op,
+        head,
+        head,
+        inner_start,
+        joined_fold,
+        head_refl,
+        inner_proof,
+    );
+    let target = rn_op_term(d, p, op, head, joined_fold);
+    rn_ctrans(d, p, start, regrouped, target, assoc, lifted)
+}
+
+/// `Equiv (rn_fold xs) (op xs[i] (rn_fold rest))`, `rest` being `xs` without `i`.
+///
+/// # Panics
+///
+/// Panics on an empty list or an out-of-range index.
+fn rn_fold_pull(d: &mut IntDev<'_>, p: CRealPrelude, op: RnOp, xs: &[ExprId], i: usize) -> ExprId {
+    assert!(i < xs.len(), "rn_fold_pull index out of range");
+    if xs.len() == 1 {
+        // `rn_fold [x]` is `x`; the target writes `op x unit`.
+        let whole = xs[0];
+        let unit = rn_op_unit(d, p, op);
+        let padded = rn_op_term(d, p, op, whole, unit);
+        let collapse = rn_op_unit_right(d, p, op, whole);
+        return rn_csymm(d, p, padded, whole, collapse);
+    }
+    if i == 0 {
+        let whole = rn_fold(d, p, op, xs);
+        return rn_crefl(d, p, whole);
+    }
+    let head = xs[0];
+    let tail = &xs[1..];
+    let chosen = xs[i];
+    let mut tail_rest: Vec<ExprId> = tail.to_vec();
+    tail_rest.remove(i - 1);
+    let tail_fold = rn_fold(d, p, op, tail);
+    let tail_rest_fold = rn_fold(d, p, op, &tail_rest);
+    let inner = rn_fold_pull(d, p, op, tail, i - 1);
+
+    let start = rn_op_term(d, p, op, head, tail_fold);
+    let pulled = rn_op_term(d, p, op, chosen, tail_rest_fold);
+    let head_refl = rn_crefl(d, p, head);
+    let first = rn_op_congr(d, p, op, head, head, tail_fold, pulled, head_refl, inner);
+    let nested = rn_op_term(d, p, op, head, pulled);
+    let flat_head = rn_op_term(d, p, op, head, chosen);
+    let flat = rn_op_term(d, p, op, flat_head, tail_rest_fold);
+    let assoc = rn_op_assoc(d, p, op, head, chosen, tail_rest_fold);
+    let second = rn_csymm(d, p, flat, nested, assoc);
+    let commuted_head = rn_op_term(d, p, op, chosen, head);
+    let commute = rn_op_comm(d, p, op, head, chosen);
+    let rest_refl = rn_crefl(d, p, tail_rest_fold);
+    let third = rn_op_congr(
+        d,
+        p,
+        op,
+        flat_head,
+        commuted_head,
+        tail_rest_fold,
+        tail_rest_fold,
+        commute,
+        rest_refl,
+    );
+    let commuted = rn_op_term(d, p, op, commuted_head, tail_rest_fold);
+    let fourth = rn_op_assoc(d, p, op, chosen, head, tail_rest_fold);
+    let regrouped = {
+        let inner_sum = rn_op_term(d, p, op, head, tail_rest_fold);
+        rn_op_term(d, p, op, chosen, inner_sum)
+    };
+    let mut steps = vec![
+        (nested, first),
+        (flat, second),
+        (commuted, third),
+        (regrouped, fourth),
+    ];
+    if tail_rest.is_empty() {
+        // `rn_fold (head :: [])` is `head`, but the chain has reached
+        // `op chosen (op head unit)`.
+        let padded = rn_op_term(d, p, op, head, tail_rest_fold);
+        let collapse = rn_op_unit_right(d, p, op, head);
+        let chosen_refl = rn_crefl(d, p, chosen);
+        let trimmed = rn_op_congr(
+            d,
+            p,
+            op,
+            chosen,
+            chosen,
+            padded,
+            head,
+            chosen_refl,
+            collapse,
+        );
+        let target = rn_op_term(d, p, op, chosen, head);
+        steps.push((target, trimmed));
+    }
+    let (_, proof) = rn_cchain(d, p, start, &steps);
+    proof
+}
+
+/// `Equiv (rn_fold xs) (rn_fold ys)` when `ys` is a permutation of `xs`.
+///
+/// # Panics
+///
+/// Panics if `ys` is not a permutation of `xs`.
+pub(crate) fn rn_fold_perm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    op: RnOp,
+    xs: &[ExprId],
+    ys: &[ExprId],
+) -> ExprId {
+    assert_eq!(xs.len(), ys.len(), "rn_fold_perm needs equal lengths");
+    if xs.is_empty() {
+        let unit = rn_op_unit(d, p, op);
+        return rn_crefl(d, p, unit);
+    }
+    if xs.len() == 1 {
+        assert_eq!(xs[0], ys[0], "rn_fold_perm was given a non-permutation");
+        return rn_crefl(d, p, xs[0]);
+    }
+    let target = ys[0];
+    let position = xs
+        .iter()
+        .position(|&x| x == target)
+        .expect("rn_fold_perm was given a non-permutation");
+    let mut rest: Vec<ExprId> = xs.to_vec();
+    rest.remove(position);
+    let pull = rn_fold_pull(d, p, op, xs, position);
+    let rest_fold = rn_fold(d, p, op, &rest);
+    let tail_fold = rn_fold(d, p, op, &ys[1..]);
+    let inner = rn_fold_perm(d, p, op, &rest, &ys[1..]);
+    let head_refl = rn_crefl(d, p, target);
+    let lifted = rn_op_congr(
+        d, p, op, target, target, rest_fold, tail_fold, head_refl, inner,
+    );
+    let start = rn_fold(d, p, op, xs);
+    let middle = rn_op_term(d, p, op, target, rest_fold);
+    let end = rn_op_term(d, p, op, target, tail_fold);
+    rn_ctrans(d, p, start, middle, end, pull, lifted)
+}
+
+// --- the derived group and ring identities ----------------------------------
+
+/// `Equiv (add zero a) a`.
+fn rn_zero_add(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+    rn_op_unit_left(d, p, RnOp::Add, a)
+}
+
+/// `Equiv (mul zero a) zero`.
+fn rn_zero_mul(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+    let zero = rn_czero(d, p);
+    let start = rn_cmul(d, p, zero, a);
+    let flipped = rn_cmul(d, p, a, zero);
+    let commute = d.lemma(p.mul_comm, &[zero, a]);
+    let collapse = d.lemma(p.mul_zero, &[a]);
+    rn_ctrans(d, p, start, flipped, zero, commute, collapse)
+}
+
+/// `Equiv (add (neg a) a) zero` — the orientation `add_neg` does not state.
+fn rn_neg_add_cancel(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+    let negated = rn_cneg(d, p, a);
+    let start = rn_cadd(d, p, negated, a);
+    let flipped = rn_cadd(d, p, a, negated);
+    let zero = rn_czero(d, p);
+    let commute = d.lemma(p.add_comm, &[negated, a]);
+    let collapse = d.lemma(p.add_neg, &[a]);
+    rn_ctrans(d, p, start, flipped, zero, commute, collapse)
+}
+
+/// `Equiv (neg zero) zero`.
+fn rn_neg_zero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let zero = rn_czero(d, p);
+    let negated = rn_cneg(d, p, zero);
+    let padded = rn_cadd(d, p, zero, negated);
+    let expand = rn_zero_add(d, p, negated);
+    let back = rn_csymm(d, p, padded, negated, expand);
+    let collapse = d.lemma(p.add_neg, &[zero]);
+    rn_ctrans(d, p, negated, padded, zero, back, collapse)
+}
+
+/// From `Equiv (add a b) zero`, conclude `Equiv (neg a) b` — uniqueness of the
+/// additive inverse, and the lever every sign identity below goes through.
+fn rn_neg_eq_of_add_zero(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    hypothesis: ExprId,
+) -> ExprId {
+    let zero = rn_czero(d, p);
+    let negated = rn_cneg(d, p, a);
+    let sum = rn_cadd(d, p, a, b);
+
+    let padded = rn_cadd(d, p, negated, zero);
+    let collapse = d.lemma(p.add_zero, &[negated]);
+    let expand = rn_csymm(d, p, padded, negated, collapse);
+
+    let back = rn_csymm(d, p, sum, zero, hypothesis);
+    let neg_refl = rn_crefl(d, p, negated);
+    let widened = rn_cadd(d, p, negated, sum);
+    let step2 = rn_op_congr(d, p, RnOp::Add, negated, negated, zero, sum, neg_refl, back);
+
+    let regrouped = {
+        let inner = rn_cadd(d, p, negated, a);
+        rn_cadd(d, p, inner, b)
+    };
+    let assoc = d.lemma(p.add_assoc, &[negated, a, b]);
+    let step3 = rn_csymm(d, p, regrouped, widened, assoc);
+
+    let cancel = rn_neg_add_cancel(d, p, a);
+    let b_refl = rn_crefl(d, p, b);
+    let inner_left = rn_cadd(d, p, negated, a);
+    let step4 = rn_op_congr(d, p, RnOp::Add, inner_left, zero, b, b, cancel, b_refl);
+    let with_zero = rn_cadd(d, p, zero, b);
+    let step5 = rn_zero_add(d, p, b);
+
+    let (_, proof) = rn_cchain(
+        d,
+        p,
+        negated,
+        &[
+            (padded, expand),
+            (widened, step2),
+            (regrouped, step3),
+            (with_zero, step4),
+            (b, step5),
+        ],
+    );
+    proof
+}
+
+/// `Equiv (neg (neg a)) a`.
+fn rn_neg_neg(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+    let negated = rn_cneg(d, p, a);
+    let cancel = rn_neg_add_cancel(d, p, a);
+    rn_neg_eq_of_add_zero(d, p, negated, a, cancel)
+}
+
+/// `Equiv (neg (add a b)) (add (neg a) (neg b))`.
+fn rn_neg_add(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let na = rn_cneg(d, p, a);
+    let nb = rn_cneg(d, p, b);
+    let zero = rn_czero(d, p);
+
+    // `(a + b) + ((−a) + (−b)) ~ 0`, by reassociation into `a + (−a + (b + −b))`.
+    let left = rn_cadd(d, p, a, b);
+    let right = rn_cadd(d, p, na, nb);
+    let start = rn_cadd(d, p, left, right);
+    let joined = rn_fold_append(d, p, RnOp::Add, &[a, b], &[na, nb]);
+    let listed = rn_fold(d, p, RnOp::Add, &[a, b, na, nb]);
+    let sorted = rn_fold(d, p, RnOp::Add, &[a, na, b, nb]);
+    let permuted = rn_fold_perm(d, p, RnOp::Add, &[a, b, na, nb], &[a, na, b, nb]);
+
+    let inner_pair = rn_cadd(d, p, b, nb);
+    let pair_zero = d.lemma(p.add_neg, &[b]);
+    let na_refl = rn_crefl(d, p, na);
+    let inner = rn_op_congr(
+        d,
+        p,
+        RnOp::Add,
+        na,
+        na,
+        inner_pair,
+        zero,
+        na_refl,
+        pair_zero,
+    );
+    let a_refl = rn_crefl(d, p, a);
+    let inner_start = rn_cadd(d, p, na, inner_pair);
+    let inner_end = rn_cadd(d, p, na, zero);
+    let lifted = rn_op_congr(d, p, RnOp::Add, a, a, inner_start, inner_end, a_refl, inner);
+    let stage = rn_cadd(d, p, a, inner_end);
+    let trim_inner = d.lemma(p.add_zero, &[na]);
+    let a_refl2 = rn_crefl(d, p, a);
+    let trimmed = rn_op_congr(d, p, RnOp::Add, a, a, inner_end, na, a_refl2, trim_inner);
+    let pair = rn_cadd(d, p, a, na);
+    let finish = d.lemma(p.add_neg, &[a]);
+    let (_, to_zero) = rn_cchain(
+        d,
+        p,
+        start,
+        &[
+            (listed, joined),
+            (sorted, permuted),
+            (stage, lifted),
+            (pair, trimmed),
+            (zero, finish),
+        ],
+    );
+    rn_neg_eq_of_add_zero(d, p, left, right, to_zero)
+}
+
+/// `Equiv (mul (add a b) c) (add (mul a c) (mul b c))`.
+fn rn_right_distrib(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let sum = rn_cadd(d, p, a, b);
+    let start = rn_cmul(d, p, sum, c);
+    let flipped = rn_cmul(d, p, c, sum);
+    let commute = d.lemma(p.mul_comm, &[sum, c]);
+    let ca = rn_cmul(d, p, c, a);
+    let cb = rn_cmul(d, p, c, b);
+    let expanded = rn_cadd(d, p, ca, cb);
+    let distrib = d.lemma(p.left_distrib, &[c, a, b]);
+    let ac = rn_cmul(d, p, a, c);
+    let bc = rn_cmul(d, p, b, c);
+    let target = rn_cadd(d, p, ac, bc);
+    let left_swap = d.lemma(p.mul_comm, &[c, a]);
+    let right_swap = d.lemma(p.mul_comm, &[c, b]);
+    let swapped = rn_op_congr(d, p, RnOp::Add, ca, ac, cb, bc, left_swap, right_swap);
+    let (_, proof) = rn_cchain(
+        d,
+        p,
+        start,
+        &[(flipped, commute), (expanded, distrib), (target, swapped)],
+    );
+    proof
+}
+
+/// `Equiv (mul (neg a) b) (neg (mul a b))`.
+fn rn_neg_mul(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let na = rn_cneg(d, p, a);
+    let ab = rn_cmul(d, p, a, b);
+    let nab = rn_cmul(d, p, na, b);
+    let zero = rn_czero(d, p);
+
+    let start = rn_cadd(d, p, ab, nab);
+    let factored = {
+        let inner = rn_cadd(d, p, a, na);
+        rn_cmul(d, p, inner, b)
+    };
+    let expand = rn_right_distrib(d, p, a, na, b);
+    let back = rn_csymm(d, p, factored, start, expand);
+    let inner_sum = rn_cadd(d, p, a, na);
+    let cancel = d.lemma(p.add_neg, &[a]);
+    let b_refl = rn_crefl(d, p, b);
+    let collapsed = rn_cmul(d, p, zero, b);
+    let step = rn_op_congr(d, p, RnOp::Mul, inner_sum, zero, b, b, cancel, b_refl);
+    let finish = rn_zero_mul(d, p, b);
+    let (_, to_zero) = rn_cchain(
+        d,
+        p,
+        start,
+        &[(factored, back), (collapsed, step), (zero, finish)],
+    );
+    let uniqueness = rn_neg_eq_of_add_zero(d, p, ab, nab, to_zero);
+    let negated_product = rn_cneg(d, p, ab);
+    rn_csymm(d, p, negated_product, nab, uniqueness)
+}
+
+/// `Equiv (mul a (neg b)) (neg (mul a b))`.
+fn rn_mul_neg(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let nb = rn_cneg(d, p, b);
+    let start = rn_cmul(d, p, a, nb);
+    let flipped = rn_cmul(d, p, nb, a);
+    let commute = d.lemma(p.mul_comm, &[a, nb]);
+    let ba = rn_cmul(d, p, b, a);
+    let pulled = rn_cneg(d, p, ba);
+    let pull = rn_neg_mul(d, p, b, a);
+    let ab = rn_cmul(d, p, a, b);
+    let target = rn_cneg(d, p, ab);
+    let swap = d.lemma(p.mul_comm, &[b, a]);
+    let lifted = d.lemma(p.neg_congr, &[ba, ab, swap]);
+    let (_, proof) = rn_cchain(
+        d,
+        p,
+        start,
+        &[(flipped, commute), (pulled, pull), (target, lifted)],
+    );
+    proof
+}
+
+// --- the normal form ---------------------------------------------------------
+
+/// One signed monomial: a **sorted** list of atoms, and a sign.
+///
+/// Field order is load-bearing: the derived `Ord` sorts by atoms first, so
+/// monomials over the same atoms with opposite signs land adjacent and
+/// [`rn_canonicalize`] can cancel them in one pass.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub(crate) struct RnMono {
+    atoms: Vec<ExprId>,
+    neg: bool,
+}
+
+/// A formal expression over `CReal`, in the language the normalizer decides.
+///
+/// [`RnExpr::Zero`] and [`RnExpr::One`] are the *constants* `CReal.zero` and
+/// `CReal.one`, not atoms: the whole point is that `x · 1` and `x · 0` collapse.
+#[derive(Clone, Debug)]
+pub(crate) enum RnExpr {
+    /// An opaque `CReal` term — a variable, or anything the calculus should not
+    /// look inside.
+    Atom(ExprId),
+    /// `CReal.zero`. Unconstructed by the Ceva proofs below (their
+    /// correction terms are built from `One`/`Neg`/atoms, never a bare
+    /// zero literal), kept for fidelity with the ported source.
+    #[allow(dead_code)]
+    Zero,
+    /// `CReal.one`.
+    One,
+    /// `CReal.add`.
+    Add(Box<RnExpr>, Box<RnExpr>),
+    /// `CReal.mul`.
+    Mul(Box<RnExpr>, Box<RnExpr>),
+    /// `CReal.neg`.
+    Neg(Box<RnExpr>),
+}
+
+impl RnExpr {
+    /// `a + b`.
+    pub(crate) fn add(a: RnExpr, b: RnExpr) -> RnExpr {
+        RnExpr::Add(Box::new(a), Box::new(b))
+    }
+    /// `a · b`.
+    pub(crate) fn mul(a: RnExpr, b: RnExpr) -> RnExpr {
+        RnExpr::Mul(Box::new(a), Box::new(b))
+    }
+    /// `−a`.
+    pub(crate) fn neg(a: RnExpr) -> RnExpr {
+        RnExpr::Neg(Box::new(a))
+    }
+}
+
+/// Render a formal expression as the `CReal` term it denotes.
+pub(crate) fn rn_render(d: &mut IntDev<'_>, p: CRealPrelude, e: &RnExpr) -> ExprId {
+    match e {
+        RnExpr::Atom(a) => *a,
+        RnExpr::Zero => rn_czero(d, p),
+        RnExpr::One => rn_cone(d, p),
+        RnExpr::Add(a, b) => {
+            let left = rn_render(d, p, a);
+            let right = rn_render(d, p, b);
+            rn_cadd(d, p, left, right)
+        }
+        RnExpr::Mul(a, b) => {
+            let left = rn_render(d, p, a);
+            let right = rn_render(d, p, b);
+            rn_cmul(d, p, left, right)
+        }
+        RnExpr::Neg(a) => {
+            let inner = rn_render(d, p, a);
+            rn_cneg(d, p, inner)
+        }
+    }
+}
+
+fn rn_mono_term(d: &mut IntDev<'_>, p: CRealPrelude, m: &RnMono) -> ExprId {
+    let product = rn_fold(d, p, RnOp::Mul, &m.atoms);
+    if m.neg {
+        rn_cneg(d, p, product)
+    } else {
+        product
+    }
+}
+
+fn rn_mono_terms(d: &mut IntDev<'_>, p: CRealPrelude, monos: &[RnMono]) -> Vec<ExprId> {
+    monos.iter().map(|m| rn_mono_term(d, p, m)).collect()
+}
+
+/// The canonical term of a monomial multiset: `zero` when empty.
+pub(crate) fn rn_sum_term(d: &mut IntDev<'_>, p: CRealPrelude, monos: &[RnMono]) -> ExprId {
+    let terms = rn_mono_terms(d, p, monos);
+    rn_fold(d, p, RnOp::Add, &terms)
+}
+
+fn rn_flip(monos: &[RnMono]) -> Vec<RnMono> {
+    monos
+        .iter()
+        .map(|m| RnMono {
+            atoms: m.atoms.clone(),
+            neg: !m.neg,
+        })
+        .collect()
+}
+
+/// `Equiv (neg (rn_sum_term monos)) (rn_sum_term (rn_flip monos))`.
+fn rn_neg_sum(d: &mut IntDev<'_>, p: CRealPrelude, monos: &[RnMono]) -> ExprId {
+    match monos {
+        [] => rn_neg_zero(d, p),
+        [m] => {
+            let product = rn_fold(d, p, RnOp::Mul, &m.atoms);
+            if m.neg {
+                // `neg (neg P) ~ P`.
+                rn_neg_neg(d, p, product)
+            } else {
+                // `neg P` is already the flipped monomial's term.
+                let negated = rn_cneg(d, p, product);
+                rn_crefl(d, p, negated)
+            }
+        }
+        [head, rest @ ..] => {
+            let head_term = rn_mono_term(d, p, head);
+            let rest_term = rn_sum_term(d, p, rest);
+            let split = rn_neg_add(d, p, head_term, rest_term);
+            let negated_head = rn_cneg(d, p, head_term);
+            let negated_rest = rn_cneg(d, p, rest_term);
+            let head_slice = std::slice::from_ref(head);
+            let head_proof = rn_neg_sum(d, p, head_slice);
+            let rest_proof = rn_neg_sum(d, p, rest);
+            let flipped_head = rn_flip(head_slice);
+            let flipped_rest = rn_flip(rest);
+            let flipped_head_term = rn_sum_term(d, p, &flipped_head);
+            let flipped_rest_term = rn_sum_term(d, p, &flipped_rest);
+            let lifted = rn_op_congr(
+                d,
+                p,
+                RnOp::Add,
+                negated_head,
+                flipped_head_term,
+                negated_rest,
+                flipped_rest_term,
+                head_proof,
+                rest_proof,
+            );
+            let joint = rn_cadd(d, p, head_term, rest_term);
+            let start = rn_cneg(d, p, joint);
+            let middle = rn_cadd(d, p, negated_head, negated_rest);
+            let end = rn_cadd(d, p, flipped_head_term, flipped_rest_term);
+            rn_ctrans(d, p, start, middle, end, split, lifted)
+        }
+    }
+}
+
+fn rn_mul_mono_mono(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    m: &RnMono,
+    n: &RnMono,
+) -> (RnMono, ExprId) {
+    let mut concat: Vec<ExprId> = m.atoms.clone();
+    concat.extend_from_slice(&n.atoms);
+    let mut sorted = concat.clone();
+    sorted.sort_unstable();
+    let result = RnMono {
+        atoms: sorted.clone(),
+        neg: m.neg != n.neg,
+    };
+
+    let left = rn_fold(d, p, RnOp::Mul, &m.atoms);
+    let right = rn_fold(d, p, RnOp::Mul, &n.atoms);
+    let raw = rn_cmul(d, p, left, right);
+    let concat_fold = rn_fold(d, p, RnOp::Mul, &concat);
+    let sorted_fold = rn_fold(d, p, RnOp::Mul, &sorted);
+    let append = rn_fold_append(d, p, RnOp::Mul, &m.atoms, &n.atoms);
+    let permute = rn_fold_perm(d, p, RnOp::Mul, &concat, &sorted);
+    let base = rn_ctrans(d, p, raw, concat_fold, sorted_fold, append, permute);
+
+    let proof = match (m.neg, n.neg) {
+        (false, false) => base,
+        (true, false) => {
+            let negated_left = rn_cneg(d, p, left);
+            let start = rn_cmul(d, p, negated_left, right);
+            let pulled = rn_cneg(d, p, raw);
+            let pull = rn_neg_mul(d, p, left, right);
+            let target = rn_cneg(d, p, sorted_fold);
+            let lifted = d.lemma(p.neg_congr, &[raw, sorted_fold, base]);
+            let (_, proof) = rn_cchain(d, p, start, &[(pulled, pull), (target, lifted)]);
+            proof
+        }
+        (false, true) => {
+            let negated_right = rn_cneg(d, p, right);
+            let start = rn_cmul(d, p, left, negated_right);
+            let pulled = rn_cneg(d, p, raw);
+            let pull = rn_mul_neg(d, p, left, right);
+            let target = rn_cneg(d, p, sorted_fold);
+            let lifted = d.lemma(p.neg_congr, &[raw, sorted_fold, base]);
+            let (_, proof) = rn_cchain(d, p, start, &[(pulled, pull), (target, lifted)]);
+            proof
+        }
+        (true, true) => {
+            let negated_left = rn_cneg(d, p, left);
+            let negated_right = rn_cneg(d, p, right);
+            let start = rn_cmul(d, p, negated_left, negated_right);
+            let inner_start = rn_cmul(d, p, left, negated_right);
+            let once = rn_cneg(d, p, inner_start);
+            let first = rn_neg_mul(d, p, left, negated_right);
+            let inner = rn_mul_neg(d, p, left, right);
+            let inner_end = rn_cneg(d, p, raw);
+            let second = d.lemma(p.neg_congr, &[inner_start, inner_end, inner]);
+            let twice = rn_cneg(d, p, inner_end);
+            let third = rn_neg_neg(d, p, raw);
+            let (_, proof) = rn_cchain(
+                d,
+                p,
+                start,
+                &[
+                    (once, first),
+                    (twice, second),
+                    (raw, third),
+                    (sorted_fold, base),
+                ],
+            );
+            proof
+        }
+    };
+    (result, proof)
+}
+
+fn rn_mul_mono_sum(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    m: &RnMono,
+    ns: &[RnMono],
+) -> (Vec<RnMono>, ExprId) {
+    let head_term = rn_mono_term(d, p, m);
+    match ns {
+        [] => {
+            let proof = d.lemma(p.mul_zero, &[head_term]);
+            (Vec::new(), proof)
+        }
+        [n] => {
+            let (result, proof) = rn_mul_mono_mono(d, p, m, n);
+            (vec![result], proof)
+        }
+        [n, rest @ ..] => {
+            let first_term = rn_mono_term(d, p, n);
+            let rest_term = rn_sum_term(d, p, rest);
+            let sum = rn_cadd(d, p, first_term, rest_term);
+            let start = rn_cmul(d, p, head_term, sum);
+            let distrib = d.lemma(p.left_distrib, &[head_term, first_term, rest_term]);
+            let left_product = rn_cmul(d, p, head_term, first_term);
+            let right_product = rn_cmul(d, p, head_term, rest_term);
+            let expanded = rn_cadd(d, p, left_product, right_product);
+
+            let (first_result, first_proof) = rn_mul_mono_mono(d, p, m, n);
+            let (rest_result, rest_proof) = rn_mul_mono_sum(d, p, m, rest);
+            let first_canon = rn_mono_term(d, p, &first_result);
+            let rest_canon = rn_sum_term(d, p, &rest_result);
+            let lifted = rn_op_congr(
+                d,
+                p,
+                RnOp::Add,
+                left_product,
+                first_canon,
+                right_product,
+                rest_canon,
+                first_proof,
+                rest_proof,
+            );
+            let paired = rn_cadd(d, p, first_canon, rest_canon);
+
+            let rest_terms = rn_mono_terms(d, p, &rest_result);
+            let join = rn_fold_append(d, p, RnOp::Add, &[first_canon], &rest_terms);
+            let mut result = vec![first_result];
+            result.extend(rest_result);
+            let joined = rn_sum_term(d, p, &result);
+
+            let (_, proof) = rn_cchain(
+                d,
+                p,
+                start,
+                &[(expanded, distrib), (paired, lifted), (joined, join)],
+            );
+            (result, proof)
+        }
+    }
+}
+
+fn rn_mul_sum_sum(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    ms: &[RnMono],
+    ns: &[RnMono],
+) -> (Vec<RnMono>, ExprId) {
+    match ms {
+        [] => {
+            let right = rn_sum_term(d, p, ns);
+            let proof = rn_zero_mul(d, p, right);
+            (Vec::new(), proof)
+        }
+        [m] => rn_mul_mono_sum(d, p, m, ns),
+        [m, rest @ ..] => {
+            let head_term = rn_mono_term(d, p, m);
+            let rest_term = rn_sum_term(d, p, rest);
+            let right = rn_sum_term(d, p, ns);
+            let sum = rn_cadd(d, p, head_term, rest_term);
+            let start = rn_cmul(d, p, sum, right);
+            let distrib = rn_right_distrib(d, p, head_term, rest_term, right);
+            let left_product = rn_cmul(d, p, head_term, right);
+            let right_product = rn_cmul(d, p, rest_term, right);
+            let expanded = rn_cadd(d, p, left_product, right_product);
+
+            let (first_result, first_proof) = rn_mul_mono_sum(d, p, m, ns);
+            let (rest_result, rest_proof) = rn_mul_sum_sum(d, p, rest, ns);
+            let first_canon = rn_sum_term(d, p, &first_result);
+            let rest_canon = rn_sum_term(d, p, &rest_result);
+            let lifted = rn_op_congr(
+                d,
+                p,
+                RnOp::Add,
+                left_product,
+                first_canon,
+                right_product,
+                rest_canon,
+                first_proof,
+                rest_proof,
+            );
+            let paired = rn_cadd(d, p, first_canon, rest_canon);
+
+            let first_terms = rn_mono_terms(d, p, &first_result);
+            let rest_terms = rn_mono_terms(d, p, &rest_result);
+            let join = rn_fold_append(d, p, RnOp::Add, &first_terms, &rest_terms);
+            let mut result = first_result;
+            result.extend(rest_result);
+            let joined = rn_sum_term(d, p, &result);
+
+            let (_, proof) = rn_cchain(
+                d,
+                p,
+                start,
+                &[(expanded, distrib), (paired, lifted), (joined, join)],
+            );
+            (result, proof)
+        }
+    }
+}
+
+/// `(normal form, proof of `Equiv (rn_render e) (rn_sum_term normal form)`)`.
+fn rn_normalize(d: &mut IntDev<'_>, p: CRealPrelude, e: &RnExpr) -> (Vec<RnMono>, ExprId) {
+    match e {
+        RnExpr::Atom(a) => {
+            let monos = vec![RnMono {
+                atoms: vec![*a],
+                neg: false,
+            }];
+            let proof = rn_crefl(d, p, *a);
+            (monos, proof)
+        }
+        RnExpr::Zero => {
+            let zero = rn_czero(d, p);
+            let proof = rn_crefl(d, p, zero);
+            (Vec::new(), proof)
+        }
+        RnExpr::One => {
+            let one = rn_cone(d, p);
+            let proof = rn_crefl(d, p, one);
+            (
+                vec![RnMono {
+                    atoms: Vec::new(),
+                    neg: false,
+                }],
+                proof,
+            )
+        }
+        RnExpr::Neg(inner) => {
+            let (monos, proof) = rn_normalize(d, p, inner);
+            let source = rn_render(d, p, inner);
+            let canon = rn_sum_term(d, p, &monos);
+            let start = rn_cneg(d, p, source);
+            let middle = rn_cneg(d, p, canon);
+            let lifted = d.lemma(p.neg_congr, &[source, canon, proof]);
+            let flipped = rn_flip(&monos);
+            let end = rn_sum_term(d, p, &flipped);
+            let distribute = rn_neg_sum(d, p, &monos);
+            let composite = rn_ctrans(d, p, start, middle, end, lifted, distribute);
+            (flipped, composite)
+        }
+        RnExpr::Add(a, b) => {
+            let (ma, pa) = rn_normalize(d, p, a);
+            let (mb, pb) = rn_normalize(d, p, b);
+            let source_a = rn_render(d, p, a);
+            let source_b = rn_render(d, p, b);
+            let canon_a = rn_sum_term(d, p, &ma);
+            let canon_b = rn_sum_term(d, p, &mb);
+            let start = rn_cadd(d, p, source_a, source_b);
+            let middle = rn_cadd(d, p, canon_a, canon_b);
+            let lifted = rn_op_congr(
+                d,
+                p,
+                RnOp::Add,
+                source_a,
+                canon_a,
+                source_b,
+                canon_b,
+                pa,
+                pb,
+            );
+            let terms_a = rn_mono_terms(d, p, &ma);
+            let terms_b = rn_mono_terms(d, p, &mb);
+            let join = rn_fold_append(d, p, RnOp::Add, &terms_a, &terms_b);
+            let mut result = ma;
+            result.extend(mb);
+            let end = rn_sum_term(d, p, &result);
+            let composite = rn_ctrans(d, p, start, middle, end, lifted, join);
+            (result, composite)
+        }
+        RnExpr::Mul(a, b) => {
+            let (ma, pa) = rn_normalize(d, p, a);
+            let (mb, pb) = rn_normalize(d, p, b);
+            let source_a = rn_render(d, p, a);
+            let source_b = rn_render(d, p, b);
+            let canon_a = rn_sum_term(d, p, &ma);
+            let canon_b = rn_sum_term(d, p, &mb);
+            let start = rn_cmul(d, p, source_a, source_b);
+            let middle = rn_cmul(d, p, canon_a, canon_b);
+            let lifted = rn_op_congr(
+                d,
+                p,
+                RnOp::Mul,
+                source_a,
+                canon_a,
+                source_b,
+                canon_b,
+                pa,
+                pb,
+            );
+            let (result, expand) = rn_mul_sum_sum(d, p, &ma, &mb);
+            let end = rn_sum_term(d, p, &result);
+            let composite = rn_ctrans(d, p, start, middle, end, lifted, expand);
+            (result, composite)
+        }
+    }
+}
+
+/// Sort the multiset and cancel opposite pairs.
+///
+/// Returns the canonical multiset and a proof that the original sum is
+/// `Equiv` to it.
+fn rn_canonicalize(d: &mut IntDev<'_>, p: CRealPrelude, monos: &[RnMono]) -> (Vec<RnMono>, ExprId) {
+    let mut current: Vec<RnMono> = monos.to_vec();
+    let start = rn_sum_term(d, p, &current);
+    let mut steps: Vec<(ExprId, ExprId)> = Vec::new();
+
+    // Sort once: the derived `Ord` puts equal-atom monomials adjacent.
+    let mut sorted = current.clone();
+    sorted.sort();
+    if sorted != current {
+        let from = rn_mono_terms(d, p, &current);
+        let to = rn_mono_terms(d, p, &sorted);
+        let permute = rn_fold_perm(d, p, RnOp::Add, &from, &to);
+        let target = rn_sum_term(d, p, &sorted);
+        steps.push((target, permute));
+        current = sorted;
+    }
+
+    // Cancel adjacent opposite pairs until none remain. Removing two adjacent
+    // entries from a sorted list leaves it sorted, so no re-sort is needed.
+    while let Some(index) = (0..current.len().saturating_sub(1))
+        .find(|&i| current[i].atoms == current[i + 1].atoms && current[i].neg != current[i + 1].neg)
+    {
+        let mut reordered = vec![current[index].clone(), current[index + 1].clone()];
+        for (position, mono) in current.iter().enumerate() {
+            if position != index && position != index + 1 {
+                reordered.push(mono.clone());
+            }
+        }
+        let from = rn_mono_terms(d, p, &current);
+        let to = rn_mono_terms(d, p, &reordered);
+        let permute = rn_fold_perm(d, p, RnOp::Add, &from, &to);
+        let moved = rn_sum_term(d, p, &reordered);
+        steps.push((moved, permute));
+
+        let first = rn_mono_term(d, p, &reordered[0]);
+        let second = rn_mono_term(d, p, &reordered[1]);
+        let product = rn_fold(d, p, RnOp::Mul, &reordered[0].atoms);
+        let pair_zero = if reordered[0].neg {
+            rn_neg_add_cancel(d, p, product)
+        } else {
+            d.lemma(p.add_neg, &[product])
+        };
+        let zero = rn_czero(d, p);
+        let rest = &reordered[2..];
+        let remainder: Vec<RnMono> = rest.to_vec();
+        if remainder.is_empty() {
+            steps.push((zero, pair_zero));
+        } else {
+            let rest_term = rn_sum_term(d, p, &remainder);
+            let regrouped = {
+                let pair = rn_cadd(d, p, first, second);
+                rn_cadd(d, p, pair, rest_term)
+            };
+            let nested = {
+                let inner = rn_cadd(d, p, second, rest_term);
+                rn_cadd(d, p, first, inner)
+            };
+            let assoc = d.lemma(p.add_assoc, &[first, second, rest_term]);
+            let regroup = rn_csymm(d, p, regrouped, nested, assoc);
+            steps.push((regrouped, regroup));
+
+            let pair = rn_cadd(d, p, first, second);
+            let rest_refl = rn_crefl(d, p, rest_term);
+            let collapsed = rn_cadd(d, p, zero, rest_term);
+            let collapse = rn_op_congr(
+                d,
+                p,
+                RnOp::Add,
+                pair,
+                zero,
+                rest_term,
+                rest_term,
+                pair_zero,
+                rest_refl,
+            );
+            steps.push((collapsed, collapse));
+            let trim = rn_zero_add(d, p, rest_term);
+            steps.push((rest_term, trim));
+        }
+        current = remainder;
+    }
+
+    let (_, proof) = rn_cchain(d, p, start, &steps);
+    (current, proof)
+}
+
+/// A proof of `CReal.Equiv (rn_render lhs) (rn_render rhs)`.
+///
+/// # Panics
+///
+/// Panics when the two normal forms differ — the identity is **not** a
+/// consequence of the commutative-ring laws, and the caller is wrong. The
+/// message names both normal forms rather than letting the kernel reject an
+/// enormous term with a type mismatch.
+pub(crate) fn rn_ring_proof(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    lhs: &RnExpr,
+    rhs: &RnExpr,
+) -> ExprId {
+    let left_source = rn_render(d, p, lhs);
+    let right_source = rn_render(d, p, rhs);
+
+    let (raw_left, left_proof) = rn_normalize(d, p, lhs);
+    let raw_left_term = rn_sum_term(d, p, &raw_left);
+    let (canon_left, left_canon_proof) = rn_canonicalize(d, p, &raw_left);
+    let canon_left_term = rn_sum_term(d, p, &canon_left);
+    let full_left = rn_ctrans(
+        d,
+        p,
+        left_source,
+        raw_left_term,
+        canon_left_term,
+        left_proof,
+        left_canon_proof,
+    );
+
+    let (raw_right, right_proof) = rn_normalize(d, p, rhs);
+    let raw_right_term = rn_sum_term(d, p, &raw_right);
+    let (canon_right, right_canon_proof) = rn_canonicalize(d, p, &raw_right);
+    let canon_right_term = rn_sum_term(d, p, &canon_right);
+    let full_right = rn_ctrans(
+        d,
+        p,
+        right_source,
+        raw_right_term,
+        canon_right_term,
+        right_proof,
+        right_canon_proof,
+    );
+
+    assert_eq!(
+        canon_left, canon_right,
+        "rn_ring_proof: the two sides have different normal forms, so the identity \
+         does not follow from the commutative-ring laws"
+    );
+    let back = rn_csymm(d, p, right_source, canon_right_term, full_right);
+    rn_ctrans(
+        d,
+        p,
+        left_source,
+        canon_left_term,
+        right_source,
+        full_left,
+        back,
+    )
+}
+
+// ============================================================================
+// Ceva's theorem: cevians AX, BY, CZ (X on BC, Y on CA, Z on AB, each an
+// explicit `lerp` affine combination -- see [`CPointPrelude::point_lerp`])
+// are concurrent when the ratio product `p*q*r ~ (1-p)*(1-q)*(1-r)` holds
+// (the classical `(BX/XC)*(CY/YA)*(AZ/ZB) = 1`, division-free).
+//
+// ## The construction, on paper
+//
+// Write `X := lerp B C p`, `Y := lerp C A q`, `Z := lerp A B r`. Barycentric
+// bookkeeping (worked with `sympy`, not by hand -- see
+// `scripts/`-adjacent session notes) gives the intersection of cevians `AX`
+// and `BY` as `lerp A X t ~ lerp B Y u` with
+//
+//     D := (1 - q) + p*q          -- purely a function of p,q; independent
+//                                     of the triangle A,B,C
+//     t := (1 - q) * D⁻¹,   u := p * D⁻¹
+//
+// as a **pure ring identity in the cevian-parameter denominator's inverse**:
+// writing `z` for that inverse,
+//
+//     lerp a (lerp b c p) t  -  lerp b (lerp c a q) u  ~  (D*z - 1) * (b - a)
+//
+// for EVERY scalar `a,b,c` (this is [`cevian_pair_ax_by_scalar_proof`]'s
+// content, discharged by [`rn_ring_proof`] -- the correction term vanishes
+// once `z` actually is `D⁻¹`, i.e. once `D*z ~ 1`). Continuing to the third
+// cevian `CZ` picks up a SECOND correction term that needs the Ceva ratio
+// condition itself:
+//
+//     lerp b (lerp c a q) u  -  lerp c (lerp a b r) v  ~
+//         (D*z - 1)*(c - b)  +  (z*(a - b)) * (p*q*r - (1-p)*(1-q)*(1-r))
+//
+// with `v := (1 - p - q + 2*p*q) * z`. Both identities were verified exactly
+// with `sympy` (polynomial division, then a zero-residual check) before
+// being encoded here; `D` and the cofactors are NOT independently
+// re-derived by the Lean kernel -- `rn_ring_proof` only checks that both
+// sides of each stated identity share a normal form, which is exactly the
+// claim the `sympy` check already confirmed.
+//
+// `D` depends only on `p, q` -- **not** on `A, B, C` -- so the
+// non-degeneracy hypothesis every theorem below carries (`PosBound (mul D
+// D) k`, the same witnessed-squared idiom [`CPointPrelude::non_collinear`]
+// uses) is a fact about the two cevian ratios, not about the triangle.
+// Nothing here needs [`CPointPrelude::non_collinear`] at all: two cevians
+// with parameters `p, q` fail to meet (as vectors, in ANY affine frame) iff
+// `D = 0`, regardless of whether `A, B, C` are themselves collinear.
+//
+// `z` is built from `D` exactly the way
+// [`CPointPrelude::circumcentre_unique`]'s proof consumes
+// [`CPointPrelude::non_collinear`]: never inverting `D` directly (its sign
+// is unknown), but squaring first (`PosBound (D*D) k` is provable whenever
+// `D ≠ 0`, whatever its sign) and using `D * (D*D)⁻¹ = D⁻¹` via one
+// `mul_assoc`/`mul_inv_cancel` step ([`cevian_dinv_cancel`]).
+//
+// ## Why a local ring-normalization port, not hand-composed chains
+//
+// The two identities above have up to 3 free scalars beyond `a,b,c`
+// (`p,q,r,z`) and, expanded, dozens of monomials -- an order of magnitude
+// past what this file's existing bespoke `*_scalar_proof` helpers
+// (`lagrange_identity_scalar_proof`, `stewart_ring_core_proof`, …) were
+// built for. `rn_ring_proof` (ported above from `complex/ring.rs`, see that
+// section's banner) is a decision procedure for exactly this: it panics
+// loudly if the two normal forms disagree, rather than risking a
+// kernel-rejected multi-hundred-node term from a hand mis-association.
+//
+// ## Matching shapes, not just values: why the `rn_*` trees mirror
+// `lerp_raw`/`CPoint.lerp` exactly
+//
+// Every scalar identity below is proved entirely in terms of `x P`/`y P`
+// coordinate projections and raw `CReal` operations; the outer theorems
+// state their conclusion using `CPoint.lerp`/`CPoint.Equiv` instead. The
+// kernel accepts this because `CReal.Equiv` and defeq are different
+// relations: what bridges the gap is that `x (CPoint.lerp P Q t)` DELTA/IOTA
+// *reduces* (definitionally, no proof needed) to exactly
+// `Scalar.lerp (x P) (x Q) t`, which is [`lerp_raw`]'s own shape. So every
+// `RnExpr` tree that stands for a `lerp` below is built with
+// [`rn_lerp`] -- the `RnExpr` mirror of [`lerp_raw`] -- never with a
+// re-associated or coefficient-expanded equivalent, and every `D`, cevian
+// coefficient, or Ceva-defect term that needs to appear identically in more
+// than one place (a hypothesis's type and a proof step's input, or the
+// same subterm inside two different `RnExpr` trees) is built by calling
+// the SAME small `rn_*` constructor function each time and letting the
+// kernel's hash-consed expression arena (`Kernel::intern_expr`, structural
+// interning -- confirmed by reading `crates/axeyum-lean-kernel/src/lib.rs`)
+// guarantee the two calls land on the identical `ExprId`, rather than by
+// hand-retyping the same nested `add`/`mul`/`neg` chain twice and hoping
+// the parenthesisation matches. `CReal.Equiv` (unlike `=`) is not something
+// the kernel's defeq checker reasons about on its own, so a structural
+// mismatch here would show up as a rejected proof, not a wrong theorem --
+// but a rejected proof on a term this size is exactly the "180s to fail"
+// trap the module doc for this whole file warns about, so the point is to
+// avoid ever hand-duplicating a subterm's shape in the first place.
+
+/// The `RnExpr` mirror of [`lerp_raw`]: `a + t*(b-a)`, in exactly the shape
+/// `x (CPoint.lerp P Q t)` reduces to (`add a (mul t (add b (neg a)))`).
+/// Every cevian point built as an `RnExpr` below goes through this, never a
+/// re-associated equivalent -- see the module note on why the shapes must
+/// match `lerp_raw` exactly, not just be ring-equal to it.
+fn rn_lerp(a: RnExpr, b: RnExpr, t: RnExpr) -> RnExpr {
+    RnExpr::add(a.clone(), RnExpr::mul(t, RnExpr::add(b, RnExpr::neg(a))))
+}
+
+/// The `RnExpr` for `x - y`.
+fn rn_diff(x: RnExpr, y: RnExpr) -> RnExpr {
+    RnExpr::add(x, RnExpr::neg(y))
+}
+
+/// The `RnExpr` for `1 - x`.
+fn rn_one_minus(x: RnExpr) -> RnExpr {
+    RnExpr::add(RnExpr::One, RnExpr::neg(x))
+}
+
+/// The `RnExpr` for the AX/BY cevian-pair denominator `D := (1-q) + p*q` --
+/// see the module note. A function of `p, q` alone, independent of the
+/// triangle.
+fn rn_cevian_d(pp: RnExpr, qq: RnExpr) -> RnExpr {
+    RnExpr::add(rn_one_minus(qq.clone()), RnExpr::mul(pp, qq))
+}
+
+/// The `RnExpr` for the `AX` cevian parameter `t := (1-q)*z`.
+fn rn_cevian_t(qq: RnExpr, z: RnExpr) -> RnExpr {
+    RnExpr::mul(rn_one_minus(qq), z)
+}
+
+/// The `RnExpr` for the `BY` cevian parameter `u := p*z`.
+fn rn_cevian_u(pp: RnExpr, z: RnExpr) -> RnExpr {
+    RnExpr::mul(pp, z)
+}
+
+/// The `RnExpr` for the `CZ` cevian parameter `v := (1 - p - q + 2*p*q)*z`.
+fn rn_cevian_v(pp: RnExpr, qq: RnExpr, z: RnExpr) -> RnExpr {
+    let pq = RnExpr::mul(pp.clone(), qq.clone());
+    let coeff = RnExpr::add(
+        RnExpr::add(rn_one_minus(pp), RnExpr::neg(qq)),
+        RnExpr::add(pq.clone(), pq),
+    );
+    RnExpr::mul(coeff, z)
+}
+
+/// The `RnExpr` for the Ceva ratio product `p*q*r`.
+fn rn_ceva_lhs(pp: RnExpr, qq: RnExpr, rr: RnExpr) -> RnExpr {
+    RnExpr::mul(pp, RnExpr::mul(qq, rr))
+}
+
+/// The `RnExpr` for `(1-p)*(1-q)*(1-r)`.
+fn rn_ceva_rhs(pp: RnExpr, qq: RnExpr, rr: RnExpr) -> RnExpr {
+    RnExpr::mul(
+        rn_one_minus(pp),
+        RnExpr::mul(rn_one_minus(qq), rn_one_minus(rr)),
+    )
+}
+
+/// The `RnExpr` for the Ceva ratio defect `p*q*r - (1-p)*(1-q)*(1-r)`, built
+/// from [`rn_ceva_lhs`]/[`rn_ceva_rhs`] (never re-typed) so that
+/// [`sub_eq_zero_of_equiv`] applied to a `hCeva : Equiv (rn_ceva_lhs …)
+/// (rn_ceva_rhs …)` hypothesis produces a proof about exactly the same term
+/// this renders to.
+fn rn_ceva_defect(pp: RnExpr, qq: RnExpr, rr: RnExpr) -> RnExpr {
+    RnExpr::add(
+        rn_ceva_lhs(pp.clone(), qq.clone(), rr.clone()),
+        RnExpr::neg(rn_ceva_rhs(pp, qq, rr)),
+    )
+}
+
+/// `D := (1-q) + p*q`, as a concrete term -- built via [`rn_cevian_d`]/
+/// [`rn_render`] (not a hand-typed `cadd`/`cmul` chain) so every other call
+/// site that also goes through `rn_cevian_d` on the same `pp, qq` lands on
+/// this exact `ExprId` (hash-consing; see the module note).
+fn cevian_big_d(d: &mut IntDev<'_>, p: CPointPrelude, pp: ExprId, qq: ExprId) -> ExprId {
+    let creal = p.creal;
+    let d_r = rn_cevian_d(RnExpr::Atom(pp), RnExpr::Atom(qq));
+    rn_render(d, creal, &d_r)
+}
+
+/// `z := D * CReal.inv (mul D D) k h` -- "`1/D`" without ever inspecting
+/// `D`'s sign, mirroring [`CPointPrelude::non_collinear`]'s own squaring
+/// trick (see the module note).
+fn cevian_dinv(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    big_d: ExprId,
+    k: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let dd = cmul(d, p, big_d, big_d);
+    let inv_dd = d.const_app(creal.inv, &[dd, k, h]);
+    cmul(d, p, big_d, inv_dd)
+}
+
+/// `Equiv (mul D z) one`, `z` as built by [`cevian_dinv`] at the same
+/// `big_d, k, h`: `D*z ~ (D*D)*inv_dd` (`mul_assoc`, reversed) `~ one`
+/// (`mul_inv_cancel`).
+fn cevian_dinv_cancel(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    big_d: ExprId,
+    k: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let dd = cmul(d, p, big_d, big_d);
+    let inv_dd = d.const_app(creal.inv, &[dd, k, h]);
+    let d_inv_dd = cmul(d, p, big_d, inv_dd);
+    let d_z = cmul(d, p, big_d, d_inv_dd);
+    let dd_invdd = cmul(d, p, dd, inv_dd);
+    let assoc = d.lemma(creal.mul_assoc, &[big_d, big_d, inv_dd]); // Equiv(dd_invdd, d_z)
+    let assoc_symm = symm(d, p, dd_invdd, d_z, assoc); // Equiv(d_z, dd_invdd)
+    let cancel_dd = d.lemma(creal.mul_inv_cancel, &[dd, k, h]); // Equiv(dd_invdd, one)
+    let one = d.kernel().const_(creal.one, vec![]);
+    chain(d, p, d_z, &[(dd_invdd, assoc_symm), (one, cancel_dd)])
+}
+
+/// `(correction, proof : Equiv correction CReal.zero)`, `correction := mul
+/// (add (mul D z) (neg one)) diff`, given `dz_cancel : Equiv (mul D z) one`.
+/// The single-term correction [`cevian_pair_ax_by_scalar_proof`] needs, and
+/// the first half of what [`cevian_correction2_zero`] needs.
+fn cevian_correction_zero(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    big_d: ExprId,
+    z: ExprId,
+    diff: ExprId,
+    dz_cancel: ExprId,
+) -> (ExprId, ExprId) {
+    let creal = p.creal;
+    let one = d.kernel().const_(creal.one, vec![]);
+    let d_z = cmul(d, p, big_d, z);
+    let neg_one = cneg(d, p, one);
+    let dz_minus_one = cadd(d, p, d_z, neg_one);
+    let dz_zero = sub_eq_zero_of_equiv(d, p, d_z, one, dz_cancel); // Equiv dz_minus_one zero
+    let zero = czero(d, p);
+    let refl_diff = refl(d, p, diff);
+    let correction = cmul(d, p, dz_minus_one, diff);
+    let zero_diff = cmul(d, p, zero, diff);
+    let congr = d.lemma(
+        creal.mul_congr,
+        &[dz_minus_one, zero, diff, diff, dz_zero, refl_diff],
+    );
+    let zm = zero_mul_proof(d, p, diff);
+    let proof = chain(d, p, correction, &[(zero_diff, congr), (zero, zm)]);
+    (correction, proof)
+}
+
+/// `(correction, proof : Equiv correction CReal.zero)`, `correction := add
+/// (mul (add (mul D z) (neg one)) diff1) (mul (mul z diff2) defect)`, given
+/// `dz_cancel : Equiv (mul D z) one` and `defect_zero : Equiv defect
+/// CReal.zero`. The BY/CZ cevian-pair correction term (see the module
+/// note): unlike [`cevian_correction_zero`] it needs BOTH the denominator
+/// witness and the Ceva ratio condition to vanish.
+fn cevian_correction2_zero(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    big_d: ExprId,
+    z: ExprId,
+    diff1: ExprId,
+    diff2: ExprId,
+    dz_cancel: ExprId,
+    defect: ExprId,
+    defect_zero: ExprId,
+) -> (ExprId, ExprId) {
+    let creal = p.creal;
+    let zero = czero(d, p);
+
+    let (term1, term1_zero) = cevian_correction_zero(d, p, big_d, z, diff1, dz_cancel);
+
+    let z_diff2 = cmul(d, p, z, diff2);
+    let term2 = cmul(d, p, z_diff2, defect);
+    let refl_zd = refl(d, p, z_diff2);
+    let congr2 = d.lemma(
+        creal.mul_congr,
+        &[z_diff2, z_diff2, defect, zero, refl_zd, defect_zero],
+    ); // Equiv term2 (mul z_diff2 zero)
+    let mz = d.lemma(creal.mul_zero, &[z_diff2]); // Equiv (mul z_diff2 zero) zero
+    let zero_zd = cmul(d, p, z_diff2, zero);
+    let term2_zero = chain(d, p, term2, &[(zero_zd, congr2), (zero, mz)]);
+
+    let correction2 = cadd(d, p, term1, term2);
+    let congr_sum = d.lemma(
+        creal.add_congr,
+        &[term1, zero, term2, zero, term1_zero, term2_zero],
+    ); // Equiv correction2 (add zero zero)
+    let zero_zero = cadd(d, p, zero, zero);
+    let az = d.lemma(creal.add_zero, &[zero]); // Equiv (add zero zero) zero
+    let proof = chain(d, p, correction2, &[(zero_zero, congr_sum), (zero, az)]);
+    (correction2, proof)
+}
+
+/// One coordinate of the `AX`/`BY` cevian pair. `a, b, c` stand for the
+/// shared coordinate (`x` or `y`) of `A, B, C`; `pp, qq` are the cevian
+/// ratios `p, q`; `z, big_d` are [`cevian_dinv`]/[`cevian_big_d`]'s outputs
+/// at these same `pp, qq` (and some `k, h`, not needed again here);
+/// `dz_cancel` is [`cevian_dinv_cancel`]'s proof at those same values --
+/// the caller is responsible for that consistency, not re-derived here (see
+/// the module note on why the shapes must match by construction).
+///
+/// Proves `Equiv (lerp a (lerp b c pp) t) (lerp b (lerp c a qq) u)`,
+/// `t := (1-qq)*z`, `u := pp*z`, via the pure ring identity
+/// `lerp a (lerp b c pp) t - lerp b (lerp c a qq) u ~ (D*z - 1)*(b - a)`
+/// (checked exactly with `sympy`, see the module note) plus
+/// [`cevian_correction_zero`].
+fn cevian_pair_ax_by_scalar_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    pp: ExprId,
+    qq: ExprId,
+    z: ExprId,
+    big_d: ExprId,
+    dz_cancel: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+
+    let a_r = RnExpr::Atom(a);
+    let b_r = RnExpr::Atom(b);
+    let c_r = RnExpr::Atom(c);
+    let pp_r = RnExpr::Atom(pp);
+    let qq_r = RnExpr::Atom(qq);
+    let z_r = RnExpr::Atom(z);
+
+    let t_r = rn_cevian_t(qq_r.clone(), z_r.clone());
+    let u_r = rn_cevian_u(pp_r.clone(), z_r.clone());
+
+    let x_r = rn_lerp(b_r.clone(), c_r.clone(), pp_r);
+    let y_r = rn_lerp(c_r.clone(), a_r.clone(), qq_r.clone());
+
+    let lhs_r = rn_lerp(a_r.clone(), x_r, t_r);
+    let rhs_main_r = rn_lerp(b_r.clone(), y_r, u_r);
+
+    let d_r = rn_cevian_d(RnExpr::Atom(pp), qq_r);
+    let dz_minus_one_r = RnExpr::add(RnExpr::mul(d_r, z_r), RnExpr::neg(RnExpr::One));
+    let ba_r = rn_diff(b_r.clone(), a_r.clone());
+    let correction_r = RnExpr::mul(dz_minus_one_r, ba_r);
+
+    let rhs_full_r = RnExpr::add(rhs_main_r.clone(), correction_r);
+
+    let ring_pf = rn_ring_proof(d, creal, &lhs_r, &rhs_full_r);
+
+    let lhs_actual = rn_render(d, creal, &lhs_r);
+    let rhs_main_actual = rn_render(d, creal, &rhs_main_r);
+    let rhs_full_actual = rn_render(d, creal, &rhs_full_r);
+
+    let neg_a = cneg(d, p, a);
+    let ba = cadd(d, p, b, neg_a);
+    let (correction_actual, correction_zero_pf) =
+        cevian_correction_zero(d, p, big_d, z, ba, dz_cancel);
+    let _ = correction_actual; // consistency guaranteed by construction, see module note
+
+    let zero = czero(d, p);
+    let refl_rhs_main = refl(d, p, rhs_main_actual);
+    let congr_rhs = d.lemma(
+        creal.add_congr,
+        &[
+            rhs_main_actual,
+            rhs_main_actual,
+            correction_actual,
+            zero,
+            refl_rhs_main,
+            correction_zero_pf,
+        ],
+    );
+    let rhs_plus_zero = cadd(d, p, rhs_main_actual, zero);
+    let az = d.lemma(creal.add_zero, &[rhs_main_actual]);
+
+    chain(
+        d,
+        p,
+        lhs_actual,
+        &[
+            (rhs_full_actual, ring_pf),
+            (rhs_plus_zero, congr_rhs),
+            (rhs_main_actual, az),
+        ],
+    )
+}
+
+/// **The `AX`/`BY` cevian-pair meeting point, exhibited explicitly.** See
+/// [`CPointPrelude::cevian_pair_meet`].
+fn declare_cevian_pair_meet(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    let pp_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(pp_fv);
+    let qq_fv = d.fresh_fvar();
+    let qq = d.kernel().fvar(qq_fv);
+    let k_fv = d.fresh_fvar();
+    let pk = d.kernel().fvar(k_fv);
+
+    let big_d = cevian_big_d(d, p, pp, qq);
+    let dd = cmul(d, p, big_d, big_d);
+    let hd_ty = d.const_app(creal.pos_bound, &[dd, pk]);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    let z = cevian_dinv(d, p, big_d, pk, hd);
+    let dz_cancel = cevian_dinv_cancel(d, p, big_d, pk, hd);
+
+    let t_expr = rn_render(d, creal, &rn_cevian_t(RnExpr::Atom(qq), RnExpr::Atom(z)));
+    let u_expr = rn_render(d, creal, &rn_cevian_u(RnExpr::Atom(pp), RnExpr::Atom(z)));
+
+    let big_x = d.const_app(p.point_lerp, &[pb, pc, pp]);
+    let big_y = d.const_app(p.point_lerp, &[pc, pa, qq]);
+    let lhs_point = d.const_app(p.point_lerp, &[pa, big_x, t_expr]);
+    let rhs_point = d.const_app(p.point_lerp, &[pb, big_y, u_expr]);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let ay = d.const_app(p.y, &[pa]);
+    let by = d.const_app(p.y, &[pb]);
+    let cy = d.const_app(p.y, &[pc]);
+
+    let proof_x = cevian_pair_ax_by_scalar_proof(d, p, ax, bx, cx, pp, qq, z, big_d, dz_cancel);
+    let proof_y = cevian_pair_ax_by_scalar_proof(d, p, ay, by, cy, pp, qq, z, big_d, dz_cancel);
+
+    let lhs_x = d.const_app(p.x, &[lhs_point]);
+    let rhs_x = d.const_app(p.x, &[rhs_point]);
+    let lhs_y = d.const_app(p.y, &[lhs_point]);
+    let rhs_y = d.const_app(p.y, &[rhs_point]);
+    let claim_x = equiv(d, p, lhs_x, rhs_x);
+    let claim_y = equiv(d, p, lhs_y, rhs_y);
+    let body = and_intro(d, p, claim_x, claim_y, proof_x, proof_y);
+    let concl = d.const_app(p.point_equiv, &[lhs_point, rhs_point]);
+
+    let ty_body = {
+        let inner = d.pi_fv(hd_fv, hd_ty, concl);
+        let w1 = d.pi_fv(k_fv, nat, inner);
+        let w2 = d.pi_fv(qq_fv, carrier, w1);
+        d.pi_fv(pp_fv, carrier, w2)
+    };
+    let ty = {
+        let w1 = d.pi_fv(c_fv, point, ty_body);
+        let w2 = d.pi_fv(b_fv, point, w1);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value_body = {
+        let inner = d.lam_fv(hd_fv, hd_ty, body);
+        let w1 = d.lam_fv(k_fv, nat, inner);
+        let w2 = d.lam_fv(qq_fv, carrier, w1);
+        d.lam_fv(pp_fv, carrier, w2)
+    };
+    let value = {
+        let w1 = d.lam_fv(c_fv, point, value_body);
+        let w2 = d.lam_fv(b_fv, point, w1);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cevian_pair_meet,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// One coordinate of the `BY`/`CZ` cevian pair, discharging the Ceva ratio
+/// condition. `a, b, c` are the shared coordinate of `A, B, C`; `pp, qq, rr`
+/// the three ratios; `z, big_d, dz_cancel` as in
+/// [`cevian_pair_ax_by_scalar_proof`] (same `pp, qq` and some `k, h`);
+/// `defect` is [`rn_ceva_defect`]'s rendered term at `pp, qq, rr` and
+/// `defect_zero` a proof that it is `Equiv`-zero (from the Ceva ratio
+/// hypothesis via [`sub_eq_zero_of_equiv`]) -- the caller builds both, so
+/// the same `ExprId` is used here as in the Ceva hypothesis's own type (see
+/// the module note on why that consistency matters and how it is
+/// guaranteed).
+///
+/// Proves `Equiv (lerp b (lerp c a qq) u) (lerp c (lerp a b rr) v)`,
+/// `u := pp*z`, `v := (1 - pp - qq + 2*pp*qq)*z`, via the pure ring identity
+/// `lerp b (lerp c a qq) u - lerp c (lerp a b rr) v ~
+///    (D*z - 1)*(c - b) + (z*(a - b)) * defect`
+/// (checked exactly with `sympy`, see the module note) plus
+/// [`cevian_correction2_zero`].
+fn cevian_pair_by_cz_scalar_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    pp: ExprId,
+    qq: ExprId,
+    rr: ExprId,
+    z: ExprId,
+    big_d: ExprId,
+    dz_cancel: ExprId,
+    defect: ExprId,
+    defect_zero: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+
+    let a_r = RnExpr::Atom(a);
+    let b_r = RnExpr::Atom(b);
+    let c_r = RnExpr::Atom(c);
+    let pp_r = RnExpr::Atom(pp);
+    let qq_r = RnExpr::Atom(qq);
+    let rr_r = RnExpr::Atom(rr);
+    let z_r = RnExpr::Atom(z);
+
+    let u_r = rn_cevian_u(pp_r.clone(), z_r.clone());
+    let v_r = rn_cevian_v(pp_r.clone(), qq_r.clone(), z_r.clone());
+
+    let y_r = rn_lerp(c_r.clone(), a_r.clone(), qq_r.clone());
+    let z_pt_r = rn_lerp(a_r.clone(), b_r.clone(), rr_r.clone());
+
+    let lhs_r = rn_lerp(b_r.clone(), y_r, u_r);
+    let rhs_main_r = rn_lerp(c_r.clone(), z_pt_r, v_r);
+
+    let d_r = rn_cevian_d(pp_r.clone(), qq_r.clone());
+    let dz_minus_one_r = RnExpr::add(RnExpr::mul(d_r, z_r.clone()), RnExpr::neg(RnExpr::One));
+    let cb_r = rn_diff(c_r.clone(), b_r.clone());
+    let term1_r = RnExpr::mul(dz_minus_one_r, cb_r);
+
+    let ab_r = rn_diff(a_r.clone(), b_r.clone());
+    let z_ab_r = RnExpr::mul(z_r, ab_r);
+    let defect_r = rn_ceva_defect(pp_r, qq_r, rr_r);
+    let term2_r = RnExpr::mul(z_ab_r, defect_r);
+
+    let correction_r = RnExpr::add(term1_r, term2_r);
+    let rhs_full_r = RnExpr::add(rhs_main_r.clone(), correction_r);
+
+    let ring_pf = rn_ring_proof(d, creal, &lhs_r, &rhs_full_r);
+
+    let lhs_actual = rn_render(d, creal, &lhs_r);
+    let rhs_main_actual = rn_render(d, creal, &rhs_main_r);
+    let rhs_full_actual = rn_render(d, creal, &rhs_full_r);
+
+    let neg_b1 = cneg(d, p, b);
+    let cb = cadd(d, p, c, neg_b1);
+    let neg_b2 = cneg(d, p, b);
+    let ab = cadd(d, p, a, neg_b2);
+    let (correction_actual, correction_zero_pf) =
+        cevian_correction2_zero(d, p, big_d, z, cb, ab, dz_cancel, defect, defect_zero);
+    let _ = correction_actual; // consistency guaranteed by construction, see module note
+
+    let zero = czero(d, p);
+    let refl_rhs_main = refl(d, p, rhs_main_actual);
+    let congr_rhs = d.lemma(
+        creal.add_congr,
+        &[
+            rhs_main_actual,
+            rhs_main_actual,
+            correction_actual,
+            zero,
+            refl_rhs_main,
+            correction_zero_pf,
+        ],
+    );
+    let rhs_plus_zero = cadd(d, p, rhs_main_actual, zero);
+    let az = d.lemma(creal.add_zero, &[rhs_main_actual]);
+
+    chain(
+        d,
+        p,
+        lhs_actual,
+        &[
+            (rhs_full_actual, ring_pf),
+            (rhs_plus_zero, congr_rhs),
+            (rhs_main_actual, az),
+        ],
+    )
+}
+
+/// **Ceva's theorem, exhibiting direction.** See
+/// [`CPointPrelude::ceva_concurrent_of_ratio_product`].
+fn declare_ceva_concurrent_of_ratio_product(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    let pp_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(pp_fv);
+    let qq_fv = d.fresh_fvar();
+    let qq = d.kernel().fvar(qq_fv);
+    let rr_fv = d.fresh_fvar();
+    let rr = d.kernel().fvar(rr_fv);
+    let k_fv = d.fresh_fvar();
+    let pk = d.kernel().fvar(k_fv);
+
+    let big_d = cevian_big_d(d, p, pp, qq);
+    let dd = cmul(d, p, big_d, big_d);
+    let hd_ty = d.const_app(creal.pos_bound, &[dd, pk]);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    let ceva_lhs_expr = rn_render(
+        d,
+        creal,
+        &rn_ceva_lhs(RnExpr::Atom(pp), RnExpr::Atom(qq), RnExpr::Atom(rr)),
+    );
+    let ceva_rhs_expr = rn_render(
+        d,
+        creal,
+        &rn_ceva_rhs(RnExpr::Atom(pp), RnExpr::Atom(qq), RnExpr::Atom(rr)),
+    );
+    let hceva_ty = equiv(d, p, ceva_lhs_expr, ceva_rhs_expr);
+    let hceva_fv = d.fresh_fvar();
+    let hceva = d.kernel().fvar(hceva_fv);
+
+    let z = cevian_dinv(d, p, big_d, pk, hd);
+    let dz_cancel = cevian_dinv_cancel(d, p, big_d, pk, hd);
+
+    let t_expr = rn_render(d, creal, &rn_cevian_t(RnExpr::Atom(qq), RnExpr::Atom(z)));
+    let u_expr = rn_render(d, creal, &rn_cevian_u(RnExpr::Atom(pp), RnExpr::Atom(z)));
+    let v_expr = rn_render(
+        d,
+        creal,
+        &rn_cevian_v(RnExpr::Atom(pp), RnExpr::Atom(qq), RnExpr::Atom(z)),
+    );
+
+    let big_x = d.const_app(p.point_lerp, &[pb, pc, pp]);
+    let big_y = d.const_app(p.point_lerp, &[pc, pa, qq]);
+    let big_z = d.const_app(p.point_lerp, &[pa, pb, rr]);
+    let ax_point = d.const_app(p.point_lerp, &[pa, big_x, t_expr]);
+    let by_point = d.const_app(p.point_lerp, &[pb, big_y, u_expr]);
+    let cz_point = d.const_app(p.point_lerp, &[pc, big_z, v_expr]);
+
+    let defect = rn_render(
+        d,
+        creal,
+        &rn_ceva_defect(RnExpr::Atom(pp), RnExpr::Atom(qq), RnExpr::Atom(rr)),
+    );
+    let defect_zero = sub_eq_zero_of_equiv(d, p, ceva_lhs_expr, ceva_rhs_expr, hceva);
+
+    // -- first conjunct: AX meets BY --------------------------------------
+    let ax = d.const_app(p.x, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let ay = d.const_app(p.y, &[pa]);
+    let by_ = d.const_app(p.y, &[pb]);
+    let cy = d.const_app(p.y, &[pc]);
+
+    let pf1_x = cevian_pair_ax_by_scalar_proof(d, p, ax, bx, cx, pp, qq, z, big_d, dz_cancel);
+    let pf1_y = cevian_pair_ax_by_scalar_proof(d, p, ay, by_, cy, pp, qq, z, big_d, dz_cancel);
+
+    let ax_x = d.const_app(p.x, &[ax_point]);
+    let by_x = d.const_app(p.x, &[by_point]);
+    let ax_y = d.const_app(p.y, &[ax_point]);
+    let by_y = d.const_app(p.y, &[by_point]);
+    let claim1_x = equiv(d, p, ax_x, by_x);
+    let claim1_y = equiv(d, p, ax_y, by_y);
+    let body1 = and_intro(d, p, claim1_x, claim1_y, pf1_x, pf1_y);
+    let concl1 = d.const_app(p.point_equiv, &[ax_point, by_point]);
+
+    // -- second conjunct: BY meets CZ, via the Ceva ratio condition -------
+    let pf2_x = cevian_pair_by_cz_scalar_proof(
+        d,
+        p,
+        ax,
+        bx,
+        cx,
+        pp,
+        qq,
+        rr,
+        z,
+        big_d,
+        dz_cancel,
+        defect,
+        defect_zero,
+    );
+    let pf2_y = cevian_pair_by_cz_scalar_proof(
+        d,
+        p,
+        ay,
+        by_,
+        cy,
+        pp,
+        qq,
+        rr,
+        z,
+        big_d,
+        dz_cancel,
+        defect,
+        defect_zero,
+    );
+
+    let by_x2 = d.const_app(p.x, &[by_point]);
+    let cz_x = d.const_app(p.x, &[cz_point]);
+    let by_y2 = d.const_app(p.y, &[by_point]);
+    let cz_y = d.const_app(p.y, &[cz_point]);
+    let claim2_x = equiv(d, p, by_x2, cz_x);
+    let claim2_y = equiv(d, p, by_y2, cz_y);
+    let body2 = and_intro(d, p, claim2_x, claim2_y, pf2_x, pf2_y);
+    let concl2 = d.const_app(p.point_equiv, &[by_point, cz_point]);
+
+    let body = and_intro(d, p, concl1, concl2, body1, body2);
+    let concl = {
+        let and_ = p.creal.rat.int.logic.and;
+        d.const_app(and_, &[concl1, concl2])
+    };
+
+    let ty_body = {
+        let inner = d.pi_fv(hceva_fv, hceva_ty, concl);
+        let w1 = d.pi_fv(hd_fv, hd_ty, inner);
+        let w2 = d.pi_fv(k_fv, nat, w1);
+        let w3 = d.pi_fv(rr_fv, carrier, w2);
+        let w4 = d.pi_fv(qq_fv, carrier, w3);
+        d.pi_fv(pp_fv, carrier, w4)
+    };
+    let ty = {
+        let w1 = d.pi_fv(c_fv, point, ty_body);
+        let w2 = d.pi_fv(b_fv, point, w1);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value_body = {
+        let inner = d.lam_fv(hceva_fv, hceva_ty, body);
+        let w1 = d.lam_fv(hd_fv, hd_ty, inner);
+        let w2 = d.lam_fv(k_fv, nat, w1);
+        let w3 = d.lam_fv(rr_fv, carrier, w2);
+        let w4 = d.lam_fv(qq_fv, carrier, w3);
+        d.lam_fv(pp_fv, carrier, w4)
+    };
+    let value = {
+        let w1 = d.lam_fv(c_fv, point, value_body);
+        let w2 = d.lam_fv(b_fv, point, w1);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.ceva_concurrent_of_ratio_product,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// Menelaus' theorem and the converse of Ceva.
+//
+// Menelaus: same `X, Y, Z` as Ceva (`X := lerp B C p`, `Y := lerp C A q`,
+// `Z := lerp A B r`), but the claim is that `X, Y, Z` are COLLINEAR (a
+// transversal line cutting the three sides, possibly extended) rather than
+// that the three cevians `AX, BY, CZ` are concurrent. The division-free
+// ratio-product condition picks up a sign flip relative to Ceva: checked
+// exactly with `sympy` (`ax,ay,bx,by,cx,cy,p,q,r` symbolic, `cross X Y Z`
+// expanded and polynomial-divided by `cross A B C`), the quotient is EXACTLY
+// `p*q*r + (1-p)*(1-q)*(1-r)` with zero remainder:
+//
+//     cross X Y Z  ~  (p*q*r + (1-p)*(1-q)*(1-r)) * cross A B C
+//
+// an unconditional polynomial identity (`A = B = C` included, matching the
+// Ceva lane's finding that `D` needs no `NonCollinear` hypothesis). So
+// Menelaus' division-free form is the SUM `p*q*r + (1-p)*(1-q)*(1-r) ~ 0`,
+// i.e. `p*q*r ~ -(1-p)*(1-q)*(1-r)` -- the sign-flipped analogue of Ceva's
+// `p*q*r ~ (1-p)*(1-q)*(1-r)`, exactly as sketched. Ceva's own defect
+// `p*q*r - (1-p)*(1-q)*(1-r)` does NOT appear here at all (residual nonzero
+// for both signs of that quotient), so the two theorems are genuinely
+// different polynomial identities, not the same one restated.
+//
+// The Ceva converse is a different kind of statement: given that the
+// canonical `BY`/`CZ` meeting point (the same `u, v` the exhibiting
+// direction uses) actually coincides, recover the ratio product. Route in
+// the section below the Menelaus declaration.
+
+/// The `RnExpr` for `cross` applied to six raw coordinate values, mirroring
+/// [`cross_raw`]'s construction call-for-call (`u := qx-px, v := ry-qy, w :=
+/// qy-py, z := rx-qx`, value `u*v - w*z`) so `rn_render` of this lands on
+/// exactly the `ExprId` [`cross_raw`] builds from the same coordinate atoms
+/// (interning; see the module note on why the `rn_*` trees must mirror the
+/// actual-term builders exactly, not just be ring-equal to them).
+fn rn_cross(px: RnExpr, py: RnExpr, qx: RnExpr, qy: RnExpr, rx: RnExpr, ry: RnExpr) -> RnExpr {
+    let u = rn_diff(qx.clone(), px);
+    let v = rn_diff(ry, qy.clone());
+    let w = rn_diff(qy, py);
+    let z = rn_diff(rx, qx);
+    let uv = RnExpr::mul(u, v);
+    let wz = RnExpr::mul(w, z);
+    RnExpr::add(uv, RnExpr::neg(wz))
+}
+
+/// The `RnExpr` for the Menelaus ratio defect `p*q*r + (1-p)*(1-q)*(1-r)`
+/// (the SUM, not [`rn_ceva_defect`]'s difference -- see the module note on
+/// the sign flip). Built from [`rn_ceva_lhs`]/[`rn_ceva_rhs`] so a term
+/// mirroring this shape lands on the same `ExprId`s those produce.
+fn rn_menelaus_defect(pp: RnExpr, qq: RnExpr, rr: RnExpr) -> RnExpr {
+    RnExpr::add(
+        rn_ceva_lhs(pp.clone(), qq.clone(), rr.clone()),
+        rn_ceva_rhs(pp, qq, rr),
+    )
+}
+
+/// **Menelaus' theorem, collinear-of-ratio-product direction.** See
+/// [`CPointPrelude::menelaus_collinear_of_ratio_product`].
+fn declare_menelaus_collinear_of_ratio_product(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let carrier = creal_ty(d, p);
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    let pp_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(pp_fv);
+    let qq_fv = d.fresh_fvar();
+    let qq = d.kernel().fvar(qq_fv);
+    let rr_fv = d.fresh_fvar();
+    let rr = d.kernel().fvar(rr_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+
+    let ax_r = RnExpr::Atom(ax);
+    let ay_r = RnExpr::Atom(ay);
+    let bx_r = RnExpr::Atom(bx);
+    let by_r = RnExpr::Atom(by);
+    let cx_r = RnExpr::Atom(cx);
+    let cy_r = RnExpr::Atom(cy);
+    let pp_r = RnExpr::Atom(pp);
+    let qq_r = RnExpr::Atom(qq);
+    let rr_r = RnExpr::Atom(rr);
+
+    // -- the ratio-product hypothesis: `p*q*r ~ neg ((1-p)*(1-q)*(1-r))` ---
+    let ceva_lhs_expr = rn_render(
+        d,
+        creal,
+        &rn_ceva_lhs(pp_r.clone(), qq_r.clone(), rr_r.clone()),
+    );
+    let ceva_rhs_expr = rn_render(
+        d,
+        creal,
+        &rn_ceva_rhs(pp_r.clone(), qq_r.clone(), rr_r.clone()),
+    );
+    let neg_ceva_rhs_expr = cneg(d, p, ceva_rhs_expr);
+    let hmen_ty = equiv(d, p, ceva_lhs_expr, neg_ceva_rhs_expr);
+    let hmen_fv = d.fresh_fvar();
+    let hmen = d.kernel().fvar(hmen_fv);
+
+    // `defect_actual := add ceva_lhs_expr (neg neg_ceva_rhs_expr)`, `~ zero`
+    // from `hmen` via `sub_eq_zero_of_equiv` -- ring-equal to (but not
+    // syntactically) `rn_menelaus_defect`'s render, since it carries the
+    // extra double negation `sub_eq_zero_of_equiv` always produces.
+    let raw_defect_zero = sub_eq_zero_of_equiv(d, p, ceva_lhs_expr, neg_ceva_rhs_expr, hmen);
+    let raw_defect_r = RnExpr::add(
+        rn_ceva_lhs(pp_r.clone(), qq_r.clone(), rr_r.clone()),
+        RnExpr::neg(RnExpr::neg(rn_ceva_rhs(
+            pp_r.clone(),
+            qq_r.clone(),
+            rr_r.clone(),
+        ))),
+    );
+    let clean_defect_r = rn_menelaus_defect(pp_r.clone(), qq_r.clone(), rr_r.clone());
+
+    // -- the point coordinates of X, Y, Z -----------------------------------
+    let xx_r = rn_lerp(bx_r.clone(), cx_r.clone(), pp_r.clone());
+    let xy_r = rn_lerp(by_r.clone(), cy_r.clone(), pp_r.clone());
+    let yx_r = rn_lerp(cx_r.clone(), ax_r.clone(), qq_r.clone());
+    let yy_r = rn_lerp(cy_r.clone(), ay_r.clone(), qq_r.clone());
+    let zx_r = rn_lerp(ax_r.clone(), bx_r.clone(), rr_r.clone());
+    let zy_r = rn_lerp(ay_r.clone(), by_r.clone(), rr_r.clone());
+
+    let cross_xyz_r = rn_cross(xx_r, xy_r, yx_r, yy_r, zx_r, zy_r);
+    let cross_abc_r = rn_cross(ax_r, ay_r, bx_r, by_r, cx_r, cy_r);
+
+    // -- the pure ring identity: `cross X Y Z ~ raw_defect * cross A B C` --
+    let target_r = RnExpr::mul(raw_defect_r, cross_abc_r.clone());
+    let ring_pf = rn_ring_proof(d, creal, &cross_xyz_r, &target_r);
+
+    let cross_xyz_actual = rn_render(d, creal, &cross_xyz_r);
+    let cross_abc_actual = rn_render(d, creal, &cross_abc_r);
+    // Built directly from `ceva_lhs_expr`/`neg_ceva_rhs_expr` (not re-derived
+    // via `rn_render`) so it is *by construction* the same `ExprId`
+    // `sub_eq_zero_of_equiv` used internally (`cadd u (cneg v)`), matching
+    // `raw_defect_zero`'s type exactly.
+    let neg_neg_ceva_rhs_expr = cneg(d, p, neg_ceva_rhs_expr);
+    let raw_defect_actual = cadd(d, p, ceva_lhs_expr, neg_neg_ceva_rhs_expr);
+    let _ = clean_defect_r; // documents the "clean" shape; not separately rendered
+
+    let target_actual = cmul(d, p, raw_defect_actual, cross_abc_actual);
+    let zero = czero(d, p);
+    let refl_cross_abc = refl(d, p, cross_abc_actual);
+    let congr = d.lemma(
+        creal.mul_congr,
+        &[
+            raw_defect_actual,
+            zero,
+            cross_abc_actual,
+            cross_abc_actual,
+            raw_defect_zero,
+            refl_cross_abc,
+        ],
+    );
+    let zero_cross_abc = cmul(d, p, zero, cross_abc_actual);
+    let zm = zero_mul_proof(d, p, cross_abc_actual);
+
+    let proof = chain(
+        d,
+        p,
+        cross_xyz_actual,
+        &[
+            (target_actual, ring_pf),
+            (zero_cross_abc, congr),
+            (zero, zm),
+        ],
+    );
+
+    // -- the theorem's stated conclusion, at the Point level ---------------
+    let big_x = d.const_app(p.point_lerp, &[pb, pc, pp]);
+    let big_y = d.const_app(p.point_lerp, &[pc, pa, qq]);
+    let big_z = d.const_app(p.point_lerp, &[pa, pb, rr]);
+    let cross_xyz_stated = d.const_app(p.cross, &[big_x, big_y, big_z]);
+    let concl = equiv(d, p, cross_xyz_stated, zero);
+
+    let ty_body = {
+        let inner = d.pi_fv(hmen_fv, hmen_ty, concl);
+        let w1 = d.pi_fv(rr_fv, carrier, inner);
+        let w2 = d.pi_fv(qq_fv, carrier, w1);
+        d.pi_fv(pp_fv, carrier, w2)
+    };
+    let ty = {
+        let w1 = d.pi_fv(c_fv, point, ty_body);
+        let w2 = d.pi_fv(b_fv, point, w1);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value_body = {
+        let inner = d.lam_fv(hmen_fv, hmen_ty, proof);
+        let w1 = d.lam_fv(rr_fv, carrier, inner);
+        let w2 = d.lam_fv(qq_fv, carrier, w1);
+        d.lam_fv(pp_fv, carrier, w2)
+    };
+    let value = {
+        let w1 = d.lam_fv(c_fv, point, value_body);
+        let w2 = d.lam_fv(b_fv, point, w1);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.menelaus_collinear_of_ratio_product,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// The converse of Ceva: concurrency implies the ratio product.
+//
+// The exhibiting direction (`ceva_concurrent_of_ratio_product`) never proves
+// the `BY`/`CZ` meeting point is UNIQUE, so the converse cannot honestly
+// hypothesize "some point on all three cevians" without first building that
+// uniqueness argument (a separate, harder result). Instead this hypothesizes
+// concurrency at the SAME canonical parametrisation the exhibiting direction
+// uses (`u := p*z, v := (1-p-q+2pq)*z`, `z` from `D ≠ 0`): `CPoint.Equiv
+// (lerp B Y u) (lerp C Z v)`. Given `D ≠ 0`, `AX ~ BY` is already forced
+// (`cevian_pair_meet`, no Ceva hypothesis needed), so this hypothesis is
+// exactly "the point where AX, BY already necessarily meet also lies on
+// CZ" -- concurrency, for this configuration.
+//
+// `cevian_pair_by_cz_scalar_proof`'s ring identity (`lerp b Y u - lerp c Z v
+// ~ (D*z-1)*(c-b) + (z*(a-b))*defect`) runs in REVERSE: the hypothesis
+// forces the left side to `~ 0`; the first summand is `~ 0` unconditionally
+// (from `D*z ~ 1`, [`cevian_correction_zero`]); so the second summand is `~
+// 0`. Multiplying through by `D` cancels the shared `z` factor via `D*z ~
+// 1` -- no need for `z` itself to be invertible -- leaving `(a-b)*defect ~
+// 0` at BOTH coordinates (`a,b` being `A,B`'s `x` and `y` respectively).
+// Squaring and summing those two turns them into `distSq A B * defect² ~
+// 0`; `distSq A B` invertible (the extra non-degeneracy, `A ≠ B`) cancels it
+// to `defect² ~ 0`, and `eq_zero_of_mul_self_zero` finishes at `defect ~ 0`,
+// i.e. the Ceva ratio equation.
+
+/// The pure ring identity behind [`cevian_pair_by_cz_scalar_proof`], split
+/// into its pieces with NO hypothesis consumed (unlike that function, which
+/// needs `dz_cancel`/`defect_zero` to simplify further) -- exactly what the
+/// converse needs to run the identity in reverse. Returns `(lhs_actual,
+/// rhs_main_actual, term1_actual, term2_actual, rhs_full_actual, ab_actual)`
+/// where `ring_pf : Equiv lhs_actual rhs_full_actual` and `rhs_full_actual`
+/// is BY CONSTRUCTION `add rhs_main_actual (add term1_actual term2_actual)`.
+#[allow(clippy::too_many_arguments)]
+fn cevian_by_cz_ring_split(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    pp: ExprId,
+    qq: ExprId,
+    rr: ExprId,
+    z: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId, ExprId, ExprId, ExprId) {
+    let creal = p.creal;
+
+    let a_r = RnExpr::Atom(a);
+    let b_r = RnExpr::Atom(b);
+    let c_r = RnExpr::Atom(c);
+    let pp_r = RnExpr::Atom(pp);
+    let qq_r = RnExpr::Atom(qq);
+    let rr_r = RnExpr::Atom(rr);
+    let z_r = RnExpr::Atom(z);
+
+    let u_r = rn_cevian_u(pp_r.clone(), z_r.clone());
+    let v_r = rn_cevian_v(pp_r.clone(), qq_r.clone(), z_r.clone());
+
+    let y_r = rn_lerp(c_r.clone(), a_r.clone(), qq_r.clone());
+    let z_pt_r = rn_lerp(a_r.clone(), b_r.clone(), rr_r.clone());
+
+    let lhs_r = rn_lerp(b_r.clone(), y_r, u_r);
+    let rhs_main_r = rn_lerp(c_r.clone(), z_pt_r, v_r);
+
+    let d_r = rn_cevian_d(pp_r.clone(), qq_r.clone());
+    let dz_minus_one_r = RnExpr::add(RnExpr::mul(d_r, z_r.clone()), RnExpr::neg(RnExpr::One));
+    let cb_r = rn_diff(c_r.clone(), b_r.clone());
+    let term1_r = RnExpr::mul(dz_minus_one_r, cb_r);
+
+    let ab_r = rn_diff(a_r.clone(), b_r.clone());
+    let z_ab_r = RnExpr::mul(z_r, ab_r.clone());
+    let defect_r = rn_ceva_defect(pp_r, qq_r, rr_r);
+    let term2_r = RnExpr::mul(z_ab_r, defect_r);
+
+    let correction_r = RnExpr::add(term1_r.clone(), term2_r.clone());
+    let rhs_full_r = RnExpr::add(rhs_main_r.clone(), correction_r);
+
+    let ring_pf = rn_ring_proof(d, creal, &lhs_r, &rhs_full_r);
+
+    let lhs_actual = rn_render(d, creal, &lhs_r);
+    let rhs_main_actual = rn_render(d, creal, &rhs_main_r);
+    let term1_actual = rn_render(d, creal, &term1_r);
+    let term2_actual = rn_render(d, creal, &term2_r);
+    let rhs_full_actual = rn_render(d, creal, &rhs_full_r);
+    let ab_actual = rn_render(d, creal, &ab_r);
+
+    (
+        lhs_actual,
+        rhs_main_actual,
+        term1_actual,
+        term2_actual,
+        rhs_full_actual,
+        ab_actual,
+        ring_pf,
+    )
+}
+
+/// From the concurrency hypothesis at ONE coordinate (`hmeet_coord : Equiv
+/// lhs_actual rhs_main_actual`, matching [`cevian_by_cz_ring_split`]'s
+/// output at this `a, b, c`) and `dz_cancel : Equiv (mul big_d z) one`,
+/// derive `Equiv (mul ab_actual defect_actual) zero` -- see the module note
+/// above for the two-stage cancellation (`term1` unconditionally, then `z`
+/// via `D*z~1`).
+#[allow(clippy::too_many_arguments)]
+fn ceva_converse_coord(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    pp: ExprId,
+    qq: ExprId,
+    rr: ExprId,
+    z: ExprId,
+    big_d: ExprId,
+    dz_cancel: ExprId,
+    hmeet_coord: ExprId,
+) -> (ExprId, ExprId) {
+    let creal = p.creal;
+    let (
+        lhs_actual,
+        rhs_main_actual,
+        term1_actual,
+        term2_actual,
+        rhs_full_actual,
+        ab_actual,
+        ring_pf,
+    ) = cevian_by_cz_ring_split(d, p, a, b, c, pp, qq, rr, z);
+
+    // `cb_actual` matches [`cevian_correction_zero`]'s own `diff` shape at
+    // this `a, b, c` (see the doc there): mirror it here rather than thread
+    // it through the ring-split return, since only [`cevian_correction_zero`]
+    // needs the standalone value.
+    let neg_b = cneg(d, p, b);
+    let cb_actual = cadd(d, p, c, neg_b);
+    let (_term1_check, term1_zero) = cevian_correction_zero(d, p, big_d, z, cb_actual, dz_cancel);
+
+    // -- `add term1_actual term2_actual ~ zero`, from `hmeet_coord` + `ring_pf` --
+    let symm_hmeet = symm(d, p, lhs_actual, rhs_main_actual, hmeet_coord);
+    let rhs_main_to_full = chain(
+        d,
+        p,
+        rhs_main_actual,
+        &[(lhs_actual, symm_hmeet), (rhs_full_actual, ring_pf)],
+    );
+    // rhs_main_to_full : Equiv rhs_main_actual rhs_full_actual
+    let symm_main_to_full = symm(d, p, rhs_main_actual, rhs_full_actual, rhs_main_to_full);
+    // symm_main_to_full : Equiv rhs_full_actual rhs_main_actual
+    let raw_zero = sub_eq_zero_of_equiv(d, p, rhs_full_actual, rhs_main_actual, symm_main_to_full);
+    // raw_zero : Equiv (add rhs_full_actual (neg rhs_main_actual)) zero
+    let neg_rhs_main_actual = cneg(d, p, rhs_main_actual);
+    let raw_actual = cadd(d, p, rhs_full_actual, neg_rhs_main_actual);
+
+    let zero = czero(d, p);
+    let sum_terms = cadd(d, p, term1_actual, term2_actual);
+    // a tiny 2-atom ring identity: `(rhs_main_actual + sum_terms) -
+    // rhs_main_actual ~ sum_terms`, `rhs_main_actual`/`sum_terms` opaque.
+    let raw_r = RnExpr::add(
+        RnExpr::add(RnExpr::Atom(rhs_main_actual), RnExpr::Atom(sum_terms)),
+        RnExpr::neg(RnExpr::Atom(rhs_main_actual)),
+    );
+    let target_r = RnExpr::Atom(sum_terms);
+    let cancel_link = rn_ring_proof(d, creal, &raw_r, &target_r);
+    // cancel_link : Equiv raw_actual sum_terms
+    let symm_cancel_link = symm(d, p, raw_actual, sum_terms, cancel_link);
+    let sum_terms_zero = chain(
+        d,
+        p,
+        sum_terms,
+        &[(raw_actual, symm_cancel_link), (zero, raw_zero)],
+    );
+    // sum_terms_zero : Equiv sum_terms zero
+
+    // -- subtract `term1_actual ~ zero` to get `term2_actual ~ zero` -------
+    let symm_term1 = symm(d, p, term1_actual, zero, term1_zero);
+    let refl_term2 = refl(d, p, term2_actual);
+    let congr_term2 = d.lemma(
+        creal.add_congr,
+        &[
+            zero,
+            term1_actual,
+            term2_actual,
+            term2_actual,
+            symm_term1,
+            refl_term2,
+        ],
+    );
+    // congr_term2 : Equiv (add zero term2_actual) sum_terms
+    let zero_term2 = cadd(d, p, zero, term2_actual);
+    let za = zero_add_proof(d, p, term2_actual); // Equiv zero_term2 term2_actual
+    let symm_za = symm(d, p, zero_term2, term2_actual, za);
+    let term2_zero = chain(
+        d,
+        p,
+        term2_actual,
+        &[
+            (zero_term2, symm_za),
+            (sum_terms, congr_term2),
+            (zero, sum_terms_zero),
+        ],
+    );
+    // term2_zero : Equiv term2_actual zero, term2_actual = mul (mul z ab_actual) defect_actual
+
+    // -- cancel the shared `z` factor via `D*z ~ 1` -------------------------
+    let defect_actual = rn_render(
+        d,
+        creal,
+        &rn_ceva_defect(RnExpr::Atom(pp), RnExpr::Atom(qq), RnExpr::Atom(rr)),
+    );
+    let one = d.kernel().const_(creal.one, vec![]);
+
+    let z_ab = cmul(d, p, z, ab_actual);
+    let z_ab_defect = cmul(d, p, z_ab, defect_actual); // = term2_actual, by construction
+    let d_term2 = cmul(d, p, big_d, z_ab_defect);
+    let refl_bigd = refl(d, p, big_d);
+    let congr2 = d.lemma(
+        creal.mul_congr,
+        &[big_d, big_d, z_ab_defect, zero, refl_bigd, term2_zero],
+    );
+    // congr2 : Equiv d_term2 (mul big_d zero)
+    let d_zero = cmul(d, p, big_d, zero);
+    let step3 = d.lemma(creal.mul_zero, &[big_d]); // Equiv d_zero zero
+
+    let bd_r = RnExpr::Atom(big_d);
+    let z_r = RnExpr::Atom(z);
+    let ab_r = RnExpr::Atom(ab_actual);
+    let defect_r = RnExpr::Atom(defect_actual);
+    let lhs2_r = RnExpr::mul(
+        bd_r.clone(),
+        RnExpr::mul(RnExpr::mul(z_r.clone(), ab_r.clone()), defect_r.clone()),
+    );
+    let rhs2_r = RnExpr::mul(RnExpr::mul(bd_r, z_r), RnExpr::mul(ab_r, defect_r));
+    let link = rn_ring_proof(d, creal, &lhs2_r, &rhs2_r);
+    // link : Equiv d_term2 bd_z_ab_defect
+
+    let bd_z = cmul(d, p, big_d, z);
+    let ab_defect = cmul(d, p, ab_actual, defect_actual);
+    let bd_z_ab_defect = cmul(d, p, bd_z, ab_defect);
+
+    let refl_ab_defect = refl(d, p, ab_defect);
+    let congr1 = d.lemma(
+        creal.mul_congr,
+        &[bd_z, one, ab_defect, ab_defect, dz_cancel, refl_ab_defect],
+    );
+    // congr1 : Equiv bd_z_ab_defect (mul one ab_defect)
+    let one_ab_defect = cmul(d, p, one, ab_defect);
+    let step2 = one_mul_proof(d, p, ab_defect); // Equiv one_ab_defect ab_defect
+
+    let symm_step2 = symm(d, p, one_ab_defect, ab_defect, step2);
+    let symm_congr1 = symm(d, p, bd_z_ab_defect, one_ab_defect, congr1);
+    let symm_link = symm(d, p, d_term2, bd_z_ab_defect, link);
+
+    let ab_defect_zero = chain(
+        d,
+        p,
+        ab_defect,
+        &[
+            (one_ab_defect, symm_step2),
+            (bd_z_ab_defect, symm_congr1),
+            (d_term2, symm_link),
+            (d_zero, congr2),
+            (zero, step3),
+        ],
+    );
+    // ab_defect_zero : Equiv ab_defect zero, ab_defect = mul ab_actual defect_actual
+
+    (ab_defect_zero, defect_actual)
+}
+
+/// From the two per-coordinate facts `Equiv (mul dx defect) zero` / `Equiv
+/// (mul dy defect) zero` (`dx := x A - x B`, `dy := y A - y B`) and `hab :
+/// PosBound (distSq A B) k2`, derive `Equiv defect zero` -- squaring and
+/// summing the two turns them into `distSq A B * defect² ~ 0`; `distSq A B`
+/// invertible cancels it to `defect² ~ 0`, and `eq_zero_of_mul_self_zero`
+/// finishes. See the module note above [`cevian_by_cz_ring_split`].
+#[allow(clippy::too_many_arguments)]
+fn ceva_converse_combine(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    ax: ExprId,
+    ay: ExprId,
+    bx: ExprId,
+    by_: ExprId,
+    defect_actual: ExprId,
+    k2: ExprId,
+    hab: ExprId,
+    eqx_zero: ExprId,
+    eqy_zero: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let zero = czero(d, p);
+    let one = d.kernel().const_(creal.one, vec![]);
+
+    let neg_bx = cneg(d, p, bx);
+    let dx = cadd(d, p, ax, neg_bx);
+    let neg_by = cneg(d, p, by_);
+    let dy = cadd(d, p, ay, neg_by);
+
+    let a1 = cmul(d, p, dx, defect_actual);
+    let a2 = cmul(d, p, dy, defect_actual);
+
+    // -- square both facts and sum -----------------------------------------
+    let a1a1 = cmul(d, p, a1, a1);
+    let sq_x = d.lemma(creal.mul_congr, &[a1, zero, a1, zero, eqx_zero, eqx_zero]);
+    let zero_zero = cmul(d, p, zero, zero);
+    let zz = zero_mul_proof(d, p, zero);
+    let sqx_zero = chain(d, p, a1a1, &[(zero_zero, sq_x), (zero, zz)]);
+
+    let a2a2 = cmul(d, p, a2, a2);
+    let sq_y = d.lemma(creal.mul_congr, &[a2, zero, a2, zero, eqy_zero, eqy_zero]);
+    let sqy_zero = chain(d, p, a2a2, &[(zero_zero, sq_y), (zero, zz)]);
+
+    let sum_sq = cadd(d, p, a1a1, a2a2);
+    let congr_sum = d.lemma(
+        creal.add_congr,
+        &[a1a1, zero, a2a2, zero, sqx_zero, sqy_zero],
+    );
+    let zero_zero_add = cadd(d, p, zero, zero);
+    let az = d.lemma(creal.add_zero, &[zero]);
+    let sum_sq_zero = chain(d, p, sum_sq, &[(zero_zero_add, congr_sum), (zero, az)]);
+
+    // -- ring identity: `sum_sq ~ raw_distsq * defect²` ---------------------
+    let dxdx = cmul(d, p, dx, dx);
+    let dydy = cmul(d, p, dy, dy);
+    let raw_distsq = cadd(d, p, dxdx, dydy);
+    let dx_r = RnExpr::Atom(dx);
+    let dy_r = RnExpr::Atom(dy);
+    let defect_r = RnExpr::Atom(defect_actual);
+    let lhs_r = RnExpr::add(
+        RnExpr::mul(
+            RnExpr::mul(dx_r.clone(), defect_r.clone()),
+            RnExpr::mul(dx_r.clone(), defect_r.clone()),
+        ),
+        RnExpr::mul(
+            RnExpr::mul(dy_r.clone(), defect_r.clone()),
+            RnExpr::mul(dy_r.clone(), defect_r.clone()),
+        ),
+    );
+    let rhs_r = RnExpr::mul(
+        RnExpr::add(
+            RnExpr::mul(dx_r.clone(), dx_r),
+            RnExpr::mul(dy_r.clone(), dy_r),
+        ),
+        RnExpr::mul(defect_r.clone(), defect_r),
+    );
+    let ring_link = rn_ring_proof(d, creal, &lhs_r, &rhs_r);
+    // ring_link : Equiv sum_sq raw_distsq_defect_sq
+
+    let defect_sq = cmul(d, p, defect_actual, defect_actual);
+    let raw_distsq_defect_sq = cmul(d, p, raw_distsq, defect_sq);
+    let symm_ring_link = symm(d, p, sum_sq, raw_distsq_defect_sq, ring_link);
+    let rd_defect_sq_zero = chain(
+        d,
+        p,
+        raw_distsq_defect_sq,
+        &[(sum_sq, symm_ring_link), (zero, sum_sq_zero)],
+    );
+    // rd_defect_sq_zero : Equiv raw_distsq_defect_sq zero
+
+    // -- invert `raw_distsq` (defeq-bridged against `hab`'s stated type) ---
+    let inv_distsq = d.const_app(creal.inv, &[raw_distsq, k2, hab]);
+    let mul_inv_cancel_pf = d.lemma(creal.mul_inv_cancel, &[raw_distsq, k2, hab]);
+    // mul_inv_cancel_pf : Equiv (mul raw_distsq inv_distsq) one
+
+    let rd_r = RnExpr::Atom(raw_distsq);
+    let inv_r = RnExpr::Atom(inv_distsq);
+    let ds_r = RnExpr::Atom(defect_sq);
+    let lhs2_r = RnExpr::mul(inv_r.clone(), RnExpr::mul(rd_r.clone(), ds_r.clone()));
+    let rhs2_r = RnExpr::mul(RnExpr::mul(rd_r, inv_r), ds_r);
+    let link2 = rn_ring_proof(d, creal, &lhs2_r, &rhs2_r);
+    // link2 : Equiv inv_times_prod rd_inv_ds
+
+    let inv_times_prod = cmul(d, p, inv_distsq, raw_distsq_defect_sq);
+    let refl_inv = refl(d, p, inv_distsq);
+    let congr3 = d.lemma(
+        creal.mul_congr,
+        &[
+            inv_distsq,
+            inv_distsq,
+            raw_distsq_defect_sq,
+            zero,
+            refl_inv,
+            rd_defect_sq_zero,
+        ],
+    );
+    // congr3 : Equiv inv_times_prod (mul inv_distsq zero)
+    let inv_zero = cmul(d, p, inv_distsq, zero);
+    let mz2 = d.lemma(creal.mul_zero, &[inv_distsq]);
+    let inv_times_prod_zero = chain(d, p, inv_times_prod, &[(inv_zero, congr3), (zero, mz2)]);
+
+    let rd_inv = cmul(d, p, raw_distsq, inv_distsq);
+    let rd_inv_ds = cmul(d, p, rd_inv, defect_sq);
+    let symm_link2 = symm(d, p, inv_times_prod, rd_inv_ds, link2);
+    let rd_inv_ds_zero = chain(
+        d,
+        p,
+        rd_inv_ds,
+        &[(inv_times_prod, symm_link2), (zero, inv_times_prod_zero)],
+    );
+
+    let refl_ds = refl(d, p, defect_sq);
+    let congr4 = d.lemma(
+        creal.mul_congr,
+        &[
+            rd_inv,
+            one,
+            defect_sq,
+            defect_sq,
+            mul_inv_cancel_pf,
+            refl_ds,
+        ],
+    );
+    // congr4 : Equiv rd_inv_ds (mul one defect_sq)
+    let one_ds = cmul(d, p, one, defect_sq);
+    let step_one_mul = one_mul_proof(d, p, defect_sq); // Equiv one_ds defect_sq
+
+    let symm_step_one_mul = symm(d, p, one_ds, defect_sq, step_one_mul);
+    let symm_congr4 = symm(d, p, rd_inv_ds, one_ds, congr4);
+    let defect_sq_zero = chain(
+        d,
+        p,
+        defect_sq,
+        &[
+            (one_ds, symm_step_one_mul),
+            (rd_inv_ds, symm_congr4),
+            (zero, rd_inv_ds_zero),
+        ],
+    );
+    // defect_sq_zero : Equiv defect_sq zero
+
+    d.lemma(
+        creal.eq_zero_of_mul_self_zero,
+        &[defect_actual, defect_sq_zero],
+    )
+}
+
+/// **Ceva's theorem, the converse.** See
+/// [`CPointPrelude::ceva_ratio_product_of_concurrent`].
+fn declare_ceva_ratio_product_of_concurrent(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    let pp_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(pp_fv);
+    let qq_fv = d.fresh_fvar();
+    let qq = d.kernel().fvar(qq_fv);
+    let rr_fv = d.fresh_fvar();
+    let rr = d.kernel().fvar(rr_fv);
+    let k_fv = d.fresh_fvar();
+    let pk = d.kernel().fvar(k_fv);
+    let k2_fv = d.fresh_fvar();
+    let pk2 = d.kernel().fvar(k2_fv);
+
+    let big_d = cevian_big_d(d, p, pp, qq);
+    let dd = cmul(d, p, big_d, big_d);
+    let hd_ty = d.const_app(creal.pos_bound, &[dd, pk]);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    let dist_ab = d.const_app(p.dist_sq, &[pa, pb]);
+    let hab_ty = d.const_app(creal.pos_bound, &[dist_ab, pk2]);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let z = cevian_dinv(d, p, big_d, pk, hd);
+    let dz_cancel = cevian_dinv_cancel(d, p, big_d, pk, hd);
+
+    let u_expr = rn_render(d, creal, &rn_cevian_u(RnExpr::Atom(pp), RnExpr::Atom(z)));
+    let v_expr = rn_render(
+        d,
+        creal,
+        &rn_cevian_v(RnExpr::Atom(pp), RnExpr::Atom(qq), RnExpr::Atom(z)),
+    );
+
+    let big_y = d.const_app(p.point_lerp, &[pc, pa, qq]);
+    let big_z = d.const_app(p.point_lerp, &[pa, pb, rr]);
+    let by_point = d.const_app(p.point_lerp, &[pb, big_y, u_expr]);
+    let cz_point = d.const_app(p.point_lerp, &[pc, big_z, v_expr]);
+
+    let hmeet_ty = d.const_app(p.point_equiv, &[by_point, cz_point]);
+    let hmeet_fv = d.fresh_fvar();
+    let hmeet = d.kernel().fvar(hmeet_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by_ = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+
+    let by_x = d.const_app(p.x, &[by_point]);
+    let cz_x = d.const_app(p.x, &[cz_point]);
+    let by_y = d.const_app(p.y, &[by_point]);
+    let cz_y = d.const_app(p.y, &[cz_point]);
+    let ex_ty = equiv(d, p, by_x, cz_x);
+    let ey_ty = equiv(d, p, by_y, cz_y);
+    let hmeet_x = d.and_left(ex_ty, ey_ty, hmeet);
+    let hmeet_y = d.and_right(ex_ty, ey_ty, hmeet);
+
+    let (ab_defect_zero_x, defect_actual_x) =
+        ceva_converse_coord(d, p, ax, bx, cx, pp, qq, rr, z, big_d, dz_cancel, hmeet_x);
+    let (ab_defect_zero_y, defect_actual_y) =
+        ceva_converse_coord(d, p, ay, by_, cy, pp, qq, rr, z, big_d, dz_cancel, hmeet_y);
+    // `defect_actual` depends only on `p, q, r`, so both runs land on the
+    // same `ExprId` by construction (interning) -- kept as two names only to
+    // document that each run independently computed it, checked mutually
+    // below.
+    debug_assert_eq!(defect_actual_x, defect_actual_y);
+
+    let defect_zero = ceva_converse_combine(
+        d,
+        p,
+        ax,
+        ay,
+        bx,
+        by_,
+        defect_actual_x,
+        pk2,
+        hab,
+        ab_defect_zero_x,
+        ab_defect_zero_y,
+    );
+    // defect_zero : Equiv defect_actual_x zero
+
+    let ceva_lhs_expr = rn_render(
+        d,
+        creal,
+        &rn_ceva_lhs(RnExpr::Atom(pp), RnExpr::Atom(qq), RnExpr::Atom(rr)),
+    );
+    let ceva_rhs_expr = rn_render(
+        d,
+        creal,
+        &rn_ceva_rhs(RnExpr::Atom(pp), RnExpr::Atom(qq), RnExpr::Atom(rr)),
+    );
+    let concl_proof = equiv_of_sub_eq_zero(d, p, ceva_lhs_expr, ceva_rhs_expr, defect_zero);
+    let concl = equiv(d, p, ceva_lhs_expr, ceva_rhs_expr);
+
+    let ty_body = {
+        let inner = d.pi_fv(hmeet_fv, hmeet_ty, concl);
+        let w1 = d.pi_fv(hab_fv, hab_ty, inner);
+        let w2 = d.pi_fv(hd_fv, hd_ty, w1);
+        let w3 = d.pi_fv(k2_fv, nat, w2);
+        let w4 = d.pi_fv(k_fv, nat, w3);
+        let w5 = d.pi_fv(rr_fv, carrier, w4);
+        let w6 = d.pi_fv(qq_fv, carrier, w5);
+        d.pi_fv(pp_fv, carrier, w6)
+    };
+    let ty = {
+        let w1 = d.pi_fv(c_fv, point, ty_body);
+        let w2 = d.pi_fv(b_fv, point, w1);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value_body = {
+        let inner = d.lam_fv(hmeet_fv, hmeet_ty, concl_proof);
+        let w1 = d.lam_fv(hab_fv, hab_ty, inner);
+        let w2 = d.lam_fv(hd_fv, hd_ty, w1);
+        let w3 = d.lam_fv(k2_fv, nat, w2);
+        let w4 = d.lam_fv(k_fv, nat, w3);
+        let w5 = d.lam_fv(rr_fv, carrier, w4);
+        let w6 = d.lam_fv(qq_fv, carrier, w5);
+        d.lam_fv(pp_fv, carrier, w6)
+    };
+    let value = {
+        let w1 = d.lam_fv(c_fv, point, value_body);
+        let w2 = d.lam_fv(b_fv, point, w1);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.ceva_ratio_product_of_concurrent,
         uparams: vec![],
         ty,
         value,

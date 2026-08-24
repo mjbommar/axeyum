@@ -22,10 +22,12 @@
 //! `CReal.left_distrib` is `mul x (add y z) ~ add (mul x y) (mul x z)` — the
 //! sum has to sit in the multiplicand's **right** slot. [`mul_sub_one_geom`]
 //! needs to expand `mul (add one (neg x)) xⁿ`, where the sum is on the
-//! **left**, so this file builds the missing direction inline
-//! ([`right_distrib`]) from `mul_comm` plus `left_distrib`, and the
-//! companion `neg (mul x y) ~ mul (neg x) y` ([`neg_mul_left`]) by the same
-//! "any right-additive-inverse partner of `mul x y` under `add` **is**
+//! **left**, so this file uses the missing direction
+//! ([`right_distrib`](super::ring_helpers::right_distrib), shared with
+//! `creal/derivative.rs` in `creal/ring_helpers.rs` since both built it
+//! independently and identically) from `mul_comm` plus `left_distrib`, and
+//! the companion `neg (mul x y) ~ mul (neg x) y` ([`neg_mul_left`]) by the
+//! same "any right-additive-inverse partner of `mul x y` under `add` **is**
 //! `neg (mul x y)`" argument `creal/series.rs::neg_add` uses for `neg(add a
 //! b)` — reused here as the general uniqueness step ([`neg_unique`]) rather
 //! than re-derived, since `series.rs`'s copy is private to that module.
@@ -60,6 +62,7 @@
 //! on `Σ xᵏ` alone (rather than on `(1−x)·Σ xᵏ`) does not appear in this
 //! statement because this statement does not reach that claim.
 
+use super::ring_helpers::right_distrib;
 use super::{CRealPrelude, DERIVED_HEIGHT, clt, creal_ty, equiv};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -259,27 +262,6 @@ fn mul_zero_left(d: &mut IntDev<'_>, p: CRealPrelude, b: ExprId) -> ExprId {
 /// from it plus `mul_comm` on all three products, exactly the way
 /// `series.rs`'s local helpers are built from the declared laws rather than
 /// declared themselves.
-fn right_distrib(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
-    let ab = cadd(d, p, a, b);
-    let lhs = cmul(d, p, ab, c);
-    let c_ab = cmul(d, p, c, ab);
-    let h1 = d.lemma(p.mul_comm, &[ab, c]); // lhs ~ c_ab
-
-    let ca = cmul(d, p, c, a);
-    let cb = cmul(d, p, c, b);
-    let dist = cadd(d, p, ca, cb);
-    let h2 = d.lemma(p.left_distrib, &[c, a, b]); // c_ab ~ dist
-
-    let ac = cmul(d, p, a, c);
-    let bc = cmul(d, p, b, c);
-    let target = cadd(d, p, ac, bc);
-    let h3a = d.lemma(p.mul_comm, &[c, a]); // ca ~ ac
-    let h3b = d.lemma(p.mul_comm, &[c, b]); // cb ~ bc
-    let h3 = d.lemma(p.add_congr, &[ca, ac, cb, bc, h3a, h3b]); // dist ~ target
-
-    echain(d, p, lhs, &[(c_ab, h1), (dist, h2), (target, h3)])
-}
-
 /// `Equiv (neg (mul a b)) (mul (neg a) b)` — additive inverse on the left of
 /// a product, via [`right_distrib`] and [`neg_unique`]: `mul a b` and
 /// `mul (neg a) b` sum to `mul zero b ~ zero` (`right_distrib` at `add a (neg

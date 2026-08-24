@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "id": "F:menelaus-and-ceva-over-constructed-plane",
+  "title": "Ceva's and Menelaus' theorems over the constructed reals, in a division-free ratio parametrisation, with Ceva proved in both directions",
+  "statement": "For a triangle A,B,C in the plane CPoint = CReal x CReal over the constructed (Bishop) reals, with points on the sides given as affine combinations X := lerp B C p, Y := lerp C A q, Z := lerp A B r: MENELAUS -- if p*q*r ~ -((1-p)*(1-q)*(1-r)) then cross X Y Z ~ 0, i.e. X, Y, Z are collinear. CEVA (both directions) -- the three cevians AX, BY, CZ concur if and only if p*q*r ~ (1-p)*(1-q)*(1-r). MENELAUS IS CEVA'S SUM WHERE CEVA IS THE DIFFERENCE. The two statements differ by a single Neg and have IDENTICAL empty axiom footprints, which is why each carries a verbatim statement pin. THE PARAMETRISATION IS DIVISION-FREE BY NECESSITY, not convenience. The classical forms (BX/XC)*(CY/YA)*(AZ/ZB) = 1 and = -1 need reciprocals, and a CReal reciprocal requires an APARTNESS witness that cannot be obtained constructively from a mere inequality -- Markov's principle is unavailable here, Apart x y := lt x y \\/ lt y x is an Or, and Or's recursor does not eliminate into Type. The product forms above are equivalent to the classical ones wherever the classical ones are defined. Equality throughout is CReal.Equiv / CPoint.Equiv, DEFINED Prop relations on a setoid, never Eq.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal) -> ((x4 : CReal) -> ((x5 : CReal) -> ((x6 : CReal.Equiv (CReal.mul x3 (CReal.mul x4 x5)) (CReal.neg (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CReal.mul (CReal.add CReal.one (CReal.neg x4)) (CReal.add CReal.one (CReal.neg x5)))))) -> CReal.Equiv (CPoint.cross (CPoint.lerp x1 x2 x3) (CPoint.lerp x2 x0 x4) (CPoint.lerp x0 x1 x5)) CReal.zero)))))))",
+    "fragment": "CPoint",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.menelaus_collinear_of_ratio_product",
+      "kind": "kernel-term",
+      "supports": "`CPoint.menelaus_collinear_of_ratio_product` is admitted with exactly the type in formal.statement. The proof rests on a polynomial identity derived symbolically BEFORE any kernel work and confirmed with zero remainder: cross X Y Z = (p*q*r + (1-p)*(1-q)*(1-r)) * cross A B C. MENELAUS NEEDS NO NON-DEGENERACY HYPOTHESIS AT ALL -- not even the ratio condition Ceva requires. When the hypothesis makes the left factor vanish, cross X Y Z vanishes REGARDLESS of cross A B C, the fully degenerate A = B = C included. Ceva's forward direction, by contrast, needs PosBound (D*D) k on the ratios where D := (1-q) + p*q. Two configurations, two different answers to what degeneracy matters; the second was checked rather than carried across from the first.",
+      "check_status": "checked",
+      "checkers": [
+        "creal_point_tests::menelaus_collinear_of_ratio_product_statement_is_exact (asserts the KERNEL-RENDERED type verbatim with assert_eq!, then asserts exactly ONE negated ratio-product factor -- the sign that distinguishes Menelaus from Ceva)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_cpoint_prelude return Err and the suite fail)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::menelaus_collinear_of_ratio_product_statement_is_exact -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/creal_point.rs",
+      "notes": "A footprint check cannot carry this claim, and here the two candidates are a SINGLE `neg` apart: Ceva's ratio condition and Menelaus' are the same product equation with opposite sign, and both are axiom-free. Stating Menelaus with Ceva's sign would be false and no sweep in this repository would notice. The pin asserts the occurrence count of the negation BEFORE relying on it, because a substring guard for a shape that was never present reads as a dead guard rather than a red flag. Mutation-verified by the establishing lane: weakening the guard killed exactly one test, then reverted. The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
+    },
+    {
+      "id": "kernel-CPoint.ceva-both-directions",
+      "kind": "kernel-term",
+      "supports": "`CPoint.ceva_concurrent_of_ratio_product` (exhibiting: the meeting point is CONSTRUCTED, not asserted to exist) and `CPoint.ceva_ratio_product_of_concurrent` (the converse). The converse's conclusion is syntactically the forward direction's hypothesis, so the converse relationship is visible in the types rather than asserted in prose. The converse needs strictly more: beyond D != 0 it requires A != B as a witnessed PosBound (distSq A B) k, which is irreducible since A = B degenerates the configuration. Its route runs the forward direction's ring identity backwards; the D*z - 1 correction cancels unconditionally, and multiplying through by D cancels the shared z factor via D*z ~ 1 -- SO z ITSELF NEVER NEEDS TO BE INVERTIBLE, which is what keeps the argument constructive. That leaves (a-b)*defect ~ 0 at both coordinates; squaring and summing gives distSq A B * defect^2 ~ 0, and inverting distSq A B finishes.",
+      "check_status": "checked",
+      "checkers": [
+        "creal_point_tests::ceva_ratio_product_of_concurrent_statement_is_exact (asserts the KERNEL-RENDERED type verbatim, including that the conclusion has the same shape as the forward direction's hypothesis)",
+        "creal_point_tests::every_theorem_here_is_axiom_free (reads Kernel::axiom_footprint for every declared theorem in this file and requires the empty set)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::ceva_ratio_product_of_concurrent_statement_is_exact -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/creal_point.rs",
+      "notes": "Mutation-verified by the establishing lane on the conclusion-shape pattern; exactly one test died, then reverted. Note the DIRECTION is load-bearing in the names: the forward theorem exhibits a point and the converse derives the ratio equation, and a name that dropped the direction would let a reader assume an iff that is only true under the stated non-degeneracy."
+    },
+    {
+      "id": "footprint-cpoint-ceva-menelaus",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for all three theorems and everything beneath them, including the ported ring-normalisation decision procedure. The `cpoint` prelude's trusted surface is 0: no Axiom, no Opaque, no Quotient. Measured across the whole inventory at the time of landing: 980 distinct declarations, ZERO with a nonzero footprint.",
+      "check_status": "checked",
+      "checkers": [
+        "creal_point_tests::every_theorem_here_is_axiom_free (per-declaration Kernel::axiom_footprint, empty set required)",
+        "prelude_theorem_inventory --include-constructed (independent sweep listing every declared name with its footprint across every constructed carrier)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::every_theorem_here_is_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs",
+      "notes": "Presence matters as much as the footprint: axiom_footprint of a name interned but never DECLARED is vacuously empty, which is why the presence sweep is the companion check. Counting Declaration::Axiom alone would not suffice either, since Opaque has no proof body and Quotient admits Quot.sound."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-capability-assurance (2026-08-24) across two dispatched lanes: the first built Ceva's exhibiting direction and established that the non-degeneracy condition depends only on the ratios, the second derived Menelaus' division-free form symbolically and built it plus Ceva's converse. Kernel theorems over CPoint (the constructed plane, ADR-0512), all with empty axiom_footprint.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "Menelaus of Alexandria",
+        "what": "the transversal theorem",
+        "year": 100,
+        "where": "Sphaerica, c. 100 CE; the plane case is the classical one",
+        "attribution": "standard attribution; this lane did not consult any primary source."
+      },
+      {
+        "who": "Giovanni Ceva",
+        "what": "the concurrency criterion",
+        "year": 1678,
+        "where": "De lineis rectis se invicem secantibus statica constructio",
+        "attribution": "conventional. The result was known earlier to al-Mu'taman ibn Hud (11th century); the attribution to Ceva is the standard modern one."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred. (1) The CLASSICAL RATIO FORMS. (BX/XC)*(CY/YA)*(AZ/ZB) = 1 and = -1 need reciprocals of CReal quantities, and a CReal reciprocal requires an apartness WITNESS, not an inequality -- so those forms are not merely inconvenient here, they are not statable without additional data. The product forms proved are equivalent wherever the classical ones are defined. (2) MENELAUS' CONVERSE (collinearity implies the ratio product) is not proved; only Ceva has both directions. (3) Nothing about signed lengths or betweenness: `lerp` parameters range over all of CReal, so the results cover the extended sides, and no claim is made about which points lie between which.\n\nA METHODOLOGICAL NOTE. The symbolic derivation was required BEFORE any kernel work precisely because a sign error here produces a theorem that type-checks, is axiom-free, and is false -- the two statements differ by one Neg. The derivation confirmed the sketched sign exactly, with zero remainder. Earlier the same day a different geometry claim (the Euler line as a property) was REFUTED by a lane with the counterexample A = B = C, so the discipline is not hypothetical.\n\nThe proofs are constructive throughout: no Classical.em, no propext, no funext, no Quot.sound, and no branch on a real comparison anywhere -- CReal.le is undecidable here, so every non-degeneracy condition is carried as a witnessed PosBound rather than as a negated equality.\n\nexternal_status is `proved`: formalization of classical plane geometry, not discovery."
+}

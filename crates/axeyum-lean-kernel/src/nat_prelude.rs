@@ -139,6 +139,7 @@ mod diagonal;
 mod divisibility;
 mod division;
 mod fermat;
+mod fibonacci;
 mod finite;
 mod gcd;
 mod helpers;
@@ -151,6 +152,7 @@ mod order_more;
 mod primes;
 mod rectangle;
 mod restrict_pair;
+mod totient;
 pub(crate) mod transposition;
 mod vandermonde;
 
@@ -176,6 +178,7 @@ use diagonal::declare_diagonal;
 use divisibility::declare_divisibility;
 use division::declare_euclidean_division;
 use fermat::declare_fermat;
+use fibonacci::declare_fib_all;
 use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
     declare_restrict_maps_into,
@@ -191,6 +194,7 @@ use rectangle::declare_rectangle;
 use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
+use totient::declare_totient_all;
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
     declare_transposition_injective, declare_transposition_involutive,
@@ -834,6 +838,53 @@ pub struct NatPrelude {
     /// theorem.
     pub pow_prime_modeq_self: NameId,
 
+    // --- Euler's totient (`totient.rs`) -------------------------------------
+    /// `Nat.countRange p n := |{k < n : p k = true}|` — the count of a
+    /// decidable (`Bool`-valued) predicate over `[0,n)`, by structural
+    /// recursion on `n`. Nothing in this prelude could count a decidable
+    /// subset before this.
+    pub count_range: NameId,
+    /// `Nat.countRange_zero : ∀ p, countRange p 0 = 0`.
+    pub count_range_zero: NameId,
+    /// `Nat.countRange_succ : ∀ p n, countRange p (succ n) =
+    /// countRange p n + (if p n then 1 else 0)`.
+    pub count_range_succ: NameId,
+    /// `Nat.countRange_le : ∀ p n, countRange p n ≤ n`.
+    pub count_range_le: NameId,
+    /// `Nat.countRange_congr : ∀ f g n, (∀ i, Eq Bool (f i) (g i)) →
+    /// countRange f n = countRange g n` — two predicates that agree
+    /// pointwise (everywhere, not just below `n`) count the same subset of
+    /// `[0,n)`. Mirrors `sumRange_congr` (`algebra.rs`), the unconditional
+    /// congruence law for `sumRange`.
+    pub count_range_congr: NameId,
+    /// `Nat.countRange_split : ∀ f m j, countRange f (add m j) =
+    /// add (countRange f m) (countRange (fun k => f (add m k)) j)` — the
+    /// `countRange` analogue of `sumRange_split` (`rectangle.rs`), by
+    /// induction on `j` alone (`f`, `m` held fixed).
+    pub count_range_split: NameId,
+    /// `Nat.beq_eq_false_of_ne : ∀ a b, Not (Eq Nat a b) → beq a b = false` —
+    /// the converse of `ne_of_beq_eq_false`, closing the boolean/propositional
+    /// bridge from the other side. Proved by deciding `beq a b` itself
+    /// (`Bool.rec` into `Or (Eq Bool _ true) (Eq Bool _ false)`, fully
+    /// constructive) and refuting the `true` branch via `eq_of_beq_eq_true`.
+    pub beq_eq_false_of_ne: NameId,
+    /// `Nat.totient n := countRange (fun k => beq (gcd k n) 1) n` — Euler's
+    /// totient, the count of residues in `[0,n)` coprime to `n`. `k = 0` is
+    /// never counted for `n > 1` (`gcd 0 n = n ≠ 1`), so this matches the
+    /// textbook `[1,n]` convention (`n` itself is out of range but was never
+    /// coprime to itself for `n > 1` either).
+    pub totient: NameId,
+    /// `Nat.countRange_eq_pred_of_only_zero_false : ∀ f n, (∀ k, 0 < k → k <
+    /// succ n → f k = true) → f 0 = false → countRange f (succ n) = n` — the
+    /// counting lemma `totient_prime` rests on: a predicate false at exactly
+    /// one endpoint and true everywhere else in the range counts one short of
+    /// the range's length.
+    pub count_range_eq_pred_of_only_zero_false: NameId,
+    /// `Nat.totient_prime : Prime p → totient p = sub p 1` — the bridge that
+    /// makes Euler's theorem generalize Fermat's: every prime's totient is
+    /// `p - 1`.
+    pub totient_prime: NameId,
+
     // --- `Fin`, and the pigeonhole notions (`finite.rs`) --------------------
     /// `Nat.Fin : Nat → Type 0` — the canonical finite index type
     /// `{0, …, n-1}`, the subtype form `⟨val : Nat, isLt : val < n⟩` declared
@@ -1065,6 +1116,54 @@ pub struct NatPrelude {
     /// at `k := size n`, closed by [`Self::lt_pow_size`] and
     /// [`Self::mod_eq_self_of_lt`].
     pub sum_test_bit_eq: NameId,
+
+    // --- Fibonacci numbers (`fibonacci.rs`) ----------------------------------
+    /// `Nat.fibAux : Nat -> Nat -> Nat -> Nat`, `fibAux i a b`: recursion on
+    /// the FIRST argument `i` (the fuel/step-count — structural), threading
+    /// TWO ordinary curried `Nat` parameters `a b` through as the accumulator
+    /// pair (there is no tuple type in this kernel; two curried parameters
+    /// serve the same purpose without one — see `fibonacci.rs`'s module doc
+    /// for why the `And`-pairing trick used to prove properties TOGETHER by
+    /// ordinary `Nat.rec` does not by itself give a way to DEFINE a
+    /// `Nat`-valued function). `fibAux 0 a b ≡ a`; `fibAux (succ i) a b ≡
+    /// fibAux i b (add a b)`. Not the public name; [`Self::fib`] supplies the
+    /// seed `(0, 1)`.
+    pub fib_aux: NameId,
+    /// `Nat.fib n := fibAux n 0 1` — the Fibonacci numbers. `fib 0 ≡ 0`,
+    /// `fib 1 ≡ 1` by pure `δ`/`ι` reduction (no theorem needed);
+    /// `fib (n+2) = fib (n+1) + fib n` is [`Self::fib_add_two`], which is
+    /// NOT a bare `δ`/`ι` fact (see its own doc).
+    pub fib: NameId,
+    /// `Nat.fib_add_two : ∀ n, fib (succ (succ n)) = add (fib (succ n)) (fib n)`
+    /// — the defining recurrence, stated over `fib` rather than `fibAux`.
+    /// Proved from a STRONGER internal fact generalized over the accumulator
+    /// seed (`∀ i a b, fibAux (succ (succ i)) a b = add (fibAux (succ i) a b)
+    /// (fibAux i a b)`, built by `fibonacci.rs`'s private
+    /// `fib_aux_add_two_gen` and specialized at `a=0, b=1` — the general
+    /// statement's induction step closes by defeq alone (the induction
+    /// hypothesis applied at the shifted seed `(b, a+b)` already has the
+    /// exact type the goal unfolds to); only the base case needs an actual
+    /// rewrite, `add_comm`.
+    pub fib_add_two: NameId,
+    /// `Nat.fib_le_succ : ∀ n, Le (fib n) (fib (succ n))` — the Fibonacci
+    /// sequence is non-decreasing. By induction on `n`; the base case is
+    /// `zero_le`, and the step needs no induction hypothesis at all —
+    /// `fib_add_two` plus `le_add_right` gives it unconditionally.
+    pub fib_le_succ: NameId,
+    /// `Nat.fib_pos_of_pos : ∀ n, Lt zero n → Lt zero (fib n)` — every `fib`
+    /// value past the zeroth is positive. From the unconditional `∀ i, Lt
+    /// zero (fib (succ i))` (induction on `i`, base `le_refl`, step
+    /// `fib_le_succ` chained through `lt_of_lt_of_le`), transported along
+    /// `pos_implies_succ_pred` (`finite.rs`) to discharge the hypothesis.
+    pub fib_pos_of_pos: NameId,
+    /// `Nat.sum_fib : ∀ n, sumRange fib n = sub (fib (succ n)) one` —
+    /// `Σ_{i<n} fib i = fib(n+1) - 1`. Proved from the SUBTRACTION-FREE
+    /// internal fact `∀ n, add (sumRange fib n) 1 = fib (succ n)`
+    /// (`sum_fib_add_one_gen`, straight induction using `add_right_comm` and
+    /// `fib_add_two`), converted to the truncated-subtraction form by
+    /// `add_comm` + `add_sub_cancel_left` — `Nat.sub` never drives an
+    /// induction step here, only the final one-line conversion.
+    pub sum_fib: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1337,6 +1436,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_sum_range_of_forall_lt: kernel.name_str(nat, "dvd_sumRange_of_forall_lt"),
             add_pow_modeq_prime: kernel.name_str(nat, "add_pow_modeq_prime"),
             pow_prime_modeq_self: kernel.name_str(nat, "pow_prime_modeq_self"),
+            count_range: kernel.name_str(nat, "countRange"),
+            count_range_zero: kernel.name_str(nat, "countRange_zero"),
+            count_range_succ: kernel.name_str(nat, "countRange_succ"),
+            count_range_le: kernel.name_str(nat, "countRange_le"),
+            count_range_congr: kernel.name_str(nat, "countRange_congr"),
+            count_range_split: kernel.name_str(nat, "countRange_split"),
+            beq_eq_false_of_ne: kernel.name_str(nat, "beq_eq_false_of_ne"),
+            totient: kernel.name_str(nat, "totient"),
+            count_range_eq_pred_of_only_zero_false: kernel
+                .name_str(nat, "countRange_eq_pred_of_only_zero_false"),
+            totient_prime: kernel.name_str(nat, "totient_prime"),
             fin,
             fin_mk: kernel.name_str(fin, "mk"),
             fin_rec: kernel.name_str(fin, "rec"),
@@ -1379,6 +1489,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lt_pow_size: kernel.name_str(nat, "lt_pow_size"),
             mod_eq_self_of_lt: kernel.name_str(nat, "mod_eq_self_of_lt"),
             sum_test_bit_eq: kernel.name_str(nat, "sum_testBit_eq"),
+            fib_aux: kernel.name_str(nat, "fibAux"),
+            fib: kernel.name_str(nat, "fib"),
+            fib_add_two: kernel.name_str(nat, "fib_add_two"),
+            fib_le_succ: kernel.name_str(nat, "fib_le_succ"),
+            fib_pos_of_pos: kernel.name_str(nat, "fib_pos_of_pos"),
+            sum_fib: kernel.name_str(nat, "sum_fib"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1415,6 +1531,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_succ_mul_choose_eq(&mut d, &p)?;
         declare_prime_dvd_choose(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
+        declare_totient_all(&mut d, &p)?;
         declare_fin(&mut d, &p)?;
         declare_injective_surjective(&mut d, &p)?;
         declare_pigeonhole(&mut d, &p)?;
@@ -1434,6 +1551,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_vandermonde_all(&mut d, &p)?;
         declare_binary_all(&mut d, &p)?;
         declare_size_all(&mut d, &p)?;
+        declare_fib_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
