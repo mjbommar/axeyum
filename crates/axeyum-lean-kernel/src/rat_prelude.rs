@@ -54,6 +54,7 @@ use crate::{Kernel, KernelError};
 
 mod archimedean;
 mod core;
+mod decide;
 mod defs;
 mod field;
 pub(crate) mod group;
@@ -637,6 +638,37 @@ pub struct RatPrelude {
     /// Mathlib's `CauSeq`) has to extract that number; the fixed modulus of
     /// ADR-0512 computes it.
     pub bounds_num: NameId,
+
+    // --- boolean decision (`Rat.ble`) ---------------------------------------
+    /// `Rat.ble : Rat → Rat → Bool` — decidable `≤`, a genuine `Bool` in
+    /// `Type`, computable. Defined on the representation exactly like
+    /// [`Self::max`]/[`Self::min`]: `Int.rec` (motive `Bool`) on the sign of
+    /// the same cross-multiplication gap `num b · den a − num a · den b`,
+    /// dispatching to `true` on `Int.ofNat` and `false` on `Int.negSucc`. No
+    /// `Prop` is eliminated into `Type` and [`Self::le_or_lt`] is never
+    /// consulted — which is exactly what makes this a genuine *decision*
+    /// rather than a case split on an already-proved disjunction.
+    pub ble: NameId,
+    /// `Rat.ble_eq_true_of_le : ∀ a b, Rat.le a b → Rat.ble a b = true`.
+    pub ble_eq_true_of_le: NameId,
+    /// `Rat.le_of_ble_eq_true : ∀ a b, Rat.ble a b = true → Rat.le a b` — the
+    /// converse, ruling out the `Int.negSucc` branch by `Bool.false ≠ true`.
+    /// Together with [`Self::ble_eq_true_of_le`] this is the full spec —
+    /// `Rat.ble a b = true ↔ Rat.le a b` — split into two names because this
+    /// development has no `Iff`.
+    pub le_of_ble_eq_true: NameId,
+    /// `Rat.ble_refl : ∀ a, Rat.ble a a = true` — one application of
+    /// [`Self::ble_eq_true_of_le`] to [`Self::le_refl`].
+    pub ble_refl: NameId,
+    /// `Rat.ble_trans : ∀ a b c, Rat.ble a b = true → Rat.ble b c = true →
+    /// Rat.ble a c = true` — [`Self::le_of_ble_eq_true`] twice,
+    /// [`Self::le_trans`] once, [`Self::ble_eq_true_of_le`] once.
+    pub ble_trans: NameId,
+    /// `Rat.ble_total : ∀ a b, Or (Rat.ble a b = true) (Rat.ble b a = true)` —
+    /// the constructive decision [`Self::le_or_lt`] does not itself give as
+    /// data (it is `Or (le a b) (lt b a)`, a `Prop`): this is the same fact
+    /// restated in `Bool`, via [`Self::le_or_lt`] and [`Self::le_of_lt`].
+    pub ble_total: NameId,
 }
 
 impl RatPrelude {
@@ -812,6 +844,12 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sub_max_le: child(kernel, "sub_max_le"),
         sub_min_le: child(kernel, "sub_min_le"),
         zero_le_max_neg: child(kernel, "zero_le_max_neg"),
+        ble: child(kernel, "ble"),
+        ble_eq_true_of_le: child(kernel, "ble_eq_true_of_le"),
+        le_of_ble_eq_true: child(kernel, "le_of_ble_eq_true"),
+        ble_refl: child(kernel, "ble_refl"),
+        ble_trans: child(kernel, "ble_trans"),
+        ble_total: child(kernel, "ble_total"),
     }
 }
 
@@ -852,6 +890,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         product::declare_product_laws(&mut d, prelude)?;
         field::declare_field_laws(&mut d, prelude)?;
         lattice::declare_lattice(&mut d, prelude)?;
+        decide::declare_decide(&mut d, prelude)?;
         Ok(())
     })();
     match built {

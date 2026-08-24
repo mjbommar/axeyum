@@ -88,6 +88,12 @@ fn every_named_declaration_exists() {
         ("sub_max_le", p.sub_max_le),
         ("sub_min_le", p.sub_min_le),
         ("zero_le_max_neg", p.zero_le_max_neg),
+        ("ble", p.ble),
+        ("ble_eq_true_of_le", p.ble_eq_true_of_le),
+        ("le_of_ble_eq_true", p.le_of_ble_eq_true),
+        ("ble_refl", p.ble_refl),
+        ("ble_trans", p.ble_trans),
+        ("ble_total", p.ble_total),
     ];
     for (label, name) in expected {
         assert!(
@@ -1078,6 +1084,145 @@ fn the_rational_lattice_is_axiom_free() {
             ),
             "Rat.{label} is asserted, not derived"
         );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+// --- `Rat.ble`, the decidable `≤` -------------------------------------------
+
+/// Every declaration `decide::declare_decide` adds — `Rat.ble` itself and the
+/// five theorems built on it — is a **checked** definition or theorem with an
+/// empty axiom footprint, read out of the kernel, not off the diff.
+#[test]
+fn the_boolean_decision_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("ble", p.ble, false),
+        ("ble_eq_true_of_le", p.ble_eq_true_of_le, true),
+        ("le_of_ble_eq_true", p.le_of_ble_eq_true, true),
+        ("ble_refl", p.ble_refl, true),
+        ("ble_trans", p.ble_trans, true),
+        ("ble_total", p.ble_total, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// **`Rat.ble` computes**, and it is the *representation* that decides — the
+/// same standard [`the_rational_lattice_computes_on_both_branches`] holds
+/// `Rat.max`/`Rat.min` to. Checked at a pair whose gap lands in the
+/// `Int.ofNat` branch (`1 ≤ 3`, and the reflexive `2 ≤ 2`) and one whose gap
+/// lands in `Int.negSucc` (`3 ≤ 1` is `false`), by `Eq.refl` — not by trusting
+/// the spec theorems to be about the definition this file actually declared.
+#[test]
+fn rat_ble_computes_on_both_branches() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // (label, a, b, ble a b expected)
+    let cases: [(&str, u32, u32, bool); 3] = [
+        ("one_le_three", 1, 3, true),
+        ("three_le_one", 3, 1, false),
+        ("two_le_two", 2, 2, true),
+    ];
+    for (label, av, bv, expected) in cases {
+        let a = literal(&mut d, av);
+        let b = literal(&mut d, bv);
+        let ble_ab = d.const_app(p.ble, &[a, b]);
+        let expected_value = if expected {
+            d.bool_true()
+        } else {
+            d.bool_false()
+        };
+        let stmt = d.bool_eq(ble_ab, expected_value);
+        let proof = d.bool_refl(expected_value);
+        let name = d.kernel().name_str(anon, format!("Check.ble_{label}"));
+        d.declare_theorem(name, stmt, proof)
+            .unwrap_or_else(|e| panic!("Rat.ble did not reduce for {label}: {e:?}"));
+    }
+}
+
+/// The negative control for [`rat_ble_computes_on_both_branches`]: the same
+/// `Eq.refl` route, pointed at the **wrong** `Bool`.
+///
+/// `Rat.ble 3 1` is `false`; asking it to be `true` must be REFUSED, or the
+/// computation check above measures nothing.
+#[test]
+fn rat_ble_reduction_check_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let zero_index = d.num(0);
+    let three = d.num(3);
+    let one = d.num(1);
+    let a = d.const_app(p.nat_div_succ, &[three, zero_index]);
+    let b = d.const_app(p.nat_div_succ, &[one, zero_index]);
+
+    let ble_ab = d.const_app(p.ble, &[a, b]);
+    let true_ = d.bool_true();
+    let stmt = d.bool_eq(ble_ab, true_);
+    let proof = d.bool_refl(true_);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.ble_three_le_one_is_not_true");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `Rat.ble 3 1 = true`, so the computation check \
+         proves nothing"
+    );
+}
+
+/// `Rat.ble_refl`/`Rat.ble_trans`/`Rat.ble_total` each **use** the spec rather
+/// than restating it: dropping `ble_eq_true_of_le` or `le_of_ble_eq_true`
+/// would make every one of these fail to build, which is what makes them a
+/// meaningful check on the spec rather than three more axiom-free theorems
+/// that happen to sit beside it.
+#[test]
+fn ble_refl_trans_total_are_built_on_the_spec() {
+    let (kernel, p) = built();
+    for (label, name) in [
+        ("ble_refl", p.ble_refl),
+        ("ble_trans", p.ble_trans),
+        ("ble_total", p.ble_total),
+    ] {
         let footprint: Vec<String> = kernel
             .axiom_footprint(name)
             .into_iter()
