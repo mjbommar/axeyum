@@ -239,6 +239,132 @@ fn predicates_are_axiom_free() {
     }
 }
 
+/// Presence discipline for `map` and its laws: an unvisited name's
+/// `axiom_footprint` is UNMEASURED, not empty, so this is checked
+/// independently of the footprint test below.
+#[test]
+fn map_names_are_registered() {
+    let (k, sp) = setup(2);
+    for n in [
+        sp.map,
+        sp.map_nil,
+        sp.map_cons,
+        sp.map_append,
+        sp.map_reverse,
+        sp.map_id,
+        sp.map_map,
+        sp.length_map,
+    ] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered"
+        );
+    }
+}
+
+/// `map` and its laws must rest on nothing assumed.
+#[test]
+fn map_laws_are_axiom_free() {
+    let (k, sp) = setup(2);
+    for n in [
+        sp.map,
+        sp.map_nil,
+        sp.map_cons,
+        sp.map_append,
+        sp.map_reverse,
+        sp.map_id,
+        sp.map_map,
+        sp.length_map,
+    ] {
+        let footprint = k.axiom_footprint(n);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(n),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// Presence discipline for `foldr` and its laws: an unvisited name's
+/// `axiom_footprint` is UNMEASURED, not empty, so this is checked
+/// independently of the footprint test below.
+#[test]
+fn foldr_names_are_registered() {
+    let (k, sp) = setup(2);
+    for n in [
+        sp.foldr,
+        sp.foldr_nil,
+        sp.foldr_cons,
+        sp.length_eq_foldr,
+        sp.append_eq_foldr,
+    ] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered"
+        );
+    }
+}
+
+/// `foldr` and its laws must rest on nothing assumed.
+#[test]
+fn foldr_laws_are_axiom_free() {
+    let (k, sp) = setup(2);
+    for n in [
+        sp.foldr,
+        sp.foldr_nil,
+        sp.foldr_cons,
+        sp.length_eq_foldr,
+        sp.append_eq_foldr,
+    ] {
+        let footprint = k.axiom_footprint(n);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(n),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// Presence discipline for `All` and its laws: an unvisited name's
+/// `axiom_footprint` is UNMEASURED, not empty, so this is checked
+/// independently of the footprint test below.
+#[test]
+fn all_names_are_registered() {
+    let (k, sp) = setup(2);
+    for n in [sp.all_, sp.all_nil, sp.all_append, sp.all_of_is_prefix] {
+        assert!(
+            k.environment().contains(n),
+            "declaration must be registered"
+        );
+    }
+}
+
+/// `All` and its laws must rest on nothing assumed.
+#[test]
+fn all_laws_are_axiom_free() {
+    let (k, sp) = setup(2);
+    for n in [sp.all_, sp.all_nil, sp.all_append, sp.all_of_is_prefix] {
+        let footprint = k.axiom_footprint(n);
+        assert!(
+            footprint.is_empty(),
+            "{} is not axiom-free: {:?}",
+            k.display_name(n),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
 #[test]
 fn empty_alphabet_admits() {
     // A pure equality/disequality reconstruction needs no concrete character.

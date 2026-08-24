@@ -115,6 +115,28 @@ pub struct StringPrelude {
     /// Eq Nat (length (cons h t)) (Nat.succ (length t))` (definitional).
     pub length_cons: NameId,
 
+    /// `foldr.{u} : Π (α : Sort u), (Char → α → α) → α → Str → α` — the
+    /// universal recursor over the free monoid, universe-polymorphic in its
+    /// result type (see `foldr.rs`).
+    pub foldr: NameId,
+    /// The bound universe parameter `u` in `foldr.{u}`'s own signature.
+    pub foldr_uparam: NameId,
+    /// `foldr_nil.{u} : ∀ (α : Sort u) (f : Char → α → α) (init : α),
+    /// Eq α (foldr α f init nil) init` (definitional).
+    pub foldr_nil: NameId,
+    /// `foldr_cons.{u} : ∀ (α : Sort u) (f : Char → α → α) (init : α)
+    /// (h : Char) (t : Str),
+    /// Eq α (foldr α f init (cons h t)) (f h (foldr α f init t))`
+    /// (definitional).
+    pub foldr_cons: NameId,
+    /// `length_eq_foldr : ∀ (s : Str),
+    /// Eq Nat (length s) (foldr Nat (fun _ n => Nat.succ n) Nat.zero s)` —
+    /// `length` IS a fold, not a parallel definition.
+    pub length_eq_foldr: NameId,
+    /// `append_eq_foldr : ∀ (s t : Str),
+    /// Eq Str (append s t) (foldr Str Str.cons t s)` — likewise `append`.
+    pub append_eq_foldr: NameId,
+
     /// `reverse : Str → Str`, a checked structural recursion built from
     /// `append` (see `reverse.rs`).
     pub reverse: NameId,
@@ -127,6 +149,28 @@ pub struct StringPrelude {
     /// `reverse_reverse : ∀ (s : Str), Eq Str (reverse (reverse s)) s` —
     /// involution, proved via `reverse_append`.
     pub reverse_reverse: NameId,
+
+    /// `map : (Char → Char) → Str → Str` — the structural-recursion
+    /// combinator lifting a character transformation over a whole word (see
+    /// `map.rs`).
+    pub map: NameId,
+    /// `map_nil : ∀ f, Eq Str (map f nil) nil` (definitional).
+    pub map_nil: NameId,
+    /// `map_cons : ∀ f h t, Eq Str (map f (cons h t)) (cons (f h) (map f t))`
+    /// (definitional).
+    pub map_cons: NameId,
+    /// `map_append : ∀ f s t,
+    /// Eq Str (map f (append s t)) (append (map f s) (map f t))`.
+    pub map_append: NameId,
+    /// `map_reverse : ∀ f s, Eq Str (map f (reverse s)) (reverse (map f s))`.
+    pub map_reverse: NameId,
+    /// `map_id : ∀ s, Eq Str (map (fun c => c) s) s`.
+    pub map_id: NameId,
+    /// `map_map : ∀ f g s,
+    /// Eq Str (map f (map g s)) (map (fun c => f (g c)) s)`.
+    pub map_map: NameId,
+    /// `length_map : ∀ f s, Eq Nat (length (map f s)) (length s)`.
+    pub length_map: NameId,
 
     /// `append_left_cancel : ∀ (a t u : Str),
     /// Eq Str (append a t) (append a u) → Eq Str t u` — left cancellation,
@@ -257,6 +301,20 @@ pub struct StringPrelude {
     /// `append_assoc`.
     pub contains_substr: NameId,
 
+    /// `All : (Char → Prop) → Str → Prop := λ p s, Str.rec.{1} … True …
+    /// (fun h t ih => And (p h) ih) s` — "every character of this word
+    /// satisfies `p`" (see `all.rs`).
+    pub all_: NameId,
+    /// `all_nil : ∀ p, All p nil` (definitional; `True.intro`).
+    pub all_nil: NameId,
+    /// `all_append : ∀ p s t,
+    /// All p (append s t) → And (All p s) (All p t)` — the splitting
+    /// direction.
+    pub all_append: NameId,
+    /// `all_of_isPrefix : ∀ p pfx s,
+    /// isPrefix pfx s → All p s → All p pfx`.
+    pub all_of_is_prefix: NameId,
+
     /// The universe level `1` (so `Char`/`Str : Sort 1 = Type`).
     one: LevelId,
 }
@@ -386,6 +444,36 @@ pub fn build_string_prelude(
             one,
         )?;
 
+        // --- foldr.{u} : Π (α : Sort u), (Char → α → α) → α → Str → α --------
+        // Universe-polymorphic; keeps `Str.rec`'s own motive level OPEN as a
+        // bound parameter instead of fixing it. See `foldr.rs`.
+        let foldr = kernel.name_str(namespace, "foldr");
+        let foldr_uparam = kernel.name_str(anon, "u");
+        let foldr_nil = kernel.name_str(namespace, "foldr_nil");
+        let foldr_cons = kernel.name_str(namespace, "foldr_cons");
+        let length_eq_foldr = kernel.name_str(namespace, "length_eq_foldr");
+        let append_eq_foldr = kernel.name_str(namespace, "append_eq_foldr");
+        foldr::declare_foldr(
+            kernel,
+            &foldr::FoldrNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_cons,
+                str_rec,
+                append,
+                length,
+                foldr,
+                foldr_uparam,
+                foldr_nil,
+                foldr_cons,
+                length_eq_foldr,
+                append_eq_foldr,
+            },
+            one,
+        )?;
+
         // --- reverse : Str → Str, and its laws --------------------------------
         // See `reverse.rs`.
         let reverse = kernel.name_str(namespace, "reverse");
@@ -408,6 +496,41 @@ pub fn build_string_prelude(
                 reverse_nil,
                 reverse_append,
                 reverse_reverse,
+            },
+            one,
+        )?;
+
+        // --- map : (Char → Char) → Str → Str, and its fusion laws ------------
+        // Declared after `reverse` (needed by `map_reverse`) and `length`
+        // (needed by `length_map`). See `map.rs`.
+        let map = kernel.name_str(namespace, "map");
+        let map_nil = kernel.name_str(namespace, "map_nil");
+        let map_cons = kernel.name_str(namespace, "map_cons");
+        let map_append = kernel.name_str(namespace, "map_append");
+        let map_reverse = kernel.name_str(namespace, "map_reverse");
+        let map_id = kernel.name_str(namespace, "map_id");
+        let map_map = kernel.name_str(namespace, "map_map");
+        let length_map = kernel.name_str(namespace, "length_map");
+        map::declare_map_and_laws(
+            kernel,
+            &map::MapNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_cons,
+                str_rec,
+                append,
+                reverse,
+                length,
+                map,
+                map_nil,
+                map_cons,
+                map_append,
+                map_reverse,
+                map_id,
+                map_map,
+                length_map,
             },
             one,
         )?;
@@ -558,6 +681,32 @@ pub fn build_string_prelude(
             one,
         )?;
 
+        // --- All : (Char → Prop) → Str → Prop, and its laws ------------------
+        // Declared after `predicates` (needed by `all_of_isPrefix`, which
+        // cites `isPrefix`). See `all.rs`.
+        let all_ = kernel.name_str(namespace, "All");
+        let all_nil = kernel.name_str(namespace, "all_nil");
+        let all_append = kernel.name_str(namespace, "all_append");
+        let all_of_is_prefix = kernel.name_str(namespace, "all_of_isPrefix");
+        all::declare_all_and_laws(
+            kernel,
+            &all::AllNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_cons,
+                str_rec,
+                append,
+                is_prefix,
+                all_,
+                all_nil,
+                all_append,
+                all_of_is_prefix,
+            },
+            one,
+        )?;
+
         Ok(StringPrelude {
             logic,
             char_ind,
@@ -575,10 +724,24 @@ pub fn build_string_prelude(
             length,
             length_nil,
             length_cons,
+            foldr,
+            foldr_uparam,
+            foldr_nil,
+            foldr_cons,
+            length_eq_foldr,
+            append_eq_foldr,
             reverse,
             reverse_nil,
             reverse_append,
             reverse_reverse,
+            map,
+            map_nil,
+            map_cons,
+            map_append,
+            map_reverse,
+            map_id,
+            map_map,
+            length_map,
             append_left_cancel,
             take,
             drop,
@@ -614,6 +777,10 @@ pub fn build_string_prelude(
             contains_of_is_prefix,
             contains_of_is_suffix,
             contains_substr,
+            all_,
+            all_nil,
+            all_append,
+            all_of_is_prefix,
             one,
         })
     })();
@@ -995,9 +1162,12 @@ impl StringPrelude {
     }
 }
 
+mod all;
 mod cancel;
+mod foldr;
 mod length;
 mod length_append;
+mod map;
 mod monoid;
 mod predicates;
 mod reverse;
