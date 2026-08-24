@@ -82,6 +82,7 @@ mod division;
 mod dvd;
 mod euclid;
 mod euler;
+mod fibonacci;
 mod gcd;
 mod modeq;
 mod modeq_family;
@@ -895,6 +896,13 @@ pub struct IntPrelude {
     /// that direction needs a primitive root or a counting argument this
     /// prelude does not build.
     pub euler_criterion_pm_one: NameId,
+    /// `fib_cassini : ∀ n, Eq Int (sub (mul (ofNat (Nat.fib (n+2))) (ofNat
+    /// (Nat.fib n))) (mul (ofNat (Nat.fib (n+1))) (ofNat (Nat.fib (n+1)))))
+    /// (pow (neg one) (succ n))` — Cassini's identity, shifted so every index
+    /// is a literal successor and `(-1)^n` is `Int.pow` at a negative base
+    /// (no parity case-split) rather than a computed exponent. See
+    /// `fibonacci.rs`'s module doc for the hand check and the proof's algebra.
+    pub fib_cassini: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1096,6 +1104,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         is_quadratic_residue_one: child(kernel, "is_quadratic_residue_one"),
         is_quadratic_residue_mul: child(kernel, "is_quadratic_residue_mul"),
         euler_criterion_pm_one: child(kernel, "euler_criterion_pm_one"),
+        fib_cassini: child(kernel, "fib_cassini"),
     }
 }
 
@@ -1258,6 +1267,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler::declare_euler_criterion_pm_one(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
+        fibonacci::declare_fib_cassini_all(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;

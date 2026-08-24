@@ -91,6 +91,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.div,
         p.mod_,
         p.gcd,
+        p.lcm,
         p.sum_range,
         p.pred,
         p.sub,
@@ -212,6 +213,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.gcd_dvd_right,
         p.dvd_gcd,
         p.dvd_gcd_iff,
+        p.lcm_zero_left,
+        p.dvd_lcm_left,
+        p.dvd_lcm_right,
+        p.gcd_mul_lcm,
         p.gcd_bezout,
         p.mod_eq_refl,
         p.mod_eq_symm,
@@ -1792,6 +1797,93 @@ fn executable_gcd_uses_checked_remainder_descent_and_computes() {
     let error = f
         .declare_theorem(changed_name, changed_ty, equation)
         .expect_err("the gcd equation must reject quotient/remainder mutation");
+    assert!(matches!(
+        error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
+}
+
+/// `Nat.lcm` computes, and its checked properties apply at concrete points.
+///
+/// Hand-computed values (also recorded in the session report): `lcm 4 6 = 12`
+/// (gcd 4 6 = 2, 24/2 = 12), `lcm 0 5 = 0`, `lcm 1 7 = 7`, `lcm 7 7 = 7`,
+/// `lcm 0 0 = 0` (the degenerate corner: `gcd 0 0 = 0` too, and `div _ 0 = 0`,
+/// so `0 * 0 = 0 * 0`). Every one of these is checked by kernel `def_eq`, not
+/// merely by inferring the theorem's stated type — an `lcm` that type-checks
+/// but computes wrong would pass every OTHER sweep in this repository.
+#[test]
+fn lcm_computes_and_satisfies_its_checked_properties() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let one = f.num(1);
+    let four = f.num(4);
+    let five = f.num(5);
+    let six = f.num(6);
+    let seven = f.num(7);
+    let twelve = f.num(12);
+
+    let lcm_4_6 = f.const_app(p.lcm, &[four, six]);
+    assert!(f.k.def_eq(lcm_4_6, twelve), "lcm 4 6 must reduce to 12");
+    assert!(!f.k.def_eq(lcm_4_6, six), "lcm 4 6 must NOT reduce to 6");
+
+    let lcm_0_5 = f.const_app(p.lcm, &[zero, five]);
+    assert!(f.k.def_eq(lcm_0_5, zero), "lcm 0 5 must reduce to 0");
+
+    let lcm_1_7 = f.const_app(p.lcm, &[one, seven]);
+    assert!(f.k.def_eq(lcm_1_7, seven), "lcm 1 7 must reduce to 7");
+
+    let lcm_7_7 = f.const_app(p.lcm, &[seven, seven]);
+    assert!(f.k.def_eq(lcm_7_7, seven), "lcm 7 7 must reduce to 7");
+
+    let lcm_0_0 = f.const_app(p.lcm, &[zero, zero]);
+    assert!(f.k.def_eq(lcm_0_0, zero), "lcm 0 0 must reduce to 0");
+
+    // `dvd_lcm_left`/`dvd_lcm_right`: lcm is a genuine common multiple.
+    let dvd_left = f.lemma(p.dvd_lcm_left, &[four, six]);
+    let dvd_left_ty = f.dvd(four, lcm_4_6);
+    let inferred =
+        f.k.infer(dvd_left)
+            .expect("dvd_lcm_left must apply at (4,6)");
+    assert!(f.k.def_eq(inferred, dvd_left_ty));
+
+    let dvd_right = f.lemma(p.dvd_lcm_right, &[four, six]);
+    let dvd_right_ty = f.dvd(six, lcm_4_6);
+    let inferred =
+        f.k.infer(dvd_right)
+            .expect("dvd_lcm_right must apply at (4,6)");
+    assert!(f.k.def_eq(inferred, dvd_right_ty));
+
+    // `gcd_mul_lcm`: the headline identity, at a positive pair and at the
+    // all-zero corner.
+    let headline = f.lemma(p.gcd_mul_lcm, &[four, six]);
+    let common = f.gcd(four, six);
+    let mul_common_lcm = f.mul(common, lcm_4_6);
+    let four_six = f.mul(four, six);
+    let headline_ty = f.eq(mul_common_lcm, four_six);
+    let inferred =
+        f.k.infer(headline)
+            .expect("gcd_mul_lcm must apply at (4,6)");
+    assert!(f.k.def_eq(inferred, headline_ty));
+
+    let headline_zero = f.lemma(p.gcd_mul_lcm, &[zero, zero]);
+    let common_zero = f.gcd(zero, zero);
+    let mul_common_zero_lcm = f.mul(common_zero, lcm_0_0);
+    let zero_zero = f.mul(zero, zero);
+    let headline_zero_ty = f.eq(mul_common_zero_lcm, zero_zero);
+    let inferred =
+        f.k.infer(headline_zero)
+            .expect("gcd_mul_lcm must apply at the all-zero corner");
+    assert!(f.k.def_eq(inferred, headline_zero_ty));
+
+    // Negative control: a changed conclusion must be rejected by the trusted
+    // gate, not just look wrong to a reader.
+    let six_sq = f.mul(six, six);
+    let wrong_ty = f.eq(mul_common_lcm, six_sq);
+    let changed_name = f.name("gcd_mul_lcm_with_wrong_product");
+    let error = f
+        .declare_theorem(changed_name, wrong_ty, headline)
+        .expect_err("gcd_mul_lcm's proof must not typecheck against a different product");
     assert!(matches!(
         error,
         KernelError::DeclarationValueMismatch { .. }
@@ -4338,7 +4430,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        34 + 187,
+        35 + 191,
         "every promised definition and theorem must be rendered"
     );
 }
