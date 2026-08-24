@@ -1107,3 +1107,80 @@ pub(super) fn declare_pow_add(d: &mut IntDev<'_>) -> Result<(), KernelError> {
         value,
     })
 }
+
+/// `Int.pow_mul : ∀ (a : Int) (m n : Nat), Eq Int (pow a (m*n)) (pow (pow a
+/// m) n)` — induction on `n`. Both directions of the base case compute (`m*0`
+/// and `n=0` both hit `pow _ 0 ≡ 1` definitionally), and the step chains
+/// `pow_add` then the induction hypothesis through `mul m (succ j) ≡ add (mul
+/// m j) m` and `pow (pow a m) (succ j) ≡ mul (pow (pow a m) j) (pow a m)`,
+/// both definitional (`Nat.mul`/`Int.pow` both recurse on their SECOND
+/// argument).
+///
+/// Quantifies over one `Int` and two `Nat`s, so — like [`declare_pow_add`] —
+/// it is declared by hand rather than through [`IntDev::int_theorem`].
+///
+/// # Errors
+///
+/// Returns the kernel's rejection if the constructed proof does not check.
+pub(super) fn declare_pow_mul(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let int_ty = d.int_ty();
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| {
+        let prod = NatOps::mul(d, m, x);
+        let lhs = d.ipow(a, prod);
+        let pow_a_m = d.ipow(a, m);
+        let rhs = d.ipow(pow_a_m, x);
+        d.ieq(lhs, rhs)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            let one = d.ione();
+            d.irefl(one)
+        },
+        &|d, j, ih| {
+            let mj = NatOps::mul(d, m, j);
+            let pow_a_mj = d.ipow(a, mj);
+            let sum = NatOps::add(d, mj, m);
+            let start = d.ipow(a, sum);
+            let pow_a_m = d.ipow(a, m);
+            let after_pow_add = d.imul(pow_a_mj, pow_a_m);
+            let h_pow_add = d.const_app(p.pow_add, &[a, mj, m]);
+            let pow_pam_j = d.ipow(pow_a_m, j);
+            let after_ih = d.imul(pow_pam_j, pow_a_m);
+            let h_ih = d.icongr(pow_a_mj, pow_pam_j, ih, &|d, t| d.imul(t, pow_a_m));
+            let (_, proof) = d.ichain(start, &[(after_pow_add, h_pow_add), (after_ih, h_ih)]);
+            proof
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let inner2 = d.pi_fv(m_fv, nat, inner);
+        d.pi_fv(a_fv, int_ty, inner2)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let inner2 = d.lam_fv(m_fv, nat, inner);
+        d.lam_fv(a_fv, int_ty, inner2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}

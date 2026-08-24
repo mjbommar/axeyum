@@ -302,6 +302,9 @@ pub struct IntPrelude {
     /// `pow_add : ∀ (a : Int) (m n : Nat), Eq Int (pow a (add m n)) (mul (pow a m) (pow a n))`
     /// — induction on `n`, mirroring `Nat.pow_add`'s own proof shape.
     pub pow_add: NameId,
+    /// `pow_mul : ∀ (a : Int) (m n : Nat),
+    /// Eq Int (pow a (m*n)) (pow (pow a m) n)`.
+    pub pow_mul: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -429,6 +432,9 @@ pub struct IntPrelude {
     /// `nat_abs_neg : ∀ n, natAbs (neg n) = natAbs n` — negation preserves
     /// magnitude.
     pub nat_abs_neg: NameId,
+    /// `nat_abs_pow : ∀ a k, Eq Nat (natAbs (pow a k)) (Nat.pow (natAbs a)
+    /// k)` — the magnitude of a power is the power of the magnitude.
+    pub nat_abs_pow: NameId,
 
     // --- `Int.gcd`, Euclid's Book VII transported from `ℕ` -------------------
     /// `Int.gcd a b := Nat.gcd (natAbs a) (natAbs b)` — a `Nat`-valued gcd, as
@@ -625,6 +631,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         pow_zero: child(kernel, "pow_zero"),
         pow_succ: child(kernel, "pow_succ"),
         pow_add: child(kernel, "pow_add"),
+        pow_mul: child(kernel, "pow_mul"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -662,6 +669,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
         nat_abs_neg: child(kernel, "nat_abs_neg"),
+        nat_abs_pow: child(kernel, "nat_abs_pow"),
         gcd: child(kernel, "gcd"),
         nat_abs_mul: child(kernel, "nat_abs_mul"),
         dvd_of_nat_abs_dvd: child(kernel, "dvd_of_nat_abs_dvd"),
@@ -749,6 +757,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         defs::declare_pow(&mut d)?;
         defs::declare_pow_equations(&mut d)?;
         algebra::declare_pow_add(&mut d)?;
+        algebra::declare_pow_mul(&mut d)?;
         sub_nat_nat::declare_mul_lemmas(&mut d)?;
         algebra::declare_left_distrib(&mut d)?;
         sub::declare_sub_definition(&mut d)?;
@@ -795,6 +804,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_gcd_comm(&mut d)?;
         gcd::declare_gcd_one_zero_right(&mut d)?;
         gcd::declare_nat_abs_mul(&mut d)?;
+        nat_abs::declare_nat_abs_pow(&mut d)?;
         gcd::declare_dvd_of_nat_abs_dvd(&mut d)?;
         gcd::declare_nat_abs_dvd_nat_abs_of_dvd(&mut d)?;
         gcd::declare_gcd_dvd_left_right(&mut d)?;
