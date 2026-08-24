@@ -147,6 +147,7 @@ mod order;
 mod order_extra;
 mod order_more;
 mod primes;
+mod transposition;
 
 pub use ops::{NatDev, NatOps, NatState};
 
@@ -179,6 +180,11 @@ use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
 use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
+use transposition::{
+    declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
+    declare_transposition_injective, declare_transposition_involutive,
+    declare_transposition_maps_into,
+};
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
 /// and its constructors/recursor (re-exported from the [`LogicPrelude`] for
@@ -862,6 +868,33 @@ pub struct NatPrelude {
     /// MapsInto (fun k => point_override σ i0 (σ n) k) n` — the companion
     /// closure lemma to [`Self::restrict_injective`].
     pub restrict_maps_into: NameId,
+    /// `Nat.transposition : Nat → Nat → Nat → Nat` — `transposition i j k`
+    /// swaps `i` and `j` and fixes everything else, built from four nested
+    /// `Nat.ble` cuts in the style of `point_override`/`point_swap`
+    /// (`transposition.rs`'s module doc). The reusable object
+    /// `Int.prodRange_swap` does not give: it takes its swapped function by
+    /// hypothesis rather than constructing one.
+    pub transposition: NameId,
+    /// `Nat.transposition_involutive : ∀ i j, Lt i j → ∀ k,
+    /// Eq Nat (transposition i j (transposition i j k)) k`.
+    pub transposition_involutive: NameId,
+    /// `Nat.transposition_injective : ∀ i j n, Lt i j →
+    /// InjectiveOn (fun k => transposition i j k) n` — any involution is
+    /// injective, applying [`Self::transposition_involutive`].
+    pub transposition_injective: NameId,
+    /// `Nat.transposition_maps_into : ∀ i j n, Lt i j → Lt j n →
+    /// MapsInto (fun k => transposition i j k) n`.
+    pub transposition_maps_into: NameId,
+    /// `Nat.conjugate_injective : ∀ t σ n, (∀ x, Eq Nat (t (t x)) x) →
+    /// MapsInto t n → InjectiveOn σ n →
+    /// InjectiveOn (fun k => t (σ (t k))) n` — conjugating an injective
+    /// self-map by any involutive self-map preserves injectivity, generic
+    /// over `t` (not specialized to [`Self::transposition`]).
+    pub conjugate_injective: NameId,
+    /// `Nat.conjugate_maps_into : ∀ t σ n, MapsInto t n → MapsInto σ n →
+    /// MapsInto (fun k => t (σ (t k))) n` — the companion closure lemma to
+    /// [`Self::conjugate_injective`], needing no involution law.
+    pub conjugate_maps_into: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1146,6 +1179,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             injective_on_imp_surjective_on: kernel.name_str(nat, "injective_on_imp_surjective_on"),
             restrict_injective: kernel.name_str(nat, "restrict_injective"),
             restrict_maps_into: kernel.name_str(nat, "restrict_maps_into"),
+            transposition: kernel.name_str(nat, "transposition"),
+            transposition_involutive: kernel.name_str(nat, "transposition_involutive"),
+            transposition_injective: kernel.name_str(nat, "transposition_injective"),
+            transposition_maps_into: kernel.name_str(nat, "transposition_maps_into"),
+            conjugate_injective: kernel.name_str(nat, "conjugate_injective"),
+            conjugate_maps_into: kernel.name_str(nat, "conjugate_maps_into"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1187,6 +1226,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_pigeonhole(&mut d, &p)?;
         declare_restrict_injective(&mut d, &p)?;
         declare_restrict_maps_into(&mut d, &p)?;
+        declare_transposition(&mut d, &p)?;
+        declare_transposition_involutive(&mut d, &p)?;
+        declare_transposition_injective(&mut d, &p)?;
+        declare_transposition_maps_into(&mut d, &p)?;
+        declare_conjugate_injective(&mut d, &p)?;
+        declare_conjugate_maps_into(&mut d, &p)?;
         Ok(p)
     })();
     match built {

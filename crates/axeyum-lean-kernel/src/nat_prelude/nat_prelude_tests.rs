@@ -107,6 +107,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.injective_on,
         p.surjective_on,
         p.maps_into,
+        p.transposition,
     ]
 }
 
@@ -268,6 +269,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.injective_on_imp_surjective_on,
         p.restrict_injective,
         p.restrict_maps_into,
+        p.transposition_involutive,
+        p.transposition_injective,
+        p.transposition_maps_into,
+        p.conjugate_injective,
+        p.conjugate_maps_into,
     ]
 }
 
@@ -3987,7 +3993,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        24 + 152,
+        25 + 157,
         "every promised definition and theorem must be rendered"
     );
 }

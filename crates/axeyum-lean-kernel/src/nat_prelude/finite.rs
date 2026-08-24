@@ -488,7 +488,13 @@ fn compact_eq_of_gt(
 }
 
 /// `h : Lt a b ⊢ Le a b`, by weakening `Le (succ a) b` through `Le a (succ a)`.
-fn le_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+pub(super) fn le_of_lt(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = *p;
     let sa = d.succ(a);
     let le_a_sa = d.lemma(p.le_succ, &[a]);
@@ -551,7 +557,7 @@ fn zero_lt_via_c(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, x: ExprId, h: Ex
 
 /// `Or (Lt x c) (Or (Eq Nat x c) (Lt c x))`, by `Nat.le_total` then
 /// `Nat.lt_or_eq_of_le` on whichever side holds.
-fn trichotomy(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, x: ExprId) -> ExprId {
+pub(super) fn trichotomy(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, x: ExprId) -> ExprId {
     let p = *p;
     let logic = p.logic;
     let lt_xc = d.lt(x, c);
@@ -1366,7 +1372,13 @@ fn point_override(d: &mut NatDev<'_>, sigma: ExprId, i0: ExprId, v: ExprId, k: E
 }
 
 /// `heq : Eq Bool cond true ⊢ Eq Nat (bool_select_nat cond a b) a`.
-fn select_nat_true(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+pub(super) fn select_nat_true(
+    d: &mut NatDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
     let true_val = d.bool_true();
     let symm_hb = d.bool_symm(cond, true_val, heq);
     let motive = d.bool_eq_motive(true_val, &|d, value| {
@@ -1378,7 +1390,13 @@ fn select_nat_true(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: 
 }
 
 /// `heq : Eq Bool cond false ⊢ Eq Nat (bool_select_nat cond a b) b`.
-fn select_nat_false(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+pub(super) fn select_nat_false(
+    d: &mut NatDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
     let false_val = d.bool_false();
     let symm_hb = d.bool_symm(cond, false_val, heq);
     let motive = d.bool_eq_motive(false_val, &|d, value| {
@@ -1394,7 +1412,7 @@ fn select_nat_false(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq:
 /// (mirrors `int_prelude/prod.rs`'s identically-shaped private helper,
 /// specialized there to `IntDev`) because `point_override`'s nested
 /// selection uses it at two different points.
-fn restrict_ble_eq_false_of_lt(
+pub(super) fn restrict_ble_eq_false_of_lt(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     a: ExprId,

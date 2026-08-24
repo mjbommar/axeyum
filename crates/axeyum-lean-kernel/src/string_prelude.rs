@@ -87,6 +87,10 @@ pub struct StringPrelude {
     /// `char_beq_eq_true_of_eq : ∀ a b,
     /// Eq Char a b → Eq Bool (char_beq a b) Bool.true` — completeness.
     pub char_beq_eq_true_of_eq: NameId,
+    /// `Char.decidable_eq : Π (a b : Char), Decidable (Eq Char a b)` — the
+    /// `logic` prelude's `Decidable.ofBool` bridge applied to `char_beq` and
+    /// its two spec directions above (see `decidable.rs`).
+    pub char_decidable_eq: NameId,
 
     /// `Str : Type` (`Sort 1`) — the recursive `List Char` inductive.
     pub str_ind: NameId,
@@ -109,6 +113,9 @@ pub struct StringPrelude {
     /// `str_beq_eq_true_of_eq : ∀ a b,
     /// Eq Str a b → Eq Bool (str_beq a b) Bool.true` — completeness.
     pub str_beq_eq_true_of_eq: NameId,
+    /// `Str.decidable_eq : Π (a b : Str), Decidable (Eq Str a b)` — the same
+    /// `Decidable.ofBool` bridge applied to `str_beq` (see `decidable.rs`).
+    pub str_decidable_eq: NameId,
 
     /// `append : Str → Str → Str` — the monoid multiplication, a **checked
     /// definition** by structural recursion on its first argument (not an
@@ -364,6 +371,12 @@ pub struct StringPrelude {
     /// Eq Bool (isPrefixBool p s) Bool.true → isPrefix p s` — soundness
     /// (constructs the existential witness).
     pub is_prefix_of_is_prefix_bool_eq_true: NameId,
+    /// `Str.decidable_isPrefix : Π (p s : Str), Decidable (isPrefix p s)` —
+    /// the `logic` prelude's `Decidable.ofBool` bridge applied to
+    /// `isPrefixBool` and the two spec directions above: a decision procedure
+    /// for a `Prop`-valued EXISTENTIAL, not just an equality (see
+    /// `decidable.rs`).
+    pub str_decidable_is_prefix: NameId,
 
     /// `isSuffixBool : Str → Str → Bool := λ s t, isPrefixBool (reverse s)
     /// (reverse t)` — not a fresh recursion, a composition (see
@@ -473,6 +486,25 @@ pub fn build_string_prelude(
             one,
         )?;
 
+        // --- Char.decidable_eq : Π (a b : Char), Decidable (Eq Char a b) -----
+        // The `logic` prelude's `Decidable.ofBool` bridge applied to
+        // `char_beq` and the two spec directions just declared. See
+        // `decidable.rs`.
+        let char_decidable_eq = kernel.name_str(namespace, "char_decidable_eq");
+        decidable::declare_decidable(
+            kernel,
+            &decidable::DecidableNames {
+                logic,
+                carrier: char_ind,
+                prop: decidable::PropKind::CarrierEq,
+                bexpr: char_beq,
+                positive: char_eq_of_beq_eq_true,
+                completeness: char_beq_eq_true_of_eq,
+                decidable_name: char_decidable_eq,
+            },
+            one,
+        )?;
+
         // --- Str : Type, Str.nil | Str.cons (Char) (Str) ---------------------
         // The recursive `List Char`: `cons` has a carrier field (`head : Char`) and a
         // direct recursive field (`tail : Str`), exactly the slice-5 shape the
@@ -513,6 +545,24 @@ pub fn build_string_prelude(
                 str_beq_refl,
                 str_eq_of_beq_eq_true,
                 str_beq_eq_true_of_eq,
+            },
+            one,
+        )?;
+
+        // --- Str.decidable_eq : Π (a b : Str), Decidable (Eq Str a b) --------
+        // The same `Decidable.ofBool` bridge applied to `str_beq`. See
+        // `decidable.rs`.
+        let str_decidable_eq = kernel.name_str(namespace, "str_decidable_eq");
+        decidable::declare_decidable(
+            kernel,
+            &decidable::DecidableNames {
+                logic,
+                carrier: str_ind,
+                prop: decidable::PropKind::CarrierEq,
+                bexpr: str_beq,
+                positive: str_eq_of_beq_eq_true,
+                completeness: str_beq_eq_true_of_eq,
+                decidable_name: str_decidable_eq,
             },
             one,
         )?;
@@ -901,6 +951,25 @@ pub fn build_string_prelude(
             one,
         )?;
 
+        // --- Str.decidable_isPrefix : Π (p s : Str), Decidable (isPrefix p s)
+        // The same `Decidable.ofBool` bridge applied to `isPrefixBool` — a
+        // decision procedure for a `Prop`-valued existential rather than an
+        // equality. See `decidable.rs`.
+        let str_decidable_is_prefix = kernel.name_str(namespace, "str_decidable_isPrefix");
+        decidable::declare_decidable(
+            kernel,
+            &decidable::DecidableNames {
+                logic,
+                carrier: str_ind,
+                prop: decidable::PropKind::Predicate(is_prefix),
+                bexpr: is_prefix_bool,
+                positive: is_prefix_of_is_prefix_bool_eq_true,
+                completeness: is_prefix_bool_eq_true_of_is_prefix,
+                decidable_name: str_decidable_is_prefix,
+            },
+            one,
+        )?;
+
         Ok(StringPrelude {
             logic,
             char_ind,
@@ -910,6 +979,7 @@ pub fn build_string_prelude(
             char_beq_refl,
             char_eq_of_beq_eq_true,
             char_beq_eq_true_of_eq,
+            char_decidable_eq,
             str_ind,
             str_nil,
             str_cons,
@@ -918,6 +988,7 @@ pub fn build_string_prelude(
             str_beq_refl,
             str_eq_of_beq_eq_true,
             str_beq_eq_true_of_eq,
+            str_decidable_eq,
             append,
             nil_append,
             cons_append,
@@ -989,6 +1060,7 @@ pub fn build_string_prelude(
             is_prefix_bool_nil,
             is_prefix_bool_eq_true_of_is_prefix,
             is_prefix_of_is_prefix_bool_eq_true,
+            str_decidable_is_prefix,
             is_suffix_bool,
             is_suffix_bool_eq_true_of_is_suffix,
             is_suffix_of_is_suffix_bool_eq_true,
@@ -1384,6 +1456,7 @@ mod all_bool;
 mod bool_predicates;
 mod cancel;
 mod char_beq;
+mod decidable;
 mod foldr;
 mod length;
 mod length_append;

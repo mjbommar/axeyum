@@ -353,6 +353,40 @@ pub struct LogicPrelude {
     pub decidable_by_cases: NameId,
     /// The universe parameter `v` of [`Self::decidable_by_cases`].
     pub decidable_by_cases_vparam: NameId,
+    /// `Decidable.ofBool : Π (p : Prop) (b : Bool), (Eq Bool b Bool.true → p) →
+    /// (Eq Bool b Bool.false → (p → False)) → Decidable p` — the bridge from a
+    /// computed `Bool` plus its two spec directions to a `Decidable` witness:
+    /// the leverage that turns each of `Nat.ble`/`Rat.ble`/`Char.beq`/
+    /// `Str.beq`'s independent hand-rolled decision procedures into a
+    /// one-line instance. A [`Declaration::Definition`] like [`Self::decide`]
+    /// (codomain `Decidable p : Sort 1`, not `Prop`), built by `Bool.rec.{1}`
+    /// on `b` — each branch is closed by instantiating its own live
+    /// hypothesis at `Eq.refl`, not by ruling out an impossible one (unlike
+    /// [`Self::of_decide_eq_true`]/[`Self::of_decide_eq_false`], which case
+    /// on a *fixed* `decide` result and must discharge the impossible branch
+    /// with [`Self::bool_false_ne_true`]/[`Self::bool_true_ne_false`]).
+    pub decidable_of_bool: NameId,
+    /// `Decidable.and : Π (p q : Prop), Decidable p → Decidable q →
+    /// Decidable (And p q)` — closes `Decidable` under conjunction, built by
+    /// nested `Decidable.rec.{1}` case-splits on `dp` then `dq`.
+    pub decidable_and: NameId,
+    /// `Decidable.or : Π (p q : Prop), Decidable p → Decidable q →
+    /// Decidable (Or p q)` — closes `Decidable` under disjunction, the same
+    /// nested-case-split shape as [`Self::decidable_and`], refuting the
+    /// `¬p ∧ ¬q` branch via [`Self::or_elim`].
+    pub decidable_or: NameId,
+    /// `Decidable.not : Π (p : Prop), Decidable p → Decidable (p → False)` —
+    /// closes `Decidable` under negation by swapping the two `Decidable.rec`
+    /// branches.
+    pub decidable_not: NameId,
+    /// `Decidable.decide_eq_true_iff : Π (p : Prop) (d : Decidable p),
+    /// Iff (Eq Bool (decide p d) Bool.true) p` — packages
+    /// [`Self::of_decide_eq_true`] (the `Iff.mp` direction) together with a
+    /// `Decidable.rec` case-split proving the converse (`Iff.mpr`): the
+    /// `isTrue` branch is `Eq.refl` after `decide` ι-reduces, the `isFalse`
+    /// branch is ex falso from the given `h : p` against the constructor's
+    /// own refutation.
+    pub decidable_decide_eq_true_iff: NameId,
 
     /// `Bool : Type` (`Sort 1`) — the **computational** two-element type, a
     /// nullary enum `Bool.false | Bool.true`, in official Lean order. This is
@@ -3909,6 +3943,538 @@ pub(crate) fn build_logic_prelude_uncached(
             })?;
         }
 
+        // --- Decidable.ofBool : Π (p : Prop) (b : Bool), --------------------
+        //     (Eq Bool b Bool.true → p) → (Eq Bool b Bool.false → (p → False))
+        //     → Decidable p --------------------------------------------------
+        // The leverage lemma: case-split on `b` via `Bool.rec.{1}` (the motive
+        // selects the remaining two-hypothesis Pi type, so this needs the
+        // type-valued `Bool` recursor, the same shape as the
+        // `bool_false_ne_true` discriminator above). Each branch is closed by
+        // applying its OWN live hypothesis at `Eq.refl` -- unlike
+        // `of_decide_eq_true`/`of_decide_eq_false`, no impossible branch ever
+        // needs `Bool.false_ne_true`/`Bool.true_ne_false` here, because both
+        // branches of `b` are live and each carries exactly the hypothesis
+        // that discharges it.
+        let decidable_of_bool = kernel.name_str(decidable, "ofBool");
+        {
+            let prop = kernel.prop();
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
+            let p_fvar = 24_100;
+            let b_fvar = 24_101;
+            let h1_fvar = 24_102;
+            let h2_fvar = 24_103;
+            let bval_fvar = 24_104;
+            let h1c_fvar = 24_105;
+            let h2c_fvar = 24_106;
+            let h1d_fvar = 24_107;
+            let h2d_fvar = 24_108;
+
+            let p = kernel.fvar(p_fvar);
+            let b = kernel.fvar(b_fvar);
+            let bool_const = kernel.const_(bool_, vec![]);
+            let bool_true_v = kernel.const_(bool_true, vec![]);
+            let bool_false_v = kernel.const_(bool_false, vec![]);
+            let false_const = kernel.const_(false_, vec![]);
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let dec_p = kernel.app(decidable_const, p);
+            let hf_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+
+            // h1_ty := Eq Bool b Bool.true → p ; h2_ty := Eq Bool b Bool.false → hf_ty.
+            let eq_b_true_ty = eq_app(kernel, eq, one, bool_const, b, bool_true_v);
+            let h1_ty = kernel.pi(anon, eq_b_true_ty, p, BinderInfo::Default);
+            let eq_b_false_ty = eq_app(kernel, eq, one, bool_const, b, bool_false_v);
+            let h2_ty = kernel.pi(anon, eq_b_false_ty, hf_ty, BinderInfo::Default);
+
+            // type: Π (p : Prop) (b : Bool), h1_ty → h2_ty → Decidable p.
+            let t_inner = kernel.pi(anon, h2_ty, dec_p, BinderInfo::Default);
+            let t_mid = kernel.pi(anon, h1_ty, t_inner, BinderInfo::Default);
+            let with_b_ty = pi_fvar(kernel, b_fvar, bool_const, t_mid, BinderInfo::Default);
+            let decidable_of_bool_ty =
+                pi_fvar(kernel, p_fvar, prop, with_b_ty, BinderInfo::Default);
+
+            // motive(bval) := (Eq Bool bval Bool.true → p) →
+            //   (Eq Bool bval Bool.false → hf_ty) → Decidable p.
+            let bval = kernel.fvar(bval_fvar);
+            let eq_bval_true_ty = eq_app(kernel, eq, one, bool_const, bval, bool_true_v);
+            let h1_ty_bval = kernel.pi(anon, eq_bval_true_ty, p, BinderInfo::Default);
+            let eq_bval_false_ty = eq_app(kernel, eq, one, bool_const, bval, bool_false_v);
+            let h2_ty_bval = kernel.pi(anon, eq_bval_false_ty, hf_ty, BinderInfo::Default);
+            let motive_inner = kernel.pi(anon, h2_ty_bval, dec_p, BinderInfo::Default);
+            let motive_body = kernel.pi(anon, h1_ty_bval, motive_inner, BinderInfo::Default);
+            let motive = lam_fvar(
+                kernel,
+                bval_fvar,
+                bool_const,
+                motive_body,
+                BinderInfo::Default,
+            );
+
+            let decidable_is_false_const = kernel.const_(decidable_is_false, vec![]);
+            let decidable_is_true_const = kernel.const_(decidable_is_true, vec![]);
+            let eq_refl_const = kernel.const_(eq_refl, vec![one]);
+
+            // case Bool.false: fun _h1 h2 => Decidable.isFalse p (h2 (Eq.refl Bool Bool.false)).
+            let case_false = {
+                let h1_ty_false = {
+                    let e = eq_app(kernel, eq, one, bool_const, bool_false_v, bool_true_v);
+                    kernel.pi(anon, e, p, BinderInfo::Default)
+                };
+                let h2_ty_false = {
+                    let e = eq_app(kernel, eq, one, bool_const, bool_false_v, bool_false_v);
+                    kernel.pi(anon, e, hf_ty, BinderInfo::Default)
+                };
+                let refl_false = apply_all(kernel, eq_refl_const, &[bool_const, bool_false_v]);
+                let h2c = kernel.fvar(h2c_fvar);
+                let hf_from_h2 = kernel.app(h2c, refl_false);
+                let is_false_applied =
+                    apply_all(kernel, decidable_is_false_const, &[p, hf_from_h2]);
+                let with_h2 = lam_fvar(
+                    kernel,
+                    h2c_fvar,
+                    h2_ty_false,
+                    is_false_applied,
+                    BinderInfo::Default,
+                );
+                lam_fvar(kernel, h1c_fvar, h1_ty_false, with_h2, BinderInfo::Default)
+            };
+
+            // case Bool.true: fun h1 _h2 => Decidable.isTrue p (h1 (Eq.refl Bool Bool.true)).
+            let case_true = {
+                let h1_ty_true = {
+                    let e = eq_app(kernel, eq, one, bool_const, bool_true_v, bool_true_v);
+                    kernel.pi(anon, e, p, BinderInfo::Default)
+                };
+                let h2_ty_true = {
+                    let e = eq_app(kernel, eq, one, bool_const, bool_true_v, bool_false_v);
+                    kernel.pi(anon, e, hf_ty, BinderInfo::Default)
+                };
+                let refl_true = apply_all(kernel, eq_refl_const, &[bool_const, bool_true_v]);
+                let h1d = kernel.fvar(h1d_fvar);
+                let p_from_h1 = kernel.app(h1d, refl_true);
+                let is_true_applied = apply_all(kernel, decidable_is_true_const, &[p, p_from_h1]);
+                let with_h2 = lam_fvar(
+                    kernel,
+                    h2d_fvar,
+                    h2_ty_true,
+                    is_true_applied,
+                    BinderInfo::Default,
+                );
+                lam_fvar(kernel, h1d_fvar, h1_ty_true, with_h2, BinderInfo::Default)
+            };
+
+            let bool_rec_one = kernel.const_(bool_rec, vec![one]);
+            let cased = apply_all(kernel, bool_rec_one, &[motive, case_false, case_true, b]);
+            let h1 = kernel.fvar(h1_fvar);
+            let h2 = kernel.fvar(h2_fvar);
+            let applied = apply_all(kernel, cased, &[h1, h2]);
+
+            let with_h2v = lam_fvar(kernel, h2_fvar, h2_ty, applied, BinderInfo::Default);
+            let with_h1v = lam_fvar(kernel, h1_fvar, h1_ty, with_h2v, BinderInfo::Default);
+            let with_bv = lam_fvar(kernel, b_fvar, bool_const, with_h1v, BinderInfo::Default);
+            let decidable_of_bool_value =
+                lam_fvar(kernel, p_fvar, prop, with_bv, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Definition {
+                name: decidable_of_bool,
+                uparams: vec![],
+                ty: decidable_of_bool_ty,
+                value: decidable_of_bool_value,
+                hint: ReducibilityHint::Regular(0),
+            })?;
+        }
+
+        // --- Decidable.and : Π (p q : Prop), Decidable p → Decidable q → ----
+        //     Decidable (And p q) -------------------------------------------
+        let decidable_and = kernel.name_str(decidable, "and");
+        {
+            let prop = kernel.prop();
+            let zero = kernel.level_zero();
+            let p_fvar = 24_110;
+            let q_fvar = 24_111;
+            let dp_fvar = 24_112;
+            let dq_fvar = 24_113;
+            let dummy_p_fvar = 24_114;
+            let dummy_q_fvar = 24_115;
+            let hnp_fvar = 24_116;
+            let hp_fvar = 24_117;
+            let hnq_fvar = 24_118;
+            let hq_fvar = 24_119;
+            let hpq_fvar = 24_120;
+
+            let p = kernel.fvar(p_fvar);
+            let q = kernel.fvar(q_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let dec_p = kernel.app(decidable_const, p);
+            let dec_q = kernel.app(decidable_const, q);
+            let and_const = kernel.const_(and, vec![]);
+            let and_pq = apply_all(kernel, and_const, &[p, q]);
+            let dec_and_pq = kernel.app(decidable_const, and_pq);
+            let hnp_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let hnq_ty = kernel.pi(anon, q, false_const, BinderInfo::Default); // q → False
+
+            // type: Π (p q : Prop), Decidable p → Decidable q → Decidable (And p q).
+            let t_inner = kernel.pi(anon, dec_q, dec_and_pq, BinderInfo::Default);
+            let t_mid = kernel.pi(anon, dec_p, t_inner, BinderInfo::Default);
+            let with_q = pi_fvar(kernel, q_fvar, prop, t_mid, BinderInfo::Default);
+            let decidable_and_ty = pi_fvar(kernel, p_fvar, prop, with_q, BinderInfo::Default);
+
+            let decidable_is_false_const = kernel.const_(decidable_is_false, vec![]);
+            let decidable_is_true_const = kernel.const_(decidable_is_true, vec![]);
+            let one = kernel.level_succ(zero);
+            let decidable_rec_one = kernel.const_(decidable_rec, vec![one]);
+            let and_left_const = kernel.const_(and_left, vec![]);
+            let and_right_const = kernel.const_(and_right, vec![]);
+            let and_intro_const = kernel.const_(and_intro, vec![]);
+
+            // isFalse p hnp => Decidable.isFalse (And p q) (fun hpq => hnp (And.left p q hpq)).
+            let case_false_p = {
+                let hnp = kernel.fvar(hnp_fvar);
+                let hpq = kernel.fvar(hpq_fvar);
+                let left_pq = apply_all(kernel, and_left_const, &[p, q, hpq]);
+                let refuted = kernel.app(hnp, left_pq);
+                let body = lam_fvar(kernel, hpq_fvar, and_pq, refuted, BinderInfo::Default);
+                let applied = apply_all(kernel, decidable_is_false_const, &[and_pq, body]);
+                lam_fvar(kernel, hnp_fvar, hnp_ty, applied, BinderInfo::Default)
+            };
+            // isTrue p hp => <inner case-split on dq, using hp>.
+            let case_true_p = {
+                let hp = kernel.fvar(hp_fvar);
+                let dummy_q =
+                    lam_fvar(kernel, dummy_q_fvar, dec_q, dec_and_pq, BinderInfo::Default);
+                // isFalse q hnq => Decidable.isFalse (And p q) (fun hpq => hnq (And.right p q hpq)).
+                let case_false_q = {
+                    let hnq = kernel.fvar(hnq_fvar);
+                    let hpq = kernel.fvar(hpq_fvar);
+                    let right_pq = apply_all(kernel, and_right_const, &[p, q, hpq]);
+                    let refuted = kernel.app(hnq, right_pq);
+                    let body = lam_fvar(kernel, hpq_fvar, and_pq, refuted, BinderInfo::Default);
+                    let applied = apply_all(kernel, decidable_is_false_const, &[and_pq, body]);
+                    lam_fvar(kernel, hnq_fvar, hnq_ty, applied, BinderInfo::Default)
+                };
+                // isTrue q hq => Decidable.isTrue (And p q) (And.intro p q hp hq).
+                let case_true_q = {
+                    let hq = kernel.fvar(hq_fvar);
+                    let intro = apply_all(kernel, and_intro_const, &[p, q, hp, hq]);
+                    let applied = apply_all(kernel, decidable_is_true_const, &[and_pq, intro]);
+                    lam_fvar(kernel, hq_fvar, q, applied, BinderInfo::Default)
+                };
+                let dq = kernel.fvar(dq_fvar);
+                let split = apply_all(
+                    kernel,
+                    decidable_rec_one,
+                    &[q, dummy_q, case_false_q, case_true_q, dq],
+                );
+                lam_fvar(kernel, hp_fvar, p, split, BinderInfo::Default)
+            };
+
+            let dummy_p = lam_fvar(kernel, dummy_p_fvar, dec_p, dec_and_pq, BinderInfo::Default);
+            let dp = kernel.fvar(dp_fvar);
+            let outer = apply_all(
+                kernel,
+                decidable_rec_one,
+                &[p, dummy_p, case_false_p, case_true_p, dp],
+            );
+
+            let with_dq = lam_fvar(kernel, dq_fvar, dec_q, outer, BinderInfo::Default);
+            let with_dp = lam_fvar(kernel, dp_fvar, dec_p, with_dq, BinderInfo::Default);
+            let with_qv = lam_fvar(kernel, q_fvar, prop, with_dp, BinderInfo::Default);
+            let decidable_and_value = lam_fvar(kernel, p_fvar, prop, with_qv, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Definition {
+                name: decidable_and,
+                uparams: vec![],
+                ty: decidable_and_ty,
+                value: decidable_and_value,
+                hint: ReducibilityHint::Regular(0),
+            })?;
+        }
+
+        // --- Decidable.or : Π (p q : Prop), Decidable p → Decidable q → -----
+        //     Decidable (Or p q) ------------------------------------------
+        let decidable_or = kernel.name_str(decidable, "or");
+        {
+            let prop = kernel.prop();
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
+            let p_fvar = 24_130;
+            let q_fvar = 24_131;
+            let dp_fvar = 24_132;
+            let dq_fvar = 24_133;
+            let dummy_p_fvar = 24_134;
+            let dummy_q_fvar = 24_135;
+            let hnp_fvar = 24_136;
+            let hp_fvar = 24_137;
+            let hnq_fvar = 24_138;
+            let hq_fvar = 24_139;
+
+            let p = kernel.fvar(p_fvar);
+            let q = kernel.fvar(q_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let dec_p = kernel.app(decidable_const, p);
+            let dec_q = kernel.app(decidable_const, q);
+            let or_const = kernel.const_(or, vec![]);
+            let or_pq = apply_all(kernel, or_const, &[p, q]);
+            let dec_or_pq = kernel.app(decidable_const, or_pq);
+            let hnp_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let hnq_ty = kernel.pi(anon, q, false_const, BinderInfo::Default); // q → False
+
+            // type: Π (p q : Prop), Decidable p → Decidable q → Decidable (Or p q).
+            let t_inner = kernel.pi(anon, dec_q, dec_or_pq, BinderInfo::Default);
+            let t_mid = kernel.pi(anon, dec_p, t_inner, BinderInfo::Default);
+            let with_q = pi_fvar(kernel, q_fvar, prop, t_mid, BinderInfo::Default);
+            let decidable_or_ty = pi_fvar(kernel, p_fvar, prop, with_q, BinderInfo::Default);
+
+            let decidable_is_false_const = kernel.const_(decidable_is_false, vec![]);
+            let decidable_is_true_const = kernel.const_(decidable_is_true, vec![]);
+            let decidable_rec_one = kernel.const_(decidable_rec, vec![one]);
+            let or_inl_const = kernel.const_(or_inl, vec![]);
+            let or_inr_const = kernel.const_(or_inr, vec![]);
+            let or_elim_const = kernel.const_(or_elim, vec![]);
+
+            // isTrue p hp => Decidable.isTrue (Or p q) (Or.inl p q hp).
+            let case_true_p = {
+                let hp = kernel.fvar(hp_fvar);
+                let inl = apply_all(kernel, or_inl_const, &[p, q, hp]);
+                let applied = apply_all(kernel, decidable_is_true_const, &[or_pq, inl]);
+                lam_fvar(kernel, hp_fvar, p, applied, BinderInfo::Default)
+            };
+            // isFalse p hnp => <inner case-split on dq, using hnp>.
+            let case_false_p = {
+                let hnp = kernel.fvar(hnp_fvar);
+                let dummy_q = lam_fvar(kernel, dummy_q_fvar, dec_q, dec_or_pq, BinderInfo::Default);
+                // isTrue q hq => Decidable.isTrue (Or p q) (Or.inr p q hq).
+                let case_true_q = {
+                    let hq = kernel.fvar(hq_fvar);
+                    let inr = apply_all(kernel, or_inr_const, &[p, q, hq]);
+                    let applied = apply_all(kernel, decidable_is_true_const, &[or_pq, inr]);
+                    lam_fvar(kernel, hq_fvar, q, applied, BinderInfo::Default)
+                };
+                // isFalse q hnq => Decidable.isFalse (Or p q)
+                //   (fun hpq => Or.elim p q False hpq hnp hnq).
+                let case_false_q = {
+                    let hnq = kernel.fvar(hnq_fvar);
+                    let hpq_fvar = 24_140;
+                    let hpq = kernel.fvar(hpq_fvar);
+                    let refuted =
+                        apply_all(kernel, or_elim_const, &[p, q, false_const, hpq, hnp, hnq]);
+                    let body = lam_fvar(kernel, hpq_fvar, or_pq, refuted, BinderInfo::Default);
+                    let applied = apply_all(kernel, decidable_is_false_const, &[or_pq, body]);
+                    lam_fvar(kernel, hnq_fvar, hnq_ty, applied, BinderInfo::Default)
+                };
+                let dq = kernel.fvar(dq_fvar);
+                let split = apply_all(
+                    kernel,
+                    decidable_rec_one,
+                    &[q, dummy_q, case_false_q, case_true_q, dq],
+                );
+                lam_fvar(kernel, hnp_fvar, hnp_ty, split, BinderInfo::Default)
+            };
+
+            let dummy_p = lam_fvar(kernel, dummy_p_fvar, dec_p, dec_or_pq, BinderInfo::Default);
+            let dp = kernel.fvar(dp_fvar);
+            let outer = apply_all(
+                kernel,
+                decidable_rec_one,
+                &[p, dummy_p, case_false_p, case_true_p, dp],
+            );
+
+            let with_dq = lam_fvar(kernel, dq_fvar, dec_q, outer, BinderInfo::Default);
+            let with_dp = lam_fvar(kernel, dp_fvar, dec_p, with_dq, BinderInfo::Default);
+            let with_qv = lam_fvar(kernel, q_fvar, prop, with_dp, BinderInfo::Default);
+            let decidable_or_value = lam_fvar(kernel, p_fvar, prop, with_qv, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Definition {
+                name: decidable_or,
+                uparams: vec![],
+                ty: decidable_or_ty,
+                value: decidable_or_value,
+                hint: ReducibilityHint::Regular(0),
+            })?;
+        }
+
+        // --- Decidable.not : Π (p : Prop), Decidable p → -------------------
+        //     Decidable (p → False) --------------------------------------
+        let decidable_not = kernel.name_str(decidable, "not");
+        {
+            let prop = kernel.prop();
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
+            let p_fvar = 24_150;
+            let dp_fvar = 24_151;
+            let dummy_fvar = 24_152;
+            let hnp_fvar = 24_153;
+            let hp_fvar = 24_154;
+            let hnp2_fvar = 24_155;
+
+            let p = kernel.fvar(p_fvar);
+            let false_const = kernel.const_(false_, vec![]);
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let dec_p = kernel.app(decidable_const, p);
+            let hnp_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let dec_not_p = kernel.app(decidable_const, hnp_ty);
+
+            // type: Π (p : Prop), Decidable p → Decidable (p → False).
+            let with_dp = kernel.pi(anon, dec_p, dec_not_p, BinderInfo::Default);
+            let decidable_not_ty = pi_fvar(kernel, p_fvar, prop, with_dp, BinderInfo::Default);
+
+            let decidable_is_false_const = kernel.const_(decidable_is_false, vec![]);
+            let decidable_is_true_const = kernel.const_(decidable_is_true, vec![]);
+            let decidable_rec_one = kernel.const_(decidable_rec, vec![one]);
+
+            // isFalse p hnp => Decidable.isTrue (p → False) hnp.
+            let case_false_p = {
+                let hnp = kernel.fvar(hnp_fvar);
+                let applied = apply_all(kernel, decidable_is_true_const, &[hnp_ty, hnp]);
+                lam_fvar(kernel, hnp_fvar, hnp_ty, applied, BinderInfo::Default)
+            };
+            // isTrue p hp => Decidable.isFalse (p → False) (fun hnp => hnp hp).
+            let case_true_p = {
+                let hp = kernel.fvar(hp_fvar);
+                let hnp2 = kernel.fvar(hnp2_fvar);
+                let refuted = kernel.app(hnp2, hp);
+                let body = lam_fvar(kernel, hnp2_fvar, hnp_ty, refuted, BinderInfo::Default);
+                let applied = apply_all(kernel, decidable_is_false_const, &[hnp_ty, body]);
+                lam_fvar(kernel, hp_fvar, p, applied, BinderInfo::Default)
+            };
+
+            let dummy = lam_fvar(kernel, dummy_fvar, dec_p, dec_not_p, BinderInfo::Default);
+            let dp = kernel.fvar(dp_fvar);
+            let cased = apply_all(
+                kernel,
+                decidable_rec_one,
+                &[p, dummy, case_false_p, case_true_p, dp],
+            );
+
+            let with_dp_v = lam_fvar(kernel, dp_fvar, dec_p, cased, BinderInfo::Default);
+            let decidable_not_value =
+                lam_fvar(kernel, p_fvar, prop, with_dp_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Definition {
+                name: decidable_not,
+                uparams: vec![],
+                ty: decidable_not_ty,
+                value: decidable_not_value,
+                hint: ReducibilityHint::Regular(0),
+            })?;
+        }
+
+        // --- Decidable.decide_eq_true_iff : Π (p : Prop) (d : Decidable p), -
+        //     Iff (Eq Bool (decide p d) Bool.true) p --------------------------
+        // `Iff.intro` of `of_decide_eq_true` (the `mp` direction) with a
+        // `Decidable.rec` case-split proving the converse `mpr`: the `isTrue`
+        // branch is `Eq.refl` once `decide` ι-reduces, the `isFalse` branch is
+        // ex falso from the supplied `hp : p` against the constructor's own
+        // refutation.
+        let decidable_decide_eq_true_iff = kernel.name_str(decidable, "decide_eq_true_iff");
+        {
+            let prop = kernel.prop();
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
+            let p_fvar = 24_160;
+            let d_fvar = 24_161;
+            let dvar_fvar = 24_162;
+            let h_fvar = 24_163;
+            let hp_fvar = 24_164;
+            let hp2_fvar = 24_165;
+
+            let p = kernel.fvar(p_fvar);
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let dec_p = kernel.app(decidable_const, p);
+            let bool_const = kernel.const_(bool_, vec![]);
+            let bool_true_v = kernel.const_(bool_true, vec![]);
+            let false_const = kernel.const_(false_, vec![]);
+            let hf_ty = kernel.pi(anon, p, false_const, BinderInfo::Default); // p → False
+            let decide_const = kernel.const_(decide, vec![]);
+
+            let d = kernel.fvar(d_fvar);
+            let decide_p_d = apply_all(kernel, decide_const, &[p, d]);
+            let eq_true_d_ty = eq_app(kernel, eq, one, bool_const, decide_p_d, bool_true_v);
+            let iff_const = kernel.const_(iff, vec![]);
+            let iff_ty = apply_all(kernel, iff_const, &[eq_true_d_ty, p]);
+
+            // type: Π (p : Prop) (d : Decidable p), Iff (Eq Bool (decide p d) Bool.true) p.
+            let with_d = pi_fvar(kernel, d_fvar, dec_p, iff_ty, BinderInfo::Default);
+            let decidable_decide_eq_true_iff_ty =
+                pi_fvar(kernel, p_fvar, prop, with_d, BinderInfo::Default);
+
+            // mp := of_decide_eq_true p d : Eq Bool (decide p d) Bool.true → p.
+            let of_decide_eq_true_const = kernel.const_(of_decide_eq_true, vec![]);
+            let mp_term = apply_all(kernel, of_decide_eq_true_const, &[p, d]);
+
+            // mpr := Decidable.rec.{0} p (motive := fun dvar => p → Eq Bool (decide p dvar) Bool.true)
+            //   (fun h hp => False.rec (Eq Bool Bool.false Bool.true) (h hp))
+            //   (fun h _hp => Eq.refl Bool Bool.true)
+            //   d.
+            let dvar = kernel.fvar(dvar_fvar);
+            let decide_p_dvar = apply_all(kernel, decide_const, &[p, dvar]);
+            let eq_true_dvar_ty = eq_app(kernel, eq, one, bool_const, decide_p_dvar, bool_true_v);
+            let motive_inner = kernel.pi(anon, p, eq_true_dvar_ty, BinderInfo::Default);
+            let motive = lam_fvar(kernel, dvar_fvar, dec_p, motive_inner, BinderInfo::Default);
+
+            let bool_false_v = kernel.const_(bool_false, vec![]);
+            let false_rec_const = kernel.const_(false_rec, vec![zero]);
+            let minor_is_false = {
+                let h = kernel.fvar(h_fvar);
+                let hp = kernel.fvar(hp_fvar);
+                let refuted = kernel.app(h, hp); // False
+                let target_ty = eq_app(kernel, eq, one, bool_const, bool_false_v, bool_true_v);
+                let false_motive = {
+                    let dummy_fvar = 24_167;
+                    lam_fvar(
+                        kernel,
+                        dummy_fvar,
+                        false_const,
+                        target_ty,
+                        BinderInfo::Default,
+                    )
+                };
+                let body = apply_all(kernel, false_rec_const, &[false_motive, refuted]);
+                let with_hp = lam_fvar(kernel, hp_fvar, p, body, BinderInfo::Default);
+                lam_fvar(kernel, h_fvar, hf_ty, with_hp, BinderInfo::Default)
+            };
+            let eq_refl_const = kernel.const_(eq_refl, vec![one]);
+            let minor_is_true = {
+                let h2_fvar = 24_166;
+                let refl_true = apply_all(kernel, eq_refl_const, &[bool_const, bool_true_v]);
+                let with_hp2 = lam_fvar(kernel, hp2_fvar, p, refl_true, BinderInfo::Default);
+                lam_fvar(kernel, h2_fvar, p, with_hp2, BinderInfo::Default)
+            };
+
+            let decidable_rec_zero = kernel.const_(decidable_rec, vec![zero]);
+            let mpr_term = apply_all(
+                kernel,
+                decidable_rec_zero,
+                &[p, motive, minor_is_false, minor_is_true, d],
+            );
+
+            let iff_intro_const = kernel.const_(iff_intro, vec![]);
+            let decidable_decide_eq_true_iff_value_body = apply_all(
+                kernel,
+                iff_intro_const,
+                &[eq_true_d_ty, p, mp_term, mpr_term],
+            );
+
+            let with_d_v = lam_fvar(
+                kernel,
+                d_fvar,
+                dec_p,
+                decidable_decide_eq_true_iff_value_body,
+                BinderInfo::Default,
+            );
+            let decidable_decide_eq_true_iff_value =
+                lam_fvar(kernel, p_fvar, prop, with_d_v, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: decidable_decide_eq_true_iff,
+                uparams: vec![],
+                ty: decidable_decide_eq_true_iff_ty,
+                value: decidable_decide_eq_true_iff_value,
+            })?;
+        }
+
         Ok(LogicPrelude {
             true_,
             true_intro,
@@ -3981,6 +4547,11 @@ pub(crate) fn build_logic_prelude_uncached(
             decidable_em,
             decidable_by_cases,
             decidable_by_cases_vparam,
+            decidable_of_bool,
+            decidable_and,
+            decidable_or,
+            decidable_not,
+            decidable_decide_eq_true_iff,
             bool_,
             bool_true,
             bool_false,

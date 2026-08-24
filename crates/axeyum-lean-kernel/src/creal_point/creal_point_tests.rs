@@ -127,6 +127,14 @@ fn every_theorem_here_is_axiom_free() {
             p.cross_annihilates_difference,
         ),
         ("circumcentre_unique", p.circumcentre_unique),
+        ("power_zero_iff_on_circle", p.power_zero_iff_on_circle),
+        ("power_of_centre", p.power_of_centre),
+        ("radical_axis_iff_dot", p.radical_axis_iff_dot),
+        ("power_difference_linear", p.power_difference_linear),
+        (
+            "two_circles_meet_on_radical_axis",
+            p.two_circles_meet_on_radical_axis,
+        ),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -238,6 +246,12 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.cross_self_right,
         p.cross_swap_bc,
         p.non_collinear,
+        p.power,
+        p.power_zero_iff_on_circle,
+        p.power_of_centre,
+        p.radical_axis_iff_dot,
+        p.power_difference_linear,
+        p.two_circles_meet_on_radical_axis,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),
@@ -1467,5 +1481,135 @@ fn circumcentre_unique_statement_is_exact() {
     assert_eq!(
         rendered,
         "((x0 : AxNat) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : CPoint) -> ((x5 : CPoint) -> ((x6 : CPoint.NonCollinear x1 x2 x3 x0) -> ((x7 : CReal.Equiv (CPoint.distSq x4 x1) (CPoint.distSq x4 x2)) -> ((x8 : CReal.Equiv (CPoint.distSq x4 x2) (CPoint.distSq x4 x3)) -> ((x9 : CReal.Equiv (CPoint.distSq x5 x1) (CPoint.distSq x5 x2)) -> ((x10 : CReal.Equiv (CPoint.distSq x5 x2) (CPoint.distSq x5 x3)) -> CPoint.Equiv x4 x5)))))))))))"
+    );
+}
+
+/// `CPoint.power`'s own type -- a `Definition`, checked for presence above
+/// and here for an exact render (this file's convention: see
+/// `cross_statement_is_exact`'s doc for why `Definition`s get this instead
+/// of the axiom-free list). `x0,x1 = P,O`.
+#[test]
+fn power_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.power)
+        .expect("power must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CReal) -> CReal)))"
+    );
+}
+
+/// **The power vanishes exactly on the circle.** See
+/// [`CPointPrelude::power_zero_iff_on_circle`]. `x0,x1,x2 = P,O,r2`.
+#[test]
+fn power_zero_iff_on_circle_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.power_zero_iff_on_circle)
+        .expect("power_zero_iff_on_circle must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CReal) -> Iff (CReal.Equiv (CPoint.power x0 x1 x2) CReal.zero) (CPoint.OnCircle x0 x1 x2))))"
+    );
+}
+
+/// **The power of the centre.** See [`CPointPrelude::power_of_centre`].
+/// `x0,x1 = O,r2`.
+#[test]
+fn power_of_centre_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.power_of_centre)
+        .expect("power_of_centre must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CReal) -> CReal.Equiv (CPoint.power x0 x0 x1) (CReal.neg x1)))"
+    );
+}
+
+/// **The radical axis -- the headline.** See
+/// [`CPointPrelude::radical_axis_iff_dot`]. `x0,...,x4 = O1,O2,r1,r2,P`.
+#[test]
+fn radical_axis_iff_dot_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.radical_axis_iff_dot)
+        .expect("radical_axis_iff_dot must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CPoint) -> Iff (CReal.Equiv (CPoint.power x4 x0 x2) (CPoint.power x4 x1 x3)) (CReal.Equiv (CPoint.dot (CPoint.sub x4 (CPoint.midpoint x0 x1)) (CPoint.sub x1 x0)) (CReal.mul CPoint.Scalar.inv2 (CReal.add x2 (CReal.neg x3)))))))))"
+    );
+}
+
+/// **The power difference is affine in `P`.** See
+/// [`CPointPrelude::power_difference_linear`]. `x0,...,x4 = O1,O2,r1,r2,P`.
+#[test]
+fn power_difference_linear_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.power_difference_linear)
+        .expect("power_difference_linear must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CPoint) -> CReal.Equiv (CReal.add (CPoint.power x4 x0 x2) (CReal.neg (CPoint.power x4 x1 x3))) (CReal.add (CReal.mul CPoint.Scalar.two (CPoint.dot x4 (CPoint.sub x1 x0))) (CReal.add (CReal.neg (CReal.add (CPoint.dot (CPoint.midpoint x0 x1) (CPoint.sub x1 x0)) (CPoint.dot (CPoint.midpoint x0 x1) (CPoint.sub x1 x0)))) (CReal.add (CReal.neg x2) x3))))))))"
+    );
+}
+
+/// **A common point of two circles has equal power, hence lies on the
+/// radical axis.** See
+/// [`CPointPrelude::two_circles_meet_on_radical_axis`]. `x0,...,x4 =
+/// O1,O2,r1,r2,P`.
+#[test]
+fn two_circles_meet_on_radical_axis_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.two_circles_meet_on_radical_axis)
+        .expect("two_circles_meet_on_radical_axis must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CPoint) -> ((x5 : CPoint.OnCircle x4 x0 x2) -> ((x6 : CPoint.OnCircle x4 x1 x3) -> CReal.Equiv (CPoint.dot (CPoint.sub x4 (CPoint.midpoint x0 x1)) (CPoint.sub x1 x0)) (CReal.mul CPoint.Scalar.inv2 (CReal.add x2 (CReal.neg x3))))))))))"
     );
 }

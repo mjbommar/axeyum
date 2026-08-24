@@ -938,6 +938,28 @@ pub struct RatPrelude {
     /// threshold `a²`, in the multiplied-through form that needs no
     /// `Rat.inv`.
     pub chebyshev_inequality: NameId,
+
+    // --- the weak law of large numbers scaffolding (rat_prelude::probability) --
+    /// `Rat.covariance_add_right : ∀ X Y Z p n,
+    /// covariance X (fun k => Y k + Z k) p n =
+    /// add (covariance X Y p n) (covariance X Z p n)` — bilinearity of
+    /// covariance in its second argument. Purely algebraic, no
+    /// `IsDistribution` hypothesis needed (matching [`Self::expectation_add`]'s
+    /// own unconditional linearity): `Cov[X,Y+Z] = E[X(Y+Z)] − E[X]E[Y+Z] =
+    /// (E[XY]+E[XZ]) − (E[X]E[Y]+E[X]E[Z]) = Cov[X,Y]+Cov[X,Z]`.
+    pub covariance_add_right: NameId,
+    /// `Rat.sumVars X m k := sumRange (fun j => X j k) m` — the pointwise sum
+    /// of `m` variables `X 0, X 1, …, X (m-1)`, each a `Nat → Rat` sequence
+    /// over the same outcome index `k`.
+    pub sum_vars: NameId,
+    /// `Rat.expectation_sumVars : ∀ X p n m,
+    /// expectation (sumVars X m) p n = sumRange (fun j => expectation (X j) p n) m`
+    /// — linearity of expectation over a FAMILY of variables, by induction on
+    /// `m` from [`Self::expectation_add`]. The scaffolding
+    /// [`Self::variance_add_of_uncorrelated`] alone does not give: every
+    /// multi-variable statement (the finite weak law of large numbers
+    /// included) needs `E[Σ_j X_j] = Σ_j E[X_j]`, not just `E[X+Y]=E[X]+E[Y]`.
+    pub expectation_sum_vars: NameId,
 }
 
 impl RatPrelude {
@@ -1166,6 +1188,9 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         indicator_le: child(kernel, "indicator_le"),
         markov_constructed: child(kernel, "markov_constructed"),
         chebyshev_inequality: child(kernel, "chebyshev_inequality"),
+        covariance_add_right: child(kernel, "covariance_add_right"),
+        sum_vars: child(kernel, "sumVars"),
+        expectation_sum_vars: child(kernel, "expectation_sumVars"),
     }
 }
 

@@ -68,6 +68,13 @@ const INDICATOR_HEIGHT: u16 = 38;
 /// sequence over the whole prelude, and `declare_covariance` runs last.
 const COVARIANCE_HEIGHT: u16 = 39;
 
+/// Delta height for `Rat.sumVars`: above `Rat.covariance`
+/// ([`COVARIANCE_HEIGHT`], 39) and every other height declared in this
+/// prelude so far — `Rat.sumVars` itself only calls `Rat.sumRange`, but this
+/// file's convention (see [`INDICATOR_HEIGHT`]) is a single monotone
+/// sequence over the whole prelude, and `declare_sum_vars` runs last.
+const SUM_VARS_HEIGHT: u16 = 40;
+
 /// Declare `Rat.IsDistribution`, `Rat.expectation`, `Rat.uniform`,
 /// `Rat.variance`, Markov's and (in spirit) Chebyshev's inequalities, and
 /// everything this file proves about them.
@@ -102,6 +109,9 @@ pub(super) fn declare_probability(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_covariance(d, p)?;
     declare_variance_add_eq(d, p)?;
     declare_variance_add_of_uncorrelated(d, p)?;
+    declare_covariance_add_right(d, p)?;
+    declare_sum_vars(d, p)?;
+    declare_expectation_sum_vars(d, p)?;
     Ok(())
 }
 
@@ -3101,4 +3111,350 @@ fn declare_variance_add_of_uncorrelated(
         ty,
         value,
     })
+}
+
+// --- the finite weak law of large numbers scaffolding -----------------------
+//
+// `Rat.variance_add_of_uncorrelated` gives the two-variable case. Every
+// multi-variable statement — the finite weak law included — needs linearity
+// of expectation over a whole FAMILY of variables, which
+// `Rat.expectation_add` alone does not give (it is the `m = 2` case, stated
+// directly rather than by induction). `Rat.covariance_add_right` and
+// `Rat.sumVars`/`Rat.expectation_sumVars` below are that scaffolding.
+
+/// `Rat.covariance_add_right : ∀ X Y Z p n,
+/// covariance X (fun k => Y k + Z k) p n = add (covariance X Y p n)
+/// (covariance X Z p n)` — bilinearity of covariance in its second argument.
+///
+/// Purely algebraic, no `IsDistribution` hypothesis needed — matching
+/// [`RatPrelude::expectation_add`]'s own unconditional linearity, not
+/// [`declare_variance_add_eq`]'s (which needs it only for `variance_eq`'s own
+/// `expectation_const` step, a step this proof never takes): `Cov[X,Y+Z] =
+/// E[X(Y+Z)] − E[X]E[Y+Z] = (E[XY]+E[XZ]) − (E[X]E[Y]+E[X]E[Z]) =
+/// Cov[X,Y]+Cov[X,Z]`, via [`RatPrelude::left_distrib`] twice (once on the
+/// summand, once on the product of means) and [`RatPrelude::sub_add_add`]
+/// once to regroup the difference of two two-term sums.
+fn declare_covariance_add_right(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let yz = combined(d, y, z);
+    let cov_x_yz = covariance(d, p, x, yz, pf, n);
+    let cov_x_y = covariance(d, p, x, y, pf, n);
+    let cov_x_z = covariance(d, p, x, z, pf, n);
+    let rhs = radd(d, cov_x_y, cov_x_z);
+    let concl = req(d, cov_x_yz, rhs);
+
+    // --- Step A: expectation(weighted(x, yz), pf, n) = e_xy + e_xz
+    let xy = weighted(d, x, y);
+    let xz = weighted(d, x, z);
+    let e_xy = expectation(d, p, xy, pf, n);
+    let e_xz = expectation(d, p, xz, pf, n);
+
+    let x_yz_summand = weighted(d, x, yz); // fun k => Xk*(Yk+Zk)
+    let xy_xz_combined = combined(d, xy, xz); // fun k => Xk*Yk + Xk*Zk
+    // `expectation` weights its argument by `pf` internally, so the
+    // pointwise identity has to be proved at THAT level (`weighted(_,pf)`),
+    // not at the raw random-variable level — otherwise `sum_range_congr`
+    // proves an equation missing the `pf` factor entirely.
+    let x_yz_weighted = weighted(d, x_yz_summand, pf); // fun k => (Xk*(Yk+Zk))*Pk
+    let xy_xz_weighted = weighted(d, xy_xz_combined, pf); // fun k => (Xk*Yk+Xk*Zk)*Pk
+    let pointwise_a = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let xk = d.apply(x, &[k]);
+        let yk = d.apply(y, &[k]);
+        let zk = d.apply(z, &[k]);
+        let pk = d.apply(pf, &[k]);
+        let yk_zk = radd(d, yk, zk);
+        let xk_yz_k = rmul(d, xk, yk_zk);
+        let xk_yk = rmul(d, xk, yk);
+        let xk_zk = rmul(d, xk, zk);
+        let xkyk_xkzk = radd(d, xk_yk, xk_zk);
+        let step = d.lemma(p.left_distrib, &[xk, yk, zk]);
+        // step : Eq(Xk*(Yk+Zk), Xk*Yk + Xk*Zk)
+        let lifted = rcongr(d, xk_yz_k, xkyk_xkzk, step, &|d, t| rmul(d, t, pk));
+        // lifted : Eq((Xk*(Yk+Zk))*Pk, (Xk*Yk+Xk*Zk)*Pk)
+        d.lam_fv(k_fv, nat, lifted)
+    };
+    let congr_a = d.lemma(
+        p.sum_range_congr,
+        &[x_yz_weighted, xy_xz_weighted, n, pointwise_a],
+    );
+    // congr_a : Eq(sumRange(x_yz_weighted,n), sumRange(xy_xz_weighted,n))
+    //   ~ Eq(expectation(x_yz_summand,pf,n), expectation(xy_xz_combined,pf,n)) [defeq]
+
+    let eq_add_a = d.lemma(p.expectation_add, &[xy, xz, pf, n]);
+    // eq_add_a : Eq(expectation(xy_xz_combined,pf,n), e_xy + e_xz)
+
+    let sum_x_yz_weighted = rsum_range(d, p, x_yz_weighted, n);
+    let sum_xy_xz_weighted = rsum_range(d, p, xy_xz_weighted, n);
+    let e_xy_e_xz = radd(d, e_xy, e_xz);
+    let (_e, a_chain) = rchain(
+        d,
+        sum_x_yz_weighted,
+        &[(sum_xy_xz_weighted, congr_a), (e_xy_e_xz, eq_add_a)],
+    );
+    // a_chain : Eq(sum_x_yz_weighted, e_xy_e_xz)
+    //   ~ Eq(e_x_yz, e_xy_e_xz)                                          [defeq,
+    //   both at the boundary (sum_xy_xz_weighted ~ expectation(xy_xz_combined,pf,n),
+    //   the LHS `eq_add_a` actually carries) and at the chain's own start]
+    let e_x_yz = expectation(d, p, x_yz_summand, pf, n);
+
+    // --- Step B: ex * e_yz = ex*ey + ex*ez
+    let ex = expectation(d, p, x, pf, n);
+    let ey = expectation(d, p, y, pf, n);
+    let ez = expectation(d, p, z, pf, n);
+    let e_yz = expectation(d, p, yz, pf, n);
+    let ex_e_yz = rmul(d, ex, e_yz);
+
+    let eq_add_b = d.lemma(p.expectation_add, &[y, z, pf, n]);
+    // eq_add_b : Eq(e_yz, ey+ez)
+    let ey_ez = radd(d, ey, ez);
+    let step_b1 = rcongr(d, e_yz, ey_ez, eq_add_b, &|d, t| rmul(d, ex, t));
+    // step_b1 : Eq(ex*e_yz, ex*(ey+ez))
+    let ex_ey_ez = rmul(d, ex, ey_ez);
+
+    let ex_ey = rmul(d, ex, ey);
+    let ex_ez = rmul(d, ex, ez);
+    let ex_ey_plus_ex_ez = radd(d, ex_ey, ex_ez);
+    let step_b2 = d.lemma(p.left_distrib, &[ex, ey, ez]);
+    // step_b2 : Eq(ex*(ey+ez), ex*ey + ex*ez)
+
+    let (_e, b_chain) = rchain(
+        d,
+        ex_e_yz,
+        &[(ex_ey_ez, step_b1), (ex_ey_plus_ex_ez, step_b2)],
+    );
+    // b_chain : Eq(ex_e_yz, ex_ey_plus_ex_ez)
+
+    // --- Step C: combine sub(e_x_yz, ex_e_yz) into sxy + sxz
+    let d1 = rcongr(d, e_x_yz, e_xy_e_xz, a_chain, &|d, t| {
+        rsub(d, p, t, ex_e_yz)
+    });
+    let after_d1 = rsub(d, p, e_xy_e_xz, ex_e_yz);
+    let d2 = rcongr(d, ex_e_yz, ex_ey_plus_ex_ez, b_chain, &|d, t| {
+        rsub(d, p, e_xy_e_xz, t)
+    });
+    let after_d2 = rsub(d, p, e_xy_e_xz, ex_ey_plus_ex_ez);
+
+    let s1 = d.lemma(p.sub_add_add, &[e_xy, e_xz, ex_ey, ex_ez]);
+    // s1 : Eq(sub(e_xy+e_xz, ex_ey+ex_ez), sub(e_xy,ex_ey) + sub(e_xz,ex_ez))
+    let sxy = rsub(d, p, e_xy, ex_ey);
+    let sxz = rsub(d, p, e_xz, ex_ez);
+    let target = radd(d, sxy, sxz);
+
+    let sub_start = rsub(d, p, e_x_yz, ex_e_yz);
+    let (_e, final_chain) = rchain(
+        d,
+        sub_start,
+        &[(after_d1, d1), (after_d2, d2), (target, s1)],
+    );
+    // final_chain : Eq(sub_start, target)
+    //   ~ Eq(cov_x_yz, cov_x_y + cov_x_z)                                [defeq]
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, final_chain);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_z = d.lam_fv(z_fv, fn_ty, with_pf);
+        let with_y = d.lam_fv(y_fv, fn_ty, with_z);
+        d.lam_fv(x_fv, fn_ty, with_y)
+    };
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, concl);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_z = d.pi_fv(z_fv, fn_ty, with_pf);
+        let with_y = d.pi_fv(y_fv, fn_ty, with_z);
+        d.pi_fv(x_fv, fn_ty, with_y)
+    };
+    d.declare_theorem(p.covariance_add_right, ty, value)
+}
+
+/// `Rat.sumVars X m k`, i.e. the partial application `d.const_app(p.sum_vars,
+/// &[x, m])` applied to `k` — the pointwise sum of `m` variables at outcome
+/// `k`.
+fn sum_vars_fn(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, m: ExprId) -> ExprId {
+    d.const_app(p.sum_vars, &[x, m])
+}
+
+/// Admit `Rat.sumVars : (Nat → Nat → Rat) → Nat → Nat → Rat := fun X m k =>
+/// sumRange (fun j => X j k) m` — the pointwise sum of `m` variables `X 0, X
+/// 1, …, X (m-1)`, each a `Nat → Rat` sequence over the same outcome index
+/// `k`.
+fn declare_sum_vars(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let inner_fn = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let xj = d.apply(x, &[j]);
+        let xjk = d.apply(xj, &[k]);
+        d.lam_fv(j_fv, nat, xjk)
+    };
+    let body = rsum_range(d, p, inner_fn, m);
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, body);
+        let with_m = d.lam_fv(m_fv, nat, with_k);
+        d.lam_fv(x_fv, x_ty, with_m)
+    };
+    let ty = {
+        let over_k = d.arrow(nat, carrier);
+        let over_m = d.arrow(nat, over_k);
+        d.arrow(x_ty, over_m)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sum_vars,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(SUM_VARS_HEIGHT),
+    })
+}
+
+/// `Rat.expectation_sumVars : ∀ X p n m,
+/// expectation (sumVars X m) p n = sumRange (fun j => expectation (X j) p n) m`
+/// — linearity of expectation over a FAMILY of variables, by induction on `m`
+/// from [`RatPrelude::expectation_add`].
+///
+/// Base case (`m = 0`): both sides are `zero`, but not by `Eq.refl` alone —
+/// `sumVars X 0 k` ι-reduces to `zero` (under the `k`-binder, since
+/// `sumRange`'s zero branch does not depend on the summand), so `expectation
+/// (sumVars X 0) p n` is definitionally `expectation (fun _ => zero) p n =
+/// sumRange (fun k => zero * p k) n` — a genuine sum of (pointwise-zero, but
+/// not syntactically zero) terms, closed by `sumRange_congr` against
+/// `rat_zero_mul` pointwise, [`sum_range_const`] at `c = zero`, and
+/// `mul_zero`.
+///
+/// Successor case: `sumVars X (succ m) k` ι-reduces (again under the
+/// `k`-binder) to `sumVars X m k + X m k`, so `expectation (sumVars X (succ
+/// m)) p n` is definitionally `expectation (fun k => sumVars X m k + X m k)
+/// p n`; [`RatPrelude::expectation_add`] splits it, the inductive hypothesis
+/// rewrites the first summand, and the result is definitionally the target
+/// `sumRange (fun j => expectation (X j) p n) m + expectation (X m) p n =
+/// sumRange (…) (succ m)` via `sumRange_succ`.
+fn declare_expectation_sum_vars(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let exp_of_x = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let xj = d.apply(x, &[j]);
+        let e_xj = expectation(d, p, xj, pf, n);
+        d.lam_fv(j_fv, nat, e_xj)
+    };
+
+    let motive = |d: &mut IntDev<'_>, bound: ExprId| -> ExprId {
+        let sv = sum_vars_fn(d, p, x, bound);
+        let lhs = expectation(d, p, sv, pf, n);
+        let rhs = rsum_range(d, p, exp_of_x, bound);
+        req(d, lhs, rhs)
+    };
+    let stmt = motive(d, m);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            // Base: expectation(const_fn zero, pf, n) = zero, via
+            // sumRange_congr (rat_zero_mul pointwise) + sum_range_const + mul_zero.
+            let zero_r = rzero(d, p);
+            let const_zero = const_fn(d, zero_r);
+            let weighted_zero = weighted(d, const_zero, pf);
+            let pointwise_zero = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let pk = d.apply(pf, &[k]);
+                let step = rat_zero_mul(d, p, pk);
+                d.lam_fv(k_fv, nat, step)
+            };
+            let congr1 = d.lemma(
+                p.sum_range_congr,
+                &[weighted_zero, const_zero, n, pointwise_zero],
+            );
+            let (_stmt_sc, proof_sc) = sum_range_const(d, p, zero_r, n);
+            let n_as_rat = nat_as_rat(d, p, n);
+            let n_zero = rmul(d, n_as_rat, zero_r);
+            let mul_zero_step = d.lemma(p.mul_zero, &[n_as_rat]);
+            let sum_weighted_zero = rsum_range(d, p, weighted_zero, n);
+            let sum_const_zero = rsum_range(d, p, const_zero, n);
+            let (_e, chain) = rchain(
+                d,
+                sum_weighted_zero,
+                &[
+                    (sum_const_zero, congr1),
+                    (n_zero, proof_sc),
+                    (zero_r, mul_zero_step),
+                ],
+            );
+            chain
+        },
+        &|d, j, ih| {
+            let sv_j = sum_vars_fn(d, p, x, j);
+            let x_j = d.apply(x, &[j]);
+            let combined_fn = combined(d, sv_j, x_j);
+
+            let eq1 = d.lemma(p.expectation_add, &[sv_j, x_j, pf, n]);
+            // eq1 : Eq(expectation(combined_fn,pf,n), expectation(sv_j,pf,n)+expectation(x_j,pf,n))
+            let e_svj = expectation(d, p, sv_j, pf, n);
+            let e_xj = expectation(d, p, x_j, pf, n);
+            let rhs1 = radd(d, e_svj, e_xj);
+
+            let sum_exp_j = rsum_range(d, p, exp_of_x, j);
+            let lift_ih = rcongr(d, e_svj, sum_exp_j, ih, &|d, t| radd(d, t, e_xj));
+            let target = radd(d, sum_exp_j, e_xj);
+
+            let e_combined = expectation(d, p, combined_fn, pf, n);
+            let (_e, chain) = rchain(d, e_combined, &[(rhs1, eq1), (target, lift_ih)]);
+            chain
+        },
+        m,
+    );
+
+    let value = {
+        let with_m = d.lam_fv(m_fv, nat, proof);
+        let with_n = d.lam_fv(n_fv, nat, with_m);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        d.lam_fv(x_fv, x_ty, with_pf)
+    };
+    let ty = {
+        let with_m = d.pi_fv(m_fv, nat, stmt);
+        let with_n = d.pi_fv(n_fv, nat, with_m);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        d.pi_fv(x_fv, x_ty, with_pf)
+    };
+    d.declare_theorem(p.expectation_sum_vars, ty, value)
 }

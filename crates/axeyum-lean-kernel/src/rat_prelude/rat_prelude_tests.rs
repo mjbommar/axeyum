@@ -2156,3 +2156,101 @@ fn rat_indicator_reduction_check_can_fail() {
          computation check above proves nothing"
     );
 }
+
+#[test]
+fn sum_vars_succ_closes_by_refl_alone() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, rat_ty, req, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    // sumVars X (succ m) k = sumVars X m k + X m k, by Eq.refl — the addend
+    // order sumRange's own succ ι-reduction actually produces.
+    let sm = d.succ(m);
+    let lhs = d.const_app(p.sum_vars, &[x, sm, k]);
+    let sv_m_k = d.const_app(p.sum_vars, &[x, m, k]);
+    let x_m = d.apply(x, &[m]);
+    let x_m_k = d.apply(x_m, &[k]);
+    let rhs = radd(&mut d, sv_m_k, x_m_k);
+    let stmt = req(&mut d, lhs, rhs);
+    let proof = rrefl(&mut d, rhs);
+    let ty = {
+        let inner = d.pi_fv(k_fv, nat, stmt);
+        let with_m = d.pi_fv(m_fv, nat, inner);
+        d.pi_fv(x_fv, x_ty, with_m)
+    };
+    let value = {
+        let inner = d.lam_fv(k_fv, nat, proof);
+        let with_m = d.lam_fv(m_fv, nat, inner);
+        d.lam_fv(x_fv, x_ty, with_m)
+    };
+    let name = d.kernel().name_str(anon, "Check.sum_vars_succ_refl");
+    d.declare_theorem(name, ty, value).unwrap_or_else(|e| {
+        panic!(
+            "Rat.sumVars did not reduce to sumVars X m k + X m k at succ m \
+             by refl alone: {}",
+            d.explain(&e)
+        )
+    });
+}
+
+#[test]
+fn sum_vars_succ_wrong_order_is_rejected() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, rat_ty, req, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let sm = d.succ(m);
+    let lhs = d.const_app(p.sum_vars, &[x, sm, k]);
+    let sv_m_k = d.const_app(p.sum_vars, &[x, m, k]);
+    let x_m = d.apply(x, &[m]);
+    let x_m_k = d.apply(x_m, &[k]);
+    let wrong_rhs = radd(&mut d, x_m_k, sv_m_k); // swapped
+    let stmt = req(&mut d, lhs, wrong_rhs);
+    let proof = rrefl(&mut d, wrong_rhs);
+    let ty = {
+        let inner = d.pi_fv(k_fv, nat, stmt);
+        let with_m = d.pi_fv(m_fv, nat, inner);
+        d.pi_fv(x_fv, x_ty, with_m)
+    };
+    let value = {
+        let inner = d.lam_fv(k_fv, nat, proof);
+        let with_m = d.lam_fv(m_fv, nat, inner);
+        d.lam_fv(x_fv, x_ty, with_m)
+    };
+    let name = d.kernel().name_str(anon, "Check.sum_vars_succ_wrong_order");
+    assert!(
+        d.declare_theorem(name, ty, value).is_err(),
+        "the kernel accepted the swapped-order sumVars succ equation by \
+         Eq.refl, so the computation check above proves nothing"
+    );
+}
