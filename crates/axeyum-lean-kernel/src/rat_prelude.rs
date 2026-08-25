@@ -1545,6 +1545,14 @@ pub struct RatPrelude {
     /// — cofactor expansion along the first row, in terms of [`Self::det2`]
     /// applied to the three 2×2 minors.
     pub det3_cofactor_row1: NameId,
+    /// `Rat.det3_scale_row : ∀ k a b c d e f g h i,`
+    /// `det3 (k*a) (k*b) (k*c) d e f g h i = k * det3 a b c d e f g h i` —
+    /// scaling row 1 scales the determinant. Rows 2/3 are not stated (`matrix.rs`'s
+    /// `declare_det3_scale_row` doc comment explains why: the scale factor
+    /// lands inside two of the three minors instead of outside all three
+    /// uniformly), matching [`Self::det2_scale_row`]'s own row-1-only
+    /// precedent.
+    pub det3_scale_row: NameId,
     /// `Rat.det3_ofInt : ∀ a b c d e f g h i : Int,`
     /// `det3 (ofInt a) … (ofInt i) = ofInt ((a*(e*i-f*h) - b*(d*i-f*g)) + c*(d*h-e*g))`
     /// — the bridge a concrete `det3` example uses to push its arithmetic
@@ -1870,6 +1878,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det3: child(kernel, "det3"),
         det3_id: child(kernel, "det3_id"),
         det3_cofactor_row1: child(kernel, "det3_cofactor_row1"),
+        det3_scale_row: child(kernel, "det3_scale_row"),
         det3_ofint: child(kernel, "det3_ofInt"),
         det3_example_generic: child(kernel, "det3_example_generic"),
         det3_example_diagonal: child(kernel, "det3_example_diagonal"),
