@@ -1852,6 +1852,22 @@ pub struct CRealPrelude {
     /// [G's own error at (F x, F y)] + G'(F x) * [F's own error at (x,y)]`,
     /// no ring expansion), unlike the product rule.
     pub has_derivative_chain: NameId,
+    /// `CReal.hasDerivative_chain_id_sq : ∀ a b k1 k2, BoundedOn (fun _ =>
+    /// one) a b k1 → BoundedOn (fun x => add x x) a b k2 →
+    /// HasDerivativeOn (fun r => mul r r) (fun x => add x x) a b` — the
+    /// chain rule's first concrete instantiation, `F := id`, `G := sq`.
+    /// [`Self::has_derivative_chain`]'s own self-map hypotheses are
+    /// `Equiv.refl`/hypothesis-projection trivial here (`id z` is defeq
+    /// `z`), and [`Self::uniformly_continuous_id`] supplies the continuity
+    /// hypothesis directly. The chain rule's raw output derivative is `fun x
+    /// => mul (add x x) one`, not `fun x => add x x` — closed against
+    /// [`Self::has_derivative_sq`]'s own stated derivative via
+    /// [`Self::has_derivative_congr`] and [`Self::mul_one`]. `k1`/`k2` and
+    /// their `BoundedOn` witnesses are left universally quantified (the
+    /// `hasDerivative_cube` pattern) rather than derived, since deriving a
+    /// concrete magnitude bound for `fun x => x+x` over an arbitrary `[a,b]`
+    /// is a separate undertaking this instantiation does not need.
+    pub has_derivative_chain_id_sq: NameId,
 
     // --- the integral (creal/integral.rs) -------------------------------------
     /// `CReal.riemannSum (f : CReal → CReal) (a b : CReal) (m : Nat) : CReal`
@@ -2177,6 +2193,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_cube: kernel.name_str(creal, "hasDerivative_cube"),
         has_derivative_pow: kernel.name_str(creal, "hasDerivative_pow"),
         has_derivative_chain: kernel.name_str(creal, "hasDerivative_chain"),
+        has_derivative_chain_id_sq: kernel.name_str(creal, "hasDerivative_chain_id_sq"),
         riemann_sum: kernel.name_str(creal, "riemannSum"),
         riemann_sum_add: kernel.name_str(creal, "riemannSum_add"),
         mul_riemann_sum: kernel.name_str(creal, "mul_riemannSum"),
