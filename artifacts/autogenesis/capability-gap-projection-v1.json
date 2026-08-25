@@ -513,7 +513,6 @@
         "mathlib-v4.30.0-08ee032d9058b06c",
         "mathlib-v4.30.0-2bd246da70511653",
         "mathlib-v4.30.0-6fc2be2d83334e77",
-        "mathlib-v4.30.0-c2635744801654c7",
         "mathlib-v4.30.0-ce4e3e890bcf8f1c",
         "mathlib-v4.30.0-d2b3ae01ee9a9ed0",
         "mathlib-v4.30.0-f1259356540dba68"
@@ -521,14 +520,13 @@
       "direct_unlock_fact_count": 0,
       "direct_unlock_fact_ids": [],
       "family": "natural-modular-equivalence",
-      "ready_fact_count": 7,
+      "ready_fact_count": 6,
       "ready_fact_ids": [
         "F:ml430-mutation-c86940b52af8159ca9b381d6",
         "F:ml430-nat-add-modeq-left-e3b1fba9",
         "F:ml430-nat-add-modeq-right-e2f11f21",
         "F:ml430-nat-mod-modeq-436e4c10",
         "F:ml430-nat-modeq-one-516d46e8",
-        "F:ml430-nat-modeq-refl-d870c8f5",
         "F:ml430-nat-modulus-modeq-zero-fd9af096"
       ],
       "statement_shape": "unconditional-relation",
@@ -594,20 +592,20 @@
     }
   ],
   "census": {
-    "admissible_facts": 0,
-    "cataloged_ready_facts": 98,
-    "dependency_ready_facts": 98,
+    "admissible_facts": 2,
+    "cataloged_ready_facts": 97,
+    "dependency_ready_facts": 97,
     "excluded_held_out_ready_facts": 34,
     "excluded_outside_evaluation_ready_facts": 9,
-    "global_dependency_ready_facts": 141,
+    "global_dependency_ready_facts": 140,
     "groups": 2,
     "rejection_reasons": [
       {
-        "fact_count": 5,
+        "fact_count": 2,
         "reason": "gate-coupling-review-required"
       },
       {
-        "fact_count": 98,
+        "fact_count": 95,
         "reason": "no-registered-operation"
       }
     ],
@@ -619,10 +617,10 @@
       "train"
     ],
     "family_concept_crosswalk_path": "artifacts/autogenesis/family-concept-crosswalk-v1.json",
-    "frontier_sha256": "b41f0b65a8bffdff308cbd62ff57f471b6a96b661432ee70ca0681df8d890838",
-    "ledger_sha256": "b69482b7a56d5941be5d7f17c14e5e6cfeba6c847dc92bbf27dbed23ebfc0528",
+    "frontier_sha256": "b767c26e6e2677d9b5cb0df972aa7f94eb1d04dd2afa901c9ed97382ee7fd3ca",
+    "ledger_sha256": "8a9866189dd0f80b0d4c270495b7a676bd7bf7ae2e6d0265c689a1c4e2dbfbdd",
     "nursery_sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1",
-    "operation_registry_sha256": "9f4de92b1b2596aaf8665644a34c0ef024a8ee9f3e2ce77682d24973908fd404",
+    "operation_registry_sha256": "a3340fcb15a9a6ff305f60c8ad9e8e70920c2bb7e43408d9bc0d640c611da6cb",
     "reviewed_fact_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
     "source": "scripts/fact-frontier.py build_machine_frontier",
     "trust_boundary": "train/development ranking and producer-investigation input only; never held-out inspection, proof, or admission authority"
@@ -675,10 +673,13 @@
       "route_class": "proof-route-only"
     },
     {
-      "admissible_fact_ids": [],
+      "admissible_fact_ids": [
+        "F:ml430-nat-modeq-symm-0a3d4d18",
+        "F:ml430-nat-modeq-trans-ef9d1c46"
+      ],
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "ready_fact_count": 72,
+      "ready_fact_count": 71,
       "ready_fact_ids": [
         "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
         "F:ml430-mutation-5179f333b8333ecff8adc223",
@@ -733,7 +734,6 @@
         "F:ml430-nat-modeq-of-dvd-d75cc374",
         "F:ml430-nat-modeq-of-mul-left-88d20bca",
         "F:ml430-nat-modeq-one-516d46e8",
-        "F:ml430-nat-modeq-refl-d870c8f5",
         "F:ml430-nat-modeq-symm-0a3d4d18",
         "F:ml430-nat-modeq-trans-ef9d1c46",
         "F:ml430-nat-modulus-modeq-zero-fd9af096",
@@ -753,14 +753,16 @@
         "F:ml430-nat-testbit-lor-7644e067",
         "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
       ],
-      "registered_operation_ids": [],
+      "registered_operation_ids": [
+        "authoritative-mathlib-modeq-family-v1"
+      ],
       "rejection_reasons": [
         {
-          "fact_count": 4,
+          "fact_count": 1,
           "reason": "gate-coupling-review-required"
         },
         {
-          "fact_count": 72,
+          "fact_count": 69,
           "reason": "no-registered-operation"
         }
       ],

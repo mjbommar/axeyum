@@ -36,7 +36,7 @@
         "Kernel::axiom_footprint",
         "environment-wide trusted-surface enumeration"
       ],
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- mul_comm 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.mul_comm[[:space:]]'",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- mul_comm 2>/dev/null | grep -Ec '^theorem[[:space:]]+Int\\.mul_comm[[:space:]]')\" -ge 1",
       "notes": "Two independent bounds, because either alone would be weaker than it looks. (1) `Kernel::axiom_footprint` walks THIS declaration's transitive dependencies and prints an empty footprint column -- this is the kernel's `#print axioms`, and it is the check that matters, since an integer law IS still asserted (`Int.euclidean_decomposition`; it was 6 until lane int-remainder proved the `subNatNat` borrow, and the check mattered more then) and Int.mul_comm could have reached for one and still type-checked. (2) `nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0` for the development ZZ is constructed over, so the foundation admits no trusted declaration at all. Counting `Declaration::Axiom` alone would not have sufficed: `Opaque` has no proof body and `Quotient` admits `Quot.sound`, which is exactly the declaration the quotient-of-NxN construction would have added -- the enumeration covers all three kinds and reports zero for each."
     }
   ],

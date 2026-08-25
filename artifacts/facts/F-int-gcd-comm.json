@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:int-gcd-comm",
+  "title": "gcd is commutative on the integers",
+  "statement": "For all integers a and b, gcd(a, b) = gcd(b, a). (The integer gcd returns a natural number.)",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.gcd_comm : ((x0 : Int) -> ((x1 : Int) -> Eq.{1} AxNat (Int.gcd x0 x1) (Int.gcd x1 x0)))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-dvd-gcd",
+    "F:nat-gcd-dvd-left",
+    "F:nat-gcd-dvd-right",
+    "F:nat-le-antisymm",
+    "F:nat-le-of-dvd",
+    "F:nat-one-le-of-dvd-pos",
+    "F:nat-zero-mul"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.gcd_comm",
+      "kind": "kernel-term",
+      "supports": "For all integers a and b, gcd(a, b) = gcd(b, a). (The integer gcd returns a natural number.)",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- gcd_comm 2>/dev/null | grep -Ec '^theorem[[:space:]]+Int\\.gcd_comm[[:space:]]')\" -ge 1",
+      "notes": "`build_int_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `int_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted `theorem`-kind row to be printed."
+    },
+    {
+      "id": "footprint-Int.gcd_comm",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Int prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "notes": "`nat_axiom_inventory --require-axiom-free integer` enumerates the built Int environment (which nests the Nat development) and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:greatest-common-divisor",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_int_prelude, lane rado-claim-ledger",
+    "source": "one of the theorems build_int_prelude admits; registered to close the flywheel's fact-ledger arrow for recently landed Int theorems"
+  },
+  "notes": "`depends_on` is literal: `theorem_dependency_inventory` lists `Nat.dvd_gcd`, `Nat.gcd_dvd_left` and `Nat.gcd_dvd_right` among this theorem's direct dependencies (ℤ's gcd is defined via `Nat.gcd` over absolute values), and all three are registered as facts.",
+  "external_status": "proved"
+}

@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-pow-prime-modeq-self",
+  "title": "Fermat's little theorem for the naturals",
+  "statement": "For every prime natural number p and every natural number a, a^p is congruent to a modulo p.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.pow_prime_modeq_self : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x0) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x0))))) -> AxNat.modEq x0 (AxNat.pow x1 x0) x1)))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-le-trans",
+    "F:nat-mod-eq-add-right",
+    "F:nat-mod-eq-refl",
+    "F:nat-mod-eq-trans",
+    "F:nat-not-lt-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.pow_prime_modeq_self",
+      "kind": "kernel-term",
+      "supports": "For every prime natural number p and every natural number a, a^p is congruent to a modulo p.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- pow_prime_modeq_self 2>/dev/null | grep -Ec '^Nat\\.pow_prime_modeq_self[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed -- both halves of the check depend on the theorem actually being present."
+    },
+    {
+      "id": "footprint-Nat.pow_prime_modeq_self",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:prime-number",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:modular-arithmetic",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:fermats-little-theorem",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane rado-claim-ledger",
+    "source": "one of the theorems build_nat_prelude admits; registered to close the flywheel's fact-ledger arrow for recently landed Nat theorems"
+  },
+  "notes": "This is Fermat's little theorem. The primality hypothesis is inlined structurally as `2 ≤ p ∧ (∀ d, d ∣ p → d = 1 ∨ d = p)` rather than via a named `Nat.Prime` predicate -- `formal.statement` renders that hypothesis type verbatim, exactly as the kernel admitted it.",
+  "external_status": "proved"
+}

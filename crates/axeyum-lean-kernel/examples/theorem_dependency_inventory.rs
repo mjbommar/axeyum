@@ -31,9 +31,35 @@
 //! which *propositions* it needs.
 //!
 //! ```sh
-//! cargo run -q -p axeyum-lean-kernel --example theorem_dependency_inventory
-//! cargo run -q -p axeyum-lean-kernel --example theorem_dependency_inventory -- euclid
+//! cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory
+//! cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- euclid
 //! ```
+//!
+//! # `--release` WAS mandatory for two hours, and is no longer — read this
+//! before copying the flag from an older `checker_command`
+//!
+//! Adding `creal`/`complex`/`cpoint` made `Kernel::add_declaration` recurse
+//! deeply enough that a DEBUG build blew the default main-thread stack:
+//! `cargo build --release` exited 0 with 1,092 theorems while `cargo build`
+//! SIGABRTed with `thread 'main' has overflowed its stack`, exit 134. Nothing
+//! was wrong with any theorem — a resource limit wearing a crash's clothes.
+//!
+//! That doc note is what this paragraph replaces, and it is worth saying why
+//! rather than deleting it. The note was TRUE and it still did harm: it could
+//! not reach the two scripts that already invoked this example without the
+//! flag, so `just check` failed with `died with <Signals.SIGABRT: 6>` until
+//! the example itself was fixed. **A doc comment cannot fix a call site it
+//! does not know about.**
+//!
+//! The fix is the `stack_size(64 * 1024 * 1024)` worker in `main` below, and
+//! it makes `--release` UNNECESSARY here: a debug build now exits 0 and
+//! reports the same theorem count as release, measured on this tree by two
+//! independent lanes. Passing `--release` remains correct and is faster, so
+//! existing `checker_command`s need no change — but do not propagate
+//! "mandatory" to a new one, and do not cite this tool as evidence that some
+//! OTHER example needs the flag. `prelude_theorem_inventory
+//! --include-constructed` and `nat_axiom_inventory --include-constructed` are
+//! still genuinely affected; they have no deep-stack worker.
 //!
 //! # A filter that matches nothing is a FAILURE
 //!
@@ -45,11 +71,35 @@
 use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
-    Declaration, Kernel, build_characterization, build_int_prelude, build_logic_prelude,
-    build_nat_prelude, build_rat_prelude, build_string_prelude,
+    Declaration, Kernel, build_characterization, build_complex_prelude, build_cpoint_prelude,
+    build_creal_prelude, build_int_prelude, build_logic_prelude, build_nat_prelude,
+    build_rat_prelude, build_string_prelude,
 };
 
 fn main() -> ExitCode {
+    // RUN THE WHOLE BUILD ON A DEEP STACK, not on the process's main thread.
+    //
+    // Extending this example to `creal`/`complex`/`cpoint` made a DEBUG build
+    // overflow the default 8 MiB main-thread stack and die with SIGABRT before
+    // printing anything. `--release` happens to survive, so the extension was
+    // landed with a doc note saying `--release` is now mandatory -- and that
+    // note did not reach the two scripts that already invoked this example
+    // without it. `just check` then failed in `check-fact-depends-derived.py`
+    // with `died with <Signals.SIGABRT: 6>`.
+    //
+    // A doc comment cannot fix a call site it does not know about. `complex`
+    // and `cpoint` already solve this the same way in their test modules
+    // (`stack_size(64 * 1024 * 1024)`), so do it here and let every caller --
+    // debug or release, present or future -- work unchanged.
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(run)
+        .expect("spawn the deep-stack worker")
+        .join()
+        .expect("the deep-stack worker must not panic")
+}
+
+fn run() -> ExitCode {
     let filter: Option<String> = std::env::args().nth(1);
 
     let mut kernel = Kernel::new();
@@ -63,8 +113,13 @@ fn main() -> ExitCode {
     // never pointed at the subject is indistinguishable from a strong negative,
     // which is exactly the trap CLAUDE.md records.
     //
-    // `creal` is deliberately excluded while it is under construction; add it
-    // when it settles.
+    // `creal`/`complex`/`cpoint` (the constructed ℝ, ℂ, and the plane over
+    // constructed ℝ) are now included: 423 theorems combined were previously
+    // outside this tool's coverage, so a fact over them could never get a
+    // derived `depends_on`. Each `build_*_prelude` call here is idempotent and
+    // builds its own prerequisites (e.g. `build_creal_prelude` calls
+    // `build_rat_prelude` itself), so re-adding `rat` here is a harmless no-op
+    // rather than a duplicate build.
     let _ = build_nat_prelude(&mut kernel).expect("Nat prelude must build");
     let _ = build_int_prelude(&mut kernel).expect("Int prelude must build");
     let _ = build_rat_prelude(&mut kernel).expect("Rat prelude must build");
@@ -73,6 +128,9 @@ fn main() -> ExitCode {
     let logic = build_logic_prelude(&mut kernel).expect("logic prelude must build");
     let _ = build_string_prelude(&mut kernel, logic, 2).expect("String prelude must build");
     let _ = build_characterization(&mut kernel).expect("characterization must build");
+    let _ = build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+    let _ = build_complex_prelude(&mut kernel).expect("Complex prelude must build");
+    let _ = build_cpoint_prelude(&mut kernel).expect("CPoint prelude must build");
 
     // Collect first, then sort by rendered name: environment iteration order is
     // an interning artifact and this output is meant to be diffable.

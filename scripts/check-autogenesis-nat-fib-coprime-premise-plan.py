@@ -1498,15 +1498,30 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         != "772646c0d1a0c6ebca302c37a42cf2bb2f5030ee"
         or implementation["bool_constructor_order"]
         != ["Bool.false", "Bool.true"]
-        or sha256(ROOT / implementation["logic_prelude"])
+        # This binds the PRELUDE SOURCE AS IT STOOD AT `bool_order_commit`, not
+        # the live working tree. `crates/axeyum-lean-kernel/src/prelude.rs` is
+        # under concurrent kernel edits from other lanes, so a live-tree
+        # `sha256(ROOT / …)` here drifts on every unrelated touch to that file
+        # -- exactly the failure this plan hit. `bool_order_commit` already
+        # names the historical revision this pin is FOR; hash the blob at that
+        # revision, the same idiom every other historical-tool pin in this file
+        # uses (`git_blob_sha256`), instead of a second, inconsistent live-file
+        # check that silently disagreed with its own recorded commit.
+        or git_blob_sha256(
+            implementation["bool_order_commit"], implementation["logic_prelude"]
+        )
         != implementation["logic_prelude_sha256"]
         or implementation["nat_mod_lt_commit"]
         != "a5a1114989077b7254a5dec0daa048aa5d2793ba"
         or implementation["nat_mod_lt_contract"]
         != "forall x y, 0 < y -> Nat.mod x y < y"
         or len(implementation["nat_mod_lt_sources"]) != 4
+        # Same fix, same reason: these four files implement the frozen
+        # `Nat.mod_lt` contract as of `nat_mod_lt_commit`, not as of whatever
+        # the working tree happens to hold right now.
         or any(
-            sha256(ROOT / row["path"]) != row["sha256"]
+            git_blob_sha256(implementation["nat_mod_lt_commit"], row["path"])
+            != row["sha256"]
             for row in implementation["nat_mod_lt_sources"]
         )
         or implementation["acc_package_commit"]

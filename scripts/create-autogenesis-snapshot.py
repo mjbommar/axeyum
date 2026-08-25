@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import pathlib
-import re
 import subprocess
 import sys
 from typing import Any
@@ -22,9 +22,7 @@ from typing import Any
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 FACTS = pathlib.Path("artifacts/facts")
 BASELINE = pathlib.Path("docs/plan/generated/autogenesis-baseline.json")
-THEOREM_RE = re.compile(
-    r"\^?((?:Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded)\\?\.[A-Za-z0-9_']+)"
-)
+DEPENDENCY_CHECKER = ROOT / "scripts" / "check-fact-depends-derived.py"
 
 
 class SnapshotError(RuntimeError):
@@ -43,12 +41,28 @@ def file_digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def theorem_of(fact: dict[str, Any]) -> str | None:
-    for evidence in fact.get("evidence") or []:
-        match = THEOREM_RE.search(evidence.get("checker_command", ""))
-        if match:
-            return match.group(1).replace("\\", "")
-    return None
+def _dependency_module():
+    """Load `check-fact-depends-derived.py` as a module, the same way
+    `create-autogenesis-chain-catalog.py` already does, so this script's
+    notion of "which theorem is this fact about" cannot drift from that
+    checker's. It used to carry its own copy of `theorem_of`/`THEOREM_RE`
+    covering only `Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded`, single
+    dot-segment only -- so it returned `None` for every Complex/CReal/CPoint
+    fact (an entire fragment silently ineligible for a B->A snapshot) and
+    truncated a multi-segment name like `Int.Characterization.categorical`
+    to `Int.Characterization`. Sharing the implementation fixes both at once
+    and keeps them fixed together."""
+    spec = importlib.util.spec_from_file_location(
+        "depends_derived_for_autogenesis_snapshot", DEPENDENCY_CHECKER
+    )
+    if spec is None or spec.loader is None:
+        raise SnapshotError(f"cannot load {DEPENDENCY_CHECKER}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+theorem_of = _dependency_module().theorem_of
 
 
 def load_facts(root: pathlib.Path) -> tuple[dict[str, dict[str, Any]], dict[str, str]]:

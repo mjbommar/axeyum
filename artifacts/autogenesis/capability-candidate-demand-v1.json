@@ -80,7 +80,7 @@
   },
   "derivation": {
     "candidate_rule": "overlay capability entity with status candidate and at least one obstruction candidate_capability reference",
-    "knowledge_overlay_sha256": "346b2c1d1df0f537db5c8377b8c0e22eac101bd37ec6335018e247d185601d7d",
+    "knowledge_overlay_sha256": "559cd93509b83e8fa9a60591bb21e40d073f4f5a739faec5941857e01e707d8b",
     "obstruction_projection_sha256": "f9e55a85d2f3cbc5c5b02a69c21a04b0a15e4017ea29fb177b92c6c7683901d4",
     "trust_boundary": "investigation ranking only; never producer selection, proof construction, admission, or trust authority"
   },

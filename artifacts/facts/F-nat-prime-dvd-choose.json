@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-prime-dvd-choose",
+  "title": "A prime divides the interior binomial coefficients of its own row",
+  "statement": "For every prime natural number p and every natural number k with 0 < k < p, p divides C(p, k).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.prime_dvd_choose : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x0) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x0))))) -> ((x3 : AxNat.lt AxNat.zero x1) -> ((x4 : AxNat.lt x1 x0) -> AxNat.dvd x0 (AxNat.choose x0 x1))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-dvd-mul",
+    "F:nat-euclid-lemma",
+    "F:nat-le-dest",
+    "F:nat-le-of-dvd",
+    "F:nat-lt-irrefl",
+    "F:nat-succ-add",
+    "F:nat-zero-add",
+    "F:nat-zero-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.prime_dvd_choose",
+      "kind": "kernel-term",
+      "supports": "For every prime natural number p and every natural number k with 0 < k < p, p divides C(p, k).",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prime_dvd_choose 2>/dev/null | grep -Ec '^Nat\\.prime_dvd_choose[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed -- both halves of the check depend on the theorem actually being present."
+    },
+    {
+      "id": "footprint-Nat.prime_dvd_choose",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:prime-number",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:binomial-coefficient",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:divisibility",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane rado-claim-ledger",
+    "source": "one of the theorems build_nat_prelude admits; registered to close the flywheel's fact-ledger arrow for recently landed Nat theorems"
+  },
+  "notes": "As on `F:nat-pow-prime-modeq-self`, the primality hypothesis is inlined structurally rather than via a named `Nat.Prime` predicate; `formal.statement` renders it verbatim.",
+  "external_status": "proved"
+}

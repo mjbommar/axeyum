@@ -312,6 +312,47 @@ def check_fact(
                 ],
             }
         )
+    elif executor["driver"] == "axeyum-lean-import/modeq-family-multi-target-v1":
+        # Resolve and read via the executor module's own reviewed helpers
+        # (`modeq_family_target_contract`) -- never re-implemented here, so
+        # this replay can never disagree with what `build_receipt` itself
+        # used to produce the receipt this evidence row is bound to.
+        executor_module = load_module(
+            "executor_for_fact_operation_modeq_family", EXECUTOR_SCRIPT
+        )
+        try:
+            target, adapter, modeq = executor_module.modeq_family_target_contract(
+                operation, fact
+            )
+        except executor_module.ExecutionError as error:
+            raise FactOperationError(
+                f"modeq-family target contract failed: {error}"
+            ) from error
+        op = modeq["operation"]
+        expected_binding.update(
+            {
+                "target_fact_id": fact["id"],
+                "statement_adapter_manifest": target[
+                    "statement_adapter_manifest"
+                ],
+                "statement_adapter_manifest_sha256": digest(adapter),
+                "modeq_manifest": target["modeq_manifest"],
+                "modeq_manifest_sha256": digest(modeq),
+                "external_artifact_sha256": adapter["external_artifact"][
+                    "sha256"
+                ],
+                "formal_statement_sha256": byte_digest(
+                    fact["formal"]["statement"].encode()
+                ),
+                "target_definition": target["target_definition"],
+                "goal_sha256": op["goal_sha256"],
+                "proof_sha256": op["proof_sha256"],
+                "target_content_sha256": op["target_content_sha256"],
+                "binders_used": op["binders_used"],
+                "max_binders": op["max_binders"],
+                "admitted_declarations": op["admitted_declarations"],
+            }
+        )
     else:
         raise FactOperationError("fact operation uses an unsupported driver")
     if binding != expected_binding:
@@ -337,6 +378,8 @@ def check_fact(
     observation = (
         runner(operation, binding["trigger"])
         if executor["driver"] == "axeyum-lean-kernel/nat-mul-one-episode-apply-v1"
+        else runner(operation, fact=fact)
+        if executor["driver"] == "axeyum-lean-import/modeq-family-multi-target-v1"
         else runner(operation)
     )
     if executor["driver"] == "axeyum-bench/smtcomp-evidence-v1":
@@ -473,6 +516,21 @@ def check_fact(
             ],
             "ledger_writes": authority["ledger_writes"],
         }
+    elif executor["driver"] == "axeyum-lean-import/modeq-family-multi-target-v1":
+        # Reused verbatim from the executor module (ADR-0554): the ONLY
+        # fresh, independent re-derivation is the subprocess call inside
+        # `runner(operation, fact=fact)` above (`check_target` against the
+        # real kernel checker binary); this just re-reads what the committed
+        # candidate manifest claims, the same "two independent
+        # constructions of the same content-addressed values" pattern used
+        # for the binding above.
+        executor_module = load_module(
+            "executor_for_fact_operation_modeq_family_observation",
+            EXECUTOR_SCRIPT,
+        )
+        expected_observation = executor_module.expected_modeq_family_target_observation(
+            operation, fact
+        )
     else:
         premise_candidate = (
             "Autogenesis.Authoritative.E"

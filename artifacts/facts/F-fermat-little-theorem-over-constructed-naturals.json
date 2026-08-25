@@ -28,7 +28,7 @@
         "nat_prelude_tests::fermat_and_frobenius_are_stated_over_primes_not_merely_positive_moduli (asserts the KERNEL-RENDERED type of Nat.pow_prime_modeq_self verbatim with assert_eq!, and separately asserts both theorems mention AxNat.dvd -- the primality predicate -- and conclude an AxNat.modEq)",
         "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks every proof term against its stated type at build time; a rejected proof makes build_nat_prelude return Err and the test fail)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib fermat_and_frobenius_are_stated_over_primes_not_merely_positive_moduli 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib fermat_and_frobenius_are_stated_over_primes_not_merely_positive_moduli 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/fermat.rs",
       "notes": "A footprint check cannot carry this claim: a theorem stating something weaker -- primality replaced by 0 < p, or the vacuous a = a -- has exactly the same empty footprint. Mutation-verified rather than assumed: transposing the exponent in the pinned string (AxNat.pow x1 x0 -> AxNat.pow x0 x1) makes cargo report `43 passed; 1 failed`, naming this test and no other; restored, 44/44 green. The test re-derives from source on every run, rebuilding the whole Nat prelude through add_declaration. Anchored on the exact `1 passed; 0 failed` count, so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
     },
@@ -41,7 +41,7 @@
         "nat_prelude_tests::the_nat_prelude_declares_no_axioms (the prelude declares no Axiom, Opaque or Quotient at all)",
         "nat_prelude_tests::the_build_is_deterministic (renders every promised definition and theorem from two independent kernels and requires 20+146 entries, so a name that is interned but never DECLARED fails the count rather than passing with a vacuously empty footprint)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_nat_prelude_declares_no_axioms -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_nat_prelude_declares_no_axioms -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
       "notes": "Presence and footprint are separate properties and both are needed. Nat.euclid_lemma was admitted and axiom-free but named by NOTHING in this prelude's sweep until 2026-08-23, so it was never visited -- axiom_footprint of an unvisited name is not empty, it is unmeasured, and the two are indistinguishable in a green run. It is registered now, and Fermat depends on it transitively. The pinned count in the_build_is_deterministic is a live guard: changing 20+142 to 20+143 killed exactly one test when checked."
     }

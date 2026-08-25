@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-add-assoc",
+  "title": "Addition on the rationals is associative",
+  "statement": "For all rationals a, b and c, (a + b) + c = a + (b + c).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.add_assoc : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> Eq.{1} Rat (Rat.add (Rat.add x0 x1) x2) (Rat.add x0 (Rat.add x1 x2)))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-add-assoc",
+    "F:int-mul-assoc",
+    "F:int-mul-comm",
+    "F:nat-mul-assoc",
+    "F:nat-one-le-mul",
+    "F:rat-den-pos",
+    "F:rat-int-right-distrib",
+    "F:rat-normalize-add-normalize",
+    "F:rat-normalize-congr",
+    "F:rat-self-normalize"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.add_assoc",
+      "kind": "kernel-term",
+      "supports": "Rat.add_assoc is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.add_assoc 2>/dev/null | grep -cE '^Rat\\.add_assoc[[:space:]]'",
+      "notes": "`build_rat_prelude` admits Rat.add_assoc through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` exits non-zero for a named filter that matches nothing (a deleted theorem cannot read as a re-derived one), and `grep -c` (never `-q`) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present -- two ways the same absence would be caught. `--release` is MANDATORY: this tool now also builds `creal`/`complex`/`cpoint`, which recurse deep enough in a debug build to overflow the default thread stack (measured: release exits 0 with 1092 theorems, debug SIGABRTs at 134) -- the same resource-limit gotcha already documented for `prelude_theorem_inventory --include-constructed`."
+    },
+    {
+      "id": "footprint-Rat.add_assoc",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Rat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "notes": "`nat_axiom_inventory` builds the Rat environment as its own group and reports `rat: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree). That bounds every individual Rat theorem's footprint by [], since a theorem cannot depend on a trusted declaration the environment does not contain -- and the enumeration covers Axiom, Opaque AND Quotient, not just Declaration::Axiom, because Opaque has no proof body and Quotient admits Quot.sound. `--require-axiom-free <name>` is an error (not a silent pass/zero) for a prelude this run never built, which is what makes `rat` here a claim rather than an absence."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:associativity",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_rat_prelude",
+    "source": "see F:rat-add-comm for the extraction method (shared for the whole batch)."
+  },
+  "notes": "depends_on is the direct-edge set from theorem_dependency_inventory for Rat.add_assoc.",
+  "external_status": "proved"
+}

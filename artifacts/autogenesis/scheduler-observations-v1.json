@@ -3,21 +3,21 @@
   "observations": [
     {
       "admission_authority": false,
-      "applicable_facts": 5,
-      "complete_transport_chains": 5,
+      "applicable_facts": 4,
+      "complete_transport_chains": 4,
       "evidence_credited_facts": 3,
       "observation_kind": "mechanically-observed",
       "operation_id": "authoritative-mathlib-bounded-induction-factorial-family-v1",
-      "qualified_formal_mappings": 5
+      "qualified_formal_mappings": 0
     },
     {
       "admission_authority": false,
-      "applicable_facts": 4,
-      "complete_transport_chains": 4,
+      "applicable_facts": 7,
+      "complete_transport_chains": 5,
       "evidence_credited_facts": 4,
       "observation_kind": "mechanically-observed",
       "operation_id": "authoritative-mathlib-modeq-family-v1",
-      "qualified_formal_mappings": 4
+      "qualified_formal_mappings": 0
     }
   ],
   "schema_version": 1,

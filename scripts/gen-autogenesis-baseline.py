@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
-import re
 import subprocess
 import sys
 from collections import Counter, defaultdict
@@ -99,9 +99,34 @@ STATIC_SOURCES = (
 
 SETTLED = {"axiom", "proved", "computed", "refuted"}
 KERNEL_ROUTES = {"kernel-lean"}
-THEOREM_RE = re.compile(
-    r"\^?((?:Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded)\\?\.[A-Za-z0-9_']+)"
-)
+
+
+_DEPENDENCY_MODULE_CACHE: list[Any] = []
+
+
+def _dependency_module():
+    """Load `check-fact-depends-derived.py` for its `theorem_of`, the same way
+    `create-autogenesis-chain-catalog.py` and `create-autogenesis-snapshot.py`
+    already do. This module used to carry its own copy of `THEOREM_RE`
+    (`Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded`, single dot-segment
+    only, no `formal.kernel_theorem` override), so `named_kernel_theorem`
+    returned `None` for every Complex/CReal/CPoint/AxNat/AxReal fact and could
+    not see a fact's explicit subject declaration -- a baseline this project
+    treats as authoritative was silently undercounting `with_named_theorem`.
+    Sharing the implementation is what keeps this from drifting again."""
+    if _DEPENDENCY_MODULE_CACHE:
+        return _DEPENDENCY_MODULE_CACHE[0]
+    spec = importlib.util.spec_from_file_location(
+        "depends_derived_for_autogenesis_baseline",
+        ROOT / "scripts" / "check-fact-depends-derived.py",
+    )
+    if spec is None or spec.loader is None:
+        raise BaselineError("cannot load scripts/check-fact-depends-derived.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    _DEPENDENCY_MODULE_CACHE.append(module)
+    return module
+
 
 # A reviewed classification, but never an unsupported one: each row carries a
 # source marker.  If the implementation stops saying the thing on which the
@@ -309,11 +334,7 @@ def graph_shape(facts: dict[str, dict[str, Any]], population: set[str]) -> dict[
 
 
 def named_kernel_theorem(fact: dict[str, Any]) -> str | None:
-    for evidence in fact.get("evidence") or []:
-        found = THEOREM_RE.search(evidence.get("checker_command", ""))
-        if found:
-            return found.group(1).replace("\\", "")
-    return None
+    return _dependency_module().theorem_of(fact)
 
 
 def assurance_shape(facts: dict[str, dict[str, Any]]) -> dict[str, Any]:

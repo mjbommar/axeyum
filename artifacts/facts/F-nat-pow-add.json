@@ -5,6 +5,7 @@
     "language": "lean4",
     "statement": "theorem Nat.pow_add : ((a : AxNat) -> ((m : AxNat) -> ((n : AxNat) -> Eq.{1} AxNat (AxNat.pow a (AxNat.add m n)) (AxNat.mul (AxNat.pow a m) (AxNat.pow a n)))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.pow_add",
     "free_symbols": [
       "a",
       "m",
@@ -26,8 +27,8 @@
       "kind": "kernel-term",
       "supports": "For all natural numbers a, m and n, a^(m+n) = a^m * a^n.",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- pow_add 2>/dev/null | grep -qxF 'Nat.pow_add\t3\t((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.pow x0 (AxNat.add x1 x2)) (AxNat.mul (AxNat.pow x0 x1) (AxNat.pow x0 x2)))))'",
-      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing the row at all is a machine-checked proof. Proved by induction on the exponent `n`: the base case is `mul_one` reversed (both `a^(m+0)` and `a^0` compute definitionally), and the step chains the induction hypothesis, `mul_assoc`, and `pow_succ` backwards. The command names its own subject twice over -- `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed; verified 2026-08-16 that a fabricated name exits 1. TIGHTENED 2026-08-17: the command matched the NAME only, which a weakened statement survives. Lane `nat-prime-divisor` measured this concretely on its own theorem \u2014 spelling a primality bound `1 <= p` instead of `2 <= p` still type-checks, still admits, and passes every name-only checker, while being satisfied by p = 1. The kernel cannot see a weaker statement; only comparing the rendered TYPE can. This now matches the full type exactly (grep -qxF), so any change to the proposition breaks it."
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- pow_add 2>/dev/null | grep -xFc 'Nat.pow_add\t3\t((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.pow x0 (AxNat.add x1 x2)) (AxNat.mul (AxNat.pow x0 x1) (AxNat.pow x0 x2)))))')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing the row at all is a machine-checked proof. Proved by induction on the exponent `n`: the base case is `mul_one` reversed (both `a^(m+0)` and `a^0` compute definitionally), and the step chains the induction hypothesis, `mul_assoc`, and `pow_succ` backwards. The command names its own subject twice over -- `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed; verified 2026-08-16 that a fabricated name exits 1. TIGHTENED 2026-08-17: the command matched the NAME only, which a weakened statement survives. Lane `nat-prime-divisor` measured this concretely on its own theorem — spelling a primality bound `1 <= p` instead of `2 <= p` still type-checks, still admits, and passes every name-only checker, while being satisfied by p = 1. The kernel cannot see a weaker statement; only comparing the rendered TYPE can. This now matches the full type exactly (grep -qxF), so any change to the proposition breaks it."
     },
     {
       "id": "footprint-Nat.pow_add",

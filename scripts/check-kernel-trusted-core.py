@@ -149,11 +149,60 @@ TRUSTED_FILES = {
 }
 
 # --- guard C ---------------------------------------------------------------
-# Measured 2026-08-17 at 5,110 function-body lines. The ceiling has deliberate
-# headroom: the point is to catch a step change in what must be correct, not to
-# make every edit in `tc.rs` fail an unrelated lane's gate. Raising it means
-# more code must be right, so say why in the commit message.
-TRUSTED_LINES_MAX = 5500
+# Set 2026-08-17 at a measured 5,129 function-body lines (the docstring above
+# has always said 5,129; this comment previously said "5,110", which was never
+# what the tool measured at that commit — re-run against a `git archive` of
+# c6a3147bc confirms 5,129 exactly, matching the docstring's own per-file
+# breakdown line for line. Fixed 2026-08-25, no ceiling movement from this
+# alone). The ceiling has deliberate headroom: the point is to catch a step
+# change in what must be correct, not to make every edit in `tc.rs` fail an
+# unrelated lane's gate. Raising it means more code must be right, so say why
+# in the commit message.
+#
+# Raised 5500 -> 5900 on 2026-08-25 at a measured 5,508 (past the old ceiling).
+# Traced to two real, necessary additions since 2026-08-17, both landed with
+# their own soundness/perf evidence and both already narrated in `git log`:
+#
+#   +377  tc.rs (+347) / inductive.rs (+30), commit 2633d7186: universe-
+#         parameter closure. The kernel-vs-Lean wire differential (widened 5
+#         mutation families -> 51) found declarations official Lean 4.30.0
+#         refuses that this kernel admitted — a `Param` occurring in a type or
+#         value but not among the declaration's OWN `levelParams` was never
+#         checked, so an undeclared universe leaked into every instantiation
+#         site. `undeclared_universe_param`/`undeclared_level_param` (tc.rs)
+#         are called from BOTH `check_declaration` (tc.rs) and
+#         `add_inductive_group` (inductive.rs) — the inductive gate type-checks
+#         its own group and never routes through `check_declaration`, so it
+#         needed the same check written into the gate itself, not into a
+#         caller the trusted closure would skip. This closes a real
+#         soundness hole; it cannot be moved off the admission path because it
+#         IS the admission path.
+#   +349  tc.rs (+347) / env.rs (+2), commits 6e9aeab62 + 0887ab652 +
+#         4e1f9b092: memoisation for `whnf_core`, Lean's second reduction
+#         cache (ours had one of the two `type_checker.h` caches, not both).
+#         Without it the full kernel suite ran 1857 s -> 13.4 s once fixed —
+#         a 138x pathological cost that made the trusted core practically
+#         unusable, not merely slow. The new functions (`whnf_core_result`,
+#         `remember_whnf_core`, `recall_whnf_core`, the `taint_*`/
+#         `drain_volatile`/`unbound_probe_mark` volatile-entry tracking,
+#         `type_of`/`value_of`) sit directly inside `def_eq`/`whnf`, which
+#         `add_declaration` calls to type-check every admitted term — a wrong
+#         cached answer is a wrong verdict, so the cache's correctness is
+#         exactly as trust-critical as the reduction it memoises and belongs
+#         in the trusted core, not beside it. Each invalidation path (push,
+#         pop, environment revision, `Kernel::rollback`) carries its own
+#         mutation-checked test per the commit messages.
+#
+# Neither addition could be moved off the admission path without either
+# reopening the soundness hole (universe closure) or losing the fix that made
+# the kernel checkable at all in reasonable time (whnf_core memo) — see
+# option (c) in the brief that produced this note; both were rejected.
+#
+# Headroom kept at the same character as 2026-08-17's: that ceiling was 371
+# lines (7.2%) above its measurement; 5900 is 392 lines (7.1%) above this one
+# — enough that an ordinary edit in `tc.rs` does not fail an unrelated lane's
+# gate, not so much that a step change slips through unnoticed.
+TRUSTED_LINES_MAX = 5900
 
 # --- guard E ---------------------------------------------------------------
 # Floors. A scanner that silently stops parsing reports 0 trusted lines and
@@ -390,9 +439,31 @@ class Crate:
             else:
                 self.free[r["name"]].append(i)
         self.types = {r["owner"] for r in self.fns if r["owner"]}
-        self.edges = [self._resolve(r) for r in self.fns]
+        # Loose-rule support: for the `.f(` receiver-unknown case below, the
+        # original code re-scanned the WHOLE enclosing file with a fresh
+        # `re.search(type_name, filecode)` for every candidate at every call
+        # site — O(call sites * same-named candidates * file size), and it
+        # dominates runtime once the crate is large enough for common method
+        # names (`new`, `get`, …) to have many candidates. `r["filecode"]` is
+        # the *same string object* for every function in one file (assigned
+        # once per file in the loop above), so which of `self.types` occurs
+        # in a given file is a per-FILE fact, not a per-(function, candidate)
+        # one. Precompute it once per file with a single combined-alternation
+        # scan; `_resolve` below looks it up by `id(filecode)` instead of
+        # re-searching. Same `\b...\b` semantics, same result set — this is a
+        # cache, not a change to what counts as a match.
+        self._types_in_file: dict[int, frozenset[str]] = {}
+        if self.types:
+            alt = "|".join(re.escape(t) for t in sorted(self.types))
+            types_pattern = re.compile(r"\b(?:" + alt + r")\b")
+            seen_filecodes: dict[int, str] = {}
+            for r in self.fns:
+                seen_filecodes.setdefault(id(r["filecode"]), r["filecode"])
+            for key, code in seen_filecodes.items():
+                self._types_in_file[key] = frozenset(types_pattern.findall(code))
+        self.edges = [self._resolve(i, r) for i, r in enumerate(self.fns)]
 
-    def _resolve(self, r: dict) -> set[int]:
+    def _resolve(self, index: int, r: dict) -> set[int]:
         body, owner, out = r["body"], r["owner"], set()
         for m in re.finditer(r"\bself\s*\.\s*(" + IDENT + r")\s*\(", body):
             out.update(self.by_owner.get((owner, m.group(1)), ()))
@@ -407,14 +478,15 @@ class Crate:
             out.update(self.free.get(m.group(1), ()))
         # Loose rule for any other receiver: every same-named method whose owner
         # type is nameable in this file. Over-approximating on purpose.
+        present = self._types_in_file.get(id(r["filecode"]), frozenset())
         for m in re.finditer(r"\.\s*(" + IDENT + r")\s*\(", body):
             if body[max(0, m.start() - 4) : m.start()].endswith("self"):
                 continue
             for j in self.by_name.get(m.group(1), ()):
                 other = self.fns[j]["owner"]
-                if other and re.search(r"\b" + re.escape(other) + r"\b", r["filecode"]):
+                if other and other in present:
                     out.add(j)
-        out.discard(self.fns.index(r) if r in self.fns else -1)
+        out.discard(index)
         return out
 
     def admission_gates(self) -> list[int]:

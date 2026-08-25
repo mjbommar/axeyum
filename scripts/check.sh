@@ -57,6 +57,7 @@ step fmt    cargo fmt --all --check
 # for different reasons, and a disagreement between them is itself a finding.
 step fmt-all scripts/check-fmt-complete.sh
 step facts  python3 scripts/validate-facts.py
+step validate-facts-tests python3 -m unittest scripts.tests.test_validate_facts
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
 step fact-dag-tests python3 -m unittest scripts.tests.test_check_fact_dag
@@ -93,6 +94,7 @@ step autogenesis-must-decline-population-tests python3 -m unittest scripts.tests
 step autogenesis-must-decline-population python3 scripts/check-autogenesis-must-decline-population.py
 step autogenesis-bounded-induction-family python3 scripts/check-autogenesis-bounded-induction-family.py
 step autogenesis-modeq-family python3 scripts/check-autogenesis-modeq-family.py
+step autogenesis-nat-modeq-family python3 scripts/check-autogenesis-nat-modeq-family.py
 step established-fact-bounded-truth python3 scripts/check-established-facts-bounded-truth.py
 step lane-turn-controls ./scripts/tests/test-check-lane-turn.sh
 step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
@@ -121,6 +123,37 @@ step autogenesis-type-slice-producer-census-tests python3 -m unittest scripts.te
 step autogenesis-type-slice-producer-census python3 scripts/check-autogenesis-type-slice-producer-census.py
 step autogenesis-factorial-zero-family-tests python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
 step autogenesis-factorial-zero-family python3 scripts/check-autogenesis-factorial-zero-family.py
+step autogenesis-int-fib-neg-natcast-dependency-audit-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_fib_neg_natcast_dependency_audit_result
+step autogenesis-int-fib-of-odd-private-root-audit-plan-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_fib_of_odd_private_root_audit_plan
+step autogenesis-int-fib-of-odd-private-root-audit-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_fib_of_odd_private_root_audit_result
+step autogenesis-nat-fib-gcd-surface-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_nat_fib_gcd_surface_result
+step autogenesis-nat-gcd-greatest-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_nat_gcd_greatest_result
+step autogenesis-semantic-abstraction-census-tests python3 -m unittest scripts.tests.test_check_autogenesis_semantic_abstraction_census
+step autogenesis-semantic-abstraction-census python3 scripts/check-autogenesis-semantic-abstraction-census.py
+step autogenesis-semantic-function-contract-rust cargo test -p axeyum-lean-import --test semantic_function_contract
+step autogenesis-semantic-contract-target-census-rust cargo test -p axeyum-lean-import --example semantic_contract_target_census
+step autogenesis-semantic-contract-target-census-tests python3 -m unittest scripts.tests.test_check_autogenesis_semantic_contract_target_census
+step autogenesis-semantic-contract-target-census python3 scripts/check-autogenesis-semantic-contract-target-census.py
+step autogenesis-int-gcd-contract-residualization-rust-test cargo test -p axeyum-lean-import --test contract_residualization
+step autogenesis-int-gcd-contract-residualization-rust-example cargo test -p axeyum-lean-import --example int_gcd_contract_residualization
+step autogenesis-int-gcd-contract-residualization-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_residualization
+step autogenesis-int-gcd-contract-residualization python3 scripts/check-autogenesis-int-gcd-contract-residualization.py
+step autogenesis-int-gcd-source-delta-rust-test cargo test -p axeyum-lean-import --test source_delta_trace
+step autogenesis-int-gcd-source-delta-rust-example cargo test -p axeyum-lean-import --example int_gcd_source_delta_trace
+step autogenesis-int-gcd-source-delta-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_source_delta
+step autogenesis-int-gcd-source-delta python3 scripts/check-autogenesis-int-gcd-source-delta.py
+step autogenesis-int-gcd-trace-contract-receipt-rust-test cargo test -p axeyum-lean-import --test trace_contract_receipt
+step autogenesis-int-gcd-trace-contract-receipt-rust-example cargo test -p axeyum-lean-import --example int_gcd_trace_contract_receipt
+step autogenesis-int-gcd-trace-contract-receipt-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_trace_contract_receipt
+step autogenesis-int-gcd-trace-contract-receipt python3 scripts/check-autogenesis-int-gcd-trace-contract-receipt.py
+step autogenesis-int-gcd-contract-theorem-control-policy-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_theorem_control_policy
+step autogenesis-int-gcd-contract-theorem-control-policy python3 scripts/check-autogenesis-int-gcd-contract-theorem-control-policy.py
+step autogenesis-int-gcd-contract-theorem-control-rust-test cargo test -p axeyum-lean-import --test trace_contract_theorem_receipt
+step autogenesis-int-gcd-contract-theorem-control-rust-example cargo test -p axeyum-lean-import --example int_gcd_contract_theorem_control
+step autogenesis-int-gcd-contract-theorem-control-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_theorem_control
+step autogenesis-int-gcd-contract-theorem-control python3 scripts/check-autogenesis-int-gcd-contract-theorem-control.py
+step autogenesis-nat-fib-gcd-premise-selection-policy-tests python3 -m unittest scripts.tests.test_check_autogenesis_nat_fib_gcd_premise_selection_policy
+step autogenesis-nat-fib-gcd-premise-selection-policy python3 scripts/check-autogenesis-nat-fib-gcd-premise-selection-policy.py
 step autogenesis-mathlib-source-tests python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source
 step autogenesis-mathlib-source python3 scripts/check-autogenesis-mathlib-source.py
 step autogenesis-mathlib-candidate-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_candidates
@@ -233,6 +266,8 @@ step parity-freshness ./scripts/check-parity-freshness.py
 step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
+step commit-msg-trailer-controls ./scripts/tests/test-commit-msg-trailer.sh
+step lane-merge-additive-controls python3 -m unittest scripts.tests.test_lane_merge_additive
 step lane-push-controls ./scripts/tests/test-lane-push-target.sh
 # The pre-push compile step must build examples/ and tests/. Without
 # `--all-targets` it builds neither, and on 2026-08-20 a non-compiling
@@ -293,25 +328,43 @@ step axiom-freedom-generalized cargo run --release -q -p axeyum-solver --feature
     --example ordered_ring_refutation -- --require-empty
 step axiom-freedom-constructed cargo run --release -q -p axeyum-solver --features full \
     --example ordered_ring_refutation -- --constructed-reals
+# ADR-0553. No artifact may declare a dependency on a repository this project
+# does not own. `--self-test` runs first on purpose: it drives every rule over a
+# synthetic violation and fails if any rule does NOT fire, so the zero the scan
+# prints afterwards is a measurement rather than a no-op.
+step external-coupling-tests python3 -m unittest scripts.tests.test_check_external_coupling
+step external-coupling-selftest python3 scripts/check-external-coupling.py --self-test
+step external-coupling python3 scripts/check-external-coupling.py
 step autogenesis-knowledge-overlay-tests python3 -m unittest scripts.tests.test_validate_autogenesis_knowledge
+step autogenesis-knowledge-coverage-tests python3 -m unittest scripts.tests.test_gen_autogenesis_knowledge_coverage
 step autogenesis-knowledge-overlay python3 scripts/validate-autogenesis-knowledge.py
 step autogenesis-knowledge-controls ./scripts/check-autogenesis-knowledge-controls.sh
 step autogenesis-kernel-projection python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
 step autogenesis-kernel-projection-content python3 scripts/validate-autogenesis-kernel-dependency-projection.py
+step autogenesis-kernel-projection-fresh python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
 step autogenesis-obstruction-projection python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection
 step autogenesis-obstruction-projection-content python3 scripts/validate-autogenesis-obstruction-projection.py
+step autogenesis-obstruction-projection-fresh python3 scripts/gen-autogenesis-obstruction-projection.py --check
 step autogenesis-transport-projection python3 -m unittest scripts.tests.test_validate_autogenesis_transport_projection
 step autogenesis-transport-projection-content python3 scripts/validate-autogenesis-transport-projection.py
+step autogenesis-transport-projection-fresh python3 scripts/gen-autogenesis-transport-projection.py --check
 step autogenesis-capability-gap python3 -m unittest scripts.tests.test_validate_autogenesis_capability_gap_projection
 step autogenesis-capability-gap-content python3 scripts/validate-autogenesis-capability-gap-projection.py
+step autogenesis-capability-demand-tests python3 -m unittest scripts.tests.test_validate_autogenesis_capability_candidate_demand
+step autogenesis-capability-demand-content python3 scripts/validate-autogenesis-capability-candidate-demand.py
+step autogenesis-capability-gap-fresh python3 scripts/gen-autogenesis-capability-gap-projection.py --check
 step autogenesis-concept-coverage python3 -m unittest scripts.tests.test_validate_autogenesis_concept_coverage_projection
 step autogenesis-concept-coverage-content python3 scripts/validate-autogenesis-concept-coverage-projection.py
+step autogenesis-concept-coverage-fresh python3 scripts/gen-autogenesis-concept-coverage-projection.py --check
 step autogenesis-producer-outcomes python3 -m unittest scripts.tests.test_validate_autogenesis_producer_outcome_observations
 step autogenesis-producer-outcomes-content python3 scripts/validate-autogenesis-producer-outcome-observations.py
+step autogenesis-producer-outcomes-fresh python3 scripts/gen-autogenesis-producer-outcome-observations.py --check
 step autogenesis-producer-evaluation-frontier python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_frontier
 step autogenesis-producer-evaluation-frontier-content python3 scripts/validate-autogenesis-producer-evaluation-frontier.py
+step autogenesis-producer-evaluation-frontier-fresh python3 scripts/gen-autogenesis-producer-evaluation-frontier.py --check
 step autogenesis-producer-evaluation-protocol python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_protocol
 step autogenesis-producer-evaluation-protocol-content python3 scripts/validate-autogenesis-producer-evaluation-protocol.py
+step autogenesis-producer-evaluation-protocol-fresh python3 scripts/gen-autogenesis-producer-evaluation-protocol.py --check
 step autogenesis-producer-evaluation-result-contract python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_result
 step autogenesis-proposer-isolation ./scripts/check-autogenesis-proposer-isolation.sh
 step autogenesis-induction-search ./scripts/check-autogenesis-induction-search.sh
@@ -652,6 +705,40 @@ step obstruction-graph        python3 scripts/gen-obstruction-graph.py --check
 step obstruction-graph-valid  python3 scripts/validate-obstruction-graph.py
 step obstruction-dashboard    python3 scripts/gen-obstruction-dashboard.py --check
 step obstruction-graph-tests  python3 -m unittest scripts.tests.test_obstruction_graph
+
+# Theorem correspondences (ADR-0546). `just correspondences` runs the same two
+# steps.
+#
+# The claim being gated is "these two facts are the same idea", which is not a
+# proof dependency and must not become one: the validator refuses any pair the
+# fact ledger already connects through the TRANSITIVE `depends_on` closure, in
+# either direction. It also refuses an empty population -- the whole file is a
+# vocabulary, and a vocabulary with no instance cannot fail.
+#
+# The rule doing the most work is the structural one. `carrier-transport` is not
+# taken on trust: erasing the carrier from both formal statements must leave the
+# same string, and a fragment with no carrier spelling FAILS rather than skipping
+# the check. Read `CORRESPONDENCES|checked=N|kinds=...|derivation=...`, not the
+# status alone -- the per-kind counts include the ZEROES, so a vocabulary term
+# nobody instantiated is visible instead of merely declared. Every guard is
+# mutation-verified to kill exactly one test -- `python3
+# scripts/tests/mutation_controls.py correspondences` (39 anchors, 39 killed).
+step correspondences       python3 scripts/validate-correspondences.py
+step correspondences-tests python3 -m unittest scripts.tests.test_validate_correspondences
+
+# Mocked-subprocess unit controls for the Tock log2 capture/cache-prepare
+# investigation tooling (bench-results/verify-tock-log2-20260721/). These only
+# guard the committed scripts' own logic via subprocess mocks; the
+# `prove-tock-log2*` generations are excluded because their frozen
+# registration pins a SHA-256 of `crates/axeyum-verify/tests/tock_log2_external.rs`
+# that has drifted since the freeze, so all four currently fail closed.
+step tock-log2-capture-tests    python3 -m unittest scripts.tests.test_capture_tock_log2
+step tock-log2-capture-v2-tests python3 -m unittest scripts.tests.test_capture_tock_log2_v2
+step tock-log2-capture-v3-tests python3 -m unittest scripts.tests.test_capture_tock_log2_v3
+step tock-log2-cache-v2-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v2
+step tock-log2-cache-v3-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v3
+step tock-log2-cache-v4-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v4
+step tock-log2-cache-v5-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v5
 
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2

@@ -27,7 +27,7 @@
       "kind": "unsat-certificate",
       "supports": "One named refutation reaches `outcome=verified` end-to-end. Anchored on the row rather than on a test-count line: `test result: ok` is true of a suite that produced no certificate at all, and this pattern is false unless a certificate was produced AND re-derived.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test certified_implies_revalidatable -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'nia_non_square_discriminant .*kind=unsat-int-univariate-poly .*certified=1 outcome=verified'",
+      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test certified_implies_revalidatable -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'nia_non_square_discriminant .*kind=unsat-int-univariate-poly .*certified=1 outcome=verified')\" -ge 1",
       "notes": "Anchored on `certified=1 outcome=verified` in one row of `certified_implies_revalidatable`, which re-validates against a FRESH PARSE of the SMT-LIB text rather than the producing run's arena. That distinction is the whole point of the anchor: checking against the producer's own arena passes for any certificate, including one that merely copies the producer's conclusions. `UnsatQuantInstanceSet` shipped `certified=1` over a FAILED re-check on 2026-08-17 because its TermIds meant nothing in a second arena, and this suite exists because of it."
     },
     {
@@ -43,7 +43,7 @@
       "kind": "unsat-certificate",
       "supports": "The strand's PRIMARY METRIC moved, not just a test passing. `docs/mathematics-2026-08/01-decide-vs-certify.md` asks, per area, whether a verdict comes with an artifact a third party can check; `QF_NIA` answered no. It now ranks band 1, `artifact already built`.",
       "check_status": "checked",
-      "checker_command": "out=$(python3 scripts/check-capability-assurance.py --rank --quiet 2>&1) && printf \"%s\\n\" \"$out\" | grep -A1 'band 1' | grep -qE 'QF_NIA'",
+      "checker_command": "out=$(python3 scripts/check-capability-assurance.py --rank --quiet 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -A1 'band 1' | grep -Ec 'QF_NIA')\" -ge 1",
       "notes": "The exit status depends on the FINDING: `grep -A1 'band 1'` fails when QF_NIA sits under any other band, and the same command asserted against `band 3` exits 1 today -- so this discriminates rather than merely running. Deliberately NOT a claim that an external checker reads the artifact: band 1 means one could be pointed at it, and `checked_by` stays `SelfChecker` until one is."
     }
   ],

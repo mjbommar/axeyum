@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "Complex.no_compatible_order : forall (le lt : Complex -> Complex -> Prop), (forall x, le x x) -> (forall x, Not (lt x x)) -> (forall x y z, le x y -> lt y z -> lt x z) -> (forall x x2 y y2, le x x2 -> le y y2 -> le (Complex.add x y) (Complex.add x2 y2)) -> (forall a b c e, Complex.Equiv a b -> Complex.Equiv c e -> le a c -> le b e) -> (forall x, le Complex.zero (Complex.mul x x)) -> lt Complex.zero Complex.one -> False",
     "fragment": "Complex",
+    "kernel_theorem": "Complex.no_compatible_order",
     "free_symbols": [
       "Complex",
       "Complex.Equiv",
@@ -23,6 +24,10 @@
   "proof_route": "kernel-lean",
   "external_status": "proved",
   "depends_on": [
+    "F:complex-add-neg",
+    "F:complex-add-zero",
+    "F:complex-equiv-refl",
+    "F:complex-i-sq",
     "F:complex-ring-constructed-axiom-free"
   ],
   "axiom_footprint": [],
@@ -32,7 +37,7 @@
       "kind": "kernel-term",
       "supports": "Complex.no_compatible_order is a checked theorem -- not an axiom, not an opaque -- with an empty axiom footprint.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^Complex[.]no_compatible_order[[:space:]]+theorem[[:space:]]+-$'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^Complex[.]no_compatible_order[[:space:]]+theorem[[:space:]]+-$')\" -ge 1",
       "notes": "The kind column distinguishes theorem from AXIOM/OPAQUE and the third column is the footprint, so an assumed version of this statement fails the row rather than passing it."
     },
     {
@@ -40,7 +45,7 @@
       "kind": "kernel-term",
       "supports": "Complex.I_sq is a checked theorem, so the refutation's witness is a real one: without it Complex.I is unconstrained and I = 0 would satisfy every other law in the module.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^Complex[.]I_sq[[:space:]]+theorem[[:space:]]+-$'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^Complex[.]I_sq[[:space:]]+theorem[[:space:]]+-$')\" -ge 1",
       "notes": "Complex.ofReal_mul cannot pin I, because I is not in the image of ofReal. This is the only declaration that constrains it."
     },
     {
@@ -48,7 +53,7 @@
       "kind": "kernel-term",
       "supports": "Neither Complex.le nor Complex.lt is declared, checked against the environment rather than inferred from the absence of the words in a source file -- the theorem and a declared order cannot both stand.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>&1) && printf '%s\\n' \"$out\" | grep -qE 'order refuted = true, order declared = none'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -Ec 'order refuted = true, order declared = none')\" -ge 1",
       "notes": "An omission and a refutation look identical from outside, which is the whole reason this row exists in addition to the theorem row. The example probes the environment for Complex.le and Complex.lt by name and exits non-zero if either is present; verified to fail when a Complex.le definition is added.",
       "verified_negative": "Declaring Complex.le makes the example exit 1 and this command exit non-zero."
     }

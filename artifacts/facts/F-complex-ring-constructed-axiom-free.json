@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "Complex : Type, Complex.mk : CReal -> CReal -> Complex, Complex.Equiv : Complex -> Complex -> Prop := fun z w => And (CReal.Equiv (Complex.re z) (Complex.re w)) (CReal.Equiv (Complex.im z) (Complex.im w)); and for each L in {add_comm, add_assoc, add_zero, add_neg, mul_comm, mul_assoc, mul_one, mul_zero, left_distrib}, Complex.L is a checked Theorem with Kernel::axiom_footprint = [].",
     "fragment": "Complex",
+    "kernel_theorem": null,
     "free_symbols": [
       "Complex",
       "Complex.Equiv",
@@ -27,6 +28,20 @@
   "proof_route": "kernel-lean",
   "external_status": "proved",
   "depends_on": [
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-neg",
+    "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-left-distrib",
+    "F:creal-mul-assoc",
+    "F:creal-mul-comm",
+    "F:creal-mul-congr",
+    "F:creal-mul-zero",
+    "F:creal-neg-congr",
     "F:real-axioms-modelled-by-constructed-setoid"
   ],
   "axiom_footprint": [],
@@ -36,7 +51,7 @@
       "kind": "kernel-term",
       "supports": "Associativity of complex multiplication -- the law whose two sides are the same eight monomials in different orders, and the one that pays for the ring calculus on its own -- is a checked theorem with an empty axiom footprint.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^law[[:space:]]+Complex[.]mul_assoc[[:space:]]+\\[\\]$'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^law[[:space:]]+Complex[.]mul_assoc[[:space:]]+\\[\\]$')\" -ge 1",
       "notes": "Anchored on the law name AND the empty-footprint column, so a rename or a witness that grew a dependency on a trusted declaration both fail. The `law` rows go to stdout; the summary goes to stderr, which is why this row and the population row below capture different streams."
     },
     {
@@ -44,7 +59,7 @@
       "kind": "kernel-term",
       "supports": "Distributivity -- the law that ties the additive and multiplicative structures together, so the pair of rows cannot both pass on additive-only work.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^law[[:space:]]+Complex[.]left_distrib[[:space:]]+\\[\\]$'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^law[[:space:]]+Complex[.]left_distrib[[:space:]]+\\[\\]$')\" -ge 1",
       "notes": "Second law, from the interaction of the two operations rather than from either alone."
     },
     {
@@ -52,7 +67,7 @@
       "kind": "kernel-term",
       "supports": "All nine laws hold, every named declaration is checked with an empty footprint, the whole environment's trusted surface is zero, and the carrier is inhabited and Equiv-discriminating on BOTH components -- the example exits non-zero otherwise.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>&1) && printf '%s\\n' \"$out\" | grep -qE '9/9 ring laws have an EMPTY axiom footprint'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '9/9 ring laws have an EMPTY axiom footprint')\" -ge 1",
       "notes": "Captures BOTH streams: the per-declaration and per-law rows go to stdout and the summary to stderr, so the obvious `2>/dev/null` form silently matches nothing and passes for the wrong reason -- the same trap the creal population row records. The nine come from ComplexPrelude::ring_laws read out of the kernel, so dropping or duplicating a law flips the exit status instead of shrinking a count.",
       "verified_negative": "Removing the `neg` from Complex.mul's real part (making it a-c + b-e) makes the build fail and this command exit non-zero; removing the normalizer's cancellation pass does the same via add_neg and mul_conj."
     },
@@ -61,7 +76,7 @@
       "kind": "kernel-term",
       "supports": "The environment carrying Complex, CReal, Rat, Int and Nat together has a trusted surface of zero -- Axiom AND Opaque AND Quotient, not Axiom alone.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>&1) && printf '%s\\n' \"$out\" | grep -qE 'trusted surface = 0 \\(empty\\)'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -Ec 'trusted surface = 0 \\(empty\\)')\" -ge 1",
       "notes": "Opaque has no proof body and Quotient admits Quot.sound, so an Axiom-only count can read zero while trusted declarations are present. This anchors on the count the example computes over all three kinds."
     }
   ],

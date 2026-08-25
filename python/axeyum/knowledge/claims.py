@@ -43,23 +43,28 @@ REQUIRED = frozenset(
 
 @dataclass(frozen=True, slots=True)
 class ConceptRef:
-    """A pointer into the pinned ``math-education`` graph."""
+    """A claim's pointer at a named concept.
+
+    Carried no ``resolved`` flag since 2026-08-24. It used to assert that the
+    ``ref`` had been found in a sibling repository at a pinned revision, which
+    nothing in this checkout could re-derive; ADR-0553 removed that repository
+    from the project's surface and the flag with it. A boolean nobody can check
+    is worse than no boolean.
+    """
 
     graph: str | None
     ref: str | None
     relation: str | None
-    resolved: bool | None
     note: str | None
 
     @classmethod
     def from_raw(cls, raw: Any) -> ConceptRef:
         if not isinstance(raw, dict):
-            return cls(None, None, None, None, None)
+            return cls(None, None, None, None)
         return cls(
             graph=raw.get("graph"),
             ref=raw.get("ref"),
             relation=raw.get("relation"),
-            resolved=raw.get("resolved"),
             note=raw.get("note") or raw.get("notes"),
         )
 
@@ -164,7 +169,7 @@ class ClaimLedger:
         return {k: tuple(v) for k, v in sorted(grouped.items())}
 
     def concept_refs(self) -> tuple[ConceptRef, ...]:
-        """Every pointer into the external graph, across all claims."""
+        """Every topic citation, across all claims. Nothing resolves them."""
         return tuple(ref for claim in self.claims for ref in claim.concept_refs)
 
     def referenced_by(self, path_suffix: str) -> tuple[Claim, ...]:

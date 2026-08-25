@@ -12,129 +12,129 @@ One row per claim under `artifacts/claims/<family>/<id>/claim.json`: what is ass
 - Epistemic status: `computed` 101, `open` 3
 - Evidence rows: 266 — `checked` 262, `not-checked` 1, `replay-only` 3
 - Evidence kinds: `cube-cover` 6, `cube-tree-cover` 1, `instance-pin` 52, `unsat-certificate` 100, `witness-replay` 107
-- Concept references: 438 — 438 resolved, 0 pending
+- Topic citations: 438 — unresolved by design (ADR-0553); nothing in this repository resolves them
 - Frontier records (open/conjectured claims): 3
 
 ## Claims
 
 ### `offdiag-schur`
 
-| Claim | Title | Status | Evidence (kind: check_status) | Refs resolved | Refs pending |
-| --- | --- | --- | --- | ---: | ---: |
-| [`offdiag-schur-3-3-3-10`](offdiag-schur/offdiag-schur-3-3-3-10/claim.json) | S(3;3,3,10) = 77 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-3-11`](offdiag-schur/offdiag-schur-3-3-3-11/claim.json) | S(3;3,3,11) = 86 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-3-12`](offdiag-schur/offdiag-schur-3-3-3-12/claim.json) | S(3;3,3,12) = 94 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-3-13`](offdiag-schur/offdiag-schur-3-3-3-13/claim.json) | S(3;3,3,13) = 104 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-3-14`](offdiag-schur/offdiag-schur-3-3-3-14/claim.json) | S(3;3,3,14) = 113 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-3-8`](offdiag-schur/offdiag-schur-3-3-3-8/claim.json) | S(3;3,3,8) = 59 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-3-9`](offdiag-schur/offdiag-schur-3-3-3-9/claim.json) | S(3;3,3,9) = 68 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-4-10`](offdiag-schur/offdiag-schur-3-3-4-10/claim.json) | S(3;3,4,10) = 86 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-4-11`](offdiag-schur/offdiag-schur-3-3-4-11/claim.json) | S(3;3,4,11) = 98 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-4-12`](offdiag-schur/offdiag-schur-3-3-4-12/claim.json) | S(3;3,4,12) = 106 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-4-8`](offdiag-schur/offdiag-schur-3-3-4-8/claim.json) | S(3;3,4,8) = 67 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-4-9`](offdiag-schur/offdiag-schur-3-3-4-9/claim.json) | S(3;3,4,9) = 78 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-5-8`](offdiag-schur/offdiag-schur-3-3-5-8/claim.json) | S(3;3,5,8) = 91 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-3-5-9`](offdiag-schur/offdiag-schur-3-3-5-9/claim.json) | S(3;3,5,9) = 103 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-4-10`](offdiag-schur/offdiag-schur-3-4-4-10/claim.json) | S(3;4,4,10) = 109 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-4-11`](offdiag-schur/offdiag-schur-3-4-4-11/claim.json) | S(3;4,4,11) = 120 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-4-12`](offdiag-schur/offdiag-schur-3-4-4-12/claim.json) | S(3;4,4,12) = 131 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-4-13`](offdiag-schur/offdiag-schur-3-4-4-13/claim.json) | S(3;4,4,13) = 142 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-4-4`](offdiag-schur/offdiag-schur-3-4-4-4/claim.json) | S(3;4,4,4) = 43 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-4-5`](offdiag-schur/offdiag-schur-3-4-4-5/claim.json) | S(3;4,4,5) = 54 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-4-6`](offdiag-schur/offdiag-schur-3-4-4-6/claim.json) | S(3;4,4,6) = 65 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-4-7`](offdiag-schur/offdiag-schur-3-4-4-7/claim.json) | S(3;4,4,7) = 76 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-4-8`](offdiag-schur/offdiag-schur-3-4-4-8/claim.json) | S(3;4,4,8) = 87 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-4-9`](offdiag-schur/offdiag-schur-3-4-4-9/claim.json) | S(3;4,4,9) = 98 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-5-10`](offdiag-schur/offdiag-schur-3-4-5-10/claim.json) | S(3;4,5,10) = 139 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-5-11`](offdiag-schur/offdiag-schur-3-4-5-11/claim.json) | S(3;4,5,11) = 153 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-5-5`](offdiag-schur/offdiag-schur-3-4-5-5/claim.json) | S(3;4,5,5) = 69 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-5-6`](offdiag-schur/offdiag-schur-3-4-5-6/claim.json) | S(3;4,5,6) = 83 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-5-7`](offdiag-schur/offdiag-schur-3-4-5-7/claim.json) | S(3;4,5,7) = 97 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-5-8`](offdiag-schur/offdiag-schur-3-4-5-8/claim.json) | S(3;4,5,8) = 111 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-5-9`](offdiag-schur/offdiag-schur-3-4-5-9/claim.json) | S(3;4,5,9) = 125 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-6-6`](offdiag-schur/offdiag-schur-3-4-6-6/claim.json) | S(3;4,6,6) = 101 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-6-7`](offdiag-schur/offdiag-schur-3-4-6-7/claim.json) | S(3;4,6,7) = 118 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-6-8`](offdiag-schur/offdiag-schur-3-4-6-8/claim.json) | S(3;4,6,8) = 135 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-6-9`](offdiag-schur/offdiag-schur-3-4-6-9/claim.json) | S(3;4,6,9) = 152 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-7-7`](offdiag-schur/offdiag-schur-3-4-7-7/claim.json) | S(3;4,7,7) = 139 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-4-7-8`](offdiag-schur/offdiag-schur-3-4-7-8/claim.json) | S(3;4,7,8) = 159 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-5-5-5`](offdiag-schur/offdiag-schur-3-5-5-5/claim.json) | S(3;5,5,5) = 94 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-5-5-6`](offdiag-schur/offdiag-schur-3-5-5-6/claim.json) | S(3;5,5,6) = 113 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 | 0 |
-| [`offdiag-schur-3-5-5-7`](offdiag-schur/offdiag-schur-3-5-5-7/claim.json) | S(3;5,5,7) = 132 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-5-5-8`](offdiag-schur/offdiag-schur-3-5-5-8/claim.json) | S(3;5,5,8) = 151 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-5-5-9`](offdiag-schur/offdiag-schur-3-5-5-9/claim.json) | S(3;5,5,9) = 170 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-5-6-6`](offdiag-schur/offdiag-schur-3-5-6-6/claim.json) | S(3;5,6,6) = 137 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-5-6-7`](offdiag-schur/offdiag-schur-3-5-6-7/claim.json) | S(3;5,6,7) = 160 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-5-6-8`](offdiag-schur/offdiag-schur-3-5-6-8/claim.json) | S(3;5,6,8) = 183 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-5-7-7`](offdiag-schur/offdiag-schur-3-5-7-7/claim.json) | S(3;5,7,7) = 188 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-6-6-6`](offdiag-schur/offdiag-schur-3-6-6-6/claim.json) | S(3;6,6,6) = 173 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
-| [`offdiag-schur-3-6-6-7`](offdiag-schur/offdiag-schur-3-6-6-7/claim.json) | S(3;6,6,7) = 202 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 | 0 |
+| Claim | Title | Status | Evidence (kind: check_status) | Citations |
+| --- | --- | --- | --- | ---: |
+| [`offdiag-schur-3-3-3-10`](offdiag-schur/offdiag-schur-3-3-3-10/claim.json) | S(3;3,3,10) = 77 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-3-11`](offdiag-schur/offdiag-schur-3-3-3-11/claim.json) | S(3;3,3,11) = 86 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-3-12`](offdiag-schur/offdiag-schur-3-3-3-12/claim.json) | S(3;3,3,12) = 94 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-3-13`](offdiag-schur/offdiag-schur-3-3-3-13/claim.json) | S(3;3,3,13) = 104 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-3-14`](offdiag-schur/offdiag-schur-3-3-3-14/claim.json) | S(3;3,3,14) = 113 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-3-8`](offdiag-schur/offdiag-schur-3-3-3-8/claim.json) | S(3;3,3,8) = 59 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-3-9`](offdiag-schur/offdiag-schur-3-3-3-9/claim.json) | S(3;3,3,9) = 68 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-4-10`](offdiag-schur/offdiag-schur-3-3-4-10/claim.json) | S(3;3,4,10) = 86 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-4-11`](offdiag-schur/offdiag-schur-3-3-4-11/claim.json) | S(3;3,4,11) = 98 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-4-12`](offdiag-schur/offdiag-schur-3-3-4-12/claim.json) | S(3;3,4,12) = 106 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-4-8`](offdiag-schur/offdiag-schur-3-3-4-8/claim.json) | S(3;3,4,8) = 67 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-4-9`](offdiag-schur/offdiag-schur-3-3-4-9/claim.json) | S(3;3,4,9) = 78 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-5-8`](offdiag-schur/offdiag-schur-3-3-5-8/claim.json) | S(3;3,5,8) = 91 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-3-5-9`](offdiag-schur/offdiag-schur-3-3-5-9/claim.json) | S(3;3,5,9) = 103 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-4-10`](offdiag-schur/offdiag-schur-3-4-4-10/claim.json) | S(3;4,4,10) = 109 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-4-11`](offdiag-schur/offdiag-schur-3-4-4-11/claim.json) | S(3;4,4,11) = 120 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-4-12`](offdiag-schur/offdiag-schur-3-4-4-12/claim.json) | S(3;4,4,12) = 131 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-4-13`](offdiag-schur/offdiag-schur-3-4-4-13/claim.json) | S(3;4,4,13) = 142 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-4-4-4`](offdiag-schur/offdiag-schur-3-4-4-4/claim.json) | S(3;4,4,4) = 43 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-4-5`](offdiag-schur/offdiag-schur-3-4-4-5/claim.json) | S(3;4,4,5) = 54 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-4-6`](offdiag-schur/offdiag-schur-3-4-4-6/claim.json) | S(3;4,4,6) = 65 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-4-7`](offdiag-schur/offdiag-schur-3-4-4-7/claim.json) | S(3;4,4,7) = 76 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-4-8`](offdiag-schur/offdiag-schur-3-4-4-8/claim.json) | S(3;4,4,8) = 87 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-4-9`](offdiag-schur/offdiag-schur-3-4-4-9/claim.json) | S(3;4,4,9) = 98 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-5-10`](offdiag-schur/offdiag-schur-3-4-5-10/claim.json) | S(3;4,5,10) = 139 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-4-5-11`](offdiag-schur/offdiag-schur-3-4-5-11/claim.json) | S(3;4,5,11) = 153 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-4-5-5`](offdiag-schur/offdiag-schur-3-4-5-5/claim.json) | S(3;4,5,5) = 69 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-5-6`](offdiag-schur/offdiag-schur-3-4-5-6/claim.json) | S(3;4,5,6) = 83 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-5-7`](offdiag-schur/offdiag-schur-3-4-5-7/claim.json) | S(3;4,5,7) = 97 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-5-8`](offdiag-schur/offdiag-schur-3-4-5-8/claim.json) | S(3;4,5,8) = 111 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-5-9`](offdiag-schur/offdiag-schur-3-4-5-9/claim.json) | S(3;4,5,9) = 125 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-6-6`](offdiag-schur/offdiag-schur-3-4-6-6/claim.json) | S(3;4,6,6) = 101 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-6-7`](offdiag-schur/offdiag-schur-3-4-6-7/claim.json) | S(3;4,6,7) = 118 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-4-6-8`](offdiag-schur/offdiag-schur-3-4-6-8/claim.json) | S(3;4,6,8) = 135 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-4-6-9`](offdiag-schur/offdiag-schur-3-4-6-9/claim.json) | S(3;4,6,9) = 152 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-4-7-7`](offdiag-schur/offdiag-schur-3-4-7-7/claim.json) | S(3;4,7,7) = 139 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-4-7-8`](offdiag-schur/offdiag-schur-3-4-7-8/claim.json) | S(3;4,7,8) = 159 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-5-5-5`](offdiag-schur/offdiag-schur-3-5-5-5/claim.json) | S(3;5,5,5) = 94 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-5-5-6`](offdiag-schur/offdiag-schur-3-5-5-6/claim.json) | S(3;5,5,6) = 113 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`instance-pin`: checked | 4 |
+| [`offdiag-schur-3-5-5-7`](offdiag-schur/offdiag-schur-3-5-5-7/claim.json) | S(3;5,5,7) = 132 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-5-5-8`](offdiag-schur/offdiag-schur-3-5-5-8/claim.json) | S(3;5,5,8) = 151 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-5-5-9`](offdiag-schur/offdiag-schur-3-5-5-9/claim.json) | S(3;5,5,9) = 170 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-5-6-6`](offdiag-schur/offdiag-schur-3-5-6-6/claim.json) | S(3;5,6,6) = 137 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-5-6-7`](offdiag-schur/offdiag-schur-3-5-6-7/claim.json) | S(3;5,6,7) = 160 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-5-6-8`](offdiag-schur/offdiag-schur-3-5-6-8/claim.json) | S(3;5,6,8) = 183 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-5-7-7`](offdiag-schur/offdiag-schur-3-5-7-7/claim.json) | S(3;5,7,7) = 188 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-6-6-6`](offdiag-schur/offdiag-schur-3-6-6-6/claim.json) | S(3;6,6,6) = 173 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
+| [`offdiag-schur-3-6-6-7`](offdiag-schur/offdiag-schur-3-6-6-7/claim.json) | S(3;6,6,7) = 202 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 4 |
 
 ### `rado`
 
-| Claim | Title | Status | Evidence (kind: check_status) | Refs resolved | Refs pending |
-| --- | --- | --- | --- | ---: | ---: |
-| [`rado-r3-a1-b1`](rado/rado-r3-a1-b1/claim.json) | R_3(1(x-y)=1z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a1-b2`](rado/rado-r3-a1-b2/claim.json) | R_3(1(x-y)=2z) = 43 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a1-b3`](rado/rado-r3-a1-b3/claim.json) | R_3(1(x-y)=3z) = 94 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a1-b4`](rado/rado-r3-a1-b4/claim.json) | R_3(1(x-y)=4z) = 173 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a1-b5`](rado/rado-r3-a1-b5/claim.json) | R_3(1(x-y)=5z) = 286 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a2-b1`](rado/rado-r3-a2-b1/claim.json) | R_3(2(x-y)=1z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a2-b2`](rado/rado-r3-a2-b2/claim.json) | R_3(2(x-y)=2z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a2-b3`](rado/rado-r3-a2-b3/claim.json) | R_3(2(x-y)=3z) = 61 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a2-b4`](rado/rado-r3-a2-b4/claim.json) | R_3(2(x-y)=4z) = 43 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a2-b5`](rado/rado-r3-a2-b5/claim.json) | R_3(2(x-y)=5z) = 181 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a3-b1`](rado/rado-r3-a3-b1/claim.json) | R_3(3(x-y)=1z) = 27 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a3-b2`](rado/rado-r3-a3-b2/claim.json) | R_3(3(x-y)=2z) = 31 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a3-b3`](rado/rado-r3-a3-b3/claim.json) | R_3(3(x-y)=3z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a3-b4`](rado/rado-r3-a3-b4/claim.json) | R_3(3(x-y)=4z) = 109 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a3-b5`](rado/rado-r3-a3-b5/claim.json) | R_3(3(x-y)=5z) = 186 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a4-b1`](rado/rado-r3-a4-b1/claim.json) | R_3(4(x-y)=1z) = 64 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a4-b2`](rado/rado-r3-a4-b2/claim.json) | R_3(4(x-y)=2z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a4-b3`](rado/rado-r3-a4-b3/claim.json) | R_3(4(x-y)=3z) = 73 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a4-b4`](rado/rado-r3-a4-b4/claim.json) | R_3(4(x-y)=4z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a4-b5`](rado/rado-r3-a4-b5/claim.json) | R_3(4(x-y)=5z) = 180 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a5-b1`](rado/rado-r3-a5-b1/claim.json) | R_3(5(x-y)=1z) = 125 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a5-b2`](rado/rado-r3-a5-b2/claim.json) | R_3(5(x-y)=2z) = 125 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a5-b3`](rado/rado-r3-a5-b3/claim.json) | R_3(5(x-y)=3z) = 125 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a5-b4`](rado/rado-r3-a5-b4/claim.json) | R_3(5(x-y)=4z) = 141 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r3-a5-b5`](rado/rado-r3-a5-b5/claim.json) | R_3(5(x-y)=5z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r4-a1-b1`](rado/rado-r4-a1-b1/claim.json) | R_4(1(x-y)=1z) = 45 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r4-a1-b2`](rado/rado-r4-a1-b2/claim.json) | R_4(1(x-y)=2z) = 171 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r4-a2-b1`](rado/rado-r4-a2-b1/claim.json) | R_4(2(x-y)=1z) = 56 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`cube-cover`: checked | 5 | 0 |
-| [`rado-r4-a2-b2`](rado/rado-r4-a2-b2/claim.json) | R_4(2(x-y)=2z) = 45 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r4-a2-b3`](rado/rado-r4-a2-b3/claim.json) | R_4(2(x-y)=3z) = 226 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked<br>`cube-cover`: checked | 5 | 0 |
-| [`rado-r4-a3-b1`](rado/rado-r4-a3-b1/claim.json) | R_4(3(x-y)=1z) = 81 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r4-a3-b2`](rado/rado-r4-a3-b2/claim.json) | R_4(3(x-y)=2z) = 103 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r4-a3-b3`](rado/rado-r4-a3-b3/claim.json) | R_4(3(x-y)=3z) = 45 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r4-a4-b1`](rado/rado-r4-a4-b1/claim.json) | R_4(4(x-y)=1z) = 256 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r4-a4-b2`](rado/rado-r4-a4-b2/claim.json) | R_4(4(x-y)=2z) = 56 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 | 0 |
-| [`rado-r4-a4-b3`](rado/rado-r4-a4-b3/claim.json) | R_4(4(x-y)=3z) = 313 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`cube-cover`: checked<br>`unsat-certificate`: checked<br>`cube-cover`: replay-only<br>`cube-cover`: replay-only<br>`cube-cover`: replay-only | 5 | 0 |
-| [`rado-r4-a5-b1`](rado/rado-r4-a5-b1/claim.json) | R_4(5(x-y)=1z) = 625 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`rado-r4-a5-b2`](rado/rado-r4-a5-b2/claim.json) | R_4(5(x-y)=2z) = 625 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`rado-r4-a5-b3`](rado/rado-r4-a5-b3/claim.json) | R_4(5(x-y)=3z) = 625 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`rado-r4-a5-b4-frontier`](rado/rado-r4-a5-b4-frontier/claim.json) | R_4(5(x-y)=4z) = 741 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`cube-tree-cover`: checked | 5 | 0 |
-| [`rado-r4-a6-b5-frontier`](rado/rado-r4-a6-b5-frontier/claim.json) | R_4(6(x-y)=5z) > 1500: the shell construction at the next point of the k=4 row | `open` | `witness-replay`: checked | 5 | 0 |
-| [`rado-r5-a3-b1-frontier`](rado/rado-r5-a3-b1-frontier/claim.json) | R_5(3(x-y)=1z) > 243: the a^k law fails at five colours | `open` | `instance-pin`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked | 3 | 0 |
-| [`rado-r5-a3-b2-frontier`](rado/rado-r5-a3-b2-frontier/claim.json) | R_5(3(x-y)=2z) > 350: first five-colour bound for this family | `open` | `witness-replay`: checked<br>`witness-replay`: checked | 5 | 0 |
+| Claim | Title | Status | Evidence (kind: check_status) | Citations |
+| --- | --- | --- | --- | ---: |
+| [`rado-r3-a1-b1`](rado/rado-r3-a1-b1/claim.json) | R_3(1(x-y)=1z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a1-b2`](rado/rado-r3-a1-b2/claim.json) | R_3(1(x-y)=2z) = 43 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a1-b3`](rado/rado-r3-a1-b3/claim.json) | R_3(1(x-y)=3z) = 94 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a1-b4`](rado/rado-r3-a1-b4/claim.json) | R_3(1(x-y)=4z) = 173 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a1-b5`](rado/rado-r3-a1-b5/claim.json) | R_3(1(x-y)=5z) = 286 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a2-b1`](rado/rado-r3-a2-b1/claim.json) | R_3(2(x-y)=1z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a2-b2`](rado/rado-r3-a2-b2/claim.json) | R_3(2(x-y)=2z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a2-b3`](rado/rado-r3-a2-b3/claim.json) | R_3(2(x-y)=3z) = 61 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a2-b4`](rado/rado-r3-a2-b4/claim.json) | R_3(2(x-y)=4z) = 43 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a2-b5`](rado/rado-r3-a2-b5/claim.json) | R_3(2(x-y)=5z) = 181 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a3-b1`](rado/rado-r3-a3-b1/claim.json) | R_3(3(x-y)=1z) = 27 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a3-b2`](rado/rado-r3-a3-b2/claim.json) | R_3(3(x-y)=2z) = 31 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a3-b3`](rado/rado-r3-a3-b3/claim.json) | R_3(3(x-y)=3z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a3-b4`](rado/rado-r3-a3-b4/claim.json) | R_3(3(x-y)=4z) = 109 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a3-b5`](rado/rado-r3-a3-b5/claim.json) | R_3(3(x-y)=5z) = 186 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a4-b1`](rado/rado-r3-a4-b1/claim.json) | R_3(4(x-y)=1z) = 64 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a4-b2`](rado/rado-r3-a4-b2/claim.json) | R_3(4(x-y)=2z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a4-b3`](rado/rado-r3-a4-b3/claim.json) | R_3(4(x-y)=3z) = 73 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a4-b4`](rado/rado-r3-a4-b4/claim.json) | R_3(4(x-y)=4z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a4-b5`](rado/rado-r3-a4-b5/claim.json) | R_3(4(x-y)=5z) = 180 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a5-b1`](rado/rado-r3-a5-b1/claim.json) | R_3(5(x-y)=1z) = 125 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a5-b2`](rado/rado-r3-a5-b2/claim.json) | R_3(5(x-y)=2z) = 125 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a5-b3`](rado/rado-r3-a5-b3/claim.json) | R_3(5(x-y)=3z) = 125 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a5-b4`](rado/rado-r3-a5-b4/claim.json) | R_3(5(x-y)=4z) = 141 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r3-a5-b5`](rado/rado-r3-a5-b5/claim.json) | R_3(5(x-y)=5z) = 14 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r4-a1-b1`](rado/rado-r4-a1-b1/claim.json) | R_4(1(x-y)=1z) = 45 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r4-a1-b2`](rado/rado-r4-a1-b2/claim.json) | R_4(1(x-y)=2z) = 171 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r4-a2-b1`](rado/rado-r4-a2-b1/claim.json) | R_4(2(x-y)=1z) = 56 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked<br>`cube-cover`: checked | 5 |
+| [`rado-r4-a2-b2`](rado/rado-r4-a2-b2/claim.json) | R_4(2(x-y)=2z) = 45 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r4-a2-b3`](rado/rado-r4-a2-b3/claim.json) | R_4(2(x-y)=3z) = 226 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked<br>`cube-cover`: checked | 5 |
+| [`rado-r4-a3-b1`](rado/rado-r4-a3-b1/claim.json) | R_4(3(x-y)=1z) = 81 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r4-a3-b2`](rado/rado-r4-a3-b2/claim.json) | R_4(3(x-y)=2z) = 103 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r4-a3-b3`](rado/rado-r4-a3-b3/claim.json) | R_4(3(x-y)=3z) = 45 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r4-a4-b1`](rado/rado-r4-a4-b1/claim.json) | R_4(4(x-y)=1z) = 256 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r4-a4-b2`](rado/rado-r4-a4-b2/claim.json) | R_4(4(x-y)=2z) = 56 | `computed` | `witness-replay`: checked<br>`unsat-certificate`: checked | 5 |
+| [`rado-r4-a4-b3`](rado/rado-r4-a4-b3/claim.json) | R_4(4(x-y)=3z) = 313 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`cube-cover`: checked<br>`unsat-certificate`: checked<br>`cube-cover`: replay-only<br>`cube-cover`: replay-only<br>`cube-cover`: replay-only | 5 |
+| [`rado-r4-a5-b1`](rado/rado-r4-a5-b1/claim.json) | R_4(5(x-y)=1z) = 625 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`rado-r4-a5-b2`](rado/rado-r4-a5-b2/claim.json) | R_4(5(x-y)=2z) = 625 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`rado-r4-a5-b3`](rado/rado-r4-a5-b3/claim.json) | R_4(5(x-y)=3z) = 625 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`rado-r4-a5-b4-frontier`](rado/rado-r4-a5-b4-frontier/claim.json) | R_4(5(x-y)=4z) = 741 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`cube-tree-cover`: checked | 5 |
+| [`rado-r4-a6-b5-frontier`](rado/rado-r4-a6-b5-frontier/claim.json) | R_4(6(x-y)=5z) > 1500: the shell construction at the next point of the k=4 row | `open` | `witness-replay`: checked | 5 |
+| [`rado-r5-a3-b1-frontier`](rado/rado-r5-a3-b1-frontier/claim.json) | R_5(3(x-y)=1z) > 243: the a^k law fails at five colours | `open` | `instance-pin`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked | 3 |
+| [`rado-r5-a3-b2-frontier`](rado/rado-r5-a3-b2-frontier/claim.json) | R_5(3(x-y)=2z) > 350: first five-colour bound for this family | `open` | `witness-replay`: checked<br>`witness-replay`: checked | 5 |
 
 ### `vdw`
 
-| Claim | Title | Status | Evidence (kind: check_status) | Refs resolved | Refs pending |
-| --- | --- | --- | --- | ---: | ---: |
-| [`vdw-2-3-10`](vdw/vdw-2-3-10/claim.json) | w(2;3,10) = 97 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`vdw-2-3-11`](vdw/vdw-2-3-11/claim.json) | w(2;3,11) = 114 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`vdw-2-3-12`](vdw/vdw-2-3-12/claim.json) | w(2;3,12) = 135 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: not-checked | 3 | 0 |
-| [`vdw-2-3-3`](vdw/vdw-2-3-3/claim.json) | W(2,3) = 9 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`vdw-2-3-4`](vdw/vdw-2-3-4/claim.json) | w(2;3,4) = 18 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`vdw-2-3-5`](vdw/vdw-2-3-5/claim.json) | w(2;3,5) = 22 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`vdw-2-3-6`](vdw/vdw-2-3-6/claim.json) | w(2;3,6) = 32 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`vdw-2-3-7`](vdw/vdw-2-3-7/claim.json) | w(2;3,7) = 46 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`vdw-2-3-8`](vdw/vdw-2-3-8/claim.json) | w(2;3,8) = 58 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`vdw-2-3-9`](vdw/vdw-2-3-9/claim.json) | w(2;3,9) = 77 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`vdw-2-4-4`](vdw/vdw-2-4-4/claim.json) | W(2,4) = 35 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`vdw-2-5-5`](vdw/vdw-2-5-5/claim.json) | W(2,5) = 178 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
-| [`vdw-3-3-3-3`](vdw/vdw-3-3-3-3/claim.json) | W(3,3) = 27 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 | 0 |
+| Claim | Title | Status | Evidence (kind: check_status) | Citations |
+| --- | --- | --- | --- | ---: |
+| [`vdw-2-3-10`](vdw/vdw-2-3-10/claim.json) | w(2;3,10) = 97 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`vdw-2-3-11`](vdw/vdw-2-3-11/claim.json) | w(2;3,11) = 114 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`vdw-2-3-12`](vdw/vdw-2-3-12/claim.json) | w(2;3,12) = 135 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: not-checked | 3 |
+| [`vdw-2-3-3`](vdw/vdw-2-3-3/claim.json) | W(2,3) = 9 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`vdw-2-3-4`](vdw/vdw-2-3-4/claim.json) | w(2;3,4) = 18 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`vdw-2-3-5`](vdw/vdw-2-3-5/claim.json) | w(2;3,5) = 22 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`vdw-2-3-6`](vdw/vdw-2-3-6/claim.json) | w(2;3,6) = 32 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`vdw-2-3-7`](vdw/vdw-2-3-7/claim.json) | w(2;3,7) = 46 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`vdw-2-3-8`](vdw/vdw-2-3-8/claim.json) | w(2;3,8) = 58 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`vdw-2-3-9`](vdw/vdw-2-3-9/claim.json) | w(2;3,9) = 77 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`vdw-2-4-4`](vdw/vdw-2-4-4/claim.json) | W(2,4) = 35 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`vdw-2-5-5`](vdw/vdw-2-5-5/claim.json) | W(2,5) = 178 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
+| [`vdw-3-3-3-3`](vdw/vdw-3-3-3-3/claim.json) | W(3,3) = 27 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
 
 ## Frontier
 

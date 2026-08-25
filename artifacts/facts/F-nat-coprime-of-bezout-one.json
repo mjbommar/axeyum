@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-coprime-of-bezout-one",
+  "title": "A Bezout witness of 1 certifies coprimality",
+  "statement": "For all natural numbers a and b: if some balanced Bezout combination of a and b equals 1 (`AxNat.bezout a b 1`), then a and b are coprime, i.e. gcd(a, b) = 1.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.coprime_of_bezout_one : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.bezout x0 x1 (AxNat.succ AxNat.zero)) -> Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-add-assoc",
+    "F:nat-add-comm",
+    "F:nat-add-zero",
+    "F:nat-dvd-add",
+    "F:nat-dvd-add-right-cancel-of-pos",
+    "F:nat-dvd-mul-right-of-dvd",
+    "F:nat-eq-one-of-dvd-one",
+    "F:nat-gcd-dvd-left",
+    "F:nat-gcd-dvd-right",
+    "F:nat-le-succ-succ",
+    "F:nat-not-succ-le-zero",
+    "F:nat-zero-le",
+    "F:nat-zero-mul"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.coprime_of_bezout_one",
+      "kind": "kernel-term",
+      "supports": "For all natural numbers a and b: if some balanced Bezout combination of a and b equals 1 (`AxNat.bezout a b 1`), then a and b are coprime, i.e. gcd(a, b) = 1.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- coprime_of_bezout_one 2>/dev/null | grep -Ec '^Nat\\.coprime_of_bezout_one[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed -- both halves of the check depend on the theorem actually being present."
+    },
+    {
+      "id": "footprint-Nat.coprime_of_bezout_one",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:greatest-common-divisor",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:coprime",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:bezout-identity",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane rado-claim-ledger",
+    "source": "one of the theorems build_nat_prelude admits; registered to close the flywheel's fact-ledger arrow for recently landed Nat theorems"
+  },
+  "notes": "This is the converse direction of `F:nat-gcd-bezout` (which produces a Bezout witness FROM the gcd); this theorem goes the other way, from a witness TO the gcd value. `AxNat.bezout` is the balanced-form predicate documented on `F:nat-gcd-bezout`. `depends_on` is literal: `theorem_dependency_inventory` lists `Nat.dvd_add`, `Nat.gcd_dvd_left` and `Nat.gcd_dvd_right` among this theorem's direct dependencies, and all three are registered as facts.",
+  "external_status": "proved"
+}

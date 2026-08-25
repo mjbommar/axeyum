@@ -42,7 +42,7 @@
         "axeyum-cdcl-model",
         "independent-0-1-enumeration"
       ],
-      "checker_command": "cargo run --release -q -p axeyum-cnf --example sorting_network -- --n 3 --size 3 --sym full 2>/dev/null | grep -q SORTS",
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-cnf --example sorting_network -- --n 3 --size 3 --sym full 2>/dev/null | grep -c SORTS)\" -ge 1",
       "notes": "The witness network is replayed over all 2^3 zero-one inputs by a checker that shares no code with the SAT search. The 0-1 principle makes that sufficient for all totally ordered inputs."
     }
   ],

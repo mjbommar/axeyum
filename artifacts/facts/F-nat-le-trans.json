@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-le-trans",
+  "title": "<= on the naturals is transitive",
+  "statement": "For natural numbers a, b and c, if a <= b and b <= c, then a <= c.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.le_trans : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x0 x1) -> ((x4 : AxNat.le x1 x2) -> AxNat.le x0 x2)))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-le_trans",
+      "kind": "kernel-term",
+      "supports": "Nat.le_trans is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.le_trans 2>/dev/null | grep -Ec '^Nat\\.le_trans[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check; the command both performs it and prints the admitted type, which is copied verbatim into formal.statement."
+    },
+    {
+      "id": "footprint-le_trans",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than Declaration::Axiom alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:order-relation",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:transitivity",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "depends_on is literal, read off theorem_dependency_inventory's direct-edge output for this theorem (cross-checked against nat_theorem_inventory's own admitted type), keeping only edges whose target is itself a registered fact. No theorem dependencies (decided directly over the order's recursive definition); it is itself a direct dependency of Nat.le_of_succ_le_succ, Nat.lt_of_lt_of_le, Nat.lt_of_le_of_lt and Nat.mul_le_mul_left in this kernel.",
+  "external_status": "proved"
+}

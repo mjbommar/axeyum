@@ -67,6 +67,12 @@ fn every_named_declaration_exists() {
         ("mul_inv_cancel_of_neg", p.mul_inv_cancel_of_neg),
         ("mul_inv_cancel_of_ne_zero", p.mul_inv_cancel_of_ne_zero),
         ("inv_pos", p.inv_pos),
+        ("one_ne_zero", p.one_ne_zero),
+        ("IsField", p.is_field),
+        ("rat_isField", p.rat_is_field),
+        ("mul_left_cancel_of_ne_zero", p.mul_left_cancel_of_ne_zero),
+        ("IsOrderedField", p.is_ordered_field),
+        ("rat_isOrderedField", p.rat_is_ordered_field),
         ("sub_mul", p.sub_mul),
         ("mul_inv_sub_one", p.mul_inv_sub_one),
         ("inv_sub_inv", p.inv_sub_inv),
@@ -125,6 +131,14 @@ fn every_named_declaration_exists() {
         ("inv2_bottom_right", p.inv2_bottom_right),
         ("cramer_two_unique_x", p.cramer_two_unique_x),
         ("cramer_two_unique_y", p.cramer_two_unique_y),
+        ("cramer2_x", p.cramer2_x),
+        ("cramer2_y", p.cramer2_y),
+        ("cramer2_solves", p.cramer2_solves),
+        ("ofInt", p.of_int),
+        ("ofInt_add", p.of_int_add),
+        ("ofInt_mul", p.of_int_mul),
+        ("ofInt_neg", p.of_int_neg),
+        ("det2_fib", p.det2_fib),
     ];
     for (label, name) in expected {
         assert!(
@@ -315,11 +329,12 @@ fn right_distrib_is_axiom_free() {
     );
 }
 
-/// `Rat.det2` and its nine theorems — the 2×2 linear algebra `matrix` adds —
-/// are each a **checked** declaration with an empty axiom footprint, read out
-/// of the kernel rather than off the diff. `det2` itself is a `Definition`
-/// (its defining equation holds by `Rat.sub`/`Rat.mul` unfolding, so it needs
-/// no equation lemma); the other nine are `Theorem`s.
+/// `Rat.det2` and its theorems — the 2×2 linear algebra `matrix` adds,
+/// including the `ℤ→ℚ` cast `Rat.ofInt` and the Fibonacci–determinant bridge
+/// `Rat.det2_fib` — are each a **checked** declaration with an empty axiom
+/// footprint, read out of the kernel rather than off the diff. `det2` and
+/// `ofInt` are `Definition`s (their defining equations hold by unfolding, so
+/// neither needs an equation lemma); everything else here is a `Theorem`.
 #[test]
 fn matrix_laws_are_axiom_free() {
     let (kernel, p) = built();
@@ -331,6 +346,33 @@ fn matrix_laws_are_axiom_free() {
     assert!(
         matches!(declaration, Declaration::Definition { .. }),
         "Rat.det2 must be a Definition, found a different kind"
+    );
+
+    let declaration = kernel
+        .environment()
+        .get(p.of_int)
+        .expect("Rat.ofInt was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Definition { .. }),
+        "Rat.ofInt must be a Definition, found a different kind"
+    );
+
+    let declaration = kernel
+        .environment()
+        .get(p.cramer2_x)
+        .expect("Rat.cramer2_x was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Definition { .. }),
+        "Rat.cramer2_x must be a Definition, found a different kind"
+    );
+
+    let declaration = kernel
+        .environment()
+        .get(p.cramer2_y)
+        .expect("Rat.cramer2_y was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Definition { .. }),
+        "Rat.cramer2_y must be a Definition, found a different kind"
     );
 
     let expected = [
@@ -349,6 +391,11 @@ fn matrix_laws_are_axiom_free() {
         ("inv2_bottom_right", p.inv2_bottom_right),
         ("cramer_two_unique_x", p.cramer_two_unique_x),
         ("cramer_two_unique_y", p.cramer_two_unique_y),
+        ("cramer2_solves", p.cramer2_solves),
+        ("ofInt_add", p.of_int_add),
+        ("ofInt_mul", p.of_int_mul),
+        ("ofInt_neg", p.of_int_neg),
+        ("det2_fib", p.det2_fib),
     ];
     for (label, name) in expected {
         let declaration = kernel
@@ -366,6 +413,253 @@ fn matrix_laws_are_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// `Rat.cramer2_solves`'s statement, asserted verbatim — same discipline as
+/// [`cramer_two_unique_x_is_the_stated_forward_direction`]: this is the
+/// SUBSTITUTION direction (the `cramer2_x`/`cramer2_y` formulas actually
+/// satisfy both equations of the system), bundled as an `And` of the two
+/// equations, never a bare existence claim about one variable.
+#[test]
+fn cramer2_solves_is_the_stated_substitution_direction() {
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.cramer2_solves)
+        .expect("declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    let rendered = kernel
+        .render_lean(ty)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert_eq!(
+        rendered,
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> ((x4 : Rat) -> \
+         ((x5 : Rat) -> ((x6 : Not (Eq.{1} Rat (Rat.det2 x0 x1 x2 x3) Rat.zero)) -> \
+         And (Eq.{1} Rat (Rat.add (Rat.mul x0 (Rat.cramer2_x x0 x1 x2 x3 x4 x5)) \
+         (Rat.mul x1 (Rat.cramer2_y x0 x1 x2 x3 x4 x5))) x4) \
+         (Eq.{1} Rat (Rat.add (Rat.mul x2 (Rat.cramer2_x x0 x1 x2 x3 x4 x5)) \
+         (Rat.mul x3 (Rat.cramer2_y x0 x1 x2 x3 x4 x5))) x5))))))))"
+    );
+}
+
+/// `Rat.cramer2_x`/`Rat.cramer2_y` at an explicit 2×2 system, checked by pure
+/// REDUCTION (`Eq.refl`) — not merely that `Rat.cramer2_solves` type-checks,
+/// which would be true of a vacuous or mis-stated theorem too.
+///
+/// System `2x+y=5, x+y=3` (`a=2,b=1,c=1,d=1`, `D = 2·1−1·1 = 1`): the unique
+/// solution is `x=2, y=1`. `D=1` keeps the positivity witness this test needs
+/// (`Rat.nat_div_succ_pos` at `Nat.le 1 1`, i.e. `Nat.le_refl`) a one-liner;
+/// `Rat.cramer2_solves` itself carries no such restriction on `D`. Also
+/// exercises `Rat.cramer2_solves` applied at this concrete instance, checking
+/// the kernel accepts discharging its `D ≠ 0` hypothesis here.
+#[test]
+fn cramer2_solves_computes_an_explicit_two_by_two_system() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, rat_eq_rewrite, req, rlt, rmul, rrefl, rzero};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let a = literal(&mut d, 2);
+    let b = literal(&mut d, 1);
+    let c = literal(&mut d, 1);
+    let dd = literal(&mut d, 1);
+    let u = literal(&mut d, 5);
+    let v = literal(&mut d, 3);
+
+    // D ≠ 0, derived from 0 < D: D = det2 2 1 1 1 reduces to natDivSucc 1 0,
+    // and `nat_div_succ_pos` gives 0 < natDivSucc 1 0 directly (Nat.le 1 1 is
+    // `Nat.le_refl`). Same "assume Eq, rewrite the positivity witness along
+    // it, refute by lt_irrefl" route `Rat.ne_zero_of_pos` (private to
+    // probability.rs) uses.
+    let det = d.const_app(p.det2, &[a, b, c, dd]);
+    let zero_r = rzero(&mut d, p);
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let le_pf = d.lemma(p.int.nat.le_refl, &[one_nat]); // Nat.le 1 1
+    let pos = d.lemma(p.nat_div_succ_pos, &[one_nat, zero_nat, le_pf]); // 0 < natDivSucc 1 0, defeq 0 < det
+    let heq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(heq_fv);
+    let eq_ty = req(&mut d, det, zero_r);
+    let rewritten = rat_eq_rewrite(&mut d, det, zero_r, heq, pos, &|d, t| rlt(d, p, zero_r, t));
+    let irrefl = d.lemma(p.lt_irrefl, &[zero_r]);
+    let false_proof = d.apply(irrefl, &[rewritten]);
+    let h3 = d.lam_fv(heq_fv, eq_ty, false_proof); // Not (Eq Rat det Rat.zero)
+
+    // The formulas compute to the right rationals, by pure reduction.
+    let x_val = d.const_app(p.cramer2_x, &[a, b, c, dd, u, v]);
+    let two = literal(&mut d, 2);
+    let claim_x = req(&mut d, x_val, two);
+    let proof_x = rrefl(&mut d, two);
+    let name_x = d.kernel().name_str(anon, "Check.cramer2_x_value");
+    let accepted_x = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_x,
+        uparams: vec![],
+        ty: claim_x,
+        value: proof_x,
+    });
+    assert!(
+        accepted_x.is_ok(),
+        "cramer2_x 2 1 1 1 5 3 must REDUCE to 2: {accepted_x:?}"
+    );
+
+    let y_val = d.const_app(p.cramer2_y, &[a, b, c, dd, u, v]);
+    let one = literal(&mut d, 1);
+    let claim_y = req(&mut d, y_val, one);
+    let proof_y = rrefl(&mut d, one);
+    let name_y = d.kernel().name_str(anon, "Check.cramer2_y_value");
+    let accepted_y = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_y,
+        uparams: vec![],
+        ty: claim_y,
+        value: proof_y,
+    });
+    assert!(
+        accepted_y.is_ok(),
+        "cramer2_y 2 1 1 1 5 3 must REDUCE to 1: {accepted_y:?}"
+    );
+
+    // The theorem itself, applied at this concrete instance: both equations
+    // hold of the values just computed.
+    let solved = d.lemma(p.cramer2_solves, &[a, b, c, dd, u, v, h3]);
+    let ax = rmul(&mut d, a, x_val);
+    let by = rmul(&mut d, b, y_val);
+    let ax_by = radd(&mut d, ax, by);
+    let eq1 = req(&mut d, ax_by, u);
+    let cx = rmul(&mut d, c, x_val);
+    let dy = rmul(&mut d, dd, y_val);
+    let cx_dy = radd(&mut d, cx, dy);
+    let eq2 = req(&mut d, cx_dy, v);
+    let expected = d.and(eq1, eq2);
+    let name_s = d.kernel().name_str(anon, "Check.cramer2_solves_instance");
+    let accepted_s = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_s,
+        uparams: vec![],
+        ty: expected,
+        value: solved,
+    });
+    assert!(
+        accepted_s.is_ok(),
+        "cramer2_solves 2 1 1 1 5 3 h3 must discharge both equations of the \
+         system it claims to solve: {accepted_s:?}"
+    );
+}
+
+/// The negative control [`cramer2_solves_computes_an_explicit_two_by_two_system`]
+/// needs: at a SINGULAR instance (`D = 0`), the unrestricted claim
+/// `a·cramer2_x+b·cramer2_y = u` is not merely unprovable, it is FALSE —
+/// exactly the mistake `Rat.inv`'s totality (`inv 0 = 0`) invites, since
+/// `cramer2_x`/`cramer2_y` are still total there and silently evaluate to `0`.
+///
+/// System `x+y=1, x+y=2` (`a=b=c=d=1`, `D = 1·1−1·1 = 0`) has no solution at
+/// all (the two equations contradict each other), so `u=1` is as good a
+/// target as any: `cramer2_x`/`cramer2_y` both reduce to `0` (numerator times
+/// `inv 0 = 0`), so `a·cramer2_x+b·cramer2_y` reduces to `0`, not `1`. Checked
+/// both ways — the TRUE value (`0`) is accepted by `Eq.refl`, and the
+/// unrestricted claim (`= u = 1`) is REFUSED — so this is a check on the
+/// value, not a tool that cannot fail.
+#[test]
+fn cramer2_solves_needs_its_hypothesis_the_unrestricted_claim_is_false_at_d_zero() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, req, rmul, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let a = literal(&mut d, 1);
+    let b = literal(&mut d, 1);
+    let c = literal(&mut d, 1);
+    let dd = literal(&mut d, 1);
+    let u = literal(&mut d, 1);
+    let v = literal(&mut d, 2);
+
+    let x_val = d.const_app(p.cramer2_x, &[a, b, c, dd, u, v]);
+    let y_val = d.const_app(p.cramer2_y, &[a, b, c, dd, u, v]);
+    let ax = rmul(&mut d, a, x_val);
+    let by = rmul(&mut d, b, y_val);
+    let lhs = radd(&mut d, ax, by);
+
+    let zero = literal(&mut d, 0);
+    let claim_true = req(&mut d, lhs, zero);
+    let proof_true = rrefl(&mut d, zero);
+    let name_true = d.kernel().name_str(anon, "Check.cramer2_at_d_zero_is_zero");
+    let accepted_true = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_true,
+        uparams: vec![],
+        ty: claim_true,
+        value: proof_true,
+    });
+    assert!(
+        accepted_true.is_ok(),
+        "at D=0, a*cramer2_x+b*cramer2_y must REDUCE to 0 (Rat.inv 0 = 0): {accepted_true:?}"
+    );
+
+    let claim_false = req(&mut d, lhs, u);
+    let proof_false = rrefl(&mut d, u);
+    let name_false = d
+        .kernel()
+        .name_str(anon, "Check.cramer2_at_d_zero_equals_u");
+    let refused = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_false,
+        uparams: vec![],
+        ty: claim_false,
+        value: proof_false,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted a*cramer2_x+b*cramer2_y = u at D=0 (0 = 1), so \
+         dropping the D ≠ 0 hypothesis would not merely be unprovable, it \
+         would be FALSE, and this reduction check caught neither: {refused:?}"
+    );
+}
+
+/// `Rat.det2_fib`'s statement, asserted verbatim — an empty axiom footprint
+/// on a theorem *named* `det2_fib` says nothing about which statement it
+/// proves; this checks it is genuinely Cassini's identity read through
+/// `det2`, cast into `ℚ` by `ofInt`, and not some vacuous or mismatched
+/// restatement.
+#[test]
+fn det2_fib_is_cassini_through_det2() {
+    let (kernel, p) = built();
+    let ty = match kernel.environment().get(p.det2_fib).expect("declared") {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    let rendered = kernel
+        .render_lean(ty)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert_eq!(
+        rendered,
+        "((x0 : AxNat) -> Eq.{1} Rat (Rat.det2 \
+         (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ (AxNat.succ x0))))) \
+         (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ x0)))) \
+         (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ x0)))) \
+         (Rat.ofInt (Int.ofNat (AxNat.fib x0)))) \
+         (Rat.ofInt (Int.pow (Int.neg Int.one) (AxNat.succ x0))))"
+    );
 }
 
 /// `Rat.inv2_top_left`'s statement, asserted verbatim — the same discipline
@@ -848,6 +1142,326 @@ fn the_product_toolkit_is_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "{label} rests on {footprint:?}");
     }
+}
+
+/// **`Rat.IsField`, and every leaf is asserted verbatim** — the curriculum
+/// target (`fields.md`): a bundled `Prop` predicate in the
+/// `nat_prelude::group::Nat.IsGroupOn` house style, with `Rat.rat_isField` the
+/// worked instance and `Rat.mul_left_cancel_of_ne_zero` the consequence a
+/// field gives that a ring does not.
+#[test]
+fn the_rationals_satisfy_is_field_and_cancel() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    assert_eq!(
+        rendered(&mut kernel, p.one_ne_zero),
+        "Not (Eq.{1} Rat Rat.one Rat.zero)"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.is_field),
+        "((x0 : ((x0 : Rat) -> ((x1 : Rat) -> Rat))) -> ((x1 : ((x1 : Rat) -> \
+         ((x2 : Rat) -> Rat))) -> ((x2 : ((x2 : Rat) -> Rat)) -> ((x3 : ((x3 : \
+         Rat) -> Rat)) -> ((x4 : Rat) -> ((x5 : Rat) -> Prop))))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.rat_is_field),
+        "Rat.IsField Rat.add Rat.mul Rat.neg Rat.inv Rat.zero Rat.one"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.mul_left_cancel_of_ne_zero),
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Not (Eq.{1} Rat x0 \
+         Rat.zero)) -> ((x4 : Eq.{1} Rat (Rat.mul x0 x1) (Rat.mul x0 x2)) -> \
+         Eq.{1} Rat x1 x2)))))"
+    );
+
+    for (label, name, expect_definition) in [
+        ("one_ne_zero", p.one_ne_zero, false),
+        ("IsField", p.is_field, true),
+        ("rat_isField", p.rat_is_field, false),
+        (
+            "mul_left_cancel_of_ne_zero",
+            p.mul_left_cancel_of_ne_zero,
+            false,
+        ),
+    ] {
+        let decl = kernel.environment().get(name);
+        if expect_definition {
+            assert!(
+                matches!(decl, Some(Declaration::Definition { .. })),
+                "Rat.{label} must be a checked Definition"
+            );
+        } else {
+            assert!(
+                matches!(decl, Some(Declaration::Theorem { .. })),
+                "Rat.{label} must be a checked Theorem"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// **`Rat.IsOrderedField`, and every leaf is asserted verbatim** — `IsField`
+/// extended with the two order axioms of an ordered field, COMPOSED rather
+/// than restated: `Rat.rat_isOrderedField`'s field component is
+/// `Rat.rat_isField` itself, not a re-derivation of the ten field leaves.
+#[test]
+fn the_rationals_satisfy_is_ordered_field() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    assert_eq!(
+        rendered(&mut kernel, p.rat_is_ordered_field),
+        "Rat.IsOrderedField Rat.add Rat.mul Rat.neg Rat.inv Rat.zero Rat.one"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.is_ordered_field),
+        "((x0 : ((x0 : Rat) -> ((x1 : Rat) -> Rat))) -> ((x1 : ((x1 : Rat) -> \
+         ((x2 : Rat) -> Rat))) -> ((x2 : ((x2 : Rat) -> Rat)) -> ((x3 : ((x3 : \
+         Rat) -> Rat)) -> ((x4 : Rat) -> ((x5 : Rat) -> Prop))))))"
+    );
+
+    for (label, name, expect_definition) in [
+        ("IsOrderedField", p.is_ordered_field, true),
+        ("rat_isOrderedField", p.rat_is_ordered_field, false),
+    ] {
+        let decl = kernel.environment().get(name);
+        if expect_definition {
+            assert!(
+                matches!(decl, Some(Declaration::Definition { .. })),
+                "Rat.{label} must be a checked Definition"
+            );
+        } else {
+            assert!(
+                matches!(decl, Some(Declaration::Theorem { .. })),
+                "Rat.{label} must be a checked Theorem"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// **The two order axioms compute at `0` and `1`, and the kernel refuses the
+/// UNRESTRICTED closure of the nonnegatives (`∀ a b, 0 ≤ a·b`, both
+/// hypotheses dropped) built by reusing `Rat.mul_nonneg`'s own constant.**
+///
+/// This is the negative control `Rat.mul_nonneg`'s two hypotheses exist to
+/// rule out, and — like the previous lane's `mul_inv_cancel` control — the
+/// unrestricted claim is genuinely FALSE, not merely under-justified:
+/// `1·(-1) = -1`, and `0 ≤ -1` does not hold.
+#[test]
+fn order_axioms_compute_at_zero_and_one_and_reject_the_unrestricted_closure() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, rat_ty, rle, rmul, rone, rzero};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let zero = rzero(&mut d, p);
+    let one = rone(&mut d, p);
+
+    // Translation invariance at `x=0, y=1, z=1`: `0 ≤ 1 → 0+1 ≤ 1+1`.
+    let zero_lt_one = d.lemma(p.zero_lt_one, &[]);
+    let zero_le_one = d.lemma(p.le_of_lt, &[zero, one, zero_lt_one]);
+    let refl_one = d.lemma(p.le_refl, &[one]);
+    let translation_step = d.lemma(p.add_le_add, &[zero, one, one, one, zero_le_one, refl_one]);
+    let zero_plus_one = radd(&mut d, zero, one);
+    let one_plus_one = radd(&mut d, one, one);
+    let translation_claim = rle(&mut d, p, zero_plus_one, one_plus_one);
+    let translation_name = d.kernel().name_str(anon, "Check.translation_at_zero_one");
+    let translation_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: translation_name,
+        uparams: vec![],
+        ty: translation_claim,
+        value: translation_step,
+    });
+    assert!(
+        translation_accepted.is_ok(),
+        "translation invariance must compute at 0,1,1: {translation_accepted:?}"
+    );
+
+    // Closure of the nonnegatives at `a=1, b=1`: `0 ≤ 1 → 0 ≤ 1 → 0 ≤ 1·1`.
+    let mul_nonneg_step = d.lemma(p.mul_nonneg, &[one, one, zero_le_one, zero_le_one]);
+    let one_times_one = rmul(&mut d, one, one);
+    let mul_nonneg_claim = rle(&mut d, p, zero, one_times_one);
+    let mul_nonneg_name = d.kernel().name_str(anon, "Check.mul_nonneg_at_one_one");
+    let mul_nonneg_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: mul_nonneg_name,
+        uparams: vec![],
+        ty: mul_nonneg_claim,
+        value: mul_nonneg_step,
+    });
+    assert!(
+        mul_nonneg_accepted.is_ok(),
+        "closure of the nonnegatives must compute at 1,1: {mul_nonneg_accepted:?}"
+    );
+
+    // NEGATIVE CONTROL: `∀ a b, 0 ≤ a·b`, UNRESTRICTED — false at `a=1,
+    // b=-1`. Reuse `Rat.mul_nonneg`'s own constant, applied to just `a, b`
+    // (no nonnegativity proofs supplied) — its type is `le 0 a -> le 0 b ->
+    // le 0 (a*b)`, not the bare `le 0 (a*b)` the unrestricted statement
+    // needs, so the kernel must refuse.
+    let carrier = rat_ty(&mut d);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let ab = rmul(&mut d, a, b);
+    let bad_concl = rle(&mut d, p, zero, ab);
+    let with_b_ty = d.pi_fv(b_fv, carrier, bad_concl);
+    let bad_ty = d.pi_fv(a_fv, carrier, with_b_ty);
+
+    let mul_nonneg_const = d.kernel().const_(p.mul_nonneg, vec![]);
+    let bad_body = d.apply(mul_nonneg_const, &[a, b]); // : le 0 a -> le 0 b -> le 0 (a*b)
+    let with_b_val = d.lam_fv(b_fv, carrier, bad_body);
+    let bad_value = d.lam_fv(a_fv, carrier, with_b_val);
+
+    let bad_name = d.kernel().name_str(anon, "Check.unrestricted_mul_nonneg");
+    let bad_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: bad_name,
+        uparams: vec![],
+        ty: bad_ty,
+        value: bad_value,
+    });
+    assert!(
+        bad_accepted.is_err(),
+        "the kernel accepted `∀ a b, 0 ≤ a·b` UNRESTRICTED — both \
+         nonnegativity hypotheses were refused as if they were vacuous: \
+         {bad_accepted:?}"
+    );
+}
+
+/// **The field laws compute at an explicit rational, and the kernel refuses
+/// the unrestricted `x·x⁻¹ = 1` when it is asked to reuse the real proof
+/// without the `x ≠ 0` hypothesis.**
+///
+/// `Rat.inv`'s totality (`inv 0 = 0`) is exactly what makes `mul_inv_cancel`
+/// need a hypothesis at all; the negative control here is the mistake that
+/// hypothesis exists to rule out.
+#[test]
+fn field_laws_compute_at_one_half_and_reject_the_unrestricted_inverse() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_eq_rewrite, req, rlt, rmul, rone, rrefl, rzero};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    // `1/2`, as `Rat.natDivSucc 1 1`, and its positivity (`1 ≤ 1`).
+    let one_nat = d.num(1);
+    let half = d.const_app(p.nat_div_succ, &[one_nat, one_nat]);
+    let one_le_one = d.lemma(p.int.nat.le_refl, &[one_nat]);
+    let half_pos = d.lemma(p.nat_div_succ_pos, &[one_nat, one_nat, one_le_one]); // 0 < 1/2
+
+    // `1/2 ≠ 0`, by the same rewrite-to-`lt_irrefl` route as `Rat.one_ne_zero`.
+    let zero = rzero(&mut d, p);
+    let half_eq_zero = req(&mut d, half, zero);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let rewritten = rat_eq_rewrite(&mut d, half, zero, h, half_pos, &|d, t| rlt(d, p, zero, t));
+    let refuted = d.lemma(p.lt_irrefl, &[zero]);
+    let false_proof = d.apply(refuted, &[rewritten]);
+    let half_ne_zero = d.lam_fv(h_fv, half_eq_zero, false_proof);
+
+    // Computation: `(1/2)⁻¹` REDUCES to `2/1` — `Eq.refl` alone must check.
+    let two_nat = d.num(2);
+    let zero_nat = d.zero();
+    let doubled = d.const_app(p.nat_div_succ, &[two_nat, zero_nat]); // 2/1
+    let reciprocal = d.const_app(p.inv, &[half]);
+    let inv_computes = req(&mut d, reciprocal, doubled);
+    let inv_proof = rrefl(&mut d, doubled);
+    let inv_name = d.kernel().name_str(anon, "Check.half_inv_computes");
+    let inv_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: inv_name,
+        uparams: vec![],
+        ty: inv_computes,
+        value: inv_proof,
+    });
+    assert!(
+        inv_accepted.is_ok(),
+        "`(1/2)⁻¹` must REDUCE to `2/1`: {inv_accepted:?}"
+    );
+
+    // The field law itself, applied at this concrete `1/2`: `(1/2)·(1/2)⁻¹ = 1`.
+    let one = rone(&mut d, p);
+    let product = rmul(&mut d, half, reciprocal);
+    let law_claim = req(&mut d, product, one);
+    let law_proof = d.lemma(p.mul_inv_cancel_of_ne_zero, &[half, half_ne_zero]);
+    let law_name = d.kernel().name_str(anon, "Check.half_mul_inv_cancel");
+    let law_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: law_name,
+        uparams: vec![],
+        ty: law_claim,
+        value: law_proof,
+    });
+    assert!(
+        law_accepted.is_ok(),
+        "the field law must apply at `1/2`: {law_accepted:?}"
+    );
+
+    // NEGATIVE CONTROL: `∀ x, mul x (inv x) = one`, UNRESTRICTED — false at
+    // `x = 0` (`Rat.inv Rat.zero = Rat.zero`, so the claim there is `0 = 1`).
+    // Reuse `Rat.mul_inv_cancel_of_ne_zero`'s own constant, applied to just
+    // `x` (no `x ≠ 0` proof supplied) — its type is `Not (x=0) -> …`, not the
+    // bare `Eq` the unrestricted statement needs, so the kernel must refuse.
+    let carrier = crate::rat_prelude::ops::rat_ty(&mut d);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let one2 = rone(&mut d, p);
+    let ix = d.const_app(p.inv, &[x]);
+    let bad_product = rmul(&mut d, x, ix);
+    let bad_concl = req(&mut d, bad_product, one2);
+    let bad_ty = d.pi_fv(x_fv, carrier, bad_concl);
+
+    let real_const = d.kernel().const_(p.mul_inv_cancel_of_ne_zero, vec![]);
+    let bad_body = d.apply(real_const, &[x]); // : Not (x=0) -> mul x (inv x) = one
+    let bad_value = d.lam_fv(x_fv, carrier, bad_body);
+    let bad_name = d.kernel().name_str(anon, "Check.unrestricted_inv_cancel");
+    let bad_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: bad_name,
+        uparams: vec![],
+        ty: bad_ty,
+        value: bad_value,
+    });
+    assert!(
+        bad_accepted.is_err(),
+        "the kernel accepted `∀ x, x·x⁻¹ = 1` UNRESTRICTED — the `x ≠ 0` \
+         hypothesis was refused as if it were vacuous: {bad_accepted:?}"
+    );
 }
 
 /// **ℚ is a field, and the statement is asserted verbatim.**
@@ -1586,7 +2200,8 @@ fn ble_refl_trans_total_are_built_on_the_spec() {
 // --- `Rat.sumRange` and its algebra (`rat_prelude::sum`) -------------------
 
 /// Every declaration `sum::declare_sum` adds — `Rat.sumRange` itself and the
-/// six theorems built on it — is a **checked** definition or theorem with an
+/// ten theorems built on it (counted from the list below, not carried over
+/// from an earlier count) — is a **checked** definition or theorem with an
 /// empty axiom footprint, read out of the kernel, not off the diff.
 #[test]
 fn the_finite_sum_toolkit_is_axiom_free() {
@@ -1602,6 +2217,7 @@ fn the_finite_sum_toolkit_is_axiom_free() {
         ("sumRange_nonneg", p.sum_range_nonneg, true),
         ("sumRange_congr_lt", p.sum_range_congr_lt, true),
         ("sumRange_eq_zero_of_lt", p.sum_range_eq_zero_of_lt, true),
+        ("sumRange_swap", p.sum_range_swap, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
@@ -1806,6 +2422,7 @@ fn the_probability_toolkit_is_axiom_free() {
         ("sumVars", p.sum_vars, false),
         ("expectation_sumVars", p.expectation_sum_vars, true),
         ("covariance_sumVars_left", p.covariance_sum_vars_left, true),
+        ("covariance_sumVars", p.covariance_sum_vars, true),
         ("PairwiseUncorrelated", p.pairwise_uncorrelated, false),
         ("variance_sumVars", p.variance_sum_vars, true),
         ("variance_scaled_mean", p.variance_scaled_mean, true),
@@ -1873,6 +2490,188 @@ fn the_probability_toolkit_is_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// A CONCRETE instance of [`RatPrelude::covariance_sum_vars`], checked by
+/// `Eq.refl` alone against the DEFINITIONS themselves (`Rat.covariance`,
+/// `Rat.sumVars`, `Rat.sumRange`, `Rat.expectation`) — not against the
+/// theorem's own proof, which could be internally consistent yet prove a
+/// statement off by a factor this check would catch (exactly the class
+/// [`bernoulli_variance_at_one_half_reduces_to_one_quarter`] guards against
+/// for `Rat.variance_indicator`).
+///
+/// `pf k := 1` (no `IsDistribution` needed — `covariance_sumVars` carries no
+/// such hypothesis), `n := 2`, `X i k := k` for every `i` (`m := 2`, so `X`
+/// does not even need to vary across the family — `sumVars X 2 k = k+k =
+/// 2k`), `Y j k := 1` for every `j` (`m' := 1`).
+///
+/// Hand computation (`E[h] := Σ_{k<2} h(k)·1`): `E[k] = 0+1 = 1`, `E[1] =
+/// 1+1 = 2`, `E[2k] = 2`, `E[2k·1] = 2`. LHS: `Cov[2k, 1] = E[2k·1] −
+/// E[2k]·E[1] = 2 − 2·2 = −2`. RHS: `Cov[k,1] = E[k·1] − E[k]·E[1] = 1 −
+/// 1·2 = −1`, summed over `i<2, j<1` (both terms identical since `X`/`Y` do
+/// not depend on their family index) `= 2·(−1) = −2`. Both sides `= −2`.
+#[test]
+fn covariance_sum_vars_computes_at_a_concrete_two_by_one_instance() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rneg, rone, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    // x_body k := Rat.natDivSucc k 0  (= k as a rational)
+    let x_body = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zero_nat = d.num(0);
+        let val = d.const_app(p.nat_div_succ, &[k, zero_nat]);
+        d.lam_fv(k_fv, nat, val)
+    };
+    // X i k := x_body k, for every i (X does not depend on its family index)
+    let x_family = {
+        let i_fv = d.fresh_fvar();
+        d.lam_fv(i_fv, nat, x_body)
+    };
+    // y_body k := Rat.one, for every k
+    let y_body = {
+        let k_fv = d.fresh_fvar();
+        let one = rone(&mut d, p);
+        d.lam_fv(k_fv, nat, one)
+    };
+    // Y j k := y_body k, for every j
+    let y_family = {
+        let j_fv = d.fresh_fvar();
+        d.lam_fv(j_fv, nat, y_body)
+    };
+    // pf k := Rat.one
+    let pf = {
+        let k_fv = d.fresh_fvar();
+        let one = rone(&mut d, p);
+        d.lam_fv(k_fv, nat, one)
+    };
+    let n = d.num(2);
+    let m = d.num(2);
+    let m2 = d.num(1);
+
+    let neg_two = {
+        let numerator = d.num(2);
+        let idx = d.num(0);
+        let two = d.const_app(p.nat_div_succ, &[numerator, idx]);
+        rneg(&mut d, two)
+    };
+
+    // LHS := covariance (sumVars X m) (sumVars Y m2) pf n
+    let sv_x = d.const_app(p.sum_vars, &[x_family, m]);
+    let sv_y = d.const_app(p.sum_vars, &[y_family, m2]);
+    let lhs = d.const_app(p.covariance, &[sv_x, sv_y, pf, n]);
+    let lhs_stmt = req(&mut d, lhs, neg_two);
+    let lhs_proof = rrefl(&mut d, lhs);
+    let lhs_name = d.kernel().name_str(anon, "Check.cov_sum_vars_lhs_computes");
+    d.declare_theorem(lhs_name, lhs_stmt, lhs_proof)
+        .unwrap_or_else(|e| {
+            panic!(
+                "covariance(sumVars X 2, sumVars Y 1) did not reduce to -2: {}",
+                d.explain(&e)
+            )
+        });
+
+    // RHS := sumRange (fun i => sumRange (fun j => covariance (X i) (Y j) pf n) m2) m
+    let inner_fn = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let xi = d.apply(x_family, &[i]);
+        let per_j = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let yj = d.apply(y_family, &[j]);
+            let cov = d.const_app(p.covariance, &[xi, yj, pf, n]);
+            d.lam_fv(j_fv, nat, cov)
+        };
+        let inner_sum = d.const_app(p.sum_range, &[per_j, m2]);
+        d.lam_fv(i_fv, nat, inner_sum)
+    };
+    let rhs = d.const_app(p.sum_range, &[inner_fn, m]);
+    let rhs_stmt = req(&mut d, rhs, neg_two);
+    let rhs_proof = rrefl(&mut d, rhs);
+    let rhs_name = d.kernel().name_str(anon, "Check.cov_sum_vars_rhs_computes");
+    d.declare_theorem(rhs_name, rhs_stmt, rhs_proof)
+        .unwrap_or_else(|e| {
+            panic!(
+                "the double sum of covariances did not reduce to -2: {}",
+                d.explain(&e)
+            )
+        });
+}
+
+/// The negative control for
+/// [`covariance_sum_vars_computes_at_a_concrete_two_by_one_instance`]: the
+/// SAME `covariance(sumVars X 2, sumVars Y 1, pf, n)` term is NOT `-1` — the
+/// value a BROKEN `sumVars` that returned a single family member instead of
+/// the sum of the family (`sumVars X 2 k = x_body k` instead of `x_body k +
+/// x_body k`) would produce (`Cov[x_body, y_body] = -1`, computed in the
+/// positive test's own doc comment). Must be REFUSED, or the positive check
+/// above proves nothing about the family actually being summed.
+#[test]
+fn covariance_sum_vars_lhs_is_not_the_unsummed_single_member_value() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rneg, rone, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let x_body = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zero_nat = d.num(0);
+        let val = d.const_app(p.nat_div_succ, &[k, zero_nat]);
+        d.lam_fv(k_fv, nat, val)
+    };
+    let x_family = {
+        let i_fv = d.fresh_fvar();
+        d.lam_fv(i_fv, nat, x_body)
+    };
+    let y_body = {
+        let k_fv = d.fresh_fvar();
+        let one = rone(&mut d, p);
+        d.lam_fv(k_fv, nat, one)
+    };
+    let y_family = {
+        let j_fv = d.fresh_fvar();
+        d.lam_fv(j_fv, nat, y_body)
+    };
+    let pf = {
+        let k_fv = d.fresh_fvar();
+        let one = rone(&mut d, p);
+        d.lam_fv(k_fv, nat, one)
+    };
+    let n = d.num(2);
+    let m = d.num(2);
+    let m2 = d.num(1);
+
+    let neg_one = {
+        let one = rone(&mut d, p);
+        rneg(&mut d, one)
+    };
+
+    let sv_x = d.const_app(p.sum_vars, &[x_family, m]);
+    let sv_y = d.const_app(p.sum_vars, &[y_family, m2]);
+    let lhs = d.const_app(p.covariance, &[sv_x, sv_y, pf, n]);
+    let stmt = req(&mut d, lhs, neg_one);
+    let proof = rrefl(&mut d, neg_one);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.cov_sum_vars_lhs_is_not_unsummed");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted covariance(sumVars X 2, sumVars Y 1) = -1 (the \
+         UNSUMMED single-member value, not the sum of the family), so the \
+         reduction check above proves nothing"
+    );
 }
 
 /// A CONCRETE Bernoulli instance, checked by `Eq.refl` alone against the
@@ -2741,4 +3540,674 @@ fn sum_vars_succ_wrong_order_is_rejected() {
         "the kernel accepted the swapped-order sumVars succ equation by \
          Eq.refl, so the computation check above proves nothing"
     );
+}
+
+// --- `Rat.sumRange` diagonal/rectangle reindexing (`rat_prelude::diagonal`) -
+
+/// Every declaration `diagonal::declare_diagonal` adds — the three theorems
+/// built on `Rat.sumRange` (counted from the list below, not carried over
+/// from an earlier count) — is a **checked** theorem with an empty axiom
+/// footprint, read out of the kernel, not off the diff.
+#[test]
+fn the_diagonal_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("sumRange_split", p.sum_range_split),
+        ("sumRange_diagonal", p.sum_range_diagonal),
+        (
+            "sumRange_rect_eq_diag_add_corner",
+            p.sum_range_rect_eq_diag_add_corner,
+        ),
+    ];
+    for (label, name) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "Rat.{label} must be a checked Theorem, found a different kind"
+        );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// `Rat.sumRange_diagonal` at a concrete instance: `F i j := 1` (constant),
+/// `n = 3`. Both the antidiagonal grouping (`Σ_{k<3} Σ_{i≤k} F i (k−i)`) and
+/// the row grouping (`Σ_{i<3} Σ_{j<3−i} F i j`) COUNT the same 6-point
+/// triangle `{(i,j) : i+j<3}` — `(0,0),(1,0),(0,1),(2,0),(1,1),(0,2)` — and
+/// both must independently reduce to `6`, so this is a genuine reindexing
+/// check over `Rat` values, not just an admission. A constant summand (not
+/// `add i j`, unlike `Nat`'s own version of this test) keeps the concrete
+/// arithmetic to `Rat.add`/normalize alone, without also needing a `Nat →
+/// Rat` conversion for the summand itself.
+#[test]
+fn sum_range_diagonal_computes_at_a_concrete_instance_over_rat() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // F := fun i j => 1 (constant Rat one).
+    let one = literal(&mut d, 1);
+    let ff = {
+        let i_fv = d.fresh_fvar();
+        let j_fv = d.fresh_fvar();
+        let inner = d.lam_fv(j_fv, nat, one);
+        d.lam_fv(i_fv, nat, inner)
+    };
+    let three = d.num(3);
+    let six = literal(&mut d, 6);
+
+    let proof = d.lemma(p.sum_range_diagonal, &[ff, three]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("sumRange_diagonal(F,3) should infer: {e:?}"));
+
+    // The antidiagonal (triangle) sum, built independently of
+    // `diagonal.rs`'s own helpers.
+    let triangle = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ki = d.sub(k, i);
+        let fiki = d.apply(ff, &[i, ki]);
+        let diag_inner = d.lam_fv(i_fv, nat, fiki);
+        let sk = d.succ(k);
+        let diag_sum = rsum_range(&mut d, p, diag_inner, sk);
+        let t_fn = d.lam_fv(k_fv, nat, diag_sum);
+        rsum_range(&mut d, p, t_fn, three)
+    };
+    // The row-major sum, likewise independently built.
+    let rows = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let fij = d.apply(ff, &[i, j]);
+        let row_inner = d.lam_fv(j_fv, nat, fij);
+        let ni = d.sub(three, i);
+        let row_sum_i = rsum_range(&mut d, p, row_inner, ni);
+        let row_fn = d.lam_fv(i_fv, nat, row_sum_i);
+        rsum_range(&mut d, p, row_fn, three)
+    };
+
+    let expected = req(&mut d, triangle, rows);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "sumRange_diagonal(F,3) should state the antidiagonal sum equals the row-major sum"
+    );
+    assert!(
+        d.kernel().def_eq(triangle, six),
+        "the antidiagonal (triangle) sum of the constant 1 over {{(i,j):i+j<3}} \
+         (6 points) must reduce to 6"
+    );
+    assert!(
+        d.kernel().def_eq(rows, six),
+        "the row-major sum of the constant 1 over {{(i,j):i+j<3}} (6 points) \
+         must reduce to 6"
+    );
+
+    assert!(
+        d.kernel().axiom_footprint(p.sum_range_diagonal).is_empty(),
+        "sumRange_diagonal must rest on zero axioms"
+    );
+}
+
+/// `Rat.sumRange_rect_eq_diag_add_corner` at a concrete instance: `F i j :=
+/// 1`, `n = 2`. The rectangle `{i<2,j<2}` (4 points) splits into the
+/// antidiagonal triangle `{i+j<2}` (3 points: `(0,0),(1,0),(0,1)`) and the
+/// corner `{i<2,j<2,i+j≥2}` (the single point `(1,1)`) — `4 = 3 + 1`, checked
+/// both as the theorem's own statement AND by independently reducing all
+/// three sums.
+#[test]
+fn sum_range_rect_eq_diag_add_corner_computes_at_a_concrete_instance_over_rat() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, req, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let one = literal(&mut d, 1);
+    let ff = {
+        let i_fv = d.fresh_fvar();
+        let j_fv = d.fresh_fvar();
+        let inner = d.lam_fv(j_fv, nat, one);
+        d.lam_fv(i_fv, nat, inner)
+    };
+    let two = d.num(2);
+
+    let proof = d.lemma(p.sum_range_rect_eq_diag_add_corner, &[ff, two]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("sumRange_rect_eq_diag_add_corner(F,2) should infer: {e:?}"));
+
+    // The rectangle {(i,j): i<2, j<2} -- 4 points -- built independently.
+    let rectangle = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let fij = d.apply(ff, &[i, j]);
+        let row_inner = d.lam_fv(j_fv, nat, fij);
+        let row_sum_i = rsum_range(&mut d, p, row_inner, two);
+        let rect_row = d.lam_fv(i_fv, nat, row_sum_i);
+        rsum_range(&mut d, p, rect_row, two)
+    };
+    // The antidiagonal triangle {(i,j): i+j<2} -- 3 points -- built
+    // independently.
+    let triangle = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ki = d.sub(k, i);
+        let fiki = d.apply(ff, &[i, ki]);
+        let diag_inner = d.lam_fv(i_fv, nat, fiki);
+        let sk = d.succ(k);
+        let diag_sum = rsum_range(&mut d, p, diag_inner, sk);
+        let t_fn = d.lam_fv(k_fv, nat, diag_sum);
+        rsum_range(&mut d, p, t_fn, two)
+    };
+    // The corner {(i,j): i<2, j<2, i+j>=2} -- the single point (1,1) --
+    // built independently.
+    let corner = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let k_fv = d.fresh_fvar();
+        let sub_2i = d.sub(two, i);
+        let shifted_idx = {
+            let k = d.kernel().fvar(k_fv);
+            d.add(sub_2i, k)
+        };
+        let fi_shifted = d.apply(ff, &[i, shifted_idx]);
+        let corner_inner = d.lam_fv(k_fv, nat, fi_shifted);
+        let corner_sum_i = rsum_range(&mut d, p, corner_inner, i);
+        let corner_row = d.lam_fv(i_fv, nat, corner_sum_i);
+        rsum_range(&mut d, p, corner_row, two)
+    };
+
+    let rhs = radd(&mut d, triangle, corner);
+    let expected = req(&mut d, rectangle, rhs);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "sumRange_rect_eq_diag_add_corner(F,2) should state rectangle = triangle + corner"
+    );
+
+    let four = literal(&mut d, 4);
+    let three = literal(&mut d, 3);
+    assert!(
+        d.kernel().def_eq(rectangle, four),
+        "the rectangle sum of the constant 1 over {{i<2,j<2}} (4 points) must reduce to 4"
+    );
+    assert!(
+        d.kernel().def_eq(triangle, three),
+        "the triangle sum of the constant 1 over {{i+j<2}} (3 points) must reduce to 3"
+    );
+    assert!(
+        d.kernel().def_eq(corner, one),
+        "the corner sum of the constant 1 over {{i<2,j<2,i+j>=2}} (1 point) must reduce to 1"
+    );
+
+    assert!(
+        d.kernel()
+            .axiom_footprint(p.sum_range_rect_eq_diag_add_corner)
+            .is_empty(),
+        "sumRange_rect_eq_diag_add_corner must rest on zero axioms"
+    );
+}
+
+// --- polynomials (`rat_prelude::polynomial`) --------------------------------
+
+/// Every declaration `polynomial::declare_polynomial` adds — `Rat.pow`,
+/// `Rat.polyEval`, and the six theorems built on them — is a **checked**
+/// definition or theorem with an empty axiom footprint, read out of the
+/// kernel, not off the diff. (`built()` already implies the kernel accepted
+/// every one of these proofs — a failed `add_declaration` would have made
+/// `build_rat_prelude` return `Err` and this helper's own `.expect` panic —
+/// so this test's job is the *kind*/footprint check, not re-proving
+/// acceptance.)
+#[test]
+fn the_polynomial_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("pow", p.pow, false),
+        ("pow_zero", p.pow_zero, true),
+        ("pow_succ", p.pow_succ, true),
+        ("polyEval", p.poly_eval, false),
+        ("polyEval_zero", p.poly_eval_zero, true),
+        ("polyEval_succ", p.poly_eval_succ, true),
+        ("polyEval_add", p.poly_eval_add, true),
+        ("polyEval_smul", p.poly_eval_smul, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// `Rat.pow` **computes**: `2^3 = 8`, by `Eq.refl` on concrete literals —
+/// not by trusting `pow_succ`/`pow_zero` (proved symbolically, over opaque
+/// `a`/`m`) to be about the definition this file actually declared.
+#[test]
+fn rat_pow_computes_on_a_concrete_literal() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rpow, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let two = literal(&mut d, 2);
+    let three_n = d.num(3);
+    let power = rpow(&mut d, p, two, three_n);
+    let eight = literal(&mut d, 8);
+    let stmt = req(&mut d, power, eight);
+    let proof = rrefl(&mut d, power);
+    let name = d.kernel().name_str(anon, "Check.pow_two_cubed");
+    d.declare_theorem(name, stmt, proof)
+        .unwrap_or_else(|e| panic!("Rat.pow did not reduce on 2^3: {}", d.explain(&e)));
+}
+
+/// The negative control for [`rat_pow_computes_on_a_concrete_literal`]:
+/// `2^3 = 9` must be REFUSED, or the reduction check above measures nothing.
+#[test]
+fn rat_pow_reduction_check_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rpow, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let two = literal(&mut d, 2);
+    let three_n = d.num(3);
+    let power = rpow(&mut d, p, two, three_n);
+    let nine = literal(&mut d, 9);
+    let stmt = req(&mut d, power, nine);
+    let proof = rrefl(&mut d, power);
+    let name = d.kernel().name_str(anon, "Check.pow_two_cubed_is_not_nine");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `Rat.pow 2 3 = 9`, so the pow reduction check proves nothing"
+    );
+}
+
+/// **The mandatory concrete computation test.** `Rat.polyEval` evaluates the
+/// linear polynomial `p(i) = 1 + 2i` (as the coefficient function `c 0 = 1`,
+/// `c (succ _) = 2`, degree bound `n = 2`) at `x = 3`: `p(3) = 1·1 + 2·3 =
+/// 7`, checked by `Eq.refl` alone — not by trusting `polyEval_zero`/
+/// `polyEval_succ` (proved symbolically) to be about the definition this
+/// file actually declared.
+#[test]
+fn rat_poly_eval_computes_a_concrete_polynomial() {
+    use crate::BinderInfo;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_ty, req, rpoly_eval, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // c := fun i => Nat.rec (motive := fun _ => Rat) 1 (fun _ _ => 2) i,
+    // i.e. c 0 = 1, c (succ _) = 2 — enough to fix c at the two indices
+    // (0, 1) that a degree bound of 2 ever inspects.
+    let coeffs = {
+        let one_r = literal(&mut d, 1);
+        let two_r = literal(&mut d, 2);
+        let anon_binder = d.anon_name();
+        let one_level = d.level_one();
+        let motive = d
+            .kernel()
+            .lam(anon_binder, nat, carrier, BinderInfo::Default);
+        let minor_succ = {
+            let j_fv = d.fresh_fvar();
+            let ih_fv = d.fresh_fvar();
+            let inner = d.lam_fv(ih_fv, carrier, two_r);
+            d.lam_fv(j_fv, nat, inner)
+        };
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let rec_name = d.prelude().rec;
+        let rec = d.kernel().const_(rec_name, vec![one_level]);
+        let body = d.apply(rec, &[motive, one_r, minor_succ, i]);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let n = d.num(2);
+    let x = literal(&mut d, 3);
+    let evaluated = rpoly_eval(&mut d, p, coeffs, n, x);
+    let seven = literal(&mut d, 7);
+    let stmt = req(&mut d, evaluated, seven);
+    let proof = rrefl(&mut d, evaluated);
+    let name = d.kernel().name_str(anon, "Check.poly_eval_linear_at_three");
+    d.declare_theorem(name, stmt, proof).unwrap_or_else(|e| {
+        panic!(
+            "Rat.polyEval did not reduce to 7 on (1+2i) at x=3: {}",
+            d.explain(&e)
+        )
+    });
+}
+
+/// The negative control for
+/// [`rat_poly_eval_computes_a_concrete_polynomial`]: the same polynomial at
+/// the same point evaluated against `8` instead of `7` must be REFUSED, or
+/// the computation check above measures nothing.
+#[test]
+fn rat_poly_eval_computation_check_can_fail() {
+    use crate::BinderInfo;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_ty, req, rpoly_eval, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let coeffs = {
+        let one_r = literal(&mut d, 1);
+        let two_r = literal(&mut d, 2);
+        let anon_binder = d.anon_name();
+        let one_level = d.level_one();
+        let motive = d
+            .kernel()
+            .lam(anon_binder, nat, carrier, BinderInfo::Default);
+        let minor_succ = {
+            let j_fv = d.fresh_fvar();
+            let ih_fv = d.fresh_fvar();
+            let inner = d.lam_fv(ih_fv, carrier, two_r);
+            d.lam_fv(j_fv, nat, inner)
+        };
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let rec_name = d.prelude().rec;
+        let rec = d.kernel().const_(rec_name, vec![one_level]);
+        let body = d.apply(rec, &[motive, one_r, minor_succ, i]);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let n = d.num(2);
+    let x = literal(&mut d, 3);
+    let evaluated = rpoly_eval(&mut d, p, coeffs, n, x);
+    let eight = literal(&mut d, 8);
+    let stmt = req(&mut d, evaluated, eight);
+    let proof = rrefl(&mut d, evaluated);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.poly_eval_linear_at_three_is_not_eight");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `polyEval (1+2i) 2 3 = 8`, so the polyEval computation \
+         check proves nothing"
+    );
+}
+
+/// `polyEval_mul` (the finite Cauchy product) is NOT attempted in this
+/// prelude, and this test is the kernel-confirmed reason why: the natural
+/// candidate statement `polyEval (conv a b) (m+n-1) x = polyEval a m x *
+/// polyEval b n x`, with `conv a b k := sumRange (fun i => a i * b (k-i))
+/// (k+1)` the plain (untruncated) antidiagonal formula, is FALSE for
+/// `a`/`b` that are not required to vanish beyond their own bound.
+///
+/// Take `a 0 = 1`, `a (succ _) = 5` (so `m = 2` means "`a`'s declared
+/// coefficients are `1, 5`"), and `b 0 = 3`, `b (succ _) = 100` (`n = 1`
+/// means "`b`'s declared coefficient is `3`"; `b 1 = 100` is `b`'s value
+/// PAST its declared bound — `polyEval b 1 x` never looks at it, but nothing
+/// stops it being nonzero). The truncated rectangle product's `x^1`
+/// coefficient is `a 1 * b 0 = 5*3 = 15`. But `conv a b 1` — the coefficient
+/// `polyEval_mul` would need to equal `15` — is `a 0 * b 1 + a 1 * b 0 =
+/// 1*100 + 5*3 = 115`: `conv` sums the FULL antidiagonal `{(i,j) : i+j=1}`,
+/// which includes `(0,1)`, a point OUTSIDE the `m×n` rectangle `{i<2,j<1}`
+/// (since `j=1 ≥ n=1`). `conv`'s own formula is correct (it is exactly the
+/// infinite-power-series Cauchy product, confirmed positively below); the
+/// gap is that it is not, by itself, the TRUNCATED product `polyEval_mul`
+/// would need — that needs either an extra hypothesis (`a`/`b` vanish beyond
+/// `m`/`n`) or a `conv` bounded by BOTH `m` and `n` (not the same-bound `n×n`
+/// square `rat_prelude/diagonal.rs` supplies), neither built here.
+#[test]
+fn naive_conv_disagrees_with_the_truncated_rectangle_product() {
+    use crate::BinderInfo;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_ty, req, rmul, rrefl, rsum_range};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // A step function `Nat -> Rat`, `f 0 = at_zero`, `f (succ _) = beyond`,
+    // via `Nat.rec` -- exactly `rat_poly_eval_computes_a_concrete_polynomial`'s
+    // own `coeffs` builder, reused for both `a` and `b`.
+    let step = |d: &mut IntDev<'_>, at_zero: ExprId, beyond: ExprId| -> ExprId {
+        let anon_binder = d.anon_name();
+        let one_level = d.level_one();
+        let motive = d
+            .kernel()
+            .lam(anon_binder, nat, carrier, BinderInfo::Default);
+        let minor_succ = {
+            let j_fv = d.fresh_fvar();
+            let ih_fv = d.fresh_fvar();
+            let inner = d.lam_fv(ih_fv, carrier, beyond);
+            d.lam_fv(j_fv, nat, inner)
+        };
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let rec_name = d.prelude().rec;
+        let rec = d.kernel().const_(rec_name, vec![one_level]);
+        let body = d.apply(rec, &[motive, at_zero, minor_succ, i]);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let one_r = literal(&mut d, 1);
+    let five_r = literal(&mut d, 5);
+    let a = step(&mut d, one_r, five_r); // a 0 = 1, a 1 = 5
+
+    let three_r = literal(&mut d, 3);
+    let hundred_r = literal(&mut d, 100);
+    let b = step(&mut d, three_r, hundred_r); // b 0 = 3, b 1 = 100 (junk beyond n=1)
+
+    // conv a b k := sumRange (fun i => a i * b (k-i)) (k+1), built inline
+    // (not a named `Rat.conv` -- this test does not commit to that shape
+    // being the right one, per the module doc above).
+    let conv = |d: &mut IntDev<'_>, a: ExprId, b: ExprId, k: ExprId| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ai = d.apply(a, &[i]);
+        let ki = d.sub(k, i);
+        let bki = d.apply(b, &[ki]);
+        let term = rmul(d, ai, bki);
+        let inner = d.lam_fv(i_fv, nat, term);
+        let sk = d.succ(k);
+        rsum_range(d, p, inner, sk)
+    };
+
+    // Positive control: conv's OWN antidiagonal formula computes correctly
+    // (the "re-verify i<=k, so no truncation fires" check the task asked
+    // for, at a third concrete instance beyond k=0,1,2 symbolic hand-check).
+    let zero_n = d.zero();
+    let conv_0 = conv(&mut d, a, b, zero_n);
+    let expected_0 = literal(&mut d, 3); // a0*b0 = 1*3
+    let stmt0 = req(&mut d, conv_0, expected_0);
+    let proof0 = rrefl(&mut d, conv_0);
+    let name0 = d.kernel().name_str(anon, "Check.conv_k0_is_three");
+    d.declare_theorem(name0, stmt0, proof0)
+        .unwrap_or_else(|e| panic!("conv(a,b,0) did not reduce to 3: {}", d.explain(&e)));
+
+    let one_n = d.num(1);
+    let conv_1 = conv(&mut d, a, b, one_n);
+    let expected_1 = literal(&mut d, 115); // a0*b1 + a1*b0 = 100 + 15
+    let stmt1 = req(&mut d, conv_1, expected_1);
+    let proof1 = rrefl(&mut d, conv_1);
+    let name1 = d.kernel().name_str(anon, "Check.conv_k1_is_115");
+    d.declare_theorem(name1, stmt1, proof1)
+        .unwrap_or_else(|e| panic!("conv(a,b,1) did not reduce to 115: {}", d.explain(&e)));
+
+    // Negative control -- THE FINDING: conv(a,b,1) is NOT the truncated
+    // rectangle coefficient a1*b0 = 15. If it were, `polyEval_mul`'s naive
+    // statement (no vanishing-beyond-bound hypotheses on a/b) would be
+    // provable as stated; it is not.
+    let conv_1_again = conv(&mut d, a, b, one_n);
+    let fifteen = literal(&mut d, 15);
+    let wrong_stmt = req(&mut d, conv_1_again, fifteen);
+    let wrong_proof = rrefl(&mut d, conv_1_again);
+    let wrong_name = d.kernel().name_str(anon, "Check.conv_k1_is_not_fifteen");
+    assert!(
+        d.declare_theorem(wrong_name, wrong_stmt, wrong_proof)
+            .is_err(),
+        "the kernel accepted conv(a,b,1) = 15 (the truncated rectangle \
+         coefficient a1*b0), but conv(a,b,1) = 115 (a0*b1+a1*b0) since conv \
+         sums the FULL antidiagonal including the out-of-rectangle point \
+         (0,1) -- so the naive polyEval_mul statement is not merely \
+         unattempted here, it is false as stated without extra hypotheses"
+    );
+}
+
+/// `dotN_cauchy_schwarz`'s statement rendered verbatim — SQUARED, the
+/// unweakened form: `(dotN u v n) * (dotN u v n) <= (dotN u u n) * (dotN v v
+/// n)`, not `|dotN u v n| <= sqrt(...)` (ℚ has no square root). The same
+/// pinning discipline
+/// [`the_order_completeness_statements_are_the_unweakened_ones`] uses for
+/// `le_antisymm`/`lt_trichotomy`.
+#[test]
+fn the_cauchy_schwarz_statement_is_squared() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.dot_n_cauchy_schwarz),
+        "((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : AxNat) -> \
+         Rat.le (Rat.mul (Rat.dotN x0 x1 x2) (Rat.dotN x0 x1 x2)) \
+         (Rat.mul (Rat.dotN x0 x0 x2) (Rat.dotN x1 x1 x2)))))"
+    );
+}
+
+// --- `Rat.dotN`: the n-dimensional dot product (`rat_prelude::vector`) ----
+
+/// Every declaration `vector::declare_vector` adds — `Rat.dotN` itself and
+/// the six theorems built on it — is a **checked** definition or theorem
+/// with an empty axiom footprint, read out of the kernel, not off the diff.
+#[test]
+fn the_vector_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("dotN", p.dot_n, false),
+        ("dotN_zero", p.dot_n_zero, true),
+        ("dotN_succ", p.dot_n_succ, true),
+        ("dotN_comm", p.dot_n_comm, true),
+        ("dotN_add_left", p.dot_n_add_left, true),
+        ("dotN_smul_left", p.dot_n_smul_left, true),
+        ("dotN_self_nonneg", p.dot_n_self_nonneg, true),
+        ("dotN_two", p.dot_n_two, true),
+        ("dotN_cauchy_schwarz", p.dot_n_cauchy_schwarz, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
 }

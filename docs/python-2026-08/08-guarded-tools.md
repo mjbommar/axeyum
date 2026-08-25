@@ -20,7 +20,13 @@ three prefixes long:
 |---|---|---|
 | `https://export.arxiv.org/api/query` | arXiv's Atom metadata API | titles, authors, abstracts. It cannot return a proof. |
 | `https://api.semanticscholar.org/graph/v1/` | Semantic Scholar's graph API | bibliographic metadata only. |
-| `file://<pinned math-education>/graph/` | the sibling concept/technique graph | present **only** when `math_education.pin_ok()` — the checkout is at exactly the revision the overlay pins. |
+
+The list is exactly those two, and `allowed_prefixes()` returns a constant. There
+used to be a third — `file://<pinned math-education>/graph/`, present whenever a
+sibling checkout sat at the revision the overlay pinned — which put a local
+filesystem path into an agent's fetch allowlist. ADR-0553 removed that
+repository from this project's surface, so **no `file://` URL is reachable
+through `web_fetch` any more**, including one pointing inside this checkout.
 
 Anything else raises `WebPolicyError`, and the message carries the full prefix
 list. Nothing is dropped silently, for the reason the gotchas section states in

@@ -84,17 +84,42 @@ KERNEL_ROUTES = {"kernel-lean"}
 # it: `unnamed` never fires (a name WAS found), the graph lookup misses, and the
 # fact is skipped with nothing printed. Measured 2026-08-19, the silent-skip path
 # this file's header promises to report instead.
+#
+# `CReal|Complex|CPoint` added 2026-08-25: this list previously covered
+# `Nat`/`Int`/`Rat` and the axiomatized `AxReal`, but never the constructed
+# carriers `CReal` (159 theorems), `Complex` (84) and `CPoint` (88), so every
+# fact whose checker names a theorem in one of those namespaces silently fell
+# into `unnamed` -- 331 theorems this gate never enforced anything over.
+# `CReal` is the substring hazard CLAUDE.md documents for `contains("Real.")`;
+# the SAME `(?<![A-Za-z])` boundary that already keeps `AxReal.add_comm` from
+# yielding a false `Real.add_comm` match ALSO keeps a name like `XCReal.foo`
+# (nothing declares one, but it is the near-miss control) from matching at the
+# `CReal` offset, because the character before that offset is a letter. See
+# `test_theorem_re_does_not_match_near_miss_carrier_prefix` for the check.
 _SEG = r"[A-Za-z0-9_]+"
 _DOT = r"(?:\\?\.|\[\.\])"
-_NS = "AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Str"
+_NS = "AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Str|CReal|Complex|CPoint"
 THEOREM_RE = re.compile(rf"\^?(?<![A-Za-z])((?:{_NS})(?:{_DOT}{_SEG})+)")
 
 
 def inventory() -> dict[str, list[str]]:
-    """`theorem -> [direct theorem dependency]`, read out of the kernel."""
+    """`theorem -> [direct theorem dependency]`, read out of the kernel.
+
+    `--release` is MANDATORY, not a speed nicety. Since `f74fb3a3e` this tool
+    unconditionally builds `creal`/`complex`/`cpoint` (its own module doc says
+    so explicitly: "`--release` IS NOW MANDATORY"), which recurses deep enough
+    through `Kernel::add_declaration` to blow a debug build's default thread
+    stack -- the same resource limit CLAUDE.md already documents for
+    `prelude_theorem_inventory --include-constructed`. Measured 2026-08-25 on
+    this tree: the debug form SIGABRTs (`Signals.SIGABRT`, "has overflowed its
+    stack") every time, so this checker -- wired into both `scripts/check.sh`
+    and `just check` -- could not validate ANY kernel-route fact's
+    `depends_on`, including the 175 that predate this fix. Nothing was wrong
+    with any fact; the checker itself never ran to completion.
+    """
     proc = subprocess.run(
         [
-            "cargo", "run", "-q", "-p", "axeyum-lean-kernel",
+            "cargo", "run", "-q", "--release", "-p", "axeyum-lean-kernel",
             "--example", "theorem_dependency_inventory",
         ],
         cwd=ROOT,
@@ -113,7 +138,34 @@ def inventory() -> dict[str, list[str]]:
 
 
 def theorem_of(fact: dict[str, Any]) -> str | None:
-    """The theorem a kernel-route fact is about, from its own checker command."""
+    """The theorem a kernel-route fact is about.
+
+    `formal.kernel_theorem`, when the KEY IS PRESENT, is authoritative and
+    extraction is not consulted at all -- including when its value is `null`,
+    which means "this fact is not about exactly one kernel theorem" (a
+    package-level result bundling several laws/theorems) and must not fall
+    back to guessing. That distinguishes a deliberate "no single subject"
+    from an unfilled field, which is what makes the key's PRESENCE the signal
+    rather than its truthiness.
+
+    Only when the key is ABSENT does this fall back to the historical
+    behaviour: the first dotted theorem name matched in the fact's own
+    evidence `checker_command`s, in evidence order. That extraction is a
+    convenience for the common case (one theorem, named once, nothing else in
+    the command looks like a theorem name) and is demonstrably NOT reliable
+    in general -- it can match an embedded formal-statement fragment instead
+    of the theorem under test (`F:cassini-identity-over-constructed-integers`
+    extracted `Int.sub`, not the actual subject `Int.fib_cassini`, until this
+    field existed), or collide two unrelated facts onto the same name
+    (`F:complex-mul-assoc` and `F:complex-ring-constructed-axiom-free` both
+    extracted `Complex.mul_assoc`). `formal.kernel_theorem` exists precisely
+    to let a fact's author pin the right answer where extraction cannot be
+    trusted, without touching every fact where it already agrees.
+    """
+    formal = fact.get("formal") or {}
+    if "kernel_theorem" in formal:
+        value = formal["kernel_theorem"]
+        return value if isinstance(value, str) else None
     for item in fact.get("evidence") or []:
         found = THEOREM_RE.search(item.get("checker_command", ""))
         if found:

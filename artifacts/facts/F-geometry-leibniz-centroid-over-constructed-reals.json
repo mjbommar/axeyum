@@ -31,7 +31,7 @@
         "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes `build_cpoint_prelude` return `Err` and the test below fail)",
         "creal_point_tests::centroid_dist_sq_statement_is_exact (asserts the KERNEL-RENDERED type verbatim with assert_eq!, so a theorem with a wrong multiplicity on |PG|^2, a transposed distSq, or the vertices in the wrong role cannot pass with the same empty footprint)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::centroid_dist_sq_statement_is_exact -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::centroid_dist_sq_statement_is_exact -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/creal_point.rs",
       "notes": "Re-derives from source every run: rebuilds CPointPrelude, re-typechecking `Scalar.three`, `inv3`, `threePosBound`, `centroid`, `centroid_median` and `centroid_dist_sq` through `add_declaration`, then compares the rendered type character for character. Anchored on the exact `1 passed; 0 failed` count; verified that substituting a non-existent test name makes the identical command exit 1 rather than 0, so a silently-empty filter cannot read as success."
     },
@@ -43,7 +43,7 @@
       "checkers": [
         "creal_point_tests::every_theorem_here_is_axiom_free (reads `Kernel::axiom_footprint` for every declared theorem in this file, `centroid_dist_sq` included, and requires the empty set)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::every_theorem_here_is_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::every_theorem_here_is_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs",
       "notes": "Counting Declaration::Axiom alone would not suffice (Opaque has no proof body and Quotient admits Quot.sound); axiom_footprint covers all three. Presence matters as much as the footprint -- axiom_footprint of a name interned but never declared is vacuously empty -- so the statement test above, which fetches the declaration from the environment and panics if absent, is the companion check."
     }

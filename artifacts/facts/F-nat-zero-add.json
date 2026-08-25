@@ -21,7 +21,7 @@
       "kind": "kernel-term",
       "supports": "0 + a = a for all a ",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- zero_add 2>/dev/null | grep -qE '^Nat\\.zero_add[[:space:]]'",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- zero_add 2>/dev/null | grep -Ec '^Nat\\.zero_add[[:space:]]')\" -ge 1",
       "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check; the command both performs it and prints the admitted type, which is copied verbatim into formal.statement. Nothing here is transcribed."
     },
     {

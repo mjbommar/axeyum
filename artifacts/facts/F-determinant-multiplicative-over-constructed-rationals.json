@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "id": "F:determinant-multiplicative-over-constructed-rationals",
+  "title": "Multiplicativity of the 2x2 determinant over the constructed rationals: det2(AB) = det2(A)*det2(B)",
+  "statement": "For rationals a,b,c,d,e,f,g,h: det2 (a*e+b*g) (a*f+b*h) (c*e+d*g) (c*f+d*h) = det2 a b c d * det2 e f g h, where det2 x y z w := x*w - y*z is the determinant of the 2x2 matrix [[x,y],[z,w]] over the constructed rationals ℚ. The left side's four entries are exactly the entries of the matrix product [[a,b],[c,d]]*[[e,f],[g,h]], so this is det(AB) = det(A)*det(B) written out termwise: this kernel has no product or tuple type (a function returning four rationals would need one), so `Rat.det2` and this theorem take the four matrix entries as four separate arguments rather than as a matrix value, and the product's four entries are spelled out by hand rather than through matrix multiplication as an operation. Proved by Cauchy's route -- row-linearity of det2 in each row (det2_scale_row-style scaling, det2_row_add-style row addition) together with the alternating property that swapping two equal rows negates the determinant (det2_swap_rows) -- rather than by expanding both sides into eight monomials of ℚ and reordering the product, for which this kernel's Rat.mul has no generic commutative-reordering tool.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> ((x4 : Rat) -> ((x5 : Rat) -> ((x6 : Rat) -> ((x7 : Rat) -> Eq.{1} Rat (Rat.det2 (Rat.add (Rat.mul x0 x4) (Rat.mul x1 x6)) (Rat.add (Rat.mul x0 x5) (Rat.mul x1 x7)) (Rat.add (Rat.mul x2 x4) (Rat.mul x3 x6)) (Rat.add (Rat.mul x2 x5) (Rat.mul x3 x7))) (Rat.mul (Rat.det2 x0 x1 x2 x3) (Rat.det2 x4 x5 x6 x7))))))))))",
+    "fragment": "Rat",
+    "kernel_theorem": "Rat.det2_mul",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-add-neg",
+    "F:rat-add-zero",
+    "F:rat-det2-swap-rows",
+    "F:rat-left-distrib",
+    "F:rat-mul-assoc",
+    "F:rat-mul-comm",
+    "F:rat-mul-neg",
+    "F:rat-mul-zero",
+    "F:rat-right-distrib",
+    "F:rat-sub-add-add",
+    "F:rat-sub-mul",
+    "F:rat-zero-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.det2_mul",
+      "kind": "kernel-term",
+      "supports": "`Rat.det2_mul` is admitted, declared as a checked `Theorem` (not a `Definition` or vacuous stub) and rests on no axiom. `matrix_laws_are_axiom_free` checks presence and kind for `det2_mul` among the 19 named matrix declarations, and a companion check (below) pins its exact direct proof-term dependencies, which are ordinary commutative-ring lemmas over ℚ (add_neg, add_zero, det2_swap_rows, left_distrib, mul_assoc, mul_comm, mul_neg, mul_zero, right_distrib, sub_add_add, sub_mul, zero_add) and nothing Fibonacci-shaped -- consistent with Cauchy's row-linearity route and inconsistent with any route through fib_cassini or det2_fib.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::matrix_laws_are_axiom_free (requires det2_mul to be a Declaration::Theorem with empty Kernel::axiom_footprint)",
+        "theorem_dependency_inventory -- det2_mul (prints det2_mul's DIRECT theorem dependencies, read from the proof term via Kernel::theorem_dependencies; a filter matching nothing is itself a failure)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::matrix_laws_are_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
+      "notes": "Run 2026-08-24: `test result: ok. 1 passed; 0 failed`, exit 0. A deliberately misnamed test path exits 1. NO COMMITTED TEST asserts `det2_mul`'s statement verbatim (unlike `det2_fib`'s `det2_fib_is_cassini_through_det2`), so -- exactly as CLAUDE.md warns for a footprint-only check -- this row alone cannot rule out a mis-transposed determinant formula with the same empty footprint. `formal.statement` above was read from `Kernel::render_lean(det2_mul)` via the crate's public API (build_rat_prelude + render_lean, the same route `int_theorem_inventory` and the existing pinned tests use) and cross-checked against the doc comment on `RatPrelude::det2_mul` in rat_prelude.rs, but that reading is not itself re-derivable by a command committed to this repository without adding new code to `crates/`, which this lane's brief forbids. The dependency-list check below is the strongest available substitute: it is sensitive to any change that alters which ring lemmas det2_mul's proof term cites."
+    },
+    {
+      "id": "dependencies-Rat.det2_mul",
+      "kind": "kernel-term",
+      "supports": "Rat.det2_mul's direct theorem dependencies, read from the proof term by Kernel::theorem_dependencies, are exactly Rat.add_neg, Rat.add_zero, Rat.det2_swap_rows, Rat.left_distrib, Rat.mul_assoc, Rat.mul_comm, Rat.mul_neg, Rat.mul_zero, Rat.right_distrib, Rat.sub_add_add, Rat.sub_mul, Rat.zero_add -- twelve ordinary commutative-ring facts about ℚ and one other det2 law (det2_swap_rows). None of Int.fib_cassini, Rat.ofInt, Rat.ofInt_add/_mul/_neg or Rat.det2_fib appear, confirming det2_mul is proved independently of the Fibonacci development: the multiplicative law and Cassini's identity share no proof in this kernel, which is exactly why they are related by a correspondence (X:cassini-specializes-determinant-multiplicativity) rather than by depends_on.",
+      "check_status": "checked",
+      "checkers": [
+        "theorem_dependency_inventory -- det2_mul (direct dependency list, exact string match)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh run --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- det2_mul 2>&1 | grep -Fc \"Rat.det2_mul\tRat.add_neg,Rat.add_zero,Rat.det2_swap_rows,Rat.left_distrib,Rat.mul_assoc,Rat.mul_comm,Rat.mul_neg,Rat.mul_zero,Rat.right_distrib,Rat.sub_add_add,Rat.sub_mul,Rat.zero_add\")\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
+      "notes": "Run 2026-08-24: exit 0. A deliberately wrong substring run through the identical command exits 1."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-correspondence-cassini (2026-08-24), closing ADR-0546's motivating example. Rat.det2_mul itself was proved by an earlier lane (see matrix.rs's module comment crediting Cauchy's route); this lane's contribution is making the already-admitted theorem an addressable fact in the ledger.",
+    "sources": [
+      "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
+      "crates/axeyum-lean-kernel/src/rat_prelude.rs",
+      "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs"
+    ],
+    "prior_art": [
+      {
+        "who": "Augustin-Louis Cauchy",
+        "what": "the determinant product theorem",
+        "year": 1812,
+        "where": "conventionally attributed",
+        "attribution": "standard attribution; noted in the establishing lane's comments as the route actually used (row-linearity plus alternation, not monomial expansion)."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred. (1) No n x n generalisation: everything here is 2x2, four entries per matrix, no matrix or tuple type. (2) No connection to Cassini's identity or to Fibonacci numbers is made HERE, and the dependency check above confirms the proof term cites none of that development -- see F:cassini-as-determinant-of-a-matrix-power and its correspondence to this fact for that connection. (3) det2_eq_zero_iff_rows_dependent and any characterisation of invertibility beyond the existing det2-nonzero-implies-invertible facts (cramer's rule, inv2_*) are separate facts, not this one.\n\nThe proof is constructive throughout: no Classical.em, no propext, no funext, no Quot.sound.\n\nexternal_status is `proved`: formalization of classical elementary linear algebra, not discovery."
+}

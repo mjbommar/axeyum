@@ -40,6 +40,21 @@ CHECKED_THEOREM_RECEIPT_CHECKER = (
 DEPENDENCY_THEOREM_RECEIPT_CHECKER = (
     ROOT / "scripts/check-autogenesis-nat-fib-coprime-premise-plan.py"
 )
+# `axeyum-lean-import/modeq-family-multi-target-v1` has no authoritative
+# dispatch case below (see `run_registered`) -- the content-addressed receipt
+# schema for a multi-target driver is still undesigned (ADR-0470 scoped v1 to
+# one input artifact binding to exactly one fact, and multi-target operations
+# arrived later without a follow-up ADR). These two checker modules are each
+# operation's own independent re-derivation and are reused, never duplicated,
+# by `dry_run_multi_target` below to prove the remaining path is reachable.
+MODEQ_FAMILY_CHECKERS = {
+    "authoritative-mathlib-modeq-family-v1": (
+        ROOT / "scripts/check-autogenesis-modeq-family.py"
+    ),
+    "authoritative-mathlib-nat-modeq-family-v1": (
+        ROOT / "scripts/check-autogenesis-nat-modeq-family.py"
+    ),
+}
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 EVIDENCE_RE = re.compile(
     r"^;\s*evidence\s+kind=(\S+)\s+certified=(\S+)\s+"
@@ -509,8 +524,25 @@ def selected_inputs(
 
     selected = (frontier.get("selection") or {}).get("selected_fact_id")
     admissible = (frontier.get("selection") or {}).get("admissible_fact_ids")
-    if not isinstance(selected, str) or admissible != [selected]:
-        raise ExecutionError("executor requires exactly one admissible selected fact")
+    # This used to require `admissible == [selected]` -- the frontier's WHOLE
+    # admissible set had to be a singleton. That was a correct proxy for "this
+    # run resolves to one fact, unambiguously" only as long as every
+    # authoritative operation named exactly one fact in `applicability`, which
+    # was true when this check was written (ADR-0470, 2026-08-18) and is no
+    # longer true: a multi-target operation (e.g.
+    # `authoritative-mathlib-nat-modeq-family-v1`) makes every ready fact it
+    # names independently admissible, so `admissible` can have >1 member by
+    # design. `fact-frontier.py` still resolves that to exactly ONE
+    # `selected_fact_id` deterministically (lexicographically-first
+    # admissible fact id -- see `build_machine_frontier`), so the property
+    # this check exists to enforce -- one fact, unambiguously, per execution
+    # run -- is `selected in admissible`, not `len(admissible) == 1`.
+    if (
+        not isinstance(selected, str)
+        or not isinstance(admissible, list)
+        or selected not in admissible
+    ):
+        raise ExecutionError("executor requires the selected fact to be admissible")
     fact = facts.get(selected)
     if not isinstance(fact, dict):
         raise ExecutionError("selected fact is absent from the authoritative ledger")
@@ -536,6 +568,190 @@ def selected_inputs(
     ]:
         raise ExecutionError("frontier selection does not bind the exact operation")
     return fact, operation, registry
+
+
+def resolve_multi_target(operation: dict[str, Any], fact_id: str) -> dict[str, Any]:
+    """Pick the ONE target within a multi-target operation that names `fact_id`.
+
+    A multi-target operation's `executor.targets` lists several facts, each
+    with its own statement adapter and modeq manifest -- exactly the "typed
+    statement-to-input derivation" ADR-0470 required before a multi-fact
+    operation could exist. This is the missing piece that consumes it: given
+    the ONE fact `selected_inputs()` chose, find the ONE target that binds it.
+    """
+    executor = operation["executor"]
+    targets = executor.get("targets")
+    if not isinstance(targets, list):
+        raise ExecutionError("multi-target operation has no targets list")
+    matches = [target for target in targets if target.get("fact_id") == fact_id]
+    if len(matches) != 1:
+        raise ExecutionError(
+            f"multi-target operation names {len(matches)} targets for "
+            f"{fact_id!r}; expected exactly one"
+        )
+    return matches[0]
+
+
+def dry_run_multi_target(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> dict[str, Any]:
+    """Independently replay ONE target of a multi-target operation and report
+    what it would admit, without emitting a content-addressed execution
+    receipt or writing anything.
+
+    This exists because `run_registered`/`build_receipt` have no dispatch
+    case for `axeyum-lean-import/modeq-family-multi-target-v1`: the
+    content-addressed receipt schema for a multi-target driver (what
+    `input_identity`/`request_input`/`expected_observation` mean when an
+    operation names several facts) is still undesigned, and inventing it here
+    would be exactly the kind of silent architectural decision CLAUDE.md's
+    Session Protocol reserves for an ADR. What this function DOES settle:
+    whether the executor -- now that `selected_inputs()` accepts a frontier
+    where more than one fact of a family is simultaneously admissible -- can
+    still identify and independently re-derive exactly one fact's proof, with
+    its siblings left untouched. It reuses each operation's own checker
+    module (`MODEQ_FAMILY_CHECKERS`) rather than re-implementing the replay,
+    so this can never disagree with the checker gate about what a valid
+    target looks like.
+    """
+    checker_path = MODEQ_FAMILY_CHECKERS.get(operation["id"])
+    if checker_path is None:
+        raise ExecutionError(
+            f"no dry-run checker registered for operation {operation['id']!r}"
+        )
+    target = resolve_multi_target(operation, fact["id"])
+    family_module = load_module("modeq_family_for_dry_run", checker_path)
+    # `check_target` raises `family_module.FamilyError` on any disagreement
+    # between the committed manifests and a fresh replay; let that propagate
+    # as-is rather than swallowing it, since a checker that cannot fail is
+    # worse than no checker.
+    family_module.check_target(target, operation["executor"]["max_binders"])
+    modeq = family_module.load(ROOT / target["modeq_manifest"])
+    op = modeq.get("operation") or {}
+    return {
+        "would_admit_fact_id": fact["id"],
+        "operation_id": operation["id"],
+        "target_definition": target["target_definition"],
+        "goal_sha256": op.get("goal_sha256"),
+        "proof_sha256": op.get("proof_sha256"),
+        "admitted_declarations": op.get("admitted_declarations"),
+        "binders_used": op.get("binders_used"),
+        "axioms": op.get("axioms"),
+        "theorem_dependencies": op.get("theorem_dependencies"),
+        # Other facts this SAME multi-target operation names -- not
+        # necessarily still `open`/admissible (one may already be settled,
+        # as `F:ml430-nat-modeq-refl-...` is here); this reports what the
+        # operation covers, not each sibling's current ledger status.
+        "other_target_fact_ids": sorted(
+            other["fact_id"]
+            for other in operation["executor"]["targets"]
+            if other["fact_id"] != fact["id"]
+        ),
+    }
+
+
+def modeq_family_checker_module(operation: dict[str, Any]):
+    """Load the ONE reviewed checker module this operation id is bound to.
+
+    Never re-implemented: `MODEQ_FAMILY_CHECKERS` is the single source of
+    truth `dry_run_multi_target` already uses, so an authoritative execution
+    and a dry run can never disagree about which checker gate applies.
+    """
+    checker_path = MODEQ_FAMILY_CHECKERS.get(operation["id"])
+    if checker_path is None:
+        raise ExecutionError(
+            f"no modeq-family checker registered for operation {operation['id']!r}"
+        )
+    return load_module("modeq_family_for_execution", checker_path)
+
+
+def modeq_family_target_contract(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Resolve the ONE target row that names `fact` and load its adapter and
+    candidate manifests, re-checking the same structural contract
+    `check_target` and the registry validator already enforce.
+
+    This performs NO subprocess call and re-derives nothing through the
+    kernel -- it only re-reads content already committed to the tree. The
+    independent, fresh re-derivation happens exactly once, inside
+    `run_modeq_family_multi_target_registered`, via the reused checker
+    module's own `check_target`. Calling this function again from
+    `build_receipt` is deliberate, cheap redundancy: the same pattern
+    `statement_reflexivity_contract` and `checked_theorem_receipt_contract`
+    already use to let the request builder and the observation builder each
+    independently arrive at the same content-addressed values.
+    """
+    executor = operation["executor"]
+    target = resolve_multi_target(operation, fact["id"])
+    adapter = json.loads((ROOT / target["statement_adapter_manifest"]).read_text())
+    modeq = json.loads((ROOT / target["modeq_manifest"]).read_text())
+    op = modeq.get("operation") or {}
+    statement = (fact.get("formal") or {}).get("statement")
+    if (
+        adapter.get("source_fact_id") != fact["id"]
+        or modeq.get("source_fact_id") != fact["id"]
+        or modeq.get("statement_adapter") != target["statement_adapter_manifest"]
+        or op.get("target_definition") != target["target_definition"]
+        or op.get("max_binders") != executor["max_binders"]
+        or op.get("axioms") != 0
+        or op.get("theorem_dependencies") != 0
+        or op.get("target_dependency") is not False
+        or not isinstance(statement, str)
+        or byte_digest(statement.encode()) != adapter.get("source_statement_sha256")
+    ):
+        raise ExecutionError("modeq-family target contract is inconsistent")
+    return target, adapter, modeq
+
+
+def expected_modeq_family_target_observation(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> dict[str, Any]:
+    target, _adapter, modeq = modeq_family_target_contract(operation, fact)
+    op = modeq["operation"]
+    return {
+        "verdict": "proved",
+        "evidence_label": operation["executor"]["expected_evidence_label"],
+        "target_definition": target["target_definition"],
+        "goal_sha256": op["goal_sha256"],
+        "proof_sha256": op["proof_sha256"],
+        "target_content_sha256": op["target_content_sha256"],
+        "binders_used": op["binders_used"],
+        "max_binders": op["max_binders"],
+        "admitted_declarations": op["admitted_declarations"],
+        "axiom_footprint": [],
+        "retained_answer_dependencies": [],
+        "target_dependency": False,
+        "ledger_writes": 0,
+    }
+
+
+def run_modeq_family_multi_target_registered(
+    operation: dict[str, Any], fact: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Independently re-derive the ONE target the selected fact resolves to
+    and return its receipt-worthy observation. This is the piece
+    `dry_run_multi_target`'s docstring named as undesigned: unlike a dry run,
+    a successful call here is exactly what `build_receipt` requires before a
+    content-addressed execution receipt may be built.
+
+    `family_module.check_target` is the ONLY place a subprocess runs -- it
+    replays the target through the real kernel checker binary and raises on
+    any disagreement with the committed candidate manifest, so a receipt can
+    never be built for a target that was not freshly, independently
+    rechecked.
+    """
+    if fact is None:
+        raise ExecutionError(
+            "modeq-family multi-target operation requires the selected fact"
+        )
+    target = resolve_multi_target(operation, fact["id"])
+    family_module = modeq_family_checker_module(operation)
+    try:
+        family_module.check_target(target, operation["executor"]["max_binders"])
+    except family_module.FamilyError as error:
+        raise ExecutionError(f"modeq-family target replay failed: {error}") from error
+    return expected_modeq_family_target_observation(operation, fact)
 
 
 def parse_observation(stdout: str) -> dict[str, Any]:
@@ -1203,7 +1419,9 @@ def run_kernel_apply_registered(
 
 
 def run_registered(
-    operation: dict[str, Any], trigger: dict[str, Any] | None = None
+    operation: dict[str, Any],
+    trigger: dict[str, Any] | None = None,
+    fact: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     driver = operation["executor"]["driver"]
     if driver == "axeyum-bench/smtcomp-evidence-v1":
@@ -1228,6 +1446,12 @@ def run_registered(
         if trigger is not None:
             raise ExecutionError("sealed kernel capsule operation rejects a trigger")
         return run_sealed_kernel_capsule_registered(operation)
+    if driver == "axeyum-lean-import/modeq-family-multi-target-v1":
+        if trigger is not None:
+            raise ExecutionError(
+                "modeq-family multi-target operation rejects a trigger"
+            )
+        return run_modeq_family_multi_target_registered(operation, fact)
     raise ExecutionError(f"unsupported execution driver {driver!r}")
 
 
@@ -1408,6 +1632,34 @@ def build_receipt(
             "declaration_sha256": executor["declaration_sha256"],
             "receipt_sha256": executor["receipt_sha256"],
         }
+    elif executor["driver"] == "axeyum-lean-import/modeq-family-multi-target-v1":
+        target, adapter, modeq = modeq_family_target_contract(operation, fact)
+        expected_observation = expected_modeq_family_target_observation(
+            operation, fact
+        )
+        input_identity = {
+            "formal_statement_sha256": byte_digest(
+                fact["formal"]["statement"].encode()
+            ),
+            "target_definition": target["target_definition"],
+            "statement_adapter_manifest_sha256": digest(adapter),
+            "modeq_manifest_sha256": digest(modeq),
+            "external_artifact_sha256": adapter["external_artifact"]["sha256"],
+        }
+        request_input = {
+            # `executor["input_fact_id"]` (merged into `request` below) is the
+            # operation's single registered anchor fact, not necessarily the
+            # one THIS receipt is for -- a multi-target operation can be
+            # dispatched against any of its `targets`. `identity.fact_id` is
+            # the authoritative binding; this field exists only so a reader
+            # scanning `request` is not misled by `input_fact_id` into
+            # thinking this receipt concerns the anchor fact.
+            "target_fact_id": fact["id"],
+            "statement_adapter_manifest": target["statement_adapter_manifest"],
+            "modeq_manifest": target["modeq_manifest"],
+            "target_definition": target["target_definition"],
+            "max_binders": executor["max_binders"],
+        }
     else:
         raise ExecutionError(f"unsupported execution driver {executor['driver']!r}")
     if observation != expected_observation:
@@ -1484,7 +1736,7 @@ def derive(
             raise ExecutionError("selected operation does not accept --trigger-bundle")
         trigger = None
         commit = clean_commit()
-        observation = runner(operation)
+        observation = runner(operation, fact=fact)
     return build_receipt(
         frontier=frontier,
         fact=fact,
@@ -1513,8 +1765,34 @@ def main() -> int:
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--output", type=pathlib.Path)
     action.add_argument("--verify", type=pathlib.Path)
+    action.add_argument(
+        "--dry-run-multi-target",
+        action="store_true",
+        help=(
+            "Independently re-derive the ONE selected fact's proof from a "
+            "multi-target operation and report what it would admit. Prints "
+            "and exits; does not build or verify a content-addressed "
+            "execution receipt, and writes nothing."
+        ),
+    )
     args = parser.parse_args()
     try:
+        if args.dry_run_multi_target:
+            if args.trigger_bundle is not None:
+                raise ExecutionError("--dry-run-multi-target rejects --trigger-bundle")
+            frontier = json.loads(args.frontier.resolve().read_text())
+            fact, operation, _registry = selected_inputs(frontier)
+            plan = dry_run_multi_target(operation, fact)
+            print(
+                "AUTOGENESIS_OPERATION_EXECUTION_DRY_RUN|"
+                f"would_admit={plan['would_admit_fact_id']}|"
+                f"operation={plan['operation_id']}|"
+                f"target={plan['target_definition']}|"
+                f"goal_sha256={plan['goal_sha256']}|"
+                f"proof_sha256={plan['proof_sha256']}|"
+                f"other_target_fact_ids={','.join(plan['other_target_fact_ids'])}"
+            )
+            return 0
         expected = derive(
             args.frontier.resolve(),
             trigger_bundle=(

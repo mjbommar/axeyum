@@ -17,9 +17,14 @@
   "proof_route": "kernel-lean",
   "external_status": "proved",
   "depends_on": [
+    "F:int-add-assoc",
+    "F:int-neg-of-nat-add-neg-of-nat",
+    "F:int-neg-of-nat-add-of-nat",
+    "F:int-neg-succ-mul-sub-nat-nat",
+    "F:int-of-nat-add-neg-of-nat",
+    "F:int-of-nat-mul-sub-nat-nat",
     "F:nat-left-distrib",
-    "F:nat-succ-add",
-    "F:int-add-assoc"
+    "F:nat-succ-add"
   ],
   "axiom_footprint": [],
   "evidence": [
@@ -44,7 +49,7 @@
         "Kernel::axiom_footprint",
         "environment-wide trusted-surface enumeration (nat_axiom_inventory)"
       ],
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- left_distrib 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.left_distrib[[:space:]]+\\(\\('",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- left_distrib 2>/dev/null | grep -Ec '^theorem[[:space:]]+Int\\.left_distrib[[:space:]]+\\(\\(')\" -ge 1",
       "notes": "Two independent bounds, because either alone would be weaker than it looks. (1) `Kernel::axiom_footprint` walks THIS declaration's transitive dependencies; `int_theorem_inventory` prints it as the third tab-separated column, and the regex requires that column to be EMPTY -- the type must begin immediately after the name. The negative control is in the same output: `Int.euclidean_decomposition`, the one law still asserted, prints its own name in that column and fails the same regex (measured 2026-08-15). So the check discriminates rather than merely running. (2) `nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0` for the development ZZ is constructed over. Counting `Declaration::Axiom` alone would not suffice: `Opaque` has no proof body and `Quotient` admits `Quot.sound` -- exactly the declaration a quotient-of-NxN construction would have added -- and the enumeration covers all three kinds and reports zero for each."
     }
   ],

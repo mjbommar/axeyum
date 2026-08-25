@@ -30,7 +30,7 @@
         "complex_tests::the_rectangle_decomposition_is_stated_exactly (renders both theorem types via Kernel::render_lean, asserts the corner substring is PRESENT, then compares each full type verbatim with assert_eq!)",
         "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_complex_prelude return Err and complex_prelude_builds fail)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib complex::complex_tests::the_rectangle_decomposition_is_stated_exactly -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib complex::complex_tests::the_rectangle_decomposition_is_stated_exactly -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/complex.rs",
       "notes": "A footprint check cannot carry this claim: the theorem with the CORNER TERM DROPPED is precisely the refuted naive identity, and it would have an identically empty footprint. Mutation-verified by the establishing lane: a single-character mutation of the pinned constant took the suite from 10 passed to 9 passed / 1 failed, naming this test and no other; the file was then restored and hash-verified against the committed blob, and the suite returned to 10 passed. The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success. Note that complex_tests.rs OVERFLOWS the default 2 MiB stack and aborts with SIGABRT; the suite runs bodies on a 64 MiB thread via its own on_a_deep_stack helper, so a SIGABRT here is an environment fact and not a proof failure."
     },
@@ -43,7 +43,7 @@
         "complex_tests::every_named_complex_declaration_is_checked_and_footprint_free (reads Kernel::axiom_footprint for every named declaration and requires the empty set; also requires each name to be PRESENT in the environment, which is the half that catches an omission)",
         "prelude_theorem_inventory --include-constructed (independent sweep listing every declared name with its footprint)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib complex::complex_tests::every_named_complex_declaration_is_checked_and_footprint_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib complex::complex_tests::every_named_complex_declaration_is_checked_and_footprint_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/complex/complex_tests.rs",
       "notes": "Presence matters as much as the footprint: axiom_footprint of a name interned but never DECLARED is vacuously empty. Counting Declaration::Axiom alone would also not suffice in this kernel, since Opaque has no proof body and Quotient admits Quot.sound; axiom_footprint covers all three."
     }

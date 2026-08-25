@@ -52,6 +52,33 @@ class TheTheoremNameComesFromTheFactsOwnCommand(unittest.TestCase):
         self.assertIsNone(DD.theorem_of(data))
 
 
+class AnExplicitFormalKernelTheoremOverridesExtraction(unittest.TestCase):
+    """`F:cassini-identity-over-constructed-integers` extracted `Int.sub` --
+    matched out of its OWN formal-statement fragment embedded in the
+    checker_command -- instead of its actual subject `Int.fib_cassini`, until
+    `formal.kernel_theorem` existed to pin the right answer. `F:complex-ring-
+    constructed-axiom-free` and `F:complex-mul-assoc` both extracted
+    `Complex.mul_assoc` and collided, until an explicit `null` marked the
+    package-level fact as having no single subject."""
+
+    def test_an_explicit_string_wins_even_when_extraction_would_disagree(self) -> None:
+        data = fact("F:a", "Nat.mul_one")
+        data["formal"] = {"kernel_theorem": "Nat.zero_add"}
+        self.assertEqual(DD.theorem_of(data), "Nat.zero_add")
+
+    def test_an_explicit_null_means_no_single_subject_even_though_evidence_names_one(
+        self,
+    ) -> None:
+        data = fact("F:a", "Nat.mul_one")
+        data["formal"] = {"kernel_theorem": None}
+        self.assertIsNone(DD.theorem_of(data))
+
+    def test_an_absent_key_still_falls_back_to_extraction(self) -> None:
+        data = fact("F:a", "Nat.mul_one")
+        data["formal"] = {"language": "lean4"}
+        self.assertEqual(DD.theorem_of(data), "Nat.mul_one")
+
+
 class EachGuardCanFail(unittest.TestCase):
     def test_a_missing_derived_edge_fails(self) -> None:
         facts = {
@@ -187,6 +214,44 @@ class ATheoremNameIsWrittenThreeWaysInCheckerCommands(unittest.TestCase):
             ]
         }
         self.assertIsNone(DD.theorem_of(fact))
+
+
+class TheConstructedCarriersAreEnforcedToo(unittest.TestCase):
+    """`CReal`/`Complex`/`CPoint` were absent from `_NS` until 2026-08-25, so
+    every fact whose checker named a theorem in one of those namespaces fell
+    into `unnamed` — 331 theorems (159 CReal, 84 Complex, 88 CPoint) this gate
+    never enforced anything over. Widening the class must not repeat the
+    `AxReal`/`Real` substring trap CLAUDE.md documents: `CReal` is a literal
+    substring of nothing in `_NS`, but the boundary must still hold for any
+    name that merely ENDS in one of these tokens."""
+
+    def test_creal_matches(self) -> None:
+        found = DD.THEOREM_RE.search("theorem_dependency_inventory -- CReal.add_comm")
+        self.assertEqual(found.group(1), "CReal.add_comm")
+
+    def test_complex_matches(self) -> None:
+        found = DD.THEOREM_RE.search("theorem_dependency_inventory -- Complex.mul_comm")
+        self.assertEqual(found.group(1), "Complex.mul_comm")
+
+    def test_cpoint_matches(self) -> None:
+        found = DD.THEOREM_RE.search("theorem_dependency_inventory -- CPoint.dot_comm")
+        self.assertEqual(found.group(1), "CPoint.dot_comm")
+
+    def test_a_near_miss_carrier_prefix_is_not_matched_as_creal(self) -> None:
+        """`XCReal.foo` is not a name any kernel declares. The same
+        `(?<![A-Za-z])` boundary that keeps `AxReal.add_comm` from spuriously
+        yielding `Real.add_comm` must also keep this from matching at the
+        `CReal` offset — the character immediately before it is a letter."""
+        found = DD.THEOREM_RE.search("cargo run -- XCReal.foo")
+        self.assertIsNone(found)
+
+    def test_axreal_still_wins_over_real_next_to_a_real_creal_name(self) -> None:
+        """Regression control for the ORIGINAL substring trap, now run
+        alongside the widened class: `AxReal.add_comm` must still yield
+        `AxReal.add_comm`, never `Real.add_comm`, even with `CReal` present in
+        `_NS`."""
+        found = DD.THEOREM_RE.search("nat_theorem_inventory -- AxReal.add_comm")
+        self.assertEqual(found.group(1), "AxReal.add_comm")
 
 
 if __name__ == "__main__":

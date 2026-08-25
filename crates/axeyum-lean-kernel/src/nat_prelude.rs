@@ -133,6 +133,8 @@ mod bezout;
 mod binary;
 mod binomial;
 mod ble;
+mod cardinality;
+mod catalan;
 mod choose;
 mod defs;
 mod diagonal;
@@ -141,7 +143,9 @@ mod division;
 mod fermat;
 mod fibonacci;
 mod finite;
+mod finite_set;
 mod gcd;
+mod group;
 mod helpers;
 mod lcm;
 mod modular;
@@ -150,8 +154,10 @@ mod ops;
 mod order;
 mod order_extra;
 mod order_more;
+mod permutation;
 mod primes;
 mod rectangle;
+mod relation;
 mod restrict_pair;
 mod totient;
 pub(crate) mod transposition;
@@ -170,6 +176,8 @@ use binomial::{
     declare_succ_sub_of_le,
 };
 use ble::declare_boolean_le;
+use cardinality::declare_nat_pigeonhole;
+use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
@@ -184,15 +192,26 @@ use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
     declare_restrict_maps_into,
 };
+use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
-use lcm::{declare_gauss_lemma, declare_lcm, declare_lcm_dvd};
+use group::declare_group_all;
+use lcm::{
+    declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
+    declare_lcm_comm, declare_lcm_dvd,
+};
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
+use permutation::declare_permutation_all;
 use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
 use rectangle::declare_rectangle;
+use relation::{
+    declare_bijective_of_injective_on, declare_bijective_on, declare_comp,
+    declare_eq_equivalence_on, declare_injective_on_comp, declare_mod_eq_equivalence_on,
+    declare_relation_properties,
+};
 use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
@@ -610,6 +629,42 @@ pub struct NatPrelude {
     /// `Nat.lcm_dvd : ∀ a b c, dvd a c → dvd b c → dvd (lcm a b) c` — the
     /// "least" half of the least common multiple's universal property.
     pub lcm_dvd: NameId,
+    /// `Nat.dvd_antisymm : ∀ a b, dvd a b → dvd b a → Eq a b` — antisymmetry
+    /// of divisibility. Conceptually belongs beside `dvd_gcd`/`dvd_gcd_iff`
+    /// in `nat_prelude/divisibility.rs`; it lands in `nat_prelude/lcm.rs`
+    /// instead (flagged for promotion) because it needs `le_of_dvd`
+    /// (declared in `primes.rs`, after `lcm.rs` runs) and another lane held
+    /// `divisibility.rs` when this was built. Double induction (`a` then
+    /// `b`, both inner IHs unused — a case split, not real recursion):
+    /// `a = 0` forces `b = 0` from `dvd 0 b` alone via `zero_mul`; at
+    /// `a = succ k`, `b = 0` forces `a = 0` symmetrically from `dvd 0 a`
+    /// (no absurdity lemma needed — it *is* the goal at that branch), and
+    /// `b = succ j` closes via `le_of_dvd` in both directions plus
+    /// `le_antisymm`.
+    pub dvd_antisymm: NameId,
+
+    // --- Catalan numbers (`catalan.rs`) --------------------------------------
+    /// `Nat.catalan n := choose (n+n) n − choose (n+n) (n+1)` — the closed
+    /// form. `Nat.sub` is TOTAL, so the definition needs no `≤` side
+    /// condition; the recursive convolution form was priced and NOT built
+    /// (it is course-of-values, so a curried accumulator does not reach it).
+    pub catalan: NameId,
+    /// `Nat.catalan_mul_succ : ∀ n, succ n · catalan n = choose (n+n) n` —
+    /// the multiplicative identity tying `catalan` to `choose`, stated so no
+    /// division is needed. Proved from two instances of
+    /// `Nat.succ_mul_choose_eq` on the odd row `2n−1`, tied together by
+    /// `Nat.choose_symm`; the truncated subtraction is handled by the
+    /// UNCONDITIONAL `Nat.mul_sub_left_distrib_total`, so no `≤` proof is
+    /// required anywhere.
+    pub catalan_mul_succ: NameId,
+    /// `Nat.lcm_comm : ∀ a b, lcm a b = lcm b a`. Direct from `dvd_antisymm`
+    /// fed the two `lcm_dvd` applications (each built from
+    /// `dvd_lcm_left`/`dvd_lcm_right` with the endpoints swapped).
+    pub lcm_comm: NameId,
+    /// `Nat.coprime_lcm_eq_mul : ∀ a b, gcd a b = 1 → lcm a b = a * b`. From
+    /// the unconditional `gcd_mul_lcm`, substituting the coprimality
+    /// hypothesis and cancelling the leading `1` with `one_mul`.
+    pub coprime_lcm_eq_mul: NameId,
     /// Balanced natural Bézout certificates:
     /// `bezout m n g := ∃ mp mn np nn, g + m*mn + n*nn = m*mp + n*np`.
     pub bezout: NameId,
@@ -1208,6 +1263,230 @@ pub struct NatPrelude {
     /// `1` (via `gcd_dvd`, `fib_add_two`, `dvd_add_iff_right`, `dvd_gcd` and
     /// the induction hypothesis) and closes with `eq_one_of_dvd_one`.
     pub coprime_fib_succ: NameId,
+
+    // --- relation properties bounded on `n` (`relation.rs`) -----------------
+    /// `Nat.ReflexiveOn r n := ∀ i, i < n → r i i`, for `r : Nat → Nat → Prop`.
+    pub reflexive_on: NameId,
+    /// `Nat.SymmetricOn r n := ∀ i j, i < n → j < n → r i j → r j i`.
+    pub symmetric_on: NameId,
+    /// `Nat.TransitiveOn r n := ∀ i j k, i < n → j < n → k < n → r i j →
+    /// r j k → r i k`.
+    pub transitive_on: NameId,
+    /// `Nat.EquivalenceOn r n := ReflexiveOn r n ∧ SymmetricOn r n ∧
+    /// TransitiveOn r n` (right-nested `And`).
+    pub equivalence_on: NameId,
+    /// `Nat.eq_equivalence_on : ∀ n, EquivalenceOn (Eq Nat) n` — equality is
+    /// an equivalence relation, the canonical worked instance.
+    pub eq_equivalence_on: NameId,
+    /// `Nat.modEq_equivalence_on : ∀ m n, EquivalenceOn (Nat.modEq m) n` —
+    /// congruence mod `m` is an equivalence relation; connects this L0 node
+    /// to the `modular-arithmetic` L2 node.
+    pub mod_eq_equivalence_on: NameId,
+    /// `Nat.BijectiveOn f n := InjectiveOn f n ∧ MapsInto f n ∧
+    /// SurjectiveOn f n`.
+    pub bijective_on: NameId,
+    /// `Nat.bijective_of_injective_on : ∀ n f, InjectiveOn f n →
+    /// MapsInto f n → BijectiveOn f n` — packaging over
+    /// [`Self::injective_on_imp_surjective_on`] (`finite.rs`).
+    pub bijective_of_injective_on: NameId,
+    /// `Nat.comp f g := fun x => f (g x)`.
+    pub comp: NameId,
+    /// `Nat.injective_on_comp : ∀ n f g, MapsInto g n → InjectiveOn g n →
+    /// InjectiveOn f n → InjectiveOn (comp f g) n`.
+    pub injective_on_comp: NameId,
+
+    // --- finite sets over a bounded universe (`finite_set.rs`) --------------
+    // Curriculum node `sets` (Layer 0, docs/curriculum/00-foundations/sets.md).
+    /// `Nat.setUnion p q := fun k => if p k then true else q k`.
+    pub set_union: NameId,
+    /// `Nat.setInter p q := fun k => if p k then q k else false`.
+    pub set_inter: NameId,
+    /// `Nat.setCompl p := fun k => if p k then false else true`.
+    pub set_compl: NameId,
+    /// `Nat.setDiff p q := fun k => if p k then (if q k then false else true) else false`
+    /// — `p k ∧ ¬ q k`.
+    pub set_diff: NameId,
+    /// `Nat.Subset p q n := ∀ k, k < n → p k = true → q k = true` — a
+    /// `Prop`-valued `Definition`, the same shape
+    /// [`Self::injective_on`] already uses.
+    pub subset: NameId,
+    /// `Nat.countRange_union_add_inter : ∀ p q n,
+    ///   countRange (setUnion p q) n + countRange (setInter p q) n =
+    ///   countRange p n + countRange q n` — the two-set inclusion–exclusion
+    /// law, stated additively (`Nat.sub` is truncated).
+    pub count_range_union_add_inter: NameId,
+    /// `Nat.countRange_le_of_subset : ∀ p q n,
+    ///   Subset p q n → countRange p n ≤ countRange q n` — cardinality
+    /// monotonicity.
+    pub count_range_le_of_subset: NameId,
+    /// `Nat.countRange_compl : ∀ p n,
+    ///   countRange p n + countRange (setCompl p) n = n`.
+    pub count_range_compl: NameId,
+
+    // --- the two-bound pigeonhole (`cardinality.rs`) -------------------------
+    // Curriculum node `cardinality` (Layer 0,
+    // docs/curriculum/00-foundations/cardinality.md).
+    /// `Nat.pigeonhole : ∀ n m f, Lt n m → (∀ i, i < m → f i < n) →
+    /// InjectiveOn f m → False` — no injection from an `m`-set into a
+    /// (strictly smaller) `n`-set. Not the same statement as
+    /// [`Self::injective_on_imp_surjective_on`] (`finite.rs`), which is a
+    /// SELF-map on one shared bound; this one crosses two bounds and is
+    /// proved by reducing to that self-map lemma (see `cardinality.rs`'s
+    /// module doc).
+    pub pigeonhole: NameId,
+    // --- pointwise Boolean-lattice laws for finite sets (`finite_set.rs`) --
+    // The `sets` curriculum node's own claim: "the same Boolean laws as in
+    // propositional logic, one level up". Every statement here is pointwise
+    // (`∀ k, … p k … = … q k …`), not an equality of functions — this kernel
+    // has no `funext`.
+    /// `Nat.setUnion_comm : ∀ p q k, Eq Bool (setUnion p q k) (setUnion q p k)`.
+    pub set_union_comm: NameId,
+    /// `Nat.setInter_comm : ∀ p q k, Eq Bool (setInter p q k) (setInter q p k)`.
+    pub set_inter_comm: NameId,
+    /// `Nat.setUnion_assoc : ∀ p q r k,
+    ///   Eq Bool (setUnion (setUnion p q) r k) (setUnion p (setUnion q r) k)`.
+    pub set_union_assoc: NameId,
+    /// `Nat.setInter_assoc : ∀ p q r k,
+    ///   Eq Bool (setInter (setInter p q) r k) (setInter p (setInter q r) k)`.
+    pub set_inter_assoc: NameId,
+    /// `Nat.setUnion_idem : ∀ p k, Eq Bool (setUnion p p k) (p k)`.
+    pub set_union_idem: NameId,
+    /// `Nat.setInter_idem : ∀ p k, Eq Bool (setInter p p k) (p k)`.
+    pub set_inter_idem: NameId,
+    /// `Nat.setInter_union_distrib : ∀ p q r k,
+    ///   Eq Bool (setInter p (setUnion q r) k)
+    ///           (setUnion (setInter p q) (setInter p r) k)`.
+    pub set_inter_union_distrib: NameId,
+    /// `Nat.setUnion_inter_distrib : ∀ p q r k,
+    ///   Eq Bool (setUnion p (setInter q r) k)
+    ///           (setInter (setUnion p q) (setUnion p r) k)`.
+    pub set_union_inter_distrib: NameId,
+    /// `Nat.setUnion_absorb : ∀ p q k, Eq Bool (setUnion p (setInter p q) k) (p k)`.
+    pub set_union_absorb: NameId,
+    /// `Nat.setInter_absorb : ∀ p q k, Eq Bool (setInter p (setUnion p q) k) (p k)`.
+    pub set_inter_absorb: NameId,
+    /// `Nat.setCompl_union : ∀ p q k,
+    ///   Eq Bool (setCompl (setUnion p q) k) (setInter (setCompl p) (setCompl q) k)`.
+    pub set_compl_union: NameId,
+    /// `Nat.setCompl_inter : ∀ p q k,
+    ///   Eq Bool (setCompl (setInter p q) k) (setUnion (setCompl p) (setCompl q) k)`.
+    pub set_compl_inter: NameId,
+    /// `Nat.setCompl_involutive : ∀ p k, Eq Bool (setCompl (setCompl p) k) (p k)`.
+    pub set_compl_involutive: NameId,
+    // --- groups (`group.rs`) -------------------------------------------------
+    // Curriculum node `groups` (Layer 2, docs/curriculum/02-structures/groups.md).
+    /// `Nat.IsGroupOn (op : Nat → Nat → Nat) (e : Nat) (inv : Nat → Nat) (n :
+    /// Nat) : Prop := closure ∧ (associativity ∧ (identity ∧ inverse))`, all
+    /// bounded on `n`. The bundled-predicate shape `Rat.IsDistribution`
+    /// already uses (this kernel has no typeclasses).
+    pub is_group_on: NameId,
+    /// `Nat.group_identity_unique : IsGroupOn op e inv n → ∀ e', e'<n →
+    /// (∀ a, a<n → op a e' = a) → e' = e`.
+    pub group_identity_unique: NameId,
+    /// `Nat.group_inverse_unique : IsGroupOn op e inv n → ∀ a b c,
+    /// a<n→b<n→c<n → op b a=e → op a c=e → b=c` — a left inverse of `a`
+    /// equals a right inverse of `a`.
+    pub group_inverse_unique: NameId,
+    /// `Nat.group_left_cancel : IsGroupOn op e inv n → ∀ a b c,
+    /// a<n→b<n→c<n → op a b=op a c → b=c`.
+    pub group_left_cancel: NameId,
+    /// `Nat.modAdd_isGroup : ∀ n, 0<n → IsGroupOn (fun a b => mod (add a b)
+    /// n) 0 (fun a => mod (sub n a) n) n` — ℤ/n under addition, the worked
+    /// instance.
+    pub mod_add_is_group: NameId,
+    /// `Nat.subset_refl : ∀ f n, Subset f f n` — reflexivity.
+    pub subset_refl: NameId,
+    /// `Nat.subset_trans : ∀ f g h n, Subset f g n → Subset g h n →
+    /// Subset f h n` — transitivity.
+    pub subset_trans: NameId,
+    /// `Nat.subset_antisymm : ∀ f g n, Subset f g n → Subset g f n →
+    /// ∀ k, k < n → Eq Bool (f k) (g k)` — antisymmetry, POINTWISE (this
+    /// kernel has no `funext`).
+    pub subset_antisymm: NameId,
+    /// `Nat.setDiff_eq_inter_compl : ∀ f g k,
+    ///   Eq Bool (setDiff f g k) (setInter f (setCompl g) k)` — `setDiff` is
+    /// literally `setInter` composed with `setCompl`.
+    pub set_diff_eq_inter_compl: NameId,
+    /// `Nat.union_eq_right_of_subset : ∀ f g n, Subset f g n →
+    ///   ∀ k, k < n → Eq Bool (setUnion f g k) (g k)` — the lattice–order
+    /// bridge: union with a superset is the superset.
+    pub union_eq_right_of_subset: NameId,
+    /// `Nat.subset_union_left : ∀ f g n, Subset f (setUnion f g) n`.
+    pub subset_union_left: NameId,
+    /// `Nat.subset_inter_left : ∀ f g n, Subset (setInter f g) f n`.
+    pub subset_inter_left: NameId,
+
+    // --- the symmetric group's missing piece (`permutation.rs`) --------------
+    // Curriculum node `groups` (Layer 2): the second worked instance of
+    // `IsGroupOn`'s *representation problem* — `Nat.comp`/`Nat.id` are the
+    // right operation/identity for permutations, and this is the explicit
+    // inverse construction `IsGroupOn`'s bundled `inv : Nat → Nat` (function
+    // case: `(Nat→Nat)→(Nat→Nat)`) actually needs, since `Exists.rec`
+    // eliminates only into `Prop`.
+    /// `Nat.permInverse (f : Nat → Nat) (n k : Nat) : Nat` — a bounded
+    /// downward search: the least index found scanning `n-1, …, 0` with
+    /// `f i = k`, `0` if none is found (never reached under
+    /// [`Self::perm_inverse_left`]/[`Self::perm_inverse_right`]'s
+    /// hypotheses).
+    pub perm_inverse: NameId,
+    /// `Nat.permInverse_right : ∀ f n, SurjectiveOn f n → ∀ k, k < n →
+    /// f (permInverse f n k) = k` — `f ∘ permInverse f n` is the identity
+    /// on `[0,n)`, a genuine right inverse.
+    pub perm_inverse_right: NameId,
+    /// `Nat.permInverse_left : ∀ f n, MapsInto f n → InjectiveOn f n →
+    /// ∀ i, i < n → permInverse f n (f i) = i` — `permInverse f n ∘ f` is
+    /// the identity on `[0,n)`, a genuine left inverse. Needs no
+    /// `SurjectiveOn`: `i` is already its own existence witness.
+    pub perm_inverse_left: NameId,
+    /// `Nat.id : Nat → Nat := fun x => x` — the identity self-map,
+    /// `IsGroupOnFn`'s `e`.
+    pub id: NameId,
+    /// `Nat.comp_assoc : ∀ f g h, comp (comp f g) h = comp f (comp g h)` —
+    /// the associativity conjunct an `IsGroupOnFn` predicate over `Nat.comp`
+    /// would need, proved by `Eq.refl` (both sides delta/beta-reduce to the
+    /// same literal lambda — no `funext`).
+    pub comp_assoc: NameId,
+    /// `Nat.IsGroupOnFn (op : (Nat→Nat)→(Nat→Nat)→(Nat→Nat)) (e : Nat→Nat)
+    /// (inv : (Nat→Nat)→(Nat→Nat)) (n : Nat) : Prop := closure ∧
+    /// (associativity ∧ (identity ∧ inverse))` — `group.rs::IsGroupOn`
+    /// generalised to function-valued elements, `BijectiveOn · n` standing
+    /// in for `· < n` as carrier membership (representation option (a) from
+    /// this slice's brief: a permutation is a `Nat → Nat`, not a `Nat`).
+    pub is_group_on_fn: NameId,
+    /// `Nat.bijective_on_comp : ∀ n a b, BijectiveOn a n → BijectiveOn b n →
+    /// BijectiveOn (comp a b) n` — composition of self-maps preserves
+    /// bijectivity on the same bound, `IsGroupOnFn`'s closure conjunct over
+    /// `Nat.comp`. Injectivity is `Nat.injective_on_comp` applied directly;
+    /// `MapsInto` composes with no case split; surjectivity destructures both
+    /// witnesses via nested `Exists.rec`.
+    pub bijective_on_comp: NameId,
+    /// `Nat.bijective_on_perm_inverse : ∀ n f, BijectiveOn f n →
+    /// BijectiveOn (permInverse f n) n` — the inverse of a bijection on
+    /// `[0,n)` is itself one. Injectivity of `permInverse f n` follows
+    /// because `f` is its own left inverse on `[0,n)` (`permInverse_right`);
+    /// `MapsInto` is `permInverse`'s own unconditional bound
+    /// (`permInverse f n k < n` for **any** `k`, given `0 < n`); surjectivity
+    /// picks `f k` as the preimage of `k` (`permInverse_left`).
+    pub bijective_on_perm_inverse: NameId,
+    /// `Nat.EqOn (f g : Nat → Nat) (n : Nat) : Prop := ∀ i, i < n →
+    /// Eq Nat (f i) (g i)` — bounded function equality, the fix for
+    /// `IsGroupOnFn`'s `identity`/`inverse` conjuncts (see `permutation.rs`'s
+    /// module doc, "The full `IsGroupOnFn` instance WAS REFUTED"): unbounded
+    /// `Eq (Nat → Nat)` is unsatisfiable for `Nat.permInverse` outside
+    /// `[0,n)`, and this kernel has no `funext` to state one differently.
+    pub eq_on: NameId,
+    /// `Nat.eqOn_refl : ∀ f n, EqOn f f n`.
+    pub eq_on_refl: NameId,
+    /// `Nat.eqOn_symm : ∀ f g n, EqOn f g n → EqOn g f n`.
+    pub eq_on_symm: NameId,
+    /// `Nat.eqOn_trans : ∀ f g h n, EqOn f g n → EqOn g h n → EqOn f h n`.
+    pub eq_on_trans: NameId,
+    /// `Nat.symmetric_group_isGroupOnFn : ∀ n, IsGroupOnFn Nat.comp Nat.id
+    /// (fun f => Nat.permInverse f n) n` — the symmetric group on `[0,n)`,
+    /// permutations under composition, the instance `IsGroupOnFn`'s original
+    /// unbounded form refuted, landed once `identity`/`inverse` were
+    /// rebuilt on `Nat.EqOn`.
+    pub symmetric_group_is_group_on_fn: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1412,6 +1691,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gcd_mul_lcm: kernel.name_str(nat, "gcd_mul_lcm"),
             gauss_lemma: kernel.name_str(nat, "gauss_lemma"),
             lcm_dvd: kernel.name_str(nat, "lcm_dvd"),
+            dvd_antisymm: kernel.name_str(nat, "dvd_antisymm"),
+            catalan: kernel.name_str(nat, "catalan"),
+            catalan_mul_succ: kernel.name_str(nat, "catalan_mul_succ"),
+            lcm_comm: kernel.name_str(nat, "lcm_comm"),
+            coprime_lcm_eq_mul: kernel.name_str(nat, "coprime_lcm_eq_mul"),
             bezout: kernel.name_str(nat, "bezout"),
             gcd_bezout: kernel.name_str(nat, "gcd_bezout"),
             mod_eq: kernel.name_str(nat, "modEq"),
@@ -1548,6 +1832,63 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_fib: kernel.name_str(nat, "sum_fib"),
             fib_add: kernel.name_str(nat, "fib_add"),
             coprime_fib_succ: kernel.name_str(nat, "coprime_fib_succ"),
+            reflexive_on: kernel.name_str(nat, "reflexiveOn"),
+            symmetric_on: kernel.name_str(nat, "symmetricOn"),
+            transitive_on: kernel.name_str(nat, "transitiveOn"),
+            equivalence_on: kernel.name_str(nat, "equivalenceOn"),
+            eq_equivalence_on: kernel.name_str(nat, "eq_equivalence_on"),
+            mod_eq_equivalence_on: kernel.name_str(nat, "modEq_equivalence_on"),
+            bijective_on: kernel.name_str(nat, "bijectiveOn"),
+            bijective_of_injective_on: kernel.name_str(nat, "bijective_of_injective_on"),
+            comp: kernel.name_str(nat, "comp"),
+            injective_on_comp: kernel.name_str(nat, "injective_on_comp"),
+            set_union: kernel.name_str(nat, "setUnion"),
+            set_inter: kernel.name_str(nat, "setInter"),
+            set_compl: kernel.name_str(nat, "setCompl"),
+            set_diff: kernel.name_str(nat, "setDiff"),
+            subset: kernel.name_str(nat, "Subset"),
+            count_range_union_add_inter: kernel.name_str(nat, "countRange_union_add_inter"),
+            count_range_le_of_subset: kernel.name_str(nat, "countRange_le_of_subset"),
+            count_range_compl: kernel.name_str(nat, "countRange_compl"),
+            pigeonhole: kernel.name_str(nat, "pigeonhole"),
+            set_union_comm: kernel.name_str(nat, "setUnion_comm"),
+            set_inter_comm: kernel.name_str(nat, "setInter_comm"),
+            set_union_assoc: kernel.name_str(nat, "setUnion_assoc"),
+            set_inter_assoc: kernel.name_str(nat, "setInter_assoc"),
+            set_union_idem: kernel.name_str(nat, "setUnion_idem"),
+            set_inter_idem: kernel.name_str(nat, "setInter_idem"),
+            set_inter_union_distrib: kernel.name_str(nat, "setInter_union_distrib"),
+            set_union_inter_distrib: kernel.name_str(nat, "setUnion_inter_distrib"),
+            set_union_absorb: kernel.name_str(nat, "setUnion_absorb"),
+            set_inter_absorb: kernel.name_str(nat, "setInter_absorb"),
+            set_compl_union: kernel.name_str(nat, "setCompl_union"),
+            set_compl_inter: kernel.name_str(nat, "setCompl_inter"),
+            set_compl_involutive: kernel.name_str(nat, "setCompl_involutive"),
+            is_group_on: kernel.name_str(nat, "isGroupOn"),
+            group_identity_unique: kernel.name_str(nat, "group_identity_unique"),
+            group_inverse_unique: kernel.name_str(nat, "group_inverse_unique"),
+            group_left_cancel: kernel.name_str(nat, "group_left_cancel"),
+            mod_add_is_group: kernel.name_str(nat, "modAdd_isGroup"),
+            subset_refl: kernel.name_str(nat, "subset_refl"),
+            subset_trans: kernel.name_str(nat, "subset_trans"),
+            subset_antisymm: kernel.name_str(nat, "subset_antisymm"),
+            set_diff_eq_inter_compl: kernel.name_str(nat, "setDiff_eq_inter_compl"),
+            union_eq_right_of_subset: kernel.name_str(nat, "union_eq_right_of_subset"),
+            subset_union_left: kernel.name_str(nat, "subset_union_left"),
+            subset_inter_left: kernel.name_str(nat, "subset_inter_left"),
+            perm_inverse: kernel.name_str(nat, "permInverse"),
+            perm_inverse_right: kernel.name_str(nat, "permInverse_right"),
+            perm_inverse_left: kernel.name_str(nat, "permInverse_left"),
+            id: kernel.name_str(nat, "id"),
+            comp_assoc: kernel.name_str(nat, "comp_assoc"),
+            is_group_on_fn: kernel.name_str(nat, "isGroupOnFn"),
+            bijective_on_comp: kernel.name_str(nat, "bijective_on_comp"),
+            bijective_on_perm_inverse: kernel.name_str(nat, "bijective_on_perm_inverse"),
+            eq_on: kernel.name_str(nat, "eqOn"),
+            eq_on_refl: kernel.name_str(nat, "eqOn_refl"),
+            eq_on_symm: kernel.name_str(nat, "eqOn_symm"),
+            eq_on_trans: kernel.name_str(nat, "eqOn_trans"),
+            symmetric_group_is_group_on_fn: kernel.name_str(nat, "symmetric_group_isGroupOnFn"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1578,6 +1919,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
         declare_primes(&mut d, &p)?;
+        // Needs `le_of_dvd` (just declared by `declare_primes`), so these
+        // cannot run inside `declare_lcm` above despite conceptually
+        // belonging there — see `dvd_antisymm`'s doc comment.
+        declare_dvd_antisymm(&mut d, &p)?;
+        declare_lcm_comm(&mut d, &p)?;
+        declare_coprime_lcm_eq_mul(&mut d, &p)?;
         declare_coprime_of_lt_prime(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
@@ -1588,9 +1935,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_prime_dvd_choose(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
         declare_totient_all(&mut d, &p)?;
+        declare_finite_set_all(&mut d, &p)?;
         declare_fin(&mut d, &p)?;
         declare_injective_surjective(&mut d, &p)?;
         declare_pigeonhole(&mut d, &p)?;
+        declare_nat_pigeonhole(&mut d, &p)?;
         declare_restrict_injective(&mut d, &p)?;
         declare_restrict_maps_into(&mut d, &p)?;
         declare_transposition(&mut d, &p)?;
@@ -1605,9 +1954,19 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_diagonal(&mut d, &p)?;
         declare_rectangle(&mut d, &p)?;
         declare_vandermonde_all(&mut d, &p)?;
+        declare_catalan_all(&mut d, &p)?;
         declare_binary_all(&mut d, &p)?;
         declare_size_all(&mut d, &p)?;
         declare_fib_all(&mut d, &p)?;
+        declare_relation_properties(&mut d, &p)?;
+        declare_eq_equivalence_on(&mut d, &p)?;
+        declare_mod_eq_equivalence_on(&mut d, &p)?;
+        declare_bijective_on(&mut d, &p)?;
+        declare_bijective_of_injective_on(&mut d, &p)?;
+        declare_comp(&mut d, &p)?;
+        declare_injective_on_comp(&mut d, &p)?;
+        declare_group_all(&mut d, &p)?;
+        declare_permutation_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

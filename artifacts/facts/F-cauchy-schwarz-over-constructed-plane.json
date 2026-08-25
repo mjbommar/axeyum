@@ -27,7 +27,7 @@
         "creal_point_tests::cauchy_schwarz_statement_is_exact (asserts the KERNEL-RENDERED type verbatim with assert_eq!)",
         "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_cpoint_prelude return Err and the test fail)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::cauchy_schwarz_statement_is_exact -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::cauchy_schwarz_statement_is_exact -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/creal_point.rs",
       "notes": "A footprint check cannot carry this claim: a theorem stating something weaker -- the two factors on the right transposed, or a different inequality direction -- has exactly the same empty footprint. Mutation-verified: changing `CPoint.dot x0 x0` to `CPoint.dot x0 x1` in the pinned string makes cargo report `40 passed; 1 failed`, naming this test and no other; restored, 41/41 green. The command re-derives from source every run, rebuilding CPointPrelude through add_declaration, and is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
     },
@@ -40,7 +40,7 @@
         "creal_point_tests::every_theorem_here_is_axiom_free (reads Kernel::axiom_footprint for every declared theorem in this file and requires the empty set)",
         "prelude_theorem_inventory --include-constructed (independent sweep showing each name with axiom footprint 0; guards the unvisited-is-not-empty trap)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::every_theorem_here_is_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::every_theorem_here_is_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs",
       "notes": "Counting Declaration::Axiom alone would not suffice in this kernel (Opaque has no proof body and Quotient admits Quot.sound); axiom_footprint covers all three. Presence matters as much as the footprint -- axiom_footprint of a name interned but never DECLARED is vacuously empty -- which is why the statement pin, which fetches the declaration from the environment and panics if absent, is the companion check and not optional."
     }

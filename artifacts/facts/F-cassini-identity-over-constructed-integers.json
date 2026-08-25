@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "F:cassini-identity-over-constructed-integers",
+  "title": "Cassini's identity: fib(n+2)*fib(n) - fib(n+1)^2 = (-1)^(n+1), over the constructed integers",
+  "statement": "For every natural n: fib(n+2)*fib(n) - fib(n+1)^2 = (-1)^(n+1), where fib is Nat.fib (rendered AxNat.fib in this kernel) cast into the constructed integers ℤ at each occurrence, and the subtraction, multiplication and negation are genuinely Int operations -- so this is stated over ℤ even though every fib value involved is nonnegative. THE SIGN AND THE SHIFTED EXPONENT ARE THE CONTENT: at n=0 the identity reads fib(2)*fib(0) - fib(1)^2 = 1*0 - 1 = -1 = (-1)^1, so the exponent genuinely is n+1 and not n -- a proof pinning (-1)^n instead would be a DIFFERENT, false statement for even n. Proved by induction on n via a difference-doubling step: writing D(n) := fib(n+2)*fib(n) - fib(n+1)^2, the induction step establishes D(n+1) = -D(n) using the Fibonacci recurrence fib(n+2) = fib(n) + fib(n+1) and ring identities alone (no case split, no well-founded recursion beyond the recurrence itself). This is the classical Cassini identity, restated here with no reference to matrices, determinants, or the golden ratio -- see F:cassini-as-determinant-of-a-matrix-power for the ℚ/det2 restatement that connects it to determinant multiplicativity, and that fact's notes for why phi itself is not a statable number in this kernel.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> Eq.{1} Int (Int.sub (Int.mul (Int.ofNat (AxNat.fib (AxNat.succ (AxNat.succ x0)))) (Int.ofNat (AxNat.fib x0))) (Int.mul (Int.ofNat (AxNat.fib (AxNat.succ x0))) (Int.ofNat (AxNat.fib (AxNat.succ x0))))) (Int.pow (Int.neg Int.one) (AxNat.succ x0)))",
+    "fragment": "Int",
+    "kernel_theorem": "Int.fib_cassini",
+    "free_symbols": [
+      "x0"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-add-assoc",
+    "F:int-add-comm",
+    "F:int-add-neg",
+    "F:int-add-zero",
+    "F:int-left-distrib",
+    "F:int-mul-assoc",
+    "F:int-mul-comm",
+    "F:int-mul-neg",
+    "F:int-mul-one",
+    "F:int-mul-zero",
+    "F:int-neg-one-mul",
+    "F:int-one-mul",
+    "F:int-pow-succ",
+    "F:int-pow-zero",
+    "F:ml430-nat-fib-add-two-b86e0c82"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.fib_cassini",
+      "kind": "kernel-term",
+      "supports": "`Int.fib_cassini` is admitted with exactly the type quoted in `formal.statement`, read directly out of the kernel's environment via the exact `render_lean` route `int_theorem_inventory` uses. No committed test in this repository asserts `Int.fib_cassini`'s statement verbatim the way `det2_fib_is_cassini_through_det2` does for `Rat.det2_fib` or the Wilson checker does for `Int.wilson` -- this evidence row is the closest available substitute: it re-derives the rendered type from the trusted kernel on every run and fails the moment that type changes, rather than trusting the doc comment in `fibonacci.rs`.",
+      "check_status": "checked",
+      "checkers": [
+        "int_theorem_inventory -- fib_cassini (filters the environment to Int.fib_cassini and prints its Kernel::render_lean type; the example itself treats a filter matching nothing as failure, so a deleted or renamed theorem would already break this command before the grep runs)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh run --release -p axeyum-lean-kernel --example int_theorem_inventory -- fib_cassini 2>&1 | grep -Fc \"((x0 : AxNat) -> Eq.{1} Int (Int.sub (Int.mul (Int.ofNat (AxNat.fib (AxNat.succ (AxNat.succ x0)))) (Int.ofNat (AxNat.fib x0))) (Int.mul (Int.ofNat (AxNat.fib (AxNat.succ x0))) (Int.ofNat (AxNat.fib (AxNat.succ x0))))) (Int.pow (Int.neg Int.one) (AxNat.succ x0)))\")\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/fibonacci.rs",
+      "notes": "Run 2026-08-24 against this tree: exit 0. A deliberately wrong substring (a string that appears nowhere in the tool's output) run through the identical command exits 1, confirming the grep is not a vacuous pass. This is the strongest available check that does not require adding a new pinned test to `crates/`, which this lane's brief forbids touching."
+    },
+    {
+      "id": "footprint-Int.fib_cassini",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for Int.fib_cassini. `derived_laws_have_no_axiom_footprint` iterates the fixed-size `derived_laws` array (122 entries, a compile-time-checked size so an omission cannot silently pass) which includes `p.fib_cassini`, and requires `Kernel::axiom_footprint` to be empty for every entry. The `integer` prelude's trusted surface is 0: no Axiom, no Opaque, no Quotient.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for each of the 122 derived laws, including fib_cassini, and requires the empty set)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
+      "notes": "Run 2026-08-24: `test result: ok. 1 passed; 0 failed`, exit 0. Running the identical command against a deliberately misspelled test path (`..._axiom_footprint_WRONG_NAME`) exits 1 with `error: no test with the name...` / zero matched, confirming the anchor cannot read a no-op as success."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-correspondence-cassini (2026-08-24), closing ADR-0546's motivating example. Int.fib_cassini itself was proved by an earlier lane (see fibonacci.rs); this lane's contribution is making the already-admitted theorem an addressable fact in the ledger, with its statement read from the kernel rather than transcribed from a doc comment.",
+    "sources": [
+      "crates/axeyum-lean-kernel/src/int_prelude/fibonacci.rs",
+      "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs"
+    ],
+    "prior_art": [
+      {
+        "who": "Giovanni Domenico Cassini",
+        "what": "the identity relating three consecutive Fibonacci numbers",
+        "year": 1680,
+        "where": "conventionally attributed",
+        "attribution": "standard attribution; this lane did not consult a primary source."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred. (1) No connection to matrices or determinants is made HERE -- that restatement is F:cassini-as-determinant-of-a-matrix-power, a separate, derived fact. (2) No connection to the golden ratio, eigenvalues of [[1,1],[1,0]], or Binet's formula: this kernel has no CReal.sqrt (only the integer natSqrt), so phi as a NUMBER is not statable here at all; only a defining property such as x^2 = x + 1 would be. (3) The generalized Catalan identity (fib(n+r)*fib(n-r) - fib(n)^2 = (-1)^(n-r+1) fib(r)^2, of which Cassini is the r=1 case) is not attempted.\n\nThe proof is constructive throughout: induction on n via the difference-doubling step, no Classical.em, no propext, no funext, no Quot.sound, no WellFounded.fix beyond ordinary structural induction.\n\nexternal_status is `proved`: formalization of a classical 17th-century identity, not discovery."
+}

@@ -81,8 +81,351 @@ impl Fixture {
 /// Every name [`build_nat_prelude`] promises, with the declaration kind it must
 /// have. `Nat`/`Nat.zero`/`Nat.succ`/`Nat.rec`/`Nat.le`/… are inductive
 /// machinery, so they are checked separately by `environment().contains`.
+/// `Nat.permInverse` COMPUTES the right inverse table for a concrete
+/// permutation of `[0,4)` — not merely type-checks — and a negative control:
+/// reusing the very proof that certifies the correct `(n, k)` instance
+/// against a statement with `n` and `k` TRANSPOSED (a genuinely different,
+/// and false, computed equation) must be rejected.
+#[test]
+fn perm_inverse_computes_a_concrete_permutation_table_with_a_transposed_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    // f : the 4-cycle (0 1 2 3), i.e. f(0)=1, f(1)=2, f(2)=3, f(3)=0.
+    let perm = |f: &mut Fixture| -> ExprId {
+        let k_fv = f.fresh_fvar();
+        let k = f.kernel().fvar(k_fv);
+        let zero = f.zero();
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let cond2 = f.beq(k, two);
+        let sel2 = f.bool_select_nat(cond2, three, zero);
+        let cond1 = f.beq(k, one);
+        let sel1 = f.bool_select_nat(cond1, two, sel2);
+        let cond0 = f.beq(k, zero);
+        let sel0 = f.bool_select_nat(cond0, one, sel1);
+        f.lam_fv(k_fv, nat, sel0)
+    };
+    let sigma = perm(&mut f);
+    let four = f.num(4);
+
+    // The genuine inverse table: permInverse sigma 4 k, for k = 0,1,2,3,
+    // must COMPUTE (by `def_eq`, i.e. by reduction, not merely type) to
+    // 3, 0, 1, 2 respectively -- sigma's actual two-sided inverse on [0,4).
+    let expected = [(0u32, 3u32), (1, 0), (2, 1), (3, 2)];
+    let mut computed_at_one: Option<ExprId> = None;
+    for (k_val, expected_val) in expected {
+        let k = f.num(k_val);
+        let idx = f.const_app(p.perm_inverse, &[sigma, four, k]);
+        let want = f.num(expected_val);
+        assert!(
+            f.k.def_eq(idx, want),
+            "permInverse sigma 4 {k_val} must COMPUTE to {expected_val}"
+        );
+        // NEGATIVE CONTROL half 1: it must not also collapse to some OTHER
+        // index (a checker that accepts every value would pass the line
+        // above vacuously if `def_eq` were broken in the "always true"
+        // direction).
+        let bogus = f.num((expected_val + 1) % 4);
+        assert!(
+            !f.k.def_eq(idx, bogus),
+            "permInverse sigma 4 {k_val} must NOT also compute to {}",
+            (expected_val + 1) % 4
+        );
+        if k_val == 1 {
+            computed_at_one = Some(idx);
+        }
+    }
+    let idx_at_1 = computed_at_one.expect("k=1 case ran");
+
+    // `sigma` composed with its computed inverse really is the identity at
+    // this point: `sigma (permInverse sigma 4 1) = 1`.
+    let sigma_idx = f.apply(sigma, &[idx_at_1]);
+    let one = f.num(1);
+    assert!(
+        f.k.def_eq(sigma_idx, one),
+        "sigma (permInverse sigma 4 1) must compute to 1"
+    );
+
+    // The REAL proof of this fact: `Eq.refl 1`, whose inferred type is
+    // `Eq Nat 1 1`, accepted here as `Eq Nat (sigma (permInverse sigma 4 1)) 1`
+    // only because both sides genuinely reduce to the same numeral.
+    let real_proof = f.refl(one);
+    let real_stmt = f.eq(sigma_idx, one);
+    let real_name = f.name("nc_perm_inverse_real_at_n4_k1");
+    f.declare_theorem(real_name, real_stmt, real_proof)
+        .expect("the real, non-transposed fact must be admitted");
+
+    // NEGATIVE CONTROL half 2 (the brief's required control): reuse THAT
+    // SAME proof term against the statement with `n` and `k` TRANSPOSED --
+    // `sigma (permInverse sigma 1 4) = 4` instead of
+    // `sigma (permInverse sigma 4 1) = 1`. This is a genuinely different
+    // computed value (confirmed below before trusting the rejection), not
+    // an accidental tautology: `permInverse sigma 1 4` computes to `0`
+    // (the search bound is `1`, so only index `0` is ever tried, and
+    // `sigma 0 = 1 != 4` never matches, so the search falls through to its
+    // base-case default `0`), and `sigma 0 = 1`, so the transposed
+    // statement's left side is `1`, not `4`.
+    let one_bound = f.num(1);
+    let four_target = f.num(4);
+    let idx_transposed = f.const_app(p.perm_inverse, &[sigma, one_bound, four_target]);
+    let zero = f.zero();
+    assert!(
+        f.k.def_eq(idx_transposed, zero),
+        "permInverse sigma 1 4 must compute to 0 (only index 0 is searched)"
+    );
+    let sigma_idx_transposed = f.apply(sigma, &[idx_transposed]);
+    assert!(
+        f.k.def_eq(sigma_idx_transposed, one),
+        "sigma (permInverse sigma 1 4) computes to 1, genuinely != the claimed 4"
+    );
+    let transposed_stmt = f.eq(sigma_idx_transposed, four_target);
+
+    let bad_name = f.name("nc_perm_inverse_transposed_n_and_k");
+    let err = f
+        .declare_theorem(bad_name, transposed_stmt, real_proof)
+        .expect_err(
+            "NC: reusing the n=4,k=1 proof against the n,k-transposed statement must be rejected",
+        );
+    println!(
+        "NC (permInverse with n and k transposed) rejected:\n  {}",
+        f.explain(&err)
+    );
+    assert!(!f.k.environment().contains(bad_name));
+}
+
+/// `Nat.bijective_on_perm_inverse` and `Nat.bijective_on_comp` APPLY at a
+/// concrete, genuinely nontrivial instance — the transposition swapping `0`
+/// and `1` on `[0,2)` (the order-2 symmetric group on two elements), built
+/// entirely from already-proved `Nat.transposition_*` theorems, no
+/// hand-rolled case bash — and `Nat.permInverse sigma 2` COMPUTES sigma's
+/// genuine inverse table. Negative control: reusing the genuine
+/// `bijective_on_perm_inverse` proof (built at bound `2`) against a
+/// statement with the bound TRANSPOSED to `3` must be rejected, after
+/// confirming `2` and `3` genuinely differ.
+#[test]
+fn bijective_on_lemmas_apply_to_a_concrete_transposition_with_a_transposed_bound_negative_control()
+{
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+
+    // sigma := transposition 0 1 : Nat -> Nat, swapping 0 and 1 -- the
+    // generator of the order-2 symmetric group on [0,2).
+    let sigma = f.const_app(p.transposition, &[zero, one]);
+
+    let lt01 = f.zero_lt_succ(zero); // Lt 0 1
+    let lt12 = f.lemma(p.lt_succ_self, &[one]); // Lt 1 2
+
+    let inj_sigma = f.lemma(p.transposition_injective, &[zero, one, lt01, two]);
+    let maps_sigma = f.lemma(p.transposition_maps_into, &[zero, one, lt01, two, lt12]);
+    let bij_sigma = f.lemma(
+        p.bijective_of_injective_on,
+        &[two, sigma, inj_sigma, maps_sigma],
+    );
+
+    // `Nat.permInverse sigma 2` COMPUTES sigma's genuine inverse table on
+    // `[0,2)`: sigma swaps 0 and 1, so its inverse does too.
+    let g_at_0 = f.const_app(p.perm_inverse, &[sigma, two, zero]);
+    assert!(
+        f.k.def_eq(g_at_0, one),
+        "permInverse sigma 2 0 must COMPUTE to 1"
+    );
+    assert!(
+        !f.k.def_eq(g_at_0, zero),
+        "permInverse sigma 2 0 must NOT also compute to 0"
+    );
+    let g_at_1 = f.const_app(p.perm_inverse, &[sigma, two, one]);
+    assert!(
+        f.k.def_eq(g_at_1, zero),
+        "permInverse sigma 2 1 must COMPUTE to 0"
+    );
+    assert!(
+        !f.k.def_eq(g_at_1, one),
+        "permInverse sigma 2 1 must NOT also compute to 1"
+    );
+
+    // `Nat.bijective_on_perm_inverse` APPLIES at this concrete instance --
+    // the kernel re-checks the proof against the genuine statement.
+    let ga = f.const_app(p.perm_inverse, &[sigma, two]);
+    let ga_bij_stmt = f.const_app(p.bijective_on, &[ga, two]);
+    let ga_bij_proof = f.lemma(p.bijective_on_perm_inverse, &[two, sigma, bij_sigma]);
+    let real_name = f.name("nc_bijective_on_perm_inverse_real_at_n2");
+    f.declare_theorem(real_name, ga_bij_stmt, ga_bij_proof)
+        .expect("BijectiveOn (permInverse sigma 2) 2 must be admitted");
+
+    // `Nat.bijective_on_comp` APPLIES too: composing sigma with itself is
+    // bijective on the same bound.
+    let comp_sigma_sigma = f.const_app(p.comp, &[sigma, sigma]);
+    let comp_bij_stmt = f.const_app(p.bijective_on, &[comp_sigma_sigma, two]);
+    let comp_bij_proof = f.lemma(
+        p.bijective_on_comp,
+        &[two, sigma, sigma, bij_sigma, bij_sigma],
+    );
+    let comp_name = f.name("nc_bijective_on_comp_real_at_n2");
+    f.declare_theorem(comp_name, comp_bij_stmt, comp_bij_proof)
+        .expect("BijectiveOn (comp sigma sigma) 2 must be admitted");
+
+    // NEGATIVE CONTROL: reuse the REAL `bijective_on_perm_inverse` proof
+    // (built at n = 2) against a statement with the bound TRANSPOSED to 3.
+    // Confirm first that 2 and 3 genuinely differ (not an accidental
+    // tautology).
+    assert!(
+        !f.k.def_eq(two, three),
+        "2 and 3 must genuinely differ before trusting the rejection"
+    );
+    let bad_stmt = f.const_app(p.bijective_on, &[ga, three]);
+    let bad_name = f.name("nc_bijective_on_perm_inverse_transposed_bound");
+    let err = f
+        .declare_theorem(bad_name, bad_stmt, ga_bij_proof)
+        .expect_err("NC: reusing the n=2 proof against the n=3 statement must be rejected");
+    println!(
+        "NC (bijective_on_perm_inverse with bound transposed) rejected:\n  {}",
+        f.explain(&err)
+    );
+    assert!(!f.k.environment().contains(bad_name));
+}
+
+/// `Nat.symmetric_group_isGroupOnFn` APPLIES at a concrete instance —
+/// `transposition 0 1` on `[0,2)` — and `Nat.permInverse`'s table for it
+/// COMPUTES (by `def_eq`, not merely type-checks). The REQUIRED negative
+/// control: the exact proof term that makes the FIXED (`EqOn`-bounded)
+/// inverse conjunct hold at this instance is reused against the UNBOUNDED
+/// `Eq (Nat → Nat)` form this module's own top-of-file doc found false —
+/// and the kernel rejects it.
+#[test]
+fn symmetric_group_is_group_on_fn_applies_at_transposition_0_1_with_unbounded_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let fn_ty = f.arrow(nat, nat);
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+
+    // sigma := transposition 0 1 : Nat -> Nat, swapping 0 and 1.
+    let sigma = f.const_app(p.transposition, &[zero, one]);
+    let lt01 = f.zero_lt_succ(zero); // Lt 0 1
+    let lt12 = f.lemma(p.lt_succ_self, &[one]); // Lt 1 2
+    let inj_sigma = f.lemma(p.transposition_injective, &[zero, one, lt01, two]);
+    let maps_sigma = f.lemma(p.transposition_maps_into, &[zero, one, lt01, two, lt12]);
+    let surj_sigma = f.lemma(
+        p.injective_on_imp_surjective_on,
+        &[two, sigma, inj_sigma, maps_sigma],
+    );
+
+    // `Nat.permInverse sigma 2` COMPUTES sigma's genuine inverse table on
+    // `[0,2)`: sigma is its own inverse, so the table is 1, 0.
+    let g_at_0 = f.const_app(p.perm_inverse, &[sigma, two, zero]);
+    assert!(
+        f.k.def_eq(g_at_0, one),
+        "permInverse sigma 2 0 must COMPUTE to 1"
+    );
+    let g_at_1 = f.const_app(p.perm_inverse, &[sigma, two, one]);
+    assert!(
+        f.k.def_eq(g_at_1, zero),
+        "permInverse sigma 2 1 must COMPUTE to 0"
+    );
+
+    // The group witness APPLIES at n := 2: `Nat.symmetric_group_isGroupOnFn 2`
+    // is a genuine proof of `IsGroupOnFn Nat.comp Nat.id (fun f=>permInverse
+    // f 2) 2`; the kernel re-checks it here when declared as a consumer
+    // theorem (the "downstream development can use it" pattern this file's
+    // own module doc names as its third thing checked).
+    let ga = f.const_app(p.perm_inverse, &[sigma, two]); // Nat -> Nat
+    let inv = {
+        let f_fv = f.fresh_fvar();
+        let fvar = f.kernel().fvar(f_fv);
+        let body = f.const_app(p.perm_inverse, &[fvar, two]);
+        f.lam_fv(f_fv, fn_ty, body)
+    };
+    let op = f.const_app(p.comp, &[]);
+    let id_const = f.const_app(p.id, &[]);
+    let full = f.const_app(p.symmetric_group_is_group_on_fn, &[two]);
+    let full_stmt = f.const_app(p.is_group_on_fn, &[op, id_const, inv, two]);
+    let real_name = f.name("nc_symmetric_group_is_group_on_fn_real_at_n2");
+    f.declare_theorem(real_name, full_stmt, full)
+        .expect("IsGroupOnFn Nat.comp Nat.id (fun f=>permInverse f 2) 2 must be admitted");
+
+    // The bounded inverse fact this fix actually proves: `EqOn (comp sigma
+    // (permInverse sigma 2)) Nat.id 2`, built directly from
+    // `Nat.permInverse_right` (the same lemma
+    // `declare_symmetric_group_is_group_on_fn` uses internally) at every
+    // `k < 2` — a real, TRUE fact, admitted here to confirm it as such
+    // before reusing its proof term below.
+    let comp_sigma_ga = f.const_app(p.comp, &[sigma, ga]);
+    let eqon_proof = {
+        let k_fv = f.fresh_fvar();
+        let k = f.kernel().fvar(k_fv);
+        let hk_fv = f.fresh_fvar();
+        let hk = f.kernel().fvar(hk_fv);
+        let hk_ty = f.lt(k, two);
+        let body = f.lemma(p.perm_inverse_right, &[sigma, two, surj_sigma, k, hk]);
+        let with_hk = f.lam_fv(hk_fv, hk_ty, body);
+        f.lam_fv(k_fv, nat, with_hk)
+    };
+    let eqon_stmt = f.const_app(p.eq_on, &[comp_sigma_ga, id_const, two]);
+    let real_name2 = f.name("nc_symmetric_group_eqon_real_at_n2");
+    f.declare_theorem(real_name2, eqon_stmt, eqon_proof)
+        .expect("EqOn (comp sigma (permInverse sigma 2)) Nat.id 2 must be admitted");
+
+    // Confirm, by computation, that the UNBOUNDED claim this module's doc
+    // refuted really is false here (not an accidental tautology this
+    // negative control would pass vacuously): at k := 2 (outside [0,2)),
+    // `permInverse sigma 2 2` computes to `0` (the search never matches),
+    // so `sigma (permInverse sigma 2 2) = sigma 0 = 1`, genuinely != `id 2 = 2`.
+    let g_at_2 = f.const_app(p.perm_inverse, &[sigma, two, two]);
+    assert!(
+        f.k.def_eq(g_at_2, zero),
+        "permInverse sigma 2 2 must COMPUTE to 0 (the search never matches)"
+    );
+    let sigma_g2 = f.apply(sigma, &[g_at_2]);
+    assert!(
+        f.k.def_eq(sigma_g2, one),
+        "sigma (permInverse sigma 2 2) must compute to 1"
+    );
+    assert!(
+        !f.k.def_eq(sigma_g2, two),
+        "…and genuinely not to 2, confirming the unbounded claim is false at this instance"
+    );
+
+    // THE NEGATIVE CONTROL: reuse the REAL `eqon_proof` — a `Pi`-shaped
+    // pointwise fact, and this fix's whole reason for existing — against
+    // the UNBOUNDED `Eq (Nat → Nat) (comp sigma (permInverse sigma 2))
+    // Nat.id` this file's module doc found false. It must be rejected.
+    let unbounded_stmt = {
+        let one_lvl = f.level_one();
+        let eq_const = f.kernel().const_(p.logic.eq, vec![one_lvl]);
+        f.apply(eq_const, &[fn_ty, comp_sigma_ga, id_const])
+    };
+    let bad_name = f.name("nc_symmetric_group_unbounded_inverse_conjunct");
+    let err = f
+        .declare_theorem(bad_name, unbounded_stmt, eqon_proof)
+        .expect_err(
+            "NC: the bounded EqOn fact must NOT prove the unbounded (refuted) IsGroupOnFn claim",
+        );
+    println!(
+        "NC (unbounded IsGroupOnFn inverse conjunct, reusing the real EqOn proof) rejected:\n  {}",
+        f.explain(&err)
+    );
+    assert!(!f.k.environment().contains(bad_name));
+}
+
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        p.set_union,
+        p.set_inter,
+        p.set_compl,
+        p.set_diff,
+        p.subset,
+        p.catalan,
         p.add,
         p.mul,
         p.pow,
@@ -118,11 +461,25 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.totient,
         p.fib_aux,
         p.fib,
+        p.reflexive_on,
+        p.symmetric_on,
+        p.transitive_on,
+        p.equivalence_on,
+        p.bijective_on,
+        p.comp,
+        p.is_group_on,
+        p.perm_inverse,
+        p.id,
+        p.is_group_on_fn,
+        p.eq_on,
     ]
 }
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        p.count_range_union_add_inter,
+        p.count_range_le_of_subset,
+        p.count_range_compl,
         p.add_zero,
         p.add_succ,
         p.mul_zero,
@@ -220,6 +577,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.gcd_bezout,
         p.gauss_lemma,
         p.lcm_dvd,
+        p.dvd_antisymm,
+        p.catalan_mul_succ,
+        p.lcm_comm,
+        p.coprime_lcm_eq_mul,
         p.fib_add,
         p.coprime_fib_succ,
         p.mod_eq_refl,
@@ -322,6 +683,44 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.fib_le_succ,
         p.fib_pos_of_pos,
         p.sum_fib,
+        p.eq_equivalence_on,
+        p.mod_eq_equivalence_on,
+        p.bijective_of_injective_on,
+        p.injective_on_comp,
+        p.pigeonhole,
+        p.set_union_comm,
+        p.set_inter_comm,
+        p.set_union_assoc,
+        p.set_inter_assoc,
+        p.set_union_idem,
+        p.set_inter_idem,
+        p.set_inter_union_distrib,
+        p.set_union_inter_distrib,
+        p.set_union_absorb,
+        p.set_inter_absorb,
+        p.set_compl_union,
+        p.set_compl_inter,
+        p.set_compl_involutive,
+        p.group_identity_unique,
+        p.group_inverse_unique,
+        p.group_left_cancel,
+        p.mod_add_is_group,
+        p.subset_refl,
+        p.subset_trans,
+        p.subset_antisymm,
+        p.set_diff_eq_inter_compl,
+        p.union_eq_right_of_subset,
+        p.subset_union_left,
+        p.subset_inter_left,
+        p.perm_inverse_right,
+        p.perm_inverse_left,
+        p.comp_assoc,
+        p.bijective_on_comp,
+        p.bijective_on_perm_inverse,
+        p.eq_on_refl,
+        p.eq_on_symm,
+        p.eq_on_trans,
+        p.symmetric_group_is_group_on_fn,
     ]
 }
 
@@ -4434,7 +4833,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        35 + 195,
+        52 + 240,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -5753,4 +6152,447 @@ fn fib_le_succ_pos_of_pos_and_sum_fib_apply_and_are_axiom_free() {
         f.k.axiom_footprint(p.sum_fib).is_empty(),
         "sum_fib must rest on zero axioms"
     );
+}
+
+/// `Nat.catalan` computes: the kernel's own `def_eq` reduces `catalan 0..5`
+/// to the literal Catalan numbers `1, 1, 2, 5, 14, 42` — see `catalan.rs`'s
+/// module doc for the hand check. The negative control matters as much as
+/// the positive one (`arithmetic_reduces_on_numerals` says so above, and it
+/// applies here just as much): a `catalan` that type-checks but computes
+/// wrong has an EMPTY axiom footprint and passes every sweep in this
+/// repository.
+#[test]
+fn catalan_computes_at_concrete_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let expected: [u32; 6] = [1, 1, 2, 5, 14, 42];
+    for (n, &c) in expected.iter().enumerate() {
+        let n_expr = f.num(u32::try_from(n).expect("n fits in u32"));
+        let cat = f.const_app(p.catalan, &[n_expr]);
+        let c_expr = f.num(c);
+        assert!(
+            f.k.def_eq(cat, c_expr),
+            "catalan {n} must reduce to {c}, the n={n} Catalan number"
+        );
+    }
+
+    // Negative control: `catalan 3` is NOT `6` — a plausible-looking wrong
+    // value (`6 = choose 4 2`, what you would get from forgetting the
+    // second subtracted term entirely).
+    let three = f.num(3);
+    let cat_3 = f.const_app(p.catalan, &[three]);
+    let six = f.num(6);
+    assert!(
+        !f.k.def_eq(cat_3, six),
+        "catalan 3 must NOT reduce to 6 (def_eq must not be vacuously true)"
+    );
+}
+
+/// `Nat.catalan_mul_succ` at `n = 3`: `4 * catalan 3 = 4 * 5 = 20 = choose 6
+/// 3` — the multiplicative identity that ties `catalan` to `choose`, checked
+/// at a concrete instance independent of the computation check above (that
+/// one never applies `catalan_mul_succ`).
+#[test]
+fn catalan_mul_succ_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let three = f.num(3);
+    let proof = f.lemma(p.catalan_mul_succ, &[three]);
+    let inferred =
+        f.k.infer(proof)
+            .unwrap_or_else(|e| panic!("catalan_mul_succ(3) should infer: {}", f.explain(&e)));
+
+    let lhs = {
+        let four = f.succ(three);
+        let cat_3 = f.const_app(p.catalan, &[three]);
+        f.mul(four, cat_3)
+    };
+    let rhs = {
+        let six = f.add(three, three);
+        f.choose(six, three)
+    };
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "catalan_mul_succ(3) should state mul (succ 3) (catalan 3) = choose (add 3 3) 3"
+    );
+
+    let twenty = f.num(20);
+    assert!(f.k.def_eq(lhs, twenty), "4 * catalan 3 must reduce to 20");
+    assert!(f.k.def_eq(rhs, twenty), "choose 6 3 must reduce to 20");
+
+    assert!(
+        f.k.axiom_footprint(p.catalan_mul_succ).is_empty(),
+        "catalan_mul_succ must rest on zero axioms"
+    );
+}
+
+/// Finite set operations (`nat_prelude/finite_set.rs`) compute the right
+/// membership on a small concrete instance: singleton predicates `A = {0}`,
+/// `B = {1}`, and `C = {0}` (so `A ∩ C` has a nonempty positive case, unlike
+/// the disjoint `A ∩ B`). This is the mandatory concrete instance for the
+/// curriculum node `sets` — a characteristic function that type-checks but
+/// computes the wrong membership has an empty axiom footprint and passes
+/// every other sweep in this repository. WITH negative controls throughout.
+#[test]
+fn finite_set_operations_compute_on_a_concrete_pair() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    let singleton = |f: &mut Fixture, elem: ExprId| -> ExprId {
+        let k_fv = f.fresh_fvar();
+        let k = f.kernel().fvar(k_fv);
+        let body = f.beq(k, elem);
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+
+    let a = singleton(&mut f, zero); // A = {0}
+    let b = singleton(&mut f, one); // B = {1}
+    let c = singleton(&mut f, zero); // C = {0}, overlaps A
+
+    // setUnion: A ∪ B = {0, 1}.
+    let union_ab = f.const_app(p.set_union, &[a, b]);
+    let u0 = f.apply(union_ab, &[zero]);
+    let u1 = f.apply(union_ab, &[one]);
+    let u2 = f.apply(union_ab, &[two]);
+    assert!(f.k.def_eq(u0, true_), "0 must be in A union B");
+    assert!(f.k.def_eq(u1, true_), "1 must be in A union B");
+    assert!(f.k.def_eq(u2, false_), "2 must not be in A union B");
+    assert!(
+        !f.k.def_eq(u2, true_),
+        "NEGATIVE: 2 not in A union B must not reduce to true"
+    );
+
+    // setInter: A ∩ B = ∅ (disjoint); A ∩ C = {0} (C = A, overlapping).
+    let inter_ab = f.const_app(p.set_inter, &[a, b]);
+    let iab0 = f.apply(inter_ab, &[zero]);
+    let iab1 = f.apply(inter_ab, &[one]);
+    assert!(f.k.def_eq(iab0, false_), "0 must not be in A inter B");
+    assert!(f.k.def_eq(iab1, false_), "1 must not be in A inter B");
+
+    let inter_ac = f.const_app(p.set_inter, &[a, c]);
+    let iac0 = f.apply(inter_ac, &[zero]);
+    let iac1 = f.apply(inter_ac, &[one]);
+    assert!(f.k.def_eq(iac0, true_), "0 must be in A inter C");
+    assert!(f.k.def_eq(iac1, false_), "1 must not be in A inter C");
+    assert!(
+        !f.k.def_eq(iac0, false_),
+        "NEGATIVE: 0 in A inter C must not reduce to false"
+    );
+
+    // setCompl: complement of A over the ambient {0, 1, 2} probe points.
+    let compl_a = f.const_app(p.set_compl, &[a]);
+    let ca0 = f.apply(compl_a, &[zero]);
+    let ca1 = f.apply(compl_a, &[one]);
+    let ca2 = f.apply(compl_a, &[two]);
+    assert!(f.k.def_eq(ca0, false_), "0 must not be in complement of A");
+    assert!(f.k.def_eq(ca1, true_), "1 must be in complement of A");
+    assert!(f.k.def_eq(ca2, true_), "2 must be in complement of A");
+    assert!(
+        !f.k.def_eq(ca0, true_),
+        "NEGATIVE: 0 not in complement of A must not reduce to true"
+    );
+
+    // setDiff: A \ B = {0}.
+    let diff_ab = f.const_app(p.set_diff, &[a, b]);
+    let d0 = f.apply(diff_ab, &[zero]);
+    let d1 = f.apply(diff_ab, &[one]);
+    let d2 = f.apply(diff_ab, &[two]);
+    assert!(f.k.def_eq(d0, true_), "0 must be in A diff B");
+    assert!(f.k.def_eq(d1, false_), "1 must not be in A diff B");
+    assert!(f.k.def_eq(d2, false_), "2 must not be in A diff B");
+    assert!(
+        !f.k.def_eq(d0, false_),
+        "NEGATIVE: 0 in A diff B must not reduce to false"
+    );
+
+    // Every declaration exercised here rests on zero axioms.
+    for name in [p.set_union, p.set_inter, p.set_compl, p.set_diff, p.subset] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
+
+/// The pointwise Boolean-lattice laws (`nat_prelude/finite_set.rs`) — the
+/// curriculum node `sets`'s own claim, "the same Boolean laws as in
+/// propositional logic, one level up" — apply at a concrete instance and
+/// genuinely compute, not just type-check; WITH the mandatory negative
+/// control: a De Morgan law with its top operator swapped (`union` for
+/// `inter`) type-checks as a STATEMENT exactly like the real one, but is a
+/// different, false Boolean identity, and reusing the real proof against it
+/// must be rejected by the trusted gate.
+#[test]
+fn set_lattice_laws_hold_concretely_and_reject_a_swapped_de_morgan() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    let singleton = |f: &mut Fixture, elem: ExprId| -> ExprId {
+        let k_fv = f.fresh_fvar();
+        let k = f.kernel().fvar(k_fv);
+        let body = f.beq(k, elem);
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+
+    let a = singleton(&mut f, zero); // A = {0}
+    let b = singleton(&mut f, one); // B = {1}
+
+    // `setUnion_comm` applies at a concrete instance, and both sides
+    // genuinely compute the SAME `Bool` (not just type-check the same).
+    let comm_thm = f.k.const_(p.set_union_comm, vec![]);
+    let applied = f.apply(comm_thm, &[a, b, zero]);
+    let inferred =
+        f.k.infer(applied)
+            .unwrap_or_else(|e| panic!("setUnion_comm(A,B,0) should infer: {}", f.explain(&e)));
+    let union_ab = f.const_app(p.set_union, &[a, b]);
+    let union_ba = f.const_app(p.set_union, &[b, a]);
+    let lhs0 = f.apply(union_ab, &[zero]);
+    let rhs0 = f.apply(union_ba, &[zero]);
+    let expected = f.bool_eq(lhs0, rhs0);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "setUnion_comm(A,B,0) should state (A union B) 0 = (B union A) 0"
+    );
+    assert!(f.k.def_eq(lhs0, true_), "0 is in A union B");
+    assert!(f.k.def_eq(rhs0, true_), "0 is in B union A too");
+    assert!(
+        !f.k.def_eq(lhs0, false_),
+        "NEGATIVE: (A union B) 0 must not reduce to false"
+    );
+
+    // `setCompl_involutive` applies at a concrete instance where its shared
+    // value is `false` (1 is not in A).
+    let inv_thm = f.k.const_(p.set_compl_involutive, vec![]);
+    let applied_inv = f.apply(inv_thm, &[a, one]);
+    f.k.infer(applied_inv)
+        .unwrap_or_else(|e| panic!("setCompl_involutive(A,1) should infer: {}", f.explain(&e)));
+    let a1 = f.apply(a, &[one]);
+    assert!(f.k.def_eq(a1, false_), "1 is not in A");
+
+    // NEGATIVE CONTROL: at A={0}, B={1}, point 0 — `compl (union A B) 0` is
+    // `false` (0 IS in A union B), and the TRUE De Morgan law's rhs
+    // `inter (compl A) (compl B) 0` matches (`false`: 0 is in A, so not in
+    // `compl A`, and `inter`'s `false` branch is the fixed constant). The
+    // SWAPPED law (`union` for `inter`) claims `union (compl A) (compl B) 0`,
+    // which is `true` (1 IS in `compl A`, and `union`'s `true` branch
+    // short-circuits) — a genuinely DIFFERENT value. Reusing the REAL
+    // `setCompl_union` proof (of the true, `inter`, statement) against this
+    // swapped statement must be rejected: a checker that admits it is
+    // vacuous.
+    let real_thm = f.k.const_(p.set_compl_union, vec![]);
+    let real_proof_at_point = f.apply(real_thm, &[a, b, zero]);
+
+    let compl_union_ab = f.const_app(p.set_compl, &[union_ab]);
+    let lhs_bad = f.apply(compl_union_ab, &[zero]);
+    let compl_a = f.const_app(p.set_compl, &[a]);
+    let compl_b = f.const_app(p.set_compl, &[b]);
+    let bad_rhs_fn = f.const_app(p.set_union, &[compl_a, compl_b]); // WRONG: should be set_inter
+    let rhs_bad = f.apply(bad_rhs_fn, &[zero]);
+    let bad_stmt = f.bool_eq(lhs_bad, rhs_bad);
+
+    // Confirm the two sides genuinely diverge, so this is a real negative
+    // control and not an accidental tautology.
+    assert!(
+        f.k.def_eq(lhs_bad, false_),
+        "compl(A union B) at 0 is false"
+    );
+    assert!(
+        f.k.def_eq(rhs_bad, true_),
+        "the SWAPPED rhs (union of complements) at 0 is true -- genuinely different"
+    );
+
+    let name = f.name("nc63_set_compl_union_rhs_swapped_to_union");
+    let err = f
+        .declare_theorem(name, bad_stmt, real_proof_at_point)
+        .expect_err("NC63: a De Morgan law with its operator swapped must be rejected");
+    println!(
+        "NC63 (setCompl_union with rhs swapped to union) rejected:\n  {}",
+        f.explain(&err)
+    );
+    assert!(!f.k.environment().contains(name));
+}
+
+/// `Subset` is a partial order (`subset_refl`/`subset_trans`/
+/// `subset_antisymm`), `setDiff` is `setInter` composed with `setCompl`, and
+/// union with a superset is the superset — the `sets` node's own open goal,
+/// joined to `relations-and-functions`. Concrete computation at a singleton
+/// predicate over {0,1,2}, exercising BOTH branches of `subset_antisymm`'s
+/// `Bool.rec` split (`k=0`, where `A 0 = true`; `k=1`, where `A 1 = false`),
+/// WITH a negative control: reusing `setDiff_eq_inter_compl`'s real,
+/// universally-quantified proof term against a statement with its top
+/// operator on the right swapped (`setUnion` for `setInter`) must be
+/// rejected — `setDiff f g` is defeq to `setInter f (setCompl g)` for
+/// ABSTRACT `f g`, never to `setUnion f (setCompl g)`.
+#[test]
+fn subset_is_a_partial_order_and_joins_the_lattice() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let bool_ty = f.bool_ty();
+
+    let singleton = |f: &mut Fixture, elem: ExprId| -> ExprId {
+        let k_fv = f.fresh_fvar();
+        let k = f.kernel().fvar(k_fv);
+        let body = f.beq(k, elem);
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+
+    let a = singleton(&mut f, zero); // A = {0}
+    let b = singleton(&mut f, one); // B = {1}
+
+    // `0 < 3` and `1 < 3`, built as `Le` witnesses (`Lt x y := Le (succ x) y`).
+    let hk0 = {
+        let sum = f.add(one, two);
+        let sum_eq = f.refl(sum);
+        f.lemma(p.le_intro, &[one, three, two, sum_eq])
+    };
+    let hk1 = {
+        let sum = f.add(two, one);
+        let sum_eq = f.refl(sum);
+        f.lemma(p.le_intro, &[two, three, one, sum_eq])
+    };
+
+    // subset_refl / subset_trans: concrete instances must infer.
+    let refl_proof = f.lemma(p.subset_refl, &[a, three]);
+    f.k.infer(refl_proof).expect("subset_refl should infer");
+    let trans_proof = f.lemma(p.subset_trans, &[a, a, a, three, refl_proof, refl_proof]);
+    f.k.infer(trans_proof).expect("subset_trans should infer");
+
+    // subset_antisymm on A, A (mutually a subset of itself via subset_refl):
+    // pointwise equal everywhere. Evaluate at k=0 (A 0 = true, exercising the
+    // `Bool.rec` split's TRUE branch) and k=1 (A 1 = false, the FALSE branch).
+    let antisymm_proof = f.lemma(p.subset_antisymm, &[a, a, three, refl_proof, refl_proof]);
+    let eq_at_0 = f.apply(antisymm_proof, &[zero, hk0]);
+    f.k.infer(eq_at_0)
+        .expect("subset_antisymm at k=0 should infer");
+    let a0 = f.apply(a, &[zero]);
+    assert!(f.k.def_eq(a0, true_), "A 0 must compute to true");
+    let eq_at_1 = f.apply(antisymm_proof, &[one, hk1]);
+    f.k.infer(eq_at_1)
+        .expect("subset_antisymm at k=1 should infer");
+    let a1 = f.apply(a, &[one]);
+    assert!(f.k.def_eq(a1, false_), "A 1 must compute to false");
+
+    // setDiff_eq_inter_compl: A \ B at 0 must equal A ∩ (compl B) at 0, and
+    // both must compute to `true` (0 is in A, 0 is not in B).
+    let diff_ab = f.const_app(p.set_diff, &[a, b]);
+    let diff_ab_0 = f.apply(diff_ab, &[zero]);
+    let compl_b = f.const_app(p.set_compl, &[b]);
+    let inter_a_complb = f.const_app(p.set_inter, &[a, compl_b]);
+    let inter_a_complb_0 = f.apply(inter_a_complb, &[zero]);
+    assert!(
+        f.k.def_eq(diff_ab_0, inter_a_complb_0),
+        "setDiff a b 0 must be defeq to setInter a (setCompl b) 0"
+    );
+    assert!(
+        f.k.def_eq(diff_ab_0, true_),
+        "0 is in A and not in B, so A diff B at 0 must compute to true"
+    );
+
+    // union_eq_right_of_subset: Subset A A n (via subset_refl) gives
+    // setUnion A A k = A k at every k < n.
+    let union_eq_proof = f.lemma(p.union_eq_right_of_subset, &[a, a, three, refl_proof]);
+    let union_eq_at_0 = f.apply(union_eq_proof, &[zero, hk0]);
+    f.k.infer(union_eq_at_0)
+        .expect("union_eq_right_of_subset at k=0 should infer");
+    let union_aa = f.const_app(p.set_union, &[a, a]);
+    let union_aa_0 = f.apply(union_aa, &[zero]);
+    assert!(
+        f.k.def_eq(union_aa_0, a0),
+        "setUnion a a 0 must compute to a 0"
+    );
+
+    // subset_union_left / subset_inter_left: concrete instances must infer,
+    // and (for union_left) the produced membership proof must check against
+    // the real `setUnion a b 0 = true` obligation.
+    let union_left_proof = f.lemma(p.subset_union_left, &[a, b, three]);
+    let mem_a0 = f.bool_refl(a0);
+    let union_left_at_0 = f.apply(union_left_proof, &[zero, hk0, mem_a0]);
+    let union_ab = f.const_app(p.set_union, &[a, b]);
+    let union_ab_0 = f.apply(union_ab, &[zero]);
+    let inferred_union_left =
+        f.k.infer(union_left_at_0)
+            .expect("subset_union_left at k=0 should infer");
+    let expected_union_left = f.bool_eq(union_ab_0, true_);
+    assert!(f.k.def_eq(inferred_union_left, expected_union_left));
+
+    let inter_left_proof = f.lemma(p.subset_inter_left, &[a, b, three]);
+    f.k.infer(inter_left_proof)
+        .expect("subset_inter_left should infer");
+
+    // NEGATIVE CONTROL: reuse `setDiff_eq_inter_compl`'s real, fully
+    // quantified proof term against a statement with the right-hand
+    // operator swapped (`setUnion` in place of `setInter`) — a genuinely
+    // different identity for abstract `f g k`, and the kernel must reject
+    // the reuse.
+    let real_proof = f.const_app(p.set_diff_eq_inter_compl, &[]);
+    let wrong_ty = {
+        let pred_ty = f.arrow(nat, bool_ty);
+        let f_fv = f.fresh_fvar();
+        let fp = f.kernel().fvar(f_fv);
+        let g_fv = f.fresh_fvar();
+        let gp = f.kernel().fvar(g_fv);
+        let k_fv = f.fresh_fvar();
+        let kp = f.kernel().fvar(k_fv);
+
+        let diff_fg = f.const_app(p.set_diff, &[fp, gp]);
+        let lhs = f.apply(diff_fg, &[kp]);
+        let compl_g = f.const_app(p.set_compl, &[gp]);
+        let union_f_complg = f.const_app(p.set_union, &[fp, compl_g]); // swapped
+        let rhs = f.apply(union_f_complg, &[kp]);
+        let eq = f.bool_eq(lhs, rhs);
+
+        let with_k = f.pi_fv(k_fv, nat, eq);
+        let with_g = f.pi_fv(g_fv, pred_ty, with_k);
+        f.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let wrong_name = f.name("setDiff_is_secretly_setUnion_compl");
+    let error = f
+        .declare_theorem(wrong_name, wrong_ty, real_proof)
+        .expect_err("setDiff must not be defeq to setUnion(f, compl g) for abstract f g k");
+    assert!(matches!(
+        error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
+
+    // Every declaration exercised here rests on zero axioms.
+    for name in [
+        p.subset_refl,
+        p.subset_trans,
+        p.subset_antisymm,
+        p.set_diff_eq_inter_compl,
+        p.union_eq_right_of_subset,
+        p.subset_union_left,
+        p.subset_inter_left,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
 }

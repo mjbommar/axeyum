@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-theorem-correspondence",
+  "id": "X:varignon-two-independent-formalizations",
+  "title": "Varignon's theorem is in this ledger twice, by two machines that share no step",
+  "correspondence_kind": "independent-formalization",
+  "endpoints": [
+    "F:geometry-varignon-midpoint-parallelogram",
+    "F:geometry-varignon-over-constructed-reals"
+  ],
+  "claim": "Both facts are Varignon's theorem: the midpoints of the four sides of any quadrilateral form a parallelogram, with no non-degeneracy hypothesis on either side. They were established by routes that share nothing — one is a CAS certificate over SMT `Real` in the NRA fragment, the other a kernel-Lean proof over `CPoint = CReal × CReal` where the conclusion is `CPoint.Equiv`, a defined Prop relation, and not `Eq`. Neither proof cites the other and neither could: the statements are in different languages over different carriers with different equalities.",
+  "transport": "Interpret the SMT `Real` variables as `CReal` points and the componentwise rational midpoint as `CPoint.midpoint`, then replace `=` by `CPoint.Equiv`. The classical statement is the common source both formalizations render.",
+  "derivation_status": "route-recorded",
+  "external_status": "classical",
+  "via": [
+    {
+      "step": "CPoint is CReal × CReal with componentwise CPoint.Equiv, so an NRA statement over ordered pairs of reals has a CPoint reading. Nothing in the ledger states this correspondence of carriers",
+      "ref": null
+    },
+    {
+      "step": "CReal.Equiv is the Bishop equivalence and is coarser than Eq, so an equality proved over SMT Real does not transport to CReal without choosing which relation the conclusion uses. No fact records the choice",
+      "ref": null
+    }
+  ],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-correspondence-model (2026-08-24). Both facts were already settled; nothing in the ledger said they were the same theorem, and the ledger's own summary line counts them as two.",
+    "sources": [
+      "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+      "artifacts/facts/F-geometry-varignon-over-constructed-reals.json"
+    ],
+    "prior_art": [
+      {
+        "who": "Pierre Varignon",
+        "what": "the midpoint quadrilateral of any quadrilateral is a parallelogram",
+        "year": 1731,
+        "where": "Élémens de mathématique, posthumous",
+        "attribution": "standard attribution; this lane did not consult the primary source."
+      }
+    ]
+  },
+  "notes": "This is the kind with no structural check available, and the validator does not pretend otherwise. `carrier-transport` is checked by erasing the carrier and comparing strings; here the two formal statements are SMT-LIB and a Lean type, so there is nothing to compare. What IS checked is the one thing this kind asserts: the two facts must be on DIFFERENT `proof_route`s (`cas-certificate` and `kernel-lean`). Two facts on the same route are one formalization recorded twice, and the gate refuses them.\n\nWhy it is worth recording anyway: the ledger already reports how many evidence rows were re-derived by two or more independent checkers, and treats that as an assurance measure. This is the same measure one level up — a whole theorem reached twice by disjoint machinery — and until now the data model had no way to notice it. Varignon is currently the ONLY such pair: the ledger holds ten NRA geometry facts and five CPoint ones, and Varignon is the sole overlap.\n\nBoth `via` steps have a `null` ref. That is the finding, not a gap in this file: there is no fact stating how CPoint relates to a pair of SMT reals, and no fact recording why `CPoint.Equiv` is the right conclusion relation. Writing them is what would move this to `mechanized-here`."
+}

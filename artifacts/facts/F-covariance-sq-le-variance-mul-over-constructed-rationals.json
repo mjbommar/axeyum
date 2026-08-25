@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:covariance-sq-le-variance-mul-over-constructed-rationals",
+  "title": "The probabilistic Cauchy-Schwarz inequality over the constructed rationals: cov(X,Y)^2 <= var(X)*var(Y), in squared form",
+  "statement": "For random variables X, Y on a finite outcome space of size n with weights p forming a probability distribution (Rat.IsDistribution p n), the squared covariance is bounded by the product of the variances: covariance(X,Y,p,n)^2 <= variance(X,p,n) * variance(Y,p,n), with <= Rat.le and the arithmetic Rat.mul over the constructed (normalised num/den pair) rationals. THIS IS THE SQUARED FORM AND IT IS NOT A WEAKENING, for the same reason CPoint.cauchy_schwarz records: the familiar |cov(X,Y)| <= sqrt(var(X)*var(Y)) requires a square root, and this kernel's Rat carries no Rat.sqrt (only integer square roots exist elsewhere in the library), so the absolute-value/sqrt form is not statable over this carrier at all, not merely inconvenient. The squared form is what every downstream estimate (Chebyshev, the weak law of large numbers scaffolding in this same prelude) actually uses. covariance is defined as E[XY] - E[X]E[Y] and variance as covariance(X,X); the proof does not go through an abstract inner-product-space Cauchy-Schwarz lemma at all -- it is a direct discriminant argument on Var[tX+Y] >= 0 for every rational t, with a three-way case split on whether variance X and variance Y vanish. Equality throughout is Eq on Rat, a normalised pair, never a setoid relation.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : ((x2 : AxNat) -> Rat)) -> ((x3 : AxNat) -> ((x4 : Rat.IsDistribution x2 x3) -> Rat.le (Rat.mul (Rat.covariance x0 x1 x2 x3) (Rat.covariance x0 x1 x2 x3)) (Rat.mul (Rat.variance x0 x2 x3) (Rat.variance x1 x2 x3)))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.covariance_sq_le_variance_mul",
+      "kind": "kernel-term",
+      "supports": "`Rat.covariance_sq_le_variance_mul` is admitted with exactly the type in formal.statement. It composes `Rat.covariance_sq_le_variance_mul_of_pos` (the case `0 < variance X p n`, closed by instantiating `Rat.variance_scaled_add_nonneg` -- `Var[tX+Y] >= 0` -- at `t := -cov * inv(var X)` and multiplying through) with `Rat.covariance_sq_le_variance_mul_of_zero_zero` (the case both variances vanish, closed without any inverse by instantiating the same nonnegativity fact at `t := one` and `t := neg one`) and a symmetric role-swapped call for `variance X p n = 0 < variance Y p n`. This is the DISCRIMINANT proof of Cauchy-Schwarz, not a transport of `CPoint.cauchy_schwarz`: nothing in this proof mentions CPoint, CReal or Lagrange's identity, and nothing in CPoint.cauchy_schwarz's proof mentions covariance or variance.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_probability_toolkit_is_axiom_free (reads the declared type of every probability-toolkit name including covariance_sq_le_variance_mul from the kernel environment, asserts it is a checked Theorem, and asserts its axiom_footprint is empty)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_rat_prelude return Err and the test fail)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_probability_toolkit_is_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs",
+      "notes": "Run 2026-08-24: exit 0 (`test result: ok. 1 passed; 0 failed`). Negative control run the same way against the nonexistent test name `the_probability_toolkit_is_axiom_free_NONEXISTENT` exits 1 (the filter matches zero tests, `running 0 tests ... ok`, which the grep pattern does not match). HONEST GAP, stated so it is not assumed away: unlike `CPoint.cauchy_schwarz`'s fact, this one has NO committed test that pins the exact rendered type string with `assert_eq!` the way `cauchy_schwarz_statement_is_exact` and `lagrange_identity_statement_is_exact` do for their theorems -- `the_probability_toolkit_is_axiom_free` checks declaration presence, Theorem-hood and an empty axiom footprint, which does not by itself distinguish this statement from a same-shaped, same-footprint theorem with (for instance) the two sides of the inequality swapped. `formal.statement` above was obtained by direct kernel inspection -- building `Rat` prelude and calling `Kernel::render_lean` on the declared type of `covariance_sq_le_variance_mul` -- rather than by an existing pinned test; the crate this would live in (`crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs`) was out of scope for this lane, which was constrained to `artifacts/`. Adding a `covariance_sq_le_variance_mul_statement_is_exact` test analogous to the CPoint ones would close this gap and is a natural next step for a lane with `crates/` in scope."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-capability-assurance (2026-08-24), crates/axeyum-lean-kernel/src/rat_prelude/probability.rs. This fact was written by lane agent-cauchy-schwarz-correspondence (2026-08-24) as the prerequisite for a theorem correspondence to CPoint.cauchy_schwarz -- the theorem was already proved and settled in the kernel; nothing here is new mathematics, only the missing fact-ledger entry.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "Augustin-Louis Cauchy",
+        "what": "the inequality for finite sums, of which the probabilistic (covariance) form is a standard textbook corollary via the L^2 inner product <X,Y> := E[XY] on random variables",
+        "year": 1821,
+        "where": "Cours d'Analyse de l'Ecole Royale Polytechnique, Note II",
+        "attribution": "standard attribution; this lane did not consult the primary source. The probabilistic form covariance(X,Y)^2 <= var(X)var(Y) is textbook probability theory and is not separately attributed. The kernel proof here does NOT go through an abstract inner-product-space lemma; it is a direct discriminant argument specific to Var[tX+Y] >= 0."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred. (1) THE NORM/ABSOLUTE-VALUE FORM: |cov(X,Y)| <= sqrt(var(X)*var(Y)). Rat has no Rat.sqrt in this kernel, so it is not statable over this carrier, exactly as CPoint.cauchy_schwarz's own fact records for CReal. (2) THE EQUALITY CASE: nothing here characterises when cov(X,Y)^2 = var(X)*var(Y) (classically: X and Y affinely dependent). (3) THE CORRELATION COEFFICIENT: no division by sqrt(var(X)*var(Y)) is formed, so no statement of the form '-1 <= corr(X,Y) <= 1' exists here -- Rat.inv is total but there is still no square root to divide by. (4) INDEPENDENCE: IsDistribution is the only hypothesis; nothing about X or Y being independent, or even uncorrelated, is assumed or needed -- this is the general inequality, not the zero-covariance special case PairwiseUncorrelated already names elsewhere in this prelude.\n\nThe proof is constructive throughout (no Classical.em, no propext, no funext, no Quot.sound), matching the rest of this prelude.\n\nexternal_status is `proved`: formalization of a classical, textbook inequality, not discovery. What is locally notable is only that this repository proves the SAME inequality shape (X.Y-style squared Cauchy-Schwarz) twice, over two different carriers and by two different arguments, and until this fact existed there was no ledger entry making the second occurrence visible at all."
+}

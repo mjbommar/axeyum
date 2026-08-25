@@ -28,6 +28,20 @@ INT_FIB_OF_NONNEG_FACT = "F:ml430-int-fib-of-nonneg-438018c5"
 NAT_FIB_POS_FACT = "F:ml430-nat-fib-pos-9e67bd8e"
 NAT_FIB_EQ_ZERO_FACT = "F:ml430-nat-fib-eq-zero-61879073"
 INT_FIB_EQ_ZERO_FACT = "F:ml430-int-fib-eq-zero-8193c7cb"
+# `authoritative-mathlib-modeq-family-v1` (registered 2026-08-25 as
+# `authoritative-mathlib-nat-modeq-family-v1`, merged the same day into the
+# Int.ModEq operation under this id) makes both of these `open` and
+# dependency-ready on the LIVE ledger, so `frontier_module.load()` now returns
+# a `facts` dict where they are unconditionally admissible. Its driver,
+# `axeyum-lean-import/modeq-family-multi-target-v1`, is dispatched through
+# `scripts/check-autogenesis-nat-modeq-family.py` in production, not through
+# `executor.build_receipt()` -- so left unneutralized, `selected_inputs()`
+# picks one of these instead of the fact each test means to exercise, and
+# `build_receipt()` correctly refuses it as an unsupported driver. Same
+# purpose as the rest of this settle list: keep facts this suite does not
+# intend to dispatch out of the way of the one it does.
+NAT_MODEQ_SYMM_FACT = "F:ml430-nat-modeq-symm-0a3d4d18"
+NAT_MODEQ_TRANS_FACT = "F:ml430-nat-modeq-trans-ef9d1c46"
 
 
 def settle_reflexivity_fact(facts):
@@ -46,6 +60,8 @@ def settle_reflexivity_fact(facts):
         NAT_FIB_POS_FACT,
         NAT_FIB_EQ_ZERO_FACT,
         INT_FIB_EQ_ZERO_FACT,
+        NAT_MODEQ_SYMM_FACT,
+        NAT_MODEQ_TRANS_FACT,
     ):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"
@@ -431,6 +447,81 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
         )
         checked = checker.check_fact(after, lambda _operation: observation)
         self.assertEqual(checked["operation_id"], operation["id"])
+
+    def test_modeq_family_multi_target_delta_binds_one_target_and_refuses_relabel(
+        self,
+    ):
+        executor = MODULE.load_module(
+            "executor_for_modeq_family_transaction_test", MODULE.EXECUTOR_SCRIPT
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_modeq_family_transaction_test", executor.FRONTIER_SCRIPT
+        )
+        facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
+        target = copy.deepcopy(facts[NAT_MODEQ_SYMM_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[NAT_MODEQ_SYMM_FACT] = target
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
+        self.assertEqual(before["id"], NAT_MODEQ_SYMM_FACT)
+        observation = executor.expected_modeq_family_target_observation(
+            operation, before
+        )
+        execution_receipt = executor.build_receipt(
+            frontier=frontier,
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="8" * 40,
+            observation=observation,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution_receipt,
+            operation=operation,
+            registry=registry,
+        )
+        after = transaction["authoritative_write"]["after_fact"]
+        self.assertEqual(after["proof_route"], "kernel-lean")
+        self.assertEqual(after["axiom_footprint"], [])
+        binding = after["evidence"][0]["checker_operation"]
+        self.assertEqual(
+            binding["target_definition"],
+            "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqSymm",
+        )
+        self.assertEqual(binding["target_fact_id"], NAT_MODEQ_SYMM_FACT)
+        self.assertEqual(binding["proof_sha256"], observation["proof_sha256"])
+        checker = MODULE.load_module(
+            "fact_checker_for_modeq_family_transaction_test",
+            MODULE.FACT_OPERATION_SCRIPT,
+        )
+        checked = checker.check_fact(
+            after, lambda _operation, fact=None: observation
+        )
+        self.assertEqual(checked["operation_id"], operation["id"])
+
+        # The hard-constraint guard: a receipt relabeled (and re-signed, so
+        # it is self-consistent) to a sibling target's fact_id must still be
+        # refused by `build_authoritative_transaction`'s own
+        # `identity.fact_id != before_fact.id` check -- independent of
+        # `verify_receipt`, which a caller could otherwise be tempted to
+        # treat as the only line of defense.
+        forged = copy.deepcopy(execution_receipt)
+        forged["identity"]["fact_id"] = NAT_MODEQ_TRANS_FACT
+        unsigned = dict(forged)
+        unsigned.pop("execution_sha256", None)
+        forged["execution_sha256"] = executor.digest(unsigned)
+        with self.assertRaisesRegex(MODULE.TransactionError, "does not bind"):
+            MODULE.build_authoritative_transaction(
+                before_fact=before,
+                execution=forged,
+                operation=operation,
+                registry=registry,
+            )
 
     def test_checked_theorem_receipt_delta_retains_source_and_proof_identities(self):
         executor = MODULE.load_module(

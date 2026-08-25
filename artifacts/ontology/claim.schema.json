@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://axeyum.dev/schema/claim.schema.json",
   "title": "Axeyum claim ledger record",
-  "description": "One mathematical claim as a first-class artifact joining the knowledge graph (concepts, prerequisites, epistemic status) to machine-checked evidence (witnesses, certificates, checkers). Untrusted search proposes; recorded checkers dispose. A claim's epistemic_status uses the math-education vocabulary verbatim so the two corpora share one epistemics.",
+  "description": "One mathematical claim as a first-class artifact joining a topic citation (concepts, prerequisites, epistemic status) to machine-checked evidence (witnesses, certificates, checkers). Untrusted search proposes; recorded checkers dispose.\n\nADR-0553: `concept_refs` are CITATIONS. They name a graph and an id and nothing resolves them, here or anywhere. Until 2026-08-24 `graph` was an enum whose only value was `math-education`, `concept_refs` was required, `resolved` was required on every ref, and `provenance.graph_pin` carried that repository's 40-hex commit -- so no claim could be recorded in this repository without asserting a resolution against a sibling checkout at a pinned revision, and all 104 committed claims carried the same SHA. A claim must stand on its `formal` block and its `evidence`; the citation is gloss.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -45,7 +45,7 @@
         "conjectured",
         "open"
       ],
-      "description": "math-education graph/vocab semantics, verbatim: axiom=assumed; proved=general-case proof; computed=established by calculation or exhaustive check over a stated range; empirical=observed; conjectured=believed, unproved; open=nobody knows."
+      "description": "axiom=assumed; proved=general-case proof; computed=established by calculation or exhaustive check over a stated range; empirical=observed; conjectured=believed, unproved; open=nobody knows. Shared verbatim with `fact.schema.json`'s `epistemic_status` (which adds `refuted`), so the two ledgers report one epistemics."
     },
     "novelty": {
       "enum": [
@@ -93,21 +93,20 @@
     },
     "concept_refs": {
       "type": "array",
-      "description": "Anchors into the math-education knowledge graph. Follows that repo's resolution policy: a ref may be pending (target not yet written) but a pending ref must never be asserted as resolved, and a release gate requires resolution or removal.",
+      "description": "Unresolved topic citations. A `graph` label and a `ref` id; no path, no revision, and no resolution claim. `resolved` was removed by ADR-0553 along with `provenance.graph_pin`: with no pin, `resolved: true` was an assertion about an external artifact that nothing could check, which is worse than an honest citation.",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": [
           "graph",
           "ref",
-          "relation",
-          "resolved"
+          "relation"
         ],
         "properties": {
           "graph": {
-            "enum": [
-              "math-education"
-            ]
+            "description": "A free-text label naming where the id comes from. Deliberately NOT an enum: a one-value enum made citing that one corpus mandatory, which is how a gloss field became a dependency.",
+            "type": "string",
+            "minLength": 1
           },
           "ref": {
             "type": "string",
@@ -123,10 +122,6 @@
               "uses-technique"
             ],
             "description": "instance-of: the claim instantiates the concept. exercises: deciding it exercises the concept at that encounter depth. refutes: machine evidence against a misconception. frontier-of: the claim sits on the open frontier of the concept. uses-technique: the proof/search uses the technique."
-          },
-          "resolved": {
-            "type": "boolean",
-            "description": "True only if the target id exists in the pinned graph snapshot named by provenance.graph_pin."
           },
           "note": {
             "type": "string"
@@ -230,11 +225,6 @@
               "description": "True if the working tree had uncommitted changes at build time. A dirty build cannot be reproduced from the commit alone, so a regenerable evidence row built dirty is recorded honestly rather than silently."
             }
           }
-        },
-        "graph_pin": {
-          "type": "string",
-          "description": "40-hex commit of the math-education repo against which concept_refs.resolved was evaluated.",
-          "pattern": "^[0-9a-f]{40}$"
         },
         "prior_art": {
           "type": "array",

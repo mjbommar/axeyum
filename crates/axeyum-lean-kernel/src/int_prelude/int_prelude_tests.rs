@@ -142,6 +142,7 @@ fn int_prelude_admits_all_declarations() {
         p.gcd,
         p.coprime,
         p.is_quadratic_residue,
+        p.is_comm_ring,
     ] {
         assert!(
             matches!(
@@ -181,8 +182,10 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 122] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 124] {
     [
+        p.int_is_comm_ring,
+        p.mul_eq_zero,
         p.fib_cassini,
         p.is_quadratic_residue_one,
         p.is_quadratic_residue_mul,
@@ -1913,3 +1916,180 @@ fn wilson_iff_states_the_full_equivalence() {
 
 /// The pinned type of [`IntPrelude::wilson_iff`].
 const WILSON_IFF_TYPE: &str = "((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> Iff (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x0) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x0))))) (Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one))))";
+
+/// **`Int.mul_eq_zero` computes at a concrete zero product, and the kernel
+/// REFUSES reusing `Nat.mul_eq_zero` (ℕ's own integral-domain proof) at the
+/// residue `2·3 ≡ 0 (mod 6)`.**
+///
+/// This is the negative control the `rings` curriculum node's "exhibit a
+/// commutative ring that is not an integral domain" asks for (`ring.rs`'s doc
+/// comment: ℤ/6, `2·3 ≡ 0` with neither factor `0`), stated at the level this
+/// development actually has rather than a full `Nat.IsCommRingOn` bundle for
+/// ℤ/n (which does not exist here — building one would need multiplicative
+/// associativity/distributivity mod `n`, a separate development). What's
+/// checked:
+///
+/// - `Int.mul_eq_zero` genuinely COMPUTES: applied at the concrete zero
+///   product `0·5`, the kernel accepts `Or (0=0) (5=0)`.
+/// - `2·3 mod 6` genuinely reduces to `0` — ℤ/6 has a real zero product here,
+///   not a stated-but-unverified one.
+/// - `2·3` itself (without the `mod 6`) does NOT reduce to `0` — the two
+///   hypotheses are genuinely different propositions, not the same fact
+///   under different names.
+/// - Reusing `Nat.mul_eq_zero`'s own constant at `2, 3`, supplying the mod-6
+///   fact where it demands the literal `Nat.mul 2 3 = Nat.zero`, is refused
+///   by the trusted gate — a type mismatch, not merely an unproved goal.
+///   `Int.IsCommRing`/`Nat`'s ring structure does not hand ℤ/6 the
+///   integral-domain property for free, which is exactly the content the
+///   `rings` node wants a learner to see.
+#[test]
+fn mul_eq_zero_computes_and_the_mod_six_reuse_is_refused() {
+    use crate::env::Declaration;
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+
+    // --- positive: `Int.mul_eq_zero 0 5 (h : 0*5=0) : Or (0=0) (5=0)`. -----
+    let int_ty = k.const_(p.z, vec![]);
+    let zero = numeral(&mut k, &p, 0);
+    let five = numeral(&mut k, &p, 5);
+    let mul = k.const_(p.mul, vec![]);
+    let product = {
+        let e = k.app(mul, zero);
+        k.app(e, five)
+    };
+    let eq_int = k.const_(p.logic.eq, vec![level_one]);
+    let refl_int = k.const_(p.logic.eq_refl, vec![level_one]);
+    let h_val = {
+        let r = k.app(refl_int, int_ty);
+        k.app(r, zero)
+    };
+    assert!(
+        k.def_eq(product, zero),
+        "0*5 must reduce to 0 for the h : 0*5=0 witness to check"
+    );
+
+    let mul_eq_zero = k.const_(p.mul_eq_zero, vec![]);
+    let applied = {
+        let e = k.app(mul_eq_zero, zero);
+        let e = k.app(e, five);
+        k.app(e, h_val)
+    };
+    let a_eq_zero_ty = {
+        let e = k.app(eq_int, int_ty);
+        let e = k.app(e, zero);
+        k.app(e, zero)
+    };
+    let b_eq_zero_ty = {
+        let e = k.app(eq_int, int_ty);
+        let e = k.app(e, five);
+        k.app(e, zero)
+    };
+    let or_ty = k.const_(p.logic.or, vec![]);
+    let disj_ty = {
+        let e = k.app(or_ty, a_eq_zero_ty);
+        k.app(e, b_eq_zero_ty)
+    };
+    let name = k.name_str(anon, "Check.mul_eq_zero_at_zero_five");
+    let accepted = k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: disj_ty,
+        value: applied,
+    });
+    assert!(
+        accepted.is_ok(),
+        "Int.mul_eq_zero must compute at 0*5=0: {accepted:?}"
+    );
+
+    // --- ℤ/6 genuinely has this zero product, computed. --------------------
+    let two = numeral_nat(&mut k, &p, 2);
+    let three = numeral_nat(&mut k, &p, 3);
+    let six = numeral_nat(&mut k, &p, 6);
+    let zero_nat = numeral_nat(&mut k, &p, 0);
+    let nat_mul = k.const_(p.nat.mul, vec![]);
+    let two_three = {
+        let e = k.app(nat_mul, two);
+        k.app(e, three)
+    };
+    let nat_mod = k.const_(p.nat.mod_, vec![]);
+    let residue = {
+        let e = k.app(nat_mod, two_three);
+        k.app(e, six)
+    };
+    assert!(
+        k.def_eq(residue, zero_nat),
+        "2*3 mod 6 must reduce to 0 -- ZZ/6 genuinely has this zero product"
+    );
+    assert!(
+        !k.def_eq(two_three, zero_nat),
+        "2*3 itself must NOT reduce to 0 -- this is what makes reusing \
+         Nat.mul_eq_zero at the residue a type error, not merely unproved"
+    );
+
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+    let eq_nat = k.const_(p.nat.logic.eq, vec![level_one]);
+    let refl_nat = k.const_(p.nat.logic.eq_refl, vec![level_one]);
+    let residue_h_ty = {
+        let e = k.app(eq_nat, nat_ty);
+        let e = k.app(e, residue);
+        k.app(e, zero_nat)
+    };
+    let residue_h_val = {
+        let r = k.app(refl_nat, nat_ty);
+        k.app(r, residue)
+    };
+    let sanity_name = k.name_str(anon, "Check.residue_eq_zero");
+    let sanity = k.add_declaration(Declaration::Theorem {
+        name: sanity_name,
+        uparams: vec![],
+        ty: residue_h_ty,
+        value: residue_h_val,
+    });
+    assert!(
+        sanity.is_ok(),
+        "2*3 mod 6 = 0 must check by computation alone: {sanity:?}"
+    );
+
+    // --- NEGATIVE CONTROL: reuse `Nat.mul_eq_zero` (ZZ's own integral-domain
+    // proof) at 2,3, supplying the mod-6 witness where it demands the
+    // LITERAL `Nat.mul 2 3 = Nat.zero`.
+    let nat_mul_eq_zero = k.const_(p.nat.mul_eq_zero, vec![]);
+    let bad_body = {
+        let e = k.app(nat_mul_eq_zero, two);
+        let e = k.app(e, three);
+        k.app(e, residue_h_val)
+    };
+    let two_eq_zero_ty = {
+        let e = k.app(eq_nat, nat_ty);
+        let e = k.app(e, two);
+        k.app(e, zero_nat)
+    };
+    let three_eq_zero_ty = {
+        let e = k.app(eq_nat, nat_ty);
+        let e = k.app(e, three);
+        k.app(e, zero_nat)
+    };
+    let nat_or = k.const_(p.nat.logic.or, vec![]);
+    let bad_ty = {
+        let e = k.app(nat_or, two_eq_zero_ty);
+        k.app(e, three_eq_zero_ty)
+    };
+    let bad_name = k.name_str(anon, "Check.mod_six_reuses_the_integral_domain_proof");
+    let bad_accepted = k.add_declaration(Declaration::Theorem {
+        name: bad_name,
+        uparams: vec![],
+        ty: bad_ty,
+        value: bad_body,
+    });
+    assert!(
+        bad_accepted.is_err(),
+        "the trusted gate ACCEPTED reusing Nat.mul_eq_zero's own constant \
+         with a mod-6 hypothesis standing in for a literal-zero one -- ZZ/6 \
+         would wrongly inherit the integral-domain property: {bad_accepted:?}"
+    );
+}

@@ -63,6 +63,23 @@ Two consequences that change how you work, not just how you feel about it:
   dies. Six of seven guards in one suite were removable with everything still
   green, because they all rejected through one shared check.
 
+  **Re-measured 2026-08-25 over the whole ledger, and the picture is better —
+  but check the METHOD before quoting either number, because the two
+  measurements do not share a denominator.** Across 488 facts and 590
+  `checker_command`s: 464 carry an explicitly discriminating shape (`grep -c`
+  consuming the pipe and a tested count, `--require-axiom-free`,
+  `--expect-axioms`, `--check`, `diff`), and the remaining 126 are
+  `cargo test` / `cargo run` whose status depends on the suite passing.
+
+  **Those 126 are NOT the failure mode**, and I nearly reported them as such.
+  A `cargo test --test X` exits nonzero when a test fails, so it does depend on
+  the finding — the real vacuity risk is a suite that compiles to ZERO tests
+  behind a feature gate and prints `running 0 tests ... ok`. All 5 distinct
+  `(crate, --test suite)` pairs the ledger names are UNGATED, verified by
+  reading each file's head for `#![cfg(feature`, so none can pass vacuously
+  that way. The lesson is the one this section already teaches, aimed at
+  myself: a crude classifier that flags a whole shape is not a measurement.
+
 ## Working Stance — we ship toward Z3 + Lean parity
 
 This is an ambitious, **achievable** build, and the job is to *complete it* — one
@@ -596,6 +613,46 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   the `__pycache__` trap under Gotchas, which makes hand loops report the
   *previous* mutant's result anyway.
 
+- **TWO LANES CAN EACH BUMP A PINNED COUNT CORRECTLY AND THE MERGE STILL WILL
+  NOT COMPILE.** The standing rule — "recompute by COUNTING the list, never by
+  adding to the old number" — is written for the LANE, and it works: measured
+  2026-08-25, both the chain-rule lane and the series lane landed one
+  declaration each and both correctly took `creal_tests.rs`'s pin from 199 to
+  200 against their own bases.
+
+  Git then merged both array ENTRIES cleanly, because they are different lines,
+  and left the DECLARED size at 200 with 201 entries:
+
+      error[E0308]: mismatched types
+      let expected: [(&str, crate::NameId, &str); 200] = [ ... ]
+
+  The case the rule does not cover is the COORDINATOR merging two correct
+  increments. So recount after every merge that touches a pinned list, not only
+  after a conflicted one — this merge had **zero conflicts**. It happened eight
+  times in one day across `creal_tests.rs` and `nat_prelude_tests.rs`.
+
+  `hooks/pre-push` refuses the push, so it does not reach `main`; the cost is a
+  wasted push attempt, which on this repository is several minutes of battery.
+
+- **AN ABSOLUTE PATH UNDER THE MAIN CHECKOUT SILENTLY EDITS THE MAIN CHECKOUT,
+  EVEN FROM INSIDE A WORKTREE.** A lane working in
+  `.claude/worktrees/agent-<id>/` opened `CLAUDE.md` by its familiar path,
+  `/home/mjbommar/projects/personal/axeyum/CLAUDE.md`, and was reading — and
+  would have been writing — the SHARED checkout, not its own isolated copy. The
+  worktree's whole purpose is that its writes are isolated; an absolute path
+  defeats that without any error.
+
+  It is asymmetric and that is what makes it easy to miss: a shell command is
+  fine, because the lane's cwd IS the worktree and relative paths resolve there.
+  Only the absolute form escapes. The lane caught it before an edit landed in
+  the wrong tree, but it cost exploration turns and it would have looked, to
+  everyone else, like a mystery edit from nowhere.
+
+  So from a worktree, prefix absolute paths with your own worktree root, or use
+  relative paths from cwd. When briefing a lane, say this explicitly — "read
+  your reference files from your own worktree" is not enough, because the lane
+  believes it is doing that.
+
 - **THE SESSION SCRATCHPAD IS SHARED BY EVERY LANE IN THE SESSION, and a
   fixed-name file in it is a shared append point.** `/tmp/claude-1000/<project>/
   <session>/scratchpad` is per SESSION, not per lane, so concurrent lanes write
@@ -757,19 +814,37 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
      `--format=%b` the line before a trailer is BLANK. Measured 2026-08-20:
      reported **1 commit when there were 21**. Use
      `git log --format='%H|%s|%(trailers:key=Agent,valueonly)'`.
-  4. **Reporting an empty `grep` as a negative result.** An empty answer and a
+  4. **Testing a grep PATTERN interactively and trusting it in a script.** On
+     this host `grep` is a shell FUNCTION wrapping `ugrep 7.5.0` in an
+     interactive shell, and plain `/usr/bin/grep` (GNU grep 3.12) everywhere
+     else. They disagree on `\t`: ugrep reads it as a tab in ERE, GNU grep
+     reads it as a literal `t`. Measured 2026-08-25, each with its control:
+
+         printf 'a\tb\n' | /usr/bin/grep -cE 'a\tb'   -> 0   # a real tab: NO match
+         printf 'atb\n'  | /usr/bin/grep -cE 'a\tb'   -> 1   # literal 't': matches
+
+     **54 facts / 68 `checker_command`s matched the inventory's tab-separated
+     output with `\t`**, so each reported a theorem that EXISTS as absent from
+     any script or CI run, while passing when a human ran it by hand. It is
+     fail-closed, so flakiness rather than unsoundness -- but the evidence
+     re-derived nowhere except one interactive shell. Use `[[:space:]]`, and
+     **test every pattern with `/usr/bin/grep` explicitly**. `command -v grep`
+     prints `/usr/bin/grep` under `bash -c` and `grep is a function`
+     interactively, which is the fastest way to tell which one you have.
+
+  5. **Reporting an empty `grep` as a negative result.** An empty answer and a
      wrong query are the same observation. This is the grep-shaped case of the
      coverage trap below; pair the negative with a positive control that MUST
      produce output, in the same command.
-  5. **Fixed-name files in the session scratchpad.** It is per-SESSION, shared by
+  6. **Fixed-name files in the session scratchpad.** It is per-SESSION, shared by
      every lane (see the multi-agent section). `push.log`, `reg.log`, `audit.log`
      collide; prefix with `$AXEYUM_AGENT`.
-  6. **A "did it finish?" check that has never been shown to fire.** Measured
+  7. **A "did it finish?" check that has never been shown to fire.** Measured
      2026-08-20: an end-marker sweep reported `!! NO END MARKER` for two jobs
      that had completed normally — the scripts had never written markers. The
      check was wrong, not the job, and the natural reading was the opposite.
 
-  The rule underneath all six, and the one to apply to any command not on this
+  The rule underneath all seven, and the one to apply to any command not on this
   list: **before believing a result, ask what the command would print if it were
   broken.** If that is what it just printed, it is not evidence.
 
@@ -846,6 +921,20 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   right tool for measurement when several lanes are contending — a sweep that
   queues behind three other lanes is what tempts an agent to background it in the
   first place.
+
+  **AND WHEN THE MEASUREMENT *IS* THE TASK, "do not background it" is not
+  advice a lane can follow.** Ninth stall, 2026-08-25: a lane sent to profile a
+  gate that takes ~500 s per run returned *"I'll stop here and wait for the
+  monitor's completion notification."* It could not do the work without a long
+  run and had been told not to background one, so it did both and reported
+  neither. Telling it harder would not have helped.
+
+  What works is bounding the measurement in the brief instead of forbidding the
+  wait: **"profile a SINGLE invocation"**, and — the part that unlocks it — *"if
+  one full run is too long, profile a REDUCED input and say the numbers are from
+  a reduced run."* A profile of a smaller input still locates the hotspot, and a
+  located hotspot is the deliverable. Give the lane a way to finish, not just a
+  way to fail.
 
 - **A BACKGROUND TASK REPORTED AS EXITED MAY STILL BE RUNNING, AND IT WILL TAX
   EVERY MEASUREMENT YOU TAKE AFTERWARDS.** Found 2026-08-21: a `python3 -` from
@@ -933,6 +1022,80 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   the next three targets share with it; `applicability.fact_ids` is a list and
   nothing ever required length one. Full retrospective:
   `docs/autogenesis/228-capsule-lane-retrospective.md`.
+
+- **`Nat.add` RECURSES ON ITS RIGHT ARGUMENT, so `Nat.add(literal, k)` IS STUCK
+  FOR SYMBOLIC `k` — and it fails by not reducing, not by erroring.** Measured
+  2026-08-25 while normalizing a `CReal` bound: two fusion steps built
+  `Nat.add(8, k)` instead of `Nat.add(k, 8)`, and the term never reduced to
+  `succ^8(k)`. The kernel reported a `TypeMismatch` deep inside an unrelated
+  `Rat.le` cross-multiplication unfold, several rewrites away from the cause.
+
+  What makes it worth its own entry is the SECOND-order damage: the whole
+  construction had been designed so that every `K`-containing accumulator stays
+  the left operand, which keeps the index arithmetic **pure defeq and needs no
+  `Nat.add_assoc`/`Nat.add_comm` at all**. Putting the literal on the left does
+  not merely produce a stuck term — it silently forfeits that property, so the
+  proof would need associativity and commutativity lemmas everywhere it
+  previously needed none.
+
+  The rule: **when a `Nat.add` will be padded, compared, or fused, the symbolic
+  side goes LEFT and the literal RIGHT.** If a term mysteriously will not reduce
+  and the error surfaces far from the arithmetic, check the operand order before
+  anything else.
+
+- **A PRELUDE CAN DECLARE INTO ANOTHER PRELUDE'S NAMESPACE, SO "IS THIS NAME
+  TAKEN?" IS NOT ANSWERED BY READING THE MODULE IT BELONGS IN.** Measured
+  2026-08-25: a lane built an explicit inverse for a bijection on `[0,n)` and
+  named it `Nat.inverseIndex`. That name was already owned by
+  `int_prelude/wilson.rs`, which declares `Nat.inverseIndex` and eight lemmas
+  about it into the **`Nat`** namespace from the **Int** prelude — the modular
+  inverse index from Wilson's theorem, an unrelated function.
+
+  Three things made it expensive, and they compound:
+  - Nothing in `nat_prelude/` mentions the name. The lane was told to check for
+    an existing inverse, did, and looked where the code lives.
+  - **The nat prelude builds fine alone.** `cargo test --lib nat_prelude::` was
+    **66 green with the collision present.** It fires only once a downstream
+    prelude builds on it.
+  - The message names neither the string nor either site: `the Int model must
+    build: DeclarationExists { name: NameId(457) }`, across **230** failures in
+    `arith_model` and `characterization`, none of which mention `Nat` or the
+    file that added it.
+
+  So before naming a declaration, check the **whole** inventory
+  (`prelude_theorem_inventory --include-constructed`, `--release`), not the
+  module you are writing in. And note the asymmetry when you find a clash: the
+  older declaration is usually load-bearing elsewhere, so rename the NEW one.
+
+- **TWO LANES ADDING FUNCTIONS TO ONE RUST FILE PRODUCE A CONFLICT WHERE
+  "KEEP BOTH SIDES" SILENTLY DOES NOT PARSE.** The conflict looks purely
+  additive — no line is changed by both — so concatenating the sides is the
+  obvious resolution and it is wrong. Git's hunk boundaries cut **mid-item**:
+  each side ends with a dangling
+
+      pub(super) fn declare_something(
+
+  whose parameter list is the shared context *after* the hunk, because that
+  boilerplate is byte-identical on both sides and the differ aligns on it.
+  Measured 2026-08-25 in `nat_prelude/finite_set.rs` — three `mismatched
+  closing delimiter` errors — and again in `nat_prelude_tests.rs` with two
+  `#[test] fn` bodies. **`-X patience` does not fix the alignment.** Reordering
+  the sides does not either: there is one shared tail and two dangling
+  signatures.
+
+  The tell is **delimiter balance per hunk side**, and it must count parens and
+  brackets, not just braces — the real failure dangled an open paren.
+  `scripts/lane-merge-additive.py check <file>` reports it and exits 1;
+  `… splice <file> --theirs <ref> --anchor <text>` reconstructs instead, lifting
+  whole items out of the other branch's own file by brace matching. It strips
+  line comments first, because this repository's doc comments are full of
+  `[0,n)` and [`Self::foo`] links that are deliberately unbalanced.
+
+  Two things `splice` does NOT do, and both have bitten: it moves item bodies
+  but **not their call sites** (wire each `declare_*` into its dispatcher
+  yourself), and it replaces the whole file, so **name-list and pin edits from
+  the other side are lost** — re-derive them, and recompute the pin by
+  **counting** the lists.
 
 - **Tools in this repo have lied more often than the solver has been weak.**
   In one session: a corpus gate that ran zero tests for 15 days while exiting 0;

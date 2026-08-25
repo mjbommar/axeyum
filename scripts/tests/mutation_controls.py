@@ -1774,12 +1774,13 @@ SUITES["agent-episode"] = (
 #   tactic with no measured accepted or declined goal is a name. Neither can be
 #   caught by validating fields; both are census properties of the whole file.
 #
-#   `technique` is covered by a HERMETIC fixture (a stand-in sibling checkout
-#   with a patched revision), not by the live `../math-education`. Under this
-#   harness the subject runs from a scratch copy where the real sibling is not
-#   beside it, so a live-sibling test would SKIP here and report the guard as a
-#   survivor -- the "an empty result from a tool never pointed at your subject"
-#   trap, one level up.
+#   The two technique-RESOLUTION anchors are gone (ADR-0553). They covered a
+#   pin against `../math-education` and a stat of its `graph/techniques/*.md`,
+#   both removed with the coupling; their hermetic fixture existed because the
+#   live sibling is not beside a scratch copy, which was the right fix for the
+#   wrong problem -- the guard should not have reached outside the checkout at
+#   all. What replaces them refuses the fields: `uses_technique` takes exactly
+#   `id`, and the overlay may declare no external source.
 SUITES["tactic-catalog"] = (
     "scripts/validate-tactic-catalog.py",
     "scripts.tests.test_validate_tactic_catalog",
@@ -1815,14 +1816,14 @@ SUITES["tactic-catalog"] = (
             "        if False:",
         ),
         (
-            "the technique pin must be the overlay's pin",
-            "        if overlay_pin is not None and revision != overlay_pin:",
-            "        if False:",
+            "uses_technique takes exactly id -- no source, no revision",
+            '    if not isinstance(technique, dict) or set(technique) != {"id"}:',
+            "    if False:",
         ),
         (
-            "a pinned technique must resolve to a file",
-            "            if not target.is_file():",
-            "            if False:",
+            "the overlay may declare no external source",
+            '        if isinstance(source, dict) and source.get("kind", "").startswith("external"):',
+            "        if False:",
         ),
         (
             "residual shape and measure are \"none\" together",
@@ -1848,6 +1849,75 @@ SUITES["tactic-catalog"] = (
             "the precondition predicate vocabulary",
             '    if kind not in PREDICATES:\n        err(errors, "schema", f"{where}: unknown predicate kind {kind!r}")\n        return',
             "    if kind not in PREDICATES:\n        return",
+        ),
+    ],
+)
+
+# The external-coupling gate (ADR-0553).
+#
+# This gate exists because the owner's "math-education is reference only" rule
+# had NO gate, and by the time anyone looked it had been violated in five places
+# at once. A gate born from an ungated guarantee had better not be one itself.
+#
+# `R1`, `R2` and `R3` each have ONE control asserting every value that guard must
+# catch, via `subTest`. Three separate tests per guard would all die together and
+# report a shared rejection path as thorough coverage.
+#
+# The vacuity guards are driven through `vacuity()` rather than `main()` for the
+# same reason: routed through `main()` all three fail together, so one mutation
+# kills three tests. Extracting the function was what made them separable.
+#
+# Expected SURVIVORS under these mutations, by design -- they are acceptance
+# cases, and deleting a guard makes them pass more easily:
+#   test_a_registered_local_key_is_accepted
+#   test_a_registered_foreign_import_is_accepted
+#   test_a_local_path_containing_two_dots_is_not_rejected
+#   test_a_healthy_scan_is_not_a_finding
+# They exist to stop the opposite failure: a rule so broad it rejects Mathlib's
+# deliberate pin, or every version string in the tree.
+SUITES["external-coupling"] = (
+    "scripts/check-external-coupling.py",
+    "scripts.tests.test_check_external_coupling",
+    [
+        (
+            "R1 the external-declaration vocabulary",
+            "        if value in EXTERNAL_VOCABULARY:",
+            "        if False:",
+        ),
+        (
+            "R2 a path segment that escapes the checkout",
+            "        if DOTDOT.search(value):",
+            "        if False:",
+        ),
+        (
+            "R3 a revision pin under an unregistered key",
+            "        if HEX40.match(value) and key not in REVISION_KEYS:",
+            "        if False:",
+        ),
+        (
+            "R4 source that builds a path out of the checkout",
+            "            if needle in code:",
+            "            if False:",
+        ),
+        (
+            "vacuity: zero artifacts scanned",
+            "    if files == 0:",
+            "    if False:",
+        ),
+        (
+            "vacuity: zero strings examined",
+            "    if strings == 0:",
+            "    if False:",
+        ),
+        (
+            "vacuity: zero scripts scanned",
+            "    if script_files == 0:",
+            "    if False:",
+        ),
+        (
+            "the exit status depends on the finding",
+            "    return 1 if findings else 0",
+            "    return 0",
         ),
     ],
 )
@@ -2520,6 +2590,343 @@ def check_anchors() -> int:
     total = sum(len(normalize(n).mutations) for n in sorted(set(SUITES) - DEMOS))
     print(f"MUTATION_ANCHORS|suites={len(set(SUITES) - DEMOS)}|anchors={total}|stale={failed}")
     return failed
+
+
+SUITES["correspondences"] = (
+    "scripts/validate-correspondences.py",
+    "scripts.tests.test_validate_correspondences",
+    [
+        # -- vacuity: an empty population must fail, not pass -----------------
+        (
+            "an empty correspondence directory fails closed",
+            "    if not paths:",
+            "    if False:",
+        ),
+        (
+            "an empty fact ledger fails closed",
+            "    if not facts:",
+            "    if False:",
+        ),
+        # -- the rule the artifact exists for ---------------------------------
+        (
+            "a pair the ledger already links by depends_on is refused",
+            "    if right_id in closure.get(left_id, ()) or left_id in closure.get(right_id, ()):",
+            "    if False:",
+        ),
+        # -- endpoints --------------------------------------------------------
+        ("a self-loop is refused", "    if left_id == right_id:", "    if False:"),
+        (
+            "an endpoint that is not a fact is refused",
+            "    missing = [e for e in (left_id, right_id) if e not in facts]\n    if missing:",
+            "    missing = [e for e in (left_id, right_id) if e not in facts]\n    if False:",
+        ),
+        (
+            "an unsettled endpoint is refused",
+            '        if fact.get("epistemic_status") not in SETTLED:',
+            "        if False:",
+        ),
+        (
+            "two identical formal statements are a duplicate, not a correspondence",
+            '    if left.get("formal", {}).get("statement") == right.get("formal", {}).get("statement"):',
+            "    if False:",
+        ),
+        # -- the two defects found by lanes USING the gate, not by the gate ---
+        (
+            "a specialization whose every via ref is null is refused",
+            """        elif not any(
+            isinstance(step, dict) and isinstance(step.get("ref"), str) and step["ref"].strip()
+            for step in document["via"]
+        ):""",
+            "        elif False:",
+        ),
+        (
+            "AxNat is the Nat carrier, so a kernel-spelled transport erases",
+            '    "Nat": ("AxNat", "Nat", "\u2115"),',
+            '    "Nat": ("Nat", "\u2115"),',
+        ),
+        # -- carrier-transport is checked structurally ------------------------
+        (
+            "two facts in one fragment are not a transport",
+            "        if left_fragment == right_fragment:",
+            "        if False:",
+        ),
+        (
+            "a fragment with no carrier spelling fails closed",
+            "        unknown = [f for f in (left_fragment, right_fragment) if f not in CARRIERS]\n        if unknown:",
+            "        unknown = [f for f in (left_fragment, right_fragment) if f not in CARRIERS]\n        if False:",
+        ),
+        (
+            "carrier erasure must leave the same statement",
+            "        if left_erased != right_erased:",
+            "        if False:",
+        ),
+        (
+            "independent-formalization needs two different proof routes",
+            '        if left.get("proof_route") == right.get("proof_route"):',
+            "        if False:",
+        ),
+        (
+            "a specialization must record its instantiation route",
+            '        if document["derivation_status"] == "asserted":',
+            "        if False:",
+        ),
+        # -- the two status axes must be backed, not toned --------------------
+        (
+            "asserted holds exactly when via is empty",
+            '    if (derivation == "asserted") != (not via):',
+            "    if False:",
+        ),
+        (
+            "a via ref must name a fact that exists",
+            "        if ref in facts:",
+            "        if True:",
+        ),
+        (
+            "a via ref must name a declaration the projection observed",
+            "        if name in declarations:",
+            "        if True:",
+        ),
+        (
+            "a via ref of neither shape is refused",
+            '    return f"via ref {ref!r} is neither an F: fact id nor a kernel:<Name> reference"',
+            "    return None",
+        ),
+        (
+            "mechanized-here forbids a missing step",
+            '        if any(isinstance(s, dict) and s.get("ref") is None for s in via):',
+            "        if False:",
+        ),
+        (
+            "mechanized-here requires evidence",
+            "        if not evidence:",
+            "        if False:",
+        ),
+        (
+            "evidence must carry a checker command",
+            '            if not isinstance(row, dict) or not str(row.get("checker_command", "")).strip():',
+            "            if False:",
+        ),
+        (
+            "evidence under a weaker status is refused",
+            "    elif evidence:",
+            "    elif False:",
+        ),
+        (
+            "novel-here requires a mechanized derivation",
+            '    if document["external_status"] == "novel-here" and derivation != "mechanized-here":',
+            "    if False:",
+        ),
+        # -- prose floors -----------------------------------------------------
+        (
+            "a short claim is refused",
+            '    if len(document["claim"].strip()) < MIN_CLAIM:',
+            "    if False:",
+        ),
+        (
+            "a short transport is refused",
+            '    if len(document["transport"].strip()) < MIN_TRANSPORT:',
+            "    if False:",
+        ),
+        (
+            "a transport copied from the claim is refused",
+            '    if document["claim"].strip() == document["transport"].strip():',
+            "    if False:",
+        ),
+        # -- identity ---------------------------------------------------------
+        (
+            "a filename that disagrees with the id is refused",
+            "        if name != expected:",
+            "        if False:",
+        ),
+        ("a duplicate id is refused", "        if identifier in seen_ids:", "        if False:"),
+        (
+            "one adjudication per endpoint pair",
+            "        if len(pair) == 2 and pair in seen_pairs:",
+            "        if False:",
+        ),
+        # -- shape and enum membership ----------------------------------------
+        (
+            "an unknown key is refused",
+            "    unknown = set(document) - set(REQUIRED_KEYS) - set(OPTIONAL_KEYS)\n    if unknown:",
+            "    unknown = set(document) - set(REQUIRED_KEYS) - set(OPTIONAL_KEYS)\n    if False:",
+        ),
+        (
+            "a missing required key is refused",
+            "    missing = [key for key in REQUIRED_KEYS if key not in document]\n    if missing:",
+            "    missing = [key for key in REQUIRED_KEYS if key not in document]\n    if False:",
+        ),
+        (
+            "schema_version is pinned",
+            '    if document["schema_version"] != 1:',
+            "    if False:",
+        ),
+        (
+            "kind is pinned",
+            '    if document["kind"] != "axeyum-theorem-correspondence":',
+            "    if False:",
+        ),
+        (
+            "the id pattern is enforced",
+            '    if not isinstance(document["id"], str) or not ID_RE.fullmatch(document["id"]):',
+            "    if False:",
+        ),
+        (
+            "correspondence_kind membership",
+            '    if document["correspondence_kind"] not in KINDS:',
+            "    if False:",
+        ),
+        (
+            "derivation_status membership",
+            '    if document["derivation_status"] not in DERIVATION_STATUSES:',
+            "    if False:",
+        ),
+        (
+            "external_status membership",
+            '    if document["external_status"] not in EXTERNAL_STATUSES:',
+            "    if False:",
+        ),
+        (
+            "exactly two endpoints",
+            "    if not isinstance(endpoints, list) or len(endpoints) != 2:",
+            "    if False:",
+        ),
+        (
+            "every endpoint is an F: fact id",
+            "    if not all(isinstance(e, str) and FACT_ID_RE.fullmatch(e) for e in endpoints):",
+            "    if False:",
+        ),
+        (
+            "via and evidence are arrays",
+            '    if not isinstance(document["via"], list) or not isinstance(document["evidence"], list):',
+            "    if False:",
+        ),
+        (
+            "provenance.date is a date",
+            '    if not isinstance(provenance, dict) or not DATE_RE.fullmatch(str(provenance.get("date", ""))):',
+            "    if False:",
+        ),
+        (
+            "provenance names a source",
+            '    if not provenance.get("sources"):',
+            "    if False:",
+        ),
+    ],
+)
+
+SUITES["fact-checker-grep-dash-q"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # `grep -q` as a pipeline consumer SIGPIPEs the producer under
+        # `set -o pipefail`, turning the exit status nondeterministic
+        # (CLAUDE.md, banned-shell-idioms #2; measured 7-vs-3 orphans on an
+        # UNCHANGED tree). Deleting this guard must kill exactly the one test
+        # that asserts a `grep -q` checker_command is rejected -- the
+        # acceptance tests (committed form, `grep -c` forms) do not touch this
+        # branch and must keep passing.
+        (
+            "grep -q checker_command is refused",
+            "        if checker_command_uses_grep_dash_q(cmd):",
+            "        if False:",
+        ),
+    ],
+)
+
+SUITES["fact-checker-grep-backslash-t"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # `\t` inside a grep -E pattern is NOT a tab in POSIX ERE (or BRE) --
+        # GNU grep drops the backslash and matches a literal 't'. 54 facts /
+        # 68 checker_commands carried this before 2026-08-25's rewrite to
+        # `[[:space:]]`, each silently reporting a PRESENT theorem as ABSENT
+        # under any script or CI run. Deleting this guard must kill exactly
+        # the one test that asserts a `\t` checker_command is rejected -- the
+        # acceptance tests (committed `[[:space:]]` forms, the `$(printf
+        # '\t')` exception) do not touch this branch and must keep passing.
+        (
+            "grep \\t checker_command is refused",
+            "        if checker_command_uses_grep_backslash_t(cmd):",
+            "        if False:",
+        ),
+    ],
+)
+
+SUITES["fact-checker-deep-stack-release"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # `nat_axiom_inventory --include-constructed`, `prelude_theorem_inventory
+        # --include-constructed` and any `theorem_dependency_inventory` build the
+        # constructed carriers (CReal/Complex/CPoint) deep enough through
+        # `Kernel::add_declaration` to overflow a debug build's default thread
+        # stack -- measured exit 134 ("has overflowed its stack") without
+        # `--release`, exit 0 with it. 19 committed `F-creal-*`/`F-complex-*`
+        # checker commands carried this before 2026-08-25's fix. Deleting this
+        # guard must kill exactly the one test that asserts such a
+        # checker_command is rejected -- the acceptance tests (committed
+        # `--release` forms, the --include-constructed-absent exception, the
+        # unrelated-tool exception) do not touch this branch and must keep
+        # passing.
+        (
+            "deep-stack inventory without --release is refused",
+            "        if checker_command_needs_release_for_deep_stack(cmd):",
+            "        if False:",
+        ),
+    ],
+)
+
+SUITES["fact-checker-kernel-theorem-shape"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # `formal.kernel_theorem` is what `theorem_of`
+        # (scripts/check-fact-depends-derived.py, shared by the chain catalog
+        # and the autogenesis snapshot builder) reads as a fact's subject
+        # theorem when the key is present -- nothing else in the ledger reads
+        # or validates this field, so a malformed value would be silently
+        # treated as a real theorem name by every one of those consumers.
+        # Deleting this guard must kill exactly the one test that asserts an
+        # invalid value is rejected THROUGH `validate_one` -- the broader
+        # good/bad-shape coverage (`kernel_theorem_is_valid` exercised
+        # directly) does not touch this call site and must keep passing.
+        (
+            "invalid formal.kernel_theorem is refused",
+            '    if "kernel_theorem" in formal and not kernel_theorem_is_valid(formal["kernel_theorem"]):',
+            "    if False:",
+        ),
+    ],
+)
+
+SUITES["fact-theorem-of-explicit-field"] = (
+    "scripts/check-fact-depends-derived.py",
+    "scripts.tests.test_check_fact_depends_derived",
+    [
+        # `F:cassini-identity-over-constructed-integers` extracted `Int.sub`
+        # (matched out of its own embedded formal-statement fragment) instead
+        # of its real subject `Int.fib_cassini`, until `formal.kernel_theorem`
+        # existed to let a fact pin the right answer over extraction. Deleting
+        # the override kills exactly `test_an_explicit_string_wins...`; the
+        # null-handling mutation below is separate and independent.
+        (
+            "an explicit string kernel_theorem wins over extraction",
+            "        return value if isinstance(value, str) else None",
+            "        return None",
+        ),
+        # `F:complex-ring-constructed-axiom-free` and `F:complex-mul-assoc`
+        # both extracted `Complex.mul_assoc` and collided in
+        # `create-autogenesis-chain-catalog.py --check`, until an explicit
+        # `null` marked the package-level fact as having no single subject.
+        # A presence check that degrades to a truthiness check would silently
+        # treat that `null` as "key absent" and fall back to extraction again
+        # -- kills exactly `test_an_explicit_null_means_no_single_subject...`.
+        (
+            "an explicit null kernel_theorem is honoured, not falsy-skipped",
+            '    if "kernel_theorem" in formal:',
+            '    if formal.get("kernel_theorem"):',
+        ),
+    ],
+)
 
 
 def main(argv: list[str]) -> int:

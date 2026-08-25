@@ -13,13 +13,19 @@ closed by a bounded search over `Eq.refl`/`Eq.symm`/`Eq.trans`/`Iff.intro`,
 each reconstructed directly from `Eq.rec`/`Iff`'s own constructor -- never a
 borrowed theorem, never a name lookup on the target or a sibling.
 
-This gate re-runs the checker example against all four targets the operation
-names, from their tracked, hash-pinned external Mathlib exports, and
-requires every receipt field to match the committed candidate manifest
-exactly. It also re-checks that each of the four facts this operation
-settles is bound to it correctly -- exactly one checked evidence row each --
-and that the checker declines on a nonexistent input path (a tool that
-ignores its argument would pass every check above for the wrong reason).
+`authoritative-mathlib-modeq-family-v1` was later widened to also name the
+three dependency-ready `Nat.ModEq` development facts (development-partition
+requires an operation that closes a development fact to also close a train
+fact, and this producer generalizes from these Int train facts to them
+unmodified). This gate re-runs the checker example against the four Int
+targets it selects out of the operation's full target list, from their
+tracked, hash-pinned external Mathlib exports, and requires every receipt
+field to match the committed candidate manifest exactly. It also re-checks
+that each of the four facts this operation settles is bound to it correctly
+-- exactly one checked evidence row each -- and that the checker declines on
+a nonexistent input path (a tool that ignores its argument would pass every
+check above for the wrong reason). The Nat.ModEq targets are the domain of
+`check-autogenesis-nat-modeq-family.py`, re-run separately.
 
 The negative control for THIS producer's actual failure mode -- a candidate
 that closes its goal by citing the target theorem itself, or any borrowed
@@ -294,9 +300,16 @@ def main() -> int:
         if executor["driver"] != "axeyum-lean-import/modeq-family-multi-target-v1":
             raise FamilyError("operation driver changed")
         max_binders = executor["max_binders"]
-        targets = executor["targets"]
+        # The operation may now also carry the Nat.ModEq development targets
+        # (`authoritative-mathlib-nat-modeq-family-v1` merged into this
+        # operation so the development-partition gate can see the Int train
+        # facts it generalizes from). This checker's job is the four Int
+        # targets specifically, so it selects its own subset rather than
+        # assuming the operation names only them.
+        all_targets = executor["targets"]
+        targets = [t for t in all_targets if t["fact_id"] in SETTLED_FACT_IDS]
         if len(targets) != 4:
-            raise FamilyError("expected exactly four targets in this family")
+            raise FamilyError("expected exactly four Int targets in this family")
         for target in targets:
             check_target(target, max_binders)
         check_settled_fact_binding(operation)

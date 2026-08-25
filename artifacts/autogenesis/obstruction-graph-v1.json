@@ -885,7 +885,7 @@
     {
       "kind": "manifest",
       "path": "artifacts/autogenesis/knowledge-overlay-v1.json",
-      "sha256": "818c36d85fc2768de4ba4a86beeb1d8d2da8e9b4ecf184b3a8b696b0d37f184e"
+      "sha256": "559cd93509b83e8fa9a60591bb21e40d073f4f5a739faec5941857e01e707d8b"
     },
     {
       "kind": "decline-record",
@@ -935,7 +935,7 @@
     {
       "kind": "manifest",
       "path": "artifacts/autogenesis/tactic-catalog-v1.json",
-      "sha256": "1d753a18084785dc038fd79bd10990498fa0b12bbce0fd5b1bbdfade9a48f935"
+      "sha256": "a07350f10869e1a38ba588491ed7f2770d9f87c025e654238e8e572290ca343f"
     },
     {
       "kind": "episode",

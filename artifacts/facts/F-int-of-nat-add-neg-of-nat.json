@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "F:int-of-nat-add-neg-of-nat",
+  "title": "Sum of a nonnegative integer and a negOfNat integer reduces to subNatNat",
+  "statement": "For naturals a and b, a + (-b) = subNatNat(a, b).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.ofNat_add_negOfNat : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.add (Int.ofNat x0) (Int.negOfNat x1)) (Int.subNatNat x0 x1)))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.ofNat_add_negOfNat",
+      "kind": "kernel-term",
+      "supports": "Int.ofNat_add_negOfNat is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Int.ofNat_add_negOfNat 2>/dev/null | grep -cE '^Int\\.ofNat_add_negOfNat[[:space:]]'",
+      "notes": "`build_int_prelude` admits Int.ofNat_add_negOfNat through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in `theorem_dependency_inventory`'s output for the exact name is a machine-checked proof having been admitted. That tool exits non-zero for a named filter matching nothing (a deleted theorem cannot read as a re-derived one), and `grep -c` (never `-q`) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present. `--release` is MANDATORY: this tool unconditionally also builds `creal`/`complex`/`cpoint`, which recurse deep enough in a debug build to overflow the default thread stack (measured: release exits 0, debug SIGABRTs at 134)."
+    },
+    {
+      "id": "footprint-Int.ofNat_add_negOfNat",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- Int.ofNat_add_negOfNat lives in the Int prelude's trusted surface, which is empty.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "notes": "`nat_axiom_inventory --require-axiom-free integer` builds the Int environment as its own group and reports `integer: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree), exiting 0 with `ok: integer trusted surface = 0`. That bounds every individual Int theorem's footprint by [], since Int.ofNat_add_negOfNat cannot depend on a trusted declaration the environment does not contain. `--require-axiom-free <name>` is an error (not a silent pass) for a prelude this run never built, which is what makes `integer` here a claim rather than an absence."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_int_prelude",
+    "source": "theorem name and dependency edges from theorem_dependency_inventory; canonical type read via int_theorem_inventory, which already prints Int declarations with their canonical type and axiom footprint -- no probe crate was needed for this batch."
+  },
+  "notes": "depends_on keeps only the sibling-mapped edges from theorem_dependency_inventory's direct-edge output: the direct dependencies among the raw list that are NOT themselves registered ledger facts are omitted -- only a used theorem that is itself a ledger fact is declared.",
+  "external_status": "proved"
+}

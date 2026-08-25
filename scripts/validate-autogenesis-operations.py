@@ -857,6 +857,53 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
         raise RegistryError(f"{label}.expected_evidence_label is invalid")
 
 
+def check_fact_provenance_is_exclusive(
+    root: pathlib.Path, fact_operation_ids: dict[str, list[str]]
+) -> None:
+    """A fact may be named by several operations; at most one may PROVE it.
+
+    `applicability.fact_ids` is structural coverage -- which operations a
+    fact-agnostic producer *could* re-derive -- and more than one operation
+    legitimately naming the same fact is by design (a target-agnostic
+    bounded-induction family alongside the narrower operation that actually
+    produced the fact; see `check-autogenesis-bounded-induction-family.py`'s
+    own `SETTLED_FACT_IDS` split for the worked example). What must never
+    happen is the fact ITSELF becoming ambiguous about which operation is its
+    provenance: two checked evidence rows bound to two different operations,
+    or a checked evidence row bound to an operation that does not even name
+    the fact. Both are silent forks in every downstream reader that resolves
+    a fact to "its" operation (`check-autogenesis-fact-operation.py`,
+    `fact-frontier.py`'s dispatch). This only inspects facts named by 2+
+    operations; a fact named by exactly one has nothing to be ambiguous about.
+    """
+    for fact_id, operation_ids in sorted(fact_operation_ids.items()):
+        if len(operation_ids) < 2:
+            continue
+        fact_path = root / "artifacts/facts" / (fact_id.replace("F:", "F-") + ".json")
+        fact = json.loads(fact_path.read_text())
+        bound = sorted(
+            {
+                row["checker_operation"]["id"]
+                for row in fact.get("evidence") or []
+                if isinstance(row.get("checker_operation"), dict)
+                and isinstance(row["checker_operation"].get("id"), str)
+            }
+        )
+        if len(bound) > 1:
+            raise RegistryError(
+                f"fact {fact_id} is named by {sorted(operation_ids)} in "
+                "applicability.fact_ids and carries checked evidence bound to "
+                f"more than one of them ({bound}) -- several operations may "
+                "structurally cover one fact, but exactly one may hold its "
+                "provenance"
+            )
+        if bound and bound[0] not in operation_ids:
+            raise RegistryError(
+                f"fact {fact_id} evidence is bound to operation {bound[0]!r}, "
+                "which does not name this fact in its applicability.fact_ids"
+            )
+
+
 def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
     if not isinstance(registry, dict):
         raise RegistryError("registry must be an object")
@@ -870,6 +917,7 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
     if not isinstance(operations, list):
         raise RegistryError("operations must be a list")
     seen: set[str] = set()
+    fact_operation_ids: dict[str, list[str]] = {}
     for index, operation in enumerate(operations):
         label = f"operations[{index}]"
         if not isinstance(operation, dict):
@@ -915,6 +963,9 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
             applicability["fragments"], f"{label}.applicability.fragments"
         )
         languages = applicability["formal_languages"]
+        if scope == "authoritative":
+            for fact_id in fact_ids:
+                fact_operation_ids.setdefault(fact_id, []).append(operation_id)
         for fact_id in fact_ids:
             if not FACT_ID_RE.fullmatch(fact_id):
                 raise RegistryError(f"{label} has invalid fact id {fact_id!r}")
@@ -1027,9 +1078,16 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                         f"{label}.executor driver is inconsistent with applicability/admission"
                     )
             elif executor["driver"] == "axeyum-lean-import/modeq-family-multi-target-v1":
+                # The producer is fragment-agnostic (it never names Int, Nat,
+                # ModEq, or %; see producers::modeq_family) and a single
+                # operation may legitimately span both -- authored on the Int
+                # train facts, generalizing to the Nat development facts. So
+                # the closed set of valid values is every nonempty subset of
+                # {Int, Nat}, not just the two singletons.
                 if (
                     applicability["formal_languages"] != ["lean4-surface"]
-                    or applicability["fragments"] not in (["Int"], ["Nat"])
+                    or applicability["fragments"]
+                    not in (["Int"], ["Nat"], ["Int", "Nat"])
                     or admission["proof_route"] != "kernel-lean"
                     or admission["evidence_kind"] != "kernel-term"
                     or admission["axiom_footprint"] != []
@@ -1081,6 +1139,7 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                     raise RegistryError(
                         f"{label}.executor premise operation is absent or ambiguous"
                     )
+    check_fact_provenance_is_exclusive(root, fact_operation_ids)
 
 
 def load_registry(

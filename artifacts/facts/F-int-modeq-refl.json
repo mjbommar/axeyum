@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:int-modeq-refl",
+  "title": "Congruence mod n is reflexive on the integers",
+  "statement": "For all integers n and a, a is congruent to a modulo n.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.modEq_refl : ((x0 : Int) -> ((x1 : Int) -> Int.ModEq x0 x1 x1))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.modEq_refl",
+      "kind": "kernel-term",
+      "supports": "For all integers n and a, a is congruent to a modulo n.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- modEq_refl 2>/dev/null | grep -Ec '^theorem[[:space:]]+Int\\.modEq_refl[[:space:]]')\" -ge 1",
+      "notes": "`build_int_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `int_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted `theorem`-kind row to be printed."
+    },
+    {
+      "id": "footprint-Int.modEq_refl",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Int prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "notes": "`nat_axiom_inventory --require-axiom-free integer` enumerates the built Int environment (which nests the Nat development) and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:modular-arithmetic",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:congruence",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_int_prelude, lane rado-claim-ledger",
+    "source": "one of the theorems build_int_prelude admits; registered to close the flywheel's fact-ledger arrow for recently landed Int theorems"
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `int_theorem_inventory`, not transcribed by hand.",
+  "external_status": "proved"
+}

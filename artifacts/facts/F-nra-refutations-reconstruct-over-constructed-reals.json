@@ -27,9 +27,9 @@
     {
       "id": "nra-refutations-reconstruct-over-constructed-reals-1",
       "kind": "kernel-term",
-      "supports": "Nothing in the suite failed. Anchored on `0 failed` rather than on a test name plus `ok`, because the latter contains no digit or boolean and so survives every mutation the scaffolder applies \u2014 it would have gone into the ledger as a checker that cannot discriminate.",
+      "supports": "Nothing in the suite failed. Anchored on `0 failed` rather than on a test name plus `ok`, because the latter contains no digit or boolean and so survives every mutation the scaffolder applies — it would have gone into the ledger as a checker that cannot discriminate.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo test -p axeyum-solver --features full --lib reconstruct::arithmetic 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'test result: ok\\. [0-9]+ passed; 0 failed'",
+      "checker_command": "out=$(cargo test -p axeyum-solver --features full --lib reconstruct::arithmetic 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'test result: ok\\. [0-9]+ passed; 0 failed')\" -ge 1",
       "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output (`0 failed` -> `1 failed`)."
     },
     {

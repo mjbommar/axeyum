@@ -14,7 +14,6 @@ rules at once cannot tell you which guard caught it.
 
 from __future__ import annotations
 
-import contextlib
 import copy
 import importlib.util
 import json
@@ -27,7 +26,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/validate-tactic-catalog.py"
 CATALOG = ROOT / "artifacts/autogenesis/tactic-catalog-v1.json"
-EXTERNAL_ROOT = ROOT.parent / "math-education"
 
 _spec = importlib.util.spec_from_file_location("validate_tactic_catalog", SCRIPT)
 assert _spec is not None and _spec.loader is not None
@@ -40,7 +38,7 @@ def load() -> dict:
 
 
 def run(doc: dict) -> tuple[list[str], list[str], dict | None]:
-    return validator.validate_document(doc, ROOT, EXTERNAL_ROOT)
+    return validator.validate_document(doc, ROOT)
 
 
 def rules(errors: list[str]) -> set[str]:
@@ -52,40 +50,6 @@ def tactic(doc: dict, tactic_id: str) -> dict:
         if entry["id"] == tactic_id:
             return entry
     raise AssertionError(f"no tactic {tactic_id!r} in the committed catalog")
-
-
-def pins(doc: dict) -> set[str]:
-    return {entry["uses_technique"]["revision"] for entry in doc["tactics"]}
-
-
-def external_on_pin(doc: dict) -> bool:
-    if not EXTERNAL_ROOT.is_dir():
-        return False
-    head = validator.git_head(EXTERNAL_ROOT)
-    return head is not None and pins(doc) == {head}
-
-
-@contextlib.contextmanager
-def fake_external(doc: dict, present: set[str]):
-    """A stand-in sibling checkout holding exactly `present` technique files.
-
-    Hermetic on purpose: this suite runs from a scratch COPY of the repository
-    under the mutation harness, where the real `../math-education` is not
-    beside it -- so a test that depended on the live sibling would silently
-    SKIP there, and the guard it covers would be reported as a survivor.
-    """
-    revision = sorted(pins(doc))[0]
-    with tempfile.TemporaryDirectory() as scratch:
-        root = Path(scratch) / "math-education"
-        (root / "graph/techniques").mkdir(parents=True)
-        for name in present:
-            (root / "graph/techniques" / f"{name}.md").write_text(f"id: TQ:{name}\n")
-        original = validator.git_head
-        validator.git_head = lambda _path, _revision=revision: _revision
-        try:
-            yield root
-        finally:
-            validator.git_head = original
 
 
 class CommittedCatalogTests(unittest.TestCase):
@@ -161,20 +125,14 @@ class CorruptFixtureTests(unittest.TestCase):
         errors, _warnings, _counts = run(doc)
         self.assertIn("capability", rules(errors))
 
-    def test_technique_revision_off_the_overlay_pin_is_rejected(self) -> None:
+    def test_technique_pinned_to_a_foreign_revision_is_rejected(self) -> None:
+        """ADR-0553. `uses_technique` is required on every tactic, so while its
+        `revision` was mandatory no tactic could exist here without pinning a
+        sibling repository's commit."""
         doc = load()
         tactic(doc, "T:refl-closure")["uses_technique"]["revision"] = "0" * 40
         errors, _warnings, _counts = run(doc)
-        self.assertIn("technique-pin", rules(errors))
-
-    def test_unresolved_technique_is_rejected(self) -> None:
-        doc = load()
-        names = {entry["uses_technique"]["id"][3:] for entry in doc["tactics"]}
-        tactic(doc, "T:refl-closure")["uses_technique"]["id"] = "TQ:no-such-technique"
-        with fake_external(doc, names) as root:
-            errors, warnings, _counts = validator.validate_document(doc, ROOT, root)
-        self.assertEqual(warnings, [], "the stand-in sibling is on pin, so nothing is skipped")
-        self.assertIn("technique", rules(errors))
+        self.assertIn("schema", rules(errors))
 
     def test_residual_measure_none_without_shape_none_is_rejected(self) -> None:
         doc = load()
@@ -215,32 +173,55 @@ class CorruptFixtureTests(unittest.TestCase):
         self.assertIn("schema", rules(errors))
 
 
-class TechniqueResolutionTests(unittest.TestCase):
-    """The skip-with-warning behaviour, both halves, stated explicitly."""
+class NoExternalResolutionTests(unittest.TestCase):
+    """ADR-0553: nothing here resolves a `TQ:` id, and nothing may try.
 
-    def test_every_technique_resolves_against_a_sibling_on_pin(self) -> None:
-        doc = load()
-        names = {entry["uses_technique"]["id"][3:] for entry in doc["tactics"]}
-        with fake_external(doc, names) as root:
-            errors, warnings, _counts = validator.validate_document(doc, ROOT, root)
+    This class replaces `TechniqueResolutionTests`, which asserted the OPPOSITE
+    contract -- that an absent sibling produced one warning per tactic, and a
+    present one on pin resolved every technique to a `graph/techniques/*.md`
+    file. Those three tests were the strongest evidence that the coupling was a
+    live integration and not merely a label.
+    """
+
+    def test_the_committed_catalog_produces_no_warnings(self) -> None:
+        """Nine `checkout is absent` warnings used to be the normal output."""
+        _errors, warnings, _counts = run(load())
         self.assertEqual(warnings, [])
-        self.assertNotIn("technique", rules(errors))
 
-    def test_absent_sibling_warns_and_skips_rather_than_passing_silently(self) -> None:
-        doc = load()
+    def test_an_overlay_declaring_an_external_source_is_rejected(self) -> None:
+        """The catalog reads the overlay. If the overlay reacquires an external
+        source, every tactic is pinned to it again at one remove."""
+        overlay = json.loads(
+            (ROOT / "artifacts/autogenesis/knowledge-overlay-v1.json").read_text()
+        )
+        overlay["sources"].append(
+            {
+                "id": "sibling",
+                "kind": "external-repository",
+                "revision_policy": "pinned",
+                "revision": "0" * 40,
+            }
+        )
+        # Drive the guard directly. Routing through `validate_document` with a
+        # scratch root ALSO trips `implemented_by.path must exist`, and the
+        # mutation harness then reports two guards killing this one test --
+        # which is the shared-rejection-path shape this suite exists to avoid.
         with tempfile.TemporaryDirectory() as scratch:
-            absent = Path(scratch) / "math-education"
-            errors, warnings, _counts = validator.validate_document(doc, ROOT, absent)
-        self.assertNotIn("technique", rules(errors))
-        self.assertEqual(len(warnings), len(doc["tactics"]))
+            root = Path(scratch)
+            (root / "artifacts/autogenesis").mkdir(parents=True)
+            (root / "artifacts/autogenesis/knowledge-overlay-v1.json").write_text(
+                json.dumps(overlay)
+            )
+            errors: list[str] = []
+            validator.overlay_capabilities(root, errors)
+        self.assertTrue(
+            any("declares an external source" in error for error in errors), errors
+        )
 
-    def test_live_sibling_resolves_when_it_is_present_and_on_pin(self) -> None:
-        doc = load()
-        if not external_on_pin(doc):
-            self.skipTest("math-education sibling is absent or off the catalog pin")
-        errors, warnings, _counts = run(doc)
-        self.assertEqual(warnings, [])
-        self.assertNotIn("technique", rules(errors))
+    def test_the_validator_holds_no_path_outside_the_checkout(self) -> None:
+        source = SCRIPT.read_text()
+        self.assertNotIn("ROOT.parent", source)
+        self.assertNotIn("math-education", source.split('"""', 2)[-1])
 
 
 class CommandLineTests(unittest.TestCase):

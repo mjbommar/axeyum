@@ -92,6 +92,7 @@
         "check-autogenesis-nursery.py",
         "check-autogenesis-proposer-isolation.sh",
         "create-autogenesis-mathlib-nursery-split.py",
+        "gen-obstruction-graph.py",
         "run-autogenesis-authoritative-chain.py",
         "validate-autogenesis-operations.py"
       ],
@@ -1270,7 +1271,6 @@
         "fact_ids": [
           "F:ml430-nat-descfactorial-one-d4856d4a",
           "F:ml430-nat-ascfactorial-zero-fd183202",
-          "F:ml430-nat-descfactorial-zero-966b01df",
           "F:ml430-nat-zero-ascfactorial-af4fcdca",
           "F:ml430-nat-one-ascfactorial-8bacb017"
         ],
@@ -1299,7 +1299,6 @@
         "input_fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
         "additional_fact_ids": [
           "F:ml430-nat-ascfactorial-zero-fd183202",
-          "F:ml430-nat-descfactorial-zero-966b01df",
           "F:ml430-nat-zero-ascfactorial-af4fcdca",
           "F:ml430-nat-one-ascfactorial-8bacb017"
         ],
@@ -1315,12 +1314,6 @@
             "statement_adapter_manifest": "artifacts/autogenesis/mathlib-statement-adapter-v1.json",
             "induction_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-ascfactorial-zero-v1.json",
             "target_definition": "Axeyum.Autogenesis.Statement.natAscFactorialZero"
-          },
-          {
-            "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
-            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-descfactorial-zero-statement-adapter-v1.json",
-            "induction_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-descfactorial-zero-v1.json",
-            "target_definition": "Axeyum.Autogenesis.Statement.FactorialZero.natDescFactorialZero"
           },
           {
             "fact_id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
@@ -1352,20 +1345,26 @@
       "id": "authoritative-mathlib-modeq-family-v1",
       "scope": "authoritative",
       "reviewed_gate_mentions": [
-        "check-autogenesis-modeq-family.py"
+        "check-autogenesis-modeq-family.py",
+        "check-autogenesis-nat-modeq-family.py",
+        "validate-autogenesis-nat-modeq-capability-selection.py"
       ],
       "applicability": {
         "fact_ids": [
           "F:ml430-int-modeq-refl-30e15520",
           "F:ml430-int-modeq-symm-984a6e67",
           "F:ml430-int-modeq-trans-6d7863e0",
-          "F:ml430-int-modeq-comm-1e4bcc07"
+          "F:ml430-int-modeq-comm-1e4bcc07",
+          "F:ml430-nat-modeq-refl-d870c8f5",
+          "F:ml430-nat-modeq-symm-0a3d4d18",
+          "F:ml430-nat-modeq-trans-ef9d1c46"
         ],
         "formal_languages": [
           "lean4-surface"
         ],
         "fragments": [
-          "Int"
+          "Int",
+          "Nat"
         ]
       },
       "producer": {
@@ -1387,7 +1386,10 @@
         "additional_fact_ids": [
           "F:ml430-int-modeq-symm-984a6e67",
           "F:ml430-int-modeq-trans-6d7863e0",
-          "F:ml430-int-modeq-comm-1e4bcc07"
+          "F:ml430-int-modeq-comm-1e4bcc07",
+          "F:ml430-nat-modeq-refl-d870c8f5",
+          "F:ml430-nat-modeq-symm-0a3d4d18",
+          "F:ml430-nat-modeq-trans-ef9d1c46"
         ],
         "targets": [
           {
@@ -1413,6 +1415,24 @@
             "statement_adapter_manifest": "artifacts/autogenesis/mathlib-modeq-family-comm-statement-adapter-v1.json",
             "modeq_manifest": "artifacts/autogenesis/mathlib-modeq-family-comm-v1.json",
             "target_definition": "Axeyum.Autogenesis.Statement.IntModEqFamily.intModEqComm"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-refl-statement-adapter-v1.json",
+            "modeq_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-refl-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqRefl"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-symm-statement-adapter-v1.json",
+            "modeq_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-symm-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqSymm"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-trans-statement-adapter-v1.json",
+            "modeq_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-trans-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqTrans"
           }
         ],
         "max_binders": 8,

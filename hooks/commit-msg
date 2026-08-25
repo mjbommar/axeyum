@@ -63,10 +63,28 @@ EOF
     exit 1
 fi
 
-# Append as a trailer, with a blank line before it if the message does not
-# already end in a trailer block.
-if [[ -n "$(tail -1 "$msg_file")" ]] && ! tail -1 "$msg_file" | grep -qE '^[A-Za-z-]+:[[:space:]]'; then
-    printf '\n' >> "$msg_file"
-fi
-printf 'Agent: %s\n' "$agent" >> "$msg_file"
+# Append via git's OWN trailer parser, not by hand.
+#
+# The hand-rolled version appended `Agent: <lane>` after deciding whether a
+# blank line was needed by testing `tail -1` against `^[A-Za-z-]+:[[:space:]]`.
+# That test cannot tell a trailer from a sentence, and it produced commits
+# carrying the TEXT of a trailer that git does not PARSE as one -- so
+# `git log --format='%(trailers:key=Agent,valueonly)'`, the query CLAUDE.md
+# prescribes for pairing a commit with its lane, reads them as unattributed.
+#
+# Measured 2026-08-25 over the last 60 commits: 46 parsed, 12 had no stamp at
+# all (`--no-verify` merges), and 2 had the text without parsing. Both failures
+# were the same misreading:
+#
+#   - a body whose last line was prose beginning `ways: the true value ...`
+#     -- `ways:` matches the pattern, so no blank line was inserted and the
+#     line joined the preceding paragraph;
+#   - a SUBJECT-ONLY message, `fixup: clippy ...` -- `fixup:` matches too, so
+#     the trailer was glued directly under the subject with no blank line, and
+#     a two-line message has no trailer block at all.
+#
+# `git interpret-trailers` gets all three shapes right, including appending
+# into an existing trailer block without an extra blank line. Controls, one per
+# shape: scripts/tests/test-commit-msg-trailer.sh.
+git interpret-trailers --trailer "Agent: $agent" --in-place "$msg_file"
 exit 0

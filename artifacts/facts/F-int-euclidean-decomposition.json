@@ -16,6 +16,9 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:int-euclid-neg-succ",
+    "F:int-euclid-of-nat",
+    "F:int-lt-dest",
     "F:nat-div-mod-exists",
     "F:nat-div-mod-unique",
     "F:nat-zero-add"
@@ -27,7 +30,7 @@
       "kind": "kernel-term",
       "supports": "For all integers t and k with 0 < k, there exist q and r with t = k*q + r and 0 <= r < k.",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- euclidean_decomposition 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.euclidean_decomposition[[:space:]]'",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- euclidean_decomposition 2>/dev/null | grep -Ec '^theorem[[:space:]]+Int\\.euclidean_decomposition[[:space:]]')\" -ge 1",
       "notes": "The `^theorem` anchor is the whole point of this row, not decoration. Until 2026-08-16 this declaration was an `axiom`, and the same command would print an `axiom` row and FAIL the grep. So the checker discriminates exactly the change the fact records -- it is bound to this declaration's name AND to its kind, and `int_theorem_inventory` additionally exits non-zero for a name that does not exist."
     },
     {

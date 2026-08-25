@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-sumrange-telescope",
+  "title": "A finite telescoping sum of constructed-real differences collapses to its endpoints",
+  "statement": "For a constructed-real sequence f and natural n, sum_{i<n} (f(i+1) - f(i)) is CReal.Equiv-equivalent to f(n) - f(0). The telescoping identity that CReal.mul_sub_one_geom above and much of the sumRange toolkit specialise.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.sumRange_telescope : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : AxNat) -> CReal.Equiv (CReal.sumRange (fun (x2 : AxNat) => CReal.add (x0 (AxNat.succ x2)) (CReal.neg (x0 x2))) x1) (CReal.add (x0 x1) (CReal.neg (x0 AxNat.zero)))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-neg",
+    "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.sumRange_telescope",
+      "kind": "kernel-term",
+      "supports": "CReal.sumRange_telescope is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.sumRange_telescope 2>/dev/null | grep -cE '^CReal\\.sumRange_telescope[[:space:]]'",
+      "notes": "`build_creal_prelude` admits CReal.sumRange_telescope through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` was extended in this same change to build creal/complex/cpoint (previously only nat/integer/rat/string/characterization); it exits non-zero for a named filter that matches nothing, and `grep -c` (never `-q`) independently asserts the exact tab-anchored line is present. `--release` is MANDATORY: building the constructed carriers recurses deep enough in a debug build to overflow the default thread stack (measured: release exits 0 with 1092 theorems total, debug SIGABRTs at 134) -- the same resource-limit gotcha already documented for `prelude_theorem_inventory --include-constructed`."
+    },
+    {
+      "id": "footprint-CReal.sumRange_telescope",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the CReal prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "notes": "`nat_axiom_inventory --include-constructed` builds the CReal environment as its own group and reports `creal: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree). That bounds every individual CReal theorem's footprint by [], since a theorem cannot depend on a trusted declaration the environment does not contain, and the enumeration covers Axiom, Opaque AND Quotient, not just Declaration::Axiom. `--include-constructed` is REQUIRED here -- without it `--require-axiom-free creal` is an error (verified: exit 1), not a silent pass, because creal is not built at all without the flag; this is the standing trap of an empty/absent result reading as a strong negative when the tool was never pointed at the subject."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:telescoping-sum",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_creal_prelude",
+    "source": "theorem name and dependency edges from theorem_dependency_inventory (extended in this change to cover creal/complex/cpoint); canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint()) -- no in-tree example currently prints CReal theorem types, and crates/ source was left untouched here beyond theorem_dependency_inventory.rs itself."
+  },
+  "notes": "depends_on keeps only the sibling-mapped edge (CReal.Equiv.refl/symm/trans, CReal.add_assoc, CReal.add_congr, CReal.add_neg, CReal.add_zero are not registered facts).",
+  "external_status": "proved"
+}

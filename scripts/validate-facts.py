@@ -57,6 +57,15 @@ FACTS = ROOT / "artifacts" / "facts"
 SCHEMA = ROOT / "artifacts" / "ontology" / "fact.schema.json"
 
 ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
+# Same namespace class `theorem_of` (scripts/check-fact-depends-derived.py) reads
+# checker_commands with, plus `null` for "explicitly no single subject" -- see
+# `formal.kernel_theorem` in fact.schema.json. A garbage string here would be
+# silently treated as a theorem name by every `theorem_of` consumer and would
+# never be caught, since nothing else reads this field.
+KERNEL_THEOREM_RE = re.compile(
+    r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Str|"
+    r"CReal|Complex|CPoint)(?:\.[A-Za-z_][A-Za-z0-9_']*)+$"
+)
 
 REQUIRED = {"schema_version", "id", "title", "statement", "formal",
             "epistemic_status", "depends_on", "evidence", "provenance"}
@@ -112,6 +121,117 @@ def fail(errors: list[str], msg: str) -> None:
     errors.append(msg)
 
 
+def kernel_theorem_is_valid(value: object) -> bool:
+    """`formal.kernel_theorem`: `None` (an explicit "no single kernel theorem",
+    for a package-level fact) or a dotted namespaced kernel theorem name that
+    `theorem_of` (scripts/check-fact-depends-derived.py) could plausibly have
+    extracted itself. Anything else is a value none of that field's consumers
+    could use, and nothing else in the ledger would catch it."""
+    if value is None:
+        return True
+    return isinstance(value, str) and bool(KERNEL_THEOREM_RE.match(value))
+
+
+_GREP_INVOCATION_RE = re.compile(r"\bgrep\b((?:\s+(?:-[a-zA-Z]+|--[a-zA-Z-]+))*)")
+
+
+def checker_command_uses_grep_dash_q(cmd: str) -> bool:
+    """True if `cmd` invokes `grep` with a quiet flag (`-q`, `-qE`, `-Eq`,
+    `--quiet`, or `-q`/`-E` as separate tokens) anywhere in a pipeline.
+
+    Matches short-option clusters in ANY order (so `-qE` and `-Eq` both hit)
+    and flags given as separate tokens (`-q -E`), not just one bundled
+    cluster -- a narrower check that only caught the bundled form would leave
+    the idiom's other spellings free to reappear.
+    """
+    for m in _GREP_INVOCATION_RE.finditer(cmd):
+        flags = re.findall(r"(?:-[a-zA-Z]+|--[a-zA-Z-]+)", m.group(1))
+        for f in flags:
+            if f == "--quiet":
+                return True
+            if f.startswith("-") and not f.startswith("--") and "q" in f[1:]:
+                return True
+    return False
+
+
+_GREP_QUOTED_PATTERN_RE = re.compile(r"\bgrep\b(?:\s+(?:-[a-zA-Z]+|--[a-zA-Z-]+))*\s+'([^']*)'")
+
+
+def checker_command_uses_grep_backslash_t(cmd: str) -> bool:
+    """True if `cmd` passes `grep` a single-quoted pattern containing the
+    two-character escape `\\t`.
+
+    In POSIX ERE (and BRE), `\\t` is NOT a tab -- GNU grep drops the backslash
+    and matches a literal `t`. Measured on this host with `/usr/bin/grep`
+    (GNU grep 3.12): `printf 'a\\tb\\n' | grep -cE 'a\\tb'` -> 0 (a real tab
+    does not match), `printf 'atb\\n' | grep -cE 'a\\tb'` -> 1 (it matches the
+    literal 't' instead). 54 facts / 68 checker_commands carried this before
+    2026-08-25's rewrite to `[[:space:]]`, all silently reporting a PRESENT
+    theorem as ABSENT -- fail-closed, not a wrong verdict, but the evidence
+    does not re-derive under any script or CI run.
+
+    Why it went unnoticed: on a host where an interactive shell's `grep` is a
+    function wrapping `ugrep` (which DOES interpret `\\t` as a tab), the exact
+    same checker_command passes by hand and fails from a script. Always test
+    a fix with `/usr/bin/grep` explicitly, never a bare `grep`.
+
+    Catches `\\t` both as a standalone separator (`'^Name\\t'`, fix:
+    `[[:space:]]`) and inside a bracket expression (`'[^\\t]'`, fix:
+    `[^[:space:]]` -- backslash is not special inside `[...]` either, so
+    `[^\\t]` means "not backslash and not t", not "not tab"). A pattern that
+    needs a literal tab specifically (not any whitespace) should build one
+    with `$(printf '\\t')` outside the single-quoted literal instead, which
+    this check does not flag because that substitution never appears inside
+    a `'...'` pattern argument.
+    """
+    for m in _GREP_QUOTED_PATTERN_RE.finditer(cmd):
+        if "\\t" in m.group(1):
+            return True
+    return False
+
+
+_DEEP_STACK_INVENTORY_RE = re.compile(
+    r"\bexample\s+(nat_axiom_inventory|prelude_theorem_inventory|theorem_dependency_inventory)\b"
+)
+
+
+def checker_command_needs_release_for_deep_stack(cmd: str) -> bool:
+    """True if `cmd` runs a kernel-inventory example whose constructed-carrier
+    build (CReal/Complex/CPoint) recurses deep enough through
+    `Kernel::add_declaration` to overflow a debug build's default thread
+    stack, without `--release`.
+
+    Measured 2026-08-25 on this tree: `cargo run -q -p axeyum-lean-kernel
+    --example nat_axiom_inventory -- --include-constructed
+    --require-axiom-free creal` exits 134 (`thread 'main' has overflowed its
+    stack`) without `--release`, exit 0 with it -- the same resource limit
+    CLAUDE.md already documents for `prelude_theorem_inventory
+    --include-constructed`. 19 committed `F-creal-*`/`F-complex-*` checker
+    commands carried this before 2026-08-25's fix, all silently unrunnable in
+    a debug build.
+
+    `theorem_dependency_inventory` builds EVERY constructed prelude
+    unconditionally (no flag gates it, per its own module doc), so any
+    invocation without `--release` is flagged regardless of arguments.
+    `nat_axiom_inventory` and `prelude_theorem_inventory` build the
+    constructed carriers only when `--include-constructed` is passed --
+    their Nat/Int/Rat/logic-only forms run fine in a debug build (measured:
+    `nat_axiom_inventory -- --require-axiom-free nat` exits 0 without
+    `--release`) -- so only that combination is flagged. Demanding
+    `--release` on every invocation of these tools, unconditionally, would
+    force a needless rewrite on 102 committed commands that do not crash,
+    without catching any additional failure.
+    """
+    m = _DEEP_STACK_INVENTORY_RE.search(cmd)
+    if not m:
+        return False
+    if "--release" in cmd:
+        return False
+    if m.group(1) == "theorem_dependency_inventory":
+        return True
+    return "--include-constructed" in cmd
+
+
 def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
     errors: list[str] = []
     fid = fact.get("id", f"<{path.name}>")
@@ -139,6 +259,19 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
     if formal.get("language") not in LANGUAGES_ALL:
         fail(errors, f"{fid}: formal.language {formal.get('language')!r} not in "
                      f"{sorted(LANGUAGES_ALL)}")
+    # `theorem_of` (scripts/check-fact-depends-derived.py, shared by the chain
+    # catalog and the autogenesis snapshot builder) reads this key WHEN PRESENT
+    # as the fact's subject theorem, `null` included -- `null` means "explicitly
+    # no single kernel theorem" (a package-level fact) and is NOT the same as
+    # omitting the key (which asks for extraction from evidence). A malformed
+    # string here would be silently treated as a real theorem name by every one
+    # of those consumers, so it is validated the same way a theorem name is
+    # matched out of a checker_command.
+    if "kernel_theorem" in formal and not kernel_theorem_is_valid(formal["kernel_theorem"]):
+        fail(errors, f"{fid}: formal.kernel_theorem must be null (explicitly "
+                     f"'no single kernel theorem') or a dotted namespaced "
+                     f"kernel theorem name such as 'Rat.det2_fib'; got "
+                     f"{formal['kernel_theorem']!r}")
     if formal.get("language") == "certificate-spec":
         statement = formal.get("statement", "")
         try:
@@ -195,6 +328,68 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
                          f"verdict. It exits 0 on sat AND unsat, so as written it checks "
                          f"that the binary ran. Wrap it, e.g. "
                          f'test "$(... | tail -1)" = unsat')
+        # `grep -q` as a pipeline consumer under `set -o pipefail` is banned
+        # (CLAUDE.md, banned-shell-idioms #2): `-q` exits at the FIRST match and
+        # SIGPIPEs the producer, so the pipeline's exit status becomes 141 --
+        # which `pipefail` turns into "not found". Measured 2026-08-20 in
+        # `scripts/check-control-registration.sh`: the SAME unchanged tree
+        # reported 7 orphans on one run and 3 on the next, because whether the
+        # producer finishes writing before the SIGPIPE arrives depends on
+        # buffering -- this is nondeterministic flakiness, not a one-time bug.
+        # `grep -c` (or `--count`) consumes all input to EOF and cannot SIGPIPE,
+        # so pair it with a count test: `test "$(... | grep -cE '...')" -ge 1`.
+        if checker_command_uses_grep_dash_q(cmd):
+            fail(errors, f"{fid}: checker_command uses `grep -q` (or `--quiet`) as a "
+                         f"pipeline consumer. Under `set -o pipefail` that SIGPIPEs the "
+                         f"producer at the first match, turning the pipeline's exit "
+                         f"status nondeterministic (141 sometimes, 0 other times, "
+                         f"depending on buffering) -- CLAUDE.md's banned-shell-idioms "
+                         f"#2, measured to flip 7 vs 3 on an UNCHANGED tree. Replace "
+                         f"`grep -q PATTERN` with `grep -c PATTERN` and test the count: "
+                         f'test "$(... | grep -cE \'PATTERN\')" -ge 1')
+        # `\t` inside a grep -E pattern is NOT a tab in POSIX ERE -- GNU grep
+        # drops the backslash and matches a literal 't'. Measured with
+        # `/usr/bin/grep` (GNU grep 3.12): `printf 'a\tb\n' | grep -cE 'a\tb'`
+        # matches ZERO real tabs and `printf 'atb\n' | grep -cE 'a\tb'`
+        # matches ONE literal 't' -- the opposite of what the pattern's
+        # author intended. 54 facts / 68 checker_commands carried this before
+        # 2026-08-25's rewrite, each silently reporting a PRESENT theorem as
+        # ABSENT under any script or CI run (fail-closed, not a wrong sat/unsat,
+        # but the evidence did not re-derive anywhere except an interactive
+        # shell whose `grep` is a function wrapping `ugrep`, which DOES treat
+        # `\t` as a tab and so never saw the bug). Replace a standalone `\t`
+        # separator with `[[:space:]]`; inside a bracket expression (`[^\t]`)
+        # use `[^[:space:]]`, since backslash is not special there either. If
+        # a pattern needs a literal tab specifically (not any whitespace),
+        # build one with `$(printf '\t')` outside the single-quoted literal.
+        if checker_command_uses_grep_backslash_t(cmd):
+            fail(errors, f"{fid}: checker_command passes grep a pattern containing "
+                         f"the literal escape `\\t`, which POSIX ERE (and BRE) does "
+                         f"NOT interpret as a tab -- GNU grep drops the backslash and "
+                         f"matches a literal 't' instead, so a tab-anchored pattern "
+                         f"like '^Name\\t' matches NOTHING against real tab-separated "
+                         f"output. This reports a PRESENT theorem as ABSENT under any "
+                         f"script or CI run (an interactive shell's `grep` may be a "
+                         f"function wrapping `ugrep`, which DOES treat \\t as a tab, "
+                         f"masking the bug by hand). Replace a standalone `\\t` "
+                         f"separator with `[[:space:]]`; inside a bracket expression "
+                         f"(`[^\\t]`) use `[^[:space:]]`. For a literal tab "
+                         f"specifically, build one with `$(printf '\\t')` outside the "
+                         f"single-quoted pattern.")
+        # `nat_axiom_inventory --include-constructed`, `prelude_theorem_inventory
+        # --include-constructed` and any `theorem_dependency_inventory` build the
+        # constructed carriers (CReal/Complex/CPoint) deep enough through
+        # `Kernel::add_declaration` to overflow a debug build's default thread
+        # stack -- measured exit 134 ("has overflowed its stack") without
+        # `--release`, exit 0 with it. 19 committed checker commands carried this
+        # before 2026-08-25's fix, silently unrunnable in a debug build.
+        if checker_command_needs_release_for_deep_stack(cmd):
+            fail(errors, f"{fid}: checker_command runs a kernel-inventory example "
+                         f"over the constructed carriers (CReal/Complex/CPoint) "
+                         f"without `--release`. That build recurses deep enough to "
+                         f"overflow a debug build's default thread stack -- measured "
+                         f"exit 134 ('has overflowed its stack') without the flag, "
+                         f"exit 0 with it. Add `--release` right after `cargo run -q`.")
         if ev.get("kind") == "claim-ref":
             art = ev.get("artifact")
             if not art:

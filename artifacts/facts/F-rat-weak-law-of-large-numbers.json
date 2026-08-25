@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-weak-law-of-large-numbers",
+  "title": "The weak law of large numbers over the constructed rationals",
+  "statement": "For pairwise-uncorrelated random variables X_0..X_(n-1) over a common distribution and a positive rational threshold k, k^2 * P(|sampleMean - E[sampleMean]| >= k) <= (1/n)^2 * sum_{i<n} variance(X_i). The sample mean's deviation from its expectation is controlled by the average variance, shrinking as n grows -- the capstone of the probability development built on Chebyshev above.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.weak_law_of_large_numbers : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : Rat) -> ((x2 : ((x2 : AxNat) -> Rat)) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : Rat.IsDistribution x2 x3) -> ((x6 : Rat.PairwiseUncorrelated x0 x4 x2 x3) -> ((x7 : Rat.lt Rat.zero x1) -> Rat.le (Rat.mul (Rat.mul x1 x1) (Rat.expectation (Rat.indicator (Rat.mul x1 x1) (fun (x8 : AxNat) => Rat.mul (Rat.sub ((fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x8) (Rat.expectation (fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x2 x3)) (Rat.sub ((fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x8) (Rat.expectation (fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x2 x3)))) x2 x3)) (Rat.mul (Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.inv (Rat.natDivSucc x4 AxNat.zero))) (Rat.sumRange (fun (x8 : AxNat) => Rat.variance (x0 x8) x2 x3) x4))))))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8",
+      "x9"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-chebyshev-samplemean-uncorrelated"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.weak_law_of_large_numbers",
+      "kind": "kernel-term",
+      "supports": "Rat.weak_law_of_large_numbers is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.weak_law_of_large_numbers 2>/dev/null | grep -cE '^Rat\\.weak_law_of_large_numbers[[:space:]]'",
+      "notes": "`build_rat_prelude` admits Rat.weak_law_of_large_numbers through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` exits non-zero for a named filter that matches nothing (a deleted theorem cannot read as a re-derived one), and `grep -c` (never `-q`) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present -- two ways the same absence would be caught. `--release` is MANDATORY: this tool now also builds `creal`/`complex`/`cpoint`, which recurse deep enough in a debug build to overflow the default thread stack (measured: release exits 0 with 1092 theorems, debug SIGABRTs at 134) -- the same resource-limit gotcha already documented for `prelude_theorem_inventory --include-constructed`."
+    },
+    {
+      "id": "footprint-Rat.weak_law_of_large_numbers",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Rat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "notes": "`nat_axiom_inventory` builds the Rat environment as its own group and reports `rat: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree). That bounds every individual Rat theorem's footprint by [], since a theorem cannot depend on a trusted declaration the environment does not contain -- and the enumeration covers Axiom, Opaque AND Quotient, not just Declaration::Axiom, because Opaque has no proof body and Quotient admits Quot.sound. `--require-axiom-free <name>` is an error (not a silent pass/zero) for a prelude this run never built, which is what makes `rat` here a claim rather than an absence."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:law-of-large-numbers",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_rat_prelude",
+    "source": "see F:rat-add-comm for the extraction method (shared for the whole batch)."
+  },
+  "notes": "depends_on is empty because the sole direct kernel dependency, Rat.chebyshev_sampleMean_uncorrelated, is a distinct intermediate theorem from Rat.chebyshev_inequality above and is not itself a registered fact in this batch -- the relationship to F:rat-chebyshev-inequality is thematic (both instantiate Chebyshev), not a direct proof-term citation, and depends_on records only direct citations, never thematic ones (the convention set by F:int-add-comm).",
+  "external_status": "proved"
+}

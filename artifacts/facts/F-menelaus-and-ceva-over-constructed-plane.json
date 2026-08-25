@@ -32,7 +32,7 @@
         "creal_point_tests::menelaus_collinear_of_ratio_product_statement_is_exact (asserts the KERNEL-RENDERED type verbatim with assert_eq!, then asserts exactly ONE negated ratio-product factor -- the sign that distinguishes Menelaus from Ceva)",
         "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_cpoint_prelude return Err and the suite fail)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::menelaus_collinear_of_ratio_product_statement_is_exact -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::menelaus_collinear_of_ratio_product_statement_is_exact -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/creal_point.rs",
       "notes": "A footprint check cannot carry this claim, and here the two candidates are a SINGLE `neg` apart: Ceva's ratio condition and Menelaus' are the same product equation with opposite sign, and both are axiom-free. Stating Menelaus with Ceva's sign would be false and no sweep in this repository would notice. The pin asserts the occurrence count of the negation BEFORE relying on it, because a substring guard for a shape that was never present reads as a dead guard rather than a red flag. Mutation-verified by the establishing lane: weakening the guard killed exactly one test, then reverted. The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
     },
@@ -45,7 +45,7 @@
         "creal_point_tests::ceva_ratio_product_of_concurrent_statement_is_exact (asserts the KERNEL-RENDERED type verbatim, including that the conclusion has the same shape as the forward direction's hypothesis)",
         "creal_point_tests::every_theorem_here_is_axiom_free (reads Kernel::axiom_footprint for every declared theorem in this file and requires the empty set)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::ceva_ratio_product_of_concurrent_statement_is_exact -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::ceva_ratio_product_of_concurrent_statement_is_exact -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/creal_point.rs",
       "notes": "Mutation-verified by the establishing lane on the conclusion-shape pattern; exactly one test died, then reverted. Note the DIRECTION is load-bearing in the names: the forward theorem exhibits a point and the converse derives the ratio equation, and a name that dropped the direction would let a reader assume an iff that is only true under the stated non-degeneracy."
     },
@@ -58,7 +58,7 @@
         "creal_point_tests::every_theorem_here_is_axiom_free (per-declaration Kernel::axiom_footprint, empty set required)",
         "prelude_theorem_inventory --include-constructed (independent sweep listing every declared name with its footprint across every constructed carrier)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::every_theorem_here_is_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal_point::creal_point_tests::every_theorem_here_is_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs",
       "notes": "Presence matters as much as the footprint: axiom_footprint of a name interned but never DECLARED is vacuously empty, which is why the presence sweep is the companion check. Counting Declaration::Axiom alone would not suffice either, since Opaque has no proof body and Quotient admits Quot.sound."
     }

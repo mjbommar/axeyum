@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-covariance-sq-le-variance-mul-of-pos",
+  "title": "Covariance squared is bounded by the product of variances, given a positive variance",
+  "statement": "For random variables X, Y over a distribution (p, n): if 0 < variance(X, p, n) then covariance(X,Y,p,n)^2 <= variance(X,p,n) * variance(Y,p,n) -- the Cauchy-Schwarz bound for covariance, positive-variance case.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.covariance_sq_le_variance_mul_of_pos : ((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : ((x2 : AxNat) -> Rat)) -> ((x3 : AxNat) -> ((x4 : Rat.IsDistribution x2 x3) -> ((x5 : Rat.lt Rat.zero (Rat.variance x0 x2 x3)) -> Rat.le (Rat.mul (Rat.covariance x0 x1 x2 x3) (Rat.covariance x0 x1 x2 x3)) (Rat.mul (Rat.variance x0 x2 x3) (Rat.variance x1 x2 x3))))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-add-assoc",
+    "F:rat-add-comm",
+    "F:rat-add-le-add",
+    "F:rat-add-neg",
+    "F:rat-add-zero",
+    "F:rat-le-of-lt",
+    "F:rat-le-refl",
+    "F:rat-lt-irrefl",
+    "F:rat-mul-assoc",
+    "F:rat-mul-comm",
+    "F:rat-mul-inv-cancel-of-ne-zero",
+    "F:rat-mul-le-mul-of-nonneg-left",
+    "F:rat-mul-neg",
+    "F:rat-mul-one",
+    "F:rat-neg-add-cancel",
+    "F:rat-neg-mul",
+    "F:rat-neg-neg",
+    "F:rat-zero-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.covariance_sq_le_variance_mul_of_pos",
+      "kind": "kernel-term",
+      "supports": "Rat.covariance_sq_le_variance_mul_of_pos is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.covariance_sq_le_variance_mul_of_pos 2>/dev/null | grep -cE '^Rat\\.covariance_sq_le_variance_mul_of_pos[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "`build_rat_prelude` admits Rat.covariance_sq_le_variance_mul_of_pos through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` exits non-zero for a named filter that matches nothing (a deleted theorem cannot read as a re-derived one), and `grep -c` (never `-q`) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present. `--release` is MANDATORY: this tool also builds `creal`/`complex`/`cpoint`, which recurse deep enough in a debug build to overflow the default thread stack (measured: release exits 0, debug SIGABRTs at 134) -- the same resource-limit gotcha already documented for `prelude_theorem_inventory --include-constructed`."
+    },
+    {
+      "id": "footprint-Rat.covariance_sq_le_variance_mul_of_pos",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.covariance_sq_le_variance_mul_of_pos",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 10,
+      "notes": "`nat_axiom_inventory` builds the Rat environment as its own group and reports `rat: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree). That bounds every individual Rat theorem's footprint by [], including Rat.covariance_sq_le_variance_mul_of_pos, since a theorem cannot depend on a trusted declaration the environment does not contain -- and the enumeration covers Axiom, Opaque AND Quotient, not just Declaration::Axiom, because Opaque has no proof body and Quotient admits Quot.sound. `--require-axiom-free <name>` is an error (not a silent pass/zero) for a prelude this run never built, which is what makes `rat` here a claim rather than an absence."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_rat_prelude",
+    "source": "theorem name and dependency edges from theorem_dependency_inventory (builds nat/int/rat/creal/complex/cpoint/string/characterization); canonical type and top-level binder count read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean()) -- no in-tree example prints Rat/CReal theorem types beyond a substring filter; crates/ source was not touched to produce this batch; the probe was built and run in the session scratchpad and deleted after use."
+  },
+  "notes": "depends_on keeps the sibling-mapped subset of Rat.covariance_sq_le_variance_mul_of_pos's direct-edge set from theorem_dependency_inventory: a used theorem is declared only when it is itself a registered ledger fact (including new facts from this same batch).",
+  "external_status": "proved"
+}

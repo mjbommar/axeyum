@@ -19,7 +19,12 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:nat-div-mod-exists"
+    "F:nat-div-mod-exists",
+    "F:nat-le-add-right",
+    "F:nat-le-total",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-mul-le-mul-left"
   ],
   "axiom_footprint": [],
   "evidence": [
@@ -28,7 +33,7 @@
       "kind": "kernel-term",
       "supports": "If n = d*q1 + r1 with r1 < d and n = d*q2 + r2 with r2 < d, then q1 = q2 and r1 = r2.",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- div_mod_unique 2>/dev/null | grep -qE '^Nat\\.div_mod_unique[[:space:]]'",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- div_mod_unique 2>/dev/null | grep -Ec '^Nat\\.div_mod_unique[[:space:]]')\" -ge 1",
       "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing the row at all is a machine-checked proof. TIGHTENED 2026-08-16: the command was `cargo test -p axeyum-lean-kernel --lib nat_prelude`, a whole-suite run that passes or fails identically for every fact citing it and would stay green if THIS theorem were deleted. It now names its own subject twice over -- `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed."
     },
     {

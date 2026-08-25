@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 188] = [
+    let expected: [(&str, crate::NameId, &str); 213] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -213,6 +213,9 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.converges_add", p.converges_add, "theorem"),
         ("CReal.converges_neg", p.converges_neg, "theorem"),
         ("CReal.converges_sub", p.converges_sub, "theorem"),
+        // The squeeze theorem: no shift bridge needed, since `CReal.le` is
+        // already stated at the same canonical-sample index `Converges` uses.
+        ("CReal.converges_squeeze", p.converges_squeeze, "theorem"),
         // Boundedness and sequential continuity (phase R10).
         ("CReal.Bounded", p.bounded, "def"),
         ("CReal.converges_bounded", p.converges_bounded, "theorem"),
@@ -240,6 +243,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.uniformly_continuous_const",
             p.uniformly_continuous_const,
+            "theorem",
+        ),
+        (
+            "CReal.uniformly_continuous_add",
+            p.uniformly_continuous_add,
             "theorem",
         ),
         ("CReal.ratSqLe", p.rat_sq_le, "theorem"),
@@ -288,6 +296,38 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.sumRange_telescope", p.sum_range_telescope, "theorem"),
         ("CReal.sumRange_split", p.sum_range_split, "theorem"),
         ("CReal.sumRange_tail_le", p.sum_range_tail_le, "theorem"),
+        (
+            "CReal.sumRange_tail_within",
+            p.sum_range_tail_within,
+            "theorem",
+        ),
+        (
+            "CReal.sumRange_tail_within_le",
+            p.sum_range_tail_within_le,
+            "theorem",
+        ),
+        (
+            "CReal.sumRange_tail_cauchy_within",
+            p.sum_range_tail_cauchy_within,
+            "theorem",
+        ),
+        (
+            "CReal.sumRange_tail_within_cauchy",
+            p.sum_range_tail_within_cauchy,
+            "theorem",
+        ),
+        (
+            "CReal.sumRange_cauchy_dominated_ordered",
+            p.sum_range_cauchy_dominated_ordered,
+            "theorem",
+        ),
+        (
+            "CReal.sumRange_cauchy_dominated_ordered_normalized",
+            p.sum_range_cauchy_dominated_ordered_normalized,
+            "theorem",
+        ),
+        ("CReal.sumRange_seq_zero", p.sum_range_seq_zero, "theorem"),
+        ("CReal.sumRange_seq_succ", p.sum_range_seq_succ, "theorem"),
         // Powers, and the geometric series over ℝ (creal/power.rs).
         // PRESENCE MATTERS AS MUCH AS THE FOOTPRINT here too — see the
         // convergence block's own comment above.
@@ -351,6 +391,10 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.abs_mul_le_of_bounds,
             "theorem",
         ),
+        ("CReal.BoundedOn", p.bounded_on, "def"),
+        ("CReal.bounded_on_unfold", p.bounded_on_unfold, "theorem"),
+        ("CReal.bounded_on_mul", p.bounded_on_mul, "theorem"),
+        ("CReal.bounded_on_add", p.bounded_on_add, "theorem"),
         ("CReal.hasDerivative_smul", p.has_derivative_smul, "theorem"),
         ("CReal.hasDerivative_sub", p.has_derivative_sub, "theorem"),
         ("CReal.hasDerivative_mul", p.has_derivative_mul, "theorem"),
@@ -364,6 +408,27 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.has_derivative_pow_two,
             "theorem",
         ),
+        ("CReal.hasDerivative_cube", p.has_derivative_cube, "theorem"),
+        ("CReal.hasDerivative_pow", p.has_derivative_pow, "theorem"),
+        (
+            "CReal.hasDerivative_chain",
+            p.has_derivative_chain,
+            "theorem",
+        ),
+        // The integral (creal/integral.rs). PRESENCE MATTERS AS MUCH AS THE
+        // FOOTPRINT here too — see the convergence block's own comment above.
+        ("CReal.riemannSum", p.riemann_sum, "def"),
+        ("CReal.riemannSum_add", p.riemann_sum_add, "theorem"),
+        ("CReal.mul_riemannSum", p.mul_riemann_sum, "theorem"),
+        ("CReal.riemannSum_le", p.riemann_sum_le, "theorem"),
+        ("CReal.riemannSum_const", p.riemann_sum_const, "theorem"),
+        ("CReal.ofNat_le", p.of_nat_le, "theorem"),
+        (
+            "CReal.riemannSum_sample_in_bounds",
+            p.riemann_sample_in_bounds,
+            "theorem",
+        ),
+        ("CReal.riemannSum_le_on", p.riemann_sum_le_on, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -395,6 +460,1036 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "{label} rests on {footprint:?}");
     }
+}
+
+/// **`CReal.sumRange_tail_within` on a trivial instance**: `f = g` the
+/// constant-zero sequence, `m = n = 0`. Not a soundness check on its own
+/// (the general theorem is already proved for every `f g m n`, so any
+/// instance holds) — it is the sanity check the module documentation's
+/// "series.rs" retrospective on `nra_monomial_bound_cert.rs`-style vacuity
+/// asks for: instantiate the theorem's own conclusion at a fully CONCRETE,
+/// CLOSED term and have the kernel independently `infer` its type, rather
+/// than trusting that a universally-quantified statement that type-checks
+/// is the statement intended. `Kernel::infer` requires a closed term
+/// (`tests.rs::inference_caches_only_closed_successes` pins that an
+/// unregistered free variable is refused), which is exactly why this test
+/// closes the pointwise hypothesis and both indices to ground terms instead
+/// of leaving `f` a free variable.
+#[test]
+fn sum_range_tail_within_specializes_to_the_zero_series_against_itself() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+
+    // zero_fn := λ _ : Nat, CReal.zero.
+    let zero_fn = {
+        let k_fv = d.fresh_fvar();
+        let _k = d.kernel().fvar(k_fv);
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        d.lam_fv(k_fv, nat, zero_c)
+    };
+    let zero_nat = d.num(0);
+
+    // pointwise : ∀ k, le (abs (zero_fn k)) (zero_fn k), via le_abs_self.
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zk = d.apply(zero_fn, &[k]);
+        let body = d.lemma(p.le_abs_self, &[zk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let instance = d.lemma(
+        p.sum_range_tail_within,
+        &[zero_fn, zero_fn, zero_nat, zero_nat, pointwise],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!(
+            "sumRange_tail_within refused at the trivial f = g = (fun _ => zero), \
+             m = n = 0 instance: {error:?}"
+        )
+    });
+
+    // Not just well-typed: the conclusion the kernel infers is genuinely a
+    // `Within` bound, not e.g. `True` or some other vacuous stand-in.
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Within"),
+        "the instantiated conclusion is not a `Within` bound: {rendered}"
+    );
+}
+
+/// `CReal.sumRange_tail_within_le` on a trivial instance: `f = g` the
+/// constant-zero sequence, `a = 0`, `b = 1` — a **non-degenerate** pair
+/// (`a ≠ b`), deliberately, so the `Nat.le_dest` witness `k` used internally
+/// is `1`, not `0`: an `a = b` instance would exercise `k = 0` only and could
+/// pass even if the general `k`-indexed rewrite were broken. Same rationale
+/// and same `Kernel::infer`-on-a-closed-term method as
+/// [`sum_range_tail_within_specializes_to_the_zero_series_against_itself`].
+#[test]
+fn sum_range_tail_within_le_specializes_to_the_zero_series_from_0_to_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+
+    // zero_fn := λ _ : Nat, CReal.zero.
+    let zero_fn = {
+        let k_fv = d.fresh_fvar();
+        let _k = d.kernel().fvar(k_fv);
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        d.lam_fv(k_fv, nat, zero_c)
+    };
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    // pointwise : ∀ k, le (abs (zero_fn k)) (zero_fn k), via le_abs_self.
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zk = d.apply(zero_fn, &[k]);
+        let body = d.lemma(p.le_abs_self, &[zk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    // hle : Nat.le 0 1, via Nat.zero_le.
+    let zero_le = d.prelude().zero_le;
+    let hle = d.lemma(zero_le, &[one_nat]);
+
+    let instance = d.lemma(
+        p.sum_range_tail_within_le,
+        &[zero_fn, zero_fn, zero_nat, one_nat, pointwise, hle],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!(
+            "sumRange_tail_within_le refused at the trivial f = g = (fun _ => zero), \
+             a = 0, b = 1 instance: {error:?}"
+        )
+    });
+
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Within"),
+        "the instantiated conclusion is not a `Within` bound: {rendered}"
+    );
+}
+
+/// **`CReal.sumRange_tail_cauchy_within` on a trivial instance**: `g` the
+/// constant-zero sequence, `K := 0`, `m = n = 0`. Same rationale and same
+/// `Kernel::infer`-on-a-closed-term method as
+/// [`sum_range_tail_within_specializes_to_the_zero_series_against_itself`].
+///
+/// Unlike the two tests above, the theorem's own hypothesis here is itself a
+/// genuine `∀ pp qq` statement (the raw Cauchy witness), so this cannot be
+/// discharged by a single existing lemma at the trivial instance — it needs
+/// an actual (short) proof that `sumRange (fun _ => zero) n` samples to
+/// `Rat.zero` at every index, by induction on `n` via
+/// `sumRange_seq_zero`/`sumRange_seq_succ`, then that `Within Rat.zero
+/// bound` holds for any nonnegative `bound` (both `natDivSucc` moduli are
+/// nonnegative via `Rat.zero_le_natDivSucc`).
+#[test]
+fn sum_range_tail_cauchy_within_specializes_to_the_zero_series_against_itself() {
+    use crate::expr::ExprId;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::{
+        radd, rat_eq_rewrite, rchain, rcongr, req, rle, rneg, rrefl, rsymm, rtrans, rzero,
+    };
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+    let rat = p.rat;
+
+    // zero_fn := λ _ : Nat, CReal.zero.
+    let zero_fn = {
+        let k_fv = d.fresh_fvar();
+        let _k = d.kernel().fvar(k_fv);
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        d.lam_fv(k_fv, nat, zero_c)
+    };
+
+    // zero_seq_at(n) : ∀ k, Eq Rat (seq (sumRange zero_fn n) k) Rat.zero, by
+    // induction on `n` via `sumRange_seq_zero`/`sumRange_seq_succ`.
+    let zero_seq_at = |d: &mut IntDev<'_>, n_val: ExprId| -> ExprId {
+        let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+            let sum_x = d.const_app(p.sum_range, &[zero_fn, x]);
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let lhs = super::sample(d, p, sum_x, k);
+            let rzero_c = rzero(d, rat);
+            let claim = req(d, lhs, rzero_c);
+            d.pi_fv(k_fv, nat, claim)
+        };
+        d.induct(
+            &motive,
+            &|d| d.lemma(p.sum_range_seq_zero, &[zero_fn]),
+            &|d, j, ih| {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sk = super::shift(d, k);
+                // step : Eq Rat (seq (sumRange zero_fn (succ j)) k)
+                //               (add (seq (sumRange zero_fn j) sk) (seq (zero_fn j) sk))
+                let step = d.lemma(p.sum_range_seq_succ, &[zero_fn, j, k]);
+
+                let sum_j = d.const_app(p.sum_range, &[zero_fn, j]);
+                let left_sample = super::sample(d, p, sum_j, sk);
+                let zfj = d.apply(zero_fn, &[j]);
+                let right_sample = super::sample(d, p, zfj, sk);
+                let start = radd(d, left_sample, right_sample);
+
+                let rzero_c = rzero(d, rat);
+                let ih_at_sk = d.apply(ih, &[sk]); // Eq Rat left_sample rzero_c
+                // `right_sample` is defeq to `rzero_c` (`zero_fn j` beta-reduces
+                // to `zero`, then `seq zero sk` iota-reduces to `Rat.zero`).
+                let right_is_zero = rrefl(d, rzero_c);
+
+                let after_left = radd(d, rzero_c, right_sample);
+                let step1 = rcongr(d, left_sample, rzero_c, ih_at_sk, &|d, t| {
+                    radd(d, t, right_sample)
+                });
+                let after_right = radd(d, rzero_c, rzero_c);
+                let step2 = rcongr(d, right_sample, rzero_c, right_is_zero, &|d, t| {
+                    radd(d, rzero_c, t)
+                });
+                let collapse = d.lemma(rat.add_zero, &[rzero_c]); // Eq (add zero zero) zero
+
+                let (_, chained) = rchain(
+                    d,
+                    start,
+                    &[
+                        (after_left, step1),
+                        (after_right, step2),
+                        (rzero_c, collapse),
+                    ],
+                );
+                let succ_sample = {
+                    let sj = d.succ(j);
+                    let sum_sj = d.const_app(p.sum_range, &[zero_fn, sj]);
+                    super::sample(d, p, sum_sj, k)
+                };
+                let total = rtrans(d, succ_sample, start, rzero_c, step, chained);
+
+                d.lam_fv(k_fv, nat, total)
+            },
+            n_val,
+        )
+    };
+
+    let zero_nat = d.num(0);
+    let k_witness = d.num(0);
+
+    // hyp : ∀ pp qq, Within (seq (sumRange zero_fn pp) pp
+    //                        − seq (sumRange zero_fn qq) qq)
+    //                       (natDivSucc 0 pp + natDivSucc 0 qq)
+    let hyp = {
+        let pp_fv = d.fresh_fvar();
+        let pp = d.kernel().fvar(pp_fv);
+        let qq_fv = d.fresh_fvar();
+        let qq = d.kernel().fvar(qq_fv);
+
+        let left_eq = {
+            let at_pp = zero_seq_at(&mut d, pp);
+            d.apply(at_pp, &[pp])
+        }; // Eq Rat (seq (sumRange zero_fn pp) pp) Rat.zero
+        let right_eq = {
+            let at_qq = zero_seq_at(&mut d, qq);
+            d.apply(at_qq, &[qq])
+        };
+
+        let sum_pp = d.const_app(p.sum_range, &[zero_fn, pp]);
+        let sum_qq = d.const_app(p.sum_range, &[zero_fn, qq]);
+        let left = super::sample(&mut d, p, sum_pp, pp);
+        let right = super::sample(&mut d, p, sum_qq, qq);
+        let diff = rsub(&mut d, rat, left, right);
+        let rzero_c = rzero(&mut d, rat);
+
+        // diff = zero: rewrite `left`, then `right`, to zero, then collapse
+        // `zero - zero` via `neg_zero`/`add_zero`.
+        let after_left = rsub(&mut d, rat, rzero_c, right);
+        let step1 = rcongr(&mut d, left, rzero_c, left_eq, &|d, t| {
+            rsub(d, rat, t, right)
+        });
+        let after_right = rsub(&mut d, rat, rzero_c, rzero_c);
+        let step2 = rcongr(&mut d, right, rzero_c, right_eq, &|d, t| {
+            rsub(d, rat, rzero_c, t)
+        });
+
+        let neg_zero_eq = d.lemma(rat.neg_zero, &[]); // Eq (neg zero) zero
+        let neg_zero_term = rneg(&mut d, rzero_c);
+        let zero_plus_neg_zero = radd(&mut d, rzero_c, neg_zero_term);
+        let zero_plus_zero = radd(&mut d, rzero_c, rzero_c);
+        let step3a = rcongr(&mut d, neg_zero_term, rzero_c, neg_zero_eq, &|d, t| {
+            radd(d, rzero_c, t)
+        }); // Eq (add zero (neg zero)) (add zero zero)
+        let add_zero_eq = d.lemma(rat.add_zero, &[rzero_c]); // Eq (add zero zero) zero
+        // `after_right` (`sub zero zero`) is defeq to `zero_plus_neg_zero`
+        // (`add zero (neg zero)`), so `step3` below stands directly for
+        // `Eq Rat after_right rzero_c`.
+        let step3 = rtrans(
+            &mut d,
+            zero_plus_neg_zero,
+            zero_plus_zero,
+            rzero_c,
+            step3a,
+            add_zero_eq,
+        );
+
+        let (_, diff_eq_zero) = rchain(
+            &mut d,
+            diff,
+            &[(after_left, step1), (after_right, step2), (rzero_c, step3)],
+        );
+        let zero_eq_diff = rsymm(&mut d, diff, rzero_c, diff_eq_zero);
+
+        let bpp = d.const_app(rat.nat_div_succ, &[k_witness, pp]);
+        let bqq = d.const_app(rat.nat_div_succ, &[k_witness, qq]);
+        let bound = radd(&mut d, bpp, bqq);
+
+        let nonneg_pp = d.lemma(rat.zero_le_nat_div_succ, &[k_witness, pp]);
+        let nonneg_qq = d.lemma(rat.zero_le_nat_div_succ, &[k_witness, qq]);
+        let bound_nonneg = d.lemma(rat.add_nonneg, &[bpp, bqq, nonneg_pp, nonneg_qq]);
+        let neg_bound_nonpos = d.lemma(rat.neg_nonpos_of_nonneg, &[bound, bound_nonneg]);
+        let neg_bound = rneg(&mut d, bound);
+        let lower_ty = rle(&mut d, rat, neg_bound, rzero_c);
+        let upper_ty = rle(&mut d, rat, rzero_c, bound);
+        let zero_within_bound = super::and_intro(
+            &mut d,
+            p,
+            lower_ty,
+            upper_ty,
+            neg_bound_nonpos,
+            bound_nonneg,
+        );
+
+        let within_diff = rat_eq_rewrite(
+            &mut d,
+            rzero_c,
+            diff,
+            zero_eq_diff,
+            zero_within_bound,
+            &|d, t| super::within(d, p, t, bound),
+        );
+
+        let over_qq = d.lam_fv(qq_fv, nat, within_diff);
+        d.lam_fv(pp_fv, nat, over_qq)
+    };
+
+    let instance = d.lemma(
+        p.sum_range_tail_cauchy_within,
+        &[zero_fn, k_witness, zero_nat, zero_nat, hyp],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!(
+            "sumRange_tail_cauchy_within refused at the trivial g = (fun _ => zero), \
+             K = 0, m = n = 0 instance: {error:?}"
+        )
+    });
+
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Within"),
+        "the instantiated conclusion is not a `Within` bound: {rendered}"
+    );
+}
+
+/// **`CReal.sumRange_tail_within_cauchy` (the outer telescope) on a
+/// non-degenerate instance**: `f = g` the constant-zero sequence, `K = 0`,
+/// `m = 0`, `n = 1` (so `m + n = 1 ≠ 0`, exercising the `shift`/`modulus`
+/// legs at a genuinely nonzero index rather than the `m = n = 0` case the
+/// two theorems this one composes were each already checked at separately).
+/// Same rationale and `Kernel::infer`-on-a-closed-term method as the other
+/// specialization tests in this file; the Cauchy hypothesis is built the
+/// same way [`sum_range_tail_cauchy_within_specializes_to_the_zero_series_against_itself`]
+/// builds it.
+#[test]
+fn sum_range_tail_within_cauchy_specializes_to_the_zero_series_against_itself() {
+    use crate::expr::ExprId;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::{
+        radd, rat_eq_rewrite, rchain, rcongr, req, rle, rneg, rrefl, rsymm, rtrans, rzero,
+    };
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+    let rat = p.rat;
+
+    // zero_fn := λ _ : Nat, CReal.zero.
+    let zero_fn = {
+        let k_fv = d.fresh_fvar();
+        let _k = d.kernel().fvar(k_fv);
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        d.lam_fv(k_fv, nat, zero_c)
+    };
+
+    // zero_seq_at(n) : ∀ k, Eq Rat (seq (sumRange zero_fn n) k) Rat.zero, by
+    // induction on `n` via `sumRange_seq_zero`/`sumRange_seq_succ`.
+    let zero_seq_at = |d: &mut IntDev<'_>, n_val: ExprId| -> ExprId {
+        let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+            let sum_x = d.const_app(p.sum_range, &[zero_fn, x]);
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let lhs = super::sample(d, p, sum_x, k);
+            let rzero_c = rzero(d, rat);
+            let claim = req(d, lhs, rzero_c);
+            d.pi_fv(k_fv, nat, claim)
+        };
+        d.induct(
+            &motive,
+            &|d| d.lemma(p.sum_range_seq_zero, &[zero_fn]),
+            &|d, j, ih| {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sk = super::shift(d, k);
+                let step = d.lemma(p.sum_range_seq_succ, &[zero_fn, j, k]);
+
+                let sum_j = d.const_app(p.sum_range, &[zero_fn, j]);
+                let left_sample = super::sample(d, p, sum_j, sk);
+                let zfj = d.apply(zero_fn, &[j]);
+                let right_sample = super::sample(d, p, zfj, sk);
+                let start = radd(d, left_sample, right_sample);
+
+                let rzero_c = rzero(d, rat);
+                let ih_at_sk = d.apply(ih, &[sk]);
+                let right_is_zero = rrefl(d, rzero_c);
+
+                let after_left = radd(d, rzero_c, right_sample);
+                let step1 = rcongr(d, left_sample, rzero_c, ih_at_sk, &|d, t| {
+                    radd(d, t, right_sample)
+                });
+                let after_right = radd(d, rzero_c, rzero_c);
+                let step2 = rcongr(d, right_sample, rzero_c, right_is_zero, &|d, t| {
+                    radd(d, rzero_c, t)
+                });
+                let collapse = d.lemma(rat.add_zero, &[rzero_c]);
+
+                let (_, chained) = rchain(
+                    d,
+                    start,
+                    &[
+                        (after_left, step1),
+                        (after_right, step2),
+                        (rzero_c, collapse),
+                    ],
+                );
+                let succ_sample = {
+                    let sj = d.succ(j);
+                    let sum_sj = d.const_app(p.sum_range, &[zero_fn, sj]);
+                    super::sample(d, p, sum_sj, k)
+                };
+                let total = rtrans(d, succ_sample, start, rzero_c, step, chained);
+
+                d.lam_fv(k_fv, nat, total)
+            },
+            n_val,
+        )
+    };
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let k_witness = d.num(0);
+
+    // pointwise : ∀ k, le (abs (zero_fn k)) (zero_fn k), via le_abs_self.
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zk = d.apply(zero_fn, &[k]);
+        let body = d.lemma(p.le_abs_self, &[zk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    // cauchy_hyp : ∀ pp qq, Within (seq (sumRange zero_fn pp) pp
+    //                               − seq (sumRange zero_fn qq) qq)
+    //                              (natDivSucc 0 pp + natDivSucc 0 qq)
+    let cauchy_hyp = {
+        let pp_fv = d.fresh_fvar();
+        let pp = d.kernel().fvar(pp_fv);
+        let qq_fv = d.fresh_fvar();
+        let qq = d.kernel().fvar(qq_fv);
+
+        let left_eq = {
+            let at_pp = zero_seq_at(&mut d, pp);
+            d.apply(at_pp, &[pp])
+        };
+        let right_eq = {
+            let at_qq = zero_seq_at(&mut d, qq);
+            d.apply(at_qq, &[qq])
+        };
+
+        let sum_pp = d.const_app(p.sum_range, &[zero_fn, pp]);
+        let sum_qq = d.const_app(p.sum_range, &[zero_fn, qq]);
+        let left = super::sample(&mut d, p, sum_pp, pp);
+        let right = super::sample(&mut d, p, sum_qq, qq);
+        let diff = rsub(&mut d, rat, left, right);
+        let rzero_c = rzero(&mut d, rat);
+
+        let after_left = rsub(&mut d, rat, rzero_c, right);
+        let step1 = rcongr(&mut d, left, rzero_c, left_eq, &|d, t| {
+            rsub(d, rat, t, right)
+        });
+        let after_right = rsub(&mut d, rat, rzero_c, rzero_c);
+        let step2 = rcongr(&mut d, right, rzero_c, right_eq, &|d, t| {
+            rsub(d, rat, rzero_c, t)
+        });
+
+        let neg_zero_eq = d.lemma(rat.neg_zero, &[]);
+        let neg_zero_term = rneg(&mut d, rzero_c);
+        let zero_plus_neg_zero = radd(&mut d, rzero_c, neg_zero_term);
+        let zero_plus_zero = radd(&mut d, rzero_c, rzero_c);
+        let step3a = rcongr(&mut d, neg_zero_term, rzero_c, neg_zero_eq, &|d, t| {
+            radd(d, rzero_c, t)
+        });
+        let add_zero_eq = d.lemma(rat.add_zero, &[rzero_c]);
+        let step3 = rtrans(
+            &mut d,
+            zero_plus_neg_zero,
+            zero_plus_zero,
+            rzero_c,
+            step3a,
+            add_zero_eq,
+        );
+
+        let (_, diff_eq_zero) = rchain(
+            &mut d,
+            diff,
+            &[(after_left, step1), (after_right, step2), (rzero_c, step3)],
+        );
+        let zero_eq_diff = rsymm(&mut d, diff, rzero_c, diff_eq_zero);
+
+        let bpp = d.const_app(rat.nat_div_succ, &[k_witness, pp]);
+        let bqq = d.const_app(rat.nat_div_succ, &[k_witness, qq]);
+        let bound = radd(&mut d, bpp, bqq);
+
+        let nonneg_pp = d.lemma(rat.zero_le_nat_div_succ, &[k_witness, pp]);
+        let nonneg_qq = d.lemma(rat.zero_le_nat_div_succ, &[k_witness, qq]);
+        let bound_nonneg = d.lemma(rat.add_nonneg, &[bpp, bqq, nonneg_pp, nonneg_qq]);
+        let neg_bound_nonpos = d.lemma(rat.neg_nonpos_of_nonneg, &[bound, bound_nonneg]);
+        let neg_bound = rneg(&mut d, bound);
+        let lower_ty = rle(&mut d, rat, neg_bound, rzero_c);
+        let upper_ty = rle(&mut d, rat, rzero_c, bound);
+        let zero_within_bound = super::and_intro(
+            &mut d,
+            p,
+            lower_ty,
+            upper_ty,
+            neg_bound_nonpos,
+            bound_nonneg,
+        );
+
+        let within_diff = rat_eq_rewrite(
+            &mut d,
+            rzero_c,
+            diff,
+            zero_eq_diff,
+            zero_within_bound,
+            &|d, t| super::within(d, p, t, bound),
+        );
+
+        let over_qq = d.lam_fv(qq_fv, nat, within_diff);
+        d.lam_fv(pp_fv, nat, over_qq)
+    };
+
+    let instance = d.lemma(
+        p.sum_range_tail_within_cauchy,
+        &[
+            zero_fn, zero_fn, k_witness, zero_nat, one_nat, pointwise, cauchy_hyp,
+        ],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!(
+            "sumRange_tail_within_cauchy refused at the trivial f = g = (fun _ => zero), \
+             K = 0, m = 0, n = 1 instance: {error:?}"
+        )
+    });
+
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Within"),
+        "the instantiated conclusion is not a `Within` bound: {rendered}"
+    );
+}
+
+/// **`CReal.sumRange_cauchy_dominated_ordered` on a non-degenerate
+/// instance**: `f = g` the constant-zero sequence, `K = 0`, `a = 0`, `b = 1`
+/// — a non-degenerate pair (`a ≠ b`), deliberately, for the same reason
+/// [`sum_range_tail_within_le_specializes_to_the_zero_series_from_0_to_1`]
+/// picks it: the internal `Nat.le_dest` witness is `1`, not `0`, so this
+/// exercises the general (`gap ≠ 0`) rewrite rather than only the trivial
+/// one. Same `zero_seq_at`/`cauchy_hyp` construction as
+/// [`sum_range_tail_within_cauchy_specializes_to_the_zero_series_against_itself`],
+/// plus the `hle : Nat.le 0 1` witness
+/// [`sum_range_tail_within_le_specializes_to_the_zero_series_from_0_to_1`]
+/// already builds.
+#[test]
+fn sum_range_cauchy_dominated_ordered_specializes_to_the_zero_series_from_0_to_1() {
+    use crate::expr::ExprId;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::{
+        radd, rat_eq_rewrite, rchain, rcongr, req, rle, rneg, rrefl, rsymm, rtrans, rzero,
+    };
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+    let rat = p.rat;
+
+    // zero_fn := λ _ : Nat, CReal.zero.
+    let zero_fn = {
+        let k_fv = d.fresh_fvar();
+        let _k = d.kernel().fvar(k_fv);
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        d.lam_fv(k_fv, nat, zero_c)
+    };
+
+    // zero_seq_at(n) : ∀ k, Eq Rat (seq (sumRange zero_fn n) k) Rat.zero, by
+    // induction on `n` via `sumRange_seq_zero`/`sumRange_seq_succ`.
+    let zero_seq_at = |d: &mut IntDev<'_>, n_val: ExprId| -> ExprId {
+        let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+            let sum_x = d.const_app(p.sum_range, &[zero_fn, x]);
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let lhs = super::sample(d, p, sum_x, k);
+            let rzero_c = rzero(d, rat);
+            let claim = req(d, lhs, rzero_c);
+            d.pi_fv(k_fv, nat, claim)
+        };
+        d.induct(
+            &motive,
+            &|d| d.lemma(p.sum_range_seq_zero, &[zero_fn]),
+            &|d, j, ih| {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sk = super::shift(d, k);
+                let step = d.lemma(p.sum_range_seq_succ, &[zero_fn, j, k]);
+
+                let sum_j = d.const_app(p.sum_range, &[zero_fn, j]);
+                let left_sample = super::sample(d, p, sum_j, sk);
+                let zfj = d.apply(zero_fn, &[j]);
+                let right_sample = super::sample(d, p, zfj, sk);
+                let start = radd(d, left_sample, right_sample);
+
+                let rzero_c = rzero(d, rat);
+                let ih_at_sk = d.apply(ih, &[sk]);
+                let right_is_zero = rrefl(d, rzero_c);
+
+                let after_left = radd(d, rzero_c, right_sample);
+                let step1 = rcongr(d, left_sample, rzero_c, ih_at_sk, &|d, t| {
+                    radd(d, t, right_sample)
+                });
+                let after_right = radd(d, rzero_c, rzero_c);
+                let step2 = rcongr(d, right_sample, rzero_c, right_is_zero, &|d, t| {
+                    radd(d, rzero_c, t)
+                });
+                let collapse = d.lemma(rat.add_zero, &[rzero_c]);
+
+                let (_, chained) = rchain(
+                    d,
+                    start,
+                    &[
+                        (after_left, step1),
+                        (after_right, step2),
+                        (rzero_c, collapse),
+                    ],
+                );
+                let succ_sample = {
+                    let sj = d.succ(j);
+                    let sum_sj = d.const_app(p.sum_range, &[zero_fn, sj]);
+                    super::sample(d, p, sum_sj, k)
+                };
+                let total = rtrans(d, succ_sample, start, rzero_c, step, chained);
+
+                d.lam_fv(k_fv, nat, total)
+            },
+            n_val,
+        )
+    };
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let k_witness = d.num(0);
+
+    // pointwise : ∀ k, le (abs (zero_fn k)) (zero_fn k), via le_abs_self.
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zk = d.apply(zero_fn, &[k]);
+        let body = d.lemma(p.le_abs_self, &[zk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    // cauchy_hyp : ∀ pp qq, Within (seq (sumRange zero_fn pp) pp
+    //                               − seq (sumRange zero_fn qq) qq)
+    //                              (natDivSucc 0 pp + natDivSucc 0 qq)
+    let cauchy_hyp = {
+        let pp_fv = d.fresh_fvar();
+        let pp = d.kernel().fvar(pp_fv);
+        let qq_fv = d.fresh_fvar();
+        let qq = d.kernel().fvar(qq_fv);
+
+        let left_eq = {
+            let at_pp = zero_seq_at(&mut d, pp);
+            d.apply(at_pp, &[pp])
+        };
+        let right_eq = {
+            let at_qq = zero_seq_at(&mut d, qq);
+            d.apply(at_qq, &[qq])
+        };
+
+        let sum_pp = d.const_app(p.sum_range, &[zero_fn, pp]);
+        let sum_qq = d.const_app(p.sum_range, &[zero_fn, qq]);
+        let left = super::sample(&mut d, p, sum_pp, pp);
+        let right = super::sample(&mut d, p, sum_qq, qq);
+        let diff = rsub(&mut d, rat, left, right);
+        let rzero_c = rzero(&mut d, rat);
+
+        let after_left = rsub(&mut d, rat, rzero_c, right);
+        let step1 = rcongr(&mut d, left, rzero_c, left_eq, &|d, t| {
+            rsub(d, rat, t, right)
+        });
+        let after_right = rsub(&mut d, rat, rzero_c, rzero_c);
+        let step2 = rcongr(&mut d, right, rzero_c, right_eq, &|d, t| {
+            rsub(d, rat, rzero_c, t)
+        });
+
+        let neg_zero_eq = d.lemma(rat.neg_zero, &[]);
+        let neg_zero_term = rneg(&mut d, rzero_c);
+        let zero_plus_neg_zero = radd(&mut d, rzero_c, neg_zero_term);
+        let zero_plus_zero = radd(&mut d, rzero_c, rzero_c);
+        let step3a = rcongr(&mut d, neg_zero_term, rzero_c, neg_zero_eq, &|d, t| {
+            radd(d, rzero_c, t)
+        });
+        let add_zero_eq = d.lemma(rat.add_zero, &[rzero_c]);
+        let step3 = rtrans(
+            &mut d,
+            zero_plus_neg_zero,
+            zero_plus_zero,
+            rzero_c,
+            step3a,
+            add_zero_eq,
+        );
+
+        let (_, diff_eq_zero) = rchain(
+            &mut d,
+            diff,
+            &[(after_left, step1), (after_right, step2), (rzero_c, step3)],
+        );
+        let zero_eq_diff = rsymm(&mut d, diff, rzero_c, diff_eq_zero);
+
+        let bpp = d.const_app(rat.nat_div_succ, &[k_witness, pp]);
+        let bqq = d.const_app(rat.nat_div_succ, &[k_witness, qq]);
+        let bound = radd(&mut d, bpp, bqq);
+
+        let nonneg_pp = d.lemma(rat.zero_le_nat_div_succ, &[k_witness, pp]);
+        let nonneg_qq = d.lemma(rat.zero_le_nat_div_succ, &[k_witness, qq]);
+        let bound_nonneg = d.lemma(rat.add_nonneg, &[bpp, bqq, nonneg_pp, nonneg_qq]);
+        let neg_bound_nonpos = d.lemma(rat.neg_nonpos_of_nonneg, &[bound, bound_nonneg]);
+        let neg_bound = rneg(&mut d, bound);
+        let lower_ty = rle(&mut d, rat, neg_bound, rzero_c);
+        let upper_ty = rle(&mut d, rat, rzero_c, bound);
+        let zero_within_bound = super::and_intro(
+            &mut d,
+            p,
+            lower_ty,
+            upper_ty,
+            neg_bound_nonpos,
+            bound_nonneg,
+        );
+
+        let within_diff = rat_eq_rewrite(
+            &mut d,
+            rzero_c,
+            diff,
+            zero_eq_diff,
+            zero_within_bound,
+            &|d, t| super::within(d, p, t, bound),
+        );
+
+        let over_qq = d.lam_fv(qq_fv, nat, within_diff);
+        d.lam_fv(pp_fv, nat, over_qq)
+    };
+
+    // hle : Nat.le 0 1, via Nat.zero_le.
+    let zero_le = d.prelude().zero_le;
+    let hle = d.lemma(zero_le, &[one_nat]);
+
+    let instance = d.lemma(
+        p.sum_range_cauchy_dominated_ordered,
+        &[
+            zero_fn, zero_fn, k_witness, zero_nat, one_nat, pointwise, cauchy_hyp, hle,
+        ],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!(
+            "sumRange_cauchy_dominated_ordered refused at the trivial f = g = (fun _ => zero), \
+             K = 0, a = 0, b = 1 instance: {error:?}"
+        )
+    });
+
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Within"),
+        "the instantiated conclusion is not a `Within` bound: {rendered}"
+    );
+}
+
+/// **`CReal.sumRange_cauchy_dominated_ordered_normalized` on a non-degenerate
+/// instance**: same `f = g` constant-zero sequence, `K = 0`, `a = 0`, `b = 1`
+/// as [`sum_range_cauchy_dominated_ordered_specializes_to_the_zero_series_from_0_to_1`]
+/// — deliberately non-degenerate (`a ≠ b`) for the same reason that test
+/// picks it. This is bound *normalization* on top of that theorem: the
+/// instantiated conclusion's bound must render as a single two-term
+/// `natDivSucc K' b + natDivSucc K' a` (checked structurally below, not just
+/// "contains `Within`"), even though `k_witness = 0` here — the normalization
+/// still runs the full eleven-leaf widen/fuse regardless of what `K` is.
+#[test]
+fn sum_range_cauchy_dominated_ordered_normalized_specializes_to_the_zero_series_from_0_to_1() {
+    use crate::expr::ExprId;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::{
+        radd, rat_eq_rewrite, rchain, rcongr, req, rle, rneg, rrefl, rsymm, rtrans, rzero,
+    };
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+    let rat = p.rat;
+
+    // zero_fn := λ _ : Nat, CReal.zero.
+    let zero_fn = {
+        let k_fv = d.fresh_fvar();
+        let _k = d.kernel().fvar(k_fv);
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        d.lam_fv(k_fv, nat, zero_c)
+    };
+
+    // zero_seq_at(n) : ∀ k, Eq Rat (seq (sumRange zero_fn n) k) Rat.zero, by
+    // induction on `n` via `sumRange_seq_zero`/`sumRange_seq_succ`.
+    let zero_seq_at = |d: &mut IntDev<'_>, n_val: ExprId| -> ExprId {
+        let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+            let sum_x = d.const_app(p.sum_range, &[zero_fn, x]);
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let lhs = super::sample(d, p, sum_x, k);
+            let rzero_c = rzero(d, rat);
+            let claim = req(d, lhs, rzero_c);
+            d.pi_fv(k_fv, nat, claim)
+        };
+        d.induct(
+            &motive,
+            &|d| d.lemma(p.sum_range_seq_zero, &[zero_fn]),
+            &|d, j, ih| {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sk = super::shift(d, k);
+                let step = d.lemma(p.sum_range_seq_succ, &[zero_fn, j, k]);
+
+                let sum_j = d.const_app(p.sum_range, &[zero_fn, j]);
+                let left_sample = super::sample(d, p, sum_j, sk);
+                let zfj = d.apply(zero_fn, &[j]);
+                let right_sample = super::sample(d, p, zfj, sk);
+                let start = radd(d, left_sample, right_sample);
+
+                let rzero_c = rzero(d, rat);
+                let ih_at_sk = d.apply(ih, &[sk]);
+                let right_is_zero = rrefl(d, rzero_c);
+
+                let after_left = radd(d, rzero_c, right_sample);
+                let step1 = rcongr(d, left_sample, rzero_c, ih_at_sk, &|d, t| {
+                    radd(d, t, right_sample)
+                });
+                let after_right = radd(d, rzero_c, rzero_c);
+                let step2 = rcongr(d, right_sample, rzero_c, right_is_zero, &|d, t| {
+                    radd(d, rzero_c, t)
+                });
+                let collapse = d.lemma(rat.add_zero, &[rzero_c]);
+
+                let (_, chained) = rchain(
+                    d,
+                    start,
+                    &[
+                        (after_left, step1),
+                        (after_right, step2),
+                        (rzero_c, collapse),
+                    ],
+                );
+                let succ_sample = {
+                    let sj = d.succ(j);
+                    let sum_sj = d.const_app(p.sum_range, &[zero_fn, sj]);
+                    super::sample(d, p, sum_sj, k)
+                };
+                let total = rtrans(d, succ_sample, start, rzero_c, step, chained);
+
+                d.lam_fv(k_fv, nat, total)
+            },
+            n_val,
+        )
+    };
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let k_witness = d.num(0);
+
+    // pointwise : ∀ k, le (abs (zero_fn k)) (zero_fn k), via le_abs_self.
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zk = d.apply(zero_fn, &[k]);
+        let body = d.lemma(p.le_abs_self, &[zk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    // cauchy_hyp : ∀ pp qq, Within (seq (sumRange zero_fn pp) pp
+    //                               − seq (sumRange zero_fn qq) qq)
+    //                              (natDivSucc 0 pp + natDivSucc 0 qq)
+    let cauchy_hyp = {
+        let pp_fv = d.fresh_fvar();
+        let pp = d.kernel().fvar(pp_fv);
+        let qq_fv = d.fresh_fvar();
+        let qq = d.kernel().fvar(qq_fv);
+
+        let left_eq = {
+            let at_pp = zero_seq_at(&mut d, pp);
+            d.apply(at_pp, &[pp])
+        };
+        let right_eq = {
+            let at_qq = zero_seq_at(&mut d, qq);
+            d.apply(at_qq, &[qq])
+        };
+
+        let sum_pp = d.const_app(p.sum_range, &[zero_fn, pp]);
+        let sum_qq = d.const_app(p.sum_range, &[zero_fn, qq]);
+        let left = super::sample(&mut d, p, sum_pp, pp);
+        let right = super::sample(&mut d, p, sum_qq, qq);
+        let diff = rsub(&mut d, rat, left, right);
+        let rzero_c = rzero(&mut d, rat);
+
+        let after_left = rsub(&mut d, rat, rzero_c, right);
+        let step1 = rcongr(&mut d, left, rzero_c, left_eq, &|d, t| {
+            rsub(d, rat, t, right)
+        });
+        let after_right = rsub(&mut d, rat, rzero_c, rzero_c);
+        let step2 = rcongr(&mut d, right, rzero_c, right_eq, &|d, t| {
+            rsub(d, rat, rzero_c, t)
+        });
+
+        let neg_zero_eq = d.lemma(rat.neg_zero, &[]);
+        let neg_zero_term = rneg(&mut d, rzero_c);
+        let zero_plus_neg_zero = radd(&mut d, rzero_c, neg_zero_term);
+        let zero_plus_zero = radd(&mut d, rzero_c, rzero_c);
+        let step3a = rcongr(&mut d, neg_zero_term, rzero_c, neg_zero_eq, &|d, t| {
+            radd(d, rzero_c, t)
+        });
+        let add_zero_eq = d.lemma(rat.add_zero, &[rzero_c]);
+        let step3 = rtrans(
+            &mut d,
+            zero_plus_neg_zero,
+            zero_plus_zero,
+            rzero_c,
+            step3a,
+            add_zero_eq,
+        );
+
+        let (_, diff_eq_zero) = rchain(
+            &mut d,
+            diff,
+            &[(after_left, step1), (after_right, step2), (rzero_c, step3)],
+        );
+        let zero_eq_diff = rsymm(&mut d, diff, rzero_c, diff_eq_zero);
+
+        let bpp = d.const_app(rat.nat_div_succ, &[k_witness, pp]);
+        let bqq = d.const_app(rat.nat_div_succ, &[k_witness, qq]);
+        let bound = radd(&mut d, bpp, bqq);
+
+        let nonneg_pp = d.lemma(rat.zero_le_nat_div_succ, &[k_witness, pp]);
+        let nonneg_qq = d.lemma(rat.zero_le_nat_div_succ, &[k_witness, qq]);
+        let bound_nonneg = d.lemma(rat.add_nonneg, &[bpp, bqq, nonneg_pp, nonneg_qq]);
+        let neg_bound_nonpos = d.lemma(rat.neg_nonpos_of_nonneg, &[bound, bound_nonneg]);
+        let neg_bound = rneg(&mut d, bound);
+        let lower_ty = rle(&mut d, rat, neg_bound, rzero_c);
+        let upper_ty = rle(&mut d, rat, rzero_c, bound);
+        let zero_within_bound = super::and_intro(
+            &mut d,
+            p,
+            lower_ty,
+            upper_ty,
+            neg_bound_nonpos,
+            bound_nonneg,
+        );
+
+        let within_diff = rat_eq_rewrite(
+            &mut d,
+            rzero_c,
+            diff,
+            zero_eq_diff,
+            zero_within_bound,
+            &|d, t| super::within(d, p, t, bound),
+        );
+
+        let over_qq = d.lam_fv(qq_fv, nat, within_diff);
+        d.lam_fv(pp_fv, nat, over_qq)
+    };
+
+    // hle : Nat.le 0 1, via Nat.zero_le.
+    let zero_le = d.prelude().zero_le;
+    let hle = d.lemma(zero_le, &[one_nat]);
+
+    let instance = d.lemma(
+        p.sum_range_cauchy_dominated_ordered_normalized,
+        &[
+            zero_fn, zero_fn, k_witness, zero_nat, one_nat, pointwise, cauchy_hyp, hle,
+        ],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!(
+            "sumRange_cauchy_dominated_ordered_normalized refused at the trivial \
+             f = g = (fun _ => zero), K = 0, a = 0, b = 1 instance: {error:?}"
+        )
+    });
+
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Within"),
+        "the instantiated conclusion is not a `Within` bound: {rendered}"
+    );
+    // The bound must be the single two-term `natDivSucc K' b + natDivSucc K'
+    // a` shape, not the un-normalized eleven-leaf mess — i.e. no `shift`
+    // (Bishop's shifted index) survives into the rendered conclusion.
+    assert!(
+        !rendered.contains("shift"),
+        "the normalized bound still mentions `shift`, so normalization did \
+         not actually collapse it: {rendered}"
+    );
+    let nat_div_succ_count = rendered.matches("natDivSucc").count();
+    assert_eq!(
+        nat_div_succ_count, 2,
+        "the normalized bound must be exactly two natDivSucc leaves, found \
+         {nat_div_succ_count}: {rendered}"
+    );
 }
 
 /// The three setoid laws say what ADR-0512 says they say. An empty footprint on
@@ -2007,3 +3102,363 @@ const HAS_DERIVATIVE_ON_SPEC_TYPE: &str = "((x0 : ((x0 : CReal) -> CReal)) -> ((
 
 /// The pinned type of `CReal.hasDerivative_sq`.
 const HAS_DERIVATIVE_SQ_TYPE: &str = "((x0 : CReal) -> ((x1 : CReal) -> CReal.HasDerivativeOn (fun (x2 : CReal) => CReal.mul x2 x2) (fun (x2 : CReal) => CReal.add x2 x2) x0 x1))";
+
+/// **Mandatory computation test** for `CReal.riemannSum` (see the task
+/// briefing this module was built against): a single-subinterval Riemann
+/// sum of the constant function `1` on `[0, 1]` must COMPUTE to `1`, not
+/// merely type-check.
+///
+/// `riemannSum (fun _ => one) zero one 0` has `m = 0`, so `n = Nat.succ 0 =
+/// 1` (one subinterval), `Δ = (one − zero) · Rat.natDivSucc 1 0 = 1 · 1`,
+/// and its single term samples at the left endpoint `i = 0`: `f(zero)·Δ =
+/// one · one`. `CReal.seq` of that at an arbitrary index must reduce, by
+/// unfolding alone (β/δ/ι — no lemma, no `Equiv`), to the same rational
+/// `CReal.seq one` reduces to at the same index. This is checked by
+/// declaring `Eq Rat (seq (riemannSum …) 2) (seq one 2)` with the proof
+/// `Eq.refl` at the LEFT side and letting `Kernel::add_declaration` verify
+/// the two sides are actually definitionally equal: if the sample point or
+/// the `Δ` arithmetic had the wrong shape (e.g. `Δ` and the index
+/// transposed — the exact failure mode the task briefing warns a
+/// type-correct definition can still have), this reduction would not close
+/// and `add_declaration` would return `Err`, not silently accept a vacuous
+/// or ill-typed term.
+#[test]
+fn riemann_sum_of_the_constant_one_on_0_1_computes_to_one() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+
+    // const_one := fun _ : CReal => one.
+    let const_one = {
+        let x_fv = d.fresh_fvar();
+        let _x = d.kernel().fvar(x_fv);
+        d.lam_fv(x_fv, carrier, one_c)
+    };
+
+    let zero_m = d.num(0); // m := 0, so n = Nat.succ 0 = 1.
+    let rsum_term = d.const_app(p.riemann_sum, &[const_one, zero_c, one_c, zero_m]);
+
+    let index = d.num(2);
+    let lhs = d.const_app(p.seq, &[rsum_term, index]);
+    let rhs = d.const_app(p.seq, &[one_c, index]);
+    let stmt = req(&mut d, lhs, rhs);
+    let proof = rrefl(&mut d, lhs);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__riemann_sum_of_the_constant_one_on_0_1_computes_to_one",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: stmt,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "riemannSum (fun _ => one) zero one 0 did NOT compute to one at \
+                 sample index 2 (not merely type-check): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory computation test**, extending
+/// [`riemann_sum_of_the_constant_one_on_0_1_computes_to_one`] to a
+/// NON-UNIT interval and a NON-ONE constant: a single-subinterval Riemann
+/// sum of the constant `2` on `[0, 3]` must COMPUTE to `6`, catching the
+/// exact bug class a definition can pass type-checking with but still have
+/// (`Δ` and the constant transposed, or a stray `Δ`-count arithmetic slip)
+/// that the all-`one`s `c = 1, [0, 1]` instance is too degenerate to expose
+/// — `1 · 1` reads the same whichever factor is which.
+///
+/// `c`, `[a, b]` and the target `6` are all built from `CReal.one`/`add`
+/// alone (never `CReal.ofNat`, which is its own delta-step-plus-`Rat`-
+/// normalization construction — irrelevant to what this test is checking),
+/// so the only new arithmetic this test exercises beyond the existing one
+/// is the constant/width multiplication, not a second embedding route.
+#[test]
+fn riemann_sum_of_the_constant_two_on_0_3_computes_to_six() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let two_c = d.const_app(p.add, &[one_c, one_c]); // 1 + 1 = 2
+    let three_c = d.const_app(p.add, &[two_c, one_c]); // 2 + 1 = 3
+    let six_c = d.const_app(p.add, &[three_c, three_c]); // 3 + 3 = 6
+
+    // const_two := fun _ : CReal => two_c.
+    let const_two = {
+        let x_fv = d.fresh_fvar();
+        let _x = d.kernel().fvar(x_fv);
+        d.lam_fv(x_fv, carrier, two_c)
+    };
+
+    let zero_m = d.num(0); // m := 0, so n = Nat.succ 0 = 1.
+    let rsum_term = d.const_app(p.riemann_sum, &[const_two, zero_c, three_c, zero_m]);
+
+    let index = d.num(2);
+    let lhs = d.const_app(p.seq, &[rsum_term, index]);
+    let rhs = d.const_app(p.seq, &[six_c, index]);
+    let stmt = req(&mut d, lhs, rhs);
+    let proof = rrefl(&mut d, lhs);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__riemann_sum_of_the_constant_two_on_0_3_computes_to_six",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: stmt,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "riemannSum (fun _ => 2) 0 3 0 did NOT compute to 6 at sample \
+                 index 2 (not merely type-check): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory computation test for `CReal.ofNat_le`.** Instantiates it at
+/// explicit small naturals `i := 1`, `j := 3` against a CONCRETE
+/// `Nat.le 1 3` witness built from `Nat.le_intro 1 3 2 (rfl : 1+2=3)` — not a
+/// symbolic hypothesis — and checks the kernel accepts
+/// `CReal.ofNat_le 1 3 h : CReal.le (ofNat 1) (ofNat 3)` at that exact type.
+/// A `Δ`/index transposition (e.g. `ofNat_le` accidentally proving
+/// `le (ofNat j) (ofNat i)`, or using `k` where `i`/`j` belong) would still
+/// type-check as SOME `CReal.le` statement but not this one, which is why the
+/// declared `ty` below is asserted rather than merely inferred.
+#[test]
+fn of_nat_le_at_one_and_three_proves_le_one_three() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let one_nat = d.num(1);
+    let three_nat = d.num(3);
+    let two_nat = d.num(2);
+
+    // h : Nat.le 1 3, from `Nat.le_intro 1 3 2 (rfl : add 1 2 = 3)`.
+    // `le_intro`'s hypothesis type is `Eq Nat (add 1 2) 3`; `Eq.refl Nat 3`
+    // checks against it by defeq (`add 1 2` reduces to `3`).
+    let eq_proof = d.refl(three_nat);
+    let nat_le_intro = d.prelude().le_intro;
+    let hle = d.const_app(nat_le_intro, &[one_nat, three_nat, two_nat, eq_proof]);
+
+    let value = d.const_app(p.of_nat_le, &[one_nat, three_nat, hle]);
+
+    let of_nat_1 = d.const_app(p.of_nat, &[one_nat]);
+    let of_nat_3 = d.const_app(p.of_nat, &[three_nat]);
+    let ty = super::cle(&mut d, p, of_nat_1, of_nat_3);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__of_nat_le_at_one_and_three_proves_le_one_three");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.ofNat_le 1 3 h did NOT check against \
+                 CReal.le (ofNat 1) (ofNat 3) (not merely SOME le statement): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory computation test for `CReal.riemannSum_sample_in_bounds`.**
+/// Instantiates it at `a := CReal.zero`, `b := CReal.ofNat 3`, `m := 2`
+/// (so `n = succ m = 3`), `i := 1` — the sample point at index `1` of a
+/// 3-subinterval partition of `[0, 3]`, i.e. `Δ = 3 · 1/3 = 1` and the sample
+/// point is `0 + 1·Δ`, genuinely INSIDE `(0, 3)` rather than at an endpoint —
+/// against CONCRETE witnesses (`0 ≤ 3` from `Rat.zero_le_natDivSucc`, `1 < 3`
+/// from `Nat.le_intro 2 3 1 (rfl : 2+1=3)`), and checks the kernel accepts
+/// the application at the EXACT expected `And (le a sp) (le sp b)` type,
+/// built independently here from `CReal.add`/`CReal.neg`/`CReal.mul`/
+/// `CReal.ofNat`/`CReal.ofRat` rather than by calling back into
+/// `integral.rs`'s private term builders. A `Δ`/index transposition (e.g.
+/// swapping which factor is `ofNat i` and which is the width) would still
+/// type-check as SOME `And` of two `le`s but not this one.
+#[test]
+fn riemann_sample_in_bounds_at_zero_three_two_one_lands_strictly_inside() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let b = d.const_app(p.of_nat, &[three_nat]);
+    let m = two_nat;
+    let i = one_nat;
+
+    // hab : CReal.le zero (ofNat 3), directly from `Rat.zero_le_natDivSucc`
+    // lifted across `CReal.ofRat_le` (`CReal.zero` and `CReal.ofNat 3` are
+    // each one delta-step from an `ofRat` of a `Rat.natDivSucc`).
+    let hab = {
+        let rat_3 = d.const_app(p.rat.nat_div_succ, &[three_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[three_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_3, rle])
+    };
+
+    // hlt : Nat.lt 1 3 (defeq Nat.le 2 3), from `Nat.le_intro 2 3 1
+    // (rfl : add 2 1 = 3)`.
+    let hlt = {
+        let eq_proof = d.refl(three_nat);
+        let nat_le_intro = d.prelude().le_intro;
+        d.const_app(nat_le_intro, &[two_nat, three_nat, one_nat, eq_proof])
+    };
+
+    let value = d.const_app(p.riemann_sample_in_bounds, &[a, b, m, i, hab, hlt]);
+
+    // The expected sample point, built independently: `sp := add a (mul
+    // (ofNat i) delta)`, `delta := mul (add b (neg a)) (ofRat (natDivSucc 1
+    // m))` -- exactly `integral.rs::sample_point`/`delta_of`'s own shape.
+    let ty = {
+        let rat_frac = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+        let frac_real = d.const_app(p.of_rat, &[rat_frac]);
+        let neg_a = d.const_app(p.neg, &[a]);
+        let width = d.const_app(p.add, &[b, neg_a]);
+        let delta = d.const_app(p.mul, &[width, frac_real]);
+        let of_nat_i = d.const_app(p.of_nat, &[i]);
+        let shift = d.const_app(p.mul, &[of_nat_i, delta]);
+        let sp = d.const_app(p.add, &[a, shift]);
+
+        let a_le_sp = super::cle(&mut d, p, a, sp);
+        let sp_le_b = super::cle(&mut d, p, sp, b);
+        d.const_app(p.rat.int.logic.and, &[a_le_sp, sp_le_b])
+    };
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__riemann_sample_in_bounds_at_zero_three_two_one_lands_strictly_inside",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.riemannSum_sample_in_bounds 0 3 2 1 hab hlt did NOT check \
+                 against And (le 0 sp) (le sp 3) at the expected sample point \
+                 (not merely SOME And of le statements): {error:?}"
+            )
+        });
+}
+
+/// **Computation/argument-order test for `CReal.riemannSum_le_on`.**
+/// Instantiates it at `f := g := fun _ => one`, `a := zero`, `b := ofNat 3`,
+/// `m := 0` (so `n = 1`, a single subinterval), with `hab : le zero (ofNat
+/// 3)` and the RESTRICTED `hfg : ∀ z, le zero z → le z (ofNat 3) → le one
+/// one` (built from `le_refl one`, ignoring the two bounds — a global `hfg`
+/// would also work here, but this checks the RESTRICTED-arity application
+/// itself, catching an `f`/`g` or `hab`/`hfg` argument transposition, which
+/// would still type-check as SOME `le` statement but not this one), and
+/// checks the kernel accepts it at the EXACT expected
+/// `le (riemannSum f a b m) (riemannSum g a b m)` type.
+#[test]
+fn riemann_sum_le_on_at_the_constant_function_type_checks_at_the_expected_statement() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+
+    let zero_nat = d.num(0);
+    let three_nat = d.num(3);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let b = d.const_app(p.of_nat, &[three_nat]);
+    let m = zero_nat;
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    // f := g := fun _ : CReal => one.
+    let const_one = {
+        let x_fv = d.fresh_fvar();
+        let _x = d.kernel().fvar(x_fv);
+        d.lam_fv(x_fv, carrier, one_c)
+    };
+    let f = const_one;
+    let g = const_one;
+
+    // hab : le zero (ofNat 3).
+    let hab = {
+        let rat_3 = d.const_app(p.rat.nat_div_succ, &[three_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[three_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_3, rle])
+    };
+
+    // hfg : ∀ z, le zero z → le z (ofNat 3) → le one one.
+    let hfg = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let lo_fv = d.fresh_fvar();
+        let hi_fv = d.fresh_fvar();
+        let lo_ty = super::cle(&mut d, p, a, z);
+        let hi_ty = super::cle(&mut d, p, z, b);
+        let refl_one = d.lemma(p.le_refl, &[one_c]);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, refl_one);
+        let with_lo = d.lam_fv(lo_fv, lo_ty, with_hi);
+        d.lam_fv(z_fv, carrier, with_lo)
+    };
+
+    let value = d.const_app(p.riemann_sum_le_on, &[f, g, a, b, m, hab, hfg]);
+
+    let rsum_f = d.const_app(p.riemann_sum, &[f, a, b, m]);
+    let rsum_g = d.const_app(p.riemann_sum, &[g, a, b, m]);
+    let ty = super::cle(&mut d, p, rsum_f, rsum_g);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__riemann_sum_le_on_at_the_constant_function_type_checks_at_the_expected_statement",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.riemannSum_le_on (fun _ => one) (fun _ => one) 0 3 0 hab hfg \
+                 did NOT check against le (riemannSum f 0 3 0) (riemannSum g 0 3 0) \
+                 (not merely SOME le statement): {error:?}"
+            )
+        });
+}

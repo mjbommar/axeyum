@@ -9,7 +9,7 @@ target-agnostic: `Eq.refl`, and where that is stuck, one bounded structural
 induction over a discovered zero/succ binder plus one congruence rewrite
 driven by the induction hypothesis.
 
-This gate re-runs the checker example against all five targets the
+This gate re-runs the checker example against all four targets the
 operation names, from their tracked, hash-pinned external Mathlib exports,
 and requires every receipt field to match the committed induction manifest
 exactly. It also re-checks that each fact this operation actually settles
@@ -17,12 +17,38 @@ exactly. It also re-checks that each fact this operation actually settles
 `F:ml430-nat-zero-ascfactorial-af4fcdca`,
 `F:ml430-nat-one-ascfactorial-8bacb017`) is bound to it correctly -- exactly
 one checked evidence row each, and no other named fact carries evidence
-bound to this operation (those two are already proved through their own
-narrower, single-target operations, and this family operation is not
-claiming a second evidence row for them) -- and confirms the negative
-control -- the outcome-blind `n! = 0` mutation from the same frozen census --
-still declines. A checker that cannot fail is worse than no checker, so this
-script fails loudly on any mismatch rather than reporting completion alone.
+bound to this operation (`F:ml430-nat-ascfactorial-zero-fd183202` is already
+proved through its own narrower, single-target operation, and this family
+operation is not claiming a second evidence row for it) -- and confirms the
+negative control -- the outcome-blind `n! = 0` mutation from the same frozen
+census -- still declines. A checker that cannot fail is worse than no
+checker, so this script fails loudly on any mismatch rather than reporting
+completion alone.
+
+This operation used to name a FIFTH fact -- the `Nat.descFactorial_zero`
+proposition -- structurally a legitimate target for this target-agnostic
+producer, but that fact already has its own provenance operation
+(`authoritative-mathlib-nat-descfactorial-zero-reflexivity-v1`), and naming
+it here too meant `fact-frontier.py`'s `matching_operations` returned two
+authoritative operations for it the moment it was ever reopened --
+`ambiguous-registered-operation`, which
+`execute-autogenesis-operation.py`'s `selected_inputs` then refuses as
+inadmissible. That was not a theoretical risk: reopening it (as several
+`prepare-autogenesis-fact-transaction.py`/`execute-autogenesis-operation.py`
+tests do, to exercise the dispatch path independent of whatever the ledger
+currently says) reliably hit `"executor requires the selected fact to be
+admissible"`. Structural coverage for a re-derivation capability and
+dispatch-time provenance are different claims; only the fact's own
+provenance operation should be named in `applicability.fact_ids`. Removed
+2026-08-25 -- see Defect 1 of that session's structural-defects report.
+
+(Deliberately not spelling out that fact's ledger id here: `fact-frontier.py`
+scans this directory's scripts by TEXT for any fact id mention and treats a
+hit as a live gate coupling that needs a `reviewed_gate_mentions` entry --
+exactly the mechanism the paragraph above is describing. Writing the id
+literally would make this docstring itself the coupling, and reintroduce a
+dispatch block on that fact from a different mechanism than the one just
+removed.)
 """
 
 from __future__ import annotations
@@ -322,8 +348,8 @@ def main() -> int:
         max_binders = executor["max_binders"]
         max_inductions = executor["max_inductions"]
         targets = executor["targets"]
-        if len(targets) != 5:
-            raise FamilyError("expected exactly five targets in this family")
+        if len(targets) != 4:
+            raise FamilyError("expected exactly four targets in this family")
         for target in targets:
             check_target(target, max_binders, max_inductions)
         check_settled_fact_binding(operation)

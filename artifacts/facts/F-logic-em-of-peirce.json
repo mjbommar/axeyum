@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "F:logic-em-of-peirce",
+  "title": "Excluded middle from Peirce's law",
+  "statement": "If Peirce's law holds for every pair of propositions, then excluded middle holds for every proposition.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem em_of_peirce : ((x0 : ((x0 : Prop) -> ((x1 : Prop) -> ((x2 : ((x2 : ((x2 : x0) -> x1)) -> x0)) -> x0)))) -> ((x1 : Prop) -> Or x1 (((x2 : x1) -> False))))",
+    "fragment": "Logic",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-logic-em-of-peirce",
+      "kind": "kernel-term",
+      "supports": "If Peirce's law holds for every pair of propositions, then excluded middle holds for every proposition.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- em_of_peirce 2>/dev/null | grep -Ec '^em_of_peirce[[:space:]]')\" -ge 1",
+      "notes": "`build_logic_prelude` (built first by `build_nat_prelude`, which `nat_theorem_inventory` constructs) admits `em_of_peirce` only through the trusted kernel gate, so this line in the tool's output IS the type-check. Anchored with `grep -Ec '^em_of_peirce[[:space:]]'` on the tool's own substring-filtered output, matching exactly one row; a name that does not exist makes both the tool's argument filter and the anchored grep fail (verified both ways 2026-08-25)."
+    },
+    {
+      "id": "footprint-logic-em-of-peirce",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the logic environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free logic",
+      "notes": "Reports `logic: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the full trusted surface (`Axiom` + `Opaque` + `Quotient`), not `Declaration::Axiom` alone. The enumeration is per-environment, so it bounds this theorem's footprint: a proof admitted into an environment cannot depend on a trusted declaration the environment does not contain. `logic` is the isolated, intuitionistic core (`build_logic_prelude` alone) that `nat` nests -- measured 2026-08-25 with `nat_axiom_inventory --require-axiom-free logic`."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "nat-axiom-coverage lane, axeyum-lean-kernel logic prelude",
+    "source": "read off the kernel by `nat_theorem_inventory`, not transcribed; statement authored here",
+    "prior_art": [
+      {
+        "citation": "Standard intuitionistic/classical propositional logic (natural deduction); no single primary source.",
+        "establishes": "Standard result: Peirce's law is intuitionistically equivalent to excluded middle.",
+        "attribution": "standard textbook material; this lane did not consult a primary source"
+      }
+    ]
+  },
+  "notes": "Part of the `logic` prelude's first fact registrations (2026-08-25): the classical/`Decidable`/`Or`/`Iff`/`Bool`/`And` package had zero kernel-lean facts despite being the foundation every other prelude nests. `logic` is intuitionistic and axiom-free (measured: axiom=0 opaque=0 quotient=0), so this is a genuinely axiom-free kernel proof, distinct from and stronger than an `smt-term-level` truth-table check of the same-shaped statement (see e.g. F:peirce-law), which cannot certify axiom-freedom at all. Registered together with the `nat_axiom_inventory` coverage fix that extended it to build `cpoint`, the crate's ninth prelude.",
+  "external_status": "proved"
+}

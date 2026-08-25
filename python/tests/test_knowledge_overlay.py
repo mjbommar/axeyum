@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from dataclasses import replace
 
 import pytest
 
@@ -69,15 +70,59 @@ def test_relation_domain_and_range_are_declared() -> None:
         assert link.target.kind in relation.target_kinds
 
 
-def test_external_endpoints_carry_a_source_revision() -> None:
+def test_the_overlay_declares_no_external_source() -> None:
+    """ADR-0553: every endpoint resolves inside this checkout.
+
+    This replaces `test_external_endpoints_carry_a_source_revision`, which
+    asserted that external endpoints EXIST and pinned each one's revision to the
+    sibling `math-education` checkout. That subject is gone, so the test is
+    inverted rather than relaxed: the assertions below fail the moment an
+    external source, an `external-pinned` namespace, or a `source_revision` on
+    any endpoint comes back.
+
+    It is deliberately not a tautology -- `assert loaded.external_links() == ()`
+    alone would also pass against an overlay with no links at all -- so each
+    check is paired with a positive control that the collection it filters was
+    read and is non-empty.
+    """
     loaded = overlay.load(ROOT)
-    external = loaded.external_links()
-    assert len(external) > 0
-    pinned = loaded.pinned_revision()
-    for link in external:
+
+    assert len(loaded.sources) > 0, "no sources were read -- the assertion is vacuous"
+    for source in loaded.sources:
+        assert not source.is_pinned, f"source {source.id!r} is pinned to a foreign revision"
+        assert source.kind != "external-repository", f"source {source.id!r} is external"
+        assert source.revision is None, f"source {source.id!r} carries a revision"
+
+    assert len(loaded.namespaces) > 0, "no namespaces were read -- the assertion is vacuous"
+    for namespace in loaded.namespaces:
+        assert namespace.resolution != "external-pinned", (
+            f"namespace {namespace.id!r} resolves against a pinned foreign checkout"
+        )
+
+    assert len(loaded.links) > 0, "no links were read -- the assertion is vacuous"
+    for link in loaded.links:
         for endpoint in (link.source, link.target):
-            if endpoint.is_external:
-                assert endpoint.source_revision == pinned
+            assert endpoint.source_revision is None, (
+                f"endpoint {endpoint.id!r} of link {link.id!r} carries a source_revision"
+            )
+            assert not endpoint.is_external
+    assert loaded.external_links() == ()
+
+
+def test_the_external_detector_still_fires_on_a_forged_endpoint() -> None:
+    """The check above is only worth its assertions if the detector works.
+
+    `external_links()` returning `()` for the committed artifact and returning
+    `()` because nothing can ever be external are different states, and only one
+    of them is a measurement. A forged endpoint tells them apart.
+    """
+    loaded = overlay.load(ROOT)
+    raw = loaded.links[0].raw
+    forged = overlay.Link.from_raw(
+        {**raw, "source": {**raw["source"], "source_revision": "deadbee"}}
+    )
+    assert forged.source.is_external
+    assert replace(loaded, links=(forged,)).external_links() == (forged,)
 
 
 def test_local_endpoints_resolve() -> None:
@@ -132,9 +177,3 @@ def test_capability_entities_carry_their_budgets() -> None:
 def test_top_keys_are_exactly_the_schemas() -> None:
     document = json.loads((ROOT / overlay.OVERLAY_PATH).read_text(encoding="utf-8"))
     assert set(document) == set(overlay.TOP_KEYS)
-
-
-def test_pinned_revision_raises_for_an_unpinned_source() -> None:
-    loaded = overlay.load(ROOT)
-    with pytest.raises(KeyError):
-        loaded.pinned_revision("axeyum")

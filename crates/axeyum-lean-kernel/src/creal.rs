@@ -815,6 +815,18 @@ pub struct CRealPrelude {
     /// There is no `CReal.sub` operation in this development, so the
     /// difference is spelled `add _ (neg _)` throughout, honestly.
     pub converges_sub: NameId,
+    /// `CReal.converges_squeeze : ∀ a b c L, (∀ n, le (a n) (b n)) →
+    /// (∀ n, le (b n) (c n)) → Converges a L → Converges c L → Converges b L`.
+    ///
+    /// The squeeze (sandwich) theorem. Unlike [`Self::converges_add`], no
+    /// shift bridge is needed: [`Self::le`] is `∀ n, seq x n − seq y n ≤
+    /// 2/(n+1)`, the *same* canonical-sample idiom [`Self::converges`] itself
+    /// uses, so `(hab n) n` and `(hbc n) n` land directly at the same index
+    /// `n` the two `Converges` hypotheses are read at — no third index, no
+    /// Archimedean lemma, only `Rat.add_le_add`/`Rat.neg_le_neg` telescoping
+    /// and one `Rat.natDivSucc_le_add_left` widening per side to a common
+    /// witness `K := (2+K_a)+(2+K_c)`.
+    pub converges_squeeze: NameId,
 
     // --- boundedness of sequences, and sequential continuity (phase R10) ----
     /// `CReal.Bounded (g : Nat → CReal) : Prop :=
@@ -931,6 +943,14 @@ pub struct CRealPrelude {
     /// (fun _ => c) a b` -- any modulus works (`fun _ => 0` is used); `c - c` is
     /// `Equiv`-zero, so the conclusion holds independently of the hypothesis.
     pub uniformly_continuous_const: NameId,
+    /// `CReal.uniformly_continuous_add : forall F G a b, UniformlyContinuousOn F
+    /// a b -> UniformlyContinuousOn G a b -> UniformlyContinuousOn (fun r => add
+    /// (F r) (G r)) a b` -- combined modulus `mF(2n+1) + mG(2n+1)`, the same
+    /// shape `creal/derivative.rs`'s `hasDerivative_add` uses for its own
+    /// combined modulus, unblocked the same way by
+    /// [`Rat.natDivSucc_antitone`](crate::RatPrelude::nat_div_succ_antitone).
+    /// See `creal/uniform_continuity.rs`.
+    pub uniformly_continuous_add: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -1105,18 +1125,164 @@ pub struct CRealPrelude {
     /// corresponding tail of `g`'s. Not stated through `CReal.Cauchy`
     /// (`creal/convergence.rs`) — see `series.rs`'s module documentation for
     /// why: `Cauchy`'s body compares `seq (h m) m` against `seq (h n) n`, the
-    /// RATIONAL sample each real offers at *its own canonical index*, and
-    /// bridging that for `h := sumRange f` needs a sample-rate law for
-    /// `sumRange` itself (how `seq (sumRange f n) k` relates to the
-    /// individual `f i`'s samples) that does not exist anywhere in this
-    /// development — every other `sumRange` law here, this one included, is
-    /// proved through the abstract `Equiv`/`le`/`abs` algebra alone, never
-    /// touching `seq`. This theorem is the actual mathematical engine of the
-    /// comparison test (a real-valued tail bound, via `sum_range_split` +
-    /// `abs_sumRange_le` + `sumRange_le`); reaching the literal
-    /// `CReal.Cauchy` predicate from it is a separate, unbuilt piece of
-    /// infrastructure, not a restatement.
+    /// RATIONAL sample each real offers at *its own canonical index*.
+    /// [`Self::sum_range_seq_succ`] now supplies the recursive form of that
+    /// sample-rate law; reaching the literal `CReal.Cauchy` predicate from
+    /// this theorem plus that one is still a separate, unbuilt bridge (see
+    /// the module documentation for exactly what is missing and why the
+    /// recursive law alone is not enough). This theorem remains the actual
+    /// mathematical engine of the comparison test (a real-valued tail bound,
+    /// via `sum_range_split` + `abs_sumRange_le` + `sumRange_le`).
     pub sum_range_tail_le: NameId,
+    /// `CReal.sumRange_tail_within : ∀ f g m n, (∀ k, le (abs (f k)) (g k)) →
+    /// Within (seq (add (sumRange f (add m n)) (neg (sumRange f m))) (add m
+    /// n)) (add (seq (add (sumRange g (add m n)) (neg (sumRange g m))) (add m
+    /// n)) (natDivSucc 2 (add m n)))` — [`Self::sum_range_tail_le`]'s
+    /// `CReal.le`, unfolded at its own tail's defining index `add m n` and
+    /// repackaged as a `Within` bound on that same RATIONAL sample, widened
+    /// by `2/(add m n + 1)`. Built from **two** one-sided applications
+    /// ([`Self::le_abs_self`]/[`Self::neg_le_abs`] chained through
+    /// [`Self::le_trans`] against `sum_range_tail_le`'s conclusion, then each
+    /// applied at `add m n`) via `series::within_of_tail_le` (the
+    /// "within-swap via `neg_sub`"-shaped helper `series.rs`'s module
+    /// documentation names as the first piece to land), **not** one `abs_le`
+    /// call — `abs_le`'s hypothesis shape does not survive sampling at an
+    /// index. This is the `f`-side leg [`Self::sum_range_tail_within_cauchy`]
+    /// (the outer telescope) combines with a bound on this theorem's own
+    /// `g`-side sample; that `g`-side bound, through a Cauchy witness for
+    /// `sumRange g`, is [`Self::sum_range_tail_cauchy_within`] (the inner
+    /// telescope).
+    pub sum_range_tail_within: NameId,
+    /// `CReal.sumRange_tail_within_le : ∀ f g, (∀ k, le (abs (f k)) (g k)) →
+    /// ∀ a b, Nat.le a b → Within (seq (add (sumRange f b) (neg (sumRange f
+    /// a))) b) (add (seq (add (sumRange g b) (neg (sumRange g a))) b)
+    /// (natDivSucc 2 b))` — the **Nat.le_total case split**'s content, first
+    /// half: lifts [`Self::sum_range_tail_within`]'s ordered-pair form `(m,
+    /// add m n)` to an arbitrary pair `(a, b)` constrained only by `a ≤ b`,
+    /// which `series.rs`'s module documentation names as needed to reach
+    /// `CReal.Cauchy`'s arbitrary-pair `∀ m n` shape.
+    ///
+    /// Built from `Nat.le_dest` (`a ≤ b → ∃ k, add a k = b`), one application
+    /// of [`Self::sum_range_tail_within`] at `(a, k)`, and one `Nat`-equality
+    /// rewrite (`series::nat_rewrite_prop`-style transport) carrying the
+    /// witnessed instance's index `add a k` over to `b`. The mirror direction
+    /// (`b ≤ a`) needs no new machinery — it is this same theorem applied
+    /// with `a`/`b` swapped — so this theorem supplies both halves' content;
+    /// selecting between them via `Nat.le_total` is left to whichever future
+    /// piece (the outer telescope) actually consumes the selection.
+    pub sum_range_tail_within_le: NameId,
+    /// `CReal.sumRange_tail_cauchy_within : ∀ g K, (∀ pp qq, Within (seq
+    /// (sumRange g pp) pp − seq (sumRange g qq) qq) (natDivSucc K pp +
+    /// natDivSucc K qq)) → ∀ m n, Within (seq (add (sumRange g (add m n))
+    /// (neg (sumRange g m))) (add m n)) ((modulus t q + (natDivSucc K q +
+    /// natDivSucc K m)) + modulus m t)`, `q := add m n`, `t := shift q` — the
+    /// **inner telescope** `series.rs`'s module documentation and
+    /// [`Self::sum_range_tail_within`]'s own doc comment name as unbuilt:
+    /// bounds `sumRange_tail_within`'s `g`-side rational sample through a
+    /// Cauchy witness for `sumRange g`, taken in its raw witnessed form (an
+    /// explicit `K` plus the `∀ pp qq` bound) rather than as the
+    /// existentially-quantified `CReal.Cauchy (sumRange g)`, so this theorem
+    /// needs no `Exists.rec` motive of its own.
+    ///
+    /// A three-leg telescope at the shared index `t`, chained via **two**
+    /// `Rat.sub_add_sub` rewrites and no `Rat.neg` anywhere (the three legs
+    /// already share consecutive endpoints in the right order): `CReal.regular`
+    /// at `(sumRange g q, t, q)`, the witnessed hypothesis applied at `(q,
+    /// m)`, and `CReal.regular` at `(sumRange g m, m, t)`. The outer
+    /// telescope — combining this with [`Self::sum_range_tail_within`]'s own
+    /// bound — is [`Self::sum_range_tail_within_cauchy`].
+    pub sum_range_tail_cauchy_within: NameId,
+    /// `CReal.sumRange_tail_within_cauchy : ∀ f g, (∀ k, le (abs (f k)) (g
+    /// k)) → ∀ K, (∀ pp qq, Within (seq (sumRange g pp) pp − seq (sumRange g
+    /// qq) qq) (natDivSucc K pp + natDivSucc K qq)) → ∀ m n, Within (seq
+    /// (add (sumRange f (add m n)) (neg (sumRange f m))) (add m n)) (add
+    /// ((modulus t q + (natDivSucc K q + natDivSucc K m)) + modulus m t)
+    /// (natDivSucc 2 (add m n)))`, `q := add m n`, `t := shift q` — the
+    /// **outer telescope** `series.rs`'s module documentation names as the
+    /// one piece left to combine [`Self::sum_range_tail_within`]'s bound
+    /// (`Within u (v+w)`, the `f`-side real-valued tail bound unfolded at
+    /// its own index) with [`Self::sum_range_tail_cauchy_within`]'s bound on
+    /// that same `v` (`Within v B`, `v` built identically by both theorems
+    /// from the same `m`, `n`, so no transport is needed to identify them).
+    ///
+    /// Built from nothing beyond `series::weaken` (`Within r q` + `q ≤ q'` →
+    /// `Within r q'`) applied to `q := v+w`, `q' := B+w`: `q ≤ q'` is one
+    /// `Rat.add_le_add` on the upper half of `sum_range_tail_cauchy_within`'s
+    /// own conclusion (`le v B`, via `halves`) paired with `Rat.le_refl w`.
+    /// The three-leg inner telescope and the two one-sided real bounds this
+    /// composes already did the heavy lifting inside the two theorems named
+    /// above; this one is bound-widening glue only, not a further telescope.
+    pub sum_range_tail_within_cauchy: NameId,
+    /// `CReal.sumRange_cauchy_dominated_ordered : ∀ f g k, (∀ x, le (abs (f
+    /// x)) (g x)) → (∀ pp qq, Within (seq (sumRange g pp) pp − seq (sumRange
+    /// g qq) qq) (natDivSucc k pp + natDivSucc k qq)) → ∀ a b, Nat.le a b →
+    /// Within (seq (sumRange f b) b − seq (sumRange f a) a) (bound k a b)` —
+    /// the ordered-pair half of wiring [`Self::sum_range_tail_within_cauchy`]
+    /// through to [`Self::cauchy`]'s own **canonical** two-index sample
+    /// shape (`seq (f p) p − seq (f q) q`, not the shifted-sample shape that
+    /// theorem supplies). `series.rs`'s module documentation names this gap
+    /// under "Cauchy-shape conversion": `sum_range_tail_within_cauchy`
+    /// bounds `f`'s tail sampled at a *shared, shifted* index; reaching
+    /// `Cauchy`'s own shape needs two more `CReal.regular` legs bridging
+    /// each side back to its own canonical sample
+    /// (`series::dominated_canonical_at`), and lifting the ordered pair
+    /// `(m, add m gap)` that construction works with to an arbitrary
+    /// `a ≤ b` (`Nat.le_dest` plus transport, the same technique
+    /// [`Self::sum_range_tail_within_le`] already used to lift
+    /// `sum_range_tail_within`, reused here against a different payload).
+    ///
+    /// Selecting between this pair's two orientations via `Nat.le_total`,
+    /// and normalizing the resulting bound into `Cauchy`'s own
+    /// `natDivSucc K m + natDivSucc K n` shape, are left to whichever piece
+    /// assembles `sumRange_cauchy_of_dominated` itself.
+    pub sum_range_cauchy_dominated_ordered: NameId,
+    /// `CReal.sumRange_cauchy_dominated_ordered_normalized : ∀ f g k, (∀ x,
+    /// le (abs (f x)) (g x)) → (∀ pp qq, Within (seq (sumRange g pp) pp − seq
+    /// (sumRange g qq) qq) (natDivSucc k pp + natDivSucc k qq)) → ∀ a b,
+    /// Nat.le a b → Within (seq (sumRange f b) b − seq (sumRange f a) a)
+    /// (natDivSucc K' b + natDivSucc K' a)`, for an explicit `K'` built from
+    /// `k` alone (`Nat.add`-with-literal chain, no fresh existential) —
+    /// **bound normalization**, `series.rs`'s module documentation's second
+    /// named gap. Post-processes [`Self::sum_range_cauchy_dominated_ordered`]'s
+    /// own eleven-`natDivSucc`-leaf bound (four copies of `1/(shift b+1)`,
+    /// widened to `1/(b+1)` via `half_shift_le`; the rest fused pairwise via
+    /// `Rat.natDivSucc_add`) into the **single**, `Cauchy`-shaped two-term sum
+    /// this development's `b`-side already reaches without padding (`K' :=
+    /// k+8`) and its `a`-side reaches by one `Rat.natDivSucc_le_add_left` pad
+    /// (`k+2 ↦ k+8`, defeq to `K'` since both are nested `Nat.add`-by-literal
+    /// chains over the same `k`, needing no `Nat.add_assoc`/`Nat.add_comm`
+    /// lemma to align — see `series.rs`'s doc for why this is pure
+    /// computation). Still returns the **ordered-pair** shape (`a ≤ b`
+    /// required, not yet `∀ a b` unconditionally) and takes the Cauchy
+    /// hypothesis in its raw witnessed form (`k` a plain parameter, not
+    /// wrapped in `∃`) — the `Nat.le_total` case split and the `CReal.Cauchy`
+    /// existential itself are `series.rs`'s two remaining named gaps, left to
+    /// whichever piece assembles `sumRange_cauchy_of_dominated` next.
+    pub sum_range_cauchy_dominated_ordered_normalized: NameId,
+    /// `CReal.sumRange_seq_zero : Eq Rat (seq (sumRange f Nat.zero) k)
+    /// Rat.zero` — the base case of the sample-rate law, closing by `Eq.refl`
+    /// alone (`sumRange f zero` ι-reduces to `zero := ofRat Rat.zero`, and
+    /// `seq (ofRat q) k` ι-reduces to `q`).
+    pub sum_range_seq_zero: NameId,
+    /// `CReal.sumRange_seq_succ : ∀ f n k, Eq Rat (seq (sumRange f (Nat.succ
+    /// n)) k) (add (seq (sumRange f n) (shift k)) (seq (f n) (shift k)))` —
+    /// **the sample-rate law this file's own module documentation named as
+    /// missing**, in its cheap recursive form: `sumRange f (succ n)`
+    /// ι-reduces to `add (sumRange f n) (f n)`, and `seq (add x y) k`
+    /// ι-reduces (through `CReal.add`'s own `mk (fun n => …) _`
+    /// representative) to `seq x (shift k) + seq y (shift k)` — so the whole
+    /// chain is ι+β, no case split and no rational estimate, exactly like
+    /// [`Self::sum_range_zero`]/[`Self::sum_range_succ`]. Closing the general
+    /// **closed form** this recursion implies (`seq (sumRange f n) k = Σ_{i<n}
+    /// seq (f i) (shift^{n-i} k)`, `shift` iterated `n − i` times) as its own
+    /// kernel theorem, and bridging from there (or from
+    /// [`Self::sum_range_tail_le`] directly) to `CReal.Cauchy`/`Converges`,
+    /// is unbuilt — see `series.rs`'s module documentation for why the
+    /// closed form alone is not sufficient (each term's own regularity
+    /// contributes an `Ω(1/i)` error that does not shrink with `n`, so a
+    /// naive per-term bound diverges) and what the tractable next step looks
+    /// like.
+    pub sum_range_seq_succ: NameId,
 
     // --- powers, and the geometric series over ℝ (creal/power.rs) -----------
     /// `CReal.pow : CReal → Nat → CReal`, by structural `Nat.rec` on the
@@ -1407,6 +1573,72 @@ pub struct CRealPrelude {
     /// through by the literal `CReal.ofRat (Rat.natDivSucc 1 1)` rather than
     /// deciding any sign.
     pub abs_mul_le_of_bounds: NameId,
+    /// `CReal.BoundedOn (h : CReal → CReal) (a b : CReal) (k : Nat) : Prop :=
+    /// ∀ z, le a z → le z b → le (abs (h z)) (ofRat (natDivSucc (Nat.succ k)
+    /// 0))` — a transparent `Definition`, naming `creal/derivative.rs`'s own
+    /// private `bounded_on_ty` helper (the inline shape
+    /// [`Self::has_derivative_mul`]'s and [`Self::has_derivative_cube`]'s own
+    /// `hbf`/`hbg`/`hbgp` hypotheses already use) rather than restating it.
+    ///
+    /// `Regular`, not `Opaque`, so it stays defeq to `bounded_on_ty`'s inline
+    /// form and a closure theorem stated over it can still be applied at
+    /// those two theorems' own existing call sites without editing their
+    /// statements — see [`Self::bounded_on_unfold`] for the confirmation and
+    /// [`Self::bounded_on_mul`] for a proof that exercises it.
+    pub bounded_on: NameId,
+    /// `CReal.bounded_on_unfold : ∀ h a b k, BoundedOn h a b k → ∀ z, le a z
+    /// → le z b → le (abs (h z)) (ofRat (natDivSucc (Nat.succ k) 0))`, proved
+    /// by `fun h a b k hyp => hyp` — the identity function on `hyp`, ascribed
+    /// a conclusion type stated in `bounded_on_ty`'s own raw, unfolded shape.
+    /// This typechecks **only** because [`Self::bounded_on`] is definitionally
+    /// equal to that shape by one delta step; it exercises nothing else, so a
+    /// failure here would isolate a defeq break from every other reason
+    /// [`Self::bounded_on_mul`] might fail to build.
+    pub bounded_on_unfold: NameId,
+    /// `CReal.bounded_on_mul : ∀ F G a b k1 k2, BoundedOn F a b k1 →
+    /// BoundedOn G a b k2 → BoundedOn (fun z => mul (F z) (G z)) a b
+    /// (Nat.add (Nat.add (Nat.mul k1 k2) k1) k2)` — the product of two
+    /// functions bounded on `[a,b]` is bounded on `[a,b]`.
+    ///
+    /// The combined bound `k3 := k1·k2 + k1 + k2` is chosen so that `Nat.succ
+    /// k3 = Nat.succ k1 · Nat.succ k2` **exactly**, with no `Nat.sub`
+    /// anywhere: [`RatPrelude::nat_div_succ_mul`] folds `natDivSucc (succ k1)
+    /// 0 · natDivSucc (succ k2) 0` to `natDivSucc (succ k1 · succ k2) 0` in
+    /// one step (the general two-index form
+    /// [`Self::has_derivative_mul`]'s own `fold_index0_first` needs is not
+    /// needed here — both factors already carry index `0`), so the only
+    /// remaining work is the `Nat` identity above, closed by `succ_mul` /
+    /// `mul_succ` / `add_succ` (defining equations, not a new lemma).
+    ///
+    /// The proof applies `hF`/`hG` (typed `BoundedOn F a b k1` / `BoundedOn G
+    /// a b k2`) directly to a point `z` and its two range proofs, the exact
+    /// shape [`Self::has_derivative_mul`]'s own `hbf`/`hbg`/`hbgp` are
+    /// applied at — the confirmation [`Self::bounded_on_unfold`] gives in
+    /// isolation, exercised here inside a real closure proof.
+    pub bounded_on_mul: NameId,
+    /// `CReal.bounded_on_add : ∀ F G a b k1 k2, BoundedOn F a b k1 →
+    /// BoundedOn G a b k2 → BoundedOn (fun z => add (F z) (G z)) a b
+    /// (Nat.add k1 (Nat.succ k2))` — the sum of two functions bounded on
+    /// `[a,b]` is bounded on `[a,b]`.
+    ///
+    /// Simpler than [`Self::bounded_on_mul`]: [`RatPrelude::nat_div_succ_add`]
+    /// folds `natDivSucc (succ k1) 0 + natDivSucc (succ k2) 0` to `natDivSucc
+    /// (succ k1 + succ k2) 0` directly (no index-`0`-only restriction the way
+    /// [`RatPrelude::nat_div_succ_mul`] has), and the combined bound `k3 :=
+    /// k1 + succ k2` is chosen so `succ k1 + succ k2 = succ k3` by
+    /// `Nat.succ_add` alone — no `mul_succ`/`add_succ` dance. The magnitude
+    /// step reuses `creal/derivative.rs`'s own private `abs_add_le` helper
+    /// (`|F z + G z| ≤ |F z| + |G z|`, already built for
+    /// [`Self::has_derivative_add`]) chained against the two given bounds via
+    /// `add_le_add` and `le_trans`, not [`Self::abs_mul_le_of_bounds`].
+    ///
+    /// This is the piece `creal/derivative.rs`'s own module documentation
+    /// identifies as still missing for `hasDerivative_pow` at general `n`
+    /// beyond [`Self::bounded_on_mul`]: the product rule's derivative term
+    /// `F'(x)·G(x) + F(x)·G'(x)` is a **sum**, so advancing the induction
+    /// `pow (n+1) = id · pow n` needs boundedness of that sum at every step,
+    /// not just of `pow n` itself.
+    pub bounded_on_add: NameId,
     /// `CReal.hasDerivative_smul : ∀ c F F' a b, HasDerivativeOn F F' a b →
     /// ∀ (k : Nat), le (abs c) (ofRat (natDivSucc (Nat.succ k) 0)) →
     /// HasDerivativeOn (fun r => mul c (F r)) (fun x => mul c (F' x)) a b` —
@@ -1476,6 +1708,111 @@ pub struct CRealPrelude {
     /// shape not matched `hasDerivative_sq` at `n = 2`, one of the two would be
     /// wrong.
     pub has_derivative_pow_two: NameId,
+    /// `CReal.hasDerivative_cube : ∀ a b k1 k2 k3,
+    /// (∀ z, le a z → le z b → le (abs z) (ofRat (natDivSucc (succ k1) 0))) →
+    /// (∀ z, le a z → le z b → le (abs (mul z z)) (ofRat (natDivSucc (succ
+    /// k2) 0))) → (∀ z, le a z → le z b → le (abs (add z z)) (ofRat
+    /// (natDivSucc (succ k3) 0))) → HasDerivativeOn (fun r => mul r (mul r
+    /// r)) (fun x => add (mul one (mul x x)) (mul x (add x x))) a b` — the
+    /// cube rule, built with **zero new algebra**: `r*(r*r)` is exactly
+    /// `id(r) * sq(r)`, so this is [`Self::has_derivative_mul`] applied
+    /// directly to [`Self::has_derivative_id`] and [`Self::has_derivative_sq`],
+    /// with `CReal.uniformly_continuous_id` supplying the continuity
+    /// hypothesis the product rule's own third term needs.
+    ///
+    /// The three magnitude bounds (on `id`, on `sq`, and on `sq`'s own
+    /// derivative `fun x => x+x`) are three INDEPENDENT caller-supplied
+    /// hypotheses, matching `hasDerivative_mul`'s own three-independent-
+    /// bounds shape exactly — deliberately **not** derived from one another
+    /// via a single interval bound. Folding them into one would need a rational
+    /// identity of the shape `natDivSucc(m,0) * natDivSucc(n,0) =
+    /// natDivSucc(m*n,0)`, which is not established anywhere in this prelude
+    /// (see `creal/derivative.rs`'s module documentation for what closing a
+    /// comparably-shaped gap — `Rat.natDivSucc` antitone in its index —
+    /// actually cost the sum rule); avoiding that gap by taking three
+    /// independent hypotheses is what keeps this cheap.
+    pub has_derivative_cube: NameId,
+    /// `CReal.hasDerivative_pow : ∀ a b k1, BoundedOn (fun r => r) a b k1 →
+    /// ∀ (kb kd : Nat → Nat),
+    ///   (∀ n, BoundedOn (fun r => pow r n) a b (kb n)) →
+    ///   (∀ n, BoundedOn (fun x => mul (ofNat (Nat.succ n)) (pow x n)) a b
+    ///     (kd n)) →
+    ///   ∀ n, HasDerivativeOn (fun r => pow r (Nat.succ n))
+    ///     (fun x => mul (ofNat (Nat.succ n)) (pow x n)) a b` — the general
+    /// power rule, by induction on `n` at exponent `succ n` (never `n - 1`:
+    /// `Nat.sub` is truncated and banned in an index). See
+    /// `creal/derivative.rs::declare_has_derivative_pow`'s own doc comment for
+    /// why the exponent is `succ n`, why the induction commutes each product
+    /// before calling [`Self::has_derivative_mul`], and why boundedness is
+    /// two explicit Skolem functions rather than a derived fact.
+    pub has_derivative_pow: NameId,
+    /// `CReal.hasDerivative_chain : ∀ F F' G G' a b,
+    ///   HasDerivativeOn F F' a b → HasDerivativeOn G G' a b →
+    ///   UniformlyContinuousOn F a b →
+    ///   (∀ z, le a z → le z b → le a (F z)) →
+    ///   (∀ z, le a z → le z b → le (F z) b) →
+    ///   ∀ k1 k2, BoundedOn F' a b k1 → BoundedOn G' a b k2 →
+    ///   HasDerivativeOn (fun r => G (F r)) (fun x => mul (G' (F x)) (F' x))
+    ///   a b` — the chain rule. The domain question is settled by the two
+    /// self-map hypotheses (`∀ z, ... → le a (F z)` / `... → le (F z) b`),
+    /// in [`Self::bounded_on`]'s own two-Π shape rather than a bundled `And`
+    /// or a second interval for `G` — see
+    /// `creal/derivative.rs::declare_has_derivative_chain`'s own doc comment
+    /// for what that choice costs and why. The two-level modulus composition
+    /// (`UniformlyContinuousOn F a b`'s own modulus applied to `G`'s
+    /// modulus, not to a `Nat` literal) is what the scouting report flagged
+    /// as genuinely new; the error term itself telescopes EXACTLY (`E =
+    /// [G's own error at (F x, F y)] + G'(F x) * [F's own error at (x,y)]`,
+    /// no ring expansion), unlike the product rule.
+    pub has_derivative_chain: NameId,
+
+    // --- the integral (creal/integral.rs) -------------------------------------
+    /// `CReal.riemannSum (f : CReal → CReal) (a b : CReal) (m : Nat) : CReal`
+    /// — a left-endpoint Riemann sum over `[a, b]` with `Nat.succ m` equal
+    /// subintervals: `sumRange (fun i => f(a + i·Δ)·Δ) (Nat.succ m)` with
+    /// `Δ := (b − a) · ofRat (Rat.natDivSucc 1 m)`. See `integral.rs`'s
+    /// module documentation for why the subinterval count is taken as
+    /// `Nat.succ m` (so `Δ` needs no `CReal.inv`/`PosBound` witness) and why
+    /// the sample point is the left endpoint.
+    pub riemann_sum: NameId,
+    /// `CReal.riemannSum_add : ∀ f g a b m,
+    /// Equiv (riemannSum (fun r => add (f r) (g r)) a b m)
+    ///       (add (riemannSum f a b m) (riemannSum g a b m))` — linearity in
+    /// the integrand, the additive half.
+    pub riemann_sum_add: NameId,
+    /// `CReal.mul_riemannSum : ∀ c f a b m,
+    /// Equiv (riemannSum (fun r => mul c (f r)) a b m) (mul c (riemannSum f a b m))`
+    /// — linearity in the integrand, the scalar half.
+    pub mul_riemann_sum: NameId,
+    /// `CReal.riemannSum_le : ∀ f g a b m, le a b → (∀ z, le (f z) (g z)) →
+    /// le (riemannSum f a b m) (riemannSum g a b m)` — monotonicity. The
+    /// pointwise hypothesis is global (`∀ z`), not restricted to `[a, b]`;
+    /// see `integral.rs`'s module documentation for why.
+    pub riemann_sum_le: NameId,
+    /// `CReal.riemannSum_const : ∀ c a b m,
+    /// Equiv (riemannSum (fun _ => c) a b m) (mul c (add b (neg a)))` — a
+    /// constant function's Riemann sum is exactly base times height,
+    /// exactly (no error term), for every subinterval count `m`. See
+    /// `integral.rs`'s module documentation for the two-piece route.
+    pub riemann_sum_const: NameId,
+    /// `CReal.ofNat_le : ∀ i j : Nat, Nat.le i j → CReal.le (ofNat i) (ofNat j)`
+    /// — `CReal.ofNat` is monotone. Via `Nat.le_dest` (`∃ k, i + k = j`) plus
+    /// `RatPrelude::nat_div_succ_le_add_left` (monotone in the numerator,
+    /// stated additively so no `Nat`-subtraction appears) lifted across
+    /// [`Self::of_rat_le`]; see `integral.rs`'s module documentation.
+    pub of_nat_le: NameId,
+    /// `CReal.riemannSum_sample_in_bounds : ∀ a b m i, le a b → Nat.lt i
+    /// (Nat.succ m) → And (le a (add a (mul (ofNat i) delta))) (le (add a
+    /// (mul (ofNat i) delta)) b)` — every LEFT-endpoint sample point of a
+    /// Riemann sum over `[a, b]` lies in `[a, b]`; see `integral.rs`'s module
+    /// documentation for the route.
+    pub riemann_sample_in_bounds: NameId,
+    /// `CReal.riemannSum_le_on : ∀ f g a b m, le a b → (∀ z, le a z → le z b →
+    /// le (f z) (g z)) → le (riemannSum f a b m) (riemannSum g a b m)` —
+    /// [`Self::riemann_sum_le`]'s pointwise hypothesis restricted to `[a, b]`,
+    /// via [`Self::riemann_sample_in_bounds`]. See `integral.rs`'s module
+    /// documentation; `riemann_sum_le` itself is UNCHANGED (both exist).
+    pub riemann_sum_le_on: NameId,
 }
 
 impl CRealPrelude {
@@ -1651,6 +1988,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_add: kernel.name_str(creal, "converges_add"),
         converges_neg: kernel.name_str(creal, "converges_neg"),
         converges_sub: kernel.name_str(creal, "converges_sub"),
+        converges_squeeze: kernel.name_str(creal, "converges_squeeze"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
         converges_mul: kernel.name_str(creal, "converges_mul"),
@@ -1667,6 +2005,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uc_spec: kernel.name_str(uniformly_continuous_on, "spec"),
         uniformly_continuous_id: kernel.name_str(creal, "uniformly_continuous_id"),
         uniformly_continuous_const: kernel.name_str(creal, "uniformly_continuous_const"),
+        uniformly_continuous_add: kernel.name_str(creal, "uniformly_continuous_add"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
@@ -1694,6 +2033,16 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_telescope: kernel.name_str(creal, "sumRange_telescope"),
         sum_range_split: kernel.name_str(creal, "sumRange_split"),
         sum_range_tail_le: kernel.name_str(creal, "sumRange_tail_le"),
+        sum_range_tail_within: kernel.name_str(creal, "sumRange_tail_within"),
+        sum_range_tail_within_le: kernel.name_str(creal, "sumRange_tail_within_le"),
+        sum_range_tail_cauchy_within: kernel.name_str(creal, "sumRange_tail_cauchy_within"),
+        sum_range_tail_within_cauchy: kernel.name_str(creal, "sumRange_tail_within_cauchy"),
+        sum_range_cauchy_dominated_ordered: kernel
+            .name_str(creal, "sumRange_cauchy_dominated_ordered"),
+        sum_range_cauchy_dominated_ordered_normalized: kernel
+            .name_str(creal, "sumRange_cauchy_dominated_ordered_normalized"),
+        sum_range_seq_zero: kernel.name_str(creal, "sumRange_seq_zero"),
+        sum_range_seq_succ: kernel.name_str(creal, "sumRange_seq_succ"),
         pow: kernel.name_str(creal, "pow"),
         pow_zero: kernel.name_str(creal, "pow_zero"),
         pow_succ: kernel.name_str(creal, "pow_succ"),
@@ -1724,11 +2073,26 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_neg: kernel.name_str(creal, "hasDerivative_neg"),
         has_derivative_add: kernel.name_str(creal, "hasDerivative_add"),
         abs_mul_le_of_bounds: kernel.name_str(creal, "abs_mul_le_of_bounds"),
+        bounded_on: kernel.name_str(creal, "BoundedOn"),
+        bounded_on_unfold: kernel.name_str(creal, "bounded_on_unfold"),
+        bounded_on_mul: kernel.name_str(creal, "bounded_on_mul"),
+        bounded_on_add: kernel.name_str(creal, "bounded_on_add"),
         has_derivative_smul: kernel.name_str(creal, "hasDerivative_smul"),
         has_derivative_sub: kernel.name_str(creal, "hasDerivative_sub"),
         has_derivative_mul: kernel.name_str(creal, "hasDerivative_mul"),
         has_derivative_congr: kernel.name_str(creal, "hasDerivative_congr"),
         has_derivative_pow_two: kernel.name_str(creal, "hasDerivative_pow_two"),
+        has_derivative_cube: kernel.name_str(creal, "hasDerivative_cube"),
+        has_derivative_pow: kernel.name_str(creal, "hasDerivative_pow"),
+        has_derivative_chain: kernel.name_str(creal, "hasDerivative_chain"),
+        riemann_sum: kernel.name_str(creal, "riemannSum"),
+        riemann_sum_add: kernel.name_str(creal, "riemannSum_add"),
+        mul_riemann_sum: kernel.name_str(creal, "mul_riemannSum"),
+        riemann_sum_le: kernel.name_str(creal, "riemannSum_le"),
+        riemann_sum_const: kernel.name_str(creal, "riemannSum_const"),
+        of_nat_le: kernel.name_str(creal, "ofNat_le"),
+        riemann_sample_in_bounds: kernel.name_str(creal, "riemannSum_sample_in_bounds"),
+        riemann_sum_le_on: kernel.name_str(creal, "riemannSum_le_on"),
     }
 }
 
@@ -1812,13 +2176,20 @@ pub(crate) fn build_creal_prelude_uncached(
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
+        // `riemannSum` is built directly on `sumRange`/`ofNat` and needs
+        // nothing from `power`, so it can land right after `series` rather
+        // than waiting for the `power`/`hasDerivative_pow*` tail below.
+        integral::declare_integral(&mut d, prelude)?;
         power::declare_power(&mut d, prelude)?;
         // `hasDerivative_pow_two` mentions `CReal.pow`, which `power.rs`
         // declares. It cannot live inside `derivative::declare_derivative`,
         // which runs BEFORE `power::declare_power` above: the kernel rejects a
         // term naming a constant not yet in the environment (`UnknownConst`).
         // Wired in here instead, after `pow` exists.
-        derivative::declare_has_derivative_pow_two(&mut d, prelude)
+        derivative::declare_has_derivative_pow_two(&mut d, prelude)?;
+        // `hasDerivative_pow` (the general induction) also mentions `pow`,
+        // for the identical reason.
+        derivative::declare_has_derivative_pow(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -2738,6 +3109,7 @@ mod cotransitivity;
 mod density;
 mod derivative;
 mod field;
+mod integral;
 mod inverse;
 mod lattice;
 mod mul_self_zero;

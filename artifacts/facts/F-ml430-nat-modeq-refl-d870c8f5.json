@@ -8,10 +8,37 @@
     "statement": "∀ {n : ℕ} (a : ℕ), a ≡ a [MOD n]",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "autogenesis-operation-nat-modeq-1c0507f1ded168f7",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Nat.ModEq.refl` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "modeq-family-eq-iff-combinators-v1",
+        "axeyum-lean-import/modeq-family-operation-v1",
+        "axeyum-lean-import/modeq-family-multi-target-v1"
+      ],
+      "checker_command": "python3 scripts/check-autogenesis-nat-modeq-family.py",
+      "artifact": "sha256:1c0507f1ded168f7bea07c8e63e3cf92b27166328eb9468e7ee77ae635abb4f9",
+      "checker_operation": {
+        "id": "authoritative-mathlib-modeq-family-v1",
+        "admitted_declarations": 193,
+        "binders_used": 2,
+        "goal_sha256": "af29ca73ebc2956b60e5b342e28c8e182466be4b3dcb150b4abfe62c0d202f3e",
+        "proof_sha256": "1c0507f1ded168f7bea07c8e63e3cf92b27166328eb9468e7ee77ae635abb4f9",
+        "target_content_sha256": "b346fa99bd6cdd9384bd90b772cf752aa7dfca961f0817bb4f1be68fea2a9667",
+        "max_binders": 8,
+        "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-refl-statement-adapter-v1.json",
+        "modeq_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-refl-v1.json",
+        "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqRefl"
+      },
+      "notes": "Derived from an independently replayed modeq-family receipt. The registered fact-operation checker (scripts/check-autogenesis-nat-modeq-family.py) replays the proof-isolated statement artifact through a fresh importer and requires the exact kernel-checked proof and dependency-free result; no caller-authored route, footprint, checker, or shell command is accepted. This is a BLIND GENERALIZATION of the train-set producer (modeq_family_support, tuned only on the four int-modeq-* streams and committed unmodified): it unfolds `Nat.ModEq.refl`'s definitional `ModEq n a b := a % n = b % n` and closes with Eq.refl, reconstructed directly from Eq.rec -- never a borrowed theorem, never a reference to the target or a sibling ModEq fact. Only THIS fact of the three the operation names is settled here; `F:ml430-nat-modeq-symm-0a3d4d18` and `F:ml430-nat-modeq-trans-ef9d1c46` remain open and dispatchable, deliberately left for a following lane so the transition stays reviewable one fact at a time."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +53,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The registered operation authoritative-mathlib-modeq-family-v1 (registered at the time of this closure as authoritative-mathlib-nat-modeq-family-v1; merged 2026-08-25 into the Int.ModEq operation so the development-partition gate sees a train fact alongside this development fact -- the underlying producer, goal and proof are unchanged) -- a blind generalization of the train-set modeq_family_support producer (tuned only on the four int-modeq-* streams) to the Nat.ModEq development family -- produced a fresh-import axiom-free kernel proof for this fact via Eq.refl over the definitional unfolding of ModEq, reconstructed directly from Eq.rec. Only this one fact of the three the operation names was flipped in this transaction; F:ml430-nat-modeq-symm-0a3d4d18 and F:ml430-nat-modeq-trans-ef9d1c46 remain open and dispatchable for a following lane, and F:ml430-nat-modeq-comm-24b71e7a stays blocked on the unsettled symm dependency.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

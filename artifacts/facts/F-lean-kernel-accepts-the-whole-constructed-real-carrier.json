@@ -20,7 +20,7 @@
       "kind": "kernel-term",
       "supports": "The whole carrier, and the WHOLE of it. Lean's kernel ends with exactly as many constants as this kernel holds -- 470 = 470, both numbers read out of the run rather than transcribed. This is the row that distinguishes `accepted` from `accepted a subset`, which is the failure mode every other real-Lean check in this repository is exposed to: they render the closure of one refutation, so Lean only ever sees the declarations some query happens to cite.",
       "check_status": "checked",
-      "checker_command": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'AXEYUM-CREAL-CARRIER declared=470 lean_kernel_constants=470'",
+      "checker_command": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'AXEYUM-CREAL-CARRIER declared=470 lean_kernel_constants=470')\" -ge 1",
       "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the two counts printed on ONE line, so neither can drift without the other being noticed, and both are read from the kernel and from Lean at run time. A bare `470` in a document would be a transcription; this is a comparison."
     },
     {
@@ -28,7 +28,7 @@
       "kind": "kernel-term",
       "supports": "Lean actually RAN, twice. An exit status cannot distinguish `checked 2 modules` from `checked none`, and this repository has shipped suites that were inert for weeks. The suite prints its own invocation count and the pinned toolchain it used; `scripts/check-lean-gate.sh` sums those counts and cross-checks the binary.",
       "check_status": "checked",
-      "checker_command": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'AXEYUM-LEAN-CHECKED creal-carrier-kernel-replay checked=2'",
+      "checker_command": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'AXEYUM-LEAN-CHECKED creal-carrier-kernel-replay checked=2')\" -ge 1",
       "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the suite's own `AXEYUM-LEAN-CHECKED` count, not on the exit status. The count is the thing an inert suite cannot produce."
     },
     {
@@ -36,7 +36,7 @@
       "kind": "kernel-term",
       "supports": "The NEGATIVE control passed, which is what makes the two rows above mean anything. The second of the two Lean invocations replays the same stream with `CReal.Equiv.not_zero_one`'s proof replaced by another closed proof, and the run only passes if Lean's kernel REJECTS it naming `CReal.Equiv` -- i.e. only if it really type-checked that declaration against that type.",
       "check_status": "checked",
-      "checker_command": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE '1 passed; 0 failed'",
+      "checker_command": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec '1 passed; 0 failed')\" -ge 1",
       "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the harness verdict for a suite whose every assertion is about the finding: the count equality, the presence of the two residue declarations by name BEFORE any Lean runs, and the tampered-stream rejection. `0 failed` is only informative because of what the assertions are."
     }
   ],

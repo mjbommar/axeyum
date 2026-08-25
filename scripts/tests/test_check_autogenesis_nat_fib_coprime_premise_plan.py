@@ -503,6 +503,68 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "definition composition"):
             MODULE.validate(changed)
 
+    def test_prelude_and_nat_mod_lt_sources_are_pinned_to_their_commit_not_the_live_tree(
+        self,
+    ) -> None:
+        """Defect 2, 2026-08-25 structural-defects session.
+
+        `crates/axeyum-lean-kernel/src/{prelude.rs,nat_prelude.rs,
+        nat_prelude/ops.rs,nat_prelude/bezout.rs}` move under concurrent
+        kernel work, and `validate()` used to hash the LIVE working-tree file
+        for these four paths while every other historical-tool pin in this
+        module hashes the git blob AT ITS RECORDED COMMIT
+        (`git_blob_sha256`). The manifest already carries the right commit in
+        `bool_order_commit`/`nat_mod_lt_commit` -- the checker just was not
+        using it for these two fields, so ordinary concurrent kernel edits
+        made `test_exact_plan_is_accepted` fail for a reason that had nothing
+        to do with this plan's mathematics.
+
+        This is exactly `test_historical_tool_identity_survives_current_api_
+        evolution`'s pattern (same file, `composition_probe.api`) applied to
+        the two fields that were missing it. If a future edit reverts to
+        live-tree hashing here, THIS test fails even on a tree where the
+        source happens to still match (the `assertNotEqual` below only proves
+        drift is real right now); the `assertEqual` against `git_blob_sha256`
+        is the one that catches the regression unconditionally, because
+        `validate()` on the current manifest is exercised as a live oracle:
+        replacing `git_blob_sha256` with `MODULE.sha256(ROOT / …)` in
+        `validate()` reproduces the exact failure this test documents.
+        """
+        implementation = self.manifest["implementation"]
+        bool_commit = implementation["bool_order_commit"]
+        mod_lt_commit = implementation["nat_mod_lt_commit"]
+        logic_prelude = implementation["logic_prelude"]
+        self.assertEqual(
+            MODULE.git_blob_sha256(bool_commit, logic_prelude),
+            implementation["logic_prelude_sha256"],
+        )
+        for row in implementation["nat_mod_lt_sources"]:
+            self.assertEqual(
+                MODULE.git_blob_sha256(mod_lt_commit, row["path"]),
+                row["sha256"],
+            )
+        # The drift this defect was reported against: at least one of these
+        # paths' LIVE content already disagrees with the pinned commit blob,
+        # which is exactly why a live-tree check breaks under concurrent
+        # kernel work while the commit-pinned check does not.
+        live_matches_pinned_commit = all(
+            MODULE.sha256(ROOT / row["path"]) == row["sha256"]
+            for row in implementation["nat_mod_lt_sources"]
+        ) and MODULE.sha256(ROOT / logic_prelude) == implementation[
+            "logic_prelude_sha256"
+        ]
+        self.assertFalse(
+            live_matches_pinned_commit,
+            "expected concurrent kernel edits to have moved at least one of "
+            "these files off the pinned commit's content -- if this now "
+            "fails, the drift this defect was written against no longer "
+            "reproduces, which is fine, but re-check that the fix is still "
+            "exercised (assertEqual above) rather than vacuously true",
+        )
+        # And the actual regression guard: validate() must still accept the
+        # committed plan on THIS tree, where the live content has drifted.
+        MODULE.validate(self.manifest)
+
 
 if __name__ == "__main__":
     unittest.main()
