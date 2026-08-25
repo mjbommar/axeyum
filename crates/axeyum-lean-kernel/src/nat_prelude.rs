@@ -1695,6 +1695,12 @@ pub struct NatPrelude {
     /// IX.36 blocker `perfect.rs`'s module doc names: `sumDivisors_two_pow`'s
     /// tail sub-induction needs `2^k < 2^(k+1)`, an instance at `b = 2`.
     pub pow_lt_pow_succ: NameId,
+    /// `Nat.dvd_two_pow_succ_iff_of_le : ∀ k d, Le d (pow 2 k) → Iff (dvd d
+    /// (pow 2 k)) (dvd d (pow 2 (succ k)))` — the congruence step
+    /// `sumDivisors_two_pow`'s tail sub-induction consumes: below the bound
+    /// `2^k`, divisibility by `2^k` and by `2^(k+1)` agree. See
+    /// `perfect.rs`'s module doc for the proof route.
+    pub dvd_two_pow_succ_iff_of_le: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2128,6 +2134,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_two_pow_classify: kernel.name_str(nat, "dvd_two_pow_classify"),
             pow_pos: kernel.name_str(nat, "pow_pos"),
             pow_lt_pow_succ: kernel.name_str(nat, "pow_lt_pow_succ"),
+            dvd_two_pow_succ_iff_of_le: kernel.name_str(nat, "dvd_two_pow_succ_iff_of_le"),
         };
 
         let mut d = NatDev::new(kernel, p);

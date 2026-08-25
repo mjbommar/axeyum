@@ -752,6 +752,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_two_pow_classify,
         p.pow_pos,
         p.pow_lt_pow_succ,
+        p.dvd_two_pow_succ_iff_of_le,
     ]
 }
 
@@ -1435,6 +1436,63 @@ fn pow_lt_pow_succ_computes_at_a_concrete_instance() {
     assert!(
         f.k.axiom_footprint(p.pow_lt_pow_succ).is_empty(),
         "pow_lt_pow_succ rests on a trusted declaration"
+    );
+}
+
+/// `Nat.dvd_two_pow_succ_iff_of_le` — the congruence step
+/// `sumDivisors_two_pow`'s tail sub-induction needs. At `k = 2` (`2^2 = 4`,
+/// `2^3 = 8`) with `dd = 4` (`Le 4 4` via `le_refl`), the theorem fully
+/// applied type-checks to the concrete `Iff (dvd 4 4) (dvd 4 8)`, and its
+/// forward direction (`iff_mp`) applied to the genuine fact `dvd 4 4`
+/// (`dvd_refl`) computes a proof of `dvd 4 8`.
+#[test]
+fn dvd_two_pow_succ_iff_of_le_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let four = f.num(4);
+    let eight = f.num(8);
+    let k = f.num(2);
+    let pow_k = f.const_app(p.pow, &[two, k]);
+    assert!(f.k.def_eq(pow_k, four), "pow 2 2 must reduce to 4");
+    let sk = f.succ(k);
+    let pow_sk = f.const_app(p.pow, &[two, sk]);
+    assert!(f.k.def_eq(pow_sk, eight), "pow 2 (succ 2) must reduce to 8");
+
+    let dd = four;
+    let bound = f.lemma(p.le_refl, &[four]); // Le 4 4, defeq Le dd (pow 2 k)
+
+    let iff_proof = f.lemma(p.dvd_two_pow_succ_iff_of_le, &[k, dd, bound]);
+    let inferred =
+        f.k.infer(iff_proof)
+            .expect("dvd_two_pow_succ_iff_of_le 2 4 (le_refl 4) must type-check");
+    let expected_left = f.dvd(dd, four);
+    let expected_right = f.dvd(dd, eight);
+    let expected_iff = f.const_app(p.logic.iff, &[expected_left, expected_right]);
+    assert!(
+        f.k.def_eq(inferred, expected_iff),
+        "dvd_two_pow_succ_iff_of_le 2 4 must certify Iff (dvd 4 4) (dvd 4 8), got {}",
+        f.k.render_lean(inferred)
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.dvd_two_pow_succ_iff_of_le).is_empty(),
+        "dvd_two_pow_succ_iff_of_le rests on a trusted declaration"
+    );
+
+    // The forward direction really computes: `dvd 4 4` (genuinely true, via
+    // `dvd_refl`) pushed through `iff_mp` must certify `dvd 4 8`.
+    let dvd_4_4 = f.lemma(p.dvd_refl, &[four]);
+    let mp = f.const_app(p.logic.iff_mp, &[expected_left, expected_right, iff_proof]);
+    let dvd_4_8 = f.apply(mp, &[dvd_4_4]);
+    let inferred_mp =
+        f.k.infer(dvd_4_8)
+            .expect("iff_mp (dvd_two_pow_succ_iff_of_le 2 4 …) dvd_refl must type-check");
+    assert!(
+        f.k.def_eq(inferred_mp, expected_right),
+        "the forward direction must certify dvd 4 8, got {}",
+        f.k.render_lean(inferred_mp)
     );
 }
 
@@ -5519,7 +5577,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        58 + 265,
+        58 + 266,
         "every promised definition and theorem must be rendered"
     );
 }
