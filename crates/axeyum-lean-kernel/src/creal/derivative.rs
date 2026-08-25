@@ -290,7 +290,7 @@
 )]
 
 use super::ring_helpers::{add4_comm, right_distrib};
-use super::{CRealPrelude, creal_ty};
+use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
@@ -316,6 +316,10 @@ pub(super) fn declare_derivative(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     declare_has_derivative_neg(d, p)?;
     declare_has_derivative_add(d, p)?;
     declare_abs_mul_le_of_bounds(d, p)?;
+    declare_bounded_on(d, p)?;
+    declare_bounded_on_unfold(d, p)?;
+    declare_bounded_on_mul(d, p)?;
+    declare_bounded_on_add(d, p)?;
     declare_has_derivative_smul(d, p)?;
     declare_has_derivative_sub(d, p)?;
     declare_has_derivative_mul(d, p)?;
@@ -3816,6 +3820,545 @@ fn bounded_on_ty(
     let with_zb = d.arrow(range_zb, concl);
     let with_az = d.arrow(range_az, with_zb);
     d.pi_fv(z_fv, carrier, with_az)
+}
+
+/// `CReal.BoundedOn h a b k` applied.
+fn bounded_on_applied(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    h: ExprId,
+    a: ExprId,
+    b: ExprId,
+    k: ExprId,
+) -> ExprId {
+    d.const_app(p.bounded_on, &[h, a, b, k])
+}
+
+/// Admit `CReal.BoundedOn` — a transparent `Definition` naming
+/// [`bounded_on_ty`]'s own inline shape verbatim (`value` is
+/// `bounded_on_ty` itself under four fresh binders `h a b k`), so it is
+/// definitionally equal to it by exactly one delta step. See
+/// [`declare_bounded_on_unfold`] for the isolated confirmation and
+/// [`declare_bounded_on_mul`] for a proof exercising it.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_bounded_on(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+    let prop = d.kernel().sort_zero();
+
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let body = bounded_on_ty(d, p, h, a, b, k);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, body);
+        let with_b = d.lam_fv(b_fv, carrier, with_k);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        d.lam_fv(h_fv, func_ty, with_a)
+    };
+    let ty = {
+        let with_k = d.arrow(nat, prop);
+        let with_b = d.arrow(carrier, with_k);
+        let with_a = d.arrow(carrier, with_b);
+        d.arrow(func_ty, with_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.bounded_on,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 50),
+    })
+}
+
+/// `CReal.bounded_on_unfold : ∀ h a b k, BoundedOn h a b k → ∀ z, le a z →
+/// le z b → le (abs (h z)) (mag_bound k)`, proved by the identity function
+/// on the hypothesis. See [`CRealPrelude::bounded_on_unfold`] for why this
+/// is the isolated defeq confirmation, exercising nothing else.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means `BoundedOn` is
+/// NOT defeq to `bounded_on_ty`'s inline shape.
+fn declare_bounded_on_unfold(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hyp_ty = bounded_on_applied(d, p, h, a, b, k);
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    let value = {
+        let with_hyp = d.lam_fv(hyp_fv, hyp_ty, hyp);
+        let with_k = d.lam_fv(k_fv, nat, with_hyp);
+        let with_b = d.lam_fv(b_fv, carrier, with_k);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        d.lam_fv(h_fv, func_ty, with_a)
+    };
+    let ty = {
+        let concl = bounded_on_ty(d, p, h, a, b, k);
+        let after_hyp = d.arrow(hyp_ty, concl);
+        let with_k = d.pi_fv(k_fv, nat, after_hyp);
+        let with_b = d.pi_fv(b_fv, carrier, with_k);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        d.pi_fv(h_fv, func_ty, with_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bounded_on_unfold,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// The `Nat` identity `Nat.succ k1 * Nat.succ k2 = Nat.succ (Nat.add (Nat.add
+/// (Nat.mul k1 k2) k1) k2)`, by `succ_mul` / `mul_succ` / `add_succ` — no
+/// `Nat.sub` anywhere. Returns `(k3, succ_k1, succ_k2, proof)` where `k3 :=
+/// k1*k2 + k1 + k2` and `proof : Eq Nat (mul succ_k1 succ_k2) (succ k3)`.
+fn bounded_on_mul_index(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k1: ExprId,
+    k2: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let nat_p = p.rat.int.nat;
+    let succ_k1 = d.succ(k1);
+    let succ_k2 = d.succ(k2);
+    let k1k2 = d.mul(k1, k2);
+    let k1k2_k1 = d.add(k1k2, k1);
+    let k3 = d.add(k1k2_k1, k2);
+
+    let start = d.mul(succ_k1, succ_k2);
+
+    // succ_mul(k1, succ_k2) : mul (succ k1) succ_k2 = add (mul k1 succ_k2) succ_k2
+    let step1 = d.lemma(nat_p.succ_mul, &[k1, succ_k2]);
+    let mul_k1_succk2 = d.mul(k1, succ_k2);
+    let next1 = d.add(mul_k1_succk2, succ_k2);
+
+    // mul_succ(k1, k2) : mul k1 (succ k2) = add (mul k1 k2) k1, lifted
+    // through the one-hole context `fun x => add x succ_k2`.
+    let mul_succ_proof = d.lemma(nat_p.mul_succ, &[k1, k2]);
+    let step2 = d.congr(mul_k1_succk2, k1k2_k1, mul_succ_proof, &|d, x| {
+        d.add(x, succ_k2)
+    });
+    let next2 = d.add(k1k2_k1, succ_k2);
+
+    // add_succ(k1k2_k1, k2) : add k1k2_k1 (succ k2) = succ (add k1k2_k1 k2)
+    let step3 = d.lemma(nat_p.add_succ, &[k1k2_k1, k2]);
+    let succ_k3 = d.succ(k3);
+
+    let (_, proof) = d.chain(start, &[(next1, step1), (next2, step2), (succ_k3, step3)]);
+
+    (k3, succ_k1, succ_k2, proof)
+}
+
+/// From the `Nat` identity `bounded_on_mul_index` supplies, derive `Equiv
+/// (mul (mag_bound k1) (mag_bound k2)) (mag_bound k3)` — `Rat.natDivSucc_mul`
+/// folds the two index-`0` bounds into one `natDivSucc`, then the `Nat`
+/// identity's lift (via [`nat_eq_to_rat`]) folds that into `mag_bound k3`
+/// itself. Returns `(mag_bound k1, mag_bound k2, mag_bound k3, k3, proof)`.
+fn fold_mag_bound_product(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k1: ExprId,
+    k2: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId, ExprId) {
+    let (k3, succ_k1, succ_k2, nat_eq_proof) = bounded_on_mul_index(d, p, k1, k2);
+    let mul_succk1_succk2 = d.mul(succ_k1, succ_k2);
+    let succ_k3 = d.succ(k3);
+    let zero_idx = d.num(0);
+
+    let bound1_rat = div_succ_expr(d, p, succ_k1, zero_idx);
+    let bound2_rat = div_succ_expr(d, p, succ_k2, zero_idx);
+    let big1 = d.const_app(p.of_rat, &[bound1_rat]); // mag_bound k1
+    let big2 = d.const_app(p.of_rat, &[bound2_rat]); // mag_bound k2
+    let mag_k3_rat = div_succ_expr(d, p, succ_k3, zero_idx);
+    let mag_k3 = d.const_app(p.of_rat, &[mag_k3_rat]); // mag_bound k3
+
+    let of_rat_mul_proof = d.lemma(p.of_rat_mul, &[bound1_rat, bound2_rat]);
+    // Equiv (mul big1 big2) (ofRat (rmul bound1_rat bound2_rat))
+    let mul_bb = cmul(d, p, big1, big2);
+    let rat_prod = {
+        let f_ap = d.int().rat_mul;
+        d.const_app(f_ap, &[bound1_rat, bound2_rat])
+    };
+    let prod_bound_rat = div_succ_expr(d, p, mul_succk1_succk2, zero_idx);
+
+    let motive = |d: &mut IntDev<'_>, t: ExprId| {
+        let oft = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[mul_bb, oft])
+    };
+
+    // Rat.natDivSucc_mul (succ_k1, succ_k2, 0) : rat_prod = prod_bound_rat
+    let eq_mul_nat = d.lemma(p.rat.nat_div_succ_mul, &[succ_k1, succ_k2, zero_idx]);
+    let step_a = rat_eq_rewrite(
+        d,
+        rat_prod,
+        prod_bound_rat,
+        eq_mul_nat,
+        of_rat_mul_proof,
+        &motive,
+    );
+    // Equiv mul_bb (ofRat prod_bound_rat)
+
+    let eq_fold = nat_eq_to_rat(d, mul_succk1_succk2, succ_k3, nat_eq_proof, &|d, x| {
+        div_succ_expr(d, p, x, zero_idx)
+    });
+    // Eq Rat prod_bound_rat mag_k3_rat
+    let step_b = rat_eq_rewrite(d, prod_bound_rat, mag_k3_rat, eq_fold, step_a, &motive);
+    // Equiv mul_bb mag_k3
+
+    (big1, big2, mag_k3, k3, step_b)
+}
+
+/// `CReal.bounded_on_mul : ∀ F G a b k1 k2, BoundedOn F a b k1 → BoundedOn G
+/// a b k2 → BoundedOn (fun z => mul (F z) (G z)) a b (k1*k2+k1+k2)`. See
+/// [`CRealPrelude::bounded_on_mul`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_bounded_on_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let k1_fv = d.fresh_fvar();
+    let k1 = d.kernel().fvar(k1_fv);
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+
+    let hbf_ty = bounded_on_applied(d, p, f, a, b, k1);
+    let hbf_fv = d.fresh_fvar();
+    let hbf = d.kernel().fvar(hbf_fv);
+    let hbg_ty = bounded_on_applied(d, p, g, a, b, k2);
+    let hbg_fv = d.fresh_fvar();
+    let hbg = d.kernel().fvar(hbg_fv);
+
+    let (big1, big2, mag_k3, k3, bound_equiv) = fold_mag_bound_product(d, p, k1, k2);
+
+    let fmul = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let fr = d.apply(f, &[r]);
+        let gr = d.apply(g, &[r]);
+        let prod = cmul(d, p, fr, gr);
+        d.lam_fv(r_fv, carrier, prod)
+    };
+
+    // The per-point body, held here so `ty` and `value` can each wrap it in
+    // their own binder shape (`ty` via `bounded_on_ty`'s raw Pi form so the
+    // final `concl` below can be ascribed through `bounded_on_applied`).
+    let per_point = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_fv = d.fresh_fvar();
+        let haz = d.kernel().fvar(haz_fv);
+        let hzb_fv = d.fresh_fvar();
+        let hzb = d.kernel().fvar(hzb_fv);
+
+        let range_az = d.const_app(p.le, &[a, z]);
+        let range_zb = d.const_app(p.le, &[z, b]);
+
+        let fz = d.apply(f, &[z]);
+        let gz = d.apply(g, &[z]);
+
+        // BoundedOn F a b k1 / BoundedOn G a b k2, applied at (z, haz, hzb) —
+        // the exact shape `declare_has_derivative_mul`'s own `hbf`/`hbg` are
+        // applied at, and this typechecks only via `BoundedOn`'s defeq to
+        // `bounded_on_ty`.
+        let hbf_z = d.apply(hbf, &[z, haz, hzb]); // le (abs fz) big1
+        let hbg_z = d.apply(hbg, &[z, haz, hzb]); // le (abs gz) big2
+
+        let prod_le = d.lemma(p.abs_mul_le_of_bounds, &[fz, gz, big1, big2, hbf_z, hbg_z]);
+        // le (abs (mul fz gz)) (mul big1 big2)
+
+        let fz_gz = cmul(d, p, fz, gz);
+        let abs_fzgz = cabs(d, p, fz_gz);
+        let refl_afg = erefl(d, p, abs_fzgz);
+        let mul_bb = cmul(d, p, big1, big2);
+        let final_le = d.lemma(
+            p.le_congr,
+            &[
+                abs_fzgz,
+                abs_fzgz,
+                mul_bb,
+                mag_k3,
+                refl_afg,
+                bound_equiv,
+                prod_le,
+            ],
+        );
+        // le (abs fz_gz) mag_k3
+
+        let with_hzb = d.lam_fv(hzb_fv, range_zb, final_le);
+        let with_haz = d.lam_fv(haz_fv, range_az, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let value = {
+        let with_hbg = d.lam_fv(hbg_fv, hbg_ty, per_point);
+        let with_hbf = d.lam_fv(hbf_fv, hbf_ty, with_hbg);
+        let with_k2 = d.lam_fv(k2_fv, nat, with_hbf);
+        let with_k1 = d.lam_fv(k1_fv, nat, with_k2);
+        let with_b = d.lam_fv(b_fv, carrier, with_k1);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_g = d.lam_fv(g_fv, func_ty, with_a);
+        d.lam_fv(f_fv, func_ty, with_g)
+    };
+    let ty = {
+        let concl = bounded_on_applied(d, p, fmul, a, b, k3);
+        let with_hbg = d.arrow(hbg_ty, concl);
+        let with_hbf = d.arrow(hbf_ty, with_hbg);
+        let with_k2 = d.pi_fv(k2_fv, nat, with_hbf);
+        let with_k1 = d.pi_fv(k1_fv, nat, with_k2);
+        let with_b = d.pi_fv(b_fv, carrier, with_k1);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_g = d.pi_fv(g_fv, func_ty, with_a);
+        d.pi_fv(f_fv, func_ty, with_g)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bounded_on_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// The `Nat` identity `Nat.succ k1 + Nat.succ k2 = Nat.succ (Nat.add k1
+/// (Nat.succ k2))` — `succ_add` alone, no `mul_succ`/`add_succ` dance the way
+/// [`bounded_on_mul_index`] needs. Returns `(k3, succ_k1, succ_k2, proof)`
+/// where `k3 := add k1 (succ k2)` and `proof : Eq Nat (add succ_k1 succ_k2)
+/// (succ k3)`.
+fn bounded_on_add_index(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k1: ExprId,
+    k2: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let nat_p = p.rat.int.nat;
+    let succ_k1 = d.succ(k1);
+    let succ_k2 = d.succ(k2);
+    let k3 = d.add(k1, succ_k2);
+
+    // succ_add(k1, succ_k2) : add (succ k1) succ_k2 = succ (add k1 succ_k2)
+    let proof = d.lemma(nat_p.succ_add, &[k1, succ_k2]);
+
+    (k3, succ_k1, succ_k2, proof)
+}
+
+/// From the `Nat` identity [`bounded_on_add_index`] supplies, derive `Equiv
+/// (add (mag_bound k1) (mag_bound k2)) (mag_bound k3)` —
+/// `Rat.natDivSucc_add` folds the two index-`0` bounds into one `natDivSucc`
+/// directly, then the `Nat` identity's lift (via [`nat_eq_to_rat`]) folds
+/// that into `mag_bound k3`. Returns `(mag_bound k1, mag_bound k2, mag_bound
+/// k3, k3, proof)` — the additive mirror of [`fold_mag_bound_product`].
+fn fold_mag_bound_sum(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k1: ExprId,
+    k2: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId, ExprId) {
+    let (k3, succ_k1, succ_k2, nat_eq_proof) = bounded_on_add_index(d, p, k1, k2);
+    let succ_k1_plus_succ_k2 = d.add(succ_k1, succ_k2);
+    let succ_k3 = d.succ(k3);
+    let zero_idx = d.num(0);
+
+    let bound1_rat = div_succ_expr(d, p, succ_k1, zero_idx);
+    let bound2_rat = div_succ_expr(d, p, succ_k2, zero_idx);
+    let big1 = d.const_app(p.of_rat, &[bound1_rat]); // mag_bound k1
+    let big2 = d.const_app(p.of_rat, &[bound2_rat]); // mag_bound k2
+    let mag_k3_rat = div_succ_expr(d, p, succ_k3, zero_idx);
+    let mag_k3 = d.const_app(p.of_rat, &[mag_k3_rat]); // mag_bound k3
+
+    let of_rat_add_proof = d.lemma(p.of_rat_add, &[bound1_rat, bound2_rat]);
+    // Equiv (add big1 big2) (ofRat (radd bound1_rat bound2_rat))
+    let add_bb = cadd(d, p, big1, big2);
+    let rat_sum = radd(d, bound1_rat, bound2_rat);
+    let sum_bound_rat = div_succ_expr(d, p, succ_k1_plus_succ_k2, zero_idx);
+
+    let motive = |d: &mut IntDev<'_>, t: ExprId| {
+        let oft = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[add_bb, oft])
+    };
+
+    // Rat.natDivSucc_add (succ_k1, succ_k2, 0) : rat_sum = sum_bound_rat
+    let eq_add_nat = d.lemma(p.rat.nat_div_succ_add, &[succ_k1, succ_k2, zero_idx]);
+    let step_a = rat_eq_rewrite(
+        d,
+        rat_sum,
+        sum_bound_rat,
+        eq_add_nat,
+        of_rat_add_proof,
+        &motive,
+    );
+    // Equiv add_bb (ofRat sum_bound_rat)
+
+    let eq_fold = nat_eq_to_rat(d, succ_k1_plus_succ_k2, succ_k3, nat_eq_proof, &|d, x| {
+        div_succ_expr(d, p, x, zero_idx)
+    });
+    // Eq Rat sum_bound_rat mag_k3_rat
+    let step_b = rat_eq_rewrite(d, sum_bound_rat, mag_k3_rat, eq_fold, step_a, &motive);
+    // Equiv add_bb mag_k3
+
+    (big1, big2, mag_k3, k3, step_b)
+}
+
+/// `CReal.bounded_on_add : ∀ F G a b k1 k2, BoundedOn F a b k1 → BoundedOn G
+/// a b k2 → BoundedOn (fun z => add (F z) (G z)) a b (k1 + succ k2)`. See
+/// [`CRealPrelude::bounded_on_add`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_bounded_on_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let k1_fv = d.fresh_fvar();
+    let k1 = d.kernel().fvar(k1_fv);
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+
+    let hbf_ty = bounded_on_applied(d, p, f, a, b, k1);
+    let hbf_fv = d.fresh_fvar();
+    let hbf = d.kernel().fvar(hbf_fv);
+    let hbg_ty = bounded_on_applied(d, p, g, a, b, k2);
+    let hbg_fv = d.fresh_fvar();
+    let hbg = d.kernel().fvar(hbg_fv);
+
+    let (big1, big2, mag_k3, k3, bound_equiv) = fold_mag_bound_sum(d, p, k1, k2);
+
+    let fadd = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let fr = d.apply(f, &[r]);
+        let gr = d.apply(g, &[r]);
+        let sum = cadd(d, p, fr, gr);
+        d.lam_fv(r_fv, carrier, sum)
+    };
+
+    let per_point = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_fv = d.fresh_fvar();
+        let haz = d.kernel().fvar(haz_fv);
+        let hzb_fv = d.fresh_fvar();
+        let hzb = d.kernel().fvar(hzb_fv);
+
+        let range_az = d.const_app(p.le, &[a, z]);
+        let range_zb = d.const_app(p.le, &[z, b]);
+
+        let fz = d.apply(f, &[z]);
+        let gz = d.apply(g, &[z]);
+
+        let hbf_z = d.apply(hbf, &[z, haz, hzb]); // le (abs fz) big1
+        let hbg_z = d.apply(hbg, &[z, haz, hzb]); // le (abs gz) big2
+
+        let fz_gz = cadd(d, p, fz, gz);
+        let abs_fzgz = cabs(d, p, fz_gz);
+        let abs_fz = cabs(d, p, fz);
+        let abs_gz = cabs(d, p, gz);
+        let abs_sum_bound = cadd(d, p, abs_fz, abs_gz);
+        let mul_bb = cadd(d, p, big1, big2);
+
+        let le_abs_sum = abs_add_le(d, p, fz, gz); // le abs_fzgz abs_sum_bound
+        let combined_le = d.lemma(p.add_le_add, &[abs_fz, big1, abs_gz, big2, hbf_z, hbg_z]);
+        // le abs_sum_bound mul_bb
+        let prod_le = d.lemma(
+            p.le_trans,
+            &[abs_fzgz, abs_sum_bound, mul_bb, le_abs_sum, combined_le],
+        );
+        // le abs_fzgz mul_bb
+
+        let refl_afg = erefl(d, p, abs_fzgz);
+        let final_le = d.lemma(
+            p.le_congr,
+            &[
+                abs_fzgz,
+                abs_fzgz,
+                mul_bb,
+                mag_k3,
+                refl_afg,
+                bound_equiv,
+                prod_le,
+            ],
+        );
+        // le abs_fzgz mag_k3
+
+        let with_hzb = d.lam_fv(hzb_fv, range_zb, final_le);
+        let with_haz = d.lam_fv(haz_fv, range_az, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let value = {
+        let with_hbg = d.lam_fv(hbg_fv, hbg_ty, per_point);
+        let with_hbf = d.lam_fv(hbf_fv, hbf_ty, with_hbg);
+        let with_k2 = d.lam_fv(k2_fv, nat, with_hbf);
+        let with_k1 = d.lam_fv(k1_fv, nat, with_k2);
+        let with_b = d.lam_fv(b_fv, carrier, with_k1);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_g = d.lam_fv(g_fv, func_ty, with_a);
+        d.lam_fv(f_fv, func_ty, with_g)
+    };
+    let ty = {
+        let concl = bounded_on_applied(d, p, fadd, a, b, k3);
+        let with_hbg = d.arrow(hbg_ty, concl);
+        let with_hbf = d.arrow(hbf_ty, with_hbg);
+        let with_k2 = d.pi_fv(k2_fv, nat, with_hbf);
+        let with_k1 = d.pi_fv(k1_fv, nat, with_k2);
+        let with_b = d.pi_fv(b_fv, carrier, with_k1);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_g = d.pi_fv(g_fv, func_ty, with_a);
+        d.pi_fv(f_fv, func_ty, with_g)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bounded_on_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 /// From `mul (ofRat (natDivSucc (succ k) 0)) (ofRat (natDivSucc 1 e_prime))`
