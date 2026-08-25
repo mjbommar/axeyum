@@ -145,6 +145,7 @@ mod fibonacci;
 mod finite;
 mod finite_set;
 mod gcd;
+mod group;
 mod helpers;
 mod lcm;
 mod modular;
@@ -192,6 +193,7 @@ use finite::{
 };
 use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
+use group::declare_group_all;
 use lcm::{
     declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
     declare_lcm_comm, declare_lcm_dvd,
@@ -1369,6 +1371,27 @@ pub struct NatPrelude {
     pub set_compl_inter: NameId,
     /// `Nat.setCompl_involutive : ∀ p k, Eq Bool (setCompl (setCompl p) k) (p k)`.
     pub set_compl_involutive: NameId,
+    // --- groups (`group.rs`) -------------------------------------------------
+    // Curriculum node `groups` (Layer 2, docs/curriculum/02-structures/groups.md).
+    /// `Nat.IsGroupOn (op : Nat → Nat → Nat) (e : Nat) (inv : Nat → Nat) (n :
+    /// Nat) : Prop := closure ∧ (associativity ∧ (identity ∧ inverse))`, all
+    /// bounded on `n`. The bundled-predicate shape `Rat.IsDistribution`
+    /// already uses (this kernel has no typeclasses).
+    pub is_group_on: NameId,
+    /// `Nat.group_identity_unique : IsGroupOn op e inv n → ∀ e', e'<n →
+    /// (∀ a, a<n → op a e' = a) → e' = e`.
+    pub group_identity_unique: NameId,
+    /// `Nat.group_inverse_unique : IsGroupOn op e inv n → ∀ a b c,
+    /// a<n→b<n→c<n → op b a=e → op a c=e → b=c` — a left inverse of `a`
+    /// equals a right inverse of `a`.
+    pub group_inverse_unique: NameId,
+    /// `Nat.group_left_cancel : IsGroupOn op e inv n → ∀ a b c,
+    /// a<n→b<n→c<n → op a b=op a c → b=c`.
+    pub group_left_cancel: NameId,
+    /// `Nat.modAdd_isGroup : ∀ n, 0<n → IsGroupOn (fun a b => mod (add a b)
+    /// n) 0 (fun a => mod (sub n a) n) n` — ℤ/n under addition, the worked
+    /// instance.
+    pub mod_add_is_group: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1746,6 +1769,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             set_compl_union: kernel.name_str(nat, "setCompl_union"),
             set_compl_inter: kernel.name_str(nat, "setCompl_inter"),
             set_compl_involutive: kernel.name_str(nat, "setCompl_involutive"),
+            is_group_on: kernel.name_str(nat, "isGroupOn"),
+            group_identity_unique: kernel.name_str(nat, "group_identity_unique"),
+            group_inverse_unique: kernel.name_str(nat, "group_inverse_unique"),
+            group_left_cancel: kernel.name_str(nat, "group_left_cancel"),
+            mod_add_is_group: kernel.name_str(nat, "modAdd_isGroup"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1822,6 +1850,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_bijective_of_injective_on(&mut d, &p)?;
         declare_comp(&mut d, &p)?;
         declare_injective_on_comp(&mut d, &p)?;
+        declare_group_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
