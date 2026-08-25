@@ -497,6 +497,63 @@ partly wrong picture three times in a row. This repository's standing rule about
 preferring a measurement to a message applies to its own source as much as to
 its tools.
 
+## Seventh amendment, 2026-08-25 — the wall is the EXPORT'S CLOSURE, not any producer
+
+The sixth amendment named the next capability as "an order-relation combinator
+vocabulary." A lane **built it** — `zeroLe : ∀a, 0 ≤ a`,
+`succLeSucc : n ≤ m → succ n ≤ succ m` (inducting on the order proof itself via
+`Nat.le.rec`), and `leAddLeft : ∀ a b, b ≤ a + b`, all registered as real
+`Theorem` declarations, re-checked by `Kernel::add_declaration`, axiom-free and
+theorem-dependency-free.
+
+**And the goal still did not close, for a reason one level below anything
+examined so far.**
+
+Composing that vocabulary with `Nat.fib` needs a bridge identity —
+`fib(n+2) = fib n + fib(n+1)`, or even just its building block
+`iterate(succ n) x = transition(iterate n x)`. That is **not definitionally
+true** (`def_eq` returns `false` for symbolic `n`, confirmed directly), so it
+needs a genuine `Eq`-typed inductive proof. But:
+
+> **`F:ml430-nat-fib-le-fib-succ`'s own minimal-closure export never declares
+> `Eq` at all.**
+
+Verified independently by resolving the export's interned name table — the names
+are integer indices with a string table, so a text grep cannot see them, the
+same reason CLAUDE.md forbids grepping this kernel for theorem names. Of 148
+resolved names: `Nat.fib` present, `LE`, `LE.le`, `LE.mk`, `LE.rec` present,
+**no `Eq` family member at all.** (Both positive controls matter here: an
+earlier text-grep attempt returned zero for the target AND for the control,
+which is how it was caught as a broken query rather than a finding.)
+
+The reason is structural. The goal is purely `LE.le`-headed, so Lean's
+dependency closure for **stating** it never pulls in propositional equality. And
+no order-only combinator can substitute: `Nat.le`'s recursor produces further
+`Nat.le`-typed conclusions from `Nat.le`-typed premises and never bridges an
+equality.
+
+**So the constraint is the reproduction adapter's closure policy** — what the
+minimal export includes — and not `bounded_induction.rs`, not
+`axeyum-lean-import`, not the kernel. Three amendments have now walked down
+through the producer, the composition mechanism, and the combinator vocabulary,
+and the wall was underneath all three.
+
+**What this means for the next step.** The question is no longer "what
+combinator is missing" but "**what should a minimal-closure export contain?**"
+Statement-closure alone is provably insufficient for any goal whose proof needs
+a lemma in a type the statement does not mention — which is most non-trivial
+goals. Widening it has an obvious cost (a larger trusted import surface per
+goal) and an obvious risk (importing the answer), and that trade is a genuine
+design decision rather than an implementation gap. It should get an ADR.
+
+**The pattern across all four amendments is the same one**, and it is worth
+naming because it has now cost four rounds: each stated blocker was real, and
+each was **not the binding one**. Every correction came from running something
+against the actual artifact — the WHNF probe, the composition against real
+kernels, the arity check against real streams, and now the name table of the
+real export. Reading the code and its documentation produced a plausible and
+partly wrong picture four times running.
+
 ## Boundary
 
 This document **selects nothing and authorizes nothing.** It adds no operation
