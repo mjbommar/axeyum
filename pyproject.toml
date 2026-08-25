@@ -35,6 +35,11 @@ agent = [
     "pydantic-ai-slim[anthropic]==2.33.0",
     "pydantic-graph==2.33.0",
     "pydantic-evals==2.33.0",
+    # `axeyum.agent.sandbox`'s import whitelist names sympy, and a whitelist
+    # entry for a module the sandbox interpreter cannot import is a capability
+    # that only exists in a docstring. The sandbox runs `sys.executable`, so
+    # sympy has to be in the SAME environment the agent extra installs.
+    "sympy==1.14.0",
 ]
 
 [project.urls]

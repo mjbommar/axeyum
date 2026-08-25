@@ -19,6 +19,8 @@ class Outcome:
     expected_status: Any
     logic: Any
     model: Any
+    replay_available: Any
+    replay_unavailable_reason: Any
     status: Any
 
     def __init__(self, *args: Any, **kwargs: Any) -> None: ...

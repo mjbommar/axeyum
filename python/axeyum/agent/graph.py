@@ -75,7 +75,9 @@ from ..knowledge import facts as facts_api
 from ..knowledge import frontier as frontier_api
 from ..knowledge import nursery as nursery_api
 from ..knowledge._paths import read_json, resolve_root
+from . import classify as classify_api
 from . import episode as episode_api
+from . import web as web_api
 from .episode import Budgets, EpisodeWriteError
 from .models import (
     ELIGIBLE_PARTITIONS,
@@ -297,6 +299,16 @@ class EpisodeState:
     gate_reason: str = ""
     #: The tier-C tool the plan's `producer_id` routes to, empty when none does.
     producer_tool: str = ""
+    #: Whether this episode ASKED for the A6 retrieval tools. Default off, and
+    #: off is not the same as refused: `web_reason` records which it was, so an
+    #: episode that never asked and one whose family the guard closed are
+    #: distinguishable afterwards.
+    allow_web: bool = False
+    #: What `web.family_guard` decided in `Gather`, in its own words. Never
+    #: contains a fact id.
+    web_reason: str = "web retrieval was not requested for this episode"
+    #: Whether the `Gather` toolset actually carried `web_fetch`/`python_exec`.
+    web_enabled: bool = False
     #: The pending approval request the deferred tool call ended the run with.
     deferred: Any = None
     #: What the supervisor decided per tool call id: `(approved, reason)`.
@@ -305,6 +317,13 @@ class EpisodeState:
     producer_outcome: Any = None
     #: What the SECOND kernel said. Never the producer's own word.
     check_outcome: Any = None
+    #: What `Classify` made of a decline: the typed obstruction cluster this run
+    #: belongs to. It is NOT written into the episode -- schema v2 already has
+    #: every field the classification is a function of, and slice A5 deliberately
+    #: added none -- so this exists for the CLI, for logging, and as the in-graph
+    #: half of the pair `python/tests/test_agent_classify.py` holds to agreement
+    #: with `scripts/gen-obstruction-graph.py`.
+    classification: Any = None
     checker_runs: list[dict[str, Any]] = field(default_factory=list)
     axiom_footprint: list[str] = field(default_factory=list)
     transaction_path: Path | None = None
@@ -333,6 +352,7 @@ def build_agent(
     *,
     for_plan: bool = False,
     include_tier_c: bool = False,
+    with_web: bool = False,
 ) -> Agent[AgentDeps, str]:
     """One agent, standing instructions, and only the tools the caller asked for.
 
@@ -345,6 +365,13 @@ def build_agent(
     that plans cannot see a tool that dispatches. Only `Dispatch` and
     `Supervise` pass True, and there every tier-C tool is
     `requires_approval=True`.
+
+    `with_web` defaults to False for the same reason and answers a different
+    question: not "may it dispatch" but "may it retrieve". Only `Gather` passes
+    True, only when `state.allow_web` was asked for AND `web.family_guard`
+    allows it for this episode's target. A run that never asks is byte-identical
+    to one from before slice A6, which is what keeps the committed episodes
+    replayable.
     """
     model = state.model
     if for_plan and state.plan_model is not None:
@@ -354,11 +381,30 @@ def build_agent(
     return Agent(
         model,
         deps_type=AgentDeps,
-        toolsets=[build_toolset(include_tier_c=include_tier_c)],
+        toolsets=[build_toolset(include_tier_c=include_tier_c, with_web=with_web)],
         instructions=instructions_text(state.root),
         model_settings=state.settings,
         retries=3,
     )
+
+
+def web_decision(state: EpisodeState) -> web_api.FamilyDecision:
+    """May this episode see the A6 retrieval tools? Two conditions, both required.
+
+    `allow_web` is the REQUEST and `web.family_guard` is the POLICY, and they are
+    kept apart because the two "no"s are different findings: an episode that
+    never asked and an episode whose nursery family the guard closed both run
+    without `web_fetch`, and only one of them is the guard doing its job.
+
+    A module-level function rather than a block inside `Gather.run` so it can be
+    exercised without a model. A guard that can only be observed by running a
+    whole episode is a guard whose branches get tested on the paths that happen
+    to be reachable today -- and today no eligible fact sits in a family with a
+    held-out member, so the disabling branch would never run.
+    """
+    if not state.allow_web:
+        return web_api.Disabled("web retrieval was not requested for this episode")
+    return web_api.family_guard(state.fact_id, state.root)
 
 
 # ------------------------------------------------------------------- the nodes
@@ -386,6 +432,10 @@ class Select(BaseNode[EpisodeState, None, Path]):
         state.frontier_path, _ = episode_api.save_frontier(state.frontier, state.out_dir)
         state.deps.selected_fact_id = state.fact_id
         state.deps.deadline = state.deadline
+        # Pinned here rather than in `Gather`, because `web_fetch` refuses
+        # without it: a snapshot outside the episode directory is a digest
+        # `check-agent-episode.py` rule 4 cannot resolve.
+        state.deps.episode_dir = state.out_dir
         return Gather()
 
 
@@ -398,7 +448,11 @@ class Gather(BaseNode[EpisodeState, None, Path]):
         if state.out_of_time():
             state.verdict, state.decline_class = "budget-exhausted", DECLINE_BUDGET
             return WriteEpisode()
-        agent = build_agent(state)
+        # The A6 guard, evaluated once per episode and recorded either way.
+        decision = web_decision(state)
+        state.web_enabled = bool(decision.allowed)
+        state.web_reason = decision.reason
+        agent = build_agent(state, with_web=state.web_enabled)
         try:
             with capture_run_messages() as captured:
                 result = await agent.run(
@@ -493,13 +547,13 @@ class Gate(BaseNode[EpisodeState, None, Path]):
     exception would put it in the harness's error path.
     """
 
-    async def run(self, ctx: GraphRunContext[EpisodeState, None]) -> Dispatch | WriteEpisode:
+    async def run(self, ctx: GraphRunContext[EpisodeState, None]) -> Dispatch | Classify:
         state = ctx.state
         passed, reason, tool = gate_decision(state)
         state.gate_passed, state.gate_reason, state.producer_tool = passed, reason, tool
         if not passed:
             state.verdict, state.decline_class = "declined", DECLINE_GATE
-            return WriteEpisode()
+            return Classify()
         return Dispatch()
 
 
@@ -620,11 +674,11 @@ class Dispatch(BaseNode[EpisodeState, None, Path]):
     dispatch and did not get one.
     """
 
-    async def run(self, ctx: GraphRunContext[EpisodeState, None]) -> Supervise | WriteEpisode:
+    async def run(self, ctx: GraphRunContext[EpisodeState, None]) -> Supervise | Classify:
         state = ctx.state
         if state.out_of_time():
             state.verdict, state.decline_class = "budget-exhausted", DECLINE_BUDGET
-            return WriteEpisode()
+            return Classify()
         proposal = state.proposals[0]
         agent = build_agent(state, include_tier_c=True)
         history = list(state.messages)
@@ -646,7 +700,7 @@ class Dispatch(BaseNode[EpisodeState, None, Path]):
             state.messages = partial_messages(history, list(captured))
             state.verdict = "budget-exhausted"
             state.decline_class = "budget-exhausted-during-plan"
-            return WriteEpisode()
+            return Classify()
         state.messages = list(result.all_messages())
         output = result.output
         if not isinstance(output, DeferredToolRequests) or not output.approvals:
@@ -655,7 +709,7 @@ class Dispatch(BaseNode[EpisodeState, None, Path]):
                 f"{state.gate_reason}; but the model did not call the tool: the run "
                 f"finished with {type(output).__name__} instead of an approval request"
             )
-            return WriteEpisode()
+            return Classify()
         state.deferred = output
         return Supervise()
 
@@ -674,7 +728,7 @@ class Supervise(BaseNode[EpisodeState, None, Path]):
     will make again -- and the reason is recorded on the episode.
     """
 
-    async def run(self, ctx: GraphRunContext[EpisodeState, None]) -> Check | WriteEpisode:
+    async def run(self, ctx: GraphRunContext[EpisodeState, None]) -> Check | Classify:
         state = ctx.state
         requests = state.deferred
         approvals: dict[str, Any] = {}
@@ -699,15 +753,15 @@ class Supervise(BaseNode[EpisodeState, None, Path]):
             state.messages = partial_messages(history, list(captured))
             state.verdict = "budget-exhausted"
             state.decline_class = "budget-exhausted-during-plan"
-            return WriteEpisode()
+            return Classify()
         state.messages = list(result.all_messages())
         if not any(approved for approved, _ in state.supervisor_decisions.values()):
             state.verdict, state.decline_class = "declined", DECLINE_SUPERVISOR
-            return WriteEpisode()
+            return Classify()
         outcomes = list(state.deps.producer_outcomes)
         if not outcomes:
             state.verdict, state.decline_class = "declined", DECLINE_OPERATIONAL
-            return WriteEpisode()
+            return Classify()
         state.producer_outcome = outcomes[-1]
         return Check()
 
@@ -767,15 +821,13 @@ class Check(BaseNode[EpisodeState, None, Path]):
     the whole reason an empty list here means anything.
     """
 
-    async def run(
-        self, ctx: GraphRunContext[EpisodeState, None]
-    ) -> StageTransaction | WriteEpisode:
+    async def run(self, ctx: GraphRunContext[EpisodeState, None]) -> StageTransaction | Classify:
         state = ctx.state
         outcome = state.producer_outcome
         if not isinstance(outcome, ProducerAccepted):
             state.verdict = "declined"
             state.decline_class = getattr(outcome, "decline_class", DECLINE_OPERATIONAL)
-            return WriteEpisode()
+            return Classify()
         verdict = independent_check(state.root, state.fact_id, outcome.tool, outcome.proof_sha256)
         state.check_outcome = verdict
         record = verdict.model_dump(mode="json")
@@ -791,11 +843,11 @@ class Check(BaseNode[EpisodeState, None, Path]):
         )
         if not isinstance(verdict, CheckVerified):
             state.verdict, state.decline_class = "declined", DECLINE_OPERATIONAL
-            return WriteEpisode()
+            return Classify()
         state.axiom_footprint = list(verdict.axiom_footprint)
         if verdict.axiom_footprint:
             state.verdict, state.decline_class = "declined", "missing-certificate"
-            return WriteEpisode()
+            return Classify()
         state.verdict, state.decline_class = "proved", None
         return StageTransaction()
 
@@ -886,6 +938,45 @@ class StageTransaction(BaseNode[EpisodeState, None, Path]):
 
 
 @dataclass
+class Classify(BaseNode[EpisodeState, None, Path]):
+    """Deterministic. Which typed obstruction does this decline belong to? NO MODEL.
+
+    Every post-plan decline arrives here -- a gate refusal, a supervisor denial,
+    a producer that declined, a re-check that disagreed, a budget that ran out
+    mid-dispatch -- and leaves with a cluster key. `Select` and `Plan` still exit
+    straight to `WriteEpisode` when a run is cut short before it has a plan: there
+    is no typed proposal to read, `decline_class` already carries the whole
+    finding, and routing the v1 path through a node the A2 episodes never ran
+    would change what a v1 replay re-derives.
+
+    **No model runs here, and the plan drew this node in italics.** The reasons
+    are in :mod:`axeyum.agent.classify`; the short form is that the inputs are
+    already typed values -- a discriminated `NoGeneralRoute`, a pinned
+    `decline_class` enum, a producer's own Rust `DeclineReason` variant -- so
+    there is no free text left for a classifier to read, and a model call here
+    would put the obstruction graph's cluster keys outside the replay guarantee
+    that every deterministic node re-derives bit-identically.
+
+    **This node writes nothing into the episode.** Schema v2 already carries
+    every field the classification is a function of, so
+    `scripts/gen-obstruction-graph.py` re-derives the identical cluster from the
+    committed bytes with the standard library alone. That is the property that
+    lets a stdlib gate own the obstruction graph while the classifier lives in
+    an optional extra, and `python/tests/test_agent_classify.py` holds the two
+    implementations to agreement on every committed episode.
+    """
+
+    async def run(self, ctx: GraphRunContext[EpisodeState, None]) -> WriteEpisode:
+        state = ctx.state
+        state.classification = classify_api.classify(
+            decline_class=state.decline_class,
+            proposals=state.proposals,
+            verdict=state.verdict,
+        )
+        return WriteEpisode()
+
+
+@dataclass
 class WriteEpisode(BaseNode[EpisodeState, None, Path]):
     """Deterministic. Serialize the run into the one artifact it may produce."""
 
@@ -942,6 +1033,11 @@ class WriteEpisode(BaseNode[EpisodeState, None, Path]):
             proposal_rows=proposal_rows,
             verdict=state.verdict,
             decline_class=state.decline_class,
+            # Empty on every episode that did not retrieve, which is all of them
+            # by default. The rows are projected from the fetch log rather than
+            # rebuilt from the snapshot directory, so a file nobody fetched
+            # cannot become a row and a fetch that happened cannot become absent.
+            web_snapshots=web_api.web_snapshot_rows(state.deps.web_documents, state.root),
             **extra,
         )
         state.episode_path = episode_api.write_episode(document, state.out_dir, state.root)
@@ -949,12 +1045,15 @@ class WriteEpisode(BaseNode[EpisodeState, None, Path]):
 
 
 def build_graph():
-    """The nine-node loop. Every node can short-circuit to `WriteEpisode`.
+    """The ten-node loop. Every node can short-circuit to a terminal path.
 
     That every path ends at `WriteEpisode` is the design: a run that was gated,
     denied, declined or cut short still produces the artifact, because "the gate
     refused" and "the loop crashed" are different findings and a harness that
-    wrote nothing for the first would be reporting the second.
+    wrote nothing for the first would be reporting the second. Since slice A5
+    every POST-PLAN decline reaches `WriteEpisode` through `Classify`, so the
+    typed obstruction is derived while the state that produced it is still in
+    hand rather than reconstructed from the artifact afterwards.
     """
     builder: GraphBuilder[EpisodeState, None, Select, Path] = GraphBuilder(
         name="axeyum-frontier-loop",
@@ -972,6 +1071,7 @@ def build_graph():
         builder.node(Supervise),
         builder.node(Check),
         builder.node(StageTransaction),
+        builder.node(Classify),
         builder.node(WriteEpisode),
     )
     return builder.build()
@@ -996,6 +1096,7 @@ __all__ = [
     "PLAN_PROMPT",
     "PREPARE_TRANSACTION",
     "Check",
+    "Classify",
     "Dispatch",
     "EpisodeState",
     "Gate",
@@ -1014,4 +1115,5 @@ __all__ = [
     "run_episode",
     "run_prepare",
     "supervisor_decision",
+    "web_decision",
 ]

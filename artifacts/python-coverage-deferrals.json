@@ -1,0 +1,137 @@
+{
+  "schema": "python-coverage-deferrals-v1",
+  "note": [
+    "Hand-maintained. One entry per Rust item (or module prefix) that the Python",
+    "binding deliberately does NOT project, with the reason. Read by",
+    "scripts/gen-python-coverage.py, which refuses an entry whose `reason` is",
+    "missing or empty: an unexplained deferral and a forgotten item are the same",
+    "thing, and the whole point of this file is to keep them different.",
+    "Keys are `<crate>:<item>`; `<item>` may be a bare name (`RatFunc`), a",
+    "`Type::method`, a module path (`reconstruct::foo`), or a `*`-suffixed prefix.",
+    "A deferral is not permission to stay unbound forever -- `slice` names the",
+    "slice in docs/python-2026-08/09-coverage-plan.md that revisits it, or is",
+    "empty when the answer is a settled `no`."
+  ],
+  "deferrals": {
+    "axeyum-cas:RatFunc": {
+      "reason": "No reachable public constructor: `CasExpr` has no text parser and nothing public returns a `RatFunc` (crates/axeyum-cas/src/lib.rs:1580), so a Python wrapper would be a type a caller cannot make. Recorded as `Skip:` in inventories/cas.md.",
+      "slice": ""
+    },
+    "axeyum-cas:UnaryFunc": {
+      "reason": "The 27 unary builders are projected individually as `Expr.ln` ... `Expr.ceiling` (plan 02-B). Exposing the tag enum would let Python build a `UnaryFunc` application the builders never construct, which is surface the Rust API does not have.",
+      "slice": ""
+    },
+    "axeyum-cas:groebner_basis": {
+      "reason": "Unbudgeted Buchberger: no `Limits`, no typed decline, so a Python caller cannot bound it and a runaway is indistinguishable from a hang. `groebner_cert::reduce_with_cofactors` (budgeted, certificate-producing) is bound instead -- plan 02-B says prefer `groebner_cert`.",
+      "slice": "S5"
+    },
+    "axeyum-cas:ideal_contains": {
+      "reason": "Same unbudgeted Buchberger call as `groebner_basis`; the checkable route is a cofactor certificate, which `groebner_cert` produces and Python can re-check.",
+      "slice": "S5"
+    },
+    "axeyum-cas:groebner::reduce": {
+      "reason": "Unbudgeted multivariate reduction with no cofactor record, so its result is not re-checkable -- `reduce_with_cofactors` returns the same normal form plus the `sum(cofactor*gen) + remainder == target` witness.",
+      "slice": "S5"
+    },
+    "axeyum-cnf:ProofSearchProgress": {
+      "reason": "An `mpsc::Sender` progress sink. Binding it means owning a Rust thread and draining a channel from Python; v1 omits the progress fields entirely (plan 02-A), which is also why `SolverConfig` can stay a plain `#[pyclass]`.",
+      "slice": "S8"
+    },
+    "axeyum-lean-import:CompletedStatementImport": {
+      "reason": "The consumed form of an import. It only exists between `into_parts` and its four outputs; the binding produces those outputs directly, so there is nothing for Python to hold.",
+      "slice": ""
+    },
+    "axeyum-lean-import:into_parts": {
+      "reason": "Consuming API: it destroys the import, which a Python object referenced elsewhere cannot survive. The binding calls it internally (crates/axeyum-py/src/producers.rs:928) and projects the non-consuming accessors -- plan 02-D says skip `into_parts`.",
+      "slice": ""
+    },
+    "axeyum-lean-import:verify_*": {
+      "reason": "Receipt verifiers are bound in the same slice as the `issue_*` producer they check, never before: a certificate must carry every distinction its producer makes, and a Python caller holding only the verifier can accept a receipt shape the issuer never emits. `issue_*` stays Rust-side until the receipt shapes freeze (plan 02-D).",
+      "slice": "S2"
+    },
+    "axeyum-lean-kernel:release_transient_tables_for_export": {
+      "reason": "One-way: it frees interning tables the kernel needs for everything except export, so a Python caller could poison a live `Kernel` handle and the failure would surface far from the call. Plan 02-C says document as one-way or omit; omitted.",
+      "slice": ""
+    },
+    "axeyum-query:QueryBuilder": {
+      "reason": "`QueryBuilder<'a>` borrows the arena for the life of the builder, and a lifetime cannot cross the PyO3 edge. Python accumulates triples and builds the `Query` in one Rust call (plan 02-A).",
+      "slice": ""
+    },
+    "axeyum-smtlib:Script::checked_flat_view": {
+      "reason": "Returns the raw assertion list, which is EMPTY on a word-first-fallback parse and would then solve as a vacuous `sat` -- a shipped P0. The binding projects `solvable_flat_view`, which returns `None` in exactly that case (plan 02-A).",
+      "slice": ""
+    },
+    "axeyum-smtlib:sort_text": {
+      "reason": "Writer-internal sort formatting. Python writes scripts through `write_script`; a second text path is a second place for the writer to disagree with the parser, and nothing in the plan needs it.",
+      "slice": ""
+    },
+    "axeyum-solver:CheckBudget": {
+      "reason": "`CheckBudget<'a>` borrows (crates/axeyum-solver/src/proof.rs:376) and a lifetime cannot become a `#[pyclass]`; the budgeted entry points take their budget at the call instead. Plan 02-A: not bound.",
+      "slice": ""
+    },
+    "axeyum-solver:CheckProgress": {
+      "reason": "`mpsc::Sender` progress sink -- one of the two fields that make `SolverConfig` `Send` but `!Sync`. v1 exposes the 18 plain fields and omits both (plan 02-A); revisit as a background-thread iterator.",
+      "slice": "S8"
+    },
+    "axeyum-solver:CheckingProgress": {
+      "reason": "The payload of the `CheckProgress` channel; pointless without the sink. Marked *(v2)* in inventories/smt-solver.md.",
+      "slice": "S8"
+    },
+    "axeyum-solver:ProofProgress": {
+      "reason": "`mpsc::Sender` progress sink, the other `!Sync` field of `SolverConfig`. Same v1 omission and same v2 route as `CheckProgress`.",
+      "slice": "S8"
+    },
+    "axeyum-solver:confirm_bounded_string_verdict": {
+      "reason": "Takes `&mut axeyum_smtlib::Script`: it mutates a parse the caller owns, and it is already run inside `solve_smtlib` (ADR-0052 `StringGate`). Projecting it would build a second, weaker front door that a Python caller could invoke in the wrong order.",
+      "slice": ""
+    },
+    "axeyum-solver:upgrade_bounded_string_unknown": {
+      "reason": "Same `&mut Script` shape and same reason as `confirm_bounded_string_verdict`; it is an upgrade-only companion of the gate the front door already runs.",
+      "slice": ""
+    },
+    "axeyum-solver:word_route_verdict": {
+      "reason": "Internal string route over `&mut Script`. The front door picks the route; a Python caller choosing one directly can get an `unknown` the shipped route decides, which reads as a capability regression that is not one.",
+      "slice": ""
+    },
+    "axeyum-solver:online_string_verdict": {
+      "reason": "Internal string route over `&mut Script`; see `word_route_verdict`.",
+      "slice": ""
+    },
+    "axeyum-solver:membership_verdict": {
+      "reason": "Internal string route over `&mut Script`; see `word_route_verdict`.",
+      "slice": ""
+    },
+    "axeyum-solver:lex_order_verdict": {
+      "reason": "Internal string route over `&mut Script`; see `word_route_verdict`.",
+      "slice": ""
+    },
+    "axeyum-solver:length_lia_verdict": {
+      "reason": "Internal string route over `&mut Script`; see `word_route_verdict`.",
+      "slice": ""
+    },
+    "axeyum-solver:decide_word_only_script": {
+      "reason": "Internal word-only decision procedure over `&mut Script`; reachable from Python only through `solve_smtlib`, which is the route whose verdict the corpus gates measure.",
+      "slice": ""
+    },
+    "axeyum-solver:optimize_smtlib": {
+      "reason": "`config` is ignored upstream (`let _ = config;`, smtlib.rs:2091), so a bound version would advertise timeouts, node budgets and memory limits that do not apply -- a budget that cannot bite is worse than no budget. Bind once the Rust side honours it.",
+      "slice": "S9"
+    },
+    "axeyum-solver:optimize_smtlib_lexicographic": {
+      "reason": "Same ignored `config` (smtlib.rs:2119) as `optimize_smtlib`; same fix first, then bind both together.",
+      "slice": "S9"
+    },
+    "axeyum-solver:reconstruct::*": {
+      "reason": "Lean reconstruction is its own slice (09 S2), not a wrapper pass: every route has to round-trip through the kernel and assert an axiom footprint, and a binding that returned a `Proof` nobody checked would be the checker-that-cannot-fail defect with a Python front end.",
+      "slice": "S2"
+    },
+    "axeyum-solver:membership_unsat_lean_module": {
+      "reason": "Regex-emptiness Lean module emitter; belongs with the rest of Lean reconstruction (S2) so that one slice owns the kernel round-trip and the footprint assertion. Marked *(later)* in inventories/smt-solver.md.",
+      "slice": "S2"
+    },
+    "axeyum-solver:membership_unsat_certificate": {
+      "reason": "The certificate half of `membership_unsat_lean_module`; deferred with it so producer and checker are projected together.",
+      "slice": "S2"
+    }
+  }
+}

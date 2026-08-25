@@ -105,6 +105,11 @@ class RealAlgebraicValue:
     def __repr__(self) -> Any: ...
     def __str__(self) -> Any: ...
 
+class ReplayUnavailable(AxeyumError):
+    """`Outcome.replay()` was asked to re-check a model it does not hold."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+
 class SmtLibParseError(AxeyumError):
     """The SMT-LIB text could not be parsed, or used a construct outside the supported fragment."""
 

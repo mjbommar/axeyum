@@ -37,6 +37,13 @@ create_exception!(
     "A binding-level budget refused the call before any search started.\n\nThis is NOT how a solver timeout surfaces: an exhausted solver budget is a\n`Outcome` with `status == \"unknown\"`, because `unknown` is a value."
 );
 
+create_exception!(
+    axeyum,
+    ReplayUnavailable,
+    AxeyumError,
+    "`Outcome.replay()` was asked to re-check a model it does not hold.\n\nRaised for a non-`sat` outcome (there is no model to check) and for the one\nknown front-door route that decides `sat` without leaving a replayable\narena (a quantified query). It is deliberately NOT `False`: `False` means\n\"replayed and the model does not satisfy the assertions\" -- a soundness\nsignal -- and the two must never share a value."
+);
+
 /// Registers the exception types on `module`.
 ///
 /// # Errors
@@ -47,5 +54,6 @@ pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("AxeyumError", py.get_type::<AxeyumError>())?;
     module.add("SmtLibParseError", py.get_type::<SmtLibParseError>())?;
     module.add("BudgetExceeded", py.get_type::<BudgetExceeded>())?;
+    module.add("ReplayUnavailable", py.get_type::<ReplayUnavailable>())?;
     Ok(())
 }

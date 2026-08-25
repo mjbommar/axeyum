@@ -64,3 +64,24 @@ def test_unknown_kind_and_strategy_are_str_enums() -> None:
     assert axeyum.UnknownKind.TIMEOUT == "Timeout"
     assert set(axeyum.solver.UNKNOWN_KINDS) == {kind.value for kind in axeyum.UnknownKind}
     assert set(axeyum.solver.STRATEGIES) == {value.value for value in axeyum.Strategy}
+
+
+import subprocess
+import sys
+
+import pytest
+
+DOCUMENTED_SUBMODULES = ["smt", "ir", "solver", "cas", "kernel", "producers", "knowledge", "agent"]
+
+
+@pytest.mark.parametrize("name", DOCUMENTED_SUBMODULES)
+def test_documented_submodule_imports_directly_in_a_fresh_interpreter(name: str) -> None:
+    # `from axeyum import smt` working while `import axeyum.smt` fails is the
+    # defect this pins: an attribute is not an importable module. A fresh
+    # interpreter so nothing this process already imported can mask it.
+    code = f"import axeyum.{name} as m; assert m is not None; print(m.__name__)"
+    completed = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, timeout=120, check=False
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip().startswith("axeyum.")

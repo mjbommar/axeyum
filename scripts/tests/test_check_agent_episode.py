@@ -205,9 +205,26 @@ class AgentEpisodeTests(unittest.TestCase):
             document["selection"]["frontier_path"] = str(saved)
             document["selection"]["frontier_sha256"] = artifact["frontier_sha256"]
 
-        code, out = run(self.corrupt(DECLINED, mutate))
+        code, out = run(self.corrupt(DECLINED, mutate), "--verify-frontier")
         self.assertEqual(code, 1, out)
         self.assertRule(out, "frontier-reverify")
+
+    def test_a_stale_frontier_only_warns_without_the_freshness_flag(self) -> None:
+        artifact = self.frontier()
+        artifact["ledger"]["fact_count"] += 1
+        unsigned = {k: v for k, v in artifact.items() if k != "frontier_sha256"}
+        artifact["frontier_sha256"] = frontier_tool.digest(unsigned)
+        saved = self.dir / "stale-frontier-warn.json"
+        saved.write_text(json.dumps(artifact, indent=2))
+
+        def mutate(document):
+            document["selection"]["frontier_path"] = str(saved)
+            document["selection"]["frontier_sha256"] = artifact["frontier_sha256"]
+
+        code, out = run(self.corrupt(DECLINED, mutate))
+        self.assertEqual(code, 0, out)
+        self.assertIn("frontier-reverify", out)
+        self.assertNotIn("frontier-reverify", out.rsplit("|rules=", 1)[-1])
 
     def test_a_web_snapshot_digest_mismatch_is_a_failure(self) -> None:
         page = self.dir / "page.html"
