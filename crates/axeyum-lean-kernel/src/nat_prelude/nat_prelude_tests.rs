@@ -745,6 +745,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sum_divisors_one,
         p.sum_divisors_prime,
         p.pow2_geom_sum,
+        p.cantor_diagonal,
+        p.cantor_diagonal_neg,
+        p.cantor_no_fixed_point,
     ]
 }
 
@@ -5313,7 +5316,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        58 + 258,
+        58 + 261,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -7146,4 +7149,155 @@ fn crt_unique_holds_at_a_concrete_instance() {
             f.k.display_name(name)
         );
     }
+}
+
+/// `Nat.cantor_diagonal` applies at a concrete `f := Nat.beq`, and — the part
+/// that matters, since a wrong argument order (`f k n` instead of `f n n`)
+/// would type-check identically — the diagonal it produces actually
+/// REDUCES, not merely type-checks.
+///
+/// `beq n n` is constantly `true` (`Nat.beq_refl`), so the diagonal witness
+/// `g := fun n => not (f n n)` is constantly `false`; at `n = 3` this is
+/// `not (beq 3 3) = not true = false`, disagreeing with `f 3 3 = beq 3 3 =
+/// true`. The `not` here is rebuilt independently from `cantor.rs`'s private
+/// copy, using only the generic `NatOps` methods any downstream development
+/// has (the same pattern this file's own `Fixture` demonstrates throughout),
+/// so this is a genuinely external check of what the declared theorem's
+/// *statement* reduces to at a concrete instance, not a re-run of its proof.
+#[test]
+fn cantor_diagonal_applies_at_beq_and_the_diagonal_witness_reduces() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let bool_ty = f.bool_ty();
+
+    // f_concrete := Nat.beq : Nat -> Nat -> Bool
+    let f_concrete = f.k.const_(p.beq, vec![]);
+
+    let theorem = f.k.const_(p.cantor_diagonal, vec![]);
+    let applied = f.k.app(theorem, f_concrete);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "cantor_diagonal must apply to a concrete f: {}",
+            f.explain(&e)
+        )
+    });
+    let rendered = f.k.render_lean(inferred);
+    assert!(
+        rendered.contains("Exists"),
+        "unexpected residue type: {rendered}"
+    );
+
+    // f_concrete 3 3 = beq 3 3, must reduce to `true` (Nat.beq_refl).
+    let three = f.num(3);
+    let f_3_3 = {
+        let applied = f.k.app(f_concrete, three);
+        f.k.app(applied, three)
+    };
+    let bool_true = f.bool_true();
+    let bool_false = f.bool_false();
+    assert!(
+        f.k.def_eq(f_3_3, bool_true),
+        "beq 3 3 must reduce to Bool.true"
+    );
+
+    // not (f_concrete 3 3), rebuilt independently of cantor.rs's private
+    // `not_bool`, must reduce to `false` -- the diagonal witness's value at
+    // n = 3.
+    let g_3 = {
+        let motive_fv = f.fresh_fvar();
+        let motive = f.lam_fv(motive_fv, bool_ty, bool_ty);
+        let one = f.level_one();
+        let bool_rec = f.k.const_(p.logic.bool_rec, vec![one]);
+        f.apply(bool_rec, &[motive, bool_true, bool_false, f_3_3])
+    };
+    assert!(
+        f.k.def_eq(g_3, bool_false),
+        "not (beq 3 3) must reduce to Bool.false"
+    );
+    assert!(
+        !f.k.def_eq(g_3, f_3_3),
+        "the diagonal witness must genuinely differ from the row at n = 3"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.cantor_diagonal).is_empty(),
+        "cantor_diagonal must rest on zero axioms"
+    );
+}
+
+/// `Nat.cantor_diagonal_neg` applies at a concrete `f := Nat.beq` and is
+/// axiom-free -- the negative form built from `cantor_diagonal` by nested
+/// `Exists.rec`, checked as a standalone declaration (its own `add_declaration`
+/// call already re-verified the proof term against the stated type; this test
+/// pins that the composed statement keeps applying downstream).
+#[test]
+fn cantor_diagonal_neg_applies_at_beq() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let f_concrete = f.k.const_(p.beq, vec![]);
+    let theorem = f.k.const_(p.cantor_diagonal_neg, vec![]);
+    let applied = f.k.app(theorem, f_concrete);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "cantor_diagonal_neg must apply to a concrete f: {}",
+            f.explain(&e)
+        )
+    });
+    let rendered = f.k.render_lean(inferred);
+    assert!(
+        rendered.contains("Exists") && rendered.contains("False"),
+        "unexpected residue type: {rendered}"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.cantor_diagonal_neg).is_empty(),
+        "cantor_diagonal_neg must rest on zero axioms"
+    );
+}
+
+/// `Nat.cantor_no_fixed_point` applies at a concrete `F := not` (rebuilt
+/// independently of `cantor.rs`'s private `not_bool`, the same pattern the
+/// two tests above use) and is axiom-free. Instantiating at `not` is the
+/// corollary's own point: the diagonal's negation has no fixed point on
+/// `Bool`, which is the seed of the halting argument's self-application
+/// shape.
+#[test]
+fn cantor_no_fixed_point_applies_to_negation() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let bool_ty = f.bool_ty();
+
+    // not := fun b => Bool.rec (fun _ => Bool) true false b
+    let not_fn = {
+        let b_fv = f.fresh_fvar();
+        let b = f.k.fvar(b_fv);
+        let inner_motive_fv = f.fresh_fvar();
+        let inner_motive = f.lam_fv(inner_motive_fv, bool_ty, bool_ty);
+        let one = f.level_one();
+        let bool_rec = f.k.const_(p.logic.bool_rec, vec![one]);
+        let t = f.bool_true();
+        let ff = f.bool_false();
+        let not_b = f.apply(bool_rec, &[inner_motive, t, ff, b]);
+        f.lam_fv(b_fv, bool_ty, not_b)
+    };
+
+    let theorem = f.k.const_(p.cantor_no_fixed_point, vec![]);
+    let applied = f.k.app(theorem, not_fn);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "cantor_no_fixed_point must apply to a concrete F: {}",
+            f.explain(&e)
+        )
+    });
+    let rendered = f.k.render_lean(inferred);
+    assert!(
+        rendered.contains("Exists") && rendered.contains("False"),
+        "unexpected residue type: {rendered}"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.cantor_no_fixed_point).is_empty(),
+        "cantor_no_fixed_point must rest on zero axioms"
+    );
 }

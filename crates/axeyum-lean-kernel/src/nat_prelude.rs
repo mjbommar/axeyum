@@ -133,6 +133,7 @@ mod bezout;
 mod binary;
 mod binomial;
 mod ble;
+mod cantor;
 mod cardinality;
 mod catalan;
 mod choose;
@@ -182,6 +183,7 @@ use binomial::{
     declare_succ_sub_of_le,
 };
 use ble::declare_boolean_le;
+use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;
 use catalan::declare_catalan_all;
 use choose::declare_choose_all;
@@ -1638,6 +1640,34 @@ pub struct NatPrelude {
     /// pow 2 n` — the finite geometric sum over powers of two, subtraction-
     /// free (`Σ_{i<n} 2^i = 2^n − 1` restated as `Σ_{i<n} 2^i + 1 = 2^n`).
     pub pow2_geom_sum: NameId,
+    // --- Cantor's diagonal argument (`cantor.rs`) ----------------------------
+    /// `Nat.cantor_diagonal : ∀ f : Nat → Nat → Bool,
+    ///   ∃ g : Nat → Bool, ∀ n, Eq Bool (g n) (f n n) → False` — the pointwise,
+    /// funext-free form of Cantor's diagonal argument: the witness `g := fun n
+    /// => not (f n n)` disagrees with every row `f n` at that row's own index,
+    /// so no `f : Nat → Nat → Bool` enumerates every `Nat → Bool` sequence.
+    /// `Exists`'s witness type here is `Nat → Bool`, not `Nat`; see
+    /// `cantor.rs`'s module doc for why that instantiation type-checks despite
+    /// `Exists.rec` being restricted to `Prop` motives (`sum_range_diagonal`'s
+    /// neighbouring finding, the opposite direction of the same restriction).
+    pub cantor_diagonal: NameId,
+    /// `Nat.cantor_diagonal_neg : ∀ f : Nat → Nat → Bool,
+    ///   (∀ g : Nat → Bool, ∃ n, ∀ k, Eq Bool (f n k) (g k)) → False` — the
+    /// negative form: no `f` enumerates every `Nat → Bool` sequence, where
+    /// "enumerates" is stated pointwise (`∀ k, …`) rather than as a function
+    /// equality, so this needs no `funext` either. Follows from
+    /// [`Self::cantor_diagonal`] by nested `Exists.rec` elimination; see
+    /// `cantor.rs`'s module doc.
+    pub cantor_diagonal_neg: NameId,
+    /// `Nat.cantor_no_fixed_point : ∀ F : Bool → Bool,
+    ///   (∀ b, Eq Bool (F b) b → False) → (∃ d, Eq Bool (F d) d) → False` —
+    /// the fixed-point corollary: a `Bool → Bool` function disagreeing with
+    /// every input everywhere has no fixed point. Independent of
+    /// [`Self::cantor_diagonal`]/[`Self::cantor_diagonal_neg`] (a single
+    /// `Exists.rec`, no `Bool.rec` case split needed), but instantiating `F`
+    /// at the diagonal's own `not` recovers "negation has no fixed point" —
+    /// the seed of the halting argument's shape.
+    pub cantor_no_fixed_point: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2064,6 +2094,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_divisors_prime: kernel.name_str(nat, "sumDivisors_prime"),
             perfect: kernel.name_str(nat, "Perfect"),
             pow2_geom_sum: kernel.name_str(nat, "pow2_geom_sum"),
+            cantor_diagonal: kernel.name_str(nat, "cantor_diagonal"),
+            cantor_diagonal_neg: kernel.name_str(nat, "cantor_diagonal_neg"),
+            cantor_no_fixed_point: kernel.name_str(nat, "cantor_no_fixed_point"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2153,6 +2186,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_exists_prime_factorization(&mut d, &p)?;
         declare_crt(&mut d, &p)?;
         declare_powsq_all(&mut d, &p)?;
+        declare_cantor_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
