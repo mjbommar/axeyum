@@ -125,6 +125,11 @@ fn every_named_declaration_exists() {
         ("inv2_bottom_right", p.inv2_bottom_right),
         ("cramer_two_unique_x", p.cramer_two_unique_x),
         ("cramer_two_unique_y", p.cramer_two_unique_y),
+        ("ofInt", p.of_int),
+        ("ofInt_add", p.of_int_add),
+        ("ofInt_mul", p.of_int_mul),
+        ("ofInt_neg", p.of_int_neg),
+        ("det2_fib", p.det2_fib),
     ];
     for (label, name) in expected {
         assert!(
@@ -315,11 +320,12 @@ fn right_distrib_is_axiom_free() {
     );
 }
 
-/// `Rat.det2` and its nine theorems — the 2×2 linear algebra `matrix` adds —
-/// are each a **checked** declaration with an empty axiom footprint, read out
-/// of the kernel rather than off the diff. `det2` itself is a `Definition`
-/// (its defining equation holds by `Rat.sub`/`Rat.mul` unfolding, so it needs
-/// no equation lemma); the other nine are `Theorem`s.
+/// `Rat.det2` and its theorems — the 2×2 linear algebra `matrix` adds,
+/// including the `ℤ→ℚ` cast `Rat.ofInt` and the Fibonacci–determinant bridge
+/// `Rat.det2_fib` — are each a **checked** declaration with an empty axiom
+/// footprint, read out of the kernel rather than off the diff. `det2` and
+/// `ofInt` are `Definition`s (their defining equations hold by unfolding, so
+/// neither needs an equation lemma); everything else here is a `Theorem`.
 #[test]
 fn matrix_laws_are_axiom_free() {
     let (kernel, p) = built();
@@ -331,6 +337,15 @@ fn matrix_laws_are_axiom_free() {
     assert!(
         matches!(declaration, Declaration::Definition { .. }),
         "Rat.det2 must be a Definition, found a different kind"
+    );
+
+    let declaration = kernel
+        .environment()
+        .get(p.of_int)
+        .expect("Rat.ofInt was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Definition { .. }),
+        "Rat.ofInt must be a Definition, found a different kind"
     );
 
     let expected = [
@@ -349,6 +364,10 @@ fn matrix_laws_are_axiom_free() {
         ("inv2_bottom_right", p.inv2_bottom_right),
         ("cramer_two_unique_x", p.cramer_two_unique_x),
         ("cramer_two_unique_y", p.cramer_two_unique_y),
+        ("ofInt_add", p.of_int_add),
+        ("ofInt_mul", p.of_int_mul),
+        ("ofInt_neg", p.of_int_neg),
+        ("det2_fib", p.det2_fib),
     ];
     for (label, name) in expected {
         let declaration = kernel
@@ -366,6 +385,34 @@ fn matrix_laws_are_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// `Rat.det2_fib`'s statement, asserted verbatim — an empty axiom footprint
+/// on a theorem *named* `det2_fib` says nothing about which statement it
+/// proves; this checks it is genuinely Cassini's identity read through
+/// `det2`, cast into `ℚ` by `ofInt`, and not some vacuous or mismatched
+/// restatement.
+#[test]
+fn det2_fib_is_cassini_through_det2() {
+    let (kernel, p) = built();
+    let ty = match kernel.environment().get(p.det2_fib).expect("declared") {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    let rendered = kernel
+        .render_lean(ty)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert_eq!(
+        rendered,
+        "((x0 : AxNat) -> Eq.{1} Rat (Rat.det2 \
+         (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ (AxNat.succ x0))))) \
+         (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ x0)))) \
+         (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ x0)))) \
+         (Rat.ofInt (Int.ofNat (AxNat.fib x0)))) \
+         (Rat.ofInt (Int.pow (Int.neg Int.one) (AxNat.succ x0))))"
+    );
 }
 
 /// `Rat.inv2_top_left`'s statement, asserted verbatim — the same discipline
@@ -2741,4 +2788,307 @@ fn sum_vars_succ_wrong_order_is_rejected() {
         "the kernel accepted the swapped-order sumVars succ equation by \
          Eq.refl, so the computation check above proves nothing"
     );
+}
+
+// --- polynomials (`rat_prelude::polynomial`) --------------------------------
+
+/// Every declaration `polynomial::declare_polynomial` adds — `Rat.pow`,
+/// `Rat.polyEval`, and the six theorems built on them — is a **checked**
+/// definition or theorem with an empty axiom footprint, read out of the
+/// kernel, not off the diff. (`built()` already implies the kernel accepted
+/// every one of these proofs — a failed `add_declaration` would have made
+/// `build_rat_prelude` return `Err` and this helper's own `.expect` panic —
+/// so this test's job is the *kind*/footprint check, not re-proving
+/// acceptance.)
+#[test]
+fn the_polynomial_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("pow", p.pow, false),
+        ("pow_zero", p.pow_zero, true),
+        ("pow_succ", p.pow_succ, true),
+        ("polyEval", p.poly_eval, false),
+        ("polyEval_zero", p.poly_eval_zero, true),
+        ("polyEval_succ", p.poly_eval_succ, true),
+        ("polyEval_add", p.poly_eval_add, true),
+        ("polyEval_smul", p.poly_eval_smul, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// `Rat.pow` **computes**: `2^3 = 8`, by `Eq.refl` on concrete literals —
+/// not by trusting `pow_succ`/`pow_zero` (proved symbolically, over opaque
+/// `a`/`m`) to be about the definition this file actually declared.
+#[test]
+fn rat_pow_computes_on_a_concrete_literal() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rpow, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let two = literal(&mut d, 2);
+    let three_n = d.num(3);
+    let power = rpow(&mut d, p, two, three_n);
+    let eight = literal(&mut d, 8);
+    let stmt = req(&mut d, power, eight);
+    let proof = rrefl(&mut d, power);
+    let name = d.kernel().name_str(anon, "Check.pow_two_cubed");
+    d.declare_theorem(name, stmt, proof)
+        .unwrap_or_else(|e| panic!("Rat.pow did not reduce on 2^3: {}", d.explain(&e)));
+}
+
+/// The negative control for [`rat_pow_computes_on_a_concrete_literal`]:
+/// `2^3 = 9` must be REFUSED, or the reduction check above measures nothing.
+#[test]
+fn rat_pow_reduction_check_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rpow, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let two = literal(&mut d, 2);
+    let three_n = d.num(3);
+    let power = rpow(&mut d, p, two, three_n);
+    let nine = literal(&mut d, 9);
+    let stmt = req(&mut d, power, nine);
+    let proof = rrefl(&mut d, power);
+    let name = d.kernel().name_str(anon, "Check.pow_two_cubed_is_not_nine");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `Rat.pow 2 3 = 9`, so the pow reduction check proves nothing"
+    );
+}
+
+/// **The mandatory concrete computation test.** `Rat.polyEval` evaluates the
+/// linear polynomial `p(i) = 1 + 2i` (as the coefficient function `c 0 = 1`,
+/// `c (succ _) = 2`, degree bound `n = 2`) at `x = 3`: `p(3) = 1·1 + 2·3 =
+/// 7`, checked by `Eq.refl` alone — not by trusting `polyEval_zero`/
+/// `polyEval_succ` (proved symbolically) to be about the definition this
+/// file actually declared.
+#[test]
+fn rat_poly_eval_computes_a_concrete_polynomial() {
+    use crate::BinderInfo;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_ty, req, rpoly_eval, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // c := fun i => Nat.rec (motive := fun _ => Rat) 1 (fun _ _ => 2) i,
+    // i.e. c 0 = 1, c (succ _) = 2 — enough to fix c at the two indices
+    // (0, 1) that a degree bound of 2 ever inspects.
+    let coeffs = {
+        let one_r = literal(&mut d, 1);
+        let two_r = literal(&mut d, 2);
+        let anon_binder = d.anon_name();
+        let one_level = d.level_one();
+        let motive = d
+            .kernel()
+            .lam(anon_binder, nat, carrier, BinderInfo::Default);
+        let minor_succ = {
+            let j_fv = d.fresh_fvar();
+            let ih_fv = d.fresh_fvar();
+            let inner = d.lam_fv(ih_fv, carrier, two_r);
+            d.lam_fv(j_fv, nat, inner)
+        };
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let rec_name = d.prelude().rec;
+        let rec = d.kernel().const_(rec_name, vec![one_level]);
+        let body = d.apply(rec, &[motive, one_r, minor_succ, i]);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let n = d.num(2);
+    let x = literal(&mut d, 3);
+    let evaluated = rpoly_eval(&mut d, p, coeffs, n, x);
+    let seven = literal(&mut d, 7);
+    let stmt = req(&mut d, evaluated, seven);
+    let proof = rrefl(&mut d, evaluated);
+    let name = d.kernel().name_str(anon, "Check.poly_eval_linear_at_three");
+    d.declare_theorem(name, stmt, proof).unwrap_or_else(|e| {
+        panic!(
+            "Rat.polyEval did not reduce to 7 on (1+2i) at x=3: {}",
+            d.explain(&e)
+        )
+    });
+}
+
+/// The negative control for
+/// [`rat_poly_eval_computes_a_concrete_polynomial`]: the same polynomial at
+/// the same point evaluated against `8` instead of `7` must be REFUSED, or
+/// the computation check above measures nothing.
+#[test]
+fn rat_poly_eval_computation_check_can_fail() {
+    use crate::BinderInfo;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_ty, req, rpoly_eval, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let coeffs = {
+        let one_r = literal(&mut d, 1);
+        let two_r = literal(&mut d, 2);
+        let anon_binder = d.anon_name();
+        let one_level = d.level_one();
+        let motive = d
+            .kernel()
+            .lam(anon_binder, nat, carrier, BinderInfo::Default);
+        let minor_succ = {
+            let j_fv = d.fresh_fvar();
+            let ih_fv = d.fresh_fvar();
+            let inner = d.lam_fv(ih_fv, carrier, two_r);
+            d.lam_fv(j_fv, nat, inner)
+        };
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let rec_name = d.prelude().rec;
+        let rec = d.kernel().const_(rec_name, vec![one_level]);
+        let body = d.apply(rec, &[motive, one_r, minor_succ, i]);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let n = d.num(2);
+    let x = literal(&mut d, 3);
+    let evaluated = rpoly_eval(&mut d, p, coeffs, n, x);
+    let eight = literal(&mut d, 8);
+    let stmt = req(&mut d, evaluated, eight);
+    let proof = rrefl(&mut d, evaluated);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.poly_eval_linear_at_three_is_not_eight");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `polyEval (1+2i) 2 3 = 8`, so the polyEval computation \
+         check proves nothing"
+    );
+}
+
+/// `dotN_cauchy_schwarz`'s statement rendered verbatim — SQUARED, the
+/// unweakened form: `(dotN u v n) * (dotN u v n) <= (dotN u u n) * (dotN v v
+/// n)`, not `|dotN u v n| <= sqrt(...)` (ℚ has no square root). The same
+/// pinning discipline
+/// [`the_order_completeness_statements_are_the_unweakened_ones`] uses for
+/// `le_antisymm`/`lt_trichotomy`.
+#[test]
+fn the_cauchy_schwarz_statement_is_squared() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.dot_n_cauchy_schwarz),
+        "((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : AxNat) -> \
+         Rat.le (Rat.mul (Rat.dotN x0 x1 x2) (Rat.dotN x0 x1 x2)) \
+         (Rat.mul (Rat.dotN x0 x0 x2) (Rat.dotN x1 x1 x2)))))"
+    );
+}
+
+// --- `Rat.dotN`: the n-dimensional dot product (`rat_prelude::vector`) ----
+
+/// Every declaration `vector::declare_vector` adds — `Rat.dotN` itself and
+/// the six theorems built on it — is a **checked** definition or theorem
+/// with an empty axiom footprint, read out of the kernel, not off the diff.
+#[test]
+fn the_vector_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("dotN", p.dot_n, false),
+        ("dotN_zero", p.dot_n_zero, true),
+        ("dotN_succ", p.dot_n_succ, true),
+        ("dotN_comm", p.dot_n_comm, true),
+        ("dotN_add_left", p.dot_n_add_left, true),
+        ("dotN_smul_left", p.dot_n_smul_left, true),
+        ("dotN_self_nonneg", p.dot_n_self_nonneg, true),
+        ("dotN_two", p.dot_n_two, true),
+        ("dotN_cauchy_schwarz", p.dot_n_cauchy_schwarz, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
 }

@@ -2522,6 +2522,214 @@ def check_anchors() -> int:
     return failed
 
 
+SUITES["correspondences"] = (
+    "scripts/validate-correspondences.py",
+    "scripts.tests.test_validate_correspondences",
+    [
+        # -- vacuity: an empty population must fail, not pass -----------------
+        (
+            "an empty correspondence directory fails closed",
+            "    if not paths:",
+            "    if False:",
+        ),
+        (
+            "an empty fact ledger fails closed",
+            "    if not facts:",
+            "    if False:",
+        ),
+        # -- the rule the artifact exists for ---------------------------------
+        (
+            "a pair the ledger already links by depends_on is refused",
+            "    if right_id in closure.get(left_id, ()) or left_id in closure.get(right_id, ()):",
+            "    if False:",
+        ),
+        # -- endpoints --------------------------------------------------------
+        ("a self-loop is refused", "    if left_id == right_id:", "    if False:"),
+        (
+            "an endpoint that is not a fact is refused",
+            "    missing = [e for e in (left_id, right_id) if e not in facts]\n    if missing:",
+            "    missing = [e for e in (left_id, right_id) if e not in facts]\n    if False:",
+        ),
+        (
+            "an unsettled endpoint is refused",
+            '        if fact.get("epistemic_status") not in SETTLED:',
+            "        if False:",
+        ),
+        (
+            "two identical formal statements are a duplicate, not a correspondence",
+            '    if left.get("formal", {}).get("statement") == right.get("formal", {}).get("statement"):',
+            "    if False:",
+        ),
+        # -- carrier-transport is checked structurally ------------------------
+        (
+            "two facts in one fragment are not a transport",
+            "        if left_fragment == right_fragment:",
+            "        if False:",
+        ),
+        (
+            "a fragment with no carrier spelling fails closed",
+            "        unknown = [f for f in (left_fragment, right_fragment) if f not in CARRIERS]\n        if unknown:",
+            "        unknown = [f for f in (left_fragment, right_fragment) if f not in CARRIERS]\n        if False:",
+        ),
+        (
+            "carrier erasure must leave the same statement",
+            "        if left_erased != right_erased:",
+            "        if False:",
+        ),
+        (
+            "independent-formalization needs two different proof routes",
+            '        if left.get("proof_route") == right.get("proof_route"):',
+            "        if False:",
+        ),
+        (
+            "a specialization must record its instantiation route",
+            '    elif kind == "specialization" and document["derivation_status"] == "asserted":',
+            "    elif False:",
+        ),
+        # -- the two status axes must be backed, not toned --------------------
+        (
+            "asserted holds exactly when via is empty",
+            '    if (derivation == "asserted") != (not via):',
+            "    if False:",
+        ),
+        (
+            "a via ref must name a fact that exists",
+            "        if ref in facts:",
+            "        if True:",
+        ),
+        (
+            "a via ref must name a declaration the projection observed",
+            "        if name in declarations:",
+            "        if True:",
+        ),
+        (
+            "a via ref of neither shape is refused",
+            '    return f"via ref {ref!r} is neither an F: fact id nor a kernel:<Name> reference"',
+            "    return None",
+        ),
+        (
+            "mechanized-here forbids a missing step",
+            '        if any(isinstance(s, dict) and s.get("ref") is None for s in via):',
+            "        if False:",
+        ),
+        (
+            "mechanized-here requires evidence",
+            "        if not evidence:",
+            "        if False:",
+        ),
+        (
+            "evidence must carry a checker command",
+            '            if not isinstance(row, dict) or not str(row.get("checker_command", "")).strip():',
+            "            if False:",
+        ),
+        (
+            "evidence under a weaker status is refused",
+            "    elif evidence:",
+            "    elif False:",
+        ),
+        (
+            "novel-here requires a mechanized derivation",
+            '    if document["external_status"] == "novel-here" and derivation != "mechanized-here":',
+            "    if False:",
+        ),
+        # -- prose floors -----------------------------------------------------
+        (
+            "a short claim is refused",
+            '    if len(document["claim"].strip()) < MIN_CLAIM:',
+            "    if False:",
+        ),
+        (
+            "a short transport is refused",
+            '    if len(document["transport"].strip()) < MIN_TRANSPORT:',
+            "    if False:",
+        ),
+        (
+            "a transport copied from the claim is refused",
+            '    if document["claim"].strip() == document["transport"].strip():',
+            "    if False:",
+        ),
+        # -- identity ---------------------------------------------------------
+        (
+            "a filename that disagrees with the id is refused",
+            "        if name != expected:",
+            "        if False:",
+        ),
+        ("a duplicate id is refused", "        if identifier in seen_ids:", "        if False:"),
+        (
+            "one adjudication per endpoint pair",
+            "        if len(pair) == 2 and pair in seen_pairs:",
+            "        if False:",
+        ),
+        # -- shape and enum membership ----------------------------------------
+        (
+            "an unknown key is refused",
+            "    unknown = set(document) - set(REQUIRED_KEYS) - set(OPTIONAL_KEYS)\n    if unknown:",
+            "    unknown = set(document) - set(REQUIRED_KEYS) - set(OPTIONAL_KEYS)\n    if False:",
+        ),
+        (
+            "a missing required key is refused",
+            "    missing = [key for key in REQUIRED_KEYS if key not in document]\n    if missing:",
+            "    missing = [key for key in REQUIRED_KEYS if key not in document]\n    if False:",
+        ),
+        (
+            "schema_version is pinned",
+            '    if document["schema_version"] != 1:',
+            "    if False:",
+        ),
+        (
+            "kind is pinned",
+            '    if document["kind"] != "axeyum-theorem-correspondence":',
+            "    if False:",
+        ),
+        (
+            "the id pattern is enforced",
+            '    if not isinstance(document["id"], str) or not ID_RE.fullmatch(document["id"]):',
+            "    if False:",
+        ),
+        (
+            "correspondence_kind membership",
+            '    if document["correspondence_kind"] not in KINDS:',
+            "    if False:",
+        ),
+        (
+            "derivation_status membership",
+            '    if document["derivation_status"] not in DERIVATION_STATUSES:',
+            "    if False:",
+        ),
+        (
+            "external_status membership",
+            '    if document["external_status"] not in EXTERNAL_STATUSES:',
+            "    if False:",
+        ),
+        (
+            "exactly two endpoints",
+            "    if not isinstance(endpoints, list) or len(endpoints) != 2:",
+            "    if False:",
+        ),
+        (
+            "every endpoint is an F: fact id",
+            "    if not all(isinstance(e, str) and FACT_ID_RE.fullmatch(e) for e in endpoints):",
+            "    if False:",
+        ),
+        (
+            "via and evidence are arrays",
+            '    if not isinstance(document["via"], list) or not isinstance(document["evidence"], list):',
+            "    if False:",
+        ),
+        (
+            "provenance.date is a date",
+            '    if not isinstance(provenance, dict) or not DATE_RE.fullmatch(str(provenance.get("date", ""))):',
+            "    if False:",
+        ),
+        (
+            "provenance names a source",
+            '    if not provenance.get("sources"):',
+            "    if False:",
+        ),
+    ],
+)
+
+
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
         return check_anchors()
