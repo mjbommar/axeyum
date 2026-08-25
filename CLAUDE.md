@@ -757,19 +757,37 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
      `--format=%b` the line before a trailer is BLANK. Measured 2026-08-20:
      reported **1 commit when there were 21**. Use
      `git log --format='%H|%s|%(trailers:key=Agent,valueonly)'`.
-  4. **Reporting an empty `grep` as a negative result.** An empty answer and a
+  4. **Testing a grep PATTERN interactively and trusting it in a script.** On
+     this host `grep` is a shell FUNCTION wrapping `ugrep 7.5.0` in an
+     interactive shell, and plain `/usr/bin/grep` (GNU grep 3.12) everywhere
+     else. They disagree on `\t`: ugrep reads it as a tab in ERE, GNU grep
+     reads it as a literal `t`. Measured 2026-08-25, each with its control:
+
+         printf 'a\tb\n' | /usr/bin/grep -cE 'a\tb'   -> 0   # a real tab: NO match
+         printf 'atb\n'  | /usr/bin/grep -cE 'a\tb'   -> 1   # literal 't': matches
+
+     **54 facts / 68 `checker_command`s matched the inventory's tab-separated
+     output with `\t`**, so each reported a theorem that EXISTS as absent from
+     any script or CI run, while passing when a human ran it by hand. It is
+     fail-closed, so flakiness rather than unsoundness -- but the evidence
+     re-derived nowhere except one interactive shell. Use `[[:space:]]`, and
+     **test every pattern with `/usr/bin/grep` explicitly**. `command -v grep`
+     prints `/usr/bin/grep` under `bash -c` and `grep is a function`
+     interactively, which is the fastest way to tell which one you have.
+
+  5. **Reporting an empty `grep` as a negative result.** An empty answer and a
      wrong query are the same observation. This is the grep-shaped case of the
      coverage trap below; pair the negative with a positive control that MUST
      produce output, in the same command.
-  5. **Fixed-name files in the session scratchpad.** It is per-SESSION, shared by
+  6. **Fixed-name files in the session scratchpad.** It is per-SESSION, shared by
      every lane (see the multi-agent section). `push.log`, `reg.log`, `audit.log`
      collide; prefix with `$AXEYUM_AGENT`.
-  6. **A "did it finish?" check that has never been shown to fire.** Measured
+  7. **A "did it finish?" check that has never been shown to fire.** Measured
      2026-08-20: an end-marker sweep reported `!! NO END MARKER` for two jobs
      that had completed normally — the scripts had never written markers. The
      check was wrong, not the job, and the natural reading was the opposite.
 
-  The rule underneath all six, and the one to apply to any command not on this
+  The rule underneath all seven, and the one to apply to any command not on this
   list: **before believing a result, ask what the command would print if it were
   broken.** If that is what it just printed, it is not evidence.
 
