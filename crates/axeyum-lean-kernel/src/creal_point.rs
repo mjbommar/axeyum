@@ -728,6 +728,26 @@ pub struct CPointPrelude {
     /// rather than per-coordinate — named for exactly what it is, not
     /// `triangle_inequality`.
     pub dist_sq_double_sum_bound: NameId,
+    /// **Euclid I.20, squared — the honest triangle inequality.** `∀ A B C,
+    /// CReal.le (mul diff diff) (add ab_bc (add ab_bc (add ab_bc ab_bc)))`
+    /// where `diff = add (add (distSq A C) (neg (distSq A B))) (neg (distSq
+    /// B C))` and `ab_bc = mul (distSq A B) (distSq B C)` — i.e.
+    /// `(distSq A C − distSq A B − distSq B C)² ≤ 4 · distSq A B · distSq B C`.
+    ///
+    /// Unlike [`Self::dist_sq_double_sum_bound`], this **is** equivalent
+    /// (modulo the missing `CReal.sqrt`) to the classical `|AC| ≤ |AB| +
+    /// |BC|`: squaring `|AC| ≤ |AB|+|BC|` and its reverse-triangle
+    /// counterpart `||AB|−|BC|| ≤ |AC|` and combining both directions gives
+    /// exactly `(distSq A C − distSq A B − distSq B C)² ≤ 4·distSq A B·distSq
+    /// B C`, with equality iff `B` lies on segment `AC` (Euclid's actual
+    /// content — a straight line is the shortest path). With `U := sub A B`,
+    /// `V := sub B C`, the identity `distSq A C − distSq A B − distSq B C ~
+    /// dot U V + dot U V` is exact (a ring identity via
+    /// [`Self::dot_self_add`], no inequality involved), and squaring it
+    /// against [`Self::cauchy_schwarz`] (`dot U V · dot U V ≤ dot U U · dot V
+    /// V = distSq A B · distSq B C`) is the whole proof — no square root
+    /// needed anywhere, same as [`Self::dist_sq_double_sum_bound`].
+    pub dist_sq_triangle_sq_bound: NameId,
     /// **Positive-definiteness of `dot`, converse half.** `∀ V,
     /// CPoint.Equiv V (CPoint.mk CReal.zero CReal.zero) → Equiv (dot V V)
     /// CReal.zero`.
@@ -1346,6 +1366,7 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_lagrange_identity(&mut d, p)?;
     declare_cauchy_schwarz(&mut d, p)?;
     declare_dist_sq_double_sum_bound(&mut d, p)?;
+    declare_dist_sq_triangle_sq_bound(&mut d, p)?;
     declare_dot_self_zero_of_eq_zero(&mut d, p)?;
     declare_eq_zero_of_dot_self_zero(&mut d, p)?;
     declare_dot_self_zero_iff(&mut d, p)?;
@@ -1472,6 +1493,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         lagrange_identity: kernel.name_str(point, "lagrange_identity"),
         cauchy_schwarz: kernel.name_str(point, "cauchy_schwarz"),
         dist_sq_double_sum_bound: kernel.name_str(point, "distSq_double_sum_bound"),
+        dist_sq_triangle_sq_bound: kernel.name_str(point, "distSq_triangle_sq_bound"),
         dot_self_zero_of_eq_zero: kernel.name_str(point, "dot_self_zero_of_eq_zero"),
         eq_zero_of_dot_self_zero: kernel.name_str(point, "eq_zero_of_dot_self_zero"),
         dot_self_zero_iff: kernel.name_str(point, "dot_self_zero_iff"),
@@ -12589,6 +12611,240 @@ fn declare_dist_sq_double_sum_bound(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.dist_sq_double_sum_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// **Euclid I.20, squared — the honest triangle inequality.** See
+/// [`CPointPrelude::dist_sq_triangle_sq_bound`].
+///
+/// With `U := sub A B`, `V := sub B C`: `distSq A C ~ dot(U,U) + (dot(U,V) +
+/// (dot(U,V) + dot(V,V)))` ([`declare_dist_sq`]'s definitional unfolding plus
+/// [`point_sub_telescope_fact`]/[`CPointPrelude::dot_self_add`], exactly the
+/// derivation [`declare_dist_sq_double_sum_bound`] already builds), while
+/// `distSq A B` and `distSq B C` unfold *directly* (no telescoping needed —
+/// `U`/`V` themselves are `sub A B`/`sub B C`) to `dot(U,U)` and `dot(V,V)`.
+/// So `distSq A C − distSq A B − distSq B C` is, term-for-term, `dot(U,V) +
+/// dot(U,V)` — proved by flattening both sides into a 6-leaf right-chain
+/// `[dot(U,U), dot(U,V), dot(U,V), dot(V,V), neg dot(U,U), neg dot(V,V)]` and
+/// cancelling the two opposite pairs with [`cancel_two_pairs_prefix`].
+/// Squaring that identity and bounding the cross term via
+/// [`CPointPrelude::cauchy_schwarz`] (`dot(U,V)·dot(U,V) ≤ dot(U,U)·dot(V,V)
+/// = distSq A B · distSq B C`) gives the statement below — `(x−a−c)² ≤ 4ac`
+/// for `x = distSq A C`, `a = distSq A B`, `c = distSq B C`, exactly Lagrange
+/// applied to the two edge vectors.
+fn declare_dist_sq_triangle_sq_bound(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let u = psub(d, p, pa, pb); // U = A - B
+    let v = psub(d, p, pb, pc); // V = B - C
+
+    let uu = dotp(d, p, u, u);
+    let uv = dotp(d, p, u, v);
+    let vv = dotp(d, p, v, v);
+
+    // distSq A C ~ dot(add U V)(add U V) ~ uu + (uv + (uv + vv))
+    // — the same telescoping [`declare_dist_sq_double_sum_bound`] uses.
+    let ac_sub = psub(d, p, pa, pc);
+    let add_uv = padd(d, p, u, v);
+    let telescope = point_sub_telescope_fact(d, p, pa, pb, pc); // CPoint.Equiv (sub A C) (add U V)
+    let dot_congr_step = d.lemma(
+        p.dot_congr,
+        &[ac_sub, add_uv, ac_sub, add_uv, telescope, telescope],
+    ); // Equiv(dot(ac_sub,ac_sub), dot(add_uv,add_uv))
+    let dsa = d.lemma(p.dot_self_add, &[u, v]); // Equiv(dot(add_uv,add_uv), add uu (add uv (add uv vv)))
+    let dot_acac = dotp(d, p, ac_sub, ac_sub); // == distSq A C, by defeq
+    let dot_uvuv = dotp(d, p, add_uv, add_uv);
+    let uv_vv = cadd(d, p, uv, vv);
+    let uv_uv_vv = cadd(d, p, uv, uv_vv);
+    let expanded = cadd(d, p, uu, uv_uv_vv);
+    let dist_ac_to_expanded = chain(
+        d,
+        p,
+        dot_acac,
+        &[(dot_uvuv, dot_congr_step), (expanded, dsa)],
+    ); // Equiv(dot_acac, expanded)
+
+    // diff_raw = (distSq A C - distSq A B) - distSq B C, in raw dot terms
+    // (distSq A B / distSq B C unfold directly to uu / vv here — no
+    // telescoping needed, unlike distSq A C).
+    let neg_uu = cneg(d, p, uu);
+    let neg_vv = cneg(d, p, vv);
+    let ac_minus_ab = cadd(d, p, dot_acac, neg_uu);
+    let diff_raw = cadd(d, p, ac_minus_ab, neg_vv);
+
+    // Replace dot_acac by its expansion inside diff_raw.
+    let refl_neg_uu = refl(d, p, neg_uu);
+    let congr1 = d.lemma(
+        creal.add_congr,
+        &[
+            dot_acac,
+            expanded,
+            neg_uu,
+            neg_uu,
+            dist_ac_to_expanded,
+            refl_neg_uu,
+        ],
+    ); // Equiv(ac_minus_ab, expanded_minus_ab)
+    let expanded_minus_ab = cadd(d, p, expanded, neg_uu);
+    let refl_neg_vv = refl(d, p, neg_vv);
+    let congr2 = d.lemma(
+        creal.add_congr,
+        &[
+            ac_minus_ab,
+            expanded_minus_ab,
+            neg_vv,
+            neg_vv,
+            congr1,
+            refl_neg_vv,
+        ],
+    ); // Equiv(diff_raw, diff_expanded)
+    let diff_expanded = cadd(d, p, expanded_minus_ab, neg_vv);
+
+    // Flatten diff_expanded's 6 leaves [uu, uv, uv, vv, neg_uu, neg_vv],
+    // reorder to bring the two cancelling pairs to the front, then cancel.
+    let tree = sadd(
+        sadd(
+            sadd(
+                SumTree::Leaf(uu),
+                sadd(
+                    SumTree::Leaf(uv),
+                    sadd(SumTree::Leaf(uv), SumTree::Leaf(vv)),
+                ),
+            ),
+            SumTree::Leaf(neg_uu),
+        ),
+        SumTree::Leaf(neg_vv),
+    );
+    let (chain6, flat_proof) = flatten_sum_tree(d, p, &tree); // Equiv(diff_expanded, chain6)
+
+    let from_leaves = [uu, uv, uv, vv, neg_uu, neg_vv];
+    let target_leaves = [uu, neg_uu, vv, neg_vv, uv, uv];
+    let reorder_proof = reorder_right_chain(d, p, &from_leaves, &target_leaves);
+    let reordered_chain = build_right_chain(d, p, &target_leaves);
+
+    let uv_plus_uv = cadd(d, p, uv, uv);
+    let cancel_proof = cancel_two_pairs_prefix(d, p, uu, vv, uv_plus_uv);
+    // Equiv(reordered_chain, uv_plus_uv)
+
+    let diff_raw_to_uvpp = chain(
+        d,
+        p,
+        diff_raw,
+        &[
+            (diff_expanded, congr2),
+            (chain6, flat_proof),
+            (reordered_chain, reorder_proof),
+            (uv_plus_uv, cancel_proof),
+        ],
+    ); // Equiv(diff_raw, uv_plus_uv)
+
+    // (diff_raw)^2 ~ (uv+uv)^2 ~ uv*uv + (uv*uv + (uv*uv + uv*uv))  [Cauchy-Schwarz bounds each uv*uv]
+    let mul_diff_diff = cmul(d, p, diff_raw, diff_raw);
+    let mul_uvpp_uvpp = cmul(d, p, uv_plus_uv, uv_plus_uv);
+    let mul_congr_diff = d.lemma(
+        creal.mul_congr,
+        &[
+            diff_raw,
+            uv_plus_uv,
+            diff_raw,
+            uv_plus_uv,
+            diff_raw_to_uvpp,
+            diff_raw_to_uvpp,
+        ],
+    ); // Equiv(mul_diff_diff, mul_uvpp_uvpp)
+
+    let (_orig, chain4_uvuv, expand_proof) = expand_mul_sum2(d, p, uv, uv, uv, uv);
+    // expand_proof : Equiv(mul_uvpp_uvpp, chain4_uvuv)
+
+    let mul_diff_diff_to_chain4 = chain(
+        d,
+        p,
+        mul_diff_diff,
+        &[(mul_uvpp_uvpp, mul_congr_diff), (chain4_uvuv, expand_proof)],
+    ); // Equiv(mul_diff_diff, chain4_uvuv)
+
+    let uvuv = cmul(d, p, uv, uv);
+    let ac_prod = cmul(d, p, uu, vv);
+    let cs = d.lemma(p.cauchy_schwarz, &[u, v]); // le uvuv ac_prod
+
+    let level1 = d.lemma(creal.add_le_add, &[uvuv, ac_prod, uvuv, ac_prod, cs, cs]);
+    let uvuv_uvuv = cadd(d, p, uvuv, uvuv);
+    let acprod_acprod = cadd(d, p, ac_prod, ac_prod);
+    // level1 : le uvuv_uvuv acprod_acprod
+
+    let level2 = d.lemma(
+        creal.add_le_add,
+        &[uvuv, ac_prod, uvuv_uvuv, acprod_acprod, cs, level1],
+    );
+    let three_uvuv = cadd(d, p, uvuv, uvuv_uvuv);
+    let three_acprod = cadd(d, p, ac_prod, acprod_acprod);
+    // level2 : le three_uvuv three_acprod
+
+    let level3 = d.lemma(
+        creal.add_le_add,
+        &[uvuv, ac_prod, three_uvuv, three_acprod, cs, level2],
+    );
+    let chain4_acprod = cadd(d, p, ac_prod, three_acprod);
+    // level3 : le chain4_uvuv chain4_acprod  (chain4_uvuv == cadd(uvuv, three_uvuv))
+
+    let le_of_equiv_step = d.lemma(
+        creal.le_of_equiv,
+        &[mul_diff_diff, chain4_uvuv, mul_diff_diff_to_chain4],
+    ); // le mul_diff_diff chain4_uvuv
+    let final_le = d.lemma(
+        creal.le_trans,
+        &[
+            mul_diff_diff,
+            chain4_uvuv,
+            chain4_acprod,
+            le_of_equiv_step,
+            level3,
+        ],
+    ); // le mul_diff_diff chain4_acprod
+
+    // State via the named `distSq`, not the raw `dot`/`sub` shape `value` is
+    // built over — the same defeq bridge `declare_dist_sq_double_sum_bound`
+    // and `declare_pythagoras_dist_sq` rely on.
+    let dist_ac = d.const_app(p.dist_sq, &[pa, pc]);
+    let dist_ab = d.const_app(p.dist_sq, &[pa, pb]);
+    let dist_bc = d.const_app(p.dist_sq, &[pb, pc]);
+    let neg_dist_ab = cneg(d, p, dist_ab);
+    let neg_dist_bc = cneg(d, p, dist_bc);
+    let ac_minus_ab_ty = cadd(d, p, dist_ac, neg_dist_ab);
+    let diff_ty = cadd(d, p, ac_minus_ab_ty, neg_dist_bc);
+    let mul_diff_diff_ty = cmul(d, p, diff_ty, diff_ty);
+    let ab_bc = cmul(d, p, dist_ab, dist_bc);
+    let ab_bc_pair = cadd(d, p, ab_bc, ab_bc);
+    let ab_bc_triple = cadd(d, p, ab_bc, ab_bc_pair);
+    let sum4_ty = cadd(d, p, ab_bc, ab_bc_triple);
+    let ty_body = d.const_app(creal.le, &[mul_diff_diff_ty, sum4_ty]);
+
+    let ty = {
+        let w2 = d.pi_fv(c_fv, point, ty_body);
+        let w1 = d.pi_fv(b_fv, point, w2);
+        d.pi_fv(a_fv, point, w1)
+    };
+    let value = {
+        let w2 = d.lam_fv(c_fv, point, final_le);
+        let w1 = d.lam_fv(b_fv, point, w2);
+        d.lam_fv(a_fv, point, w1)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.dist_sq_triangle_sq_bound,
         uparams: vec![],
         ty,
         value,
