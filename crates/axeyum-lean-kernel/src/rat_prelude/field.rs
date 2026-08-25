@@ -115,7 +115,9 @@ pub(super) fn declare_field_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_one_ne_zero(d, p)?;
     declare_is_field(d, &p)?;
     declare_rat_is_field(d, p)?;
-    declare_mul_left_cancel_of_ne_zero(d, p)
+    declare_mul_left_cancel_of_ne_zero(d, p)?;
+    declare_is_ordered_field(d, &p)?;
+    declare_rat_is_ordered_field(d, p)
 }
 
 /// `Rat.mul_pos : ∀ a b, 0 < a → 0 < b → 0 < a·b`.
@@ -1937,4 +1939,228 @@ fn declare_mul_left_cancel_of_ne_zero(
     }
 
     d.declare_theorem(p.mul_left_cancel_of_ne_zero, ty, value)
+}
+
+// === `Rat.IsOrderedField` — `IsField` plus the two order axioms ============
+//
+// Composition, not restatement: `IsOrderedField add mul neg inv zero one :=
+// IsField add mul neg inv zero one ∧ (translation ∧ mul_nonneg)`. The ten
+// field leaves are never rebuilt here. `Rat.rat_isField` (already proved) is
+// reused VERBATIM as the instance's first component, and `Rat.IsField` (an
+// existing named `Definition`) is reused VERBATIM as the bundle type's first
+// component — the declared type of `Rat.rat_isField` is already the folded
+// `Rat.IsField Rat.add Rat.mul Rat.neg Rat.inv Rat.zero Rat.one`, so it
+// matches this bundle's first conjunct with no unfolding needed on either
+// side. `Rat.le` is fixed, exactly as `Eq Rat` is fixed in `IsField`'s own
+// leaves: the order relation is not a bundle parameter, only the six
+// algebraic operations are — the same "no bound parameter" reason `IsField`
+// gives for its own name (`Rat` is already the whole carrier).
+//
+// The alternative — restating all ten field leaves alongside the two order
+// ones — would work too (the kernel does not care), but it would duplicate
+// `field_parts`/`field_body`/`declare_is_field`'s ~120 lines for no benefit:
+// nothing downstream needs to decompose `IsOrderedField` down to its field
+// leaves directly, only to `IsField` (whose own decomposition already
+// exists) and to the two order axioms.
+
+/// Delta height for `Rat.IsOrderedField`, one above [`FIELD_HEIGHT`]. Unlike
+/// `IsField`'s own note about its height (never reachable, since its value
+/// only abstracts over caller-supplied operations), `IsOrderedField`'s value
+/// DOES apply the `IsField` constant directly, so it must sit strictly above
+/// it.
+const ORDERED_FIELD_HEIGHT: u16 = FIELD_HEIGHT + 1;
+
+/// `∀ x y z, le x y → le (add x z) (add y z)` — translation invariance,
+/// `IsOrderedField`'s first order axiom.
+fn field_translation_prop(d: &mut IntDev<'_>, p: RatPrelude, add: ExprId) -> ExprId {
+    let r = rat_ty(d);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+
+    let hyp = rle(d, p, x, y);
+    let xz = d.apply(add, &[x, z]);
+    let yz = d.apply(add, &[y, z]);
+    let concl = rle(d, p, xz, yz);
+    let body = d.arrow(hyp, concl);
+    let with_z = d.pi_fv(z_fv, r, body);
+    let with_y = d.pi_fv(y_fv, r, with_z);
+    d.pi_fv(x_fv, r, with_y)
+}
+
+/// `∀ x y, le zero x → le zero y → le zero (mul x y)` — closure of the
+/// nonnegatives under multiplication, `IsOrderedField`'s second order axiom.
+/// Verbatim [`RatPrelude::mul_nonneg`]'s statement, generalised to a
+/// caller-supplied `mul`/`zero` rather than the fixed operations.
+fn field_order_mul_nonneg_prop(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mul: ExprId,
+    zero: ExprId,
+) -> ExprId {
+    let r = rat_ty(d);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hx = rle(d, p, zero, x);
+    let hy = rle(d, p, zero, y);
+    let xy = d.apply(mul, &[x, y]);
+    let concl = rle(d, p, zero, xy);
+    let body = d.arrow(hy, concl);
+    let with_hx = d.arrow(hx, body);
+    let with_y = d.pi_fv(y_fv, r, with_hx);
+    d.pi_fv(x_fv, r, with_y)
+}
+
+/// `d.const_app(p.is_ordered_field, &[add, mul, neg, inv, zero, one])`.
+#[allow(clippy::too_many_arguments)]
+fn is_ordered_field(
+    d: &mut IntDev<'_>,
+    p: &RatPrelude,
+    add: ExprId,
+    mul: ExprId,
+    neg: ExprId,
+    inv: ExprId,
+    zero: ExprId,
+    one: ExprId,
+) -> ExprId {
+    d.const_app(p.is_ordered_field, &[add, mul, neg, inv, zero, one])
+}
+
+/// Admit `Rat.IsOrderedField : (Rat → Rat → Rat) → (Rat → Rat → Rat) → (Rat →
+/// Rat) → (Rat → Rat) → Rat → Rat → Prop`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the generated definition does not
+/// type-check or the name is already taken.
+fn declare_is_ordered_field(d: &mut IntDev<'_>, p: &RatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let r = rat_ty(d);
+    let prop = d.kernel().sort_zero();
+    let binop = field_binop_ty(d);
+    let unop = field_unop_ty(d);
+
+    let add_fv = d.fresh_fvar();
+    let add = d.kernel().fvar(add_fv);
+    let mul_fv = d.fresh_fvar();
+    let mul = d.kernel().fvar(mul_fv);
+    let neg_fv = d.fresh_fvar();
+    let neg = d.kernel().fvar(neg_fv);
+    let inv_fv = d.fresh_fvar();
+    let inv = d.kernel().fvar(inv_fv);
+    let zero_fv = d.fresh_fvar();
+    let zero = d.kernel().fvar(zero_fv);
+    let one_fv = d.fresh_fvar();
+    let one = d.kernel().fvar(one_fv);
+
+    let field_component = is_field(d, &p, add, mul, neg, inv, zero, one);
+    let translation = field_translation_prop(d, p, add);
+    let mul_nonneg_prop = field_order_mul_nonneg_prop(d, p, mul, zero);
+    let order_body = d.and(translation, mul_nonneg_prop);
+    let body = d.and(field_component, order_body);
+
+    let value = {
+        let with_one = d.lam_fv(one_fv, r, body);
+        let with_zero = d.lam_fv(zero_fv, r, with_one);
+        let with_inv = d.lam_fv(inv_fv, unop, with_zero);
+        let with_neg = d.lam_fv(neg_fv, unop, with_inv);
+        let with_mul = d.lam_fv(mul_fv, binop, with_neg);
+        d.lam_fv(add_fv, binop, with_mul)
+    };
+    let ty = {
+        let over_one = d.arrow(r, prop);
+        let over_zero = d.arrow(r, over_one);
+        let over_inv = d.arrow(unop, over_zero);
+        let over_neg = d.arrow(unop, over_inv);
+        let over_mul = d.arrow(binop, over_neg);
+        d.arrow(binop, over_mul)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.is_ordered_field,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(ORDERED_FIELD_HEIGHT),
+    })
+}
+
+/// Proof of `∀ x y z, le x y → le (add x z) (add y z)` at the CONCRETE
+/// `Rat.add`: `Rat.add_le_add x y z z h (Rat.le_refl z) : le (add x z) (add y
+/// z)` — translation invariance falls out of `add_le_add` by pairing the real
+/// hypothesis with a reflexive one on the shared `z`, exactly the
+/// `lattice.rs` idiom (`d.lemma(p.add_le_add, &[a, b, c, c, h, reflexive])`)
+/// used throughout this prelude already.
+fn translation_invariance_proof(d: &mut IntDev<'_>, p: RatPrelude) -> ExprId {
+    let r = rat_ty(d);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let hyp = rle(d, p, x, y);
+    let refl_z = d.lemma(p.le_refl, &[z]);
+    let step = d.lemma(p.add_le_add, &[x, y, z, z, h, refl_z]);
+
+    let inner = d.lam_fv(h_fv, hyp, step);
+    let with_z = d.lam_fv(z_fv, r, inner);
+    let with_y = d.lam_fv(y_fv, r, with_z);
+    d.lam_fv(x_fv, r, with_y)
+}
+
+/// Admit `Rat.rat_isOrderedField : Rat.IsOrderedField Rat.add Rat.mul
+/// Rat.neg Rat.inv Rat.zero Rat.one`.
+///
+/// The field component is `Rat.rat_isField` verbatim — no new algebra. Of
+/// the two order axioms, translation invariance is
+/// [`translation_invariance_proof`] (two lines of `add_le_add`+`le_refl`) and
+/// closure of the nonnegatives is [`RatPrelude::mul_nonneg`] verbatim: its
+/// STATED type (`∀ a b, le 0 a → le 0 b → le 0 (mul a b)`, `statements.rs`)
+/// already matches [`field_order_mul_nonneg_prop`] at the concrete `Rat.mul`
+/// and `Rat.zero`, so it needs no new proof either.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the generated declaration does not
+/// type-check or the name is already taken.
+fn declare_rat_is_ordered_field(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let add = d.kernel().const_(p.int.rat_add, vec![]);
+    let mul = d.kernel().const_(p.int.rat_mul, vec![]);
+    let neg = d.kernel().const_(p.int.rat_neg, vec![]);
+    let inv = d.kernel().const_(p.inv, vec![]);
+    let zero = d.kernel().const_(p.zero, vec![]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    let ty = is_ordered_field(d, &p, add, mul, neg, inv, zero, one);
+
+    let field_component_ty = is_field(d, &p, add, mul, neg, inv, zero, one);
+    let field_proof = d.lemma(p.rat_is_field, &[]);
+
+    let translation_ty = field_translation_prop(d, p, add);
+    let translation_proof = translation_invariance_proof(d, p);
+
+    let mul_nonneg_ty = field_order_mul_nonneg_prop(d, p, mul, zero);
+    let mul_nonneg_proof = d.lemma(p.mul_nonneg, &[]);
+
+    let order_ty = d.and(translation_ty, mul_nonneg_ty);
+    let order_proof = field_and_intro(
+        d,
+        translation_ty,
+        mul_nonneg_ty,
+        translation_proof,
+        mul_nonneg_proof,
+    );
+
+    let value = field_and_intro(d, field_component_ty, order_ty, field_proof, order_proof);
+
+    d.declare_theorem(p.rat_is_ordered_field, ty, value)
 }

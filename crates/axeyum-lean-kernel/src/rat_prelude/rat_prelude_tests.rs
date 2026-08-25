@@ -71,6 +71,8 @@ fn every_named_declaration_exists() {
         ("IsField", p.is_field),
         ("rat_isField", p.rat_is_field),
         ("mul_left_cancel_of_ne_zero", p.mul_left_cancel_of_ne_zero),
+        ("IsOrderedField", p.is_ordered_field),
+        ("rat_isOrderedField", p.rat_is_ordered_field),
         ("sub_mul", p.sub_mul),
         ("mul_inv_sub_one", p.mul_inv_sub_one),
         ("inv_sub_inv", p.inv_sub_inv),
@@ -971,6 +973,154 @@ fn the_rationals_satisfy_is_field_and_cancel() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// **`Rat.IsOrderedField`, and every leaf is asserted verbatim** — `IsField`
+/// extended with the two order axioms of an ordered field, COMPOSED rather
+/// than restated: `Rat.rat_isOrderedField`'s field component is
+/// `Rat.rat_isField` itself, not a re-derivation of the ten field leaves.
+#[test]
+fn the_rationals_satisfy_is_ordered_field() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    assert_eq!(
+        rendered(&mut kernel, p.rat_is_ordered_field),
+        "Rat.IsOrderedField Rat.add Rat.mul Rat.neg Rat.inv Rat.zero Rat.one"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.is_ordered_field),
+        "((x0 : ((x0 : Rat) -> ((x1 : Rat) -> Rat))) -> ((x1 : ((x1 : Rat) -> \
+         ((x2 : Rat) -> Rat))) -> ((x2 : ((x2 : Rat) -> Rat)) -> ((x3 : ((x3 : \
+         Rat) -> Rat)) -> ((x4 : Rat) -> ((x5 : Rat) -> Prop))))))"
+    );
+
+    for (label, name, expect_definition) in [
+        ("IsOrderedField", p.is_ordered_field, true),
+        ("rat_isOrderedField", p.rat_is_ordered_field, false),
+    ] {
+        let decl = kernel.environment().get(name);
+        if expect_definition {
+            assert!(
+                matches!(decl, Some(Declaration::Definition { .. })),
+                "Rat.{label} must be a checked Definition"
+            );
+        } else {
+            assert!(
+                matches!(decl, Some(Declaration::Theorem { .. })),
+                "Rat.{label} must be a checked Theorem"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// **The two order axioms compute at `0` and `1`, and the kernel refuses the
+/// UNRESTRICTED closure of the nonnegatives (`∀ a b, 0 ≤ a·b`, both
+/// hypotheses dropped) built by reusing `Rat.mul_nonneg`'s own constant.**
+///
+/// This is the negative control `Rat.mul_nonneg`'s two hypotheses exist to
+/// rule out, and — like the previous lane's `mul_inv_cancel` control — the
+/// unrestricted claim is genuinely FALSE, not merely under-justified:
+/// `1·(-1) = -1`, and `0 ≤ -1` does not hold.
+#[test]
+fn order_axioms_compute_at_zero_and_one_and_reject_the_unrestricted_closure() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, rat_ty, rle, rmul, rone, rzero};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let zero = rzero(&mut d, p);
+    let one = rone(&mut d, p);
+
+    // Translation invariance at `x=0, y=1, z=1`: `0 ≤ 1 → 0+1 ≤ 1+1`.
+    let zero_lt_one = d.lemma(p.zero_lt_one, &[]);
+    let zero_le_one = d.lemma(p.le_of_lt, &[zero, one, zero_lt_one]);
+    let refl_one = d.lemma(p.le_refl, &[one]);
+    let translation_step = d.lemma(p.add_le_add, &[zero, one, one, one, zero_le_one, refl_one]);
+    let zero_plus_one = radd(&mut d, zero, one);
+    let one_plus_one = radd(&mut d, one, one);
+    let translation_claim = rle(&mut d, p, zero_plus_one, one_plus_one);
+    let translation_name = d.kernel().name_str(anon, "Check.translation_at_zero_one");
+    let translation_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: translation_name,
+        uparams: vec![],
+        ty: translation_claim,
+        value: translation_step,
+    });
+    assert!(
+        translation_accepted.is_ok(),
+        "translation invariance must compute at 0,1,1: {translation_accepted:?}"
+    );
+
+    // Closure of the nonnegatives at `a=1, b=1`: `0 ≤ 1 → 0 ≤ 1 → 0 ≤ 1·1`.
+    let mul_nonneg_step = d.lemma(p.mul_nonneg, &[one, one, zero_le_one, zero_le_one]);
+    let one_times_one = rmul(&mut d, one, one);
+    let mul_nonneg_claim = rle(&mut d, p, zero, one_times_one);
+    let mul_nonneg_name = d.kernel().name_str(anon, "Check.mul_nonneg_at_one_one");
+    let mul_nonneg_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: mul_nonneg_name,
+        uparams: vec![],
+        ty: mul_nonneg_claim,
+        value: mul_nonneg_step,
+    });
+    assert!(
+        mul_nonneg_accepted.is_ok(),
+        "closure of the nonnegatives must compute at 1,1: {mul_nonneg_accepted:?}"
+    );
+
+    // NEGATIVE CONTROL: `∀ a b, 0 ≤ a·b`, UNRESTRICTED — false at `a=1,
+    // b=-1`. Reuse `Rat.mul_nonneg`'s own constant, applied to just `a, b`
+    // (no nonnegativity proofs supplied) — its type is `le 0 a -> le 0 b ->
+    // le 0 (a*b)`, not the bare `le 0 (a*b)` the unrestricted statement
+    // needs, so the kernel must refuse.
+    let carrier = rat_ty(&mut d);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let ab = rmul(&mut d, a, b);
+    let bad_concl = rle(&mut d, p, zero, ab);
+    let with_b_ty = d.pi_fv(b_fv, carrier, bad_concl);
+    let bad_ty = d.pi_fv(a_fv, carrier, with_b_ty);
+
+    let mul_nonneg_const = d.kernel().const_(p.mul_nonneg, vec![]);
+    let bad_body = d.apply(mul_nonneg_const, &[a, b]); // : le 0 a -> le 0 b -> le 0 (a*b)
+    let with_b_val = d.lam_fv(b_fv, carrier, bad_body);
+    let bad_value = d.lam_fv(a_fv, carrier, with_b_val);
+
+    let bad_name = d.kernel().name_str(anon, "Check.unrestricted_mul_nonneg");
+    let bad_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: bad_name,
+        uparams: vec![],
+        ty: bad_ty,
+        value: bad_value,
+    });
+    assert!(
+        bad_accepted.is_err(),
+        "the kernel accepted `∀ a b, 0 ≤ a·b` UNRESTRICTED — both \
+         nonnegativity hypotheses were refused as if they were vacuous: \
+         {bad_accepted:?}"
+    );
 }
 
 /// **The field laws compute at an explicit rational, and the kernel refuses
