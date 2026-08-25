@@ -16,14 +16,29 @@ only if one of the two shipped bounded producers (`modeq_family`,
 
 | stage | count | note |
 |---|---:|---|
-| `open` facts | 146 | the ledger |
+| facts already `proved` | 498 | the closed frontier — the refl/symm/trans/comm families (nat *and* int) are here |
+| `open` facts | 146 | the remaining frontier |
 | `open` + dependency-ready + train/development | 109 | the eligible pool |
-| …with a frozen export today → **attemptable** | **2** | this is the "3" |
+| …with a frozen export today → **attemptable** | **2** | this is the "3": `nat-modeq-symm`, `nat-modeq-trans` |
 | …lean4 + **arrow-free** + no export yet | 41 | the generator can auto-export these |
-| …reflexivity-shaped → **provable** by today's producers | 2 | within current producer reach |
+| …arrow-free open facts the producers actually **close** | ~0 | the provable shapes are already proved |
 
-So `attemptable ≈ provable ≈ 2–3` is exactly the intersection of *has an
-export* and *is refl-shaped*. Neither number is an accident or a config gap.
+The sharp finding: the "3" is not a floor set by *reachability*. The refl /
+symm / trans / comm shapes the two bounded producers can close are **already
+proved** (498 of them) — the four unregistered `int-modeq-{refl,symm,trans,comm}`
+NDJSON on the NAS all correspond to `proved` facts. Every arrow-free *open*
+modeq fact I exported and handed to a producer was a **congruence** goal
+(`n + a ≡ a`, `a + n ≡ a`) and was **declined**. So `attemptable ≈ 3` is
+dominated by the *provability* bottleneck, not reachability: expanding exports
+adds attempts (and typed obstruction data), but the open frontier now needs
+proof strategies the producers do not have.
+
+Which bottleneck dominates depends on the fact. For the modeq family the
+provability wall is in front of the reachability one, so exporting more of it
+buys attempts, not proofs. For families whose *provable* shapes are **not** yet
+proved, reachability is the binding constraint and the generator directly lifts
+the proved count. Both levers are real; this note lands the reachability tool
+and measures where each wall stands today.
 
 ## Bottleneck 1 — reachability (mostly fixable, tool-capped)
 
