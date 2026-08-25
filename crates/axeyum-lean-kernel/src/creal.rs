@@ -1959,6 +1959,14 @@ pub struct CRealPrelude {
     /// via [`Self::riemann_sample_in_bounds`]. See `integral.rs`'s module
     /// documentation; `riemann_sum_le` itself is UNCHANGED (both exist).
     pub riemann_sum_le_on: NameId,
+    /// `CReal.expTerm : Nat → CReal := fun n => ofRat (Rat.normalize (Int.ofNat
+    /// 1) (Nat.factorial n) (Nat.one_le_factorial n))` — the `n`-th term of the
+    /// exponential series, `1/n!`, already reduced. See
+    /// `creal/exponential.rs`'s module documentation.
+    pub exp_term: NameId,
+    /// `CReal.expSeriesPartial : Nat → CReal := CReal.sumRange CReal.expTerm`
+    /// — the `k`-th partial sum `Σ_{n<k} 1/n!`. See `creal/exponential.rs`.
+    pub exp_series_partial: NameId,
 }
 
 impl CRealPrelude {
@@ -2249,6 +2257,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         of_nat_le: kernel.name_str(creal, "ofNat_le"),
         riemann_sample_in_bounds: kernel.name_str(creal, "riemannSum_sample_in_bounds"),
         riemann_sum_le_on: kernel.name_str(creal, "riemannSum_le_on"),
+        exp_term: kernel.name_str(creal, "expTerm"),
+        exp_series_partial: kernel.name_str(creal, "expSeriesPartial"),
     }
 }
 
@@ -2348,7 +2358,12 @@ pub(crate) fn build_creal_prelude_uncached(
         derivative::declare_has_derivative_pow_two(&mut d, prelude)?;
         // `hasDerivative_pow` (the general induction) also mentions `pow`,
         // for the identical reason.
-        derivative::declare_has_derivative_pow(&mut d, prelude)
+        derivative::declare_has_derivative_pow(&mut d, prelude)?;
+        // `expTerm`/`expSeriesPartial` need `Nat.factorial` (already in
+        // `nat_prelude`, consumed here through `IntDev`'s `NatOps` impl) and
+        // `Rat.normalize`; nothing else in this file depends on them, so they
+        // land last.
+        exponential::declare_exponential(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -3268,6 +3283,7 @@ mod convergence;
 mod cotransitivity;
 mod density;
 mod derivative;
+mod exponential;
 mod field;
 mod integral;
 mod inverse;

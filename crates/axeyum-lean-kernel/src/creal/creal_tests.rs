@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 223] = [
+    let expected: [(&str, crate::NameId, &str); 225] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -481,6 +481,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             "theorem",
         ),
         ("CReal.riemannSum_le_on", p.riemann_sum_le_on, "theorem"),
+        // Euler's number's raw material (creal/exponential.rs): the `n`-th
+        // series term `1/n!` and its `sumRange` partial sums. `CReal.e`
+        // itself is not built yet -- see that file's module documentation.
+        ("CReal.expTerm", p.exp_term, "def"),
+        ("CReal.expSeriesPartial", p.exp_series_partial, "def"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -4249,4 +4254,75 @@ fn equiv_zero_of_small_at_zero_proves_equiv_zero_zero() {
                  Equiv zero zero (not merely SOME Equiv statement): {error:?}"
             )
         });
+}
+
+/// `Rat.normalize (Int.ofNat num_val) (Nat.succ k) (one_le_succ k)`, where
+/// `k := Nat.num(den_val - 1)` -- the literal rational `num_val/den_val`,
+/// built so the denominator passed to `normalize` and the denominator named
+/// in the positivity proof's type are the SAME term (`Nat.succ k`), not two
+/// independently-built numerals that merely happen to match.
+fn exp_test_rat_literal(
+    d: &mut crate::int_prelude::ops::IntDev<'_>,
+    num_val: u32,
+    den_val: u32,
+) -> crate::expr::ExprId {
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{normalize, one_le_succ};
+    assert!(den_val >= 1, "denominator must be positive");
+    let k = d.num(den_val - 1);
+    let denominator = d.succ(k);
+    let positive = one_le_succ(d, k);
+    let num_nat = d.num(num_val);
+    let numerator = d.of_nat(num_nat);
+    normalize(d, numerator, denominator, positive)
+}
+
+/// **Mandatory computation test for `CReal.expSeriesPartial`.** Checks the
+/// first four partial sums of `Σ_{n<k} 1/n!` reduce to the expected
+/// rationals as REAL kernel reduction (`Kernel::def_eq`, which forces the
+/// term through β/δ/ι reduction -- `sumRange`'s own `Nat.rec`, `CReal.add`'s
+/// constant-sequence arithmetic, and `Rat.normalize`'s `gcd` bookkeeping --
+/// all the way to a `Rat.mk` normal form), not merely type-checking: an
+/// off-by-one in `sumRange`'s range bound type-checks perfectly and
+/// constructs a DIFFERENT number, which only a reduction check catches.
+///
+/// `expSeriesPartial 1 = 1/0! = 1`, `expSeriesPartial 2 = 1 + 1/1! = 2`,
+/// `expSeriesPartial 3 = 2 + 1/2! = 5/2`, `expSeriesPartial 4 = 5/2 + 1/3! =
+/// 8/3` -- worked on paper before this test was written.
+///
+/// Includes a negative control: `expSeriesPartial 3` must NOT reduce to
+/// `ofRat 2` (its own PRECEDING partial sum) -- a checker that cannot fail
+/// is not a checker.
+#[test]
+fn exp_series_partial_computes_its_first_few_values() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    for (k_val, num_val, den_val) in [(1u32, 1u32, 1u32), (2, 2, 1), (3, 5, 2), (4, 8, 3)] {
+        let k = d.num(k_val);
+        let partial = d.const_app(p.exp_series_partial, &[k]);
+        let expected = exp_test_rat_literal(&mut d, num_val, den_val);
+        let embedded = d.const_app(p.of_rat, &[expected]);
+        assert!(
+            d.kernel().def_eq(partial, embedded),
+            "expSeriesPartial {k_val} should reduce to ofRat ({num_val}/{den_val})"
+        );
+    }
+
+    // Negative control: expSeriesPartial 3 (= 5/2) must NOT reduce to
+    // ofRat 2 -- its own preceding partial sum, and the value it would
+    // wrongly equal under an off-by-one that dropped the last term.
+    let k3 = d.num(3);
+    let partial3 = d.const_app(p.exp_series_partial, &[k3]);
+    let two = exp_test_rat_literal(&mut d, 2, 1);
+    let embedded_two = d.const_app(p.of_rat, &[two]);
+    assert!(
+        !d.kernel().def_eq(partial3, embedded_two),
+        "expSeriesPartial 3 must NOT reduce to ofRat 2 -- if it does, this \
+         check cannot fail and something is wrong with the harness, not \
+         just the theorem"
+    );
 }
