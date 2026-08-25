@@ -2792,6 +2792,245 @@ fn sum_vars_succ_wrong_order_is_rejected() {
     );
 }
 
+// --- `Rat.sumRange` diagonal/rectangle reindexing (`rat_prelude::diagonal`) -
+
+/// Every declaration `diagonal::declare_diagonal` adds — the three theorems
+/// built on `Rat.sumRange` (counted from the list below, not carried over
+/// from an earlier count) — is a **checked** theorem with an empty axiom
+/// footprint, read out of the kernel, not off the diff.
+#[test]
+fn the_diagonal_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("sumRange_split", p.sum_range_split),
+        ("sumRange_diagonal", p.sum_range_diagonal),
+        (
+            "sumRange_rect_eq_diag_add_corner",
+            p.sum_range_rect_eq_diag_add_corner,
+        ),
+    ];
+    for (label, name) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "Rat.{label} must be a checked Theorem, found a different kind"
+        );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// `Rat.sumRange_diagonal` at a concrete instance: `F i j := 1` (constant),
+/// `n = 3`. Both the antidiagonal grouping (`Σ_{k<3} Σ_{i≤k} F i (k−i)`) and
+/// the row grouping (`Σ_{i<3} Σ_{j<3−i} F i j`) COUNT the same 6-point
+/// triangle `{(i,j) : i+j<3}` — `(0,0),(1,0),(0,1),(2,0),(1,1),(0,2)` — and
+/// both must independently reduce to `6`, so this is a genuine reindexing
+/// check over `Rat` values, not just an admission. A constant summand (not
+/// `add i j`, unlike `Nat`'s own version of this test) keeps the concrete
+/// arithmetic to `Rat.add`/normalize alone, without also needing a `Nat →
+/// Rat` conversion for the summand itself.
+#[test]
+fn sum_range_diagonal_computes_at_a_concrete_instance_over_rat() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // F := fun i j => 1 (constant Rat one).
+    let one = literal(&mut d, 1);
+    let ff = {
+        let i_fv = d.fresh_fvar();
+        let j_fv = d.fresh_fvar();
+        let inner = d.lam_fv(j_fv, nat, one);
+        d.lam_fv(i_fv, nat, inner)
+    };
+    let three = d.num(3);
+    let six = literal(&mut d, 6);
+
+    let proof = d.lemma(p.sum_range_diagonal, &[ff, three]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("sumRange_diagonal(F,3) should infer: {e:?}"));
+
+    // The antidiagonal (triangle) sum, built independently of
+    // `diagonal.rs`'s own helpers.
+    let triangle = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ki = d.sub(k, i);
+        let fiki = d.apply(ff, &[i, ki]);
+        let diag_inner = d.lam_fv(i_fv, nat, fiki);
+        let sk = d.succ(k);
+        let diag_sum = rsum_range(&mut d, p, diag_inner, sk);
+        let t_fn = d.lam_fv(k_fv, nat, diag_sum);
+        rsum_range(&mut d, p, t_fn, three)
+    };
+    // The row-major sum, likewise independently built.
+    let rows = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let fij = d.apply(ff, &[i, j]);
+        let row_inner = d.lam_fv(j_fv, nat, fij);
+        let ni = d.sub(three, i);
+        let row_sum_i = rsum_range(&mut d, p, row_inner, ni);
+        let row_fn = d.lam_fv(i_fv, nat, row_sum_i);
+        rsum_range(&mut d, p, row_fn, three)
+    };
+
+    let expected = req(&mut d, triangle, rows);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "sumRange_diagonal(F,3) should state the antidiagonal sum equals the row-major sum"
+    );
+    assert!(
+        d.kernel().def_eq(triangle, six),
+        "the antidiagonal (triangle) sum of the constant 1 over {{(i,j):i+j<3}} \
+         (6 points) must reduce to 6"
+    );
+    assert!(
+        d.kernel().def_eq(rows, six),
+        "the row-major sum of the constant 1 over {{(i,j):i+j<3}} (6 points) \
+         must reduce to 6"
+    );
+
+    assert!(
+        d.kernel().axiom_footprint(p.sum_range_diagonal).is_empty(),
+        "sumRange_diagonal must rest on zero axioms"
+    );
+}
+
+/// `Rat.sumRange_rect_eq_diag_add_corner` at a concrete instance: `F i j :=
+/// 1`, `n = 2`. The rectangle `{i<2,j<2}` (4 points) splits into the
+/// antidiagonal triangle `{i+j<2}` (3 points: `(0,0),(1,0),(0,1)`) and the
+/// corner `{i<2,j<2,i+j≥2}` (the single point `(1,1)`) — `4 = 3 + 1`, checked
+/// both as the theorem's own statement AND by independently reducing all
+/// three sums.
+#[test]
+fn sum_range_rect_eq_diag_add_corner_computes_at_a_concrete_instance_over_rat() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, req, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let one = literal(&mut d, 1);
+    let ff = {
+        let i_fv = d.fresh_fvar();
+        let j_fv = d.fresh_fvar();
+        let inner = d.lam_fv(j_fv, nat, one);
+        d.lam_fv(i_fv, nat, inner)
+    };
+    let two = d.num(2);
+
+    let proof = d.lemma(p.sum_range_rect_eq_diag_add_corner, &[ff, two]);
+    let inferred = d.kernel().infer(proof).unwrap_or_else(|e| {
+        panic!("sumRange_rect_eq_diag_add_corner(F,2) should infer: {e:?}")
+    });
+
+    // The rectangle {(i,j): i<2, j<2} -- 4 points -- built independently.
+    let rectangle = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let fij = d.apply(ff, &[i, j]);
+        let row_inner = d.lam_fv(j_fv, nat, fij);
+        let row_sum_i = rsum_range(&mut d, p, row_inner, two);
+        let rect_row = d.lam_fv(i_fv, nat, row_sum_i);
+        rsum_range(&mut d, p, rect_row, two)
+    };
+    // The antidiagonal triangle {(i,j): i+j<2} -- 3 points -- built
+    // independently.
+    let triangle = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ki = d.sub(k, i);
+        let fiki = d.apply(ff, &[i, ki]);
+        let diag_inner = d.lam_fv(i_fv, nat, fiki);
+        let sk = d.succ(k);
+        let diag_sum = rsum_range(&mut d, p, diag_inner, sk);
+        let t_fn = d.lam_fv(k_fv, nat, diag_sum);
+        rsum_range(&mut d, p, t_fn, two)
+    };
+    // The corner {(i,j): i<2, j<2, i+j>=2} -- the single point (1,1) --
+    // built independently.
+    let corner = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let k_fv = d.fresh_fvar();
+        let sub_2i = d.sub(two, i);
+        let shifted_idx = {
+            let k = d.kernel().fvar(k_fv);
+            d.add(sub_2i, k)
+        };
+        let fi_shifted = d.apply(ff, &[i, shifted_idx]);
+        let corner_inner = d.lam_fv(k_fv, nat, fi_shifted);
+        let corner_sum_i = rsum_range(&mut d, p, corner_inner, i);
+        let corner_row = d.lam_fv(i_fv, nat, corner_sum_i);
+        rsum_range(&mut d, p, corner_row, two)
+    };
+
+    let rhs = radd(&mut d, triangle, corner);
+    let expected = req(&mut d, rectangle, rhs);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "sumRange_rect_eq_diag_add_corner(F,2) should state rectangle = triangle + corner"
+    );
+
+    let four = literal(&mut d, 4);
+    let three = literal(&mut d, 3);
+    assert!(
+        d.kernel().def_eq(rectangle, four),
+        "the rectangle sum of the constant 1 over {{i<2,j<2}} (4 points) must reduce to 4"
+    );
+    assert!(
+        d.kernel().def_eq(triangle, three),
+        "the triangle sum of the constant 1 over {{i+j<2}} (3 points) must reduce to 3"
+    );
+    assert!(
+        d.kernel().def_eq(corner, one),
+        "the corner sum of the constant 1 over {{i<2,j<2,i+j>=2}} (1 point) must reduce to 1"
+    );
+
+    assert!(
+        d.kernel()
+            .axiom_footprint(p.sum_range_rect_eq_diag_add_corner)
+            .is_empty(),
+        "sumRange_rect_eq_diag_add_corner must rest on zero axioms"
+    );
+}
+
 // --- polynomials (`rat_prelude::polynomial`) --------------------------------
 
 /// Every declaration `polynomial::declare_polynomial` adds — `Rat.pow`,

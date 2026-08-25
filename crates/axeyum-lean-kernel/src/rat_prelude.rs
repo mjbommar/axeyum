@@ -58,6 +58,7 @@ mod core;
 mod decidable;
 mod decide;
 mod defs;
+mod diagonal;
 mod field;
 pub(crate) mod group;
 pub(crate) mod lattice;
@@ -855,6 +856,27 @@ pub struct RatPrelude {
     /// swap a Cauchy product's `(Σa)(Σb)` side needs before any antidiagonal
     /// reindexing, and it needs no `Nat.sub`.
     pub sum_range_swap: NameId,
+    /// `Rat.sumRange_split : ∀ f m j, sumRange f (add m j) = add (sumRange f
+    /// m) (sumRange (fun k => f (add m k)) j)` — the `Rat` port of
+    /// `Nat.sumRange_split` (`nat_prelude::rectangle`). By induction on `j`
+    /// alone, `f`/`m` fixed; needs no `Nat.sub`.
+    pub sum_range_split: NameId,
+    /// `Rat.sumRange_diagonal : ∀ F n, sumRange (fun k => sumRange (fun i =>
+    /// F i (sub k i)) (succ k)) n = sumRange (fun i => sumRange (fun j => F i
+    /// j) (sub n i)) n` — the antidiagonal-triangle-by-`k` sum equals the
+    /// same triangle grouped by row `i`. The `Rat` port of
+    /// `Nat.sumRange_diagonal` (`nat_prelude::diagonal`,
+    /// `rat_prelude::diagonal`).
+    pub sum_range_diagonal: NameId,
+    /// `Rat.sumRange_rect_eq_diag_add_corner : ∀ F n, sumRange (fun i =>
+    /// sumRange (fun j => F i j) n) n = add (sumRange (fun k => sumRange (fun
+    /// i => F i (sub k i)) (succ k)) n) (sumRange (fun i => sumRange (fun k
+    /// => F i (add (sub n i) k)) i) n)` — rectangle = (antidiagonal triangle)
+    /// + corner, the same-bound `n×n` square decomposition the naive finite
+    /// Cauchy identity's refutation forces (`rat_prelude/diagonal.rs`'s
+    /// module doc). The `Rat` port of `Nat.sumRange_rect_eq_diag_add_corner`
+    /// (`nat_prelude::rectangle`).
+    pub sum_range_rect_eq_diag_add_corner: NameId,
 
     // --- polynomials (rat_prelude::polynomial) ------------------------------
     /// `Rat.pow : Rat → Nat → Rat`, `Nat.rec` on the exponent: `pow a zero ≡
@@ -1601,6 +1623,9 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sum_range_congr_lt: child(kernel, "sumRange_congr_lt"),
         sum_range_eq_zero_of_lt: child(kernel, "sumRange_eq_zero_of_lt"),
         sum_range_swap: child(kernel, "sumRange_swap"),
+        sum_range_split: child(kernel, "sumRange_split"),
+        sum_range_diagonal: child(kernel, "sumRange_diagonal"),
+        sum_range_rect_eq_diag_add_corner: child(kernel, "sumRange_rect_eq_diag_add_corner"),
         pow: child(kernel, "pow"),
         pow_zero: child(kernel, "pow_zero"),
         pow_succ: child(kernel, "pow_succ"),
@@ -1732,6 +1757,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         decide::declare_decide(&mut d, prelude)?;
         decidable::declare_decidable(&mut d, prelude)?;
         sum::declare_sum(&mut d, prelude)?;
+        diagonal::declare_diagonal(&mut d, prelude)?;
         polynomial::declare_polynomial(&mut d, prelude)?;
         vector::declare_vector(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
