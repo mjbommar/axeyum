@@ -1550,6 +1550,24 @@ pub struct CRealPrelude {
     /// inverse identity for `Rat.natDivSucc`, none of which this development
     /// builds; see the module documentation for the precise blocker.
     pub geom_tail_bounded: NameId,
+    /// `CReal.geom_tail_bounded_div : ∀ x, le zero x → ∀ k (h : PosBound (add
+    /// one (neg x)) k) m n, le (add (sumRange (fun j => pow x j) (Nat.add m
+    /// n)) (neg (sumRange (fun j => pow x j) m))) (mul (inv (add one (neg x))
+    /// k h) (pow x m))` — the **quotient form** of [`Self::geom_tail_bounded`]:
+    /// `tail ≤ xᵐ / (1 − x)`, for `1 − x` bounded away from zero by a
+    /// witnessed [`Self::pos_bound`] (see `geometric.rs`'s module
+    /// documentation for why this is data, not a hypothesis on `x` itself).
+    /// Multiplies [`Self::geom_tail_bounded`]'s conclusion through by `inv
+    /// (add one (neg x)) k h` (nonnegative, [`Self::inv_nonneg`]) via
+    /// [`Self::mul_le_mul_of_nonneg_left`], then cancels the resulting
+    /// `mul inv (mul (1−x) tail)` down to `tail` using
+    /// [`Self::mul_inv_cancel`] — the same `mul inv (mul c w) ≈ w` identity
+    /// `creal/cancellation.rs::declare_le_of_mul_le_mul_left` builds, reused
+    /// here in its more direct `mul_le_mul_of_nonneg_left`-then-cancel order
+    /// rather than through that theorem's own `le (mul c x) (mul c y) → le x
+    /// y` wrapper, because this bound's right-hand side (`pow x m`) is not
+    /// already in `mul (1−x) _` shape.
+    pub geom_tail_bounded_div: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -2258,6 +2276,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pow_le_pow_of_le_one: kernel.name_str(creal, "pow_le_pow_of_le_one"),
         mul_sub_one_geom_tail: kernel.name_str(creal, "mul_sub_one_geom_tail"),
         geom_tail_bounded: kernel.name_str(creal, "geom_tail_bounded"),
+        geom_tail_bounded_div: kernel.name_str(creal, "geom_tail_bounded_div"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
@@ -2401,6 +2420,11 @@ pub(crate) fn build_creal_prelude_uncached(
         // `hasDerivative_pow` (the general induction) also mentions `pow`,
         // for the identical reason.
         derivative::declare_has_derivative_pow(&mut d, prelude)?;
+        // `geometric` needs both `power::declare_power` (`geom_tail_bounded`)
+        // and `cancellation::declare_cancellation` (`inv_nonneg`,
+        // `mul_inv_cancel` via `inverse`) — the latter already ran earlier,
+        // the former just above. See `geometric.rs`'s module documentation.
+        geometric::declare_geometric(&mut d, prelude)?;
         // `expTerm`/`expSeriesPartial` need `Nat.factorial` (already in
         // `nat_prelude`, consumed here through `IntDev`'s `NatOps` impl) and
         // `Rat.normalize`; nothing else in this file depends on them, so they
@@ -3328,6 +3352,7 @@ mod density;
 mod derivative;
 mod exponential;
 mod field;
+mod geometric;
 mod integral;
 mod inverse;
 mod lattice;
