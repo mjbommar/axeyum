@@ -8,10 +8,10 @@
 
 | | |
 |---|---:|
-| Established facts (`proved` or `computed`) | 261 |
+| Established facts (`proved` or `computed`) | 291 |
 | …via an operation covering **more than one** fact | **8** |
 | …via a single-target operation (a capsule) | 21 |
-| …with no registered operation (hand-constructed or imported) | 232 |
+| …with no registered operation (hand-constructed or imported) | 262 |
 | Registered operations | 26 |
 | …**authoritative** and covering more than one fact | **2** |
 | …fixture-scope covering more than one fact (NOT the metric) | 0 |
@@ -28,7 +28,7 @@ Facts: `F:ml430-int-modeq-comm-1e4bcc07`, `F:ml430-int-modeq-refl-30e15520`, `F:
 |---|---:|---:|---:|---|
 | `cas-certificate` | 0 | 0 | 22 | computer-algebra certificate |
 | `imported-kernel-lean` | 0 | 0 | 5 | kernel proof imported from an external development |
-| `kernel-lean` | 8 | 20 | 171 | kernel proof, reconstructed and checked here |
+| `kernel-lean` | 8 | 20 | 201 | kernel proof, reconstructed and checked here |
 | `search-certificate` | 0 | 0 | 9 | search certificate |
 | `smt-clausal` | 0 | 0 | 9 | SMT decision with clausal (DRAT) evidence |
 | `smt-term-level` | 0 | 1 | 16 | SMT decision with term-level evidence |
@@ -50,7 +50,7 @@ is no proof-affecting intervention, which this join cannot see. Multi-target
 coverage is the **necessary** condition that is measurable today, and a
 single-target registry fails it without needing a harder test.
 
-Of the 261 established facts, 198 record an
+Of the 291 established facts, 228 record an
 empty axiom footprint. That is a different axis from provenance: a
 hand-written proof can be axiom-free and a produced one need not be.
 
