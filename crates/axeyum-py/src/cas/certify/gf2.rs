@@ -58,6 +58,18 @@ pub struct Gf2Limits {
     inner: CasGf2Limits,
 }
 
+impl Gf2Limits {
+    /// The wrapped Rust ceilings.
+    pub(crate) fn into_inner(self) -> CasGf2Limits {
+        self.inner
+    }
+
+    /// Wraps Rust ceilings.
+    pub(crate) fn from_inner(inner: CasGf2Limits) -> Self {
+        Self { inner }
+    }
+}
+
 #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Gf2Limits {
@@ -499,7 +511,7 @@ pub struct IrreducibilityCertificate {
 
 impl IrreducibilityCertificate {
     /// Wraps a Rust certificate.
-    fn wrap(inner: CasIrreducibilityCertificate) -> Self {
+    pub(crate) fn wrap(inner: CasIrreducibilityCertificate) -> Self {
         Self { inner }
     }
 

@@ -2,48 +2,100 @@
 # ruff: noqa: E501, F401, F403, F405
 
 from axeyum import _native
+from axeyum._native.cas.certify import gf2
+from axeyum._native.cas.certify import sturm
 import builtins
 import enum
 import fractions
 import typing
 from . import certify
 __all__ = [
+    "AlgebraicReal",
     "Assumptions",
+    "BOOL_MAX_VARS",
+    "BinaryExtensionConnectedAdamsTraceReport",
+    "BinaryExtensionEllThreeDegreeSevenClosedForm",
+    "BinaryExtensionEllThreeDegreeSevenWittShiftedClosedForm",
+    "BinaryExtensionEllTwoDegreeFiveClosedForm",
+    "BinaryExtensionLongCycleTraceReport",
+    "BinaryExtensionTraceLimits",
+    "BinaryExtensionWittShiftedLayerTrace",
+    "BinaryExtensionWittShiftedTraceReport",
+    "BoolExpr",
     "CasError",
     "Certainty",
     "CertifiedIntegral",
     "DefiniteIntegral",
     "Expr",
+    "ExtensionTraceHankelMinor",
     "Gf2Error",
     "LimitPoint",
     "Matrix",
     "Monomial",
     "MultiPoly",
     "MvPoly",
+    "Permutation",
     "Rational",
     "RealInterval",
+    "RealSet",
     "Sign",
+    "SparseSearchLimits",
+    "SparseSearchOutcome",
     "ZeroTest",
+    "acosh",
+    "algebraic_real_roots",
+    "aliquot_sum",
     "apart",
     "apply_initial_conditions",
     "approximate_real_roots",
+    "are_amicable",
     "argument",
+    "asinh",
+    "atanh",
+    "bell",
+    "bernoulli",
+    "beta",
+    "binary_extension_connected_adams_trace",
+    "binary_extension_ell_three_degree_seven_closed_form",
+    "binary_extension_ell_three_degree_seven_witt_shifted_closed_form",
+    "binary_extension_ell_two_degree_five_closed_form",
+    "binary_extension_long_cycle_trace",
+    "binary_extension_witt_shifted_trace",
+    "binomial",
     "cancel",
+    "carmichael_lambda",
+    "catalan",
     "certify",
     "characteristic_polynomial",
+    "chebyshev_t",
+    "chebyshev_u",
+    "cholesky_decomposition",
     "coeff",
     "collect",
     "companion_matrix",
     "conjugate",
     "content",
+    "continued_fraction",
+    "convergents",
+    "cosh",
+    "coth",
     "count_real_roots",
+    "covariance",
+    "crt",
+    "csch",
     "cyclotomic_polynomial",
     "definite_integrate",
     "definite_sum",
     "degree",
+    "derangements",
     "diagonalize",
+    "dirichlet_eta",
+    "dirichlet_lambda",
+    "discrete_log",
     "discriminant",
     "divergence",
+    "divisors",
+    "double_factorial",
     "dsolve_bernoulli",
     "dsolve_euler_cauchy",
     "dsolve_exact",
@@ -54,59 +106,224 @@ __all__ = [
     "eigenvalues",
     "eigenvectors",
     "equal",
+    "euler_number",
+    "euler_phi",
+    "eulerian",
     "evalf",
     "evaluate_trig",
+    "exact_rational",
     "expand",
     "expand_log",
     "expand_trig",
+    "extended_gcd",
+    "extension_trace_hankel_minor",
     "factor",
     "factor_expr",
+    "factor_list",
+    "factorial",
+    "factorize",
+    "fibonacci",
     "finite_product",
+    "gamma",
+    "gcd",
+    "gegenbauer",
+    "generalized_harmonic",
+    "generalized_laguerre",
+    "gfp_add",
+    "gfp_div_rem",
+    "gfp_factor_berlekamp",
+    "gfp_gcd",
+    "gfp_is_irreducible",
+    "gfp_mul",
+    "gfp_neg",
+    "gfp_pow_mod",
+    "gfp_roots",
+    "gfp_scale",
+    "gfp_sub",
     "gosper_sum",
     "gradient",
+    "gram_schmidt",
+    "harmonic",
+    "hermite",
+    "hermite_normal_form",
     "hessian",
     "imaginary_part",
     "infinite_sum",
+    "integer_nth_root",
     "integrate",
+    "inverse_laplace",
+    "inverse_z_transform",
+    "is_abundant",
+    "is_carmichael_number",
+    "is_deficient",
     "is_irreducible",
+    "is_perfect",
+    "is_prime",
+    "is_quadratic_residue",
+    "is_squarefree",
+    "jacobi",
+    "jacobi_symbol",
     "jacobian",
+    "jacobsthal",
+    "jordan_form",
+    "jordan_totient",
+    "kronecker_symbol",
+    "lagrange_interpolation",
+    "laguerre",
+    "lah",
+    "laplace_transform",
     "laplacian",
+    "laurent_series",
+    "lcm",
     "leading_coeff",
+    "legendre",
+    "legendre_symbol",
     "limit",
+    "linear_ode_system",
     "logcombine",
+    "lucas",
+    "matrix_exp",
     "matrix_rank",
+    "mean",
+    "median",
+    "mertens",
     "minimal_polynomial",
+    "mobius",
+    "mod_inverse",
+    "mod_pow",
+    "mode",
     "modulus",
+    "motzkin",
+    "multinomial",
+    "multiplicative_order",
+    "narayana",
+    "newton_divided_differences",
+    "next_prime",
     "normalize",
     "nsimplify",
+    "nth_prime",
+    "num_divisors",
+    "pade",
+    "pade_fraction",
+    "partition_count",
+    "pell",
+    "pell_fundamental_solution",
+    "perfect_power",
+    "permutations",
     "poly_div",
     "poly_gcd",
     "poly_lcm",
+    "polygamma_at_one",
+    "prev_prime",
+    "prime_pi",
     "primitive_part",
+    "primitive_pythagorean_triples",
+    "primitive_root",
+    "primorial",
     "prove_derivative",
+    "qr_decomposition",
+    "radical",
     "rationalize",
     "real_part",
     "real_root_intervals",
+    "real_roots",
     "residue",
     "resultant",
     "rewrite_exp",
     "sample_standard_deviation",
+    "sample_variance",
+    "search_sparse_half_degree",
+    "sech",
     "series",
     "series_at",
+    "series_reversion",
+    "sigma_k",
     "simplify",
     "simplify_radicals",
     "simplify_under_assumptions",
+    "sinh",
+    "smith_normal_form",
     "solve",
+    "solve_linear_congruence",
     "solve_linear_system",
     "solve_polynomial_inequality",
     "solve_polynomial_system",
     "solve_recurrence",
+    "sqrt_continued_fraction",
+    "sqrt_mod",
     "standard_deviation",
+    "stirling_first",
+    "stirling_second",
+    "sum_divisors",
     "sum_polynomial",
+    "tanh",
     "trace",
+    "tribonacci",
     "trigsimp",
+    "variance",
     "wronskian",
+    "z_transform",
+    "zeta",
 ]
+
+BOOL_MAX_VARS: builtins.int
+@typing.final
+class AlgebraicReal:
+    r"""
+    A real algebraic number: a minimal polynomial plus an isolating interval.
+    
+    Tier R: owned plain data. Every operation is exact; `to_float` is the single
+    lossy accessor and is named so.
+    """
+    @property
+    def minimal_polynomial(self) -> builtins.list[fractions.Fraction]:
+        r"""
+        The minimal polynomial as exact coefficients, lowest degree first.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the fractions.
+        """
+    @property
+    def degree(self) -> builtins.int:
+        r"""
+        The degree of the minimal polynomial.
+        """
+    @property
+    def isolating_interval(self) -> tuple[fractions.Fraction, fractions.Fraction]:
+        r"""
+        The isolating interval `(lower, upper)` containing exactly this root.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the fractions.
+        """
+    def rational_value(self) -> typing.Optional[fractions.Fraction]:
+        r"""
+        The exact rational value when this number is rational, else `None`.
+        
+        `None` is a decided answer — the number is irrational — not a decline.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the fraction.
+        """
+    def refine(self, width: typing.Any) -> typing.Optional[AlgebraicReal]:
+        r"""
+        The same number with an isolating interval narrower than `width`, or
+        `None` when the exact arithmetic overflows.
+        
+        # Errors
+        
+        Raises `OverflowError` when `width` does not fit the exact `i128`
+        rational.
+        """
+    def to_float(self) -> builtins.float:
+        r"""
+        A `float` near this number. The only lossy accessor here.
+        """
+    def __eq__(self, other: typing.Any) -> builtins.bool: ...
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class Assumptions:
@@ -152,6 +369,730 @@ class Assumptions:
         r"""
         Whether this context establishes `expr != 0`.
         """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class BinaryExtensionConnectedAdamsTraceReport:
+    r"""
+    Exact connected endpoint trace over one binary extension field.
+    
+    Tier P: a frozen record of an exact bounded enumeration. Every field
+    of the Rust report is present.
+    """
+    @property
+    def field_modulus(self) -> builtins.int:
+        r"""
+        Packed monic irreducible modulus defining the field.
+        """
+    @property
+    def field_degree(self) -> builtins.int:
+        r"""
+        Extension degree `r`.
+        """
+    @property
+    def field_order(self) -> builtins.int:
+        r"""
+        Field order `2 ** r`.
+        """
+    @property
+    def ell(self) -> builtins.int:
+        r"""
+        Number of constrained next-to-leading coefficients.
+        """
+    @property
+    def polynomial_degree(self) -> builtins.int:
+        r"""
+        Degree of every monic polynomial counted.
+        """
+    @property
+    def class_count(self) -> builtins.int:
+        r"""
+        Number of coefficient classes.
+        """
+    @property
+    def candidate_count(self) -> builtins.int:
+        r"""
+        Exact total population.
+        """
+    @property
+    def uniform_mean(self) -> builtins.int:
+        r"""
+        The uniform per-class population.
+        """
+    @property
+    def identity_class_mangoldt_sum(self) -> builtins.int:
+        r"""
+        Mangoldt mass of the identity class.
+        """
+    @property
+    def satisfies_candidate_bound(self) -> builtins.bool:
+        r"""
+        Whether the stopping test held.
+        """
+    @property
+    def centered_second_moment(self) -> typing.Any:
+        r"""
+        Exact `M_2`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def centered_fourth_moment(self) -> typing.Any:
+        r"""
+        Exact `M_4`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def fourth_cumulant_numerator(self) -> typing.Any:
+        r"""
+        Exact `q ** ell * M_4 - 3 * M_2 ** 2`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def connected_adams_trace(self) -> typing.Any:
+        r"""
+        Exact `T_r`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def candidate_absolute_bound(self) -> typing.Any:
+        r"""
+        The absolute stopping bound.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def minimum_normalized_betti_ceiling(self) -> typing.Any:
+        r"""
+        Least normalized Betti ceiling.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class BinaryExtensionEllThreeDegreeSevenClosedForm:
+    r"""
+    Closed form of the `ell = 3`, degree-seven connected Adams trace.
+    
+    Tier P: a frozen record of an exact bounded enumeration. Every field
+    of the Rust report is present.
+    """
+    @property
+    def field_degree(self) -> builtins.int:
+        r"""
+        Extension degree `r` in `q = 2 ** r`.
+        """
+    @property
+    def connected_trace_q_degree(self) -> builtins.int:
+        r"""
+        Leading `q`-degree of the connected trace.
+        """
+    @property
+    def adams_weight_q_degree(self) -> builtins.int:
+        r"""
+        `q`-degree of the Adams weight.
+        """
+    @property
+    def normalized_connected_q_degree(self) -> builtins.int:
+        r"""
+        `q`-degree after normalization.
+        """
+    @property
+    def proposed_normalized_q_degree(self) -> builtins.int:
+        r"""
+        The proposed universal cutoff.
+        """
+    @property
+    def one_extra_q_normalized_degree(self) -> builtins.int:
+        r"""
+        The cutoff with one extra `q`.
+        """
+    @property
+    def normalized_q_degree_excess(self) -> builtins.int:
+        r"""
+        How far the closed form exceeds it.
+        """
+    @property
+    def field_order(self) -> typing.Any:
+        r"""
+        Field order `q`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def special_class_count(self) -> typing.Any:
+        r"""
+        Number of special classes.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def ordinary_class_count(self) -> typing.Any:
+        r"""
+        Number of ordinary classes.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def special_class_population(self) -> typing.Any:
+        r"""
+        Population of a special class.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def ordinary_class_population(self) -> typing.Any:
+        r"""
+        Population of an ordinary class.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def centered_second_moment(self) -> typing.Any:
+        r"""
+        Exact `M_2`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def centered_fourth_moment(self) -> typing.Any:
+        r"""
+        Exact `M_4`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def fourth_cumulant_numerator(self) -> typing.Any:
+        r"""
+        Exact fourth-cumulant numerator.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def connected_adams_trace(self) -> typing.Any:
+        r"""
+        Exact `T_r`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class BinaryExtensionEllThreeDegreeSevenWittShiftedClosedForm:
+    r"""
+    Closed form of the `ell = 3`, degree-seven Witt-shifted high-character trace.
+    
+    Tier P: a frozen record of an exact bounded enumeration. Every field
+    of the Rust report is present.
+    """
+    @property
+    def field_degree(self) -> builtins.int:
+        r"""
+        Extension degree `r` in `q = 2 ** r`.
+        """
+    @property
+    def conductor_two_trace_q_degree(self) -> builtins.int:
+        r"""
+        Leading `q`-degree of the conductor-two trace.
+        """
+    @property
+    def formal_top_q_degree(self) -> builtins.int:
+        r"""
+        Formal top `q`-degree before cancellation.
+        """
+    @property
+    def q_degree_drop(self) -> builtins.int:
+        r"""
+        Full `q`-degrees removed in the closed form.
+        """
+    @property
+    def field_order(self) -> typing.Any:
+        r"""
+        Field order `q`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def supported_coarse_mass(self) -> typing.Any:
+        r"""
+        The common nonzero coarse covariance mass.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def conductor_one_high_character_trace(self) -> typing.Any:
+        r"""
+        Exact conductor-one high-character trace.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def conductor_two_high_character_trace(self) -> typing.Any:
+        r"""
+        Exact conductor-two high-character trace.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class BinaryExtensionEllTwoDegreeFiveClosedForm:
+    r"""
+    Closed form of the `ell = 2`, degree-five connected Adams trace.
+    
+    Tier P: a frozen record of an exact bounded enumeration. Every field
+    of the Rust report is present.
+    """
+    @property
+    def field_degree(self) -> builtins.int:
+        r"""
+        Extension degree `r` in `q = 2 ** r`.
+        """
+    @property
+    def connected_trace_q_degree(self) -> builtins.int:
+        r"""
+        Leading `q`-degree of the connected trace.
+        """
+    @property
+    def adams_weight_q_degree(self) -> builtins.int:
+        r"""
+        `q`-degree of the Adams weight.
+        """
+    @property
+    def normalized_connected_q_degree(self) -> builtins.int:
+        r"""
+        `q`-degree after normalization.
+        """
+    @property
+    def proposed_normalized_q_degree(self) -> builtins.int:
+        r"""
+        The proposed universal cutoff.
+        """
+    @property
+    def normalized_q_degree_excess(self) -> builtins.int:
+        r"""
+        How far the closed form exceeds it.
+        """
+    @property
+    def field_order(self) -> typing.Any:
+        r"""
+        Field order `q`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def zero_subtrace_population(self) -> typing.Any:
+        r"""
+        Population with zero subtrace.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def nonzero_subtrace_population(self) -> typing.Any:
+        r"""
+        Population with nonzero subtrace.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def centered_second_moment(self) -> typing.Any:
+        r"""
+        Exact `M_2`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def centered_fourth_moment(self) -> typing.Any:
+        r"""
+        Exact `M_4`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def fourth_cumulant_numerator(self) -> typing.Any:
+        r"""
+        Exact fourth-cumulant numerator.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def connected_adams_trace(self) -> typing.Any:
+        r"""
+        Exact `T_r`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class BinaryExtensionLongCycleTraceReport:
+    r"""
+    Exact fixed-degree long-cycle trace over one binary extension field.
+    
+    Tier P: a frozen record of an exact bounded enumeration. Every field
+    of the Rust report is present.
+    """
+    @property
+    def field_modulus(self) -> builtins.int:
+        r"""
+        Packed monic irreducible modulus defining the field.
+        """
+    @property
+    def field_degree(self) -> builtins.int:
+        r"""
+        Extension degree `r`.
+        """
+    @property
+    def field_order(self) -> builtins.int:
+        r"""
+        Field order `2 ** r`.
+        """
+    @property
+    def polynomial_degree(self) -> builtins.int:
+        r"""
+        Degree of every monic polynomial in the interval.
+        """
+    @property
+    def fixed_leading_coefficients(self) -> builtins.int:
+        r"""
+        Prescribed zero next-to-leading coefficients.
+        """
+    @property
+    def free_coefficients(self) -> builtins.int:
+        r"""
+        Free low coefficients.
+        """
+    @property
+    def candidate_count(self) -> builtins.int:
+        r"""
+        Exact interval population.
+        """
+    @property
+    def mangoldt_sum(self) -> builtins.int:
+        r"""
+        Exact orbit-weighted Mangoldt sum.
+        """
+    @property
+    def error(self) -> builtins.int:
+        r"""
+        The signed long-cycle diagnostic.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class BinaryExtensionTraceLimits:
+    r"""
+    Deterministic limits for one extension-field interval trace.
+    
+    Tier P. Defaults are the Rust `BinaryExtensionTraceLimits::default()`
+    verbatim: `max_field_degree=8`, `max_polynomial_degree=16`,
+    `max_candidates=1_000_000`.
+    """
+    @property
+    def max_field_degree(self) -> builtins.int:
+        r"""
+        Largest admitted extension degree `r` in `GF(2 ** r)`.
+        """
+    @property
+    def max_polynomial_degree(self) -> builtins.int:
+        r"""
+        Largest admitted polynomial degree.
+        """
+    @property
+    def max_candidates(self) -> builtins.int:
+        r"""
+        Largest admitted interval population.
+        """
+    def __new__(cls, max_field_degree: builtins.int = 8, max_polynomial_degree: builtins.int = 16, max_candidates: builtins.int = 1000000) -> BinaryExtensionTraceLimits:
+        r"""
+        Ceilings, defaulting to the Rust `BinaryExtensionTraceLimits::default()`.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class BinaryExtensionWittShiftedLayerTrace:
+    r"""
+    One signed low-twist layer of a Witt-shifted trace.
+    
+    Tier P: a frozen record of an exact bounded enumeration. Every field
+    of the Rust report is present.
+    """
+    @property
+    def layer(self) -> builtins.int:
+        r"""
+        The layer index.
+        """
+    @property
+    def average_contraction_holds(self) -> builtins.bool:
+        r"""
+        Whether the average contraction identity held.
+        """
+    @property
+    def identity_aggregate_mass(self) -> typing.Any:
+        r"""
+        Aggregate mass on the identity path.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def parent_aggregate_mass(self) -> typing.Any:
+        r"""
+        Aggregate mass on the parent path.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def signed_spatial_layer(self) -> typing.Any:
+        r"""
+        The signed spatial layer value.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def signed_high_character_trace(self) -> typing.Any:
+        r"""
+        The signed high-character trace.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class BinaryExtensionWittShiftedTraceReport:
+    r"""
+    The complete signed low-twist layer sequence over one extension field.
+    
+    Tier P: a frozen record of an exact bounded enumeration. Every field of the
+    Rust report is present, including the per-layer traces.
+    """
+    @property
+    def field_modulus(self) -> builtins.int:
+        r"""
+        Packed monic irreducible modulus defining the field.
+        """
+    @property
+    def field_degree(self) -> builtins.int:
+        r"""
+        Extension degree `r`.
+        """
+    @property
+    def field_order(self) -> builtins.int:
+        r"""
+        Field order `2 ** r`.
+        """
+    @property
+    def ell(self) -> builtins.int:
+        r"""
+        Number of constrained next-to-leading coefficients.
+        """
+    @property
+    def polynomial_degree(self) -> builtins.int:
+        r"""
+        Degree of every monic polynomial counted.
+        """
+    @property
+    def coarse_level(self) -> builtins.int:
+        r"""
+        The coarse level the descendants are taken over.
+        """
+    @property
+    def descendant_count(self) -> builtins.int:
+        r"""
+        The number of descendants.
+        """
+    @property
+    def aggregate_global_mass(self) -> typing.Any:
+        r"""
+        The aggregate global mass.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
+        """
+    @property
+    def layers(self) -> builtins.list[BinaryExtensionWittShiftedLayerTrace]:
+        r"""
+        The per-layer traces, in layer order.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class BoolExpr:
+    r"""
+    A propositional formula over `bool` constants and named variables.
+    
+    Tier R: owned plain data, immutable once built. `And`, `Or` and `Xor` are
+    variadic; the empty `And` is `True` and the empty `Or`/`Xor` are `False`.
+    """
+    @property
+    def variables(self) -> builtins.list[builtins.str]:
+        r"""
+        The distinct variable names, sorted.
+        """
+    @staticmethod
+    def constant(value: builtins.bool) -> BoolExpr:
+        r"""
+        The constant `True` or `False`.
+        """
+    @staticmethod
+    def var(name: builtins.str) -> BoolExpr:
+        r"""
+        A named propositional variable.
+        """
+    @staticmethod
+    def negate(inner: BoolExpr) -> BoolExpr:
+        r"""
+        Negation.
+        """
+    @staticmethod
+    def and_(operands: typing.Sequence[BoolExpr]) -> BoolExpr:
+        r"""
+        Variadic conjunction; the empty conjunction is `True`.
+        
+        Exported as `and_` because `and` is a Python keyword: a `#[pyclass]`
+        method named `and` is registered but unreachable from Python source,
+        which is surface that exists and cannot be called.
+        """
+    @staticmethod
+    def or_(operands: typing.Sequence[BoolExpr]) -> BoolExpr:
+        r"""
+        Variadic disjunction; the empty disjunction is `False`.
+        
+        Exported as `or_`; see [`Self::and`] for why.
+        """
+    @staticmethod
+    def xor(operands: typing.Sequence[BoolExpr]) -> BoolExpr:
+        r"""
+        Variadic exclusive-or (parity); the empty case is `False`.
+        """
+    @staticmethod
+    def implies(antecedent: BoolExpr, consequent: BoolExpr) -> BoolExpr:
+        r"""
+        Material implication `antecedent -> consequent`.
+        """
+    @staticmethod
+    def iff(left: BoolExpr, right: BoolExpr) -> BoolExpr:
+        r"""
+        Bi-implication `left <-> right`.
+        """
+    def size(self) -> builtins.int:
+        r"""
+        The number of nodes in the formula.
+        """
+    def evaluate(self, assignment: dict) -> typing.Optional[builtins.bool]:
+        r"""
+        The truth value under `assignment`, or `None` when a variable is unbound.
+        
+        # Errors
+        
+        Propagates the per-entry extraction error.
+        """
+    def truth_table(self) -> typing.Optional[builtins.list[tuple[builtins.list[builtins.bool], builtins.bool]]]:
+        r"""
+        `[(assignment, value), ...]` over every assignment, or `None` past
+        `BOOL_MAX_VARS`.
+        
+        The assignment is a list of booleans positionally aligned with
+        `variables`.
+        """
+    def is_tautology(self) -> typing.Optional[builtins.bool]:
+        r"""
+        Whether the formula is true under every assignment; `None` past the
+        budget.
+        """
+    def is_satisfiable(self) -> typing.Optional[builtins.bool]:
+        r"""
+        Whether some assignment satisfies the formula; `None` past the budget.
+        
+        A `None` here is **not** `False`: past `BOOL_MAX_VARS` this module
+        declines to enumerate and claims nothing.
+        """
+    def is_contradiction(self) -> typing.Optional[builtins.bool]:
+        r"""
+        Whether no assignment satisfies the formula; `None` past the budget.
+        """
+    def equivalent(self, other: BoolExpr) -> typing.Optional[builtins.bool]:
+        r"""
+        Whether the two formulas agree on every assignment; `None` past the
+        budget.
+        """
+    def to_dnf(self) -> BoolExpr:
+        r"""
+        The disjunctive normal form.
+        """
+    def to_cnf(self) -> BoolExpr:
+        r"""
+        The conjunctive normal form.
+        """
+    def simplify_qmc(self) -> typing.Optional[BoolExpr]:
+        r"""
+        The Quine-McCluskey minimal form, or `None` past the budget.
+        """
+    def __eq__(self, other: typing.Any) -> builtins.bool: ...
     def __repr__(self) -> builtins.str: ...
 
 class CasError(_native.AxeyumError):
@@ -457,6 +1398,35 @@ class Expr:
     def __str__(self) -> builtins.str:
         r"""
         The rendered expression. **Not** parseable back into an `Expr`.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class ExtensionTraceHankelMinor:
+    r"""
+    An exact Hankel minor of a bounded extension-trace sequence.
+    
+    Tier P: a frozen record of an exact bounded enumeration. Every field
+    of the Rust report is present.
+    """
+    @property
+    def first_power(self) -> builtins.int:
+        r"""
+        The power the sequence starts at.
+        """
+    @property
+    def tested_maximum_recurrence_order(self) -> builtins.int:
+        r"""
+        The recurrence order tested.
+        """
+    @property
+    def determinant(self) -> typing.Any:
+        r"""
+        The exact Bareiss determinant.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the `int`.
         """
     def __repr__(self) -> builtins.str: ...
 
@@ -794,6 +1764,71 @@ class MvPoly:
     def __repr__(self) -> builtins.str: ...
 
 @typing.final
+class Permutation:
+    r"""
+    A permutation of `0..n`, stored as its image list.
+    
+    Tier R: owned plain data with no budget. Every method that can fail on a
+    shape mismatch returns `None` rather than raising.
+    """
+    @property
+    def images(self) -> builtins.list[builtins.int]:
+        r"""
+        The image list.
+        """
+    @staticmethod
+    def from_images(images: typing.Sequence[builtins.int]) -> typing.Optional[Permutation]:
+        r"""
+        A permutation from its image list, or `None` when the list is not a
+        bijection of `0..len`.
+        """
+    @staticmethod
+    def from_cycles(cycles: typing.Sequence[typing.Sequence[builtins.int]], n: builtins.int) -> typing.Optional[Permutation]:
+        r"""
+        A permutation of `0..n` from disjoint cycles, or `None` when a cycle
+        repeats a point or leaves the range.
+        """
+    @staticmethod
+    def identity(n: builtins.int) -> Permutation:
+        r"""
+        The identity on `0..n`.
+        """
+    def __len__(self) -> builtins.int:
+        r"""
+        The size of the underlying set.
+        """
+    def is_empty(self) -> builtins.bool:
+        r"""
+        Whether the permutation acts on the empty set.
+        """
+    def apply(self, point: builtins.int) -> typing.Optional[builtins.int]:
+        r"""
+        The image of `point`, or `None` when it is out of range.
+        """
+    def compose(self, other: Permutation) -> typing.Optional[Permutation]:
+        r"""
+        `self` after `other`, or `None` on a size mismatch.
+        """
+    def inverse(self) -> Permutation:
+        r"""
+        The inverse permutation.
+        """
+    def cycles(self) -> builtins.list[builtins.list[builtins.int]]:
+        r"""
+        The nontrivial cycles, each starting at its least point.
+        """
+    def order(self) -> typing.Optional[builtins.int]:
+        r"""
+        The order in the symmetric group, or `None` on `u128` overflow.
+        """
+    def sign(self) -> builtins.int:
+        r"""
+        The sign: `1` for an even permutation, `-1` for an odd one.
+        """
+    def __eq__(self, other: typing.Any) -> builtins.bool: ...
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
 class Rational:
     r"""
     An exact rational number, normalized, with an `i128` numerator and
@@ -881,6 +1916,179 @@ class RealInterval:
     def upper_closed(self) -> builtins.bool:
         r"""
         Whether the upper endpoint is included.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class RealSet:
+    r"""
+    A subset of the real line: a normalized ascending union of disjoint
+    intervals.
+    
+    Tier R: owned plain data. The normal form is an invariant of every
+    constructor here, which is why `==` decides set equality and not just
+    structural sameness.
+    """
+    @property
+    def intervals(self) -> builtins.list[sturm.SetInterval]:
+        r"""
+        The disjoint interval pieces, ascending.
+        """
+    @staticmethod
+    def empty() -> RealSet:
+        r"""
+        The empty set.
+        """
+    @staticmethod
+    def interval(interval: sturm.SetInterval) -> RealSet:
+        r"""
+        The set denoted by one interval.
+        """
+    @staticmethod
+    def point(a: typing.Any) -> RealSet:
+        r"""
+        The singleton `{a}`.
+        
+        # Errors
+        
+        Raises `OverflowError` when `a` does not fit the exact `i128` rational.
+        """
+    @staticmethod
+    def universe() -> RealSet:
+        r"""
+        All of the reals.
+        """
+    @staticmethod
+    def from_intervals(intervals: typing.Sequence[sturm.SetInterval]) -> RealSet:
+        r"""
+        The union of the given intervals, normalized.
+        """
+    @staticmethod
+    def finite(points: typing.Any) -> RealSet:
+        r"""
+        The finite set of the given points; duplicates and order do not matter.
+        
+        # Errors
+        
+        Raises `OverflowError` when a point does not fit the exact `i128`
+        rational.
+        """
+    def union(self, other: RealSet) -> RealSet:
+        r"""
+        The union.
+        """
+    def intersection(self, other: RealSet) -> RealSet:
+        r"""
+        The intersection.
+        """
+    def complement(self) -> RealSet:
+        r"""
+        The complement in the reals.
+        """
+    def difference(self, other: RealSet) -> RealSet:
+        r"""
+        `self` minus `other`.
+        """
+    def contains(self, x: typing.Any) -> builtins.bool:
+        r"""
+        Whether `x` is a member.
+        
+        # Errors
+        
+        Raises `OverflowError` when `x` does not fit the exact `i128` rational.
+        """
+    def is_empty(self) -> builtins.bool:
+        r"""
+        Whether the set has no points.
+        """
+    def is_subset(self, other: RealSet) -> builtins.bool:
+        r"""
+        Whether every point of `self` lies in `other`.
+        """
+    def is_equal(self, other: RealSet) -> builtins.bool:
+        r"""
+        Whether the two sets have the same points.
+        """
+    def measure(self) -> typing.Optional[fractions.Fraction]:
+        r"""
+        The Lebesgue measure, or `None` when the set is unbounded or the exact
+        sum overflows. Isolated points measure zero.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the fraction.
+        """
+    def __eq__(self, other: typing.Any) -> builtins.bool: ...
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class SparseSearchLimits:
+    r"""
+    Explicit ceilings for one degree's sparse GF(2) search.
+    
+    Tier P. Defaults are the Rust `SparseSearchLimits::default()` verbatim:
+    `max_tail_terms=4`, `max_candidates=2_000_000`, and `Gf2Limits::default()`
+    arithmetic.
+    """
+    @property
+    def max_tail_terms(self) -> builtins.int:
+        r"""
+        Largest even number of nonleading terms enumerated.
+        """
+    @property
+    def max_candidates(self) -> builtins.int:
+        r"""
+        Maximum candidates tested for this degree.
+        """
+    @property
+    def arithmetic(self) -> gf2.Gf2Limits:
+        r"""
+        The per-candidate arithmetic and certificate ceilings.
+        """
+    def __new__(cls, max_tail_terms: builtins.int = 4, max_candidates: builtins.int = 2000000, arithmetic: typing.Optional[gf2.Gf2Limits] = None) -> SparseSearchLimits:
+        r"""
+        Ceilings, defaulting to the Rust `SparseSearchLimits::default()`.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class SparseSearchOutcome:
+    r"""
+    One deterministic sparse-search result, with its counts.
+    
+    Tier P. `kind` is `"Found"`, `"Exhausted"` or `"CandidateLimit"`, and the
+    three are **different answers**: `Exhausted` says every candidate through
+    `max_tail_terms` was reducible, `CandidateLimit` says the budget stopped the
+    enumeration and claims nothing about the remaining candidates.
+    """
+    @property
+    def kind(self) -> builtins.str:
+        r"""
+        `"Found"`, `"Exhausted"` or `"CandidateLimit"`.
+        """
+    @property
+    def certificate(self) -> typing.Optional[gf2.IrreducibilityCertificate]:
+        r"""
+        The certificate of the polynomial that was found, or `None`.
+        
+        Hand it to `cas.certify.gf2.check_certificate` /
+        `check_certificate_independent`: the producer here is untrusted, and the
+        certificate is what makes it checkable.
+        """
+    @property
+    def candidates_tested(self) -> builtins.int:
+        r"""
+        How many candidates were tested, in every outcome.
+        """
+    @property
+    def tail_terms(self) -> typing.Optional[builtins.int]:
+        r"""
+        The number of nonleading terms in the successful polynomial, or `None`.
+        """
+    @property
+    def limit(self) -> typing.Optional[builtins.int]:
+        r"""
+        The configured candidate ceiling that stopped the search, or `None`.
         """
     def __repr__(self) -> builtins.str: ...
 
@@ -977,6 +2185,35 @@ class Sign(enum.Enum):
     Not determined.
     """
 
+def acosh(expr: Expr) -> Expr:
+    r"""
+    The inverse hyperbolic cosine.
+    
+    Tier R: a total builder — it always returns an expression.
+    """
+
+def algebraic_real_roots(coeffs: typing.Any) -> typing.Optional[builtins.list[AlgebraicReal]]:
+    r"""
+    Every real root of a rational polynomial given by dense coefficients, lowest
+    degree first, ascending.
+    
+    Tier R: a pure function of the coefficients. `None` is exact-arithmetic
+    overflow.
+    
+    # Errors
+    
+    Raises `OverflowError` when a coefficient does not fit the exact `i128`
+    rational.
+    """
+
+def aliquot_sum(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The sum of the proper divisors of `n`.
+    
+    Tier R: a pure function of its arguments. `None` is *no such value or
+    `i128` overflow*, never an error.
+    """
+
 def apart(expr: Expr, var: builtins.str) -> typing.Optional[Expr]:
     r"""
     Partial-fraction decomposition in `var`.
@@ -1001,9 +2238,143 @@ def approximate_real_roots(expr: Expr, var: builtins.str, width: builtins.int  |
     Raises `ValueError` when `width` is not an exact rational.
     """
 
+def are_amicable(m: builtins.int, n: builtins.int) -> builtins.bool:
+    r"""
+    Whether `m` and `n` are an amicable pair.
+    
+    Tier R: a pure function of its arguments.
+    """
+
 def argument(expr: Expr) -> typing.Optional[Expr]:
     r"""
     The complex argument.
+    """
+
+def asinh(expr: Expr) -> Expr:
+    r"""
+    The inverse hyperbolic sine, as a logarithm.
+    
+    Tier R: a total builder — it always returns an expression.
+    """
+
+def atanh(expr: Expr) -> Expr:
+    r"""
+    The inverse hyperbolic tangent.
+    
+    Tier R: a total builder — it always returns an expression.
+    """
+
+def bell(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The `n`-th Bell number: set partitions of `n` elements.
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
+    """
+
+def bernoulli(n: builtins.int) -> typing.Optional[fractions.Fraction]:
+    r"""
+    The `n`-th Bernoulli number as an exact `fractions.Fraction`.
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow of the exact
+    rational, never an error.
+    
+    The convention is `B(1) == -1/2`.
+    
+    # Errors
+    
+    Propagates any Python error raised while building the fraction.
+    """
+
+def beta(x: typing.Any, y: typing.Any) -> typing.Optional[Expr]:
+    r"""
+    The Beta function `B(x, y)`, or `None` outside the closed-form fragment.
+    
+    Tier R: a pure function of its arguments.
+    
+    # Errors
+    
+    Raises `OverflowError` when an argument does not fit the exact `i128`
+    rational.
+    """
+
+def binary_extension_connected_adams_trace(field_modulus: builtins.int, ell: builtins.int, polynomial_degree: builtins.int, limits: typing.Optional[BinaryExtensionTraceLimits] = None) -> BinaryExtensionConnectedAdamsTraceReport:
+    r"""
+    The exact connected endpoint trace over `GF(2 ** r)`.
+    
+    Tier P: a bounded exact enumeration behind an explicit budget.
+    
+    # Errors
+    
+    Raises `Gf2Error` for a non-endpoint degree, an inadmissible field or
+    population, host-size overflow, or a failed Mangoldt conservation identity.
+    """
+
+def binary_extension_ell_three_degree_seven_closed_form(field_degree: builtins.int, limits: typing.Optional[BinaryExtensionTraceLimits] = None) -> BinaryExtensionEllThreeDegreeSevenClosedForm:
+    r"""
+    The closed form of the `ell = 3`, degree-seven connected Adams trace.
+    
+    Tier P: an exact closed form under an explicit degree ceiling.
+    
+    # Errors
+    
+    Raises `Gf2Error` for a zero extension degree or a degree above the
+    configured bound.
+    """
+
+def binary_extension_ell_three_degree_seven_witt_shifted_closed_form(field_degree: builtins.int, limits: typing.Optional[BinaryExtensionTraceLimits] = None) -> BinaryExtensionEllThreeDegreeSevenWittShiftedClosedForm:
+    r"""
+    The closed form of the `ell = 3`, degree-seven Witt-shifted trace.
+    
+    Tier P: an exact closed form under an explicit degree ceiling.
+    
+    # Errors
+    
+    Raises `Gf2Error` for a zero extension degree or a degree above the
+    configured bound.
+    """
+
+def binary_extension_ell_two_degree_five_closed_form(field_degree: builtins.int, limits: typing.Optional[BinaryExtensionTraceLimits] = None) -> BinaryExtensionEllTwoDegreeFiveClosedForm:
+    r"""
+    The closed form of the `ell = 2`, degree-five connected Adams trace.
+    
+    Tier P: an exact closed form under an explicit degree ceiling.
+    
+    # Errors
+    
+    Raises `Gf2Error` for a zero extension degree or a degree above the
+    configured bound.
+    """
+
+def binary_extension_long_cycle_trace(field_modulus: builtins.int, polynomial_degree: builtins.int, fixed_leading_coefficients: builtins.int, limits: typing.Optional[BinaryExtensionTraceLimits] = None) -> BinaryExtensionLongCycleTraceReport:
+    r"""
+    The exact fixed-degree long-cycle trace over `GF(2 ** r)`.
+    
+    Tier P: a bounded exact enumeration behind an explicit budget.
+    
+    # Errors
+    
+    Raises `Gf2Error` for a reducible field modulus, a malformed interval, a
+    configured degree or population excess, or a failed exact invariant.
+    """
+
+def binary_extension_witt_shifted_trace(field_modulus: builtins.int, ell: builtins.int, polynomial_degree: builtins.int, coarse_level: builtins.int, limits: typing.Optional[BinaryExtensionTraceLimits] = None) -> BinaryExtensionWittShiftedTraceReport:
+    r"""
+    The complete signed low-twist layer sequence over one extension field.
+    
+    Tier P: a bounded exact enumeration behind an explicit budget.
+    
+    # Errors
+    
+    Raises `Gf2Error` for a non-endpoint degree, a `coarse_level` outside
+    `1..ell`, an inadmissible field or population, or a failed invariant.
+    """
+
+def binomial(n: builtins.int, k: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    `C(n, k)`, or `None` on overflow. `k < 0` or `k > n` is `0`, not `None`.
+    
+    Tier R: a pure function of its arguments.
     """
 
 def cancel(expr: Expr) -> typing.Optional[Expr]:
@@ -1011,9 +2382,49 @@ def cancel(expr: Expr) -> typing.Optional[Expr]:
     Cancels common factors in a quotient.
     """
 
+def carmichael_lambda(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The reduced totient: the exponent of the unit group mod `n`.
+    
+    Tier R: a pure function of its arguments. `None` is *no such value or
+    `i128` overflow*, never an error.
+    """
+
+def catalan(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The `n`-th Catalan number.
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
+    """
+
 def characteristic_polynomial(matrix: Matrix, var: builtins.str) -> typing.Optional[Expr]:
     r"""
     The characteristic polynomial in `var`.
+    """
+
+def chebyshev_t(n: builtins.int, var: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The Chebyshev polynomial of the first kind.
+    
+    Tier R: a pure function of `n` and the variable name. `None` is
+    `i128` coefficient overflow at large `n`.
+    """
+
+def chebyshev_u(n: builtins.int, var: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The Chebyshev polynomial of the second kind.
+    
+    Tier R: a pure function of `n` and the variable name. `None` is
+    `i128` coefficient overflow at large `n`.
+    """
+
+def cholesky_decomposition(matrix: Matrix) -> typing.Optional[Matrix]:
+    r"""
+    The lower-triangular `L` with `matrix == L L^T`, or `None` when the matrix is
+    not symmetric positive definite over the exact rationals.
+    
+    Tier R: a pure function of its argument.
     """
 
 def coeff(expr: Expr, var: builtins.str, n: builtins.int) -> typing.Optional[Expr]:
@@ -1041,6 +2452,34 @@ def content(expr: Expr, var: builtins.str) -> typing.Optional[Expr]:
     The content (gcd of coefficients) in `var`.
     """
 
+def continued_fraction(num: builtins.int, den: builtins.int) -> builtins.list[builtins.int]:
+    r"""
+    The continued-fraction expansion of `num / den`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def convergents(cf: typing.Sequence[builtins.int]) -> builtins.list[tuple[builtins.int, builtins.int]]:
+    r"""
+    The convergents `[(numerator, denominator), ...]` of a continued fraction.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def cosh(expr: Expr) -> Expr:
+    r"""
+    The hyperbolic cosine.
+    
+    Tier R: a total builder — it always returns an expression.
+    """
+
+def coth(expr: Expr) -> Expr:
+    r"""
+    The hyperbolic cotangent.
+    
+    Tier R: a total builder — it always returns an expression.
+    """
+
 def count_real_roots(expr: Expr, var: builtins.str, lower: builtins.int  |  fractions.Fraction  |  Rational, upper: builtins.int  |  fractions.Fraction  |  Rational) -> typing.Optional[builtins.int]:
     r"""
     The exact number of distinct real roots in `[lower, upper]`.
@@ -1048,6 +2487,35 @@ def count_real_roots(expr: Expr, var: builtins.str, lower: builtins.int  |  frac
     # Errors
     
     Raises `ValueError` when an endpoint is not an exact rational.
+    """
+
+def covariance(xs: typing.Any, ys: typing.Any) -> typing.Optional[fractions.Fraction]:
+    r"""
+    The population covariance of two equal-length samples.
+    
+    Tier R: a pure function of the samples. `None` for mismatched lengths, an
+    empty sample, or overflow.
+    
+    # Errors
+    
+    Raises `OverflowError` when a datum does not fit the exact `i128` rational.
+    """
+
+def crt(residues: typing.Sequence[tuple[builtins.int, builtins.int]]) -> typing.Optional[tuple[builtins.int, builtins.int]]:
+    r"""
+    The Chinese remainder solution `(residue, modulus)` for
+    `[(residue, modulus), ...]`, or `None` when the congruences are inconsistent.
+    
+    Tier R: a pure function of its arguments. An inconsistent system is a
+    *decided* `None`, exactly like an overflow — the pair is the witness the
+    caller re-checks.
+    """
+
+def csch(expr: Expr) -> Expr:
+    r"""
+    The hyperbolic cosecant.
+    
+    Tier R: a total builder — it always returns an expression.
     """
 
 def cyclotomic_polynomial(n: builtins.int, var: builtins.str) -> typing.Optional[Expr]:
@@ -1070,9 +2538,38 @@ def degree(expr: Expr, var: builtins.str) -> typing.Optional[builtins.int]:
     The degree of `expr` in `var`, or `None` when it is not a polynomial there.
     """
 
+def derangements(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The number of permutations of `n` with no fixed point (`!n`).
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
+    """
+
 def diagonalize(matrix: Matrix, var: builtins.str) -> typing.Optional[tuple[Matrix, Matrix]]:
     r"""
     `(P, D)` with `A = P D P^-1`, or `None` when not diagonalizable.
+    """
+
+def dirichlet_eta(s: builtins.int) -> typing.Optional[Expr]:
+    r"""
+    The Dirichlet eta function at an integer, or `None`.
+    
+    Tier R: a pure function of `s`.
+    """
+
+def dirichlet_lambda(s: builtins.int) -> typing.Optional[Expr]:
+    r"""
+    The Dirichlet lambda function at an integer, or `None`.
+    
+    Tier R: a pure function of `s`.
+    """
+
+def discrete_log(base: builtins.int, target: builtins.int, modulus: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The least `x` with `base ** x == target (mod modulus)`, or `None`.
+    
+    Tier R: a pure function of its arguments.
     """
 
 def discriminant(expr: Expr, var: builtins.str) -> typing.Optional[Expr]:
@@ -1087,6 +2584,21 @@ def divergence(field: typing.Sequence[Expr], vars: typing.Sequence[builtins.str]
     # Errors
     
     Propagates the per-element extraction error.
+    """
+
+def divisors(n: builtins.int) -> builtins.list[builtins.int]:
+    r"""
+    Every positive divisor of `n`, ascending.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def double_factorial(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    `n!!`, the double factorial.
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
     """
 
 def dsolve_bernoulli(p: Expr, q: Expr, var: builtins.str) -> typing.Optional[Expr]:
@@ -1154,6 +2666,28 @@ def equal(a: Expr, b: Expr) -> ZeroTest:
     the canonical form of `a - b`, which an independent caller can re-normalize.
     """
 
+def euler_number(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The `n`-th Euler (secant/tangent) number.
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
+    """
+
+def euler_phi(n: builtins.int) -> builtins.int:
+    r"""
+    Euler's totient: how many of `1..=n` are coprime to `n`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def eulerian(n: builtins.int, k: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The Eulerian number `A(n, k)`.
+    
+    Tier R: a pure function of `n` and `k`. `None` is `i128` overflow.
+    """
+
 def evalf(expr: Expr, bindings: dict) -> typing.Optional[builtins.float]:
     r"""
     Floating-point evaluation under `bindings`, or `None`.
@@ -1166,6 +2700,20 @@ def evalf(expr: Expr, bindings: dict) -> typing.Optional[builtins.float]:
 def evaluate_trig(expr: Expr) -> Expr:
     r"""
     Evaluates trig at exact special angles.
+    """
+
+def exact_rational(value: typing.Any) -> fractions.Fraction:
+    r"""
+    The exact rational a Python value denotes, as a `fractions.Fraction`.
+    
+    Tier R. Exposed because the boundary rule this module documents — a value
+    too large for the exact `i128` pair is an `OverflowError`, not a
+    `ValueError` — is otherwise only observable through a statistic.
+    
+    # Errors
+    
+    Raises `OverflowError` beyond `i128`, `ValueError`/`TypeError` for a value
+    that is not an exact rational.
     """
 
 def expand(expr: Expr) -> typing.Optional[Expr]:
@@ -1183,6 +2731,28 @@ def expand_trig(expr: Expr) -> Expr:
     Expands trig of sums and multiples.
     """
 
+def extended_gcd(a: builtins.int, b: builtins.int) -> tuple[builtins.int, builtins.int, builtins.int]:
+    r"""
+    `(g, x, y)` with `g == gcd(a, b) == a * x + b * y` — the Bezout witness.
+    
+    Tier R: a pure function of its arguments. The pair `(x, y)` is what makes
+    the gcd re-checkable without trusting this function.
+    """
+
+def extension_trace_hankel_minor(traces: typing.Sequence[builtins.int], first_power: builtins.int, tested_maximum_recurrence_order: builtins.int) -> ExtensionTraceHankelMinor:
+    r"""
+    The exact Hankel minor of a bounded extension-trace sequence.
+    
+    Tier P: an exact Bareiss determinant. A **nonzero** minor refutes a
+    recurrence of order below `tested_maximum_recurrence_order`; it never infers
+    a recurrence from finite data.
+    
+    # Errors
+    
+    Raises `Gf2Error` for order zero, a power-label overflow, too few traces, or
+    a failed exact Bareiss-division invariant.
+    """
+
 def factor(expr: Expr, var: builtins.str) -> typing.Optional[Expr]:
     r"""
     Factors a univariate polynomial in `var`.
@@ -1193,9 +2763,178 @@ def factor_expr(expr: Expr, var: builtins.str) -> typing.Optional[Expr]:
     Factors over the rationals, certified.
     """
 
+def factor_list(n: builtins.int) -> builtins.list[builtins.int]:
+    r"""
+    The prime factors with multiplicity, ascending.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def factorial(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    `n!`, or `None` past the `i128` ceiling (`n > 33`).
+    
+    Tier R: a pure function of its arguments. `None` is *no such value or
+    `i128` overflow*, never an error.
+    """
+
+def factorize(n: builtins.int) -> builtins.list[tuple[builtins.int, builtins.int]]:
+    r"""
+    The prime factorization as `[(prime, exponent), ...]`, ascending.
+    
+    Tier R: a pure function of its arguments. `factorize(0)` and `factorize(1)`
+    are the empty list — the degenerate arguments this operator has.
+    """
+
+def fibonacci(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The `n`-th Fibonacci number, `F(0) == 0`.
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
+    """
+
 def finite_product(f: Expr, var: builtins.str, lower: Expr, upper: Expr) -> typing.Optional[Expr]:
     r"""
     The finite product of `f` over `var` from `lower` to `upper`.
+    """
+
+def gamma(x: typing.Any) -> typing.Optional[Expr]:
+    r"""
+    The Gamma function at an exact rational, or `None` outside the closed-form
+    fragment.
+    
+    Tier R: a pure function of `x`. Closed forms exist at the positive integers
+    and the half-integers; everything else is `None`, which is *no closed form
+    here* rather than an error.
+    
+    # Errors
+    
+    Raises `OverflowError` when `x` does not fit the exact `i128` rational.
+    """
+
+def gcd(a: builtins.int, b: builtins.int) -> builtins.int:
+    r"""
+    The greatest common divisor of `a` and `b`, non-negative.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def gegenbauer(n: builtins.int, weight: typing.Any, var: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The Gegenbauer (ultraspherical) polynomial `C_n^lambda(var)`.
+    
+    Tier R: a pure function of its arguments.
+    
+    # Errors
+    
+    Raises `OverflowError` when `lambda` does not fit the exact `i128` rational.
+    """
+
+def generalized_harmonic(n: builtins.int, r: builtins.int) -> typing.Optional[fractions.Fraction]:
+    r"""
+    The generalized harmonic number `sum(1 / k ** r for k in 1..=n)`.
+    
+    Tier R: a pure function of `n` and `r`.
+    
+    # Errors
+    
+    Propagates any Python error raised while building the fraction.
+    """
+
+def generalized_laguerre(n: builtins.int, alpha: typing.Any, var: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The generalized Laguerre polynomial `L_n^alpha(var)`.
+    
+    Tier R: a pure function of its arguments.
+    
+    # Errors
+    
+    Raises `OverflowError` when `alpha` does not fit the exact `i128` rational.
+    """
+
+def gfp_add(a: typing.Sequence[builtins.int], b: typing.Sequence[builtins.int], p: builtins.int) -> builtins.list[builtins.int]:
+    r"""
+    Sum of two polynomials over `GF(p)`.
+    
+    Tier R: a pure function. Coefficients are dense and ascending
+    (index `i` is the coefficient of `x ** i`); `p` must be prime.
+    """
+
+def gfp_div_rem(a: typing.Sequence[builtins.int], b: typing.Sequence[builtins.int], p: builtins.int) -> typing.Optional[tuple[builtins.list[builtins.int], builtins.list[builtins.int]]]:
+    r"""
+    `(quotient, remainder)` of `a / b` over `GF(p)`, or `None` when `b` is zero.
+    
+    Tier R: a pure function. Division by the **zero polynomial** is the
+    degenerate argument for this operator and is `None` — a decided answer, not
+    an exception and not a convention.
+    """
+
+def gfp_factor_berlekamp(a: typing.Sequence[builtins.int], p: builtins.int) -> typing.Optional[builtins.list[tuple[builtins.list[builtins.int], builtins.int]]]:
+    r"""
+    The Berlekamp factorization as `[(factor, multiplicity), ...]`, or `None`.
+    
+    Tier R: a pure function. The factors are the witness: multiplying them back
+    together is how a caller checks this without trusting it.
+    """
+
+def gfp_gcd(a: typing.Sequence[builtins.int], b: typing.Sequence[builtins.int], p: builtins.int) -> builtins.list[builtins.int]:
+    r"""
+    Monic gcd of two polynomials over `GF(p)`; the zero polynomial for two zeros.
+    
+    Tier R: a pure function. Coefficients are dense and ascending
+    (index `i` is the coefficient of `x ** i`); `p` must be prime.
+    """
+
+def gfp_is_irreducible(a: typing.Sequence[builtins.int], p: builtins.int) -> typing.Optional[builtins.bool]:
+    r"""
+    Whether `a` is irreducible over `GF(p)`; `None` when undecided.
+    
+    Tier R: a pure function.
+    """
+
+def gfp_mul(a: typing.Sequence[builtins.int], b: typing.Sequence[builtins.int], p: builtins.int) -> builtins.list[builtins.int]:
+    r"""
+    Product of two polynomials over `GF(p)`.
+    
+    Tier R: a pure function. Coefficients are dense and ascending
+    (index `i` is the coefficient of `x ** i`); `p` must be prime.
+    """
+
+def gfp_neg(a: typing.Sequence[builtins.int], p: builtins.int) -> builtins.list[builtins.int]:
+    r"""
+    `-a` over `GF(p)`.
+    
+    Tier R: a pure function.
+    """
+
+def gfp_pow_mod(a: typing.Sequence[builtins.int], e: builtins.int, modulus: typing.Sequence[builtins.int], p: builtins.int) -> typing.Optional[builtins.list[builtins.int]]:
+    r"""
+    `a ** e mod modulus` over `GF(p)`, or `None` for a zero modulus or overflow.
+    
+    Tier R: a pure function.
+    """
+
+def gfp_roots(a: typing.Sequence[builtins.int], p: builtins.int) -> builtins.list[builtins.int]:
+    r"""
+    The roots of `a` in `GF(p)`, ascending.
+    
+    Tier R: a pure function.
+    """
+
+def gfp_scale(a: typing.Sequence[builtins.int], c: builtins.int, p: builtins.int) -> builtins.list[builtins.int]:
+    r"""
+    `c * a` over `GF(p)`.
+    
+    Tier R: a pure function.
+    """
+
+def gfp_sub(a: typing.Sequence[builtins.int], b: typing.Sequence[builtins.int], p: builtins.int) -> builtins.list[builtins.int]:
+    r"""
+    Difference of two polynomials over `GF(p)`.
+    
+    Tier R: a pure function. Coefficients are dense and ascending
+    (index `i` is the coefficient of `x ** i`); `p` must be prime.
     """
 
 def gosper_sum(expr: Expr, var: builtins.str) -> typing.Optional[Expr]:
@@ -1206,6 +2945,45 @@ def gosper_sum(expr: Expr, var: builtins.str) -> typing.Optional[Expr]:
 def gradient(expr: Expr, vars: typing.Sequence[builtins.str]) -> builtins.list[Expr]:
     r"""
     The gradient of `expr` with respect to `vars`.
+    """
+
+def gram_schmidt(vectors: typing.Any) -> typing.Optional[builtins.list[builtins.list[Expr]]]:
+    r"""
+    The Gram-Schmidt orthogonalization of `vectors`, as a list of lists.
+    
+    Tier R: a pure function of its argument. `None` for ragged input or a
+    linearly dependent family.
+    
+    # Errors
+    
+    Propagates the per-element extraction error.
+    """
+
+def harmonic(n: builtins.int) -> typing.Optional[fractions.Fraction]:
+    r"""
+    The `n`-th harmonic number `1 + 1/2 + ... + 1/n` as an exact fraction.
+    
+    Tier R: a pure function of `n`. `harmonic(0)` is `0`.
+    
+    # Errors
+    
+    Propagates any Python error raised while building the fraction.
+    """
+
+def hermite(n: builtins.int, var: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The (physicists') Hermite polynomial.
+    
+    Tier R: a pure function of `n` and the variable name. `None` is
+    `i128` coefficient overflow at large `n`.
+    """
+
+def hermite_normal_form(matrix: Matrix) -> typing.Optional[tuple[Matrix, Matrix]]:
+    r"""
+    `(U, H)` with `U * matrix == H` in Hermite normal form, or `None`.
+    
+    Tier R: a pure function of its argument. `U` is the unimodular transform, so
+    the caller can re-derive `H` rather than take it on faith.
     """
 
 def hessian(f: Expr, vars: typing.Sequence[builtins.str]) -> typing.Optional[Matrix]:
@@ -1223,6 +3001,14 @@ def infinite_sum(f: Expr, var: builtins.str, lower: Expr) -> typing.Optional[Exp
     The infinite sum of `f` over `var` from `lower`.
     """
 
+def integer_nth_root(n: builtins.int, k: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The integer `k`-th root of `n` (floor), or `None` outside the fragment.
+    
+    Tier R: a pure function of its arguments. `k == 0` is the degenerate
+    argument and returns `None`.
+    """
+
 def integrate(expr: Expr, var: builtins.str) -> typing.Optional[CertifiedIntegral]:
     r"""
     An antiderivative that carries its own proof, or `None` when declined.
@@ -1231,10 +3017,94 @@ def integrate(expr: Expr, var: builtins.str) -> typing.Optional[CertifiedIntegra
     `d(antiderivative)/dvar - integrand`.
     """
 
+def inverse_laplace(expr: Expr, s: builtins.str, t: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The inverse Laplace transform of `expr` from `s` to `t`.
+    
+    Tier R: a pure function of its arguments. `None` is *outside the
+    transform table*, never an error.
+    """
+
+def inverse_z_transform(expr: Expr, z: builtins.str, n: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The inverse Z-transform of `expr` from `z` to `n`.
+    
+    Tier R: a pure function of its arguments. `None` is *outside the
+    transform table*, never an error.
+    """
+
+def is_abundant(n: builtins.int) -> builtins.bool:
+    r"""
+    Whether the aliquot sum exceeds `n`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def is_carmichael_number(n: builtins.int) -> builtins.bool:
+    r"""
+    Whether `n` is a Carmichael number (a Fermat pseudoprime to every base).
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def is_deficient(n: builtins.int) -> builtins.bool:
+    r"""
+    Whether the aliquot sum falls short of `n`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
 def is_irreducible(expr: Expr, var: builtins.str) -> typing.Optional[builtins.bool]:
     r"""
     Whether `expr` is irreducible over the rationals in `var`; `None` when
     undecided.
+    """
+
+def is_perfect(n: builtins.int) -> builtins.bool:
+    r"""
+    Whether `n` is perfect.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def is_prime(n: builtins.int) -> builtins.bool:
+    r"""
+    Whether `n` is prime.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def is_quadratic_residue(a: builtins.int, p: builtins.int) -> builtins.bool:
+    r"""
+    Whether `a` is a nonzero quadratic residue mod the prime `p`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def is_squarefree(n: builtins.int) -> builtins.bool:
+    r"""
+    Whether no prime square divides `n`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def jacobi(n: builtins.int, alpha: typing.Any, beta: typing.Any, var: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The Jacobi polynomial `P_n^(alpha, beta)(var)`.
+    
+    Tier R: a pure function of its arguments.
+    
+    # Errors
+    
+    Raises `OverflowError` when a parameter does not fit the exact `i128`
+    rational.
+    """
+
+def jacobi_symbol(a: builtins.int, n: builtins.int) -> builtins.int:
+    r"""
+    The Jacobi symbol `(a / n)` for odd positive `n`.
+    
+    Tier R: a pure function of its arguments.
     """
 
 def jacobian(exprs: typing.Sequence[Expr], vars: typing.Sequence[builtins.str]) -> typing.Optional[Matrix]:
@@ -1246,9 +3116,90 @@ def jacobian(exprs: typing.Sequence[Expr], vars: typing.Sequence[builtins.str]) 
     Propagates the per-element extraction error.
     """
 
+def jacobsthal(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The `n`-th Jacobsthal number.
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
+    """
+
+def jordan_form(matrix: Matrix, var: builtins.str) -> typing.Optional[tuple[Matrix, Matrix]]:
+    r"""
+    `(P, J)` with `matrix == P J P^-1`, or `None` when no rational Jordan form
+    exists.
+    
+    Tier R: a pure function of its arguments. `var` names the variable the
+    characteristic polynomial is taken in.
+    """
+
+def jordan_totient(k: builtins.int, n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    Jordan's totient `J_k(n)`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def kronecker_symbol(a: builtins.int, n: builtins.int) -> builtins.int:
+    r"""
+    The Kronecker symbol `(a / n)`, defined for every integer `n`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def lagrange_interpolation(points: typing.Any, var: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The Lagrange interpolating polynomial through `points`, in `var`.
+    
+    Tier R: a pure function of the sample.
+    
+    # Errors
+    
+    Raises `OverflowError` when a coordinate does not fit the exact `i128`
+    rational.
+    """
+
+def laguerre(n: builtins.int, var: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The Laguerre polynomial.
+    
+    Tier R: a pure function of `n` and the variable name. `None` is
+    `i128` coefficient overflow at large `n`.
+    """
+
+def lah(n: builtins.int, k: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The unsigned Lah number `L(n, k)`.
+    
+    Tier R: a pure function of `n` and `k`. `None` is `i128` overflow.
+    """
+
+def laplace_transform(expr: Expr, t: builtins.str, s: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The Laplace transform of `expr` from `t` to `s`.
+    
+    Tier R: a pure function of its arguments. `None` is *outside the
+    transform table*, never an error.
+    """
+
 def laplacian(f: Expr, vars: typing.Sequence[builtins.str]) -> Expr:
     r"""
     The Laplacian of `f` with respect to `vars`.
+    """
+
+def laurent_series(expr: Expr, var: builtins.str, order: builtins.int) -> typing.Optional[Expr]:
+    r"""
+    The Laurent series of `expr` in `var` to `order`, including negative powers.
+    
+    Tier R: a pure function of its arguments. `None` when the expansion leaves
+    the fragment or overflows.
+    """
+
+def lcm(a: builtins.int, b: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The least common multiple, or `None` on `i128` overflow.
+    
+    Tier R: a pure function of its arguments.
     """
 
 def leading_coeff(expr: Expr, var: builtins.str) -> typing.Optional[Expr]:
@@ -1256,9 +3207,32 @@ def leading_coeff(expr: Expr, var: builtins.str) -> typing.Optional[Expr]:
     The leading coefficient in `var`.
     """
 
+def legendre(n: builtins.int, var: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The Legendre polynomial.
+    
+    Tier R: a pure function of `n` and the variable name. `None` is
+    `i128` coefficient overflow at large `n`.
+    """
+
+def legendre_symbol(a: builtins.int, p: builtins.int) -> builtins.int:
+    r"""
+    The Legendre symbol `(a / p)` for an odd prime `p`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
 def limit(expr: Expr, var: builtins.str, point: LimitPoint) -> typing.Optional[Expr]:
     r"""
     The limit of `expr` as `var` approaches `point`.
+    """
+
+def linear_ode_system(matrix: Matrix, initial: Matrix, t: builtins.str) -> typing.Optional[Matrix]:
+    r"""
+    The solution of `x' == matrix x`, `x(0) == initial`, as a column of
+    expressions in `t`.
+    
+    Tier R: a pure function of its arguments.
     """
 
 def logcombine(expr: Expr) -> Expr:
@@ -1266,9 +3240,59 @@ def logcombine(expr: Expr) -> Expr:
     Combines a sum of logarithms into one.
     """
 
+def lucas(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The `n`-th Lucas number, `L(0) == 2`.
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
+    """
+
+def matrix_exp(matrix: Matrix, t: builtins.str) -> typing.Optional[Matrix]:
+    r"""
+    `exp(matrix * t)` as a matrix of expressions in `t`, or `None`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
 def matrix_rank(matrix: Matrix) -> typing.Optional[builtins.int]:
     r"""
     The rank of a matrix, or `None`.
+    """
+
+def mean(data: typing.Any) -> typing.Optional[fractions.Fraction]:
+    r"""
+    The arithmetic mean.
+    
+    Tier R: a pure function of the sample. `None` is *undefined for this
+    sample* or exact-arithmetic overflow.
+    
+    # Errors
+    
+    Raises `OverflowError` when a datum does not fit the exact `i128`
+    rational, and `ValueError`/`TypeError` for a value that is not an
+    exact rational at all.
+    """
+
+def median(data: typing.Any) -> typing.Optional[fractions.Fraction]:
+    r"""
+    The median; the mean of the two middle values for an even sample.
+    
+    Tier R: a pure function of the sample. `None` is *undefined for this
+    sample* or exact-arithmetic overflow.
+    
+    # Errors
+    
+    Raises `OverflowError` when a datum does not fit the exact `i128`
+    rational, and `ValueError`/`TypeError` for a value that is not an
+    exact rational at all.
+    """
+
+def mertens(n: builtins.int) -> builtins.int:
+    r"""
+    The Mertens function, the partial sum of `mobius`.
+    
+    Tier R: a pure function of its arguments.
     """
 
 def minimal_polynomial(matrix: Matrix, var: builtins.str) -> typing.Optional[Expr]:
@@ -1276,9 +3300,95 @@ def minimal_polynomial(matrix: Matrix, var: builtins.str) -> typing.Optional[Exp
     The minimal polynomial in `var`.
     """
 
+def mobius(n: builtins.int) -> builtins.int:
+    r"""
+    The Moebius function: `0`, `1` or `-1`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def mod_inverse(a: builtins.int, modulus: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The inverse of `a` modulo `modulus`, or `None` when they are not coprime.
+    
+    Tier R: a pure function of its arguments. `None` here is *decided*: no
+    inverse exists.
+    """
+
+def mod_pow(base: builtins.int, exponent: builtins.int, modulus: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    `base ** exponent mod modulus`, or `None` for a non-positive modulus or
+    overflow.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def mode(data: typing.Any) -> builtins.list[fractions.Fraction]:
+    r"""
+    Every most-frequent value, ascending; the empty list for empty data.
+    
+    Tier R: a pure function of the sample. A sample with no repeats is
+    multimodal, so this returns every value — it never picks one.
+    
+    # Errors
+    
+    Raises `OverflowError` when a datum does not fit the exact `i128` rational.
+    """
+
 def modulus(expr: Expr) -> typing.Optional[Expr]:
     r"""
     The complex modulus.
+    """
+
+def motzkin(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The `n`-th Motzkin number.
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
+    """
+
+def multinomial(groups: typing.Sequence[builtins.int]) -> typing.Optional[builtins.int]:
+    r"""
+    The multinomial coefficient `(sum(groups))! / prod(g! for g in groups)`.
+    
+    Tier R: a pure function of `groups`. The empty list is `1`.
+    """
+
+def multiplicative_order(a: builtins.int, n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The multiplicative order of `a` mod `n`, or `None` when they are not coprime.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def narayana(n: builtins.int, k: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The Narayana number `N(n, k)`.
+    
+    Tier R: a pure function of `n` and `k`. `None` is `i128` overflow.
+    """
+
+def newton_divided_differences(points: typing.Any) -> typing.Optional[builtins.list[fractions.Fraction]]:
+    r"""
+    The Newton divided-difference coefficients of the interpolant through
+    `points`.
+    
+    Tier R: a pure function of the sample. `None` for repeated abscissae or
+    exact-arithmetic overflow.
+    
+    # Errors
+    
+    Raises `OverflowError` when a coordinate does not fit the exact `i128`
+    rational.
+    """
+
+def next_prime(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The least prime strictly above `n`.
+    
+    Tier R: a pure function of its arguments. `None` is *no such value or
+    `i128` overflow*, never an error.
     """
 
 def normalize(expr: Expr) -> typing.Optional[MultiPoly]:
@@ -1290,6 +3400,86 @@ def normalize(expr: Expr) -> typing.Optional[MultiPoly]:
 def nsimplify(value: builtins.float, max_denominator: builtins.int) -> typing.Optional[Expr]:
     r"""
     A symbolic value matching the float `value`, or `None`.
+    """
+
+def nth_prime(k: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The `k`-th prime, one-based: `nth_prime(1) == 2`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def num_divisors(n: builtins.int) -> builtins.int:
+    r"""
+    The number of positive divisors of `n`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def pade(series_coeffs: typing.Any, m: builtins.int, n: builtins.int, var: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The `[m/n]` Pade approximant of a Maclaurin series, as `P(var) / Q(var)`.
+    
+    Tier R: a pure function of the coefficients. `None` when fewer than
+    `m + n + 1` coefficients are supplied, when the denominator system is
+    singular, or on exact overflow.
+    
+    # Errors
+    
+    Raises `OverflowError` when a coefficient does not fit the exact `i128`
+    rational.
+    """
+
+def pade_fraction(series_coeffs: typing.Any, m: builtins.int, n: builtins.int) -> typing.Optional[tuple[builtins.list[fractions.Fraction], builtins.list[fractions.Fraction]]]:
+    r"""
+    The `[m/n]` Pade approximant as raw coefficient vectors
+    `(numerator, denominator)`, ascending in degree, with `Q(0) == 1`.
+    
+    Tier R. Exposed alongside [`pade`] because the coefficient vectors are what
+    a caller re-checks `P - Q * A == 0 (mod x ** (m + n + 1))` against.
+    
+    # Errors
+    
+    Raises `OverflowError` when a coefficient does not fit the exact `i128`
+    rational.
+    """
+
+def partition_count(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The number of integer partitions of `n` (`p(n)`).
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
+    """
+
+def pell(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The `n`-th Pell number.
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
+    """
+
+def pell_fundamental_solution(d: builtins.int) -> typing.Optional[tuple[builtins.int, builtins.int]]:
+    r"""
+    The fundamental solution `(x, y)` of `x^2 - d y^2 == 1`, or `None`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def perfect_power(n: builtins.int) -> typing.Optional[tuple[builtins.int, builtins.int]]:
+    r"""
+    `(base, exponent)` with `base ** exponent == n` and `exponent` maximal, or
+    `None` when `n` is not a perfect power.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def permutations(n: builtins.int, k: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    `P(n, k)`, the number of ordered `k`-selections from `n`.
+    
+    Tier R: a pure function of its arguments.
     """
 
 def poly_div(a: Expr, b: Expr, var: builtins.str) -> typing.Optional[tuple[Expr, Expr]]:
@@ -1307,14 +3497,75 @@ def poly_lcm(a: Expr, b: Expr, var: builtins.str) -> typing.Optional[Expr]:
     Polynomial lcm in `var`.
     """
 
+def polygamma_at_one(m: builtins.int) -> typing.Optional[Expr]:
+    r"""
+    The polygamma function `psi^(m)(1)`, or `None`.
+    
+    Tier R: a pure function of `m`.
+    """
+
+def prev_prime(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The greatest prime strictly below `n`.
+    
+    Tier R: a pure function of its arguments. `None` is *no such value or
+    `i128` overflow*, never an error.
+    """
+
+def prime_pi(n: builtins.int) -> builtins.int:
+    r"""
+    The prime-counting function: how many primes are at most `n`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
 def primitive_part(expr: Expr, var: builtins.str) -> typing.Optional[Expr]:
     r"""
     The primitive part in `var`.
     """
 
+def primitive_pythagorean_triples(limit: builtins.int) -> typing.Optional[builtins.list[tuple[builtins.int, builtins.int, builtins.int]]]:
+    r"""
+    Every primitive Pythagorean triple with hypotenuse at most `limit`.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def primitive_root(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The least primitive root mod `n`, or `None` when the unit group is not
+    cyclic.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def primorial(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The product of every prime at most `n`.
+    
+    Tier R: a pure function of its arguments. `None` is *no such value or
+    `i128` overflow*, never an error.
+    """
+
 def prove_derivative(expr: Expr, var: builtins.str, claimed: Expr) -> ZeroTest:
     r"""
     Checks a claimed derivative directly, returning the certificate.
+    """
+
+def qr_decomposition(matrix: Matrix) -> typing.Optional[tuple[Matrix, Matrix]]:
+    r"""
+    `(Q, R)` with `matrix == Q R`, `Q` orthogonal and `R` upper triangular, or
+    `None` when the exact rational arithmetic cannot produce it.
+    
+    Tier R: a pure function of its argument.
+    """
+
+def radical(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The product of the distinct primes dividing `n`.
+    
+    Tier R: a pure function of its arguments. `None` is *no such value or
+    `i128` overflow*, never an error.
     """
 
 def rationalize(x: builtins.float, max_denominator: builtins.int) -> typing.Optional[fractions.Fraction]:
@@ -1339,6 +3590,14 @@ def real_root_intervals(expr: Expr, var: builtins.str) -> typing.Optional[builti
     # Errors
     
     Propagates any Python error raised while building the fractions.
+    """
+
+def real_roots(expr: Expr, var: builtins.str) -> typing.Optional[builtins.list[AlgebraicReal]]:
+    r"""
+    Every real root of `expr` in `var` as an exact algebraic number, ascending.
+    
+    Tier R: a pure function of its arguments. `None` when `expr` is not a
+    univariate rational polynomial in `var`, or on overflow.
     """
 
 def residue(expr: Expr, var: builtins.str, point: builtins.int  |  fractions.Fraction  |  Rational) -> typing.Optional[Expr]:
@@ -1369,6 +3628,42 @@ def sample_standard_deviation(data: typing.Sequence[builtins.int  |  fractions.F
     Raises `ValueError` when a datum is not an exact rational.
     """
 
+def sample_variance(data: typing.Any) -> typing.Optional[fractions.Fraction]:
+    r"""
+    The sample variance (divisor `n - 1`).
+    
+    Tier R: a pure function of the sample. `None` is *undefined for this
+    sample* or exact-arithmetic overflow.
+    
+    # Errors
+    
+    Raises `OverflowError` when a datum does not fit the exact `i128`
+    rational, and `ValueError`/`TypeError` for a value that is not an
+    exact rational at all.
+    """
+
+def search_sparse_half_degree(degree: builtins.int, limits: typing.Optional[SparseSearchLimits] = None) -> SparseSearchOutcome:
+    r"""
+    Enumerates sparse `GF(2)` candidates of `degree` in a stable order and
+    returns the first one with a dual-checkable irreducibility certificate.
+    
+    Tier P: a *producer* under an explicit budget. It never claims a polynomial
+    does not exist beyond the searched sparse layers — that is what the
+    `Exhausted` / `CandidateLimit` distinction is for.
+    
+    # Errors
+    
+    Raises `Gf2Error` for a malformed policy (`max_tail_terms` must be a
+    positive even number) or a typed arithmetic/resource decline.
+    """
+
+def sech(expr: Expr) -> Expr:
+    r"""
+    The hyperbolic secant.
+    
+    Tier R: a total builder — it always returns an expression.
+    """
+
 def series(expr: Expr, var: builtins.str, order: builtins.int) -> typing.Optional[Expr]:
     r"""
     The Maclaurin series of `expr` to `order`.
@@ -1377,6 +3672,22 @@ def series(expr: Expr, var: builtins.str, order: builtins.int) -> typing.Optiona
 def series_at(expr: Expr, var: builtins.str, center: Expr, order: builtins.int) -> typing.Optional[Expr]:
     r"""
     The Taylor series of `expr` about `center` to `order`.
+    """
+
+def series_reversion(expr: Expr, var: builtins.str, order: builtins.int) -> typing.Optional[Expr]:
+    r"""
+    The compositional inverse (series reversion) of `expr` to `order`.
+    
+    Tier R: a pure function of its arguments. Reversion needs a zero constant
+    term and a nonzero linear term; anything else is `None`, which is a
+    statement about the series and not a budget.
+    """
+
+def sigma_k(k: builtins.int, n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    `sigma_k(n)`, the sum of the `k`-th powers of the divisors of `n`.
+    
+    Tier R: a pure function of its arguments.
     """
 
 def simplify(expr: Expr) -> Expr:
@@ -1394,9 +3705,31 @@ def simplify_under_assumptions(expr: Expr, assumptions: Assumptions) -> Expr:
     Simplification under sign assumptions.
     """
 
+def sinh(expr: Expr) -> Expr:
+    r"""
+    The hyperbolic sine, as an exponential expression.
+    
+    Tier R: a total builder — it always returns an expression.
+    """
+
+def smith_normal_form(matrix: Matrix) -> typing.Optional[tuple[Matrix, Matrix, Matrix]]:
+    r"""
+    `(U, D, V)` with `U * matrix * V == D` in Smith normal form, or `None`.
+    
+    Tier R: a pure function of its argument. Both transforms are returned for
+    the same reason as [`hermite_normal_form`].
+    """
+
 def solve(expr: Expr, var: builtins.str) -> typing.Optional[builtins.list[Expr]]:
     r"""
     The exact roots of `expr` in `var`, or `None`.
+    """
+
+def solve_linear_congruence(a: builtins.int, b: builtins.int, n: builtins.int) -> typing.Optional[builtins.list[builtins.int]]:
+    r"""
+    Every solution of `a x == b (mod n)` in `0..n`, or `None` when there is none.
+    
+    Tier R: a pure function of its arguments.
     """
 
 def solve_linear_system(equations: typing.Sequence[Expr], vars: typing.Sequence[builtins.str]) -> typing.Optional[builtins.list[tuple[builtins.str, Expr]]]:
@@ -1433,6 +3766,22 @@ def solve_recurrence(coefficients: typing.Sequence[builtins.int  |  fractions.Fr
     Raises `ValueError` when a coefficient is not an exact rational.
     """
 
+def sqrt_continued_fraction(d: builtins.int) -> typing.Optional[tuple[builtins.int, builtins.list[builtins.int]]]:
+    r"""
+    `(a0, period)` for the continued fraction of `sqrt(d)`, or `None` when `d` is
+    a perfect square or non-positive.
+    
+    Tier R: a pure function of its arguments.
+    """
+
+def sqrt_mod(a: builtins.int, p: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    A square root of `a` mod the prime `p`, or `None` when none exists.
+    
+    Tier R: a pure function of its arguments. `None` is decided: `a` is a
+    non-residue.
+    """
+
 def standard_deviation(data: typing.Sequence[builtins.int  |  fractions.Fraction  |  Rational]) -> typing.Optional[Expr]:
     r"""
     The population standard deviation of exact rational data.
@@ -1442,9 +3791,38 @@ def standard_deviation(data: typing.Sequence[builtins.int  |  fractions.Fraction
     Raises `ValueError` when a datum is not an exact rational.
     """
 
+def stirling_first(n: builtins.int, k: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The unsigned Stirling number of the first kind `c(n, k)`.
+    
+    Tier R: a pure function of `n` and `k`. `None` is `i128` overflow.
+    """
+
+def stirling_second(n: builtins.int, k: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The Stirling number of the second kind `S(n, k)`.
+    
+    Tier R: a pure function of `n` and `k`. `None` is `i128` overflow.
+    """
+
+def sum_divisors(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The sum of the positive divisors of `n`.
+    
+    Tier R: a pure function of its arguments. `None` is *no such value or
+    `i128` overflow*, never an error.
+    """
+
 def sum_polynomial(expr: Expr, var: builtins.str) -> typing.Optional[Expr]:
     r"""
     The indefinite sum of a polynomial in `var`.
+    """
+
+def tanh(expr: Expr) -> Expr:
+    r"""
+    The hyperbolic tangent.
+    
+    Tier R: a total builder — it always returns an expression.
     """
 
 def trace(matrix: Matrix) -> typing.Optional[Expr]:
@@ -1452,9 +3830,31 @@ def trace(matrix: Matrix) -> typing.Optional[Expr]:
     The trace, or `None` for a non-square matrix.
     """
 
+def tribonacci(n: builtins.int) -> typing.Optional[builtins.int]:
+    r"""
+    The `n`-th tribonacci number.
+    
+    Tier R: a pure function of `n`. `None` is `i128` overflow, never an
+    error.
+    """
+
 def trigsimp(expr: Expr) -> Expr:
     r"""
     Trigonometric simplification.
+    """
+
+def variance(data: typing.Any) -> typing.Optional[fractions.Fraction]:
+    r"""
+    The population variance (divisor `n`).
+    
+    Tier R: a pure function of the sample. `None` is *undefined for this
+    sample* or exact-arithmetic overflow.
+    
+    # Errors
+    
+    Raises `OverflowError` when a datum does not fit the exact `i128`
+    rational, and `ValueError`/`TypeError` for a value that is not an
+    exact rational at all.
     """
 
 def wronskian(functions: typing.Sequence[Expr], var: builtins.str) -> typing.Optional[Expr]:
@@ -1464,5 +3864,23 @@ def wronskian(functions: typing.Sequence[Expr], var: builtins.str) -> typing.Opt
     # Errors
     
     Propagates the per-element extraction error.
+    """
+
+def z_transform(expr: Expr, n: builtins.str, z: builtins.str) -> typing.Optional[Expr]:
+    r"""
+    The unilateral Z-transform of the signal `expr` from `n` to `z`.
+    
+    Tier R: a pure function of its arguments. `None` is *outside the
+    transform table*, never an error.
+    """
+
+def zeta(s: builtins.int) -> typing.Optional[Expr]:
+    r"""
+    The Riemann zeta function at an integer, or `None` where no closed form is
+    known.
+    
+    Tier R: a pure function of `s`. `zeta(2)` is exact; `zeta(3)` is `None`
+    because Apery's constant has no closed form in this fragment — a decided
+    answer, not a decline to compute.
     """
 

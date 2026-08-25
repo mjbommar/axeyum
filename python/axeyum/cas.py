@@ -41,7 +41,7 @@ from ._native.cas import (
 # axeyum.cas.certify.geometry` working exactly like the `axeyum._native` spelling
 # -- the same split plan 01 already paid for once with `axeyum.smt`.
 _sys.modules[__name__ + ".certify"] = certify
-for _route in ("geometry", "gf2", "groebner", "sos", "sturm", "telescoping"):
+for _route in ("ansatz", "geometry", "gf2", "groebner", "moments", "sos", "sturm", "telescoping"):
     _sys.modules[f"{__name__}.certify.{_route}"] = getattr(certify, _route)
 
 __all__ = [name for name in dir(_cas) if not name.startswith("_")]

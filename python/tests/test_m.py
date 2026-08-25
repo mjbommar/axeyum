@@ -164,3 +164,147 @@ def test_polynomial_toolkit() -> None:
     assert str(m.Discriminant("x^2 - 4")) == "16"
     q, r = m.PolynomialQuotientRemainder("x^3 - 1", "x - 1", "x")
     assert (m.show(q), str(r)) == ("x^2 + x + 1", "0")
+
+
+# ---------------------------------------------------------------------------
+# The long-tail verbs (coverage-plan slice S5). Each is a renaming of one
+# `axeyum.cas` call, so the tests check the renaming AND that `None` survives
+# it: a verb that substituted a default where the CAS declined would be
+# inventing an answer.
+# ---------------------------------------------------------------------------
+
+
+def test_number_theory_verbs() -> None:
+    assert m.PrimeQ(97) and not m.PrimeQ(1)
+    assert m.FactorInteger(360) == [(2, 3), (3, 2), (5, 1)]
+    assert m.FactorInteger(1) == []
+    assert m.Divisors(12) == [1, 2, 3, 4, 6, 12]
+    assert m.DivisorSigma(1, 12) == 28
+    assert m.EulerPhi(12) == 4
+    assert m.MoebiusMu(30) == -1
+    assert m.GCD(12, 18) == 6
+    assert m.LCM(4, 6) == 12
+    assert m.PowerMod(2, 10, 1000) == 24
+    assert m.ModularInverse(3, 7) == 5
+    assert m.ModularInverse(4, 6) is None
+    assert m.ChineseRemainder([2, 3], [3, 5]) == (8, 15)
+    assert m.ChineseRemainder([1, 0], [2, 4]) is None
+    assert m.JacobiSymbol(2, 15) == 1
+    assert m.PrimitiveRoot(7) == 3
+    assert m.PrimitiveRoot(8) is None
+    assert m.MultiplicativeOrder(2, 7) == 3
+    assert m.NextPrime(10) == 11
+    assert m.Prime(10) == 29
+    assert m.PrimePi(10) == 4
+
+
+def test_continued_fraction_takes_a_fraction_or_a_pair() -> None:
+    from fractions import Fraction
+
+    assert m.ContinuedFraction((22, 7)) == [3, 7]
+    assert m.ContinuedFraction(Fraction(22, 7)) == [3, 7]
+
+
+def test_combinatorics_verbs() -> None:
+    assert m.Binomial(5, 2) == 10
+    assert m.Binomial(5, 9) == 0
+    assert m.Fibonacci(30) == 832040
+    assert m.Fibonacci(200) is None  # i128 overflow is a value
+    assert m.LucasL(10) == 123
+    assert m.CatalanNumber(10) == 16796
+    assert m.BellB(5) == 52
+    assert m.PartitionsP(10) == 42
+    assert m.StirlingS1(5, 2) == 50
+    assert m.StirlingS2(5, 2) == 15
+
+
+def test_bernoulli_verb_uses_the_first_kind_convention() -> None:
+    from fractions import Fraction
+
+    assert m.BernoulliB(1) == Fraction(-1, 2)
+    assert m.BernoulliB(2) == Fraction(1, 6)
+    assert "first kind" in (m.BernoulliB.__doc__ or "")
+
+
+def test_statistics_verbs_default_to_the_sample_form() -> None:
+    from fractions import Fraction
+
+    data = [1, 2, 3, 4]
+    assert m.Mean(data) == Fraction(5, 2)
+    assert m.Median(data) == Fraction(5, 2)
+    assert m.Variance(data) == Fraction(5, 3)  # sample, as in Mathematica
+    assert m.Variance(data, population=True) == Fraction(5, 4)
+    assert m.Mean([]) is None
+    sigma = m.StandardDeviation(data)
+    assert sigma is not None
+    assert cas.equal(sigma * sigma, cas.Expr.rat(5, 3)).equal is True
+
+
+def test_special_function_verbs() -> None:
+    from fractions import Fraction
+
+    assert str(m.Zeta(2)) == "(1/6)*pi^2"
+    assert m.Zeta(3) is None  # no closed form: a decided None
+    assert str(m.Gamma(4)) == "6"
+    assert m.Gamma(Fraction(1, 3)) is None
+    assert m.Beta(Fraction(2), Fraction(3)) is not None
+    assert m.show(m.LegendreP(1)) == "x"
+    assert m.show(m.ChebyshevT(2)) == "2*x^2 - 1"
+    assert m.ChebyshevU(2) is not None
+    assert m.HermiteH(2) is not None
+    assert m.LaguerreL(2) is not None
+
+
+def test_transform_verbs_round_trip() -> None:
+    assert str(m.LaplaceTransform("t^2")) == "2/s^3"
+    assert m.LaplaceTransform("ln(t)") is None  # outside the table
+    back = m.InverseLaplaceTransform("2/s^3")
+    assert back is not None
+    assert cas.equal(back, m.parse("t^2")).equal is True
+    forward = m.ZTransform("n")
+    assert forward is not None and str(forward) == "z/(z - 1)^2"
+    assert m.InverseZTransform(forward) is not None
+
+
+def matrix_of(rows: list[list[int]]) -> cas.Matrix:
+    built = cas.Matrix.from_rows([[cas.Expr.int(v) for v in row] for row in rows])
+    assert built is not None
+    return built
+
+
+def test_matrix_decomposition_verbs_return_their_factors() -> None:
+    a = matrix_of([[5, 4], [1, 2]])
+    jordan = m.JordanDecomposition(a)
+    assert jordan is not None
+    p, j = jordan
+    left, right = a.mul(p), p.mul(j)
+    assert left is not None and right is not None
+    assert all(
+        cas.equal(left.get(r, c), right.get(r, c)).equal is True for r in range(2) for c in range(2)
+    )
+    assert m.JordanDecomposition(matrix_of([[0, 1], [-1, 0]])) is None
+    assert m.MatrixExp(a) is not None
+    hermite = m.HermiteDecomposition(a)
+    assert hermite is not None
+    smith = m.SmithDecomposition(a)
+    assert smith is not None and len(smith) == 3
+    qr = m.QRDecomposition(matrix_of([[1, 0], [0, 1]]))
+    assert qr is not None
+    assert m.CholeskyDecomposition(matrix_of([[2, 1], [1, 2]])) is not None
+
+
+def test_every_new_verb_is_exported() -> None:
+    for name in (
+        "PrimeQ",
+        "FactorInteger",
+        "Binomial",
+        "BernoulliB",
+        "LaplaceTransform",
+        "JordanDecomposition",
+        "HermiteDecomposition",
+        "SmithDecomposition",
+        "Zeta",
+        "Mean",
+    ):
+        assert name in m.__all__
+        assert getattr(m, name).__doc__, f"{name} has no docstring"
