@@ -188,6 +188,83 @@ class Specialization(unittest.TestCase):
         self.assertTrue(any("without the argument" in p for p in problems), problems)
 
 
+    def test_a_specialization_whose_every_via_ref_is_null_is_refused(self) -> None:
+        """The rule above only refuses an EMPTY route; this refuses an empty one
+        dressed as prose. Found by a lane using the gate, not by the gate."""
+        document = load()
+        document["correspondence_kind"] = "specialization"
+        document["derivation_status"] = "route-recorded"
+        document["via"] = [{"step": "instantiate the general form at n = 2", "ref": None}]
+        left, right = endpoints_of(document)
+        problems: list[str] = []
+        checker.check_kind_rules(document, "fixture", left, right, problems)
+        self.assertTrue(any("not one of them names a `ref`" in p for p in problems), problems)
+
+    def test_a_specialization_with_one_real_ref_among_nulls_is_accepted(self) -> None:
+        """The discriminating half: null refs are legitimate for prose steps, so
+        the rule must fire on ALL-null and not on ANY-null."""
+        document = load()
+        document["correspondence_kind"] = "specialization"
+        document["derivation_status"] = "route-recorded"
+        document["via"] = [
+            {"step": "rearrange", "ref": None},
+            {"step": "instantiate", "ref": "kernel:Int.fib_cassini"},
+        ]
+        left, right = endpoints_of(document)
+        problems: list[str] = []
+        checker.check_kind_rules(document, "fixture", left, right, problems)
+        self.assertEqual(problems, [])
+
+    def test_a_specialization_whose_via_ref_is_blank_is_refused(self) -> None:
+        """`""` is a string, so an `isinstance(..., str)` test alone passes it."""
+        document = load()
+        document["correspondence_kind"] = "specialization"
+        document["derivation_status"] = "route-recorded"
+        document["via"] = [{"step": "instantiate", "ref": "   "}]
+        left, right = endpoints_of(document)
+        problems: list[str] = []
+        checker.check_kind_rules(document, "fixture", left, right, problems)
+        self.assertTrue(any("not one of them names a `ref`" in p for p in problems), problems)
+
+
+class KernelSpelling(unittest.TestCase):
+    """`AxNat` is the kernel's spelling of the CONSTRUCTED naturals -- the `Ax`
+    is *axeyum*, not *axiomatised*. Without it in CARRIERS the word-boundary
+    erasure can never fire on a kernel-spelled statement, because the `x`
+    defeats `(?<![A-Za-z])Nat`, and every such transport fails closed."""
+
+    def test_axnat_is_erased_as_the_nat_carrier(self) -> None:
+        self.assertEqual(
+            checker.erase_carrier("AxNat.add is commutative", "Nat"),
+            f"{checker.CARRIER_PLACEHOLDER}.add is commutative",
+        )
+
+    def test_a_kernel_spelled_transport_survives_erasure(self) -> None:
+        """The end-to-end consequence, not just the helper: the same law over
+        two carriers, each written the way the kernel renders it."""
+        document = load()
+        left, right = endpoints_of(document)
+        left = copy.deepcopy(left)
+        right = copy.deepcopy(right)
+        left["formal"]["fragment"] = "Nat"
+        right["formal"]["fragment"] = "Int"
+        left["formal"]["statement"] = "for every n, AxNat.fib n is a AxNat"
+        right["formal"]["statement"] = "for every n, Int.fib n is a Int"
+        problems: list[str] = []
+        checker.check_kind_rules(document, "fixture", left, right, problems)
+        self.assertEqual(problems, [])
+
+    def test_axreal_is_not_erased_as_the_nat_carrier(self) -> None:
+        """The discriminating case. `AxReal` IS an axiomatisation -- 30 assumed
+        laws -- and a genuinely different carrier from `AxNat`. Erasing one as
+        the other would call an axiom-free theorem and an axiom-bearing one the
+        same law."""
+        self.assertEqual(
+            checker.erase_carrier("AxReal.add is commutative", "Nat"),
+            "AxReal.add is commutative",
+        )
+
+
 class DerivationBacking(unittest.TestCase):
     """`derivation_status` must be earned by what is in the document."""
 

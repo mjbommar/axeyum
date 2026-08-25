@@ -43,6 +43,12 @@ evidence, so every rule below is about something a machine can recompute:
         resolving to a fact or to a declaration the kernel projection has
         actually observed. A route naming an object that does not exist is the
         failure this array exists to make impossible.
+      - a `specialization` additionally requires at least ONE non-blank `ref`
+        among its steps, whatever its derivation_status. `route-recorded`
+        permits null refs generally and should -- a step may be an algebraic
+        rearrangement with nothing to cite -- but a specialisation is by
+        definition an instantiation OF something, and a route of prose with
+        every reference null names no general theorem at all.
       - `mechanized-here` additionally forbids a null `ref` and requires
         evidence carrying a checker command.
       - evidence at all requires `mechanized-here`, mirroring the fact ledger's
@@ -92,9 +98,20 @@ OPTIONAL_KEYS = ("notes",)
 
 # Every spelling of a carrier that can appear in a formal statement, per
 # `formal.fragment`. Erasing these is what makes `carrier-transport` checkable.
-# Aliases are erased longest-first so `CReal` is never matched as `C` + `Real`.
+# Aliases are erased longest-first so `CReal` is never matched as `C` + `Real`,
+# and so `AxNat` is erased before `Nat` can match its tail.
+#
+# `AxNat` IS THE KERNEL'S OWN SPELLING OF THE CONSTRUCTED NATURALS, and it
+# belongs under `Nat` -- the `Ax` is *axeyum*, added by `lean_pp` so the
+# rendered name does not shadow Lean's `Nat`. It is NOT an axiomatisation.
+# `AxReal` is the opposite case and a genuinely different carrier: the
+# axiomatised ordered field, 30 assumed laws, and it is a fragment of its
+# own. Without `AxNat` here the word-boundary erasure could never fire on a
+# statement written in kernel spelling (the `x` blocks `(?<![A-Za-z])Nat`),
+# so every such transport failed closed and the gate silently steered
+# authors toward prose-ℕ -- a checker shaping its own input.
 CARRIERS: dict[str, tuple[str, ...]] = {
-    "Nat": ("Nat", "ℕ"),
+    "Nat": ("AxNat", "Nat", "ℕ"),
     "Int": ("Int", "ℤ"),
     "Rat": ("Rat", "ℚ"),
     "CReal": ("CReal", "ℝ"),
@@ -354,11 +371,30 @@ def check_kind_rules(
                 f"{left.get('proof_route')!r}. The content of this kind is that two DIFFERENT "
                 "routes reached the same theorem"
             )
-    elif kind == "specialization" and document["derivation_status"] == "asserted":
-        problems.append(
-            f"{name}: a specialization must record the instantiation route in `via`. Saying one "
-            "theorem is a case of another, with no step named, is the claim without the argument"
-        )
+    elif kind == "specialization":
+        if document["derivation_status"] == "asserted":
+            problems.append(
+                f"{name}: a specialization must record the instantiation route in `via`. Saying one "
+                "theorem is a case of another, with no step named, is the claim without the argument"
+            )
+        elif not any(
+            isinstance(step, dict) and isinstance(step.get("ref"), str) and step["ref"].strip()
+            for step in document["via"]
+        ):
+            # A `via` of prose steps with every `ref` null passes the rule above
+            # -- it is non-empty -- and names no theorem at all. That is the
+            # same claim-without-the-argument the rule exists to refuse, one
+            # level down, and it is what an author writes when they know the
+            # specialisation is true and have not looked up the general form.
+            # `route-recorded` permits null refs generally, and should: a step
+            # may legitimately be an algebraic rearrangement with nothing to
+            # cite. But a SPECIALISATION is by definition an instantiation OF
+            # something, so at least one step has to say of what.
+            problems.append(
+                f"{name}: a specialization records {len(document['via'])} via step(s) and not one "
+                "of them names a `ref`. The general theorem being instantiated must be named -- a "
+                "route of prose with every reference null is the claim without the argument again"
+            )
 
 
 def check_backing(

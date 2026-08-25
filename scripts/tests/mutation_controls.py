@@ -2630,6 +2630,20 @@ SUITES["correspondences"] = (
             '    if left.get("formal", {}).get("statement") == right.get("formal", {}).get("statement"):',
             "    if False:",
         ),
+        # -- the two defects found by lanes USING the gate, not by the gate ---
+        (
+            "a specialization whose every via ref is null is refused",
+            """        elif not any(
+            isinstance(step, dict) and isinstance(step.get("ref"), str) and step["ref"].strip()
+            for step in document["via"]
+        ):""",
+            "        elif False:",
+        ),
+        (
+            "AxNat is the Nat carrier, so a kernel-spelled transport erases",
+            '    "Nat": ("AxNat", "Nat", "\u2115"),',
+            '    "Nat": ("Nat", "\u2115"),',
+        ),
         # -- carrier-transport is checked structurally ------------------------
         (
             "two facts in one fragment are not a transport",
@@ -2653,8 +2667,8 @@ SUITES["correspondences"] = (
         ),
         (
             "a specialization must record its instantiation route",
-            '    elif kind == "specialization" and document["derivation_status"] == "asserted":',
-            "    elif False:",
+            '        if document["derivation_status"] == "asserted":',
+            "        if False:",
         ),
         # -- the two status axes must be backed, not toned --------------------
         (
