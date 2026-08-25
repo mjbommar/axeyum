@@ -1529,6 +1529,22 @@ pub struct RatPrelude {
     /// with [`Self::of_int_add`]/[`Self::of_int_mul`]/[`Self::of_int_neg`] —
     /// not reproved independently.
     pub det2_fib: NameId,
+
+    // --- the 3×3 determinant (matrix.rs) ------------------------------------
+    /// `Rat.det3 a b c d e f g h i :=`
+    /// `(a*(e*i - f*h) - b*(d*i - f*g)) + c*(d*h - e*g)` — the determinant of
+    /// `[[a,b,c],[d,e,f],[g,h,i]]`, cofactor-expanded along row 1. Nine
+    /// explicit scalar arguments, matching [`Self::det2`]'s convention: no
+    /// matrix carrier.
+    pub det3: NameId,
+    /// `Rat.det3_id : det3 1 0 0 0 1 0 0 0 1 = 1` — the 3×3 identity matrix
+    /// has determinant 1.
+    pub det3_id: NameId,
+    /// `Rat.det3_cofactor_row1 : ∀ a b c d e f g h i,`
+    /// `det3 a b c d e f g h i = (a * det2 e f h i - b * det2 d f g i) + c * det2 d e g h`
+    /// — cofactor expansion along the first row, in terms of [`Self::det2`]
+    /// applied to the three 2×2 minors.
+    pub det3_cofactor_row1: NameId,
 }
 
 impl RatPrelude {
@@ -1837,6 +1853,9 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         of_int_mul: child(kernel, "ofInt_mul"),
         of_int_neg: child(kernel, "ofInt_neg"),
         det2_fib: child(kernel, "det2_fib"),
+        det3: child(kernel, "det3"),
+        det3_id: child(kernel, "det3_id"),
+        det3_cofactor_row1: child(kernel, "det3_cofactor_row1"),
     }
 }
 

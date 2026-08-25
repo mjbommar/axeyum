@@ -55,6 +55,14 @@ use crate::nat_prelude::NatOps;
 /// unfolds to" convention [`super::defs`] sets for `Rat.zero`/`Rat.one`.
 const DET2_HEIGHT: u16 = 40;
 
+/// Delta height for `Rat.det3`: one above [`DET2_HEIGHT`], following this
+/// file's convention of a monotone bump per new definition (`CRAMER2_HEIGHT`,
+/// `OF_INT_HEIGHT` below do the same). `Rat.det3` does not call `Rat.det2` in
+/// its own value (see [`declare_det3_def`]'s doc comment for why), so it only
+/// needs to sit above `Rat.sub`/`Rat.mul` the way [`DET2_HEIGHT`] does — this
+/// keeps the numbering linear rather than because of a real dependency.
+const DET3_HEIGHT: u16 = DET2_HEIGHT + 1;
+
 /// Admit `Rat.det2`, its four basic laws, and multiplicativity.
 ///
 /// # Errors
@@ -76,7 +84,10 @@ pub(super) fn declare_matrix_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_of_int_add(d, p)?;
     declare_of_int_mul(d, p)?;
     declare_of_int_neg(d, p)?;
-    declare_det2_fib(d, p)
+    declare_det2_fib(d, p)?;
+    declare_det3_def(d, p)?;
+    declare_det3_id(d, p)?;
+    declare_det3_cofactor_row1(d, p)
 }
 
 /// `Rat.det2 a b c d := Rat.sub (Rat.mul a d) (Rat.mul b c)`.
@@ -3219,5 +3230,319 @@ fn declare_det2_fib(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError
         uparams: vec![],
         ty,
         value,
+    })
+}
+
+// ============================================================================
+// The 3×3 determinant: `Rat.det3`, `Rat.det3_id`, cofactor expansion.
+// ============================================================================
+//
+// Same idiom as `Rat.det2` above: no matrix carrier, nine explicit scalar
+// arguments in row-major order — `det3 a b c d e f g h i` is
+// `[[a,b,c],[d,e,f],[g,h,i]]`. `Rat.det3` is built directly as the
+// cofactor-expanded-along-row-1 formula (`a*det2(e,f,h,i) − b*det2(d,f,g,i) +
+// c*det2(d,e,g,h)`, written out in raw `sub`/`mul` form rather than by
+// calling `Rat.det2`), so [`declare_det3_cofactor_row1`] — the theorem
+// stating that expansion in terms of three `Rat.det2` applications — needs no
+// ring-law rewriting at all: both sides δ-unfold to the identical raw term,
+// and `Eq.refl` closes it.
+
+/// `Rat.det3 a b c d e f g h i :=`
+/// `  (a*(e*i − f*h) − b*(d*i − f*g)) + c*(d*h − e*g)`
+///
+/// The 3×3 determinant of `[[a,b,c],[d,e,f],[g,h,i]]`, cofactor-expanded
+/// along the first row: `e*i−f*h`, `d*i−f*g`, `d*h−e*g` are exactly
+/// `Rat.det2 e f h i`, `Rat.det2 d f g i`, `Rat.det2 d e g h` unfolded (`Rat.det2
+/// x y z w := x*w − y*z`). Written directly in this expanded raw form — not
+/// by applying `Rat.det2` three times — so [`declare_det3_cofactor_row1`]
+/// needs no algebra: it is the same claim stated two ways, provable by
+/// `Eq.refl`.
+fn declare_det3_def(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+    let fvs: Vec<u64> = (0..9).map(|_| d.fresh_fvar()).collect();
+    let vars: Vec<ExprId> = fvs.iter().map(|&fv| d.kernel().fvar(fv)).collect();
+    let (a, b, c, dd, e, f, g, h, i) = (
+        vars[0], vars[1], vars[2], vars[3], vars[4], vars[5], vars[6], vars[7], vars[8],
+    );
+
+    let ei = rmul(d, e, i);
+    let fh = rmul(d, f, h);
+    let x = rsub(d, p, ei, fh);
+    let di = rmul(d, dd, i);
+    let fg = rmul(d, f, g);
+    let y = rsub(d, p, di, fg);
+    let dh = rmul(d, dd, h);
+    let eg = rmul(d, e, g);
+    let z = rsub(d, p, dh, eg);
+
+    let ax = rmul(d, a, x);
+    let by = rmul(d, b, y);
+    let cz = rmul(d, c, z);
+    let ax_by = rsub(d, p, ax, by);
+    let body = radd(d, ax_by, cz);
+
+    let mut value = body;
+    for &fv in fvs.iter().rev() {
+        value = d.lam_fv(fv, carrier, value);
+    }
+    let mut ty = carrier;
+    for _ in 0..9 {
+        ty = d.arrow(carrier, ty);
+    }
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.det3,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DET3_HEIGHT),
+    })
+}
+
+/// `Rat.det3 a b c d e f g h i` — the folded application, for building
+/// statements. Argument order matches [`declare_det3_def`]: row-major,
+/// `[[a,b,c],[d,e,f],[g,h,i]]`.
+#[allow(clippy::too_many_arguments)]
+fn rdet3(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    dd: ExprId,
+    e: ExprId,
+    f: ExprId,
+    g: ExprId,
+    h: ExprId,
+    i: ExprId,
+) -> ExprId {
+    d.const_app(p.det3, &[a, b, c, dd, e, f, g, h, i])
+}
+
+/// `zero * x = 0`, via `mul_comm` then `mul_zero` — this development has no
+/// standalone `zero_mul` law (see `Rat.mul_zero`'s own doc comment), so every
+/// left-zero product goes through commutation first.
+fn zero_mul(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
+    let zero = rzero(d, p);
+    let zx = rmul(d, zero, x);
+    let xz = rmul(d, x, zero);
+    let comm = d.lemma(p.mul_comm, &[zero, x]); // zero*x = x*zero
+    let mz = d.lemma(p.mul_zero, &[x]); // x*zero = zero
+    let (_, proof) = rchain(d, zx, &[(xz, comm), (zero, mz)]);
+    proof
+}
+
+/// `Rat.det3_id : det3 1 0 0 0 1 0 0 0 1 = 1` — the 3×3 identity matrix has
+/// determinant 1.
+fn declare_det3_id(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.det3_id, 0, &|d, _v| {
+        let one = rone(d, p);
+        let zero = rzero(d, p);
+        // Row-major identity: a=1 b=0 c=0 / d=0 e=1 f=0 / g=0 h=0 i=1.
+        let lhs = rdet3(d, p, one, zero, zero, zero, one, zero, zero, zero, one);
+        let stmt = req(d, lhs, one);
+
+        // --- X = e*i - f*h = 1*1 - 0*0 -> 1 ----------------------------------
+        let ei = rmul(d, one, one);
+        let fh = rmul(d, zero, zero);
+        let neg_fh = rneg(d, fh);
+        let x_raw = radd(d, ei, neg_fh);
+
+        let mo_ei = d.lemma(p.mul_one, &[one]); // one*one = one
+        let step_x1 = rcongr(d, ei, one, mo_ei, &|d, t| {
+            let n = rneg(d, fh);
+            radd(d, t, n)
+        });
+        let mid_x1 = radd(d, one, neg_fh);
+        let mz_fh = d.lemma(p.mul_zero, &[zero]); // zero*zero = zero
+        let step_x2 = rcongr(d, fh, zero, mz_fh, &|d, t| {
+            let n = rneg(d, t);
+            radd(d, one, n)
+        });
+        let neg_zero = rneg(d, zero);
+        let mid_x2 = radd(d, one, neg_zero);
+        let nz_x = d.lemma(p.neg_zero, &[]); // -0 = 0
+        let step_x3 = rcongr(d, neg_zero, zero, nz_x, &|d, t| radd(d, one, t));
+        let mid_x3 = radd(d, one, zero);
+        let az_x = d.lemma(p.add_zero, &[one]); // 1+0 = 1
+        let (_, x_proof) = rchain(
+            d,
+            x_raw,
+            &[
+                (mid_x1, step_x1),
+                (mid_x2, step_x2),
+                (mid_x3, step_x3),
+                (one, az_x),
+            ],
+        );
+
+        // --- Y = d*i - f*g = 0*1 - 0*0 -> 0 -----------------------------------
+        let di = rmul(d, zero, one);
+        let fg = rmul(d, zero, zero);
+        let neg_fg = rneg(d, fg);
+        let y_raw = radd(d, di, neg_fg);
+
+        let zm_di = zero_mul(d, p, one); // zero*one = zero
+        let step_y1 = rcongr(d, di, zero, zm_di, &|d, t| {
+            let n = rneg(d, fg);
+            radd(d, t, n)
+        });
+        let mid_y1 = radd(d, zero, neg_fg);
+        let mz_fg = d.lemma(p.mul_zero, &[zero]); // zero*zero = zero
+        let step_y2 = rcongr(d, fg, zero, mz_fg, &|d, t| {
+            let n = rneg(d, t);
+            radd(d, zero, n)
+        });
+        let mid_y2 = radd(d, zero, neg_zero);
+        let nz_y = d.lemma(p.neg_zero, &[]);
+        let step_y3 = rcongr(d, neg_zero, zero, nz_y, &|d, t| radd(d, zero, t));
+        let mid_y3 = radd(d, zero, zero);
+        let az_y = d.lemma(p.add_zero, &[zero]); // 0+0 = 0
+        let (_, y_proof) = rchain(
+            d,
+            y_raw,
+            &[
+                (mid_y1, step_y1),
+                (mid_y2, step_y2),
+                (mid_y3, step_y3),
+                (zero, az_y),
+            ],
+        );
+
+        // --- Z = d*h - e*g = 0*0 - 1*0 -> 0 -----------------------------------
+        let dh = rmul(d, zero, zero);
+        let eg = rmul(d, one, zero);
+        let neg_eg = rneg(d, eg);
+        let z_raw = radd(d, dh, neg_eg);
+
+        let mz_dh = d.lemma(p.mul_zero, &[zero]); // zero*zero = zero
+        let step_z1 = rcongr(d, dh, zero, mz_dh, &|d, t| {
+            let n = rneg(d, eg);
+            radd(d, t, n)
+        });
+        let mid_z1 = radd(d, zero, neg_eg);
+        let mz_eg = d.lemma(p.mul_zero, &[one]); // one*zero = zero
+        let step_z2 = rcongr(d, eg, zero, mz_eg, &|d, t| {
+            let n = rneg(d, t);
+            radd(d, zero, n)
+        });
+        let mid_z2 = radd(d, zero, neg_zero);
+        let nz_z = d.lemma(p.neg_zero, &[]);
+        let step_z3 = rcongr(d, neg_zero, zero, nz_z, &|d, t| radd(d, zero, t));
+        let mid_z3 = radd(d, zero, zero);
+        let az_z = d.lemma(p.add_zero, &[zero]);
+        let (_, z_proof) = rchain(
+            d,
+            z_raw,
+            &[
+                (mid_z1, step_z1),
+                (mid_z2, step_z2),
+                (mid_z3, step_z3),
+                (zero, az_z),
+            ],
+        );
+
+        // --- combine: (a*X - b*Y) + c*Z, a=1, b=0, c=0 ------------------------
+        let ax = rmul(d, one, x_raw);
+        let by = rmul(d, zero, y_raw);
+        let neg_by = rneg(d, by);
+        let ax_by = radd(d, ax, neg_by);
+        let cz = rmul(d, zero, z_raw);
+        let top = radd(d, ax_by, cz); // = lhs, raw unfolded
+
+        let ax_mid = rmul(d, one, one);
+        let step_ax1 = rcongr(d, x_raw, one, x_proof, &|d, t| rmul(d, one, t));
+        let mo_ax = d.lemma(p.mul_one, &[one]);
+        let (_, ax_proof) = rchain(d, ax, &[(ax_mid, step_ax1), (one, mo_ax)]);
+
+        let by_mid = rmul(d, zero, zero);
+        let step_by1 = rcongr(d, y_raw, zero, y_proof, &|d, t| rmul(d, zero, t));
+        let mz_by = d.lemma(p.mul_zero, &[zero]);
+        let (_, by_proof) = rchain(d, by, &[(by_mid, step_by1), (zero, mz_by)]);
+
+        let cz_mid = rmul(d, zero, zero);
+        let step_cz1 = rcongr(d, z_raw, zero, z_proof, &|d, t| rmul(d, zero, t));
+        let mz_cz = d.lemma(p.mul_zero, &[zero]);
+        let (_, cz_proof) = rchain(d, cz, &[(cz_mid, step_cz1), (zero, mz_cz)]);
+
+        // top = add(add(ax, neg(by)), cz)
+        let step1 = rcongr(d, ax, one, ax_proof, &|d, t| {
+            let n = rneg(d, by);
+            let inner = radd(d, t, n);
+            radd(d, inner, cz)
+        });
+        let mid1 = {
+            let neg_by = rneg(d, by);
+            let inner = radd(d, one, neg_by);
+            radd(d, inner, cz)
+        };
+        let step2 = rcongr(d, by, zero, by_proof, &|d, t| {
+            let n = rneg(d, t);
+            let inner = radd(d, one, n);
+            radd(d, inner, cz)
+        });
+        let mid2 = {
+            let neg_zero2 = rneg(d, zero);
+            let inner = radd(d, one, neg_zero2);
+            radd(d, inner, cz)
+        };
+        let neg_zero_mid = rneg(d, zero);
+        let step3 = rcongr(d, neg_zero_mid, zero, nz_x, &|d, t| {
+            let inner = radd(d, one, t);
+            radd(d, inner, cz)
+        });
+        let mid3 = {
+            let inner = radd(d, one, zero);
+            radd(d, inner, cz)
+        };
+        let az1 = d.lemma(p.add_zero, &[one]); // one+zero = one
+        let one_plus_zero = radd(d, one, zero);
+        let step4 = rcongr(d, one_plus_zero, one, az1, &|d, t| radd(d, t, cz));
+        let mid4 = radd(d, one, cz);
+        let step5 = rcongr(d, cz, zero, cz_proof, &|d, t| radd(d, one, t));
+        let mid5 = radd(d, one, zero);
+        let step6 = d.lemma(p.add_zero, &[one]); // one+zero = one
+
+        let (_, proof) = rchain(
+            d,
+            top,
+            &[
+                (mid1, step1),
+                (mid2, step2),
+                (mid3, step3),
+                (mid4, step4),
+                (mid5, step5),
+                (one, step6),
+            ],
+        );
+        (stmt, proof)
+    })
+}
+
+/// `Rat.det3_cofactor_row1 : ∀ a b c d e f g h i,`
+/// `det3 a b c d e f g h i = (a * det2 e f h i - b * det2 d f g i) + c * det2 d e g h`
+///
+/// Cofactor expansion along the first row. `Rat.det3` was *defined* as
+/// exactly this expanded raw arithmetic ([`declare_det3_def`]), and each
+/// `Rat.det2 p q r s` δ-unfolds to `p*s - q*r`, so both sides of this
+/// statement δ/β-reduce to the identical term — `Eq.refl` closes it, no
+/// ring-law rewriting needed.
+fn declare_det3_cofactor_row1(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.det3_cofactor_row1, 9, &|d, v| {
+        let (a, b, c, dd, e, f, g, h, i) = (v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8]);
+        let lhs = rdet3(d, p, a, b, c, dd, e, f, g, h, i);
+
+        let det_efhi = rdet2(d, p, e, f, h, i);
+        let det_dfgi = rdet2(d, p, dd, f, g, i);
+        let det_degh = rdet2(d, p, dd, e, g, h);
+
+        let a_ef = rmul(d, a, det_efhi);
+        let b_df = rmul(d, b, det_dfgi);
+        let ab = rsub(d, p, a_ef, b_df);
+        let c_dg = rmul(d, c, det_degh);
+        let rhs = radd(d, ab, c_dg);
+
+        let stmt = req(d, lhs, rhs);
+        let proof = rrefl(d, lhs);
+        (stmt, proof)
     })
 }
