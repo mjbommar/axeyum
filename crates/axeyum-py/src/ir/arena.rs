@@ -1238,3 +1238,59 @@ pub(crate) fn python_int_to_lsb_bits(value: &Bound<'_, PyAny>, width: u32) -> Py
     }
     Ok(bits)
 }
+
+#[cfg(test)]
+mod tests {
+    use axeyum_ir::Sort;
+    use pyo3::Python;
+
+    use super::Arena;
+    use crate::ir::types::{EpochError, PySort, Term};
+
+    /// Every arena gets its own epoch, and epochs never repeat.
+    ///
+    /// This is the whole basis of the handle invariant: two arenas sharing an
+    /// epoch would accept each other's `Term`s, and a `TermId` is a dense index
+    /// -- so the call would silently denote a DIFFERENT term rather than fail.
+    #[test]
+    fn arena_epochs_are_monotone_and_distinct() {
+        let first = Arena::new();
+        let second = Arena::new();
+        let third = Arena::new();
+        assert!(first.epoch < second.epoch, "epochs must increase");
+        assert!(second.epoch < third.epoch, "epochs must increase");
+        // Never zero: `PySort` uses epoch 0 for the arena-independent sorts and
+        // skips the check for them, so an arena at epoch 0 would disable it.
+        assert!(first.epoch >= 1);
+    }
+
+    /// A `Term` minted by one arena is refused by another, as `EpochError`.
+    #[test]
+    fn a_term_from_another_arena_is_an_epoch_error() {
+        Python::attach(|py| {
+            let mut origin = Arena::new();
+            let other = Arena::new();
+            let sort = PySort::universal(Sort::Bool);
+            let symbol = origin.declare("p", &sort).expect("declare p");
+            let term: Term = origin.var(symbol).expect("var p");
+
+            // Same arena: fine.
+            term.resolve(origin.epoch)
+                .expect("its own arena accepts it");
+
+            let error = term
+                .resolve(other.epoch)
+                .expect_err("another arena must refuse it");
+            assert!(
+                error.is_instance_of::<EpochError>(py),
+                "expected EpochError, got {error}"
+            );
+            let message = error.to_string();
+            assert!(
+                message.contains(&origin.epoch.to_string())
+                    && message.contains(&other.epoch.to_string()),
+                "the message must name both epochs: {message}"
+            );
+        });
+    }
+}

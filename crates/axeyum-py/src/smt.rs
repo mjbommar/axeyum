@@ -350,6 +350,31 @@ fn build_replay_state(
     config: &SolverConfig,
 ) -> Result<(ReplayState, Vec<(String, Value)>), String> {
     let mut script = parse_script(input).map_err(|error| format!("re-parse failed: {error}"))?;
+    // A WORD-ONLY FALLBACK PARSE BUILDS NO FLAT ASSERTIONS, so `check_model`
+    // over its (empty) assertion stack returns `true` having checked nothing.
+    //
+    // `parse_script` retries a bounded-encoder decline -- a string literal past
+    // the ADR-0029 byte model, a `str.++` over the bound -- as a source-only
+    // parse and records the reason in `word_only_fallback`. The front door then
+    // decides the query on independently checked source routes, which is sound;
+    // but the arena it hands back here has an empty assertion list, and a
+    // checker whose input is empty cannot fail.
+    //
+    // Measured 2026-08-24 before this guard:
+    //     (set-logic QF_S)(declare-fun s () String)
+    //     (assert (= s "\u{100}"))(check-sat)
+    // came back `sat` with `model == {}` and `replay() is True` -- a vacuous
+    // certification. `axeyum_solver`'s own `solvable_flat_view` refuses exactly
+    // this shape (it returns `None` rather than solving an empty assertion list
+    // as a vacuous `sat`, a shipped P0); this is the same refusal on the replay
+    // side, which was missing.
+    if let Some(reason) = script.word_only_fallback.as_deref() {
+        return Err(format!(
+            "the replay re-parse fell back to a word-only parse ({reason}), which builds no flat \
+             assertions; `check_model` over an empty assertion stack would accept any model, so \
+             there is nothing here that could fail"
+        ));
+    }
     if script.check_sats > 1 {
         return Err(
             "multi-`check-sat` scripts are not replayed through `Outcome`; use `session`".into(),
@@ -1148,4 +1173,169 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     module.add_function(wrap_pyfunction!(write_script, &module)?)?;
     parent.add("smt", &module)?;
     Ok(module)
+}
+
+#[cfg(test)]
+mod tests {
+    use axeyum_ir::{Sort, TermArena, Value};
+    use axeyum_smtlib::{decode_packed_string, packed_string_max_len, parse_script};
+
+    use super::{
+        build_replay_state, contains_quantifier, encode_packed_string, lift_onto_arena,
+        next_script_epoch, script_config,
+    };
+
+    /// The widths for which the parser's packed-string layout is defined.
+    ///
+    /// `packed_string_max_len` answers `Some` only for widths that are exactly
+    /// the total of some maximum length, so the widths are DERIVED here rather
+    /// than written down: a hard-coded width that stopped being a legal packed
+    /// width would make this suite skip everything while staying green.
+    fn packed_widths(count: usize) -> Vec<(u32, u32)> {
+        let widths: Vec<(u32, u32)> = (1..=512)
+            .filter_map(|width| packed_string_max_len(width).map(|max| (width, max)))
+            .filter(|&(_, max)| max >= 1)
+            .take(count)
+            .collect();
+        assert_eq!(
+            widths.len(),
+            count,
+            "fewer than {count} packed string widths exist; the layout changed"
+        );
+        widths
+    }
+
+    /// The encoder is the inverse of the public decoder at every length.
+    ///
+    /// `lift_onto_arena` trusts `encode_packed_string` to reproduce the layout
+    /// `decode_packed_string` reads. If the two ever disagreed, a replayed
+    /// model would carry a DIFFERENT string than the solver found -- and the
+    /// replay would then be checking a claim nobody made.
+    #[test]
+    fn packed_string_encoder_round_trips_at_every_length() {
+        let mut checked = 0usize;
+        for (width, max_len) in packed_widths(3) {
+            for len in 0..=max_len {
+                let bytes: Vec<u8> = (0..len)
+                    .map(|i| u8::try_from(i % 251).unwrap_or(7))
+                    .collect();
+                let packed = encode_packed_string(width, &bytes)
+                    .unwrap_or_else(|| panic!("width {width} refused a {len}-byte string"));
+                assert_eq!(
+                    decode_packed_string(width, packed).as_deref(),
+                    Some(bytes.as_slice()),
+                    "width {width}, length {len} did not round-trip"
+                );
+                checked += 1;
+            }
+            // One past the maximum must be refused, not silently truncated.
+            let too_long: Vec<u8> = vec![b'x'; (max_len + 1) as usize];
+            assert!(
+                encode_packed_string(width, &too_long).is_none(),
+                "width {width} accepted a string one byte over its maximum"
+            );
+        }
+        assert!(checked >= 3, "only {checked} lengths were exercised");
+    }
+
+    /// A quantified assertion is detected; an equally deep ground one is not.
+    #[test]
+    fn contains_quantifier_finds_a_binder_and_only_a_binder() {
+        let mut arena = TermArena::new();
+        let symbol = arena.declare("p", Sort::Bool).expect("declare p");
+        let p = arena.var(symbol);
+        let ground = arena.and(p, p).expect("and");
+        assert!(!contains_quantifier(&arena, ground));
+
+        let quantified = arena.forall(symbol, ground).expect("forall");
+        assert!(contains_quantifier(&arena, quantified));
+
+        // Nested below another node, so the walk -- not just the root check --
+        // is what is under test.
+        let nested = arena.and(ground, quantified).expect("and");
+        assert!(contains_quantifier(&arena, nested));
+    }
+
+    /// A code point outside the packed byte model is refused, not truncated.
+    ///
+    /// Truncating it would replay a DIFFERENT string than the solver found and
+    /// report `True`; the refusal is what makes `replay()` unavailable instead.
+    #[test]
+    fn lift_onto_arena_refuses_an_out_of_range_code_point() {
+        let script = parse_script(
+            "(set-logic QF_S)(declare-fun s () String)(assert (= s \"ab\"))(check-sat)",
+        )
+        .expect("parse");
+        let symbol = script.arena.find_symbol("s").expect("declared symbol s");
+
+        let wide = Value::Seq(vec![Value::Bv {
+            width: 16,
+            value: 0x100,
+        }]);
+        let error = lift_onto_arena(&script, symbol, wide).expect_err("U+0100 must be refused");
+        assert!(
+            error.contains("outside the packed encoding"),
+            "unexpected refusal: {error}"
+        );
+
+        // Positive control: an in-range value lifts, and lands as a packed
+        // bit-vector rather than staying a sequence.
+        let in_range = Value::Seq(vec![
+            Value::Bv {
+                width: 16,
+                value: u128::from(b'a'),
+            },
+            Value::Bv {
+                width: 16,
+                value: u128::from(b'b'),
+            },
+        ]);
+        let lifted = lift_onto_arena(&script, symbol, in_range).expect("in-range value lifts");
+        assert!(matches!(lifted, Value::Bv { .. }), "{lifted:?}");
+    }
+
+    /// Script epochs strictly increase, so two scripts never share one.
+    ///
+    /// A repeated epoch would make one script's `ScriptTerm` resolve against
+    /// another script's arena -- an index into the wrong table, which is a
+    /// wrong term rather than an error.
+    #[test]
+    fn script_epochs_are_monotone() {
+        let first = next_script_epoch();
+        let second = next_script_epoch();
+        let third = next_script_epoch();
+        assert!(first < second && second < third, "{first} {second} {third}");
+        // Disjoint from the `ir::Arena` range, which starts at 1.
+        assert!(
+            first >= 1 << 32,
+            "script epochs must not collide with arenas"
+        );
+    }
+
+    /// A word-only fallback parse yields NO replay state.
+    ///
+    /// The fallback builds no flat assertions, so `check_model` over its
+    /// assertion stack returns `true` having checked nothing. Before the guard
+    /// in `build_replay_state`, this script came back `sat` with an empty model
+    /// and `replay() == True` -- a certification of nothing.
+    #[test]
+    fn a_word_only_fallback_parse_has_no_replay_state() {
+        let script =
+            "(set-logic QF_S)(declare-fun s () String)(assert (= s \"\\u{100}\"))(check-sat)";
+        let parsed = parse_script(script).expect("the fallback parse succeeds");
+        assert!(
+            parsed.word_only_fallback.is_some(),
+            "this fixture no longer exercises the fallback"
+        );
+        assert!(
+            super::active_assertions(&parsed).is_empty(),
+            "the fallback parse must have no flat assertions -- that is the hazard"
+        );
+
+        let config = script_config(10_000, None, None, None, None, None, false, true);
+        let error = build_replay_state(script, &config)
+            .err()
+            .expect("no replay state for a word-only fallback parse");
+        assert!(error.contains("word-only"), "unexpected reason: {error}");
+    }
 }

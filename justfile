@@ -1326,7 +1326,7 @@ corpus:
 
 # The Python binding gate (docs/python-2026-08/01-pyo3-maturin.md, S5).
 #
-# Five steps, and EVERY ONE PRINTS A COUNT, because a Python gate is the
+# Six steps, and EVERY ONE PRINTS A COUNT, because a Python gate is the
 # easiest place in this repository to build something that exits 0 while
 # examining nothing: `pytest` prints "no tests ran" and exits 5, and a stub
 # drift check with no floor reports "nothing differed" over an empty
@@ -1342,12 +1342,20 @@ corpus:
 # on this fleet is a 62 G RAM tmpfs already implicated in OOM kills
 # (strand rule 5, docs/python-2026-08/README.md).
 
-# Build the extension, run the Python tests, check stub drift and lint.
+# Build the extension, run the Python tests, check stub drift, types and lint.
+#
+# `tools/check_types.py` runs Astral's `ty` over `python/axeyum/` against a
+# budget of diagnostics that are NOT ours to fix (flat native-submodule stubs, a
+# `setattr`-attached exception attribute, one pydantic-ai overload) -- each named
+# in that file rather than silenced with an ignore comment, because an ignore is
+# invisible in a count. It prints `TYPES|...|control=N` and fails when the
+# control produced nothing, so a checker pointed at the wrong path cannot pass.
 py-check:
     mkdir -p "${TMPDIR:-/data0/axeyum/scratch/py-tmp-$USER}"
     TMPDIR="${TMPDIR:-/data0/axeyum/scratch/py-tmp-$USER}" uv run --no-sync maturin develop
     uv run --no-sync pytest python/tests -q
     uv run --no-sync python tools/gen_native_stub.py --check
+    uv run --no-sync python tools/check_types.py
     uv run --no-sync ruff check python/ tools/
     uv run --no-sync ruff format --check python/ tools/
 

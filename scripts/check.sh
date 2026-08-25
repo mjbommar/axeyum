@@ -532,9 +532,12 @@ step adr-remote-collisions python3 scripts/gen-adr-index.py --check-remote
 # nothing installed -- but a missing toolchain is SKIPPED, never passed: an
 # absent gate that prints nothing is indistinguishable from a gate that ran.
 #
-# Both remaining steps print a COUNT (`PYTEST|collected=N`, `STUBS|compared=M`)
-# and fail on zero, because a Python gate is the easiest place here to build
-# something that exits 0 while examining nothing.
+# Every count-bearing step prints one (`PYTEST|collected=N`, `STUBS|compared=M`,
+# `TYPES|...|control=N`) and fails on zero, because a Python gate is the easiest
+# place here to build something that exits 0 while examining nothing. The type
+# step checks a deliberately ill-typed file through the same path on every run
+# and fails when THAT produces no diagnostic -- a type checker aimed at the
+# wrong directory is silent, not red.
 #
 # TMPDIR off /tmp: `maturin develop` writes a wheel there per rebuild and /tmp
 # on this fleet is a 62 G RAM tmpfs already implicated in OOM kills.
@@ -544,6 +547,7 @@ if command -v uv >/dev/null 2>&1 && [ -d .venv ]; then
   step py-maturin-develop uv run --no-sync maturin develop
   step py-pytest          uv run --no-sync pytest python/tests -q
   step py-stubs           uv run --no-sync python tools/gen_native_stub.py --check
+  step py-types           uv run --no-sync python tools/check_types.py
   step py-ruff-check      uv run --no-sync ruff check python/ tools/
   step py-ruff-format     uv run --no-sync ruff format --check python/ tools/
 elif [ "$list_only" != "1" ]; then

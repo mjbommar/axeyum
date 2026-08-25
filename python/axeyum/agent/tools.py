@@ -612,10 +612,15 @@ def web_fetch(ctx: RunContext[AgentDeps], url: str) -> str:
             "an unsnapshotted fetch is evidence nobody can re-derive"
         )
 
+    # Bound to a local so the `is None` refusal above narrows INSIDE the
+    # closure: a checker cannot assume `deps.episode_dir` is still non-`None`
+    # when `body` eventually runs, and it is right not to.
+    episode_dir = deps.episode_dir
+
     def body() -> str:
         document = web_api.web_fetch(
             url,
-            episode_dir=deps.episode_dir,  # type: ignore[arg-type]
+            episode_dir=episode_dir,
             fact_id=fact_id,
             root=deps.root,
         )
@@ -1148,6 +1153,21 @@ def build_toolset(
     return toolset
 
 
+def tool_name(function: Callable[..., Any]) -> str:
+    """The registered name of a tool function.
+
+    `Callable` promises nothing about `__name__` -- a callable instance need not
+    have one -- and every member of the tool tuples is a plain `def`, so the
+    attribute is READ rather than assumed. A tool without one raises here
+    instead of contributing an empty key to the fingerprint, which is a hash
+    over a name nobody could look up.
+    """
+    name = getattr(function, "__name__", None)
+    if not isinstance(name, str) or not name:
+        raise TypeError(f"tool {function!r} has no usable __name__ for the fingerprint")
+    return name
+
+
 def toolset_fingerprint() -> dict[str, Any]:
     """A canonical description of the tool surface the model was shown.
 
@@ -1167,7 +1187,7 @@ def toolset_fingerprint() -> dict[str, Any]:
             ).hexdigest(),
         }
         for name, function in (
-            (f.__name__, f) for f in TIER_R_TOOLS + TIER_R_GUARDED_TOOLS + TIER_C_TOOLS
+            (tool_name(f), f) for f in TIER_R_TOOLS + TIER_R_GUARDED_TOOLS + TIER_C_TOOLS
         )
     }
 

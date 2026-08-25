@@ -111,7 +111,13 @@ include = [
 # `[build-system].requires` provisions the PEP 517 backend, not a runnable
 # `maturin` binary. The dev group is what puts one on PATH for
 # `uv run maturin develop`.
-dev = ["maturin>=1.15,<2", "pytest>=8", "ruff"]
+dev = [
+    "hypothesis>=6.165.10",
+    "maturin>=1.15,<2",
+    "pytest>=8",
+    "ruff",
+    "ty>=0.0.74",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["python/tests"]
