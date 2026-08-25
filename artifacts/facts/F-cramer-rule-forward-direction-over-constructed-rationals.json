@@ -36,7 +36,7 @@
         "rat_prelude_tests::cramer_two_unique_x_is_the_stated_forward_direction (asserts the whitespace-normalised KERNEL-RENDERED type verbatim with assert_eq!)",
         "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_rat_prelude return Err and the test fail)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::cramer_two_unique_x_is_the_stated_forward_direction -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::cramer_two_unique_x_is_the_stated_forward_direction -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
       "notes": "A footprint check cannot carry this claim. The same theorem with the numerator columns TRANSPOSED -- det2 u b v d replaced by det2 a u c v -- is false and has an identically empty footprint, as does one with the nonzero-determinant hypothesis removed. The pin is what separates them, and the establishing lane added it on its own initiative rather than because the brief demanded it. The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
     },
@@ -49,7 +49,7 @@
         "rat_prelude_tests::matrix_laws_are_axiom_free (reads Kernel::axiom_footprint for each matrix declaration and requires the empty set)",
         "rat_prelude_tests::every_named_declaration_exists (requires each name to be PRESENT in the environment -- the half that catches an omission, since a name interned but never declared has a vacuously empty footprint)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::matrix_laws_are_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::matrix_laws_are_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
       "notes": "Presence and footprint are two different checks and both are required. A lane found five pre-existing rat declarations missing from a sweep on the same day; an unvisited name's footprint is not empty, it is UNMEASURED. Counting Declaration::Axiom alone would not suffice either, since Opaque has no proof body and Quotient admits Quot.sound."
     }

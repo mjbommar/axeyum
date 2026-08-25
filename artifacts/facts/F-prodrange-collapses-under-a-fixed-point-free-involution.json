@@ -35,7 +35,7 @@
         "int_prelude_tests::the_pairing_collapse_keeps_its_fixed_point_free_premise (asserts the rendered type CONTAINS the fixed-point-free premise and the involution premise, asserts it does NOT contain `Prime`, then compares verbatim with assert_eq!)",
         "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_int_prelude return Err and the test fail)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::the_pairing_collapse_keeps_its_fixed_point_free_premise -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::the_pairing_collapse_keeps_its_fixed_point_free_premise -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/int_prelude/wilson.rs",
       "notes": "A footprint check cannot carry this claim, and here the difference is soundness rather than strength: the SAME theorem with the fixed-point-free premise deleted is FALSE at sigma = id, and it would have an identically empty footprint. Mutation-verified 2026-08-24: deleting that premise from the pinned string makes cargo report `578 passed; 1 failed`, naming this test and no other; restored, 579/579 green. The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
     },
@@ -48,7 +48,7 @@
         "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for each of the 109 derived laws and requires the empty set; the size annotation makes an omission a compile error rather than a silent skip)",
         "prelude_theorem_inventory --include-constructed (independent sweep listing every declared name with its footprint)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
       "notes": "The size annotation on the derived-laws array is what makes presence checkable: axiom_footprint of a name interned but never DECLARED is vacuously empty, so a sweep that merely iterates whatever is in the array cannot detect an omission. Declaration::Axiom alone would also not suffice in this kernel -- Opaque has no proof body and Quotient admits Quot.sound -- which is why axiom_footprint, covering all three, is what is read."
     }

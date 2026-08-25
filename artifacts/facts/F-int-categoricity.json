@@ -32,7 +32,7 @@
       "kind": "kernel-term",
       "supports": "Every generated aperiodic Z-structure is in structure-preserving bijection with the constructed Int, and the axiom footprint of the witness is empty.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-categoricity[[:space:]]+Int[.]Characterization[.]categorical[[:space:]]+\\[\\][[:space:]]'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^int-categoricity[[:space:]]+Int[.]Characterization[.]categorical[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
       "notes": "The grep is anchored on the declaration name AND on an EMPTY footprint column, so neither a rename nor a theorem that grew a dependency on a trusted declaration can satisfy it. The `&&` is load-bearing: `characterization_status` is itself a checker that exits non-zero when any entry is not a `Declaration::Theorem`, when any footprint is non-empty, when the population changes, or when any injected `Weakening` is ACCEPTED by the kernel or is refused BEFORE the declaration it was aimed at. Verified 2026-08-18: the command exits 0, and the same command with a non-existent declaration name exits 1."
     },
     {
@@ -40,7 +40,7 @@
       "kind": "kernel-term",
       "supports": "NON-VACUITY: the hypothesis list is inhabited -- `categorical` instantiated at (Int, 0, (.+1), (.-1)) with every premise discharged by a real theorem, admitted by the kernel with an empty footprint.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-categoricity[[:space:]]+Int[.]Characterization[.]categorical_at_int[[:space:]]+\\[\\][[:space:]]'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^int-categoricity[[:space:]]+Int[.]Characterization[.]categorical_at_int[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
       "notes": "A categoricity theorem whose premises nothing satisfies is axiom-free and worthless, so this witness is a DECLARATION OF THE SHIPPED PACKAGE rather than a test: the inverse laws come from `add_assoc`/`add_neg`/`add_zero`/`add_comm`, generation is `Int.Characterization.induction` verbatim, and aperiodicity is `Nat.Peano.zero_ne_succ` composed with `Int.natAbs` through `Int.Characterization.iter_at_int`. It is checked on every build and printed as its own row."
     },
     {
@@ -48,7 +48,7 @@
       "kind": "kernel-term",
       "supports": "The EXISTENCE half of the universal property, which is what F:int-characterization was missing: the comparison map exists and preserves the +1 recurrence.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-universal-property[[:space:]]+Int[.]Characterization[.]iter_succ[[:space:]]+\\[\\][[:space:]]'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^int-universal-property[[:space:]]+Int[.]Characterization[.]iter_succ[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
       "notes": "`iter_zero` is definitional; `iter_succ` needs ONLY `up (down x) = x` and `iter_pred` needs ONLY `down (up x) = x`, because in the normalized ofNat/negSucc representation each is definitional except at the branch that crosses zero. Two `Weakening` variants replace exactly those hypotheses with `True` and the kernel refuses each at its own declaration. With `rec_unique` (uniqueness) this makes Int the initial Z-structure."
     },
     {
@@ -56,7 +56,7 @@
       "kind": "kernel-term",
       "supports": "The CONSTRUCTED isomorphism, as opposed to the Prop-level bijection: given any structure-preserving psi : R -> Int, iter . psi = id_R and psi . iter = id_Int.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-categoricity[[:space:]]+Int[.]Characterization[.]iso[[:space:]]+\\[\\][[:space:]]'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^int-categoricity[[:space:]]+Int[.]Characterization[.]iso[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
       "notes": "This is the honest statement of the stronger form and of its price. The R-side identity is proved by the target's generation principle; the Int-side identity is `rec_unique` applied to psi . iter against the identity map. What is NOT proved, and does not follow from these premises, is that such a psi exists -- a Prop-valued generation principle can prove `forall y, exists t, iter t = y` and cannot define a function R -> Int."
     },
     {

@@ -27,7 +27,7 @@
       "checkers": [
         "int_theorem_inventory -- fib_cassini (filters the environment to Int.fib_cassini and prints its Kernel::render_lean type; the example itself treats a filter matching nothing as failure, so a deleted or renamed theorem would already break this command before the grep runs)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh run --release -p axeyum-lean-kernel --example int_theorem_inventory -- fib_cassini 2>&1 | grep -qF \"((x0 : AxNat) -> Eq.{1} Int (Int.sub (Int.mul (Int.ofNat (AxNat.fib (AxNat.succ (AxNat.succ x0)))) (Int.ofNat (AxNat.fib x0))) (Int.mul (Int.ofNat (AxNat.fib (AxNat.succ x0))) (Int.ofNat (AxNat.fib (AxNat.succ x0))))) (Int.pow (Int.neg Int.one) (AxNat.succ x0)))\"",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh run --release -p axeyum-lean-kernel --example int_theorem_inventory -- fib_cassini 2>&1 | grep -Fc \"((x0 : AxNat) -> Eq.{1} Int (Int.sub (Int.mul (Int.ofNat (AxNat.fib (AxNat.succ (AxNat.succ x0)))) (Int.ofNat (AxNat.fib x0))) (Int.mul (Int.ofNat (AxNat.fib (AxNat.succ x0))) (Int.ofNat (AxNat.fib (AxNat.succ x0))))) (Int.pow (Int.neg Int.one) (AxNat.succ x0)))\")\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/int_prelude/fibonacci.rs",
       "notes": "Run 2026-08-24 against this tree: exit 0. A deliberately wrong substring (a string that appears nowhere in the tool's output) run through the identical command exits 1, confirming the grep is not a vacuous pass. This is the strongest available check that does not require adding a new pinned test to `crates/`, which this lane's brief forbids touching."
     },
@@ -39,7 +39,7 @@
       "checkers": [
         "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for each of the 122 derived laws, including fib_cassini, and requires the empty set)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
       "notes": "Run 2026-08-24: `test result: ok. 1 passed; 0 failed`, exit 0. Running the identical command against a deliberately misspelled test path (`..._axiom_footprint_WRONG_NAME`) exits 1 with `error: no test with the name...` / zero matched, confirming the anchor cannot read a no-op as success."
     }

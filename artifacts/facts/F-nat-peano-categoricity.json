@@ -27,7 +27,7 @@
       "kind": "kernel-term",
       "supports": "Every Peano structure is in structure-preserving bijection with the constructed Nat, and the axiom footprint of the witness is empty.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^nat-categoricity[[:space:]]+Nat[.]Peano[.]categorical[[:space:]]+\\[\\][[:space:]]'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^nat-categoricity[[:space:]]+Nat[.]Peano[.]categorical[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
       "notes": "The grep is anchored on the declaration name AND on an EMPTY footprint column, so neither a renamed theorem nor one that grew a dependency on a trusted declaration can satisfy it. The `&&` is load-bearing: `characterization_status` is itself a checker that exits non-zero when any entry is not a `Declaration::Theorem`, when any footprint is non-empty, when the population changes, or when any injected `Weakening` is ACCEPTED by the kernel -- so this command fails both on a missing row and on a package whose hypotheses stopped being load-bearing. Verified 2026-08-17: the command exits 0, and the same command with a non-existent declaration name exits 1."
     },
     {
@@ -35,7 +35,7 @@
       "kind": "kernel-term",
       "supports": "Peano 1: zero is not a successor. Proved by a Prop-valued Nat.rec discriminator, not assumed.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^peano-axiom[[:space:]]+Nat[.]Peano[.]zero_ne_succ[[:space:]]+\\[\\][[:space:]]'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^peano-axiom[[:space:]]+Nat[.]Peano[.]zero_ne_succ[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
       "notes": "This was the one Peano axiom the Nat prelude did not carry -- its module docs said `n != succ n`-style discrimination was absent -- so it is the row that actually moved. `Nat.Peano.succ_injective` and `Nat.Peano.induction` restate the other two in this module and are discharged by `Nat.succ_injective` and the kernel-generated `Nat.rec`, so a prelude statement that drifts becomes a kernel rejection here rather than a silently different axiom."
     },
     {
@@ -43,7 +43,7 @@
       "kind": "kernel-term",
       "supports": "The comparison map is the UNIQUE structure-preserving map out of Nat, which is what makes the isomorphism canonical rather than merely existent.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^nat-universal-property[[:space:]]+Nat[.]Peano[.]iter_unique[[:space:]]+\\[\\][[:space:]]'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^nat-universal-property[[:space:]]+Nat[.]Peano[.]iter_unique[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
       "notes": "Existence is `Nat.Peano.iter` (a definition by `Nat.rec`) with `iter_zero`/`iter_succ` holding definitionally; uniqueness is this theorem. Together they are the universal property of Nat as the initial iteration algebra."
     },
     {

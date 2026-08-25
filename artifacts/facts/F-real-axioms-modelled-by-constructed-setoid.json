@@ -34,7 +34,7 @@
       "kind": "kernel-term",
       "supports": "The additive-commutativity law of the AxReal package is modelled by CReal.add_comm, with an empty axiom footprint.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^law[[:space:]]+AxReal[.]add_comm[[:space:]]+CReal[.]add_comm[[:space:]]+\\[\\][[:space:]]'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^law[[:space:]]+AxReal[.]add_comm[[:space:]]+CReal[.]add_comm[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
       "notes": "Anchored on the AxReal law name, the CReal witness name AND the empty footprint column, so a rename, a swapped pairing, or a witness that grew a dependency on a trusted declaration all fail. Verified to fail when the subject is mangled."
     },
     {
@@ -42,7 +42,7 @@
       "kind": "kernel-term",
       "supports": "A multiplicative law is modelled too -- multiplication is the half that needed a canonical bound derived from regularity.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^law[[:space:]]+AxReal[.]mul_comm[[:space:]]+CReal[.]mul_comm[[:space:]]+\\[\\][[:space:]]'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^law[[:space:]]+AxReal[.]mul_comm[[:space:]]+CReal[.]mul_comm[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
       "notes": "Second law from the other half of the ring structure, so the pair cannot both pass on additive-only work."
     },
     {
@@ -50,7 +50,7 @@
       "kind": "kernel-term",
       "supports": "All 22 laws are modelled, all footprints empty, and the seven discrimination witnesses hold -- the example exits non-zero otherwise.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>&1) && printf '%s\\n' \"$out\" | grep -qE '22/22 witnesses have an EMPTY axiom footprint'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '22/22 witnesses have an EMPTY axiom footprint')\" -ge 1",
       "notes": "Captures BOTH streams: the per-law rows go to stdout and the summary to stderr, so the obvious `2>/dev/null` form silently matches nothing and passes for the wrong reason. Found by running this row before committing it. The population comes from the environment rather than a hand-written table, so dropping a law fails the coverage check instead of shrinking a count."
     }
   ],

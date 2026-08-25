@@ -28,7 +28,7 @@
         "Kernel::add_declaration (independent re-derivation of the type from the proof term)",
         "SHA-256 pin of the exported stream bytes"
       ],
-      "checker_command": "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -q 'AXEYUM-IMPORT-FACT|F:bool-and-comm|'",
+      "checker_command": "test \"$(cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -c 'AXEYUM-IMPORT-FACT|F:bool-and-comm|')\" -ge 1",
       "artifact": "artifacts/lean-imports/bool-and-comm.ndjson",
       "notes": "The command greps for this fact's own marker line rather than trusting the exit status, so a suite that compiles to zero tests -- this repository's signature defect -- fails instead of exiting 0. Measured 2026-08-15: the stream hashes to the pin in `artifacts/lean-imports/MANIFEST.json`, the fail-closed importer admits 48 declarations (it publishes nothing unless the WHOLE stream translates and every declaration passes the trusted gate), and `Kernel::render_lean` of the admitted type is `((x : Bool) -> ((y : Bool) -> Eq.{1} Bool (Bool.and x y) (Bool.and y x)))`. `formal.statement` is that string verbatim."
     },

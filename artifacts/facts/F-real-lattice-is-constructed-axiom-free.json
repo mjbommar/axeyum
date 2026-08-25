@@ -22,7 +22,7 @@
       "kind": "kernel-term",
       "supports": "94 CReal declarations admitted (76 before this lane), every one a checked Definition or Theorem with an empty axiom_footprint, and the whole environment's trusted surface still EMPTY -- read out of the kernel, with the exit status depending on both values.",
       "check_status": "checked",
-      "checker_command": "out=$(scripts/cargo-serialized.sh run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE '94 declarations admitted, trusted surface = 0 [(]empty[)]'",
+      "checker_command": "out=$(scripts/cargo-serialized.sh run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec '94 declarations admitted, trusted surface = 0 [(]empty[)]')\" -ge 1",
       "notes": "Anchored on TWO values on one line -- the count 94 and `trusted surface = 0 (empty)` -- so a dropped declaration and a leaked axiom each flip it. Verified discriminating by scripts/new-fact.py. This is the row that carries the axiom-freedom claim; the example exits 1 with a named FAIL line if any admitted declaration is an Axiom or Opaque, or if any footprint is non-empty."
     },
     {
@@ -30,7 +30,7 @@
       "kind": "kernel-term",
       "supports": "`abs is not the identity` -- CReal.not_equiv_abs_neg_one and CReal.not_le_zero_neg_one are both present as checked theorems, which is what stops the four abs laws being satisfied by `abs x := x`.",
       "check_status": "checked",
-      "checker_command": "out=$(scripts/cargo-serialized.sh run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'abs is not the identity = true'",
+      "checker_command": "out=$(scripts/cargo-serialized.sh run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'abs is not the identity = true')\" -ge 1",
       "notes": "This is the NON-TRIVIALITY row and it exists because nothing in this fact carries a side condition: the failure mode here is not an uninhabited guard but a DEGENERATE OPERATION. `max x y := x` satisfies le_max_left by reflexivity; `abs x := x` satisfies le_abs_self, neg_le_abs and abs_le -- footprint-free, statements verbatim. Verified discriminating by scripts/new-fact.py (`true` -> `false` kills it). The example's exit status depends on it: witness clause (10)."
     },
     {
@@ -46,7 +46,7 @@
       "kind": "kernel-term",
       "supports": "The fifteen lattice statements are asserted VERBATIM as rendered types (not by footprint); max idempotence, `max 0 1 is not 0`, `min 0 1 is not 1` and `|-1| is not -1` are all admitted THROUGH THE KERNEL from the laws alone; and three one-token mutations are REFUSED.",
       "check_status": "checked",
-      "checker_command": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal::creal_tests::the_lattice 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'test result: ok\\. 3 passed; 0 failed'",
+      "checker_command": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal::creal_tests::the_lattice 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'test result: ok\\. 3 passed; 0 failed')\" -ge 1",
       "notes": "Anchored on a NONZERO test count (3), because a filter matching nothing prints 'ok. 0 passed' and exits 0 -- and on `0 failed`, so a green-looking partial run cannot pass. Verified discriminating by scripts/new-fact.py. The three refused mutations are `max x y <= x` (from le_max_left, FALSE at x=0,y=1), `|x| <= 0` (from abs_nonneg, FALSE at x=1), and `not (|1| ~ 1)` -- the abs discrimination's own script with `neg one` replaced by `one`, which is FALSE and must not go through, or the discrimination would be proving nothing about the sign."
     },
     {
@@ -54,7 +54,7 @@
       "kind": "kernel-term",
       "supports": "Rat.max and Rat.min REDUCE by Eq.refl at four concrete pairs, including one whose argument is negative, and the wrong answer is REFUSED. Every Rat lattice declaration is checked and footprint-free.",
       "check_status": "checked",
-      "checker_command": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_rational_lattice 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'test result: ok\\. 3 passed; 0 failed'",
+      "checker_command": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_rational_lattice 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'test result: ok\\. 3 passed; 0 failed')\" -ge 1",
       "notes": "This is the row that pins the OPERATION rather than its laws, one level down: all nine Rat lattice laws are one-sided consequences of max_cases and would hold, footprint-free, of a max that always returned its first argument. Reduction cannot. The negative control (`Rat.max 3 1 = 1` and `Rat.min 3 1 = 3` both REFUSED) is what makes the positive reductions mean anything -- a conversion checker that accepted everything would otherwise make them pass. Anchored on a NONZERO count and `0 failed`; verified discriminating by scripts/new-fact.py."
     }
   ],

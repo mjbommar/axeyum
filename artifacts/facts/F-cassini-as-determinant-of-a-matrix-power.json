@@ -28,7 +28,7 @@
         "rat_prelude_tests::det2_fib_is_cassini_through_det2 (asserts the whitespace-normalised KERNEL-RENDERED type verbatim with assert_eq!)",
         "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_rat_prelude return Err and every rat test fail)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::det2_fib_is_cassini_through_det2 -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::det2_fib_is_cassini_through_det2 -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
       "notes": "Run 2026-08-24: `test result: ok. 1 passed; 0 failed`, exit 0. A deliberately misnamed test path exits 1."
     },
@@ -40,7 +40,7 @@
       "checkers": [
         "rat_prelude_tests::matrix_laws_are_axiom_free (requires det2_fib, among 19 named matrix declarations, to be a Declaration::Theorem with empty Kernel::axiom_footprint)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::matrix_laws_are_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::matrix_laws_are_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
       "notes": "Run 2026-08-24: exit 0. Same command against a misnamed test path exits 1."
     },
@@ -52,7 +52,7 @@
       "checkers": [
         "theorem_dependency_inventory -- det2_fib (direct dependency list, exact string match)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh run --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- det2_fib 2>&1 | grep -qF \"Rat.det2_fib\tInt.fib_cassini,Rat.ofInt_add,Rat.ofInt_mul,Rat.ofInt_neg\"",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh run --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- det2_fib 2>&1 | grep -Fc \"Rat.det2_fib\tInt.fib_cassini,Rat.ofInt_add,Rat.ofInt_mul,Rat.ofInt_neg\")\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
       "notes": "Run 2026-08-24: exit 0. A deliberately wrong substring run through the identical command exits 1."
     }

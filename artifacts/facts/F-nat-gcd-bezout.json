@@ -30,7 +30,7 @@
       "kind": "kernel-term",
       "supports": "For all natural numbers m and n there exist natural numbers mp, mn, np, nn with gcd(m, n) + m*mn + n*nn = m*mp + n*np. This is Bezout's identity in balanced form: the usual `gcd(m,n) = m*x + n*y` with integer x, y, rearranged so both sides are natural numbers.",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- gcd_bezout 2>/dev/null | grep -qE '^Nat\\.gcd_bezout[[:space:]]'",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- gcd_bezout 2>/dev/null | grep -Ec '^Nat\\.gcd_bezout[[:space:]]')\" -ge 1",
       "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing the row at all is a machine-checked proof. TIGHTENED 2026-08-16: the command was `cargo test -p axeyum-lean-kernel --lib nat_prelude`, a whole-suite run that passes or fails identically for every fact citing it and would stay green if THIS theorem were deleted. It now names its own subject twice over -- `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed."
     },
     {

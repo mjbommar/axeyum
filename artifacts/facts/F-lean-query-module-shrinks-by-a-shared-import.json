@@ -22,7 +22,7 @@
       "kind": "instance-pin",
       "supports": "The shared half is a function of the ROOT SET and nothing else, so one compiled `.olean` serves the whole query family. Without this the split is a relabelling: each query would need its own prelude and the per-query total would be unchanged.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'the shared module is byte-identical across fixtures: true'",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'the shared module is byte-identical across fixtures: true')\" -ge 1",
       "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the byte-identity verdict rather than on the shared module's size: a size match is consistent with two different modules of equal length, and identity is the property the claim needs."
     },
     {
@@ -30,7 +30,7 @@
       "kind": "instance-pin",
       "supports": "Nothing the kernel's `axiom_footprint` counts went missing when the module was split, and the query half introduced no assumption the kernel did not count. This is the split's form of the invariant `front_door_carrier --require-axiom-free` enforces on the single file; a smaller artefact that dropped a footprint entry would be a regression however good the byte count looked. It is coverage and NOT a summed line count, because the shared half legitimately carries axioms a given refutation never reaches.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'the two halves cover the kernel footprint exactly: true'",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'the two halves cover the kernel footprint exactly: true')\" -ge 1",
       "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the two-directional coverage verdict, not on an axiom-line count. A count is what the single-file invariant uses and it is WRONG here — the shared half is rooted at a union over the query family, so it carries axioms this refutation never reaches and a sum would exceed the footprint for a module set that is entirely correct."
     },
     {
@@ -38,7 +38,7 @@
       "kind": "instance-pin",
       "supports": "The headline result is unmoved by the layout change: the refutation still rests on zero CARRIER axioms, only on the query's own variable and hypotheses. This is what stops the byte saving from being bought by re-admitting an assumption.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'refutations still rest on zero carrier axioms: true'",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'refutations still rest on zero carrier axioms: true')\" -ge 1",
       "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the carrier-axiom verdict, which is computed from `Kernel::axiom_footprint` (this kernel's `#print axioms`) and not from module text."
     },
     {
@@ -46,7 +46,7 @@
       "kind": "instance-pin",
       "supports": "The saving is real on every fixture, not only the one the byte figures quote — the weakest of the three is 91x.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'every query module is at least 50x smaller: true'",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'every query module is at least 50x smaller: true')\" -ge 1",
       "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the floor verdict, which is over the MINIMUM factor across the three fixtures, so a regression on any one of them fails it."
     },
     {
@@ -54,7 +54,7 @@
       "kind": "instance-pin",
       "supports": "The exact bytes, on the fixture the title quotes. The other four rows are verdicts a rewrite could keep true while the numbers moved; this one pins them.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE '5056 B query \\+ 1715764 B shared'",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec '5056 B query \\+ 1715764 B shared')\" -ge 1",
       "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the two byte counts printed together on one line, so neither can drift without the other being noticed. It is the row that fails first if the carrier grows or the writer regresses."
     }
   ],
