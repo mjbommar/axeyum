@@ -19,6 +19,23 @@
       },
       "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
       "irreversible": true
+    },
+    {
+      "date": "2026-08-25",
+      "family": "natural-binomial",
+      "from": "held-out",
+      "to": "development",
+      "reason": "ordinary hand development in crates/axeyum-lean-kernel/src/nat_prelude/choose.rs, unrelated to autogenesis, already proves at least 5 of the 20 held-out natural-binomial propositions by statement comparison (Nat.choose_zero_right, Nat.choose_self, Nat.choose_succ_succ, Nat.zero_choose_succ, Nat.choose_succ_self_eq_zero) even though every one of them kept epistemic_status open and no autogenesis operation was ever registered against them -- see docs/autogenesis/263-holdout-contamination-by-ordinary-development.md; the family is moved rather than split because partition_unit is whole-family-with-source-review-groups-indivisible and the shared choose.rs machinery (Pascal's rule, choose_symm, sum lemmas) is evidence about the remaining 15 siblings too",
+      "breach": {
+        "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+        "proof_shape": "natural-binomial:unconditional-equality",
+        "operation_id": "no-operation-ordinary-nat-prelude-choose-development",
+        "registered_commit": "8b9ddb7c5",
+        "registered_date": "2026-08-23",
+        "detected_date": "2026-08-25"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
     }
   ],
   "authority": {
@@ -31,7 +48,7 @@
     "integer-fibonacci": "train",
     "integer-gcd": "train",
     "integer-modular-equivalence": "train",
-    "natural-binomial": "held-out",
+    "natural-binomial": "development",
     "natural-bitwise": "development",
     "natural-factorial": "train",
     "natural-fibonacci": "train",

@@ -267,6 +267,8 @@ compounding, not automation theatre.
 | [Partition-safe producer evaluation frontier](252-producer-evaluation-frontier.md) | Which dependency-ready train/development facts may a future general producer receive, with held-out facts excluded before dispatch? |
 | [General-producer evaluation protocol](253-producer-evaluation-protocol.md) | Which funnel, decline taxonomy, negative-control rule, and forbidden inputs must be fixed before a general producer can be evaluated? |
 | [Producer-evaluation result contract](254-producer-evaluation-result-contract.md) | What must a future producer result account for before its funnel or successes can be trusted? |
+| [Held-out contamination by ordinary development](263-holdout-contamination-by-ordinary-development.md) | Ordinary hand development, unrelated to autogenesis, already proved held-out propositions; why the isolation gate could not see it. |
+| [Held-out contamination measurement and repair](264-holdout-contamination-measurement-and-repair.md) | The real count across all 57 pre-repair held-out rows (5), the re-deriving detector that would have caught it, and the `natural-binomial` whole-family repair. |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

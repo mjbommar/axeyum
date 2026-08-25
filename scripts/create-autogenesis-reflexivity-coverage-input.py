@@ -47,7 +47,7 @@ def fact_path(fact_id: str) -> pathlib.Path:
     return FACTS / (fact_id.replace("F:", "F-") + ".json")
 
 
-LIVE_POPULATION = 157
+LIVE_POPULATION = 177
 
 
 def build(
@@ -68,8 +68,12 @@ def build(
     )
     # LIVE_POPULATION is the tripwire for generating a NEW census: an unexplained
     # change to the evaluation population must stop this rather than silently
-    # re-size it. 157 = train 78 + development 79, after the `natural-gcd` family
-    # left held-out on 2026-08-22 (ADR-0542).
+    # re-size it. 177 = train 78 + development 99, after the `natural-binomial`
+    # family left held-out on 2026-08-25 (ADR-0542, ordinary hand development
+    # in nat_prelude/choose.rs had already proved at least 5 of its rows -- see
+    # docs/autogenesis/263-holdout-contamination-by-ordinary-development.md).
+    # Before that it was 157 (train 78 + development 79), after the
+    # `natural-gcd` family left held-out on 2026-08-22.
     #
     # `expected` exists because RE-VERIFYING an OLD census is a different
     # question. A frozen capture is evidence about the population as it stood

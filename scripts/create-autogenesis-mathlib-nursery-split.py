@@ -26,7 +26,7 @@ PREREGISTERED_STATES = {
     "preregistered-before-target-outcomes",
     "preregistered-before-target-outcomes-with-recorded-amendments",
 }
-PARTITION_COUNTS = {"train": 78, "development": 79, "held-out": 57}
+PARTITION_COUNTS = {"train": 78, "development": 99, "held-out": 37}
 AMENDMENT_KEYS = {
     "date", "family", "from", "to", "reason", "breach", "authority", "irreversible",
 }
