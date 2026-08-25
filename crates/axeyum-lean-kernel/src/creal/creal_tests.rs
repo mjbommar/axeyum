@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 228] = [
+    let expected: [(&str, crate::NameId, &str); 229] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -404,6 +404,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             "theorem",
         ),
         ("CReal.geom_tail_bounded", p.geom_tail_bounded, "theorem"),
+        (
+            "CReal.geom_tail_bounded_div",
+            p.geom_tail_bounded_div,
+            "theorem",
+        ),
         (
             "CReal.one_le_pow_of_one_le",
             p.one_le_pow_of_one_le,
@@ -4476,6 +4481,66 @@ fn exp_series_partial_computes_its_first_few_values() {
     assert!(
         !d.kernel().def_eq(partial3, embedded_two),
         "expSeriesPartial 3 must NOT reduce to ofRat 2 -- if it does, this \
+         check cannot fail and something is wrong with the harness, not \
+         just the theorem"
+    );
+}
+
+/// **Mandatory computation test for `CReal.geom_tail_bounded_div`'s subject
+/// matter.** `r := 1/2` is the concrete instantiation the geometric-series
+/// slice's task named as mandatory: the answer is known independently (the
+/// series sums to `2`), and its first four partial sums -- `1, 3/2, 7/4,
+/// 15/8` -- must reduce as REAL kernel reduction (`Kernel::def_eq`, forcing
+/// `sumRange`'s own `Nat.rec`, `CReal.pow`'s recursive `mul`, and `CReal.add`'s
+/// constant-sequence arithmetic all the way to a `Rat.mk` normal form), not
+/// merely type-check: an off-by-one in `sumRange`'s range bound, or in
+/// `pow`'s recursive step, type-checks perfectly and builds a DIFFERENT
+/// series, which only a reduction check catches.
+///
+/// Includes a negative control: the `k = 3` partial sum (`7/4`) must NOT
+/// reduce to the `k = 2` partial sum (`3/2`) -- a checker that cannot fail is
+/// not a checker.
+#[test]
+fn geometric_series_at_one_half_reduces_to_the_expected_partial_sums() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let half = exp_test_rat_literal(&mut d, 1, 2);
+    let x = d.const_app(p.of_rat, &[half]);
+
+    // `fun i => CReal.pow x i`, built the same way `power.rs::pow_fn` (and
+    // `geometric.rs::pow_fn`) do.
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let body = d.const_app(p.pow, &[x, i]);
+    let nat_ty = d.nat_ty();
+    let f = d.lam_fv(i_fv, nat_ty, body);
+
+    for (k_val, num_val, den_val) in [(1u32, 1u32, 1u32), (2, 3, 2), (3, 7, 4), (4, 15, 8)] {
+        let k = d.num(k_val);
+        let partial = d.const_app(p.sum_range, &[f, k]);
+        let expected = exp_test_rat_literal(&mut d, num_val, den_val);
+        let embedded = d.const_app(p.of_rat, &[expected]);
+        assert!(
+            d.kernel().def_eq(partial, embedded),
+            "sumRange (pow 1/2) {k_val} should reduce to ofRat \
+             ({num_val}/{den_val})"
+        );
+    }
+
+    // Negative control: the k=3 partial sum (7/4) must NOT reduce to the
+    // k=2 partial sum (3/2) -- the value it would wrongly equal under an
+    // off-by-one that dropped the last term.
+    let k3 = d.num(3u32);
+    let partial3 = d.const_app(p.sum_range, &[f, k3]);
+    let three_halves = exp_test_rat_literal(&mut d, 3, 2);
+    let embedded_three_halves = d.const_app(p.of_rat, &[three_halves]);
+    assert!(
+        !d.kernel().def_eq(partial3, embedded_three_halves),
+        "sumRange (pow 1/2) 3 must NOT reduce to 3/2 -- if it does, this \
          check cannot fail and something is wrong with the harness, not \
          just the theorem"
     );
