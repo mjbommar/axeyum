@@ -53,7 +53,14 @@ class ReflexivityCoverageInputTests(unittest.TestCase):
                 raise AssertionError("held-out fact was opened")
             return self.fact(fact_id)
 
-        source, mapping = MODULE.build(self.nursery(), load, self.MODULES)
+        # `expected=138` is this fixture's OWN population size (78 train + 60
+        # development, built by `nursery()` above), passed explicitly rather
+        # than relying on `MODULE.LIVE_POPULATION`. The fixture has no business
+        # depending on a constant that tracks the real nursery -- that live
+        # count moved 138 -> 157 on 2026-08-22 for a legitimate reason (a
+        # held-out family graduating to development) and had nothing to do
+        # with this synthetic population.
+        source, mapping = MODULE.build(self.nursery(), load, self.MODULES, expected=138)
         self.assertEqual(len(opened), 138)
         self.assertNotIn("F:sealed", opened)
         self.assertEqual(mapping["authority"]["held_out_inspected"], False)
@@ -63,10 +70,10 @@ class ReflexivityCoverageInputTests(unittest.TestCase):
 
     def test_output_is_deterministic_under_entry_reordering(self):
         nursery = self.nursery()
-        first = MODULE.build(nursery, self.fact, self.MODULES)
+        first = MODULE.build(nursery, self.fact, self.MODULES, expected=138)
         changed = copy.deepcopy(nursery)
         changed["entries"].reverse()
-        second = MODULE.build(changed, self.fact, self.MODULES)
+        second = MODULE.build(changed, self.fact, self.MODULES, expected=138)
         self.assertEqual(first[0], second[0])
         self.assertEqual(first[1]["rows"], second[1]["rows"])
 
@@ -74,7 +81,7 @@ class ReflexivityCoverageInputTests(unittest.TestCase):
         nursery = self.nursery()
         nursery["entries"].pop(0)
         with self.assertRaisesRegex(MODULE.CoverageInputError, "expected 138"):
-            MODULE.build(nursery, self.fact, self.MODULES)
+            MODULE.build(nursery, self.fact, self.MODULES, expected=138)
 
     def test_non_surface_fact_is_rejected(self):
         def load(fact_id):
@@ -83,7 +90,7 @@ class ReflexivityCoverageInputTests(unittest.TestCase):
             return fact
 
         with self.assertRaisesRegex(MODULE.CoverageInputError, "unexpected language"):
-            MODULE.build(self.nursery(), load, self.MODULES)
+            MODULE.build(self.nursery(), load, self.MODULES, expected=138)
 
 
 if __name__ == "__main__":

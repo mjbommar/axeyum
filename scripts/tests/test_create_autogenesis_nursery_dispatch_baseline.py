@@ -49,16 +49,46 @@ class DispatchBaselineTests(unittest.TestCase):
         coverage = result["coverage"]
 
         # The load-bearing invariant, and the one this census exists to report:
-        # no row in the evaluation population has an operation that could be
-        # dispatched to it. Registry coverage is entirely on facts already
-        # established.
-        self.assertEqual(coverage["eligible_for_dispatch"], 0)
-        self.assertEqual(set(coverage["decline_reasons"]), {"no-exact-authoritative-operation"})
+        # the three outcome buckets are exhaustive and mutually exclusive, and
+        # an admitted (already-established) fact is NEVER counted as a
+        # pre-execution decline or as newly dispatchable, no matter how many
+        # operations get registered against the rest of the population. This
+        # is a property of the classification, not a snapshot of today's
+        # dispatch count: `eligible_for_dispatch` legitimately rises whenever a
+        # lane registers a matching operation -- that is the pipeline doing its
+        # job -- so pinning it to 0 goes red for a reason that is not a defect.
         self.assertEqual(
-            coverage["declined_before_execution"] + coverage["already_established"],
+            coverage["eligible_for_dispatch"]
+            + coverage["declined_before_execution"]
+            + coverage["already_established"],
             coverage["candidates"],
         )
+        # A pre-execution census never dispatches, regardless of how many rows
+        # are eligible -- this script only classifies, it does not run
+        # producers.
         self.assertEqual(result["budget"]["executor_invocations"], 0)
+
+        established_reasons = set()
+        for row in result["rows"]:
+            fact = self.facts[row["fact_id"]]
+            established = fact.get("epistemic_status") in {"proved", "refuted", "disproved"}
+            if established:
+                self.assertEqual(row["outcome"], "already-established")
+                self.assertIsNone(row["decline_reason"])
+            elif row["outcome"] == "eligible-for-dispatch":
+                self.assertIsNone(row["decline_reason"])
+                self.assertTrue(row["registered_operation_ids"])
+            else:
+                self.assertEqual(row["outcome"], "declined-before-execution")
+                self.assertIsNotNone(row["decline_reason"])
+                self.assertEqual(row["registered_operation_ids"], [])
+                established_reasons.add(row["decline_reason"])
+        # decline_reasons is exactly the set of reasons attached to declined
+        # rows (not a fixed vocabulary -- which reasons appear shifts as
+        # adapters/candidates/operations are registered, and that shift is
+        # legitimate).
+        self.assertEqual(set(coverage["decline_reasons"]), established_reasons)
+        self.assertEqual(sum(coverage["decline_reasons"].values()), coverage["declined_before_execution"])
 
         # A FLOOR, not an equality. `already_established` rises whenever a lane
         # registers another capsule -- nine landed in the ten hours before this
