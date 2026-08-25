@@ -476,6 +476,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.prod_range_if,
         p.pow_sq_aux,
         p.pow_sq,
+        p.sum_divisors,
+        p.perfect,
     ]
 }
 
@@ -740,6 +742,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_sq_zero,
         p.pow_sq_succ,
         p.succ_pred_of_pos,
+        p.sum_divisors_one,
+        p.sum_divisors_prime,
+        p.pow2_geom_sum,
     ]
 }
 
@@ -1078,6 +1083,152 @@ fn prod_range_if_congr_lt_applies_at_a_reflexive_instance() {
     assert!(
         f.kernel().def_eq(inferred, stmt),
         "prodRangeIf_congr_lt applied reflexively must prove prodRangeIf p f 4 = prodRangeIf p f 4"
+    );
+}
+
+/// `sumDivisors` computes the ACTUAL divisor sum by pure kernel reduction,
+/// not merely type-checks: `sumDivisors 1 = 1`, `sumDivisors 6 = 12`
+/// (`1+2+3+6`, `6` is the smallest perfect number), `sumDivisors 7 = 8`
+/// (`1+7`, `7` is prime), and `sumDivisors 28 = 56` (`1+2+4+7+14+28`, the
+/// second perfect number). An off-by-one in the range bound (excluding `n`
+/// itself) type-checks perfectly and computes a different function; only
+/// computation catches it.
+#[test]
+fn sum_divisors_computes_on_small_numerals() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let one = f.num(1);
+    let sum_divisors_one = f.const_app(p.sum_divisors, &[one]);
+    assert!(
+        f.k.def_eq(sum_divisors_one, one),
+        "sumDivisors 1 must reduce to 1"
+    );
+
+    let six = f.num(6);
+    let twelve = f.num(12);
+    let sum_divisors_six = f.const_app(p.sum_divisors, &[six]);
+    assert!(
+        f.k.def_eq(sum_divisors_six, twelve),
+        "sumDivisors 6 must reduce to 12 (1+2+3+6, 6 is perfect)"
+    );
+
+    let seven = f.num(7);
+    let eight = f.num(8);
+    let sum_divisors_seven = f.const_app(p.sum_divisors, &[seven]);
+    assert!(
+        f.k.def_eq(sum_divisors_seven, eight),
+        "sumDivisors 7 must reduce to 8 (1+7, 7 is prime)"
+    );
+
+    let twenty_eight = f.num(28);
+    let fifty_six = f.num(56);
+    let sum_divisors_twenty_eight = f.const_app(p.sum_divisors, &[twenty_eight]);
+    assert!(
+        f.k.def_eq(sum_divisors_twenty_eight, fifty_six),
+        "sumDivisors 28 must reduce to 56 (1+2+4+7+14+28, the second perfect number)"
+    );
+
+    // NEGATIVE reduction controls.
+    let eleven = f.num(11);
+    assert!(
+        !f.k.def_eq(sum_divisors_six, eleven),
+        "sumDivisors 6 must NOT be def-eq to 11"
+    );
+    let nine = f.num(9);
+    assert!(
+        !f.k.def_eq(sum_divisors_seven, nine),
+        "sumDivisors 7 must NOT be def-eq to 9"
+    );
+}
+
+/// `Nat.Perfect` computes correctly at both a perfect and a non-perfect
+/// numeral: `sumDivisors 6 = 2*6` reduces (both sides to `12`), while
+/// `sumDivisors 7 = 2*7` does NOT (`8` vs `14`) — the negative control that
+/// distinguishes "the predicate type-checks" from "the predicate is
+/// selective".
+#[test]
+fn perfect_holds_at_six_and_fails_at_seven() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let six = f.num(6);
+    let perfect_six = f.const_app(p.perfect, &[six]);
+    let twelve = f.num(12);
+    let sum_divisors_six = f.const_app(p.sum_divisors, &[six]);
+    let sum_divisors_six_eq_twelve = f.eq(sum_divisors_six, twelve);
+    assert!(
+        f.k.def_eq(perfect_six, sum_divisors_six_eq_twelve),
+        "Perfect 6 must unfold to sumDivisors 6 = 12"
+    );
+
+    let seven = f.num(7);
+    let sum_divisors_seven = f.const_app(p.sum_divisors, &[seven]);
+    let fourteen = f.num(14);
+    assert!(
+        !f.k.def_eq(sum_divisors_seven, fourteen),
+        "sumDivisors 7 must NOT be def-eq to 14 -- Perfect 7 must be false"
+    );
+}
+
+/// `Nat.sumDivisors_prime` composes with the executable `sumDivisors`: at a
+/// concrete prime (`7`), the theorem applied through the primality witness
+/// gives a proof of `sumDivisors 7 = 8` by pure kernel reduction of the
+/// conclusion, not a fresh computation.
+#[test]
+fn sum_divisors_one_and_prime_are_derived_and_apply() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    for name in [p.sum_divisors_one, p.sum_divisors_prime] {
+        let declaration = k
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{name:?} must be declared"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "{name:?} must be a Theorem"
+        );
+        assert!(
+            k.axiom_footprint(name).is_empty(),
+            "{name:?} rests on a trusted declaration"
+        );
+    }
+}
+
+/// `Nat.pow2_geom_sum` computes the ACTUAL finite geometric sum by kernel
+/// reduction: `pow 2 5` reduces to `32`, and the theorem applied at `5`
+/// type-checks to a residue naming `sumRange`, `pow`, and `add` (the
+/// subtraction-free `Σ_{i<5} 2^i + 1 = 2^5` statement) — a definition that
+/// type-checks but sums the wrong function has an empty axiom footprint and
+/// passes every sweep in this repository, so the numeral check matters as
+/// much as the derivation check.
+#[test]
+fn pow2_geom_sum_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let five = f.num(5);
+    let two_pow_five = f.const_app(p.pow, &[two, five]);
+    let thirty_two = f.num(32);
+    assert!(
+        f.k.def_eq(two_pow_five, thirty_two),
+        "pow 2 5 must reduce to 32"
+    );
+
+    let five2 = f.num(5);
+    let applied = f.const_app(p.pow2_geom_sum, &[five2]);
+    let inferred = f.k.infer(applied).expect("pow2_geom_sum 5 must type-check");
+    let rendered = f.k.render_lean(inferred);
+    assert!(
+        rendered.contains("sumRange") && rendered.contains("AxNat.pow") && rendered.contains("add"),
+        "unexpected residue type: {rendered}"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.pow2_geom_sum).is_empty(),
+        "pow2_geom_sum rests on a trusted declaration"
     );
 }
 
@@ -5162,7 +5313,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        56 + 255,
+        58 + 258,
         "every promised definition and theorem must be rendered"
     );
 }

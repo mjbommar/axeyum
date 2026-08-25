@@ -157,6 +157,7 @@ mod ops;
 mod order;
 mod order_extra;
 mod order_more;
+mod perfect;
 mod permutation;
 mod powsq;
 mod primes;
@@ -212,6 +213,7 @@ use no_confusion::declare_no_confusion;
 use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
+use perfect::declare_perfect_all;
 use permutation::declare_permutation_all;
 use powsq::declare_powsq_all;
 use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
@@ -1618,6 +1620,24 @@ pub struct NatPrelude {
     /// subset built from a partial operator (e.g. truncated subtraction)
     /// typically only agrees within the range.
     pub prod_range_if_congr_lt: NameId,
+    /// `Nat.sumDivisors n := sumRange (fun d => bool_select_nat (beq (mod n
+    /// d) 0) d 0) (succ n)` — the sum of every divisor of `n` in `[0,n]`,
+    /// `n` itself included (`d = 0` never contributes: both `bool_select_nat`
+    /// branches are `0` there).
+    pub sum_divisors: NameId,
+    /// `Nat.sumDivisors_one : Eq (sumDivisors (succ zero)) (succ zero)`.
+    pub sum_divisors_one: NameId,
+    /// `Nat.sumDivisors_prime : Prime p → Eq (sumDivisors p) (succ p)` — a
+    /// prime's only divisors in `[0,p]` are `1` and `p`.
+    pub sum_divisors_prime: NameId,
+    /// `Nat.Perfect n := Eq (sumDivisors n) (mul 2 n)` — summing *all*
+    /// divisors including `n` itself (the classical "proper divisors"
+    /// phrasing needs `Nat.sub`, truncated here, and is avoided).
+    pub perfect: NameId,
+    /// `Nat.pow2_geom_sum : ∀ n, add (sumRange (fun i => pow 2 i) n) one =
+    /// pow 2 n` — the finite geometric sum over powers of two, subtraction-
+    /// free (`Σ_{i<n} 2^i = 2^n − 1` restated as `Σ_{i<n} 2^i + 1 = 2^n`).
+    pub pow2_geom_sum: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2039,6 +2059,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prod_range_if_zero: kernel.name_str(nat, "prodRangeIf_zero"),
             prod_range_if_succ: kernel.name_str(nat, "prodRangeIf_succ"),
             prod_range_if_congr_lt: kernel.name_str(nat, "prodRangeIf_congr_lt"),
+            sum_divisors: kernel.name_str(nat, "sumDivisors"),
+            sum_divisors_one: kernel.name_str(nat, "sumDivisors_one"),
+            sum_divisors_prime: kernel.name_str(nat, "sumDivisors_prime"),
+            perfect: kernel.name_str(nat, "Perfect"),
+            pow2_geom_sum: kernel.name_str(nat, "pow2_geom_sum"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2090,6 +2115,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_succ_pred_of_pos(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
         declare_totient_all(&mut d, &p)?;
+        declare_perfect_all(&mut d, &p)?;
         declare_finite_set_all(&mut d, &p)?;
         declare_fin(&mut d, &p)?;
         declare_injective_surjective(&mut d, &p)?;
