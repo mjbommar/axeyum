@@ -473,6 +473,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.is_group_on_fn,
         p.eq_on,
         p.prod_range,
+        p.pow_sq_aux,
+        p.pow_sq,
     ]
 }
 
@@ -727,6 +729,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.exists_prime_factorization,
         p.coprime_mul_dvd,
         p.crt_unique,
+        p.pow_half_split,
+        p.pow_sq_aux_eq_pow,
+        p.pow_sq_eq_pow,
+        p.pow_sq_zero,
+        p.pow_sq_succ,
     ]
 }
 
@@ -1024,6 +1031,116 @@ fn size_computes_binary_digit_counts() {
             f.k.display_name(name)
         );
     }
+}
+
+/// `powSq 2 10` reduces to `1024` and `powSq 3 4` to `81` — real kernel
+/// reduction (`def_eq`), not type-checking. An implementation with the
+/// even/odd branches of `powSqAux` swapped type-checks perfectly and
+/// computes the wrong function; only computation catches that, which is why
+/// this test exists independently of `pow_sq_eq_pow`'s admission.
+#[test]
+fn pow_sq_computes_exponentiation_by_squaring() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let ten = f.num(10);
+    let three = f.num(3);
+    let four = f.num(4);
+
+    let pow_sq_2_10 = f.const_app(p.pow_sq, &[two, ten]);
+    let expected_1024 = f.num(1024);
+    assert!(
+        f.k.def_eq(pow_sq_2_10, expected_1024),
+        "powSq 2 10 must reduce to 1024"
+    );
+
+    let pow_sq_3_4 = f.const_app(p.pow_sq, &[three, four]);
+    let expected_81 = f.num(81);
+    assert!(
+        f.k.def_eq(pow_sq_3_4, expected_81),
+        "powSq 3 4 must reduce to 81"
+    );
+
+    // NEGATIVE reduction controls — a checker that can't fail is worse than
+    // none. 512 = 2^9 is the off-by-one an exponent/fuel bookkeeping slip
+    // would plausibly produce; 80/82 are near misses on 81.
+    let wrong_512 = f.num(512);
+    assert!(
+        !f.k.def_eq(pow_sq_2_10, wrong_512),
+        "powSq 2 10 must NOT be def-eq to 512 (= 2^9, an off-by-one)"
+    );
+    let wrong_80 = f.num(80);
+    assert!(
+        !f.k.def_eq(pow_sq_3_4, wrong_80),
+        "powSq 3 4 must NOT be def-eq to 80"
+    );
+    let wrong_82 = f.num(82);
+    assert!(
+        !f.k.def_eq(pow_sq_3_4, wrong_82),
+        "powSq 3 4 must NOT be def-eq to 82"
+    );
+
+    for name in [
+        p.pow_sq_aux,
+        p.pow_sq,
+        p.pow_half_split,
+        p.pow_sq_aux_eq_pow,
+        p.pow_sq_eq_pow,
+        p.pow_sq_zero,
+        p.pow_sq_succ,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
+
+/// `powSq`'s own two defining equations, checked by reducing both sides at a
+/// concrete instance — not just admission (the theorems are proved generically
+/// via `pow_sq_eq_pow`, so this is an independent computational check).
+#[test]
+fn pow_sq_defining_equations_hold_at_concrete_points() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // pow_sq_zero : powSq b 0 = 1, at b = 7.
+    let seven = f.num(7);
+    let zero = f.zero();
+    let proof_zero = f.lemma(p.pow_sq_zero, &[seven]);
+    let lhs_zero = f.const_app(p.pow_sq, &[seven, zero]);
+    let one = f.num(1);
+    let stmt_zero = f.eq(lhs_zero, one);
+    let inferred_zero =
+        f.k.infer(proof_zero)
+            .unwrap_or_else(|e| panic!("pow_sq_zero(7) should infer: {}", f.explain(&e)));
+    assert!(
+        f.k.def_eq(inferred_zero, stmt_zero),
+        "pow_sq_zero(7) must prove powSq 7 0 = 1"
+    );
+
+    // pow_sq_succ at b = 2, k = 3 (e = succ k = 4, even): both sides of the
+    // stated equation reduce to 16.
+    let two = f.num(2);
+    let three = f.num(3);
+    let proof_succ = f.lemma(p.pow_sq_succ, &[two, three]);
+    let inferred_succ =
+        f.k.infer(proof_succ)
+            .unwrap_or_else(|e| panic!("pow_sq_succ(2, 3) should infer: {}", f.explain(&e)));
+    let sixteen = f.num(16);
+    let e = f.succ(three);
+    let lhs_succ = f.const_app(p.pow_sq, &[two, e]);
+    let stmt_succ_lhs_reduces = f.eq(lhs_succ, sixteen);
+    assert!(
+        f.k.def_eq(inferred_succ, stmt_succ_lhs_reduces),
+        "pow_sq_succ(2, 3)'s statement must reduce to powSq 2 4 = 16"
+    );
+    assert!(
+        f.k.def_eq(lhs_succ, sixteen),
+        "powSq 2 4 must independently reduce to 16"
+    );
 }
 
 /// `Nat.lt_pow_size` holds at several concrete instances, checked by reducing
@@ -4839,7 +4956,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        53 + 245,
+        55 + 250,
         "every promised definition and theorem must be rendered"
     );
 }
