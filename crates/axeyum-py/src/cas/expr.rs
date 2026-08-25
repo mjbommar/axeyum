@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 
+use crate::error::BudgetExceeded;
 use axeyum_cas::assumptions::{Assumptions as CasAssumptions, Sign as CasSign};
 use axeyum_cas::{
     CasExpr, Certainty as CasCertainty, CertifiedIntegral as CasCertifiedIntegral,
@@ -112,6 +113,57 @@ impl Sign {
 /// or a `fractions.Fraction` -- the exact operands. A `float` is refused with
 /// `TypeError` rather than approximated: the CAS is exact over Q, and `x + 0.5`
 /// silently becoming `x + 1/2` would be a guess about the caller's intent.
+/// The deepest nesting the binding will build or accept in a single `CasExpr`.
+///
+/// A `CasExpr` is a recursively-boxed tree, and `Clone`/`Drop`/`normalize` all
+/// recurse over it. A left-leaning chain (`x + x + ... + x`, or `Neg(Neg(...))`)
+/// past a few tens of thousands of levels overflows the thread stack and
+/// **aborts the process** rather than raising. Every entry point that could
+/// build or descend such a chain screens the depth first with an ITERATIVE walk
+/// (this function never recurses) and raises `BudgetExceeded` above the bound --
+/// mirrors `ir::arena::MAX_RECURSIVE_DEPTH`, which guards the same class of
+/// crash for terms.
+pub(crate) const MAX_EXPR_DEPTH: usize = 1_024;
+
+/// The maximum nesting depth of `expr`, computed without recursion.
+fn expr_depth(expr: &CasExpr) -> usize {
+    let mut stack: Vec<(&CasExpr, usize)> = vec![(expr, 1)];
+    let mut max = 0usize;
+    while let Some((node, depth)) = stack.pop() {
+        if depth > max {
+            max = depth;
+        }
+        match node {
+            CasExpr::Const(_) | CasExpr::Var(_) => {}
+            CasExpr::Neg(inner) | CasExpr::Pow(inner, _) | CasExpr::Unary(_, inner) => {
+                stack.push((inner, depth + 1));
+            }
+            CasExpr::Div(a, b) => {
+                stack.push((a, depth + 1));
+                stack.push((b, depth + 1));
+            }
+            CasExpr::Add(terms) | CasExpr::Mul(terms) => {
+                for term in terms {
+                    stack.push((term, depth + 1));
+                }
+            }
+        }
+    }
+    max
+}
+
+/// Raises `BudgetExceeded` when `expr` is nested past [`MAX_EXPR_DEPTH`], before
+/// any recursive clone or traversal has a chance to overflow the stack.
+fn guard_depth(expr: &CasExpr) -> PyResult<()> {
+    let depth = expr_depth(expr);
+    if depth > MAX_EXPR_DEPTH {
+        return Err(BudgetExceeded::new_err(format!(
+            "expression is nested {depth} levels deep, above {MAX_EXPR_DEPTH}: the Rust              CAS clones and normalizes recursively and would overflow the thread stack              (aborting the process) rather than compute a result"
+        )));
+    }
+    Ok(())
+}
+
 struct Operand(CasExpr);
 
 impl FromPyObject<'_, '_> for Operand {
@@ -119,7 +171,9 @@ impl FromPyObject<'_, '_> for Operand {
 
     fn extract(obj: pyo3::Borrowed<'_, '_, PyAny>) -> PyResult<Self> {
         if let Ok(expr) = obj.cast::<Expr>() {
-            return Ok(Operand(expr.get().inner.clone()));
+            let inner = &expr.get().inner;
+            guard_depth(inner)?;
+            return Ok(Operand(inner.clone()));
         }
         if obj.is_instance_of::<pyo3::types::PyFloat>() {
             return Err(pyo3::exceptions::PyTypeError::new_err(
@@ -488,40 +542,49 @@ impl Expr {
         found.into_iter().collect()
     }
 
-    fn __add__(&self, other: Operand) -> Expr {
-        Expr::wrap(self.inner.clone() + other.0)
+    fn __add__(&self, other: Operand) -> PyResult<Expr> {
+        guard_depth(&self.inner)?;
+        Ok(Expr::wrap(self.inner.clone() + other.0))
     }
 
-    fn __radd__(&self, other: Operand) -> Expr {
-        Expr::wrap(other.0 + self.inner.clone())
+    fn __radd__(&self, other: Operand) -> PyResult<Expr> {
+        guard_depth(&self.inner)?;
+        Ok(Expr::wrap(other.0 + self.inner.clone()))
     }
 
-    fn __sub__(&self, other: Operand) -> Expr {
-        Expr::wrap(self.inner.clone() - other.0)
+    fn __sub__(&self, other: Operand) -> PyResult<Expr> {
+        guard_depth(&self.inner)?;
+        Ok(Expr::wrap(self.inner.clone() - other.0))
     }
 
-    fn __rsub__(&self, other: Operand) -> Expr {
-        Expr::wrap(other.0 - self.inner.clone())
+    fn __rsub__(&self, other: Operand) -> PyResult<Expr> {
+        guard_depth(&self.inner)?;
+        Ok(Expr::wrap(other.0 - self.inner.clone()))
     }
 
-    fn __mul__(&self, other: Operand) -> Expr {
-        Expr::wrap(self.inner.clone() * other.0)
+    fn __mul__(&self, other: Operand) -> PyResult<Expr> {
+        guard_depth(&self.inner)?;
+        Ok(Expr::wrap(self.inner.clone() * other.0))
     }
 
-    fn __rmul__(&self, other: Operand) -> Expr {
-        Expr::wrap(other.0 * self.inner.clone())
+    fn __rmul__(&self, other: Operand) -> PyResult<Expr> {
+        guard_depth(&self.inner)?;
+        Ok(Expr::wrap(other.0 * self.inner.clone()))
     }
 
-    fn __truediv__(&self, other: Operand) -> Expr {
-        Expr::wrap(self.inner.clone() / other.0)
+    fn __truediv__(&self, other: Operand) -> PyResult<Expr> {
+        guard_depth(&self.inner)?;
+        Ok(Expr::wrap(self.inner.clone() / other.0))
     }
 
-    fn __rtruediv__(&self, other: Operand) -> Expr {
-        Expr::wrap(other.0 / self.inner.clone())
+    fn __rtruediv__(&self, other: Operand) -> PyResult<Expr> {
+        guard_depth(&self.inner)?;
+        Ok(Expr::wrap(other.0 / self.inner.clone()))
     }
 
-    fn __neg__(&self) -> Expr {
-        Expr::wrap(-self.inner.clone())
+    fn __neg__(&self) -> PyResult<Expr> {
+        guard_depth(&self.inner)?;
+        Ok(Expr::wrap(-self.inner.clone()))
     }
 
     /// `self ** exp`; the three-argument (modular) form is not defined here.
