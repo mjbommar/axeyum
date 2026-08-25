@@ -251,6 +251,103 @@ class FactOperationReplayTests(unittest.TestCase):
         with self.assertRaisesRegex(checker.FactOperationError, "stale or mutated"):
             checker.check_fact(changed, lambda _operation: observation)
 
+    def test_modeq_family_multi_target_binding_and_result_replay(self) -> None:
+        registry = checker.load_module(
+            "registry_for_modeq_family_replay_test", checker.REGISTRY_SCRIPT
+        ).load_registry()
+        operation = next(
+            op
+            for op in registry["operations"]
+            if op["id"] == "authoritative-mathlib-modeq-family-v1"
+        )
+        executor = operation["executor"]
+        executor_module = checker.load_module(
+            "executor_for_modeq_family_replay_test", checker.EXECUTOR_SCRIPT
+        )
+        fact_id = "F:ml430-nat-modeq-symm-0a3d4d18"
+        target = executor_module.resolve_multi_target(operation, fact_id)
+        adapter = checker.json.loads(
+            (ROOT / target["statement_adapter_manifest"]).read_text()
+        )
+        modeq = checker.json.loads((ROOT / target["modeq_manifest"]).read_text())
+        op = modeq["operation"]
+        statement = (
+            "∀ {n a b : ℕ}, a ≡ b [MOD n] → b ≡ a [MOD n]"
+        )
+        binding = {
+            "id": operation["id"],
+            "operation_sha256": checker.digest(operation),
+            "registry_sha256_at_execution": "a" * 64,
+            "execution_sha256": "b" * 64,
+            "frontier_sha256": "c" * 64,
+            "target_fact_id": fact_id,
+            "statement_adapter_manifest": target["statement_adapter_manifest"],
+            "statement_adapter_manifest_sha256": checker.digest(adapter),
+            "modeq_manifest": target["modeq_manifest"],
+            "modeq_manifest_sha256": checker.digest(modeq),
+            "external_artifact_sha256": adapter["external_artifact"]["sha256"],
+            "formal_statement_sha256": checker.byte_digest(statement.encode()),
+            "target_definition": target["target_definition"],
+            "goal_sha256": op["goal_sha256"],
+            "proof_sha256": op["proof_sha256"],
+            "target_content_sha256": op["target_content_sha256"],
+            "binders_used": op["binders_used"],
+            "max_binders": op["max_binders"],
+            "admitted_declarations": op["admitted_declarations"],
+        }
+        fact = {
+            "id": fact_id,
+            "statement": "modeq symm",
+            "formal": {"statement": statement},
+            "epistemic_status": "proved",
+            "proof_route": "kernel-lean",
+            "axiom_footprint": [],
+            "evidence": [
+                {
+                    "kind": "kernel-term",
+                    "supports": "modeq symm",
+                    "check_status": "checked",
+                    "checker_command": checker.checker_command(fact_id),
+                    "checker_operation": binding,
+                }
+            ],
+        }
+        observation = {
+            "verdict": "proved",
+            "evidence_label": executor["expected_evidence_label"],
+            "target_definition": target["target_definition"],
+            "goal_sha256": op["goal_sha256"],
+            "proof_sha256": op["proof_sha256"],
+            "target_content_sha256": op["target_content_sha256"],
+            "binders_used": op["binders_used"],
+            "max_binders": op["max_binders"],
+            "admitted_declarations": op["admitted_declarations"],
+            "axiom_footprint": [],
+            "retained_answer_dependencies": [],
+            "target_dependency": False,
+            "ledger_writes": 0,
+        }
+        result = checker.check_fact(
+            fact, lambda _operation, fact=None: observation
+        )
+        self.assertEqual(result["operation_id"], operation["id"])
+
+        # Cross-target replay: relabeling the binding's target_fact_id (and
+        # every field a fresh `resolve_multi_target` on the sibling would
+        # disagree with) to a sibling fact must be refused, not silently
+        # accepted -- this is the same guard ADR-0554 demonstrates on the
+        # execution receipt, one layer up at the settled-fact evidence row.
+        sibling_id = "F:ml430-nat-modeq-trans-ef9d1c46"
+        changed = copy.deepcopy(fact)
+        changed["evidence"][0]["checker_operation"]["target_fact_id"] = sibling_id
+        with self.assertRaisesRegex(checker.FactOperationError, "stale or mutated"):
+            checker.check_fact(changed, lambda _operation, fact=None: observation)
+
+        changed = copy.deepcopy(fact)
+        changed["evidence"][0]["checker_operation"]["proof_sha256"] = "0" * 64
+        with self.assertRaisesRegex(checker.FactOperationError, "stale or mutated"):
+            checker.check_fact(changed, lambda _operation, fact=None: observation)
+
 
 if __name__ == "__main__":
     unittest.main()
