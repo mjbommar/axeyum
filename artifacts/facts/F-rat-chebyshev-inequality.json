@@ -19,7 +19,9 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:rat-sq-nonneg"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

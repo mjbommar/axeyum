@@ -49,7 +49,9 @@
     "F:nat-le-add-right",
     "F:nat-le-trans",
     "F:nat-mul-one",
-    "F:rat-mul-comm"
+    "F:rat-mul-comm",
+    "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-mul"
   ],
   "axiom_footprint": [],
   "evidence": [

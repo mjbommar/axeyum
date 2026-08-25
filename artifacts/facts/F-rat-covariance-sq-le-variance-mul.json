@@ -18,6 +18,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:rat-lt-trichotomy",
     "F:rat-mul-comm",
     "F:rat-variance-nonneg"
   ],

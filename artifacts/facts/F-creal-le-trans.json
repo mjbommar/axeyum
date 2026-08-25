@@ -20,7 +20,11 @@
   "depends_on": [
     "F:creal-regular",
     "F:rat-add-assoc",
-    "F:rat-add-comm"
+    "F:rat-add-comm",
+    "F:rat-add-le-add",
+    "F:rat-le-of-le-add-natdivsucc",
+    "F:rat-natdivsucc-add",
+    "F:rat-sub-add-sub"
   ],
   "axiom_footprint": [],
   "evidence": [

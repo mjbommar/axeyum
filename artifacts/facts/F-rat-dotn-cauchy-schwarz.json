@@ -18,10 +18,19 @@
   "depends_on": [
     "F:rat-add-assoc",
     "F:rat-add-comm",
+    "F:rat-add-le-add",
+    "F:rat-add-zero",
     "F:rat-dotn-comm",
+    "F:rat-le-refl",
     "F:rat-left-distrib",
+    "F:rat-lt-trichotomy",
     "F:rat-mul-assoc",
-    "F:rat-mul-comm"
+    "F:rat-mul-comm",
+    "F:rat-mul-one",
+    "F:rat-mul-zero",
+    "F:rat-neg-neg",
+    "F:rat-sq-nonneg",
+    "F:rat-zero-add"
   ],
   "axiom_footprint": [],
   "evidence": [

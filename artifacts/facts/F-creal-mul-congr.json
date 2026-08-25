@@ -22,8 +22,18 @@
     "F:creal-bound-within",
     "F:creal-equiv-of-bounded",
     "F:creal-regular",
+    "F:rat-add-le-add",
+    "F:rat-bounds-add",
+    "F:rat-bounds-mul",
     "F:rat-le-trans",
-    "F:rat-mul-comm"
+    "F:rat-mul-comm",
+    "F:rat-mul-sub-mul",
+    "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-le-scaled",
+    "F:rat-natdivsucc-mul",
+    "F:rat-neg-le-neg",
+    "F:rat-sub-add-sub",
+    "F:rat-zero-le-natdivsucc"
   ],
   "axiom_footprint": [],
   "evidence": [

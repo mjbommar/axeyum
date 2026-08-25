@@ -17,7 +17,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:rat-left-distrib"
+    "F:rat-left-distrib",
+    "F:rat-mul-zero"
   ],
   "axiom_footprint": [],
   "evidence": [

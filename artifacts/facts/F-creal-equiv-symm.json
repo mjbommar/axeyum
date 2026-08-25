@@ -15,7 +15,10 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:rat-bounds-neg",
+    "F:rat-neg-sub"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

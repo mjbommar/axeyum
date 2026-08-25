@@ -22,9 +22,15 @@
   "external_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:rat-add-neg",
+    "F:rat-add-zero",
     "F:rat-left-distrib",
     "F:rat-mul-assoc",
-    "F:rat-mul-comm"
+    "F:rat-mul-comm",
+    "F:rat-mul-zero",
+    "F:rat-right-distrib",
+    "F:rat-sub-add-add",
+    "F:rat-zero-add"
   ],
   "axiom_footprint": [],
   "evidence": [

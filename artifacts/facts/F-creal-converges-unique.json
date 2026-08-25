@@ -19,7 +19,12 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:creal-equiv-of-bounded",
-    "F:rat-add-comm"
+    "F:rat-add-comm",
+    "F:rat-bounds-add",
+    "F:rat-bounds-neg",
+    "F:rat-natdivsucc-add",
+    "F:rat-neg-sub",
+    "F:rat-sub-add-sub"
   ],
   "axiom_footprint": [],
   "evidence": [
