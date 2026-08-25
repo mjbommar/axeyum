@@ -192,6 +192,13 @@ fn every_theorem_here_is_axiom_free() {
             "ceva_ratio_product_of_concurrent",
             p.ceva_ratio_product_of_concurrent,
         ),
+        ("cross_translate", p.cross_translate),
+        ("area_zero_of_collinear", p.area_zero_of_collinear),
+        (
+            "medial_triangle_cross_quarter",
+            p.medial_triangle_cross_quarter,
+        ),
+        ("collinear_of_area_zero", p.collinear_of_area_zero),
     ] {
         let footprint = kernel.axiom_footprint(name);
         assert!(
@@ -318,6 +325,11 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.menelaus_collinear_of_ratio_product,
         p.heron_sixteen_area_sq,
         p.ceva_ratio_product_of_concurrent,
+        p.cross_translate,
+        p.collinear,
+        p.area_zero_of_collinear,
+        p.medial_triangle_cross_quarter,
+        p.collinear_of_area_zero,
     ] {
         assert!(
             kernel.environment().get(name).is_some(),

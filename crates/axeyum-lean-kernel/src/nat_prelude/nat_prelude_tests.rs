@@ -220,6 +220,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.gcd_bezout,
         p.gauss_lemma,
         p.lcm_dvd,
+        p.fib_add,
+        p.coprime_fib_succ,
         p.mod_eq_refl,
         p.mod_eq_symm,
         p.mod_eq_trans,
@@ -4432,7 +4434,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        35 + 193,
+        35 + 195,
         "every promised definition and theorem must be rendered"
     );
 }
