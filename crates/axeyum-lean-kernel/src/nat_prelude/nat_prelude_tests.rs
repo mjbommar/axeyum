@@ -763,6 +763,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_two_pow_succ_iff_of_le,
         p.sum_divisors_two_pow_eq_geom_sum,
         p.sum_divisors_two_pow,
+        p.even_of_even_sq,
+        p.no_rational_sqrt_two,
     ]
 }
 
@@ -5940,7 +5942,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        61 + 273,
+        61 + 275,
         "every promised definition and theorem must be rendered"
     );
 }
