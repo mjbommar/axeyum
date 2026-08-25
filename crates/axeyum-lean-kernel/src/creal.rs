@@ -1315,6 +1315,37 @@ pub struct CRealPrelude {
     /// in `Exists.intro` at the same `K' := k+8` numerator
     /// `sum_range_cauchy_dominated_ordered_normalized` already produces.
     pub sum_range_cauchy_of_dominated: NameId,
+    /// `CReal.sumRange_converges_of_dominated : ∀ f g, (∀ k, le (abs (f k))
+    /// (g k)) → Cauchy (sumRange g) → Exists (fun L => Converges (sumRange f)
+    /// L)` — the composition `series.rs`'s module documentation named as the
+    /// remaining step once [`Self::converges_of_cauchy`] landed
+    /// (`creal/convergence.rs`, the `Cauchy → Converges` bridge through
+    /// `speedup`/`KRegular`, filling the gap that same documentation had
+    /// earlier flagged as missing infrastructure). Introduces no existential
+    /// of its own: applies [`Self::sum_range_cauchy_of_dominated`] to get
+    /// `Cauchy (sumRange f)`, then [`Self::converges_of_cauchy`] directly —
+    /// both already-declared theorems, composed by application alone.
+    pub sum_range_converges_of_dominated: NameId,
+    /// `CReal.sumRange_comparisonTest : ∀ a b, (∀ k, le zero (a k)) → (∀ k,
+    /// le (a k) (b k)) → Exists (fun M => Converges (sumRange b) M) →
+    /// Exists (fun L => Converges (sumRange a) L)` — the comparison test as
+    /// usually stated (pointwise `0 ≤ a k ≤ b k`, `Σ b` convergent), rather
+    /// than [`Self::sum_range_converges_of_dominated`]'s `Cauchy`-hypothesis
+    /// form.
+    ///
+    /// Two conversions bridge the two forms: [`Self::converges_cauchy`]
+    /// turns the `Exists … Converges (sumRange b) M` hypothesis into
+    /// `Cauchy (sumRange b)` (eliminating the witness `M` into a target that
+    /// does not mention it, `creal/convergence.rs`'s `exists_elim` reused
+    /// over `CReal` rather than `Nat`); and `0 ≤ a k`/`a k ≤ b k` combine into
+    /// `abs (a k) ≤ b k` via [`Self::abs_le`], whose second premise
+    /// `neg (a k) ≤ b k` comes from `neg (a k) ≤ zero` (`Self::neg_le_neg` at
+    /// `0 ≤ a k`, then the `Equiv (neg zero) zero` rewrite
+    /// `series.rs::neg_zero_equiv` already builds for `power.rs`'s identical
+    /// pattern) chained through `zero ≤ b k` (`Self::le_trans` of the two
+    /// pointwise hypotheses) by one more [`Self::le_trans`]. Then
+    /// [`Self::sum_range_converges_of_dominated`] closes it directly.
+    pub sum_range_comparison_test: NameId,
     /// `CReal.sumRange_seq_zero : Eq Rat (seq (sumRange f Nat.zero) k)
     /// Rat.zero` — the base case of the sample-rate law, closing by `Eq.refl`
     /// alone (`sumRange f zero` ι-reduces to `zero := ofRat Rat.zero`, and
@@ -2100,6 +2131,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_cauchy_dominated_ordered_normalized: kernel
             .name_str(creal, "sumRange_cauchy_dominated_ordered_normalized"),
         sum_range_cauchy_of_dominated: kernel.name_str(creal, "sumRange_cauchy_of_dominated"),
+        sum_range_converges_of_dominated: kernel.name_str(creal, "sumRange_converges_of_dominated"),
+        sum_range_comparison_test: kernel.name_str(creal, "sumRange_comparisonTest"),
         sum_range_seq_zero: kernel.name_str(creal, "sumRange_seq_zero"),
         sum_range_seq_succ: kernel.name_str(creal, "sumRange_seq_succ"),
         pow: kernel.name_str(creal, "pow"),

@@ -283,7 +283,18 @@ fn diagonal(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId) -> ExprId {
 }
 
 /// `Exists elem_ty predicate`.
-fn exists_ty(d: &mut IntDev<'_>, p: CRealPrelude, elem_ty: ExprId, predicate: ExprId) -> ExprId {
+///
+/// `pub(super)`: reused by `creal/series.rs`'s `sumRange_converges_of_dominated`
+/// / `sumRange_comparison_test` to build the `Exists CReal (fun L => …)`
+/// target type over `CReal` (not `Nat` — `int_prelude::ops::exists_elim` is
+/// hardcoded to `Nat`), rather than re-deriving this construction a second
+/// time.
+pub(super) fn exists_ty(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    elem_ty: ExprId,
+    predicate: ExprId,
+) -> ExprId {
     let one = d.level_one();
     let exists_name = p.rat.int.logic.exists_;
     let exists_const = d.kernel().const_(exists_name, vec![one]);
@@ -308,7 +319,14 @@ fn exists_intro(
 /// `Exists.rec elem_ty predicate motive minor witness` — eliminate
 /// `witness : Exists elem_ty predicate` into `target`, given
 /// `minor : ∀ a, predicate a → target`. `target` must not depend on `witness`.
-fn exists_elim(
+///
+/// `pub(super)`: `series.rs`'s `sumRange_comparison_test` reuses this (over
+/// `elem_ty := CReal`) to eliminate its `Exists (fun M => Converges (sumRange
+/// b) M)` hypothesis into `Cauchy (sumRange b)` — a target that does not
+/// mention the witness `M`, the same "target independent of the witness"
+/// shape `series.rs`'s own `sumRange_cauchy_of_dominated` already uses
+/// against a *different* existential, over `Nat`.
+pub(super) fn exists_elim(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     elem_ty: ExprId,
@@ -369,7 +387,14 @@ fn converges_predicate(
 }
 
 /// `CReal.Converges func target`.
-fn converges_applied(d: &mut IntDev<'_>, p: CRealPrelude, func: ExprId, target: ExprId) -> ExprId {
+///
+/// `pub(super)`: reused by `creal/series.rs`, see [`exists_ty`]'s doc comment.
+pub(super) fn converges_applied(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    func: ExprId,
+    target: ExprId,
+) -> ExprId {
     d.const_app(p.converges, &[func, target])
 }
 
