@@ -69,6 +69,29 @@ use axeyum_lean_kernel::{
 };
 
 fn main() -> ExitCode {
+    // RUN THE WHOLE BUILD ON A DEEP STACK, not on the process's main thread.
+    //
+    // Extending this example to `creal`/`complex`/`cpoint` made a DEBUG build
+    // overflow the default 8 MiB main-thread stack and die with SIGABRT before
+    // printing anything. `--release` happens to survive, so the extension was
+    // landed with a doc note saying `--release` is now mandatory -- and that
+    // note did not reach the two scripts that already invoked this example
+    // without it. `just check` then failed in `check-fact-depends-derived.py`
+    // with `died with <Signals.SIGABRT: 6>`.
+    //
+    // A doc comment cannot fix a call site it does not know about. `complex`
+    // and `cpoint` already solve this the same way in their test modules
+    // (`stack_size(64 * 1024 * 1024)`), so do it here and let every caller --
+    // debug or release, present or future -- work unchanged.
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(run)
+        .expect("spawn the deep-stack worker")
+        .join()
+        .expect("the deep-stack worker must not panic")
+}
+
+fn run() -> ExitCode {
     let filter: Option<String> = std::env::args().nth(1);
 
     let mut kernel = Kernel::new();

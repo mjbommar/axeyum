@@ -21,7 +21,11 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:rat-left-distrib",
+    "F:rat-mul-assoc",
+    "F:rat-mul-comm"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

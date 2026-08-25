@@ -15,7 +15,11 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:nat-dvd-gcd",
+    "F:nat-gcd-dvd-left",
+    "F:nat-gcd-dvd-right"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

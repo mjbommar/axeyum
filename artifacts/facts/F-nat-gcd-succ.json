@@ -14,7 +14,9 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:nat-mod-lt"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

@@ -15,6 +15,9 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:nat-add-assoc",
+    "F:nat-add-comm",
+    "F:nat-add-zero",
     "F:nat-dvd-add",
     "F:nat-gcd-dvd-left",
     "F:nat-gcd-dvd-right"

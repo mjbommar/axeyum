@@ -19,6 +19,7 @@
     "F:nat-add-comm",
     "F:nat-gcd-succ",
     "F:nat-left-distrib",
+    "F:nat-mod-lt",
     "F:nat-mul-assoc",
     "F:nat-mul-one",
     "F:nat-zero-add"

@@ -14,7 +14,11 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:nat-euclid-lemma",
+    "F:nat-succ-add",
+    "F:nat-zero-add"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

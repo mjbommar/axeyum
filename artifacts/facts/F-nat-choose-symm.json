@@ -16,7 +16,9 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-add-comm",
-    "F:nat-choose-zero-right"
+    "F:nat-add-sub-cancel-left",
+    "F:nat-choose-zero-right",
+    "F:nat-succ-add"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -16,7 +16,8 @@
   "axiom_footprint": [],
   "depends_on": [
     "F:nat-dvd-add",
-    "F:nat-exists-prime-dvd"
+    "F:nat-exists-prime-dvd",
+    "F:nat-one-le-factorial"
   ],
   "evidence": [
     {
