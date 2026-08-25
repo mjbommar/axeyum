@@ -725,6 +725,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.prod_range_zero,
         p.prod_range_succ,
         p.exists_prime_factorization,
+        p.coprime_mul_dvd,
+        p.crt_unique,
     ]
 }
 
@@ -4837,7 +4839,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        53 + 243,
+        53 + 245,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -6593,6 +6595,77 @@ fn subset_is_a_partial_order_and_joins_the_lattice() {
         p.subset_union_left,
         p.subset_inter_left,
     ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
+
+/// The Chinese Remainder Theorem's **uniqueness** half (`crt_unique`,
+/// `crt.rs`) at a concrete instance: `m=2, n=3, x=1, y=7` — `1` and `7` are
+/// both `≡ 1 (mod 2)` and `≡ 1 (mod 3)`, and `7 - 1 = 6 = 2*3`, so
+/// `crt_unique` must produce `modEq 6 1 7`. `coprime_mul_dvd` (`crt.rs`) is
+/// exercised here as `crt_unique`'s own engine, not standalone. NEGATIVE
+/// CONTROL: the same proof term reused against a WRONG modulus (`5`, not
+/// `2*3`) must be rejected — the witnesses `crt_unique` builds are for `6`
+/// specifically, not for any common multiple of `2` and `3`.
+#[test]
+fn crt_unique_holds_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let seven = f.num(7);
+
+    // gcd 2 3 computes to 1.
+    let gcd_mn = f.gcd(two, three);
+    let coprime_ty = f.eq(gcd_mn, one);
+    let coprime = f.refl(one);
+    let coprime_inferred =
+        f.k.infer(coprime)
+            .unwrap_or_else(|e| panic!("gcd 2 3 = 1 should typecheck: {}", f.explain(&e)));
+    assert!(
+        f.k.def_eq(coprime_inferred, coprime_ty),
+        "gcd 2 3 must compute to 1"
+    );
+
+    // x=1 ≡ y=7 (mod 2): 1 + 2*3 = 7 + 2*0.
+    let hm = f.concrete_mod_eq(two, one, seven, three, zero);
+    // x=1 ≡ y=7 (mod 3): 1 + 3*2 = 7 + 3*0.
+    let hn = f.concrete_mod_eq(three, one, seven, two, zero);
+
+    let proof = f.lemma(p.crt_unique, &[two, three, one, seven, coprime, hm, hn]);
+    let mn = f.mul(two, three);
+    let six = f.num(6);
+    assert!(f.k.def_eq(mn, six), "2*3 must compute to 6");
+    let target = f.mod_eq(mn, one, seven);
+    let name = f.name("one_mod_six_seven");
+    f.declare_theorem(name, target, proof).unwrap_or_else(|e| {
+        panic!(
+            "crt_unique at m=2,n=3,x=1,y=7 should admit modEq 6 1 7: {}",
+            f.explain(&e)
+        )
+    });
+
+    // NEGATIVE CONTROL: the very same proof term against a WRONG modulus
+    // (5, not 2*3) must be rejected.
+    let five = f.num(5);
+    let wrong_ty = f.mod_eq(five, one, seven);
+    let wrong_name = f.name("one_mod_five_seven_via_crt_unique_forgery");
+    let error = f
+        .declare_theorem(wrong_name, wrong_ty, proof)
+        .expect_err("crt_unique's witness for modulus 6 must not satisfy modulus 5");
+    assert!(matches!(
+        error,
+        KernelError::TypeMismatch { .. } | KernelError::DeclarationValueMismatch { .. }
+    ));
+
+    for name in [p.coprime_mul_dvd, p.crt_unique] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),
             "{} must rest on zero axioms",
