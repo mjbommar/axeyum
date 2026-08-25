@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 189] = [
+    let expected: [(&str, crate::NameId, &str); 191] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -291,6 +291,8 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.sumRange_telescope", p.sum_range_telescope, "theorem"),
         ("CReal.sumRange_split", p.sum_range_split, "theorem"),
         ("CReal.sumRange_tail_le", p.sum_range_tail_le, "theorem"),
+        ("CReal.sumRange_seq_zero", p.sum_range_seq_zero, "theorem"),
+        ("CReal.sumRange_seq_succ", p.sum_range_seq_succ, "theorem"),
         // Powers, and the geometric series over ℝ (creal/power.rs).
         // PRESENCE MATTERS AS MUCH AS THE FOOTPRINT here too — see the
         // convergence block's own comment above.
