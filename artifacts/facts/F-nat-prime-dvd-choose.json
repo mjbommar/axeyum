@@ -15,7 +15,10 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:nat-dvd-mul",
     "F:nat-euclid-lemma",
+    "F:nat-le-dest",
+    "F:nat-le-of-dvd",
     "F:nat-lt-irrefl",
     "F:nat-succ-add",
     "F:nat-zero-add",

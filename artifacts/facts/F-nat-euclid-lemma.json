@@ -19,14 +19,19 @@
     "F:nat-add-assoc",
     "F:nat-add-comm",
     "F:nat-dvd-add",
+    "F:nat-dvd-add-right-cancel-of-pos",
     "F:nat-dvd-gcd-iff",
+    "F:nat-dvd-mul",
+    "F:nat-dvd-mul-right-of-dvd",
     "F:nat-gcd-bezout",
     "F:nat-gcd-dvd-left",
     "F:nat-gcd-dvd-right",
     "F:nat-le-add-right",
     "F:nat-le-trans",
     "F:nat-mul-assoc",
-    "F:nat-mul-comm"
+    "F:nat-mul-comm",
+    "F:nat-one-mul",
+    "F:nat-right-distrib"
   ],
   "evidence": [
     {

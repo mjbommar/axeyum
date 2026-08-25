@@ -15,6 +15,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:nat-div-mod-exec",
     "F:nat-not-succ-le-zero"
   ],
   "axiom_footprint": [],

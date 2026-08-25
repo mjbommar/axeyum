@@ -17,10 +17,16 @@
   "depends_on": [
     "F:nat-add-comm",
     "F:nat-add-sub-cancel-left",
+    "F:nat-choose-self",
+    "F:nat-choose-succ-succ",
     "F:nat-choose-zero-right",
+    "F:nat-le-antisymm",
+    "F:nat-le-dest",
     "F:nat-le-of-succ-le-succ",
     "F:nat-lt-or-eq-of-le",
+    "F:nat-sub-self",
     "F:nat-succ-add",
+    "F:nat-succ-sub-succ",
     "F:nat-zero-le"
   ],
   "axiom_footprint": [],
