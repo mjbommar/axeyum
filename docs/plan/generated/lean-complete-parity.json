@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "c488877ce936a446b2171429ba501e6440b4f5fb309773504c8effbdf52097b3"
+      "sha256": "636421c1f73e4c61193b498e3c97c16974d39e3b69d6f2636c03dfab6c65e339"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -44,7 +44,7 @@
     },
     {
       "path": "docs/plan/lean-axiom-ledger-v1.json",
-      "sha256": "1324c5219a1fd04d66897fb2b05af528592cfdcd6a95761b3ccd7f53dec0ef04"
+      "sha256": "69be62cc71409d8204aa874ab33666ac8daa5957763d5905477790beb54c0ba4"
     },
     {
       "path": "docs/plan/lean-compatibility-v1.json",
@@ -508,7 +508,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "24b2d32266404d119f333458e6b0c666705a654e44de47c277ac8a9726a977b2"
+      "sha256": "57d147a422022289a3b26cf6d704f2441b6b151bd52e0e298e43010f1699ea18"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
