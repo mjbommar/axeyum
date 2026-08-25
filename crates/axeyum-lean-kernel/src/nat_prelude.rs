@@ -1609,6 +1609,15 @@ pub struct NatPrelude {
     /// [`Self::cantor_diagonal`] by nested `Exists.rec` elimination; see
     /// `cantor.rs`'s module doc.
     pub cantor_diagonal_neg: NameId,
+    /// `Nat.cantor_no_fixed_point : ∀ F : Bool → Bool,
+    ///   (∀ b, Eq Bool (F b) b → False) → (∃ d, Eq Bool (F d) d) → False` —
+    /// the fixed-point corollary: a `Bool → Bool` function disagreeing with
+    /// every input everywhere has no fixed point. Independent of
+    /// [`Self::cantor_diagonal`]/[`Self::cantor_diagonal_neg`] (a single
+    /// `Exists.rec`, no `Bool.rec` case split needed), but instantiating `F`
+    /// at the diagonal's own `not` recovers "negation has no fixed point" —
+    /// the seed of the halting argument's shape.
+    pub cantor_no_fixed_point: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2028,6 +2037,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             pow_sq_succ: kernel.name_str(nat, "pow_sq_succ"),
             cantor_diagonal: kernel.name_str(nat, "cantor_diagonal"),
             cantor_diagonal_neg: kernel.name_str(nat, "cantor_diagonal_neg"),
+            cantor_no_fixed_point: kernel.name_str(nat, "cantor_no_fixed_point"),
         };
 
         let mut d = NatDev::new(kernel, p);

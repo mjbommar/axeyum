@@ -738,6 +738,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.succ_pred_of_pos,
         p.cantor_diagonal,
         p.cantor_diagonal_neg,
+        p.cantor_no_fixed_point,
     ]
 }
 
@@ -5017,7 +5018,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        55 + 254,
+        55 + 255,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -6954,5 +6955,51 @@ fn cantor_diagonal_neg_applies_at_beq() {
     assert!(
         f.k.axiom_footprint(p.cantor_diagonal_neg).is_empty(),
         "cantor_diagonal_neg must rest on zero axioms"
+    );
+}
+
+/// `Nat.cantor_no_fixed_point` applies at a concrete `F := not` (rebuilt
+/// independently of `cantor.rs`'s private `not_bool`, the same pattern the
+/// two tests above use) and is axiom-free. Instantiating at `not` is the
+/// corollary's own point: the diagonal's negation has no fixed point on
+/// `Bool`, which is the seed of the halting argument's self-application
+/// shape.
+#[test]
+fn cantor_no_fixed_point_applies_to_negation() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let bool_ty = f.bool_ty();
+
+    // not := fun b => Bool.rec (fun _ => Bool) true false b
+    let not_fn = {
+        let b_fv = f.fresh_fvar();
+        let b = f.k.fvar(b_fv);
+        let inner_motive_fv = f.fresh_fvar();
+        let inner_motive = f.lam_fv(inner_motive_fv, bool_ty, bool_ty);
+        let one = f.level_one();
+        let bool_rec = f.k.const_(p.logic.bool_rec, vec![one]);
+        let t = f.bool_true();
+        let ff = f.bool_false();
+        let not_b = f.apply(bool_rec, &[inner_motive, t, ff, b]);
+        f.lam_fv(b_fv, bool_ty, not_b)
+    };
+
+    let theorem = f.k.const_(p.cantor_no_fixed_point, vec![]);
+    let applied = f.k.app(theorem, not_fn);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "cantor_no_fixed_point must apply to a concrete F: {}",
+            f.explain(&e)
+        )
+    });
+    let rendered = f.k.render_lean(inferred);
+    assert!(
+        rendered.contains("Exists") && rendered.contains("False"),
+        "unexpected residue type: {rendered}"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.cantor_no_fixed_point).is_empty(),
+        "cantor_no_fixed_point must rest on zero axioms"
     );
 }

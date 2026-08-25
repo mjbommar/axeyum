@@ -400,10 +400,103 @@ pub(super) fn declare_cantor_diagonal_neg(
     d.declare_theorem(p.cantor_diagonal_neg, ty, value)
 }
 
+/// `Nat.cantor_no_fixed_point : ∀ F : Bool → Bool,
+///   (∀ b, Eq Bool (F b) b → False) → (∃ d, Eq Bool (F d) d) → False`
+///
+/// The fixed-point corollary: a `Bool → Bool` function that disagrees with
+/// every input everywhere has no fixed point. This is nearly free of the
+/// case-split machinery the two theorems above needed — it is a single
+/// `Exists.rec` on the fixed-point hypothesis, applying the pointwise
+/// disagreement hypothesis directly at the witness — and it is the seed of
+/// the halting argument's shape: a procedure that decides a self-referential
+/// question by disagreeing with itself at every point cannot be applied to
+/// itself.
+///
+/// Instantiating `F` at the diagonal's own `not` and the hypothesis at
+/// [`cantor_pointwise`] (universally closed) gives "negation has no fixed
+/// point on `Bool`" — checked in `nat_prelude_tests.rs`.
+pub(super) fn declare_cantor_no_fixed_point(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let bool_ty = d.bool_ty();
+    let false_const = d.kernel().const_(p.logic.false_, vec![]);
+    let one = d.level_one();
+
+    let fb_ty = d.arrow(bool_ty, bool_ty); // Bool -> Bool
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+
+    // no_ne_hyp_ty := ∀ b, Eq Bool (F b) b -> False
+    let (b_fv, no_ne_body_ty) = {
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let fb = d.apply(f, &[b]);
+        let eq_ty = d.bool_eq(fb, b);
+        let neg_ty = d.arrow(eq_ty, false_const);
+        (b_fv, neg_ty)
+    };
+    let no_ne_hyp_ty = d.pi_fv(b_fv, bool_ty, no_ne_body_ty);
+
+    // fixed_pred := fun d => Eq Bool (F d) d
+    let fixed_pred = {
+        let d_fv = d.fresh_fvar();
+        let dv = d.kernel().fvar(d_fv);
+        let fd = d.apply(f, &[dv]);
+        let eq_ty = d.bool_eq(fd, dv);
+        d.lam_fv(d_fv, bool_ty, eq_ty)
+    };
+    let exists_c = d.kernel().const_(p.logic.exists_, vec![one]);
+    let fixed_ex_ty = d.apply(exists_c, &[bool_ty, fixed_pred]);
+
+    let stmt_for_f = {
+        let inner = d.arrow(fixed_ex_ty, false_const);
+        d.arrow(no_ne_hyp_ty, inner)
+    };
+
+    let no_ne_fv = d.fresh_fvar();
+    let no_ne = d.kernel().fvar(no_ne_fv);
+    let ex_fv = d.fresh_fvar();
+    let ex = d.kernel().fvar(ex_fv);
+
+    // motive := fun (_ : Exists Bool fixed_pred) => False
+    let motive = {
+        let dummy_fv = d.fresh_fvar();
+        d.lam_fv(dummy_fv, fixed_ex_ty, false_const)
+    };
+    // minor := fun (d0 : Bool) (hd0 : Eq Bool (F d0) d0) => no_ne d0 hd0
+    let minor = {
+        let d0_fv = d.fresh_fvar();
+        let d0 = d.kernel().fvar(d0_fv);
+        let fd0 = d.apply(f, &[d0]);
+        let hd0_ty = d.bool_eq(fd0, d0);
+        let hd0_fv = d.fresh_fvar();
+        let hd0 = d.kernel().fvar(hd0_fv);
+        let no_ne_d0 = d.apply(no_ne, &[d0]);
+        let result = d.apply(no_ne_d0, &[hd0]);
+        let with_hd0 = d.lam_fv(hd0_fv, hd0_ty, result);
+        d.lam_fv(d0_fv, bool_ty, with_hd0)
+    };
+    let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+    let false_proof = d.apply(exists_rec, &[bool_ty, fixed_pred, motive, minor, ex]);
+
+    let with_ex = d.lam_fv(ex_fv, fixed_ex_ty, false_proof);
+    let with_no_ne = d.lam_fv(no_ne_fv, no_ne_hyp_ty, with_ex);
+
+    let ty = d.pi_fv(f_fv, fb_ty, stmt_for_f);
+    let value = d.lam_fv(f_fv, fb_ty, with_no_ne);
+
+    d.declare_theorem(p.cantor_no_fixed_point, ty, value)
+}
+
 /// Declare this module's results, in dependency order: the headline theorem,
-/// then the negative form built on top of it.
+/// the negative form built on top of it, then the fixed-point corollary
+/// (independent of both, but placed alongside them thematically).
 pub(super) fn declare_cantor_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_cantor_diagonal(d, p)?;
     declare_cantor_diagonal_neg(d, p)?;
+    declare_cantor_no_fixed_point(d, p)?;
     Ok(())
 }
