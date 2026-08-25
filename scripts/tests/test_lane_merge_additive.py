@@ -171,3 +171,23 @@ class TempDir:
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DocCommentDelimiters(unittest.TestCase):
+    """Doc comments in this repository carry deliberately unbalanced
+    delimiters -- interval notation `[0,n)` and rustdoc links [`Self::foo`].
+    Counting them made the tool refuse a SAFE merge on 2026-08-25."""
+
+    def test_interval_notation_in_a_comment_does_not_count(self) -> None:
+        self.assertEqual(lma.delimiter_balance("/// the identity on `[0,n)`\nfn a() {}"), {"{": 0, "(": 0, "[": 0})
+
+    def test_a_rustdoc_link_pair_does_not_count(self) -> None:
+        text = "/// see [`Self::x`]/[`Self::y`]\npub(super) fn a() {}"
+        self.assertEqual({k: v for k, v in lma.delimiter_balance(text).items() if v}, {})
+
+    def test_code_delimiters_are_still_counted_after_a_comment(self) -> None:
+        """The discriminating half: stripping comments must not blind the check."""
+        self.assertEqual(lma.delimiter_balance("// note\npub(super) fn a(")["("], 1)
+
+    def test_a_delimiter_before_a_comment_on_the_same_line_still_counts(self) -> None:
+        self.assertEqual(lma.delimiter_balance("fn a() { // trailing note )))\n")["{"], 1)

@@ -81,6 +81,121 @@ impl Fixture {
 /// Every name [`build_nat_prelude`] promises, with the declaration kind it must
 /// have. `Nat`/`Nat.zero`/`Nat.succ`/`Nat.rec`/`Nat.le`/… are inductive
 /// machinery, so they are checked separately by `environment().contains`.
+/// `Nat.permInverse` COMPUTES the right inverse table for a concrete
+/// permutation of `[0,4)` — not merely type-checks — and a negative control:
+/// reusing the very proof that certifies the correct `(n, k)` instance
+/// against a statement with `n` and `k` TRANSPOSED (a genuinely different,
+/// and false, computed equation) must be rejected.
+#[test]
+fn perm_inverse_computes_a_concrete_permutation_table_with_a_transposed_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    // f : the 4-cycle (0 1 2 3), i.e. f(0)=1, f(1)=2, f(2)=3, f(3)=0.
+    let perm = |f: &mut Fixture| -> ExprId {
+        let k_fv = f.fresh_fvar();
+        let k = f.kernel().fvar(k_fv);
+        let zero = f.zero();
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let cond2 = f.beq(k, two);
+        let sel2 = f.bool_select_nat(cond2, three, zero);
+        let cond1 = f.beq(k, one);
+        let sel1 = f.bool_select_nat(cond1, two, sel2);
+        let cond0 = f.beq(k, zero);
+        let sel0 = f.bool_select_nat(cond0, one, sel1);
+        f.lam_fv(k_fv, nat, sel0)
+    };
+    let sigma = perm(&mut f);
+    let four = f.num(4);
+
+    // The genuine inverse table: permInverse sigma 4 k, for k = 0,1,2,3,
+    // must COMPUTE (by `def_eq`, i.e. by reduction, not merely type) to
+    // 3, 0, 1, 2 respectively -- sigma's actual two-sided inverse on [0,4).
+    let expected = [(0u32, 3u32), (1, 0), (2, 1), (3, 2)];
+    let mut computed_at_one: Option<ExprId> = None;
+    for (k_val, expected_val) in expected {
+        let k = f.num(k_val);
+        let idx = f.const_app(p.perm_inverse, &[sigma, four, k]);
+        let want = f.num(expected_val);
+        assert!(
+            f.k.def_eq(idx, want),
+            "permInverse sigma 4 {k_val} must COMPUTE to {expected_val}"
+        );
+        // NEGATIVE CONTROL half 1: it must not also collapse to some OTHER
+        // index (a checker that accepts every value would pass the line
+        // above vacuously if `def_eq` were broken in the "always true"
+        // direction).
+        let bogus = f.num((expected_val + 1) % 4);
+        assert!(
+            !f.k.def_eq(idx, bogus),
+            "permInverse sigma 4 {k_val} must NOT also compute to {}",
+            (expected_val + 1) % 4
+        );
+        if k_val == 1 {
+            computed_at_one = Some(idx);
+        }
+    }
+    let idx_at_1 = computed_at_one.expect("k=1 case ran");
+
+    // `sigma` composed with its computed inverse really is the identity at
+    // this point: `sigma (permInverse sigma 4 1) = 1`.
+    let sigma_idx = f.apply(sigma, &[idx_at_1]);
+    let one = f.num(1);
+    assert!(
+        f.k.def_eq(sigma_idx, one),
+        "sigma (permInverse sigma 4 1) must compute to 1"
+    );
+
+    // The REAL proof of this fact: `Eq.refl 1`, whose inferred type is
+    // `Eq Nat 1 1`, accepted here as `Eq Nat (sigma (permInverse sigma 4 1)) 1`
+    // only because both sides genuinely reduce to the same numeral.
+    let real_proof = f.refl(one);
+    let real_stmt = f.eq(sigma_idx, one);
+    let real_name = f.name("nc_perm_inverse_real_at_n4_k1");
+    f.declare_theorem(real_name, real_stmt, real_proof)
+        .expect("the real, non-transposed fact must be admitted");
+
+    // NEGATIVE CONTROL half 2 (the brief's required control): reuse THAT
+    // SAME proof term against the statement with `n` and `k` TRANSPOSED --
+    // `sigma (permInverse sigma 1 4) = 4` instead of
+    // `sigma (permInverse sigma 4 1) = 1`. This is a genuinely different
+    // computed value (confirmed below before trusting the rejection), not
+    // an accidental tautology: `permInverse sigma 1 4` computes to `0`
+    // (the search bound is `1`, so only index `0` is ever tried, and
+    // `sigma 0 = 1 != 4` never matches, so the search falls through to its
+    // base-case default `0`), and `sigma 0 = 1`, so the transposed
+    // statement's left side is `1`, not `4`.
+    let one_bound = f.num(1);
+    let four_target = f.num(4);
+    let idx_transposed = f.const_app(p.perm_inverse, &[sigma, one_bound, four_target]);
+    let zero = f.zero();
+    assert!(
+        f.k.def_eq(idx_transposed, zero),
+        "permInverse sigma 1 4 must compute to 0 (only index 0 is searched)"
+    );
+    let sigma_idx_transposed = f.apply(sigma, &[idx_transposed]);
+    assert!(
+        f.k.def_eq(sigma_idx_transposed, one),
+        "sigma (permInverse sigma 1 4) computes to 1, genuinely != the claimed 4"
+    );
+    let transposed_stmt = f.eq(sigma_idx_transposed, four_target);
+
+    let bad_name = f.name("nc_perm_inverse_transposed_n_and_k");
+    let err = f
+        .declare_theorem(bad_name, transposed_stmt, real_proof)
+        .expect_err(
+            "NC: reusing the n=4,k=1 proof against the n,k-transposed statement must be rejected",
+        );
+    println!(
+        "NC (permInverse with n and k transposed) rejected:\n  {}",
+        f.explain(&err)
+    );
+    assert!(!f.k.environment().contains(bad_name));
+}
+
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
         p.set_union,
@@ -131,6 +246,9 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.bijective_on,
         p.comp,
         p.is_group_on,
+        p.perm_inverse,
+        p.id,
+        p.is_group_on_fn,
     ]
 }
 
@@ -371,6 +489,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.union_eq_right_of_subset,
         p.subset_union_left,
         p.subset_inter_left,
+        p.perm_inverse_right,
+        p.perm_inverse_left,
+        p.comp_assoc,
     ]
 }
 
@@ -4483,7 +4604,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        48 + 231,
+        51 + 234,
         "every promised definition and theorem must be rendered"
     );
 }

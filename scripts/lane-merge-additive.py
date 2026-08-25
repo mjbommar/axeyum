@@ -53,14 +53,27 @@ PAIRS = {"{": "}", "(": ")", "[": "]"}
 ITEM_RE = re.compile(r"^(?:pub\(super\) |pub\(crate\) |pub |)fn ([A-Za-z_][A-Za-z0-9_]*)", re.M)
 
 
-def delimiter_balance(text: str) -> dict[str, int]:
-    """Net opener-minus-closer count per pair, ignoring strings/comments crudely.
+LINE_COMMENT_RE = re.compile(r"//.*$", re.M)
 
-    Crude is correct here: we are asking "did this block end mid-item", and a
-    block that ends inside a string literal is equally unsafe to concatenate.
+
+def delimiter_balance(text: str) -> dict[str, int]:
+    """Net opener-minus-closer count per pair, over CODE only.
+
+    Line comments are stripped first, and that is not a nicety -- this
+    repository's doc comments are full of interval notation like `[0,n)` and
+    rustdoc links like [`Self::foo`], which are deliberately unbalanced as
+    delimiters. Measured 2026-08-25: without stripping, a genuinely SAFE hunk
+    reported `{'(': -2, '[': 2}` and the tool refused a merge that would have
+    concatenated fine. That is the fail-closed direction, but a checker that
+    cries wolf gets ignored, and being ignored is how it stops being a checker.
+
+    Block comments and string literals are NOT handled. A block whose braces
+    balance only because a `{` sits inside a string is still unsafe to
+    concatenate, so counting it is the conservative reading; and `//` covers
+    every comment in the prelude modules this tool is for.
     """
     out = {k: 0 for k in PAIRS}
-    for ch in text:
+    for ch in LINE_COMMENT_RE.sub("", text):
         for opener, closer in PAIRS.items():
             if ch == opener:
                 out[opener] += 1
