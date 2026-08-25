@@ -228,7 +228,7 @@ use relation::{
 use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
-use subset_product::declare_prod_range_if_all;
+use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use totient::declare_totient_all;
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
@@ -1622,6 +1622,22 @@ pub struct NatPrelude {
     /// subset built from a partial operator (e.g. truncated subtraction)
     /// typically only agrees within the range.
     pub prod_range_if_congr_lt: NameId,
+    /// `Nat.injectiveOnP p f n := ∀ i j, i<n → j<n → p i=true → p j=true →
+    /// f i=f j → i=j` — [`Self::injective_on`] restricted to the `p`-subset
+    /// of `[0,n)`.
+    pub injective_on_p: NameId,
+    /// `Nat.mapsIntoP p f n := ∀ i, i<n → p i=true → f i<n ∧ p (f i)=true`
+    /// — a SELF-map of the `p`-subset, not merely into `[0,n)`.
+    pub maps_into_p: NameId,
+    /// `Nat.surjectiveOnP p f n := ∀ k, k<n → p k=true → ∃ i, i<n ∧
+    /// p i=true ∧ f i=k`.
+    pub surjective_on_p: NameId,
+    /// `Nat.injective_on_p_imp_surjective_on_p : ∀ p f n, InjectiveOnP p f n
+    /// → MapsIntoP p f n → SurjectiveOnP p f n` — the predicate-scoped
+    /// pigeonhole, by reduction to [`Self::injective_on_imp_surjective_on`]
+    /// (`finite.rs`) via the identity-outside-`S` extension of `f`
+    /// (`subset_product.rs`'s module doc).
+    pub injective_on_p_imp_surjective_on_p: NameId,
     /// `Nat.sumDivisors n := sumRange (fun d => bool_select_nat (beq (mod n
     /// d) 0) d 0) (succ n)` — the sum of every divisor of `n` in `[0,n]`,
     /// `n` itself included (`d = 0` never contributes: both `bool_select_nat`
@@ -2107,6 +2123,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prod_range_if_zero: kernel.name_str(nat, "prodRangeIf_zero"),
             prod_range_if_succ: kernel.name_str(nat, "prodRangeIf_succ"),
             prod_range_if_congr_lt: kernel.name_str(nat, "prodRangeIf_congr_lt"),
+            injective_on_p: kernel.name_str(nat, "injectiveOnP"),
+            maps_into_p: kernel.name_str(nat, "mapsIntoP"),
+            surjective_on_p: kernel.name_str(nat, "surjectiveOnP"),
+            injective_on_p_imp_surjective_on_p: kernel
+                .name_str(nat, "injective_on_p_imp_surjective_on_p"),
             sum_divisors: kernel.name_str(nat, "sumDivisors"),
             sum_divisors_one: kernel.name_str(nat, "sumDivisors_one"),
             sum_divisors_prime: kernel.name_str(nat, "sumDivisors_prime"),
@@ -2204,6 +2225,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_permutation_all(&mut d, &p)?;
         declare_prod_range(&mut d, &p)?;
         declare_prod_range_if_all(&mut d, &p)?;
+        declare_pigeonhole_p_all(&mut d, &p)?;
         declare_exists_prime_factorization(&mut d, &p)?;
         declare_crt(&mut d, &p)?;
         declare_powsq_all(&mut d, &p)?;

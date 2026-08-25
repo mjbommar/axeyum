@@ -474,6 +474,9 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.eq_on,
         p.prod_range,
         p.prod_range_if,
+        p.injective_on_p,
+        p.maps_into_p,
+        p.surjective_on_p,
         p.pow_sq_aux,
         p.pow_sq,
         p.sum_divisors,
@@ -733,6 +736,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.prod_range_if_zero,
         p.prod_range_if_succ,
         p.prod_range_if_congr_lt,
+        p.injective_on_p_imp_surjective_on_p,
         p.exists_prime_factorization,
         p.coprime_mul_dvd,
         p.crt_unique,
@@ -1089,6 +1093,107 @@ fn prod_range_if_congr_lt_applies_at_a_reflexive_instance() {
     assert!(
         f.kernel().def_eq(inferred, stmt),
         "prodRangeIf_congr_lt applied reflexively must prove prodRangeIf p f 4 = prodRangeIf p f 4"
+    );
+}
+
+/// The predicate-scoped pigeonhole (`Nat.injective_on_p_imp_surjective_on_p`)
+/// at a REAL predicate and a REAL bijection of its subset: `p i := i is odd`
+/// on `{0,…,5}` (the subset is `{1,3,5}`) and `sigma` the 3-cycle
+/// `1 → 3 → 5 → 1`, fixing every point outside the subset. Two things are
+/// checked, not just one: first that `p` and `sigma` genuinely compute what
+/// their names claim (every value below reduces to the SAME numeral both
+/// sides would reach, checked by `def_eq`, not merely type-checked), and
+/// second — the "apply, then infer" bar `restrict_injective_and_maps_into_
+/// apply_at_a_concrete_swap` above already sets for a self-map theorem with
+/// this many hypotheses — that the theorem's PARTIAL application (the two
+/// data arguments `p`/`sigma`/`n`, none of the three proof-shaped
+/// hypotheses) infers the expected residual Pi type.
+#[test]
+fn predicate_scoped_pigeonhole_applies_at_a_concrete_odd_3_cycle() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    // `fun i => beq (mod i 2) 1` — `i` is odd. Same construction
+    // `prod_range_if_computes_on_small_numerals` above uses.
+    let is_odd = {
+        let i_fv = f.fresh_fvar();
+        let i = f.kernel().fvar(i_fv);
+        let two = f.num(2);
+        let one = f.num(1);
+        let rem = f.modulo(i, two);
+        let cond = f.beq(rem, one);
+        f.lam_fv(i_fv, nat, cond)
+    };
+
+    // `sigma i := if i==1 then 3 else if i==3 then 5 else if i==5 then 1
+    //   else i` — the 3-cycle on the odd subset `{1,3,5}`, identity
+    // elsewhere.
+    let sigma = {
+        let i_fv = f.fresh_fvar();
+        let i = f.kernel().fvar(i_fv);
+        let one = f.num(1);
+        let three = f.num(3);
+        let five = f.num(5);
+        let is_five = f.beq(i, five);
+        let inner_five = f.bool_select_nat(is_five, one, i);
+        let is_three = f.beq(i, three);
+        let inner_three = f.bool_select_nat(is_three, five, inner_five);
+        let is_one = f.beq(i, one);
+        let body = f.bool_select_nat(is_one, three, inner_three);
+        f.lam_fv(i_fv, nat, body)
+    };
+
+    // Concrete reductions: `sigma` really is the 3-cycle on `{1,3,5}` and
+    // the identity on `{0,2,4}` — a lemma whose hypotheses nothing satisfies
+    // is admitted with a type nothing can use.
+    for (input, expected) in [(1u32, 3u32), (3, 5), (5, 1), (0, 0), (2, 2), (4, 4)] {
+        let arg = f.num(input);
+        let applied = f.apply(sigma, &[arg]);
+        let want = f.num(expected);
+        assert!(
+            f.kernel().def_eq(applied, want),
+            "sigma({input}) must reduce to {expected}"
+        );
+    }
+    // `is_odd` really is the odd/even split on `{0,…,5}`.
+    let true_v = f.bool_true();
+    let false_v = f.bool_false();
+    for (input, expected_odd) in [
+        (0u32, false),
+        (1, true),
+        (2, false),
+        (3, true),
+        (4, false),
+        (5, true),
+    ] {
+        let arg = f.num(input);
+        let applied = f.apply(is_odd, &[arg]);
+        let want = if expected_odd { true_v } else { false_v };
+        assert!(
+            f.kernel().def_eq(applied, want),
+            "is_odd({input}) must reduce to {expected_odd}"
+        );
+    }
+
+    // Apply, then infer: the theorem's residual type over the two data
+    // arguments `is_odd`/`sigma` and the bound `n = 6` must accept the two
+    // `InjectiveOnP`/`MapsIntoP` hypothesis slots and land on
+    // `SurjectiveOnP is_odd sigma 6`.
+    let six = f.num(6);
+    let proof = f.lemma(p.injective_on_p_imp_surjective_on_p, &[is_odd, sigma, six]);
+    f.kernel().infer(proof).unwrap_or_else(|e| {
+        panic!(
+            "injective_on_p_imp_surjective_on_p(is_odd, sigma, 6) should infer: {}",
+            f.explain(&e)
+        )
+    });
+
+    assert!(
+        f.kernel()
+            .axiom_footprint(p.injective_on_p_imp_surjective_on_p)
+            .is_empty(),
+        "the predicate-scoped pigeonhole must rest on zero axioms"
     );
 }
 
@@ -5453,7 +5558,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        58 + 264,
+        61 + 265,
         "every promised definition and theorem must be rendered"
     );
 }
