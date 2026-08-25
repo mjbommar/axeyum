@@ -30,6 +30,19 @@ INT_FIB_ADD_ONE_FACT = "F:ml430-int-fib-add-one-33f1b748"
 INT_FIB_GCD_FACT = "F:ml430-int-fib-gcd-3a8bfdec"
 INT_FIB_DVD_FACT = "F:ml430-int-fib-dvd-ffb3c5c1"
 INT_FIB_OF_NONNEG_FACT = "F:ml430-int-fib-of-nonneg-438018c5"
+# `authoritative-mathlib-nat-modeq-family-v1` (registered 2026-08-25) makes
+# both of these `open` and dependency-ready on the LIVE ledger, so
+# `frontier_module.load()` now returns a `facts` dict where they are
+# unconditionally admissible -- lexicographically ahead of most other fact
+# ids this suite targets (`F:ml430-nat-modeq-symm...` < `F:no-integer...`,
+# for instance). Left unneutralized, `execution.selected_inputs()` either
+# refuses outright (pre-fix: >1 globally admissible fact) or silently selects
+# ONE OF THESE instead of the fact each test means to exercise (post-fix:
+# `selected_fact_id` is deterministic but no longer "the only admissible
+# fact"). Same purpose as `settle_reflexivity_fact` below: keep facts this
+# suite does not intend to dispatch out of the way of the one it does.
+NAT_MODEQ_SYMM_FACT = "F:ml430-nat-modeq-symm-0a3d4d18"
+NAT_MODEQ_TRANS_FACT = "F:ml430-nat-modeq-trans-ef9d1c46"
 
 
 def settle_reflexivity_fact(facts):
@@ -43,6 +56,8 @@ def settle_reflexivity_fact(facts):
         INT_FIB_GCD_FACT,
         INT_FIB_DVD_FACT,
         INT_FIB_OF_NONNEG_FACT,
+        NAT_MODEQ_SYMM_FACT,
+        NAT_MODEQ_TRANS_FACT,
     ):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"
@@ -236,6 +251,42 @@ class OperationExecutionTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(execution.ExecutionError, "invalid"):
             execution.selected_inputs(changed, self.facts)
+
+    def test_selected_inputs_admits_a_fact_whose_admissible_set_has_siblings(
+        self,
+    ) -> None:
+        """`authoritative-mathlib-nat-modeq-family-v1` (a REAL, currently
+        registered multi-target operation -- no fixture needed) makes both
+        `F:ml430-nat-modeq-symm-0a3d4d18` and `F:ml430-nat-modeq-trans-...`
+        simultaneously admissible on the live ledger, so this exercises the
+        real production frontier, not a constructed one.
+
+        This is the mutation pairing for the `selected_inputs()` invariant
+        change: reverting `selected not in admissible` back to the old
+        `admissible != [selected]` makes THIS test -- and only this one --
+        fail, because it is the one place this suite calls `selected_inputs`
+        on a frontier whose admissible set has more than one member. Verified
+        directly against `scripts/execute-autogenesis-operation.py` as
+        committed at HEAD before this change: it raises "executor requires
+        exactly one admissible selected fact" on this exact frontier.
+        """
+        frontier_module = execution.load_module(
+            "frontier_for_multi_target_admissibility_test", execution.FRONTIER_SCRIPT
+        )
+        facts = frontier_module.load()
+        frontier = frontier_module.build_machine_frontier(facts)
+        selection = frontier["selection"]
+        self.assertGreaterEqual(len(selection["admissible_fact_ids"]), 2)
+        self.assertIn(
+            "F:ml430-nat-modeq-symm-0a3d4d18", selection["admissible_fact_ids"]
+        )
+        self.assertIn(
+            "F:ml430-nat-modeq-trans-ef9d1c46", selection["admissible_fact_ids"]
+        )
+        fact, operation, _registry = execution.selected_inputs(frontier, facts)
+        self.assertEqual(fact["id"], selection["selected_fact_id"])
+        self.assertIn(fact["id"], selection["admissible_fact_ids"])
+        self.assertEqual(operation["id"], "authoritative-mathlib-nat-modeq-family-v1")
 
     def test_authoritative_kernel_receipt_binds_formal_statement_and_axiom_free_result(self):
         frontier_module = execution.load_module(
