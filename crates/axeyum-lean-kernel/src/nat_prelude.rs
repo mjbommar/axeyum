@@ -133,6 +133,7 @@ mod bezout;
 mod binary;
 mod binomial;
 mod ble;
+mod cantor;
 mod cardinality;
 mod catalan;
 mod choose;
@@ -180,6 +181,7 @@ use binomial::{
     declare_succ_sub_of_le,
 };
 use ble::declare_boolean_le;
+use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;
 use catalan::declare_catalan_all;
 use choose::declare_choose_all;
@@ -1587,6 +1589,18 @@ pub struct NatPrelude {
     /// (mul (mul (powSq b ((succ k)/2)) (powSq b ((succ k)/2))) b)` — `powSq`'s
     /// own second defining equation, over `powSq` itself (not `powSqAux`).
     pub pow_sq_succ: NameId,
+
+    // --- Cantor's diagonal argument (`cantor.rs`) ----------------------------
+    /// `Nat.cantor_diagonal : ∀ f : Nat → Nat → Bool,
+    ///   ∃ g : Nat → Bool, ∀ n, Eq Bool (g n) (f n n) → False` — the pointwise,
+    /// funext-free form of Cantor's diagonal argument: the witness `g := fun n
+    /// => not (f n n)` disagrees with every row `f n` at that row's own index,
+    /// so no `f : Nat → Nat → Bool` enumerates every `Nat → Bool` sequence.
+    /// `Exists`'s witness type here is `Nat → Bool`, not `Nat`; see
+    /// `cantor.rs`'s module doc for why that instantiation type-checks despite
+    /// `Exists.rec` being restricted to `Prop` motives (`sum_range_diagonal`'s
+    /// neighbouring finding, the opposite direction of the same restriction).
+    pub cantor_diagonal: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2004,6 +2018,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             pow_sq_eq_pow: kernel.name_str(nat, "pow_sq_eq_pow"),
             pow_sq_zero: kernel.name_str(nat, "pow_sq_zero"),
             pow_sq_succ: kernel.name_str(nat, "pow_sq_succ"),
+            cantor_diagonal: kernel.name_str(nat, "cantor_diagonal"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2091,6 +2106,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_exists_prime_factorization(&mut d, &p)?;
         declare_crt(&mut d, &p)?;
         declare_powsq_all(&mut d, &p)?;
+        declare_cantor_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
