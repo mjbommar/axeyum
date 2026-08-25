@@ -1468,6 +1468,25 @@ pub struct NatPrelude {
     /// (`permInverse f n k < n` for **any** `k`, given `0 < n`); surjectivity
     /// picks `f k` as the preimage of `k` (`permInverse_left`).
     pub bijective_on_perm_inverse: NameId,
+    /// `Nat.EqOn (f g : Nat → Nat) (n : Nat) : Prop := ∀ i, i < n →
+    /// Eq Nat (f i) (g i)` — bounded function equality, the fix for
+    /// `IsGroupOnFn`'s `identity`/`inverse` conjuncts (see `permutation.rs`'s
+    /// module doc, "The full `IsGroupOnFn` instance WAS REFUTED"): unbounded
+    /// `Eq (Nat → Nat)` is unsatisfiable for `Nat.permInverse` outside
+    /// `[0,n)`, and this kernel has no `funext` to state one differently.
+    pub eq_on: NameId,
+    /// `Nat.eqOn_refl : ∀ f n, EqOn f f n`.
+    pub eq_on_refl: NameId,
+    /// `Nat.eqOn_symm : ∀ f g n, EqOn f g n → EqOn g f n`.
+    pub eq_on_symm: NameId,
+    /// `Nat.eqOn_trans : ∀ f g h n, EqOn f g n → EqOn g h n → EqOn f h n`.
+    pub eq_on_trans: NameId,
+    /// `Nat.symmetric_group_isGroupOnFn : ∀ n, IsGroupOnFn Nat.comp Nat.id
+    /// (fun f => Nat.permInverse f n) n` — the symmetric group on `[0,n)`,
+    /// permutations under composition, the instance `IsGroupOnFn`'s original
+    /// unbounded form refuted, landed once `identity`/`inverse` were
+    /// rebuilt on `Nat.EqOn`.
+    pub symmetric_group_is_group_on_fn: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1865,6 +1884,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             is_group_on_fn: kernel.name_str(nat, "isGroupOnFn"),
             bijective_on_comp: kernel.name_str(nat, "bijective_on_comp"),
             bijective_on_perm_inverse: kernel.name_str(nat, "bijective_on_perm_inverse"),
+            eq_on: kernel.name_str(nat, "eqOn"),
+            eq_on_refl: kernel.name_str(nat, "eqOn_refl"),
+            eq_on_symm: kernel.name_str(nat, "eqOn_symm"),
+            eq_on_trans: kernel.name_str(nat, "eqOn_trans"),
+            symmetric_group_is_group_on_fn: kernel.name_str(nat, "symmetric_group_isGroupOnFn"),
         };
 
         let mut d = NatDev::new(kernel, p);
