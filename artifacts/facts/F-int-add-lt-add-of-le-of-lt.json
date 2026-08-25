@@ -22,7 +22,10 @@
   "depends_on": [
     "F:int-add-assoc",
     "F:int-add-comm",
-    "F:int-add-le-add"
+    "F:int-add-le-add",
+    "F:int-le-dest",
+    "F:int-lt-dest",
+    "F:int-lt-of-nat-add"
   ],
   "axiom_footprint": [],
   "evidence": [

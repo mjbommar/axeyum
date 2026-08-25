@@ -17,9 +17,14 @@
   "proof_route": "kernel-lean",
   "external_status": "proved",
   "depends_on": [
+    "F:int-add-assoc",
+    "F:int-neg-of-nat-add-neg-of-nat",
+    "F:int-neg-of-nat-add-of-nat",
+    "F:int-neg-succ-mul-sub-nat-nat",
+    "F:int-of-nat-add-neg-of-nat",
+    "F:int-of-nat-mul-sub-nat-nat",
     "F:nat-left-distrib",
-    "F:nat-succ-add",
-    "F:int-add-assoc"
+    "F:nat-succ-add"
   ],
   "axiom_footprint": [],
   "evidence": [

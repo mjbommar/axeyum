@@ -14,6 +14,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:int-add-zero",
+    "F:int-mul-one",
     "F:nat-mul-one"
   ],
   "axiom_footprint": [],
