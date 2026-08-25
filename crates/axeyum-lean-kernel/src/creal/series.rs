@@ -263,6 +263,80 @@
 //! whichever future piece assembles `sumRange_cauchy_of_dominated` itself,
 //! along with the two further gaps below.
 //!
+//! **That "wiring through" undercounted its own size by one more hidden
+//! step, and the step is now landed.** `declare_sum_range_tail_within_cauchy`'s
+//! conclusion is a bound on `seq (add (sumRange f (add m n)) (neg (sumRange
+//! f m))) (add m n)`, and unfolding `CReal.add`'s `seq` equation (the same
+//! ι/β argument [`declare_sum_range_seq_equations`]'s doc comment gives)
+//! shows this samples **both** `sumRange f (add m n)` and `sumRange f m` at
+//! the *shifted* index `t := shift (add m n)`, never at their own canonical
+//! indices `add m n` and `m`. `CReal.Cauchy`'s own body is stated at exactly
+//! those canonical indices (`seq (f p) p − seq (f qq) qq`), so
+//! `sum_range_tail_within_cauchy`'s conclusion — even lifted to an arbitrary
+//! pair by `sum_range_tail_within_le`'s own technique — is **not yet** in
+//! `Cauchy`-callable shape. Reaching it needs two more `CReal.regular` legs
+//! per side (`seq (sumRange f q) q` against `seq (sumRange f q) t`, and
+//! `seq (sumRange f m) m` against `seq (sumRange f m) t`), chained through
+//! the already-landed bound via [`chain_within3`] a *second* time — not the
+//! `X → Y → Z → W` order `sum_range_tail_cauchy_within`'s own inner
+//! telescope uses (there the middle leg was the *known* raw Cauchy witness
+//! for `g`; here the middle leg is the *known* quantity —
+//! `sum_range_tail_within_cauchy`'s own conclusion — and the canonical
+//! difference is what's wanted, so the known bound sits in the middle of
+//! the chain, `Y → X → W → Z`, rather than at an end). [`within_symm`]
+//! (`Within (a−b) q → Within (b−a) q`, via `Rat.neg_sub` + `Rat.bounds_neg`)
+//! supplies the two regularity legs' needed orientation.
+//!
+//! **[`dominated_canonical_at`] does exactly this, and
+//! [`declare_sum_range_cauchy_dominated_ordered`] lifts it to an arbitrary
+//! `a ≤ b` via `Nat.le_dest` + transport — `sum_range_tail_within_le`'s own
+//! technique, reused against this different, canonical-shape payload rather
+//! than re-derived.** Both are landed and kernel-checked (verified at the
+//! non-degenerate `a = 0, b = 1` instance, `creal_tests.rs`). What is
+//! **still** missing to close `sumRange_cauchy_of_dominated` itself:
+//!
+//! - **The `Nat.le_total` case split proper** — `sum_range_cauchy_dominated_ordered`
+//!   supplies both orientations' *content* (swap `a`/`b`) but not the
+//!   selection between them for an arbitrary pair, plus one [`within_symm`]
+//!   flip in the `a ≤ b` branch (that branch's raw conclusion is
+//!   `seq (f b) b − seq (f a) a`; `Cauchy`'s own call order at `(m, n) := (a,
+//!   b)` wants `seq (f a) a − seq (f b) b`) and one `Rat.add_comm` in the
+//!   `b ≤ a` branch (this theorem's bound is *not* symmetric in its two
+//!   arguments — the `t`-side legs attach to whichever of `a`/`b` is
+//!   larger — so the two branches' bounds arrive in opposite `radd` order
+//!   relative to `Cauchy`'s fixed `(m, n)` argument order).
+//! - **Bound normalization.** `sum_range_cauchy_dominated_ordered`'s bound,
+//!   expanded, is eleven `Rat.natDivSucc`-shaped leaves (four copies of
+//!   `1/(shift b+1)`, from the two extra `regular` legs *and* the two
+//!   already inside `sum_range_tail_within_cauchy`'s own bound; the rest at
+//!   `1/(a+1)` or `1/(b+1)`, plus one raw `K`-witness term per side) — not
+//!   `Cauchy`'s required `natDivSucc K' m + natDivSucc K' n` shape for a
+//!   *single* `K'`. Every `1/(shift b+1)` leaf widens to `1/(b+1)` via
+//!   `half_shift_le` (`completeness.rs`, already `pub(super)` for exactly
+//!   this kind of cross-module reuse); the
+//!   same-index leaves then fuse exactly via `Rat.natDivSucc_add`, and
+//!   `Rat.natDivSucc_le_add_left` pads whichever side's fused coefficient is
+//!   smaller up to match the other — the same three lemmas
+//!   `declare_converges_cauchy`'s `regroup_middle_four` already uses one
+//!   telescope down, at a larger term count. Keeping every `K`-containing
+//!   `Nat.add` in the fixed shape `add k <literal>` (`k` always the
+//!   left/base argument, never the right one `Nat.add` recurses on) is what
+//!   keeps this pure defeq computation rather than a further `Nat.add_assoc`
+//!   / `Nat.add_comm` derivation — checked against this development's
+//!   left-recursive `Nat.add`, not assumed.
+//! - **The `CReal.Cauchy` existential itself**: eliminating the hypothesis
+//!   (`Exists.rec`, elem type `Nat`, exactly [`exists_elim`]'s shape —
+//!   already used this way by `declare_sum_range_tail_within_le`
+//!   against a *different* `Nat`-witnessed existential, `Nat.le_dest`'s) and
+//!   introducing the conclusion (`Exists.intro` at the chosen `K'`) around
+//!   the case-split proof above. `declare_converges_cauchy`
+//!   (`creal/convergence.rs`) already does both mechanically for a
+//!   structurally similar `Cauchy`-producing theorem — same recursor, same
+//!   "target must not depend on the witness" shape — so this is confirmed
+//!   tractable, not merely assumed so: `Exists.rec` eliminating into a
+//!   `Prop` target (`Cauchy (sumRange f)` is a `Prop`) is exactly what that
+//!   theorem's own `exists_elim` call already relies on.
+//!
 //! ## Two further gaps this slice found, neither in the previous brief
 //!
 //! Even a landed `sumRange_cauchy_of_dominated` does **not** reach `Σ b`
