@@ -1352,20 +1352,26 @@
       "id": "authoritative-mathlib-modeq-family-v1",
       "scope": "authoritative",
       "reviewed_gate_mentions": [
-        "check-autogenesis-modeq-family.py"
+        "check-autogenesis-modeq-family.py",
+        "check-autogenesis-nat-modeq-family.py",
+        "validate-autogenesis-nat-modeq-capability-selection.py"
       ],
       "applicability": {
         "fact_ids": [
           "F:ml430-int-modeq-refl-30e15520",
           "F:ml430-int-modeq-symm-984a6e67",
           "F:ml430-int-modeq-trans-6d7863e0",
-          "F:ml430-int-modeq-comm-1e4bcc07"
+          "F:ml430-int-modeq-comm-1e4bcc07",
+          "F:ml430-nat-modeq-refl-d870c8f5",
+          "F:ml430-nat-modeq-symm-0a3d4d18",
+          "F:ml430-nat-modeq-trans-ef9d1c46"
         ],
         "formal_languages": [
           "lean4-surface"
         ],
         "fragments": [
-          "Int"
+          "Int",
+          "Nat"
         ]
       },
       "producer": {
@@ -1387,7 +1393,10 @@
         "additional_fact_ids": [
           "F:ml430-int-modeq-symm-984a6e67",
           "F:ml430-int-modeq-trans-6d7863e0",
-          "F:ml430-int-modeq-comm-1e4bcc07"
+          "F:ml430-int-modeq-comm-1e4bcc07",
+          "F:ml430-nat-modeq-refl-d870c8f5",
+          "F:ml430-nat-modeq-symm-0a3d4d18",
+          "F:ml430-nat-modeq-trans-ef9d1c46"
         ],
         "targets": [
           {
@@ -1413,61 +1422,7 @@
             "statement_adapter_manifest": "artifacts/autogenesis/mathlib-modeq-family-comm-statement-adapter-v1.json",
             "modeq_manifest": "artifacts/autogenesis/mathlib-modeq-family-comm-v1.json",
             "target_definition": "Axeyum.Autogenesis.Statement.IntModEqFamily.intModEqComm"
-          }
-        ],
-        "max_binders": 8,
-        "timeout_seconds": 180,
-        "expected_evidence_label": "modeq-family-v1"
-      },
-      "admission": {
-        "epistemic_status": "proved",
-        "proof_route": "kernel-lean",
-        "evidence_kind": "kernel-term",
-        "axiom_footprint_policy": "must-be-empty",
-        "axiom_footprint": []
-      }
-    },
-    {
-      "id": "authoritative-mathlib-nat-modeq-family-v1",
-      "scope": "authoritative",
-      "reviewed_gate_mentions": [
-        "check-autogenesis-nat-modeq-family.py",
-        "validate-autogenesis-nat-modeq-capability-selection.py"
-      ],
-      "applicability": {
-        "fact_ids": [
-          "F:ml430-nat-modeq-refl-d870c8f5",
-          "F:ml430-nat-modeq-symm-0a3d4d18",
-          "F:ml430-nat-modeq-trans-ef9d1c46"
-        ],
-        "formal_languages": [
-          "lean4-surface"
-        ],
-        "fragments": [
-          "Nat"
-        ]
-      },
-      "producer": {
-        "operation": "modeq-family-eq-iff-combinators-v1",
-        "implementation": "crates/axeyum-lean-import/src/producers/modeq_family.rs",
-        "input_kind": "axeyum-proof-isolated-kernel-goal",
-        "output_kind": "axeyum-modeq-family-candidate"
-      },
-      "checker": {
-        "operation": "axeyum-lean-import/modeq-family-operation-v1",
-        "implementation": "crates/axeyum-lean-import/examples/modeq_family_operation.rs",
-        "input_kind": "axeyum-modeq-family-candidate",
-        "output_kind": "axeyum-source-bound-kernel-evidence-v1"
-      },
-      "executor": {
-        "driver": "axeyum-lean-import/modeq-family-multi-target-v1",
-        "implementation": "scripts/execute-autogenesis-operation.py",
-        "input_fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
-        "additional_fact_ids": [
-          "F:ml430-nat-modeq-symm-0a3d4d18",
-          "F:ml430-nat-modeq-trans-ef9d1c46"
-        ],
-        "targets": [
+          },
           {
             "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
             "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-refl-statement-adapter-v1.json",
@@ -1489,7 +1444,7 @@
         ],
         "max_binders": 8,
         "timeout_seconds": 180,
-        "expected_evidence_label": "nat-modeq-family-v1"
+        "expected_evidence_label": "modeq-family-v1"
       },
       "admission": {
         "epistemic_status": "proved",
