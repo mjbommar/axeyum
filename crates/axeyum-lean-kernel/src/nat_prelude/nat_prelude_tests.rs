@@ -130,6 +130,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.equivalence_on,
         p.bijective_on,
         p.comp,
+        p.is_group_on,
     ]
 }
 
@@ -345,6 +346,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_equivalence_on,
         p.bijective_of_injective_on,
         p.injective_on_comp,
+        p.group_identity_unique,
+        p.group_inverse_unique,
+        p.group_left_cancel,
+        p.mod_add_is_group,
     ]
 }
 
@@ -4457,7 +4462,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        47 + 206,
+        48 + 210,
         "every promised definition and theorem must be rendered"
     );
 }
