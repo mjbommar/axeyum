@@ -303,6 +303,136 @@ missing capability was not the binding constraint — and it found it by
 *probing the artifact rather than the description of the artifact*, which is
 this repository's standing rule about tools arriving one level up.
 
+## Fifth amendment, 2026-08-25 — the composition mechanism for the fourth amendment's premise already exists, and it hits the same wall
+
+The fourth amendment named two candidate capabilities and left both
+unassessed for buildability. This amendment settles the first — "composing an
+already-checked auxiliary lemma (`Nat.fib_add_two`, `Nat.factorial_succ`) as a
+hypothesis" — by measurement rather than design, and the answer is narrower
+than either "buildable" or "missing."
+
+**The premises exist, in two forms.** `prelude_theorem_inventory
+--include-constructed --release` lists both, axiom-free, in this kernel's own
+hand-built `nat_prelude`:
+
+```
+Nat.factorial_succ   ((x0 : AxNat) -> Eq AxNat (AxNat.factorial (AxNat.succ x0)) (AxNat.mul (AxNat.factorial x0) (AxNat.succ x0)))
+Nat.fib_add_two      ((x0 : AxNat) -> Eq AxNat (AxNat.fib (AxNat.succ (AxNat.succ x0))) (AxNat.add (AxNat.fib (AxNat.succ x0)) (AxNat.fib x0)))
+```
+
+`Nat.fib_add_two` is additionally an already-**proved ledger fact**
+(`F:ml430-nat-fib-add-two-b86e0c82`, route `bounded-iterate-recurrence-v3`,
+`crates/axeyum-lean-import/examples/nat_fib_iterate_recurrence.rs` — an
+independent re-derivation through `Nat.iterate` unfolding, not composition).
+`Nat.factorial_succ` is not itself a tracked nursery fact.
+
+**Neither is available to the producer as it stands, because the producer's
+kernel imports only definitions.** `import_statement_ndjson` builds an
+isolated per-goal kernel from a proof-free adapter (`proof_declarations_allowed:
+false`), and its dependency closure is the STATEMENT's definitional closure
+only. Measured directly (not by grepping ndjson text) on the real, existing
+`descfactorial-one.ndjson` export: `{"Constructor": 10, "Definition": 31,
+"Inductive": 9, "Recursor": 9}` — **zero Theorem, zero Axiom, zero Opaque**
+among its 59 admitted declarations. No existing export for any open
+`natural-factorial`/`natural-fibonacci` fact carries a citable premise theorem,
+by construction of the adapter contract, not by omission.
+
+**A general mechanism for bridging that gap already exists and is already
+decided: ADR-0523, accepted 2026-08-20.** Cross-kernel theorem composition
+(`axeyum_lean_import::compose_checked_theorem_slice`) takes a source kernel, a
+target kernel, and named theorem roots, reuses shared-name declarations by
+kernel-type-shape compatibility, imports missing closure members only when
+they are themselves checked theorems, and publishes only after the TARGET
+kernel's own `Kernel::add_declaration` independently rechecks the rebuilt
+proof — i.e. re-derives, never just cites. It is already used in production,
+~20 times, composing real Mathlib theorem names (`Nat.add_comm`,
+`Nat.gcd_dvd_left`, …) alongside `nat_prelude`-sourced lemmas, for facts
+including `F:ml430-int-fib-add-two-739358dd` and `Nat.gcd_fib_add_self`. **So
+the architectural question this document's fourth amendment posed — is a
+premise a new manifest kind, an extra field, or a different mechanism
+entirely — is already answered by precedent, and no new ADR is needed for the
+mechanism itself.**
+
+**Measured directly against two of the real open facts, that mechanism
+reaches the same wall `bounded_induction.rs` does, for two distinct
+reasons.** Built two new proof-free adapters
+(`scripts/lean/autogenesis_statement_adapter_nat_factorial_pos_v1.lean`,
+`…_nat_fib_le_fib_succ_v1.lean`), compiled and exported them against the
+pinned Mathlib v4.30.0 checkout on s5 exactly as the existing manifests'
+`reproduction` field prescribes, and ran `compose_checked_theorem_slice`
+against the resulting real, freshly-exported isolated kernels (ndjson mirrored
+to `/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-premise-composition-probe-v1/`,
+`sha256:f0624c7f…` and `sha256:d1af65c0…`):
+
+- **`F:ml430-nat-factorial-pos-f1dd2405`** (`∀ n, 0 < n.factorial`) composed
+  against `Nat.factorial_succ`: `bounded_induction_operation` alone declines
+  first (`"terminal goal is not definitionally equal and no applicable
+  induction-hypothesis rewrite closed the gap"`, confirming the goal is
+  genuinely open to the existing producer). `compose_checked_theorem_slice`
+  gets much further — it resolves the closure and reuses the shared `Nat`
+  family by type-shape — then fails at the target kernel's own recheck:
+
+  ```
+  DeclarationValueMismatch {
+    declared: "(x0 : AxNat) -> Eq AxNat (AxNat.factorial (AxNat.succ x0)) (AxNat.mul (AxNat.factorial x0) (AxNat.succ x0))",
+    inferred: "(x0 : AxNat) -> Eq AxNat (AxNat.mul (AxNat.factorial x0) (AxNat.succ x0)) (AxNat.mul (AxNat.factorial x0) (AxNat.succ x0))"
+  }
+  ```
+
+  `nat_prelude`'s own `Nat.factorial_succ` proof is `rfl`-shaped (its own
+  `factorial` is a plain recursor, one iota step). Retargeted at Mathlib's
+  `Nat.factorial` — compiled through `brecOn`/`below`/`PProd` course-of-values
+  recursion, reconstructed faithfully by this kernel's importer — the LHS
+  `AxNat.factorial (AxNat.succ x0)` does not WHNF-reduce to the RHS in THIS
+  kernel, so the declared type and the rebuilt proof's inferred type diverge
+  at exactly the point the fourth amendment's `BIS_DEBUG` probe stalled. This
+  is the **same wall**, confirmed through a **second, independent code path**
+  that does not go through `bounded_induction.rs`'s search at all — it is a
+  property of what this kernel's `def_eq` can and cannot see through `Nat.factorial`'s Mathlib-compiled form, not an artifact of one producer's
+  scoping.
+- **`F:ml430-nat-fib-le-fib-succ-d1ef4a3d`** (`∀ n, Nat.fib n ≤ Nat.fib (n+1)`)
+  composed against `Nat.fib_add_two`: a **different** failure. `nat_prelude`'s
+  own `Nat.fib` is built over an internal `AxNat.fibAux` accumulator, which
+  has no Mathlib-imported counterpart to reuse — Mathlib's `Nat.fib` compiles
+  through `Nat.iterate`, not an accumulator recursor of this shape — so the
+  rebuilt proof's inferred type is stated over `AxNat.fibAux` where the
+  declared type is stated over the target's own `AxNat.fib`, and admission is
+  rejected the same way. This is a **representational mismatch between two
+  independently-authored constructions of the same function**, distinct from
+  the factorial probe's WHNF-opacity wall, but with the identical practical
+  consequence: `nat_prelude`'s own proof of the recurrence does not transfer.
+
+**What this narrows the finding to.** The fourth amendment framed the choice
+as "compose a premise" vs. "a smarter introspection strategy," as if the first
+were the cheaper option once found feasible. It is not cheaper: composing a
+`nat_prelude`-sourced premise requires that premise's OWN proof to survive
+re-derivation against Mathlib's independently-compiled representation of the
+same function, and for both `factorial` and `fib` it does not, for two
+different structural reasons. The one case where composition-style reasoning
+already closed a real fact (`fib_add_two` itself, via
+`bounded-iterate-recurrence-v3`) did NOT compose an existing premise at all —
+it independently re-derived the recurrence by reasoning through `Nat.iterate`
+directly, i.e. exactly the fourth amendment's SECOND candidate ("an
+introspection strategy other than plain WHNF-then-app-spine"), not the first.
+That is now measured evidence, not conjecture, that the second candidate is
+the one with a working precedent and the first does not have one yet for
+either target family.
+
+This does not close the question for every open fact in these two families —
+`Nat.factorial_succ`'s own `brecOn` shape and `Nat.fib`'s `Nat.iterate` shape
+are two specific compiled forms among others Mathlib may use elsewhere — but
+it means the next concrete step for `natural-factorial`/`natural-fibonacci`
+is not "wire composition into `bounded_induction.rs`"; it is either (a) a
+kernel-level fix to how this kernel's `whnf`/`def_eq` handles
+`brecOn`/`below`-compiled course-of-values recursion (out of scope for this
+document — `crates/axeyum-lean-kernel/` is not this lane's to touch), or (b)
+more `Nat.iterate`/well-founded-shaped producers in the style of
+`bounded-iterate-recurrence-v3`, generalized past its current single-target
+registration (`authoritative-mathlib-nat-fib-add-two-receipt-v1` covers
+exactly one fact) into something that earns a nonzero
+`facts_via_multi_target` count the way `authoritative-mathlib-nat-modeq-family-v1`
+already did for a different shape.
+
 ## Boundary
 
 This document **selects nothing and authorizes nothing.** It adds no operation
