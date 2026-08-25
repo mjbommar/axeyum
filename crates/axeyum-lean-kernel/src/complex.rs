@@ -927,6 +927,48 @@ pub struct ComplexPrelude {
     /// showing `inv z k h` is again an `n`-th root of unity is a separate
     /// development, not attempted here).
     pub root_of_unity_pow: NameId,
+
+    /// `Complex.ptolemy_identity : ∀ a b c d, Equiv (mul (add a (neg c)) (add
+    /// b (neg d))) (add (mul (add a (neg b)) (add c (neg d))) (mul (add b
+    /// (neg c)) (add a (neg d))))` — Ptolemy's theorem's actual algebraic
+    /// content, `(a − c)(b − d) = (a − b)(c − d) + (b − c)(a − d)`, holding
+    /// for *every* four points of ℂ, cyclic or not.
+    ///
+    /// Expand both sides: LHS `= ab − ad − cb + cd`; RHS
+    /// `= (ac − ad − bc + bd) + (ab − bd − ac + cd) = ab − ad − bc + cd`,
+    /// term for term. Decided by the same ring calculus as
+    /// [`Self::ring_laws`] — `complex_law` over four free variables, no
+    /// induction, no analysis.
+    pub ptolemy_identity: NameId,
+    /// `Complex.normSq_congr : ∀ z w, Equiv z w → CReal.Equiv (normSq z)
+    /// (normSq w)` — `normSq` respects `Complex.Equiv`, the one congruence
+    /// this module's own operations never needed until now: `normSq z`
+    /// unfolds to `re z · re z + im z · im z`, and squaring each of the two
+    /// `CReal.Equiv` halves of a `Complex.Equiv` proof (`CReal.mul_congr`)
+    /// then recombining (`CReal.add_congr`) is the whole proof.
+    pub norm_sq_congr: NameId,
+    /// `Complex.ptolemy_inequality_sq : ∀ a b c d, CReal.le (normSq (mul (add
+    /// a (neg c)) (add b (neg d)))) (CReal.add (CReal.add (normSq (mul (add a
+    /// (neg b)) (add c (neg d)))) (normSq (mul (add a (neg b)) (add c (neg
+    /// d))))) (CReal.add (normSq (mul (add b (neg c)) (add a (neg d))))
+    /// (normSq (mul (add b (neg c)) (add a (neg d))))))` — the squared,
+    /// sqrt-free consequence of [`Self::ptolemy_identity`]. Writing
+    /// `L := (a−c)(b−d)`, `X := (a−b)(c−d)`, `Y := (b−c)(a−d)`, this is
+    /// `‖L‖² ≤ 2‖X‖² + 2‖Y‖²`.
+    ///
+    /// **This is NOT Ptolemy's inequality**, and not even the sharp squared
+    /// form `‖L‖² ≤ ‖X‖² + 2‖X‖‖Y‖ + ‖Y‖²` (which is not even statable here:
+    /// no `Complex.abs`/modulus is declared in this module, only `normSq`).
+    /// It is the honest bound the available lemmas reach:
+    /// [`Self::ptolemy_identity`] gives `L ~ X + Y`, [`Self::norm_sq_congr`]
+    /// transports that to `‖L‖² ~ ‖X+Y‖²`, and [`Self::norm_sq_add_le`]
+    /// bounds `‖X+Y‖² ≤ 2‖X‖² + 2‖Y‖²` — the same factor-of-2-loose
+    /// subadditivity every other metric consequence in this module already
+    /// uses, not a sharper bound derived specially for this identity. The
+    /// unsquared metric Ptolemy inequality (`|AC|·|BD| ≤ |AB|·|CD| +
+    /// |BC|·|AD|`, on moduli) needs `CReal.sqrt`, which does not exist in
+    /// this kernel yet.
+    pub ptolemy_inequality_sq: NameId,
 }
 
 impl ComplexPrelude {
@@ -1074,6 +1116,9 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
             .name_str(complex, "geom_sum_eq_zero_of_root_of_unity"),
         root_of_unity_mul: kernel.name_str(complex, "root_of_unity_mul"),
         root_of_unity_pow: kernel.name_str(complex, "root_of_unity_pow"),
+        ptolemy_identity: kernel.name_str(complex, "ptolemy_identity"),
+        norm_sq_congr: kernel.name_str(complex, "normSq_congr"),
+        ptolemy_inequality_sq: kernel.name_str(complex, "ptolemy_inequality_sq"),
     }
 }
 
@@ -1164,7 +1209,10 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_pow_mul(&mut d, prelude)?;
         declare_geom_sum_eq_zero_of_root_of_unity(&mut d, prelude)?;
         declare_root_of_unity_mul(&mut d, prelude)?;
-        declare_root_of_unity_pow(&mut d, prelude)
+        declare_root_of_unity_pow(&mut d, prelude)?;
+        declare_ptolemy_identity(&mut d, prelude)?;
+        declare_norm_sq_congr(&mut d, prelude)?;
+        declare_ptolemy_inequality_sq(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -8609,6 +8657,185 @@ fn declare_root_of_unity_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<()
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.root_of_unity_pow,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.ptolemy_identity`: `(a − c)(b − d) = (a − b)(c − d) + (b − c)(a −
+/// d)`, for arbitrary `a b c d : Complex` — Ptolemy's theorem's actual ring
+/// content. See [`ComplexPrelude::ptolemy_identity`] for the expansion.
+///
+/// The fourth point is bound as `e` rather than `d` here purely to avoid
+/// shadowing this function's own `IntDev` argument `d`; the statement and
+/// argument order are otherwise exactly `a, b, c, d`.
+///
+/// [`complex_law`] over four free variables, exactly [`declare_ring_laws`]'s
+/// own pattern — no induction, no analysis, decided entirely by the ring
+/// calculus.
+fn declare_ptolemy_identity(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    complex_law(d, p, p.ptolemy_identity, 4, &|d, v| {
+        let a = CExpr::var(d, p, v[0]);
+        let b = CExpr::var(d, p, v[1]);
+        let c = CExpr::var(d, p, v[2]);
+        let e = CExpr::var(d, p, v[3]); // the fourth point, "d" in the geometry
+        let lhs = CExpr::mul(
+            CExpr::add(a.clone(), CExpr::neg(c.clone())),
+            CExpr::add(b.clone(), CExpr::neg(e.clone())),
+        );
+        let x = CExpr::mul(
+            CExpr::add(a.clone(), CExpr::neg(b.clone())),
+            CExpr::add(c.clone(), CExpr::neg(e.clone())),
+        );
+        let y = CExpr::mul(CExpr::add(b, CExpr::neg(c)), CExpr::add(a, CExpr::neg(e)));
+        (lhs, CExpr::add(x, y))
+    })
+}
+
+/// `Complex.normSq_congr`: `normSq` respects `Complex.Equiv`. See
+/// [`ComplexPrelude::norm_sq_congr`].
+///
+/// `normSq z` unfolds to `re z · re z + im z · im z` ([`declare_norm`]'s own
+/// definition); [`equiv_halves`] splits `h : Equiv z w` into its two
+/// `CReal.Equiv` components, `CReal.mul_congr` squares each, and
+/// `CReal.add_congr` recombines them — exactly the shape [`declare_norm`]'s
+/// `mul_conj` and [`declare_norm_conjugation`]'s `normSq_mul` already unfold
+/// `normSq` into.
+fn declare_norm_sq_congr(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let hypothesis = zeq(d, p, z, w);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let (ha, hb) = equiv_halves(d, p, z, w, h);
+
+    let a = re_of(d, p, z);
+    let b = im_of(d, p, z);
+    let a2 = re_of(d, p, w);
+    let b2 = im_of(d, p, w);
+
+    let aa_proof = d.lemma(creal.mul_congr, &[a, a2, a, a2, ha, ha]);
+    let bb_proof = d.lemma(creal.mul_congr, &[b, b2, b, b2, hb, hb]);
+    let aa = cmul(d, creal, a, a);
+    let aa2 = cmul(d, creal, a2, a2);
+    let bb = cmul(d, creal, b, b);
+    let bb2 = cmul(d, creal, b2, b2);
+    let body = d.lemma(creal.add_congr, &[aa, aa2, bb, bb2, aa_proof, bb_proof]);
+
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, body);
+        let with_w = d.lam_fv(w_fv, carrier, with_h);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let claim = ceq(d, creal, norm_z, norm_w);
+        let inner = d.arrow(hypothesis, claim);
+        let with_w = d.pi_fv(w_fv, carrier, inner);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.norm_sq_congr,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.ptolemy_inequality_sq`: the squared, sqrt-free consequence of
+/// [`declare_ptolemy_identity`]. See [`ComplexPrelude::ptolemy_inequality_sq`]
+/// for the precise statement and what it deliberately is **not**.
+///
+/// `L := (a−c)(b−d)`, `X := (a−b)(c−d)`, `Y := (b−c)(a−d)`, `R := X + Y`.
+/// [`ComplexPrelude::ptolemy_identity`] gives `h_id : Equiv L R`;
+/// [`declare_norm_sq_congr`] transports it to `h_normsq : CReal.Equiv (normSq
+/// L) (normSq R)`; [`ComplexPrelude::norm_sq_add_le`] at `X, Y` gives
+/// `h_bound : CReal.le (normSq R) (2·normSq X + 2·normSq Y)` (since `normSq R`
+/// **is** `normSq (add X Y)`, no rewriting needed there); `CReal.equiv_symm`
+/// plus `CReal.le_congr` carry `h_bound` across `h_normsq` to conclude about
+/// `normSq L` instead of `normSq R`.
+fn declare_ptolemy_inequality_sq(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let e_fv = d.fresh_fvar(); // the fourth point, "d" in the geometry
+    let e = d.kernel().fvar(e_fv);
+
+    let neg_c = d.const_app(p.neg, &[c]);
+    let neg_e = d.const_app(p.neg, &[e]);
+    let neg_b = d.const_app(p.neg, &[b]);
+
+    let a_minus_c = d.const_app(p.add, &[a, neg_c]);
+    let b_minus_e = d.const_app(p.add, &[b, neg_e]);
+    let l = d.const_app(p.mul, &[a_minus_c, b_minus_e]); // L = (a-c)(b-e)
+
+    let a_minus_b = d.const_app(p.add, &[a, neg_b]);
+    let c_minus_e = d.const_app(p.add, &[c, neg_e]);
+    let x = d.const_app(p.mul, &[a_minus_b, c_minus_e]); // X = (a-b)(c-e)
+
+    let b_minus_c = d.const_app(p.add, &[b, neg_c]);
+    let a_minus_e = d.const_app(p.add, &[a, neg_e]);
+    let y = d.const_app(p.mul, &[b_minus_c, a_minus_e]); // Y = (b-c)(a-e)
+
+    let r = d.const_app(p.add, &[x, y]); // R = X + Y
+
+    // h_id : Equiv L R, from ptolemy_identity
+    let h_id = d.lemma(p.ptolemy_identity, &[a, b, c, e]);
+
+    // h_normsq : CReal.Equiv (normSq L) (normSq R)
+    let h_normsq = d.lemma(p.norm_sq_congr, &[l, r, h_id]);
+
+    let norm_l = d.const_app(p.norm_sq, &[l]);
+    let norm_r = d.const_app(p.norm_sq, &[r]);
+    let norm_x = d.const_app(p.norm_sq, &[x]);
+    let norm_y = d.const_app(p.norm_sq, &[y]);
+
+    // h_bound : CReal.le (normSq R) (2 * normSq X + 2 * normSq Y)
+    let h_bound = d.lemma(p.norm_sq_add_le, &[x, y]);
+
+    let bound = {
+        let x2 = cadd(d, creal, norm_x, norm_x);
+        let y2 = cadd(d, creal, norm_y, norm_y);
+        cadd(d, creal, x2, y2)
+    };
+
+    // hx : CReal.Equiv (normSq R) (normSq L)
+    let hx = d.lemma(creal.equiv_symm, &[norm_l, norm_r, h_normsq]);
+    let hy = crefl(d, creal, bound);
+    let proof = d.lemma(
+        creal.le_congr,
+        &[norm_r, norm_l, bound, bound, hx, hy, h_bound],
+    );
+
+    let value = {
+        let with_e = d.lam_fv(e_fv, carrier, proof);
+        let with_c = d.lam_fv(c_fv, carrier, with_e);
+        let with_b = d.lam_fv(b_fv, carrier, with_c);
+        d.lam_fv(a_fv, carrier, with_b)
+    };
+    let ty = {
+        let claim = d.const_app(creal.le, &[norm_l, bound]);
+        let with_e = d.pi_fv(e_fv, carrier, claim);
+        let with_c = d.pi_fv(c_fv, carrier, with_e);
+        let with_b = d.pi_fv(b_fv, carrier, with_c);
+        d.pi_fv(a_fv, carrier, with_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.ptolemy_inequality_sq,
         uparams: vec![],
         ty,
         value,
