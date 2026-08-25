@@ -154,6 +154,7 @@ mod ops;
 mod order;
 mod order_extra;
 mod order_more;
+mod permutation;
 mod primes;
 mod rectangle;
 mod relation;
@@ -203,6 +204,7 @@ use no_confusion::declare_no_confusion;
 use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
+use permutation::declare_permutation_all;
 use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
 use rectangle::declare_rectangle;
 use relation::{
@@ -1392,6 +1394,44 @@ pub struct NatPrelude {
     /// n) 0 (fun a => mod (sub n a) n) n` — ℤ/n under addition, the worked
     /// instance.
     pub mod_add_is_group: NameId,
+
+    // --- the symmetric group's missing piece (`permutation.rs`) --------------
+    // Curriculum node `groups` (Layer 2): the second worked instance of
+    // `IsGroupOn`'s *representation problem* — `Nat.comp`/`Nat.id` are the
+    // right operation/identity for permutations, and this is the explicit
+    // inverse construction `IsGroupOn`'s bundled `inv : Nat → Nat` (function
+    // case: `(Nat→Nat)→(Nat→Nat)`) actually needs, since `Exists.rec`
+    // eliminates only into `Prop`.
+    /// `Nat.inverseIndex (f : Nat → Nat) (n k : Nat) : Nat` — a bounded
+    /// downward search: the least index found scanning `n-1, …, 0` with
+    /// `f i = k`, `0` if none is found (never reached under
+    /// [`Self::inverse_index_left`]/[`Self::inverse_index_right`]'s
+    /// hypotheses).
+    pub inverse_index: NameId,
+    /// `Nat.inverseIndex_right : ∀ f n, SurjectiveOn f n → ∀ k, k < n →
+    /// f (inverseIndex f n k) = k` — `f ∘ inverseIndex f n` is the identity
+    /// on `[0,n)`, a genuine right inverse.
+    pub inverse_index_right: NameId,
+    /// `Nat.inverseIndex_left : ∀ f n, MapsInto f n → InjectiveOn f n →
+    /// ∀ i, i < n → inverseIndex f n (f i) = i` — `inverseIndex f n ∘ f` is
+    /// the identity on `[0,n)`, a genuine left inverse. Needs no
+    /// `SurjectiveOn`: `i` is already its own existence witness.
+    pub inverse_index_left: NameId,
+    /// `Nat.id : Nat → Nat := fun x => x` — the identity self-map,
+    /// `IsGroupOnFn`'s `e`.
+    pub id: NameId,
+    /// `Nat.comp_assoc : ∀ f g h, comp (comp f g) h = comp f (comp g h)` —
+    /// the associativity conjunct an `IsGroupOnFn` predicate over `Nat.comp`
+    /// would need, proved by `Eq.refl` (both sides delta/beta-reduce to the
+    /// same literal lambda — no `funext`).
+    pub comp_assoc: NameId,
+    /// `Nat.IsGroupOnFn (op : (Nat→Nat)→(Nat→Nat)→(Nat→Nat)) (e : Nat→Nat)
+    /// (inv : (Nat→Nat)→(Nat→Nat)) (n : Nat) : Prop := closure ∧
+    /// (associativity ∧ (identity ∧ inverse))` — `group.rs::IsGroupOn`
+    /// generalised to function-valued elements, `BijectiveOn · n` standing
+    /// in for `· < n` as carrier membership (representation option (a) from
+    /// this slice's brief: a permutation is a `Nat → Nat`, not a `Nat`).
+    pub is_group_on_fn: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1774,6 +1814,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             group_inverse_unique: kernel.name_str(nat, "group_inverse_unique"),
             group_left_cancel: kernel.name_str(nat, "group_left_cancel"),
             mod_add_is_group: kernel.name_str(nat, "modAdd_isGroup"),
+            inverse_index: kernel.name_str(nat, "inverseIndex"),
+            inverse_index_right: kernel.name_str(nat, "inverseIndex_right"),
+            inverse_index_left: kernel.name_str(nat, "inverseIndex_left"),
+            id: kernel.name_str(nat, "id"),
+            comp_assoc: kernel.name_str(nat, "comp_assoc"),
+            is_group_on_fn: kernel.name_str(nat, "isGroupOnFn"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1851,6 +1897,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_comp(&mut d, &p)?;
         declare_injective_on_comp(&mut d, &p)?;
         declare_group_all(&mut d, &p)?;
+        declare_permutation_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
