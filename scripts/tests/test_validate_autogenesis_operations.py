@@ -7,6 +7,7 @@ import copy
 import importlib.util
 import json
 import pathlib
+import tempfile
 import unittest
 
 
@@ -452,6 +453,141 @@ class OperationRegistryTests(unittest.TestCase):
                         registry_module.RegistryError, "contract disagrees"
                     ):
                         registry_module.validate_registry(mutated, ROOT)
+
+
+class FactProvenanceExclusivityTests(unittest.TestCase):
+    """`check_fact_provenance_is_exclusive` -- see Defect 1 of the
+    2026-08-25 structural-defects session: `F:ml430-nat-descfactorial-zero-966b01df`
+    is named by two authoritative operations (a reflexivity operation that
+    actually proved it, and a bounded-induction family that could
+    independently re-derive it). That overlap is legitimate -- several
+    operations may structurally cover one fact -- but the fact itself must
+    never become ambiguous about which operation is its PROVENANCE (a checked
+    evidence row). These tests exercise the guard directly, against synthetic
+    fact files, so they do not depend on the shape of any real operation.
+    """
+
+    def setUp(self) -> None:
+        self.registry = json.loads(
+            (ROOT / "artifacts/autogenesis/operations.json").read_text()
+        )
+
+    def _write_fact(self, root: pathlib.Path, fact_id: str, bound_operation_ids: list[str]) -> None:
+        facts_dir = root / "artifacts/facts"
+        facts_dir.mkdir(parents=True, exist_ok=True)
+        evidence = [
+            {"checker_operation": {"id": operation_id}}
+            for operation_id in bound_operation_ids
+        ]
+        fact_path = facts_dir / (fact_id.replace("F:", "F-") + ".json")
+        fact_path.write_text(json.dumps({"id": fact_id, "evidence": evidence}))
+
+    def test_two_operations_naming_a_fact_with_no_bound_evidence_is_fine(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            self._write_fact(root, "F:example", [])
+            registry_module.check_fact_provenance_is_exclusive(
+                root, {"F:example": ["op-a", "op-b"]}
+            )
+
+    def test_two_operations_naming_a_fact_with_one_bound_is_the_legitimate_case(self) -> None:
+        # Exactly today's shape: op-a proved the fact; op-b (a fact-agnostic
+        # re-derivation family) also names it in applicability.fact_ids but
+        # never claims a second evidence row.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            self._write_fact(root, "F:example", ["op-a"])
+            registry_module.check_fact_provenance_is_exclusive(
+                root, {"F:example": ["op-a", "op-b"]}
+            )
+
+    def test_a_fact_named_by_only_one_operation_is_never_inspected(self) -> None:
+        # Bound to an operation that is NOT even the one (hypothetical) named
+        # operation -- would fail the "does not name it" branch if this were
+        # reached at all. It must not be: len(operation_ids) < 2 short-circuits.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            self._write_fact(root, "F:example", ["op-nowhere"])
+            registry_module.check_fact_provenance_is_exclusive(
+                root, {"F:example": ["op-a"]}
+            )
+
+    def test_two_bound_evidence_rows_on_one_fact_is_a_silent_fork_and_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            self._write_fact(root, "F:example", ["op-a", "op-b"])
+            with self.assertRaisesRegex(
+                registry_module.RegistryError, "more than one of them"
+            ):
+                registry_module.check_fact_provenance_is_exclusive(
+                    root, {"F:example": ["op-a", "op-b"]}
+                )
+
+    def test_evidence_bound_to_an_operation_that_does_not_name_the_fact_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            self._write_fact(root, "F:example", ["op-c"])
+            with self.assertRaisesRegex(
+                registry_module.RegistryError, "does not name this fact"
+            ):
+                registry_module.check_fact_provenance_is_exclusive(
+                    root, {"F:example": ["op-a", "op-b"]}
+                )
+
+    def test_committed_registry_already_carries_the_legitimate_two_operation_case(self) -> None:
+        # F:ml430-nat-descfactorial-zero-966b01df USED TO be this example --
+        # named by both authoritative-mathlib-nat-descfactorial-zero-
+        # reflexivity-v1 (its actual provenance) and authoritative-mathlib-
+        # bounded-induction-factorial-family-v1 (a target-agnostic family
+        # that could re-derive it but never claimed a second evidence row).
+        # That overlap was REMOVED 2026-08-25 (Defect 1 of that session's
+        # structural-defects report, chosen as (b): the family should not
+        # have named it) because it broke `fact-frontier.py` dispatch the
+        # moment the fact was ever reopened -- `matching_operations` returned
+        # both operations, `ambiguous-registered-operation` refused it, and
+        # `execute-autogenesis-operation.py`'s `selected_inputs` raised
+        # "executor requires the selected fact to be admissible". Two
+        # committed tests already exercised exactly that reopen path
+        # (`test_execute_autogenesis_operation.py`'s
+        # `test_statement_reflexivity_receipt_binds_manifests_artifact_and_
+        # proof` and `test_prepare_autogenesis_fact_transaction.py`'s
+        # `test_statement_reflexivity_delta_retains_external_and_proof_
+        # identities`) and were failing on HEAD before this fix, for a reason
+        # unrelated to whatever either test's own assertions cover.
+        #
+        # F:ml430-nat-ascfactorial-zero-fd183202 is the still-live instance of
+        # the SAME pattern (same family operation, same "already proved
+        # elsewhere, no second evidence row" shape) -- kept as-is because nothing
+        # currently reopens it, this repository's own bounded-induction-family
+        # checker explicitly re-verifies the no-second-evidence-row invariant for
+        # it, and dropping it too is a larger, separate design question (it would
+        # mean either shrinking this operation's targets again or decoupling
+        # `applicability.fact_ids` from `executor.targets`, which the exact-
+        # binding rule in `validate_registry` currently forbids) than this
+        # session's assigned defect. It is exactly the shape
+        # `check_fact_provenance_is_exclusive` is written to police: the full
+        # registry validator must accept it (one bound evidence row, not two)
+        # without complaint, and would reject it the moment a second evidence
+        # row appeared.
+        registry_module.validate_registry(self.registry, ROOT)
+        fact_operation_ids: dict[str, list[str]] = {}
+        for operation in self.registry["operations"]:
+            if operation.get("scope") != "authoritative":
+                continue
+            for fact_id in operation["applicability"]["fact_ids"]:
+                fact_operation_ids.setdefault(fact_id, []).append(operation["id"])
+        self.assertIn(
+            "F:ml430-nat-ascfactorial-zero-fd183202", fact_operation_ids
+        )
+        self.assertGreaterEqual(
+            len(fact_operation_ids["F:ml430-nat-ascfactorial-zero-fd183202"]), 2
+        )
+        # And confirm the fix: the fact this session's Defect 1 was filed
+        # against is no longer one of the multiply-named facts.
+        self.assertEqual(
+            fact_operation_ids.get("F:ml430-nat-descfactorial-zero-966b01df"),
+            ["authoritative-mathlib-nat-descfactorial-zero-reflexivity-v1"],
+        )
 
 
 if __name__ == "__main__":
