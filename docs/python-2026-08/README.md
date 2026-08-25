@@ -63,3 +63,11 @@ and the alternatives are in the study).
 Lane status lives in [`docs/plan/status/python-layer.md`](../plan/status/python-layer.md)
 and is emitted into `PLAN.md` by `scripts/gen-plan.py`. This folder carries the
 plans; that file carries what is true now.
+
+## Mathematica-shaped verbs
+
+`axeyum.m` (`Simplify`, `Factor`, `Expand`, `Together`, `Solve`, `D`, `Integrate`,
+`Series`, `Limit`, `N`, `TrigSimplify`) accepts strings (`"x^2 + 5 x + 6"`,
+`"Sin[x]^2"`) or `Expr`, infers the variable when exactly one is free and
+refuses to guess otherwise, and `show()` folds `x - (-2)` into `x + 2`. Pure
+Python over `axeyum.cas`; every result keeps its Rust certificate.
