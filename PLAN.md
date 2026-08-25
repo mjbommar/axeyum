@@ -990,33 +990,37 @@ instances landed, all `route-recorded`.
 Detail moved to [`../notes/123-theorem-correspondences.md`](docs/plan/notes/123-theorem-correspondences.md).
 
 **Curriculum-directed kernel development (`WIP`, coordinator, 2026-08-25).**
-Targets are chosen per
-[doc 262](docs/autogenesis/262-curriculum-directed-frontier-selection.md): the
-curriculum DAG picks the subject, `fact-frontier.py` picks the row. The kernel
-stands at **1,096 distinct theorems, every one axiom-free**, trusted base
-unmoved at 30 declared-and-unreached `axreal` assumptions — and there are **no
-`Opaque` and no `Quotient` declarations in any prelude builder**, measured, so
-`Axiom`-only and the full trusted surface coincide everywhere today.
+**1,106 distinct theorems, every one axiom-free**; trusted base unmoved at 30
+declared-and-unreached `axreal` assumptions, and no `Opaque` or `Quotient`
+declaration exists anywhere, so `Axiom`-only and the trusted surface coincide. Fact ledger **362 → 587**, `missing_edges=0`.
 
-**The frontier selects.** It refused every candidate for the whole programme's
-history — `no-registered-operation` on all 196 rows — because the registry was a
-dispatch table: 26 operations, 24 naming exactly one fact, every one of them
-already proved. One operation naming several open dependency-ready facts changed
-that, and `execute-autogenesis-operation.py --dry-run-multi-target` now runs the
-whole chain — selection, dispatch, independent re-derivation,
-`would_admit=F:ml430-nat-modeq-symm-0a3d4d18` — **with no ledger write**. What
-stands between that and an automatic admission is the authoritative receipt
-schema, which is an ADR decision and was deliberately not invented.
+**The loop is code-complete.** Frontier selects → operation re-derives → receipt
+survives a re-signed cross-target forgery → transaction verifies. Reproduced
+end to end; the fact stays `open` on purpose, because whether to WRITE is not a
+decision a gate should make.
 
-**The ledger went 362 → 458 facts**, and the measurement that prompted it is
-the number worth carrying: **1,018 of 1,053 admitted theorems (97%) had no
-fact**, `rat` was 220-of-220 uncovered, and `complex`/`cpoint`/`logic` were at
-zero. `theorem_dependency_inventory` was extended to the constructed carriers,
-which had been outside its coverage entirely.
+**Why it is not yet automatic has a measured answer, not a direction.** Three
+producers cover 7, 4 and 1 facts; the third is single-target **by
+construction** (`const TARGET`, `const STREAM_SHA256`). Both routes past the
+wall were tested: premise composition dies on WHNF opacity — reconfirmed
+through a code path that never touches the induction producer — and on a
+`fibAux`-vs-`Nat.iterate` representation mismatch; iterate re-derivation dies
+because `LE.le` desugars to a four-argument spine and is rejected before any
+combinator runs. The next capability is named: an order-relation combinator
+vocabulary. Full chain in doc 262's fourth, fifth and sixth amendments.
 
-Detail and older landed rows moved to [`../notes/124-curriculum-frontier.md`](docs/plan/notes/124-curriculum-frontier.md).
+**Next.** (1) That vocabulary, narrowly scoped — the previously-reverted broad
+version exhausted a shared budget for zero admits. (2) Coverage is 210+/1134;
+`Complex` and `CPoint` are thinnest. (3) `sumRange_cauchy_of_dominated` is three
+named steps from closing.
 
-Detail and older landed rows moved to [`../notes/124-curriculum-frontier.md`](docs/plan/notes/124-curriculum-frontier.md).
+**Three findings outrank the counts.** The binding constraint on the mathematics
+is a **missing type** — no `List`, no `Finset`, no product — found every time by
+a lane trying to prove something, never by planning. **Three targets I named
+were false or unsatisfiable**, and lanes refuted them with counterexamples
+rather than failing to prove them. And **reading a producer gave a plausible,
+partly wrong picture three times running**; every correction came from running
+it.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
