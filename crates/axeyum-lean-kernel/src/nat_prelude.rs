@@ -1729,6 +1729,32 @@ pub struct NatPrelude {
     /// IX.36 blocker `perfect.rs`'s module doc names: `sumDivisors_two_pow`'s
     /// tail sub-induction needs `2^k < 2^(k+1)`, an instance at `b = 2`.
     pub pow_lt_pow_succ: NameId,
+    /// `Nat.pow_lt_pow_of_lt : ∀ b i j, Lt (succ zero) b → Lt i j → Lt (pow b
+    /// i) (pow b j)` — general strict monotonicity of `pow` in the exponent,
+    /// across any gap, for any base greater than `1`. Built by induction on
+    /// `j` (fixing `b`, `i`), composing [`Self::pow_lt_pow_succ`] one
+    /// successor at a time with [`Self::lt_of_lt_of_le`]: the successor-step
+    /// lemma already existed for exactly the reason this field's own history
+    /// records (see `perfect.rs`'s module note by [`Self::pow_lt_pow_succ`]
+    /// and [`Self::pow_pos`]), but nothing composed it across an arbitrary
+    /// gap until Euclid IX.36's injectivity chain needed it.
+    pub pow_lt_pow_of_lt: NameId,
+    /// `Nat.pow_injective : ∀ b i j, Lt (succ zero) b → Eq (pow b i) (pow b
+    /// j) → Eq i j` — `pow b` is injective in the exponent for any base
+    /// greater than `1`. From [`Self::pow_lt_pow_of_lt`] plus trichotomy
+    /// (`le_total` then `lt_or_eq_of_le` on each side): either strict
+    /// direction contradicts the assumed equality via `lt_irrefl`, leaving
+    /// only `Eq i j`.
+    pub pow_injective: NameId,
+    /// `Nat.pow_mul_prime_injective : ∀ i j q, Le (succ zero) q → Eq (mul
+    /// (pow 2 i) q) (mul (pow 2 j) q) → Eq i j` — cancelling the shared
+    /// positive cofactor `q` (via `mul_comm` + `mul_left_cancel_of_pos`,
+    /// which cancels on the LEFT) reduces to `Eq (pow 2 i) (pow 2 j)`, then
+    /// [`Self::pow_injective`] at `b = 2` (`Lt 1 2` from `le_refl 2`) finishes
+    /// it. Needed to know the `2(k+1)` divisor-sum terms in Euclid IX.36's
+    /// two-family case are pairwise distinct before they can be summed as a
+    /// clean total.
+    pub pow_mul_prime_injective: NameId,
     /// `Nat.dvd_two_pow_succ_iff_of_le : ∀ k d, Le d (pow 2 k) → Iff (dvd d
     /// (pow 2 k)) (dvd d (pow 2 (succ k)))` — the congruence step
     /// `sumDivisors_two_pow`'s tail sub-induction consumes: below the bound
@@ -2184,6 +2210,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             pow_two_ne_pow_two_mul_prime: kernel.name_str(nat, "pow_two_ne_pow_two_mul_prime"),
             pow_pos: kernel.name_str(nat, "pow_pos"),
             pow_lt_pow_succ: kernel.name_str(nat, "pow_lt_pow_succ"),
+            pow_lt_pow_of_lt: kernel.name_str(nat, "pow_lt_pow_of_lt"),
+            pow_injective: kernel.name_str(nat, "pow_injective"),
+            pow_mul_prime_injective: kernel.name_str(nat, "pow_mul_prime_injective"),
             dvd_two_pow_succ_iff_of_le: kernel.name_str(nat, "dvd_two_pow_succ_iff_of_le"),
             sum_divisors_two_pow_eq_geom_sum: kernel
                 .name_str(nat, "sumDivisors_two_pow_eq_geom_sum"),

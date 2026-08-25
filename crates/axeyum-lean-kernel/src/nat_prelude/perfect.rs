@@ -2330,6 +2330,372 @@ pub(super) fn declare_pow_lt_pow_succ(
 }
 
 // ============================================================================
+// `Nat.pow_lt_pow_of_lt` — general strict monotonicity of `pow` in the
+// exponent, across any gap `i < j`, not just one successor step. Euclid
+// IX.36's injectivity chain needs this to know `i ↦ 2^i` is injective (see
+// [`declare_pow_injective`] below); [`declare_pow_lt_pow_succ`] above only
+// ever proved the one-step instance a different sub-induction needed.
+//
+// Induction on `j`, fixing `b` and `i`. The motive at `j` is the WHOLE
+// implication `Lt i j → Lt (pow b i) (pow b j)` (a hypothesis-carrying
+// motive, same shape [`declare_pow2_geom_sum`] and others already use).
+//
+// Base (`j = zero`): `Lt i zero` is impossible (`not_lt_zero`), so the
+// implication holds vacuously via `False.rec`.
+//
+// Step (`j = succ j'`, `ih : Lt i j' → Lt (pow b i) (pow b j')`): given
+// `h : Lt i (succ j')` (defeq `Le (succ i) (succ j')`), `le_of_succ_le_succ`
+// strips the successors to `Le i j'`, and `lt_or_eq_of_le` splits it:
+//   - `Lt i j'`: `ih` gives `Lt (pow b i) (pow b j')`; `pow_lt_pow_succ`
+//     gives `Lt (pow b j') (pow b (succ j'))`, weakened to a `Le` (`b ≤ succ
+//     b` via `le_succ`, then `le_trans`, since `Lt` IS `Le (succ ·) ·`) so
+//     `lt_of_lt_of_le` composes the two into `Lt (pow b i) (pow b (succ
+//     j'))`.
+//   - `Eq i j'`: transport `pow_lt_pow_succ(b, i)`'s `Lt (pow b i) (pow b
+//     (succ i))` along `congr succ` of the equality to land directly on
+//     `Lt (pow b i) (pow b (succ j'))`.
+// ============================================================================
+
+/// `Nat.pow_lt_pow_of_lt : ∀ b i j, Lt (succ zero) b → Lt i j → Lt (pow b i)
+/// (pow b j)` — see the module doc above for the proof route.
+pub(super) fn declare_pow_lt_pow_of_lt(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.pow_lt_pow_of_lt, 3, &|d, v| {
+        let (b, i, j) = (v[0], v[1], v[2]);
+
+        let one = d.num(1);
+        let hb_ty = d.lt(one, b);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let pow_i = d.pow(b, i);
+
+        let motive = |d: &mut NatDev<'_>, jj: ExprId| -> ExprId {
+            let hyp = d.lt(i, jj);
+            let pow_jj = d.pow(b, jj);
+            let concl = d.lt(pow_i, pow_jj);
+            d.arrow(hyp, concl)
+        };
+
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let zero = d.zero();
+            let hyp_ty = d.lt(i, zero);
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+
+            let not_lt = d.lemma(p.not_lt_zero, &[i]); // Not (Lt i zero)
+            let contradiction = d.apply(not_lt, &[hyp]); // False
+
+            let pow_zero = d.pow(b, zero);
+            let target = d.lt(pow_i, pow_zero);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let motive_false = {
+                let anon = d.anon_name();
+                d.kernel().lam(anon, false_ty, target, BinderInfo::Default)
+            };
+            let level_zero = d.kernel().level_zero();
+            let false_rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+            let body = d.apply(false_rec, &[motive_false, contradiction]);
+            d.lam_fv(hyp_fv, hyp_ty, body)
+        };
+
+        let step = |d: &mut NatDev<'_>, jp: ExprId, ih: ExprId| -> ExprId {
+            let sjp = d.succ(jp);
+            let hyp_ty = d.lt(i, sjp); // defeq Le (succ i) (succ jp)
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+
+            let le_i_jp = d.lemma(p.le_of_succ_le_succ, &[i, jp, hyp]); // Le i jp
+            let split = d.lemma(p.lt_or_eq_of_le, &[i, jp, le_i_jp]); // Or (Lt i jp) (Eq i jp)
+
+            let pow_jp = d.pow(b, jp);
+            let pow_sjp = d.pow(b, sjp);
+            let goal = d.lt(pow_i, pow_sjp);
+            let lt_ty = d.lt(i, jp);
+            let eq_ty = d.eq(i, jp);
+
+            let lt_branch = {
+                let lt_fv = d.fresh_fvar();
+                let lt_i_jp = d.kernel().fvar(lt_fv);
+                let ih_result = d.apply(ih, &[lt_i_jp]); // Lt pow_i pow_jp
+
+                let step_lt = d.lemma(p.pow_lt_pow_succ, &[b, jp, hb]); // Lt pow_jp pow_sjp
+                let succ_pow_jp = d.succ(pow_jp);
+                let le_pow_jp_self_succ = d.lemma(p.le_succ, &[pow_jp]); // Le pow_jp (succ pow_jp)
+                let le_pow_jp_sjp = d.lemma(
+                    p.le_trans,
+                    &[pow_jp, succ_pow_jp, pow_sjp, le_pow_jp_self_succ, step_lt],
+                ); // Le pow_jp pow_sjp
+
+                let result = d.lemma(
+                    p.lt_of_lt_of_le,
+                    &[pow_i, pow_jp, pow_sjp, ih_result, le_pow_jp_sjp],
+                );
+                d.lam_fv(lt_fv, lt_ty, result)
+            };
+
+            let eq_branch = {
+                let eq_fv = d.fresh_fvar();
+                let eq_i_jp = d.kernel().fvar(eq_fv);
+
+                let step_i = d.lemma(p.pow_lt_pow_succ, &[b, i, hb]); // Lt pow_i (pow b (succ i))
+                let succ_i = d.succ(i);
+                let pow_succ_i = d.pow(b, succ_i);
+                let congr_eq = d.congr(i, jp, eq_i_jp, &|d, x| {
+                    let sx = d.succ(x);
+                    d.pow(b, sx)
+                }); // Eq pow_succ_i pow_sjp
+                let motive_t = d.eq_motive(pow_succ_i, &|d, x| d.lt(pow_i, x));
+                let result = d.transport(pow_succ_i, motive_t, step_i, pow_sjp, congr_eq);
+                d.lam_fv(eq_fv, eq_ty, result)
+            };
+
+            let anon = d.anon_name();
+            let logic = d.prelude().logic;
+            let or_ty = d.const_app(logic.or, &[lt_ty, eq_ty]);
+            let motive_or = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+            let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+            let case_result = d.apply(
+                or_rec,
+                &[lt_ty, eq_ty, motive_or, lt_branch, eq_branch, split],
+            );
+            d.lam_fv(hyp_fv, hyp_ty, case_result)
+        };
+
+        let proof = d.induct(&motive, &base, &step, j);
+        let stmt_inner = motive(d, j);
+        let stmt = d.arrow(hb_ty, stmt_inner);
+        let value = d.lam_fv(hb_fv, hb_ty, proof);
+        (stmt, value)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.pow_injective` — `pow b` is injective in the exponent for any base
+// greater than `1`. From [`declare_pow_lt_pow_of_lt`] plus trichotomy on `i`
+// and `j` (`le_total` then `lt_or_eq_of_le` on each side): either strict
+// direction contradicts the assumed `Eq (pow b i) (pow b j)` via
+// `lt_irrefl` (transport the strict inequality along the assumed equality,
+// reflexively), leaving only `Eq i j`.
+// ============================================================================
+
+/// `Nat.pow_injective : ∀ b i j, Lt (succ zero) b → Eq (pow b i) (pow b j) →
+/// Eq i j` — see the module doc above for the proof route.
+pub(super) fn declare_pow_injective(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.pow_injective, 3, &|d, v| {
+        let (b, i, j) = (v[0], v[1], v[2]);
+
+        let one = d.num(1);
+        let hb_ty = d.lt(one, b);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let pow_i = d.pow(b, i);
+        let pow_j = d.pow(b, j);
+        let heq_ty = d.eq(pow_i, pow_j);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        let goal = d.eq(i, j);
+
+        // From `Lt x y` (`Le (succ x) y`) and `Eq (pow b x) (pow b y)`,
+        // contradict via `pow_lt_pow_of_lt` transported along `heq_dir`
+        // (whichever direction matches) into `Lt (pow b ?) (pow b ?)` with
+        // both sides equal, refuted by `lt_irrefl`.
+        let strict_contra = |d: &mut NatDev<'_>, x: ExprId, y: ExprId, lt_xy: ExprId| -> ExprId {
+            // lt_xy : Lt x y. pow_lt_pow_of_lt gives Lt (pow b x) (pow b y).
+            let strict = d.lemma(p.pow_lt_pow_of_lt, &[b, x, y, hb, lt_xy]);
+            // Transport along `heq` (Eq pow_i pow_j) is only directly usable
+            // when {x,y} = {i,j} in the SAME order as heq; build the needed
+            // equality locally from heq by symm if required by the caller.
+            strict
+        };
+
+        let tri = d.lemma(p.le_total, &[i, j]); // Or (Le i j) (Le j i)
+        let le_ij_ty = d.le(i, j);
+        let le_ji_ty = d.le(j, i);
+
+        let left_branch = {
+            let le_fv = d.fresh_fvar();
+            let le_ij = d.kernel().fvar(le_fv);
+            let split = d.lemma(p.lt_or_eq_of_le, &[i, j, le_ij]); // Or (Lt i j) (Eq i j)
+            let lt_ty = d.lt(i, j);
+            let eq_ty = d.eq(i, j);
+
+            let lt_sub = {
+                let fv = d.fresh_fvar();
+                let lt_i_j = d.kernel().fvar(fv);
+                // Lt (pow b i) (pow b j)
+                let strict = strict_contra(d, i, j, lt_i_j);
+                // transport along heq : Eq pow_i pow_j, motive fun x => Lt pow_i x,
+                // reversed to substitute pow_j -> pow_i using symm(heq).
+                let heq_rev = d.symm(pow_i, pow_j, heq); // Eq pow_j pow_i
+                let motive_t = d.eq_motive(pow_j, &|d, x| d.lt(pow_i, x));
+                let lt_self = d.transport(pow_j, motive_t, strict, pow_i, heq_rev); // Lt pow_i pow_i
+                let irrefl = d.lemma(p.lt_irrefl, &[pow_i]);
+                let contradiction = d.apply(irrefl, &[lt_self]);
+                let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                let motive_false = {
+                    let anon = d.anon_name();
+                    d.kernel().lam(anon, false_ty, goal, BinderInfo::Default)
+                };
+                let level_zero = d.kernel().level_zero();
+                let false_rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+                let result = d.apply(false_rec, &[motive_false, contradiction]);
+                d.lam_fv(fv, lt_ty, result)
+            };
+
+            let eq_sub = {
+                let fv = d.fresh_fvar();
+                let eq_i_j = d.kernel().fvar(fv);
+                d.lam_fv(fv, eq_ty, eq_i_j)
+            };
+
+            let anon = d.anon_name();
+            let logic = d.prelude().logic;
+            let or_ty = d.const_app(logic.or, &[lt_ty, eq_ty]);
+            let motive_or = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+            let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+            let case_result = d.apply(or_rec, &[lt_ty, eq_ty, motive_or, lt_sub, eq_sub, split]);
+            d.lam_fv(le_fv, le_ij_ty, case_result)
+        };
+
+        let right_branch = {
+            let le_fv = d.fresh_fvar();
+            let le_ji = d.kernel().fvar(le_fv);
+            let split = d.lemma(p.lt_or_eq_of_le, &[j, i, le_ji]); // Or (Lt j i) (Eq j i)
+            let lt_ty = d.lt(j, i);
+            let eq_ty = d.eq(j, i);
+
+            let lt_sub = {
+                let fv = d.fresh_fvar();
+                let lt_j_i = d.kernel().fvar(fv);
+                // Lt (pow b j) (pow b i)
+                let strict = strict_contra(d, j, i, lt_j_i);
+                let motive_t = d.eq_motive(pow_i, &|d, x| d.lt(pow_j, x));
+                let lt_self = d.transport(pow_i, motive_t, strict, pow_j, heq); // heq : Eq pow_i pow_j
+                let irrefl = d.lemma(p.lt_irrefl, &[pow_j]);
+                let contradiction = d.apply(irrefl, &[lt_self]);
+                let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                let motive_false = {
+                    let anon = d.anon_name();
+                    d.kernel().lam(anon, false_ty, goal, BinderInfo::Default)
+                };
+                let level_zero = d.kernel().level_zero();
+                let false_rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+                let result = d.apply(false_rec, &[motive_false, contradiction]);
+                d.lam_fv(fv, lt_ty, result)
+            };
+
+            let eq_sub = {
+                let fv = d.fresh_fvar();
+                let eq_j_i = d.kernel().fvar(fv);
+                let result = d.symm(j, i, eq_j_i); // Eq i j
+                d.lam_fv(fv, eq_ty, result)
+            };
+
+            let anon = d.anon_name();
+            let logic = d.prelude().logic;
+            let or_ty = d.const_app(logic.or, &[lt_ty, eq_ty]);
+            let motive_or = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+            let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+            let case_result = d.apply(or_rec, &[lt_ty, eq_ty, motive_or, lt_sub, eq_sub, split]);
+            d.lam_fv(le_fv, le_ji_ty, case_result)
+        };
+
+        let anon = d.anon_name();
+        let logic = d.prelude().logic;
+        let or_ty = d.const_app(logic.or, &[le_ij_ty, le_ji_ty]);
+        let motive_or = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+        let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+        let tri_result = d.apply(
+            or_rec,
+            &[
+                le_ij_ty,
+                le_ji_ty,
+                motive_or,
+                left_branch,
+                right_branch,
+                tri,
+            ],
+        );
+
+        let proof = d.lam_fv(heq_fv, heq_ty, tri_result);
+        let stmt_inner = d.arrow(heq_ty, goal);
+        let stmt = d.arrow(hb_ty, stmt_inner);
+        let value = d.lam_fv(hb_fv, hb_ty, proof);
+        (stmt, value)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.pow_mul_prime_injective` — cancelling the shared positive cofactor
+// `q` (via `mul_comm` to move it to the left, then `mul_left_cancel_of_pos`)
+// reduces `Eq (mul (pow 2 i) q) (mul (pow 2 j) q)` to `Eq (pow 2 i) (pow 2
+// j)`, then [`declare_pow_injective`] at `b = 2` (`Lt 1 2` from `le_refl 2`)
+// finishes it.
+// ============================================================================
+
+/// `Nat.pow_mul_prime_injective : ∀ i j q, Le (succ zero) q → Eq (mul (pow 2
+/// i) q) (mul (pow 2 j) q) → Eq i j` — see the module doc above for the
+/// proof route.
+pub(super) fn declare_pow_mul_prime_injective(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.pow_mul_prime_injective, 3, &|d, v| {
+        let (i, j, q) = (v[0], v[1], v[2]);
+
+        let one = d.num(1);
+        let hq_ty = d.le(one, q);
+        let hq_fv = d.fresh_fvar();
+        let hq = d.kernel().fvar(hq_fv);
+
+        let two = d.num(2);
+        let pow_i = d.pow(two, i);
+        let pow_j = d.pow(two, j);
+        let mul_i = d.mul(pow_i, q);
+        let mul_j = d.mul(pow_j, q);
+        let heq_ty = d.eq(mul_i, mul_j);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        // Commute both sides to put `q` on the left: `Eq (mul q pow_i) (mul q pow_j)`.
+        let comm_i = d.lemma(p.mul_comm, &[pow_i, q]); // Eq (mul pow_i q) (mul q pow_i)
+        let comm_j = d.lemma(p.mul_comm, &[pow_j, q]); // Eq (mul pow_j q) (mul q pow_j)
+        let q_pow_i = d.mul(q, pow_i);
+        let q_pow_j = d.mul(q, pow_j);
+        let comm_i_rev = d.symm(mul_i, q_pow_i, comm_i); // Eq q_pow_i mul_i
+        let (_e, chained) = d.chain(
+            q_pow_i,
+            &[(mul_i, comm_i_rev), (mul_j, heq), (q_pow_j, comm_j)],
+        );
+        // chained : Eq q_pow_i q_pow_j
+
+        let cancelled = d.lemma(p.mul_left_cancel_of_pos, &[q, pow_i, pow_j, hq, chained]); // Eq pow_i pow_j
+
+        let two2 = d.num(2);
+        let le_two_two = d.lemma(p.le_refl, &[two2]); // Le 2 2, defeq Lt 1 2
+        let goal = d.eq(i, j);
+        let result = d.lemma(p.pow_injective, &[two, i, j, le_two_two, cancelled]);
+
+        let proof = d.lam_fv(heq_fv, heq_ty, result);
+        let stmt_inner = d.arrow(heq_ty, goal);
+        let stmt = d.arrow(hq_ty, stmt_inner);
+        let value = d.lam_fv(hq_fv, hq_ty, proof);
+        (stmt, value)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
 // `Nat.dvd_two_pow_succ_iff_of_le` — the congruence step
 // `sumDivisors_two_pow`'s tail sub-induction consumes: for `dd ≤ 2^k`, `dd ∣
 // 2^k ↔ dd ∣ 2^(succ k)`. Depends on both classification theorems above AND
@@ -3402,8 +3768,10 @@ pub(super) fn declare_sum_divisors_two_pow(
 /// `Nat.Perfect`, the finite geometric sum over powers of two, the divisor
 /// classifications `Nat.dvd_two_pow_mul_classify` and
 /// `Nat.dvd_two_pow_classify`, the divisor congruence
-/// `Nat.dvd_two_pow_succ_iff_of_le`, and `pow`'s strict monotonicity in the
-/// exponent (`Nat.pow_pos`, `Nat.pow_lt_pow_succ`), in dependency order.
+/// `Nat.dvd_two_pow_succ_iff_of_le`, `pow`'s strict monotonicity in the
+/// exponent (`Nat.pow_pos`, `Nat.pow_lt_pow_succ`, general-gap
+/// `Nat.pow_lt_pow_of_lt`), and the resulting injectivity facts
+/// (`Nat.pow_injective`, `Nat.pow_mul_prime_injective`), in dependency order.
 /// `Nat.sumDivisors_two_pow` and its `eq_geom_sum` bridge are declared
 /// SEPARATELY, later in `build_nat_prelude_uncached`'s pipeline (see the note
 /// at the end of this function) — they need `Nat.sumRange_split`
@@ -3419,6 +3787,9 @@ pub(super) fn declare_perfect_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     declare_pow_two_ne_pow_two_mul_prime(d, p)?;
     declare_pow_pos(d, p)?;
     declare_pow_lt_pow_succ(d, p)?;
+    declare_pow_lt_pow_of_lt(d, p)?;
+    declare_pow_injective(d, p)?;
+    declare_pow_mul_prime_injective(d, p)?;
     declare_dvd_two_pow_succ_iff_of_le(d, p)?;
     // `Nat.sumDivisors_two_pow{,_eq_geom_sum}` need `Nat.sumRange_split`
     // (`rectangle.rs`), declared LATER in `build_nat_prelude_uncached`'s
