@@ -3263,6 +3263,133 @@ fn rat_poly_eval_computation_check_can_fail() {
     );
 }
 
+/// `polyEval_mul` (the finite Cauchy product) is NOT attempted in this
+/// prelude, and this test is the kernel-confirmed reason why: the natural
+/// candidate statement `polyEval (conv a b) (m+n-1) x = polyEval a m x *
+/// polyEval b n x`, with `conv a b k := sumRange (fun i => a i * b (k-i))
+/// (k+1)` the plain (untruncated) antidiagonal formula, is FALSE for
+/// `a`/`b` that are not required to vanish beyond their own bound.
+///
+/// Take `a 0 = 1`, `a (succ _) = 5` (so `m = 2` means "`a`'s declared
+/// coefficients are `1, 5`"), and `b 0 = 3`, `b (succ _) = 100` (`n = 1`
+/// means "`b`'s declared coefficient is `3`"; `b 1 = 100` is `b`'s value
+/// PAST its declared bound — `polyEval b 1 x` never looks at it, but nothing
+/// stops it being nonzero). The truncated rectangle product's `x^1`
+/// coefficient is `a 1 * b 0 = 5*3 = 15`. But `conv a b 1` — the coefficient
+/// `polyEval_mul` would need to equal `15` — is `a 0 * b 1 + a 1 * b 0 =
+/// 1*100 + 5*3 = 115`: `conv` sums the FULL antidiagonal `{(i,j) : i+j=1}`,
+/// which includes `(0,1)`, a point OUTSIDE the `m×n` rectangle `{i<2,j<1}`
+/// (since `j=1 ≥ n=1`). `conv`'s own formula is correct (it is exactly the
+/// infinite-power-series Cauchy product, confirmed positively below); the
+/// gap is that it is not, by itself, the TRUNCATED product `polyEval_mul`
+/// would need — that needs either an extra hypothesis (`a`/`b` vanish beyond
+/// `m`/`n`) or a `conv` bounded by BOTH `m` and `n` (not the same-bound `n×n`
+/// square `rat_prelude/diagonal.rs` supplies), neither built here.
+#[test]
+fn naive_conv_disagrees_with_the_truncated_rectangle_product() {
+    use crate::BinderInfo;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_ty, req, rmul, rrefl, rsum_range};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // A step function `Nat -> Rat`, `f 0 = at_zero`, `f (succ _) = beyond`,
+    // via `Nat.rec` -- exactly `rat_poly_eval_computes_a_concrete_polynomial`'s
+    // own `coeffs` builder, reused for both `a` and `b`.
+    let step = |d: &mut IntDev<'_>, at_zero: ExprId, beyond: ExprId| -> ExprId {
+        let anon_binder = d.anon_name();
+        let one_level = d.level_one();
+        let motive = d
+            .kernel()
+            .lam(anon_binder, nat, carrier, BinderInfo::Default);
+        let minor_succ = {
+            let j_fv = d.fresh_fvar();
+            let ih_fv = d.fresh_fvar();
+            let inner = d.lam_fv(ih_fv, carrier, beyond);
+            d.lam_fv(j_fv, nat, inner)
+        };
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let rec_name = d.prelude().rec;
+        let rec = d.kernel().const_(rec_name, vec![one_level]);
+        let body = d.apply(rec, &[motive, at_zero, minor_succ, i]);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let one_r = literal(&mut d, 1);
+    let five_r = literal(&mut d, 5);
+    let a = step(&mut d, one_r, five_r); // a 0 = 1, a 1 = 5
+
+    let three_r = literal(&mut d, 3);
+    let hundred_r = literal(&mut d, 100);
+    let b = step(&mut d, three_r, hundred_r); // b 0 = 3, b 1 = 100 (junk beyond n=1)
+
+    // conv a b k := sumRange (fun i => a i * b (k-i)) (k+1), built inline
+    // (not a named `Rat.conv` -- this test does not commit to that shape
+    // being the right one, per the module doc above).
+    let conv = |d: &mut IntDev<'_>, a: ExprId, b: ExprId, k: ExprId| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ai = d.apply(a, &[i]);
+        let ki = d.sub(k, i);
+        let bki = d.apply(b, &[ki]);
+        let term = rmul(d, ai, bki);
+        let inner = d.lam_fv(i_fv, nat, term);
+        let sk = d.succ(k);
+        rsum_range(d, p, inner, sk)
+    };
+
+    // Positive control: conv's OWN antidiagonal formula computes correctly
+    // (the "re-verify i<=k, so no truncation fires" check the task asked
+    // for, at a third concrete instance beyond k=0,1,2 symbolic hand-check).
+    let zero_n = d.zero();
+    let conv_0 = conv(&mut d, a, b, zero_n);
+    let expected_0 = literal(&mut d, 3); // a0*b0 = 1*3
+    let stmt0 = req(&mut d, conv_0, expected_0);
+    let proof0 = rrefl(&mut d, conv_0);
+    let name0 = d.kernel().name_str(anon, "Check.conv_k0_is_three");
+    d.declare_theorem(name0, stmt0, proof0)
+        .unwrap_or_else(|e| panic!("conv(a,b,0) did not reduce to 3: {}", d.explain(&e)));
+
+    let one_n = d.num(1);
+    let conv_1 = conv(&mut d, a, b, one_n);
+    let expected_1 = literal(&mut d, 115); // a0*b1 + a1*b0 = 100 + 15
+    let stmt1 = req(&mut d, conv_1, expected_1);
+    let proof1 = rrefl(&mut d, conv_1);
+    let name1 = d.kernel().name_str(anon, "Check.conv_k1_is_115");
+    d.declare_theorem(name1, stmt1, proof1)
+        .unwrap_or_else(|e| panic!("conv(a,b,1) did not reduce to 115: {}", d.explain(&e)));
+
+    // Negative control -- THE FINDING: conv(a,b,1) is NOT the truncated
+    // rectangle coefficient a1*b0 = 15. If it were, `polyEval_mul`'s naive
+    // statement (no vanishing-beyond-bound hypotheses on a/b) would be
+    // provable as stated; it is not.
+    let conv_1_again = conv(&mut d, a, b, one_n);
+    let fifteen = literal(&mut d, 15);
+    let wrong_stmt = req(&mut d, conv_1_again, fifteen);
+    let wrong_proof = rrefl(&mut d, conv_1_again);
+    let wrong_name = d.kernel().name_str(anon, "Check.conv_k1_is_not_fifteen");
+    assert!(
+        d.declare_theorem(wrong_name, wrong_stmt, wrong_proof)
+            .is_err(),
+        "the kernel accepted conv(a,b,1) = 15 (the truncated rectangle \
+         coefficient a1*b0), but conv(a,b,1) = 115 (a0*b1+a1*b0) since conv \
+         sums the FULL antidiagonal including the out-of-rectangle point \
+         (0,1) -- so the naive polyEval_mul statement is not merely \
+         unattempted here, it is false as stated without extra hypotheses"
+    );
+}
+
 /// `dotN_cauchy_schwarz`'s statement rendered verbatim — SQUARED, the
 /// unweakened form: `(dotN u v n) * (dotN u v n) <= (dotN u u n) * (dotN v v
 /// n)`, not `|dotN u v n| <= sqrt(...)` (ℚ has no square root). The same
