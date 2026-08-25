@@ -3611,7 +3611,7 @@ fn factor_k_out_of_three(
 /// minor's own first row; `middle_swap` plus `mul_assoc`, mirroring this
 /// file's `X = e*i-f*h -> (k*e)*i - f*(k*h)`-style rewrite, for the minor
 /// where the scaled entries are split across both factors) before the same
-/// three-term factor-out closes it. That is three more mul_assoc/middle_swap
+/// three-term factor-out closes it. That is three more `mul_assoc`/`middle_swap`
 /// derivations nested one level deeper than this one, not a different proof
 /// technique — sized but not attempted here, in favor of `det3_swap_rows` and
 /// `det3_row_add`.
