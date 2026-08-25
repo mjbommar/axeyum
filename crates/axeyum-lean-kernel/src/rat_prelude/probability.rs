@@ -122,6 +122,7 @@ pub(super) fn declare_probability(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_sum_vars(d, p)?;
     declare_expectation_sum_vars(d, p)?;
     declare_covariance_sum_vars_left(d, p)?;
+    declare_covariance_sum_vars(d, p)?;
     declare_pairwise_uncorrelated(d, p)?;
     declare_variance_sum_vars(d, p)?;
     declare_variance_scaled_mean(d, p)?;
@@ -4433,6 +4434,157 @@ fn declare_covariance_sum_vars_left(d: &mut IntDev<'_>, p: RatPrelude) -> Result
         d.pi_fv(x_fv, x_ty, with_y)
     };
     d.declare_theorem(p.covariance_sum_vars_left, ty, value)
+}
+
+/// `Rat.covariance_sumVars : ∀ X Y p n m m',
+/// covariance (sumVars X m) (sumVars Y m') p n =
+/// sumRange (fun i => sumRange (fun j => covariance (X i) (Y j) p n) m') m`
+/// — bilinearity of covariance over TWO families at once: `Cov[Σᵢ Xᵢ, Σⱼ Yⱼ]
+/// = Σᵢ Σⱼ Cov[Xᵢ, Yⱼ]`. [`declare_covariance_sum_vars_left`]'s own
+/// statement already quantifies its `Y` over an ARBITRARY `Nat → Rat`
+/// function, so this is not a new induction: instantiate that theorem once
+/// at `Y := sumVars Y' m'` to reduce the first family, then for each fixed
+/// `i` swap `Cov[X i, sumVars Y' m']` to `Cov[sumVars Y' m', X i]`
+/// ([`RatPrelude::covariance_comm`]) and apply
+/// [`declare_covariance_sum_vars_left`] AGAIN (roles reversed, at `m'`) to
+/// reduce the second family, then swap each resulting term back
+/// ([`RatPrelude::covariance_comm`] again, pointwise under the inner sum via
+/// [`RatPrelude::sum_range_congr`]) and lift that pointwise fact through the
+/// outer sum with a second [`RatPrelude::sum_range_congr`]. Both congruence
+/// steps use the UNRESTRICTED form, not `sumRange_congr_lt`: `covariance_comm`
+/// and `covariance_sumVars_left` hold for every index, not just a bounded
+/// range, unlike `PairwiseUncorrelated`'s own zero facts.
+///
+/// This is exactly the natural double-sum generalisation `Rat.sumRange_swap`
+/// (the Fubini swap landed in `rat_prelude::sum`) might have been expected to
+/// unlock — and it does not: the derivation above already produces the
+/// `Σᵢ Σⱼ` order directly (apply the `X`-reduction first, the `Y`-reduction
+/// second, inside each `i`-th term), so no reordering of summation is ever
+/// needed. `sumRange_swap` would only matter for a proof that needed the
+/// OTHER order, `Σⱼ Σᵢ`, and nothing here does — [`RatPrelude::covariance_comm`]
+/// already gets that symmetry for free at the level of `covariance` itself.
+fn declare_covariance_sum_vars(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, nat_fn_ty);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let m2_fv = d.fresh_fvar();
+    let m2 = d.kernel().fvar(m2_fv);
+
+    let sv_x = sum_vars_fn(d, p, x, m);
+    let sv_y = sum_vars_fn(d, p, y, m2);
+    let lhs = covariance(d, p, sv_x, sv_y, pf, n);
+
+    // outer_fn i := sumRange (fun j => covariance (X i) (Y j) p n) m2
+    let outer_fn = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let xi = d.apply(x, &[i]);
+        let inner_fn = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let yj = d.apply(y, &[j]);
+            let cov = covariance(d, p, xi, yj, pf, n);
+            d.lam_fv(j_fv, nat, cov)
+        };
+        let inner_sum = rsum_range(d, p, inner_fn, m2);
+        d.lam_fv(i_fv, nat, inner_sum)
+    };
+    let rhs = rsum_range(d, p, outer_fn, m);
+    let concl = req(d, lhs, rhs);
+
+    // Step 1: Cov[sumVars X m, sumVars Y m2] p n
+    //       = sumRange (fun i => Cov[X i, sumVars Y m2] p n) m
+    let h1 = d.lemma(p.covariance_sum_vars_left, &[x, sv_y, pf, n, m]);
+    let mid_fn = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let xi = d.apply(x, &[i]);
+        let cov = covariance(d, p, xi, sv_y, pf, n);
+        d.lam_fv(i_fv, nat, cov)
+    };
+    let mid = rsum_range(d, p, mid_fn, m);
+
+    // Step 2: pointwise, for each i:
+    //   Cov[X i, sumVars Y m2] p n = sumRange (fun j => Cov[X i, Y j] p n) m2
+    let pointwise_i = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let xi = d.apply(x, &[i]);
+
+        let cov_xi_svy = covariance(d, p, xi, sv_y, pf, n);
+        let comm1 = d.lemma(p.covariance_comm, &[xi, sv_y, pf, n]);
+        let cov_svy_xi = covariance(d, p, sv_y, xi, pf, n);
+
+        // Cov[sumVars Y m2, X i] p n = sumRange (fun j => Cov[Y j, X i] p n) m2
+        let h2 = d.lemma(p.covariance_sum_vars_left, &[y, xi, pf, n, m2]);
+        let yx_fn = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let yj = d.apply(y, &[j]);
+            let cov = covariance(d, p, yj, xi, pf, n);
+            d.lam_fv(j_fv, nat, cov)
+        };
+        let sum_yx = rsum_range(d, p, yx_fn, m2);
+
+        // swap each term back: Cov[Y j, X i] p n = Cov[X i, Y j] p n
+        let xy_fn = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let yj = d.apply(y, &[j]);
+            let cov = covariance(d, p, xi, yj, pf, n);
+            d.lam_fv(j_fv, nat, cov)
+        };
+        let pointwise2 = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let yj = d.apply(y, &[j]);
+            let body = d.lemma(p.covariance_comm, &[yj, xi, pf, n]);
+            d.lam_fv(j_fv, nat, body)
+        };
+        let congr2 = d.lemma(p.sum_range_congr, &[yx_fn, xy_fn, m2, pointwise2]);
+        let sum_xy = rsum_range(d, p, xy_fn, m2);
+
+        let (_e, chain) = rchain(
+            d,
+            cov_xi_svy,
+            &[(cov_svy_xi, comm1), (sum_yx, h2), (sum_xy, congr2)],
+        );
+        d.lam_fv(i_fv, nat, chain)
+    };
+    let congr1 = d.lemma(p.sum_range_congr, &[mid_fn, outer_fn, m, pointwise_i]);
+
+    let (_e, final_chain) = rchain(d, lhs, &[(mid, h1), (rhs, congr1)]);
+
+    let value = {
+        let with_m2 = d.lam_fv(m2_fv, nat, final_chain);
+        let with_m = d.lam_fv(m_fv, nat, with_m2);
+        let with_n = d.lam_fv(n_fv, nat, with_m);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_y = d.lam_fv(y_fv, x_ty, with_pf);
+        d.lam_fv(x_fv, x_ty, with_y)
+    };
+    let ty = {
+        let with_m2 = d.pi_fv(m2_fv, nat, concl);
+        let with_m = d.pi_fv(m_fv, nat, with_m2);
+        let with_n = d.pi_fv(n_fv, nat, with_m);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_y = d.pi_fv(y_fv, x_ty, with_pf);
+        d.pi_fv(x_fv, x_ty, with_y)
+    };
+    d.declare_theorem(p.covariance_sum_vars, ty, value)
 }
 
 // --- pairwise uncorrelatedness and the variance of a sum of variables ------
