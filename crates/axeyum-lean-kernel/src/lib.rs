@@ -1569,4 +1569,6 @@ impl Kernel {
 }
 
 #[cfg(test)]
+mod cross_prelude_collision_tests;
+#[cfg(test)]
 mod tests;
