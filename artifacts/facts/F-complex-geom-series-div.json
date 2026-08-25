@@ -18,8 +18,14 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:complex-equiv-refl",
+    "F:complex-equiv-symm",
+    "F:complex-equiv-trans",
+    "F:complex-inv-mul-cancel",
     "F:complex-mul-assoc",
     "F:complex-mul-comm",
+    "F:complex-mul-congr",
+    "F:complex-mul-one",
     "F:complex-mul-sub-one-geom"
   ],
   "axiom_footprint": [],

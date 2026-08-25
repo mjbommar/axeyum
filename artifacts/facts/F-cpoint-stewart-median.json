@@ -16,6 +16,9 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:cpoint-distsq-congr",
+    "F:cpoint-lerp-half-is-midpoint",
+    "F:cpoint-scalar-one-sub-inv2",
     "F:cpoint-stewart",
     "F:creal-add-congr",
     "F:creal-equiv-refl",

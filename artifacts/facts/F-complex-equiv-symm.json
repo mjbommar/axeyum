@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "F:complex-equiv-symm",
+  "title": "Complex.Equiv is symmetric",
+  "statement": "For constructed complex numbers x0, x1, if x0 is Complex.Equiv-equivalent to x1 then x1 is Complex.Equiv-equivalent to x0.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Complex.Equiv.symm : ((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex.Equiv x0 x1) -> Complex.Equiv x1 x0)))",
+    "fragment": "Complex",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-equiv-symm"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Complex.Equiv.symm",
+      "kind": "kernel-term",
+      "supports": "Complex.Equiv.symm is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Complex.Equiv.symm 2>/dev/null | grep -cE '^Complex\\.Equiv\\.symm[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "`build_complex_prelude` admits Complex.Equiv.symm through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` builds creal/complex/cpoint in one run; it exits non-zero for a named filter that matches nothing, and `grep -c` (never `-q`) independently asserts the exact tab-anchored line is present. `--release` is MANDATORY: building the constructed carriers recurses deep enough in a debug build to overflow the default thread stack (measured on this tree: release exits 0, debug SIGABRTs at 134)."
+    },
+    {
+      "id": "footprint-Complex.Equiv.symm",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the complex prelude's trusted surface is empty, which bounds Complex.Equiv.symm",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free complex",
+      "checker_seconds": 20,
+      "notes": "`nat_axiom_inventory --include-constructed --require-axiom-free complex` builds the complex environment as its own group and reports `complex: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree), covering Axiom, Opaque AND Quotient, not just Declaration::Axiom -- this bounds every individual complex theorem's footprint by []. `--include-constructed` is REQUIRED: without it the command exits 1 naming `complex` as known but not built this run rather than a silent pass, which is the standing trap of an empty/absent result reading as a strong negative when the tool was never pointed at the subject. `nat_axiom_inventory` now covers `cpoint` directly (re-verified on this tree: `--require-axiom-free cpoint` exits 0 with `cpoint: axiom=0 opaque=0 quotient=0 total_trusted=0`), so the footprint_closure_audit fallback some earlier CPoint facts used is not needed here. `--release` is MANDATORY for the same deep-recursion reason as `theorem_dependency_inventory` (measured on this tree: debug SIGABRTs at 134)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_complex_prelude",
+    "source": "theorem name and dependency edges from theorem_dependency_inventory (builds creal/complex/cpoint); canonical type and top-level binder arity read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint(), expr_node()) -- no in-tree example prints Complex/CPoint theorem types; crates/ source was not touched to produce this batch; the probe was built and run in the session scratchpad and deleted after use."
+  },
+  "notes": "depends_on keeps the sibling-mapped subset of Complex.Equiv.symm's direct-edge set from theorem_dependency_inventory: a used theorem is declared only when it is itself a registered ledger fact (including new facts from this same batch).",
+  "external_status": "proved"
+}

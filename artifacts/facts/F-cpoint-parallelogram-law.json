@@ -19,6 +19,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:cpoint-dot-comm",
+    "F:cpoint-dot-congr",
+    "F:cpoint-dot-neg-left",
     "F:cpoint-dot-self-add",
     "F:cpoint-dot-self-sub",
     "F:creal-add-assoc",

@@ -14,9 +14,12 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-add-le-add",
     "F:creal-add-zero",
     "F:creal-equiv-symm",
-    "F:creal-le-trans"
+    "F:creal-le-of-equiv",
+    "F:creal-le-trans",
+    "F:creal-sq-nonneg"
   ],
   "axiom_footprint": [],
   "evidence": [
