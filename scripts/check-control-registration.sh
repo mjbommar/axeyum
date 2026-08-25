@@ -39,7 +39,7 @@ CALLERS=(scripts/check.sh justfile hooks/pre-push .github/workflows)
 # the blind spot. So the count is pinned: a RISE fails, and a FALL is a result
 # that must lower the pin. New Python controls therefore have to be registered,
 # which is the property that was missing.
-PY_ORPHAN_BASELINE=${AXEYUM_PY_ORPHAN_BASELINE:-199}
+PY_ORPHAN_BASELINE=${AXEYUM_PY_ORPHAN_BASELINE:-188}
 
 orphans=()
 total=0

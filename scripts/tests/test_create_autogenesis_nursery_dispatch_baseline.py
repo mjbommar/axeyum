@@ -24,7 +24,7 @@ class DispatchBaselineTests(unittest.TestCase):
         result = MODULE.build(self.nursery, self.registry, self.facts)
         self.assertFalse(result["authority"]["held_out_inspected"])
         self.assertEqual({row["partition"] for row in result["rows"]}, {"train", "development"})
-        self.assertEqual(result["coverage"]["candidates"], 157)
+        self.assertEqual(result["coverage"]["candidates"], 177)
 
     def test_fact_loader_does_not_open_held_out_paths(self) -> None:
         nursery = {
@@ -131,7 +131,7 @@ class DispatchBaselineTests(unittest.TestCase):
     def test_population_drift_fails_closed(self) -> None:
         nursery = copy.deepcopy(self.nursery)
         nursery["entries"] = nursery["entries"][:-1]
-        with self.assertRaisesRegex(MODULE.BaselineError, "expected 157"):
+        with self.assertRaisesRegex(MODULE.BaselineError, "expected 177"):
             MODULE.build(nursery, self.registry, self.facts)
 
 

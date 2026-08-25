@@ -113,8 +113,11 @@ class HoldoutIsolationTests(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn("verdict=PASS", out)
         # The repaired partition, pinned: a silent re-expansion of held-out
-        # would mean the amendment was reverted.
-        self.assertIn("held_out=57", out)
+        # would mean the amendment was reverted. 57 -> 37 on 2026-08-25 when
+        # `natural-binomial` moved to development (see docs/autogenesis/
+        # 263-holdout-contamination-by-ordinary-development.md and the second
+        # amendment in mathlib-nursery-split-policy-v1.json).
+        self.assertIn("held_out=37", out)
 
     # --- guard 1: a held-out fact must not be settled ---------------------
     def test_a_settled_held_out_fact_is_a_violation(self) -> None:

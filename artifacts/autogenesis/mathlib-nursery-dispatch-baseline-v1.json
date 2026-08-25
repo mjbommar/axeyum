@@ -3,8 +3,8 @@
   "kind": "axeyum-autogenesis-nursery-dispatch-baseline",
   "state": "pre-execution-capability-census",
   "authority": {
-    "nursery_sha256": "b4dc596fd83d164eae1a152cb62ab99f0db30c59510c1edaa3589aab59218767",
-    "operation_registry_sha256": "848a43747a63ee983ae8a087640debfcaed3809bf7338f1f10639d20c9b96a97",
+    "nursery_sha256": "b476f6824da037c20cf2727c947b87c01dd9db24ad8d8501a352b69333519314",
+    "operation_registry_sha256": "a3340fcb15a9a6ff305f60c8ad9e8e70920c2bb7e43408d9bc0d640c611da6cb",
     "partitions_inspected": [
       "development",
       "train"
@@ -13,9 +13,16 @@
     "proof_bodies_accessed": false,
     "target_outcomes_accessed": false,
     "statement_adapter_fact_ids": [
+      "F:ml430-int-modeq-comm-1e4bcc07",
+      "F:ml430-int-modeq-refl-30e15520",
+      "F:ml430-int-modeq-symm-984a6e67",
+      "F:ml430-int-modeq-trans-6d7863e0",
       "F:ml430-nat-ascfactorial-zero-fd183202",
       "F:ml430-nat-descfactorial-one-d4856d4a",
       "F:ml430-nat-descfactorial-zero-966b01df",
+      "F:ml430-nat-modeq-refl-d870c8f5",
+      "F:ml430-nat-modeq-symm-0a3d4d18",
+      "F:ml430-nat-modeq-trans-ef9d1c46",
       "F:ml430-nat-one-ascfactorial-8bacb017",
       "F:ml430-nat-zero-ascfactorial-af4fcdca"
     ],
@@ -30,12 +37,12 @@
     "executor_budget_consumed": 0
   },
   "coverage": {
-    "candidates": 157,
-    "eligible_for_dispatch": 0,
-    "declined_before_execution": 134,
-    "already_established": 23,
+    "candidates": 177,
+    "eligible_for_dispatch": 2,
+    "declined_before_execution": 144,
+    "already_established": 31,
     "decline_reasons": {
-      "no-exact-authoritative-operation": 134
+      "no-exact-authoritative-operation": 144
     },
     "families": {
       "integer-fibonacci": {
@@ -45,6 +52,9 @@
         "no-exact-authoritative-operation": 11
       },
       "integer-modular-equivalence": {
+        "no-exact-authoritative-operation": 14
+      },
+      "natural-binomial": {
         "no-exact-authoritative-operation": 20
       },
       "natural-bitwise": {
@@ -54,13 +64,13 @@
         "no-exact-authoritative-operation": 10
       },
       "natural-fibonacci": {
-        "no-exact-authoritative-operation": 9
+        "no-exact-authoritative-operation": 8
       },
       "natural-gcd": {
         "no-exact-authoritative-operation": 18
       },
       "natural-modular-equivalence": {
-        "no-exact-authoritative-operation": 20
+        "no-exact-authoritative-operation": 17
       },
       "natural-primes": {
         "no-exact-authoritative-operation": 21
@@ -458,11 +468,13 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-modeq-family-v1"
+      ],
       "executor_budget_consumed": 0,
-      "statement_adapter_ready": false,
+      "statement_adapter_ready": true,
       "reflexivity_candidate_checked": false
     },
     {
@@ -484,8 +496,8 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
+      "outcome": "already-established",
+      "decline_reason": null,
       "registered_operation_ids": [],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
@@ -549,8 +561,8 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
+      "outcome": "already-established",
+      "decline_reason": null,
       "registered_operation_ids": [],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
@@ -562,11 +574,13 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-modeq-family-v1"
+      ],
       "executor_budget_consumed": 0,
-      "statement_adapter_ready": false,
+      "statement_adapter_ready": true,
       "reflexivity_candidate_checked": false
     },
     {
@@ -588,11 +602,13 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-modeq-family-v1"
+      ],
       "executor_budget_consumed": 0,
-      "statement_adapter_ready": false,
+      "statement_adapter_ready": true,
       "reflexivity_candidate_checked": false
     },
     {
@@ -601,11 +617,13 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-modeq-family-v1"
+      ],
       "executor_budget_consumed": 0,
-      "statement_adapter_ready": false,
+      "statement_adapter_ready": true,
       "reflexivity_candidate_checked": false
     },
     {
@@ -765,6 +783,19 @@
       "reflexivity_candidate_checked": false
     },
     {
+      "fact_id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
       "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
       "family": "natural-modular-equivalence",
       "partition": "development",
@@ -835,6 +866,188 @@
     {
       "fact_id": "F:ml430-nat-bitwise-swap-7175e90e",
       "family": "natural-bitwise",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-le-add-9c463139",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-le-choose-907b5042",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-le-succ-62ae968b",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-mono-a1af9c18",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-ne-zero-49c3d3cb",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-one-right-7eda8e39",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-symm-add-e4b68161",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
+      "family": "natural-binomial",
       "partition": "development",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
@@ -1168,7 +1381,6 @@
       "outcome": "already-established",
       "decline_reason": null,
       "registered_operation_ids": [
-        "authoritative-mathlib-bounded-induction-factorial-family-v1",
         "authoritative-mathlib-nat-descfactorial-zero-reflexivity-v1"
       ],
       "executor_budget_consumed": 0,
@@ -1272,6 +1484,32 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
       "outcome": "declined-before-execution",
       "decline_reason": "no-exact-authoritative-operation",
       "registered_operation_ids": [],
@@ -1451,8 +1689,8 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
+      "outcome": "already-established",
+      "decline_reason": null,
       "registered_operation_ids": [],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
@@ -1860,11 +2098,13 @@
       "partition": "development",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-modeq-family-v1"
+      ],
       "executor_budget_consumed": 0,
-      "statement_adapter_ready": false,
+      "statement_adapter_ready": true,
       "reflexivity_candidate_checked": false
     },
     {
@@ -1873,15 +2113,32 @@
       "partition": "development",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "eligible-for-dispatch",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-modeq-family-v1"
+      ],
       "executor_budget_consumed": 0,
-      "statement_adapter_ready": false,
+      "statement_adapter_ready": true,
       "reflexivity_candidate_checked": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+      "family": "natural-modular-equivalence",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "eligible-for-dispatch",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-modeq-family-v1"
+      ],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": true,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
       "family": "natural-modular-equivalence",
       "partition": "development",
       "formal_language": "lean4-surface",
@@ -1894,8 +2151,34 @@
       "reflexivity_candidate_checked": false
     },
     {
-      "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
-      "family": "natural-modular-equivalence",
+      "fact_id": "F:ml430-nat-multichoose-one-b210386a",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-multichoose-one-right-7755072d",
+      "family": "natural-binomial",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-multichoose-zero-right-6ef827c8",
+      "family": "natural-binomial",
       "partition": "development",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
@@ -2159,5 +2442,5 @@
     }
   ],
   "interpretation": "This is a dispatch-contract census, not a proof episode. A pre-execution decline consumes no producer budget and earns no proof credit; an already-established row is counted separately and is not redispatched.",
-  "baseline_sha256": "07a9299206e38fb9b81da94ac247a104a4d51f088e7b513fb3b50b2654977e1c"
+  "baseline_sha256": "0df1bc7caa843b12b0c9c90b8acff4692a8a40e107950a45f378d2ef6a95f494"
 }
