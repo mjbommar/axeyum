@@ -58,14 +58,27 @@
 //!   [`super::series::CRealPrelude::mul_sum_range`].
 //! - **`riemannSum_le`**: monotonicity, `le a b → (∀ z, le (f z) (g z)) →
 //!   le (riemannSum f a b m) (riemannSum g a b m)`. The hypothesis is
-//!   **global** (`∀ z`, not restricted to `[a, b]`) — restricting it to the
-//!   sample points would additionally need `a ≤ a + i·Δ ≤ b` for every
-//!   `i < n`, which is true but not yet built anywhere in this prelude
-//!   (it needs `ofNat` monotonicity composed with `mul_le_mul_of_nonneg_*`,
-//!   a small independent development out of scope for this slice). `le a b`
-//!   is still genuinely used: it is exactly what makes `Δ ≥ 0`, which
+//!   **global** (`∀ z`, not restricted to `[a, b]`). `le a b` is still
+//!   genuinely used: it is exactly what makes `Δ ≥ 0`, which
 //!   [`CRealPrelude::mul_le_mul_of_nonneg_left`] needs to multiply the
 //!   pointwise hypothesis through by `Δ` without reversing it.
+//! - **`ofNat_le`**: `Nat.le i j → CReal.le (ofNat i) (ofNat j)` — `CReal.ofNat`
+//!   is monotone, via `Nat.le_dest` plus
+//!   `RatPrelude::nat_div_succ_le_add_left` lifted across
+//!   [`CRealPrelude::of_rat_le`]. Independently reusable; nothing else in the
+//!   prelude had it.
+//! - **`riemannSum_sample_in_bounds`**: `le a b → i < succ m → a ≤ a + i·Δ ≤
+//!   b` — every LEFT-endpoint sample point lies in `[a, b]`. The piece
+//!   `riemannSum_le`'s own doc used to flag as missing: nonneg-ness of the
+//!   lower half ([`shift_le_of_nonneg`], generalizing
+//!   [`CRealPrelude::le_add_of_nonneg`] off the rational embedding) and
+//!   `ofNat_le` composed with `mul_le_mul_of_nonneg_left` plus the exact
+//!   identity `n·Δ ~ (b−a)` ([`mesh_times_count_eq_width`], reusing
+//!   [`mesh_inverse_identity`]) for the upper half.
+//! - **`riemannSum_le_on`**: `riemannSum_le` with the pointwise hypothesis
+//!   RESTRICTED to `[a, b]` (`∀ z, le a z → le z b → le (f z) (g z)`), via
+//!   `riemannSum_sample_in_bounds`. `riemannSum_le` itself is **unchanged** —
+//!   both theorems exist, stated exactly as their own doc comments say.
 //!
 //! - **`riemannSum_const`**: `riemannSum (fun _ => c) a b m ~ c · (b − a)`,
 //!   exactly, for every `m` — the theorem that says the definition is right
@@ -101,19 +114,17 @@
 //!   `mul_congr`) exposes `mul (ofNat n) frac_real` next to the width so
 //!   piece 2 cancels it, leaving `mul c width` via `mul_one`.
 //!
-//! **Not attempted**: `riemannSum_le` restricted to `[a, b]` (its pointwise
-//! hypothesis is still global — see that theorem's own doc) and additivity
-//! over an interval split (`riemannSum f a c` vs. `riemannSum f a b` plus
-//! `riemannSum f b c`), which is false for a FIXED subinterval count unless
-//! the two partitions happen to line up — see `declare_integral`'s caller for
-//! that check.
+//! **Not attempted**: additivity over an interval split (`riemannSum f a c`
+//! vs. `riemannSum f a b` plus `riemannSum f b c`), which is false for a
+//! FIXED subinterval count unless the two partitions happen to line up — see
+//! `declare_integral`'s caller for that check.
 
 use super::ring_helpers::right_distrib;
-use super::{CRealPrelude, DERIVED_HEIGHT, cadd, creal_ty, embed, equiv};
+use super::{CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, embed, equiv};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
-use crate::int_prelude::ops::IntDev;
+use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{
     nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rchain, req, rmul, rone,
@@ -133,10 +144,13 @@ const RIEMANN_HEIGHT: u16 = DERIVED_HEIGHT + 45;
 /// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
 /// the kernel **refused** a proof, not that a script gave up.
 pub(super) fn declare_integral(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_of_nat_le(d, p)?;
     declare_riemann_sum(d, p)?;
     declare_riemann_sum_add(d, p)?;
     declare_mul_riemann_sum(d, p)?;
     declare_riemann_sum_le(d, p)?;
+    declare_riemann_sample_in_bounds(d, p)?;
+    declare_riemann_sum_le_on(d, p)?;
     declare_riemann_sum_const(d, p)
 }
 
@@ -212,6 +226,100 @@ fn summand_fn(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, a: ExprId, delta: 
 /// `CReal.riemannSum f a b m`.
 fn rsum(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, a: ExprId, b: ExprId, m: ExprId) -> ExprId {
     d.const_app(p.riemann_sum, &[f, a, b, m])
+}
+
+// --- `CReal.ofNat_le` -----------------------------------------------------
+
+/// `CReal.ofNat_le : ∀ i j : Nat, Nat.le i j → CReal.le (ofNat i) (ofNat j)`
+/// — `CReal.ofNat` is monotone.
+///
+/// `CReal.ofNat n := CReal.ofRat (Rat.natDivSucc n 0)` ([`super::archimedean`]),
+/// so this is [`RatPrelude::nat_div_succ_le_add_left`]
+/// (`∀ a e j, Rat.le (natDivSucc a j) (natDivSucc (a+e) j)` — monotone in the
+/// numerator, stated additively so no `Nat`-subtraction ever appears) lifted
+/// across [`CRealPrelude::of_rat_le`], then transported from the existential
+/// witness `Nat.le_dest` supplies (`i + k = j`) up to the actual bound `j`.
+///
+/// The same idiom as `series.rs`'s `sumRange_tail_within_le`: `Nat.le_dest i j
+/// hij : Exists (fun k => Eq Nat (add i k) j)`; applying
+/// `nat_div_succ_le_add_left` at `(i, k, 0)` gives exactly this theorem's
+/// conclusion *shape*, but indexed at `add i k` rather than `j`, and one
+/// `Nat`-equality transport ([`nat_rewrite_prop`]) carries it over.
+fn declare_of_nat_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_add = d.prelude().add;
+    let nat_le_dest = d.prelude().le_dest;
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let hle_ty = d.le(i, j);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    let of_nat_i = d.const_app(p.of_nat, &[i]);
+    // target_at(x) := CReal.le (ofNat i) (ofNat x) -- this theorem's
+    // conclusion at x := j, and `nat_div_succ_le_add_left`'s shape at
+    // x := add i k.
+    let target_at = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let of_nat_x = d.const_app(p.of_nat, &[x]);
+        cle(d, p, of_nat_i, of_nat_x)
+    };
+    let target = target_at(d, j);
+
+    // pred := λ k, Eq Nat (add i k) j.
+    let pred = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sum = d.const_app(nat_add, &[i, k]);
+        let body = d.eq(sum, j);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let represented = d.const_app(nat_le_dest, &[i, j, hle]);
+
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let i_plus_k = d.const_app(nat_add, &[i, k]);
+        let e_ty = d.eq(i_plus_k, j);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        // body_at_ik : CReal.le (embed (natDivSucc i 0)) (embed (natDivSucc
+        // (add i k) 0)) -- defeq target_at(add i k), since `ofNat n` unfolds
+        // to `embed (natDivSucc n 0)`.
+        let zero_nat = d.num(0);
+        let rat_i = d.const_app(p.rat.nat_div_succ, &[i, zero_nat]);
+        let rat_ik = d.const_app(p.rat.nat_div_succ, &[i_plus_k, zero_nat]);
+        let rat_le = d.lemma(p.rat.nat_div_succ_le_add_left, &[i, k, zero_nat]);
+        let body_at_ik = d.lemma(p.of_rat_le, &[rat_i, rat_ik, rat_le]);
+
+        let rewritten = nat_rewrite_prop(d, i_plus_k, j, e, body_at_ik, &target_at);
+        let with_e = d.lam_fv(e_fv, e_ty, rewritten);
+        d.lam_fv(k_fv, nat, with_e)
+    };
+
+    let proof_body = exists_elim(d, pred, target, represented, minor);
+
+    let ty = {
+        let after_hle = d.arrow(hle_ty, target);
+        let over_j = d.pi_fv(j_fv, nat, after_hle);
+        d.pi_fv(i_fv, nat, over_j)
+    };
+    let value = {
+        let with_hle = d.lam_fv(hle_fv, hle_ty, proof_body);
+        let over_j = d.lam_fv(j_fv, nat, with_hle);
+        d.lam_fv(i_fv, nat, over_j)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_nat_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 // --- the declarations ---------------------------------------------------------
@@ -479,6 +587,55 @@ fn declare_mul_riemann_sum(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     })
 }
 
+/// `delta := mul (width_of a b) (embed (natDivSucc 1 m))` together with a
+/// proof `le zero delta`, given `hab : le a b`. Shared by
+/// [`declare_riemann_sum_le`] and [`declare_riemann_sample_in_bounds`]: `le a
+/// b` is what makes the width `b − a` nonneg (via `add_le_add` shifted by
+/// `neg a`), and the mesh factor `1/(m+1)` is unconditionally nonneg, so
+/// `mul_nonneg` closes it.
+fn delta_nonneg_of(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    m: ExprId,
+    hab: ExprId,
+) -> (ExprId, ExprId) {
+    let width = width_of(d, p, a, b);
+    let one_nat = d.num(1);
+    let frac = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+    let frac_real = embed(d, p, frac);
+    let delta = cmul(d, p, width, frac_real);
+    let zero_c = czero(d, p);
+
+    // width_nonneg : le zero (add b (neg a)), from `le a b`.
+    let width_nonneg = {
+        let na = cneg(d, p, a);
+        let refl_na = d.lemma(p.le_refl, &[na]);
+        let a_na = cadd(d, p, a, na);
+        let b_na = cadd(d, p, b, na);
+        let shifted = d.lemma(p.add_le_add, &[a, b, na, na, hab, refl_na]);
+        // shifted : le (add a (neg a)) (add b (neg a))
+        let hn = d.lemma(p.add_neg, &[a]); // Equiv (add a (neg a)) zero
+        let refl_bna = d.lemma(p.equiv_refl, &[b_na]);
+        d.lemma(
+            p.le_congr,
+            &[a_na, zero_c, b_na, b_na, hn, refl_bna, shifted],
+        )
+    };
+
+    // frac_nonneg : le zero (ofRat (natDivSucc 1 m)).
+    let frac_nonneg = {
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, m]);
+        d.lemma(p.of_rat_le, &[rzero, frac, rle])
+    };
+
+    // delta_nonneg : le zero delta.
+    let delta_nonneg = d.lemma(p.mul_nonneg, &[width, frac_real, width_nonneg, frac_nonneg]);
+    (delta, delta_nonneg)
+}
+
 /// `CReal.riemannSum_le : ∀ f g a b m, le a b → (∀ z, le (f z) (g z)) →
 /// le (riemannSum f a b m) (riemannSum g a b m)`.
 ///
@@ -518,39 +675,8 @@ fn declare_riemann_sum_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     let hfg_fv = d.fresh_fvar();
     let hfg = d.kernel().fvar(hfg_fv);
 
-    let width = width_of(d, p, a, b);
-    let one_nat = d.num(1);
-    let frac = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
-    let frac_real = embed(d, p, frac);
-    let delta = cmul(d, p, width, frac_real);
+    let (delta, delta_nonneg) = delta_nonneg_of(d, p, a, b, m, hab);
     let n = d.succ(m);
-    let zero_c = czero(d, p);
-
-    // width_nonneg : le zero (add b (neg a)), from `le a b`.
-    let width_nonneg = {
-        let na = cneg(d, p, a);
-        let refl_na = d.lemma(p.le_refl, &[na]);
-        let a_na = cadd(d, p, a, na);
-        let b_na = cadd(d, p, b, na);
-        let shifted = d.lemma(p.add_le_add, &[a, b, na, na, hab, refl_na]);
-        // shifted : le (add a (neg a)) (add b (neg a))
-        let hn = d.lemma(p.add_neg, &[a]); // Equiv (add a (neg a)) zero
-        let refl_bna = d.lemma(p.equiv_refl, &[b_na]);
-        d.lemma(
-            p.le_congr,
-            &[a_na, zero_c, b_na, b_na, hn, refl_bna, shifted],
-        )
-    };
-
-    // frac_nonneg : le zero (ofRat (natDivSucc 1 m)).
-    let frac_nonneg = {
-        let rzero = d.kernel().const_(p.rat.zero, vec![]);
-        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, m]);
-        d.lemma(p.of_rat_le, &[rzero, frac, rle])
-    };
-
-    // delta_nonneg : le zero delta.
-    let delta_nonneg = d.lemma(p.mul_nonneg, &[width, frac_real, width_nonneg, frac_nonneg]);
 
     let f_summand = summand_fn(d, p, f, a, delta);
     let g_summand = summand_fn(d, p, g, a, delta);
@@ -618,6 +744,436 @@ fn declare_riemann_sum_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.riemann_sum_le,
+        uparams: vec![],
+        ty: ty_full,
+        value: value_full,
+    })
+}
+
+// --- sample points lie in `[a, b]` ------------------------------------------
+
+/// `CReal.le zero (CReal.ofNat n)` — `CReal.ofNat` is nonneg. Directly from
+/// `Rat.zero_le_natDivSucc` lifted across [`CRealPrelude::of_rat_le`] — the
+/// same route [`delta_nonneg_of`]'s `frac_nonneg` uses for the mesh factor.
+fn zero_le_of_nat(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let zero_nat = d.num(0);
+    let rat_n = d.const_app(p.rat.nat_div_succ, &[n, zero_nat]);
+    let rzero = d.kernel().const_(p.rat.zero, vec![]);
+    let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[n, zero_nat]);
+    d.lemma(p.of_rat_le, &[rzero, rat_n, rle])
+    // : CReal.le (embed rzero) (embed rat_n) -- defeq CReal.le zero (ofNat n)
+}
+
+/// `CReal.le x (add x w)`, given `hw : CReal.le zero w` — for a general
+/// nonneg ADDEND `w : CReal`. No public `CReal` prelude lemma gives this: only
+/// [`CRealPrelude::le_add_of_nonneg`] does, and only for `w := embed q` at a
+/// nonneg RATIONAL `q`. Built directly from `add_le_add`/`add_zero`/`le_congr`
+/// — the same three steps `le_add_of_nonneg`'s own proof runs, generalized off
+/// the rational embedding.
+fn shift_le_of_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    w: ExprId,
+    hw: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let refl_x = d.lemma(p.le_refl, &[x]);
+    let grown = d.lemma(p.add_le_add, &[x, x, zero_c, w, refl_x, hw]);
+    // grown : le (add x zero) (add x w)
+    let padded = cadd(d, p, x, zero_c);
+    let target = cadd(d, p, x, w);
+    let trim = d.lemma(p.add_zero, &[x]); // Equiv (add x zero) x
+    let refl_target = d.lemma(p.equiv_refl, &[target]);
+    d.lemma(
+        p.le_congr,
+        &[padded, x, target, target, trim, refl_target, grown],
+    )
+    // : le x (add x w)
+}
+
+/// `Equiv (add a (add b (neg a))) b` — `a + (b − a) ~ b`, the ring identity
+/// [`add_sub_cancel`]'s callers need to fold `a + width` back down to `b`.
+fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let na = cneg(d, p, a);
+    let width = cadd(d, p, b, na); // b + (-a)
+    let start = cadd(d, p, a, width); // a + (b + (-a))
+
+    let nab = cadd(d, p, na, b); // (-a) + b
+    let s1 = cadd(d, p, a, nab); // a + ((-a) + b)
+    let h1 = {
+        let comm = d.lemma(p.add_comm, &[b, na]); // Equiv width nab
+        let refl_a = d.lemma(p.equiv_refl, &[a]);
+        d.lemma(p.add_congr, &[a, a, width, nab, refl_a, comm])
+        // : Equiv start s1
+    };
+
+    let ana = cadd(d, p, a, na); // a + (-a)
+    let s2 = cadd(d, p, ana, b); // (a + (-a)) + b
+    let h2 = {
+        let assoc = d.lemma(p.add_assoc, &[a, na, b]);
+        // assoc : Equiv (add (add a na) b) (add a (add na b)) = Equiv s2 s1
+        d.lemma(p.equiv_symm, &[s2, s1, assoc]) // : Equiv s1 s2
+    };
+
+    let zero_c = czero(d, p);
+    let s3 = cadd(d, p, zero_c, b); // zero + b
+    let h3 = {
+        let hn = d.lemma(p.add_neg, &[a]); // Equiv ana zero
+        let refl_b = d.lemma(p.equiv_refl, &[b]);
+        d.lemma(p.add_congr, &[ana, zero_c, b, b, hn, refl_b])
+        // : Equiv s2 s3
+    };
+
+    let s4 = cadd(d, p, b, zero_c); // b + zero
+    let h4 = d.lemma(p.add_comm, &[zero_c, b]); // Equiv s3 s4
+
+    let h5 = d.lemma(p.add_zero, &[b]); // Equiv s4 b
+
+    echain(
+        d,
+        p,
+        start,
+        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (b, h5)],
+    )
+}
+
+/// `Equiv (mul (ofNat (Nat.succ m)) (mul width frac)) width`, where `frac :=
+/// embed (Rat.natDivSucc 1 m)` — `n · Δ ~ (b − a)` when `Δ := width · frac`,
+/// exactly (no error term), for every `m`. The width-only case of
+/// [`riemann_sum_const_rearrange`]'s own algebra (that one additionally
+/// carries a constant factor `c`), reusing [`mesh_inverse_identity`].
+fn mesh_times_count_eq_width(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    width: ExprId,
+    frac: ExprId,
+    m: ExprId,
+) -> ExprId {
+    let on = {
+        let successor = d.succ(m);
+        d.const_app(p.of_nat, &[successor])
+    };
+    let delta = cmul(d, p, width, frac);
+    let a_start = cmul(d, p, on, delta); // mul on (mul width frac)
+
+    let on_width = cmul(d, p, on, width);
+    let width_on = cmul(d, p, width, on);
+    let on_frac = cmul(d, p, on, frac);
+
+    // b1 := mul (mul on width) frac
+    let b1 = cmul(d, p, on_width, frac);
+    let h1 = {
+        let assoc = d.lemma(p.mul_assoc, &[on, width, frac]); // Equiv b1 a_start
+        d.lemma(p.equiv_symm, &[b1, a_start, assoc]) // Equiv a_start b1
+    };
+
+    // b2 := mul (mul width on) frac
+    let b2 = cmul(d, p, width_on, frac);
+    let h2 = {
+        let comm = d.lemma(p.mul_comm, &[on, width]); // Equiv on_width width_on
+        let refl_frac = d.lemma(p.equiv_refl, &[frac]);
+        d.lemma(
+            p.mul_congr,
+            &[on_width, width_on, frac, frac, comm, refl_frac],
+        )
+        // Equiv b1 b2
+    };
+
+    // b3 := mul width (mul on frac)
+    let b3 = cmul(d, p, width, on_frac);
+    // assoc(width,on,frac) : Equiv (mul (mul width on) frac) (mul width (mul on frac)) = Equiv b2 b3
+    let h3 = d.lemma(p.mul_assoc, &[width, on, frac]);
+
+    // b4 := mul width one
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let b4 = cmul(d, p, width, one_c);
+    let h4 = {
+        let cancel = mesh_inverse_identity(d, p, m); // Equiv on_frac one_c
+        let refl_width = d.lemma(p.equiv_refl, &[width]);
+        d.lemma(
+            p.mul_congr,
+            &[width, width, on_frac, one_c, refl_width, cancel],
+        )
+        // Equiv b3 b4
+    };
+
+    let h5 = d.lemma(p.mul_one, &[width]); // Equiv (mul width one) width = Equiv b4 width
+
+    echain(
+        d,
+        p,
+        a_start,
+        &[(b1, h1), (b2, h2), (b3, h3), (b4, h4), (width, h5)],
+    )
+}
+
+/// `Nat.le i n`, from `hlt : Nat.lt i n` (defeq `Nat.le (succ i) n`) — via
+/// `Nat.le_succ i : Nat.le i (succ i)` and `Nat.le_trans`.
+fn nat_le_of_lt(d: &mut IntDev<'_>, i: ExprId, n: ExprId, hlt: ExprId) -> ExprId {
+    let np = d.prelude();
+    let succ_i = d.succ(i);
+    let step = d.const_app(np.le_succ, &[i]); // Nat.le i (succ i)
+    d.const_app(np.le_trans, &[i, succ_i, n, step, hlt])
+}
+
+/// `CReal.riemannSum_sample_in_bounds : ∀ a b m i, le a b → Nat.lt i (Nat.succ
+/// m) → And (le a (add a (mul (ofNat i) delta))) (le (add a (mul (ofNat i)
+/// delta)) b)`, where `delta := (b − a) · ofRat (Rat.natDivSucc 1 m)` exactly
+/// as in `riemannSum` itself — every LEFT-endpoint sample point of a Riemann
+/// sum over `[a, b]` lies in `[a, b]`.
+///
+/// Lower half: `0 ≤ ofNat i` ([`zero_le_of_nat`]) times `0 ≤ Δ`
+/// ([`delta_nonneg_of`]) gives `0 ≤ ofNat i · Δ` (`mul_nonneg`), and
+/// [`shift_le_of_nonneg`] turns that into `a ≤ a + ofNat i · Δ`.
+///
+/// Upper half: `i < succ m` gives `i ≤ succ m` ([`nat_le_of_lt`]), so `ofNat i
+/// ≤ ofNat (succ m)` ([`CRealPrelude::of_nat_le`]); multiplying through by the
+/// nonneg `Δ` (`mul_le_mul_of_nonneg_left`, commuted to put `Δ` on the right
+/// the same way `riemannSum_le`'s own pointwise step does) gives `ofNat i · Δ
+/// ≤ ofNat (succ m) · Δ`, and `ofNat (succ m) · Δ ~ b − a` exactly
+/// ([`mesh_times_count_eq_width`]), so `ofNat i · Δ ≤ b − a`; adding `a` to
+/// both sides and folding `a + (b − a) ~ b` ([`add_sub_cancel`]) gives `a +
+/// ofNat i · Δ ≤ b`.
+fn declare_riemann_sample_in_bounds(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let n = d.succ(m);
+    let hlt_ty = d.lt(i, n);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+
+    let (delta, delta_nonneg) = delta_nonneg_of(d, p, a, b, m, hab);
+    let sp = sample_point(d, p, a, delta, i);
+    let of_nat_i = d.const_app(p.of_nat, &[i]);
+    let term = cmul(d, p, of_nat_i, delta); // mul (ofNat i) delta, defeq (sp - a)'s summand
+
+    // lower : le a sp.
+    let lower = {
+        let i_nonneg = zero_le_of_nat(d, p, i);
+        let term_nonneg = d.lemma(p.mul_nonneg, &[of_nat_i, delta, i_nonneg, delta_nonneg]);
+        shift_le_of_nonneg(d, p, a, term, term_nonneg)
+    };
+
+    // upper : le sp b.
+    let upper = {
+        let hle_i_n = nat_le_of_lt(d, i, n, hlt);
+        let of_nat_ile = d.lemma(p.of_nat_le, &[i, n, hle_i_n]); // le (ofNat i) (ofNat n)
+        let of_nat_n = d.const_app(p.of_nat, &[n]);
+
+        let step = d.lemma(
+            p.mul_le_mul_of_nonneg_left,
+            &[delta, of_nat_i, of_nat_n, delta_nonneg, of_nat_ile],
+        );
+        // step : le (mul delta (ofNat i)) (mul delta (ofNat n))
+        let comm_i = d.lemma(p.mul_comm, &[delta, of_nat_i]);
+        let comm_n = d.lemma(p.mul_comm, &[delta, of_nat_n]);
+        let di = cmul(d, p, delta, of_nat_i);
+        let dn = cmul(d, p, delta, of_nat_n);
+        let nd = cmul(d, p, of_nat_n, delta);
+        let commuted = d.lemma(p.le_congr, &[di, term, dn, nd, comm_i, comm_n, step]);
+        // commuted : le (mul (ofNat i) delta) (mul (ofNat n) delta) = le term nd
+
+        let width = width_of(d, p, a, b);
+        let one_nat = d.num(1);
+        let frac = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+        let frac_real = embed(d, p, frac);
+        let n_delta_eq_width = mesh_times_count_eq_width(d, p, width, frac_real, m);
+        // n_delta_eq_width : Equiv (mul (ofNat n) delta) width -- nd, syntactically
+
+        let refl_term = d.lemma(p.equiv_refl, &[term]);
+        let term_le_width = d.lemma(
+            p.le_congr,
+            &[term, term, nd, width, refl_term, n_delta_eq_width, commuted],
+        );
+        // term_le_width : le term width
+
+        let refl_a = d.lemma(p.le_refl, &[a]);
+        let shifted = d.lemma(p.add_le_add, &[a, a, term, width, refl_a, term_le_width]);
+        // shifted : le (add a term) (add a width) = le sp (add a width)
+
+        let cancel = add_sub_cancel(d, p, a, b); // Equiv (add a width) b
+        let a_width = cadd(d, p, a, width);
+        let refl_sp = d.lemma(p.equiv_refl, &[sp]);
+        d.lemma(p.le_congr, &[sp, sp, a_width, b, refl_sp, cancel, shifted])
+        // : le sp b
+    };
+
+    let a_le_sp = cle(d, p, a, sp);
+    let sp_le_b = cle(d, p, sp, b);
+    let and_ty = d.const_app(p.rat.int.logic.and, &[a_le_sp, sp_le_b]);
+    let proof_body = and_intro(d, p, a_le_sp, sp_le_b, lower, upper);
+
+    let ty = {
+        let after_hlt = d.arrow(hlt_ty, and_ty);
+        let after_hab = d.arrow(hab_ty, after_hlt);
+        let over_i = d.pi_fv(i_fv, nat, after_hab);
+        let over_m = d.pi_fv(m_fv, nat, over_i);
+        let over_b = d.pi_fv(b_fv, carrier, over_m);
+        d.pi_fv(a_fv, carrier, over_b)
+    };
+    let value = {
+        let with_hlt = d.lam_fv(hlt_fv, hlt_ty, proof_body);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_hlt);
+        let over_i = d.lam_fv(i_fv, nat, with_hab);
+        let over_m = d.lam_fv(m_fv, nat, over_i);
+        let over_b = d.lam_fv(b_fv, carrier, over_m);
+        d.lam_fv(a_fv, carrier, over_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sample_in_bounds,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.riemannSum_le_on : ∀ f g a b m, le a b → (∀ z, le a z → le z b → le
+/// (f z) (g z)) → le (riemannSum f a b m) (riemannSum g a b m)` —
+/// [`declare_riemann_sum_le`]'s pointwise hypothesis RESTRICTED to `[a, b]`.
+/// **`riemannSum_le` itself is unchanged** — both theorems exist, stated
+/// exactly as their own doc comments say, per the module documentation.
+///
+/// Identical scaffolding to `declare_riemann_sum_le`; the only change is
+/// inside `bounded_pointwise`: the `i < n` witness the original already
+/// threads through for `sum_range_le`'s own signature (there, discarded) is
+/// used here to invoke [`declare_riemann_sample_in_bounds`]'s theorem at
+/// `(a, b, m, i, hab, hlt)`, and `And.left`/`And.right` split its conclusion
+/// into the two bounds `hfg` now needs.
+fn declare_riemann_sum_le_on(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+    let logic = p.rat.int.logic;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    // hfg_ty := ∀ z, le a z → le z b → le (f z) (g z) -- RESTRICTED to [a, b],
+    // unlike `declare_riemann_sum_le`'s global `∀ z, le (f z) (g z)`.
+    let hfg_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fz = d.apply(f, &[z]);
+        let gz = d.apply(g, &[z]);
+        let conclusion = cle(d, p, fz, gz);
+        let z_le_b = cle(d, p, z, b);
+        let after_upper = d.arrow(z_le_b, conclusion);
+        let a_le_z = cle(d, p, a, z);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hfg_fv = d.fresh_fvar();
+    let hfg = d.kernel().fvar(hfg_fv);
+
+    let (delta, delta_nonneg) = delta_nonneg_of(d, p, a, b, m, hab);
+    let n = d.succ(m);
+
+    let f_summand = summand_fn(d, p, f, a, delta);
+    let g_summand = summand_fn(d, p, g, a, delta);
+
+    let bounded_pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let sp = sample_point(d, p, a, delta, i);
+        let fz = d.apply(f, &[sp]);
+        let gz = d.apply(g, &[sp]);
+
+        let lt_hyp_ty = d.lt(i, n);
+        let lt_fv = d.fresh_fvar();
+        let lt = d.kernel().fvar(lt_fv);
+
+        // and_bounds : And (le a sp) (le sp b), from
+        // `riemannSum_sample_in_bounds a b m i hab lt`.
+        let and_bounds = d.const_app(p.riemann_sample_in_bounds, &[a, b, m, i, hab, lt]);
+        let a_le_sp = cle(d, p, a, sp);
+        let sp_le_b = cle(d, p, sp, b);
+        let lower = d.const_app(logic.and_left, &[a_le_sp, sp_le_b, and_bounds]);
+        let upper = d.const_app(logic.and_right, &[a_le_sp, sp_le_b, and_bounds]);
+        let h_fg = d.apply(hfg, &[sp, lower, upper]); // le (f sp) (g sp)
+
+        let step = d.lemma(
+            p.mul_le_mul_of_nonneg_left,
+            &[delta, fz, gz, delta_nonneg, h_fg],
+        );
+        // step : le (mul delta fz) (mul delta gz)
+        let comm_f = d.lemma(p.mul_comm, &[delta, fz]); // Equiv (mul delta fz) (mul fz delta)
+        let comm_g = d.lemma(p.mul_comm, &[delta, gz]);
+        let df = cmul(d, p, delta, fz);
+        let dg = cmul(d, p, delta, gz);
+        let fd = cmul(d, p, fz, delta);
+        let gd = cmul(d, p, gz, delta);
+        let transported = d.lemma(p.le_congr, &[df, fd, dg, gd, comm_f, comm_g, step]);
+        // transported : le (mul fz delta) (mul gz delta) = le (f_summand i) (g_summand i)
+
+        let with_lt = d.lam_fv(lt_fv, lt_hyp_ty, transported);
+        d.lam_fv(i_fv, nat, with_lt)
+    };
+
+    let result = d.lemma(
+        p.sum_range_le,
+        &[f_summand, g_summand, n, bounded_pointwise],
+    );
+
+    let ty = {
+        let lhs_rs = rsum(d, p, f, a, b, m);
+        let rhs_rs = rsum(d, p, g, a, b, m);
+        cle(d, p, lhs_rs, rhs_rs)
+    };
+    let ty_inner = {
+        let after_hfg = d.arrow(hfg_ty, ty);
+        d.arrow(hab_ty, after_hfg)
+    };
+    let ty_full = {
+        let over_m = d.pi_fv(m_fv, nat, ty_inner);
+        let over_b = d.pi_fv(b_fv, carrier, over_m);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_g = d.pi_fv(g_fv, f_ty, over_a);
+        d.pi_fv(f_fv, f_ty, over_g)
+    };
+    let value_inner = {
+        let with_hfg = d.lam_fv(hfg_fv, hfg_ty, result);
+        d.lam_fv(hab_fv, hab_ty, with_hfg)
+    };
+    let value_full = {
+        let over_m = d.lam_fv(m_fv, nat, value_inner);
+        let over_b = d.lam_fv(b_fv, carrier, over_m);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        let over_g = d.lam_fv(g_fv, f_ty, over_a);
+        d.lam_fv(f_fv, f_ty, over_g)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sum_le_on,
         uparams: vec![],
         ty: ty_full,
         value: value_full,

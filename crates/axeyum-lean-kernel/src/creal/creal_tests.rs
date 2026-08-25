@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 209] = [
+    let expected: [(&str, crate::NameId, &str); 212] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -417,6 +417,13 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.mul_riemannSum", p.mul_riemann_sum, "theorem"),
         ("CReal.riemannSum_le", p.riemann_sum_le, "theorem"),
         ("CReal.riemannSum_const", p.riemann_sum_const, "theorem"),
+        ("CReal.ofNat_le", p.of_nat_le, "theorem"),
+        (
+            "CReal.riemannSum_sample_in_bounds",
+            p.riemann_sample_in_bounds,
+            "theorem",
+        ),
+        ("CReal.riemannSum_le_on", p.riemann_sum_le_on, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -2982,6 +2989,232 @@ fn riemann_sum_of_the_constant_two_on_0_3_computes_to_six() {
             panic!(
                 "riemannSum (fun _ => 2) 0 3 0 did NOT compute to 6 at sample \
                  index 2 (not merely type-check): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory computation test for `CReal.ofNat_le`.** Instantiates it at
+/// explicit small naturals `i := 1`, `j := 3` against a CONCRETE
+/// `Nat.le 1 3` witness built from `Nat.le_intro 1 3 2 (rfl : 1+2=3)` — not a
+/// symbolic hypothesis — and checks the kernel accepts
+/// `CReal.ofNat_le 1 3 h : CReal.le (ofNat 1) (ofNat 3)` at that exact type.
+/// A `Δ`/index transposition (e.g. `ofNat_le` accidentally proving
+/// `le (ofNat j) (ofNat i)`, or using `k` where `i`/`j` belong) would still
+/// type-check as SOME `CReal.le` statement but not this one, which is why the
+/// declared `ty` below is asserted rather than merely inferred.
+#[test]
+fn of_nat_le_at_one_and_three_proves_le_one_three() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let one_nat = d.num(1);
+    let three_nat = d.num(3);
+    let two_nat = d.num(2);
+
+    // h : Nat.le 1 3, from `Nat.le_intro 1 3 2 (rfl : add 1 2 = 3)`.
+    // `le_intro`'s hypothesis type is `Eq Nat (add 1 2) 3`; `Eq.refl Nat 3`
+    // checks against it by defeq (`add 1 2` reduces to `3`).
+    let eq_proof = d.refl(three_nat);
+    let nat_le_intro = d.prelude().le_intro;
+    let hle = d.const_app(nat_le_intro, &[one_nat, three_nat, two_nat, eq_proof]);
+
+    let value = d.const_app(p.of_nat_le, &[one_nat, three_nat, hle]);
+
+    let of_nat_1 = d.const_app(p.of_nat, &[one_nat]);
+    let of_nat_3 = d.const_app(p.of_nat, &[three_nat]);
+    let ty = super::cle(&mut d, p, of_nat_1, of_nat_3);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__of_nat_le_at_one_and_three_proves_le_one_three");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.ofNat_le 1 3 h did NOT check against \
+                 CReal.le (ofNat 1) (ofNat 3) (not merely SOME le statement): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory computation test for `CReal.riemannSum_sample_in_bounds`.**
+/// Instantiates it at `a := CReal.zero`, `b := CReal.ofNat 3`, `m := 2`
+/// (so `n = succ m = 3`), `i := 1` — the sample point at index `1` of a
+/// 3-subinterval partition of `[0, 3]`, i.e. `Δ = 3 · 1/3 = 1` and the sample
+/// point is `0 + 1·Δ`, genuinely INSIDE `(0, 3)` rather than at an endpoint —
+/// against CONCRETE witnesses (`0 ≤ 3` from `Rat.zero_le_natDivSucc`, `1 < 3`
+/// from `Nat.le_intro 2 3 1 (rfl : 2+1=3)`), and checks the kernel accepts
+/// the application at the EXACT expected `And (le a sp) (le sp b)` type,
+/// built independently here from `CReal.add`/`CReal.neg`/`CReal.mul`/
+/// `CReal.ofNat`/`CReal.ofRat` rather than by calling back into
+/// `integral.rs`'s private term builders. A `Δ`/index transposition (e.g.
+/// swapping which factor is `ofNat i` and which is the width) would still
+/// type-check as SOME `And` of two `le`s but not this one.
+#[test]
+fn riemann_sample_in_bounds_at_zero_three_two_one_lands_strictly_inside() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let b = d.const_app(p.of_nat, &[three_nat]);
+    let m = two_nat;
+    let i = one_nat;
+
+    // hab : CReal.le zero (ofNat 3), directly from `Rat.zero_le_natDivSucc`
+    // lifted across `CReal.ofRat_le` (`CReal.zero` and `CReal.ofNat 3` are
+    // each one delta-step from an `ofRat` of a `Rat.natDivSucc`).
+    let hab = {
+        let rat_3 = d.const_app(p.rat.nat_div_succ, &[three_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[three_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_3, rle])
+    };
+
+    // hlt : Nat.lt 1 3 (defeq Nat.le 2 3), from `Nat.le_intro 2 3 1
+    // (rfl : add 2 1 = 3)`.
+    let hlt = {
+        let eq_proof = d.refl(three_nat);
+        let nat_le_intro = d.prelude().le_intro;
+        d.const_app(nat_le_intro, &[two_nat, three_nat, one_nat, eq_proof])
+    };
+
+    let value = d.const_app(p.riemann_sample_in_bounds, &[a, b, m, i, hab, hlt]);
+
+    // The expected sample point, built independently: `sp := add a (mul
+    // (ofNat i) delta)`, `delta := mul (add b (neg a)) (ofRat (natDivSucc 1
+    // m))` -- exactly `integral.rs::sample_point`/`delta_of`'s own shape.
+    let ty = {
+        let rat_frac = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+        let frac_real = d.const_app(p.of_rat, &[rat_frac]);
+        let neg_a = d.const_app(p.neg, &[a]);
+        let width = d.const_app(p.add, &[b, neg_a]);
+        let delta = d.const_app(p.mul, &[width, frac_real]);
+        let of_nat_i = d.const_app(p.of_nat, &[i]);
+        let shift = d.const_app(p.mul, &[of_nat_i, delta]);
+        let sp = d.const_app(p.add, &[a, shift]);
+
+        let a_le_sp = super::cle(&mut d, p, a, sp);
+        let sp_le_b = super::cle(&mut d, p, sp, b);
+        d.const_app(p.rat.int.logic.and, &[a_le_sp, sp_le_b])
+    };
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__riemann_sample_in_bounds_at_zero_three_two_one_lands_strictly_inside",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.riemannSum_sample_in_bounds 0 3 2 1 hab hlt did NOT check \
+                 against And (le 0 sp) (le sp 3) at the expected sample point \
+                 (not merely SOME And of le statements): {error:?}"
+            )
+        });
+}
+
+/// **Computation/argument-order test for `CReal.riemannSum_le_on`.**
+/// Instantiates it at `f := g := fun _ => one`, `a := zero`, `b := ofNat 3`,
+/// `m := 0` (so `n = 1`, a single subinterval), with `hab : le zero (ofNat
+/// 3)` and the RESTRICTED `hfg : ∀ z, le zero z → le z (ofNat 3) → le one
+/// one` (built from `le_refl one`, ignoring the two bounds — a global `hfg`
+/// would also work here, but this checks the RESTRICTED-arity application
+/// itself, catching an `f`/`g` or `hab`/`hfg` argument transposition, which
+/// would still type-check as SOME `le` statement but not this one), and
+/// checks the kernel accepts it at the EXACT expected
+/// `le (riemannSum f a b m) (riemannSum g a b m)` type.
+#[test]
+fn riemann_sum_le_on_at_the_constant_function_type_checks_at_the_expected_statement() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+
+    let zero_nat = d.num(0);
+    let three_nat = d.num(3);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let b = d.const_app(p.of_nat, &[three_nat]);
+    let m = zero_nat;
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    // f := g := fun _ : CReal => one.
+    let const_one = {
+        let x_fv = d.fresh_fvar();
+        let _x = d.kernel().fvar(x_fv);
+        d.lam_fv(x_fv, carrier, one_c)
+    };
+    let f = const_one;
+    let g = const_one;
+
+    // hab : le zero (ofNat 3).
+    let hab = {
+        let rat_3 = d.const_app(p.rat.nat_div_succ, &[three_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[three_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_3, rle])
+    };
+
+    // hfg : ∀ z, le zero z → le z (ofNat 3) → le one one.
+    let hfg = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let lo_fv = d.fresh_fvar();
+        let hi_fv = d.fresh_fvar();
+        let lo_ty = super::cle(&mut d, p, a, z);
+        let hi_ty = super::cle(&mut d, p, z, b);
+        let refl_one = d.lemma(p.le_refl, &[one_c]);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, refl_one);
+        let with_lo = d.lam_fv(lo_fv, lo_ty, with_hi);
+        d.lam_fv(z_fv, carrier, with_lo)
+    };
+
+    let value = d.const_app(p.riemann_sum_le_on, &[f, g, a, b, m, hab, hfg]);
+
+    let rsum_f = d.const_app(p.riemann_sum, &[f, a, b, m]);
+    let rsum_g = d.const_app(p.riemann_sum, &[g, a, b, m]);
+    let ty = super::cle(&mut d, p, rsum_f, rsum_g);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__riemann_sum_le_on_at_the_constant_function_type_checks_at_the_expected_statement",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.riemannSum_le_on (fun _ => one) (fun _ => one) 0 3 0 hab hfg \
+                 did NOT check against le (riemannSum f 0 3 0) (riemannSum g 0 3 0) \
+                 (not merely SOME le statement): {error:?}"
             )
         });
 }
