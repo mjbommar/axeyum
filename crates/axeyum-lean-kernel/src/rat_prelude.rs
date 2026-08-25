@@ -71,6 +71,7 @@ mod product;
 mod scaling;
 mod statements;
 mod sum;
+mod vector;
 
 pub use model::{RatModel, RatModelLaw, build_rat_model_of_arith};
 
@@ -873,6 +874,72 @@ pub struct RatPrelude {
     /// polyEval c n x` — a scalar distributes through evaluation.
     pub poly_eval_smul: NameId,
 
+    // --- `Rat.dotN`: the n-dimensional dot product (rat_prelude::vector) ---
+    /// `Rat.dotN : (Nat → Rat) → (Nat → Rat) → Nat → Rat := fun u v n =>
+    /// sumRange (fun i => u i * v i) n` — the finite-dimensional inner
+    /// product. `matrix.rs`'s own `adj2` note applies here too: this kernel
+    /// has no product/tuple type, so a "vector" is not reified as its own
+    /// carrier — it is represented exactly the way [`Self::sum_range`]
+    /// already represents a summand, a coefficient FUNCTION `Nat → Rat`
+    /// together with an explicit dimension bound `n`.
+    pub dot_n: NameId,
+    /// `Rat.dotN_zero : ∀ u v, dotN u v zero = zero` — `Eq.refl`, the same
+    /// way [`Self::sum_range_zero`] is.
+    pub dot_n_zero: NameId,
+    /// `Rat.dotN_succ : ∀ u v n, dotN u v (succ n) = dotN u v n + u n * v n`
+    /// — `Eq.refl`, the same way [`Self::sum_range_succ`] is.
+    pub dot_n_succ: NameId,
+    /// `Rat.dotN_comm : ∀ u v n, dotN u v n = dotN v u n` — one
+    /// [`Self::sum_range_congr`] applied to the pointwise
+    /// [`Self::mul_comm`].
+    pub dot_n_comm: NameId,
+    /// `Rat.dotN_add_left : ∀ u1 u2 v n,`
+    /// `dotN (fun i => u1 i + u2 i) v n = dotN u1 v n + dotN u2 v n` —
+    /// linearity in the first argument. [`Self::right_distrib`] distributes
+    /// the summand pointwise (via [`Self::sum_range_congr`]), then
+    /// [`Self::sum_range_add`] splits the sum — the same two-step shape
+    /// [`Self::expectation_add`] uses.
+    pub dot_n_add_left: NameId,
+    /// `Rat.dotN_smul_left : ∀ a u v n,`
+    /// `dotN (fun i => a * u i) v n = a * dotN u v n` — the scalar half of
+    /// bilinearity. [`Self::mul_assoc`] regroups the summand pointwise, then
+    /// [`Self::mul_sum_range`] pulls the constant back out of the sum — the
+    /// same two-step shape [`Self::expectation_smul`] uses.
+    pub dot_n_smul_left: NameId,
+    /// `Rat.dotN_self_nonneg : ∀ v n, le zero (dotN v v n)` — every diagonal
+    /// dot product is nonnegative, since each summand is a square
+    /// ([`Self::sq_nonneg`]) and [`Self::sum_range_nonneg`] carries that
+    /// through the sum.
+    pub dot_n_self_nonneg: NameId,
+    /// `Rat.dotN_two : ∀ u v,`
+    /// `dotN u v (succ (succ zero)) = u zero * v zero + u (succ zero) * v (succ zero)`
+    /// — the n = 2 cross-check: unfolding [`Self::dot_n`]'s general
+    /// recursion at the fixed dimension `matrix.rs`'s own 2×2 development
+    /// lives at (`det2_mul`'s `row1a := a*e+b*g` is exactly a 2-dimensional
+    /// dot product, written out by hand there because `Rat.adj2` cannot be
+    /// reified). Two applications of [`Self::dot_n_succ`], one of
+    /// [`Self::dot_n_zero`], one of [`Self::zero_add`] — no new algebra, a
+    /// check that the general recursive definition collapses to the
+    /// expected concrete arithmetic.
+    pub dot_n_two: NameId,
+    /// `Rat.dotN_cauchy_schwarz : ∀ u v n,`
+    /// `(dotN u v n) * (dotN u v n) ≤ (dotN u u n) * (dotN v v n)` —
+    /// Cauchy–Schwarz, in SQUARED form: ℚ has no square root, the same
+    /// limit [`crate::creal_point::CPointPrelude::cauchy_schwarz`] (the
+    /// plane) and [`Self::covariance_sq_le_variance_mul`] (probability)
+    /// each record. The discriminant argument: `0 ≤ dotN (t*u+v) (t*u+v) n`
+    /// for every rational `t` ([`Self::dot_n_self_nonneg`] plus
+    /// bilinearity), unconditional over `A := dotN u u n`, `B := dotN u v
+    /// n`, `C := dotN v v n`. `A ≥ 0` always ([`Self::dot_n_self_nonneg`]),
+    /// so only `A = 0` vs `A > 0` needs a case split: `A > 0` closes at `t
+    /// := -(B·A⁻¹)` (the minimizer, via [`Self::mul_inv_cancel`]); `A = 0,
+    /// C > 0` reduces to the same case with `u`/`v` swapped
+    /// ([`Self::dot_n_comm`] reads the result back); `A = 0, C = 0` closes
+    /// at `t := 1` and `t := -1` (`B + B = 0`, no sign case-split on `B`
+    /// itself) — the same three-case shape
+    /// [`Self::covariance_sq_le_variance_mul`] uses, unweighted.
+    pub dot_n_cauchy_schwarz: NameId,
+
     // --- finite probability distributions (rat_prelude::probability) -------
     /// `Rat.IsDistribution p n := (∀ k, Lt k n → le zero (p k)) ∧ sumRange p
     /// n = one`.
@@ -1533,6 +1600,15 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         poly_eval_succ: child(kernel, "polyEval_succ"),
         poly_eval_add: child(kernel, "polyEval_add"),
         poly_eval_smul: child(kernel, "polyEval_smul"),
+        dot_n: child(kernel, "dotN"),
+        dot_n_zero: child(kernel, "dotN_zero"),
+        dot_n_succ: child(kernel, "dotN_succ"),
+        dot_n_comm: child(kernel, "dotN_comm"),
+        dot_n_add_left: child(kernel, "dotN_add_left"),
+        dot_n_smul_left: child(kernel, "dotN_smul_left"),
+        dot_n_self_nonneg: child(kernel, "dotN_self_nonneg"),
+        dot_n_two: child(kernel, "dotN_two"),
+        dot_n_cauchy_schwarz: child(kernel, "dotN_cauchy_schwarz"),
         is_distribution: child(kernel, "IsDistribution"),
         prob_le_one: child(kernel, "prob_le_one"),
         prob_complement: child(kernel, "prob_complement"),
@@ -1648,6 +1724,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         decidable::declare_decidable(&mut d, prelude)?;
         sum::declare_sum(&mut d, prelude)?;
         polynomial::declare_polynomial(&mut d, prelude)?;
+        vector::declare_vector(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();

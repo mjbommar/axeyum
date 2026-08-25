@@ -3020,3 +3020,75 @@ fn rat_poly_eval_computation_check_can_fail() {
          check proves nothing"
     );
 }
+
+/// `dotN_cauchy_schwarz`'s statement rendered verbatim — SQUARED, the
+/// unweakened form: `(dotN u v n) * (dotN u v n) <= (dotN u u n) * (dotN v v
+/// n)`, not `|dotN u v n| <= sqrt(...)` (ℚ has no square root). The same
+/// pinning discipline
+/// [`the_order_completeness_statements_are_the_unweakened_ones`] uses for
+/// `le_antisymm`/`lt_trichotomy`.
+#[test]
+fn the_cauchy_schwarz_statement_is_squared() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.dot_n_cauchy_schwarz),
+        "((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : AxNat) -> \
+         Rat.le (Rat.mul (Rat.dotN x0 x1 x2) (Rat.dotN x0 x1 x2)) \
+         (Rat.mul (Rat.dotN x0 x0 x2) (Rat.dotN x1 x1 x2)))))"
+    );
+}
+
+// --- `Rat.dotN`: the n-dimensional dot product (`rat_prelude::vector`) ----
+
+/// Every declaration `vector::declare_vector` adds — `Rat.dotN` itself and
+/// the six theorems built on it — is a **checked** definition or theorem
+/// with an empty axiom footprint, read out of the kernel, not off the diff.
+#[test]
+fn the_vector_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("dotN", p.dot_n, false),
+        ("dotN_zero", p.dot_n_zero, true),
+        ("dotN_succ", p.dot_n_succ, true),
+        ("dotN_comm", p.dot_n_comm, true),
+        ("dotN_add_left", p.dot_n_add_left, true),
+        ("dotN_smul_left", p.dot_n_smul_left, true),
+        ("dotN_self_nonneg", p.dot_n_self_nonneg, true),
+        ("dotN_two", p.dot_n_two, true),
+        ("dotN_cauchy_schwarz", p.dot_n_cauchy_schwarz, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
