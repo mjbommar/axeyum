@@ -757,9 +757,14 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_two_ne_pow_two_mul_prime,
         p.pow_pos,
         p.pow_lt_pow_succ,
+        p.pow_lt_pow_of_lt,
+        p.pow_injective,
+        p.pow_mul_prime_injective,
         p.dvd_two_pow_succ_iff_of_le,
         p.sum_divisors_two_pow_eq_geom_sum,
         p.sum_divisors_two_pow,
+        p.even_of_even_sq,
+        p.no_rational_sqrt_two,
     ]
 }
 
@@ -1596,6 +1601,130 @@ fn pow_lt_pow_succ_computes_at_a_concrete_instance() {
     assert!(
         f.k.axiom_footprint(p.pow_lt_pow_succ).is_empty(),
         "pow_lt_pow_succ rests on a trusted declaration"
+    );
+}
+
+/// `Nat.pow_lt_pow_of_lt` — fully applied at `b = 2, i = 1, j = 4` (a genuine
+/// GAP, not a successor step, and `i ≠ j` so the direction is checkable: a
+/// transposed-argument defect would certify `Lt 16 2`, which is false and
+/// would fail the `def_eq` below), the residue's inferred type must reduce to
+/// `Lt 2 16` by `def_eq`. Euclid IX.36's injectivity chain needs exactly this
+/// general-gap form (`pow_lt_pow_succ` only ever gave one successor step).
+#[test]
+fn pow_lt_pow_of_lt_computes_at_a_concrete_gap() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let one = f.num(1);
+    let two = f.num(2);
+    let four = f.num(4);
+    let pow_two_one = f.const_app(p.pow, &[two, one]);
+    assert!(f.k.def_eq(pow_two_one, two), "pow 2 1 must reduce to 2");
+    let pow_two_four = f.const_app(p.pow, &[two, four]);
+    let sixteen = f.num(16);
+    assert!(
+        f.k.def_eq(pow_two_four, sixteen),
+        "pow 2 4 must reduce to 16"
+    );
+
+    // `Lt 1 2` (defeq `Le 2 2`): `le_refl 2`.
+    let hb = f.const_app(p.le_refl, &[two]);
+
+    // `Lt 1 4` (defeq `Le 2 4`): `le_refl 2` widened twice by `le_step`.
+    let le_2_2 = f.const_app(p.le_refl, &[two]);
+    let le_2_3 = f.lemma(p.le_step, &[two, two, le_2_2]);
+    let three = f.num(3);
+    let hlt = f.lemma(p.le_step, &[two, three, le_2_3]);
+
+    let applied = f.const_app(p.pow_lt_pow_of_lt, &[two, one, four]);
+    let full = f.apply(applied, &[hb, hlt]);
+    let inferred =
+        f.k.infer(full)
+            .expect("pow_lt_pow_of_lt 2 1 4 hb hlt must type-check");
+    let expected = f.lt(two, sixteen);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "pow_lt_pow_of_lt 2 1 4 must certify Lt 2 16, got {}",
+        f.k.render_lean(inferred)
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.pow_lt_pow_of_lt).is_empty(),
+        "pow_lt_pow_of_lt rests on a trusted declaration"
+    );
+}
+
+/// `Nat.pow_injective` — fully applied at `b = 2, i = j = 3` with the
+/// reflexive proof of `Eq (pow 2 3) (pow 2 3)`, the residue's inferred type
+/// must reduce to `Eq 3 3` by `def_eq`.
+#[test]
+fn pow_injective_applies_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let three = f.num(3);
+
+    // `Lt 1 2` (defeq `Le 2 2`): `le_refl 2`.
+    let hb = f.const_app(p.le_refl, &[two]);
+
+    let pow_two_three = f.const_app(p.pow, &[two, three]);
+    let heq = f.refl(pow_two_three); // Eq (pow 2 3) (pow 2 3)
+
+    let applied = f.const_app(p.pow_injective, &[two, three, three]);
+    let full = f.apply(applied, &[hb, heq]);
+    let inferred =
+        f.k.infer(full)
+            .expect("pow_injective 2 3 3 hb heq must type-check");
+    let expected = f.eq(three, three);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "pow_injective 2 3 3 must certify Eq 3 3, got {}",
+        f.k.render_lean(inferred)
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.pow_injective).is_empty(),
+        "pow_injective rests on a trusted declaration"
+    );
+}
+
+/// `Nat.pow_mul_prime_injective` — fully applied at `i = j = 2, q = 3` with
+/// the reflexive proof of `Eq (mul (pow 2 2) 3) (mul (pow 2 2) 3)`, the
+/// residue's inferred type must reduce to `Eq 2 2` by `def_eq`.
+#[test]
+fn pow_mul_prime_injective_applies_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+
+    // `Le 1 3`: `le_refl 1` widened twice by `le_step`.
+    let le_1_1 = f.const_app(p.le_refl, &[one]);
+    let le_1_2 = f.lemma(p.le_step, &[one, one, le_1_1]);
+    let hq = f.lemma(p.le_step, &[one, two, le_1_2]);
+
+    let pow_two_two = f.const_app(p.pow, &[two, two]);
+    let mul_term = f.mul(pow_two_two, three);
+    let heq = f.refl(mul_term); // Eq (mul (pow 2 2) 3) (mul (pow 2 2) 3)
+
+    let applied = f.const_app(p.pow_mul_prime_injective, &[two, two, three]);
+    let full = f.apply(applied, &[hq, heq]);
+    let inferred =
+        f.k.infer(full)
+            .expect("pow_mul_prime_injective 2 2 3 hq heq must type-check");
+    let expected = f.eq(two, two);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "pow_mul_prime_injective 2 2 3 must certify Eq 2 2, got {}",
+        f.k.render_lean(inferred)
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.pow_mul_prime_injective).is_empty(),
+        "pow_mul_prime_injective rests on a trusted declaration"
     );
 }
 
@@ -5813,7 +5942,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        61 + 270,
+        61 + 275,
         "every promised definition and theorem must be rendered"
     );
 }

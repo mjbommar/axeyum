@@ -151,6 +151,7 @@ mod finite_set;
 mod gcd;
 mod group;
 mod helpers;
+mod irrational;
 mod lcm;
 mod modular;
 mod no_confusion;
@@ -206,6 +207,7 @@ use finite::{
 use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use group::declare_group_all;
+use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use lcm::{
     declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
     declare_lcm_comm, declare_lcm_dvd,
@@ -1729,6 +1731,32 @@ pub struct NatPrelude {
     /// IX.36 blocker `perfect.rs`'s module doc names: `sumDivisors_two_pow`'s
     /// tail sub-induction needs `2^k < 2^(k+1)`, an instance at `b = 2`.
     pub pow_lt_pow_succ: NameId,
+    /// `Nat.pow_lt_pow_of_lt : ∀ b i j, Lt (succ zero) b → Lt i j → Lt (pow b
+    /// i) (pow b j)` — general strict monotonicity of `pow` in the exponent,
+    /// across any gap, for any base greater than `1`. Built by induction on
+    /// `j` (fixing `b`, `i`), composing [`Self::pow_lt_pow_succ`] one
+    /// successor at a time with [`Self::lt_of_lt_of_le`]: the successor-step
+    /// lemma already existed for exactly the reason this field's own history
+    /// records (see `perfect.rs`'s module note by [`Self::pow_lt_pow_succ`]
+    /// and [`Self::pow_pos`]), but nothing composed it across an arbitrary
+    /// gap until Euclid IX.36's injectivity chain needed it.
+    pub pow_lt_pow_of_lt: NameId,
+    /// `Nat.pow_injective : ∀ b i j, Lt (succ zero) b → Eq (pow b i) (pow b
+    /// j) → Eq i j` — `pow b` is injective in the exponent for any base
+    /// greater than `1`. From [`Self::pow_lt_pow_of_lt`] plus trichotomy
+    /// (`le_total` then `lt_or_eq_of_le` on each side): either strict
+    /// direction contradicts the assumed equality via `lt_irrefl`, leaving
+    /// only `Eq i j`.
+    pub pow_injective: NameId,
+    /// `Nat.pow_mul_prime_injective : ∀ i j q, Le (succ zero) q → Eq (mul
+    /// (pow 2 i) q) (mul (pow 2 j) q) → Eq i j` — cancelling the shared
+    /// positive cofactor `q` (via `mul_comm` + `mul_left_cancel_of_pos`,
+    /// which cancels on the LEFT) reduces to `Eq (pow 2 i) (pow 2 j)`, then
+    /// [`Self::pow_injective`] at `b = 2` (`Lt 1 2` from `le_refl 2`) finishes
+    /// it. Needed to know the `2(k+1)` divisor-sum terms in Euclid IX.36's
+    /// two-family case are pairwise distinct before they can be summed as a
+    /// clean total.
+    pub pow_mul_prime_injective: NameId,
     /// `Nat.dvd_two_pow_succ_iff_of_le : ∀ k d, Le d (pow 2 k) → Iff (dvd d
     /// (pow 2 k)) (dvd d (pow 2 (succ k)))` — the congruence step
     /// `sumDivisors_two_pow`'s tail sub-induction consumes: below the bound
@@ -1745,6 +1773,16 @@ pub struct NatPrelude {
     /// (pow 2 (succ k))` — the divisor sum of `2^k`, subtraction-free
     /// (`Σd|2^k d = 2^(k+1) − 1` restated as `+1 =`).
     pub sum_divisors_two_pow: NameId,
+
+    // --- the irrationality of `√2` (`irrational.rs`) ------------------------
+    /// `Nat.even_of_even_sq : ∀ n, dvd 2 (mul n n) → dvd 2 n`. Via
+    /// `gcd(2,n) ∈ {1,2}` plus `gauss_lemma`/`gcd_dvd_right`.
+    pub even_of_even_sq: NameId,
+    /// `Nat.no_rational_sqrt_two : ∀ p q, q ≠ 0 → p·p ≠ 2·(q·q)` — the
+    /// content of "`√2` is irrational", stated purely over `Nat` (no real
+    /// `sqrt`, no rational embedding). Infinite descent on `q` via
+    /// `WellFounded.fix`.
+    pub no_rational_sqrt_two: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2184,10 +2222,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             pow_two_ne_pow_two_mul_prime: kernel.name_str(nat, "pow_two_ne_pow_two_mul_prime"),
             pow_pos: kernel.name_str(nat, "pow_pos"),
             pow_lt_pow_succ: kernel.name_str(nat, "pow_lt_pow_succ"),
+            pow_lt_pow_of_lt: kernel.name_str(nat, "pow_lt_pow_of_lt"),
+            pow_injective: kernel.name_str(nat, "pow_injective"),
+            pow_mul_prime_injective: kernel.name_str(nat, "pow_mul_prime_injective"),
             dvd_two_pow_succ_iff_of_le: kernel.name_str(nat, "dvd_two_pow_succ_iff_of_le"),
             sum_divisors_two_pow_eq_geom_sum: kernel
                 .name_str(nat, "sumDivisors_two_pow_eq_geom_sum"),
             sum_divisors_two_pow: kernel.name_str(nat, "sumDivisors_two_pow"),
+            even_of_even_sq: kernel.name_str(nat, "even_of_even_sq"),
+            no_rational_sqrt_two: kernel.name_str(nat, "no_rational_sqrt_two"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2285,6 +2328,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_crt(&mut d, &p)?;
         declare_powsq_all(&mut d, &p)?;
         declare_cantor_all(&mut d, &p)?;
+        declare_even_of_even_sq(&mut d, &p)?;
+        declare_no_rational_sqrt_two(&mut d, &p)?;
         Ok(p)
     })();
     match built {
