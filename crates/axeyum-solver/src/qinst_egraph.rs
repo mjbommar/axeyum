@@ -6169,10 +6169,10 @@ fn mentions_foreign_binder(
     let mut stack = vec![term];
     while let Some(current) = stack.pop() {
         match arena.node(current) {
-            TermNode::Symbol(symbol) => {
-                if binders.contains(symbol) && !var_index.contains_key(symbol) {
-                    return true;
-                }
+            TermNode::Symbol(symbol)
+                if binders.contains(symbol) && !var_index.contains_key(symbol) =>
+            {
+                return true;
             }
             TermNode::App { args, .. } => stack.extend(args.iter().copied()),
             _ => {}

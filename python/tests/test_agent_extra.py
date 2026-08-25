@@ -19,6 +19,11 @@ EXPECTED = {
     "pydantic-ai-slim[anthropic]": "2.33.0",
     "pydantic-graph": "2.33.0",
     "pydantic-evals": "2.33.0",
+    # Slice A6. `axeyum.agent.sandbox` runs `sys.executable`, so its import
+    # whitelist can only name a module the extra actually installs -- a
+    # whitelist entry for an absent module is a capability that exists in a
+    # docstring and nowhere else.
+    "sympy": "1.14.0",
 }
 
 

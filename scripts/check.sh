@@ -532,9 +532,12 @@ step adr-remote-collisions python3 scripts/gen-adr-index.py --check-remote
 # nothing installed -- but a missing toolchain is SKIPPED, never passed: an
 # absent gate that prints nothing is indistinguishable from a gate that ran.
 #
-# Both remaining steps print a COUNT (`PYTEST|collected=N`, `STUBS|compared=M`)
-# and fail on zero, because a Python gate is the easiest place here to build
-# something that exits 0 while examining nothing.
+# Every count-bearing step prints one (`PYTEST|collected=N`, `STUBS|compared=M`,
+# `TYPES|...|control=N`) and fails on zero, because a Python gate is the easiest
+# place here to build something that exits 0 while examining nothing. The type
+# step checks a deliberately ill-typed file through the same path on every run
+# and fails when THAT produces no diagnostic -- a type checker aimed at the
+# wrong directory is silent, not red.
 #
 # TMPDIR off /tmp: `maturin develop` writes a wheel there per rebuild and /tmp
 # on this fleet is a 62 G RAM tmpfs already implicated in OOM kills.
@@ -544,6 +547,7 @@ if command -v uv >/dev/null 2>&1 && [ -d .venv ]; then
   step py-maturin-develop uv run --no-sync maturin develop
   step py-pytest          uv run --no-sync pytest python/tests -q
   step py-stubs           uv run --no-sync python tools/gen_native_stub.py --check
+  step py-types           uv run --no-sync python tools/check_types.py
   step py-ruff-check      uv run --no-sync ruff check python/ tools/
   step py-ruff-format     uv run --no-sync ruff format --check python/ tools/
 elif [ "$list_only" != "1" ]; then
@@ -555,6 +559,26 @@ elif [ "$list_only" != "1" ]; then
     echo "py-check: SKIPPED (no uv)"
   fi
 fi
+
+# The Python coverage ledger (docs/python-2026-08/09-coverage-plan.md). Two
+# steps, both printing a COUNT-bearing line, unit suite first.
+#
+# `gen-python-coverage.py` is what evaluates plan 02's exit criterion -- "every
+# tier-R inventory row bound or a recorded deferral" -- which until 2026-08-24
+# nothing could evaluate at all. It scans every crate's public surface, joins it
+# to what `crates/axeyum-py` references (comments stripped: a doc comment naming
+# a function is not a call) and to the three hand-written inventories, and
+# prints `PYTHON_COVERAGE|crates=N|public=P|referenced=R|inventoried=I|
+# tier_r_unreferenced=U|deferred=D`.
+#
+# Three ways it goes red, and only one of them is "the artifact is stale":
+#   * `--check` staleness -- regenerate with `python3 scripts/gen-python-coverage.py`;
+#   * exit 2, a deferral in `artifacts/python-coverage-deferrals.json` with no
+#     reason (an unexplained deferral and a forgotten row are the same thing);
+#   * exit 1, `U > 0` while some document CLAIMS the criterion is met. `U > 0`
+#     alone is the normal state of an unfinished plan and passes.
+step python-coverage-tests python3 -m unittest scripts.tests.test_gen_python_coverage
+step python-coverage python3 scripts/gen-python-coverage.py --check
 
 # The tactic catalog (docs/python-2026-08/04-tactic-catalog.md, slice A3): the
 # strategy vocabulary the agent's Plan node resolves against. Two steps, both
@@ -602,6 +626,21 @@ step episode-tests  python3 -m unittest scripts.tests.test_check_agent_episode
 # `MOBILITY_CENSUS|open=N|evaluable=E|...|violations=V`, not the status alone.
 step mobility-census python3 scripts/check-mobility-census.py
 step mobility-census-tests python3 -m unittest scripts.tests.test_check_mobility_census
+
+# The obstruction graph (docs/python-2026-08/06-obstruction-graph.md, slice A5;
+# Autogenesis F3). `just obstruction-graph` runs the same four steps.
+#
+# The graph is DERIVED from the committed episodes and decline records, so the
+# first step is the one that can go red on a healthy-looking tree: `--check`
+# fails when the committed artifact is not a regeneration, which is how a
+# hand-edited cluster is caught. The generator also exits 1 when no obstruction
+# was derived, when a decline record's shape matches no predicate, and when any
+# held-out fact id reaches a population or the rendered bytes. Read
+# `OBSTRUCTIONS|...` and `OBSTRUCTION_GRAPH_OK|...`, not the status alone.
+step obstruction-graph        python3 scripts/gen-obstruction-graph.py --check
+step obstruction-graph-valid  python3 scripts/validate-obstruction-graph.py
+step obstruction-dashboard    python3 scripts/gen-obstruction-dashboard.py --check
+step obstruction-graph-tests  python3 -m unittest scripts.tests.test_obstruction_graph
 
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2

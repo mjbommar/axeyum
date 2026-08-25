@@ -68,6 +68,31 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
+  # The Python binding gate (docs/python-2026-08/01-pyo3-maturin.md, S5).
+  # `scripts/check.sh` SKIPS this gate when `uv`/.venv are absent, which is
+  # correct on a fleet host and useless in CI -- so it runs here explicitly,
+  # on every interpreter the wheel claims (abi3-py312). Each step prints a
+  # count; a `PYTEST|collected=0` or `STUBS|compared=0` fails on its own.
+  python:
+    name: python (${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v6
+      - run: uv python install ${{ matrix.python }}
+      - run: uv sync --locked --dev --python ${{ matrix.python }}
+      - run: uv run --no-sync maturin develop
+      - run: uv run --no-sync pytest python/tests -q -p no:cacheprovider
+      - run: uv run --no-sync python tools/gen_native_stub.py --check
+      - run: uv run --no-sync ruff check python/ tools/
+      - run: uv run --no-sync ruff format --check python/ tools/
+
   # NOTE: the heavy test gate lives in scripts/local-ci.sh, run on local
   # hardware — NOT here. The full-workspace suite (esp. the ~32 z3/cvc5
   # differential-fuzz binaries, 60s+ each) needs real cores; on GitHub's 4-core

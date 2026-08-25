@@ -1238,7 +1238,10 @@ def build_clusters(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             continue
         key = tuple(sorted(set(row["unmatched"].values())))
         buckets.setdefault(key, []).append(row["fact_id"])
-    clusters = [
+    # Annotated because the rows are heterogeneous JSON: without it the value
+    # type infers as `list[str] | int` and `-cluster["size"]` below is a unary
+    # minus on a union the checker cannot accept.
+    clusters: list[dict[str, Any]] = [
         {"reasons": list(key), "size": len(ids), "fact_ids": sorted(ids)}
         for key, ids in buckets.items()
     ]

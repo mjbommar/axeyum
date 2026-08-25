@@ -12,8 +12,38 @@
 
 from typing import Any
 
+ASSURANCES: list
+CHECKED_BY: list
+IR_STATUSES: list
+PARSER_STATUSES: list
+PROOF_STATUSES: list
+SOLVER_STATUSES: list
 STRATEGIES: list
 UNKNOWN_KINDS: list
+
+class BackendCapabilities:
+    """What a backend can do (`backend::Capabilities`)."""
+
+    complete: Any
+    name: Any
+    produces_models: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+
+class Capability:
+    """One row of the capability ledger (`capabilities::CAPABILITIES`)."""
+
+    area: Any
+    assurance: Any
+    checked_by: Any
+    evidence: Any
+    feature: Any
+    id: Any
+    reference: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
 
 class CheckResult:
     """The verdict of one satisfiability check."""
@@ -83,6 +113,7 @@ class EvidenceReport:
     proof: Any
     provenance: Any
     result: Any
+    trust_steps: Any
     trusted_steps: Any
     verdict: Any
 
@@ -137,7 +168,60 @@ class RouteTrace:
     def __repr__(self) -> Any: ...
     def to_json(self) -> Any: ...
 
+class SatBvBackend:
+    """The pure-Rust `QF_BV` backend, monomorphized."""
+
+    def __init__(self) -> None: ...
+    def __repr__(self) -> Any: ...
+    def capabilities(self) -> Any: ...
+    def check(self, arena: Any, assertions: Any, config: Any = None) -> Any: ...
+    def last_stats(self) -> Any: ...
+
+class SolveStats:
+    """Layer-attributed measurements from one backend check (`backend::SolveStats`)."""
+
+    assertion_count: Any
+    backend: Any
+    model_lift_ns: Any
+    model_lift_seconds: Any
+    solve_ns: Any
+    solve_seconds: Any
+    terms_translated: Any
+    translate_ns: Any
+    translate_seconds: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+
+class SupportRow:
+    """One row of the four-axis support matrix (`support_matrix::SUPPORT_MATRIX`)."""
+
+    fragment: Any
+    ir: Any
+    note: Any
+    parser: Any
+    proof: Any
+    solver: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+
+class TrustStep:
+    """One reduction of the trust ledger."""
+
+    certified: Any
+    id: Any
+    ledger_certified: Any
+    meaning: Any
+    pedantic_level: Any
+    reference: Any
+    status: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __repr__(self) -> Any: ...
+
 def capabilities() -> Any: ...
+def capability_rows() -> Any: ...
 def check_auto_explained(arena: Any, assertions: Any, config: Any = None) -> Any: ...
 def produce_evidence(arena: Any, assertions: Any, config: Any = None) -> Any: ...
 def prove(arena: Any, hypotheses: Any, goal: Any, config: Any = None) -> Any: ...
@@ -156,6 +240,8 @@ def solve_with_strategy(
     config: Any = None,
 ) -> Any: ...
 def support_matrix() -> Any: ...
+def support_matrix_rows() -> Any: ...
 def trust_ids() -> Any: ...
 def trust_ledger() -> Any: ...
+def trust_ledger_rows() -> Any: ...
 def unsat_core(arena: Any, assertions: Any, config: Any = None) -> Any: ...

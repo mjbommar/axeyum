@@ -34,7 +34,7 @@ except ModuleNotFoundError as _error:  # pragma: no cover - exercised by a fresh
         "`uv sync --extra agent` or `pip install 'axeyum[agent]'`"
     ) from _error
 
-from . import episode, graph, models, replay, tools
+from . import classify, episode, graph, models, replay, tools
 from .episode import Budgets, EpisodeWriteError, HeldOutLeak
 from .graph import EpisodeState, build_graph, run_episode
 from .models import NoGeneralRoute, Plan, StrategyProposal
@@ -55,6 +55,7 @@ __all__ = [
     "StrategyProposal",
     "build_graph",
     "build_toolset",
+    "classify",
     "eligible_fact_ids",
     "episode",
     "graph",

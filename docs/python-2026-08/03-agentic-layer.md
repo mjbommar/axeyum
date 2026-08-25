@@ -246,12 +246,127 @@ Four findings A5 and A7 inherit:
 `blocked-by` overlay links; a generated dashboard answering "which capability
 removes the largest measured cluster?"
 
+### A5 result (measured 2026-08-24)
+
+The census, from `scripts/gen-obstruction-graph.py`:
+
+```text
+OBSTRUCTIONS|entities=12|links=28|facts_blocked=19|from_episodes=16|
+from_decline_records=11|largest_cluster=O:tactic-precondition-unmatched-b14d25ec:6
+```
+
+F3's funnel over the sixteen episodes: **goal 16 -> adapter 2 -> producer 2 ->
+reconstruction 2 -> checker 0 -> obstruction 14.** Three episodes dispatched a
+tier-C producer and one of those three came back `retrieval-miss`, so `adapter`
+is 2 and not 3. `checker` is the registry/transaction stage and it is **0** --
+both proofs were kernel-checked with an empty axiom footprint and neither had a
+registered operation to land in, which is A4's finding 4 now visible as a stage
+rather than as prose.
+
+The ranked answer to F3's question has two halves and both matter:
+
+* **By capability:** `K:proposed-tactic-precondition-mobility-census` -- named
+  for 3 clusters covering **10 of 19 blocked facts**, and it does not exist. It
+  is slice A7: run every tactic precondition against every open fact with no
+  model in the loop. A4's finding 3 already measured why -- the three-sibling
+  rule filters the model's *confidence* that a route generalizes, not whether it
+  does, and the gap was 1 in 3 on the exportable ModEq facts.
+* **By single cluster:** `O:tactic-precondition-unmatched-b14d25ec`, 6 facts,
+  removed by `K:bounded-structural-induction` -- which **already exists and is
+  `active` in the overlay**. That is a scheduling finding, not an engineering
+  one: the capability is built and has not been pointed at the population. The
+  cluster's own decline record names what would close it, in its own words.
+
+Two findings A7 inherits:
+
+1. **`no-general-route` and `gate-refused` are one obstruction, not two.** A4's
+   gate refuses a `NoGeneralRoute` plan, so the identical model behaviour that
+   A2 recorded as `no-general-route` A4 records as `gate-refused`. The
+   classifier reads the *proposal variant* as the first blocker and lets the
+   decline class join the known set; keying on `decline_class` alone would split
+   one cluster in two and blame the mathematics for a change in our own graph.
+2. **A single decline record can declare a larger population than six episodes
+   assemble.** The top cluster rests on one record's `generalization.sibling_fact_ids`
+   (7 rows, 6 after the must-decline filter) while the runner-up was built one
+   episode at a time. The dashboard prints the evidence count beside every
+   cluster for exactly this reason, and A7's census is what would settle which
+   of the two is the better estimate.
+
+*Classify* is **deterministic**, though plan 03's node list draws it in italics.
+Its inputs are already typed values, a model call would put the cluster keys
+outside the replay guarantee, and the same mapping has to re-derive in
+standard-library code under `scripts/`. Rationale and the agreement test:
+[`06-obstruction-graph.md`](06-obstruction-graph.md). No field was added to
+episode schema v2.
+
 ### A6 — guarded web and Python tools
 `web_fetch` restricted to arXiv / Semantic Scholar metadata and the pinned
 `math-education` sibling; disabled entirely when the target's **family**
 contains a held-out member; a sandboxed `python_exec` (smolagents'
 `LocalPythonExecutor` pattern, `MemoryMax` + `MemorySwapMax`). Open web search
 requires its own ADR.
+
+### A6 result (measured 2026-08-24)
+
+Full write-up: [`08-guarded-tools.md`](08-guarded-tools.md). Modules:
+`python/axeyum/agent/web.py`, `python/axeyum/agent/sandbox.py`; 73 tests in
+`python/tests/test_agent_web.py` and `test_agent_sandbox.py` (72 pass, 1 skips
+without `AXEYUM_ALLOW_NETWORK_TESTS=1`). The Python gate goes 995 -> 1067
+passed; `check-agent-episode.py` is unchanged at 20/20.
+
+```
+SANDBOX-SELFCHECK|ENFORCED|memory_status=-9|memory_out=|network=REFUSED|
+network_status=1|network_layer=import-guard-only|cap=512M|
+isolation=systemd-scope(MemoryMax=512M,MemorySwapMax=0)+rlimit-cpu(125s)+
+wall-timeout(120s,killpg)+no-network-isolation(unshare-n unavailable; import
+guard only)+scratch-cwd+import-whitelist(sympy,fractions,math,itertools,json,re,decimal)
+```
+
+Both tools are tier **R** and **neither is in the default toolset**:
+`build_toolset(with_web=True)` is the only thing that adds them, `Gather` is the
+only node that passes it, and it passes it only when `state.allow_web` was asked
+for *and* `web.family_guard` allows this target. `allow_web` defaults to False,
+so the graph's default behaviour is byte-identical to A5 and the sixteen
+committed episodes still replay.
+
+Five findings A7 and any open-search ADR inherit:
+
+1. **The family rule has no live subject, and that is worth stating rather than
+   discovering later.** Measured against the live nursery: 13 families, 3 held
+   out (`natural-binomial`, `natural-logarithm`, `natural-square-root`), and all
+   three are held out **entirely** -- so today *no* train or development fact
+   sits in a family with a held-out member, and the guard's disabling branch
+   fires only on a held-out id itself or on a fact the nursery does not
+   preregister. The rule is not dormant, though: the moment one mixed family is
+   registered it disables retrieval for every eligible member of it. The tests
+   compute both families from the live manifest and assert they differ, so a
+   nursery that later mixes a family exercises the branch automatically.
+2. **`isolation` had to become a field, not a log line.** `unshare -n` does not
+   work on s4 (unprivileged user namespaces are refused) and `PrivateNetwork=yes`
+   is not available to a `--user` scope, so network containment here is the
+   import whitelist and nothing else. That is a real gap, and the only way it
+   stays visible is that every `ExecResult` and every self-check line says
+   `no-network-isolation(unshare-n unavailable; import guard only)`.
+3. **A probe must run in the environment the real call gets.** The first
+   `systemd_scope_available()` probed with the caller's full environment and
+   returned True, while every real call -- run with a stripped environment --
+   died on `Failed to connect to user scope bus`. Both halves looked correct in
+   isolation. `systemd-run --user` needs `XDG_RUNTIME_DIR` and
+   `DBUS_SESSION_BUS_ADDRESS`, so those two are the entire passthrough list and
+   the probe now uses `child_environment()` like everything else.
+4. **The import whitelist is a guard-rail and the doc says so.** Two designs
+   were measured wrong before the third: a depth counter lets sympy's lazily
+   imported `sympy.core.relational` through at depth 0, and matching the
+   caller's *package* against the whitelist fails on `_io` from a frozen
+   bootstrap frame. The rule that works is "refuse when the immediate caller is
+   `__main__`". It stops user code reaching for `os`; it does not stop code that
+   `exec`s with a forged `__name__`, and the boundary is the cgroup.
+5. **`disabled_reason` cannot reach the episode.** `agent-episode-v2`'s
+   `toolCall` is `additionalProperties: false` and this slice may not touch
+   `artifacts/ontology/`, so a guard refusal is recorded as a tool call with
+   `assurance == "read"` and its reason rides on the harness's `ToolCallRecord`.
+   A schema revision that wants "the policy fired" to be legible to the checker
+   is the smallest field addition A7 could make.
 
 ### A7 — mobility census and evaluation
 Run every tactic precondition against every open fact without running a

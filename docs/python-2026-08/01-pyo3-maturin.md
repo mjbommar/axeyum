@@ -71,7 +71,11 @@ landed and the next slice does not start.
   517 backend, not a runnable `maturin` — the dev group is what puts it on
   `PATH` (glaurung hit exactly this in CI).
 - `python/axeyum/__init__.py`, `py.typed`.
-- Gate: `cargo clippy -p axeyum-py --all-targets -- -D warnings`;
+- Gate: `cargo clippy -p axeyum-py --all-targets -- -D warnings` **on the default
+  toolchain as well as `+stable`** — the default here is nightly, whose newer
+  lints reach into every crate the binding pulls in (a `collapsible_match` in
+  `axeyum-solver` made this gate red on nightly while stable was green,
+  2026-08-24);
   `cargo test --workspace` still links (no `extension-module` default);
   `uv run maturin develop`; `python -c "import axeyum; print(axeyum.__version__)"`.
 

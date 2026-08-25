@@ -188,6 +188,13 @@ now. Nothing was deleted.
 | 2026-08-24 | `755f8e35d` | **Cassini's identity**, `fib(n+2)·fib(n) − fib(n+1)² = (−1)^(n+1)`, every index a literal successor so truncated `Nat.sub` never appears. **`Int.pow (neg one) n` works directly — the parity split I offered was not needed**: `Int.pow` recurses structurally on the NATURAL exponent with the base closed over, so it is total at a negative base. Different obstruction from `euler_criterion_pm_one`, which genuinely needed the `p−1 = m+m` device to dodge division. **And the ℕ→ℤ transport is FREE here, contradicting the precedent I warned about**: `Int.add`/`Int.mul` compute definitionally on two `ofNat` arguments, so no `Int.fib` and no homomorphism lemma were needed. `Int.factorial` differs because it is a ℤ-side DEFINITION unfolding through `prodRange`, not a cast. The rule is "check which side the definition lives on", not a blanket answer either way. |
 | 2026-08-24 | `2edf730d9` | **Gauss's lemma — and it was already inlined inside `euclid_lemma`.** Both prior lanes priced it against `coprime_of_bezout_one`'s ~250-line proof and I passed that estimate on; reading the source instead, **`euclid_lemma`'s `g = 1` branch already contains it** — scale the Bézout identity by `b`, cancel via `dvd_add_right_cancel_of_pos`. Ordinary structural induction, **no `WellFounded.fix`** despite `Nat.gcd` itself being one. Twelfth briefed premise corrected today, and the second where the correction was "much cheaper than we thought". `gcd_bezout` is a **balanced all-naturals** identity (`g + m·mn + n·nn = m·mp + n·np`) — anyone reaching for `ax+by=g` will not find it. **`lcm_dvd` still did not land, and that is the best part**: the lane designed a complete route, produced an eliminator chain it could not verify would type-check, and **reverted rather than commit and hope**. Three lanes today committed on a green `cargo check` and the kernel rejected all three; this one declined to be the fourth. |
 | 2026-08-24 | (review) | **Both generated ledgers were stale for the whole session, and both `--check` gates were red the entire time.** Theorem ledger 909 → **998** distinct, all axiom-free. Provenance ledger 152 → **160** settled, `via_multi_target` **unchanged at 7**. Every one of today's eight recorded facts is `no_operation` — 132 of 160 established, **82.5%, hand-constructed**. And `fact-frontier.py` currently returns **`admissible_fact_ids: []`, `refused-no-admissible-candidate`**: 141 dependency-ready facts, zero dispatchable, all rejected `no-registered-operation`. Doc 228's instrument is working exactly as designed and what it measures did not move. Retrospective item 4 says regenerate downstream artifacts in the same commit; I landed ~130 theorems and regenerated none, and nothing pointed me at it because I never ran the gates. |
+| 2026-08-24 | `7d4c2e64d` | **Heron's formula**, `16·Area² = 4a²b² − (a²+b²−c²)²`, squared throughout because there is no `CReal.sqrt`. **The lane checked step 0 and correctly built nothing there**: `cross` already IS twice the signed area (the shoelace determinant, doc already saying so), so no `doubleArea` synonym was added — the discipline I failed twice today. **The identity I briefed unverified turned out correct**, checked by exact `Fraction` trials, via a cleaner route than expanding: `cross² = a²b² − dot₂²` composed with `2·dot₂ = a²+b²−c²`. **Kernel-rejected on the lane's submission and the defect was ONE argument position** — `rn_op_congr` passed `dot2_val` where `fact_b : Equiv two_dot2 diff_val` demanded `two_dot2`, **and the lane's own comment on the next line already stated the correct form**. Fifth argument-position defect today. Also: the ring normalizer has a size ceiling — a flat `rn_ring_proof` over six raw coordinates SIGABRTs inside the 64 MiB thread; stage the proof. |
+| 2026-08-24 | (process) | **Two more self-inflicted gate misreads, same shape as the earlier three.** I ran rustdoc, it printed **101**, and I committed anyway — reading the commit result instead of the number two lines above it, exactly as I had done with clippy's `2` earlier. And a `--check` I piped through `tail` reported `exit=0` for a gate that really exits **1**; redirecting to a file and reading `$?` bare gives the truth. Labelling gate outputs half-worked. The remaining fix is **sequencing**: run the gates, read them, and only then commit — never both in one invocation where the commit line lands last. |
+| 2026-08-24 | `48d7044a2` | Python coverage ledger: 831 of 4,672 public items referenced, 8 tier-R rows open, deferrals with reasons, `09-coverage-plan.md` ordered by consumer value |
+| 2026-08-24 | `5b7140d72` | Plan 03 A6: allowlisted metadata fetch with a family-level held-out guard and injection wrapper; cgroup-capped sandboxed `python_exec` with a discriminating self-check; 76 tests |
+| 2026-08-24 | `27c601025` | Review fixes: `ReplayUnavailable` and front-door-model replay (P0), forwarding modules for `axeyum.smt/ir/solver` (P1), CI `python` job 3.12-3.14 (P1), nightly clippy green (P1); frontier re-verification opt-in |
+| 2026-08-24 | `00a0803f7` | Plan 03 A5: obstruction graph derived from 16 episodes + 11 decline records, 12 clusters / 19 facts, F3 answered both ways; 26 guards |
+| 2026-08-24 | `b44cf88da` | Plan 03 A7: mobility census -- three-valued precondition evaluation over every open fact; 4 of 191 evaluable; 4 real catalog reach disagreements reported |
 | 2026-08-24 | `2f300656f` | Plan 03 A4: schema v2, deferred checker tools, model-free `Supervise`, independent second-kernel `Check`, holdout gate over episodes; live run proved `Nat.ModEq` refl and symm axiom-free (digests new to the ledger), $1.55; 94 tests |
 | 2026-08-24 | `0ba7eaac3` | Frontier agent (plan 03 A2): `[agent]` extra, six read-only partition-filtering tools, `Select -> Gather -> Plan -> WriteEpisode` graph, replay; ten live episodes ($1.635), 8/8 `NoGeneralRoute`; 86 tests |
 | 2026-08-24 | `0f64b8951` | Episode schema + fail-closed `check-agent-episode.py` (A1, 15 mutation-verified guards) and tactic catalog v1 with a dispatch-table-rejecting validator (A3, 13 guards) |
@@ -3422,22 +3429,22 @@ school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
-[`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01, 02 and
-03 A1-A4 are landed on `main`. **The loop has closed:** on a live run, the
-agent selected two open facts (`F:ml430-nat-modeq-refl-d870c8f5`,
-`F:ml430-nat-modeq-symm-0a3d4d18`), chose a producer from the tactic
-catalog, dispatched it behind a deferred approval, and an independent
-second kernel re-derived both proofs axiom-free -- digests absent from
-every committed manifest, so they are results the ledger does not have
-(957 tests; 20/20 episodes pass the fail-closed checker; ledger untouched).
-The ledger transition itself is blocked on a human decision: no registered
-authoritative operation covers the `Nat.ModEq` family, and a transaction is
-derivable only from one plus an execution receipt. Measured bottleneck: only
-3 of 98 eligible facts have a frozen Lean export (the s5 export step, not
-the producers). Next: A5 (typed declines to the AG4.1 obstruction graph),
-A7 (the mobility census -- every tactic precondition against every open
-fact without running a producer), and the export-coverage question raised
-above.
+[`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01-03 are
+landed on `main` through A7: the binding crate, the seven Python
+submodules (1,026 tests), the fail-closed episode checker, the tactic
+catalog, the frontier agent, the deferred-approval checker loop that
+**closed the loop** (two `Nat.ModEq` facts proved by a model-chosen plan and
+re-derived in a second kernel), the obstruction graph (12 clusters / 19
+facts; largest removable by an existing capability), and the mobility
+census (only 4 of 191 open facts have a frozen export -- the measured
+bottleneck). A review's four blockers are fixed: `replay()` never
+conflates unavailable with failed and replays the front door's OWN model;
+documented submodule imports resolve; a CI Python job on 3.12-3.14; the S1
+clippy gate is green on nightly as well as stable. Open for a human: register
+an operation for the `Nat.ModEq` family so the two proofs can land in the
+ledger; the s5 export step; four real tactic-catalog reach disagreements
+(preconditions narrower than their accepted rows); joining the two
+obstruction populations (F3).
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)

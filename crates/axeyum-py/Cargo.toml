@@ -43,5 +43,17 @@ axeyum-solver = { path = "../axeyum-solver", version = "0.1.0", default-features
 # fail to link, so it is supplied only by `[tool.maturin] features`.
 pyo3 = { version = "=0.29.2", features = ["abi3-py312"] }
 
+# TEST-ONLY. `auto-initialize` starts a CPython interpreter so `Python::attach`
+# works inside `cargo test`; it links `libpython`, which is exactly what an
+# extension module must NOT do. Keeping it in `[dev-dependencies]` is what makes
+# that safe: Cargo considers dev-dependency features only when building tests,
+# benches and examples, so `maturin build`/`develop` -- which builds the cdylib
+# with `pyo3/extension-module` from `[tool.maturin] features` -- never sees it.
+# The two are incompatible in ONE build (an extension module resolves the Python
+# symbols from its host interpreter and must not link a second one), and they
+# are never in one build here.
+[dev-dependencies]
+pyo3 = { version = "=0.29.2", features = ["auto-initialize"] }
+
 [lints]
 workspace = true

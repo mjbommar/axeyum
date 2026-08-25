@@ -118,6 +118,20 @@ def transcript_model(responses: list[ModelResponse]) -> FunctionModel:
     inventing a response: a replay that quietly generated new content would
     compare a different run against the episode and call the match meaningful.
     """
+    return transcript_model_with_counter(responses)[0]
+
+
+def transcript_model_with_counter(
+    responses: list[ModelResponse],
+) -> tuple[FunctionModel, list[int]]:
+    """:func:`transcript_model`, plus the counter of responses it handed out.
+
+    The counter is returned rather than stashed on the model. It used to be an
+    attribute assigned onto the `FunctionModel` instance, which no declared type
+    carries -- so every reader of it was unchecked, and a rename on either side
+    would have failed at runtime with the count silently absent from the replay
+    result.
+    """
     stream: Iterator[ModelResponse] = iter(responses)
     consumed: list[int] = [0]
 
@@ -132,9 +146,7 @@ def transcript_model(responses: list[ModelResponse]) -> FunctionModel:
         consumed[0] += 1
         return response
 
-    model = FunctionModel(respond, model_name="replay")
-    model._axeyum_consumed = consumed
-    return model
+    return FunctionModel(respond, model_name="replay"), consumed
 
 
 def _comparable_selection(selection: dict[str, Any]) -> dict[str, Any]:
@@ -207,7 +219,7 @@ def replay(
     if not isinstance(fact_id, str):
         raise ReplayError("the episode names no fact to re-select")
 
-    model = transcript_model(responses)
+    model, consumed = transcript_model_with_counter(responses)
     settings_doc = policy.get("settings") or {}
     settings = ModelSettings(
         temperature=float(settings_doc.get("temperature", 0.0)),
@@ -275,7 +287,7 @@ def replay(
             diverged=compare(document, replayed),
             tool_calls_match=_tool_call_shape(document) == _tool_call_shape(replayed),
             recorded_responses=len(responses),
-            consumed_responses=model._axeyum_consumed[0],
+            consumed_responses=consumed[0],
         )
         if temporary is not None:
             # Read everything needed before the scratch directory disappears.
@@ -297,4 +309,5 @@ __all__ = [
     "recorded_responses",
     "replay",
     "transcript_model",
+    "transcript_model_with_counter",
 ]

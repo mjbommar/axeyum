@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axeyum.dev/ontology/obstruction-graph.schema.json",
+  "title": "Axeyum Obstruction Graph",
+  "description": "A DERIVED, overlay-shaped sidecar turning typed declines into obstruction clusters (Autogenesis F3, docs/autogenesis/243-knowledge-overlay-and-fill-plan.md; slice A5 of docs/python-2026-08/03-agentic-layer.md). Three properties are load-bearing. (1) It is GENERATED, never hand-authored: scripts/gen-obstruction-graph.py derives every entity and link from committed agent episodes and committed producer decline records, and `--check` fails when the committed file differs from a regeneration. Doc 243's rule is that this graph must be derivable rather than authored, and a hand-edited row would be a claim nobody measured. (2) It is a SIDECAR and never an edit to artifacts/autogenesis/knowledge-overlay-v1.json. The overlay already declares `obstruction` as an entity kind and `blocked-by` as a relation, and this document mirrors the overlay's link shape field for field so the two can be read together -- but it declares its own namespaces and its own endpoint kinds, because `tactic` is NOT an overlay entity kind and pretending otherwise would let a sidecar row be merged verbatim into a document whose schema forbids it. (3) Its assurance ceiling is `mechanically-observed`. Every row here is an observation about what a run did, not a mathematical claim: nothing in it is kernel-derived, checker-derived, registry-derived, or human-reviewed, and the enum below cannot express those values at all. An obstruction is evidence that a route did not close a goal; it is never evidence that the goal is false, and never evidence that any capability named in `candidate_capability` would in fact close it.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "generated_by",
+    "inputs",
+    "namespaces",
+    "relation_types",
+    "funnel",
+    "entities",
+    "links"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "axeyum-obstruction-graph" },
+    "generated_by": {
+      "description": "The generator that owns this file. A reader who wants to change a row edits the generator or the evidence, never this document.",
+      "type": "string",
+      "minLength": 1
+    },
+    "inputs": {
+      "description": "Every file the derivation read, with the digest it read. This is what makes a regeneration comparable: a changed input changes a digest here before it changes any count.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/input" }
+    },
+    "namespaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/namespace" }
+    },
+    "relation_types": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/relationType" }
+    },
+    "funnel": {
+      "$ref": "#/$defs/funnel"
+    },
+    "entities": {
+      "description": "The obstruction clusters. Empty is not a valid graph: a derivation that found nothing is a derivation that was pointed at nothing, and the generator exits 1 rather than committing an empty census.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/obstruction" }
+    },
+    "links": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/link" }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "factId": { "type": "string", "pattern": "^F:[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "obstructionId": { "type": "string", "pattern": "^O:[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "capabilityId": { "type": "string", "pattern": "^K:[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "tacticId": { "type": "string", "pattern": "^T:[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "assurance": {
+      "description": "The CEILING is `mechanically-observed` and the enum enforces it: the overlay's `formal-derived`, `independently-checked`, `registry-derived` and `human-reviewed` are deliberately absent, so no row in this file can claim a kernel, a checker, a registry or a person stood behind it. An obstruction is a thing a run did, observed from committed bytes.",
+      "enum": ["mechanically-observed", "heuristic", "proposed"]
+    },
+    "status": {
+      "description": "`open`: the cluster still blocks its population. `mitigated`: a capability landed and the funnel moved but the cluster is not empty. `resolved`: the population is no longer blocked, and `resolution.commit` names the change that did it.",
+      "enum": ["open", "mitigated", "resolved"]
+    },
+    "declineClass": {
+      "description": "The v2 episode enum, verbatim from artifacts/ontology/agent-episode-v2.schema.json, plus `null` for evidence that is not an episode (a producer decline record predates the loop and carries no episode decline class). The nine AG4.1 classes and the five loop-local ones are NOT merged here for the same reason the episode schema keeps them apart: `no-general-route` is a result the model produced, not a mathematical obstruction anyone observed.",
+      "type": ["string", "null"],
+      "enum": [
+        null,
+        "unsupported-semantics",
+        "missing-lemma",
+        "missing-plan-rule",
+        "missing-certificate",
+        "representation-explosion",
+        "resource-exhaustion",
+        "retrieval-miss",
+        "formalization-mismatch",
+        "operational-failure",
+        "no-general-route",
+        "gate-refused",
+        "supervisor-denied",
+        "budget-exhausted-before-plan",
+        "budget-exhausted-during-plan"
+      ]
+    },
+    "blockerKind": {
+      "description": "Derived from the evidence that exists, not invented. Each value is produced by a structural predicate over a committed document, and each was observed at least once when this enum was written (2026-08-24). `no-general-route`, `export-missing`, `budget` and `gate-refused` come from the 16 committed episodes; `axiom-footprint-nonempty`, `elaboration-blocked`, `tooling-gate-refused`, `tactic-precondition-unmatched` and `replay-readiness-mismatch` come from the 11 committed producer decline records. A record whose shape matches none of them is classified `unclassified`, and the generator EXITS 1 on that -- a new decline shape that silently vanished from the census would be the checker-that-cannot-fail defect one arrow upstream.",
+      "enum": [
+        "no-general-route",
+        "gate-refused",
+        "export-missing",
+        "budget",
+        "axiom-footprint-nonempty",
+        "elaboration-blocked",
+        "tooling-gate-refused",
+        "tactic-precondition-unmatched",
+        "replay-readiness-mismatch",
+        "unclassified"
+      ]
+    },
+    "input": {
+      "type": "object",
+      "required": ["path", "sha256", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "kind": { "enum": ["episode", "decline-record", "catalog", "manifest"] }
+      }
+    },
+    "namespace": {
+      "type": "object",
+      "required": ["id", "endpoint_kinds", "resolution"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "endpoint_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/endpointKind" }
+        },
+        "resolution": { "enum": ["sidecar-entity", "local-required", "overlay-required"] },
+        "path": { "type": "string", "minLength": 1 },
+        "notes": { "type": "string", "minLength": 1 }
+      }
+    },
+    "endpointKind": {
+      "description": "`fact`, `capability`, `operation` and `obstruction` are overlay entity kinds and mean exactly what the overlay means by them. `tactic` is NOT: the overlay has no tactic kind, and a `T:` id resolves in artifacts/autogenesis/tactic-catalog-v1.json. It is kept as its own kind rather than filed under the overlay's `producer` or `technique` so that nobody can copy a link from this file into the overlay and have it validate.",
+      "enum": ["fact", "tactic", "capability", "operation", "obstruction"]
+    },
+    "relationType": {
+      "type": "object",
+      "required": ["id", "source_kinds", "target_kinds", "semantics"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "source_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/endpointKind" }
+        },
+        "target_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/endpointKind" }
+        },
+        "semantics": { "type": "string", "minLength": 1 }
+      }
+    },
+    "endpoint": {
+      "type": "object",
+      "required": ["namespace", "kind", "id"],
+      "additionalProperties": false,
+      "properties": {
+        "namespace": { "type": "string", "minLength": 1 },
+        "kind": { "$ref": "#/$defs/endpointKind" },
+        "id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "funnel": {
+      "description": "F3's normalization, counted over the committed episodes: goal -> adapter -> producer -> reconstruction -> checker -> obstruction. Every stage is a predicate over one episode document and nothing else. `adapter` counts a tier-C dispatch whose frozen statement export RESOLVED, so a dispatch that came back `retrieval-miss` is counted at `goal` and not at `adapter` -- which is the point: it is where the population is actually lost. `checker` is the registry/transaction stage (prepare-autogenesis-fact-transaction.py exiting 0), NOT the independent kernel re-check, which is `reconstruction`. Those two are different findings and collapsing them would hide that a fact can be kernel-proved and still have nowhere to land.",
+      "type": "object",
+      "required": [
+        "goal",
+        "adapter",
+        "producer",
+        "reconstruction",
+        "checker",
+        "obstruction",
+        "episodes_read",
+        "episodes_contributing"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "goal": { "type": "integer", "minimum": 0 },
+        "adapter": { "type": "integer", "minimum": 0 },
+        "producer": { "type": "integer", "minimum": 0 },
+        "reconstruction": { "type": "integer", "minimum": 0 },
+        "checker": { "type": "integer", "minimum": 0 },
+        "obstruction": { "type": "integer", "minimum": 0 },
+        "episodes_read": { "type": "integer", "minimum": 0 },
+        "episodes_contributing": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "blocker": {
+      "description": "One observed blocker. `kind` is the taxonomy value a predicate produced; `detail` is the finer discriminator the evidence carried verbatim (a tactic id, an axiom name, the elaborator operation that was refused); `observed_in` is the file it came from. The CLUSTER key uses `kind` plus the COARSE detail; `known_blockers` keeps every distinct fine-grained pair, which is how `first observed blocker` and `complete known blocker set` stay separate rather than one overwriting the other.",
+      "type": "object",
+      "required": ["kind", "detail", "source", "observed_in"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "$ref": "#/$defs/blockerKind" },
+        "detail": { "type": "string", "minLength": 1 },
+        "source": {
+          "description": "Which typed field the predicate read. A blocker derived from a proposal variant is a different quality of evidence from one derived from a producer's own Rust enum variant, and the distinction is not recoverable from `kind`.",
+          "enum": [
+            "episode-proposal-route",
+            "episode-decline-class",
+            "decline-record-observation"
+          ]
+        },
+        "observed_in": { "type": "string", "minLength": 1 }
+      }
+    },
+    "population": {
+      "description": "Who this obstruction blocks. `partitions` counts by nursery partition and MUST NOT contain `held-out`: the generator and the validator both refuse the document when it does, and neither treats an absent key as a pass. A capsule registered against one held-out row cost 19 of 76 held-out propositions on 2026-08-21; a census that merely enumerated one would be the same class of spend.",
+      "type": "object",
+      "required": ["fact_ids", "partitions", "families"],
+      "additionalProperties": false,
+      "properties": {
+        "fact_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/factId" }
+        },
+        "partitions": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "train": { "type": "integer", "minimum": 0 },
+            "development": { "type": "integer", "minimum": 0 },
+            "longitudinal": { "type": "integer", "minimum": 0 },
+            "unregistered": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "families": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "candidateCapability": {
+      "description": "The capability that would remove this cluster, and whether it already exists. `exists` is measured against artifacts/autogenesis/knowledge-overlay-v1.json, not asserted: an id outside that file must be spelled `K:proposed-...` so a reader cannot mistake a wish for an entity. `exists: true` is the interesting case and it is not the flattering one -- it says the capability is already built and has not been pointed at the cluster, which is a scheduling finding rather than an engineering one.",
+      "type": "object",
+      "required": ["id", "exists", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/capabilityId" },
+        "exists": { "type": "boolean" },
+        "reason": { "type": "string", "minLength": 16 }
+      }
+    },
+    "resolution": {
+      "description": "`commit` is null until something removes the cluster. `before` is the funnel measured over this cluster's own episode evidence NOW; `after` stays null until a resolution commit exists and the same population is re-run, because a before/after that was never measured twice is not a before/after.",
+      "type": "object",
+      "required": ["commit", "before", "after"],
+      "additionalProperties": false,
+      "properties": {
+        "commit": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+        "before": { "$ref": "#/$defs/clusterFunnel" },
+        "after": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/clusterFunnel" }]
+        }
+      }
+    },
+    "clusterFunnel": {
+      "type": "object",
+      "required": [
+        "goal",
+        "adapter",
+        "producer",
+        "reconstruction",
+        "checker",
+        "obstruction"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "goal": { "type": "integer", "minimum": 0 },
+        "adapter": { "type": "integer", "minimum": 0 },
+        "producer": { "type": "integer", "minimum": 0 },
+        "reconstruction": { "type": "integer", "minimum": 0 },
+        "checker": { "type": "integer", "minimum": 0 },
+        "obstruction": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "evidence": {
+      "description": "A committed file and the digest it had when this row was derived. `sha256` is re-hashed from disk by the validator; a mismatch is an error, not a warning, because an obstruction that cites bytes nobody can reproduce is prose.",
+      "type": "object",
+      "required": ["path", "sha256", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "kind": { "enum": ["episode", "decline-record"] },
+        "fact_id": { "$ref": "#/$defs/factId" },
+        "decline_class": { "$ref": "#/$defs/declineClass" }
+      }
+    },
+    "obstruction": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "cluster_key",
+        "decline_classes",
+        "first_blocker",
+        "known_blockers",
+        "population",
+        "facts_blocked",
+        "tactic_ids",
+        "candidate_capability",
+        "resolution",
+        "evidence",
+        "assurance",
+        "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/obstructionId" },
+        "kind": { "const": "obstruction" },
+        "title": { "type": "string", "minLength": 1 },
+        "cluster_key": {
+          "description": "The exact string the id is derived from: `<first blocker kind>|<coarse detail>`. Printed so a reader can re-derive the id by hand with sha256 and see that nothing was assigned by judgement.",
+          "type": "string",
+          "minLength": 1
+        },
+        "decline_classes": {
+          "description": "Every distinct v2 decline class the cluster's episode evidence carried. More than one is normal and informative: the same obstruction recorded `no-general-route` under the A2 graph and `gate-refused` under A4, because A4 added a gate that refuses a NoGeneralRoute plan. The obstruction did not change; the harness did.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/declineClass" }
+        },
+        "first_blocker": { "$ref": "#/$defs/blocker" },
+        "known_blockers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/blocker" }
+        },
+        "population": { "$ref": "#/$defs/population" },
+        "facts_blocked": { "type": "integer", "minimum": 0 },
+        "tactic_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/tacticId" }
+        },
+        "candidate_capability": { "$ref": "#/$defs/candidateCapability" },
+        "resolution": { "$ref": "#/$defs/resolution" },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/evidence" }
+        },
+        "assurance": { "$ref": "#/$defs/assurance" },
+        "status": { "$ref": "#/$defs/status" }
+      }
+    },
+    "link": {
+      "description": "Field for field the overlay's link shape (id / relation / source / target / assurance / status / reason / provenance / evidence), so the two documents read together. `blocked-by` points from a fact, a tactic or a capability TO the obstruction, matching the overlay's own `blocked-by` direction.",
+      "type": "object",
+      "required": [
+        "id",
+        "relation",
+        "source",
+        "target",
+        "assurance",
+        "status",
+        "reason",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^L:[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "relation": { "const": "blocked-by" },
+        "source": { "$ref": "#/$defs/endpoint" },
+        "target": { "$ref": "#/$defs/endpoint" },
+        "assurance": { "$ref": "#/$defs/assurance" },
+        "status": { "$ref": "#/$defs/status" },
+        "reason": { "type": "string", "minLength": 1 },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "evidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["method", "sources"],
+      "additionalProperties": false,
+      "properties": {
+        "method": { "const": "mechanically-observed" },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "notes": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

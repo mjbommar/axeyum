@@ -421,6 +421,7 @@ def build_episode(
     proposal_rows: list[dict[str, Any]],
     verdict: str,
     decline_class: str | None,
+    web_snapshots: list[dict[str, Any]] | None = None,
     created_at: str | None = None,
 ) -> dict[str, Any]:
     """Assemble the document. Every refusal here is a refusal to lie in a file."""
@@ -474,7 +475,7 @@ def build_episode(
             "messages_path": messages_path,
             "tool_calls": tool_calls,
         },
-        "web_snapshots": [],
+        "web_snapshots": list(web_snapshots or []),
         "proposals": proposal_rows,
         "outcome": {
             "verdict": verdict,
@@ -550,6 +551,12 @@ def build_episode_v2(
     checker_runs: list[dict[str, Any]] | None = None,
     axiom_footprint: list[str] | None = None,
     observed: dict[str, Any] | None = None,
+    #: The A6 retrieval snapshots, from `web.web_snapshot_rows`. Defaults to the
+    #: empty list, which is what every episode written before slice A6 carried
+    #: and what every episode that does not retrieve still carries -- so the
+    #: field's presence is not evidence that anything was fetched. Rule 4 of
+    #: `check-agent-episode.py` re-hashes every path listed here.
+    web_snapshots: list[dict[str, Any]] | None = None,
     created_at: str | None = None,
 ) -> dict[str, Any]:
     """Assemble a schema v2 document. Every refusal here is a refusal to lie in a file.
@@ -618,7 +625,7 @@ def build_episode_v2(
             "messages_path": messages_path,
             "tool_calls": tool_calls,
         },
-        "web_snapshots": [],
+        "web_snapshots": list(web_snapshots or []),
         "proposals": proposal_rows,
         "outcome": {
             "verdict": verdict,

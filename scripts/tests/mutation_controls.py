@@ -158,6 +158,67 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
             ),
         ],
     ),
+    "python-coverage": (
+        "scripts/gen-python-coverage.py",
+        "scripts.tests.test_gen_python_coverage",
+        [
+            (
+                "pub(crate) is not public",
+                '            if matched is not None and matched.group("restrict") is None:',
+                "            if matched is not None:",
+            ),
+            (
+                "cfg(test) modules are not public surface",
+                '        skip_here = any("cfg(test)" in a.replace(" ", "") for a in pending)',
+                "        skip_here = False",
+            ),
+            (
+                "a method is referenced only when its OWNING type is",
+                '        if owner in names and (bare in binding["calls"] or bare in names):  # type: ignore[operator]',
+                '        if bare in binding["calls"] or bare in names:  # type: ignore[operator]',
+            ),
+            (
+                "a backticked keyword is not an item",
+                "                        if name not in NOT_AN_ITEM",
+                "                        if True",
+            ),
+            (
+                "empty-inventory fail-closed",
+                '        raise CoverageError(f"{INVENTORY_DIR} produced zero rows -- the parser or the tables changed")',
+                "        pass",
+            ),
+            (
+                "no-crates fail-closed",
+                '        raise CoverageError("no crates found under crates/ -- wrong ROOT?")',
+                "        pass",
+            ),
+            (
+                "a deferral must carry a reason",
+                "        if not isinstance(reason, str) or not reason.strip():",
+                "        if False:",
+            ),
+            (
+                "claim guard",
+                "    if unreferenced > 0 and claims:",
+                "    if False:",
+            ),
+            (
+                "claim-guard polarity: a denial is not a claim",
+                "                if NOT_A_CLAIM.search(line):",
+                "                if False:",
+            ),
+            (
+                "--check staleness guard",
+                "        if _normalise(current) == _normalise(content):",
+                "        if True:",
+            ),
+            (
+                "git_commit is normalised, not compared",
+                '    return re.sub(r\'"git_commit": "[^"]*"\', \'"git_commit": "<normalised>"\', text)',
+                "    return text",
+            ),
+        ],
+    ),
     "adr-index": (
         "scripts/gen-adr-index.py",
         "scripts.tests.test_gen_adr_index",
@@ -1791,6 +1852,116 @@ SUITES["tactic-catalog"] = (
     ],
 )
 
+DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
+DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
+
+SUITES["self-demo"] = (
+    DEMO_SUBJECT,
+    "scripts.tests.fixtures.mutation_demo.suite_tests",
+    [
+        ("a guard a control drives", "    if n < 0:", "    if False:"),
+        ("a guard NO control drives", "    if n > 100:", "    if False:"),
+        ("a mutation that breaks the parse", "def classify(n: int) -> str:", "def classify(n: int) -> str"),
+        (
+            # Renaming the CLASS does not work -- `unittest` collects by base
+            # class, not by name -- and finding that out is why this demo exists.
+            # Dropping the base is the `#![cfg(feature = "full")]` shape: the
+            # module still imports, and collects nothing.
+            "a mutation that empties collection",
+            "class DemoControls(unittest.TestCase):",
+            "class DemoControls:",
+            DEMO_CONTROL,
+        ),
+    ],
+)
+
+DEMO_EXPECTED = {
+    "a guard a control drives": KILLED,
+    "a guard NO control drives": SURVIVED,
+    "a mutation that breaks the parse": NO_BUILD,
+    "a mutation that empties collection": NO_RUN,
+}
+
+#: Suites whose point is to produce non-results; excluded from a bare run.
+DEMOS = {"self-demo"}
+
+
+def run_demo() -> int:
+    _status, reports = baseline_and_mutants("self-demo")
+    observed = {label: report.outcome for label, report in reports}
+    wrong = [
+        f"{label}: expected {want}, harness said {observed.get(label, '<no report>')}"
+        for label, want in DEMO_EXPECTED.items()
+        if observed.get(label) != want
+    ]
+    if wrong:
+        print("self-demo: the harness MISCLASSIFIED " + f"{len(wrong)} of {len(DEMO_EXPECTED)}:")
+        for line in wrong:
+            print(f"    {line}")
+        return 1
+    print(f"self-demo: all {len(DEMO_EXPECTED)} outcomes named correctly")
+    return 0
+
+
+def check_anchors() -> int:
+    """Every registered anchor still matches its subject exactly once.
+
+    Builds nothing and runs no test, so this is cheap enough to be a gate — and
+    it catches the rot that actually happens. No gate runs any real mutation
+    suite: `scripts/check.sh` and the `justfile` run the harness's OWN controls
+    and `self-demo`, so the harness is verified continuously and every SUBJECT
+    is verified once, by hand, at commit time. When the source then drifts, the
+    anchor stops matching, the mutation reports `NOT APPLIED` — and nobody is
+    looking, so a suite can decay to measuring nothing while its commit message
+    still claims "each guard killed exactly one test".
+
+    `NOT APPLIED` and `AMBIGUOUS ANCHOR` are both failures here for the reason
+    `_apply` gives: an anchor matching twice would be resolved by
+    `str.replace(..., 1)` picking whichever came first, and the report could not
+    say which guard was deleted.
+
+    This does NOT say the guards still kill anything. That needs the builds.
+    It says the suites are still POINTED at real code, which is the difference
+    between a stale suite and a green one.
+    """
+    failed = 0
+    for name in sorted(set(SUITES) - DEMOS):
+        suite = normalize(name)
+        for mutation in suite.mutations:
+            target = mutation.target or suite.subject
+            path = ROOT / target
+            if not path.exists():
+                print(f"MISSING SUBJECT {name}: {target}")
+                failed = 1
+                continue
+            text = path.read_text(encoding="utf-8")
+            occurrences = text.count(mutation.find)
+            if occurrences != 1:
+                verdict = "NOT APPLIED" if occurrences == 0 else "AMBIGUOUS ANCHOR"
+                print(f"{verdict} {name}: {mutation.label!r} matches {occurrences} places in {target}")
+                failed = 1
+    total = sum(len(normalize(n).mutations) for n in sorted(set(SUITES) - DEMOS))
+    print(f"MUTATION_ANCHORS|suites={len(set(SUITES) - DEMOS)}|anchors={total}|stale={failed}")
+    return failed
+
+
+def main(argv: list[str]) -> int:
+    if argv[1:2] == ["--check-anchors"]:
+        return check_anchors()
+    names = argv[1:] or sorted(set(SUITES) - DEMOS)
+    failed = 0
+    for name in names:
+        if name not in SUITES:
+            print(f"unknown suite {name!r}; known: {', '.join(sorted(SUITES))}")
+            return 2
+        if name in DEMOS:
+            failed |= run_demo()
+            continue
+        status, _reports = baseline_and_mutants(name)
+        failed |= status
+    return failed
+
+
 SUITES["mobility-census"] = (
     "scripts/check-mobility-census.py",
     "scripts.tests.test_check_mobility_census",
@@ -2103,6 +2274,269 @@ def main(argv: list[str]) -> int:
         failed |= status
     return failed
 
+
+SUITES["obstruction-graph"] = (
+    "scripts/validate-obstruction-graph.py",
+    "scripts.tests.test_obstruction_graph",
+    [
+        (
+            "an obstruction id must re-derive from its cluster key",
+            "        if ident != expected:",
+            "        if False:",
+        ),
+        (
+            "entity assurance ceiling",
+            '        if entity["assurance"] not in ASSURANCE:',
+            "        if False:",
+        ),
+        (
+            "link assurance ceiling",
+            '        if link["assurance"] not in ASSURANCE:',
+            "        if False:",
+        ),
+        (
+            "provenance method must be mechanically-observed",
+            '        if link["provenance"]["method"] != METHOD:',
+            "        if False:",
+        ),
+        (
+            "evidence digests are re-hashed from disk",
+            '            if digest != row["sha256"]:',
+            "            if False:",
+        ),
+        (
+            "evidence must be on disk",
+            "            if not path.is_file():\n"
+            "                errors.append(f\"{where}: evidence {row['path']} is not on disk\")",
+            "            if False:\n"
+            "                errors.append(f\"{where}: evidence {row['path']} is not on disk\")",
+        ),
+        (
+            "an obstruction with no evidence",
+            '        if not entity["evidence"]:',
+            "        if False:",
+        ),
+        (
+            "facts_blocked must equal the population",
+            '        if entity["facts_blocked"] != len(fact_ids):',
+            "        if False:",
+        ),
+        (
+            "candidate_capability.exists is re-measured against the overlay",
+            '        if candidate["exists"] != exists:',
+            "        if False:",
+        ),
+        (
+            "an absent capability must be spelled K:proposed-",
+            '        if not exists and not candidate["id"].startswith(PROPOSED_CAPABILITY):',
+            "        if False:",
+        ),
+        (
+            "the first blocker must be in the known set",
+            '        elif not any(\n'
+            '            row["kind"] == first["kind"] and row["detail"] == first["detail"] '
+            "for row in known\n        ):",
+            "        elif False:",
+        ),
+        (
+            "decline classes come from the v2 episode enum",
+            "            if value not in DECLINE_CLASSES:",
+            "            if False:",
+        ),
+        (
+            "tactic ids must resolve in the catalog",
+            "            if tactic_id not in tactics:",
+            "            if False:",
+        ),
+        (
+            "population facts must resolve in the ledger",
+            "            if not path.is_file():\n                errors.append("
+            'f"{where}: population fact {fact_id} does not resolve in the ledger")',
+            "            if False:\n                errors.append("
+            'f"{where}: population fact {fact_id} does not resolve in the ledger")',
+        ),
+        (
+            "a link must point at an obstruction this graph declares",
+            '        if link["target"]["id"] not in seen_ids:',
+            "        if False:",
+        ),
+        (
+            "relation domain",
+            '        if link["source"]["kind"] not in relation["source_kinds"]:',
+            "        if False:",
+        ),
+        (
+            "duplicate obstruction ids",
+            "        if ident in seen_ids:",
+            "        if False:",
+        ),
+        (
+            "an after-funnel without a resolution commit",
+            '        if resolution["commit"] is None and resolution["after"] is not None:',
+            "        if False:",
+        ),
+        (
+            "a graph with no entity fails closed",
+            "    if not entities:",
+            "    if False:",
+        ),
+        (
+            "the validator refuses a held-out population",
+            "            if fact_id in blind:\n"
+            '                errors.append(f"{where}: population names a held-out fact")',
+            "            if False:\n"
+            '                errors.append(f"{where}: population names a held-out fact")',
+        ),
+        (
+            "the validator refuses a held-out partition count",
+            '        if "held-out" in population["partitions"]:',
+            "        if False:",
+        ),
+        (
+            "the validator walks every string for a held-out id",
+            "    leaked = sorted(ident for ident in blind if any(ident in text for text in strings))",
+            "    leaked = []",
+        ),
+        (
+            "the generator refuses a tree with no dated episode directory",
+            "    if not paths:\n        raise DeriveError(f\"{EPISODES}: no dated episode "
+            'directories; nothing to derive from")',
+            "    if False:\n        raise DeriveError(f\"{EPISODES}: no dated episode "
+            'directories; nothing to derive from")',
+            "scripts/gen-obstruction-graph.py",
+        ),
+        (
+            "the generator refuses an unclassifiable decline record",
+            "    if unclassified:",
+            "    if False:",
+            "scripts/gen-obstruction-graph.py",
+        ),
+        (
+            "the generator refuses an episode selecting a held-out fact",
+            "        if blind_selection:",
+            "        if False:",
+            "scripts/gen-obstruction-graph.py",
+        ),
+        (
+            "the generator walks the rendered bytes for a held-out id",
+            "    breaches.extend(\n"
+            '        f"rendered document names held-out fact {ident}"',
+            "    breaches.extend(\n"
+            '        f"IGNORED {ident}"',
+            "scripts/gen-obstruction-graph.py",
+        ),
+    ],
+)
+
+
+DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
+DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
+
+SUITES["self-demo"] = (
+    DEMO_SUBJECT,
+    "scripts.tests.fixtures.mutation_demo.suite_tests",
+    [
+        ("a guard a control drives", "    if n < 0:", "    if False:"),
+        ("a guard NO control drives", "    if n > 100:", "    if False:"),
+        ("a mutation that breaks the parse", "def classify(n: int) -> str:", "def classify(n: int) -> str"),
+        (
+            # Renaming the CLASS does not work -- `unittest` collects by base
+            # class, not by name -- and finding that out is why this demo exists.
+            # Dropping the base is the `#![cfg(feature = "full")]` shape: the
+            # module still imports, and collects nothing.
+            "a mutation that empties collection",
+            "class DemoControls(unittest.TestCase):",
+            "class DemoControls:",
+            DEMO_CONTROL,
+        ),
+    ],
+)
+
+DEMO_EXPECTED = {
+    "a guard a control drives": KILLED,
+    "a guard NO control drives": SURVIVED,
+    "a mutation that breaks the parse": NO_BUILD,
+    "a mutation that empties collection": NO_RUN,
+}
+
+#: Suites whose point is to produce non-results; excluded from a bare run.
+DEMOS = {"self-demo"}
+
+
+def run_demo() -> int:
+    _status, reports = baseline_and_mutants("self-demo")
+    observed = {label: report.outcome for label, report in reports}
+    wrong = [
+        f"{label}: expected {want}, harness said {observed.get(label, '<no report>')}"
+        for label, want in DEMO_EXPECTED.items()
+        if observed.get(label) != want
+    ]
+    if wrong:
+        print("self-demo: the harness MISCLASSIFIED " + f"{len(wrong)} of {len(DEMO_EXPECTED)}:")
+        for line in wrong:
+            print(f"    {line}")
+        return 1
+    print(f"self-demo: all {len(DEMO_EXPECTED)} outcomes named correctly")
+    return 0
+
+
+def check_anchors() -> int:
+    """Every registered anchor still matches its subject exactly once.
+
+    Builds nothing and runs no test, so this is cheap enough to be a gate — and
+    it catches the rot that actually happens. No gate runs any real mutation
+    suite: `scripts/check.sh` and the `justfile` run the harness's OWN controls
+    and `self-demo`, so the harness is verified continuously and every SUBJECT
+    is verified once, by hand, at commit time. When the source then drifts, the
+    anchor stops matching, the mutation reports `NOT APPLIED` — and nobody is
+    looking, so a suite can decay to measuring nothing while its commit message
+    still claims "each guard killed exactly one test".
+
+    `NOT APPLIED` and `AMBIGUOUS ANCHOR` are both failures here for the reason
+    `_apply` gives: an anchor matching twice would be resolved by
+    `str.replace(..., 1)` picking whichever came first, and the report could not
+    say which guard was deleted.
+
+    This does NOT say the guards still kill anything. That needs the builds.
+    It says the suites are still POINTED at real code, which is the difference
+    between a stale suite and a green one.
+    """
+    failed = 0
+    for name in sorted(set(SUITES) - DEMOS):
+        suite = normalize(name)
+        for mutation in suite.mutations:
+            target = mutation.target or suite.subject
+            path = ROOT / target
+            if not path.exists():
+                print(f"MISSING SUBJECT {name}: {target}")
+                failed = 1
+                continue
+            text = path.read_text(encoding="utf-8")
+            occurrences = text.count(mutation.find)
+            if occurrences != 1:
+                verdict = "NOT APPLIED" if occurrences == 0 else "AMBIGUOUS ANCHOR"
+                print(f"{verdict} {name}: {mutation.label!r} matches {occurrences} places in {target}")
+                failed = 1
+    total = sum(len(normalize(n).mutations) for n in sorted(set(SUITES) - DEMOS))
+    print(f"MUTATION_ANCHORS|suites={len(set(SUITES) - DEMOS)}|anchors={total}|stale={failed}")
+    return failed
+
+
+def main(argv: list[str]) -> int:
+    if argv[1:2] == ["--check-anchors"]:
+        return check_anchors()
+    names = argv[1:] or sorted(set(SUITES) - DEMOS)
+    failed = 0
+    for name in names:
+        if name not in SUITES:
+            print(f"unknown suite {name!r}; known: {', '.join(sorted(SUITES))}")
+            return 2
+        if name in DEMOS:
+            failed |= run_demo()
+            continue
+        status, _reports = baseline_and_mutants(name)
+        failed |= status
+    return failed
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
