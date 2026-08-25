@@ -1607,6 +1607,20 @@ pub struct CRealPrelude {
     /// actually cost the sum rule); avoiding that gap by taking three
     /// independent hypotheses is what keeps this cheap.
     pub has_derivative_cube: NameId,
+    /// `CReal.hasDerivative_pow : ∀ a b k1, BoundedOn (fun r => r) a b k1 →
+    /// ∀ (kb kd : Nat → Nat),
+    ///   (∀ n, BoundedOn (fun r => pow r n) a b (kb n)) →
+    ///   (∀ n, BoundedOn (fun x => mul (ofNat (Nat.succ n)) (pow x n)) a b
+    ///     (kd n)) →
+    ///   ∀ n, HasDerivativeOn (fun r => pow r (Nat.succ n))
+    ///     (fun x => mul (ofNat (Nat.succ n)) (pow x n)) a b` — the general
+    /// power rule, by induction on `n` at exponent `succ n` (never `n - 1`:
+    /// `Nat.sub` is truncated and banned in an index). See
+    /// `creal/derivative.rs::declare_has_derivative_pow`'s own doc comment for
+    /// why the exponent is `succ n`, why the induction commutes each product
+    /// before calling [`Self::has_derivative_mul`], and why boundedness is
+    /// two explicit Skolem functions rather than a derived fact.
+    pub has_derivative_pow: NameId,
 }
 
 impl CRealPrelude {
@@ -1869,6 +1883,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_congr: kernel.name_str(creal, "hasDerivative_congr"),
         has_derivative_pow_two: kernel.name_str(creal, "hasDerivative_pow_two"),
         has_derivative_cube: kernel.name_str(creal, "hasDerivative_cube"),
+        has_derivative_pow: kernel.name_str(creal, "hasDerivative_pow"),
     }
 }
 
@@ -1958,7 +1973,10 @@ pub(crate) fn build_creal_prelude_uncached(
         // which runs BEFORE `power::declare_power` above: the kernel rejects a
         // term naming a constant not yet in the environment (`UnknownConst`).
         // Wired in here instead, after `pow` exists.
-        derivative::declare_has_derivative_pow_two(&mut d, prelude)
+        derivative::declare_has_derivative_pow_two(&mut d, prelude)?;
+        // `hasDerivative_pow` (the general induction) also mentions `pow`,
+        // for the identical reason.
+        derivative::declare_has_derivative_pow(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
