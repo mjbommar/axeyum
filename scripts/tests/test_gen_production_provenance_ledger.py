@@ -114,8 +114,10 @@ class ProvenanceTests(unittest.TestCase):
         self.assertIn(f"| {report['settled']} |", text)
         # The claim the whole ledger exists to make. If this ever fails because
         # the number ROSE, that is the result -- regenerate and say so.
-        self.assertEqual(report["generality"][prov.GENERAL], 0)
-        self.assertEqual(report["multi_target_operations"], 0)
+        # 0 -> 8 / 0 -> 2: the modeq-family and bounded-induction-factorial-
+        # family multi-target operations each produced real settled facts.
+        self.assertEqual(report["generality"][prov.GENERAL], 8)
+        self.assertEqual(report["multi_target_operations"], 2)
 
     def test_an_empty_facts_directory_is_an_error_not_a_vacuous_pass(self) -> None:
         """`classify` guards the settled set; `load_facts` guards the corpus. Two
