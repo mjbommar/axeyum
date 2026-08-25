@@ -13,6 +13,7 @@
 
 pub(crate) mod cnf;
 pub(crate) mod core;
+pub(crate) mod ledgers;
 pub(crate) mod proofs;
 pub(crate) mod results;
 
@@ -34,6 +35,7 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     )?;
     module.add_class::<results::Config>()?;
     core::register(&module)?;
+    ledgers::register(&module)?;
     module.add("UNKNOWN_KINDS", results::UNKNOWN_KINDS.to_vec())?;
     module.add(
         "STRATEGIES",

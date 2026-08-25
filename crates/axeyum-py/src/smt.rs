@@ -22,7 +22,8 @@ use axeyum_smtlib::{
     parse_script_within,
 };
 use axeyum_solver::smtlib::{
-    solve_smtlib, solve_smtlib_get_assignment, solve_smtlib_get_proof, solve_smtlib_get_value,
+    solve_smtlib, solve_smtlib_get_assertions, solve_smtlib_get_assignment, solve_smtlib_get_info,
+    solve_smtlib_get_option, solve_smtlib_get_proof, solve_smtlib_get_value,
     solve_smtlib_incremental, solve_smtlib_unsat_core,
 };
 use axeyum_solver::{
@@ -830,6 +831,66 @@ fn unsat_core(py: Python<'_>, script: &str, timeout_ms: u64) -> PyResult<Option<
         .map_err(map_solver_error)
 }
 
+/// The assertion-stack snapshots the script's `(get-assertions)` commands ask
+/// for, one list of SMT-LIB texts per command, in script order.
+///
+/// Tier **R** — pure. The Rust function ignores the config and never solves;
+/// the snapshot is taken at the exact command point, after honoring prior
+/// `assert`/`push`/`pop`/`reset-assertions`. One-shot `check-sat-assuming`
+/// assumptions are deliberately NOT in the stack, so a snapshot is the
+/// assertion set and not the last query.
+///
+/// `None` means the script requested no snapshots — not that it has no
+/// assertions.
+#[pyfunction]
+#[pyo3(signature = (script,))]
+fn get_assertions(py: Python<'_>, script: &str) -> PyResult<Option<Vec<Vec<String>>>> {
+    // The Rust signature takes a config and ignores it (`_config`), so this
+    // binding offers no budget: a timeout that cannot bite is worse than none.
+    let config = SolverConfig::new();
+    py.detach(|| solve_smtlib_get_assertions(script, &config))
+        .map_err(map_solver_error)
+}
+
+/// The `(get-info ...)` answers, as `(key, value)` pairs in script order.
+///
+/// Tier **R/P**. Pure for every key EXCEPT `:reason-unknown`, which solves the
+/// single active query — so this one takes a budget. An unrecognized key comes
+/// back as `"unsupported"` rather than being dropped: a missing pair and an
+/// unsupported one are different answers.
+///
+/// `:reason-unknown` is the empty SMT-LIB string literal `""` when the query
+/// was decided; the classified reason is returned only for an actual
+/// `unknown`. `None` when the script asks for no info.
+#[pyfunction]
+#[pyo3(signature = (script, *, timeout_ms = 10_000))]
+fn get_info(
+    py: Python<'_>,
+    script: &str,
+    timeout_ms: u64,
+) -> PyResult<Option<Vec<(String, String)>>> {
+    let config = default_config(timeout_ms);
+    py.detach(|| solve_smtlib_get_info(script, &config))
+        .map_err(map_solver_error)
+}
+
+/// The `(get-option ...)` answers, as `(key, value)` pairs in script order.
+///
+/// Tier **R** — pure; nothing is solved. A key the script set is echoed
+/// verbatim, an unset standard key gets its SMT-LIB default, and anything else
+/// is `"unsupported"`. This is the option state a driver would observe, which
+/// is not the same as "the solver honors it".
+///
+/// `None` when the script asks for no options.
+#[pyfunction]
+#[pyo3(signature = (script,))]
+fn get_option(py: Python<'_>, script: &str) -> PyResult<Option<Vec<(String, String)>>> {
+    // `_config` upstream: no budget is offered, because none would apply.
+    let config = SolverConfig::new();
+    py.detach(|| solve_smtlib_get_option(script, &config))
+        .map_err(map_solver_error)
+}
+
 /// A textual Alethe proof of an `unsat`, or `None`.
 ///
 /// `None` means **no emitter covers this refutation**, not that the script is
@@ -1080,6 +1141,9 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     module.add_function(wrap_pyfunction!(get_assignment, &module)?)?;
     module.add_function(wrap_pyfunction!(unsat_core, &module)?)?;
     module.add_function(wrap_pyfunction!(get_proof, &module)?)?;
+    module.add_function(wrap_pyfunction!(get_assertions, &module)?)?;
+    module.add_function(wrap_pyfunction!(get_info, &module)?)?;
+    module.add_function(wrap_pyfunction!(get_option, &module)?)?;
     module.add_function(wrap_pyfunction!(parse, &module)?)?;
     module.add_function(wrap_pyfunction!(write_script, &module)?)?;
     parent.add("smt", &module)?;

@@ -13,10 +13,10 @@
       "axeyum-smtlib",
       "axeyum-solver"
     ],
-    "files": 32,
-    "fn_definitions": 1372,
-    "pyclasses": 114,
-    "pyfunctions": 168
+    "files": 33,
+    "fn_definitions": 1429,
+    "pyclasses": 120,
+    "pyfunctions": 174
   },
   "crates": [
     {
@@ -2061,7 +2061,7 @@
         "fn|CRealModel::restated_count|crates/axeyum-lean-kernel/src/creal_model.rs:164|",
         "fn|build_creal_model_of_arith|crates/axeyum-lean-kernel/src/creal_model.rs:189|",
         "struct|CPointPrelude|crates/axeyum-lean-kernel/src/creal_point.rs:95|named-in-crate-path",
-        "fn|build_cpoint_prelude|crates/axeyum-lean-kernel/src/creal_point.rs:1132|named-in-crate-path",
+        "fn|build_cpoint_prelude|crates/axeyum-lean-kernel/src/creal_point.rs:1160|named-in-crate-path",
         "enum|ReducibilityHint|crates/axeyum-lean-kernel/src/env.rs:42|named-in-crate-path",
         "struct|RecRule|crates/axeyum-lean-kernel/src/env.rs:81|",
         "enum|QuotKind|crates/axeyum-lean-kernel/src/env.rs:99|",
@@ -2594,10 +2594,10 @@
         "struct|PyDeclarationIdentity|crates/axeyum-py/src/producers.rs:525|",
         "struct|PyImportReport|crates/axeyum-py/src/producers.rs:589|",
         "struct|PyStatementImport|crates/axeyum-py/src/producers.rs:807|",
-        "struct|ScriptTerm|crates/axeyum-py/src/smt.rs:54|",
-        "struct|Outcome|crates/axeyum-py/src/smt.rs:116|",
-        "struct|Response|crates/axeyum-py/src/smt.rs:614|",
-        "struct|PyScript|crates/axeyum-py/src/smt.rs:852|",
+        "struct|ScriptTerm|crates/axeyum-py/src/smt.rs:55|",
+        "struct|Outcome|crates/axeyum-py/src/smt.rs:117|",
+        "struct|Response|crates/axeyum-py/src/smt.rs:615|",
+        "struct|PyScript|crates/axeyum-py/src/smt.rs:913|",
         "struct|PyCnfFormula|crates/axeyum-py/src/solver/cnf.rs:29|",
         "fn|parse_dimacs_py|crates/axeyum-py/src/solver/cnf.rs:80|",
         "struct|PyDratCheckOutcome|crates/axeyum-py/src/solver/cnf.rs:92|",
@@ -2606,22 +2606,31 @@
         "fn|solve_with_drat_proof|crates/axeyum-py/src/solver/cnf.rs:207|",
         "struct|PyCnfEncoding|crates/axeyum-py/src/solver/cnf.rs:245|",
         "fn|tseitin_encode|crates/axeyum-py/src/solver/cnf.rs:296|",
-        "fn|solve|crates/axeyum-py/src/solver/core.rs:54|",
-        "fn|check_auto_explained|crates/axeyum-py/src/solver/core.rs:79|",
-        "fn|unsat_core|crates/axeyum-py/src/solver/core.rs:106|",
-        "fn|solve_with_strategy|crates/axeyum-py/src/solver/core.rs:122|",
-        "fn|solve_with_portfolio|crates/axeyum-py/src/solver/core.rs:143|",
-        "fn|recommended_portfolio|crates/axeyum-py/src/solver/core.rs:166|",
-        "struct|PyEvidenceCheck|crates/axeyum-py/src/solver/core.rs:184|",
-        "struct|PyEvidenceReport|crates/axeyum-py/src/solver/core.rs:253|",
-        "fn|produce_evidence|crates/axeyum-py/src/solver/core.rs:387|",
-        "struct|PyProofOutcome|crates/axeyum-py/src/solver/core.rs:405|",
-        "fn|prove|crates/axeyum-py/src/solver/core.rs:477|",
-        "struct|PyIncremental|crates/axeyum-py/src/solver/core.rs:535|",
-        "fn|capabilities|crates/axeyum-py/src/solver/core.rs:709|",
-        "fn|support_matrix|crates/axeyum-py/src/solver/core.rs:715|",
-        "fn|trust_ledger|crates/axeyum-py/src/solver/core.rs:721|",
-        "fn|trust_ids|crates/axeyum-py/src/solver/core.rs:727|",
+        "fn|solve|crates/axeyum-py/src/solver/core.rs:55|",
+        "fn|check_auto_explained|crates/axeyum-py/src/solver/core.rs:80|",
+        "fn|unsat_core|crates/axeyum-py/src/solver/core.rs:107|",
+        "fn|solve_with_strategy|crates/axeyum-py/src/solver/core.rs:123|",
+        "fn|solve_with_portfolio|crates/axeyum-py/src/solver/core.rs:144|",
+        "fn|recommended_portfolio|crates/axeyum-py/src/solver/core.rs:167|",
+        "struct|PyEvidenceCheck|crates/axeyum-py/src/solver/core.rs:185|",
+        "struct|PyEvidenceReport|crates/axeyum-py/src/solver/core.rs:254|",
+        "fn|produce_evidence|crates/axeyum-py/src/solver/core.rs:405|",
+        "struct|PyProofOutcome|crates/axeyum-py/src/solver/core.rs:423|",
+        "fn|prove|crates/axeyum-py/src/solver/core.rs:495|",
+        "struct|PyIncremental|crates/axeyum-py/src/solver/core.rs:553|",
+        "fn|capabilities|crates/axeyum-py/src/solver/core.rs:727|",
+        "fn|support_matrix|crates/axeyum-py/src/solver/core.rs:733|",
+        "fn|trust_ledger|crates/axeyum-py/src/solver/core.rs:739|",
+        "fn|trust_ids|crates/axeyum-py/src/solver/core.rs:745|",
+        "struct|PyCapability|crates/axeyum-py/src/solver/ledgers.rs:100|",
+        "struct|PySupportRow|crates/axeyum-py/src/solver/ledgers.rs:191|",
+        "struct|PyTrustStep|crates/axeyum-py/src/solver/ledgers.rs:280|",
+        "struct|PySolveStats|crates/axeyum-py/src/solver/ledgers.rs:371|",
+        "struct|PyBackendCapabilities|crates/axeyum-py/src/solver/ledgers.rs:471|",
+        "struct|PySatBvBackend|crates/axeyum-py/src/solver/ledgers.rs:527|",
+        "fn|capability_rows|crates/axeyum-py/src/solver/ledgers.rs:592|",
+        "fn|support_matrix_rows|crates/axeyum-py/src/solver/ledgers.rs:598|",
+        "fn|trust_ledger_rows|crates/axeyum-py/src/solver/ledgers.rs:608|",
         "struct|PyUnsatProof|crates/axeyum-py/src/solver/proofs.rs:26|",
         "struct|PyUnsatProofOutcome|crates/axeyum-py/src/solver/proofs.rs:99|",
         "fn|export_qf_bv_unsat_proof|crates/axeyum-py/src/solver/proofs.rs:169|",
@@ -2631,7 +2640,7 @@
         "struct|PyRouteTrace|crates/axeyum-py/src/solver/results.rs:359|"
       ],
       "items_format": "kind|name|file:line|reference_evidence",
-      "public": 163,
+      "public": 172,
       "referenced": 0,
       "tier_r": 0,
       "tier_r_unreferenced": 0,
@@ -3338,87 +3347,7 @@
       "tier_unassigned": 2
     },
     {
-      "backlog": [
-        {
-          "inventory_skip": "",
-          "items": [
-            "solve_smtlib_get_assertions"
-          ],
-          "path": "smtlib.rs:2380",
-          "section": "1. The SMT-LIB text front door \u2014 `crates/axeyum-solver/src/smtlib.rs`",
-          "source": "docs/python-2026-08/inventories/smt-solver.md:77"
-        },
-        {
-          "inventory_skip": "",
-          "items": [
-            "solve_smtlib_get_info"
-          ],
-          "path": "smtlib.rs:2451",
-          "section": "1. The SMT-LIB text front door \u2014 `crates/axeyum-solver/src/smtlib.rs`",
-          "source": "docs/python-2026-08/inventories/smt-solver.md:78"
-        },
-        {
-          "inventory_skip": "",
-          "items": [
-            "solve_smtlib_get_option"
-          ],
-          "path": "smtlib.rs:2524",
-          "section": "1. The SMT-LIB text front door \u2014 `crates/axeyum-solver/src/smtlib.rs`",
-          "source": "docs/python-2026-08/inventories/smt-solver.md:79"
-        },
-        {
-          "inventory_skip": "",
-          "items": [
-            "SolveStats"
-          ],
-          "path": "backend.rs:595",
-          "section": "2. Solver core \u2014 `backend.rs`, `error.rs`, `model.rs` (feature: **default `qfbv`**)",
-          "source": "docs/python-2026-08/inventories/smt-solver.md:109"
-        },
-        {
-          "inventory_skip": "",
-          "items": [
-            "Capabilities"
-          ],
-          "path": "backend.rs:613",
-          "section": "2. Solver core \u2014 `backend.rs`, `error.rs`, `model.rs` (feature: **default `qfbv`**)",
-          "source": "docs/python-2026-08/inventories/smt-solver.md:110"
-        },
-        {
-          "inventory_skip": "",
-          "items": [
-            "TrustId",
-            "TrustStep"
-          ],
-          "path": "trust.rs:26",
-          "section": "3. Model replay \u2014 the **C** tier (feature **full**)",
-          "source": "docs/python-2026-08/inventories/smt-solver.md:148"
-        },
-        {
-          "inventory_skip": "",
-          "items": [
-            "Assurance",
-            "Capability",
-            "CheckedBy"
-          ],
-          "path": "capabilities.rs:26",
-          "section": "3. Model replay \u2014 the **C** tier (feature **full**)",
-          "source": "docs/python-2026-08/inventories/smt-solver.md:149"
-        },
-        {
-          "inventory_skip": "",
-          "items": [
-            "IrStatus",
-            "ParserStatus",
-            "ProofStatus",
-            "SolverStatus",
-            "SupportRow"
-          ],
-          "path": "support_matrix.rs:36",
-          "section": "3. Model replay \u2014 the **C** tier (feature **full**)",
-          "source": "docs/python-2026-08/inventories/smt-solver.md:150"
-        }
-      ],
+      "backlog": [],
       "crate": "axeyum-solver",
       "deferred": 1,
       "inventoried": 71,
@@ -3537,9 +3466,9 @@
         "fn|SolverConfig::with_native_cdcl|crates/axeyum-solver/src/backend.rs:569|",
         "fn|SolverConfig::with_proof_progress|crates/axeyum-solver/src/backend.rs:577|",
         "fn|SolverConfig::with_check_progress|crates/axeyum-solver/src/backend.rs:586|",
-        "struct|SolveStats|crates/axeyum-solver/src/backend.rs:595|",
-        "struct|Capabilities|crates/axeyum-solver/src/backend.rs:613|",
-        "trait|SolverBackend|crates/axeyum-solver/src/backend.rs:629|",
+        "struct|SolveStats|crates/axeyum-solver/src/backend.rs:595|named-in-crate-path",
+        "struct|Capabilities|crates/axeyum-solver/src/backend.rs:613|named-in-crate-path",
+        "trait|SolverBackend|crates/axeyum-solver/src/backend.rs:629|named-in-crate-path",
         "fn|bitblast_step|crates/axeyum-solver/src/bitblast_alethe.rs:280|",
         "enum|BitblastMiterOutcome|crates/axeyum-solver/src/bitblast_miter.rs:44|",
         "fn|certify_bitblast_by_miter|crates/axeyum-solver/src/bitblast_miter.rs:71|",
@@ -3579,12 +3508,12 @@
         "struct|BvUfLocalDerivedEquality|crates/axeyum-solver/src/bv_uf_local.rs:33|",
         "struct|BvUfLocalRefutationCertificate|crates/axeyum-solver/src/bv_uf_local.rs:44|",
         "fn|bv_uf_local_refutation|crates/axeyum-solver/src/bv_uf_local.rs:62|",
-        "enum|Assurance|crates/axeyum-solver/src/capabilities.rs:26|",
-        "fn|Assurance::label|crates/axeyum-solver/src/capabilities.rs:45|",
-        "enum|CheckedBy|crates/axeyum-solver/src/capabilities.rs:82|",
-        "fn|CheckedBy::label|crates/axeyum-solver/src/capabilities.rs:106|",
-        "struct|Capability|crates/axeyum-solver/src/capabilities.rs:125|",
-        "const|CAPABILITIES|crates/axeyum-solver/src/capabilities.rs:144|",
+        "enum|Assurance|crates/axeyum-solver/src/capabilities.rs:26|named-in-crate-path",
+        "fn|Assurance::label|crates/axeyum-solver/src/capabilities.rs:45|method-of-referenced-type",
+        "enum|CheckedBy|crates/axeyum-solver/src/capabilities.rs:82|named-in-crate-path",
+        "fn|CheckedBy::label|crates/axeyum-solver/src/capabilities.rs:106|method-of-referenced-type",
+        "struct|Capability|crates/axeyum-solver/src/capabilities.rs:125|named-in-crate-path",
+        "const|CAPABILITIES|crates/axeyum-solver/src/capabilities.rs:144|named-in-crate-path",
         "fn|capability_matrix_markdown|crates/axeyum-solver/src/capabilities.rs:2183|named-in-crate-path",
         "fn|at_most|crates/axeyum-solver/src/cardinality.rs:21|",
         "fn|at_least|crates/axeyum-solver/src/cardinality.rs:37|",
@@ -4306,8 +4235,8 @@
         "const|ROUTE_TRACE_JSON_SCHEMA_VERSION|crates/axeyum-solver/src/route_trace.rs:236|",
         "fn|push_json_string|crates/axeyum-solver/src/route_trace.rs:247|",
         "fn|RouteTrace::to_json|crates/axeyum-solver/src/route_trace.rs:317|",
-        "struct|SatBvBackend|crates/axeyum-solver/src/sat_bv_backend.rs:62|",
-        "fn|SatBvBackend::new|crates/axeyum-solver/src/sat_bv_backend.rs:68|",
+        "struct|SatBvBackend|crates/axeyum-solver/src/sat_bv_backend.rs:62|named-in-crate-path",
+        "fn|SatBvBackend::new|crates/axeyum-solver/src/sat_bv_backend.rs:68|method-of-referenced-type",
         "struct|SetCardinalityRefutationCertificate|crates/axeyum-solver/src/set_cardinality.rs:18|",
         "fn|set_cardinality_refutation|crates/axeyum-solver/src/set_cardinality.rs:59|",
         "enum|Rel|crates/axeyum-solver/src/simplex.rs:78|",
@@ -4335,9 +4264,9 @@
         "fn|optimize_smtlib_lexicographic|crates/axeyum-solver/src/smtlib.rs:2119|",
         "fn|solve_smtlib_get_value|crates/axeyum-solver/src/smtlib.rs:2194|named-in-crate-path",
         "fn|solve_smtlib_get_assignment|crates/axeyum-solver/src/smtlib.rs:2335|named-in-crate-path",
-        "fn|solve_smtlib_get_assertions|crates/axeyum-solver/src/smtlib.rs:2380|",
-        "fn|solve_smtlib_get_info|crates/axeyum-solver/src/smtlib.rs:2451|",
-        "fn|solve_smtlib_get_option|crates/axeyum-solver/src/smtlib.rs:2524|",
+        "fn|solve_smtlib_get_assertions|crates/axeyum-solver/src/smtlib.rs:2380|named-in-crate-path",
+        "fn|solve_smtlib_get_info|crates/axeyum-solver/src/smtlib.rs:2451|named-in-crate-path",
+        "fn|solve_smtlib_get_option|crates/axeyum-solver/src/smtlib.rs:2524|named-in-crate-path",
         "fn|solve_smtlib_get_model|crates/axeyum-solver/src/smtlib.rs:2581|",
         "fn|solve_smtlib_model|crates/axeyum-solver/src/smtlib.rs:2606|named-in-crate-path",
         "fn|solve_smtlib_unsat_core|crates/axeyum-solver/src/smtlib.rs:2675|named-in-crate-path",
@@ -4429,16 +4358,16 @@
         "fn|BoundedString::from_int|crates/axeyum-solver/src/strings.rs:1006|",
         "enum|Regex|crates/axeyum-solver/src/strings.rs:1074|",
         "fn|Regex::literal|crates/axeyum-solver/src/strings.rs:1127|",
-        "enum|ParserStatus|crates/axeyum-solver/src/support_matrix.rs:36|",
-        "fn|ParserStatus::label|crates/axeyum-solver/src/support_matrix.rs:54|",
-        "enum|IrStatus|crates/axeyum-solver/src/support_matrix.rs:67|",
-        "fn|IrStatus::label|crates/axeyum-solver/src/support_matrix.rs:82|",
-        "enum|SolverStatus|crates/axeyum-solver/src/support_matrix.rs:95|",
-        "fn|SolverStatus::label|crates/axeyum-solver/src/support_matrix.rs:113|",
-        "enum|ProofStatus|crates/axeyum-solver/src/support_matrix.rs:127|",
-        "fn|ProofStatus::label|crates/axeyum-solver/src/support_matrix.rs:144|",
-        "struct|SupportRow|crates/axeyum-solver/src/support_matrix.rs:156|",
-        "const|SUPPORT_MATRIX|crates/axeyum-solver/src/support_matrix.rs:177|",
+        "enum|ParserStatus|crates/axeyum-solver/src/support_matrix.rs:36|named-in-crate-path",
+        "fn|ParserStatus::label|crates/axeyum-solver/src/support_matrix.rs:54|method-of-referenced-type",
+        "enum|IrStatus|crates/axeyum-solver/src/support_matrix.rs:67|named-in-crate-path",
+        "fn|IrStatus::label|crates/axeyum-solver/src/support_matrix.rs:82|method-of-referenced-type",
+        "enum|SolverStatus|crates/axeyum-solver/src/support_matrix.rs:95|named-in-crate-path",
+        "fn|SolverStatus::label|crates/axeyum-solver/src/support_matrix.rs:113|method-of-referenced-type",
+        "enum|ProofStatus|crates/axeyum-solver/src/support_matrix.rs:127|named-in-crate-path",
+        "fn|ProofStatus::label|crates/axeyum-solver/src/support_matrix.rs:144|method-of-referenced-type",
+        "struct|SupportRow|crates/axeyum-solver/src/support_matrix.rs:156|named-in-crate-path",
+        "const|SUPPORT_MATRIX|crates/axeyum-solver/src/support_matrix.rs:177|named-in-crate-path",
         "fn|support_matrix_markdown|crates/axeyum-solver/src/support_matrix.rs:533|named-in-crate-path",
         "enum|PathStatus|crates/axeyum-solver/src/symexec.rs:59|",
         "fn|PathStatus::is_feasible|crates/axeyum-solver/src/symexec.rs:73|",
@@ -4596,14 +4525,14 @@
         "fn|TinyBvProgram::concrete_run|crates/axeyum-solver/src/toy_bv_vm.rs:1549|",
         "fn|TinyBvProgram::concrete_reaches_win|crates/axeyum-solver/src/toy_bv_vm.rs:1554|",
         "fn|TinyBvProgram::concrete_reaches_pc|crates/axeyum-solver/src/toy_bv_vm.rs:1560|",
-        "enum|TrustId|crates/axeyum-solver/src/trust.rs:26|",
+        "enum|TrustId|crates/axeyum-solver/src/trust.rs:26|named-in-crate-path",
         "const|ALL_TRUST_IDS|crates/axeyum-solver/src/trust.rs:124|named-in-crate-path",
-        "fn|TrustId::label|crates/axeyum-solver/src/trust.rs:144|",
-        "fn|TrustId::meaning|crates/axeyum-solver/src/trust.rs:165|",
-        "fn|TrustId::pedantic_level|crates/axeyum-solver/src/trust.rs:190|",
-        "fn|TrustId::is_certified|crates/axeyum-solver/src/trust.rs:284|",
-        "fn|TrustId::reference|crates/axeyum-solver/src/trust.rs:305|",
-        "struct|TrustStep|crates/axeyum-solver/src/trust.rs:336|",
+        "fn|TrustId::label|crates/axeyum-solver/src/trust.rs:144|method-of-referenced-type",
+        "fn|TrustId::meaning|crates/axeyum-solver/src/trust.rs:165|method-of-referenced-type",
+        "fn|TrustId::pedantic_level|crates/axeyum-solver/src/trust.rs:190|method-of-referenced-type",
+        "fn|TrustId::is_certified|crates/axeyum-solver/src/trust.rs:284|method-of-referenced-type",
+        "fn|TrustId::reference|crates/axeyum-solver/src/trust.rs:305|method-of-referenced-type",
+        "struct|TrustStep|crates/axeyum-solver/src/trust.rs:336|named-in-crate-path",
         "fn|trust_ledger_markdown|crates/axeyum-solver/src/trust.rs:348|named-in-crate-path",
         "struct|UfArithCongruenceCertificate|crates/axeyum-solver/src/uf_arith.rs:19|",
         "fn|uf_arith_congruence_refutation|crates/axeyum-solver/src/uf_arith.rs:32|",
@@ -4641,9 +4570,9 @@
       ],
       "items_format": "kind|name|file:line|reference_evidence",
       "public": 1215,
-      "referenced": 79,
+      "referenced": 110,
       "tier_r": 10,
-      "tier_r_unreferenced": 8,
+      "tier_r_unreferenced": 0,
       "tier_unassigned": 27
     },
     {
@@ -5290,7 +5219,7 @@
     }
   },
   "generated_by": "scripts/gen-python-coverage.py",
-  "git_commit": "unknown",
+  "git_commit": "4a03a50433bfa37ccc21e44e03a863d3149b140d",
   "git_commit_note": "excluded from --check: a file cannot carry the id of the commit containing it",
   "inventory": [
     {
@@ -7428,7 +7357,7 @@
         "solve_smtlib_get_assertions"
       ],
       "path": "smtlib.rs:2380",
-      "referenced": false,
+      "referenced": true,
       "section": "1. The SMT-LIB text front door \u2014 `crates/axeyum-solver/src/smtlib.rs`",
       "source": "docs/python-2026-08/inventories/smt-solver.md:77",
       "tier": "R"
@@ -7441,7 +7370,7 @@
         "solve_smtlib_get_info"
       ],
       "path": "smtlib.rs:2451",
-      "referenced": false,
+      "referenced": true,
       "section": "1. The SMT-LIB text front door \u2014 `crates/axeyum-solver/src/smtlib.rs`",
       "source": "docs/python-2026-08/inventories/smt-solver.md:78",
       "tier": "R/P"
@@ -7454,7 +7383,7 @@
         "solve_smtlib_get_option"
       ],
       "path": "smtlib.rs:2524",
-      "referenced": false,
+      "referenced": true,
       "section": "1. The SMT-LIB text front door \u2014 `crates/axeyum-solver/src/smtlib.rs`",
       "source": "docs/python-2026-08/inventories/smt-solver.md:79",
       "tier": "R"
@@ -7681,7 +7610,7 @@
         "SolveStats"
       ],
       "path": "backend.rs:595",
-      "referenced": false,
+      "referenced": true,
       "section": "2. Solver core \u2014 `backend.rs`, `error.rs`, `model.rs` (feature: **default `qfbv`**)",
       "source": "docs/python-2026-08/inventories/smt-solver.md:109",
       "tier": "R"
@@ -7694,7 +7623,7 @@
         "Capabilities"
       ],
       "path": "backend.rs:613",
-      "referenced": false,
+      "referenced": true,
       "section": "2. Solver core \u2014 `backend.rs`, `error.rs`, `model.rs` (feature: **default `qfbv`**)",
       "source": "docs/python-2026-08/inventories/smt-solver.md:110",
       "tier": "R"
@@ -7707,7 +7636,7 @@
         "SolverBackend"
       ],
       "path": "backend.rs:629",
-      "referenced": false,
+      "referenced": true,
       "section": "2. Solver core \u2014 `backend.rs`, `error.rs`, `model.rs` (feature: **default `qfbv`**)",
       "source": "docs/python-2026-08/inventories/smt-solver.md:111",
       "tier": "P"
@@ -7720,7 +7649,7 @@
         "SatBvBackend"
       ],
       "path": "lib.rs:870",
-      "referenced": false,
+      "referenced": true,
       "section": "2. Solver core \u2014 `backend.rs`, `error.rs`, `model.rs` (feature: **default `qfbv`**)",
       "source": "docs/python-2026-08/inventories/smt-solver.md:112",
       "tier": "P"
@@ -7931,7 +7860,7 @@
         "TrustStep"
       ],
       "path": "trust.rs:26",
-      "referenced": false,
+      "referenced": true,
       "section": "3. Model replay \u2014 the **C** tier (feature **full**)",
       "source": "docs/python-2026-08/inventories/smt-solver.md:148",
       "tier": "R"
@@ -7946,7 +7875,7 @@
         "CheckedBy"
       ],
       "path": "capabilities.rs:26",
-      "referenced": false,
+      "referenced": true,
       "section": "3. Model replay \u2014 the **C** tier (feature **full**)",
       "source": "docs/python-2026-08/inventories/smt-solver.md:149",
       "tier": "R"
@@ -7963,7 +7892,7 @@
         "SupportRow"
       ],
       "path": "support_matrix.rs:36",
-      "referenced": false,
+      "referenced": true,
       "section": "3. Model replay \u2014 the **C** tier (feature **full**)",
       "source": "docs/python-2026-08/inventories/smt-solver.md:150",
       "tier": "R"
@@ -8357,7 +8286,7 @@
         "Z3Backend"
       ],
       "path": "solver.rs:56",
-      "referenced": false,
+      "referenced": true,
       "section": "6. Send/Sync and lifetime hazards \u2014 the complete list",
       "source": "docs/python-2026-08/inventories/smt-solver.md:259",
       "tier": ""
@@ -8734,10 +8663,10 @@
     "inventoried": 250,
     "inventory_rows": 250,
     "inventory_rows_excluded_binding": 6,
-    "public": 4672,
-    "referenced": 831,
+    "public": 4681,
+    "referenced": 862,
     "tier_r": 61,
-    "tier_r_unreferenced": 8,
+    "tier_r_unreferenced": 0,
     "tier_unassigned": 65
   }
 }

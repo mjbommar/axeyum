@@ -17,6 +17,7 @@ use pyo3::types::{PyDict, PyModule};
 use crate::error::AxeyumError;
 use crate::ir::arena::Arena;
 use crate::ir::types::{Term, check_epoch};
+use crate::solver::ledgers::PyTrustStep;
 use crate::solver::proofs::PyUnsatProof;
 use crate::solver::results::{Config, PyCheckResult, PyRouteTrace, map_solver_error};
 
@@ -349,6 +350,23 @@ impl PyEvidenceReport {
             .trusted_steps
             .iter()
             .map(|step| (step.id.label(), step.certified))
+            .collect()
+    }
+
+    /// The trusted reductions this result depended on, as structured
+    /// [`TrustStep`](axeyum.solver.TrustStep) records in canonical order.
+    ///
+    /// The same list as `trusted_steps`, with the reduction's meaning,
+    /// pedantic level, ADR and LEDGER-wide `is_certified()` bit alongside the
+    /// PER-RUN `certified` one. Read `certified` to know what this result
+    /// carried; `ledger_certified` answers a different question and a row
+    /// where the two disagree is the normal case, not an anomaly.
+    #[getter]
+    fn trust_steps(&self) -> Vec<PyTrustStep> {
+        self.report
+            .trusted_steps
+            .iter()
+            .map(|&step| PyTrustStep::build(step))
             .collect()
     }
 
