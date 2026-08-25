@@ -91,10 +91,23 @@ THEOREM_RE = re.compile(rf"\^?(?<![A-Za-z])((?:{_NS})(?:{_DOT}{_SEG})+)")
 
 
 def inventory() -> dict[str, list[str]]:
-    """`theorem -> [direct theorem dependency]`, read out of the kernel."""
+    """`theorem -> [direct theorem dependency]`, read out of the kernel.
+
+    `--release` is MANDATORY, not a speed nicety. Since `f74fb3a3e` this tool
+    unconditionally builds `creal`/`complex`/`cpoint` (its own module doc says
+    so explicitly: "`--release` IS NOW MANDATORY"), which recurses deep enough
+    through `Kernel::add_declaration` to blow a debug build's default thread
+    stack -- the same resource limit CLAUDE.md already documents for
+    `prelude_theorem_inventory --include-constructed`. Measured 2026-08-25 on
+    this tree: the debug form SIGABRTs (`Signals.SIGABRT`, "has overflowed its
+    stack") every time, so this checker -- wired into both `scripts/check.sh`
+    and `just check` -- could not validate ANY kernel-route fact's
+    `depends_on`, including the 175 that predate this fix. Nothing was wrong
+    with any fact; the checker itself never ran to completion.
+    """
     proc = subprocess.run(
         [
-            "cargo", "run", "-q", "-p", "axeyum-lean-kernel",
+            "cargo", "run", "-q", "--release", "-p", "axeyum-lean-kernel",
             "--example", "theorem_dependency_inventory",
         ],
         cwd=ROOT,
