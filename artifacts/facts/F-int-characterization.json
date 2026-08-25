@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.Characterization.induction : ((x0 : ((x0 : Int) -> Prop)) -> ((x1 : x0 Int.zero) -> ((x2 : ((x2 : Int) -> ((x3 : x0 x2) -> x0 (Int.add x2 Int.one)))) -> ((x3 : ((x3 : Int) -> ((x4 : x0 x3) -> x0 (Int.add x3 (Int.neg Int.one))))) -> ((x4 : Int) -> x0 x4)))))",
     "fragment": "Int",
+    "kernel_theorem": null,
     "free_symbols": [
       "x0",
       "x1",

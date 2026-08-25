@@ -52,6 +52,33 @@ class TheTheoremNameComesFromTheFactsOwnCommand(unittest.TestCase):
         self.assertIsNone(DD.theorem_of(data))
 
 
+class AnExplicitFormalKernelTheoremOverridesExtraction(unittest.TestCase):
+    """`F:cassini-identity-over-constructed-integers` extracted `Int.sub` --
+    matched out of its OWN formal-statement fragment embedded in the
+    checker_command -- instead of its actual subject `Int.fib_cassini`, until
+    `formal.kernel_theorem` existed to pin the right answer. `F:complex-ring-
+    constructed-axiom-free` and `F:complex-mul-assoc` both extracted
+    `Complex.mul_assoc` and collided, until an explicit `null` marked the
+    package-level fact as having no single subject."""
+
+    def test_an_explicit_string_wins_even_when_extraction_would_disagree(self) -> None:
+        data = fact("F:a", "Nat.mul_one")
+        data["formal"] = {"kernel_theorem": "Nat.zero_add"}
+        self.assertEqual(DD.theorem_of(data), "Nat.zero_add")
+
+    def test_an_explicit_null_means_no_single_subject_even_though_evidence_names_one(
+        self,
+    ) -> None:
+        data = fact("F:a", "Nat.mul_one")
+        data["formal"] = {"kernel_theorem": None}
+        self.assertIsNone(DD.theorem_of(data))
+
+    def test_an_absent_key_still_falls_back_to_extraction(self) -> None:
+        data = fact("F:a", "Nat.mul_one")
+        data["formal"] = {"language": "lean4"}
+        self.assertEqual(DD.theorem_of(data), "Nat.mul_one")
+
+
 class EachGuardCanFail(unittest.TestCase):
     def test_a_missing_derived_edge_fails(self) -> None:
         facts = {

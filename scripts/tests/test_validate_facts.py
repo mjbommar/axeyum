@@ -298,5 +298,82 @@ class DeepStackInventoryCheckerCommandTests(unittest.TestCase):
                 self.assertFalse(MODULE.checker_command_needs_release_for_deep_stack(ok_cmd))
 
 
+KERNEL_THEOREM_FACT = ROOT / "artifacts" / "facts" / "F-nat-add-assoc.json"
+
+
+class KernelTheoremFieldTests(unittest.TestCase):
+    """`formal.kernel_theorem` is what `theorem_of`
+    (scripts/check-fact-depends-derived.py, shared by the chain catalog and
+    the autogenesis snapshot builder) reads, WHEN PRESENT, as a fact's
+    subject theorem -- `null` included, meaning "explicitly no single kernel
+    theorem" (a package-level fact). A malformed value here is never caught
+    by anything else, since no other tool reads this key, so it must be
+    validated the same way an extracted theorem name is."""
+
+    def setUp(self) -> None:
+        self.fact = json.loads(KERNEL_THEOREM_FACT.read_text(encoding="utf-8"))
+
+    def errors_for_kernel_theorem(self, value, *, key_present: bool = True) -> list[str]:
+        fact = copy.deepcopy(self.fact)
+        if key_present:
+            fact["formal"]["kernel_theorem"] = value
+        else:
+            fact["formal"].pop("kernel_theorem", None)
+        return MODULE.validate_one(KERNEL_THEOREM_FACT, fact, {fact["id"]})
+
+    def test_absent_key_is_accepted(self) -> None:
+        self.assertEqual(self.errors_for_kernel_theorem(None, key_present=False), [])
+
+    def test_explicit_null_is_accepted(self) -> None:
+        # `null` means "package-level, no single subject" -- a real, valid
+        # value, not an error.
+        self.assertEqual(self.errors_for_kernel_theorem(None), [])
+
+    def test_a_real_dotted_theorem_name_is_accepted(self) -> None:
+        self.assertEqual(self.errors_for_kernel_theorem("Nat.add_assoc"), [])
+
+    def test_a_multi_segment_characterization_name_is_accepted(self) -> None:
+        self.assertEqual(
+            self.errors_for_kernel_theorem("Int.Characterization.categorical"), []
+        )
+
+    def test_an_invalid_value_is_rejected(self) -> None:
+        # Deliberately ONE assertion through `validate_one`, not a subTest
+        # loop over every bad shape: this suite's contract is that deleting
+        # the guard kills exactly one test. Coverage of WHICH shapes are
+        # invalid lives in the two tests below, which call
+        # `kernel_theorem_is_valid` directly and so are unaffected by a
+        # mutation at the `validate_one` call site.
+        errors = self.errors_for_kernel_theorem("not a theorem name")
+        self.assertTrue(
+            any("formal.kernel_theorem" in e for e in errors), errors
+        )
+
+    def test_kernel_theorem_is_valid_rejects_every_bad_shape(self) -> None:
+        for value in (
+            "not a theorem name",
+            "Nat",  # bare namespace, no dot-segment
+            42,
+            "",
+            "nat.add_assoc",  # lowercase namespace
+        ):
+            with self.subTest(value=value):
+                self.assertFalse(MODULE.kernel_theorem_is_valid(value))
+
+    def test_kernel_theorem_is_valid_accepts_every_good_shape(self) -> None:
+        for value in (
+            None,
+            "Nat.add_assoc",
+            "Int.Characterization.categorical",
+            "AxReal.add_comm",
+            "AxNat.fib",
+            "CReal.add_comm",
+            "Complex.mul_assoc",
+            "CPoint.dot_comm",
+        ):
+            with self.subTest(value=value):
+                self.assertTrue(MODULE.kernel_theorem_is_valid(value))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -57,6 +57,15 @@ FACTS = ROOT / "artifacts" / "facts"
 SCHEMA = ROOT / "artifacts" / "ontology" / "fact.schema.json"
 
 ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
+# Same namespace class `theorem_of` (scripts/check-fact-depends-derived.py) reads
+# checker_commands with, plus `null` for "explicitly no single subject" -- see
+# `formal.kernel_theorem` in fact.schema.json. A garbage string here would be
+# silently treated as a theorem name by every `theorem_of` consumer and would
+# never be caught, since nothing else reads this field.
+KERNEL_THEOREM_RE = re.compile(
+    r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Str|"
+    r"CReal|Complex|CPoint)(?:\.[A-Za-z_][A-Za-z0-9_']*)+$"
+)
 
 REQUIRED = {"schema_version", "id", "title", "statement", "formal",
             "epistemic_status", "depends_on", "evidence", "provenance"}
@@ -110,6 +119,17 @@ ESTABLISHED = {"proved", "computed", "refuted"}
 
 def fail(errors: list[str], msg: str) -> None:
     errors.append(msg)
+
+
+def kernel_theorem_is_valid(value: object) -> bool:
+    """`formal.kernel_theorem`: `None` (an explicit "no single kernel theorem",
+    for a package-level fact) or a dotted namespaced kernel theorem name that
+    `theorem_of` (scripts/check-fact-depends-derived.py) could plausibly have
+    extracted itself. Anything else is a value none of that field's consumers
+    could use, and nothing else in the ledger would catch it."""
+    if value is None:
+        return True
+    return isinstance(value, str) and bool(KERNEL_THEOREM_RE.match(value))
 
 
 _GREP_INVOCATION_RE = re.compile(r"\bgrep\b((?:\s+(?:-[a-zA-Z]+|--[a-zA-Z-]+))*)")
@@ -239,6 +259,19 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
     if formal.get("language") not in LANGUAGES_ALL:
         fail(errors, f"{fid}: formal.language {formal.get('language')!r} not in "
                      f"{sorted(LANGUAGES_ALL)}")
+    # `theorem_of` (scripts/check-fact-depends-derived.py, shared by the chain
+    # catalog and the autogenesis snapshot builder) reads this key WHEN PRESENT
+    # as the fact's subject theorem, `null` included -- `null` means "explicitly
+    # no single kernel theorem" (a package-level fact) and is NOT the same as
+    # omitting the key (which asks for extraction from evidence). A malformed
+    # string here would be silently treated as a real theorem name by every one
+    # of those consumers, so it is validated the same way a theorem name is
+    # matched out of a checker_command.
+    if "kernel_theorem" in formal and not kernel_theorem_is_valid(formal["kernel_theorem"]):
+        fail(errors, f"{fid}: formal.kernel_theorem must be null (explicitly "
+                     f"'no single kernel theorem') or a dotted namespaced "
+                     f"kernel theorem name such as 'Rat.det2_fib'; got "
+                     f"{formal['kernel_theorem']!r}")
     if formal.get("language") == "certificate-spec":
         statement = formal.get("statement", "")
         try:

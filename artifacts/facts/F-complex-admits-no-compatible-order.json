@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "Complex.no_compatible_order : forall (le lt : Complex -> Complex -> Prop), (forall x, le x x) -> (forall x, Not (lt x x)) -> (forall x y z, le x y -> lt y z -> lt x z) -> (forall x x2 y y2, le x x2 -> le y y2 -> le (Complex.add x y) (Complex.add x2 y2)) -> (forall a b c e, Complex.Equiv a b -> Complex.Equiv c e -> le a c -> le b e) -> (forall x, le Complex.zero (Complex.mul x x)) -> lt Complex.zero Complex.one -> False",
     "fragment": "Complex",
+    "kernel_theorem": "Complex.no_compatible_order",
     "free_symbols": [
       "Complex",
       "Complex.Equiv",

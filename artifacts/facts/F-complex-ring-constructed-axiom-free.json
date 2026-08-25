@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "Complex : Type, Complex.mk : CReal -> CReal -> Complex, Complex.Equiv : Complex -> Complex -> Prop := fun z w => And (CReal.Equiv (Complex.re z) (Complex.re w)) (CReal.Equiv (Complex.im z) (Complex.im w)); and for each L in {add_comm, add_assoc, add_zero, add_neg, mul_comm, mul_assoc, mul_one, mul_zero, left_distrib}, Complex.L is a checked Theorem with Kernel::axiom_footprint = [].",
     "fragment": "Complex",
+    "kernel_theorem": null,
     "free_symbols": [
       "Complex",
       "Complex.Equiv",

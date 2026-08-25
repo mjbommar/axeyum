@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> ((x4 : Rat) -> ((x5 : Rat) -> ((x6 : Rat) -> ((x7 : Rat) -> Eq.{1} Rat (Rat.det2 (Rat.add (Rat.mul x0 x4) (Rat.mul x1 x6)) (Rat.add (Rat.mul x0 x5) (Rat.mul x1 x7)) (Rat.add (Rat.mul x2 x4) (Rat.mul x3 x6)) (Rat.add (Rat.mul x2 x5) (Rat.mul x3 x7))) (Rat.mul (Rat.det2 x0 x1 x2 x3) (Rat.det2 x4 x5 x6 x7))))))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.det2_mul",
     "free_symbols": [
       "x0",
       "x1",

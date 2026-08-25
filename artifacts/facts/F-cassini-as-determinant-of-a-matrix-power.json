@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "((x0 : AxNat) -> Eq.{1} Rat (Rat.det2 (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ (AxNat.succ x0))))) (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ x0)))) (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ x0)))) (Rat.ofInt (Int.ofNat (AxNat.fib x0)))) (Rat.ofInt (Int.pow (Int.neg Int.one) (AxNat.succ x0))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.det2_fib",
     "free_symbols": [
       "x0"
     ]
