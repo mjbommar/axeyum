@@ -233,6 +233,7 @@ step parity-freshness ./scripts/check-parity-freshness.py
 step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
+step commit-msg-trailer-controls ./scripts/tests/test-commit-msg-trailer.sh
 step lane-push-controls ./scripts/tests/test-lane-push-target.sh
 # The pre-push compile step must build examples/ and tests/. Without
 # `--all-targets` it builds neither, and on 2026-08-20 a non-compiling
