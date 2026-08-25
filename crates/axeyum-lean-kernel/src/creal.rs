@@ -1509,6 +1509,30 @@ pub struct CRealPrelude {
     /// shape not matched `hasDerivative_sq` at `n = 2`, one of the two would be
     /// wrong.
     pub has_derivative_pow_two: NameId,
+    /// `CReal.hasDerivative_cube : ∀ a b k1 k2 k3,
+    /// (∀ z, le a z → le z b → le (abs z) (ofRat (natDivSucc (succ k1) 0))) →
+    /// (∀ z, le a z → le z b → le (abs (mul z z)) (ofRat (natDivSucc (succ
+    /// k2) 0))) → (∀ z, le a z → le z b → le (abs (add z z)) (ofRat
+    /// (natDivSucc (succ k3) 0))) → HasDerivativeOn (fun r => mul r (mul r
+    /// r)) (fun x => add (mul one (mul x x)) (mul x (add x x))) a b` — the
+    /// cube rule, built with **zero new algebra**: `r*(r*r)` is exactly
+    /// `id(r) * sq(r)`, so this is [`Self::has_derivative_mul`] applied
+    /// directly to [`Self::has_derivative_id`] and [`Self::has_derivative_sq`],
+    /// with `CReal.uniformly_continuous_id` supplying the continuity
+    /// hypothesis the product rule's own third term needs.
+    ///
+    /// The three magnitude bounds (on `id`, on `sq`, and on `sq`'s own
+    /// derivative `fun x => x+x`) are three INDEPENDENT caller-supplied
+    /// hypotheses, matching `hasDerivative_mul`'s own three-independent-
+    /// bounds shape exactly — deliberately **not** derived from one another
+    /// via a single interval bound. Folding them into one would need a rational
+    /// identity of the shape `natDivSucc(m,0) * natDivSucc(n,0) =
+    /// natDivSucc(m*n,0)`, which is not established anywhere in this prelude
+    /// (see `creal/derivative.rs`'s module documentation for what closing a
+    /// comparably-shaped gap — `Rat.natDivSucc` antitone in its index —
+    /// actually cost the sum rule); avoiding that gap by taking three
+    /// independent hypotheses is what keeps this cheap.
+    pub has_derivative_cube: NameId,
 }
 
 impl CRealPrelude {
@@ -1765,6 +1789,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_mul: kernel.name_str(creal, "hasDerivative_mul"),
         has_derivative_congr: kernel.name_str(creal, "hasDerivative_congr"),
         has_derivative_pow_two: kernel.name_str(creal, "hasDerivative_pow_two"),
+        has_derivative_cube: kernel.name_str(creal, "hasDerivative_cube"),
     }
 }
 

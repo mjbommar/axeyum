@@ -204,19 +204,82 @@
 //! any fixed-arity equal split, and needs nothing this prelude does not
 //! already have.
 //!
-//! **`hasDerivative_mul` itself: built, `cargo check`/`clippy` clean, kernel
-//! status unresolved as of this commit.** A first `Kernel::add_declaration`
-//! attempt was rejected in ~29s (an ordinary type error, not a large-term
-//! mismatch) on an argument-order bug: four `esymm` calls in the "combine
-//! the three terms" section (the ones lifting a raw `Rat`-level `add_assoc`
-//! to its reverse direction) had their explicit `(a, b)` arguments swapped
-//! relative to the underlying proof's own type, so `esymm` built `Equiv b a`
-//! from a hypothesis actually typed `Equiv a b` read backwards — caught and
-//! fixed by re-deriving each `add_assoc` call's real type by hand and
-//! checking it against the adjacent comment, not by re-running the kernel.
-//! **Not re-verified against the kernel after the fix**; the next session
-//! should run `cargo test -p axeyum-lean-kernel --lib creal` before trusting
-//! this further.
+//! **`hasDerivative_mul` itself: built, `cargo check`/`clippy` clean, and
+//! now KERNEL-VERIFIED.** A first `Kernel::add_declaration` attempt was
+//! rejected in ~29s (an ordinary type error, not a large-term mismatch) on
+//! an argument-order bug: four `esymm` calls in the "combine the three
+//! terms" section (the ones lifting a raw `Rat`-level `add_assoc` to its
+//! reverse direction) had their explicit `(a, b)` arguments swapped relative
+//! to the underlying proof's own type, so `esymm` built `Equiv b a` from a
+//! hypothesis actually typed `Equiv a b` read backwards — caught and fixed
+//! by re-deriving each `add_assoc` call's real type by hand and checking it
+//! against the adjacent comment, not by re-running the kernel. **Re-verified
+//! since**: `cargo test -p axeyum-lean-kernel --lib creal::creal_tests::`
+//! passes all 28 tests, including `creal_prelude_builds` (the whole prelude,
+//! `hasDerivative_mul` included, kernel-checks with no `Err`) and
+//! `every_creal_declaration_is_checked_and_axiom_free`.
+//!
+//! **Landed in a later pass still: `hasDerivative_cube`, with zero new
+//! algebra.** `r*(r*r)` is exactly `id(r) * sq(r)`, so it is
+//! [`declare_has_derivative_mul`]'s own theorem applied directly to
+//! [`CRealPrelude::has_derivative_id`] and [`CRealPrelude::has_derivative_sq`],
+//! with [`CRealPrelude::uniformly_continuous_id`] supplying the continuity
+//! hypothesis the product rule's third term needs. The three magnitude
+//! bounds (on `id`, on `sq`, and on `sq`'s own derivative `fun x=>x+x`) are
+//! kept as three INDEPENDENT caller-supplied hypotheses rather than folded
+//! into one via a single interval bound — folding them would need a rational
+//! identity of the shape `natDivSucc(m,0) * natDivSucc(n,0) =
+//! natDivSucc(m*n,0)`, which is not established anywhere in this prelude,
+//! and is exactly the kind of gap that cost the sum rule its own
+//! antitonicity blocker above. See [`CRealPrelude::has_derivative_cube`] for
+//! the statement in full; kernel-verified (axiom-footprint 0) by the same
+//! test run as `hasDerivative_mul`.
+//!
+//! **What this means for the next domino (general `hasDerivative_pow`,
+//! `hasDerivative_chain`, or uniqueness of the derivative):** all three were
+//! scouted and found to need genuinely new supporting infrastructure, not
+//! present anywhere in this prelude, before any new algebra could even
+//! start:
+//!
+//! - **`hasDerivative_pow` at general `n`, by induction from `hasDerivative_mul`**
+//!   (rather than `hasDerivative_cube`'s direct `id * sq` composition) needs
+//!   `UniformlyContinuousOn` and THREE independent `BoundedOn` facts about
+//!   `F^(n-1)` at every inductive step — i.e. closure lemmas
+//!   ("product of two bounded/continuous functions is bounded/continuous")
+//!   that do not exist in `uniform_continuity.rs` or anywhere else in this
+//!   file (checked: `uniform_continuity.rs` declares only the carrier, its
+//!   projections, `uniformly_continuous_id`, and `uniformly_continuous_const`
+//!   — no `_mul`, no `_add`). `hasDerivative_cube` sidesteps this entirely by
+//!   composing `id` and `sq` directly instead of inducting.
+//! - **`hasDerivative_chain`** needs (1) a hypothesis relating `F`'s range on
+//!   `[a,b]` to `G`'s own domain (this file's convention of sharing one
+//!   `[a,b]` across every function does not by itself make `F`'s image land
+//!   in `[a,b]`, so either an explicit self-map hypothesis or a genuinely
+//!   different domain `[c,e]` for `G` plus a range-mapping hypothesis is
+//!   forced — a real, new hypothesis, not a simplification of one already
+//!   here), and (2) composing `G`'s own accuracy target through `F`'s
+//!   modulus via `UniformlyContinuousOn F a b`'s own continuity modulus
+//!   (usable as-is, the same tool `hasDerivative_mul`'s third term already
+//!   takes as an explicit hypothesis) — buildable in principle, but a
+//!   genuinely new two-level modulus composition, not a reuse of the
+//!   sum/product rescale machinery below.
+//! - **Uniqueness of the derivative** (`HasDerivativeOn F F1 a b ->
+//!   HasDerivativeOn F F2 a b -> Equiv (F1 x) (F2 x)` for `x` in `[a,b]`)
+//!   needs a closing lemma of the shape "if `le (abs v) (ofRat (natDivSucc 1
+//!   e))` for every `e : Nat`, then `Equiv v zero`" at the ABSTRACT `le`
+//!   level. `CReal.equiv_of_bounded` is the nearest fact in this prelude and
+//!   is NOT it: it operates on `seq x n` directly (`∀ n, Within (seq x n −
+//!   seq y n) (natDivSucc K n)) → Equiv x y`), a lower-level API this file
+//!   never touches, and bridging an abstract `∀ e, le (abs v) (...)` fact
+//!   down to a `seq`-level bound is its own undertaking. Separately, proving
+//!   `F1(x) ~ F2(x)` also needs a witness `y != x` inside `[a,b]` arbitrarily
+//!   close to `x`, chosen WITHOUT deciding `x`'s position relative to `a`/`b`
+//!   (`CReal.le` is undecidable) — a convex-combination construction
+//!   sidesteps the branching (see the reasoning trace for this session), but
+//!   still needs a "cancel by a known-positive scalar" lemma this file does
+//!   not have either. None of this is a dead end, but none of it is cheap,
+//!   and this session left it unbuilt rather than risk a partial, unverified
+//!   attempt at either.
 
 #![allow(
     clippy::doc_markdown,
@@ -256,6 +319,7 @@ pub(super) fn declare_derivative(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     declare_has_derivative_smul(d, p)?;
     declare_has_derivative_sub(d, p)?;
     declare_has_derivative_mul(d, p)?;
+    declare_has_derivative_cube(d, p)?;
     declare_has_derivative_congr(d, p)
     // `hasDerivative_pow_two` is NOT called here: it mentions `CReal.pow`,
     // which `power.rs` declares later in `build_creal_prelude_uncached`'s own
@@ -5350,6 +5414,148 @@ fn declare_has_derivative_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.has_derivative_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.hasDerivative_cube : ∀ a b k1 k2 k3, ... → HasDerivativeOn (fun r
+/// => mul r (mul r r)) (fun x => add (mul one (mul x x)) (mul x (add x
+/// x))) a b` — see [`CRealPrelude::has_derivative_cube`]'s own doc comment
+/// for the statement in full and why the three magnitude bounds are kept
+/// independent rather than folded into one.
+///
+/// Built with **zero new algebra**: `r*(r*r)` is literally `id(r) * sq(r)`,
+/// so the whole proof is [`declare_has_derivative_mul`]'s own theorem
+/// applied to [`CRealPrelude::has_derivative_id`] and
+/// [`CRealPrelude::has_derivative_sq`], with
+/// [`CRealPrelude::uniformly_continuous_id`] supplying the continuity
+/// hypothesis `hasDerivative_mul`'s own third term needs — no ring identity
+/// is derived here at all, unlike `hasDerivative_sq`'s `diff_of_squares`
+/// route.
+fn declare_has_derivative_cube(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    // Rebuilt locally rather than imported: `declare_has_derivative_id` and
+    // `declare_has_derivative_sq` each build their own `identity`/`square`
+    // terms as PRIVATE locals, exactly the way `declare_has_derivative_pow_two`
+    // already rebuilds `sq_fn`/`sq_deriv` locally before calling
+    // `p.has_derivative_sq` — a fresh `fun r => r` (resp. `fun r => r*r`)
+    // built here is the SAME final term after `lam_fv` abstraction erases the
+    // scaffolding free variable, so this matches the type `p.has_derivative_id`
+    // (resp. `p.has_derivative_sq`) actually carries.
+    let id_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let one_fn = {
+        let ignore_fv = d.fresh_fvar();
+        let one_c = d.kernel().const_(p.one, vec![]);
+        d.lam_fv(ignore_fv, carrier, one_c)
+    };
+    let sq_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let rr = cmul(d, p, r, r);
+        d.lam_fv(r_fv, carrier, rr)
+    };
+    let double_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let xx = cadd(d, p, x, x);
+        d.lam_fv(x_fv, carrier, xx)
+    };
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let k1_fv = d.fresh_fvar();
+    let k1 = d.kernel().fvar(k1_fv);
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+    let k3_fv = d.fresh_fvar();
+    let k3 = d.kernel().fvar(k3_fv);
+
+    // Same `bounded_on_ty` shape `declare_has_derivative_mul` itself uses for
+    // its own `hbf`/`hbg`/`hbgp`, applied at `id_fn`/`sq_fn`/`double_fn` so
+    // the types line up with `p.has_derivative_mul`'s own hypothesis types
+    // exactly (not merely up to a defeq the application would still have to
+    // re-derive).
+    let hbf_ty = bounded_on_ty(d, p, id_fn, a, b, k1);
+    let hbf_fv = d.fresh_fvar();
+    let hbf = d.kernel().fvar(hbf_fv);
+    let hbg_ty = bounded_on_ty(d, p, sq_fn, a, b, k2);
+    let hbg_fv = d.fresh_fvar();
+    let hbg = d.kernel().fvar(hbg_fv);
+    let hbgp_ty = bounded_on_ty(d, p, double_fn, a, b, k3);
+    let hbgp_fv = d.fresh_fvar();
+    let hbgp = d.kernel().fvar(hbgp_fv);
+
+    let hf = d.const_app(p.has_derivative_id, &[a, b]);
+    let hg = d.const_app(p.has_derivative_sq, &[a, b]);
+    let huc = d.const_app(p.uniformly_continuous_id, &[a, b]);
+
+    let mk_applied = d.const_app(
+        p.has_derivative_mul,
+        &[
+            id_fn, one_fn, sq_fn, double_fn, a, b, hf, hg, huc, k1, k2, k3, hbf, hbg, hbgp,
+        ],
+    );
+
+    let value = {
+        let with_hbgp = d.lam_fv(hbgp_fv, hbgp_ty, mk_applied);
+        let with_hbg = d.lam_fv(hbg_fv, hbg_ty, with_hbgp);
+        let with_hbf = d.lam_fv(hbf_fv, hbf_ty, with_hbg);
+        let with_k3 = d.lam_fv(k3_fv, nat, with_hbf);
+        let with_k2 = d.lam_fv(k2_fv, nat, with_k3);
+        let with_k1 = d.lam_fv(k1_fv, nat, with_k2);
+        let with_b = d.lam_fv(b_fv, carrier, with_k1);
+        d.lam_fv(a_fv, carrier, with_b)
+    };
+
+    // Stated with the plain, unfolded `r*(r*r)` / `1*(x*x) + x*(x+x)` shape
+    // rather than `id_fn`/`sq_fn` applied — defeq to `mk_applied`'s own
+    // inferred type by beta reduction alone (`Kernel::add_declaration` checks
+    // the value's type against this one up to definitional equality, the same
+    // way `declare_has_derivative_pow_two` states its `ty` using `CReal.pow`
+    // while its `value` is built through `hasDerivative_congr` entirely).
+    let cube_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let rr = cmul(d, p, r, r);
+        let rrr = cmul(d, p, r, rr);
+        d.lam_fv(r_fv, carrier, rrr)
+    };
+    let cube_deriv = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let xx = cmul(d, p, x, x);
+        let one_xx = cmul(d, p, one_c, xx);
+        let xpx = cadd(d, p, x, x);
+        let x_xpx = cmul(d, p, x, xpx);
+        let sum = cadd(d, p, one_xx, x_xpx);
+        d.lam_fv(x_fv, carrier, sum)
+    };
+
+    let ty = {
+        let applied = hd_ty(d, p, cube_fn, cube_deriv, a, b);
+        let with_hbgp = d.arrow(hbgp_ty, applied);
+        let with_hbg = d.arrow(hbg_ty, with_hbgp);
+        let with_hbf = d.arrow(hbf_ty, with_hbg);
+        let with_k3 = d.pi_fv(k3_fv, nat, with_hbf);
+        let with_k2 = d.pi_fv(k2_fv, nat, with_k3);
+        let with_k1 = d.pi_fv(k1_fv, nat, with_k2);
+        let with_b = d.pi_fv(b_fv, carrier, with_k1);
+        d.pi_fv(a_fv, carrier, with_b)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.has_derivative_cube,
         uparams: vec![],
         ty,
         value,
