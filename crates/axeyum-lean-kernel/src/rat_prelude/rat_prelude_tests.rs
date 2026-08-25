@@ -140,6 +140,13 @@ fn every_named_declaration_exists() {
         ("ofInt_mul", p.of_int_mul),
         ("ofInt_neg", p.of_int_neg),
         ("det2_fib", p.det2_fib),
+        ("det3", p.det3),
+        ("det3_id", p.det3_id),
+        ("det3_cofactor_row1", p.det3_cofactor_row1),
+        ("det3_ofInt", p.det3_ofint),
+        ("det3_example_generic", p.det3_example_generic),
+        ("det3_example_diagonal", p.det3_example_diagonal),
+        ("det3_example_singular", p.det3_example_singular),
     ];
     for (label, name) in expected {
         assert!(
@@ -376,6 +383,15 @@ fn matrix_laws_are_axiom_free() {
         "Rat.cramer2_y must be a Definition, found a different kind"
     );
 
+    let declaration = kernel
+        .environment()
+        .get(p.det3)
+        .expect("Rat.det3 was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Definition { .. }),
+        "Rat.det3 must be a Definition, found a different kind"
+    );
+
     let expected = [
         ("det2_swap_rows", p.det2_swap_rows),
         ("det2_id", p.det2_id),
@@ -398,6 +414,12 @@ fn matrix_laws_are_axiom_free() {
         ("ofInt_mul", p.of_int_mul),
         ("ofInt_neg", p.of_int_neg),
         ("det2_fib", p.det2_fib),
+        ("det3_id", p.det3_id),
+        ("det3_cofactor_row1", p.det3_cofactor_row1),
+        ("det3_ofInt", p.det3_ofint),
+        ("det3_example_generic", p.det3_example_generic),
+        ("det3_example_diagonal", p.det3_example_diagonal),
+        ("det3_example_singular", p.det3_example_singular),
     ];
     for (label, name) in expected {
         let declaration = kernel

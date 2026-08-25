@@ -1529,6 +1529,36 @@ pub struct RatPrelude {
     /// with [`Self::of_int_add`]/[`Self::of_int_mul`]/[`Self::of_int_neg`] —
     /// not reproved independently.
     pub det2_fib: NameId,
+
+    // --- the 3×3 determinant (matrix.rs) ------------------------------------
+    /// `Rat.det3 a b c d e f g h i :=`
+    /// `(a*(e*i - f*h) - b*(d*i - f*g)) + c*(d*h - e*g)` — the determinant of
+    /// `[[a,b,c],[d,e,f],[g,h,i]]`, cofactor-expanded along row 1. Nine
+    /// explicit scalar arguments, matching [`Self::det2`]'s convention: no
+    /// matrix carrier.
+    pub det3: NameId,
+    /// `Rat.det3_id : det3 1 0 0 0 1 0 0 0 1 = 1` — the 3×3 identity matrix
+    /// has determinant 1.
+    pub det3_id: NameId,
+    /// `Rat.det3_cofactor_row1 : ∀ a b c d e f g h i,`
+    /// `det3 a b c d e f g h i = (a * det2 e f h i - b * det2 d f g i) + c * det2 d e g h`
+    /// — cofactor expansion along the first row, in terms of [`Self::det2`]
+    /// applied to the three 2×2 minors.
+    pub det3_cofactor_row1: NameId,
+    /// `Rat.det3_ofInt : ∀ a b c d e f g h i : Int,`
+    /// `det3 (ofInt a) … (ofInt i) = ofInt ((a*(e*i-f*h) - b*(d*i-f*g)) + c*(d*h-e*g))`
+    /// — the bridge a concrete `det3` example uses to push its arithmetic
+    /// down to `Int`, which computes at concrete literals for free.
+    pub det3_ofint: NameId,
+    /// `Rat.det3_example_generic : det3 (ofInt 1) … (ofInt 10) = ofInt (-3)`
+    /// — the determinant of `[[1,2,3],[4,5,6],[7,8,10]]`.
+    pub det3_example_generic: NameId,
+    /// `Rat.det3_example_diagonal : det3 (ofInt 2) (ofInt 0) … (ofInt 4) = ofInt 24`
+    /// — the determinant of `diag(2,3,4)`.
+    pub det3_example_diagonal: NameId,
+    /// `Rat.det3_example_singular : det3 (ofInt 1) … (ofInt 9) = ofInt 0` —
+    /// the determinant of `[[1,2,3],[4,5,6],[7,8,9]]`.
+    pub det3_example_singular: NameId,
 }
 
 impl RatPrelude {
@@ -1837,6 +1867,13 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         of_int_mul: child(kernel, "ofInt_mul"),
         of_int_neg: child(kernel, "ofInt_neg"),
         det2_fib: child(kernel, "det2_fib"),
+        det3: child(kernel, "det3"),
+        det3_id: child(kernel, "det3_id"),
+        det3_cofactor_row1: child(kernel, "det3_cofactor_row1"),
+        det3_ofint: child(kernel, "det3_ofInt"),
+        det3_example_generic: child(kernel, "det3_example_generic"),
+        det3_example_diagonal: child(kernel, "det3_example_diagonal"),
+        det3_example_singular: child(kernel, "det3_example_singular"),
     }
 }
 
