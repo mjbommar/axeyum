@@ -52,6 +52,7 @@ use pyo3::types::{PyBytes, PyModule};
 
 use crate::error::AxeyumError;
 use crate::kernel::{PyExprId, PyKernel, PyNameId};
+use crate::stub_types::PyBorrowedList;
 
 create_exception!(
     axeyum,
@@ -78,6 +79,10 @@ create_exception!(
 /// that carries none. `producer` says which producer's vocabulary `kind` comes
 /// from: the two enums overlap but are **not** the same type and do not have
 /// the same variants.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
 #[pyclass(frozen, skip_from_py_object, module = "axeyum", name = "DeclineReason")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyDeclineReason {
@@ -151,6 +156,7 @@ impl PyDeclineReason {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyDeclineReason {
     /// Which producer's vocabulary `kind` belongs to.
@@ -188,8 +194,13 @@ impl PyDeclineReason {
         )
     }
 
-    fn __eq__(&self, other: &Self) -> bool {
-        self == other
+    // `&Bound<'_, PyAny>`, not `&Self`: `__eq__` must accept ANY object.
+    // Typed as `&Self` it raises TypeError on a mismatch, where Python expects
+    // `False`, and the derived stub then declares `__eq__(self, other: Self)`,
+    // which mypy rejects as a Liskov violation against `object.__eq__` -- the
+    // stub package fails to BUILD, so `stubtest` compares nothing at all.
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        other.cast::<Self>().is_ok_and(|other| self == other.get())
     }
 
     fn __hash__(&self) -> u64 {
@@ -218,6 +229,10 @@ impl PyDeclineReason {
 /// `inductions_used == 0` means the goal closed by plain reflexivity. Nothing
 /// here is checked: `proof` is untrusted until `Kernel.add_declaration` accepts
 /// it as the value of a theorem whose type is the goal.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
 #[pyclass(frozen, skip_from_py_object, module = "axeyum", name = "Candidate")]
 #[derive(Debug, Clone, Copy)]
 pub struct PyCandidate {
@@ -229,6 +244,7 @@ pub struct PyCandidate {
     inductions_used: usize,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyCandidate {
     /// The proposed proof term. Untrusted until the kernel re-checks it.
@@ -264,6 +280,10 @@ impl PyCandidate {
 /// measure different quantities against different budgets, and a single class
 /// with `inductions_used = None` would make "this producer performs no
 /// inductions" indistinguishable from "nobody measured".
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
 #[pyclass(
     frozen,
     skip_from_py_object,
@@ -278,6 +298,7 @@ pub struct PyModEqCandidate {
     binders_used: usize,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyModEqCandidate {
     /// The proposed proof term. Untrusted until the kernel re-checks it.
@@ -308,6 +329,10 @@ impl PyModEqCandidate {
 /// head-symbol text match on a rendered name. The three counts are exposed
 /// individually and `passes()` is derived from them, so a caller can see *why*
 /// an audit failed rather than reading a bare `False`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
 #[pyclass(
     frozen,
     skip_from_py_object,
@@ -324,6 +349,7 @@ pub struct PyCircularityAudit {
     theorem_dependencies: usize,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyCircularityAudit {
     /// Whether the candidate's transitive closure contains the target itself —
@@ -393,6 +419,10 @@ const DEFAULT_MAX_RECORDS: usize = 2_000_000;
 /// `producers::tests::binding_defaults_match_rust` pins them, so a drift on
 /// either side fails a test rather than silently changing what Python imports
 /// under.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "ImportLimits")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PyImportLimits {
@@ -400,6 +430,7 @@ pub struct PyImportLimits {
     inner: ImportLimits,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyImportLimits {
     /// Limits with the Rust defaults, or the given overrides.
@@ -433,8 +464,13 @@ impl PyImportLimits {
         )
     }
 
-    fn __eq__(&self, other: &Self) -> bool {
-        self == other
+    // `&Bound<'_, PyAny>`, not `&Self`: `__eq__` must accept ANY object.
+    // Typed as `&Self` it raises TypeError on a mismatch, where Python expects
+    // `False`, and the derived stub then declares `__eq__(self, other: Self)`,
+    // which mypy rejects as a Liskov violation against `object.__eq__` -- the
+    // stub package fails to BUILD, so `stubtest` compares nothing at all.
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        other.cast::<Self>().is_ok_and(|other| self == other.get())
     }
 
     fn __hash__(&self) -> u64 {
@@ -446,6 +482,10 @@ impl PyImportLimits {
 }
 
 /// One imported axiom bound to TL0.4-compatible name and type identities.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
 #[pyclass(frozen, skip_from_py_object, module = "axeyum", name = "AxiomIdentity")]
 #[derive(Debug, Clone)]
 pub struct PyAxiomIdentity {
@@ -457,6 +497,7 @@ pub struct PyAxiomIdentity {
     type_sha256: String,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyAxiomIdentity {
     /// Exact displayed hierarchical declaration name.
@@ -483,6 +524,10 @@ impl PyAxiomIdentity {
 }
 
 /// One direct dependency bound to the dependency's structural content.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
 #[pyclass(
     frozen,
     skip_from_py_object,
@@ -497,6 +542,7 @@ pub struct PyDeclarationDependency {
     content_sha256: String,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyDeclarationDependency {
     /// Exact displayed hierarchical dependency name.
@@ -520,6 +566,10 @@ impl PyDeclarationDependency {
 ///
 /// `content_sha256` is what a family manifest's `target_content_sha256` pins:
 /// it is arena-independent, so two imports of the same bytes agree.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
 #[pyclass(frozen, module = "axeyum", name = "DeclarationIdentity")]
 #[derive(Debug)]
 pub struct PyDeclarationIdentity {
@@ -535,6 +585,7 @@ pub struct PyDeclarationIdentity {
     dependencies: Vec<Py<PyDeclarationDependency>>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyDeclarationIdentity {
     /// Exact displayed hierarchical declaration name.
@@ -584,6 +635,10 @@ impl PyDeclarationIdentity {
 /// from "an admitted trusted declaration": every name in it still reports
 /// `kind == "theorem"` in `declaration_identities`, which is structurally true
 /// and would otherwise be indistinguishable.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
 #[pyclass(frozen, module = "axeyum", name = "ImportReport")]
 #[derive(Debug)]
 pub struct PyImportReport {
@@ -617,6 +672,7 @@ pub struct PyImportReport {
     substituted_theorems: Vec<String>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyImportReport {
     /// Export-format version from the first record.
@@ -676,8 +732,8 @@ impl PyImportReport {
     /// Imported axiom names. Their types were checked; their propositions
     /// remain assumptions until discharged separately.
     #[getter]
-    fn axioms(&self) -> &[String] {
-        &self.axioms
+    fn axioms(&self) -> PyBorrowedList<'_, String> {
+        PyBorrowedList(&self.axioms)
     }
 
     /// Identity schema for the two manifests below.
@@ -707,8 +763,8 @@ impl PyImportReport {
     /// Theorems this crate reconstructed and independently re-checked itself,
     /// in place of the untrusted wire-supplied type/value.
     #[getter]
-    fn substituted_theorems(&self) -> &[String] {
-        &self.substituted_theorems
+    fn substituted_theorems(&self) -> PyBorrowedList<'_, String> {
+        PyBorrowedList(&self.substituted_theorems)
     }
 
     fn __repr__(&self) -> String {
@@ -803,6 +859,10 @@ fn build_report(py: Python<'_>, report: &ImportReport) -> PyResult<Py<PyImportRe
 ///
 /// The Rust `into_parts` is deliberately not bound: it consumes the import, and
 /// the four non-consuming accessors give the same values.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
 #[pyclass(module = "axeyum", name = "StatementImport")]
 pub struct PyStatementImport {
     /// The independently checked environment, under its own fresh epoch.
@@ -815,16 +875,17 @@ pub struct PyStatementImport {
     goal: PyExprId,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyStatementImport {
-    /// The independently checked environment holding the goal's definitional
-    /// dependencies and no proof of the goal.
-    ///
-    /// The same object on every call: handles stay valid across a producer's
-    /// mutations.
-    fn kernel(&self, py: Python<'_>) -> Py<PyKernel> {
-        self.kernel.clone_ref(py)
-    }
+    // ORDER MATTERS HERE, and only here. `kernel()` is the last accessor
+    // deliberately: the generated stub imports the sibling module as
+    // `from axeyum._native import kernel`, and inside a class body a member
+    // named `kernel` shadows that import for every annotation written AFTER it.
+    // With this method first, `goal(self) -> kernel.ExprId` two lines down
+    // resolves `kernel` to this method and mypy refuses to build the stub
+    // package at all -- so `stubtest` compares nothing and exits reporting a
+    // build error rather than a stub problem. Measured 2026-08-24.
 
     /// The checked proposition to hand to an untrusted proof producer.
     fn goal(&self) -> PyExprId {
@@ -839,6 +900,15 @@ impl PyStatementImport {
     /// The completed import inventory and canonical declaration identities.
     fn report(&self, py: Python<'_>) -> Py<PyImportReport> {
         self.report.clone_ref(py)
+    }
+
+    /// The independently checked environment holding the goal's definitional
+    /// dependencies and no proof of the goal.
+    ///
+    /// The same object on every call: handles stay valid across a producer's
+    /// mutations.
+    fn kernel(&self, py: Python<'_>) -> Py<PyKernel> {
+        self.kernel.clone_ref(py)
     }
 
     fn __repr__(&self, py: Python<'_>) -> String {
@@ -905,6 +975,10 @@ fn statement_import_error(
 /// Raises `TypeError` for a `source` that is neither, `OSError` if the file
 /// cannot be opened, and `StatementImportError` if the stream fails the
 /// proof-isolation contract.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.producers")
+)]
 #[pyfunction]
 #[pyo3(signature = (source, limits, target))]
 fn import_statement_ndjson(
@@ -959,6 +1033,10 @@ fn import_statement_ndjson(
 ///
 /// Raises `EpochError` if `goal` was interned by another kernel, and `Declined`
 /// carrying a typed `.reason` when the bounded search does not close the goal.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.producers")
+)]
 #[pyfunction]
 fn propose_bounded_induction(
     py: Python<'_>,
@@ -995,6 +1073,10 @@ fn propose_bounded_induction(
 ///
 /// Raises `EpochError` if `goal` was interned by another kernel, and `Declined`
 /// carrying a typed `.reason` when the bounded search does not close the goal.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.producers")
+)]
 #[pyfunction]
 fn propose_modeq_family(
     py: Python<'_>,
@@ -1029,6 +1111,10 @@ fn propose_modeq_family(
 // `PyO3` extracts OWNED values across the FFI edge, so the handles are by value
 // whether or not the body consumes them.
 #[allow(clippy::needless_pass_by_value)]
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.producers")
+)]
 #[pyfunction]
 fn audit_circularity(
     kernel: PyRef<'_, PyKernel>,
@@ -1101,4 +1187,47 @@ mod tests {
         let quoted = PyImportLimits::new(DEFAULT_MAX_LINE_BYTES, DEFAULT_MAX_RECORDS);
         assert_eq!(quoted.inner, ImportLimits::default());
     }
+}
+
+// See `crate::error`: an exception is a `PyErr` type, not a `#[pyclass]`, so the
+// stub record has to be submitted separately -- and both exceptions here carry a
+// payload attached with `setattr` at the RAISE site, which exists in no
+// signature. `Declined.reason` in particular is read by
+// `python/axeyum/agent/tools.py`, where it was an unresolved attribute under
+// `ty` until it was declared here.
+#[cfg(feature = "stub-gen")]
+mod stub {
+    use super::{Declined, PyDeclineReason, StatementImportError};
+    use crate::error::AxeyumError;
+    use crate::stub_info::stub_exception;
+
+    stub_exception!(
+        "axeyum._native.producers",
+        Declined,
+        AxeyumError,
+        "A producer declined the goal. `unknown` and `declined` are values, and this is how the value crosses a `raise`.",
+        "reason": PyDeclineReason = "The typed refusal: which producer, which kind, and its detail.",
+    );
+    stub_exception!(
+        "axeyum._native.producers",
+        StatementImportError,
+        AxeyumError,
+        "A `lean4export` statement could not be imported.",
+        "variant": String = "The Rust error variant name. Never match on the message text.",
+        "debug": String = "The full Rust `Debug` rendering of the failure.",
+    );
+}
+
+// Module-level constants reach Python through `module.add("NAME", value)`, a
+// RUNTIME call with no item for a `#[gen_stub_*]` macro to sit on -- so without
+// these submissions they exist in the extension and in no stub, and a checked
+// consumer reading one gets an unresolved attribute. The type is named; the
+// VALUE deliberately is not, so a constant cannot drift from its stub.
+#[cfg(feature = "stub-gen")]
+mod stub_variables {
+    pyo3_stub_gen::module_variable!("axeyum._native.producers", "MAX_BINDERS", usize);
+    pyo3_stub_gen::module_variable!("axeyum._native.producers", "MAX_INDUCTIONS", usize);
+    pyo3_stub_gen::module_variable!("axeyum._native.producers", "MODEQ_MAX_BINDERS", usize);
+    pyo3_stub_gen::module_variable!("axeyum._native.producers", "FORMAT_VERSION", String);
+    pyo3_stub_gen::module_variable!("axeyum._native.producers", "IDENTITY_VERSION", String);
 }

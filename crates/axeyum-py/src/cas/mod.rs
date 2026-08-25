@@ -94,3 +94,25 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     parent.add("cas", &module)?;
     Ok(module)
 }
+
+// See `crate::error`: an exception is a `PyErr` type, not a `#[pyclass]`, so the
+// stub record has to be submitted separately.
+#[cfg(feature = "stub-gen")]
+mod stub {
+    use super::{CasError, Gf2Error};
+    use crate::error::AxeyumError;
+    use crate::stub_info::stub_exception;
+
+    stub_exception!(
+        "axeyum._native.cas",
+        CasError,
+        AxeyumError,
+        "A CAS artifact was malformed, or a checker discharged no obligation."
+    );
+    stub_exception!(
+        "axeyum._native.cas",
+        Gf2Error,
+        CasError,
+        "A GF(2) budget, shape, or certificate-structure refusal."
+    );
+}

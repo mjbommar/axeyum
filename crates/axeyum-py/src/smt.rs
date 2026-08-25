@@ -50,6 +50,10 @@ fn next_script_epoch() -> u64 {
 ///
 /// Distinct from [`ir.Term`](axeyum.ir.Term) on purpose: a script owns its own
 /// arena, so its terms are not usable against an `ir.Arena` and vice versa.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.smt")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "ScriptTerm")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ScriptTerm {
@@ -68,6 +72,7 @@ impl ScriptTerm {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl ScriptTerm {
     /// The epoch of the script that minted this handle.
@@ -113,6 +118,10 @@ struct ReplayState {
 /// `status` is `"sat"`, `"unsat"` or `"unknown"`. **`unknown` is a value**, not
 /// an exception (CLAUDE.md hard rule): a budget-exhausted or incomplete run
 /// returns an `Outcome` whose `detail` says why.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.smt")
+)]
 #[pyclass(frozen, module = "axeyum", name = "Outcome")]
 pub struct Outcome {
     status: &'static str,
@@ -124,6 +133,7 @@ pub struct Outcome {
     replay_unavailable: Option<String>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Outcome {
     /// `"sat"`, `"unsat"`, or `"unknown"`.
@@ -239,6 +249,10 @@ fn optional_repr(value: Option<&str>) -> String {
 /// Raises `SmtLibParseError` when the text is malformed or uses a construct
 /// outside the supported fragment, and `AxeyumError` for any other solver
 /// failure.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 #[pyo3(signature = (
     script,
@@ -797,6 +811,10 @@ fn default_config(timeout_ms: u64) -> SolverConfig {
 /// outside the implemented surface, the second that it was illegal in the
 /// state the script had reached. Collapsing them loses the difference between
 /// "we do not do that" and "that script is wrong".
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.smt")
+)]
 #[pyclass(frozen, module = "axeyum", name = "Response")]
 pub struct Response {
     kind: &'static str,
@@ -806,6 +824,7 @@ pub struct Response {
     command: Option<String>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Response {
     /// `"check-sat"`, `"model"`, `"values"`, `"unsat-core"`, `"proof"`,
@@ -866,6 +885,10 @@ fn verdict_name(result: &CheckResult) -> &'static str {
 ///
 /// Raises `SmtLibParseError` for malformed text; an illegal-in-state command
 /// is an `error` RESPONSE, not an exception.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 #[pyo3(signature = (script, *, timeout_ms = 10_000))]
 fn session(py: Python<'_>, script: &str, timeout_ms: u64) -> PyResult<Vec<Response>> {
@@ -955,6 +978,10 @@ fn session(py: Python<'_>, script: &str, timeout_ms: u64) -> PyResult<Vec<Respon
 /// Runs a multi-`check-sat` script and returns just the verdicts, in order.
 ///
 /// Delegates to the same session walk, so the two cannot disagree.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 #[pyo3(signature = (script, *, timeout_ms = 10_000))]
 fn incremental(py: Python<'_>, script: &str, timeout_ms: u64) -> PyResult<Vec<&'static str>> {
@@ -969,6 +996,10 @@ fn incremental(py: Python<'_>, script: &str, timeout_ms: u64) -> PyResult<Vec<&'
 ///
 /// `None` when the script is not `sat`, or asks for no values. The values are
 /// read from the **replay-checked** model through the ground evaluator.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 #[pyo3(signature = (script, *, timeout_ms = 10_000))]
 fn get_value<'py>(
@@ -993,6 +1024,10 @@ fn get_value<'py>(
 /// The truth value of each `:named` Boolean assertion under the model.
 ///
 /// `None` when the script is not `sat`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 #[pyo3(signature = (script, *, timeout_ms = 10_000))]
 fn get_assignment(
@@ -1009,6 +1044,10 @@ fn get_assignment(
 ///
 /// Every returned name is genuinely needed. `None` when the script is not
 /// `unsat`; a bounded-string `unsat` is gate-confirmed before a core is built.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 #[pyo3(signature = (script, *, timeout_ms = 10_000))]
 fn unsat_core(py: Python<'_>, script: &str, timeout_ms: u64) -> PyResult<Option<Vec<String>>> {
@@ -1028,6 +1067,10 @@ fn unsat_core(py: Python<'_>, script: &str, timeout_ms: u64) -> PyResult<Option<
 ///
 /// `None` means the script requested no snapshots — not that it has no
 /// assertions.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 #[pyo3(signature = (script,))]
 fn get_assertions(py: Python<'_>, script: &str) -> PyResult<Option<Vec<Vec<String>>>> {
@@ -1048,6 +1091,10 @@ fn get_assertions(py: Python<'_>, script: &str) -> PyResult<Option<Vec<Vec<Strin
 /// `:reason-unknown` is the empty SMT-LIB string literal `""` when the query
 /// was decided; the classified reason is returned only for an actual
 /// `unknown`. `None` when the script asks for no info.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 #[pyo3(signature = (script, *, timeout_ms = 10_000))]
 fn get_info(
@@ -1068,6 +1115,10 @@ fn get_info(
 /// is not the same as "the solver honors it".
 ///
 /// `None` when the script asks for no options.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 #[pyo3(signature = (script,))]
 fn get_option(py: Python<'_>, script: &str) -> PyResult<Option<Vec<(String, String)>>> {
@@ -1082,6 +1133,10 @@ fn get_option(py: Python<'_>, script: &str) -> PyResult<Option<Vec<(String, Stri
 /// `None` means **no emitter covers this refutation**, not that the script is
 /// satisfiable. Three fragments also pass external Carcara; the `QF_LIA` one
 /// is internal-only, so it is tried last.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 #[pyo3(signature = (script, *, timeout_ms = 10_000))]
 fn get_proof(py: Python<'_>, script: &str, timeout_ms: u64) -> PyResult<Option<String>> {
@@ -1095,12 +1150,17 @@ fn get_proof(py: Python<'_>, script: &str, timeout_ms: u64) -> PyResult<Option<S
 /// `parse_script` creates and gives away a `TermArena`, so a `Script` IS the
 /// arena for its terms; the handles it hands out carry its own epoch and are
 /// not interchangeable with an [`Arena`](axeyum.ir.Arena)'s.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.smt")
+)]
 #[pyclass(module = "axeyum", name = "Script")]
 pub struct PyScript {
     script: Script,
     epoch: u64,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyScript {
     /// The script's `(set-logic ...)`, when it declared one.
@@ -1260,6 +1320,10 @@ impl PyScript {
 ///
 /// Raises `SmtLibParseError` for malformed or out-of-fragment text, and
 /// `BudgetExceeded` when ingest ran out of budget.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 #[pyo3(signature = (script, *, timeout_ms = None))]
 fn parse(py: Python<'_>, script: &str, timeout_ms: Option<u64>) -> PyResult<PyScript> {
@@ -1290,6 +1354,10 @@ fn parse(py: Python<'_>, script: &str, timeout_ms: Option<u64>) -> PyResult<PySc
 ///
 /// Raises `EpochError` when an assertion belongs to another arena. The Rust
 /// writer PANICS on a foreign term, which is why this is checked here.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
 #[pyfunction]
 fn write_script(
     arena: PyRef<'_, crate::ir::arena::Arena>,

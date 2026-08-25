@@ -14,12 +14,20 @@ use crate::convert::{py_to_value, value_to_py};
 use crate::ir::types::{PySort, map_ir_error};
 
 /// The LSB-first bits of a bit-vector of `width` bits.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.bits")
+)]
 #[pyfunction]
 pub fn bv_value_to_lsb_bits(width: u32, value: &Bound<'_, PyAny>) -> PyResult<Vec<bool>> {
     crate::ir::arena::python_int_to_lsb_bits(value, width)
 }
 
 /// The bit-vector value LSB-first `bits` denote.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.bits")
+)]
 #[pyfunction]
 pub fn lsb_bits_to_bv_value(py: Python<'_>, bits: Vec<bool>) -> PyResult<Bound<'_, PyAny>> {
     let value = axeyum_ir::lsb_bits_to_bv_value(&bits).map_err(|error| map_ir_error(&error))?;
@@ -30,6 +38,10 @@ pub fn lsb_bits_to_bv_value(py: Python<'_>, bits: Vec<bool>) -> PyResult<Bound<'
 ///
 /// Raises `SortError` when the bit count does not match the sort's lowered
 /// width — a length mismatch is never silently padded or truncated.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.bits")
+)]
 #[pyfunction]
 pub fn lsb_bits_to_value<'py>(
     py: Python<'py>,
@@ -42,6 +54,10 @@ pub fn lsb_bits_to_value<'py>(
 }
 
 /// The LSB-first bits of a scalar Python value of `sort`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.bits")
+)]
 #[pyfunction]
 pub fn value_to_lsb_bits(sort: &PySort, value: &Bound<'_, PyAny>) -> PyResult<Vec<bool>> {
     let value = py_to_value(value, sort.sort)?;
@@ -60,4 +76,14 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     module.add("LSB_FIRST", true)?;
     parent.add("bits", &module)?;
     Ok(module)
+}
+
+// Module-level constants reach Python through `module.add("NAME", value)`, a
+// RUNTIME call with no item for a `#[gen_stub_*]` macro to sit on -- so without
+// these submissions they exist in the extension and in no stub, and a checked
+// consumer reading one gets an unresolved attribute. The type is named; the
+// VALUE deliberately is not, so a constant cannot drift from its stub.
+#[cfg(feature = "stub-gen")]
+mod stub_variables {
+    pyo3_stub_gen::module_variable!("axeyum._native.ir.bits", "LSB_FIRST", bool);
 }

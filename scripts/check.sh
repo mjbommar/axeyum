@@ -547,6 +547,17 @@ if command -v uv >/dev/null 2>&1 && [ -d .venv ]; then
   step py-maturin-develop uv run --no-sync maturin develop
   step py-pytest          uv run --no-sync pytest python/tests -q
   step py-stubs           uv run --no-sync python tools/gen_native_stub.py --check
+  # The typed-stub pair. `py-stubs` above compares NAMES and ARITY against the
+  # built extension and ignores annotations; these two are the type half.
+  #   py-stub-types  every `typing.Any` in the generated stubs is on a committed
+  #                  allowlist with a reason, and no entry names a site that has
+  #                  stopped being `Any` -- a ratchet that can only go down.
+  #   py-stubtest    mypy's `stubtest` imports the `.so` and the stubs and
+  #                  compares them AS TYPES. It is the only checker here that can
+  #                  see a stub claiming `-> int` for something returning `str`:
+  #                  `ty` reads the stubs and believes them.
+  step py-stub-types      uv run --no-sync python tools/check_stub_types.py
+  step py-stubtest        uv run --no-sync python -m mypy.stubtest axeyum._native --ignore-missing-stub --ignore-positional-only --mypy-config-file tools/stubtest-mypy.ini --allowlist tools/stubtest-allowlist.txt --concise
   step py-types           uv run --no-sync python tools/check_types.py
   step py-ruff-check      uv run --no-sync ruff check python/ tools/
   step py-ruff-format     uv run --no-sync ruff format --check python/ tools/

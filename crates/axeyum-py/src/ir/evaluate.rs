@@ -24,6 +24,10 @@ use crate::ir::types::{Symbol, Term, check_epoch, map_ir_error};
 /// Bound to one [`Arena`](axeyum.ir.Arena): every method takes the arena so the
 /// binding can both check the epoch and coerce a Python value to the symbol's
 /// declared sort.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.ir")
+)]
 #[pyclass(module = "axeyum", name = "Assignment")]
 pub struct PyAssignment {
     pub(crate) assignment: Assignment,
@@ -43,6 +47,7 @@ impl PyAssignment {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyAssignment {
     /// Creates an empty assignment bound to `arena`.
@@ -125,6 +130,10 @@ impl PyAssignment {
 ///
 /// Raises `SortError` for an unbound symbol, an un-enumerable quantifier
 /// domain, or an arithmetic overflow.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir")
+)]
 #[pyfunction]
 pub fn eval<'py>(
     py: Python<'py>,
@@ -140,6 +149,10 @@ pub fn eval<'py>(
 }
 
 /// A canonical inhabitant of `sort`, or `None` for a sort with none.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir")
+)]
 #[pyfunction]
 pub fn well_founded_default<'py>(
     py: Python<'py>,

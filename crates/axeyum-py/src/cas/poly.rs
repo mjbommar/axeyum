@@ -14,8 +14,14 @@ use pyo3::types::{PyAny, PyDict};
 
 use crate::cas::expr::{Expr, rational_env};
 use crate::cas::rational;
+use crate::cas::rational::RationalLike;
+use crate::stub_types::{PyFraction, PySequence};
 
 /// A monomial: a product of variable powers, with no coefficient.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Monomial")]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Monomial {
@@ -29,6 +35,7 @@ impl Monomial {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Monomial {
     /// The empty monomial `1`.
@@ -96,6 +103,10 @@ impl Monomial {
 }
 
 /// A multivariate polynomial over the exact rationals.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "MvPoly")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MvPoly {
@@ -136,6 +147,7 @@ impl MvPoly {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl MvPoly {
     /// The zero polynomial.
@@ -150,8 +162,10 @@ impl MvPoly {
     ///
     /// Raises `ValueError` when `value` is not an exact rational.
     #[staticmethod]
-    fn constant(value: &Bound<'_, PyAny>) -> PyResult<MvPoly> {
-        Ok(MvPoly::wrap(CasMvPoly::constant(rational::from_py(value)?)))
+    fn constant(value: RationalLike<'_>) -> PyResult<MvPoly> {
+        Ok(MvPoly::wrap(CasMvPoly::constant(rational::from_py(
+            value.as_any(),
+        )?)))
     }
 
     /// The polynomial `var`.
@@ -167,11 +181,11 @@ impl MvPoly {
     ///
     /// Raises `ValueError` when a coefficient is not an exact rational.
     #[staticmethod]
-    fn from_terms(terms: &Bound<'_, PyAny>) -> PyResult<Option<MvPoly>> {
+    fn from_terms(terms: PySequence<'_, (Monomial, RationalLike<'_>)>) -> PyResult<Option<MvPoly>> {
         let mut collected = Vec::new();
-        for item in terms.try_iter()? {
+        for item in terms.as_any().try_iter()? {
             let (monomial, coefficient): (Monomial, Py<PyAny>) = item?.extract()?;
-            let coefficient = rational::from_py(coefficient.bind(terms.py()))?;
+            let coefficient = rational::from_py(coefficient.bind(terms.as_any().py()))?;
             collected.push((monomial.inner.clone(), coefficient));
         }
         Ok(MvPoly::wrap_option(CasMvPoly::from_terms(collected)))
@@ -192,7 +206,7 @@ impl MvPoly {
     /// # Errors
     ///
     /// Propagates any Python error raised while building the fractions.
-    fn terms<'py>(&self, py: Python<'py>) -> PyResult<Vec<(Monomial, Bound<'py, PyAny>)>> {
+    fn terms<'py>(&self, py: Python<'py>) -> PyResult<Vec<(Monomial, PyFraction<'py>)>> {
         self.inner
             .terms()
             .map(|(monomial, coefficient)| {
@@ -264,7 +278,7 @@ impl MvPoly {
         &self,
         py: Python<'py>,
         assignment: &Bound<'py, PyDict>,
-    ) -> PyResult<Option<Bound<'py, PyAny>>> {
+    ) -> PyResult<Option<PyFraction<'py>>> {
         let bindings: BTreeMap<String, _> = rational_env(assignment)?;
         rational::optional_fraction(py, self.inner.evaluate(&bindings))
     }
@@ -358,6 +372,10 @@ impl MvPoly {
 ///
 /// Reachable only through `normalize` and through a [`crate::cas::expr::ZeroTest`]
 /// witness: the Rust type has no public constructor from terms.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "MultiPoly")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MultiPoly {
@@ -376,6 +394,7 @@ impl MultiPoly {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl MultiPoly {
     /// The zero normal form.
@@ -399,7 +418,7 @@ impl MultiPoly {
         &self,
         py: Python<'py>,
         var: &str,
-    ) -> PyResult<Option<Vec<Bound<'py, PyAny>>>> {
+    ) -> PyResult<Option<Vec<PyFraction<'py>>>> {
         self.inner
             .to_univariate(var)
             .map(|coefficients| {
@@ -425,7 +444,7 @@ impl MultiPoly {
         &self,
         py: Python<'py>,
         env: &Bound<'py, PyDict>,
-    ) -> PyResult<Option<Bound<'py, PyAny>>> {
+    ) -> PyResult<Option<PyFraction<'py>>> {
         let bindings = rational_env(env)?;
         rational::optional_fraction(py, self.inner.eval(&bindings))
     }

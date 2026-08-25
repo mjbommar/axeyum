@@ -18,6 +18,8 @@ use crate::cas::expr::{
 };
 use crate::cas::poly::MultiPoly;
 use crate::cas::rational;
+use crate::cas::rational::RationalLike;
+use crate::stub_types::{PyFraction, PySequence};
 
 // Every macro below detaches from the interpreter around the CAS call.
 //
@@ -40,6 +42,10 @@ use crate::cas::rational;
 macro_rules! total_unary {
     ($name:ident, $doc:literal) => {
         #[doc = $doc]
+        #[cfg_attr(
+            feature = "stub-gen",
+            pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+        )]
         #[pyfunction]
         fn $name(py: Python<'_>, expr: &Expr) -> Expr {
             Expr::wrap(py.detach(|| axeyum_cas::$name(expr.inner())))
@@ -51,6 +57,10 @@ macro_rules! total_unary {
 macro_rules! partial_unary {
     ($name:ident, $doc:literal) => {
         #[doc = $doc]
+        #[cfg_attr(
+            feature = "stub-gen",
+            pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+        )]
         #[pyfunction]
         fn $name(py: Python<'_>, expr: &Expr) -> Option<Expr> {
             Expr::wrap_option(py.detach(|| axeyum_cas::$name(expr.inner())))
@@ -62,6 +72,10 @@ macro_rules! partial_unary {
 macro_rules! partial_in_var {
     ($name:ident, $doc:literal) => {
         #[doc = $doc]
+        #[cfg_attr(
+            feature = "stub-gen",
+            pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+        )]
         #[pyfunction]
         fn $name(py: Python<'_>, expr: &Expr, var: &str) -> Option<Expr> {
             Expr::wrap_option(py.detach(|| axeyum_cas::$name(expr.inner(), var)))
@@ -73,6 +87,10 @@ macro_rules! partial_in_var {
 macro_rules! partial_binary_in_var {
     ($name:ident, $doc:literal) => {
         #[doc = $doc]
+        #[cfg_attr(
+            feature = "stub-gen",
+            pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+        )]
         #[pyfunction]
         fn $name(py: Python<'_>, a: &Expr, b: &Expr, var: &str) -> Option<Expr> {
             Expr::wrap_option(py.detach(|| axeyum_cas::$name(a.inner(), b.inner(), var)))
@@ -123,6 +141,10 @@ partial_binary_in_var!(resultant, "The resultant in `var`.");
 
 /// The canonical polynomial normal form of `expr`, or `None` when it is outside
 /// the polynomial fragment (or overflows).
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn normalize(expr: &Expr) -> Option<MultiPoly> {
     MultiPoly::wrap_option(axeyum_cas::normalize(expr.inner()))
@@ -132,12 +154,20 @@ fn normalize(expr: &Expr) -> Option<MultiPoly> {
 ///
 /// The returned [`ZeroTest`] is the certificate, not a bool: `Certified` carries
 /// the canonical form of `a - b`, which an independent caller can re-normalize.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn equal(a: &Expr, b: &Expr) -> ZeroTest {
     ZeroTest::wrap(axeyum_cas::equal(a.inner(), b.inner()))
 }
 
 /// Checks a claimed derivative directly, returning the certificate.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn prove_derivative(expr: &Expr, var: &str, claimed: &Expr) -> ZeroTest {
     ZeroTest::wrap(axeyum_cas::prove_derivative(
@@ -148,6 +178,10 @@ fn prove_derivative(expr: &Expr, var: &str, claimed: &Expr) -> ZeroTest {
 }
 
 /// Simplification under sign assumptions.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn simplify_under_assumptions(expr: &Expr, assumptions: &Assumptions) -> Expr {
     Expr::wrap(axeyum_cas::simplify_under_assumptions(
@@ -157,12 +191,20 @@ fn simplify_under_assumptions(expr: &Expr, assumptions: &Assumptions) -> Expr {
 }
 
 /// The degree of `expr` in `var`, or `None` when it is not a polynomial there.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn degree(expr: &Expr, var: &str) -> Option<usize> {
     axeyum_cas::degree(expr.inner(), var)
 }
 
 /// The coefficient of `var ** n`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn coeff(expr: &Expr, var: &str, n: usize) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::coeff(expr.inner(), var, n))
@@ -170,12 +212,20 @@ fn coeff(expr: &Expr, var: &str, n: usize) -> Option<Expr> {
 
 /// Whether `expr` is irreducible over the rationals in `var`; `None` when
 /// undecided.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn is_irreducible(expr: &Expr, var: &str) -> Option<bool> {
     axeyum_cas::is_irreducible(expr.inner(), var)
 }
 
 /// `(quotient, remainder)` of polynomial division in `var`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn poly_div(a: &Expr, b: &Expr, var: &str) -> Option<(Expr, Expr)> {
     axeyum_cas::poly_div(a.inner(), b.inner(), var)
@@ -183,6 +233,10 @@ fn poly_div(a: &Expr, b: &Expr, var: &str) -> Option<(Expr, Expr)> {
 }
 
 /// The exact roots of `expr` in `var`, or `None`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn solve(expr: &Expr, var: &str) -> Option<Vec<Expr>> {
     axeyum_cas::solve(expr.inner(), var).map(Expr::wrap_vec)
@@ -193,12 +247,16 @@ fn solve(expr: &Expr, var: &str) -> Option<Vec<Expr>> {
 /// # Errors
 ///
 /// Propagates the per-element extraction error.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn solve_linear_system(
-    equations: &Bound<'_, PyAny>,
+    equations: PySequence<'_, Expr>,
     vars: Vec<String>,
 ) -> PyResult<Option<Vec<(String, Expr)>>> {
-    let equations = Expr::vec_from_py(equations)?;
+    let equations = Expr::vec_from_py(equations.as_any())?;
     let borrowed: Vec<&str> = vars.iter().map(String::as_str).collect();
     Ok(
         axeyum_cas::solve_linear_system(&equations, &borrowed).map(|solution| {
@@ -211,6 +269,10 @@ fn solve_linear_system(
 }
 
 /// Solves a bivariate polynomial system, returning `[(x, y), ...]`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn solve_polynomial_system(
     f: &Expr,
@@ -227,12 +289,17 @@ fn solve_polynomial_system(
 }
 
 /// A real interval with rational or infinite endpoints.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "RealInterval")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RealInterval {
     inner: CasRealInterval,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl RealInterval {
     /// The lower endpoint, or `None` for `-infinity`.
@@ -241,7 +308,7 @@ impl RealInterval {
     ///
     /// Propagates any Python error raised while building the fraction.
     #[getter]
-    fn lower<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyAny>>> {
+    fn lower<'py>(&self, py: Python<'py>) -> PyResult<Option<PyFraction<'py>>> {
         rational::optional_fraction(py, self.inner.lower)
     }
 
@@ -257,7 +324,7 @@ impl RealInterval {
     ///
     /// Propagates any Python error raised while building the fraction.
     #[getter]
-    fn upper<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyAny>>> {
+    fn upper<'py>(&self, py: Python<'py>) -> PyResult<Option<PyFraction<'py>>> {
         rational::optional_fraction(py, self.inner.upper)
     }
 
@@ -291,6 +358,10 @@ impl RealInterval {
 /// # Errors
 ///
 /// Raises `ValueError` for an unrecognized `op`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn solve_polynomial_inequality(
     expr: &Expr,
@@ -323,12 +394,16 @@ fn solve_polynomial_inequality(
 /// # Errors
 ///
 /// Propagates any Python error raised while building the fractions.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn real_root_intervals<'py>(
     py: Python<'py>,
     expr: &Expr,
     var: &str,
-) -> PyResult<Option<Vec<(Bound<'py, PyAny>, Bound<'py, PyAny>)>>> {
+) -> PyResult<Option<Vec<(PyFraction<'py>, PyFraction<'py>)>>> {
     axeyum_cas::real_root_intervals(expr.inner(), var)
         .map(|intervals| {
             intervals
@@ -349,18 +424,22 @@ fn real_root_intervals<'py>(
 /// # Errors
 ///
 /// Raises `ValueError` when an endpoint is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn count_real_roots(
     expr: &Expr,
     var: &str,
-    lower: &Bound<'_, PyAny>,
-    upper: &Bound<'_, PyAny>,
+    lower: RationalLike<'_>,
+    upper: RationalLike<'_>,
 ) -> PyResult<Option<usize>> {
     Ok(axeyum_cas::count_real_roots(
         expr.inner(),
         var,
-        rational::from_py(lower)?,
-        rational::from_py(upper)?,
+        rational::from_py(lower.as_any())?,
+        rational::from_py(upper.as_any())?,
     ))
 }
 
@@ -369,14 +448,18 @@ fn count_real_roots(
 /// # Errors
 ///
 /// Raises `ValueError` when `width` is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn approximate_real_roots<'py>(
     py: Python<'py>,
     expr: &Expr,
     var: &str,
-    width: &Bound<'py, PyAny>,
-) -> PyResult<Option<Vec<Bound<'py, PyAny>>>> {
-    let width = rational::from_py(width)?;
+    width: RationalLike<'_>,
+) -> PyResult<Option<Vec<PyFraction<'py>>>> {
+    let width = rational::from_py(width.as_any())?;
     axeyum_cas::approximate_real_roots(expr.inner(), var, width)
         .map(|roots| {
             roots
@@ -388,18 +471,30 @@ fn approximate_real_roots<'py>(
 }
 
 /// The limit of `expr` as `var` approaches `point`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn limit(expr: &Expr, var: &str, point: &LimitPoint) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::limit(expr.inner(), var, point.inner()))
 }
 
 /// The Maclaurin series of `expr` to `order`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn series(expr: &Expr, var: &str, order: usize) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::series(expr.inner(), var, order))
 }
 
 /// The Taylor series of `expr` about `center` to `order`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn series_at(expr: &Expr, var: &str, center: &Expr, order: usize) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::series_at(
@@ -414,12 +509,20 @@ fn series_at(expr: &Expr, var: &str, center: &Expr, order: usize) -> Option<Expr
 ///
 /// The result's `certificate` is a [`ZeroTest`] over
 /// `d(antiderivative)/dvar - integrand`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn integrate(expr: &Expr, var: &str) -> Option<CertifiedIntegral> {
     axeyum_cas::integrate(expr.inner(), var).map(CertifiedIntegral::wrap)
 }
 
 /// A definite integral, with the antiderivative and certificate it came from.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn definite_integrate(
     expr: &Expr,
@@ -436,6 +539,10 @@ fn definite_integrate(
 /// # Errors
 ///
 /// Propagates the per-entry extraction error.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn evalf(expr: &Expr, bindings: &Bound<'_, PyDict>) -> PyResult<Option<f64>> {
     let owned = float_env(bindings)?;
@@ -452,16 +559,20 @@ fn evalf(expr: &Expr, bindings: &Bound<'_, PyDict>) -> PyResult<Option<f64>> {
 /// # Errors
 ///
 /// Propagates any Python error raised while building the fraction.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
-fn rationalize(
-    py: Python<'_>,
-    x: f64,
-    max_denominator: i128,
-) -> PyResult<Option<Bound<'_, PyAny>>> {
+fn rationalize(py: Python<'_>, x: f64, max_denominator: i128) -> PyResult<Option<PyFraction<'_>>> {
     rational::optional_fraction(py, axeyum_cas::rationalize(x, max_denominator))
 }
 
 /// A symbolic value matching the float `value`, or `None`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn nsimplify(value: f64, max_denominator: i128) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::nsimplify(value, max_denominator))
@@ -472,16 +583,24 @@ fn nsimplify(value: f64, max_denominator: i128) -> Option<Expr> {
 /// # Errors
 ///
 /// Raises `ValueError` when `point` is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
-fn residue(expr: &Expr, var: &str, point: &Bound<'_, PyAny>) -> PyResult<Option<Expr>> {
+fn residue(expr: &Expr, var: &str, point: RationalLike<'_>) -> PyResult<Option<Expr>> {
     Ok(Expr::wrap_option(axeyum_cas::residue(
         expr.inner(),
         var,
-        rational::from_py(point)?,
+        rational::from_py(point.as_any())?,
     )))
 }
 
 /// The definite sum of `f` over `var` from `lower` to `upper`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn definite_sum(f: &Expr, var: &str, lower: &Expr, upper: &Expr) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::definite_sum(
@@ -493,12 +612,20 @@ fn definite_sum(f: &Expr, var: &str, lower: &Expr, upper: &Expr) -> Option<Expr>
 }
 
 /// The infinite sum of `f` over `var` from `lower`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn infinite_sum(f: &Expr, var: &str, lower: &Expr) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::infinite_sum(f.inner(), var, lower.inner()))
 }
 
 /// The finite product of `f` over `var` from `lower` to `upper`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn finite_product(f: &Expr, var: &str, lower: &Expr, upper: &Expr) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::finite_product(
@@ -514,9 +641,16 @@ fn finite_product(f: &Expr, var: &str, lower: &Expr, upper: &Expr) -> Option<Exp
 /// # Errors
 ///
 /// Raises `ValueError` when a coefficient is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
-fn dsolve_euler_cauchy(coeffs: &Bound<'_, PyAny>, var: &str) -> PyResult<Option<Expr>> {
-    let coeffs = rational::vec_from_py(coeffs)?;
+fn dsolve_euler_cauchy(
+    coeffs: PySequence<'_, RationalLike<'_>>,
+    var: &str,
+) -> PyResult<Option<Expr>> {
+    let coeffs = rational::vec_from_py(coeffs.as_any())?;
     Ok(Expr::wrap_option(axeyum_cas::dsolve_euler_cauchy(
         &coeffs, var,
     )))
@@ -527,9 +661,16 @@ fn dsolve_euler_cauchy(coeffs: &Bound<'_, PyAny>, var: &str) -> PyResult<Option<
 /// # Errors
 ///
 /// Raises `ValueError` when a coefficient is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
-fn dsolve_homogeneous(char_coeffs: &Bound<'_, PyAny>, var: &str) -> PyResult<Option<Expr>> {
-    let coeffs = rational::vec_from_py(char_coeffs)?;
+fn dsolve_homogeneous(
+    char_coeffs: PySequence<'_, RationalLike<'_>>,
+    var: &str,
+) -> PyResult<Option<Expr>> {
+    let coeffs = rational::vec_from_py(char_coeffs.as_any())?;
     Ok(Expr::wrap_option(axeyum_cas::dsolve_homogeneous(
         &coeffs, var,
     )))
@@ -540,13 +681,17 @@ fn dsolve_homogeneous(char_coeffs: &Bound<'_, PyAny>, var: &str) -> PyResult<Opt
 /// # Errors
 ///
 /// Raises `ValueError` when a coefficient is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn dsolve_inhomogeneous(
-    char_coeffs: &Bound<'_, PyAny>,
+    char_coeffs: PySequence<'_, RationalLike<'_>>,
     forcing: &Expr,
     var: &str,
 ) -> PyResult<Option<Expr>> {
-    let coeffs = rational::vec_from_py(char_coeffs)?;
+    let coeffs = rational::vec_from_py(char_coeffs.as_any())?;
     Ok(Expr::wrap_option(axeyum_cas::dsolve_inhomogeneous(
         &coeffs,
         forcing.inner(),
@@ -555,6 +700,10 @@ fn dsolve_inhomogeneous(
 }
 
 /// Solves `y' + p(var) y = q(var)`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn dsolve_first_order_linear(p: &Expr, q: &Expr, var: &str) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::dsolve_first_order_linear(
@@ -565,6 +714,10 @@ fn dsolve_first_order_linear(p: &Expr, q: &Expr, var: &str) -> Option<Expr> {
 }
 
 /// Solves a separable first-order ODE.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn dsolve_separable(f: &Expr, g: &Expr, xvar: &str, yvar: &str) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::dsolve_separable(
@@ -576,12 +729,20 @@ fn dsolve_separable(f: &Expr, g: &Expr, xvar: &str, yvar: &str) -> Option<Expr> 
 }
 
 /// Solves an exact first-order ODE.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn dsolve_exact(m: &Expr, n: &Expr, xvar: &str, yvar: &str) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::dsolve_exact(m.inner(), n.inner(), xvar, yvar))
 }
 
 /// Solves a Bernoulli first-order ODE.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn dsolve_bernoulli(p: &Expr, q: &Expr, var: &str) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::dsolve_bernoulli(p.inner(), q.inner(), var))
@@ -593,6 +754,10 @@ fn dsolve_bernoulli(p: &Expr, q: &Expr, var: &str) -> Option<Expr> {
 /// # Errors
 ///
 /// Propagates the per-element extraction error.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn apply_initial_conditions(
     general: &Expr,
@@ -615,14 +780,18 @@ fn apply_initial_conditions(
 /// # Errors
 ///
 /// Raises `ValueError` when a coefficient is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn solve_recurrence(
-    coefficients: &Bound<'_, PyAny>,
-    initial: &Bound<'_, PyAny>,
+    coefficients: PySequence<'_, RationalLike<'_>>,
+    initial: PySequence<'_, RationalLike<'_>>,
     var: &str,
 ) -> PyResult<Option<Expr>> {
-    let coefficients = rational::vec_from_py(coefficients)?;
-    let initial = rational::vec_from_py(initial)?;
+    let coefficients = rational::vec_from_py(coefficients.as_any())?;
+    let initial = rational::vec_from_py(initial.as_any())?;
     Ok(Expr::wrap_option(axeyum_cas::solve_recurrence(
         &coefficients,
         &initial,
@@ -631,6 +800,10 @@ fn solve_recurrence(
 }
 
 /// A dense matrix of expressions.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Matrix")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Matrix {
@@ -649,6 +822,7 @@ impl Matrix {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Matrix {
     /// A matrix from a list of rows, or `None` when the rows are ragged.
@@ -657,9 +831,9 @@ impl Matrix {
     ///
     /// Propagates the per-element extraction error.
     #[staticmethod]
-    fn from_rows(rows: &Bound<'_, PyAny>) -> PyResult<Option<Matrix>> {
+    fn from_rows(rows: PySequence<'_, PySequence<'_, Expr>>) -> PyResult<Option<Matrix>> {
         let mut collected = Vec::new();
-        for row in rows.try_iter()? {
+        for row in rows.as_any().try_iter()? {
             collected.push(Expr::vec_from_py(&row?)?);
         }
         Ok(Matrix::wrap_option(CasMatrix::from_rows(collected)))
@@ -753,42 +927,70 @@ impl Matrix {
 }
 
 /// The rank of a matrix, or `None`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn matrix_rank(matrix: &Matrix) -> Option<usize> {
     axeyum_cas::matrix_rank(&matrix.inner)
 }
 
 /// The trace, or `None` for a non-square matrix.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn trace(matrix: &Matrix) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::trace(&matrix.inner))
 }
 
 /// The characteristic polynomial in `var`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn characteristic_polynomial(matrix: &Matrix, var: &str) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::characteristic_polynomial(&matrix.inner, var))
 }
 
 /// The minimal polynomial in `var`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn minimal_polynomial(matrix: &Matrix, var: &str) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::minimal_polynomial(&matrix.inner, var))
 }
 
 /// The companion matrix of a monic polynomial in `var`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn companion_matrix(poly: &Expr, var: &str) -> Option<Matrix> {
     Matrix::wrap_option(axeyum_cas::companion_matrix(poly.inner(), var))
 }
 
 /// The eigenvalues, or `None`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn eigenvalues(matrix: &Matrix, var: &str) -> Option<Vec<Expr>> {
     axeyum_cas::eigenvalues(&matrix.inner, var).map(Expr::wrap_vec)
 }
 
 /// `[(eigenvalue, [eigenvector, ...]), ...]`, or `None`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn eigenvectors(matrix: &Matrix, var: &str) -> Option<Vec<(Expr, Vec<Matrix>)>> {
     axeyum_cas::eigenvectors(&matrix.inner, var).map(|pairs| {
@@ -805,12 +1007,20 @@ fn eigenvectors(matrix: &Matrix, var: &str) -> Option<Vec<(Expr, Vec<Matrix>)>> 
 }
 
 /// `(P, D)` with `A = P D P^-1`, or `None` when not diagonalizable.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn diagonalize(matrix: &Matrix, var: &str) -> Option<(Matrix, Matrix)> {
     axeyum_cas::diagonalize(&matrix.inner, var).map(|(p, d)| (Matrix::wrap(p), Matrix::wrap(d)))
 }
 
 /// The gradient of `expr` with respect to `vars`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn gradient(expr: &Expr, vars: Vec<String>) -> Vec<Expr> {
     let borrowed: Vec<&str> = vars.iter().map(String::as_str).collect();
@@ -822,14 +1032,22 @@ fn gradient(expr: &Expr, vars: Vec<String>) -> Vec<Expr> {
 /// # Errors
 ///
 /// Propagates the per-element extraction error.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
-fn jacobian(exprs: &Bound<'_, PyAny>, vars: Vec<String>) -> PyResult<Option<Matrix>> {
-    let exprs = Expr::vec_from_py(exprs)?;
+fn jacobian(exprs: PySequence<'_, Expr>, vars: Vec<String>) -> PyResult<Option<Matrix>> {
+    let exprs = Expr::vec_from_py(exprs.as_any())?;
     let borrowed: Vec<&str> = vars.iter().map(String::as_str).collect();
     Ok(Matrix::wrap_option(axeyum_cas::jacobian(&exprs, &borrowed)))
 }
 
 /// The Hessian of `f` with respect to `vars`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn hessian(f: &Expr, vars: Vec<String>) -> Option<Matrix> {
     let borrowed: Vec<&str> = vars.iter().map(String::as_str).collect();
@@ -837,6 +1055,10 @@ fn hessian(f: &Expr, vars: Vec<String>) -> Option<Matrix> {
 }
 
 /// The Laplacian of `f` with respect to `vars`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn laplacian(f: &Expr, vars: Vec<String>) -> Expr {
     let borrowed: Vec<&str> = vars.iter().map(String::as_str).collect();
@@ -848,9 +1070,13 @@ fn laplacian(f: &Expr, vars: Vec<String>) -> Expr {
 /// # Errors
 ///
 /// Propagates the per-element extraction error.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
-fn divergence(field: &Bound<'_, PyAny>, vars: Vec<String>) -> PyResult<Option<Expr>> {
-    let field = Expr::vec_from_py(field)?;
+fn divergence(field: PySequence<'_, Expr>, vars: Vec<String>) -> PyResult<Option<Expr>> {
+    let field = Expr::vec_from_py(field.as_any())?;
     let borrowed: Vec<&str> = vars.iter().map(String::as_str).collect();
     Ok(Expr::wrap_option(axeyum_cas::divergence(&field, &borrowed)))
 }
@@ -860,13 +1086,21 @@ fn divergence(field: &Bound<'_, PyAny>, vars: Vec<String>) -> PyResult<Option<Ex
 /// # Errors
 ///
 /// Propagates the per-element extraction error.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
-fn wronskian(functions: &Bound<'_, PyAny>, var: &str) -> PyResult<Option<Expr>> {
-    let functions = Expr::vec_from_py(functions)?;
+fn wronskian(functions: PySequence<'_, Expr>, var: &str) -> PyResult<Option<Expr>> {
+    let functions = Expr::vec_from_py(functions.as_any())?;
     Ok(Expr::wrap_option(axeyum_cas::wronskian(&functions, var)))
 }
 
 /// The `n`-th cyclotomic polynomial in `var`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
 fn cyclotomic_polynomial(n: u64, var: &str) -> Option<Expr> {
     Expr::wrap_option(axeyum_cas::cyclotomic_polynomial(n, var))
@@ -877,9 +1111,13 @@ fn cyclotomic_polynomial(n: u64, var: &str) -> Option<Expr> {
 /// # Errors
 ///
 /// Raises `ValueError` when a datum is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
-fn standard_deviation(data: &Bound<'_, PyAny>) -> PyResult<Option<Expr>> {
-    let data = rational::vec_from_py(data)?;
+fn standard_deviation(data: PySequence<'_, RationalLike<'_>>) -> PyResult<Option<Expr>> {
+    let data = rational::vec_from_py(data.as_any())?;
     Ok(Expr::wrap_option(axeyum_cas::standard_deviation(&data)))
 }
 
@@ -888,9 +1126,13 @@ fn standard_deviation(data: &Bound<'_, PyAny>) -> PyResult<Option<Expr>> {
 /// # Errors
 ///
 /// Raises `ValueError` when a datum is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
+)]
 #[pyfunction]
-fn sample_standard_deviation(data: &Bound<'_, PyAny>) -> PyResult<Option<Expr>> {
-    let data = rational::vec_from_py(data)?;
+fn sample_standard_deviation(data: PySequence<'_, RationalLike<'_>>) -> PyResult<Option<Expr>> {
+    let data = rational::vec_from_py(data.as_any())?;
     Ok(Expr::wrap_option(axeyum_cas::sample_standard_deviation(
         &data,
     )))

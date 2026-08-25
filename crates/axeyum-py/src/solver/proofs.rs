@@ -21,6 +21,10 @@ use crate::solver::results::map_solver_error;
 ///
 /// Three plain strings, so a caller can write them to files and hand them to
 /// `drat-trim` or any LRAT checker without this binding in the loop.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver.proofs")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "UnsatProof")]
 #[derive(Clone)]
 pub struct PyUnsatProof {
@@ -33,6 +37,7 @@ impl PyUnsatProof {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyUnsatProof {
     /// The bit-blasted CNF in DIMACS.
@@ -151,6 +156,10 @@ fn bytes_of<'py>(py: Python<'py>, text: &str) -> PyResult<Bound<'py, PyBytes>> {
 ///
 /// `Inconclusive` means the proof core exhausted its budget. **It is not a
 /// pass and not a `sat`** — a timeout is a third answer.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver.proofs")
+)]
 #[pyclass(frozen, module = "axeyum", name = "UnsatProofOutcome")]
 pub struct PyUnsatProofOutcome {
     status: &'static str,
@@ -176,6 +185,7 @@ impl PyUnsatProofOutcome {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyUnsatProofOutcome {
     /// `"proved"`, `"satisfiable"` or `"inconclusive"`.
@@ -220,6 +230,10 @@ fn deadline(timeout_ms: Option<u64>) -> Option<Instant> {
 ///
 /// `timeout_ms` bounds only the proof SEARCH; when it expires the outcome is
 /// `inconclusive`, which is neither a verdict nor a pass.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver.proofs")
+)]
 #[pyfunction]
 #[pyo3(signature = (arena, assertions, timeout_ms = None))]
 pub fn export_qf_bv_unsat_proof(
@@ -242,6 +256,7 @@ macro_rules! mut_exporters {
     ($($py:ident => $rust:ident $(/ $within:ident)?),* $(,)?) => {
         $(
             #[doc = concat!("`axeyum_solver::", stringify!($rust), "`.\n\nAn exhausted budget is `inconclusive`, never a verdict.")]
+            #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver.proofs"))]
             #[pyfunction]
             #[pyo3(signature = (arena, assertions, timeout_ms = None))]
             pub fn $py(
@@ -286,6 +301,10 @@ mut_exporters!(
 /// `int_width` is the bit width the integers are blasted at; an `unsat` is
 /// only an `unsat` **within that width**, which is why the parameter has no
 /// default.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver.proofs")
+)]
 #[pyfunction]
 pub fn export_qf_lia_unsat_proof(
     py: Python<'_>,

@@ -1,85 +1,73 @@
 #!/usr/bin/env python3
-"""Generate type stubs for the compiled ``axeyum._native`` extension.
+"""The NAME and ARITY drift gate between the built extension and its stubs.
 
-``axeyum._native`` is a PyO3 ``.so``. Type checkers cannot read it, so every
-attribute reached through it -- which is the whole Python surface -- is
-invisible without stubs. This script introspects the *built* module and writes
-a stub package that mirrors it exactly.
+``python/axeyum/_native/**/__init__.pyi`` is now generated from the RUST
+signatures by ``cargo run -p axeyum-py --features stub-gen --bin stub_gen``
+(``pyo3-stub-gen``), not by introspecting the built module. That is what makes
+the stubs *typed*; it also means nothing in the generator's own pipeline ever
+looks at the extension that actually gets imported. Two things can therefore be
+wrong at once and neither tool notices:
 
-Why introspection and not hand-writing: a hand-written stub drifts silently
-and then makes the checker confidently wrong. That is not a hypothetical --
-the sibling repository this generator is ported from measured it twice: a
-1,532-line hand stub of its native surface accounted for ~1,400 of 2,004
-checker diagnostics, and a five-line hand stub of ``pytest`` shadowed the real
-one and produced 417 more. Generated output plus a drift test cannot go stale
-without a test going red.
+* a name reaches Python through a runtime call the macros cannot see --
+  ``module.add("MAX_BV_WIDTH", ...)``, an ``add_submodule``, an alias -- so it
+  exists in the ``.so`` and in no stub;
+* a ``#[gen_stub_pyfunction(module = "...")]`` names a module the function is
+  not registered in, so the stub describes a symbol that is not there.
 
-Why ``Any`` everywhere: PyO3 exposes ``__text_signature__`` (parameter names,
-arity, defaults) but no type information. Emitting ``Any`` for every parameter
-and return keeps the stub *sound* -- it reports wrong argument names, wrong
-arity and missing arguments, and never invents a type constraint the Rust code
-does not actually impose.
+This script is what compares the two. It walks the IMPORTED module, walks the
+COMMITTED stubs, and requires that they describe the same names with the same
+parameter names in the same order. **It ignores annotations entirely** --
+``tools/check_stub_types.py`` is the gate for those, and keeping the two
+separate means a type improvement cannot mask a name regression.
 
-Layout written under ``python/axeyum/``::
+This file used to *generate* an all-``Any`` stub package by introspection.
+Nothing does that any more; the previous role is gone, the drift check it
+carried is not.
 
-  _native/__init__.pyi      top-level classes, functions, constants
-  _native/<sub>.pyi         one per PyO3 submodule (smt, ir, solver, ...)
-  <alias>.pyi               one per submodule that ``axeyum/__init__.py``
-                            registers in ``sys.modules`` as ``axeyum.<name>``
-                            (none today; emitted automatically if that changes)
+Three comparisons are deliberately weaker, because PyO3 controls the runtime
+spelling and a Rust parameter name is not observable:
+
+* ``__new__``/``__init__``: PyO3 leaves ``__new__`` as ``(*args, **kwargs)``
+  and puts the real ``#[new]`` signature on the CLASS's
+  ``__text_signature__``, so the stub's ``__init__`` is compared against that.
+* Every other dunder: CPython's slot wrappers name their argument by the C
+  convention (``value``, ``key``), never the Rust one, and the arguments are
+  positional-only. Arity is compared; names are not.
+* An alias -- a module attribute that IS the same object as another attribute
+  already covered -- is reported, not required. ``ir.bv.lower_terms_py`` is a
+  second binding of ``ir.bv.lower_terms``, not a second function.
 
 Usage::
 
-    uv run --no-sync python tools/gen_native_stub.py            # write
-    uv run --no-sync python tools/gen_native_stub.py --check     # exit 1 if stale
+    uv run --no-sync python tools/gen_native_stub.py --check
+    uv run --no-sync python tools/gen_native_stub.py            # same, verbose
 
-``--check`` exits 1 on drift **and** on having compared zero stubs. The second
-guard is the one this repository keeps paying for elsewhere: a gate that
-examines nothing and exits 0 is worse than no gate (a corpus sweep printed
-"running 0 tests ... ok" for 15 days). On success it prints ``STUBS|compared=M``
-so the count is visible to whoever reads the log.
+Prints ``STUBS|modules=M|symbols=S|aliases=A`` and exits 1 on any drift **or**
+on having compared zero symbols. The second guard is the one this repository
+keeps paying for: a gate that examines nothing and exits 0 is worse than no
+gate (a corpus sweep printed "running 0 tests ... ok" for 15 days).
 """
 
 from __future__ import annotations
 
 import argparse
 import ast
-import inspect
-import keyword
 import sys
 import types
-from collections.abc import Mapping
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PKG_DIR = REPO_ROOT / "python" / "axeyum"
-STUB_PKG = PKG_DIR / "_native"
+PYTHON_ROOT = REPO_ROOT / "python"
 
-HEADER = """\
-# Generated by tools/gen_native_stub.py -- DO NOT EDIT BY HAND.
-#
-# Mirrors the compiled PyO3 extension `axeyum._native`. Regenerate with
-#     uv run --no-sync maturin develop
-#     uv run --no-sync python tools/gen_native_stub.py
-# `python/tests/test_native_stub_current.py` fails when this file drifts from
-# the built module.
-#
-# Parameter and return types are `Any`: PyO3 exposes arity, parameter names
-# and defaults, but no types. Arity and keyword names are therefore checked;
-# types deliberately are not.
-"""
+# Names on a module object that are Python's, not ours.
+MODULE_DUNDERS = frozenset(
+    {"__doc__", "__loader__", "__name__", "__package__", "__spec__", "__file__", "__all__"}
+)
 
-# Dunders NOT to stub. Everything else a `#[pymethods]` block defines is
-# emitted, because the operators are how the types are actually used: `a < b`
-# is `__lt__`, and omitting it makes the checker reject working code.
-#
-# `__init__`/`__new__` are excluded because PyO3 leaves them as
-# `($type, *args, **kwargs)` and puts the real `#[new]` signature on the
-# class's own `__text_signature__`, which `_class_lines` reads directly.
-SKIPPED_DUNDERS = frozenset(
+# Members every `#[pyclass]` inherits or that PyO3 stamps on; a stub that omits
+# them is not drift.
+IGNORED_CLASS_MEMBERS = frozenset(
     {
-        "__init__",
-        "__new__",
         "__doc__",
         "__module__",
         "__dict__",
@@ -91,453 +79,310 @@ SKIPPED_DUNDERS = frozenset(
         "__init_subclass__",
         "__subclasshook__",
         "__class__",
+        "__new__",
+        "__init__",
     }
 )
 
-# Reserved words a member name may collide with. Read from the interpreter's
-# own tables rather than transcribed: a hand-written list is a second source of
-# truth that goes stale the next time Python grows a keyword, and the failure
-# would be silent (a stub emitting a name Python cannot parse).
-_KEYWORDS = frozenset(keyword.kwlist) | frozenset(keyword.softkwlist)
 
-
-# Members the extension exports under a name Python cannot spell (a reserved
-# keyword). They are unreachable except via `getattr`, cannot be stubbed, and
-# are reported so the Rust side can be renamed.
-UNSPELLABLE: list[str] = []
-
-
-def _is_identifier(name: str) -> bool:
-    return name.isidentifier() and name not in _KEYWORDS
-
-
-def _record_unspellable(owner: str, members: Mapping[str, object]) -> None:
-    for name in sorted(members):
-        if not name.startswith("_") and not _is_identifier(name):
-            UNSPELLABLE.append(f"{owner}.{name}")
-
-
-def _default_literal(text: str) -> str:
-    """Keep a default value only when it round-trips as a Python literal."""
-    try:
-        ast.literal_eval(text)
-    except (ValueError, SyntaxError, MemoryError, TypeError):
-        return "..."
-    return text
-
-
-def _split_params(inner: str) -> list[str]:
-    """Split a signature body on top-level commas."""
+def split_signature(text: str) -> list[str]:
+    """Top-level comma split of a ``__text_signature__`` body."""
     parts: list[str] = []
     depth = 0
     current: list[str] = []
-    for ch in inner:
-        if ch in "([{":
+    for character in text:
+        if character in "([{":
             depth += 1
-        elif ch in ")]}":
+        elif character in ")]}":
             depth -= 1
-        if ch == "," and depth == 0:
+        if character == "," and depth == 0:
             parts.append("".join(current).strip())
             current = []
         else:
-            current.append(ch)
+            current.append(character)
     tail = "".join(current).strip()
     if tail:
         parts.append(tail)
     return parts
 
 
-def _render_params(text_signature: str | None, *, self_name: str | None) -> str:
-    """Turn a PyO3 ``__text_signature__`` into an annotated parameter list.
-
-    ``self_name`` is the receiver to prepend (``self``/``cls``), or None for a
-    free function or staticmethod. Returns the text between the parentheses.
-    """
-    lead = [self_name] if self_name else []
-    if text_signature is None:
-        # PyO3 omits the signature for some constructors and operators. A
-        # permissive `*args, **kwargs` never produces a false positive.
-        return ", ".join(lead + ["*args: Any", "**kwargs: Any"])
-
-    inner = text_signature.strip()
+def runtime_parameters(signature: str | None) -> list[str] | None:
+    """Parameter names from a ``__text_signature__``; None when PyO3 omitted it."""
+    if signature is None:
+        return None
+    inner = signature.strip()
     if inner.startswith("(") and inner.endswith(")"):
         inner = inner[1:-1]
-
-    out: list[str] = list(lead)
-    for raw in _split_params(inner):
-        if not raw:
+    names: list[str] = []
+    for raw in split_signature(inner):
+        if raw in ("/", "*") or raw.startswith("$"):
             continue
-        if raw in ("/", "*"):
-            # A leading `/` only makes sense after a real parameter.
-            if raw == "/" and len(out) <= len(lead):
-                continue
-            out.append(raw)
-            continue
-        if raw.startswith("$"):
-            # `$self` / `$type` / `$cls` -- already handled via `self_name`.
-            continue
-        star = ""
-        body = raw
-        while body.startswith("*"):
-            star += "*"
-            body = body[1:]
-        name, _, default = body.partition("=")
-        name = name.strip()
-        # PyO3 can emit annotations in the text signature; drop them, the stub
-        # annotates everything as Any.
-        name = name.split(":", 1)[0].strip()
-        if not _is_identifier(name):
-            # Unparseable -- fall back to something permissive rather than
-            # emitting a stub that lies about arity.
-            return ", ".join(lead + ["*args: Any", "**kwargs: Any"])
-        if star:
-            out.append(f"{star}{name}: Any")
-        elif default:
-            out.append(f"{name}: Any = {_default_literal(default.strip())}")
-        else:
-            out.append(f"{name}: Any")
-    if not out:
-        return ""
-    return ", ".join(out)
+        raw = raw.lstrip("*")
+        names.append(raw.split("=")[0].split(":")[0].strip())
+    return names
 
 
-def _receiver(text_signature: str | None) -> str | None:
-    """``self``, ``cls``, or None, based on PyO3's ``$self`` / ``$type`` marker."""
-    if not text_signature:
-        return None
-    head = text_signature.lstrip("(").split(",", 1)[0].strip()
-    if head == "$self":
-        return "self"
-    if head in ("$type", "$cls", "$module"):
-        return "cls"
-    return None
-
-
-LINE_LENGTH = 88  # ruff's `line-length`; a generated line past it fails `ruff format --check`
-
-
-def _def_line(indent: str, name: str, params: str, ret: str = "Any") -> list[str]:
-    """``def name(params) -> Any: ...``, wrapped one-parameter-per-line past LINE_LENGTH.
-
-    The wrapped form is exactly what ``ruff format`` produces for a call that
-    overflows (magic trailing comma), so generated output never needs a
-    formatter pass -- a stub that ``ruff format --check`` would rewrite is a
-    drift the check cannot tell from a real one.
-    """
-    flat = f"{indent}def {name}({params}) -> {ret}: ..."
-    if len(flat) <= LINE_LENGTH or not params:
-        return [flat]
-    inner = indent + "    "
-    return [
-        f"{indent}def {name}(",
-        *[f"{inner}{param.strip()}," for param in params.split(", ")],
-        f"{indent}) -> {ret}: ...",
+def stub_parameters(node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
+    """Parameter names from a stub ``def``, receiver dropped."""
+    arguments = node.args
+    every = [
+        *arguments.posonlyargs,
+        *arguments.args,
+        *([arguments.vararg] if arguments.vararg else []),
+        *arguments.kwonlyargs,
+        *([arguments.kwarg] if arguments.kwarg else []),
     ]
+    names = [argument.arg for argument in every]
+    if names and names[0] in ("self", "cls"):
+        names = names[1:]
+    return names
 
 
-def _func_lines(name: str, obj: object, *, in_class: bool, indent: str) -> list[str]:
-    sig = getattr(obj, "__text_signature__", None)
-    if in_class:
-        recv = _receiver(sig)
-        if recv is None:
-            if isinstance(obj, staticmethod) or type(obj).__name__ in (
-                "builtin_function_or_method",
-                "function",
-            ):
-                lines = [f"{indent}@staticmethod"]
-                params = _render_params(sig, self_name=None)
-                return lines + _def_line(indent, name, params)
-            recv = "self"
-        lines = [f"{indent}@classmethod"] if recv == "cls" else []
-        params = _render_params(sig, self_name=recv)
-        return lines + _def_line(indent, name, params)
-    params = _render_params(sig, self_name=None)
-    return _def_line(indent, name, params)
+def is_dunder(name: str) -> bool:
+    return name.startswith("__") and name.endswith("__")
 
 
-def _class_lines(name: str, cls: type, *, level: int = 0) -> list[str]:
-    pad = "    " * level
-    inner = "    " * (level + 1)
-    body: list[str] = []
-    doc = inspect.getdoc(cls)
-    if doc:
-        first = doc.strip().splitlines()[0].replace('"""', "'''")
-        body.append(f'{inner}"""{first}"""')
-        body.append("")
+class Drift:
+    """Accumulates findings so the report names every one, not just the first."""
 
+    def __init__(self) -> None:
+        self.problems: list[str] = []
+        self.symbols = 0
+        self.aliases: list[str] = []
+        self.artifacts: list[str] = []
+
+    def report(self, message: str) -> None:
+        self.problems.append(message)
+
+
+def stub_path(module_name: str) -> Path:
+    return PYTHON_ROOT / Path(*module_name.split(".")) / "__init__.pyi"
+
+
+def walk_modules(module: types.ModuleType, name: str, found: dict[str, types.ModuleType]) -> None:
+    found[name] = module
+    for key, value in vars(module).items():
+        if isinstance(value, types.ModuleType) and value.__name__.startswith("axeyum._native"):
+            walk_modules(value, f"{name}.{key}", found)
+
+
+def compare_callable(
+    drift: Drift, where: str, runtime_object: object, node: ast.FunctionDef, *, arity_only: bool
+) -> None:
+    signature = getattr(runtime_object, "__text_signature__", None)
+    expected = runtime_parameters(signature)
+    if expected is None:
+        # PyO3 omits the signature for some slots; there is nothing to compare
+        # against, and inventing a comparison would be worse than none.
+        return
+    drift.symbols += 1
+    actual = stub_parameters(node)
+    if arity_only:
+        if len(expected) != len(actual):
+            drift.report(
+                f"{where}: runtime takes {len(expected)} argument(s), stub takes {len(actual)}"
+            )
+        return
+    if expected != actual:
+        drift.report(f"{where}: runtime parameters {expected}, stub {actual}")
+
+
+def check_class(drift: Drift, module_name: str, name: str, cls: type, node: ast.ClassDef) -> None:
     members = vars(cls)
-    _record_unspellable(name, members)
-    # PyO3 enum variants: class attributes whose value is an instance of the
-    # class itself. Emit them first, as `Variant: ClassName`.
-    variants = sorted(
-        k
-        for k, v in members.items()
-        if not k.startswith("_") and _is_identifier(k) and isinstance(v, cls)
-    )
-    for k in variants:
-        body.append(f"{inner}{k}: {name}")
-    if variants:
-        body.append("")
+    stub_members: dict[str, ast.FunctionDef] = {}
+    stub_attributes: set[str] = set()
+    for statement in node.body:
+        if isinstance(statement, ast.FunctionDef):
+            stub_members[statement.name] = statement
+        elif isinstance(statement, ast.AnnAssign) and isinstance(statement.target, ast.Name):
+            stub_attributes.add(statement.target.id)
+        elif isinstance(statement, ast.Assign):
+            # A simple `#[pyclass(eq, eq_int)]` enum's variants come out as
+            # `Certified = ...`, an Assign, not an AnnAssign.
+            stub_attributes |= {t.id for t in statement.targets if isinstance(t, ast.Name)}
+        elif isinstance(statement, ast.ClassDef):
+            stub_attributes.add(statement.name)
 
-    props = sorted(
-        k
-        for k, v in members.items()
-        if not k.startswith("_")
-        and _is_identifier(k)
-        and type(v).__name__ in ("getset_descriptor", "member_descriptor")
-    )
-    for k in props:
-        body.append(f"{inner}{k}: Any")
-    if props:
-        body.append("")
-
-    consts = sorted(
-        k
-        for k, v in members.items()
-        if not k.startswith("_")
-        and _is_identifier(k)
-        and k not in variants
-        and isinstance(v, (int, float, str, bytes, bool))
-    )
-    for k in consts:
-        body.append(f"{inner}{k}: {type(members[k]).__name__}")
-    if consts:
-        body.append("")
-
-    # PyO3 complex enums expose each variant as a nested class whose
-    # constructor takes the variant's payload.
-    nested = sorted(
-        k
-        for k, v in members.items()
-        if not k.startswith("_") and _is_identifier(k) and inspect.isclass(v)
-    )
-    for k in nested:
-        body.extend(_class_lines(k, members[k], level=level + 1))
-
-    # PyO3 records the `#[new]` signature on the class, not on `__new__`.
-    # Without it every constructor call would be checked against
-    # `object.__init__` and reported as too many positional arguments.
-    ctor = getattr(cls, "__text_signature__", None)
-    body.extend(_def_line(inner, "__init__", _render_params(ctor, self_name="self"), ret="None"))
-
-    methods = sorted(
-        k
-        for k, v in members.items()
-        if (
-            not k.startswith("_")
-            or (k.startswith("__") and k.endswith("__") and k not in SKIPPED_DUNDERS)
+    # The `#[new]` signature lives on the class, not on `__new__`.
+    constructor = stub_members.get("__init__") or stub_members.get("__new__")
+    if constructor is not None:
+        compare_callable(
+            drift, f"{module_name}.{name}.__init__", cls, constructor, arity_only=False
         )
-        and _is_identifier(k)
-        and k not in variants
-        and k not in props
-        and k not in consts
-        and k not in nested
-        and callable(v)
-    )
-    for k in methods:
-        body.extend(_func_lines(k, members[k], in_class=True, indent=inner))
 
-    if not body:
-        body = [f"{inner}..."]
-    while body and body[-1] == "":
-        body.pop()
-    # PyO3 complex-enum variants really are subclasses of the enum and inherit
-    # its getters; an exception class really is a subclass of `Exception`.
-    # Losing the base makes every inherited attribute read as unresolved.
-    bases = [b.__name__ for b in cls.__bases__ if b is not object]
-    head = f"{pad}class {name}({', '.join(bases)}):" if bases else f"{pad}class {name}:"
-    return [head, *body, ""]
+    for member_name, member in sorted(members.items()):
+        if member_name in IGNORED_CLASS_MEMBERS:
+            continue
+        if member_name.startswith("_") and not is_dunder(member_name):
+            continue
+        if member_name not in stub_members and member_name not in stub_attributes:
+            if is_dunder(member_name):
+                # PyO3 and CPython synthesise dunders the Rust never wrote: the
+                # five ordering slots on every `#[pyclass]`, `__ne__` from
+                # `__eq__`, and a reflected `__rX__` for every `__X__` (one
+                # `nb_*` slot serves both operand orders). The interpreter
+                # resolves these through the slot, so a stub that omits one
+                # loses precision and never correctness. Reported, not failed.
+                drift.artifacts.append(f"{module_name}.{name}.{member_name}")
+                continue
+            drift.report(f"{module_name}.{name}.{member_name}: on the class, absent from the stub")
+            continue
+        node_member = stub_members.get(member_name)
+        if node_member is None or not callable(member):
+            continue
+        if type(member).__name__ in ("getset_descriptor", "member_descriptor"):
+            continue
+        compare_callable(
+            drift,
+            f"{module_name}.{name}.{member_name}",
+            member,
+            node_member,
+            arity_only=is_dunder(member_name),
+        )
+
+    for member_name in sorted(stub_members) + sorted(stub_attributes):
+        if member_name in ("__init__", "__new__") or member_name in members:
+            continue
+        if issubclass(cls, BaseException):
+            # An exception's payload is attached with `setattr` at the RAISE
+            # site (`Declined.reason`, `KernelError.variant`), so it exists on
+            # the instance and never on the class. It is declared in the stub
+            # deliberately -- see `crate::stub_info::stub_exception!` -- and
+            # `ty` reported it as an unresolved attribute until it was.
+            drift.artifacts.append(f"{module_name}.{name}.{member_name} (raise-time payload)")
+            continue
+        if is_dunder(member_name):
+            # PyO3 compiles some dunders into a type slot rather than into a
+            # same-named attribute: `#[pymethods] fn __getattr__` becomes
+            # `tp_getattro`, which Python surfaces as `__getattribute__`. The
+            # stub names the protocol the class actually implements.
+            drift.artifacts.append(f"{module_name}.{name}.{member_name} (slot-only)")
+            continue
+        drift.report(f"{module_name}.{name}.{member_name}: in the stub, absent from the class")
 
 
-def _module_source(mod: types.ModuleType, submodules: list[str]) -> str:
-    members = vars(mod)
-    _record_unspellable(mod.__name__, members)
-    lines = [HEADER]
-    body_start = len(lines)
-    for sub in submodules:
-        lines.append(f"from . import {sub} as {sub}")
-    foreign_bases = sorted(
-        {
-            b.__name__
-            for v in members.values()
-            if inspect.isclass(v)
-            for b in v.__bases__
-            if b is not object and b.__module__ != "builtins" and b.__name__ not in members
-        }
-    )
-    for base in foreign_bases:
-        # `create_exception!` stamps `__module__ = "axeyum"`, not the defining
-        # `axeyum._native` path, so the test is "not defined here", never a
-        # module-name prefix. Bases so far all come from the parent module; a
-        # base from a sibling submodule would need its own relative path.
-        lines.append(f"from . import {base} as {base}")
-    if submodules or foreign_bases:
-        lines.append("")
+def check_module(drift: Drift, module_name: str, module: types.ModuleType) -> None:
+    path = stub_path(module_name)
+    if not path.is_file():
+        drift.report(f"{module_name}: no stub at {path.relative_to(REPO_ROOT)}")
+        return
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    stub_functions = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
+    stub_classes = {n.name: n for n in tree.body if isinstance(n, ast.ClassDef)}
+    stub_names = set(stub_functions) | set(stub_classes)
+    for statement in tree.body:
+        if isinstance(statement, ast.AnnAssign) and isinstance(statement.target, ast.Name):
+            stub_names.add(statement.target.id)
+        elif isinstance(statement, ast.Assign):
+            stub_names |= {t.id for t in statement.targets if isinstance(t, ast.Name)}
+        elif isinstance(statement, ast.ImportFrom):
+            stub_names |= {alias.asname or alias.name for alias in statement.names}
 
-    public = {
-        k: v
-        for k, v in members.items()
-        if not k.startswith("_") and _is_identifier(k) and not isinstance(v, types.ModuleType)
+    members = {
+        key: value
+        for key, value in vars(module).items()
+        if not isinstance(value, types.ModuleType)
+        and (not key.startswith("_") or key == "__version__")
+        and key not in MODULE_DUNDERS
     }
-    classes = sorted(k for k, v in public.items() if inspect.isclass(v))
-    funcs = sorted(k for k, v in public.items() if k not in classes and callable(v))
-    consts = sorted(k for k in public if k not in classes and k not in funcs)
 
-    for k in consts:
-        lines.append(f"{k}: {type(members[k]).__name__}")
-    if consts:
-        lines.append("")
-    for k in classes:
-        lines.extend(_class_lines(k, members[k]))
-    for k in funcs:
-        lines.extend(_func_lines(k, members[k], in_class=False, indent=""))
-    if funcs:
-        lines.append("")
-    # `from typing import Any` is emitted only when the body uses it. A
-    # submodule the Rust side has registered but not yet populated produces an
-    # otherwise empty stub, and an unused import there is a lint failure --
-    # which would make `ruff` red on generated output nobody may edit.
-    if any("Any" in line for line in lines[body_start:]):
-        lines.insert(body_start, "from typing import Any\n")
-    return "\n".join(lines).rstrip() + "\n"
+    for key, value in sorted(members.items()):
+        if key in stub_names:
+            drift.symbols += 1
+            continue
+        twin = next(
+            (
+                other
+                for other, obj in sorted(members.items())
+                if obj is value and other in stub_names
+            ),
+            None,
+        )
+        if twin is not None:
+            drift.aliases.append(f"{module_name}.{key} -> {twin}")
+            continue
+        drift.report(f"{module_name}.{key}: in the extension, absent from the stub")
 
+    for name, node in sorted(stub_functions.items()):
+        target = members.get(name)
+        if target is None:
+            drift.report(f"{module_name}.{name}: in the stub, absent from the extension")
+            continue
+        compare_callable(drift, f"{module_name}.{name}", target, node, arity_only=is_dunder(name))
 
-def _alias_source(sub: str, mod: types.ModuleType) -> str:
-    """A forwarding stub for ``axeyum.<sub>``.
-
-    Emitted only for a submodule that ``axeyum/__init__.py`` puts into
-    ``sys.modules`` under that name, so ``import axeyum.<sub>`` works at
-    runtime and must type-check.
-    """
-    names = sorted(k for k in vars(mod) if not k.startswith("_") and _is_identifier(k))
-    lines = [
-        HEADER.rstrip("\n"),
-        f"# `axeyum/__init__.py` registers `axeyum._native.{sub}` in `sys.modules`",
-        f"# as `axeyum.{sub}`, so `import axeyum.{sub}` works at runtime and must",
-        "# type-check. Each name is listed rather than star-imported, so a name",
-        "# vanishing from the extension shows up as a diff in this file.",
-        "",
-        f"from axeyum._native import {sub} as _mod",
-        "",
-    ]
-    for k in names:
-        lines.append(f"{k} = _mod.{k}")
-    return "\n".join(lines).rstrip() + "\n"
+    for name, node in sorted(stub_classes.items()):
+        target = members.get(name)
+        if target is None:
+            drift.report(f"{module_name}.{name}: in the stub, absent from the extension")
+            continue
+        if isinstance(target, type):
+            check_class(drift, module_name, name, target, node)
 
 
-def _sys_module_aliases(native: types.ModuleType, subs: list[str]) -> list[str]:
-    """Submodules published as ``axeyum.<name>`` in ``sys.modules``.
-
-    Derived, never listed by hand: the package decides which submodules it
-    re-registers, and a hand-maintained list here would be one more thing that
-    can drift from the runtime. None are registered today; if one is, its
-    forwarding stub appears without this file changing.
-    """
-    return [sub for sub in subs if sys.modules.get(f"axeyum.{sub}") is getattr(native, sub, None)]
-
-
-def _generate(stub_pkg: Path = STUB_PKG, pkg_dir: Path = PKG_DIR) -> dict[Path, str]:
+def run() -> Drift:
     import axeyum._native as native
 
-    subs = sorted(k for k, v in vars(native).items() if isinstance(v, types.ModuleType))
-    out: dict[Path, str] = {
-        stub_pkg / "__init__.pyi": _module_source(native, subs),
-    }
-    for sub in subs:
-        out[stub_pkg / f"{sub}.pyi"] = _module_source(getattr(native, sub), [])
-    for sub in _sys_module_aliases(native, subs):
-        out[pkg_dir / f"{sub}.pyi"] = _alias_source(sub, getattr(native, sub))
-    return out
+    modules: dict[str, types.ModuleType] = {}
+    walk_modules(native, "axeyum._native", modules)
+    drift = Drift()
+    for name, module in sorted(modules.items()):
+        check_module(drift, name, module)
+    drift.module_count = len(modules)  # type: ignore[attr-defined]
+    return drift
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Generate axeyum._native type stubs.")
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--check",
         action="store_true",
-        help="do not write; exit 1 if any stub differs from the built module",
+        help="kept for the callers that pass it; the script only ever checks",
     )
+    parser.add_argument("--quiet", action="store_true", help="do not list the aliases")
     parser.add_argument(
-        "--stub-dir",
-        type=Path,
-        default=None,
-        help=(
-            "write/compare stubs under this directory instead of "
-            "python/axeyum/_native (used by the drift test and by the negative "
-            "controls that demonstrate --check failing)"
-        ),
+        "--show",
+        action="store_true",
+        help="also list every dunder PyO3 or CPython synthesised, and every "
+        "raise-time exception payload the stub declares",
     )
     args = parser.parse_args(argv)
 
-    stub_pkg = args.stub_dir.resolve() if args.stub_dir else STUB_PKG
-    pkg_dir = stub_pkg.parent if args.stub_dir else PKG_DIR
+    drift = run()
+    modules = getattr(drift, "module_count", 0)
+    print(
+        f"STUBS|modules={modules}|symbols={drift.symbols}"
+        f"|aliases={len(drift.aliases)}|synthesised_dunders={len(drift.artifacts)}"
+    )
 
-    files = _generate(stub_pkg, pkg_dir)
-    stale: list[tuple[Path, str]] = []
-    # `compared` counts stubs that were actually read off disk and compared
-    # byte-for-byte -- NOT how many the generator produced. Those differ
-    # exactly when the stubs are missing, which is the case where a count of
-    # "files generated" would report a healthy number for a comparison that
-    # never happened.
-    compared = 0
-    for path, text in sorted(files.items()):
-        if path.exists():
-            compared += 1
-            existing = path.read_text()
-        else:
-            existing = None
-        if existing == text:
-            continue
-        stale.append((path, "missing" if existing is None else "differs"))
-        if not args.check:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(text)
-
-    # A stub file left behind for a submodule that no longer exists is drift too.
-    if stub_pkg.exists():
-        for path in sorted(stub_pkg.glob("*.pyi")):
-            if path not in files:
-                compared += 1
-                stale.append((path, "orphan -- no such submodule"))
-                if not args.check:
-                    path.unlink()
-
-    if not args.check:
-        print(f"wrote {len(files)} stub files ({len(stale)} changed)")
-        if UNSPELLABLE:
-            print(
-                "note: exported under a name Python cannot spell "
-                "(reachable only via getattr, not stubbed):"
-            )
-            for entry in sorted(set(UNSPELLABLE)):
-                print(f"  {entry}")
-        return 0
+    if not args.quiet:
+        for alias in drift.aliases:
+            print(f"  alias: {alias}")
+    if args.show:
+        for artifact in drift.artifacts:
+            print(f"  synthesised: {artifact}")
 
     failed = False
-    if stale:
-        print("stale native stubs:", file=sys.stderr)
-        for path, why in stale:
-            rel = path if not path.is_relative_to(REPO_ROOT) else path.relative_to(REPO_ROOT)
-            print(f"  {rel}: {why}", file=sys.stderr)
+    if drift.problems:
+        print("stub drift against the built extension:", file=sys.stderr)
+        for problem in drift.problems:
+            print(f"  {problem}", file=sys.stderr)
         print(
-            "run: uv run --no-sync maturin develop && "
-            "uv run --no-sync python tools/gen_native_stub.py",
+            "regenerate with:\n"
+            "  uv run --no-sync maturin develop\n"
+            "  cargo run -p axeyum-py --features stub-gen --bin stub_gen",
             file=sys.stderr,
         )
         failed = True
-    if compared == 0:
-        # The inert-gate guard. Without it, pointing this at a directory with
-        # no stubs in it would report "nothing differed" and exit 0.
+    if drift.symbols == 0:
         print(
-            f"STUBS|FAIL compared=0 -- no stub was read from {stub_pkg}; "
-            "a check that compared nothing is not a pass",
+            "STUBS|FAIL symbols=0 -- nothing was compared; a check that examined "
+            "nothing is not a pass",
             file=sys.stderr,
         )
         failed = True
     if failed:
-        print(f"STUBS|FAIL compared={compared} stale={len(stale)}")
+        print(f"STUBS|FAIL symbols={drift.symbols} problems={len(drift.problems)}")
         return 1
-    print(f"STUBS|compared={compared}")
     return 0
 
 

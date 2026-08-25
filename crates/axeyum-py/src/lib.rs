@@ -26,11 +26,21 @@ mod kernel;
 mod producers;
 mod smt;
 mod solver;
+#[cfg(feature = "stub-gen")]
+mod stub_info;
+mod stub_types;
+
+#[cfg(feature = "stub-gen")]
+pub use stub_info::stub_info;
 
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
 
 /// The Axeyum workspace version this extension module was built from.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native")
+)]
 #[pyfunction]
 fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
@@ -69,4 +79,14 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         sys_modules.set_item(format!("axeyum._native.{name}"), &submodule)?;
     }
     Ok(())
+}
+
+// Module-level constants reach Python through `module.add("NAME", value)`, a
+// RUNTIME call with no item for a `#[gen_stub_*]` macro to sit on -- so without
+// these submissions they exist in the extension and in no stub, and a checked
+// consumer reading one gets an unresolved attribute. The type is named; the
+// VALUE deliberately is not, so a constant cannot drift from its stub.
+#[cfg(feature = "stub-gen")]
+mod stub_variables {
+    pyo3_stub_gen::module_variable!("axeyum._native", "__version__", String);
 }

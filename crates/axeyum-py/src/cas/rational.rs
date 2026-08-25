@@ -10,12 +10,18 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyModule};
 
+use crate::stub_types::PyFraction;
+
 /// An exact rational number, normalized, with an `i128` numerator and
 /// denominator.
 ///
 /// Constructing one with a zero denominator raises `ValueError`:
 /// `axeyum_ir::Rational::new` panics there, so the binding goes through
 /// `checked_new` (inventory §0.6).
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Rational")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Rational {
@@ -29,6 +35,7 @@ impl Rational {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Rational {
     /// `Rational(num, den=1)`.
@@ -70,7 +77,7 @@ impl Rational {
     /// # Errors
     ///
     /// Propagates any Python error raised while importing `fractions`.
-    fn to_fraction<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    fn to_fraction<'py>(&self, py: Python<'py>) -> PyResult<PyFraction<'py>> {
         fraction(py, self.inner)
     }
 
@@ -82,8 +89,8 @@ impl Rational {
     /// Raises `ValueError` when the pair does not fit in `i128` or the
     /// denominator is zero, and `TypeError` for an object with no such fields.
     #[staticmethod]
-    fn coerce(value: &Bound<'_, PyAny>) -> PyResult<Self> {
-        from_py(value).map(Self::wrap)
+    fn coerce(value: RationalLike<'_>) -> PyResult<Self> {
+        from_py(value.as_any()).map(Self::wrap)
     }
 
     fn __repr__(&self) -> String {
@@ -137,10 +144,11 @@ pub(crate) fn checked(num: i128, den: i128) -> Option<IrRational> {
 /// # Errors
 ///
 /// Propagates any Python error raised while importing `fractions`.
-pub(crate) fn fraction(py: Python<'_>, value: IrRational) -> PyResult<Bound<'_, PyAny>> {
+pub(crate) fn fraction(py: Python<'_>, value: IrRational) -> PyResult<PyFraction<'_>> {
     PyModule::import(py, "fractions")?
         .getattr("Fraction")?
         .call1((value.numerator(), value.denominator()))
+        .map(PyFraction::new)
 }
 
 /// `fractions.Fraction` for an optional IR rational; `None` stays `None`.
@@ -151,7 +159,7 @@ pub(crate) fn fraction(py: Python<'_>, value: IrRational) -> PyResult<Bound<'_, 
 pub(crate) fn optional_fraction(
     py: Python<'_>,
     value: Option<IrRational>,
-) -> PyResult<Option<Bound<'_, PyAny>>> {
+) -> PyResult<Option<PyFraction<'_>>> {
     value.map(|value| fraction(py, value)).transpose()
 }
 
@@ -195,4 +203,43 @@ pub(crate) fn from_py(value: &Bound<'_, PyAny>) -> PyResult<IrRational> {
 /// Propagates the per-element conversion error.
 pub(crate) fn vec_from_py(values: &Bound<'_, PyAny>) -> PyResult<Vec<IrRational>> {
     values.try_iter()?.map(|item| from_py(&item?)).collect()
+}
+
+/// Anything this crate accepts where an exact rational is wanted: a Python
+/// `int`, a `fractions.Fraction`, or a [`Rational`].
+///
+/// [`from_py`] reads `numerator`/`denominator` off the object, so the Rust
+/// parameter has to be `&Bound<'_, PyAny>` and the derived stub would say
+/// `typing.Any` -- true, and useless. This wrapper changes nothing at run time
+/// (it is the same handle) and makes the stub name the three types the error
+/// message already names.
+pub(crate) struct RationalLike<'py>(Bound<'py, PyAny>);
+
+impl<'py> RationalLike<'py> {
+    /// The wrapped object, to read `numerator`/`denominator` from.
+    pub(crate) fn as_any(&self) -> &Bound<'py, PyAny> {
+        &self.0
+    }
+}
+
+impl<'py> FromPyObject<'_, 'py> for RationalLike<'py> {
+    type Error = PyErr;
+
+    fn extract(object: pyo3::Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        Ok(Self(object.to_owned()))
+    }
+}
+
+#[cfg(feature = "stub-gen")]
+impl pyo3_stub_gen::PyStubType for RationalLike<'_> {
+    fn type_input() -> pyo3_stub_gen::TypeInfo {
+        use pyo3_stub_gen::PyStubType;
+        <i128 as PyStubType>::type_input()
+            | <PyFraction<'_> as PyStubType>::type_output()
+            | <Rational as PyStubType>::type_output()
+    }
+
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        Self::type_input()
+    }
 }

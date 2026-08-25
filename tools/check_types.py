@@ -6,18 +6,23 @@ and refuses an increase in the diagnostic count.
 Why a budget instead of zero: five diagnostics remain, and none of them is
 fixable in `python/axeyum/**.py`.
 
-  * `axeyum._native.cas.certify` and `axeyum._native.kernel.identity` are real
-    submodules (the extension registers them in `sys.modules`), but the
-    generated stubs are FLAT -- `_native/cas.pyi` is a module, so it can have no
-    `certify` member. Fixing it means emitting `_native/cas/__init__.pyi` +
-    `_native/cas/certify.pyi` from `tools/gen_native_stub.py`, and widening the
-    wheel's `include` glob to match. That is a stub-generator change, not a
-    package change.
-  * `Declined.reason` is attached with `setattr` when the exception is RAISED
-    (`crates/axeyum-py/src/producers.rs`), so no generator can see it; the stub
-    would have to declare it deliberately.
   * `AbstractAgent.run` is a pydantic-ai overload set that our call does not
     match under `ty`'s reading. It runs correctly (the agent suites cover it).
+  * THREE inside the GENERATED stub `python/axeyum/_native/producers/*.pyi*`.
+    `StatementImport` has a member named `kernel`, and the stub imports the
+    sibling module as `from axeyum._native import kernel`; inside a class body
+    the member shadows the import, so `goal(self) -> kernel.ExprId` resolves
+    `kernel` to the method. `pyo3-stub-gen` 0.23 always qualifies a cross-module
+    type as `<last module component>.<Type>` (`TypeInfo::locally_defined`,
+    `ImportKind::Module`) and offers no alias, so this cannot be fixed from the
+    annotations; the fixes available are to rename the accessor (a public API
+    change) or to re-export the three kernel handle types into `producers`.
+    Neither belongs in a typing slice. Recorded rather than hidden.
+
+  The four that USED to be here are gone: `axeyum._native.cas.certify` and
+  `axeyum._native.kernel.identity` now resolve, because the stubs are a PACKAGE
+  with one directory per PyO3 submodule; and `Declined.reason` is declared by
+  `crate::stub_info::stub_exception!`.
 
 Each is recorded here rather than silenced with an ignore comment, because an
 ignore comment is invisible in a count and a budget is not.
@@ -44,7 +49,7 @@ TARGET = "python/axeyum"
 # The number of `ty` diagnostics in TARGET that are not ours to fix. Lower it
 # whenever the real number drops; never raise it without naming the diagnostic
 # above and saying why it cannot be fixed here.
-BUDGET = 5
+BUDGET = 4
 
 
 def ty_binary() -> str:

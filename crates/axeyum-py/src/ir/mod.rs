@@ -69,3 +69,19 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     parent.add("ir", &module)?;
     Ok(module)
 }
+
+// Module-level constants reach Python through `module.add("NAME", value)`, a
+// RUNTIME call with no item for a `#[gen_stub_*]` macro to sit on -- so without
+// these submissions they exist in the extension and in no stub, and a checked
+// consumer reading one gets an unresolved attribute. The type is named; the
+// VALUE deliberately is not, so a constant cannot drift from its stub.
+#[cfg(feature = "stub-gen")]
+mod stub_variables {
+    pyo3_stub_gen::module_variable!("axeyum._native.ir", "MAX_BV_WIDTH", u32);
+    pyo3_stub_gen::module_variable!("axeyum._native.ir", "STRING_ELEM_WIDTH", u32);
+    pyo3_stub_gen::module_variable!(
+        "axeyum._native.ir",
+        "OP_NAMES",
+        crate::stub_types::PyFrozenSetOf<String>
+    );
+}

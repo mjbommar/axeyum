@@ -19,10 +19,10 @@ import re
 from fractions import Fraction
 
 import pytest
-from axeyum._native.cas.certify import geometry, gf2, groebner, sos, sturm, telescoping
 
 from axeyum._native import cas
 from axeyum._native.cas import certify
+from axeyum._native.cas.certify import geometry, gf2, groebner, sos, sturm, telescoping
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GEOMETRY_DIR = REPO / "artifacts/geometry-certificates"

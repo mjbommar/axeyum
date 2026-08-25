@@ -104,7 +104,71 @@ landed and the next slice does not start.
   through `target/release/examples/smtcomp_cli` and through `smt.solve` agree.
 - Gate: as S2, plus the differential.
 
-### S4 — stub generation and drift gate
+### S4 — typed stubs and the two drift gates
+
+**Landed as introspection stubs; replaced by TYPED stubs 2026-08-24 (goal 10,
+slice Q5).** The original design is kept below the line because the reason it
+was replaced is the interesting part.
+
+Today the stubs are generated **from the Rust signatures** by
+`pyo3-stub-gen` 0.23 (PyO3 `>=0.27,<0.30`, so the `=0.29.2` pin fits):
+
+```sh
+cargo run -p axeyum-py --features stub-gen --bin stub_gen
+```
+
+- `stub-gen` is a Cargo feature that is **off by default and absent from
+  `[tool.maturin] features`**. `pyo3-stub-gen` works by `inventory::submit!`ing
+  a record per class, method and function into a link section walked at run
+  time; those records are static data the extension itself never reads, so the
+  wheel is built without them and the generator links the same library with the
+  feature on. Every annotation is written
+  `#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_*)]`, so the
+  default build does not even resolve the path.
+- The stubs are a **package** — `_native/__init__.pyi`, `_native/cas/__init__.pyi`,
+  `_native/cas/certify/sos/__init__.pyi`, one directory per PyO3 submodule.
+  That is not cosmetic: a flat `_native/cas.pyi` is a *module* and can therefore
+  have no `certify` member, which is exactly why `axeyum._native.cas.certify`
+  and `axeyum._native.kernel.identity` were unresolved imports under `ty` while
+  both exist at run time. `[tool.maturin] include` uses `**` to match.
+- Types PyO3 has no Rust type for are named by transparent wrappers in
+  `crates/axeyum-py/src/stub_types.rs` (`PyFraction` → `fractions.Fraction`,
+  `PyBigInt` → `int`, `PySequence<T>` → `typing.Sequence[T]`,
+  `PyBorrowedList<T>` → `list[T]`, `PyFrozenSetOf<T>` → `frozenset[T]`) and by
+  `RationalLike` / `NameLike` next to the code that reads them. A wrapper puts
+  the claim in the Rust signature where the compiler sees it; a stub *override*
+  would be a second statement of the type, written in a string, checked by
+  nothing.
+- Exceptions and module constants reach Python through runtime calls
+  (`create_exception!`, `module.add("MAX_BV_WIDTH", ...)`), so no item exists
+  for a macro to sit on. They are submitted from feature-gated blocks —
+  `crate::stub_info::stub_exception!` and `pyo3_stub_gen::module_variable!` —
+  which is also how `Declined.reason` and `KernelError.variant/fields/names`
+  get declared at all: those are attached with `setattr` at the **raise** site
+  and exist on no class.
+
+Two gates, deliberately separate, so a type improvement cannot mask a name
+regression:
+
+| gate | compares | prints |
+|---|---|---|
+| `tools/gen_native_stub.py --check` | the built `.so` against the stubs: names, parameter names, arity. **Annotations ignored.** | `STUBS\|modules=M\|symbols=S\|aliases=A\|synthesised_dunders=D` |
+| `tools/check_stub_types.py` | every `typing.Any` in the stubs against `python/axeyum/_native/ANY_ALLOWLIST.txt` | `STUB_TYPES\|params=P\|typed=T\|any=A\|allowlisted=L\|return_any=R` |
+
+plus `python -m mypy.stubtest axeyum._native` (see `just py-check` for the exact
+flags), which is the only checker here that compares stubs to the runtime **as
+types** — `ty` reads the stubs and believes them.
+
+`gen_native_stub.py` no longer generates anything. Its three deliberately weak
+comparisons are `__new__` (PyO3 puts the real `#[new]` signature on the CLASS's
+`__text_signature__`), every other dunder (CPython slot wrappers name their
+argument `value`/`key`, never the Rust name, and are positional-only: arity
+only), and aliases (`ir.bv.lower_terms_py` **is** `ir.bv.lower_terms`, one
+object under two names).
+
+---
+
+Original S4 (superseded):
 
 - Port `tools/gen_native_stub.py` (introspection of the built module,
   `__text_signature__` → parameter names and defaults, `Any` for types —

@@ -66,6 +66,10 @@ pub(crate) const UNKNOWN_KINDS: &[&str] = &[
 // fields, which make it `Send` but `!Sync`. They are always `None` here (the
 // sinks are not bound), but the type is what PyO3 checks. `unsendable` binds
 // the object to the thread that created it, which is where a config is used.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(unsendable, from_py_object, module = "axeyum", name = "Config")]
 #[derive(Clone)]
 pub struct Config {
@@ -79,6 +83,7 @@ impl Config {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Config {
     /// Builds a configuration. Every argument defaults to the Rust default.
@@ -199,6 +204,10 @@ impl Config {
 /// an exception** — a budget-exhausted or incomplete run is a first-class
 /// answer, and reading it as `unsat` is the mistake the structure exists to
 /// prevent.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(module = "axeyum", name = "CheckResult")]
 pub struct PyCheckResult {
     pub(crate) status: &'static str,
@@ -237,6 +246,7 @@ impl PyCheckResult {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyCheckResult {
     /// `"sat"`, `"unsat"` or `"unknown"`.
@@ -355,12 +365,17 @@ impl PyCheckResult {
 ///
 /// Verdict-invariant with the un-traced dispatch: the recorder never
 /// participates in a branch.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(frozen, module = "axeyum", name = "RouteTrace")]
 pub struct PyRouteTrace {
     pub(crate) json: String,
     pub(crate) attempts: usize,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyRouteTrace {
     /// The trace as JSON — the one native serializer in the solver surface.

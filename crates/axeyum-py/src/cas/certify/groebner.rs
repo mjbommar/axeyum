@@ -18,6 +18,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyModule};
 
 use crate::cas::poly::MvPoly;
+use crate::stub_types::PySequence;
 
 /// Reads a monomial-order name.
 ///
@@ -50,6 +51,10 @@ pub(crate) fn monomial_order_name(order: MonomialOrder) -> &'static str {
 /// Dickson's lemma, and these exist so a latency-sensitive caller can bound the
 /// work without a wall clock. A ceiling cannot change a verdict, only whether
 /// one is reached.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.groebner")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Limits")]
 #[derive(Debug, Clone, Copy)]
 pub struct Limits {
@@ -68,6 +73,7 @@ impl Limits {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Limits {
     /// Limits with the `Limits::fast()` defaults, overridable per field.
@@ -156,6 +162,10 @@ impl Limits {
 /// `is_ceiling()` is the distinction that matters: a tripped budget is worth
 /// retrying with larger [`Limits`]; an `i128` overflow is not. A decline that
 /// does not say which is uninterpretable.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.groebner")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "DeclineReason")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DeclineReason {
@@ -180,6 +190,7 @@ impl DeclineReason {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl DeclineReason {
     /// The variant name.
@@ -218,12 +229,17 @@ impl DeclineReason {
 /// Advisory only: nothing in a certificate depends on these, and they are
 /// recorded on the success path too so a run that certifies can be compared
 /// against one that does not.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.groebner")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "ReductionStats")]
 #[derive(Debug, Clone, Copy)]
 pub struct ReductionStats {
     inner: CasReductionStats,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl ReductionStats {
     /// S-pairs taken off the queue.
@@ -283,6 +299,10 @@ impl ReductionStats {
 }
 
 /// The outcome of a cofactor-tracked reduction: `Reduced` or `Declined`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.groebner")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "CofactorOutcome")]
 #[derive(Debug, Clone)]
 pub struct CofactorOutcome {
@@ -296,6 +316,7 @@ impl CofactorOutcome {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl CofactorOutcome {
     /// `"Reduced"` or `"Declined"`.
@@ -363,8 +384,8 @@ impl CofactorOutcome {
     /// # Errors
     ///
     /// Propagates the per-element extraction error for `generators`.
-    fn check(&self, generators: &Bound<'_, PyAny>, target: &MvPoly) -> PyResult<bool> {
-        let generators = MvPoly::vec_from_py(generators)?;
+    fn check(&self, generators: PySequence<'_, MvPoly>, target: &MvPoly) -> PyResult<bool> {
+        let generators = MvPoly::vec_from_py(generators.as_any())?;
         let CasCofactorOutcome::Reduced {
             cofactors,
             remainder,
@@ -428,15 +449,19 @@ fn reexpand(
 /// # Errors
 ///
 /// Propagates the per-element extraction error.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.groebner")
+)]
 #[pyfunction]
 fn check_identity(
-    cofactors: &Bound<'_, PyAny>,
+    cofactors: PySequence<'_, MvPoly>,
     remainder: &MvPoly,
-    generators: &Bound<'_, PyAny>,
+    generators: PySequence<'_, MvPoly>,
     target: &MvPoly,
 ) -> PyResult<bool> {
-    let cofactors = MvPoly::vec_from_py(cofactors)?;
-    let generators = MvPoly::vec_from_py(generators)?;
+    let cofactors = MvPoly::vec_from_py(cofactors.as_any())?;
+    let generators = MvPoly::vec_from_py(generators.as_any())?;
     Ok(reexpand(
         &cofactors,
         remainder.inner(),
@@ -451,15 +476,19 @@ fn check_identity(
 /// # Errors
 ///
 /// Propagates the per-element extraction error.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.groebner")
+)]
 #[pyfunction]
 #[pyo3(signature = (generators, target, limits = None))]
 fn reduce_with_cofactors(
     py: Python<'_>,
-    generators: &Bound<'_, PyAny>,
+    generators: PySequence<'_, MvPoly>,
     target: &MvPoly,
     limits: Option<&Limits>,
 ) -> PyResult<CofactorOutcome> {
-    let generators = MvPoly::vec_from_py(generators)?;
+    let generators = MvPoly::vec_from_py(generators.as_any())?;
     let limits = limits.map_or_else(CasLimits::fast, |limits| limits.inner());
     let target = target.inner().clone();
     Ok(CofactorOutcome::wrap(py.detach(|| {
@@ -473,14 +502,18 @@ fn reduce_with_cofactors(
 /// # Errors
 ///
 /// Propagates the per-element extraction error.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.groebner")
+)]
 #[pyfunction]
 #[pyo3(signature = (generators, limits = None))]
 fn unit_ideal_cofactors(
     py: Python<'_>,
-    generators: &Bound<'_, PyAny>,
+    generators: PySequence<'_, MvPoly>,
     limits: Option<&Limits>,
 ) -> PyResult<CofactorOutcome> {
-    let generators = MvPoly::vec_from_py(generators)?;
+    let generators = MvPoly::vec_from_py(generators.as_any())?;
     let limits = limits.map_or_else(CasLimits::fast, |limits| limits.inner());
     Ok(CofactorOutcome::wrap(
         py.detach(|| cas_unit_ideal(&generators, limits)),
@@ -493,16 +526,20 @@ fn unit_ideal_cofactors(
 /// # Errors
 ///
 /// Propagates the per-element extraction error.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.groebner")
+)]
 #[pyfunction]
 #[pyo3(signature = (generators, targets, limits = None))]
 fn reduce_many_with_cofactors(
     py: Python<'_>,
-    generators: &Bound<'_, PyAny>,
-    targets: &Bound<'_, PyAny>,
+    generators: PySequence<'_, MvPoly>,
+    targets: PySequence<'_, MvPoly>,
     limits: Option<&Limits>,
 ) -> PyResult<(Vec<CofactorOutcome>, ReductionStats)> {
-    let generators = MvPoly::vec_from_py(generators)?;
-    let targets = MvPoly::vec_from_py(targets)?;
+    let generators = MvPoly::vec_from_py(generators.as_any())?;
+    let targets = MvPoly::vec_from_py(targets.as_any())?;
     let limits = limits.map_or_else(CasLimits::fast, |limits| limits.inner());
     let (outcomes, stats) =
         py.detach(|| reduce_many_with_cofactors_traced(&generators, &targets, limits));

@@ -27,8 +27,14 @@ use crate::cas::certify::groebner::{DeclineReason, Limits};
 use crate::cas::expr::rational_env;
 use crate::cas::poly::MvPoly;
 use crate::cas::rational;
+use crate::cas::rational::RationalLike;
+use crate::stub_types::PyBorrowedList;
 
 /// A point with polynomial coordinates.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Pt")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pt {
@@ -42,6 +48,7 @@ impl Pt {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Pt {
     /// A free point `(name_x, name_y)`, its coordinates fresh variables.
@@ -56,10 +63,10 @@ impl Pt {
     ///
     /// Raises `ValueError` when a coordinate is not an exact rational.
     #[staticmethod]
-    fn fixed(x: &Bound<'_, PyAny>, y: &Bound<'_, PyAny>) -> PyResult<Pt> {
+    fn fixed(x: RationalLike<'_>, y: RationalLike<'_>) -> PyResult<Pt> {
         Ok(Pt::wrap(CasPt::fixed(
-            rational::from_py(x)?,
-            rational::from_py(y)?,
+            rational::from_py(x.as_any())?,
+            rational::from_py(y.as_any())?,
         )))
     }
 
@@ -90,8 +97,11 @@ impl Pt {
     /// # Errors
     ///
     /// Raises `ValueError` when `factor` is not an exact rational.
-    fn scale(&self, factor: &Bound<'_, PyAny>) -> PyResult<Option<Pt>> {
-        Ok(self.inner.scale(rational::from_py(factor)?).map(Pt::wrap))
+    fn scale(&self, factor: RationalLike<'_>) -> PyResult<Option<Pt>> {
+        Ok(self
+            .inner
+            .scale(rational::from_py(factor.as_any())?)
+            .map(Pt::wrap))
     }
 
     fn __repr__(&self) -> String {
@@ -103,6 +113,12 @@ impl Pt {
 macro_rules! two_point {
     ($name:ident, $doc:literal) => {
         #[doc = $doc]
+        #[cfg_attr(
+            feature = "stub-gen",
+            pyo3_stub_gen::derive::gen_stub_pyfunction(
+                module = "axeyum._native.cas.certify.geometry"
+            )
+        )]
         #[pyfunction]
         fn $name(first: &Pt, second: &Pt) -> Option<MvPoly> {
             MvPoly::wrap_option(geometry_certify::$name(&first.inner, &second.inner))
@@ -114,13 +130,23 @@ macro_rules! two_point {
 macro_rules! four_point {
     ($name:ident, $doc:literal) => {
         #[doc = $doc]
+        #[cfg_attr(
+            feature = "stub-gen",
+            pyo3_stub_gen::derive::gen_stub_pyfunction(
+                module = "axeyum._native.cas.certify.geometry"
+            )
+        )]
         #[pyfunction]
-        fn $name(from: &Pt, to: &Pt, other_from: &Pt, other_to: &Pt) -> Option<MvPoly> {
+        // NOT `from`/`to`: `from` is a Python keyword, so a caller cannot
+        // spell it and a generated stub carrying it does not even parse. The
+        // extension exported exactly that until the typed stubs were generated
+        // and `ast.parse` rejected the file.
+        fn $name(first: &Pt, second: &Pt, other_first: &Pt, other_second: &Pt) -> Option<MvPoly> {
             MvPoly::wrap_option(geometry_certify::$name(
-                &from.inner,
-                &to.inner,
-                &other_from.inner,
-                &other_to.inner,
+                &first.inner,
+                &second.inner,
+                &other_first.inner,
+                &other_second.inner,
             ))
         }
     };
@@ -132,18 +158,22 @@ two_point!(dist_sq, "The squared distance between two points.");
 
 four_point!(
     parallel,
-    "`from->to` is parallel to `other_from->other_to`."
+    "`first->second` is parallel to `other_first->other_second`."
 );
 four_point!(
     perpendicular,
-    "`from->to` is perpendicular to `other_from->other_to`."
+    "`first->second` is perpendicular to `other_first->other_second`."
 );
 four_point!(
     equidistant,
-    "`|from - to|` equals `|other_from - other_to|`."
+    "`|first - second|` equals `|other_first - other_second|`."
 );
 
 /// Three points are collinear.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyfunction]
 fn collinear(first: &Pt, second: &Pt, third: &Pt) -> Option<MvPoly> {
     MvPoly::wrap_option(geometry_certify::collinear(
@@ -154,6 +184,10 @@ fn collinear(first: &Pt, second: &Pt, third: &Pt) -> Option<MvPoly> {
 }
 
 /// Four points lie on a common circle.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyfunction]
 fn concyclic(first: &Pt, second: &Pt, third: &Pt, fourth: &Pt) -> Option<MvPoly> {
     MvPoly::wrap_option(geometry_certify::concyclic(
@@ -165,18 +199,30 @@ fn concyclic(first: &Pt, second: &Pt, third: &Pt, fourth: &Pt) -> Option<MvPoly>
 }
 
 /// The midpoint of two points.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyfunction]
-fn midpoint(from: &Pt, to: &Pt) -> Option<Pt> {
-    geometry_certify::midpoint(&from.inner, &to.inner).map(Pt::wrap)
+fn midpoint(first: &Pt, second: &Pt) -> Option<Pt> {
+    geometry_certify::midpoint(&first.inner, &second.inner).map(Pt::wrap)
 }
 
 /// The centroid of three points.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyfunction]
 fn centroid(first: &Pt, second: &Pt, third: &Pt) -> Option<Pt> {
     geometry_certify::centroid(&first.inner, &second.inner, &third.inner).map(Pt::wrap)
 }
 
 /// The two coordinate equations saying that two points coincide.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyfunction]
 fn same_point(first: &Pt, second: &Pt) -> Option<Vec<MvPoly>> {
     geometry_certify::same_point(&first.inner, &second.inner)
@@ -184,12 +230,17 @@ fn same_point(first: &Pt, second: &Pt) -> Option<Vec<MvPoly>> {
 }
 
 /// A hypothesis or conclusion: an identified polynomial equation `poly == 0`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Constraint")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Constraint {
     inner: CasConstraint,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Constraint {
     /// A constraint `poly == 0` with a stable identifier and a gloss.
@@ -224,12 +275,17 @@ impl Constraint {
 }
 
 /// A non-degeneracy condition: an identified polynomial that must **not** vanish.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Condition")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Condition {
     inner: CasCondition,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Condition {
     /// A condition `poly != 0` with a stable identifier and a gloss.
@@ -268,12 +324,17 @@ impl Condition {
 /// This is the certificate's **negative control**: a stated witness that does
 /// not in fact break the theorem makes the producer decline
 /// (`UnverifiedWitness`) rather than ship a decorative one.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "DegenerateWitness")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DegenerateWitness {
     inner: CasDegenerateWitness,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl DegenerateWitness {
     /// A purely rational witness for the named condition.
@@ -329,12 +390,17 @@ impl DegenerateWitness {
 }
 
 /// A generic configuration at which the theorem's identity is replayed.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "GenericWitness")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GenericWitness {
     inner: CasGenericWitness,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl GenericWitness {
     /// A generic configuration.
@@ -386,6 +452,10 @@ fn rational_dict<'py>(
 }
 
 /// A geometry theorem, stated in coordinates.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "GeometryProblem")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GeometryProblem {
@@ -399,6 +469,7 @@ impl GeometryProblem {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl GeometryProblem {
     /// States a theorem from its hypotheses, non-degeneracy conditions,
@@ -525,6 +596,10 @@ impl GeometryProblem {
 }
 
 /// A checkable geometry certificate.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(
     frozen,
     from_py_object,
@@ -543,6 +618,7 @@ impl GeometryCertificate {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl GeometryCertificate {
     /// The theorem's identifier.
@@ -565,8 +641,8 @@ impl GeometryCertificate {
 
     /// The coordinate names, in order.
     #[getter]
-    fn coordinates(&self) -> &[String] {
-        &self.inner.coordinates
+    fn coordinates(&self) -> PyBorrowedList<'_, String> {
+        PyBorrowedList(&self.inner.coordinates)
     }
 
     /// The generator list the identity is stated over.
@@ -652,12 +728,17 @@ impl GeometryCertificate {
 }
 
 /// Why the geometry producer emitted no certificate.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "GeometryDecline")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GeometryDecline {
     inner: CasGeometryDecline,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl GeometryDecline {
     /// The variant name: one of `Reduction`, `TooManyConditions`,
@@ -707,12 +788,17 @@ impl GeometryDecline {
 }
 
 /// The three-way result of attempting to certify a [`GeometryProblem`].
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "ProofOutcome")]
 #[derive(Debug, Clone)]
 pub struct ProofOutcome {
     inner: CasProofOutcome,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl ProofOutcome {
     /// `"Certified"`, `"NotInSaturatedIdeal"`, or `"Declined"`.
@@ -791,6 +877,10 @@ impl ProofOutcome {
 /// Every one of these is exposed because a zero is the fail signal: a checker
 /// that verified nothing and a checker that verified everything must not look
 /// alike from Python.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "GeometryReport")]
 #[derive(Debug, Clone)]
 pub struct GeometryReport {
@@ -801,6 +891,7 @@ pub struct GeometryReport {
     conditions_used: Vec<String>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl GeometryReport {
     /// Conclusions whose cofactor identity was re-expanded.
@@ -829,8 +920,8 @@ impl GeometryReport {
 
     /// The non-degeneracy conditions the proof actually used.
     #[getter]
-    fn conditions_used(&self) -> &[String] {
-        &self.conditions_used
+    fn conditions_used(&self) -> PyBorrowedList<'_, String> {
+        PyBorrowedList(&self.conditions_used)
     }
 
     fn __repr__(&self) -> String {
@@ -847,12 +938,17 @@ impl GeometryReport {
 }
 
 /// The verdict of the independent geometry checker.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "GeometryVerdict")]
 #[derive(Debug, Clone)]
 pub struct GeometryVerdict {
     inner: CasGeometryVerdict,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl GeometryVerdict {
     /// `"Verified"` or `"Rejected"`.
@@ -908,12 +1004,17 @@ impl GeometryVerdict {
 
 /// How hard the numeric cross-check works. Defaults: `numeric_points=24`,
 /// `half_range=6`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "CheckOptions")]
 #[derive(Debug, Clone, Copy)]
 pub struct CheckOptions {
     inner: CasCheckOptions,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl CheckOptions {
     /// Options, defaulting to the Rust `CheckOptions::default()`.
@@ -949,12 +1050,20 @@ impl CheckOptions {
 }
 
 /// The ceilings calibrated to the committed geometry corpus.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyfunction]
 fn geometry_limits() -> Limits {
     Limits::wrap(geometry_certify::geometry_limits())
 }
 
 /// The front door: tries every route and returns the three-way outcome.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyfunction]
 #[pyo3(signature = (problem, limits = None))]
 fn certify_any_route(
@@ -970,6 +1079,10 @@ fn certify_any_route(
 }
 
 /// The Groebner-saturation route only.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyfunction]
 #[pyo3(signature = (problem, limits = None))]
 fn certify(py: Python<'_>, problem: &GeometryProblem, limits: Option<&Limits>) -> ProofOutcome {
@@ -981,6 +1094,10 @@ fn certify(py: Python<'_>, problem: &GeometryProblem, limits: Option<&Limits>) -
 }
 
 /// The linear-elimination route, with an optional Groebner handover.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyfunction]
 #[pyo3(signature = (problem, handover = None))]
 fn certify_by_linear_elimination(
@@ -996,6 +1113,10 @@ fn certify_by_linear_elimination(
 }
 
 /// The committed corpus of geometry theorems.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyfunction]
 fn corpus() -> Vec<GeometryProblem> {
     geometry_corpus::corpus()
@@ -1005,6 +1126,10 @@ fn corpus() -> Vec<GeometryProblem> {
 }
 
 /// The frontier: theorems the producer does not yet certify.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.geometry")
+)]
 #[pyfunction]
 fn frontier() -> Vec<GeometryProblem> {
     geometry_corpus::frontier()
@@ -1064,4 +1189,20 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     );
     parent.add("geometry", &module)?;
     Ok(())
+}
+
+// Module-level constants reach Python through `module.add("NAME", value)`, a
+// RUNTIME call with no item for a `#[gen_stub_*]` macro to sit on -- so without
+// these submissions they exist in the extension and in no stub, and a checked
+// consumer reading one gets an unresolved attribute. The type is named; the
+// VALUE deliberately is not, so a constant cannot drift from its stub.
+#[cfg(feature = "stub-gen")]
+mod stub_variables {
+    pyo3_stub_gen::module_variable!("axeyum._native.cas.certify.geometry", "FORMAT", String);
+    pyo3_stub_gen::module_variable!(
+        "axeyum._native.cas.certify.geometry",
+        "INVERSE_PREFIX",
+        String
+    );
+    pyo3_stub_gen::module_variable!("axeyum._native.cas.certify.geometry", "VERSION", u32);
 }
