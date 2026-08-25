@@ -28,6 +28,20 @@ INT_FIB_OF_NONNEG_FACT = "F:ml430-int-fib-of-nonneg-438018c5"
 NAT_FIB_POS_FACT = "F:ml430-nat-fib-pos-9e67bd8e"
 NAT_FIB_EQ_ZERO_FACT = "F:ml430-nat-fib-eq-zero-61879073"
 INT_FIB_EQ_ZERO_FACT = "F:ml430-int-fib-eq-zero-8193c7cb"
+# `authoritative-mathlib-modeq-family-v1` (registered 2026-08-25 as
+# `authoritative-mathlib-nat-modeq-family-v1`, merged the same day into the
+# Int.ModEq operation under this id) makes both of these `open` and
+# dependency-ready on the LIVE ledger, so `frontier_module.load()` now returns
+# a `facts` dict where they are unconditionally admissible. Its driver,
+# `axeyum-lean-import/modeq-family-multi-target-v1`, is dispatched through
+# `scripts/check-autogenesis-nat-modeq-family.py` in production, not through
+# `executor.build_receipt()` -- so left unneutralized, `selected_inputs()`
+# picks one of these instead of the fact each test means to exercise, and
+# `build_receipt()` correctly refuses it as an unsupported driver. Same
+# purpose as the rest of this settle list: keep facts this suite does not
+# intend to dispatch out of the way of the one it does.
+NAT_MODEQ_SYMM_FACT = "F:ml430-nat-modeq-symm-0a3d4d18"
+NAT_MODEQ_TRANS_FACT = "F:ml430-nat-modeq-trans-ef9d1c46"
 
 
 def settle_reflexivity_fact(facts):
@@ -46,6 +60,8 @@ def settle_reflexivity_fact(facts):
         NAT_FIB_POS_FACT,
         NAT_FIB_EQ_ZERO_FACT,
         INT_FIB_EQ_ZERO_FACT,
+        NAT_MODEQ_SYMM_FACT,
+        NAT_MODEQ_TRANS_FACT,
     ):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"

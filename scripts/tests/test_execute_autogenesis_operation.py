@@ -30,7 +30,8 @@ INT_FIB_ADD_ONE_FACT = "F:ml430-int-fib-add-one-33f1b748"
 INT_FIB_GCD_FACT = "F:ml430-int-fib-gcd-3a8bfdec"
 INT_FIB_DVD_FACT = "F:ml430-int-fib-dvd-ffb3c5c1"
 INT_FIB_OF_NONNEG_FACT = "F:ml430-int-fib-of-nonneg-438018c5"
-# `authoritative-mathlib-nat-modeq-family-v1` (registered 2026-08-25) makes
+# `authoritative-mathlib-nat-modeq-family-v1` (registered 2026-08-25, later
+# merged into `authoritative-mathlib-modeq-family-v1` the same day) makes
 # both of these `open` and dependency-ready on the LIVE ledger, so
 # `frontier_module.load()` now returns a `facts` dict where they are
 # unconditionally admissible -- lexicographically ahead of most other fact
@@ -255,8 +256,10 @@ class OperationExecutionTests(unittest.TestCase):
     def test_selected_inputs_admits_a_fact_whose_admissible_set_has_siblings(
         self,
     ) -> None:
-        """`authoritative-mathlib-nat-modeq-family-v1` (a REAL, currently
-        registered multi-target operation -- no fixture needed) makes both
+        """`authoritative-mathlib-modeq-family-v1` (a REAL, currently
+        registered multi-target operation -- no fixture needed; registered
+        2026-08-25 as `authoritative-mathlib-nat-modeq-family-v1` and merged
+        the same day into the Int.ModEq operation under this id) makes both
         `F:ml430-nat-modeq-symm-0a3d4d18` and `F:ml430-nat-modeq-trans-...`
         simultaneously admissible on the live ledger, so this exercises the
         real production frontier, not a constructed one.
@@ -286,7 +289,7 @@ class OperationExecutionTests(unittest.TestCase):
         fact, operation, _registry = execution.selected_inputs(frontier, facts)
         self.assertEqual(fact["id"], selection["selected_fact_id"])
         self.assertIn(fact["id"], selection["admissible_fact_ids"])
-        self.assertEqual(operation["id"], "authoritative-mathlib-nat-modeq-family-v1")
+        self.assertEqual(operation["id"], "authoritative-mathlib-modeq-family-v1")
 
     def test_authoritative_kernel_receipt_binds_formal_statement_and_axiom_free_result(self):
         frontier_module = execution.load_module(

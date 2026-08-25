@@ -92,6 +92,7 @@
         "check-autogenesis-nursery.py",
         "check-autogenesis-proposer-isolation.sh",
         "create-autogenesis-mathlib-nursery-split.py",
+        "gen-obstruction-graph.py",
         "run-autogenesis-authoritative-chain.py",
         "validate-autogenesis-operations.py"
       ],
