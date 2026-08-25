@@ -753,6 +753,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_pos,
         p.pow_lt_pow_succ,
         p.dvd_two_pow_succ_iff_of_le,
+        p.sum_divisors_two_pow_eq_geom_sum,
+        p.sum_divisors_two_pow,
     ]
 }
 
@@ -1493,6 +1495,82 @@ fn dvd_two_pow_succ_iff_of_le_computes_at_a_concrete_instance() {
         f.k.def_eq(inferred_mp, expected_right),
         "the forward direction must certify dvd 4 8, got {}",
         f.k.render_lean(inferred_mp)
+    );
+}
+
+/// `Nat.sumDivisors_two_pow_eq_geom_sum` and `Nat.sumDivisors_two_pow` — the
+/// Euclid IX.36 divisor-sum blocker. At `k = 3` (`2^3 = 8`): `sumDivisors 8`
+/// is ALREADY independently computation-tested to reduce to `15`
+/// (`sum_divisors_computes_on_small_numerals`), and `15 + 1 = 16 = 2^4`. Both
+/// theorems fully applied at `k = 3` must certify exactly this concrete
+/// numeral identity — not merely type-check — and rest on empty axiom
+/// footprints.
+#[test]
+fn sum_divisors_two_pow_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let eight = f.num(8);
+    let fifteen = f.num(15);
+    let sixteen = f.num(16);
+
+    let pow_2_3 = f.const_app(p.pow, &[two, three]);
+    assert!(f.k.def_eq(pow_2_3, eight), "pow 2 3 must reduce to 8");
+    let pow_2_4 = f.const_app(p.pow, &[two, four]);
+    assert!(f.k.def_eq(pow_2_4, sixteen), "pow 2 4 must reduce to 16");
+    let sd_8 = f.const_app(p.sum_divisors, &[eight]);
+    assert!(
+        f.k.def_eq(sd_8, fifteen),
+        "sumDivisors 8 must reduce to 15 (independently pinned elsewhere too)"
+    );
+
+    // `sumDivisors_two_pow_eq_geom_sum 3 : Eq (sumDivisors (pow 2 3))
+    // (sumRange (fun i => pow 2 i) 4)`, and the RHS is the geometric sum
+    // `1+2+4+8 = 15`.
+    let eq_geom_applied = f.const_app(p.sum_divisors_two_pow_eq_geom_sum, &[three]);
+    let inferred_geom =
+        f.k.infer(eq_geom_applied)
+            .expect("sumDivisors_two_pow_eq_geom_sum 3 must type-check");
+    let f_pow2 = {
+        let nat = f.nat_ty();
+        let i_fv = f.fresh_fvar();
+        let i = f.kernel().fvar(i_fv);
+        let two_inner = f.num(2);
+        let body = f.pow(two_inner, i);
+        f.lam_fv(i_fv, nat, body)
+    };
+    let geom_sum_4 = f.sum_range(f_pow2, four);
+    let expected_geom_ty = f.eq(sd_8, geom_sum_4);
+    assert!(
+        f.k.def_eq(inferred_geom, expected_geom_ty),
+        "sumDivisors_two_pow_eq_geom_sum 3 must certify Eq (sumDivisors 8) \
+         (sumRange pow2 4), got {}",
+        f.k.render_lean(inferred_geom)
+    );
+    assert!(
+        f.k.axiom_footprint(p.sum_divisors_two_pow_eq_geom_sum)
+            .is_empty(),
+        "sumDivisors_two_pow_eq_geom_sum rests on a trusted declaration"
+    );
+
+    // `sumDivisors_two_pow 3 : Eq (add (sumDivisors (pow 2 3)) one) (pow 2 4)`
+    // — both sides reduce to the CONCRETE numeral `16`.
+    let applied = f.const_app(p.sum_divisors_two_pow, &[three]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("sumDivisors_two_pow 3 must type-check");
+    let expected_ty = f.eq(sixteen, sixteen);
+    assert!(
+        f.k.def_eq(inferred, expected_ty),
+        "sumDivisors_two_pow 3 must certify Eq 16 16 (i.e. sumDivisors 8 + 1 = 2^4), got {}",
+        f.k.render_lean(inferred)
+    );
+    assert!(
+        f.k.axiom_footprint(p.sum_divisors_two_pow).is_empty(),
+        "sumDivisors_two_pow rests on a trusted declaration"
     );
 }
 
@@ -5577,7 +5655,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        58 + 266,
+        58 + 268,
         "every promised definition and theorem must be rendered"
     );
 }
