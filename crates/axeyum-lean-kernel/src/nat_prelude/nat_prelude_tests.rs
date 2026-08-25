@@ -473,6 +473,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.is_group_on_fn,
         p.eq_on,
         p.prod_range,
+        p.sum_divisors,
+        p.perfect,
     ]
 }
 
@@ -725,6 +727,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.prod_range_zero,
         p.prod_range_succ,
         p.exists_prime_factorization,
+        p.sum_divisors_one,
+        p.sum_divisors_prime,
     ]
 }
 
@@ -921,6 +925,116 @@ fn totient_computes_on_small_numerals() {
         !f.k.def_eq(totient_nine, five),
         "totient 9 must NOT be def-eq to 5"
     );
+}
+
+/// `sumDivisors` computes the ACTUAL divisor sum by pure kernel reduction,
+/// not merely type-checks: `sumDivisors 1 = 1`, `sumDivisors 6 = 12`
+/// (`1+2+3+6`, `6` is the smallest perfect number), `sumDivisors 7 = 8`
+/// (`1+7`, `7` is prime), and `sumDivisors 28 = 56` (`1+2+4+7+14+28`, the
+/// second perfect number). An off-by-one in the range bound (excluding `n`
+/// itself) type-checks perfectly and computes a different function; only
+/// computation catches it.
+#[test]
+fn sum_divisors_computes_on_small_numerals() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let one = f.num(1);
+    let sum_divisors_one = f.const_app(p.sum_divisors, &[one]);
+    assert!(
+        f.k.def_eq(sum_divisors_one, one),
+        "sumDivisors 1 must reduce to 1"
+    );
+
+    let six = f.num(6);
+    let twelve = f.num(12);
+    let sum_divisors_six = f.const_app(p.sum_divisors, &[six]);
+    assert!(
+        f.k.def_eq(sum_divisors_six, twelve),
+        "sumDivisors 6 must reduce to 12 (1+2+3+6, 6 is perfect)"
+    );
+
+    let seven = f.num(7);
+    let eight = f.num(8);
+    let sum_divisors_seven = f.const_app(p.sum_divisors, &[seven]);
+    assert!(
+        f.k.def_eq(sum_divisors_seven, eight),
+        "sumDivisors 7 must reduce to 8 (1+7, 7 is prime)"
+    );
+
+    let twenty_eight = f.num(28);
+    let fifty_six = f.num(56);
+    let sum_divisors_twenty_eight = f.const_app(p.sum_divisors, &[twenty_eight]);
+    assert!(
+        f.k.def_eq(sum_divisors_twenty_eight, fifty_six),
+        "sumDivisors 28 must reduce to 56 (1+2+4+7+14+28, the second perfect number)"
+    );
+
+    // NEGATIVE reduction controls.
+    let eleven = f.num(11);
+    assert!(
+        !f.k.def_eq(sum_divisors_six, eleven),
+        "sumDivisors 6 must NOT be def-eq to 11"
+    );
+    let nine = f.num(9);
+    assert!(
+        !f.k.def_eq(sum_divisors_seven, nine),
+        "sumDivisors 7 must NOT be def-eq to 9"
+    );
+}
+
+/// `Nat.Perfect` computes correctly at both a perfect and a non-perfect
+/// numeral: `sumDivisors 6 = 2*6` reduces (both sides to `12`), while
+/// `sumDivisors 7 = 2*7` does NOT (`8` vs `14`) — the negative control that
+/// distinguishes "the predicate type-checks" from "the predicate is
+/// selective".
+#[test]
+fn perfect_holds_at_six_and_fails_at_seven() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let six = f.num(6);
+    let perfect_six = f.const_app(p.perfect, &[six]);
+    let twelve = f.num(12);
+    let sum_divisors_six = f.const_app(p.sum_divisors, &[six]);
+    let sum_divisors_six_eq_twelve = f.eq(sum_divisors_six, twelve);
+    assert!(
+        f.k.def_eq(perfect_six, sum_divisors_six_eq_twelve),
+        "Perfect 6 must unfold to sumDivisors 6 = 12"
+    );
+
+    let seven = f.num(7);
+    let sum_divisors_seven = f.const_app(p.sum_divisors, &[seven]);
+    let fourteen = f.num(14);
+    assert!(
+        !f.k.def_eq(sum_divisors_seven, fourteen),
+        "sumDivisors 7 must NOT be def-eq to 14 -- Perfect 7 must be false"
+    );
+}
+
+/// `Nat.sumDivisors_prime` composes with the executable `sumDivisors`: at a
+/// concrete prime (`7`), the theorem applied through the primality witness
+/// gives a proof of `sumDivisors 7 = 8` by pure kernel reduction of the
+/// conclusion, not a fresh computation.
+#[test]
+fn sum_divisors_one_and_prime_are_derived_and_apply() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    for name in [p.sum_divisors_one, p.sum_divisors_prime] {
+        let declaration = k
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{name:?} must be declared"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "{name:?} must be a Theorem"
+        );
+        assert!(
+            k.axiom_footprint(name).is_empty(),
+            "{name:?} rests on a trusted declaration"
+        );
+    }
 }
 
 /// `Nat.testBit` computes the binary digits of `13 = 1101₂` by pure reduction
@@ -4837,7 +4951,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        53 + 243,
+        55 + 245,
         "every promised definition and theorem must be rendered"
     );
 }

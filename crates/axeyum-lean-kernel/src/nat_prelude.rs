@@ -155,6 +155,7 @@ mod ops;
 mod order;
 mod order_extra;
 mod order_more;
+mod perfect;
 mod permutation;
 mod primes;
 mod rectangle;
@@ -206,6 +207,7 @@ use no_confusion::declare_no_confusion;
 use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
+use perfect::declare_perfect_all;
 use permutation::declare_permutation_all;
 use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
 use rectangle::declare_rectangle;
@@ -1516,6 +1518,20 @@ pub struct NatPrelude {
     /// `Finset`, or product type in this kernel, so uniqueness (the multiset
     /// of prime factors) is not expressible here — only existence is stated.
     pub exists_prime_factorization: NameId,
+    /// `Nat.sumDivisors n := sumRange (fun d => bool_select_nat (beq (mod n
+    /// d) 0) d 0) (succ n)` — the sum of every divisor of `n` in `[0,n]`,
+    /// `n` itself included (`d = 0` never contributes: both `bool_select_nat`
+    /// branches are `0` there).
+    pub sum_divisors: NameId,
+    /// `Nat.sumDivisors_one : Eq (sumDivisors (succ zero)) (succ zero)`.
+    pub sum_divisors_one: NameId,
+    /// `Nat.sumDivisors_prime : Prime p → Eq (sumDivisors p) (succ p)` — a
+    /// prime's only divisors in `[0,p]` are `1` and `p`.
+    pub sum_divisors_prime: NameId,
+    /// `Nat.Perfect n := Eq (sumDivisors n) (mul 2 n)` — summing *all*
+    /// divisors including `n` itself (the classical "proper divisors"
+    /// phrasing needs `Nat.sub`, truncated here, and is avoided).
+    pub perfect: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1922,6 +1938,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prod_range_zero: kernel.name_str(nat, "prodRange_zero"),
             prod_range_succ: kernel.name_str(nat, "prodRange_succ"),
             exists_prime_factorization: kernel.name_str(nat, "exists_prime_factorization"),
+            sum_divisors: kernel.name_str(nat, "sumDivisors"),
+            sum_divisors_one: kernel.name_str(nat, "sumDivisors_one"),
+            sum_divisors_prime: kernel.name_str(nat, "sumDivisors_prime"),
+            perfect: kernel.name_str(nat, "Perfect"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1968,6 +1988,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_prime_dvd_choose(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
         declare_totient_all(&mut d, &p)?;
+        declare_perfect_all(&mut d, &p)?;
         declare_finite_set_all(&mut d, &p)?;
         declare_fin(&mut d, &p)?;
         declare_injective_surjective(&mut d, &p)?;
