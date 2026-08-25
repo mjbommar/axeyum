@@ -131,6 +131,9 @@ fn every_named_declaration_exists() {
         ("inv2_bottom_right", p.inv2_bottom_right),
         ("cramer_two_unique_x", p.cramer_two_unique_x),
         ("cramer_two_unique_y", p.cramer_two_unique_y),
+        ("cramer2_x", p.cramer2_x),
+        ("cramer2_y", p.cramer2_y),
+        ("cramer2_solves", p.cramer2_solves),
         ("ofInt", p.of_int),
         ("ofInt_add", p.of_int_add),
         ("ofInt_mul", p.of_int_mul),
@@ -354,6 +357,24 @@ fn matrix_laws_are_axiom_free() {
         "Rat.ofInt must be a Definition, found a different kind"
     );
 
+    let declaration = kernel
+        .environment()
+        .get(p.cramer2_x)
+        .expect("Rat.cramer2_x was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Definition { .. }),
+        "Rat.cramer2_x must be a Definition, found a different kind"
+    );
+
+    let declaration = kernel
+        .environment()
+        .get(p.cramer2_y)
+        .expect("Rat.cramer2_y was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Definition { .. }),
+        "Rat.cramer2_y must be a Definition, found a different kind"
+    );
+
     let expected = [
         ("det2_swap_rows", p.det2_swap_rows),
         ("det2_id", p.det2_id),
@@ -370,6 +391,7 @@ fn matrix_laws_are_axiom_free() {
         ("inv2_bottom_right", p.inv2_bottom_right),
         ("cramer_two_unique_x", p.cramer_two_unique_x),
         ("cramer_two_unique_y", p.cramer_two_unique_y),
+        ("cramer2_solves", p.cramer2_solves),
         ("ofInt_add", p.of_int_add),
         ("ofInt_mul", p.of_int_mul),
         ("ofInt_neg", p.of_int_neg),
@@ -391,6 +413,225 @@ fn matrix_laws_are_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// `Rat.cramer2_solves`'s statement, asserted verbatim — same discipline as
+/// [`cramer_two_unique_x_is_the_stated_forward_direction`]: this is the
+/// SUBSTITUTION direction (the `cramer2_x`/`cramer2_y` formulas actually
+/// satisfy both equations of the system), bundled as an `And` of the two
+/// equations, never a bare existence claim about one variable.
+#[test]
+fn cramer2_solves_is_the_stated_substitution_direction() {
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.cramer2_solves)
+        .expect("declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    let rendered = kernel
+        .render_lean(ty)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert_eq!(
+        rendered,
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> ((x4 : Rat) -> \
+         ((x5 : Rat) -> ((x6 : Not (Eq.{1} Rat (Rat.det2 x0 x1 x2 x3) Rat.zero)) -> \
+         And (Eq.{1} Rat (Rat.add (Rat.mul x0 (Rat.cramer2_x x0 x1 x2 x3 x4 x5)) \
+         (Rat.mul x1 (Rat.cramer2_y x0 x1 x2 x3 x4 x5))) x4) \
+         (Eq.{1} Rat (Rat.add (Rat.mul x2 (Rat.cramer2_x x0 x1 x2 x3 x4 x5)) \
+         (Rat.mul x3 (Rat.cramer2_y x0 x1 x2 x3 x4 x5))) x5))))))))"
+    );
+}
+
+/// `Rat.cramer2_x`/`Rat.cramer2_y` at an explicit 2×2 system, checked by pure
+/// REDUCTION (`Eq.refl`) — not merely that `Rat.cramer2_solves` type-checks,
+/// which would be true of a vacuous or mis-stated theorem too.
+///
+/// System `2x+y=5, x+y=3` (`a=2,b=1,c=1,d=1`, `D = 2·1−1·1 = 1`): the unique
+/// solution is `x=2, y=1`. `D=1` keeps the positivity witness this test needs
+/// (`Rat.nat_div_succ_pos` at `Nat.le 1 1`, i.e. `Nat.le_refl`) a one-liner;
+/// `Rat.cramer2_solves` itself carries no such restriction on `D`. Also
+/// exercises `Rat.cramer2_solves` applied at this concrete instance, checking
+/// the kernel accepts discharging its `D ≠ 0` hypothesis here.
+#[test]
+fn cramer2_solves_computes_an_explicit_two_by_two_system() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, rat_eq_rewrite, req, rlt, rmul, rrefl, rzero};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let a = literal(&mut d, 2);
+    let b = literal(&mut d, 1);
+    let c = literal(&mut d, 1);
+    let dd = literal(&mut d, 1);
+    let u = literal(&mut d, 5);
+    let v = literal(&mut d, 3);
+
+    // D ≠ 0, derived from 0 < D: D = det2 2 1 1 1 reduces to natDivSucc 1 0,
+    // and `nat_div_succ_pos` gives 0 < natDivSucc 1 0 directly (Nat.le 1 1 is
+    // `Nat.le_refl`). Same "assume Eq, rewrite the positivity witness along
+    // it, refute by lt_irrefl" route `Rat.ne_zero_of_pos` (private to
+    // probability.rs) uses.
+    let det = d.const_app(p.det2, &[a, b, c, dd]);
+    let zero_r = rzero(&mut d, p);
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let le_pf = d.lemma(p.int.nat.le_refl, &[one_nat]); // Nat.le 1 1
+    let pos = d.lemma(p.nat_div_succ_pos, &[one_nat, zero_nat, le_pf]); // 0 < natDivSucc 1 0, defeq 0 < det
+    let heq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(heq_fv);
+    let eq_ty = req(&mut d, det, zero_r);
+    let rewritten = rat_eq_rewrite(&mut d, det, zero_r, heq, pos, &|d, t| rlt(d, p, zero_r, t));
+    let irrefl = d.lemma(p.lt_irrefl, &[zero_r]);
+    let false_proof = d.apply(irrefl, &[rewritten]);
+    let h3 = d.lam_fv(heq_fv, eq_ty, false_proof); // Not (Eq Rat det Rat.zero)
+
+    // The formulas compute to the right rationals, by pure reduction.
+    let x_val = d.const_app(p.cramer2_x, &[a, b, c, dd, u, v]);
+    let two = literal(&mut d, 2);
+    let claim_x = req(&mut d, x_val, two);
+    let proof_x = rrefl(&mut d, two);
+    let name_x = d.kernel().name_str(anon, "Check.cramer2_x_value");
+    let accepted_x = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_x,
+        uparams: vec![],
+        ty: claim_x,
+        value: proof_x,
+    });
+    assert!(
+        accepted_x.is_ok(),
+        "cramer2_x 2 1 1 1 5 3 must REDUCE to 2: {accepted_x:?}"
+    );
+
+    let y_val = d.const_app(p.cramer2_y, &[a, b, c, dd, u, v]);
+    let one = literal(&mut d, 1);
+    let claim_y = req(&mut d, y_val, one);
+    let proof_y = rrefl(&mut d, one);
+    let name_y = d.kernel().name_str(anon, "Check.cramer2_y_value");
+    let accepted_y = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_y,
+        uparams: vec![],
+        ty: claim_y,
+        value: proof_y,
+    });
+    assert!(
+        accepted_y.is_ok(),
+        "cramer2_y 2 1 1 1 5 3 must REDUCE to 1: {accepted_y:?}"
+    );
+
+    // The theorem itself, applied at this concrete instance: both equations
+    // hold of the values just computed.
+    let solved = d.lemma(p.cramer2_solves, &[a, b, c, dd, u, v, h3]);
+    let ax = rmul(&mut d, a, x_val);
+    let by = rmul(&mut d, b, y_val);
+    let ax_by = radd(&mut d, ax, by);
+    let eq1 = req(&mut d, ax_by, u);
+    let cx = rmul(&mut d, c, x_val);
+    let dy = rmul(&mut d, dd, y_val);
+    let cx_dy = radd(&mut d, cx, dy);
+    let eq2 = req(&mut d, cx_dy, v);
+    let expected = d.and(eq1, eq2);
+    let name_s = d.kernel().name_str(anon, "Check.cramer2_solves_instance");
+    let accepted_s = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_s,
+        uparams: vec![],
+        ty: expected,
+        value: solved,
+    });
+    assert!(
+        accepted_s.is_ok(),
+        "cramer2_solves 2 1 1 1 5 3 h3 must discharge both equations of the \
+         system it claims to solve: {accepted_s:?}"
+    );
+}
+
+/// The negative control [`cramer2_solves_computes_an_explicit_two_by_two_system`]
+/// needs: at a SINGULAR instance (`D = 0`), the unrestricted claim
+/// `a·cramer2_x+b·cramer2_y = u` is not merely unprovable, it is FALSE —
+/// exactly the mistake `Rat.inv`'s totality (`inv 0 = 0`) invites, since
+/// `cramer2_x`/`cramer2_y` are still total there and silently evaluate to `0`.
+///
+/// System `x+y=1, x+y=2` (`a=b=c=d=1`, `D = 1·1−1·1 = 0`) has no solution at
+/// all (the two equations contradict each other), so `u=1` is as good a
+/// target as any: `cramer2_x`/`cramer2_y` both reduce to `0` (numerator times
+/// `inv 0 = 0`), so `a·cramer2_x+b·cramer2_y` reduces to `0`, not `1`. Checked
+/// both ways — the TRUE value (`0`) is accepted by `Eq.refl`, and the
+/// unrestricted claim (`= u = 1`) is REFUSED — so this is a check on the
+/// value, not a tool that cannot fail.
+#[test]
+fn cramer2_solves_needs_its_hypothesis_the_unrestricted_claim_is_false_at_d_zero() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, req, rmul, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let a = literal(&mut d, 1);
+    let b = literal(&mut d, 1);
+    let c = literal(&mut d, 1);
+    let dd = literal(&mut d, 1);
+    let u = literal(&mut d, 1);
+    let v = literal(&mut d, 2);
+
+    let x_val = d.const_app(p.cramer2_x, &[a, b, c, dd, u, v]);
+    let y_val = d.const_app(p.cramer2_y, &[a, b, c, dd, u, v]);
+    let ax = rmul(&mut d, a, x_val);
+    let by = rmul(&mut d, b, y_val);
+    let lhs = radd(&mut d, ax, by);
+
+    let zero = literal(&mut d, 0);
+    let claim_true = req(&mut d, lhs, zero);
+    let proof_true = rrefl(&mut d, zero);
+    let name_true = d.kernel().name_str(anon, "Check.cramer2_at_d_zero_is_zero");
+    let accepted_true = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_true,
+        uparams: vec![],
+        ty: claim_true,
+        value: proof_true,
+    });
+    assert!(
+        accepted_true.is_ok(),
+        "at D=0, a*cramer2_x+b*cramer2_y must REDUCE to 0 (Rat.inv 0 = 0): {accepted_true:?}"
+    );
+
+    let claim_false = req(&mut d, lhs, u);
+    let proof_false = rrefl(&mut d, u);
+    let name_false = d
+        .kernel()
+        .name_str(anon, "Check.cramer2_at_d_zero_equals_u");
+    let refused = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_false,
+        uparams: vec![],
+        ty: claim_false,
+        value: proof_false,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted a*cramer2_x+b*cramer2_y = u at D=0 (0 = 1), so \
+         dropping the D ≠ 0 hypothesis would not merely be unprovable, it \
+         would be FALSE, and this reduction check caught neither: {refused:?}"
+    );
 }
 
 /// `Rat.det2_fib`'s statement, asserted verbatim — an empty axiom footprint

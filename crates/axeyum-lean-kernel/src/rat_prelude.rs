@@ -1450,6 +1450,27 @@ pub struct RatPrelude {
     /// `y = Rat.div (det2 a u c v) (det2 a b c d)` — the `y` companion of
     /// [`Self::cramer_two_unique_x`].
     pub cramer_two_unique_y: NameId,
+    /// `Rat.cramer2_x : Rat → Rat → Rat → Rat → Rat → Rat → Rat`,
+    /// `cramer2_x a b c d u v := Rat.div (det2 u b v d) (det2 a b c d)` — the
+    /// Cramer solution **formula** for `x` (not a uniqueness statement about
+    /// it, but the value itself). Defined unconditionally: `Rat.inv` is
+    /// total, so no `D ≠ 0` hypothesis belongs on the value — only on
+    /// theorems about it ([`Self::cramer2_solves`]).
+    pub cramer2_x: NameId,
+    /// `Rat.cramer2_y : Rat → Rat → Rat → Rat → Rat → Rat → Rat`,
+    /// `cramer2_y a b c d u v := Rat.div (det2 a u c v) (det2 a b c d)` — the
+    /// `y` companion of [`Self::cramer2_x`].
+    pub cramer2_y: NameId,
+    /// `Rat.cramer2_solves : ∀ a b c d u v, Not (det2 a b c d = 0) →`
+    /// `a*(cramer2_x a b c d u v) + b*(cramer2_y a b c d u v) = u ∧`
+    /// `c*(cramer2_x a b c d u v) + d*(cramer2_y a b c d u v) = v`.
+    ///
+    /// The **substitution** direction of Cramer's rule: the formulas actually
+    /// solve the system. [`Self::cramer_two_unique_x`]/
+    /// [`Self::cramer_two_unique_y`] are the converse (a solution, if one
+    /// exists, must equal them) — uniqueness and existence are different
+    /// theorems, and this kernel now has both.
+    pub cramer2_solves: NameId,
 
     // --- the ℤ→ℚ cast, and Cassini read through `det2` (matrix.rs) ----------
     /// `Rat.ofInt : Int → Rat`, `ofInt x := Rat.mk x 1 pos red` — the
@@ -1780,6 +1801,9 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         inv2_bottom_right: child(kernel, "inv2_bottom_right"),
         cramer_two_unique_x: child(kernel, "cramer_two_unique_x"),
         cramer_two_unique_y: child(kernel, "cramer_two_unique_y"),
+        cramer2_x: child(kernel, "cramer2_x"),
+        cramer2_y: child(kernel, "cramer2_y"),
+        cramer2_solves: child(kernel, "cramer2_solves"),
         of_int: child(kernel, "ofInt"),
         of_int_add: child(kernel, "ofInt_add"),
         of_int_mul: child(kernel, "ofInt_mul"),

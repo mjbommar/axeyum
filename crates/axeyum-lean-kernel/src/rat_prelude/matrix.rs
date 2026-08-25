@@ -70,6 +70,7 @@ pub(super) fn declare_matrix_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_adjugate(d, p)?;
     declare_inverse(d, p)?;
     declare_cramer(d, p)?;
+    declare_cramer2(d, p)?;
     declare_of_int_def(d, p)?;
     declare_of_int_add(d, p)?;
     declare_of_int_mul(d, p)?;
@@ -2053,6 +2054,536 @@ fn declare_cramer_two_unique_y(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), 
         ty,
         value,
     })
+}
+
+// --- Cramer's rule for a 2×2 system: the solution formulas, and that they
+// --- actually solve the system -----------------------------------------------
+//
+// `cramer_two_unique_x`/`cramer_two_unique_y` above are the FORWARD direction
+// only: *if* `(x, y)` solves the system, it must equal these formulas. That
+// says nothing about whether the formulas solve anything — uniqueness and
+// existence are different theorems. This section adds the formulas as
+// unconditional VALUES (`Rat.cramer2_x`/`Rat.cramer2_y`, total because
+// `Rat.inv` is total) and the SUBSTITUTION direction (`Rat.cramer2_solves`):
+// plugged back in, they satisfy both equations, given `D ≠ 0`.
+
+/// Delta height for `Rat.cramer2_x`/`Rat.cramer2_y`: above both `Rat.div`
+/// (`DERIVED_HEIGHT + 1` in `defs.rs`) and `Rat.det2` ([`DET2_HEIGHT`]),
+/// since each definition's body applies both directly.
+const CRAMER2_HEIGHT: u16 = DET2_HEIGHT + 1;
+
+/// `Rat.cramer2_x a b c d u v := Rat.div (det2 u b v d) (det2 a b c d)` —
+/// Cramer's formula for `x`, the solution of `a·x+b·y=u, c·x+d·y=v` when
+/// `det2 a b c d ≠ 0`. Defined **unconditionally**: `Rat.inv` is total
+/// (`inv 0 = 0`), so the value needs no `D ≠ 0` hypothesis — that belongs on
+/// the *theorem* about it ([`declare_cramer2_solves`]), not on the
+/// definition. Six separate `Rat` arguments, not a matrix or a pair: this
+/// kernel has no tuple/product type, hence the `_x`/`_y` split already
+/// established by [`declare_cramer_two_unique_x`]/
+/// [`declare_cramer_two_unique_y`].
+fn declare_cramer2_x(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+    let fvs: Vec<u64> = (0..6).map(|_| d.fresh_fvar()).collect();
+    let vars: Vec<ExprId> = fvs.iter().map(|&f| d.kernel().fvar(f)).collect();
+    let (a, b, c, dd, u, v) = (vars[0], vars[1], vars[2], vars[3], vars[4], vars[5]);
+
+    let m = rdet2(d, p, u, b, v, dd);
+    let det = rdet2(d, p, a, b, c, dd);
+    let body = d.const_app(p.div, &[m, det]);
+
+    let value = {
+        let mut val = body;
+        for &fv in fvs.iter().rev() {
+            val = d.lam_fv(fv, carrier, val);
+        }
+        val
+    };
+    let ty = {
+        let mut t = carrier;
+        for _ in 0..6 {
+            t = d.arrow(carrier, t);
+        }
+        t
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.cramer2_x,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(CRAMER2_HEIGHT),
+    })
+}
+
+/// `Rat.cramer2_y a b c d u v := Rat.div (det2 a u c v) (det2 a b c d)` — the
+/// `y` companion of [`declare_cramer2_x`].
+fn declare_cramer2_y(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+    let fvs: Vec<u64> = (0..6).map(|_| d.fresh_fvar()).collect();
+    let vars: Vec<ExprId> = fvs.iter().map(|&f| d.kernel().fvar(f)).collect();
+    let (a, b, c, dd, u, v) = (vars[0], vars[1], vars[2], vars[3], vars[4], vars[5]);
+
+    let m = rdet2(d, p, a, u, c, v);
+    let det = rdet2(d, p, a, b, c, dd);
+    let body = d.const_app(p.div, &[m, det]);
+
+    let value = {
+        let mut val = body;
+        for &fv in fvs.iter().rev() {
+            val = d.lam_fv(fv, carrier, val);
+        }
+        val
+    };
+    let ty = {
+        let mut t = carrier;
+        for _ in 0..6 {
+            t = d.arrow(carrier, t);
+        }
+        t
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.cramer2_y,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(CRAMER2_HEIGHT),
+    })
+}
+
+/// `a·(det2 u b v d) + b·(det2 a u c v) = (det2 a b c d)·u` — unconditional,
+/// no hypothesis. Half of "the Cramer values satisfy the system": scaling
+/// `det2 u b v d` (`x`'s Cramer numerator) by `a` and `det2 a u c v` (`y`'s
+/// Cramer numerator) by `b` and summing collapses to `D·u`. The cross terms
+/// `a·(b·v)` and `b·(a·v)` are equal (`mul_comm`+`mul_assoc`) and telescope
+/// away via `sub_add_sub`, leaving `a·(u·d) − b·(u·c) = D·u` by `sub_mul`.
+#[allow(clippy::too_many_arguments)]
+fn cramer_solves_eq1_identity(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    dd: ExprId,
+    u: ExprId,
+    v: ExprId,
+) -> ExprId {
+    let u_dd = rmul(d, u, dd);
+    let b_v = rmul(d, b, v);
+    let mx = diff(d, u_dd, b_v); // = det2 u b v d (defeq)
+    let a_v = rmul(d, a, v);
+    let u_c = rmul(d, u, c);
+    let my = diff(d, a_v, u_c); // = det2 a u c v (defeq)
+
+    let term_a = rmul(d, a, mx);
+    let term_b = rmul(d, b, my);
+    let start = radd(d, term_a, term_b);
+
+    let a_udd = rmul(d, a, u_dd);
+    let a_bv = rmul(d, a, b_v);
+    let target_a = diff(d, a_udd, a_bv);
+    let msrr_a = mul_sub_right_rev(d, p, a, u_dd, b_v); // target_a = term_a
+    let step_a = rsymm(d, target_a, term_a, msrr_a); // term_a -> target_a
+    let cstep_a = rcongr(d, term_a, target_a, step_a, &|d, t| radd(d, t, term_b));
+    let mid1 = radd(d, target_a, term_b);
+
+    let b_av = rmul(d, b, a_v);
+    let b_uc = rmul(d, b, u_c);
+    let target_b = diff(d, b_av, b_uc);
+    let msrr_b = mul_sub_right_rev(d, p, b, a_v, u_c); // target_b = term_b
+    let step_b = rsymm(d, target_b, term_b, msrr_b); // term_b -> target_b
+    let cstep_b = rcongr(d, term_b, target_b, step_b, &|d, t| radd(d, target_a, t));
+    let mid2 = radd(d, target_a, target_b); // (a_udd - a_bv) + (b_av - b_uc)
+
+    // b_av = a_bv: b*(a*v) = (b*a)*v = (a*b)*v = a*(b*v).
+    let ba = rmul(d, b, a);
+    let ba_v = rmul(d, ba, v);
+    let assoc_bav = d.lemma(p.mul_assoc, &[b, a, v]); // (b*a)*v = b*(a*v) = b_av
+    let step_bav1 = rsymm(d, ba_v, b_av, assoc_bav); // b_av -> ba_v
+    let ab = rmul(d, a, b);
+    let ab_v = rmul(d, ab, v);
+    let comm_ba = d.lemma(p.mul_comm, &[b, a]); // b*a = a*b
+    let step_bav2 = rcongr(d, ba, ab, comm_ba, &|d, t| rmul(d, t, v)); // ba_v -> ab_v
+    let assoc_abv = d.lemma(p.mul_assoc, &[a, b, v]); // (a*b)*v = a*(b*v) = a_bv
+    let (_, hab) = rchain(
+        d,
+        b_av,
+        &[(ba_v, step_bav1), (ab_v, step_bav2), (a_bv, assoc_abv)],
+    ); // hab : b_av = a_bv
+
+    let step_rewrite = rcongr(d, b_av, a_bv, hab, &|d, t| {
+        let inner = diff(d, t, b_uc);
+        radd(d, target_a, inner)
+    });
+    let a_bv_minus_buc = diff(d, a_bv, b_uc);
+    let mid3 = radd(d, target_a, a_bv_minus_buc); // (a_udd-a_bv)+(a_bv-b_uc)
+
+    let telescope = d.lemma(p.sub_add_sub, &[a_udd, a_bv, b_uc]); // mid3 = a_udd - b_uc
+    let mid4 = diff(d, a_udd, b_uc);
+
+    // a_udd -> (a*dd)*u
+    let dd_u = rmul(d, dd, u);
+    let a_ddu = rmul(d, a, dd_u);
+    let comm_udd = d.lemma(p.mul_comm, &[u, dd]); // u*d = d*u
+    let step_udd1 = rcongr(d, u_dd, dd_u, comm_udd, &|d, t| rmul(d, a, t)); // a_udd -> a_ddu
+    let a_dd = rmul(d, a, dd);
+    let a_dd_u = rmul(d, a_dd, u);
+    let assoc_addu = d.lemma(p.mul_assoc, &[a, dd, u]); // (a*d)*u = a*(d*u) = a_ddu
+    let step_udd2 = rsymm(d, a_dd_u, a_ddu, assoc_addu); // a_ddu -> a_dd_u
+    let (_, a_udd_to_a_dd_u) = rchain(d, a_udd, &[(a_ddu, step_udd1), (a_dd_u, step_udd2)]);
+
+    // b_uc -> (b*c)*u
+    let c_u = rmul(d, c, u);
+    let b_cu = rmul(d, b, c_u);
+    let comm_uc = d.lemma(p.mul_comm, &[u, c]); // u*c = c*u
+    let step_buc1 = rcongr(d, u_c, c_u, comm_uc, &|d, t| rmul(d, b, t)); // b_uc -> b_cu
+    let b_c = rmul(d, b, c);
+    let b_c_u = rmul(d, b_c, u);
+    let assoc_bcu = d.lemma(p.mul_assoc, &[b, c, u]); // (b*c)*u = b*(c*u) = b_cu
+    let step_buc2 = rsymm(d, b_c_u, b_cu, assoc_bcu); // b_cu -> b_c_u
+    let (_, b_uc_to_b_c_u) = rchain(d, b_uc, &[(b_cu, step_buc1), (b_c_u, step_buc2)]);
+
+    let step5 = rcongr(d, a_udd, a_dd_u, a_udd_to_a_dd_u, &|d, t| {
+        let n = rneg(d, b_uc);
+        radd(d, t, n)
+    });
+    let mid5 = diff(d, a_dd_u, b_uc);
+    let step6 = rcongr(d, b_uc, b_c_u, b_uc_to_b_c_u, &|d, t| {
+        let n = rneg(d, t);
+        radd(d, a_dd_u, n)
+    });
+    let mid6 = diff(d, a_dd_u, b_c_u);
+
+    let sub_mul_pf = d.lemma(p.sub_mul, &[a_dd, b_c, u]); // (a_dd*u)-(b_c*u)=(a_dd-b_c)*u
+    let det = rdet2(d, p, a, b, c, dd);
+    let det_u = rmul(d, det, u); // = (a_dd-b_c)*u (defeq)
+
+    let (_, proof) = rchain(
+        d,
+        start,
+        &[
+            (mid1, cstep_a),
+            (mid2, cstep_b),
+            (mid3, step_rewrite),
+            (mid4, telescope),
+            (mid5, step5),
+            (mid6, step6),
+            (det_u, sub_mul_pf),
+        ],
+    );
+    proof
+}
+
+/// `c·(det2 u b v d) + d·(det2 a u c v) = (det2 a b c d)·v` — unconditional,
+/// no hypothesis. The other half of "the Cramer values satisfy the system"
+/// ([`cramer_solves_eq1_identity`] is the `u`/first-equation half): here the
+/// `u`-terms `c·(u·d)` and `d·(u·c)` are equal (a three-factor commute) and
+/// cancel, leaving `d·(a·v) − c·(b·v) = D·v`.
+#[allow(clippy::too_many_arguments)]
+fn cramer_solves_eq2_identity(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    dd: ExprId,
+    u: ExprId,
+    v: ExprId,
+) -> ExprId {
+    let u_dd = rmul(d, u, dd);
+    let b_v = rmul(d, b, v);
+    let mx = diff(d, u_dd, b_v); // = det2 u b v d (defeq)
+    let a_v = rmul(d, a, v);
+    let u_c = rmul(d, u, c);
+    let my = diff(d, a_v, u_c); // = det2 a u c v (defeq)
+
+    let term_c = rmul(d, c, mx);
+    let term_dd = rmul(d, dd, my);
+    let start = radd(d, term_c, term_dd);
+
+    let c_udd = rmul(d, c, u_dd);
+    let c_bv = rmul(d, c, b_v);
+    let target_c = diff(d, c_udd, c_bv);
+    let msrr_c = mul_sub_right_rev(d, p, c, u_dd, b_v); // target_c = term_c
+    let step_c = rsymm(d, target_c, term_c, msrr_c); // term_c -> target_c
+    let cstep_c = rcongr(d, term_c, target_c, step_c, &|d, t| radd(d, t, term_dd));
+    let mid1 = radd(d, target_c, term_dd);
+
+    let dd_av = rmul(d, dd, a_v);
+    let dd_uc = rmul(d, dd, u_c);
+    let target_dd = diff(d, dd_av, dd_uc);
+    let msrr_dd = mul_sub_right_rev(d, p, dd, a_v, u_c); // target_dd = term_dd
+    let step_dd = rsymm(d, target_dd, term_dd, msrr_dd); // term_dd -> target_dd
+    let cstep_dd = rcongr(d, term_dd, target_dd, step_dd, &|d, t| radd(d, target_c, t));
+    let mid2 = radd(d, target_c, target_dd); // (c_udd-c_bv)+(dd_av-dd_uc)
+
+    // c_udd = dd_uc: c*(u*d) = (c*d)*u = (d*c)*u = d*(c*u) = d*(u*c).
+    let dd_u = rmul(d, dd, u);
+    let c_ddu = rmul(d, c, dd_u);
+    let comm_h1 = d.lemma(p.mul_comm, &[u, dd]); // u*d = d*u
+    let step_h1 = rcongr(d, u_dd, dd_u, comm_h1, &|d, t| rmul(d, c, t)); // c_udd -> c_ddu
+    let c_dd = rmul(d, c, dd);
+    let cdd_u = rmul(d, c_dd, u);
+    let assoc_h2 = d.lemma(p.mul_assoc, &[c, dd, u]); // (c*d)*u = c*(d*u) = c_ddu
+    let step_h2 = rsymm(d, cdd_u, c_ddu, assoc_h2); // c_ddu -> cdd_u
+    let ddc = rmul(d, dd, c);
+    let ddc_u = rmul(d, ddc, u);
+    let comm_h3 = d.lemma(p.mul_comm, &[c, dd]); // c*d = d*c
+    let step_h3 = rcongr(d, c_dd, ddc, comm_h3, &|d, t| rmul(d, t, u)); // cdd_u -> ddc_u
+    let c_u = rmul(d, c, u);
+    let dd_cu = rmul(d, dd, c_u);
+    let assoc_h4 = d.lemma(p.mul_assoc, &[dd, c, u]); // (d*c)*u = d*(c*u) = dd_cu
+    let comm_h5 = d.lemma(p.mul_comm, &[c, u]); // c*u = u*c
+    let step_h5 = rcongr(d, c_u, u_c, comm_h5, &|d, t| rmul(d, dd, t)); // dd_cu -> dd_uc
+
+    let (_, hcu) = rchain(
+        d,
+        c_udd,
+        &[
+            (c_ddu, step_h1),
+            (cdd_u, step_h2),
+            (ddc_u, step_h3),
+            (dd_cu, assoc_h4),
+            (dd_uc, step_h5),
+        ],
+    ); // hcu : c_udd = dd_uc
+
+    let step_rewrite = rcongr(d, c_udd, dd_uc, hcu, &|d, t| {
+        let inner = diff(d, t, c_bv);
+        radd(d, inner, target_dd)
+    });
+    let dd_uc_minus_cbv = diff(d, dd_uc, c_bv);
+    let mid2b = radd(d, dd_uc_minus_cbv, target_dd); // (dd_uc-c_bv)+(dd_av-dd_uc)
+
+    let swap = d.lemma(p.add_comm, &[dd_uc_minus_cbv, target_dd]); // mid2b = swapped
+    let swapped = radd(d, target_dd, dd_uc_minus_cbv); // (dd_av-dd_uc)+(dd_uc-c_bv)
+
+    let telescope = d.lemma(p.sub_add_sub, &[dd_av, dd_uc, c_bv]); // swapped = dd_av - c_bv
+    let mid4 = diff(d, dd_av, c_bv);
+
+    // dd_av -> (a*dd)*v
+    let dda = rmul(d, dd, a);
+    let dda_v = rmul(d, dda, v);
+    let assoc_ddav = d.lemma(p.mul_assoc, &[dd, a, v]); // (d*a)*v = d*(a*v) = dd_av
+    let step_ddav1 = rsymm(d, dda_v, dd_av, assoc_ddav); // dd_av -> dda_v
+    let a_dd = rmul(d, a, dd);
+    let a_dd_v = rmul(d, a_dd, v);
+    let comm_ddav = d.lemma(p.mul_comm, &[dd, a]); // d*a = a*d
+    let step_ddav2 = rcongr(d, dda, a_dd, comm_ddav, &|d, t| rmul(d, t, v)); // dda_v -> a_dd_v
+    let (_, dd_av_to_a_dd_v) = rchain(d, dd_av, &[(dda_v, step_ddav1), (a_dd_v, step_ddav2)]);
+
+    // c_bv -> (b*c)*v
+    let cb = rmul(d, c, b);
+    let cb_v = rmul(d, cb, v);
+    let assoc_cbv = d.lemma(p.mul_assoc, &[c, b, v]); // (c*b)*v = c*(b*v) = c_bv
+    let step_cbv1 = rsymm(d, cb_v, c_bv, assoc_cbv); // c_bv -> cb_v
+    let b_c = rmul(d, b, c);
+    let b_c_v = rmul(d, b_c, v);
+    let comm_cbv = d.lemma(p.mul_comm, &[c, b]); // c*b = b*c
+    let step_cbv2 = rcongr(d, cb, b_c, comm_cbv, &|d, t| rmul(d, t, v)); // cb_v -> b_c_v
+    let (_, c_bv_to_b_c_v) = rchain(d, c_bv, &[(cb_v, step_cbv1), (b_c_v, step_cbv2)]);
+
+    let step5 = rcongr(d, dd_av, a_dd_v, dd_av_to_a_dd_v, &|d, t| {
+        let n = rneg(d, c_bv);
+        radd(d, t, n)
+    });
+    let mid5 = diff(d, a_dd_v, c_bv);
+    let step6 = rcongr(d, c_bv, b_c_v, c_bv_to_b_c_v, &|d, t| {
+        let n = rneg(d, t);
+        radd(d, a_dd_v, n)
+    });
+    let mid6 = diff(d, a_dd_v, b_c_v);
+
+    let sub_mul_pf = d.lemma(p.sub_mul, &[a_dd, b_c, v]); // (a_dd*v)-(b_c*v)=(a_dd-b_c)*v
+    let det = rdet2(d, p, a, b, c, dd);
+    let det_v = rmul(d, det, v); // = (a_dd-b_c)*v (defeq)
+
+    let (_, proof) = rchain(
+        d,
+        start,
+        &[
+            (mid1, cstep_c),
+            (mid2, cstep_dd),
+            (mid2b, step_rewrite),
+            (swapped, swap),
+            (mid4, telescope),
+            (mid5, step5),
+            (mid6, step6),
+            (det_v, sub_mul_pf),
+        ],
+    );
+    proof
+}
+
+/// Solve `coef1·m1 + coef2·m2 = D·w` for `w`, given `h3 : D ≠ 0`, producing a
+/// proof of `Eq (coef1·(m1·invD) + coef2·(m2·invD)) w` — the two-term
+/// generalisation of [`cramer_solve`], needed for the SUBSTITUTION direction
+/// ([`declare_cramer2_solves`]) where both `Rat.cramer2_x` and
+/// `Rat.cramer2_y` appear together in the same equation, unlike the
+/// uniqueness direction's single unknown.
+#[allow(clippy::too_many_arguments)]
+fn combo_cramer_solve(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    det: ExprId,
+    inv_det: ExprId,
+    coef1: ExprId,
+    m1: ExprId,
+    coef2: ExprId,
+    m2: ExprId,
+    w: ExprId,
+    combo_is_det_w: ExprId,
+    h3: ExprId,
+) -> ExprId {
+    let m1_invd = rmul(d, m1, inv_det);
+    let m2_invd = rmul(d, m2, inv_det);
+    let term1 = rmul(d, coef1, m1_invd);
+    let term2 = rmul(d, coef2, m2_invd);
+    let start = radd(d, term1, term2);
+
+    let coef1_m1 = rmul(d, coef1, m1);
+    let coef1_m1_invd = rmul(d, coef1_m1, inv_det);
+    let assoc1 = d.lemma(p.mul_assoc, &[coef1, m1, inv_det]); // coef1_m1_invd = term1
+    let step1 = rsymm(d, coef1_m1_invd, term1, assoc1); // term1 -> coef1_m1_invd
+    let cstep1 = rcongr(d, term1, coef1_m1_invd, step1, &|d, t| radd(d, t, term2));
+    let mid1 = radd(d, coef1_m1_invd, term2);
+
+    let coef2_m2 = rmul(d, coef2, m2);
+    let coef2_m2_invd = rmul(d, coef2_m2, inv_det);
+    let assoc2 = d.lemma(p.mul_assoc, &[coef2, m2, inv_det]); // coef2_m2_invd = term2
+    let step2 = rsymm(d, coef2_m2_invd, term2, assoc2); // term2 -> coef2_m2_invd
+    let cstep2 = rcongr(d, term2, coef2_m2_invd, step2, &|d, t| {
+        radd(d, coef1_m1_invd, t)
+    });
+    let mid2 = radd(d, coef1_m1_invd, coef2_m2_invd);
+
+    let combined_inner = radd(d, coef1_m1, coef2_m2);
+    let combined = rmul(d, combined_inner, inv_det);
+    let distrib_fwd = d.lemma(p.right_distrib, &[coef1_m1, coef2_m2, inv_det]); // combined = mid2
+    let step3 = rsymm(d, combined, mid2, distrib_fwd); // mid2 -> combined
+
+    let det_w = rmul(d, det, w);
+    let step4 = rcongr(d, combined_inner, det_w, combo_is_det_w, &|d, t| {
+        rmul(d, t, inv_det)
+    });
+    let mid4 = rmul(d, det_w, inv_det);
+
+    let assoc3 = d.lemma(p.mul_assoc, &[det, w, inv_det]); // mid4 = mid5
+    let w_invd = rmul(d, w, inv_det);
+    let mid5 = rmul(d, det, w_invd);
+
+    let comm1 = d.lemma(p.mul_comm, &[w, inv_det]); // w*invD = invD*w
+    let invd_w = rmul(d, inv_det, w);
+    let step6 = rcongr(d, w_invd, invd_w, comm1, &|d, t| rmul(d, det, t));
+    let mid6 = rmul(d, det, invd_w);
+
+    let det_invd = rmul(d, det, inv_det);
+    let det_invd_w = rmul(d, det_invd, w);
+    let assoc4 = d.lemma(p.mul_assoc, &[det, inv_det, w]); // det_invd_w = mid6
+    let step7 = rsymm(d, det_invd_w, mid6, assoc4); // mid6 -> det_invd_w
+
+    let cancel = d.lemma(p.mul_inv_cancel_of_ne_zero, &[det, h3]); // det*invD = 1
+    let one = rone(d, p);
+    let step8 = rcongr(d, det_invd, one, cancel, &|d, t| rmul(d, t, w));
+    let mid8 = rmul(d, one, w);
+
+    let comm2 = d.lemma(p.mul_comm, &[one, w]); // 1*w = w*1
+    let w1 = rmul(d, w, one);
+    let mul_one_pf = d.lemma(p.mul_one, &[w]); // w*1 = w
+
+    let (_, proof) = rchain(
+        d,
+        start,
+        &[
+            (mid1, cstep1),
+            (mid2, cstep2),
+            (combined, step3),
+            (mid4, step4),
+            (mid5, assoc3),
+            (mid6, step6),
+            (det_invd_w, step7),
+            (mid8, step8),
+            (w1, comm2),
+            (w, mul_one_pf),
+        ],
+    );
+    proof
+}
+
+/// `Rat.cramer2_solves : ∀ a b c d u v, Not (det2 a b c d = 0) →`
+/// `  (a·(cramer2_x a b c d u v) + b·(cramer2_y a b c d u v) = u) ∧`
+/// `  (c·(cramer2_x a b c d u v) + d·(cramer2_y a b c d u v) = v)`.
+///
+/// The **substitution** direction of Cramer's rule: the formulas actually
+/// solve the system, not merely that a solution (if one exists) must equal
+/// them ([`declare_cramer_two_unique_x`]/[`declare_cramer_two_unique_y`]).
+/// Bundled with the kernel's `Prop`-level `And` — no tuple/product type
+/// exists to return `(x, y)` together, but `And` needs no such type, only two
+/// `Prop`s. Each half reduces to [`cramer_solves_eq1_identity`]/
+/// [`cramer_solves_eq2_identity`] (unconditional algebraic identities) via
+/// [`combo_cramer_solve`].
+fn declare_cramer2_solves(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem_hyp(
+        d,
+        p.cramer2_solves,
+        6,
+        &|d, v| {
+            let (a, b, c, dd, u, vv) = (v[0], v[1], v[2], v[3], v[4], v[5]);
+            let hyp = det2_ne_zero(d, p, a, b, c, dd);
+
+            let x = d.const_app(p.cramer2_x, &[a, b, c, dd, u, vv]);
+            let y = d.const_app(p.cramer2_y, &[a, b, c, dd, u, vv]);
+
+            let ax = rmul(d, a, x);
+            let by = rmul(d, b, y);
+            let ax_by = radd(d, ax, by);
+            let eq1 = req(d, ax_by, u);
+
+            let cx = rmul(d, c, x);
+            let dy = rmul(d, dd, y);
+            let cx_dy = radd(d, cx, dy);
+            let eq2 = req(d, cx_dy, vv);
+
+            let concl = d.and(eq1, eq2);
+            (hyp, concl)
+        },
+        &|d, v, h| {
+            let (a, b, c, dd, u, vv) = (v[0], v[1], v[2], v[3], v[4], v[5]);
+            let det = rdet2(d, p, a, b, c, dd);
+            let inv_det = d.const_app(p.inv, &[det]);
+            let mx = rdet2(d, p, u, b, vv, dd);
+            let my = rdet2(d, p, a, u, c, vv);
+
+            let identity1 = cramer_solves_eq1_identity(d, p, a, b, c, dd, u, vv);
+            let proof_eq1 = combo_cramer_solve(d, p, det, inv_det, a, mx, b, my, u, identity1, h);
+
+            let identity2 = cramer_solves_eq2_identity(d, p, a, b, c, dd, u, vv);
+            let proof_eq2 = combo_cramer_solve(d, p, det, inv_det, c, mx, dd, my, vv, identity2, h);
+
+            let x = d.const_app(p.cramer2_x, &[a, b, c, dd, u, vv]);
+            let y = d.const_app(p.cramer2_y, &[a, b, c, dd, u, vv]);
+            let ax = rmul(d, a, x);
+            let by = rmul(d, b, y);
+            let ax_by = radd(d, ax, by);
+            let eq1 = req(d, ax_by, u);
+            let cx = rmul(d, c, x);
+            let dy = rmul(d, dd, y);
+            let cx_dy = radd(d, cx, dy);
+            let eq2 = req(d, cx_dy, vv);
+
+            let intro = p.int.logic.and_intro;
+            d.const_app(intro, &[eq1, eq2, proof_eq1, proof_eq2])
+        },
+    )
+}
+
+/// Admit `Rat.cramer2_x`, `Rat.cramer2_y`, and `Rat.cramer2_solves`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_cramer2(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    declare_cramer2_x(d, p)?;
+    declare_cramer2_y(d, p)?;
+    declare_cramer2_solves(d, p)
 }
 
 // ============================================================================
