@@ -2222,51 +2222,61 @@ reports a long standing `just-only` list of autogenesis steps. The new gate is
 on **both** sides and adds no divergence.
 
 **Curriculum-directed kernel development (`WIP`, coordinator, 2026-08-25).**
-Target selection follows
+Targets are chosen per
 [doc 262](docs/autogenesis/262-curriculum-directed-frontier-selection.md): the
-curriculum DAG picks the subject, `fact-frontier.py` picks the row. Doc 262's
-first amendment recorded 18 of 23 nodes as "solver-backed and kernel-empty";
-**five of those are no longer empty** — `sets` 0→28, `groups` 0→4 (with ℤ/n as
-a worked instance), `relations-and-functions` 0→5, `cardinality` 0→1,
-`polynomials` 0→4 — and the second amendment records the measurement. The
-kernel stands at **1,053+ distinct theorems, every one axiom-free**, trusted
-base unmoved at 30 declared-and-unreached `axreal` assumptions.
+curriculum DAG picks the subject, `fact-frontier.py` picks the row. The kernel
+stands at **1,079 distinct theorems, every one axiom-free**, trusted base
+unmoved at 30 declared-and-unreached `axreal` assumptions — and there are **no
+`Opaque` and no `Quotient` declarations in any prelude builder**, measured, so
+`Axiom`-only and the full trusted surface coincide everywhere today.
 
-The fact ledger went from **362 to 410 facts** across four lanes. The gap they
-measured first is the number worth carrying: **1,018 of 1,053 admitted theorems
-(97%) had no fact**, and `rat` was 220-of-220 uncovered — zero facts anywhere
-named a theorem originating in the ℚ prelude. `theorem_dependency_inventory`
-was extended to build `creal`/`complex`/`cpoint`, which had been outside its
-coverage entirely, so a fact over those 423 theorems can now get a derived
-`depends_on` instead of a hand-asserted one.
+**The frontier selects.** It refused every candidate for the whole programme's
+history — `no-registered-operation` on all 196 rows — because the registry was a
+dispatch table: 26 operations, 24 naming exactly one fact, every one of them
+already proved. One operation naming several open dependency-ready facts changed
+that, and `execute-autogenesis-operation.py --dry-run-multi-target` now runs the
+whole chain — selection, dispatch, independent re-derivation,
+`would_admit=F:ml430-nat-modeq-symm-0a3d4d18` — **with no ledger write**. What
+stands between that and an automatic admission is the authoritative receipt
+schema, which is an ADR decision and was deliberately not invented.
 
-**Next.** (1) `complex`/`cpoint` remain at zero facts — the tooling blocker is
-gone, the rows are not written. (2) Both curriculum **destinations** are still
-kernel-thin and, more importantly, still carry **zero nursery pressure**; doc
-262's Gap 2 is the sharper one and is unchanged, because a producer cannot be
-evaluated against a population containing nothing from its subject.
-(3) `Rat.polyEval_mul` is open with its obstruction now characterised rather
-than unknown. (4) Series convergence needs `sumRange_tail_le`'s `le` bound
-converted to `Cauchy` shape.
+**The ledger went 362 → 458 facts**, and the measurement that prompted it is
+the number worth carrying: **1,018 of 1,053 admitted theorems (97%) had no
+fact**, `rat` was 220-of-220 uncovered, and `complex`/`cpoint`/`logic` were at
+zero. `theorem_dependency_inventory` was extended to the constructed carriers,
+which had been outside its coverage entirely.
 
-**Two findings from working the nodes outrank the counts.** The binding
-constraint is a **missing type** — no `List`, no `Finset`, no product — which is
-why a permutation cannot be a group element, why `det2` takes four scalars, and
-why Lagrange's identity at general `n` is unstatable. Each instance was found by
-a lane trying to prove the theorem, never by planning. And **a brief can name a
-false target**: `polyEval_mul` as I stated it is false for arbitrary
-coefficients, and the lane refuted it with a kernel-confirmed counterexample
-rather than failing to prove it. A node's frontier is characterised as much by
-what is false there as by what is proved.
+**Next.** (1) Coverage is 111 of ~1,100 theorems; the largest holes are Nat by
+absolute count and CReal by fraction. (2) Both curriculum **destinations** are
+still kernel-thin and, more importantly, still carry **zero nursery pressure** —
+doc 262's Gap 2, unchanged, and the sharper of the two. (3) The multi-target
+receipt schema needs an ADR. (4) `just check` has six recipes red for
+pre-existing reasons, under repair.
 
-**Two process defects, both fixed rather than noted.** A prelude can declare
-into another prelude's namespace, so a lane reading all of `nat_prelude/` could
-not see that `int_prelude/wilson.rs` already owned `Nat.inverseIndex`; the nat
-prelude built fine alone with the collision present and it surfaced 230 failures
-downstream as `DeclarationExists { name: NameId(457) }`. And two lanes adding
-functions to one file produce a conflict where keeping both sides does not
-parse — `scripts/lane-merge-additive.py` now refuses that resolution and can
-reconstruct instead.
+**Three findings outrank the counts.**
+
+*The binding constraint is a missing TYPE.* No `List`, no `Finset`, no product.
+It is why `det2` takes four scalars, why a permutation cannot be a group
+element, and why `polyEval_mul` cannot be stated without vanishing hypotheses.
+Every instance was found by a lane trying to prove the theorem, never by
+planning.
+
+*Two targets I named were FALSE, and lanes refuted them rather than failing.*
+The ℚ Cauchy product does not hold for arbitrary coefficients — `conv` sums the
+full antidiagonal, including points outside the `m×n` rectangle — shown with a
+kernel-confirmed counterexample. And `Nat.IsGroupOnFn` is **unsatisfiable at the
+symmetric group**: its conjuncts use unbounded `Eq (Nat → Nat)` while
+`permInverse` inverts only on `[0,n)`. A node's frontier is characterised as
+much by what is false there as by what is proved.
+
+*Five checkers could not fail, and one guarded the headline claim.*
+`prelude_axiom_inventory` parsed no arguments and always exited 0, and because
+it built 3 of 9 preludes the axiom ledger's cross-check was satisfied
+**vacuously for the other six**. `nat_axiom_inventory` gave a real prelude and a
+typo the same message. `theorem_dependency_inventory` SIGABRTed behind a vacuity
+guard, hiding 21 real missing `depends_on` edges. 81 facts consumed a pipeline
+with `grep -q`. And 15 control suites ran nowhere at all — including
+`test_validate_facts`, which guards the fact ledger itself.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible
 version-1 sidecar joins existing facts and operations to reusable capabilities
