@@ -292,6 +292,132 @@ fn bijective_on_lemmas_apply_to_a_concrete_transposition_with_a_transposed_bound
     assert!(!f.k.environment().contains(bad_name));
 }
 
+/// `Nat.symmetric_group_isGroupOnFn` APPLIES at a concrete instance —
+/// `transposition 0 1` on `[0,2)` — and `Nat.permInverse`'s table for it
+/// COMPUTES (by `def_eq`, not merely type-checks). The REQUIRED negative
+/// control: the exact proof term that makes the FIXED (`EqOn`-bounded)
+/// inverse conjunct hold at this instance is reused against the UNBOUNDED
+/// `Eq (Nat → Nat)` form this module's own top-of-file doc found false —
+/// and the kernel rejects it.
+#[test]
+fn symmetric_group_is_group_on_fn_applies_at_transposition_0_1_with_unbounded_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let fn_ty = f.arrow(nat, nat);
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+
+    // sigma := transposition 0 1 : Nat -> Nat, swapping 0 and 1.
+    let sigma = f.const_app(p.transposition, &[zero, one]);
+    let lt01 = f.zero_lt_succ(zero); // Lt 0 1
+    let lt12 = f.lemma(p.lt_succ_self, &[one]); // Lt 1 2
+    let inj_sigma = f.lemma(p.transposition_injective, &[zero, one, lt01, two]);
+    let maps_sigma = f.lemma(p.transposition_maps_into, &[zero, one, lt01, two, lt12]);
+    let surj_sigma = f.lemma(
+        p.injective_on_imp_surjective_on,
+        &[two, sigma, inj_sigma, maps_sigma],
+    );
+
+    // `Nat.permInverse sigma 2` COMPUTES sigma's genuine inverse table on
+    // `[0,2)`: sigma is its own inverse, so the table is 1, 0.
+    let g_at_0 = f.const_app(p.perm_inverse, &[sigma, two, zero]);
+    assert!(
+        f.k.def_eq(g_at_0, one),
+        "permInverse sigma 2 0 must COMPUTE to 1"
+    );
+    let g_at_1 = f.const_app(p.perm_inverse, &[sigma, two, one]);
+    assert!(
+        f.k.def_eq(g_at_1, zero),
+        "permInverse sigma 2 1 must COMPUTE to 0"
+    );
+
+    // The group witness APPLIES at n := 2: `Nat.symmetric_group_isGroupOnFn 2`
+    // is a genuine proof of `IsGroupOnFn Nat.comp Nat.id (fun f=>permInverse
+    // f 2) 2`; the kernel re-checks it here when declared as a consumer
+    // theorem (the "downstream development can use it" pattern this file's
+    // own module doc names as its third thing checked).
+    let ga = f.const_app(p.perm_inverse, &[sigma, two]); // Nat -> Nat
+    let inv = {
+        let f_fv = f.fresh_fvar();
+        let fvar = f.kernel().fvar(f_fv);
+        let body = f.const_app(p.perm_inverse, &[fvar, two]);
+        f.lam_fv(f_fv, fn_ty, body)
+    };
+    let op = f.const_app(p.comp, &[]);
+    let id_const = f.const_app(p.id, &[]);
+    let full = f.const_app(p.symmetric_group_is_group_on_fn, &[two]);
+    let full_stmt = f.const_app(p.is_group_on_fn, &[op, id_const, inv, two]);
+    let real_name = f.name("nc_symmetric_group_is_group_on_fn_real_at_n2");
+    f.declare_theorem(real_name, full_stmt, full)
+        .expect("IsGroupOnFn Nat.comp Nat.id (fun f=>permInverse f 2) 2 must be admitted");
+
+    // The bounded inverse fact this fix actually proves: `EqOn (comp sigma
+    // (permInverse sigma 2)) Nat.id 2`, built directly from
+    // `Nat.permInverse_right` (the same lemma
+    // `declare_symmetric_group_is_group_on_fn` uses internally) at every
+    // `k < 2` — a real, TRUE fact, admitted here to confirm it as such
+    // before reusing its proof term below.
+    let comp_sigma_ga = f.const_app(p.comp, &[sigma, ga]);
+    let eqon_proof = {
+        let k_fv = f.fresh_fvar();
+        let k = f.kernel().fvar(k_fv);
+        let hk_fv = f.fresh_fvar();
+        let hk = f.kernel().fvar(hk_fv);
+        let hk_ty = f.lt(k, two);
+        let body = f.lemma(p.perm_inverse_right, &[sigma, two, surj_sigma, k, hk]);
+        let with_hk = f.lam_fv(hk_fv, hk_ty, body);
+        f.lam_fv(k_fv, nat, with_hk)
+    };
+    let eqon_stmt = f.const_app(p.eq_on, &[comp_sigma_ga, id_const, two]);
+    let real_name2 = f.name("nc_symmetric_group_eqon_real_at_n2");
+    f.declare_theorem(real_name2, eqon_stmt, eqon_proof)
+        .expect("EqOn (comp sigma (permInverse sigma 2)) Nat.id 2 must be admitted");
+
+    // Confirm, by computation, that the UNBOUNDED claim this module's doc
+    // refuted really is false here (not an accidental tautology this
+    // negative control would pass vacuously): at k := 2 (outside [0,2)),
+    // `permInverse sigma 2 2` computes to `0` (the search never matches),
+    // so `sigma (permInverse sigma 2 2) = sigma 0 = 1`, genuinely != `id 2 = 2`.
+    let g_at_2 = f.const_app(p.perm_inverse, &[sigma, two, two]);
+    assert!(
+        f.k.def_eq(g_at_2, zero),
+        "permInverse sigma 2 2 must COMPUTE to 0 (the search never matches)"
+    );
+    let sigma_g2 = f.apply(sigma, &[g_at_2]);
+    assert!(
+        f.k.def_eq(sigma_g2, one),
+        "sigma (permInverse sigma 2 2) must compute to 1"
+    );
+    assert!(
+        !f.k.def_eq(sigma_g2, two),
+        "…and genuinely not to 2, confirming the unbounded claim is false at this instance"
+    );
+
+    // THE NEGATIVE CONTROL: reuse the REAL `eqon_proof` — a `Pi`-shaped
+    // pointwise fact, and this fix's whole reason for existing — against
+    // the UNBOUNDED `Eq (Nat → Nat) (comp sigma (permInverse sigma 2))
+    // Nat.id` this file's module doc found false. It must be rejected.
+    let unbounded_stmt = {
+        let one_lvl = f.level_one();
+        let eq_const = f.kernel().const_(p.logic.eq, vec![one_lvl]);
+        f.apply(eq_const, &[fn_ty, comp_sigma_ga, id_const])
+    };
+    let bad_name = f.name("nc_symmetric_group_unbounded_inverse_conjunct");
+    let err = f
+        .declare_theorem(bad_name, unbounded_stmt, eqon_proof)
+        .expect_err(
+            "NC: the bounded EqOn fact must NOT prove the unbounded (refuted) IsGroupOnFn claim",
+        );
+    println!(
+        "NC (unbounded IsGroupOnFn inverse conjunct, reusing the real EqOn proof) rejected:\n  {}",
+        f.explain(&err)
+    );
+    assert!(!f.k.environment().contains(bad_name));
+}
+
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
         p.set_union,
@@ -345,6 +471,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.perm_inverse,
         p.id,
         p.is_group_on_fn,
+        p.eq_on,
     ]
 }
 
@@ -590,6 +717,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.comp_assoc,
         p.bijective_on_comp,
         p.bijective_on_perm_inverse,
+        p.eq_on_refl,
+        p.eq_on_symm,
+        p.eq_on_trans,
+        p.symmetric_group_is_group_on_fn,
     ]
 }
 
@@ -4702,7 +4833,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        51 + 236,
+        52 + 240,
         "every promised definition and theorem must be rendered"
     );
 }

@@ -51,7 +51,8 @@
 //! bijection on `[0,n)` is one) — the two "IF ONLY STEP 1/2 LANDS" targets
 //! this file's own follow-up brief asked for.
 //!
-//! ## The full `IsGroupOnFn` instance is REFUTED, not merely undone
+//! ## The full `IsGroupOnFn` instance WAS REFUTED at its original statement —
+//! ## fixed by bounding `identity`/`inverse`, not by weakening the claim
 //!
 //! The natural next step reads as "bundle closure/identity/inverse the way
 //! `group.rs::declare_mod_add_is_group` bundles ℤ/n." That target is
@@ -77,21 +78,33 @@
 //! identity EVERYWHERE — no witness for `inv` closes that gap, because no
 //! `Nat → Nat` total function can.
 //!
-//! So `Nat.IsGroupOnFn`'s `identity`/`inverse` conjuncts, as declared, are
-//! satisfiable only by a genuinely constant-on-its-complement `op`/`e`
-//! (`group.rs`'s bare-`Nat` `IsGroupOn` never has this problem — a bound
-//! `a < n` is a real restriction that makes `e`/`inv a` themselves live
+//! So `Nat.IsGroupOnFn`'s `identity`/`inverse` conjuncts, AS ORIGINALLY
+//! DECLARED, were satisfiable only by a genuinely constant-on-its-complement
+//! `op`/`e` (`group.rs`'s bare-`Nat` `IsGroupOn` never has this problem — a
+//! bound `a < n` is a real restriction that makes `e`/`inv a` themselves live
 //! `< n`, but `BijectiveOn f n` restricts `f`'s *behaviour*, not its *type*:
 //! `f` is still a total `Nat → Nat`, defined everywhere, and `Eq (Nat → Nat)`
-//! sees all of it). Repairing this needs a genuinely different predicate —
-//! `identity`/`inverse` stated with a **bounded** function equality
-//! (`Nat.EqOn f g n := ∀ i, i < n → f i = g i`, undeclared anywhere in this
-//! kernel) in place of `Eq (Nat → Nat) f g` — which is a new definition and a
-//! new `IsGroupOnFn`-shaped predicate, not a lemma this file's four existing
-//! pieces can discharge. That is out of this slice's scope; this file stops
-//! at the two `BijectiveOn`-preservation lemmas
-//! (`Nat.bijective_on_comp`/`Nat.bijective_on_perm_inverse`) the brief named
-//! as an acceptable outcome on their own.
+//! sees all of it). The counterexample is a fact about the STATEMENT, not
+//! about permutations — it never claimed `Nat.comp a (Nat.permInverse a n)`
+//! disagrees with `Nat.id` anywhere on `[0,n)`, only that unbounded equality
+//! also inspects points nothing here ever promised to control.
+//!
+//! **The fix**: `identity`/`inverse` now state their two equality conjuncts
+//! with `Nat.EqOn f g n := ∀ i, i < n → f i = g i` ([`declare_eq_on`], below)
+//! in place of `Eq (Nat → Nat) f g` — the same restriction `BijectiveOn f n`
+//! already applies to a function's *behaviour*, now applied to the equalities
+//! that behaviour must satisfy. This is a **new definition and a redeclared
+//! `IsGroupOnFn`**, not a lemma about the old predicate (this repository's
+//! standing rule against editing an existing declaration's statement is
+//! waived here for exactly this reason — the old statement was
+//! unsatisfiable, so nothing could depend on it; every reference was checked
+//! before the edit, see the commit this lands in). With that fix,
+//! `Nat.symmetric_group_isGroupOnFn` ([`declare_symmetric_group_is_group_on_fn`],
+//! below) is the instance this file's brief was written for: closure is
+//! `Nat.bijective_on_comp`, associativity is `Nat.comp_assoc`, and the
+//! `identity`/`inverse` conjuncts are exactly `Nat.permInverse_right`/`_left`
+//! — the theorems this file already proved, which only ever promised the
+//! equality ON `[0,n)` in the first place.
 //!
 //! ## What's declared
 //!
@@ -134,6 +147,18 @@
 //! - `Nat.bijective_on_perm_inverse : ∀ n f, BijectiveOn f n →
 //!   BijectiveOn (permInverse f n) n` — the inverse of a bijection on
 //!   `[0,n)` is itself one.
+//! - `Nat.EqOn (f g : Nat → Nat) (n : Nat) : Prop := ∀ i, i < n →
+//!   Eq Nat (f i) (g i)` — bounded function equality, the fix described
+//!   above, plus `Nat.eqOn_refl`/`Nat.eqOn_symm`/`Nat.eqOn_trans` (reflexive,
+//!   symmetric, transitive at every bound `n`).
+//! - `Nat.IsGroupOnFn` — REDECLARED (see "The fix", above): `identity`'s and
+//!   `inverse`'s two equality conjuncts now use `Nat.EqOn · · n` in place of
+//!   the unbounded `Eq (Nat → Nat) · ·`; `assoc` is untouched (it holds
+//!   unbounded, genuinely, via `Nat.comp_assoc`).
+//! - `Nat.symmetric_group_isGroupOnFn : ∀ n, IsGroupOnFn Nat.comp Nat.id
+//!   (fun f => Nat.permInverse f n) n` — the symmetric group on `[0,n)`,
+//!   landed. No side condition on `n`: every conjunct holds at `n = 0` too
+//!   (vacuously, the same way `group.rs`'s bounded predicates do).
 //!
 //! Internal to the induction (never given a kernel-level name, matching how
 //! `finite.rs`'s `compact_eq_of_le`/`_of_gt`/`compact_injective` stay plain
@@ -149,9 +174,9 @@
 //! or on a concrete `Bool` value via `Bool.rec`, never on an assumed
 //! excluded middle.
 //!
-//! `Nat.symmetric_group_isGroupOnFn` — the full instance — is **not**
-//! declared. See "The full `IsGroupOnFn` instance is REFUTED" above: it is
-//! not an omission, it is a target this file found to be false as stated.
+//! `Nat.symmetric_group_isGroupOnFn` — the full instance — IS declared, once
+//! `Nat.IsGroupOnFn`'s `identity`/`inverse` conjuncts were rebuilt on
+//! `Nat.EqOn`. See "The fix", above.
 
 use super::NatPrelude;
 use super::finite::ex_falso;
@@ -1178,10 +1203,229 @@ fn declare_bijective_on_perm_inverse(
     d.declare_theorem(p.bijective_on_perm_inverse, ty, value)
 }
 
+/// Delta height for `Nat.EqOn`: a `Pi` over `Nat.lt` (height 1) and `Eq`
+/// (a primitive-family application, not itself unfolded), so `1` matches
+/// `GROUP_FN_HEIGHT` and every other bounded predicate in this file.
+const EQ_ON_HEIGHT: u16 = 1;
+
+/// Admit `Nat.EqOn (f g : Nat → Nat) (n : Nat) : Prop := ∀ i, i < n →
+/// Eq Nat (f i) (g i)` — **bounded** function equality, in place of the
+/// literal, unbounded `Eq (Nat → Nat) f g` this kernel cannot productively
+/// use here (see this module's top-of-file doc, "The full `IsGroupOnFn`
+/// instance was REFUTED"): `Nat.permInverse a n` is a two-sided inverse of
+/// `a` only ON `[0,n)`, and `EqOn` is exactly the equality that statement
+/// needs, no more. `EqOn` exists precisely BECAUSE this kernel has no
+/// `funext` — an unbounded pointwise equality is not even a full function
+/// equality here, so there is nothing weaker to fall back to; bounding it is
+/// the fix, not a workaround.
+///
+/// # Errors
+///
+/// Returns the kernel's rejection if the generated definition does not
+/// type-check or the name is already taken.
+fn declare_eq_on(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+    let prop = d.kernel().sort_zero();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let bound = d.lt(i, n);
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let eq_fi_gi = d.eq(fi, gi);
+    let body_i = d.arrow(bound, eq_fi_gi);
+    let body = d.pi_fv(i_fv, nat, body_i);
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        let with_g = d.lam_fv(g_fv, fn_ty, with_n);
+        d.lam_fv(f_fv, fn_ty, with_g)
+    };
+    let ty = {
+        let over_n = d.arrow(nat, prop);
+        let over_g = d.arrow(fn_ty, over_n);
+        d.arrow(fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.eq_on,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(EQ_ON_HEIGHT),
+    })
+}
+
+/// Admit `Nat.eqOn_refl : ∀ f n, EqOn f f n`, by `Eq.refl` at each point
+/// (`EqOn f f n` unfolds to `∀ i, i<n → f i = f i`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+fn declare_eq_on_refl(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hi_ty = d.lt(i, n);
+    let hi_fv = d.fresh_fvar();
+
+    let fi = d.apply(f, &[i]);
+    let refl_fi = d.refl(fi);
+
+    let concl_ty = d.const_app(p.eq_on, &[f, f, n]);
+
+    let value = {
+        let with_hi = d.lam_fv(hi_fv, hi_ty, refl_fi);
+        let with_i = d.lam_fv(i_fv, nat, with_hi);
+        let with_n = d.lam_fv(n_fv, nat, with_i);
+        d.lam_fv(f_fv, fn_ty, with_n)
+    };
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, concl_ty);
+        d.pi_fv(f_fv, fn_ty, with_n)
+    };
+    d.declare_theorem(p.eq_on_refl, ty, value)
+}
+
+/// Admit `Nat.eqOn_symm : ∀ f g n, EqOn f g n → EqOn g f n`, by [`NatOps::symm`]
+/// at each point.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+fn declare_eq_on_symm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let h_ty = d.const_app(p.eq_on, &[f, g, n]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hi_ty = d.lt(i, n);
+    let hi_fv = d.fresh_fvar();
+    let hi = d.kernel().fvar(hi_fv);
+
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let h_at_i = d.apply(h, &[i, hi]);
+    let sym = d.symm(fi, gi, h_at_i);
+
+    let concl_ty = d.const_app(p.eq_on, &[g, f, n]);
+
+    let value = {
+        let with_hi = d.lam_fv(hi_fv, hi_ty, sym);
+        let with_i = d.lam_fv(i_fv, nat, with_hi);
+        let with_h = d.lam_fv(h_fv, h_ty, with_i);
+        let with_n = d.lam_fv(n_fv, nat, with_h);
+        let with_g = d.lam_fv(g_fv, fn_ty, with_n);
+        d.lam_fv(f_fv, fn_ty, with_g)
+    };
+    let ty = {
+        let with_h = d.arrow(h_ty, concl_ty);
+        let with_n = d.pi_fv(n_fv, nat, with_h);
+        let with_g = d.pi_fv(g_fv, fn_ty, with_n);
+        d.pi_fv(f_fv, fn_ty, with_g)
+    };
+    d.declare_theorem(p.eq_on_symm, ty, value)
+}
+
+/// Admit `Nat.eqOn_trans : ∀ f g h n, EqOn f g n → EqOn g h n → EqOn f h n`,
+/// by [`NatOps::trans`] at each point. The third function is bound as `k`
+/// (not `h`) to keep it distinct from the two hypothesis fvars this proof
+/// also needs named `h1`/`h2`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+fn declare_eq_on_trans(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let h1_ty = d.const_app(p.eq_on, &[f, g, n]);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_ty = d.const_app(p.eq_on, &[g, k, n]);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hi_ty = d.lt(i, n);
+    let hi_fv = d.fresh_fvar();
+    let hi = d.kernel().fvar(hi_fv);
+
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let ki = d.apply(k, &[i]);
+    let h1_at_i = d.apply(h1, &[i, hi]);
+    let h2_at_i = d.apply(h2, &[i, hi]);
+    let tr = d.trans(fi, gi, ki, h1_at_i, h2_at_i);
+
+    let concl_ty = d.const_app(p.eq_on, &[f, k, n]);
+
+    let value = {
+        let with_hi = d.lam_fv(hi_fv, hi_ty, tr);
+        let with_i = d.lam_fv(i_fv, nat, with_hi);
+        let with_h2 = d.lam_fv(h2_fv, h2_ty, with_i);
+        let with_h1 = d.lam_fv(h1_fv, h1_ty, with_h2);
+        let with_n = d.lam_fv(n_fv, nat, with_h1);
+        let with_k = d.lam_fv(k_fv, fn_ty, with_n);
+        let with_g = d.lam_fv(g_fv, fn_ty, with_k);
+        d.lam_fv(f_fv, fn_ty, with_g)
+    };
+    let ty = {
+        let with_h2 = d.arrow(h2_ty, concl_ty);
+        let with_h1 = d.arrow(h1_ty, with_h2);
+        let with_n = d.pi_fv(n_fv, nat, with_h1);
+        let with_k = d.pi_fv(k_fv, fn_ty, with_n);
+        let with_g = d.pi_fv(g_fv, fn_ty, with_k);
+        d.pi_fv(f_fv, fn_ty, with_g)
+    };
+    d.declare_theorem(p.eq_on_trans, ty, value)
+}
+
 /// `Eq.{1} fn_ty x y`, for `fn_ty` the `Nat → Nat` carrier — `d.eq` is
-/// hardcoded to `Eq Nat`, so every function-valued equality in
-/// `Nat.IsGroupOnFn` is built directly this way (the same pattern
-/// [`declare_comp_assoc`] and `helpers.rs::apply_nat_function_equality` use).
+/// hardcoded to `Eq Nat`, so every UNBOUNDED function-valued equality still
+/// used in `Nat.IsGroupOnFn` (its `assoc` conjunct only — `identity`/
+/// `inverse` now use [`declare_eq_on`]'s bounded `Nat.EqOn`, see this
+/// module's top-of-file doc) is built directly this way, the same pattern
+/// [`declare_comp_assoc`] and `helpers.rs::apply_nat_function_equality` use.
 fn fn_eq(d: &mut NatDev<'_>, fn_ty: ExprId, x: ExprId, y: ExprId) -> ExprId {
     let one = d.level_one();
     let logic = d.prelude().logic;
@@ -1272,8 +1516,8 @@ fn identity_forall_prop_fn(
 
     let ae = d.apply(op, &[a, e]);
     let ea = d.apply(op, &[e, a]);
-    let left_eq = fn_eq(d, fn_ty, ae, a);
-    let right_eq = fn_eq(d, fn_ty, ea, a);
+    let left_eq = d.const_app(p.eq_on, &[ae, a, n]);
+    let right_eq = d.const_app(p.eq_on, &[ea, a, n]);
     let both = d.const_app(logic.and, &[left_eq, right_eq]);
     let bij_a = d.const_app(p.bijective_on, &[a, n]);
     let inner = d.arrow(bij_a, both);
@@ -1316,8 +1560,8 @@ fn inverse_prop_fn(
     let ia_bij = d.const_app(p.bijective_on, &[ia, n]);
     let a_ia = d.apply(op, &[a, ia]);
     let ia_a = d.apply(op, &[ia, a]);
-    let left_eq = fn_eq(d, fn_ty, a_ia, e);
-    let right_eq = fn_eq(d, fn_ty, ia_a, e);
+    let left_eq = d.const_app(p.eq_on, &[a_ia, e, n]);
+    let right_eq = d.const_app(p.eq_on, &[ia_a, e, n]);
     let eqs = d.const_app(logic.and, &[left_eq, right_eq]);
     let bundle = d.const_app(logic.and, &[ia_bij, eqs]);
     let bij_a = d.const_app(p.bijective_on, &[a, n]);
@@ -1334,19 +1578,24 @@ fn inverse_prop_fn(
 /// "is a permutation of `[0,n)`" predicate, already proved equivalent to
 /// `InjectiveOn ∧ MapsInto` by `relation.rs::bijective_of_injective_on`).
 ///
-/// **Not instantiable at the symmetric group, and not for lack of a lemma.**
+/// **Fixed, not merely restated.** An earlier version of this predicate
+/// stated `identity`/`inverse` with literal, UNBOUNDED `Eq (Nat → Nat) _ _`
+/// (via [`fn_eq`]), and was unsatisfiable at the symmetric group: this
+/// kernel's own module doc found the counterexample and refused to paper
+/// over it (see this module's top-of-file doc, "The full `IsGroupOnFn`
+/// instance was REFUTED", for the derivation this predicate's shape had to
+/// change to survive). `identity`/`inverse` now use
+/// [`declare_eq_on`]'s bounded `Nat.EqOn f g n := ∀ i, i<n → f i = g i` in
+/// place of `Eq (Nat → Nat) f g` — the same restriction `BijectiveOn · n`
+/// already applies to a function's *behaviour*, now applied to the
+/// equalities that behaviour must satisfy. `assoc` is left at the unbounded
+/// `fn_eq`: `Nat.comp_assoc` proves the genuinely unbounded form by
+/// `Eq.refl`, so bounding it would only weaken a true statement.
 /// `Nat.comp`/`Nat.id`/`Nat.comp_assoc` supply the closure and associativity
 /// conjuncts (closure needs [`declare_bijective_on_comp`]'s
-/// `Nat.bijective_on_comp`, landed alongside this predicate), but the
-/// `identity`/`inverse` conjuncts below are stated as literal, UNBOUNDED
-/// `Eq (Nat → Nat) _ _` (via [`fn_eq`]), and `Nat.permInverse a n` is
-/// provably NOT `Nat.comp a`'s two-sided inverse as a total function — only
-/// on `[0,n)`. See this module's own top-of-file doc, "The full `IsGroupOnFn`
-/// instance is REFUTED", for the counterexample. `Nat.bijective_on_comp` and
-/// `Nat.bijective_on_perm_inverse` are landed as the reachable, correctly
-/// bounded fragment; the full instance needs a redesigned predicate (bounded
-/// `Nat.EqOn` in place of `Eq (Nat → Nat)`) that does not exist in this
-/// kernel yet.
+/// `Nat.bijective_on_comp`, landed alongside this predicate), and
+/// [`declare_symmetric_group_is_group_on_fn`] is the instance this fix
+/// exists for.
 ///
 /// # Errors
 ///
@@ -1400,8 +1649,293 @@ fn declare_is_group_on_fn(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kern
     })
 }
 
+/// `BijectiveOn Nat.id n`, for a fixed `n : Nat` — needed as the bound half
+/// of [`declare_symmetric_group_is_group_on_fn`]'s identity conjunct.
+/// `Nat.id`'s three components each close with no induction: `id i` is
+/// definitionally `i`, so `InjectiveOn`'s hypothesis literally IS its own
+/// conclusion once `id` is unfolded, `MapsInto`'s hypothesis literally IS
+/// its conclusion, and `SurjectiveOn`'s witness for `k` is `k` itself
+/// (reusing [`exists_predicate`]'s own `∃ i, i<n ∧ f i = k` shape at
+/// `f := id`).
+fn bijective_on_id_proof(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let logic = p.logic;
+    let one = d.level_one();
+    let id = d.const_app(p.id, &[]);
+
+    // InjectiveOn id n := ∀ i j, i<n → j<n → id i = id j → i = j.
+    let inj_ty = d.const_app(p.injective_on, &[id, n]);
+    let inj_proof = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi_ty = d.lt(i, n);
+        let hj_fv = d.fresh_fvar();
+        let hj_ty = d.lt(j, n);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let idi = d.apply(id, &[i]);
+        let idj = d.apply(id, &[j]);
+        let heq_ty = d.eq(idi, idj);
+        let with_heq = d.lam_fv(heq_fv, heq_ty, heq);
+        let with_hj = d.lam_fv(hj_fv, hj_ty, with_heq);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hj);
+        let with_j = d.lam_fv(j_fv, nat, with_hi);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+
+    // MapsInto id n := ∀ i, i<n → id i<n.
+    let maps_ty = d.const_app(p.maps_into, &[id, n]);
+    let maps_proof = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hi_ty = d.lt(i, n);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, hi);
+        d.lam_fv(i_fv, nat, with_hi)
+    };
+
+    // SurjectiveOn id n := ∀ k, k<n → ∃ i, i<n ∧ id i = k. Witness i := k.
+    let surj_ty = d.const_app(p.surjective_on, &[id, n]);
+    let surj_proof = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, n);
+        let idk = d.apply(id, &[k]);
+        let eq_ty = d.eq(idk, k);
+        let refl_k = d.refl(k);
+        let pred = exists_predicate(d, &p, id, k, n);
+        let and_proof = d.const_app(logic.and_intro, &[hk_ty, eq_ty, hk, refl_k]);
+        let intro = d.kernel().const_(logic.exists_intro, vec![one]);
+        let witness = d.apply(intro, &[nat, pred, k, and_proof]);
+        let with_hk = d.lam_fv(hk_fv, hk_ty, witness);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    let inner_ty = d.const_app(logic.and, &[maps_ty, surj_ty]);
+    let inner_proof = d.const_app(logic.and_intro, &[maps_ty, surj_ty, maps_proof, surj_proof]);
+    d.const_app(logic.and_intro, &[inj_ty, inner_ty, inj_proof, inner_proof])
+}
+
+/// Admit `Nat.symmetric_group_isGroupOnFn : ∀ n, IsGroupOnFn Nat.comp Nat.id
+/// (fun f => Nat.permInverse f n) n` — the symmetric group on `[0,n)`,
+/// permutations under composition, as an actual instance of `Nat.IsGroupOnFn`
+/// (see this module's top-of-file doc, and [`declare_is_group_on_fn`]'s own
+/// doc, for why the predicate's earlier unbounded form could never reach
+/// this).
+///
+/// - **Closure** is [`declare_bijective_on_comp`]'s `Nat.bijective_on_comp`,
+///   applied directly: `Nat.bijective_on_comp n` already has exactly the
+///   closure conjunct's type.
+/// - **Associativity** is `Nat.comp_assoc`, ignoring the (unneeded)
+///   bijectivity hypotheses.
+/// - **Identity**'s bound half is [`bijective_on_id_proof`]; its forall half
+///   needs no case split — `comp a id i` and `comp id a i` both delta/beta-
+///   reduce to `a i` (through `comp`'s definition and then `id`'s), so
+///   `Eq.refl Nat (a i)` proves BOTH `EqOn (comp a id) a n` and
+///   `EqOn (comp id a) a n` at every point.
+/// - **Inverse**'s bijectivity half is `Nat.bijective_on_perm_inverse`; its
+///   two `EqOn` equalities are exactly `Nat.permInverse_right`/`_left`'s
+///   conclusions once `comp _ _ k` and `id k` are unfolded — the whole
+///   reason this predicate needed `EqOn` rather than `Eq (Nat → Nat)`:
+///   `permInverse_right`/`_left` only ever promised the equality ON `[0,n)`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection — an `Err` means the kernel
+/// **refused** the proof, not that a script gave up.
+fn declare_symmetric_group_is_group_on_fn(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+    let logic = p.logic;
+
+    d.theorem(p.symmetric_group_is_group_on_fn, 1, &|d, values| {
+        let n = values[0];
+
+        let op = d.const_app(p.comp, &[]);
+        let e = d.const_app(p.id, &[]);
+        let inv = {
+            let f_fv = d.fresh_fvar();
+            let f = d.kernel().fvar(f_fv);
+            let body = d.const_app(p.perm_inverse, &[f, n]);
+            d.lam_fv(f_fv, fn_ty, body)
+        };
+
+        let closure_ty = closure_prop_fn(d, &p, fn_ty, op, n);
+        let assoc_ty = assoc_prop_fn(d, &p, fn_ty, op, n);
+        let identity_ty = identity_prop_fn(d, &p, fn_ty, op, e, n);
+        let inverse_ty = inverse_prop_fn(d, &p, fn_ty, op, e, inv, n);
+
+        // --- closure: Nat.bijective_on_comp, partially applied at n. ---
+        let closure_proof = d.const_app(p.bijective_on_comp, &[n]);
+
+        // --- associativity: Nat.comp_assoc, ignoring the bijectivity hyps. ---
+        let assoc_proof = {
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let c_fv = d.fresh_fvar();
+            let c = d.kernel().fvar(c_fv);
+            let bij_a_fv = d.fresh_fvar();
+            let bij_b_fv = d.fresh_fvar();
+            let bij_c_fv = d.fresh_fvar();
+            let body = d.lemma(p.comp_assoc, &[a, b, c]);
+            let bij_c_ty = d.const_app(p.bijective_on, &[c, n]);
+            let bij_b_ty = d.const_app(p.bijective_on, &[b, n]);
+            let bij_a_ty = d.const_app(p.bijective_on, &[a, n]);
+            let with_bc = d.lam_fv(bij_c_fv, bij_c_ty, body);
+            let with_bb = d.lam_fv(bij_b_fv, bij_b_ty, with_bc);
+            let with_ba = d.lam_fv(bij_a_fv, bij_a_ty, with_bb);
+            let with_c = d.lam_fv(c_fv, fn_ty, with_ba);
+            let with_b = d.lam_fv(b_fv, fn_ty, with_c);
+            d.lam_fv(a_fv, fn_ty, with_b)
+        };
+
+        // --- identity: BijectiveOn id n ∧ (∀a, BijectiveOn a n →
+        //     EqOn(comp a id) a n ∧ EqOn(comp id a) a n), both by Eq.refl. ---
+        let identity_proof = {
+            let bound_ty = identity_bound_prop_fn(d, &p, e, n);
+            let bound_proof = bijective_on_id_proof(d, &p, n);
+            let forall_ty = identity_forall_prop_fn(d, &p, fn_ty, op, e, n);
+            let forall_proof = {
+                let a_fv = d.fresh_fvar();
+                let a = d.kernel().fvar(a_fv);
+                let bij_a_fv = d.fresh_fvar();
+                let bij_a_ty = d.const_app(p.bijective_on, &[a, n]);
+
+                let ae = d.apply(op, &[a, e]);
+                let ea = d.apply(op, &[e, a]);
+                let left_ty = d.const_app(p.eq_on, &[ae, a, n]);
+                let right_ty = d.const_app(p.eq_on, &[ea, a, n]);
+
+                let left_proof = {
+                    let i_fv = d.fresh_fvar();
+                    let i = d.kernel().fvar(i_fv);
+                    let hi_fv = d.fresh_fvar();
+                    let hi_ty = d.lt(i, n);
+                    let ai = d.apply(a, &[i]);
+                    let refl_ai = d.refl(ai);
+                    let with_hi = d.lam_fv(hi_fv, hi_ty, refl_ai);
+                    d.lam_fv(i_fv, nat, with_hi)
+                };
+                let right_proof = {
+                    let i_fv = d.fresh_fvar();
+                    let i = d.kernel().fvar(i_fv);
+                    let hi_fv = d.fresh_fvar();
+                    let hi_ty = d.lt(i, n);
+                    let ai = d.apply(a, &[i]);
+                    let refl_ai = d.refl(ai);
+                    let with_hi = d.lam_fv(hi_fv, hi_ty, refl_ai);
+                    d.lam_fv(i_fv, nat, with_hi)
+                };
+                let both = d.const_app(
+                    logic.and_intro,
+                    &[left_ty, right_ty, left_proof, right_proof],
+                );
+                let with_bij = d.lam_fv(bij_a_fv, bij_a_ty, both);
+                d.lam_fv(a_fv, fn_ty, with_bij)
+            };
+            d.const_app(
+                logic.and_intro,
+                &[bound_ty, forall_ty, bound_proof, forall_proof],
+            )
+        };
+
+        // --- inverse: ∀a, BijectiveOn a n → BijectiveOn(permInverse a n)n ∧
+        //     (EqOn(comp a (permInverse a n)) id n ∧
+        //      EqOn(comp (permInverse a n) a) id n). ---
+        let inverse_proof = {
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let bij_a_fv = d.fresh_fvar();
+            let bij_a = d.kernel().fvar(bij_a_fv);
+            let bij_a_ty = d.const_app(p.bijective_on, &[a, n]);
+
+            let inj_a_ty = d.const_app(p.injective_on, &[a, n]);
+            let maps_a_ty = d.const_app(p.maps_into, &[a, n]);
+            let surj_a_ty = d.const_app(p.surjective_on, &[a, n]);
+            let inner_a_ty = d.const_app(logic.and, &[maps_a_ty, surj_a_ty]);
+            let inj_a = and_left(d, inj_a_ty, inner_a_ty, bij_a);
+            let inner_a = and_right(d, inj_a_ty, inner_a_ty, bij_a);
+            let maps_a = and_left(d, maps_a_ty, surj_a_ty, inner_a);
+            let surj_a = and_right(d, maps_a_ty, surj_a_ty, inner_a);
+
+            let ia = d.apply(inv, &[a]);
+            let ia_bij_ty = d.const_app(p.bijective_on, &[ia, n]);
+            let ia_bij_proof = d.lemma(p.bijective_on_perm_inverse, &[n, a, bij_a]);
+
+            let a_ia = d.apply(op, &[a, ia]);
+            let ia_a = d.apply(op, &[ia, a]);
+            let left_ty = d.const_app(p.eq_on, &[a_ia, e, n]);
+            let right_ty = d.const_app(p.eq_on, &[ia_a, e, n]);
+
+            let left_proof = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let hk_fv = d.fresh_fvar();
+                let hk = d.kernel().fvar(hk_fv);
+                let hk_ty = d.lt(k, n);
+                let body = d.lemma(p.perm_inverse_right, &[a, n, surj_a, k, hk]);
+                let with_hk = d.lam_fv(hk_fv, hk_ty, body);
+                d.lam_fv(k_fv, nat, with_hk)
+            };
+            let right_proof = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let hk_fv = d.fresh_fvar();
+                let hk = d.kernel().fvar(hk_fv);
+                let hk_ty = d.lt(k, n);
+                let body = d.lemma(p.perm_inverse_left, &[a, n, maps_a, inj_a, k, hk]);
+                let with_hk = d.lam_fv(hk_fv, hk_ty, body);
+                d.lam_fv(k_fv, nat, with_hk)
+            };
+
+            let eqs_ty = d.const_app(logic.and, &[left_ty, right_ty]);
+            let eqs = d.const_app(
+                logic.and_intro,
+                &[left_ty, right_ty, left_proof, right_proof],
+            );
+            let bundle = d.const_app(logic.and_intro, &[ia_bij_ty, eqs_ty, ia_bij_proof, eqs]);
+            let with_bij_a = d.lam_fv(bij_a_fv, bij_a_ty, bundle);
+            d.lam_fv(a_fv, fn_ty, with_bij_a)
+        };
+
+        let id_inv = d.const_app(
+            logic.and_intro,
+            &[identity_ty, inverse_ty, identity_proof, inverse_proof],
+        );
+        let assoc_rest_ty = d.const_app(logic.and, &[identity_ty, inverse_ty]);
+        let assoc_rest = d.const_app(
+            logic.and_intro,
+            &[assoc_ty, assoc_rest_ty, assoc_proof, id_inv],
+        );
+        let rest_ty = d.const_app(logic.and, &[assoc_ty, assoc_rest_ty]);
+        let full = d.const_app(
+            logic.and_intro,
+            &[closure_ty, rest_ty, closure_proof, assoc_rest],
+        );
+
+        let stmt = d.const_app(p.is_group_on_fn, &[op, e, inv, n]);
+        (stmt, full)
+    })?;
+    Ok(())
+}
+
 /// Admit `Nat.permInverse`, its two two-sided-inverse theorems, `Nat.id`,
-/// `Nat.comp_assoc`, and `Nat.IsGroupOnFn`.
+/// `Nat.comp_assoc`, `Nat.EqOn` (plus reflexivity/symmetry/transitivity),
+/// `Nat.IsGroupOnFn`, and the symmetric group instance
+/// `Nat.symmetric_group_isGroupOnFn`.
 ///
 /// # Errors
 ///
@@ -1416,8 +1950,13 @@ pub(super) fn declare_permutation_all(
     declare_perm_inverse_left(d, p)?;
     declare_id(d, p)?;
     declare_comp_assoc(d, p)?;
+    declare_eq_on(d, p)?;
+    declare_eq_on_refl(d, p)?;
+    declare_eq_on_symm(d, p)?;
+    declare_eq_on_trans(d, p)?;
     declare_is_group_on_fn(d, p)?;
     declare_bijective_on_comp(d, p)?;
     declare_bijective_on_perm_inverse(d, p)?;
+    declare_symmetric_group_is_group_on_fn(d, p)?;
     Ok(())
 }
