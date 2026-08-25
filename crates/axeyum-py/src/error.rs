@@ -39,6 +39,13 @@ create_exception!(
 
 create_exception!(
     axeyum,
+    InternalError,
+    AxeyumError,
+    "A Rust invariant broke where the binding could not screen for it first.\n\nRaised INSTEAD of letting a `panic!` reach Python as\n`pyo3_runtime.PanicException`, which derives from `BaseException` and so\nescapes `except Exception`. The message names the Rust site. This is always\na bug in Axeyum, never a usage error: a usage error gets a specific type\n(`SortError`, `EpochError`, `ValueError`, `OverflowError`) from a preflight\ncheck. It exists only where a preflight is impossible -- see\n`docs/python-2026-08/13-panic-surface.md` for the rule and the list."
+);
+
+create_exception!(
+    axeyum,
     ReplayUnavailable,
     AxeyumError,
     "`Outcome.replay()` was asked to re-check a model it does not hold.\n\nRaised for a non-`sat` outcome (there is no model to check) and for the one\nknown front-door route that decides `sat` without leaving a replayable\narena (a quantified query). It is deliberately NOT `False`: `False` means\n\"replayed and the model does not satisfy the assertions\" -- a soundness\nsignal -- and the two must never share a value."
@@ -55,6 +62,7 @@ pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("SmtLibParseError", py.get_type::<SmtLibParseError>())?;
     module.add("BudgetExceeded", py.get_type::<BudgetExceeded>())?;
     module.add("ReplayUnavailable", py.get_type::<ReplayUnavailable>())?;
+    module.add("InternalError", py.get_type::<InternalError>())?;
     Ok(())
 }
 
@@ -65,7 +73,7 @@ pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
 // checked consumer is an unresolved attribute.
 #[cfg(feature = "stub-gen")]
 mod stub {
-    use super::{AxeyumError, BudgetExceeded, ReplayUnavailable, SmtLibParseError};
+    use super::{AxeyumError, BudgetExceeded, InternalError, ReplayUnavailable, SmtLibParseError};
     use crate::stub_info::stub_exception;
     use pyo3::exceptions::PyException;
 
@@ -92,5 +100,11 @@ mod stub {
         ReplayUnavailable,
         AxeyumError,
         "`Outcome.replay()` was asked to re-check a model it does not hold."
+    );
+    stub_exception!(
+        "axeyum._native",
+        InternalError,
+        AxeyumError,
+        "A Rust invariant was violated inside a call that could not be guarded by a preflight; the message names the Rust site. Not a normal outcome -- report it."
     );
 }

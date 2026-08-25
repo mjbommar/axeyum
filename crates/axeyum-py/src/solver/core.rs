@@ -14,7 +14,7 @@ use axeyum_solver::{
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyModule};
 
-use crate::error::AxeyumError;
+use crate::error::{AxeyumError, InternalError};
 use crate::ir::arena::Arena;
 use crate::ir::types::{Term, check_epoch};
 use crate::solver::ledgers::PyTrustStep;
@@ -46,6 +46,51 @@ fn strategy_name(strategy: Strategy) -> &'static str {
     }
 }
 
+/// Runs one `axeyum_solver` dispatch with a panic caught and typed.
+///
+/// # Why `catch_unwind` here and a preflight everywhere else
+///
+/// Everywhere the binding CAN name the bad input first, it does: the bit
+/// lowerer gets `first_unsupported_op`/`first_unsupported_sort`, `write_script`
+/// gets an epoch check, the rational constructors get a zero-denominator test.
+/// A preflight names the caller's mistake; a caught panic can only report that
+/// something broke.
+///
+/// The multi-theory dispatcher is the case where a preflight is not available,
+/// and the reason is that the SAME sort is fine or fatal depending on a route
+/// chosen inside Rust. Measured 2026-08-25: `(= s1 s2)` over two `String`
+/// symbols reaches `axeyum-bv`'s `unreachable!("sequence terms are rejected
+/// before bit lowering (P2.7)")` through `solve`, `check_auto_explained` and
+/// `unsat_core`, while `(= (str.len s) 1)` -- a sequence term in the same
+/// query, over the same sort -- is dispatched to arithmetic and answers
+/// normally. Refusing every sequence-bearing query up front would therefore
+/// break queries that work today, and refusing none of them lets a
+/// `PanicException` escape `except Exception`.
+///
+/// So the panic is caught HERE, at the single dispatch call, and nowhere else.
+/// It is deliberately NOT a blanket wrapper around the module: a panic anywhere
+/// the binding has not measured must stay loud. `InternalError` names the Rust
+/// site and says it is a bug in Axeyum, so nothing about this is quiet.
+///
+/// `AssertUnwindSafe` is required because `&mut TermArena` is not
+/// `UnwindSafe`. That is sound here for the reason the marker exists: this
+/// process observes the arena again only through Python, and a caller who has
+/// just been told the engine broke has no invariant left to rely on. It is a
+/// safe API -- `unsafe_code` stays denied.
+fn dispatch<T>(site: &'static str, work: impl FnOnce() -> T) -> PyResult<T> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(work)).map_err(|payload| {
+        let detail = payload
+            .downcast_ref::<&str>()
+            .map(|text| (*text).to_owned())
+            .or_else(|| payload.downcast_ref::<String>().cloned())
+            .unwrap_or_else(|| "panic payload was not a string".to_owned());
+        InternalError::new_err(format!(
+            "{site} panicked: {detail}. This is a bug in Axeyum, not in the query; the panic was \
+             converted so it does not escape `except Exception` as a PanicException"
+        ))
+    })
+}
+
 /// Decides `assertions` with the multi-theory dispatcher.
 ///
 /// `unknown` comes back as a [`CheckResult`](axeyum.solver.CheckResult), never
@@ -68,9 +113,10 @@ pub fn solve(
     // The `PyRefMut` guard is not `Send`, but `&mut TermArena` is; splitting the
     // borrow out is what lets the search run with the GIL released.
     let subject: &mut axeyum_ir::TermArena = &mut arena.arena;
-    let result = py
-        .detach(move || axeyum_solver::solve(subject, &ids, &config))
-        .map_err(|error| map_solver_error(&error))?;
+    let result = dispatch("axeyum_solver::solve", move || {
+        py.detach(move || axeyum_solver::solve(subject, &ids, &config))
+    })?
+    .map_err(|error| map_solver_error(&error))?;
     Ok(PyCheckResult::build(epoch, &result))
 }
 
@@ -95,9 +141,10 @@ pub fn check_auto_explained(
     let ids = arena.resolve_terms(&assertions)?;
     let config = Config::resolve(config);
     let subject: &mut axeyum_ir::TermArena = &mut arena.arena;
-    let (result, trace) = py
-        .detach(move || axeyum_solver::check_auto_explained(subject, &ids, &config))
-        .map_err(|error| map_solver_error(&error))?;
+    let (result, trace) = dispatch("axeyum_solver::check_auto_explained", move || {
+        py.detach(move || axeyum_solver::check_auto_explained(subject, &ids, &config))
+    })?
+    .map_err(|error| map_solver_error(&error))?;
     Ok((
         PyCheckResult::build(epoch, &result),
         PyRouteTrace {
@@ -125,8 +172,10 @@ pub fn unsat_core(
     let ids = arena.resolve_terms(&assertions)?;
     let config = Config::resolve(config);
     let subject: &mut axeyum_ir::TermArena = &mut arena.arena;
-    py.detach(move || axeyum_solver::unsat_core(subject, &ids, &config))
-        .map_err(|error| map_solver_error(&error))
+    dispatch("axeyum_solver::unsat_core", move || {
+        py.detach(move || axeyum_solver::unsat_core(subject, &ids, &config))
+    })?
+    .map_err(|error| map_solver_error(&error))
 }
 
 /// Decides `assertions` with one named strategy.
@@ -148,9 +197,10 @@ pub fn solve_with_strategy(
     let config = Config::resolve(config);
     let strategy = strategy_from_name(strategy)?;
     let subject: &mut axeyum_ir::TermArena = &mut arena.arena;
-    let result = py
-        .detach(move || axeyum_solver::solve_with_strategy(subject, &ids, &config, strategy))
-        .map_err(|error| map_solver_error(&error))?;
+    let result = dispatch("axeyum_solver::solve_with_strategy", move || {
+        py.detach(move || axeyum_solver::solve_with_strategy(subject, &ids, &config, strategy))
+    })?
+    .map_err(|error| map_solver_error(&error))?;
     Ok(PyCheckResult::build(epoch, &result))
 }
 
@@ -176,9 +226,10 @@ pub fn solve_with_portfolio(
         .map(|name| strategy_from_name(name))
         .collect::<PyResult<_>>()?;
     let subject: &mut axeyum_ir::TermArena = &mut arena.arena;
-    let result = py
-        .detach(move || axeyum_solver::solve_with_portfolio(subject, &ids, &config, &strategies))
-        .map_err(|error| map_solver_error(&error))?;
+    let result = dispatch("axeyum_solver::solve_with_portfolio", move || {
+        py.detach(move || axeyum_solver::solve_with_portfolio(subject, &ids, &config, &strategies))
+    })?
+    .map_err(|error| map_solver_error(&error))?;
     Ok(PyCheckResult::build(epoch, &result))
 }
 

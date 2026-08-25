@@ -31,28 +31,77 @@ from . import cas
 from .cas import Expr
 
 __all__ = [
+    "GCD",
+    "LCM",
+    "BellB",
+    "BernoulliB",
+    "Beta",
+    "Binomial",
+    "CatalanNumber",
+    "ChebyshevT",
+    "ChebyshevU",
+    "ChineseRemainder",
+    "CholeskyDecomposition",
+    "ContinuedFraction",
     "D",
     "Degree",
     "Discriminant",
+    "DivisorSigma",
+    "Divisors",
     "Equal",
+    "EulerPhi",
     "Expand",
     "Factor",
+    "FactorInteger",
+    "Fibonacci",
+    "Gamma",
+    "HermiteDecomposition",
+    "HermiteH",
     "Integrate",
+    "InverseLaplaceTransform",
+    "InverseZTransform",
+    "JacobiSymbol",
+    "JordanDecomposition",
+    "LaguerreL",
+    "LaplaceTransform",
+    "LegendreP",
     "Limit",
+    "LucasL",
+    "MatrixExp",
+    "Mean",
+    "Median",
+    "ModularInverse",
+    "MoebiusMu",
+    "MultiplicativeOrder",
     "N",
     "NRoots",
+    "NextPrime",
+    "PartitionsP",
     "PolynomialQuotientRemainder",
+    "PowerMod",
+    "Prime",
+    "PrimePi",
+    "PrimeQ",
+    "PrimitiveRoot",
+    "QRDecomposition",
     "Rationalize",
     "Reduce",
     "ReplaceAll",
     "Resultant",
     "Series",
     "Simplify",
+    "SmithDecomposition",
     "Solve",
+    "StandardDeviation",
+    "StirlingS1",
+    "StirlingS2",
     "Substitute",
     "Sum",
     "Together",
     "TrigSimplify",
+    "Variance",
+    "ZTransform",
+    "Zeta",
     "interval",
     "parse",
     "show",
@@ -466,3 +515,275 @@ def Discriminant(expr: str | Expr, var: str | None = None) -> Expr | None:
 def PolynomialQuotientRemainder(a: str | Expr, b: str | Expr, var: str) -> tuple[Expr, Expr] | None:
     """``PolynomialQuotientRemainder[a, b, x]`` -> ``(quotient, remainder)``."""
     return cas.poly_div(parse(a), parse(b), var)
+
+
+# ---------------------------------------------------------------------------
+# The long tail: number theory, combinatorics, statistics, special functions,
+# transforms and matrix normal forms (coverage-plan slice S5).
+#
+# Every verb below is a thin renaming of one `axeyum.cas` function -- the
+# Mathematica spelling for a call the Rust surface already has. None of them
+# adds semantics, and every one keeps the `None` the CAS returns for *outside
+# the fragment or i128 overflow*. A verb that quietly substituted a default
+# there would be inventing an answer, which is the one thing this layer must
+# never do.
+# ---------------------------------------------------------------------------
+
+
+def PrimeQ(n: int) -> bool:
+    """``PrimeQ[n]``."""
+    return cas.is_prime(n)
+
+
+def FactorInteger(n: int) -> list[tuple[int, int]]:
+    """``FactorInteger[n]`` -> ``[(prime, exponent), ...]``; ``[]`` for 0 and 1."""
+    return cas.factorize(n)
+
+
+def Divisors(n: int) -> list[int]:
+    """``Divisors[n]``, ascending."""
+    return cas.divisors(n)
+
+
+def DivisorSigma(k: int, n: int) -> int | None:
+    """``DivisorSigma[k, n]`` -- the sum of the ``k``-th powers of the divisors."""
+    return cas.sigma_k(k, n)
+
+
+def EulerPhi(n: int) -> int:
+    """``EulerPhi[n]``."""
+    return cas.euler_phi(n)
+
+
+def MoebiusMu(n: int) -> int:
+    """``MoebiusMu[n]``."""
+    return cas.mobius(n)
+
+
+def GCD(a: int, b: int) -> int:
+    """``GCD[a, b]``."""
+    return cas.gcd(a, b)
+
+
+def LCM(a: int, b: int) -> int | None:
+    """``LCM[a, b]``; ``None`` on ``i128`` overflow."""
+    return cas.lcm(a, b)
+
+
+def PowerMod(base: int, exponent: int, modulus: int) -> int | None:
+    """``PowerMod[b, e, m]``; ``None`` for a non-positive modulus."""
+    return cas.mod_pow(base, exponent, modulus)
+
+
+def ModularInverse(a: int, modulus: int) -> int | None:
+    """``ModularInverse[a, m]``; ``None`` when ``a`` and ``m`` are not coprime."""
+    return cas.mod_inverse(a, modulus)
+
+
+def ChineseRemainder(residues: list[int], moduli: list[int]) -> tuple[int, int] | None:
+    """``ChineseRemainder[r, m]`` -> ``(residue, modulus)``; ``None`` when inconsistent."""
+    return cas.crt(list(zip(residues, moduli, strict=True)))
+
+
+def JacobiSymbol(a: int, n: int) -> int:
+    """``JacobiSymbol[a, n]``."""
+    return cas.jacobi_symbol(a, n)
+
+
+def PrimitiveRoot(n: int) -> int | None:
+    """``PrimitiveRoot[n]``; ``None`` when the unit group is not cyclic."""
+    return cas.primitive_root(n)
+
+
+def MultiplicativeOrder(a: int, n: int) -> int | None:
+    """``MultiplicativeOrder[a, n]``; ``None`` when ``a`` and ``n`` are not coprime."""
+    return cas.multiplicative_order(a, n)
+
+
+def ContinuedFraction(value: Fraction | tuple[int, int]) -> list[int]:
+    """``ContinuedFraction[p/q]``; takes a ``Fraction`` or a ``(num, den)`` pair."""
+    if isinstance(value, tuple):
+        num, den = value
+    else:
+        num, den = value.numerator, value.denominator
+    return cas.continued_fraction(num, den)
+
+
+def NextPrime(n: int) -> int | None:
+    """``NextPrime[n]``."""
+    return cas.next_prime(n)
+
+
+def Prime(k: int) -> int | None:
+    """``Prime[k]`` -- the ``k``-th prime, one-based."""
+    return cas.nth_prime(k)
+
+
+def PrimePi(n: int) -> int:
+    """``PrimePi[n]``."""
+    return cas.prime_pi(n)
+
+
+def Binomial(n: int, k: int) -> int | None:
+    """``Binomial[n, k]``; ``0`` outside ``0 <= k <= n``, ``None`` on overflow."""
+    return cas.binomial(n, k)
+
+
+def Fibonacci(n: int) -> int | None:
+    """``Fibonacci[n]``; ``None`` past the ``i128`` ceiling."""
+    return cas.fibonacci(n)
+
+
+def LucasL(n: int) -> int | None:
+    """``LucasL[n]``."""
+    return cas.lucas(n)
+
+
+def CatalanNumber(n: int) -> int | None:
+    """``CatalanNumber[n]``."""
+    return cas.catalan(n)
+
+
+def BellB(n: int) -> int | None:
+    """``BellB[n]``."""
+    return cas.bell(n)
+
+
+def PartitionsP(n: int) -> int | None:
+    """``PartitionsP[n]``."""
+    return cas.partition_count(n)
+
+
+def BernoulliB(n: int) -> Fraction | None:
+    """``BernoulliB[n]``, exact.
+
+    The convention is the Bernoulli numbers of the *first kind*: ``B(1)`` is
+    ``-1/2``, matching the generating function ``x / (exp(x) - 1)``. SymPy
+    (>= 1.13) returns ``+1/2`` there; every other index agrees.
+    """
+    return cas.bernoulli(n)
+
+
+def StirlingS1(n: int, k: int) -> int | None:
+    """``StirlingS1[n, k]``, unsigned."""
+    return cas.stirling_first(n, k)
+
+
+def StirlingS2(n: int, k: int) -> int | None:
+    """``StirlingS2[n, k]``."""
+    return cas.stirling_second(n, k)
+
+
+def Mean(data: list[Fraction | int]) -> Fraction | None:
+    """``Mean[data]``, exact; ``None`` for an empty sample."""
+    return cas.mean(data)
+
+
+def Median(data: list[Fraction | int]) -> Fraction | None:
+    """``Median[data]``, exact."""
+    return cas.median(data)
+
+
+def Variance(data: list[Fraction | int], population: bool = False) -> Fraction | None:
+    """``Variance[data]`` -- the SAMPLE variance by default, as in Mathematica.
+
+    Pass ``population=True`` for the divisor-``n`` form.
+    """
+    return cas.variance(data) if population else cas.sample_variance(data)
+
+
+def StandardDeviation(data: list[Fraction | int], population: bool = False) -> Expr | None:
+    """``StandardDeviation[data]`` -- the sample form by default, as in Mathematica."""
+    return cas.standard_deviation(data) if population else cas.sample_standard_deviation(data)
+
+
+def Gamma(x: Fraction | int) -> Expr | None:
+    """``Gamma[x]`` at an exact rational; ``None`` outside the closed-form fragment."""
+    return cas.gamma(x)
+
+
+def Beta(x: Fraction | int, y: Fraction | int) -> Expr | None:
+    """``Beta[x, y]``."""
+    return cas.beta(x, y)
+
+
+def Zeta(s: int) -> Expr | None:
+    """``Zeta[s]`` at an integer; ``None`` where no closed form is known (``Zeta[3]``)."""
+    return cas.zeta(s)
+
+
+def LegendreP(n: int, var: str = "x") -> Expr | None:
+    """``LegendreP[n, x]``."""
+    return cas.legendre(n, var)
+
+
+def ChebyshevT(n: int, var: str = "x") -> Expr | None:
+    """``ChebyshevT[n, x]``."""
+    return cas.chebyshev_t(n, var)
+
+
+def ChebyshevU(n: int, var: str = "x") -> Expr | None:
+    """``ChebyshevU[n, x]``."""
+    return cas.chebyshev_u(n, var)
+
+
+def HermiteH(n: int, var: str = "x") -> Expr | None:
+    """``HermiteH[n, x]`` -- the physicists' Hermite polynomial."""
+    return cas.hermite(n, var)
+
+
+def LaguerreL(n: int, var: str = "x") -> Expr | None:
+    """``LaguerreL[n, x]``."""
+    return cas.laguerre(n, var)
+
+
+def LaplaceTransform(expr: str | Expr, t: str = "t", s: str = "s") -> Expr | None:
+    """``LaplaceTransform[f, t, s]``; ``None`` outside the transform table."""
+    return cas.laplace_transform(parse(expr), t, s)
+
+
+def InverseLaplaceTransform(expr: str | Expr, s: str = "s", t: str = "t") -> Expr | None:
+    """``InverseLaplaceTransform[F, s, t]``."""
+    return cas.inverse_laplace(parse(expr), s, t)
+
+
+def ZTransform(expr: str | Expr, n: str = "n", z: str = "z") -> Expr | None:
+    """``ZTransform[f, n, z]``."""
+    return cas.z_transform(parse(expr), n, z)
+
+
+def InverseZTransform(expr: str | Expr, z: str = "z", n: str = "n") -> Expr | None:
+    """``InverseZTransform[F, z, n]``."""
+    return cas.inverse_z_transform(parse(expr), z, n)
+
+
+def JordanDecomposition(m: cas.Matrix, var: str = "t") -> tuple[cas.Matrix, cas.Matrix] | None:
+    """``JordanDecomposition[m]`` -> ``(P, J)`` with ``m == P J P^-1``; ``None`` when none exists over Q."""
+    return cas.jordan_form(m, var)
+
+
+def MatrixExp(m: cas.Matrix, t: str = "t") -> cas.Matrix | None:
+    """``MatrixExp[m t]``."""
+    return cas.matrix_exp(m, t)
+
+
+def HermiteDecomposition(m: cas.Matrix) -> tuple[cas.Matrix, cas.Matrix] | None:
+    """``HermiteDecomposition[m]`` -> ``(U, H)`` with ``U m == H``."""
+    return cas.hermite_normal_form(m)
+
+
+def SmithDecomposition(
+    m: cas.Matrix,
+) -> tuple[cas.Matrix, cas.Matrix, cas.Matrix] | None:
+    """``SmithDecomposition[m]`` -> ``(U, D, V)`` with ``U m V == D``."""
+    return cas.smith_normal_form(m)
+
+
+def QRDecomposition(m: cas.Matrix) -> tuple[cas.Matrix, cas.Matrix] | None:
+    """``QRDecomposition[m]`` -> ``(Q, R)`` with ``m == Q R``."""
+    return cas.qr_decomposition(m)
+
+
+def CholeskyDecomposition(m: cas.Matrix) -> cas.Matrix | None:
+    """``CholeskyDecomposition[m]`` -> ``L`` with ``m == L L^T``; ``None`` when not SPD over Q."""
+    return cas.cholesky_decomposition(m)

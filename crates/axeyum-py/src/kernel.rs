@@ -51,7 +51,7 @@ use pyo3::exceptions::{PyAttributeError, PyKeyError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyInt, PyList, PyModule, PyTuple};
 
-use crate::error::AxeyumError;
+use crate::error::{AxeyumError, InternalError};
 use prelude_fields::Sub;
 
 create_exception!(
@@ -1419,6 +1419,49 @@ impl PyKernel {
     }
 }
 
+/// The stack a `build_*_prelude` recursion is run on.
+///
+/// The default 8 MB main-thread stack is not enough for `build_cpoint_prelude`
+/// (measured 2026-08-25: SIGSEGV at 8 MB, returns at 16 MB). 64 MB is a factor
+/// of four above the last size measured to fail, on a thread that lives only
+/// for the duration of one call.
+const DEEP_STACK_BYTES: usize = 64 * 1024 * 1024;
+
+/// Runs `work` on a thread with [`DEEP_STACK_BYTES`] of stack, turning a panic
+/// inside it into an `Err` carrying the panic message.
+///
+/// Two problems, one mechanism. The stack size is what stops a deeply recursive
+/// prelude builder from overflowing -- and a stack overflow is NOT a panic, so
+/// `catch_unwind` could not have helped with it at all. `join()` is what turns a
+/// panic that does happen into a value, without `catch_unwind` and without
+/// widening `unsafe_code`.
+///
+/// A SCOPED thread is what lets `work` borrow the kernel mutably; a detached
+/// `thread::spawn` would demand `'static`.
+///
+/// # Errors
+///
+/// Returns the panic message when `work` panicked, or the spawn failure.
+fn on_deep_stack<T, F>(work: F) -> Result<T, String>
+where
+    F: FnOnce() -> T + Send,
+    T: Send,
+{
+    std::thread::scope(|scope| {
+        let handle = std::thread::Builder::new()
+            .stack_size(DEEP_STACK_BYTES)
+            .spawn_scoped(scope, work)
+            .map_err(|error| format!("could not start the deep-stack thread: {error}"))?;
+        handle.join().map_err(|payload| {
+            payload
+                .downcast_ref::<&str>()
+                .map(|text| (*text).to_owned())
+                .or_else(|| payload.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "panic payload was not a string".to_owned())
+        })
+    })
+}
+
 // PyO3 extracts OWNED values across the FFI edge: a `&[T]` or a `&PyRef<T>`
 // cannot be built from a Python object, so every argument below is by value
 // whether or not the body consumes it.
@@ -1630,7 +1673,22 @@ impl PyKernel {
     /// package.
     fn build_cpoint_prelude(&mut self, py: Python<'_>) -> PyResult<Py<PyPrelude>> {
         let kernel = &mut self.inner;
-        let built = py.detach(move || build_cpoint_prelude(kernel));
+        // ON A DEEP STACK, and this one is not optional. Measured 2026-08-25:
+        // `Kernel().build_cpoint_prelude()` on the 8 MB main-thread stack kills
+        // CPython with SIGSEGV -- silently, no traceback, no `PanicException`,
+        // nothing an `except` of any kind can see -- while the same call on a
+        // 16 MB stack returns a 106-name prelude. It is the only one of the nine
+        // builders that does this; the other eight return on the default stack.
+        //
+        // NO PREFLIGHT IS POSSIBLE HERE. The input is the empty kernel: there is
+        // no argument to screen and no caller mistake to report, so the only fix
+        // is to give the recursion the room it needs.
+        let built = py.detach(move || on_deep_stack(move || build_cpoint_prelude(kernel)));
+        let built = built.map_err(|detail| {
+            InternalError::new_err(format!(
+                "axeyum_lean_kernel::build_cpoint_prelude panicked: {detail}"
+            ))
+        })?;
         let package = built.map_err(|error| self.kernel_error(py, &error))?;
         make_prelude(
             py,

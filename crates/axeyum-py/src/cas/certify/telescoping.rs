@@ -17,6 +17,7 @@ use axeyum_cas::telescoping::{
 use axeyum_cas::telescoping_check::{
     CheckOptions as CasCheckOptions, CheckReport as CasCheckReport, Verdict as CasVerdict,
     check_certificate, check_closed_form as cas_check_closed_form,
+    check_closed_form_symbolic as cas_check_closed_form_symbolic,
 };
 use axeyum_cas::telescoping_json::{
     self, CertificateDocument as CasCertificateDocument, ClosedFormClaim as CasClosedFormClaim,
@@ -540,6 +541,83 @@ impl ClosedFormReport {
     }
 }
 
+/// What the **symbolic** closed-form checker established.
+///
+/// Two counts the concrete report does not have, and both are load-bearing:
+/// `forced_support` is the interval outside which the summand is *proved* to
+/// vanish, and `confirmed_zero_points` is how many window points were **checked**
+/// to vanish rather than assumed. A symbolic base case over an unbounded
+/// summation is only as good as that bound, so dropping either number would
+/// leave a report that cannot be falsified.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
+#[pyclass(
+    frozen,
+    from_py_object,
+    module = "axeyum",
+    name = "SymbolicClosedFormReport"
+)]
+#[derive(Debug, Clone)]
+pub struct SymbolicClosedFormReport {
+    base: i64,
+    base_cases: usize,
+    forced_support: (i64, i64),
+    confirmed_zero_points: usize,
+    leading_zeros: Vec<i64>,
+}
+
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
+#[pymethods]
+impl SymbolicClosedFormReport {
+    /// The base index the identity is claimed from.
+    #[getter]
+    fn base(&self) -> i64 {
+        self.base
+    }
+
+    /// Base cases established at symbolic parameters by exact finite summation.
+    #[getter]
+    fn base_cases(&self) -> usize {
+        self.base_cases
+    }
+
+    /// The `k` interval outside which the summand at the first base index is
+    /// *forced* to vanish.
+    #[getter]
+    fn forced_support(&self) -> (i64, i64) {
+        self.forced_support
+    }
+
+    /// Window points confirmed -- not assumed -- to vanish outside that support.
+    #[getter]
+    fn confirmed_zero_points(&self) -> usize {
+        self.confirmed_zero_points
+    }
+
+    /// Integers at or above `base` where the leading coefficient vanishes.
+    ///
+    /// A nonempty list breaks the induction; the checker rejects rather than
+    /// reports it, so a verified report always has this empty.
+    #[getter]
+    fn leading_zeros(&self) -> Vec<i64> {
+        self.leading_zeros.clone()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "SymbolicClosedFormReport(base={}, base_cases={}, forced_support={:?}, \
+             confirmed_zero_points={}, leading_zeros={:?})",
+            self.base,
+            self.base_cases,
+            self.forced_support,
+            self.confirmed_zero_points,
+            self.leading_zeros
+        )
+    }
+}
+
 /// A creative-telescoping certificate.
 #[cfg_attr(
     feature = "stub-gen",
@@ -638,6 +716,39 @@ impl TelescopingCertificate {
             .map(|report| ClosedFormReport {
                 base: report.base,
                 base_cases: report.base_cases,
+                leading_zeros: report.leading_zeros,
+            })
+            .map_err(|reasons| CasError::new_err(reasons.join("; ")))
+    }
+
+    /// Checks a claimed closed form **without specializing the remaining
+    /// parameters**.
+    ///
+    /// This is the route for an identity with a symbolic parameter -- the
+    /// Chu-Vandermonde shape -- where the concrete checker cannot settle the
+    /// base cases at integers. Nothing is sampled: the summation collapses to
+    /// the finitely many `k` a parameter-free Gamma forces, and the report says
+    /// how many window points were *confirmed* zero rather than assumed.
+    ///
+    /// # Errors
+    ///
+    /// Raises `CasError` carrying every reason the claim was not established.
+    fn check_closed_form_symbolic(
+        &self,
+        py: Python<'_>,
+        closed_form: &HyperTerm,
+        base: i64,
+        options: &CheckOptions,
+    ) -> PyResult<SymbolicClosedFormReport> {
+        let certificate = self.inner.clone();
+        let term = closed_form.inner.clone();
+        let options = options.inner.clone();
+        py.detach(|| cas_check_closed_form_symbolic(&certificate, &term, base, &options))
+            .map(|report| SymbolicClosedFormReport {
+                base: report.base,
+                base_cases: report.base_cases,
+                forced_support: report.forced_support,
+                confirmed_zero_points: report.confirmed_zero_points,
                 leading_zeros: report.leading_zeros,
             })
             .map_err(|reasons| CasError::new_err(reasons.join("; ")))
@@ -847,6 +958,7 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CheckReport>()?;
     module.add_class::<Verdict>()?;
     module.add_class::<ClosedFormReport>()?;
+    module.add_class::<SymbolicClosedFormReport>()?;
     module.add_class::<TelescopingCertificate>()?;
     module.add_class::<TelescopingOutcome>()?;
     module.add_class::<CertificateDocument>()?;

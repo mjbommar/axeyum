@@ -14,6 +14,10 @@ __all__ = [
     "SosSum",
     "by_id",
     "check",
+    "check_artifact",
+    "check_barrier",
+    "check_lyapunov",
+    "check_psd_not_sos",
     "check_unguarded",
     "corpus",
     "is_psd",
@@ -191,6 +195,54 @@ def check(artifact: SosArtifact) -> CheckReport:
     report is empty**: a checker that discharged no obligation established
     nothing, and returning that as a pass is the failure mode this route is
     documented against.
+    """
+
+def check_artifact(artifact: SosArtifact) -> CheckReport:
+    r"""
+    Re-derives an artifact through the kind-dispatching checker.
+    
+    Identical in effect to [`check`], and bound separately because the crate has
+    two entry points and a caller reading `sos::check_artifact` in Rust should
+    find it here rather than guess.
+    
+    # Errors
+    
+    Raises `CasError` when the checker rejects the artifact or discharged
+    nothing.
+    """
+
+def check_barrier(artifact: SosArtifact) -> CheckReport:
+    r"""
+    Re-derives a **barrier** artifact through the safety checker specifically.
+    
+    # Errors
+    
+    Raises `CasError` when the artifact is not a barrier artifact, when the
+    checker rejects it, or when it discharged nothing.
+    """
+
+def check_lyapunov(artifact: SosArtifact) -> CheckReport:
+    r"""
+    Re-derives a **Lyapunov** artifact through the stability checker specifically.
+    
+    Raises rather than silently dispatching when the artifact is another kind:
+    a per-kind checker that quietly runs a different one cannot be shown to
+    fail on the wrong input, which is the only thing asking for it by name buys.
+    
+    # Errors
+    
+    Raises `CasError` when the artifact is not a Lyapunov artifact, when the
+    checker rejects it, or when it discharged nothing.
+    """
+
+def check_psd_not_sos(artifact: SosArtifact) -> CheckReport:
+    r"""
+    Re-derives a **psd-not-sos** artifact through the dual checker specifically.
+    
+    # Errors
+    
+    Raises `CasError` when the artifact is not a psd-not-sos artifact, when the
+    checker rejects it, or when it discharged nothing.
     """
 
 def check_unguarded(artifact: SosArtifact) -> CheckReport:

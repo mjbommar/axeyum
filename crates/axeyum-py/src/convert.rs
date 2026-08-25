@@ -18,7 +18,7 @@
     clippy::trivially_copy_pass_by_ref
 )]
 
-use axeyum_ir::{ArraySortKey, Rational, Sort, Value};
+use axeyum_ir::{ArraySortKey, Sort, Value};
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyBytes, PyDict, PyInt, PyList, PyModule, PyString, PyTuple};
 
@@ -642,9 +642,18 @@ pub(crate) fn py_to_value(object: &Bound<'_, PyAny>, sort: Sort) -> PyResult<Val
                 .getattr("denominator")
                 .and_then(|d| d.extract())
                 .map_err(|_| SortError::new_err("Real needs a fractions.Fraction (or an int)"))?;
-            let rational = Rational::checked_new(numerator, denominator).ok_or_else(|| {
-                SortError::new_err("rational is outside the i128 reference range")
-            })?;
+            // `denominator` comes from an arbitrary Python object exposing
+            // `.numerator`/`.denominator` -- `fractions.Fraction` never yields
+            // zero, but a duck-typed object does, and `Rational::checked_new`
+            // ASSERTS on it rather than answering `None`.
+            let rational =
+                crate::cas::rational::checked(numerator, denominator).ok_or_else(|| {
+                    if denominator == 0 {
+                        SortError::new_err("a Real value needs a non-zero denominator")
+                    } else {
+                        SortError::new_err("rational is outside the i128 reference range")
+                    }
+                })?;
             Ok(Value::Real(rational))
         }
         Sort::Seq(ArraySortKey::BitVec(width)) => {

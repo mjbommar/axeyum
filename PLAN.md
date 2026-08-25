@@ -130,6 +130,9 @@ now. Nothing was deleted.
 | 2026-08-24 | `c49566743` | Derive hash-bound transport chains with incomplete paths explicit rather than name-matched |
 | 2026-08-24 | `8e78d8e3e` | Publish separated formal, producer-credit, and transport coverage dimensions |
 | 2026-08-24 | `7160fc0bc` | Publish non-authoritative producer observations; current live queue has zero registered admissible candidates |
+| 2026-08-24 | `219ce5618` | Q7: panic-surface hardening -- a probe over every callable took panics 3->0, crashes 19->2; preflights + one `catch_unwind` (`InternalError`); a hypothesis no-panic property found the solver-dispatch panic the hand battery missed |
+| 2026-08-24 | `e0ce70376` | Q8: the CAS long tail (179 items, 941 tests vs sympy oracle, coverage 302->471, three disagreements pinned) + a runnable demo gallery |
+| 2026-08-24 | `f11a74c18` | Q5: typed stubs from the Rust signatures via pyo3-stub-gen (96.9% typed), stubtest + `Any` ratchet gates; found three `axeyum.m` type errors |
 | 2026-08-24 | `f11a74c18` | Q5: typed stubs via pyo3-stub-gen behind an off-by-default feature (96.9% typed, allowlisted `Any`s with reasons), `stubtest` + `Any` ratchet gates; three `axeyum.m` type errors found and fixed |
 | 2026-08-24 | `68f5d61a4` | `axeyum.m`: Mathematica-shaped verbs over the CAS -- parser, variable inference, readable printer; three iterations (equations, assumptions, limits at infinity; systems, definite integrals, Substitute, semantic Equal, mixed int/Fraction arithmetic on `Expr`; Sum, Reduce, Rationalize, NRoots, polynomial toolkit); 19 tests |
 | 2026-08-24 | `460bee2db` | Q2: replay of the deciding run's model via `solve_smtlib_with_model` (2.22x on sat), clone audit (12 borrows, 13 `__eq__` via cast), CAS detaches, bytes accessors, benchmarks |
@@ -2193,31 +2196,28 @@ school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
-[`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01-03 are
-complete on `main`; the quality goal (`10-quality-best-practices.md`,
-sourced against PyO3 0.29 / maturin / pyo3-stub-gen / Hypothesis guidance)
-has landed Q1-Q4: 73 hypothesis property tests against independent
-references (which found and fixed a replay that certified an EMPTY
-assertion stack on the parser's word-only fallback), 8 Rust-side unit tests,
-a `ty` ratchet; the zero-copy audit and `solve_smtlib_with_model` (the
-front door now returns its own arena and model -- `smt.solve` 2.22x faster
-on `sat`, replay of the deciding run, no second solve), `cast` over
-`extract` in 13 `__eq__`s, the CAS detaching, bytes accessors for proofs;
-release wheels (abi3 + 3.14t + sdist, smoke-installed before any publish);
-the eight open tier-R rows -- `PYTHON_COVERAGE|...|tier_r_unreferenced=0`.
-Q5 landed: typed stubs generated from the Rust signatures via pyo3-stub-gen
-(96.9% of parameters typed, 52 `Any` each with a written reason), `stubtest`
-and an `Any` ratchet in the gate -- and the typed stubs immediately found
-three real type errors in `axeyum.m`. `axeyum.m` (Mathematica-shaped verbs
-with a parser, variable inference and a readable printer) landed in three
-iterations. Gate at `f11a74c18`: pytest 1,237 passed / 15 skipped, clippy
-0 on nightly and stable with and without `stub-gen`. In flight: Q7
-(panic-surface hardening: probe every callable, typed preflight, no
-`PanicException` may escape) and Q8 (CAS long tail vs sympy as oracle).
-Next: Q6 (derive `eq`/`hash`/`str`; make `Config`/`Incremental` `Sync` so
-`unsendable` and then `gil_used = true` can go).
+[`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01-03 and the
+quality goal (`10-quality-best-practices.md`) are complete on `main`. Q1-Q8
+landed: property-based + Rust-side tests + a `ty` ratchet (Q1, which found a
+replay that certified an empty assertion stack); the zero-copy audit and
+`solve_smtlib_with_model` ending the double solve (Q2); release wheels with a
+3.14t build and a smoke-install gate (Q3); the eight open tier-R rows (Q4);
+typed stubs from the Rust signatures via pyo3-stub-gen at 96.9%, stubtest and
+an `Any` ratchet (Q5); the CAS long tail -- ntheory / combinatorics / stats /
+special / transforms / normal forms / moment provers / ansatz / gf / boolean /
+algebraic, 179 items tested against sympy as oracle, three disagreements
+argued and pinned (Q8, coverage 302 -> 471); panic-surface hardening -- a
+probe took reachable panics 3 -> 0 and crashes 19 -> 2, the rest typed at the
+boundary (Q7). Plus `axeyum.m` (Mathematica-shaped verbs) and a runnable
+`python/examples/gallery.py`. Coverage `tier_r_unreferenced=0`.
 
-Detail and older landed rows moved to [`../notes/python-layer.md`](docs/plan/notes/python-layer.md).
+Two known follow-ups, both recorded honestly rather than hidden: several
+AGENT/knowledge tests hardcode ModEq fact ids that main's fact growth
+(358 -> ~700) removed -- a fact-fixture refresh, not a binding bug; and two
+deep-`Clone`/`Drop` segfaults in `Expr` need an iterative Clone in
+`axeyum-cas`, out of reach of a boundary guard. Next: Q6 (derive
+`eq`/`hash`/`str`; make `Config`/`Incremental` `Sync` so `unsendable` and
+`gil_used = true` can go), and those two follow-ups.
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)

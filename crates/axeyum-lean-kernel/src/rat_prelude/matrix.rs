@@ -67,6 +67,7 @@ pub(super) fn declare_matrix_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_det2_scale_row(d, p)?;
     declare_det2_row_add(d, p)?;
     declare_det2_mul(d, p)?;
+    declare_det2_eq_zero_of_lin_dep(d, p)?;
     declare_adjugate(d, p)?;
     declare_inverse(d, p)?;
     declare_cramer(d, p)?;
@@ -853,6 +854,324 @@ fn declare_det2_mul(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError
         let final_proof = rtrans(d, lhs, after1, rhs, proof1, proof);
         (stmt, final_proof)
     })
+}
+
+// --- linear dependence: the singular case of a 2x2 system ------------------
+//
+// `Rat.det2_eq_zero_of_lin_dep` is the first statement in this kernel about
+// linear DEPENDENCE rather than about solving. With no `List`/`Finset`/
+// product type, "the rows are proportional" cannot be an existential over a
+// vector or a pair — it is stated the way linear dependence is actually
+// defined: a nontrivial scalar combination of the rows that vanishes.
+//
+// The naive `∃ t, c = t·a ∧ d = t·b` is FALSE at `a = b = 0` with `(c,d)`
+// nonzero — no `t` scales `(0,0)` to a nonzero `(c,d)` — even though `det2`
+// is then always `0`. So the statement here is the symmetric one, with no
+// degenerate case:
+//
+//   `∃ s t, (s ≠ 0 ∨ t ≠ 0) ∧ s·a + t·c = 0 ∧ s·b + t·d = 0`
+//
+// encoded as three explicit hypotheses (`Or`/`Eq`/`Eq`) rather than a bundled
+// `∃`, matching every other `_of_ne_zero`-style theorem in this file.
+
+/// `s·a = neg (t·c)`, given `h : s·a + t·c = 0` — `add_comm` to read the sum
+/// the other way round, then `neg_eq_of_add_eq_zero`.
+fn cross_solve(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    s: ExprId,
+    a: ExprId,
+    t: ExprId,
+    c: ExprId,
+    h: ExprId, // s*a + t*c = 0
+) -> ExprId {
+    let sa = rmul(d, s, a);
+    let tc = rmul(d, t, c);
+    let zero = rzero(d, p);
+    let sa_tc = radd(d, sa, tc);
+    let tc_sa = radd(d, tc, sa);
+
+    let comm = d.lemma(p.add_comm, &[sa, tc]); // sa+tc = tc+sa
+    let comm_rev = rsymm(d, sa_tc, tc_sa, comm); // tc+sa = sa+tc
+    let tc_sa_zero = rtrans(d, tc_sa, sa_tc, zero, comm_rev, h); // tc+sa=0
+
+    let neg_tc_eq_sa = d.lemma(p.neg_eq_of_add_eq_zero, &[tc, sa, tc_sa_zero]); // neg(tc)=sa
+    let neg_tc = rneg(d, tc);
+    rsymm(d, neg_tc, sa, neg_tc_eq_sa) // sa = neg(tc)
+}
+
+/// `(s·a)·m = neg (t·(c·m))`, given `h_a : s·a = neg (t·c)`.
+///
+/// The one algebraic step [`declare_det2_eq_zero_of_lin_dep`] repeats at four
+/// different `m`: substitute the negated cross term (`neg_mul`), then pull
+/// `t` back out of `(t·c)·m` by `mul_assoc`.
+fn cross_scaled(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    s: ExprId,
+    a: ExprId,
+    t: ExprId,
+    c: ExprId,
+    h_a: ExprId, // s*a = neg(t*c)
+    m: ExprId,
+) -> ExprId {
+    let sa = rmul(d, s, a);
+    let tc = rmul(d, t, c);
+    let neg_tc = rneg(d, tc);
+    let sam = rmul(d, sa, m);
+
+    let step1 = rcongr(d, sa, neg_tc, h_a, &|d, w| rmul(d, w, m)); // sa*m = neg(tc)*m
+    let neg_tc_m = rmul(d, neg_tc, m);
+
+    let step2 = d.lemma(p.neg_mul, &[tc, m]); // neg(tc)*m = neg(tc*m)
+    let tcm = rmul(d, tc, m);
+    let neg_tcm = rneg(d, tcm);
+
+    let assoc = d.lemma(p.mul_assoc, &[t, c, m]); // (t*c)*m = t*(c*m)
+    let cm = rmul(d, c, m);
+    let t_cm = rmul(d, t, cm);
+    let step3 = rcongr(d, tcm, t_cm, assoc, &|d, w| rneg(d, w)); // neg(tcm) = neg(t*(c*m))
+    let neg_t_cm = rneg(d, t_cm);
+
+    let (_, proof) = rchain(
+        d,
+        sam,
+        &[(neg_tc_m, step1), (neg_tcm, step2), (neg_t_cm, step3)],
+    );
+    proof
+}
+
+/// `det2 a b c d = 0`, given `ad_eq_bc : a·d = b·c`.
+fn det2_zero_of_ad_eq_bc(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    dd: ExprId,
+    ad_eq_bc: ExprId,
+) -> ExprId {
+    let ad = rmul(d, a, dd);
+    let bc = rmul(d, b, c);
+    let neg_bc = rneg(d, bc);
+    let start = radd(d, ad, neg_bc); // = det2 a b c d (defeq)
+
+    let step = rcongr(d, ad, bc, ad_eq_bc, &|d, w| {
+        let n = rneg(d, bc);
+        radd(d, w, n)
+    });
+    let mid = radd(d, bc, neg_bc);
+    let zero = rzero(d, p);
+    let vanish = d.lemma(p.add_neg, &[bc]); // bc + neg(bc) = 0
+
+    let (_, proof) = rchain(d, start, &[(mid, step), (zero, vanish)]);
+    proof
+}
+
+/// `Rat.det2_eq_zero_of_lin_dep : ∀ a b c d s t,`
+/// `  Or (Not (s=0)) (Not (t=0)) → s·a+t·c=0 → s·b+t·d=0 → det2 a b c d = 0`.
+///
+/// The **easy direction** of "`det2 = 0` iff the rows are linearly
+/// dependent": a nontrivial vanishing combination of the rows forces the
+/// determinant to vanish. Pure algebra, plus one `Or`-elimination on the
+/// nontriviality hypothesis itself (a value already in hand, not a decision
+/// procedure run on `a,b,c,d,s,t`).
+///
+/// [`cross_solve`] turns the two hypotheses into `s·a = neg(t·c)` and
+/// `s·b = neg(t·d)`. [`cross_scaled`] at `m := d` and `m := c` combines them
+/// (through `t·(c·d) = t·(d·c)`) into `(s·a)·d = (s·b)·c`, hence
+/// `s·(a·d) = s·(b·c)`; at `m := b` and `m := a` it combines them (through a
+/// double-negation cancellation, since that route lands on `neg = neg`
+/// rather than on the values directly) into `t·(a·d) = t·(b·c)`. Whichever of
+/// `s,t` the hypothesis names nonzero cancels its equation
+/// ([`RatPrelude::mul_left_cancel_of_ne_zero`]) down to `a·d = b·c`, and
+/// [`det2_zero_of_ad_eq_bc`] finishes both branches identically.
+fn declare_det2_eq_zero_of_lin_dep(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let dd_fv = d.fresh_fvar();
+    let dd = d.kernel().fvar(dd_fv);
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+
+    let zero = rzero(d, p);
+    let s_eq_zero = req(d, s, zero);
+    let s_ne_zero = d.not(s_eq_zero);
+    let t_eq_zero = req(d, t, zero);
+    let t_ne_zero = d.not(t_eq_zero);
+    let nontrivial = d.or(s_ne_zero, t_ne_zero);
+    let nt_fv = d.fresh_fvar();
+    let nt = d.kernel().fvar(nt_fv);
+
+    let sa = rmul(d, s, a);
+    let tc = rmul(d, t, c);
+    let sa_tc = radd(d, sa, tc);
+    let eq1_ty = req(d, sa_tc, zero);
+    let eq1_fv = d.fresh_fvar();
+    let eq1 = d.kernel().fvar(eq1_fv);
+
+    let sb = rmul(d, s, b);
+    let td = rmul(d, t, dd);
+    let sb_td = radd(d, sb, td);
+    let eq2_ty = req(d, sb_td, zero);
+    let eq2_fv = d.fresh_fvar();
+    let eq2 = d.kernel().fvar(eq2_fv);
+
+    let det = rdet2(d, p, a, b, c, dd);
+    let concl = req(d, det, zero);
+
+    let body = {
+        let h_a = cross_solve(d, p, s, a, t, c, eq1); // s*a = neg(t*c)
+        let h_b = cross_solve(d, p, s, b, t, dd, eq2); // s*b = neg(t*d)
+
+        let a_dd = rmul(d, a, dd);
+        let b_c = rmul(d, b, c);
+
+        // --- s*(a*d) = s*(b*c) --------------------------------------------
+        let l1 = cross_scaled(d, p, s, a, t, c, h_a, dd); // (s*a)*d = neg(t*(c*d))
+        let l2 = cross_scaled(d, p, s, b, t, dd, h_b, c); // (s*b)*c = neg(t*(d*c))
+
+        let cd = rmul(d, c, dd);
+        let dc = rmul(d, dd, c);
+        let t_cd = rmul(d, t, cd);
+        let t_dc = rmul(d, t, dc);
+        let comm_cd = d.lemma(p.mul_comm, &[c, dd]); // c*d = d*c
+        let m_d = rcongr(d, cd, dc, comm_cd, &|d, w| rmul(d, t, w)); // t*(c*d)=t*(d*c)
+        let neg_t_cd = rneg(d, t_cd);
+        let neg_t_dc = rneg(d, t_dc);
+        let neg_m_d = rcongr(d, t_cd, t_dc, m_d, &|d, w| rneg(d, w));
+
+        let sa_dd = rmul(d, sa, dd);
+        let sb_c = rmul(d, sb, c);
+        let l2_rev = rsymm(d, sb_c, neg_t_dc, l2); // neg(t*(d*c)) = (s*b)*c
+        let (_, k0) = rchain(
+            d,
+            sa_dd,
+            &[(neg_t_cd, l1), (neg_t_dc, neg_m_d), (sb_c, l2_rev)],
+        );
+        // k0 : (s*a)*d = (s*b)*c
+
+        let s_add = rmul(d, s, a_dd);
+        let s_bc = rmul(d, s, b_c);
+        let assoc_s1 = d.lemma(p.mul_assoc, &[s, a, dd]); // (s*a)*d = s*(a*d)
+        let assoc_s2 = d.lemma(p.mul_assoc, &[s, b, c]); // (s*b)*c = s*(b*c)
+        let un_assoc_s1 = rsymm(d, sa_dd, s_add, assoc_s1); // s*(a*d) = (s*a)*d
+        let (_, k) = rchain(
+            d,
+            s_add,
+            &[(sa_dd, un_assoc_s1), (sb_c, k0), (s_bc, assoc_s2)],
+        );
+        // k : s*(a*d) = s*(b*c)
+
+        // --- t*(a*d) = t*(b*c) --------------------------------------------
+        let n1 = cross_scaled(d, p, s, a, t, c, h_a, b); // (s*a)*b = neg(t*(c*b))
+        let n2 = cross_scaled(d, p, s, b, t, dd, h_b, a); // (s*b)*a = neg(t*(d*a))
+
+        let sa_b = rmul(d, sa, b);
+        let sb_a = rmul(d, sb, a);
+        let assoc_n1 = d.lemma(p.mul_assoc, &[s, a, b]); // (s*a)*b = s*(a*b)
+        let assoc_n2 = d.lemma(p.mul_assoc, &[s, b, a]); // (s*b)*a = s*(b*a)
+        let ab = rmul(d, a, b);
+        let ba = rmul(d, b, a);
+        let comm_ab = d.lemma(p.mul_comm, &[a, b]); // a*b = b*a
+        let s_ab = rmul(d, s, ab);
+        let s_ba = rmul(d, s, ba);
+        let congr_ab = rcongr(d, ab, ba, comm_ab, &|d, w| rmul(d, s, w)); // s*(a*b)=s*(b*a)
+        let un_assoc_n2 = rsymm(d, sb_a, s_ba, assoc_n2); // s*(b*a) = (s*b)*a
+        let (_, n0) = rchain(
+            d,
+            sa_b,
+            &[(s_ab, assoc_n1), (s_ba, congr_ab), (sb_a, un_assoc_n2)],
+        );
+        // n0 : (s*a)*b = (s*b)*a
+
+        let cb = rmul(d, c, b);
+        let da = rmul(d, dd, a);
+        let t_cb = rmul(d, t, cb);
+        let t_da = rmul(d, t, da);
+        let neg_t_cb = rneg(d, t_cb);
+        let neg_t_da = rneg(d, t_da);
+        let n1_rev = rsymm(d, sa_b, neg_t_cb, n1); // neg(t*(c*b)) = (s*a)*b
+        let (_, neg_eq2) = rchain(d, neg_t_cb, &[(sa_b, n1_rev), (sb_a, n0), (neg_t_da, n2)]);
+        // neg_eq2 : neg(t*(c*b)) = neg(t*(d*a))
+
+        // neg_t_cb = neg(t_cb), neg_t_da = neg(t_da).
+        let neg_neg_tcb_expr = rneg(d, neg_t_cb); // = neg(neg(t_cb))
+        let neg_neg_tda_expr = rneg(d, neg_t_da); // = neg(neg(t_da))
+        let neg_neg_tcb = d.lemma(p.neg_neg, &[t_cb]); // neg(neg(t_cb))=t_cb
+        let tcb_eq_negneg = rsymm(d, neg_neg_tcb_expr, t_cb, neg_neg_tcb); // t_cb = neg(neg(t_cb))
+        let negneg_eq = rcongr(d, neg_t_cb, neg_t_da, neg_eq2, &|d, w| rneg(d, w));
+        let neg_neg_tda = d.lemma(p.neg_neg, &[t_da]); // neg(neg(t_da))=t_da
+        let (_, t0) = rchain(
+            d,
+            t_cb,
+            &[
+                (neg_neg_tcb_expr, tcb_eq_negneg),
+                (neg_neg_tda_expr, negneg_eq),
+                (t_da, neg_neg_tda),
+            ],
+        );
+        // t0 : t*(c*b) = t*(d*a)
+
+        let comm_cb = d.lemma(p.mul_comm, &[c, b]); // c*b = b*c
+        let cm2 = rcongr(d, cb, b_c, comm_cb, &|d, w| rmul(d, t, w)); // t*(c*b)=t*(b*c) i.e. t_cb = t_bc
+        let comm_da = d.lemma(p.mul_comm, &[dd, a]); // d*a = a*d
+        let cm1 = rcongr(d, da, a_dd, comm_da, &|d, w| rmul(d, t, w)); // t*(d*a)=t*(a*d) i.e. t_da = t_ad
+
+        let t_bc = rmul(d, t, b_c);
+        let t_ad = rmul(d, t, a_dd);
+        let cm2_rev = rsymm(d, t_cb, t_bc, cm2); // t_bc = t_cb
+        let (_, t_bc_eq_ad) = rchain(d, t_bc, &[(t_cb, cm2_rev), (t_da, t0), (t_ad, cm1)]);
+        // t_bc_eq_ad : t*(b*c) = t*(a*d)
+        let big_t = rsymm(d, t_bc, t_ad, t_bc_eq_ad); // t*(a*d) = t*(b*c)
+
+        // --- case split on the nontriviality hypothesis ---------------------
+        d.or_elim(
+            s_ne_zero,
+            t_ne_zero,
+            concl,
+            nt,
+            &|d, hs| {
+                let ad_eq_bc = d.lemma(p.mul_left_cancel_of_ne_zero, &[s, a_dd, b_c, hs, k]);
+                det2_zero_of_ad_eq_bc(d, p, a, b, c, dd, ad_eq_bc)
+            },
+            &|d, ht| {
+                let ad_eq_bc = d.lemma(p.mul_left_cancel_of_ne_zero, &[t, a_dd, b_c, ht, big_t]);
+                det2_zero_of_ad_eq_bc(d, p, a, b, c, dd, ad_eq_bc)
+            },
+        )
+    };
+
+    let mut ty = concl;
+    ty = d.arrow(eq2_ty, ty);
+    ty = d.arrow(eq1_ty, ty);
+    ty = d.arrow(nontrivial, ty);
+    let mut value = body;
+    value = d.lam_fv(eq2_fv, eq2_ty, value);
+    value = d.lam_fv(eq1_fv, eq1_ty, value);
+    value = d.lam_fv(nt_fv, nontrivial, value);
+
+    let binders = [
+        (a_fv, carrier),
+        (b_fv, carrier),
+        (c_fv, carrier),
+        (dd_fv, carrier),
+        (s_fv, carrier),
+        (t_fv, carrier),
+    ];
+    for &(fv, vty) in binders.iter().rev() {
+        ty = d.pi_fv(fv, vty, ty);
+        value = d.lam_fv(fv, vty, value);
+    }
+
+    d.declare_theorem(p.det2_eq_zero_of_lin_dep, ty, value)
 }
 
 // --- the adjugate identity ---------------------------------------------------

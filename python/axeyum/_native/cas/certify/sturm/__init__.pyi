@@ -134,6 +134,61 @@ class SetInterval:
     Named apart from [`Interval`] deliberately: the two are different types with
     different guarantees, and the crate's own inventory flags the collision.
     """
+    @property
+    def lower(self) -> typing.Optional[fractions.Fraction]:
+        r"""
+        The lower endpoint, or `None` for `-infinity`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the fraction.
+        """
+    @property
+    def lower_closed(self) -> builtins.bool:
+        r"""
+        Whether the lower endpoint is included.
+        """
+    @property
+    def upper(self) -> typing.Optional[fractions.Fraction]:
+        r"""
+        The upper endpoint, or `None` for `+infinity`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the fraction.
+        """
+    @property
+    def upper_closed(self) -> builtins.bool:
+        r"""
+        Whether the upper endpoint is included.
+        """
+    @staticmethod
+    def closed_open(a: typing.Any, b: typing.Any) -> SetInterval:
+        r"""
+        `[a, b)`.
+        
+        # Errors
+        
+        Raises `ValueError` when an endpoint is not an exact rational.
+        """
+    @staticmethod
+    def open_closed(a: typing.Any, b: typing.Any) -> SetInterval:
+        r"""
+        `(a, b]`.
+        
+        # Errors
+        
+        Raises `ValueError` when an endpoint is not an exact rational.
+        """
+    @staticmethod
+    def point(a: typing.Any) -> SetInterval:
+        r"""
+        The single point `{a}`.
+        
+        # Errors
+        
+        Raises `ValueError` when `a` is not an exact rational.
+        """
     @staticmethod
     def closed(a: builtins.int  |  fractions.Fraction  |  cas.Rational, b: builtins.int  |  fractions.Fraction  |  cas.Rational) -> SetInterval:
         r"""
@@ -169,6 +224,7 @@ class SetInterval:
         
         Raises `ValueError` when `x` is not an exact rational.
         """
+    def __eq__(self, other: typing.Any) -> builtins.bool: ...
     def __repr__(self) -> builtins.str: ...
 
 def approximate_real_roots(p: typing.Sequence[builtins.int  |  fractions.Fraction  |  cas.Rational], width: builtins.int  |  fractions.Fraction  |  cas.Rational) -> typing.Optional[builtins.list[fractions.Fraction]]:

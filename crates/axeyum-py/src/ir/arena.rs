@@ -359,9 +359,22 @@ impl Arena {
     }
 
     /// A real constant `num / den`; `den` must be non-zero.
+    ///
+    /// # Errors
+    ///
+    /// Raises `ValueError` for `den == 0` and `AxeyumError` when the ratio
+    /// leaves the `i128` reference range. `Rational::checked_new` is NOT a
+    /// guard for the first of those -- it keeps `new`'s `assert!(den != 0)`,
+    /// so it panics rather than answering `None` (measured 2026-08-25 through
+    /// this very function). `crate::cas::rational::checked` is the form that
+    /// screens both.
     fn real_ratio(&mut self, num: i128, den: i128) -> PyResult<Term> {
-        let rational = Rational::checked_new(num, den).ok_or_else(|| {
-            AxeyumError::new_err(format!("{num}/{den} is not a representable rational"))
+        let rational = crate::cas::rational::checked(num, den).ok_or_else(|| {
+            if den == 0 {
+                pyo3::exceptions::PyValueError::new_err("a rational denominator must be non-zero")
+            } else {
+                AxeyumError::new_err(format!("{num}/{den} is not a representable rational"))
+            }
         })?;
         let id = self.arena.real_const(rational);
         Ok(self.wrap(id))
@@ -1181,8 +1194,15 @@ impl Arena {
     /// This is `axeyum_ir::render`, the IR's only term-to-text path. It lives
     /// on the arena rather than on `Term.__str__` because a `Term` is a bare
     /// `(epoch, index)` pair and does not hold the arena that gives it meaning.
+    ///
+    /// # Errors
+    ///
+    /// Raises `BudgetExceeded` above [`MAX_RECURSIVE_DEPTH`]; `axeyum_ir::render`
+    /// recurses per node and overflows the thread stack beyond that, which is a
+    /// process ABORT rather than an exception.
     fn render(&self, term: Term) -> PyResult<String> {
         let id = term.resolve(self.epoch)?;
+        check_recursion_depth(&self.arena, &[id], "render")?;
         Ok(axeyum_ir::render(&self.arena, id))
     }
 
@@ -1201,6 +1221,7 @@ impl Arena {
     /// output is linear in the DAG rather than in the tree.
     fn write_script(&self, assertions: Vec<Term>) -> PyResult<String> {
         let assertions = self.resolve_terms(&assertions)?;
+        check_recursion_depth(&self.arena, &assertions, "write_script")?;
         Ok(axeyum_smtlib::write_script(&self.arena, &assertions))
     }
 
@@ -1208,6 +1229,46 @@ impl Arena {
     fn assignment(&self) -> crate::ir::evaluate::PyAssignment {
         crate::ir::evaluate::PyAssignment::empty(self.epoch)
     }
+}
+
+/// The deepest term the two tree-recursive text routines will accept.
+///
+/// `axeyum_ir::render` and `axeyum_smtlib::write_script` recurse once per node.
+/// Measured 2026-08-25 on an 8 MB main-thread stack: depth 16,384 renders,
+/// depth 32,768 ABORTS the process (SIGABRT, exit 134) -- not a
+/// `PanicException`, so no `except` of any kind can see it. This budget sits a
+/// factor of two below the last depth measured safe.
+///
+/// It is a budget, not a semantic limit, which is why it refuses with
+/// `BudgetExceeded`: nothing about the term is wrong, the binding simply
+/// declines before the stack runs out.
+pub(crate) const MAX_RECURSIVE_DEPTH: u64 = 8_192;
+
+/// Refuses a term too deep for the tree-recursive routines.
+///
+/// `TermStats::compute` is itself ITERATIVE (an explicit worklist, not
+/// recursion), so measuring the depth cannot overflow the stack the way the
+/// routine it guards would.
+///
+/// # Errors
+///
+/// Raises `BudgetExceeded` when any root is deeper than
+/// [`MAX_RECURSIVE_DEPTH`].
+pub(crate) fn check_recursion_depth(
+    arena: &axeyum_ir::TermArena,
+    roots: &[axeyum_ir::TermId],
+    what: &str,
+) -> PyResult<()> {
+    let stats = axeyum_ir::TermStats::compute(arena, roots);
+    if stats.max_depth > MAX_RECURSIVE_DEPTH {
+        return Err(crate::error::BudgetExceeded::new_err(format!(
+            "`{what}` recurses once per node and this term is {} deep; the binding refuses \
+             above {MAX_RECURSIVE_DEPTH} because the Rust routine would overflow the thread \
+             stack, which ABORTS the process instead of raising",
+            stats.max_depth
+        )));
+    }
+    Ok(())
 }
 
 /// The LSB-first bits of a non-negative Python integer, at `width` bits.

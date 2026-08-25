@@ -1353,7 +1353,9 @@ fn parse(py: Python<'_>, script: &str, timeout_ms: Option<u64>) -> PyResult<PySc
 /// # Errors
 ///
 /// Raises `EpochError` when an assertion belongs to another arena. The Rust
-/// writer PANICS on a foreign term, which is why this is checked here.
+/// writer PANICS on a foreign term, which is why this is checked here. Raises
+/// `BudgetExceeded` for a term too deep for the writer's per-node recursion,
+/// which would ABORT the process rather than raise.
 #[cfg_attr(
     feature = "stub-gen",
     pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
@@ -1364,6 +1366,7 @@ fn write_script(
     assertions: Vec<crate::ir::types::Term>,
 ) -> PyResult<String> {
     let ids = arena.resolve_terms(&assertions)?;
+    crate::ir::arena::check_recursion_depth(&arena.arena, &ids, "write_script")?;
     Ok(axeyum_smtlib::write_script(&arena.arena, &ids))
 }
 
