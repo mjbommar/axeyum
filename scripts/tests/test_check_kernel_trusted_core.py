@@ -32,7 +32,21 @@ SPEC.loader.exec_module(KT)
 
 @functools.cache
 def committed() -> "KT.Report":
-    """The committed tree, parsed once. Six tests read it; parsing is ~2s."""
+    """The committed tree, parsed once. Six tests read it.
+
+    Measured 2026-08-25 (crate at 3,541 functions / 224k lines,
+    `crates/axeyum-lean-kernel/src`): parsing took ~495 s before the loose-rule
+    fix below (99.5% of that in `re.Pattern.search`, 324,510 calls from
+    `Crate._resolve`'s `.method(` receiver-unknown case, which re-scanned the
+    WHOLE enclosing file for every same-named candidate at every call site —
+    O(call sites * candidates * file size), and dominates once common method
+    names like `new`/`get` have hundreds of candidates across the crate).
+    `_resolve` now looks up a per-file, precomputed set of which owner-type
+    names occur in that file (one combined-alternation regex scan per file,
+    not per candidate) instead of re-searching; the `\\b...\\b` match semantics
+    are unchanged, so the trusted-line count is identical, just derived in
+    ~1.5 s instead of ~495 s. "~2 s" here was stale well before that — it was
+    never re-measured as the crate grew from 794 to 3,541 functions."""
     return KT.Report(KT.Crate(KT.SRC))
 
 
