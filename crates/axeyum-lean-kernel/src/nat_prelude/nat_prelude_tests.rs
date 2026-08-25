@@ -345,6 +345,19 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_equivalence_on,
         p.bijective_of_injective_on,
         p.injective_on_comp,
+        p.set_union_comm,
+        p.set_inter_comm,
+        p.set_union_assoc,
+        p.set_inter_assoc,
+        p.set_union_idem,
+        p.set_inter_idem,
+        p.set_inter_union_distrib,
+        p.set_union_inter_distrib,
+        p.set_union_absorb,
+        p.set_inter_absorb,
+        p.set_compl_union,
+        p.set_compl_inter,
+        p.set_compl_involutive,
     ]
 }
 
@@ -4457,7 +4470,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        47 + 206,
+        47 + 219,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -5947,4 +5960,108 @@ fn finite_set_operations_compute_on_a_concrete_pair() {
             f.k.display_name(name)
         );
     }
+}
+
+/// The pointwise Boolean-lattice laws (`nat_prelude/finite_set.rs`) — the
+/// curriculum node `sets`'s own claim, "the same Boolean laws as in
+/// propositional logic, one level up" — apply at a concrete instance and
+/// genuinely compute, not just type-check; WITH the mandatory negative
+/// control: a De Morgan law with its top operator swapped (`union` for
+/// `inter`) type-checks as a STATEMENT exactly like the real one, but is a
+/// different, false Boolean identity, and reusing the real proof against it
+/// must be rejected by the trusted gate.
+#[test]
+fn set_lattice_laws_hold_concretely_and_reject_a_swapped_de_morgan() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    let singleton = |f: &mut Fixture, elem: ExprId| -> ExprId {
+        let k_fv = f.fresh_fvar();
+        let k = f.kernel().fvar(k_fv);
+        let body = f.beq(k, elem);
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+
+    let a = singleton(&mut f, zero); // A = {0}
+    let b = singleton(&mut f, one); // B = {1}
+
+    // `setUnion_comm` applies at a concrete instance, and both sides
+    // genuinely compute the SAME `Bool` (not just type-check the same).
+    let comm_thm = f.k.const_(p.set_union_comm, vec![]);
+    let applied = f.apply(comm_thm, &[a, b, zero]);
+    let inferred =
+        f.k.infer(applied)
+            .unwrap_or_else(|e| panic!("setUnion_comm(A,B,0) should infer: {}", f.explain(&e)));
+    let union_ab = f.const_app(p.set_union, &[a, b]);
+    let union_ba = f.const_app(p.set_union, &[b, a]);
+    let lhs0 = f.apply(union_ab, &[zero]);
+    let rhs0 = f.apply(union_ba, &[zero]);
+    let expected = f.bool_eq(lhs0, rhs0);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "setUnion_comm(A,B,0) should state (A union B) 0 = (B union A) 0"
+    );
+    assert!(f.k.def_eq(lhs0, true_), "0 is in A union B");
+    assert!(f.k.def_eq(rhs0, true_), "0 is in B union A too");
+    assert!(
+        !f.k.def_eq(lhs0, false_),
+        "NEGATIVE: (A union B) 0 must not reduce to false"
+    );
+
+    // `setCompl_involutive` applies at a concrete instance where its shared
+    // value is `false` (1 is not in A).
+    let inv_thm = f.k.const_(p.set_compl_involutive, vec![]);
+    let applied_inv = f.apply(inv_thm, &[a, one]);
+    f.k.infer(applied_inv)
+        .unwrap_or_else(|e| panic!("setCompl_involutive(A,1) should infer: {}", f.explain(&e)));
+    let a1 = f.apply(a, &[one]);
+    assert!(f.k.def_eq(a1, false_), "1 is not in A");
+
+    // NEGATIVE CONTROL: at A={0}, B={1}, point 0 — `compl (union A B) 0` is
+    // `false` (0 IS in A union B), and the TRUE De Morgan law's rhs
+    // `inter (compl A) (compl B) 0` matches (`false`: 0 is in A, so not in
+    // `compl A`, and `inter`'s `false` branch is the fixed constant). The
+    // SWAPPED law (`union` for `inter`) claims `union (compl A) (compl B) 0`,
+    // which is `true` (1 IS in `compl A`, and `union`'s `true` branch
+    // short-circuits) — a genuinely DIFFERENT value. Reusing the REAL
+    // `setCompl_union` proof (of the true, `inter`, statement) against this
+    // swapped statement must be rejected: a checker that admits it is
+    // vacuous.
+    let real_thm = f.k.const_(p.set_compl_union, vec![]);
+    let real_proof_at_point = f.apply(real_thm, &[a, b, zero]);
+
+    let compl_union_ab = f.const_app(p.set_compl, &[union_ab]);
+    let lhs_bad = f.apply(compl_union_ab, &[zero]);
+    let compl_a = f.const_app(p.set_compl, &[a]);
+    let compl_b = f.const_app(p.set_compl, &[b]);
+    let bad_rhs_fn = f.const_app(p.set_union, &[compl_a, compl_b]); // WRONG: should be set_inter
+    let rhs_bad = f.apply(bad_rhs_fn, &[zero]);
+    let bad_stmt = f.bool_eq(lhs_bad, rhs_bad);
+
+    // Confirm the two sides genuinely diverge, so this is a real negative
+    // control and not an accidental tautology.
+    assert!(
+        f.k.def_eq(lhs_bad, false_),
+        "compl(A union B) at 0 is false"
+    );
+    assert!(
+        f.k.def_eq(rhs_bad, true_),
+        "the SWAPPED rhs (union of complements) at 0 is true -- genuinely different"
+    );
+
+    let name = f.name("nc63_set_compl_union_rhs_swapped_to_union");
+    let err = f
+        .declare_theorem(name, bad_stmt, real_proof_at_point)
+        .expect_err("NC63: a De Morgan law with its operator swapped must be rejected");
+    println!(
+        "NC63 (setCompl_union with rhs swapped to union) rejected:\n  {}",
+        f.explain(&err)
+    );
+    assert!(!f.k.environment().contains(name));
 }

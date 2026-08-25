@@ -849,8 +849,995 @@ pub(super) fn declare_count_range_compl(
     d.declare_theorem(p.count_range_compl, ty, value)
 }
 
-/// Declare `Nat.setUnion`/`setInter`/`setCompl`/`setDiff`/`Subset` and the
-/// three `countRange` cardinality laws, in dependency order. Must run AFTER
+// ============================================================================
+// Pointwise Boolean-lattice laws — the curriculum node's own claim ("the same
+// Boolean laws as in propositional logic, one level up"), made a kernel
+// theorem. Every statement is `∀ …, Eq Bool (… k) (… k)`, NOT an equality of
+// functions: this kernel has no `funext`.
+//
+// `union_at`/`inter_at`/`compl_at` are the same `bool_select_bool` shapes
+// [`declare_set_union`]/[`declare_set_inter`]/[`declare_set_compl`] build,
+// factored out so every per-element proof below can share them; each
+// declared theorem's STATEMENT still goes through the real `Nat.setUnion` /
+// `Nat.setInter` / `Nat.setCompl` constants (delta-equal to these, so the
+// kernel's own defeq check bridges the two — the same split the file already
+// used for `countRange_union_add_inter`'s statement vs. `union_inter_sum_eq`'s
+// proof).
+//
+// Every law here needs only ONE `Bool.rec` case split — on the outermost
+// variable — except the two commutativity laws, which genuinely need both
+// arguments concrete before either side reduces (`bool_split2`). The reason
+// every other law collapses with a single split: `union`/`inter` branch only
+// on their FIRST argument, so once that argument is a literal, one side
+// short-circuits to a fixed value while the other reduces (by unfolding +
+// ι, no lemma) to the identical residual — verified case-by-case in the
+// doc comment of each `_at` function below.
+// ============================================================================
+
+/// `select(a, true_, b)` — [`declare_set_union`]'s body at a point, factored
+/// out for the pointwise laws below.
+fn union_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let true_ = d.bool_true();
+    bool_select_bool(d, p, a, true_, b)
+}
+
+/// `select(a, b, false_)` — [`declare_set_inter`]'s body at a point.
+fn inter_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let false_ = d.bool_false();
+    bool_select_bool(d, p, a, b, false_)
+}
+
+/// `select(a, false_, true_)` — [`declare_set_compl`]'s body at a point.
+fn compl_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId) -> ExprId {
+    let false_ = d.bool_false();
+    let true_ = d.bool_true();
+    bool_select_bool(d, p, a, false_, true_)
+}
+
+/// One-variable `Bool.rec` case split on `a`: `case_true`/`case_false` supply
+/// the proof of `goal(true)`/`goal(false)` (almost always a bare `Eq.refl`,
+/// since every law using this helper reduces both sides of `goal(x)` to the
+/// identical residual term once `x` is a literal). `goal` builds
+/// `Eq Bool lhs(x) rhs(x)` for a placeholder `x : Bool`.
+fn bool_split1(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    goal: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+    case_true: &dyn Fn(&mut NatDev<'_>) -> ExprId,
+    case_false: &dyn Fn(&mut NatDev<'_>) -> ExprId,
+) -> ExprId {
+    let p_ = *p;
+    let bool_ty = d.bool_ty();
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let body = goal(d, x);
+        d.lam_fv(x_fv, bool_ty, body)
+    };
+    let case_true_term = case_true(d);
+    let case_false_term = case_false(d);
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p_.logic.bool_rec, vec![level_zero]);
+    d.apply(bool_rec, &[motive, case_false_term, case_true_term, a])
+}
+
+/// The `a`-fixed half of [`bool_split2`]: case-splits on `b` alone, with `a`
+/// already substituted by the literal `a_val` (`a_is_true` says which).
+/// `leaf(a_is_true, b_is_true)` gives the `Bool` literal both sides reduce to.
+fn bool_split2_case(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a_val: ExprId,
+    a_is_true: bool,
+    b: ExprId,
+    goal: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
+    leaf: &dyn Fn(bool, bool) -> bool,
+) -> ExprId {
+    let p_ = *p;
+    let bool_ty = d.bool_ty();
+    let motive = {
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let body = goal(d, a_val, y);
+        d.lam_fv(y_fv, bool_ty, body)
+    };
+    let case_true_term = {
+        let lit = if leaf(a_is_true, true) {
+            d.bool_true()
+        } else {
+            d.bool_false()
+        };
+        d.bool_refl(lit)
+    };
+    let case_false_term = {
+        let lit = if leaf(a_is_true, false) {
+            d.bool_true()
+        } else {
+            d.bool_false()
+        };
+        d.bool_refl(lit)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p_.logic.bool_rec, vec![level_zero]);
+    d.apply(bool_rec, &[motive, case_false_term, case_true_term, b])
+}
+
+/// Two-variable `Bool.rec` case split (`a` then `b`) — for the two
+/// commutativity laws, the only ones here where NEITHER argument's literal
+/// value alone lets the other side reduce (unlike every other law, which
+/// peels only its outermost condition; see the module doc above).
+fn bool_split2(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    goal: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
+    leaf: &dyn Fn(bool, bool) -> bool,
+) -> ExprId {
+    let p_ = *p;
+    let bool_ty = d.bool_ty();
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+    let case_true_a = bool_split2_case(d, &p_, true_, true, b, goal, leaf);
+    let case_false_a = bool_split2_case(d, &p_, false_, false, b, goal, leaf);
+    let motive_outer = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let body = goal(d, x, b);
+        d.lam_fv(x_fv, bool_ty, body)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p_.logic.bool_rec, vec![level_zero]);
+    d.apply(bool_rec, &[motive_outer, case_false_a, case_true_a, a])
+}
+
+// --- the per-element facts --------------------------------------------------
+
+/// `Eq Bool (union a b) (union b a)`. Genuinely needs both arguments split
+/// (4 cases): at `a = true` alone, `union b a` is stuck on the free `b`
+/// (`select(b, true_, true_)` does not ι-reduce without a literal `b`), even
+/// though every branch is `true_` — `Bool.rec` has no case-irrelevance
+/// principle for that. `leaf = a || b` in every one of the 4 concrete cases.
+fn union_comm_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId, y: ExprId| -> ExprId {
+        let lhs = union_at(d, &p_, x, y);
+        let rhs = union_at(d, &p_, y, x);
+        d.bool_eq(lhs, rhs)
+    };
+    let leaf = |x: bool, y: bool| -> bool { x || y };
+    bool_split2(d, &p_, a, b, &goal, &leaf)
+}
+
+/// `Eq Bool (inter a b) (inter b a)`, the `inter` sibling of
+/// [`union_comm_at`]; same reason for needing both arguments split.
+fn inter_comm_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId, y: ExprId| -> ExprId {
+        let lhs = inter_at(d, &p_, x, y);
+        let rhs = inter_at(d, &p_, y, x);
+        d.bool_eq(lhs, rhs)
+    };
+    let leaf = |x: bool, y: bool| -> bool { x && y };
+    bool_split2(d, &p_, a, b, &goal, &leaf)
+}
+
+/// `Eq Bool (union (union a b) c) (union a (union b c))`. A SINGLE split on
+/// `a`: at `a = true` both sides ι-reduce to `true_` without touching `b`/`c`
+/// (union's `true` branch short-circuits); at `a = false` both sides ι-reduce
+/// to the identical term `union b c` (union's `false` branch discards its own
+/// left argument and defers to the right, on both sides alike).
+fn union_assoc_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let xb = union_at(d, &p_, x, b);
+        let lhs = union_at(d, &p_, xb, c);
+        let bc = union_at(d, &p_, b, c);
+        let rhs = union_at(d, &p_, x, bc);
+        d.bool_eq(lhs, rhs)
+    };
+    let case_true = |d: &mut NatDev<'_>| -> ExprId {
+        let true_ = d.bool_true();
+        d.bool_refl(true_)
+    };
+    let case_false = |d: &mut NatDev<'_>| -> ExprId {
+        let bc = union_at(d, &p_, b, c);
+        d.bool_refl(bc)
+    };
+    bool_split1(d, &p_, a, &goal, &case_true, &case_false)
+}
+
+/// `Eq Bool (inter (inter a b) c) (inter a (inter b c))`, the `inter`
+/// sibling of [`union_assoc_at`]. A single split on `a`: at `a = true` both
+/// sides ι-reduce to the identical term `inter b c`; at `a = false` both
+/// ι-reduce to `false_` (`inter`'s `false` branch is the fixed constant
+/// `false_`, so it never even looks at the other operand).
+fn inter_assoc_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let xb = inter_at(d, &p_, x, b);
+        let lhs = inter_at(d, &p_, xb, c);
+        let bc = inter_at(d, &p_, b, c);
+        let rhs = inter_at(d, &p_, x, bc);
+        d.bool_eq(lhs, rhs)
+    };
+    let case_true = |d: &mut NatDev<'_>| -> ExprId {
+        let bc = inter_at(d, &p_, b, c);
+        d.bool_refl(bc)
+    };
+    let case_false = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        d.bool_refl(false_)
+    };
+    bool_split1(d, &p_, a, &goal, &case_true, &case_false)
+}
+
+/// `Eq Bool (union a a) a` — a single split on `a`, both branches literal.
+fn union_idem_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let lhs = union_at(d, &p_, x, x);
+        d.bool_eq(lhs, x)
+    };
+    let case_true = |d: &mut NatDev<'_>| -> ExprId {
+        let true_ = d.bool_true();
+        d.bool_refl(true_)
+    };
+    let case_false = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        d.bool_refl(false_)
+    };
+    bool_split1(d, &p_, a, &goal, &case_true, &case_false)
+}
+
+/// `Eq Bool (inter a a) a`, the `inter` sibling of [`union_idem_at`].
+fn inter_idem_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let lhs = inter_at(d, &p_, x, x);
+        d.bool_eq(lhs, x)
+    };
+    let case_true = |d: &mut NatDev<'_>| -> ExprId {
+        let true_ = d.bool_true();
+        d.bool_refl(true_)
+    };
+    let case_false = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        d.bool_refl(false_)
+    };
+    bool_split1(d, &p_, a, &goal, &case_true, &case_false)
+}
+
+/// `Eq Bool (inter a (union b c)) (union (inter a b) (inter a c))` —
+/// `setInter_union_distrib`'s per-element fact. A single split on `a`: at
+/// `a = true`, both sides ι-reduce to the identical term `union b c`; at
+/// `a = false`, both ι-reduce to `false_` (`inter`'s `false` branch is the
+/// fixed constant on the left, and on the right `inter a b`/`inter a c` both
+/// collapse to `false_` the same way before `union false_ false_` does too).
+fn inter_union_distrib_at(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let qr = union_at(d, &p_, b, c);
+        let lhs = inter_at(d, &p_, x, qr);
+        let pq = inter_at(d, &p_, x, b);
+        let pr = inter_at(d, &p_, x, c);
+        let rhs = union_at(d, &p_, pq, pr);
+        d.bool_eq(lhs, rhs)
+    };
+    let case_true = |d: &mut NatDev<'_>| -> ExprId {
+        let bc = union_at(d, &p_, b, c);
+        d.bool_refl(bc)
+    };
+    let case_false = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        d.bool_refl(false_)
+    };
+    bool_split1(d, &p_, a, &goal, &case_true, &case_false)
+}
+
+/// `Eq Bool (union a (inter b c)) (inter (union a b) (union a c))` —
+/// `setUnion_inter_distrib`'s per-element fact, the dual of
+/// [`inter_union_distrib_at`]. A single split on `a`: at `a = true`, both
+/// sides ι-reduce to `true_`; at `a = false`, both ι-reduce to the identical
+/// term `inter b c`.
+fn union_inter_distrib_at(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let qr = inter_at(d, &p_, b, c);
+        let lhs = union_at(d, &p_, x, qr);
+        let pq = union_at(d, &p_, x, b);
+        let pr = union_at(d, &p_, x, c);
+        let rhs = inter_at(d, &p_, pq, pr);
+        d.bool_eq(lhs, rhs)
+    };
+    let case_true = |d: &mut NatDev<'_>| -> ExprId {
+        let true_ = d.bool_true();
+        d.bool_refl(true_)
+    };
+    let case_false = |d: &mut NatDev<'_>| -> ExprId {
+        let bc = inter_at(d, &p_, b, c);
+        d.bool_refl(bc)
+    };
+    bool_split1(d, &p_, a, &goal, &case_true, &case_false)
+}
+
+/// `Eq Bool (union a (inter a b)) a` — `setUnion_absorb`'s per-element fact.
+/// A single split on `a`: at `a = true`, `union`'s own `true` branch
+/// short-circuits to `true_` without even looking at `inter true b`; at
+/// `a = false`, `union`'s `false` branch defers to `inter false b`, which
+/// itself ι-reduces to the fixed constant `false_` regardless of `b`. Both
+/// branches land on the literal equal to `a`'s own value — no lemma at all.
+fn union_absorb_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let xb = inter_at(d, &p_, x, b);
+        let lhs = union_at(d, &p_, x, xb);
+        d.bool_eq(lhs, x)
+    };
+    let case_true = |d: &mut NatDev<'_>| -> ExprId {
+        let true_ = d.bool_true();
+        d.bool_refl(true_)
+    };
+    let case_false = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        d.bool_refl(false_)
+    };
+    bool_split1(d, &p_, a, &goal, &case_true, &case_false)
+}
+
+/// `Eq Bool (inter a (union a b)) a` — `setInter_absorb`'s per-element fact,
+/// the dual of [`union_absorb_at`]. A single split on `a`: at `a = true`,
+/// `inter`'s `true` branch defers to `union true b`, which itself ι-reduces
+/// to `true_` regardless of `b`; at `a = false`, `inter`'s own `false` branch
+/// is the fixed constant `false_`, never looking at `union false b` at all.
+fn inter_absorb_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let xb = union_at(d, &p_, x, b);
+        let lhs = inter_at(d, &p_, x, xb);
+        d.bool_eq(lhs, x)
+    };
+    let case_true = |d: &mut NatDev<'_>| -> ExprId {
+        let true_ = d.bool_true();
+        d.bool_refl(true_)
+    };
+    let case_false = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        d.bool_refl(false_)
+    };
+    bool_split1(d, &p_, a, &goal, &case_true, &case_false)
+}
+
+/// `Eq Bool (compl (union a b)) (inter (compl a) (compl b))` — De Morgan,
+/// `setCompl_union`'s per-element fact. A single split on `a`: at `a = true`,
+/// both sides ι-reduce to `false_`; at `a = false`, both ι-reduce to the
+/// identical term `compl b`.
+fn compl_union_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let xy = union_at(d, &p_, x, b);
+        let lhs = compl_at(d, &p_, xy);
+        let cx = compl_at(d, &p_, x);
+        let cb = compl_at(d, &p_, b);
+        let rhs = inter_at(d, &p_, cx, cb);
+        d.bool_eq(lhs, rhs)
+    };
+    let case_true = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        d.bool_refl(false_)
+    };
+    let case_false = |d: &mut NatDev<'_>| -> ExprId {
+        let cb = compl_at(d, &p_, b);
+        d.bool_refl(cb)
+    };
+    bool_split1(d, &p_, a, &goal, &case_true, &case_false)
+}
+
+/// `Eq Bool (compl (inter a b)) (union (compl a) (compl b))` — De Morgan,
+/// `setCompl_inter`'s per-element fact, the dual of [`compl_union_at`]. A
+/// single split on `a`: at `a = true`, both sides ι-reduce to the identical
+/// term `compl b`; at `a = false`, both ι-reduce to `true_`.
+fn compl_inter_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let xy = inter_at(d, &p_, x, b);
+        let lhs = compl_at(d, &p_, xy);
+        let cx = compl_at(d, &p_, x);
+        let cb = compl_at(d, &p_, b);
+        let rhs = union_at(d, &p_, cx, cb);
+        d.bool_eq(lhs, rhs)
+    };
+    let case_true = |d: &mut NatDev<'_>| -> ExprId {
+        let cb = compl_at(d, &p_, b);
+        d.bool_refl(cb)
+    };
+    let case_false = |d: &mut NatDev<'_>| -> ExprId {
+        let true_ = d.bool_true();
+        d.bool_refl(true_)
+    };
+    bool_split1(d, &p_, a, &goal, &case_true, &case_false)
+}
+
+/// `Eq Bool (compl (compl a)) a` — `setCompl_involutive`'s per-element fact.
+/// A single split on `a`, both branches literal.
+fn compl_involutive_at(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId) -> ExprId {
+    let p_ = *p;
+    let goal = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let cx = compl_at(d, &p_, x);
+        let ccx = compl_at(d, &p_, cx);
+        d.bool_eq(ccx, x)
+    };
+    let case_true = |d: &mut NatDev<'_>| -> ExprId {
+        let true_ = d.bool_true();
+        d.bool_refl(true_)
+    };
+    let case_false = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        d.bool_refl(false_)
+    };
+    bool_split1(d, &p_, a, &goal, &case_true, &case_false)
+}
+
+// --- the theorems ------------------------------------------------------
+
+/// `Nat.setUnion_comm : ∀ p q k, Eq Bool (setUnion p q k) (setUnion q p k)`.
+pub(super) fn declare_set_union_comm(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let union_fg = d.const_app(p.set_union, &[f, g]);
+    let union_gf = d.const_app(p.set_union, &[g, f]);
+    let lhs = d.apply(union_fg, &[k]);
+    let rhs = d.apply(union_gf, &[k]);
+    let stmt = d.bool_eq(lhs, rhs);
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let proof = union_comm_at(d, &p, fk, gk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_k);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_k);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.set_union_comm, ty, value)
+}
+
+/// `Nat.setInter_comm : ∀ p q k, Eq Bool (setInter p q k) (setInter q p k)`.
+pub(super) fn declare_set_inter_comm(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let inter_fg = d.const_app(p.set_inter, &[f, g]);
+    let inter_gf = d.const_app(p.set_inter, &[g, f]);
+    let lhs = d.apply(inter_fg, &[k]);
+    let rhs = d.apply(inter_gf, &[k]);
+    let stmt = d.bool_eq(lhs, rhs);
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let proof = inter_comm_at(d, &p, fk, gk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_k);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_k);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.set_inter_comm, ty, value)
+}
+
+/// `Nat.setUnion_assoc : ∀ p q r k,
+///   Eq Bool (setUnion (setUnion p q) r k) (setUnion p (setUnion q r) k)`.
+pub(super) fn declare_set_union_assoc(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let union_fg = d.const_app(p.set_union, &[f, g]);
+    let lhs_fn = d.const_app(p.set_union, &[union_fg, h]);
+    let union_gh = d.const_app(p.set_union, &[g, h]);
+    let rhs_fn = d.const_app(p.set_union, &[f, union_gh]);
+    let lhs = d.apply(lhs_fn, &[k]);
+    let rhs = d.apply(rhs_fn, &[k]);
+    let stmt = d.bool_eq(lhs, rhs);
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let hk = d.apply(h, &[k]);
+    let proof = union_assoc_at(d, &p, fk, gk, hk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        let with_h = d.pi_fv(h_fv, pred_ty, with_k);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_h);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_h = d.lam_fv(h_fv, pred_ty, with_k);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_h);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.set_union_assoc, ty, value)
+}
+
+/// `Nat.setInter_assoc : ∀ p q r k,
+///   Eq Bool (setInter (setInter p q) r k) (setInter p (setInter q r) k)`.
+pub(super) fn declare_set_inter_assoc(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let inter_fg = d.const_app(p.set_inter, &[f, g]);
+    let lhs_fn = d.const_app(p.set_inter, &[inter_fg, h]);
+    let inter_gh = d.const_app(p.set_inter, &[g, h]);
+    let rhs_fn = d.const_app(p.set_inter, &[f, inter_gh]);
+    let lhs = d.apply(lhs_fn, &[k]);
+    let rhs = d.apply(rhs_fn, &[k]);
+    let stmt = d.bool_eq(lhs, rhs);
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let hk = d.apply(h, &[k]);
+    let proof = inter_assoc_at(d, &p, fk, gk, hk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        let with_h = d.pi_fv(h_fv, pred_ty, with_k);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_h);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_h = d.lam_fv(h_fv, pred_ty, with_k);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_h);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.set_inter_assoc, ty, value)
+}
+
+/// `Nat.setUnion_idem : ∀ p k, Eq Bool (setUnion p p k) (p k)`.
+pub(super) fn declare_set_union_idem(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let union_ff = d.const_app(p.set_union, &[f, f]);
+    let lhs = d.apply(union_ff, &[k]);
+    let fk = d.apply(f, &[k]);
+    let stmt = d.bool_eq(lhs, fk);
+
+    let proof = union_idem_at(d, &p, fk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        d.pi_fv(f_fv, pred_ty, with_k)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        d.lam_fv(f_fv, pred_ty, with_k)
+    };
+    d.declare_theorem(p.set_union_idem, ty, value)
+}
+
+/// `Nat.setInter_idem : ∀ p k, Eq Bool (setInter p p k) (p k)`.
+pub(super) fn declare_set_inter_idem(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let inter_ff = d.const_app(p.set_inter, &[f, f]);
+    let lhs = d.apply(inter_ff, &[k]);
+    let fk = d.apply(f, &[k]);
+    let stmt = d.bool_eq(lhs, fk);
+
+    let proof = inter_idem_at(d, &p, fk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        d.pi_fv(f_fv, pred_ty, with_k)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        d.lam_fv(f_fv, pred_ty, with_k)
+    };
+    d.declare_theorem(p.set_inter_idem, ty, value)
+}
+
+/// `Nat.setInter_union_distrib : ∀ p q r k,
+///   Eq Bool (setInter p (setUnion q r) k)
+///           (setUnion (setInter p q) (setInter p r) k)`.
+pub(super) fn declare_set_inter_union_distrib(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let union_gh = d.const_app(p.set_union, &[g, h]);
+    let lhs_fn = d.const_app(p.set_inter, &[f, union_gh]);
+    let inter_fg = d.const_app(p.set_inter, &[f, g]);
+    let inter_fh = d.const_app(p.set_inter, &[f, h]);
+    let rhs_fn = d.const_app(p.set_union, &[inter_fg, inter_fh]);
+    let lhs = d.apply(lhs_fn, &[k]);
+    let rhs = d.apply(rhs_fn, &[k]);
+    let stmt = d.bool_eq(lhs, rhs);
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let hk = d.apply(h, &[k]);
+    let proof = inter_union_distrib_at(d, &p, fk, gk, hk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        let with_h = d.pi_fv(h_fv, pred_ty, with_k);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_h);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_h = d.lam_fv(h_fv, pred_ty, with_k);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_h);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.set_inter_union_distrib, ty, value)
+}
+
+/// `Nat.setUnion_inter_distrib : ∀ p q r k,
+///   Eq Bool (setUnion p (setInter q r) k)
+///           (setInter (setUnion p q) (setUnion p r) k)`.
+pub(super) fn declare_set_union_inter_distrib(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let inter_gh = d.const_app(p.set_inter, &[g, h]);
+    let lhs_fn = d.const_app(p.set_union, &[f, inter_gh]);
+    let union_fg = d.const_app(p.set_union, &[f, g]);
+    let union_fh = d.const_app(p.set_union, &[f, h]);
+    let rhs_fn = d.const_app(p.set_inter, &[union_fg, union_fh]);
+    let lhs = d.apply(lhs_fn, &[k]);
+    let rhs = d.apply(rhs_fn, &[k]);
+    let stmt = d.bool_eq(lhs, rhs);
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let hk = d.apply(h, &[k]);
+    let proof = union_inter_distrib_at(d, &p, fk, gk, hk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        let with_h = d.pi_fv(h_fv, pred_ty, with_k);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_h);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_h = d.lam_fv(h_fv, pred_ty, with_k);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_h);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.set_union_inter_distrib, ty, value)
+}
+
+/// `Nat.setUnion_absorb : ∀ p q k, Eq Bool (setUnion p (setInter p q) k) (p k)`.
+pub(super) fn declare_set_union_absorb(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let inter_fg = d.const_app(p.set_inter, &[f, g]);
+    let lhs_fn = d.const_app(p.set_union, &[f, inter_fg]);
+    let lhs = d.apply(lhs_fn, &[k]);
+    let fk = d.apply(f, &[k]);
+    let stmt = d.bool_eq(lhs, fk);
+
+    let gk = d.apply(g, &[k]);
+    let proof = union_absorb_at(d, &p, fk, gk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_k);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_k);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.set_union_absorb, ty, value)
+}
+
+/// `Nat.setInter_absorb : ∀ p q k, Eq Bool (setInter p (setUnion p q) k) (p k)`.
+pub(super) fn declare_set_inter_absorb(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let union_fg = d.const_app(p.set_union, &[f, g]);
+    let lhs_fn = d.const_app(p.set_inter, &[f, union_fg]);
+    let lhs = d.apply(lhs_fn, &[k]);
+    let fk = d.apply(f, &[k]);
+    let stmt = d.bool_eq(lhs, fk);
+
+    let gk = d.apply(g, &[k]);
+    let proof = inter_absorb_at(d, &p, fk, gk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_k);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_k);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.set_inter_absorb, ty, value)
+}
+
+/// `Nat.setCompl_union : ∀ p q k,
+///   Eq Bool (setCompl (setUnion p q) k) (setInter (setCompl p) (setCompl q) k)`.
+pub(super) fn declare_set_compl_union(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let union_fg = d.const_app(p.set_union, &[f, g]);
+    let lhs_fn = d.const_app(p.set_compl, &[union_fg]);
+    let compl_f = d.const_app(p.set_compl, &[f]);
+    let compl_g = d.const_app(p.set_compl, &[g]);
+    let rhs_fn = d.const_app(p.set_inter, &[compl_f, compl_g]);
+    let lhs = d.apply(lhs_fn, &[k]);
+    let rhs = d.apply(rhs_fn, &[k]);
+    let stmt = d.bool_eq(lhs, rhs);
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let proof = compl_union_at(d, &p, fk, gk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_k);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_k);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.set_compl_union, ty, value)
+}
+
+/// `Nat.setCompl_inter : ∀ p q k,
+///   Eq Bool (setCompl (setInter p q) k) (setUnion (setCompl p) (setCompl q) k)`.
+pub(super) fn declare_set_compl_inter(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let inter_fg = d.const_app(p.set_inter, &[f, g]);
+    let lhs_fn = d.const_app(p.set_compl, &[inter_fg]);
+    let compl_f = d.const_app(p.set_compl, &[f]);
+    let compl_g = d.const_app(p.set_compl, &[g]);
+    let rhs_fn = d.const_app(p.set_union, &[compl_f, compl_g]);
+    let lhs = d.apply(lhs_fn, &[k]);
+    let rhs = d.apply(rhs_fn, &[k]);
+    let stmt = d.bool_eq(lhs, rhs);
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let proof = compl_inter_at(d, &p, fk, gk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_k);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_k);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.set_compl_inter, ty, value)
+}
+
+/// `Nat.setCompl_involutive : ∀ p k, Eq Bool (setCompl (setCompl p) k) (p k)`.
+pub(super) fn declare_set_compl_involutive(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let compl_f = d.const_app(p.set_compl, &[f]);
+    let lhs_fn = d.const_app(p.set_compl, &[compl_f]);
+    let lhs = d.apply(lhs_fn, &[k]);
+    let fk = d.apply(f, &[k]);
+    let stmt = d.bool_eq(lhs, fk);
+
+    let proof = compl_involutive_at(d, &p, fk);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        d.pi_fv(f_fv, pred_ty, with_k)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        d.lam_fv(f_fv, pred_ty, with_k)
+    };
+    d.declare_theorem(p.set_compl_involutive, ty, value)
+}
+
+/// Declare `Nat.setUnion`/`setInter`/`setCompl`/`setDiff`/`Subset`, the three
+/// `countRange` cardinality laws, and the pointwise Boolean-lattice laws
+/// (curriculum node `sets`'s own claim), in dependency order. Must run AFTER
 /// [`super::totient::declare_totient_all`] (`Nat.countRange` itself).
 pub(super) fn declare_finite_set_all(
     d: &mut NatDev<'_>,
@@ -864,5 +1851,18 @@ pub(super) fn declare_finite_set_all(
     declare_count_range_union_add_inter(d, p)?;
     declare_count_range_le_of_subset(d, p)?;
     declare_count_range_compl(d, p)?;
+    declare_set_union_comm(d, p)?;
+    declare_set_inter_comm(d, p)?;
+    declare_set_union_assoc(d, p)?;
+    declare_set_inter_assoc(d, p)?;
+    declare_set_union_idem(d, p)?;
+    declare_set_inter_idem(d, p)?;
+    declare_set_inter_union_distrib(d, p)?;
+    declare_set_union_inter_distrib(d, p)?;
+    declare_set_union_absorb(d, p)?;
+    declare_set_inter_absorb(d, p)?;
+    declare_set_compl_union(d, p)?;
+    declare_set_compl_inter(d, p)?;
+    declare_set_compl_involutive(d, p)?;
     Ok(())
 }
