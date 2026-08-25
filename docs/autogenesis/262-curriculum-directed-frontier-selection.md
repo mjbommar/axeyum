@@ -433,6 +433,70 @@ exactly one fact) into something that earns a nonzero
 `facts_via_multi_target` count the way `authoritative-mathlib-nat-modeq-family-v1`
 already did for a different shape.
 
+## Sixth amendment, 2026-08-25 — the producer map, complete and measured
+
+Both candidate routes the fourth amendment named have now been **tested rather
+than argued about**, and the map of what this programme can currently produce is
+finished. Recording it because "why is the flywheel not automatic yet" now has a
+specific answer instead of a direction.
+
+**The three producers, by facts covered:**
+
+| producer | facts | shape it closes |
+|---|---:|---|
+| `modeq-family-eq-iff-combinators-v1` | 7 | carrier-agnostic: peels Pi binders, closes an `Eq`/`Iff` terminal by refl/symm/trans from `Eq.rec`. Never names `Int`, `Nat`, `ModEq` or `%`. |
+| `bounded-induction-reflexivity-v1` | 4 | zero/succ structural recursion with a congruence rewrite from the induction hypothesis. Declines "diagonal" recursions by its own doc. |
+| `bounded-iterate-recurrence-v3` | 1 | one `Nat.iterate` accumulator, double-successor unfold, RHS decomposing as `combine(f(n+1), f(n))`. |
+
+**The third is single-target BY CONSTRUCTION, not merely by registration.**
+`nat_fib_iterate_recurrence.rs` carries `const TARGET` and `const
+STREAM_SHA256` as hardcoded constants, so it can only ever prove the one goal
+baked into one pinned, hash-checked export. That is a materially different thing
+from an operation that happens to name one fact, and it is worth not confusing
+the two when counting "general" producers.
+
+**Route 1 — compose a checked premise — is dead, measured.** ADR-0523 already
+provides the mechanism (`compose_checked_theorem_slice`, ~20 capsules). A lane
+built the adapters, exported against pinned Mathlib, and ran it. Both targets
+failed for *different* reasons: `factorial_pos` on the WHNF wall **via a code
+path that never touches `bounded_induction.rs`** — independent confirmation
+through a disjoint mechanism — and `fib_le_fib_succ` because this kernel's
+`Nat.fib` is built over an internal `AxNat.fibAux` accumulator with no Mathlib
+counterpart, Mathlib's being `Nat.iterate`-based. A representation mismatch, not
+opacity. Also measured: the producer's isolated per-goal kernel carries
+`{Constructor:10, Definition:31, Inductive:9, Recursor:9}` and **zero
+Theorems**, by design (`proof_declarations_allowed: false`), confirmed against a
+positive control so the zero is a finding rather than a failed query.
+
+**Route 2 — `Nat.iterate` re-derivation — has a hard structural boundary, also
+measured.** A probe re-ran `recurrence_proof`'s own arity/head check against the
+real exported streams:
+
+    fib_add_two (r080):  goal_body_head=Eq     spine_arity=3  -> clears
+    fib_le_fib_succ:     goal_body_head=LE.le  spine_arity=4  -> rejected
+
+`LE.le` desugars to a four-argument spine (type, instance, `a`, `b`), so the
+`!= 3` check rejects an order goal **before any combinator runs** — and the
+whole toolkit manufactures only `Eq` proofs, with no order-congruence or
+monotonicity combinator anywhere. Of the remaining open `natural-fibonacci`
+train rows, **zero** clear it: seven are order-relation goals, and the eighth
+(`fastFib = fib`) is `Eq`-shaped but compares a different function than the
+hardcoded shape-inspection looks at.
+
+**So the next capability is now named rather than guessed:** an order-relation
+combinator vocabulary — order-congruence and monotonicity over the transition
+function, parallel to the existing `Eq` combinators — covering the
+`≤` / `<` / `Monotone` / `StrictMono` class. That is not a parameterization of
+existing code; it is new vocabulary.
+
+**And the methodological point, which is the reusable part.** Every step of this
+map came from *running* something: the WHNF probe under `BIS_DEBUG=1`, the
+composition against real exported kernels, the arity check re-run against the
+real streams. Reading the producers and their documentation gave a plausible and
+partly wrong picture three times in a row. This repository's standing rule about
+preferring a measurement to a message applies to its own source as much as to
+its tools.
+
 ## Boundary
 
 This document **selects nothing and authorizes nothing.** It adds no operation
