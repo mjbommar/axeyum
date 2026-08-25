@@ -126,6 +126,9 @@ now. Nothing was deleted.
 | 2026-08-25 | `4a21cbde7` | Correction to a correction: `Int.prodRange_permute` is full-range (`MapsInto σ n`), so the predicate-scoped primitive genuinely does not exist over any carrier. Production regen 1125 → 1141. |
 | 2026-08-25 | `af8340e16` | Held-out contamination and the seven-lane fold finding, recorded. |
 | 2026-08-25 | `8aa57e4e8` | The `CReal.sqrt` route: `KRegular` at `c = 3` **uniformly in `x`**, so `sqrt` is total and needs no `PosBound` — which a constructive setting could not have supplied, since `0 ≤ x` is undecidable. |
+| 2026-08-25 | `2a2e863f2` | `gen-statement-adapters.py`: proof-free Lean statement adapters from `formal.statement` to expand frozen-export coverage; `--exportable-only` drops arrow-bearing statements lean4export 3.1.0 refuses; verified end to end on s5; 7 controls |
+| 2026-08-25 | `57f3e68b4` `90d6cb5c0` | `14-frontier-reachability.md`: the ~3-of-146 gap decomposed into reachability x provability, measured; finding is the frontier is producer-bound (498 proved, open modeq facts are congruence goals the producers decline) |
+| 2026-08-25 | `5c5c2fd04` | fix: a deep `CasExpr` chain raises `BudgetExceeded` (`MAX_EXPR_DEPTH`) instead of segfaulting the process |
 | 2026-08-24 | `da1701d97` | The knowledge overlay may not name a sibling repository: source, namespace, 24 links and three unreachable relation types removed; schema tightened so the vocabulary cannot come back; the validator no longer reads `ROOT.parent`. |
 | 2026-08-24 | `94f3beb0c` | The crosswalk and the tactic catalog, plus the two projections that went structurally empty with them. `uses_technique` no longer mandates an external source on every tactic. 13 tactic guards, each killed by exactly one test. |
 | 2026-08-24 | `70aaccb38` | `scripts/check-external-coupling.py` — 4 rules, 8 guards, 25 controls, each guard killed by exactly one test; wired into both aggregates with `--self-test` first. `graph_pin` and `resolved` removed from all 104 claims; the 777-line Python integration and the agent's `file://` allowlist entry deleted. |
@@ -2270,13 +2273,27 @@ probe took reachable panics 3 -> 0 and crashes 19 -> 2, the rest typed at the
 boundary (Q7). Plus `axeyum.m` (Mathematica-shaped verbs) and a runnable
 `python/examples/gallery.py`. Coverage `tier_r_unreferenced=0`.
 
-Two known follow-ups, both recorded honestly rather than hidden: several
-AGENT/knowledge tests hardcode ModEq fact ids that main's fact growth
-(358 -> ~700) removed -- a fact-fixture refresh, not a binding bug; and two
-deep-`Clone`/`Drop` segfaults in `Expr` need an iterative Clone in
-`axeyum-cas`, out of reach of a boundary guard. Next: Q6 (derive
-`eq`/`hash`/`str`; make `Config`/`Incremental` `Sync` so `unsendable` and
-`gil_used = true` can go), and those two follow-ups.
+Both prior follow-ups are now closed: the AGENT/knowledge fact-fixture drift
+was refreshed (targets moved to `nat-modeq-symm/trans` and a nursery-derived
+mobility count), and the deep-`Clone`/`Drop` segfault is guarded at the
+boundary by a `MAX_EXPR_DEPTH` iterative-depth check that raises
+`BudgetExceeded` (an iterative Clone in `axeyum-cas` remains the deeper fix).
+
+**Frontier reachability (2026-08-25).** Answered "why does the agent attempt
+~3 of 146 open facts?" — decomposed into reachability x provability
+([`14-frontier-reachability.md`](docs/python-2026-08/14-frontier-reachability.md)).
+Built `scripts/gen-statement-adapters.py`: generates proof-free Lean statement
+adapters from each fact's `formal.statement` so `lean4export` can freeze them
+(the only artifact a tier-C producer consumes). Verified end to end on s5
+(24 adapters, one `lake env lean` compile, arrow-free ones export to valid
+~320KB NDJSON that `import_statement_ndjson` accepts). Measured finding: the
+"3" is producer-bound, not export-bound — the refl/symm/trans/comm shapes the
+producers close are already proved (498 proved), and every arrow-free *open*
+modeq fact is a congruence goal both producers decline. lean4export 3.1.0
+silently refuses arrow-bearing statements (exit 1), capping auto-export at
+arrow-free shapes. Next: Q6 (derive `eq`/`hash`/`str`; `Config`/`Incremental`
+`Sync`); a `ModEq`-unfolding producer to lift the *provability* wall; an
+arrow-capable export path.
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
