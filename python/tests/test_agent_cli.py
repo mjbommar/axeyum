@@ -128,3 +128,26 @@ def test_skip_unreachable_still_runs_a_reachable_fact(root, tmp_path, capsys) ->
     out = capsys.readouterr()
     assert len(list(tmp_path.glob("episode-*.json"))) == 1
     assert "skipped_unreachable=0" in out.out
+
+
+def test_reachable_first_surfaces_exported_facts_without_changing_the_set(root) -> None:
+    from axeyum.agent.tools import ExportUnavailable, resolve_export
+
+    def reachable(fid: str) -> bool:
+        try:
+            resolve_export(root, fid)
+            return True
+        except ExportUnavailable:
+            return False
+
+    everything = cli_api.pick_facts(root, [], 10_000)
+    reordered = cli_api.pick_facts(root, [], 10_000, reachable_first=True)
+    # Same population, only reordered -- no fact added or dropped.
+    assert set(everything) == set(reordered)
+    # Every reachable fact precedes every unreachable one.
+    flags = [reachable(f) for f in reordered]
+    assert flags == sorted(flags, reverse=True), "reachable facts must come first"
+    # Stable within each partition: the reachable ones keep their eligible order.
+    reachable_plain = [f for f in everything if reachable(f)]
+    reachable_reordered = [f for f in reordered if reachable(f)]
+    assert reachable_plain == reachable_reordered
