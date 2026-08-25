@@ -268,14 +268,16 @@
 //! the three should be attempted as a single unverified slice.
 
 use super::ring_helpers::add4_comm;
-use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, equiv, sample, shift};
+use super::{
+    CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, div_succ, equiv, sample, shift, within,
+};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{radd, req, rrefl, rzero};
+use crate::rat_prelude::ops::{radd, rat_eq_rewrite, req, rle, rneg, rrefl, rzero};
 
 /// Admit `CReal.sumRange`, its defining equations, congruence, additivity,
 /// scalar distribution, monotonicity, and the triangle inequality.
@@ -295,6 +297,7 @@ pub(super) fn declare_series(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     declare_sum_range_telescope(d, p)?;
     declare_sum_range_split(d, p)?;
     declare_sum_range_tail_le(d, p)?;
+    declare_sum_range_tail_within(d, p)?;
     declare_sum_range_seq_equations(d, p)
 }
 
@@ -1480,6 +1483,159 @@ fn declare_sum_range_tail_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sum_range_tail_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// From `Rat.le (Rat.sub u v) w` and `Rat.le (Rat.sub (Rat.neg u) v) w`,
+/// derive `CReal.Within u (Rat.add v w)` — the "within-swap via `neg_sub`"
+/// helper the module documentation names as the first piece to land. It is
+/// what turns the two one-sided `CReal.le`-unfolded bounds
+/// (`le_trans le_abs_self sum_range_tail_le` /
+/// `le_trans neg_le_abs sum_range_tail_le`, each applied at a shared index)
+/// into the single `Within` bound the outer telescope's middle leg needs,
+/// rather than one `abs_le` call — `abs_le`'s hypothesis shape does not
+/// survive sampling at an index.
+///
+/// Modelled on [`super::weaken`]'s own `neg_le_neg` + rewrite pattern: the
+/// upper half is `le_of_sub_le` outright; the lower half is `le_of_sub_le`
+/// on `h2`, then `neg_le_neg` to flip it, then one `neg_neg` rewrite to
+/// strip the resulting double negation back off `u` (`Rat`'s `neg_neg` is a
+/// proved theorem, not a computation, so this rewrite is not optional the
+/// way it would be over `CReal`'s ι-reducing `neg`).
+fn within_of_tail_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    w: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let vw = radd(d, v, w);
+
+    // upper : le u vw
+    let upper = d.lemma(rat.le_of_sub_le, &[u, v, w, h1]);
+
+    // lower_neg : le (neg u) vw
+    let neg_u = rneg(d, u);
+    let lower_neg = d.lemma(rat.le_of_sub_le, &[neg_u, v, w, h2]);
+
+    // flipped : le (neg vw) (neg (neg u))
+    let neg_vw = rneg(d, vw);
+    let neg_neg_u = rneg(d, neg_u);
+    let flipped = d.lemma(rat.neg_le_neg, &[neg_u, vw, lower_neg]);
+
+    // nn : Eq (neg (neg u)) u; lower : le (neg vw) u.
+    let nn = d.lemma(rat.neg_neg, &[u]);
+    let lower = rat_eq_rewrite(d, neg_neg_u, u, nn, flipped, &|d, t| rle(d, rat, neg_vw, t));
+
+    let lower_ty = rle(d, rat, neg_vw, u);
+    let upper_ty = rle(d, rat, u, vw);
+    and_intro(d, p, lower_ty, upper_ty, lower, upper)
+}
+
+/// `CReal.sumRange_tail_within`. See the field documentation
+/// ([`super::CRealPrelude::sum_range_tail_within`]) and this module's own
+/// documentation for what this theorem is and is not: the middle leg the
+/// outer telescope needs, not the telescope itself.
+///
+/// Reuses [`declare_sum_range_tail_le`]'s own `tail_f`/`tail_g`
+/// construction verbatim, chains `le_abs_self`/`neg_le_abs` through
+/// `le_trans` against that theorem's conclusion to get the two one-sided
+/// `CReal.le` facts, applies each at the tail's own index `add m n`
+/// (**not** at a further-shifted index — `CReal.add`'s own shift already
+/// lands both `tail_f`'s and `tail_g`'s samples at `shift (add m n)`
+/// automatically, by ι-reduction, once sampled at `add m n`), and closes
+/// with [`within_of_tail_le`].
+fn declare_sum_range_tail_within(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_add = d.prelude().add;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let pointwise_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let fk = d.apply(f, &[k]);
+        let gk = d.apply(g, &[k]);
+        let abs_fk = cabs(d, p, fk);
+        let leq = cle(d, p, abs_fk, gk);
+        d.pi_fv(k_fv, nat, leq)
+    };
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    let m_plus_n = d.const_app(nat_add, &[m, n]);
+    let sum_f_mn = d.const_app(p.sum_range, &[f, m_plus_n]);
+    let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+    let neg_sum_f_m = cneg(d, p, sum_f_m);
+    let tail_f = cadd(d, p, sum_f_mn, neg_sum_f_m);
+
+    let sum_g_mn = d.const_app(p.sum_range, &[g, m_plus_n]);
+    let sum_g_m = d.const_app(p.sum_range, &[g, m]);
+    let neg_sum_g_m = cneg(d, p, sum_g_m);
+    let tail_g = cadd(d, p, sum_g_mn, neg_sum_g_m);
+
+    // tail_le : CReal.le (abs tail_f) tail_g
+    let tail_le = d.lemma(p.sum_range_tail_le, &[f, g, m, n, hyp]);
+    let abs_tail_f = cabs(d, p, tail_f);
+
+    // r1 : CReal.le tail_f tail_g
+    let le_abs_self_f = d.lemma(p.le_abs_self, &[tail_f]);
+    let r1 = d.lemma(
+        p.le_trans,
+        &[tail_f, abs_tail_f, tail_g, le_abs_self_f, tail_le],
+    );
+
+    // r2 : CReal.le (neg tail_f) tail_g
+    let neg_tail_f = cneg(d, p, tail_f);
+    let neg_le_abs_f = d.lemma(p.neg_le_abs, &[tail_f]);
+    let r2 = d.lemma(
+        p.le_trans,
+        &[neg_tail_f, abs_tail_f, tail_g, neg_le_abs_f, tail_le],
+    );
+
+    // Both applied at the tail's own defining index.
+    let r1_mn = d.apply(r1, &[m_plus_n]);
+    let r2_mn = d.apply(r2, &[m_plus_n]);
+
+    let u = sample(d, p, tail_f, m_plus_n);
+    let v = sample(d, p, tail_g, m_plus_n);
+    let w = div_succ(d, p, 2, m_plus_n);
+
+    let value_body = within_of_tail_le(d, p, u, v, w, r1_mn, r2_mn);
+
+    let ty = {
+        let vw = radd(d, v, w);
+        let claim = within(d, p, u, vw);
+        let after_hyp = d.arrow(pointwise_ty, claim);
+        let over_n = d.pi_fv(n_fv, nat, after_hyp);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_m);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let with_hyp = d.lam_fv(hyp_fv, pointwise_ty, value_body);
+        let over_n = d.lam_fv(n_fv, nat, with_hyp);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_m);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_tail_within,
         uparams: vec![],
         ty,
         value,
