@@ -14,7 +14,10 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:nat-mod-eq-refl",
+    "F:nat-mod-eq-trans"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

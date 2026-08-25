@@ -18,6 +18,9 @@
     "F:nat-dvd-gcd",
     "F:nat-gcd-dvd-left",
     "F:nat-gcd-dvd-right",
+    "F:nat-le-antisymm",
+    "F:nat-le-of-dvd",
+    "F:nat-one-le-of-dvd-pos",
     "F:nat-zero-mul"
   ],
   "axiom_footprint": [],

@@ -15,7 +15,11 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:nat-le-trans"
+    "F:nat-le-trans",
+    "F:nat-mod-eq-add-right",
+    "F:nat-mod-eq-refl",
+    "F:nat-mod-eq-trans",
+    "F:nat-not-lt-zero"
   ],
   "axiom_footprint": [],
   "evidence": [

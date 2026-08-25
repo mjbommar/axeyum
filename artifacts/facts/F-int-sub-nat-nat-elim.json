@@ -22,6 +22,7 @@
   "depends_on": [
     "F:int-sub-nat-nat-shift",
     "F:nat-add-zero",
+    "F:nat-le-dest",
     "F:nat-le-total"
   ],
   "axiom_footprint": [],

@@ -23,7 +23,8 @@
     "F:nat-le-add-right",
     "F:nat-le-total",
     "F:nat-lt-irrefl",
-    "F:nat-lt-or-eq-of-le"
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-mul-le-mul-left"
   ],
   "axiom_footprint": [],
   "evidence": [

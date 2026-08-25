@@ -17,6 +17,7 @@
   "depends_on": [
     "F:nat-add-zero",
     "F:nat-le-succ-succ",
+    "F:nat-mod-eq-zero-of-dvd",
     "F:nat-zero-add",
     "F:nat-zero-le",
     "F:nat-zero-mul"

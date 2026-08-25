@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-choose-self",
+  "title": "C(a, a) = 1",
+  "statement": "For every natural a: the binomial coefficient C(a, a) equals 1.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.choose_self : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.choose x0 x0) (AxNat.succ AxNat.zero))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-choose-succ-succ"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-choose_self",
+      "kind": "kernel-term",
+      "supports": "Nat.choose_self is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.choose_self 2>/dev/null | grep -Ec '^Nat\\.choose_self[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check; the command both performs it and prints the admitted type, which is copied verbatim into formal.statement."
+    },
+    {
+      "id": "footprint-choose_self",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than Declaration::Axiom alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:binomial-coefficient",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "depends_on is literal, read off theorem_dependency_inventory's direct-edge output for this theorem (cross-checked against nat_theorem_inventory's own admitted type), keeping only edges whose target is itself a registered fact.",
+  "external_status": "proved"
+}

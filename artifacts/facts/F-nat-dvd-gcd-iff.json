@@ -17,6 +17,7 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-dvd-gcd",
+    "F:nat-dvd-trans",
     "F:nat-gcd-dvd-left",
     "F:nat-gcd-dvd-right"
   ],

@@ -16,7 +16,9 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:nat-dvd-mod-iff",
     "F:nat-gcd-succ",
+    "F:nat-gcd-zero-left",
     "F:nat-le-succ-succ",
     "F:nat-mod-lt",
     "F:nat-zero-le"

@@ -16,11 +16,14 @@
   "axiom_footprint": [],
   "depends_on": [
     "F:nat-dvd-add",
+    "F:nat-dvd-add-right-cancel-of-pos",
+    "F:nat-dvd-factorial-of-le",
     "F:nat-exists-prime-dvd",
     "F:nat-le-add-right",
     "F:nat-le-total",
     "F:nat-le-trans",
     "F:nat-lt-or-eq-of-le",
+    "F:nat-not-dvd-one-of-two-le",
     "F:nat-one-le-factorial"
   ],
   "evidence": [

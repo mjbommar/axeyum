@@ -19,9 +19,14 @@
   "depends_on": [
     "F:nat-div-mod-exists",
     "F:nat-dvd-add",
+    "F:nat-dvd-refl",
+    "F:nat-dvd-trans",
+    "F:nat-le-of-dvd",
     "F:nat-le-succ-succ",
     "F:nat-le-trans",
+    "F:nat-least-divisor-search",
     "F:nat-lt-or-eq-of-le",
+    "F:nat-one-le-of-dvd-pos",
     "F:nat-zero-le"
   ],
   "evidence": [
