@@ -498,7 +498,9 @@ fn det3_scale_row_computes_at_diag_2_3_4_scaled_by_5() {
     // pf2 : det3 qa qz qz qz qe qz qz qz qi = ofInt (Sarrus at 2,0,0,0,3,0,0,0,4)
     let pf2 = d.lemma(
         p.det3_ofint,
-        &[two, zero_i, zero_i, zero_i, three, zero_i, zero_i, zero_i, four],
+        &[
+            two, zero_i, zero_i, zero_i, three, zero_i, zero_i, zero_i, four,
+        ],
     );
     let ei = d.imul(three, four);
     let fh = d.imul(zero_i, zero_i);
@@ -535,7 +537,9 @@ fn det3_scale_row_computes_at_diag_2_3_4_scaled_by_5() {
     let expected = int_lit(&mut d, 120);
     let of_expected = of_int(&mut d, expected);
     let claim = req(&mut d, lhs0, of_expected);
-    let name = d.kernel().name_str(anon, "Check.det3_scale_row_diag_2_3_4_by_5");
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.det3_scale_row_diag_2_3_4_by_5");
     let accepted = d.kernel().add_declaration(Declaration::Theorem {
         name,
         uparams: vec![],
