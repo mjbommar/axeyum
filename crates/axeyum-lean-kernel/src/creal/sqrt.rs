@@ -61,6 +61,76 @@ fn and_ty(d: &mut IntDev<'_>, p: CRealPrelude, left: ExprId, right: ExprId) -> E
     d.const_app(p.rat.int.logic.and, &[left, right])
 }
 
+/// `False.rec (fun _ => target) false_proof : target`.
+///
+/// A local copy of the identical private helper in `nat_prelude::fermat`,
+/// `nat_prelude::totient`, `nat_prelude::order_more`, and
+/// `nat_prelude::binomial` (each of those, in turn, a copy of the others) —
+/// adapted here to `IntDev` since this module builds over `IntDev`, not
+/// `NatDev`. Trivial enough (one `False.rec` application) that a fifth copy
+/// costs nothing next to threading a `NatDev`-specific dependency through the
+/// `creal` module boundary.
+#[allow(dead_code)] // staged for declare_kregular_sqrt_approx (Step A/B, not yet landed)
+fn ex_falso(d: &mut IntDev<'_>, p: CRealPrelude, target: ExprId, false_proof: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let nat = p.rat.int.nat;
+    let false_ty = d.kernel().const_(nat.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+    let level_zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(nat.logic.false_rec, vec![level_zero]);
+    d.apply(rec, &[motive, false_proof])
+}
+
+/// `h : Lt zero n ⊢ Eq n (succ (pred n))` — i.e. `1 ≤ n → n = succ (pred n)`
+/// (`Nat.lt zero n` is definitionally `Nat.le (succ zero) n = Nat.le 1 n`).
+///
+/// A local copy of `nat_prelude::finite::pos_implies_succ_pred` (itself
+/// duplicated in `fermat.rs` and `totient.rs` — this is the fourth copy, and
+/// per that helper's own doc comment, promoting it to a declared `Nat`
+/// theorem reachable outside `nat_prelude` is the right long-term fix, not
+/// attempted here). By induction on `n`: the base case is impossible via
+/// `not_lt_zero`; the successor case is `refl`, since `pred (succ m)` reduces
+/// to `m` definitionally. `n` may be any `Nat`-typed expression, not just a
+/// bound variable — `Nat.rec` does not require its target to reduce.
+#[allow(dead_code)] // staged for declare_kregular_sqrt_approx (Step A/B, not yet landed)
+fn one_le_implies_succ_pred(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let nat = p.rat.int.nat;
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let zero = d.zero();
+        let hyp = d.lt(zero, x);
+        let px = d.pred(x);
+        let spx = d.succ(px);
+        let concl = d.eq(x, spx);
+        d.arrow(hyp, concl)
+    };
+    d.induct(
+        &motive,
+        &|d: &mut IntDev<'_>| {
+            let zero = d.zero();
+            let hyp_ty = d.lt(zero, zero);
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+            let pz = d.pred(zero);
+            let spz = d.succ(pz);
+            let target_ty = d.eq(zero, spz);
+            let not_lt = d.lemma(nat.not_lt_zero, &[zero]);
+            let false_proof = d.apply(not_lt, &[hyp]);
+            let body = ex_falso(d, p, target_ty, false_proof);
+            d.lam_fv(hyp_fv, hyp_ty, body)
+        },
+        &|d: &mut IntDev<'_>, m: ExprId, _ih: ExprId| {
+            let sm = d.succ(m);
+            let zero = d.zero();
+            let hyp_ty = d.lt(zero, sm);
+            let hyp_fv = d.fresh_fvar();
+            let _hyp = d.kernel().fvar(hyp_fv);
+            let body = d.refl(sm);
+            d.lam_fv(hyp_fv, hyp_ty, body)
+        },
+        n,
+    )
+}
+
 /// From `h : Eq Bool b Bool.false`, derive `Not (Eq Bool b Bool.true)`.
 ///
 /// `b`'s two possible values are mutually exclusive
@@ -458,4 +528,52 @@ pub(super) fn declare_sqrt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     declare_nat_sqrt_le(d, p)?;
     declare_nat_sqrt_lt(d, p)?;
     declare_sqrt_approx(d, p)
+}
+
+#[cfg(test)]
+mod bridging_smoke_tests {
+    use super::*;
+    use crate::int_prelude::ops::IntDev;
+
+    /// Smoke-checks [`one_le_implies_succ_pred`] (the local copy of bridging
+    /// piece 1 from the sqrt route's "what is left" list) by wrapping it in
+    /// a declared theorem and letting the kernel accept or reject it —
+    /// building the Rust closures is not evidence the *term* is well-typed,
+    /// only `Kernel::add_declaration`'s trusted checker is.
+    #[test]
+    fn one_le_implies_succ_pred_type_checks() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let nat = d.nat_ty();
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+
+        let zero = d.zero();
+        let hyp = d.lt(zero, n);
+        let pn = d.pred(n);
+        let spn = d.succ(pn);
+        let concl = d.eq(n, spn);
+        let inner_ty = d.arrow(hyp, concl);
+
+        let body = one_le_implies_succ_pred(&mut d, p, n);
+
+        let value = d.lam_fv(n_fv, nat, body);
+        let ty = d.pi_fv(n_fv, nat, inner_ty);
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "sqrtSmokeOneLeImpliesSuccPred");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "one_le_implies_succ_pred must kernel-check: {:?}",
+            result.err()
+        );
+    }
 }
