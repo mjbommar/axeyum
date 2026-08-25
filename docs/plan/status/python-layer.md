@@ -22,6 +22,7 @@ obstruction populations (F3).
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-24 | `48d7044a2` | Python coverage ledger: 831 of 4,672 public items referenced, 8 tier-R rows open, deferrals with reasons, `09-coverage-plan.md` ordered by consumer value |
 | 2026-08-24 | `5b7140d72` | Plan 03 A6: allowlisted metadata fetch with a family-level held-out guard and injection wrapper; cgroup-capped sandboxed `python_exec` with a discriminating self-check; 76 tests |
 | 2026-08-24 | `27c601025` | Review fixes: `ReplayUnavailable` and front-door-model replay (P0), forwarding modules for `axeyum.smt/ir/solver` (P1), CI `python` job 3.12-3.14 (P1), nightly clippy green (P1); frontier re-verification opt-in |
 | 2026-08-24 | `00a0803f7` | Plan 03 A5: obstruction graph derived from 16 episodes + 11 decline records, 12 clusters / 19 facts, F3 answered both ways; 26 guards |
