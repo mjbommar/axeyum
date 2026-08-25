@@ -216,6 +216,8 @@ use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
 use perfect::declare_perfect_all;
+use perfect::declare_sum_divisors_two_pow;
+use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
 use powsq::declare_powsq_all;
 use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
@@ -1691,6 +1693,15 @@ pub struct NatPrelude {
     /// or that power times `q`. The Euclid IX.36 divisor-classification
     /// blocker; see `perfect.rs`'s module doc for the proof route.
     pub dvd_two_pow_mul_classify: NameId,
+    /// `Nat.dvd_two_pow_classify : ∀ k d, dvd d (pow 2 k) → ∃ i, Le i k ∧ Eq
+    /// d (pow 2 i)` — every divisor of `2^k` is a power of `2` up to `2^k`
+    /// (the `q`-free specialization [`Self::dvd_two_pow_mul_classify`]
+    /// cannot be instantiated to give directly, since its cofactor carries a
+    /// `2 ≤ q` primality hypothesis that blocks `q = 1`). This is the
+    /// "divisors of `2^n` are exactly the powers of `2` up to `n`"
+    /// classification `sumDivisors_two_pow`'s congruence step needs; see
+    /// `perfect.rs`'s module doc for the proof route.
+    pub dvd_two_pow_classify: NameId,
     /// `Nat.pow_pos : ∀ b k, Lt zero b → Lt zero (pow b k)` — positivity of
     /// `pow` is preserved by a positive base, at any exponent. See
     /// `perfect.rs`'s module note for why this and `pow_lt_pow_succ` did not
@@ -1702,6 +1713,22 @@ pub struct NatPrelude {
     /// IX.36 blocker `perfect.rs`'s module doc names: `sumDivisors_two_pow`'s
     /// tail sub-induction needs `2^k < 2^(k+1)`, an instance at `b = 2`.
     pub pow_lt_pow_succ: NameId,
+    /// `Nat.dvd_two_pow_succ_iff_of_le : ∀ k d, Le d (pow 2 k) → Iff (dvd d
+    /// (pow 2 k)) (dvd d (pow 2 (succ k)))` — the congruence step
+    /// `sumDivisors_two_pow`'s tail sub-induction consumes: below the bound
+    /// `2^k`, divisibility by `2^k` and by `2^(k+1)` agree. See
+    /// `perfect.rs`'s module doc for the proof route.
+    pub dvd_two_pow_succ_iff_of_le: NameId,
+    /// `Nat.sumDivisors_two_pow_eq_geom_sum : ∀ k, Eq (sumDivisors (pow 2 k))
+    /// (sumRange (fun i => pow 2 i) (succ k))` — the divisor sum of `2^k`
+    /// equals the geometric sum of powers of `2` up to `k`; the bridge
+    /// `Nat.sumDivisors_two_pow` composes with `pow2_geom_sum`. See
+    /// `perfect.rs`'s module doc for the proof route.
+    pub sum_divisors_two_pow_eq_geom_sum: NameId,
+    /// `Nat.sumDivisors_two_pow : ∀ k, Eq (add (sumDivisors (pow 2 k)) one)
+    /// (pow 2 (succ k))` — the divisor sum of `2^k`, subtraction-free
+    /// (`Σd|2^k d = 2^(k+1) − 1` restated as `+1 =`).
+    pub sum_divisors_two_pow: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2137,8 +2164,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             cantor_diagonal_neg: kernel.name_str(nat, "cantor_diagonal_neg"),
             cantor_no_fixed_point: kernel.name_str(nat, "cantor_no_fixed_point"),
             dvd_two_pow_mul_classify: kernel.name_str(nat, "dvd_two_pow_mul_classify"),
+            dvd_two_pow_classify: kernel.name_str(nat, "dvd_two_pow_classify"),
             pow_pos: kernel.name_str(nat, "pow_pos"),
             pow_lt_pow_succ: kernel.name_str(nat, "pow_lt_pow_succ"),
+            dvd_two_pow_succ_iff_of_le: kernel.name_str(nat, "dvd_two_pow_succ_iff_of_le"),
+            sum_divisors_two_pow_eq_geom_sum: kernel
+                .name_str(nat, "sumDivisors_two_pow_eq_geom_sum"),
+            sum_divisors_two_pow: kernel.name_str(nat, "sumDivisors_two_pow"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2209,6 +2241,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_restrict_pair_maps_into(&mut d, &p)?;
         declare_diagonal(&mut d, &p)?;
         declare_rectangle(&mut d, &p)?;
+        // `Nat.sumDivisors_two_pow{,_eq_geom_sum}` (`perfect.rs`) need
+        // `Nat.sumRange_split`, just declared by `declare_rectangle` above —
+        // `declare_perfect_all` runs much earlier in this pipeline, before
+        // `sumRange_split` exists, so these two are called from here instead.
+        declare_sum_divisors_two_pow_eq_geom_sum(&mut d, &p)?;
+        declare_sum_divisors_two_pow(&mut d, &p)?;
         declare_vandermonde_all(&mut d, &p)?;
         declare_catalan_all(&mut d, &p)?;
         declare_binary_all(&mut d, &p)?;
