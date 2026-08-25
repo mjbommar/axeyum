@@ -83,6 +83,7 @@ impl Fixture {
 /// machinery, so they are checked separately by `environment().contains`.
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        p.catalan,
         p.add,
         p.mul,
         p.pow,
@@ -221,6 +222,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.gauss_lemma,
         p.lcm_dvd,
         p.dvd_antisymm,
+        p.catalan_mul_succ,
         p.lcm_comm,
         p.coprime_lcm_eq_mul,
         p.fib_add,
@@ -4437,7 +4439,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        35 + 198,
+        36 + 199,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -5755,5 +5757,80 @@ fn fib_le_succ_pos_of_pos_and_sum_fib_apply_and_are_axiom_free() {
     assert!(
         f.k.axiom_footprint(p.sum_fib).is_empty(),
         "sum_fib must rest on zero axioms"
+    );
+}
+
+/// `Nat.catalan` computes: the kernel's own `def_eq` reduces `catalan 0..5`
+/// to the literal Catalan numbers `1, 1, 2, 5, 14, 42` — see `catalan.rs`'s
+/// module doc for the hand check. The negative control matters as much as
+/// the positive one (`arithmetic_reduces_on_numerals` says so above, and it
+/// applies here just as much): a `catalan` that type-checks but computes
+/// wrong has an EMPTY axiom footprint and passes every sweep in this
+/// repository.
+#[test]
+fn catalan_computes_at_concrete_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let expected: [u32; 6] = [1, 1, 2, 5, 14, 42];
+    for (n, &c) in expected.iter().enumerate() {
+        let n_expr = f.num(u32::try_from(n).expect("n fits in u32"));
+        let cat = f.const_app(p.catalan, &[n_expr]);
+        let c_expr = f.num(c);
+        assert!(
+            f.k.def_eq(cat, c_expr),
+            "catalan {n} must reduce to {c}, the n={n} Catalan number"
+        );
+    }
+
+    // Negative control: `catalan 3` is NOT `6` — a plausible-looking wrong
+    // value (`6 = choose 4 2`, what you would get from forgetting the
+    // second subtracted term entirely).
+    let three = f.num(3);
+    let cat_3 = f.const_app(p.catalan, &[three]);
+    let six = f.num(6);
+    assert!(
+        !f.k.def_eq(cat_3, six),
+        "catalan 3 must NOT reduce to 6 (def_eq must not be vacuously true)"
+    );
+}
+
+/// `Nat.catalan_mul_succ` at `n = 3`: `4 * catalan 3 = 4 * 5 = 20 = choose 6
+/// 3` — the multiplicative identity that ties `catalan` to `choose`, checked
+/// at a concrete instance independent of the computation check above (that
+/// one never applies `catalan_mul_succ`).
+#[test]
+fn catalan_mul_succ_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let three = f.num(3);
+    let proof = f.lemma(p.catalan_mul_succ, &[three]);
+    let inferred =
+        f.k.infer(proof)
+            .unwrap_or_else(|e| panic!("catalan_mul_succ(3) should infer: {}", f.explain(&e)));
+
+    let lhs = {
+        let four = f.succ(three);
+        let cat_3 = f.const_app(p.catalan, &[three]);
+        f.mul(four, cat_3)
+    };
+    let rhs = {
+        let six = f.add(three, three);
+        f.choose(six, three)
+    };
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "catalan_mul_succ(3) should state mul (succ 3) (catalan 3) = choose (add 3 3) 3"
+    );
+
+    let twenty = f.num(20);
+    assert!(f.k.def_eq(lhs, twenty), "4 * catalan 3 must reduce to 20");
+    assert!(f.k.def_eq(rhs, twenty), "choose 6 3 must reduce to 20");
+
+    assert!(
+        f.k.axiom_footprint(p.catalan_mul_succ).is_empty(),
+        "catalan_mul_succ must rest on zero axioms"
     );
 }

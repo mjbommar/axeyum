@@ -133,6 +133,7 @@ mod bezout;
 mod binary;
 mod binomial;
 mod ble;
+mod catalan;
 mod choose;
 mod defs;
 mod diagonal;
@@ -170,6 +171,7 @@ use binomial::{
     declare_succ_sub_of_le,
 };
 use ble::declare_boolean_le;
+use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
@@ -626,6 +628,21 @@ pub struct NatPrelude {
     /// `b = succ j` closes via `le_of_dvd` in both directions plus
     /// `le_antisymm`.
     pub dvd_antisymm: NameId,
+
+    // --- Catalan numbers (`catalan.rs`) --------------------------------------
+    /// `Nat.catalan n := choose (n+n) n − choose (n+n) (n+1)` — the closed
+    /// form. `Nat.sub` is TOTAL, so the definition needs no `≤` side
+    /// condition; the recursive convolution form was priced and NOT built
+    /// (it is course-of-values, so a curried accumulator does not reach it).
+    pub catalan: NameId,
+    /// `Nat.catalan_mul_succ : ∀ n, succ n · catalan n = choose (n+n) n` —
+    /// the multiplicative identity tying `catalan` to `choose`, stated so no
+    /// division is needed. Proved from two instances of
+    /// `Nat.succ_mul_choose_eq` on the odd row `2n−1`, tied together by
+    /// `Nat.choose_symm`; the truncated subtraction is handled by the
+    /// UNCONDITIONAL `Nat.mul_sub_left_distrib_total`, so no `≤` proof is
+    /// required anywhere.
+    pub catalan_mul_succ: NameId,
     /// `Nat.lcm_comm : ∀ a b, lcm a b = lcm b a`. Direct from `dvd_antisymm`
     /// fed the two `lcm_dvd` applications (each built from
     /// `dvd_lcm_left`/`dvd_lcm_right` with the endpoints swapped).
@@ -1437,6 +1454,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_lemma: kernel.name_str(nat, "gauss_lemma"),
             lcm_dvd: kernel.name_str(nat, "lcm_dvd"),
             dvd_antisymm: kernel.name_str(nat, "dvd_antisymm"),
+            catalan: kernel.name_str(nat, "catalan"),
+            catalan_mul_succ: kernel.name_str(nat, "catalan_mul_succ"),
             lcm_comm: kernel.name_str(nat, "lcm_comm"),
             coprime_lcm_eq_mul: kernel.name_str(nat, "coprime_lcm_eq_mul"),
             bezout: kernel.name_str(nat, "bezout"),
@@ -1638,6 +1657,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_diagonal(&mut d, &p)?;
         declare_rectangle(&mut d, &p)?;
         declare_vandermonde_all(&mut d, &p)?;
+        declare_catalan_all(&mut d, &p)?;
         declare_binary_all(&mut d, &p)?;
         declare_size_all(&mut d, &p)?;
         declare_fib_all(&mut d, &p)?;
