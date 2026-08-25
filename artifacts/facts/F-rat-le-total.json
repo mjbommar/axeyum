@@ -14,7 +14,9 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:int-le-total"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

@@ -20,6 +20,8 @@
   "proof_route": "kernel-lean",
   "external_status": "proved",
   "depends_on": [
+    "F:int-sub-nat-nat-add-left",
+    "F:int-sub-nat-nat-add-right",
     "F:int-sub-nat-nat-shift",
     "F:nat-add-zero",
     "F:nat-le-dest",

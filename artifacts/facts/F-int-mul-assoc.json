@@ -17,6 +17,10 @@
   "proof_route": "kernel-lean",
   "external_status": "proved",
   "depends_on": [
+    "F:int-mul-neg-of-nat-neg-succ",
+    "F:int-mul-neg-of-nat-of-nat",
+    "F:int-mul-neg-succ-neg-of-nat",
+    "F:int-mul-of-nat-neg-of-nat",
     "F:nat-mul-assoc"
   ],
   "axiom_footprint": [],

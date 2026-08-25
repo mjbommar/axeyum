@@ -14,6 +14,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:int-mul-nonneg",
     "F:int-sq-nonneg",
     "F:nat-one-le-mul",
     "F:rat-den-pos"
