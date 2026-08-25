@@ -16,7 +16,12 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:cpoint-stewart"
+    "F:cpoint-stewart",
+    "F:creal-add-congr",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-mul-congr"
   ],
   "axiom_footprint": [],
   "evidence": [

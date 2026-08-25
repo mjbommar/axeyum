@@ -13,7 +13,11 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:creal-add-zero",
+    "F:creal-equiv-symm",
+    "F:creal-le-trans"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {
