@@ -122,6 +122,45 @@ Concretely, the decision procedure this document proposes:
    unchanged, the work did not produce; that is the one number doc 228
    installed and the one it says to watch.
 
+## Amendment, 2026-08-24 — `covered` never meant kernel-proved
+
+**A lane refuted the reading this document was first written under, and the
+correction sharpens it.**
+
+The original framing measured *kernel theorems per curriculum node* and read a
+zero as "covered on paper only". That is wrong. `covered` is re-derived by
+`scripts/check-curriculum-coverage.py` from a realized **`axeyum-scenarios`
+family** — `polynomials` names `Family::Polynomial`, fixed-degree BitVec
+exhaustive and witness self-checks over the **solver**. It has always meant
+"this node has a self-checking exercise family", and never "this node has kernel
+theorems".
+
+So the 18 zero-pressure nodes are **not unbacked**. They are
+
+    backed on the SOLVER route (scenarios, decide-and-check)
+    empty  on the KERNEL route (proved theorems)
+
+which is the ADR-0033 double-duty split doing exactly what it was designed to
+do: the same artifact teaches a concept *and* tests a theory. But **testing a
+theory and proving a theorem are different evidence routes**, and the
+autogenesis loop is a kernel-proving loop. So it is the kernel-side zero, not
+the coverage flag, that binds this programme.
+
+Restated, the two gaps are:
+
+| | measured |
+|---|---|
+| Gap 1 | 72 of 216 nursery rows (33%) name subjects no curriculum node names |
+| Gap 2 | 18 of 23 nodes are solver-backed and kernel-empty, **both destinations among them** |
+
+The decision procedure below is unchanged; step 2 should read *nursery pressure
+and kernel theorems* rather than "coverage".
+
+**This amendment exists because the document was wrong in a way its own tables
+could not show.** The counts were right; what they meant was not — the same
+error doc `233` recorded about itself and kept rather than deleted, for the same
+reason.
+
 ## Boundary
 
 This document **selects nothing and authorizes nothing.** It adds no operation
