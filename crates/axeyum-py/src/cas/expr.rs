@@ -98,6 +98,47 @@ impl Sign {
 /// Built only by the constructors and operators below — the crate has no parser
 /// and `impl FromStr` does not exist. `str(expr)` renders the tree for humans
 /// and is **not** parseable back into an `Expr`.
+/// The right-hand side of an arithmetic operator: an `Expr`, a Python `int`,
+/// or a `fractions.Fraction` -- the exact operands. A `float` is refused with
+/// `TypeError` rather than approximated: the CAS is exact over Q, and `x + 0.5`
+/// silently becoming `x + 1/2` would be a guess about the caller's intent.
+struct Operand(CasExpr);
+
+impl FromPyObject<'_, '_> for Operand {
+    type Error = PyErr;
+
+    fn extract(obj: pyo3::Borrowed<'_, '_, PyAny>) -> PyResult<Self> {
+        if let Ok(expr) = obj.cast::<Expr>() {
+            return Ok(Operand(expr.get().inner.clone()));
+        }
+        if obj.is_instance_of::<pyo3::types::PyFloat>() {
+            return Err(pyo3::exceptions::PyTypeError::new_err(
+                "Expr arithmetic takes Expr, int or fractions.Fraction, not float (the CAS is exact over Q; write Fraction(1, 2))",
+            ));
+        }
+        if let Ok(n) = obj.extract::<i128>() {
+            return Ok(Operand(CasExpr::int(n)));
+        }
+        let (num, den) = (
+            obj.getattr("numerator").and_then(|v| v.extract::<i128>()),
+            obj.getattr("denominator").and_then(|v| v.extract::<i128>()),
+        );
+        if let (Ok(num), Ok(den)) = (num, den) {
+            let value = rational::checked(num, den).ok_or_else(|| {
+                PyValueError::new_err(format!("{num}/{den} does not fit the i128 rational"))
+            })?;
+            return Ok(Operand(CasExpr::Const(value)));
+        }
+        Err(pyo3::exceptions::PyTypeError::new_err(format!(
+            "Expr arithmetic takes Expr, int or fractions.Fraction, not {}",
+            obj.get_type()
+                .name()
+                .map(|n| n.to_string())
+                .unwrap_or_default()
+        )))
+    }
+}
+
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Expr")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Expr {
@@ -418,20 +459,36 @@ impl Expr {
         found.into_iter().collect()
     }
 
-    fn __add__(&self, other: &Expr) -> Expr {
-        Expr::wrap(self.inner.clone() + other.inner.clone())
+    fn __add__(&self, other: Operand) -> Expr {
+        Expr::wrap(self.inner.clone() + other.0)
     }
 
-    fn __sub__(&self, other: &Expr) -> Expr {
-        Expr::wrap(self.inner.clone() - other.inner.clone())
+    fn __radd__(&self, other: Operand) -> Expr {
+        Expr::wrap(other.0 + self.inner.clone())
     }
 
-    fn __mul__(&self, other: &Expr) -> Expr {
-        Expr::wrap(self.inner.clone() * other.inner.clone())
+    fn __sub__(&self, other: Operand) -> Expr {
+        Expr::wrap(self.inner.clone() - other.0)
     }
 
-    fn __truediv__(&self, other: &Expr) -> Expr {
-        Expr::wrap(self.inner.clone() / other.inner.clone())
+    fn __rsub__(&self, other: Operand) -> Expr {
+        Expr::wrap(other.0 - self.inner.clone())
+    }
+
+    fn __mul__(&self, other: Operand) -> Expr {
+        Expr::wrap(self.inner.clone() * other.0)
+    }
+
+    fn __rmul__(&self, other: Operand) -> Expr {
+        Expr::wrap(other.0 * self.inner.clone())
+    }
+
+    fn __truediv__(&self, other: Operand) -> Expr {
+        Expr::wrap(self.inner.clone() / other.0)
+    }
+
+    fn __rtruediv__(&self, other: Operand) -> Expr {
+        Expr::wrap(other.0 / self.inner.clone())
     }
 
     fn __neg__(&self) -> Expr {
