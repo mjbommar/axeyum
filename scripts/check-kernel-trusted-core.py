@@ -149,11 +149,60 @@ TRUSTED_FILES = {
 }
 
 # --- guard C ---------------------------------------------------------------
-# Measured 2026-08-17 at 5,110 function-body lines. The ceiling has deliberate
-# headroom: the point is to catch a step change in what must be correct, not to
-# make every edit in `tc.rs` fail an unrelated lane's gate. Raising it means
-# more code must be right, so say why in the commit message.
-TRUSTED_LINES_MAX = 5500
+# Set 2026-08-17 at a measured 5,129 function-body lines (the docstring above
+# has always said 5,129; this comment previously said "5,110", which was never
+# what the tool measured at that commit — re-run against a `git archive` of
+# c6a3147bc confirms 5,129 exactly, matching the docstring's own per-file
+# breakdown line for line. Fixed 2026-08-25, no ceiling movement from this
+# alone). The ceiling has deliberate headroom: the point is to catch a step
+# change in what must be correct, not to make every edit in `tc.rs` fail an
+# unrelated lane's gate. Raising it means more code must be right, so say why
+# in the commit message.
+#
+# Raised 5500 -> 5900 on 2026-08-25 at a measured 5,508 (past the old ceiling).
+# Traced to two real, necessary additions since 2026-08-17, both landed with
+# their own soundness/perf evidence and both already narrated in `git log`:
+#
+#   +377  tc.rs (+347) / inductive.rs (+30), commit 2633d7186: universe-
+#         parameter closure. The kernel-vs-Lean wire differential (widened 5
+#         mutation families -> 51) found declarations official Lean 4.30.0
+#         refuses that this kernel admitted — a `Param` occurring in a type or
+#         value but not among the declaration's OWN `levelParams` was never
+#         checked, so an undeclared universe leaked into every instantiation
+#         site. `undeclared_universe_param`/`undeclared_level_param` (tc.rs)
+#         are called from BOTH `check_declaration` (tc.rs) and
+#         `add_inductive_group` (inductive.rs) — the inductive gate type-checks
+#         its own group and never routes through `check_declaration`, so it
+#         needed the same check written into the gate itself, not into a
+#         caller the trusted closure would skip. This closes a real
+#         soundness hole; it cannot be moved off the admission path because it
+#         IS the admission path.
+#   +349  tc.rs (+347) / env.rs (+2), commits 6e9aeab62 + 0887ab652 +
+#         4e1f9b092: memoisation for `whnf_core`, Lean's second reduction
+#         cache (ours had one of the two `type_checker.h` caches, not both).
+#         Without it the full kernel suite ran 1857 s -> 13.4 s once fixed —
+#         a 138x pathological cost that made the trusted core practically
+#         unusable, not merely slow. The new functions (`whnf_core_result`,
+#         `remember_whnf_core`, `recall_whnf_core`, the `taint_*`/
+#         `drain_volatile`/`unbound_probe_mark` volatile-entry tracking,
+#         `type_of`/`value_of`) sit directly inside `def_eq`/`whnf`, which
+#         `add_declaration` calls to type-check every admitted term — a wrong
+#         cached answer is a wrong verdict, so the cache's correctness is
+#         exactly as trust-critical as the reduction it memoises and belongs
+#         in the trusted core, not beside it. Each invalidation path (push,
+#         pop, environment revision, `Kernel::rollback`) carries its own
+#         mutation-checked test per the commit messages.
+#
+# Neither addition could be moved off the admission path without either
+# reopening the soundness hole (universe closure) or losing the fix that made
+# the kernel checkable at all in reasonable time (whnf_core memo) — see
+# option (c) in the brief that produced this note; both were rejected.
+#
+# Headroom kept at the same character as 2026-08-17's: that ceiling was 371
+# lines (7.2%) above its measurement; 5900 is 392 lines (7.1%) above this one
+# — enough that an ordinary edit in `tc.rs` does not fail an unrelated lane's
+# gate, not so much that a step change slips through unnoticed.
+TRUSTED_LINES_MAX = 5900
 
 # --- guard E ---------------------------------------------------------------
 # Floors. A scanner that silently stops parsing reports 0 trusted lines and
