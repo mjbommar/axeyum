@@ -1330,6 +1330,45 @@ pub struct NatPrelude {
     /// proved by reducing to that self-map lemma (see `cardinality.rs`'s
     /// module doc).
     pub pigeonhole: NameId,
+    // --- pointwise Boolean-lattice laws for finite sets (`finite_set.rs`) --
+    // The `sets` curriculum node's own claim: "the same Boolean laws as in
+    // propositional logic, one level up". Every statement here is pointwise
+    // (`∀ k, … p k … = … q k …`), not an equality of functions — this kernel
+    // has no `funext`.
+    /// `Nat.setUnion_comm : ∀ p q k, Eq Bool (setUnion p q k) (setUnion q p k)`.
+    pub set_union_comm: NameId,
+    /// `Nat.setInter_comm : ∀ p q k, Eq Bool (setInter p q k) (setInter q p k)`.
+    pub set_inter_comm: NameId,
+    /// `Nat.setUnion_assoc : ∀ p q r k,
+    ///   Eq Bool (setUnion (setUnion p q) r k) (setUnion p (setUnion q r) k)`.
+    pub set_union_assoc: NameId,
+    /// `Nat.setInter_assoc : ∀ p q r k,
+    ///   Eq Bool (setInter (setInter p q) r k) (setInter p (setInter q r) k)`.
+    pub set_inter_assoc: NameId,
+    /// `Nat.setUnion_idem : ∀ p k, Eq Bool (setUnion p p k) (p k)`.
+    pub set_union_idem: NameId,
+    /// `Nat.setInter_idem : ∀ p k, Eq Bool (setInter p p k) (p k)`.
+    pub set_inter_idem: NameId,
+    /// `Nat.setInter_union_distrib : ∀ p q r k,
+    ///   Eq Bool (setInter p (setUnion q r) k)
+    ///           (setUnion (setInter p q) (setInter p r) k)`.
+    pub set_inter_union_distrib: NameId,
+    /// `Nat.setUnion_inter_distrib : ∀ p q r k,
+    ///   Eq Bool (setUnion p (setInter q r) k)
+    ///           (setInter (setUnion p q) (setUnion p r) k)`.
+    pub set_union_inter_distrib: NameId,
+    /// `Nat.setUnion_absorb : ∀ p q k, Eq Bool (setUnion p (setInter p q) k) (p k)`.
+    pub set_union_absorb: NameId,
+    /// `Nat.setInter_absorb : ∀ p q k, Eq Bool (setInter p (setUnion p q) k) (p k)`.
+    pub set_inter_absorb: NameId,
+    /// `Nat.setCompl_union : ∀ p q k,
+    ///   Eq Bool (setCompl (setUnion p q) k) (setInter (setCompl p) (setCompl q) k)`.
+    pub set_compl_union: NameId,
+    /// `Nat.setCompl_inter : ∀ p q k,
+    ///   Eq Bool (setCompl (setInter p q) k) (setUnion (setCompl p) (setCompl q) k)`.
+    pub set_compl_inter: NameId,
+    /// `Nat.setCompl_involutive : ∀ p k, Eq Bool (setCompl (setCompl p) k) (p k)`.
+    pub set_compl_involutive: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1694,6 +1733,19 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_le_of_subset: kernel.name_str(nat, "countRange_le_of_subset"),
             count_range_compl: kernel.name_str(nat, "countRange_compl"),
             pigeonhole: kernel.name_str(nat, "pigeonhole"),
+            set_union_comm: kernel.name_str(nat, "setUnion_comm"),
+            set_inter_comm: kernel.name_str(nat, "setInter_comm"),
+            set_union_assoc: kernel.name_str(nat, "setUnion_assoc"),
+            set_inter_assoc: kernel.name_str(nat, "setInter_assoc"),
+            set_union_idem: kernel.name_str(nat, "setUnion_idem"),
+            set_inter_idem: kernel.name_str(nat, "setInter_idem"),
+            set_inter_union_distrib: kernel.name_str(nat, "setInter_union_distrib"),
+            set_union_inter_distrib: kernel.name_str(nat, "setUnion_inter_distrib"),
+            set_union_absorb: kernel.name_str(nat, "setUnion_absorb"),
+            set_inter_absorb: kernel.name_str(nat, "setInter_absorb"),
+            set_compl_union: kernel.name_str(nat, "setCompl_union"),
+            set_compl_inter: kernel.name_str(nat, "setCompl_inter"),
+            set_compl_involutive: kernel.name_str(nat, "setCompl_involutive"),
         };
 
         let mut d = NatDev::new(kernel, p);
