@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-theorem-correspondence",
+  "id": "X:cassini-specializes-determinant-multiplicativity",
+  "title": "Cassini's identity is determinant multiplicativity specialized to the powers of one Fibonacci matrix",
+  "correspondence_kind": "specialization",
+  "endpoints": [
+    "F:cassini-identity-over-constructed-integers",
+    "F:determinant-multiplicative-over-constructed-rationals"
+  ],
+  "claim": "Cassini's identity, fib(n+2)*fib(n) - fib(n+1)^2 = (-1)^(n+1), is det(A)*det(B) = det(AB) specialized to A = M^n and B = M for M = [[1,1],[1,0]]: M^n has entries [[fib(n+1), fib n],[fib n, fib(n-1)]] and det M = -1, so multiplicativity gives det(M^n) = (-1)^n, which unfolds at those entries to exactly Cassini's left- and right-hand sides. This is the motivating case ADR-0546 was written for -- two lanes landed Int.fib_cassini and Rat.det2_mul hours apart without either citing the other, and the fact ledger's own depends_on will never connect them because neither theorem's kernel proof mentions the other's subject.",
+  "transport": "n maps to A = M^n, B = M for the fixed matrix M = [[1,1],[1,0]]; Rat.ofInt carries the integer identity into ℚ so it can be compared against a det2 statement, and det2's four-argument encoding of a 2x2 matrix identifies M^n's entries with the four ofInt-cast Fibonacci values that appear in both Cassini and det2_fib.",
+  "derivation_status": "route-recorded",
+  "external_status": "classical",
+  "via": [
+    {
+      "step": "Rat.det2_fib transports Int.fib_cassini across Rat.ofInt via the ring-homomorphism lemmas ofInt_add/ofInt_mul/ofInt_neg, restating Cassini as det2 applied to the four ofInt-cast Fibonacci entries adjacent to n -- the cast identification this correspondence's transport names",
+      "ref": "F:cassini-as-determinant-of-a-matrix-power"
+    },
+    {
+      "step": "For M = [[1,1],[1,0]], M^n has entries [[fib(n+1), fib n],[fib n, fib(n-1)]] and det M = -1, so det(M^n) = (-1)^n follows from det2_mul by induction on n with det2_id as the n=0 base case. No fact in this ledger computes M^n's entries or states det M = -1, and F:cassini-as-determinant-of-a-matrix-power's own pinned direct-dependency list confirms its proof cites det2_mul nowhere -- so this induction from multiplicativity to Cassini is a named gap, not a mechanized route",
+      "ref": null
+    },
+    {
+      "step": "det(M^n) = (-1)^n, unfolded at M^n's entries above, is the same equation as det2_fib's statement and hence the same equation as Cassini via the first step -- the identification read from the multiplicativity side rather than the Cassini side. No fact restates det2_mul specialized to M and its powers, so this reading is prose here, not a kernel term",
+      "ref": null
+    }
+  ],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-correspondence-cassini (2026-08-24), closing ADR-0546's motivating example after writing the two prerequisite facts (F:cassini-identity-over-constructed-integers, F:determinant-multiplicative-over-constructed-rationals) and the bridge fact their via step cites (F:cassini-as-determinant-of-a-matrix-power). Both endpoint theorems were already kernel-admitted before this lane; the new work is making them addressable and adjudicating that they are the same theorem without being a depends_on edge.",
+    "sources": [
+      "docs/research/09-decisions/adr-0546-theorem-correspondences-are-not-proof-dependencies.md",
+      "artifacts/facts/F-cassini-identity-over-constructed-integers.json",
+      "artifacts/facts/F-determinant-multiplicative-over-constructed-rationals.json",
+      "artifacts/facts/F-cassini-as-determinant-of-a-matrix-power.json",
+      "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs"
+    ]
+  },
+  "notes": "WHY THE BRIDGE FACT (F:cassini-as-determinant-of-a-matrix-power) IS NOT AN ENDPOINT, decided deliberately. Its kernel proof directly cites Int.fib_cassini (confirmed by `theorem_dependency_inventory -- det2_fib`), so its own fact record carries `depends_on: [F:cassini-identity-over-constructed-integers]` -- a genuine proof dependency, not a correspondence. Making it an endpoint here would have required either omitting that true depends_on edge (dishonest) or having the gate refuse this file outright (the ledger already connects the pair). So the correspondence sits one level up, between Cassini and determinant multiplicativity -- the pair that shares NO proof, confirmed by the same dependency read: det2_mul's direct dependencies are twelve ordinary ring lemmas and det2_swap_rows, nothing Fibonacci-shaped, and Int.fib_cassini's are Nat.fib_add_two and ordinary Int ring lemmas, nothing determinant-shaped -- and the bridge fact is recorded in `via` instead, exactly where ADR-0546's README says a derivation that connects two otherwise-unconnected endpoints belongs.\n\nWhy `specialization` and not `carrier-transport`: the two endpoints are not the same law over two carriers with the carrier erased (the CARRIERS structural check would not even apply meaningfully -- det2_mul is universally quantified over eight rationals with no Fibonacci content, and Cassini is universally quantified over one natural with no matrix content). Cassini becomes a consequence of determinant multiplicativity only under the SPECIFIC substitution named in `transport` (M and its powers), which is exactly what `specialization` is for.\n\nTwo of the three `via` steps have a null ref, and that is the finding this correspondence exists to make precise, not a gap to be embarrassed about: the classical route from multiplicativity to Cassini goes through matrix powers and an induction using det2_mul, and NOTHING in this kernel mechanizes that induction -- det2_fib's actual proof bypasses it entirely via a direct cast-transport of Cassini. So this repository holds both theorems, and holds the fact that they are the same idea, without holding a mechanized proof of one FROM the other via the classical route. That is `route-recorded`, honestly, not `mechanized-here`."
+}
