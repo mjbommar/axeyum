@@ -29,7 +29,7 @@
         "producing-build (Kernel::add_declaration)",
         "theorem_dependency_inventory re-list"
       ],
-      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CPoint.dot_self_sub 2>/dev/null | grep -cE '^CPoint\\.dot_self_sub\\t'",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CPoint.dot_self_sub 2>/dev/null | grep -cE '^CPoint\\.dot_self_sub[[:space:]]'",
       "checker_seconds": 10,
       "notes": "`build_cpoint_prelude` admits CPoint.dot_self_sub through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` builds creal/complex/cpoint (extended 2026-08-25); it exits non-zero for a named filter that matches nothing, and `grep -c` (never `-q`) independently asserts the exact tab-anchored line is present. `--release` is MANDATORY: building the constructed carriers recurses deep enough in a debug build to overflow the default thread stack (measured on this tree: release exits 0, debug SIGABRTs at 134) -- the same resource-limit gotcha documented for `prelude_theorem_inventory --include-constructed`."
     },
@@ -42,7 +42,7 @@
         "footprint_closure_audit narrow closure",
         "footprint_closure_audit widened (inductive-edge) closure"
       ],
-      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example footprint_closure_audit -- --include-constructed 2>/dev/null | grep -cE '^cpoint\\tCPoint\\.dot_self_sub\\t[^\\t]*\\t0\\t\\t\\t0\\t$'",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example footprint_closure_audit -- --include-constructed 2>/dev/null | grep -cE '^cpoint[[:space:]]CPoint\\.dot_self_sub[[:space:]][^[:space:]]*[[:space:]]0[[:space:]][[:space:]][[:space:]]0[[:space:]]$'",
       "checker_seconds": 25,
       "notes": "`nat_axiom_inventory` does NOT cover `cpoint` at all (verified: `--include-constructed --require-axiom-free cpoint` errors '\"cpoint\" is not enumerated by this run (known: ... creal, complex)' -- cpoint was never added to that tool's group list, an empty/absent-coverage trap in its own right). `footprint_closure_audit --include-constructed` DOES build a `cpoint` group (verified in its `build_groups`) and, per admitted theorem, emits a row `cpoint<TAB>NAME<TAB>narrow_kinds<TAB>narrow_dangling<TAB>narrow_trusted<TAB>widened_trusted<TAB>widened_dangling<TAB>inductive_edge_diffs`. An axiom-free theorem has narrow_dangling=0, narrow_trusted empty, widened_trusted empty (the WIDENED closure additionally walks inductive constructor/recursor types one step further than `render_deps`, so this is stronger than the narrow-only check the `nat_axiom_inventory`-style facts use), widened_dangling=0, and no inductive edge diff -- the anchored regex below requires all of that in one line. `--include-constructed` is REQUIRED: without it the cpoint group is never built and BOTH the row-match and the `cpoint: theorems=` coverage line are absent (verified: 0 matches for either, vs 1 for both with the flag), which is the same coverage trap CLAUDE.md already documents for `nat_axiom_inventory`. `--release` is MANDATORY for the same deep-recursion reason as `theorem_dependency_inventory` (this tool's own doc example uses it); measured full-audit wall time on this tree ~20s release."
     }

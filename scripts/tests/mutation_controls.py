@@ -2832,6 +2832,26 @@ SUITES["fact-checker-grep-dash-q"] = (
     ],
 )
 
+SUITES["fact-checker-grep-backslash-t"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # `\t` inside a grep -E pattern is NOT a tab in POSIX ERE (or BRE) --
+        # GNU grep drops the backslash and matches a literal 't'. 54 facts /
+        # 68 checker_commands carried this before 2026-08-25's rewrite to
+        # `[[:space:]]`, each silently reporting a PRESENT theorem as ABSENT
+        # under any script or CI run. Deleting this guard must kill exactly
+        # the one test that asserts a `\t` checker_command is rejected -- the
+        # acceptance tests (committed `[[:space:]]` forms, the `$(printf
+        # '\t')` exception) do not touch this branch and must keep passing.
+        (
+            "grep \\t checker_command is refused",
+            "        if checker_command_uses_grep_backslash_t(cmd):",
+            "        if False:",
+        ),
+    ],
+)
+
 
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:

@@ -134,6 +134,42 @@ def checker_command_uses_grep_dash_q(cmd: str) -> bool:
     return False
 
 
+_GREP_QUOTED_PATTERN_RE = re.compile(r"\bgrep\b(?:\s+(?:-[a-zA-Z]+|--[a-zA-Z-]+))*\s+'([^']*)'")
+
+
+def checker_command_uses_grep_backslash_t(cmd: str) -> bool:
+    """True if `cmd` passes `grep` a single-quoted pattern containing the
+    two-character escape `\\t`.
+
+    In POSIX ERE (and BRE), `\\t` is NOT a tab -- GNU grep drops the backslash
+    and matches a literal `t`. Measured on this host with `/usr/bin/grep`
+    (GNU grep 3.12): `printf 'a\\tb\\n' | grep -cE 'a\\tb'` -> 0 (a real tab
+    does not match), `printf 'atb\\n' | grep -cE 'a\\tb'` -> 1 (it matches the
+    literal 't' instead). 54 facts / 68 checker_commands carried this before
+    2026-08-25's rewrite to `[[:space:]]`, all silently reporting a PRESENT
+    theorem as ABSENT -- fail-closed, not a wrong verdict, but the evidence
+    does not re-derive under any script or CI run.
+
+    Why it went unnoticed: on a host where an interactive shell's `grep` is a
+    function wrapping `ugrep` (which DOES interpret `\\t` as a tab), the exact
+    same checker_command passes by hand and fails from a script. Always test
+    a fix with `/usr/bin/grep` explicitly, never a bare `grep`.
+
+    Catches `\\t` both as a standalone separator (`'^Name\\t'`, fix:
+    `[[:space:]]`) and inside a bracket expression (`'[^\\t]'`, fix:
+    `[^[:space:]]` -- backslash is not special inside `[...]` either, so
+    `[^\\t]` means "not backslash and not t", not "not tab"). A pattern that
+    needs a literal tab specifically (not any whitespace) should build one
+    with `$(printf '\\t')` outside the single-quoted literal instead, which
+    this check does not flag because that substitution never appears inside
+    a `'...'` pattern argument.
+    """
+    for m in _GREP_QUOTED_PATTERN_RE.finditer(cmd):
+        if "\\t" in m.group(1):
+            return True
+    return False
+
+
 def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
     errors: list[str] = []
     fid = fact.get("id", f"<{path.name}>")
@@ -236,6 +272,35 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
                          f"#2, measured to flip 7 vs 3 on an UNCHANGED tree. Replace "
                          f"`grep -q PATTERN` with `grep -c PATTERN` and test the count: "
                          f'test "$(... | grep -cE \'PATTERN\')" -ge 1')
+        # `\t` inside a grep -E pattern is NOT a tab in POSIX ERE -- GNU grep
+        # drops the backslash and matches a literal 't'. Measured with
+        # `/usr/bin/grep` (GNU grep 3.12): `printf 'a\tb\n' | grep -cE 'a\tb'`
+        # matches ZERO real tabs and `printf 'atb\n' | grep -cE 'a\tb'`
+        # matches ONE literal 't' -- the opposite of what the pattern's
+        # author intended. 54 facts / 68 checker_commands carried this before
+        # 2026-08-25's rewrite, each silently reporting a PRESENT theorem as
+        # ABSENT under any script or CI run (fail-closed, not a wrong sat/unsat,
+        # but the evidence did not re-derive anywhere except an interactive
+        # shell whose `grep` is a function wrapping `ugrep`, which DOES treat
+        # `\t` as a tab and so never saw the bug). Replace a standalone `\t`
+        # separator with `[[:space:]]`; inside a bracket expression (`[^\t]`)
+        # use `[^[:space:]]`, since backslash is not special there either. If
+        # a pattern needs a literal tab specifically (not any whitespace),
+        # build one with `$(printf '\t')` outside the single-quoted literal.
+        if checker_command_uses_grep_backslash_t(cmd):
+            fail(errors, f"{fid}: checker_command passes grep a pattern containing "
+                         f"the literal escape `\\t`, which POSIX ERE (and BRE) does "
+                         f"NOT interpret as a tab -- GNU grep drops the backslash and "
+                         f"matches a literal 't' instead, so a tab-anchored pattern "
+                         f"like '^Name\\t' matches NOTHING against real tab-separated "
+                         f"output. This reports a PRESENT theorem as ABSENT under any "
+                         f"script or CI run (an interactive shell's `grep` may be a "
+                         f"function wrapping `ugrep`, which DOES treat \\t as a tab, "
+                         f"masking the bug by hand). Replace a standalone `\\t` "
+                         f"separator with `[[:space:]]`; inside a bracket expression "
+                         f"(`[^\\t]`) use `[^[:space:]]`. For a literal tab "
+                         f"specifically, build one with `$(printf '\\t')` outside the "
+                         f"single-quoted pattern.")
         if ev.get("kind") == "claim-ref":
             art = ev.get("artifact")
             if not art:

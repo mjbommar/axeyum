@@ -31,7 +31,7 @@
         "producing-build (Kernel::add_declaration)",
         "theorem_dependency_inventory re-list"
       ],
-      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Complex.mul_inv_cancel 2>/dev/null | grep -cE '^Complex\\.mul_inv_cancel\\t'",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Complex.mul_inv_cancel 2>/dev/null | grep -cE '^Complex\\.mul_inv_cancel[[:space:]]'",
       "checker_seconds": 10,
       "notes": "`build_complex_prelude` admits Complex.mul_inv_cancel through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` builds creal/complex/cpoint (extended 2026-08-25); it exits non-zero for a named filter that matches nothing, and `grep -c` (never `-q`) independently asserts the exact tab-anchored line is present. `--release` is MANDATORY: building the constructed carriers recurses deep enough in a debug build to overflow the default thread stack (measured on this tree: release exits 0, debug SIGABRTs at 134) -- the same resource-limit gotcha documented for `prelude_theorem_inventory --include-constructed`."
     },
