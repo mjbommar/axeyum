@@ -133,6 +133,7 @@ mod bezout;
 mod binary;
 mod binomial;
 mod ble;
+mod cardinality;
 mod catalan;
 mod choose;
 mod defs;
@@ -173,6 +174,7 @@ use binomial::{
     declare_succ_sub_of_le,
 };
 use ble::declare_boolean_le;
+use cardinality::declare_nat_pigeonhole;
 use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use defs::{
@@ -1316,6 +1318,18 @@ pub struct NatPrelude {
     /// `Nat.countRange_compl : ∀ p n,
     ///   countRange p n + countRange (setCompl p) n = n`.
     pub count_range_compl: NameId,
+
+    // --- the two-bound pigeonhole (`cardinality.rs`) -------------------------
+    // Curriculum node `cardinality` (Layer 0,
+    // docs/curriculum/00-foundations/cardinality.md).
+    /// `Nat.pigeonhole : ∀ n m f, Lt n m → (∀ i, i < m → f i < n) →
+    /// InjectiveOn f m → False` — no injection from an `m`-set into a
+    /// (strictly smaller) `n`-set. Not the same statement as
+    /// [`Self::injective_on_imp_surjective_on`] (`finite.rs`), which is a
+    /// SELF-map on one shared bound; this one crosses two bounds and is
+    /// proved by reducing to that self-map lemma (see `cardinality.rs`'s
+    /// module doc).
+    pub pigeonhole: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1679,6 +1693,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_union_add_inter: kernel.name_str(nat, "countRange_union_add_inter"),
             count_range_le_of_subset: kernel.name_str(nat, "countRange_le_of_subset"),
             count_range_compl: kernel.name_str(nat, "countRange_compl"),
+            pigeonhole: kernel.name_str(nat, "pigeonhole"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1729,6 +1744,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_fin(&mut d, &p)?;
         declare_injective_surjective(&mut d, &p)?;
         declare_pigeonhole(&mut d, &p)?;
+        declare_nat_pigeonhole(&mut d, &p)?;
         declare_restrict_injective(&mut d, &p)?;
         declare_restrict_maps_into(&mut d, &p)?;
         declare_transposition(&mut d, &p)?;
