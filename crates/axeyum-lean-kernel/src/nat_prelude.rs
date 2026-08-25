@@ -1702,6 +1702,22 @@ pub struct NatPrelude {
     /// classification `sumDivisors_two_pow`'s congruence step needs; see
     /// `perfect.rs`'s module doc for the proof route.
     pub dvd_two_pow_classify: NameId,
+    /// `Nat.pow_two_ne_pow_two_mul_prime : ∀ i j q, (2 ≤ q ∧ ∀ c, dvd c q →
+    /// Eq c 1 ∨ Eq c q) → ¬(dvd q 2) → ¬(Eq (pow 2 i) (mul (pow 2 j) q))` —
+    /// the non-overlap fact between `2^k·q`'s two divisor families: no power
+    /// of `2` equals `2^j` times an odd prime `q`. Needed to split
+    /// `sumDivisors (2^k·q)` into its two families without double-counting
+    /// (Euclid IX.36). Proved via [`Self::dvd_two_pow_classify`] rather than
+    /// `euclid_lemma`: assume `Eq (pow 2 i) (mul (pow 2 j) q)`; `q` divides
+    /// the right side unconditionally (`dvd_mul` + `mul_comm`), hence
+    /// (transporting along the assumed equality) `q ∣ 2^i`; classify that
+    /// divisor to get `q = 2^e` for some `e`. `e = 0` forces `q = 1`,
+    /// contradicting `2 ≤ q`; `e = succ e'` forces `2 ∣ q` (`2^e ≡ 2^e' * 2`
+    /// by iota), so `q`'s own divisor clause at `c = 2` gives `2 = 1` (absurd)
+    /// or `2 = q` (giving `dvd q 2`, contradicting the odd-prime hypothesis
+    /// directly). See `perfect.rs`'s module doc for why the constructed
+    /// `dvd_two_pow_classify` route was chosen over `euclid_lemma`.
+    pub pow_two_ne_pow_two_mul_prime: NameId,
     /// `Nat.pow_pos : ∀ b k, Lt zero b → Lt zero (pow b k)` — positivity of
     /// `pow` is preserved by a positive base, at any exponent. See
     /// `perfect.rs`'s module note for why this and `pow_lt_pow_succ` did not
@@ -2165,6 +2181,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             cantor_no_fixed_point: kernel.name_str(nat, "cantor_no_fixed_point"),
             dvd_two_pow_mul_classify: kernel.name_str(nat, "dvd_two_pow_mul_classify"),
             dvd_two_pow_classify: kernel.name_str(nat, "dvd_two_pow_classify"),
+            pow_two_ne_pow_two_mul_prime: kernel.name_str(nat, "pow_two_ne_pow_two_mul_prime"),
             pow_pos: kernel.name_str(nat, "pow_pos"),
             pow_lt_pow_succ: kernel.name_str(nat, "pow_lt_pow_succ"),
             dvd_two_pow_succ_iff_of_le: kernel.name_str(nat, "dvd_two_pow_succ_iff_of_le"),

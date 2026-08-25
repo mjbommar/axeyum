@@ -754,6 +754,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.cantor_no_fixed_point,
         p.dvd_two_pow_mul_classify,
         p.dvd_two_pow_classify,
+        p.pow_two_ne_pow_two_mul_prime,
         p.pow_pos,
         p.pow_lt_pow_succ,
         p.dvd_two_pow_succ_iff_of_le,
@@ -1454,6 +1455,58 @@ fn dvd_two_pow_classify_computes_at_a_concrete_instance() {
         rendered_full.contains("Exists"),
         "fully applied residue must still be the existential witness claim: \
          {rendered_full}"
+    );
+}
+
+/// `Nat.pow_two_ne_pow_two_mul_prime` — the non-overlap fact between
+/// `2^k·q`'s two divisor families. At `i = 2, j = 0, q = 3` (`p = 2`'s
+/// Euclid IX.36 instance: `2^1·3 = 6`, and `sumDivisors 6` already reduces
+/// to `12 = 2·6` — see `perfect_holds_at_six_and_fails_at_seven`), `pow 2 2
+/// = 4` and `mul (pow 2 0) 3 = 3` are genuinely distinct numerals, so this
+/// checks the theorem's residue SHAPE (a `Prime → ¬(dvd · 2) → Not (Eq …)`
+/// arrow chain) rather than deriving an impossible witness — there is no
+/// counterexample to construct, since the statement is true. The axiom
+/// footprint is empty.
+#[test]
+fn pow_two_ne_pow_two_mul_prime_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let zero = f.num(0);
+    let three = f.num(3);
+    let four = f.num(4);
+    let two_pow_two = f.const_app(p.pow, &[two, two]);
+    assert!(f.k.def_eq(two_pow_two, four), "pow 2 2 must reduce to 4");
+    let two_pow_zero = f.const_app(p.pow, &[two, zero]);
+    let one = f.num(1);
+    assert!(f.k.def_eq(two_pow_zero, one), "pow 2 0 must reduce to 1");
+    let target = f.mul(one, three);
+    assert!(
+        f.k.def_eq(target, three),
+        "mul (pow 2 0) 3 must reduce to 3"
+    );
+
+    let i = f.num(2);
+    let j = f.num(0);
+    let q = f.num(3);
+    let applied = f.const_app(p.pow_two_ne_pow_two_mul_prime, &[i, j, q]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("pow_two_ne_pow_two_mul_prime 2 0 3 must type-check");
+    let rendered = f.k.render_lean(inferred);
+    assert!(
+        rendered.contains("dvd")
+            && rendered.contains("AxNat.pow")
+            && rendered.contains("Not")
+            && rendered.contains("Eq"),
+        "unexpected residue type: {rendered}"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.pow_two_ne_pow_two_mul_prime)
+            .is_empty(),
+        "pow_two_ne_pow_two_mul_prime rests on a trusted declaration"
     );
 }
 
@@ -5760,7 +5813,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        61 + 269,
+        61 + 270,
         "every promised definition and theorem must be rendered"
     );
 }
