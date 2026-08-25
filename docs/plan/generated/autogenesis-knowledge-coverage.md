@@ -8,9 +8,9 @@
 | Measure | Count |
 |---|---:|
 | Authoritative multi-target operations | 2 |
-| Facts in their applicability sets | 9 |
+| Facts in their applicability sets | 11 |
 | Credited facts mapped with `established-by` | 7 |
-| Applicable facts with no `established-by` credit | 2 |
+| Applicable facts with no `established-by` credit | 4 |
 
 ## Removed dimensions
 

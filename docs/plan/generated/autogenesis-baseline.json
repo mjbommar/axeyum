@@ -59,29 +59,31 @@
   "contract": "internal-autogenesis-phase0",
   "ledger": {
     "assurance": {
-      "axiom_free_kernel_facts": 197,
+      "axiom_free_kernel_facts": 227,
       "check_statuses": {
-        "checked": 532
+        "checked": 592
       },
-      "evidence_rows": 532,
-      "with_checker_command": 530,
-      "with_multiple_named_checkers": 280
+      "evidence_rows": 592,
+      "with_checker_command": 590,
+      "with_multiple_named_checkers": 318
     },
     "dependency_graph": {
       "dangling": [],
       "depth_histogram": {
-        "1": 275,
-        "10": 1,
-        "2": 78,
-        "3": 30,
-        "4": 19,
-        "5": 12,
-        "6": 26,
-        "7": 10,
-        "8": 5,
-        "9": 2
+        "1": 280,
+        "10": 5,
+        "11": 2,
+        "12": 1,
+        "2": 83,
+        "3": 32,
+        "4": 17,
+        "5": 15,
+        "6": 16,
+        "7": 15,
+        "8": 17,
+        "9": 5
       },
-      "edges": 308,
+      "edges": 699,
       "edges_detail": [
         {
           "consequent": "F:bcnf-decomposition-lossless-not-dependency-preserving",
@@ -101,7 +103,35 @@
         },
         {
           "consequent": "F:complex-add-comm",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:complex-add-comm",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-admits-no-compatible-order",
+          "premise": "F:complex-i-sq"
         },
         {
           "consequent": "F:complex-admits-no-compatible-order",
@@ -109,15 +139,91 @@
         },
         {
           "consequent": "F:complex-conj-add",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:complex-conj-add",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:complex-conj-mul",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-left-distrib"
         },
         {
           "consequent": "F:complex-conj-mul",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:complex-geom-series-div",
@@ -137,19 +243,151 @@
         },
         {
           "consequent": "F:complex-i-sq",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-i-sq",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:complex-left-distrib",
           "premise": "F:creal-add-comm"
         },
         {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-add-assoc"
+        },
+        {
           "consequent": "F:complex-mul-assoc",
           "premise": "F:creal-add-comm"
         },
         {
           "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:complex-mul-comm",
@@ -157,7 +395,47 @@
         },
         {
           "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:complex-mul-conj",
@@ -165,7 +443,59 @@
         },
         {
           "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:complex-mul-inv-cancel",
@@ -173,11 +503,55 @@
         },
         {
           "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-mul-congr"
         },
         {
           "consequent": "F:complex-mul-inv-cancel",
           "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:complex-mul-sub-one-geom",
@@ -185,11 +559,119 @@
         },
         {
           "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
           "premise": "F:creal-add-comm"
         },
         {
           "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:complex-ring-constructed-axiom-free",
@@ -197,15 +679,107 @@
         },
         {
           "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-le-trans"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-mul-assoc"
         },
         {
           "consequent": "F:cpoint-cauchy-schwarz",
           "premise": "F:creal-mul-comm"
         },
         {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-add-assoc"
+        },
+        {
           "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-assoc"
         },
         {
           "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
@@ -213,7 +787,27 @@
         },
         {
           "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
           "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:cpoint-dot-comm",
+          "premise": "F:creal-add-congr"
         },
         {
           "consequent": "F:cpoint-dot-comm",
@@ -224,32 +818,192 @@
           "premise": "F:cpoint-dot-comm"
         },
         {
+          "consequent": "F:cpoint-dot-self-add",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-add",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-add",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-add",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-nonneg",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-nonneg",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-nonneg",
+          "premise": "F:creal-le-trans"
+        },
+        {
           "consequent": "F:cpoint-dot-self-sub",
           "premise": "F:cpoint-dot-comm"
         },
         {
           "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:cpoint-euler-line",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-mul-assoc"
         },
         {
           "consequent": "F:cpoint-euler-line",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-mul-congr"
         },
         {
           "consequent": "F:cpoint-euler-line",
           "premise": "F:creal-mul-inv-cancel"
         },
         {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-assoc"
+        },
+        {
           "consequent": "F:cpoint-lagrange-identity",
           "premise": "F:creal-add-comm"
         },
         {
           "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:cpoint-parallelogram-law",
@@ -265,7 +1019,43 @@
         },
         {
           "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:cpoint-pythagoras",
@@ -273,7 +1063,43 @@
         },
         {
           "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:cpoint-pythagoras-distsq",
@@ -285,15 +1111,87 @@
         },
         {
           "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-left-distrib"
         },
         {
           "consequent": "F:cpoint-stewart",
           "premise": "F:creal-mul-comm"
         },
         {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-neg-congr"
+        },
+        {
           "consequent": "F:cpoint-stewart-median",
           "premise": "F:cpoint-stewart"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:creal-mul-congr"
         },
         {
           "consequent": "F:cpoint-thales",
@@ -301,27 +1199,191 @@
         },
         {
           "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-thales",
           "premise": "F:creal-add-comm"
         },
         {
           "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:cpoint-thales",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-mul-congr"
         },
         {
           "consequent": "F:cpoint-thales",
           "premise": "F:creal-mul-inv-cancel"
         },
         {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:creal-add-assoc",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-add-assoc",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-add-assoc",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-add-assoc",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-add-comm",
+          "premise": "F:creal-equiv-of-pointwise"
+        },
+        {
           "consequent": "F:creal-add-comm",
           "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-add-neg",
+          "premise": "F:creal-equiv-of-pointwise"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:creal-add-zero",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-add-zero",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-archimedean",
+          "premise": "F:creal-bound-within"
         },
         {
           "consequent": "F:creal-archimedean",
           "premise": "F:rat-le-trans"
         },
         {
+          "consequent": "F:creal-bound-within",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-bound-within",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-bound-within",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-bound-within",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-converges-unique",
+          "premise": "F:creal-equiv-of-bounded"
+        },
+        {
           "consequent": "F:creal-converges-unique",
           "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-equiv-of-bounded",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-equiv-of-bounded",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-equiv-of-bounded",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-equiv-trans",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-equiv-trans",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-equiv-trans",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:creal-hasderivative-mul",
@@ -329,23 +1391,179 @@
         },
         {
           "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-le-trans"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
           "premise": "F:creal-mul-comm"
         },
         {
           "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
           "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:nat-mul-one"
         },
         {
           "consequent": "F:creal-hasderivative-mul",
           "premise": "F:rat-mul-comm"
         },
         {
+          "consequent": "F:creal-le-trans",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-le-trans",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-le-trans",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:creal-bound-within"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:creal-equiv-of-bounded"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:rat-left-distrib"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:creal-bound-within"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:creal-equiv-of-bounded"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:rat-mul-assoc"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-comm",
+          "premise": "F:creal-equiv-of-pointwise"
+        },
+        {
           "consequent": "F:creal-mul-comm",
           "premise": "F:nat-add-comm"
         },
         {
           "consequent": "F:creal-mul-comm",
           "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-congr",
+          "premise": "F:creal-bound-within"
+        },
+        {
+          "consequent": "F:creal-mul-congr",
+          "premise": "F:creal-equiv-of-bounded"
+        },
+        {
+          "consequent": "F:creal-mul-congr",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-mul-congr",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-mul-congr",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:creal-equiv-of-bounded"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:nat-mul-one"
         },
         {
           "consequent": "F:creal-mul-inv-cancel",
@@ -364,16 +1582,104 @@
           "premise": "F:rat-mul-comm"
         },
         {
+          "consequent": "F:creal-mul-one",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-mul-one",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-add-assoc"
+        },
+        {
           "consequent": "F:creal-mul-sub-one-geom",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-left-distrib"
         },
         {
           "consequent": "F:creal-mul-sub-one-geom",
           "premise": "F:creal-mul-comm"
         },
         {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:creal-mul-zero",
+          "premise": "F:creal-equiv-of-pointwise"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-add-assoc"
+        },
+        {
           "consequent": "F:creal-sumrange-telescope",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-equiv-trans"
         },
         {
           "consequent": "F:determinant-multiplicative-over-constructed-rationals",
@@ -492,6 +1798,10 @@
           "premise": "F:nat-gcd-dvd-right"
         },
         {
+          "consequent": "F:int-gcd-comm",
+          "premise": "F:nat-zero-mul"
+        },
+        {
           "consequent": "F:int-left-distrib",
           "premise": "F:int-add-assoc"
         },
@@ -520,8 +1830,24 @@
           "premise": "F:nat-mul-comm"
         },
         {
+          "consequent": "F:int-no-integer-strictly-between-zero-and-one",
+          "premise": "F:nat-le-of-succ-le-succ"
+        },
+        {
+          "consequent": "F:int-no-integer-strictly-between-zero-and-one",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:int-no-integer-strictly-between-zero-and-one",
+          "premise": "F:nat-not-succ-le-zero"
+        },
+        {
           "consequent": "F:int-sq-nonneg",
           "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:int-sq-nonneg",
+          "premise": "F:nat-zero-le"
         },
         {
           "consequent": "F:int-sub-nat-nat-elim",
@@ -530,6 +1856,10 @@
         {
           "consequent": "F:int-sub-nat-nat-elim",
           "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-elim",
+          "premise": "F:nat-le-total"
         },
         {
           "consequent": "F:int-sub-nat-nat-shift",
@@ -908,6 +2238,10 @@
           "premise": "F:nat-add-comm"
         },
         {
+          "consequent": "F:nat-add-sub-cancel-left",
+          "premise": "F:nat-le-add-right"
+        },
+        {
           "consequent": "F:nat-choose-symm",
           "premise": "F:nat-add-comm"
         },
@@ -921,7 +2255,19 @@
         },
         {
           "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-le-of-succ-le-succ"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-lt-or-eq-of-le"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
           "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-zero-le"
         },
         {
           "consequent": "F:nat-coprime-of-bezout-one",
@@ -948,8 +2294,44 @@
           "premise": "F:nat-gcd-dvd-right"
         },
         {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-not-succ-le-zero"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-zero-le"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-zero-mul"
+        },
+        {
+          "consequent": "F:nat-div-mod-exists",
+          "premise": "F:nat-lt-or-eq-of-le"
+        },
+        {
           "consequent": "F:nat-div-mod-unique",
           "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-le-total"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-lt-irrefl"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-lt-or-eq-of-le"
         },
         {
           "consequent": "F:nat-dvd-add",
@@ -961,7 +2343,15 @@
         },
         {
           "consequent": "F:nat-dvd-gcd",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd",
           "premise": "F:nat-mod-lt"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd",
+          "premise": "F:nat-zero-le"
         },
         {
           "consequent": "F:nat-dvd-gcd-iff",
@@ -1005,6 +2395,14 @@
         },
         {
           "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
           "premise": "F:nat-mul-assoc"
         },
         {
@@ -1020,12 +2418,44 @@
           "premise": "F:nat-dvd-add"
         },
         {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-lt-or-eq-of-le"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-zero-le"
+        },
+        {
           "consequent": "F:nat-exists-prime-gt",
           "premise": "F:nat-dvd-add"
         },
         {
           "consequent": "F:nat-exists-prime-gt",
           "premise": "F:nat-exists-prime-dvd"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-le-total"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-lt-or-eq-of-le"
         },
         {
           "consequent": "F:nat-exists-prime-gt",
@@ -1045,6 +2475,10 @@
         },
         {
           "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
           "premise": "F:nat-left-distrib"
         },
         {
@@ -1064,16 +2498,64 @@
           "premise": "F:nat-zero-add"
         },
         {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-zero-le"
+        },
+        {
           "consequent": "F:nat-gcd-mul-lcm",
           "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:nat-gcd-mul-lcm",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-gcd-mul-lcm",
+          "premise": "F:nat-zero-le"
+        },
+        {
+          "consequent": "F:nat-gcd-mul-lcm",
+          "premise": "F:nat-zero-mul"
+        },
+        {
+          "consequent": "F:nat-gcd-succ",
+          "premise": "F:nat-le-succ-succ"
         },
         {
           "consequent": "F:nat-gcd-succ",
           "premise": "F:nat-mod-lt"
         },
         {
+          "consequent": "F:nat-gcd-succ",
+          "premise": "F:nat-zero-le"
+        },
+        {
+          "consequent": "F:nat-le-of-succ-le-succ",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:nat-le-total",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-le-total",
+          "premise": "F:nat-zero-le"
+        },
+        {
           "consequent": "F:nat-left-distrib",
           "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-lt-irrefl",
+          "premise": "F:nat-le-of-succ-le-succ"
+        },
+        {
+          "consequent": "F:nat-lt-irrefl",
+          "premise": "F:nat-not-succ-le-zero"
+        },
+        {
+          "consequent": "F:nat-lt-or-eq-of-le",
+          "premise": "F:nat-le-succ-succ"
         },
         {
           "consequent": "F:nat-mod-eq-zero-iff-dvd",
@@ -1081,15 +2563,67 @@
         },
         {
           "consequent": "F:nat-mod-eq-zero-iff-dvd",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-mod-eq-zero-iff-dvd",
           "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-mod-eq-zero-iff-dvd",
+          "premise": "F:nat-zero-le"
+        },
+        {
+          "consequent": "F:nat-mod-eq-zero-iff-dvd",
+          "premise": "F:nat-zero-mul"
+        },
+        {
+          "consequent": "F:nat-mod-lt",
+          "premise": "F:nat-not-succ-le-zero"
         },
         {
           "consequent": "F:nat-mul-assoc",
           "premise": "F:nat-left-distrib"
         },
         {
+          "consequent": "F:nat-mul-comm",
+          "premise": "F:nat-zero-mul"
+        },
+        {
           "consequent": "F:nat-mul-one",
           "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-one-le-factorial",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:nat-one-le-factorial",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-one-le-factorial",
+          "premise": "F:nat-one-le-mul"
+        },
+        {
+          "consequent": "F:nat-one-le-factorial",
+          "premise": "F:nat-zero-le"
+        },
+        {
+          "consequent": "F:nat-one-le-mul",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-one-le-mul",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:nat-one-le-mul",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:nat-one-le-mul",
+          "premise": "F:nat-not-succ-le-zero"
         },
         {
           "consequent": "F:nat-pow-add",
@@ -1104,8 +2638,16 @@
           "premise": "F:nat-mul-one"
         },
         {
+          "consequent": "F:nat-pow-prime-modeq-self",
+          "premise": "F:nat-le-trans"
+        },
+        {
           "consequent": "F:nat-prime-dvd-choose",
           "premise": "F:nat-euclid-lemma"
+        },
+        {
+          "consequent": "F:nat-prime-dvd-choose",
+          "premise": "F:nat-lt-irrefl"
         },
         {
           "consequent": "F:nat-prime-dvd-choose",
@@ -1114,6 +2656,10 @@
         {
           "consequent": "F:nat-prime-dvd-choose",
           "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-prime-dvd-choose",
+          "premise": "F:nat-zero-le"
         },
         {
           "consequent": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
@@ -1144,12 +2690,20 @@
           "premise": "F:nat-mul-assoc"
         },
         {
+          "consequent": "F:rat-add-assoc",
+          "premise": "F:nat-one-le-mul"
+        },
+        {
           "consequent": "F:rat-add-comm",
           "premise": "F:int-add-comm"
         },
         {
           "consequent": "F:rat-add-comm",
           "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-add-comm",
+          "premise": "F:nat-one-le-mul"
         },
         {
           "consequent": "F:rat-add-neg-inverse",
@@ -1232,6 +2786,10 @@
           "premise": "F:nat-mul-assoc"
         },
         {
+          "consequent": "F:rat-left-distrib",
+          "premise": "F:nat-one-le-mul"
+        },
+        {
           "consequent": "F:rat-mul-assoc",
           "premise": "F:int-mul-assoc"
         },
@@ -1240,12 +2798,20 @@
           "premise": "F:nat-mul-assoc"
         },
         {
+          "consequent": "F:rat-mul-assoc",
+          "premise": "F:nat-one-le-mul"
+        },
+        {
           "consequent": "F:rat-mul-comm",
           "premise": "F:int-mul-comm"
         },
         {
           "consequent": "F:rat-mul-comm",
           "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-mul-comm",
+          "premise": "F:nat-one-le-mul"
         },
         {
           "consequent": "F:rat-mul-renormalises",
@@ -1316,17 +2882,17 @@
           "premise": "F:prodrange-collapses-under-a-fixed-point-free-involution"
         }
       ],
-      "isolated": 203,
-      "max_depth": 10,
-      "nodes": 458,
-      "with_dependencies": 183,
-      "with_dependents": 141
+      "isolated": 200,
+      "max_depth": 12,
+      "nodes": 488,
+      "with_dependencies": 208,
+      "with_dependents": 172
     },
-    "facts": 458,
+    "facts": 488,
     "kernel_dependency_coverage": {
       "authority_gate": "scripts/check-fact-depends-derived.py",
-      "facts": 199,
-      "named": 87,
+      "facts": 229,
+      "named": 117,
       "unnamed_fact_ids": [
         "F:cauchy-schwarz-over-constructed-plane",
         "F:complex-add-comm",
@@ -1445,18 +3011,20 @@
     "kernel_lean_graph": {
       "dangling": [],
       "depth_histogram": {
-        "1": 80,
-        "10": 1,
-        "2": 29,
-        "3": 18,
-        "4": 16,
-        "5": 12,
-        "6": 26,
-        "7": 10,
-        "8": 5,
-        "9": 2
+        "1": 85,
+        "10": 5,
+        "11": 2,
+        "12": 1,
+        "2": 34,
+        "3": 20,
+        "4": 14,
+        "5": 15,
+        "6": 16,
+        "7": 15,
+        "8": 17,
+        "9": 5
       },
-      "edges": 235,
+      "edges": 626,
       "edges_detail": [
         {
           "consequent": "F:cassini-as-determinant-of-a-matrix-power",
@@ -1468,7 +3036,35 @@
         },
         {
           "consequent": "F:complex-add-comm",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:complex-add-comm",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-admits-no-compatible-order",
+          "premise": "F:complex-i-sq"
         },
         {
           "consequent": "F:complex-admits-no-compatible-order",
@@ -1476,15 +3072,91 @@
         },
         {
           "consequent": "F:complex-conj-add",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:complex-conj-add",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:complex-conj-mul",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-left-distrib"
         },
         {
           "consequent": "F:complex-conj-mul",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:complex-geom-series-div",
@@ -1504,19 +3176,151 @@
         },
         {
           "consequent": "F:complex-i-sq",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-i-sq",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:complex-left-distrib",
           "premise": "F:creal-add-comm"
         },
         {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-add-assoc"
+        },
+        {
           "consequent": "F:complex-mul-assoc",
           "premise": "F:creal-add-comm"
         },
         {
           "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:complex-mul-comm",
@@ -1524,7 +3328,47 @@
         },
         {
           "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:complex-mul-conj",
@@ -1532,7 +3376,59 @@
         },
         {
           "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:complex-mul-inv-cancel",
@@ -1540,11 +3436,55 @@
         },
         {
           "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-mul-congr"
         },
         {
           "consequent": "F:complex-mul-inv-cancel",
           "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:complex-mul-sub-one-geom",
@@ -1552,11 +3492,119 @@
         },
         {
           "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
           "premise": "F:creal-add-comm"
         },
         {
           "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:complex-ring-constructed-axiom-free",
@@ -1564,15 +3612,107 @@
         },
         {
           "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-le-trans"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-mul-assoc"
         },
         {
           "consequent": "F:cpoint-cauchy-schwarz",
           "premise": "F:creal-mul-comm"
         },
         {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-add-assoc"
+        },
+        {
           "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-assoc"
         },
         {
           "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
@@ -1580,7 +3720,27 @@
         },
         {
           "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
           "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:cpoint-dot-comm",
+          "premise": "F:creal-add-congr"
         },
         {
           "consequent": "F:cpoint-dot-comm",
@@ -1591,32 +3751,192 @@
           "premise": "F:cpoint-dot-comm"
         },
         {
+          "consequent": "F:cpoint-dot-self-add",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-add",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-add",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-add",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-nonneg",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-nonneg",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-nonneg",
+          "premise": "F:creal-le-trans"
+        },
+        {
           "consequent": "F:cpoint-dot-self-sub",
           "premise": "F:cpoint-dot-comm"
         },
         {
           "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:cpoint-euler-line",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-mul-assoc"
         },
         {
           "consequent": "F:cpoint-euler-line",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-mul-congr"
         },
         {
           "consequent": "F:cpoint-euler-line",
           "premise": "F:creal-mul-inv-cancel"
         },
         {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-assoc"
+        },
+        {
           "consequent": "F:cpoint-lagrange-identity",
           "premise": "F:creal-add-comm"
         },
         {
           "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:cpoint-parallelogram-law",
@@ -1632,7 +3952,43 @@
         },
         {
           "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:cpoint-pythagoras",
@@ -1640,7 +3996,43 @@
         },
         {
           "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-neg-congr"
         },
         {
           "consequent": "F:cpoint-pythagoras-distsq",
@@ -1652,15 +4044,87 @@
         },
         {
           "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-left-distrib"
         },
         {
           "consequent": "F:cpoint-stewart",
           "premise": "F:creal-mul-comm"
         },
         {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-neg-congr"
+        },
+        {
           "consequent": "F:cpoint-stewart-median",
           "premise": "F:cpoint-stewart"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:creal-mul-congr"
         },
         {
           "consequent": "F:cpoint-thales",
@@ -1668,27 +4132,191 @@
         },
         {
           "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:cpoint-thales",
           "premise": "F:creal-add-comm"
         },
         {
           "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-right-cancel"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:cpoint-thales",
           "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-mul-congr"
         },
         {
           "consequent": "F:cpoint-thales",
           "premise": "F:creal-mul-inv-cancel"
         },
         {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:creal-add-assoc",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-add-assoc",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-add-assoc",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-add-assoc",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-add-comm",
+          "premise": "F:creal-equiv-of-pointwise"
+        },
+        {
           "consequent": "F:creal-add-comm",
           "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-add-neg",
+          "premise": "F:creal-equiv-of-pointwise"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-add-assoc"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:creal-add-right-cancel",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:creal-add-zero",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-add-zero",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-archimedean",
+          "premise": "F:creal-bound-within"
         },
         {
           "consequent": "F:creal-archimedean",
           "premise": "F:rat-le-trans"
         },
         {
+          "consequent": "F:creal-bound-within",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-bound-within",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-bound-within",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-bound-within",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-converges-unique",
+          "premise": "F:creal-equiv-of-bounded"
+        },
+        {
           "consequent": "F:creal-converges-unique",
           "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-equiv-of-bounded",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-equiv-of-bounded",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-equiv-of-bounded",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-equiv-trans",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-equiv-trans",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-equiv-trans",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-add-assoc"
         },
         {
           "consequent": "F:creal-hasderivative-mul",
@@ -1696,23 +4324,179 @@
         },
         {
           "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-le-trans"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-left-distrib"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-mul-assoc"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
           "premise": "F:creal-mul-comm"
         },
         {
           "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
           "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:nat-mul-one"
         },
         {
           "consequent": "F:creal-hasderivative-mul",
           "premise": "F:rat-mul-comm"
         },
         {
+          "consequent": "F:creal-le-trans",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-le-trans",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-le-trans",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:creal-bound-within"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:creal-equiv-of-bounded"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:rat-left-distrib"
+        },
+        {
+          "consequent": "F:creal-left-distrib",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:creal-bound-within"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:creal-equiv-of-bounded"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:rat-mul-assoc"
+        },
+        {
+          "consequent": "F:creal-mul-assoc",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-comm",
+          "premise": "F:creal-equiv-of-pointwise"
+        },
+        {
           "consequent": "F:creal-mul-comm",
           "premise": "F:nat-add-comm"
         },
         {
           "consequent": "F:creal-mul-comm",
           "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-congr",
+          "premise": "F:creal-bound-within"
+        },
+        {
+          "consequent": "F:creal-mul-congr",
+          "premise": "F:creal-equiv-of-bounded"
+        },
+        {
+          "consequent": "F:creal-mul-congr",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-mul-congr",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-mul-congr",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:creal-equiv-of-bounded"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:nat-mul-one"
         },
         {
           "consequent": "F:creal-mul-inv-cancel",
@@ -1731,16 +4515,104 @@
           "premise": "F:rat-mul-comm"
         },
         {
+          "consequent": "F:creal-mul-one",
+          "premise": "F:creal-regular"
+        },
+        {
+          "consequent": "F:creal-mul-one",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-add-assoc"
+        },
+        {
           "consequent": "F:creal-mul-sub-one-geom",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-equiv-trans"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-left-distrib"
         },
         {
           "consequent": "F:creal-mul-sub-one-geom",
           "premise": "F:creal-mul-comm"
         },
         {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-mul-congr"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-mul-one"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-mul-zero"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-neg-congr"
+        },
+        {
+          "consequent": "F:creal-mul-zero",
+          "premise": "F:creal-equiv-of-pointwise"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-add-assoc"
+        },
+        {
           "consequent": "F:creal-sumrange-telescope",
           "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-add-congr"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-add-neg"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-add-zero"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-equiv-refl"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-equiv-symm"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-equiv-trans"
         },
         {
           "consequent": "F:determinant-multiplicative-over-constructed-rationals",
@@ -1847,6 +4719,10 @@
           "premise": "F:nat-gcd-dvd-right"
         },
         {
+          "consequent": "F:int-gcd-comm",
+          "premise": "F:nat-zero-mul"
+        },
+        {
           "consequent": "F:int-left-distrib",
           "premise": "F:int-add-assoc"
         },
@@ -1875,8 +4751,24 @@
           "premise": "F:nat-mul-comm"
         },
         {
+          "consequent": "F:int-no-integer-strictly-between-zero-and-one",
+          "premise": "F:nat-le-of-succ-le-succ"
+        },
+        {
+          "consequent": "F:int-no-integer-strictly-between-zero-and-one",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:int-no-integer-strictly-between-zero-and-one",
+          "premise": "F:nat-not-succ-le-zero"
+        },
+        {
           "consequent": "F:int-sq-nonneg",
           "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:int-sq-nonneg",
+          "premise": "F:nat-zero-le"
         },
         {
           "consequent": "F:int-sub-nat-nat-elim",
@@ -1885,6 +4777,10 @@
         {
           "consequent": "F:int-sub-nat-nat-elim",
           "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-elim",
+          "premise": "F:nat-le-total"
         },
         {
           "consequent": "F:int-sub-nat-nat-shift",
@@ -1999,6 +4895,10 @@
           "premise": "F:nat-add-comm"
         },
         {
+          "consequent": "F:nat-add-sub-cancel-left",
+          "premise": "F:nat-le-add-right"
+        },
+        {
           "consequent": "F:nat-choose-symm",
           "premise": "F:nat-add-comm"
         },
@@ -2012,7 +4912,19 @@
         },
         {
           "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-le-of-succ-le-succ"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-lt-or-eq-of-le"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
           "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-zero-le"
         },
         {
           "consequent": "F:nat-coprime-of-bezout-one",
@@ -2039,8 +4951,44 @@
           "premise": "F:nat-gcd-dvd-right"
         },
         {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-not-succ-le-zero"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-zero-le"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-zero-mul"
+        },
+        {
+          "consequent": "F:nat-div-mod-exists",
+          "premise": "F:nat-lt-or-eq-of-le"
+        },
+        {
           "consequent": "F:nat-div-mod-unique",
           "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-le-total"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-lt-irrefl"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-lt-or-eq-of-le"
         },
         {
           "consequent": "F:nat-dvd-add",
@@ -2052,7 +5000,15 @@
         },
         {
           "consequent": "F:nat-dvd-gcd",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd",
           "premise": "F:nat-mod-lt"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd",
+          "premise": "F:nat-zero-le"
         },
         {
           "consequent": "F:nat-dvd-gcd-iff",
@@ -2096,6 +5052,14 @@
         },
         {
           "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
           "premise": "F:nat-mul-assoc"
         },
         {
@@ -2111,12 +5075,44 @@
           "premise": "F:nat-dvd-add"
         },
         {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-lt-or-eq-of-le"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-zero-le"
+        },
+        {
           "consequent": "F:nat-exists-prime-gt",
           "premise": "F:nat-dvd-add"
         },
         {
           "consequent": "F:nat-exists-prime-gt",
           "premise": "F:nat-exists-prime-dvd"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-le-total"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-lt-or-eq-of-le"
         },
         {
           "consequent": "F:nat-exists-prime-gt",
@@ -2136,6 +5132,10 @@
         },
         {
           "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
           "premise": "F:nat-left-distrib"
         },
         {
@@ -2155,16 +5155,64 @@
           "premise": "F:nat-zero-add"
         },
         {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-zero-le"
+        },
+        {
           "consequent": "F:nat-gcd-mul-lcm",
           "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:nat-gcd-mul-lcm",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-gcd-mul-lcm",
+          "premise": "F:nat-zero-le"
+        },
+        {
+          "consequent": "F:nat-gcd-mul-lcm",
+          "premise": "F:nat-zero-mul"
+        },
+        {
+          "consequent": "F:nat-gcd-succ",
+          "premise": "F:nat-le-succ-succ"
         },
         {
           "consequent": "F:nat-gcd-succ",
           "premise": "F:nat-mod-lt"
         },
         {
+          "consequent": "F:nat-gcd-succ",
+          "premise": "F:nat-zero-le"
+        },
+        {
+          "consequent": "F:nat-le-of-succ-le-succ",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:nat-le-total",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-le-total",
+          "premise": "F:nat-zero-le"
+        },
+        {
           "consequent": "F:nat-left-distrib",
           "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-lt-irrefl",
+          "premise": "F:nat-le-of-succ-le-succ"
+        },
+        {
+          "consequent": "F:nat-lt-irrefl",
+          "premise": "F:nat-not-succ-le-zero"
+        },
+        {
+          "consequent": "F:nat-lt-or-eq-of-le",
+          "premise": "F:nat-le-succ-succ"
         },
         {
           "consequent": "F:nat-mod-eq-zero-iff-dvd",
@@ -2172,15 +5220,67 @@
         },
         {
           "consequent": "F:nat-mod-eq-zero-iff-dvd",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-mod-eq-zero-iff-dvd",
           "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-mod-eq-zero-iff-dvd",
+          "premise": "F:nat-zero-le"
+        },
+        {
+          "consequent": "F:nat-mod-eq-zero-iff-dvd",
+          "premise": "F:nat-zero-mul"
+        },
+        {
+          "consequent": "F:nat-mod-lt",
+          "premise": "F:nat-not-succ-le-zero"
         },
         {
           "consequent": "F:nat-mul-assoc",
           "premise": "F:nat-left-distrib"
         },
         {
+          "consequent": "F:nat-mul-comm",
+          "premise": "F:nat-zero-mul"
+        },
+        {
           "consequent": "F:nat-mul-one",
           "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-one-le-factorial",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:nat-one-le-factorial",
+          "premise": "F:nat-le-succ-succ"
+        },
+        {
+          "consequent": "F:nat-one-le-factorial",
+          "premise": "F:nat-one-le-mul"
+        },
+        {
+          "consequent": "F:nat-one-le-factorial",
+          "premise": "F:nat-zero-le"
+        },
+        {
+          "consequent": "F:nat-one-le-mul",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-one-le-mul",
+          "premise": "F:nat-le-add-right"
+        },
+        {
+          "consequent": "F:nat-one-le-mul",
+          "premise": "F:nat-le-trans"
+        },
+        {
+          "consequent": "F:nat-one-le-mul",
+          "premise": "F:nat-not-succ-le-zero"
         },
         {
           "consequent": "F:nat-pow-add",
@@ -2195,8 +5295,16 @@
           "premise": "F:nat-mul-one"
         },
         {
+          "consequent": "F:nat-pow-prime-modeq-self",
+          "premise": "F:nat-le-trans"
+        },
+        {
           "consequent": "F:nat-prime-dvd-choose",
           "premise": "F:nat-euclid-lemma"
+        },
+        {
+          "consequent": "F:nat-prime-dvd-choose",
+          "premise": "F:nat-lt-irrefl"
         },
         {
           "consequent": "F:nat-prime-dvd-choose",
@@ -2205,6 +5313,10 @@
         {
           "consequent": "F:nat-prime-dvd-choose",
           "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-prime-dvd-choose",
+          "premise": "F:nat-zero-le"
         },
         {
           "consequent": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
@@ -2231,12 +5343,20 @@
           "premise": "F:nat-mul-assoc"
         },
         {
+          "consequent": "F:rat-add-assoc",
+          "premise": "F:nat-one-le-mul"
+        },
+        {
           "consequent": "F:rat-add-comm",
           "premise": "F:int-add-comm"
         },
         {
           "consequent": "F:rat-add-comm",
           "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-add-comm",
+          "premise": "F:nat-one-le-mul"
         },
         {
           "consequent": "F:rat-add-neg-inverse",
@@ -2319,6 +5439,10 @@
           "premise": "F:nat-mul-assoc"
         },
         {
+          "consequent": "F:rat-left-distrib",
+          "premise": "F:nat-one-le-mul"
+        },
+        {
           "consequent": "F:rat-mul-assoc",
           "premise": "F:int-mul-assoc"
         },
@@ -2327,12 +5451,20 @@
           "premise": "F:nat-mul-assoc"
         },
         {
+          "consequent": "F:rat-mul-assoc",
+          "premise": "F:nat-one-le-mul"
+        },
+        {
           "consequent": "F:rat-mul-comm",
           "premise": "F:int-mul-comm"
         },
         {
           "consequent": "F:rat-mul-comm",
           "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-mul-comm",
+          "premise": "F:nat-one-le-mul"
         },
         {
           "consequent": "F:rat-mul-renormalises",
@@ -2399,21 +5531,21 @@
           "premise": "F:prodrange-collapses-under-a-fixed-point-free-involution"
         }
       ],
-      "isolated": 49,
-      "max_depth": 10,
-      "nodes": 199,
+      "isolated": 46,
+      "max_depth": 12,
+      "nodes": 229,
       "statuses": {
-        "proved": 199
+        "proved": 229
       },
       "unsettled": 0,
-      "with_dependencies": 119,
-      "with_dependents": 88
+      "with_dependencies": 144,
+      "with_dependents": 119
     },
     "routes": {
       "(missing)": 193,
       "cas-certificate": 23,
       "imported-kernel-lean": 5,
-      "kernel-lean": 199,
+      "kernel-lean": 229,
       "search-certificate": 12,
       "smt-clausal": 9,
       "smt-term-level": 17
@@ -2422,7 +5554,7 @@
       "computed": 2,
       "conjectured": 3,
       "open": 190,
-      "proved": 259,
+      "proved": 289,
       "refuted": 4
     }
   },
@@ -2527,7 +5659,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "623ce3b6861167e6c76080142d2a6c08ae115e571e0c5e351773a459aa53c02a",
+    "digest": "4058f91b658a362bb623ab7c69eda78ef19ea9ae461622eab90dcf5d8539f8bc",
     "inputs": [
       {
         "bytes": 1939,
@@ -2650,69 +5782,69 @@
         "sha256": "b189142039a4e84d081b03b3a8c4f78ff5486344123d461508464eae8e41f006"
       },
       {
-        "bytes": 4463,
+        "bytes": 4626,
         "path": "artifacts/facts/F-complex-add-comm.json",
-        "sha256": "004d192d72edc347d05d747b3632f21669db7f2cb38add03b8900bcca418b96f"
+        "sha256": "91268f52dfc41f66cfac96b37cf18930a4da19c1c35560399884831b971ac0c1"
       },
       {
-        "bytes": 5239,
+        "bytes": 5261,
         "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
-        "sha256": "12fe02c023d74c00ac95aad8d9de3babd08665a9db4c0cb854de0420ad3e4f16"
+        "sha256": "6bb85e27a5de84525209d3b992c913f94abdd307e1d83a7821e3193b22abd7b4"
       },
       {
-        "bytes": 4418,
+        "bytes": 4629,
         "path": "artifacts/facts/F-complex-conj-add.json",
-        "sha256": "7481dda626467076576245ac9ecfc2843e8394630c7e288effaa170609fce34c"
+        "sha256": "fb7cd7b0416a0ae6c06c3893b660a2590220b1a5a8d8c4275a5ed41717aecff8"
       },
       {
-        "bytes": 4634,
+        "bytes": 4922,
         "path": "artifacts/facts/F-complex-conj-mul.json",
-        "sha256": "ef2608486f31b67aa3bf6afd9c209f00ed0445d7912518af7e25bb2121d0ab05"
+        "sha256": "f61f7c40399863f58a23241f2836225ada56b1b34199dab47420c0d4e344794b"
       },
       {
-        "bytes": 5162,
+        "bytes": 5172,
         "path": "artifacts/facts/F-complex-geom-series-div.json",
-        "sha256": "9b498e397d748ccaa1297df5cc4d4ebb26cae64ad3d7629b98fac52e553fc553"
+        "sha256": "51f8706702dd4bf081ac417d10bc66fafc701a52c76674027266e9e3f2d06d33"
       },
       {
-        "bytes": 4639,
+        "bytes": 4897,
         "path": "artifacts/facts/F-complex-i-sq.json",
-        "sha256": "679604b8141626fdfec279672bd510c8eb4f6c29f28dbc00732f7e0ba5a05b46"
+        "sha256": "cc6b3b18b9b253a21c40d764e847ae27087a9126beb6415455e371d4a003ecef"
       },
       {
-        "bytes": 4573,
+        "bytes": 4837,
         "path": "artifacts/facts/F-complex-left-distrib.json",
-        "sha256": "c6593bfadff3e88a2f4535eff9b931e85064c34bbaae1731e653031e21b553c7"
+        "sha256": "b6387ca93a46b74b0bf6f7586f240a1fb26d2cfc23cf278374041f69acd2ca37"
       },
       {
-        "bytes": 4597,
+        "bytes": 4910,
         "path": "artifacts/facts/F-complex-mul-assoc.json",
-        "sha256": "b3f794cd4da1b659b9c43f3dd87e046a042f2cda91454c5ef007d8f00fc56ae5"
+        "sha256": "16e490bddfbcb6061b78089387ba9c22adbcc313dd8a8dd28c399d95f6161396"
       },
       {
-        "bytes": 4457,
+        "bytes": 4718,
         "path": "artifacts/facts/F-complex-mul-comm.json",
-        "sha256": "32bf8d063792e6ceaed746c0b576e4622b505ddbc89b11ed3485ac222a0e8a18"
+        "sha256": "c1e4169ce74d75736c49bbcda9db2721012eec8a5090cc8c33bf62df9a0cc4ca"
       },
       {
-        "bytes": 4620,
+        "bytes": 4956,
         "path": "artifacts/facts/F-complex-mul-conj.json",
-        "sha256": "bb9f32c5bc48d6d64c2ce9b7dcca429937ac507753aec6740085508c09b92e9b"
+        "sha256": "6cdf99bf1415b1c6f1548291f5a7ebbcb63297765074f80983c4d70017bb405d"
       },
       {
-        "bytes": 5254,
+        "bytes": 5567,
         "path": "artifacts/facts/F-complex-mul-inv-cancel.json",
-        "sha256": "d7b8476c48e0d427eb22e27989c0521003365cde019da0f144e450551c025e38"
+        "sha256": "e5cfc8de308090b46d20a8ae7497ab1f31f6ba865ea48fbc71b4cc52228df9e6"
       },
       {
-        "bytes": 5533,
+        "bytes": 5869,
         "path": "artifacts/facts/F-complex-mul-sub-one-geom.json",
-        "sha256": "eef179cb0b4d49b54306f007c07b50aebe26b7700c97f1b5c6c9a604fe23b501"
+        "sha256": "d29fc19b27d1a0f582ce3b3bdfb98e7c065d8070a6ecb04f129259a47aa8604b"
       },
       {
-        "bytes": 6554,
+        "bytes": 6905,
         "path": "artifacts/facts/F-complex-ring-constructed-axiom-free.json",
-        "sha256": "83d65cc011100d87ad7e255e777ef7f36d4b4fce6a8e2a0783200e3eb94802b1"
+        "sha256": "5ae7d9766ad0430e3ee4bb12128cd631cc681d902b24fba9dbc49f8aed9f93e2"
       },
       {
         "bytes": 9692,
@@ -2735,49 +5867,49 @@
         "sha256": "23030562044c2141035fb075fce6317c942fc8bd5e089906d271bc4b0f18b61f"
       },
       {
-        "bytes": 5953,
+        "bytes": 6312,
         "path": "artifacts/facts/F-cpoint-cauchy-schwarz.json",
-        "sha256": "8392c630c9c0162f5b0c66e06e99c5a60d732feec441e35578ee43dddec951df"
+        "sha256": "617e438c1b532747cb855f595bf4f5e4bdd10d41c9a067776bf7d95f9ab67d8c"
       },
       {
-        "bytes": 8241,
+        "bytes": 8567,
         "path": "artifacts/facts/F-cpoint-ceva-concurrent-of-ratio-product.json",
-        "sha256": "c4e5ad4199422f2d325bc380c3b5104a26570da5fb1fd94e788f12f07afa5b53"
+        "sha256": "2135d78e15685142d8f3fe0e079a25b77bc537c7a36e2c707960edc4901cff11"
       },
       {
-        "bytes": 5268,
+        "bytes": 5293,
         "path": "artifacts/facts/F-cpoint-dot-comm.json",
-        "sha256": "49b0b77c19495a0cd29f5c7dae4b345fdd0174448f59db0f6e74dbf56e9ad530"
+        "sha256": "2b8bcbf62ba54ae57aad693b5c7ca7f76f80e680b8441c123d0fde4f692663eb"
       },
       {
-        "bytes": 5604,
+        "bytes": 5707,
         "path": "artifacts/facts/F-cpoint-dot-self-add.json",
-        "sha256": "49aa13f08dce2b7bf36532dc4542cabf248170d7a41101b96ddaf1229bd2e5fa"
+        "sha256": "eef82645572dee66eed45e0110cd3b5abcd17ab1c23d785957ac8bb295401565"
       },
       {
-        "bytes": 5396,
+        "bytes": 5472,
         "path": "artifacts/facts/F-cpoint-dot-self-nonneg.json",
-        "sha256": "3055c3d52df8f1c7be068f4fca92d61e863611e392949182c583642dc1ef10f3"
+        "sha256": "9b9a43aa5d913809a60fd40eba07a163e9f6d27d57f29483911a81b9d2754f12"
       },
       {
-        "bytes": 5661,
+        "bytes": 5894,
         "path": "artifacts/facts/F-cpoint-dot-self-sub.json",
-        "sha256": "bdc62513ea719a90d02427cdb6fdca95d3eafdaba8579dcbd6bf7420bcc7142d"
+        "sha256": "4f4cf74340acf565e8fcc62c08241a8731e9f359f0ff233d4b27cb6467ffb756"
       },
       {
-        "bytes": 6314,
+        "bytes": 6591,
         "path": "artifacts/facts/F-cpoint-euler-line.json",
-        "sha256": "05bc4cf9b0e1018d7efda3aa7e0ea22885612ddf8241bb61deb02cd65c4b0447"
+        "sha256": "23bfcccf404007ff4e52316119d879ff81c3edc3730553bf54545ac8317d493a"
       },
       {
-        "bytes": 6387,
+        "bytes": 6722,
         "path": "artifacts/facts/F-cpoint-lagrange-identity.json",
-        "sha256": "b8410af244dbb160f5567194c758b9a112aed2cc1ebc3f855dbe067b8a147c50"
+        "sha256": "a7588662c5da575f02bd681f6657afe27bc6696ba021cdce98c5d8f60d460815"
       },
       {
-        "bytes": 6078,
+        "bytes": 6311,
         "path": "artifacts/facts/F-cpoint-parallelogram-law.json",
-        "sha256": "ed5f003fabe7649c9ce3174a8361646d72717a4ba3a8c3357719851ecfcafdca"
+        "sha256": "34f6a968956226a4963638001209e33582fd3142c3cc92e30f778ffd70a51c88"
       },
       {
         "bytes": 5575,
@@ -2785,24 +5917,24 @@
         "sha256": "25c59ec9086b69efdaa028b4c5c382c5f080fbc5d83f54061bf991cdcbd46c0c"
       },
       {
-        "bytes": 5737,
+        "bytes": 5970,
         "path": "artifacts/facts/F-cpoint-pythagoras.json",
-        "sha256": "6cb671b17f3213d1f9048cc880b837ff2d2bcd5332d7a2693cd488e45c26c7e6"
+        "sha256": "0c7bef950bf4e2ae7fc1d0e63f868b4955875bf24279fa2180576bd906055b63"
       },
       {
-        "bytes": 5824,
+        "bytes": 5953,
         "path": "artifacts/facts/F-cpoint-stewart-median.json",
-        "sha256": "2f2a4eeb6195edf3c19111795f122fec5f79a143d5122ce517d14294b7f2c7fc"
+        "sha256": "77d97adc07b9d63922ccb04c01767495518f7b0a55ad0f2c7fd24b60c034c107"
       },
       {
-        "bytes": 6084,
+        "bytes": 6417,
         "path": "artifacts/facts/F-cpoint-stewart.json",
-        "sha256": "969d59487aa5861d945b488129a0dfda31757dfb2420ed5fd3508bef12e141cc"
+        "sha256": "e601905c620516c8ffb5c20e7d73cda9536c1da670ee11885a2fdb1ffb6d61d8"
       },
       {
-        "bytes": 6256,
+        "bytes": 6590,
         "path": "artifacts/facts/F-cpoint-thales.json",
-        "sha256": "3382bb382f948c6ed15db104803443f8d50d182840c1450d681668a10f1ecb7e"
+        "sha256": "94700f69bcd30a1ddc5c6e8f7dece52af73804f0e5016c200b853c9303a79734"
       },
       {
         "bytes": 8370,
@@ -2810,44 +5942,139 @@
         "sha256": "4dba97b11b2fa1874a57975ff50e42cda3fe1eec1602b532be16e466b8e94d7e"
       },
       {
-        "bytes": 4435,
+        "bytes": 4753,
+        "path": "artifacts/facts/F-creal-add-assoc.json",
+        "sha256": "aa49b4aef272c2f917ed6a9640b86b6c4c72ff3365342947dd534f5d99dffd6b"
+      },
+      {
+        "bytes": 4479,
         "path": "artifacts/facts/F-creal-add-comm.json",
-        "sha256": "b37346b2745c267a1632ab3d1b30e3e363bb6f59d964124e525053986985759d"
+        "sha256": "a47b69c22f3918ad586c15d22cce9c3a980301e9c3f4eb8e632fc52c5277657d"
       },
       {
-        "bytes": 4133,
+        "bytes": 5076,
+        "path": "artifacts/facts/F-creal-add-congr.json",
+        "sha256": "a77b8a136dbd7263b4107b6c6886c0da497b74c6c623d62a48da0a3c09afa637"
+      },
+      {
+        "bytes": 4598,
+        "path": "artifacts/facts/F-creal-add-neg.json",
+        "sha256": "32ab8e169ef02209ad117c29f6b4f99ab17b4c33829b372eeaae801ae1a8e935"
+      },
+      {
+        "bytes": 5160,
+        "path": "artifacts/facts/F-creal-add-right-cancel.json",
+        "sha256": "28f8075f12faac859332f276a676382ffc344855bd4f1e805dc9d2ba11bf3645"
+      },
+      {
+        "bytes": 4584,
+        "path": "artifacts/facts/F-creal-add-zero.json",
+        "sha256": "b64026b63f84740bdde7c7c6a2f86f4b9447d2f16156ac1d87f3ae44e9f9dba8"
+      },
+      {
+        "bytes": 4171,
         "path": "artifacts/facts/F-creal-archimedean.json",
-        "sha256": "1b926337dd802dd7b503085eff462eaba502adcdf09c16d987760d98c33084fa"
+        "sha256": "3004e1dac7f8adb0193410ef52904ff24c714881d25760f60ca970b8e767645e"
       },
       {
-        "bytes": 4371,
+        "bytes": 4810,
+        "path": "artifacts/facts/F-creal-bound-within.json",
+        "sha256": "a668b451e924dd31ec8ed1bb6c06fd40a0264aaeefd8f43241c95f75858efef6"
+      },
+      {
+        "bytes": 4413,
         "path": "artifacts/facts/F-creal-converges-unique.json",
-        "sha256": "cc75eb741e8f85c7f44204cf387f5c143aadece3812093e34a845fb47280be2a"
+        "sha256": "06bdc457ab26abc7bd25f808f88e832b182dcd4daf760f17ae93029dc385d0aa"
       },
       {
-        "bytes": 5991,
+        "bytes": 5111,
+        "path": "artifacts/facts/F-creal-equiv-of-bounded.json",
+        "sha256": "b41219e7f1535a3c4847a4128bb228fafd6af56e30611003f7ddb313b56c958f"
+      },
+      {
+        "bytes": 5115,
+        "path": "artifacts/facts/F-creal-equiv-of-pointwise.json",
+        "sha256": "33ab102473c3546df17990097c3f06a6091980727df8da73b1924656e8d423c5"
+      },
+      {
+        "bytes": 4648,
+        "path": "artifacts/facts/F-creal-equiv-refl.json",
+        "sha256": "24bb1adc6cfa483971ab10ad5857b79be5d9d9362befb8b5b722a9c4749fdb07"
+      },
+      {
+        "bytes": 4722,
+        "path": "artifacts/facts/F-creal-equiv-symm.json",
+        "sha256": "ed0c6fabe36e914ad07803460be26a269f56a9b0f6c1ed2548f84e6c78d0b5ee"
+      },
+      {
+        "bytes": 4941,
+        "path": "artifacts/facts/F-creal-equiv-trans.json",
+        "sha256": "32932ef820cc0ccf457d07391c69d80c09a4e031d7a51a62c2b7243e472f8154"
+      },
+      {
+        "bytes": 6397,
         "path": "artifacts/facts/F-creal-hasderivative-mul.json",
-        "sha256": "cd7718a1e20418e3848d2e51ab75efb2a471cde1fbfc13e0c977d2fc19f29ff1"
+        "sha256": "5721f153045b6d36db583ee357cf87a10b50daa7a370481d46a578cdb7776fec"
       },
       {
-        "bytes": 4159,
+        "bytes": 4865,
+        "path": "artifacts/facts/F-creal-le-trans.json",
+        "sha256": "fbedab13edd5ac068ed85606c0866da9382a37aae5d8ba2f0941d8d9e3a0f894"
+      },
+      {
+        "bytes": 4876,
+        "path": "artifacts/facts/F-creal-left-distrib.json",
+        "sha256": "53b426095d5e0aa468aeb67612430f1323995b2f1e0d3c87ba4de05fccc04298"
+      },
+      {
+        "bytes": 4819,
+        "path": "artifacts/facts/F-creal-mul-assoc.json",
+        "sha256": "37309eb2afb4426a4eb3333de2e52a82f881d5ebb99645f9c17f5c44b1c81953"
+      },
+      {
+        "bytes": 4203,
         "path": "artifacts/facts/F-creal-mul-comm.json",
-        "sha256": "422f0fb6b4fab28f14f445eb956324e6b410a583cad0c669853fb9565570277a"
+        "sha256": "9f60d129a90f9c1831d42217c857b2572e6267c01ba3c2bb3b58600aaee583df"
       },
       {
-        "bytes": 4839,
+        "bytes": 4963,
+        "path": "artifacts/facts/F-creal-mul-congr.json",
+        "sha256": "02e62aafe22962a3caa0db60481a1904b1ab2830fb965a38838002151a54afcb"
+      },
+      {
+        "bytes": 4925,
         "path": "artifacts/facts/F-creal-mul-inv-cancel.json",
-        "sha256": "98344270aa49f58d7ff32f29df838025d8ff46d593ef35df7f8cc24910f80c89"
+        "sha256": "ca236b2c2cf41c883f1d3889500de6445e48c744c9e28303b698f9ac6ed3982c"
       },
       {
-        "bytes": 4594,
+        "bytes": 4451,
+        "path": "artifacts/facts/F-creal-mul-one.json",
+        "sha256": "f3881be3fe0ebe5d46fc8ce2de51bb0757781bd2c69df2bb37bb4833fe671f2e"
+      },
+      {
+        "bytes": 4905,
         "path": "artifacts/facts/F-creal-mul-sub-one-geom.json",
-        "sha256": "a8b626c18178e75005da471bfbee79a2f3426b0d91d7aa6324287bb69b4d8991"
+        "sha256": "9b385b100568555d495e48e5e84376c7524e95290309a2fdc10443f82dfb1a6c"
       },
       {
-        "bytes": 4513,
+        "bytes": 4588,
+        "path": "artifacts/facts/F-creal-mul-zero.json",
+        "sha256": "a114c20e2cdc011b725b71a89fdcbb4dbe97953a24600c3a8ced799c6549a1eb"
+      },
+      {
+        "bytes": 4792,
+        "path": "artifacts/facts/F-creal-neg-congr.json",
+        "sha256": "a18df8500b7bd413526ce405fb8b70abd9726e27e0f70b3d48b2a7b2decde89e"
+      },
+      {
+        "bytes": 4876,
+        "path": "artifacts/facts/F-creal-regular.json",
+        "sha256": "fd02faa00f8d9560651108f10c61ac012e8c936f639e9077afcf551870d56f9c"
+      },
+      {
+        "bytes": 4699,
         "path": "artifacts/facts/F-creal-sumrange-telescope.json",
-        "sha256": "d0e0a4fffded326d2e478442da490a8d36ef8807b1fe287e55776b374c413d89"
+        "sha256": "2fc439224e75b3f98e4b113b86ed87afec5d4f32f7de58fd95c5d9158ac14a66"
       },
       {
         "bytes": 4989,
@@ -3100,9 +6327,9 @@
         "sha256": "abe3fdd2588b7397b6eae1d3d4793c80ef8fba4b28940c0026b0b7299ac9cb36"
       },
       {
-        "bytes": 3066,
+        "bytes": 3088,
         "path": "artifacts/facts/F-int-gcd-comm.json",
-        "sha256": "4fd41c1aa003f468fc60634d5fb39b6eedceae5e55fc12aaaa2500763d7d9a74"
+        "sha256": "d2d87460683e5e2712fa74a79160fa46d675f414563fcc11570eadf47d0475c3"
       },
       {
         "bytes": 4359,
@@ -3135,19 +6362,19 @@
         "sha256": "eee27b98e3c47381292ef0dea60f7a6416a0ca0ba2d10078fb66c88591fd280b"
       },
       {
-        "bytes": 4615,
+        "bytes": 4701,
         "path": "artifacts/facts/F-int-no-integer-strictly-between-zero-and-one.json",
-        "sha256": "8d3fc73299b0b4fa9bc041ec0e175a101a8b28242460f4b3f500d9eaaa13a902"
+        "sha256": "9e5df07b03f92f5cbfd8314629925b90a45cda3361384173c83578899723db5e"
       },
       {
-        "bytes": 3673,
+        "bytes": 3694,
         "path": "artifacts/facts/F-int-sq-nonneg.json",
-        "sha256": "af832511b271f848472f96d3a154e07fb557ed2d2cec83c97632c8c85401328a"
+        "sha256": "7f7b2f9e99388ebfbdacb00d4369a4df0addd45bbeb66febb18706634365c08c"
       },
       {
-        "bytes": 5059,
+        "bytes": 5081,
         "path": "artifacts/facts/F-int-sub-nat-nat-elim.json",
-        "sha256": "97b4909ace141147772e58e5872ceefac4ccc49e203472e1d67f7c45034b1ee6"
+        "sha256": "9d84e991f4a9150d7e228f91635f7439a88d0b309fa224497953a06ab94acdaa"
       },
       {
         "bytes": 4983,
@@ -4395,9 +7622,9 @@
         "sha256": "b4e985e302c071330911e0eced3fa606e7fea958ad5bb51753254c7d65d633dd"
       },
       {
-        "bytes": 4095,
+        "bytes": 4121,
         "path": "artifacts/facts/F-nat-add-sub-cancel-left.json",
-        "sha256": "b56de236b009d0a506afccf9f55cd9ba68390a39752d2aaedad1c15050c9498a"
+        "sha256": "48bf4737a22a9766fcc03d20550a22c963d55505f9a71780a4362a9b693c6c1f"
       },
       {
         "bytes": 3459,
@@ -4410,9 +7637,9 @@
         "sha256": "08c33bc951dc2ef906348254b18a70c6ff4aa7ec8a85d298950d7f55ad5aa183"
       },
       {
-        "bytes": 3224,
+        "bytes": 3305,
         "path": "artifacts/facts/F-nat-choose-symm.json",
-        "sha256": "3faecae6851dc1df9e289c88fa734e9e79a374b6765679ea9525ddf25549a988"
+        "sha256": "df45e51531c91a0d5930912e6a1ed43e0fc1b0b198e21755423e23167eeb5a34"
       },
       {
         "bytes": 2944,
@@ -4420,19 +7647,19 @@
         "sha256": "9a89000a7c19d3d6f9d941d452791d6bad226283a6168888cbcc5b874b06dfd8"
       },
       {
-        "bytes": 3869,
+        "bytes": 3968,
         "path": "artifacts/facts/F-nat-coprime-of-bezout-one.json",
-        "sha256": "3a3bbd1b3460229083f6d368c1aa54684eff38c060365c432eff8147e740d08a"
+        "sha256": "6731f540cc377cd89b4ab8f1e19936609a583a4b0c67b135ad743a2c3a2b74d4"
       },
       {
-        "bytes": 4025,
+        "bytes": 4055,
         "path": "artifacts/facts/F-nat-div-mod-exists.json",
-        "sha256": "1f745a1411b856dfe4cd732ca58dbeabbd11e3010801ed6a84e4ab97ea204f00"
+        "sha256": "10315fe0741a718424ee416c921662d64416c2398f5a63fb1097036e1bc4f3e1"
       },
       {
-        "bytes": 3974,
+        "bytes": 4073,
         "path": "artifacts/facts/F-nat-div-mod-unique.json",
-        "sha256": "ea261568f2e245fd908f8f137108db195698c542d04428de0a5f2368bc213589"
+        "sha256": "9c76e80cea0a7d4cf874f85364e63344f8a52544ebafbc63b0cae794e308eb46"
       },
       {
         "bytes": 3735,
@@ -4445,29 +7672,29 @@
         "sha256": "e3bf10ff266c1d767f2c2cd576e8dec9b42fadfe58e87cbfdfbd39f33831c505"
       },
       {
-        "bytes": 3353,
+        "bytes": 3400,
         "path": "artifacts/facts/F-nat-dvd-gcd.json",
-        "sha256": "791e552b4f2e745fb7f06acb33d9eb6feac95b18de2de55b7055b662ebab695e"
+        "sha256": "903b5d9e032198dc3d758544c9da891e6dabf7a26f523f840e7b6f62672d7a0f"
       },
       {
-        "bytes": 6047,
+        "bytes": 6095,
         "path": "artifacts/facts/F-nat-euclid-lemma.json",
-        "sha256": "724d669990fd3d4ae6871a6deb64d3cab82746b2458335bbc50fab7de592100a"
+        "sha256": "0496e4c32e9393d4a1039ec4046c0582272b1555440c6dd0cb7bf0238f4894b9"
       },
       {
-        "bytes": 6650,
+        "bytes": 6747,
         "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
-        "sha256": "2283d1e36fd7b8b331b49a0653a019c13638ac3ec456bbe174504041cb85e906"
+        "sha256": "e8adc77bdb10883c3cb3bba470aa99cf47695fda5a78bbd0fbe62e9e7a912a6c"
       },
       {
-        "bytes": 6574,
+        "bytes": 6672,
         "path": "artifacts/facts/F-nat-exists-prime-gt.json",
-        "sha256": "2c319b5a5a51d0db016325c4fb597084d2a1e2273f97260cb5fd69874dcca537"
+        "sha256": "43e4ab383dcd6549424dbbe7668b6413e2cf4e64bcf3f6b3132b48beabad7a82"
       },
       {
-        "bytes": 4213,
+        "bytes": 4260,
         "path": "artifacts/facts/F-nat-gcd-bezout.json",
-        "sha256": "9f9e4c6b090c51ae5a88dc00d1ae7a8303f39d7d5248b3633a3097ced594ade9"
+        "sha256": "c9cadbbc7c1702ae0f0d105e1a27e05d4f9cf758f4507957b8ac548b20d7049c"
       },
       {
         "bytes": 2942,
@@ -4480,14 +7707,24 @@
         "sha256": "26941b927c1fa486560fb679f9d4a07b4c1444b93d5bf3e4003323ddb4178ffc"
       },
       {
-        "bytes": 3089,
+        "bytes": 3158,
         "path": "artifacts/facts/F-nat-gcd-mul-lcm.json",
-        "sha256": "94061214fff423325b7396deac189860c4cceee5ae2b05ec5d5fb346ec1b26ee"
+        "sha256": "0fd4deb9db610189248f56c7b425bcaaba3fe3c968e9adea3f378abf2f9190a9"
       },
       {
-        "bytes": 4172,
+        "bytes": 4219,
         "path": "artifacts/facts/F-nat-gcd-succ.json",
-        "sha256": "7f9ab4312ed31dd821c1bad8b14fb4fca0faf795ab794e34fefc781b43e576cb"
+        "sha256": "c4cd8be3f145d1551541d9f9777744a6816a61124ffaf8721762d5870632b3e6"
+      },
+      {
+        "bytes": 2527,
+        "path": "artifacts/facts/F-nat-le-add-right.json",
+        "sha256": "a8c944b9d152d0170d99ab1b114332d2b2325767f8838396c593cee3d7056d38"
+      },
+      {
+        "bytes": 2693,
+        "path": "artifacts/facts/F-nat-le-of-succ-le-succ.json",
+        "sha256": "dcd2ec171e4a430eb53a44636d55fa30bfdaee90391ee484faef52080b0d42e3"
       },
       {
         "bytes": 5534,
@@ -4495,9 +7732,24 @@
         "sha256": "f83fac4a9614c03c0a57991e2f1605236fadc46b1910959e4f2740c8c1fd6750"
       },
       {
+        "bytes": 2619,
+        "path": "artifacts/facts/F-nat-le-succ-succ.json",
+        "sha256": "897d482b1ed057f6cc7987a1a890a66407cf5696bf7c2c94e559e7b791d04a04"
+      },
+      {
         "bytes": 5773,
         "path": "artifacts/facts/F-nat-le-succ.json",
         "sha256": "8a9a615b36e22389ec562721ecd412b9f0e4d3bb4619675baa6d51edb27387ef"
+      },
+      {
+        "bytes": 2551,
+        "path": "artifacts/facts/F-nat-le-total.json",
+        "sha256": "e8b88cd5822517ea708351fed9720c2b4aa5d783a10a524e4fea85429a55294a"
+      },
+      {
+        "bytes": 2961,
+        "path": "artifacts/facts/F-nat-le-trans.json",
+        "sha256": "11c096efb23b8276a7de11065d8f99721cfb21aa219036c56c1831d1839f2e8a"
       },
       {
         "bytes": 3679,
@@ -4505,19 +7757,29 @@
         "sha256": "76729b3fe39c6ec6179c47b449a10ac1ca5ccb0d0f33e239ae071262245e0ec3"
       },
       {
+        "bytes": 2547,
+        "path": "artifacts/facts/F-nat-lt-irrefl.json",
+        "sha256": "6d0162476196ac350f9911f0d8a086efcb1914fc7f75e5e2ee49dc6fcfd03132"
+      },
+      {
+        "bytes": 2618,
+        "path": "artifacts/facts/F-nat-lt-or-eq-of-le.json",
+        "sha256": "43e2cf0ef4c0261a770dbc293f02b2ef74a65972438dd93d264e0ebe5ce80deb"
+      },
+      {
         "bytes": 4048,
         "path": "artifacts/facts/F-nat-mod-eq-mul.json",
         "sha256": "4a9fb96036da0e73aa89828ae3f91208ce7061b3150df52e48b9aa0eb8d34516"
       },
       {
-        "bytes": 3122,
+        "bytes": 3191,
         "path": "artifacts/facts/F-nat-mod-eq-zero-iff-dvd.json",
-        "sha256": "148d4e7a9be0bad55e58724c027e634291c63ec24e52b28c86ee9d99d4f5ffc9"
+        "sha256": "1aecff6376e7adfa0b8802b3ebd76f45cf0a3fab4748e8ea5bb3e645e0abadc4"
       },
       {
-        "bytes": 2959,
+        "bytes": 2991,
         "path": "artifacts/facts/F-nat-mod-lt.json",
-        "sha256": "61cbfbfe31ee9a3a1730fcec870b3ac29fc1ed197891a78459ffd72de005739a"
+        "sha256": "ea53317e9af67c015bd983683972d44da8e17d93537a96c4a1d11ce44423a1ef"
       },
       {
         "bytes": 3516,
@@ -4530,9 +7792,9 @@
         "sha256": "8aead86fde616541c3f494d036102deda1ba3c0632c1305b5d4807ffe9ebb0da"
       },
       {
-        "bytes": 3389,
+        "bytes": 3413,
         "path": "artifacts/facts/F-nat-mul-comm.json",
-        "sha256": "2787e7725ab3db13f76557b669e84db5829af752069da626e9ff9b4fa7b4a4e0"
+        "sha256": "8cfaebcdba57f6365a301cc1b344daeb83ff1444f22c87777b1ec434bf8530b9"
       },
       {
         "bytes": 3576,
@@ -4540,9 +7802,19 @@
         "sha256": "ab8e6478591729018339fdb4d57cdef0f62c79f6fe0ee4ccd8374d2e0decd554"
       },
       {
-        "bytes": 2981,
+        "bytes": 2576,
+        "path": "artifacts/facts/F-nat-not-succ-le-zero.json",
+        "sha256": "16d013b01ed84b1dab33debb1eeea5106f14854b0d43559e256b93e25e1fcf84"
+      },
+      {
+        "bytes": 3080,
         "path": "artifacts/facts/F-nat-one-le-factorial.json",
-        "sha256": "80292a9e4ea91974b67939c4a6c8d205feaa23be491a650ce7ed92f8ae2a9d15"
+        "sha256": "e39601c448162773ba04918355aef9b1f63909736b32df0d7198c629a7cc4ce3"
+      },
+      {
+        "bytes": 2704,
+        "path": "artifacts/facts/F-nat-one-le-mul.json",
+        "sha256": "a22d7dfdc0e995e438718696111b30b00ae599622ebdadb04dea091ff66879a2"
       },
       {
         "bytes": 7313,
@@ -4555,14 +7827,14 @@
         "sha256": "220946f1ec8cff07eed7a569bdb72319e717224bd92d6d8539d3ebe1a2fcb356"
       },
       {
-        "bytes": 3529,
+        "bytes": 3553,
         "path": "artifacts/facts/F-nat-pow-prime-modeq-self.json",
-        "sha256": "f1a2542c7fa9fe3085c423d386c27bcf5c884d81217f27f63d6d11cb52db9a83"
+        "sha256": "8efd9056cf7deff03bb09a7fc3329e8fa0e142e5ea85c8134b334f2366915d95"
       },
       {
-        "bytes": 3552,
+        "bytes": 3596,
         "path": "artifacts/facts/F-nat-prime-dvd-choose.json",
-        "sha256": "d699ab0ed9855c23fe9b7bf0eedc9cb3d7719ef98267cb40bd4c9eca60ab0665"
+        "sha256": "3436fe3c1bc7414d60af239104e5ddc60c1bb789fc6c5f94973a5a4816bc0601"
       },
       {
         "bytes": 2469,
@@ -4573,6 +7845,16 @@
         "bytes": 2370,
         "path": "artifacts/facts/F-nat-zero-add.json",
         "sha256": "d518345df6c6194402510e93c75a5b9a9988cac4cd87f2eb39146779b884175c"
+      },
+      {
+        "bytes": 2508,
+        "path": "artifacts/facts/F-nat-zero-le.json",
+        "sha256": "1a285f05b97d68ef65a093659028c86fa6f7e0cd54b99a3d21057cc28bc05fbf"
+      },
+      {
+        "bytes": 2565,
+        "path": "artifacts/facts/F-nat-zero-mul.json",
+        "sha256": "5b77d00a026ce2070a552e2b2eb2cb7fca62456398fedefc829a1eab394835ce"
       },
       {
         "bytes": 8106,
@@ -4650,14 +7932,14 @@
         "sha256": "bcdd70d99fd8dc65f5cb6d44ef50b1461282e9046869a6793674e7eda96f6b0f"
       },
       {
-        "bytes": 3625,
+        "bytes": 3649,
         "path": "artifacts/facts/F-rat-add-assoc.json",
-        "sha256": "929c004d0d0e7524151b48c94cd5bd7f8fbf94fa73b365949934cb977abce057"
+        "sha256": "993100c8ce0f578b21d38a8984f46df22739e88b906e844f12429a891d516d78"
       },
       {
-        "bytes": 4454,
+        "bytes": 4478,
         "path": "artifacts/facts/F-rat-add-comm.json",
-        "sha256": "0507d2c6bbdfdd511cedcf6927b7b3dc3250aba58b92cab3438d80bd5595f796"
+        "sha256": "29b19671b63bf7e33e87ff69e66f6188c736a7a76d879938931866e345c7398b"
       },
       {
         "bytes": 2546,
@@ -4705,19 +7987,19 @@
         "sha256": "ce9c4012f5162cf8e4b3e8faa02479c961f88f0f6b0de8484b120fc98672bd33"
       },
       {
-        "bytes": 3684,
+        "bytes": 3708,
         "path": "artifacts/facts/F-rat-left-distrib.json",
-        "sha256": "3d661603409632d7d91b1f98da3eaa7e7818a875ac3f0636882f4d7013aa5cca"
+        "sha256": "792c17242f26dc944e0389d0aecca7a17129400812f810faf0fe70fa226b4f74"
       },
       {
-        "bytes": 3586,
+        "bytes": 3610,
         "path": "artifacts/facts/F-rat-mul-assoc.json",
-        "sha256": "151f493c19ebbb02ce48c49c3c481d3b950efed34965f0c34f44164c9585c0fa"
+        "sha256": "4b7afa96370951d33a7420da3a5224996e7d9206a0f16355b2671398fc4256a3"
       },
       {
-        "bytes": 3506,
+        "bytes": 3530,
         "path": "artifacts/facts/F-rat-mul-comm.json",
-        "sha256": "f3b33379d829f7f5c249b0abc8ba24197697a6304a689697d9e227e5487841ba"
+        "sha256": "dc694860c1edbaafa8674903da12e84286b226ae7cd9f080b683e21b04d75743"
       },
       {
         "bytes": 4186,
@@ -4940,9 +8222,9 @@
         "sha256": "98361cbd4b978273d5e49270f2614af91755379c5229fbba00812281797493fa"
       },
       {
-        "bytes": 23301,
+        "bytes": 26191,
         "path": "scripts/check-autogenesis-fact-operation.py",
-        "sha256": "f2d9562d9154cd011f1b8d75d239b966221ff2b74c941aec5b69852c619375a1"
+        "sha256": "406895df7b19eecb16d07bfbccec9e370cd9e29176f42d0a4b79cedc0f192464"
       },
       {
         "bytes": 3677,
@@ -4975,9 +8257,9 @@
         "sha256": "224a2672fd9a41730ca47e860a3a6a0b0c605113a924f6066f4a3287422fde81"
       },
       {
-        "bytes": 9542,
+        "bytes": 10406,
         "path": "scripts/check-fact-depends-derived.py",
-        "sha256": "94d3db7ed4a5efb941ceaaa6cdc16f757d28ce2f08126058a12b3be560d5b5b0"
+        "sha256": "922a27f81fe51b62753cd56fdbfc3ebf2fd02fc9b79392d1a2c7811f9a74ec05"
       },
       {
         "bytes": 61229,
@@ -5080,9 +8362,9 @@
         "sha256": "78cc93de6ab3c1fed5378c757f0ebfcbee47e66ecd72c25022755a4707e2b376"
       },
       {
-        "bytes": 45819,
+        "bytes": 49245,
         "path": "scripts/prepare-autogenesis-fact-transaction.py",
-        "sha256": "0c9ea1a70c3f496f81444ee849c2ba91a2c4d61a4e97866f7357017556f25829"
+        "sha256": "cef99776b5569d1aafb0c5618c4c7c71e1bdb7790746f35be559f3e85c86b207"
       },
       {
         "bytes": 14169,

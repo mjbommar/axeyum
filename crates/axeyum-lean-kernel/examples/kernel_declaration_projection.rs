@@ -52,6 +52,30 @@ fn emit(label: &str, kernel: &Kernel) {
 }
 
 fn main() {
+    // RUN THE WHOLE PROJECTION ON A DEEP STACK, not the process's main thread.
+    //
+    // This example builds every constructed prelude, and `Kernel::add_declaration`
+    // recurses deeply enough through them to overflow the default 8 MiB
+    // main-thread stack: `gen-autogenesis-kernel-dependency-projection.py`
+    // shells out to it and got `died with <Signals.SIGABRT: 6>`, so the
+    // projection could not be regenerated at all and had gone stale -- a lane
+    // measured it holding 195 `Rat.*` declarations and zero `det2`, `cramer`
+    // or `fib`.
+    //
+    // Same fix, and the same reasoning, as `theorem_dependency_inventory`:
+    // `--release` happens to survive, but a doc note saying so cannot reach a
+    // caller that does not read it. `complex`/`cpoint`'s own test modules use
+    // `stack_size(64 * 1024 * 1024)`; do it here and every caller works
+    // unchanged, debug or release.
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(run)
+        .expect("spawn the deep-stack worker")
+        .join()
+        .expect("the deep-stack worker must not panic");
+}
+
+fn run() {
     let mut logic = Kernel::new();
     let _ = build_logic_prelude(&mut logic).expect("logic prelude must build");
     emit("logic", &logic);

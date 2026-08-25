@@ -227,6 +227,22 @@
 //! inner telescope alone, verified against a trivial `f = g` instance,
 //! *then* the outer one) rather than as one unverified block.
 //!
+//! **The `within`-swap helper and the inner telescope are now both landed**
+//! — [`within_of_tail_le`] (used inside [`declare_sum_range_tail_within`])
+//! and [`declare_sum_range_tail_cauchy_within`], each kernel-checked and
+//! verified against a trivial `g = (fun _ => zero)` instance
+//! (`creal_tests.rs`). The inner telescope turned out to need no `Rat.neg`
+//! anywhere — the three legs (`CReal.regular` at `(sumRange g q, t, q)`, the
+//! raw Cauchy witness applied at `(q, m)`, `CReal.regular` at `(sumRange g
+//! m, m, t)`) already share consecutive endpoints in the right order, so two
+//! direct `Rat.sub_add_sub` rewrites suffice ([`chain_within3`]) rather than
+//! `declare_converges_cauchy`'s `regroup_middle_four` regrouping — closer to
+//! `declare_limit_dist`'s own two-leg shape, one leg longer, than to the
+//! single-telescope estimate above. **Still open**: the outer telescope
+//! (combining [`declare_sum_range_tail_within`]'s bound with this one's, and
+//! the `Nat.le_total` orientation selection [`declare_sum_range_tail_within_le`]
+//! already supplies), and the two further gaps below.
+//!
 //! ## Two further gaps this slice found, neither in the previous brief
 //!
 //! Even a landed `sumRange_cauchy_of_dominated` does **not** reach `Σ b`
@@ -269,7 +285,8 @@
 
 use super::ring_helpers::add4_comm;
 use super::{
-    CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, div_succ, equiv, sample, shift, within,
+    CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, div_succ, equiv, halves, modulus, sample,
+    shift, within,
 };
 use crate::BinderInfo;
 use crate::KernelError;
@@ -277,6 +294,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
+use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
     nat_rewrite_prop, radd, rat_eq_rewrite, req, rle, rneg, rrefl, rzero,
 };
@@ -301,6 +319,7 @@ pub(super) fn declare_series(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     declare_sum_range_tail_le(d, p)?;
     declare_sum_range_tail_within(d, p)?;
     declare_sum_range_tail_within_le(d, p)?;
+    declare_sum_range_tail_cauchy_within(d, p)?;
     declare_sum_range_seq_equations(d, p)
 }
 
@@ -1761,6 +1780,201 @@ fn declare_sum_range_tail_within_le(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sum_range_tail_within_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.natDivSucc k j`, with `k` a **variable** rather than a literal —
+/// [`div_succ`](super::div_succ) only takes a `u32`, and the Cauchy witness
+/// below needs the modulus at its own free witness `K`.
+fn div_succ_var(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> ExprId {
+    d.const_app(p.rat.nat_div_succ, &[k, j])
+}
+
+/// From `Within (x−y) bxy`, `Within (y−z) byz`, `Within (z−w) bzw`, derive
+/// `Within (x−w) ((bxy+byz)+bzw)` — two applications of `Rat.sub_add_sub`
+/// (`(a−b)+(b−c) ~ a−c`), [`declare_limit_dist`](super::completeness::declare_limit_dist)'s
+/// own two-leg chaining shape one leg longer. Needs no `Rat.neg`/`bounds_neg`
+/// anywhere, unlike
+/// [`declare_converges_cauchy`](super::convergence)'s `regroup_middle_four`:
+/// the three legs here already share consecutive endpoints (`x,y` / `y,z` /
+/// `z,w`) in the right order, so each combining step is a direct
+/// `sub_add_sub` rewrite rather than a four-term regrouping.
+fn chain_within3(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+    w: ExprId,
+    bxy: ExprId,
+    byz: ExprId,
+    bzw: ExprId,
+    pxy: ExprId,
+    pyz: ExprId,
+    pzw: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+
+    // (x-y)+(y-z) ~ x-z, bound bxy+byz.
+    let xy = rsub(d, rat, x, y);
+    let yz = rsub(d, rat, y, z);
+    let (lxy, rxy) = halves(d, p, xy, bxy, pxy);
+    let (lyz, ryz) = halves(d, p, yz, byz, pyz);
+    let combined1 = d.lemma(rat.bounds_add, &[xy, bxy, yz, byz, lxy, rxy, lyz, ryz]);
+    let xy_plus_yz = radd(d, xy, yz);
+    let xz = rsub(d, rat, x, z);
+    let fuse1 = d.lemma(rat.sub_add_sub, &[x, y, z]); // Eq ((x-y)+(y-z)) (x-z)
+    let bound1 = radd(d, bxy, byz);
+    let at_xz = rat_eq_rewrite(d, xy_plus_yz, xz, fuse1, combined1, &|d, t| {
+        within(d, p, t, bound1)
+    });
+
+    // (x-z)+(z-w) ~ x-w, bound (bxy+byz)+bzw.
+    let (lxz, rxz) = halves(d, p, xz, bound1, at_xz);
+    let zw = rsub(d, rat, z, w);
+    let (lzw, rzw) = halves(d, p, zw, bzw, pzw);
+    let combined2 = d.lemma(rat.bounds_add, &[xz, bound1, zw, bzw, lxz, rxz, lzw, rzw]);
+    let xz_plus_zw = radd(d, xz, zw);
+    let xw = rsub(d, rat, x, w);
+    let fuse2 = d.lemma(rat.sub_add_sub, &[x, z, w]); // Eq ((x-z)+(z-w)) (x-w)
+    let bound2 = radd(d, bound1, bzw);
+    rat_eq_rewrite(d, xz_plus_zw, xw, fuse2, combined2, &|d, t| {
+        within(d, p, t, bound2)
+    })
+}
+
+/// `CReal.sumRange_tail_cauchy_within` — the **inner telescope** the module
+/// documentation's "Cauchy-shape conversion" section names, and
+/// [`CRealPrelude::sum_range_tail_within`]'s own doc comment flags as unbuilt:
+/// bounding `sumRange_tail_within`'s `g`-side rational sample `seq (add
+/// (sumRange g (add m n)) (neg (sumRange g m))) (add m n)` through a Cauchy
+/// witness for `sumRange g`, rather than through `sum_range_tail_le` (which
+/// is the machinery that reaches this quantity in the first place, not what
+/// bounds it).
+///
+/// Takes the **witnessed** form of `CReal.Cauchy (sumRange g)` directly — `∀
+/// pp qq, Within (seq (sumRange g pp) pp − seq (sumRange g qq) qq)
+/// (natDivSucc K pp + natDivSucc K qq)`, for an explicit `K` — rather than the
+/// existentially-quantified `CReal.Cauchy (sumRange g)` itself, so this
+/// theorem needs no `Exists.rec` motive of its own. Extracting `K` from an
+/// actual `Cauchy` hypothesis is left to whichever future piece (the outer
+/// telescope, or the assembly of `sumRange_cauchy_of_dominated` itself)
+/// consumes this one — exactly the granularity
+/// [`declare_converges_cauchy`](super::convergence)'s own `minor` closure
+/// already works at, one module over.
+///
+/// At the shared index `t := shift (add m n)`, `q := add m n`: writing `X :=
+/// seq (sumRange g q) t`, `Y := seq (sumRange g q) q`, `Z := seq (sumRange g
+/// m) m`, `W := seq (sumRange g m) t`, the target `seq (add (sumRange g q)
+/// (neg (sumRange g m))) q` is **defeq** to `X − W` (`CReal.add`'s own `mk
+/// (fun n => …) _` representative plus `CReal.neg`'s, both bare `Nat → CReal`
+/// projections with no `Nat.rec` in the way — the same ι/β argument
+/// [`declare_sum_range_seq_equations`]'s own doc comment gives for the
+/// simpler `add`-only case), so no separate `Eq` lemma is declared for it;
+/// the kernel accepts [`chain_within3`]'s output at that type directly. The
+/// three legs: `X − Y` via [`CRealPrelude::regular`] at `(sumRange g q, t,
+/// q)`; `Y − Z` via the witnessed hypothesis applied at `(q, m)`; `Z − W` via
+/// [`CRealPrelude::regular`] at `(sumRange g m, m, t)`.
+fn declare_sum_range_tail_cauchy_within(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_add = d.prelude().add;
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    // hyp_ty : ∀ pp qq, Within (seq (sumRange g pp) pp − seq (sumRange g qq)
+    //                            qq) (natDivSucc k pp + natDivSucc k qq)
+    let hyp_ty = {
+        let pp_fv = d.fresh_fvar();
+        let pp = d.kernel().fvar(pp_fv);
+        let qq_fv = d.fresh_fvar();
+        let qq = d.kernel().fvar(qq_fv);
+        let sum_pp = d.const_app(p.sum_range, &[g, pp]);
+        let sum_qq = d.const_app(p.sum_range, &[g, qq]);
+        let left = sample(d, p, sum_pp, pp);
+        let right = sample(d, p, sum_qq, qq);
+        let diff = rsub(d, rat, left, right);
+        let bpp = div_succ_var(d, p, k, pp);
+        let bqq = div_succ_var(d, p, k, qq);
+        let bound = radd(d, bpp, bqq);
+        let claim = within(d, p, diff, bound);
+        let over_qq = d.pi_fv(qq_fv, nat, claim);
+        d.pi_fv(pp_fv, nat, over_qq)
+    };
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let q = d.const_app(nat_add, &[m, n]);
+    let t = shift(d, q);
+
+    let sum_g_q = d.const_app(p.sum_range, &[g, q]);
+    let sum_g_m = d.const_app(p.sum_range, &[g, m]);
+
+    let x = sample(d, p, sum_g_q, t);
+    let y = sample(d, p, sum_g_q, q);
+    let z = sample(d, p, sum_g_m, m);
+    let w = sample(d, p, sum_g_m, t);
+
+    // leg1 : Within (X - Y) (modulus t q).
+    let leg1 = d.lemma(p.regular, &[sum_g_q, t, q]);
+    let b1 = modulus(d, p, t, q);
+
+    // leg2 : Within (Y - Z) (natDivSucc k q + natDivSucc k m), via `hyp q m`.
+    let leg2 = d.apply(hyp, &[q, m]);
+    let b2 = {
+        let bq = div_succ_var(d, p, k, q);
+        let bm = div_succ_var(d, p, k, m);
+        radd(d, bq, bm)
+    };
+
+    // leg3 : Within (Z - W) (modulus m t).
+    let leg3 = d.lemma(p.regular, &[sum_g_m, m, t]);
+    let b3 = modulus(d, p, m, t);
+
+    let telescoped = chain_within3(d, p, x, y, z, w, b1, b2, b3, leg1, leg2, leg3);
+    let total_bound = {
+        let b12 = radd(d, b1, b2);
+        radd(d, b12, b3)
+    };
+
+    // tail_sample is defeq to (x - w); see the doc comment above.
+    let neg_sum_g_m = cneg(d, p, sum_g_m);
+    let tail_g = cadd(d, p, sum_g_q, neg_sum_g_m);
+    let tail_sample = sample(d, p, tail_g, q);
+
+    let ty = {
+        let claim = within(d, p, tail_sample, total_bound);
+        let after_hyp = d.arrow(hyp_ty, claim);
+        let over_n = d.pi_fv(n_fv, nat, after_hyp);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_k = d.pi_fv(k_fv, nat, over_m);
+        d.pi_fv(g_fv, fn_ty, over_k)
+    };
+    let value = {
+        let with_hyp = d.lam_fv(hyp_fv, hyp_ty, telescoped);
+        let over_n = d.lam_fv(n_fv, nat, with_hyp);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_k = d.lam_fv(k_fv, nat, over_m);
+        d.lam_fv(g_fv, fn_ty, over_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_tail_cauchy_within,
         uparams: vec![],
         ty,
         value,
