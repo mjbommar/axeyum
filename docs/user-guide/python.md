@@ -115,3 +115,28 @@ it compared zero stubs.
 are both present, and otherwise prints `py-check: SKIPPED (no uv)` — skipped,
 never passed. Which hosts have `uv` is recorded in
 [fleet hosts](../contributor-guide/fleet-hosts.md).
+
+## Mathematica-shaped verbs: `axeyum.m`
+
+```python
+from axeyum import m
+m.Simplify("x*x + 5*x + 6")                 # x^2 + 5*x + 6
+m.show(m.Factor("x^2 + 5 x + 6"))           # (x + 2)*(x + 3)
+m.Solve("2x + 3 = 7")                       # [Expr("2")]
+m.Solve(["x + y = 3", "x - y = 1"], ["x", "y"])   # [{'x': 2, 'y': 1}]
+m.D("x^3 + 2 x"); m.Integrate("x^2", ("x", 0, 1))  # 3*x^2 + 2 ; 1/3
+m.Sum("k^2", ("k", 1, "n"))                 # (1/3)*n^3 + (1/2)*n^2 + (1/6)*n
+[m.interval(i) for i in m.Reduce("x^2 < 4")]      # ['-2 < x < 2']
+m.Simplify("exp(ln(x))", assume={"x": "positive"})  # x
+m.Equal("(x+2)(x+3)", "x^2 + 5x + 6")       # True -- a certified zero-test, not tree equality
+m.parse("x") + 1, 2 * m.parse("x"), m.parse("x") / 2   # mixed int/Fraction arithmetic
+```
+
+Strings accept `^` or `**`, implicit multiplication (`5 x`), `Sin[x]`,
+rationals as `p/q` and equations with `=`. The layer never guesses: several
+free variables raise `ValueError` naming them; a float literal is a
+`TypeError` (write `Fraction(1, 2)`); `pi`/`E` are refused because the CAS is
+exact over Q; an undecided `Equal` raises rather than answering `False`.
+Every result is still a `cas.Expr` with its Rust certificates reachable, and
+`None` means the Rust side declined (multivariate `Factor`, a symbolic
+exponent -- `CasExpr::Pow` is `u32` -- and similar gaps are real and stated).
