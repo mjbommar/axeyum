@@ -187,6 +187,7 @@ fn every_theorem_here_is_axiom_free() {
             "menelaus_collinear_of_ratio_product",
             p.menelaus_collinear_of_ratio_product,
         ),
+        ("heron_sixteen_area_sq", p.heron_sixteen_area_sq),
         (
             "ceva_ratio_product_of_concurrent",
             p.ceva_ratio_product_of_concurrent,
@@ -315,6 +316,7 @@ fn midpoint_self_and_sum_perm_and_diag_core_are_present_declarations() {
         p.cevian_pair_meet,
         p.ceva_concurrent_of_ratio_product,
         p.menelaus_collinear_of_ratio_product,
+        p.heron_sixteen_area_sq,
         p.ceva_ratio_product_of_concurrent,
     ] {
         assert!(
