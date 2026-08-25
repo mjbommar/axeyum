@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "For each law L of the AxReal package, AxReal.CRealModel.L : interpret(type of AxReal.L) := CReal.L, where interpret substitutes the eight CReal symbols for the AxReal ones and rewrites the partial application (Eq AxReal) to CReal.Equiv. The obligation is COMPUTED from the axiom as it stands in the environment, so a changed axiom changes the obligation.",
     "fragment": "Real",
+    "kernel_theorem": null,
     "free_symbols": [
       "CReal",
       "CReal.Equiv",

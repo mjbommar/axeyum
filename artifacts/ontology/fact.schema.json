@@ -56,6 +56,10 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Symbols the statement quantifies over or leaves free, so a consumer need not re-parse to know its shape."
+        },
+        "kernel_theorem": {
+          "type": ["string", "null"],
+          "description": "Which kernel-lean theorem this fact is FIRST-PARTY about, stated explicitly rather than left for a checker_command regex to guess. Every consumer that needs a fact's subject theorem (`create-autogenesis-chain-catalog.py`, `check-fact-depends-derived.py`, `create-autogenesis-snapshot.py`, all sharing one `theorem_of`) reads this key WHEN PRESENT, before falling back to extracting the first dotted theorem name mentioned in the fact's own evidence `checker_command`s.\n\nOmit the key entirely to ask for that fallback -- correct for the common case, where evidence mentions the fact's own theorem and nothing else that looks like one.\n\nSet it to a STRING when extraction would guess wrong or ambiguously: evidence commonly also names dependency/witness theorems (a `dependencies-X` grep listing what X's proof used, or a witness lemma cited to corroborate the argument), and a regex has no way to tell 'the fact's subject' from 'a theorem this fact's evidence happens to mention'.\n\nSet it explicitly to `null` -- present, not absent -- when the fact is genuinely NOT about one single kernel theorem: a package-level result (e.g. 'the whole Complex ring is axiom-free', bundling several laws; a categoricity fact whose evidence checks several related theorems together). `null` here is a deliberate assertion ('no single subject'), distinct from omitting the key ('infer conservatively'), and it is what stops two such package-level facts from silently colliding onto the same extracted name -- which happened: `F:complex-mul-assoc` and `F:complex-ring-constructed-axiom-free` both extracted to `Complex.mul_assoc` before this field existed."
         }
       }
     },

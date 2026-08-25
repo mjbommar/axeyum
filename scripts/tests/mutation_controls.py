@@ -2876,6 +2876,58 @@ SUITES["fact-checker-deep-stack-release"] = (
     ],
 )
 
+SUITES["fact-checker-kernel-theorem-shape"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # `formal.kernel_theorem` is what `theorem_of`
+        # (scripts/check-fact-depends-derived.py, shared by the chain catalog
+        # and the autogenesis snapshot builder) reads as a fact's subject
+        # theorem when the key is present -- nothing else in the ledger reads
+        # or validates this field, so a malformed value would be silently
+        # treated as a real theorem name by every one of those consumers.
+        # Deleting this guard must kill exactly the one test that asserts an
+        # invalid value is rejected THROUGH `validate_one` -- the broader
+        # good/bad-shape coverage (`kernel_theorem_is_valid` exercised
+        # directly) does not touch this call site and must keep passing.
+        (
+            "invalid formal.kernel_theorem is refused",
+            '    if "kernel_theorem" in formal and not kernel_theorem_is_valid(formal["kernel_theorem"]):',
+            "    if False:",
+        ),
+    ],
+)
+
+SUITES["fact-theorem-of-explicit-field"] = (
+    "scripts/check-fact-depends-derived.py",
+    "scripts.tests.test_check_fact_depends_derived",
+    [
+        # `F:cassini-identity-over-constructed-integers` extracted `Int.sub`
+        # (matched out of its own embedded formal-statement fragment) instead
+        # of its real subject `Int.fib_cassini`, until `formal.kernel_theorem`
+        # existed to let a fact pin the right answer over extraction. Deleting
+        # the override kills exactly `test_an_explicit_string_wins...`; the
+        # null-handling mutation below is separate and independent.
+        (
+            "an explicit string kernel_theorem wins over extraction",
+            "        return value if isinstance(value, str) else None",
+            "        return None",
+        ),
+        # `F:complex-ring-constructed-axiom-free` and `F:complex-mul-assoc`
+        # both extracted `Complex.mul_assoc` and collided in
+        # `create-autogenesis-chain-catalog.py --check`, until an explicit
+        # `null` marked the package-level fact as having no single subject.
+        # A presence check that degrades to a truthiness check would silently
+        # treat that `null` as "key absent" and fall back to extraction again
+        # -- kills exactly `test_an_explicit_null_means_no_single_subject...`.
+        (
+            "an explicit null kernel_theorem is honoured, not falsy-skipped",
+            '    if "kernel_theorem" in formal:',
+            '    if formal.get("kernel_theorem"):',
+        ),
+    ],
+)
+
 
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:

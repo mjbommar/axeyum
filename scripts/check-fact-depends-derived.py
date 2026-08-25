@@ -138,7 +138,34 @@ def inventory() -> dict[str, list[str]]:
 
 
 def theorem_of(fact: dict[str, Any]) -> str | None:
-    """The theorem a kernel-route fact is about, from its own checker command."""
+    """The theorem a kernel-route fact is about.
+
+    `formal.kernel_theorem`, when the KEY IS PRESENT, is authoritative and
+    extraction is not consulted at all -- including when its value is `null`,
+    which means "this fact is not about exactly one kernel theorem" (a
+    package-level result bundling several laws/theorems) and must not fall
+    back to guessing. That distinguishes a deliberate "no single subject"
+    from an unfilled field, which is what makes the key's PRESENCE the signal
+    rather than its truthiness.
+
+    Only when the key is ABSENT does this fall back to the historical
+    behaviour: the first dotted theorem name matched in the fact's own
+    evidence `checker_command`s, in evidence order. That extraction is a
+    convenience for the common case (one theorem, named once, nothing else in
+    the command looks like a theorem name) and is demonstrably NOT reliable
+    in general -- it can match an embedded formal-statement fragment instead
+    of the theorem under test (`F:cassini-identity-over-constructed-integers`
+    extracted `Int.sub`, not the actual subject `Int.fib_cassini`, until this
+    field existed), or collide two unrelated facts onto the same name
+    (`F:complex-mul-assoc` and `F:complex-ring-constructed-axiom-free` both
+    extracted `Complex.mul_assoc`). `formal.kernel_theorem` exists precisely
+    to let a fact's author pin the right answer where extraction cannot be
+    trusted, without touching every fact where it already agrees.
+    """
+    formal = fact.get("formal") or {}
+    if "kernel_theorem" in formal:
+        value = formal["kernel_theorem"]
+        return value if isinstance(value, str) else None
     for item in fact.get("evidence") or []:
         found = THEOREM_RE.search(item.get("checker_command", ""))
         if found:
