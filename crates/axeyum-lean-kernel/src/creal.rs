@@ -1105,18 +1105,39 @@ pub struct CRealPrelude {
     /// corresponding tail of `g`'s. Not stated through `CReal.Cauchy`
     /// (`creal/convergence.rs`) — see `series.rs`'s module documentation for
     /// why: `Cauchy`'s body compares `seq (h m) m` against `seq (h n) n`, the
-    /// RATIONAL sample each real offers at *its own canonical index*, and
-    /// bridging that for `h := sumRange f` needs a sample-rate law for
-    /// `sumRange` itself (how `seq (sumRange f n) k` relates to the
-    /// individual `f i`'s samples) that does not exist anywhere in this
-    /// development — every other `sumRange` law here, this one included, is
-    /// proved through the abstract `Equiv`/`le`/`abs` algebra alone, never
-    /// touching `seq`. This theorem is the actual mathematical engine of the
-    /// comparison test (a real-valued tail bound, via `sum_range_split` +
-    /// `abs_sumRange_le` + `sumRange_le`); reaching the literal
-    /// `CReal.Cauchy` predicate from it is a separate, unbuilt piece of
-    /// infrastructure, not a restatement.
+    /// RATIONAL sample each real offers at *its own canonical index*.
+    /// [`Self::sum_range_seq_succ`] now supplies the recursive form of that
+    /// sample-rate law; reaching the literal `CReal.Cauchy` predicate from
+    /// this theorem plus that one is still a separate, unbuilt bridge (see
+    /// the module documentation for exactly what is missing and why the
+    /// recursive law alone is not enough). This theorem remains the actual
+    /// mathematical engine of the comparison test (a real-valued tail bound,
+    /// via `sum_range_split` + `abs_sumRange_le` + `sumRange_le`).
     pub sum_range_tail_le: NameId,
+    /// `CReal.sumRange_seq_zero : Eq Rat (seq (sumRange f Nat.zero) k)
+    /// Rat.zero` — the base case of the sample-rate law, closing by `Eq.refl`
+    /// alone (`sumRange f zero` ι-reduces to `zero := ofRat Rat.zero`, and
+    /// `seq (ofRat q) k` ι-reduces to `q`).
+    pub sum_range_seq_zero: NameId,
+    /// `CReal.sumRange_seq_succ : ∀ f n k, Eq Rat (seq (sumRange f (Nat.succ
+    /// n)) k) (add (seq (sumRange f n) (shift k)) (seq (f n) (shift k)))` —
+    /// **the sample-rate law this file's own module documentation named as
+    /// missing**, in its cheap recursive form: `sumRange f (succ n)`
+    /// ι-reduces to `add (sumRange f n) (f n)`, and `seq (add x y) k`
+    /// ι-reduces (through `CReal.add`'s own `mk (fun n => …) _`
+    /// representative) to `seq x (shift k) + seq y (shift k)` — so the whole
+    /// chain is ι+β, no case split and no rational estimate, exactly like
+    /// [`Self::sum_range_zero`]/[`Self::sum_range_succ`]. Closing the general
+    /// **closed form** this recursion implies (`seq (sumRange f n) k = Σ_{i<n}
+    /// seq (f i) (shift^{n-i} k)`, `shift` iterated `n − i` times) as its own
+    /// kernel theorem, and bridging from there (or from
+    /// [`Self::sum_range_tail_le`] directly) to `CReal.Cauchy`/`Converges`,
+    /// is unbuilt — see `series.rs`'s module documentation for why the
+    /// closed form alone is not sufficient (each term's own regularity
+    /// contributes an `Ω(1/i)` error that does not shrink with `n`, so a
+    /// naive per-term bound diverges) and what the tractable next step looks
+    /// like.
+    pub sum_range_seq_succ: NameId,
 
     // --- powers, and the geometric series over ℝ (creal/power.rs) -----------
     /// `CReal.pow : CReal → Nat → CReal`, by structural `Nat.rec` on the
@@ -1694,6 +1715,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_telescope: kernel.name_str(creal, "sumRange_telescope"),
         sum_range_split: kernel.name_str(creal, "sumRange_split"),
         sum_range_tail_le: kernel.name_str(creal, "sumRange_tail_le"),
+        sum_range_seq_zero: kernel.name_str(creal, "sumRange_seq_zero"),
+        sum_range_seq_succ: kernel.name_str(creal, "sumRange_seq_succ"),
         pow: kernel.name_str(creal, "pow"),
         pow_zero: kernel.name_str(creal, "pow_zero"),
         pow_succ: kernel.name_str(creal, "pow_succ"),

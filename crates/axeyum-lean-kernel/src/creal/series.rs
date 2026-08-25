@@ -65,30 +65,103 @@
 //! `completeness.rs`/`convergence.rs` build extensively for `CReal.add`'s
 //! single shift. Reaching that shape for `h := sumRange f` needs a
 //! sample-rate law for `sumRange` itself — how `seq (sumRange f n) k`
-//! relates to the individual `f i`'s own samples — and nothing here, or
-//! anywhere else in this development, builds one: every `sumRange` law in
-//! this file, [`declare_sum_range_tail_le`] included, is proved through the
-//! abstract `Equiv`/`le`/`abs` algebra alone and never once inspects `seq`.
-//! Building that sample-rate law is plausibly a module the size of
-//! `completeness.rs` on its own (a finite sum of `n` shifted reals, not one
-//! fixed shift), and is not attempted here.
-//! [`declare_sum_range_tail_le`] is instead the actual mathematical engine
-//! of the comparison test — a genuine real-valued tail bound, via
-//! [`declare_sum_range_split`] to rewrite each tail as a shifted partial sum
-//! ([`cancel_right`]: `(a+b)+(−a) ~ b`), then
+//! relates to the individual `f i`'s own samples — and every other
+//! `sumRange` law in this file, [`declare_sum_range_tail_le`] included, is
+//! proved through the abstract `Equiv`/`le`/`abs` algebra alone and never
+//! once inspects `seq`. [`declare_sum_range_tail_le`] is the actual
+//! mathematical engine of the comparison test — a genuine real-valued tail
+//! bound, via [`declare_sum_range_split`] to rewrite each tail as a shifted
+//! partial sum ([`cancel_right`]: `(a+b)+(−a) ~ b`), then
 //! [`super::CRealPrelude::abs_sum_range_le`] and
-//! [`super::CRealPrelude::sum_range_le`] to bound it — and reaching the
-//! literal `CReal.Cauchy` predicate from it is future, unbuilt
-//! infrastructure, not a restatement of what is proved here.
+//! [`super::CRealPrelude::sum_range_le`] to bound it.
+//!
+//! ## The sample-rate law itself: cheap in recursive form, not in closed form
+//!
+//! An earlier slice of this file reported the sample-rate law above as
+//! "not existing anywhere in this development" and "plausibly a module the
+//! size of `completeness.rs` on its own". The **recursive** form of the law
+//! is not that expensive, and [`declare_sum_range_seq_equations`] proves it
+//! outright:
+//!
+//! ```text
+//! CReal.sumRange_seq_zero : ∀ f k, Eq Rat (seq (sumRange f Nat.zero) k) Rat.zero
+//! CReal.sumRange_seq_succ : ∀ f n k, Eq Rat (seq (sumRange f (Nat.succ n)) k)
+//!   (Rat.add (seq (sumRange f n) (shift k)) (seq (f n) (shift k)))
+//! ```
+//!
+//! Both close by `Eq.refl` alone — exactly [`declare_sum_range_equations`]'s
+//! own pattern one level deeper. `sumRange f (succ n)` already ι-reduces to
+//! `add (sumRange f n) (f n)` ([`declare_sum_range_equations`]'s own
+//! content); what makes the `seq`-level law free is that `CReal.add`'s
+//! representative is *also* a bare `mk (fun n => …) _` application
+//! ([`super::declare_addition`]), so `seq (add x y) k` ι-reduces (through
+//! the `CReal.rec`/`CReal.mk` projection [`super::declare_projections`]
+//! builds) straight to `seq x (shift k) + seq y (shift k)`, no case split on
+//! `x`, `y`, `k`, or `n` required — all of them stay free variables through
+//! the whole reduction, which is why the general (`∀ n`) law needs no
+//! induction, only ι and β.
+//!
+//! **This recursion is not the same thing as a *closed form*, and the closed
+//! form is where the real cost lives.** Unwinding [`declare_sum_range_seq_equations`]
+//! `n` times gives, writing `shift^m` for `shift` iterated `m` times
+//! (`shift^0 := id`):
+//!
+//! ```text
+//! seq (sumRange f n) k  =  Σ_{i<n} seq (f i) (shift^{n−i} k)
+//! ```
+//!
+//! i.e. `sumRange f n` sampled at `k` reads term `i` not at `i`'s own
+//! canonical index, but at a *deep* index reached by iterating `shift` down
+//! from `k`. This is a true statement — provable by induction on `n` from
+//! the two equations above — but it is **not declared as a kernel theorem
+//! here**, because stating it needs an explicit `Nat → Nat → Nat`
+//! shift-iteration combinator (`shift` composed with itself a *symbolic*
+//! number of times), which does not exist in this development and is its
+//! own small piece of infrastructure (a `Nat.rec` definition plus its own
+//! two defining equations, the same shape as [`declare_sum_range`] itself).
+//!
+//! Nor would the closed form, once stated, be *sufficient* to reach
+//! `CReal.Cauchy (sumRange f)` for an arbitrary `f` — and seeing why is the
+//! actual load-bearing finding of this slice. `Cauchy`'s bound has to be
+//! **uniform in `n`** (one `K`, working for every pair of indices), but
+//! bounding `seq (f i) (shift^{n−i} k)` against `f i`'s own canonical sample
+//! `seq (f i) i` via [`super::CRealPrelude::regular`] costs
+//! `modulus (shift^{n−i} k) i = 1/(shift^{n−i}(k)+1) + 1/(i+1)`. The first
+//! term shrinks with more shifting; the **second does not shrink with
+//! `n`** — it is `f i`'s own fixed regularity cost, unrelated to how deep
+//! `sumRange` samples it. Summing that error over `i < n` costs at least
+//! `Σ_{i<n} 1/(i+1)`, the harmonic series, which **diverges** as `n → ∞`. So
+//! a per-term bound built this way cannot give a `Cauchy`-shaped estimate
+//! uniform in `n`, for any `f` — the closed form is real, but it is the
+//! wrong tool for this particular bridge, independent of how carefully it
+//! is stated or proved.
+//!
+//! The tractable route is the one [`declare_sum_range_tail_le`] already
+//! reaches partway: convert its **real-valued** tail bound (`CReal.le`,
+//! already representative-independent) into a `Cauchy`-shaped raw bound by
+//! widening at a *shared* index — the same three-term telescope
+//! `completeness.rs::declare_limit_dist` runs (`seq (h m) m − seq (h n) n =
+//! (seq (h m) m − seq (h m) j) + (seq (h m) j − seq (h n) j) + (seq (h n) j
+//! − seq (h n) n)`, the outer two legs closed by [`super::CRealPrelude::regular`]
+//! applied to the *fixed* reals `h m`/`h n` — no deep-shift indices involved
+//! — and the middle leg by unfolding [`declare_sum_range_tail_le`]'s
+//! `CReal.le` at that same shared index `j`, after deciding which of `m ≤ n`
+//! or `n ≤ m` holds so the tail lemma has a `sum_range_split`-shaped
+//! difference to work with). That still needs `CReal.abs`'s own `seq`
+//! characterisation to unfold the middle leg (untouched by this slice), so
+//! it is real remaining work, not a restatement — but it is bounded work of
+//! the same shape `limit_dist` already solved, not a fresh harmonic-series
+//! dead end.
 
 use super::ring_helpers::add4_comm;
-use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, equiv};
+use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, equiv, sample, shift};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
+use crate::rat_prelude::ops::{radd, req, rrefl, rzero};
 
 /// Admit `CReal.sumRange`, its defining equations, congruence, additivity,
 /// scalar distribution, monotonicity, and the triangle inequality.
@@ -107,7 +180,8 @@ pub(super) fn declare_series(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     declare_abs_sum_range_le(d, p)?;
     declare_sum_range_telescope(d, p)?;
     declare_sum_range_split(d, p)?;
-    declare_sum_range_tail_le(d, p)
+    declare_sum_range_tail_le(d, p)?;
+    declare_sum_range_seq_equations(d, p)
 }
 
 // --- small local term builders ----------------------------------------------
@@ -1296,4 +1370,93 @@ fn declare_sum_range_tail_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
         ty,
         value,
     })
+}
+
+/// `CReal.sumRange_seq_zero`/`CReal.sumRange_seq_succ` — the recursive
+/// sample-rate law. See the module documentation for the closed form it
+/// implies, why that closed form is not declared here, and why it would not
+/// by itself be enough to reach `CReal.Cauchy`.
+///
+/// Both close by `Eq.refl` alone: `sumRange f Nat.zero` ι-reduces to `zero :=
+/// ofRat Rat.zero`, and `seq (ofRat q) k` ι-reduces to `q`
+/// ([`super::declare_of_rat`]); `sumRange f (succ n)` ι-reduces to `add
+/// (sumRange f n) (f n)`, and `seq (add x y) k` ι-reduces (through
+/// `CReal.add`'s own `mk (fun n => …) _` representative,
+/// [`super::declare_addition`]) to `seq x (shift k) + seq y (shift k)`.
+fn declare_sum_range_seq_equations(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    // sumRange_seq_zero : ∀ f k, Eq Rat (seq (sumRange f Nat.zero) k) Rat.zero.
+    {
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zero_n = d.zero();
+        let sf = d.const_app(p.sum_range, &[f, zero_n]);
+        let lhs = sample(d, p, sf, k);
+        let rat_zero = rzero(d, p.rat);
+        let stmt = req(d, lhs, rat_zero);
+        let proof = rrefl(d, rat_zero);
+        let value = {
+            let inner = d.lam_fv(k_fv, nat, proof);
+            d.lam_fv(f_fv, fn_ty, inner)
+        };
+        let ty = {
+            let inner = d.pi_fv(k_fv, nat, stmt);
+            d.pi_fv(f_fv, fn_ty, inner)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.sum_range_seq_zero,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // sumRange_seq_succ : ∀ f n k,
+    //   Eq Rat (seq (sumRange f (succ n)) k)
+    //          (add (seq (sumRange f n) (shift k)) (seq (f n) (shift k))).
+    {
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+
+        let sn = d.succ(n);
+        let sf_sn = d.const_app(p.sum_range, &[f, sn]);
+        let lhs = sample(d, p, sf_sn, k);
+
+        let sk = shift(d, k);
+        let sf_n = d.const_app(p.sum_range, &[f, n]);
+        let left_sample = sample(d, p, sf_n, sk);
+        let fn_at_n = d.apply(f, &[n]);
+        let right_sample = sample(d, p, fn_at_n, sk);
+        let rhs = radd(d, left_sample, right_sample);
+
+        let stmt = req(d, lhs, rhs);
+        let proof = rrefl(d, rhs);
+
+        let value = {
+            let inner = d.lam_fv(k_fv, nat, proof);
+            let over_n = d.lam_fv(n_fv, nat, inner);
+            d.lam_fv(f_fv, fn_ty, over_n)
+        };
+        let ty = {
+            let inner = d.pi_fv(k_fv, nat, stmt);
+            let over_n = d.pi_fv(n_fv, nat, inner);
+            d.pi_fv(f_fv, fn_ty, over_n)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.sum_range_seq_succ,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
 }
