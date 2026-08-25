@@ -292,50 +292,52 @@
 //! `a ≤ b` via `Nat.le_dest` + transport — `sum_range_tail_within_le`'s own
 //! technique, reused against this different, canonical-shape payload rather
 //! than re-derived.** Both are landed and kernel-checked (verified at the
-//! non-degenerate `a = 0, b = 1` instance, `creal_tests.rs`). What is
-//! **still** missing to close `sumRange_cauchy_of_dominated` itself:
+//! non-degenerate `a = 0, b = 1` instance, `creal_tests.rs`).
 //!
-//! - **The `Nat.le_total` case split proper** — `sum_range_cauchy_dominated_ordered`
-//!   supplies both orientations' *content* (swap `a`/`b`) but not the
-//!   selection between them for an arbitrary pair, plus one [`within_symm`]
-//!   flip in the `a ≤ b` branch (that branch's raw conclusion is
-//!   `seq (f b) b − seq (f a) a`; `Cauchy`'s own call order at `(m, n) := (a,
-//!   b)` wants `seq (f a) a − seq (f b) b`) and one `Rat.add_comm` in the
-//!   `b ≤ a` branch (this theorem's bound is *not* symmetric in its two
-//!   arguments — the `t`-side legs attach to whichever of `a`/`b` is
-//!   larger — so the two branches' bounds arrive in opposite `radd` order
-//!   relative to `Cauchy`'s fixed `(m, n)` argument order).
-//! - **Bound normalization.** `sum_range_cauchy_dominated_ordered`'s bound,
-//!   expanded, is eleven `Rat.natDivSucc`-shaped leaves (four copies of
-//!   `1/(shift b+1)`, from the two extra `regular` legs *and* the two
-//!   already inside `sum_range_tail_within_cauchy`'s own bound; the rest at
-//!   `1/(a+1)` or `1/(b+1)`, plus one raw `K`-witness term per side) — not
-//!   `Cauchy`'s required `natDivSucc K' m + natDivSucc K' n` shape for a
-//!   *single* `K'`. Every `1/(shift b+1)` leaf widens to `1/(b+1)` via
-//!   `half_shift_le` (`completeness.rs`, already `pub(super)` for exactly
-//!   this kind of cross-module reuse); the
-//!   same-index leaves then fuse exactly via `Rat.natDivSucc_add`, and
-//!   `Rat.natDivSucc_le_add_left` pads whichever side's fused coefficient is
-//!   smaller up to match the other — the same three lemmas
-//!   `declare_converges_cauchy`'s `regroup_middle_four` already uses one
-//!   telescope down, at a larger term count. Keeping every `K`-containing
-//!   `Nat.add` in the fixed shape `add k <literal>` (`k` always the
-//!   left/base argument, never the right one `Nat.add` recurses on) is what
-//!   keeps this pure defeq computation rather than a further `Nat.add_assoc`
-//!   / `Nat.add_comm` derivation — checked against this development's
-//!   left-recursive `Nat.add`, not assumed.
-//! - **The `CReal.Cauchy` existential itself**: eliminating the hypothesis
-//!   (`Exists.rec`, elem type `Nat`, exactly [`exists_elim`]'s shape —
-//!   already used this way by `declare_sum_range_tail_within_le`
-//!   against a *different* `Nat`-witnessed existential, `Nat.le_dest`'s) and
-//!   introducing the conclusion (`Exists.intro` at the chosen `K'`) around
-//!   the case-split proof above. `declare_converges_cauchy`
-//!   (`creal/convergence.rs`) already does both mechanically for a
-//!   structurally similar `Cauchy`-producing theorem — same recursor, same
-//!   "target must not depend on the witness" shape — so this is confirmed
-//!   tractable, not merely assumed so: `Exists.rec` eliminating into a
-//!   `Prop` target (`Cauchy (sumRange f)` is a `Prop`) is exactly what that
-//!   theorem's own `exists_elim` call already relies on.
+//! **All three gaps this section used to list are now landed —
+//! [`declare_sum_range_cauchy_of_dominated`] closes
+//! `CReal.sumRange_cauchy_of_dominated`, kernel-checked (`creal_tests.rs`,
+//! `f = g` the constant-zero sequence, a genuine `K = 0` `Exists.intro`
+//! witness — the theorem's own generic type-check already exercises both
+//! `Nat.le_total` branches, since a Pi body is checked once against a fresh
+//! free variable, not once per instantiation).** The previous brief's
+//! per-branch prediction had the right total repair (one [`within_symm`]
+//! flip, one `Rat.add_comm`) but the wrong branch: calling
+//! `sum_range_cauchy_dominated_ordered_normalized` at `(a, b) := (n, m)`
+//! whenever `Nat.le n m` holds lands **exactly** on `Cauchy`'s own `(m, n)`
+//! sample and `radd` order, no rewrite at all — this theorem's bound
+//! genuinely is not symmetric in `a`/`b` (the `t`-side legs always attach to
+//! the larger argument `b`), so which pairing is "free" is fixed by that
+//! asymmetry, not a 50/50 choice. The `Nat.le m n` branch (`(a, b) := (m,
+//! n)`) carries both repairs together: `within_symm` flips the raw `seq (f
+//! n) n − seq (f m) m)` to `Cauchy`'s wanted `seq (f m) m − seq (f n) n)`,
+//! and `Rat.add_comm` reorders the still-`(n, m)`-ordered bound
+//! `within_symm` leaves untouched to `Cauchy`'s `(m, n)` order. Both
+//! branches close over the **same** `K' := k + 8`, built once outside the
+//! split as eight bare `Nat.succ`s of the raw Cauchy witness `k` (not the
+//! source theorem's own nested-`Nat.add`-by-literal chain — both reduce to
+//! the identical `succ` tower, but a bare `succ` chain has no `Nat.add`
+//! operand-order trap to fall into at all).
+//!
+//! - **Bound normalization** (also landed, by an earlier slice):
+//!   [`declare_sum_range_cauchy_dominated_ordered_normalized`] widens
+//!   `sum_range_cauchy_dominated_ordered`'s eleven-`Rat.natDivSucc`-leaf
+//!   bound (four copies of `1/(shift b+1)`, widened to `1/(b+1)` via
+//!   `half_shift_le`) down to the single-`K'` `natDivSucc K' b + natDivSucc
+//!   K' a` shape `CReal.Cauchy` needs, via `Rat.natDivSucc_add` fusion and
+//!   one `Rat.natDivSucc_le_add_left` pad — the same three lemmas
+//!   `declare_converges_cauchy`'s `regroup_middle_four` uses one telescope
+//!   down. [`declare_sum_range_cauchy_of_dominated`] reuses this theorem
+//!   directly rather than re-deriving the normalization.
+//! - **The `CReal.Cauchy` existential itself** (landed by this slice):
+//!   [`declare_sum_range_cauchy_of_dominated`] eliminates the hypothesis
+//!   (`int_prelude::ops::exists_elim`, elem type `Nat` — the same idiom
+//!   [`declare_sum_range_cauchy_dominated_ordered`] already uses against a
+//!   *different* `Nat`-witnessed existential, `Nat.le_dest`'s) and
+//!   introduces the conclusion (`Exists.intro` at `K' := k + 8`) around the
+//!   `Nat.le_total` case split above — confirming
+//!   `declare_converges_cauchy`'s (`creal/convergence.rs`) prediction that
+//!   this shape is tractable, not merely assuming it so.
 //!
 //! ## Two further gaps this slice found, neither in the previous brief
 //!
@@ -418,6 +420,7 @@ pub(super) fn declare_series(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     declare_sum_range_tail_within_cauchy(d, p)?;
     declare_sum_range_cauchy_dominated_ordered(d, p)?;
     declare_sum_range_cauchy_dominated_ordered_normalized(d, p)?;
+    declare_sum_range_cauchy_of_dominated(d, p)?;
     declare_sum_range_seq_equations(d, p)
 }
 
@@ -2991,6 +2994,231 @@ fn declare_sum_range_cauchy_dominated_ordered_normalized(
         ty,
         value,
     })
+}
+
+/// `∀ pp qq, Within (seq (h pp) pp − seq (h qq) qq) (natDivSucc k pp +
+/// natDivSucc k qq)` — `CReal.Cauchy h`'s own body at a (possibly symbolic)
+/// numerator `k`, reconstructed call-for-call from `sample`/`rsub`/
+/// `div_succ_var`/`radd`/`within`/`pi_fv` (exactly `convergence.rs`'s private
+/// `cauchy_body`'s own construction; not reused — `convergence.rs` is out of
+/// scope for this slice) so it is syntactically the predicate `CReal.Cauchy`
+/// itself unfolds to, and a witness/proof built against it type-checks
+/// directly against `Cauchy h` with no explicit rewrite.
+fn sum_range_cauchy_body(d: &mut IntDev<'_>, p: CRealPrelude, h: ExprId, k: ExprId) -> ExprId {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hm = d.apply(h, &[m]);
+    let hn = d.apply(h, &[n]);
+    let left = sample(d, p, hm, m);
+    let right = sample(d, p, hn, n);
+    let diff = rsub(d, rat, left, right);
+    let bm = div_succ_var(d, p, k, m);
+    let bn = div_succ_var(d, p, k, n);
+    let bound = radd(d, bm, bn);
+    let claim = within(d, p, diff, bound);
+    let over_n = d.pi_fv(n_fv, nat, claim);
+    d.pi_fv(m_fv, nat, over_n)
+}
+
+/// `CReal.sumRange_cauchy_of_dominated : ∀ f g, (∀ k, le (abs (f k)) (g k))
+/// → Cauchy (sumRange g) → Cauchy (sumRange f)` — the piece `series.rs`'s
+/// module documentation names as the goal: eliminate the `Cauchy (sumRange
+/// g)` existential (`Exists.rec`, elem type `Nat`,
+/// [`declare_sum_range_cauchy_dominated_ordered`]'s own `exists_elim` idiom
+/// against a different existential), split `∀ m n` on the **decidable**
+/// `Nat.le_total` (never branch on the *undecidable* [`super::CRealPrelude::le`]
+/// over `CReal` itself — the whole reason this step is tractable), and in
+/// each branch instantiate
+/// [`declare_sum_range_cauchy_dominated_ordered_normalized`] at whichever of
+/// `(m, n)`/`(n, m)` satisfies its own `a ≤ b` side condition:
+///
+/// - `n ≤ m`: calling the theorem at `(a, b) := (n, m)` lands **exactly** on
+///   `Cauchy`'s own `(m, n)` sample and `radd` order — no further rewrite.
+/// - `m ≤ n`: calling it at `(a, b) := (m, n)` gives `Within (seq (f n) n −
+///   seq (f m) m)` in the `(n, m)`-ordered bound; reaching `Cauchy`'s
+///   `(m, n)`-ordered shape needs one [`within_symm`] flip (the difference)
+///   plus one `Rat.add_comm` (the bound), since this theorem's bound is not
+///   symmetric in its two arguments.
+///
+/// Both branches use the **same** `K' := k+8` (built once, outside the case
+/// split, as eight nested `Nat.succ`s of the Cauchy witness `k` rather than
+/// the source theorem's own nested-`Nat.add`-by-literal chain — both reduce
+/// to the identical `succ` tower, but a bare `succ` chain sidesteps the
+/// "symbolic side left of `Nat.add`" trap entirely), so
+/// [`CRealPrelude::sum_range_cauchy_dominated_ordered_normalized`]'s bound in
+/// each branch is defeq to the one `Exists.intro` closes over.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sum_range_cauchy_of_dominated(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let rat = p.rat;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    let pointwise_ty = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fx = d.apply(f, &[x]);
+        let gx = d.apply(g, &[x]);
+        let abs_fx = cabs(d, p, fx);
+        let leq = cle(d, p, abs_fx, gx);
+        d.pi_fv(x_fv, nat, leq)
+    };
+    let hyp1_fv = d.fresh_fvar();
+    let hyp1 = d.kernel().fvar(hyp1_fv);
+
+    let sum_g = d.const_app(p.sum_range, &[g]);
+    let cauchy_g_ty = d.const_app(p.cauchy, &[sum_g]);
+    let hyp2_fv = d.fresh_fvar();
+    let hyp2 = d.kernel().fvar(hyp2_fv);
+
+    let sum_f = d.const_app(p.sum_range, &[f]);
+    let target = d.const_app(p.cauchy, &[sum_f]);
+
+    // predicate_g := λ k, sum_range_cauchy_body(sum_g, k) — syntactically
+    // `Cauchy (sumRange g)`'s own unfolded predicate.
+    let predicate_g = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = sum_range_cauchy_body(d, p, sum_g, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    // minor : ∀ k, predicate_g k → target.
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hyp2_body_ty = sum_range_cauchy_body(d, p, sum_g, k);
+        let hyp2_body_fv = d.fresh_fvar();
+        let hyp2_body = d.kernel().fvar(hyp2_body_fv);
+
+        // K' := k+8, eight bare `Nat.succ`s — already fully reduced, so no
+        // `Nat.add` operand-order trap to fall into.
+        let mut k_prime = k;
+        for _ in 0..8 {
+            k_prime = d.succ(k_prime);
+        }
+
+        // case_proof : ∀ m n, Within (seq (sumRange f m) m − seq (sumRange f
+        // n) n) (natDivSucc k_prime m + natDivSucc k_prime n).
+        let case_proof = {
+            let m_fv = d.fresh_fvar();
+            let m = d.kernel().fvar(m_fv);
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+
+            let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+            let sum_f_n = d.const_app(p.sum_range, &[f, n]);
+            let y_m = sample(d, p, sum_f_m, m);
+            let z_n = sample(d, p, sum_f_n, n);
+            let diff_mn = rsub(d, rat, y_m, z_n);
+            let bm = div_succ_var(d, p, k_prime, m);
+            let bn = div_succ_var(d, p, k_prime, n);
+            let bound_mn = radd(d, bm, bn);
+            let claim_mn = within(d, p, diff_mn, bound_mn);
+
+            let left_ty = d.le(m, n);
+            let right_ty = d.le(n, m);
+            let total_mn = {
+                let name = d.prelude().le_total;
+                d.const_app(name, &[m, n])
+            };
+
+            let body = d.or_elim(
+                left_ty,
+                right_ty,
+                claim_mn,
+                total_mn,
+                // m ≤ n: ordered_normalized(a := m, b := n) gives
+                // Within (seq f n n − seq f m m) (bn + bm); flip the
+                // difference, then reorder the bound.
+                &|d, hmn| {
+                    let raw = d.lemma(
+                        p.sum_range_cauchy_dominated_ordered_normalized,
+                        &[f, g, k, m, n, hyp1, hyp2_body, hmn],
+                    );
+                    let bound_nm = radd(d, bn, bm);
+                    let flipped = within_symm(d, p, z_n, y_m, bound_nm, raw);
+                    let comm_eq = d.lemma(p.rat.add_comm, &[bn, bm]);
+                    rat_eq_rewrite(d, bound_nm, bound_mn, comm_eq, flipped, &|d, t| {
+                        within(d, p, diff_mn, t)
+                    })
+                },
+                // n ≤ m: ordered_normalized(a := n, b := m) gives exactly
+                // Within (seq f m m − seq f n n) (bm + bn) — no rewrite.
+                &|d, hnm| {
+                    d.lemma(
+                        p.sum_range_cauchy_dominated_ordered_normalized,
+                        &[f, g, k, n, m, hyp1, hyp2_body, hnm],
+                    )
+                },
+            );
+            let over_n = d.lam_fv(n_fv, nat, body);
+            d.lam_fv(m_fv, nat, over_n)
+        };
+
+        let predicate_f = {
+            let kf_fv = d.fresh_fvar();
+            let kf = d.kernel().fvar(kf_fv);
+            let body = sum_range_cauchy_body(d, p, sum_f, kf);
+            d.lam_fv(kf_fv, nat, body)
+        };
+        let target_proof = exists_nat_intro(d, p, predicate_f, k_prime, case_proof);
+
+        let with_hyp2_body = d.lam_fv(hyp2_body_fv, hyp2_body_ty, target_proof);
+        d.lam_fv(k_fv, nat, with_hyp2_body)
+    };
+
+    let proof_body = exists_elim(d, predicate_g, target, hyp2, minor);
+
+    let ty = {
+        let after_hyp2 = d.arrow(cauchy_g_ty, target);
+        let after_hyp1 = d.arrow(pointwise_ty, after_hyp2);
+        let over_g = d.pi_fv(g_fv, fn_ty, after_hyp1);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let with_hyp2 = d.lam_fv(hyp2_fv, cauchy_g_ty, proof_body);
+        let with_hyp1 = d.lam_fv(hyp1_fv, pointwise_ty, with_hyp2);
+        let over_g = d.lam_fv(g_fv, fn_ty, with_hyp1);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_cauchy_of_dominated,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Exists.intro Nat predicate witness proof`.
+fn exists_nat_intro(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    predicate: ExprId,
+    witness: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let intro_name = p.rat.int.logic.exists_intro;
+    let intro = d.kernel().const_(intro_name, vec![one]);
+    d.apply(intro, &[nat, predicate, witness, proof])
 }
 
 /// `CReal.sumRange_seq_zero`/`CReal.sumRange_seq_succ` — the recursive
