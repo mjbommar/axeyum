@@ -1034,7 +1034,13 @@ fn dvd_elim(
 }
 
 /// Local copy of `lcm.rs`'s private `dvd_intro`.
-fn dvd_intro(d: &mut NatDev<'_>, a: ExprId, n: ExprId, witness: ExprId, eq_proof: ExprId) -> ExprId {
+fn dvd_intro(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    n: ExprId,
+    witness: ExprId,
+    eq_proof: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let one = d.level_one();
     let predicate = d.dvd_predicate(a, n);
@@ -1098,14 +1104,26 @@ fn divisors_of_two(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, dvd_c2: ExprId
     let or_rec = d.kernel().const_(logic.or_rec, vec![]);
     d.apply(
         or_rec,
-        &[left_ty, right_ty, motive, left_branch, right_branch, dichotomy],
+        &[
+            left_ty,
+            right_ty,
+            motive,
+            left_branch,
+            right_branch,
+            dichotomy,
+        ],
     )
 }
 
 /// `fun i => Le i bound ∧ Eq target (pow 2 i [* extra])` — shared by
 /// [`pow_eq_exists`] and [`pow_eq_intro`]/[`pow_eq_elim`] so all three build
 /// the identical predicate term.
-fn pow_eq_predicate(d: &mut NatDev<'_>, bound: ExprId, target: ExprId, extra: Option<ExprId>) -> ExprId {
+fn pow_eq_predicate(
+    d: &mut NatDev<'_>,
+    bound: ExprId,
+    target: ExprId,
+    extra: Option<ExprId>,
+) -> ExprId {
     let nat = d.nat_ty();
     let i_fv = d.fresh_fvar();
     let i = d.kernel().fvar(i_fv);
@@ -1123,7 +1141,12 @@ fn pow_eq_predicate(d: &mut NatDev<'_>, bound: ExprId, target: ExprId, extra: Op
 }
 
 /// `∃ i, Le i bound ∧ Eq target (pow 2 i [* extra])`.
-fn pow_eq_exists(d: &mut NatDev<'_>, bound: ExprId, target: ExprId, extra: Option<ExprId>) -> ExprId {
+fn pow_eq_exists(
+    d: &mut NatDev<'_>,
+    bound: ExprId,
+    target: ExprId,
+    extra: Option<ExprId>,
+) -> ExprId {
     let nat = d.nat_ty();
     let one = d.level_one();
     let predicate = pow_eq_predicate(d, bound, target, extra);
@@ -1214,14 +1237,26 @@ fn classify_goal(d: &mut NatDev<'_>, bound: ExprId, target: ExprId, q: ExprId) -
     d.const_app(logic.or, &[left, right])
 }
 
-fn classify_inl(d: &mut NatDev<'_>, bound: ExprId, target: ExprId, q: ExprId, proof: ExprId) -> ExprId {
+fn classify_inl(
+    d: &mut NatDev<'_>,
+    bound: ExprId,
+    target: ExprId,
+    q: ExprId,
+    proof: ExprId,
+) -> ExprId {
     let left = pow_eq_exists(d, bound, target, None);
     let right = pow_eq_exists(d, bound, target, Some(q));
     let logic = d.prelude().logic;
     d.const_app(logic.or_inl, &[left, right, proof])
 }
 
-fn classify_inr(d: &mut NatDev<'_>, bound: ExprId, target: ExprId, q: ExprId, proof: ExprId) -> ExprId {
+fn classify_inr(
+    d: &mut NatDev<'_>,
+    bound: ExprId,
+    target: ExprId,
+    q: ExprId,
+    proof: ExprId,
+) -> ExprId {
     let left = pow_eq_exists(d, bound, target, None);
     let right = pow_eq_exists(d, bound, target, Some(q));
     let logic = d.prelude().logic;
@@ -1319,8 +1354,14 @@ fn even_branch_left(
     let two_pow_i = d.mul(two, pow_i);
     let comm = d.lemma(p.mul_comm, &[two, pow_i]);
     let pow_i_two = d.mul(pow_i, two);
-    let (_e, dd_eq_final) =
-        d.chain(dd, &[(two_dprime, dd_eq), (two_pow_i, congr_step), (pow_i_two, comm)]);
+    let (_e, dd_eq_final) = d.chain(
+        dd,
+        &[
+            (two_dprime, dd_eq),
+            (two_pow_i, congr_step),
+            (pow_i_two, comm),
+        ],
+    );
     let succ_i = d.succ(i);
     let le_i_sm = d.lemma(p.le_succ_succ, &[i, m, le_i]);
     let intro = pow_eq_intro(d, sm, dd, None, succ_i, le_i_sm, dd_eq_final);
@@ -1452,7 +1493,14 @@ pub(super) fn declare_dvd_two_pow_mul_classify(
             let or_rec = d.kernel().const_(logic.or_rec, vec![]);
             let case_result = d.apply(
                 or_rec,
-                &[left_ty, right_ty, motive_or, left_branch, right_branch, or_proof],
+                &[
+                    left_ty,
+                    right_ty,
+                    motive_or,
+                    left_branch,
+                    right_branch,
+                    or_proof,
+                ],
             );
             let dd_body = d.lam_fv(hyp_fv, hyp_ty, case_result);
             d.lam_fv(dd_fv, nat, dd_body)
@@ -1515,7 +1563,8 @@ pub(super) fn declare_dvd_two_pow_mul_classify(
 
                 let body = dvd_elim(d, two, dd, goal, dvd_2_dd, &|d, dprime, dd_eq| {
                     let two_dprime = d.mul(two, dprime);
-                    let dvd_scaled = transport_dvd_left(d, dd, two_dprime, dd_eq, end_, dvd_two_pmq);
+                    let dvd_scaled =
+                        transport_dvd_left(d, dd, two_dprime, dd_eq, end_, dvd_two_pmq);
 
                     dvd_elim(d, two_dprime, end_, goal, dvd_scaled, &|d, e, eq2| {
                         let two_dprime_e = d.mul(two_dprime, e);
@@ -1538,18 +1587,30 @@ pub(super) fn declare_dvd_two_pow_mul_classify(
                         let left_of_ih = {
                             let hh_fv = d.fresh_fvar();
                             let hh = d.kernel().fvar(hh_fv);
-                            let inner = pow_eq_elim(d, m, dprime, None, goal, hh, &|d, i, le_i, eq_i| {
-                                even_branch_left(d, &p, dd, dprime, dd_eq, m, sm, q, i, le_i, eq_i)
-                            });
+                            let inner =
+                                pow_eq_elim(d, m, dprime, None, goal, hh, &|d, i, le_i, eq_i| {
+                                    even_branch_left(
+                                        d, &p, dd, dprime, dd_eq, m, sm, q, i, le_i, eq_i,
+                                    )
+                                });
                             d.lam_fv(hh_fv, ih_left_ty, inner)
                         };
                         let right_of_ih = {
                             let hh_fv = d.fresh_fvar();
                             let hh = d.kernel().fvar(hh_fv);
-                            let inner =
-                                pow_eq_elim(d, m, dprime, Some(q), goal, hh, &|d, i, le_i, eq_i| {
-                                    even_branch_right(d, &p, dd, dprime, dd_eq, m, sm, q, i, le_i, eq_i)
-                                });
+                            let inner = pow_eq_elim(
+                                d,
+                                m,
+                                dprime,
+                                Some(q),
+                                goal,
+                                hh,
+                                &|d, i, le_i, eq_i| {
+                                    even_branch_right(
+                                        d, &p, dd, dprime, dd_eq, m, sm, q, i, le_i, eq_i,
+                                    )
+                                },
+                            );
                             d.lam_fv(hh_fv, ih_right_ty, inner)
                         };
 
@@ -1560,7 +1621,14 @@ pub(super) fn declare_dvd_two_pow_mul_classify(
                         let or_rec2 = d.kernel().const_(logic2.or_rec, vec![]);
                         d.apply(
                             or_rec2,
-                            &[ih_left_ty, ih_right_ty, motive2, left_of_ih, right_of_ih, ih_result],
+                            &[
+                                ih_left_ty,
+                                ih_right_ty,
+                                motive2,
+                                left_of_ih,
+                                right_of_ih,
+                                ih_result,
+                            ],
                         )
                     })
                 });
@@ -1574,7 +1642,14 @@ pub(super) fn declare_dvd_two_pow_mul_classify(
             let or_rec = d.kernel().const_(logic.or_rec, vec![]);
             let case_result = d.apply(
                 or_rec,
-                &[left_ty, right_ty, motive_or, coprime_branch, even_branch, two_cases],
+                &[
+                    left_ty,
+                    right_ty,
+                    motive_or,
+                    coprime_branch,
+                    even_branch,
+                    two_cases,
+                ],
             );
             let dd_body = d.lam_fv(hyp_fv, hyp_ty, case_result);
             d.lam_fv(dd_fv, nat, dd_body)
