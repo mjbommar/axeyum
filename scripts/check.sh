@@ -556,6 +556,26 @@ elif [ "$list_only" != "1" ]; then
   fi
 fi
 
+# The Python coverage ledger (docs/python-2026-08/09-coverage-plan.md). Two
+# steps, both printing a COUNT-bearing line, unit suite first.
+#
+# `gen-python-coverage.py` is what evaluates plan 02's exit criterion -- "every
+# tier-R inventory row bound or a recorded deferral" -- which until 2026-08-24
+# nothing could evaluate at all. It scans every crate's public surface, joins it
+# to what `crates/axeyum-py` references (comments stripped: a doc comment naming
+# a function is not a call) and to the three hand-written inventories, and
+# prints `PYTHON_COVERAGE|crates=N|public=P|referenced=R|inventoried=I|
+# tier_r_unreferenced=U|deferred=D`.
+#
+# Three ways it goes red, and only one of them is "the artifact is stale":
+#   * `--check` staleness -- regenerate with `python3 scripts/gen-python-coverage.py`;
+#   * exit 2, a deferral in `artifacts/python-coverage-deferrals.json` with no
+#     reason (an unexplained deferral and a forgotten row are the same thing);
+#   * exit 1, `U > 0` while some document CLAIMS the criterion is met. `U > 0`
+#     alone is the normal state of an unfinished plan and passes.
+step python-coverage-tests python3 -m unittest scripts.tests.test_gen_python_coverage
+step python-coverage python3 scripts/gen-python-coverage.py --check
+
 # The tactic catalog (docs/python-2026-08/04-tactic-catalog.md, slice A3): the
 # strategy vocabulary the agent's Plan node resolves against. Two steps, both
 # printing a COUNT. The validator re-derives every claim the catalog makes about

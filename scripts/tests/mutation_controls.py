@@ -158,6 +158,67 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
             ),
         ],
     ),
+    "python-coverage": (
+        "scripts/gen-python-coverage.py",
+        "scripts.tests.test_gen_python_coverage",
+        [
+            (
+                "pub(crate) is not public",
+                '            if matched is not None and matched.group("restrict") is None:',
+                "            if matched is not None:",
+            ),
+            (
+                "cfg(test) modules are not public surface",
+                '        skip_here = any("cfg(test)" in a.replace(" ", "") for a in pending)',
+                "        skip_here = False",
+            ),
+            (
+                "a method is referenced only when its OWNING type is",
+                '        if owner in names and (bare in binding["calls"] or bare in names):  # type: ignore[operator]',
+                '        if bare in binding["calls"] or bare in names:  # type: ignore[operator]',
+            ),
+            (
+                "a backticked keyword is not an item",
+                "                        if name not in NOT_AN_ITEM",
+                "                        if True",
+            ),
+            (
+                "empty-inventory fail-closed",
+                '        raise CoverageError(f"{INVENTORY_DIR} produced zero rows -- the parser or the tables changed")',
+                "        pass",
+            ),
+            (
+                "no-crates fail-closed",
+                '        raise CoverageError("no crates found under crates/ -- wrong ROOT?")',
+                "        pass",
+            ),
+            (
+                "a deferral must carry a reason",
+                "        if not isinstance(reason, str) or not reason.strip():",
+                "        if False:",
+            ),
+            (
+                "claim guard",
+                "    if unreferenced > 0 and claims:",
+                "    if False:",
+            ),
+            (
+                "claim-guard polarity: a denial is not a claim",
+                "                if NOT_A_CLAIM.search(line):",
+                "                if False:",
+            ),
+            (
+                "--check staleness guard",
+                "        if _normalise(current) == _normalise(content):",
+                "        if True:",
+            ),
+            (
+                "git_commit is normalised, not compared",
+                '    return re.sub(r\'"git_commit": "[^"]*"\', \'"git_commit": "<normalised>"\', text)',
+                "    return text",
+            ),
+        ],
+    ),
     "adr-index": (
         "scripts/gen-adr-index.py",
         "scripts.tests.test_gen_adr_index",

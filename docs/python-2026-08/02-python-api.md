@@ -366,8 +366,20 @@ larger and can land in parallel lanes on disjoint files).
 
 Exit criteria for the plan:
 
-- Every row in the three inventories marked tier R is bound or has a
-  recorded reason in the inventory for deferral.
+- Every row in the three inventories marked tier R is bound, or carries a
+  recorded reason for deferral in
+  [`artifacts/python-coverage-deferrals.json`](../../artifacts/python-coverage-deferrals.json).
+  **Measured, not asserted**: `python3 scripts/gen-python-coverage.py` prints
+  `PYTHON_COVERAGE|...|tier_r_unreferenced=U|deferred=D` and the criterion is
+  `U == 0`; the join, the per-crate table and the row-by-row backlog are
+  [`docs/plan/generated/python-coverage.md`](../plan/generated/python-coverage.md),
+  and the slices that close the backlog are
+  [`09-coverage-plan.md`](09-coverage-plan.md). Until this ledger existed
+  (2026-08-24) nothing could evaluate this line, and an empty answer from a
+  tool nobody had pointed at the surface would have read as full coverage.
+  The reason moved out of the inventory prose and into a validated file for
+  the same reason: a deferral with no reason and a forgotten row are the same
+  thing until something refuses the first.
 - The five kernel example binaries and `fact-frontier.py --json` are each
   reproduced by ≤ 40 lines of Python with byte-equal output on the committed
   inputs (measured, in tests).
