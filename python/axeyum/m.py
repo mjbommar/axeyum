@@ -237,8 +237,8 @@ def Simplify(expr: str | Expr, assume: dict[str, str] | None = None) -> Expr:
     return cas.simplify(e) if a is None else cas.simplify_under_assumptions(e, a)
 
 
-def Expand(expr: str | Expr) -> Expr:
-    """``Expand[e]``."""
+def Expand(expr: str | Expr) -> Expr | None:
+    """``Expand[e]``; ``None`` when the Rust expander declines (overflow)."""
     return cas.expand(parse(expr))
 
 
@@ -248,7 +248,7 @@ def Factor(expr: str | Expr, var: str | None = None) -> Expr | None:
     return cas.factor(e, _var(e, var))
 
 
-def Together(expr: str | Expr) -> Expr:
+def Together(expr: str | Expr) -> Expr | None:
     """``Together[e]`` / ``Cancel`` -- one rational function with common factors cancelled."""
     return cas.cancel(parse(expr))
 
@@ -290,6 +290,10 @@ def Limit(expr: str | Expr, point: Fraction | float | str, var: str | None = Non
         p = cas.LimitPoint.pos_infinity() if positive else cas.LimitPoint.neg_infinity()
     elif isinstance(point, float) and point in (float("inf"), float("-inf")):
         p = cas.LimitPoint.pos_infinity() if point > 0 else cas.LimitPoint.neg_infinity()
+    elif isinstance(point, float):
+        raise TypeError("a finite limit point must be exact: an int or Fraction, not a float")
+    elif isinstance(point, str):
+        raise ValueError(f"unknown limit point {point!r}; use a number, 'inf' or '-inf'")
     else:
         p = cas.LimitPoint.finite(point)
     return cas.limit(e, _var(e, var), p)
