@@ -622,3 +622,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0543](adr-0543-cube-and-conquer-certificate-composition.md) | Cube-And-Conquer Certificate Composition, With A Splitter-Blind Checker | proposed |
 | [0544](adr-0544-gf2-machinery-stays-lemire-research-leaves.md) | Reusable binary-field machinery lands on main; the Kaser--Lemire attack, its data, and its narrative move to a paper repo and a long-lived branch. | accepted |
 | [0545](adr-0545-python-surface-is-a-projection.md) | `axeyum._native` (PyO3, abi3) exposes the Rust engines and knowledge artifacts to Python as a projection; submodule names the trust tier; nothing callable from Python admits a fact, writes a ledger, relaxes a checker, or changes a footprint. | accepted |
+| [0553](adr-0553-no-artifact-depends-on-a-repository-we-do-not-own.md) | `../math-education` is reference-only; the data coupling to it is removed and gated | accepted |

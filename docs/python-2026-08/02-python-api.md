@@ -36,9 +36,12 @@ move daily.
    8` is part of every settled bounded-induction fact's reproduction contract
    (the family checker refuses a mismatch even when every proof hash agrees);
    it is a module constant, never a keyword default.
-7. **Read-only over shared resources.** The fact ledger, operation registry,
-   nursery and the sibling `../math-education` are never written by Python.
-   Writes go through the existing scripts, from JSON the Python side produced.
+7. **Read-only over shared resources.** The fact ledger, operation registry and
+   nursery are never written by Python. Writes go through the existing scripts,
+   from JSON the Python side produced. This rule used to name a sibling
+   checkout at `../math-education` as a fourth shared resource; ADR-0553 removed
+   that repository from this project's surface entirely, so it is not read
+   either.
 
 ## Module map
 
@@ -51,7 +54,7 @@ move daily.
 | `axeyum.cas.certify` | P + C | geometry, telescoping, SOS, GF(2), Gröbner cofactors — `produce()` / `Certificate.check()` pairs | 02-B |
 | `axeyum.kernel` | R + C | `Kernel`, `Declaration`, `KernelError`, `build_*_prelude`, footprints/closures, `render_lean*`, NDJSON export, identity hashes | 02-C |
 | `axeyum.producers` | P | `import_statement_ndjson`, `propose_bounded_induction`, `propose_modeq_family`, `audit_circularity`, the `verify_*` receipts | 02-D |
-| `axeyum.knowledge` | R | facts, frontier, operations, overlay, nursery, claims, foundational concepts, `math-education`, autogenesis artifact index | 02-E |
+| `axeyum.knowledge` | R | facts, frontier, operations, overlay, nursery, claims, foundational concepts, autogenesis artifact index | 02-E |
 | `axeyum.evidence` | R | canonical JSON, `sha256`, receipt/certificate `to_json` | all |
 
 ## 02-A — `axeyum.smt`, `axeyum.solver`, `axeyum.ir`
@@ -332,21 +335,20 @@ Read-only, typed, validator-mirroring accessors over (inventory Part 2):
   from `applicability.fact_ids` only; `EXECUTION_DRIVERS` (9) exposed as a
   frozen set.
 - `overlay`: entities, links, relation types; `assurance` carried on every
-  link; `query(relation, endpoint)`; external endpoints carry
-  `source_revision`.
+  link; `query(relation, endpoint)`. Every endpoint resolves inside this
+  checkout (ADR-0553); `Endpoint.source_revision` and `external_links()` remain
+  as DETECTORS, so a reintroduced external endpoint becomes visible to a test
+  rather than being silently parsed.
 - `nursery`: `entries` (216: train 78, development 79, held-out 57,
   longitudinal 2; 13 families); `partition_of(fact_id)`, `family_of`,
   `held_out_ids()`, `is_safe_to_reference(fact_id)`; **every accessor answers
   by `partition`, never by count** (dependency-ready and train+development
   are both 138 and differ). Amendment ledger exposed read-only.
 - `claims`: `artifacts/claims/<family>/<id>/claim.json` (104; `formal` is a
-  generator recipe, not a proposition); `concept_refs` already point into
-  `math-education`.
+  generator recipe, not a proposition); `concept_refs` are unresolved topic
+  citations — a `graph` label and a `ref`, with no path, no pin and no
+  resolution claim (ADR-0553).
 - `concepts`: `foundational-concepts.json` (137 rows, generated).
-- `math_education`: `Concept`/`Technique` from YAML front matter (1,567 /
-  42; encounters are inline per concept); `pin_ok()` compares `git rev-parse
-  HEAD` in the sibling to the overlay pin and **degrades to
-  `unavailable`**, never errors, mirroring the validator.
 - `autogenesis`: an index of the 958 artifact JSONs classified by shape
   (`plan`/`result`/`decline`/`admission`/…), since `kind` has 707 distinct
   values; pairs plans with results.
