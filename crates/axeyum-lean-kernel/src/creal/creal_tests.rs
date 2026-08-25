@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 223] = [
+    let expected: [(&str, crate::NameId, &str); 224] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -481,6 +481,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             "theorem",
         ),
         ("CReal.riemannSum_le_on", p.riemann_sum_le_on, "theorem"),
+        // The continuity-from-differentiability bridge (creal/monotone.rs),
+        // the missing piece the monotone_of_nonneg_deriv handoff plan did not
+        // name: a `HasDerivativeOn` interpolation endpoint is only ever
+        // `Equiv` to the true endpoint, never syntactically equal to it, so
+        // closing a telescoped bound needs `F` to respect that `Equiv`.
+        (
+            "CReal.hasDerivative_closeOfEquiv",
+            p.has_derivative_close_of_equiv,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
