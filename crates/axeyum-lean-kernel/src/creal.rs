@@ -1147,12 +1147,11 @@ pub struct CRealPrelude {
     /// "within-swap via `neg_sub`"-shaped helper `series.rs`'s module
     /// documentation names as the first piece to land), **not** one `abs_le`
     /// call — `abs_le`'s hypothesis shape does not survive sampling at an
-    /// index. This is the middle leg the outer telescope in `series.rs`'s
-    /// module documentation needs; the outer telescope itself (bounding
-    /// `seq (sumRange f m) m − seq (sumRange f (add m n)) (add m n)` through
-    /// `CReal.regular` at a shared shifted index) is not built here. The
-    /// inner one — bounding this theorem's own `g`-side sample through a
-    /// Cauchy witness for `sumRange g` — is [`Self::sum_range_tail_cauchy_within`].
+    /// index. This is the `f`-side leg [`Self::sum_range_tail_within_cauchy`]
+    /// (the outer telescope) combines with a bound on this theorem's own
+    /// `g`-side sample; that `g`-side bound, through a Cauchy witness for
+    /// `sumRange g`, is [`Self::sum_range_tail_cauchy_within`] (the inner
+    /// telescope).
     pub sum_range_tail_within: NameId,
     /// `CReal.sumRange_tail_within_le : ∀ f g, (∀ k, le (abs (f k)) (g k)) →
     /// ∀ a b, Nat.le a b → Within (seq (add (sumRange f b) (neg (sumRange f
@@ -1191,8 +1190,29 @@ pub struct CRealPrelude {
     /// at `(sumRange g q, t, q)`, the witnessed hypothesis applied at `(q,
     /// m)`, and `CReal.regular` at `(sumRange g m, m, t)`. The outer
     /// telescope — combining this with [`Self::sum_range_tail_within`]'s own
-    /// bound — is not built here.
+    /// bound — is [`Self::sum_range_tail_within_cauchy`].
     pub sum_range_tail_cauchy_within: NameId,
+    /// `CReal.sumRange_tail_within_cauchy : ∀ f g, (∀ k, le (abs (f k)) (g
+    /// k)) → ∀ K, (∀ pp qq, Within (seq (sumRange g pp) pp − seq (sumRange g
+    /// qq) qq) (natDivSucc K pp + natDivSucc K qq)) → ∀ m n, Within (seq
+    /// (add (sumRange f (add m n)) (neg (sumRange f m))) (add m n)) (add
+    /// ((modulus t q + (natDivSucc K q + natDivSucc K m)) + modulus m t)
+    /// (natDivSucc 2 (add m n)))`, `q := add m n`, `t := shift q` — the
+    /// **outer telescope** `series.rs`'s module documentation names as the
+    /// one piece left to combine [`Self::sum_range_tail_within`]'s bound
+    /// (`Within u (v+w)`, the `f`-side real-valued tail bound unfolded at
+    /// its own index) with [`Self::sum_range_tail_cauchy_within`]'s bound on
+    /// that same `v` (`Within v B`, `v` built identically by both theorems
+    /// from the same `m`, `n`, so no transport is needed to identify them).
+    ///
+    /// Built from nothing beyond `series::weaken` (`Within r q` + `q ≤ q'` →
+    /// `Within r q'`) applied to `q := v+w`, `q' := B+w`: `q ≤ q'` is one
+    /// `Rat.add_le_add` on the upper half of `sum_range_tail_cauchy_within`'s
+    /// own conclusion (`le v B`, via `halves`) paired with `Rat.le_refl w`.
+    /// The three-leg inner telescope and the two one-sided real bounds this
+    /// composes already did the heavy lifting inside the two theorems named
+    /// above; this one is bound-widening glue only, not a further telescope.
+    pub sum_range_tail_within_cauchy: NameId,
     /// `CReal.sumRange_seq_zero : Eq Rat (seq (sumRange f Nat.zero) k)
     /// Rat.zero` — the base case of the sample-rate law, closing by `Eq.refl`
     /// alone (`sumRange f zero` ι-reduces to `zero := ofRat Rat.zero`, and
@@ -1946,6 +1966,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_tail_within: kernel.name_str(creal, "sumRange_tail_within"),
         sum_range_tail_within_le: kernel.name_str(creal, "sumRange_tail_within_le"),
         sum_range_tail_cauchy_within: kernel.name_str(creal, "sumRange_tail_cauchy_within"),
+        sum_range_tail_within_cauchy: kernel.name_str(creal, "sumRange_tail_within_cauchy"),
         sum_range_seq_zero: kernel.name_str(creal, "sumRange_seq_zero"),
         sum_range_seq_succ: kernel.name_str(creal, "sumRange_seq_succ"),
         pow: kernel.name_str(creal, "pow"),
