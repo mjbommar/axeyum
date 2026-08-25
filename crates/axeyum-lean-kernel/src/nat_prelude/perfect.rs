@@ -434,6 +434,7 @@ fn ne_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, pp: ExprId, lt_c_pp: 
 /// given by `h`, and `w` is whichever value `select(lit, on_true, on_false)`
 /// reduces to (the caller supplies `w` and relies on it being the correct
 /// defeq reduct).
+#[allow(clippy::too_many_arguments)]
 fn resolve_select(
     d: &mut NatDev<'_>,
     gj: ExprId,
@@ -870,12 +871,118 @@ pub(super) fn declare_sum_divisors_prime(
     Ok(())
 }
 
+// ============================================================================
+// `Nat.pow2_geom_sum` — the finite geometric sum over powers of two, in its
+// subtraction-free form (`Nat.sub` is truncated; `sum_fib`, `fibonacci.rs`,
+// carries the same convention for exactly the same reason).
+// ============================================================================
+
+/// `fun i => pow 2 i`.
+fn pow2_term(d: &mut NatDev<'_>) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let two = d.num(2);
+    let body = d.pow(two, i);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `Nat.pow2_geom_sum : ∀ n, Eq (add (sumRange (fun i => pow 2 i) n) one)
+/// (pow 2 n)` — the finite geometric sum `Σ_{i<n} 2^i = 2^n − 1`, stated
+/// subtraction-free as `Σ_{i<n} 2^i + 1 = 2^n`. This is the load-bearing
+/// lemma Euclid IX.36 needs (`Σ_{i<p} 2^i = 2^p − 1`) and did not exist in
+/// this kernel — `Nat.mul_sumRange_pow` (`algebra.rs`) is only the shift
+/// identity `a * Σ (a^·) n = Σ (a^(·+1)) n`, not the closed form.
+///
+/// By induction on `n`. Base (`n = 0`): both sides reduce to `1` by pure
+/// `ι`/`δ` reduction (`sumRange _ 0 ≡ 0`, `pow 2 0 ≡ 1`). Step: `Σ_{i<succ m}
+/// 2^i + 1 ≡ (Σ_{i<m} 2^i + 2^m) + 1` (`sumRange`'s own defining equation)
+/// `= (2^m + Σ_{i<m} 2^i) + 1` (`add_comm`) `= 2^m + (Σ_{i<m} 2^i + 1)`
+/// (`add_assoc`) `= 2^m + 2^m` (the IH) `= 2^{succ m}` (`zero_add` plus
+/// `pow`'s and `mul`'s own recursive equations: `2^{succ m} ≡ 2^m * 2 ≡
+/// (2^m * 1) + 2^m ≡ (2^m * 0 + 2^m) + 2^m ≡ (0 + 2^m) + 2^m`).
+pub(super) fn declare_pow2_geom_sum(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let f = pow2_term(d);
+    d.theorem(p.pow2_geom_sum, 1, &|d, v| {
+        let n = v[0];
+        let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+            let sr = d.sum_range(f, x);
+            let one = d.num(1);
+            let lhs = d.add(sr, one);
+            let two = d.num(2);
+            let rhs = d.pow(two, x);
+            d.eq(lhs, rhs)
+        };
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let zero = d.zero();
+                let sr0 = d.sum_range(f, zero);
+                let one = d.num(1);
+                let lhs = d.add(sr0, one);
+                d.refl(lhs) // both sides defeq `1`
+            },
+            &|d, m, ih| {
+                let sm = d.succ(m);
+                let sr_m = d.sum_range(f, m);
+                let two = d.num(2);
+                let pow_m = d.pow(two, m);
+                let one = d.num(1);
+                let zero = d.zero();
+
+                // `start` is defeq `add (sumRange f (succ m)) one`, since
+                // `sumRange f (succ m) ≡ add sr_m (f m) ≡ add sr_m pow_m`.
+                let inner1 = d.add(sr_m, pow_m);
+                let start = d.add(inner1, one);
+
+                let comm1 = d.lemma(p.add_comm, &[sr_m, pow_m]);
+                let inner2 = d.add(pow_m, sr_m);
+                let step1 = d.congr(inner1, inner2, comm1, &|d, x| d.add(x, one));
+                let mid1 = d.add(inner2, one);
+
+                let assoc = d.lemma(p.add_assoc, &[pow_m, sr_m, one]);
+                let inner3 = d.add(sr_m, one);
+                let mid2 = d.add(pow_m, inner3);
+
+                let step3 = d.congr(inner3, pow_m, ih, &|d, x| d.add(pow_m, x));
+                let mid3 = d.add(pow_m, pow_m);
+
+                let zero_add_pm = d.lemma(p.zero_add, &[pow_m]);
+                let mul_intermediate = d.add(zero, pow_m);
+                let step4_inner = d.congr(mul_intermediate, pow_m, zero_add_pm, &|d, x| {
+                    d.add(x, pow_m)
+                });
+                let pow_succ_m = d.pow(two, sm);
+                let mul_intermediate_plus_pow_m = d.add(mul_intermediate, pow_m);
+                let step4 = d.symm(mul_intermediate_plus_pow_m, mid3, step4_inner);
+
+                let (_e, proof) = d.chain(
+                    start,
+                    &[
+                        (mid1, step1),
+                        (mid2, assoc),
+                        (mid3, step3),
+                        (pow_succ_m, step4),
+                    ],
+                );
+                proof
+            },
+            n,
+        );
+        (motive(d, n), proof)
+    })?;
+    Ok(())
+}
+
 /// Declare `Nat.sumDivisors`, its computational and prime sanity theorems,
-/// and `Nat.Perfect`, in dependency order.
+/// `Nat.Perfect`, and the finite geometric sum over powers of two, in
+/// dependency order.
 pub(super) fn declare_perfect_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_sum_divisors(d, p)?;
     declare_sum_divisors_one(d, p)?;
     declare_sum_divisors_prime(d, p)?;
     declare_perfect(d, p)?;
+    declare_pow2_geom_sum(d, p)?;
     Ok(())
 }

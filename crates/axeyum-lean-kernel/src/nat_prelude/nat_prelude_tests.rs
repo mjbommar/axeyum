@@ -729,6 +729,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.exists_prime_factorization,
         p.sum_divisors_one,
         p.sum_divisors_prime,
+        p.pow2_geom_sum,
     ]
 }
 
@@ -1035,6 +1036,42 @@ fn sum_divisors_one_and_prime_are_derived_and_apply() {
             "{name:?} rests on a trusted declaration"
         );
     }
+}
+
+/// `Nat.pow2_geom_sum` computes the ACTUAL finite geometric sum by kernel
+/// reduction: `pow 2 5` reduces to `32`, and the theorem applied at `5`
+/// type-checks to a residue naming `sumRange`, `pow`, and `add` (the
+/// subtraction-free `Σ_{i<5} 2^i + 1 = 2^5` statement) — a definition that
+/// type-checks but sums the wrong function has an empty axiom footprint and
+/// passes every sweep in this repository, so the numeral check matters as
+/// much as the derivation check.
+#[test]
+fn pow2_geom_sum_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let five = f.num(5);
+    let two_pow_five = f.const_app(p.pow, &[two, five]);
+    let thirty_two = f.num(32);
+    assert!(
+        f.k.def_eq(two_pow_five, thirty_two),
+        "pow 2 5 must reduce to 32"
+    );
+
+    let five2 = f.num(5);
+    let applied = f.const_app(p.pow2_geom_sum, &[five2]);
+    let inferred = f.k.infer(applied).expect("pow2_geom_sum 5 must type-check");
+    let rendered = f.k.render_lean(inferred);
+    assert!(
+        rendered.contains("sumRange") && rendered.contains("AxNat.pow") && rendered.contains("add"),
+        "unexpected residue type: {rendered}"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.pow2_geom_sum).is_empty(),
+        "pow2_geom_sum rests on a trusted declaration"
+    );
 }
 
 /// `Nat.testBit` computes the binary digits of `13 = 1101₂` by pure reduction
@@ -4951,7 +4988,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        55 + 245,
+        55 + 246,
         "every promised definition and theorem must be rendered"
     );
 }

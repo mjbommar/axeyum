@@ -1532,6 +1532,10 @@ pub struct NatPrelude {
     /// divisors including `n` itself (the classical "proper divisors"
     /// phrasing needs `Nat.sub`, truncated here, and is avoided).
     pub perfect: NameId,
+    /// `Nat.pow2_geom_sum : ∀ n, add (sumRange (fun i => pow 2 i) n) one =
+    /// pow 2 n` — the finite geometric sum over powers of two, subtraction-
+    /// free (`Σ_{i<n} 2^i = 2^n − 1` restated as `Σ_{i<n} 2^i + 1 = 2^n`).
+    pub pow2_geom_sum: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1942,6 +1946,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_divisors_one: kernel.name_str(nat, "sumDivisors_one"),
             sum_divisors_prime: kernel.name_str(nat, "sumDivisors_prime"),
             perfect: kernel.name_str(nat, "Perfect"),
+            pow2_geom_sum: kernel.name_str(nat, "pow2_geom_sum"),
         };
 
         let mut d = NatDev::new(kernel, p);
