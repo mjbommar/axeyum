@@ -21,7 +21,7 @@
 //! instead of two.
 
 use super::RatPrelude;
-use super::ops::{radd, rat_ty, rchain, rcongr, req, rle, rrefl, rsum_range, rzero};
+use super::ops::{radd, rat_ty, rchain, rcongr, req, rle, rrefl, rsum_range, rsymm, rzero};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -51,6 +51,7 @@ pub(super) fn declare_sum(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kerne
     declare_sum_range_nonneg(d, p)?;
     declare_sum_range_congr_lt(d, p)?;
     declare_sum_range_eq_zero_of_lt(d, p)?;
+    declare_sum_range_swap(d, p)?;
     Ok(())
 }
 
@@ -873,4 +874,179 @@ fn declare_sum_range_eq_zero_of_lt(d: &mut IntDev<'_>, p: RatPrelude) -> Result<
         d.lam_fv(f_fv, fn_ty, over_n)
     };
     d.declare_theorem(p.sum_range_eq_zero_of_lt, ty, value)
+}
+
+// ---------------------------------------------------------------------------
+// `Rat.sumRange_swap` — the Fubini/rectangle-swap lemma, not `Nat`'s
+// triangle/corner decomposition.
+// ---------------------------------------------------------------------------
+
+/// `fun j => f i j` for a CONCRETE `i` — one row's summand function, `Nat →
+/// Rat`. [`col_fn`]'s own successor `ι`-step unfolds to exactly this
+/// applied at the new row, which is why [`declare_sum_range_swap`]'s
+/// successor case can hand it straight to [`RatPrelude::sum_range_add`]
+/// without a bridging step.
+fn row_summand(d: &mut IntDev<'_>, f: ExprId, i: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let fij = d.apply(f, &[i, j]);
+    d.lam_fv(j_fv, nat, fij)
+}
+
+/// `fun i => sumRange (fun j => f i j) n` — the row-major grouping: outer
+/// index `i` (eventually bounded by `m`), inner index `j` bounded by the
+/// fixed `n`.
+fn row_fn(d: &mut IntDev<'_>, p: RatPrelude, f: ExprId, n: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let inner = row_summand(d, f, i);
+    let body = rsum_range(d, p, inner, n);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `fun j => sumRange (fun i => f i j) m` — the column-major grouping: outer
+/// index `j` bounded by the fixed `n`, inner index `i` bounded by `m`.
+fn col_fn(d: &mut IntDev<'_>, p: RatPrelude, f: ExprId, m: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let inner = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fij = d.apply(f, &[i, j]);
+        d.lam_fv(i_fv, nat, fij)
+    };
+    let body = rsum_range(d, p, inner, m);
+    d.lam_fv(j_fv, nat, body)
+}
+
+/// `fun j => add (F j) (G j)` — matches [`declare_sum_range_add`]'s own
+/// internal `combined_fn` shape exactly (same as [`super::polynomial`]'s
+/// private `combined`), so `Rat.sumRange_add` applies to it with no
+/// bridging step.
+fn combined2(d: &mut IntDev<'_>, f: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let fj = d.apply(f, &[j]);
+    let gj = d.apply(g, &[j]);
+    let body = radd(d, fj, gj);
+    d.lam_fv(j_fv, nat, body)
+}
+
+/// `Rat.sumRange_swap : ∀ f m n,`
+/// `sumRange (fun i => sumRange (fun j => f i j) n) m`
+/// `= sumRange (fun j => sumRange (fun i => f i j) m) n` —
+/// swapping the order of summation over an `m`-by-`n` rectangle. This is
+/// the Fubini SWAP, not `Nat`'s `rectangle`/`diagonal` triangle+corner
+/// decomposition (`nat_prelude::rectangle`/`nat_prelude::diagonal`, built
+/// for the antidiagonal reindexing a finite Cauchy product needs): it needs
+/// no `Nat.sub` and no antidiagonal reindexing, only two nested `sumRange`
+/// unfoldings and one application of [`RatPrelude::sum_range_add`] per step.
+/// `f` and `n` are held fixed throughout; the induction is on `m` alone.
+///
+/// # Route
+///
+/// - **Base** (`m = 0`): the LHS `sumRange _ zero` is `Rat.zero`
+///   definitionally, regardless of the summand — `sumRange`'s own `ι`-rule
+///   fires on the literal `zero` major premise without inspecting the
+///   function argument. The RHS is `sumRange (fun j => sumRange (fun i => f
+///   i j) zero) n`; for every `j` the inner sum is `zero` the same
+///   definitional way, so the whole outer function is defeq to the
+///   constant-zero function and [`RatPrelude::sum_range_eq_zero_of_lt`]
+///   (with the trivial pointwise proof `Eq.refl`) collapses it.
+/// - **Succ** (`m = succ k`, `ih : sumRange row k = sumRange (col_fn f k)
+///   n`): `sumRange row (succ k)` `ι`-reduces to `sumRange row k + row_summand
+///   f k` (`sumRange (fun j => f k j) n`, the new row). Column by column,
+///   `col_fn f (succ k)` `ι`-reduces to `combined2 (col_fn f k)
+///   (row_summand f k)` — each column peels off its own `k`-th term — so
+///   [`RatPrelude::sum_range_add`] splits `sumRange (col_fn f (succ k)) n`
+///   into `sumRange (col_fn f k) n + sumRange (row_summand f k) n`, and the
+///   second summand IS (not merely defeq to) the new row's sum. `ih`
+///   supplies the remaining congruence.
+fn declare_sum_range_swap(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn2_ty = {
+        let inner = d.arrow(nat, carrier);
+        d.arrow(nat, inner)
+    };
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let row = row_fn(d, p, f, n);
+        let lhs = rsum_range(d, p, row, x);
+        let col = col_fn(d, p, f, x);
+        let rhs = rsum_range(d, p, col, n);
+        req(d, lhs, rhs)
+    };
+    let stmt = motive(d, m);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero_n = d.zero();
+            let col_zero = col_fn(d, p, f, zero_n);
+            let zero_r = rzero(d, p);
+            let pointwise_zero = {
+                let i_fv = d.fresh_fvar();
+                let i = d.kernel().fvar(i_fv);
+                let hi_fv = d.fresh_fvar();
+                let hi_ty = d.lt(i, n);
+                let body = rrefl(d, zero_r);
+                let with_hi = d.lam_fv(hi_fv, hi_ty, body);
+                d.lam_fv(i_fv, nat, with_hi)
+            };
+            let h = d.lemma(p.sum_range_eq_zero_of_lt, &[col_zero, n, pointwise_zero]);
+            // h : Eq Rat (sumRange col_zero n) zero_r
+            let sum_col_zero = rsum_range(d, p, col_zero, n);
+            rsymm(d, sum_col_zero, zero_r, h)
+        },
+        &|d, k, ih| {
+            // ih : Eq Rat (sumRange (row_fn f n) k) (sumRange (col_fn f k) n)
+            let row_summand_k = row_summand(d, f, k);
+            let row_k = rsum_range(d, p, row_summand_k, n);
+
+            let row = row_fn(d, p, f, n);
+            let sum_row_k = rsum_range(d, p, row, k);
+            let term1 = radd(d, sum_row_k, row_k);
+
+            let col_k = col_fn(d, p, f, k);
+            let sum_col_k = rsum_range(d, p, col_k, n);
+            let term2 = radd(d, sum_col_k, row_k);
+            let h_ih_congr = rcongr(d, sum_row_k, sum_col_k, ih, &|d, t| radd(d, t, row_k));
+
+            let combined_shape = combined2(d, col_k, row_summand_k);
+            let sum_combined = rsum_range(d, p, combined_shape, n);
+            let h_add = d.lemma(p.sum_range_add, &[col_k, row_summand_k, n]);
+            // h_add : Eq Rat (sumRange combined_shape n)
+            //           (add (sumRange col_k n) (sumRange row_summand_k n))
+            //       = Eq Rat sum_combined term2
+            let h_add_symm = rsymm(d, sum_combined, term2, h_add);
+
+            let (_e, proof) = rchain(d, term1, &[(term2, h_ih_congr), (sum_combined, h_add_symm)]);
+            proof
+        },
+        m,
+    );
+
+    let ty = {
+        let over_m = d.pi_fv(m_fv, nat, stmt);
+        let over_n = d.pi_fv(n_fv, nat, over_m);
+        d.pi_fv(f_fv, fn2_ty, over_n)
+    };
+    let value = {
+        let over_m = d.lam_fv(m_fv, nat, proof);
+        let over_n = d.lam_fv(n_fv, nat, over_m);
+        d.lam_fv(f_fv, fn2_ty, over_n)
+    };
+    d.declare_theorem(p.sum_range_swap, ty, value)
 }

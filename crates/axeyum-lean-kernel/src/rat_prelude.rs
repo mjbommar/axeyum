@@ -847,6 +847,14 @@ pub struct RatPrelude {
     /// are supplied for `i ≠ j` within a range, never universally, so
     /// [`Self::sum_range_congr`]'s UNRESTRICTED hypothesis cannot be used).
     pub sum_range_eq_zero_of_lt: NameId,
+    /// `Rat.sumRange_swap : ∀ f m n, sumRange (fun i => sumRange (fun j => f
+    /// i j) n) m = sumRange (fun j => sumRange (fun i => f i j) m) n` — the
+    /// Fubini/rectangle-swap over a `ℚ`-valued double sum, `f`/`n` fixed and
+    /// induction on `m` alone. Not `Nat`'s `rectangle`/`diagonal`
+    /// triangle+corner decomposition — this is the plain order-of-summation
+    /// swap a Cauchy product's `(Σa)(Σb)` side needs before any antidiagonal
+    /// reindexing, and it needs no `Nat.sub`.
+    pub sum_range_swap: NameId,
 
     // --- polynomials (rat_prelude::polynomial) ------------------------------
     /// `Rat.pow : Rat → Nat → Rat`, `Nat.rec` on the exponent: `pow a zero ≡
@@ -1592,6 +1600,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sum_range_nonneg: child(kernel, "sumRange_nonneg"),
         sum_range_congr_lt: child(kernel, "sumRange_congr_lt"),
         sum_range_eq_zero_of_lt: child(kernel, "sumRange_eq_zero_of_lt"),
+        sum_range_swap: child(kernel, "sumRange_swap"),
         pow: child(kernel, "pow"),
         pow_zero: child(kernel, "pow_zero"),
         pow_succ: child(kernel, "pow_succ"),
