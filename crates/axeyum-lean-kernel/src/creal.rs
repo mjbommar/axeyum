@@ -1213,6 +1213,29 @@ pub struct CRealPrelude {
     /// composes already did the heavy lifting inside the two theorems named
     /// above; this one is bound-widening glue only, not a further telescope.
     pub sum_range_tail_within_cauchy: NameId,
+    /// `CReal.sumRange_cauchy_dominated_ordered : ∀ f g k, (∀ x, le (abs (f
+    /// x)) (g x)) → (∀ pp qq, Within (seq (sumRange g pp) pp − seq (sumRange
+    /// g qq) qq) (natDivSucc k pp + natDivSucc k qq)) → ∀ a b, Nat.le a b →
+    /// Within (seq (sumRange f b) b − seq (sumRange f a) a) (bound k a b)` —
+    /// the ordered-pair half of wiring [`Self::sum_range_tail_within_cauchy`]
+    /// through to [`Self::cauchy`]'s own **canonical** two-index sample
+    /// shape (`seq (f p) p − seq (f q) q`, not the shifted-sample shape that
+    /// theorem supplies). `series.rs`'s module documentation names this gap
+    /// under "Cauchy-shape conversion": `sum_range_tail_within_cauchy`
+    /// bounds `f`'s tail sampled at a *shared, shifted* index; reaching
+    /// `Cauchy`'s own shape needs two more `CReal.regular` legs bridging
+    /// each side back to its own canonical sample
+    /// (`series::dominated_canonical_at`), and lifting the ordered pair
+    /// `(m, add m gap)` that construction works with to an arbitrary
+    /// `a ≤ b` (`Nat.le_dest` plus transport, the same technique
+    /// [`Self::sum_range_tail_within_le`] already used to lift
+    /// `sum_range_tail_within`, reused here against a different payload).
+    ///
+    /// Selecting between this pair's two orientations via `Nat.le_total`,
+    /// and normalizing the resulting bound into `Cauchy`'s own
+    /// `natDivSucc K m + natDivSucc K n` shape, are left to whichever piece
+    /// assembles `sumRange_cauchy_of_dominated` itself.
+    pub sum_range_cauchy_dominated_ordered: NameId,
     /// `CReal.sumRange_seq_zero : Eq Rat (seq (sumRange f Nat.zero) k)
     /// Rat.zero` — the base case of the sample-rate law, closing by `Eq.refl`
     /// alone (`sumRange f zero` ι-reduces to `zero := ofRat Rat.zero`, and
@@ -1967,6 +1990,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_tail_within_le: kernel.name_str(creal, "sumRange_tail_within_le"),
         sum_range_tail_cauchy_within: kernel.name_str(creal, "sumRange_tail_cauchy_within"),
         sum_range_tail_within_cauchy: kernel.name_str(creal, "sumRange_tail_within_cauchy"),
+        sum_range_cauchy_dominated_ordered: kernel
+            .name_str(creal, "sumRange_cauchy_dominated_ordered"),
         sum_range_seq_zero: kernel.name_str(creal, "sumRange_seq_zero"),
         sum_range_seq_succ: kernel.name_str(creal, "sumRange_seq_succ"),
         pow: kernel.name_str(creal, "pow"),

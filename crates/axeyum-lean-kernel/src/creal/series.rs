@@ -341,6 +341,7 @@ pub(super) fn declare_series(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     declare_sum_range_tail_within_le(d, p)?;
     declare_sum_range_tail_cauchy_within(d, p)?;
     declare_sum_range_tail_within_cauchy(d, p)?;
+    declare_sum_range_cauchy_dominated_ordered(d, p)?;
     declare_sum_range_seq_equations(d, p)
 }
 
@@ -2138,6 +2139,281 @@ fn declare_sum_range_tail_within_cauchy(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sum_range_tail_within_cauchy,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// From `Within (a-b) q`, derive `Within (b-a) q` via `Rat.neg_sub` (`neg
+/// (a-b) = b-a`) and `Rat.bounds_neg` (negating a two-sided bound keeps it) —
+/// the generic "swap the two sides of a `Within` difference" helper
+/// [`dominated_canonical_at`] uses to turn each `CReal.regular` leg (which
+/// always bounds "earlier index minus later index") into whichever
+/// orientation its three-leg chain needs.
+fn within_symm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    q: ExprId,
+    pab: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let ab = rsub(d, rat, a, b);
+    let (lower, upper) = halves(d, p, ab, q, pab);
+    let neg_within = d.lemma(rat.bounds_neg, &[ab, q, lower, upper]);
+    let neg_ab = rneg(d, ab);
+    let ba = rsub(d, rat, b, a);
+    let eq = d.lemma(rat.neg_sub, &[a, b]);
+    rat_eq_rewrite(d, neg_ab, ba, eq, neg_within, &|d, t| within(d, p, t, q))
+}
+
+/// The four legs [`dominated_canonical_at`] chains at shared index `x`
+/// (`t := shift x`, `m` fixed): `bxy := modulus t x`, `bzw := modulus m t`
+/// bracket `byz`, [`declare_sum_range_tail_within_cauchy`]'s own
+/// `final_bound` reconstructed identically (same `radd`/`modulus`/
+/// `div_succ_var`/`div_succ` calls in the same order) so that theorem's
+/// conclusion, applied at `(m, x)`'s defining gap, lands at exactly this
+/// `byz` — not merely an equal expression, the same one, which is what lets
+/// the kernel accept it in that argument position without an explicit `Eq`
+/// rewrite. `total` is their sum, the bound
+/// [`declare_sum_range_cauchy_dominated_ordered`]'s `target_at` states.
+fn dominated_canonical_legs(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k: ExprId,
+    m: ExprId,
+    x: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let t = shift(d, x);
+    let bxy = modulus(d, p, t, x);
+    let b2 = {
+        let bx = div_succ_var(d, p, k, x);
+        let bm = div_succ_var(d, p, k, m);
+        radd(d, bx, bm)
+    };
+    let bzw = modulus(d, p, m, t);
+    let bxy_b2 = radd(d, bxy, b2);
+    let total_bound_g = radd(d, bxy_b2, bzw);
+    let w_extra = div_succ(d, p, 2, x);
+    let byz = radd(d, total_bound_g, w_extra);
+    let bxy_byz = radd(d, bxy, byz);
+    let total = radd(d, bxy_byz, bzw);
+    (bxy, byz, bzw, total)
+}
+
+/// The bound [`declare_sum_range_cauchy_dominated_ordered`]'s `target_at`
+/// states at shared index `x` — [`dominated_canonical_legs`]'s `total`.
+fn dominated_canonical_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k: ExprId,
+    m: ExprId,
+    x: ExprId,
+) -> ExprId {
+    dominated_canonical_legs(d, p, k, m, x).3
+}
+
+/// The canonical-index extraction: from
+/// [`CRealPrelude::sum_range_tail_within_cauchy`]'s bound on `f`'s tail
+/// sampled at the *shared, shifted* index `t := shift q` (`q := add m gap`)
+/// — a bound on `seq (sumRange f q) t − seq (sumRange f m) t` — plus two more
+/// `CReal.regular` legs bridging each side of that back to its own
+/// **canonical** sample (`seq (sumRange f q) q`, `seq (sumRange f m) m`),
+/// derive a bound on `seq (sumRange f q) q − seq (sumRange f m) m` itself:
+/// the shape [`CRealPrelude::cauchy`] actually needs, not the shifted-sample
+/// shape `sum_range_tail_within_cauchy` supplies.
+///
+/// Four points, chained `Y → X → W → Z` (`Y := seq (sumRange f q) q`,
+/// `X := seq (sumRange f q) t`, `W := seq (sumRange f m) t`,
+/// `Z := seq (sumRange f m) m`) via [`chain_within3`], **not** the
+/// `X → Y → Z → W` order `sum_range_tail_cauchy_within`'s own inner
+/// telescope uses — that telescope's middle leg was a *known* Cauchy
+/// witness; here the middle leg (`X − W`) is the *known* quantity
+/// (`sum_range_tail_within_cauchy`'s own conclusion, defeq to `X − W` for
+/// the same ι/β reason that theorem's own doc comment gives) and `Y − Z` is
+/// what is wanted, so the known bound has to sit in the **middle** of the
+/// chain rather than at an end — the two `CReal.regular` legs (`Y − X`,
+/// `W − Z`) are each a [`within_symm`] flip of the natural
+/// `regular`-supplied orientation (`X − Y`, `Z − W`).
+fn dominated_canonical_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    g: ExprId,
+    k: ExprId,
+    m: ExprId,
+    gap: ExprId,
+    hyp1: ExprId,
+    hyp2: ExprId,
+) -> ExprId {
+    let nat_add = d.prelude().add;
+    let q = d.const_app(nat_add, &[m, gap]);
+    let t = shift(d, q);
+
+    let tail_cw = d.lemma(
+        p.sum_range_tail_within_cauchy,
+        &[f, g, k, m, gap, hyp1, hyp2],
+    );
+    let (bxy, byz, bzw, _total) = dominated_canonical_legs(d, p, k, m, q);
+
+    let sum_f_q = d.const_app(p.sum_range, &[f, q]);
+    let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+
+    let x_pt = sample(d, p, sum_f_q, t);
+    let y_pt = sample(d, p, sum_f_q, q);
+    let z_pt = sample(d, p, sum_f_m, m);
+    let w_pt = sample(d, p, sum_f_m, t);
+
+    let reg1 = d.lemma(p.regular, &[sum_f_q, t, q]);
+    let p_yx = within_symm(d, p, x_pt, y_pt, bxy, reg1);
+
+    let reg2 = d.lemma(p.regular, &[sum_f_m, m, t]);
+    let p_wz = within_symm(d, p, z_pt, w_pt, bzw, reg2);
+
+    chain_within3(
+        d, p, y_pt, x_pt, w_pt, z_pt, bxy, byz, bzw, p_yx, tail_cw, p_wz,
+    )
+}
+
+/// `CReal.sumRange_cauchy_dominated_ordered` — the ordered-pair half of
+/// wiring `sumRange_tail_within_cauchy` through to `CReal.Cauchy`'s own
+/// canonical two-index shape, the gap the module documentation's
+/// "Cauchy-shape conversion" section names as unfinished: lifts
+/// [`dominated_canonical_at`]'s ordered-pair form `(m, add m gap)` to an
+/// arbitrary pair `(a, b)` constrained only by `a ≤ b`, exactly the
+/// `Nat.le_dest`-plus-transport technique
+/// [`declare_sum_range_tail_within_le`] already used to lift
+/// `sum_range_tail_within` the same way — reused here, not re-derived,
+/// against a different (canonical-shape, Cauchy-witnessed) payload.
+///
+/// Selecting between this pair's two orientations via `Nat.le_total`, and
+/// normalizing the resulting bound into `CReal.Cauchy`'s own
+/// `natDivSucc K m + natDivSucc K n` shape, are left to whichever piece
+/// assembles `sumRange_cauchy_of_dominated` itself.
+fn declare_sum_range_cauchy_dominated_ordered(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_add = d.prelude().add;
+    let nat_le_dest = d.prelude().le_dest;
+    let rat = p.rat;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let pointwise_ty = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fx = d.apply(f, &[x]);
+        let gx = d.apply(g, &[x]);
+        let abs_fx = cabs(d, p, fx);
+        let leq = cle(d, p, abs_fx, gx);
+        d.pi_fv(x_fv, nat, leq)
+    };
+    let hyp1_fv = d.fresh_fvar();
+    let hyp1 = d.kernel().fvar(hyp1_fv);
+
+    let cauchy_hyp_ty = {
+        let pp_fv = d.fresh_fvar();
+        let pp = d.kernel().fvar(pp_fv);
+        let qq_fv = d.fresh_fvar();
+        let qq = d.kernel().fvar(qq_fv);
+        let sum_pp = d.const_app(p.sum_range, &[g, pp]);
+        let sum_qq = d.const_app(p.sum_range, &[g, qq]);
+        let left = sample(d, p, sum_pp, pp);
+        let right = sample(d, p, sum_qq, qq);
+        let diff = rsub(d, rat, left, right);
+        let bpp = div_succ_var(d, p, k, pp);
+        let bqq = div_succ_var(d, p, k, qq);
+        let bound = radd(d, bpp, bqq);
+        let claim = within(d, p, diff, bound);
+        let over_qq = d.pi_fv(qq_fv, nat, claim);
+        d.pi_fv(pp_fv, nat, over_qq)
+    };
+    let hyp2_fv = d.fresh_fvar();
+    let hyp2 = d.kernel().fvar(hyp2_fv);
+
+    let hle_ty = d.le(a, b);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    let sum_f_a = d.const_app(p.sum_range, &[f, a]);
+
+    let target_at = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let sum_f_x = d.const_app(p.sum_range, &[f, x]);
+        let y = sample(d, p, sum_f_x, x);
+        let z = sample(d, p, sum_f_a, a);
+        let diff = rsub(d, rat, y, z);
+        let bound = dominated_canonical_bound(d, p, k, a, x);
+        within(d, p, diff, bound)
+    };
+    let target = target_at(d, b);
+
+    // pred := λ n, Eq Nat (add a n) b.
+    let pred = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sum = d.const_app(nat_add, &[a, n]);
+        let body = d.eq(sum, b);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    let represented = d.const_app(nat_le_dest, &[a, b, hle]);
+
+    let minor = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let a_plus_n = d.const_app(nat_add, &[a, n]);
+        let e_ty = d.eq(a_plus_n, b);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        // body_at_an : target_at(add a n) -- exactly
+        // `dominated_canonical_at f g k a n hyp1 hyp2`'s own conclusion.
+        let body_at_an = dominated_canonical_at(d, p, f, g, k, a, n, hyp1, hyp2);
+        let rewritten = nat_rewrite_prop(d, a_plus_n, b, e, body_at_an, &|d, x| target_at(d, x));
+
+        let with_e = d.lam_fv(e_fv, e_ty, rewritten);
+        d.lam_fv(n_fv, nat, with_e)
+    };
+
+    let proof_body = exists_elim(d, pred, target, represented, minor);
+
+    let ty = {
+        let after_hle = d.arrow(hle_ty, target);
+        let after_hyp2 = d.arrow(cauchy_hyp_ty, after_hle);
+        let after_hyp1 = d.arrow(pointwise_ty, after_hyp2);
+        let over_b = d.pi_fv(b_fv, nat, after_hyp1);
+        let over_a = d.pi_fv(a_fv, nat, over_b);
+        let over_k = d.pi_fv(k_fv, nat, over_a);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_k);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let with_hle = d.lam_fv(hle_fv, hle_ty, proof_body);
+        let with_hyp2 = d.lam_fv(hyp2_fv, cauchy_hyp_ty, with_hle);
+        let with_hyp1 = d.lam_fv(hyp1_fv, pointwise_ty, with_hyp2);
+        let over_b = d.lam_fv(b_fv, nat, with_hyp1);
+        let over_a = d.lam_fv(a_fv, nat, over_b);
+        let over_k = d.lam_fv(k_fv, nat, over_a);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_k);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_cauchy_dominated_ordered,
         uparams: vec![],
         ty,
         value,
