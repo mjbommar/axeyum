@@ -243,6 +243,31 @@ pub struct RatPrelude {
     /// only the one inverse law `a⁻¹·a = 1` is needed, not a bounded group's
     /// closure/membership bookkeeping.
     pub mul_left_cancel_of_ne_zero: NameId,
+    /// `Rat.IsOrderedField (add mul : Rat → Rat → Rat) (neg inv : Rat → Rat)
+    /// (zero one : Rat) : Prop := Rat.IsField add mul neg inv zero one ∧
+    /// (translation ∧ mul_nonneg)` — `IsField` extended with the two order
+    /// axioms of an ordered field:
+    ///
+    /// - translation invariance: `∀ x y z, le x y → le (add x z) (add y z)`;
+    /// - closure of the nonnegatives under multiplication: `∀ x y, le zero x
+    ///   → le zero y → le zero (mul x y)`.
+    ///
+    /// Composition, not restatement: the ten field leaves are never rebuilt,
+    /// `Rat.IsField` is reused as this bundle's first conjunct verbatim.
+    /// `Rat.le` is fixed rather than a bundle parameter, exactly as `Eq Rat`
+    /// is fixed in `IsField`'s own leaves — the same "no bound parameter"
+    /// reason `IsField` gives for its own name (`Rat` is already the whole
+    /// carrier).
+    pub is_ordered_field: NameId,
+    /// `Rat.rat_isOrderedField : Rat.IsOrderedField Rat.add Rat.mul Rat.neg
+    /// Rat.inv Rat.zero Rat.one` — the worked instance. The field component
+    /// is [`Self::rat_is_field`] verbatim; translation invariance is
+    /// [`Self::add_le_add`] paired with a reflexive hypothesis on the shared
+    /// summand ([`Self::le_refl`]); closure of the nonnegatives is
+    /// [`Self::mul_nonneg`] verbatim — its stated type already matches this
+    /// bundle's second order axiom, so neither order axiom needs new
+    /// algebra.
+    pub rat_is_ordered_field: NameId,
     /// `Rat.inv : Rat → Rat` — the multiplicative inverse, with `inv 0 = 0`
     /// (the standard total convention; `ℚ` has no partial operations here for
     /// the same reason SMT-LIB's `bvudiv` is total).
@@ -1513,6 +1538,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         is_field: child(kernel, "IsField"),
         rat_is_field: child(kernel, "rat_isField"),
         mul_left_cancel_of_ne_zero: child(kernel, "mul_left_cancel_of_ne_zero"),
+        is_ordered_field: child(kernel, "IsOrderedField"),
+        rat_is_ordered_field: child(kernel, "rat_isOrderedField"),
         mul_pos: child(kernel, "mul_pos"),
         nat_div_succ_pos: child(kernel, "natDivSucc_pos"),
         sub_mul: child(kernel, "sub_mul"),
