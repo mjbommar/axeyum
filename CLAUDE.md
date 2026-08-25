@@ -1023,6 +1023,26 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   nothing ever required length one. Full retrospective:
   `docs/autogenesis/228-capsule-lane-retrospective.md`.
 
+- **`Nat.add` RECURSES ON ITS RIGHT ARGUMENT, so `Nat.add(literal, k)` IS STUCK
+  FOR SYMBOLIC `k` — and it fails by not reducing, not by erroring.** Measured
+  2026-08-25 while normalizing a `CReal` bound: two fusion steps built
+  `Nat.add(8, k)` instead of `Nat.add(k, 8)`, and the term never reduced to
+  `succ^8(k)`. The kernel reported a `TypeMismatch` deep inside an unrelated
+  `Rat.le` cross-multiplication unfold, several rewrites away from the cause.
+
+  What makes it worth its own entry is the SECOND-order damage: the whole
+  construction had been designed so that every `K`-containing accumulator stays
+  the left operand, which keeps the index arithmetic **pure defeq and needs no
+  `Nat.add_assoc`/`Nat.add_comm` at all**. Putting the literal on the left does
+  not merely produce a stuck term — it silently forfeits that property, so the
+  proof would need associativity and commutativity lemmas everywhere it
+  previously needed none.
+
+  The rule: **when a `Nat.add` will be padded, compared, or fused, the symbolic
+  side goes LEFT and the literal RIGHT.** If a term mysteriously will not reduce
+  and the error surfaces far from the arithmetic, check the operand order before
+  anything else.
+
 - **A PRELUDE CAN DECLARE INTO ANOTHER PRELUDE'S NAMESPACE, SO "IS THIS NAME
   TAKEN?" IS NOT ANSWERED BY READING THE MODULE IT BELONGS IN.** Measured
   2026-08-25: a lane built an explicit inverse for a bijection on `[0,n)` and
