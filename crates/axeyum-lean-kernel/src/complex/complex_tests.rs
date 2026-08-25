@@ -239,6 +239,9 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ),
         ("Complex.root_of_unity_mul", p.root_of_unity_mul),
         ("Complex.root_of_unity_pow", p.root_of_unity_pow),
+        ("Complex.ptolemy_identity", p.ptolemy_identity),
+        ("Complex.normSq_congr", p.norm_sq_congr),
+        ("Complex.ptolemy_inequality_sq", p.ptolemy_inequality_sq),
     ];
     for (label, name) in named {
         let declaration = kernel
@@ -454,3 +457,101 @@ const RECT_EQ_DIAG_ADD_CORNER_TYPE: &str = "((x0 : ((x0 : AxNat) -> ((x1 : AxNat
 
 /// The pinned type of [`ComplexPrelude::sum_range_mul_eq_diag_add_corner`].
 const SUM_RANGE_MUL_EQ_DIAG_ADD_CORNER_TYPE: &str = "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : ((x1 : AxNat) -> Complex)) -> ((x2 : AxNat) -> Complex.Equiv (Complex.mul (Complex.sumRange x0 x2) (Complex.sumRange x1 x2)) (Complex.add (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => fun (x6 : AxNat) => Complex.mul (x0 x5) (x1 x6)) x4 (AxNat.sub x3 x4)) (AxNat.succ x3)) x2) (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => (fun (x6 : AxNat) => fun (x7 : AxNat) => Complex.mul (x0 x6) (x1 x7)) x3 x5) (AxNat.add (AxNat.sub x2 x3) x4)) x3) x2)))))";
+
+/// **Concrete instantiation, checked by REDUCING, not merely type-checking.**
+///
+/// `ptolemy_identity` at `a = 1, b = I, c = −1, d = −I` — the fourth roots of
+/// unity, all on the unit circle (concyclic), matching the module's own
+/// `Complex.I_is_fourth_root` / `Complex.I_sq` witnesses. By hand: `L :=
+/// (a−c)(b−d) = (1−(−1))·(I−(−I)) = 2·2I = 4I`; `X := (a−b)(c−d) =
+/// (1−I)(−1+I) = 2I`; `Y := (b−c)(a−d) = (I+1)(1+I) = 2I`; `X+Y = 4I = L`.
+///
+/// That the UNIVERSAL theorem type-checks is already guaranteed by the ring
+/// calculus refusing a false identity (`the_ring_calculus_refuses_a_false_identity`).
+/// What this test adds: applying it at these four points, IN THIS ORDER,
+/// must reduce (via the kernel's own `Pi`-application) to EXACTLY the
+/// statement built independently here from raw `Complex.add`/`Complex.neg`/
+/// `Complex.mul` applications — not via `complex_law`/`CExpr`, so this is a
+/// genuine second construction path. An argument-position defect (a swapped
+/// `a`/`b`/`c`/`d`, or a swapped `X`/`Y` pairing) would fail the `def_eq`
+/// below even though the universal theorem type-checked perfectly.
+#[test]
+fn ptolemy_identity_reduces_at_the_fourth_roots_of_unity() {
+    use crate::expr::ExprId;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let i = d.kernel().const_(p.i, vec![]);
+    let neg_one = d.const_app(p.neg, &[one]);
+    let neg_i = d.const_app(p.neg, &[i]);
+
+    let proof = d.lemma(p.ptolemy_identity, &[one, i, neg_one, neg_i]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .expect("ptolemy_identity at (1, I, -1, -I) must type-check");
+
+    let sub = |d: &mut IntDev<'_>, x: ExprId, y: ExprId| -> ExprId {
+        let ny = d.const_app(p.neg, &[y]);
+        d.const_app(p.add, &[x, ny])
+    };
+    let a_minus_c = sub(&mut d, one, neg_one); // 1 - (-1)
+    let b_minus_d = sub(&mut d, i, neg_i); // I - (-I)
+    let lhs = d.const_app(p.mul, &[a_minus_c, b_minus_d]);
+
+    let a_minus_b = sub(&mut d, one, i); // 1 - I
+    let c_minus_d = sub(&mut d, neg_one, neg_i); // -1 - (-I)
+    let x = d.const_app(p.mul, &[a_minus_b, c_minus_d]);
+
+    let b_minus_c = sub(&mut d, i, neg_one); // I - (-1)
+    let a_minus_d = sub(&mut d, one, neg_i); // 1 - (-I)
+    let y = d.const_app(p.mul, &[b_minus_c, a_minus_d]);
+
+    let rhs = d.const_app(p.add, &[x, y]);
+    let expected = super::zeq(&mut d, p, lhs, rhs);
+
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "the instantiated identity must be EXACTLY \
+         (1-(-1))(I-(-I)) ~ (1-I)(-1-(-I)) + (I-(-1))(1-(-I)); an \
+         argument-position defect would fail this def_eq even though the \
+         universal theorem type-checked"
+    );
+}
+
+/// `Complex.ptolemy_inequality_sq` is built from `normSq` applied to the
+/// SAME three products `ptolemy_identity` relates — not to some other
+/// grouping — read out of the kernel's own rendering rather than trusted from
+/// the source text that built it.
+#[test]
+fn ptolemy_inequality_sq_is_stated_over_the_ptolemy_products() {
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.ptolemy_inequality_sq)
+        .expect("Complex.ptolemy_inequality_sq must be declared")
+    {
+        Declaration::Theorem { ty, .. } => kernel.render_lean(*ty),
+        other => panic!("{other:?} is not a theorem"),
+    };
+    assert!(
+        ty.contains("Complex.normSq"),
+        "the statement must mention normSq: {ty}"
+    );
+    // Three multiplicative products, one normSq'd on the left of `CReal.le`
+    // and two summed (each doubled) on the right -- L, X, X, Y, Y.
+    assert_eq!(
+        ty.matches("Complex.normSq (Complex.mul").count(),
+        5,
+        "L, X (twice, for the doubling) and Y (twice) must each appear as a \
+         normSq of a Complex.mul: {ty}"
+    );
+    assert!(
+        ty.contains("CReal.le"),
+        "the conclusion must be a CReal.le, not an Equiv: {ty}"
+    );
+}
