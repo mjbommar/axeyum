@@ -32,14 +32,17 @@ from .cas import Expr
 
 __all__ = [
     "D",
+    "Equal",
     "Expand",
     "Factor",
     "Integrate",
     "Limit",
     "N",
+    "ReplaceAll",
     "Series",
     "Simplify",
     "Solve",
+    "Substitute",
     "Together",
     "TrigSimplify",
     "parse",
@@ -58,6 +61,11 @@ _FUNCS: dict[str, Callable[[Expr], Expr]] = {
     "abs": Expr.abs,
     "erf": Expr.erf,
     "gamma": Expr.gamma,
+}
+_NOT_SYMBOLS = {
+    "pi": "`pi` is not a symbol here: the CAS is exact over Q and has no transcendental constant; use a variable name or N()",
+    "Pi": "`Pi` is not a symbol here: the CAS is exact over Q and has no transcendental constant",
+    "E": "`E` is not a symbol here; write exp(1) or use a variable name",
 }
 _MMA_FUNCS = {
     "Sin": "sin",
@@ -118,6 +126,10 @@ def _build(node: ast.AST) -> Expr:
             )
         return Expr.int(node.value)
     if isinstance(node, ast.Name):
+        if node.id in _NOT_SYMBOLS:
+            raise ValueError(_NOT_SYMBOLS[node.id])
+        if node.id == "I":
+            return Expr.imaginary_unit()
         return Expr.var(node.id)
     if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
         return -_build(node.operand)
@@ -234,24 +246,11 @@ def TrigSimplify(expr: str | Expr) -> Expr:
     return cas.trigsimp(parse(expr))
 
 
-def Solve(expr: str | Expr, var: str | None = None) -> list[Expr] | None:
-    """``Solve[e == 0, x]`` -- roots of ``e`` in ``x`` (``None`` when the Rust solver declines)."""
-    e = parse(expr)
-    return cas.solve(e, _var(e, var))
-
-
 def D(expr: str | Expr, var: str | None = None, n: int = 1) -> Expr:
     """``D[e, x]`` (or ``D[e, {x, n}]``), simplified."""
     e = parse(expr)
     v = _var(e, var)
     return cas.simplify(e.differentiate_n(v, n) if n != 1 else e.differentiate(v))
-
-
-def Integrate(expr: str | Expr, var: str | None = None) -> Expr | None:
-    """``Integrate[e, x]`` -- the antiderivative; its certificate is on ``cas.integrate(...)``."""
-    e = parse(expr)
-    result = cas.integrate(e, _var(e, var))
-    return None if result is None else result.antiderivative
 
 
 def Series(expr: str | Expr, var: str | None = None, order: int = 4) -> Expr | None:
@@ -287,3 +286,86 @@ def Limit(expr: str | Expr, point: Fraction | float | str, var: str | None = Non
 def N(expr: str | Expr, **values: float) -> float | None:
     """``N[e /. {x -> 2.5}]`` -- floating evaluation; ``None`` outside the evaluable fragment."""
     return cas.evalf(parse(expr), dict(values))
+
+
+def Equal(a: str | Expr, b: str | Expr) -> bool:
+    """``a == b`` as MATHEMATICS, not as trees: a certified zero-test of ``a - b``.
+
+    ``m.parse("1 + x") == m.parse("x + 1")`` is ``False`` (structural
+    equality, which is what ``==`` on ``Expr`` means); ``Equal`` asks the CAS
+    and returns ``True`` only for ``ZeroTest.Certified`` with ``equal``; an
+    ``Unknown`` (outside the decidable fragment, or overflow) raises
+    ``ValueError`` rather than answering ``False`` -- "could not decide" is not
+    "not equal".
+    """
+    verdict = cas.equal(parse(a), parse(b))
+    if verdict.certainty() != cas.Certainty.Certified:
+        raise ValueError(
+            f"equality of {show(parse(a))} and {show(parse(b))} is undecided: {verdict}"
+        )
+    return bool(verdict.equal)
+
+
+def Substitute(expr: str | Expr, **values: str | Expr | int) -> Expr:
+    """``e /. {x -> 2, y -> z + 1}``; values may be strings, ``Expr`` or ints."""
+    e = parse(expr)
+    for name, value in values.items():
+        e = e.substitute(name, Expr.int(value) if isinstance(value, int) else parse(value))
+    return e
+
+
+ReplaceAll = Substitute
+
+
+def _solve_system(
+    equations: list[str | Expr], variables: list[str]
+) -> list[dict[str, Expr]] | None:
+    exprs = [parse(eq) for eq in equations]
+    if len(variables) == 2 and len(exprs) == 2:
+        pairs = cas.solve_polynomial_system(exprs[0], exprs[1], variables[0], variables[1])
+        if pairs is not None:
+            return [{variables[0]: a, variables[1]: b} for a, b in pairs]
+    rows = cas.solve_linear_system(exprs, variables)
+    if rows is None:
+        return None
+    return [dict(rows)]
+
+
+def Solve(
+    expr: str | Expr | list[str | Expr], var: str | list[str] | None = None
+) -> list[Expr] | list[dict[str, Expr]] | None:
+    """``Solve[e == 0, x]`` for one expression; ``Solve[{e1, e2}, {x, y}]`` for a system.
+
+    A system returns ``[{"x": Expr, "y": Expr}, ...]`` -- every solution the
+    Rust solver found -- via the bivariate polynomial solver when there are
+    exactly two equations in two unknowns, else the linear solver. ``None``
+    when Rust declines (a univariate solve in a multivariate expression, a
+    nonlinear system it does not cover).
+    """
+    if isinstance(expr, list):
+        if not isinstance(var, list) or not var:
+            raise TypeError("a system needs its variables as a list, e.g. Solve([...], ['x', 'y'])")
+        return _solve_system(expr, var)
+    e = parse(expr)
+    if isinstance(var, list):
+        raise TypeError("one expression takes one variable, not a list")
+    return cas.solve(e, _var(e, var))
+
+
+def Integrate(
+    expr: str | Expr, var: str | tuple[str, str | Expr | int, str | Expr | int] | None = None
+) -> Expr | None:
+    """``Integrate[e, x]`` (antiderivative) or ``Integrate[e, {x, a, b}]`` as ``var=("x", a, b)``.
+
+    Both carry certificates on the Rust result (`cas.integrate(...).certificate`,
+    `cas.definite_integrate(...)`); this returns the expression or value.
+    """
+    e = parse(expr)
+    if isinstance(var, tuple):
+        name, lower, upper = var
+        lo = Expr.int(lower) if isinstance(lower, int) else parse(lower)
+        hi = Expr.int(upper) if isinstance(upper, int) else parse(upper)
+        result = cas.definite_integrate(e, name, lo, hi)
+        return None if result is None else result.value
+    result = cas.integrate(e, _var(e, var))
+    return None if result is None else result.antiderivative
