@@ -92,6 +92,7 @@ pub(crate) mod ops;
 mod order;
 mod prod;
 mod rat;
+mod ring;
 mod sign;
 mod statements;
 mod sub;
@@ -688,6 +689,20 @@ pub struct IntPrelude {
     /// `eq_em : ∀ (a b : Int), Or (Eq Int a b) (Not (Eq Int a b))`.
     pub eq_em: NameId,
 
+    // --- `Int.IsCommRing` (`rings` curriculum node, `int_prelude::ring`) -----
+    /// `IsCommRing (add mul : Int → Int → Int) (neg : Int → Int) (zero one :
+    /// Int) : Prop := add_comm ∧ (add_assoc ∧ (add_zero ∧ (add_neg ∧ (mul_comm
+    /// ∧ (mul_assoc ∧ (mul_one ∧ distrib))))))` — `Rat.IsField`'s own first
+    /// eight leaves, over `Int`, minus the two that make a ring a field.
+    pub is_comm_ring: NameId,
+    /// `int_isCommRing : IsCommRing Int.add Int.mul Int.neg Int.zero Int.one`
+    /// — the worked instance.
+    pub int_is_comm_ring: NameId,
+    /// `mul_eq_zero : ∀ a b, mul a b = zero → a = zero ∨ b = zero` — ℤ is an
+    /// integral domain, the consequence a general commutative ring does not
+    /// have (`Int.IsCommRing`'s own doc comment: ℤ/6 does not).
+    pub mul_eq_zero: NameId,
+
     // --- `Int.factorial`, and the self-inverse step toward Wilson's theorem --
     /// `Int.factorial : Nat → Int := Int.prodRange (fun k => Int.ofNat (Nat.succ k))`
     /// — `factorial n = 1 * 2 * … * n`, mirroring `Nat.factorial`'s own
@@ -1076,6 +1091,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         rat_neg: kernel.name_str(rat, "neg"),
         rat_add: kernel.name_str(rat, "add"),
         eq_em: child(kernel, "eq_em"),
+        is_comm_ring: child(kernel, "IsCommRing"),
+        int_is_comm_ring: child(kernel, "int_isCommRing"),
+        mul_eq_zero: child(kernel, "mul_eq_zero"),
         factorial: child(kernel, "factorial"),
         factorial_zero: child(kernel, "factorial_zero"),
         factorial_succ: child(kernel, "factorial_succ"),
@@ -1272,6 +1290,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;
         rat::declare_more_arithmetic(&mut d)?;
+        ring::declare_ring_all(&mut d, &prelude)?;
         Ok(prelude)
     })();
     match built {
