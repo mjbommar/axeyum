@@ -16,7 +16,10 @@
   "external_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:cassini-identity-over-constructed-integers"
+    "F:cassini-identity-over-constructed-integers",
+    "F:rat-ofint-add",
+    "F:rat-ofint-mul",
+    "F:rat-ofint-neg"
   ],
   "axiom_footprint": [],
   "evidence": [

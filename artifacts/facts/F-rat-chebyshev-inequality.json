@@ -20,6 +20,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:rat-markov-constructed",
+    "F:rat-mul-pos",
     "F:rat-sq-nonneg"
   ],
   "axiom_footprint": [],

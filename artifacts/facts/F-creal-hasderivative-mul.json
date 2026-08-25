@@ -65,7 +65,8 @@
     "F:nat-mul-one",
     "F:rat-mul-comm",
     "F:rat-natdivsucc-add",
-    "F:rat-natdivsucc-mul"
+    "F:rat-natdivsucc-mul",
+    "F:rat-natdivsucc-scale"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -15,7 +15,9 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:rat-lt-trichotomy"
+    "F:rat-lt-trichotomy",
+    "F:rat-mul-inv-cancel",
+    "F:rat-mul-inv-cancel-of-neg"
   ],
   "axiom_footprint": [],
   "evidence": [

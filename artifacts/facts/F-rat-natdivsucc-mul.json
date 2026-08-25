@@ -20,7 +20,8 @@
     "F:nat-one-le-mul",
     "F:nat-one-mul",
     "F:nat-zero-le",
-    "F:rat-normalize-congr"
+    "F:rat-normalize-congr",
+    "F:rat-normalize-mul-normalize"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -16,7 +16,12 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-le-succ-succ",
-    "F:nat-zero-le"
+    "F:nat-zero-le",
+    "F:rat-int-le-of-mul-le-mul-right",
+    "F:rat-int-zero-le-of-nat",
+    "F:rat-int-zero-mul",
+    "F:rat-nonneg-of-int-nonneg",
+    "F:rat-normalize-cross"
   ],
   "axiom_footprint": [],
   "evidence": [

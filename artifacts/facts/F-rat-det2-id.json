@@ -14,7 +14,8 @@
   "depends_on": [
     "F:rat-add-zero",
     "F:rat-mul-one",
-    "F:rat-mul-zero"
+    "F:rat-mul-zero",
+    "F:rat-neg-zero"
   ],
   "axiom_footprint": [],
   "evidence": [

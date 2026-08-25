@@ -27,6 +27,7 @@
     "F:rat-le-trans",
     "F:rat-natdivsucc-add",
     "F:rat-natdivsucc-halve",
+    "F:rat-neg-add",
     "F:rat-neg-le-neg",
     "F:rat-zero-le-natdivsucc"
   ],

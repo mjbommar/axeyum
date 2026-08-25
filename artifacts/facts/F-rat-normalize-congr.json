@@ -22,7 +22,10 @@
   "depends_on": [
     "F:int-mul-assoc",
     "F:int-mul-comm",
-    "F:nat-one-le-mul"
+    "F:nat-one-le-mul",
+    "F:rat-eq-of-cross",
+    "F:rat-int-mul-right-cancel",
+    "F:rat-normalize-cross"
   ],
   "axiom_footprint": [],
   "evidence": [

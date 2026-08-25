@@ -20,6 +20,8 @@
     "F:nat-le-succ-succ",
     "F:nat-one-le-mul",
     "F:nat-zero-le",
+    "F:rat-int-right-distrib",
+    "F:rat-normalize-add-normalize",
     "F:rat-normalize-congr"
   ],
   "axiom_footprint": [],

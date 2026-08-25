@@ -32,7 +32,8 @@
     "F:rat-mul-inv-cancel-of-ne-zero",
     "F:rat-mul-one",
     "F:rat-right-distrib",
-    "F:rat-sub-add-add"
+    "F:rat-sub-add-add",
+    "F:rat-sub-mul"
   ],
   "axiom_footprint": [],
   "evidence": [

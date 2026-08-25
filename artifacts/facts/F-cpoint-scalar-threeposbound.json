@@ -13,7 +13,10 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:cpoint-scalar-twoposbound",
-    "F:creal-le-trans"
+    "F:creal-le-add-of-nonneg",
+    "F:creal-le-trans",
+    "F:rat-le-of-lt",
+    "F:rat-zero-lt-one"
   ],
   "axiom_footprint": [],
   "evidence": [

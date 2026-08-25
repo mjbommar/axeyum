@@ -16,6 +16,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-max-congr",
     "F:creal-neg-congr"
   ],
   "axiom_footprint": [],

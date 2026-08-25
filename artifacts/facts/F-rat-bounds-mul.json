@@ -22,9 +22,16 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:rat-le-of-lt",
+    "F:rat-le-or-lt",
     "F:rat-le-trans",
+    "F:rat-mul-le-mul-of-nonneg-left",
+    "F:rat-mul-le-mul-of-nonneg-right",
+    "F:rat-mul-neg",
     "F:rat-neg-le-neg",
-    "F:rat-neg-neg"
+    "F:rat-neg-mul",
+    "F:rat-neg-neg",
+    "F:rat-neg-zero"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -15,7 +15,9 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:int-mul-one",
-    "F:nat-mul-one"
+    "F:nat-mul-one",
+    "F:rat-eq-of-cross",
+    "F:rat-mul-cross"
   ],
   "axiom_footprint": [],
   "evidence": [
