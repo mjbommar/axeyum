@@ -15,14 +15,21 @@ on `sat`, replay of the deciding run, no second solve), `cast` over
 `extract` in 13 `__eq__`s, the CAS detaching, bytes accessors for proofs;
 release wheels (abi3 + 3.14t + sdist, smoke-installed before any publish);
 the eight open tier-R rows -- `PYTHON_COVERAGE|...|tier_r_unreferenced=0`.
-Gate at `7c01fa0bd`: pytest 1,209 passed / 15 skipped, clippy 0 on nightly
-and stable. In flight: Q5 typed stubs via pyo3-stub-gen behind an off-by-
-default feature, with `stubtest` and an `Any` ratchet. Next: Q6 (derive
-`eq`/`hash`/`str`; make `Config`/`Incremental` `Sync` so `unsendable` and
-then `gil_used = true` can go).
+Q5 landed: typed stubs generated from the Rust signatures via pyo3-stub-gen
+(96.9% of parameters typed, 52 `Any` each with a written reason), `stubtest`
+and an `Any` ratchet in the gate -- and the typed stubs immediately found
+three real type errors in `axeyum.m`. `axeyum.m` (Mathematica-shaped verbs
+with a parser, variable inference and a readable printer) landed in three
+iterations. Gate at `f11a74c18`: pytest 1,237 passed / 15 skipped, clippy
+0 on nightly and stable with and without `stub-gen`. In flight: Q7
+(panic-surface hardening: probe every callable, typed preflight, no
+`PanicException` may escape) and Q8 (CAS long tail vs sympy as oracle).
+Next: Q6 (derive `eq`/`hash`/`str`; make `Config`/`Incremental` `Sync` so
+`unsendable` and then `gil_used = true` can go).
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-24 | `f11a74c18` | Q5: typed stubs via pyo3-stub-gen behind an off-by-default feature (96.9% typed, allowlisted `Any`s with reasons), `stubtest` + `Any` ratchet gates; three `axeyum.m` type errors found and fixed |
 | 2026-08-24 | `68f5d61a4` | `axeyum.m`: Mathematica-shaped verbs over the CAS -- parser, variable inference, readable printer; three iterations (equations, assumptions, limits at infinity; systems, definite integrals, Substitute, semantic Equal, mixed int/Fraction arithmetic on `Expr`; Sum, Reduce, Rationalize, NRoots, polynomial toolkit); 19 tests |
 | 2026-08-24 | `460bee2db` | Q2: replay of the deciding run's model via `solve_smtlib_with_model` (2.22x on sat), clone audit (12 borrows, 13 `__eq__` via cast), CAS detaches, bytes accessors, benchmarks |
 | 2026-08-24 | `d904a5c14` | `axeyum-solver`: `solve_smtlib_with_model` -- the front door returns arena, assertions and model; `solve_smtlib` wraps it; 152-file equality test |

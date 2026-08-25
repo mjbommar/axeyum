@@ -194,6 +194,7 @@ now. Nothing was deleted.
 | 2026-08-24 | `de47d419b` | **Transport a derivative along pointwise `Equiv`**, plus the `n = 2` cross-check. `congr` is the one every later calculus lane needs, because a constructive derivative is **not unique as a function** — only up to pointwise `Equiv` on the interval. **The lane argued the hypothesis shape from the type rather than assuming it**: every occurrence of `F x`/`F y`/`F' x` in `spec`'s conclusion sits behind the same four range hypotheses, so agreement on `[a,b]` suffices. `pow_two` transports `hasDerivative_sq` across one identity with the derivative side reused verbatim — had the general shape not matched at `n = 2`, one of the two would be wrong. **The kernel caught a build-order bug `cargo check` cannot see** (`pow` is declared after `derivative.rs` runs) — and I reproduced the same error while hand-merging, wiring one `declare_` call and not the other: **112 of 608 tests failed** on a function that compiled and was never called. |
 | 2026-08-24 | `436f0058e` | **`lcm_dvd`** — the least common multiple finally earns its name, with both halves of its universal property. **The route was written down by the lane that FAILED at it** and reverted rather than commit unverified; this lane followed it exactly. The fix for the shape that sank the first attempt: the single `goal` `ExprId` is computed once at the top of the step closure and threaded through unchanged, never rebuilt at a deeper nesting level. |
 | 2026-08-24 | `26dd00530` | **The Fibonacci addition formula and area-zero iff collinear.** `fib_add` uses the `And (P n) (P (succ n))` pairing device — **the same device the Fibonacci lane correctly REFUSED for defining `fib`**, because it proves a proposition and cannot define a function. Two lanes, opposite verdicts on the same tool, both right. **The bare collinearity iff is false and the lane said so**: at `A ~ B`, `cross A B C ~ 0` for every `C`. The medial-triangle factor turned out to be a **generic** ring identity in an arbitrary scale `h`, so nothing about `inv2`'s numeric value is needed. |
+| 2026-08-24 | `f11a74c18` | Q5: typed stubs via pyo3-stub-gen behind an off-by-default feature (96.9% typed, allowlisted `Any`s with reasons), `stubtest` + `Any` ratchet gates; three `axeyum.m` type errors found and fixed |
 | 2026-08-24 | `68f5d61a4` | `axeyum.m`: Mathematica-shaped verbs over the CAS -- parser, variable inference, readable printer; three iterations (equations, assumptions, limits at infinity; systems, definite integrals, Substitute, semantic Equal, mixed int/Fraction arithmetic on `Expr`; Sum, Reduce, Rationalize, NRoots, polynomial toolkit); 19 tests |
 | 2026-08-24 | `460bee2db` | Q2: replay of the deciding run's model via `solve_smtlib_with_model` (2.22x on sat), clone audit (12 borrows, 13 `__eq__` via cast), CAS detaches, bytes accessors, benchmarks |
 | 2026-08-24 | `d904a5c14` | `axeyum-solver`: `solve_smtlib_with_model` -- the front door returns arena, assertions and model; `solve_smtlib` wraps it; 152-file equality test |
@@ -3452,11 +3453,17 @@ on `sat`, replay of the deciding run, no second solve), `cast` over
 `extract` in 13 `__eq__`s, the CAS detaching, bytes accessors for proofs;
 release wheels (abi3 + 3.14t + sdist, smoke-installed before any publish);
 the eight open tier-R rows -- `PYTHON_COVERAGE|...|tier_r_unreferenced=0`.
-Gate at `7c01fa0bd`: pytest 1,209 passed / 15 skipped, clippy 0 on nightly
-and stable. In flight: Q5 typed stubs via pyo3-stub-gen behind an off-by-
-default feature, with `stubtest` and an `Any` ratchet. Next: Q6 (derive
-`eq`/`hash`/`str`; make `Config`/`Incremental` `Sync` so `unsendable` and
-then `gil_used = true` can go).
+Q5 landed: typed stubs generated from the Rust signatures via pyo3-stub-gen
+(96.9% of parameters typed, 52 `Any` each with a written reason), `stubtest`
+and an `Any` ratchet in the gate -- and the typed stubs immediately found
+three real type errors in `axeyum.m`. `axeyum.m` (Mathematica-shaped verbs
+with a parser, variable inference and a readable printer) landed in three
+iterations. Gate at `f11a74c18`: pytest 1,237 passed / 15 skipped, clippy
+0 on nightly and stable with and without `stub-gen`. In flight: Q7
+(panic-surface hardening: probe every callable, typed preflight, no
+`PanicException` may escape) and Q8 (CAS long tail vs sympy as oracle).
+Next: Q6 (derive `eq`/`hash`/`str`; make `Config`/`Incremental` `Sync` so
+`unsendable` and then `gil_used = true` can go).
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
