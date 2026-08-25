@@ -17,7 +17,8 @@
   "depends_on": [
     "F:nat-dvd-gcd",
     "F:nat-gcd-dvd-left",
-    "F:nat-gcd-dvd-right"
+    "F:nat-gcd-dvd-right",
+    "F:nat-zero-mul"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -16,8 +16,10 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-euclid-lemma",
+    "F:nat-lt-irrefl",
     "F:nat-succ-add",
-    "F:nat-zero-add"
+    "F:nat-zero-add",
+    "F:nat-zero-le"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -20,7 +20,11 @@
     "F:nat-add-zero",
     "F:nat-dvd-add",
     "F:nat-gcd-dvd-left",
-    "F:nat-gcd-dvd-right"
+    "F:nat-gcd-dvd-right",
+    "F:nat-le-succ-succ",
+    "F:nat-not-succ-le-zero",
+    "F:nat-zero-le",
+    "F:nat-zero-mul"
   ],
   "axiom_footprint": [],
   "evidence": [

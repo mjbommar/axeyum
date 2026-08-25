@@ -19,7 +19,8 @@
     "F:int-add-assoc",
     "F:int-mul-assoc",
     "F:int-mul-comm",
-    "F:nat-mul-assoc"
+    "F:nat-mul-assoc",
+    "F:nat-one-le-mul"
   ],
   "axiom_footprint": [],
   "evidence": [

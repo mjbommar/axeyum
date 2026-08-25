@@ -18,7 +18,11 @@
   "axiom_footprint": [],
   "depends_on": [
     "F:nat-div-mod-exists",
-    "F:nat-dvd-add"
+    "F:nat-dvd-add",
+    "F:nat-le-succ-succ",
+    "F:nat-le-trans",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-zero-le"
   ],
   "evidence": [
     {

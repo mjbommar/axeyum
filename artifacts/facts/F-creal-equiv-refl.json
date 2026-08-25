@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-equiv-refl",
+  "title": "CReal.Equiv is reflexive",
+  "statement": "For every constructed real x, x is CReal.Equiv-equivalent to itself.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.Equiv.refl : ((x0 : CReal) -> CReal.Equiv x0 x0)",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.Equiv.refl",
+      "kind": "kernel-term",
+      "supports": "CReal.Equiv.refl is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.Equiv.refl 2>/dev/null | grep -cE '^CReal\\.Equiv\\.refl[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "`build_creal_prelude`/`build_cpoint_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` builds creal/complex/cpoint in one run; it exits non-zero for a named filter that matches nothing, and `grep -c` (never `-q`) independently asserts the exact tab-anchored line is present. `--release` is MANDATORY: building the constructed carriers recurses deep enough in a debug build to overflow the default thread stack (measured on this tree: release exits 0, debug SIGABRTs at 134)."
+    },
+    {
+      "id": "footprint-CReal.Equiv.refl",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.Equiv.refl",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 20,
+      "notes": "`nat_axiom_inventory --include-constructed --require-axiom-free creal` builds the creal environment as its own group and reports `creal: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree), covering Axiom, Opaque AND Quotient, not just Declaration::Axiom. This bounds every individual creal theorem's footprint by []. `--include-constructed` is REQUIRED here -- verified: without it the command exits 1 with \"\\\"creal\\\" is a known prelude but was NOT built this run ... need --include-constructed\", rather than a silent pass; this is the standing trap of an empty/absent result reading as a strong negative when the tool was never pointed at the subject. `--release` is ALSO load-bearing here, and this is a bug this batch found in the pre-existing F-creal-add-comm.json-style pattern (which omits it): measured on this tree, `cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal` (no --release) SIGABRTs with 'has overflowed its stack', exit 134 -- the same deep-recursion resource limit already documented for prelude_theorem_inventory and theorem_dependency_inventory, just not previously measured for this tool. `--release` fixes it: exit 0."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:equivalence-relation",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_creal_prelude",
+    "source": "theorem name and dependency edges from theorem_dependency_inventory; canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint()) -- crates/ source untouched."
+  },
+  "notes": "depends_on is literal, read off theorem_dependency_inventory's direct-edge output for this theorem, keeping only edges whose target is itself a registered fact (Rat/Nat ring lemmas the proof cites but that have no fact row are omitted, per check-fact-depends-derived.py's rule). Direct dependencies (Rat.neg_nonpos_of_nonneg, Rat.sub_self, Rat.zero_le_natDivSucc) are Rat lemmas with no fact row, so depends_on is empty.",
+  "external_status": "proved"
+}

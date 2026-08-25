@@ -23,6 +23,8 @@
     "F:nat-gcd-bezout",
     "F:nat-gcd-dvd-left",
     "F:nat-gcd-dvd-right",
+    "F:nat-le-add-right",
+    "F:nat-le-trans",
     "F:nat-mul-assoc",
     "F:nat-mul-comm"
   ],

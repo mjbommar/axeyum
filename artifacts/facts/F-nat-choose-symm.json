@@ -18,7 +18,10 @@
     "F:nat-add-comm",
     "F:nat-add-sub-cancel-left",
     "F:nat-choose-zero-right",
-    "F:nat-succ-add"
+    "F:nat-le-of-succ-le-succ",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-succ-add",
+    "F:nat-zero-le"
   ],
   "axiom_footprint": [],
   "evidence": [

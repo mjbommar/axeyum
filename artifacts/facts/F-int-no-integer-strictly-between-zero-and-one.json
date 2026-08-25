@@ -13,7 +13,11 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:nat-le-of-succ-le-succ",
+    "F:nat-le-trans",
+    "F:nat-not-succ-le-zero"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

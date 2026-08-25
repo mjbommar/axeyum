@@ -16,7 +16,10 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-add-zero",
-    "F:nat-zero-add"
+    "F:nat-le-succ-succ",
+    "F:nat-zero-add",
+    "F:nat-zero-le",
+    "F:nat-zero-mul"
   ],
   "axiom_footprint": [],
   "evidence": [
