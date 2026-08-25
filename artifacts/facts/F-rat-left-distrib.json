@@ -22,7 +22,10 @@
     "F:nat-mul-assoc",
     "F:nat-one-le-mul",
     "F:rat-den-pos",
+    "F:rat-int-right-distrib",
+    "F:rat-normalize-add-normalize",
     "F:rat-normalize-congr",
+    "F:rat-normalize-mul-normalize",
     "F:rat-self-normalize"
   ],
   "axiom_footprint": [],

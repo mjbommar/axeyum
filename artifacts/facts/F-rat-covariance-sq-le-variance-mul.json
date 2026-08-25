@@ -18,6 +18,11 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:rat-covariance-comm",
+    "F:rat-covariance-sq-le-variance-mul-of-pos",
+    "F:rat-covariance-sq-le-variance-mul-of-zero-zero",
+    "F:rat-lt-irrefl",
+    "F:rat-lt-of-le-of-lt",
     "F:rat-lt-trichotomy",
     "F:rat-mul-comm",
     "F:rat-variance-nonneg"

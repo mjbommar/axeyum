@@ -19,9 +19,14 @@
   "depends_on": [
     "F:rat-add-assoc",
     "F:rat-add-comm",
+    "F:rat-add-lt-add-of-le-of-lt",
     "F:rat-add-neg",
     "F:rat-add-zero",
-    "F:rat-le-refl"
+    "F:rat-le-or-lt",
+    "F:rat-le-refl",
+    "F:rat-lt-irrefl",
+    "F:rat-lt-of-le-of-lt",
+    "F:rat-natdivsucc-lt-of-pos"
   ],
   "axiom_footprint": [],
   "evidence": [

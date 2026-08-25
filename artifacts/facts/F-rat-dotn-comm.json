@@ -16,7 +16,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:rat-mul-comm"
+    "F:rat-mul-comm",
+    "F:rat-sumrange-congr"
   ],
   "axiom_footprint": [],
   "evidence": [

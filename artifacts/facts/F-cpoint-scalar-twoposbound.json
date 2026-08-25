@@ -11,7 +11,11 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:creal-le-add-of-nonneg",
+    "F:rat-le-of-lt",
+    "F:rat-zero-lt-one"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

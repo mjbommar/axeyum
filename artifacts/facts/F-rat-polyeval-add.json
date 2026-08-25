@@ -19,7 +19,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:rat-right-distrib",
-    "F:rat-sumrange-add"
+    "F:rat-sumrange-add",
+    "F:rat-sumrange-congr"
   ],
   "axiom_footprint": [],
   "evidence": [

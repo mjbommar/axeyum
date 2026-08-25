@@ -22,7 +22,9 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:rat-chebyshev-samplemean-uncorrelated"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

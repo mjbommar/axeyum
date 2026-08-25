@@ -17,6 +17,7 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:rat-neg-nonpos-of-nonneg",
+    "F:rat-sub-self",
     "F:rat-zero-le-natdivsucc"
   ],
   "axiom_footprint": [],

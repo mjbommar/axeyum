@@ -21,7 +21,9 @@
     "F:rat-add-comm",
     "F:rat-add-zero",
     "F:rat-left-distrib",
-    "F:rat-mul-comm"
+    "F:rat-mul-comm",
+    "F:rat-mul-neg",
+    "F:rat-neg-add-cancel"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -21,7 +21,9 @@
     "F:int-le-trans",
     "F:int-mul-assoc",
     "F:int-mul-comm",
-    "F:rat-den-pos"
+    "F:rat-den-pos",
+    "F:rat-int-le-of-mul-le-mul-right",
+    "F:rat-int-mul-le-mul-right"
   ],
   "axiom_footprint": [],
   "evidence": [

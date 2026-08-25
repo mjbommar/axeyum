@@ -14,7 +14,9 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:rat-den-pos"
+    "F:rat-den-pos",
+    "F:rat-eq-of-cross",
+    "F:rat-normalize-cross"
   ],
   "axiom_footprint": [],
   "evidence": [

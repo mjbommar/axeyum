@@ -21,7 +21,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:rat-add-le-add"
+    "F:rat-add-le-add",
+    "F:rat-neg-add"
   ],
   "axiom_footprint": [],
   "evidence": [

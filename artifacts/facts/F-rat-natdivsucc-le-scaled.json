@@ -18,7 +18,9 @@
   "depends_on": [
     "F:nat-add-comm",
     "F:nat-mul-one",
-    "F:rat-natdivsucc-mul"
+    "F:rat-natdivsucc-le-add-left",
+    "F:rat-natdivsucc-mul",
+    "F:rat-natdivsucc-scale"
   ],
   "axiom_footprint": [],
   "evidence": [

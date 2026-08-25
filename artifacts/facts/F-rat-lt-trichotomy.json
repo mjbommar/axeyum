@@ -14,7 +14,10 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:rat-le-antisymm",
+    "F:rat-le-or-lt"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

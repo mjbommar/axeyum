@@ -16,6 +16,7 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:rat-add-comm",
+    "F:rat-neg-add",
     "F:rat-neg-neg"
   ],
   "axiom_footprint": [],

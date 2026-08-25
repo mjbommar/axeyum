@@ -17,7 +17,12 @@
     "F:int-mul-nonneg",
     "F:int-sq-nonneg",
     "F:nat-one-le-mul",
-    "F:rat-den-pos"
+    "F:rat-den-pos",
+    "F:rat-int-le-of-mul-le-mul-right",
+    "F:rat-int-zero-le-of-nat",
+    "F:rat-int-zero-mul",
+    "F:rat-mul-cross",
+    "F:rat-nonneg-of-int-nonneg"
   ],
   "axiom_footprint": [],
   "evidence": [

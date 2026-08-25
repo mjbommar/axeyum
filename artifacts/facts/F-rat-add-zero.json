@@ -16,7 +16,10 @@
   "depends_on": [
     "F:int-add-zero",
     "F:int-mul-one",
-    "F:nat-mul-one"
+    "F:nat-mul-one",
+    "F:rat-add-cross",
+    "F:rat-eq-of-cross",
+    "F:rat-int-zero-mul"
   ],
   "axiom_footprint": [],
   "evidence": [

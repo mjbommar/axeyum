@@ -17,7 +17,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:rat-bounds-neg",
-    "F:rat-neg-sub"
+    "F:rat-neg-sub",
+    "F:rat-sub-neg-sub"
   ],
   "axiom_footprint": [],
   "evidence": [

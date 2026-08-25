@@ -16,7 +16,12 @@
   "depends_on": [
     "F:int-add-neg",
     "F:nat-one-le-mul",
-    "F:rat-den-pos"
+    "F:rat-add-cross",
+    "F:rat-den-pos",
+    "F:rat-eq-zero-of-num-zero",
+    "F:rat-int-mul-right-cancel",
+    "F:rat-int-right-distrib",
+    "F:rat-int-zero-mul"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -36,6 +36,8 @@
     "F:creal-left-distrib",
     "F:creal-mul-comm",
     "F:creal-mul-congr",
+    "F:creal-mul-le-mul-of-nonneg-left",
+    "F:creal-mul-nonneg",
     "F:creal-mul-one",
     "F:creal-mul-zero",
     "F:creal-neg-congr",

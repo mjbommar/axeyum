@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-le-add-of-nonneg",
+  "title": "Adding a nonnegative rational to a constructed real does not decrease it",
+  "statement": "For a constructed real x0 and a rational x1 with 0 <= x1: x0 <= x0 + ofRat(x1).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.le_add_of_nonneg : ((x0 : CReal) -> ((x1 : Rat) -> ((x2 : Rat.le Rat.zero x1) -> CReal.le x0 (CReal.add x0 (CReal.ofRat x1)))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-regular",
+    "F:rat-add-comm",
+    "F:rat-add-le-add",
+    "F:rat-add-zero",
+    "F:rat-le-refl",
+    "F:rat-le-trans",
+    "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-halve",
+    "F:rat-neg-nonpos-of-nonneg",
+    "F:rat-sub-add-add",
+    "F:rat-zero-add",
+    "F:rat-zero-le-natdivsucc"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.le_add_of_nonneg",
+      "kind": "kernel-term",
+      "supports": "CReal.le_add_of_nonneg is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.le_add_of_nonneg 2>/dev/null | grep -cE '^CReal\\.le_add_of_nonneg[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "`build_creal_prelude` admits CReal.le_add_of_nonneg through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` builds creal/complex/cpoint in one run; it exits non-zero for a named filter that matches nothing, and `grep -c` (never `-q`) independently asserts the exact tab-anchored line is present. `--release` is MANDATORY: building the constructed carriers recurses deep enough in a debug build to overflow the default thread stack (measured on this tree: release exits 0, debug SIGABRTs at 134)."
+    },
+    {
+      "id": "footprint-CReal.le_add_of_nonneg",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.le_add_of_nonneg",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 20,
+      "notes": "`nat_axiom_inventory --include-constructed --require-axiom-free creal` builds the creal environment as its own group and reports `creal: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree), covering Axiom, Opaque AND Quotient, not just Declaration::Axiom -- this bounds CReal.le_add_of_nonneg's individual footprint by []. `--include-constructed` is REQUIRED: without it the command exits 1 naming `creal` as known but not built this run rather than a silent pass. `--release` is MANDATORY for the same deep-recursion reason as `theorem_dependency_inventory` (measured on this tree: debug SIGABRTs at 134)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_creal_prelude",
+    "source": "theorem name and dependency edges from theorem_dependency_inventory (builds nat/int/rat/creal/complex/cpoint/string/characterization); canonical type and top-level binder count read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean()) -- no in-tree example prints Rat/CReal theorem types beyond a substring filter; crates/ source was not touched to produce this batch; the probe was built and run in the session scratchpad and deleted after use."
+  },
+  "notes": "depends_on keeps the sibling-mapped subset of CReal.le_add_of_nonneg's direct-edge set from theorem_dependency_inventory: a used theorem is declared only when it is itself a registered ledger fact (including new facts from this same batch).",
+  "external_status": "proved"
+}

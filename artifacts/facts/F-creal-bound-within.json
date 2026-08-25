@@ -22,9 +22,11 @@
     "F:rat-add-neg",
     "F:rat-add-zero",
     "F:rat-bounds-add",
+    "F:rat-bounds-num",
     "F:rat-le-refl",
     "F:rat-le-trans",
     "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-le-one",
     "F:rat-neg-le-neg"
   ],
   "axiom_footprint": [],
