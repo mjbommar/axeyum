@@ -130,3 +130,61 @@ reason to look at `int_prelude/prod.rs`. **Before recording an absence, query
 every carrier by the bare operation name** (`prodrange`, `permute`, `swap`), not
 by the namespace you expect. This is the same failure that produced four
 duplicate lanes today, one carrier away.
+
+---
+
+## Correction to the correction: the ℤ machinery is FULL-RANGE, and does not solve this
+
+The correction above is **wrong on the point that matters**, and the lane it
+redirected is the one that found out. Recording it rather than editing it away,
+because the way I got it wrong is the more useful artifact.
+
+`Int.prodRange_permute`'s actual statement, read from source rather than
+inferred from its name:
+
+```text
+∀ f σ n, InjectiveOn σ n → MapsInto σ n →
+  Eq Int (prodRange f n) (prodRange (fun k => f (σ k)) n)
+```
+
+`MapsInto σ n` makes `σ` a self-map of **the whole `{0,…,n−1}`**. It is the
+permutation lemma for a *contiguous range*, not for a predicate-defined subset.
+Likewise `Nat.injective_on_imp_surjective_on` — the pigeonhole — is stated for
+full-range self-maps only.
+
+**So the predicate-scoped versions genuinely do not exist, over any carrier.**
+The original seven-lane finding stands. What landed today is the *fold*
+(`Nat.prodRangeIf`); what is still missing is invariance of that fold under a
+bijection of the subset it selects, plus a predicate-scoped pigeonhole.
+
+### Why Wilson did not need it, which is the whole subtlety
+
+Wilson's theorem is about a **prime** modulus, and every residue in `[1, p−1]` is
+then a unit. The "subset of units" *is* the contiguous range, so full-range
+machinery suffices — and `wilson.rs` does not even use `prodRange_permute` for
+its main step: it uses a fixed-point-free **involution collapse**
+(`Int.prod_range_pairing_collapse`), which is sound precisely because no residue
+is skipped.
+
+Euler's theorem is about a **composite** modulus, where the units are a proper,
+predicate-carved subset. That is the entire difference between the two theorems
+from this kernel's point of view, and it is invisible from the outside: they look
+like the same argument, and one of them is one lemma away while the other is not.
+
+### How I got it wrong
+
+I matched on a **name**. `Int.prodRange_permute` is what the missing thing would
+be called, and it exists, so I recorded the primitive as portable and redirected
+a lane on that basis. I never read its hypotheses.
+
+This is the same failure that produced four duplicate lanes today, and I had
+already written the rule for it twice — *use names to generate candidates,
+decide by statement.* The ledger-audit lane applied it correctly and refuted 14
+of 16 name-level matches. I did not apply it to my own conclusion.
+
+Note also that this correction cost less than it could have: the lane was told
+to report "precisely what blocked you if anything did", it did, and the redirect
+still produced two real theorems (`Int.euler_unit_coprime`,
+`Int.euler_unit_injective` — the MapsInto and InjectiveOn halves for
+multiplication by a unit) that any future route needs. A wrong brief with a
+correct escape hatch is recoverable; a wrong brief that demands success is not.
