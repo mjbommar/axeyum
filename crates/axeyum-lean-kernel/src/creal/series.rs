@@ -380,6 +380,7 @@
 //! the three should be attempted as a single unverified slice.
 
 use super::completeness::half_shift_le;
+use super::convergence::{converges_applied, exists_elim as creal_exists_elim, exists_ty};
 use super::ring_helpers::add4_comm;
 use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, div_succ, equiv, halves, modulus, sample,
@@ -421,6 +422,8 @@ pub(super) fn declare_series(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     declare_sum_range_cauchy_dominated_ordered(d, p)?;
     declare_sum_range_cauchy_dominated_ordered_normalized(d, p)?;
     declare_sum_range_cauchy_of_dominated(d, p)?;
+    declare_sum_range_converges_of_dominated(d, p)?;
+    declare_sum_range_comparison_test(d, p)?;
     declare_sum_range_seq_equations(d, p)
 }
 
@@ -3200,6 +3203,248 @@ fn declare_sum_range_cauchy_of_dominated(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sum_range_cauchy_of_dominated,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sumRange_converges_of_dominated : ∀ f g, (∀ k, le (abs (f k)) (g
+/// k)) → Cauchy (sumRange g) → Exists (fun L => Converges (sumRange f) L)`.
+///
+/// The composition the module documentation named as the remaining step,
+/// once [`CRealPrelude::converges_of_cauchy`] closed the `Cauchy →
+/// Converges` bridge (`creal/convergence.rs`): apply
+/// [`CRealPrelude::sum_range_cauchy_of_dominated`] to the two hypotheses to
+/// get `Cauchy (sumRange f)`, then `converges_of_cauchy` directly. Neither
+/// step introduces or eliminates an existential here — both are
+/// already-declared theorems, applied in sequence; only the **target type**
+/// (`Exists CReal (fun L => Converges (sumRange f) L)`) has to be built by
+/// hand, via [`exists_ty`]/[`converges_applied`] (`convergence.rs`, bumped to
+/// `pub(super)` for exactly this reuse).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_sum_range_converges_of_dominated(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    let pointwise_ty = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fx = d.apply(f, &[x]);
+        let gx = d.apply(g, &[x]);
+        let abs_fx = cabs(d, p, fx);
+        let leq = cle(d, p, abs_fx, gx);
+        d.pi_fv(x_fv, nat, leq)
+    };
+    let hyp1_fv = d.fresh_fvar();
+    let hyp1 = d.kernel().fvar(hyp1_fv);
+
+    let sum_g = d.const_app(p.sum_range, &[g]);
+    let cauchy_g_ty = d.const_app(p.cauchy, &[sum_g]);
+    let hyp2_fv = d.fresh_fvar();
+    let hyp2 = d.kernel().fvar(hyp2_fv);
+
+    let sum_f = d.const_app(p.sum_range, &[f]);
+
+    // cauchy_f : Cauchy (sumRange f).
+    let cauchy_f = d.lemma(p.sum_range_cauchy_of_dominated, &[f, g, hyp1, hyp2]);
+    // proof_body : Exists CReal (fun L => Converges (sumRange f) L).
+    let proof_body = d.lemma(p.converges_of_cauchy, &[sum_f, cauchy_f]);
+
+    let pred_f = {
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let conv_l = converges_applied(d, p, sum_f, l);
+        d.lam_fv(l_fv, carrier, conv_l)
+    };
+    let target = exists_ty(d, p, carrier, pred_f);
+
+    let ty = {
+        let after_hyp2 = d.arrow(cauchy_g_ty, target);
+        let after_hyp1 = d.arrow(pointwise_ty, after_hyp2);
+        let over_g = d.pi_fv(g_fv, fn_ty, after_hyp1);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let with_hyp2 = d.lam_fv(hyp2_fv, cauchy_g_ty, proof_body);
+        let with_hyp1 = d.lam_fv(hyp1_fv, pointwise_ty, with_hyp2);
+        let over_g = d.lam_fv(g_fv, fn_ty, with_hyp1);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_converges_of_dominated,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sumRange_comparisonTest : ∀ a b, (∀ k, le zero (a k)) → (∀ k, le
+/// (a k) (b k)) → Exists (fun M => Converges (sumRange b) M) → Exists (fun L
+/// => Converges (sumRange a) L)` — the comparison test as usually stated.
+///
+/// Converts the `Exists … Converges (sumRange b) M` hypothesis to `Cauchy
+/// (sumRange b)` via [`creal_exists_elim`] (`convergence.rs`'s `exists_elim`,
+/// reused over `elem_ty := CReal`) eliminating into
+/// [`CRealPrelude::converges_cauchy`] applied at the witness — a target
+/// (`Cauchy (sumRange b)`) that does not mention the eliminated witness `M`,
+/// exactly the shape [`declare_sum_range_cauchy_of_dominated`] already uses
+/// against a *different* existential over `Nat`. Derives `∀ k, le (abs (a
+/// k)) (b k)` from the two pointwise hypotheses via
+/// [`CRealPrelude::abs_le`]: its second premise `neg (a k) ≤ b k` comes from
+/// `neg (a k) ≤ zero` ([`CRealPrelude::neg_le_neg`] at `0 ≤ a k`, rewritten
+/// along `Equiv (neg zero) zero` via [`neg_zero_equiv`] and
+/// [`CRealPrelude::le_congr`] — [`super::power`]'s identical pattern) chained
+/// through `zero ≤ b k` ([`CRealPrelude::le_trans`] of the two pointwise
+/// hypotheses) by one more `le_trans`. Then
+/// [`declare_sum_range_converges_of_dominated`] closes it directly.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_sum_range_comparison_test(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let nonneg_ty = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let ax = d.apply(a, &[x]);
+        let zero_c = czero(d, p);
+        let leq = cle(d, p, zero_c, ax);
+        d.pi_fv(x_fv, nat, leq)
+    };
+    let nonneg_fv = d.fresh_fvar();
+    let nonneg = d.kernel().fvar(nonneg_fv);
+
+    let dominates_ty = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let ax = d.apply(a, &[x]);
+        let bx = d.apply(b, &[x]);
+        let leq = cle(d, p, ax, bx);
+        d.pi_fv(x_fv, nat, leq)
+    };
+    let dominates_fv = d.fresh_fvar();
+    let dominates = d.kernel().fvar(dominates_fv);
+
+    let sum_b = d.const_app(p.sum_range, &[b]);
+    let pred_b = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let conv_m = converges_applied(d, p, sum_b, m);
+        d.lam_fv(m_fv, carrier, conv_m)
+    };
+    let conv_b_ty = exists_ty(d, p, carrier, pred_b);
+    let conv_b_fv = d.fresh_fvar();
+    let conv_b = d.kernel().fvar(conv_b_fv);
+
+    let sum_a = d.const_app(p.sum_range, &[a]);
+    let pred_a = {
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let conv_l = converges_applied(d, p, sum_a, l);
+        d.lam_fv(l_fv, carrier, conv_l)
+    };
+    let target = exists_ty(d, p, carrier, pred_a);
+
+    // pointwise_abs : ∀ k, le (abs (a k)) (b k).
+    let pointwise_abs = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let ak = d.apply(a, &[k]);
+        let bk = d.apply(b, &[k]);
+        let zero_c = czero(d, p);
+
+        let h_nonneg_k = d.apply(nonneg, &[k]); // le zero ak
+        let h_dom_k = d.apply(dominates, &[k]); // le ak bk
+
+        // le (neg ak) (neg zero)
+        let h_negle = d.lemma(p.neg_le_neg, &[zero_c, ak, h_nonneg_k]);
+        let neg_ak = cneg(d, p, ak);
+        let neg_zero = cneg(d, p, zero_c);
+
+        // le (neg ak) zero, via neg_zero ~ zero — power.rs's own pattern.
+        let h_negzero = neg_zero_equiv(d, p);
+        let refl_negak = d.lemma(p.equiv_refl, &[neg_ak]);
+        let h_negle_zero = d.lemma(
+            p.le_congr,
+            &[
+                neg_ak, neg_ak, neg_zero, zero_c, refl_negak, h_negzero, h_negle,
+            ],
+        );
+
+        // zero ≤ bk, from le_trans zero ak bk.
+        let h_zero_le_bk = d.lemma(p.le_trans, &[zero_c, ak, bk, h_nonneg_k, h_dom_k]);
+
+        // neg ak ≤ bk, from le_trans (neg ak) zero bk.
+        let h_negle_bk = d.lemma(
+            p.le_trans,
+            &[neg_ak, zero_c, bk, h_negle_zero, h_zero_le_bk],
+        );
+
+        // abs ak ≤ bk.
+        let h_abs = d.lemma(p.abs_le, &[ak, bk, h_dom_k, h_negle_bk]);
+        d.lam_fv(k_fv, nat, h_abs)
+    };
+
+    // minor : ∀ M, Converges (sumRange b) M → target.
+    let minor = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let hp_ty = converges_applied(d, p, sum_b, m);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+
+        let cauchy_b = d.lemma(p.converges_cauchy, &[sum_b, m, hp]);
+        let result = d.lemma(
+            p.sum_range_converges_of_dominated,
+            &[a, b, pointwise_abs, cauchy_b],
+        );
+
+        let with_hp = d.lam_fv(hp_fv, hp_ty, result);
+        d.lam_fv(m_fv, carrier, with_hp)
+    };
+
+    let proof_body = creal_exists_elim(d, p, carrier, pred_b, target, conv_b, minor);
+
+    let ty = {
+        let after_conv_b = d.arrow(conv_b_ty, target);
+        let after_dom = d.arrow(dominates_ty, after_conv_b);
+        let after_nonneg = d.arrow(nonneg_ty, after_dom);
+        let over_b = d.pi_fv(b_fv, fn_ty, after_nonneg);
+        d.pi_fv(a_fv, fn_ty, over_b)
+    };
+    let value = {
+        let with_conv_b = d.lam_fv(conv_b_fv, conv_b_ty, proof_body);
+        let with_dom = d.lam_fv(dominates_fv, dominates_ty, with_conv_b);
+        let with_nonneg = d.lam_fv(nonneg_fv, nonneg_ty, with_dom);
+        let over_b = d.lam_fv(b_fv, fn_ty, with_nonneg);
+        d.lam_fv(a_fv, fn_ty, over_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_comparison_test,
         uparams: vec![],
         ty,
         value,
