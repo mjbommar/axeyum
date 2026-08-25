@@ -34,18 +34,21 @@
 //! - [`declare_sum_range_telescope_ge`]: a LOWER bound on each difference
 //!   telescopes to a lower bound on the total (`Σ_{i<k} bound ≤ f k − f 0`).
 //!
-//! The intended first consumer is `CReal.monotone_of_nonneg_deriv` (not yet
-//! landed): each piece's difference is bounded below by `−(1/(e+1))·step`
-//! (`HasDerivativeOn`'s spec plus the nonnegative-derivative hypothesis), so
-//! [`declare_sum_range_telescope_ge`] with `bound := neg ((1/(e+1))·step)`
-//! gives a lower bound on `F y − F x` for every accuracy `e`, and
-//! `CReal.le_of_forall_le_add_small` (`archimedean_squeeze.rs`) closes that
-//! down to `CReal.le` outright. That composition is not built here — it
-//! needs `HasDerivativeOn` (`derivative.rs`) and a choice of piece count from
-//! `CReal.bound` (`product.rs`) instantiated at each piece, both a
-//! substantial further slice — but every piece landed in this file is
-//! already independently reusable: the same shape is what a Riemann-sum
-//! upper/lower bound and the Fundamental Theorem of Calculus need.
+//! The first consumer is `CReal.monotone_of_nonneg_deriv`, landed further
+//! down this file: each piece's difference is bounded below by
+//! `−(1/(e_acc+1))·step` (`HasDerivativeOn`'s spec plus the
+//! nonnegative-derivative hypothesis), so [`declare_sum_range_telescope_ge`]
+//! with `bound := neg ((1/(e_acc+1))·step)` gives a lower bound on `F y − F
+//! x` for every outer accuracy, and `CReal.le_of_forall_le_add_small`
+//! (`archimedean_squeeze.rs`) closes that down to `CReal.le` outright. That
+//! composition needed a piece count chosen from an Archimedean bound on
+//! `abs (y − x)` (not `CReal.bound` itself — see
+//! `declare_monotone_of_nonneg_deriv`'s own documentation), plus — contrary
+//! to what this paragraph used to say — `CReal.sumRange (fun _ => bound) k`
+//! DOES eventually need folding into `mul (ofNat k) bound`
+//! ([`declare_sum_range_const`]) once a concrete numeric bound has to be
+//! extracted from the telescoped sum. The telescope lemmas above still leave
+//! it unevaluated, and still do not need it themselves.
 
 use super::ring_helpers::right_distrib;
 use super::{CRealPrelude, and_intro, cadd, cle, creal_ty, div_succ, embed, equiv};

@@ -1187,8 +1187,8 @@ pub struct CRealPrelude {
     /// pieces each bounded below telescope to a lower bound on the total
     /// difference, `k` itself left symbolic (composed from
     /// [`Self::sum_range_le`] and [`Self::sum_range_telescope`] via
-    /// [`Self::le_congr`], not a new estimate). The intended first consumer
-    /// is `CReal.monotone_of_nonneg_deriv` (not yet landed).
+    /// [`Self::le_congr`], not a new estimate). The first consumer is
+    /// [`Self::monotone_of_nonneg_deriv`].
     pub sum_range_telescope_ge: NameId,
     /// `CReal.sumRange_telescope_le : ∀ f bound k,
     /// (∀ i, Nat.lt i k → le (add (f (Nat.succ i)) (neg (f i))) bound) →
