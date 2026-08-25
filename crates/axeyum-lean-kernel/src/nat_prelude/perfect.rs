@@ -1901,6 +1901,227 @@ pub(super) fn declare_dvd_two_pow_classify(
 }
 
 // ============================================================================
+// `Nat.pow_two_ne_pow_two_mul_prime` — the non-overlap fact between `2^k·q`'s
+// two divisor families, needed to split `sumDivisors (2^k·q)` without
+// double-counting: no power of `2` equals `2^j` times an odd prime `q`.
+//
+// Chose the [`declare_dvd_two_pow_classify`] route over `euclid_lemma`
+// (the task brief's suggested alternative): the assumed equality `2^i = 2^j·q`
+// makes `q ∣ 2^i` immediate (`q` divides its own product `2^j·q`
+// unconditionally, via `dvd_mul` + `mul_comm`, then transport along the
+// assumed equality), and `dvd_two_pow_classify` is ALREADY DECLARED right
+// above this — it turns that single divisibility fact directly into
+// `q = 2^e`, with no separate induction needed. Deriving `q ∤ 2^j` via
+// `euclid_lemma` would need its own induction on `j` (`euclid_lemma` peels
+// one prime factor at a time, not a whole power at once) to rule out every
+// exponent, which this route gets for free from a theorem already in the
+// environment.
+//
+// From `q = 2^e`: `e = 0` forces `q = 1` (`2^0` is defeq `1`), contradicting
+// primality's `2 ≤ q` directly (`Le 2 1` is defeq `Lt 1 1`, refuted by
+// `lt_irrefl`). `e = succ e'` forces `2 ∣ q` (`2^e ≡ 2^e' * 2` by iota, so `q`
+// is `2^e'` times `2`, and `dvd_mul` gives `2 ∣ 2 * 2^e'` directly after a
+// `mul_comm` reassociation) — then `q`'s OWN divisor clause at `c = 2` gives
+// `Or (Eq 2 1) (Eq 2 q)`: the first disjunct is absurd by the same `2 ≠ 1`
+// fact (built via `ne_of_lt` from `Lt 1 2`, this file's own local combinator),
+// and the second gives `q ∣ 2` (transporting `dvd_refl 2` along `Eq 2 q`)
+// directly contradicting the odd-prime hypothesis `¬(dvd q 2)`.
+// ============================================================================
+
+/// `Nat.pow_two_ne_pow_two_mul_prime : ∀ i j q, Prime q → ¬(dvd q 2) →
+/// ¬(Eq (pow 2 i) (mul (pow 2 j) q))` — see the module doc above for the
+/// proof route.
+pub(super) fn declare_pow_two_ne_pow_two_mul_prime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.pow_two_ne_pow_two_mul_prime, 3, &|d, v| {
+        let (i, j, q) = (v[0], v[1], v[2]);
+
+        let prime_q_ty = prime_ty(d, &p, q);
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+
+        let two_lit = d.num(2);
+        let dvd_q2_ty = d.dvd(q, two_lit);
+        let logic = d.prelude().logic;
+        let not_dvd_q2_ty = d.const_app(logic.not, &[dvd_q2_ty]);
+        let not_fv = d.fresh_fvar();
+        let not_dvd_q2 = d.kernel().fvar(not_fv);
+
+        let two = d.num(2);
+        let pow_i = d.pow(two, i);
+        let pow_j = d.pow(two, j);
+        let target = d.mul(pow_j, q);
+        let eq_ty = d.eq(pow_i, target);
+        let eq_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(eq_fv);
+
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+
+        // `q ∣ target`, from `dvd_mul(q, pow_j) : dvd q (mul q pow_j)`
+        // reassociated via `mul_comm` to `dvd q (mul pow_j q)`.
+        let dvd_q_qpj = d.lemma(p.dvd_mul, &[q, pow_j]);
+        let mul_q_pj = d.mul(q, pow_j);
+        let comm_q_pj = d.lemma(p.mul_comm, &[q, pow_j]);
+        let dvd_q_target = transport_dvd_right(d, q, mul_q_pj, target, comm_q_pj, dvd_q_qpj);
+
+        // `q ∣ pow_i`, transporting along `h : Eq pow_i target`.
+        let target_eq_pow_i = d.symm(pow_i, target, h);
+        let dvd_q_pow_i = transport_dvd_right(d, q, target, pow_i, target_eq_pow_i, dvd_q_target);
+
+        // Classify: `∃ e ≤ i, Eq q (pow 2 e)`.
+        let classify = d.lemma(p.dvd_two_pow_classify, &[i, q, dvd_q_pow_i]);
+
+        let (two_le_q_ty, divisor_clause_ty) = prime_parts(d, &p, q);
+        let q_divisor_clause = and_right(d, two_le_q_ty, divisor_clause_ty, prime_proof);
+        let two_le_q = and_left(d, two_le_q_ty, divisor_clause_ty, prime_proof);
+
+        let body = pow_eq_elim(
+            d,
+            i,
+            q,
+            None,
+            false_ty,
+            classify,
+            &|d, e, _le_e_i, eq_q_pow_e| {
+                let zero = d.zero();
+                let beq_e0 = d.beq(e, zero);
+                let cases = bool_true_or_false(d, &p, beq_e0);
+                let bool_true_lit = d.bool_true();
+                let bool_false_lit = d.bool_false();
+                let bool_true_ty = d.bool_eq(beq_e0, bool_true_lit);
+                let bool_false_ty = d.bool_eq(beq_e0, bool_false_lit);
+
+                // `e = 0`: `q = pow 2 0`, defeq `1`, contradicting `2 ≤ q`.
+                let true_branch = {
+                    let hh_fv = d.fresh_fvar();
+                    let hh = d.kernel().fvar(hh_fv);
+                    let e_eq_0 = d.lemma(p.eq_of_beq_eq_true, &[e, zero, hh]);
+                    let two2 = d.num(2);
+                    let pow_e = d.pow(two2, e);
+                    let pow_0 = d.pow(two2, zero);
+                    let congr_pow = d.congr(e, zero, e_eq_0, &|d, x| {
+                        let t = d.num(2);
+                        d.pow(t, x)
+                    });
+                    let eq_q_pow0 = d.trans(q, pow_e, pow_0, eq_q_pow_e, congr_pow);
+                    let motive = d.eq_motive(q, &|d, x| {
+                        let t = d.num(2);
+                        d.le(t, x)
+                    });
+                    let le_2_pow0 = d.transport(q, motive, two_le_q, pow_0, eq_q_pow0);
+                    // `Le 2 pow_0` is defeq `Lt 1 1` (`pow_0` defeq `1`).
+                    let one = d.num(1);
+                    let irrefl = d.lemma(p.lt_irrefl, &[one]);
+                    let absurd = d.apply(irrefl, &[le_2_pow0]);
+                    d.lam_fv(hh_fv, bool_true_ty, absurd)
+                };
+
+                // `e = succ e'`: `q = 2^e' * 2`, so `2 ∣ q`; `q`'s divisor
+                // clause at `c = 2` then refutes both `2 = 1` and `2 = q`
+                // (the latter via the odd-prime hypothesis).
+                let false_branch = {
+                    let hh_fv = d.fresh_fvar();
+                    let hh = d.kernel().fvar(hh_fv);
+                    let e_ne_0 = d.lemma(p.ne_of_beq_eq_false, &[e, zero, hh]);
+                    let e_pos = d.lemma(p.zero_lt_of_ne_zero, &[e, e_ne_0]);
+                    let succ_pred_fn = pos_implies_succ_pred(d, &p, e);
+                    let e_eq_succ_pred = d.apply(succ_pred_fn, &[e_pos]);
+                    let ep = d.pred(e);
+                    let sep = d.succ(ep);
+
+                    let two2 = d.num(2);
+                    let pow_e = d.pow(two2, e);
+                    let pow_sep = d.pow(two2, sep);
+                    let congr_pow = d.congr(e, sep, e_eq_succ_pred, &|d, x| {
+                        let t = d.num(2);
+                        d.pow(t, x)
+                    });
+                    // `eq_q_pow_sep : Eq q pow_sep`, and `pow_sep` is defeq
+                    // `mul(pow_ep, two2)` (`pow`'s own succ-equation).
+                    let eq_q_pow_sep = d.trans(q, pow_e, pow_sep, eq_q_pow_e, congr_pow);
+                    let pow_ep = d.pow(two2, ep);
+                    let pow_ep_two = d.mul(pow_ep, two2);
+
+                    let dvd_2_mul2pe = d.lemma(p.dvd_mul, &[two2, pow_ep]);
+                    let two_pow_ep = d.mul(two2, pow_ep);
+                    let comm_pe2 = d.lemma(p.mul_comm, &[pow_ep, two2]); // Eq pow_ep_two two_pow_ep
+                    let comm_rev = d.symm(pow_ep_two, two_pow_ep, comm_pe2); // Eq two_pow_ep pow_ep_two
+                    let eq_q_pow_sep_rev = d.symm(q, pow_sep, eq_q_pow_sep); // Eq pow_sep q, defeq Eq pow_ep_two q
+                    let two_pow_ep_eq_q =
+                        d.trans(two_pow_ep, pow_ep_two, q, comm_rev, eq_q_pow_sep_rev);
+                    let dvd_2_q =
+                        transport_dvd_right(d, two2, two_pow_ep, q, two_pow_ep_eq_q, dvd_2_mul2pe);
+
+                    let or_proof = d.apply(q_divisor_clause, &[two2, dvd_2_q]);
+                    let one = d.num(1);
+                    let is_one = d.eq(two2, one);
+                    let is_q = d.eq(two2, q);
+
+                    let left_branch = {
+                        let hhh_fv = d.fresh_fvar();
+                        let hhh = d.kernel().fvar(hhh_fv); // Eq 2 1
+                        let two3 = d.num(2);
+                        let le_2_2 = d.lemma(p.le_refl, &[two3]); // Le 2 2, defeq Lt 1 2
+                        let ne_1_2 = ne_of_lt(d, &p, one, two3, le_2_2); // Not(Eq 1 2)
+                        let one_eq_two = d.symm(two3, one, hhh); // Eq 1 2
+                        let absurd = d.apply(ne_1_2, &[one_eq_two]);
+                        d.lam_fv(hhh_fv, is_one, absurd)
+                    };
+                    let right_branch = {
+                        let hhh_fv = d.fresh_fvar();
+                        let hhh = d.kernel().fvar(hhh_fv); // Eq 2 q
+                        let dvd_2_2 = d.lemma(p.dvd_refl, &[two2]); // dvd two2 two2
+                        let dvd_q_2 = transport_dvd_left(d, two2, q, hhh, two2, dvd_2_2);
+                        let absurd = d.apply(not_dvd_q2, &[dvd_q_2]);
+                        d.lam_fv(hhh_fv, is_q, absurd)
+                    };
+
+                    let anon = d.anon_name();
+                    let or_ty = d.const_app(logic.or, &[is_one, is_q]);
+                    let motive_or = d.kernel().lam(anon, or_ty, false_ty, BinderInfo::Default);
+                    let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+                    let result = d.apply(
+                        or_rec,
+                        &[is_one, is_q, motive_or, left_branch, right_branch, or_proof],
+                    );
+                    d.lam_fv(hh_fv, bool_false_ty, result)
+                };
+
+                let anon = d.anon_name();
+                let or_ty = d.const_app(logic.or, &[bool_true_ty, bool_false_ty]);
+                let motive_or = d.kernel().lam(anon, or_ty, false_ty, BinderInfo::Default);
+                let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+                d.apply(
+                    or_rec,
+                    &[
+                        bool_true_ty,
+                        bool_false_ty,
+                        motive_or,
+                        true_branch,
+                        false_branch,
+                        cases,
+                    ],
+                )
+            },
+        );
+
+        let stmt_inner = d.arrow(eq_ty, false_ty);
+        let stmt_with_not = d.arrow(not_dvd_q2_ty, stmt_inner);
+        let stmt = d.arrow(prime_q_ty, stmt_with_not);
+
+        let proof_inner = d.lam_fv(eq_fv, eq_ty, body);
+        let proof_with_not = d.lam_fv(not_fv, not_dvd_q2_ty, proof_inner);
+        let proof = d.lam_fv(prime_fv, prime_q_ty, proof_with_not);
+
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
 // `Nat.pow_pos` / `Nat.pow_lt_pow_succ` — strict monotonicity of `pow` in the
 // exponent, for any base greater than `1`. Verified against the full
 // `--include-constructed` theorem inventory that neither existed anywhere in
@@ -3195,6 +3416,7 @@ pub(super) fn declare_perfect_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     declare_pow2_geom_sum(d, p)?;
     declare_dvd_two_pow_mul_classify(d, p)?;
     declare_dvd_two_pow_classify(d, p)?;
+    declare_pow_two_ne_pow_two_mul_prime(d, p)?;
     declare_pow_pos(d, p)?;
     declare_pow_lt_pow_succ(d, p)?;
     declare_dvd_two_pow_succ_iff_of_le(d, p)?;
