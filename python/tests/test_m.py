@@ -131,3 +131,36 @@ def test_mixed_arithmetic_with_python_numbers() -> None:
     assert m.show(Fraction(1, 2) / x) == "(1/2)/x"
     with pytest.raises(TypeError):
         _ = x + 0.5  # a float is not exact; write Fraction(1, 2)
+
+
+def test_sums_are_exact() -> None:
+    assert m.show(m.Sum("k", ("k", 1, "n"))) == "(1/2)*n^2 + (1/2)*n"
+    assert m.show(m.Sum("k^2", ("k", 1, "n"))) == "(1/3)*n^3 + (1/2)*n^2 + (1/6)*n"
+    assert str(m.Sum("k", ("k", 1, 100))) == "5050"
+    with pytest.raises(ValueError, match="symbolic power"):
+        m.Sum("1/2^k", ("k", 0, None))
+
+
+def test_reduce_renders_interval_unions() -> None:
+    inside = m.Reduce("x^2 - 4 < 0")
+    assert inside is not None and [m.interval(i) for i in inside] == ["-2 < x < 2"]
+    outside = m.Reduce("x^2 >= 4")
+    assert outside is not None and [m.interval(i) for i in outside] == ["x <= -2", "2 <= x"]
+    with pytest.raises(ValueError, match="exactly one of"):
+        m.Reduce("x^2 - 4")
+
+
+def test_polynomial_toolkit() -> None:
+    from fractions import Fraction
+
+    assert str(m.Rationalize(0.5)) == "1/2"
+    roots = m.NRoots("x^2 - 2")
+    assert roots is not None and len(roots) == 2
+    assert abs(float(roots[1]) - 2**0.5) < 1e-6
+    assert isinstance(roots[1], Fraction)
+    assert m.Degree("x^3 + x") == 3
+    assert m.Degree("sin(x)") is None
+    assert str(m.Resultant("x^2 - 1", "x - 1", "x")) == "0"
+    assert str(m.Discriminant("x^2 - 4")) == "16"
+    q, r = m.PolynomialQuotientRemainder("x^3 - 1", "x - 1", "x")
+    assert (m.show(q), str(r)) == ("x^2 + x + 1", "0")
