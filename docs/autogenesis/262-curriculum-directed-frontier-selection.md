@@ -245,6 +245,64 @@ the REGISTRY. They move for unrelated reasons, and conflating them is what made
 "141 ready, 0 admissible" read as a frontier problem when it was a registry
 problem.
 
+## Fourth amendment, 2026-08-25 — the producer wall is WHNF opacity, not a missing capability
+
+The loop is now code-complete: `fact-frontier.py` selects,
+`execute-autogenesis-operation.py` re-derives and emits a receipt that survives
+a re-signed cross-target forgery, `prepare-autogenesis-fact-transaction.py`
+produces a checkable transaction. So the bottleneck moved, and it is worth
+naming precisely, because two successive measurements framed it differently and
+the second one is right.
+
+**The autonomy metric, measured:** 291 established facts, **8 via an operation
+covering more than one fact**, 21 via single-target capsules, 262
+hand-constructed or imported. Two authoritative multi-target producers exist.
+The machinery is not the constraint; producer *reach* is.
+
+**First framing (correct but incomplete).** A lane walked all 10 open train
+`natural-factorial` rows and all 9 `natural-fibonacci` rows against
+`bounded_induction.rs` and found none reachable, attributing most of it to a
+missing **order-side residual generalization** — `close_order_terminal` has no
+analogue of the Eq-side `try_absorbing_argument`, so any inequality whose gap is
+a symbolic quantity is out of reach. It noted the doc records that mechanism was
+*built and deliberately reverted* in `002e7956d` for capacity reasons.
+
+**Second framing (verified, and deeper).** A lane then read that commit, found
+the reverted work drove `attempt`'s greedy induction choice into a self-similar
+chain that exhausted the shared `MAX_RESIDUAL_LEMMAS` budget for **zero admits**
+— and then went past the commit message to probe the actual goals with
+`BIS_DEBUG=1` against the real frozen exports:
+
+- `AxNat.factorial (AxNat.succ n)` WHNF-reduces to a `brecOn.go`/`below`
+  projection ending in `(...).1 (AxNat.succ n)`. The multiplication
+  `(succ n) · n!` **never becomes a separable top-level application** for
+  symbolic `n`.
+- `AxNat.fib (n+1)` WHNF-reduces to `(Nat.iterate f (n+1) (0,1)).1`. The
+  additive recurrence is not definitionally reachable; `fib_add_two` is a
+  separately proved lemma.
+
+A residual/absorbing mechanism works on the WHNF-reduced application spine. **If
+WHNF exposes no separable structure, no scoping of that mechanism can close
+these goals** — building it would reproduce the measured capacity cost with none
+of the hoped-for upside. That is a stronger result than "the capability is
+missing": the capability would not have helped.
+
+**So the next capability is a different one**, and there are two candidates
+worth stating: composing an already-checked auxiliary lemma
+(`Nat.fib_add_two`, `Nat.factorial_succ`) as a hypothesis the producer can
+rewrite through, rather than re-deriving it structurally; or an introspection
+strategy other than plain WHNF-then-app-spine that can see through
+`brecOn`/`Nat.iterate` compilation for a generic argument. Neither is a narrow
+addition to an existing function.
+
+**The methodological point, which is the reusable part.** The first lane's
+diagnosis came from reading the producer and the doc; the second's came from
+running the producer against the real goal and looking at what WHNF actually
+produced. Both were careful. Only the second could have found that the named
+missing capability was not the binding constraint — and it found it by
+*probing the artifact rather than the description of the artifact*, which is
+this repository's standing rule about tools arriving one level up.
+
 ## Boundary
 
 This document **selects nothing and authorizes nothing.** It adds no operation
