@@ -1449,6 +1449,33 @@ pub struct CRealPrelude {
     /// See `creal/derivative.rs`'s module documentation for the corrected,
     /// numerically re-verified error decomposition this closes.
     pub has_derivative_mul: NameId,
+    /// `CReal.hasDerivative_congr : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// ∀ G G', (∀ x, le a x → le x b → Equiv (G x) (F x)) →
+    /// (∀ x, le a x → le x b → Equiv (G' x) (F' x)) →
+    /// HasDerivativeOn G G' a b` — transport a derivative along pointwise
+    /// `Equiv` **on the interval only**.
+    ///
+    /// `HasDerivativeOn.spec`'s own type guards every occurrence of
+    /// `F x`/`F y`/`F' x` in its conclusion behind the SAME range hypotheses
+    /// (`le a x`, `le x b`, `le a y`, `le y b`) the caller must already supply
+    /// to invoke `spec` at all, so agreement need only hold ON `[a,b]` —
+    /// off-interval agreement is neither needed nor assumed. Reuses `F`'s own
+    /// modulus verbatim; `abs_le_of_equiv` carries `F`'s own bound across.
+    ///
+    /// A constructive derivative is **not unique as a function**, only up to
+    /// pointwise `Equiv` on the interval, so without this two developments
+    /// producing the "same" derivative in different syntactic forms cannot be
+    /// connected at all.
+    pub has_derivative_congr: NameId,
+    /// `CReal.hasDerivative_pow_two : ∀ a b,
+    /// HasDerivativeOn (fun r => pow r 2) (fun x => add x x) a b` — `pow r 2`
+    /// ι-reduces to `mul (mul one r) r`, `Equiv`-equal to `mul r r`, so
+    /// [`Self::has_derivative_congr`] transports [`Self::has_derivative_sq`]'s
+    /// witness across that one identity with the derivative side reused
+    /// verbatim. **The cross-check this development wanted**: had the general
+    /// shape not matched `hasDerivative_sq` at `n = 2`, one of the two would be
+    /// wrong.
+    pub has_derivative_pow_two: NameId,
 }
 
 impl CRealPrelude {
@@ -1700,6 +1727,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_smul: kernel.name_str(creal, "hasDerivative_smul"),
         has_derivative_sub: kernel.name_str(creal, "hasDerivative_sub"),
         has_derivative_mul: kernel.name_str(creal, "hasDerivative_mul"),
+        has_derivative_congr: kernel.name_str(creal, "hasDerivative_congr"),
+        has_derivative_pow_two: kernel.name_str(creal, "hasDerivative_pow_two"),
     }
 }
 
@@ -1783,7 +1812,13 @@ pub(crate) fn build_creal_prelude_uncached(
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
-        power::declare_power(&mut d, prelude)
+        power::declare_power(&mut d, prelude)?;
+        // `hasDerivative_pow_two` mentions `CReal.pow`, which `power.rs`
+        // declares. It cannot live inside `derivative::declare_derivative`,
+        // which runs BEFORE `power::declare_power` above: the kernel rejects a
+        // term naming a constant not yet in the environment (`UnknownConst`).
+        // Wired in here instead, after `pow` exists.
+        derivative::declare_has_derivative_pow_two(&mut d, prelude)
     })();
     match built {
         Ok(()) => {

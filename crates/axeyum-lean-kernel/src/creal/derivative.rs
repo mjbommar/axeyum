@@ -255,7 +255,12 @@ pub(super) fn declare_derivative(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     declare_abs_mul_le_of_bounds(d, p)?;
     declare_has_derivative_smul(d, p)?;
     declare_has_derivative_sub(d, p)?;
-    declare_has_derivative_mul(d, p)
+    declare_has_derivative_mul(d, p)?;
+    declare_has_derivative_congr(d, p)
+    // `hasDerivative_pow_two` is NOT called here: it mentions `CReal.pow`,
+    // which `power.rs` declares later in `build_creal_prelude_uncached`'s own
+    // pipeline. See `declare_has_derivative_pow_two`'s doc comment and the
+    // call site in `creal.rs`.
 }
 
 // --- shared term builders ----------------------------------------------------
@@ -5345,6 +5350,348 @@ fn declare_has_derivative_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.has_derivative_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `∀ x, le a x → le x b → Equiv (lhs x) (rhs x)` — the shape of both
+/// agreement hypotheses [`declare_has_derivative_congr`] takes, built once
+/// and reused for `G`/`F` and `G'`/`F'`.
+fn agree_on_interval_ty(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    lhs_fn: ExprId,
+    rhs_fn: ExprId,
+) -> ExprId {
+    let carrier = creal_ty(d, p);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let range_ax = d.const_app(p.le, &[a, x]);
+    let range_xb = d.const_app(p.le, &[x, b]);
+    let lx = d.apply(lhs_fn, &[x]);
+    let rx = d.apply(rhs_fn, &[x]);
+    let eq = d.const_app(p.equiv, &[lx, rx]);
+
+    let with_hxb = d.arrow(range_xb, eq);
+    let with_hax = d.arrow(range_ax, with_hxb);
+    d.pi_fv(x_fv, carrier, with_hax)
+}
+
+/// `Equiv (pow x 2) (mul x x)` — `pow x 2` ι-reduces (`pow`'s own `Nat.rec`,
+/// twice, then `pow_zero`'s base case) to `mul (mul one x) x`, definitionally
+/// (this is exactly how [`super::power`]'s own induction steps rely on
+/// `pow`'s ι-reduction rather than calling `pow_succ`/`pow_zero` as rewrite
+/// lemmas — see e.g. `declare_pow_nonneg`). What is not definitional is
+/// `mul one x ~ x`: closed by `mul_comm` then `mul_one`, then lifted through
+/// `mul_congr` on the right factor `x` (reflexivity).
+fn pow_two_equiv_sq(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let mul_one_x = cmul(d, p, one_c, x);
+    let mul_x_one = cmul(d, p, x, one_c);
+    let comm = d.lemma(p.mul_comm, &[one_c, x]); // mul_one_x ~ mul_x_one
+    let mo = d.lemma(p.mul_one, &[x]); // mul_x_one ~ x
+    let one_x_eq_x = echain(d, p, mul_one_x, &[(mul_x_one, comm), (x, mo)]); // mul_one_x ~ x
+    let refl_x = erefl(d, p, x);
+    // Equiv (mul (mul one x) x) (mul x x) — defeq to Equiv (pow x 2) (mul x x).
+    d.lemma(p.mul_congr, &[mul_one_x, x, x, x, one_x_eq_x, refl_x])
+}
+
+/// `CReal.hasDerivative_congr : ∀ F F' a b, HasDerivativeOn F F' a b →
+/// ∀ G G', (∀ x, le a x → le x b → Equiv (G x) (F x)) →
+/// (∀ x, le a x → le x b → Equiv (G' x) (F' x)) → HasDerivativeOn G G' a b`
+///
+/// **The hypothesis shape, decided from `HasDerivativeOn.spec`'s own
+/// type, not assumed.** `spec`'s conclusion mentions `F x`, `F y`, `F' x`
+/// only inside a body reached through `le a x → le x b → le a y → le y b →
+/// …` — the SAME four range hypotheses a caller of `spec` must already hold
+/// to reach that body at all. So agreement of `G`/`G'` with `F`/`F'` is only
+/// ever exercised at a point already proved to lie in `[a,b]`, and
+/// agreement OFF the interval is neither needed nor assumed here — the two
+/// hypotheses above are exactly `∀ x ∈ [a,b], …`, nothing wider.
+///
+/// Reuses `F`'s own modulus **verbatim** (no rescaling: this is a pure
+/// relabelling, not an estimate). The error term transports to `F`'s own
+/// error term by two structural steps — `add_congr`/`neg_congr` for the
+/// `G y − G x` half, `mul_congr`/`neg_congr` for the `G'(x)·(y−x)` half,
+/// then one more `add_congr` to combine — and [`abs_le_of_equiv`] carries
+/// `F`'s own bound (from `F`'s own `spec`, at the identical `e x y` and
+/// range proofs) across that `Equiv`.
+fn declare_has_derivative_congr(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hf_ty = hd_ty(d, p, f, fp, a, b);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let gp_fv = d.fresh_fvar();
+    let gp = d.kernel().fvar(gp_fv);
+
+    let agree_g_ty = agree_on_interval_ty(d, p, a, b, g, f);
+    let agree_gp_ty = agree_on_interval_ty(d, p, a, b, gp, fp);
+    let agree_g_fv = d.fresh_fvar();
+    let agree_g = d.kernel().fvar(agree_g_fv);
+    let agree_gp_fv = d.fresh_fvar();
+    let agree_gp = d.kernel().fvar(agree_gp_fv);
+
+    // Reuse F's own modulus verbatim — this is a relabelling, not an
+    // estimate, so no rescaling is needed.
+    let modulus = d.const_app(p.hd_modulus, &[f, fp, a, b, hf]);
+
+    let spec = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hax_fv = d.fresh_fvar();
+        let hxb_fv = d.fresh_fvar();
+        let hay_fv = d.fresh_fvar();
+        let hyb_fv = d.fresh_fvar();
+        let h_fv = d.fresh_fvar();
+
+        let range_ax = d.const_app(p.le, &[a, x]);
+        let range_xb = d.const_app(p.le, &[x, b]);
+        let range_ay = d.const_app(p.le, &[a, y]);
+        let range_yb = d.const_app(p.le, &[y, b]);
+
+        let diff_yx = cdiff(d, p, y, x);
+        let abs_diff = cabs(d, p, diff_yx);
+
+        let mod_e = d.apply(modulus, &[e]);
+        let in_bound = div_succ(d, p, 1, mod_e);
+        let ofr_in = d.const_app(p.of_rat, &[in_bound]);
+        let hyp = within_real(d, p, diff_yx, ofr_in);
+
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb = d.kernel().fvar(hxb_fv);
+        let hay = d.kernel().fvar(hay_fv);
+        let hyb = d.kernel().fvar(hyb_fv);
+        let h_fv_expr = d.kernel().fvar(h_fv);
+
+        let fx = d.apply(f, &[x]);
+        let fy = d.apply(f, &[y]);
+        let fpx = d.apply(fp, &[x]);
+        let deriv_term_f = cmul(d, p, fpx, diff_yx);
+        let fy_fx_f = cdiff(d, p, fy, fx);
+        let error_f = cdiff(d, p, fy_fx_f, deriv_term_f);
+
+        let gx = d.apply(g, &[x]);
+        let gy = d.apply(g, &[y]);
+        let gpx = d.apply(gp, &[x]);
+        let deriv_term_g = cmul(d, p, gpx, diff_yx);
+        let gy_gx_g = cdiff(d, p, gy, gx);
+        let error_g = cdiff(d, p, gy_gx_g, deriv_term_g);
+
+        let out_bound_rat = div_succ(d, p, 1, e);
+        let ofr_out = d.const_app(p.of_rat, &[out_bound_rat]);
+        let out_bound = cmul(d, p, ofr_out, abs_diff);
+
+        // gy ~ fy, gx ~ fx, gpx ~ fpx — the two agreement hypotheses,
+        // instantiated at x (with x's own range proofs) and at y (with y's).
+        let gy_eq_fy = d.apply(agree_g, &[y, hay, hyb]);
+        let gx_eq_fx = d.apply(agree_g, &[x, hax, hxb]);
+        let gpx_eq_fpx = d.apply(agree_gp, &[x, hax, hxb]);
+
+        let neg_gx = cneg(d, p, gx);
+        let neg_fx = cneg(d, p, fx);
+        let neg_gx_eq_neg_fx = d.lemma(p.neg_congr, &[gx, fx, gx_eq_fx]);
+
+        // gy_gx_g ~ fy_fx_f : Equiv (add gy (neg gx)) (add fy (neg fx))
+        let gy_gx_eq_fy_fx = d.lemma(
+            p.add_congr,
+            &[gy, fy, neg_gx, neg_fx, gy_eq_fy, neg_gx_eq_neg_fx],
+        );
+
+        // deriv_term_g ~ deriv_term_f : Equiv (mul gpx diff) (mul fpx diff)
+        let refl_diff = erefl(d, p, diff_yx);
+        let deriv_term_eq = d.lemma(
+            p.mul_congr,
+            &[gpx, fpx, diff_yx, diff_yx, gpx_eq_fpx, refl_diff],
+        );
+        let neg_deriv_term_eq = d.lemma(p.neg_congr, &[deriv_term_g, deriv_term_f, deriv_term_eq]);
+
+        // error_g ~ error_f.
+        let neg_deriv_term_g = cneg(d, p, deriv_term_g);
+        let neg_deriv_term_f = cneg(d, p, deriv_term_f);
+        let error_g_eq_error_f = d.lemma(
+            p.add_congr,
+            &[
+                gy_gx_g,
+                fy_fx_f,
+                neg_deriv_term_g,
+                neg_deriv_term_f,
+                gy_gx_eq_fy_fx,
+                neg_deriv_term_eq,
+            ],
+        );
+
+        let error_f_bound = d.lemma(
+            p.hd_spec,
+            &[f, fp, a, b, hf, e, x, y, hax, hxb, hay, hyb, h_fv_expr],
+        ); // le (abs error_f) out_bound
+        let conclusion = abs_le_of_equiv(
+            d,
+            p,
+            error_g,
+            error_f,
+            out_bound,
+            error_g_eq_error_f,
+            error_f_bound,
+        );
+
+        let with_h = d.lam_fv(h_fv, hyp, conclusion);
+        let with_hyb = d.lam_fv(hyb_fv, range_yb, with_h);
+        let with_hay = d.lam_fv(hay_fv, range_ay, with_hyb);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, with_hay);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        d.lam_fv(e_fv, nat, with_x)
+    };
+
+    let mk_applied = d.const_app(p.hd_mk, &[g, gp, a, b, modulus, spec]);
+    let value = {
+        let with_agree_gp = d.lam_fv(agree_gp_fv, agree_gp_ty, mk_applied);
+        let with_agree_g = d.lam_fv(agree_g_fv, agree_g_ty, with_agree_gp);
+        let with_gp = d.lam_fv(gp_fv, func_ty, with_agree_g);
+        let with_g = d.lam_fv(g_fv, func_ty, with_gp);
+        let with_hf = d.lam_fv(hf_fv, hf_ty, with_g);
+        let with_b = d.lam_fv(b_fv, carrier, with_hf);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_fp = d.lam_fv(fp_fv, func_ty, with_a);
+        d.lam_fv(f_fv, func_ty, with_fp)
+    };
+    let ty = {
+        let applied = hd_ty(d, p, g, gp, a, b);
+        let with_agree_gp = d.arrow(agree_gp_ty, applied);
+        let with_agree_g = d.arrow(agree_g_ty, with_agree_gp);
+        let with_gp = d.pi_fv(gp_fv, func_ty, with_agree_g);
+        let with_g = d.pi_fv(g_fv, func_ty, with_gp);
+        let with_hf = d.arrow(hf_ty, with_g);
+        let with_b = d.pi_fv(b_fv, carrier, with_hf);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_fp = d.pi_fv(fp_fv, func_ty, with_a);
+        d.pi_fv(f_fv, func_ty, with_fp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.has_derivative_congr,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.hasDerivative_pow_two : ∀ a b, HasDerivativeOn (fun r => pow r 2)
+/// (fun x => add x x) a b` — [`declare_has_derivative_congr`] transporting
+/// [`CRealPrelude::has_derivative_sq`]'s own witness across
+/// [`pow_two_equiv_sq`]. `G' := F'` **verbatim** (the same `fun x => add x
+/// x` term, not merely `Equiv`-equal to it), so the second agreement
+/// hypothesis is closed by `Equiv.refl` alone — no transport needed on the
+/// derivative side at all.
+///
+/// **The real cross-check** the module documentation for
+/// [`declare_has_derivative_sq`] promises: if the general transport built
+/// above did not compose with `hasDerivative_sq`'s own statement at this one
+/// instance, one of the two would be wrong, and finding out which would be
+/// worth more than this theorem.
+pub(super) fn declare_has_derivative_pow_two(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let sq_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let rr = cmul(d, p, r, r);
+        d.lam_fv(r_fv, carrier, rr)
+    };
+    let sq_deriv = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let xx = cadd(d, p, x, x);
+        d.lam_fv(x_fv, carrier, xx)
+    };
+    let pow_two_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let two = d.num(2);
+        let pr2 = d.const_app(p.pow, &[r, two]);
+        d.lam_fv(r_fv, carrier, pr2)
+    };
+
+    let hf = d.const_app(p.has_derivative_sq, &[a, b]); // HasDerivativeOn sq_fn sq_deriv a b
+
+    // agree_g : ∀ x, le a x → le x b → Equiv (pow x 2) (mul x x)
+    let agree_g = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_fv = d.fresh_fvar();
+        let hxb_fv = d.fresh_fvar();
+        let range_ax = d.const_app(p.le, &[a, x]);
+        let range_xb = d.const_app(p.le, &[x, b]);
+        let eq = pow_two_equiv_sq(d, p, x);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, eq);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        d.lam_fv(x_fv, carrier, with_hax)
+    };
+
+    // agree_gp : ∀ x, le a x → le x b → Equiv (add x x) (add x x) — Equiv.refl.
+    let agree_gp = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_fv = d.fresh_fvar();
+        let hxb_fv = d.fresh_fvar();
+        let range_ax = d.const_app(p.le, &[a, x]);
+        let range_xb = d.const_app(p.le, &[x, b]);
+        let xx = cadd(d, p, x, x);
+        let refl = erefl(d, p, xx);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, refl);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        d.lam_fv(x_fv, carrier, with_hax)
+    };
+
+    let applied = d.const_app(
+        p.has_derivative_congr,
+        &[
+            sq_fn, sq_deriv, a, b, hf, pow_two_fn, sq_deriv, agree_g, agree_gp,
+        ],
+    );
+
+    let value = {
+        let with_b = d.lam_fv(b_fv, carrier, applied);
+        d.lam_fv(a_fv, carrier, with_b)
+    };
+    let ty = {
+        let target = hd_ty(d, p, pow_two_fn, sq_deriv, a, b);
+        let with_b = d.pi_fv(b_fv, carrier, target);
+        d.pi_fv(a_fv, carrier, with_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.has_derivative_pow_two,
         uparams: vec![],
         ty,
         value,
