@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": "F:cpoint-pythagoras-distsq",
+  "title": "The Pythagorean theorem restated in squared distance",
+  "statement": "The same hypothesis as F:cpoint-pythagoras (legs at c perpendicular) gives distSq(a,b) CReal.Equiv-equivalent to distSq(a,c) + distSq(b,c) -- the same theorem in the distSq vocabulary F:cpoint-parallelogram-law and F:cpoint-stewart use, rather than raw dot products.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CPoint.pythagoras_distSq : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal.Equiv (CPoint.dot (CPoint.sub x0 x2) (CPoint.sub x1 x2)) CReal.zero) -> CReal.Equiv (CPoint.distSq x0 x1) (CReal.add (CPoint.distSq x0 x2) (CPoint.distSq x1 x2))))))",
+    "fragment": "CPoint",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:cpoint-pythagoras"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.pythagoras_distSq",
+      "kind": "kernel-term",
+      "supports": "CPoint.pythagoras_distSq is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CPoint.pythagoras_distSq 2>/dev/null | grep -cE '^CPoint\\.pythagoras_distSq\\t'",
+      "checker_seconds": 10,
+      "notes": "`build_cpoint_prelude` admits CPoint.pythagoras_distSq through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` builds creal/complex/cpoint (extended 2026-08-25); it exits non-zero for a named filter that matches nothing, and `grep -c` (never `-q`) independently asserts the exact tab-anchored line is present. `--release` is MANDATORY: building the constructed carriers recurses deep enough in a debug build to overflow the default thread stack (measured on this tree: release exits 0, debug SIGABRTs at 134) -- the same resource-limit gotcha documented for `prelude_theorem_inventory --include-constructed`."
+    },
+    {
+      "id": "footprint-CPoint.pythagoras_distSq",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- CPoint.pythagoras_distSq's narrow AND widened trusted-declaration closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "footprint_closure_audit narrow closure",
+        "footprint_closure_audit widened (inductive-edge) closure"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example footprint_closure_audit -- --include-constructed 2>/dev/null | grep -cE '^cpoint\\tCPoint\\.pythagoras_distSq\\t[^\\t]*\\t0\\t\\t\\t0\\t$'",
+      "checker_seconds": 25,
+      "notes": "`nat_axiom_inventory` does NOT cover `cpoint` at all (verified: `--include-constructed --require-axiom-free cpoint` errors '\"cpoint\" is not enumerated by this run (known: ... creal, complex)' -- cpoint was never added to that tool's group list, an empty/absent-coverage trap in its own right). `footprint_closure_audit --include-constructed` DOES build a `cpoint` group (verified in its `build_groups`) and, per admitted theorem, emits a row `cpoint<TAB>NAME<TAB>narrow_kinds<TAB>narrow_dangling<TAB>narrow_trusted<TAB>widened_trusted<TAB>widened_dangling<TAB>inductive_edge_diffs`. An axiom-free theorem has narrow_dangling=0, narrow_trusted empty, widened_trusted empty (the WIDENED closure additionally walks inductive constructor/recursor types one step further than `render_deps`, so this is stronger than the narrow-only check the `nat_axiom_inventory`-style facts use), widened_dangling=0, and no inductive edge diff -- the anchored regex below requires all of that in one line. `--include-constructed` is REQUIRED: without it the cpoint group is never built and BOTH the row-match and the `cpoint: theorems=` coverage line are absent (verified: 0 matches for either, vs 1 for both with the flag), which is the same coverage trap CLAUDE.md already documents for `nat_axiom_inventory`. `--release` is MANDATORY for the same deep-recursion reason as `theorem_dependency_inventory` (this tool's own doc example uses it); measured full-audit wall time on this tree ~20s release."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:pythagorean-theorem",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_cpoint_prelude",
+    "source": "theorem name and dependency edges from theorem_dependency_inventory (builds creal/complex/cpoint); canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint()) -- no in-tree example prints Complex/CPoint theorem types; crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on is literal and total: CPoint.pythagoras_distSq's ONLY direct edge is CPoint.pythagoras -> F:cpoint-pythagoras, a one-line proof restating the dot form in distSq terms.",
+  "external_status": "proved"
+}
