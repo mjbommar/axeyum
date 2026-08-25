@@ -25,7 +25,7 @@
       "kind": "kernel-term",
       "supports": "For all natural numbers n and k with k ≤ n, C(n, k) = C(n, n - k).",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- choose_symm 2>/dev/null | grep -qE '^Nat\\.choose_symm[[:space:]]'",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- choose_symm 2>/dev/null | grep -Ec '^Nat\\.choose_symm[[:space:]]')\" -ge 1",
       "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed -- both halves of the check depend on the theorem actually being present."
     },
     {

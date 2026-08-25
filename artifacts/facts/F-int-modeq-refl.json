@@ -22,7 +22,7 @@
       "kind": "kernel-term",
       "supports": "For all integers n and a, a is congruent to a modulo n.",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- modEq_refl 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.modEq_refl[[:space:]]'",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- modEq_refl 2>/dev/null | grep -Ec '^theorem[[:space:]]+Int\\.modEq_refl[[:space:]]')\" -ge 1",
       "notes": "`build_int_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `int_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted `theorem`-kind row to be printed."
     },
     {

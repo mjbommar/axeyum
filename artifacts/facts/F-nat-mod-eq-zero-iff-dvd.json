@@ -22,7 +22,7 @@
       "kind": "kernel-term",
       "supports": "For all natural numbers m and n, n is congruent to 0 modulo m if and only if m divides n.",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- mod_eq_zero_iff_dvd 2>/dev/null | grep -qE '^Nat\\.mod_eq_zero_iff_dvd[[:space:]]'",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- mod_eq_zero_iff_dvd 2>/dev/null | grep -Ec '^Nat\\.mod_eq_zero_iff_dvd[[:space:]]')\" -ge 1",
       "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed -- both halves of the check depend on the theorem actually being present."
     },
     {
