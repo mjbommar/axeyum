@@ -13,7 +13,12 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:nat-le-add-right",
+    "F:nat-le-succ-succ",
+    "F:nat-one-le-mul",
+    "F:nat-zero-le"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

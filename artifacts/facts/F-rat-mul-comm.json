@@ -16,7 +16,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:int-mul-comm",
-    "F:nat-mul-comm"
+    "F:nat-mul-comm",
+    "F:nat-one-le-mul"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -17,6 +17,10 @@
   "depends_on": [
     "F:nat-dvd-add",
     "F:nat-exists-prime-dvd",
+    "F:nat-le-add-right",
+    "F:nat-le-total",
+    "F:nat-le-trans",
+    "F:nat-lt-or-eq-of-le",
     "F:nat-one-le-factorial"
   ],
   "evidence": [

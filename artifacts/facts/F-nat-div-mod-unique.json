@@ -19,7 +19,11 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:nat-div-mod-exists"
+    "F:nat-div-mod-exists",
+    "F:nat-le-add-right",
+    "F:nat-le-total",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-or-eq-of-le"
   ],
   "axiom_footprint": [],
   "evidence": [

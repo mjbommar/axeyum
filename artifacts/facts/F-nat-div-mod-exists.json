@@ -14,7 +14,9 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:nat-lt-or-eq-of-le"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {
