@@ -162,6 +162,7 @@ mod primes;
 mod rectangle;
 mod relation;
 mod restrict_pair;
+mod subset_product;
 mod totient;
 pub(crate) mod transposition;
 mod vandermonde;
@@ -221,6 +222,7 @@ use relation::{
 use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
+use subset_product::declare_prod_range_if_all;
 use totient::declare_totient_all;
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
@@ -1581,6 +1583,35 @@ pub struct NatPrelude {
     /// (mul (mul (powSq b ((succ k)/2)) (powSq b ((succ k)/2))) b)` — `powSq`'s
     /// own second defining equation, over `powSq` itself (not `powSqAux`).
     pub pow_sq_succ: NameId,
+
+    // --- subset product (`subset_product.rs`) — product over a
+    // predicate-defined subset of `[0,n)` -----------------------------------
+    /// `Nat.prodRangeIf (p : Nat → Bool) (f : Nat → Nat) (n : Nat) : Nat :=
+    /// prodRange (fun i => bool_select_nat (p i) (f i) 1) n` — the product
+    /// over `i < n` of `f i` when `p i` holds and `1` (the multiplicative
+    /// identity) otherwise, i.e. the product side of the `Nat.countRange`
+    /// pattern (a fold over a `Bool`-valued predicate-defined subset of
+    /// `[0,n)`). Defined in terms of the already-declared [`Self::prod_range`]
+    /// rather than a fresh `Nat.rec`, so its defining equations are pure
+    /// `Eq.refl` (delta into `prodRange`'s own iota reduction), exactly as
+    /// `Nat.totient` is defined in terms of `Nat.countRange`.
+    pub prod_range_if: NameId,
+    /// `Nat.prodRangeIf_zero : ∀ p f, Eq Nat (prodRangeIf p f zero) 1` —
+    /// closes by `Eq.refl`.
+    pub prod_range_if_zero: NameId,
+    /// `Nat.prodRangeIf_succ : ∀ p f n, Eq Nat (prodRangeIf p f (succ n))
+    /// (mul (prodRangeIf p f n) (bool_select_nat (p n) (f n) 1))` — closes by
+    /// `Eq.refl`.
+    pub prod_range_if_succ: NameId,
+    /// `Nat.prodRangeIf_congr_lt : ∀ p q f g n, (∀ i, Lt i n → Eq Bool (p i)
+    /// (q i)) → (∀ i, Lt i n → Eq Nat (f i) (g i)) → Eq Nat (prodRangeIf p f
+    /// n) (prodRangeIf q g n)` — `p` and `f` agreeing pointwise below `n`
+    /// (against `q`/`g` respectively) gives equal products. Bounded (`Lt i
+    /// n`), matching [`Self::sum_range_congr_lt`]'s convention rather than
+    /// [`Self::count_range_congr`]'s unconditional one, since a predicate
+    /// subset built from a partial operator (e.g. truncated subtraction)
+    /// typically only agrees within the range.
+    pub prod_range_if_congr_lt: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1997,6 +2028,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             pow_sq_eq_pow: kernel.name_str(nat, "pow_sq_eq_pow"),
             pow_sq_zero: kernel.name_str(nat, "pow_sq_zero"),
             pow_sq_succ: kernel.name_str(nat, "pow_sq_succ"),
+            prod_range_if: kernel.name_str(nat, "prodRangeIf"),
+            prod_range_if_zero: kernel.name_str(nat, "prodRangeIf_zero"),
+            prod_range_if_succ: kernel.name_str(nat, "prodRangeIf_succ"),
+            prod_range_if_congr_lt: kernel.name_str(nat, "prodRangeIf_congr_lt"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2080,6 +2115,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_group_all(&mut d, &p)?;
         declare_permutation_all(&mut d, &p)?;
         declare_prod_range(&mut d, &p)?;
+        declare_prod_range_if_all(&mut d, &p)?;
         declare_exists_prime_factorization(&mut d, &p)?;
         declare_crt(&mut d, &p)?;
         declare_powsq_all(&mut d, &p)?;

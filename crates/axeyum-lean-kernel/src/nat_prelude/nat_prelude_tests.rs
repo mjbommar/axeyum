@@ -473,6 +473,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.is_group_on_fn,
         p.eq_on,
         p.prod_range,
+        p.prod_range_if,
         p.pow_sq_aux,
         p.pow_sq,
     ]
@@ -726,6 +727,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.symmetric_group_is_group_on_fn,
         p.prod_range_zero,
         p.prod_range_succ,
+        p.prod_range_if_zero,
+        p.prod_range_if_succ,
+        p.prod_range_if_congr_lt,
         p.exists_prime_factorization,
         p.coprime_mul_dvd,
         p.crt_unique,
@@ -930,6 +934,149 @@ fn totient_computes_on_small_numerals() {
     assert!(
         !f.k.def_eq(totient_nine, five),
         "totient 9 must NOT be def-eq to 5"
+    );
+}
+
+/// Run `f` on a thread with a **64 MiB stack**.
+///
+/// The default test-thread stack is 2 MiB. Reducing `prodRangeIf 6 (fun _ =>
+/// true) succ` to the UNARY numeral `720` (720 nested `succ`s, via `Nat.mul`'s
+/// own recursive unfolding) overflows it — confirmed by running the same test
+/// under `RUST_MIN_STACK=1073741824` directly (bypassing the test harness's
+/// own default), where it passes. This is the same shape as
+/// `complex_tests.rs`'s/`creal_point_tests.rs`'s `on_a_deep_stack`: the
+/// recursion is in the kernel's own reducer over a genuinely large unary
+/// term, not a bug, so the fix is to give it room where it is exercised
+/// rather than solve it with an environment variable CI would not set.
+fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(f)
+        .expect("spawning a deep-stack thread must succeed")
+        .join()
+        .expect("the deep-stack thread must not panic")
+}
+
+/// `Nat.prodRangeIf` computes on small numerals by REDUCTION, not merely
+/// type-checking — the mandatory concrete instance for the product-over-a-
+/// predicate-defined-subset primitive.
+///
+/// `prodRangeIf 6 (fun i => i is odd) id` restricts to `{1,3,5}` of `{0,..,5}`
+/// and multiplies them: `1*3*5 = 15`. `prodRangeIf 6 (fun _ => true) succ`
+/// keeps every index and multiplies `succ i` for `i` in `{0,..,5}`, i.e.
+/// `1*2*3*4*5*6 = 720`. Both negative controls below are plausible off-by-one
+/// answers (the parity flipped, or the bound off by one), not arbitrary
+/// numbers — a definition that type-checks but computes a different function
+/// passes an axiom-footprint sweep, so only reduction catches it.
+#[test]
+fn prod_range_if_computes_on_small_numerals() {
+    on_a_deep_stack(|| {
+        let mut f = Fixture::new();
+        let p = f.p;
+        let nat = f.nat_ty();
+
+        // `fun i => beq (mod i 2) 1` — `i` is odd.
+        let is_odd = {
+            let i_fv = f.fresh_fvar();
+            let i = f.kernel().fvar(i_fv);
+            let two = f.num(2);
+            let one = f.num(1);
+            let rem = f.modulo(i, two);
+            let cond = f.beq(rem, one);
+            f.lam_fv(i_fv, nat, cond)
+        };
+        let id_fn = f.const_app(p.id, &[]);
+        let six = f.num(6);
+        let prod_odds = f.const_app(p.prod_range_if, &[is_odd, id_fn, six]);
+        let fifteen = f.num(15);
+        assert!(
+            f.k.def_eq(prod_odds, fifteen),
+            "prodRangeIf 6 (odd) id must reduce to 15"
+        );
+        // NEGATIVE CONTROL: the flipped predicate (evens: {0,2,4}) multiplies
+        // to 0 (via `id 0`), a plausible bug if the `Bool.rec` branches were
+        // transposed.
+        let zero = f.zero();
+        assert!(
+            !f.k.def_eq(prod_odds, zero),
+            "prodRangeIf 6 (odd) id must NOT reduce to 0 (the flipped-parity answer)"
+        );
+
+        // `fun _ => Bool.true` — every index passes.
+        let const_true = {
+            let i_fv = f.fresh_fvar();
+            let true_v = f.bool_true();
+            f.lam_fv(i_fv, nat, true_v)
+        };
+        let succ_fn = f.const_app(p.succ, &[]);
+        let six_again = f.num(6);
+        let prod_succ = f.const_app(p.prod_range_if, &[const_true, succ_fn, six_again]);
+        let seven_twenty = f.num(720);
+        assert!(
+            f.k.def_eq(prod_succ, seven_twenty),
+            "prodRangeIf 6 (true) succ must reduce to 720"
+        );
+        // NEGATIVE CONTROL: the off-by-one bound (7 instead of 6) gives 5040.
+        let five_thousand_forty = f.num(5040);
+        assert!(
+            !f.k.def_eq(prod_succ, five_thousand_forty),
+            "prodRangeIf 6 (true) succ must NOT reduce to 5040 (the off-by-one bound answer)"
+        );
+    });
+}
+
+/// `Nat.prodRangeIf_congr_lt` applies at a concrete instance: two predicates
+/// that agree below the bound (`beq i 0`, both sides) and two functions that
+/// agree below the bound (`id` on both sides) give a proof of
+/// `prodRangeIf p f 4 = prodRangeIf p f 4` — the reflexive case exercises the
+/// full argument shape (both bounded-pointwise hypotheses) end to end.
+#[test]
+fn prod_range_if_congr_lt_applies_at_a_reflexive_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    let is_zero = {
+        let i_fv = f.fresh_fvar();
+        let i = f.kernel().fvar(i_fv);
+        let zero = f.zero();
+        let cond = f.beq(i, zero);
+        f.lam_fv(i_fv, nat, cond)
+    };
+    let id_fn = f.const_app(p.id, &[]);
+    let four = f.num(4);
+
+    let refl_bool = {
+        let i_fv = f.fresh_fvar();
+        let i = f.kernel().fvar(i_fv);
+        let pi = f.apply(is_zero, &[i]);
+        let refl = f.bool_refl(pi);
+        let hi_fv = f.fresh_fvar();
+        let hi_ty = f.lt(i, four);
+        let with_hi = f.lam_fv(hi_fv, hi_ty, refl);
+        f.lam_fv(i_fv, nat, with_hi)
+    };
+    let refl_nat = {
+        let i_fv = f.fresh_fvar();
+        let i = f.kernel().fvar(i_fv);
+        let fi = f.apply(id_fn, &[i]);
+        let refl = f.refl(fi);
+        let hi_fv = f.fresh_fvar();
+        let hi_ty = f.lt(i, four);
+        let with_hi = f.lam_fv(hi_fv, hi_ty, refl);
+        f.lam_fv(i_fv, nat, with_hi)
+    };
+
+    let proof = f.const_app(
+        p.prod_range_if_congr_lt,
+        &[is_zero, is_zero, id_fn, id_fn, four, refl_bool, refl_nat],
+    );
+    let expected_lhs = f.const_app(p.prod_range_if, &[is_zero, id_fn, four]);
+    let stmt = f.eq(expected_lhs, expected_lhs);
+    let inferred = f.kernel().infer(proof).expect("congr_lt must apply");
+    assert!(
+        f.kernel().def_eq(inferred, stmt),
+        "prodRangeIf_congr_lt applied reflexively must prove prodRangeIf p f 4 = prodRangeIf p f 4"
     );
 }
 
@@ -4957,7 +5104,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        55 + 251,
+        56 + 254,
         "every promised definition and theorem must be rendered"
     );
 }
