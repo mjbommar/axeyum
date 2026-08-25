@@ -1256,9 +1256,28 @@ pub struct CRealPrelude {
     /// required, not yet `∀ a b` unconditionally) and takes the Cauchy
     /// hypothesis in its raw witnessed form (`k` a plain parameter, not
     /// wrapped in `∃`) — the `Nat.le_total` case split and the `CReal.Cauchy`
-    /// existential itself are `series.rs`'s two remaining named gaps, left to
-    /// whichever piece assembles `sumRange_cauchy_of_dominated` next.
+    /// existential itself are what [`Self::sum_range_cauchy_of_dominated`]
+    /// adds on top of this theorem.
     pub sum_range_cauchy_dominated_ordered_normalized: NameId,
+    /// `CReal.sumRange_cauchy_of_dominated : ∀ f g, (∀ k, le (abs (f k)) (g
+    /// k)) → Cauchy (sumRange g) → Cauchy (sumRange f)` — the comparison
+    /// test's Cauchy half, and `series.rs`'s module documentation's own
+    /// goal: eliminate [`Self::cauchy`]'s existential on the hypothesis
+    /// (`Exists.rec`, elem type `Nat`, `declare_converges_cauchy`'s own
+    /// idiom, `creal/convergence.rs`), split `∀ m n` via the **decidable** `Nat.le_total` (never
+    /// branch this way on the *undecidable* [`Self::le`] over `CReal`
+    /// itself), and in each branch instantiate
+    /// [`Self::sum_range_cauchy_dominated_ordered_normalized`] at whichever
+    /// of `(m, n)`/`(n, m)` satisfies its `a ≤ b` side condition — one
+    /// orientation lands exactly on `Cauchy`'s own `(m, n)` argument and
+    /// sample order with no further work, the other needs one
+    /// `within_symm` flip (the raw conclusion's difference is `seq (f n) n
+    /// − seq (f m) m)`, `Cauchy` wants `seq (f m) m − seq (f n) n`) plus one
+    /// `Rat.add_comm` (the two branches' `K'`-bounds arrive in opposite
+    /// `radd` order relative to `Cauchy`'s fixed `(m, n)`). Wraps the result
+    /// in `Exists.intro` at the same `K' := k+8` numerator
+    /// `sum_range_cauchy_dominated_ordered_normalized` already produces.
+    pub sum_range_cauchy_of_dominated: NameId,
     /// `CReal.sumRange_seq_zero : Eq Rat (seq (sumRange f Nat.zero) k)
     /// Rat.zero` — the base case of the sample-rate law, closing by `Eq.refl`
     /// alone (`sumRange f zero` ι-reduces to `zero := ofRat Rat.zero`, and
@@ -2041,6 +2060,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
             .name_str(creal, "sumRange_cauchy_dominated_ordered"),
         sum_range_cauchy_dominated_ordered_normalized: kernel
             .name_str(creal, "sumRange_cauchy_dominated_ordered_normalized"),
+        sum_range_cauchy_of_dominated: kernel.name_str(creal, "sumRange_cauchy_of_dominated"),
         sum_range_seq_zero: kernel.name_str(creal, "sumRange_seq_zero"),
         sum_range_seq_succ: kernel.name_str(creal, "sumRange_seq_succ"),
         pow: kernel.name_str(creal, "pow"),
