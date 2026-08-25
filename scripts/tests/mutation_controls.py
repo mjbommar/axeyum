@@ -2813,6 +2813,25 @@ SUITES["correspondences"] = (
     ],
 )
 
+SUITES["fact-checker-grep-dash-q"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # `grep -q` as a pipeline consumer SIGPIPEs the producer under
+        # `set -o pipefail`, turning the exit status nondeterministic
+        # (CLAUDE.md, banned-shell-idioms #2; measured 7-vs-3 orphans on an
+        # UNCHANGED tree). Deleting this guard must kill exactly the one test
+        # that asserts a `grep -q` checker_command is rejected -- the
+        # acceptance tests (committed form, `grep -c` forms) do not touch this
+        # branch and must keep passing.
+        (
+            "grep -q checker_command is refused",
+            "        if checker_command_uses_grep_dash_q(cmd):",
+            "        if False:",
+        ),
+    ],
+)
+
 
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:

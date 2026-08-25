@@ -112,6 +112,28 @@ def fail(errors: list[str], msg: str) -> None:
     errors.append(msg)
 
 
+_GREP_INVOCATION_RE = re.compile(r"\bgrep\b((?:\s+(?:-[a-zA-Z]+|--[a-zA-Z-]+))*)")
+
+
+def checker_command_uses_grep_dash_q(cmd: str) -> bool:
+    """True if `cmd` invokes `grep` with a quiet flag (`-q`, `-qE`, `-Eq`,
+    `--quiet`, or `-q`/`-E` as separate tokens) anywhere in a pipeline.
+
+    Matches short-option clusters in ANY order (so `-qE` and `-Eq` both hit)
+    and flags given as separate tokens (`-q -E`), not just one bundled
+    cluster -- a narrower check that only caught the bundled form would leave
+    the idiom's other spellings free to reappear.
+    """
+    for m in _GREP_INVOCATION_RE.finditer(cmd):
+        flags = re.findall(r"(?:-[a-zA-Z]+|--[a-zA-Z-]+)", m.group(1))
+        for f in flags:
+            if f == "--quiet":
+                return True
+            if f.startswith("-") and not f.startswith("--") and "q" in f[1:]:
+                return True
+    return False
+
+
 def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
     errors: list[str] = []
     fid = fact.get("id", f"<{path.name}>")
@@ -195,6 +217,25 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
                          f"verdict. It exits 0 on sat AND unsat, so as written it checks "
                          f"that the binary ran. Wrap it, e.g. "
                          f'test "$(... | tail -1)" = unsat')
+        # `grep -q` as a pipeline consumer under `set -o pipefail` is banned
+        # (CLAUDE.md, banned-shell-idioms #2): `-q` exits at the FIRST match and
+        # SIGPIPEs the producer, so the pipeline's exit status becomes 141 --
+        # which `pipefail` turns into "not found". Measured 2026-08-20 in
+        # `scripts/check-control-registration.sh`: the SAME unchanged tree
+        # reported 7 orphans on one run and 3 on the next, because whether the
+        # producer finishes writing before the SIGPIPE arrives depends on
+        # buffering -- this is nondeterministic flakiness, not a one-time bug.
+        # `grep -c` (or `--count`) consumes all input to EOF and cannot SIGPIPE,
+        # so pair it with a count test: `test "$(... | grep -cE '...')" -ge 1`.
+        if checker_command_uses_grep_dash_q(cmd):
+            fail(errors, f"{fid}: checker_command uses `grep -q` (or `--quiet`) as a "
+                         f"pipeline consumer. Under `set -o pipefail` that SIGPIPEs the "
+                         f"producer at the first match, turning the pipeline's exit "
+                         f"status nondeterministic (141 sometimes, 0 other times, "
+                         f"depending on buffering) -- CLAUDE.md's banned-shell-idioms "
+                         f"#2, measured to flip 7 vs 3 on an UNCHANGED tree. Replace "
+                         f"`grep -q PATTERN` with `grep -c PATTERN` and test the count: "
+                         f'test "$(... | grep -cE \'PATTERN\')" -ge 1')
         if ev.get("kind") == "claim-ref":
             art = ev.get("artifact")
             if not art:

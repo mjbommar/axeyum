@@ -27,7 +27,7 @@
         "nat_prelude_tests::the_rectangle_decomposition_is_stated_exactly (asserts the KERNEL-RENDERED type verbatim with assert_eq!, and separately asserts the corner's single-subtraction shape by substring before comparing)",
         "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_nat_prelude return Err and the test fail)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_rectangle_decomposition_is_stated_exactly -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_rectangle_decomposition_is_stated_exactly -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/rectangle.rs",
       "notes": "A footprint check cannot carry this claim: a theorem that DROPPED the corner term entirely -- i.e. the refuted naive identity -- has an identically empty footprint, as does one summing the triangle to `x2` instead of `succ x2`, which loses the whole antidiagonal. Mutation-verified 2026-08-24: rewriting the pinned corner shape `AxNat.add (AxNat.sub x1 x2) x3` to the nested `AxNat.add (AxNat.sub x1 (AxNat.sub x2 x3)) x3` makes cargo report `578 passed; 1 failed`, naming this test and no other; restored, 579/579 green. The command re-derives from source every run and is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
     },
@@ -40,7 +40,7 @@
         "nat_prelude_tests::the_rectangle_decomposition_is_stated_exactly (asserts the rendered type contains neither `AxNat.le` nor `AxNat.sub` before comparing it verbatim -- the `m <= n` formulation would fail on the first assertion, naming the reason)",
         "nat_prelude_tests::the_build_is_deterministic (pinned rendered-declaration count 26 + 163; a name interned but not declared fails here)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_rectangle_decomposition_is_stated_exactly -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_rectangle_decomposition_is_stated_exactly -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/rectangle.rs",
       "notes": "The le-free/sub-free assertion is not decoration: both formulations are true theorems with empty footprints, and only the sub-free one supports an induction that never discharges a Le side condition. The distinction is invisible to any check that does not read the statement."
     },
@@ -53,7 +53,7 @@
         "nat_prelude_tests::the_nat_prelude_declares_no_axioms (reads Kernel::axiom_footprint for every name in theorem_names() and requires the empty set)",
         "prelude_theorem_inventory --include-constructed (independent sweep; guards the unvisited-is-not-empty trap by listing every declared name with its footprint)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_nat_prelude_declares_no_axioms -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_nat_prelude_declares_no_axioms -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
       "notes": "Presence matters as much as the footprint: axiom_footprint of a name interned but never DECLARED is vacuously empty. A lane found five pre-existing declarations missing from another prelude's sweep on the same day, so registration in theorem_names() is the load-bearing half and `the_build_is_deterministic`'s pinned count is what makes an omission fail rather than pass quietly."
     }

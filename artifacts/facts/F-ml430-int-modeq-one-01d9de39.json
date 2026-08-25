@@ -21,7 +21,7 @@
         "int_prelude_tests::the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis (asserts the KERNEL-RENDERED type of each name verbatim with assert_eq!, and separately asserts the rendered type contains no `Int.lt Int.zero` premise)",
         "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs",
       "notes": "The statement pin exists because the footprint check cannot carry this claim: a theorem stating something WEAKER -- carrying the `0 < n` hypothesis that every other congruence lemma in `modeq.rs` carries, or with `a`/`b` swapped -- has exactly the same empty footprint and passes the footprint sweep unchanged. Mutation-verified: changing `Int.one` to `Int.zero` in the pinned string kills exactly one test, this one, and nothing else (23 passed / 1 failed). Anchored on the exact `1 passed; 0 failed` count."
     },
@@ -34,7 +34,7 @@
         "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for each of the 89 derived laws, these names included, and requires the empty set)",
         "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks each proof term against its stated type at build time; a rejected proof makes build_int_prelude return Err and the test fail)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
       "notes": "Counting Declaration::Axiom alone would not suffice in this kernel (Opaque has no proof body and Quotient admits Quot.sound); axiom_footprint covers all three. Anchored on the exact `1 passed; 0 failed` count -- verified that an unmatched filter prints `0 passed` and makes the identical command exit 1 rather than reporting a vacuous pass."
     }

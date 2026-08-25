@@ -28,7 +28,7 @@
       "kind": "kernel-term",
       "supports": "The negative control: the counter DOES move. After the four measurements the same process builds the AxReal package on purpose and the counter reads 1.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'FRONT_DOOR_REACH control \\| arith_prelude_builds=1$'",
+      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'FRONT_DOOR_REACH control \\| arith_prelude_builds=1$')\" -ge 1",
       "notes": "Without this row every other row here would pass just as happily against an arith_prelude_builds() wired to return 0. This is the row that makes the four zeros a finding rather than a broken instrument, and it is anchored on the value 1 -- not on `nonzero` -- because the control builds the package exactly once."
     },
     {
@@ -36,7 +36,7 @@
       "kind": "kernel-term",
       "supports": "The purely conjunctive real Farkas arm reaches no AxReal axiom.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=Lra module=[0-9]+ arith_prelude_builds=0$'",
+      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'fragment=Lra module=[0-9]+ arith_prelude_builds=0$')\" -ge 1",
       "notes": "Anchored on the fragment AND the counter value on the same line, so a fixture that silently stopped routing to Lra cannot satisfy it. `module=[0-9]+` is left free because the module size is not the claim."
     },
     {
@@ -44,7 +44,7 @@
       "kind": "kernel-term",
       "supports": "The sum-of-squares arm -- the only one that touches the multiplicative laws and sq_nonneg -- reaches no AxReal axiom.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=Sos module=[0-9]+ arith_prelude_builds=0$'",
+      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'fragment=Sos module=[0-9]+ arith_prelude_builds=0$')\" -ge 1",
       "notes": "Same anchoring. Sos is listed separately from Lra because it is a different reconstructor (reconstruct_sos_to_lean_module), not a different fixture through the same one."
     },
     {
@@ -52,7 +52,7 @@
       "kind": "kernel-term",
       "supports": "The Or.rec case-split arm reaches no AxReal axiom.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=DisjunctiveLra module=[0-9]+ arith_prelude_builds=0$'",
+      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'fragment=DisjunctiveLra module=[0-9]+ arith_prelude_builds=0$')\" -ge 1",
       "notes": "Same anchoring. `fragment=DisjunctiveLra` cannot be matched by the Lra pattern only because that pattern requires the space after `Lra`; both are pinned separately so a collapse of one arm into the other is visible."
     },
     {
@@ -60,7 +60,7 @@
       "kind": "kernel-term",
       "supports": "The integer Farkas arm -- the one that DID build all 30 until 2026-08-18 -- reaches no AxReal axiom.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=IntFarkas module=[0-9]+ arith_prelude_builds=0$'",
+      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'fragment=IntFarkas module=[0-9]+ arith_prelude_builds=0$')\" -ge 1",
       "notes": "The row this fact exists for. Restore the pre-2026-08-18 body of reconstruct_int_farkas_to_lean_module and this row is the one that fails -- mutation-checked, and all nine tests of tests/farkas_over_the_integers.rs, the suite named for this route, pass under that mutation because they assert on the module and the footprint, both of which were already clean."
     },
     {
@@ -68,7 +68,7 @@
       "kind": "kernel-term",
       "supports": "The measurement ran to completion: the single test in this binary passed, so no fixture was skipped and no assertion was left unevaluated.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'test result: ok\\. 1 passed'",
+      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -Ec 'test result: ok\\. 1 passed')\" -ge 1",
       "notes": "Completion alone is not a finding, which is why this row is not the only one. It is here because the counter rows are printed BEFORE they are asserted: an output carrying four `arith_prelude_builds=0` lines and a failed assertion afterwards would satisfy the pattern rows on its own."
     },
     {

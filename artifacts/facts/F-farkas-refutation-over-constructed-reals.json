@@ -31,7 +31,7 @@
       "kind": "kernel-term",
       "supports": "The equality slot is ADOPTED from CRealPrelude at 0 declarations added, against 18 axioms declared for the same slot over AxReal.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals 2>&1) && printf '%s\\n' \"$out\" | grep -qE '^[[:space:]]+equality slot: .CReal[.]Equiv. adopted from CRealPrelude -- 0 declarations added [(]the .AxReal. route declares 18 AXIOMS'",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^[[:space:]]+equality slot: .CReal[.]Equiv. adopted from CRealPrelude -- 0 declarations added [(]the .AxReal. route declares 18 AXIOMS')\" -ge 1",
       "notes": "Anchored on BOTH numbers in one line, so the row fails if adoption starts declaring anything and equally if the AxReal comparison it is measured against stops being 18. Both are read from Environment::len before and after, not from a constant. Verified to fail when the line is mutated to '18 declarations added'."
     },
     {
@@ -55,7 +55,7 @@
       "kind": "kernel-term",
       "supports": "The example's own aggregate verdict, which it computes from the per-fixture measurements rather than printing unconditionally.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals 2>&1) && printf '%s\\n' \"$out\" | grep -qxE 'closed refutations over the CONSTRUCTED reals rest on zero carrier axioms: true'",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -xEc 'closed refutations over the CONSTRUCTED reals rest on zero carrier axioms: true')\" -ge 1",
       "notes": "`grep -x` on the whole line including the trailing `true`: an unanchored match would also accept the `false` rendering of the same sentence. The example's exit status is 0 either way, so a row checking only the command's exit code would pass on a negative result -- the failure mode this ledger keeps finding. Both streams are captured (`2>&1`) because a summary on stderr with `2>/dev/null` matches nothing and passes for the wrong reason."
     }
   ],

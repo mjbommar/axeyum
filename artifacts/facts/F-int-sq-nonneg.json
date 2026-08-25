@@ -41,7 +41,7 @@
         "Kernel::axiom_footprint",
         "environment-wide trusted-surface enumeration (nat_axiom_inventory)"
       ],
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- sq_nonneg 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.sq_nonneg[[:space:]]+\\(\\('",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- sq_nonneg 2>/dev/null | grep -Ec '^theorem[[:space:]]+Int\\.sq_nonneg[[:space:]]+\\(\\(')\" -ge 1",
       "notes": "The third tab-separated column is `Kernel::axiom_footprint` for this declaration, and the regex requires it to be EMPTY -- the rendered type must begin immediately after the name. The discriminating negative control is in the same output: `Int.euclidean_decomposition`, the one integer law still asserted, prints its own name in that column and fails the same regex (measured 2026-08-15). `nat_axiom_inventory` independently reports `nat: axiom=0 opaque=0 quotient=0` for the development ZZ is constructed over, covering all three trusted kinds rather than `Declaration::Axiom` alone."
     }
   ],

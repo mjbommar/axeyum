@@ -33,7 +33,7 @@
         "rat_prelude_tests::matrix_laws_are_axiom_free (requires det2_mul to be a Declaration::Theorem with empty Kernel::axiom_footprint)",
         "theorem_dependency_inventory -- det2_mul (prints det2_mul's DIRECT theorem dependencies, read from the proof term via Kernel::theorem_dependencies; a filter matching nothing is itself a failure)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::matrix_laws_are_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::matrix_laws_are_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
       "notes": "Run 2026-08-24: `test result: ok. 1 passed; 0 failed`, exit 0. A deliberately misnamed test path exits 1. NO COMMITTED TEST asserts `det2_mul`'s statement verbatim (unlike `det2_fib`'s `det2_fib_is_cassini_through_det2`), so -- exactly as CLAUDE.md warns for a footprint-only check -- this row alone cannot rule out a mis-transposed determinant formula with the same empty footprint. `formal.statement` above was read from `Kernel::render_lean(det2_mul)` via the crate's public API (build_rat_prelude + render_lean, the same route `int_theorem_inventory` and the existing pinned tests use) and cross-checked against the doc comment on `RatPrelude::det2_mul` in rat_prelude.rs, but that reading is not itself re-derivable by a command committed to this repository without adding new code to `crates/`, which this lane's brief forbids. The dependency-list check below is the strongest available substitute: it is sensitive to any change that alters which ring lemmas det2_mul's proof term cites."
     },
@@ -45,7 +45,7 @@
       "checkers": [
         "theorem_dependency_inventory -- det2_mul (direct dependency list, exact string match)"
       ],
-      "checker_command": "scripts/cargo-serialized.sh run --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- det2_mul 2>&1 | grep -qF \"Rat.det2_mul\tRat.add_neg,Rat.add_zero,Rat.det2_swap_rows,Rat.left_distrib,Rat.mul_assoc,Rat.mul_comm,Rat.mul_neg,Rat.mul_zero,Rat.right_distrib,Rat.sub_add_add,Rat.sub_mul,Rat.zero_add\"",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh run --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- det2_mul 2>&1 | grep -Fc \"Rat.det2_mul\tRat.add_neg,Rat.add_zero,Rat.det2_swap_rows,Rat.left_distrib,Rat.mul_assoc,Rat.mul_comm,Rat.mul_neg,Rat.mul_zero,Rat.right_distrib,Rat.sub_add_add,Rat.sub_mul,Rat.zero_add\")\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
       "notes": "Run 2026-08-24: exit 0. A deliberately wrong substring run through the identical command exits 1."
     }
