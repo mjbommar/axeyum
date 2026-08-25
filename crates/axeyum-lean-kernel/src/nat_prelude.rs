@@ -153,6 +153,7 @@ mod order_extra;
 mod order_more;
 mod primes;
 mod rectangle;
+mod relation;
 mod restrict_pair;
 mod totient;
 pub(crate) mod transposition;
@@ -198,6 +199,11 @@ use order_extra::declare_order_extra;
 use order_more::declare_order_more;
 use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
 use rectangle::declare_rectangle;
+use relation::{
+    declare_bijective_of_injective_on, declare_bijective_on, declare_comp,
+    declare_eq_equivalence_on, declare_injective_on_comp, declare_mod_eq_equivalence_on,
+    declare_relation_properties,
+};
 use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
@@ -1249,6 +1255,37 @@ pub struct NatPrelude {
     /// `1` (via `gcd_dvd`, `fib_add_two`, `dvd_add_iff_right`, `dvd_gcd` and
     /// the induction hypothesis) and closes with `eq_one_of_dvd_one`.
     pub coprime_fib_succ: NameId,
+
+    // --- relation properties bounded on `n` (`relation.rs`) -----------------
+    /// `Nat.ReflexiveOn r n := ∀ i, i < n → r i i`, for `r : Nat → Nat → Prop`.
+    pub reflexive_on: NameId,
+    /// `Nat.SymmetricOn r n := ∀ i j, i < n → j < n → r i j → r j i`.
+    pub symmetric_on: NameId,
+    /// `Nat.TransitiveOn r n := ∀ i j k, i < n → j < n → k < n → r i j →
+    /// r j k → r i k`.
+    pub transitive_on: NameId,
+    /// `Nat.EquivalenceOn r n := ReflexiveOn r n ∧ SymmetricOn r n ∧
+    /// TransitiveOn r n` (right-nested `And`).
+    pub equivalence_on: NameId,
+    /// `Nat.eq_equivalence_on : ∀ n, EquivalenceOn (Eq Nat) n` — equality is
+    /// an equivalence relation, the canonical worked instance.
+    pub eq_equivalence_on: NameId,
+    /// `Nat.modEq_equivalence_on : ∀ m n, EquivalenceOn (Nat.modEq m) n` —
+    /// congruence mod `m` is an equivalence relation; connects this L0 node
+    /// to the `modular-arithmetic` L2 node.
+    pub mod_eq_equivalence_on: NameId,
+    /// `Nat.BijectiveOn f n := InjectiveOn f n ∧ MapsInto f n ∧
+    /// SurjectiveOn f n`.
+    pub bijective_on: NameId,
+    /// `Nat.bijective_of_injective_on : ∀ n f, InjectiveOn f n →
+    /// MapsInto f n → BijectiveOn f n` — packaging over
+    /// [`Self::injective_on_imp_surjective_on`] (`finite.rs`).
+    pub bijective_of_injective_on: NameId,
+    /// `Nat.comp f g := fun x => f (g x)`.
+    pub comp: NameId,
+    /// `Nat.injective_on_comp : ∀ n f g, MapsInto g n → InjectiveOn g n →
+    /// InjectiveOn f n → InjectiveOn (comp f g) n`.
+    pub injective_on_comp: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1594,6 +1631,16 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_fib: kernel.name_str(nat, "sum_fib"),
             fib_add: kernel.name_str(nat, "fib_add"),
             coprime_fib_succ: kernel.name_str(nat, "coprime_fib_succ"),
+            reflexive_on: kernel.name_str(nat, "reflexiveOn"),
+            symmetric_on: kernel.name_str(nat, "symmetricOn"),
+            transitive_on: kernel.name_str(nat, "transitiveOn"),
+            equivalence_on: kernel.name_str(nat, "equivalenceOn"),
+            eq_equivalence_on: kernel.name_str(nat, "eq_equivalence_on"),
+            mod_eq_equivalence_on: kernel.name_str(nat, "modEq_equivalence_on"),
+            bijective_on: kernel.name_str(nat, "bijectiveOn"),
+            bijective_of_injective_on: kernel.name_str(nat, "bijective_of_injective_on"),
+            comp: kernel.name_str(nat, "comp"),
+            injective_on_comp: kernel.name_str(nat, "injective_on_comp"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1661,6 +1708,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_binary_all(&mut d, &p)?;
         declare_size_all(&mut d, &p)?;
         declare_fib_all(&mut d, &p)?;
+        declare_relation_properties(&mut d, &p)?;
+        declare_eq_equivalence_on(&mut d, &p)?;
+        declare_mod_eq_equivalence_on(&mut d, &p)?;
+        declare_bijective_on(&mut d, &p)?;
+        declare_bijective_of_injective_on(&mut d, &p)?;
+        declare_comp(&mut d, &p)?;
+        declare_injective_on_comp(&mut d, &p)?;
         Ok(p)
     })();
     match built {

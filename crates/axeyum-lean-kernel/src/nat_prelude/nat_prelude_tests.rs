@@ -119,6 +119,12 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.totient,
         p.fib_aux,
         p.fib,
+        p.reflexive_on,
+        p.symmetric_on,
+        p.transitive_on,
+        p.equivalence_on,
+        p.bijective_on,
+        p.comp,
     ]
 }
 
@@ -327,6 +333,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.fib_le_succ,
         p.fib_pos_of_pos,
         p.sum_fib,
+        p.eq_equivalence_on,
+        p.mod_eq_equivalence_on,
+        p.bijective_of_injective_on,
+        p.injective_on_comp,
     ]
 }
 
@@ -4439,7 +4449,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        36 + 199,
+        42 + 203,
         "every promised definition and theorem must be rendered"
     );
 }
