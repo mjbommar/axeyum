@@ -1,159 +1,153 @@
 {
- "schema_version": 1,
- "id": "rado-r4-a5-b4-frontier",
- "title": "R_4(5(x-y)=4z) = 741",
- "statement": "The 4-colour Rado number of the equation 5(x-y) = 4z is exactly 741: every 4-colouring of {1,...,741} contains a monochromatic solution, and some 4-colouring of {1,...,740} avoids one. The value was predicted exactly by the nested two-ended shell construction of this work (741 = 5^4 + 5^3 - 2*5 + 1), which is where the search was pointed; it lies outside the published four-colour table, whose (a,b) = (5,4) entry is blank. To this work's knowledge the value appears nowhere in the literature.",
- "epistemic_status": "computed",
- "novelty": "new",
- "formal": {
-  "language": "cnf-family",
-  "family": "rado-colouring-a(x-y)=bz",
-  "parameters": {
-   "a": 5,
-   "b": 4,
-   "k": 4,
-   "n": 741
+  "schema_version": 1,
+  "id": "rado-r4-a5-b4-frontier",
+  "title": "R_4(5(x-y)=4z) = 741",
+  "statement": "The 4-colour Rado number of the equation 5(x-y) = 4z is exactly 741: every 4-colouring of {1,...,741} contains a monochromatic solution, and some 4-colouring of {1,...,740} avoids one. The value was predicted exactly by the nested two-ended shell construction of this work (741 = 5^4 + 5^3 - 2*5 + 1), which is where the search was pointed; it lies outside the published four-colour table, whose (a,b) = (5,4) entry is blank. To this work's knowledge the value appears nowhere in the literature.",
+  "epistemic_status": "computed",
+  "novelty": "new",
+  "formal": {
+    "language": "cnf-family",
+    "family": "rado-colouring-a(x-y)=bz",
+    "parameters": {
+      "a": 5,
+      "b": 4,
+      "k": 4,
+      "n": 741
+    },
+    "generator": "scripts/gen-rado-instance.py",
+    "semantics_note": "artifacts/claims/rado/SEMANTICS.md"
   },
-  "generator": "scripts/gen-rado-instance.py",
-  "semantics_note": "artifacts/claims/rado/SEMANTICS.md"
- },
- "concept_refs": [
-  {
-   "graph": "math-education",
-   "ref": "C:rado-number",
-   "relation": "instance-of",
-   "resolved": true,
-   "note": "authored 2026-08-12 at math-education graph/concepts/rado-number.md (uncommitted)"
-  },
-  {
-   "graph": "math-education",
-   "ref": "C:ramsey-number",
-   "relation": "frontier-of",
-   "resolved": true
-  },
-  {
-   "graph": "math-education",
-   "ref": "C:open-problem",
-   "relation": "instance-of",
-   "resolved": true,
-   "note": "was open when this entry was created on 2026-08-12; settled 2026-08-13"
-  },
-  {
-   "graph": "math-education",
-   "ref": "TQ:colouring",
-   "relation": "uses-technique",
-   "resolved": true
-  },
-  {
-   "graph": "math-education",
-   "ref": "C:computational-search",
-   "relation": "exercises",
-   "resolved": true
-  }
- ],
- "axeyum_refs": {
-  "fragments": [],
-  "curriculum_nodes": [
-   "propositional-logic"
-  ]
- },
- "provenance": {
-  "conjectured_by": "construction: the nested two-ended shell colouring of this work gives N = a^(k-1)b + sum_{i=2}^{k-1} 2 a^(i-1) b = 740 at (a,b,k) = (5,4,4), predicting R_4 = 741 exactly. The prediction held.",
-  "searched_by": [
-   "shell construction (verify_shell.py, an independent reimplementation from the specification) for the SAT side at n = 740: built directly, no search",
-   "axeyum adaptive cube-and-conquer (axeyum-search run_adaptive_cover, examples/rado_adaptive_cover) for the UNSAT side at n = 741: a TREE cover of 6241 cubes at depths 3-16 over branch integers 5,10,15,...,80, produced over seven runs on two hosts (s4 16 workers, s7 10-12 workers) with budget-driven splitting at 200k conflicts per cube"
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:rado-number",
+      "relation": "instance-of",
+      "note": "authored 2026-08-12 at math-education graph/concepts/rado-number.md (uncommitted)"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:ramsey-number",
+      "relation": "frontier-of"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:open-problem",
+      "relation": "instance-of",
+      "note": "was open when this entry was created on 2026-08-12; settled 2026-08-13"
+    },
+    {
+      "graph": "math-education",
+      "ref": "TQ:colouring",
+      "relation": "uses-technique"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:computational-search",
+      "relation": "exercises"
+    }
   ],
-  "checked_by": [
-   "axeyum in-tree backward DRAT checker (check_drat_backward, ADR-0382): all 6241 cubes, 699,572,027 proof steps, 22,042.6 s of aggregate checking, zero failures, zero deferred -- each proof checked in the worker that produced it",
-   "axeyum in-tree cover certification (cover::certify_tree_cover via examples/rado_certify_tree_cover) over the union of all seven run ledgers: every cube unsat and checked, every row's cube code re-derived from its own colour tuple, the cubes exactly the leaf set of a complete branch trie (covered measure exactly 4294967296/4294967296), and every branch integer's at-least-one clause located verbatim in F",
-   "scripts/check-claim-certificates.py: witness replay by an independent O(n^2) enumerator, instance pin by regeneration, and an independently written trie walk over the cover ledger",
-   "INDEPENDENT RE-DERIVATION (examples/rado_replay_tree_cover, strict_steps=1): every one of the 6241 cubes re-refuted from the merged ledger ALONE -- F rebuilt from (a,b,k,n), each cube's units rebuilt from the row's own recorded choices -- each proof re-checked by check_drat_backward, and each step count required to match EXACTLY. Run twice, on two hosts, two worker counts and TWO RUSTC VERSIONS: s4 (15 workers, rustc 1.99.0-nightly) and s7 (16 workers, rustc 1.93.1 stable). Both re-derived 699,572,027 proof steps, identical to the digit, and both re-certified the cover -- 4120.5 s and 2288.8 s of wall clock. Determinism is a public API promise in this project and this is the first cross-compiler test of it.",
-   "SATISFIABLE-SIDE PROBE at n = 741 (examples/rado_sat_probe, corroboration only, not evidence): min-conflicts from 5 start distributions (the [740] witness with each of the four colours appended, plus a cold round-robin start) x 12 seeds x 25M moves found NO 4-colouring in 4101.5 s. The 2026-08-12 probe of 4 x 30M moves agreed."
+  "axeyum_refs": {
+    "fragments": [],
+    "curriculum_nodes": [
+      "propositional-logic"
+    ]
+  },
+  "provenance": {
+    "conjectured_by": "construction: the nested two-ended shell colouring of this work gives N = a^(k-1)b + sum_{i=2}^{k-1} 2 a^(i-1) b = 740 at (a,b,k) = (5,4,4), predicting R_4 = 741 exactly. The prediction held.",
+    "searched_by": [
+      "shell construction (verify_shell.py, an independent reimplementation from the specification) for the SAT side at n = 740: built directly, no search",
+      "axeyum adaptive cube-and-conquer (axeyum-search run_adaptive_cover, examples/rado_adaptive_cover) for the UNSAT side at n = 741: a TREE cover of 6241 cubes at depths 3-16 over branch integers 5,10,15,...,80, produced over seven runs on two hosts (s4 16 workers, s7 10-12 workers) with budget-driven splitting at 200k conflicts per cube"
+    ],
+    "checked_by": [
+      "axeyum in-tree backward DRAT checker (check_drat_backward, ADR-0382): all 6241 cubes, 699,572,027 proof steps, 22,042.6 s of aggregate checking, zero failures, zero deferred -- each proof checked in the worker that produced it",
+      "axeyum in-tree cover certification (cover::certify_tree_cover via examples/rado_certify_tree_cover) over the union of all seven run ledgers: every cube unsat and checked, every row's cube code re-derived from its own colour tuple, the cubes exactly the leaf set of a complete branch trie (covered measure exactly 4294967296/4294967296), and every branch integer's at-least-one clause located verbatim in F",
+      "scripts/check-claim-certificates.py: witness replay by an independent O(n^2) enumerator, instance pin by regeneration, and an independently written trie walk over the cover ledger",
+      "INDEPENDENT RE-DERIVATION (examples/rado_replay_tree_cover, strict_steps=1): every one of the 6241 cubes re-refuted from the merged ledger ALONE -- F rebuilt from (a,b,k,n), each cube's units rebuilt from the row's own recorded choices -- each proof re-checked by check_drat_backward, and each step count required to match EXACTLY. Run twice, on two hosts, two worker counts and TWO RUSTC VERSIONS: s4 (15 workers, rustc 1.99.0-nightly) and s7 (16 workers, rustc 1.93.1 stable). Both re-derived 699,572,027 proof steps, identical to the digit, and both re-certified the cover -- 4120.5 s and 2288.8 s of wall clock. Determinism is a public API promise in this project and this is the first cross-compiler test of it.",
+      "SATISFIABLE-SIDE PROBE at n = 741 (examples/rado_sat_probe, corroboration only, not evidence): min-conflicts from 5 start distributions (the [740] witness with each of the four colours appended, plus a cold round-robin start) x 12 seeds x 25M moves found NO 4-colouring in 4101.5 s. The 2026-08-12 probe of 4 x 30M moves agreed."
+    ],
+    "date": "2026-08-13",
+    "machine": "linux x86-64; s4 (16 cores, 123 GiB) and s7 (16 cores, 26 GiB); no external solver or checker anywhere in the pipeline. The cover binaries were built from a private snapshot of this tree with only agent-b's changes applied, because the shared checkout did not compile at the time (another lane was mid-edit). The library code they exercise -- harness.rs, cover.rs, certify.rs, and the axeyum-cnf CDCL core and backward checker -- is unchanged since commit 9d85b067649906230038fa0ac93179191469848f.",
+    "toolchain": {
+      "axeyum_commit": "ee0868eb114cbaf57ff4081af431d7b816f0f733",
+      "rustc_version": "rustc 1.99.0-nightly (be8e82435 2026-07-11) on s4; rustc 1.93.1 (01f6ddf75 2026-02-11) on s7",
+      "target": "x86_64-unknown-linux-gnu",
+      "dirty": true
+    },
+    "prior_art": [
+      {
+        "citation": "Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022",
+        "url": "https://arxiv.org/abs/2210.03262",
+        "establishes": "R_3 and partial R_4 tables for this family. Their Table 10 has NO (a,b) = (5,4) entry at k = 4: of its 20 cells, 13 are populated and only 12 exact. Their Lemma 4.2 is the k=3 shadow of the shell construction used here."
+      },
+      {
+        "citation": "A. C. Li, SSRN 6814341; artifacts at github.com/crabsatellite/rado-numbers-sat",
+        "establishes": "The one other active computational group in this area works the x + by = bz family, which maps onto the b = 1 column here and says nothing about b = 4. Recorded for scale: their largest completed four-colour refutation is b = 5 at n = 624 in 523 s with CaDiCaL 1.5.3, and they mark b = 6, k = 4 as needing a cluster. This instance is n = 741 at k = 4."
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "deciding-instance",
+      "kind": "instance-pin",
+      "supports": "identifies F_741, the formula the cover's 6241 verdicts are about",
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b4-frontier/F_741.cnf",
+      "artifact_sha256": "90f4e81cae0eaf2a64e681cb31ad81d625da95fb6710b7facaaa6725b562a697",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a5-b4-frontier",
+      "notes": "2964 variables, 269,664 clauses, 8,591,634 bytes. THREE independently written encoders produce these bytes exactly: the axeyum-search encoder the cover itself ran against (ColouringProblem::encode, dumped by examples/rado_dump_cnf), scripts/gen-rado-instance.py, and the encoder inside scripts/check-claim-certificates.py, which re-derives the CNF from (a,b,k,n) = (5,4,4,741) and requires byte-identity. The pin is checked by regeneration, not by hash alone, so a bug shared by one implementation cannot authenticate itself. The 313 upper bound shipped for a while with five cover ledgers and no identified subject; that is what this row exists to prevent.",
+      "artifact_format": "dimacs-cnf"
+    },
+    {
+      "id": "lower-witness",
+      "kind": "witness-replay",
+      "supports": "R_4 > 740 (lower bound)",
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b4-frontier/witness-740.txt",
+      "artifact_sha256": "a1406f0cd79570bfaecc4ab4cf6307b212561b133d8e2214246a7e3e925797c1",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a5-b4-frontier",
+      "notes": "The nested-shell 4-colouring of [740]: multiples of 5 coloured min(v_5(j), 4), non-multiples by two-ended shell bands with cuts at 20 and 120 from each end, default colour 4. Verified solution-free over all 65,416 solution triples by an enumerator sharing no code with the builder. The construction extended to 741 has the monochromatic solution (621, 121, 625), so this witness is extremal for the construction. Renamed from `witness-740` when the claim became computed; the artifact and its sha256 are unchanged.",
+      "artifact_format": "colouring-text"
+    },
+    {
+      "id": "upper-cube-tree-cover",
+      "kind": "cube-tree-cover",
+      "supports": "R_4 <= 741 (upper bound, complete adaptive cover)",
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b4-frontier/cube-tree-cover.tsv",
+      "artifact_sha256": "eb61dce9f4df7eef09d832f4e80e0cfdbfd288ee27b78d552920f0f6fc472cd1",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a5-b4-frontier",
+      "parameters": {
+        "branch": [
+          5,
+          10,
+          15,
+          20,
+          25,
+          30,
+          35,
+          40,
+          45,
+          50,
+          55,
+          60,
+          65,
+          70,
+          75,
+          80
+        ],
+        "cubes": 6241,
+        "checked_cubes": 6241,
+        "deferred_cubes": 0,
+        "depths": [
+          3,
+          16
+        ],
+        "proof_steps": 699572027,
+        "clause_additions": 366009752
+      },
+      "notes": "An ADAPTIVE (tree) cover, not a flat product: a cube that exhausted its 200k-conflict budget was split on the next branch integer and its children queued, so the 6241 cubes sit at depths 3 to 16 rather than all at one depth. The flat depth-6 product this instance was first attacked with left 1132 of 1946 finished cells resource-out (2026-08-12). Every cube is unsat with its DRAT proof checked by axeyum's in-tree backward checker (ADR-0382) IN THE WORKER THAT PRODUCED IT -- zero deferred, zero failures, 699,572,027 proof steps, 27,985.0 s of solving and 22,042.6 s of checking in aggregate across two hosts. No DRAT bytes are retained: at ~83 bytes per step a full dump is ~58 GB, and every proof regenerates deterministically from this ledger -- examples/rado_replay_tree_cover does exactly that and requires the step count to match EXACTLY. The cover was produced by seven runs (b1, b3, c4b, da on s4; b4, c3, db on s7); this file is their union, written in cube-code order by the certification pass that accepted it. Cube codes are shape-independent (BranchPlan::prefix_code), which is what makes the union of resumed and partitioned runs one cover rather than seven fragments. Completeness is not an assumption here: cover::verify_cube_cover requires the cubes to be exactly the leaf set of a complete branch trie, and the covered measure came out at exactly 4294967296/4294967296. One earlier ledger (run c4, 111 cubes) was QUARANTINED rather than merged, because a restart from a wider starting point made it overlap work being redone; an overlapping cover is refused by design, not pruned. RE-DERIVED INDEPENDENTLY 2026-08-13 on two hosts and two rustc versions (1.99.0-nightly and 1.93.1) at 15 and 16 workers: both reproduced 699,572,027 proof steps exactly and re-certified the cover. A single cube differing by one step would have stopped those runs and named it.",
+      "artifact_format": "tsv-ledger"
+    }
   ],
-  "date": "2026-08-13",
-  "machine": "linux x86-64; s4 (16 cores, 123 GiB) and s7 (16 cores, 26 GiB); no external solver or checker anywhere in the pipeline. The cover binaries were built from a private snapshot of this tree with only agent-b's changes applied, because the shared checkout did not compile at the time (another lane was mid-edit). The library code they exercise -- harness.rs, cover.rs, certify.rs, and the axeyum-cnf CDCL core and backward checker -- is unchanged since commit 9d85b067649906230038fa0ac93179191469848f.",
-  "toolchain": {
-   "axeyum_commit": "ee0868eb114cbaf57ff4081af431d7b816f0f733",
-   "rustc_version": "rustc 1.99.0-nightly (be8e82435 2026-07-11) on s4; rustc 1.93.1 (01f6ddf75 2026-02-11) on s7",
-   "target": "x86_64-unknown-linux-gnu",
-   "dirty": true
-  },
-  "graph_pin": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c",
-  "prior_art": [
-   {
-    "citation": "Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022",
-    "url": "https://arxiv.org/abs/2210.03262",
-    "establishes": "R_3 and partial R_4 tables for this family. Their Table 10 has NO (a,b) = (5,4) entry at k = 4: of its 20 cells, 13 are populated and only 12 exact. Their Lemma 4.2 is the k=3 shadow of the shell construction used here."
-   },
-   {
-    "citation": "A. C. Li, SSRN 6814341; artifacts at github.com/crabsatellite/rado-numbers-sat",
-    "establishes": "The one other active computational group in this area works the x + by = bz family, which maps onto the b = 1 column here and says nothing about b = 4. Recorded for scale: their largest completed four-colour refutation is b = 5 at n = 624 in 523 s with CaDiCaL 1.5.3, and they mark b = 6, k = 4 as needing a cluster. This instance is n = 741 at k = 4."
-   }
-  ]
- },
- "evidence": [
-  {
-   "id": "deciding-instance",
-   "kind": "instance-pin",
-   "supports": "identifies F_741, the formula the cover's 6241 verdicts are about",
-   "artifact": "artifacts/claims/rado/rado-r4-a5-b4-frontier/F_741.cnf",
-   "artifact_sha256": "90f4e81cae0eaf2a64e681cb31ad81d625da95fb6710b7facaaa6725b562a697",
-   "check_status": "checked",
-   "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a5-b4-frontier",
-   "notes": "2964 variables, 269,664 clauses, 8,591,634 bytes. THREE independently written encoders produce these bytes exactly: the axeyum-search encoder the cover itself ran against (ColouringProblem::encode, dumped by examples/rado_dump_cnf), scripts/gen-rado-instance.py, and the encoder inside scripts/check-claim-certificates.py, which re-derives the CNF from (a,b,k,n) = (5,4,4,741) and requires byte-identity. The pin is checked by regeneration, not by hash alone, so a bug shared by one implementation cannot authenticate itself. The 313 upper bound shipped for a while with five cover ledgers and no identified subject; that is what this row exists to prevent.",
-   "artifact_format": "dimacs-cnf"
-  },
-  {
-   "id": "lower-witness",
-   "kind": "witness-replay",
-   "supports": "R_4 > 740 (lower bound)",
-   "artifact": "artifacts/claims/rado/rado-r4-a5-b4-frontier/witness-740.txt",
-   "artifact_sha256": "a1406f0cd79570bfaecc4ab4cf6307b212561b133d8e2214246a7e3e925797c1",
-   "check_status": "checked",
-   "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a5-b4-frontier",
-   "notes": "The nested-shell 4-colouring of [740]: multiples of 5 coloured min(v_5(j), 4), non-multiples by two-ended shell bands with cuts at 20 and 120 from each end, default colour 4. Verified solution-free over all 65,416 solution triples by an enumerator sharing no code with the builder. The construction extended to 741 has the monochromatic solution (621, 121, 625), so this witness is extremal for the construction. Renamed from `witness-740` when the claim became computed; the artifact and its sha256 are unchanged.",
-   "artifact_format": "colouring-text"
-  },
-  {
-   "id": "upper-cube-tree-cover",
-   "kind": "cube-tree-cover",
-   "supports": "R_4 <= 741 (upper bound, complete adaptive cover)",
-   "artifact": "artifacts/claims/rado/rado-r4-a5-b4-frontier/cube-tree-cover.tsv",
-   "artifact_sha256": "eb61dce9f4df7eef09d832f4e80e0cfdbfd288ee27b78d552920f0f6fc472cd1",
-   "check_status": "checked",
-   "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a5-b4-frontier",
-   "parameters": {
-    "branch": [
-     5,
-     10,
-     15,
-     20,
-     25,
-     30,
-     35,
-     40,
-     45,
-     50,
-     55,
-     60,
-     65,
-     70,
-     75,
-     80
-    ],
-    "cubes": 6241,
-    "checked_cubes": 6241,
-    "deferred_cubes": 0,
-    "depths": [
-     3,
-     16
-    ],
-    "proof_steps": 699572027,
-    "clause_additions": 366009752
-   },
-   "notes": "An ADAPTIVE (tree) cover, not a flat product: a cube that exhausted its 200k-conflict budget was split on the next branch integer and its children queued, so the 6241 cubes sit at depths 3 to 16 rather than all at one depth. The flat depth-6 product this instance was first attacked with left 1132 of 1946 finished cells resource-out (2026-08-12). Every cube is unsat with its DRAT proof checked by axeyum's in-tree backward checker (ADR-0382) IN THE WORKER THAT PRODUCED IT -- zero deferred, zero failures, 699,572,027 proof steps, 27,985.0 s of solving and 22,042.6 s of checking in aggregate across two hosts. No DRAT bytes are retained: at ~83 bytes per step a full dump is ~58 GB, and every proof regenerates deterministically from this ledger -- examples/rado_replay_tree_cover does exactly that and requires the step count to match EXACTLY. The cover was produced by seven runs (b1, b3, c4b, da on s4; b4, c3, db on s7); this file is their union, written in cube-code order by the certification pass that accepted it. Cube codes are shape-independent (BranchPlan::prefix_code), which is what makes the union of resumed and partitioned runs one cover rather than seven fragments. Completeness is not an assumption here: cover::verify_cube_cover requires the cubes to be exactly the leaf set of a complete branch trie, and the covered measure came out at exactly 4294967296/4294967296. One earlier ledger (run c4, 111 cubes) was QUARANTINED rather than merged, because a restart from a wider starting point made it overlap work being redone; an overlapping cover is refused by design, not pruned. RE-DERIVED INDEPENDENTLY 2026-08-13 on two hosts and two rustc versions (1.99.0-nightly and 1.93.1) at 15 and 16 workers: both reproduced 699,572,027 proof steps exactly and re-certified the cover. A single cube differing by one step would have stopped those runs and named it.",
-   "artifact_format": "tsv-ledger"
-  }
- ],
- "notes": "Closed 2026-08-13. The repository's own standing open claim: the construction predicted 741, SLS could not refute it, and the flat cube cover could not close it. What closed it was adaptive splitting -- a cube that exhausts its budget is split rather than abandoned -- together with branch integers chosen from the equation's structure. The cover obligation was generalized in the same commit as the splitting strategy, from 'the cells are exactly the flat product' to 'the cubes are exactly the leaf set of a complete branch trie'.\n\nWHAT MADE IT TRACTABLE (measured, not folklore): What made this tractable, measured: branch on integers that are z-values of the equation. A point j is a z only when a' | j (a' = a/gcd(a,b)), so for (a,b) = (5,4) the multiples of 5 are the only points that occur as a z at all. Measured on this instance: point 5 sits in 884 of the 65,564 forbidden sets, point 2 and point 4 in 148 each. Head-to-head at equal budget and wall clock, branch integers 2,4,6,8,10,12 refuted 27 cubes with 27 proof steps in total (all trivial symmetry refutations) while 5,10,15,20,25,30 refuted 362 with 34.8M steps. Two other orderings suggested by the extremal colouring's structure were measured and rejected: 5-adic (625,125,250,...) and shell boundaries (625,125,25,5,621,620,...), the latter producing not one non-trivial refutation. Checking costs about as much as solving (0.95 ratio with the backward checker), so inline checking is a 2x tax and worth paying only because it removes the proof bytes entirely.\n\nSTILL OPEN: R_4(6(x-y)=5z), predicted 1501 by the same construction, is the next point and is untested; Route A for tree covers: one composed DRAT proof of F_741 whose acceptance would discharge the cover meta-argument entirely.\n\nTHE RESIDUAL META-ARGUMENT: this refutation is route B -- four checked cover obligations, not a single composed DRAT proof. compose::compose_cover_proof (route A) is written for a flat product and is not generalized to a tree cover, so the step 'checked refutations of every cube of a complete cover imply F is unsatisfiable' is checked as four obligations rather than by a checker accepting one proof of F."
+  "notes": "Closed 2026-08-13. The repository's own standing open claim: the construction predicted 741, SLS could not refute it, and the flat cube cover could not close it. What closed it was adaptive splitting -- a cube that exhausts its budget is split rather than abandoned -- together with branch integers chosen from the equation's structure. The cover obligation was generalized in the same commit as the splitting strategy, from 'the cells are exactly the flat product' to 'the cubes are exactly the leaf set of a complete branch trie'.\n\nWHAT MADE IT TRACTABLE (measured, not folklore): What made this tractable, measured: branch on integers that are z-values of the equation. A point j is a z only when a' | j (a' = a/gcd(a,b)), so for (a,b) = (5,4) the multiples of 5 are the only points that occur as a z at all. Measured on this instance: point 5 sits in 884 of the 65,564 forbidden sets, point 2 and point 4 in 148 each. Head-to-head at equal budget and wall clock, branch integers 2,4,6,8,10,12 refuted 27 cubes with 27 proof steps in total (all trivial symmetry refutations) while 5,10,15,20,25,30 refuted 362 with 34.8M steps. Two other orderings suggested by the extremal colouring's structure were measured and rejected: 5-adic (625,125,250,...) and shell boundaries (625,125,25,5,621,620,...), the latter producing not one non-trivial refutation. Checking costs about as much as solving (0.95 ratio with the backward checker), so inline checking is a 2x tax and worth paying only because it removes the proof bytes entirely.\n\nSTILL OPEN: R_4(6(x-y)=5z), predicted 1501 by the same construction, is the next point and is untested; Route A for tree covers: one composed DRAT proof of F_741 whose acceptance would discharge the cover meta-argument entirely.\n\nTHE RESIDUAL META-ARGUMENT: this refutation is route B -- four checked cover obligations, not a single composed DRAT proof. compose::compose_cover_proof (route A) is written for a flat product and is not generalized to a tree cover, so the step 'checked refutations of every cube of a complete cover imply F is unsatisfiable' is checked as four obligations rather than by a checker accepting one proof of F."
 }

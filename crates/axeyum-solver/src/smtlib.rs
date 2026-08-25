@@ -1378,6 +1378,63 @@ pub struct SmtLibModel {
     pub functions: Vec<(String, FuncValue)>,
 }
 
+/// One front-door decision **together with the state needed to re-check it**.
+///
+/// [`solve_smtlib`] answers a verdict and drops the arena the decided terms
+/// lived in, so a caller that wants to replay a `sat` model against the
+/// ORIGINAL assertions (the standing rule: every `sat` must be checkable by
+/// evaluating the original term against the lifted model) had no choice but to
+/// solve a second time. This carries the arena, the assertion stack that was
+/// actually decided, and the front door's own model out of the *same* run, so
+/// the replay checks exactly what was decided.
+///
+/// # Reading `assertions` and `model`
+///
+/// `model` is `Some` only when the **flat bounded encoding** decided `Sat` —
+/// i.e. the verdict came from [`crate::solve`] over `assertions`, in
+/// [`SmtLibSolved::script`]'s arena, so
+/// `check_model(&solved.script.arena, &solved.assertions, model)` is the
+/// canonical replay and is meaningful.
+///
+/// `model` is `None` — with `assertions` left empty — for every verdict that
+/// did not come from that path: `unsat`, `unknown`, an ingest that ran out of
+/// budget before a script existed, and the source-level string/FP routes, whose
+/// witnesses are checked by their own replay against the raw source expressions
+/// and are NOT an assignment to the flat arena's assertion stack. Handing such a
+/// model to `check_model` against an empty assertion list would return `true`
+/// for a query the flat view never saw, which is a claim this type refuses to
+/// make.
+#[derive(Debug)]
+pub struct SmtLibSolved {
+    /// The verdict, identical to what [`solve_smtlib`] returns for this input.
+    pub outcome: SmtLibOutcome,
+    /// The parsed script, kept alive because `assertions` index its arena.
+    pub script: Script,
+    /// The active assertion stack the flat encoding decided; empty when the
+    /// verdict came from a route that never built the flat view.
+    pub assertions: Vec<TermId>,
+    /// The front door's own satisfying assignment over `script.arena`, present
+    /// exactly when the flat path decided `Sat` (see the type docs).
+    pub model: Option<Model>,
+}
+
+impl SmtLibSolved {
+    /// A verdict with no replayable flat view: an empty assertion stack and no
+    /// model, regardless of what the result carries.
+    fn without_replay(script: Script, result: CheckResult) -> Self {
+        Self {
+            outcome: SmtLibOutcome {
+                result,
+                logic: script.logic.clone(),
+                expected_status: script.status.clone(),
+            },
+            script,
+            assertions: Vec::new(),
+            model: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct SmtLibSingleQuery {
     assertions: Vec<TermId>,
@@ -1794,14 +1851,35 @@ fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError
 /// - any [`SolverError`] from [`crate::solve`] (e.g. a non-Boolean assertion or
 ///   an internal backend failure).
 pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome, SolverError> {
+    Ok(solve_smtlib_with_model(input, config)?.outcome)
+}
+
+/// [`solve_smtlib`] that also hands back what is needed to re-check the answer.
+///
+/// This is the front door itself — [`solve_smtlib`] is a projection of it, so
+/// the two cannot report different verdicts for the same input. It returns the
+/// arena the decided terms live in, the assertion stack that was decided, and
+/// the run's own model, so a caller can replay a `sat` with
+/// [`crate::check_model`] **without solving again**. See [`SmtLibSolved`] for
+/// when `model`/`assertions` are populated.
+///
+/// # Errors
+///
+/// - [`SolverError::Parse`] when the text is malformed or uses an SMT-LIB
+///   construct outside the supported fragment.
+/// - any [`SolverError`] from [`crate::solve`].
+pub fn solve_smtlib_with_model(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<SmtLibSolved, SolverError> {
     // One deadline for the WHOLE front door, taken before the first attempt: the
     // ladder below must share `config.timeout` with the default rung, never start a
     // fresh full budget of its own.
     let deadline = config
         .timeout
         .and_then(|t| std::time::Instant::now().checked_add(t));
-    let outcome = solve_smtlib_at_string_bound(input, config, DEFAULT_STRING_BOUND)?;
-    Ok(apply_string_bound_ladder(input, config, deadline, outcome))
+    let solved = solve_smtlib_at_string_bound(input, config, DEFAULT_STRING_BOUND)?;
+    Ok(apply_string_bound_ladder(input, config, deadline, solved))
 }
 
 /// The declared-string window the ordinary front door parses at — `axeyum_smtlib`'s
@@ -1860,10 +1938,10 @@ fn apply_string_bound_ladder(
     input: &str,
     config: &SolverConfig,
     deadline: Option<std::time::Instant>,
-    outcome: SmtLibOutcome,
-) -> SmtLibOutcome {
-    if !is_string_window_decline(&outcome.result) {
-        return outcome;
+    solved: SmtLibSolved,
+) -> SmtLibSolved {
+    if !is_string_window_decline(&solved.outcome.result) {
+        return solved;
     }
     for rung in STRING_BOUND_LADDER {
         // Budget REMAINING to the front door's shared deadline, so the ladder can
@@ -1872,7 +1950,7 @@ fn apply_string_bound_ladder(
             None => None,
             Some(at) => match at.checked_duration_since(std::time::Instant::now()) {
                 Some(left) if left >= MIN_RUNG_BUDGET => Some(left),
-                _ => return outcome,
+                _ => return solved,
             },
         };
         let mut rung_config = config.clone();
@@ -1881,12 +1959,12 @@ fn apply_string_bound_ladder(
         // become a clean `Unsupported`) is not a failure of the query: keep the
         // original `Unknown` and try the next rung.
         if let Ok(wider) = solve_smtlib_at_string_bound(input, &rung_config, rung)
-            && matches!(wider.result, CheckResult::Sat(_))
+            && matches!(wider.outcome.result, CheckResult::Sat(_))
         {
             return wider;
         }
     }
-    outcome
+    solved
 }
 
 /// Whether `result` is the bounded-string-window `Unknown` the ladder exists to
@@ -1915,7 +1993,7 @@ fn solve_smtlib_at_string_bound(
     input: &str,
     config: &SolverConfig,
     string_bound: u32,
-) -> Result<SmtLibOutcome, SolverError> {
+) -> Result<SmtLibSolved, SolverError> {
     // Ingest shares the caller's budget. Without this a 24s budget produced
     // measured 39.9s / 49.4s / 66s runs, and the harness KILLED the process
     // mid-parse -- strictly worse than a decline, because `unknown` is a
@@ -1933,24 +2011,22 @@ fn solve_smtlib_at_string_bound(
         // hard rule requires, carrying the phase that ran out so a profile can
         // find it.
         Err(axeyum_smtlib::SmtError::DeadlineExceeded(phase)) => {
-            return Ok(SmtLibOutcome {
-                result: CheckResult::Unknown(UnknownReason {
+            return Ok(SmtLibSolved::without_replay(
+                Script::default(),
+                CheckResult::Unknown(UnknownReason {
                     kind: UnknownKind::ResourceLimit,
                     detail: format!("ingest exceeded the configured timeout during {phase}"),
                 }),
-                logic: None,
-                expected_status: None,
-            });
+            ));
         }
         Err(axeyum_smtlib::SmtError::ResourceLimit(detail)) => {
-            return Ok(SmtLibOutcome {
-                result: CheckResult::Unknown(UnknownReason {
+            return Ok(SmtLibSolved::without_replay(
+                Script::default(),
+                CheckResult::Unknown(UnknownReason {
                     kind: UnknownKind::ResourceLimit,
                     detail: format!("ingest resource limit: {detail}"),
                 }),
-                logic: None,
-                expected_status: None,
-            });
+            ));
         }
         Err(error) => return Err(SolverError::Parse(error.to_string())),
     };
@@ -1959,18 +2035,10 @@ fn solve_smtlib_at_string_bound(
     // its empty flat assertion view.
     if script.word_only_fallback.is_some() {
         let result = decide_word_only(&mut script, config)?;
-        return Ok(SmtLibOutcome {
-            result,
-            logic: script.logic,
-            expected_status: script.status,
-        });
+        return Ok(SmtLibSolved::without_replay(script, result));
     }
     if let Some(result) = source_fp_prefix_monotonic_result(&script) {
-        return Ok(SmtLibOutcome {
-            result,
-            logic: script.logic,
-            expected_status: script.status,
-        });
+        return Ok(SmtLibSolved::without_replay(script, result));
     }
     // A complete word skeleton is an exact source-level view, and the dense PyEx
     // membership families are materially faster there than after the large packed
@@ -1983,11 +2051,7 @@ fn solve_smtlib_at_string_bound(
     if source_string_routes_tried
         && let Some(result) = source_string_route_verdict(&mut script, config)
     {
-        return Ok(SmtLibOutcome {
-            result,
-            logic: script.logic,
-            expected_status: script.status,
-        });
+        return Ok(SmtLibSolved::without_replay(script, result));
     }
     let query = smtlib_single_query(&script)?;
     let gate = StringGate::from_script(&script);
@@ -2050,10 +2114,23 @@ fn solve_smtlib_at_string_bound(
     // length-capped ≤ MAX_LEN, every Int provably < 2^31) and upgrades it to a
     // real `unsat`. Only ever turns that specific `unknown` into `unsat`.
     let result = apply_bounded_completeness_unsat(input, result);
-    Ok(SmtLibOutcome {
-        result,
-        logic: script.logic,
-        expected_status: script.status,
+    // The model is taken from THIS run, not re-derived: `assertions` index
+    // `script.arena`, so `check_model(&script.arena, &assertions, &model)` replays
+    // exactly what was just decided. Cloned rather than moved because the verdict
+    // itself keeps carrying it (`CheckResult::Sat`) for every existing caller.
+    let model = match &result {
+        CheckResult::Sat(model) => Some(model.clone()),
+        CheckResult::Unsat | CheckResult::Unknown(_) => None,
+    };
+    Ok(SmtLibSolved {
+        outcome: SmtLibOutcome {
+            result,
+            logic: script.logic.clone(),
+            expected_status: script.status.clone(),
+        },
+        script,
+        assertions: query.assertions,
+        model,
     })
 }
 
@@ -3933,4 +4010,183 @@ fn alethe_proof_for(arena: &TermArena, assertions: &[TermId]) -> Option<String> 
         return Some(write_alethe(&proof));
     }
     None
+}
+
+#[cfg(test)]
+mod solve_smtlib_with_model_tests {
+    use super::{SmtLibSolved, solve_smtlib, solve_smtlib_with_model};
+    use crate::backend::{CheckResult, SolverConfig};
+    use crate::check_model;
+    use std::path::PathBuf;
+    use std::time::Duration;
+
+    /// The verdict word, which is what both entry points must agree on.
+    ///
+    /// The full [`super::SmtLibOutcome`] is not compared, because an `unknown`
+    /// carries a rendered `detail` that can name the phase a wall-clock budget
+    /// ran out in — comparing that would make the test fail on machine load
+    /// rather than on divergence. The word plus the script's own declarations is
+    /// the observable contract.
+    fn verdict(result: &CheckResult) -> &'static str {
+        match result {
+            CheckResult::Sat(_) => "sat",
+            CheckResult::Unsat => "unsat",
+            CheckResult::Unknown(_) => "unknown",
+        }
+    }
+
+    /// Whether `term`'s DAG contains a `forall`/`exists` node.
+    fn contains_quantifier(arena: &axeyum_ir::TermArena, term: axeyum_ir::TermId) -> bool {
+        let mut stack = vec![term];
+        let mut seen = std::collections::HashSet::new();
+        while let Some(current) = stack.pop() {
+            if !seen.insert(current) {
+                continue;
+            }
+            if let axeyum_ir::TermNode::App { op, args } = arena.node(current) {
+                if matches!(op, axeyum_ir::Op::Forall(_) | axeyum_ir::Op::Exists(_)) {
+                    return true;
+                }
+                stack.extend(args.iter().copied());
+            }
+        }
+        false
+    }
+
+    /// Every committed `corpus/regression/**.smt2`, in a deterministic order.
+    fn regression_files() -> Vec<PathBuf> {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/regression")
+            .canonicalize()
+            .expect("corpus/regression must exist");
+        let mut files = Vec::new();
+        let mut stack = vec![root];
+        while let Some(dir) = stack.pop() {
+            let mut entries: Vec<_> = std::fs::read_dir(&dir)
+                .expect("readable corpus directory")
+                .map(|entry| entry.expect("readable corpus entry").path())
+                .collect();
+            entries.sort();
+            for path in entries {
+                if path.is_dir() {
+                    stack.push(path);
+                } else if path.extension().is_some_and(|ext| ext == "smt2") {
+                    files.push(path);
+                }
+            }
+        }
+        files.sort();
+        files
+    }
+
+    /// `solve_smtlib` is a projection of `solve_smtlib_with_model`, and the
+    /// replay state the latter carries genuinely re-checks the former's `sat`.
+    ///
+    /// Two claims in one sweep, because they are the two halves of the reason
+    /// the entry point exists: the binding must not have to solve twice, and
+    /// what it replays must be what was decided. A `sat` whose model does not
+    /// satisfy the assertions it was decided over is a soundness signal, so this
+    /// asserts it rather than reporting it.
+    #[test]
+    fn agrees_with_solve_smtlib_over_the_regression_corpus() {
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(1));
+        let files = regression_files();
+        assert!(
+            files.len() >= 100,
+            "expected the committed regression corpus, found {} files",
+            files.len()
+        );
+        let mut compared = 0usize;
+        let mut replayed = 0usize;
+        for path in &files {
+            let Ok(input) = std::fs::read_to_string(path) else {
+                continue;
+            };
+            let plain = solve_smtlib(&input, &config);
+            let solved = solve_smtlib_with_model(&input, &config);
+            match (plain, solved) {
+                (Ok(plain), Ok(solved)) => {
+                    assert_eq!(
+                        verdict(&plain.result),
+                        verdict(&solved.outcome.result),
+                        "verdict diverged for {}",
+                        path.display()
+                    );
+                    assert_eq!(plain.logic, solved.outcome.logic, "{}", path.display());
+                    assert_eq!(
+                        plain.expected_status,
+                        solved.outcome.expected_status,
+                        "{}",
+                        path.display()
+                    );
+                    compared += 1;
+                    replayed += usize::from(assert_replays(&solved, path));
+                }
+                (Err(_), Err(_)) => compared += 1,
+                (plain, solved) => panic!(
+                    "one entry point errored and the other did not for {}: {:?} vs {:?}",
+                    path.display(),
+                    plain.map(|outcome| verdict(&outcome.result)),
+                    solved.map(|solved| verdict(&solved.outcome.result)),
+                ),
+            }
+        }
+        // Printed, not just asserted: this is the evidence that the entry point
+        // removed the binding's second solve, and the share matters -- the
+        // binding still re-lifts for the `sat` files with no flat model.
+        eprintln!(
+            "solve_smtlib_with_model: compared={compared} files, {replayed} `sat` verdicts \
+             replayed from the deciding run"
+        );
+        assert!(compared >= 100, "compared only {compared} files");
+        assert!(
+            replayed > 0,
+            "no `sat` in the corpus carried a replayable model; the entry point's \
+             whole purpose is unexercised"
+        );
+    }
+
+    /// Asserts that a carried model satisfies the assertions it was decided
+    /// over; returns whether there was one to check.
+    fn assert_replays(solved: &SmtLibSolved, path: &std::path::Path) -> bool {
+        let Some(model) = solved.model.as_ref() else {
+            // The discriminator the binding relies on: a `sat` with no model is
+            // exactly a verdict from a route that built no flat view, and such a
+            // run must not hand back an assertion stack it did not decide over.
+            assert!(
+                !matches!(solved.outcome.result, CheckResult::Sat(_))
+                    || solved.assertions.is_empty(),
+                "{} is `sat` with assertions but no model",
+                path.display()
+            );
+            return false;
+        };
+        assert!(
+            matches!(solved.outcome.result, CheckResult::Sat(_)),
+            "{} carries a model for a non-`sat` verdict",
+            path.display()
+        );
+        // The ground evaluator is total on GROUND terms; a quantifier is a limit
+        // of the checker, not a failed replay, and the binding declines these for
+        // the same reason. Skipping is honest here only because it is reported:
+        // the sweep asserts a nonzero count of replays that did happen.
+        if solved
+            .assertions
+            .iter()
+            .any(|&term| contains_quantifier(&solved.script.arena, term))
+        {
+            return false;
+        }
+        match check_model(&solved.script.arena, &solved.assertions, model) {
+            Ok(true) => true,
+            Ok(false) => panic!(
+                "the front door's own model does NOT satisfy the assertions it \
+                 decided for {}",
+                path.display()
+            ),
+            // The ground evaluator cannot decide a quantifier; that is a limit of
+            // the checker, not a failed replay.
+            Err(_) => false,
+        }
+    }
 }

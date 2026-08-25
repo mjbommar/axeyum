@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 
 use axeyum_solver::{UnsatProof, UnsatProofOutcome};
 use pyo3::prelude::*;
-use pyo3::types::PyModule;
+use pyo3::types::{PyBytes, PyModule};
 
 use crate::ir::arena::Arena;
 use crate::ir::types::Term;
@@ -55,6 +55,48 @@ impl PyUnsatProof {
         self.proof.lrat.as_deref()
     }
 
+    /// The DIMACS as `bytes`, without building a Python `str`.
+    ///
+    /// Same bytes as [`dimacs`](Self::dimacs) (the text is ASCII), but the
+    /// object is filled in place by `PyBytes::new_with`: one `memcpy` from the
+    /// Rust `String` into the Python object's own buffer, with no intermediate
+    /// allocation and none of the code-point scan `PyUnicode` performs to pick
+    /// its representation. That scan is linear in the proof, and these proofs
+    /// reach megabytes. Prefer this whenever the destination is a file, a hash,
+    /// or a subprocess stdin -- all of which want bytes anyway.
+    ///
+    /// # Errors
+    ///
+    /// Propagates a Python allocation failure.
+    fn dimacs_bytes<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
+        bytes_of(py, &self.proof.dimacs)
+    }
+
+    /// The DRAT refutation as `bytes`; see [`dimacs_bytes`](Self::dimacs_bytes).
+    ///
+    /// # Errors
+    ///
+    /// Propagates a Python allocation failure.
+    fn drat_bytes<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
+        bytes_of(py, &self.proof.drat)
+    }
+
+    /// The LRAT refutation as `bytes`, or `None` when there is no LRAT.
+    ///
+    /// `None` keeps the meaning it has on [`lrat`](Self::lrat): the DRAT
+    /// certificate still stands. It is never an empty `bytes`.
+    ///
+    /// # Errors
+    ///
+    /// Propagates a Python allocation failure.
+    fn lrat_bytes<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyBytes>>> {
+        self.proof
+            .lrat
+            .as_deref()
+            .map(|lrat| bytes_of(py, lrat))
+            .transpose()
+    }
+
     /// Re-derives the refutation from the certificate TEXT alone.
     ///
     /// Parses the DIMACS and the DRAT, then confirms the empty clause follows
@@ -89,6 +131,20 @@ impl PyUnsatProof {
                 .map_or_else(|| "None".to_owned(), |lrat| format!("{} bytes", lrat.len()))
         )
     }
+}
+
+/// Copies `text` straight into a freshly allocated Python `bytes`.
+///
+/// `PyBytes::new_with` hands out the destination buffer, so this is one
+/// `memcpy` into the object that is returned -- as opposed to `PyBytes::new`,
+/// which is also one copy but from a slice the caller had to have already, and
+/// as opposed to returning `&str`, which additionally makes `CPython` scan for
+/// the widest code point in the string.
+fn bytes_of<'py>(py: Python<'py>, text: &str) -> PyResult<Bound<'py, PyBytes>> {
+    PyBytes::new_with(py, text.len(), |slice| {
+        slice.copy_from_slice(text.as_bytes());
+        Ok(())
+    })
 }
 
 /// The outcome of attempting to export an `unsat` proof.

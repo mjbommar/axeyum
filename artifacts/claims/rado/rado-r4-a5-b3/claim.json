@@ -21,23 +21,17 @@
     {
       "graph": "math-education",
       "ref": "C:ramsey-number",
-      "relation": "exercises",
-      "resolved": true,
-      "note": "pending: no graph_pin evaluated for this claim"
+      "relation": "exercises"
     },
     {
       "graph": "math-education",
       "ref": "TQ:colouring",
-      "relation": "uses-technique",
-      "resolved": true,
-      "note": "pending: no graph_pin evaluated for this claim"
+      "relation": "uses-technique"
     },
     {
       "graph": "math-education",
       "ref": "C:computational-search",
-      "relation": "exercises",
-      "resolved": true,
-      "note": "pending: no graph_pin evaluated for this claim"
+      "relation": "exercises"
     }
   ],
   "axeyum_refs": {
@@ -72,8 +66,7 @@
         "url": "https://arxiv.org/abs/2210.03262",
         "establishes": "NEW. Table 10 of arXiv:2210.03262 is the only published four-colour table for this family: 20 cells, 13 populated (12 exact plus the bare '> 225' at (2,3)), 7 blank. (5,2) is one of the blanks. Census read from the rendered v1 PDF cell by cell and cross-checked against this repository's ledger over all 25 k=3 cells and all 12 exact k=4 cells with zero disagreements, so the blank is a real blank and not a transcription slip. OEIS full-text search for 'Rado number' returns 7 sequences, none for this family at k >= 3 colours."
       }
-    ],
-    "graph_pin": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+    ]
   },
   "evidence": [
     {

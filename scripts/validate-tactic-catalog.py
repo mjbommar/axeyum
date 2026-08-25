@@ -12,9 +12,9 @@ two jobs, and the second is the one that can fail on a healthy-looking file:
     ``DeclineReason`` enum; every ``budget`` constant must equal the ``const``
     in THAT file (aliases such as ``const MAX_ABSURD_HYPOTHESES: usize =
     MAX_BINDERS;`` are resolved); ``realizes`` must resolve to a ``capability``
-    entity in the knowledge overlay; ``uses_technique`` must carry the overlay's
-    own external pin and, when the sibling checkout is present at that pin,
-    resolve to a real technique file.
+    entity in the knowledge overlay; ``uses_technique`` names a technique and is
+    NOT resolved anywhere (ADR-0553 -- it used to carry a sibling repository's
+    pinned commit and be stat-ed against that checkout).
 
 2.  *The census.*  It prints ``TACTIC_CATALOG|...`` and **fails** when
     ``distinct_precondition_shapes < 2`` (every entry matching one goal shape is
@@ -37,7 +37,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -46,8 +45,6 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CATALOG = ROOT / "artifacts/autogenesis/tactic-catalog-v1.json"
 SCHEMA = ROOT / "artifacts/ontology/tactic-catalog.schema.json"
 OVERLAY = ROOT / "artifacts/autogenesis/knowledge-overlay-v1.json"
-EXTERNAL_ROOT = ROOT.parent / "math-education"
-EXTERNAL_SOURCE_ID = "math-education"
 
 TOP_KEYS_REQUIRED = {"schema_version", "kind", "tactics"}
 TOP_KEYS_ALLOWED = TOP_KEYS_REQUIRED | {"notes"}
@@ -116,7 +113,6 @@ PREDICATES: dict[str, tuple[set[str], set[str], dict[str, set[Any]]]] = {
 TACTIC_ID = re.compile(r"^T:[a-z0-9]+(?:-[a-z0-9]+)*$")
 CAPABILITY_ID = re.compile(r"^K:[a-z0-9]+(?:-[a-z0-9]+)*$")
 TECHNIQUE_ID = re.compile(r"^TQ:[a-z0-9]+(?:-[a-z0-9]+)*$")
-REVISION = re.compile(r"^[0-9a-f]{40}$")
 CONST_DECL = re.compile(
     r"^[ \t]*(?:pub[ \t]+)?const[ \t]+([A-Z][A-Z0-9_]*)[ \t]*:[ \t]*[A-Za-z0-9_]+[ \t]*=[ \t]*([^;]+);",
     re.MULTILINE,
@@ -253,15 +249,11 @@ def check_tactic_structure(tactic: Any, index: int, errors: list[str]) -> None:
         err(errors, "schema", f"{where}: realizes must be a K: capability id")
 
     technique = tactic.get("uses_technique")
-    if not isinstance(technique, dict) or set(technique) != {"id", "source", "revision"}:
-        err(errors, "schema", f"{where}: uses_technique needs exactly id, source and revision")
+    if not isinstance(technique, dict) or set(technique) != {"id"}:
+        err(errors, "schema", f"{where}: uses_technique needs exactly id (ADR-0553: no source, no revision)")
     else:
         if not TECHNIQUE_ID.fullmatch(str(technique.get("id"))):
             err(errors, "schema", f"{where}: uses_technique.id must be a TQ: id")
-        if technique.get("source") != EXTERNAL_SOURCE_ID:
-            err(errors, "schema", f"{where}: uses_technique.source must be {EXTERNAL_SOURCE_ID}")
-        if not REVISION.fullmatch(str(technique.get("revision"))):
-            err(errors, "schema", f"{where}: uses_technique.revision must be a 40-hex commit")
 
     reach = tactic.get("reach")
     if not isinstance(reach, dict) or set(reach) != {"accepted_goals", "declined_goals"}:
@@ -327,43 +319,31 @@ def rust_decline_variants(text: str) -> set[str]:
     return set(VARIANT.findall(match.group(1)))
 
 
-def git_head(path: Path) -> str | None:
-    try:
-        return subprocess.run(
-            ["git", "-C", str(path), "rev-parse", "HEAD"],
-            check=True, capture_output=True, text=True,
-        ).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return None
-
-
-def overlay_capabilities(root: Path, errors: list[str]) -> tuple[set[str], str | None]:
+def overlay_capabilities(root: Path, errors: list[str]) -> set[str]:
     path = root / "artifacts/autogenesis/knowledge-overlay-v1.json"
     try:
         overlay = json.loads(path.read_text())
     except (OSError, json.JSONDecodeError) as exc:
         err(errors, "capability", f"cannot read the knowledge overlay: {exc}")
-        return set(), None
+        return set()
     capabilities = {
         entity["id"] for entity in overlay.get("entities", [])
         if isinstance(entity, dict) and entity.get("kind") == "capability"
     }
-    pin = None
     for source in overlay.get("sources", []):
-        if isinstance(source, dict) and source.get("id") == EXTERNAL_SOURCE_ID:
-            pin = source.get("revision")
-    return capabilities, pin
+        if isinstance(source, dict) and source.get("kind", "").startswith("external"):
+            err(errors, "capability",
+                f"the knowledge overlay declares an external source {source.get('id')!r} (ADR-0553)")
+    return capabilities
 
 
 def check_bindings(
     doc: dict[str, Any],
     root: Path,
-    external_root: Path,
     errors: list[str],
     warnings: list[str],
 ) -> None:
-    capabilities, overlay_pin = overlay_capabilities(root, errors)
-    external_head = git_head(external_root) if external_root.is_dir() else None
+    capabilities = overlay_capabilities(root, errors)
     sources: dict[str, str] = {}
 
     seen: set[str] = set()
@@ -424,34 +404,6 @@ def check_bindings(
                 f"{ident}: realizes {realizes!r} is not a capability entity in the knowledge overlay",
             )
 
-        technique = tactic.get("uses_technique") or {}
-        revision = technique.get("revision")
-        if overlay_pin is not None and revision != overlay_pin:
-            err(
-                errors, "technique-pin",
-                f"{ident}: uses_technique.revision {revision!r} is not the overlay's"
-                f" {EXTERNAL_SOURCE_ID} pin {overlay_pin!r}",
-            )
-        technique_id = technique.get("id")
-        if not isinstance(technique_id, str):
-            continue
-        if external_head is None:
-            warnings.append(
-                f"{external_root.name} checkout is absent; skipping technique resolution for {ident}"
-            )
-        elif external_head != revision:
-            warnings.append(
-                f"{external_root.name} checkout is present but not at the catalog pin;"
-                f" skipping technique resolution for {ident}"
-                f" (expected {revision}, got {external_head})"
-            )
-        else:
-            target = external_root / "graph/techniques" / f"{technique_id[3:]}.md"
-            if not target.is_file():
-                err(
-                    errors, "technique",
-                    f"{ident}: unresolved pinned technique {technique_id!r} (no {target})",
-                )
 
         residual = tactic.get("residual") or {}
         shape_none = residual.get("shape") == "none"
@@ -516,7 +468,6 @@ def census(doc: dict[str, Any], errors: list[str]) -> dict[str, int]:
 def validate_document(
     doc: Any,
     root: Path = ROOT,
-    external_root: Path = EXTERNAL_ROOT,
     with_jsonschema: bool = False,
 ) -> tuple[list[str], list[str], dict[str, int] | None]:
     errors: list[str] = []
@@ -526,7 +477,7 @@ def validate_document(
         schema_check_published(doc, errors)
     if errors:
         return errors, warnings, None
-    check_bindings(doc, root, external_root, errors, warnings)
+    check_bindings(doc, root, errors, warnings)
     counts = census(doc, errors)
     return errors, warnings, counts
 
@@ -535,7 +486,6 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("path", nargs="?", type=Path, default=DEFAULT_CATALOG)
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--external-root", type=Path, default=EXTERNAL_ROOT)
     parser.add_argument(
         "--with-jsonschema",
         action="store_true",
@@ -549,7 +499,7 @@ def main() -> int:
         print(f"TACTIC_CATALOG_ERROR|schema|{args.path}: cannot read JSON: {exc}", file=sys.stderr)
         return 1
     errors, warnings, counts = validate_document(
-        doc, args.root, args.external_root, args.with_jsonschema
+        doc, args.root, args.with_jsonschema
     )
     for warning in warnings:
         print(f"TACTIC_CATALOG_WARNING|{warning}", file=sys.stderr)

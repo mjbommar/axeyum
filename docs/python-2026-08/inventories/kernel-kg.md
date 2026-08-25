@@ -412,54 +412,48 @@ tuples) and `SEALED_CAPSULE_CONTRACTS` (per-fact `result_manifest`,
 
 ### 2.4 `artifacts/autogenesis/knowledge-overlay-v1.json`
 
-Schema: `artifacts/ontology/autogenesis-knowledge-overlay.schema.json`
-(`$id: https://axeyum.dev/ontology/autogenesis-knowledge-overlay.schema.json`).
-Required = the seven top-level keys exactly: `schema_version`, `kind`,
 `sources`, `namespaces`, `relation_types`, `entities`, `links`.
 `kind: "axeyum-autogenesis-knowledge-overlay"`, `schema_version: 1`.
 
-- `sources`: **2** — `{id: "axeyum", kind: local-repository, revision_policy:
-  live-worktree, path_hint: "."}` and `{id: "math-education", kind:
-  external-repository, revision_policy: pinned, revision:
-  "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c", path_hint: "../math-education",
-  license_note: …}`.
-- `namespaces`: **4** — `axeyum-knowledge` (overlay-entity; kinds capability,
-  obstruction, episode, representation), `axeyum-fact` (local-required, path
-  `artifacts/facts`, `id_pattern ^F:[a-z0-9]+(-[a-z0-9]+)*$`),
-  `axeyum-operation` (local-required, `artifacts/autogenesis/operations.json`),
-  `math-education` (external-pinned, path `graph`, `id_pattern` covering
-  `C:<slug>[@remember|understand|apply|analyze|evaluate|create]` and `TQ:<slug>`).
-- `relation_types`: **7** — `realizes-capability`, `established-by`,
-  `formalizes`, `uses-technique`, `exemplifies`, `blocked-by`, `unlocks`, each
-  with `source_kinds`/`target_kinds`/`semantics`.
-- `entities`: **2** — `K:bounded-structural-induction` and
-  `K:modeq-equivalence-combinators`, both `kind: capability`, with
-  `attributes` carrying `max_binders: 8`, `max_inductions: 2`,
-  `assurance_floor: "kernel-lean-empty-axiom-footprint"`.
-- `links`: **24** — `{id, relation, source{namespace,kind,id}, target{…},
-  assurance, status, reason, provenance{method, sources[]}}`. Relations:
-  `formalizes` 10, `established-by` 7, `exemplifies` 3, `realizes-capability` 2,
-  `uses-technique` 2. Assurance: `human-reviewed` 15, `independently-checked` 7,
-  `registry-derived` 2. External endpoints additionally carry `source_revision`.
+**Re-measured after ADR-0553.** The figures this section used to carry — 2
+sources, 7 relation types, 24 links, and a live pin-resolution routine running
+`git -C ../math-education rev-parse HEAD` — described an overlay that named a
+repository this project does not own. They are replaced, not annotated: a stale
+inventory of a removed dependency is worse than none.
+
+- `sources`: **1** — `{id: "axeyum", kind: local-repository, revision_policy:
+  live-worktree, path_hint: "."}`. The schema's `kind` enum is now
+  `local-repository` / `local-artifact`; `path_hint` refuses `..` and absolute
+  paths by pattern.
+- `namespaces`: **4** — `axeyum-knowledge` (overlay-entity), `axeyum-fact`
+  (local-required, `artifacts/facts`), `axeyum-operation`, `axeyum-kernel`.
+  `resolution` is `overlay-entity` or `local-required`; `external-pinned` was
+  removed.
+- `relation_types`: **5** — `realizes-capability`, `established-by`,
+  `direct-theorem-depends-on`, `blocked-by`, `unlocks`. `formalizes`,
+  `uses-technique` and `exemplifies` are gone: every one of their target kinds
+  (`concept`, `encounter`, `technique`) was supplied only by the removed
+  namespace, so none had a reachable target.
+- `entities`: `kind: capability` rows with `attributes` carrying `max_binders`,
+  `max_inductions`, `assurance_floor`.
+- `links`: **9** — `established-by` 7, `realizes-capability` 2. No endpoint
+  carries `source_revision`; the field was removed from the schema.
 
 Validator: `scripts/validate-autogenesis-knowledge.py`. Beyond schema it checks
-unique ids, typed endpoints, local resolution, pinned revisions, and
-relation domain/range. `ENTITY_KINDS` (15), `ASSURANCE` (7:
-formal-derived, independently-checked, registry-derived, mechanically-observed,
-human-reviewed, heuristic, proposed), and a `METHODS` set are module constants
-the Python layer should mirror. **Pin resolution**: `git_head()` runs
-`git -C ../math-education rev-parse HEAD`; if the sibling is absent, external
-resolution is *skipped* (the checkout is optional and CI does not vendor it);
-if present but at a different commit, a **warning** is emitted and live
-resolution is skipped; only at the exact pin does it resolve each endpoint via
-`math_education_resolves()`, which maps `C:<slug>` → `graph/concepts/<slug>.md`
-and `TQ:<slug>` → `graph/techniques/<slug>.md` (the `@level` suffix is stripped
-first). Measured here: the sibling **is present and at `ce3e2a52…`**, so
-resolution is live in this checkout. Coverage generator:
-`scripts/gen-autogenesis-knowledge-coverage.py` → reads the overlay +
-`operations.json`, writes `docs/plan/generated/autogenesis-knowledge-coverage.md`,
-supports `--check`; it counts authoritative operations with
-`len(applicability.fact_ids) > 1` — i.e. it gates generality, not coverage.
+unique ids, typed endpoints, local resolution, and relation domain/range. It no
+longer reads anything outside this checkout — `ROOT.parent`, `git_head()` and
+`math_education_resolves()` are gone, with the `subprocess` import.
+`ENTITY_KINDS` is now **10** (the educational vocabulary and
+`external-declaration` were removed); `ASSURANCE` (7) and `METHODS` are module
+constants the Python layer mirrors, and `python/tests/test_knowledge_overlay.py`
+compares them against this file.
+
+Coverage generator: `scripts/gen-autogenesis-knowledge-coverage.py` → reads the
+overlay + `operations.json`, writes
+`docs/plan/generated/autogenesis-knowledge-coverage.md`, supports `--check`; it
+counts authoritative operations with `len(applicability.fact_ids) > 1` — i.e. it
+gates generality, not coverage. Ten of its fifteen census rows were removed with
+the `formalizes` population rather than left pinned at zero.
 
 ### 2.5 `artifacts/autogenesis/nursery-v1.json` — the blind evaluation population
 
@@ -530,8 +524,10 @@ Schema `artifacts/ontology/claim.schema.json`; required `schema_version`, `id`,
 **generator recipe** (`{language: "cnf-family", family, parameters, generator:
 "crates/axeyum-search/src/offdiag.rs", semantics_note}`), which is the
 documented distinction from a fact, whose `formal` is the proposition itself.
-`concept_refs[]` entries carry `{graph: "math-education", ref: "C:…", relation,
-resolved, notes}` — i.e. claims already point into the sibling graph.
+`concept_refs[]` entries carry `{graph, ref, relation}` and are UNRESOLVED
+CITATIONS. ADR-0553 removed `resolved` and `provenance.graph_pin`: with no pin,
+`resolved: true` asserted something about an external artifact that nothing here
+could check.
 Readers: `scripts/validate-claims.py` (also checks `axeyum_refs.fragments ⊆
 artifacts/ontology/smt-fragments.json`; supports `--root`; prints
 "no claims found under artifacts/claims/**/claim.json" rather than failing
@@ -559,35 +555,24 @@ and the curriculum layer directories (`docs/curriculum/00-foundations` …
 `just foundational-resources`. This is the `curriculum-node` layer of the
 overlay's `ENTITY_KINDS` and the natural join target for facts' `concept_refs`.
 
-### 2.8 The sibling `../math-education/graph/`
+### 2.8 The sibling reference corpus — REMOVED (ADR-0553)
 
-Present in this checkout, at `HEAD = ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c`
-— **exactly the overlay pin**, so live endpoint resolution is active here.
-Layout: `graph/{concepts, techniques, events, misconceptions, ontology, people,
-places, playables, themes, threads, tracks, vocab, works, figures}` plus
-`README.md`, `AUTHORING.md`, `INVENTORY.md`, `QUALITY.md`.
-Measured: **concepts 1,567 files**, **techniques 42 files**, and
-**`encounters/` does not exist as a directory** — encounters are an inline
-front-matter list *inside* each concept file, which the Python accessor must
-model accordingly.
+This section inventoried `../math-education/graph/` as a live resource: present
+at `HEAD = ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c`, "exactly the overlay pin,
+so live endpoint resolution is active here", 1,567 concept files, 42 technique
+files, encounters inline rather than a directory.
 
-One file per node, Markdown with YAML front matter. Concept front matter:
-`id` (`C:<slug>`), `type: Concept`, `title`, `pref_label`, `alt_labels[]`,
-`short_definition`, `definition`, `epistemic_status`, `status`, `confidence`,
-`strand` (`S:…`), `created`, `updated`, `related[]`, `bridges_to[]`
-(`{concept, domain_area, reason}`), and `encounters[]` — each
-`{level ∈ remember|understand|apply|analyze|evaluate|create, summary,
-objectives[{statement, knowledge_dimension}], requires[{encounter:
-"C:x@understand", strength}]}`. Technique front matter: `id` (`TQ:<slug>`),
-`type: Technique`, `title`, `pref_label`, `short_definition`, `definition`,
-`epistemic_status`, `status`, `confidence`, `created`, `updated`, `refrain`,
-`related[]`, then prose body.
+**None of that is a resource of this repository any more, and the inventory is
+not updated because there is nothing here to inventory.** The sibling is
+reference only: something to read for calibration, never something this project
+depends on, integrates with, or points at in its data. ADR-0553 removed the
+overlay source and namespace, the crosswalk `path_hint`, the tactic schema's
+mandatory `source`/`revision`, `graph_pin` from all 104 claims, and the 777-line
+`axeyum.knowledge.math_education` module that read this tree.
+`scripts/check-external-coupling.py` refuses its return.
 
-Ownership note from the overlay's `license_note`: the sibling is owned by the
-project owner; **Axeyum copies or adapts selected metadata and never mutates
-it**. A Python accessor must be strictly read-only over this path, and must
-degrade cleanly when the checkout is absent or off-pin, mirroring the
-validator's skip-with-warning rather than erroring.
+The section is kept as a stub rather than deleted so a reader who remembers the
+numbers above finds out what happened to them.
 
 ### 2.9 `artifacts/autogenesis/` — plan / result / decline / capsule JSONs
 
@@ -681,7 +666,7 @@ but lives outside `docs/plan/generated/`.
   surface (defer `issue_*`).
 - **`axeyum.knowledge`** — typed read-only accessors over facts, the frontier,
   operations, the overlay, the nursery (partition-aware, held-out-safe),
-  claims, `foundational-concepts.json`, the pinned math-education graph, and a
+  claims, `foundational-concepts.json`, and a
   shape-classified index of `artifacts/autogenesis/`. Every accessor should
   mirror its canonical validator's semantics rather than re-derive them, and
   every "nothing found" answer should be distinguishable from "not looked at",

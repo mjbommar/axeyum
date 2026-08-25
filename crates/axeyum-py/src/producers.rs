@@ -177,8 +177,8 @@ impl PyDeclineReason {
         &self.message
     }
 
-    fn __str__(&self) -> String {
-        self.message.clone()
+    fn __str__(&self) -> &str {
+        &self.message
     }
 
     fn __repr__(&self) -> String {
@@ -676,8 +676,8 @@ impl PyImportReport {
     /// Imported axiom names. Their types were checked; their propositions
     /// remain assumptions until discharged separately.
     #[getter]
-    fn axioms(&self) -> Vec<String> {
-        self.axioms.clone()
+    fn axioms(&self) -> &[String] {
+        &self.axioms
     }
 
     /// Identity schema for the two manifests below.
@@ -707,8 +707,8 @@ impl PyImportReport {
     /// Theorems this crate reconstructed and independently re-checked itself,
     /// in place of the untrusted wire-supplied type/value.
     #[getter]
-    fn substituted_theorems(&self) -> Vec<String> {
-        self.substituted_theorems.clone()
+    fn substituted_theorems(&self) -> &[String] {
+        &self.substituted_theorems
     }
 
     fn __repr__(&self) -> String {

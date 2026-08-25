@@ -21,32 +21,27 @@
       "graph": "math-education",
       "ref": "C:rado-number",
       "relation": "instance-of",
-      "resolved": true,
-      "note": "authored this session at math-education graph/concepts/rado-number.md (uncommitted); flip to resolved with a fresh graph_pin once that repo commits"
+      "note": "authored this session at math-education graph/concepts/rado-number.md (uncommitted)"
     },
     {
       "graph": "math-education",
       "ref": "C:ramsey-number",
-      "relation": "exercises",
-      "resolved": true
+      "relation": "exercises"
     },
     {
       "graph": "math-education",
       "ref": "C:pigeonhole-principle",
-      "relation": "exercises",
-      "resolved": true
+      "relation": "exercises"
     },
     {
       "graph": "math-education",
       "ref": "TQ:colouring",
-      "relation": "uses-technique",
-      "resolved": true
+      "relation": "uses-technique"
     },
     {
       "graph": "math-education",
       "ref": "C:computational-search",
-      "relation": "exercises",
-      "resolved": true
+      "relation": "exercises"
     }
   ],
   "axeyum_refs": {
@@ -74,7 +69,6 @@
       "target": "x86_64",
       "dirty": true
     },
-    "graph_pin": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c",
     "prior_art": [
       {
         "citation": "Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022",

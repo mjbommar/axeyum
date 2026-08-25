@@ -535,8 +535,12 @@ impl FuncValue {
 impl FuncValue {
     /// The parameter sorts.
     #[getter]
-    fn params(&self) -> Vec<PySort> {
-        self.params.clone()
+    fn params<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
+        // `PySort` is a `#[pyclass]`, so `&PySort` has no `IntoPyObject`; the
+        // choice is a `Vec` clone or building the list straight from the
+        // iterator. `PyList::new` over an `ExactSizeIterator` presizes the list
+        // and fills it in place, so the intermediate `Vec` never exists.
+        PyList::new(py, self.params.iter().copied())
     }
 
     /// The result sort.

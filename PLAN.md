@@ -117,6 +117,11 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-24 | `da1701d97` | The knowledge overlay may not name a sibling repository: source, namespace, 24 links and three unreachable relation types removed; schema tightened so the vocabulary cannot come back; the validator no longer reads `ROOT.parent`. |
+| 2026-08-24 | `94f3beb0c` | The crosswalk and the tactic catalog, plus the two projections that went structurally empty with them. `uses_technique` no longer mandates an external source on every tactic. 13 tactic guards, each killed by exactly one test. |
+| 2026-08-24 | `70aaccb38` | `scripts/check-external-coupling.py` — 4 rules, 8 guards, 25 controls, each guard killed by exactly one test; wired into both aggregates with `--self-test` first. `graph_pin` and `resolved` removed from all 104 claims; the 777-line Python integration and the agent's `file://` allowlist entry deleted. |
+| 2026-08-24 | `c0c2b6fea` | **ADR-0546 + the gate wired into both aggregates.** Records three findings against the brief: `technique`/`concept` are NOT uninstantiated overlay kinds (24 endpoints, resolved `external-pinned` next door); the existing vocabulary still does not suffice, because `unlocks` is reachability and every `formalizes` edge is *required* to be `completeness: partial` so two cannot compose into "same"; and the motivating `Int.fib_cassini ↔ Rat.det2_mul` edge **is not landable** — neither theorem has a fact and neither is in the kernel projection, so `specialization` ships as a declared kind with zero instances and the gate prints that zero. |
+| 2026-08-24 | `06b41a5e6` | **`artifacts/correspondences/` — two theorems can be said to be the same idea, and the claim is checked.** Refuses any pair the ledger's *transitive* `depends_on` closure connects (`F:ml430-nat-fib-add-two` / `F:ml430-int-fib-add-two` is a real such pair and the control pins the refusal against the committed ledger). `carrier-transport` is checked *structurally* — erasing the carrier from both formal statements must leave the same string, and an unknown carrier FAILS rather than skipping. Two status axes mirroring the ledger's, each backed: `asserted` ⟺ empty `via`; `route-recorded` requires every non-null ref to resolve; `mechanized-here` forbids a null ref and requires a checker command; evidence at all requires `mechanized-here`. Empty population exits 1. Prose floors set from measuring `../math-education` (1,263 reasons, median 190 chars — and a bridge to `C:pi` whose reason was about *density* validated cleanly there, which is why nothing here rests on prose). |
 | 2026-08-24 | `3ba9c1ec6` | Additive Autogenesis knowledge overlay v1 defines typed, qualified, provenance-bearing links across facts, operations, capabilities, and a pinned read-only external concept graph, with eight seed links and four negative controls |
 | 2026-08-24 | `b42ecfd81` | Complete F1's evidence-backed multi-target-producer crosswalk, publish a generated coverage census, and reject uncredited producer or individual complete-coverage claims |
 | 2026-08-24 | `137fef720` | Generate the complete constructed-kernel declaration/dependency projection with exact theorem-edge agreement and negative controls |
@@ -194,6 +199,12 @@ now. Nothing was deleted.
 | 2026-08-24 | `de47d419b` | **Transport a derivative along pointwise `Equiv`**, plus the `n = 2` cross-check. `congr` is the one every later calculus lane needs, because a constructive derivative is **not unique as a function** — only up to pointwise `Equiv` on the interval. **The lane argued the hypothesis shape from the type rather than assuming it**: every occurrence of `F x`/`F y`/`F' x` in `spec`'s conclusion sits behind the same four range hypotheses, so agreement on `[a,b]` suffices. `pow_two` transports `hasDerivative_sq` across one identity with the derivative side reused verbatim — had the general shape not matched at `n = 2`, one of the two would be wrong. **The kernel caught a build-order bug `cargo check` cannot see** (`pow` is declared after `derivative.rs` runs) — and I reproduced the same error while hand-merging, wiring one `declare_` call and not the other: **112 of 608 tests failed** on a function that compiled and was never called. |
 | 2026-08-24 | `436f0058e` | **`lcm_dvd`** — the least common multiple finally earns its name, with both halves of its universal property. **The route was written down by the lane that FAILED at it** and reverted rather than commit unverified; this lane followed it exactly. The fix for the shape that sank the first attempt: the single `goal` `ExprId` is computed once at the top of the step closure and threaded through unchanged, never rebuilt at a deeper nesting level. |
 | 2026-08-24 | `26dd00530` | **The Fibonacci addition formula and area-zero iff collinear.** `fib_add` uses the `And (P n) (P (succ n))` pairing device — **the same device the Fibonacci lane correctly REFUSED for defining `fib`**, because it proves a proposition and cannot define a function. Two lanes, opposite verdicts on the same tool, both right. **The bare collinearity iff is false and the lane said so**: at `A ~ B`, `cross A B C ~ 0` for every `C`. The medial-triangle factor turned out to be a **generic** ring identity in an arbitrary scale `h`, so nothing about `inv2`'s numeric value is needed. |
+| 2026-08-24 | `460bee2db` | Q2: replay of the deciding run's model via `solve_smtlib_with_model` (2.22x on sat), clone audit (12 borrows, 13 `__eq__` via cast), CAS detaches, bytes accessors, benchmarks |
+| 2026-08-24 | `d904a5c14` | `axeyum-solver`: `solve_smtlib_with_model` -- the front door returns arena, assertions and model; `solve_smtlib` wraps it; 152-file equality test |
+| 2026-08-24 | `68fb060e7` | Q1: 73 hypothesis differentials, 8 Rust unit tests, `ty` ratchet; fixed replay-over-empty-stack on the word-only fallback |
+| 2026-08-24 | `a4393ef18` | Q4: the eight open tier-R solver rows as typed ledgers + `get_assertions/get_info/get_option` + `SolveStats`; coverage backlog empty |
+| 2026-08-24 | `e0ce50f97` | Q3: release wheels (manylinux 2_28, macOS, Windows, 3.14t, sdist) with a smoke-install gate before publish |
+| 2026-08-24 | `b08986061` | `10-quality-best-practices.md`: sourced practice vs the measured binding; six quality slices |
 | 2026-08-24 | `48d7044a2` | Python coverage ledger: 831 of 4,672 public items referenced, 8 tier-R rows open, deferrals with reasons, `09-coverage-plan.md` ordered by consumer value |
 | 2026-08-24 | `5b7140d72` | Plan 03 A6: allowlisted metadata fetch with a family-level held-out guard and injection wrapper; cgroup-capped sandboxed `python_exec` with a discriminating self-check; 76 tests |
 | 2026-08-24 | `27c601025` | Review fixes: `ReplayUnavailable` and front-door-model replay (P0), forwarding modules for `axeyum.smt/ir/solver` (P1), CI `python` job 3.12-3.14 (P1), nightly clippy green (P1); frontier re-verification opt-in |
@@ -1796,6 +1807,66 @@ lists are committed and have never been run; and hand UF's reproducible
 composition shift (both/only 77/8/14 → 60/23/33 across ~100 commits) to the UF
 lane.
 
+**The data coupling to `../math-education` is removed and
+`scripts/check-external-coupling.py` refuses its return** (`WIP`,
+agent-decouple-math-education, 2026-08-24). The owner's constraint is that the
+sibling is REFERENCE ONLY — read it for calibration, never depend on it,
+integrate with it, or point at it in data. It was stated and never gated, and by
+today it had been violated in **five places at once**, with every validator
+involved exiting 0:
+
+- the knowledge overlay (an `external-repository` source, an `external-pinned`
+  namespace, **24 of 33 links** pinned to that repo's SHA);
+- the family-concept crosswalk (`path_hint: ../math-education/graph/concepts`,
+  and a validator that hardcoded the SHA and *required* the file to match);
+- `tactic-catalog.schema.json`, where `uses_technique` is required on every
+  tactic and required `source: {const: "math-education"}` plus a `revision` —
+  so no tactic could be declared here without naming that checkout;
+- **all 104 claims**, each carrying `provenance.graph_pin` and 438
+  `resolved: true` refs, with the schema making `concept_refs` mandatory and
+  `graph` a one-value enum;
+- `python/axeyum/knowledge/math_education.py`, 777 lines that resolved
+  `Path("..") / "math-education"`, ran `git rev-parse HEAD` against it, and put
+  the resulting `file://` prefix **into the agent's fetch allowlist**.
+
+Four validators reached outside the checkout in code, one of them defaulting to
+`~/projects/personal/math-education/graph` — an absolute path into one machine's
+home directory, in a tracked file.
+
+**Not internalized, deliberately.** Re-pointing the 24 edges at local
+`C:factorial`-style entities keeps their shape and moves their semantics
+nowhere: an axeyum-local `C:factorial` means "whatever the sibling means", with
+nobody here to adjudicate it. That is the coupling laundered through a rename,
+and it would pass the new gate while the authority still lived elsewhere.
+ADR-0553 records the prerequisite instead: **a concept vocabulary this
+repository owns is required before a `formalizes` edge can mean anything**, and
+the three guards that went with that relation must return with it.
+
+The gate names mechanisms, not repositories, so a different sibling is caught
+too: the external-declaration vocabulary (including inside a schema enum), any
+`..` path segment in any string, a 40-hex revision under a key not in a registry
+that says which repository it pins, and source that builds a path out of the
+checkout across `scripts/`, `python/` and `tools/`. Measured: **1,885 artifacts,
+159,474 strings, findings=0** here — and **64 findings** over the four real
+pre-change artifacts read from `56eaab2cc`, which is the positive control. R4
+restored the deleted 777-line module and fired on its first constant.
+
+R3 does **not** forbid a foreign pin — Mathlib, the Lean toolchain and
+lean4export are pinned on purpose. It forbids an *undeclared* one.
+
+**Next, and it is the largest known gap:** 1,174 absolute paths in
+`artifacts/**` are deliberately uncovered. They record where a measurement
+physically ran (`/nas3/...`, `/home/mjbommar/lean-import-scale/...`), which is
+provenance rather than a dependency, and forbidding them is a separate policy
+question with a 1,174-row blast radius. If that policy is wanted, it is its own
+ADR and its own lane.
+
+Two downstream artifacts went **structurally empty** when the `formalizes`
+links went, and were reduced rather than left reporting zero — the concept
+coverage projection's validator had degenerated to comparing two empty sets, a
+check that cannot fail. Ten of fifteen census rows are now *named* instead of
+printed as zeroes.
+
 **Gap #4 diagnosed; "multi-year catch-up" confirmed for the search, and the
 sizing corrected three ways (`DONE`, agent-nia-diagnosis, 2026-08-21).**
 [Gap analysis](docs/plan/gap-analysis-smt-solvers-2026-08-21.md) §9 row 4 →
@@ -2103,6 +2174,41 @@ HEAD move, a staged file, and an untracked leftover, and to stay quiet otherwise
 Not pushed. The research record is exported to
 `../lemire-half-degree-irreducibles` (`f7181da`, 768 files) and every source tip
 is pinned under `archive/*` in this repository.
+
+**Theorem correspondences (`WIP`, agent-correspondence-model, 2026-08-24).** The
+data model can now state that two settled facts are the same mathematical
+content, and cannot state it where `depends_on` belongs
+([ADR-0546](docs/research/09-decisions/adr-0546-theorem-correspondences-are-not-proof-dependencies.md)).
+`artifacts/correspondences/*.json`, one file per adjudication on the
+`artifacts/facts/` pattern, gated by `scripts/validate-correspondences.py`
+(`just correspondences`; 39 mutations, 39 killed, one test each). Three
+instances landed, all `route-recorded`.
+
+**Next**, and the ordering is deliberate. (1) **The 20 cross-carrier ℕ/ℤ pairs
+already in the ledger** — `modeq-*` (13 of them), `fib-*`, `gcd-greatest`,
+`add-modeq-*`. The carrier-erasure check makes each cheap to adjudicate and
+impossible to fake, and some will be **refused** as `depends_on` dependencies,
+which is the useful half of the answer. (2) **A fact for `Int.fib_cassini` and a
+fact for `Rat.det2_mul`** — see the blocker below; the correspondence between
+them is one JSON file once they exist. (3) `null` `via` refs are a named
+backlog: `Int.ofNat` injectivity, `↑a ∣ ↑b ↔ a ∣ b`, and the two CPoint/SMT-real
+carrier steps are each a missing fact that three correspondences point at.
+
+**Blocked, and worth someone's attention beyond this lane.**
+`artifacts/autogenesis/kernel-dependency-projection-v1.json` is STALE against
+theorems that landed the same day it was refreshed:
+`git merge-base --is-ancestor aa3e8ea24 e256492c2` is **false**, so the refresh
+at `e256492c2` predates the linear-algebra commit. It holds 195 `Rat.*`
+declarations and zero `det2`, zero `cramer`, zero `fib`. Every
+`kernel-declaration` endpoint anywhere in the knowledge overlay inherits that
+blind spot, and refreshing it needs a workspace `cargo run` this lane could not
+justify in a tree five lanes are editing.
+
+Two pre-existing gates are red for reasons this lane did not cause and did not
+fix: `check-control-registration.sh` reports `py_orphans` 199 → 203 (all
+`test_analyze_*`, committed by other lanes), and `check-aggregate-scope.sh`
+reports a long standing `just-only` list of autogenesis steps. The new gate is
+on **both** sides and adds no divergence.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible
 version-1 sidecar joins existing facts and operations to reusable capabilities
@@ -3434,21 +3540,22 @@ school-and-olympiad, adversarial along the *shape* axis but not the
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
 [`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01-03 are
-landed on `main` through A7: the binding crate, the seven Python
-submodules (1,026 tests), the fail-closed episode checker, the tactic
-catalog, the frontier agent, the deferred-approval checker loop that
-**closed the loop** (two `Nat.ModEq` facts proved by a model-chosen plan and
-re-derived in a second kernel), the obstruction graph (12 clusters / 19
-facts; largest removable by an existing capability), and the mobility
-census (only 4 of 191 open facts have a frozen export -- the measured
-bottleneck). A review's four blockers are fixed: `replay()` never
-conflates unavailable with failed and replays the front door's OWN model;
-documented submodule imports resolve; a CI Python job on 3.12-3.14; the S1
-clippy gate is green on nightly as well as stable. Open for a human: register
-an operation for the `Nat.ModEq` family so the two proofs can land in the
-ledger; the s5 export step; four real tactic-catalog reach disagreements
-(preconditions narrower than their accepted rows); joining the two
-obstruction populations (F3).
+complete on `main`; the quality goal (`10-quality-best-practices.md`,
+sourced against PyO3 0.29 / maturin / pyo3-stub-gen / Hypothesis guidance)
+has landed Q1-Q4: 73 hypothesis property tests against independent
+references (which found and fixed a replay that certified an EMPTY
+assertion stack on the parser's word-only fallback), 8 Rust-side unit tests,
+a `ty` ratchet; the zero-copy audit and `solve_smtlib_with_model` (the
+front door now returns its own arena and model -- `smt.solve` 2.22x faster
+on `sat`, replay of the deciding run, no second solve), `cast` over
+`extract` in 13 `__eq__`s, the CAS detaching, bytes accessors for proofs;
+release wheels (abi3 + 3.14t + sdist, smoke-installed before any publish);
+the eight open tier-R rows -- `PYTHON_COVERAGE|...|tier_r_unreferenced=0`.
+Gate at `7c01fa0bd`: pytest 1,209 passed / 15 skipped, clippy 0 on nightly
+and stable. In flight: Q5 typed stubs via pyo3-stub-gen behind an off-by-
+default feature, with `stubtest` and an `Any` ratchet. Next: Q6 (derive
+`eq`/`hash`/`str`; make `Config`/`Incremental` `Sync` so `unsendable` and
+then `gil_used = true` can go).
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)

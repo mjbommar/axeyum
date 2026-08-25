@@ -32,9 +32,9 @@
   },
   "$defs": {
     "entityKind": {
+      "description": "Every kind here must be supplied by some local namespace. The educational vocabulary (concept, encounter, technique, curriculum-node) and `external-declaration` were removed by ADR-0553: they were only ever resolvable against a sibling repository, and this overlay may not name one.",
       "enum": [
-        "concept", "encounter", "technique", "curriculum-node", "fact",
-        "kernel-declaration", "external-declaration", "operation", "producer",
+        "fact", "kernel-declaration", "operation", "producer",
         "checker", "capability", "obstruction", "episode", "evidence-artifact",
         "representation"
       ]
@@ -45,10 +45,18 @@
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-        "kind": { "enum": ["local-repository", "external-repository", "external-artifact"] },
+        "kind": {
+          "description": "Local only. ADR-0553 forbids this overlay from declaring an external repository or artifact.",
+          "enum": ["local-repository", "local-artifact"]
+        },
         "revision_policy": { "enum": ["live-worktree", "pinned"] },
         "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-        "path_hint": { "type": "string", "minLength": 1 },
+        "path_hint": {
+          "description": "A path INSIDE this checkout. `..` segments and absolute paths are refused (ADR-0553): a path that escapes the checkout is a dependency on something this repository does not own.",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
         "license_note": { "type": "string", "minLength": 1 }
       },
       "allOf": [
@@ -69,7 +77,10 @@
           "type": "array", "minItems": 1, "uniqueItems": true,
           "items": { "$ref": "#/$defs/entityKind" }
         },
-        "resolution": { "enum": ["overlay-entity", "local-required", "external-pinned"] },
+        "resolution": {
+          "description": "Local only. `external-pinned` was removed by ADR-0553.",
+          "enum": ["overlay-entity", "local-required"]
+        },
         "path": { "type": "string", "minLength": 1 },
         "id_pattern": { "type": "string", "minLength": 1 },
         "notes": { "type": "string" }
@@ -82,8 +93,7 @@
       "properties": {
         "namespace": { "type": "string" },
         "kind": { "$ref": "#/$defs/entityKind" },
-        "id": { "type": "string", "minLength": 1 },
-        "source_revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+        "id": { "type": "string", "minLength": 1 }
       }
     },
     "relationType": {

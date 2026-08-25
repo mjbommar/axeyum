@@ -18,7 +18,6 @@ submodule            canonical authority
 :mod:`nursery`       ``scripts/check-autogenesis-holdout-isolation.py``
 :mod:`claims`        ``scripts/validate-claims.py``
 :mod:`concepts`      ``scripts/validate-foundational-concepts.py``
-:mod:`math_education` the overlay pin + ``git rev-parse HEAD``
 :mod:`autogenesis`   shape classification (``kind`` has 707 values)
 :mod:`generated`     the dashboards' own headers
 ===================  ===============================================
@@ -30,8 +29,7 @@ Three rules hold everywhere in this package:
    :class:`FileNotFoundError` naming the path; an accessor asked about a subject
    it cannot find raises :class:`KeyError`.
 2. **A refusal is a value.** ``refused-no-admissible-candidate`` from the
-   frontier, ``unavailable`` / ``off-pin`` from the sibling graph, and a decline
-   from a producer are answers, not exceptions.
+   frontier and a decline from a producer are answers, not exceptions.
 3. **Partition questions are answered by partition, never by a count.** The
    nursery's dependency-ready set and its train+development set are both 138 and
    are different sets.
@@ -46,7 +44,6 @@ from . import (
     facts,
     frontier,
     generated,
-    math_education,
     nursery,
     operations,
     overlay,
@@ -62,7 +59,6 @@ __all__ = [
     "facts",
     "frontier",
     "generated",
-    "math_education",
     "nursery",
     "operations",
     "overlay",

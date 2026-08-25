@@ -1774,12 +1774,13 @@ SUITES["agent-episode"] = (
 #   tactic with no measured accepted or declined goal is a name. Neither can be
 #   caught by validating fields; both are census properties of the whole file.
 #
-#   `technique` is covered by a HERMETIC fixture (a stand-in sibling checkout
-#   with a patched revision), not by the live `../math-education`. Under this
-#   harness the subject runs from a scratch copy where the real sibling is not
-#   beside it, so a live-sibling test would SKIP here and report the guard as a
-#   survivor -- the "an empty result from a tool never pointed at your subject"
-#   trap, one level up.
+#   The two technique-RESOLUTION anchors are gone (ADR-0553). They covered a
+#   pin against `../math-education` and a stat of its `graph/techniques/*.md`,
+#   both removed with the coupling; their hermetic fixture existed because the
+#   live sibling is not beside a scratch copy, which was the right fix for the
+#   wrong problem -- the guard should not have reached outside the checkout at
+#   all. What replaces them refuses the fields: `uses_technique` takes exactly
+#   `id`, and the overlay may declare no external source.
 SUITES["tactic-catalog"] = (
     "scripts/validate-tactic-catalog.py",
     "scripts.tests.test_validate_tactic_catalog",
@@ -1815,14 +1816,14 @@ SUITES["tactic-catalog"] = (
             "        if False:",
         ),
         (
-            "the technique pin must be the overlay's pin",
-            "        if overlay_pin is not None and revision != overlay_pin:",
-            "        if False:",
+            "uses_technique takes exactly id -- no source, no revision",
+            '    if not isinstance(technique, dict) or set(technique) != {"id"}:',
+            "    if False:",
         ),
         (
-            "a pinned technique must resolve to a file",
-            "            if not target.is_file():",
-            "            if False:",
+            "the overlay may declare no external source",
+            '        if isinstance(source, dict) and source.get("kind", "").startswith("external"):',
+            "        if False:",
         ),
         (
             "residual shape and measure are \"none\" together",
@@ -1848,6 +1849,75 @@ SUITES["tactic-catalog"] = (
             "the precondition predicate vocabulary",
             '    if kind not in PREDICATES:\n        err(errors, "schema", f"{where}: unknown predicate kind {kind!r}")\n        return',
             "    if kind not in PREDICATES:\n        return",
+        ),
+    ],
+)
+
+# The external-coupling gate (ADR-0553).
+#
+# This gate exists because the owner's "math-education is reference only" rule
+# had NO gate, and by the time anyone looked it had been violated in five places
+# at once. A gate born from an ungated guarantee had better not be one itself.
+#
+# `R1`, `R2` and `R3` each have ONE control asserting every value that guard must
+# catch, via `subTest`. Three separate tests per guard would all die together and
+# report a shared rejection path as thorough coverage.
+#
+# The vacuity guards are driven through `vacuity()` rather than `main()` for the
+# same reason: routed through `main()` all three fail together, so one mutation
+# kills three tests. Extracting the function was what made them separable.
+#
+# Expected SURVIVORS under these mutations, by design -- they are acceptance
+# cases, and deleting a guard makes them pass more easily:
+#   test_a_registered_local_key_is_accepted
+#   test_a_registered_foreign_import_is_accepted
+#   test_a_local_path_containing_two_dots_is_not_rejected
+#   test_a_healthy_scan_is_not_a_finding
+# They exist to stop the opposite failure: a rule so broad it rejects Mathlib's
+# deliberate pin, or every version string in the tree.
+SUITES["external-coupling"] = (
+    "scripts/check-external-coupling.py",
+    "scripts.tests.test_check_external_coupling",
+    [
+        (
+            "R1 the external-declaration vocabulary",
+            "        if value in EXTERNAL_VOCABULARY:",
+            "        if False:",
+        ),
+        (
+            "R2 a path segment that escapes the checkout",
+            "        if DOTDOT.search(value):",
+            "        if False:",
+        ),
+        (
+            "R3 a revision pin under an unregistered key",
+            "        if HEX40.match(value) and key not in REVISION_KEYS:",
+            "        if False:",
+        ),
+        (
+            "R4 source that builds a path out of the checkout",
+            "            if needle in code:",
+            "            if False:",
+        ),
+        (
+            "vacuity: zero artifacts scanned",
+            "    if files == 0:",
+            "    if False:",
+        ),
+        (
+            "vacuity: zero strings examined",
+            "    if strings == 0:",
+            "    if False:",
+        ),
+        (
+            "vacuity: zero scripts scanned",
+            "    if script_files == 0:",
+            "    if False:",
+        ),
+        (
+            "the exit status depends on the finding",
+            "    return 1 if findings else 0",
+            "    return 0",
         ),
     ],
 )

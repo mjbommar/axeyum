@@ -24,10 +24,22 @@ in `scripts/tests/test_check_reachability_census.py` -- deliberately not one
 shared validity check with eight callers, which is the shape this repository
 found six-of-seven guards removable behind.
 
-Coverage before zeroes: the sibling `math-education` checkout is not part of
-this repository, so [`corpus_coverage`] reports SKIPPED rather than passing
-when it is absent. An empty result from a tool that was never pointed at the
-corpus is not evidence that the corpus agrees.
+Coverage before zeroes: the reference corpus is not part of this repository, so
+[`corpus_coverage`] reports SKIPPED rather than passing when it is absent. An
+empty result from a tool that was never pointed at the corpus is not evidence
+that the corpus agrees.
+
+ADR-0553: THE DEFAULT PATH IS GONE. This module used to fall back to
+`~/projects/personal/math-education/graph` -- an absolute path, into a named
+sibling checkout, on one particular machine, written into a tracked file. That
+is the repository pointing at something it does not own, and it is the exact
+shape the coupling gate now refuses. The cross-check itself is still available
+and still useful, but the operator supplies the path:
+
+    AXEYUM_MATH_EDUCATION_GRAPH=/path/to/graph python3 scripts/check-reachability-census.py
+
+Reading a reference corpus when a human points you at one is a citation. Storing
+where to find it is a dependency.
 """
 
 from __future__ import annotations
@@ -43,14 +55,10 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 CENSUS = ROOT / "artifacts/reachability/r3-census.tsv"
 DOC = ROOT / "docs/mathematics-2026-08/04-reachability.md"
 
-# The sibling content repository. Not a dependency of this repository, and not
-# required for the gate -- see `corpus_coverage`.
-CORPUS_ROOT = pathlib.Path(
-    os.environ.get(
-        "AXEYUM_MATH_EDUCATION_GRAPH",
-        os.path.expanduser("~/projects/personal/math-education/graph"),
-    )
-)
+# An OPTIONAL reference corpus, supplied by the operator. There is deliberately
+# no default: see the module docstring, and ADR-0553.
+_CORPUS_ENV = os.environ.get("AXEYUM_MATH_EDUCATION_GRAPH", "").strip()
+CORPUS_ROOT = pathlib.Path(_CORPUS_ENV) if _CORPUS_ENV else None
 CORPUS_DIR = {"misconception": "misconceptions", "technique": "techniques"}
 
 CLASSES = ("A", "B", "C", "DEP")
@@ -147,7 +155,7 @@ def corpus_coverage(rows: list[dict[str, str]]) -> tuple[list[str], bool]:
     that the census never classified. The second is the one that matters --
     a census silently missing rows is exactly how the count drifted before.
     """
-    if not CORPUS_ROOT.is_dir():
+    if CORPUS_ROOT is None or not CORPUS_ROOT.is_dir():
         return [], False
     failures: list[str] = []
     for corpus, directory in CORPUS_DIR.items():

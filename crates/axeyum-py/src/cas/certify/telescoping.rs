@@ -435,8 +435,8 @@ impl CheckOptions {
 
     /// `{variable: [point, ...]}`.
     #[getter]
-    fn samples(&self) -> BTreeMap<String, Vec<i64>> {
-        self.inner.samples.clone()
+    fn samples(&self) -> &BTreeMap<String, Vec<i64>> {
+        &self.inner.samples
     }
 
     fn __repr__(&self) -> String {
@@ -478,8 +478,8 @@ impl ClosedFormReport {
     /// A nonempty list breaks the induction; the checker rejects rather than
     /// reports it, so a verified report always has this empty.
     #[getter]
-    fn leading_zeros(&self) -> Vec<i64> {
-        self.leading_zeros.clone()
+    fn leading_zeros(&self) -> &[i64] {
+        &self.leading_zeros
     }
 
     fn __repr__(&self) -> String {
@@ -589,9 +589,14 @@ impl TelescopingCertificate {
     }
 
     fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        // `cast` + `get`, never `extract`: `extract` on a `#[pyclass]` CLONES the
+        // whole wrapped value -- an entire expression tree or certificate -- to
+        // compare it and then drops it, and builds a `TypeError` object for the
+        // ordinary `NotImplemented` case. `frozen` makes `Bound::get` a borrow
+        // with no runtime borrow check at all.
         other
-            .extract::<TelescopingCertificate>()
-            .is_ok_and(|other| other.inner == self.inner)
+            .cast::<TelescopingCertificate>()
+            .is_ok_and(|other| other.get().inner == self.inner)
     }
 
     fn __repr__(&self) -> String {

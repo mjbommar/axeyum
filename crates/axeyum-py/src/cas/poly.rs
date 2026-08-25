@@ -73,9 +73,14 @@ impl Monomial {
     }
 
     fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        // `cast` + `get`, never `extract`: `extract` on a `#[pyclass]` CLONES the
+        // whole wrapped value -- an entire expression tree or certificate -- to
+        // compare it and then drops it, and builds a `TypeError` object for the
+        // ordinary `NotImplemented` case. `frozen` makes `Bound::get` a borrow
+        // with no runtime borrow check at all.
         other
-            .extract::<Monomial>()
-            .is_ok_and(|other| other.inner == self.inner)
+            .cast::<Monomial>()
+            .is_ok_and(|other| other.get().inner == self.inner)
     }
 
     fn __hash__(&self) -> u64 {
@@ -330,9 +335,14 @@ impl MvPoly {
     }
 
     fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        // `cast` + `get`, never `extract`: `extract` on a `#[pyclass]` CLONES the
+        // whole wrapped value -- an entire expression tree or certificate -- to
+        // compare it and then drops it, and builds a `TypeError` object for the
+        // ordinary `NotImplemented` case. `frozen` makes `Bound::get` a borrow
+        // with no runtime borrow check at all.
         other
-            .extract::<MvPoly>()
-            .is_ok_and(|other| other.inner == self.inner)
+            .cast::<MvPoly>()
+            .is_ok_and(|other| other.get().inner == self.inner)
     }
 
     fn __repr__(&self) -> String {
@@ -421,9 +431,14 @@ impl MultiPoly {
     }
 
     fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        // `cast` + `get`, never `extract`: `extract` on a `#[pyclass]` CLONES the
+        // whole wrapped value -- an entire expression tree or certificate -- to
+        // compare it and then drops it, and builds a `TypeError` object for the
+        // ordinary `NotImplemented` case. `frozen` makes `Bound::get` a borrow
+        // with no runtime borrow check at all.
         other
-            .extract::<MultiPoly>()
-            .is_ok_and(|other| other.inner == self.inner)
+            .cast::<MultiPoly>()
+            .is_ok_and(|other| other.get().inner == self.inner)
     }
 
     fn __repr__(&self) -> String {

@@ -22,9 +22,9 @@ use axeyum_smtlib::{
     parse_script_within,
 };
 use axeyum_solver::smtlib::{
-    solve_smtlib, solve_smtlib_get_assertions, solve_smtlib_get_assignment, solve_smtlib_get_info,
+    SmtLibSolved, solve_smtlib_get_assertions, solve_smtlib_get_assignment, solve_smtlib_get_info,
     solve_smtlib_get_option, solve_smtlib_get_proof, solve_smtlib_get_value,
-    solve_smtlib_incremental, solve_smtlib_unsat_core,
+    solve_smtlib_incremental, solve_smtlib_unsat_core, solve_smtlib_with_model,
 };
 use axeyum_solver::{
     BitLoweringMode, CheckResult, Model, SmtLibResponse, SolverConfig, SolverError, check_model,
@@ -209,8 +209,8 @@ impl Outcome {
 
     /// Why `replay()` would raise, or `None` when it is available.
     #[getter]
-    fn replay_unavailable_reason(&self) -> Option<String> {
-        self.replay_unavailable.clone()
+    fn replay_unavailable_reason(&self) -> Option<&str> {
+        self.replay_unavailable.as_deref()
     }
 
     fn __repr__(&self) -> String {
@@ -275,26 +275,91 @@ fn solve(
         prove_unsat,
         preprocess,
     );
-    let outcome = py
-        .detach(|| solve_smtlib(script, &config))
+    // ONE front-door call. `solve_smtlib_with_model` IS the front door --
+    // `solve_smtlib` is a projection of it -- and it hands back the arena the
+    // decided terms live in, the assertion stack that was decided, and that run's
+    // own model. So the replay re-checks exactly what was decided, and the second
+    // solve this function used to pay on every `sat` is gone.
+    let solved = py
+        .detach(|| {
+            let solved = solve_smtlib_with_model(script, &config)?;
+            Ok::<_, SolverError>(finish(solved, script, &config))
+        })
         .map_err(map_solver_error)?;
+    let Finished {
+        status,
+        logic,
+        expected_status,
+        detail,
+        replay,
+        replay_unavailable,
+        named,
+    } = solved;
 
-    let (status, detail) = match &outcome.result {
+    Ok(Outcome {
+        status,
+        logic,
+        expected_status,
+        detail,
+        model: model_dict(py, &named)?.unbind(),
+        replay,
+        replay_unavailable,
+    })
+}
+
+/// Everything `solve` derives from one front-door run without holding the GIL.
+///
+/// Split out so the whole Rust half -- solving, the quantifier check, the model
+/// completion and the packed-string lift -- happens inside a single
+/// [`Python::detach`], rather than re-attaching between phases.
+struct Finished {
+    status: &'static str,
+    logic: Option<String>,
+    expected_status: Option<String>,
+    detail: String,
+    replay: Option<ReplayState>,
+    replay_unavailable: Option<String>,
+    named: Vec<(String, Value)>,
+}
+
+/// Turns one [`SmtLibSolved`] into the parts an [`Outcome`] is built from.
+fn finish(solved: SmtLibSolved, input: &str, config: &SolverConfig) -> Finished {
+    let (status, detail) = match &solved.outcome.result {
         CheckResult::Sat(_) => ("sat", String::new()),
         CheckResult::Unsat => ("unsat", String::new()),
         CheckResult::Unknown(reason) => ("unknown", format!("{reason:?}")),
     };
-
-    // The front door returns a verdict, not an arena -- and the canonical replay
-    // needs the arena the original terms live in. So on `sat` the front door's
-    // own model lift (`solve_smtlib_model`, the same route) is run once more and
-    // laid onto the parsed script's arena, kept alive inside the `Outcome`. It
-    // costs a second front-door call on `sat`; removing that needs a Rust entry
-    // point returning verdict, arena, assertions and model together.
+    let SmtLibSolved {
+        outcome,
+        mut script,
+        assertions,
+        model,
+    } = solved;
     let (replay, replay_unavailable, named) = if status == "sat" {
-        match py.detach(|| build_replay_state(script, &config)) {
+        // The ONE remaining case that costs a second front-door call, and it is
+        // narrow: a source-level string/FP route decides against the RAW SMT-LIB
+        // expressions and never builds the flat arena view, so `solved.model` is
+        // `None` and there is nothing over the parsed assertions to re-check.
+        // Re-lifting through `solve_smtlib_model` recovers a packed model on the
+        // encoded view -- the pre-existing behaviour, kept because replaying a
+        // source witness against the PACKED assertions would report `False`, the
+        // documented soundness signal, whenever the encoding's abstraction
+        // symbols complete to a different value than the source route assumed.
+        let built = match replay_state(&mut script, assertions, model) {
+            Ok(pair) => Ok(pair),
+            Err(_) => relift_replay_state(input, config),
+        };
+        match built {
             Ok((state, named)) => (Some(state), None, named),
-            Err(reason) => (None, Some(reason), Vec::new()),
+            // Nothing to re-check, but the route still DECIDED, and its witness
+            // is in the verdict. Report the assignment it found rather than an
+            // empty dictionary: what is unavailable is the re-check, not the
+            // model.
+            Err(reason) => (
+                None,
+                Some(reason),
+                source_route_model(&script, &outcome.result),
+            ),
         }
     } else {
         (
@@ -303,16 +368,15 @@ fn solve(
             Vec::new(),
         )
     };
-
-    Ok(Outcome {
+    Finished {
         status,
         logic: outcome.logic,
         expected_status: outcome.expected_status,
         detail,
-        model: model_dict(py, &named)?.unbind(),
         replay,
         replay_unavailable,
-    })
+        named,
+    }
 }
 
 /// Builds the front-door configuration from the shared keyword set.
@@ -339,13 +403,16 @@ fn script_config(
     config
 }
 
-/// Re-solves `input` through [`axeyum_solver::solve`] to recover the arena, the
-/// active assertion stack, and the model.
+/// Recovers a replay state by RE-LIFTING the query on the bounded encoding.
 ///
-/// Returns `None` when the script is not a single-query script, fails to parse,
-/// or does not come back `sat` on this route — all of which leave the caller
-/// with an empty model and a `replay()` of `False` rather than a wrong answer.
-fn build_replay_state(
+/// The single narrow fallback described at the call site: it costs a second
+/// front-door call and is reached only when the verdict came from a
+/// source-level route, which builds no flat model. Everything else replays
+/// straight out of the run that decided.
+///
+/// Returns `Err` with a human reason when there is genuinely nothing to replay,
+/// rather than inventing a model.
+fn relift_replay_state(
     input: &str,
     config: &SolverConfig,
 ) -> Result<(ReplayState, Vec<(String, Value)>), String> {
@@ -391,11 +458,6 @@ fn build_replay_state(
             axeyum_ir::render(&script.arena, term)
         ));
     }
-    // The SAME route the verdict came from (`solve_smtlib_model` is the front
-    // door plus a model lift), not `axeyum_solver::solve`, which can decide a
-    // different way -- measured 2026-08-24: a quantified `LIA` query was `sat`
-    // by both routes, and `solve`'s model, replayed, said `False` for a reason
-    // that had nothing to do with soundness.
     let lifted = axeyum_solver::smtlib::solve_smtlib_model(input, config)
         .map_err(|error| format!("front-door model lift failed: {error}"))?
         .ok_or_else(|| "the front door produced no liftable model for this `sat`".to_owned())?;
@@ -417,21 +479,7 @@ fn build_replay_state(
         };
         model.set_function(id, func.clone());
     }
-    // Symbols the front door left unconstrained get the same well-founded
-    // default the solver's own completion uses, so `check_model` sees a total
-    // assignment. A symbol with no well-founded default is left unassigned and
-    // `check_model` reports it, rather than this code inventing a value.
-    let unassigned: Vec<(SymbolId, Sort)> = script
-        .arena
-        .symbols()
-        .filter(|(symbol, _, _)| model.get(*symbol).is_none())
-        .map(|(symbol, _, sort)| (symbol, sort))
-        .collect();
-    for (symbol, sort) in unassigned {
-        if let Some(value) = axeyum_ir::well_founded_default(&script.arena, sort) {
-            model.set(symbol, value);
-        }
-    }
+    complete_with_defaults(&script, &mut model);
     let named = named_constants(&script, &model);
     let arena = std::mem::take(&mut script.arena);
     Ok((
@@ -508,29 +556,11 @@ fn encode_packed_string(width: u32, bytes: &[u8]) -> Option<u128> {
     Some((content << lw) | u128::from(len))
 }
 
-/// Whether `term`'s DAG contains a `forall`/`exists` node.
-fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
-    let mut stack = vec![term];
-    let mut seen = std::collections::HashSet::new();
-    while let Some(current) = stack.pop() {
-        if !seen.insert(current) {
-            continue;
-        }
-        if let axeyum_ir::TermNode::App { op, args } = arena.node(current) {
-            if matches!(op, axeyum_ir::Op::Forall(_) | axeyum_ir::Op::Exists(_)) {
-                return true;
-            }
-            stack.extend(args.iter().copied());
-        }
-    }
-    false
-}
-
 /// The assertion stack active at the script's `check-sat`, honoring
 /// `push`/`pop`, `check-sat-assuming` and `reset-assertions`.
 ///
-/// This mirrors the solver's own private `smtlib_single_query`. A script with no
-/// `check-sat` decides its whole flat stack, matching the front door.
+/// Used only by the re-lift fallback; the ordinary path takes the stack the
+/// front door actually decided, so the two can no longer disagree.
 fn active_assertions(script: &Script) -> Vec<TermId> {
     let mut stack: Vec<TermId> = Vec::new();
     let mut scopes: Vec<usize> = Vec::new();
@@ -565,6 +595,137 @@ fn active_assertions(script: &Script) -> Vec<TermId> {
         }
     }
     queried.unwrap_or(stack)
+}
+
+/// Gives every symbol the model left unconstrained the solver's own
+/// well-founded default, so `check_model` sees a total assignment.
+///
+/// A symbol with no well-founded default is left unassigned and `check_model`
+/// reports it, rather than this code inventing a value.
+fn complete_with_defaults(script: &Script, model: &mut Model) {
+    let unassigned: Vec<(SymbolId, Sort)> = script
+        .arena
+        .symbols()
+        .filter(|(symbol, _, _)| model.get(*symbol).is_none())
+        .map(|(symbol, _, sort)| (symbol, sort))
+        .collect();
+    for (symbol, sort) in unassigned {
+        if let Some(value) = axeyum_ir::well_founded_default(&script.arena, sort) {
+            model.set(symbol, value);
+        }
+    }
+}
+
+/// The user-facing model for a `sat` the source-level string routes decided.
+///
+/// Those routes reason over the SOURCE expressions, so their witness binds the
+/// `!weq!<name>` sequence symbols the parser shares between the word skeleton
+/// and the word problem -- not the packed bit-vector the declared `String`
+/// lowered to, which stays unbound. Reading the packed symbol alone (what
+/// `named_constants` does) therefore reports `{}` for a query that was decided
+/// with a witness in hand.
+///
+/// Keyed on `Script::declared_strings` and on the parser's own `!weq!` naming,
+/// never on sort or width: a `Seq` bound to some other internal symbol is not
+/// this variable's value, and reporting it would be a wrong model rather than a
+/// missing one.
+fn source_route_model(script: &Script, result: &CheckResult) -> Vec<(String, Value)> {
+    let CheckResult::Sat(model) = result else {
+        return Vec::new();
+    };
+    script
+        .model_symbols
+        .iter()
+        .filter_map(|&symbol| {
+            let (name, _sort) = script.arena.symbol(symbol);
+            if let Some(value) = model.get(symbol) {
+                return Some((
+                    name.to_owned(),
+                    render_declared_string(script, symbol, value),
+                ));
+            }
+            if !script.declared_strings.iter().any(|&(s, _)| s == symbol) {
+                return None;
+            }
+            // The word route's own binding, already a `Seq` of code points --
+            // the same shape `render_declared_string` produces from a packing.
+            let word = script.arena.find_internal_symbol(&format!("!weq!{name}"))?;
+            let value @ Value::Seq(_) = model.get(word)? else {
+                return None;
+            };
+            Some((name.to_owned(), value))
+        })
+        .collect()
+}
+
+/// Assembles the replay state from ONE front-door run.
+///
+/// No solving happens here: `assertions` and `model` are what
+/// [`solve_smtlib_with_model`] just decided, and both index `script.arena`, so
+/// the [`check_model`] this feeds re-checks exactly the run that produced the
+/// verdict. The old shape of this function re-solved the script to recover an
+/// arena, which cost a second front-door call on every `sat` AND let the replay
+/// be built from a different route than the one that answered.
+///
+/// Returns `Err` with a human reason for the cases that genuinely have nothing
+/// to replay rather than inventing one.
+fn replay_state(
+    script: &mut Script,
+    assertions: Vec<TermId>,
+    model: Option<Model>,
+) -> Result<(ReplayState, Vec<(String, Value)>), String> {
+    // A source-level string/FP route decides against the RAW SMT-LIB expressions
+    // and replays its own witness there; it never builds the flat arena view, so
+    // there is no assignment to the parsed assertions to re-check. Saying so is
+    // the honest answer -- `check_model` against the empty assertion list would
+    // return `true` for a query the flat view never saw.
+    let Some(mut model) = model else {
+        return Err(
+            "the front door decided this on a route that builds no flat assertion view (a \
+             source-level string or floating-point route), so there is no model over the \
+             parsed arena to re-check"
+                .to_owned(),
+        );
+    };
+    if let Some(term) = assertions
+        .iter()
+        .copied()
+        .find(|&term| contains_quantifier(&script.arena, term))
+    {
+        return Err(format!(
+            "assertion {} is quantified; the ground evaluator cannot decide a quantifier, so a `sat` here is not replayable through `check_model`",
+            axeyum_ir::render(&script.arena, term)
+        ));
+    }
+    complete_with_defaults(script, &mut model);
+    let named = named_constants(script, &model);
+    let arena = std::mem::take(&mut script.arena);
+    Ok((
+        ReplayState {
+            arena,
+            assertions,
+            model,
+        },
+        named,
+    ))
+}
+
+/// Whether `term`'s DAG contains a `forall`/`exists` node.
+fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
+    let mut stack = vec![term];
+    let mut seen = std::collections::HashSet::new();
+    while let Some(current) = stack.pop() {
+        if !seen.insert(current) {
+            continue;
+        }
+        if let axeyum_ir::TermNode::App { op, args } = arena.node(current) {
+            if matches!(op, axeyum_ir::Op::Forall(_) | axeyum_ir::Op::Exists(_)) {
+                return true;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
 }
 
 /// The user-declared constants of `script` with their model values, in
@@ -1018,7 +1179,7 @@ impl PyScript {
                         "terms",
                         pairs
                             .iter()
-                            .map(|(text, term)| (text.clone(), ScriptTerm::new(self.epoch, *term)))
+                            .map(|(text, term)| (text.as_str(), ScriptTerm::new(self.epoch, *term)))
                             .collect::<Vec<_>>(),
                     )?;
                 }
@@ -1181,8 +1342,8 @@ mod tests {
     use axeyum_smtlib::{decode_packed_string, packed_string_max_len, parse_script};
 
     use super::{
-        build_replay_state, contains_quantifier, encode_packed_string, lift_onto_arena,
-        next_script_epoch, script_config,
+        contains_quantifier, encode_packed_string, lift_onto_arena, next_script_epoch,
+        relift_replay_state, script_config,
     };
 
     /// The widths for which the parser's packed-string layout is defined.
@@ -1316,7 +1477,7 @@ mod tests {
     ///
     /// The fallback builds no flat assertions, so `check_model` over its
     /// assertion stack returns `true` having checked nothing. Before the guard
-    /// in `build_replay_state`, this script came back `sat` with an empty model
+    /// in `relift_replay_state`, this script came back `sat` with an empty model
     /// and `replay() == True` -- a certification of nothing.
     #[test]
     fn a_word_only_fallback_parse_has_no_replay_state() {
@@ -1333,7 +1494,7 @@ mod tests {
         );
 
         let config = script_config(10_000, None, None, None, None, None, false, true);
-        let error = build_replay_state(script, &config)
+        let error = relift_replay_state(script, &config)
             .err()
             .expect("no replay state for a word-only fallback parse");
         assert!(error.contains("word-only"), "unexpected reason: {error}");

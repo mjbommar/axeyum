@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import os
 import re
+from pathlib import Path
 
 import pytest
 
@@ -115,26 +116,27 @@ def test_the_semantic_scholar_graph_endpoint_is_allowed() -> None:
     assert web.classify(S2_QUERY) == web.SOURCE_SEMANTIC_SCHOLAR
 
 
-def test_a_file_url_outside_the_sibling_is_refused(tmp_path) -> None:
+def test_any_file_url_is_refused(tmp_path) -> None:
+    """No local path is fetchable. ADR-0553 removed the one that ever was.
+
+    Until 2026-08-24 a `file://` URL under a pinned `../math-education`
+    checkout classified as an allowed source. That prefix is gone, so `file://`
+    now has no accepting branch at all -- including for a path inside this very
+    repository, which is what an escape would aim at.
+    """
     (tmp_path / "x.md").write_text("hello", encoding="utf-8")
     with pytest.raises(web.WebPolicyError):
         web.classify((tmp_path / "x.md").as_uri())
+    with pytest.raises(web.WebPolicyError):
+        web.classify(Path(__file__).resolve().as_uri())
 
 
-def test_the_allowlist_is_data_and_starts_with_the_two_remote_prefixes(root) -> None:
-    prefixes = web.allowed_prefixes(root)
-    assert prefixes[:2] == web.STATIC_ALLOWLIST
-    assert len(prefixes) in (2, 3)
-
-
-def test_the_sibling_prefix_appears_exactly_when_the_pin_holds(root) -> None:
-    """Off-pin is a refusal, not a near-miss: an unpinned corpus has no digest."""
-    from axeyum.knowledge import math_education as me_api
-
-    prefix = web.sibling_prefix(root)
-    assert (prefix is not None) == me_api.graph(root).pin_ok()
-    if prefix is not None:
-        assert prefix.startswith("file://") and prefix.endswith("/")
+def test_the_allowlist_is_exactly_the_two_remote_prefixes(root) -> None:
+    """The list is data, it is closed, and no root can widen it."""
+    assert web.allowed_prefixes(root) == web.STATIC_ALLOWLIST
+    assert len(web.STATIC_ALLOWLIST) == 2
+    assert web.allowed_prefixes(None) == web.STATIC_ALLOWLIST
+    assert all(prefix.startswith("https://") for prefix in web.allowed_prefixes(root))
 
 
 # --------------------------------------------------------------- family guard

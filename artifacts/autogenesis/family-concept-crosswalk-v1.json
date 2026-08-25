@@ -6,12 +6,9 @@
     "fact_catalog": {
       "path": "artifacts/autogenesis/mathlib-nat-int-fact-catalog-v1.json",
       "catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988"
-    },
-    "math_education": {
-      "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c",
-      "path_hint": "../math-education/graph/concepts"
     }
   },
+  "topic_vocabulary": "UNRESOLVED CITATION LABELS. The `C:` ids below name topics; they are not resolved, here or anywhere. Until 2026-08-24 this file carried `path_hint: ../math-education/graph/concepts` and a pin to that repository's commit `ce3e2a52e7`, which made a topic label into a dependency on a checkout this project does not own. ADR-0553 removed both. A label may be cited; a path and a revision tell you where to look and which version to use, and that is the difference.",
   "mappings": [
     {"family": "integer-fibonacci", "concept_id": "C:fibonacci-sequence", "assurance": "human-reviewed", "reason": "The catalog family groups statements whose formal surface is Int.fib and its recurrence-derived identities."},
     {"family": "integer-gcd", "concept_id": "C:greatest-common-divisor", "assurance": "human-reviewed", "reason": "The catalog family groups integer greatest-common-divisor, divisibility, and Bezout-form statements."},
