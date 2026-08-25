@@ -1668,6 +1668,13 @@ pub struct NatPrelude {
     /// at the diagonal's own `not` recovers "negation has no fixed point" —
     /// the seed of the halting argument's shape.
     pub cantor_no_fixed_point: NameId,
+    /// `Nat.dvd_two_pow_mul_classify : ∀ k q, (2 ≤ q ∧ ∀ c, dvd c q → Eq c 1
+    /// ∨ Eq c q) → ¬(dvd q 2) → ∀ d, dvd d (mul (pow 2 k) q) → (∃ i, Le i k
+    /// ∧ Eq d (pow 2 i)) ∨ (∃ i, Le i k ∧ Eq d (mul (pow 2 i) q))` — every
+    /// divisor of `2^k·q` (`q` prime) is either a power of `2` up to `2^k`
+    /// or that power times `q`. The Euclid IX.36 divisor-classification
+    /// blocker; see `perfect.rs`'s module doc for the proof route.
+    pub dvd_two_pow_mul_classify: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2097,6 +2104,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             cantor_diagonal: kernel.name_str(nat, "cantor_diagonal"),
             cantor_diagonal_neg: kernel.name_str(nat, "cantor_diagonal_neg"),
             cantor_no_fixed_point: kernel.name_str(nat, "cantor_no_fixed_point"),
+            dvd_two_pow_mul_classify: kernel.name_str(nat, "dvd_two_pow_mul_classify"),
         };
 
         let mut d = NatDev::new(kernel, p);
