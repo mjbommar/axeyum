@@ -1668,10 +1668,219 @@ pub(super) fn declare_dvd_two_pow_mul_classify(
     Ok(())
 }
 
+// ============================================================================
+// `Nat.pow_pos` / `Nat.pow_lt_pow_succ` — strict monotonicity of `pow` in the
+// exponent, for any base greater than `1`. Verified against the full
+// `--include-constructed` theorem inventory that neither existed anywhere in
+// this kernel: the only `pow`-adjacent order facts are `Nat.lt_pow_size` /
+// `Nat.size_aux_lt_pow` (bounds tied to the `size` function, not general
+// monotonicity) and `Nat.choose_le_two_pow` (binomial coefficients). This is
+// the blocker the module doc above names for `sumDivisors_two_pow`'s tail
+// sub-induction: the segment `(2^k, 2^(k+1))` argument needs `2^k <
+// 2^(k+1)`, a direct instance of `pow_lt_pow_succ` at base `2`.
+//
+// Chose the SUCCESSOR form (`pow b k < pow b (succ k)`) over a general
+// `pow_lt_pow_of_lt` (comparing two arbitrary exponents `i < j`): the tail
+// sub-induction only ever steps one exponent at a time, and the successor
+// form is what falls out directly from `pow`'s own recursive equation
+// (`pow b (succ k) ≡ mul (pow b k) b`, by iota) without an extra induction
+// on the exponent gap. A general form could be built later by induction on
+// that gap using this lemma as its step case, if a future use needs it.
+// ============================================================================
+
+/// `eq : Eq from to`, `proof : Lt zero from` ⊢ `Lt zero to` — local copy of
+/// `helpers.rs`'s `transport_dvd_left` pattern, specialized to `Lt zero ·`.
+fn transport_lt_zero(
+    d: &mut NatDev<'_>,
+    from: ExprId,
+    to: ExprId,
+    eq: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let motive = d.eq_motive(from, &|d, x| {
+        let zero = d.zero();
+        d.lt(zero, x)
+    });
+    d.transport(from, motive, proof, to, eq)
+}
+
+/// `ha : Lt zero a`, `hb : Lt zero b` ⊢ `Lt zero (mul a b)`.
+///
+/// Rewrites `b` to its succ-shape via [`pos_implies_succ_pred`], so `mul a
+/// b` unfolds by iota to `add (mul a (pred b)) a`; that sum is `≥ a` (`a ≤
+/// add a (mul a (pred b))` is [`super::NatPrelude::le_add_right`], commuted
+/// into position by `add_comm`), and `a > 0` closes it through
+/// `lt_of_lt_of_le`. No induction on `b` is needed — `pos_implies_succ_pred`
+/// already supplies the one successor layer this needs.
+fn positive_mul(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    ha: ExprId,
+    hb: ExprId,
+) -> ExprId {
+    let succ_pred_fn = pos_implies_succ_pred(d, p, b);
+    let eq_b = d.apply(succ_pred_fn, &[hb]); // Eq b (succ (pred b))
+    let pred_b = d.pred(b);
+    let succ_pred_b = d.succ(pred_b);
+
+    let mul_a_predb = d.mul(a, pred_b);
+    let lhs = d.add(mul_a_predb, a); // defeq `mul a succ_pred_b`
+    let rhs = d.add(a, mul_a_predb);
+    let comm = d.lemma(p.add_comm, &[mul_a_predb, a]); // Eq lhs rhs
+
+    let zero = d.zero();
+    let le_a_rhs = d.lemma(p.le_add_right, &[a, mul_a_predb]); // Le a rhs
+    let q_rhs = d.lemma(p.lt_of_lt_of_le, &[zero, a, rhs, ha, le_a_rhs]); // Lt zero rhs
+
+    let comm_rev = d.symm(lhs, rhs, comm); // Eq rhs lhs
+    let q_lhs = transport_lt_zero(d, rhs, lhs, comm_rev, q_rhs); // Lt zero lhs
+
+    // `q_lhs : Lt zero lhs`, and `lhs` is defeq `mul a succ_pred_b`, so it
+    // serves directly as the motive's refl case at `succ_pred_b` below.
+    let eq_b_rev = d.symm(b, succ_pred_b, eq_b); // Eq succ_pred_b b
+    let motive = d.eq_motive(succ_pred_b, &|d, x| {
+        let mx = d.mul(a, x);
+        let zero = d.zero();
+        d.lt(zero, mx)
+    });
+    d.transport(succ_pred_b, motive, q_lhs, b, eq_b_rev)
+}
+
+/// `Nat.pow_pos : ∀ b k, Lt zero b → Lt zero (pow b k)`, by induction on `k`.
+///
+/// Base (`k = 0`): `pow b zero ≡ succ zero` by iota, so `zero_lt_succ zero`
+/// closes it directly (`hb` unused, matching this file's own convention for
+/// an unused induction hypothesis — see [`pos_implies_succ_pred`]'s base
+/// case). Step: `pow b (succ j) ≡ mul (pow b j) b` by iota; apply the IH to
+/// `hb` for `Lt zero (pow b j)`, then [`positive_mul`] with `hb` again for
+/// positivity of `b` itself.
+pub(super) fn declare_pow_pos(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.pow_pos, 2, &|d, v| {
+        let b = v[0];
+        let k = v[1];
+        let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+            let zero = d.zero();
+            let hb_ty = d.lt(zero, b);
+            let px = d.pow(b, x);
+            let concl = d.lt(zero, px);
+            d.arrow(hb_ty, concl)
+        };
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let zero = d.zero();
+                let hb_ty = d.lt(zero, b);
+                let hb_fv = d.fresh_fvar();
+                let body = d.zero_lt_succ(zero); // Lt zero (succ zero), defeq `Lt zero (pow b zero)`
+                d.lam_fv(hb_fv, hb_ty, body)
+            },
+            &|d, j, ih| {
+                let zero = d.zero();
+                let hb_ty = d.lt(zero, b);
+                let hb_fv = d.fresh_fvar();
+                let hb = d.kernel().fvar(hb_fv);
+                let ih_at_hb = d.apply(ih, &[hb]); // Lt zero (pow b j)
+                let pow_b_j = d.pow(b, j);
+                let body = positive_mul(d, &p, pow_b_j, b, ih_at_hb, hb);
+                d.lam_fv(hb_fv, hb_ty, body)
+            },
+            k,
+        );
+        (motive(d, k), proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.pow_lt_pow_succ : ∀ b k, Lt (succ zero) b → Lt (pow b k) (pow b
+/// (succ k))` — see the module note above for why this successor form was
+/// chosen over a general two-exponent comparison.
+///
+/// `Lt (succ zero) b` is definitionally `Le 2 b`. The goal reduces (`pow b
+/// (succ k) ≡ mul (pow b k) b` by iota) to `pow b k < mul (pow b k) b`. Let
+/// `P := pow b k`: `P > 0` by `pow_pos` (needs `Lt 0 b`, derived from `Le 2
+/// b` exactly as [`prime_pos`] derives `Le 1 x` from `Le 2 x`), and `P <
+/// mul P 2 = add P P` is `add_lt_add_left` at `P + 0 < P + P` (`add P 0`
+/// defeq `P`) transported along the `Eq (mul P 2) (add P P)` unfolding
+/// (`mul P 2 ≡ add (add zero P) P` by iota; `zero_add` closes the inner
+/// `add zero P = P`). Composing `P < mul P 2 ≤ mul P b` (the second step
+/// `mul_le_mul_left` from `Le 2 b`) through `lt_of_lt_of_le` finishes it;
+/// `mul P b` is defeq the goal's `pow b (succ k)`.
+pub(super) fn declare_pow_lt_pow_succ(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.pow_lt_pow_succ, 2, &|d, v| {
+        let b = v[0];
+        let k = v[1];
+        let one = d.num(1);
+        let two = d.num(2);
+        let zero = d.zero();
+
+        let pow_bk = d.pow(b, k);
+        let sk = d.succ(k);
+        let pow_bsk = d.pow(b, sk);
+        let target = d.lt(pow_bk, pow_bsk);
+
+        let hb_ty = d.lt(one, b); // defeq `Le 2 b`
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        // `Le 1 b` from `hb : Le 2 b` — the `prime_pos` pattern above.
+        let le_1_2 = d.lemma(p.le_succ, &[one]); // Le 1 2
+        let le_1_b = d.lemma(p.le_trans, &[one, two, b, le_1_2, hb]); // Le 1 b, defeq `Lt 0 b`
+
+        // `Lt zero pow_bk` via `pow_pos`.
+        let pow_pos_fn = d.lemma(p.pow_pos, &[b, k]);
+        let hp = d.apply(pow_pos_fn, &[le_1_b]); // Lt zero pow_bk
+
+        // `Eq (mul pow_bk 2) (add pow_bk pow_bk)`.
+        let add_zero_p = d.add(zero, pow_bk);
+        let za = d.lemma(p.zero_add, &[pow_bk]); // Eq (add zero pow_bk) pow_bk
+        let add_add_zero_p_p = d.add(add_zero_p, pow_bk);
+        let add_p_p = d.add(pow_bk, pow_bk);
+        let step_eq = d.congr(add_zero_p, pow_bk, za, &|d, x| d.add(x, pow_bk));
+        // step_eq : Eq add_add_zero_p_p add_p_p, and `mul pow_bk 2` is
+        // defeq `add_add_zero_p_p` (unfold twice through `mul`'s recursion).
+
+        // `Lt pow_bk add_p_p`, from `Lt zero pow_bk` via `add_lt_add_left`
+        // (`add pow_bk zero` defeq `pow_bk`, `add`'s base case).
+        let lt_add = d.lemma(p.add_lt_add_left, &[pow_bk, zero, pow_bk, hp]);
+
+        // Transport along `step_eq` (reversed) from `add_p_p` back to
+        // `add_add_zero_p_p` (i.e. `mul pow_bk 2`'s iota-shape).
+        let step_eq_rev = d.symm(add_add_zero_p_p, add_p_p, step_eq); // Eq add_p_p add_add_zero_p_p
+        let motive_mulp2 = d.eq_motive(add_p_p, &|d, x| d.lt(pow_bk, x));
+        let lt_mul_p2 = d.transport(add_p_p, motive_mulp2, lt_add, add_add_zero_p_p, step_eq_rev);
+        // lt_mul_p2 : Lt pow_bk add_add_zero_p_p, defeq `Lt pow_bk (mul pow_bk 2)`.
+
+        // `mul pow_bk 2 ≤ mul pow_bk b`, from `hb : Le 2 b`.
+        let mul_pow_bk_two = d.mul(pow_bk, two);
+        let mul_pow_bk_b = d.mul(pow_bk, b);
+        let mul_le = d.lemma(p.mul_le_mul_left, &[pow_bk, two, b, hb]);
+
+        // Chain: `pow_bk < mul_pow_bk_two ≤ mul_pow_bk_b`, and `mul_pow_bk_b`
+        // is defeq the goal's `pow b (succ k)`.
+        let final_proof = d.lemma(
+            p.lt_of_lt_of_le,
+            &[pow_bk, mul_pow_bk_two, mul_pow_bk_b, lt_mul_p2, mul_le],
+        );
+
+        let proof = d.lam_fv(hb_fv, hb_ty, final_proof);
+        let stmt = d.arrow(hb_ty, target);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare `Nat.sumDivisors`, its computational and prime sanity theorems,
-/// `Nat.Perfect`, the finite geometric sum over powers of two, and the
-/// divisor classification `Nat.dvd_two_pow_mul_classify`, in dependency
-/// order.
+/// `Nat.Perfect`, the finite geometric sum over powers of two, the divisor
+/// classification `Nat.dvd_two_pow_mul_classify`, and `pow`'s strict
+/// monotonicity in the exponent (`Nat.pow_pos`, `Nat.pow_lt_pow_succ`), in
+/// dependency order.
 pub(super) fn declare_perfect_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_sum_divisors(d, p)?;
     declare_sum_divisors_one(d, p)?;
@@ -1679,5 +1888,7 @@ pub(super) fn declare_perfect_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     declare_perfect(d, p)?;
     declare_pow2_geom_sum(d, p)?;
     declare_dvd_two_pow_mul_classify(d, p)?;
+    declare_pow_pos(d, p)?;
+    declare_pow_lt_pow_succ(d, p)?;
     Ok(())
 }
