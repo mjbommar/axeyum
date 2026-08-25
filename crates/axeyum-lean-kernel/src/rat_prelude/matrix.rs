@@ -88,6 +88,7 @@ pub(super) fn declare_matrix_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_det3_def(d, p)?;
     declare_det3_id(d, p)?;
     declare_det3_cofactor_row1(d, p)?;
+    declare_det3_scale_row(d, p)?;
     declare_det3_ofint(d, p)?;
     declare_det3_example_generic(d, p)?;
     declare_det3_example_diagonal(d, p)?;
@@ -3547,6 +3548,152 @@ fn declare_det3_cofactor_row1(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), K
 
         let stmt = req(d, lhs, rhs);
         let proof = rrefl(d, lhs);
+        (stmt, proof)
+    })
+}
+
+/// `(k*x - k*y) + k*z = k*((x - y) + z)` — the three-term generalization of
+/// [`mul_sub_right_rev`]'s two-term factoring, needed because `Rat.det3`'s raw
+/// body is a THREE-term combination (`(a*X - b*Y) + c*Z`), not the two-term
+/// `det2` shape `mul_sub_right_rev` was built for. Proved by reusing
+/// `mul_sub_right_rev` for the leading two terms, then one more
+/// `left_distrib` (reversed) to fold in the third.
+fn factor_k_out_of_three(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    k: ExprId,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+) -> ExprId {
+    let kx = rmul(d, k, x);
+    let ky = rmul(d, k, y);
+    let neg_ky = rneg(d, ky);
+    let kx_minus_ky = radd(d, kx, neg_ky);
+    let kz = rmul(d, k, z);
+    let start = radd(d, kx_minus_ky, kz); // (k*x - k*y) + k*z
+
+    let xy = diff(d, x, y); // = x - y (defeq to Rat.sub x y)
+    let k_xy = rmul(d, k, xy);
+    let fix1 = mul_sub_right_rev(d, p, k, x, y); // (k*x - k*y) = k*(x-y)
+    let step1 = rcongr(d, kx_minus_ky, k_xy, fix1, &|d, t| radd(d, t, kz));
+    let mid1 = radd(d, k_xy, kz);
+
+    // k*(x-y) + k*z = k*((x-y)+z), read `left_distrib` in reverse.
+    let xy_z = radd(d, xy, z);
+    let k_xyz = rmul(d, k, xy_z);
+    let distrib = d.lemma(p.left_distrib, &[k, xy, z]); // k*((x-y)+z) = k*(x-y) + k*z
+    let step2 = rsymm(d, k_xyz, mid1, distrib);
+
+    let (_, proof) = rchain(d, start, &[(mid1, step1), (k_xyz, step2)]);
+    proof
+}
+
+/// `Rat.det3_scale_row : ∀ k a b c d e f g h i,`
+/// `det3 (k*a) (k*b) (k*c) d e f g h i = k * det3 a b c d e f g h i`.
+///
+/// Scaling **row 1** by `k`. Rows 2 and 3 (`d e f g h i`) are untouched by
+/// this substitution, so the three 2×2 minors that make up `Rat.det3`'s raw
+/// body — `X = e*i-f*h`, `Y = d*i-f*g`, `Z = d*h-e*g` (matching
+/// [`declare_det3_cofactor_row1`]'s cofactor form) — are **byte-identical**
+/// on both sides: no `det2` law is needed at all, only `mul_assoc` to pull
+/// `k` back out of each `(k*row1_entry)*minor` product, and
+/// [`factor_k_out_of_three`] to re-fold the resulting three-term
+/// `k*X' - k*Y' + k*Z'` into `k*(X'-Y'+Z')`.
+///
+/// Rows 2 and 3 are deliberately **not** stated here, for the same reason
+/// [`declare_det2_scale_row`] only states row 1 for `det2`: scaling row 2
+/// (`d e f`) or row 3 (`g h i`) puts the scale factor **inside** each minor
+/// instead of outside all three uniformly (row 2's `e,f` are entries of `X`
+/// *and* `Z`; row 3's `h,i` are entries of `X` *and* `Y`), so each of the
+/// three minors needs its own one- or two-argument scale identity first
+/// (`det2_scale_row` directly for the minor where the scaled pair is that
+/// minor's own first row; `middle_swap` plus `mul_assoc`, mirroring this
+/// file's `X = e*i-f*h -> (k*e)*i - f*(k*h)`-style rewrite, for the minor
+/// where the scaled entries are split across both factors) before the same
+/// three-term factor-out closes it. That is three more mul_assoc/middle_swap
+/// derivations nested one level deeper than this one, not a different proof
+/// technique — sized but not attempted here, in favor of `det3_swap_rows` and
+/// `det3_row_add`.
+fn declare_det3_scale_row(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.det3_scale_row, 10, &|d, v| {
+        let (k, a, b, c, dd, e, f, g, h, i) =
+            (v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9]);
+        let ka = rmul(d, k, a);
+        let kb = rmul(d, k, b);
+        let kc = rmul(d, k, c);
+        let lhs = rdet3(d, p, ka, kb, kc, dd, e, f, g, h, i);
+        let rhs_inner = rdet3(d, p, a, b, c, dd, e, f, g, h, i);
+        let rhs = rmul(d, k, rhs_inner);
+        let stmt = req(d, lhs, rhs);
+
+        // The three minors, raw -- identical on both sides (row 1 untouched).
+        let ei = rmul(d, e, i);
+        let fh = rmul(d, f, h);
+        let x_minor = diff(d, ei, fh);
+        let di = rmul(d, dd, i);
+        let fg = rmul(d, f, g);
+        let y_minor = diff(d, di, fg);
+        let dh = rmul(d, dd, h);
+        let eg = rmul(d, e, g);
+        let z_minor = diff(d, dh, eg);
+
+        // start = (ka*X - kb*Y) + kc*Z, the raw unfolding of `lhs`.
+        let ka_x = rmul(d, ka, x_minor);
+        let kb_y = rmul(d, kb, y_minor);
+        let neg_kb_y = rneg(d, kb_y);
+        let ka_x_minus_kb_y = radd(d, ka_x, neg_kb_y);
+        let kc_z = rmul(d, kc, z_minor);
+        let start = radd(d, ka_x_minus_kb_y, kc_z);
+
+        // Step 1: ka*X = k*(a*X).
+        let a_x = rmul(d, a, x_minor);
+        let k_ax = rmul(d, k, a_x);
+        let assoc1 = d.lemma(p.mul_assoc, &[k, a, x_minor]); // (k*a)*X = k*(a*X)
+        let step1 = rcongr(d, ka_x, k_ax, assoc1, &|d, t| {
+            let n = rneg(d, kb_y);
+            let inner = radd(d, t, n);
+            radd(d, inner, kc_z)
+        });
+        let neg_kb_y_1 = rneg(d, kb_y);
+        let k_ax_minus_kb_y = radd(d, k_ax, neg_kb_y_1);
+        let mid1 = radd(d, k_ax_minus_kb_y, kc_z);
+
+        // Step 2: kb*Y = k*(b*Y).
+        let b_y = rmul(d, b, y_minor);
+        let k_by = rmul(d, k, b_y);
+        let assoc2 = d.lemma(p.mul_assoc, &[k, b, y_minor]); // (k*b)*Y = k*(b*Y)
+        let step2 = rcongr(d, kb_y, k_by, assoc2, &|d, t| {
+            let n = rneg(d, t);
+            let inner = radd(d, k_ax, n);
+            radd(d, inner, kc_z)
+        });
+        let neg_k_by = rneg(d, k_by);
+        let k_ax_minus_k_by = radd(d, k_ax, neg_k_by);
+        let mid2 = radd(d, k_ax_minus_k_by, kc_z);
+
+        // Step 3: kc*Z = k*(c*Z).
+        let c_z = rmul(d, c, z_minor);
+        let k_cz = rmul(d, k, c_z);
+        let assoc3 = d.lemma(p.mul_assoc, &[k, c, z_minor]); // (k*c)*Z = k*(c*Z)
+        let step3 = rcongr(d, kc_z, k_cz, assoc3, &|d, t| {
+            let n = rneg(d, k_by);
+            let inner = radd(d, k_ax, n);
+            radd(d, inner, t)
+        });
+        let mid3 = radd(d, k_ax_minus_k_by, k_cz);
+
+        // Step 4: (k*(a*X) - k*(b*Y)) + k*(c*Z) = k*((a*X - b*Y) + c*Z).
+        let step4 = factor_k_out_of_three(d, p, k, a_x, b_y, c_z);
+        let a_x_minus_b_y = diff(d, a_x, b_y);
+        let target_inner = radd(d, a_x_minus_b_y, c_z);
+        let target = rmul(d, k, target_inner); // = rhs (defeq)
+
+        let (_, proof) = rchain(
+            d,
+            start,
+            &[(mid1, step1), (mid2, step2), (mid3, step3), (target, step4)],
+        );
         (stmt, proof)
     })
 }

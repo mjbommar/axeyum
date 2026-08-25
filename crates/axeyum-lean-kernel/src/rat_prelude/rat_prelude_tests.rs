@@ -143,6 +143,7 @@ fn every_named_declaration_exists() {
         ("det3", p.det3),
         ("det3_id", p.det3_id),
         ("det3_cofactor_row1", p.det3_cofactor_row1),
+        ("det3_scale_row", p.det3_scale_row),
         ("det3_ofInt", p.det3_ofint),
         ("det3_example_generic", p.det3_example_generic),
         ("det3_example_diagonal", p.det3_example_diagonal),
@@ -416,6 +417,7 @@ fn matrix_laws_are_axiom_free() {
         ("det2_fib", p.det2_fib),
         ("det3_id", p.det3_id),
         ("det3_cofactor_row1", p.det3_cofactor_row1),
+        ("det3_scale_row", p.det3_scale_row),
         ("det3_ofInt", p.det3_ofint),
         ("det3_example_generic", p.det3_example_generic),
         ("det3_example_diagonal", p.det3_example_diagonal),
@@ -437,6 +439,113 @@ fn matrix_laws_are_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// `Rat.det3_scale_row` applied at a concrete, ASYMMETRIC instance —
+/// `diag(2,3,4)` (determinant `24`) with row 1 scaled by `5`, expected
+/// result `120` — checked by REDUCTION, not merely that the general law
+/// type-checks (true of a vacuous law too).
+///
+/// `Rat.mul`/`Rat.add` do not themselves compute at concrete `Rat` literals
+/// (see `declare_det3_ofint`'s own doc comment), so this routes the concrete
+/// instance through `Rat.det3_ofInt` (to turn the inner, unscaled
+/// `det3 2 0 0 0 3 0 0 0 4` into a pure `Int` expression) and `Rat.ofInt_mul`
+/// (to pull the outer `5 *` inside the cast too), exactly the way
+/// `declare_det3_example` bridges any concrete `Rat.det3` value to `Int`
+/// arithmetic, which the kernel then computes for free. The final declared
+/// goal names the literal `120` independently (not the `Int` expression the
+/// proof actually produces), so the kernel's own conversion check is what
+/// confirms the two agree — a wrong `det3_scale_row` (wrong sign, wrong
+/// argument mapping) would make this declaration fail to type-check.
+#[test]
+fn det3_scale_row_computes_at_diag_2_3_4_scaled_by_5() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rcongr, req, rmul, rsymm, rtrans};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let int_lit = |d: &mut IntDev<'_>, n: u32| -> ExprId {
+        let nat = d.num(n);
+        d.of_nat(nat)
+    };
+    let of_int = |d: &mut IntDev<'_>, n: ExprId| -> ExprId { d.const_app(p.of_int, &[n]) };
+
+    let five = int_lit(&mut d, 5);
+    let two = int_lit(&mut d, 2);
+    let zero_i = int_lit(&mut d, 0);
+    let three = int_lit(&mut d, 3);
+    let four = int_lit(&mut d, 4);
+
+    let qk = of_int(&mut d, five);
+    let qa = of_int(&mut d, two);
+    let qz = of_int(&mut d, zero_i);
+    let qe = of_int(&mut d, three);
+    let qi = of_int(&mut d, four);
+
+    // pf1 : det3 (qk*qa) (qk*qz) (qk*qz) qz qe qz qz qz qi
+    //     = qk * det3 qa qz qz qz qe qz qz qz qi
+    let pf1 = d.lemma(p.det3_scale_row, &[qk, qa, qz, qz, qz, qe, qz, qz, qz, qi]);
+
+    let ka = rmul(&mut d, qk, qa);
+    let kz = rmul(&mut d, qk, qz);
+    let lhs0 = d.const_app(p.det3, &[ka, kz, kz, qz, qe, qz, qz, qz, qi]);
+    let inner_det = d.const_app(p.det3, &[qa, qz, qz, qz, qe, qz, qz, qz, qi]);
+    let rhs0 = rmul(&mut d, qk, inner_det);
+
+    // pf2 : det3 qa qz qz qz qe qz qz qz qi = ofInt (Sarrus at 2,0,0,0,3,0,0,0,4)
+    let pf2 = d.lemma(
+        p.det3_ofint,
+        &[two, zero_i, zero_i, zero_i, three, zero_i, zero_i, zero_i, four],
+    );
+    let ei = d.imul(three, four);
+    let fh = d.imul(zero_i, zero_i);
+    let x = d.isub(ei, fh);
+    let di = d.imul(zero_i, four);
+    let fg = d.imul(zero_i, zero_i);
+    let y = d.isub(di, fg);
+    let dh = d.imul(zero_i, zero_i);
+    let eg = d.imul(three, zero_i);
+    let z = d.isub(dh, eg);
+    let ax = d.imul(two, x);
+    let by = d.imul(zero_i, y);
+    let ax_by = d.isub(ax, by);
+    let cz = d.imul(zero_i, z);
+    let sarrus24 = d.iadd(ax_by, cz); // must REDUCE to 24
+    let of_sarrus24 = of_int(&mut d, sarrus24);
+
+    // Rewrite rhs0 = qk * inner_det  into  qk * ofInt(sarrus24).
+    let step_inner = rcongr(&mut d, inner_det, of_sarrus24, pf2, &|d, t| rmul(d, qk, t));
+    let rhs1 = rmul(&mut d, qk, of_sarrus24);
+
+    // qk * ofInt(sarrus24) = ofInt(5 * sarrus24), via ofInt_mul reversed.
+    let mul_lemma = d.lemma(p.of_int_mul, &[five, sarrus24]); // ofInt(5*sarrus24) = qk*ofSarrus24
+    let five_sarrus = d.imul(five, sarrus24);
+    let of_five_sarrus = of_int(&mut d, five_sarrus);
+    let step_outer = rsymm(&mut d, rhs1, of_five_sarrus, mul_lemma);
+
+    let rhs_to_final = rtrans(&mut d, rhs0, rhs1, of_five_sarrus, step_inner, step_outer);
+    let full_proof = rtrans(&mut d, lhs0, rhs0, of_five_sarrus, pf1, rhs_to_final);
+
+    // The declared goal names the expected value INDEPENDENTLY (`120`, not the
+    // `Int` expression the proof produced) -- the kernel's own conversion
+    // check is what confirms `5 * sarrus(2,0,0,0,3,0,0,0,4)` reduces to it.
+    let expected = int_lit(&mut d, 120);
+    let of_expected = of_int(&mut d, expected);
+    let claim = req(&mut d, lhs0, of_expected);
+    let name = d.kernel().name_str(anon, "Check.det3_scale_row_diag_2_3_4_by_5");
+    let accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: claim,
+        value: full_proof,
+    });
+    assert!(
+        accepted.is_ok(),
+        "det3_scale_row at diag(2,3,4) scaled by 5 must REDUCE to 120: {accepted:?}"
+    );
 }
 
 /// `Rat.det2_eq_zero_of_lin_dep`'s statement, asserted verbatim: the
