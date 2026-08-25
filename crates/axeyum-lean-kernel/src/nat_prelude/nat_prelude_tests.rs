@@ -601,6 +601,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_zero_of_dvd,
         p.dvd_of_mod_eq_zero_of_pos,
         p.mod_eq_zero_iff_dvd,
+        p.mod_eq_cancel,
         p.dvd_mul,
         p.dvd_refl,
         p.dvd_zero,
@@ -2952,6 +2953,63 @@ fn modular_congruence_is_a_checked_equivalence_relation() {
     });
 }
 
+/// `Nat.mod_eq_cancel` at a concrete instance: `gcd 3 5 = 1` and
+/// `3*2 ≡ 3*7 [5]` (both sides are `6 ≡ 21`, and `6 mod 5 = 21 mod 5 = 1`)
+/// must cancel to `2 ≡ 7 [5]` — and the proof must genuinely REDUCE (the
+/// `gcd 3 5 = 1` premise is discharged by `refl`, which only checks if the
+/// executable `gcd` actually computes to `1`), not merely type-check.
+///
+/// A negative control: reusing the same premises against the WRONG
+/// conclusion (`3 ≡ 7 [5]`, transposing the cancelled `2` for the modulus'
+/// own `3`) must be rejected by the kernel.
+#[test]
+fn mod_eq_cancel_holds_at_a_concrete_instance_with_a_transposed_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.num(0);
+    let three = f.num(3);
+    let two = f.num(2);
+    let five = f.num(5);
+    let seven = f.num(7);
+
+    let gcd_three_five = f.gcd(three, five);
+    let coprime_proof = f.refl(gcd_three_five);
+    // `coprime_proof : Eq (gcd 3 5) (gcd 3 5)`, accepted below against
+    // `Eq (gcd 3 5) 1` only because `gcd 3 5` reduces to `1`.
+
+    let three_two = f.mul(three, two);
+    let three_seven = f.mul(three, seven);
+    // `3*2 ≡ 3*7 [5]`, witnesses `u=3, v=0`: `6+5*3=21`, `21+5*0=21`.
+    let hyp_proof = f.concrete_mod_eq(five, three_two, three_seven, three, zero);
+
+    let cancel_proof = f.lemma(
+        p.mod_eq_cancel,
+        &[five, three, two, seven, coprime_proof, hyp_proof],
+    );
+    let cancel_ty = f.mod_eq(five, two, seven);
+    let name = f.name("two_mod_five_seven_from_cancellation");
+    f.declare_theorem(name, cancel_ty, cancel_proof)
+        .unwrap_or_else(|e| panic!("mod_eq_cancel should admit: {}", f.explain(&e)));
+
+    // Negative control: the same cancellation proof does NOT check against
+    // `modEq 5 3 7` (transposing the cancelled `2` for the modulus' `3`).
+    let wrong_ty = f.mod_eq(five, three, seven);
+    let wrong_name = f.name("nc_mod_eq_cancel_wrong_conclusion");
+    let wrong_proof = f.lemma(
+        p.mod_eq_cancel,
+        &[five, three, two, seven, coprime_proof, hyp_proof],
+    );
+    let result = f.declare_theorem(wrong_name, wrong_ty, wrong_proof);
+    assert!(
+        result.is_err(),
+        "mod_eq_cancel's proof must be rejected against the transposed conclusion"
+    );
+    assert!(
+        !f.k.environment().contains(wrong_name),
+        "a rejected declaration must not enter the environment"
+    );
+}
+
 #[test]
 fn order_bounds_round_trip_through_additive_witnesses() {
     let mut f = Fixture::new();
@@ -4957,7 +5015,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        55 + 251,
+        55 + 252,
         "every promised definition and theorem must be rendered"
     );
 }
