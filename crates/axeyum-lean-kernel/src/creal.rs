@@ -1448,6 +1448,72 @@ pub struct CRealPrelude {
     /// through by the literal `CReal.ofRat (Rat.natDivSucc 1 1)` rather than
     /// deciding any sign.
     pub abs_mul_le_of_bounds: NameId,
+    /// `CReal.BoundedOn (h : CReal → CReal) (a b : CReal) (k : Nat) : Prop :=
+    /// ∀ z, le a z → le z b → le (abs (h z)) (ofRat (natDivSucc (Nat.succ k)
+    /// 0))` — a transparent `Definition`, naming `creal/derivative.rs`'s own
+    /// private `bounded_on_ty` helper (the inline shape
+    /// [`Self::has_derivative_mul`]'s and [`Self::has_derivative_cube`]'s own
+    /// `hbf`/`hbg`/`hbgp` hypotheses already use) rather than restating it.
+    ///
+    /// `Regular`, not `Opaque`, so it stays defeq to `bounded_on_ty`'s inline
+    /// form and a closure theorem stated over it can still be applied at
+    /// those two theorems' own existing call sites without editing their
+    /// statements — see [`Self::bounded_on_unfold`] for the confirmation and
+    /// [`Self::bounded_on_mul`] for a proof that exercises it.
+    pub bounded_on: NameId,
+    /// `CReal.bounded_on_unfold : ∀ h a b k, BoundedOn h a b k → ∀ z, le a z
+    /// → le z b → le (abs (h z)) (ofRat (natDivSucc (Nat.succ k) 0))`, proved
+    /// by `fun h a b k hyp => hyp` — the identity function on `hyp`, ascribed
+    /// a conclusion type stated in `bounded_on_ty`'s own raw, unfolded shape.
+    /// This typechecks **only** because [`Self::bounded_on`] is definitionally
+    /// equal to that shape by one delta step; it exercises nothing else, so a
+    /// failure here would isolate a defeq break from every other reason
+    /// [`Self::bounded_on_mul`] might fail to build.
+    pub bounded_on_unfold: NameId,
+    /// `CReal.bounded_on_mul : ∀ F G a b k1 k2, BoundedOn F a b k1 →
+    /// BoundedOn G a b k2 → BoundedOn (fun z => mul (F z) (G z)) a b
+    /// (Nat.add (Nat.add (Nat.mul k1 k2) k1) k2)` — the product of two
+    /// functions bounded on `[a,b]` is bounded on `[a,b]`.
+    ///
+    /// The combined bound `k3 := k1·k2 + k1 + k2` is chosen so that `Nat.succ
+    /// k3 = Nat.succ k1 · Nat.succ k2` **exactly**, with no `Nat.sub`
+    /// anywhere: [`RatPrelude::nat_div_succ_mul`] folds `natDivSucc (succ k1)
+    /// 0 · natDivSucc (succ k2) 0` to `natDivSucc (succ k1 · succ k2) 0` in
+    /// one step (the general two-index form
+    /// [`Self::has_derivative_mul`]'s own `fold_index0_first` needs is not
+    /// needed here — both factors already carry index `0`), so the only
+    /// remaining work is the `Nat` identity above, closed by `succ_mul` /
+    /// `mul_succ` / `add_succ` (defining equations, not a new lemma).
+    ///
+    /// The proof applies `hF`/`hG` (typed `BoundedOn F a b k1` / `BoundedOn G
+    /// a b k2`) directly to a point `z` and its two range proofs, the exact
+    /// shape [`Self::has_derivative_mul`]'s own `hbf`/`hbg`/`hbgp` are
+    /// applied at — the confirmation [`Self::bounded_on_unfold`] gives in
+    /// isolation, exercised here inside a real closure proof.
+    pub bounded_on_mul: NameId,
+    /// `CReal.bounded_on_add : ∀ F G a b k1 k2, BoundedOn F a b k1 →
+    /// BoundedOn G a b k2 → BoundedOn (fun z => add (F z) (G z)) a b
+    /// (Nat.add k1 (Nat.succ k2))` — the sum of two functions bounded on
+    /// `[a,b]` is bounded on `[a,b]`.
+    ///
+    /// Simpler than [`Self::bounded_on_mul`]: [`RatPrelude::nat_div_succ_add`]
+    /// folds `natDivSucc (succ k1) 0 + natDivSucc (succ k2) 0` to `natDivSucc
+    /// (succ k1 + succ k2) 0` directly (no index-`0`-only restriction the way
+    /// [`RatPrelude::nat_div_succ_mul`] has), and the combined bound `k3 :=
+    /// k1 + succ k2` is chosen so `succ k1 + succ k2 = succ k3` by
+    /// `Nat.succ_add` alone — no `mul_succ`/`add_succ` dance. The magnitude
+    /// step reuses `creal/derivative.rs`'s own private `abs_add_le` helper
+    /// (`|F z + G z| ≤ |F z| + |G z|`, already built for
+    /// [`Self::has_derivative_add`]) chained against the two given bounds via
+    /// `add_le_add` and `le_trans`, not [`Self::abs_mul_le_of_bounds`].
+    ///
+    /// This is the piece `creal/derivative.rs`'s own module documentation
+    /// identifies as still missing for `hasDerivative_pow` at general `n`
+    /// beyond [`Self::bounded_on_mul`]: the product rule's derivative term
+    /// `F'(x)·G(x) + F(x)·G'(x)` is a **sum**, so advancing the induction
+    /// `pow (n+1) = id · pow n` needs boundedness of that sum at every step,
+    /// not just of `pow n` itself.
+    pub bounded_on_add: NameId,
     /// `CReal.hasDerivative_smul : ∀ c F F' a b, HasDerivativeOn F F' a b →
     /// ∀ (k : Nat), le (abs c) (ofRat (natDivSucc (Nat.succ k) 0)) →
     /// HasDerivativeOn (fun r => mul c (F r)) (fun x => mul c (F' x)) a b` —
@@ -1793,6 +1859,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_neg: kernel.name_str(creal, "hasDerivative_neg"),
         has_derivative_add: kernel.name_str(creal, "hasDerivative_add"),
         abs_mul_le_of_bounds: kernel.name_str(creal, "abs_mul_le_of_bounds"),
+        bounded_on: kernel.name_str(creal, "BoundedOn"),
+        bounded_on_unfold: kernel.name_str(creal, "bounded_on_unfold"),
+        bounded_on_mul: kernel.name_str(creal, "bounded_on_mul"),
+        bounded_on_add: kernel.name_str(creal, "bounded_on_add"),
         has_derivative_smul: kernel.name_str(creal, "hasDerivative_smul"),
         has_derivative_sub: kernel.name_str(creal, "hasDerivative_sub"),
         has_derivative_mul: kernel.name_str(creal, "hasDerivative_mul"),
