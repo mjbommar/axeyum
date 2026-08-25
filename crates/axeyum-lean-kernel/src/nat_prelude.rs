@@ -185,7 +185,7 @@ use finite::{
     declare_restrict_maps_into,
 };
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
-use lcm::{declare_gauss_lemma, declare_lcm};
+use lcm::{declare_gauss_lemma, declare_lcm, declare_lcm_dvd};
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
@@ -607,6 +607,9 @@ pub struct NatPrelude {
     /// and cancels through `dvd_add_right_cancel_of_pos`, exactly the `g = 1`
     /// branch of `euclid_lemma` with the primality side condition dropped.
     pub gauss_lemma: NameId,
+    /// `Nat.lcm_dvd : ∀ a b c, dvd a c → dvd b c → dvd (lcm a b) c` — the
+    /// "least" half of the least common multiple's universal property.
+    pub lcm_dvd: NameId,
     /// Balanced natural Bézout certificates:
     /// `bezout m n g := ∃ mp mn np nn, g + m*mn + n*nn = m*mp + n*np`.
     pub bezout: NameId,
@@ -1391,6 +1394,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_lcm_right: kernel.name_str(nat, "dvd_lcm_right"),
             gcd_mul_lcm: kernel.name_str(nat, "gcd_mul_lcm"),
             gauss_lemma: kernel.name_str(nat, "gauss_lemma"),
+            lcm_dvd: kernel.name_str(nat, "lcm_dvd"),
             bezout: kernel.name_str(nat, "bezout"),
             gcd_bezout: kernel.name_str(nat, "gcd_bezout"),
             mod_eq: kernel.name_str(nat, "modEq"),
@@ -1551,6 +1555,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_lcm(&mut d, &p)?;
         declare_gcd_bezout(&mut d, &p)?;
         declare_gauss_lemma(&mut d, &p)?;
+        declare_lcm_dvd(&mut d, &p)?;
         declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
         declare_primes(&mut d, &p)?;

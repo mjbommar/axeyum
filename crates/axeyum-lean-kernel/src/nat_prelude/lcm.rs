@@ -33,7 +33,7 @@
 //! version starts from.
 //!
 //! `Nat.lcm_dvd` (the universal/"least" property:
-//! `a ∣ c → b ∣ c → lcm a b ∣ c`) is **not** landed in this slice. The route
+//! `a ∣ c → b ∣ c → lcm a b ∣ c`) is landed below. The route
 //! is: split on `a`. At `a = zero`, `lcm zero b = zero` (`lcm_zero_left`) and
 //! the hypothesis `dvd zero c` is already the goal. At `a = succ k`,
 //! `g := gcd a b` is positive (`one_le_of_dvd_pos` against `gcd_dvd_left`);
@@ -54,14 +54,18 @@
 //! hand-verified to typecheck (several nested eliminations shared a `goal`
 //! parameter that has to be the *same* fixed Prop at every level, which a
 //! first draft got wrong more than once) and was reverted rather than risk
-//! shipping something never run through `Kernel::add_declaration`. The next
-//! attempt should build it incrementally against the real kernel gate
-//! (`cargo test -p axeyum-lean-kernel --lib nat_prelude::`) rather than
-//! writing the whole eliminator chain before compiling.
+//! shipping something never run through `Kernel::add_declaration`. The
+//! landed version below is exactly that deeply-nested `dvd_elim` chain
+//! (five levels: `a1`, `b1`, `p`, `q`, `q2`), but every algebraic step
+//! (coprimality of the cofactors, `lcm a b = g·a1·b1`, the `g`-cancellation,
+//! and the final reassembly) is factored into its own top-level helper
+//! function so each is checkable in isolation, and the single `goal`
+//! `ExprId` is computed exactly once and threaded through unchanged, never
+//! recomputed at a deeper level.
 
 use super::NatPrelude;
 use super::bezout::bezout_elim;
-use super::helpers::transport_dvd_right;
+use super::helpers::{transport_dvd_left, transport_dvd_right};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -541,6 +545,319 @@ pub(super) fn declare_gauss_lemma(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
         (goal_at(d, x), proof)
     })?;
     Ok(())
+}
+
+/// `Nat.lcm_dvd : ∀ a b c, dvd a c → dvd b c → dvd (lcm a b) c` — the
+/// "least" half of the least common multiple's universal property. See the
+/// module doc for the route.
+pub(super) fn declare_lcm_dvd(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.lcm_dvd, 3, &|d, values| {
+        let (a, b, c) = (values[0], values[1], values[2]);
+        let goal_at = |d: &mut NatDev<'_>, xv: ExprId| -> ExprId {
+            let lcm_xb = d.const_app(p.lcm, &[xv, b]);
+            let hyp1 = d.dvd(xv, c);
+            let hyp2 = d.dvd(b, c);
+            let concl = d.dvd(lcm_xb, c);
+            let inner = d.arrow(hyp2, concl);
+            d.arrow(hyp1, inner)
+        };
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let zero = d.zero();
+            let lcm0b = d.const_app(p.lcm, &[zero, b]);
+            let hyp1_ty = d.dvd(zero, c);
+            let hyp2_ty = d.dvd(b, c);
+            let h1_fv = d.fresh_fvar();
+            let h1 = d.kernel().fvar(h1_fv);
+            let h2_fv = d.fresh_fvar();
+
+            let lz = d.lemma(p.lcm_zero_left, &[b]); // Eq lcm0b zero
+            let zero_to_lcm0b = d.symm(lcm0b, zero, lz); // Eq zero lcm0b
+            let concl = transport_dvd_left(d, zero, lcm0b, zero_to_lcm0b, c, h1);
+            let with_h2 = d.lam_fv(h2_fv, hyp2_ty, concl);
+            d.lam_fv(h1_fv, hyp1_ty, with_h2)
+        };
+        let step = |d: &mut NatDev<'_>, k: ExprId, _ih: ExprId| -> ExprId {
+            let a = d.succ(k);
+            let g = d.gcd(a, b);
+            let lcm_ab = d.const_app(p.lcm, &[a, b]);
+            let hyp1_ty = d.dvd(a, c);
+            let hyp2_ty = d.dvd(b, c);
+            // Computed exactly once, and threaded unchanged through every
+            // nested `dvd_elim` below — never recomputed at a deeper level
+            // (see the module doc's note on the reverted first attempt).
+            let goal = d.dvd(lcm_ab, c);
+
+            let h1_fv = d.fresh_fvar();
+            let h1 = d.kernel().fvar(h1_fv); // dvd a c
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv); // dvd b c
+
+            let a_pos = d.zero_lt_succ(k);
+            let gcd_dvd_a = d.lemma(p.gcd_dvd_left, &[a, b]); // dvd g a
+            let gcd_dvd_b = d.lemma(p.gcd_dvd_right, &[a, b]); // dvd g b
+            let g_pos = d.lemma(p.one_le_of_dvd_pos, &[g, a, a_pos, gcd_dvd_a]); // Le 1 g
+
+            let body = dvd_elim(d, g, a, goal, gcd_dvd_a, &|d, a1, a_eq| {
+                // a_eq : Eq a (mul g a1)
+                dvd_elim(d, g, b, goal, gcd_dvd_b, &|d, b1, b_eq| {
+                    // b_eq : Eq b (mul g b1)
+                    let coprime = coprime_cofactors(d, &p, a, b, g, a1, b1, a_eq, b_eq, g_pos);
+                    let lcm_ab_eq =
+                        lcm_eq_scaled_cofactors(d, &p, a, b, g, lcm_ab, a1, b1, a_eq, b_eq, g_pos);
+
+                    let g_a1 = d.mul(g, a1);
+                    let dvd_ga1_c = transport_dvd_left(d, a, g_a1, a_eq, c, h1);
+
+                    dvd_elim(d, b, c, goal, h2, &|d, p_, c_eq| {
+                        // c_eq : Eq c (mul b p_)
+                        let g_b1 = d.mul(g, b1);
+                        let step3 = d.congr(b, g_b1, b_eq, &|d, x| d.mul(x, p_));
+                        let b_p = d.mul(b, p_);
+                        let gb1_p = d.mul(g_b1, p_);
+                        let (_, c_eq2) = d.chain(c, &[(b_p, c_eq), (gb1_p, step3)]);
+                        // c_eq2 : Eq c gb1_p
+
+                        let dvd_ga1_gb1p = transport_dvd_right(d, g_a1, c, gb1_p, c_eq2, dvd_ga1_c);
+                        // dvd g_a1 gb1_p
+
+                        dvd_elim(d, g_a1, gb1_p, goal, dvd_ga1_gb1p, &|d, q, eq_q| {
+                            // eq_q : Eq gb1_p (mul g_a1 q)
+                            let dvd_a1_p =
+                                a1_dvd_p_of_scaled(d, &p, g, a1, b1, p_, q, eq_q, g_pos, coprime);
+                            // dvd_a1_p : dvd a1 p_
+
+                            dvd_elim(d, a1, p_, goal, dvd_a1_p, &|d, q2, p_eq| {
+                                // p_eq : Eq p_ (mul a1 q2)
+                                let c_eq_final = c_eq_lcm_mul(
+                                    d, &p, g, b1, a1, c, p_, q2, lcm_ab, c_eq2, p_eq, lcm_ab_eq,
+                                );
+                                // c_eq_final : Eq c (mul lcm_ab q2)
+                                dvd_intro(d, lcm_ab, c, q2, c_eq_final)
+                            })
+                        })
+                    })
+                })
+            });
+
+            let with_h2 = d.lam_fv(h2_fv, hyp2_ty, body);
+            d.lam_fv(h1_fv, hyp1_ty, with_h2)
+        };
+        let proof = d.induct(&goal_at, &base, &step, a);
+        (goal_at(d, a), proof)
+    })?;
+    Ok(())
+}
+
+/// `Eq (gcd a1 b1) 1`, given `a = g*a1`, `b = g*b1`, and `1 ≤ g`. Uses that
+/// `g` **is** `gcd a b` by construction (the caller always passes the
+/// literal `gcd a b` expression as `g`), so rewriting both arguments by
+/// `a_eq`/`b_eq` turns `g` into `gcd (g*a1) (g*b1)`, which
+/// `gcd_cofactors_coprime` consumes directly.
+#[allow(clippy::too_many_arguments)]
+fn coprime_cofactors(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    g: ExprId,
+    a1: ExprId,
+    b1: ExprId,
+    a_eq: ExprId,
+    b_eq: ExprId,
+    g_pos: ExprId,
+) -> ExprId {
+    let p = *p;
+    let g_a1 = d.mul(g, a1);
+    let g_b1 = d.mul(g, b1);
+    let step1 = d.congr(a, g_a1, a_eq, &|d, x| d.gcd(x, b)); // Eq (gcd a b) (gcd g_a1 b)
+    let gcd_ga1_b = d.gcd(g_a1, b);
+    let step2 = d.congr(b, g_b1, b_eq, &|d, x| d.gcd(g_a1, x)); // Eq (gcd g_a1 b) (gcd g_a1 g_b1)
+    let gcd_ga1_gb1 = d.gcd(g_a1, g_b1);
+    let (_, g_eq_scaled) = d.chain(g, &[(gcd_ga1_b, step1), (gcd_ga1_gb1, step2)]);
+    // g_eq_scaled : Eq g (gcd g_a1 g_b1)  -- `g` here IS `gcd a b`.
+    let scaled_eq_g = d.symm(g, gcd_ga1_gb1, g_eq_scaled);
+    d.lemma(p.gcd_cofactors_coprime, &[g, a1, b1, g_pos, scaled_eq_g])
+}
+
+/// `Eq lcm_ab (mul g (mul a1 b1))`, given `a = g*a1`, `b = g*b1`, and
+/// `1 ≤ g`. From `gcd_mul_lcm`, `g * lcm_ab = a * b = (g*a1)*(g*b1) =
+/// g*(g*(a1*b1))`; cancelling one factor of `g` leaves `lcm_ab = g*(a1*b1)`.
+#[allow(clippy::too_many_arguments)]
+fn lcm_eq_scaled_cofactors(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    g: ExprId,
+    lcm_ab: ExprId,
+    a1: ExprId,
+    b1: ExprId,
+    a_eq: ExprId,
+    b_eq: ExprId,
+    g_pos: ExprId,
+) -> ExprId {
+    let p = *p;
+    let g_a1 = d.mul(g, a1);
+    let g_b1 = d.mul(g, b1);
+    let a1_b1 = d.mul(a1, b1);
+    let g_a1b1 = d.mul(g, a1_b1);
+
+    let gml = d.lemma(p.gcd_mul_lcm, &[a, b]); // Eq (mul g lcm_ab) (mul a b)
+    let g_lcm = d.mul(g, lcm_ab);
+    let a_b = d.mul(a, b);
+
+    let step_ab1 = d.congr(a, g_a1, a_eq, &|d, x| d.mul(x, b)); // Eq a_b (mul g_a1 b)
+    let ga1_b = d.mul(g_a1, b);
+    let step_ab2 = d.congr(b, g_b1, b_eq, &|d, x| d.mul(g_a1, x)); // Eq ga1_b (mul g_a1 g_b1)
+    let ga1_gb1 = d.mul(g_a1, g_b1);
+
+    let assoc1 = d.lemma(p.mul_assoc, &[g, a1, g_b1]); // Eq ga1_gb1 (mul g (mul a1 g_b1))
+    let a1_gb1 = d.mul(a1, g_b1);
+    let g_a1gb1 = d.mul(g, a1_gb1);
+
+    let reassoc = reassociate_a_gc(d, &p, a1, g, b1); // Eq a1_gb1 g_a1b1
+    let congr_reassoc = d.congr(a1_gb1, g_a1b1, reassoc, &|d, x| d.mul(g, x));
+    // Eq g_a1gb1 (mul g g_a1b1)
+    let g_g_a1b1 = d.mul(g, g_a1b1);
+
+    let (_, glcm_eq_gg) = d.chain(
+        g_lcm,
+        &[
+            (a_b, gml),
+            (ga1_b, step_ab1),
+            (ga1_gb1, step_ab2),
+            (g_a1gb1, assoc1),
+            (g_g_a1b1, congr_reassoc),
+        ],
+    );
+    // glcm_eq_gg : Eq (mul g lcm_ab) (mul g g_a1b1)
+    d.lemma(
+        p.mul_left_cancel_of_pos,
+        &[g, lcm_ab, g_a1b1, g_pos, glcm_eq_gg],
+    )
+    // : Eq lcm_ab g_a1b1
+}
+
+/// From `eq_q : Eq (mul (mul g b1) p) (mul (mul g a1) q)` (i.e. `(g*b1)*p =
+/// (g*a1)*q`, produced by eliminating `(g*a1) ∣ (g*b1)*p`) and `coprime :
+/// gcd a1 b1 = 1`, derive `dvd a1 p` by cancelling `g` (reassociating both
+/// sides to expose it, then `mul_left_cancel_of_pos`) and applying
+/// `gauss_lemma`.
+#[allow(clippy::too_many_arguments)]
+fn a1_dvd_p_of_scaled(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    g: ExprId,
+    a1: ExprId,
+    b1: ExprId,
+    p_: ExprId,
+    q: ExprId,
+    eq_q: ExprId,
+    g_pos: ExprId,
+    coprime: ExprId,
+) -> ExprId {
+    let p = *p;
+    let g_b1 = d.mul(g, b1);
+    let gb1_p = d.mul(g_b1, p_);
+    let g_a1 = d.mul(g, a1);
+    let ga1_q = d.mul(g_a1, q);
+
+    let b1_p = d.mul(b1, p_);
+    let g_b1p = d.mul(g, b1_p);
+    let a1_q = d.mul(a1, q);
+    let g_a1q = d.mul(g, a1_q);
+
+    let lhs_assoc = d.lemma(p.mul_assoc, &[g, b1, p_]); // Eq gb1_p g_b1p
+    let lhs_assoc_rev = d.symm(gb1_p, g_b1p, lhs_assoc); // Eq g_b1p gb1_p
+    let rhs_assoc = d.lemma(p.mul_assoc, &[g, a1, q]); // Eq ga1_q g_a1q
+
+    let (_, g_b1p_eq_g_a1q) = d.chain(
+        g_b1p,
+        &[(gb1_p, lhs_assoc_rev), (ga1_q, eq_q), (g_a1q, rhs_assoc)],
+    );
+    // g_b1p_eq_g_a1q : Eq (mul g b1_p) (mul g a1_q)
+
+    let b1p_eq_a1q = d.lemma(
+        p.mul_left_cancel_of_pos,
+        &[g, b1_p, a1_q, g_pos, g_b1p_eq_g_a1q],
+    );
+    // b1p_eq_a1q : Eq b1_p a1_q
+    let dvd_a1_b1p = dvd_intro(d, a1, b1_p, q, b1p_eq_a1q); // dvd a1 (mul b1 p_)
+    d.lemma(p.gauss_lemma, &[a1, b1, p_, coprime, dvd_a1_b1p])
+}
+
+/// `Eq c (mul lcm_ab q2)`, given `c_eq2 : Eq c (mul (mul g b1) p)`,
+/// `p_eq : Eq p (mul a1 q2)`, and `lcm_ab_eq : Eq lcm_ab (mul g (mul a1
+/// b1))`. Substitutes `p`, then reassociates `(g*b1)*(a1*q2)` down to
+/// `(g*(a1*b1))*q2 = lcm_ab*q2`.
+#[allow(clippy::too_many_arguments)]
+fn c_eq_lcm_mul(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    g: ExprId,
+    b1: ExprId,
+    a1: ExprId,
+    c: ExprId,
+    p_: ExprId,
+    q2: ExprId,
+    lcm_ab: ExprId,
+    c_eq2: ExprId,
+    p_eq: ExprId,
+    lcm_ab_eq: ExprId,
+) -> ExprId {
+    let p = *p;
+    let g_b1 = d.mul(g, b1);
+    let gb1_p = d.mul(g_b1, p_);
+    let a1_q2 = d.mul(a1, q2);
+    let gb1_a1q2 = d.mul(g_b1, a1_q2);
+
+    let step_c1 = d.congr(p_, a1_q2, p_eq, &|d, x| d.mul(g_b1, x)); // Eq gb1_p gb1_a1q2
+
+    let assoc_top = d.lemma(p.mul_assoc, &[g, b1, a1_q2]); // Eq gb1_a1q2 (mul g (mul b1 a1_q2))
+    let b1_a1q2 = d.mul(b1, a1_q2);
+    let g_b1a1q2 = d.mul(g, b1_a1q2);
+
+    let assoc_inner = d.lemma(p.mul_assoc, &[b1, a1, q2]); // Eq (mul b1_a1 q2) b1_a1q2
+    let b1_a1 = d.mul(b1, a1);
+    let b1a1_q2 = d.mul(b1_a1, q2);
+    let assoc_inner_rev = d.symm(b1a1_q2, b1_a1q2, assoc_inner); // Eq b1_a1q2 b1a1_q2
+
+    let congr1 = d.congr(b1_a1q2, b1a1_q2, assoc_inner_rev, &|d, x| d.mul(g, x));
+    // Eq g_b1a1q2 (mul g b1a1_q2)
+    let g_b1a1_q2 = d.mul(g, b1a1_q2);
+
+    let comm_b1a1 = d.lemma(p.mul_comm, &[b1, a1]); // Eq b1_a1 (mul a1 b1)
+    let a1_b1 = d.mul(a1, b1);
+    let congr2 = d.congr(b1_a1, a1_b1, comm_b1a1, &|d, x| d.mul(x, q2)); // Eq b1a1_q2 (mul a1_b1 q2)
+    let a1b1_q2 = d.mul(a1_b1, q2);
+
+    let congr3 = d.congr(b1a1_q2, a1b1_q2, congr2, &|d, x| d.mul(g, x));
+    // Eq g_b1a1_q2 (mul g a1b1_q2)
+    let g_a1b1_q2 = d.mul(g, a1b1_q2);
+
+    let g_a1b1 = d.mul(g, a1_b1);
+    let assoc_bottom = d.lemma(p.mul_assoc, &[g, a1_b1, q2]); // Eq (mul g_a1b1 q2) g_a1b1_q2
+    let g_a1b1_q2_alt = d.mul(g_a1b1, q2);
+    let assoc_bottom_rev = d.symm(g_a1b1_q2_alt, g_a1b1_q2, assoc_bottom); // Eq g_a1b1_q2 g_a1b1_q2_alt
+
+    let congr4 = d.congr(lcm_ab, g_a1b1, lcm_ab_eq, &|d, x| d.mul(x, q2)); // Eq (mul lcm_ab q2) g_a1b1_q2_alt
+    let lcm_q2 = d.mul(lcm_ab, q2);
+    let congr4_rev = d.symm(lcm_q2, g_a1b1_q2_alt, congr4); // Eq g_a1b1_q2_alt lcm_q2
+
+    let (_, chained) = d.chain(
+        c,
+        &[
+            (gb1_p, c_eq2),
+            (gb1_a1q2, step_c1),
+            (g_b1a1q2, assoc_top),
+            (g_b1a1_q2, congr1),
+            (g_a1b1_q2, congr3),
+            (g_a1b1_q2_alt, assoc_bottom_rev),
+            (lcm_q2, congr4_rev),
+        ],
+    );
+    chained
 }
 
 /// `Eq (mul a (mul g c)) (mul g (mul a c))` — reassociate the outer factor
