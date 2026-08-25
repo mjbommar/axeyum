@@ -140,6 +140,7 @@ mod defs;
 mod diagonal;
 mod divisibility;
 mod division;
+mod euler;
 mod factorization;
 mod fermat;
 mod fibonacci;
@@ -187,6 +188,7 @@ use defs::{
 use diagonal::declare_diagonal;
 use divisibility::declare_divisibility;
 use division::declare_euclidean_division;
+use euler::declare_mod_eq_cancel;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
 use fermat::declare_fermat;
 use fibonacci::declare_fib_all;
@@ -708,6 +710,10 @@ pub struct NatPrelude {
     pub dvd_of_mod_eq_zero_of_pos: NameId,
     /// `Nat.mod_eq_zero_iff_dvd : modEq d n zero ↔ dvd d n`.
     pub mod_eq_zero_iff_dvd: NameId,
+    /// `Nat.mod_eq_cancel : ∀ n c a b, gcd c n = 1 → modEq n (c*a) (c*b) →
+    /// modEq n a b`. Multiplicative cancellation modulo `n`: the engine
+    /// behind Euler's theorem (`euler.rs`).
+    pub mod_eq_cancel: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -1744,6 +1750,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             mod_eq_zero_of_dvd: kernel.name_str(nat, "mod_eq_zero_of_dvd"),
             dvd_of_mod_eq_zero_of_pos: kernel.name_str(nat, "dvd_of_mod_eq_zero_of_pos"),
             mod_eq_zero_iff_dvd: kernel.name_str(nat, "mod_eq_zero_iff_dvd"),
+            mod_eq_cancel: kernel.name_str(nat, "mod_eq_cancel"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_refl: kernel.name_str(nat, "dvd_refl"),
@@ -1951,6 +1958,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_lcm_dvd(&mut d, &p)?;
         declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
+        declare_mod_eq_cancel(&mut d, &p)?;
         declare_primes(&mut d, &p)?;
         // Needs `le_of_dvd` (just declared by `declare_primes`), so these
         // cannot run inside `declare_lcm` above despite conceptually
