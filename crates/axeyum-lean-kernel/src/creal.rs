@@ -1236,6 +1236,29 @@ pub struct CRealPrelude {
     /// `natDivSucc K m + natDivSucc K n` shape, are left to whichever piece
     /// assembles `sumRange_cauchy_of_dominated` itself.
     pub sum_range_cauchy_dominated_ordered: NameId,
+    /// `CReal.sumRange_cauchy_dominated_ordered_normalized : ∀ f g k, (∀ x,
+    /// le (abs (f x)) (g x)) → (∀ pp qq, Within (seq (sumRange g pp) pp − seq
+    /// (sumRange g qq) qq) (natDivSucc k pp + natDivSucc k qq)) → ∀ a b,
+    /// Nat.le a b → Within (seq (sumRange f b) b − seq (sumRange f a) a)
+    /// (natDivSucc K' b + natDivSucc K' a)`, for an explicit `K'` built from
+    /// `k` alone (`Nat.add`-with-literal chain, no fresh existential) —
+    /// **bound normalization**, `series.rs`'s module documentation's second
+    /// named gap. Post-processes [`Self::sum_range_cauchy_dominated_ordered`]'s
+    /// own eleven-`natDivSucc`-leaf bound (four copies of `1/(shift b+1)`,
+    /// widened to `1/(b+1)` via `half_shift_le`; the rest fused pairwise via
+    /// `Rat.natDivSucc_add`) into the **single**, `Cauchy`-shaped two-term sum
+    /// this development's `b`-side already reaches without padding (`K' :=
+    /// k+8`) and its `a`-side reaches by one `Rat.natDivSucc_le_add_left` pad
+    /// (`k+2 ↦ k+8`, defeq to `K'` since both are nested `Nat.add`-by-literal
+    /// chains over the same `k`, needing no `Nat.add_assoc`/`Nat.add_comm`
+    /// lemma to align — see `series.rs`'s doc for why this is pure
+    /// computation). Still returns the **ordered-pair** shape (`a ≤ b`
+    /// required, not yet `∀ a b` unconditionally) and takes the Cauchy
+    /// hypothesis in its raw witnessed form (`k` a plain parameter, not
+    /// wrapped in `∃`) — the `Nat.le_total` case split and the `CReal.Cauchy`
+    /// existential itself are `series.rs`'s two remaining named gaps, left to
+    /// whichever piece assembles `sumRange_cauchy_of_dominated` next.
+    pub sum_range_cauchy_dominated_ordered_normalized: NameId,
     /// `CReal.sumRange_seq_zero : Eq Rat (seq (sumRange f Nat.zero) k)
     /// Rat.zero` — the base case of the sample-rate law, closing by `Eq.refl`
     /// alone (`sumRange f zero` ι-reduces to `zero := ofRat Rat.zero`, and
@@ -1998,6 +2021,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_tail_within_cauchy: kernel.name_str(creal, "sumRange_tail_within_cauchy"),
         sum_range_cauchy_dominated_ordered: kernel
             .name_str(creal, "sumRange_cauchy_dominated_ordered"),
+        sum_range_cauchy_dominated_ordered_normalized: kernel
+            .name_str(creal, "sumRange_cauchy_dominated_ordered_normalized"),
         sum_range_seq_zero: kernel.name_str(creal, "sumRange_seq_zero"),
         sum_range_seq_succ: kernel.name_str(creal, "sumRange_seq_succ"),
         pow: kernel.name_str(creal, "pow"),

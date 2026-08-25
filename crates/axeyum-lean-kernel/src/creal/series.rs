@@ -377,6 +377,7 @@
 //! reindexing bridge; the geometric decay-rate quantification), and none of
 //! the three should be attempted as a single unverified slice.
 
+use super::completeness::half_shift_le;
 use super::ring_helpers::add4_comm;
 use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, div_succ, equiv, halves, modulus, sample,
@@ -390,7 +391,7 @@ use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
-    nat_rewrite_prop, radd, rat_eq_rewrite, req, rle, rneg, rrefl, rzero,
+    nat_rewrite_prop, radd, rat_eq_rewrite, rchain, rcongr, req, rle, rneg, rrefl, rsymm, rzero,
 };
 
 /// Admit `CReal.sumRange`, its defining equations, congruence, additivity,
@@ -416,6 +417,7 @@ pub(super) fn declare_series(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     declare_sum_range_tail_cauchy_within(d, p)?;
     declare_sum_range_tail_within_cauchy(d, p)?;
     declare_sum_range_cauchy_dominated_ordered(d, p)?;
+    declare_sum_range_cauchy_dominated_ordered_normalized(d, p)?;
     declare_sum_range_seq_equations(d, p)
 }
 
@@ -2488,6 +2490,503 @@ fn declare_sum_range_cauchy_dominated_ordered(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sum_range_cauchy_dominated_ordered,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- bound normalization for `sumRange_cauchy_dominated_ordered` -----------
+
+/// `Rat.add_assoc a b c : Eq ((a+b)+c) (a+(b+c))`, applied directly.
+fn assoc_fwd_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+    d.lemma(p.rat.add_assoc, &[a, b, c])
+}
+
+/// `Eq (a+(b+c)) ((a+b)+c)` — [`assoc_fwd_eq`] read backwards via `rsymm`.
+fn assoc_rev_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+    let ab = radd(d, a, b);
+    let lhs = radd(d, ab, c);
+    let bc = radd(d, b, c);
+    let rhs = radd(d, a, bc);
+    let fwd = assoc_fwd_eq(d, p, a, b, c);
+    rsymm(d, lhs, rhs, fwd)
+}
+
+/// `Eq (natDivSucc a j + natDivSucc b j) (natDivSucc (a+b) j)`, via
+/// `Rat.natDivSucc_add` — the one fusion move
+/// [`declare_sum_range_cauchy_dominated_ordered_normalized`]'s bound
+/// normalization runs repeatedly, at whichever pair of same-index leaves its
+/// current reassociation has just brought adjacent. Returns `(fused,
+/// eq_proof)`.
+fn fuse_same_index(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a_num: ExprId,
+    b_num: ExprId,
+    idx: ExprId,
+) -> (ExprId, ExprId) {
+    let eq = d.lemma(p.rat.nat_div_succ_add, &[a_num, b_num, idx]);
+    let sum_num = d.add(a_num, b_num);
+    let fused = div_succ_var(d, p, sum_num, idx);
+    (fused, eq)
+}
+
+/// `CReal.sumRange_cauchy_dominated_ordered_normalized` — bound
+/// normalization, `series.rs`'s module documentation's second remaining gap
+/// toward `sumRange_cauchy_of_dominated`. Post-processes
+/// [`declare_sum_range_cauchy_dominated_ordered`]'s own eleven-`natDivSucc`-leaf
+/// bound into a single `Cauchy`-shaped `natDivSucc K' b + natDivSucc K' a`,
+/// `K' := k+8` (as a nested `Nat.add`-by-literal chain, never simplified to
+/// the literal `8` — see the module documentation for why that keeps every
+/// join here pure `Nat` defeq rather than needing `Nat.add_assoc`/
+/// `Nat.add_comm`). The `b`-side reaches `K'` exactly, with no padding; the
+/// `a`-side (`k+2`) is padded up to `K'` by one `Rat.natDivSucc_le_add_left`
+/// (`e := 6`), accepted by the kernel purely because `(k+2)+6` and `k+8`
+/// reduce to the same `Nat.succ` tower.
+///
+/// Rebuilds `dominated_canonical_bound k a b` leaf-by-leaf (`m := a`,
+/// `x := b`, exactly [`dominated_canonical_legs`]'s own construction,
+/// duplicated rather than reused so every sub-piece — the four
+/// `1/(shift b+1)` legs to widen, the seven other leaves to fuse — is in
+/// scope), widens the shifted legs via `half_shift_le`, then fuses the
+/// result down to two terms across two passes: the inner three-term cluster
+/// (`sum_range_tail_cauchy_within`'s own bound shape) fuses to `bxkb + dkm`
+/// first, then the outer combination (reusing that result) fuses to
+/// `finalX + mkm2`. Neither pass is symmetric in `a`/`b` — the shifted index
+/// only ever attaches to `b` — so this remains the **ordered-pair** theorem
+/// (`a ≤ b` required) with the Cauchy hypothesis still in its raw witnessed
+/// form; the `Nat.le_total` case split and the `CReal.Cauchy` existential
+/// itself are left to whichever piece assembles `sumRange_cauchy_of_dominated`
+/// next.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sum_range_cauchy_dominated_ordered_normalized(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let rat = p.rat;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let pointwise_ty = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fx = d.apply(f, &[x]);
+        let gx = d.apply(g, &[x]);
+        let abs_fx = cabs(d, p, fx);
+        let leq = cle(d, p, abs_fx, gx);
+        d.pi_fv(x_fv, nat, leq)
+    };
+    let hyp1_fv = d.fresh_fvar();
+    let hyp1 = d.kernel().fvar(hyp1_fv);
+
+    let cauchy_hyp_ty = {
+        let pp_fv = d.fresh_fvar();
+        let pp = d.kernel().fvar(pp_fv);
+        let qq_fv = d.fresh_fvar();
+        let qq = d.kernel().fvar(qq_fv);
+        let sum_pp = d.const_app(p.sum_range, &[g, pp]);
+        let sum_qq = d.const_app(p.sum_range, &[g, qq]);
+        let left = sample(d, p, sum_pp, pp);
+        let right = sample(d, p, sum_qq, qq);
+        let diff = rsub(d, rat, left, right);
+        let bpp = div_succ_var(d, p, k, pp);
+        let bqq = div_succ_var(d, p, k, qq);
+        let bound = radd(d, bpp, bqq);
+        let claim = within(d, p, diff, bound);
+        let over_qq = d.pi_fv(qq_fv, nat, claim);
+        d.pi_fv(pp_fv, nat, over_qq)
+    };
+    let hyp2_fv = d.fresh_fvar();
+    let hyp2 = d.kernel().fvar(hyp2_fv);
+
+    let hle_ty = d.le(a, b);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    // raw : Within (seq (sumRange f b) b - seq (sumRange f a) a)
+    //              (dominated_canonical_bound k a b)
+    let raw = d.lemma(
+        p.sum_range_cauchy_dominated_ordered,
+        &[f, g, k, a, b, hyp1, hyp2, hle],
+    );
+
+    let sum_f_b = d.const_app(p.sum_range, &[f, b]);
+    let sum_f_a = d.const_app(p.sum_range, &[f, a]);
+    let y = sample(d, p, sum_f_b, b);
+    let z = sample(d, p, sum_f_a, a);
+    let diff = rsub(d, rat, y, z);
+
+    // Rebuild `dominated_canonical_bound k a b` leaf-by-leaf, matching
+    // `dominated_canonical_legs`'s own construction exactly (`m := a`,
+    // `x := b`), so every sub-piece needed below is in scope.
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let six_nat = d.num(6);
+
+    let t = shift(d, b);
+    let leaf_a = div_succ(d, p, 1, t); // natDivSucc(1, shift b)
+    let leaf_b = div_succ(d, p, 1, b); // natDivSucc(1, b)
+    let leaf_c = div_succ_var(d, p, k, b); // natDivSucc(k, b)
+    let leaf_d = div_succ_var(d, p, k, a); // natDivSucc(k, a)
+    let leaf_e = div_succ(d, p, 1, a); // natDivSucc(1, a)
+    let leaf_f = div_succ(d, p, 2, b); // natDivSucc(2, b)
+
+    let bxy = radd(d, leaf_a, leaf_b);
+    let b2 = radd(d, leaf_c, leaf_d);
+    let bzw = radd(d, leaf_e, leaf_a);
+    let bxy_b2 = radd(d, bxy, b2);
+    let total_bound_g = radd(d, bxy_b2, bzw);
+    let byz = radd(d, total_bound_g, leaf_f);
+    let bxy_byz = radd(d, bxy, byz);
+    let total = radd(d, bxy_byz, bzw);
+
+    // --- widen: every `natDivSucc(1, shift b)` leaf up to `natDivSucc(1, b)`.
+    let half = half_shift_le(d, p, b); // le(leaf_a, leaf_b)
+    let refl_leaf_b = d.lemma(rat.le_refl, &[leaf_b]);
+    let refl_leaf_e = d.lemma(rat.le_refl, &[leaf_e]);
+    let refl_b2 = d.lemma(rat.le_refl, &[b2]);
+    let refl_leaf_f = d.lemma(rat.le_refl, &[leaf_f]);
+
+    let bb = radd(d, leaf_b, leaf_b);
+    let bxy_le = d.lemma(
+        rat.add_le_add,
+        &[leaf_a, leaf_b, leaf_b, leaf_b, half, refl_leaf_b],
+    ); // le(bxy, bb)
+
+    let eb = radd(d, leaf_e, leaf_b);
+    let bzw_le = d.lemma(
+        rat.add_le_add,
+        &[leaf_e, leaf_e, leaf_a, leaf_b, refl_leaf_e, half],
+    ); // le(bzw, eb)
+
+    let bb_b2 = radd(d, bb, b2);
+    let tbg_wide = radd(d, bb_b2, eb);
+    let tbg_le = {
+        let step = d.lemma(rat.add_le_add, &[bxy, bb, b2, b2, bxy_le, refl_b2]);
+        d.lemma(rat.add_le_add, &[bxy_b2, bb_b2, bzw, eb, step, bzw_le])
+    }; // le(total_bound_g, tbg_wide)
+
+    let byz_wide = radd(d, tbg_wide, leaf_f);
+    let byz_le = d.lemma(
+        rat.add_le_add,
+        &[total_bound_g, tbg_wide, leaf_f, leaf_f, tbg_le, refl_leaf_f],
+    ); // le(byz, byz_wide)
+
+    let bb_byzwide = radd(d, bb, byz_wide);
+    let total_wide = radd(d, bb_byzwide, eb);
+    let total_le = {
+        let step = d.lemma(rat.add_le_add, &[bxy, bb, byz, byz_wide, bxy_le, byz_le]);
+        d.lemma(
+            rat.add_le_add,
+            &[bxy_byz, bb_byzwide, bzw, eb, step, bzw_le],
+        )
+    }; // le(total, total_wide)
+
+    // --- fuse pass 1: `tbg_wide = (bb + (leaf_c+leaf_d)) + eb` into
+    // `bxkb + dkm` — a single natDivSucc leaf per side.
+    let s0 = tbg_wide;
+    let (bx2, fuse_bb) = fuse_same_index(d, p, one_nat, one_nat, b); // eq(bb, bx2)
+    let bx2_num = d.add(one_nat, one_nat);
+    let bx2_b2 = radd(d, bx2, b2);
+    let s1 = radd(d, bx2_b2, eb);
+    let step1 = rcongr(d, bb, bx2, fuse_bb, &|d, t| {
+        let t_b2 = radd(d, t, b2);
+        radd(d, t_b2, eb)
+    });
+
+    let rev2 = assoc_rev_eq(d, p, bx2, leaf_c, leaf_d); // eq(bx2+(c+d), (bx2+c)+d)
+    let bx2_c = radd(d, bx2, leaf_c);
+    let bx2_c_d = radd(d, bx2_c, leaf_d);
+    let s2a = radd(d, bx2_c_d, eb);
+    let step2a = rcongr(d, bx2_b2, bx2_c_d, rev2, &|d, t| radd(d, t, eb));
+
+    // `Nat.add` recurses on its RIGHT argument, so a `k`-containing numerator
+    // must never sit there (`Add(bx2_num, k)` is stuck; `Add(k, bx2_num)`
+    // reduces). This `comm2b` swap keeps that invariant for every fuse below.
+    let comm2b = d.lemma(rat.add_comm, &[bx2, leaf_c]); // eq(bx2+c, c+bx2)
+    let c_bx2 = radd(d, leaf_c, bx2);
+    let c_bx2_d = radd(d, c_bx2, leaf_d);
+    let s2 = radd(d, c_bx2_d, eb);
+    let step2b = rcongr(d, bx2_c, c_bx2, comm2b, &|d, t| {
+        let t_d = radd(d, t, leaf_d);
+        radd(d, t_d, eb)
+    });
+
+    let (bxk, fuse_bxk) = fuse_same_index(d, p, k, bx2_num, b); // eq(c+bx2, bxk)
+    let bxk_num = d.add(k, bx2_num); // k on the left: reduces cleanly
+    let bxk_d = radd(d, bxk, leaf_d);
+    let s3 = radd(d, bxk_d, eb);
+    let step3 = rcongr(d, c_bx2, bxk, fuse_bxk, &|d, t| {
+        let t_d = radd(d, t, leaf_d);
+        radd(d, t_d, eb)
+    });
+
+    let step4 = assoc_fwd_eq(d, p, bxk, leaf_d, eb); // eq((bxk+d)+eb, bxk+(d+eb))
+    let d_eb = radd(d, leaf_d, eb);
+    let s4 = radd(d, bxk, d_eb);
+
+    let rev5 = assoc_rev_eq(d, p, leaf_d, leaf_e, leaf_b); // eq(d+(e+b), (d+e)+b)
+    let d_e = radd(d, leaf_d, leaf_e);
+    let de_b = radd(d, d_e, leaf_b);
+    let s5 = radd(d, bxk, de_b);
+    let step5 = rcongr(d, d_eb, de_b, rev5, &|d, t| radd(d, bxk, t));
+
+    let (dkm, fuse_dkm) = fuse_same_index(d, p, k, one_nat, a); // eq(d+e, dkm)
+    let dkm_num = d.add(k, one_nat);
+    let dkm_b = radd(d, dkm, leaf_b);
+    let s6 = radd(d, bxk, dkm_b);
+    let step6 = rcongr(d, d_e, dkm, fuse_dkm, &|d, t| {
+        let t_b = radd(d, t, leaf_b);
+        radd(d, bxk, t_b)
+    });
+
+    let comm7 = d.lemma(rat.add_comm, &[dkm, leaf_b]); // eq(dkm+b, b+dkm)
+    let b_dkm = radd(d, leaf_b, dkm);
+    let s7 = radd(d, bxk, b_dkm);
+    let step7 = rcongr(d, dkm_b, b_dkm, comm7, &|d, t| radd(d, bxk, t));
+
+    let step8 = assoc_rev_eq(d, p, bxk, leaf_b, dkm); // eq(bxk+(b+dkm), (bxk+b)+dkm)
+    let bxk_b = radd(d, bxk, leaf_b);
+    let s8 = radd(d, bxk_b, dkm);
+
+    let (bxkb, fuse_bxkb) = fuse_same_index(d, p, bxk_num, one_nat, b); // eq(bxk+b, bxkb)
+    let bxkb_num = d.add(bxk_num, one_nat);
+    let s9 = radd(d, bxkb, dkm);
+    let step9 = rcongr(d, bxk_b, bxkb, fuse_bxkb, &|d, t| radd(d, t, dkm));
+
+    let (_, tbg_final_eq) = rchain(
+        d,
+        s0,
+        &[
+            (s1, step1),
+            (s2a, step2a),
+            (s2, step2b),
+            (s3, step3),
+            (s4, step4),
+            (s5, step5),
+            (s6, step6),
+            (s7, step7),
+            (s8, step8),
+            (s9, step9),
+        ],
+    ); // eq(tbg_wide, s9 = bxkb + dkm)
+
+    // --- fuse pass 2: `total_wide = (bb + (tbg_wide+leaf_f)) + eb`, through
+    // pass 1's result, into `finalX + mkm2`.
+    let u0 = total_wide;
+    let byz_wide2 = radd(d, s9, leaf_f);
+    let byz_eq = rcongr(d, tbg_wide, s9, tbg_final_eq, &|d, t| radd(d, t, leaf_f));
+    let bb_byzwide2 = radd(d, bb, byz_wide2);
+    let u1 = radd(d, bb_byzwide2, eb);
+    let stepa = rcongr(d, byz_wide, byz_wide2, byz_eq, &|d, t| {
+        let bb_t = radd(d, bb, t);
+        radd(d, bb_t, eb)
+    });
+
+    let bx2_byzwide2 = radd(d, bx2, byz_wide2);
+    let u2 = radd(d, bx2_byzwide2, eb);
+    let stepb = rcongr(d, bb, bx2, fuse_bb, &|d, t| {
+        let t_byzwide2 = radd(d, t, byz_wide2);
+        radd(d, t_byzwide2, eb)
+    });
+
+    // (bxkb+dkm)+f ~ (bxkb+f)+dkm
+    let bxkb_f = radd(d, bxkb, leaf_f);
+    let byz_wide3 = radd(d, bxkb_f, dkm);
+    let byz_wide2_eq3 = {
+        let c1 = assoc_fwd_eq(d, p, bxkb, dkm, leaf_f); // eq((bxkb+dkm)+f, bxkb+(dkm+f))
+        let dkm_f = radd(d, dkm, leaf_f);
+        let mid1 = radd(d, bxkb, dkm_f);
+        let comm_c2 = d.lemma(rat.add_comm, &[dkm, leaf_f]); // eq(dkm+f, f+dkm)
+        let f_dkm = radd(d, leaf_f, dkm);
+        let mid2 = radd(d, bxkb, f_dkm);
+        let step_c2 = rcongr(d, dkm_f, f_dkm, comm_c2, &|d, t| radd(d, bxkb, t));
+        let step_c3 = assoc_rev_eq(d, p, bxkb, leaf_f, dkm); // eq(bxkb+(f+dkm), (bxkb+f)+dkm)
+        let (_, chained) = rchain(
+            d,
+            byz_wide2,
+            &[(mid1, c1), (mid2, step_c2), (byz_wide3, step_c3)],
+        );
+        chained
+    };
+    let bx2_byzwide3 = radd(d, bx2, byz_wide3);
+    let u3 = radd(d, bx2_byzwide3, eb);
+    let stepc = rcongr(d, byz_wide2, byz_wide3, byz_wide2_eq3, &|d, t| {
+        let bx2_t = radd(d, bx2, t);
+        radd(d, bx2_t, eb)
+    });
+
+    // eq(bx2+(bxkb_f+dkm), (bx2+bxkb_f)+dkm) — note bxkb_f+dkm is `byz_wide3`
+    // itself, so this is exactly the inner part of `u3` before its `+eb`.
+    let raw_stepd = assoc_rev_eq(d, p, bx2, bxkb_f, dkm);
+    let bx2_bxkbf = radd(d, bx2, bxkb_f);
+    let bx2_bxkbf_dkm = radd(d, bx2_bxkbf, dkm);
+    let stepd = rcongr(d, bx2_byzwide3, bx2_bxkbf_dkm, raw_stepd, &|d, t| {
+        radd(d, t, eb)
+    });
+    let u4 = radd(d, bx2_bxkbf_dkm, eb);
+
+    let step_e_inner = assoc_rev_eq(d, p, bx2, bxkb, leaf_f); // eq(bx2+(bxkb+f), (bx2+bxkb)+f)
+    let bx2_bxkb = radd(d, bx2, bxkb);
+    let bx2bxkb_f = radd(d, bx2_bxkb, leaf_f);
+    let bx2bxkbf_dkm = radd(d, bx2bxkb_f, dkm);
+    let u5 = radd(d, bx2bxkbf_dkm, eb);
+    let stepe = rcongr(d, bx2_bxkbf, bx2bxkb_f, step_e_inner, &|d, t| {
+        let t_dkm = radd(d, t, dkm);
+        radd(d, t_dkm, eb)
+    });
+
+    // Same invariant as pass 1's `comm2b`: `bxkb_num` contains `k`, so it must
+    // sit on the LEFT of the fuse below, never the right.
+    let comm_f0 = d.lemma(rat.add_comm, &[bx2, bxkb]); // eq(bx2+bxkb, bxkb+bx2)
+    let bxkb_bx2 = radd(d, bxkb, bx2);
+    let bxkbbx2_f = radd(d, bxkb_bx2, leaf_f);
+    let bxkbbx2f_dkm = radd(d, bxkbbx2_f, dkm);
+    let u5b = radd(d, bxkbbx2f_dkm, eb);
+    let stepe2 = rcongr(d, bx2_bxkb, bxkb_bx2, comm_f0, &|d, t| {
+        let t_f = radd(d, t, leaf_f);
+        let tf_dkm = radd(d, t_f, dkm);
+        radd(d, tf_dkm, eb)
+    });
+
+    let (bxk2, fuse_bxk2) = fuse_same_index(d, p, bxkb_num, bx2_num, b); // eq(bxkb+bx2, bxk2)
+    let bxk2_num = d.add(bxkb_num, bx2_num); // k on the left: reduces cleanly
+    let bxk2_f = radd(d, bxk2, leaf_f);
+    let bxk2f_dkm = radd(d, bxk2_f, dkm);
+    let u6 = radd(d, bxk2f_dkm, eb);
+    let stepf = rcongr(d, bxkb_bx2, bxk2, fuse_bxk2, &|d, t| {
+        let t_f = radd(d, t, leaf_f);
+        let tf_dkm = radd(d, t_f, dkm);
+        radd(d, tf_dkm, eb)
+    });
+
+    let (bxk3, fuse_bxk3) = fuse_same_index(d, p, bxk2_num, two_nat, b); // eq(bxk2+f, bxk3)
+    let bxk3_num = d.add(bxk2_num, two_nat);
+    let bxk3_dkm = radd(d, bxk3, dkm);
+    let u7 = radd(d, bxk3_dkm, eb);
+    let stepg = rcongr(d, bxk2_f, bxk3, fuse_bxk3, &|d, t| {
+        let t_dkm = radd(d, t, dkm);
+        radd(d, t_dkm, eb)
+    });
+
+    let steph = assoc_fwd_eq(d, p, bxk3, dkm, eb); // eq((bxk3+dkm)+eb, bxk3+(dkm+eb))
+    let dkm_eb = radd(d, dkm, eb);
+    let u8 = radd(d, bxk3, dkm_eb);
+
+    let rev_i = assoc_rev_eq(d, p, dkm, leaf_e, leaf_b); // eq(dkm+(e+b), (dkm+e)+b)
+    let dkm_e = radd(d, dkm, leaf_e);
+    let dkme_b = radd(d, dkm_e, leaf_b);
+    let u9 = radd(d, bxk3, dkme_b);
+    let stepi = rcongr(d, dkm_eb, dkme_b, rev_i, &|d, t| radd(d, bxk3, t));
+
+    let (mkm2, fuse_mkm2) = fuse_same_index(d, p, dkm_num, one_nat, a); // eq(dkm+e, mkm2)
+    let mkm2_num = d.add(dkm_num, one_nat);
+    let mkm2_b = radd(d, mkm2, leaf_b);
+    let u10 = radd(d, bxk3, mkm2_b);
+    let stepj = rcongr(d, dkm_e, mkm2, fuse_mkm2, &|d, t| {
+        let t_b = radd(d, t, leaf_b);
+        radd(d, bxk3, t_b)
+    });
+
+    let comm_k = d.lemma(rat.add_comm, &[mkm2, leaf_b]); // eq(mkm2+b, b+mkm2)
+    let b_mkm2 = radd(d, leaf_b, mkm2);
+    let u11 = radd(d, bxk3, b_mkm2);
+    let stepk = rcongr(d, mkm2_b, b_mkm2, comm_k, &|d, t| radd(d, bxk3, t));
+
+    let stepl = assoc_rev_eq(d, p, bxk3, leaf_b, mkm2); // eq(bxk3+(b+mkm2), (bxk3+b)+mkm2)
+    let bxk3_b = radd(d, bxk3, leaf_b);
+    let u12 = radd(d, bxk3_b, mkm2);
+
+    let (finalx, fuse_finalx) = fuse_same_index(d, p, bxk3_num, one_nat, b); // eq(bxk3+b, finalx)
+    let u13 = radd(d, finalx, mkm2);
+    let stepm = rcongr(d, bxk3_b, finalx, fuse_finalx, &|d, t| radd(d, t, mkm2));
+
+    let (_, total_wide_eq) = rchain(
+        d,
+        u0,
+        &[
+            (u1, stepa),
+            (u2, stepb),
+            (u3, stepc),
+            (u4, stepd),
+            (u5, stepe),
+            (u5b, stepe2),
+            (u6, stepf),
+            (u7, stepg),
+            (u8, steph),
+            (u9, stepi),
+            (u10, stepj),
+            (u11, stepk),
+            (u12, stepl),
+            (u13, stepm),
+        ],
+    ); // eq(total_wide, u13 = finalx + mkm2)
+
+    let total_le_u13 = rat_eq_rewrite(d, total_wide, u13, total_wide_eq, total_le, &|d, t| {
+        rle(d, rat, total, t)
+    }); // le(total, finalx + mkm2)
+
+    // --- pad `mkm2`'s numerator (k+2) up to `finalx`'s own (k+8): pure
+    // `Nat` defeq, no `Rat`-level rewrite needed for the alignment itself.
+    let k_prime = d.add(bxk3_num, one_nat); // = k+8, defeq to finalx's own numerator
+    let refl_finalx = d.lemma(rat.le_refl, &[finalx]);
+    let km_side = div_succ_var(d, p, k_prime, a); // natDivSucc(K', a)
+    let padding = d.lemma(rat.nat_div_succ_le_add_left, &[mkm2_num, six_nat, a]);
+    // le(mkm2, natDivSucc(mkm2_num+6, a)) — defeq to le(mkm2, km_side)
+
+    let target_bound = radd(d, finalx, km_side); // natDivSucc(K', b) + natDivSucc(K', a)
+    let final_order = d.lemma(
+        rat.add_le_add,
+        &[finalx, finalx, mkm2, km_side, refl_finalx, padding],
+    ); // le(finalx + mkm2, target_bound)
+
+    let final_le = d.lemma(
+        rat.le_trans,
+        &[total, u13, target_bound, total_le_u13, final_order],
+    ); // le(total, target_bound)
+
+    let normalized = weaken(d, p, diff, total, target_bound, raw, final_le);
+
+    let ty = {
+        let claim = within(d, p, diff, target_bound);
+        let after_hle = d.arrow(hle_ty, claim);
+        let after_hyp2 = d.arrow(cauchy_hyp_ty, after_hle);
+        let after_hyp1 = d.arrow(pointwise_ty, after_hyp2);
+        let over_b = d.pi_fv(b_fv, nat, after_hyp1);
+        let over_a = d.pi_fv(a_fv, nat, over_b);
+        let over_k = d.pi_fv(k_fv, nat, over_a);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_k);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let with_hle = d.lam_fv(hle_fv, hle_ty, normalized);
+        let with_hyp2 = d.lam_fv(hyp2_fv, cauchy_hyp_ty, with_hle);
+        let with_hyp1 = d.lam_fv(hyp1_fv, pointwise_ty, with_hyp2);
+        let over_b = d.lam_fv(b_fv, nat, with_hyp1);
+        let over_a = d.lam_fv(a_fv, nat, over_b);
+        let over_k = d.lam_fv(k_fv, nat, over_a);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_k);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_cauchy_dominated_ordered_normalized,
         uparams: vec![],
         ty,
         value,
