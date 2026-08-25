@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-choose-symm",
+  "title": "Binomial coefficients are symmetric",
+  "statement": "For all natural numbers n and k with k ≤ n, C(n, k) = C(n, n - k).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.choose_symm : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x1 x0) -> Eq.{1} AxNat (AxNat.choose x0 x1) (AxNat.choose x0 (AxNat.sub x0 x1)))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-add-comm",
+    "F:nat-choose-zero-right"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.choose_symm",
+      "kind": "kernel-term",
+      "supports": "For all natural numbers n and k with k ≤ n, C(n, k) = C(n, n - k).",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- choose_symm 2>/dev/null | grep -qE '^Nat\\.choose_symm[[:space:]]'",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed -- both halves of the check depend on the theorem actually being present."
+    },
+    {
+      "id": "footprint-Nat.choose_symm",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:binomial-coefficient",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:counting",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane rado-claim-ledger",
+    "source": "one of the theorems build_nat_prelude admits; registered to close the flywheel's fact-ledger arrow for recently landed Nat theorems"
+  },
+  "notes": "`depends_on` is literal: `theorem_dependency_inventory` lists `Nat.add_comm` and `Nat.choose_zero_right` among this theorem's direct dependencies (alongside several unregistered helper theorems), and both are registered as facts.",
+  "external_status": "proved"
+}
