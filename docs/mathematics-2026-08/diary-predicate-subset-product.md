@@ -188,3 +188,56 @@ still produced two real theorems (`Int.euler_unit_coprime`,
 `Int.euler_unit_injective` — the MapsInto and InjectiveOn halves for
 multiplication by a unit) that any future route needs. A wrong brief with a
 correct escape hatch is recoverable; a wrong brief that demands success is not.
+
+---
+
+## Third correction: half the obstruction was AVOIDABLE, not solvable
+
+The predicate-scoped **pigeonhole** landed, and it needed none of the machinery
+this note spent three revisions arguing about.
+
+`Nat.injective_on_p_imp_surjective_on_p` — with `Nat.injectiveOnP`,
+`Nat.mapsIntoP`, `Nat.surjectiveOnP` — is proved by **extending the map instead
+of restricting the range**:
+
+```text
+f' i := bool_select_nat (p i) (f i) i        -- fix every point outside the subset
+```
+
+`f'` is injective and self-maps `[0,n)` outright: an in-subset point can never
+collide with a fixed outside point, because `MapsIntoP` keeps every image inside
+the subset. So `f'` goes **unmodified** into the existing full-range
+`Nat.injective_on_imp_surjective_on`, and reading a genuine witness back out
+needs ruling out exactly one spurious case — the witness landing on an outside
+fixed point, impossible since the target is itself `p`-true.
+
+**No induction on `n`, no remove-one-element re-indexing, no swap lemma.**
+
+### What that says about the three previous revisions
+
+This note recorded, in order: the primitive is missing (seven lanes); it exists
+one carrier away (wrong — a name match with the hypotheses unread); it genuinely
+does not exist, full-range only (correct). All three took for granted that the
+reduction had to go *inward* — restrict the range to the subset and re-index.
+Extending outward to a total map was never considered, by any of the seven lanes
+or by me, and it makes the hard part disappear.
+
+The lesson is not "we missed a trick". It is that **an obstruction reported
+independently by seven lanes still only tells you where seven lanes stopped, not
+that the path is blocked.** Concurring reports raise confidence in the
+*symptom* and say nothing about the *diagnosis* — every one of those lanes was
+standing in the same place looking the same direction, which is exactly the
+condition under which agreement carries no information.
+
+### What is still genuinely missing
+
+`Nat.prodRangeIf_permute` — invariance of the **product** under a subset
+bijection. The extension trick does not rescue it: `f'` fixes outside points, so
+`prodRangeIf` over `f ∘ σ` and over `f` still differ in how the fold visits
+them, and a fold's `succ` step peels the *top* of the range while the pigeonhole
+witness can be interior. That is what `Int.prodRange_swap` exists for, and its
+own doc records that it took three drafts. Euler's totient theorem still needs
+it.
+
+So the score is: pigeonhole **done, cheaply**; product invariance **open, and
+the ~650-line swap port is still the honest estimate.**

@@ -98,3 +98,46 @@ squared form) landed 2026-08-24 in squared form *because* there is no `sqrt` —
 the unsquared triangle inequality, actual Euclidean distance, and Heron's
 formula all need it. It is the single highest-fanout missing definition in the
 constructive-reals development.
+
+---
+
+# Addendum, 2026-08-25: what "nothing is missing" is worth
+
+Unrelated to `sqrt`, but the same lesson and it belongs somewhere durable.
+
+A lane building `monotone_of_nonneg_deriv` handed off a plan ending *"none of
+these needs anything absent from the codebase — it's a genuinely substantial
+further slice, not a blocked one."* The next lane checked and **the claim did
+not survive contact.**
+
+The gap neither of the first two lanes named: the subdivision picks a piece
+count `K` so the last interpolation point lands on `y`. But `ofNat K · step ~
+(y − x)` is a **proved identity, not a reduction** — so `x_K` is only ever
+`Equiv` to `y`, never syntactically equal. Closing the telescoped bound to
+`F x ≤ F y` therefore needs `F` to respect that `Equiv`, and **that is not free
+for an arbitrary `F : CReal → CReal`.** Only proved congruences (`mul_congr`,
+`neg_congr`, …) carry across `Equiv`, and `HasDerivativeOn`'s hypothesis is
+stated for the caller's specific `x, y`, not up to `Equiv` on them.
+
+The lane then closed it: `CReal.hasDerivative_closeOfEquiv` derives exactly that
+congruence from `HasDerivativeOn`'s own spec, instantiated at a **fixed**
+accuracy `e := 0` — because `u ~ v` makes the piece width `Equiv` to `zero`
+outright rather than merely small, so no Archimedean closing is needed for this
+lemma specifically. Landed, axiom-free.
+
+**The transferable point:** a plan's "nothing is missing" is a *prediction*, and
+this one was made by the lane that had just spent a full attempt on the problem
+and was in the best position to know. It was still wrong, in a way visible only
+to someone who tried to write the terms. Treat a handoff's confidence about the
+remaining work the way this repository treats a checker that has never been seen
+to fail — it may be right, but nothing yet distinguishes it from wishful.
+
+Two setoid facts worth carrying forward on their own:
+
+- **Endpoint exactness is not free in a setoid.** Any construction that "picks
+  `K` so the endpoints match" gets `Equiv`, not `Eq`, and every function applied
+  to that endpoint then needs a congruence.
+- **A congruence for a function given only by a spec can often be *derived* from
+  that spec at a degenerate accuracy.** That is what made this one cheap, and it
+  is likely to recur for `integral`, `exp`, and anything else defined by a
+  modulus.
