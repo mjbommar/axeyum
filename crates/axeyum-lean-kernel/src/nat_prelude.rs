@@ -151,6 +151,7 @@ mod finite_set;
 mod gcd;
 mod group;
 mod helpers;
+mod irrational;
 mod lcm;
 mod modular;
 mod no_confusion;
@@ -206,6 +207,7 @@ use finite::{
 use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use group::declare_group_all;
+use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use lcm::{
     declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
     declare_lcm_comm, declare_lcm_dvd,
@@ -1729,6 +1731,16 @@ pub struct NatPrelude {
     /// (pow 2 (succ k))` — the divisor sum of `2^k`, subtraction-free
     /// (`Σd|2^k d = 2^(k+1) − 1` restated as `+1 =`).
     pub sum_divisors_two_pow: NameId,
+
+    // --- the irrationality of `√2` (`irrational.rs`) ------------------------
+    /// `Nat.even_of_even_sq : ∀ n, dvd 2 (mul n n) → dvd 2 n`. Via
+    /// `gcd(2,n) ∈ {1,2}` plus `gauss_lemma`/`gcd_dvd_right`.
+    pub even_of_even_sq: NameId,
+    /// `Nat.no_rational_sqrt_two : ∀ p q, q ≠ 0 → p·p ≠ 2·(q·q)` — the
+    /// content of "`√2` is irrational", stated purely over `Nat` (no real
+    /// `sqrt`, no rational embedding). Infinite descent on `q` via
+    /// `WellFounded.fix`.
+    pub no_rational_sqrt_two: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2171,6 +2183,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_divisors_two_pow_eq_geom_sum: kernel
                 .name_str(nat, "sumDivisors_two_pow_eq_geom_sum"),
             sum_divisors_two_pow: kernel.name_str(nat, "sumDivisors_two_pow"),
+            even_of_even_sq: kernel.name_str(nat, "even_of_even_sq"),
+            no_rational_sqrt_two: kernel.name_str(nat, "no_rational_sqrt_two"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2268,6 +2282,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_crt(&mut d, &p)?;
         declare_powsq_all(&mut d, &p)?;
         declare_cantor_all(&mut d, &p)?;
+        declare_even_of_even_sq(&mut d, &p)?;
+        declare_no_rational_sqrt_two(&mut d, &p)?;
         Ok(p)
     })();
     match built {
