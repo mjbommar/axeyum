@@ -749,6 +749,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.cantor_diagonal_neg,
         p.cantor_no_fixed_point,
         p.dvd_two_pow_mul_classify,
+        p.pow_pos,
+        p.pow_lt_pow_succ,
     ]
 }
 
@@ -1278,6 +1280,95 @@ fn dvd_two_pow_mul_classify_computes_at_a_concrete_instance() {
     assert!(
         f.k.axiom_footprint(p.dvd_two_pow_mul_classify).is_empty(),
         "dvd_two_pow_mul_classify rests on a trusted declaration"
+    );
+}
+
+/// `Nat.pow_pos` — fully applied at `b = 3, k = 4` (`pow 3 4` reduces to
+/// `81`) with a CONCRETE proof of `Lt 0 3` (built from `Le.refl`/`Le.step`,
+/// not merely asserted), the residue's inferred type must reduce to
+/// `Lt 0 81` by `def_eq` — the numeral check a bare axiom-footprint/type
+/// pass cannot see (an off-by-one exponent or a wrong base would still
+/// type-check).
+#[test]
+fn pow_pos_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let three = f.num(3);
+    let four = f.num(4);
+    let pow_three_four = f.const_app(p.pow, &[three, four]);
+    let eighty_one = f.num(81);
+    assert!(
+        f.k.def_eq(pow_three_four, eighty_one),
+        "pow 3 4 must reduce to 81"
+    );
+
+    // A concrete proof of `Le 1 3` (defeq `Lt 0 3`): `le_refl 1`, stepped
+    // twice.
+    let one = f.num(1);
+    let two = f.num(2);
+    let le_1_1 = f.const_app(p.le_refl, &[one]);
+    let le_1_2 = f.const_app(p.le_step, &[one, one, le_1_1]);
+    let le_1_3 = f.const_app(p.le_step, &[one, two, le_1_2]);
+
+    let applied = f.const_app(p.pow_pos, &[three, four]);
+    let full = f.apply(applied, &[le_1_3]);
+    let inferred = f.k.infer(full).expect("pow_pos 3 4 le_1_3 must type-check");
+    let zero = f.zero();
+    let expected = f.lt(zero, eighty_one);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "pow_pos 3 4 must certify Lt 0 81, got {}",
+        f.k.render_lean(inferred)
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.pow_pos).is_empty(),
+        "pow_pos rests on a trusted declaration"
+    );
+}
+
+/// `Nat.pow_lt_pow_succ` — fully applied at `b = 2, k = 3` with a CONCRETE
+/// proof of `Lt 1 2` (`Le.refl 2`), the residue's inferred type must reduce
+/// to `Lt 8 16` (`pow 2 3 = 8`, `pow 2 4 = 16`) by `def_eq`. This is exactly
+/// the instance `sumDivisors_two_pow`'s tail sub-induction will apply this
+/// lemma at (`2^k < 2^(k+1)`).
+#[test]
+fn pow_lt_pow_succ_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let pow_two_three = f.const_app(p.pow, &[two, three]);
+    let eight = f.num(8);
+    assert!(f.k.def_eq(pow_two_three, eight), "pow 2 3 must reduce to 8");
+    let pow_two_four = f.const_app(p.pow, &[two, four]);
+    let sixteen = f.num(16);
+    assert!(
+        f.k.def_eq(pow_two_four, sixteen),
+        "pow 2 4 must reduce to 16"
+    );
+
+    // A concrete proof of `Le 2 2` (defeq `Lt 1 2`): `le_refl 2`.
+    let le_2_2 = f.const_app(p.le_refl, &[two]);
+
+    let applied = f.const_app(p.pow_lt_pow_succ, &[two, three]);
+    let full = f.apply(applied, &[le_2_2]);
+    let inferred =
+        f.k.infer(full)
+            .expect("pow_lt_pow_succ 2 3 le_2_2 must type-check");
+    let expected = f.lt(eight, sixteen);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "pow_lt_pow_succ 2 3 must certify Lt 8 16, got {}",
+        f.k.render_lean(inferred)
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.pow_lt_pow_succ).is_empty(),
+        "pow_lt_pow_succ rests on a trusted declaration"
     );
 }
 
@@ -5362,7 +5453,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        58 + 262,
+        58 + 264,
         "every promised definition and theorem must be rendered"
     );
 }

@@ -1675,6 +1675,17 @@ pub struct NatPrelude {
     /// or that power times `q`. The Euclid IX.36 divisor-classification
     /// blocker; see `perfect.rs`'s module doc for the proof route.
     pub dvd_two_pow_mul_classify: NameId,
+    /// `Nat.pow_pos : ∀ b k, Lt zero b → Lt zero (pow b k)` — positivity of
+    /// `pow` is preserved by a positive base, at any exponent. See
+    /// `perfect.rs`'s module note for why this and `pow_lt_pow_succ` did not
+    /// already exist (verified against the full theorem inventory).
+    pub pow_pos: NameId,
+    /// `Nat.pow_lt_pow_succ : ∀ b k, Lt (succ zero) b → Lt (pow b k) (pow b
+    /// (succ k))` — strict monotonicity of `pow` in the exponent, one
+    /// successor step at a time, for any base greater than `1`. The Euclid
+    /// IX.36 blocker `perfect.rs`'s module doc names: `sumDivisors_two_pow`'s
+    /// tail sub-induction needs `2^k < 2^(k+1)`, an instance at `b = 2`.
+    pub pow_lt_pow_succ: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2105,6 +2116,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             cantor_diagonal_neg: kernel.name_str(nat, "cantor_diagonal_neg"),
             cantor_no_fixed_point: kernel.name_str(nat, "cantor_no_fixed_point"),
             dvd_two_pow_mul_classify: kernel.name_str(nat, "dvd_two_pow_mul_classify"),
+            pow_pos: kernel.name_str(nat, "pow_pos"),
+            pow_lt_pow_succ: kernel.name_str(nat, "pow_lt_pow_succ"),
         };
 
         let mut d = NatDev::new(kernel, p);
