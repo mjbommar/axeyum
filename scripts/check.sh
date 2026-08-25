@@ -122,6 +122,32 @@ step autogenesis-type-slice-producer-census-tests python3 -m unittest scripts.te
 step autogenesis-type-slice-producer-census python3 scripts/check-autogenesis-type-slice-producer-census.py
 step autogenesis-factorial-zero-family-tests python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
 step autogenesis-factorial-zero-family python3 scripts/check-autogenesis-factorial-zero-family.py
+step autogenesis-semantic-abstraction-census-tests python3 -m unittest scripts.tests.test_check_autogenesis_semantic_abstraction_census
+step autogenesis-semantic-abstraction-census python3 scripts/check-autogenesis-semantic-abstraction-census.py
+step autogenesis-semantic-function-contract-rust cargo test -p axeyum-lean-import --test semantic_function_contract
+step autogenesis-semantic-contract-target-census-rust cargo test -p axeyum-lean-import --example semantic_contract_target_census
+step autogenesis-semantic-contract-target-census-tests python3 -m unittest scripts.tests.test_check_autogenesis_semantic_contract_target_census
+step autogenesis-semantic-contract-target-census python3 scripts/check-autogenesis-semantic-contract-target-census.py
+step autogenesis-int-gcd-contract-residualization-rust-test cargo test -p axeyum-lean-import --test contract_residualization
+step autogenesis-int-gcd-contract-residualization-rust-example cargo test -p axeyum-lean-import --example int_gcd_contract_residualization
+step autogenesis-int-gcd-contract-residualization-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_residualization
+step autogenesis-int-gcd-contract-residualization python3 scripts/check-autogenesis-int-gcd-contract-residualization.py
+step autogenesis-int-gcd-source-delta-rust-test cargo test -p axeyum-lean-import --test source_delta_trace
+step autogenesis-int-gcd-source-delta-rust-example cargo test -p axeyum-lean-import --example int_gcd_source_delta_trace
+step autogenesis-int-gcd-source-delta-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_source_delta
+step autogenesis-int-gcd-source-delta python3 scripts/check-autogenesis-int-gcd-source-delta.py
+step autogenesis-int-gcd-trace-contract-receipt-rust-test cargo test -p axeyum-lean-import --test trace_contract_receipt
+step autogenesis-int-gcd-trace-contract-receipt-rust-example cargo test -p axeyum-lean-import --example int_gcd_trace_contract_receipt
+step autogenesis-int-gcd-trace-contract-receipt-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_trace_contract_receipt
+step autogenesis-int-gcd-trace-contract-receipt python3 scripts/check-autogenesis-int-gcd-trace-contract-receipt.py
+step autogenesis-int-gcd-contract-theorem-control-policy-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_theorem_control_policy
+step autogenesis-int-gcd-contract-theorem-control-policy python3 scripts/check-autogenesis-int-gcd-contract-theorem-control-policy.py
+step autogenesis-int-gcd-contract-theorem-control-rust-test cargo test -p axeyum-lean-import --test trace_contract_theorem_receipt
+step autogenesis-int-gcd-contract-theorem-control-rust-example cargo test -p axeyum-lean-import --example int_gcd_contract_theorem_control
+step autogenesis-int-gcd-contract-theorem-control-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_theorem_control
+step autogenesis-int-gcd-contract-theorem-control python3 scripts/check-autogenesis-int-gcd-contract-theorem-control.py
+step autogenesis-nat-fib-gcd-premise-selection-policy-tests python3 -m unittest scripts.tests.test_check_autogenesis_nat_fib_gcd_premise_selection_policy
+step autogenesis-nat-fib-gcd-premise-selection-policy python3 scripts/check-autogenesis-nat-fib-gcd-premise-selection-policy.py
 step autogenesis-mathlib-source-tests python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source
 step autogenesis-mathlib-source python3 scripts/check-autogenesis-mathlib-source.py
 step autogenesis-mathlib-candidate-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_candidates
@@ -308,20 +334,28 @@ step autogenesis-knowledge-overlay python3 scripts/validate-autogenesis-knowledg
 step autogenesis-knowledge-controls ./scripts/check-autogenesis-knowledge-controls.sh
 step autogenesis-kernel-projection python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
 step autogenesis-kernel-projection-content python3 scripts/validate-autogenesis-kernel-dependency-projection.py
+step autogenesis-kernel-projection-fresh python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
 step autogenesis-obstruction-projection python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection
 step autogenesis-obstruction-projection-content python3 scripts/validate-autogenesis-obstruction-projection.py
+step autogenesis-obstruction-projection-fresh python3 scripts/gen-autogenesis-obstruction-projection.py --check
 step autogenesis-transport-projection python3 -m unittest scripts.tests.test_validate_autogenesis_transport_projection
 step autogenesis-transport-projection-content python3 scripts/validate-autogenesis-transport-projection.py
+step autogenesis-transport-projection-fresh python3 scripts/gen-autogenesis-transport-projection.py --check
 step autogenesis-capability-gap python3 -m unittest scripts.tests.test_validate_autogenesis_capability_gap_projection
 step autogenesis-capability-gap-content python3 scripts/validate-autogenesis-capability-gap-projection.py
+step autogenesis-capability-gap-fresh python3 scripts/gen-autogenesis-capability-gap-projection.py --check
 step autogenesis-concept-coverage python3 -m unittest scripts.tests.test_validate_autogenesis_concept_coverage_projection
 step autogenesis-concept-coverage-content python3 scripts/validate-autogenesis-concept-coverage-projection.py
+step autogenesis-concept-coverage-fresh python3 scripts/gen-autogenesis-concept-coverage-projection.py --check
 step autogenesis-producer-outcomes python3 -m unittest scripts.tests.test_validate_autogenesis_producer_outcome_observations
 step autogenesis-producer-outcomes-content python3 scripts/validate-autogenesis-producer-outcome-observations.py
+step autogenesis-producer-outcomes-fresh python3 scripts/gen-autogenesis-producer-outcome-observations.py --check
 step autogenesis-producer-evaluation-frontier python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_frontier
 step autogenesis-producer-evaluation-frontier-content python3 scripts/validate-autogenesis-producer-evaluation-frontier.py
+step autogenesis-producer-evaluation-frontier-fresh python3 scripts/gen-autogenesis-producer-evaluation-frontier.py --check
 step autogenesis-producer-evaluation-protocol python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_protocol
 step autogenesis-producer-evaluation-protocol-content python3 scripts/validate-autogenesis-producer-evaluation-protocol.py
+step autogenesis-producer-evaluation-protocol-fresh python3 scripts/gen-autogenesis-producer-evaluation-protocol.py --check
 step autogenesis-producer-evaluation-result-contract python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_result
 step autogenesis-proposer-isolation ./scripts/check-autogenesis-proposer-isolation.sh
 step autogenesis-induction-search ./scripts/check-autogenesis-induction-search.sh
