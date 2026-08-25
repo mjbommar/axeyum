@@ -11,7 +11,11 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:rat-add-zero",
+    "F:rat-mul-one",
+    "F:rat-mul-zero"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

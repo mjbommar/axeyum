@@ -15,7 +15,13 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:creal-regular",
-    "F:rat-le-trans"
+    "F:rat-add-le-add",
+    "F:rat-le-refl",
+    "F:rat-le-trans",
+    "F:rat-mul-one",
+    "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-le-scaled",
+    "F:rat-neg-le-neg"
   ],
   "axiom_footprint": [],
   "evidence": [

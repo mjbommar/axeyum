@@ -20,9 +20,22 @@
     "F:creal-regular",
     "F:nat-mul-one",
     "F:rat-add-assoc",
+    "F:rat-add-le-add",
+    "F:rat-add-zero",
+    "F:rat-bounds-mul",
+    "F:rat-le-refl",
     "F:rat-le-trans",
     "F:rat-left-distrib",
-    "F:rat-mul-comm"
+    "F:rat-mul-comm",
+    "F:rat-nat-index-compose",
+    "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-halve",
+    "F:rat-natdivsucc-le-scaled",
+    "F:rat-natdivsucc-mul",
+    "F:rat-neg-le-neg",
+    "F:rat-neg-nonpos-of-nonneg",
+    "F:rat-zero-add",
+    "F:rat-zero-le-natdivsucc"
   ],
   "axiom_footprint": [],
   "evidence": [

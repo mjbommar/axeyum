@@ -19,7 +19,16 @@
     "F:creal-regular",
     "F:rat-add-assoc",
     "F:rat-add-comm",
-    "F:rat-le-trans"
+    "F:rat-add-le-add",
+    "F:rat-add-neg",
+    "F:rat-add-zero",
+    "F:rat-bounds-add",
+    "F:rat-le-refl",
+    "F:rat-le-trans",
+    "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-halve",
+    "F:rat-neg-le-neg",
+    "F:rat-zero-le-natdivsucc"
   ],
   "axiom_footprint": [],
   "evidence": [

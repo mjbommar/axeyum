@@ -14,7 +14,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:creal-equiv-of-pointwise"
+    "F:creal-equiv-of-pointwise",
+    "F:rat-add-neg"
   ],
   "axiom_footprint": [],
   "evidence": [

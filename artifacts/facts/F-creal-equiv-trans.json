@@ -20,7 +20,14 @@
   "depends_on": [
     "F:creal-regular",
     "F:rat-add-assoc",
-    "F:rat-add-comm"
+    "F:rat-add-comm",
+    "F:rat-bounds-add",
+    "F:rat-bounds-neg",
+    "F:rat-le-of-le-add-natdivsucc",
+    "F:rat-natdivsucc-add",
+    "F:rat-neg-le-neg",
+    "F:rat-neg-neg",
+    "F:rat-sub-add-sub"
   ],
   "axiom_footprint": [],
   "evidence": [

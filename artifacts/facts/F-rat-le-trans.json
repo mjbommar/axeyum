@@ -19,7 +19,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:int-mul-assoc",
-    "F:int-mul-comm"
+    "F:int-mul-comm",
+    "F:rat-den-pos"
   ],
   "axiom_footprint": [],
   "evidence": [

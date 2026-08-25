@@ -18,7 +18,12 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:rat-bounds-add",
+    "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-halve",
+    "F:rat-sub-add-add"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

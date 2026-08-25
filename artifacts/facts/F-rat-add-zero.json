@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-add-zero",
+  "title": "Zero is a right identity for rational addition",
+  "statement": "For every rational a, a + 0 = a.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.add_zero : ((x0 : Rat) -> Eq.{1} Rat (Rat.add x0 Rat.zero) x0)",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-mul-one"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.add_zero",
+      "kind": "kernel-term",
+      "supports": "Rat.add_zero is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.add_zero 2>/dev/null | grep -cE '^Rat\\\\.add_zero[[:space:]]'",
+      "notes": "`build_rat_prelude` admits Rat.add_zero through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` exits non-zero for a named filter that matches nothing (a deleted theorem cannot read as a re-derived one), and `grep -c` (never `-q`) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present -- two ways the same absence would be caught. `--release` is MANDATORY: this tool also builds `creal`/`complex`/`cpoint`, which recurse deep enough in a debug build to overflow the default thread stack (measured: release exits 0, debug SIGABRTs at 134) -- the same resource-limit gotcha already documented for `prelude_theorem_inventory --include-constructed`."
+    },
+    {
+      "id": "footprint-Rat.add_zero",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Rat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "notes": "`nat_axiom_inventory` builds the Rat environment as its own group and reports `rat: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree). That bounds every individual Rat theorem's footprint by [], since a theorem cannot depend on a trusted declaration the environment does not contain -- and the enumeration covers Axiom, Opaque AND Quotient, not just Declaration::Axiom, because Opaque has no proof body and Quotient admits Quot.sound. `--require-axiom-free <name>` is an error (not a silent pass/zero) for a prelude this run never built, which is what makes `rat` here a claim rather than an absence."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:identity-element",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_rat_prelude",
+    "source": "theorem name and dependency edges from theorem_dependency_inventory; canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path and calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint()) -- the same calls nat_theorem_inventory itself makes -- because no in-tree example currently prints Rat theorem types (crates/ source was left untouched per this task's constraint). Probe deleted after use."
+  },
+  "notes": "depends_on keeps only the sibling-mapped edges from theorem_dependency_inventory's direct-edge output for Rat.add_zero (the direct dependencies Int.add_zero, Int.mul_one, Rat.add_cross, Rat.eq_of_cross, Rat.int_zero_mul are not registered facts, so they are omitted -- only a used theorem that is itself a ledger fact is declared).",
+  "external_status": "proved"
+}

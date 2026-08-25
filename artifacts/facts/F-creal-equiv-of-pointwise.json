@@ -15,7 +15,10 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": [
+    "F:rat-neg-nonpos-of-nonneg",
+    "F:rat-zero-le-natdivsucc"
+  ],
   "axiom_footprint": [],
   "evidence": [
     {

@@ -17,7 +17,9 @@
   "depends_on": [
     "F:int-mul-comm",
     "F:nat-mul-comm",
-    "F:nat-one-le-mul"
+    "F:nat-one-le-mul",
+    "F:rat-den-pos",
+    "F:rat-normalize-congr"
   ],
   "axiom_footprint": [],
   "evidence": [
