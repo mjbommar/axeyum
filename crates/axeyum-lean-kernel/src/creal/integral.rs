@@ -1015,10 +1015,7 @@ fn riemann_sum_const_rearrange(
         let assoc = d.lemma(p.mul_assoc, &[on, width, frac]); // Equiv on_width_frac on_delta
         let inner = d.lemma(p.equiv_symm, &[on_width_frac, on_delta, assoc]);
         let refl_c = d.lemma(p.equiv_refl, &[c]);
-        d.lemma(
-            p.mul_congr,
-            &[c, c, on_delta, on_width_frac, refl_c, inner],
-        )
+        d.lemma(p.mul_congr, &[c, c, on_delta, on_width_frac, refl_c, inner])
     };
 
     // b5 := mul c (mul (mul width on) frac)
