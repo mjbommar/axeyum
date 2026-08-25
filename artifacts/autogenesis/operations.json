@@ -1271,7 +1271,6 @@
         "fact_ids": [
           "F:ml430-nat-descfactorial-one-d4856d4a",
           "F:ml430-nat-ascfactorial-zero-fd183202",
-          "F:ml430-nat-descfactorial-zero-966b01df",
           "F:ml430-nat-zero-ascfactorial-af4fcdca",
           "F:ml430-nat-one-ascfactorial-8bacb017"
         ],
@@ -1300,7 +1299,6 @@
         "input_fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
         "additional_fact_ids": [
           "F:ml430-nat-ascfactorial-zero-fd183202",
-          "F:ml430-nat-descfactorial-zero-966b01df",
           "F:ml430-nat-zero-ascfactorial-af4fcdca",
           "F:ml430-nat-one-ascfactorial-8bacb017"
         ],
@@ -1316,12 +1314,6 @@
             "statement_adapter_manifest": "artifacts/autogenesis/mathlib-statement-adapter-v1.json",
             "induction_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-ascfactorial-zero-v1.json",
             "target_definition": "Axeyum.Autogenesis.Statement.natAscFactorialZero"
-          },
-          {
-            "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
-            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-descfactorial-zero-statement-adapter-v1.json",
-            "induction_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-descfactorial-zero-v1.json",
-            "target_definition": "Axeyum.Autogenesis.Statement.FactorialZero.natDescFactorialZero"
           },
           {
             "fact_id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
