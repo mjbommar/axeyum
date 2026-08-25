@@ -22,25 +22,14 @@ use super::NatPrelude;
 use super::binomial::{binom_term, binom_term_fn, binom_term_zero_eq_pow_b};
 use super::helpers::and_left;
 use super::ops::{NatDev, NatOps};
-use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
 
 // ============================================================================
-// Small shared combinators. `ex_falso` and `shifted_fn` are local copies of
-// private helpers in [`super::binomial`] (that module's own convention: see
-// its `ex_falso`, "a local copy of `order_more::ex_falso`").
+// Small shared combinators. `shifted_fn` is a local copy of a private helper
+// in [`super::binomial`] (that module's own convention: see its `ex_falso`,
+// "a local copy of `order_more::ex_falso`").
 // ============================================================================
-
-/// `False.rec (fun _ => target) false_proof : target`.
-fn ex_falso(d: &mut NatDev<'_>, p: &NatPrelude, target: ExprId, false_proof: ExprId) -> ExprId {
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
-    let level_zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
-    d.apply(rec, &[motive, false_proof])
-}
 
 /// `fun k => f (succ k)`.
 fn shifted_fn(d: &mut NatDev<'_>, f: ExprId) -> ExprId {
@@ -89,45 +78,11 @@ fn prime_pos(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, prime_proof: ExprId)
     d.lemma(p.le_trans, &[one, two, x, one_le_two, two_le])
 }
 
-/// `Lt zero n → Eq n (succ (pred n))`, by induction on `n`: the base case is
-/// impossible (`not_lt_zero`); the successor case is `refl`, since
-/// `pred (succ m)` reduces to `m` definitionally. Returns the arrow-typed
+/// `Lt zero n → Eq n (succ (pred n))`, by applying the declared
+/// `Nat.succ_pred_of_pos` theorem (`finite.rs`). Returns the arrow-typed
 /// proof (apply it to a positivity witness to get the equation).
 fn pos_implies_succ_pred(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
-    let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
-        let zero = d.zero();
-        let hyp = d.lt(zero, x);
-        let px = d.pred(x);
-        let spx = d.succ(px);
-        let concl = d.eq(x, spx);
-        d.arrow(hyp, concl)
-    };
-    d.induct(
-        &motive,
-        &|d| {
-            let zero = d.zero();
-            let hyp_ty = d.lt(zero, zero);
-            let hyp_fv = d.fresh_fvar();
-            let hyp = d.kernel().fvar(hyp_fv);
-            let pz = d.pred(zero);
-            let spz = d.succ(pz);
-            let target_ty = d.eq(zero, spz);
-            let not_lt = d.lemma(p.not_lt_zero, &[zero]);
-            let false_proof = d.apply(not_lt, &[hyp]);
-            let body = ex_falso(d, p, target_ty, false_proof);
-            d.lam_fv(hyp_fv, hyp_ty, body)
-        },
-        &|d, m, _ih| {
-            let sm = d.succ(m);
-            let zero = d.zero();
-            let hyp_ty = d.lt(zero, sm);
-            let hyp_fv = d.fresh_fvar();
-            let _hyp = d.kernel().fvar(hyp_fv);
-            let body = d.refl(sm);
-            d.lam_fv(hyp_fv, hyp_ty, body)
-        },
-        n,
-    )
+    d.lemma(p.succ_pred_of_pos, &[n])
 }
 
 /// `Eq a b → modEq d a b`, via `mod_eq_refl` transported along the equality.
