@@ -596,6 +596,25 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   the `__pycache__` trap under Gotchas, which makes hand loops report the
   *previous* mutant's result anyway.
 
+- **AN ABSOLUTE PATH UNDER THE MAIN CHECKOUT SILENTLY EDITS THE MAIN CHECKOUT,
+  EVEN FROM INSIDE A WORKTREE.** A lane working in
+  `.claude/worktrees/agent-<id>/` opened `CLAUDE.md` by its familiar path,
+  `/home/mjbommar/projects/personal/axeyum/CLAUDE.md`, and was reading — and
+  would have been writing — the SHARED checkout, not its own isolated copy. The
+  worktree's whole purpose is that its writes are isolated; an absolute path
+  defeats that without any error.
+
+  It is asymmetric and that is what makes it easy to miss: a shell command is
+  fine, because the lane's cwd IS the worktree and relative paths resolve there.
+  Only the absolute form escapes. The lane caught it before an edit landed in
+  the wrong tree, but it cost exploration turns and it would have looked, to
+  everyone else, like a mystery edit from nowhere.
+
+  So from a worktree, prefix absolute paths with your own worktree root, or use
+  relative paths from cwd. When briefing a lane, say this explicitly — "read
+  your reference files from your own worktree" is not enough, because the lane
+  believes it is doing that.
+
 - **THE SESSION SCRATCHPAD IS SHARED BY EVERY LANE IN THE SESSION, and a
   fixed-name file in it is a shared append point.** `/tmp/claude-1000/<project>/
   <session>/scratchpad` is per SESSION, not per lane, so concurrent lanes write
