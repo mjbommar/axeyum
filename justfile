@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts autogenesis-capability-demand test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular tock-log2-maestro-controls foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage
 
 fmt:
     cargo fmt --all --check
@@ -170,6 +170,11 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-int-gcd-contract-theorem-control.py
     python3 -m unittest scripts.tests.test_check_autogenesis_nat_fib_gcd_premise_selection_policy
     python3 scripts/check-autogenesis-nat-fib-gcd-premise-selection-policy.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_int_fib_neg_natcast_dependency_audit_result
+    python3 -m unittest scripts.tests.test_check_autogenesis_int_fib_of_odd_private_root_audit_plan
+    python3 -m unittest scripts.tests.test_check_autogenesis_int_fib_of_odd_private_root_audit_result
+    python3 -m unittest scripts.tests.test_check_autogenesis_nat_fib_gcd_surface_result
+    python3 -m unittest scripts.tests.test_check_autogenesis_nat_gcd_greatest_result
 
 # The bulk source is external and optional on CI. The first checker reports
 # verified/unavailable without conflating them; the committed 240-row view is
@@ -213,6 +218,7 @@ autogenesis-authoritative-compare first second output:
 
 facts:
     python3 scripts/validate-facts.py
+    python3 -m unittest scripts.tests.test_validate_facts
     python3 -m unittest scripts.tests.test_settled_fact_statements
     python3 scripts/check-settled-fact-statements.py
     # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
@@ -447,6 +453,7 @@ parity-freshness:
 
 autogenesis-knowledge-controls:
     python3 -m unittest scripts.tests.test_validate_autogenesis_knowledge
+    python3 -m unittest scripts.tests.test_gen_autogenesis_knowledge_coverage
     python3 scripts/validate-autogenesis-knowledge.py
     scripts/check-autogenesis-knowledge-controls.sh
 
@@ -499,6 +506,10 @@ autogenesis-capability-gap:
     python3 -m unittest scripts.tests.test_validate_autogenesis_capability_gap_projection
     python3 scripts/validate-autogenesis-capability-gap-projection.py
     python3 scripts/gen-autogenesis-capability-gap-projection.py --check
+
+autogenesis-capability-demand:
+    python3 -m unittest scripts.tests.test_validate_autogenesis_capability_candidate_demand
+    python3 scripts/validate-autogenesis-capability-candidate-demand.py
 
 autogenesis-family-concepts:
     python3 -m unittest scripts.tests.test_validate_autogenesis_family_concept_crosswalk
@@ -695,6 +706,24 @@ benchmark-repetition-tests:
 # neither is present. Explicitly configured but incomplete data fails closed.
 glaurung-qfbv-regular:
     ./scripts/check-glaurung-qfbv-regular.sh
+
+# Mocked-subprocess unit controls for the Tock log2 capture/cache-prepare
+# investigation tooling (bench-results/verify-tock-log2-20260721/). The
+# underlying capture/prepare/prove pipeline needs a QEMU/LLVM toolchain and is
+# not re-run here -- these controls only guard the committed scripts' own
+# logic (namespace mounts, staging/publish atomicity, cache probing) via
+# subprocess mocks, so they run everywhere `python3 -m unittest` does. The
+# `prove-tock-log2*` generations are excluded: their frozen registration pins
+# a SHA-256 of `crates/axeyum-verify/tests/tock_log2_external.rs` that has
+# drifted since the freeze, so all four currently fail closed.
+tock-log2-maestro-controls:
+    python3 -m unittest scripts.tests.test_capture_tock_log2
+    python3 -m unittest scripts.tests.test_capture_tock_log2_v2
+    python3 -m unittest scripts.tests.test_capture_tock_log2_v3
+    python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v2
+    python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v3
+    python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v4
+    python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v5
 
 foundational-resources:
     ./scripts/check-foundational-resources.sh

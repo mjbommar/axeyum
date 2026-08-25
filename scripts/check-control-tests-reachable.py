@@ -40,22 +40,56 @@ is real work with real failures to fix, and blocking every unrelated commit
 until that is finished would just get the gate deleted. What it stops today is
 the count going UP — a NEW control that nothing runs.
 
-# What the remaining 19 are
+# What the remaining 14 are
 
-Characterised 2026-08-17 rather than left as a number. Fifteen are controls for
-the `tock-log2` / `maestro-device-id` producer series. Their subject scripts all
-still EXIST — these are not dead tests for deleted code — but the subjects
-themselves are referenced by zero or one tracked files, i.e. dormant one-off
-investigation tooling that no gate runs either. Adopting them would spend gate
-time guarding scripts nobody invokes.
+Re-characterised 2026-08-25, after the count grew from 19 to 30 (ten new
+`check-autogenesis-*` one-off audit/coverage controls landed and were never
+wired, plus one lane's own many-control `test_lane_merge_additive` suite for
+`scripts/lane-merge-additive.py` — that one adopted immediately, bringing 30
+down to 29 before this pass) and was brought back down to 14. Of the 11 `tock-log2` /
+`maestro-device-id` controls that were unregistered at the 2026-08-17
+measurement, 7 turned out to be live, passing, unittest-based guards over
+scripts that are still cross-referenced by later generations in the same
+investigation chain (`prepare-tock-log2-cache-v2.py` imports
+`capture-tock-log2.py` directly, for example) — deleting the "superseded"
+generations would have broken the ones that import them, so all 7 are now
+registered instead. The 5 `check-autogenesis-*` result/plan controls with live,
+unchanged targets are registered too.
 
-That is a legitimate reason not to adopt, and it is a different reason from "not
-got to it yet". The remaining four are census/validation controls that reference
-no `scripts/` subject at all; one of them
-(`test_validate_glaurung_llvm_loop_semantic_census`) is the single genuinely
-rotted control found in this sweep. So the tail of this ratchet is not a backlog
-of coverage — it is mostly tooling that should probably be deleted with its
-tests, which is a decision for whoever owns that investigation, not for a gate.
+What remains at 14 is not a backlog of coverage, it is four distinct kinds of
+resistance:
+
+- **Seven are pytest-style, and a pytest interpreter is not installed here.**
+  (`test_capture_maestro_device_id`, its `_v2`/`_v3` generations,
+  `test_diagnose_maestro_llvm_root_drift`, `test_qf_linear_a5_census`,
+  `test_qf_nia_a3_census`, `test_qf_uflia_a4_census`.) NB this paragraph
+  deliberately keeps the module-import keyword and any module name off the
+  SAME line — this scanner does not special-case its own docstring, so a line
+  combining both would have silently credited the module as "run" the way a
+  runner-line comment used to (see the note on comment lines below). Each of
+  the seven does not import under the plain `python3 -m unittest` convention
+  every other control in this repository uses, because they use `pytest`
+  fixtures (`tmp_path`, `monkeypatch`, `pytest.raises`) that only a pytest
+  collector provides. That collector is a declared dev dependency
+  (`uv sync --dev` would put it in `.venv`), but no other `scripts/tests/`
+  control has ever been wired through it; adopting these first would mean
+  building a second gate pathway, which is a decision for whoever owns that
+  investigation.
+- **Four are `prove-tock-log2*` (all four generations)** — every one fails
+  identically: their frozen registration
+  (`bench-results/verify-tock-log2-20260721/proof-v1-registration.json`) pins a
+  SHA-256 of `crates/axeyum-verify/tests/tock_log2_external.rs` that has
+  drifted in committed history since the freeze. Re-freezing that registration
+  is a decision for whoever owns the Tock proof, not something this gate can
+  paper over.
+- **Two are `check-autogenesis-*-plan` controls whose target fact has moved
+  on**: `test_check_autogenesis_nat_fib_gcd_surface_plan` and
+  `test_check_autogenesis_nat_gcd_greatest_plan` both fail closed with "target
+  fact identity/open state changed" — the plan checker correctly refuses to
+  validate a stale plan against a fact ledger entry that has since settled.
+- **One is the single genuinely rotted control found in the 2026-08-17
+  sweep, still rotted**: `test_validate_glaurung_llvm_loop_semantic_census`
+  still fails with `ResultValidationError: producer drift: Cargo.lock`.
 
 A module naming itself proves nothing, so `scripts/tests/` is excluded from the
 search. `scripts/check-aggregate-scope.expected` is a pinned inventory of gate
@@ -72,12 +106,15 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TESTS = ROOT / "scripts/tests"
 
-# Measured 2026-08-17, after adopting 44 modules (`scripts/check-adopted-controls.sh`),
-# after fixing this scanner to join line continuations (which revealed 2 more that
-# were already wired), and after making it ignore COMMENT lines (which had been
-# crediting 2 modules because a comment explained why they were NOT run).
+# Measured 2026-08-25, after registering 15 of the 29 orphans this ratchet found
+# red (`test_validate_facts`, `test_gen_autogenesis_knowledge_coverage`,
+# `test_validate_autogenesis_capability_candidate_demand`, 5 live
+# `check-autogenesis-*` result/plan controls, and 7 `tock-log2` capture/cache
+# controls whose scripts are still cross-referenced by later generations). The
+# remaining 14 are characterised above ("What the remaining 14 are") rather than
+# left as a bare number. Previously 19, measured 2026-08-17.
 # MAY ONLY GO DOWN.
-ORPHAN_BASELINE = 19
+ORPHAN_BASELINE = 14
 # The controls exist; if this collapses, the glob is wrong and every count lies.
 MIN_MODULES = 130
 
