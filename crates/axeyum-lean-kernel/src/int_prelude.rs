@@ -82,6 +82,7 @@ mod division;
 mod dvd;
 mod euclid;
 mod euler;
+mod euler_totient;
 mod fibonacci;
 mod gcd;
 mod modeq;
@@ -911,6 +912,22 @@ pub struct IntPrelude {
     /// that direction needs a primitive root or a counting argument this
     /// prelude does not build.
     pub euler_criterion_pm_one: NameId,
+
+    // --- the Euler's-totient-theorem unit-permutation step (`euler_totient.rs`) ---
+    /// `euler_unit_coprime : ∀ n a k, 0 < n → Coprime a n → Coprime k n →
+    /// Coprime (emod (mul a k) n) n` — multiplication by a unit `a` maps the
+    /// coprime-residue subset of `[0,n)` into itself (`MapsInto`, one half of
+    /// Euler's totient theorem's permutation step). Does NOT by itself give
+    /// bijectivity of that map on the subset — see `euler_totient.rs`'s
+    /// module doc for exactly what is still missing (a predicate-scoped
+    /// pigeonhole, not built here or anywhere in this kernel yet).
+    pub euler_unit_coprime: NameId,
+    /// `euler_unit_injective : ∀ n a i j, 0 < n → Coprime a n → 0 ≤ i →
+    /// i < n → 0 ≤ j → j < n → Eq Int (emod (mul a i) n) (emod (mul a j) n) →
+    /// Eq Int i j` — multiplication by a unit `a` is injective on the WHOLE
+    /// `[0,n)` (of which injectivity on the coprime-residue subset is a free
+    /// corollary, restricting `i,j` to that subset).
+    pub euler_unit_injective: NameId,
     /// `fib_cassini : ∀ n, Eq Int (sub (mul (ofNat (Nat.fib (n+2))) (ofNat
     /// (Nat.fib n))) (mul (ofNat (Nat.fib (n+1))) (ofNat (Nat.fib (n+1)))))
     /// (pow (neg one) (succ n))` — Cassini's identity, shifted so every index
@@ -1122,6 +1139,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         is_quadratic_residue_one: child(kernel, "is_quadratic_residue_one"),
         is_quadratic_residue_mul: child(kernel, "is_quadratic_residue_mul"),
         euler_criterion_pm_one: child(kernel, "euler_criterion_pm_one"),
+        euler_unit_coprime: child(kernel, "euler_unit_coprime"),
+        euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),
     }
 }
@@ -1283,6 +1302,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler::declare_is_quadratic_residue_one(&mut d)?;
         euler::declare_is_quadratic_residue_mul(&mut d)?;
         euler::declare_euler_criterion_pm_one(&mut d)?;
+        euler_totient::declare_euler_unit_coprime(&mut d)?;
+        euler_totient::declare_euler_unit_injective(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         fibonacci::declare_fib_cassini_all(&mut d)?;
