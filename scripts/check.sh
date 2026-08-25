@@ -57,6 +57,7 @@ step fmt    cargo fmt --all --check
 # for different reasons, and a disagreement between them is itself a finding.
 step fmt-all scripts/check-fmt-complete.sh
 step facts  python3 scripts/validate-facts.py
+step validate-facts-tests python3 -m unittest scripts.tests.test_validate_facts
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
 step fact-dag-tests python3 -m unittest scripts.tests.test_check_fact_dag
@@ -122,6 +123,11 @@ step autogenesis-type-slice-producer-census-tests python3 -m unittest scripts.te
 step autogenesis-type-slice-producer-census python3 scripts/check-autogenesis-type-slice-producer-census.py
 step autogenesis-factorial-zero-family-tests python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
 step autogenesis-factorial-zero-family python3 scripts/check-autogenesis-factorial-zero-family.py
+step autogenesis-int-fib-neg-natcast-dependency-audit-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_fib_neg_natcast_dependency_audit_result
+step autogenesis-int-fib-of-odd-private-root-audit-plan-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_fib_of_odd_private_root_audit_plan
+step autogenesis-int-fib-of-odd-private-root-audit-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_int_fib_of_odd_private_root_audit_result
+step autogenesis-nat-fib-gcd-surface-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_nat_fib_gcd_surface_result
+step autogenesis-nat-gcd-greatest-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_nat_gcd_greatest_result
 step autogenesis-mathlib-source-tests python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source
 step autogenesis-mathlib-source python3 scripts/check-autogenesis-mathlib-source.py
 step autogenesis-mathlib-candidate-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_candidates
@@ -304,6 +310,7 @@ step external-coupling-tests python3 -m unittest scripts.tests.test_check_extern
 step external-coupling-selftest python3 scripts/check-external-coupling.py --self-test
 step external-coupling python3 scripts/check-external-coupling.py
 step autogenesis-knowledge-overlay-tests python3 -m unittest scripts.tests.test_validate_autogenesis_knowledge
+step autogenesis-knowledge-coverage-tests python3 -m unittest scripts.tests.test_gen_autogenesis_knowledge_coverage
 step autogenesis-knowledge-overlay python3 scripts/validate-autogenesis-knowledge.py
 step autogenesis-knowledge-controls ./scripts/check-autogenesis-knowledge-controls.sh
 step autogenesis-kernel-projection python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
@@ -314,6 +321,8 @@ step autogenesis-transport-projection python3 -m unittest scripts.tests.test_val
 step autogenesis-transport-projection-content python3 scripts/validate-autogenesis-transport-projection.py
 step autogenesis-capability-gap python3 -m unittest scripts.tests.test_validate_autogenesis_capability_gap_projection
 step autogenesis-capability-gap-content python3 scripts/validate-autogenesis-capability-gap-projection.py
+step autogenesis-capability-demand-tests python3 -m unittest scripts.tests.test_validate_autogenesis_capability_candidate_demand
+step autogenesis-capability-demand-content python3 scripts/validate-autogenesis-capability-candidate-demand.py
 step autogenesis-concept-coverage python3 -m unittest scripts.tests.test_validate_autogenesis_concept_coverage_projection
 step autogenesis-concept-coverage-content python3 scripts/validate-autogenesis-concept-coverage-projection.py
 step autogenesis-producer-outcomes python3 -m unittest scripts.tests.test_validate_autogenesis_producer_outcome_observations
@@ -682,6 +691,20 @@ step obstruction-graph-tests  python3 -m unittest scripts.tests.test_obstruction
 # scripts/tests/mutation_controls.py correspondences` (39 anchors, 39 killed).
 step correspondences       python3 scripts/validate-correspondences.py
 step correspondences-tests python3 -m unittest scripts.tests.test_validate_correspondences
+
+# Mocked-subprocess unit controls for the Tock log2 capture/cache-prepare
+# investigation tooling (bench-results/verify-tock-log2-20260721/). These only
+# guard the committed scripts' own logic via subprocess mocks; the
+# `prove-tock-log2*` generations are excluded because their frozen
+# registration pins a SHA-256 of `crates/axeyum-verify/tests/tock_log2_external.rs`
+# that has drifted since the freeze, so all four currently fail closed.
+step tock-log2-capture-tests    python3 -m unittest scripts.tests.test_capture_tock_log2
+step tock-log2-capture-v2-tests python3 -m unittest scripts.tests.test_capture_tock_log2_v2
+step tock-log2-capture-v3-tests python3 -m unittest scripts.tests.test_capture_tock_log2_v3
+step tock-log2-cache-v2-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v2
+step tock-log2-cache-v3-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v3
+step tock-log2-cache-v4-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v4
+step tock-log2-cache-v5-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v5
 
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
