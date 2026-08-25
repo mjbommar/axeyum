@@ -39,14 +39,5 @@ checker command reaches `gf2_hayes` or `artifacts/gf2`. Exactly four of 45
 qualify, `depends_on`-closed. The other 41 would have left the ledger asserting
 evidence this repository can no longer produce.
 
-Verified: 694 `axeyum-cas` tests (690 pass, 4 ignored, 48 of them gf2); clippy
-clean under `-D warnings`; `cargo check --workspace --all-features` clean;
-`validate-facts.py` 347 facts / 0 errors; each retained fact's own
-`checker_command` runs a nonzero passing count; the four `certificate-spec`
-guards each mutation-verified to kill exactly one test (`__pycache__` cleared
-between mutants); the new pre-push caller-safety assertion shown to fire on a
-HEAD move, a staged file, and an untracked leftover, and to stay quiet otherwise.
+Detail moved to [`../notes/122-lemire-integration.md`](../notes/122-lemire-integration.md).
 
-Not pushed. The research record is exported to
-`../lemire-half-degree-irreducibles` (`f7181da`, 768 files) and every source tip
-is pinned under `archive/*` in this repository.

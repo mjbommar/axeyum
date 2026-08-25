@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts autogenesis-capability-demand test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular tock-log2-maestro-controls foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand tock-log2-maestro-controls
 
 fmt:
     cargo fmt --all --check
@@ -142,6 +142,12 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-reflexivity-coverage.py
     python3 -m unittest scripts.tests.test_analyze_autogenesis_type_slices scripts.tests.test_check_autogenesis_type_slice_feasibility
     python3 scripts/check-autogenesis-type-slice-feasibility.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_checked_type_slice_replay
+    python3 scripts/check-autogenesis-checked-type-slice-replay.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_auto_param_binder_replay
+    python3 scripts/check-autogenesis-auto-param-binder-replay.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_type_slice_producer_census
+    python3 scripts/check-autogenesis-type-slice-producer-census.py
     python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
     python3 scripts/check-autogenesis-factorial-zero-family.py
     python3 -m unittest scripts.tests.test_check_autogenesis_semantic_abstraction_census
@@ -465,6 +471,21 @@ external-coupling:
     python3 -m unittest scripts.tests.test_check_external_coupling
     python3 scripts/check-external-coupling.py --self-test
     python3 scripts/check-external-coupling.py
+
+# Controls for scripts/check-lane-turn.sh: whether a lane's own working tree is
+# safe to act on, and whether a FAIL is this lane's own regression or
+# pre-existing/another-lane's-in-flight work. Wired into `check` in
+# scripts/check.sh already (`lane-turn-controls`); was missing here.
+lane-turn-controls:
+    ./scripts/tests/test-check-lane-turn.sh
+
+# `artifacts/correspondences/*.json`: claims that two facts are the same
+# mathematical idea, kept structurally distinct from `depends_on` (a proof
+# dependency). Wired into `check` in scripts/check.sh already
+# (`correspondences`/`correspondences-tests`); was missing here.
+correspondences:
+    python3 scripts/validate-correspondences.py
+    python3 -m unittest scripts.tests.test_validate_correspondences
 
 # Owner-lane freshness checks for derived Autogenesis knowledge snapshots.
 # These are intentionally not part of `check`: construction lanes may advance

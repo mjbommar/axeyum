@@ -59,45 +59,333 @@
   "contract": "internal-autogenesis-phase0",
   "ledger": {
     "assurance": {
-      "axiom_free_kernel_facts": 78,
+      "axiom_free_kernel_facts": 197,
       "check_statuses": {
-        "checked": 293
+        "checked": 532
       },
-      "evidence_rows": 293,
-      "with_checker_command": 291,
-      "with_multiple_named_checkers": 147
+      "evidence_rows": 532,
+      "with_checker_command": 530,
+      "with_multiple_named_checkers": 280
     },
     "dependency_graph": {
       "dangling": [],
       "depth_histogram": {
-        "1": 232,
+        "1": 275,
         "10": 1,
-        "2": 60,
-        "3": 25,
-        "4": 11,
-        "5": 5,
-        "6": 2,
-        "7": 1,
-        "8": 3,
+        "2": 78,
+        "3": 30,
+        "4": 19,
+        "5": 12,
+        "6": 26,
+        "7": 10,
+        "8": 5,
         "9": 2
       },
-      "edges": 155,
+      "edges": 308,
       "edges_detail": [
         {
           "consequent": "F:bcnf-decomposition-lossless-not-dependency-preserving",
           "premise": "F:orders-fd-implication-certified"
         },
         {
+          "consequent": "F:cassini-as-determinant-of-a-matrix-power",
+          "premise": "F:cassini-identity-over-constructed-integers"
+        },
+        {
+          "consequent": "F:cassini-identity-over-constructed-integers",
+          "premise": "F:ml430-nat-fib-add-two-b86e0c82"
+        },
+        {
           "consequent": "F:chu-vandermonde-convolution",
           "premise": "F:chu-vandermonde-convolution-recurrence"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-add-comm"
         },
         {
           "consequent": "F:complex-admits-no-compatible-order",
           "premise": "F:complex-ring-constructed-axiom-free"
         },
         {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-geom-series-div",
+          "premise": "F:complex-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-geom-series-div",
+          "premise": "F:complex-mul-comm"
+        },
+        {
+          "consequent": "F:complex-geom-series-div",
+          "premise": "F:complex-mul-sub-one-geom"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:complex-left-distrib"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-mul-comm"
+        },
+        {
           "consequent": "F:complex-ring-constructed-axiom-free",
           "premise": "F:real-axioms-modelled-by-constructed-setoid"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:cpoint-dot-comm",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-add",
+          "premise": "F:cpoint-dot-comm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:cpoint-dot-comm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:cpoint-dot-comm"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:cpoint-dot-self-add"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:cpoint-dot-self-sub"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:cpoint-dot-comm"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras-distsq",
+          "premise": "F:cpoint-pythagoras"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:cpoint-dot-self-sub"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:cpoint-stewart"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:cpoint-dot-comm"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:creal-add-comm",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-archimedean",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-converges-unique",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-comm",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:creal-mul-comm",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:rat-left-distrib"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:determinant-multiplicative-over-constructed-rationals",
+          "premise": "F:rat-left-distrib"
+        },
+        {
+          "consequent": "F:determinant-multiplicative-over-constructed-rationals",
+          "premise": "F:rat-mul-assoc"
+        },
+        {
+          "consequent": "F:determinant-multiplicative-over-constructed-rationals",
+          "premise": "F:rat-mul-comm"
         },
         {
           "consequent": "F:double-negation-elimination",
@@ -114,6 +402,18 @@
         {
           "consequent": "F:farkas-refutation-over-constructed-reals",
           "premise": "F:real-axioms-modelled-by-constructed-setoid"
+        },
+        {
+          "consequent": "F:finite-cauchy-product-over-complex-equals-triangle-plus-corner",
+          "premise": "F:finite-double-sum-rectangle-eq-triangle-plus-corner"
+        },
+        {
+          "consequent": "F:geometry-leibniz-centroid-over-constructed-reals",
+          "premise": "F:geometry-stewart-over-constructed-reals"
+        },
+        {
+          "consequent": "F:gf2-degree-eight-octuple-two-step-chain",
+          "premise": "F:gf2-composition-shape-classification"
         },
         {
           "consequent": "F:int-add-assoc",
@@ -180,6 +480,18 @@
           "premise": "F:nat-zero-add"
         },
         {
+          "consequent": "F:int-gcd-comm",
+          "premise": "F:nat-dvd-gcd"
+        },
+        {
+          "consequent": "F:int-gcd-comm",
+          "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:int-gcd-comm",
+          "premise": "F:nat-gcd-dvd-right"
+        },
+        {
           "consequent": "F:int-left-distrib",
           "premise": "F:int-add-assoc"
         },
@@ -190,6 +502,14 @@
         {
           "consequent": "F:int-left-distrib",
           "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:int-modeq-symm",
+          "premise": "F:int-modeq-refl"
+        },
+        {
+          "consequent": "F:int-modeq-trans",
+          "premise": "F:int-modeq-refl"
         },
         {
           "consequent": "F:int-mul-assoc",
@@ -214,6 +534,58 @@
         {
           "consequent": "F:int-sub-nat-nat-shift",
           "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:logic-bool-true-ne-false",
+          "premise": "F:logic-bool-false-ne-true"
+        },
+        {
+          "consequent": "F:logic-decidable-decide-eq-true-iff",
+          "premise": "F:logic-decidable-of-decide-eq-true"
+        },
+        {
+          "consequent": "F:logic-decidable-of-decide-eq-false",
+          "premise": "F:logic-bool-true-ne-false"
+        },
+        {
+          "consequent": "F:logic-decidable-of-decide-eq-true",
+          "premise": "F:logic-bool-false-ne-true"
+        },
+        {
+          "consequent": "F:logic-demorgan-not-or-converse",
+          "premise": "F:logic-and-left"
+        },
+        {
+          "consequent": "F:logic-demorgan-not-or-converse",
+          "premise": "F:logic-and-right"
+        },
+        {
+          "consequent": "F:logic-demorgan-not-or-converse",
+          "premise": "F:logic-or-elim"
+        },
+        {
+          "consequent": "F:logic-dne-of-em",
+          "premise": "F:logic-or-elim"
+        },
+        {
+          "consequent": "F:logic-em-of-dne",
+          "premise": "F:logic-not-not-em"
+        },
+        {
+          "consequent": "F:logic-noncontradiction",
+          "premise": "F:logic-and-left"
+        },
+        {
+          "consequent": "F:logic-noncontradiction",
+          "premise": "F:logic-and-right"
+        },
+        {
+          "consequent": "F:logic-not-not-not",
+          "premise": "F:logic-not-not-intro"
+        },
+        {
+          "consequent": "F:logic-peirce-of-em",
+          "premise": "F:logic-or-elim"
         },
         {
           "consequent": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
@@ -536,12 +908,72 @@
           "premise": "F:nat-add-comm"
         },
         {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-add-sub-cancel-left"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-choose-zero-right"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-gcd-dvd-right"
+        },
+        {
           "consequent": "F:nat-div-mod-unique",
           "premise": "F:nat-div-mod-exists"
         },
         {
           "consequent": "F:nat-dvd-add",
           "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd",
+          "premise": "F:nat-gcd-succ"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd",
+          "premise": "F:nat-mod-lt"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd-iff",
+          "premise": "F:nat-dvd-gcd"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd-iff",
+          "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd-iff",
+          "premise": "F:nat-gcd-dvd-right"
         },
         {
           "consequent": "F:nat-euclid-lemma",
@@ -562,6 +994,14 @@
         {
           "consequent": "F:nat-euclid-lemma",
           "premise": "F:nat-gcd-bezout"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-gcd-dvd-right"
         },
         {
           "consequent": "F:nat-euclid-lemma",
@@ -588,6 +1028,10 @@
           "premise": "F:nat-exists-prime-dvd"
         },
         {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-one-le-factorial"
+        },
+        {
           "consequent": "F:nat-gcd-bezout",
           "premise": "F:nat-add-assoc"
         },
@@ -605,6 +1049,10 @@
         },
         {
           "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-mod-lt"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
           "premise": "F:nat-mul-assoc"
         },
         {
@@ -616,8 +1064,24 @@
           "premise": "F:nat-zero-add"
         },
         {
+          "consequent": "F:nat-gcd-mul-lcm",
+          "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:nat-gcd-succ",
+          "premise": "F:nat-mod-lt"
+        },
+        {
           "consequent": "F:nat-left-distrib",
           "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-mod-eq-zero-iff-dvd",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:nat-mod-eq-zero-iff-dvd",
+          "premise": "F:nat-zero-add"
         },
         {
           "consequent": "F:nat-mul-assoc",
@@ -640,6 +1104,18 @@
           "premise": "F:nat-mul-one"
         },
         {
+          "consequent": "F:nat-prime-dvd-choose",
+          "premise": "F:nat-euclid-lemma"
+        },
+        {
+          "consequent": "F:nat-prime-dvd-choose",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:nat-prime-dvd-choose",
+          "premise": "F:nat-zero-add"
+        },
+        {
           "consequent": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
           "premise": "F:int-add-comm"
         },
@@ -652,16 +1128,148 @@
           "premise": "F:orders-fd-implication-certified"
         },
         {
+          "consequent": "F:rat-add-assoc",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:rat-add-assoc",
+          "premise": "F:int-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-add-assoc",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:rat-add-assoc",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-add-comm",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:rat-add-comm",
+          "premise": "F:nat-mul-comm"
+        },
+        {
           "consequent": "F:rat-add-neg-inverse",
           "premise": "F:rat-mul-renormalises"
+        },
+        {
+          "consequent": "F:rat-covariance-sq-le-variance-mul",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-covariance-sq-le-variance-mul",
+          "premise": "F:rat-variance-nonneg"
+        },
+        {
+          "consequent": "F:rat-cramer-two-unique-x",
+          "premise": "F:rat-left-distrib"
+        },
+        {
+          "consequent": "F:rat-cramer-two-unique-x",
+          "premise": "F:rat-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-cramer-two-unique-x",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-cramer-two-unique-x",
+          "premise": "F:rat-mul-inv-cancel-of-ne-zero"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-dotn-comm"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-left-distrib"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-dotn-comm",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-le-trans",
+          "premise": "F:int-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-le-trans",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:rat-left-distrib",
+          "premise": "F:int-left-distrib"
+        },
+        {
+          "consequent": "F:rat-left-distrib",
+          "premise": "F:int-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-left-distrib",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:rat-left-distrib",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-mul-assoc",
+          "premise": "F:int-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-mul-assoc",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-mul-comm",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:rat-mul-comm",
+          "premise": "F:nat-mul-comm"
         },
         {
           "consequent": "F:rat-mul-renormalises",
           "premise": "F:rat-normalize-reduces"
         },
         {
+          "consequent": "F:rat-mul-sumrange",
+          "premise": "F:rat-left-distrib"
+        },
+        {
           "consequent": "F:rat-normalize-reduces",
           "premise": "F:int-euclidean-decomposition"
+        },
+        {
+          "consequent": "F:rat-polyeval-add",
+          "premise": "F:rat-sumrange-add"
+        },
+        {
+          "consequent": "F:rat-sumrange-add",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:rat-sumrange-add",
+          "premise": "F:rat-add-comm"
         },
         {
           "consequent": "F:real-axioms-modelled-by-constructed-setoid",
@@ -702,27 +1310,88 @@
         {
           "consequent": "F:shipped-front-door-refutes-over-constructed-reals",
           "premise": "F:real-axioms-modelled-by-constructed-setoid"
+        },
+        {
+          "consequent": "F:wilson-theorem-over-constructed-integers",
+          "premise": "F:prodrange-collapses-under-a-fixed-point-free-involution"
         }
       ],
-      "isolated": 176,
+      "isolated": 203,
       "max_depth": 10,
-      "nodes": 342,
-      "with_dependencies": 110,
-      "with_dependents": 96
+      "nodes": 458,
+      "with_dependencies": 183,
+      "with_dependents": 141
     },
-    "facts": 342,
+    "facts": 458,
     "kernel_dependency_coverage": {
       "authority_gate": "scripts/check-fact-depends-derived.py",
-      "facts": 80,
-      "named": 35,
+      "facts": 199,
+      "named": 87,
       "unnamed_fact_ids": [
+        "F:cauchy-schwarz-over-constructed-plane",
+        "F:complex-add-comm",
         "F:complex-admits-no-compatible-order",
+        "F:complex-conj-add",
+        "F:complex-conj-mul",
+        "F:complex-geom-series-div",
+        "F:complex-i-sq",
+        "F:complex-left-distrib",
+        "F:complex-mul-assoc",
+        "F:complex-mul-comm",
+        "F:complex-mul-conj",
+        "F:complex-mul-inv-cancel",
+        "F:complex-mul-sub-one-geom",
         "F:complex-ring-constructed-axiom-free",
+        "F:covariance-sq-le-variance-mul-over-constructed-rationals",
+        "F:cpoint-cauchy-schwarz",
+        "F:cpoint-ceva-concurrent-of-ratio-product",
+        "F:cpoint-dot-comm",
+        "F:cpoint-dot-self-add",
+        "F:cpoint-dot-self-nonneg",
+        "F:cpoint-dot-self-sub",
+        "F:cpoint-euler-line",
+        "F:cpoint-lagrange-identity",
+        "F:cpoint-parallelogram-law",
+        "F:cpoint-pythagoras",
+        "F:cpoint-pythagoras-distsq",
+        "F:cpoint-stewart",
+        "F:cpoint-stewart-median",
+        "F:cpoint-thales",
+        "F:cramer-rule-forward-direction-over-constructed-rationals",
         "F:farkas-refutation-over-constructed-reals",
+        "F:fermat-little-theorem-over-constructed-naturals",
+        "F:finite-cauchy-product-over-complex-equals-triangle-plus-corner",
+        "F:finite-double-sum-rectangle-eq-triangle-plus-corner",
+        "F:geometry-leibniz-centroid-over-constructed-reals",
+        "F:geometry-stewart-over-constructed-reals",
+        "F:geometry-varignon-over-constructed-reals",
         "F:int-categoricity",
         "F:int-characterization",
         "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
         "F:lean-query-module-shrinks-by-a-shared-import",
+        "F:logic-and-left",
+        "F:logic-and-right",
+        "F:logic-decidable-decide-eq-true-iff",
+        "F:logic-decidable-em",
+        "F:logic-decidable-of-decide-eq-false",
+        "F:logic-decidable-of-decide-eq-true",
+        "F:logic-demorgan-not-or",
+        "F:logic-demorgan-not-or-converse",
+        "F:logic-dne-of-em",
+        "F:logic-em-of-dne",
+        "F:logic-em-of-peirce",
+        "F:logic-iff-mp",
+        "F:logic-iff-mpr",
+        "F:logic-modus-tollens",
+        "F:logic-noncontradiction",
+        "F:logic-not-not-and",
+        "F:logic-not-not-em",
+        "F:logic-not-not-intro",
+        "F:logic-not-not-not",
+        "F:logic-or-elim",
+        "F:logic-or-resolve-left",
+        "F:logic-peirce-of-em",
+        "F:menelaus-and-ceva-over-constructed-plane",
         "F:ml430-int-fib-add-one-33f1b748",
         "F:ml430-int-fib-add-two-739358dd",
         "F:ml430-int-fib-dvd-ffb3c5c1",
@@ -733,6 +1402,12 @@
         "F:ml430-int-fib-neg-b4021d37",
         "F:ml430-int-fib-of-nonneg-438018c5",
         "F:ml430-int-gcd-fib-73bdafc2",
+        "F:ml430-int-modeq-comm-1e4bcc07",
+        "F:ml430-int-modeq-neg-d6ff57b6",
+        "F:ml430-int-modeq-one-01d9de39",
+        "F:ml430-int-modeq-refl-30e15520",
+        "F:ml430-int-modeq-symm-984a6e67",
+        "F:ml430-int-modeq-trans-6d7863e0",
         "F:ml430-nat-ascfactorial-zero-fd183202",
         "F:ml430-nat-descfactorial-one-d4856d4a",
         "F:ml430-nat-descfactorial-zero-966b01df",
@@ -744,12 +1419,15 @@
         "F:ml430-nat-fib-pos-9e67bd8e",
         "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
         "F:ml430-nat-gcd-greatest-0a04214a",
+        "F:ml430-nat-modeq-refl-d870c8f5",
         "F:ml430-nat-one-ascfactorial-8bacb017",
         "F:ml430-nat-zero-ascfactorial-af4fcdca",
         "F:nat-peano-categoricity",
+        "F:natdivsucc-antitone-over-constructed-rationals",
         "F:nra-refutations-reconstruct-over-constructed-reals",
         "F:ordered-ring-farkas-refutation",
         "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+        "F:prodrange-collapses-under-a-fixed-point-free-involution",
         "F:rat-add-neg-inverse",
         "F:rat-mul-renormalises",
         "F:rat-normalize-reduces",
@@ -760,32 +1438,321 @@
         "F:real-lattice-is-constructed-axiom-free",
         "F:schedule-critical-chain-infeasible",
         "F:shipped-front-door-reaches-no-real-axiom",
-        "F:shipped-front-door-refutes-over-constructed-reals"
+        "F:shipped-front-door-refutes-over-constructed-reals",
+        "F:wilson-theorem-over-constructed-integers"
       ]
     },
     "kernel_lean_graph": {
       "dangling": [],
       "depth_histogram": {
-        "1": 34,
+        "1": 80,
         "10": 1,
-        "2": 11,
-        "3": 13,
-        "4": 8,
-        "5": 5,
-        "6": 2,
-        "7": 1,
-        "8": 3,
+        "2": 29,
+        "3": 18,
+        "4": 16,
+        "5": 12,
+        "6": 26,
+        "7": 10,
+        "8": 5,
         "9": 2
       },
-      "edges": 82,
+      "edges": 235,
       "edges_detail": [
+        {
+          "consequent": "F:cassini-as-determinant-of-a-matrix-power",
+          "premise": "F:cassini-identity-over-constructed-integers"
+        },
+        {
+          "consequent": "F:cassini-identity-over-constructed-integers",
+          "premise": "F:ml430-nat-fib-add-two-b86e0c82"
+        },
+        {
+          "consequent": "F:complex-add-comm",
+          "premise": "F:creal-add-comm"
+        },
         {
           "consequent": "F:complex-admits-no-compatible-order",
           "premise": "F:complex-ring-constructed-axiom-free"
         },
         {
+          "consequent": "F:complex-conj-add",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-conj-mul",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-geom-series-div",
+          "premise": "F:complex-mul-assoc"
+        },
+        {
+          "consequent": "F:complex-geom-series-div",
+          "premise": "F:complex-mul-comm"
+        },
+        {
+          "consequent": "F:complex-geom-series-div",
+          "premise": "F:complex-mul-sub-one-geom"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-i-sq",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-left-distrib",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-assoc",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-comm",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-conj",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:complex-mul-inv-cancel",
+          "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:complex-left-distrib"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:complex-mul-sub-one-geom",
+          "premise": "F:creal-mul-comm"
+        },
+        {
           "consequent": "F:complex-ring-constructed-axiom-free",
           "premise": "F:real-axioms-modelled-by-constructed-setoid"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-cauchy-schwarz",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-ceva-concurrent-of-ratio-product",
+          "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:cpoint-dot-comm",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-add",
+          "premise": "F:cpoint-dot-comm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:cpoint-dot-comm"
+        },
+        {
+          "consequent": "F:cpoint-dot-self-sub",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-euler-line",
+          "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-lagrange-identity",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:cpoint-dot-comm"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:cpoint-dot-self-add"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:cpoint-dot-self-sub"
+        },
+        {
+          "consequent": "F:cpoint-parallelogram-law",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:cpoint-dot-comm"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-pythagoras-distsq",
+          "premise": "F:cpoint-pythagoras"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:cpoint-dot-self-sub"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-stewart",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-stewart-median",
+          "premise": "F:cpoint-stewart"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:cpoint-dot-comm"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:cpoint-thales",
+          "premise": "F:creal-mul-inv-cancel"
+        },
+        {
+          "consequent": "F:creal-add-comm",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-archimedean",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-converges-unique",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:creal-hasderivative-mul",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-comm",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:creal-mul-comm",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:rat-le-trans"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:rat-left-distrib"
+        },
+        {
+          "consequent": "F:creal-mul-inv-cancel",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:creal-mul-sub-one-geom",
+          "premise": "F:creal-mul-comm"
+        },
+        {
+          "consequent": "F:creal-sumrange-telescope",
+          "premise": "F:creal-add-comm"
+        },
+        {
+          "consequent": "F:determinant-multiplicative-over-constructed-rationals",
+          "premise": "F:rat-left-distrib"
+        },
+        {
+          "consequent": "F:determinant-multiplicative-over-constructed-rationals",
+          "premise": "F:rat-mul-assoc"
+        },
+        {
+          "consequent": "F:determinant-multiplicative-over-constructed-rationals",
+          "premise": "F:rat-mul-comm"
         },
         {
           "consequent": "F:farkas-refutation-over-constructed-reals",
@@ -794,6 +1761,14 @@
         {
           "consequent": "F:farkas-refutation-over-constructed-reals",
           "premise": "F:real-axioms-modelled-by-constructed-setoid"
+        },
+        {
+          "consequent": "F:finite-cauchy-product-over-complex-equals-triangle-plus-corner",
+          "premise": "F:finite-double-sum-rectangle-eq-triangle-plus-corner"
+        },
+        {
+          "consequent": "F:geometry-leibniz-centroid-over-constructed-reals",
+          "premise": "F:geometry-stewart-over-constructed-reals"
         },
         {
           "consequent": "F:int-add-assoc",
@@ -860,6 +1835,18 @@
           "premise": "F:nat-zero-add"
         },
         {
+          "consequent": "F:int-gcd-comm",
+          "premise": "F:nat-dvd-gcd"
+        },
+        {
+          "consequent": "F:int-gcd-comm",
+          "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:int-gcd-comm",
+          "premise": "F:nat-gcd-dvd-right"
+        },
+        {
           "consequent": "F:int-left-distrib",
           "premise": "F:int-add-assoc"
         },
@@ -870,6 +1857,14 @@
         {
           "consequent": "F:int-left-distrib",
           "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:int-modeq-symm",
+          "premise": "F:int-modeq-refl"
+        },
+        {
+          "consequent": "F:int-modeq-trans",
+          "premise": "F:int-modeq-refl"
         },
         {
           "consequent": "F:int-mul-assoc",
@@ -894,6 +1889,58 @@
         {
           "consequent": "F:int-sub-nat-nat-shift",
           "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:logic-bool-true-ne-false",
+          "premise": "F:logic-bool-false-ne-true"
+        },
+        {
+          "consequent": "F:logic-decidable-decide-eq-true-iff",
+          "premise": "F:logic-decidable-of-decide-eq-true"
+        },
+        {
+          "consequent": "F:logic-decidable-of-decide-eq-false",
+          "premise": "F:logic-bool-true-ne-false"
+        },
+        {
+          "consequent": "F:logic-decidable-of-decide-eq-true",
+          "premise": "F:logic-bool-false-ne-true"
+        },
+        {
+          "consequent": "F:logic-demorgan-not-or-converse",
+          "premise": "F:logic-and-left"
+        },
+        {
+          "consequent": "F:logic-demorgan-not-or-converse",
+          "premise": "F:logic-and-right"
+        },
+        {
+          "consequent": "F:logic-demorgan-not-or-converse",
+          "premise": "F:logic-or-elim"
+        },
+        {
+          "consequent": "F:logic-dne-of-em",
+          "premise": "F:logic-or-elim"
+        },
+        {
+          "consequent": "F:logic-em-of-dne",
+          "premise": "F:logic-not-not-em"
+        },
+        {
+          "consequent": "F:logic-noncontradiction",
+          "premise": "F:logic-and-left"
+        },
+        {
+          "consequent": "F:logic-noncontradiction",
+          "premise": "F:logic-and-right"
+        },
+        {
+          "consequent": "F:logic-not-not-not",
+          "premise": "F:logic-not-not-intro"
+        },
+        {
+          "consequent": "F:logic-peirce-of-em",
+          "premise": "F:logic-or-elim"
         },
         {
           "consequent": "F:ml430-int-fib-add-one-33f1b748",
@@ -924,6 +1971,10 @@
           "premise": "F:ml430-nat-fib-gcd-d1d98407"
         },
         {
+          "consequent": "F:ml430-int-modeq-comm-1e4bcc07",
+          "premise": "F:ml430-int-modeq-symm-984a6e67"
+        },
+        {
           "consequent": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
           "premise": "F:ml430-nat-fib-add-two-b86e0c82"
         },
@@ -948,12 +1999,72 @@
           "premise": "F:nat-add-comm"
         },
         {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-add-sub-cancel-left"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-choose-zero-right"
+        },
+        {
+          "consequent": "F:nat-choose-symm",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:nat-coprime-of-bezout-one",
+          "premise": "F:nat-gcd-dvd-right"
+        },
+        {
           "consequent": "F:nat-div-mod-unique",
           "premise": "F:nat-div-mod-exists"
         },
         {
           "consequent": "F:nat-dvd-add",
           "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd",
+          "premise": "F:nat-gcd-succ"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd",
+          "premise": "F:nat-mod-lt"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd-iff",
+          "premise": "F:nat-dvd-gcd"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd-iff",
+          "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:nat-dvd-gcd-iff",
+          "premise": "F:nat-gcd-dvd-right"
         },
         {
           "consequent": "F:nat-euclid-lemma",
@@ -974,6 +2085,14 @@
         {
           "consequent": "F:nat-euclid-lemma",
           "premise": "F:nat-gcd-bezout"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-gcd-dvd-right"
         },
         {
           "consequent": "F:nat-euclid-lemma",
@@ -1000,6 +2119,10 @@
           "premise": "F:nat-exists-prime-dvd"
         },
         {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-one-le-factorial"
+        },
+        {
           "consequent": "F:nat-gcd-bezout",
           "premise": "F:nat-add-assoc"
         },
@@ -1017,6 +2140,10 @@
         },
         {
           "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-mod-lt"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
           "premise": "F:nat-mul-assoc"
         },
         {
@@ -1028,8 +2155,24 @@
           "premise": "F:nat-zero-add"
         },
         {
+          "consequent": "F:nat-gcd-mul-lcm",
+          "premise": "F:nat-gcd-dvd-left"
+        },
+        {
+          "consequent": "F:nat-gcd-succ",
+          "premise": "F:nat-mod-lt"
+        },
+        {
           "consequent": "F:nat-left-distrib",
           "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-mod-eq-zero-iff-dvd",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:nat-mod-eq-zero-iff-dvd",
+          "premise": "F:nat-zero-add"
         },
         {
           "consequent": "F:nat-mul-assoc",
@@ -1052,6 +2195,18 @@
           "premise": "F:nat-mul-one"
         },
         {
+          "consequent": "F:nat-prime-dvd-choose",
+          "premise": "F:nat-euclid-lemma"
+        },
+        {
+          "consequent": "F:nat-prime-dvd-choose",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:nat-prime-dvd-choose",
+          "premise": "F:nat-zero-add"
+        },
+        {
           "consequent": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
           "premise": "F:int-add-comm"
         },
@@ -1060,16 +2215,148 @@
           "premise": "F:int-sq-nonneg"
         },
         {
+          "consequent": "F:rat-add-assoc",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:rat-add-assoc",
+          "premise": "F:int-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-add-assoc",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:rat-add-assoc",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-add-comm",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:rat-add-comm",
+          "premise": "F:nat-mul-comm"
+        },
+        {
           "consequent": "F:rat-add-neg-inverse",
           "premise": "F:rat-mul-renormalises"
+        },
+        {
+          "consequent": "F:rat-covariance-sq-le-variance-mul",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-covariance-sq-le-variance-mul",
+          "premise": "F:rat-variance-nonneg"
+        },
+        {
+          "consequent": "F:rat-cramer-two-unique-x",
+          "premise": "F:rat-left-distrib"
+        },
+        {
+          "consequent": "F:rat-cramer-two-unique-x",
+          "premise": "F:rat-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-cramer-two-unique-x",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-cramer-two-unique-x",
+          "premise": "F:rat-mul-inv-cancel-of-ne-zero"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-add-comm"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-dotn-comm"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-left-distrib"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-dotn-cauchy-schwarz",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-dotn-comm",
+          "premise": "F:rat-mul-comm"
+        },
+        {
+          "consequent": "F:rat-le-trans",
+          "premise": "F:int-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-le-trans",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:rat-left-distrib",
+          "premise": "F:int-left-distrib"
+        },
+        {
+          "consequent": "F:rat-left-distrib",
+          "premise": "F:int-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-left-distrib",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:rat-left-distrib",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-mul-assoc",
+          "premise": "F:int-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-mul-assoc",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:rat-mul-comm",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:rat-mul-comm",
+          "premise": "F:nat-mul-comm"
         },
         {
           "consequent": "F:rat-mul-renormalises",
           "premise": "F:rat-normalize-reduces"
         },
         {
+          "consequent": "F:rat-mul-sumrange",
+          "premise": "F:rat-left-distrib"
+        },
+        {
           "consequent": "F:rat-normalize-reduces",
           "premise": "F:int-euclidean-decomposition"
+        },
+        {
+          "consequent": "F:rat-polyeval-add",
+          "premise": "F:rat-sumrange-add"
+        },
+        {
+          "consequent": "F:rat-sumrange-add",
+          "premise": "F:rat-add-assoc"
+        },
+        {
+          "consequent": "F:rat-sumrange-add",
+          "premise": "F:rat-add-comm"
         },
         {
           "consequent": "F:real-axioms-modelled-by-constructed-setoid",
@@ -1106,23 +2393,27 @@
         {
           "consequent": "F:shipped-front-door-refutes-over-constructed-reals",
           "premise": "F:real-axioms-modelled-by-constructed-setoid"
+        },
+        {
+          "consequent": "F:wilson-theorem-over-constructed-integers",
+          "premise": "F:prodrange-collapses-under-a-fixed-point-free-involution"
         }
       ],
-      "isolated": 19,
+      "isolated": 49,
       "max_depth": 10,
-      "nodes": 80,
+      "nodes": 199,
       "statuses": {
-        "proved": 80
+        "proved": 199
       },
       "unsettled": 0,
-      "with_dependencies": 46,
-      "with_dependents": 43
+      "with_dependencies": 119,
+      "with_dependents": 88
     },
     "routes": {
-      "(missing)": 200,
-      "cas-certificate": 19,
+      "(missing)": 193,
+      "cas-certificate": 23,
       "imported-kernel-lean": 5,
-      "kernel-lean": 80,
+      "kernel-lean": 199,
       "search-certificate": 12,
       "smt-clausal": 9,
       "smt-term-level": 17
@@ -1130,9 +2421,9 @@
     "statuses": {
       "computed": 2,
       "conjectured": 3,
-      "open": 197,
-      "proved": 137,
-      "refuted": 3
+      "open": 190,
+      "proved": 259,
+      "refuted": 4
     }
   },
   "manual_seams": [
@@ -1236,7 +2527,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "77cf545127cc8f532e4deba8b09b08c4791dc77f131eba80a31e88185b30f2a6",
+    "digest": "99bad548ba77e855784c2e25f1dd2336658b499ca42ca3cd33ada0e873fbff87",
     "inputs": [
       {
         "bytes": 1939,
@@ -1289,9 +2580,9 @@
         "sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1"
       },
       {
-        "bytes": 57622,
+        "bytes": 64743,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "9343c2e456c17272fad2c9621af659a4b56aaf4cb8198a066fe38045970591c2"
+        "sha256": "1fcc8696505cd78a2932a3416cd5c402858a2e7f9157853ebea050f4716898d5"
       },
       {
         "bytes": 3519,
@@ -1309,9 +2600,9 @@
         "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
       },
       {
-        "bytes": 12285,
+        "bytes": 12303,
         "path": "artifacts/facts/F-barber-no-such-barber.json",
-        "sha256": "14a35ea41c66f079abd32124802a4eb7067b135591963d32a3f8a9b36bca139e"
+        "sha256": "63c533c3a8adffcb12002ca071f3094e3b313b666026930e96b358b27e3acbc0"
       },
       {
         "bytes": 11881,
@@ -1324,9 +2615,24 @@
         "sha256": "b40e1097c670223e1c561e5481ac16908d602427ff35154e7d4846038ddec3c6"
       },
       {
-        "bytes": 5003,
+        "bytes": 5021,
         "path": "artifacts/facts/F-bool-and-comm.json",
-        "sha256": "4ee5d8ffcaf59f9092fd841ee4a6c8074847c17ab29d7ed19862534a99663242"
+        "sha256": "f4b2e7dc449385bffe156bf11773b7d3229523c9e7d290bb0104173e6004cd56"
+      },
+      {
+        "bytes": 8866,
+        "path": "artifacts/facts/F-cassini-as-determinant-of-a-matrix-power.json",
+        "sha256": "570dcd1b3d19db9202155cf99df74df91b6da11573c4a7b69a26a3a2eee29044"
+      },
+      {
+        "bytes": 7200,
+        "path": "artifacts/facts/F-cassini-identity-over-constructed-integers.json",
+        "sha256": "7f3cbcace6d18eff4e672f250a8e6fa47452c0ae53282bc8f17730e16c1b3c73"
+      },
+      {
+        "bytes": 7794,
+        "path": "artifacts/facts/F-cauchy-schwarz-over-constructed-plane.json",
+        "sha256": "9d1707351a726e94ceb8ca39ce128cb9ff2df9bf116e2c26d8d2002f191d7187"
       },
       {
         "bytes": 5375,
@@ -1344,14 +2650,69 @@
         "sha256": "b189142039a4e84d081b03b3a8c4f78ff5486344123d461508464eae8e41f006"
       },
       {
-        "bytes": 5185,
-        "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
-        "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+        "bytes": 4455,
+        "path": "artifacts/facts/F-complex-add-comm.json",
+        "sha256": "0e8994b09efcc3575d6d1b2414087f7648ab64ce82397e2b145995f64f496b40"
       },
       {
-        "bytes": 6482,
+        "bytes": 5239,
+        "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+        "sha256": "12fe02c023d74c00ac95aad8d9de3babd08665a9db4c0cb854de0420ad3e4f16"
+      },
+      {
+        "bytes": 4410,
+        "path": "artifacts/facts/F-complex-conj-add.json",
+        "sha256": "e878729d3dec0b25e260201a9c103ebeea65dd5d2102abd6ab7e5b34f5cc9f26"
+      },
+      {
+        "bytes": 4626,
+        "path": "artifacts/facts/F-complex-conj-mul.json",
+        "sha256": "a648c42b548bb2aaff4405abf1b74a4bc54a9f3c5c064adb2327c533b93b60dd"
+      },
+      {
+        "bytes": 5154,
+        "path": "artifacts/facts/F-complex-geom-series-div.json",
+        "sha256": "699faf8afc64b26dd28869add454765b667ee08a01855dcadd7e03eb50903ba9"
+      },
+      {
+        "bytes": 4631,
+        "path": "artifacts/facts/F-complex-i-sq.json",
+        "sha256": "4830101c35bcf9a036610691ba4f53cd0eb30f504fc8176ac00fc5485d94e7b7"
+      },
+      {
+        "bytes": 4565,
+        "path": "artifacts/facts/F-complex-left-distrib.json",
+        "sha256": "d9097c072b391ab1fd2ec2708024e70bb8659675f629bca92cb4d2be18c750f0"
+      },
+      {
+        "bytes": 4589,
+        "path": "artifacts/facts/F-complex-mul-assoc.json",
+        "sha256": "9130eacf215f6bdba88e67ff8d8dfa14e933b93fa446d5608988463222f402f0"
+      },
+      {
+        "bytes": 4449,
+        "path": "artifacts/facts/F-complex-mul-comm.json",
+        "sha256": "aa7bba23d87cfa29eb43ed2e3974d5faf9abbd87e8e46d7882424886639c3585"
+      },
+      {
+        "bytes": 4612,
+        "path": "artifacts/facts/F-complex-mul-conj.json",
+        "sha256": "19b90e6283e969f374049bb198c96bb5f90a8d91a451a89df876dc25dded18a5"
+      },
+      {
+        "bytes": 5246,
+        "path": "artifacts/facts/F-complex-mul-inv-cancel.json",
+        "sha256": "7b3eea71ab0b106179261731e85c84f09ac163f5983ac8878dc6e91985cfb41f"
+      },
+      {
+        "bytes": 5525,
+        "path": "artifacts/facts/F-complex-mul-sub-one-geom.json",
+        "sha256": "01b8653b6f4ccfe96d28a51e451bbbe8fd2f53459b6a6b897cbcb67db66b21b1"
+      },
+      {
+        "bytes": 6554,
         "path": "artifacts/facts/F-complex-ring-constructed-axiom-free.json",
-        "sha256": "d62a1e5f4505dfffce63f7205acaeb4bcc12a24ecc84eb97dfc4179ebcf701f6"
+        "sha256": "83d65cc011100d87ad7e255e777ef7f36d4b4fce6a8e2a0783200e3eb94802b1"
       },
       {
         "bytes": 9692,
@@ -1369,6 +2730,126 @@
         "sha256": "5be5233192c2dddfe52b8e35be36f06071874e96a0e01aaa2cda712905b5f50b"
       },
       {
+        "bytes": 8004,
+        "path": "artifacts/facts/F-covariance-sq-le-variance-mul-over-constructed-rationals.json",
+        "sha256": "23030562044c2141035fb075fce6317c942fc8bd5e089906d271bc4b0f18b61f"
+      },
+      {
+        "bytes": 5883,
+        "path": "artifacts/facts/F-cpoint-cauchy-schwarz.json",
+        "sha256": "015c5807dceed36790770bfce48b759f9aa2ef2de8eb467aa7d383dfe74e857e"
+      },
+      {
+        "bytes": 8171,
+        "path": "artifacts/facts/F-cpoint-ceva-concurrent-of-ratio-product.json",
+        "sha256": "7b7da61c3417791df1e282942d8fd5610122971b259dede9fa35f596ce521e86"
+      },
+      {
+        "bytes": 5198,
+        "path": "artifacts/facts/F-cpoint-dot-comm.json",
+        "sha256": "66fa21ac29a408417102e8200a1dbf3fa2898ee7d8d271819d8954ea34ff0094"
+      },
+      {
+        "bytes": 5534,
+        "path": "artifacts/facts/F-cpoint-dot-self-add.json",
+        "sha256": "a5207e66e8d3b7d11f0e47353f644f0e08b8ff6b8a1d0c0cbb6aab80257f790d"
+      },
+      {
+        "bytes": 5326,
+        "path": "artifacts/facts/F-cpoint-dot-self-nonneg.json",
+        "sha256": "89361ca827490254625b05e34e382e6366403e02b404b5edc1481dd523fadd35"
+      },
+      {
+        "bytes": 5591,
+        "path": "artifacts/facts/F-cpoint-dot-self-sub.json",
+        "sha256": "bc68766e76ea6d5c74a2a15c612f14738b5e7d8f6de525c7a63e57f17ac32c4b"
+      },
+      {
+        "bytes": 6244,
+        "path": "artifacts/facts/F-cpoint-euler-line.json",
+        "sha256": "2337bdf5d956ddfcbd234946aa594af9c5ec5b7ee612a96305a1e39c08cb4fa7"
+      },
+      {
+        "bytes": 6317,
+        "path": "artifacts/facts/F-cpoint-lagrange-identity.json",
+        "sha256": "799853f89370c55358619f6755cee0e4f82113067c7737dc4bfd59f6c1e06b3b"
+      },
+      {
+        "bytes": 6008,
+        "path": "artifacts/facts/F-cpoint-parallelogram-law.json",
+        "sha256": "ee9b63cdea03949bf6f9676b213c20ba89d2d627d2a45c2763f452b977faedb0"
+      },
+      {
+        "bytes": 5505,
+        "path": "artifacts/facts/F-cpoint-pythagoras-distsq.json",
+        "sha256": "3f1abea38b024eaa5964eb0790e4850e73c74112436087257b24e7ac12602409"
+      },
+      {
+        "bytes": 5667,
+        "path": "artifacts/facts/F-cpoint-pythagoras.json",
+        "sha256": "f7a1e8e75bf7591ac8e2eb2e7e105e4b6c5d9968eb86c37a50b55914776d4ca8"
+      },
+      {
+        "bytes": 5754,
+        "path": "artifacts/facts/F-cpoint-stewart-median.json",
+        "sha256": "50a6af1ad3dc506e6670e82dffc6650ce5e91d946f9fecbc6b92c5dbc9a73fed"
+      },
+      {
+        "bytes": 6014,
+        "path": "artifacts/facts/F-cpoint-stewart.json",
+        "sha256": "2e07101f5835c85c8a7073a6d6126cebcd59d26b02046c6d65ea66a3c7cd957b"
+      },
+      {
+        "bytes": 6186,
+        "path": "artifacts/facts/F-cpoint-thales.json",
+        "sha256": "00d1407af6d41b2233cd86481b4f106df29deb84d0c08092903ee632f6e56103"
+      },
+      {
+        "bytes": 8370,
+        "path": "artifacts/facts/F-cramer-rule-forward-direction-over-constructed-rationals.json",
+        "sha256": "4dba97b11b2fa1874a57975ff50e42cda3fe1eec1602b532be16e466b8e94d7e"
+      },
+      {
+        "bytes": 4427,
+        "path": "artifacts/facts/F-creal-add-comm.json",
+        "sha256": "7c55d5ac9aaf3e3cbacbc9fcf66fc42e0c4a9bbafe64f53867fc9282dff40a5f"
+      },
+      {
+        "bytes": 4125,
+        "path": "artifacts/facts/F-creal-archimedean.json",
+        "sha256": "2bc826402b74848e90ab217b725e8b160789fc249f7e55fd8bc77de304ea487e"
+      },
+      {
+        "bytes": 4363,
+        "path": "artifacts/facts/F-creal-converges-unique.json",
+        "sha256": "366cc7e48888af249164f7897b4550aedd088045f3305238708305f494addd95"
+      },
+      {
+        "bytes": 5983,
+        "path": "artifacts/facts/F-creal-hasderivative-mul.json",
+        "sha256": "35dfae9d97102e4d13a16aa17e6c4ce9591d5e4b08e8a9b621639195626c5934"
+      },
+      {
+        "bytes": 4151,
+        "path": "artifacts/facts/F-creal-mul-comm.json",
+        "sha256": "baed462de087cde4a5e6787faca9938782f3b47b72079dee74bd476aeb928d86"
+      },
+      {
+        "bytes": 4831,
+        "path": "artifacts/facts/F-creal-mul-inv-cancel.json",
+        "sha256": "e6c021eadad4f16ac7183216dcaa14b147e6b6d819042e99a2c04c1c7611f075"
+      },
+      {
+        "bytes": 4586,
+        "path": "artifacts/facts/F-creal-mul-sub-one-geom.json",
+        "sha256": "ad4da8fce6e6daf9f011f9cb269e50597febbf3e4c832d6863d4fd951f685333"
+      },
+      {
+        "bytes": 4505,
+        "path": "artifacts/facts/F-creal-sumrange-telescope.json",
+        "sha256": "9f391b1893f005be0010e07433abebf26e7fb4ef7c30efdd1c8b2481cac0b431"
+      },
+      {
         "bytes": 4989,
         "path": "artifacts/facts/F-cross-binomial-row-sum.json",
         "sha256": "0ff7e9017770ccde5ed93229216206571acccaaaacdf77a86c32a39a204909a9"
@@ -1377,6 +2858,11 @@
         "bytes": 4431,
         "path": "artifacts/facts/F-de-morgan-laws.json",
         "sha256": "6506a8a0a261feef0af65df225c8eb379bc500acb4740c3fe6fecaeff59064b9"
+      },
+      {
+        "bytes": 7983,
+        "path": "artifacts/facts/F-determinant-multiplicative-over-constructed-rationals.json",
+        "sha256": "94dd7b769c63c2f512abb1756cfe91428a51616217af7af27c22d8a1b7566eca"
       },
       {
         "bytes": 4638,
@@ -1404,9 +2890,9 @@
         "sha256": "a633e580813411f7c2668e82a30950eda4f40bb3a3653d409093f0d56e1bcbdd"
       },
       {
-        "bytes": 7184,
+        "bytes": 7220,
         "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
-        "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+        "sha256": "e059994ae083a7c16909ac49ee952b47c9182cfacfa9a196322ca7cf44e1277a"
       },
       {
         "bytes": 2365,
@@ -1414,14 +2900,29 @@
         "sha256": "498198ca4681bb4141ac42f7d46edc4577eadc5ef24a848fbe861a7cf531b833"
       },
       {
+        "bytes": 8359,
+        "path": "artifacts/facts/F-fermat-little-theorem-over-constructed-naturals.json",
+        "sha256": "81fecfb12deb68422b53cc7cdb8a35677223c580fddd2530439b16d10a4e1352"
+      },
+      {
+        "bytes": 8765,
+        "path": "artifacts/facts/F-finite-cauchy-product-over-complex-equals-triangle-plus-corner.json",
+        "sha256": "dc027524bd8e4f0020995cee7f38a68ccbefe8ec201022eeeb771259d6d34a7c"
+      },
+      {
+        "bytes": 9836,
+        "path": "artifacts/facts/F-finite-double-sum-rectangle-eq-triangle-plus-corner.json",
+        "sha256": "823eef6e081c299e70acf28e01428f85b371b7cf86cb391bb686f1a4b0bc6513"
+      },
+      {
         "bytes": 2877,
         "path": "artifacts/facts/F-fol-validity-undecidable.json",
         "sha256": "a6a2d38609b5d2e3d0ce03ac55d996417b58fd215a2a7127c6cd837d17499771"
       },
       {
-        "bytes": 4114,
+        "bytes": 6838,
         "path": "artifacts/facts/F-fp16-add-monotone-rne.json",
-        "sha256": "1cb0d5f10bb28cb8de8e60d71e1ef20cbf6dec1d7d6f9bda0f10bde15c46c701"
+        "sha256": "a81cf7ffbc50b0c2f927d96eeeef3cfd807fa8ae25e8363ac3539cf07f518514"
       },
       {
         "bytes": 7085,
@@ -1469,6 +2970,11 @@
         "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
       },
       {
+        "bytes": 7674,
+        "path": "artifacts/facts/F-geometry-leibniz-centroid-over-constructed-reals.json",
+        "sha256": "2e66eb8cd201ee497b6e12f84010d8a08441b2d16e3e0b40b1eaf6743a0ea4af"
+      },
+      {
         "bytes": 5484,
         "path": "artifacts/facts/F-geometry-medians-concurrent.json",
         "sha256": "ddabdf1fd4221faf0a701188a6747383892fceba44afa598782199af0c255e59"
@@ -1499,14 +3005,44 @@
         "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
       },
       {
+        "bytes": 7990,
+        "path": "artifacts/facts/F-geometry-stewart-over-constructed-reals.json",
+        "sha256": "8924ccafc2a6fa6b64b3df6687a4429ab87f775816dca2dd1e73ee747bcf0436"
+      },
+      {
         "bytes": 5486,
         "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
         "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
       },
       {
-        "bytes": 5720,
+        "bytes": 6375,
         "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
-        "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+        "sha256": "9e8376b8afb093fc10d84b553704d3e531f6b28e58969673acd092238880acb2"
+      },
+      {
+        "bytes": 9415,
+        "path": "artifacts/facts/F-geometry-varignon-over-constructed-reals.json",
+        "sha256": "bafa0c30172945fa129ded91a495a437e1be3cee6f4b20fe3dbc15c6312cb1c4"
+      },
+      {
+        "bytes": 2078,
+        "path": "artifacts/facts/F-gf2-composition-shape-classification.json",
+        "sha256": "1ec8b1bcd822f87399dfaad1903979f0ac4956c55e276873ed906135a04ca487"
+      },
+      {
+        "bytes": 2171,
+        "path": "artifacts/facts/F-gf2-degree-eight-octuple-two-step-chain.json",
+        "sha256": "e7338a4984c59a1044e2660caf0c20005805ab0de3cb6bcc3d9cc549da0ac612"
+      },
+      {
+        "bytes": 2857,
+        "path": "artifacts/facts/F-gf2-general-monomial-composition-criterion.json",
+        "sha256": "4725905938d5031168a4a1842e467c59e0ce0a9ee67c7c86336cbd2c0f0b56e1"
+      },
+      {
+        "bytes": 2282,
+        "path": "artifacts/facts/F-gf2-witt-shifted-degree-seven-closed-form.json",
+        "sha256": "e5dbc873cb1488746ae2d0286a0205b57150155746c059d53866a47cc4b76c96"
       },
       {
         "bytes": 3389,
@@ -1519,104 +3055,249 @@
         "sha256": "79b9a3bdf8e748da41c8c9cd09cb54719fa42fa51e10fd5a767a21772aab108e"
       },
       {
-        "bytes": 4337,
+        "bytes": 4355,
         "path": "artifacts/facts/F-int-add-assoc.json",
-        "sha256": "c7422512ed450f47ab184ad50566a2a0644245c4a1c44ae3af66cf40f7eb3e11"
+        "sha256": "21e31d00c59ca07ea990b9959143107c79678783ec1648bd42fe03dc4f98c6bf"
       },
       {
-        "bytes": 3676,
+        "bytes": 3694,
         "path": "artifacts/facts/F-int-add-comm.json",
-        "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+        "sha256": "e3158cee39fd5b49de2dbf1db9536fd4a43c965bd074075951a82c4d37b5184d"
       },
       {
-        "bytes": 4402,
+        "bytes": 4420,
         "path": "artifacts/facts/F-int-add-le-add.json",
-        "sha256": "04fb3e8e80888d49ffced93aa1ddc18c944f94512aeb7b24b459a5b2457eb9af"
+        "sha256": "5c94bcc61772e3f1f100d23148d0d3aef25aff3a286174a792b308111e902eff"
       },
       {
-        "bytes": 4433,
+        "bytes": 4451,
         "path": "artifacts/facts/F-int-add-lt-add-of-le-of-lt.json",
-        "sha256": "d567f659297401f78d795caa8a433794818b401c3abf214a72e4ec195af62d43"
+        "sha256": "fc580717ffbef471b53e7af2451da51e6a9b87e8d46047936546bf59d61e0a6a"
       },
       {
-        "bytes": 4819,
+        "bytes": 4837,
         "path": "artifacts/facts/F-int-add-neg.json",
-        "sha256": "413649b045b1616f295d3f9b49b38028a24ff0d8d9e6be49d36786e6ed51a632"
+        "sha256": "b6877d6f2e44f3e6fc1e1bb279e2b9420edb5e82e0c72cd880aebb83c58dbd42"
       },
       {
-        "bytes": 9992,
+        "bytes": 10064,
         "path": "artifacts/facts/F-int-categoricity.json",
-        "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+        "sha256": "210118c8fa6bc27230388f88cdbb1321618054b55fd3cae10a8baffab1502301"
       },
       {
-        "bytes": 6959,
+        "bytes": 7031,
         "path": "artifacts/facts/F-int-characterization.json",
-        "sha256": "98dd97cfb9f22b52daabc49f7d9c74bf2368091c3cd97f454542771761792e2a"
+        "sha256": "3dcdef99dd7af11803af0acc5b6c67580507e2e76a2a29c325fc34b7468ffa72"
       },
       {
-        "bytes": 3700,
+        "bytes": 3718,
         "path": "artifacts/facts/F-int-equality-is-decidable.json",
-        "sha256": "cc1a5725b6579bcdbf90917b298552b7c962083662d3920ec5827c37bc69d1f3"
+        "sha256": "96e4c7544d679ddcc700e53d12cd27c1752284b07f87405819a1c29f294d4d9d"
       },
       {
-        "bytes": 3045,
+        "bytes": 3063,
         "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-        "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
+        "sha256": "abe3fdd2588b7397b6eae1d3d4793c80ef8fba4b28940c0026b0b7299ac9cb36"
       },
       {
-        "bytes": 4341,
+        "bytes": 3066,
+        "path": "artifacts/facts/F-int-gcd-comm.json",
+        "sha256": "4fd41c1aa003f468fc60634d5fb39b6eedceae5e55fc12aaaa2500763d7d9a74"
+      },
+      {
+        "bytes": 4359,
         "path": "artifacts/facts/F-int-left-distrib.json",
-        "sha256": "97cbe9365e1cb7043a13564c85b43115359f1a63dac559bda8c86c686345fe0d"
+        "sha256": "2c4035beb4918dc42898a96efc76b74025361ccaac7b1978b4051e8b58db7f6a"
       },
       {
-        "bytes": 4333,
+        "bytes": 2909,
+        "path": "artifacts/facts/F-int-modeq-refl.json",
+        "sha256": "955a30a78c15c55105e41a6ede32b505c3ca6e802d86cc0140d736d6155ced9b"
+      },
+      {
+        "bytes": 3447,
+        "path": "artifacts/facts/F-int-modeq-symm.json",
+        "sha256": "eae53936dc0c80fd77ba2bf13fcd9e9d7f23a2ca999d21a5594cbd15bf5842f8"
+      },
+      {
+        "bytes": 3338,
+        "path": "artifacts/facts/F-int-modeq-trans.json",
+        "sha256": "c199f076362e4e919a2b1b4d69177a627194fc50e3e485bef27a5518b7178b0d"
+      },
+      {
+        "bytes": 4351,
         "path": "artifacts/facts/F-int-mul-assoc.json",
-        "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+        "sha256": "fd4cb529e46b2211cec142bd479ee3fdca567dd01be4c1605ed9bb4a507d8110"
       },
       {
-        "bytes": 3719,
+        "bytes": 3737,
         "path": "artifacts/facts/F-int-mul-comm.json",
-        "sha256": "aba467954f1f3f2afbe7ea39c433f44368b780483abc88ea80d5dd44775d2f69"
+        "sha256": "eee27b98e3c47381292ef0dea60f7a6416a0ca0ba2d10078fb66c88591fd280b"
       },
       {
-        "bytes": 4597,
+        "bytes": 4615,
         "path": "artifacts/facts/F-int-no-integer-strictly-between-zero-and-one.json",
-        "sha256": "27d34cf3d9afef0c47884af022e5e9d44c516fdae6bd7a7d3317298b5c505c47"
+        "sha256": "8d3fc73299b0b4fa9bc041ec0e175a101a8b28242460f4b3f500d9eaaa13a902"
       },
       {
-        "bytes": 3655,
+        "bytes": 3673,
         "path": "artifacts/facts/F-int-sq-nonneg.json",
-        "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
+        "sha256": "af832511b271f848472f96d3a154e07fb557ed2d2cec83c97632c8c85401328a"
       },
       {
-        "bytes": 5041,
+        "bytes": 5059,
         "path": "artifacts/facts/F-int-sub-nat-nat-elim.json",
-        "sha256": "58d1a99763a3e5424ec08339c1bc42dd815ce27ed13369f9efaae1257014f8b3"
+        "sha256": "97b4909ace141147772e58e5872ceefac4ccc49e203472e1d67f7c45034b1ee6"
       },
       {
-        "bytes": 4965,
+        "bytes": 4983,
         "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
-        "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+        "sha256": "1e3ddda5978f8d84a3a2f4780384d984740f0d2a2a823c0ee41dd4dbbf9f2b56"
       },
       {
-        "bytes": 7418,
+        "bytes": 7472,
         "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
-        "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+        "sha256": "df94a555e968771c7031351ecd5e1cbae05ea5d807daac873c0d8d7eef69eee3"
       },
       {
-        "bytes": 8441,
+        "bytes": 8531,
         "path": "artifacts/facts/F-lean-query-module-shrinks-by-a-shared-import.json",
-        "sha256": "3ddb78d859d8b780c0b7a93bdebb71b6e4ee58b4de3f6019e8fbc54e7737874d"
+        "sha256": "f864dc2fc7b6a0dedc59b59d5ae832ab637eb1bf3867d1c99c9f0876cdbfc307"
       },
       {
-        "bytes": 5114,
+        "bytes": 5132,
         "path": "artifacts/facts/F-list-nil-append.json",
-        "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+        "sha256": "7481c1a4a5b0afac3e197e12189aa9234f5d3d7c01b34207dbeda9815b309191"
       },
       {
         "bytes": 13268,
         "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
         "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+      },
+      {
+        "bytes": 3461,
+        "path": "artifacts/facts/F-logic-and-left.json",
+        "sha256": "2e05fe6a35d10bf6b35752ab0d110a30641a6d5dde33d14d3f15d08e23ee074c"
+      },
+      {
+        "bytes": 3471,
+        "path": "artifacts/facts/F-logic-and-right.json",
+        "sha256": "b6866c704da46c2100468fcab3b5a763d5e272991f37651e691ae213501467c7"
+      },
+      {
+        "bytes": 3548,
+        "path": "artifacts/facts/F-logic-bool-false-ne-true.json",
+        "sha256": "8803d046ade74dd9136a6daccfcbf2e602033eb06492ee32e1c72cbf8ad858ac"
+      },
+      {
+        "bytes": 3584,
+        "path": "artifacts/facts/F-logic-bool-true-ne-false.json",
+        "sha256": "b5ad21abcd9b92fb5dbf6610d4c4c9adbb3ae9b574249458d7029377db10ea6b"
+      },
+      {
+        "bytes": 3897,
+        "path": "artifacts/facts/F-logic-decidable-decide-eq-true-iff.json",
+        "sha256": "4f0cf8727e9014a46613d72801b4d513845f6489a389de82b5f8f392bd8351da"
+      },
+      {
+        "bytes": 3663,
+        "path": "artifacts/facts/F-logic-decidable-em.json",
+        "sha256": "de8c793b722571e7d11d3b7d22c98c1c4f20dd96b19330ab36894dcf90f2c046"
+      },
+      {
+        "bytes": 3991,
+        "path": "artifacts/facts/F-logic-decidable-of-decide-eq-false.json",
+        "sha256": "67e394f906d4ed43b87f3a66b3c127c641ef4b746b2e1eb3f25103466cd9217d"
+      },
+      {
+        "bytes": 3906,
+        "path": "artifacts/facts/F-logic-decidable-of-decide-eq-true.json",
+        "sha256": "ddec6ec3fb8b8249df0507409fe3ba8766995d1996223d4607702bb3ad10fd59"
+      },
+      {
+        "bytes": 3807,
+        "path": "artifacts/facts/F-logic-demorgan-not-or-converse.json",
+        "sha256": "71b2ea112aec3b45f9439c4a3f716e94076498c3745073046b1f05932d89d574"
+      },
+      {
+        "bytes": 3649,
+        "path": "artifacts/facts/F-logic-demorgan-not-or.json",
+        "sha256": "0d2f1ecc5baf9a7091e2221c60b2f82451561aeff5c24bdb524793ace7605cd7"
+      },
+      {
+        "bytes": 3766,
+        "path": "artifacts/facts/F-logic-dne-of-em.json",
+        "sha256": "861b1e26143b617fa1e0304269786908b172e58b507560b34e6e1d75677e16b5"
+      },
+      {
+        "bytes": 3786,
+        "path": "artifacts/facts/F-logic-em-of-dne.json",
+        "sha256": "539794ec349ac40e723fc601a80648b11784949eec399a059c6e753cca5136af"
+      },
+      {
+        "bytes": 3728,
+        "path": "artifacts/facts/F-logic-em-of-peirce.json",
+        "sha256": "b976336cbba2b8d879b9671884b25de76e4de2ca58b0dbb5bfa4da021a8a7aa3"
+      },
+      {
+        "bytes": 3515,
+        "path": "artifacts/facts/F-logic-iff-mp.json",
+        "sha256": "ceb931123c923b010a9d7226c97e32d82d0e576b9201fc15a14f8c344fc95664"
+      },
+      {
+        "bytes": 3525,
+        "path": "artifacts/facts/F-logic-iff-mpr.json",
+        "sha256": "b80a5a6a2c3c0b7419e0bffb1211efa8e3db6a48e51f3c3086dac2e9904f0f10"
+      },
+      {
+        "bytes": 3577,
+        "path": "artifacts/facts/F-logic-modus-tollens.json",
+        "sha256": "0f45359c8455b5fafc4b6b2ce23e130ab8a1c58d4efc61ca87b34ef2339f8e94"
+      },
+      {
+        "bytes": 3597,
+        "path": "artifacts/facts/F-logic-noncontradiction.json",
+        "sha256": "88b3c92797e761307dafb80f3503550fed300b5c9a62d28d0fe66d01501f7734"
+      },
+      {
+        "bytes": 3714,
+        "path": "artifacts/facts/F-logic-not-not-and.json",
+        "sha256": "6a6affdc64da08ea303ac5af5e0adfba06d0324f85e49d2c7309f30eaabefc4c"
+      },
+      {
+        "bytes": 3778,
+        "path": "artifacts/facts/F-logic-not-not-em.json",
+        "sha256": "4527fe322ebe36a8be1d2feff6d0451f415f0f434b7cf643f32eb4d8c46ddceb"
+      },
+      {
+        "bytes": 3547,
+        "path": "artifacts/facts/F-logic-not-not-intro.json",
+        "sha256": "013014ca7a4e51edd4d2b400216221bdd5f480f5ae39b3ad0176cec1f0944068"
+      },
+      {
+        "bytes": 3591,
+        "path": "artifacts/facts/F-logic-not-not-not.json",
+        "sha256": "72697808f9aba9604e09e5a32d41578b897ef742315a4e6a80d0667d9e4d6332"
+      },
+      {
+        "bytes": 3661,
+        "path": "artifacts/facts/F-logic-or-elim.json",
+        "sha256": "0592823fec2df082a15a7d7788f2d9f8d2820294e93996e5971e578be8f3b4a0"
+      },
+      {
+        "bytes": 3585,
+        "path": "artifacts/facts/F-logic-or-resolve-left.json",
+        "sha256": "9600add9d808c10bf5cc67e5affc37e39ead8c67d5ab05094598631f287375f9"
+      },
+      {
+        "bytes": 3771,
+        "path": "artifacts/facts/F-logic-peirce-of-em.json",
+        "sha256": "7fad80f0239f1b5cd79555b998ea2085c59079fbbd39742c7e9563a049ff7f11"
+      },
+      {
+        "bytes": 11034,
+        "path": "artifacts/facts/F-menelaus-and-ceva-over-constructed-plane.json",
+        "sha256": "255bf023f379a676ecf58a40f43a3568e6bb7fc77a8ea0417bcd9a454968e84d"
       },
       {
         "bytes": 1548,
@@ -1759,9 +3440,9 @@
         "sha256": "1e2ee9c0739df34a7f9f8d5f2b92b8d4a4bb5d31066269fab86175690618e66c"
       },
       {
-        "bytes": 1588,
+        "bytes": 4377,
         "path": "artifacts/facts/F-ml430-int-modeq-comm-1e4bcc07.json",
-        "sha256": "c3655b1b54abec1efcaa88998e698d32e2d30e73c79d003254be1ad3b2dbe58d"
+        "sha256": "2223cddd243c0bb76c1a9ae2facc4dd16bcbe9ce532ef0ff0d33011d99d69253"
       },
       {
         "bytes": 1648,
@@ -1769,9 +3450,9 @@
         "sha256": "e46b10a27482efefd05dd480a61d88605bd692b306b42f9a1b000a0038039909"
       },
       {
-        "bytes": 1543,
+        "bytes": 6674,
         "path": "artifacts/facts/F-ml430-int-modeq-neg-d6ff57b6.json",
-        "sha256": "4c696a77ffff4d712f9beffe244555e2b2f1166c95238c38ed7aebbef73d9f3f"
+        "sha256": "a037db6d19c7c65237f1eaddf6b42e48f20d323e69879522282da15410a93dde"
       },
       {
         "bytes": 1544,
@@ -1794,14 +3475,14 @@
         "sha256": "7ceb5e06eda4f5f660ac0b87ca862f6bd446ce8f0555c485a5ff19b0cdae393b"
       },
       {
-        "bytes": 1519,
+        "bytes": 6334,
         "path": "artifacts/facts/F-ml430-int-modeq-one-01d9de39.json",
-        "sha256": "4a1da3d76dba4d7384c28c059b252ed15c78e2a436cdbd3f0ea297409b4ac940"
+        "sha256": "a6f66fc418fbd2981ab44e2ce7c421eccca0ded3ebf53344d52c2e64aa8ca13c"
       },
       {
-        "bytes": 1532,
+        "bytes": 4321,
         "path": "artifacts/facts/F-ml430-int-modeq-refl-30e15520.json",
-        "sha256": "30231c3873e1ca82edf39f1c12fc8bc334371743ac22cff7818bd5fb3b9b3c93"
+        "sha256": "5abebb73e96a69981255305a4207e55edacdbeeebf960e04fa3dac246f3c23bd"
       },
       {
         "bytes": 1564,
@@ -1809,14 +3490,14 @@
         "sha256": "fadd6fb2102934021d3e71cd7f492da4d35f104236f29cf2dadf03bc5527bdf5"
       },
       {
-        "bytes": 1547,
+        "bytes": 4336,
         "path": "artifacts/facts/F-ml430-int-modeq-symm-984a6e67.json",
-        "sha256": "eac66085f981f571e118398b4a87d5ff497f37d481d6c3b25d6c410b7478f8aa"
+        "sha256": "1ffd79a77553b4f7a37ca9a50e5b64cfcad16f6f83b63cfefebbde22cd3fee70"
       },
       {
-        "bytes": 1575,
+        "bytes": 4369,
         "path": "artifacts/facts/F-ml430-int-modeq-trans-6d7863e0.json",
-        "sha256": "cc5a04f40626871458b89db960fb9de31696e1515dde49b0ba53bfc777bed769"
+        "sha256": "9b2f87406e012ac0a4e26ff0e9c916b73e901b6c467fa5b322a6141a9ecf8d82"
       },
       {
         "bytes": 1562,
@@ -2509,9 +4190,9 @@
         "sha256": "228d5bcea687086659361f6520ed0cfde6315e05cdbeda03347fce37a69d5559"
       },
       {
-        "bytes": 1531,
+        "bytes": 4996,
         "path": "artifacts/facts/F-ml430-nat-modeq-refl-d870c8f5.json",
-        "sha256": "6fd58b493ef540585c892b8add9e9dc78cd1087e99a3ebf3e0ce652c2a676213"
+        "sha256": "5c483275b5badce3f667b17e81f90fcc732c63949513b995d33ca0c83aad48e1"
       },
       {
         "bytes": 1545,
@@ -2704,124 +4385,199 @@
         "sha256": "f8de95eee65f9c7dc7cee52f0095e58ee7f066f85cceda7fde3bfc472044a5f4"
       },
       {
-        "bytes": 3455,
+        "bytes": 3473,
         "path": "artifacts/facts/F-nat-add-assoc.json",
-        "sha256": "bd18999eb6c6c6c4de419ae716d27f21ce391b43fb3f518e7294a6bee3ac101e"
+        "sha256": "b9d81137d31d363b28611ba1c476a3789834103698a234de0f1b2433ce7528c6"
       },
       {
-        "bytes": 2724,
+        "bytes": 2742,
         "path": "artifacts/facts/F-nat-add-comm.json",
-        "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+        "sha256": "b4e985e302c071330911e0eced3fa606e7fea958ad5bb51753254c7d65d633dd"
       },
       {
-        "bytes": 4077,
+        "bytes": 4095,
         "path": "artifacts/facts/F-nat-add-sub-cancel-left.json",
-        "sha256": "ac41c33587cbff489830578e474a2bb9ea87467ad379a796b428124cc13b50f8"
+        "sha256": "b56de236b009d0a506afccf9f55cd9ba68390a39752d2aaedad1c15050c9498a"
       },
       {
-        "bytes": 3441,
+        "bytes": 3459,
         "path": "artifacts/facts/F-nat-add-zero.json",
-        "sha256": "3bd4d57f29edded307d8c995f3de47b115d8bf96548ef8bf60e48581ddf41a9b"
+        "sha256": "87d135e14de955aeceb94551076f79f9ae6d12e3df284d0b0b8f918fc7ea945f"
       },
       {
-        "bytes": 4007,
+        "bytes": 3086,
+        "path": "artifacts/facts/F-nat-choose-le-two-pow.json",
+        "sha256": "08c33bc951dc2ef906348254b18a70c6ff4aa7ec8a85d298950d7f55ad5aa183"
+      },
+      {
+        "bytes": 3224,
+        "path": "artifacts/facts/F-nat-choose-symm.json",
+        "sha256": "3faecae6851dc1df9e289c88fa734e9e79a374b6765679ea9525ddf25549a988"
+      },
+      {
+        "bytes": 2944,
+        "path": "artifacts/facts/F-nat-choose-zero-right.json",
+        "sha256": "9a89000a7c19d3d6f9d941d452791d6bad226283a6168888cbcc5b874b06dfd8"
+      },
+      {
+        "bytes": 3869,
+        "path": "artifacts/facts/F-nat-coprime-of-bezout-one.json",
+        "sha256": "3a3bbd1b3460229083f6d368c1aa54684eff38c060365c432eff8147e740d08a"
+      },
+      {
+        "bytes": 4025,
         "path": "artifacts/facts/F-nat-div-mod-exists.json",
-        "sha256": "3ff422e395249991b71a63c1aa733ecb7fc7ec971c950b4d3029e401a0e96539"
+        "sha256": "1f745a1411b856dfe4cd732ca58dbeabbd11e3010801ed6a84e4ab97ea204f00"
       },
       {
-        "bytes": 3956,
+        "bytes": 3974,
         "path": "artifacts/facts/F-nat-div-mod-unique.json",
-        "sha256": "9c6d2017174b8a0fb4ad4ce8a8a6f46130f2dd82d35f338dace2770771bb2a16"
+        "sha256": "ea261568f2e245fd908f8f137108db195698c542d04428de0a5f2368bc213589"
       },
       {
-        "bytes": 3717,
+        "bytes": 3735,
         "path": "artifacts/facts/F-nat-dvd-add.json",
-        "sha256": "b769d28a2b7b952e4ad0397625e9254e9aff47b32636c83b26adea3f28596425"
+        "sha256": "3095258652929c8e0c2c961a608dbb6d0704f4a30db7ba3c9c99d4242182c8c2"
       },
       {
-        "bytes": 4110,
+        "bytes": 4204,
         "path": "artifacts/facts/F-nat-dvd-gcd-iff.json",
-        "sha256": "4ff93f5783c75a1c0ca128df329e60554778c230c6cb29bcf87f5b33044bfbc1"
+        "sha256": "e3bf10ff266c1d767f2c2cd576e8dec9b42fadfe58e87cbfdfbd39f33831c505"
       },
       {
-        "bytes": 5979,
+        "bytes": 3353,
+        "path": "artifacts/facts/F-nat-dvd-gcd.json",
+        "sha256": "791e552b4f2e745fb7f06acb33d9eb6feac95b18de2de55b7055b662ebab695e"
+      },
+      {
+        "bytes": 6047,
         "path": "artifacts/facts/F-nat-euclid-lemma.json",
-        "sha256": "a2c108ceba74d3171346e5b6d3ce3c21f710d214c320eb65c831a3f4d3a13db0"
+        "sha256": "724d669990fd3d4ae6871a6deb64d3cab82746b2458335bbc50fab7de592100a"
       },
       {
-        "bytes": 6632,
+        "bytes": 6650,
         "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
-        "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+        "sha256": "2283d1e36fd7b8b331b49a0653a019c13638ac3ec456bbe174504041cb85e906"
       },
       {
-        "bytes": 6526,
+        "bytes": 6574,
         "path": "artifacts/facts/F-nat-exists-prime-gt.json",
-        "sha256": "6cb7eb93bf72e59f86ac344e6053ecb5f4418de77f8d30cb4ce68f077bd4d03e"
+        "sha256": "2c319b5a5a51d0db016325c4fb597084d2a1e2273f97260cb5fd69874dcca537"
       },
       {
-        "bytes": 4175,
+        "bytes": 4213,
         "path": "artifacts/facts/F-nat-gcd-bezout.json",
-        "sha256": "f74c9064a3014d8cf691f1d0b8ffec233ef40585a1689f026d5ed0afaf8d2d82"
+        "sha256": "9f9e4c6b090c51ae5a88dc00d1ae7a8303f39d7d5248b3633a3097ced594ade9"
       },
       {
-        "bytes": 4132,
+        "bytes": 2942,
+        "path": "artifacts/facts/F-nat-gcd-dvd-left.json",
+        "sha256": "cbe1c1c9f2b7200611c8ae7ccbca5044214fcbfca27e3586d0abdcdbd9f84a97"
+      },
+      {
+        "bytes": 2949,
+        "path": "artifacts/facts/F-nat-gcd-dvd-right.json",
+        "sha256": "26941b927c1fa486560fb679f9d4a07b4c1444b93d5bf3e4003323ddb4178ffc"
+      },
+      {
+        "bytes": 3089,
+        "path": "artifacts/facts/F-nat-gcd-mul-lcm.json",
+        "sha256": "94061214fff423325b7396deac189860c4cceee5ae2b05ec5d5fb346ec1b26ee"
+      },
+      {
+        "bytes": 4172,
         "path": "artifacts/facts/F-nat-gcd-succ.json",
-        "sha256": "e0fb1cf85f0d8e52770b9bf457242d4f15d76dbac82671a507f17d5884ca93ef"
+        "sha256": "7f9ab4312ed31dd821c1bad8b14fb4fca0faf795ab794e34fefc781b43e576cb"
       },
       {
-        "bytes": 5516,
+        "bytes": 5534,
         "path": "artifacts/facts/F-nat-le-refl.json",
-        "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+        "sha256": "f83fac4a9614c03c0a57991e2f1605236fadc46b1910959e4f2740c8c1fd6750"
       },
       {
-        "bytes": 5755,
+        "bytes": 5773,
         "path": "artifacts/facts/F-nat-le-succ.json",
-        "sha256": "72465fc1fe07b4305c3098314a720648c9d0b96462e96f17ac8bae6bceb8c3e1"
+        "sha256": "8a9a615b36e22389ec562721ecd412b9f0e4d3bb4619675baa6d51edb27387ef"
       },
       {
-        "bytes": 3661,
+        "bytes": 3679,
         "path": "artifacts/facts/F-nat-left-distrib.json",
-        "sha256": "6a25df7aec622c1a773a56290463275ea50e5301f80e64c7f53aee6e161f3b1e"
+        "sha256": "76729b3fe39c6ec6179c47b449a10ac1ca5ccb0d0f33e239ae071262245e0ec3"
       },
       {
-        "bytes": 4030,
+        "bytes": 4048,
         "path": "artifacts/facts/F-nat-mod-eq-mul.json",
-        "sha256": "bcff2d90ed232a3032e67d51c778dad6dd220768ce2eaa1870536b94ddf69640"
+        "sha256": "4a9fb96036da0e73aa89828ae3f91208ce7061b3150df52e48b9aa0eb8d34516"
       },
       {
-        "bytes": 3495,
+        "bytes": 3122,
+        "path": "artifacts/facts/F-nat-mod-eq-zero-iff-dvd.json",
+        "sha256": "148d4e7a9be0bad55e58724c027e634291c63ec24e52b28c86ee9d99d4f5ffc9"
+      },
+      {
+        "bytes": 2959,
+        "path": "artifacts/facts/F-nat-mod-lt.json",
+        "sha256": "61cbfbfe31ee9a3a1730fcec870b3ac29fc1ed197891a78459ffd72de005739a"
+      },
+      {
+        "bytes": 3516,
+        "path": "artifacts/facts/F-nat-modeq-equivalence-on.json",
+        "sha256": "76803d2f88851cd56582bc69ced29a93f45db084f6bca147138ba01bfffccdae"
+      },
+      {
+        "bytes": 3513,
         "path": "artifacts/facts/F-nat-mul-assoc.json",
-        "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+        "sha256": "8aead86fde616541c3f494d036102deda1ba3c0632c1305b5d4807ffe9ebb0da"
       },
       {
-        "bytes": 3371,
+        "bytes": 3389,
         "path": "artifacts/facts/F-nat-mul-comm.json",
-        "sha256": "1a0fdadda76cc90edec73adb119933a3cb3c130ab11c4f83d55fff53aab3e020"
+        "sha256": "2787e7725ab3db13f76557b669e84db5829af752069da626e9ff9b4fa7b4a4e0"
       },
       {
-        "bytes": 3558,
+        "bytes": 3576,
         "path": "artifacts/facts/F-nat-mul-one.json",
-        "sha256": "3f5cba9ea3a950081dc762e74ab433385503dbb37ead805723d4d18b01944480"
+        "sha256": "ab8e6478591729018339fdb4d57cdef0f62c79f6fe0ee4ccd8374d2e0decd554"
       },
       {
-        "bytes": 7259,
+        "bytes": 2981,
+        "path": "artifacts/facts/F-nat-one-le-factorial.json",
+        "sha256": "80292a9e4ea91974b67939c4a6c8d205feaa23be491a650ce7ed92f8ae2a9d15"
+      },
+      {
+        "bytes": 7313,
         "path": "artifacts/facts/F-nat-peano-categoricity.json",
-        "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+        "sha256": "b00f5587e37f015848670a6aca55c2b8f584d493ba27b4f0e51b9f6662938976"
       },
       {
-        "bytes": 5082,
+        "bytes": 5097,
         "path": "artifacts/facts/F-nat-pow-add.json",
-        "sha256": "4da8efbb7943f23c0ab6fc3de1ef54badfdc75525ded899480a4134d5ed12b63"
+        "sha256": "220946f1ec8cff07eed7a569bdb72319e717224bd92d6d8539d3ebe1a2fcb356"
       },
       {
-        "bytes": 2451,
+        "bytes": 3529,
+        "path": "artifacts/facts/F-nat-pow-prime-modeq-self.json",
+        "sha256": "f1a2542c7fa9fe3085c423d386c27bcf5c884d81217f27f63d6d11cb52db9a83"
+      },
+      {
+        "bytes": 3552,
+        "path": "artifacts/facts/F-nat-prime-dvd-choose.json",
+        "sha256": "d699ab0ed9855c23fe9b7bf0eedc9cb3d7719ef98267cb40bd4c9eca60ab0665"
+      },
+      {
+        "bytes": 2469,
         "path": "artifacts/facts/F-nat-succ-add.json",
-        "sha256": "982b8c151d6d5432d029fcb86759b37c91f400cef1eaff5bb9ca1cacf9e2ccb2"
+        "sha256": "a7b943cf98a84fcf0c33fa6c756b003c41bcbf19b1408a8f3c285b8b6d0fa375"
       },
       {
-        "bytes": 2352,
+        "bytes": 2370,
         "path": "artifacts/facts/F-nat-zero-add.json",
-        "sha256": "3fdb7a9949fdf181416c28403449e55f181c9b9938626285f2f7001dfeda86ce"
+        "sha256": "d518345df6c6194402510e93c75a5b9a9988cac4cd87f2eb39146779b884175c"
+      },
+      {
+        "bytes": 8106,
+        "path": "artifacts/facts/F-natdivsucc-antitone-over-constructed-rationals.json",
+        "sha256": "15909d478effcb92065bd0200ac6a850afeeb8e74c56f2123ed3c41a77af4386"
       },
       {
         "bytes": 5536,
@@ -2834,9 +4590,9 @@
         "sha256": "b2a8c563c13582450078e9cddda7137da437d83b59554f4cc64c335366c99898"
       },
       {
-        "bytes": 4850,
+        "bytes": 4865,
         "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
-        "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+        "sha256": "8f585d48559be1907c7a1e544cdb47367d2e3738c0ff61502f44cef2be99d4f9"
       },
       {
         "bytes": 11217,
@@ -2844,9 +4600,9 @@
         "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
       },
       {
-        "bytes": 5383,
+        "bytes": 5386,
         "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
-        "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+        "sha256": "921a823e26c75efea96214c268f8e112f13b4cdedd299eabf912d0158687bfe2"
       },
       {
         "bytes": 10680,
@@ -2864,14 +4620,19 @@
         "sha256": "df7d87675964a164cc6be5ffc051d5f78a4fb8be25de3132fbc670c10aa747f9"
       },
       {
-        "bytes": 6282,
-        "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
-        "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+        "bytes": 8858,
+        "path": "artifacts/facts/F-prodrange-collapses-under-a-fixed-point-free-involution.json",
+        "sha256": "bb3e4bc1f499d88be715f1e892f817925f36c964ba2266e7eb1a2b3b92777bac"
       },
       {
-        "bytes": 6283,
+        "bytes": 6300,
+        "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+        "sha256": "5e3801cb7db38ba8fc71ec801dc880959e17290d0c1886c6e807eb272c5bab45"
+      },
+      {
+        "bytes": 6319,
         "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
-        "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+        "sha256": "beea07aa59d16c430995d1f6c992094ba87f114aa0c9086334cb472c86649722"
       },
       {
         "bytes": 6890,
@@ -2889,19 +4650,124 @@
         "sha256": "bcdd70d99fd8dc65f5cb6d44ef50b1461282e9046869a6793674e7eda96f6b0f"
       },
       {
-        "bytes": 2528,
+        "bytes": 3617,
+        "path": "artifacts/facts/F-rat-add-assoc.json",
+        "sha256": "96151bfe3a68a22c8cbb5925ae33033bbdc9388c23ae3b3a506d1836d0e11c86"
+      },
+      {
+        "bytes": 4446,
+        "path": "artifacts/facts/F-rat-add-comm.json",
+        "sha256": "d89a7d073685fbcc4fa46c1936459dab95a8d876719445cb2a9fc16bc274bd82"
+      },
+      {
+        "bytes": 2546,
         "path": "artifacts/facts/F-rat-add-neg-inverse.json",
-        "sha256": "e7ee314bc69063f96fc6902dc1658743ed3fde572dc4e6172b634bffebd6460f"
+        "sha256": "24257bd26f2cef63f80ad6454235d7edda9b2e795eacfd6d3a10f642e6914101"
       },
       {
-        "bytes": 2580,
+        "bytes": 4223,
+        "path": "artifacts/facts/F-rat-chebyshev-inequality.json",
+        "sha256": "18a2f7743977e5df3307a0934fcf31a01249de0207f24813e8d0b68efbb37eb3"
+      },
+      {
+        "bytes": 4278,
+        "path": "artifacts/facts/F-rat-covariance-sq-le-variance-mul.json",
+        "sha256": "29e78438715f6ee31ae8f751d98a2694a5a5ef6f38bf8d6d4fd20e2612e5e90d"
+      },
+      {
+        "bytes": 4359,
+        "path": "artifacts/facts/F-rat-cramer-two-unique-x.json",
+        "sha256": "96c5ed38581f5f5dc8c04986f29b3bc409a7294feadcbf47574f5be1f9bcba11"
+      },
+      {
+        "bytes": 3506,
+        "path": "artifacts/facts/F-rat-det2-id.json",
+        "sha256": "412560cf06080473423d9afcc9d9d8ad921d2c9f8cf433a85705fd514659ca0b"
+      },
+      {
+        "bytes": 4500,
+        "path": "artifacts/facts/F-rat-dotn-cauchy-schwarz.json",
+        "sha256": "ee89a734baac78b50ddf50127de4e37ea5e87d5dded7dec30fcae8fbf9c71159"
+      },
+      {
+        "bytes": 3616,
+        "path": "artifacts/facts/F-rat-dotn-comm.json",
+        "sha256": "cd29649f40de2f956a83c67c7d6aa4fe0d8b05a5fb1bfed7efc2797779773939"
+      },
+      {
+        "bytes": 3566,
+        "path": "artifacts/facts/F-rat-le-total.json",
+        "sha256": "24ee8a743747e0654fe01651dd794e4b632fda100a8c886877d464761bddf990"
+      },
+      {
+        "bytes": 3578,
+        "path": "artifacts/facts/F-rat-le-trans.json",
+        "sha256": "70aa160be0a5a45a891c12357cd2a485521974d1bd224b4f58049e21cbd198b1"
+      },
+      {
+        "bytes": 3676,
+        "path": "artifacts/facts/F-rat-left-distrib.json",
+        "sha256": "5a94385a88a35ba9f310279cb59ae74eada3df796919ba393d50b4a97ad16cda"
+      },
+      {
+        "bytes": 3578,
+        "path": "artifacts/facts/F-rat-mul-assoc.json",
+        "sha256": "1b3363f7854c5e91fde10a613e0932d428d79ff3da0d732807590016b7092212"
+      },
+      {
+        "bytes": 3498,
+        "path": "artifacts/facts/F-rat-mul-comm.json",
+        "sha256": "85b8de37e3015aaa376ac4a6d0071f75c898808b2ed0890e00daf5d69e402de4"
+      },
+      {
+        "bytes": 4178,
+        "path": "artifacts/facts/F-rat-mul-inv-cancel-of-ne-zero.json",
+        "sha256": "0c306485da52a8d9a1780129a6a92d3ffa704082b0ae4718816a2c2ddabd3b8c"
+      },
+      {
+        "bytes": 2598,
         "path": "artifacts/facts/F-rat-mul-renormalises.json",
-        "sha256": "33c60509f0c800e5abee384df79a32e5fe6a7d2a58978988926ba03e8e85a6c3"
+        "sha256": "fc01daedf9978f863c6548c2afa1d384c5ddab9f37c6bdc4624cccbf880ae92a"
       },
       {
-        "bytes": 2738,
+        "bytes": 3737,
+        "path": "artifacts/facts/F-rat-mul-sumrange.json",
+        "sha256": "1e133fd88ac8a8ad457558743a794a1566dc6c4b354d376ca69dc29cf9f1afc8"
+      },
+      {
+        "bytes": 2756,
         "path": "artifacts/facts/F-rat-normalize-reduces.json",
-        "sha256": "595714e8e93cbd24998c0d3d7cc83f0e25e8f00e426cab6d1ae1ef5bb1fc8926"
+        "sha256": "f27d39fcdbb281b8381d843846d4483fa8f92a12c1cd91fcda3701c6aedc94e1"
+      },
+      {
+        "bytes": 3934,
+        "path": "artifacts/facts/F-rat-polyeval-add.json",
+        "sha256": "e0ff6a97c020da0ec2516f28d03341a21c24935e825d85101156b75b3354951a"
+      },
+      {
+        "bytes": 3794,
+        "path": "artifacts/facts/F-rat-polyeval-succ.json",
+        "sha256": "be05714ae3bfebcd7d62a6c5d5e02a29d89a53e70ce82dea98bbbec830107cef"
+      },
+      {
+        "bytes": 3847,
+        "path": "artifacts/facts/F-rat-sumrange-add.json",
+        "sha256": "c9bc6fe26642160a07180b7f6cabb9bb3075c6bb249a8f4905ef8bb5abdf71b5"
+      },
+      {
+        "bytes": 4041,
+        "path": "artifacts/facts/F-rat-sumrange-succ.json",
+        "sha256": "fd446aa063e95f6d0f4644c273998d400fb0362ce00342c72e2e46c38cdb56b0"
+      },
+      {
+        "bytes": 3753,
+        "path": "artifacts/facts/F-rat-variance-nonneg.json",
+        "sha256": "3f940be451ce7b7e45d4d37397bd2b60ce7fd0bec02420de318605ba307ce6dd"
+      },
+      {
+        "bytes": 5337,
+        "path": "artifacts/facts/F-rat-weak-law-of-large-numbers.json",
+        "sha256": "251b66c2f9dd0ca9a5d1285c98913d4f8786f0210ff895c0bceb12e9a2aedc35"
       },
       {
         "bytes": 5166,
@@ -2909,9 +4775,9 @@
         "sha256": "44a939d9db7d725db27facfa5f8385739bacd1f57ce2e6a3a803e4bfeec834e7"
       },
       {
-        "bytes": 5272,
+        "bytes": 5326,
         "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
-        "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+        "sha256": "0afc0372893e4ed9f6fc7c68535028d1827700db9946eafad9d818cad254f144"
       },
       {
         "bytes": 10352,
@@ -2924,9 +4790,9 @@
         "sha256": "8ae52321418f7ab35b610b10b34133ccde8c626334dc11f3480cee7d468c851f"
       },
       {
-        "bytes": 9625,
+        "bytes": 9697,
         "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
-        "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+        "sha256": "96b542eeebdc4ef11a72f1b47877b8a046413804e458c565cf517a761d584ece"
       },
       {
         "bytes": 4893,
@@ -2949,34 +4815,34 @@
         "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
       },
       {
-        "bytes": 9254,
+        "bytes": 9362,
         "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
-        "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+        "sha256": "48df3d1b392d9af4378051fed7c6be6122ae47f447a271dd7bbac6a545054ca1"
       },
       {
-        "bytes": 11739,
+        "bytes": 11757,
         "path": "artifacts/facts/F-shipped-front-door-refutes-over-constructed-reals.json",
-        "sha256": "f699d59b14cedeb62fb02a32060c128916d9d635d521240e405370575242fe01"
+        "sha256": "a4dc62d286b307b04ce3126b5cf49ceb502cb6ba5b4efd8d5ec247589468b08f"
       },
       {
-        "bytes": 3216,
+        "bytes": 3234,
         "path": "artifacts/facts/F-sorting-network-optimal-size-n3.json",
-        "sha256": "18e3187248c898df46e6e84f6def1451c07156be10ae5e835353e0cbf6a37cfa"
+        "sha256": "3b4d7745028e90dce1e01e9804c31f7f2e10a896a7219289ab5b38fdcd76a9f4"
       },
       {
-        "bytes": 3216,
+        "bytes": 3234,
         "path": "artifacts/facts/F-sorting-network-optimal-size-n4.json",
-        "sha256": "8c44ca80a16a269156d6a125f6c9167086525983515d32706201bb09956f016d"
+        "sha256": "29d6ea1b128bcf0a764ea8595897709736c76b5639db2c461bce8e351540e032"
       },
       {
-        "bytes": 3216,
+        "bytes": 3234,
         "path": "artifacts/facts/F-sorting-network-optimal-size-n5.json",
-        "sha256": "7ca4e16702e2ded7c6ae3dc27d0f02f600455cbb72537ef742d7db90ca5ff8d3"
+        "sha256": "1e72baf1ff982e3efb0ecffeb396765c017a3bbc2bdcf39d7ce94b8e416ee5b9"
       },
       {
-        "bytes": 4714,
+        "bytes": 4732,
         "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
-        "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+        "sha256": "7ac370bee0fe1d6b2c764b894cc5ead7866129102fbc562048253c583bb0baf8"
       },
       {
         "bytes": 4957,
@@ -2999,14 +4865,19 @@
         "sha256": "e8002775b2c8184b4fbfe2ec383cebdf18506dfe8da4a4530e917e47c2229946"
       },
       {
+        "bytes": 10047,
+        "path": "artifacts/facts/F-wilson-theorem-over-constructed-integers.json",
+        "sha256": "be4cc44384be0412560b88a6e4c82bc1330487f8ba4f39b7ede188513fa733e9"
+      },
+      {
         "bytes": 4036,
         "path": "artifacts/facts/F-xor-associative.json",
         "sha256": "cd39de8638f6e24feaec74820d422bf114d160a8739d3f3f3cd9904a80bf2cad"
       },
       {
-        "bytes": 18412,
+        "bytes": 18732,
         "path": "artifacts/ontology/fact.schema.json",
-        "sha256": "ca3d41c6386a4d75424052a0f44ea4d794a8d139b8f98bd4d1c14e32913a19aa"
+        "sha256": "a5a5968a6456b632013194fe472535f1aa5cb977b7e957c9236127ce1e2eaa5d"
       },
       {
         "bytes": 20474,
@@ -3034,9 +4905,9 @@
         "sha256": "77d0d1e654f105b7ad60a9f83b4a3ffbd6d765d53652126539fc63a39da15feb"
       },
       {
-        "bytes": 97412,
+        "bytes": 110912,
         "path": "justfile",
-        "sha256": "fb23c54ec3efcadff87afcc471d59cb3781dab9a9fda8059ceb134e71cb34b76"
+        "sha256": "f090ab5d6118048ad83b2ee0f5c63a580586ff73ae23229f58d7592dda35d499"
       },
       {
         "bytes": 11929,
@@ -3054,9 +4925,9 @@
         "sha256": "fbe54eba868c06a720194bf9f742a47a96737be1ec369a366a478291f854ea1c"
       },
       {
-        "bytes": 5999,
+        "bytes": 6299,
         "path": "scripts/check-aggregate-scope.expected",
-        "sha256": "4ca7f8a489610cede17b3ab4cecc4dc4813fcab2230c42cc0d3e3fb76ca32081"
+        "sha256": "f390f07c084e931a2a142996191b40464b8af474f93c20d7694a5ee6e9de70c3"
       },
       {
         "bytes": 5187,
@@ -3104,14 +4975,14 @@
         "sha256": "224a2672fd9a41730ca47e860a3a6a0b0c605113a924f6066f4a3287422fde81"
       },
       {
-        "bytes": 8699,
+        "bytes": 9542,
         "path": "scripts/check-fact-depends-derived.py",
-        "sha256": "745d919e6c9db709d77beb05ce7bff3f12e99daf16507edb4d883cb7860f9dbc"
+        "sha256": "94d3db7ed4a5efb941ceaaa6cdc16f757d28ce2f08126058a12b3be560d5b5b0"
       },
       {
-        "bytes": 41000,
+        "bytes": 54666,
         "path": "scripts/check.sh",
-        "sha256": "e21e16c4e28d69e4d28d92bedbf9487790e732842bf3162c3ad00c50a3075417"
+        "sha256": "0fe3d003523d202582b91d49182feeac3986f5f365a40b2ad31192d3bd109c0c"
       },
       {
         "bytes": 6846,
@@ -3179,14 +5050,14 @@
         "sha256": "cb7b1b6ed2cb8f268b6adac42cc1bfb4ff3b99ce9e85b438c23790b4ce92c9e1"
       },
       {
-        "bytes": 63751,
+        "bytes": 70836,
         "path": "scripts/execute-autogenesis-operation.py",
-        "sha256": "ec8c788a588a5c5938118bf35a7acbff64004816844f1ee47787ef2de03b0c27"
+        "sha256": "8b10272d9a3d91409dcdf02a8d33278adea8776568191bbe82ec0dbffa64815f"
       },
       {
-        "bytes": 27844,
+        "bytes": 29331,
         "path": "scripts/fact-frontier.py",
-        "sha256": "fb367504828dc9aa0d09ecf349b645eb33b83402b69c53df65e43e937271526c"
+        "sha256": "1254edf54c43af3cc6684a2033dd053498812ace40df639f5632a7d36cae2478"
       },
       {
         "bytes": 29065,
@@ -3259,9 +5130,9 @@
         "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
       },
       {
-        "bytes": 49337,
+        "bytes": 55013,
         "path": "scripts/validate-autogenesis-operations.py",
-        "sha256": "790e64060c361bec532fbc16663ea42724e68a0a40627e5b764c2b09029fef10"
+        "sha256": "fcfc457170994dd4cb120d8fe46e150f1dd17cbf4cafca0be05354ad1dcb8c9a"
       },
       {
         "bytes": 2711,

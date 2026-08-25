@@ -233,9 +233,9 @@ regressions to `unknown` still counted as decided.
 | `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` | `0d639f771` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-nia-curated-iand-dominance-audit.json` | `0d639f771` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json` | `0d639f771` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` | `0d639f771` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` | `c9230908f` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json` | `0d639f771` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` | `0d639f771` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` | `c9230908f` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json` | `2d08d56a1` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json` | `0d639f771` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json` | `2d08d56a1` | stamped via lane-snapshot |

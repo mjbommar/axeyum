@@ -142,6 +142,20 @@ class ReadinessDeltaTests(unittest.TestCase):
         frontier = MODULE.load_frontier_module()
         registry = frontier.load_operation_registry()
         facts = frontier.load()
+        # `authoritative-mathlib-modeq-family-v1` (registered 2026-08-25 as
+        # `authoritative-mathlib-nat-modeq-family-v1`, merged the same day
+        # into the Int.ModEq operation under this id) makes both of these
+        # `open` and dependency-ready on the LIVE ledger, and they sort
+        # lexicographically ahead of `admitted` below (`F:ml430-...` <
+        # `F:no-integer...`). Left unneutralized, the "before" frontier
+        # selects one of these instead of `admitted`, and this test's whole
+        # point is that the "before" frontier selects `admitted`.
+        for fact_id in (
+            "F:ml430-nat-modeq-symm-0a3d4d18",
+            "F:ml430-nat-modeq-trans-ef9d1c46",
+        ):
+            facts[fact_id] = copy.deepcopy(facts[fact_id])
+            facts[fact_id]["epistemic_status"] = "proved"
         admitted = "F:no-integer-square-is-minus-one"
         before_facts = copy.deepcopy(facts)
         before = before_facts[admitted]

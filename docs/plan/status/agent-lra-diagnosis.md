@@ -40,13 +40,7 @@ in the shared tree:
   cores too wide to minimise are exactly the cores whose width then exhausts
   `MAX_DYNAMIC_LARGE_CORE_LITERALS`.
 
-Next: the shipped form of that fix is **not** the constant this A/B moved —
-minimisation should be budget-driven rather than width-gated, keeping the memory
-protection the `Large` bucket exists for. Nothing here has been through
-`scripts/parity-run.sh`, which is still gated by nothing (gap #2).
-
-Full finding, all counts and controls:
-[`../../research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md`](../../research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md).
+Detail moved to [`../notes/agent-lra-diagnosis.md`](../notes/agent-lra-diagnosis.md).
 
 <!-- plan-section: landed-changes -->
 

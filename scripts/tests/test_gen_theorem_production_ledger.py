@@ -40,6 +40,7 @@ GROUPS = {
     "string": 6,
     "creal": 390,
     "complex": 414,
+    "cpoint": 415,
 }
 ORIGIN = {
     "logic": 2,
@@ -50,6 +51,11 @@ ORIGIN = {
     "string": 4,
     "creal": 70,
     "complex": 24,
+    # `cpoint` originates nothing new here (same shape as `axreal`'s 0):
+    # every theorem this fixture's `cpoint` claims is credited to an
+    # existing prelude, so the sum below still totals `distinct` (418)
+    # without moving any other value.
+    "cpoint": 0,
 }
 
 

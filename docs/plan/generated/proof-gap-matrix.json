@@ -1451,7 +1451,7 @@
     },
     {
       "path": "bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json",
-      "sha256": "b88ffaa0afea331eb94d03c290a43adb3f6b19fc04cb9c41d2882b508327e1e8"
+      "sha256": "de86672ef16b4981fa1aab5469843c4c2f8a96b62dc7903565c3c2e2e4df9d42"
     },
     {
       "path": "bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json",
@@ -1459,7 +1459,7 @@
     },
     {
       "path": "bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json",
-      "sha256": "7ee55056b5c30332c895570280cb11daf4e7c05fdc43918d36fd6b469a61b9df"
+      "sha256": "870cf8eb8b1b72e686ec5dad0e193f45f192d64264f17bc7c591ac0931b91448"
     },
     {
       "path": "bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json",
