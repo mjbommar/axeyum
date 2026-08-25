@@ -1180,6 +1180,23 @@ pub struct CRealPrelude {
     /// ≡ succ (add m j)`) plus one `add_zero`/`add_assoc` respectively — no
     /// new rational estimate.
     pub sum_range_split: NameId,
+    /// `CReal.sumRange_telescope_ge : ∀ f bound k,
+    /// (∀ i, Nat.lt i k → le bound (add (f (Nat.succ i)) (neg (f i)))) →
+    /// le (sumRange (fun _ => bound) k) (add (f k) (neg (f Nat.zero)))`
+    /// (`creal/monotone.rs`) — the symbolic-length subdivision lemma: `k`
+    /// pieces each bounded below telescope to a lower bound on the total
+    /// difference, `k` itself left symbolic (composed from
+    /// [`Self::sum_range_le`] and [`Self::sum_range_telescope`] via
+    /// [`Self::le_congr`], not a new estimate). The intended first consumer
+    /// is `CReal.monotone_of_nonneg_deriv` (not yet landed).
+    pub sum_range_telescope_ge: NameId,
+    /// `CReal.sumRange_telescope_le : ∀ f bound k,
+    /// (∀ i, Nat.lt i k → le (add (f (Nat.succ i)) (neg (f i))) bound) →
+    /// le (add (f k) (neg (f Nat.zero))) (sumRange (fun _ => bound) k)`
+    /// (`creal/monotone.rs`) — the mirror of [`Self::sum_range_telescope_ge`]:
+    /// `k` pieces each bounded above telescope to an upper bound on the
+    /// total difference.
+    pub sum_range_telescope_le: NameId,
     /// `CReal.sumRange_tail_le : ∀ f g m n, (∀ k, le (abs (f k)) (g k)) → le
     /// (abs (add (sumRange f (add m n)) (neg (sumRange f m)))) (add
     /// (sumRange g (add m n)) (neg (sumRange g m)))` — **the comparison
@@ -2165,6 +2182,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         abs_sum_range_le: kernel.name_str(creal, "abs_sumRange_le"),
         sum_range_telescope: kernel.name_str(creal, "sumRange_telescope"),
         sum_range_split: kernel.name_str(creal, "sumRange_split"),
+        sum_range_telescope_ge: kernel.name_str(creal, "sumRange_telescope_ge"),
+        sum_range_telescope_le: kernel.name_str(creal, "sumRange_telescope_le"),
         sum_range_tail_le: kernel.name_str(creal, "sumRange_tail_le"),
         sum_range_tail_within: kernel.name_str(creal, "sumRange_tail_within"),
         sum_range_tail_within_le: kernel.name_str(creal, "sumRange_tail_within_le"),
@@ -2315,6 +2334,7 @@ pub(crate) fn build_creal_prelude_uncached(
         speedup::declare_speedup(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
+        monotone::declare_monotone(&mut d, prelude)?;
         // `riemannSum` is built directly on `sumRange`/`ofNat` and needs
         // nothing from `power`, so it can land right after `series` rather
         // than waiting for the `power`/`hasDerivative_pow*` tail below.
@@ -3252,6 +3272,7 @@ mod field;
 mod integral;
 mod inverse;
 mod lattice;
+mod monotone;
 mod mul_self_zero;
 mod order_extra;
 mod power;
