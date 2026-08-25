@@ -24,6 +24,9 @@
   "proof_route": "kernel-lean",
   "external_status": "proved",
   "depends_on": [
+    "F:complex-add-neg",
+    "F:complex-add-zero",
+    "F:complex-equiv-refl",
     "F:complex-i-sq",
     "F:complex-ring-constructed-axiom-free"
   ],

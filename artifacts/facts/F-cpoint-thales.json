@@ -19,7 +19,12 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:cpoint-dot-add-left",
+    "F:cpoint-dot-add-right",
     "F:cpoint-dot-comm",
+    "F:cpoint-dot-congr",
+    "F:cpoint-dot-neg-left",
+    "F:cpoint-scalar-twoposbound",
     "F:creal-add-assoc",
     "F:creal-add-comm",
     "F:creal-add-congr",

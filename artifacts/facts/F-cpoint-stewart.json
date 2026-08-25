@@ -17,7 +17,10 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:cpoint-distsq-comm",
+    "F:cpoint-dot-congr",
     "F:cpoint-dot-self-sub",
+    "F:cpoint-lerp-dist-sq",
     "F:creal-add-assoc",
     "F:creal-add-comm",
     "F:creal-add-congr",

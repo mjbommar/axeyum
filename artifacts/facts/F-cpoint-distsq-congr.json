@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:cpoint-distsq-congr",
+  "title": "Squared distance on the constructed plane respects CPoint.Equiv on both arguments",
+  "statement": "For points x0, x1, x2, x3 of the constructed plane, if x0 is CPoint.Equiv-equivalent to x1 and x2 is CPoint.Equiv-equivalent to x3, then distSq(x0, x2) is CReal.Equiv-equivalent to distSq(x1, x3).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CPoint.distSq_congr : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : CPoint.Equiv x0 x1) -> ((x5 : CPoint.Equiv x2 x3) -> CReal.Equiv (CPoint.distSq x0 x2) (CPoint.distSq x1 x3)))))))",
+    "fragment": "CPoint",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:cpoint-dot-congr",
+    "F:creal-add-congr",
+    "F:creal-neg-congr"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.distSq_congr",
+      "kind": "kernel-term",
+      "supports": "CPoint.distSq_congr is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CPoint.distSq_congr 2>/dev/null | grep -cE '^CPoint\\.distSq_congr[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "`build_cpoint_prelude` admits CPoint.distSq_congr through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` builds creal/complex/cpoint in one run; it exits non-zero for a named filter that matches nothing, and `grep -c` (never `-q`) independently asserts the exact tab-anchored line is present. `--release` is MANDATORY: building the constructed carriers recurses deep enough in a debug build to overflow the default thread stack (measured on this tree: release exits 0, debug SIGABRTs at 134)."
+    },
+    {
+      "id": "footprint-CPoint.distSq_congr",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the cpoint prelude's trusted surface is empty, which bounds CPoint.distSq_congr",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free cpoint",
+      "checker_seconds": 20,
+      "notes": "`nat_axiom_inventory --include-constructed --require-axiom-free cpoint` builds the cpoint environment as its own group and reports `cpoint: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree), covering Axiom, Opaque AND Quotient, not just Declaration::Axiom -- this bounds every individual cpoint theorem's footprint by []. `--include-constructed` is REQUIRED: without it the command exits 1 naming `cpoint` as known but not built this run rather than a silent pass, which is the standing trap of an empty/absent result reading as a strong negative when the tool was never pointed at the subject. `nat_axiom_inventory` now covers `cpoint` directly (re-verified on this tree: `--require-axiom-free cpoint` exits 0 with `cpoint: axiom=0 opaque=0 quotient=0 total_trusted=0`), so the footprint_closure_audit fallback some earlier CPoint facts used is not needed here. `--release` is MANDATORY for the same deep-recursion reason as `theorem_dependency_inventory` (measured on this tree: debug SIGABRTs at 134)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_cpoint_prelude",
+    "source": "theorem name and dependency edges from theorem_dependency_inventory (builds creal/complex/cpoint); canonical type and top-level binder arity read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint(), expr_node()) -- no in-tree example prints Complex/CPoint theorem types; crates/ source was not touched to produce this batch; the probe was built and run in the session scratchpad and deleted after use."
+  },
+  "notes": "depends_on keeps the sibling-mapped subset of CPoint.distSq_congr's direct-edge set from theorem_dependency_inventory: a used theorem is declared only when it is itself a registered ledger fact (including new facts from this same batch).",
+  "external_status": "proved"
+}

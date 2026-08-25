@@ -16,7 +16,13 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:complex-add-congr",
+    "F:complex-add-neg",
+    "F:complex-equiv-refl",
+    "F:complex-equiv-symm",
+    "F:complex-equiv-trans",
     "F:complex-left-distrib",
+    "F:complex-mul-zero",
     "F:creal-add-assoc",
     "F:creal-add-comm",
     "F:creal-add-congr",
