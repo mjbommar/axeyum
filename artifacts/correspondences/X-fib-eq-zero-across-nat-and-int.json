@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-theorem-correspondence",
+  "id": "X:fib-eq-zero-across-nat-and-int",
+  "title": "`fib n = 0 ↔ n = 0` is one law, proved separately over ℕ and over ℤ",
+  "correspondence_kind": "carrier-transport",
+  "endpoints": [
+    "F:ml430-nat-fib-eq-zero-61879073",
+    "F:ml430-int-fib-eq-zero-8193c7cb"
+  ],
+  "claim": "The ℕ and ℤ facts are the same law: the Fibonacci sequence vanishes only at zero. Erasing the carrier from both formal statements leaves the identical string `∀ {n : ⟨C⟩}, ⟨C⟩.fib n = 0 ↔ n = 0`, so this is not a resemblance a reader has to take on trust — it is a computed identity of the two statements once the carrier is quotiented away. What the two do NOT share is a proof: the ledger records no `depends_on` edge between them, and neither proof mentions the other's carrier.",
+  "transport": "`Int.fib ↑n = ↑(Nat.fib n)` carries the ℕ statement onto the nonnegative integers, and `Int.fib (-n) = if Even n then -Int.fib n else Int.fib n` carries it onto the rest of ℤ, together with the injectivity of `Int.ofNat` to move the `= 0` across.",
+  "derivation_status": "route-recorded",
+  "external_status": "classical",
+  "via": [
+    {
+      "step": "Int.fib agrees with Nat.fib on the image of the nonnegative cast, so the ℕ statement transports onto 0 ≤ n",
+      "ref": "F:ml430-int-fib-natcast-d5886be4"
+    },
+    {
+      "step": "Int.fib on a negative argument is ±Int.fib of its absolute value, so nothing new can vanish there",
+      "ref": "F:ml430-int-fib-neg-b4021d37"
+    },
+    {
+      "step": "Int.ofNat is injective, so `↑(Nat.fib n) = 0` and `Nat.fib n = 0` are interchangeable — the step that actually moves the equality across, and nothing in the ledger states it",
+      "ref": null
+    }
+  ],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-correspondence-model (2026-08-24), reading the two committed formal statements and the ledger's dependency closure. No new mathematics; the two facts were already here and nothing said they were the same law.",
+    "sources": [
+      "artifacts/facts/F-ml430-nat-fib-eq-zero-61879073.json",
+      "artifacts/facts/F-ml430-int-fib-eq-zero-8193c7cb.json",
+      "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json"
+    ]
+  },
+  "notes": "`route-recorded`, not `mechanized-here`: the three steps are written down and two of them resolve to facts, but nothing in this repository composes them into a proof that the ℤ statement follows from the ℕ one. The third step's `ref` is `null`, which is the honest form of \"we know what is missing\" — and it is what the validator uses to refuse `mechanized-here` here.\n\nThe sibling pair `F:ml430-nat-fib-add-two` / `F:ml430-int-fib-add-two` looks like this one and is NOT a correspondence: the ℤ fact's `depends_on` already names the ℕ fact, because its proof genuinely goes through it. The gate refuses that pair, and `scripts/tests/test_validate_correspondences.py` pins the refusal against the committed ledger rather than a synthetic fixture."
+}

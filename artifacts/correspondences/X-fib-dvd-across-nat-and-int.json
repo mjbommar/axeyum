@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-theorem-correspondence",
+  "id": "X:fib-dvd-across-nat-and-int",
+  "title": "`m ∣ n → fib m ∣ fib n` is one law, proved separately over ℕ and over ℤ",
+  "correspondence_kind": "carrier-transport",
+  "endpoints": [
+    "F:ml430-nat-fib-dvd-f80f3de1",
+    "F:ml430-int-fib-dvd-ffb3c5c1"
+  ],
+  "claim": "Both facts say the Fibonacci sequence is divisibility-monotone: the index dividing implies the term dividing. Erasing the carrier leaves the identical string `∀ (m n : ⟨C⟩), m ∣ n → ⟨C⟩.fib m ∣ ⟨C⟩.fib n` on both sides. The two proofs are unrelated in the ledger — the ℕ one goes through `Nat.fib_gcd` and the ℤ one has no recorded dependency at all — so no dependency edge connects them and none ever will if the ℤ proof stays direct.",
+  "transport": "The same cast as the vanishing law: `Int.fib ↑n = ↑(Nat.fib n)` on nonnegative arguments, `Int.fib (-n) = ±Int.fib n` on the rest, and the fact that `↑a ∣ ↑b` and `a ∣ b` agree under `Int.ofNat`.",
+  "derivation_status": "route-recorded",
+  "external_status": "classical",
+  "via": [
+    {
+      "step": "Int.fib agrees with Nat.fib on the image of the nonnegative cast, so the ℕ statement transports onto 0 ≤ m, n",
+      "ref": "F:ml430-int-fib-natcast-d5886be4"
+    },
+    {
+      "step": "Int.fib on a negative argument is ±Int.fib of its absolute value, and divisibility is insensitive to sign",
+      "ref": "F:ml430-int-fib-neg-b4021d37"
+    },
+    {
+      "step": "Divisibility is preserved and reflected by Int.ofNat — `↑a ∣ ↑b ↔ a ∣ b`. This is the step the transport turns on and the ledger does not state it",
+      "ref": null
+    }
+  ],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-correspondence-model (2026-08-24), from the committed formal statements and the ledger's `depends_on` closure.",
+    "sources": [
+      "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
+      "artifacts/facts/F-ml430-int-fib-dvd-ffb3c5c1.json",
+      "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json"
+    ]
+  },
+  "notes": "Worth noting what the carrier erasure does NOT check: it compares statements, not proofs, so it can only say the two facts assert the same law. It cannot say the ℤ proof is a transport of the ℕ one, and here it very likely is not — the ℕ proof factors through `Nat.fib_gcd` and the ℤ fact records no dependency at all. That asymmetry is exactly why `derivation_status` is a separate axis from the structural check: the check is what makes the pairing honest, the axis is what stops it being read as a derivation."
+}
