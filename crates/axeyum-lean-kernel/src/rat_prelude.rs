@@ -1273,6 +1273,18 @@ pub struct RatPrelude {
     /// missing**: `Var[Σ_j X_j] = Σ_j Var[X_j]` under pairwise
     /// uncorrelatedness needs `Cov[Σ_j X_j, Y]` reduced to a sum first.
     pub covariance_sum_vars_left: NameId,
+    /// `Rat.covariance_sumVars : ∀ X Y p n m m',
+    /// covariance (sumVars X m) (sumVars Y m') p n =
+    /// sumRange (fun i => sumRange (fun j => covariance (X i) (Y j) p n) m') m`
+    /// — bilinearity of covariance over TWO families at once: `Cov[Σᵢ Xᵢ, Σⱼ
+    /// Yⱼ] = Σᵢ Σⱼ Cov[Xᵢ, Yⱼ]`. Not a new induction: instantiate
+    /// [`Self::covariance_sum_vars_left`] once at `Y := sumVars Y' m'` to
+    /// reduce the first family, then again (roles reversed, via
+    /// [`Self::covariance_comm`]) inside each term to reduce the second — see
+    /// `rat_prelude::probability::declare_covariance_sum_vars`'s own doc for
+    /// why `Rat.sumRange_swap` (the Fubini swap) is NOT needed here: the
+    /// derivation already produces the `Σᵢ Σⱼ` order directly.
+    pub covariance_sum_vars: NameId,
     /// `Rat.PairwiseUncorrelated X m p n := ∀ i j, Lt i m → Lt j m → Not (Eq
     /// i j) → covariance (X i) (X j) p n = zero` — **the honest, strictly
     /// weaker hypothesis in place of independence, now over a whole
@@ -1772,6 +1784,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sum_vars: child(kernel, "sumVars"),
         expectation_sum_vars: child(kernel, "expectation_sumVars"),
         covariance_sum_vars_left: child(kernel, "covariance_sumVars_left"),
+        covariance_sum_vars: child(kernel, "covariance_sumVars"),
         pairwise_uncorrelated: child(kernel, "PairwiseUncorrelated"),
         variance_sum_vars: child(kernel, "variance_sumVars"),
         variance_scaled_mean: child(kernel, "variance_scaled_mean"),

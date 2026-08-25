@@ -2422,6 +2422,7 @@ fn the_probability_toolkit_is_axiom_free() {
         ("sumVars", p.sum_vars, false),
         ("expectation_sumVars", p.expectation_sum_vars, true),
         ("covariance_sumVars_left", p.covariance_sum_vars_left, true),
+        ("covariance_sumVars", p.covariance_sum_vars, true),
         ("PairwiseUncorrelated", p.pairwise_uncorrelated, false),
         ("variance_sumVars", p.variance_sum_vars, true),
         ("variance_scaled_mean", p.variance_scaled_mean, true),
@@ -2489,6 +2490,188 @@ fn the_probability_toolkit_is_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// A CONCRETE instance of [`RatPrelude::covariance_sum_vars`], checked by
+/// `Eq.refl` alone against the DEFINITIONS themselves (`Rat.covariance`,
+/// `Rat.sumVars`, `Rat.sumRange`, `Rat.expectation`) — not against the
+/// theorem's own proof, which could be internally consistent yet prove a
+/// statement off by a factor this check would catch (exactly the class
+/// [`bernoulli_variance_at_one_half_reduces_to_one_quarter`] guards against
+/// for `Rat.variance_indicator`).
+///
+/// `pf k := 1` (no `IsDistribution` needed — `covariance_sumVars` carries no
+/// such hypothesis), `n := 2`, `X i k := k` for every `i` (`m := 2`, so `X`
+/// does not even need to vary across the family — `sumVars X 2 k = k+k =
+/// 2k`), `Y j k := 1` for every `j` (`m' := 1`).
+///
+/// Hand computation (`E[h] := Σ_{k<2} h(k)·1`): `E[k] = 0+1 = 1`, `E[1] =
+/// 1+1 = 2`, `E[2k] = 2`, `E[2k·1] = 2`. LHS: `Cov[2k, 1] = E[2k·1] −
+/// E[2k]·E[1] = 2 − 2·2 = −2`. RHS: `Cov[k,1] = E[k·1] − E[k]·E[1] = 1 −
+/// 1·2 = −1`, summed over `i<2, j<1` (both terms identical since `X`/`Y` do
+/// not depend on their family index) `= 2·(−1) = −2`. Both sides `= −2`.
+#[test]
+fn covariance_sum_vars_computes_at_a_concrete_two_by_one_instance() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rneg, rone, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    // x_body k := Rat.natDivSucc k 0  (= k as a rational)
+    let x_body = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zero_nat = d.num(0);
+        let val = d.const_app(p.nat_div_succ, &[k, zero_nat]);
+        d.lam_fv(k_fv, nat, val)
+    };
+    // X i k := x_body k, for every i (X does not depend on its family index)
+    let x_family = {
+        let i_fv = d.fresh_fvar();
+        d.lam_fv(i_fv, nat, x_body)
+    };
+    // y_body k := Rat.one, for every k
+    let y_body = {
+        let k_fv = d.fresh_fvar();
+        let one = rone(&mut d, p);
+        d.lam_fv(k_fv, nat, one)
+    };
+    // Y j k := y_body k, for every j
+    let y_family = {
+        let j_fv = d.fresh_fvar();
+        d.lam_fv(j_fv, nat, y_body)
+    };
+    // pf k := Rat.one
+    let pf = {
+        let k_fv = d.fresh_fvar();
+        let one = rone(&mut d, p);
+        d.lam_fv(k_fv, nat, one)
+    };
+    let n = d.num(2);
+    let m = d.num(2);
+    let m2 = d.num(1);
+
+    let neg_two = {
+        let numerator = d.num(2);
+        let idx = d.num(0);
+        let two = d.const_app(p.nat_div_succ, &[numerator, idx]);
+        rneg(&mut d, two)
+    };
+
+    // LHS := covariance (sumVars X m) (sumVars Y m2) pf n
+    let sv_x = d.const_app(p.sum_vars, &[x_family, m]);
+    let sv_y = d.const_app(p.sum_vars, &[y_family, m2]);
+    let lhs = d.const_app(p.covariance, &[sv_x, sv_y, pf, n]);
+    let lhs_stmt = req(&mut d, lhs, neg_two);
+    let lhs_proof = rrefl(&mut d, lhs);
+    let lhs_name = d.kernel().name_str(anon, "Check.cov_sum_vars_lhs_computes");
+    d.declare_theorem(lhs_name, lhs_stmt, lhs_proof)
+        .unwrap_or_else(|e| {
+            panic!(
+                "covariance(sumVars X 2, sumVars Y 1) did not reduce to -2: {}",
+                d.explain(&e)
+            )
+        });
+
+    // RHS := sumRange (fun i => sumRange (fun j => covariance (X i) (Y j) pf n) m2) m
+    let inner_fn = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let xi = d.apply(x_family, &[i]);
+        let per_j = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let yj = d.apply(y_family, &[j]);
+            let cov = d.const_app(p.covariance, &[xi, yj, pf, n]);
+            d.lam_fv(j_fv, nat, cov)
+        };
+        let inner_sum = d.const_app(p.sum_range, &[per_j, m2]);
+        d.lam_fv(i_fv, nat, inner_sum)
+    };
+    let rhs = d.const_app(p.sum_range, &[inner_fn, m]);
+    let rhs_stmt = req(&mut d, rhs, neg_two);
+    let rhs_proof = rrefl(&mut d, rhs);
+    let rhs_name = d.kernel().name_str(anon, "Check.cov_sum_vars_rhs_computes");
+    d.declare_theorem(rhs_name, rhs_stmt, rhs_proof)
+        .unwrap_or_else(|e| {
+            panic!(
+                "the double sum of covariances did not reduce to -2: {}",
+                d.explain(&e)
+            )
+        });
+}
+
+/// The negative control for
+/// [`covariance_sum_vars_computes_at_a_concrete_two_by_one_instance`]: the
+/// SAME `covariance(sumVars X 2, sumVars Y 1, pf, n)` term is NOT `-1` — the
+/// value a BROKEN `sumVars` that returned a single family member instead of
+/// the sum of the family (`sumVars X 2 k = x_body k` instead of `x_body k +
+/// x_body k`) would produce (`Cov[x_body, y_body] = -1`, computed in the
+/// positive test's own doc comment). Must be REFUSED, or the positive check
+/// above proves nothing about the family actually being summed.
+#[test]
+fn covariance_sum_vars_lhs_is_not_the_unsummed_single_member_value() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rneg, rone, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let x_body = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zero_nat = d.num(0);
+        let val = d.const_app(p.nat_div_succ, &[k, zero_nat]);
+        d.lam_fv(k_fv, nat, val)
+    };
+    let x_family = {
+        let i_fv = d.fresh_fvar();
+        d.lam_fv(i_fv, nat, x_body)
+    };
+    let y_body = {
+        let k_fv = d.fresh_fvar();
+        let one = rone(&mut d, p);
+        d.lam_fv(k_fv, nat, one)
+    };
+    let y_family = {
+        let j_fv = d.fresh_fvar();
+        d.lam_fv(j_fv, nat, y_body)
+    };
+    let pf = {
+        let k_fv = d.fresh_fvar();
+        let one = rone(&mut d, p);
+        d.lam_fv(k_fv, nat, one)
+    };
+    let n = d.num(2);
+    let m = d.num(2);
+    let m2 = d.num(1);
+
+    let neg_one = {
+        let one = rone(&mut d, p);
+        rneg(&mut d, one)
+    };
+
+    let sv_x = d.const_app(p.sum_vars, &[x_family, m]);
+    let sv_y = d.const_app(p.sum_vars, &[y_family, m2]);
+    let lhs = d.const_app(p.covariance, &[sv_x, sv_y, pf, n]);
+    let stmt = req(&mut d, lhs, neg_one);
+    let proof = rrefl(&mut d, neg_one);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.cov_sum_vars_lhs_is_not_unsummed");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted covariance(sumVars X 2, sumVars Y 1) = -1 (the \
+         UNSUMMED single-member value, not the sum of the family), so the \
+         reduction check above proves nothing"
+    );
 }
 
 /// A CONCRETE Bernoulli instance, checked by `Eq.refl` alone against the
