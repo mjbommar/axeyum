@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage
 
 fmt:
     cargo fmt --all --check
@@ -443,6 +443,15 @@ autogenesis-knowledge-controls:
     python3 -m unittest scripts.tests.test_validate_autogenesis_knowledge
     python3 scripts/validate-autogenesis-knowledge.py
     scripts/check-autogenesis-knowledge-controls.sh
+
+# ADR-0553. No artifact may declare a dependency on a repository this project
+# does not own. `--self-test` runs first and deliberately: it drives every rule
+# over a synthetic violation and fails if any rule does NOT fire, so the green
+# zero the scan prints afterwards is a measurement rather than a no-op.
+external-coupling:
+    python3 -m unittest scripts.tests.test_check_external_coupling
+    python3 scripts/check-external-coupling.py --self-test
+    python3 scripts/check-external-coupling.py
 
 # Owner-lane freshness checks for derived Autogenesis knowledge snapshots.
 # These are intentionally not part of `check`: construction lanes may advance

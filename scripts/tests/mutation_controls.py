@@ -1853,6 +1853,75 @@ SUITES["tactic-catalog"] = (
     ],
 )
 
+# The external-coupling gate (ADR-0553).
+#
+# This gate exists because the owner's "math-education is reference only" rule
+# had NO gate, and by the time anyone looked it had been violated in five places
+# at once. A gate born from an ungated guarantee had better not be one itself.
+#
+# `R1`, `R2` and `R3` each have ONE control asserting every value that guard must
+# catch, via `subTest`. Three separate tests per guard would all die together and
+# report a shared rejection path as thorough coverage.
+#
+# The vacuity guards are driven through `vacuity()` rather than `main()` for the
+# same reason: routed through `main()` all three fail together, so one mutation
+# kills three tests. Extracting the function was what made them separable.
+#
+# Expected SURVIVORS under these mutations, by design -- they are acceptance
+# cases, and deleting a guard makes them pass more easily:
+#   test_a_registered_local_key_is_accepted
+#   test_a_registered_foreign_import_is_accepted
+#   test_a_local_path_containing_two_dots_is_not_rejected
+#   test_a_healthy_scan_is_not_a_finding
+# They exist to stop the opposite failure: a rule so broad it rejects Mathlib's
+# deliberate pin, or every version string in the tree.
+SUITES["external-coupling"] = (
+    "scripts/check-external-coupling.py",
+    "scripts.tests.test_check_external_coupling",
+    [
+        (
+            "R1 the external-declaration vocabulary",
+            "        if value in EXTERNAL_VOCABULARY:",
+            "        if False:",
+        ),
+        (
+            "R2 a path segment that escapes the checkout",
+            "        if DOTDOT.search(value):",
+            "        if False:",
+        ),
+        (
+            "R3 a revision pin under an unregistered key",
+            "        if HEX40.match(value) and key not in REVISION_KEYS:",
+            "        if False:",
+        ),
+        (
+            "R4 source that builds a path out of the checkout",
+            "            if needle in code:",
+            "            if False:",
+        ),
+        (
+            "vacuity: zero artifacts scanned",
+            "    if files == 0:",
+            "    if False:",
+        ),
+        (
+            "vacuity: zero strings examined",
+            "    if strings == 0:",
+            "    if False:",
+        ),
+        (
+            "vacuity: zero scripts scanned",
+            "    if script_files == 0:",
+            "    if False:",
+        ),
+        (
+            "the exit status depends on the finding",
+            "    return 1 if findings else 0",
+            "    return 0",
+        ),
+    ],
+)
+
 DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
 DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
 

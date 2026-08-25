@@ -4,8 +4,8 @@
 This is an additive, deterministic aggregator: it reads every
 `artifacts/claims/<family>/<id>/claim.json` and emits a single legible markdown
 view — what is asserted, how firmly it is believed (`epistemic_status`), which
-evidence rows carry it (`kind` + `check_status`), how many concept references
-are resolved vs still pending, and the frontier record of every open or
+evidence rows carry it (`kind` + `check_status`), how many topic citations it
+carries, and the frontier record of every open or
 conjectured claim. It fabricates nothing and re-checks nothing: the numbers are
 read straight from the committed claim files, whose structure is enforced by
 `validate-claims.py` and whose `checked` rows are re-derived by
@@ -77,8 +77,7 @@ def build_markdown(claims: list[tuple[str, str, dict]]) -> str:
     kinds: Counter[str] = Counter()
     check_statuses: Counter[str] = Counter()
     families: Counter[str] = Counter()
-    resolved_refs = 0
-    pending_refs = 0
+    citation_refs = 0
     evidence_rows = 0
     for family, _cid, c in claims:
         families[family] += 1
@@ -87,11 +86,7 @@ def build_markdown(claims: list[tuple[str, str, dict]]) -> str:
             evidence_rows += 1
             kinds[ev["kind"]] += 1
             check_statuses[ev["check_status"]] += 1
-        for ref in c["concept_refs"]:
-            if ref.get("resolved"):
-                resolved_refs += 1
-            else:
-                pending_refs += 1
+        citation_refs += len(c["concept_refs"])
     frontier_claims = [t for t in claims if "frontier" in t[2]]
 
     lines.append("## Summary")
@@ -105,8 +100,8 @@ def build_markdown(claims: list[tuple[str, str, dict]]) -> str:
     lines.append(f"- Evidence rows: {evidence_rows} — {tally(check_statuses)}")
     lines.append(f"- Evidence kinds: {tally(kinds)}")
     lines.append(
-        f"- Concept references: {resolved_refs + pending_refs} — "
-        f"{resolved_refs} resolved, {pending_refs} pending"
+        f"- Topic citations: {citation_refs} — unresolved by design "
+        "(ADR-0553); nothing in this repository resolves them"
     )
     lines.append(
         f"- Frontier records (open/conjectured claims): {len(frontier_claims)}"
@@ -121,22 +116,20 @@ def build_markdown(claims: list[tuple[str, str, dict]]) -> str:
         lines.append("")
         lines.append(
             "| Claim | Title | Status | Evidence (kind: check_status) "
-            "| Refs resolved | Refs pending |"
+            "| Citations |"
         )
-        lines.append("| --- | --- | --- | --- | ---: | ---: |")
+        lines.append("| --- | --- | --- | --- | ---: |")
         for fam, cid, c in claims:
             if fam != family:
                 continue
             evidence = "<br>".join(
                 f"`{ev['kind']}`: {ev['check_status']}" for ev in c["evidence"]
             ) or "—"
-            resolved = sum(1 for r in c["concept_refs"] if r.get("resolved"))
-            pending = sum(1 for r in c["concept_refs"] if not r.get("resolved"))
             lines.append(
                 f"| [`{cid}`]({family}/{cid}/claim.json) "
                 f"| {cell(c['title'])} "
                 f"| `{c['epistemic_status']}` "
-                f"| {evidence} | {resolved} | {pending} |"
+                f"| {evidence} | {len(c['concept_refs'])} |"
             )
         lines.append("")
 

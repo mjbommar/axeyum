@@ -293,6 +293,13 @@ step axiom-freedom-generalized cargo run --release -q -p axeyum-solver --feature
     --example ordered_ring_refutation -- --require-empty
 step axiom-freedom-constructed cargo run --release -q -p axeyum-solver --features full \
     --example ordered_ring_refutation -- --constructed-reals
+# ADR-0553. No artifact may declare a dependency on a repository this project
+# does not own. `--self-test` runs first on purpose: it drives every rule over a
+# synthetic violation and fails if any rule does NOT fire, so the zero the scan
+# prints afterwards is a measurement rather than a no-op.
+step external-coupling-tests python3 -m unittest scripts.tests.test_check_external_coupling
+step external-coupling-selftest python3 scripts/check-external-coupling.py --self-test
+step external-coupling python3 scripts/check-external-coupling.py
 step autogenesis-knowledge-overlay-tests python3 -m unittest scripts.tests.test_validate_autogenesis_knowledge
 step autogenesis-knowledge-overlay python3 scripts/validate-autogenesis-knowledge.py
 step autogenesis-knowledge-controls ./scripts/check-autogenesis-knowledge-controls.sh

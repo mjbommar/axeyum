@@ -87,7 +87,6 @@ def test_every_submodule_is_exported() -> None:
         "facts",
         "frontier",
         "generated",
-        "math_education",
         "nursery",
         "operations",
         "overlay",

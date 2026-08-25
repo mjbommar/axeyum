@@ -25,27 +25,23 @@
       "graph": "math-education",
       "ref": "C:schur-number",
       "relation": "instance-of",
-      "resolved": true,
-      "note": "graph/concepts/schur-number.md, authored for this family and committed to math-education as ce3e2a5; verified present at graph_pin ce3e2a52e7c9. The node's body carries this family's central soundness warning -- that when colours forbid DIFFERENT equations they are not interchangeable, and a search assuming otherwise reports no colouring exists when one does."
+      "note": "graph/concepts/schur-number.md, authored for this family and committed to math-education as ce3e2a5 The node's body carries this family's central soundness warning -- that when colours forbid DIFFERENT equations they are not interchangeable, and a search assuming otherwise reports no colouring exists when one does."
     },
     {
       "graph": "math-education",
       "ref": "C:ramsey-number",
       "relation": "exercises",
-      "resolved": true,
       "note": "the additive-Ramsey case; off-diagonal is the analogue of asymmetric Ramsey numbers"
     },
     {
       "graph": "math-education",
       "ref": "TQ:colouring",
-      "relation": "uses-technique",
-      "resolved": true
+      "relation": "uses-technique"
     },
     {
       "graph": "math-education",
       "ref": "C:computational-search",
-      "relation": "exercises",
-      "resolved": true
+      "relation": "exercises"
     }
   ],
   "axeyum_refs": {
@@ -66,7 +62,6 @@
     ],
     "date": "2026-08-13",
     "machine": "linux x86-64, 16 cores",
-    "graph_pin": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c",
     "prior_art": [
       {
         "citation": "T. Ahmed, D. Schaal, 'On generalized Schur numbers', Experimental Mathematics / Congressus Numerantium (2015-2016), Table 2",

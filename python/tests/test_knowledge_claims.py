@@ -67,10 +67,24 @@ def test_every_claim_carries_the_required_keys() -> None:
         assert row.missing_required == frozenset(), f"{row.id} is missing {row.missing_required}"
 
 
-def test_concept_refs_point_into_the_sibling_graph() -> None:
+def test_concept_refs_are_citations_that_nothing_resolves() -> None:
+    """ADR-0553: a `concept_ref` names a graph and an id, and stops there.
+
+    Until 2026-08-24 each ref also carried `resolved`, asserting the id had been
+    found in a sibling checkout at the commit `provenance.graph_pin` named. Both
+    are gone from the schema and from all 104 claims, so the typed layer must not
+    offer a `resolved` attribute either -- an accessor for a field the data never
+    carries would read `None` on every ref and be indistinguishable from an
+    honest "not resolved".
+    """
     refs = claims.load(ROOT).concept_refs()
     assert len(refs) > 0
+    assert not hasattr(refs[0], "resolved")
+    assert "resolved" not in claims.ConceptRef.__slots__
     for ref in refs:
+        # Still the value every committed claim carries. It is now a free-text
+        # label rather than a schema enum, and it points at nothing: the pin it
+        # used to be read against is gone.
         assert ref.graph == "math-education"
         assert ref.ref and (ref.ref.startswith("C:") or ref.ref.startswith("TQ:"))
 

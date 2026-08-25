@@ -15,10 +15,13 @@ Referential:
       - conjectured/open => frontier present; no 'checked' row may claim to
         settle the full statement (supports must state a bound/partial)
       - bound-citation rows must be check_status == not-checked
-  * concept_refs marked resolved require provenance.graph_pin, and when the
-    math-education checkout is available at ../math-education, the target id
-    must exist there (pending refs are fine and are reported, not failed —
-    the resolution policy is: pending is honest, false-resolved is a lie).
+  * concept_refs are CITATIONS and are checked STRUCTURALLY ONLY (ADR-0553).
+    This validator used to read a sibling repository at `../math-education`,
+    census its `graph/**/*.md` front matter, and fail a ref marked `resolved`
+    whose id was absent there. `resolved` and `provenance.graph_pin` are both
+    gone: a resolution claim about an artifact outside this checkout is one
+    nothing here can check, and requiring it made every claim depend on that
+    checkout being present at one commit.
 
 Exit nonzero on any error. --quiet suppresses the per-claim OK lines.
 """
@@ -57,7 +60,6 @@ def resolve(rel: str) -> Path:
 SCHEMA = ROOT / "artifacts" / "ontology" / "claim.schema.json"
 FRAGMENTS = ROOT / "artifacts" / "ontology" / "smt-fragments.json"
 CURRICULUM = ROOT / "docs" / "curriculum" / "curriculum.toml"
-MATH_ED = ROOT.parent / "math-education"
 
 EPISTEMIC = {"axiom", "proved", "computed", "empirical", "conjectured", "open"}
 LANGUAGES = {"cnf-family", "smtlib2", "axeyum-term", "prose-only"}
@@ -409,33 +411,10 @@ def load_curriculum_ids() -> set[str] | None:
     return ids
 
 
-def load_math_ed_ids() -> set[str] | None:
-    """Best-effort id census of the sibling math-education graph."""
-    if not (MATH_ED / "graph").is_dir():
-        return None
-    ids: set[str] = set()
-    id_re = re.compile(r"^id:\s*'?([A-Z]{1,4}:[a-z0-9./-]+)'?\s*$")
-    for sub in ("concepts", "misconceptions", "techniques", "threads", "themes"):
-        d = MATH_ED / "graph" / sub
-        if not d.is_dir():
-            continue
-        for f in d.glob("*.md"):
-            for line in f.read_text(encoding="utf-8").splitlines()[:6]:
-                m = id_re.match(line.strip())
-                if m:
-                    ids.add(m.group(1))
-                    break
-    return ids
-
-
-def encounter_base(ref: str) -> str:
-    return ref.split("@", 1)[0]
-
-
 def validate_claim(path: Path, fragment_ids: set[str], curriculum_ids: set[str],
-                   math_ed_ids: set[str] | None, quiet: bool) -> list[str]:
+                   quiet: bool) -> list[str]:
     errors: list[str] = []
-    pendings: list[str] = []
+    citations: list[str] = []
     try:
         c = json.loads(path.read_text())
     except json.JSONDecodeError as e:
@@ -477,9 +456,9 @@ def validate_claim(path: Path, fragment_ids: set[str], curriculum_ids: set[str],
         fail(errors, f"{path}: provenance missing '{k}'")
     if "date" in prov and not DATE_RE.match(prov["date"]):
         fail(errors, f"{path}: bad provenance.date")
-    pin = prov.get("graph_pin")
-    if pin is not None and not PIN_RE.match(pin):
-        fail(errors, f"{path}: graph_pin is not a 40-hex commit")
+    if "graph_pin" in prov:
+        fail(errors, f"{path}: provenance.graph_pin was removed by ADR-0553; a "
+                     "claim may not pin a revision of another repository")
 
     tc = prov.get("toolchain")
     if tc is not None:
@@ -491,26 +470,23 @@ def validate_claim(path: Path, fragment_ids: set[str], curriculum_ids: set[str],
         if commit is not None and not PIN_RE.match(commit):
             fail(errors, f"{path}: axeyum_commit is not a 40-hex commit")
 
-    # concept refs and the resolution policy
+    # concept refs: citations, checked structurally (ADR-0553)
     for ref in c["concept_refs"]:
-        unknown = set(ref) - {"graph", "ref", "relation", "resolved", "note"}
+        unknown = set(ref) - {"graph", "ref", "relation", "note"}
         if unknown:
             fail(errors, f"{path}: concept_ref unknown keys {sorted(unknown)}")
-        if ref.get("graph") != "math-education":
-            fail(errors, f"{path}: concept_ref.graph must be 'math-education'")
+        if "resolved" in ref:
+            fail(errors, f"{path}: concept_ref.resolved was removed by ADR-0553; "
+                         "nothing here resolves a citation, so the field could "
+                         "only ever be an unfalsifiable assertion")
+        if not isinstance(ref.get("graph"), str) or not ref["graph"]:
+            fail(errors, f"{path}: concept_ref.graph must be a non-empty label")
         r = ref.get("ref", "")
         if not GRAPH_REF_RE.match(r):
             fail(errors, f"{path}: malformed graph ref '{r}'")
         if ref.get("relation") not in RELATIONS:
             fail(errors, f"{path}: bad concept_ref.relation")
-        if ref.get("resolved"):
-            if pin is None:
-                fail(errors, f"{path}: ref '{r}' resolved but no graph_pin recorded")
-            if math_ed_ids is not None and encounter_base(r) not in math_ed_ids:
-                fail(errors, f"{path}: ref '{r}' marked resolved but absent "
-                             f"from ../math-education graph")
-        else:
-            pendings.append(r)
+        citations.append(r)
 
     ax = c["axeyum_refs"]
     if fragment_ids is not None:
@@ -651,8 +627,8 @@ def validate_claim(path: Path, fragment_ids: set[str], curriculum_ids: set[str],
         fail(errors, f"{path}: frontier is only for conjectured/open claims")
 
     if not errors and not quiet:
-        pend = f" ({len(pendings)} pending refs)" if pendings else ""
-        print(f"OK   {c['id']}: {status}, {len(c['evidence'])} evidence rows{pend}")
+        cited = f" ({len(citations)} citations)" if citations else ""
+        print(f"OK   {c['id']}: {status}, {len(c['evidence'])} evidence rows{cited}")
     return errors
 
 
@@ -685,11 +661,7 @@ def main() -> int:
         return 1
     fragment_ids = load_fragment_ids()
     curriculum_ids = load_curriculum_ids()
-    math_ed_ids = load_math_ed_ids()
     if not quiet:
-        if math_ed_ids is None:
-            print("note: ../math-education not present; resolved refs checked "
-                  "structurally only")
         if fragment_ids is None or curriculum_ids is None:
             print("note: axeyum ontology/curriculum not in this tree; "
                   "fragment and curriculum cross-references NOT checked")
@@ -703,8 +675,7 @@ def main() -> int:
     all_errors: list[str] = []
     ids: set[str] = set()
     for path in claim_files:
-        errs = validate_claim(path, fragment_ids, curriculum_ids, math_ed_ids,
-                              quiet)
+        errs = validate_claim(path, fragment_ids, curriculum_ids, quiet)
         all_errors.extend(errs)
         try:
             cid = json.loads(path.read_text()).get("id")

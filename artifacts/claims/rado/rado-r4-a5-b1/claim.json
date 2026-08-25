@@ -20,23 +20,17 @@
     {
       "graph": "math-education",
       "ref": "C:ramsey-number",
-      "relation": "exercises",
-      "resolved": true,
-      "note": "pending: no graph_pin evaluated for this claim"
+      "relation": "exercises"
     },
     {
       "graph": "math-education",
       "ref": "TQ:colouring",
-      "relation": "uses-technique",
-      "resolved": true,
-      "note": "pending: no graph_pin evaluated for this claim"
+      "relation": "uses-technique"
     },
     {
       "graph": "math-education",
       "ref": "C:computational-search",
-      "relation": "exercises",
-      "resolved": true,
-      "note": "pending: no graph_pin evaluated for this claim"
+      "relation": "exercises"
     }
   ],
   "axeyum_refs": {
@@ -71,8 +65,7 @@
         "url": "https://arxiv.org/abs/2210.03262",
         "establishes": "REPLICATION. Table 10 of arXiv:2210.03262 gives R_4(5(x-y)=1z) = 625; this claim reproduces it end to end with axeyum's own proof-producing CDCL and backward DRAT checker. Read from the rendered v1 PDF, whose compiled form contains Tables 9-15."
       }
-    ],
-    "graph_pin": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+    ]
   },
   "evidence": [
     {

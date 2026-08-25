@@ -1,18 +1,22 @@
 """The additive Autogenesis knowledge overlay.
 
-The overlay does not modify facts, operations, or the external graph -- it adds
-typed edges between them. Two properties matter to a reader:
+The overlay does not modify facts or operations -- it adds typed edges between
+them. Two properties matter to a reader:
 
 * **every link carries an ``assurance``**, and the vocabulary is ordered from
   ``formal-derived`` down to ``proposed``. A link is only as good as its
   assurance, so this module never exposes a link without it.
-* **external endpoints carry ``source_revision``**, because an edge into a
-  pinned repository is meaningless without saying which commit it resolved
-  against.
+* **every endpoint resolves inside this checkout.** Until 2026-08-24 the overlay
+  could name a pinned sibling repository and an endpoint into it carried a
+  ``source_revision``; ADR-0553 removed external sources entirely. The parser
+  still reads ``source_revision`` -- :attr:`Endpoint.is_external` and
+  :meth:`Overlay.external_links` are how a reintroduced external endpoint would
+  be *seen* rather than silently accepted -- and the committed artifact carries
+  none, which ``test_the_overlay_declares_no_external_source`` pins.
 
 Constants are mirrored from ``scripts/validate-autogenesis-knowledge.py``, whose
-relational contract (unique ids, typed endpoints, local resolution, pinned
-revisions, relation domain/range) is what this artifact actually promises.
+relational contract (unique ids, typed endpoints, local resolution, relation
+domain/range) is what this artifact actually promises.
 """
 
 from __future__ import annotations
@@ -31,15 +35,14 @@ VALIDATOR = "validate-autogenesis-knowledge.py"
 TOP_KEYS = frozenset(
     {"schema_version", "kind", "sources", "namespaces", "relation_types", "entities", "links"}
 )
+#: Mirrored from the validator, which shrank with ADR-0553: ``concept``,
+#: ``encounter``, ``technique``, ``curriculum-node`` and ``external-declaration``
+#: were kinds only a sibling repository could supply, and there is no longer a
+#: source that could carry one.
 ENTITY_KINDS = frozenset(
     {
-        "concept",
-        "encounter",
-        "technique",
-        "curriculum-node",
         "fact",
         "kernel-declaration",
-        "external-declaration",
         "operation",
         "producer",
         "checker",
@@ -89,6 +92,12 @@ class Source:
 
     @property
     def is_pinned(self) -> bool:
+        """A source pinned to a foreign commit.
+
+        False for every source since ADR-0553, and kept for the same reason as
+        :meth:`Overlay.external_links`: it is what makes a reintroduced external
+        source *visible* to a test rather than something the parser shrugs at.
+        """
         return self.revision_policy == "pinned"
 
 
@@ -274,16 +283,13 @@ class Overlay:
         return dict(sorted(counts.items()))
 
     def external_links(self) -> tuple[Link, ...]:
-        """Links with at least one endpoint in a pinned external source."""
-        return tuple(row for row in self.links if row.source.is_external or row.target.is_external)
+        """Links with at least one endpoint outside this checkout.
 
-    def pinned_revision(self, source_id: str = "math-education") -> str:
-        """The commit a pinned source is pinned to; :class:`KeyError` when the
-        source is absent or unpinned."""
-        source = self.source(source_id)
-        if not source.revision:
-            raise KeyError(f"source {source_id!r} carries no pinned revision")
-        return source.revision
+        Empty by construction since ADR-0553 -- the overlay declares no external
+        source -- and kept as the *detector* for one coming back, not as a
+        supported query.
+        """
+        return tuple(row for row in self.links if row.source.is_external or row.target.is_external)
 
 
 @lru_cache(maxsize=4)

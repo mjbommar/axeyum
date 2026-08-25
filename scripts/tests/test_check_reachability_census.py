@@ -13,8 +13,10 @@ removable with everything still green.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import pathlib
+import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -25,7 +27,34 @@ assert SPEC and SPEC.loader
 RC = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RC)
 
-NO_CORPUS = pathlib.Path("/nonexistent/math-education/graph")
+NO_CORPUS = pathlib.Path("/nonexistent/reference-corpus/graph")
+
+
+@contextlib.contextmanager
+def stand_in_corpus(rows):
+    """A hermetic corpus holding exactly the slugs `rows` censuses.
+
+    ADR-0553 removed the default path to the reference corpus, so it is absent
+    unless an operator exports `AXEYUM_MATH_EDUCATION_GRAPH`. The two coverage
+    controls used to `skipTest` in that case -- which is every run -- so both
+    guards were reported as covered while never executing. That is the same
+    trap `test_validate_tactic_catalog.py` documents: a live-sibling test SKIPs
+    under the mutation harness and its guard reads as a survivor.
+    """
+    with tempfile.TemporaryDirectory() as scratch:
+        root = pathlib.Path(scratch) / "graph"
+        for corpus, directory in RC.CORPUS_DIR.items():
+            path = root / directory
+            path.mkdir(parents=True)
+            for entry in rows:
+                if entry["corpus"] == corpus:
+                    (path / f"{entry['slug']}.md").write_text("")
+        original = RC.CORPUS_ROOT
+        RC.CORPUS_ROOT = root
+        try:
+            yield root
+        finally:
+            RC.CORPUS_ROOT = original
 
 
 def row(corpus: str, slug: str, cls: str, fragment: str = "") -> dict[str, str]:
@@ -177,21 +206,40 @@ class CorpusCoverage(unittest.TestCase):
         self.assertFalse(checked)
 
     def test_a_corpus_row_the_census_never_classified_is_rejected(self) -> None:
-        if not RC.CORPUS_ROOT.is_dir():
-            self.skipTest("sibling math-education corpus not present")
-        short = [r for r in RC.read_census() if r["slug"] != "pigeonhole"]
-        failures, checked = RC.corpus_coverage(short)
+        census = RC.read_census()
+        with stand_in_corpus(census):
+            short = [r for r in census if r["slug"] != "pigeonhole"]
+            failures, checked = RC.corpus_coverage(short)
         self.assertTrue(checked)
         self.assertTrue(any("is not censused" in f for f in failures), failures)
 
     def test_a_censused_row_that_left_the_corpus_is_rejected(self) -> None:
-        if not RC.CORPUS_ROOT.is_dir():
-            self.skipTest("sibling math-education corpus not present")
-        failures, checked = RC.corpus_coverage(
-            RC.read_census() + [row("technique", "telepathy", "A")]
-        )
+        census = RC.read_census()
+        with stand_in_corpus(census):
+            failures, checked = RC.corpus_coverage(
+                census + [row("technique", "telepathy", "A")]
+            )
         self.assertTrue(checked)
         self.assertTrue(any("no longer exists" in f for f in failures), failures)
+
+    def test_a_matching_corpus_produces_no_failures(self) -> None:
+        """The positive half: without it, a guard that always fails would pass
+        both controls above."""
+        census = RC.read_census()
+        with stand_in_corpus(census):
+            failures, checked = RC.corpus_coverage(census)
+        self.assertTrue(checked)
+        self.assertEqual(failures, [])
+
+    def test_no_default_path_to_the_reference_corpus_is_stored(self) -> None:
+        """ADR-0553. The path is the operator's to supply, never the tree's."""
+        source = (ROOT / "scripts" / "check-reachability-census.py").read_text()
+        # Below the module docstring only -- the docstring NAMES the removed
+        # default on purpose, so a reader knows what used to be here.
+        code = source.split('"""', 2)[2]
+        self.assertNotIn("expanduser", code)
+        self.assertNotIn("projects/personal", code)
+        self.assertIsNone(RC.CORPUS_ROOT, "no corpus path without the env var")
 
 
 class TheCommittedCensusIsMeasuredNotAsserted(unittest.TestCase):

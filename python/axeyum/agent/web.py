@@ -45,7 +45,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from ..knowledge import math_education as me_api
 from ..knowledge import nursery as nursery_api
 from ..knowledge._paths import resolve_root
 
@@ -69,7 +68,6 @@ ALLOWED_HOSTS: frozenset[str] = frozenset({"export.arxiv.org", "api.semanticscho
 #: The `source` label each prefix carries into the episode.
 SOURCE_ARXIV = "arxiv"
 SOURCE_SEMANTIC_SCHOLAR = "semantic-scholar"
-SOURCE_MATH_EDUCATION = "math-education"
 
 #: Hard ceiling on one fetched document. A tool that can pull an unbounded
 #: number of bytes into a transcript is a cost hazard and a context hazard.
@@ -179,28 +177,22 @@ def family_guard(fact_id: str, root: Path | str | None = None) -> FamilyDecision
 # ----------------------------------------------------------------- the allowlist
 
 
-def sibling_prefix(root: Path | str | None = None) -> str | None:
-    """The `file://` prefix for the pinned `math-education` sibling, or None.
-
-    Returns a prefix ONLY when `math_education.pin_ok()` -- the checkout is
-    present at exactly the revision the overlay pins. Off-pin is not a
-    near-miss here: an unpinned sibling is a corpus nobody can re-derive, and a
-    snapshot digest taken from one means nothing.
-    """
-    graph = me_api.graph(resolve_root(root))
-    if not graph.pin_ok():
-        return None
-    return (graph.path / "graph").resolve().as_uri() + "/"
-
-
 def allowed_prefixes(root: Path | str | None = None) -> tuple[str, ...]:
-    """Every URL prefix in force right now, remote first, sibling last."""
-    sibling = sibling_prefix(root)
-    return STATIC_ALLOWLIST + ((sibling,) if sibling else ())
+    """Every URL prefix in force right now.
+
+    The list is exactly :data:`STATIC_ALLOWLIST` and does not depend on `root`,
+    which is kept in the signature because every caller threads a root through
+    the tool layer. Until 2026-08-24 this also returned a `file://` prefix for a
+    pinned sibling checkout at `../math-education`; ADR-0553 removed that
+    repository from this project's surface entirely, so no local path is
+    reachable through `web_fetch` any more and the only `file://` answer is a
+    refusal.
+    """
+    return STATIC_ALLOWLIST
 
 
 def _policy_error(url: str, prefixes: tuple[str, ...]) -> WebPolicyError:
-    listed = "\n  ".join(prefixes) if prefixes else "(none -- the sibling is off-pin)"
+    listed = "\n  ".join(prefixes) if prefixes else "(none)"
     return WebPolicyError(
         f"refusing to fetch {url!r}: it is not under an allowed prefix. This tool is a "
         f"prefix allowlist, not a web search, and the list is:\n  {listed}\n"
@@ -220,11 +212,6 @@ def classify(url: str, root: Path | str | None = None) -> str:
     """
     prefixes = allowed_prefixes(root)
     split = urllib.parse.urlsplit(url)
-    if split.scheme == "file":
-        sibling = sibling_prefix(root)
-        if sibling and url.startswith(sibling) and ".." not in url:
-            return SOURCE_MATH_EDUCATION
-        raise _policy_error(url, prefixes)
     if split.scheme != "https":
         raise _policy_error(url, prefixes)
     if "@" in split.netloc or split.hostname not in ALLOWED_HOSTS:
@@ -458,7 +445,6 @@ __all__ = [
     "SNAPSHOT_DIR",
     "SNAPSHOT_SUFFIX",
     "SOURCE_ARXIV",
-    "SOURCE_MATH_EDUCATION",
     "SOURCE_SEMANTIC_SCHOLAR",
     "STATIC_ALLOWLIST",
     "Allowed",
@@ -472,7 +458,6 @@ __all__ = [
     "classify",
     "family_guard",
     "scan_for_holdout",
-    "sibling_prefix",
     "web_fetch",
     "web_snapshot_rows",
     "wrap_untrusted",
