@@ -40,6 +40,21 @@ CHECKED_THEOREM_RECEIPT_CHECKER = (
 DEPENDENCY_THEOREM_RECEIPT_CHECKER = (
     ROOT / "scripts/check-autogenesis-nat-fib-coprime-premise-plan.py"
 )
+# `axeyum-lean-import/modeq-family-multi-target-v1` has no authoritative
+# dispatch case below (see `run_registered`) -- the content-addressed receipt
+# schema for a multi-target driver is still undesigned (ADR-0470 scoped v1 to
+# one input artifact binding to exactly one fact, and multi-target operations
+# arrived later without a follow-up ADR). These two checker modules are each
+# operation's own independent re-derivation and are reused, never duplicated,
+# by `dry_run_multi_target` below to prove the remaining path is reachable.
+MODEQ_FAMILY_CHECKERS = {
+    "authoritative-mathlib-modeq-family-v1": (
+        ROOT / "scripts/check-autogenesis-modeq-family.py"
+    ),
+    "authoritative-mathlib-nat-modeq-family-v1": (
+        ROOT / "scripts/check-autogenesis-nat-modeq-family.py"
+    ),
+}
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 EVIDENCE_RE = re.compile(
     r"^;\s*evidence\s+kind=(\S+)\s+certified=(\S+)\s+"
@@ -509,8 +524,25 @@ def selected_inputs(
 
     selected = (frontier.get("selection") or {}).get("selected_fact_id")
     admissible = (frontier.get("selection") or {}).get("admissible_fact_ids")
-    if not isinstance(selected, str) or admissible != [selected]:
-        raise ExecutionError("executor requires exactly one admissible selected fact")
+    # This used to require `admissible == [selected]` -- the frontier's WHOLE
+    # admissible set had to be a singleton. That was a correct proxy for "this
+    # run resolves to one fact, unambiguously" only as long as every
+    # authoritative operation named exactly one fact in `applicability`, which
+    # was true when this check was written (ADR-0470, 2026-08-18) and is no
+    # longer true: a multi-target operation (e.g.
+    # `authoritative-mathlib-nat-modeq-family-v1`) makes every ready fact it
+    # names independently admissible, so `admissible` can have >1 member by
+    # design. `fact-frontier.py` still resolves that to exactly ONE
+    # `selected_fact_id` deterministically (lexicographically-first
+    # admissible fact id -- see `build_machine_frontier`), so the property
+    # this check exists to enforce -- one fact, unambiguously, per execution
+    # run -- is `selected in admissible`, not `len(admissible) == 1`.
+    if (
+        not isinstance(selected, str)
+        or not isinstance(admissible, list)
+        or selected not in admissible
+    ):
+        raise ExecutionError("executor requires the selected fact to be admissible")
     fact = facts.get(selected)
     if not isinstance(fact, dict):
         raise ExecutionError("selected fact is absent from the authoritative ledger")
@@ -536,6 +568,86 @@ def selected_inputs(
     ]:
         raise ExecutionError("frontier selection does not bind the exact operation")
     return fact, operation, registry
+
+
+def resolve_multi_target(operation: dict[str, Any], fact_id: str) -> dict[str, Any]:
+    """Pick the ONE target within a multi-target operation that names `fact_id`.
+
+    A multi-target operation's `executor.targets` lists several facts, each
+    with its own statement adapter and modeq manifest -- exactly the "typed
+    statement-to-input derivation" ADR-0470 required before a multi-fact
+    operation could exist. This is the missing piece that consumes it: given
+    the ONE fact `selected_inputs()` chose, find the ONE target that binds it.
+    """
+    executor = operation["executor"]
+    targets = executor.get("targets")
+    if not isinstance(targets, list):
+        raise ExecutionError("multi-target operation has no targets list")
+    matches = [target for target in targets if target.get("fact_id") == fact_id]
+    if len(matches) != 1:
+        raise ExecutionError(
+            f"multi-target operation names {len(matches)} targets for "
+            f"{fact_id!r}; expected exactly one"
+        )
+    return matches[0]
+
+
+def dry_run_multi_target(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> dict[str, Any]:
+    """Independently replay ONE target of a multi-target operation and report
+    what it would admit, without emitting a content-addressed execution
+    receipt or writing anything.
+
+    This exists because `run_registered`/`build_receipt` have no dispatch
+    case for `axeyum-lean-import/modeq-family-multi-target-v1`: the
+    content-addressed receipt schema for a multi-target driver (what
+    `input_identity`/`request_input`/`expected_observation` mean when an
+    operation names several facts) is still undesigned, and inventing it here
+    would be exactly the kind of silent architectural decision CLAUDE.md's
+    Session Protocol reserves for an ADR. What this function DOES settle:
+    whether the executor -- now that `selected_inputs()` accepts a frontier
+    where more than one fact of a family is simultaneously admissible -- can
+    still identify and independently re-derive exactly one fact's proof, with
+    its siblings left untouched. It reuses each operation's own checker
+    module (`MODEQ_FAMILY_CHECKERS`) rather than re-implementing the replay,
+    so this can never disagree with the checker gate about what a valid
+    target looks like.
+    """
+    checker_path = MODEQ_FAMILY_CHECKERS.get(operation["id"])
+    if checker_path is None:
+        raise ExecutionError(
+            f"no dry-run checker registered for operation {operation['id']!r}"
+        )
+    target = resolve_multi_target(operation, fact["id"])
+    family_module = load_module("modeq_family_for_dry_run", checker_path)
+    # `check_target` raises `family_module.FamilyError` on any disagreement
+    # between the committed manifests and a fresh replay; let that propagate
+    # as-is rather than swallowing it, since a checker that cannot fail is
+    # worse than no checker.
+    family_module.check_target(target, operation["executor"]["max_binders"])
+    modeq = family_module.load(ROOT / target["modeq_manifest"])
+    op = modeq.get("operation") or {}
+    return {
+        "would_admit_fact_id": fact["id"],
+        "operation_id": operation["id"],
+        "target_definition": target["target_definition"],
+        "goal_sha256": op.get("goal_sha256"),
+        "proof_sha256": op.get("proof_sha256"),
+        "admitted_declarations": op.get("admitted_declarations"),
+        "binders_used": op.get("binders_used"),
+        "axioms": op.get("axioms"),
+        "theorem_dependencies": op.get("theorem_dependencies"),
+        # Other facts this SAME multi-target operation names -- not
+        # necessarily still `open`/admissible (one may already be settled,
+        # as `F:ml430-nat-modeq-refl-...` is here); this reports what the
+        # operation covers, not each sibling's current ledger status.
+        "other_target_fact_ids": sorted(
+            other["fact_id"]
+            for other in operation["executor"]["targets"]
+            if other["fact_id"] != fact["id"]
+        ),
+    }
 
 
 def parse_observation(stdout: str) -> dict[str, Any]:
@@ -1513,8 +1625,34 @@ def main() -> int:
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--output", type=pathlib.Path)
     action.add_argument("--verify", type=pathlib.Path)
+    action.add_argument(
+        "--dry-run-multi-target",
+        action="store_true",
+        help=(
+            "Independently re-derive the ONE selected fact's proof from a "
+            "multi-target operation and report what it would admit. Prints "
+            "and exits; does not build or verify a content-addressed "
+            "execution receipt, and writes nothing."
+        ),
+    )
     args = parser.parse_args()
     try:
+        if args.dry_run_multi_target:
+            if args.trigger_bundle is not None:
+                raise ExecutionError("--dry-run-multi-target rejects --trigger-bundle")
+            frontier = json.loads(args.frontier.resolve().read_text())
+            fact, operation, _registry = selected_inputs(frontier)
+            plan = dry_run_multi_target(operation, fact)
+            print(
+                "AUTOGENESIS_OPERATION_EXECUTION_DRY_RUN|"
+                f"would_admit={plan['would_admit_fact_id']}|"
+                f"operation={plan['operation_id']}|"
+                f"target={plan['target_definition']}|"
+                f"goal_sha256={plan['goal_sha256']}|"
+                f"proof_sha256={plan['proof_sha256']}|"
+                f"other_target_fact_ids={','.join(plan['other_target_fact_ids'])}"
+            )
+            return 0
         expected = derive(
             args.frontier.resolve(),
             trigger_bundle=(
