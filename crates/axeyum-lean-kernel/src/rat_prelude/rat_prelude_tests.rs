@@ -2952,9 +2952,10 @@ fn sum_range_rect_eq_diag_add_corner_computes_at_a_concrete_instance_over_rat() 
     let two = d.num(2);
 
     let proof = d.lemma(p.sum_range_rect_eq_diag_add_corner, &[ff, two]);
-    let inferred = d.kernel().infer(proof).unwrap_or_else(|e| {
-        panic!("sumRange_rect_eq_diag_add_corner(F,2) should infer: {e:?}")
-    });
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("sumRange_rect_eq_diag_add_corner(F,2) should infer: {e:?}"));
 
     // The rectangle {(i,j): i<2, j<2} -- 4 points -- built independently.
     let rectangle = {

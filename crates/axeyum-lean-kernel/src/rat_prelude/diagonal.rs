@@ -159,7 +159,10 @@ fn shifted(d: &mut IntDev<'_>, f: ExprId, m: ExprId) -> ExprId {
 /// `Nat.add`'s and `Rat.sumRange`'s own defining equations plus
 /// `Rat.add_zero`/`Rat.add_assoc`, never `Nat.sub`. The `Rat` port of
 /// `nat_prelude::rectangle::declare_sum_range_split`.
-pub(super) fn declare_sum_range_split(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_sum_range_split(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let carrier = rat_ty(d);
     let fn_ty = d.arrow(nat, carrier);
@@ -283,7 +286,13 @@ fn diagonal_pointwise(
 
 /// `Eq Rat (row_fn F (succ n) applied n) (F n zero)` — the row-major side's
 /// new `i = n` boundary term collapses to `F n 0`.
-fn boundary_peel(d: &mut IntDev<'_>, np: NatPrelude, rp: RatPrelude, ff: ExprId, n: ExprId) -> ExprId {
+fn boundary_peel(
+    d: &mut IntDev<'_>,
+    np: NatPrelude,
+    rp: RatPrelude,
+    ff: ExprId,
+    n: ExprId,
+) -> ExprId {
     let sn = d.succ(n);
     let row_inner_n = row_inner(d, ff, n);
 
@@ -371,7 +380,9 @@ fn diagonal_step(
     let h_l2 = d.lemma(rp.sum_range_succ, &[dinner_n, n]);
     let dinner_n_n = d.apply(dinner_n, &[n]);
     let s_plus_dinner_n_n = radd(d, s_term, dinner_n_n);
-    let h_l2_lift = rcongr(d, t_fn_ff_n, s_plus_dinner_n_n, h_l2, &|d, x| radd(d, t_n, x));
+    let h_l2_lift = rcongr(d, t_fn_ff_n, s_plus_dinner_n_n, h_l2, &|d, x| {
+        radd(d, t_n, x)
+    });
     let l_mid2 = radd(d, t_n, s_plus_dinner_n_n);
 
     let sub_nn = d.sub(n, n);
@@ -409,7 +420,10 @@ fn diagonal_step(
 
     let combined_g = combined_fn(d, row_fn_n, dinner_n);
     let pointwise = diagonal_pointwise(d, np, rp, ff, n);
-    let h_r2 = d.lemma(rp.sum_range_congr_lt, &[row_fn_sn, combined_g, n, pointwise]);
+    let h_r2 = d.lemma(
+        rp.sum_range_congr_lt,
+        &[row_fn_sn, combined_g, n, pointwise],
+    );
     let sum_combined_n = rsum_range(d, rp, combined_g, n);
 
     let h_r3 = d.lemma(rp.sum_range_add, &[row_fn_n, dinner_n, n]);
@@ -422,7 +436,9 @@ fn diagonal_step(
     let r_mid2 = radd(d, r_plus_s, row_fn_sn_n);
 
     let h_bnd = boundary_peel(d, np, rp, ff, n);
-    let h_bnd_lift = rcongr(d, row_fn_sn_n, f_n_zero, h_bnd, &|d, x| radd(d, r_plus_s, x));
+    let h_bnd_lift = rcongr(d, row_fn_sn_n, f_n_zero, h_bnd, &|d, x| {
+        radd(d, r_plus_s, x)
+    });
     let r_mid3 = radd(d, r_plus_s, f_n_zero);
 
     let (_e_r, rhs_proof) = rchain(
@@ -539,7 +555,13 @@ fn corner_sum(d: &mut IntDev<'_>, p: RatPrelude, ff: ExprId, n: ExprId) -> ExprI
 
 /// `∀ i, Lt i n → Eq Rat (sumRange (row_inner F i) n)`
 /// `(add (sumRange (row_inner F i) (sub n i)) (sumRange (corner_inner F i n) i))`.
-fn rect_pointwise(d: &mut IntDev<'_>, np: NatPrelude, rp: RatPrelude, ff: ExprId, n: ExprId) -> ExprId {
+fn rect_pointwise(
+    d: &mut IntDev<'_>,
+    np: NatPrelude,
+    rp: RatPrelude,
+    ff: ExprId,
+    n: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
 
     let i_fv = d.fresh_fvar();
@@ -565,7 +587,9 @@ fn rect_pointwise(d: &mut IntDev<'_>, np: NatPrelude, rp: RatPrelude, ff: ExprId
     let sum_row_i_n = rsum_range(d, rp, row_inner_i, n);
     let sum_row_i_addsubi = rsum_range(d, rp, row_inner_i, add_sub_i);
     // Lift the INDEX equality n_eq into a VALUE (Rat) equality.
-    let h_lift = nat_eq_to_rat(d, n, add_sub_i, n_eq, &|d, x| rsum_range(d, rp, row_inner_i, x));
+    let h_lift = nat_eq_to_rat(d, n, add_sub_i, n_eq, &|d, x| {
+        rsum_range(d, rp, row_inner_i, x)
+    });
 
     let h_split = d.lemma(rp.sum_range_split, &[row_inner_i, sub_ni, i]);
 
@@ -574,14 +598,24 @@ fn rect_pointwise(d: &mut IntDev<'_>, np: NatPrelude, rp: RatPrelude, ff: ExprId
     let sum_corner_i = rsum_range(d, rp, corner_i, i);
     let rhs = radd(d, sum_row_i_subni, sum_corner_i);
 
-    let (_e, body) = rchain(d, sum_row_i_n, &[(sum_row_i_addsubi, h_lift), (rhs, h_split)]);
+    let (_e, body) = rchain(
+        d,
+        sum_row_i_n,
+        &[(sum_row_i_addsubi, h_lift), (rhs, h_split)],
+    );
 
     let with_hi = d.lam_fv(hi_fv, hyp_ty, body);
     d.lam_fv(i_fv, nat, with_hi)
 }
 
 /// `Eq Rat (rectangle_sum F n) (add (row_sum F n) (corner_sum F n))`.
-fn rectangle_split_step(d: &mut IntDev<'_>, np: NatPrelude, rp: RatPrelude, ff: ExprId, n: ExprId) -> ExprId {
+fn rectangle_split_step(
+    d: &mut IntDev<'_>,
+    np: NatPrelude,
+    rp: RatPrelude,
+    ff: ExprId,
+    n: ExprId,
+) -> ExprId {
     let rect_row_n = rect_row(d, rp, ff, n);
     let row_fn_n = row_fn(d, rp, ff, n);
     let corner_row_n = corner_row(d, rp, ff, n);
@@ -640,7 +674,9 @@ pub(super) fn declare_sum_range_rect_eq_diag_add_corner(
     let h_diag = d.lemma(rp.sum_range_diagonal, &[ff, n]);
     let h_diag_symm = rsymm(d, tri, row_sum_n, h_diag);
 
-    let h_lift = rcongr(d, row_sum_n, tri, h_diag_symm, &|d, x| radd(d, x, corner_sum_n));
+    let h_lift = rcongr(d, row_sum_n, tri, h_diag_symm, &|d, x| {
+        radd(d, x, corner_sum_n)
+    });
 
     let (_e, proof) = rchain(d, rect, &[(mid, split_proof), (rhs_stmt, h_lift)]);
 

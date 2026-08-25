@@ -871,11 +871,11 @@ pub struct RatPrelude {
     /// `Rat.sumRange_rect_eq_diag_add_corner : ∀ F n, sumRange (fun i =>
     /// sumRange (fun j => F i j) n) n = add (sumRange (fun k => sumRange (fun
     /// i => F i (sub k i)) (succ k)) n) (sumRange (fun i => sumRange (fun k
-    /// => F i (add (sub n i) k)) i) n)` — rectangle = (antidiagonal triangle)
-    /// + corner, the same-bound `n×n` square decomposition the naive finite
-    /// Cauchy identity's refutation forces (`rat_prelude/diagonal.rs`'s
-    /// module doc). The `Rat` port of `Nat.sumRange_rect_eq_diag_add_corner`
-    /// (`nat_prelude::rectangle`).
+    /// => F i (add (sub n i) k)) i) n)` — rectangle equals the antidiagonal
+    /// triangle plus the corner, the same-bound `n×n` square decomposition
+    /// the naive finite Cauchy identity's refutation forces
+    /// (`rat_prelude/diagonal.rs`'s module doc). The `Rat` port of
+    /// `Nat.sumRange_rect_eq_diag_add_corner` (`nat_prelude::rectangle`).
     pub sum_range_rect_eq_diag_add_corner: NameId,
 
     // --- polynomials (rat_prelude::polynomial) ------------------------------
