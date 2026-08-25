@@ -1258,6 +1258,38 @@ pub struct RatPrelude {
     /// `y = Rat.div (det2 a u c v) (det2 a b c d)` — the `y` companion of
     /// [`Self::cramer_two_unique_x`].
     pub cramer_two_unique_y: NameId,
+
+    // --- the ℤ→ℚ cast, and Cassini read through `det2` (matrix.rs) ----------
+    /// `Rat.ofInt : Int → Rat`, `ofInt x := Rat.mk x 1 pos red` — the
+    /// canonical embedding of `ℤ` into `ℚ` at denominator `1`. `pos : 1 ≤ 1`
+    /// does not depend on `x`; `red` is `Rat.gcd_one_right` at `natAbs x`, so
+    /// no case split on `x` is needed (unlike `Rat.normalize`/`Rat.inv`).
+    pub of_int: NameId,
+    /// `Rat.ofInt_add : ∀ x y : Int, ofInt (x+y) = ofInt x + ofInt y` — `ofInt`
+    /// is a ring homomorphism for `+`. Not definitional: `Rat.add` renormalises
+    /// through `Rat.normalize`, so this goes through `Rat.add_cross` and
+    /// `Rat.eq_of_cross`.
+    pub of_int_add: NameId,
+    /// `Rat.ofInt_mul : ∀ x y : Int, ofInt (x·y) = ofInt x · ofInt y` — the
+    /// multiplicative companion of [`Self::of_int_add`], via `Rat.mul_cross`.
+    pub of_int_mul: NameId,
+    /// `Rat.ofInt_neg : ∀ x : Int, ofInt (neg x) = neg (ofInt x)` — **free**,
+    /// unlike `add`/`mul`: `Rat.neg` does not renormalise, so both sides
+    /// `δ`/`ι`-reduce to the same `Rat.mk` application up to the kernel's
+    /// definitional proof irrelevance on the two `Prop`-typed fields.
+    pub of_int_neg: NameId,
+    /// `Rat.det2_fib : ∀ n,`
+    /// `det2 (ofInt (ofNat (fib (n+2)))) (ofInt (ofNat (fib (n+1))))`
+    /// `     (ofInt (ofNat (fib (n+1)))) (ofInt (ofNat (fib n)))`
+    /// `= ofInt (pow (neg one) (succ n))`.
+    ///
+    /// Cassini's identity read through `det2`: for `M = [[1,1],[1,0]]`,
+    /// `Mⁿ = [[fib(n+1), fib n],[fib n, fib(n-1)]]` and `det M = -1`, so
+    /// `det (Mⁿ) = (-1)ⁿ` expands to exactly this. **Derived from
+    /// `Int.fib_cassini`** by transporting it across `Rat.ofInt` and rewriting
+    /// with [`Self::of_int_add`]/[`Self::of_int_mul`]/[`Self::of_int_neg`] —
+    /// not reproved independently.
+    pub det2_fib: NameId,
 }
 
 impl RatPrelude {
@@ -1529,6 +1561,11 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         inv2_bottom_right: child(kernel, "inv2_bottom_right"),
         cramer_two_unique_x: child(kernel, "cramer_two_unique_x"),
         cramer_two_unique_y: child(kernel, "cramer_two_unique_y"),
+        of_int: child(kernel, "ofInt"),
+        of_int_add: child(kernel, "ofInt_add"),
+        of_int_mul: child(kernel, "ofInt_mul"),
+        of_int_neg: child(kernel, "ofInt_neg"),
+        det2_fib: child(kernel, "det2_fib"),
     }
 }
 

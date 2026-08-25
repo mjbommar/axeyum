@@ -125,6 +125,11 @@ fn every_named_declaration_exists() {
         ("inv2_bottom_right", p.inv2_bottom_right),
         ("cramer_two_unique_x", p.cramer_two_unique_x),
         ("cramer_two_unique_y", p.cramer_two_unique_y),
+        ("ofInt", p.of_int),
+        ("ofInt_add", p.of_int_add),
+        ("ofInt_mul", p.of_int_mul),
+        ("ofInt_neg", p.of_int_neg),
+        ("det2_fib", p.det2_fib),
     ];
     for (label, name) in expected {
         assert!(
@@ -315,11 +320,12 @@ fn right_distrib_is_axiom_free() {
     );
 }
 
-/// `Rat.det2` and its nine theorems — the 2×2 linear algebra `matrix` adds —
-/// are each a **checked** declaration with an empty axiom footprint, read out
-/// of the kernel rather than off the diff. `det2` itself is a `Definition`
-/// (its defining equation holds by `Rat.sub`/`Rat.mul` unfolding, so it needs
-/// no equation lemma); the other nine are `Theorem`s.
+/// `Rat.det2` and its theorems — the 2×2 linear algebra `matrix` adds,
+/// including the `ℤ→ℚ` cast `Rat.ofInt` and the Fibonacci–determinant bridge
+/// `Rat.det2_fib` — are each a **checked** declaration with an empty axiom
+/// footprint, read out of the kernel rather than off the diff. `det2` and
+/// `ofInt` are `Definition`s (their defining equations hold by unfolding, so
+/// neither needs an equation lemma); everything else here is a `Theorem`.
 #[test]
 fn matrix_laws_are_axiom_free() {
     let (kernel, p) = built();
@@ -331,6 +337,15 @@ fn matrix_laws_are_axiom_free() {
     assert!(
         matches!(declaration, Declaration::Definition { .. }),
         "Rat.det2 must be a Definition, found a different kind"
+    );
+
+    let declaration = kernel
+        .environment()
+        .get(p.of_int)
+        .expect("Rat.ofInt was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Definition { .. }),
+        "Rat.ofInt must be a Definition, found a different kind"
     );
 
     let expected = [
@@ -349,6 +364,10 @@ fn matrix_laws_are_axiom_free() {
         ("inv2_bottom_right", p.inv2_bottom_right),
         ("cramer_two_unique_x", p.cramer_two_unique_x),
         ("cramer_two_unique_y", p.cramer_two_unique_y),
+        ("ofInt_add", p.of_int_add),
+        ("ofInt_mul", p.of_int_mul),
+        ("ofInt_neg", p.of_int_neg),
+        ("det2_fib", p.det2_fib),
     ];
     for (label, name) in expected {
         let declaration = kernel
@@ -366,6 +385,34 @@ fn matrix_laws_are_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// `Rat.det2_fib`'s statement, asserted verbatim — an empty axiom footprint
+/// on a theorem *named* `det2_fib` says nothing about which statement it
+/// proves; this checks it is genuinely Cassini's identity read through
+/// `det2`, cast into `ℚ` by `ofInt`, and not some vacuous or mismatched
+/// restatement.
+#[test]
+fn det2_fib_is_cassini_through_det2() {
+    let (kernel, p) = built();
+    let ty = match kernel.environment().get(p.det2_fib).expect("declared") {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    let rendered = kernel
+        .render_lean(ty)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert_eq!(
+        rendered,
+        "((x0 : AxNat) -> Eq.{1} Rat (Rat.det2 \
+         (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ (AxNat.succ x0))))) \
+         (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ x0)))) \
+         (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ x0)))) \
+         (Rat.ofInt (Int.ofNat (AxNat.fib x0)))) \
+         (Rat.ofInt (Int.pow (Int.neg Int.one) (AxNat.succ x0))))"
+    );
 }
 
 /// `Rat.inv2_top_left`'s statement, asserted verbatim — the same discipline
