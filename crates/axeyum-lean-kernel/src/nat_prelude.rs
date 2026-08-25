@@ -142,6 +142,7 @@ mod division;
 mod fermat;
 mod fibonacci;
 mod finite;
+mod finite_set;
 mod gcd;
 mod helpers;
 mod lcm;
@@ -187,6 +188,7 @@ use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
     declare_restrict_maps_into,
 };
+use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use lcm::{
     declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
@@ -1286,6 +1288,34 @@ pub struct NatPrelude {
     /// `Nat.injective_on_comp : ∀ n f g, MapsInto g n → InjectiveOn g n →
     /// InjectiveOn f n → InjectiveOn (comp f g) n`.
     pub injective_on_comp: NameId,
+
+    // --- finite sets over a bounded universe (`finite_set.rs`) --------------
+    // Curriculum node `sets` (Layer 0, docs/curriculum/00-foundations/sets.md).
+    /// `Nat.setUnion p q := fun k => if p k then true else q k`.
+    pub set_union: NameId,
+    /// `Nat.setInter p q := fun k => if p k then q k else false`.
+    pub set_inter: NameId,
+    /// `Nat.setCompl p := fun k => if p k then false else true`.
+    pub set_compl: NameId,
+    /// `Nat.setDiff p q := fun k => if p k then (if q k then false else true) else false`
+    /// — `p k ∧ ¬ q k`.
+    pub set_diff: NameId,
+    /// `Nat.Subset p q n := ∀ k, k < n → p k = true → q k = true` — a
+    /// `Prop`-valued `Definition`, the same shape
+    /// [`Self::injective_on`] already uses.
+    pub subset: NameId,
+    /// `Nat.countRange_union_add_inter : ∀ p q n,
+    ///   countRange (setUnion p q) n + countRange (setInter p q) n =
+    ///   countRange p n + countRange q n` — the two-set inclusion–exclusion
+    /// law, stated additively (`Nat.sub` is truncated).
+    pub count_range_union_add_inter: NameId,
+    /// `Nat.countRange_le_of_subset : ∀ p q n,
+    ///   Subset p q n → countRange p n ≤ countRange q n` — cardinality
+    /// monotonicity.
+    pub count_range_le_of_subset: NameId,
+    /// `Nat.countRange_compl : ∀ p n,
+    ///   countRange p n + countRange (setCompl p) n = n`.
+    pub count_range_compl: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1641,6 +1671,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bijective_of_injective_on: kernel.name_str(nat, "bijective_of_injective_on"),
             comp: kernel.name_str(nat, "comp"),
             injective_on_comp: kernel.name_str(nat, "injective_on_comp"),
+            set_union: kernel.name_str(nat, "setUnion"),
+            set_inter: kernel.name_str(nat, "setInter"),
+            set_compl: kernel.name_str(nat, "setCompl"),
+            set_diff: kernel.name_str(nat, "setDiff"),
+            subset: kernel.name_str(nat, "Subset"),
+            count_range_union_add_inter: kernel.name_str(nat, "countRange_union_add_inter"),
+            count_range_le_of_subset: kernel.name_str(nat, "countRange_le_of_subset"),
+            count_range_compl: kernel.name_str(nat, "countRange_compl"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1687,6 +1725,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_prime_dvd_choose(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
         declare_totient_all(&mut d, &p)?;
+        declare_finite_set_all(&mut d, &p)?;
         declare_fin(&mut d, &p)?;
         declare_injective_surjective(&mut d, &p)?;
         declare_pigeonhole(&mut d, &p)?;
