@@ -52,13 +52,62 @@
 //! the opposite orientation (`mul_inv_cancel` commuted) — strictly more work
 //! than applying `mul_le_mul_of_nonneg_left` once and cancelling the side
 //! that is already in the right shape.
+//!
+//! ## `CReal.geom_tail_within`, and exactly what it does and does not close
+//!
+//! The goal this file was extended for is `Cauchy (sumRange (fun n => pow x
+//! n))`. `series.rs`'s own six-stage pipeline
+//! (`sum_range_tail_within` → `_within_le` → `_tail_cauchy_within` →
+//! `_within_cauchy` → `_cauchy_dominated_ordered` → `_ordered_normalized`)
+//! is hardwired around **two** sequences `f`/`g` with a pointwise-domination
+//! hypothesis plus an already-witnessed raw `Cauchy` proof for `g` — taking
+//! `f = g = pow x ·` is circular, since nothing here has a `g` other than the
+//! sequence being proved Cauchy in the first place.
+//!
+//! [`declare_geom_tail_within`] is the self-contained analogue of the
+//! pipeline's first stage, [`CRealPrelude::sum_range_tail_within`]: it
+//! repackages a real-valued tail bound as a rational `Within` bound at the
+//! tail's own canonical index `add m n`, deferring the "other side" (there,
+//! `g`'s own tail sample; here, `Yₘ := xᵐ/(1−x)`'s own sample) rather than
+//! closing it into a fixed constant. It needs no `g` and no external Cauchy
+//! witness — only [`CRealPrelude::geom_tail_bounded_div`] (`tail ≤ Yₘ`) and a
+//! fresh nonnegativity proof for the tail (`geom_tail_nonneg`, built below
+//! from [`CRealPrelude::sum_range_split`] + [`CRealPrelude::pow_nonneg`],
+//! since `series.rs`'s own module documentation lists a nonnegativity lemma
+//! for `sumRange` of a pointwise-nonnegative function among what it does
+//! **not** build) to get `0 ≤ tail ≤ Yₘ`, hence `−Yₘ ≤ tail ≤ Yₘ`, then
+//! applies both real inequalities directly to the index `add m n` (`CReal.le`
+//! is a `Definition` — `le x y := ∀ n, seq x n − seq y n ≤ 2/(n+1)` — so a
+//! proof of it can be `.apply()`'d to a `Nat` argument exactly the way
+//! `series.rs`'s own `declare_sum_range_tail_within` applies `r1`/`r2` to
+//! `add m n`) and closes with the same "within-swap via `neg_sub`" helper
+//! (`within_of_tail_le`, reproduced verbatim below — private to `series.rs`).
+//!
+//! **This is not yet `Cauchy`, and landing it does not finish the goal.**
+//! Reaching `Cauchy`'s own `∃ K, ∀ m n, Within (…) (natDivSucc K m +
+//! natDivSucc K n)` shape from `geom_tail_within` needs bounding the deferred
+//! sample `seq Yₘ (add m n)` — a quantity that decays **geometrically** in
+//! `m` — by a **harmonic**-shaped `natDivSucc K' m` for one `K'` fixed
+//! *uniformly in `m`*. That is not index arithmetic; it is a genuine missing
+//! piece of real analysis, and nothing in this development supplies it:
+//! there is no lemma bounding `CReal.pow` above by a `natDivSucc` rational, no
+//! lemma comparing `pow` at two different bases for the same exponent
+//! (needed to compare `xⁿ` against `(1−ε)ⁿ` for the rational `ε` `PosBound`
+//! supplies), and no Bernoulli-type inequality (`(1+ε)ⁿ ≥ 1+nε`) from which
+//! such a bound is normally derived. Each is a standalone, moderate
+//! induction in its own right (see this file's own `geom_tail_nonneg` for
+//! the size of a *comparable* induction), but together they are substantially
+//! more work than the index-arithmetic difficulty this task was framed
+//! around, and none of the three exists yet in any file this slice may
+//! touch. **This is the precise remaining blocker for `CReal.geom_cauchy`.**
 
-use super::{CRealPrelude, creal_ty};
+use super::{CRealPrelude, and_intro, creal_ty, div_succ, sample, within};
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
+use crate::rat_prelude::ops::{radd, rat_eq_rewrite, rle, rneg};
 
 // --- small local term builders, verbatim in shape to every other `creal/*`
 // module's own copies (see e.g. `power.rs`, `cancellation.rs`) -------------
@@ -280,12 +329,355 @@ fn declare_geom_tail_bounded_div(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     })
 }
 
-/// Admit `CReal.geom_tail_bounded_div`.
+// --- `geom_tail_within` -----------------------------------------------------
+
+/// `λ k, f (add m k)` — `f` shifted by `m`. Verbatim copy of
+/// `series.rs::shifted_fn` (private there): the same construction, so that
+/// [`CRealPrelude::sum_range_split`]'s own instantiated conclusion (which
+/// embeds exactly this shape, substituted with our `f`/`m`) matches whatever
+/// this file independently builds — `series.rs`'s own doc comment on
+/// `shifted_fn` names this as the reason the two never build structurally
+/// distinct (merely defeq) closures for the same summand.
+fn shifted_fn(d: &mut IntDev<'_>, m: ExprId, f: ExprId) -> ExprId {
+    let nat_add = d.prelude().add;
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let mk = d.const_app(nat_add, &[m, k]);
+    let body = d.apply(f, &[mk]);
+    let nat = d.nat_ty();
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `Equiv (add (add a b) (neg a)) b` — the group cancellation `(a+b)+(−a) ~
+/// b`. Verbatim copy of `series.rs::cancel_right` (private there).
+fn cancel_right(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let na = cneg(d, p, a);
+    let ab = cadd(d, p, a, b);
+    let start = cadd(d, p, ab, na);
+
+    let ba = cadd(d, p, b, a);
+    let comm1 = d.lemma(p.add_comm, &[a, b]); // ab ~ ba
+    let refl_na = d.lemma(p.equiv_refl, &[na]);
+    let s1 = cadd(d, p, ba, na);
+    let h1 = d.lemma(p.add_congr, &[ab, ba, na, na, comm1, refl_na]);
+
+    let a_na = cadd(d, p, a, na);
+    let s2 = cadd(d, p, b, a_na);
+    let h2 = d.lemma(p.add_assoc, &[b, a, na]); // s1 ~ s2
+
+    let zero_c = czero(d, p);
+    let h_an = d.lemma(p.add_neg, &[a]); // a_na ~ zero
+    let refl_b = d.lemma(p.equiv_refl, &[b]);
+    let s3 = cadd(d, p, b, zero_c);
+    let h3 = d.lemma(p.add_congr, &[b, b, a_na, zero_c, refl_b, h_an]); // s2 ~ s3
+
+    let h4 = d.lemma(p.add_zero, &[b]); // s3 ~ b
+
+    echain(d, p, start, &[(s1, h1), (s2, h2), (s3, h3), (b, h4)])
+}
+
+/// `Equiv (neg zero) zero`. Verbatim copy of `series.rs::neg_zero_equiv`
+/// (private there): the group identity `−0 = 0`, from
+/// [`CRealPrelude::add_zero`]/[`CRealPrelude::add_comm`]/
+/// [`CRealPrelude::add_neg`] rather than any `Rat`-level fact.
+fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let zero_c = czero(d, p);
+    let nz = cneg(d, p, zero_c);
+    let padded = cadd(d, p, nz, zero_c);
+    let flipped = cadd(d, p, zero_c, nz);
+    let h1 = d.lemma(p.add_zero, &[nz]); // padded ~ nz
+    let step1 = d.lemma(p.equiv_symm, &[padded, nz, h1]); // nz ~ padded
+    let h2 = d.lemma(p.add_comm, &[nz, zero_c]); // padded ~ flipped
+    let h3 = d.lemma(p.add_neg, &[zero_c]); // flipped ~ zero
+    echain(d, p, nz, &[(padded, step1), (flipped, h2), (zero_c, h3)])
+}
+
+/// From `Rat.le (Rat.sub u v) w` and `Rat.le (Rat.sub (Rat.neg u) v) w`,
+/// derive `CReal.Within u (Rat.add v w)`. Verbatim copy of
+/// `series.rs::within_of_tail_le` (private there).
+fn within_of_tail_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    w: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let vw = radd(d, v, w);
+
+    let upper = d.lemma(rat.le_of_sub_le, &[u, v, w, h1]);
+
+    let neg_u = rneg(d, u);
+    let lower_neg = d.lemma(rat.le_of_sub_le, &[neg_u, v, w, h2]);
+
+    let neg_vw = rneg(d, vw);
+    let neg_neg_u = rneg(d, neg_u);
+    let flipped = d.lemma(rat.neg_le_neg, &[neg_u, vw, lower_neg]);
+
+    let nn = d.lemma(rat.neg_neg, &[u]);
+    let lower = rat_eq_rewrite(d, neg_neg_u, u, nn, flipped, &|d, t| rle(d, rat, neg_vw, t));
+
+    let lower_ty = rle(d, rat, neg_vw, u);
+    let upper_ty = rle(d, rat, u, vw);
+    and_intro(d, p, lower_ty, upper_ty, lower, upper)
+}
+
+/// `∀ i, le zero (pow x (add m i)) → …` folded into a proof of `le zero
+/// (sumRange (shifted_fn m (pow_fn x)) n)` by induction on `n`. The
+/// nonnegativity lemma `series.rs`'s own module documentation names as
+/// **not** built anywhere in this development (needed for
+/// [`CRealPrelude::geom_tail_bounded`]'s own real tail bound, and needed
+/// again here): base case is `sumRange _ 0 ≡ zero` (`Nat.rec`'s own
+/// ι-reduction, no named `sum_range_zero` lemma needed, mirroring
+/// `power.rs::declare_pow_nonneg`'s own base case), the step combines the
+/// inductive hypothesis with [`CRealPrelude::pow_nonneg`] at `add m j` via
+/// [`CRealPrelude::add_le_add`] and folds `add zero zero` back to `zero`
+/// with [`CRealPrelude::add_zero`] + [`CRealPrelude::le_congr`].
+fn geom_shifted_sum_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    h0: ExprId,
+    m: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let f = pow_fn(d, p, x);
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let g = shifted_fn(d, m, f);
+        let sg = d.const_app(p.sum_range, &[g, v]);
+        let zero_c = czero(d, p);
+        cle(d, p, zero_c, sg)
+    };
+    d.induct(
+        &motive,
+        &|d| {
+            let zero_c = czero(d, p);
+            d.lemma(p.le_refl, &[zero_c])
+        },
+        &|d, j, ih| {
+            let nat_add = d.prelude().add;
+            let m_plus_j = d.const_app(nat_add, &[m, j]);
+            let hj_nonneg = d.lemma(p.pow_nonneg, &[x, h0, m_plus_j]);
+
+            let g = shifted_fn(d, m, f);
+            let sg_j = d.const_app(p.sum_range, &[g, j]);
+            let gj = d.apply(g, &[j]);
+            let zero_c = czero(d, p);
+            let combined = d.lemma(p.add_le_add, &[zero_c, sg_j, zero_c, gj, ih, hj_nonneg]);
+            // combined : le (add zero zero) (add sg_j gj)
+
+            let add_zero_proof = d.lemma(p.add_zero, &[zero_c]); // Equiv (add zero zero) zero
+            let rhs = cadd(d, p, sg_j, gj);
+            let refl_rhs = d.lemma(p.equiv_refl, &[rhs]);
+            let zz = cadd(d, p, zero_c, zero_c);
+            d.lemma(
+                p.le_congr,
+                &[zz, zero_c, rhs, rhs, add_zero_proof, refl_rhs, combined],
+            )
+        },
+        n,
+    )
+}
+
+/// `le zero (add (sumRange (pow_fn x) (add m n)) (neg (sumRange (pow_fn x)
+/// m)))` — the geometric tail is nonnegative. Reduces the tail to `sumRange
+/// (shifted_fn m (pow_fn x)) n` via [`CRealPrelude::sum_range_split`] +
+/// [`cancel_right`] (the group identity `(A+B)+(−A) ~ B` with `A := sumRange
+/// f m`, `B := sumRange (shifted_fn m f) n`), then transports
+/// [`geom_shifted_sum_nonneg`]'s conclusion across that `Equiv`.
+fn geom_tail_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    h0: ExprId,
+    m: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let f = pow_fn(d, p, x);
+    let nat_add = d.prelude().add;
+    let mn = d.const_app(nat_add, &[m, n]);
+    let sum_f_mn = d.const_app(p.sum_range, &[f, mn]);
+    let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+    let neg_sum_f_m = cneg(d, p, sum_f_m);
+    let tail = cadd(d, p, sum_f_mn, neg_sum_f_m);
+
+    let g = shifted_fn(d, m, f);
+    let sum_g_n = d.const_app(p.sum_range, &[g, n]);
+
+    // split_proof : Equiv sum_f_mn (add sum_f_m sum_g_n)
+    let split_proof = d.lemma(p.sum_range_split, &[f, m, n]);
+    let refl_neg = d.lemma(p.equiv_refl, &[neg_sum_f_m]);
+    let mid = cadd(d, p, sum_f_m, sum_g_n);
+    let step1_target = cadd(d, p, mid, neg_sum_f_m);
+    let step1 = d.lemma(
+        p.add_congr,
+        &[
+            sum_f_mn,
+            mid,
+            neg_sum_f_m,
+            neg_sum_f_m,
+            split_proof,
+            refl_neg,
+        ],
+    );
+    // step1 : Equiv tail step1_target
+
+    // cancel_proof : Equiv step1_target sum_g_n
+    let cancel_proof = cancel_right(d, p, sum_f_m, sum_g_n);
+
+    let tail_equiv_sum_g_n = d.lemma(
+        p.equiv_trans,
+        &[tail, step1_target, sum_g_n, step1, cancel_proof],
+    );
+
+    let nonneg_g_n = geom_shifted_sum_nonneg(d, p, x, h0, m, n);
+
+    let zero_c = czero(d, p);
+    let refl_zero = d.lemma(p.equiv_refl, &[zero_c]);
+    let symm_te = d.lemma(p.equiv_symm, &[tail, sum_g_n, tail_equiv_sum_g_n]);
+    d.lemma(
+        p.le_congr,
+        &[
+            zero_c, zero_c, sum_g_n, tail, refl_zero, symm_te, nonneg_g_n,
+        ],
+    )
+}
+
+/// `CReal.geom_tail_within`. See the module documentation for the derivation
+/// and — importantly — for what this theorem does **not** yet close.
+fn declare_geom_tail_within(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let nat_add = d.prelude().add;
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h0_fv = d.fresh_fvar();
+    let h0 = d.kernel().fvar(h0_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let neg_x = cneg(d, p, x);
+    let a = cadd(d, p, one, neg_x); // a = 1 - x
+    let hyp_pos_bound = pos_bound_of(d, p, a, k);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let mn = d.const_app(nat_add, &[m, n]);
+    let f = pow_fn(d, p, x);
+    let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+    let sum_f_mn = d.const_app(p.sum_range, &[f, mn]);
+    let neg_sum_f_m = cneg(d, p, sum_f_m);
+    let tail = cadd(d, p, sum_f_mn, neg_sum_f_m);
+
+    let pow_m = d.const_app(p.pow, &[x, m]);
+    let inv_expr = cinv(d, p, a, k, h);
+    let y = cmul(d, p, inv_expr, pow_m);
+
+    let hyp0 = {
+        let zero_c = czero(d, p);
+        cle(d, p, zero_c, x)
+    };
+
+    // h_dom : le tail y
+    let h_dom = d.lemma(p.geom_tail_bounded_div, &[x, h0, k, h, m, n]);
+
+    // tail_nonneg : le zero tail
+    let tail_nonneg = geom_tail_nonneg(d, p, x, h0, m, n);
+
+    // y_nonneg : le zero y
+    let inv_nonneg_fact = d.lemma(p.inv_nonneg, &[a, k, h]);
+    let pow_nonneg_fact = d.lemma(p.pow_nonneg, &[x, h0, m]);
+    let y_nonneg = d.lemma(
+        p.mul_nonneg,
+        &[inv_expr, pow_m, inv_nonneg_fact, pow_nonneg_fact],
+    );
+
+    // neg_tail_le_zero : le (neg tail) zero
+    let neg_tail = cneg(d, p, tail);
+    let zero_c = czero(d, p);
+    let neg_le_neg_fact = d.lemma(p.neg_le_neg, &[zero_c, tail, tail_nonneg]);
+    // neg_le_neg_fact : le (neg tail) (neg zero)
+    let neg_zero_pf = neg_zero_equiv(d, p);
+    let refl_neg_tail = d.lemma(p.equiv_refl, &[neg_tail]);
+    let neg_zero_c = cneg(d, p, zero_c);
+    let neg_tail_le_zero = d.lemma(
+        p.le_congr,
+        &[
+            neg_tail,
+            neg_tail,
+            neg_zero_c,
+            zero_c,
+            refl_neg_tail,
+            neg_zero_pf,
+            neg_le_neg_fact,
+        ],
+    );
+
+    // neg_tail_le_y : le (neg tail) y
+    let neg_tail_le_y = d.lemma(
+        p.le_trans,
+        &[neg_tail, zero_c, y, neg_tail_le_zero, y_nonneg],
+    );
+
+    // Apply both real-valued `le` facts directly at the tail's own canonical
+    // index `mn` -- `CReal.le` is a `Definition` (`∀ n, seq x n - seq y n ≤
+    // 2/(n+1)`), so `.apply(_, &[mn])` unfolds it to the per-index `Rat.le`
+    // fact, exactly as `series.rs::declare_sum_range_tail_within` does for
+    // its own `r1`/`r2`.
+    let h1 = d.apply(h_dom, &[mn]);
+    let h2 = d.apply(neg_tail_le_y, &[mn]);
+
+    let u = sample(d, p, tail, mn);
+    let v = sample(d, p, y, mn);
+    let w = div_succ(d, p, 2, mn);
+
+    let value_body = within_of_tail_le(d, p, u, v, w, h1, h2);
+
+    let ty = {
+        let vw = radd(d, v, w);
+        let claim = within(d, p, u, vw);
+        let inner = d.pi_fv(n_fv, nat, claim);
+        let with_m = d.pi_fv(m_fv, nat, inner);
+        // `h_fv` escapes into `with_m` through `y` (via `inv_expr`), so this
+        // Pi must be genuinely dependent (`pi_fv`), not `d.arrow` -- the same
+        // trap `geom_tail_bounded_div`'s own `ty` names.
+        let with_h = d.pi_fv(h_fv, hyp_pos_bound, with_m);
+        let with_k = d.pi_fv(k_fv, nat, with_h);
+        let with_h0 = d.arrow(hyp0, with_k);
+        d.pi_fv(x_fv, carrier, with_h0)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, value_body);
+        let with_m = d.lam_fv(m_fv, nat, inner);
+        let with_h = d.lam_fv(h_fv, hyp_pos_bound, with_m);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_h0 = d.lam_fv(h0_fv, hyp0, with_k);
+        d.lam_fv(x_fv, carrier, with_h0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_tail_within,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.geom_tail_bounded_div` and `CReal.geom_tail_within`.
 ///
 /// # Errors
 ///
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
 pub(super) fn declare_geometric(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
-    declare_geom_tail_bounded_div(d, p)
+    declare_geom_tail_bounded_div(d, p)?;
+    declare_geom_tail_within(d, p)
 }
