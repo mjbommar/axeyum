@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 199] = [
+    let expected: [(&str, crate::NameId, &str); 200] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -301,6 +301,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.sum_range_tail_within,
             "theorem",
         ),
+        (
+            "CReal.sumRange_tail_within_le",
+            p.sum_range_tail_within_le,
+            "theorem",
+        ),
         ("CReal.sumRange_seq_zero", p.sum_range_seq_zero, "theorem"),
         ("CReal.sumRange_seq_succ", p.sum_range_seq_succ, "theorem"),
         // Powers, and the geometric series over ℝ (creal/power.rs).
@@ -473,6 +478,65 @@ fn sum_range_tail_within_specializes_to_the_zero_series_against_itself() {
 
     // Not just well-typed: the conclusion the kernel infers is genuinely a
     // `Within` bound, not e.g. `True` or some other vacuous stand-in.
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Within"),
+        "the instantiated conclusion is not a `Within` bound: {rendered}"
+    );
+}
+
+/// `CReal.sumRange_tail_within_le` on a trivial instance: `f = g` the
+/// constant-zero sequence, `a = 0`, `b = 1` — a **non-degenerate** pair
+/// (`a ≠ b`), deliberately, so the `Nat.le_dest` witness `k` used internally
+/// is `1`, not `0`: an `a = b` instance would exercise `k = 0` only and could
+/// pass even if the general `k`-indexed rewrite were broken. Same rationale
+/// and same `Kernel::infer`-on-a-closed-term method as
+/// [`sum_range_tail_within_specializes_to_the_zero_series_against_itself`].
+#[test]
+fn sum_range_tail_within_le_specializes_to_the_zero_series_from_0_to_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+
+    // zero_fn := λ _ : Nat, CReal.zero.
+    let zero_fn = {
+        let k_fv = d.fresh_fvar();
+        let _k = d.kernel().fvar(k_fv);
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        d.lam_fv(k_fv, nat, zero_c)
+    };
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    // pointwise : ∀ k, le (abs (zero_fn k)) (zero_fn k), via le_abs_self.
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zk = d.apply(zero_fn, &[k]);
+        let body = d.lemma(p.le_abs_self, &[zk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    // hle : Nat.le 0 1, via Nat.zero_le.
+    let zero_le = d.prelude().zero_le;
+    let hle = d.lemma(zero_le, &[one_nat]);
+
+    let instance = d.lemma(
+        p.sum_range_tail_within_le,
+        &[zero_fn, zero_fn, zero_nat, one_nat, pointwise, hle],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!(
+            "sumRange_tail_within_le refused at the trivial f = g = (fun _ => zero), \
+             a = 0, b = 1 instance: {error:?}"
+        )
+    });
+
     let rendered = kernel.render_lean(ty);
     assert!(
         rendered.contains("Within"),

@@ -1154,6 +1154,24 @@ pub struct CRealPrelude {
     /// this theorem's own `g`-side sample through `Cauchy (sumRange g)`'s
     /// witness) are not built here.
     pub sum_range_tail_within: NameId,
+    /// `CReal.sumRange_tail_within_le : ∀ f g, (∀ k, le (abs (f k)) (g k)) →
+    /// ∀ a b, Nat.le a b → Within (seq (add (sumRange f b) (neg (sumRange f
+    /// a))) b) (add (seq (add (sumRange g b) (neg (sumRange g a))) b)
+    /// (natDivSucc 2 b))` — the **Nat.le_total case split**'s content, first
+    /// half: lifts [`Self::sum_range_tail_within`]'s ordered-pair form `(m,
+    /// add m n)` to an arbitrary pair `(a, b)` constrained only by `a ≤ b`,
+    /// which `series.rs`'s module documentation names as needed to reach
+    /// `CReal.Cauchy`'s arbitrary-pair `∀ m n` shape.
+    ///
+    /// Built from `Nat.le_dest` (`a ≤ b → ∃ k, add a k = b`), one application
+    /// of [`Self::sum_range_tail_within`] at `(a, k)`, and one `Nat`-equality
+    /// rewrite (`series::nat_rewrite_prop`-style transport) carrying the
+    /// witnessed instance's index `add a k` over to `b`. The mirror direction
+    /// (`b ≤ a`) needs no new machinery — it is this same theorem applied
+    /// with `a`/`b` swapped — so this theorem supplies both halves' content;
+    /// selecting between them via `Nat.le_total` is left to whichever future
+    /// piece (the outer telescope) actually consumes the selection.
+    pub sum_range_tail_within_le: NameId,
     /// `CReal.sumRange_seq_zero : Eq Rat (seq (sumRange f Nat.zero) k)
     /// Rat.zero` — the base case of the sample-rate law, closing by `Eq.refl`
     /// alone (`sumRange f zero` ι-reduces to `zero := ofRat Rat.zero`, and
@@ -1862,6 +1880,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_split: kernel.name_str(creal, "sumRange_split"),
         sum_range_tail_le: kernel.name_str(creal, "sumRange_tail_le"),
         sum_range_tail_within: kernel.name_str(creal, "sumRange_tail_within"),
+        sum_range_tail_within_le: kernel.name_str(creal, "sumRange_tail_within_le"),
         sum_range_seq_zero: kernel.name_str(creal, "sumRange_seq_zero"),
         sum_range_seq_succ: kernel.name_str(creal, "sumRange_seq_succ"),
         pow: kernel.name_str(creal, "pow"),
