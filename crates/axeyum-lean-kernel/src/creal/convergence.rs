@@ -244,6 +244,7 @@ pub(super) fn declare_convergence(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     declare_converges_add(d, p)?;
     declare_converges_neg(d, p)?;
     declare_converges_sub(d, p)?;
+    declare_converges_squeeze(d, p)?;
     declare_bounded(d, p)?;
     declare_converges_bounded(d, p)?;
     declare_converges_mul(d, p)?;
@@ -1516,6 +1517,299 @@ fn declare_converges_sub(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.converges_sub,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- `CReal.converges_squeeze` ------------------------------------------------
+
+/// `CReal.le (func n) (target n)`.
+fn le_applied(d: &mut IntDev<'_>, p: CRealPrelude, func: ExprId, target: ExprId) -> ExprId {
+    d.const_app(p.le, &[func, target])
+}
+
+/// `∀ n, CReal.le (f n) (g n)` — the pointwise hypothesis
+/// [`declare_converges_squeeze`] threads through, applied twice at the same
+/// index (`(hab n) n`) to reach a *rational* fact, exactly the way
+/// [`converges_body`] reaches one from `Converges`'s own witness.
+fn le_pointwise_ty(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let fn_term = d.apply(f, &[n]);
+    let gn_term = d.apply(g, &[n]);
+    let claim = le_applied(d, p, fn_term, gn_term);
+    d.pi_fv(n_fv, nat, claim)
+}
+
+/// `CReal.converges_squeeze : ∀ a b c L, (∀ n, le (a n) (b n)) →
+/// (∀ n, le (b n) (c n)) → Converges a L → Converges c L → Converges b L`.
+///
+/// See the field documentation on
+/// [`CRealPrelude::converges_squeeze`](super::CRealPrelude::converges_squeeze)
+/// for why no shift bridge is needed. Fix `n`. `(hab n) n` and `(hbc n) n`
+/// give `seq (a n) n − seq (b n) n ≤ 2/(n+1)` and `seq (b n) n − seq (c n) n
+/// ≤ 2/(n+1)` directly — `CReal.le`'s own canonical-sample shape. Negating
+/// the first (`Rat.neg_le_neg` + `Rat.neg_sub`) and adding it to
+/// `Converges a L`'s lower half telescopes (`Rat.sub_add_sub`) to `Rat.le
+/// (neg ((2+K_a)/(n+1))) (seq (b n) n − seq L n)`; adding the second to
+/// `Converges c L`'s upper half telescopes to `Rat.le (seq (b n) n − seq L
+/// n) ((2+K_c)/(n+1))`. Both bounds widen (`Rat.natDivSucc_le_add_left`, one
+/// `Nat.add_comm` to line the two additions up) to the single witness `K :=
+/// (2+K_a)+(2+K_c)`, and `And.intro` closes `Within` at `K`.
+fn declare_converges_squeeze(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+    let nat_add = d.prelude().add;
+    let nat_p = d.prelude();
+    let two_nat = d.num(2);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+
+    let hab_ty = le_pointwise_ty(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hbc_ty = le_pointwise_ty(d, p, b, c);
+    let hbc_fv = d.fresh_fvar();
+    let hbc = d.kernel().fvar(hbc_fv);
+
+    let converges_al = converges_applied(d, p, a, l);
+    let converges_cl = converges_applied(d, p, c, l);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let target = converges_applied(d, p, b, l);
+
+    let outer_predicate = converges_predicate(d, p, a, l);
+    let outer_minor = {
+        let k1_fv = d.fresh_fvar();
+        let k1 = d.kernel().fvar(k1_fv);
+        let hp1_ty = converges_body(d, p, a, l, k1);
+        let hp1_fv = d.fresh_fvar();
+        let hp1 = d.kernel().fvar(hp1_fv);
+
+        let inner_predicate = converges_predicate(d, p, c, l);
+        let inner_minor = {
+            let k2_fv = d.fresh_fvar();
+            let k2 = d.kernel().fvar(k2_fv);
+            let hp2_ty = converges_body(d, p, c, l, k2);
+            let hp2_fv = d.fresh_fvar();
+            let hp2 = d.kernel().fvar(hp2_fv);
+
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+
+            let a_n = d.apply(a, &[n]);
+            let b_n = d.apply(b, &[n]);
+            let c_n = d.apply(c, &[n]);
+
+            let an = sample(d, p, a_n, n);
+            let bn = sample(d, p, b_n, n);
+            let cn = sample(d, p, c_n, n);
+            let ln = sample(d, p, l, n);
+
+            // Converges hypotheses, instantiated at n.
+            let gap_al = rsub(d, rat, an, ln);
+            let bound_al = div_succ_at(d, p, k1, n);
+            let proof_al = d.apply(hp1, &[n]);
+            let (lower_al, _upper_al) = halves(d, p, gap_al, bound_al, proof_al);
+
+            let gap_cl = rsub(d, rat, cn, ln);
+            let bound_cl = div_succ_at(d, p, k2, n);
+            let proof_cl = d.apply(hp2, &[n]);
+            let (_lower_cl, upper_cl) = halves(d, p, gap_cl, bound_cl, proof_cl);
+
+            // `le` hypotheses, applied at their own value's index and then
+            // again at `n` — `CReal.le`'s own canonical-sample shape.
+            let le_ab_n = d.apply(hab, &[n]);
+            let le_ab_nn = d.apply(le_ab_n, &[n]); // Rat.le (an-bn) (2/(n+1))
+            let le_bc_n = d.apply(hbc, &[n]);
+            let le_bc_nn = d.apply(le_bc_n, &[n]); // Rat.le (bn-cn) (2/(n+1))
+
+            let two_n = div_succ(d, p, 2, n);
+            let target_diff = rsub(d, rat, bn, ln);
+
+            // --- lower half: bn-ln >= -(2+k1)/(n+1) -------------------------
+            let ab_diff = rsub(d, rat, an, bn);
+            let neg_ab_step = d.lemma(rat.neg_le_neg, &[ab_diff, two_n, le_ab_nn]);
+            // neg_ab_step : Rat.le (neg two_n) (neg ab_diff)
+            let ba_diff = rsub(d, rat, bn, an);
+            let neg_ab_eq = d.lemma(rat.neg_sub, &[an, bn]); // Eq (neg ab_diff) ba_diff
+            let neg_two_n = rneg(d, two_n);
+            let neg_ab_diff = rneg(d, ab_diff);
+            let fact3p =
+                rat_eq_rewrite(d, neg_ab_diff, ba_diff, neg_ab_eq, neg_ab_step, &|d, t| {
+                    rle(d, rat, neg_two_n, t)
+                });
+            // fact3p : Rat.le neg_two_n ba_diff
+
+            let neg_bound_al = rneg(d, bound_al);
+            let combined_lower = d.lemma(
+                rat.add_le_add,
+                &[neg_two_n, ba_diff, neg_bound_al, gap_al, fact3p, lower_al],
+            );
+            // combined_lower : Rat.le (neg_two_n + neg bound_al) (ba_diff + gap_al)
+            let lhs_sum_lower = radd(d, neg_two_n, neg_bound_al);
+            let rhs_sum_lower = radd(d, ba_diff, gap_al);
+            let identity_lower = d.lemma(rat.sub_add_sub, &[bn, an, ln]); // Eq (ba_diff+gap_al) target_diff
+            let step_lower = rat_eq_rewrite(
+                d,
+                rhs_sum_lower,
+                target_diff,
+                identity_lower,
+                combined_lower,
+                &|d, t| rle(d, rat, lhs_sum_lower, t),
+            );
+            // step_lower : Rat.le lhs_sum_lower target_diff
+
+            let sum_al = radd(d, two_n, bound_al);
+            let neg_sum_al = rneg(d, sum_al);
+            let neg_add_eq = d.lemma(rat.neg_add, &[two_n, bound_al]); // Eq neg_sum_al lhs_sum_lower
+            let eq_lhs_rev = rsymm(d, neg_sum_al, lhs_sum_lower, neg_add_eq);
+            let step_lower2 = rat_eq_rewrite(
+                d,
+                lhs_sum_lower,
+                neg_sum_al,
+                eq_lhs_rev,
+                step_lower,
+                &|d, t| rle(d, rat, t, target_diff),
+            );
+            // step_lower2 : Rat.le neg_sum_al target_diff
+
+            let c1 = d.const_app(nat_add, &[two_nat, k1]);
+            let bound_c1 = div_succ_at(d, p, c1, n);
+            let fuse_al = d.lemma(rat.nat_div_succ_add, &[two_nat, k1, n]); // Eq sum_al bound_c1
+            let neg_congr_al = rcongr(d, sum_al, bound_c1, fuse_al, &|d, t| rneg(d, t));
+            let neg_bound_c1 = rneg(d, bound_c1);
+            let step_lower_final = rat_eq_rewrite(
+                d,
+                neg_sum_al,
+                neg_bound_c1,
+                neg_congr_al,
+                step_lower2,
+                &|d, t| rle(d, rat, t, target_diff),
+            );
+            // step_lower_final : Rat.le neg_bound_c1 target_diff
+
+            // --- upper half: bn-ln <= (2+k2)/(n+1) ---------------------------
+            let bc_diff = rsub(d, rat, bn, cn);
+            let combined_upper = d.lemma(
+                rat.add_le_add,
+                &[bc_diff, two_n, gap_cl, bound_cl, le_bc_nn, upper_cl],
+            );
+            // combined_upper : Rat.le ((bn-cn)+gap_cl) (two_n+bound_cl)
+            let bc_cl_sum = radd(d, bc_diff, gap_cl);
+            let identity_upper = d.lemma(rat.sub_add_sub, &[bn, cn, ln]); // Eq bc_cl_sum target_diff
+            let rhs_sum_upper = radd(d, two_n, bound_cl);
+            let step_upper = rat_eq_rewrite(
+                d,
+                bc_cl_sum,
+                target_diff,
+                identity_upper,
+                combined_upper,
+                &|d, t| rle(d, rat, t, rhs_sum_upper),
+            );
+            // step_upper : Rat.le target_diff rhs_sum_upper
+
+            let c2 = d.const_app(nat_add, &[two_nat, k2]);
+            let bound_c2 = div_succ_at(d, p, c2, n);
+            let fuse_cl = d.lemma(rat.nat_div_succ_add, &[two_nat, k2, n]); // Eq rhs_sum_upper bound_c2
+            let step_upper_final =
+                rat_eq_rewrite(d, rhs_sum_upper, bound_c2, fuse_cl, step_upper, &|d, t| {
+                    rle(d, rat, target_diff, t)
+                });
+            // step_upper_final : Rat.le target_diff bound_c2
+
+            // --- widen both halves to the common witness K = c1+c2 ----------
+            let k_sum = d.const_app(nat_add, &[c1, c2]);
+            let bound_k = div_succ_at(d, p, k_sum, n);
+
+            let widen_c1 = d.lemma(rat.nat_div_succ_le_add_left, &[c1, c2, n]);
+            // widen_c1 : Rat.le bound_c1 bound_k
+            let neg_widen_c1 = d.lemma(rat.neg_le_neg, &[bound_c1, bound_k, widen_c1]);
+            // neg_widen_c1 : Rat.le (neg bound_k) (neg bound_c1)
+            let neg_bound_k = rneg(d, bound_k);
+            let lower_final = d.lemma(
+                rat.le_trans,
+                &[
+                    neg_bound_k,
+                    neg_bound_c1,
+                    target_diff,
+                    neg_widen_c1,
+                    step_lower_final,
+                ],
+            );
+            // lower_final : Rat.le neg_bound_k target_diff
+
+            let c2_plus_c1 = d.const_app(nat_add, &[c2, c1]);
+            let widen_c2_raw = d.lemma(rat.nat_div_succ_le_add_left, &[c2, c1, n]);
+            // widen_c2_raw : Rat.le bound_c2 (div_succ_at c2_plus_c1 n)
+            let comm_c2c1 = d.lemma(nat_p.add_comm, &[c2, c1]); // Eq Nat c2_plus_c1 k_sum
+            let widen_c2 =
+                nat_rewrite_prop(d, c2_plus_c1, k_sum, comm_c2c1, widen_c2_raw, &|d, t| {
+                    let dsum = div_succ_at(d, p, t, n);
+                    rle(d, rat, bound_c2, dsum)
+                });
+            // widen_c2 : Rat.le bound_c2 bound_k
+            let upper_final = d.lemma(
+                rat.le_trans,
+                &[target_diff, bound_c2, bound_k, step_upper_final, widen_c2],
+            );
+            // upper_final : Rat.le target_diff bound_k
+
+            let lower_ty = rle(d, rat, neg_bound_k, target_diff);
+            let upper_ty = rle(d, rat, target_diff, bound_k);
+            let within_proof = and_intro(d, p, lower_ty, upper_ty, lower_final, upper_final);
+
+            let per_n = d.lam_fv(n_fv, nat, within_proof);
+            let converges_pred = converges_predicate(d, p, b, l);
+            let witnessed = exists_intro(d, p, nat, converges_pred, k_sum, per_n);
+
+            let with_hp2 = d.lam_fv(hp2_fv, hp2_ty, witnessed);
+            d.lam_fv(k2_fv, nat, with_hp2)
+        };
+        let inner_elim = exists_elim(d, p, nat, inner_predicate, target, h2, inner_minor);
+
+        let with_hp1 = d.lam_fv(hp1_fv, hp1_ty, inner_elim);
+        d.lam_fv(k1_fv, nat, with_hp1)
+    };
+    let proof_body = exists_elim(d, p, nat, outer_predicate, target, h1, outer_minor);
+
+    let value = {
+        let with_h2 = d.lam_fv(h2_fv, converges_cl, proof_body);
+        let with_h1 = d.lam_fv(h1_fv, converges_al, with_h2);
+        let with_hbc = d.lam_fv(hbc_fv, hbc_ty, with_h1);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_hbc);
+        let with_l = d.lam_fv(l_fv, carrier, with_hab);
+        let with_c = d.lam_fv(c_fv, seq_ty, with_l);
+        let with_b = d.lam_fv(b_fv, seq_ty, with_c);
+        d.lam_fv(a_fv, seq_ty, with_b)
+    };
+    let ty = {
+        let after_h2 = d.arrow(converges_cl, target);
+        let after_h1 = d.arrow(converges_al, after_h2);
+        let after_hbc = d.arrow(hbc_ty, after_h1);
+        let after_hab = d.arrow(hab_ty, after_hbc);
+        let with_l = d.pi_fv(l_fv, carrier, after_hab);
+        let with_c = d.pi_fv(c_fv, seq_ty, with_l);
+        let with_b = d.pi_fv(b_fv, seq_ty, with_c);
+        d.pi_fv(a_fv, seq_ty, with_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.converges_squeeze,
         uparams: vec![],
         ty,
         value,

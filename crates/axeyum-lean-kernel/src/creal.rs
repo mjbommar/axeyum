@@ -815,6 +815,18 @@ pub struct CRealPrelude {
     /// There is no `CReal.sub` operation in this development, so the
     /// difference is spelled `add _ (neg _)` throughout, honestly.
     pub converges_sub: NameId,
+    /// `CReal.converges_squeeze : ∀ a b c L, (∀ n, le (a n) (b n)) →
+    /// (∀ n, le (b n) (c n)) → Converges a L → Converges c L → Converges b L`.
+    ///
+    /// The squeeze (sandwich) theorem. Unlike [`Self::converges_add`], no
+    /// shift bridge is needed: [`Self::le`] is `∀ n, seq x n − seq y n ≤
+    /// 2/(n+1)`, the *same* canonical-sample idiom [`Self::converges`] itself
+    /// uses, so `(hab n) n` and `(hbc n) n` land directly at the same index
+    /// `n` the two `Converges` hypotheses are read at — no third index, no
+    /// Archimedean lemma, only `Rat.add_le_add`/`Rat.neg_le_neg` telescoping
+    /// and one `Rat.natDivSucc_le_add_left` widening per side to a common
+    /// witness `K := (2+K_a)+(2+K_c)`.
+    pub converges_squeeze: NameId,
 
     // --- boundedness of sequences, and sequential continuity (phase R10) ----
     /// `CReal.Bounded (g : Nat → CReal) : Prop :=
@@ -1651,6 +1663,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_add: kernel.name_str(creal, "converges_add"),
         converges_neg: kernel.name_str(creal, "converges_neg"),
         converges_sub: kernel.name_str(creal, "converges_sub"),
+        converges_squeeze: kernel.name_str(creal, "converges_squeeze"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
         converges_mul: kernel.name_str(creal, "converges_mul"),
