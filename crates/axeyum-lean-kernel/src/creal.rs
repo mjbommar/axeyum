@@ -943,6 +943,14 @@ pub struct CRealPrelude {
     /// (fun _ => c) a b` -- any modulus works (`fun _ => 0` is used); `c - c` is
     /// `Equiv`-zero, so the conclusion holds independently of the hypothesis.
     pub uniformly_continuous_const: NameId,
+    /// `CReal.uniformly_continuous_add : forall F G a b, UniformlyContinuousOn F
+    /// a b -> UniformlyContinuousOn G a b -> UniformlyContinuousOn (fun r => add
+    /// (F r) (G r)) a b` -- combined modulus `mF(2n+1) + mG(2n+1)`, the same
+    /// shape `creal/derivative.rs`'s `hasDerivative_add` uses for its own
+    /// combined modulus, unblocked the same way by
+    /// [`Rat.natDivSucc_antitone`](crate::RatPrelude::nat_div_succ_antitone).
+    /// See `creal/uniform_continuity.rs`.
+    pub uniformly_continuous_add: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -1725,6 +1733,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uc_spec: kernel.name_str(uniformly_continuous_on, "spec"),
         uniformly_continuous_id: kernel.name_str(creal, "uniformly_continuous_id"),
         uniformly_continuous_const: kernel.name_str(creal, "uniformly_continuous_const"),
+        uniformly_continuous_add: kernel.name_str(creal, "uniformly_continuous_add"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
