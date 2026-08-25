@@ -147,5 +147,75 @@ class GrepDashQCheckerCommandTests(unittest.TestCase):
                 self.assertEqual(self.errors_for_checker_command(ok_cmd), [])
 
 
+# In POSIX ERE (and BRE), `\t` is NOT a tab -- GNU grep drops the backslash
+# and matches a literal 't'. Measured with `/usr/bin/grep` (GNU grep 3.12):
+# `printf 'a\tb\n' | grep -cE 'a\tb'` -> 0 (a real tab does not match this
+# pattern) and `printf 'atb\n' | grep -cE 'a\tb'` -> 1 (it matches the
+# literal 't' instead). 54 facts / 68 checker_commands carried this before
+# 2026-08-25's rewrite to `[[:space:]]`, all silently reporting a PRESENT
+# theorem as ABSENT under a script or CI run.
+GREP_T_FACT = ROOT / "artifacts" / "facts" / "F-cpoint-cauchy-schwarz.json"
+
+
+class GrepBackslashTCheckerCommandTests(unittest.TestCase):
+    """`\\t` inside a grep -E pattern is not a tab; the fix is `[[:space:]]`
+    (or, for a bracket expression `[^\\t]`, `[^[:space:]]`)."""
+
+    def setUp(self) -> None:
+        self.fact = json.loads(GREP_T_FACT.read_text(encoding="utf-8"))
+
+    def errors_for_checker_command(self, cmd: str, index: int = 0) -> list[str]:
+        fact = copy.deepcopy(self.fact)
+        fact["evidence"][index]["checker_command"] = cmd
+        # `F-cpoint-cauchy-schwarz.json` (chosen because it carries BOTH the
+        # standalone-`\t` and bracket-`[^\t]` shapes) has non-empty
+        # `depends_on`; include those ids so a dependency-DAG error doesn't
+        # drown out the guard this test targets.
+        known_ids = {fact["id"], *fact.get("depends_on", [])}
+        return MODULE.validate_one(GREP_T_FACT, fact, known_ids)
+
+    def test_committed_checker_commands_use_bracket_space_and_are_accepted(self) -> None:
+        # Both evidence rows on this fact were rewritten 2026-08-25: one uses
+        # the standalone `\t` -> `[[:space:]]` form, the other the bracket
+        # form `[^\t]` -> `[^[:space:]]`. Neither may trip the guard.
+        for index in range(len(self.fact["evidence"])):
+            with self.subTest(index=index):
+                cmd = self.fact["evidence"][index]["checker_command"]
+                self.assertEqual(self.errors_for_checker_command(cmd, index=index), [])
+
+    def test_grep_backslash_t_is_rejected(self) -> None:
+        # Deliberately ONE assertion (see the analogous note on
+        # test_grep_dash_q_pipeline_consumer_is_rejected): the mutation
+        # harness counts each subTest failure as a separate death, and this
+        # suite's contract is that deleting the guard kills exactly one test.
+        errors = self.errors_for_checker_command("cmd 2>/dev/null | grep -cE '^Name\\t'")
+        self.assertTrue(
+            any("\\t" in e and "ERE" in e and "tab" in e for e in errors),
+            f"expected a grep \\t rejection, got {errors!r}",
+        )
+
+    def test_grep_backslash_t_helper_detects_both_shapes(self) -> None:
+        # Exercises `checker_command_uses_grep_backslash_t` directly, so this
+        # test's outcome is independent of the `validate_one` call site and
+        # of the `fact-checker-grep-backslash-t` mutation control above.
+        for bad_cmd in (
+            "cmd 2>/dev/null | grep -cE '^Name\\t'",
+            "cmd 2>/dev/null | grep -cE '^a\\tb\\t[^\\t]*\\t0\\t$'",
+        ):
+            with self.subTest(bad_cmd=bad_cmd):
+                self.assertTrue(
+                    MODULE.checker_command_uses_grep_backslash_t(bad_cmd),
+                    f"expected {bad_cmd!r} to be detected as grep \\t",
+                )
+        for ok_cmd in (
+            "cmd 2>/dev/null | grep -cE '^Name[[:space:]]'",
+            "cmd 2>/dev/null | grep -cE '^a[[:space:]]b[[:space:]][^[:space:]]*[[:space:]]0[[:space:]]$'",
+            "cmd 2>/dev/null | grep -c 'plain text'",
+            "cmd 2>/dev/null | grep -cE '^Name'\"$(printf '\\t')\"'$'",
+        ):
+            with self.subTest(ok_cmd=ok_cmd):
+                self.assertFalse(MODULE.checker_command_uses_grep_backslash_t(ok_cmd))
+
+
 if __name__ == "__main__":
     unittest.main()
