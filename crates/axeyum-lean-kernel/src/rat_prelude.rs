@@ -65,6 +65,7 @@ mod laws;
 mod matrix;
 mod model;
 pub(crate) mod ops;
+mod polynomial;
 mod probability;
 mod product;
 mod scaling;
@@ -846,6 +847,32 @@ pub struct RatPrelude {
     /// [`Self::sum_range_congr`]'s UNRESTRICTED hypothesis cannot be used).
     pub sum_range_eq_zero_of_lt: NameId,
 
+    // --- polynomials (rat_prelude::polynomial) ------------------------------
+    /// `Rat.pow : Rat → Nat → Rat`, `Nat.rec` on the exponent: `pow a zero ≡
+    /// one`, `pow a (succ j) ≡ mul (pow a j) a` — mirroring `Int.pow`
+    /// exactly, the new factor on the RIGHT.
+    pub pow: NameId,
+    /// `Rat.pow_zero : ∀ a, pow a zero = one` — `Eq.refl`.
+    pub pow_zero: NameId,
+    /// `Rat.pow_succ : ∀ a m, pow a (succ m) = mul (pow a m) a` — `Eq.refl`.
+    pub pow_succ: NameId,
+    /// `Rat.polyEval : (Nat → Rat) → Nat → Rat → Rat`, `polyEval c n x :=
+    /// sumRange (fun i => c i * x^i) n` — a polynomial given as a
+    /// coefficient function and an explicit degree bound, evaluated at a
+    /// point.
+    pub poly_eval: NameId,
+    /// `Rat.polyEval_zero : ∀ c x, polyEval c zero x = zero` — `Eq.refl`.
+    pub poly_eval_zero: NameId,
+    /// `Rat.polyEval_succ : ∀ c n x, polyEval c (succ n) x = polyEval c n x +
+    /// c n * x^n` — `Eq.refl`.
+    pub poly_eval_succ: NameId,
+    /// `Rat.polyEval_add : ∀ c g n x, polyEval (fun i => c i + g i) n x =
+    /// polyEval c n x + polyEval g n x` — evaluation is additive.
+    pub poly_eval_add: NameId,
+    /// `Rat.polyEval_smul : ∀ a c n x, polyEval (fun i => a * c i) n x = a *
+    /// polyEval c n x` — a scalar distributes through evaluation.
+    pub poly_eval_smul: NameId,
+
     // --- finite probability distributions (rat_prelude::probability) -------
     /// `Rat.IsDistribution p n := (∀ k, Lt k n → le zero (p k)) ∧ sumRange p
     /// n = one`.
@@ -1498,6 +1525,14 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sum_range_nonneg: child(kernel, "sumRange_nonneg"),
         sum_range_congr_lt: child(kernel, "sumRange_congr_lt"),
         sum_range_eq_zero_of_lt: child(kernel, "sumRange_eq_zero_of_lt"),
+        pow: child(kernel, "pow"),
+        pow_zero: child(kernel, "pow_zero"),
+        pow_succ: child(kernel, "pow_succ"),
+        poly_eval: child(kernel, "polyEval"),
+        poly_eval_zero: child(kernel, "polyEval_zero"),
+        poly_eval_succ: child(kernel, "polyEval_succ"),
+        poly_eval_add: child(kernel, "polyEval_add"),
+        poly_eval_smul: child(kernel, "polyEval_smul"),
         is_distribution: child(kernel, "IsDistribution"),
         prob_le_one: child(kernel, "prob_le_one"),
         prob_complement: child(kernel, "prob_complement"),
@@ -1612,6 +1647,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         decide::declare_decide(&mut d, prelude)?;
         decidable::declare_decidable(&mut d, prelude)?;
         sum::declare_sum(&mut d, prelude)?;
+        polynomial::declare_polynomial(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
