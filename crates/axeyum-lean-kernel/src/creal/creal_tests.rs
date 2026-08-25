@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 229] = [
+    let expected: [(&str, crate::NameId, &str); 233] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -507,6 +507,21 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // itself is not built yet -- see that file's module documentation.
         ("CReal.expTerm", p.exp_term, "def"),
         ("CReal.expSeriesPartial", p.exp_series_partial, "def"),
+        // `CReal.monotone_of_nonneg_deriv` and its three supporting lemmas
+        // (`creal/monotone.rs`), registered from the pipeline AFTER
+        // `integral::declare_integral` (they reuse `CReal.ofNat_le`).
+        ("CReal.sumRange_const", p.sum_range_const, "theorem"),
+        ("CReal.mesh_count_width", p.mesh_count_width, "theorem"),
+        (
+            "CReal.subdivisionPoint_in_bounds",
+            p.subdivision_point_in_bounds,
+            "theorem",
+        ),
+        (
+            "CReal.monotone_of_nonneg_deriv",
+            p.monotone_of_nonneg_deriv,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -4543,5 +4558,93 @@ fn geometric_series_at_one_half_reduces_to_the_expected_partial_sums() {
         "sumRange (pow 1/2) 3 must NOT reduce to 3/2 -- if it does, this \
          check cannot fail and something is wrong with the harness, not \
          just the theorem"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.monotone_of_nonneg_deriv`:
+/// the identity function on `[0, 1]`, whose derivative is the constant `one`
+/// (nonnegative everywhere), applied at `x := zero`, `y := one`. A statement
+/// with `x` and `y` transposed type-checks just as readily and is the
+/// reverse, false theorem — this pins the ASYMMETRIC instance, and checks
+/// the conclusion is exactly `le zero one` (`F` is the identity), not merely
+/// SOME `CReal.le` statement.
+#[test]
+fn monotone_of_nonneg_deriv_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    // identity := fun r => r; const_one := fun _ => one.
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    let le_zero_one = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+
+    // hderiv : ∀ z, le zero z -> le z one -> le zero (const_one z), i.e.
+    // le zero one regardless of z (const_one z beta-reduces to one).
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, le_zero_one);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy = le_zero_one;
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.monotone_of_nonneg_deriv,
+        &[
+            identity, const_one, zero_c, one_c, hf, hderiv, zero_c, one_c, hax, hxy, hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("monotone_of_nonneg_deriv refused at the identity on [0,1]: {error:?}")
+    });
+
+    // `F := fun r => r` is not beta-reduced by `render_lean`, so the
+    // conclusion prints as `le ((fun r => r) zero) ((fun r => r) one)`
+    // rather than `le zero one` — genuinely the same statement (`F x`/`F y`
+    // beta-reduce to `x`/`y`), just not textually collapsed. Applying
+    // `identity` at `zero_c`/`one_c` directly the same way builds the exact
+    // expected type, so the two `render_lean` outputs are compared verbatim
+    // — the pin discipline this file uses throughout — rather than loosely.
+    let expected_fx = d.apply(identity, &[zero_c]);
+    let expected_fy = d.apply(identity, &[one_c]);
+    let expected_ty = d.const_app(p.le, &[expected_fx, expected_fy]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `le (F zero) (F one)` (F is the identity), not some other CReal.le statement"
+    );
+    assert!(
+        rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
+        "the endpoints must be zero and one, not some other pair: {rendered}"
     );
 }

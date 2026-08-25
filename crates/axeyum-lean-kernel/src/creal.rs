@@ -1216,8 +1216,8 @@ pub struct CRealPrelude {
     /// pieces each bounded below telescope to a lower bound on the total
     /// difference, `k` itself left symbolic (composed from
     /// [`Self::sum_range_le`] and [`Self::sum_range_telescope`] via
-    /// [`Self::le_congr`], not a new estimate). The intended first consumer
-    /// is `CReal.monotone_of_nonneg_deriv` (not yet landed).
+    /// [`Self::le_congr`], not a new estimate). The first consumer is
+    /// [`Self::monotone_of_nonneg_deriv`].
     pub sum_range_telescope_ge: NameId,
     /// `CReal.sumRange_telescope_le : ∀ f bound k,
     /// (∀ i, Nat.lt i k → le (add (f (Nat.succ i)) (neg (f i))) bound) →
@@ -2023,6 +2023,44 @@ pub struct CRealPrelude {
     /// `CReal.expSeriesPartial : Nat → CReal := CReal.sumRange CReal.expTerm`
     /// — the `k`-th partial sum `Σ_{n<k} 1/n!`. See `creal/exponential.rs`.
     pub exp_series_partial: NameId,
+    /// `CReal.sumRange_const : ∀ w m,
+    /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
+    /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
+    /// exactly `(succ m)` copies of it, piece count left symbolic. Generalizes
+    /// `integral.rs`'s private `riemann_sum_const_core` (which only ever
+    /// multiplies by a fixed `ofNat n` already produced by that file's own
+    /// `mesh_inverse_identity`) into a standalone, reusable fact:
+    /// `monotone_of_nonneg_deriv` needs it to fold a telescoped subdivision
+    /// sum down to a single product before the Archimedean closing step.
+    pub sum_range_const: NameId,
+    /// `CReal.mesh_count_width : ∀ width m,
+    /// Equiv (mul (ofNat (Nat.succ m)) (mul width (ofRat (natDivSucc 1
+    /// m)))) width` (`creal/monotone.rs`) — dividing an interval of length
+    /// `width` into `succ m` equal pieces and multiplying back by the piece
+    /// count recovers `width` exactly, for every `m`. Generalizes
+    /// `integral.rs`'s private `mesh_times_count_eq_width` (already general
+    /// in `width`, not tied to that file's own Riemann-sum `a`/`b`) into a
+    /// standalone, reusable fact.
+    pub mesh_count_width: NameId,
+    /// `CReal.subdivisionPoint_in_bounds : ∀ a b m i, le a b → Nat.le i
+    /// (Nat.succ m) → And (le a (add a (mul (ofNat i) step))) (le (add a
+    /// (mul (ofNat i) step)) b)`, `step := mul (add b (neg a)) (ofRat
+    /// (natDivSucc 1 m))` (`creal/monotone.rs`) — a trivial generalization of
+    /// `integral.rs`'s `riemannSum_sample_in_bounds` from `Nat.lt` to
+    /// `Nat.le`, so it also reaches the LAST subdivision point (`i = Nat.succ
+    /// m`), which that theorem does not: its own hypothesis is already
+    /// `Nat.le`-shaped internally, so no `Nat.lt → Nat.le` conversion is
+    /// needed here at all.
+    pub subdivision_point_in_bounds: NameId,
+    /// `CReal.monotone_of_nonneg_deriv : ∀ F F' a b, HasDerivativeOn F F' a
+    /// b → (∀ z, le a z → le z b → le zero (F' z)) → ∀ x y, le a x → le x y →
+    /// le y b → le (F x) (F y)` (`creal/monotone.rs`) — a nonnegative
+    /// derivative on `[a, b]` makes `F` monotone there. See that module's
+    /// documentation for the subdivision construction and why
+    /// [`Self::has_derivative_close_of_equiv`] is needed at BOTH
+    /// interpolation endpoints, not only the last one the original two-lane
+    /// handoff plan named.
+    pub monotone_of_nonneg_deriv: NameId,
 }
 
 impl CRealPrelude {
@@ -2319,6 +2357,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_close_of_equiv: kernel.name_str(creal, "hasDerivative_closeOfEquiv"),
         exp_term: kernel.name_str(creal, "expTerm"),
         exp_series_partial: kernel.name_str(creal, "expSeriesPartial"),
+        sum_range_const: kernel.name_str(creal, "sumRange_const"),
+        mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
+        subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
+        monotone_of_nonneg_deriv: kernel.name_str(creal, "monotone_of_nonneg_deriv"),
     }
 }
 
@@ -2410,6 +2452,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // nothing from `power`, so it can land right after `series` rather
         // than waiting for the `power`/`hasDerivative_pow*` tail below.
         integral::declare_integral(&mut d, prelude)?;
+        // `monotone_of_nonneg_deriv` and its two supporting lemmas
+        // (`sumRange_const`, `mesh_count_width`, `subdivisionPoint_in_bounds`)
+        // reuse `CReal.ofNat_le` (`integral::declare_integral`, just above)
+        // and `CReal.archimedean` (`archimedean::declare_archimedean`, well
+        // above), so this call cannot move earlier than either — in
+        // particular it cannot join `monotone::declare_monotone`'s own call
+        // site, which runs before `integral` for exactly that reason.
+        monotone::declare_monotone_of_nonneg_deriv_all(&mut d, prelude)?;
         power::declare_power(&mut d, prelude)?;
         // `hasDerivative_pow_two` mentions `CReal.pow`, which `power.rs`
         // declares. It cannot live inside `derivative::declare_derivative`,
