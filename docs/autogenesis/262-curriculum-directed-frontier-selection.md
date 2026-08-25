@@ -199,6 +199,52 @@ failing to prove it, which is the outcome this document should want from a
 target it names: **a node's frontier is characterised as much by what is false
 there as by what is proved.**
 
+## Third amendment, 2026-08-25 — the refusal in the Result section is no longer true
+
+This document opens by quoting
+
+```
+ready total: 141   admissible: 0   selected: None
+outcome: refused-no-admissible-candidate
+```
+
+as its central finding. That measurement has changed, and the sentence it was
+evidence for — *"the registry covers 30 facts, all of them already settled"* —
+was the actionable half all along:
+
+```
+ledger: 435 facts   entries: 196 (open=191)
+selection.outcome: "selected"
+selection.admissible_fact_ids:
+  F:ml430-nat-modeq-refl-d870c8f5
+  F:ml430-nat-modeq-symm-0a3d4d18
+  F:ml430-nat-modeq-trans-ef9d1c46
+```
+
+One registered operation did it — `authoritative-mathlib-nat-modeq-family-v1`,
+naming **three open, dependency-ready facts**. What makes it a producer rather
+than a longer dispatch table is a real shared-shape analysis:
+`producers::modeq_family` never mentions `Int`, `Nat`, `ModEq` or `%`. It peels
+Pi binders into hypotheses and closes an `Eq`/`Iff`-headed goal by
+refl/symm/trans reconstructed from `Eq.rec`, and both `Int.ModEq` and
+`Nat.ModEq` unfold transparently to `a % n = b % n`. Equally important, the
+registration says which siblings it does **not** cover — `add-left`, `neg`,
+`dvd-iff`, `of-mul-*` need congruence reasoning the producer lacks — because a
+list that overclaims is the dispatch-table defect with extra entries.
+
+**This does not mean the loop closes.** Selection is the first arrow, not the
+last: the operation says a fact is *dispatchable*, and the registration moved no
+`epistemic_status` — `open` stayed at 191, and `ledger_writes` is 0. Whether the
+producer's output is admissible as `proved` is a separate question and is being
+asked separately.
+
+**What the counts in this document should be read as, going forward.** The
+ready-total is a property of the LEDGER and grows as facts are registered
+(141 → 196 as the ledger went 362 → 435). The admissible count is a property of
+the REGISTRY. They move for unrelated reasons, and conflating them is what made
+"141 ready, 0 admissible" read as a frontier problem when it was a registry
+problem.
+
 ## Boundary
 
 This document **selects nothing and authorizes nothing.** It adds no operation
