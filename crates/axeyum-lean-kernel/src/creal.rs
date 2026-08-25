@@ -1432,6 +1432,23 @@ pub struct CRealPrelude {
     /// ring algebra, just `hasDerivative_add F (neg∘G) hf (hasDerivative_neg
     /// G hg)`.
     pub has_derivative_sub: NameId,
+    /// `CReal.hasDerivative_mul : ∀ F F' G G' a b, HasDerivativeOn F F' a b →
+    /// HasDerivativeOn G G' a b → UniformlyContinuousOn F a b → ∀ (k1 k2 k3 :
+    /// Nat), (∀ z, le a z → le z b → le (abs (F z)) (ofRat (natDivSucc
+    /// (succ k1) 0))) → (∀ z, le a z → le z b → le (abs (G z)) (ofRat
+    /// (natDivSucc (succ k2) 0))) → (∀ z, le a z → le z b → le (abs (G' z))
+    /// (ofRat (natDivSucc (succ k3) 0))) → HasDerivativeOn (fun r => mul (F
+    /// r) (G r)) (fun x => add (mul (F' x) (G x)) (mul (F x) (G' x))) a b` --
+    /// **the product rule**, closed by three EXPLICIT magnitude-bound
+    /// hypotheses (on `F`, `G` and `G'`, none derived) plus uniform
+    /// continuity of `F`, unblocked by a genuinely three-way accuracy split
+    /// (`Rat.natDivSucc_add` twice plus `Rat.natDivSucc_scale` at `c := 2`,
+    /// `hasDerivative_add`'s two-way `natDivSucc_halve` fuse one step
+    /// deeper) and a three-source combined modulus (`hasDerivative_add`'s
+    /// own `Nat.add`/antitonicity combination, extended to three sources).
+    /// See `creal/derivative.rs`'s module documentation for the corrected,
+    /// numerically re-verified error decomposition this closes.
+    pub has_derivative_mul: NameId,
 }
 
 impl CRealPrelude {
@@ -1682,6 +1699,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         abs_mul_le_of_bounds: kernel.name_str(creal, "abs_mul_le_of_bounds"),
         has_derivative_smul: kernel.name_str(creal, "hasDerivative_smul"),
         has_derivative_sub: kernel.name_str(creal, "hasDerivative_sub"),
+        has_derivative_mul: kernel.name_str(creal, "hasDerivative_mul"),
     }
 }
 

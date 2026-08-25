@@ -181,7 +181,42 @@
 //!    single `hd_spec` call the way terms 1 and 2 do.
 //!
 //! Sized similarly to (or larger than) the sum rule, not a small addition to
-//! `smul` — left open for a dedicated slice.
+//! `smul`.
+//!
+//! **The equal three-way accuracy split needs no new `rat_prelude` lemma —
+//! it falls straight out of `Rat.natDivSucc_scale` one step past
+//! `natDivSucc_halve`.** `natDivSucc_halve` is `natDivSucc_scale`'s `c := 1`
+//! instance; the equal three-way split is the SAME identity at `c := 2`:
+//!
+//! ```text
+//! natDivSucc 1 (3e+2) + natDivSucc 1 (3e+2) + natDivSucc 1 (3e+2)
+//!   = natDivSucc 3 (3e+2)          -- natDivSucc_add, applied twice
+//!   = natDivSucc 1 e               -- natDivSucc_scale, c := 2, m := e
+//! ```
+//!
+//! `rescale_index(k, m) := (k+1)*m + k` is `natDivSucc_scale`'s own index
+//! shape, reused at `k := 2` to build `3e+2` from `e` AND again at `k :=
+//! k1/k2/k3` to rescale each of the product rule's three terms against its
+//! own magnitude bound (`fold_index0_first`/`fold_index0_second`,
+//! `smul`'s single rescale generalised to three independent bounds). This
+//! is the reusable part of this slice regardless of whether the product
+//! rule itself lands — it generalises past products of two functions to
+//! any fixed-arity equal split, and needs nothing this prelude does not
+//! already have.
+//!
+//! **`hasDerivative_mul` itself: built, `cargo check`/`clippy` clean, kernel
+//! status unresolved as of this commit.** A first `Kernel::add_declaration`
+//! attempt was rejected in ~29s (an ordinary type error, not a large-term
+//! mismatch) on an argument-order bug: four `esymm` calls in the "combine
+//! the three terms" section (the ones lifting a raw `Rat`-level `add_assoc`
+//! to its reverse direction) had their explicit `(a, b)` arguments swapped
+//! relative to the underlying proof's own type, so `esymm` built `Equiv b a`
+//! from a hypothesis actually typed `Equiv a b` read backwards — caught and
+//! fixed by re-deriving each `add_assoc` call's real type by hand and
+//! checking it against the adjacent comment, not by re-running the kernel.
+//! **Not re-verified against the kernel after the fix**; the next session
+//! should run `cargo test -p axeyum-lean-kernel --lib creal` before trusting
+//! this further.
 
 #![allow(
     clippy::doc_markdown,
@@ -219,7 +254,8 @@ pub(super) fn declare_derivative(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     declare_has_derivative_add(d, p)?;
     declare_abs_mul_le_of_bounds(d, p)?;
     declare_has_derivative_smul(d, p)?;
-    declare_has_derivative_sub(d, p)
+    declare_has_derivative_sub(d, p)?;
+    declare_has_derivative_mul(d, p)
 }
 
 // --- shared term builders ----------------------------------------------------
@@ -3637,6 +3673,1678 @@ fn declare_has_derivative_sub(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.has_derivative_sub,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- witness: `mul` (the product rule) ----------------------------------------
+//
+// See the module documentation's corrected, numerically re-verified error
+// decomposition:
+//
+//   F(y)G(y) - F(x)G(x) - (F'(x)G(x) + F(x)G'(x))(y-x)
+//     = F(y)*[G(y) - G(x) - G'(x)(y-x)]        -- term1
+//     + G(x)*[F(y) - F(x) - F'(x)(y-x)]        -- term2
+//     + (F(y) - F(x))*G'(x)*(y-x)              -- term3
+//
+// closed by three EXPLICIT hypotheses (boundedness of F, G, G' on [a,b], each
+// as `|h z| <= (k+1)/(0+1)` for a universally quantified `Nat` `k`) plus
+// uniform continuity of `F` on `[a,b]` -- none of these are derived, matching
+// this slice's brief. The accuracy budget splits the target `1/(e+1)` into
+// THREE EQUAL shares `1/(3e+3)` -- `rescale_index` below is
+// `Rat.natDivSucc_scale`'s own index shape `(c+1)*m+c`, used BOTH to build
+// the equal three-way split itself (`c := 2`, giving `3e+2`) and, once more,
+// to rescale each term's OWN accuracy against its own magnitude bound
+// (`c := k1/k2/k3`), exactly `hasDerivative_smul`'s single rescale, three
+// times over with three independent `Nat` bounds.
+
+/// `(k+1)*m + k` -- the index shape `Rat.natDivSucc_scale` recognises
+/// (`hasDerivative_smul`'s own `e' := (k+1)*e + k`, generalised to an
+/// arbitrary target `m` rather than always the outer accuracy `e`). Used
+/// here twice over: once at `k := 2` to build the equal three-way split
+/// `3e+2` from the outer accuracy `e`, and again at `k := k1/k2/k3` to
+/// rescale each term's own accuracy against its own magnitude bound, reading
+/// that rescaled accuracy back down to `1/(3e+3)` (`nat_div_succ_scale`
+/// undoes exactly this shape).
+fn rescale_index(d: &mut IntDev<'_>, k: ExprId, m: ExprId) -> ExprId {
+    let succ_k = d.succ(k);
+    let mul_km = d.mul(succ_k, m);
+    d.add(mul_km, k)
+}
+
+/// `ofRat (natDivSucc (Nat.succ k) 0)` -- the "index 0, numerator `k+1`"
+/// magnitude-bound shape `hasDerivative_smul`'s own scalar hypothesis uses,
+/// reused here for three separate hypotheses (`F`, `G` and `G'`, each
+/// bounded by its own `Nat` on `[a,b]`).
+fn mag_bound(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId) -> ExprId {
+    let succ_k = d.succ(k);
+    let zero_idx = d.num(0);
+    let r = div_succ_expr(d, p, succ_k, zero_idx);
+    d.const_app(p.of_rat, &[r])
+}
+
+/// `forall z, le a z -> le z b -> le (abs (h z)) (mag_bound k)` -- "`h` is
+/// bounded by `k+1` on `[a,b]`", the hypothesis shape shared by the product
+/// rule's three magnitude bounds (on `F`, `G` and `G'`).
+fn bounded_on_ty(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    h: ExprId,
+    a: ExprId,
+    b: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let carrier = creal_ty(d, p);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let range_az = d.const_app(p.le, &[a, z]);
+    let range_zb = d.const_app(p.le, &[z, b]);
+    let hz = d.apply(h, &[z]);
+    let bound = mag_bound(d, p, k);
+    let concl = within_real(d, p, hz, bound);
+    let with_zb = d.arrow(range_zb, concl);
+    let with_az = d.arrow(range_az, with_zb);
+    d.pi_fv(z_fv, carrier, with_az)
+}
+
+/// From `mul (ofRat (natDivSucc (succ k) 0)) (ofRat (natDivSucc 1 e_prime))`
+/// (the "index-0 magnitude bound comes FIRST" product, `hasDerivative_smul`'s
+/// own shape), derive `Equiv` to `ofRat (natDivSucc 1 m)`, where `e_prime`
+/// MUST be built as `rescale_index(k, m)` (`Rat.natDivSucc_scale`'s own
+/// index) for the final fold to typecheck. Returns `(big_expr, small_expr,
+/// ofr_out, proof)`.
+fn fold_index0_first(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k: ExprId,
+    m: ExprId,
+    e_prime: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let succ_k = d.succ(k);
+    let zero_idx = d.num(0);
+    let bound_rat = div_succ_expr(d, p, succ_k, zero_idx); // natDivSucc (succ k) 0
+    let big_expr = d.const_app(p.of_rat, &[bound_rat]);
+
+    let r_prime = div_succ(d, p, 1, e_prime); // natDivSucc 1 e_prime
+    let small_expr = d.const_app(p.of_rat, &[r_prime]);
+
+    let one_nat = d.num(1);
+    let mul_succk_1 = d.mul(succ_k, one_nat);
+    let succ_k_e_prime = div_succ_expr(d, p, succ_k, e_prime);
+    let out_bound_rat = div_succ(d, p, 1, m);
+
+    let eq_mul = d.lemma(p.rat.nat_div_succ_mul, &[succ_k, one_nat, e_prime]);
+    let mul_one_eq = d.lemma(p.rat.int.nat.mul_one, &[succ_k]);
+    let eq_fold = nat_eq_to_rat(d, mul_succk_1, succ_k, mul_one_eq, &|d, x| {
+        div_succ_expr(d, p, x, e_prime)
+    });
+    let eq_scale = d.lemma(p.rat.nat_div_succ_scale, &[k, m]);
+
+    let of_rat_mul_proof = d.lemma(p.of_rat_mul, &[bound_rat, r_prime]);
+    let mul_bb_ofre = cmul(d, p, big_expr, small_expr);
+    let rat_prod = {
+        let f_ap = d.int().rat_mul;
+        d.const_app(f_ap, &[bound_rat, r_prime])
+    };
+    let mul_succk1_e_prime = div_succ_expr(d, p, mul_succk_1, e_prime);
+
+    let motive = |d: &mut IntDev<'_>, t: ExprId| {
+        let oft = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[mul_bb_ofre, oft])
+    };
+    let step_a = rat_eq_rewrite(
+        d,
+        rat_prod,
+        mul_succk1_e_prime,
+        eq_mul,
+        of_rat_mul_proof,
+        &motive,
+    );
+    let step_b = rat_eq_rewrite(
+        d,
+        mul_succk1_e_prime,
+        succ_k_e_prime,
+        eq_fold,
+        step_a,
+        &motive,
+    );
+    let step_c = rat_eq_rewrite(d, succ_k_e_prime, out_bound_rat, eq_scale, step_b, &motive);
+    let ofr_out = d.const_app(p.of_rat, &[out_bound_rat]);
+
+    (big_expr, small_expr, ofr_out, step_c)
+}
+
+/// The mirror of [`fold_index0_first`] with the two factors SWAPPED: from
+/// `mul (ofRat (natDivSucc 1 e_prime)) (ofRat (natDivSucc (succ k) 0))`
+/// (index-0 magnitude bound comes SECOND, term3's own shape -- continuity's
+/// bound on `|F(y)-F(x)|` has no natural "index 0" companion to put first),
+/// derive `Equiv` to `ofRat (natDivSucc 1 m)` via one extra `Rat.mul_comm`
+/// step ahead of [`fold_index0_first`]'s own fold. Returns `(small_expr,
+/// big_expr, ofr_out, proof)`.
+fn fold_index0_second(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k: ExprId,
+    m: ExprId,
+    e_prime: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let r_prime = div_succ(d, p, 1, e_prime);
+    let small_expr = d.const_app(p.of_rat, &[r_prime]);
+    let succ_k = d.succ(k);
+    let zero_idx = d.num(0);
+    let bound_rat = div_succ_expr(d, p, succ_k, zero_idx);
+    let big_expr = d.const_app(p.of_rat, &[bound_rat]);
+
+    let mul_small_big = cmul(d, p, small_expr, big_expr);
+
+    let of_rat_mul_proof = d.lemma(p.of_rat_mul, &[r_prime, bound_rat]);
+    // Equiv (mul small_expr big_expr) (ofRat (Rat.mul r_prime bound_rat))
+    let rat_mul_int = d.int().rat_mul;
+    let rat_prod_rb = d.const_app(rat_mul_int, &[r_prime, bound_rat]);
+    let rat_prod_br = d.const_app(rat_mul_int, &[bound_rat, r_prime]);
+    let comm_eq = d.lemma(p.rat.mul_comm, &[r_prime, bound_rat]);
+    // Eq (Rat.mul r_prime bound_rat) (Rat.mul bound_rat r_prime)
+
+    let motive = |d: &mut IntDev<'_>, t: ExprId| {
+        let oft = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[mul_small_big, oft])
+    };
+    let step_a = rat_eq_rewrite(
+        d,
+        rat_prod_rb,
+        rat_prod_br,
+        comm_eq,
+        of_rat_mul_proof,
+        &motive,
+    );
+    // Equiv mul_small_big (ofRat rat_prod_br)
+
+    let one_nat = d.num(1);
+    let mul_succk_1 = d.mul(succ_k, one_nat);
+    let succ_k_e_prime = div_succ_expr(d, p, succ_k, e_prime);
+    let out_bound_rat = div_succ(d, p, 1, m);
+
+    let eq_mul = d.lemma(p.rat.nat_div_succ_mul, &[succ_k, one_nat, e_prime]);
+    let mul_one_eq = d.lemma(p.rat.int.nat.mul_one, &[succ_k]);
+    let eq_fold = nat_eq_to_rat(d, mul_succk_1, succ_k, mul_one_eq, &|d, x| {
+        div_succ_expr(d, p, x, e_prime)
+    });
+    let eq_scale = d.lemma(p.rat.nat_div_succ_scale, &[k, m]);
+
+    let mul_succk1_e_prime = div_succ_expr(d, p, mul_succk_1, e_prime);
+
+    let step_b = rat_eq_rewrite(d, rat_prod_br, mul_succk1_e_prime, eq_mul, step_a, &motive);
+    let step_c = rat_eq_rewrite(
+        d,
+        mul_succk1_e_prime,
+        succ_k_e_prime,
+        eq_fold,
+        step_b,
+        &motive,
+    );
+    let step_d = rat_eq_rewrite(d, succ_k_e_prime, out_bound_rat, eq_scale, step_c, &motive);
+    let ofr_out = d.const_app(p.of_rat, &[out_bound_rat]);
+
+    (small_expr, big_expr, ofr_out, step_d)
+}
+
+/// The product rule's three-source combined modulus at a given accuracy
+/// `e`: `mG (e1') + mF (e2') + muc (e3)`, where `e1'/e2'/e3 :=
+/// rescale_index(k1/k2/k3, three_e)` and `three_e := rescale_index(2, e)`
+/// (the equal three-way split). Returns `(three_e, e1p, e2p, e3, mg_val,
+/// mf_val, mu_val, mgf, combined)`. Called identically to build the
+/// `modulus_mul` lambda's own body and, separately, to recompute the same
+/// quantities inside `spec` at a fixed `e` -- the two calls must produce
+/// SYNTACTICALLY identical terms (guaranteed by calling this one function
+/// both times) for `Kernel::add_declaration` to accept `spec`'s type against
+/// `hd_mk`'s expected `deriv_spec_body ... modulus_mul`.
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+fn mul_modulus_components(
+    d: &mut IntDev<'_>,
+    mg: ExprId,
+    mf: ExprId,
+    mu: ExprId,
+    k1: ExprId,
+    k2: ExprId,
+    k3: ExprId,
+    e: ExprId,
+) -> (
+    ExprId,
+    ExprId,
+    ExprId,
+    ExprId,
+    ExprId,
+    ExprId,
+    ExprId,
+    ExprId,
+    ExprId,
+) {
+    let two = d.num(2);
+    let three_e = rescale_index(d, two, e);
+    let e1p = rescale_index(d, k1, three_e);
+    let e2p = rescale_index(d, k2, three_e);
+    let e3 = rescale_index(d, k3, three_e);
+    let mg_val = d.apply(mg, &[e1p]);
+    let mf_val = d.apply(mf, &[e2p]);
+    let mu_val = d.apply(mu, &[e3]);
+    let mgf = d.add(mg_val, mf_val);
+    let combined = d.add(mgf, mu_val);
+    (three_e, e1p, e2p, e3, mg_val, mf_val, mu_val, mgf, combined)
+}
+
+/// From `h : le abs_diff (ofRat (natDivSucc 1 combined))` where `combined =
+/// add (add mg_val mf_val) mu_val`, derive the three weakened hypotheses at
+/// each individual addend (`le abs_diff (ofRat (natDivSucc 1 mg_val))`,
+/// etc.) via `Nat.le_add_right`/`Nat.add_comm` (placing each addend first)
+/// and `Rat.natDivSucc_antitone` -- the three-source generalisation of
+/// `hasDerivative_add`'s own two-source combination.
+#[allow(clippy::too_many_arguments)]
+fn weaken_to_addend(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    abs_diff: ExprId,
+    combined: ExprId,
+    mgf: ExprId,
+    mg_val: ExprId,
+    mf_val: ExprId,
+    mu_val: ExprId,
+    h: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let nat_p = p.rat.int.nat;
+
+    // mg_val <= combined
+    let s1 = d.lemma(nat_p.le_add_right, &[mg_val, mf_val]); // mg_val <= mgf
+    let s2 = d.lemma(nat_p.le_add_right, &[mgf, mu_val]); // mgf <= combined
+    let mg_le_combined = d.lemma(nat_p.le_trans, &[mg_val, mgf, combined, s1, s2]);
+
+    // mf_val <= combined
+    let s3 = d.lemma(nat_p.le_add_right, &[mf_val, mg_val]); // mf_val <= mf_val+mg_val
+    let comm1 = d.lemma(nat_p.add_comm, &[mf_val, mg_val]); // Eq (mf_val+mg_val) mgf
+    let mf_plus_mg = d.add(mf_val, mg_val);
+    let s3p = nat_rewrite_prop(d, mf_plus_mg, mgf, comm1, s3, &|d, t| d.le(mf_val, t));
+    let mf_le_combined = d.lemma(nat_p.le_trans, &[mf_val, mgf, combined, s3p, s2]);
+
+    // mu_val <= combined
+    let s4 = d.lemma(nat_p.le_add_right, &[mu_val, mgf]); // mu_val <= mu_val+mgf
+    let comm2 = d.lemma(nat_p.add_comm, &[mu_val, mgf]); // Eq (mu_val+mgf) combined
+    let mu_plus_mgf = d.add(mu_val, mgf);
+    let mu_le_combined =
+        nat_rewrite_prop(d, mu_plus_mgf, combined, comm2, s4, &|d, t| d.le(mu_val, t));
+
+    let weaken = |d: &mut IntDev<'_>, val: ExprId, le_val_combined: ExprId| -> ExprId {
+        let rat_le = d.lemma(
+            p.rat.nat_div_succ_antitone,
+            &[val, combined, le_val_combined],
+        );
+        let r_combined = div_succ(d, p, 1, combined);
+        let r_val = div_succ(d, p, 1, val);
+        let creal_le = d.lemma(p.of_rat_le, &[r_combined, r_val, rat_le]);
+        let ofr_combined = d.const_app(p.of_rat, &[r_combined]);
+        let ofr_val = d.const_app(p.of_rat, &[r_val]);
+        d.lemma(p.le_trans, &[abs_diff, ofr_combined, ofr_val, h, creal_le])
+    };
+
+    let h_g = weaken(d, mg_val, mg_le_combined);
+    let h_f = weaken(d, mf_val, mf_le_combined);
+    let h_c = weaken(d, mu_val, mu_le_combined);
+    (h_g, h_f, h_c)
+}
+
+/// From `big = mul p_val (cdiff (cdiff q_hi q_lo) (cmul q_deriv diff))` (the
+/// shape `p_val * [error term of q]`, shared by the product rule's term1
+/// -- `p_val := F y`, `q_hi/q_lo/q_deriv := G y/G x/G' x` -- and term2 with
+/// `F`/`G` swapped), derive `Equiv big target` where `target = add (add
+/// (mul p_val q_hi) (neg (mul p_val q_lo))) (neg f_term)` and `f_term = mul
+/// (mul p_val q_deriv) diff`. Returns `(big, target, f_term, proof)` -- `big`
+/// is returned so the CALLER can use this exact term (rather than a
+/// separately-reconstructed copy) as e.g. term1/term2 in the surrounding
+/// bound derivation, and `f_term` is returned separately because term1's own
+/// `f_term` (`p_val := F y`, `q_deriv := G' x`) is the EXACT SAME term
+/// `expand_term3`'s `hi_term` produces, needed so the two cancel with no
+/// extra congruence step.
+fn expand_bound_term(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    p_val: ExprId,
+    q_hi: ExprId,
+    q_lo: ExprId,
+    q_deriv: ExprId,
+    diff: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let q_lo_neg = cneg(d, p, q_lo);
+    let hi_lo = cadd(d, p, q_hi, q_lo_neg); // q_hi - q_lo
+    let deriv_term = cmul(d, p, q_deriv, diff);
+    let deriv_term_neg = cneg(d, p, deriv_term);
+    let inner = cadd(d, p, hi_lo, deriv_term_neg);
+    let big = cmul(d, p, p_val, inner);
+
+    // top split: p_val * (hi_lo + (-deriv_term)) ~ p_val*hi_lo + p_val*(-deriv_term)
+    let ld_top = d.lemma(p.left_distrib, &[p_val, hi_lo, deriv_term_neg]);
+    let mul_p_hilo = cmul(d, p, p_val, hi_lo);
+    let mul_p_negderiv = cmul(d, p, p_val, deriv_term_neg);
+
+    // p_val*(-deriv_term) ~ -(p_val*deriv_term)
+    let mne_deriv = mul_neg_equiv(d, p, p_val, deriv_term);
+    let mul_p_deriv = cmul(d, p, p_val, deriv_term);
+    let neg_mul_p_deriv = cneg(d, p, mul_p_deriv);
+
+    // p_val*hi_lo ~ p_val*q_hi + p_val*(-q_lo)
+    let ld_bottom = d.lemma(p.left_distrib, &[p_val, q_hi, q_lo_neg]);
+    let mul_p_qhi = cmul(d, p, p_val, q_hi);
+    let mul_p_neg_qlo = cmul(d, p, p_val, q_lo_neg);
+
+    // p_val*(-q_lo) ~ -(p_val*q_lo)
+    let mne_lo = mul_neg_equiv(d, p, p_val, q_lo);
+    let mul_p_qlo = cmul(d, p, p_val, q_lo);
+    let neg_mul_p_qlo = cneg(d, p, mul_p_qlo);
+
+    let refl_mul_p_qhi = erefl(d, p, mul_p_qhi);
+    let hi_lo_congr = d.lemma(
+        p.add_congr,
+        &[
+            mul_p_qhi,
+            mul_p_qhi,
+            mul_p_neg_qlo,
+            neg_mul_p_qlo,
+            refl_mul_p_qhi,
+            mne_lo,
+        ],
+    );
+    let target_hilo = cadd(d, p, mul_p_qhi, neg_mul_p_qlo);
+    let mul_p_qhi_plus_mul_p_neg_qlo = cadd(d, p, mul_p_qhi, mul_p_neg_qlo);
+    let hilo_chain = echain(
+        d,
+        p,
+        mul_p_hilo,
+        &[
+            (mul_p_qhi_plus_mul_p_neg_qlo, ld_bottom),
+            (target_hilo, hi_lo_congr),
+        ],
+    );
+
+    // p_val * deriv_term ~ (p_val*q_deriv)*diff, via mul_assoc reversed
+    let mul_p_qderiv = cmul(d, p, p_val, q_deriv);
+    let f_term = cmul(d, p, mul_p_qderiv, diff);
+    let assoc_d = d.lemma(p.mul_assoc, &[p_val, q_deriv, diff]);
+    // Equiv f_term mul_p_deriv
+    let deriv_symm = esymm(d, p, f_term, mul_p_deriv, assoc_d); // Equiv mul_p_deriv f_term
+    let neg_deriv_congr = d.lemma(p.neg_congr, &[mul_p_deriv, f_term, deriv_symm]);
+    let neg_f_term = cneg(d, p, f_term);
+
+    let mne_deriv_to_negfterm = echain(
+        d,
+        p,
+        mul_p_negderiv,
+        &[(neg_mul_p_deriv, mne_deriv), (neg_f_term, neg_deriv_congr)],
+    );
+
+    let top_congr = d.lemma(
+        p.add_congr,
+        &[
+            mul_p_hilo,
+            target_hilo,
+            mul_p_negderiv,
+            neg_f_term,
+            hilo_chain,
+            mne_deriv_to_negfterm,
+        ],
+    );
+    let target = cadd(d, p, target_hilo, neg_f_term);
+    let mul_p_hilo_plus_mul_p_negderiv = cadd(d, p, mul_p_hilo, mul_p_negderiv);
+    let final_chain = echain(
+        d,
+        p,
+        big,
+        &[
+            (mul_p_hilo_plus_mul_p_negderiv, ld_top),
+            (target, top_congr),
+        ],
+    );
+    (big, target, f_term, final_chain)
+}
+
+/// Term3's own expansion: `Equiv (mul (mul (cdiff hi lo) deriv) diff) (add
+/// hi_term (neg lo_term))`, where `hi_term = mul (mul hi deriv) diff` and
+/// `lo_term = mul (mul lo deriv) diff` -- `(F(y)-F(x))*G'(x)*(y-x) ~
+/// F(y)*G'(x)*(y-x) - F(x)*G'(x)*(y-x)`. With `hi := F y`, `deriv := G' x`,
+/// `hi_term` is syntactically the exact `f_term` [`expand_bound_term`]
+/// returns for term1 (`p_val := F y`, `q_deriv := G' x`) -- no extra
+/// congruence is needed to cancel them. Returns `(big, hi_term, lo_term,
+/// proof)`.
+fn expand_term3(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    hi: ExprId,
+    lo: ExprId,
+    deriv: ExprId,
+    diff: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let lo_neg = cneg(d, p, lo);
+    let hilo = cadd(d, p, hi, lo_neg); // hi - lo
+    let mul_hilo_deriv = cmul(d, p, hilo, deriv);
+    let big = cmul(d, p, mul_hilo_deriv, diff);
+
+    // (hi-lo)*deriv ~ hi*deriv + (-lo)*deriv
+    let rd1 = right_distrib(d, p, hi, lo_neg, deriv);
+    let mul_hi_deriv = cmul(d, p, hi, deriv);
+    let mul_neglo_deriv = cmul(d, p, lo_neg, deriv);
+
+    // (-lo)*deriv ~ -(lo*deriv)
+    let nme1 = neg_mul_equiv_left(d, p, lo, deriv);
+    let mul_lo_deriv = cmul(d, p, lo, deriv);
+    let neg_mul_lo_deriv = cneg(d, p, mul_lo_deriv);
+
+    let refl_mhd = erefl(d, p, mul_hi_deriv);
+    let step1_congr = d.lemma(
+        p.add_congr,
+        &[
+            mul_hi_deriv,
+            mul_hi_deriv,
+            mul_neglo_deriv,
+            neg_mul_lo_deriv,
+            refl_mhd,
+            nme1,
+        ],
+    );
+    let target1 = cadd(d, p, mul_hi_deriv, neg_mul_lo_deriv);
+    let mul_hi_deriv_plus_mul_neglo_deriv = cadd(d, p, mul_hi_deriv, mul_neglo_deriv);
+    let step1 = echain(
+        d,
+        p,
+        mul_hilo_deriv,
+        &[
+            (mul_hi_deriv_plus_mul_neglo_deriv, rd1),
+            (target1, step1_congr),
+        ],
+    );
+
+    let refl_diff = erefl(d, p, diff);
+    let big_congr = d.lemma(
+        p.mul_congr,
+        &[mul_hilo_deriv, target1, diff, diff, step1, refl_diff],
+    );
+    let mul_target1_diff = cmul(d, p, target1, diff);
+
+    // target1 * diff ~ (mul_hi_deriv*diff) + (neg_mul_lo_deriv*diff)
+    let rd2 = right_distrib(d, p, mul_hi_deriv, neg_mul_lo_deriv, diff);
+    let hi_term = cmul(d, p, mul_hi_deriv, diff);
+    let mul_negmld_diff = cmul(d, p, neg_mul_lo_deriv, diff);
+
+    // neg_mul_lo_deriv*diff ~ -(mul_lo_deriv*diff)
+    let nme2 = neg_mul_equiv_left(d, p, mul_lo_deriv, diff);
+    let lo_term = cmul(d, p, mul_lo_deriv, diff);
+    let neg_lo_term = cneg(d, p, lo_term);
+
+    let refl_hiterm = erefl(d, p, hi_term);
+    let final_congr = d.lemma(
+        p.add_congr,
+        &[
+            hi_term,
+            hi_term,
+            mul_negmld_diff,
+            neg_lo_term,
+            refl_hiterm,
+            nme2,
+        ],
+    );
+    let target = cadd(d, p, hi_term, neg_lo_term);
+    let hi_term_plus_mul_negmld_diff = cadd(d, p, hi_term, mul_negmld_diff);
+
+    let final_chain = echain(
+        d,
+        p,
+        big,
+        &[
+            (mul_target1_diff, big_congr),
+            (hi_term_plus_mul_negmld_diff, rd2),
+            (target, final_congr),
+        ],
+    );
+
+    (big, hi_term, lo_term, final_chain)
+}
+
+/// From three INDEPENDENTLY-BUILT copies `q1, q2, q3` of `ofRat (natDivSucc
+/// 1 three_e)` (with `r1, r2, r3` their underlying `Rat` cores, `three_e :=
+/// rescale_index(2, e)`), derive `Equiv (add (add (mul q1 abs_diff) (mul q2
+/// abs_diff)) (mul q3 abs_diff)) (mul (ofRat (natDivSucc 1 e)) abs_diff)` --
+/// the "three EQUAL shares of `1/(e+1)` sum back to the target" arithmetic
+/// (`Rat.natDivSucc_add` applied twice, `Rat.natDivSucc_scale` at `c := 2`),
+/// the three-way generalisation of `hasDerivative_add`'s own two-way
+/// `natDivSucc_add`+`natDivSucc_halve` fuse (`natDivSucc_halve` IS
+/// `natDivSucc_scale` at `c := 1`; this is the SAME identity one step
+/// deeper, `c := 2`). Returns `(out_bound, proof)`.
+#[allow(clippy::too_many_arguments)]
+fn fuse_three_equal_bounds(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    e: ExprId,
+    three_e: ExprId,
+    q1: ExprId,
+    q2: ExprId,
+    q3: ExprId,
+    r1: ExprId,
+    r2: ExprId,
+    r3: ExprId,
+    abs_diff: ExprId,
+) -> (ExprId, ExprId) {
+    let c1 = cmul(d, p, q1, abs_diff);
+    let c2 = cmul(d, p, q2, abs_diff);
+    let c3 = cmul(d, p, q3, abs_diff);
+    let sum_c1_c2 = cadd(d, p, c1, c2);
+    let sum123 = cadd(d, p, sum_c1_c2, c3);
+
+    let q12 = cadd(d, p, q1, q2);
+    let mul_q12_ad = cmul(d, p, q12, abs_diff);
+
+    // (c1+c2) ~ mul_q12_ad, and (mul_q12_ad + c3) ~ mul (add q12 q3) abs_diff.
+    let rd_12 = right_distrib(d, p, q1, q2, abs_diff); // Equiv mul_q12_ad (add c1 c2)
+    let rd_12_symm = esymm(d, p, mul_q12_ad, sum_c1_c2, rd_12); // Equiv (add c1 c2) mul_q12_ad
+
+    let q_triple = cadd(d, p, q12, q3);
+    let mul_qtriple_ad = cmul(d, p, q_triple, abs_diff);
+    let rd_full = right_distrib(d, p, q12, q3, abs_diff);
+    // Equiv mul_qtriple_ad (add mul_q12_ad c3)
+    let mul_q12ad_c3 = cadd(d, p, mul_q12_ad, c3);
+    let rd_full_symm = esymm(d, p, mul_qtriple_ad, mul_q12ad_c3, rd_full);
+    // Equiv (add mul_q12_ad c3) mul_qtriple_ad
+
+    let refl_c3 = erefl(d, p, c3);
+    let congr_step = d.lemma(
+        p.add_congr,
+        &[sum_c1_c2, mul_q12_ad, c3, c3, rd_12_symm, refl_c3],
+    ); // Equiv sum123 mul_q12ad_c3
+    let chain1 = echain(
+        d,
+        p,
+        sum123,
+        &[(mul_q12ad_c3, congr_step), (mul_qtriple_ad, rd_full_symm)],
+    ); // Equiv sum123 mul_qtriple_ad
+
+    // --- the pure rational-level fuse: q_triple ~ ofRat (natDivSucc 1 e) ---
+    let one_nat = d.num(1);
+    let two = d.num(2);
+
+    let of_rat_add_proof1 = d.lemma(p.of_rat_add, &[r1, r2]);
+    // Equiv (add q1 q2) (ofRat (Rat.add r1 r2))
+    let eq1 = d.lemma(p.rat.nat_div_succ_add, &[one_nat, one_nat, three_e]);
+    let two_three_e = div_succ(d, p, 2, three_e);
+    let radd_r1_r2 = radd(d, r1, r2);
+    let motive_a = |d: &mut IntDev<'_>, t: ExprId| {
+        let oft = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[q12, oft])
+    };
+    let step_a = rat_eq_rewrite(
+        d,
+        radd_r1_r2,
+        two_three_e,
+        eq1,
+        of_rat_add_proof1,
+        &motive_a,
+    );
+    // Equiv q12 (ofRat two_three_e)
+
+    let ofr2 = d.const_app(p.of_rat, &[two_three_e]);
+    let refl_q3 = erefl(d, p, q3);
+    let congr_b = d.lemma(p.add_congr, &[q12, ofr2, q3, q3, step_a, refl_q3]);
+    // Equiv q_triple (add ofr2 q3)
+    let add_ofr2_q3 = cadd(d, p, ofr2, q3);
+
+    let of_rat_add_proof2 = d.lemma(p.of_rat_add, &[two_three_e, r3]);
+    // Equiv (add ofr2 q3) (ofRat (Rat.add two_three_e r3))
+    let succ_two = d.succ(two);
+    let eq2 = d.lemma(p.rat.nat_div_succ_add, &[two, one_nat, three_e]);
+    let radd_two3e_r3 = radd(d, two_three_e, r3);
+    let three_three_e = div_succ_expr(d, p, succ_two, three_e);
+
+    let motive_c = |d: &mut IntDev<'_>, t: ExprId| {
+        let oft = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[q_triple, oft])
+    };
+    let ofr_radd_two3e_r3 = d.const_app(p.of_rat, &[radd_two3e_r3]);
+    let chain_qtriple = echain(
+        d,
+        p,
+        q_triple,
+        &[
+            (add_ofr2_q3, congr_b),
+            (ofr_radd_two3e_r3, of_rat_add_proof2),
+        ],
+    ); // Equiv q_triple (ofRat (Rat.add two_three_e r3))
+    let step_c = rat_eq_rewrite(
+        d,
+        radd_two3e_r3,
+        three_three_e,
+        eq2,
+        chain_qtriple,
+        &motive_c,
+    );
+    // Equiv q_triple (ofRat three_three_e)
+
+    let eq3 = d.lemma(p.rat.nat_div_succ_scale, &[two, e]);
+    let out_bound_rat = div_succ(d, p, 1, e);
+    let step_d = rat_eq_rewrite(d, three_three_e, out_bound_rat, eq3, step_c, &motive_c);
+    // Equiv q_triple (ofRat out_bound_rat)
+
+    let ofr_target = d.const_app(p.of_rat, &[out_bound_rat]);
+    let refl_absdiff = erefl(d, p, abs_diff);
+    let mul_lift = d.lemma(
+        p.mul_congr,
+        &[
+            q_triple,
+            ofr_target,
+            abs_diff,
+            abs_diff,
+            step_d,
+            refl_absdiff,
+        ],
+    ); // Equiv mul_qtriple_ad (mul ofr_target abs_diff)
+
+    let out_bound = cmul(d, p, ofr_target, abs_diff);
+    let final_chain = echain(
+        d,
+        p,
+        sum123,
+        &[(mul_qtriple_ad, chain1), (out_bound, mul_lift)],
+    );
+
+    (out_bound, final_chain)
+}
+
+/// `CReal.hasDerivative_mul : forall F F' G G' a b, HasDerivativeOn F F' a b
+/// -> HasDerivativeOn G G' a b -> UniformlyContinuousOn F a b -> forall (k1
+/// k2 k3 : Nat), (forall z, le a z -> le z b -> le (abs (F z)) (mag_bound
+/// k1)) -> (forall z, le a z -> le z b -> le (abs (G z)) (mag_bound k2)) ->
+/// (forall z, le a z -> le z b -> le (abs (G' z)) (mag_bound k3)) ->
+/// HasDerivativeOn (fun r => mul (F r) (G r)) (fun x => add (mul (F' x)(G
+/// x)) (mul (F x)(G' x))) a b` -- **the product rule**, closed by three
+/// EXPLICIT magnitude-bound hypotheses (`F`, `G`, `G'` each `|h z| <= k+1` on
+/// `[a,b]`) plus uniform continuity of `F` on `[a,b]`, none of which is
+/// derived -- see the module documentation's corrected, numerically
+/// re-verified error decomposition, and this file's `rescale_index`/
+/// `fold_index0_first`/`fold_index0_second`/`mul_modulus_components`/
+/// `weaken_to_addend`/`expand_bound_term`/`expand_term3`/
+/// `fuse_three_equal_bounds` helpers, all built for this witness.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+fn declare_has_derivative_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let gp_fv = d.fresh_fvar();
+    let gp = d.kernel().fvar(gp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hf_ty = hd_ty(d, p, f, fp, a, b);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+    let hg_ty = hd_ty(d, p, g, gp, a, b);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+    let huc_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let huc_fv = d.fresh_fvar();
+    let huc = d.kernel().fvar(huc_fv);
+
+    let k1_fv = d.fresh_fvar();
+    let k1 = d.kernel().fvar(k1_fv);
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+    let k3_fv = d.fresh_fvar();
+    let k3 = d.kernel().fvar(k3_fv);
+
+    let hbf_ty = bounded_on_ty(d, p, f, a, b, k1);
+    let hbf_fv = d.fresh_fvar();
+    let hbf = d.kernel().fvar(hbf_fv);
+    let hbg_ty = bounded_on_ty(d, p, g, a, b, k2);
+    let hbg_fv = d.fresh_fvar();
+    let hbg = d.kernel().fvar(hbg_fv);
+    let hbgp_ty = bounded_on_ty(d, p, gp, a, b, k3);
+    let hbgp_fv = d.fresh_fvar();
+    let hbgp = d.kernel().fvar(hbgp_fv);
+
+    let fmul = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let fr = d.apply(f, &[r]);
+        let gr = d.apply(g, &[r]);
+        let prod = cmul(d, p, fr, gr);
+        d.lam_fv(r_fv, carrier, prod)
+    };
+    let fmul_p = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fpx = d.apply(fp, &[x]);
+        let gx = d.apply(g, &[x]);
+        let fx = d.apply(f, &[x]);
+        let gpx = d.apply(gp, &[x]);
+        let t1 = cmul(d, p, fpx, gx);
+        let t2 = cmul(d, p, fx, gpx);
+        let sum = cadd(d, p, t1, t2);
+        d.lam_fv(x_fv, carrier, sum)
+    };
+
+    let mf = d.const_app(p.hd_modulus, &[f, fp, a, b, hf]);
+    let mg = d.const_app(p.hd_modulus, &[g, gp, a, b, hg]);
+    let mu = d.const_app(p.uc_modulus, &[f, a, b, huc]);
+
+    let modulus_mul = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let (_, _, _, _, _, _, _, _, combined) =
+            mul_modulus_components(d, mg, mf, mu, k1, k2, k3, e);
+        d.lam_fv(e_fv, nat, combined)
+    };
+
+    let spec = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hax_fv = d.fresh_fvar();
+        let hxb_fv = d.fresh_fvar();
+        let hay_fv = d.fresh_fvar();
+        let hyb_fv = d.fresh_fvar();
+        let h_fv = d.fresh_fvar();
+
+        let range_ax = d.const_app(p.le, &[a, x]);
+        let range_xb = d.const_app(p.le, &[x, b]);
+        let range_ay = d.const_app(p.le, &[a, y]);
+        let range_yb = d.const_app(p.le, &[y, b]);
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb = d.kernel().fvar(hxb_fv);
+        let hay = d.kernel().fvar(hay_fv);
+        let hyb = d.kernel().fvar(hyb_fv);
+
+        let diff_yx = cdiff(d, p, y, x);
+        let abs_diff = cabs(d, p, diff_yx);
+
+        let (three_e, e1p, e2p, e3, mg_val, mf_val, mu_val, mgf, combined) =
+            mul_modulus_components(d, mg, mf, mu, k1, k2, k3, e);
+
+        let mod_e = d.apply(modulus_mul, &[e]);
+        let in_bound = div_succ(d, p, 1, mod_e);
+        let ofr_in = d.const_app(p.of_rat, &[in_bound]);
+        let hyp = within_real(d, p, diff_yx, ofr_in);
+        let h = d.kernel().fvar(h_fv);
+
+        let (h_g, h_f, h_c) =
+            weaken_to_addend(d, p, abs_diff, combined, mgf, mg_val, mf_val, mu_val, h);
+
+        let fx = d.apply(f, &[x]);
+        let fy = d.apply(f, &[y]);
+        let gx = d.apply(g, &[x]);
+        let gy = d.apply(g, &[y]);
+        let fpx = d.apply(fp, &[x]);
+        let gpx = d.apply(gp, &[x]);
+
+        // --- term1 = F(y) * [G's error at e1p] -------------------------------
+        let g_error_bound = d.lemma(
+            p.hd_spec,
+            &[g, gp, a, b, hg, e1p, x, y, hax, hxb, hay, hyb, h_g],
+        );
+        // le (abs g_error) (mul (ofRat (natDivSucc 1 e1p)) abs_diff)
+
+        let hbf_y = d.apply(hbf, &[y, hay, hyb]); // le (abs fy) (mag_bound k1)
+        let big_b1 = mag_bound(d, p, k1);
+        let small1 = {
+            let r = div_succ(d, p, 1, e1p);
+            d.const_app(p.of_rat, &[r])
+        };
+        let small1_times_absdiff = cmul(d, p, small1, abs_diff);
+
+        let (term1, target1, f_term1, proof1) = expand_bound_term(d, p, fy, gy, gx, gpx, diff_yx);
+        let g_error = {
+            let gyx = cdiff(d, p, gy, gx);
+            let gderiv = cmul(d, p, gpx, diff_yx);
+            cdiff(d, p, gyx, gderiv)
+        };
+
+        let term1_upper = d.lemma(
+            p.abs_mul_le_of_bounds,
+            &[
+                fy,
+                g_error,
+                big_b1,
+                small1_times_absdiff,
+                hbf_y,
+                g_error_bound,
+            ],
+        );
+        // le (abs term1) (mul big_b1 (mul small1 abs_diff))
+
+        let assoc_eq1 = d.lemma(p.mul_assoc, &[big_b1, small1, abs_diff]);
+        // Equiv (mul (mul big_b1 small1) abs_diff) (mul big_b1 (mul small1 abs_diff))
+        let mul_bigb1_small1 = cmul(d, p, big_b1, small1);
+        let regroup1 = cmul(d, p, mul_bigb1_small1, abs_diff);
+        let big_b1_small1_ad = cmul(d, p, big_b1, small1_times_absdiff);
+        let assoc_symm1 = esymm(d, p, regroup1, big_b1_small1_ad, assoc_eq1);
+
+        let (big_expr1, small_expr1, ofr_out1, fold_proof1) =
+            fold_index0_first(d, p, k1, three_e, e1p);
+        let refl_absdiff_a = erefl(d, p, abs_diff);
+        let mul_bigexpr1_smallexpr1 = cmul(d, p, big_expr1, small_expr1);
+        let mul_congr1 = d.lemma(
+            p.mul_congr,
+            &[
+                mul_bigexpr1_smallexpr1,
+                ofr_out1,
+                abs_diff,
+                abs_diff,
+                fold_proof1,
+                refl_absdiff_a,
+            ],
+        );
+        let out_bound1 = cmul(d, p, ofr_out1, abs_diff);
+        let bound_equiv1 = echain(
+            d,
+            p,
+            big_b1_small1_ad,
+            &[(regroup1, assoc_symm1), (out_bound1, mul_congr1)],
+        );
+
+        let abs_term1 = cabs(d, p, term1);
+        let refl_abs_term1 = erefl(d, p, abs_term1);
+        let term1_bound = d.lemma(
+            p.le_congr,
+            &[
+                abs_term1,
+                abs_term1,
+                big_b1_small1_ad,
+                out_bound1,
+                refl_abs_term1,
+                bound_equiv1,
+                term1_upper,
+            ],
+        );
+        // le (abs term1) out_bound1
+
+        // --- term2 = G(x) * [F's error at e2p] -------------------------------
+        let f_error_bound = d.lemma(
+            p.hd_spec,
+            &[f, fp, a, b, hf, e2p, x, y, hax, hxb, hay, hyb, h_f],
+        );
+        // le (abs f_error) (mul (ofRat (natDivSucc 1 e2p)) abs_diff)
+
+        let hbg_x = d.apply(hbg, &[x, hax, hxb]); // le (abs gx) (mag_bound k2)
+        let big_b2 = mag_bound(d, p, k2);
+        let small2 = {
+            let r = div_succ(d, p, 1, e2p);
+            d.const_app(p.of_rat, &[r])
+        };
+        let small2_times_absdiff = cmul(d, p, small2, abs_diff);
+
+        let (term2, target2, g_term2, proof2) = expand_bound_term(d, p, gx, fy, fx, fpx, diff_yx);
+        let f_error = {
+            let fyx = cdiff(d, p, fy, fx);
+            let fderiv = cmul(d, p, fpx, diff_yx);
+            cdiff(d, p, fyx, fderiv)
+        };
+
+        let term2_upper = d.lemma(
+            p.abs_mul_le_of_bounds,
+            &[
+                gx,
+                f_error,
+                big_b2,
+                small2_times_absdiff,
+                hbg_x,
+                f_error_bound,
+            ],
+        );
+        // le (abs term2) (mul big_b2 (mul small2 abs_diff))
+
+        let assoc_eq2 = d.lemma(p.mul_assoc, &[big_b2, small2, abs_diff]);
+        let mul_bigb2_small2 = cmul(d, p, big_b2, small2);
+        let regroup2 = cmul(d, p, mul_bigb2_small2, abs_diff);
+        let big_b2_small2_ad = cmul(d, p, big_b2, small2_times_absdiff);
+        let assoc_symm2 = esymm(d, p, regroup2, big_b2_small2_ad, assoc_eq2);
+
+        let (big_expr2, small_expr2, ofr_out2, fold_proof2) =
+            fold_index0_first(d, p, k2, three_e, e2p);
+        let refl_absdiff_b = erefl(d, p, abs_diff);
+        let mul_bigexpr2_smallexpr2 = cmul(d, p, big_expr2, small_expr2);
+        let mul_congr2 = d.lemma(
+            p.mul_congr,
+            &[
+                mul_bigexpr2_smallexpr2,
+                ofr_out2,
+                abs_diff,
+                abs_diff,
+                fold_proof2,
+                refl_absdiff_b,
+            ],
+        );
+        let out_bound2 = cmul(d, p, ofr_out2, abs_diff);
+        let bound_equiv2 = echain(
+            d,
+            p,
+            big_b2_small2_ad,
+            &[(regroup2, assoc_symm2), (out_bound2, mul_congr2)],
+        );
+
+        let abs_term2 = cabs(d, p, term2);
+        let refl_abs_term2 = erefl(d, p, abs_term2);
+        let term2_bound = d.lemma(
+            p.le_congr,
+            &[
+                abs_term2,
+                abs_term2,
+                big_b2_small2_ad,
+                out_bound2,
+                refl_abs_term2,
+                bound_equiv2,
+                term2_upper,
+            ],
+        );
+        // le (abs term2) out_bound2
+
+        // --- term3 = (F(y)-F(x)) * G'(x) * (y-x) ------------------------------
+        let fy_fx = cdiff(d, p, fy, fx);
+        let uc_bound = d.lemma(
+            p.uc_spec,
+            &[f, a, b, huc, e3, y, x, hay, hyb, hax, hxb, h_c],
+        );
+        // le (abs fy_fx) (ofRat (natDivSucc 1 e3))
+        let hbgp_x = d.apply(hbgp, &[x, hax, hxb]); // le (abs gpx) (mag_bound k3)
+        let big_b3 = mag_bound(d, p, k3);
+        let small3 = {
+            let r = div_succ(d, p, 1, e3);
+            d.const_app(p.of_rat, &[r])
+        };
+
+        let step3a = d.lemma(
+            p.abs_mul_le_of_bounds,
+            &[fy_fx, gpx, small3, big_b3, uc_bound, hbgp_x],
+        );
+        // le (abs (mul fy_fx gpx)) (mul small3 big_b3)
+
+        let (small_expr3, big_expr3, ofr_out3, fold_proof3) =
+            fold_index0_second(d, p, k3, three_e, e3);
+        let mul_fyfx_gpx = cmul(d, p, fy_fx, gpx);
+        let abs_mul_fyfx_gpx = cabs(d, p, mul_fyfx_gpx);
+        let refl_abs_mfg = erefl(d, p, abs_mul_fyfx_gpx);
+        let mul_smallexpr3_bigexpr3 = cmul(d, p, small_expr3, big_expr3);
+        let step3b = d.lemma(
+            p.le_congr,
+            &[
+                abs_mul_fyfx_gpx,
+                abs_mul_fyfx_gpx,
+                mul_smallexpr3_bigexpr3,
+                ofr_out3,
+                refl_abs_mfg,
+                fold_proof3,
+                step3a,
+            ],
+        );
+        // le (abs (mul fy_fx gpx)) ofr_out3
+
+        let le_refl_absdiff = d.lemma(p.le_refl, &[abs_diff]);
+        let (term3, hi_term3, lo_term3, proof3) = expand_term3(d, p, fy, fx, gpx, diff_yx);
+        let term3_bound = d.lemma(
+            p.abs_mul_le_of_bounds,
+            &[
+                mul_fyfx_gpx,
+                diff_yx,
+                ofr_out3,
+                abs_diff,
+                step3b,
+                le_refl_absdiff,
+            ],
+        );
+        // le (abs term3) (mul ofr_out3 abs_diff)
+        let out_bound3 = cmul(d, p, ofr_out3, abs_diff);
+        let abs_term3 = cabs(d, p, term3);
+
+        // --- combine the three bounds via the (3-way) triangle inequality ---
+        let term1_plus_term2 = cadd(d, p, term1, term2);
+        let combined_terms = cadd(d, p, term1_plus_term2, term3);
+
+        let triangle_12 = abs_add_le(d, p, term1, term2);
+        // le (abs term1_plus_term2) (add abs_term1 abs_term2)
+        let sum12_le = d.lemma(
+            p.add_le_add,
+            &[
+                abs_term1,
+                out_bound1,
+                abs_term2,
+                out_bound2,
+                term1_bound,
+                term2_bound,
+            ],
+        );
+        // le (add abs_term1 abs_term2) (add out_bound1 out_bound2)
+        let abs_term1_plus_abs_term2 = cadd(d, p, abs_term1, abs_term2);
+        let out_bound1_plus_out_bound2 = cadd(d, p, out_bound1, out_bound2);
+        let abs_term1_plus_term2 = cabs(d, p, term1_plus_term2);
+        let sum_ab_le = d.lemma(
+            p.le_trans,
+            &[
+                abs_term1_plus_term2,
+                abs_term1_plus_abs_term2,
+                out_bound1_plus_out_bound2,
+                triangle_12,
+                sum12_le,
+            ],
+        );
+        // le (abs term1_plus_term2) (add out_bound1 out_bound2)
+
+        let triangle_123 = abs_add_le(d, p, term1_plus_term2, term3);
+        // le (abs combined_terms) (add abs_term1_plus_term2 abs_term3)
+        let sum123_le = d.lemma(
+            p.add_le_add,
+            &[
+                abs_term1_plus_term2,
+                out_bound1_plus_out_bound2,
+                abs_term3,
+                out_bound3,
+                sum_ab_le,
+                term3_bound,
+            ],
+        );
+        // le (add abs_term1_plus_term2 abs_term3) (add out_bound1_plus_out_bound2 out_bound3)
+        let abs_t1t2_plus_abs_t3 = cadd(d, p, abs_term1_plus_term2, abs_term3);
+        let ob12_plus_ob3 = cadd(d, p, out_bound1_plus_out_bound2, out_bound3);
+        let abs_combined = cabs(d, p, combined_terms);
+        let combined_le = d.lemma(
+            p.le_trans,
+            &[
+                abs_combined,
+                abs_t1t2_plus_abs_t3,
+                ob12_plus_ob3,
+                triangle_123,
+                sum123_le,
+            ],
+        );
+        // le (abs combined_terms) ob12_plus_ob3
+
+        // --- fuse the three equal `1/(3e+3)` shares down to `1/(e+1)` -------
+        let r1 = div_succ(d, p, 1, three_e);
+        let r2 = div_succ(d, p, 1, three_e);
+        let r3 = div_succ(d, p, 1, three_e);
+        let (final_out_bound, fuse_proof) = fuse_three_equal_bounds(
+            d, p, e, three_e, ofr_out1, ofr_out2, ofr_out3, r1, r2, r3, abs_diff,
+        );
+        // Equiv ob12_plus_ob3 final_out_bound  [fuse_proof's actual shape:
+        // Equiv (add (add (mul ofr_out1 abs_diff)(mul ofr_out2 abs_diff))(mul
+        // ofr_out3 abs_diff)) final_out_bound -- structurally ob12_plus_ob3]
+
+        let refl_abs_combined = erefl(d, p, abs_combined);
+        let final_error_bound = d.lemma(
+            p.le_congr,
+            &[
+                abs_combined,
+                abs_combined,
+                ob12_plus_ob3,
+                final_out_bound,
+                refl_abs_combined,
+                fuse_proof,
+                combined_le,
+            ],
+        );
+        // le (abs combined_terms) final_out_bound
+
+        // ==================================================================
+        // The ring identity: `combined_terms ~ actual_error`, exactly. See
+        // the module documentation's algebraic verification. `A := F(y)G(y)`,
+        // `B := F(x)G(x)`, `C_raw/D_raw := F'(x)G(x)/F(x)G'(x)` (no `(y-x)`
+        // factor yet -- that is what `fmul_p`'s own `mul _ diff_yx` supplies),
+        // `E := F(y)G(x)`, `Gval := G(x)F(y)` (E's mirror, cancels against it
+        // up to `mul_comm`), `B' := G(x)F(x)` (B's mirror, likewise).
+        // ==================================================================
+        let cap_a = cmul(d, p, fy, gy);
+        let cap_b = cmul(d, p, fx, gx);
+        let c_raw = cmul(d, p, fpx, gx);
+        let d_raw = cmul(d, p, fx, gpx);
+        let cap_e = cmul(d, p, fy, gx);
+        let cap_gval = cmul(d, p, gx, fy);
+        let cap_bp = cmul(d, p, gx, fx);
+
+        // --- actual_error, mirroring `deriv_spec_body`'s own recipe with
+        // `F := fmul, F' := fmul_p` -----------------------------------------
+        let fmul_p_x = cadd(d, p, c_raw, d_raw);
+        let deriv_term_mul = cmul(d, p, fmul_p_x, diff_yx);
+        let a_minus_b = {
+            let neg_b = cneg(d, p, cap_b);
+            cadd(d, p, cap_a, neg_b)
+        };
+        let neg_deriv_term_mul = cneg(d, p, deriv_term_mul);
+        let actual_error = cadd(d, p, a_minus_b, neg_deriv_term_mul);
+
+        // deriv_term_mul ~ add c_full d_full, c_full/d_full carrying the
+        // `(y-x)` factor `expand_term3`'s own `hi_term`/`lo_term` do too.
+        let rd_cd = right_distrib(d, p, c_raw, d_raw, diff_yx);
+        // Equiv deriv_term_mul (add c_full d_full)
+        let c_full = cmul(d, p, c_raw, diff_yx);
+        let d_full = cmul(d, p, d_raw, diff_yx);
+        let neg_add_cd = cadd(d, p, c_full, d_full);
+        let neg_congr_cd = d.lemma(p.neg_congr, &[deriv_term_mul, neg_add_cd, rd_cd]);
+        // Equiv neg_deriv_term_mul (neg neg_add_cd)
+        let neg_cd = neg_add_distrib(d, p, c_full, d_full);
+        // Equiv (neg neg_add_cd) (add (neg c_full) (neg d_full))
+        let neg_c_full = cneg(d, p, c_full);
+        let neg_d_full = cneg(d, p, d_full);
+        let neg_c_neg_d = cadd(d, p, neg_c_full, neg_d_full);
+        let neg_neg_add_cd = cneg(d, p, neg_add_cd);
+        let neg_deriv_chain = echain(
+            d,
+            p,
+            neg_deriv_term_mul,
+            &[(neg_neg_add_cd, neg_congr_cd), (neg_c_neg_d, neg_cd)],
+        );
+        // Equiv neg_deriv_term_mul neg_c_neg_d
+
+        let refl_a_minus_b = erefl(d, p, a_minus_b);
+        let ae_congr = d.lemma(
+            p.add_congr,
+            &[
+                a_minus_b,
+                a_minus_b,
+                neg_deriv_term_mul,
+                neg_c_neg_d,
+                refl_a_minus_b,
+                neg_deriv_chain,
+            ],
+        );
+        let ae1 = cadd(d, p, a_minus_b, neg_c_neg_d);
+        // Equiv actual_error ae1 = (A+negB) + (negC_full + negD_full)
+
+        // --- reorder (term1+term2)+term3 into (term1+term3)+term2 -----------
+        let term2_plus_term3 = cadd(d, p, term2, term3);
+        let term1_plus_t2t3 = cadd(d, p, term1, term2_plus_term3);
+        let reorder_step1 = d.lemma(p.add_assoc, &[term1, term2, term3]);
+        // Equiv combined_terms term1_plus_t2t3
+        let term3_plus_term2 = cadd(d, p, term3, term2);
+        let term1_plus_t3t2 = cadd(d, p, term1, term3_plus_term2);
+        let comm_23 = d.lemma(p.add_comm, &[term2, term3]);
+        let refl_term1 = erefl(d, p, term1);
+        let reorder_step2 = d.lemma(
+            p.add_congr,
+            &[
+                term1,
+                term1,
+                term2_plus_term3,
+                term3_plus_term2,
+                refl_term1,
+                comm_23,
+            ],
+        );
+        // Equiv term1_plus_t2t3 term1_plus_t3t2
+        let term1_plus_term3 = cadd(d, p, term1, term3);
+        let t1t3_plus_term2 = cadd(d, p, term1_plus_term3, term2);
+        let reorder_step3 = d.lemma(p.add_assoc, &[term1, term3, term2]);
+        // Equiv t1t3_plus_term2 term1_plus_t3t2
+        let reorder_step3_symm = esymm(d, p, t1t3_plus_term2, term1_plus_t3t2, reorder_step3);
+        let reorder_proof = echain(
+            d,
+            p,
+            combined_terms,
+            &[
+                (term1_plus_t2t3, reorder_step1),
+                (term1_plus_t3t2, reorder_step2),
+                (t1t3_plus_term2, reorder_step3_symm),
+            ],
+        );
+        // Equiv combined_terms t1t3_plus_term2
+
+        // --- congr: term1~target1, term3~term3exp, term2~target2 ------------
+        let neg_lo_term3 = cneg(d, p, lo_term3);
+        let term3exp = cadd(d, p, hi_term3, neg_lo_term3);
+        let inner_congr = d.lemma(
+            p.add_congr,
+            &[term1, target1, term3, term3exp, proof1, proof3],
+        );
+        // Equiv term1_plus_term3 (add target1 term3exp)
+        let target1_plus_term3exp = cadd(d, p, target1, term3exp);
+        let outer_congr = d.lemma(
+            p.add_congr,
+            &[
+                term1_plus_term3,
+                target1_plus_term3exp,
+                term2,
+                target2,
+                inner_congr,
+                proof2,
+            ],
+        );
+        // Equiv t1t3_plus_term2 (add target1_plus_term3exp target2)
+        let target1t3exp_plus_target2 = cadd(d, p, target1_plus_term3exp, target2);
+
+        // --- cancel_middle on (target1 + term3exp): the shared `f_term1`
+        // piece (`target1`'s trailing `neg f_term1`, `term3exp`'s leading
+        // `hi_term3`) cancels -- `hi_term3`/`lo_term3` are `expand_term3`'s
+        // own copies, structurally identical to `f_term1`/`d_full` (both
+        // `mul (mul (F y) (G' x)) (y-x)` / `mul (mul (F x) (G' x)) (y-x)`).
+        let neg_e = cneg(d, p, cap_e);
+        let cap_w = cadd(d, p, cap_a, neg_e);
+        let cm_proof = cancel_middle(d, p, cap_w, f_term1, d_full);
+        // Equiv (add (add cap_w (neg f_term1)) (add f_term1 (neg d_full))) (add cap_w (neg d_full))
+        let w_minus_d = cadd(d, p, cap_w, neg_d_full);
+        let refl_target2 = erefl(d, p, target2);
+        let cm_congr = d.lemma(
+            p.add_congr,
+            &[
+                target1_plus_term3exp,
+                w_minus_d,
+                target2,
+                target2,
+                cm_proof,
+                refl_target2,
+            ],
+        );
+        // Equiv target1t3exp_plus_target2 (add w_minus_d target2)
+        let w_minus_d_plus_target2 = cadd(d, p, w_minus_d, target2);
+
+        // --- the remaining six-leaf shuffle: (A-E-D) + ((Gval-B')-Hterm) ~
+        // (A-B) + (-C-D), cancelling `neg_e + cap_gval ~ zero` (via
+        // `mul_comm`) after bringing them adjacent, then `mul_comm`-ing
+        // `cap_bp ~ cap_b` and `g_term2 ~ c_full` into place. ------------------
+        let neg_bp = cneg(d, p, cap_bp);
+        let neg_hterm = cneg(d, p, g_term2);
+        let rest = cadd(d, p, neg_bp, neg_hterm);
+
+        // 8a/8b: flatten both 3-term blocks.
+        let assoc_p0 = d.lemma(p.add_assoc, &[cap_a, neg_e, neg_d_full]);
+        let ne_plus_ndf = cadd(d, p, neg_e, neg_d_full);
+        let p0_flat = cadd(d, p, cap_a, ne_plus_ndf);
+        let assoc_q0 = d.lemma(p.add_assoc, &[cap_gval, neg_bp, neg_hterm]);
+        let q0_flat = cadd(d, p, cap_gval, rest);
+
+        // 8c: combine.
+        let step_8c = d.lemma(
+            p.add_congr,
+            &[w_minus_d, p0_flat, target2, q0_flat, assoc_p0, assoc_q0],
+        );
+        let p0flat_plus_q0flat = cadd(d, p, p0_flat, q0_flat);
+
+        // 8d: merge chains.
+        let assoc_8d = d.lemma(p.add_assoc, &[cap_a, ne_plus_ndf, q0_flat]);
+        let ne_ndf_plus_q0flat = cadd(d, p, ne_plus_ndf, q0_flat);
+        let step_8d_result = cadd(d, p, cap_a, ne_ndf_plus_q0flat);
+
+        // 8e: expose `neg_d_full + q0_flat`.
+        let assoc_8e_local = d.lemma(p.add_assoc, &[neg_e, neg_d_full, q0_flat]);
+        let ndf_plus_q0flat = cadd(d, p, neg_d_full, q0_flat);
+        let ne_plus_that = cadd(d, p, neg_e, ndf_plus_q0flat);
+        let refl_cap_a_e = erefl(d, p, cap_a);
+        let step_8e = d.lemma(
+            p.add_congr,
+            &[
+                cap_a,
+                cap_a,
+                ne_ndf_plus_q0flat,
+                ne_plus_that,
+                refl_cap_a_e,
+                assoc_8e_local,
+            ],
+        );
+        let step_8e_result = cadd(d, p, cap_a, ne_plus_that);
+
+        // 8f: local swap of `neg_d_full` and `cap_gval` inside `ndf_plus_q0flat`.
+        let assoc_rev_f_raw = d.lemma(p.add_assoc, &[neg_d_full, cap_gval, rest]);
+        let ndf_plus_gval = cadd(d, p, neg_d_full, cap_gval);
+        let ndf_gval_plus_rest = cadd(d, p, ndf_plus_gval, rest);
+        let assoc_rev_f = esymm(d, p, ndf_gval_plus_rest, ndf_plus_q0flat, assoc_rev_f_raw);
+        let comm_f = d.lemma(p.add_comm, &[neg_d_full, cap_gval]);
+        let gval_plus_ndf = cadd(d, p, cap_gval, neg_d_full);
+        let refl_rest_f = erefl(d, p, rest);
+        let congr_f = d.lemma(
+            p.add_congr,
+            &[
+                ndf_plus_gval,
+                gval_plus_ndf,
+                rest,
+                rest,
+                comm_f,
+                refl_rest_f,
+            ],
+        );
+        let gval_ndf_plus_rest = cadd(d, p, gval_plus_ndf, rest);
+        let assoc_fwd_f = d.lemma(p.add_assoc, &[cap_gval, neg_d_full, rest]);
+        let ndf_plus_rest = cadd(d, p, neg_d_full, rest);
+        let gval_plus_that = cadd(d, p, cap_gval, ndf_plus_rest);
+        let swap_f = echain(
+            d,
+            p,
+            ndf_plus_q0flat,
+            &[
+                (ndf_gval_plus_rest, assoc_rev_f),
+                (gval_ndf_plus_rest, congr_f),
+                (gval_plus_that, assoc_fwd_f),
+            ],
+        );
+        // Equiv ndf_plus_q0flat gval_plus_that
+
+        let refl_neg_e = erefl(d, p, neg_e);
+        let lift1_f = d.lemma(
+            p.add_congr,
+            &[
+                neg_e,
+                neg_e,
+                ndf_plus_q0flat,
+                gval_plus_that,
+                refl_neg_e,
+                swap_f,
+            ],
+        );
+        let ne_plus_gvalthat = cadd(d, p, neg_e, gval_plus_that);
+        let refl_cap_a_f = erefl(d, p, cap_a);
+        let lift2_f = d.lemma(
+            p.add_congr,
+            &[
+                cap_a,
+                cap_a,
+                ne_plus_that,
+                ne_plus_gvalthat,
+                refl_cap_a_f,
+                lift1_f,
+            ],
+        );
+        let step_f_result = cadd(d, p, cap_a, ne_plus_gvalthat);
+
+        // 8g: expose `neg_e + cap_gval`.
+        let assoc_rev_g_raw = d.lemma(p.add_assoc, &[neg_e, cap_gval, ndf_plus_rest]);
+        let ne_gval_plus_rest = cadd(d, p, neg_e, cap_gval);
+        let ne_gval_plus_ndfrest = cadd(d, p, ne_gval_plus_rest, ndf_plus_rest);
+        let assoc_rev_g = esymm(
+            d,
+            p,
+            ne_gval_plus_ndfrest,
+            ne_plus_gvalthat,
+            assoc_rev_g_raw,
+        );
+        let refl_cap_a_g = erefl(d, p, cap_a);
+        let lift_g = d.lemma(
+            p.add_congr,
+            &[
+                cap_a,
+                cap_a,
+                ne_plus_gvalthat,
+                ne_gval_plus_ndfrest,
+                refl_cap_a_g,
+                assoc_rev_g,
+            ],
+        );
+        let step_g_result = cadd(d, p, cap_a, ne_gval_plus_ndfrest);
+
+        // 8h: `neg_e + cap_gval ~ zero`, via `Gval ~ E` (`mul_comm`).
+        let comm_ge = d.lemma(p.mul_comm, &[gx, fy]); // Equiv cap_gval cap_e
+        let refl_neg_e_h = erefl(d, p, neg_e);
+        let congr_h1 = d.lemma(
+            p.add_congr,
+            &[neg_e, neg_e, cap_gval, cap_e, refl_neg_e_h, comm_ge],
+        );
+        let ne_plus_e = cadd(d, p, neg_e, cap_e);
+        let comm_h2 = d.lemma(p.add_comm, &[neg_e, cap_e]);
+        let e_plus_ne = cadd(d, p, cap_e, neg_e);
+        let addneg_h3 = d.lemma(p.add_neg, &[cap_e]);
+        let zero_c = czero(d, p);
+        let cancel_h = echain(
+            d,
+            p,
+            ne_gval_plus_rest,
+            &[
+                (ne_plus_e, congr_h1),
+                (e_plus_ne, comm_h2),
+                (zero_c, addneg_h3),
+            ],
+        );
+        // Equiv ne_gval_plus_rest zero_c
+
+        // 8i: collapse the resulting `zero + rest`.
+        let refl_ndfrest = erefl(d, p, ndf_plus_rest);
+        let congr_i1 = d.lemma(
+            p.add_congr,
+            &[
+                ne_gval_plus_rest,
+                zero_c,
+                ndf_plus_rest,
+                ndf_plus_rest,
+                cancel_h,
+                refl_ndfrest,
+            ],
+        );
+        let zero_plus_ndfrest = cadd(d, p, zero_c, ndf_plus_rest);
+        let comm_i2 = d.lemma(p.add_comm, &[zero_c, ndf_plus_rest]);
+        let ndfrest_plus_zero = cadd(d, p, ndf_plus_rest, zero_c);
+        let addzero_i3 = d.lemma(p.add_zero, &[ndf_plus_rest]);
+        let chain_i = echain(
+            d,
+            p,
+            ne_gval_plus_ndfrest,
+            &[
+                (zero_plus_ndfrest, congr_i1),
+                (ndfrest_plus_zero, comm_i2),
+                (ndf_plus_rest, addzero_i3),
+            ],
+        );
+        // Equiv ne_gval_plus_ndfrest ndf_plus_rest
+
+        let refl_cap_a_i = erefl(d, p, cap_a);
+        let lift_i = d.lemma(
+            p.add_congr,
+            &[
+                cap_a,
+                cap_a,
+                ne_gval_plus_ndfrest,
+                ndf_plus_rest,
+                refl_cap_a_i,
+                chain_i,
+            ],
+        );
+        let step_i_result = cadd(d, p, cap_a, ndf_plus_rest);
+
+        // 8j: expose `(cap_a + neg_d_full)`.
+        let assoc_j_raw = d.lemma(p.add_assoc, &[cap_a, neg_d_full, rest]);
+        let a_plus_ndf = cadd(d, p, cap_a, neg_d_full);
+        let a_ndf_plus_rest = cadd(d, p, a_plus_ndf, rest);
+        let assoc_rev_j = esymm(d, p, a_ndf_plus_rest, step_i_result, assoc_j_raw);
+
+        // 8k: `add4_comm` -- swap `neg_d_full` and `neg_bp`.
+        let (step_k_result, add4_proof) = add4_comm(d, p, cap_a, neg_d_full, neg_bp, neg_hterm);
+        // step_k_result = (cap_a+neg_bp)+(neg_d_full+neg_hterm)
+
+        // 8l: commute the second block.
+        let comm_l = d.lemma(p.add_comm, &[neg_d_full, neg_hterm]);
+        let a_plus_negbp = cadd(d, p, cap_a, neg_bp);
+        let ndf_plus_nhterm = cadd(d, p, neg_d_full, neg_hterm);
+        let nhterm_plus_ndf = cadd(d, p, neg_hterm, neg_d_full);
+        let refl_a_negbp = erefl(d, p, a_plus_negbp);
+        let lift_l = d.lemma(
+            p.add_congr,
+            &[
+                a_plus_negbp,
+                a_plus_negbp,
+                ndf_plus_nhterm,
+                nhterm_plus_ndf,
+                refl_a_negbp,
+                comm_l,
+            ],
+        );
+        let step_l_result = cadd(d, p, a_plus_negbp, nhterm_plus_ndf);
+
+        // 8m: `neg_bp ~ neg_cap_b` and `neg_hterm ~ neg_c_full` (both `mul_comm`).
+        let comm_bp = d.lemma(p.mul_comm, &[gx, fx]); // Equiv cap_bp cap_b
+        let neg_cap_b = cneg(d, p, cap_b);
+        let neg_congr_bp = d.lemma(p.neg_congr, &[cap_bp, cap_b, comm_bp]); // Equiv neg_bp neg_cap_b
+
+        let comm_hterm_inner = d.lemma(p.mul_comm, &[gx, fpx]); // Equiv (mul gx fpx) (mul fpx gx)
+        let refl_diff_m = erefl(d, p, diff_yx);
+        let mul_gxfpx = cmul(d, p, gx, fpx);
+        let mul_fpxgx = cmul(d, p, fpx, gx);
+        let congr_hterm_outer = d.lemma(
+            p.mul_congr,
+            &[
+                mul_gxfpx,
+                mul_fpxgx,
+                diff_yx,
+                diff_yx,
+                comm_hterm_inner,
+                refl_diff_m,
+            ],
+        ); // Equiv g_term2 c_full
+        let neg_congr_hterm = d.lemma(p.neg_congr, &[g_term2, c_full, congr_hterm_outer]);
+        // Equiv neg_hterm neg_c_full
+
+        let refl_cap_a_m = erefl(d, p, cap_a);
+        let final_congr_bp = d.lemma(
+            p.add_congr,
+            &[cap_a, cap_a, neg_bp, neg_cap_b, refl_cap_a_m, neg_congr_bp],
+        );
+        // Equiv a_plus_negbp (add cap_a neg_cap_b)
+        let a_plus_negcapb = cadd(d, p, cap_a, neg_cap_b);
+        let refl_neg_d_full = erefl(d, p, neg_d_full);
+        let final_congr_pair = d.lemma(
+            p.add_congr,
+            &[
+                neg_hterm,
+                neg_c_full,
+                neg_d_full,
+                neg_d_full,
+                neg_congr_hterm,
+                refl_neg_d_full,
+            ],
+        );
+        // Equiv nhterm_plus_ndf (add neg_c_full neg_d_full)
+        let final_congr = d.lemma(
+            p.add_congr,
+            &[
+                a_plus_negbp,
+                a_plus_negcapb,
+                nhterm_plus_ndf,
+                neg_c_neg_d,
+                final_congr_bp,
+                final_congr_pair,
+            ],
+        );
+        // Equiv step_l_result (add a_plus_negcapb neg_c_neg_d)
+        let final_target = cadd(d, p, a_plus_negcapb, neg_c_neg_d);
+        // `final_target` is defeq to `ae1` (`a_minus_b` is `add cap_a neg_cap_b`
+        // built the same way, just independently, inside its own block above).
+
+        // --- assemble the whole shuffle: w_minus_d_plus_target2 ~ final_target
+        let shuffle_proof = echain(
+            d,
+            p,
+            w_minus_d_plus_target2,
+            &[
+                (p0flat_plus_q0flat, step_8c),
+                (step_8d_result, assoc_8d),
+                (step_8e_result, step_8e),
+                (step_f_result, lift2_f),
+                (step_g_result, lift_g),
+                (step_i_result, lift_i),
+                (a_ndf_plus_rest, assoc_rev_j),
+                (step_k_result, add4_proof),
+                (step_l_result, lift_l),
+                (final_target, final_congr),
+            ],
+        );
+        // Equiv w_minus_d_plus_target2 final_target (~ ae1)
+
+        // --- assemble the whole ring identity ---------------------------------
+        let ring_chain = echain(
+            d,
+            p,
+            combined_terms,
+            &[
+                (t1t3_plus_term2, reorder_proof),
+                (target1t3exp_plus_target2, outer_congr),
+                (w_minus_d_plus_target2, cm_congr),
+                (final_target, shuffle_proof),
+            ],
+        );
+        // Equiv combined_terms final_target
+        let ae1_symm = esymm(d, p, actual_error, ae1, ae_congr);
+        // Equiv ae1 actual_error (final_target is defeq to ae1)
+        let full_ring_proof = d.lemma(
+            p.equiv_trans,
+            &[
+                combined_terms,
+                final_target,
+                actual_error,
+                ring_chain,
+                ae1_symm,
+            ],
+        );
+        // Equiv combined_terms actual_error
+        let full_ring_proof_rev = esymm(d, p, combined_terms, actual_error, full_ring_proof);
+        // Equiv actual_error combined_terms
+
+        let conclusion = abs_le_of_equiv(
+            d,
+            p,
+            actual_error,
+            combined_terms,
+            final_out_bound,
+            full_ring_proof_rev,
+            final_error_bound,
+        );
+
+        let with_h = d.lam_fv(h_fv, hyp, conclusion);
+        let with_hyb = d.lam_fv(hyb_fv, range_yb, with_h);
+        let with_hay = d.lam_fv(hay_fv, range_ay, with_hyb);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, with_hay);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        d.lam_fv(e_fv, nat, with_x)
+    };
+
+    let mk_applied = d.const_app(p.hd_mk, &[fmul, fmul_p, a, b, modulus_mul, spec]);
+    let value = {
+        let with_hbgp = d.lam_fv(hbgp_fv, hbgp_ty, mk_applied);
+        let with_hbg = d.lam_fv(hbg_fv, hbg_ty, with_hbgp);
+        let with_hbf = d.lam_fv(hbf_fv, hbf_ty, with_hbg);
+        let with_k3 = d.lam_fv(k3_fv, nat, with_hbf);
+        let with_k2 = d.lam_fv(k2_fv, nat, with_k3);
+        let with_k1 = d.lam_fv(k1_fv, nat, with_k2);
+        let with_huc = d.lam_fv(huc_fv, huc_ty, with_k1);
+        let with_hg = d.lam_fv(hg_fv, hg_ty, with_huc);
+        let with_hf = d.lam_fv(hf_fv, hf_ty, with_hg);
+        let with_b = d.lam_fv(b_fv, carrier, with_hf);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_gp = d.lam_fv(gp_fv, func_ty, with_a);
+        let with_g = d.lam_fv(g_fv, func_ty, with_gp);
+        let with_fp = d.lam_fv(fp_fv, func_ty, with_g);
+        d.lam_fv(f_fv, func_ty, with_fp)
+    };
+    let ty = {
+        let applied = hd_ty(d, p, fmul, fmul_p, a, b);
+        let with_hbgp = d.arrow(hbgp_ty, applied);
+        let with_hbg = d.arrow(hbg_ty, with_hbgp);
+        let with_hbf = d.arrow(hbf_ty, with_hbg);
+        let with_k3 = d.pi_fv(k3_fv, nat, with_hbf);
+        let with_k2 = d.pi_fv(k2_fv, nat, with_k3);
+        let with_k1 = d.pi_fv(k1_fv, nat, with_k2);
+        let with_huc = d.arrow(huc_ty, with_k1);
+        let with_hg = d.arrow(hg_ty, with_huc);
+        let with_hf = d.arrow(hf_ty, with_hg);
+        let with_b = d.pi_fv(b_fv, carrier, with_hf);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_gp = d.pi_fv(gp_fv, func_ty, with_a);
+        let with_g = d.pi_fv(g_fv, func_ty, with_gp);
+        let with_fp = d.pi_fv(fp_fv, func_ty, with_g);
+        d.pi_fv(f_fv, func_ty, with_fp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.has_derivative_mul,
         uparams: vec![],
         ty,
         value,
