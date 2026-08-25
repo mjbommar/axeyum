@@ -182,7 +182,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 124] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 126] {
     [
         p.int_is_comm_ring,
         p.mul_eq_zero,
@@ -190,6 +190,8 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 124] {
         p.is_quadratic_residue_one,
         p.is_quadratic_residue_mul,
         p.euler_criterion_pm_one,
+        p.euler_unit_coprime,
+        p.euler_unit_injective,
         p.wilson,
         p.dvd_factorial_of_le,
         p.wilson_converse,
@@ -2091,5 +2093,140 @@ fn mul_eq_zero_computes_and_the_mod_six_reuse_is_refused() {
         "the trusted gate ACCEPTED reusing Nat.mul_eq_zero's own constant \
          with a mod-6 hypothesis standing in for a literal-zero one -- ZZ/6 \
          would wrongly inherit the integral-domain property: {bad_accepted:?}"
+    );
+}
+
+/// Euler's totient theorem's numeric content, at `n = 10`: `φ(10) = 4` and
+/// `3^4 = 81 ≡ 1 (mod 10)` (`3` is a unit mod `10`, since `gcd(3,10)=1`) —
+/// checked by kernel REDUCTION, not merely stated. `Int.euler_totient_theorem`
+/// itself is not proved in this kernel (see `euler_totient.rs`'s module doc
+/// for exactly what is missing and why), so this pins down the underlying
+/// arithmetic claim directly.
+///
+/// Negative control: `3^2 = 9 ≢ 1 (mod 10)` — the check above is sensitive to
+/// the actual exponent `4 = φ(10)`, not vacuously true for any exponent.
+#[test]
+fn euler_totient_content_reduces_at_n_equals_10() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let three = numeral(&mut k, &p, 3);
+    let ten = numeral(&mut k, &p, 10);
+    let four_nat = numeral_nat(&mut k, &p, 4);
+    let two_nat = numeral_nat(&mut k, &p, 2);
+
+    let pow = k.const_(p.pow, vec![]);
+    let emod = k.const_(p.emod, vec![]);
+
+    let three_pow_4 = {
+        let f = k.app(pow, three);
+        k.app(f, four_nat)
+    };
+    let residue_4 = {
+        let f = k.app(emod, three_pow_4);
+        k.app(f, ten)
+    };
+    let one = numeral(&mut k, &p, 1);
+    assert!(
+        k.def_eq(residue_4, one),
+        "3^4 mod 10 must reduce to 1 (phi(10) = 4, and 3 is a unit mod 10)"
+    );
+
+    let three_pow_2 = {
+        let f = k.app(pow, three);
+        k.app(f, two_nat)
+    };
+    let residue_2 = {
+        let f = k.app(emod, three_pow_2);
+        k.app(f, ten)
+    };
+    let nine = numeral(&mut k, &p, 9);
+    assert!(k.def_eq(residue_2, nine), "3^2 mod 10 must reduce to 9");
+    assert!(
+        !k.def_eq(residue_2, one),
+        "3^2 mod 10 must NOT reduce to 1 -- otherwise the exponent 4 in the \
+         check above would be doing no work"
+    );
+}
+
+/// `Int.euler_unit_coprime` is not vacuous: instantiated at `n=10, a=3, k=7`
+/// (both units mod `10`), the SAME `Eq.refl` shape that proves `Coprime a n`
+/// and `Coprime k n` (both reduce `gcd _ 10` to `1`) closes the whole
+/// application, giving a genuine proof that `emod (3*7) 10` (`= 1`) is
+/// coprime to `10`. The negative control swaps `k=7` for `k=2`
+/// (`gcd(2,10)=2`): the identically-shaped `Coprime k n` proof is REFUSED by
+/// the trusted gate, because `gcd 2 10` does NOT reduce to `1`.
+#[test]
+fn euler_unit_coprime_instantiates_at_n_10_a_3_and_rejects_a_non_unit() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+
+    let ten = numeral(&mut k, &p, 10);
+    let three = numeral(&mut k, &p, 3);
+    let seven = numeral(&mut k, &p, 7);
+    let two = numeral(&mut k, &p, 2);
+
+    // `Int.lt (ofNat 0) (ofNat 10)` is definitionally `Nat.lt 0 10 =
+    // Nat.le 1 10` (`defs.rs::declare_order_definitions`'s ofNat-ofNat
+    // branch), built the same way `rat_admits_a_normalised_pair_and_rejects_
+    // an_unreduced_one` builds `1 <= den`: `le_succ_succ zero 9 (zero_le 9)`.
+    let nine_nat = numeral_nat(&mut k, &p, 9);
+    let zero_nat = numeral_nat(&mut k, &p, 0);
+    let h_pos = {
+        let base = {
+            let lemma = k.const_(p.nat.zero_le, vec![]);
+            k.app(lemma, nine_nat)
+        };
+        let lemma = k.const_(p.nat.le_succ_succ, vec![]);
+        let at_zero = k.app(lemma, zero_nat);
+        let at_pred = k.app(at_zero, nine_nat);
+        k.app(at_pred, base)
+    };
+
+    // `Coprime a n := Eq Nat (gcd a n) 1`, discharged by `rfl` at `1` --
+    // typechecks only when `gcd a n` actually reduces to `1`.
+    let coprime_refl = |k: &mut Kernel| -> crate::ExprId {
+        let refl = k.const_(p.logic.eq_refl, vec![level_one]);
+        let at_ty = k.app(refl, nat_ty);
+        let one_nat = numeral_nat(k, &p, 1);
+        k.app(at_ty, one_nat)
+    };
+
+    let h_cop_a = coprime_refl(&mut k);
+    let h_cop_k_good = coprime_refl(&mut k);
+
+    let f = k.const_(p.euler_unit_coprime, vec![]);
+    let applied = {
+        let f = k.app(f, ten);
+        let f = k.app(f, three);
+        let f = k.app(f, seven);
+        let f = k.app(f, h_pos);
+        let f = k.app(f, h_cop_a);
+        k.app(f, h_cop_k_good)
+    };
+    k.infer(applied)
+        .expect("Int.euler_unit_coprime applied at n=10, a=3, k=7 must type-check");
+
+    // Negative control: k=2 is NOT coprime to 10 (gcd(2,10)=2).
+    let h_cop_k_bad = coprime_refl(&mut k);
+    let f2 = k.const_(p.euler_unit_coprime, vec![]);
+    let applied_bad = {
+        let f2 = k.app(f2, ten);
+        let f2 = k.app(f2, three);
+        let f2 = k.app(f2, two);
+        let f2 = k.app(f2, h_pos);
+        let f2 = k.app(f2, h_cop_a);
+        k.app(f2, h_cop_k_bad)
+    };
+    assert!(
+        k.infer(applied_bad).is_err(),
+        "the trusted gate accepted `Coprime 2 10` via a proof that \
+         gcd(2,10)=1, which is FALSE"
     );
 }
