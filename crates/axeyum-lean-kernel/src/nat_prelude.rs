@@ -136,6 +136,7 @@ mod ble;
 mod cardinality;
 mod catalan;
 mod choose;
+mod crt;
 mod defs;
 mod diagonal;
 mod divisibility;
@@ -180,6 +181,7 @@ use ble::declare_boolean_le;
 use cardinality::declare_nat_pigeonhole;
 use catalan::declare_catalan_all;
 use choose::declare_choose_all;
+use crt::declare_crt;
 use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
     declare_executable_division, declare_finite_ranges, declare_subtraction,
@@ -1516,6 +1518,21 @@ pub struct NatPrelude {
     /// `Finset`, or product type in this kernel, so uniqueness (the multiset
     /// of prime factors) is not expressible here — only existence is stated.
     pub exists_prime_factorization: NameId,
+
+    // --- Chinese Remainder Theorem, uniqueness half (`crt.rs`) --------------
+    /// `Nat.coprime_mul_dvd : ∀ m n k, Eq (gcd m n) one → dvd m k → dvd n k →
+    ///   dvd (mul m n) k` — coprime divisors of a common value combine into a
+    /// divisor of their product. `lcm m n = m*n` under coprimality
+    /// ([`Self::coprime_lcm_eq_mul`]) transported along [`Self::lcm_dvd`].
+    pub coprime_mul_dvd: NameId,
+    /// `Nat.crt_unique : ∀ m n x y, Eq (gcd m n) one → modEq m x y →
+    ///   modEq n x y → modEq (mul m n) x y` — the Chinese Remainder Theorem's
+    /// uniqueness half. Existence is declined for ℕ (see `crt.rs`'s module
+    /// doc): the classical witness needs the signed Bézout coefficients
+    /// `Nat.bezout`'s balanced form exists precisely to avoid resolving;
+    /// `Int.crt_exists` (`int_prelude/crt.rs`) already proves it over ℤ,
+    /// axiom-free.
+    pub crt_unique: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1922,6 +1939,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prod_range_zero: kernel.name_str(nat, "prodRange_zero"),
             prod_range_succ: kernel.name_str(nat, "prodRange_succ"),
             exists_prime_factorization: kernel.name_str(nat, "exists_prime_factorization"),
+            coprime_mul_dvd: kernel.name_str(nat, "coprime_mul_dvd"),
+            crt_unique: kernel.name_str(nat, "crt_unique"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2002,6 +2021,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_permutation_all(&mut d, &p)?;
         declare_prod_range(&mut d, &p)?;
         declare_exists_prime_factorization(&mut d, &p)?;
+        declare_crt(&mut d, &p)?;
         Ok(p)
     })();
     match built {
