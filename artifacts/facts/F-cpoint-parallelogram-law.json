@@ -21,7 +21,16 @@
     "F:cpoint-dot-comm",
     "F:cpoint-dot-self-add",
     "F:cpoint-dot-self-sub",
-    "F:creal-add-comm"
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-neg",
+    "F:creal-add-right-cancel",
+    "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-neg-congr"
   ],
   "axiom_footprint": [],
   "evidence": [

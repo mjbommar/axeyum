@@ -15,7 +15,11 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:cpoint-dot-comm"
+    "F:cpoint-dot-comm",
+    "F:creal-add-assoc",
+    "F:creal-add-congr",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-trans"
   ],
   "axiom_footprint": [],
   "evidence": [

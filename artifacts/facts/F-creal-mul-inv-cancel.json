@@ -16,6 +16,9 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-equiv-of-bounded",
+    "F:creal-regular",
+    "F:nat-mul-one",
     "F:rat-add-assoc",
     "F:rat-le-trans",
     "F:rat-left-distrib",

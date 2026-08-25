@@ -189,5 +189,43 @@ class ATheoremNameIsWrittenThreeWaysInCheckerCommands(unittest.TestCase):
         self.assertIsNone(DD.theorem_of(fact))
 
 
+class TheConstructedCarriersAreEnforcedToo(unittest.TestCase):
+    """`CReal`/`Complex`/`CPoint` were absent from `_NS` until 2026-08-25, so
+    every fact whose checker named a theorem in one of those namespaces fell
+    into `unnamed` — 331 theorems (159 CReal, 84 Complex, 88 CPoint) this gate
+    never enforced anything over. Widening the class must not repeat the
+    `AxReal`/`Real` substring trap CLAUDE.md documents: `CReal` is a literal
+    substring of nothing in `_NS`, but the boundary must still hold for any
+    name that merely ENDS in one of these tokens."""
+
+    def test_creal_matches(self) -> None:
+        found = DD.THEOREM_RE.search("theorem_dependency_inventory -- CReal.add_comm")
+        self.assertEqual(found.group(1), "CReal.add_comm")
+
+    def test_complex_matches(self) -> None:
+        found = DD.THEOREM_RE.search("theorem_dependency_inventory -- Complex.mul_comm")
+        self.assertEqual(found.group(1), "Complex.mul_comm")
+
+    def test_cpoint_matches(self) -> None:
+        found = DD.THEOREM_RE.search("theorem_dependency_inventory -- CPoint.dot_comm")
+        self.assertEqual(found.group(1), "CPoint.dot_comm")
+
+    def test_a_near_miss_carrier_prefix_is_not_matched_as_creal(self) -> None:
+        """`XCReal.foo` is not a name any kernel declares. The same
+        `(?<![A-Za-z])` boundary that keeps `AxReal.add_comm` from spuriously
+        yielding `Real.add_comm` must also keep this from matching at the
+        `CReal` offset — the character immediately before it is a letter."""
+        found = DD.THEOREM_RE.search("cargo run -- XCReal.foo")
+        self.assertIsNone(found)
+
+    def test_axreal_still_wins_over_real_next_to_a_real_creal_name(self) -> None:
+        """Regression control for the ORIGINAL substring trap, now run
+        alongside the widened class: `AxReal.add_comm` must still yield
+        `AxReal.add_comm`, never `Real.add_comm`, even with `CReal` present in
+        `_NS`."""
+        found = DD.THEOREM_RE.search("nat_theorem_inventory -- AxReal.add_comm")
+        self.assertEqual(found.group(1), "AxReal.add_comm")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -20,9 +20,22 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:cpoint-dot-comm",
+    "F:creal-add-assoc",
     "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-neg",
+    "F:creal-add-right-cancel",
+    "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-left-distrib",
+    "F:creal-mul-assoc",
     "F:creal-mul-comm",
-    "F:creal-mul-inv-cancel"
+    "F:creal-mul-congr",
+    "F:creal-mul-inv-cancel",
+    "F:creal-mul-one",
+    "F:creal-neg-congr"
   ],
   "axiom_footprint": [],
   "evidence": [

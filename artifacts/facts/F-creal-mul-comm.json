@@ -15,6 +15,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-equiv-of-pointwise",
     "F:nat-add-comm",
     "F:rat-mul-comm"
   ],
