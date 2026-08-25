@@ -156,6 +156,7 @@ mod order;
 mod order_extra;
 mod order_more;
 mod permutation;
+mod powsq;
 mod primes;
 mod rectangle;
 mod relation;
@@ -207,6 +208,7 @@ use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
 use permutation::declare_permutation_all;
+use powsq::declare_powsq_all;
 use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
 use rectangle::declare_rectangle;
 use relation::{
@@ -1516,6 +1518,47 @@ pub struct NatPrelude {
     /// `Finset`, or product type in this kernel, so uniqueness (the multiset
     /// of prime factors) is not expressible here — only existence is stated.
     pub exists_prime_factorization: NameId,
+
+    // --- exponentiation by squaring (`powsq.rs`) -----------------------------
+    /// `Nat.powSqAux : Nat → Nat → Nat → Nat`, `powSqAux fuel b e`: structural
+    /// `Nat.rec` on `fuel` (the only structural parameter — the true
+    /// recursion is on `e/2`, not on `e`, so it needs fuel or well-founded
+    /// recursion; see the module doc for why fuel was chosen). `powSqAux 0 b
+    /// e ≡ 1`; `powSqAux (succ f) b e ≡ if beq e 0 then 1 else let h :=
+    /// powSqAux f b (e/2) in if beq (e%2) 0 then h*h else h*h*b`. Not the
+    /// public name; [`Self::pow_sq`] supplies `fuel := e`.
+    pub pow_sq_aux: NameId,
+    /// `Nat.powSq b e := powSqAux e b e` — exponentiation by squaring. `e`
+    /// itself is always enough fuel ([`Self::pow_sq_eq_pow`]).
+    pub pow_sq: NameId,
+    /// `Nat.pow_half_split : ∀ b e, Eq (pow b e) (bool_select_nat (beq (mod e
+    /// two) 0) (mul (pow b (div e two)) (pow b (div e two))) (mul (mul (pow b
+    /// (div e two)) (pow b (div e two))) b))` — pure arithmetic about
+    /// `Nat.pow`/`div`/`mod`, no fuel or induction hypothesis, true uniformly
+    /// including at `e = 0`. The reusable core both
+    /// [`Self::pow_sq_aux_eq_pow`]'s induction step and [`Self::pow_sq_succ`]
+    /// consume.
+    pub pow_half_split: NameId,
+    /// `Nat.pow_sq_aux_eq_pow : ∀ fuel b e, Le e fuel → powSqAux fuel b e =
+    /// pow b e` — sufficiency implies correctness, proved by induction on
+    /// `fuel` (NOT the `sizeAux n n = sizeAux (succ n) n` fuel-vs-fuel shape
+    /// a prior handover flagged as the wrong statement — see the module doc).
+    /// Specializing at `fuel := e` via `le_refl` gives
+    /// [`Self::pow_sq_eq_pow`].
+    pub pow_sq_aux_eq_pow: NameId,
+    /// `Nat.pow_sq_eq_pow : ∀ b e, powSq b e = pow b e` — `e` is always
+    /// sufficient fuel for `powSq b e := powSqAux e b e`. The correctness
+    /// theorem the handover asked for; [`Self::pow_sq_zero`] and
+    /// [`Self::pow_sq_succ`] are read off it rather than proved directly
+    /// against `powSqAux`'s raw unfolding.
+    pub pow_sq_eq_pow: NameId,
+    /// `Nat.pow_sq_zero : ∀ b, powSq b 0 = 1`.
+    pub pow_sq_zero: NameId,
+    /// `Nat.pow_sq_succ : ∀ b k, powSq b (succ k) = bool_select_nat (beq
+    /// ((succ k) % 2) 0) (mul (powSq b ((succ k)/2)) (powSq b ((succ k)/2)))
+    /// (mul (mul (powSq b ((succ k)/2)) (powSq b ((succ k)/2))) b)` — `powSq`'s
+    /// own second defining equation, over `powSq` itself (not `powSqAux`).
+    pub pow_sq_succ: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1922,6 +1965,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prod_range_zero: kernel.name_str(nat, "prodRange_zero"),
             prod_range_succ: kernel.name_str(nat, "prodRange_succ"),
             exists_prime_factorization: kernel.name_str(nat, "exists_prime_factorization"),
+            pow_sq_aux: kernel.name_str(nat, "powSqAux"),
+            pow_sq: kernel.name_str(nat, "powSq"),
+            pow_half_split: kernel.name_str(nat, "pow_half_split"),
+            pow_sq_aux_eq_pow: kernel.name_str(nat, "pow_sq_aux_eq_pow"),
+            pow_sq_eq_pow: kernel.name_str(nat, "pow_sq_eq_pow"),
+            pow_sq_zero: kernel.name_str(nat, "pow_sq_zero"),
+            pow_sq_succ: kernel.name_str(nat, "pow_sq_succ"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2002,6 +2052,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_permutation_all(&mut d, &p)?;
         declare_prod_range(&mut d, &p)?;
         declare_exists_prime_factorization(&mut d, &p)?;
+        declare_powsq_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
