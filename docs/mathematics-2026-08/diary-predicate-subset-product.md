@@ -241,3 +241,104 @@ it.
 
 So the score is: pigeonhole **done, cheaply**; product invariance **open, and
 the ~650-line swap port is still the honest estimate.**
+
+---
+
+## Fourth correction: the conjecture is HALF right — the reduction is free, the
+## floor under it was undercounted
+
+A conjecture came in that the pigeonhole's extension trick — fix every point
+outside the subset, hand the result unmodified to the full-range lemma — also
+rescues `Nat.prodRangeIf_permute`, contradicting the "does not rescue it" claim
+two sections up. Checked against the actual code and the actual statements,
+not against the name.
+
+**The reduction half is correct, and the third correction's "does not rescue
+it" was reasoning about the wrong construction.** That section tried extending
+`prodRangeIf` itself and hit the interior-swap problem again. The conjecture
+instead extends **the selector**, using exactly `extend_id` (already declared
+in `subset_product.rs`, built for the pigeonhole): with `h i := bool_select_nat
+(p i) (f i) 1` and `σ' i := bool_select_nat (p i) (σ i) i`, checking both
+branches of `p i` shows `h ∘ σ' = ` the selector for `f ∘ σ`, **pointwise, with
+no induction**:
+
+- `p i` true: `σ' i = σ i`, so `h(σ' i) = bool_select_nat(p(σ i))(f(σ i)) 1 =
+  f(σ i)` (using `p`-preservation), which is exactly the selector for `f∘σ` at
+  `i`.
+- `p i` false: `σ' i = i`, so `h(σ' i) = h i = 1` — **both sides are the
+  multiplicative identity**, which is the conjecture's own observation and is
+  exactly right.
+
+`σ'` is a full injective self-map of `[0,n)` by the same argument the
+pigeonhole already uses. So `prodRangeIf p (f∘σ) n` unfolds to `prodRange (h∘σ')
+n`, and the ENTIRE remaining proof obligation — with zero predicate-specific
+induction — is `Nat.prodRange (h∘σ') n = Nat.prodRange h n` for a full-range
+injective self-map `σ'`. That is `Nat.prodRange_permute`, verbatim, applied to
+`h`, not to `f`. `Nat.prodRangeIf_permute` is therefore LITERALLY a corollary
+of `Nat.prodRange_permute` plus `extend_id` plus a `bool_case` split — the same
+device already sitting in this file, not a new one.
+
+**The floor under it is real, is `Nat`-only, and is bigger than "~650 lines,"
+not smaller.** Verified by inventory, not by name:
+
+```
+cargo run --release -p axeyum-lean-kernel --example prelude_theorem_inventory -- --include-constructed
+  -> positive control Nat.gcd: 48 matches
+  -> awk -F'\t' over column 2, grep -iE 'prodrange|permute|swap':
+     Nat has only prodRange_zero, prodRange_succ, prodRangeIf_{zero,succ,congr_lt}.
+     Every *permute*/*swap* row is `Int.*` (prodRange_permute, prodRange_swap,
+     prodRange_swap_adjacent) or unrelated (sumRange_swap, det2_swap_rows, …).
+```
+
+`Int.prodRange_permute`'s verbatim rendered type (`int_theorem_inventory`)
+confirms the third correction's reading exactly: `σ` ranges over `Nat.mapsInto`
+— a **full** self-map of `[0,n)`, not a subset map. And `declare_prod_range_permute`
+itself (`int_prelude/prod.rs:3185`) is a short induction (~30 lines) that
+does nothing but call `permute_step`, which calls `prod_range_swap`
+(`declare_prod_range_swap`, `int_prelude/prod.rs:2430`, ~755 lines) which
+calls `prod_range_swap_adjacent` (`declare_prod_range_swap_adjacent`,
+`int_prelude/prod.rs:937`, ~1,493 lines including its private helpers). That
+is **~2,280 lines** of swap/permute machinery, not ~650 — the diary's own
+earlier estimate undercounted by more than 3x, measured by counting the
+functions rather than guessing from the doc comment's own "took three drafts"
+line.
+
+**One genuine mitigation, also checked rather than assumed:**
+`int_prelude/prod.rs`'s own `point_override`/`po_inner`/`select_nat_true`/
+`select_nat_false`/`override_eq_at` (lines 2608–2717, ~110 lines, private to
+that file) are structural duplicates of `nat_prelude/finite.rs`'s own
+`point_override`/`po_inner`/`select_nat_true`/`select_nat_false`/
+`override_eq_at` (lines 1392–1575) — the latter's own doc comment on the
+neighbouring `ne_of_lt` says so explicitly ("the `NatDev` counterpart of
+`int_prelude/prod.rs`'s private `ne_of_lt`"). So a `Nat`-native port of the
+swap machinery does **not** need to re-derive that ~110-line override
+apparatus; `finite.rs` already carries it, one visibility bump away
+(`fn` → `pub(super) fn` on `point_override`/`po_inner`/`override_eq_at`) from
+reuse. That trims the port, it does not eliminate it — `swap_adjacent`'s
+~1,400 remaining lines are the adjacent-transposition induction itself, which
+has no existing `Nat` counterpart at any visibility.
+
+**A route that looks free and is not, checked and closed:** `int_prelude`
+depends on `nat_prelude` (`build_int_prelude` calls `build_nat_prelude` first,
+`int_prelude.rs:1179`), never the reverse. So a `Nat.prodRange_permute` proved
+by casting through `Int.ofNat`, reusing the *already-existing*
+`Int.prodRange_permute` (`Int.of_nat_pow`, same file, is the existence proof
+that this cast-compatibility shape is buildable), is not available from inside
+`nat_prelude` — `Int.*` names do not exist yet at the point `nat_prelude` is
+built. That route only opens if a future declaration lived downstream of both
+preludes, which is out of this slice's scope (`subset_product.rs` only) and
+would not actually be `Nat.prodRange_permute` in the `nat_prelude` namespace
+Euler's proof needs.
+
+**Verdict:** conjecture CONFIRMED for the part it was actually about —
+`Nat.prodRangeIf_permute` costs zero extra induction over `Nat.prodRange_permute`
+once the latter exists, via the same extension device already in this file.
+Conjecture's implicit hope that this also shrinks the missing full-range lemma
+is REFUTED — that lemma is `Nat`-native-only, is not reachable via the `Int`
+side, and is measured at ~2,280 lines (~2,170 after reusing `finite.rs`'s
+override apparatus), not the ~650 previously guessed. Not attempted in this
+slice: building 1,400+ lines of new adjacent-transposition induction, sound
+and axiom-free, is a multi-draft undertaking by the original author's own
+account, and a `--include-constructed` inventory run plus two verbatim-type
+reads is a cheaper way to spend this slice than a first, likely-wrong draft of
+it.
