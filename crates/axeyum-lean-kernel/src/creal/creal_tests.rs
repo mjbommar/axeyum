@@ -390,6 +390,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ),
         ("CReal.hasDerivative_cube", p.has_derivative_cube, "theorem"),
         ("CReal.hasDerivative_pow", p.has_derivative_pow, "theorem"),
+        (
+            "CReal.hasDerivative_chain",
+            p.has_derivative_chain,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
