@@ -1959,6 +1959,15 @@ pub struct CRealPrelude {
     /// via [`Self::riemann_sample_in_bounds`]. See `integral.rs`'s module
     /// documentation; `riemann_sum_le` itself is UNCHANGED (both exist).
     pub riemann_sum_le_on: NameId,
+    /// `CReal.hasDerivative_closeOfEquiv : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// ∀ u v, le a u → le u b → le a v → le v b → Equiv u v → Equiv (F u) (F v)`
+    /// — differentiability implies (local) continuity: two `Equiv`-related
+    /// points inside the domain map to `Equiv`-related values. See
+    /// `creal/monotone.rs`'s module documentation for why
+    /// `monotone_of_nonneg_deriv` needs this (an interpolation endpoint built
+    /// by dividing an interval into `K` equal pieces is only ever `Equiv` to
+    /// the true endpoint, never syntactically equal to it).
+    pub has_derivative_close_of_equiv: NameId,
 }
 
 impl CRealPrelude {
@@ -2249,6 +2258,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         of_nat_le: kernel.name_str(creal, "ofNat_le"),
         riemann_sample_in_bounds: kernel.name_str(creal, "riemannSum_sample_in_bounds"),
         riemann_sum_le_on: kernel.name_str(creal, "riemannSum_le_on"),
+        has_derivative_close_of_equiv: kernel.name_str(creal, "hasDerivative_closeOfEquiv"),
     }
 }
 
