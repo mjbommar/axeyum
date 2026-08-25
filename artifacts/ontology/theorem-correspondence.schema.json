@@ -1,0 +1,181 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://axeyum.dev/ontology/theorem-correspondence.schema.json",
+    "title": "Axeyum Theorem Correspondence",
+    "description": "One adjudicated claim that two settled facts in the ledger are the same mathematical content. This is NOT a proof dependency: `depends_on` says one proof used the other, and a correspondence says the two are the same idea whether or not either proof ever mentions the other. The two are mutually exclusive by construction and `scripts/validate-correspondences.py` refuses a correspondence whose endpoints the fact ledger already connects. Everything that makes the claim strong or weak -- the transport that identifies the two, the intermediate steps and whether each one exists here, and the separation of what WE established from what mathematics knows -- is structured data, never tone.",
+    "type": "object",
+    "required": [
+        "schema_version",
+        "kind",
+        "id",
+        "title",
+        "correspondence_kind",
+        "endpoints",
+        "claim",
+        "transport",
+        "derivation_status",
+        "external_status",
+        "via",
+        "evidence",
+        "provenance"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "schema_version": {
+            "const": 1
+        },
+        "kind": {
+            "const": "axeyum-theorem-correspondence"
+        },
+        "id": {
+            "type": "string",
+            "pattern": "^X:[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "`X:` for cross-reference. Distinct from `F:` facts, `C:` concepts, `K:` overlay entities and `L:` overlay links, so an id says what kind of thing it names."
+        },
+        "title": {
+            "type": "string",
+            "minLength": 16
+        },
+        "correspondence_kind": {
+            "enum": [
+                "carrier-transport",
+                "independent-formalization",
+                "specialization"
+            ],
+            "description": "`carrier-transport`: the same law stated over two different carriers -- checkable, because stripping the carrier from both formal statements must leave the same string. `independent-formalization`: the same classical theorem formalized twice by DIFFERENT proof routes; the endpoints' formal statements are in different languages so no structural check is available and the validator says so. `specialization`: endpoints[0] is what endpoints[1] becomes under the substitution named in `transport`; ordered, never symmetric."
+        },
+        "endpoints": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "uniqueItems": true,
+            "items": {
+                "type": "string",
+                "pattern": "^F:[a-z0-9]+(?:-[a-z0-9]+)*$"
+            },
+            "description": "Exactly two fact ids. Facts, not kernel declarations: a fact is the only object in this repository that carries a formal statement, and the kernel projection's rows carry an id, a kind and an axiom footprint but no type. A correspondence anchored on a projection row could not be checked against anything, which is the failure mode this file exists to avoid. For `specialization` the order is load-bearing: endpoints[0] specializes endpoints[1]."
+        },
+        "claim": {
+            "type": "string",
+            "minLength": 120,
+            "description": "What is the same about the two, in prose. The floor is set from measured practice next door: math-education's `bridges_to` reasons run 75-328 characters with a median of 190, and its SHACL floor of 10 never fired."
+        },
+        "transport": {
+            "type": "string",
+            "minLength": 60,
+            "description": "The SPECIFIC map, cast, substitution or instantiation that identifies the two statements. `they are related` is not a transport; `n as an integer via Int.ofNat, with Int.fib agreeing with Nat.fib there` is."
+        },
+        "derivation_status": {
+            "enum": [
+                "asserted",
+                "route-recorded",
+                "mechanized-here"
+            ],
+            "description": "What WE established about the correspondence itself, on the same axis as a fact's `epistemic_status`. `asserted`: nobody has written down a route, and `via` is empty. `route-recorded`: `via` names the intermediate steps and every one of them resolves to something that exists here, but nothing composes them. `mechanized-here`: a checked artifact establishes the equivalence, and `evidence` carries the command that re-derives it."
+        },
+        "external_status": {
+            "enum": [
+                "classical",
+                "folklore",
+                "novel-here",
+                "unclassified"
+            ],
+            "description": "What MATHEMATICS knows about the correspondence, on the same axis as a fact's `external_status`. `novel-here` claims the connection itself is new, and the validator requires `derivation_status: mechanized-here` to back it."
+        },
+        "via": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "step",
+                    "ref"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "step": {
+                        "type": "string",
+                        "minLength": 20,
+                        "description": "One intermediate result the route needs."
+                    },
+                    "ref": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The object that supplies this step: an `F:` fact id, or `kernel:<Declaration.Name>` resolved against artifacts/autogenesis/kernel-dependency-projection-v1.json. `null` means the step is MISSING here -- a named gap, and the reason a route with any null cannot be `mechanized-here`."
+                    }
+                }
+            },
+            "description": "The ordered route from one endpoint to the other. Empty exactly when `derivation_status` is `asserted`. Every non-null `ref` must resolve; a step naming an object that does not exist is the failure this array exists to make impossible."
+        },
+        "evidence": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "kind",
+                    "supports",
+                    "checker_command",
+                    "artifact"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "supports": {
+                        "type": "string",
+                        "minLength": 40
+                    },
+                    "checker_command": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A command whose EXIT STATUS depends on what it found. Required non-empty, and required at all, only for `mechanized-here`."
+                    },
+                    "artifact": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                }
+            }
+        },
+        "provenance": {
+            "type": "object",
+            "required": [
+                "date",
+                "established_by",
+                "sources"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                },
+                "established_by": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "sources": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "prior_art": {
+                    "type": "array",
+                    "items": {
+                        "type": "object"
+                    }
+                }
+            }
+        },
+        "notes": {
+            "type": "string"
+        }
+    }
+}

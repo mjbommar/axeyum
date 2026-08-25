@@ -83,6 +83,12 @@ impl Fixture {
 /// machinery, so they are checked separately by `environment().contains`.
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        p.set_union,
+        p.set_inter,
+        p.set_compl,
+        p.set_diff,
+        p.subset,
+        p.catalan,
         p.add,
         p.mul,
         p.pow,
@@ -118,11 +124,20 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.totient,
         p.fib_aux,
         p.fib,
+        p.reflexive_on,
+        p.symmetric_on,
+        p.transitive_on,
+        p.equivalence_on,
+        p.bijective_on,
+        p.comp,
     ]
 }
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        p.count_range_union_add_inter,
+        p.count_range_le_of_subset,
+        p.count_range_compl,
         p.add_zero,
         p.add_succ,
         p.mul_zero,
@@ -220,6 +235,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.gcd_bezout,
         p.gauss_lemma,
         p.lcm_dvd,
+        p.dvd_antisymm,
+        p.catalan_mul_succ,
+        p.lcm_comm,
+        p.coprime_lcm_eq_mul,
         p.fib_add,
         p.coprime_fib_succ,
         p.mod_eq_refl,
@@ -322,6 +341,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.fib_le_succ,
         p.fib_pos_of_pos,
         p.sum_fib,
+        p.eq_equivalence_on,
+        p.mod_eq_equivalence_on,
+        p.bijective_of_injective_on,
+        p.injective_on_comp,
     ]
 }
 
@@ -4434,7 +4457,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        35 + 195,
+        47 + 206,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -5753,4 +5776,175 @@ fn fib_le_succ_pos_of_pos_and_sum_fib_apply_and_are_axiom_free() {
         f.k.axiom_footprint(p.sum_fib).is_empty(),
         "sum_fib must rest on zero axioms"
     );
+}
+
+/// `Nat.catalan` computes: the kernel's own `def_eq` reduces `catalan 0..5`
+/// to the literal Catalan numbers `1, 1, 2, 5, 14, 42` — see `catalan.rs`'s
+/// module doc for the hand check. The negative control matters as much as
+/// the positive one (`arithmetic_reduces_on_numerals` says so above, and it
+/// applies here just as much): a `catalan` that type-checks but computes
+/// wrong has an EMPTY axiom footprint and passes every sweep in this
+/// repository.
+#[test]
+fn catalan_computes_at_concrete_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let expected: [u32; 6] = [1, 1, 2, 5, 14, 42];
+    for (n, &c) in expected.iter().enumerate() {
+        let n_expr = f.num(u32::try_from(n).expect("n fits in u32"));
+        let cat = f.const_app(p.catalan, &[n_expr]);
+        let c_expr = f.num(c);
+        assert!(
+            f.k.def_eq(cat, c_expr),
+            "catalan {n} must reduce to {c}, the n={n} Catalan number"
+        );
+    }
+
+    // Negative control: `catalan 3` is NOT `6` — a plausible-looking wrong
+    // value (`6 = choose 4 2`, what you would get from forgetting the
+    // second subtracted term entirely).
+    let three = f.num(3);
+    let cat_3 = f.const_app(p.catalan, &[three]);
+    let six = f.num(6);
+    assert!(
+        !f.k.def_eq(cat_3, six),
+        "catalan 3 must NOT reduce to 6 (def_eq must not be vacuously true)"
+    );
+}
+
+/// `Nat.catalan_mul_succ` at `n = 3`: `4 * catalan 3 = 4 * 5 = 20 = choose 6
+/// 3` — the multiplicative identity that ties `catalan` to `choose`, checked
+/// at a concrete instance independent of the computation check above (that
+/// one never applies `catalan_mul_succ`).
+#[test]
+fn catalan_mul_succ_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let three = f.num(3);
+    let proof = f.lemma(p.catalan_mul_succ, &[three]);
+    let inferred =
+        f.k.infer(proof)
+            .unwrap_or_else(|e| panic!("catalan_mul_succ(3) should infer: {}", f.explain(&e)));
+
+    let lhs = {
+        let four = f.succ(three);
+        let cat_3 = f.const_app(p.catalan, &[three]);
+        f.mul(four, cat_3)
+    };
+    let rhs = {
+        let six = f.add(three, three);
+        f.choose(six, three)
+    };
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "catalan_mul_succ(3) should state mul (succ 3) (catalan 3) = choose (add 3 3) 3"
+    );
+
+    let twenty = f.num(20);
+    assert!(f.k.def_eq(lhs, twenty), "4 * catalan 3 must reduce to 20");
+    assert!(f.k.def_eq(rhs, twenty), "choose 6 3 must reduce to 20");
+
+    assert!(
+        f.k.axiom_footprint(p.catalan_mul_succ).is_empty(),
+        "catalan_mul_succ must rest on zero axioms"
+    );
+}
+
+/// Finite set operations (`nat_prelude/finite_set.rs`) compute the right
+/// membership on a small concrete instance: singleton predicates `A = {0}`,
+/// `B = {1}`, and `C = {0}` (so `A ∩ C` has a nonempty positive case, unlike
+/// the disjoint `A ∩ B`). This is the mandatory concrete instance for the
+/// curriculum node `sets` — a characteristic function that type-checks but
+/// computes the wrong membership has an empty axiom footprint and passes
+/// every other sweep in this repository. WITH negative controls throughout.
+#[test]
+fn finite_set_operations_compute_on_a_concrete_pair() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    let singleton = |f: &mut Fixture, elem: ExprId| -> ExprId {
+        let k_fv = f.fresh_fvar();
+        let k = f.kernel().fvar(k_fv);
+        let body = f.beq(k, elem);
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+
+    let a = singleton(&mut f, zero); // A = {0}
+    let b = singleton(&mut f, one); // B = {1}
+    let c = singleton(&mut f, zero); // C = {0}, overlaps A
+
+    // setUnion: A ∪ B = {0, 1}.
+    let union_ab = f.const_app(p.set_union, &[a, b]);
+    let u0 = f.apply(union_ab, &[zero]);
+    let u1 = f.apply(union_ab, &[one]);
+    let u2 = f.apply(union_ab, &[two]);
+    assert!(f.k.def_eq(u0, true_), "0 must be in A union B");
+    assert!(f.k.def_eq(u1, true_), "1 must be in A union B");
+    assert!(f.k.def_eq(u2, false_), "2 must not be in A union B");
+    assert!(
+        !f.k.def_eq(u2, true_),
+        "NEGATIVE: 2 not in A union B must not reduce to true"
+    );
+
+    // setInter: A ∩ B = ∅ (disjoint); A ∩ C = {0} (C = A, overlapping).
+    let inter_ab = f.const_app(p.set_inter, &[a, b]);
+    let iab0 = f.apply(inter_ab, &[zero]);
+    let iab1 = f.apply(inter_ab, &[one]);
+    assert!(f.k.def_eq(iab0, false_), "0 must not be in A inter B");
+    assert!(f.k.def_eq(iab1, false_), "1 must not be in A inter B");
+
+    let inter_ac = f.const_app(p.set_inter, &[a, c]);
+    let iac0 = f.apply(inter_ac, &[zero]);
+    let iac1 = f.apply(inter_ac, &[one]);
+    assert!(f.k.def_eq(iac0, true_), "0 must be in A inter C");
+    assert!(f.k.def_eq(iac1, false_), "1 must not be in A inter C");
+    assert!(
+        !f.k.def_eq(iac0, false_),
+        "NEGATIVE: 0 in A inter C must not reduce to false"
+    );
+
+    // setCompl: complement of A over the ambient {0, 1, 2} probe points.
+    let compl_a = f.const_app(p.set_compl, &[a]);
+    let ca0 = f.apply(compl_a, &[zero]);
+    let ca1 = f.apply(compl_a, &[one]);
+    let ca2 = f.apply(compl_a, &[two]);
+    assert!(f.k.def_eq(ca0, false_), "0 must not be in complement of A");
+    assert!(f.k.def_eq(ca1, true_), "1 must be in complement of A");
+    assert!(f.k.def_eq(ca2, true_), "2 must be in complement of A");
+    assert!(
+        !f.k.def_eq(ca0, true_),
+        "NEGATIVE: 0 not in complement of A must not reduce to true"
+    );
+
+    // setDiff: A \ B = {0}.
+    let diff_ab = f.const_app(p.set_diff, &[a, b]);
+    let d0 = f.apply(diff_ab, &[zero]);
+    let d1 = f.apply(diff_ab, &[one]);
+    let d2 = f.apply(diff_ab, &[two]);
+    assert!(f.k.def_eq(d0, true_), "0 must be in A diff B");
+    assert!(f.k.def_eq(d1, false_), "1 must not be in A diff B");
+    assert!(f.k.def_eq(d2, false_), "2 must not be in A diff B");
+    assert!(
+        !f.k.def_eq(d0, false_),
+        "NEGATIVE: 0 in A diff B must not reduce to false"
+    );
+
+    // Every declaration exercised here rests on zero axioms.
+    for name in [p.set_union, p.set_inter, p.set_compl, p.set_diff, p.subset] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
 }
