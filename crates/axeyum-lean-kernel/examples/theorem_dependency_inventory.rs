@@ -31,9 +31,27 @@
 //! which *propositions* it needs.
 //!
 //! ```sh
-//! cargo run -q -p axeyum-lean-kernel --example theorem_dependency_inventory
-//! cargo run -q -p axeyum-lean-kernel --example theorem_dependency_inventory -- euclid
+//! cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory
+//! cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- euclid
 //! ```
+//!
+//! # `--release` IS NOW MANDATORY, since `creal`/`complex`/`cpoint` were added
+//!
+//! This tool used to be shallow enough (`nat`+`integer`+`rat`+`string`+
+//! `characterization`) to run fine in a debug build, and its own doc examples
+//! above omitted the flag for that reason. Adding the constructed carriers
+//! reproduces the SAME stack depth `prelude_theorem_inventory
+//! --include-constructed` already hits: `Kernel::add_declaration` recurses
+//! deeply enough while building `CReal`/`Complex`/`CPoint` that a debug
+//! build's larger stack frames blow the default thread stack. Measured on
+//! this tree: `cargo build --release` then running the binary directly exits
+//! 0 with 1092 theorems reported; `cargo build` (debug) then running it
+//! SIGABRTs with `thread 'main' has overflowed its stack`, exit 134. Nothing
+//! is wrong with any theorem — this is the resource limit in CLAUDE.md's
+//! Gotchas wearing a crash's clothes, one level further down the tool list. A
+//! `checker_command` that runs this example MUST pass `--release`, or a
+//! `cargo run -q -p ... --example theorem_dependency_inventory -- <name>`
+//! reads as a broken checker rather than a debug-stack limit.
 //!
 //! # A filter that matches nothing is a FAILURE
 //!
@@ -45,8 +63,9 @@
 use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
-    Declaration, Kernel, build_characterization, build_int_prelude, build_logic_prelude,
-    build_nat_prelude, build_rat_prelude, build_string_prelude,
+    Declaration, Kernel, build_characterization, build_complex_prelude, build_cpoint_prelude,
+    build_creal_prelude, build_int_prelude, build_logic_prelude, build_nat_prelude,
+    build_rat_prelude, build_string_prelude,
 };
 
 fn main() -> ExitCode {
@@ -63,8 +82,13 @@ fn main() -> ExitCode {
     // never pointed at the subject is indistinguishable from a strong negative,
     // which is exactly the trap CLAUDE.md records.
     //
-    // `creal` is deliberately excluded while it is under construction; add it
-    // when it settles.
+    // `creal`/`complex`/`cpoint` (the constructed ℝ, ℂ, and the plane over
+    // constructed ℝ) are now included: 423 theorems combined were previously
+    // outside this tool's coverage, so a fact over them could never get a
+    // derived `depends_on`. Each `build_*_prelude` call here is idempotent and
+    // builds its own prerequisites (e.g. `build_creal_prelude` calls
+    // `build_rat_prelude` itself), so re-adding `rat` here is a harmless no-op
+    // rather than a duplicate build.
     let _ = build_nat_prelude(&mut kernel).expect("Nat prelude must build");
     let _ = build_int_prelude(&mut kernel).expect("Int prelude must build");
     let _ = build_rat_prelude(&mut kernel).expect("Rat prelude must build");
@@ -73,6 +97,9 @@ fn main() -> ExitCode {
     let logic = build_logic_prelude(&mut kernel).expect("logic prelude must build");
     let _ = build_string_prelude(&mut kernel, logic, 2).expect("String prelude must build");
     let _ = build_characterization(&mut kernel).expect("characterization must build");
+    let _ = build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+    let _ = build_complex_prelude(&mut kernel).expect("Complex prelude must build");
+    let _ = build_cpoint_prelude(&mut kernel).expect("CPoint prelude must build");
 
     // Collect first, then sort by rendered name: environment iteration order is
     // an interning artifact and this output is meant to be diffable.

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-polyeval-succ",
+  "title": "Rational polynomial evaluation unfolds one degree at a time",
+  "statement": "For a coefficient sequence p, degree index n and point x, evaluating p at x through degree n+1 equals (evaluating through degree n) plus the degree-n term p(n) * x^n.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.polyEval_succ : ((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : AxNat) -> ((x2 : Rat) -> Eq.{1} Rat (Rat.polyEval x0 (AxNat.succ x1) x2) (Rat.add (Rat.polyEval x0 x1 x2) (Rat.mul (x0 x1) (Rat.pow x2 x1))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.polyEval_succ",
+      "kind": "kernel-term",
+      "supports": "Rat.polyEval_succ is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.polyEval_succ 2>/dev/null | grep -cE '^Rat\\.polyEval_succ\\t'",
+      "notes": "`build_rat_prelude` admits Rat.polyEval_succ through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` exits non-zero for a named filter that matches nothing (a deleted theorem cannot read as a re-derived one), and `grep -c` (never `-q`) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present -- two ways the same absence would be caught. `--release` is MANDATORY: this tool now also builds `creal`/`complex`/`cpoint`, which recurse deep enough in a debug build to overflow the default thread stack (measured: release exits 0 with 1092 theorems, debug SIGABRTs at 134) -- the same resource-limit gotcha already documented for `prelude_theorem_inventory --include-constructed`."
+    },
+    {
+      "id": "footprint-Rat.polyEval_succ",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Rat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "notes": "`nat_axiom_inventory` builds the Rat environment as its own group and reports `rat: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree). That bounds every individual Rat theorem's footprint by [], since a theorem cannot depend on a trusted declaration the environment does not contain -- and the enumeration covers Axiom, Opaque AND Quotient, not just Declaration::Axiom, because Opaque has no proof body and Quotient admits Quot.sound. `--require-axiom-free <name>` is an error (not a silent pass/zero) for a prelude this run never built, which is what makes `rat` here a claim rather than an absence."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:polynomial-evaluation",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_rat_prelude",
+    "source": "see F:rat-add-comm for the extraction method (shared for the whole batch)."
+  },
+  "notes": "depends_on is empty: this is polyEval's own recursive definitional step, the base every other polyEval theorem rests on.",
+  "external_status": "proved"
+}
