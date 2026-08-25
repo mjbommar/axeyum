@@ -41,7 +41,8 @@
 //! Adding `creal`/`complex`/`cpoint` made `Kernel::add_declaration` recurse
 //! deeply enough that a DEBUG build blew the default main-thread stack:
 //! `cargo build --release` exited 0 with 1,092 theorems while `cargo build`
-//! SIGABRTed with `thread 'main' has overflowed its stack`, exit 134. Nothing
+//! aborted with `SIGABRT` -- `thread 'main' has overflowed its stack`, exit
+//! 134. Nothing
 //! was wrong with any theorem — a resource limit wearing a crash's clothes.
 //!
 //! That doc note is what this paragraph replaces, and it is worth saying why
