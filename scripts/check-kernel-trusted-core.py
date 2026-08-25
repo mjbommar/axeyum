@@ -439,9 +439,31 @@ class Crate:
             else:
                 self.free[r["name"]].append(i)
         self.types = {r["owner"] for r in self.fns if r["owner"]}
-        self.edges = [self._resolve(r) for r in self.fns]
+        # Loose-rule support: for the `.f(` receiver-unknown case below, the
+        # original code re-scanned the WHOLE enclosing file with a fresh
+        # `re.search(type_name, filecode)` for every candidate at every call
+        # site — O(call sites * same-named candidates * file size), and it
+        # dominates runtime once the crate is large enough for common method
+        # names (`new`, `get`, …) to have many candidates. `r["filecode"]` is
+        # the *same string object* for every function in one file (assigned
+        # once per file in the loop above), so which of `self.types` occurs
+        # in a given file is a per-FILE fact, not a per-(function, candidate)
+        # one. Precompute it once per file with a single combined-alternation
+        # scan; `_resolve` below looks it up by `id(filecode)` instead of
+        # re-searching. Same `\b...\b` semantics, same result set — this is a
+        # cache, not a change to what counts as a match.
+        self._types_in_file: dict[int, frozenset[str]] = {}
+        if self.types:
+            alt = "|".join(re.escape(t) for t in sorted(self.types))
+            types_pattern = re.compile(r"\b(?:" + alt + r")\b")
+            seen_filecodes: dict[int, str] = {}
+            for r in self.fns:
+                seen_filecodes.setdefault(id(r["filecode"]), r["filecode"])
+            for key, code in seen_filecodes.items():
+                self._types_in_file[key] = frozenset(types_pattern.findall(code))
+        self.edges = [self._resolve(i, r) for i, r in enumerate(self.fns)]
 
-    def _resolve(self, r: dict) -> set[int]:
+    def _resolve(self, index: int, r: dict) -> set[int]:
         body, owner, out = r["body"], r["owner"], set()
         for m in re.finditer(r"\bself\s*\.\s*(" + IDENT + r")\s*\(", body):
             out.update(self.by_owner.get((owner, m.group(1)), ()))
@@ -456,14 +478,15 @@ class Crate:
             out.update(self.free.get(m.group(1), ()))
         # Loose rule for any other receiver: every same-named method whose owner
         # type is nameable in this file. Over-approximating on purpose.
+        present = self._types_in_file.get(id(r["filecode"]), frozenset())
         for m in re.finditer(r"\.\s*(" + IDENT + r")\s*\(", body):
             if body[max(0, m.start() - 4) : m.start()].endswith("self"):
                 continue
             for j in self.by_name.get(m.group(1), ()):
                 other = self.fns[j]["owner"]
-                if other and re.search(r"\b" + re.escape(other) + r"\b", r["filecode"]):
+                if other and other in present:
                     out.add(j)
-        out.discard(self.fns.index(r) if r in self.fns else -1)
+        out.discard(index)
         return out
 
     def admission_gates(self) -> list[int]:
