@@ -170,6 +170,48 @@ def checker_command_uses_grep_backslash_t(cmd: str) -> bool:
     return False
 
 
+_DEEP_STACK_INVENTORY_RE = re.compile(
+    r"\bexample\s+(nat_axiom_inventory|prelude_theorem_inventory|theorem_dependency_inventory)\b"
+)
+
+
+def checker_command_needs_release_for_deep_stack(cmd: str) -> bool:
+    """True if `cmd` runs a kernel-inventory example whose constructed-carrier
+    build (CReal/Complex/CPoint) recurses deep enough through
+    `Kernel::add_declaration` to overflow a debug build's default thread
+    stack, without `--release`.
+
+    Measured 2026-08-25 on this tree: `cargo run -q -p axeyum-lean-kernel
+    --example nat_axiom_inventory -- --include-constructed
+    --require-axiom-free creal` exits 134 (`thread 'main' has overflowed its
+    stack`) without `--release`, exit 0 with it -- the same resource limit
+    CLAUDE.md already documents for `prelude_theorem_inventory
+    --include-constructed`. 19 committed `F-creal-*`/`F-complex-*` checker
+    commands carried this before 2026-08-25's fix, all silently unrunnable in
+    a debug build.
+
+    `theorem_dependency_inventory` builds EVERY constructed prelude
+    unconditionally (no flag gates it, per its own module doc), so any
+    invocation without `--release` is flagged regardless of arguments.
+    `nat_axiom_inventory` and `prelude_theorem_inventory` build the
+    constructed carriers only when `--include-constructed` is passed --
+    their Nat/Int/Rat/logic-only forms run fine in a debug build (measured:
+    `nat_axiom_inventory -- --require-axiom-free nat` exits 0 without
+    `--release`) -- so only that combination is flagged. Demanding
+    `--release` on every invocation of these tools, unconditionally, would
+    force a needless rewrite on 102 committed commands that do not crash,
+    without catching any additional failure.
+    """
+    m = _DEEP_STACK_INVENTORY_RE.search(cmd)
+    if not m:
+        return False
+    if "--release" in cmd:
+        return False
+    if m.group(1) == "theorem_dependency_inventory":
+        return True
+    return "--include-constructed" in cmd
+
+
 def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
     errors: list[str] = []
     fid = fact.get("id", f"<{path.name}>")
@@ -301,6 +343,20 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
                          f"(`[^\\t]`) use `[^[:space:]]`. For a literal tab "
                          f"specifically, build one with `$(printf '\\t')` outside the "
                          f"single-quoted pattern.")
+        # `nat_axiom_inventory --include-constructed`, `prelude_theorem_inventory
+        # --include-constructed` and any `theorem_dependency_inventory` build the
+        # constructed carriers (CReal/Complex/CPoint) deep enough through
+        # `Kernel::add_declaration` to overflow a debug build's default thread
+        # stack -- measured exit 134 ("has overflowed its stack") without
+        # `--release`, exit 0 with it. 19 committed checker commands carried this
+        # before 2026-08-25's fix, silently unrunnable in a debug build.
+        if checker_command_needs_release_for_deep_stack(cmd):
+            fail(errors, f"{fid}: checker_command runs a kernel-inventory example "
+                         f"over the constructed carriers (CReal/Complex/CPoint) "
+                         f"without `--release`. That build recurses deep enough to "
+                         f"overflow a debug build's default thread stack -- measured "
+                         f"exit 134 ('has overflowed its stack') without the flag, "
+                         f"exit 0 with it. Add `--release` right after `cargo run -q`.")
         if ev.get("kind") == "claim-ref":
             art = ev.get("artifact")
             if not art:

@@ -2852,6 +2852,30 @@ SUITES["fact-checker-grep-backslash-t"] = (
     ],
 )
 
+SUITES["fact-checker-deep-stack-release"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # `nat_axiom_inventory --include-constructed`, `prelude_theorem_inventory
+        # --include-constructed` and any `theorem_dependency_inventory` build the
+        # constructed carriers (CReal/Complex/CPoint) deep enough through
+        # `Kernel::add_declaration` to overflow a debug build's default thread
+        # stack -- measured exit 134 ("has overflowed its stack") without
+        # `--release`, exit 0 with it. 19 committed `F-creal-*`/`F-complex-*`
+        # checker commands carried this before 2026-08-25's fix. Deleting this
+        # guard must kill exactly the one test that asserts such a
+        # checker_command is rejected -- the acceptance tests (committed
+        # `--release` forms, the --include-constructed-absent exception, the
+        # unrelated-tool exception) do not touch this branch and must keep
+        # passing.
+        (
+            "deep-stack inventory without --release is refused",
+            "        if checker_command_needs_release_for_deep_stack(cmd):",
+            "        if False:",
+        ),
+    ],
+)
+
 
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:

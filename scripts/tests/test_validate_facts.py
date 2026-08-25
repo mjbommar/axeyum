@@ -217,5 +217,86 @@ class GrepBackslashTCheckerCommandTests(unittest.TestCase):
                 self.assertFalse(MODULE.checker_command_uses_grep_backslash_t(ok_cmd))
 
 
+DEEP_STACK_FACT = ROOT / "artifacts" / "facts" / "F-creal-add-comm.json"
+
+
+class DeepStackInventoryCheckerCommandTests(unittest.TestCase):
+    """`nat_axiom_inventory --include-constructed`, `prelude_theorem_inventory
+    --include-constructed` and any `theorem_dependency_inventory` invocation
+    build the constructed carriers (CReal/Complex/CPoint) deep enough through
+    `Kernel::add_declaration` to overflow a debug build's default thread
+    stack. 19 committed `F-creal-*`/`F-complex-*` checker commands carried
+    this before 2026-08-25's fix -- exit 134 ('has overflowed its stack')
+    without `--release`, exit 0 with it, measured against the exact command
+    `F:creal-add-comm`'s footprint evidence now runs."""
+
+    def setUp(self) -> None:
+        self.fact = json.loads(DEEP_STACK_FACT.read_text(encoding="utf-8"))
+
+    def errors_for_checker_command(self, cmd: str, index: int = 0) -> list[str]:
+        fact = copy.deepcopy(self.fact)
+        fact["evidence"][index]["checker_command"] = cmd
+        known_ids = {fact["id"], *fact.get("depends_on", [])}
+        return MODULE.validate_one(DEEP_STACK_FACT, fact, known_ids)
+
+    def test_committed_checker_commands_carry_release_and_are_accepted(self) -> None:
+        # `F:creal-add-comm` carries both affected tools (theorem_dependency_
+        # inventory in evidence 0, nat_axiom_inventory --include-constructed in
+        # evidence 1); after 2026-08-25's fix, neither may trip the guard.
+        for index in range(len(self.fact["evidence"])):
+            with self.subTest(index=index):
+                cmd = self.fact["evidence"][index]["checker_command"]
+                self.assertEqual(self.errors_for_checker_command(cmd, index=index), [])
+
+    def test_nat_axiom_inventory_include_constructed_without_release_is_rejected(self) -> None:
+        # Deliberately ONE assertion (see the analogous note on the grep -q and
+        # grep \t guards above): the mutation harness counts each subTest
+        # failure as a separate death, and this suite's contract is that
+        # deleting the guard kills exactly one test.
+        errors = self.errors_for_checker_command(
+            "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- "
+            "--include-constructed --require-axiom-free creal",
+            index=1,
+        )
+        self.assertTrue(
+            any("--release" in e and "overflow" in e for e in errors),
+            f"expected a deep-stack --release rejection, got {errors!r}",
+        )
+
+    def test_the_two_tools_and_the_include_constructed_scoping_are_all_exercised(self) -> None:
+        # Exercises `checker_command_needs_release_for_deep_stack` directly, so
+        # this test's outcome is independent of the `validate_one` call site
+        # and of the mutation control's own deletion.
+        for bad_cmd in (
+            "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- "
+            "--include-constructed --require-axiom-free creal",
+            "cargo run -q -p axeyum-lean-kernel --example prelude_theorem_inventory -- "
+            "--include-constructed",
+            "cargo run -q -p axeyum-lean-kernel --example theorem_dependency_inventory -- "
+            "CReal.add_comm",
+            # theorem_dependency_inventory builds every constructed prelude
+            # unconditionally, so it is flagged even WITHOUT --include-constructed.
+            "cargo run -q -p axeyum-lean-kernel --example theorem_dependency_inventory",
+        ):
+            with self.subTest(bad_cmd=bad_cmd):
+                self.assertTrue(
+                    MODULE.checker_command_needs_release_for_deep_stack(bad_cmd),
+                    f"expected {bad_cmd!r} to be flagged",
+                )
+        for ok_cmd in (
+            "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory "
+            "-- --include-constructed --require-axiom-free creal",
+            "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory",
+            # --include-constructed absent: nat_axiom_inventory's Nat/Int/Rat/
+            # logic-only forms run fine in a debug build (measured 2026-08-25).
+            "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- "
+            "--require-axiom-free nat",
+            # A tool this guard does not cover at all.
+            "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- x",
+        ):
+            with self.subTest(ok_cmd=ok_cmd):
+                self.assertFalse(MODULE.checker_command_needs_release_for_deep_stack(ok_cmd))
+
+
 if __name__ == "__main__":
     unittest.main()
