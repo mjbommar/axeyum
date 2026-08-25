@@ -1749,6 +1749,24 @@ pub struct CRealPrelude {
     /// exactly (no error term), for every subinterval count `m`. See
     /// `integral.rs`'s module documentation for the two-piece route.
     pub riemann_sum_const: NameId,
+    /// `CReal.ofNat_le : ∀ i j : Nat, Nat.le i j → CReal.le (ofNat i) (ofNat j)`
+    /// — `CReal.ofNat` is monotone. Via `Nat.le_dest` (`∃ k, i + k = j`) plus
+    /// `RatPrelude::nat_div_succ_le_add_left` (monotone in the numerator,
+    /// stated additively so no `Nat`-subtraction appears) lifted across
+    /// [`Self::of_rat_le`]; see `integral.rs`'s module documentation.
+    pub of_nat_le: NameId,
+    /// `CReal.riemannSum_sample_in_bounds : ∀ a b m i, le a b → Nat.lt i
+    /// (Nat.succ m) → And (le a (add a (mul (ofNat i) delta))) (le (add a
+    /// (mul (ofNat i) delta)) b)` — every LEFT-endpoint sample point of a
+    /// Riemann sum over `[a, b]` lies in `[a, b]`; see `integral.rs`'s module
+    /// documentation for the route.
+    pub riemann_sample_in_bounds: NameId,
+    /// `CReal.riemannSum_le_on : ∀ f g a b m, le a b → (∀ z, le a z → le z b →
+    /// le (f z) (g z)) → le (riemannSum f a b m) (riemannSum g a b m)` —
+    /// [`Self::riemann_sum_le`]'s pointwise hypothesis restricted to `[a, b]`,
+    /// via [`Self::riemann_sample_in_bounds`]. See `integral.rs`'s module
+    /// documentation; `riemann_sum_le` itself is UNCHANGED (both exist).
+    pub riemann_sum_le_on: NameId,
 }
 
 impl CRealPrelude {
@@ -2022,6 +2040,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_riemann_sum: kernel.name_str(creal, "mul_riemannSum"),
         riemann_sum_le: kernel.name_str(creal, "riemannSum_le"),
         riemann_sum_const: kernel.name_str(creal, "riemannSum_const"),
+        of_nat_le: kernel.name_str(creal, "ofNat_le"),
+        riemann_sample_in_bounds: kernel.name_str(creal, "riemannSum_sample_in_bounds"),
+        riemann_sum_le_on: kernel.name_str(creal, "riemannSum_le_on"),
     }
 }
 
