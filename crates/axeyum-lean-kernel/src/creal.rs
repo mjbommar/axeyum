@@ -1641,6 +1641,25 @@ pub struct CRealPrelude {
     /// before calling [`Self::has_derivative_mul`], and why boundedness is
     /// two explicit Skolem functions rather than a derived fact.
     pub has_derivative_pow: NameId,
+    /// `CReal.hasDerivative_chain : ∀ F F' G G' a b,
+    ///   HasDerivativeOn F F' a b → HasDerivativeOn G G' a b →
+    ///   UniformlyContinuousOn F a b →
+    ///   (∀ z, le a z → le z b → le a (F z)) →
+    ///   (∀ z, le a z → le z b → le (F z) b) →
+    ///   ∀ k1 k2, BoundedOn F' a b k1 → BoundedOn G' a b k2 →
+    ///   HasDerivativeOn (fun r => G (F r)) (fun x => mul (G' (F x)) (F' x))
+    ///   a b` — the chain rule. The domain question is settled by the two
+    /// self-map hypotheses (`∀ z, ... → le a (F z)` / `... → le (F z) b`),
+    /// in [`Self::bounded_on`]'s own two-Π shape rather than a bundled `And`
+    /// or a second interval for `G` — see
+    /// `creal/derivative.rs::declare_has_derivative_chain`'s own doc comment
+    /// for what that choice costs and why. The two-level modulus composition
+    /// (`UniformlyContinuousOn F a b`'s own modulus applied to `G`'s
+    /// modulus, not to a `Nat` literal) is what the scouting report flagged
+    /// as genuinely new; the error term itself telescopes EXACTLY (`E =
+    /// [G's own error at (F x, F y)] + G'(F x) * [F's own error at (x,y)]`,
+    /// no ring expansion), unlike the product rule.
+    pub has_derivative_chain: NameId,
 }
 
 impl CRealPrelude {
@@ -1905,6 +1924,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_pow_two: kernel.name_str(creal, "hasDerivative_pow_two"),
         has_derivative_cube: kernel.name_str(creal, "hasDerivative_cube"),
         has_derivative_pow: kernel.name_str(creal, "hasDerivative_pow"),
+        has_derivative_chain: kernel.name_str(creal, "hasDerivative_chain"),
     }
 }
 
