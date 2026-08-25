@@ -344,7 +344,163 @@ fn declare_int_is_comm_ring(d: &mut IntDev<'_>, p: IntPrelude) -> Result<(), Ker
     d.declare_theorem(p.int_is_comm_ring, ty, value)
 }
 
-/// Admit `Int.IsCommRing` and `Int.int_isCommRing`.
+// === `Int.mul_eq_zero` — ℤ is an integral domain =============================
+//
+// The consequence a general commutative ring does NOT have (ℤ/6 is a
+// counterexample, per this module's doc comment): `mul a b = zero → a = zero
+// ∨ b = zero`. Derived via `Int.natAbs`, the same route
+// `rat_prelude::field`'s doc comment describes for `Rat.mul_eq_zero`
+// (`Int.natAbs` and `Nat.mul_eq_zero` decide which factor vanishes) — except
+// here the base case IS the natAbs argument, not a rational built on top of
+// it: `natAbs (a*b) = natAbs a * natAbs b` (`Int.nat_abs_mul`) turns `a*b =
+// 0` into `natAbs a * natAbs b = 0` (Nat equation), `Nat.mul_eq_zero` (ℕ has
+// no zero divisors, `algebra.rs`) decides which `natAbs` factor is `0`, and
+// [`nat_abs_zero_implies_int_zero`] lifts that back to `Int`.
+
+/// `h : Eq Int a b ⊢ Eq Nat (natAbs a) (natAbs b)` — congruence of `natAbs`
+/// across an `Int` equality, `IntDev::icongr`'s pattern with a `Nat`-valued
+/// (rather than `Int`-valued) codomain, so it cannot reuse `icongr` itself.
+fn nat_abs_congr(d: &mut IntDev<'_>, p: IntPrelude, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let fa = d.const_app(p.nat_abs, &[a]);
+    let motive = d.ieq_motive(a, &|d, x| {
+        let fx = d.const_app(p.nat_abs, &[x]);
+        d.eq(fa, fx)
+    });
+    let refl_case = d.refl(fa);
+    d.itransport(a, motive, refl_case, b, h)
+}
+
+/// `∀ (x : Int), Eq Nat (natAbs x) Nat.zero → Eq Int x Int.zero` — built
+/// directly as a proof term (not a named declaration: nothing outside this
+/// module's own [`declare_mul_eq_zero`] needs it, and the `rings` brief's
+/// "stay in `ring.rs`" constraint is one more reason not to grow the
+/// interned-name surface for a one-use lemma).
+///
+/// By `Int.rec` case split on `x` (the same "case-split under an arrow"
+/// shape `nat_abs::declare_nat_abs_lemmas` uses for
+/// `of_nat_nat_abs_of_nonneg`):
+/// - `x = ofNat n`: `natAbs (ofNat n)` ι-reduces to `n`, so the hypothesis is
+///   (up to that reduction) `Eq Nat n Nat.zero`; [`IntDev::nat_eq_to_int`]
+///   pushes it through `ofNat` to `Eq Int (ofNat n) (ofNat Nat.zero)`, and
+///   `ofNat Nat.zero` is `Int.zero`'s own `δ`-definition (`defs.rs`:
+///   `Int.zero := Int.ofNat 0`), so this already inhabits the stated
+///   conclusion.
+/// - `x = negSucc n`: `natAbs (negSucc n)` ι-reduces to `succ n`, so the
+///   hypothesis is `Eq Nat (succ n) Nat.zero` — refuted directly by
+///   `Nat.succ_ne_zero`, no numeral induction needed.
+fn nat_abs_zero_implies_int_zero(d: &mut IntDev<'_>, p: IntPrelude, x: ExprId) -> ExprId {
+    use super::ops::{Branch, Shape, case_split};
+
+    let statement = |d: &mut IntDev<'_>, args: &[ExprId]| {
+        let y = args[0];
+        let magnitude = d.const_app(p.nat_abs, &[y]);
+        let zero_nat = d.zero();
+        let hyp = d.eq(magnitude, zero_nat);
+        let izero = d.izero();
+        let concl = d.ieq(y, izero);
+        d.arrow(hyp, concl)
+    };
+    case_split(d, &[x], &statement, &|d, branches: &[Branch]| {
+        let (shape, field) = branches[0];
+        match shape {
+            Shape::OfNat => {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let zero_nat = d.zero();
+                let hyp_ty = d.eq(field, zero_nat);
+                let proved = d.nat_eq_to_int(field, zero_nat, h, &|d, v| d.of_nat(v));
+                d.lam_fv(h_fv, hyp_ty, proved)
+            }
+            Shape::NegSucc => {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let zero_nat = d.zero();
+                let successor = d.succ(field);
+                let hyp_ty = d.eq(successor, zero_nat);
+                let nat = p.nat;
+                let refuted = d.lemma(nat.succ_ne_zero, &[field]);
+                let false_pf = d.apply(refuted, &[h]);
+                let ns = d.neg_succ(field);
+                let izero = d.izero();
+                let target = d.ieq(ns, izero);
+                let body = d.absurd(target, false_pf);
+                d.lam_fv(h_fv, hyp_ty, body)
+            }
+        }
+    })
+}
+
+/// Admit `Int.mul_eq_zero : ∀ a b, mul a b = zero → a = zero ∨ b = zero` — ℤ
+/// is an integral domain, the consequence a commutative ring gives that is
+/// strictly stronger than "not a field" (a general commutative ring need not
+/// have it: ℤ/6 does not, this module's doc comment).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the generated declaration does not
+/// type-check or the name is already taken.
+fn declare_mul_eq_zero(d: &mut IntDev<'_>, p: IntPrelude) -> Result<(), KernelError> {
+    d.int_theorem(p.mul_eq_zero, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let izero = d.izero();
+        let prod = d.imul(a, b);
+        let hyp = d.ieq(prod, izero);
+        let a_zero = d.ieq(a, izero);
+        let b_zero = d.ieq(b, izero);
+        let concl = d.or(a_zero, b_zero);
+        let stmt = d.arrow(hyp, concl);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let mag_a = d.const_app(p.nat_abs, &[a]);
+        let mag_b = d.const_app(p.nat_abs, &[b]);
+        let mag_prod = d.const_app(p.nat_abs, &[prod]);
+        let mag_ab = NatOps::mul(d, mag_a, mag_b);
+        let zero_nat = d.zero();
+
+        // `natAbs (a*b) = natAbs a * natAbs b` — `Int.nat_abs_mul`.
+        let mul_law = d.lemma(p.nat_abs_mul, &[a, b]);
+
+        // `natAbs (a*b) = natAbs Int.zero`, via `h` — stated at the
+        // convenient `Nat.zero` reduct (`natAbs Int.zero` ι/δ-reduces to
+        // `Nat.zero`, `nat_abs_zero_implies_int_zero`'s own doc comment).
+        let to_zero = nat_abs_congr(d, p, prod, izero, h);
+
+        // `natAbs a * natAbs b = Nat.zero`.
+        let ab_eq_prod = d.symm(mag_prod, mag_ab, mul_law);
+        let ab_eq_zero = d.trans(mag_ab, mag_prod, zero_nat, ab_eq_prod, to_zero);
+
+        // `Nat.mul_eq_zero` decides which factor vanishes.
+        let nat = p.nat;
+        let disj = d.lemma(nat.mul_eq_zero, &[mag_a, mag_b, ab_eq_zero]);
+        let mag_a_zero = d.eq(mag_a, zero_nat);
+        let mag_b_zero = d.eq(mag_b, zero_nat);
+
+        let helper_a = nat_abs_zero_implies_int_zero(d, p, a);
+        let helper_b = nat_abs_zero_implies_int_zero(d, p, b);
+
+        let body = d.or_elim(
+            mag_a_zero,
+            mag_b_zero,
+            concl,
+            disj,
+            &|d, ha0| {
+                let a_eq_zero = d.apply(helper_a, &[ha0]);
+                d.or_inl(a_zero, b_zero, a_eq_zero)
+            },
+            &|d, hb0| {
+                let b_eq_zero = d.apply(helper_b, &[hb0]);
+                d.or_inr(a_zero, b_zero, b_eq_zero)
+            },
+        );
+        let proof = d.lam_fv(h_fv, hyp, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// Admit `Int.IsCommRing`, `Int.int_isCommRing`, and `Int.mul_eq_zero`.
 ///
 /// # Errors
 ///
@@ -353,5 +509,6 @@ fn declare_int_is_comm_ring(d: &mut IntDev<'_>, p: IntPrelude) -> Result<(), Ker
 pub(super) fn declare_ring_all(d: &mut IntDev<'_>, p: &IntPrelude) -> Result<(), KernelError> {
     declare_is_comm_ring(d, p)?;
     declare_int_is_comm_ring(d, *p)?;
+    declare_mul_eq_zero(d, *p)?;
     Ok(())
 }

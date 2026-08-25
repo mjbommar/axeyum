@@ -698,6 +698,10 @@ pub struct IntPrelude {
     /// `int_isCommRing : IsCommRing Int.add Int.mul Int.neg Int.zero Int.one`
     /// — the worked instance.
     pub int_is_comm_ring: NameId,
+    /// `mul_eq_zero : ∀ a b, mul a b = zero → a = zero ∨ b = zero` — ℤ is an
+    /// integral domain, the consequence a general commutative ring does not
+    /// have (`Int.IsCommRing`'s own doc comment: ℤ/6 does not).
+    pub mul_eq_zero: NameId,
 
     // --- `Int.factorial`, and the self-inverse step toward Wilson's theorem --
     /// `Int.factorial : Nat → Int := Int.prodRange (fun k => Int.ofNat (Nat.succ k))`
@@ -1089,6 +1093,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         eq_em: child(kernel, "eq_em"),
         is_comm_ring: child(kernel, "IsCommRing"),
         int_is_comm_ring: child(kernel, "int_isCommRing"),
+        mul_eq_zero: child(kernel, "mul_eq_zero"),
         factorial: child(kernel, "factorial"),
         factorial_zero: child(kernel, "factorial_zero"),
         factorial_succ: child(kernel, "factorial_succ"),
