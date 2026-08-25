@@ -38,9 +38,7 @@
       },
       "realizes": "K:bounded-structural-induction",
       "uses_technique": {
-        "id": "TQ:direct-proof",
-        "source": "math-education",
-        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+        "id": "TQ:direct-proof"
       },
       "reach": {
         "accepted_goals": [
@@ -103,9 +101,7 @@
       },
       "realizes": "K:bounded-structural-induction",
       "uses_technique": {
-        "id": "TQ:proof-by-induction",
-        "source": "math-education",
-        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+        "id": "TQ:proof-by-induction"
       },
       "reach": {
         "accepted_goals": [
@@ -192,9 +188,7 @@
       },
       "realizes": "K:bounded-structural-induction",
       "uses_technique": {
-        "id": "TQ:substitution-technique",
-        "source": "math-education",
-        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+        "id": "TQ:substitution-technique"
       },
       "reach": {
         "accepted_goals": [
@@ -269,9 +263,7 @@
       },
       "realizes": "K:bounded-structural-induction",
       "uses_technique": {
-        "id": "TQ:divide-and-conquer",
-        "source": "math-education",
-        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+        "id": "TQ:divide-and-conquer"
       },
       "reach": {
         "accepted_goals": [
@@ -331,9 +323,7 @@
       },
       "realizes": "K:bounded-structural-induction",
       "uses_technique": {
-        "id": "TQ:reductio-ad-absurdum",
-        "source": "math-education",
-        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+        "id": "TQ:reductio-ad-absurdum"
       },
       "reach": {
         "accepted_goals": [
@@ -395,9 +385,7 @@
       },
       "realizes": "K:bounded-structural-induction",
       "uses_technique": {
-        "id": "TQ:proof-by-cases",
-        "source": "math-education",
-        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+        "id": "TQ:proof-by-cases"
       },
       "reach": {
         "accepted_goals": [
@@ -458,9 +446,7 @@
       },
       "realizes": "K:bounded-structural-induction",
       "uses_technique": {
-        "id": "TQ:generalize-then-specialize",
-        "source": "math-education",
-        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+        "id": "TQ:generalize-then-specialize"
       },
       "reach": {
         "accepted_goals": [
@@ -516,9 +502,7 @@
       },
       "realizes": "K:bounded-structural-induction",
       "uses_technique": {
-        "id": "TQ:algebraic-manipulation",
-        "source": "math-education",
-        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+        "id": "TQ:algebraic-manipulation"
       },
       "reach": {
         "accepted_goals": [
@@ -577,9 +561,7 @@
       },
       "realizes": "K:modeq-equivalence-combinators",
       "uses_technique": {
-        "id": "TQ:change-representation",
-        "source": "math-education",
-        "revision": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+        "id": "TQ:change-representation"
       },
       "reach": {
         "accepted_goals": [

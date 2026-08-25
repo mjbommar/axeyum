@@ -1774,12 +1774,13 @@ SUITES["agent-episode"] = (
 #   tactic with no measured accepted or declined goal is a name. Neither can be
 #   caught by validating fields; both are census properties of the whole file.
 #
-#   `technique` is covered by a HERMETIC fixture (a stand-in sibling checkout
-#   with a patched revision), not by the live `../math-education`. Under this
-#   harness the subject runs from a scratch copy where the real sibling is not
-#   beside it, so a live-sibling test would SKIP here and report the guard as a
-#   survivor -- the "an empty result from a tool never pointed at your subject"
-#   trap, one level up.
+#   The two technique-RESOLUTION anchors are gone (ADR-0553). They covered a
+#   pin against `../math-education` and a stat of its `graph/techniques/*.md`,
+#   both removed with the coupling; their hermetic fixture existed because the
+#   live sibling is not beside a scratch copy, which was the right fix for the
+#   wrong problem -- the guard should not have reached outside the checkout at
+#   all. What replaces them refuses the fields: `uses_technique` takes exactly
+#   `id`, and the overlay may declare no external source.
 SUITES["tactic-catalog"] = (
     "scripts/validate-tactic-catalog.py",
     "scripts.tests.test_validate_tactic_catalog",
@@ -1815,14 +1816,14 @@ SUITES["tactic-catalog"] = (
             "        if False:",
         ),
         (
-            "the technique pin must be the overlay's pin",
-            "        if overlay_pin is not None and revision != overlay_pin:",
-            "        if False:",
+            "uses_technique takes exactly id -- no source, no revision",
+            '    if not isinstance(technique, dict) or set(technique) != {"id"}:',
+            "    if False:",
         ),
         (
-            "a pinned technique must resolve to a file",
-            "            if not target.is_file():",
-            "            if False:",
+            "the overlay may declare no external source",
+            '        if isinstance(source, dict) and source.get("kind", "").startswith("external"):',
+            "        if False:",
         ),
         (
             "residual shape and measure are \"none\" together",

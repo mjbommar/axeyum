@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""Generate the honest F1 coverage census for the Autogenesis knowledge overlay."""
+"""Generate the honest F1 coverage census for the Autogenesis knowledge overlay.
+
+ADR-0553 removed ten of this census's fifteen rows. Every one of them counted
+`formalizes` or `uses-technique` edges, whose targets were `concept`,
+`encounter` and `technique` entities in a namespace resolved against a sibling
+repository. With that namespace gone the relations are gone, so those rows could
+only ever read zero -- and a census row that cannot move is not a measurement,
+it is decoration that makes the report look richer than it is.
+
+What survives measures the operation population, which is local and does move:
+how many authoritative multi-target operations exist, how many facts are in
+their applicability sets, and how many of those the fact EVIDENCE credits to
+them. Restoring the rest requires a concept vocabulary this repository owns.
+"""
 
 from __future__ import annotations
 
@@ -7,12 +20,9 @@ import argparse
 import json
 import pathlib
 import sys
-from collections import Counter
-
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OVERLAY = ROOT / "artifacts/autogenesis/knowledge-overlay-v1.json"
 OPERATIONS = ROOT / "artifacts/autogenesis/operations.json"
-TRANSPORT = ROOT / "artifacts/autogenesis/transport-projection-v1.json"
 OUTPUT = ROOT / "docs/plan/generated/autogenesis-knowledge-coverage.md"
 
 
@@ -43,42 +53,13 @@ def main() -> int:
         if link["relation"] == "established-by"
         and endpoint(link, "target")[2] in multi_ids
     }
-    # F1/F5 remain fact-ledger coverage measures.  Kernel theorem anchors are
-    # deliberately separate: their presence must not turn a declaration name
-    # into a fact, inflate producer credit, or imply it has a transport chain.
-    formalizes = [link for link in links if link["relation"] == "formalizes"]
-    fact_formalizes = [
-        link for link in formalizes if endpoint(link, "source")[1] == "fact"
-    ]
-    kernel_formalizes = [
-        link for link in formalizes
-        if endpoint(link, "source")[1] == "kernel-declaration"
-    ]
-    mapped_facts = {endpoint(link, "source")[2] for link in fact_formalizes}
-    mapped_applicable = applicable & mapped_facts
-    concepts = {
-        endpoint(link, "target")[2]
-        for link in fact_formalizes if endpoint(link, "target")[1] == "concept"
-    }
-    encounters = {
-        endpoint(link, "target")[2]
-        for link in fact_formalizes if endpoint(link, "target")[1] == "encounter"
-    }
-    techniques = {
-        endpoint(link, "target")[2]
-        for link in links if link["relation"] == "uses-technique"
-    }
-    coverage = Counter(link.get("qualifiers", {}).get("coverage", "unqualified") for link in fact_formalizes)
-    complete = sum(
-        link.get("qualifiers", {}).get("completeness") == "complete" for link in formalizes
-    )
-    transport = json.loads(TRANSPORT.read_text())
-    transport_complete = {
-        row["source_fact_id"] for row in transport["chains"] if row["status"] == "complete"
-    }
-    exact = sum(link.get("qualifiers", {}).get("coverage") == "exact-formalization" for link in fact_formalizes)
-    supporting = sum(link.get("qualifiers", {}).get("coverage") == "supporting-law" for link in fact_formalizes)
-    autonomous = mapped_facts & credited
+    if not applicable:
+        print(
+            "AUTOGENESIS_KNOWLEDGE_COVERAGE_ERROR|no applicable facts: the census "
+            "would be vacuously green",
+            file=sys.stderr,
+        )
+        return 1
     lines = [
         "# Generated Autogenesis knowledge coverage",
         "",
@@ -92,39 +73,18 @@ def main() -> int:
         f"| Authoritative multi-target operations | {len(multi)} |",
         f"| Facts in their applicability sets | {len(applicable)} |",
         f"| Credited facts mapped with `established-by` | {len(credited & applicable)} |",
-        f"| Applicable facts with a `formalizes` mapping | {len(mapped_applicable)} |",
-        f"| Applicable facts still unmapped | {len(applicable - mapped_applicable)} |",
-        f"| External concepts reached | {len(concepts)} |",
-        f"| External encounters reached | {len(encounters)} |",
-        f"| Mathematical techniques reached | {len(techniques)} |",
-        f"| Single-edge claims of complete concept coverage | {complete} |",
+        f"| Applicable facts with no `established-by` credit | {len(applicable - credited)} |",
         "",
-        "## F5: derived coverage dimensions",
+        "## Removed dimensions",
         "",
-        "| Measure | Count |",
-        "|---|---:|",
-        f"| Exact-formalization links | {exact} |",
-        f"| Supporting-law links | {supporting} |",
-        f"| Facts with qualified formal content | {len(mapped_facts)} |",
-        f"| Formally mapped facts credited to a reusable producer | {len(autonomous)} |",
-        f"| Formally mapped facts with a complete hash-bound transport chain | {len(mapped_facts & transport_complete)} |",
-        f"| Formally mapped facts without a complete transport chain | {len(mapped_facts - transport_complete)} |",
-        f"| Reviewed kernel-theorem semantic anchors (separate population) | {len(kernel_formalizes)} |",
-        "",
-        "## Formal-content qualifiers",
-        "",
-        "| Qualifier | Links |",
-        "|---|---:|",
-    ]
-    lines.extend(f"| `{key}` | {coverage[key]} |" for key in sorted(coverage))
-    lines += [
+        "ADR-0553 removed the `formalizes` / `uses-technique` census: concepts,",
+        "encounters and techniques reached, exact-formalization and supporting-law",
+        "link counts, facts with qualified formal content, and the reviewed",
+        "kernel-theorem anchor population. All ten counted edges into a namespace",
+        "resolved against a sibling repository. They are not reported as zero,",
+        "because a row pinned at zero reads as a measurement and is not one.",
         "",
         "## Interpretation",
-        "",
-        "A fact may support a law, base case, or relation property without covering",
-        "an entire educational concept. The overlay validator rejects `completeness: complete`",
-        "on an individual `formalizes` edge; completeness can only be a derived census",
-        "claim after its population and criteria have been separately specified.",
         "",
         "The current multi-target operation population is listed from the operation registry,",
         "while credit is read from fact evidence. A fact that was already settled through a",
@@ -141,7 +101,7 @@ def main() -> int:
     print(
         "AUTOGENESIS_KNOWLEDGE_COVERAGE|"
         f"operations={len(multi)}|applicable={len(applicable)}|"
-        f"mapped={len(mapped_applicable)}|credited={len(credited & applicable)}"
+        f"credited={len(credited & applicable)}"
     )
     return 0
 

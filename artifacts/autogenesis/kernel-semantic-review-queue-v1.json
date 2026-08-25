@@ -2,30 +2,68 @@
   "census": {
     "empty_footprint_theorems": 869,
     "kernel_theorems": 869,
-    "reviewed_kernel_semantic_anchors": 9,
-    "unreviewed_queue_entries": 860
+    "reviewed_kernel_semantic_anchors": 0,
+    "unreviewed_queue_entries": 869
   },
   "derivation": {
     "candidate_rule": "theorem with empty recorded axiom footprint and no active kernel-source formalizes link",
     "kernel_projection_sha256": "13b143f0c2ef5bfeefd592a209bc803b1aa75a163d7cb8ab3fb674cff5faa00b",
-    "knowledge_overlay_sha256": "346b2c1d1df0f537db5c8377b8c0e22eac101bd37ec6335018e247d185601d7d",
+    "knowledge_overlay_sha256": "559cd93509b83e8fa9a60591bb21e40d073f4f5a739faec5941857e01e707d8b",
     "ordering": "descending direct reverse theorem-reference count, descending direct theorem-dependency count, ascending declaration id",
     "trust_boundary": "review planning only; never concept classification, producer dispatch, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-semantic-review-queue",
-  "reviewed_kernel_semantic_anchor_ids": [
-    "CPoint.circumcentre_unique",
-    "CReal.Equiv.refl",
-    "CReal.Equiv.symm",
-    "CReal.Equiv.trans",
-    "CReal.add_congr",
-    "CReal.mul_congr",
-    "CReal.neg_congr",
-    "Complex.normSq_pow",
-    "Decidable.em"
-  ],
+  "reviewed_kernel_semantic_anchor_ids": [],
   "schema_version": 1,
   "unreviewed_entries": [
+    {
+      "direct_reverse_theorem_reference_count": 124,
+      "direct_theorem_dependency_count": 3,
+      "kernel_declaration_id": "CReal.Equiv.refl",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 120,
+      "direct_theorem_dependency_count": 10,
+      "kernel_declaration_id": "CReal.Equiv.trans",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 112,
+      "direct_theorem_dependency_count": 2,
+      "kernel_declaration_id": "CReal.Equiv.symm",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 109,
+      "direct_theorem_dependency_count": 4,
+      "kernel_declaration_id": "CReal.add_congr",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
     {
       "direct_reverse_theorem_reference_count": 97,
       "direct_theorem_dependency_count": 9,
@@ -66,6 +104,30 @@
       "direct_reverse_theorem_reference_count": 74,
       "direct_theorem_dependency_count": 14,
       "kernel_declaration_id": "CReal.add_assoc",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 70,
+      "direct_theorem_dependency_count": 15,
+      "kernel_declaration_id": "CReal.mul_congr",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 67,
+      "direct_theorem_dependency_count": 3,
+      "kernel_declaration_id": "CReal.neg_congr",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
@@ -7781,6 +7843,16 @@
     {
       "direct_reverse_theorem_reference_count": 0,
       "direct_theorem_dependency_count": 16,
+      "kernel_declaration_id": "CPoint.circumcentre_unique",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "cpoint"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 0,
+      "direct_theorem_dependency_count": 16,
       "kernel_declaration_id": "CPoint.lagrange_identity",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
@@ -8107,6 +8179,16 @@
       "direct_reverse_theorem_reference_count": 0,
       "direct_theorem_dependency_count": 10,
       "kernel_declaration_id": "Complex.apart_of_normSq_pos",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 0,
+      "direct_theorem_dependency_count": 10,
+      "kernel_declaration_id": "Complex.normSq_pow",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
@@ -10325,6 +10407,24 @@
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
         "complex"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 0,
+      "direct_theorem_dependency_count": 0,
+      "kernel_declaration_id": "Decidable.em",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "axreal",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "logic",
+        "nat",
+        "rat",
+        "string"
       ]
     },
     {

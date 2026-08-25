@@ -10,39 +10,18 @@
 | Authoritative multi-target operations | 2 |
 | Facts in their applicability sets | 9 |
 | Credited facts mapped with `established-by` | 7 |
-| Applicable facts with a `formalizes` mapping | 9 |
-| Applicable facts still unmapped | 0 |
-| External concepts reached | 3 |
-| External encounters reached | 4 |
-| Mathematical techniques reached | 2 |
-| Single-edge claims of complete concept coverage | 0 |
+| Applicable facts with no `established-by` credit | 2 |
 
-## F5: derived coverage dimensions
+## Removed dimensions
 
-| Measure | Count |
-|---|---:|
-| Exact-formalization links | 0 |
-| Supporting-law links | 3 |
-| Facts with qualified formal content | 9 |
-| Formally mapped facts credited to a reusable producer | 7 |
-| Formally mapped facts with a complete hash-bound transport chain | 9 |
-| Formally mapped facts without a complete transport chain | 0 |
-| Reviewed kernel-theorem semantic anchors (separate population) | 9 |
-
-## Formal-content qualifiers
-
-| Qualifier | Links |
-|---|---:|
-| `base-case` | 3 |
-| `relation-law` | 4 |
-| `supporting-law` | 3 |
+ADR-0553 removed the `formalizes` / `uses-technique` census: concepts,
+encounters and techniques reached, exact-formalization and supporting-law
+link counts, facts with qualified formal content, and the reviewed
+kernel-theorem anchor population. All ten counted edges into a namespace
+resolved against a sibling repository. They are not reported as zero,
+because a row pinned at zero reads as a measurement and is not one.
 
 ## Interpretation
-
-A fact may support a law, base case, or relation property without covering
-an entire educational concept. The overlay validator rejects `completeness: complete`
-on an individual `formalizes` edge; completeness can only be a derived census
-claim after its population and criteria have been separately specified.
 
 The current multi-target operation population is listed from the operation registry,
 while credit is read from fact evidence. A fact that was already settled through a

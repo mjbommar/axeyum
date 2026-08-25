@@ -277,14 +277,12 @@
           "pattern": "^K:[a-z0-9]+(?:-[a-z0-9]+)*$"
         },
         "uses_technique": {
-          "description": "The external mathematical technique, pinned to the sibling corpus revision the overlay pins.",
+          "description": "The mathematical technique this tactic implements, as an UNRESOLVED CITATION LABEL.\n\nUntil 2026-08-24 this required `source: \"math-education\"` and a 40-hex `revision` of that sibling repository. Since `uses_technique` is required on every tactic, no tactic could be declared here without naming an external checkout and pinning its commit -- a dependency mandated by the schema itself, which is the strongest form the coupling took anywhere. ADR-0553 removed both fields: a `TQ:` id names a technique, and naming is all it does.",
           "type": "object",
-          "required": ["id", "source", "revision"],
+          "required": ["id"],
           "additionalProperties": false,
           "properties": {
-            "id": { "type": "string", "pattern": "^TQ:[a-z0-9]+(?:-[a-z0-9]+)*$" },
-            "source": { "const": "math-education" },
-            "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+            "id": { "type": "string", "pattern": "^TQ:[a-z0-9]+(?:-[a-z0-9]+)*$" }
           }
         },
         "reach": {
