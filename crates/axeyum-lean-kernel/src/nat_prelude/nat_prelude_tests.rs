@@ -745,6 +745,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sum_divisors_one,
         p.sum_divisors_prime,
         p.pow2_geom_sum,
+        p.dvd_two_pow_mul_classify,
     ]
 }
 
@@ -1229,6 +1230,52 @@ fn pow2_geom_sum_computes_at_a_concrete_instance() {
     assert!(
         f.k.axiom_footprint(p.pow2_geom_sum).is_empty(),
         "pow2_geom_sum rests on a trusted declaration"
+    );
+}
+
+/// `Nat.dvd_two_pow_mul_classify` — Euclid IX.36's divisor-classification
+/// blocker. At `k = 2, q = 7` (the `p = 3` case: `2^2·7 = 28`, and
+/// `sumDivisors 28` already reduces to `56 = 2·28`, i.e. `28` is perfect —
+/// see `perfect_holds_at_six_and_fails_at_seven`), the theorem partially
+/// applied at `[k, q]` type-checks and its residue names `dvd`, `pow`, and
+/// the two-armed `Or (Exists …) (Exists …)` disjunction the classification
+/// promises; the axiom footprint is empty.
+#[test]
+fn dvd_two_pow_mul_classify_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let seven = f.num(7);
+    let four = f.num(4);
+    let twenty_eight = f.num(28);
+    let two_pow_two = f.const_app(p.pow, &[two, two]);
+    assert!(f.k.def_eq(two_pow_two, four), "pow 2 2 must reduce to 4");
+    let target = f.mul(four, seven);
+    assert!(
+        f.k.def_eq(target, twenty_eight),
+        "mul (pow 2 2) 7 must reduce to 28"
+    );
+
+    let k = f.num(2);
+    let q = f.num(7);
+    let applied = f.const_app(p.dvd_two_pow_mul_classify, &[k, q]);
+    let inferred = f
+        .k
+        .infer(applied)
+        .expect("dvd_two_pow_mul_classify 2 7 must type-check");
+    let rendered = f.k.render_lean(inferred);
+    assert!(
+        rendered.contains("dvd")
+            && rendered.contains("AxNat.pow")
+            && rendered.contains("Or")
+            && rendered.contains("Exists"),
+        "unexpected residue type: {rendered}"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.dvd_two_pow_mul_classify).is_empty(),
+        "dvd_two_pow_mul_classify rests on a trusted declaration"
     );
 }
 
@@ -5313,7 +5360,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        58 + 258,
+        58 + 259,
         "every promised definition and theorem must be rendered"
     );
 }

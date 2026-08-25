@@ -53,7 +53,7 @@
 
 use super::NatPrelude;
 use super::helpers::and_right;
-use super::helpers::{iff_forward, iff_reverse};
+use super::helpers::{and_left, iff_forward, iff_reverse, transport_dvd_left, transport_dvd_right};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -975,14 +975,634 @@ pub(super) fn declare_pow2_geom_sum(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
     Ok(())
 }
 
+// ============================================================================
+// `Nat.dvd_two_pow_mul_classify` — divisors of `2^k * q`, for `q` prime.
+//
+// The Euclid IX.36 blocker: classifying an arbitrary `d ∣ 2^k·q` as `d = 2^i`
+// or `d = 2^i·q` (`i ≤ k`), via unique factorization on the single prime `2`.
+// The proof is ONE induction on `k` (not two, as the task brief anticipated
+// for a separate `dvd_pow2`): at each step, split on `gcd(dd, 2) ∈ {1, 2}`
+// (proved inline by [`divisors_of_two`] — literally "`2` is prime", spelled
+// out once for this single use rather than as a general `Nat.prime_two`).
+// `gcd = 2` peels a factor of `2` off `dd` and recurses via the induction
+// hypothesis (applied to the fresh quotient `dd/2`); `gcd = 1` is coprime to
+// `2`, so `gauss_lemma` cancels the `2` directly from `dd ∣ 2·(2^m·q)` and the
+// induction hypothesis applies to `dd` itself unchanged (only the bound needs
+// widening from `m` to `succ m`, done by [`classify_widen`]).
+//
+// `¬(q ∣ 2)` is carried in the statement (matching the shape the task brief
+// asked for) but never consumed by the proof below: the `gcd(dd,2)` split
+// only inspects `dd`, never `q`, so nothing here needs `q` to be odd. This
+// mirrors an existing convention in this very file — see
+// [`pos_implies_succ_pred`]'s base case, whose hypothesis is likewise unused
+// once the goal reduces to a bare `Eq.refl`.
+// ============================================================================
+
+/// Eliminate `dvd_hyp : dvd divisor dividend`, continuing with the witness
+/// `q` and `eq_proof : Eq dividend (mul divisor q)` to build a proof of
+/// `goal` (which must not mention `q`). Local copy of `lcm.rs`'s private
+/// `dvd_elim` (this file's own per-file convention; see the module doc for
+/// `sumDivisors_prime`'s local combinators).
+fn dvd_elim(
+    d: &mut NatDev<'_>,
+    divisor: ExprId,
+    dividend: ExprId,
+    goal: ExprId,
+    dvd_hyp: ExprId,
+    continuation: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let anon = d.anon_name();
+    let predicate = d.dvd_predicate(divisor, dividend);
+    let dvd_ty = d.dvd(divisor, dividend);
+    let motive = d.kernel().lam(anon, dvd_ty, goal, BinderInfo::Default);
+    let minor = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let divisor_q = d.mul(divisor, q);
+        let eq_ty = d.eq(dividend, divisor_q);
+        let eq_fv = d.fresh_fvar();
+        let eq_proof = d.kernel().fvar(eq_fv);
+        let body = continuation(d, q, eq_proof);
+        let with_eq = d.lam_fv(eq_fv, eq_ty, body);
+        d.lam_fv(q_fv, nat, with_eq)
+    };
+    let exists_rec_name = d.prelude().logic.exists_rec;
+    let rec = d.kernel().const_(exists_rec_name, vec![one]);
+    d.apply(rec, &[nat, predicate, motive, minor, dvd_hyp])
+}
+
+/// Local copy of `lcm.rs`'s private `dvd_intro`.
+fn dvd_intro(d: &mut NatDev<'_>, a: ExprId, n: ExprId, witness: ExprId, eq_proof: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let predicate = d.dvd_predicate(a, n);
+    let intro_name = d.prelude().logic.exists_intro;
+    let intro = d.kernel().const_(intro_name, vec![one]);
+    d.apply(intro, &[nat, predicate, witness, eq_proof])
+}
+
+/// `∀ c, dvd c 2 → Or (Eq c 1) (Eq c 2)` — the only divisors of the literal
+/// `2` are `1` and `2` (i.e. `2` is prime), spelled out inline for this one
+/// use (classifying `gcd dd 2`) rather than as a general `Nat.prime_two`.
+/// `1 ≤ c ≤ 2` from `le_of_dvd`/`one_le_of_dvd_pos`, `c = succ (pred c)`
+/// from `succ_pred_of_pos`, then `two_le_succ_or_eq_one` on `pred c`
+/// resolves the two cases (mirroring `two_le_succ_or_eq_one`'s own use in
+/// `primes.rs`).
+fn divisors_of_two(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, dvd_c2: ExprId) -> ExprId {
+    let p = *p;
+    let two = d.num(2);
+    let one = d.num(1);
+    let one_le_two = d.lemma(p.le_succ, &[one]);
+    let one_le_c = d.lemma(p.one_le_of_dvd_pos, &[c, two, one_le_two, dvd_c2]);
+    let c_le_two = d.lemma(p.le_of_dvd, &[c, two, one_le_two, dvd_c2]);
+
+    let succ_pred = d.lemma(p.succ_pred_of_pos, &[c, one_le_c]);
+    let e = d.pred(c);
+    let se = d.succ(e);
+
+    let se_le_two = {
+        let motive = d.eq_motive(c, &|d, x| d.le(x, two));
+        d.transport(c, motive, c_le_two, se, succ_pred)
+    };
+
+    let dichotomy = d.lemma(p.two_le_succ_or_eq_one, &[e]);
+    let left_ty = d.le(two, se);
+    let right_ty = d.eq(se, one);
+
+    let goal_one = d.eq(c, one);
+    let goal_two = d.eq(c, two);
+    let logic = d.prelude().logic;
+    let goal = d.const_app(logic.or, &[goal_one, goal_two]);
+
+    let left_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let se_eq_two = d.lemma(p.le_antisymm, &[se, two, se_le_two, h]);
+        let (_e2, c_eq_two) = d.chain(c, &[(se, succ_pred), (two, se_eq_two)]);
+        let proof = d.const_app(logic.or_inr, &[goal_one, goal_two, c_eq_two]);
+        d.lam_fv(h_fv, left_ty, proof)
+    };
+    let right_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let (_e2, c_eq_one) = d.chain(c, &[(se, succ_pred), (one, h)]);
+        let proof = d.const_app(logic.or_inl, &[goal_one, goal_two, c_eq_one]);
+        d.lam_fv(h_fv, right_ty, proof)
+    };
+
+    let anon = d.anon_name();
+    let or_ty = d.const_app(logic.or, &[left_ty, right_ty]);
+    let motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+    d.apply(
+        or_rec,
+        &[left_ty, right_ty, motive, left_branch, right_branch, dichotomy],
+    )
+}
+
+/// `fun i => Le i bound ∧ Eq target (pow 2 i [* extra])` — shared by
+/// [`pow_eq_exists`] and [`pow_eq_intro`]/[`pow_eq_elim`] so all three build
+/// the identical predicate term.
+fn pow_eq_predicate(d: &mut NatDev<'_>, bound: ExprId, target: ExprId, extra: Option<ExprId>) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let le_ty = d.le(i, bound);
+    let two = d.num(2);
+    let pow_i = d.pow(two, i);
+    let rhs = match extra {
+        Some(q) => d.mul(pow_i, q),
+        None => pow_i,
+    };
+    let eq_ty = d.eq(target, rhs);
+    let logic = d.prelude().logic;
+    let body = d.const_app(logic.and, &[le_ty, eq_ty]);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `∃ i, Le i bound ∧ Eq target (pow 2 i [* extra])`.
+fn pow_eq_exists(d: &mut NatDev<'_>, bound: ExprId, target: ExprId, extra: Option<ExprId>) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let predicate = pow_eq_predicate(d, bound, target, extra);
+    let logic = d.prelude().logic;
+    let exists_ = d.kernel().const_(logic.exists_, vec![one]);
+    d.apply(exists_, &[nat, predicate])
+}
+
+/// Introduce a proof of [`pow_eq_exists`] at witness `witness_i`.
+#[allow(clippy::too_many_arguments)]
+fn pow_eq_intro(
+    d: &mut NatDev<'_>,
+    bound: ExprId,
+    target: ExprId,
+    extra: Option<ExprId>,
+    witness_i: ExprId,
+    le_proof: ExprId,
+    eq_proof: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let predicate = pow_eq_predicate(d, bound, target, extra);
+    let le_ty = d.le(witness_i, bound);
+    let two = d.num(2);
+    let pow_i = d.pow(two, witness_i);
+    let rhs = match extra {
+        Some(q) => d.mul(pow_i, q),
+        None => pow_i,
+    };
+    let eq_ty = d.eq(target, rhs);
+    let logic = d.prelude().logic;
+    let and_proof = d.const_app(logic.and_intro, &[le_ty, eq_ty, le_proof, eq_proof]);
+    let intro = d.kernel().const_(logic.exists_intro, vec![one]);
+    d.apply(intro, &[nat, predicate, witness_i, and_proof])
+}
+
+/// Eliminate a proof of [`pow_eq_exists`] `bound target extra`, continuing
+/// with the witness `i` and its `Le i bound`/`Eq target (2^i[*q])` halves
+/// (via [`and_left`]/[`and_right`]) to build a proof of `goal` (which must
+/// not mention `i`).
+#[allow(clippy::too_many_arguments)]
+fn pow_eq_elim(
+    d: &mut NatDev<'_>,
+    bound: ExprId,
+    target: ExprId,
+    extra: Option<ExprId>,
+    goal: ExprId,
+    proof: ExprId,
+    continuation: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let anon = d.anon_name();
+    let src_predicate = pow_eq_predicate(d, bound, target, extra);
+    let src_ty = pow_eq_exists(d, bound, target, extra);
+    let motive = d.kernel().lam(anon, src_ty, goal, BinderInfo::Default);
+    let minor = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let and_fv = d.fresh_fvar();
+        let and_proof = d.kernel().fvar(and_fv);
+        let le_ty = d.le(i, bound);
+        let two = d.num(2);
+        let pow_i = d.pow(two, i);
+        let rhs = match extra {
+            Some(q) => d.mul(pow_i, q),
+            None => pow_i,
+        };
+        let eq_ty = d.eq(target, rhs);
+        let le_i = and_left(d, le_ty, eq_ty, and_proof);
+        let eq_i = and_right(d, le_ty, eq_ty, and_proof);
+        let body = continuation(d, i, le_i, eq_i);
+        let logic = d.prelude().logic;
+        let and_ty = d.const_app(logic.and, &[le_ty, eq_ty]);
+        let with_and = d.lam_fv(and_fv, and_ty, body);
+        d.lam_fv(i_fv, nat, with_and)
+    };
+    let logic = d.prelude().logic;
+    let rec = d.kernel().const_(logic.exists_rec, vec![one]);
+    d.apply(rec, &[nat, src_predicate, motive, minor, proof])
+}
+
+/// `Or (pow_eq_exists bound target None) (pow_eq_exists bound target (Some q))`.
+fn classify_goal(d: &mut NatDev<'_>, bound: ExprId, target: ExprId, q: ExprId) -> ExprId {
+    let left = pow_eq_exists(d, bound, target, None);
+    let right = pow_eq_exists(d, bound, target, Some(q));
+    let logic = d.prelude().logic;
+    d.const_app(logic.or, &[left, right])
+}
+
+fn classify_inl(d: &mut NatDev<'_>, bound: ExprId, target: ExprId, q: ExprId, proof: ExprId) -> ExprId {
+    let left = pow_eq_exists(d, bound, target, None);
+    let right = pow_eq_exists(d, bound, target, Some(q));
+    let logic = d.prelude().logic;
+    d.const_app(logic.or_inl, &[left, right, proof])
+}
+
+fn classify_inr(d: &mut NatDev<'_>, bound: ExprId, target: ExprId, q: ExprId, proof: ExprId) -> ExprId {
+    let left = pow_eq_exists(d, bound, target, None);
+    let right = pow_eq_exists(d, bound, target, Some(q));
+    let logic = d.prelude().logic;
+    d.const_app(logic.or_inr, &[left, right, proof])
+}
+
+/// Widen a classification proof bounded by `m` to one bounded by `succ m`
+/// (`le_trans` against `le_succ`) — used when the induction hypothesis is
+/// applied to the SAME `dd` (the `gcd(dd,2)=1` branch), so only the bound,
+/// not the witness's shape, needs adjusting.
+fn classify_widen(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    m: ExprId,
+    target: ExprId,
+    q: ExprId,
+    proof_m: ExprId,
+) -> ExprId {
+    let p = *p;
+    let sm = d.succ(m);
+    let goal = classify_goal(d, sm, target, q);
+    let left_m = pow_eq_exists(d, m, target, None);
+    let right_m = pow_eq_exists(d, m, target, Some(q));
+
+    let left_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = pow_eq_elim(d, m, target, None, goal, h, &|d, i, le_i, eq_i| {
+            let le_succ_m = d.lemma(p.le_succ, &[m]);
+            let le_i_sm = d.lemma(p.le_trans, &[i, m, sm, le_i, le_succ_m]);
+            let intro = pow_eq_intro(d, sm, target, None, i, le_i_sm, eq_i);
+            classify_inl(d, sm, target, q, intro)
+        });
+        d.lam_fv(h_fv, left_m, body)
+    };
+    let right_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = pow_eq_elim(d, m, target, Some(q), goal, h, &|d, i, le_i, eq_i| {
+            let le_succ_m = d.lemma(p.le_succ, &[m]);
+            let le_i_sm = d.lemma(p.le_trans, &[i, m, sm, le_i, le_succ_m]);
+            let intro = pow_eq_intro(d, sm, target, Some(q), i, le_i_sm, eq_i);
+            classify_inr(d, sm, target, q, intro)
+        });
+        d.lam_fv(h_fv, right_m, body)
+    };
+
+    let anon = d.anon_name();
+    let logic = d.prelude().logic;
+    let or_ty = d.const_app(logic.or, &[left_m, right_m]);
+    let motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+    d.apply(
+        or_rec,
+        &[left_m, right_m, motive, left_branch, right_branch, proof_m],
+    )
+}
+
+/// `∀ dd, dvd dd (mul (pow 2 kk) q) → classify_goal kk dd q`.
+fn classify_motive(d: &mut NatDev<'_>, kk: ExprId, q: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let dd_fv = d.fresh_fvar();
+    let dd = d.kernel().fvar(dd_fv);
+    let two = d.num(2);
+    let pow_kk = d.pow(two, kk);
+    let target = d.mul(pow_kk, q);
+    let hyp_ty = d.dvd(dd, target);
+    let goal = classify_goal(d, kk, dd, q);
+    let body = d.arrow(hyp_ty, goal);
+    d.pi_fv(dd_fv, nat, body)
+}
+
+/// The even branch's `dprime = 2^i` case: from `dd_eq : Eq dd (mul two
+/// dprime)` and `eq_i : Eq dprime (pow 2 i)` (`i ≤ m`), build `classify_goal
+/// (succ m) dd q`'s LEFT disjunct at witness `succ i`.
+#[allow(clippy::too_many_arguments)]
+fn even_branch_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    dd: ExprId,
+    dprime: ExprId,
+    dd_eq: ExprId,
+    m: ExprId,
+    sm: ExprId,
+    q: ExprId,
+    i: ExprId,
+    le_i: ExprId,
+    eq_i: ExprId,
+) -> ExprId {
+    let p = *p;
+    let two = d.num(2);
+    let two_dprime = d.mul(two, dprime);
+    let pow_i = d.pow(two, i);
+    let congr_step = d.congr(dprime, pow_i, eq_i, &|d, t| d.mul(two, t));
+    let two_pow_i = d.mul(two, pow_i);
+    let comm = d.lemma(p.mul_comm, &[two, pow_i]);
+    let pow_i_two = d.mul(pow_i, two);
+    let (_e, dd_eq_final) =
+        d.chain(dd, &[(two_dprime, dd_eq), (two_pow_i, congr_step), (pow_i_two, comm)]);
+    let succ_i = d.succ(i);
+    let le_i_sm = d.lemma(p.le_succ_succ, &[i, m, le_i]);
+    let intro = pow_eq_intro(d, sm, dd, None, succ_i, le_i_sm, dd_eq_final);
+    classify_inl(d, sm, dd, q, intro)
+}
+
+/// The even branch's `dprime = 2^i * q` case: build `classify_goal (succ m)
+/// dd q`'s RIGHT disjunct at witness `succ i`.
+#[allow(clippy::too_many_arguments)]
+fn even_branch_right(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    dd: ExprId,
+    dprime: ExprId,
+    dd_eq: ExprId,
+    m: ExprId,
+    sm: ExprId,
+    q: ExprId,
+    i: ExprId,
+    le_i: ExprId,
+    eq_i: ExprId,
+) -> ExprId {
+    let p = *p;
+    let two = d.num(2);
+    let two_dprime = d.mul(two, dprime);
+    let pow_i = d.pow(two, i);
+    let pow_i_q = d.mul(pow_i, q);
+    let congr_step = d.congr(dprime, pow_i_q, eq_i, &|d, t| d.mul(two, t));
+    let two_pow_i_q = d.mul(two, pow_i_q);
+    let assoc_fwd = d.lemma(p.mul_assoc, &[two, pow_i, q]);
+    let two_pow_i = d.mul(two, pow_i);
+    let two_pow_i_mul_q = d.mul(two_pow_i, q);
+    let assoc_back = d.symm(two_pow_i_mul_q, two_pow_i_q, assoc_fwd);
+    let comm = d.lemma(p.mul_comm, &[two, pow_i]);
+    let pow_i_two = d.mul(pow_i, two);
+    let congr2 = d.congr(two_pow_i, pow_i_two, comm, &|d, t| d.mul(t, q));
+    let pow_i_two_q = d.mul(pow_i_two, q);
+    let (_e, dd_eq_final) = d.chain(
+        dd,
+        &[
+            (two_dprime, dd_eq),
+            (two_pow_i_q, congr_step),
+            (two_pow_i_mul_q, assoc_back),
+            (pow_i_two_q, congr2),
+        ],
+    );
+    let succ_i = d.succ(i);
+    let le_i_sm = d.lemma(p.le_succ_succ, &[i, m, le_i]);
+    let intro = pow_eq_intro(d, sm, dd, Some(q), succ_i, le_i_sm, dd_eq_final);
+    classify_inr(d, sm, dd, q, intro)
+}
+
+/// `Nat.dvd_two_pow_mul_classify : ∀ k q, (2 ≤ q ∧ ∀ c, dvd c q → Eq c 1 ∨ Eq
+/// c q) → ¬(dvd q 2) → ∀ d, dvd d (mul (pow 2 k) q) → (∃ i, Le i k ∧ Eq d
+/// (pow 2 i)) ∨ (∃ i, Le i k ∧ Eq d (mul (pow 2 i) q))` — the divisor
+/// classification Euclid IX.36 needs. See the module doc above for the
+/// single-induction route.
+pub(super) fn declare_dvd_two_pow_mul_classify(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.dvd_two_pow_mul_classify, 2, &|d, v| {
+        let (k, q) = (v[0], v[1]);
+
+        let prime_q_ty = prime_ty(d, &p, q);
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+
+        let two_lit = d.num(2);
+        let dvd_q2_ty = d.dvd(q, two_lit);
+        let logic = d.prelude().logic;
+        let not_dvd_q2_ty = d.const_app(logic.not, &[dvd_q2_ty]);
+        let not_fv = d.fresh_fvar();
+
+        let (two_le_q_ty, divisor_clause_ty) = prime_parts(d, &p, q);
+        let q_divisor_clause = and_right(d, two_le_q_ty, divisor_clause_ty, prime_proof);
+
+        let motive = |d: &mut NatDev<'_>, kk: ExprId| -> ExprId { classify_motive(d, kk, q) };
+
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let nat = d.nat_ty();
+            let dd_fv = d.fresh_fvar();
+            let dd = d.kernel().fvar(dd_fv);
+            let zero = d.zero();
+            let two = d.num(2);
+            let pow0 = d.pow(two, zero);
+            let target = d.mul(pow0, q);
+            let hyp_ty = d.dvd(dd, target);
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+
+            let one = d.num(1);
+            let mul_one_q = d.mul(one, q);
+            let one_mul_q = d.lemma(p.one_mul, &[q]);
+            let dvd_dd_q = transport_dvd_right(d, dd, mul_one_q, q, one_mul_q, hyp);
+
+            let or_proof = d.apply(q_divisor_clause, &[dd, dvd_dd_q]);
+
+            let goal = classify_goal(d, zero, dd, q);
+            let left_ty = d.eq(dd, one);
+            let right_ty = d.eq(dd, q);
+
+            let left_branch = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let zero2 = d.zero();
+                let le00 = d.lemma(p.le_refl, &[zero2]);
+                let intro = pow_eq_intro(d, zero, dd, None, zero2, le00, h);
+                let proof = classify_inl(d, zero, dd, q, intro);
+                d.lam_fv(h_fv, left_ty, proof)
+            };
+            let right_branch = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let q_eq_mul_one_q = d.symm(mul_one_q, q, one_mul_q);
+                let (_e, dd_eq_mul_one_q) = d.chain(dd, &[(q, h), (mul_one_q, q_eq_mul_one_q)]);
+                let zero2 = d.zero();
+                let le00 = d.lemma(p.le_refl, &[zero2]);
+                let intro = pow_eq_intro(d, zero, dd, Some(q), zero2, le00, dd_eq_mul_one_q);
+                let proof = classify_inr(d, zero, dd, q, intro);
+                d.lam_fv(h_fv, right_ty, proof)
+            };
+
+            let anon = d.anon_name();
+            let logic = d.prelude().logic;
+            let or_ty = d.const_app(logic.or, &[left_ty, right_ty]);
+            let motive_or = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+            let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+            let case_result = d.apply(
+                or_rec,
+                &[left_ty, right_ty, motive_or, left_branch, right_branch, or_proof],
+            );
+            let dd_body = d.lam_fv(hyp_fv, hyp_ty, case_result);
+            d.lam_fv(dd_fv, nat, dd_body)
+        };
+
+        let step = |d: &mut NatDev<'_>, m: ExprId, ih: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let sm = d.succ(m);
+            let dd_fv = d.fresh_fvar();
+            let dd = d.kernel().fvar(dd_fv);
+            let two = d.num(2);
+            let one = d.num(1);
+            let pow_sm = d.pow(two, sm);
+            let pow_m = d.pow(two, m);
+            let target_sm = d.mul(pow_sm, q);
+            let hyp_ty = d.dvd(dd, target_sm);
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+
+            let goal = classify_goal(d, sm, dd, q);
+
+            // Reassociate: (2^m*2)*q = 2*(2^m*q). `pm2 := mul(pow_m,two)` is
+            // defeq to `pow_sm` (pow's own succ-equation), so `target_sm` is
+            // defeq to `mul(pm2, q)` and the chain below is accepted at
+            // `target_sm`'s type by the kernel's defeq check.
+            let pm2 = d.mul(pow_m, two);
+            let start2 = d.mul(pm2, q);
+            let mul_comm_2 = d.lemma(p.mul_comm, &[pow_m, two]);
+            let two_pm = d.mul(two, pow_m);
+            let step_a = d.congr(pm2, two_pm, mul_comm_2, &|d, t| d.mul(t, q));
+            let mid = d.mul(two_pm, q);
+            let assoc = d.lemma(p.mul_assoc, &[two, pow_m, q]);
+            let pow_m_q = d.mul(pow_m, q);
+            let end_ = d.mul(two, pow_m_q);
+            let (_e, reassoc) = d.chain(start2, &[(mid, step_a), (end_, assoc)]);
+
+            let dvd_two_pmq = transport_dvd_right(d, dd, start2, end_, reassoc, hyp);
+
+            let gcd_dd2 = d.gcd(dd, two);
+            let gcd_dvd_2 = d.lemma(p.gcd_dvd_right, &[dd, two]);
+            let two_cases = divisors_of_two(d, &p, gcd_dd2, gcd_dvd_2);
+
+            let left_ty = d.eq(gcd_dd2, one);
+            let right_ty = d.eq(gcd_dd2, two);
+
+            let coprime_branch = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let dvd_dd_pow_m_q = d.lemma(p.gauss_lemma, &[dd, two, pow_m_q, h, dvd_two_pmq]);
+                let ih_result = d.apply(ih, &[dd, dvd_dd_pow_m_q]);
+                let widened = classify_widen(d, &p, m, dd, q, ih_result);
+                d.lam_fv(h_fv, left_ty, widened)
+            };
+
+            let even_branch = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let gcd_dvd_dd = d.lemma(p.gcd_dvd_left, &[dd, two]);
+                let dvd_2_dd = transport_dvd_left(d, gcd_dd2, two, h, dd, gcd_dvd_dd);
+
+                let body = dvd_elim(d, two, dd, goal, dvd_2_dd, &|d, dprime, dd_eq| {
+                    let two_dprime = d.mul(two, dprime);
+                    let dvd_scaled = transport_dvd_left(d, dd, two_dprime, dd_eq, end_, dvd_two_pmq);
+
+                    dvd_elim(d, two_dprime, end_, goal, dvd_scaled, &|d, e, eq2| {
+                        let two_dprime_e = d.mul(two_dprime, e);
+                        let assoc2 = d.lemma(p.mul_assoc, &[two, dprime, e]);
+                        let dprime_e = d.mul(dprime, e);
+                        let two_dprime_e2 = d.mul(two, dprime_e);
+                        let (_e3, eq3) =
+                            d.chain(end_, &[(two_dprime_e, eq2), (two_dprime_e2, assoc2)]);
+                        let one_le_two = d.lemma(p.le_succ, &[one]);
+                        let cancelled = d.lemma(
+                            p.mul_left_cancel_of_pos,
+                            &[two, pow_m_q, dprime_e, one_le_two, eq3],
+                        );
+                        let dvd_dprime_pow_m_q = dvd_intro(d, dprime, pow_m_q, e, cancelled);
+                        let ih_result = d.apply(ih, &[dprime, dvd_dprime_pow_m_q]);
+
+                        let ih_left_ty = pow_eq_exists(d, m, dprime, None);
+                        let ih_right_ty = pow_eq_exists(d, m, dprime, Some(q));
+
+                        let left_of_ih = {
+                            let hh_fv = d.fresh_fvar();
+                            let hh = d.kernel().fvar(hh_fv);
+                            let inner = pow_eq_elim(d, m, dprime, None, goal, hh, &|d, i, le_i, eq_i| {
+                                even_branch_left(d, &p, dd, dprime, dd_eq, m, sm, q, i, le_i, eq_i)
+                            });
+                            d.lam_fv(hh_fv, ih_left_ty, inner)
+                        };
+                        let right_of_ih = {
+                            let hh_fv = d.fresh_fvar();
+                            let hh = d.kernel().fvar(hh_fv);
+                            let inner =
+                                pow_eq_elim(d, m, dprime, Some(q), goal, hh, &|d, i, le_i, eq_i| {
+                                    even_branch_right(d, &p, dd, dprime, dd_eq, m, sm, q, i, le_i, eq_i)
+                                });
+                            d.lam_fv(hh_fv, ih_right_ty, inner)
+                        };
+
+                        let anon2 = d.anon_name();
+                        let logic2 = d.prelude().logic;
+                        let or_ty2 = d.const_app(logic2.or, &[ih_left_ty, ih_right_ty]);
+                        let motive2 = d.kernel().lam(anon2, or_ty2, goal, BinderInfo::Default);
+                        let or_rec2 = d.kernel().const_(logic2.or_rec, vec![]);
+                        d.apply(
+                            or_rec2,
+                            &[ih_left_ty, ih_right_ty, motive2, left_of_ih, right_of_ih, ih_result],
+                        )
+                    })
+                });
+                d.lam_fv(h_fv, right_ty, body)
+            };
+
+            let anon = d.anon_name();
+            let logic = d.prelude().logic;
+            let or_ty = d.const_app(logic.or, &[left_ty, right_ty]);
+            let motive_or = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+            let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+            let case_result = d.apply(
+                or_rec,
+                &[left_ty, right_ty, motive_or, coprime_branch, even_branch, two_cases],
+            );
+            let dd_body = d.lam_fv(hyp_fv, hyp_ty, case_result);
+            d.lam_fv(dd_fv, nat, dd_body)
+        };
+
+        let induction_proof = d.induct(&motive, &base, &step, k);
+        let stmt_inner = motive(d, k);
+        let stmt_with_not = d.arrow(not_dvd_q2_ty, stmt_inner);
+        let stmt = d.arrow(prime_q_ty, stmt_with_not);
+
+        let proof_with_not = d.lam_fv(not_fv, not_dvd_q2_ty, induction_proof);
+        let proof = d.lam_fv(prime_fv, prime_q_ty, proof_with_not);
+
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare `Nat.sumDivisors`, its computational and prime sanity theorems,
-/// `Nat.Perfect`, and the finite geometric sum over powers of two, in
-/// dependency order.
+/// `Nat.Perfect`, the finite geometric sum over powers of two, and the
+/// divisor classification `Nat.dvd_two_pow_mul_classify`, in dependency
+/// order.
 pub(super) fn declare_perfect_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_sum_divisors(d, p)?;
     declare_sum_divisors_one(d, p)?;
     declare_sum_divisors_prime(d, p)?;
     declare_perfect(d, p)?;
     declare_pow2_geom_sum(d, p)?;
+    declare_dvd_two_pow_mul_classify(d, p)?;
     Ok(())
 }
