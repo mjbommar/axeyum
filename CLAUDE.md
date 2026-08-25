@@ -905,6 +905,20 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   queues behind three other lanes is what tempts an agent to background it in the
   first place.
 
+  **AND WHEN THE MEASUREMENT *IS* THE TASK, "do not background it" is not
+  advice a lane can follow.** Ninth stall, 2026-08-25: a lane sent to profile a
+  gate that takes ~500 s per run returned *"I'll stop here and wait for the
+  monitor's completion notification."* It could not do the work without a long
+  run and had been told not to background one, so it did both and reported
+  neither. Telling it harder would not have helped.
+
+  What works is bounding the measurement in the brief instead of forbidding the
+  wait: **"profile a SINGLE invocation"**, and — the part that unlocks it — *"if
+  one full run is too long, profile a REDUCED input and say the numbers are from
+  a reduced run."* A profile of a smaller input still locates the hotspot, and a
+  located hotspot is the deliverable. Give the lane a way to finish, not just a
+  way to fail.
+
 - **A BACKGROUND TASK REPORTED AS EXITED MAY STILL BE RUNNING, AND IT WILL TAX
   EVERY MEASUREMENT YOU TAKE AFTERWARDS.** Found 2026-08-21: a `python3 -` from
   a session task started **2026-08-18 03:43**, whose output file recorded
