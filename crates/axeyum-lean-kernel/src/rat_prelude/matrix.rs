@@ -40,7 +40,8 @@
 use super::RatPrelude;
 use super::group::rsub;
 use super::ops::{
-    radd, rat_theorem, rat_ty, rchain, rcongr, req, rmul, rneg, rone, rsymm, rtrans, rzero,
+    den, mk, num, radd, rat_theorem, rat_ty, rchain, rcongr, req, rmul, rneg, rone, rrefl, rsymm,
+    rtrans, rzero,
 };
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -68,7 +69,12 @@ pub(super) fn declare_matrix_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_det2_mul(d, p)?;
     declare_adjugate(d, p)?;
     declare_inverse(d, p)?;
-    declare_cramer(d, p)
+    declare_cramer(d, p)?;
+    declare_of_int_def(d, p)?;
+    declare_of_int_add(d, p)?;
+    declare_of_int_mul(d, p)?;
+    declare_of_int_neg(d, p)?;
+    declare_det2_fib(d, p)
 }
 
 /// `Rat.det2 a b c d := Rat.sub (Rat.mul a d) (Rat.mul b c)`.
@@ -2043,6 +2049,323 @@ fn declare_cramer_two_unique_y(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), 
     }
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.cramer_two_unique_y,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// The Fibonacci–determinant bridge: `Rat.ofInt` and `Rat.det2_fib`.
+// ============================================================================
+//
+// `Int.fib_cassini` (`int_prelude/fibonacci.rs`) proves
+// `fib(n+2)·fib(n) − fib(n+1)² = (−1)^(n+1)` over `ℤ`. That LEFT side is
+// exactly `Rat.det2` applied to the four entries of `Mⁿ` for
+// `M = [[1,1],[1,0]]` (`det2 x y z w := x·w − y·z`, so `det2 C B B A =
+// C·A − B·B` with `C = fib(n+2), B = fib(n+1), A = fib n`) — Cassini's
+// identity **is** `det (Mⁿ) = (−1)ⁿ` read through this file's `det2_mul`.
+// This section makes that identification a derivation rather than a
+// comment: `Rat.ofInt` casts `ℤ` into `ℚ`, three lemmas say it is a ring
+// homomorphism for `+`, `·`, `neg`, and `Rat.det2_fib` transports
+// `Int.fib_cassini` across the cast.
+//
+// No matrix type is reified here either, for the same reason `adj2` above
+// is not: this kernel has no product/tuple type, so `Mⁿ` is never written
+// down as a single value — only its four entries, which is all `det2_fib`'s
+// statement needs.
+
+/// Delta height for `Rat.ofInt`: it unfolds to one `Rat.mk` application (a
+/// constructor, not a further `Definition`), so — like `Rat.det2` — it only
+/// needs to sit above whatever it is compared against during unfolding, not
+/// above the whole rational development.
+const OF_INT_HEIGHT: u16 = 40;
+
+/// `Rat.ofInt x := Rat.mk x 1 pos red`, where `pos : 1 ≤ 1` does not depend on
+/// `x` and `red : gcd (natAbs x) 1 = 1` is `Rat.gcd_one_right` at `natAbs x` —
+/// valid for **any** `x : Int`, so no case split on `x`'s constructor is
+/// needed the way [`super::defs::inv_body`] or `Rat.normalize` need one.
+///
+/// `Rat.num (ofInt x)` and `Rat.den (ofInt x)` therefore reduce to `x` and `1`
+/// by a single `ι`-step each — the fact every proof below leans on.
+fn declare_of_int_def(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+    let int_ty = d.int_ty();
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let unit = d.num(1);
+    let positive = {
+        let nat = p.int.nat;
+        d.lemma(nat.le_refl, &[unit])
+    };
+    let reduced = {
+        let nat_abs = d.const_app(p.int.nat_abs, &[x]);
+        d.lemma(p.gcd_one_right, &[nat_abs])
+    };
+    let body = mk(d, x, unit, positive, reduced);
+    let value = d.lam_fv(x_fv, int_ty, body);
+    let ty = d.arrow(int_ty, carrier);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.of_int,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(OF_INT_HEIGHT),
+    })
+}
+
+/// `Rat.ofInt x` — the folded application, for building statements.
+fn of_int(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.of_int, &[x])
+}
+
+/// From `h : Eq Int a b`, derive `Eq Rat (f a) (f b)` — the `Rat`-valued
+/// congruence [`super::ops::int_eq_to_nat`] is the `Nat`-valued twin of.
+/// [`Int.fib_cassini`](crate::int_prelude::IntPrelude::fib_cassini) is an `ℤ`
+/// equation and `Rat.ofInt` casts into `ℚ`, so this is the one device that
+/// transports it.
+fn int_eq_to_rat(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = d.ieq_motive(a, &|d, x| {
+        let fx = f(d, x);
+        req(d, fa, fx)
+    });
+    let refl_case = rrefl(d, fa);
+    d.itransport(a, motive, refl_case, b, h)
+}
+
+/// `Rat.ofInt_add : ∀ x y : Int, Eq Rat (ofInt (x+y)) (ofInt x + ofInt y)`.
+///
+/// Both sides have denominator exactly `1`, so the identity boils down to
+/// `Rat.add_cross` at `(ofInt x, ofInt y)` — with `den(ofInt x)`, `den(ofInt
+/// y)` unfolding to the literal `1` — simplified by `Int.mul_one` (`z·1 = z`
+/// is **not** definitional here for symbolic `z`, matching `laws.rs`'s
+/// `unit_law` convention: this development always cites the lemma) and closed
+/// by `Rat.eq_of_cross`.
+fn declare_of_int_add(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    d.int_theorem(p.of_int_add, 2, &|d, v| {
+        let (x, y) = (v[0], v[1]);
+        let sum_int = d.iadd(x, y);
+        let qxy = of_int(d, p, sum_int);
+        let qx = of_int(d, p, x);
+        let qy = of_int(d, p, y);
+        let combined = radd(d, qx, qy);
+        let stmt = req(d, qxy, combined);
+
+        let one_i = d.ione();
+        let num_combined = num(d, combined);
+        let den_combined = den(d, combined);
+        let den_combined_z = d.of_nat(den_combined);
+
+        // lhs0 = num(combined) * ofNat(den(ofInt x)) ~ num(combined) * 1,
+        // the marker `Rat.eq_of_cross`'s hypothesis states on its RHS.
+        let lhs0 = d.imul(num_combined, one_i);
+
+        // sum_expr = x*1 + y*1 ~ Rat.add_cross's naive-sum numerator, once
+        // `den(ofInt x)`/`den(ofInt y)` unfold to `1`.
+        let sum_x1 = d.imul(x, one_i);
+        let sum_y1 = d.imul(y, one_i);
+        let sum_expr = d.iadd(sum_x1, sum_y1);
+        let rhs0 = d.imul(sum_expr, den_combined_z);
+
+        // add_cross(qx, qy), read at this simplified shape by kernel defeq
+        // (den(ofInt _) ~ 1, num(ofInt _) ~ its argument, both single
+        // `ι`-steps; `1*1 ~ 1` is concrete-literal computation).
+        let cross0 = d.lemma(p.add_cross, &[qx, qy]);
+
+        // Simplify sum_expr down to x+y.
+        let xy = d.iadd(x, y);
+        let (_, simplify_sum) = {
+            let mul_one_x = d.lemma(p.int.mul_one, &[x]);
+            let mid_x = d.iadd(x, sum_y1);
+            let step_x = d.icongr(sum_x1, x, mul_one_x, &|d, t| d.iadd(t, sum_y1));
+            let mul_one_y = d.lemma(p.int.mul_one, &[y]);
+            let step_y = d.icongr(sum_y1, y, mul_one_y, &|d, t| d.iadd(x, t));
+            d.ichain(sum_expr, &[(mid_x, step_x), (xy, step_y)])
+        };
+        let rhs1 = d.imul(xy, den_combined_z);
+        let step_rhs = d.icongr(sum_expr, xy, simplify_sum, &|d, t| {
+            d.imul(t, den_combined_z)
+        });
+
+        let (_, lhs0_to_rhs1) = d.ichain(lhs0, &[(rhs0, cross0), (rhs1, step_rhs)]);
+        let hyp = d.isymm(lhs0, rhs1, lhs0_to_rhs1);
+        let proof = d.const_app(p.eq_of_cross, &[qxy, combined, hyp]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Rat.ofInt_mul : ∀ x y : Int, Eq Rat (ofInt (x·y)) (ofInt x · ofInt y)`.
+///
+/// Same route as [`declare_of_int_add`] via `Rat.mul_cross`, but with no
+/// `mul_one` cleanup needed on the product side: `mul_cross`'s naive-product
+/// numerator is already `num(ofInt x) * num(ofInt y) ~ x·y`.
+fn declare_of_int_mul(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    d.int_theorem(p.of_int_mul, 2, &|d, v| {
+        let (x, y) = (v[0], v[1]);
+        let prod_int = d.imul(x, y);
+        let qxy = of_int(d, p, prod_int);
+        let qx = of_int(d, p, x);
+        let qy = of_int(d, p, y);
+        let combined = rmul(d, qx, qy);
+        let stmt = req(d, qxy, combined);
+
+        let one_i = d.ione();
+        let num_combined = num(d, combined);
+        let den_combined = den(d, combined);
+        let den_combined_z = d.of_nat(den_combined);
+
+        let lhs0 = d.imul(num_combined, one_i);
+        let xy = d.imul(x, y);
+        let rhs0 = d.imul(xy, den_combined_z);
+
+        // mul_cross(qx, qy), read at this simplified shape by kernel defeq
+        // (den(ofInt _) ~ 1, num(ofInt _) ~ its argument).
+        let cross0 = d.lemma(p.mul_cross, &[qx, qy]);
+
+        let hyp = d.isymm(lhs0, rhs0, cross0);
+        let proof = d.const_app(p.eq_of_cross, &[qxy, combined, hyp]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Rat.ofInt_neg : ∀ x : Int, Eq Rat (ofInt (neg x)) (neg (ofInt x))`.
+///
+/// **Free** — unlike `+`/`·`, `Rat.neg` does not renormalise (it rebuilds
+/// `Rat.mk` directly, transporting the reducedness field along
+/// `natAbs (neg x) = natAbs x`), so `neg (ofInt x)` and `ofInt (neg x)` both
+/// `δ`/`ι`-reduce to `Rat.mk (neg x) 1 (le_refl 1) _`, differing only in the
+/// fourth (`Prop`-typed) field — which the kernel's definitional proof
+/// irrelevance (`tc.rs::proof_irrel_eq`) erases. `Eq.refl` is the whole proof.
+fn declare_of_int_neg(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    d.int_theorem(p.of_int_neg, 1, &|d, v| {
+        let x = v[0];
+        let neg_x = d.ineg(x);
+        let qneg = of_int(d, p, neg_x);
+        let qx = of_int(d, p, x);
+        let negq = rneg(d, qx);
+        let stmt = req(d, qneg, negq);
+        let proof = rrefl(d, qneg);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Rat.det2_fib : ∀ n, Eq Rat`
+/// `  (det2 (ofInt (ofNat (fib (n+2)))) (ofInt (ofNat (fib (n+1))))`
+/// `        (ofInt (ofNat (fib (n+1)))) (ofInt (ofNat (fib n))))`
+/// `  (ofInt (pow (neg one) (succ n)))`
+///
+/// Cassini's identity, read through `det2`: for `M = [[1,1],[1,0]]`, `Mⁿ =
+/// [[fib(n+1), fib n], [fib n, fib(n-1)]]` and `det M = −1`, so
+/// `det (Mⁿ) = (−1)ⁿ` expands to exactly this statement at the shifted index
+/// `Int.fib_cassini` uses. **Derived from `Int.fib_cassini`** (not reproved
+/// independently): [`int_eq_to_rat`] transports it across `Rat.ofInt`, and
+/// [`declare_of_int_add`]/[`declare_of_int_mul`]/[`declare_of_int_neg`]
+/// rewrite the cast of `D(n) := fib(n+2)·fib(n) − fib(n+1)²` into
+/// `det2 (ofInt C) (ofInt B) (ofInt B) (ofInt A)` — the defining unfolding of
+/// `det2 x y z w := x·w − y·z` at `x=C, y=B, z=B, w=A`.
+fn declare_det2_fib(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let sn = d.succ(n);
+    let ssn = d.succ(sn);
+    let fib = p.int.nat.fib;
+    let fib_n = d.const_app(fib, &[n]);
+    let fib_sn = d.const_app(fib, &[sn]);
+    let fib_ssn = d.const_app(fib, &[ssn]);
+    let a_int = d.of_nat(fib_n);
+    let b_int = d.of_nat(fib_sn);
+    let c_int = d.of_nat(fib_ssn);
+
+    let ca_int = d.imul(c_int, a_int);
+    let bb_int = d.imul(b_int, b_int);
+    let d_n = d.isub(ca_int, bb_int);
+    let neg_bb_int = d.ineg(bb_int);
+
+    let one_i = d.ione();
+    let neg_one = d.ineg(one_i);
+    let rhs_int = d.ipow(neg_one, sn);
+
+    // Int.fib_cassini n : Eq Int d_n rhs_int (exact same construction as
+    // int_prelude/fibonacci.rs's `cassini_lhs`/`cassini_stmt`).
+    let cassini_proof = d.lemma(p.int.fib_cassini, &[n]);
+
+    let qa = of_int(d, p, a_int);
+    let qb = of_int(d, p, b_int);
+    let qc = of_int(d, p, c_int);
+
+    let lhs = rdet2(d, p, qc, qb, qb, qa);
+    let rhs = of_int(d, p, rhs_int);
+    let stmt = req(d, lhs, rhs);
+
+    // Step A: Eq Rat (ofInt d_n) (ofInt rhs_int), by transporting Cassini.
+    let q_dn = int_eq_to_rat(d, d_n, rhs_int, cassini_proof, &|d, t| of_int(d, p, t));
+
+    // Step B: Eq Rat (ofInt d_n) (det2 qc qb qb qa), by ofInt_add/mul/neg.
+    let of_int_dn = of_int(d, p, d_n);
+    let of_int_ca = of_int(d, p, ca_int);
+    let of_int_neg_bb = of_int(d, p, neg_bb_int);
+    let of_int_bb = of_int(d, p, bb_int);
+
+    let qc_qa = rmul(d, qc, qa);
+    let qb_qb = rmul(d, qb, qb);
+    let neg_qb_qb = rneg(d, qb_qb);
+    let neg_of_int_bb = rneg(d, of_int_bb);
+
+    // ofInt(d_n) = ofInt(C*A) + ofInt(-(B*B))  [ofInt_add at (ca_int, neg_bb_int);
+    // d_n ~ ca_int + neg_bb_int by unfolding Int.sub, a single delta step].
+    let q_add_lemma = d.lemma(p.of_int_add, &[ca_int, neg_bb_int]);
+    let combined_rhs = radd(d, of_int_ca, of_int_neg_bb);
+
+    // ofInt(C*A) = qc*qa.
+    let q_mul_ca = d.lemma(p.of_int_mul, &[c_int, a_int]);
+    let mid_a = radd(d, qc_qa, of_int_neg_bb);
+    let step_a = rcongr(d, of_int_ca, qc_qa, q_mul_ca, &|d, t| {
+        radd(d, t, of_int_neg_bb)
+    });
+
+    // ofInt(-(B*B)) = -(ofInt(B*B)) = -(qb*qb).
+    let q_neg_bb = d.lemma(p.of_int_neg, &[bb_int]);
+    let q_mul_bb = d.lemma(p.of_int_mul, &[b_int, b_int]);
+    let step_negbb = {
+        let inner = rcongr(d, of_int_bb, qb_qb, q_mul_bb, &|d, t| rneg(d, t));
+        rtrans(d, of_int_neg_bb, neg_of_int_bb, neg_qb_qb, q_neg_bb, inner)
+    };
+    let target = radd(d, qc_qa, neg_qb_qb); // = det2 qc qb qb qa, unfolded
+    let step_b = rcongr(d, of_int_neg_bb, neg_qb_qb, step_negbb, &|d, t| {
+        radd(d, qc_qa, t)
+    });
+
+    let (_, combine_proof) = rchain(d, combined_rhs, &[(mid_a, step_a), (target, step_b)]);
+    let q_dn_to_target = rtrans(
+        d,
+        of_int_dn,
+        combined_rhs,
+        target,
+        q_add_lemma,
+        combine_proof,
+    );
+    let target_to_dn = rsymm(d, of_int_dn, target, q_dn_to_target);
+
+    // Combine Step A and Step B: det2 qc qb qb qa = ofInt(d_n) = ofInt(rhs_int).
+    let final_proof = rtrans(d, target, of_int_dn, rhs, target_to_dn, q_dn);
+
+    let ty = d.pi_fv(n_fv, nat, stmt);
+    let value = d.lam_fv(n_fv, nat, final_proof);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.det2_fib,
         uparams: vec![],
         ty,
         value,

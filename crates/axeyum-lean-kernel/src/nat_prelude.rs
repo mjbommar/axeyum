@@ -133,6 +133,7 @@ mod bezout;
 mod binary;
 mod binomial;
 mod ble;
+mod catalan;
 mod choose;
 mod defs;
 mod diagonal;
@@ -170,6 +171,7 @@ use binomial::{
     declare_succ_sub_of_le,
 };
 use ble::declare_boolean_le;
+use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
@@ -185,7 +187,10 @@ use finite::{
     declare_restrict_maps_into,
 };
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
-use lcm::{declare_gauss_lemma, declare_lcm, declare_lcm_dvd};
+use lcm::{
+    declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
+    declare_lcm_comm, declare_lcm_dvd,
+};
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
@@ -610,6 +615,42 @@ pub struct NatPrelude {
     /// `Nat.lcm_dvd : ∀ a b c, dvd a c → dvd b c → dvd (lcm a b) c` — the
     /// "least" half of the least common multiple's universal property.
     pub lcm_dvd: NameId,
+    /// `Nat.dvd_antisymm : ∀ a b, dvd a b → dvd b a → Eq a b` — antisymmetry
+    /// of divisibility. Conceptually belongs beside `dvd_gcd`/`dvd_gcd_iff`
+    /// in `nat_prelude/divisibility.rs`; it lands in `nat_prelude/lcm.rs`
+    /// instead (flagged for promotion) because it needs `le_of_dvd`
+    /// (declared in `primes.rs`, after `lcm.rs` runs) and another lane held
+    /// `divisibility.rs` when this was built. Double induction (`a` then
+    /// `b`, both inner IHs unused — a case split, not real recursion):
+    /// `a = 0` forces `b = 0` from `dvd 0 b` alone via `zero_mul`; at
+    /// `a = succ k`, `b = 0` forces `a = 0` symmetrically from `dvd 0 a`
+    /// (no absurdity lemma needed — it *is* the goal at that branch), and
+    /// `b = succ j` closes via `le_of_dvd` in both directions plus
+    /// `le_antisymm`.
+    pub dvd_antisymm: NameId,
+
+    // --- Catalan numbers (`catalan.rs`) --------------------------------------
+    /// `Nat.catalan n := choose (n+n) n − choose (n+n) (n+1)` — the closed
+    /// form. `Nat.sub` is TOTAL, so the definition needs no `≤` side
+    /// condition; the recursive convolution form was priced and NOT built
+    /// (it is course-of-values, so a curried accumulator does not reach it).
+    pub catalan: NameId,
+    /// `Nat.catalan_mul_succ : ∀ n, succ n · catalan n = choose (n+n) n` —
+    /// the multiplicative identity tying `catalan` to `choose`, stated so no
+    /// division is needed. Proved from two instances of
+    /// `Nat.succ_mul_choose_eq` on the odd row `2n−1`, tied together by
+    /// `Nat.choose_symm`; the truncated subtraction is handled by the
+    /// UNCONDITIONAL `Nat.mul_sub_left_distrib_total`, so no `≤` proof is
+    /// required anywhere.
+    pub catalan_mul_succ: NameId,
+    /// `Nat.lcm_comm : ∀ a b, lcm a b = lcm b a`. Direct from `dvd_antisymm`
+    /// fed the two `lcm_dvd` applications (each built from
+    /// `dvd_lcm_left`/`dvd_lcm_right` with the endpoints swapped).
+    pub lcm_comm: NameId,
+    /// `Nat.coprime_lcm_eq_mul : ∀ a b, gcd a b = 1 → lcm a b = a * b`. From
+    /// the unconditional `gcd_mul_lcm`, substituting the coprimality
+    /// hypothesis and cancelling the leading `1` with `one_mul`.
+    pub coprime_lcm_eq_mul: NameId,
     /// Balanced natural Bézout certificates:
     /// `bezout m n g := ∃ mp mn np nn, g + m*mn + n*nn = m*mp + n*np`.
     pub bezout: NameId,
@@ -1412,6 +1453,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gcd_mul_lcm: kernel.name_str(nat, "gcd_mul_lcm"),
             gauss_lemma: kernel.name_str(nat, "gauss_lemma"),
             lcm_dvd: kernel.name_str(nat, "lcm_dvd"),
+            dvd_antisymm: kernel.name_str(nat, "dvd_antisymm"),
+            catalan: kernel.name_str(nat, "catalan"),
+            catalan_mul_succ: kernel.name_str(nat, "catalan_mul_succ"),
+            lcm_comm: kernel.name_str(nat, "lcm_comm"),
+            coprime_lcm_eq_mul: kernel.name_str(nat, "coprime_lcm_eq_mul"),
             bezout: kernel.name_str(nat, "bezout"),
             gcd_bezout: kernel.name_str(nat, "gcd_bezout"),
             mod_eq: kernel.name_str(nat, "modEq"),
@@ -1578,6 +1624,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
         declare_primes(&mut d, &p)?;
+        // Needs `le_of_dvd` (just declared by `declare_primes`), so these
+        // cannot run inside `declare_lcm` above despite conceptually
+        // belonging there — see `dvd_antisymm`'s doc comment.
+        declare_dvd_antisymm(&mut d, &p)?;
+        declare_lcm_comm(&mut d, &p)?;
+        declare_coprime_lcm_eq_mul(&mut d, &p)?;
         declare_coprime_of_lt_prime(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
@@ -1605,6 +1657,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_diagonal(&mut d, &p)?;
         declare_rectangle(&mut d, &p)?;
         declare_vandermonde_all(&mut d, &p)?;
+        declare_catalan_all(&mut d, &p)?;
         declare_binary_all(&mut d, &p)?;
         declare_size_all(&mut d, &p)?;
         declare_fib_all(&mut d, &p)?;
