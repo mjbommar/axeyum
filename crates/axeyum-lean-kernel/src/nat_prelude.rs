@@ -1675,6 +1675,15 @@ pub struct NatPrelude {
     /// or that power times `q`. The Euclid IX.36 divisor-classification
     /// blocker; see `perfect.rs`'s module doc for the proof route.
     pub dvd_two_pow_mul_classify: NameId,
+    /// `Nat.dvd_two_pow_classify : ∀ k d, dvd d (pow 2 k) → ∃ i, Le i k ∧ Eq
+    /// d (pow 2 i)` — every divisor of `2^k` is a power of `2` up to `2^k`
+    /// (the `q`-free specialization [`Self::dvd_two_pow_mul_classify`]
+    /// cannot be instantiated to give directly, since its cofactor carries a
+    /// `2 ≤ q` primality hypothesis that blocks `q = 1`). This is the
+    /// "divisors of `2^n` are exactly the powers of `2` up to `n`"
+    /// classification `sumDivisors_two_pow`'s congruence step needs; see
+    /// `perfect.rs`'s module doc for the proof route.
+    pub dvd_two_pow_classify: NameId,
     /// `Nat.pow_pos : ∀ b k, Lt zero b → Lt zero (pow b k)` — positivity of
     /// `pow` is preserved by a positive base, at any exponent. See
     /// `perfect.rs`'s module note for why this and `pow_lt_pow_succ` did not
@@ -2116,6 +2125,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             cantor_diagonal_neg: kernel.name_str(nat, "cantor_diagonal_neg"),
             cantor_no_fixed_point: kernel.name_str(nat, "cantor_no_fixed_point"),
             dvd_two_pow_mul_classify: kernel.name_str(nat, "dvd_two_pow_mul_classify"),
+            dvd_two_pow_classify: kernel.name_str(nat, "dvd_two_pow_classify"),
             pow_pos: kernel.name_str(nat, "pow_pos"),
             pow_lt_pow_succ: kernel.name_str(nat, "pow_lt_pow_succ"),
         };

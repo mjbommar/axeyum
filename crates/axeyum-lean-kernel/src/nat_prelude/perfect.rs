@@ -1669,6 +1669,238 @@ pub(super) fn declare_dvd_two_pow_mul_classify(
 }
 
 // ============================================================================
+// `Nat.dvd_two_pow_classify` — divisors of `2^k` alone (no coprime cofactor
+// `q`): every `d ∣ 2^k` is `2^i` for some `i ≤ k`. This is the "divisors of
+// `2^n` are exactly the powers of `2` up to `n`" classification
+// `sumDivisors_two_pow`'s congruence step needs, and
+// [`declare_dvd_two_pow_mul_classify`] does NOT supply it: that theorem's
+// cofactor `q` carries a primality hypothesis (`2 ≤ q`) that blocks
+// instantiating it at `q = 1`.
+//
+// The proof reuses [`pow_eq_predicate`]/[`pow_eq_exists`]/[`pow_eq_intro`]/
+// [`pow_eq_elim`] verbatim with `extra = None` — those four are already
+// generic in the optional cofactor — so this is the SAME single induction on
+// `k`, splitting on `gcd(dd, 2) ∈ {1, 2}` via [`divisors_of_two`], with the
+// `Or`-of-two-shapes machinery ([`classify_goal`]/[`classify_inl`]/
+// [`classify_inr`]/[`classify_widen`]) dropped since there is only one shape
+// to land in. [`widen_pow_eq`] and [`even_step_result`] below are the
+// `q`-free analogues of [`classify_widen`]'s left branch and
+// [`even_branch_left`], respectively; the odd/coprime branch closes directly
+// through `gauss_lemma` exactly as the mul-classify theorem's coprime branch
+// does, minus the cofactor.
+// ============================================================================
+
+/// `∀ dd, dvd dd (pow 2 kk) → pow_eq_exists kk dd None`.
+fn dvd_two_pow_motive(d: &mut NatDev<'_>, kk: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let dd_fv = d.fresh_fvar();
+    let dd = d.kernel().fvar(dd_fv);
+    let two = d.num(2);
+    let pow_kk = d.pow(two, kk);
+    let hyp_ty = d.dvd(dd, pow_kk);
+    let goal = pow_eq_exists(d, kk, dd, None);
+    let body = d.arrow(hyp_ty, goal);
+    d.pi_fv(dd_fv, nat, body)
+}
+
+/// Widen a `q`-free classification proof bounded by `m` to one bounded by
+/// `succ m` — the `q`-free analogue of [`classify_widen`]'s left branch
+/// (used when the induction hypothesis is applied to the SAME `dd`, so only
+/// the bound needs adjusting, not the witness's shape).
+fn widen_pow_eq(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    m: ExprId,
+    target: ExprId,
+    proof_m: ExprId,
+) -> ExprId {
+    let p = *p;
+    let sm = d.succ(m);
+    let goal = pow_eq_exists(d, sm, target, None);
+    pow_eq_elim(d, m, target, None, goal, proof_m, &|d, i, le_i, eq_i| {
+        let le_succ_m = d.lemma(p.le_succ, &[m]);
+        let le_i_sm = d.lemma(p.le_trans, &[i, m, sm, le_i, le_succ_m]);
+        pow_eq_intro(d, sm, target, None, i, le_i_sm, eq_i)
+    })
+}
+
+/// The even branch's result: from `dd_eq : Eq dd (mul two dprime)` and
+/// `eq_i : Eq dprime (pow 2 i)` (`i ≤ m`), build a proof of `pow_eq_exists
+/// (succ m) dd None` at witness `succ i` — the `q`-free analogue of
+/// [`even_branch_left`] (identical algebra, minus the `classify_inl` `Or`
+/// wrap, since there is no second disjunct here).
+#[allow(clippy::too_many_arguments)]
+fn even_step_result(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    dd: ExprId,
+    dprime: ExprId,
+    dd_eq: ExprId,
+    m: ExprId,
+    sm: ExprId,
+    i: ExprId,
+    le_i: ExprId,
+    eq_i: ExprId,
+) -> ExprId {
+    let p = *p;
+    let two = d.num(2);
+    let two_dprime = d.mul(two, dprime);
+    let pow_i = d.pow(two, i);
+    let congr_step = d.congr(dprime, pow_i, eq_i, &|d, t| d.mul(two, t));
+    let two_pow_i = d.mul(two, pow_i);
+    let comm = d.lemma(p.mul_comm, &[two, pow_i]);
+    let pow_i_two = d.mul(pow_i, two);
+    let (_e, dd_eq_final) = d.chain(
+        dd,
+        &[
+            (two_dprime, dd_eq),
+            (two_pow_i, congr_step),
+            (pow_i_two, comm),
+        ],
+    );
+    let succ_i = d.succ(i);
+    let le_i_sm = d.lemma(p.le_succ_succ, &[i, m, le_i]);
+    pow_eq_intro(d, sm, dd, None, succ_i, le_i_sm, dd_eq_final)
+}
+
+/// `Nat.dvd_two_pow_classify : ∀ k d, dvd d (pow 2 k) → ∃ i, Le i k ∧ Eq d
+/// (pow 2 i)` — every divisor of `2^k` is a power of `2` up to `2^k`. See the
+/// module doc above for the proof route (one induction on `k`, reusing
+/// [`declare_dvd_two_pow_mul_classify`]'s `gcd(dd,2)` split machinery with
+/// the cofactor `q` erased).
+pub(super) fn declare_dvd_two_pow_classify(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.dvd_two_pow_classify, 1, &|d, v| {
+        let k = v[0];
+
+        let motive = |d: &mut NatDev<'_>, kk: ExprId| -> ExprId { dvd_two_pow_motive(d, kk) };
+
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let nat = d.nat_ty();
+            let dd_fv = d.fresh_fvar();
+            let dd = d.kernel().fvar(dd_fv);
+            let zero = d.zero();
+            let two = d.num(2);
+            let pow0 = d.pow(two, zero);
+            let hyp_ty = d.dvd(dd, pow0);
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+
+            // `pow0 ≡ one` by iota (`pow _ zero ≡ succ zero`), so `hyp` (typed
+            // `dvd dd pow0`) serves directly where `dvd dd one` is expected —
+            // exactly the convention [`declare_dvd_two_pow_mul_classify`]'s
+            // own base case relies on.
+            let dd_eq_one = d.lemma(p.eq_one_of_dvd_one, &[dd, hyp]);
+
+            let zero2 = d.zero();
+            let le00 = d.lemma(p.le_refl, &[zero2]);
+            let intro = pow_eq_intro(d, zero, dd, None, zero2, le00, dd_eq_one);
+
+            let dd_body = d.lam_fv(hyp_fv, hyp_ty, intro);
+            d.lam_fv(dd_fv, nat, dd_body)
+        };
+
+        let step = |d: &mut NatDev<'_>, m: ExprId, ih: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let sm = d.succ(m);
+            let dd_fv = d.fresh_fvar();
+            let dd = d.kernel().fvar(dd_fv);
+            let two = d.num(2);
+            let one = d.num(1);
+            let pow_m = d.pow(two, m);
+            let pow_sm = d.pow(two, sm);
+            let hyp_ty = d.dvd(dd, pow_sm);
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+
+            let goal = pow_eq_exists(d, sm, dd, None);
+
+            // `pow_sm ≡ mul(pow_m, two)` by iota; reorder to `mul(two, pow_m)`.
+            let pm2 = d.mul(pow_m, two);
+            let mul_comm_2 = d.lemma(p.mul_comm, &[pow_m, two]);
+            let two_pm = d.mul(two, pow_m);
+            let dvd_two_pm = transport_dvd_right(d, dd, pm2, two_pm, mul_comm_2, hyp);
+
+            let gcd_dd2 = d.gcd(dd, two);
+            let gcd_dvd_2 = d.lemma(p.gcd_dvd_right, &[dd, two]);
+            let two_cases = divisors_of_two(d, &p, gcd_dd2, gcd_dvd_2);
+
+            let left_ty = d.eq(gcd_dd2, one);
+            let right_ty = d.eq(gcd_dd2, two);
+
+            let coprime_branch = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let dvd_dd_pow_m = d.lemma(p.gauss_lemma, &[dd, two, pow_m, h, dvd_two_pm]);
+                let ih_result = d.apply(ih, &[dd, dvd_dd_pow_m]);
+                let widened = widen_pow_eq(d, &p, m, dd, ih_result);
+                d.lam_fv(h_fv, left_ty, widened)
+            };
+
+            let even_branch = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let gcd_dvd_dd = d.lemma(p.gcd_dvd_left, &[dd, two]);
+                let dvd_2_dd = transport_dvd_left(d, gcd_dd2, two, h, dd, gcd_dvd_dd);
+
+                let body = dvd_elim(d, two, dd, goal, dvd_2_dd, &|d, dprime, dd_eq| {
+                    let two_dprime = d.mul(two, dprime);
+                    let dvd_scaled =
+                        transport_dvd_left(d, dd, two_dprime, dd_eq, two_pm, dvd_two_pm);
+
+                    dvd_elim(d, two_dprime, two_pm, goal, dvd_scaled, &|d, e, eq2| {
+                        let two_dprime_e = d.mul(two_dprime, e);
+                        let assoc2 = d.lemma(p.mul_assoc, &[two, dprime, e]);
+                        let dprime_e = d.mul(dprime, e);
+                        let two_dprime_e2 = d.mul(two, dprime_e);
+                        let (_e3, eq3) =
+                            d.chain(two_pm, &[(two_dprime_e, eq2), (two_dprime_e2, assoc2)]);
+                        let one_le_two = d.lemma(p.le_succ, &[one]);
+                        let cancelled = d.lemma(
+                            p.mul_left_cancel_of_pos,
+                            &[two, pow_m, dprime_e, one_le_two, eq3],
+                        );
+                        let dvd_dprime_pow_m = dvd_intro(d, dprime, pow_m, e, cancelled);
+                        let ih_result = d.apply(ih, &[dprime, dvd_dprime_pow_m]);
+
+                        pow_eq_elim(d, m, dprime, None, goal, ih_result, &|d, i, le_i, eq_i| {
+                            even_step_result(d, &p, dd, dprime, dd_eq, m, sm, i, le_i, eq_i)
+                        })
+                    })
+                });
+                d.lam_fv(h_fv, right_ty, body)
+            };
+
+            let anon = d.anon_name();
+            let logic = d.prelude().logic;
+            let or_ty = d.const_app(logic.or, &[left_ty, right_ty]);
+            let motive_or = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+            let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+            let case_result = d.apply(
+                or_rec,
+                &[
+                    left_ty,
+                    right_ty,
+                    motive_or,
+                    coprime_branch,
+                    even_branch,
+                    two_cases,
+                ],
+            );
+            let dd_body = d.lam_fv(hyp_fv, hyp_ty, case_result);
+            d.lam_fv(dd_fv, nat, dd_body)
+        };
+
+        let proof = d.induct(&motive, &base, &step, k);
+        (motive(d, k), proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
 // `Nat.pow_pos` / `Nat.pow_lt_pow_succ` — strict monotonicity of `pow` in the
 // exponent, for any base greater than `1`. Verified against the full
 // `--include-constructed` theorem inventory that neither existed anywhere in
@@ -1878,9 +2110,9 @@ pub(super) fn declare_pow_lt_pow_succ(
 
 /// Declare `Nat.sumDivisors`, its computational and prime sanity theorems,
 /// `Nat.Perfect`, the finite geometric sum over powers of two, the divisor
-/// classification `Nat.dvd_two_pow_mul_classify`, and `pow`'s strict
-/// monotonicity in the exponent (`Nat.pow_pos`, `Nat.pow_lt_pow_succ`), in
-/// dependency order.
+/// classifications `Nat.dvd_two_pow_mul_classify` and
+/// `Nat.dvd_two_pow_classify`, and `pow`'s strict monotonicity in the
+/// exponent (`Nat.pow_pos`, `Nat.pow_lt_pow_succ`), in dependency order.
 pub(super) fn declare_perfect_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_sum_divisors(d, p)?;
     declare_sum_divisors_one(d, p)?;
@@ -1888,6 +2120,7 @@ pub(super) fn declare_perfect_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     declare_perfect(d, p)?;
     declare_pow2_geom_sum(d, p)?;
     declare_dvd_two_pow_mul_classify(d, p)?;
+    declare_dvd_two_pow_classify(d, p)?;
     declare_pow_pos(d, p)?;
     declare_pow_lt_pow_succ(d, p)?;
     Ok(())

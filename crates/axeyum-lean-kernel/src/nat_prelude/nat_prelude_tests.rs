@@ -749,6 +749,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.cantor_diagonal_neg,
         p.cantor_no_fixed_point,
         p.dvd_two_pow_mul_classify,
+        p.dvd_two_pow_classify,
         p.pow_pos,
         p.pow_lt_pow_succ,
     ]
@@ -1280,6 +1281,71 @@ fn dvd_two_pow_mul_classify_computes_at_a_concrete_instance() {
     assert!(
         f.k.axiom_footprint(p.dvd_two_pow_mul_classify).is_empty(),
         "dvd_two_pow_mul_classify rests on a trusted declaration"
+    );
+}
+
+/// `Nat.dvd_two_pow_classify` — the "divisors of `2^n` are exactly the
+/// powers of `2` up to `n`" classification `sumDivisors_two_pow`'s
+/// congruence step needs. At `k = 3` (`2^3 = 8`), the theorem partially
+/// applied at `[k]` type-checks and its residue names `dvd`, `pow`, and a
+/// single `Exists` (no `Or`, unlike `dvd_two_pow_mul_classify` — there is
+/// only one shape to land in without a coprime cofactor); the axiom
+/// footprint is empty.
+#[test]
+fn dvd_two_pow_classify_computes_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let three = f.num(3);
+    let eight = f.num(8);
+    let two_pow_three = f.const_app(p.pow, &[two, three]);
+    assert!(f.k.def_eq(two_pow_three, eight), "pow 2 3 must reduce to 8");
+
+    let k = f.num(3);
+    let applied = f.const_app(p.dvd_two_pow_classify, &[k]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("dvd_two_pow_classify 3 must type-check");
+    let rendered = f.k.render_lean(inferred);
+    assert!(
+        rendered.contains("dvd") && rendered.contains("AxNat.pow") && rendered.contains("Exists"),
+        "unexpected residue type: {rendered}"
+    );
+    assert!(
+        !rendered.contains("Or"),
+        "dvd_two_pow_classify has no coprime cofactor, so its residue must not \
+         carry an Or disjunction: {rendered}"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.dvd_two_pow_classify).is_empty(),
+        "dvd_two_pow_classify rests on a trusted declaration"
+    );
+
+    // A genuine divisor at this instance: `4 ∣ 8` (witness `2`), and the
+    // theorem fully applied at `dd = 4` type-checks, certifying `∃ i, Le i 3
+    // ∧ Eq 4 (pow 2 i)` (the true witness is `i = 2`, since `4 = 2^2`).
+    let four = f.num(4);
+    let nat = f.nat_ty();
+    let dvd_predicate = f.dvd_predicate(four, eight);
+    let one_lvl = f.level_one();
+    let exists_intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+    let witness = f.num(2);
+    let mul_four_two = f.mul(four, witness);
+    assert!(f.k.def_eq(eight, mul_four_two), "8 must reduce to mul 4 2");
+    let eq_proof = f.refl(eight);
+    let dvd_four_eight = f.apply(exists_intro, &[nat, dvd_predicate, witness, eq_proof]);
+
+    let applied_full = f.apply(applied, &[four, dvd_four_eight]);
+    let inferred_full =
+        f.k.infer(applied_full)
+            .expect("dvd_two_pow_classify 3 4 (proof of 4∣8) must type-check");
+    let rendered_full = f.k.render_lean(inferred_full);
+    assert!(
+        rendered_full.contains("Exists"),
+        "fully applied residue must still be the existential witness claim: \
+         {rendered_full}"
     );
 }
 
@@ -5453,7 +5519,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        58 + 264,
+        58 + 265,
         "every promised definition and theorem must be rendered"
     );
 }
