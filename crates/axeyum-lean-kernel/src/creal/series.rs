@@ -152,6 +152,120 @@
 //! it is real remaining work, not a restatement — but it is bounded work of
 //! the same shape `limit_dist` already solved, not a fresh harmonic-series
 //! dead end.
+//!
+//! ## The Cauchy-shape conversion: the route closes, but it is a *nested*
+//! telescope, not a flat one — read this before attempting it
+//!
+//! A later slice worked the construction above through to concrete term
+//! level (never committed — see below for why) and the previous framing
+//! understated its size by roughly 3–5×. The one paragraph above still
+//! describes the *outer* structure correctly, but "the middle leg by
+//! unfolding `sum_range_tail_le`'s `CReal.le`" is doing a lot of hidden
+//! work: unfolding that `CReal.le` at the shared index gives a bound on
+//! `seq (h m) j − seq (h n) j` **in terms of `seq (tail_g) j`**, i.e. in
+//! terms of `g`'s own comparison-sequence sample at `j` — and `tail_g` is
+//! itself `sumRange g (m+n) − sumRange g m`, an `add`/`neg` term whose
+//! `seq` at `j` shifts (`seq (add x y) k` samples `x`, `y` at `shift k`,
+//! never at `k`). Turning *that* into something usable needs a **second,
+//! independent instance of the same three-leg telescope**, applied to `g`'s
+//! own partial sums and anchored at `g`'s own Cauchy witness. Concretely,
+//! for `CReal.sumRange_cauchy_of_dominated : ∀ f g, (∀ k, le (abs (f k)) (g
+//! k)) → Cauchy (sumRange g) → Cauchy (sumRange f)` (the natural statement
+//! of this piece — it has to conclude the *existential* `Cauchy`, not a bare
+//! `Within`, because the bound it produces genuinely mentions `g`'s Cauchy
+//! witness `K`, and only wrapping the conclusion in its own `∃ K'` lets that
+//! dependency out of an `Exists.rec` motive):
+//!
+//! - **Outer telescope**, at shared index `t := shift q` (`q := m+n`, the
+//!   ordering `sum_range_tail_le` already bakes in via its own `m`, `add m
+//!   n` parameters — no `Nat.le_total` case split needed for *this* half):
+//!   `seq (sumRange f m) m − seq (sumRange f q) q` splits into a leg from
+//!   `CReal.regular (sumRange f m) m t`, a middle leg, and a leg from
+//!   `CReal.regular (sumRange f q) t q`. The middle leg is (up to sign)
+//!   `seq tail_f j` at `j := q`, bounded via `le_trans le_abs_self
+//!   sum_range_tail_le` / `le_trans neg_le_abs sum_range_tail_le` (**two**
+//!   one-sided real bounds, not one `abs_le` call, because `abs_le`'s
+//!   hypothesis shape does not survive sampling at an index) applied at
+//!   `q`, against `seq tail_g q`.
+//! - **Inner telescope**, same shared-index shape but anchored through `m`
+//!   and `q` themselves (not through `t` a second time): `seq tail_g q`
+//!   unfolds (`add`'s own shift) to `seq (sumRange g q) t − seq (sumRange g
+//!   m) t`, and *that* is bounded by routing through `seq (sumRange g m) m
+//!   − seq (sumRange g q) q` — exactly `Cauchy (sumRange g)`'s witness
+//!   applied at `(m, q)`, no index gymnastics needed for that piece — plus
+//!   the same two `CReal.regular`-at-`(_, t)` legs used in the outer
+//!   telescope (reused, not re-derived).
+//!
+//! **The sign/associativity bookkeeping is the actual cost, not the
+//! mathematics.** Every `seq (add x y) k` unfold only gets you as far as
+//! `Rat.sub`/`Rat.neg` applied in whatever nesting the source term had —
+//! e.g. `seq (neg tail_f) q` reduces (pure ι/β, free) to `Rat.neg (Rat.sub
+//! (seq A_q t) (seq A_m t))`, and turning that into the `Rat.sub (seq A_m
+//! t) (seq A_q t)` shape the telescope's other legs use needs an *explicit*
+//! `Rat.neg_sub` rewrite — defeq does computation, not ring identities, and
+//! this construction needs the identity at nearly every join. `Rat.le_of_sub_le`
+//! (`u ≤ v+q → ⊢ u−v ≤ q`, already declared) plus `Rat.neg_sub` supply the
+//! sign flips; `Rat.sub_add_sub` supplies each telescoping join; `Rat.bounds_add`/
+//! `Rat.bounds_neg` combine two-sided bounds; `half_shift_le`
+//! (`completeness.rs`, already `pub(super)`) widens every `1/(shift q+1)`
+//! leg up to `1/(q+1)` so `t` never survives into the final bound;
+//! `Rat.nat_div_succ_add` fuses same-index terms and `Rat.nat_div_succ_le_add_left`
+//! pads whichever of the two final coefficients is smaller so both sides
+//! share one witness `K`, as `Cauchy`'s shape requires.
+//!
+//! Worked all the way through by hand, this is on the order of **35–45
+//! distinct proof-term steps** (roughly matching `declare_converges_cauchy`
+//! and `regroup_middle_four` combined, which solve a structurally similar
+//! but *single*, not *nested*, three-term telescope) — **not committed this
+//! slice**, because a construction this size, assembled in one pass without
+//! kernel-checking each join, is exactly the failure mode this repository's
+//! own history warns about (`EIGHT argument-position defects` in one day,
+//! five in the `symm` family) and a kernel declaration has no "mostly
+//! right" state: it either checks or it does not exist. The next attempt
+//! should land the inner and outer telescopes as **separately kernel-tested
+//! pieces** (e.g. first the `within`-swap-via-`neg_sub` helper and the
+//! inner telescope alone, verified against a trivial `f = g` instance,
+//! *then* the outer one) rather than as one unverified block.
+//!
+//! ## Two further gaps this slice found, neither in the previous brief
+//!
+//! Even a landed `sumRange_cauchy_of_dominated` does **not** reach `Σ b`
+//! converges by itself, for a reason independent of the telescope above:
+//!
+//! 1. **There is no bridge from a `K`-scaled `Cauchy` witness to an actual
+//!    limit.** `completeness.rs` builds `CReal.limit`/`CReal.limit_dist`
+//!    only for `CReal.RegularSeq` — the **unscaled**, `K = 1` case
+//!    (`modulus m n = 1/(m+1)+1/(n+1)` literally, not `≤`). Given `Cauchy f`
+//!    with witness `K ≠ 1`, reindexing `f` to make it genuinely `K = 1`
+//!    regular needs an *additional* regularity leg per sample (bounding
+//!    `seq (f (σ n)) n` against `f (σ n)`'s own canonical sample `seq (f
+//!    (σ n)) (σ n)`, for whatever reindexing `σ` is chosen) — a
+//!    second, parametrised completeness construction, comparable in size to
+//!    `completeness.rs` itself, that does not exist anywhere in this
+//!    development yet. This blocks **both** `converges_geometric` (item 2)
+//!    and the comparison test's conclusion (item 3, which needs an actual
+//!    `Converges (sumRange a) L`, not just `Cauchy (sumRange a)`) — the
+//!    comparison test does not avoid this by taking `Converges (sumRange
+//!    b) M` as a hypothesis, because it still has to *produce* a limit for
+//!    `sumRange a`.
+//! 2. **`converges_geometric` needs a quantitative decay rate that also
+//!    does not exist.** [`CRealPrelude::geom_tail_bounded`] bounds `(1 − x)
+//!    · |tail| ≤ xᵐ`, not `|tail| ≤ xᵐ/(1 − x)` — going from the first to
+//!    the second needs a "cancel a positive, apart-from-zero real factor
+//!    from a `CReal.le`" lemma, and there is no such lemma over `CReal` in
+//!    this codebase (checked: no `le_of_mul_le`/`div_le`/`le_div`/
+//!    `mul_le_cancel` declared). And even granting that division, `Cauchy`'s
+//!    shape needs `xᵐ ≤ C/(m+1)` for a *fixed* `C` — true for a witnessed
+//!    ratio (`x ≤ N/(N+1)`) but itself a genuine calculus fact (Bernoulli's
+//!    inequality or equivalent), not a restatement of anything already
+//!    proved here.
+//!
+//! Net: the previous lane's "bounded work of the same shape `limit_dist`
+//! already solved" undercounted by treating the tail-bound conversion as
+//! the only remaining step. It is the first of at least three comparably
+//! sized pieces (the nested telescope above; the `Cauchy`→`Converges`
+//! reindexing bridge; the geometric decay-rate quantification), and none of
+//! the three should be attempted as a single unverified slice.
 
 use super::ring_helpers::add4_comm;
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, equiv, sample, shift};
