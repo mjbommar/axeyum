@@ -161,6 +161,44 @@ could not show.** The counts were right; what they meant was not — the same
 error doc `233` recorded about itself and kept rather than deleted, for the same
 reason.
 
+## Second amendment, 2026-08-25 — the kernel-empty half of Gap 2 moved
+
+The first amendment said 18 of 23 nodes were "solver-backed and kernel-empty."
+Five of those nodes are no longer kernel-empty. Measured from the `nat` prelude's
+`theorem_names` list — **not** by grepping source, which returns zero against
+real declarations because names are interned `NameId`s:
+
+| Curriculum node | Kernel theorems before | After | What landed |
+|---|---:|---:|---|
+| `sets` | 0 | 28 | union/inter/compl/diff, the counting laws, 13 pointwise Boolean-lattice laws, and `Subset` as a **partial order** joined to the lattice |
+| `groups` | 0 | 4 | `IsGroupOn` (bundled predicate — this kernel has no typeclasses), uniqueness of identity and inverses, left cancellation, and **ℤ/n under addition** as a worked instance |
+| `relations-and-functions` | 0 | 5 | `ReflexiveOn`/`SymmetricOn`/`TransitiveOn`/`EquivalenceOn`, `eq_equivalence_on`, `modEq_equivalence_on` |
+| `cardinality` | 0 | 1 | the two-bound `pigeonhole` — genuinely not the same statement as `finite.rs`'s one-bound self-map lemma |
+| `polynomials` | 0 | 4 | `Rat.pow`, `polyEval` and its laws; then the ℚ diagonal/rectangle toolkit |
+
+`sequences-and-limits` gained `converges_squeeze` and the `sumRange` sample-rate
+law. **Both destinations are still kernel-thin**: `linear-algebra` has the
+`dotN` inner product and Cauchy–Schwarz, `calculus` has the derivative and
+eleven theorems, and neither has nursery pressure. Gap 2's sharper half — a
+producer cannot be evaluated against a population containing nothing from its
+subject — is unchanged.
+
+**Two findings from working the nodes are worth more than the counts.**
+
+*A missing type is the binding constraint, not missing effort.* There is no
+`List`, no `Finset`, and no product type, so a permutation cannot be encoded as
+a group element, `polyEval_mul` cannot be stated without vanishing hypotheses,
+and Lagrange's identity at general `n` is unstatable. Every one of those was
+discovered by a lane trying to prove the theorem, not by planning.
+
+*A brief can ask for a false theorem.* `polyEval (conv a b) (m+n-1) x =
+polyEval a m x * polyEval b n x` is false for arbitrary coefficient functions —
+`conv` sums the full antidiagonal, including points outside the `m x n`
+rectangle. A lane refuted it with a kernel-confirmed counterexample rather than
+failing to prove it, which is the outcome this document should want from a
+target it names: **a node's frontier is characterised as much by what is false
+there as by what is proved.**
+
 ## Boundary
 
 This document **selects nothing and authorizes nothing.** It adds no operation
