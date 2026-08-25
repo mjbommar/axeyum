@@ -377,6 +377,7 @@ gate-controls:
     # `%(trailers:key=Agent,valueonly)` is the query every attribution check
     # runs, and two commits carried the text without parsing.
     scripts/tests/test-commit-msg-trailer.sh
+    python3 -m unittest scripts.tests.test_lane_merge_additive
     # `--to <branch>`: the range, the cost estimate and the fast-forward check
     # must follow the ref being PUSHED, not the current branch's remote copy.
     # Against a stale `origin/<branch>` the same doc-only landing reads FULL
