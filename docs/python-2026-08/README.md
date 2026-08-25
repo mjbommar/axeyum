@@ -24,6 +24,7 @@ command can check, and lands as slices that pass the gates on their own.
 | 07 | [`07-mobility-census.md`](07-mobility-census.md) | every precondition against every open fact without running a producer; the capability backlog | 03, 04 |
 | 08 | [`08-guarded-tools.md`](08-guarded-tools.md) | the two guarded tier-R tools: the `web_fetch` prefix allowlist, the nursery family rule, the injection fence, and the sandbox that must be shown to bite | 03 |
 | 09 | [`09-coverage-plan.md`](09-coverage-plan.md) | the generated coverage ledger (`scripts/gen-python-coverage.py`) that evaluates 02's exit criterion, and the slice plan for the gaps it measures | 02 |
+| 10 | [`10-quality-best-practices.md`](10-quality-best-practices.md) | current PyO3/maturin practice (sourced) against the measured binding; six quality slices Q1–Q6 | 01, 02 |
 
 The measured basis for all three is in two studies written 2026-08-24 and
 reproduced here as [`studies/`](studies/): the PyO3 feasibility probe (PyO3
