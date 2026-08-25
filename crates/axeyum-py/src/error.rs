@@ -57,3 +57,40 @@ pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("ReplayUnavailable", py.get_type::<ReplayUnavailable>())?;
     Ok(())
 }
+
+// The stub-inventory twin of the `create_exception!` calls above. `PyO3` builds
+// an exception as a `PyErr` type rather than a `#[pyclass]`, so nothing a
+// `#[gen_stub_*]` macro can be attached to exists -- without this the four names
+// are absent from the generated stubs and every `except axeyum.AxeyumError` in a
+// checked consumer is an unresolved attribute.
+#[cfg(feature = "stub-gen")]
+mod stub {
+    use super::{AxeyumError, BudgetExceeded, ReplayUnavailable, SmtLibParseError};
+    use crate::stub_info::stub_exception;
+    use pyo3::exceptions::PyException;
+
+    stub_exception!(
+        "axeyum._native",
+        AxeyumError,
+        PyException,
+        "Root of every exception raised by the Axeyum bindings."
+    );
+    stub_exception!(
+        "axeyum._native",
+        SmtLibParseError,
+        AxeyumError,
+        "The SMT-LIB text could not be parsed, or used a construct outside the supported fragment."
+    );
+    stub_exception!(
+        "axeyum._native",
+        BudgetExceeded,
+        AxeyumError,
+        "A binding-level budget refused the call before any search started."
+    );
+    stub_exception!(
+        "axeyum._native",
+        ReplayUnavailable,
+        AxeyumError,
+        "`Outcome.replay()` was asked to re-check a model it does not hold."
+    );
+}

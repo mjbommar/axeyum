@@ -48,12 +48,17 @@ fn is_rejection(error: &CasGf2Error) -> bool {
 /// Defaults are `Gf2Limits::default()` verbatim: `max_input_degree=4_096`,
 /// `max_intermediate_degree=8_192`, `max_frobenius_steps=4_096`,
 /// `max_word_ops=50_000_000`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.gf2")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Gf2Limits")]
 #[derive(Debug, Clone, Copy)]
 pub struct Gf2Limits {
     inner: CasGf2Limits,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Gf2Limits {
     /// Ceilings, defaulting to the Rust `Gf2Limits::default()`.
@@ -119,6 +124,10 @@ impl Gf2Limits {
 /// Resource ceilings for the dense independent checker.
 ///
 /// Defaults: `max_degree=4_096`, `max_coefficient_ops=500_000_000`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.gf2")
+)]
 #[pyclass(
     frozen,
     from_py_object,
@@ -130,6 +139,7 @@ pub struct IndependentCheckLimits {
     inner: CasIndependentCheckLimits,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl IndependentCheckLimits {
     /// Ceilings, defaulting to the Rust `IndependentCheckLimits::default()`.
@@ -165,6 +175,10 @@ impl IndependentCheckLimits {
 }
 
 /// A polynomial over GF(2), held as packed 64-bit words.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.gf2")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Gf2Poly")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Gf2Poly {
@@ -178,6 +192,7 @@ impl Gf2Poly {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Gf2Poly {
     /// A polynomial from the exponents whose coefficients are `1`.
@@ -269,6 +284,10 @@ impl Gf2Poly {
 /// `accepted` is paired with the obligation counts the certificate carries, so a
 /// caller can tell a checker that re-derived a 100-step Frobenius chain from one
 /// that re-derived nothing.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.gf2")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Gf2Verdict")]
 #[derive(Debug, Clone)]
 pub struct Gf2Verdict {
@@ -279,6 +298,7 @@ pub struct Gf2Verdict {
     bezout_obligations: usize,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Gf2Verdict {
     /// `"packed"` or `"independent"` — which implementation answered.
@@ -321,6 +341,10 @@ impl Gf2Verdict {
 }
 
 /// Both checkers' answers about one certificate.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.gf2")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Gf2BothVerdict")]
 #[derive(Debug, Clone)]
 pub struct Gf2BothVerdict {
@@ -328,6 +352,7 @@ pub struct Gf2BothVerdict {
     independent: Gf2Verdict,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Gf2BothVerdict {
     /// The packed-word checker's answer.
@@ -359,12 +384,17 @@ impl Gf2BothVerdict {
 }
 
 /// One step of the Frobenius chain: `x ** (2 ** i) = quotient * f + remainder`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.gf2")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "FrobeniusReduction")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FrobeniusReduction {
     inner: CasFrobeniusReduction,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl FrobeniusReduction {
     /// A reduction from its quotient and remainder.
@@ -399,12 +429,17 @@ impl FrobeniusReduction {
 }
 
 /// Bezout evidence for one distinct prime divisor of the candidate degree.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.gf2")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "RabinBezout")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RabinBezout {
     inner: CasRabinBezout,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl RabinBezout {
     /// An identity from its prime divisor and the two coefficients.
@@ -447,6 +482,10 @@ impl RabinBezout {
 }
 
 /// A portable Rabin irreducibility certificate.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.gf2")
+)]
 #[pyclass(
     frozen,
     from_py_object,
@@ -485,6 +524,7 @@ impl IrreducibilityCertificate {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl IrreducibilityCertificate {
     /// A certificate from its parts.
@@ -632,6 +672,10 @@ impl IrreducibilityCertificate {
 ///
 /// Raises `Gf2Error` for a zero or constant input and for typed degree,
 /// Frobenius-step, or work-limit refusals.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.gf2")
+)]
 #[pyfunction]
 #[pyo3(signature = (polynomial, limits = None))]
 fn certify_irreducible(
@@ -650,12 +694,17 @@ fn certify_irreducible(
 ///
 /// Defaults: `max_bytes=32 MiB`, `max_id_bytes=256`, `max_producer_bytes=256`,
 /// with the two checkers' own defaults.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.gf2")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "ArtifactLimits")]
 #[derive(Debug, Clone, Copy)]
 pub struct ArtifactLimits {
     inner: CasArtifactLimits,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl ArtifactLimits {
     /// Ceilings, defaulting to the Rust `ArtifactLimits::default()`.
@@ -717,6 +766,10 @@ impl ArtifactLimits {
 ///
 /// `producer` is the tier boundary made data: it records who to distrust, and it
 /// is part of the canonical bytes.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.gf2")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "HalfDegreeArtifact")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HalfDegreeArtifact {
@@ -728,6 +781,7 @@ fn map_artifact_error(error: &CasArtifactError) -> PyErr {
     Gf2Error::new_err(error.to_string())
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl HalfDegreeArtifact {
     /// An artifact from an identifier, a producer identity, and a certificate.
@@ -856,4 +910,16 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(certify_irreducible, &module)?)?;
     parent.add("gf2", &module)?;
     Ok(())
+}
+
+// Module-level constants reach Python through `module.add("NAME", value)`, a
+// RUNTIME call with no item for a `#[gen_stub_*]` macro to sit on -- so without
+// these submissions they exist in the extension and in no stub, and a checked
+// consumer reading one gets an unresolved attribute. The type is named; the
+// VALUE deliberately is not, so a constant cannot drift from its stub.
+#[cfg(feature = "stub-gen")]
+mod stub_variables {
+    pyo3_stub_gen::module_variable!("axeyum._native.cas.certify.gf2", "FORMAT", String);
+    pyo3_stub_gen::module_variable!("axeyum._native.cas.certify.gf2", "STATEMENT", String);
+    pyo3_stub_gen::module_variable!("axeyum._native.cas.certify.gf2", "VERSION", u32);
 }

@@ -96,6 +96,10 @@ fn epoch_guard(kernel_epoch: u64, handle_epoch: u64, kind: &str) -> PyResult<()>
 // ---------------------------------------------------------------------------
 
 /// An interned hierarchical name, valid only in the kernel that interned it.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.kernel")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "NameId")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PyNameId {
@@ -105,6 +109,7 @@ pub struct PyNameId {
     id: NameId,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyNameId {
     /// The epoch of the kernel that interned this name.
@@ -123,8 +128,15 @@ impl PyNameId {
         format!("NameId(raw={}, epoch={})", self.id.index(), self.epoch)
     }
 
-    fn __eq__(&self, other: &Self) -> bool {
-        self.epoch == other.epoch && self.id == other.id
+    // `&Bound<'_, PyAny>`, not `&Self`: `__eq__` must accept ANY object.
+    // Typed as `&Self` it raises TypeError on a mismatch, where Python expects
+    // `False`, and the derived stub then declares `__eq__(self, other: Self)`,
+    // which mypy rejects as a Liskov violation against `object.__eq__` -- the
+    // stub package fails to BUILD, so `stubtest` compares nothing at all.
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        other
+            .cast::<Self>()
+            .is_ok_and(|other| self.epoch == other.get().epoch && self.id == other.get().id)
     }
 
     fn __hash__(&self) -> u64 {
@@ -133,6 +145,10 @@ impl PyNameId {
 }
 
 /// An interned universe level, valid only in the kernel that interned it.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.kernel")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "LevelId")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PyLevelId {
@@ -142,6 +158,7 @@ pub struct PyLevelId {
     id: LevelId,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyLevelId {
     /// The epoch of the kernel that interned this level.
@@ -160,8 +177,15 @@ impl PyLevelId {
         format!("LevelId(raw={}, epoch={})", self.id.index(), self.epoch)
     }
 
-    fn __eq__(&self, other: &Self) -> bool {
-        self.epoch == other.epoch && self.id == other.id
+    // `&Bound<'_, PyAny>`, not `&Self`: `__eq__` must accept ANY object.
+    // Typed as `&Self` it raises TypeError on a mismatch, where Python expects
+    // `False`, and the derived stub then declares `__eq__(self, other: Self)`,
+    // which mypy rejects as a Liskov violation against `object.__eq__` -- the
+    // stub package fails to BUILD, so `stubtest` compares nothing at all.
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        other
+            .cast::<Self>()
+            .is_ok_and(|other| self.epoch == other.get().epoch && self.id == other.get().id)
     }
 
     fn __hash__(&self) -> u64 {
@@ -170,6 +194,10 @@ impl PyLevelId {
 }
 
 /// An interned expression, valid only in the kernel that interned it.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.kernel")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "ExprId")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PyExprId {
@@ -179,6 +207,7 @@ pub struct PyExprId {
     id: ExprId,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyExprId {
     /// The epoch of the kernel that interned this expression.
@@ -197,8 +226,15 @@ impl PyExprId {
         format!("ExprId(raw={}, epoch={})", self.id.index(), self.epoch)
     }
 
-    fn __eq__(&self, other: &Self) -> bool {
-        self.epoch == other.epoch && self.id == other.id
+    // `&Bound<'_, PyAny>`, not `&Self`: `__eq__` must accept ANY object.
+    // Typed as `&Self` it raises TypeError on a mismatch, where Python expects
+    // `False`, and the derived stub then declares `__eq__(self, other: Self)`,
+    // which mypy rejects as a Liskov violation against `object.__eq__` -- the
+    // stub package fails to BUILD, so `stubtest` compares nothing at all.
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        other
+            .cast::<Self>()
+            .is_ok_and(|other| self.epoch == other.get().epoch && self.id == other.get().id)
     }
 
     fn __hash__(&self) -> u64 {
@@ -215,6 +251,10 @@ impl PyExprId {
 /// These mirror Lean's binder brackets. They are elaboration and printing
 /// metadata: they do **not** affect type checking or definitional equality, so
 /// two terms differing only here are `def_eq`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass_enum(module = "axeyum._native.kernel")
+)]
 #[pyclass(eq, eq_int, from_py_object, module = "axeyum", name = "BinderInfo")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PyBinderInfo {
@@ -252,6 +292,10 @@ impl From<BinderInfo> for PyBinderInfo {
 
 /// A literal embeddable in an expression: an arbitrary-precision natural, or a
 /// string.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.kernel")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Lit")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyLit {
@@ -259,6 +303,7 @@ pub struct PyLit {
     inner: Lit,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyLit {
     /// A natural-number literal, with no fixed-width ceiling.
@@ -321,8 +366,15 @@ impl PyLit {
         }
     }
 
-    fn __eq__(&self, other: &Self) -> bool {
-        self.inner == other.inner
+    // `&Bound<'_, PyAny>`, not `&Self`: `__eq__` must accept ANY object.
+    // Typed as `&Self` it raises TypeError on a mismatch, where Python expects
+    // `False`, and the derived stub then declares `__eq__(self, other: Self)`,
+    // which mypy rejects as a Liskov violation against `object.__eq__` -- the
+    // stub package fails to BUILD, so `stubtest` compares nothing at all.
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        other
+            .cast::<Self>()
+            .is_ok_and(|other| self.inner == other.get().inner)
     }
 }
 
@@ -340,6 +392,10 @@ impl PyLit {
 /// Accessors that do not apply to `kind` return `None` rather than raising —
 /// `node.name if node.kind == "const" else ...` is the intended idiom, and
 /// [`Self::args`] gives the whole payload as a tuple for destructuring.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.kernel")
+)]
 #[pyclass(frozen, skip_from_py_object, module = "axeyum", name = "ExprNode")]
 #[derive(Debug, Clone)]
 pub struct PyExprNode {
@@ -375,6 +431,7 @@ pub struct PyExprNode {
     lit: Option<PyLit>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyExprNode {
     /// One of `bvar`, `fvar`, `sort`, `const`, `proj`, `app`, `lam`, `pi`,
@@ -534,6 +591,10 @@ impl PyExprNode {
 /// quotient package admits `Quot.sound`. Do not test `kind == "axiom"` to decide
 /// whether something rests on assumptions; ask
 /// [`PyKernel::axiom_footprint`].
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.kernel")
+)]
 #[pyclass(frozen, skip_from_py_object, module = "axeyum", name = "Declaration")]
 #[derive(Debug, Clone)]
 pub struct PyDeclaration {
@@ -559,6 +620,7 @@ fn shared_epoch(name: PyNameId, uparams: &[PyNameId], exprs: &[PyExprId]) -> PyR
 // cannot be built from a Python object, so every argument below is by value
 // whether or not the body consumes it.
 #[allow(clippy::needless_pass_by_value)]
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyDeclaration {
     /// `axiom name : ty` — an asserted constant with no definitional value.
@@ -757,6 +819,10 @@ impl PyDeclaration {
 /// struct definitions by `scripts/gen-py-prelude-fields.py`; a hand-written one
 /// would rot into a *missing* attribute, which reads exactly like "that theorem
 /// does not exist".
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.kernel")
+)]
 #[pyclass(frozen, module = "axeyum", name = "Prelude")]
 pub struct PyPrelude {
     /// The package's short kind (`nat`, `logic`, `axreal`, …).
@@ -777,6 +843,7 @@ pub struct PyPrelude {
     logic: Option<Box<LogicPrelude>>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyPrelude {
     /// The package's kind: `logic`, `nat`, `int`, `rat`, `axreal`, `creal`,
@@ -987,6 +1054,10 @@ fn sub_prelude(py: Python<'_>, epoch: u64, sub: Sub) -> PyResult<Py<PyPrelude>> 
 /// These exist so a gate can distinguish "reuse changed nothing" from "reuse
 /// never ran" — indistinguishable from output alone, and this repository has
 /// shipped several gates that passed over zero work.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.kernel")
+)]
 #[pyclass(
     frozen,
     skip_from_py_object,
@@ -1006,6 +1077,7 @@ pub struct PyPreludeCacheStats {
     templates_built: u64,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyPreludeCacheStats {
     fn __repr__(&self) -> String {
@@ -1106,6 +1178,10 @@ fn resolve_debug_name(index: &HashMap<usize, String>, value: &str) -> Option<Str
 ///
 /// Handles this kernel returns are stamped with its `epoch` and refused by any
 /// other kernel — see the module docstring.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.kernel")
+)]
 #[pyclass(module = "axeyum", name = "Kernel")]
 pub struct PyKernel {
     /// The wrapped kernel.
@@ -1347,6 +1423,7 @@ impl PyKernel {
 // cannot be built from a Python object, so every argument below is by value
 // whether or not the body consumes it.
 #[allow(clippy::needless_pass_by_value)]
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyKernel {
     /// A pristine kernel with an empty environment and a fresh epoch.
@@ -2309,8 +2386,8 @@ impl PyKernel {
     /// Raises `EpochError` for a foreign handle, `TypeError` for anything that
     /// is neither a `NameId` nor a string, and `ValueError` for a malformed
     /// dotted name.
-    fn contains(&mut self, name: &Bound<'_, PyAny>) -> PyResult<bool> {
-        let id = self.resolve(name)?;
+    fn contains(&mut self, name: NameLike<'_>) -> PyResult<bool> {
+        let id = self.resolve(name.as_any())?;
         Ok(self.inner.environment().contains(id))
     }
 
@@ -2321,8 +2398,8 @@ impl PyKernel {
     /// Raises `EpochError` for a foreign handle, `TypeError` for anything that
     /// is neither a `NameId` nor a string, and `ValueError` for a malformed
     /// dotted name.
-    fn get_declaration(&mut self, name: &Bound<'_, PyAny>) -> PyResult<Option<PyDeclaration>> {
-        let id = self.resolve(name)?;
+    fn get_declaration(&mut self, name: NameLike<'_>) -> PyResult<Option<PyDeclaration>> {
+        let id = self.resolve(name.as_any())?;
         Ok(self
             .inner
             .environment()
@@ -2345,8 +2422,8 @@ impl PyKernel {
     /// # Errors
     ///
     /// Raises `KeyError` if nothing is declared under `name`.
-    fn axiom_footprint(&mut self, name: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
-        let id = self.require_declaration(name)?;
+    fn axiom_footprint(&mut self, name: NameLike<'_>) -> PyResult<Vec<String>> {
+        let id = self.require_declaration(name.as_any())?;
         Ok(self
             .inner
             .axiom_footprint(id)
@@ -2360,8 +2437,8 @@ impl PyKernel {
     /// # Errors
     ///
     /// Raises `KeyError` if nothing is declared under `name`.
-    fn axiom_footprint_ids(&mut self, name: &Bound<'_, PyAny>) -> PyResult<Vec<PyNameId>> {
-        let id = self.require_declaration(name)?;
+    fn axiom_footprint_ids(&mut self, name: NameLike<'_>) -> PyResult<Vec<PyNameId>> {
+        let id = self.require_declaration(name.as_any())?;
         Ok(self
             .inner
             .axiom_footprint(id)
@@ -2379,7 +2456,7 @@ impl PyKernel {
     /// # Errors
     ///
     /// Raises `KeyError` if nothing is declared under `name`.
-    fn is_axiom_free(&mut self, name: &Bound<'_, PyAny>) -> PyResult<bool> {
+    fn is_axiom_free(&mut self, name: NameLike<'_>) -> PyResult<bool> {
         Ok(self.axiom_footprint(name)?.is_empty())
     }
 
@@ -2388,8 +2465,8 @@ impl PyKernel {
     /// # Errors
     ///
     /// Raises `KeyError` if nothing is declared under `name`.
-    fn declaration_dependency_closure(&mut self, name: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
-        let id = self.require_declaration(name)?;
+    fn declaration_dependency_closure(&mut self, name: NameLike<'_>) -> PyResult<Vec<String>> {
+        let id = self.require_declaration(name.as_any())?;
         Ok(self
             .inner
             .declaration_dependency_closure(id)
@@ -2403,8 +2480,8 @@ impl PyKernel {
     /// # Errors
     ///
     /// Raises `KeyError` if nothing is declared under `name`.
-    fn theorem_dependencies(&mut self, name: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
-        let id = self.require_declaration(name)?;
+    fn theorem_dependencies(&mut self, name: NameLike<'_>) -> PyResult<Vec<String>> {
+        let id = self.require_declaration(name.as_any())?;
         Ok(self
             .inner
             .theorem_dependencies(id)
@@ -2531,6 +2608,10 @@ impl PyKernel {
 ///
 /// `hits` rising between two `Kernel()` builds of the same prelude is the only
 /// evidence the cache actually ran; equal timings prove nothing.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.kernel")
+)]
 #[pyfunction]
 fn prelude_cache_stats() -> PyPreludeCacheStats {
     let stats = prelude_cache::stats();
@@ -2543,6 +2624,10 @@ fn prelude_cache_stats() -> PyPreludeCacheStats {
 
 /// Whether process-wide prelude reuse is enabled (`AXEYUM_PRELUDE_CACHE=0`
 /// disables it; read once per process).
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.kernel")
+)]
 #[pyfunction]
 fn prelude_cache_enabled() -> bool {
     prelude_cache::enabled()
@@ -2558,12 +2643,16 @@ fn prelude_cache_enabled() -> bool {
 // cannot be built from a Python object, so every argument below is by value
 // whether or not the body consumes it.
 #[allow(clippy::needless_pass_by_value)]
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.kernel.identity")
+)]
 #[pyfunction]
 fn canonical_declaration_sha256(
     mut kernel: PyRefMut<'_, PyKernel>,
-    name: &Bound<'_, PyAny>,
+    name: NameLike<'_>,
 ) -> PyResult<String> {
-    let id = kernel.require_declaration(name)?;
+    let id = kernel.require_declaration(name.as_any())?;
     lean_import::canonical_declaration_sha256(&kernel.inner, id).map_err(AxeyumError::new_err)
 }
 
@@ -2577,6 +2666,10 @@ fn canonical_declaration_sha256(
 // cannot be built from a Python object, so every argument below is by value
 // whether or not the body consumes it.
 #[allow(clippy::needless_pass_by_value)]
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.kernel.identity")
+)]
 #[pyfunction]
 fn canonical_expression_sha256(
     kernel: PyRef<'_, PyKernel>,
@@ -2598,6 +2691,10 @@ fn canonical_expression_sha256(
 // cannot be built from a Python object, so every argument below is by value
 // whether or not the body consumes it.
 #[allow(clippy::needless_pass_by_value)]
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.kernel.identity")
+)]
 #[pyfunction]
 fn canonical_alpha_expression_sha256(
     kernel: PyRef<'_, PyKernel>,
@@ -2622,6 +2719,10 @@ fn canonical_alpha_expression_sha256(
 // cannot be built from a Python object, so every argument below is by value
 // whether or not the body consumes it.
 #[allow(clippy::needless_pass_by_value)]
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.kernel.identity")
+)]
 #[pyfunction]
 fn canonical_kernel_type_shape_sha256(
     kernel: PyRef<'_, PyKernel>,
@@ -2640,6 +2741,10 @@ fn canonical_kernel_type_shape_sha256(
 // cannot be built from a Python object, so every argument below is by value
 // whether or not the body consumes it.
 #[allow(clippy::needless_pass_by_value)]
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.kernel.identity")
+)]
 #[pyfunction]
 fn canonical_level_sha256(kernel: PyRef<'_, PyKernel>, level: PyLevelId) -> PyResult<String> {
     let id = kernel.level_of(level)?;
@@ -2698,4 +2803,71 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
         .set_item("axeyum._native.kernel.identity", &identity_module)?;
     parent.add("kernel", &module)?;
     Ok(module)
+}
+
+// See `crate::error`: an exception is a `PyErr` type, not a `#[pyclass]`, so the
+// stub record has to be submitted separately. The four members of `KernelError`
+// are attached with `setattr` at the RAISE site, so they appear in no signature
+// and no generator can discover them -- they are declared here or nowhere.
+#[cfg(feature = "stub-gen")]
+mod stub {
+    use std::collections::HashMap;
+
+    use super::{EpochError, KernelError};
+    use crate::error::AxeyumError;
+    use crate::stub_info::stub_exception;
+
+    stub_exception!(
+        "axeyum._native.kernel",
+        EpochError,
+        AxeyumError,
+        "A handle was used with a kernel that did not intern it."
+    );
+    stub_exception!(
+        "axeyum._native.kernel",
+        KernelError,
+        AxeyumError,
+        "The kernel refused a declaration, an inference, or an inductive.",
+        "variant": String = "The Rust `KernelError` variant name. Never match on the message text.",
+        "fields": HashMap<String, String> = "The variant's payload, rendered field by field.",
+        "names": HashMap<String, String> = "Payload names that resolve to a declaration in the environment.",
+        "debug": String = "The full Rust `Debug` rendering of the refusal.",
+    );
+}
+
+/// A declaration name: a `str` in Lean's dotted spelling, or an interned
+/// [`PyNameId`] this kernel minted.
+///
+/// The accessors read it with `PyKernel::resolve`, which needs the untyped
+/// handle, so the Rust parameter would otherwise be `&Bound<'_, PyAny>` and the
+/// generated stub would say `typing.Any` -- hiding the one distinction that
+/// actually matters here, which is that a `NameId` interned by ANOTHER kernel
+/// is refused rather than silently denoting a different declaration.
+pub(crate) struct NameLike<'py>(Bound<'py, PyAny>);
+
+impl<'py> NameLike<'py> {
+    /// The wrapped object, to resolve against a kernel.
+    pub(crate) fn as_any(&self) -> &Bound<'py, PyAny> {
+        &self.0
+    }
+}
+
+impl<'py> FromPyObject<'_, 'py> for NameLike<'py> {
+    type Error = PyErr;
+
+    fn extract(object: pyo3::Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        Ok(Self(object.to_owned()))
+    }
+}
+
+#[cfg(feature = "stub-gen")]
+impl pyo3_stub_gen::PyStubType for NameLike<'_> {
+    fn type_input() -> pyo3_stub_gen::TypeInfo {
+        use pyo3_stub_gen::PyStubType;
+        <String as PyStubType>::type_input() | <PyNameId as PyStubType>::type_output()
+    }
+
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        Self::type_input()
+    }
 }

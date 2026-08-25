@@ -50,6 +50,10 @@ fn strategy_name(strategy: Strategy) -> &'static str {
 ///
 /// `unknown` comes back as a [`CheckResult`](axeyum.solver.CheckResult), never
 /// as an exception.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 #[pyo3(signature = (arena, assertions, config = None))]
 pub fn solve(
@@ -75,6 +79,10 @@ pub fn solve(
 /// The two are verdict-invariant with [`solve`]. **Read the trace as a record
 /// of what was tried, not as "what axeyum answers for this script"** — the
 /// SMT-LIB front door reaches routes this flat-term dispatcher does not.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 #[pyo3(signature = (arena, assertions, config = None))]
 pub fn check_auto_explained(
@@ -102,6 +110,10 @@ pub fn check_auto_explained(
 /// A deletion-minimized unsatisfiable core, as INDICES into `assertions`.
 ///
 /// `None` when the query is not `unsat` (or the core could not be minimized).
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 #[pyo3(signature = (arena, assertions, config = None))]
 pub fn unsat_core(
@@ -118,6 +130,10 @@ pub fn unsat_core(
 }
 
 /// Decides `assertions` with one named strategy.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 #[pyo3(signature = (arena, assertions, strategy, config = None))]
 pub fn solve_with_strategy(
@@ -139,6 +155,10 @@ pub fn solve_with_strategy(
 }
 
 /// Runs a portfolio of strategies in order and returns the first decision.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 #[pyo3(signature = (arena, assertions, strategies, config = None))]
 pub fn solve_with_portfolio(
@@ -163,6 +183,10 @@ pub fn solve_with_portfolio(
 }
 
 /// The strategy order this query's shape recommends. Pure; decides nothing.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 pub fn recommended_portfolio(
     arena: PyRef<'_, Arena>,
@@ -181,12 +205,17 @@ pub fn recommended_portfolio(
 /// certificate" from "there was no certificate", and collapsing the second
 /// into a pass is exactly the checker-that-cannot-fail defect. There is no
 /// `__bool__` on this class for the same reason.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(frozen, module = "axeyum", name = "EvidenceCheck")]
 pub struct PyEvidenceCheck {
     status: &'static str,
     reason: Option<&'static str>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyEvidenceCheck {
     /// `"verified"`, `"nothing-to-check"` or `"failed"`.
@@ -250,12 +279,17 @@ impl PyEvidenceCheck {
 /// The primary "give me a checkable answer" API. `check_outcome` is what is
 /// bound; the `bool`-returning `Evidence::check` is not, because it collapses
 /// `NothingToCheck` into a pass.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(module = "axeyum", name = "EvidenceReport")]
 pub struct PyEvidenceReport {
     report: EvidenceReport,
     epoch: u64,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyEvidenceReport {
     /// `"sat"`, `"unsat"` or `"unknown"`.
@@ -400,6 +434,10 @@ impl PyEvidenceReport {
 }
 
 /// Decides `assertions` and returns the verdict WITH its justification.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 #[pyo3(signature = (arena, assertions, config = None))]
 pub fn produce_evidence(
@@ -419,6 +457,10 @@ pub fn produce_evidence(
 }
 
 /// The outcome of proving `goal` from `hypotheses`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(module = "axeyum", name = "ProofOutcome")]
 pub struct PyProofOutcome {
     status: &'static str,
@@ -428,6 +470,7 @@ pub struct PyProofOutcome {
     unknown_detail: Option<String>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyProofOutcome {
     /// `"proved"`, `"disproved"` or `"unknown"`.
@@ -490,6 +533,10 @@ impl PyProofOutcome {
 }
 
 /// Proves `goal` from `hypotheses` by refuting `hypotheses AND NOT goal`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 #[pyo3(signature = (arena, hypotheses, goal, config = None))]
 pub fn prove(
@@ -549,12 +596,17 @@ pub fn prove(
 // `unsendable`: the warm solver embeds a BatSat solver whose callback structs
 // hold `Cell`s, so it is `Send` but `!Sync`. Binding it to its creating thread
 // is exactly right for an object that is also bound to one arena.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(unsendable, module = "axeyum", name = "Incremental")]
 pub struct PyIncremental {
     solver: IncrementalBvSolver,
     epoch: u64,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyIncremental {
     /// Creates a warm solver bound to `arena`.
@@ -723,24 +775,40 @@ impl PyIncremental {
 }
 
 /// The capability matrix, as Markdown. Read-only data, not a log.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 pub fn capabilities() -> String {
     axeyum_solver::capabilities::capability_matrix_markdown()
 }
 
 /// The parser/IR/solver/proof support matrix, as Markdown.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 pub fn support_matrix() -> String {
     axeyum_solver::support_matrix::support_matrix_markdown()
 }
 
 /// The trust ledger — which reductions are certified and which are trusted.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 pub fn trust_ledger() -> String {
     axeyum_solver::trust::trust_ledger_markdown()
 }
 
 /// Every trust-step label, in canonical order.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 pub fn trust_ids() -> Vec<&'static str> {
     axeyum_solver::trust::ALL_TRUST_IDS

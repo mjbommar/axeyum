@@ -26,12 +26,17 @@ use crate::ir::types::{Term, map_ir_error};
 ///
 /// `sig_bits` includes the hidden bit, so `F32` is `(8, 24)` and a value of
 /// this format is `exp_bits + sig_bits` bits wide.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.ir.fp")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "FloatFormat")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PyFloatFormat {
     pub(crate) format: FloatFormat,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyFloatFormat {
     #[new]
@@ -86,6 +91,10 @@ impl PyFloatFormat {
 }
 
 /// One of the five SMT-LIB rounding modes.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass_enum(module = "axeyum._native.ir.fp")
+)]
 #[pyclass(
     frozen,
     eq,
@@ -126,6 +135,7 @@ macro_rules! fp_fns {
     (arg1 $($name:ident),* $(,)?) => {
         $(
             #[doc = concat!("`axeyum_fp::", stringify!($name), "`.")]
+            #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp"))]
             #[pyfunction]
             pub fn $name(mut arena: PyRefMut<'_, Arena>, x: Term) -> PyResult<Term> {
                 let epoch = arena.epoch;
@@ -139,6 +149,7 @@ macro_rules! fp_fns {
     (arg1opt $($name:ident),* $(,)?) => {
         $(
             #[doc = concat!("`axeyum_fp::", stringify!($name), "`. `None` = argument not constant, never an error.")]
+            #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp"))]
             #[pyfunction]
             pub fn $name(mut arena: PyRefMut<'_, Arena>, x: Term) -> PyResult<Option<Term>> {
                 let epoch = arena.epoch;
@@ -152,6 +163,7 @@ macro_rules! fp_fns {
     (fmt1 $($name:ident),* $(,)?) => {
         $(
             #[doc = concat!("`axeyum_fp::", stringify!($name), "` over one operand of `fmt`.")]
+            #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp"))]
             #[pyfunction]
             pub fn $name(mut arena: PyRefMut<'_, Arena>, fmt: PyFloatFormat, x: Term) -> PyResult<Term> {
                 let epoch = arena.epoch;
@@ -165,6 +177,7 @@ macro_rules! fp_fns {
     (fmt1opt $($name:ident),* $(,)?) => {
         $(
             #[doc = concat!("`axeyum_fp::", stringify!($name), "`. `None` = argument not constant.")]
+            #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp"))]
             #[pyfunction]
             pub fn $name(mut arena: PyRefMut<'_, Arena>, fmt: PyFloatFormat, x: Term) -> PyResult<Option<Term>> {
                 let epoch = arena.epoch;
@@ -178,6 +191,7 @@ macro_rules! fp_fns {
     (fmt2 $($name:ident),* $(,)?) => {
         $(
             #[doc = concat!("`axeyum_fp::", stringify!($name), "` over two operands of `fmt`.")]
+            #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp"))]
             #[pyfunction]
             pub fn $name(mut arena: PyRefMut<'_, Arena>, fmt: PyFloatFormat, x: Term, y: Term) -> PyResult<Term> {
                 let epoch = arena.epoch;
@@ -192,6 +206,7 @@ macro_rules! fp_fns {
     (fmt2opt $($name:ident),* $(,)?) => {
         $(
             #[doc = concat!("`axeyum_fp::", stringify!($name), "`. `None` = an operand is not constant.")]
+            #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp"))]
             #[pyfunction]
             pub fn $name(mut arena: PyRefMut<'_, Arena>, fmt: PyFloatFormat, x: Term, y: Term) -> PyResult<Option<Term>> {
                 let epoch = arena.epoch;
@@ -206,6 +221,7 @@ macro_rules! fp_fns {
     (fmt2mode $($name:ident),* $(,)?) => {
         $(
             #[doc = concat!("`axeyum_fp::", stringify!($name), "` with an explicit rounding mode.")]
+            #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp"))]
             #[pyfunction]
             pub fn $name(mut arena: PyRefMut<'_, Arena>, fmt: PyFloatFormat, a: Term, b: Term, mode: PyRoundingMode) -> PyResult<Term> {
                 let epoch = arena.epoch;
@@ -229,6 +245,10 @@ fp_fns!(fmt2opt add_rne, sub_rne, mul_rne, div_rne, rem);
 fp_fns!(fmt2mode add, sub, mul, div);
 
 /// `axeyum_fp::sqrt` with an explicit rounding mode.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn sqrt(
     mut arena: PyRefMut<'_, Arena>,
@@ -244,6 +264,10 @@ pub fn sqrt(
 }
 
 /// `axeyum_fp::fma` — fused multiply-add `a * b + c`, one rounding.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn fma(
     mut arena: PyRefMut<'_, Arena>,
@@ -263,6 +287,10 @@ pub fn fma(
 }
 
 /// `axeyum_fp::fma_rne`; `None` = an operand is not constant.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn fma_rne(
     mut arena: PyRefMut<'_, Arena>,
@@ -281,6 +309,10 @@ pub fn fma_rne(
 }
 
 /// `axeyum_fp::to_fp` — reformat between two float formats.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn to_fp(
     mut arena: PyRefMut<'_, Arena>,
@@ -297,6 +329,10 @@ pub fn to_fp(
 }
 
 /// `axeyum_fp::from_ubv` — unsigned bit-vector to float.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn from_ubv(
     mut arena: PyRefMut<'_, Arena>,
@@ -312,6 +348,10 @@ pub fn from_ubv(
 }
 
 /// `axeyum_fp::from_sbv` — signed bit-vector to float.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn from_sbv(
     mut arena: PyRefMut<'_, Arena>,
@@ -328,6 +368,10 @@ pub fn from_sbv(
 
 /// `axeyum_fp::from_real` — an exact rational to a float constant;
 /// `None` = not representable.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn from_real(
     mut arena: PyRefMut<'_, Arena>,
@@ -346,6 +390,10 @@ pub fn from_real(
 }
 
 /// `axeyum_fp::round_to_integral`; `None` = argument not constant.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn round_to_integral(
     mut arena: PyRefMut<'_, Arena>,
@@ -361,6 +409,10 @@ pub fn round_to_integral(
 }
 
 /// `axeyum_fp::round_to_integral_sym` — the symbolic (always-a-term) form.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn round_to_integral_sym(
     mut arena: PyRefMut<'_, Arena>,
@@ -376,6 +428,10 @@ pub fn round_to_integral_sym(
 }
 
 /// `axeyum_fp::ubv_to_fp`; `None` = argument not constant.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn ubv_to_fp(
     mut arena: PyRefMut<'_, Arena>,
@@ -391,6 +447,10 @@ pub fn ubv_to_fp(
 }
 
 /// `axeyum_fp::sbv_to_fp`; `None` = argument not constant.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn sbv_to_fp(
     mut arena: PyRefMut<'_, Arena>,
@@ -406,6 +466,10 @@ pub fn sbv_to_fp(
 }
 
 /// `axeyum_fp::to_ubv`; `None` = argument not constant.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn to_ubv(
     mut arena: PyRefMut<'_, Arena>,
@@ -422,6 +486,10 @@ pub fn to_ubv(
 }
 
 /// `axeyum_fp::to_sbv`; `None` = argument not constant.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn to_sbv(
     mut arena: PyRefMut<'_, Arena>,
@@ -439,6 +507,10 @@ pub fn to_sbv(
 
 /// `axeyum_fp::to_ubv_sym` — the symbolic form, with the caller's `fresh`
 /// bit-vector standing for the out-of-range result.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn to_ubv_sym(
     mut arena: PyRefMut<'_, Arena>,
@@ -457,6 +529,10 @@ pub fn to_ubv_sym(
 }
 
 /// `axeyum_fp::to_sbv_sym` — the symbolic signed form.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn to_sbv_sym(
     mut arena: PyRefMut<'_, Arena>,
@@ -475,6 +551,10 @@ pub fn to_sbv_sym(
 }
 
 /// `axeyum_fp::to_real_sym` — the symbolic form of the float-to-real bridge.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn to_real_sym(
     mut arena: PyRefMut<'_, Arena>,
@@ -491,6 +571,10 @@ pub fn to_real_sym(
 }
 
 /// `axeyum_fp::round_significand` — keep `keep` significand bits.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn round_significand(mut arena: PyRefMut<'_, Arena>, sig: Term, keep: u32) -> PyResult<Term> {
     let epoch = arena.epoch;
@@ -501,6 +585,10 @@ pub fn round_significand(mut arena: PyRefMut<'_, Arena>, sig: Term, keep: u32) -
 }
 
 /// `axeyum_fp::round_variable` — the shared rounding gadget.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn round_variable(
     mut arena: PyRefMut<'_, Arena>,
@@ -519,6 +607,10 @@ pub fn round_variable(
 }
 
 /// `axeyum_fp::isqrt` — the integer square root gadget, as `(root, remainder)`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn isqrt(mut arena: PyRefMut<'_, Arena>, n: Term) -> PyResult<(Term, Term)> {
     let epoch = arena.epoch;
@@ -528,6 +620,10 @@ pub fn isqrt(mut arena: PyRefMut<'_, Arena>, n: Term) -> PyResult<(Term, Term)> 
 }
 
 /// `axeyum_fp::pack_params` — `(m_w, e)` normalization, as `(m, e)` terms.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn pack_params(
     mut arena: PyRefMut<'_, Arena>,
@@ -545,6 +641,10 @@ pub fn pack_params(
 }
 
 /// `axeyum_fp::pack_value` — assemble a float from sign/significand/exponent.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
 pub fn pack_value(
@@ -567,12 +667,20 @@ pub fn pack_value(
 
 /// `axeyum_fp::round_to_format` — a concrete `f64` rounded into `(eb, sb)`,
 /// returned as the raw bit pattern.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn round_to_format(eb: u32, sb: u32, value: f64, mode: PyRoundingMode) -> u128 {
     axeyum_fp::round_to_format(eb, sb, value, mode.into())
 }
 
 /// `axeyum_fp::round_rational_to_format`; `None` = not representable.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.fp")
+)]
 #[pyfunction]
 pub fn round_rational_to_format(
     eb: u32,
@@ -679,4 +787,21 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     }
     parent.add("fp", &module)?;
     Ok(module)
+}
+
+// The nine named formats are added by a loop over a table, so no item exists for
+// a `#[gen_stub_*]` macro. Named here or nowhere.
+#[cfg(feature = "stub-gen")]
+mod stub_variables {
+    use super::PyFloatFormat;
+
+    pyo3_stub_gen::module_variable!("axeyum._native.ir.fp", "BF16", PyFloatFormat);
+    pyo3_stub_gen::module_variable!("axeyum._native.ir.fp", "F128", PyFloatFormat);
+    pyo3_stub_gen::module_variable!("axeyum._native.ir.fp", "F16", PyFloatFormat);
+    pyo3_stub_gen::module_variable!("axeyum._native.ir.fp", "F32", PyFloatFormat);
+    pyo3_stub_gen::module_variable!("axeyum._native.ir.fp", "F64", PyFloatFormat);
+    pyo3_stub_gen::module_variable!("axeyum._native.ir.fp", "FP4_E2M1", PyFloatFormat);
+    pyo3_stub_gen::module_variable!("axeyum._native.ir.fp", "FP8_E4M3", PyFloatFormat);
+    pyo3_stub_gen::module_variable!("axeyum._native.ir.fp", "FP8_E5M2", PyFloatFormat);
+    pyo3_stub_gen::module_variable!("axeyum._native.ir.fp", "TF32", PyFloatFormat);
 }

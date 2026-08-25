@@ -1,0 +1,45 @@
+# `stubtest` findings that are correct as they stand, one regex per entry.
+#
+# Entries are regular expressions matched against the OBJECT PATH stubtest
+# prints at the start of each finding. An entry that matches nothing is itself
+# an error, so this list is a ratchet: tighten a signature and the entry has to
+# go with it.
+#
+# Two classes of finding, and neither is a stub that is wrong.
+
+# --------------------------------------------------------------------------
+# 1. Payloads attached with `setattr` at the RAISE site.
+#
+# `Declined.reason`, `KernelError.variant/fields/names/debug` and
+# `StatementImportError.variant/debug` exist on the exception INSTANCE and never
+# on the class, because `crates/axeyum-py` builds them in the function that
+# raises. stubtest introspects the class and correctly reports "not present at
+# runtime"; a caller writing `except Declined as e: e.reason` is nonetheless
+# right, and `ty` reported that access as unresolved until the members were
+# declared (see `crate::stub_info::stub_exception!`).
+axeyum\._native\.producers\.Declined\.reason
+axeyum\._native\.producers\.StatementImportError\.(variant|debug)
+axeyum\._native\.kernel\.KernelError\.(variant|fields|names|debug)
+
+# --------------------------------------------------------------------------
+# 2. PyO3 compiles `__getattr__` into the `tp_getattro` SLOT.
+#
+# `Prelude` implements `#[pymethods] fn __getattr__`, which Python surfaces as
+# `__getattribute__`; no attribute named `__getattr__` exists. The stub names
+# the protocol the class actually implements, which is what lets a checker
+# accept `prelude.Nat_add`.
+axeyum\._native\.kernel\.Prelude\.__getattr__
+
+# --------------------------------------------------------------------------
+# 3. Defaults PyO3's `__text_signature__` cannot render.
+#
+# PyO3 writes `...` for any `#[pyo3(signature = ...)]` default that is not a
+# Python literal -- `Vec::new()`, `ImportLimits::default()`, a named constant.
+# `pyo3-stub-gen`'s `infer_signature` evaluates the same default and prints the
+# REAL value, so the stub is strictly more informative than the runtime
+# signature it is being compared against. stubtest reports the difference
+# because it cannot tell which side is right; here it is the stub.
+axeyum\._native\.cas\.certify\.geometry\.GeometryProblem\.__new__
+axeyum\._native\.cas\.certify\.gf2\.ArtifactLimits\.__new__
+axeyum\._native\.ir\.query\.Query\.__new__
+axeyum\._native\.producers\.ImportLimits\.__new__

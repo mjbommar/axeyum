@@ -28,11 +28,16 @@ use crate::ir::types::{Symbol, Term, check_epoch};
 ///
 /// Deterministic and independent of arena-local `TermId` allocation and of
 /// labels, which is exactly what makes [`hex`](Self::hex) a safe cache key.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.ir.query")
+)]
 #[pyclass(frozen, module = "axeyum", name = "StructuralCacheKey")]
 pub struct PyStructuralCacheKey {
     key: StructuralCacheKey,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyStructuralCacheKey {
     /// The 64-bit structural digest.
@@ -95,12 +100,17 @@ fn drop_name(reason: DropReason) -> &'static str {
 }
 
 /// A planned (possibly sliced) view of a query.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.ir.query")
+)]
 #[pyclass(frozen, module = "axeyum", name = "QueryPlan")]
 pub struct PyQueryPlan {
     plan: QueryPlan,
     epoch: u64,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyQueryPlan {
     /// Whether the planner dropped anything. When this is `True`, a `sat`
@@ -222,12 +232,17 @@ impl PyQueryPlan {
 }
 
 /// A scoped query: assertions, assumptions and labels over one arena.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.ir.query")
+)]
 #[pyclass(frozen, module = "axeyum", name = "Query")]
 pub struct PyQuery {
     query: Query,
     epoch: u64,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyQuery {
     /// Builds a query from `(scope, term, label)` triples in one Rust call.

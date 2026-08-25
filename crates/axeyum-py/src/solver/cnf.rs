@@ -23,13 +23,19 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyModule};
 
 use crate::error::AxeyumError;
+use crate::stub_types::PyBorrowedList;
 
 /// A CNF formula in conjunctive normal form.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver.cnf")
+)]
 #[pyclass(module = "axeyum", name = "CnfFormula")]
 pub struct PyCnfFormula {
     pub(crate) formula: CnfFormula,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyCnfFormula {
     /// Number of declared variables.
@@ -97,7 +103,16 @@ impl PyCnfFormula {
 }
 
 /// Parses DIMACS text into a formula.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver.cnf")
+)]
+// `#[pyo3(name = ...)]`: the Rust name carries a `_py` disambiguator that no
+// caller should see. Registering under the clean name makes the generated stub
+// describe the name the API actually uses; the `_py` spelling stays bound in
+// `register` as an alias of the SAME object, so nothing is removed.
 #[pyfunction]
+#[pyo3(name = "parse_dimacs")]
 pub fn parse_dimacs_py(input: &str) -> PyResult<PyCnfFormula> {
     Ok(PyCnfFormula {
         formula: parse_dimacs(input).map_err(|error| AxeyumError::new_err(error.to_string()))?,
@@ -109,12 +124,17 @@ pub fn parse_dimacs_py(input: &str) -> PyResult<PyCnfFormula> {
 /// Three-valued: `ResourceOut` and `Interrupted` mean the checker did NOT
 /// finish, which is neither "the proof is good" nor "the proof is bad".
 /// Nothing here coerces to a `bool`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver.cnf")
+)]
 #[pyclass(frozen, module = "axeyum", name = "DratCheckOutcome")]
 pub struct PyDratCheckOutcome {
     status: &'static str,
     verified: Option<bool>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyDratCheckOutcome {
     /// `"verified"`, `"resource-out"` or `"interrupted"`.
@@ -142,7 +162,16 @@ impl PyDratCheckOutcome {
 ///
 /// Returns a three-valued outcome. When `max_steps` or `timeout_ms` cuts the
 /// run short the answer is `resource-out` / `interrupted`, never a verdict.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver.cnf")
+)]
+// `#[pyo3(name = ...)]`: the Rust name carries a `_py` disambiguator that no
+// caller should see. Registering under the clean name makes the generated stub
+// describe the name the API actually uses; the `_py` spelling stays bound in
+// `register` as an alias of the SAME object, so nothing is removed.
 #[pyfunction]
+#[pyo3(name = "check_drat")]
 #[pyo3(signature = (formula, drat, *, max_steps = None, timeout_ms = None))]
 pub fn check_drat_py(
     py: Python<'_>,
@@ -188,6 +217,10 @@ pub fn check_drat_py(
 ///
 /// `ResourceOut` and `Interrupted` are UNDECIDED, so a caller mapping either
 /// to `unknown` is sound; mapping them to a verdict is not.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver.cnf")
+)]
 #[pyclass(frozen, module = "axeyum", name = "ProofSolveOutcome")]
 pub struct PyProofSolveOutcome {
     status: &'static str,
@@ -195,6 +228,7 @@ pub struct PyProofSolveOutcome {
     drat: Option<String>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyProofSolveOutcome {
     /// `"sat"`, `"unsat"`, `"resource-out"` or `"interrupted"`.
@@ -205,8 +239,8 @@ impl PyProofSolveOutcome {
 
     /// The satisfying assignment, when `sat`.
     #[getter]
-    fn assignment(&self) -> Option<&[bool]> {
-        self.assignment.as_deref()
+    fn assignment(&self) -> Option<PyBorrowedList<'_, bool>> {
+        self.assignment.as_deref().map(PyBorrowedList)
     }
 
     /// The DRAT refutation text, when `unsat`.
@@ -223,6 +257,10 @@ impl PyProofSolveOutcome {
 /// Solves `formula` with the DRAT-producing CDCL core (ADR-0012).
 ///
 /// Never panics and never returns a `Result`: undecided is a verdict.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver.cnf")
+)]
 #[pyfunction]
 #[pyo3(signature = (formula, *, timeout_ms = None, max_conflicts = None))]
 pub fn solve_with_drat_proof(
@@ -262,11 +300,16 @@ pub fn solve_with_drat_proof(
 }
 
 /// A Tseitin encoding of an AIG, with the maps that let it be replayed.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver.cnf")
+)]
 #[pyclass(module = "axeyum", name = "CnfEncoding")]
 pub struct PyCnfEncoding {
     encoding: axeyum_cnf::CnfEncoding,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyCnfEncoding {
     /// The encoded formula.
@@ -313,6 +356,10 @@ impl PyCnfEncoding {
 }
 
 /// Tseitin-encodes a bit lowering's circuit, with its root bits as outputs.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver.cnf")
+)]
 #[pyfunction]
 pub fn tseitin_encode(
     lowering: PyRef<'_, crate::ir::lowering::PyBitLowering>,
@@ -345,8 +392,9 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     module.add_function(wrap_pyfunction!(check_drat_py, &module)?)?;
     module.add_function(wrap_pyfunction!(solve_with_drat_proof, &module)?)?;
     module.add_function(wrap_pyfunction!(tseitin_encode, &module)?)?;
-    module.add("parse_dimacs", module.getattr("parse_dimacs_py")?)?;
-    module.add("check_drat", module.getattr("check_drat_py")?)?;
+    // Backwards-compatible aliases under the Rust fn names; the SAME objects.
+    module.add("parse_dimacs_py", module.getattr("parse_dimacs")?)?;
+    module.add("check_drat_py", module.getattr("check_drat")?)?;
     module.add(
         "DEFAULT_PROOF_SAT_CONFLICT_LIMIT",
         axeyum_cnf::DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
@@ -357,4 +405,23 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     )?;
     parent.add("cnf", &module)?;
     Ok(module)
+}
+
+// Module-level constants reach Python through `module.add("NAME", value)`, a
+// RUNTIME call with no item for a `#[gen_stub_*]` macro to sit on -- so without
+// these submissions they exist in the extension and in no stub, and a checked
+// consumer reading one gets an unresolved attribute. The type is named; the
+// VALUE deliberately is not, so a constant cannot drift from its stub.
+#[cfg(feature = "stub-gen")]
+mod stub_variables {
+    pyo3_stub_gen::module_variable!(
+        "axeyum._native.solver.cnf",
+        "DEFAULT_PROGRESS_CONFLICT_INTERVAL",
+        usize
+    );
+    pyo3_stub_gen::module_variable!(
+        "axeyum._native.solver.cnf",
+        "DEFAULT_PROOF_SAT_CONFLICT_LIMIT",
+        usize
+    );
 }

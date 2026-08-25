@@ -50,6 +50,10 @@ static NEXT_EPOCH: AtomicU64 = AtomicU64::new(1);
 /// ([`Term`](axeyum.ir.Term), [`Symbol`](axeyum.ir.Symbol), …) carries this
 /// arena's `epoch`. Passing a handle from one arena to another raises
 /// `EpochError` instead of panicking inside Rust.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.ir")
+)]
 #[pyclass(module = "axeyum", name = "Arena")]
 pub struct Arena {
     pub(crate) arena: TermArena,
@@ -82,6 +86,7 @@ impl Arena {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Arena {
     /// Creates an empty arena with a fresh process-wide epoch.

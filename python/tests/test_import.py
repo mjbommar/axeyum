@@ -33,15 +33,14 @@ def test_public_names_are_all_present() -> None:
 def test_every_submodule_is_importable_by_dotted_name() -> None:
     # `add_submodule` sets the attribute but not `sys.modules`. Both routes
     # must work or every consumer hits the split exactly once.
+    import axeyum._native.ir
     import axeyum._native.ir.bits
     import axeyum._native.ir.bv
     import axeyum._native.ir.fp
     import axeyum._native.ir.query
+    import axeyum._native.solver
     import axeyum._native.solver.cnf
     import axeyum._native.solver.proofs
-
-    import axeyum._native.ir
-    import axeyum._native.solver
 
     assert axeyum._native.ir is axeyum.ir
     assert axeyum._native.solver is axeyum.solver

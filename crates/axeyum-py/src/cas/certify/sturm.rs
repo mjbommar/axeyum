@@ -16,8 +16,14 @@ use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyModule};
 
 use crate::cas::rational;
+use crate::cas::rational::RationalLike;
+use crate::stub_types::{PyFraction, PySequence};
 
 /// A closed real interval with exact rational endpoints.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.sturm")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Interval")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Interval {
@@ -36,6 +42,7 @@ impl Interval {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Interval {
     /// `[a, b]`, or `None` when `a > b`.
@@ -44,10 +51,10 @@ impl Interval {
     ///
     /// Raises `ValueError` when an endpoint is not an exact rational.
     #[new]
-    fn new(a: &Bound<'_, PyAny>, b: &Bound<'_, PyAny>) -> PyResult<Option<Interval>> {
+    fn new(a: RationalLike<'_>, b: RationalLike<'_>) -> PyResult<Option<Interval>> {
         Ok(Interval::wrap_option(CasInterval::new(
-            rational::from_py(a)?,
-            rational::from_py(b)?,
+            rational::from_py(a.as_any())?,
+            rational::from_py(b.as_any())?,
         )))
     }
 
@@ -57,9 +64,9 @@ impl Interval {
     ///
     /// Raises `ValueError` when `a` is not an exact rational.
     #[staticmethod]
-    fn degenerate(a: &Bound<'_, PyAny>) -> PyResult<Interval> {
+    fn degenerate(a: RationalLike<'_>) -> PyResult<Interval> {
         Ok(Interval::wrap(CasInterval::degenerate(rational::from_py(
-            a,
+            a.as_any(),
         )?)))
     }
 
@@ -69,7 +76,7 @@ impl Interval {
     ///
     /// Propagates any Python error raised while building the fraction.
     #[getter]
-    fn lower<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    fn lower<'py>(&self, py: Python<'py>) -> PyResult<PyFraction<'py>> {
         rational::fraction(py, self.inner.lower())
     }
 
@@ -79,7 +86,7 @@ impl Interval {
     ///
     /// Propagates any Python error raised while building the fraction.
     #[getter]
-    fn upper<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    fn upper<'py>(&self, py: Python<'py>) -> PyResult<PyFraction<'py>> {
         rational::fraction(py, self.inner.upper())
     }
 
@@ -88,7 +95,7 @@ impl Interval {
     /// # Errors
     ///
     /// Propagates any Python error raised while building the fraction.
-    fn width<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    fn width<'py>(&self, py: Python<'py>) -> PyResult<PyFraction<'py>> {
         rational::fraction(py, self.inner.width())
     }
 
@@ -97,7 +104,7 @@ impl Interval {
     /// # Errors
     ///
     /// Propagates any Python error raised while building the fraction.
-    fn midpoint<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    fn midpoint<'py>(&self, py: Python<'py>) -> PyResult<PyFraction<'py>> {
         rational::fraction(py, self.inner.midpoint())
     }
 
@@ -106,8 +113,8 @@ impl Interval {
     /// # Errors
     ///
     /// Raises `ValueError` when `x` is not an exact rational.
-    fn contains(&self, x: &Bound<'_, PyAny>) -> PyResult<bool> {
-        Ok(self.inner.contains(rational::from_py(x)?))
+    fn contains(&self, x: RationalLike<'_>) -> PyResult<bool> {
+        Ok(self.inner.contains(rational::from_py(x.as_any())?))
     }
 
     /// Whether `other` is contained in this interval.
@@ -193,12 +200,17 @@ impl Interval {
 ///
 /// Named apart from [`Interval`] deliberately: the two are different types with
 /// different guarantees, and the crate's own inventory flags the collision.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.sturm")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "SetInterval")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SetInterval {
     inner: CasSetInterval,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl SetInterval {
     /// `[a, b]`.
@@ -207,9 +219,12 @@ impl SetInterval {
     ///
     /// Raises `ValueError` when an endpoint is not an exact rational.
     #[staticmethod]
-    fn closed(a: &Bound<'_, PyAny>, b: &Bound<'_, PyAny>) -> PyResult<SetInterval> {
+    fn closed(a: RationalLike<'_>, b: RationalLike<'_>) -> PyResult<SetInterval> {
         Ok(SetInterval {
-            inner: CasSetInterval::closed(rational::from_py(a)?, rational::from_py(b)?),
+            inner: CasSetInterval::closed(
+                rational::from_py(a.as_any())?,
+                rational::from_py(b.as_any())?,
+            ),
         })
     }
 
@@ -219,9 +234,12 @@ impl SetInterval {
     ///
     /// Raises `ValueError` when an endpoint is not an exact rational.
     #[staticmethod]
-    fn open(a: &Bound<'_, PyAny>, b: &Bound<'_, PyAny>) -> PyResult<SetInterval> {
+    fn open(a: RationalLike<'_>, b: RationalLike<'_>) -> PyResult<SetInterval> {
         Ok(SetInterval {
-            inner: CasSetInterval::open(rational::from_py(a)?, rational::from_py(b)?),
+            inner: CasSetInterval::open(
+                rational::from_py(a.as_any())?,
+                rational::from_py(b.as_any())?,
+            ),
         })
     }
 
@@ -243,8 +261,8 @@ impl SetInterval {
     /// # Errors
     ///
     /// Raises `ValueError` when `x` is not an exact rational.
-    fn contains(&self, x: &Bound<'_, PyAny>) -> PyResult<bool> {
-        Ok(self.inner.contains(rational::from_py(x)?))
+    fn contains(&self, x: RationalLike<'_>) -> PyResult<bool> {
+        Ok(self.inner.contains(rational::from_py(x.as_any())?))
     }
 
     fn __repr__(&self) -> String {
@@ -260,17 +278,21 @@ impl SetInterval {
 /// # Errors
 ///
 /// Raises `ValueError` when a coefficient or endpoint is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sturm")
+)]
 #[pyfunction]
 fn count_real_roots_in(
-    p: &Bound<'_, PyAny>,
-    lower: &Bound<'_, PyAny>,
-    upper: &Bound<'_, PyAny>,
+    p: PySequence<'_, RationalLike<'_>>,
+    lower: RationalLike<'_>,
+    upper: RationalLike<'_>,
 ) -> PyResult<Option<usize>> {
-    let coefficients = rational::vec_from_py(p)?;
+    let coefficients = rational::vec_from_py(p.as_any())?;
     Ok(sturm::count_real_roots_in(
         &coefficients,
-        rational::from_py(lower)?,
-        rational::from_py(upper)?,
+        rational::from_py(lower.as_any())?,
+        rational::from_py(upper.as_any())?,
     ))
 }
 
@@ -279,12 +301,16 @@ fn count_real_roots_in(
 /// # Errors
 ///
 /// Raises `ValueError` when a coefficient is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sturm")
+)]
 #[pyfunction]
 fn isolate_real_roots<'py>(
     py: Python<'py>,
-    p: &Bound<'py, PyAny>,
-) -> PyResult<Option<Vec<(Bound<'py, PyAny>, Bound<'py, PyAny>)>>> {
-    let coefficients = rational::vec_from_py(p)?;
+    p: PySequence<'_, RationalLike<'_>>,
+) -> PyResult<Option<Vec<(PyFraction<'py>, PyFraction<'py>)>>> {
+    let coefficients = rational::vec_from_py(p.as_any())?;
     sturm::isolate_real_roots(&coefficients)
         .map(|intervals| {
             intervals
@@ -307,14 +333,18 @@ fn isolate_real_roots<'py>(
 /// # Errors
 ///
 /// Raises `ValueError` when a coefficient or `width` is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sturm")
+)]
 #[pyfunction]
 fn approximate_real_roots<'py>(
     py: Python<'py>,
-    p: &Bound<'py, PyAny>,
-    width: &Bound<'py, PyAny>,
-) -> PyResult<Option<Vec<Bound<'py, PyAny>>>> {
-    let coefficients = rational::vec_from_py(p)?;
-    let width = rational::from_py(width)?;
+    p: PySequence<'_, RationalLike<'_>>,
+    width: RationalLike<'_>,
+) -> PyResult<Option<Vec<PyFraction<'py>>>> {
+    let coefficients = rational::vec_from_py(p.as_any())?;
+    let width = rational::from_py(width.as_any())?;
     sturm::approximate_real_roots(&coefficients, width)
         .map(|roots| {
             roots
@@ -330,9 +360,16 @@ fn approximate_real_roots<'py>(
 /// # Errors
 ///
 /// Raises `ValueError` when a coefficient is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sturm")
+)]
 #[pyfunction]
-fn evaluate_polynomial_over(coeffs: &Bound<'_, PyAny>, x: &Interval) -> PyResult<Option<Interval>> {
-    let coefficients = rational::vec_from_py(coeffs)?;
+fn evaluate_polynomial_over(
+    coeffs: PySequence<'_, RationalLike<'_>>,
+    x: &Interval,
+) -> PyResult<Option<Interval>> {
+    let coefficients = rational::vec_from_py(coeffs.as_any())?;
     Ok(Interval::wrap_option(evaluate_polynomial(
         &coefficients,
         &x.inner,

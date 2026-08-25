@@ -1364,6 +1364,8 @@ py-check:
     TMPDIR="${TMPDIR:-/data0/axeyum/scratch/py-tmp-$USER}" uv run --no-sync maturin develop
     uv run --no-sync pytest python/tests -q
     uv run --no-sync python tools/gen_native_stub.py --check
+    uv run --no-sync python tools/check_stub_types.py
+    uv run --no-sync python -m mypy.stubtest axeyum._native --ignore-missing-stub --ignore-positional-only --mypy-config-file tools/stubtest-mypy.ini --allowlist tools/stubtest-allowlist.txt --concise
     uv run --no-sync python tools/check_types.py
     uv run --no-sync ruff check python/ tools/
     uv run --no-sync ruff format --check python/ tools/

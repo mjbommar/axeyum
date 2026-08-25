@@ -90,3 +90,77 @@ def test_limit_at_infinity() -> None:
 
 def test_show_renders_lists() -> None:
     assert m.show([m.parse("x"), None]) == "[x, None]"
+
+
+def test_systems_definite_integrals_substitution() -> None:
+    assert m.Solve(["x + y = 3", "x - y = 1"], ["x", "y"]) == [
+        {"x": m.parse("2"), "y": m.parse("1")}
+    ]
+    circle = m.Solve(["x^2 + y^2 = 1", "x = y"], ["x", "y"])
+    assert circle is not None and len(circle) == 2
+    with pytest.raises(TypeError, match="variables as a list"):
+        m.Solve(["x + y = 3"])
+    assert str(m.Integrate("x^2", ("x", 0, 1))) == "1/3"
+    assert m.show(m.Substitute("x^2 + 1", x="y + 1")) == "(y + 1)^2 + 1"
+    assert m.show(m.ReplaceAll("x^2 + 1", x=3)) == "3^2 + 1"
+
+
+def test_equal_is_semantic_and_never_answers_false_for_undecided() -> None:
+    assert m.parse("1 + x") != m.parse("x + 1")
+    assert m.Equal("1 + x", "x + 1") is True
+    assert m.Equal("(x+2)(x+3)", "x^2 + 5x + 6") is True
+    assert m.Equal("x", "x + 1") is False
+
+
+def test_constants_are_refused_not_silently_symbolised() -> None:
+    with pytest.raises(ValueError, match="exact over Q"):
+        m.parse("pi * x")
+    assert "I" in m.show(m.parse("I * I"))  # rendered as Rust spells the imaginary unit
+
+
+def test_mixed_arithmetic_with_python_numbers() -> None:
+    from fractions import Fraction
+
+    x = m.parse("x")
+    assert m.show(x + 1) == "x + 1"
+    assert m.show(1 + x) == "1 + x"
+    assert m.show(2 * x) == "2*x"
+    assert m.show(x / 2) == "x/2"
+    assert m.show(1 - x) == "1 - x"
+    assert m.show(x - Fraction(1, 3)) == "x - (1/3)"  # a rational keeps its parentheses
+    assert m.show(Fraction(1, 2) / x) == "(1/2)/x"
+    with pytest.raises(TypeError):
+        _ = x + 0.5  # a float is not exact; write Fraction(1, 2)
+
+
+def test_sums_are_exact() -> None:
+    assert m.show(m.Sum("k", ("k", 1, "n"))) == "(1/2)*n^2 + (1/2)*n"
+    assert m.show(m.Sum("k^2", ("k", 1, "n"))) == "(1/3)*n^3 + (1/2)*n^2 + (1/6)*n"
+    assert str(m.Sum("k", ("k", 1, 100))) == "5050"
+    with pytest.raises(ValueError, match="symbolic power"):
+        m.Sum("1/2^k", ("k", 0, None))
+
+
+def test_reduce_renders_interval_unions() -> None:
+    inside = m.Reduce("x^2 - 4 < 0")
+    assert inside is not None and [m.interval(i) for i in inside] == ["-2 < x < 2"]
+    outside = m.Reduce("x^2 >= 4")
+    assert outside is not None and [m.interval(i) for i in outside] == ["x <= -2", "2 <= x"]
+    with pytest.raises(ValueError, match="exactly one of"):
+        m.Reduce("x^2 - 4")
+
+
+def test_polynomial_toolkit() -> None:
+    from fractions import Fraction
+
+    assert str(m.Rationalize(0.5)) == "1/2"
+    roots = m.NRoots("x^2 - 2")
+    assert roots is not None and len(roots) == 2
+    assert abs(float(roots[1]) - 2**0.5) < 1e-6
+    assert isinstance(roots[1], Fraction)
+    assert m.Degree("x^3 + x") == 3
+    assert m.Degree("sin(x)") is None
+    assert str(m.Resultant("x^2 - 1", "x - 1", "x")) == "0"
+    assert str(m.Discriminant("x^2 - 4")) == "16"
+    q, r = m.PolynomialQuotientRemainder("x^3 - 1", "x - 1", "x")
+    assert (m.show(q), str(r)) == ("x^2 + x + 1", "0")

@@ -19,12 +19,18 @@ use pyo3::types::{PyAny, PyDict};
 
 use crate::cas::poly::MultiPoly;
 use crate::cas::rational;
+use crate::cas::rational::RationalLike;
+use crate::stub_types::PyFraction;
 
 /// How much trust an answer carries.
 ///
 /// `Certified` means a checkable witness is attached and the answer re-checks
 /// independently; the other two do not, and collapsing them would be the exact
 /// mistake this project treats as a defect.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass_enum(module = "axeyum._native.cas")
+)]
 #[pyclass(
     frozen,
     eq,
@@ -55,6 +61,10 @@ impl Certainty {
 }
 
 /// The sign an [`Assumptions`] context can establish for an expression.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass_enum(module = "axeyum._native.cas")
+)]
 #[pyclass(
     frozen,
     eq,
@@ -98,6 +108,65 @@ impl Sign {
 /// Built only by the constructors and operators below — the crate has no parser
 /// and `impl FromStr` does not exist. `str(expr)` renders the tree for humans
 /// and is **not** parseable back into an `Expr`.
+/// The right-hand side of an arithmetic operator: an `Expr`, a Python `int`,
+/// or a `fractions.Fraction` -- the exact operands. A `float` is refused with
+/// `TypeError` rather than approximated: the CAS is exact over Q, and `x + 0.5`
+/// silently becoming `x + 1/2` would be a guess about the caller's intent.
+struct Operand(CasExpr);
+
+impl FromPyObject<'_, '_> for Operand {
+    type Error = PyErr;
+
+    fn extract(obj: pyo3::Borrowed<'_, '_, PyAny>) -> PyResult<Self> {
+        if let Ok(expr) = obj.cast::<Expr>() {
+            return Ok(Operand(expr.get().inner.clone()));
+        }
+        if obj.is_instance_of::<pyo3::types::PyFloat>() {
+            return Err(pyo3::exceptions::PyTypeError::new_err(
+                "Expr arithmetic takes Expr, int or fractions.Fraction, not float (the CAS is exact over Q; write Fraction(1, 2))",
+            ));
+        }
+        if let Ok(n) = obj.extract::<i128>() {
+            return Ok(Operand(CasExpr::int(n)));
+        }
+        let (num, den) = (
+            obj.getattr("numerator").and_then(|v| v.extract::<i128>()),
+            obj.getattr("denominator").and_then(|v| v.extract::<i128>()),
+        );
+        if let (Ok(num), Ok(den)) = (num, den) {
+            let value = rational::checked(num, den).ok_or_else(|| {
+                PyValueError::new_err(format!("{num}/{den} does not fit the i128 rational"))
+            })?;
+            return Ok(Operand(CasExpr::Const(value)));
+        }
+        Err(pyo3::exceptions::PyTypeError::new_err(format!(
+            "Expr arithmetic takes Expr, int or fractions.Fraction, not {}",
+            obj.get_type()
+                .name()
+                .map(|n| n.to_string())
+                .unwrap_or_default()
+        )))
+    }
+}
+
+#[cfg(feature = "stub-gen")]
+impl pyo3_stub_gen::PyStubType for Operand {
+    fn type_input() -> pyo3_stub_gen::TypeInfo {
+        use pyo3_stub_gen::PyStubType;
+        <Expr as PyStubType>::type_input()
+            | <i128 as PyStubType>::type_input()
+            | <crate::stub_types::PyFraction<'_> as PyStubType>::type_output()
+    }
+
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        Self::type_input()
+    }
+}
+
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Expr")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Expr {
@@ -141,6 +210,7 @@ impl Expr {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Expr {
     /// An exact integer constant.
@@ -406,7 +476,7 @@ impl Expr {
         &self,
         py: Python<'py>,
         env: &Bound<'py, PyDict>,
-    ) -> PyResult<Option<Bound<'py, PyAny>>> {
+    ) -> PyResult<Option<PyFraction<'py>>> {
         let bindings = rational_env(env)?;
         rational::optional_fraction(py, self.inner.eval(&bindings))
     }
@@ -418,20 +488,36 @@ impl Expr {
         found.into_iter().collect()
     }
 
-    fn __add__(&self, other: &Expr) -> Expr {
-        Expr::wrap(self.inner.clone() + other.inner.clone())
+    fn __add__(&self, other: Operand) -> Expr {
+        Expr::wrap(self.inner.clone() + other.0)
     }
 
-    fn __sub__(&self, other: &Expr) -> Expr {
-        Expr::wrap(self.inner.clone() - other.inner.clone())
+    fn __radd__(&self, other: Operand) -> Expr {
+        Expr::wrap(other.0 + self.inner.clone())
     }
 
-    fn __mul__(&self, other: &Expr) -> Expr {
-        Expr::wrap(self.inner.clone() * other.inner.clone())
+    fn __sub__(&self, other: Operand) -> Expr {
+        Expr::wrap(self.inner.clone() - other.0)
     }
 
-    fn __truediv__(&self, other: &Expr) -> Expr {
-        Expr::wrap(self.inner.clone() / other.inner.clone())
+    fn __rsub__(&self, other: Operand) -> Expr {
+        Expr::wrap(other.0 - self.inner.clone())
+    }
+
+    fn __mul__(&self, other: Operand) -> Expr {
+        Expr::wrap(self.inner.clone() * other.0)
+    }
+
+    fn __rmul__(&self, other: Operand) -> Expr {
+        Expr::wrap(other.0 * self.inner.clone())
+    }
+
+    fn __truediv__(&self, other: Operand) -> Expr {
+        Expr::wrap(self.inner.clone() / other.0)
+    }
+
+    fn __rtruediv__(&self, other: Operand) -> Expr {
+        Expr::wrap(other.0 / self.inner.clone())
     }
 
     fn __neg__(&self) -> Expr {
@@ -443,13 +529,19 @@ impl Expr {
     /// # Errors
     ///
     /// Raises `TypeError` when a modulus is supplied.
-    fn __pow__(&self, exp: u32, modulo: Option<&Bound<'_, PyAny>>) -> PyResult<Expr> {
+    // `exponent`, not `exp`: `pyo3-stub-gen` assumes CPython's own
+    // `(exponent, modulo=None)` for `__pow__` and matches the Rust parameter
+    // names against it, while PyO3 refuses `#[pyo3(signature = ...)]` on a magic
+    // method -- so the name is the only place the two can be reconciled. The
+    // parameter is positional in every call `**` makes, so nothing observable
+    // changes.
+    fn __pow__(&self, exponent: u32, modulo: Option<&Bound<'_, PyAny>>) -> PyResult<Expr> {
         if modulo.is_some_and(|value| !value.is_none()) {
             return Err(pyo3::exceptions::PyTypeError::new_err(
                 "Expr.__pow__ takes no modulus",
             ));
         }
-        Ok(self.pow(exp))
+        Ok(self.pow(exponent))
     }
 
     fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
@@ -537,6 +629,10 @@ pub(crate) fn float_env(env: &Bound<'_, PyDict>) -> PyResult<Vec<(String, f64)>>
 /// Re-normalizing that difference is the independent re-check, which is why the
 /// witness is exposed rather than folded into a bool. `Unknown` is an `i128`
 /// overflow — an honest undecided, never a wrong answer.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "ZeroTest")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZeroTest {
@@ -550,6 +646,7 @@ impl ZeroTest {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl ZeroTest {
     /// `"certified"` or `"unknown"` — the variant tag.
@@ -620,6 +717,10 @@ impl ZeroTest {
 /// The `certificate` is `equal(d(antiderivative)/dvar, integrand)` — a
 /// first-class [`ZeroTest`], not a bool, so a caller can inspect the witness
 /// rather than trust the flag.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "CertifiedIntegral")]
 #[derive(Debug, Clone)]
 pub struct CertifiedIntegral {
@@ -633,6 +734,7 @@ impl CertifiedIntegral {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl CertifiedIntegral {
     /// The computed antiderivative `F` (up to `+ C`).
@@ -662,6 +764,10 @@ impl CertifiedIntegral {
 }
 
 /// A definite integral, with the antiderivative and certificate it came from.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "DefiniteIntegral")]
 #[derive(Debug, Clone)]
 pub struct DefiniteIntegral {
@@ -675,6 +781,7 @@ impl DefiniteIntegral {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl DefiniteIntegral {
     /// The evaluated value `F(b) - F(a)`.
@@ -710,6 +817,10 @@ impl DefiniteIntegral {
 }
 
 /// The point a limit is taken at.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "LimitPoint")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LimitPoint {
@@ -723,6 +834,7 @@ impl LimitPoint {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl LimitPoint {
     /// A finite rational point.
@@ -731,9 +843,9 @@ impl LimitPoint {
     ///
     /// Raises `ValueError` when `value` is not an exact rational.
     #[staticmethod]
-    fn finite(value: &Bound<'_, PyAny>) -> PyResult<LimitPoint> {
+    fn finite(value: RationalLike<'_>) -> PyResult<LimitPoint> {
         Ok(LimitPoint {
-            inner: CasLimitPoint::Finite(rational::from_py(value)?),
+            inner: CasLimitPoint::Finite(rational::from_py(value.as_any())?),
         })
     }
 
@@ -770,6 +882,10 @@ impl LimitPoint {
 ///
 /// Every builder returns a **new** context, mirroring the Rust consuming
 /// builder; nothing here mutates in place.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Assumptions")]
 #[derive(Debug, Clone, Default)]
 pub struct Assumptions {
@@ -783,6 +899,7 @@ impl Assumptions {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Assumptions {
     /// An empty assumption context.

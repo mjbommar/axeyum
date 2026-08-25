@@ -23,14 +23,21 @@ use pyo3::types::{PyAny, PyModule};
 use crate::cas::CasError;
 use crate::cas::poly::{Monomial, MvPoly};
 use crate::cas::rational;
+use crate::cas::rational::RationalLike;
+use crate::stub_types::{PyFraction, PySequence};
 
 /// A weighted sum of squares `sum(coefficient * square ** 2)`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "SosSum")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SosSum {
     inner: CasSosSum,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl SosSum {
     /// A sum from `[(coefficient, polynomial), ...]`.
@@ -40,12 +47,12 @@ impl SosSum {
     /// Raises `ValueError` when a coefficient is not an exact rational or the
     /// crate rejects the list (a negative weight, say).
     #[new]
-    fn new(squares: &Bound<'_, PyAny>) -> PyResult<SosSum> {
+    fn new(squares: PySequence<'_, (RationalLike<'_>, MvPoly)>) -> PyResult<SosSum> {
         let mut collected: Vec<(IrRational, _)> = Vec::new();
-        for item in squares.try_iter()? {
+        for item in squares.as_any().try_iter()? {
             let (coefficient, poly): (Py<PyAny>, MvPoly) = item?.extract()?;
             collected.push((
-                rational::from_py(coefficient.bind(squares.py()))?,
+                rational::from_py(coefficient.bind(squares.as_any().py()))?,
                 poly.inner().clone(),
             ));
         }
@@ -69,7 +76,7 @@ impl SosSum {
     /// # Errors
     ///
     /// Propagates any Python error raised while building the fractions.
-    fn squares<'py>(&self, py: Python<'py>) -> PyResult<Vec<(Bound<'py, PyAny>, MvPoly)>> {
+    fn squares<'py>(&self, py: Python<'py>) -> PyResult<Vec<(PyFraction<'py>, MvPoly)>> {
         self.inner
             .squares()
             .iter()
@@ -100,6 +107,10 @@ impl SosSum {
 }
 
 /// One discharged proof obligation.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Obligation")]
 #[derive(Debug, Clone)]
 pub struct Obligation {
@@ -107,6 +118,7 @@ pub struct Obligation {
     detail: String,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Obligation {
     /// The obligation's name.
@@ -127,12 +139,17 @@ impl Obligation {
 }
 
 /// What the SOS checker actually discharged.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "CheckReport")]
 #[derive(Debug, Clone)]
 pub struct CheckReport {
     inner: CasCheckReport,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl CheckReport {
     /// The obligations, in the order the checker discharged them.
@@ -154,7 +171,7 @@ impl CheckReport {
     ///
     /// Propagates any Python error raised while building the fraction.
     #[getter]
-    fn rate<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyAny>>> {
+    fn rate<'py>(&self, py: Python<'py>) -> PyResult<Option<PyFraction<'py>>> {
         rational::optional_fraction(py, self.inner.rate)
     }
 
@@ -175,6 +192,10 @@ impl CheckReport {
 }
 
 /// A sum-of-squares artifact: a problem paired with its certificate.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "SosArtifact")]
 #[derive(Debug, Clone)]
 pub struct SosArtifact {
@@ -188,6 +209,7 @@ impl SosArtifact {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl SosArtifact {
     /// The artifact identifier.
@@ -236,6 +258,10 @@ impl SosArtifact {
 /// report is empty**: a checker that discharged no obligation established
 /// nothing, and returning that as a pass is the failure mode this route is
 /// documented against.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyfunction]
 fn check(py: Python<'_>, artifact: &SosArtifact) -> PyResult<CheckReport> {
     let owned = artifact.inner.clone();
@@ -258,6 +284,10 @@ fn check(py: Python<'_>, artifact: &SosArtifact) -> PyResult<CheckReport> {
 /// # Errors
 ///
 /// Raises `CasError` when the checker rejects the artifact.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyfunction]
 fn check_unguarded(py: Python<'_>, artifact: &SosArtifact) -> PyResult<CheckReport> {
     let owned = artifact.inner.clone();
@@ -267,6 +297,10 @@ fn check_unguarded(py: Python<'_>, artifact: &SosArtifact) -> PyResult<CheckRepo
 }
 
 /// The committed SOS corpus.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyfunction]
 fn corpus() -> Vec<SosArtifact> {
     sos_corpus::all()
@@ -276,6 +310,10 @@ fn corpus() -> Vec<SosArtifact> {
 }
 
 /// One corpus artifact by identifier.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyfunction]
 fn by_id(id: &str) -> Option<SosArtifact> {
     sos_corpus::by_id(id).map(SosArtifact::wrap)
@@ -286,6 +324,10 @@ fn by_id(id: &str) -> Option<SosArtifact> {
 /// # Errors
 ///
 /// Raises `CasError` when the construction overflows.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyfunction]
 fn sum_of_variable_squares(variables: Vec<String>) -> PyResult<MvPoly> {
     sos::sum_of_variable_squares(&variables)
@@ -294,12 +336,17 @@ fn sum_of_variable_squares(variables: Vec<String>) -> PyResult<MvPoly> {
 }
 
 /// The outcome of the exact rational PSD test.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "PsdResult")]
 #[derive(Debug, Clone)]
 pub struct PsdResult {
     inner: CasPsd,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PsdResult {
     /// `"Yes"`, `"No"`, or `"Overflow"`.
@@ -325,7 +372,7 @@ impl PsdResult {
     ///
     /// Propagates any Python error raised while building the fractions.
     #[getter]
-    fn pivots<'py>(&self, py: Python<'py>) -> PyResult<Option<Vec<Bound<'py, PyAny>>>> {
+    fn pivots<'py>(&self, py: Python<'py>) -> PyResult<Option<Vec<PyFraction<'py>>>> {
         match &self.inner {
             CasPsd::Yes { pivots, .. } => pivots
                 .iter()
@@ -364,10 +411,14 @@ impl PsdResult {
 /// # Errors
 ///
 /// Raises `ValueError` when an entry is not an exact rational.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyfunction]
-fn is_psd(matrix: &Bound<'_, PyAny>) -> PyResult<PsdResult> {
+fn is_psd(matrix: PySequence<'_, PySequence<'_, RationalLike<'_>>>) -> PyResult<PsdResult> {
     let mut rows: Vec<Vec<IrRational>> = Vec::new();
-    for row in matrix.try_iter()? {
+    for row in matrix.as_any().try_iter()? {
         rows.push(rational::vec_from_py(&row?)?);
     }
     Ok(PsdResult {
@@ -383,11 +434,15 @@ fn is_psd(matrix: &Bound<'_, PyAny>) -> PyResult<PsdResult> {
 /// # Errors
 ///
 /// Propagates any Python error raised while building the fractions.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sos")
+)]
 #[pyfunction]
 fn psd_not_sos_dual<'py>(
     py: Python<'py>,
     artifact: &SosArtifact,
-) -> PyResult<Option<Vec<(Monomial, Bound<'py, PyAny>)>>> {
+) -> PyResult<Option<Vec<(Monomial, PyFraction<'py>)>>> {
     let CasSosArtifact::PsdNotSos(_, certificate) = &artifact.inner else {
         return Ok(None);
     };
@@ -426,4 +481,14 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(psd_not_sos_dual, &module)?)?;
     parent.add("sos", &module)?;
     Ok(())
+}
+
+// Module-level constants reach Python through `module.add("NAME", value)`, a
+// RUNTIME call with no item for a `#[gen_stub_*]` macro to sit on -- so without
+// these submissions they exist in the extension and in no stub, and a checked
+// consumer reading one gets an unresolved attribute. The type is named; the
+// VALUE deliberately is not, so a constant cannot drift from its stub.
+#[cfg(feature = "stub-gen")]
+mod stub_variables {
+    pyo3_stub_gen::module_variable!("axeyum._native.cas.certify.sos", "REPLAY_POINTS", usize);
 }

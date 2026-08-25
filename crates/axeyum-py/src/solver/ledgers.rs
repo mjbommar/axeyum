@@ -96,6 +96,10 @@ const PROOF_STATUS_VARIANTS: &[ProofStatus] = &[
 ///
 /// Tier **R** — read-only data. Nothing here decides anything; it is what this
 /// build says it can do and how much of that is checked.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(frozen, module = "axeyum", name = "Capability")]
 pub struct PyCapability {
     area: &'static str,
@@ -106,6 +110,7 @@ pub struct PyCapability {
     reference: &'static str,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyCapability {
     /// The row identity: `"<area> | <feature>"`.
@@ -187,6 +192,10 @@ impl PyCapability {
 /// Tier **R**. The four axes are INDEPENDENT on purpose: "the parser accepts
 /// it" is not "the solver decides it" and neither is "the `unsat` carries a
 /// proof".
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(frozen, module = "axeyum", name = "SupportRow")]
 pub struct PySupportRow {
     fragment: &'static str,
@@ -197,6 +206,7 @@ pub struct PySupportRow {
     note: &'static str,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PySupportRow {
     /// The logic fragment / feature — the row key.
@@ -276,6 +286,10 @@ impl PySupportRow {
 /// [`EvidenceReport.trust_steps`](axeyum.solver.EvidenceReport) they can
 /// differ, and reading the ledger bit as an answer about one `unsat` is the
 /// mistake `TrustId::is_certified`'s own doc comment warns about.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(frozen, module = "axeyum", name = "TrustStep")]
 pub struct PyTrustStep {
     id: &'static str,
@@ -286,6 +300,7 @@ pub struct PyTrustStep {
     reference: &'static str,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyTrustStep {
     /// The reduction's stable label (`"bit-blast"`, `"farkas"`, …).
@@ -367,6 +382,10 @@ impl PyTrustStep {
 /// Tier **R** — telemetry is returned data, not a log. Every duration is
 /// exposed BOTH as whole nanoseconds and as seconds: a benchmark that silently
 /// rounds is worse than one that is awkward to read.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(frozen, module = "axeyum", name = "SolveStats")]
 pub struct PySolveStats {
     translate: Duration,
@@ -377,6 +396,7 @@ pub struct PySolveStats {
     backend: Vec<(String, f64)>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PySolveStats {
     /// Nanoseconds spent translating Axeyum terms to the backend form.
@@ -467,6 +487,10 @@ impl PySolveStats {
 ///
 /// Tier **R**. Not uniform across backends — this is the backend's own report,
 /// not a promise about the stack.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(frozen, module = "axeyum", name = "BackendCapabilities")]
 pub struct PyBackendCapabilities {
     name: String,
@@ -474,6 +498,7 @@ pub struct PyBackendCapabilities {
     complete: bool,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyBackendCapabilities {
     /// Human-readable backend name and version.
@@ -523,11 +548,16 @@ impl PyBackendCapabilities {
 /// door returns an `SmtLibOutcome`, which carries no telemetry, and
 /// [`Incremental.stats()`](axeyum.solver.Incremental) is a different
 /// (retained-encoding) counter set.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
 #[pyclass(module = "axeyum", name = "SatBvBackend")]
 pub struct PySatBvBackend {
     backend: SatBvBackend,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PySatBvBackend {
     /// Creates a fresh backend. It reports no stats until it has checked.
@@ -588,12 +618,20 @@ impl PySatBvBackend {
 ///
 /// The same data [`capabilities()`](axeyum.solver.capabilities) renders as
 /// Markdown, with `assurance` and `checked_by` as separate fields.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 pub fn capability_rows() -> Vec<PyCapability> {
     CAPABILITIES.iter().map(PyCapability::build).collect()
 }
 
 /// The four-axis support matrix as structured rows, in `SUPPORT_MATRIX` order.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 pub fn support_matrix_rows() -> Vec<PySupportRow> {
     SUPPORT_MATRIX.iter().map(PySupportRow::build).collect()
@@ -604,6 +642,10 @@ pub fn support_matrix_rows() -> Vec<PySupportRow> {
 /// Each row's `certified` is the LEDGER-wide `TrustId::is_certified()`, so it
 /// equals `ledger_certified`. A per-run bit lives on
 /// `EvidenceReport.trust_steps`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver")
+)]
 #[pyfunction]
 pub fn trust_ledger_rows() -> Vec<PyTrustStep> {
     ALL_TRUST_IDS
@@ -644,4 +686,19 @@ pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
         labels(PROOF_STATUS_VARIANTS, ProofStatus::label),
     )?;
     Ok(())
+}
+
+// Module-level constants reach Python through `module.add("NAME", value)`, a
+// RUNTIME call with no item for a `#[gen_stub_*]` macro to sit on -- so without
+// these submissions they exist in the extension and in no stub, and a checked
+// consumer reading one gets an unresolved attribute. The type is named; the
+// VALUE deliberately is not, so a constant cannot drift from its stub.
+#[cfg(feature = "stub-gen")]
+mod stub_variables {
+    pyo3_stub_gen::module_variable!("axeyum._native.solver", "ASSURANCES", Vec<String>);
+    pyo3_stub_gen::module_variable!("axeyum._native.solver", "CHECKED_BY", Vec<String>);
+    pyo3_stub_gen::module_variable!("axeyum._native.solver", "IR_STATUSES", Vec<String>);
+    pyo3_stub_gen::module_variable!("axeyum._native.solver", "PARSER_STATUSES", Vec<String>);
+    pyo3_stub_gen::module_variable!("axeyum._native.solver", "PROOF_STATUSES", Vec<String>);
+    pyo3_stub_gen::module_variable!("axeyum._native.solver", "SOLVER_STATUSES", Vec<String>);
 }

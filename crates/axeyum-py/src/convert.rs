@@ -23,6 +23,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyBytes, PyDict, PyInt, PyList, PyModule, PyString, PyTuple};
 
 use crate::ir::types::{PySort, SortError};
+use crate::stub_types::{PyBigInt, PyFraction};
 
 /// A bit-vector value: an unsigned integer together with the width it was
 /// produced at.
@@ -32,6 +33,10 @@ use crate::ir::types::{PySort, SortError};
 /// itself is arbitrary-precision on the Python side, so `Value::Bv` (width
 /// <= 128) and `Value::WideBv` (width > 128) converge on this one type — the
 /// split in the Rust IR is a storage detail, not a semantic one.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native")
+)]
 #[pyclass(frozen, skip_from_py_object, module = "axeyum", name = "BvValue")]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BvValue {
@@ -53,6 +58,7 @@ impl BvValue {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl BvValue {
     /// The declared bit-vector width, in bits.
@@ -63,16 +69,16 @@ impl BvValue {
 
     /// The unsigned value as an arbitrary-precision Python integer.
     #[getter]
-    fn value<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        self.as_py_int(py)
+    fn value<'py>(&self, py: Python<'py>) -> PyResult<PyBigInt<'py>> {
+        self.as_py_int(py).map(PyBigInt::new)
     }
 
-    fn __int__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        self.as_py_int(py)
+    fn __int__<'py>(&self, py: Python<'py>) -> PyResult<PyBigInt<'py>> {
+        self.as_py_int(py).map(PyBigInt::new)
     }
 
-    fn __index__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        self.as_py_int(py)
+    fn __index__<'py>(&self, py: Python<'py>) -> PyResult<PyBigInt<'py>> {
+        self.as_py_int(py).map(PyBigInt::new)
     }
 
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
@@ -122,7 +128,7 @@ pub(crate) fn value_to_py<'py>(py: Python<'py>, value: &Value) -> PyResult<Bound
             .into_pyobject(py)?
             .into_any()),
         Value::Int(i) => Ok(i.into_pyobject(py)?.into_any()),
-        Value::Real(r) => fraction(py, r.numerator(), r.denominator()),
+        Value::Real(r) => Ok(fraction(py, r.numerator(), r.denominator())?.into_bound()),
         Value::Seq(elements) => seq_to_py(py, elements),
         Value::Array(array) => Ok(ArrayValue::build(array).into_pyobject(py)?.into_any()),
         Value::GenericArray(array) => Ok(GenericArrayValue::build(py, array)?
@@ -161,6 +167,10 @@ pub(crate) fn value_to_py<'py>(py: Python<'py>, value: &Value) -> PyResult<Bound
 ///
 /// Normalized by the IR (entries equal to the default are removed), so
 /// equality here is extensional and the entry order is deterministic.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native")
+)]
 #[pyclass(frozen, skip_from_py_object, module = "axeyum", name = "ArrayValue")]
 #[derive(Debug, Clone)]
 pub struct ArrayValue {
@@ -181,6 +191,7 @@ impl ArrayValue {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl ArrayValue {
     /// The index bit-vector width.
@@ -197,8 +208,10 @@ impl ArrayValue {
 
     /// The element every un-overridden index maps to.
     #[getter]
-    fn default<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        BvValue::new(self.element_width, u128_le_bytes(self.default)).as_py_int(py)
+    fn default<'py>(&self, py: Python<'py>) -> PyResult<PyBigInt<'py>> {
+        BvValue::new(self.element_width, u128_le_bytes(self.default))
+            .as_py_int(py)
+            .map(PyBigInt::new)
     }
 
     /// The overriding `(index, element)` pairs, in index order.
@@ -242,6 +255,10 @@ impl ArrayValue {
 }
 
 /// An array value over arbitrary (non-array) component sorts.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native")
+)]
 #[pyclass(
     frozen,
     skip_from_py_object,
@@ -270,6 +287,7 @@ impl GenericArrayValue {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl GenericArrayValue {
     /// The index sort.
@@ -311,6 +329,10 @@ impl GenericArrayValue {
 }
 
 /// A datatype value: which constructor built it, and its field values.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native")
+)]
 #[pyclass(frozen, skip_from_py_object, module = "axeyum", name = "DatatypeValue")]
 pub struct DatatypeValue {
     datatype: usize,
@@ -318,6 +340,7 @@ pub struct DatatypeValue {
     fields: Py<PyTuple>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl DatatypeValue {
     /// The arena-local datatype index.
@@ -353,6 +376,10 @@ impl DatatypeValue {
 /// The token has no arithmetic meaning. Two values of the same declared sort
 /// are equal exactly when their tokens are; nothing else about the number is
 /// a claim the solver made.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native")
+)]
 #[pyclass(
     frozen,
     skip_from_py_object,
@@ -365,6 +392,7 @@ pub struct UninterpretedValue {
     token: u128,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl UninterpretedValue {
     /// The arena-local declared carrier sort index.
@@ -407,6 +435,10 @@ impl UninterpretedValue {
 /// `sqrt(2)` is the root of `x^2 - 2` in `(1, 2)`. The IR supports sign and
 /// comparison on this variant; field arithmetic is deferred (ADR-0038), so the
 /// evaluator declines rather than returning a wrong value.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native")
+)]
 #[pyclass(
     frozen,
     skip_from_py_object,
@@ -423,6 +455,7 @@ impl RealAlgebraicValue {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl RealAlgebraicValue {
     /// The defining integer polynomial, lowest-degree coefficient first.
@@ -445,7 +478,7 @@ impl RealAlgebraicValue {
     fn interval<'py>(
         &self,
         py: Python<'py>,
-    ) -> PyResult<Option<(Bound<'py, PyAny>, Bound<'py, PyAny>)>> {
+    ) -> PyResult<Option<(PyFraction<'py>, PyFraction<'py>)>> {
         self.number
             .interval()
             .map(|(lo, hi)| {
@@ -462,7 +495,7 @@ impl RealAlgebraicValue {
     /// An APPROXIMATION, not the value: an algebraic number is generally
     /// irrational and has no exact `Fraction`.
     #[getter]
-    fn approx_midpoint<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyAny>>> {
+    fn approx_midpoint<'py>(&self, py: Python<'py>) -> PyResult<Option<PyFraction<'py>>> {
         self.number
             .approx_midpoint()
             .map(|q| fraction(py, q.numerator(), q.denominator()))
@@ -484,6 +517,10 @@ impl RealAlgebraicValue {
 /// A finite interpretation of an uninterpreted function.
 ///
 /// `default` is the result for every argument tuple not in `entries`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native")
+)]
 #[pyclass(frozen, skip_from_py_object, module = "axeyum", name = "FuncValue")]
 pub struct FuncValue {
     params: Vec<PySort>,
@@ -531,6 +568,7 @@ impl FuncValue {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl FuncValue {
     /// The parameter sorts.
@@ -693,10 +731,11 @@ fn code_point(element: &Value) -> Option<char> {
 }
 
 /// `fractions.Fraction(numerator, denominator)`.
-fn fraction(py: Python<'_>, numerator: i128, denominator: i128) -> PyResult<Bound<'_, PyAny>> {
+fn fraction(py: Python<'_>, numerator: i128, denominator: i128) -> PyResult<PyFraction<'_>> {
     PyModule::import(py, "fractions")?
         .getattr("Fraction")?
         .call1((numerator, denominator))
+        .map(PyFraction::new)
 }
 
 /// The little-endian magnitude of a `u128`, trailing zero bytes kept (they are

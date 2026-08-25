@@ -1,0 +1,67 @@
+# `typing.Any` in the generated `axeyum._native` stubs, with the reason for each.
+#
+# Generated stubs, hand-written reasons. `tools/check_stub_types.py` fails when a
+# site here no longer has `Any` (the entry has to go, so the budget cannot be
+# re-spent) and when an `Any` appears that is not here. The count can only fall.
+#
+# Every line is one site and one reason, separated by TWO SPACES. A site is
+# `<module>.<qualname>(<parameter>)` or `<module>.<qualname> -> return`.
+#
+# The rule this file exists to enforce is the one in
+# `docs/python-2026-08/10-quality-best-practices.md`: a stub type that cannot be
+# derived stays `Any` and is listed -- a WRONG type is worse than none. Nothing
+# below is a to-do; each is a signature whose Python type is decided at run time
+# by another argument, by a sort, or by the caller.
+
+axeyum._native.BvValue.__eq__ -> return  Returns a Python bool OR NotImplemented -- a bit-vector is not an int, and deferring lets the other operand decide.
+axeyum._native.BvValue.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.FuncValue.default -> return  An IR `Value`. Its Python type is decided by the term's SORT at run time -- bool, int, str, fractions.Fraction, BvValue, ArrayValue, GenericArrayValue, DatatypeValue, UninterpretedValue or RealAlgebraicValue -- so no single annotation is both true and useful.
+axeyum._native.GenericArrayValue.default -> return  An IR `Value`. Its Python type is decided by the term's SORT at run time -- bool, int, str, fractions.Fraction, BvValue, ArrayValue, GenericArrayValue, DatatypeValue, UninterpretedValue or RealAlgebraicValue -- so no single annotation is both true and useful.
+axeyum._native.UninterpretedValue.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.Expr.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.Expr.__pow__(modulo)  CPython's third `pow()` argument. Any object may arrive; anything that is not None is refused with TypeError, because modular exponentiation is not defined on this fragment.
+axeyum._native.cas.Matrix.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.Monomial.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.MultiPoly.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.MvPoly.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.Rational.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.ZeroTest.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.certify.geometry.GeometryCertificate.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.certify.gf2.Gf2Poly.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.certify.gf2.HalfDegreeArtifact.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.certify.gf2.IrreducibilityCertificate.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.certify.groebner.DeclineReason.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.certify.sturm.Interval.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.cas.certify.telescoping.TelescopingCertificate.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.ir.Arena.bv_const(value)  Accepts a Python int or a BvValue of the same width; the width check is a run-time refusal, not something an annotation can carry.
+axeyum._native.ir.Assignment.get -> return  An IR `Value`. Its Python type is decided by the term's SORT at run time -- bool, int, str, fractions.Fraction, BvValue, ArrayValue, GenericArrayValue, DatatypeValue, UninterpretedValue or RealAlgebraicValue -- so no single annotation is both true and useful.
+axeyum._native.ir.Assignment.set(value)  The Python denotation of a value of the symbol's sort -- bool, int, fractions.Fraction, str or BvValue, chosen by the sort, and rejected with SortError when it does not match.
+axeyum._native.ir.Constructor.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.ir.Datatype.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.ir.Func.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.ir.Sort.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.ir.SortRef.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.ir.Symbol.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.ir.Term.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.ir.TermNode.value -> return  An IR `Value`. Its Python type is decided by the term's SORT at run time -- bool, int, str, fractions.Fraction, BvValue, ArrayValue, GenericArrayValue, DatatypeValue, UninterpretedValue or RealAlgebraicValue -- so no single annotation is both true and useful.
+axeyum._native.ir.bits.bv_value_to_lsb_bits(value)  Accepts a Python int or a BvValue of the same width; the width check is a run-time refusal, not something an annotation can carry.
+axeyum._native.ir.bits.lsb_bits_to_bv_value -> return  An IR `Value`. Its Python type is decided by the term's SORT at run time -- bool, int, str, fractions.Fraction, BvValue, ArrayValue, GenericArrayValue, DatatypeValue, UninterpretedValue or RealAlgebraicValue -- so no single annotation is both true and useful.
+axeyum._native.ir.bits.lsb_bits_to_value -> return  An IR `Value`. Its Python type is decided by the term's SORT at run time -- bool, int, str, fractions.Fraction, BvValue, ArrayValue, GenericArrayValue, DatatypeValue, UninterpretedValue or RealAlgebraicValue -- so no single annotation is both true and useful.
+axeyum._native.ir.bits.value_to_lsb_bits(value)  The Python denotation of a value of `sort`; which Python type is accepted is decided by that argument.
+axeyum._native.ir.bv.BitLowering.evaluate_root -> return  An IR `Value`. Its Python type is decided by the term's SORT at run time -- bool, int, str, fractions.Fraction, BvValue, ArrayValue, GenericArrayValue, DatatypeValue, UninterpretedValue or RealAlgebraicValue -- so no single annotation is both true and useful.
+axeyum._native.ir.eval -> return  An IR `Value`. Its Python type is decided by the term's SORT at run time -- bool, int, str, fractions.Fraction, BvValue, ArrayValue, GenericArrayValue, DatatypeValue, UninterpretedValue or RealAlgebraicValue -- so no single annotation is both true and useful.
+axeyum._native.ir.fp.FloatFormat.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.ir.well_founded_default -> return  An IR `Value`. Its Python type is decided by the term's SORT at run time -- bool, int, str, fractions.Fraction, BvValue, ArrayValue, GenericArrayValue, DatatypeValue, UninterpretedValue or RealAlgebraicValue -- so no single annotation is both true and useful.
+axeyum._native.kernel.ExprId.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.kernel.LevelId.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.kernel.Lit.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.kernel.Lit.nat(value)  Read through `str()` and parsed as an arbitrary-precision decimal, so an int and its decimal spelling are both accepted and neither is the whole type.
+axeyum._native.kernel.Lit.value -> return  An int for a `nat` literal and a str for a `str` literal; `.kind` says which.
+axeyum._native.kernel.NameId.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.kernel.Prelude.__getattr__ -> return  Attribute access over a prelude's declarations: the value is whatever the named field holds, which the class does not know statically.
+axeyum._native.kernel.Prelude.__getitem__ -> return  Item access over a prelude's declarations; same as `__getattr__`.
+axeyum._native.producers.DeclineReason.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.producers.ImportLimits.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.producers.import_statement_ndjson(source)  A filesystem path (str, bytes or os.PathLike) or an in-memory bytes buffer; `resolve_source` decides which and raises TypeError otherwise.
+axeyum._native.smt.ScriptTerm.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.smt.get_value -> return  One model value per `(get-value ...)` term, each typed by its own sort -- the same union as the IR evaluator returns.

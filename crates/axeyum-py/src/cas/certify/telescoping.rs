@@ -27,14 +27,21 @@ use pyo3::types::{PyAny, PyModule};
 use crate::cas::CasError;
 use crate::cas::poly::MvPoly;
 use crate::cas::rational;
+use crate::cas::rational::RationalLike;
+use crate::stub_types::PyBorrowedList;
 
 /// An integer-linear form `sum(coefficient * variable) + constant`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "LinearForm")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinearForm {
     inner: CasLinearForm,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl LinearForm {
     /// A form from `[(variable, coefficient), ...]` and a constant.
@@ -77,12 +84,17 @@ impl LinearForm {
 }
 
 /// One factor of a hypergeometric term.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Factor")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Factor {
     inner: CasFactor,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Factor {
     /// `Gamma(form) ** exponent`. A negative exponent is a denominator.
@@ -102,10 +114,10 @@ impl Factor {
     ///
     /// Raises `ValueError` when `base` is not an exact rational.
     #[staticmethod]
-    fn power(base: &Bound<'_, PyAny>, form: &LinearForm) -> PyResult<Factor> {
+    fn power(base: RationalLike<'_>, form: &LinearForm) -> PyResult<Factor> {
         Ok(Factor {
             inner: CasFactor::Power {
-                base: rational::from_py(base)?,
+                base: rational::from_py(base.as_any())?,
                 form: form.inner.clone(),
             },
         })
@@ -138,6 +150,10 @@ impl Factor {
 }
 
 /// `(form)! ** exponent`, i.e. `Gamma(form + 1) ** exponent`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyfunction]
 fn factorial_factor(form: &LinearForm, exponent: i32) -> Factor {
     Factor {
@@ -146,6 +162,10 @@ fn factorial_factor(form: &LinearForm, exponent: i32) -> Factor {
 }
 
 /// The three gamma factors of `binomial(upper, lower) ** power`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyfunction]
 fn binomial_factors(upper: &LinearForm, lower: &LinearForm, power: i32) -> Vec<Factor> {
     cas_binomial_factors(&upper.inner, &lower.inner, power)
@@ -155,12 +175,17 @@ fn binomial_factors(upper: &LinearForm, lower: &LinearForm, power: i32) -> Vec<F
 }
 
 /// A product of [`Factor`]s: the hypergeometric summand.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "HyperTerm")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HyperTerm {
     inner: CasHyperTerm,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl HyperTerm {
     /// A term from its factors, in the order supplied.
@@ -198,12 +223,17 @@ impl HyperTerm {
 ///
 /// None of these is a degree *ansatz*: starving one makes the search **decline**,
 /// never mislead.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Limits")]
 #[derive(Debug, Clone, Copy)]
 pub struct Limits {
     inner: CasLimits,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Limits {
     /// Ceilings, defaulting to `Limits::classical()`.
@@ -298,12 +328,17 @@ impl Limits {
 ///
 /// A zero count is the fail signal: this is exactly the report a checker that
 /// did nothing would produce, and it must be visible from Python.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "CheckReport")]
 #[derive(Debug, Clone, Copy)]
 pub struct CheckReport {
     inner: CasCheckReport,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl CheckReport {
     /// Shift-ratio identities re-derived.
@@ -343,12 +378,17 @@ impl CheckReport {
 }
 
 /// The verdict of the independent telescoping checker.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Verdict")]
 #[derive(Debug, Clone)]
 pub struct Verdict {
     inner: CasVerdict,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Verdict {
     /// `"Verified"` or `"Rejected"`.
@@ -395,12 +435,17 @@ impl Verdict {
 }
 
 /// The sample points and window the checker replays over.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "CheckOptions")]
 #[derive(Debug, Clone)]
 pub struct CheckOptions {
     inner: CasCheckOptions,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl CheckOptions {
     /// Options over `shift_var` sampled at `points`, replayed on `window`.
@@ -451,6 +496,10 @@ impl CheckOptions {
 
 /// The evidence that a verified recurrence pins the sum to a claimed closed
 /// form.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "ClosedFormReport")]
 #[derive(Debug, Clone)]
 pub struct ClosedFormReport {
@@ -459,6 +508,7 @@ pub struct ClosedFormReport {
     leading_zeros: Vec<i64>,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl ClosedFormReport {
     /// The base index the identity is claimed from.
@@ -478,8 +528,8 @@ impl ClosedFormReport {
     /// A nonempty list breaks the induction; the checker rejects rather than
     /// reports it, so a verified report always has this empty.
     #[getter]
-    fn leading_zeros(&self) -> &[i64] {
-        &self.leading_zeros
+    fn leading_zeros(&self) -> PyBorrowedList<'_, i64> {
+        PyBorrowedList(&self.leading_zeros)
     }
 
     fn __repr__(&self) -> String {
@@ -491,6 +541,10 @@ impl ClosedFormReport {
 }
 
 /// A creative-telescoping certificate.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyclass(
     frozen,
     from_py_object,
@@ -509,6 +563,7 @@ impl TelescopingCertificate {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl TelescopingCertificate {
     /// The recurrence order.
@@ -610,12 +665,17 @@ impl TelescopingCertificate {
 }
 
 /// The outcome of a creative-telescoping search: `Found` or `Declined`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "TelescopingOutcome")]
 #[derive(Debug, Clone)]
 pub struct TelescopingOutcome {
     inner: CasTelescopingOutcome,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl TelescopingOutcome {
     /// `"Found"` or `"Declined"`.
@@ -648,6 +708,10 @@ impl TelescopingOutcome {
 /// Searches for a creative-telescoping certificate, smallest order first.
 ///
 /// The result is an **unchecked** search output; soundness lives in `check`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyfunction]
 #[pyo3(signature = (term, shift_var, sum_var, limits = None))]
 fn zeilberger(
@@ -667,6 +731,10 @@ fn zeilberger(
 }
 
 /// A certificate together with the options and closed-form claim it ships with.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.cas.certify.telescoping")
+)]
 #[pyclass(
     frozen,
     from_py_object,
@@ -678,6 +746,7 @@ pub struct CertificateDocument {
     inner: CasCertificateDocument,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl CertificateDocument {
     /// A document from its parts.
@@ -788,4 +857,15 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(zeilberger, &module)?)?;
     parent.add("telescoping", &module)?;
     Ok(())
+}
+
+// Module-level constants reach Python through `module.add("NAME", value)`, a
+// RUNTIME call with no item for a `#[gen_stub_*]` macro to sit on -- so without
+// these submissions they exist in the extension and in no stub, and a checked
+// consumer reading one gets an unresolved attribute. The type is named; the
+// VALUE deliberately is not, so a constant cannot drift from its stub.
+#[cfg(feature = "stub-gen")]
+mod stub_variables {
+    pyo3_stub_gen::module_variable!("axeyum._native.cas.certify.telescoping", "FORMAT", String);
+    pyo3_stub_gen::module_variable!("axeyum._native.cas.certify.telescoping", "VERSION", u32);
 }

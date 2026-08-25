@@ -57,6 +57,10 @@ pub(crate) fn map_ir_error(error: &IrError) -> PyErr {
 macro_rules! handle {
     ($py_name:literal, $rust:ident, $inner:ty, $doc:literal) => {
         #[doc = $doc]
+        #[cfg_attr(
+            feature = "stub-gen",
+            pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.ir")
+        )]
         #[pyclass(frozen, from_py_object, module = "axeyum", name = $py_name)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub struct $rust {
@@ -76,6 +80,7 @@ macro_rules! handle {
             }
         }
 
+        #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
         #[pymethods]
         impl $rust {
             /// The epoch of the arena that minted this handle.
@@ -154,6 +159,10 @@ handle!(
 /// `Sort.array(index, element)`, …). `Sort.datatype(...)` and
 /// `Sort.uninterpreted(...)` are arena-relative and carry that arena's epoch;
 /// every other sort is arena-independent (`epoch == 0`).
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.ir")
+)]
 #[pyclass(frozen, from_py_object, module = "axeyum", name = "Sort")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PySort {
@@ -182,6 +191,7 @@ impl PySort {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PySort {
     /// The Boolean sort.
@@ -318,7 +328,7 @@ impl PySort {
     }
 
     /// The `(index, element)` component sorts of an array sort, else `None`.
-    fn array_sorts(&self) -> Option<(Self, Self)> {
+    fn array_sorts(&self) -> Option<(PySort, PySort)> {
         self.sort.array_sorts().map(|(index, element)| {
             (
                 Self {
@@ -533,6 +543,10 @@ fn op_params(py: Python<'_>, epoch: u64, op: Op) -> PyResult<Bound<'_, PyDict>> 
 /// One structural node of a term, copied out of the arena.
 ///
 /// Owned, so a Python walker can hold it while the arena keeps being built.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.ir")
+)]
 #[pyclass(frozen, module = "axeyum", name = "TermNode")]
 pub struct PyTermNode {
     kind: &'static str,
@@ -630,6 +644,7 @@ impl PyTermNode {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyTermNode {
     /// `"bool_const"`, `"bv_const"`, `"int_const"`, `"real_const"`, `"symbol"`
@@ -682,6 +697,10 @@ impl PyTermNode {
 }
 
 /// Structural statistics over a set of root terms.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.ir")
+)]
 #[pyclass(frozen, module = "axeyum", name = "TermStats")]
 pub struct PyTermStats {
     stats: TermStats,
@@ -693,6 +712,7 @@ impl PyTermStats {
     }
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyTermStats {
     /// Distinct nodes reachable from the roots (the shared DAG size).
@@ -837,4 +857,26 @@ pub(crate) fn all_op_names(py: Python<'_>) -> PyResult<Bound<'_, PyAny>> {
         NAMES.iter().map(|name| PyString::new(py, name)).collect();
     py.get_type::<pyo3::types::PyFrozenSet>()
         .call1((PyTuple::new(py, items)?,))
+}
+
+// See `crate::error`: an exception is a `PyErr` type, not a `#[pyclass]`, so the
+// stub record has to be submitted separately.
+#[cfg(feature = "stub-gen")]
+mod stub {
+    use super::{EpochError, SortError};
+    use crate::error::AxeyumError;
+    use crate::stub_info::stub_exception;
+
+    stub_exception!(
+        "axeyum._native.ir",
+        EpochError,
+        AxeyumError,
+        "A handle was used with an arena that did not mint it."
+    );
+    stub_exception!(
+        "axeyum._native.ir",
+        SortError,
+        AxeyumError,
+        "A term, value or sort was rejected by the IR."
+    );
 }

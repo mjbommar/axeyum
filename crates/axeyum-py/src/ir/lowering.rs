@@ -26,7 +26,16 @@ use crate::ir::types::{PySort, SortError, Term, check_epoch, op_name};
 
 /// The first subterm whose operator the bit-blaster cannot lower, as
 /// `(term, op name)`, or `None`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.bv")
+)]
+// `#[pyo3(name = ...)]`: the Rust name carries a `_py` disambiguator that no
+// caller should see. Registering under the clean name makes the generated stub
+// describe the name the API actually uses; the `_py` spelling stays bound in
+// `register` as an alias of the SAME object, so nothing is removed.
 #[pyfunction]
+#[pyo3(name = "first_unsupported_op")]
 pub fn first_unsupported_op_py(
     arena: PyRef<'_, Arena>,
     roots: Vec<Term>,
@@ -38,7 +47,16 @@ pub fn first_unsupported_op_py(
 
 /// The first subterm whose sort the bit-blaster cannot represent, as
 /// `(term, sort)`, or `None`.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.bv")
+)]
+// `#[pyo3(name = ...)]`: the Rust name carries a `_py` disambiguator that no
+// caller should see. Registering under the clean name makes the generated stub
+// describe the name the API actually uses; the `_py` spelling stays bound in
+// `register` as an alias of the SAME object, so nothing is removed.
 #[pyfunction]
+#[pyo3(name = "first_unsupported_sort")]
 pub fn first_unsupported_sort_py(
     arena: PyRef<'_, Arena>,
     roots: Vec<Term>,
@@ -60,12 +78,17 @@ pub fn first_unsupported_sort_py(
 /// maps after solving" hard rule: [`evaluate_root`](Self::evaluate_root) and
 /// [`assignment_from_aig_values`](Self::assignment_from_aig_values) are how a
 /// caller checks a circuit-level answer against the original terms.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.ir.bv")
+)]
 #[pyclass(module = "axeyum", name = "BitLowering")]
 pub struct PyBitLowering {
     pub(crate) lowering: BitLowering,
     pub(crate) epoch: u64,
 }
 
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyBitLowering {
     /// Number of AIG nodes in the lowered circuit.
@@ -166,7 +189,16 @@ impl PyBitLowering {
 ///
 /// Raises `SortError` naming the offending subterm when the query is outside
 /// the bit-blastable fragment; the Rust lowerer would otherwise panic.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.ir.bv")
+)]
+// `#[pyo3(name = ...)]`: the Rust name carries a `_py` disambiguator that no
+// caller should see. Registering under the clean name makes the generated stub
+// describe the name the API actually uses; the `_py` spelling stays bound in
+// `register` as an alias of the SAME object, so nothing is removed.
 #[pyfunction]
+#[pyo3(name = "lower_terms")]
 pub fn lower_terms_py(arena: PyRef<'_, Arena>, roots: Vec<Term>) -> PyResult<PyBitLowering> {
     let ids = arena.resolve_terms(&roots)?;
     if let Some((term, op)) = first_unsupported_op(&arena.arena, &ids) {
@@ -204,15 +236,17 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     module.add_function(wrap_pyfunction!(lower_terms_py, &module)?)?;
     module.add_function(wrap_pyfunction!(first_unsupported_op_py, &module)?)?;
     module.add_function(wrap_pyfunction!(first_unsupported_sort_py, &module)?)?;
-    // The Rust names, without the `_py` disambiguator the Rust fns need.
-    module.add("lower_terms", module.getattr("lower_terms_py")?)?;
+    // Backwards-compatible aliases under the Rust fn names. They are the SAME
+    // function objects, so a checked consumer reads the clean name and nothing
+    // that used the `_py` spelling breaks.
+    module.add("lower_terms_py", module.getattr("lower_terms")?)?;
     module.add(
-        "first_unsupported_op",
-        module.getattr("first_unsupported_op_py")?,
+        "first_unsupported_op_py",
+        module.getattr("first_unsupported_op")?,
     )?;
     module.add(
-        "first_unsupported_sort",
-        module.getattr("first_unsupported_sort_py")?,
+        "first_unsupported_sort_py",
+        module.getattr("first_unsupported_sort")?,
     )?;
     parent.add("bv", &module)?;
     Ok(module)
