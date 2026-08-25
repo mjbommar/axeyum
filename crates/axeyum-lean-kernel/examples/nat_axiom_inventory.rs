@@ -121,14 +121,61 @@
 //! differs. `EXPECTED_PRELUDES` there lists `creal` and `complex`, so dropping
 //! the flag is a gate failure rather than a quieter ledger — a pin for a group
 //! the command never builds would pass vacuously.
+//!
+//! # `cpoint` was a second coverage hole, of exactly the same shape
+//!
+//! `build_cpoint_prelude` (the constructed-reals plane, ADR-0512's `CReal` one
+//! level up) has existed in the crate since the `CPoint` carrier landed, but
+//! this example never called it. A `CPoint` fact's `checker_command` asking
+//! `nat_axiom_inventory --include-constructed --require-axiom-free cpoint`
+//! got `error: "cpoint" is not enumerated by this run` -- not a zero, an
+//! error -- and the `CPoint` lane worked around it with `footprint_closure_audit`
+//! instead (see that example's module doc), which covers `cpoint` but has no
+//! check flags at all and always exits `SUCCESS`.
+//!
+//! Extended 2026-08-25 to build `cpoint` alongside `creal`/`complex` under
+//! `--include-constructed` (own fresh kernel, same independent-rebuild pattern
+//! `rat` already uses for `integer`). Measured the same day: `cpoint=0`.
+//! `ALWAYS_BUILT_PRELUDES` and `CONSTRUCTED_PRELUDES` below are now the single
+//! explicit list this example builds from and reports coverage against --
+//! before this change the set was an implicit `vec![...]` literal in `main`,
+//! and `scripts/gen-lean-axiom-ledger.py`'s own `EXPECTED_PRELUDES` is the
+//! precedent for naming such a list rather than leaving it to be inferred from
+//! what a function happens to construct. `--require-axiom-free`/
+//! `--expect-axioms` on an unbuilt-but-known prelude and on a genuinely
+//! unknown name now print DIFFERENT error text (see `main`), so the two
+//! failure shapes this example can hit are distinguishable rather than both
+//! reading as "not enumerated".
 
 use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
-    Declaration, Kernel, build_arith_prelude, build_complex_prelude, build_creal_prelude,
-    build_int_prelude, build_logic_prelude, build_nat_prelude, build_rat_prelude,
-    build_string_prelude,
+    Declaration, Kernel, build_arith_prelude, build_complex_prelude, build_cpoint_prelude,
+    build_creal_prelude, build_int_prelude, build_logic_prelude, build_nat_prelude,
+    build_rat_prelude, build_string_prelude,
 };
+
+/// Preludes this example builds on EVERY run, in build order.
+///
+/// This is the explicit analogue of `EXPECTED_PRELUDES` in
+/// `scripts/gen-lean-axiom-ledger.py` -- there the list polices a Python
+/// script's coverage of a Rust tool's output; here it is the Rust tool's own
+/// coverage of the crate's `build_*_prelude` surface. Before this constant
+/// existed the set was implicit in a `vec![...]` literal inside `main`, which
+/// is exactly how `cpoint` (added to the crate 2026-08-2x) went unnoticed:
+/// nothing enumerated "every prelude this crate ships" to diff against what
+/// `main` actually builds.
+const ALWAYS_BUILT_PRELUDES: [&str; 6] = ["logic", "nat", "axreal", "integer", "rat", "string"];
+
+/// Preludes built only under `--include-constructed`, in build order.
+///
+/// `creal` and `complex` cost real kernel type-checking (module doc). `cpoint`
+/// (the constructed-real plane, `build_cpoint_prelude`) builds `creal` a
+/// SECOND time into its own fresh kernel -- the same independent-rebuild
+/// pattern `rat` already uses for `integer` (`build_rat_prelude` calls
+/// `build_int_prelude` internally) -- so its trusted-surface count is the
+/// whole footprint `CPoint` facts actually rest on, not just its own delta.
+const CONSTRUCTED_PRELUDES: [&str; 3] = ["creal", "complex", "cpoint"];
 
 fn hex(bytes: &[u8]) -> String {
     const DIGITS: &[u8; 16] = b"0123456789abcdef";
@@ -225,14 +272,25 @@ fn parse_args() -> Result<Expectations, String> {
     })
 }
 
-/// The **constructed** ℝ and ℂ (ADR-0512, ADR-0521), or nothing.
+/// One built `(prelude-label, rows)` group. Named to keep [`constructed`] and
+/// the expectation-check plumbing in `main` under clippy's type-complexity
+/// budget rather than passing a bare tuple of `Option<Vec<Row>>`s around.
+type NamedRows = (&'static str, Vec<Row>);
+
+/// The **constructed** ℝ, ℂ (ADR-0512, ADR-0521), and the `CPoint` plane over
+/// ℝ, or an empty list.
 ///
-/// Separated from `main` because building both costs about two minutes of debug
-/// kernel type-checking (ten seconds on `--release`), and the reader should see
-/// at a glance that the default path does not pay it.
-fn constructed(include: bool) -> (Option<Vec<Row>>, Option<Vec<Row>>) {
+/// Separated from `main` because building all three costs real kernel
+/// type-checking (module doc), and the reader should see at a glance that the
+/// default path does not pay it. `cpoint` was the coverage hole this constant
+/// closes: `build_cpoint_prelude` has existed in the crate since the `CPoint`
+/// carrier landed, but nothing here called it, so `--require-axiom-free
+/// cpoint` errored "not enumerated by this run" rather than reporting a
+/// number -- indistinguishable, from the caller's side, between "never
+/// measured" and "axiom-free".
+fn constructed(include: bool) -> Vec<NamedRows> {
     if !include {
-        return (None, None);
+        return Vec::new();
     }
     let mut creal = Kernel::new();
     let _ = build_creal_prelude(&mut creal).expect("CReal prelude must build");
@@ -241,7 +299,22 @@ fn constructed(include: bool) -> (Option<Vec<Row>>, Option<Vec<Row>>) {
     let mut complex = Kernel::new();
     let _ = build_complex_prelude(&mut complex).expect("Complex prelude must build");
     let complex_rows = inventory("complex", &complex);
-    (Some(creal_rows), Some(complex_rows))
+
+    // `build_cpoint_prelude` builds `CRealPrelude` first into ITS OWN kernel
+    // (see its doc comment) -- an independent rebuild, not a share with the
+    // `creal` kernel above -- mirroring the `rat`-rebuilds-`integer` pattern
+    // already used for `rat` two groups up. So this row set is the whole
+    // trusted surface a CPoint theorem rests on, deduped against `creal`'s
+    // rows by `main`'s final `rows.sort(); rows.dedup();`.
+    let mut cpoint = Kernel::new();
+    let _ = build_cpoint_prelude(&mut cpoint).expect("CPoint prelude must build");
+    let cpoint_rows = inventory("cpoint", &cpoint);
+
+    vec![
+        (CONSTRUCTED_PRELUDES[0], creal_rows),
+        (CONSTRUCTED_PRELUDES[1], complex_rows),
+        (CONSTRUCTED_PRELUDES[2], cpoint_rows),
+    ]
 }
 
 fn main() -> ExitCode {
@@ -288,22 +361,26 @@ fn main() -> ExitCode {
     let _ = build_string_prelude(&mut string, logic, 2).expect("string prelude must build");
     let string_rows = inventory("string", &string);
 
-    // The CONSTRUCTED ℝ and ℂ, opt-in. `real` above is the axiomatized package
-    // and says nothing about these; enumerating them under the same labels
-    // would be worse than not enumerating them at all.
-    let (creal_rows, complex_rows) = constructed(expectations.include_constructed);
+    // The CONSTRUCTED ℝ, ℂ, and the CPoint plane, opt-in. `real` above is the
+    // axiomatized package and says nothing about these; enumerating them under
+    // the same labels would be worse than not enumerating them at all.
+    let constructed_rows = constructed(expectations.include_constructed);
 
-    let mut groups: Vec<(&str, &Vec<Row>)> = vec![
-        ("logic", &logic_rows),
-        ("nat", &nat_rows),
-        ("axreal", &real_rows),
-        ("integer", &integer_rows),
-        ("rat", &rational_rows),
-        ("string", &string_rows),
+    // Built from the two explicit constants above, not from a fresh literal --
+    // `ALWAYS_BUILT_PRELUDES`/`CONSTRUCTED_PRELUDES` are the coverage claim;
+    // this is what makes the claim and the groups actually built agree by
+    // construction rather than by two lists staying in sync by hand.
+    let always_built: [(&str, &Vec<Row>); 6] = [
+        (ALWAYS_BUILT_PRELUDES[0], &logic_rows),
+        (ALWAYS_BUILT_PRELUDES[1], &nat_rows),
+        (ALWAYS_BUILT_PRELUDES[2], &real_rows),
+        (ALWAYS_BUILT_PRELUDES[3], &integer_rows),
+        (ALWAYS_BUILT_PRELUDES[4], &rational_rows),
+        (ALWAYS_BUILT_PRELUDES[5], &string_rows),
     ];
-    if let (Some(creal_rows), Some(complex_rows)) = (&creal_rows, &complex_rows) {
-        groups.push(("creal", creal_rows));
-        groups.push(("complex", complex_rows));
+    let mut groups: Vec<(&str, &Vec<Row>)> = always_built.to_vec();
+    for (label, rows) in &constructed_rows {
+        groups.push((label, rows));
     }
     let groups = groups;
 
@@ -328,22 +405,56 @@ fn main() -> ExitCode {
         );
     }
 
-    // Turn the printed numbers into checks. A prelude named on the command line
-    // that this example does not enumerate is an ERROR, never a silent pass:
-    // "never enumerated" and "enumerated and found empty" print the same zero.
+    if check_expectations(&groups, &expectations.expected) {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
+    }
+}
+
+/// Turn the printed numbers into checks and return whether any failed.
+///
+/// A prelude named on the command line that this example does not enumerate
+/// is an ERROR, never a silent pass: "never enumerated" and "enumerated and
+/// found empty" must not print the same zero.
+///
+/// Two distinct failure shapes, deliberately given two distinct messages
+/// (task: "asking about an unknown prelude" vs "asking about a known one
+/// that is unbuilt" must be distinguishable, neither silently a zero):
+///   - a label this tool has NEVER heard of (a typo, or a prelude that does
+///     not exist) -- not in `ALWAYS_BUILT_PRELUDES` or `CONSTRUCTED_PRELUDES`
+///     at all;
+///   - a label this tool DOES know (it is in one of those two lists) but
+///     this run did not build it -- today that is only `creal`/`complex`/
+///     `cpoint` without `--include-constructed`, since every
+///     `ALWAYS_BUILT_PRELUDES` entry is, per its name, always in `groups`.
+///
+/// Collapsing these into one message is exactly how `cpoint` hid: a typo'd
+/// prelude and a real, un-built one printed the identical sentence.
+fn check_expectations(groups: &[(&str, &Vec<Row>)], expected_list: &[(String, usize)]) -> bool {
+    let known_preludes: Vec<&str> = ALWAYS_BUILT_PRELUDES
+        .iter()
+        .chain(CONSTRUCTED_PRELUDES.iter())
+        .copied()
+        .collect();
     let mut failed = false;
-    for (label, expected) in &expectations.expected {
+    for (label, expected) in expected_list {
         let Some((_, group)) = groups.iter().find(|(name, _)| name == label) else {
-            eprintln!(
-                "error: {label:?} is not enumerated by this run (known: {}) -- \
-                 refusing to report a check that never ran; `creal` and \
-                 `complex` need --include-constructed",
-                groups
-                    .iter()
-                    .map(|(name, _)| *name)
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
+            if known_preludes.contains(&label.as_str()) {
+                eprintln!(
+                    "error: {label:?} is a known prelude but was NOT built this run \
+                     (known: {}) -- `creal`, `complex`, and `cpoint` need \
+                     --include-constructed; refusing to report a check that never ran",
+                    known_preludes.join(", ")
+                );
+            } else {
+                eprintln!(
+                    "error: {label:?} is not a prelude this tool knows about at all \
+                     (known: {}) -- this is a different failure from a known prelude \
+                     this run did not build; check the name for a typo",
+                    known_preludes.join(", ")
+                );
+            }
             failed = true;
             continue;
         };
@@ -359,10 +470,5 @@ fn main() -> ExitCode {
             failed = true;
         }
     }
-
-    if failed {
-        ExitCode::FAILURE
-    } else {
-        ExitCode::SUCCESS
-    }
+    failed
 }

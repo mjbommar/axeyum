@@ -20,11 +20,15 @@ Two independent measurements, cross-checked against each other
     This is the row-level source: names and canonical types, SHA-256 bound.
 
 ``nat_axiom_inventory --include-constructed``
-    Constructs **eight** preludes -- `logic`, `nat`, `real`, `integer`, `rat`,
-    `string`, and (only under the flag) the constructed `creal` and `complex`
-    -- and emits the whole *trusted surface* (``axiom`` + ``opaque`` +
+    Constructs **nine** preludes -- `logic`, `nat`, `real`, `integer`, `rat`,
+    `string`, and (only under the flag) the constructed `creal`, `complex`, and
+    `cpoint` -- and emits the whole *trusted surface* (``axiom`` + ``opaque`` +
     ``quotient``), plus a per-prelude count line on stderr **for every prelude
-    it built, including the axiom-free ones**.
+    it built, including the axiom-free ones**. `cpoint` (the CPoint plane over
+    the constructed reals) was added 2026-08-25: the tool built eight of the
+    crate's nine `build_*_prelude` functions and silently had nothing to say
+    about the ninth, which is the exact coverage-hole shape this ledger exists
+    to rule out one layer up.
 
 The second exists because an axiom-free prelude emits no rows, so absence and
 zero are indistinguishable in the first tool's output -- this repository's
@@ -123,6 +127,7 @@ SOURCE_PATHS = {
     "string": "crates/axeyum-lean-kernel/src/string_prelude.rs",
     "creal": "crates/axeyum-lean-kernel/src/creal.rs",
     "complex": "crates/axeyum-lean-kernel/src/complex.rs",
+    "cpoint": "crates/axeyum-lean-kernel/src/creal_point.rs",
 }
 TRUSTED_KINDS = ("axiom", "opaque", "quotient")
 
@@ -172,9 +177,22 @@ ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # `--include-constructed`, and a gate that pins a number for a prelude the
 # command never builds passes vacuously.  Their membership here is precisely what
 # makes silently dropping that flag fail.
+#
+# Extended 2026-08-25 with `cpoint`.  `build_cpoint_prelude` had existed in the
+# crate since the CPoint carrier landed, but `nat_axiom_inventory` never called
+# it, so `--require-axiom-free cpoint` errored "not enumerated by this run"
+# rather than reporting a number, and a CPoint fact's `checker_command` had to
+# fall back to `footprint_closure_audit` (no check flags, always exits
+# SUCCESS) instead of this ledger's cross-checked, by-value-pinned route. Once
+# `nat_axiom_inventory` was extended to build `cpoint`, its membership here is
+# what makes silently losing that coverage (a future edit that drops the
+# `build_cpoint_prelude` call, or `--include-constructed`) a gate failure
+# rather than a quieter ledger -- the same protection `creal`/`complex` already
+# had.
 EXPECTED_PRELUDES: tuple[str, ...] = (
     "axreal",
     "complex",
+    "cpoint",
     "creal",
     "integer",
     "logic",

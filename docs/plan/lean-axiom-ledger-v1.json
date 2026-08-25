@@ -9,6 +9,7 @@
     "preludes": [
       "axreal",
       "complex",
+      "cpoint",
       "creal",
       "integer",
       "logic",
@@ -24,6 +25,12 @@
         "total_trusted": 30
       },
       "complex": {
+        "axiom": 0,
+        "opaque": 0,
+        "quotient": 0,
+        "total_trusted": 0
+      },
+      "cpoint": {
         "axiom": 0,
         "opaque": 0,
         "quotient": 0,
@@ -69,6 +76,7 @@
     "axiom_counts": {
       "axreal": 30,
       "complex": 0,
+      "cpoint": 0,
       "creal": 0,
       "integer": 0,
       "logic": 0,
