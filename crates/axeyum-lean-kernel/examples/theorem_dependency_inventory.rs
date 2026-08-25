@@ -35,23 +35,31 @@
 //! cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- euclid
 //! ```
 //!
-//! # `--release` IS NOW MANDATORY, since `creal`/`complex`/`cpoint` were added
+//! # `--release` WAS mandatory for two hours, and is no longer — read this
+//! before copying the flag from an older `checker_command`
 //!
-//! This tool used to be shallow enough (`nat`+`integer`+`rat`+`string`+
-//! `characterization`) to run fine in a debug build, and its own doc examples
-//! above omitted the flag for that reason. Adding the constructed carriers
-//! reproduces the SAME stack depth `prelude_theorem_inventory
-//! --include-constructed` already hits: `Kernel::add_declaration` recurses
-//! deeply enough while building `CReal`/`Complex`/`CPoint` that a debug
-//! build's larger stack frames blow the default thread stack. Measured on
-//! this tree: `cargo build --release` then running the binary directly exits
-//! 0 with 1092 theorems reported; `cargo build` (debug) then running it
-//! SIGABRTs with `thread 'main' has overflowed its stack`, exit 134. Nothing
-//! is wrong with any theorem — this is the resource limit in CLAUDE.md's
-//! Gotchas wearing a crash's clothes, one level further down the tool list. A
-//! `checker_command` that runs this example MUST pass `--release`, or a
-//! `cargo run -q -p ... --example theorem_dependency_inventory -- <name>`
-//! reads as a broken checker rather than a debug-stack limit.
+//! Adding `creal`/`complex`/`cpoint` made `Kernel::add_declaration` recurse
+//! deeply enough that a DEBUG build blew the default main-thread stack:
+//! `cargo build --release` exited 0 with 1,092 theorems while `cargo build`
+//! SIGABRTed with `thread 'main' has overflowed its stack`, exit 134. Nothing
+//! was wrong with any theorem — a resource limit wearing a crash's clothes.
+//!
+//! That doc note is what this paragraph replaces, and it is worth saying why
+//! rather than deleting it. The note was TRUE and it still did harm: it could
+//! not reach the two scripts that already invoked this example without the
+//! flag, so `just check` failed with `died with <Signals.SIGABRT: 6>` until
+//! the example itself was fixed. **A doc comment cannot fix a call site it
+//! does not know about.**
+//!
+//! The fix is the `stack_size(64 * 1024 * 1024)` worker in `main` below, and
+//! it makes `--release` UNNECESSARY here: a debug build now exits 0 and
+//! reports the same theorem count as release, measured on this tree by two
+//! independent lanes. Passing `--release` remains correct and is faster, so
+//! existing `checker_command`s need no change — but do not propagate
+//! "mandatory" to a new one, and do not cite this tool as evidence that some
+//! OTHER example needs the flag. `prelude_theorem_inventory
+//! --include-constructed` and `nat_axiom_inventory --include-constructed` are
+//! still genuinely affected; they have no deep-stack worker.
 //!
 //! # A filter that matches nothing is a FAILURE
 //!
