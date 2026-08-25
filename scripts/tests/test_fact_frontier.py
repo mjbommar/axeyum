@@ -166,6 +166,62 @@ class MachineFrontierTests(unittest.TestCase):
         self.assertIn("ambiguous-registered-operation", rationale["rejected_by"])
         self.assertIsNone(refused["selection"]["selected_fact_id"])
 
+    def test_stale_reviewed_gate_mentions_are_scoped_to_the_operation_not_one_fact(
+        self,
+    ) -> None:
+        """`reviewed_gate_mentions` is authored per OPERATION, over every fact
+        in its `applicability.fact_ids` -- not per fact. A gate genuinely
+        reviewed for a SIBLING fact in the same multi-fact operation must not
+        read as a stale claim on a fact that never needed it; a gate that
+        names NO fact in the operation's whole scope must still be caught.
+        """
+        facts = frontier.load()
+        registry = frontier.load_operation_registry()
+        operation = next(
+            op for op in registry["operations"]
+            if op["id"] == "authoritative-mathlib-modeq-family-v1"
+        )
+        nat_fact_id = "F:ml430-nat-modeq-symm-0a3d4d18"
+        self.assertIn(nat_fact_id, operation["applicability"]["fact_ids"])
+        self.assertIn(
+            "check-autogenesis-modeq-family.py", operation["reviewed_gate_mentions"]
+        )
+        # Sanity: that reviewed gate really is Int-only text-scan-wise, i.e.
+        # it does not itself name the Nat fact -- otherwise this fixture
+        # would not exercise the cross-fact scope at all.
+        held = frontier.gate_holds(facts)
+        self.assertNotIn(
+            "check-autogenesis-modeq-family.py", held.get(nat_fact_id, [])
+        )
+
+        registry_copy = copy.deepcopy(registry)
+        clean = frontier.build_machine_frontier(facts, registry_copy)
+        entry = next(row for row in clean["entries"] if row["fact_id"] == nat_fact_id)
+        self.assertNotIn(
+            "check-autogenesis-modeq-family.py", entry["stale_reviewed_gate_mentions"]
+        )
+        self.assertEqual(clean["selection"]["selected_fact_id"], nat_fact_id)
+
+        mutated_op = next(
+            op for op in registry_copy["operations"]
+            if op["id"] == "authoritative-mathlib-modeq-family-v1"
+        )
+        # `validate-facts.py` is a real script that mentions none of this
+        # operation's facts -- a reviewed mention with nothing left to back
+        # it, anywhere in the operation's scope.
+        mutated_op["reviewed_gate_mentions"] = mutated_op["reviewed_gate_mentions"] + [
+            "validate-facts.py"
+        ]
+        stale = frontier.build_machine_frontier(facts, registry_copy)
+        entry = next(row for row in stale["entries"] if row["fact_id"] == nat_fact_id)
+        self.assertIn("validate-facts.py", entry["stale_reviewed_gate_mentions"])
+        rationale = next(
+            row for row in stale["selection"]["rationale"]
+            if row["fact_id"] == nat_fact_id
+        )
+        self.assertIn("stale-gate-coupling-review", rationale["rejected_by"])
+        self.assertIsNone(stale["selection"]["selected_fact_id"])
+
     def test_live_loader_rejects_duplicate_fact_identity(self) -> None:
         original = frontier.FACTS
         with self.subTest("duplicate ids cannot be silently overwritten"):

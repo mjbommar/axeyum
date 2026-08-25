@@ -340,13 +340,37 @@ def build_machine_frontier(
         )
         fragment = fact["formal"]["fragment"]
         registered_operation_ids = matching_operations(fact, operations)
+        matched_operations = [
+            operation for operation in operations
+            if operation["id"] in registered_operation_ids
+        ]
         reviewed_gate_mentions = {
             mention
-            for operation in operations
-            if operation["id"] in registered_operation_ids
+            for operation in matched_operations
             for mention in operation.get("reviewed_gate_mentions", [])
         }
         gate_mentions = set(held.get(fact_id, []))
+        # `reviewed_gate_mentions` is authored per OPERATION, over the whole
+        # `applicability.fact_ids` it claims -- not per fact. An operation
+        # legitimately covering more than one fact (e.g. an Int family and a
+        # Nat family merged because their producer/checker/admission/scope are
+        # byte-identical) mentions gates that only ever talk about SOME of its
+        # facts. Comparing that operation-wide claim against a single fact's
+        # own gate mentions makes every fact see the other facts' gates as a
+        # stale claim on itself, which is a false positive, not a stale
+        # review. So staleness is judged against the SAME scope the review
+        # was written over: the union of gate mentions across every fact the
+        # matched operation(s) actually name -- a reviewed mention is stale
+        # only when no fact under that operation's authority is named by it
+        # any more. `unreviewed_gate_mentions` stays a per-fact comparison on
+        # purpose: a gate newly naming THIS fact is this fact's problem
+        # regardless of what else its operation covers.
+        operation_scope_gate_mentions = {
+            mention
+            for operation in matched_operations
+            for scoped_fact_id in operation["applicability"]["fact_ids"]
+            for mention in held.get(scoped_fact_id, [])
+        }
         entries.append(
             {
                 "fact_id": fact_id,
@@ -364,7 +388,7 @@ def build_machine_frontier(
                     gate_mentions.difference(reviewed_gate_mentions)
                 ),
                 "stale_reviewed_gate_mentions": sorted(
-                    reviewed_gate_mentions.difference(gate_mentions)
+                    reviewed_gate_mentions.difference(operation_scope_gate_mentions)
                 ),
                 "would_unlock": sorted(unlocks.get(fact_id, [])),
             }
