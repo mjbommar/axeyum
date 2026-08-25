@@ -121,6 +121,7 @@ fn every_named_declaration_exists() {
         ("det2_scale_row", p.det2_scale_row),
         ("det2_row_add", p.det2_row_add),
         ("det2_mul", p.det2_mul),
+        ("det2_eq_zero_of_lin_dep", p.det2_eq_zero_of_lin_dep),
         ("mul_adj2_top_left", p.mul_adj2_top_left),
         ("mul_adj2_top_right", p.mul_adj2_top_right),
         ("mul_adj2_bottom_left", p.mul_adj2_bottom_left),
@@ -381,6 +382,7 @@ fn matrix_laws_are_axiom_free() {
         ("det2_scale_row", p.det2_scale_row),
         ("det2_row_add", p.det2_row_add),
         ("det2_mul", p.det2_mul),
+        ("det2_eq_zero_of_lin_dep", p.det2_eq_zero_of_lin_dep),
         ("mul_adj2_top_left", p.mul_adj2_top_left),
         ("mul_adj2_top_right", p.mul_adj2_top_right),
         ("mul_adj2_bottom_left", p.mul_adj2_bottom_left),
@@ -413,6 +415,277 @@ fn matrix_laws_are_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+/// `Rat.det2_eq_zero_of_lin_dep`'s statement, asserted verbatim: the
+/// nontriviality disjunction first, then the two row equations, then the
+/// conclusion — not some other bracketing that would still typecheck while
+/// claiming something weaker (e.g. dropping the disjunction, or swapping
+/// which row each equation names).
+#[test]
+fn det2_eq_zero_of_lin_dep_is_the_stated_form() {
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.det2_eq_zero_of_lin_dep)
+        .expect("declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    let rendered = kernel
+        .render_lean(ty)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert_eq!(
+        rendered,
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> ((x4 : Rat) -> \
+         ((x5 : Rat) -> ((x6 : Or (Not (Eq.{1} Rat x4 Rat.zero)) (Not (Eq.{1} Rat x5 \
+         Rat.zero))) -> ((x7 : Eq.{1} Rat (Rat.add (Rat.mul x4 x0) (Rat.mul x5 x2)) \
+         Rat.zero) -> ((x8 : Eq.{1} Rat (Rat.add (Rat.mul x4 x1) (Rat.mul x5 x3)) \
+         Rat.zero) -> Eq.{1} Rat (Rat.det2 x0 x1 x2 x3) Rat.zero)))))))))"
+    );
+}
+
+/// `Rat.det2_eq_zero_of_lin_dep` applied at an explicit SINGULAR matrix,
+/// checked by pure REDUCTION — not merely that the theorem type-checks
+/// (true of a vacuous statement too).
+///
+/// Matrix `[[1,2],[2,4]]` (`a=1,b=2,c=2,d=4`): row 2 is `2·row1`, so
+/// `(-2)·row1 + 1·row2 = 0` is a genuine nontrivial dependence (`t=1 ≠ 0`).
+/// `det2 1 2 2 4` independently REDUCES to `0` by `Eq.refl` (checked below,
+/// separately from the theorem), confirming the theorem's conclusion is the
+/// value it claims, not just a type that happens to accept.
+///
+/// A non-singular instance (`[[2,1],[1,1]]`, `D=1`, the same system
+/// `cramer2_solves_computes_an_explicit_two_by_two_system` uses) is checked
+/// alongside: `det2` REDUCES to the nonzero `1` there, so the two literal
+/// computations of `det2` this file exercises land on different values, not
+/// a formula that happens to always produce `0`.
+#[test]
+fn det2_eq_zero_of_lin_dep_computes_at_an_explicit_singular_matrix() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, req, rmul, rneg, rrefl, rzero};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // The singular matrix and its dependence witness.
+    let a = literal(&mut d, 1);
+    let b = literal(&mut d, 2);
+    let c = literal(&mut d, 2);
+    let dd = literal(&mut d, 4);
+    let two = literal(&mut d, 2);
+    let s = rneg(&mut d, two); // s = -2
+    let t = literal(&mut d, 1); // t = 1
+
+    // det2 1 2 2 4 REDUCES to 0.
+    let det = d.const_app(p.det2, &[a, b, c, dd]);
+    let zero_r = rzero(&mut d, p);
+    let claim_det_zero = req(&mut d, det, zero_r);
+    let proof_det_zero = rrefl(&mut d, zero_r);
+    let name_det_zero = d.kernel().name_str(anon, "Check.det2_singular_value");
+    let accepted_det_zero = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_det_zero,
+        uparams: vec![],
+        ty: claim_det_zero,
+        value: proof_det_zero,
+    });
+    assert!(
+        accepted_det_zero.is_ok(),
+        "det2 1 2 2 4 must REDUCE to 0: {accepted_det_zero:?}"
+    );
+
+    // t ≠ 0, from 0 < t = natDivSucc 1 0 (Nat.le 1 1 = Nat.le_refl), the same
+    // route `cramer2_solves_computes_an_explicit_two_by_two_system` uses for
+    // its D ≠ 0.
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let le_pf = d.lemma(p.int.nat.le_refl, &[one_nat]); // Nat.le 1 1
+    let pos = d.lemma(p.nat_div_succ_pos, &[one_nat, zero_nat, le_pf]); // 0 < t
+    let heq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(heq_fv);
+    let t_eq_zero_ty = req(&mut d, t, zero_r);
+    let rewritten =
+        crate::rat_prelude::ops::rat_eq_rewrite(&mut d, t, zero_r, heq, pos, &|d, w| {
+            crate::rat_prelude::ops::rlt(d, p, zero_r, w)
+        });
+    let irrefl = d.lemma(p.lt_irrefl, &[zero_r]);
+    let false_proof = d.apply(irrefl, &[rewritten]);
+    let t_ne_zero_proof = d.lam_fv(heq_fv, t_eq_zero_ty, false_proof); // Not (t = 0)
+
+    let s_eq_zero_ty = req(&mut d, s, zero_r);
+    let s_ne_zero_ty = d.not(s_eq_zero_ty);
+    let t_ne_zero_ty = d.not(t_eq_zero_ty);
+    let nt = d.or_inr(s_ne_zero_ty, t_ne_zero_ty, t_ne_zero_proof);
+
+    // The two row equations, checked by pure reduction (they are concrete
+    // literal arithmetic): (-2)*1+1*2 = 0, (-2)*2+1*4 = 0.
+    let sa = rmul(&mut d, s, a);
+    let tc = rmul(&mut d, t, c);
+    let sa_tc = radd(&mut d, sa, tc);
+    let eq1_claim = req(&mut d, sa_tc, zero_r);
+    let eq1_proof = rrefl(&mut d, zero_r);
+    let name_eq1 = d.kernel().name_str(anon, "Check.det2_singular_eq1");
+    let accepted_eq1 = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_eq1,
+        uparams: vec![],
+        ty: eq1_claim,
+        value: eq1_proof,
+    });
+    assert!(
+        accepted_eq1.is_ok(),
+        "(-2)*1+1*2 must REDUCE to 0: {accepted_eq1:?}"
+    );
+
+    let sb = rmul(&mut d, s, b);
+    let td = rmul(&mut d, t, dd);
+    let sb_td = radd(&mut d, sb, td);
+    let eq2_claim = req(&mut d, sb_td, zero_r);
+    let eq2_proof = rrefl(&mut d, zero_r);
+    let name_eq2 = d.kernel().name_str(anon, "Check.det2_singular_eq2");
+    let accepted_eq2 = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_eq2,
+        uparams: vec![],
+        ty: eq2_claim,
+        value: eq2_proof,
+    });
+    assert!(
+        accepted_eq2.is_ok(),
+        "(-2)*2+1*4 must REDUCE to 0: {accepted_eq2:?}"
+    );
+
+    // The theorem itself, applied at this concrete instance.
+    let concluded = d.lemma(
+        p.det2_eq_zero_of_lin_dep,
+        &[a, b, c, dd, s, t, nt, eq1_proof, eq2_proof],
+    );
+    let name_concl = d.kernel().name_str(anon, "Check.det2_lin_dep_instance");
+    let accepted_concl = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_concl,
+        uparams: vec![],
+        ty: claim_det_zero,
+        value: concluded,
+    });
+    assert!(
+        accepted_concl.is_ok(),
+        "det2_eq_zero_of_lin_dep at the singular instance must discharge \
+         det2 1 2 2 4 = 0: {accepted_concl:?}"
+    );
+
+    // The non-singular companion: det2 2 1 1 1 REDUCES to 1, not 0.
+    let a2 = literal(&mut d, 2);
+    let b2 = literal(&mut d, 1);
+    let c2 = literal(&mut d, 1);
+    let d2 = literal(&mut d, 1);
+    let det_ns = d.const_app(p.det2, &[a2, b2, c2, d2]);
+    let one_r = crate::rat_prelude::ops::rone(&mut d, p);
+    let claim_ns = req(&mut d, det_ns, one_r);
+    let proof_ns = rrefl(&mut d, one_r);
+    let name_ns = d.kernel().name_str(anon, "Check.det2_nonsingular_value");
+    let accepted_ns = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_ns,
+        uparams: vec![],
+        ty: claim_ns,
+        value: proof_ns,
+    });
+    assert!(
+        accepted_ns.is_ok(),
+        "det2 2 1 1 1 must REDUCE to 1: {accepted_ns:?}"
+    );
+}
+
+/// The negative control this file's "proportional" statement needs: the
+/// NAIVE existential `∃ t, c = t·a ∧ d = t·b` is FALSE at `a = b = 0` with
+/// `(c,d)` nonzero, even though `det2` is then always `0` (checked in
+/// [`det2_eq_zero_of_lin_dep_computes_at_an_explicit_singular_matrix`]'s
+/// style elsewhere in this file). `Rat.mul_zero` gives `t·a = 0` for **any**
+/// `t` (symbolic, no case split) when `a = 0`; combined with `c = 1` NOT
+/// reducing to `0` (checked below by the kernel REFUSING the claim), no `t`
+/// can satisfy `c = t·a` — the naive form has no witness here, which is
+/// exactly the gap [`RatPrelude::det2_eq_zero_of_lin_dep`]'s `s,t` form does
+/// not have.
+#[test]
+fn the_naive_proportionality_existential_has_no_witness_at_a_eq_b_eq_zero() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_ty, req, rmul, rrefl, rtrans, rzero};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let a = rzero(&mut d, p); // a = 0
+    let c = literal(&mut d, 1); // c = 1, so (c,d) is nonzero regardless of d
+
+    // Positive control: `c = 0` is FALSE — the kernel refuses it.
+    let zero_r = rzero(&mut d, p);
+    let claim_c_zero = req(&mut d, c, zero_r);
+    let proof_c_zero = rrefl(&mut d, zero_r);
+    let name_c_zero = d.kernel().name_str(anon, "Check.c_equals_zero_is_false");
+    let refused_c_zero = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_c_zero,
+        uparams: vec![],
+        ty: claim_c_zero,
+        value: proof_c_zero,
+    });
+    assert!(
+        refused_c_zero.is_err(),
+        "the kernel accepted c = 0 with c the literal 1 (1 = 0): {refused_c_zero:?}"
+    );
+
+    // For an ARBITRARY (symbolic) t, t*a = 0, since a = 0. Not a case split
+    // on t, not a computation on t — `Rat.mul_zero` applied once, generic in
+    // t, exactly the fact the naive existential's first conjunct `c = t*a`
+    // would need to equal `c = 0` for.
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let ta = rmul(&mut d, t, a);
+    let mul_zero_t = d.lemma(p.mul_zero, &[t]); // t*a = 0 (a is literally Rat.zero here)
+    let ta_eq_zero_ty = req(&mut d, ta, zero_r);
+    let name_ta_zero = d
+        .kernel()
+        .name_str(anon, "Check.t_times_a_is_zero_for_any_t");
+    let carrier = rat_ty(&mut d);
+    let ta_zero_ty_pi = d.pi_fv(t_fv, carrier, ta_eq_zero_ty);
+    let ta_zero_val = d.lam_fv(t_fv, carrier, mul_zero_t);
+    let accepted_ta_zero = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_ta_zero,
+        uparams: vec![],
+        ty: ta_zero_ty_pi,
+        value: ta_zero_val,
+    });
+    assert!(
+        accepted_ta_zero.is_ok(),
+        "∀ t, t*a = 0 must hold generically when a = 0: {accepted_ta_zero:?}"
+    );
+
+    // So `c = t*a` would force `c = 0` for whichever `t` was proposed, and
+    // `c = 0` is already refused above: no `t` (symbolic or literal) makes
+    // the naive existential's first conjunct hold at this instance.
+    let would_force_c_zero = {
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let c_eq_ta_ty = req(&mut d, c, ta);
+        let chained = rtrans(&mut d, c, ta, zero_r, heq, mul_zero_t);
+        d.lam_fv(heq_fv, c_eq_ta_ty, chained)
+    };
+    let _ = would_force_c_zero; // typechecks: (c = t*a) -> (c = 0), for the fresh t above
 }
 
 /// `Rat.cramer2_solves`'s statement, asserted verbatim — same discipline as

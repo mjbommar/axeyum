@@ -135,6 +135,7 @@ fn every_theorem_here_is_axiom_free() {
         ("lagrange_identity", p.lagrange_identity),
         ("cauchy_schwarz", p.cauchy_schwarz),
         ("dist_sq_double_sum_bound", p.dist_sq_double_sum_bound),
+        ("dist_sq_triangle_sq_bound", p.dist_sq_triangle_sq_bound),
         ("dot_self_zero_of_eq_zero", p.dot_self_zero_of_eq_zero),
         ("eq_zero_of_dot_self_zero", p.eq_zero_of_dot_self_zero),
         ("dot_self_zero_iff", p.dot_self_zero_iff),
@@ -1336,6 +1337,37 @@ fn dist_sq_double_sum_bound_statement_is_exact() {
         "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.le (CPoint.distSq x0 x2) \
          (CReal.add (CReal.add (CPoint.distSq x0 x1) (CPoint.distSq x1 x2)) (CReal.add \
          (CPoint.distSq x0 x1) (CPoint.distSq x1 x2))))))"
+    );
+}
+
+/// **Euclid I.20, squared.** `x0,x1,x2 = A,B,C`:
+/// `(distSq A C − distSq A B − distSq B C)² ≤ 4·distSq A B·distSq B C`,
+/// written as the right-chain `ab_bc + (ab_bc + (ab_bc + ab_bc))`. See
+/// [`CPointPrelude::dist_sq_triangle_sq_bound`]'s doc comment for why this
+/// (unlike [`Self::dist_sq_double_sum_bound`]) *is* the classical triangle
+/// inequality, modulo the missing `CReal.sqrt`.
+#[test]
+fn dist_sq_triangle_sq_bound_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.dist_sq_triangle_sq_bound)
+        .expect("dist_sq_triangle_sq_bound must be declared")
+    {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.le (CReal.mul (CReal.add \
+         (CReal.add (CPoint.distSq x0 x2) (CReal.neg (CPoint.distSq x0 x1))) (CReal.neg \
+         (CPoint.distSq x1 x2))) (CReal.add (CReal.add (CPoint.distSq x0 x2) (CReal.neg \
+         (CPoint.distSq x0 x1))) (CReal.neg (CPoint.distSq x1 x2)))) (CReal.add (CReal.mul \
+         (CPoint.distSq x0 x1) (CPoint.distSq x1 x2)) (CReal.add (CReal.mul (CPoint.distSq x0 \
+         x1) (CPoint.distSq x1 x2)) (CReal.add (CReal.mul (CPoint.distSq x0 x1) (CPoint.distSq \
+         x1 x2)) (CReal.mul (CPoint.distSq x0 x1) (CPoint.distSq x1 x2))))))))"
     );
 }
 

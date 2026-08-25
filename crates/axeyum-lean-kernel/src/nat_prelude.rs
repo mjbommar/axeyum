@@ -140,6 +140,7 @@ mod defs;
 mod diagonal;
 mod divisibility;
 mod division;
+mod factorization;
 mod fermat;
 mod fibonacci;
 mod finite;
@@ -186,6 +187,7 @@ use defs::{
 use diagonal::declare_diagonal;
 use divisibility::declare_divisibility;
 use division::declare_euclidean_division;
+use factorization::{declare_exists_prime_factorization, declare_prod_range};
 use fermat::declare_fermat;
 use fibonacci::declare_fib_all;
 use finite::{
@@ -1487,6 +1489,33 @@ pub struct NatPrelude {
     /// unbounded form refuted, landed once `identity`/`inverse` were
     /// rebuilt on `Nat.EqOn`.
     pub symmetric_group_is_group_on_fn: NameId,
+
+    // --- factorization (`factorization.rs`) — FTA, existence half -----------
+    /// `Nat.prodRange : (Nat → Nat) → Nat → Nat` — structural recursion on the
+    /// `Nat` bound, mirroring [`Self::sum_range`]: `prodRange f zero ≡ one`
+    /// and `prodRange f (succ n) ≡ mul (prodRange f n) (f n)`.
+    pub prod_range: NameId,
+    /// `Nat.prodRange_zero : ∀ f, Eq (prodRange f zero) one` — closes by
+    /// `Eq.refl` since the equation is definitional.
+    pub prod_range_zero: NameId,
+    /// `Nat.prodRange_succ : ∀ f n, Eq (prodRange f (succ n))
+    ///   (mul (prodRange f n) (f n))` — closes by `Eq.refl`.
+    pub prod_range_succ: NameId,
+    /// `Nat.exists_prime_factorization : ∀ n, Le two n → ∃ k f,
+    ///   (∀ i, Lt i k → (Le two (f i) ∧ ∀ c, dvd c (f i) → Or (Eq c one)
+    ///   (Eq c (f i)))) ∧ Eq (prodRange f k) n` — the existence half of the
+    /// Fundamental Theorem of Arithmetic: every `n ≥ 2` is the product of `k`
+    /// primes named by `f` on `[0,k)`. Primality is spelled inline, matching
+    /// [`Self::exists_prime_dvd`]'s own convention (this prelude has no
+    /// `Prime` predicate). Proved by well-founded induction on `Nat.lt`
+    /// (`Self::lt_well_founded`, generic `WellFounded.fix`): `n`'s least
+    /// prime divisor `p` (`Self::exists_prime_dvd`) either equals `n` (`n`
+    /// itself is prime, `k := 1`) or is a proper divisor, in which case the
+    /// cofactor `n / p` is `2 ≤ · < n` and the induction hypothesis supplies
+    /// its factorization, extended by prepending `p`. There is no `List`,
+    /// `Finset`, or product type in this kernel, so uniqueness (the multiset
+    /// of prime factors) is not expressible here — only existence is stated.
+    pub exists_prime_factorization: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1889,6 +1918,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             eq_on_symm: kernel.name_str(nat, "eqOn_symm"),
             eq_on_trans: kernel.name_str(nat, "eqOn_trans"),
             symmetric_group_is_group_on_fn: kernel.name_str(nat, "symmetric_group_isGroupOnFn"),
+            prod_range: kernel.name_str(nat, "prodRange"),
+            prod_range_zero: kernel.name_str(nat, "prodRange_zero"),
+            prod_range_succ: kernel.name_str(nat, "prodRange_succ"),
+            exists_prime_factorization: kernel.name_str(nat, "exists_prime_factorization"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1967,6 +2000,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_injective_on_comp(&mut d, &p)?;
         declare_group_all(&mut d, &p)?;
         declare_permutation_all(&mut d, &p)?;
+        declare_prod_range(&mut d, &p)?;
+        declare_exists_prime_factorization(&mut d, &p)?;
         Ok(p)
     })();
     match built {

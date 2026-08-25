@@ -1421,6 +1421,20 @@ pub struct RatPrelude {
     /// `det2 (a·e+b·g) (a·f+b·h) (c·e+d·g) (c·f+d·h) = det2 a b c d · det2 e f g h`
     /// — multiplicativity of the 2×2 determinant.
     pub det2_mul: NameId,
+    /// `Rat.det2_eq_zero_of_lin_dep : ∀ a b c d s t,`
+    /// `Or (Not (s = 0)) (Not (t = 0)) → s·a+t·c = 0 → s·b+t·d = 0 →`
+    /// `det2 a b c d = 0`.
+    ///
+    /// The **easy direction** of "`det2 = 0` iff the rows are linearly
+    /// dependent" — the first statement in this kernel about linear
+    /// dependence rather than about solving. Stated with an explicit
+    /// nontriviality disjunction rather than `∃ t, c = t·a ∧ d = t·b`,
+    /// because that existential form is **false** at `a = b = 0` with
+    /// `(c,d)` nonzero (no `t` scales `(0,0)` to a nonzero row) even though
+    /// `det2` is then always `0`; the `s,t` form here has no such gap. The
+    /// converse — `det2 = 0` implies such a combination exists — is not yet
+    /// proved.
+    pub det2_eq_zero_of_lin_dep: NameId,
     /// `Rat.mul_adj2_top_left : ∀ a b c d, a·d + b·(−c) = det2 a b c d` — the
     /// (1,1) entry of `A · adj(A) = det(A) · I`. `adj2` itself is not a kernel
     /// constant (a function returning four rationals needs a product type the
@@ -1804,6 +1818,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det2_scale_row: child(kernel, "det2_scale_row"),
         det2_row_add: child(kernel, "det2_row_add"),
         det2_mul: child(kernel, "det2_mul"),
+        det2_eq_zero_of_lin_dep: child(kernel, "det2_eq_zero_of_lin_dep"),
         mul_adj2_top_left: child(kernel, "mul_adj2_top_left"),
         mul_adj2_top_right: child(kernel, "mul_adj2_top_right"),
         mul_adj2_bottom_left: child(kernel, "mul_adj2_bottom_left"),
