@@ -1392,6 +1392,27 @@ pub struct NatPrelude {
     /// n) 0 (fun a => mod (sub n a) n) n` — ℤ/n under addition, the worked
     /// instance.
     pub mod_add_is_group: NameId,
+    /// `Nat.subset_refl : ∀ f n, Subset f f n` — reflexivity.
+    pub subset_refl: NameId,
+    /// `Nat.subset_trans : ∀ f g h n, Subset f g n → Subset g h n →
+    /// Subset f h n` — transitivity.
+    pub subset_trans: NameId,
+    /// `Nat.subset_antisymm : ∀ f g n, Subset f g n → Subset g f n →
+    /// ∀ k, k < n → Eq Bool (f k) (g k)` — antisymmetry, POINTWISE (this
+    /// kernel has no `funext`).
+    pub subset_antisymm: NameId,
+    /// `Nat.setDiff_eq_inter_compl : ∀ f g k,
+    ///   Eq Bool (setDiff f g k) (setInter f (setCompl g) k)` — `setDiff` is
+    /// literally `setInter` composed with `setCompl`.
+    pub set_diff_eq_inter_compl: NameId,
+    /// `Nat.union_eq_right_of_subset : ∀ f g n, Subset f g n →
+    ///   ∀ k, k < n → Eq Bool (setUnion f g k) (g k)` — the lattice–order
+    /// bridge: union with a superset is the superset.
+    pub union_eq_right_of_subset: NameId,
+    /// `Nat.subset_union_left : ∀ f g n, Subset f (setUnion f g) n`.
+    pub subset_union_left: NameId,
+    /// `Nat.subset_inter_left : ∀ f g n, Subset (setInter f g) f n`.
+    pub subset_inter_left: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1774,6 +1795,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             group_inverse_unique: kernel.name_str(nat, "group_inverse_unique"),
             group_left_cancel: kernel.name_str(nat, "group_left_cancel"),
             mod_add_is_group: kernel.name_str(nat, "modAdd_isGroup"),
+            subset_refl: kernel.name_str(nat, "subset_refl"),
+            subset_trans: kernel.name_str(nat, "subset_trans"),
+            subset_antisymm: kernel.name_str(nat, "subset_antisymm"),
+            set_diff_eq_inter_compl: kernel.name_str(nat, "setDiff_eq_inter_compl"),
+            union_eq_right_of_subset: kernel.name_str(nat, "union_eq_right_of_subset"),
+            subset_union_left: kernel.name_str(nat, "subset_union_left"),
+            subset_inter_left: kernel.name_str(nat, "subset_inter_left"),
         };
 
         let mut d = NatDev::new(kernel, p);

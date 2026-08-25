@@ -1835,6 +1835,682 @@ pub(super) fn declare_set_compl_involutive(
     d.declare_theorem(p.set_compl_involutive, ty, value)
 }
 
+/// `a b : Bool ⊢ (Eq Bool a true → Eq Bool b true) → (Eq Bool b true →
+/// Eq Bool a true) → Eq Bool a b` — the per-element fact `subset_antisymm`
+/// needs: two `Bool` values that imply each other's truth are equal. A
+/// single `Bool.rec` on `a`, delayed-hypothesis style (the same shape
+/// [`le_sel_of_bool_impl`] uses): at `a = true`, the forward implication
+/// applied to `Eq.refl true` gives `Eq Bool b true`, symmetrized
+/// ([`NatOps::bool_symm`]); at `a = false`, a SECOND, nested `Bool.rec` on
+/// `b` closes it — its own `true` branch applies the backward implication
+/// (delayed the same way the outer split delays the forward one) to
+/// `Eq.refl true`, landing on exactly `Eq Bool false true`; its `false`
+/// branch is `Eq.refl false`, the backward implication unused.
+fn bool_eq_of_mutual_impl(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    imp1: ExprId,
+    imp2: ExprId,
+) -> ExprId {
+    let p_ = *p;
+    let bool_ty = d.bool_ty();
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+
+    // The `a = false` branch, built ahead of time: given
+    // `Eq Bool b true → Eq Bool false true`, produce `Eq Bool false b`, by a
+    // nested split on `b` (delayed hypothesis again: `b`'s own `true` branch
+    // needs `Eq Bool b true` to invoke the implication, which only the
+    // delayed-hypothesis shape supplies).
+    let false_branch = {
+        let nested_motive = {
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let eq_y_true = d.bool_eq(y, true_);
+            let eq_false_true = d.bool_eq(false_, true_);
+            let hyp_ty = d.arrow(eq_y_true, eq_false_true);
+            let eq_false_y = d.bool_eq(false_, y);
+            let body = d.arrow(hyp_ty, eq_false_y);
+            d.lam_fv(y_fv, bool_ty, body)
+        };
+        let nested_case_true = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let eq_true_true = d.bool_eq(true_, true_);
+            let eq_false_true = d.bool_eq(false_, true_);
+            let hyp_ty = d.arrow(eq_true_true, eq_false_true);
+            let refl_true = d.bool_refl(true_);
+            let body = d.apply(h, &[refl_true]);
+            d.lam_fv(h_fv, hyp_ty, body)
+        };
+        let nested_case_false = {
+            let h_fv = d.fresh_fvar();
+            let eq_false_true = d.bool_eq(false_, true_);
+            let hyp_ty = d.arrow(eq_false_true, eq_false_true);
+            let body = d.bool_refl(false_);
+            d.lam_fv(h_fv, hyp_ty, body)
+        };
+        let level_zero = d.kernel().level_zero();
+        let bool_rec = d.kernel().const_(p_.logic.bool_rec, vec![level_zero]);
+        d.apply(
+            bool_rec,
+            &[nested_motive, nested_case_false, nested_case_true, b],
+        )
+    };
+
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let imp1_ty = {
+            let eq_x_true = d.bool_eq(x, true_);
+            let eq_b_true = d.bool_eq(b, true_);
+            d.arrow(eq_x_true, eq_b_true)
+        };
+        let imp2_ty = {
+            let eq_b_true = d.bool_eq(b, true_);
+            let eq_x_true = d.bool_eq(x, true_);
+            d.arrow(eq_b_true, eq_x_true)
+        };
+        let concl = d.bool_eq(x, b);
+        let inner = d.arrow(imp2_ty, concl);
+        let body = d.arrow(imp1_ty, inner);
+        d.lam_fv(x_fv, bool_ty, body)
+    };
+
+    let case_true = {
+        let imp1_fv = d.fresh_fvar();
+        let imp1_hyp = d.kernel().fvar(imp1_fv);
+        let imp2_fv = d.fresh_fvar();
+
+        let eq_true_true = d.bool_eq(true_, true_);
+        let eq_b_true = d.bool_eq(b, true_);
+        let imp1_ty = d.arrow(eq_true_true, eq_b_true);
+        let imp2_ty = d.arrow(eq_b_true, eq_true_true);
+
+        let refl_true = d.bool_refl(true_);
+        let hb = d.apply(imp1_hyp, &[refl_true]); // Eq Bool b true
+        let body = d.bool_symm(b, true_, hb); // Eq Bool true b
+
+        let with_imp2 = d.lam_fv(imp2_fv, imp2_ty, body);
+        d.lam_fv(imp1_fv, imp1_ty, with_imp2)
+    };
+
+    let case_false = {
+        let imp1_fv = d.fresh_fvar();
+        let imp2_fv = d.fresh_fvar();
+        let imp2_hyp = d.kernel().fvar(imp2_fv);
+
+        let eq_false_true = d.bool_eq(false_, true_);
+        let eq_b_true = d.bool_eq(b, true_);
+        let imp1_ty = d.arrow(eq_false_true, eq_b_true);
+        let imp2_ty = d.arrow(eq_b_true, eq_false_true);
+
+        let body = d.apply(false_branch, &[imp2_hyp]); // Eq Bool false b
+
+        let with_imp2 = d.lam_fv(imp2_fv, imp2_ty, body);
+        d.lam_fv(imp1_fv, imp1_ty, with_imp2)
+    };
+
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p_.logic.bool_rec, vec![level_zero]);
+    let applied = d.apply(bool_rec, &[motive, case_false, case_true, a]);
+    let applied1 = d.apply(applied, &[imp1]);
+    d.apply(applied1, &[imp2])
+}
+/// `Nat.subset_refl : ∀ f n, Subset f f n` — reflexivity. No case split:
+/// unfolding `Subset f f n` at a point `k` is `k < n → f k = true →
+/// f k = true`, and the identity function on the membership hypothesis
+/// closes it directly.
+pub(super) fn declare_subset_refl(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let stmt = d.const_app(p.subset, &[f, f, n]);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk_ty = d.lt(k, n);
+    let hk_fv = d.fresh_fvar();
+
+    let fk = d.apply(f, &[k]);
+    let true_ = d.bool_true();
+    let hm_ty = d.bool_eq(fk, true_);
+    let hm_fv = d.fresh_fvar();
+    let hm = d.kernel().fvar(hm_fv);
+
+    let with_hm = d.lam_fv(hm_fv, hm_ty, hm);
+    let with_hk = d.lam_fv(hk_fv, hk_ty, with_hm);
+    let proof_k = d.lam_fv(k_fv, nat, with_hk);
+
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(f_fv, pred_ty, with_n)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, proof_k);
+        d.lam_fv(f_fv, pred_ty, with_n)
+    };
+    d.declare_theorem(p.subset_refl, ty, value)
+}
+/// `Nat.subset_trans : ∀ f g h n, Subset f g n → Subset g h n →
+/// Subset f h n` — transitivity: chain the two membership implications at
+/// each point.
+pub(super) fn declare_subset_trans(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let sub_fg_ty = d.const_app(p.subset, &[f, g, n]);
+    let sub_fg_fv = d.fresh_fvar();
+    let sub_fg = d.kernel().fvar(sub_fg_fv);
+    let sub_gh_ty = d.const_app(p.subset, &[g, h, n]);
+    let sub_gh_fv = d.fresh_fvar();
+    let sub_gh = d.kernel().fvar(sub_gh_fv);
+
+    let stmt = d.const_app(p.subset, &[f, h, n]);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk_ty = d.lt(k, n);
+    let hk_fv = d.fresh_fvar();
+    let hk = d.kernel().fvar(hk_fv);
+    let fk = d.apply(f, &[k]);
+    let true_ = d.bool_true();
+    let hm_ty = d.bool_eq(fk, true_);
+    let hm_fv = d.fresh_fvar();
+    let hm = d.kernel().fvar(hm_fv);
+
+    let gk_true = d.apply(sub_fg, &[k, hk, hm]); // Eq Bool (g k) true
+    let hk_true = d.apply(sub_gh, &[k, hk, gk_true]); // Eq Bool (h k) true
+
+    let with_hm = d.lam_fv(hm_fv, hm_ty, hk_true);
+    let with_hk = d.lam_fv(hk_fv, hk_ty, with_hm);
+    let proof_k = d.lam_fv(k_fv, nat, with_hk);
+    let with_gh = d.lam_fv(sub_gh_fv, sub_gh_ty, proof_k);
+    let with_fg = d.lam_fv(sub_fg_fv, sub_fg_ty, with_gh);
+
+    let ty_inner = {
+        let inner = d.arrow(sub_gh_ty, stmt);
+        d.arrow(sub_fg_ty, inner)
+    };
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, ty_inner);
+        let with_h = d.pi_fv(h_fv, pred_ty, with_n);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_h);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, with_fg);
+        let with_h = d.lam_fv(h_fv, pred_ty, with_n);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_h);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.subset_trans, ty, value)
+}
+/// `Nat.subset_antisymm : ∀ f g n, Subset f g n → Subset g f n →
+/// ∀ k, k < n → Eq Bool (f k) (g k)` — antisymmetry, POINTWISE (this kernel
+/// has no `funext`, so function equality is not even statable). Specializes
+/// both `Subset` hypotheses to the two directions of implication at `k`, then
+/// [`bool_eq_of_mutual_impl`] closes it.
+pub(super) fn declare_subset_antisymm(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let sub_fg_ty = d.const_app(p.subset, &[f, g, n]);
+    let sub_fg_fv = d.fresh_fvar();
+    let sub_fg = d.kernel().fvar(sub_fg_fv);
+    let sub_gf_ty = d.const_app(p.subset, &[g, f, n]);
+    let sub_gf_fv = d.fresh_fvar();
+    let sub_gf = d.kernel().fvar(sub_gf_fv);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk_ty = d.lt(k, n);
+    let hk_fv = d.fresh_fvar();
+    let hk = d.kernel().fvar(hk_fv);
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let true_ = d.bool_true();
+
+    let imp1 = {
+        let mem_fv = d.fresh_fvar();
+        let mem = d.kernel().fvar(mem_fv);
+        let mem_ty = d.bool_eq(fk, true_);
+        let applied = d.apply(sub_fg, &[k, hk, mem]);
+        d.lam_fv(mem_fv, mem_ty, applied)
+    };
+    let imp2 = {
+        let mem_fv = d.fresh_fvar();
+        let mem = d.kernel().fvar(mem_fv);
+        let mem_ty = d.bool_eq(gk, true_);
+        let applied = d.apply(sub_gf, &[k, hk, mem]);
+        d.lam_fv(mem_fv, mem_ty, applied)
+    };
+
+    let eq_proof = bool_eq_of_mutual_impl(d, &p, fk, gk, imp1, imp2);
+    let concl = d.bool_eq(fk, gk);
+
+    let with_hk = d.lam_fv(hk_fv, hk_ty, eq_proof);
+    let proof_k = d.lam_fv(k_fv, nat, with_hk);
+    let with_gf = d.lam_fv(sub_gf_fv, sub_gf_ty, proof_k);
+    let with_fg = d.lam_fv(sub_fg_fv, sub_fg_ty, with_gf);
+
+    let stmt_k = {
+        let inner = d.arrow(hk_ty, concl);
+        d.pi_fv(k_fv, nat, inner)
+    };
+    let ty_inner = {
+        let inner = d.arrow(sub_gf_ty, stmt_k);
+        d.arrow(sub_fg_ty, inner)
+    };
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, ty_inner);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_n);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, with_fg);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_n);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.subset_antisymm, ty, value)
+}
+/// `Nat.setDiff_eq_inter_compl : ∀ f g k,
+///   Eq Bool (setDiff f g k) (setInter f (setCompl g) k)` — `setDiff` is
+/// LITERALLY `setInter` applied to `setCompl`, not merely equal to it: both
+/// sides unfold (delta on `Nat.setDiff`/`Nat.setInter`/`Nat.setCompl`, beta,
+/// iota) to the identical `bool_select_bool` nesting, so `Eq.refl` on the
+/// LHS already has the RHS as its type up to defeq — no case split needed.
+pub(super) fn declare_set_diff_eq_inter_compl(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let diff_fg = d.const_app(p.set_diff, &[f, g]);
+    let lhs = d.apply(diff_fg, &[k]);
+
+    let compl_g = d.const_app(p.set_compl, &[g]);
+    let inter_f_complg = d.const_app(p.set_inter, &[f, compl_g]);
+    let rhs = d.apply(inter_f_complg, &[k]);
+
+    let stmt = d.bool_eq(lhs, rhs);
+    let proof = d.bool_refl(lhs);
+
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, stmt);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_k);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, proof);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_k);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.set_diff_eq_inter_compl, ty, value)
+}
+/// `a b : Bool, (Eq Bool a true → Eq Bool b true) ⊢
+///   Eq Bool (union_at a b) b` — the per-element fact
+/// `union_eq_right_of_subset` needs: if `a` implies `b`, unioning with it
+/// changes nothing. A single `Bool.rec` on `a`, delayed-hypothesis style
+/// ([`le_sel_of_bool_impl`]'s own pattern): at `a = true`, `union_at`
+/// short-circuits to `true_` and the hypothesis (applied to `Eq.refl true`)
+/// gives `Eq Bool b true`, symmetrized; at `a = false`, `union_at` reduces to
+/// `b` itself and the goal `Eq Bool b b` is `Eq.refl`, the hypothesis unused.
+fn union_eq_right_of_impl(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    imp: ExprId,
+) -> ExprId {
+    let p_ = *p;
+    let bool_ty = d.bool_ty();
+    let true_ = d.bool_true();
+
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let eq_x_true = d.bool_eq(x, true_);
+        let eq_b_true = d.bool_eq(b, true_);
+        let hyp_ty = d.arrow(eq_x_true, eq_b_true);
+        let union_x_b = bool_select_bool(d, &p_, x, true_, b);
+        let concl = d.bool_eq(union_x_b, b);
+        let body = d.arrow(hyp_ty, concl);
+        d.lam_fv(x_fv, bool_ty, body)
+    };
+    let case_true = {
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+        let eq_true_true = d.bool_eq(true_, true_);
+        let eq_b_true = d.bool_eq(b, true_);
+        let hyp_ty = d.arrow(eq_true_true, eq_b_true);
+        let refl_true = d.bool_refl(true_);
+        let hb = d.apply(hyp, &[refl_true]);
+        let body = d.bool_symm(b, true_, hb);
+        d.lam_fv(hyp_fv, hyp_ty, body)
+    };
+    let case_false = {
+        let hyp_fv = d.fresh_fvar();
+        let false_ = d.bool_false();
+        let eq_false_true = d.bool_eq(false_, true_);
+        let eq_b_true = d.bool_eq(b, true_);
+        let hyp_ty = d.arrow(eq_false_true, eq_b_true);
+        let body = d.bool_refl(b);
+        d.lam_fv(hyp_fv, hyp_ty, body)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p_.logic.bool_rec, vec![level_zero]);
+    let applied = d.apply(bool_rec, &[motive, case_false, case_true, a]);
+    d.apply(applied, &[imp])
+}
+/// `Nat.union_eq_right_of_subset : ∀ f g n, Subset f g n →
+///   ∀ k, k < n → Eq Bool (setUnion f g k) (g k)` — the lattice–order
+/// bridge: union with a superset is the superset. (The companion direction,
+/// `(∀k, setUnion f g k = g k) → Subset f g n`, is not required by the task
+/// and is not built here.)
+pub(super) fn declare_union_eq_right_of_subset(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let sub_fg_ty = d.const_app(p.subset, &[f, g, n]);
+    let sub_fg_fv = d.fresh_fvar();
+    let sub_fg = d.kernel().fvar(sub_fg_fv);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk_ty = d.lt(k, n);
+    let hk_fv = d.fresh_fvar();
+    let hk = d.kernel().fvar(hk_fv);
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let true_ = d.bool_true();
+
+    let imp = {
+        let mem_fv = d.fresh_fvar();
+        let mem = d.kernel().fvar(mem_fv);
+        let mem_ty = d.bool_eq(fk, true_);
+        let applied = d.apply(sub_fg, &[k, hk, mem]);
+        d.lam_fv(mem_fv, mem_ty, applied)
+    };
+
+    let eq_proof = union_eq_right_of_impl(d, &p, fk, gk, imp);
+
+    let union_fg = d.const_app(p.set_union, &[f, g]);
+    let lhs = d.apply(union_fg, &[k]);
+    let concl = d.bool_eq(lhs, gk);
+
+    let with_hk = d.lam_fv(hk_fv, hk_ty, eq_proof);
+    let proof_k = d.lam_fv(k_fv, nat, with_hk);
+    let with_fg = d.lam_fv(sub_fg_fv, sub_fg_ty, proof_k);
+
+    let stmt_k = {
+        let inner = d.arrow(hk_ty, concl);
+        d.pi_fv(k_fv, nat, inner)
+    };
+    let ty_inner = d.arrow(sub_fg_ty, stmt_k);
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, ty_inner);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_n);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, with_fg);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_n);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.union_eq_right_of_subset, ty, value)
+}
+/// `a b : Bool, Eq Bool a true ⊢ Eq Bool (union_at a b) true` — the
+/// per-element fact `subset_union_left` needs: membership in `p` implies
+/// membership in `setUnion p q`. A single `Bool.rec` on `a`, delayed
+/// hypothesis: at `a = true`, `union_at` short-circuits to `true_`,
+/// `Eq.refl`; at `a = false`, `union_at` reduces to `b`, and the (impossible)
+/// hypothesis `Eq Bool false true` eliminates into the goal via
+/// [`NatOps::false_true_elim`].
+fn union_left_mem_of_mem(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p_ = *p;
+    let bool_ty = d.bool_ty();
+    let true_ = d.bool_true();
+
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let eq_x_true = d.bool_eq(x, true_);
+        let union_x_b = bool_select_bool(d, &p_, x, true_, b);
+        let concl = d.bool_eq(union_x_b, true_);
+        let body = d.arrow(eq_x_true, concl);
+        d.lam_fv(x_fv, bool_ty, body)
+    };
+    let case_true = {
+        let hyp_fv = d.fresh_fvar();
+        let eq_true_true = d.bool_eq(true_, true_);
+        let body = d.bool_refl(true_);
+        d.lam_fv(hyp_fv, eq_true_true, body)
+    };
+    let case_false = {
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+        let false_ = d.bool_false();
+        let eq_false_true = d.bool_eq(false_, true_);
+        let target = d.bool_eq(b, true_);
+        let body = d.false_true_elim(target, hyp);
+        d.lam_fv(hyp_fv, eq_false_true, body)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p_.logic.bool_rec, vec![level_zero]);
+    let applied = d.apply(bool_rec, &[motive, case_false, case_true, a]);
+    d.apply(applied, &[h])
+}
+/// `Nat.subset_union_left : ∀ f g n, Subset f (setUnion f g) n`.
+pub(super) fn declare_subset_union_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let union_fg = d.const_app(p.set_union, &[f, g]);
+    let stmt = d.const_app(p.subset, &[f, union_fg, n]);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk_ty = d.lt(k, n);
+    let hk_fv = d.fresh_fvar();
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let true_ = d.bool_true();
+    let hm_ty = d.bool_eq(fk, true_);
+    let hm_fv = d.fresh_fvar();
+    let hm = d.kernel().fvar(hm_fv);
+
+    let eq_proof = union_left_mem_of_mem(d, &p, fk, gk, hm);
+
+    let with_hm = d.lam_fv(hm_fv, hm_ty, eq_proof);
+    let with_hk = d.lam_fv(hk_fv, hk_ty, with_hm);
+    let proof_k = d.lam_fv(k_fv, nat, with_hk);
+
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, stmt);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_n);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, proof_k);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_n);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.subset_union_left, ty, value)
+}
+/// `a b : Bool, Eq Bool (inter_at a b) true ⊢ Eq Bool a true` — the
+/// per-element fact `subset_inter_left` needs: membership in
+/// `setInter p q` implies membership in `p`. A single `Bool.rec` on `a`,
+/// delayed hypothesis: at `a = true`, the goal `Eq Bool true true` is
+/// `Eq.refl`, independent of the hypothesis; at `a = false`, `inter_at`
+/// reduces to `false_`, so the delayed hypothesis is ALREADY of the exact
+/// needed type `Eq Bool false true → Eq Bool false true` — the identity
+/// function.
+fn mem_left_of_inter_mem(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p_ = *p;
+    let bool_ty = d.bool_ty();
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let inter_x_b = bool_select_bool(d, &p_, x, b, false_);
+        let hyp_ty = d.bool_eq(inter_x_b, true_);
+        let concl = d.bool_eq(x, true_);
+        let body = d.arrow(hyp_ty, concl);
+        d.lam_fv(x_fv, bool_ty, body)
+    };
+    let case_true = {
+        let hyp_fv = d.fresh_fvar();
+        let eq_b_true = d.bool_eq(b, true_);
+        let body = d.bool_refl(true_);
+        d.lam_fv(hyp_fv, eq_b_true, body)
+    };
+    let case_false = {
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+        let eq_false_true = d.bool_eq(false_, true_);
+        d.lam_fv(hyp_fv, eq_false_true, hyp)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p_.logic.bool_rec, vec![level_zero]);
+    let applied = d.apply(bool_rec, &[motive, case_false, case_true, a]);
+    d.apply(applied, &[h])
+}
+/// `Nat.subset_inter_left : ∀ f g n, Subset (setInter f g) f n`.
+pub(super) fn declare_subset_inter_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let inter_fg = d.const_app(p.set_inter, &[f, g]);
+    let stmt = d.const_app(p.subset, &[inter_fg, f, n]);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk_ty = d.lt(k, n);
+    let hk_fv = d.fresh_fvar();
+
+    let fk = d.apply(f, &[k]);
+    let gk = d.apply(g, &[k]);
+    let true_ = d.bool_true();
+    let inter_fg_k = d.apply(inter_fg, &[k]);
+    let hm_ty = d.bool_eq(inter_fg_k, true_);
+    let hm_fv = d.fresh_fvar();
+    let hm = d.kernel().fvar(hm_fv);
+
+    let eq_proof = mem_left_of_inter_mem(d, &p, fk, gk, hm);
+
+    let with_hm = d.lam_fv(hm_fv, hm_ty, eq_proof);
+    let with_hk = d.lam_fv(hk_fv, hk_ty, with_hm);
+    let proof_k = d.lam_fv(k_fv, nat, with_hk);
+
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, stmt);
+        let with_g = d.pi_fv(g_fv, pred_ty, with_n);
+        d.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, proof_k);
+        let with_g = d.lam_fv(g_fv, pred_ty, with_n);
+        d.lam_fv(f_fv, pred_ty, with_g)
+    };
+    d.declare_theorem(p.subset_inter_left, ty, value)
+}
+
 /// Declare `Nat.setUnion`/`setInter`/`setCompl`/`setDiff`/`Subset`, the three
 /// `countRange` cardinality laws, and the pointwise Boolean-lattice laws
 /// (curriculum node `sets`'s own claim), in dependency order. Must run AFTER
@@ -1864,5 +2540,12 @@ pub(super) fn declare_finite_set_all(
     declare_set_compl_union(d, p)?;
     declare_set_compl_inter(d, p)?;
     declare_set_compl_involutive(d, p)?;
+    declare_subset_refl(d, p)?;
+    declare_subset_trans(d, p)?;
+    declare_subset_antisymm(d, p)?;
+    declare_set_diff_eq_inter_compl(d, p)?;
+    declare_union_eq_right_of_subset(d, p)?;
+    declare_subset_union_left(d, p)?;
+    declare_subset_inter_left(d, p)?;
     Ok(())
 }

@@ -364,6 +364,13 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.group_inverse_unique,
         p.group_left_cancel,
         p.mod_add_is_group,
+        p.subset_refl,
+        p.subset_trans,
+        p.subset_antisymm,
+        p.set_diff_eq_inter_compl,
+        p.union_eq_right_of_subset,
+        p.subset_union_left,
+        p.subset_inter_left,
     ]
 }
 
@@ -4476,7 +4483,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        48 + 224,
+        48 + 231,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -6070,4 +6077,172 @@ fn set_lattice_laws_hold_concretely_and_reject_a_swapped_de_morgan() {
         f.explain(&err)
     );
     assert!(!f.k.environment().contains(name));
+}
+
+/// `Subset` is a partial order (`subset_refl`/`subset_trans`/
+/// `subset_antisymm`), `setDiff` is `setInter` composed with `setCompl`, and
+/// union with a superset is the superset — the `sets` node's own open goal,
+/// joined to `relations-and-functions`. Concrete computation at a singleton
+/// predicate over {0,1,2}, exercising BOTH branches of `subset_antisymm`'s
+/// `Bool.rec` split (`k=0`, where `A 0 = true`; `k=1`, where `A 1 = false`),
+/// WITH a negative control: reusing `setDiff_eq_inter_compl`'s real,
+/// universally-quantified proof term against a statement with its top
+/// operator on the right swapped (`setUnion` for `setInter`) must be
+/// rejected — `setDiff f g` is defeq to `setInter f (setCompl g)` for
+/// ABSTRACT `f g`, never to `setUnion f (setCompl g)`.
+#[test]
+fn subset_is_a_partial_order_and_joins_the_lattice() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let bool_ty = f.bool_ty();
+
+    let singleton = |f: &mut Fixture, elem: ExprId| -> ExprId {
+        let k_fv = f.fresh_fvar();
+        let k = f.kernel().fvar(k_fv);
+        let body = f.beq(k, elem);
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+
+    let a = singleton(&mut f, zero); // A = {0}
+    let b = singleton(&mut f, one); // B = {1}
+
+    // `0 < 3` and `1 < 3`, built as `Le` witnesses (`Lt x y := Le (succ x) y`).
+    let hk0 = {
+        let sum = f.add(one, two);
+        let sum_eq = f.refl(sum);
+        f.lemma(p.le_intro, &[one, three, two, sum_eq])
+    };
+    let hk1 = {
+        let sum = f.add(two, one);
+        let sum_eq = f.refl(sum);
+        f.lemma(p.le_intro, &[two, three, one, sum_eq])
+    };
+
+    // subset_refl / subset_trans: concrete instances must infer.
+    let refl_proof = f.lemma(p.subset_refl, &[a, three]);
+    f.k.infer(refl_proof).expect("subset_refl should infer");
+    let trans_proof = f.lemma(p.subset_trans, &[a, a, a, three, refl_proof, refl_proof]);
+    f.k.infer(trans_proof).expect("subset_trans should infer");
+
+    // subset_antisymm on A, A (mutually a subset of itself via subset_refl):
+    // pointwise equal everywhere. Evaluate at k=0 (A 0 = true, exercising the
+    // `Bool.rec` split's TRUE branch) and k=1 (A 1 = false, the FALSE branch).
+    let antisymm_proof = f.lemma(p.subset_antisymm, &[a, a, three, refl_proof, refl_proof]);
+    let eq_at_0 = f.apply(antisymm_proof, &[zero, hk0]);
+    f.k.infer(eq_at_0)
+        .expect("subset_antisymm at k=0 should infer");
+    let a0 = f.apply(a, &[zero]);
+    assert!(f.k.def_eq(a0, true_), "A 0 must compute to true");
+    let eq_at_1 = f.apply(antisymm_proof, &[one, hk1]);
+    f.k.infer(eq_at_1)
+        .expect("subset_antisymm at k=1 should infer");
+    let a1 = f.apply(a, &[one]);
+    assert!(f.k.def_eq(a1, false_), "A 1 must compute to false");
+
+    // setDiff_eq_inter_compl: A \ B at 0 must equal A ∩ (compl B) at 0, and
+    // both must compute to `true` (0 is in A, 0 is not in B).
+    let diff_ab = f.const_app(p.set_diff, &[a, b]);
+    let diff_ab_0 = f.apply(diff_ab, &[zero]);
+    let compl_b = f.const_app(p.set_compl, &[b]);
+    let inter_a_complb = f.const_app(p.set_inter, &[a, compl_b]);
+    let inter_a_complb_0 = f.apply(inter_a_complb, &[zero]);
+    assert!(
+        f.k.def_eq(diff_ab_0, inter_a_complb_0),
+        "setDiff a b 0 must be defeq to setInter a (setCompl b) 0"
+    );
+    assert!(
+        f.k.def_eq(diff_ab_0, true_),
+        "0 is in A and not in B, so A diff B at 0 must compute to true"
+    );
+
+    // union_eq_right_of_subset: Subset A A n (via subset_refl) gives
+    // setUnion A A k = A k at every k < n.
+    let union_eq_proof = f.lemma(p.union_eq_right_of_subset, &[a, a, three, refl_proof]);
+    let union_eq_at_0 = f.apply(union_eq_proof, &[zero, hk0]);
+    f.k.infer(union_eq_at_0)
+        .expect("union_eq_right_of_subset at k=0 should infer");
+    let union_aa = f.const_app(p.set_union, &[a, a]);
+    let union_aa_0 = f.apply(union_aa, &[zero]);
+    assert!(
+        f.k.def_eq(union_aa_0, a0),
+        "setUnion a a 0 must compute to a 0"
+    );
+
+    // subset_union_left / subset_inter_left: concrete instances must infer,
+    // and (for union_left) the produced membership proof must check against
+    // the real `setUnion a b 0 = true` obligation.
+    let union_left_proof = f.lemma(p.subset_union_left, &[a, b, three]);
+    let mem_a0 = f.bool_refl(a0);
+    let union_left_at_0 = f.apply(union_left_proof, &[zero, hk0, mem_a0]);
+    let union_ab = f.const_app(p.set_union, &[a, b]);
+    let union_ab_0 = f.apply(union_ab, &[zero]);
+    let inferred_union_left =
+        f.k.infer(union_left_at_0)
+            .expect("subset_union_left at k=0 should infer");
+    let expected_union_left = f.bool_eq(union_ab_0, true_);
+    assert!(f.k.def_eq(inferred_union_left, expected_union_left));
+
+    let inter_left_proof = f.lemma(p.subset_inter_left, &[a, b, three]);
+    f.k.infer(inter_left_proof)
+        .expect("subset_inter_left should infer");
+
+    // NEGATIVE CONTROL: reuse `setDiff_eq_inter_compl`'s real, fully
+    // quantified proof term against a statement with the right-hand
+    // operator swapped (`setUnion` in place of `setInter`) — a genuinely
+    // different identity for abstract `f g k`, and the kernel must reject
+    // the reuse.
+    let real_proof = f.const_app(p.set_diff_eq_inter_compl, &[]);
+    let wrong_ty = {
+        let pred_ty = f.arrow(nat, bool_ty);
+        let f_fv = f.fresh_fvar();
+        let fp = f.kernel().fvar(f_fv);
+        let g_fv = f.fresh_fvar();
+        let gp = f.kernel().fvar(g_fv);
+        let k_fv = f.fresh_fvar();
+        let kp = f.kernel().fvar(k_fv);
+
+        let diff_fg = f.const_app(p.set_diff, &[fp, gp]);
+        let lhs = f.apply(diff_fg, &[kp]);
+        let compl_g = f.const_app(p.set_compl, &[gp]);
+        let union_f_complg = f.const_app(p.set_union, &[fp, compl_g]); // swapped
+        let rhs = f.apply(union_f_complg, &[kp]);
+        let eq = f.bool_eq(lhs, rhs);
+
+        let with_k = f.pi_fv(k_fv, nat, eq);
+        let with_g = f.pi_fv(g_fv, pred_ty, with_k);
+        f.pi_fv(f_fv, pred_ty, with_g)
+    };
+    let wrong_name = f.name("setDiff_is_secretly_setUnion_compl");
+    let error = f
+        .declare_theorem(wrong_name, wrong_ty, real_proof)
+        .expect_err("setDiff must not be defeq to setUnion(f, compl g) for abstract f g k");
+    assert!(matches!(
+        error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
+
+    // Every declaration exercised here rests on zero axioms.
+    for name in [
+        p.subset_refl,
+        p.subset_trans,
+        p.subset_antisymm,
+        p.set_diff_eq_inter_compl,
+        p.union_eq_right_of_subset,
+        p.subset_union_left,
+        p.subset_inter_left,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
 }
