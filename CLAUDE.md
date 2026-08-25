@@ -934,6 +934,60 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   nothing ever required length one. Full retrospective:
   `docs/autogenesis/228-capsule-lane-retrospective.md`.
 
+- **A PRELUDE CAN DECLARE INTO ANOTHER PRELUDE'S NAMESPACE, SO "IS THIS NAME
+  TAKEN?" IS NOT ANSWERED BY READING THE MODULE IT BELONGS IN.** Measured
+  2026-08-25: a lane built an explicit inverse for a bijection on `[0,n)` and
+  named it `Nat.inverseIndex`. That name was already owned by
+  `int_prelude/wilson.rs`, which declares `Nat.inverseIndex` and eight lemmas
+  about it into the **`Nat`** namespace from the **Int** prelude — the modular
+  inverse index from Wilson's theorem, an unrelated function.
+
+  Three things made it expensive, and they compound:
+  - Nothing in `nat_prelude/` mentions the name. The lane was told to check for
+    an existing inverse, did, and looked where the code lives.
+  - **The nat prelude builds fine alone.** `cargo test --lib nat_prelude::` was
+    **66 green with the collision present.** It fires only once a downstream
+    prelude builds on it.
+  - The message names neither the string nor either site: `the Int model must
+    build: DeclarationExists { name: NameId(457) }`, across **230** failures in
+    `arith_model` and `characterization`, none of which mention `Nat` or the
+    file that added it.
+
+  So before naming a declaration, check the **whole** inventory
+  (`prelude_theorem_inventory --include-constructed`, `--release`), not the
+  module you are writing in. And note the asymmetry when you find a clash: the
+  older declaration is usually load-bearing elsewhere, so rename the NEW one.
+
+- **TWO LANES ADDING FUNCTIONS TO ONE RUST FILE PRODUCE A CONFLICT WHERE
+  "KEEP BOTH SIDES" SILENTLY DOES NOT PARSE.** The conflict looks purely
+  additive — no line is changed by both — so concatenating the sides is the
+  obvious resolution and it is wrong. Git's hunk boundaries cut **mid-item**:
+  each side ends with a dangling
+
+      pub(super) fn declare_something(
+
+  whose parameter list is the shared context *after* the hunk, because that
+  boilerplate is byte-identical on both sides and the differ aligns on it.
+  Measured 2026-08-25 in `nat_prelude/finite_set.rs` — three `mismatched
+  closing delimiter` errors — and again in `nat_prelude_tests.rs` with two
+  `#[test] fn` bodies. **`-X patience` does not fix the alignment.** Reordering
+  the sides does not either: there is one shared tail and two dangling
+  signatures.
+
+  The tell is **delimiter balance per hunk side**, and it must count parens and
+  brackets, not just braces — the real failure dangled an open paren.
+  `scripts/lane-merge-additive.py check <file>` reports it and exits 1;
+  `… splice <file> --theirs <ref> --anchor <text>` reconstructs instead, lifting
+  whole items out of the other branch's own file by brace matching. It strips
+  line comments first, because this repository's doc comments are full of
+  `[0,n)` and [`Self::foo`] links that are deliberately unbalanced.
+
+  Two things `splice` does NOT do, and both have bitten: it moves item bodies
+  but **not their call sites** (wire each `declare_*` into its dispatcher
+  yourself), and it replaces the whole file, so **name-list and pin edits from
+  the other side are lost** — re-derive them, and recompute the pin by
+  **counting** the lists.
+
 - **Tools in this repo have lied more often than the solver has been weak.**
   In one session: a corpus gate that ran zero tests for 15 days while exiting 0;
   a pre-push hook that had never run because `core.hooksPath` was unset; a
