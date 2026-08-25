@@ -196,6 +196,102 @@ fn perm_inverse_computes_a_concrete_permutation_table_with_a_transposed_negative
     assert!(!f.k.environment().contains(bad_name));
 }
 
+/// `Nat.bijective_on_perm_inverse` and `Nat.bijective_on_comp` APPLY at a
+/// concrete, genuinely nontrivial instance — the transposition swapping `0`
+/// and `1` on `[0,2)` (the order-2 symmetric group on two elements), built
+/// entirely from already-proved `Nat.transposition_*` theorems, no
+/// hand-rolled case bash — and `Nat.permInverse sigma 2` COMPUTES sigma's
+/// genuine inverse table. Negative control: reusing the genuine
+/// `bijective_on_perm_inverse` proof (built at bound `2`) against a
+/// statement with the bound TRANSPOSED to `3` must be rejected, after
+/// confirming `2` and `3` genuinely differ.
+#[test]
+fn bijective_on_lemmas_apply_to_a_concrete_transposition_with_a_transposed_bound_negative_control()
+{
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+
+    // sigma := transposition 0 1 : Nat -> Nat, swapping 0 and 1 -- the
+    // generator of the order-2 symmetric group on [0,2).
+    let sigma = f.const_app(p.transposition, &[zero, one]);
+
+    let lt01 = f.zero_lt_succ(zero); // Lt 0 1
+    let lt12 = f.lemma(p.lt_succ_self, &[one]); // Lt 1 2
+
+    let inj_sigma = f.lemma(p.transposition_injective, &[zero, one, lt01, two]);
+    let maps_sigma = f.lemma(p.transposition_maps_into, &[zero, one, lt01, two, lt12]);
+    let bij_sigma = f.lemma(
+        p.bijective_of_injective_on,
+        &[two, sigma, inj_sigma, maps_sigma],
+    );
+
+    // `Nat.permInverse sigma 2` COMPUTES sigma's genuine inverse table on
+    // `[0,2)`: sigma swaps 0 and 1, so its inverse does too.
+    let g_at_0 = f.const_app(p.perm_inverse, &[sigma, two, zero]);
+    assert!(
+        f.k.def_eq(g_at_0, one),
+        "permInverse sigma 2 0 must COMPUTE to 1"
+    );
+    assert!(
+        !f.k.def_eq(g_at_0, zero),
+        "permInverse sigma 2 0 must NOT also compute to 0"
+    );
+    let g_at_1 = f.const_app(p.perm_inverse, &[sigma, two, one]);
+    assert!(
+        f.k.def_eq(g_at_1, zero),
+        "permInverse sigma 2 1 must COMPUTE to 0"
+    );
+    assert!(
+        !f.k.def_eq(g_at_1, one),
+        "permInverse sigma 2 1 must NOT also compute to 1"
+    );
+
+    // `Nat.bijective_on_perm_inverse` APPLIES at this concrete instance --
+    // the kernel re-checks the proof against the genuine statement.
+    let ga = f.const_app(p.perm_inverse, &[sigma, two]);
+    let ga_bij_stmt = f.const_app(p.bijective_on, &[ga, two]);
+    let ga_bij_proof = f.lemma(p.bijective_on_perm_inverse, &[two, sigma, bij_sigma]);
+    let real_name = f.name("nc_bijective_on_perm_inverse_real_at_n2");
+    f.declare_theorem(real_name, ga_bij_stmt, ga_bij_proof)
+        .expect("BijectiveOn (permInverse sigma 2) 2 must be admitted");
+
+    // `Nat.bijective_on_comp` APPLIES too: composing sigma with itself is
+    // bijective on the same bound.
+    let comp_sigma_sigma = f.const_app(p.comp, &[sigma, sigma]);
+    let comp_bij_stmt = f.const_app(p.bijective_on, &[comp_sigma_sigma, two]);
+    let comp_bij_proof = f.lemma(
+        p.bijective_on_comp,
+        &[two, sigma, sigma, bij_sigma, bij_sigma],
+    );
+    let comp_name = f.name("nc_bijective_on_comp_real_at_n2");
+    f.declare_theorem(comp_name, comp_bij_stmt, comp_bij_proof)
+        .expect("BijectiveOn (comp sigma sigma) 2 must be admitted");
+
+    // NEGATIVE CONTROL: reuse the REAL `bijective_on_perm_inverse` proof
+    // (built at n = 2) against a statement with the bound TRANSPOSED to 3.
+    // Confirm first that 2 and 3 genuinely differ (not an accidental
+    // tautology).
+    assert!(
+        !f.k.def_eq(two, three),
+        "2 and 3 must genuinely differ before trusting the rejection"
+    );
+    let bad_stmt = f.const_app(p.bijective_on, &[ga, three]);
+    let bad_name = f.name("nc_bijective_on_perm_inverse_transposed_bound");
+    let err = f
+        .declare_theorem(bad_name, bad_stmt, ga_bij_proof)
+        .expect_err("NC: reusing the n=2 proof against the n=3 statement must be rejected");
+    println!(
+        "NC (bijective_on_perm_inverse with bound transposed) rejected:\n  {}",
+        f.explain(&err)
+    );
+    assert!(!f.k.environment().contains(bad_name));
+}
+
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
         p.set_union,
@@ -492,6 +588,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.perm_inverse_right,
         p.perm_inverse_left,
         p.comp_assoc,
+        p.bijective_on_comp,
+        p.bijective_on_perm_inverse,
     ]
 }
 
@@ -4604,7 +4702,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        51 + 234,
+        51 + 236,
         "every promised definition and theorem must be rendered"
     );
 }
