@@ -200,6 +200,49 @@ pub struct RatPrelude {
     /// Derived from [`Self::mul_inv_cancel`] and the 22 laws alone — no
     /// numerator — so it is a theorem of ordered fields.
     pub inv_pos: NameId,
+    /// `Rat.one_ne_zero : Not (Eq Rat Rat.one Rat.zero)`.
+    ///
+    /// The nontriviality axiom `Rat.IsField`'s bundle needs and nothing
+    /// upstream ever phrased: [`Self::zero_lt_one`] (`0 < 1`) is `Rat`'s own
+    /// positivity fact, rewritten to a disequality by one transport against
+    /// [`Self::lt_irrefl`] — no case split, no representation reasoning.
+    pub one_ne_zero: NameId,
+    /// `Rat.IsField (add mul : Rat → Rat → Rat) (neg inv : Rat → Rat) (zero
+    /// one : Rat) : Prop` — the bundled-predicate shape
+    /// (`nat_prelude::group::declare_group_all`'s `Nat.IsGroupOn` is the house
+    /// pattern) for "these six operations make a commutative field", packed
+    /// right-nested exactly as `IsGroupOn` is:
+    ///
+    /// `add_comm ∧ (add_assoc ∧ (add_zero ∧ (add_neg ∧ (mul_comm ∧ (mul_assoc
+    /// ∧ (mul_one ∧ (distrib ∧ (one_ne_zero ∧ inv_cancel))))))))`
+    ///
+    /// **No bound parameter** (`IsGroupOn`'s `n`), and named `IsField` rather
+    /// than `IsFieldOn` for exactly that reason: `Rat` is already the whole
+    /// carrier the operations range over, unlike `Nat.IsGroupOn`'s
+    /// `{0,…,n-1}`, so there is no domain to close the operations over.
+    /// `inv_cancel`'s hypothesis is `a ≠ 0`, not `0 < a` — `Rat.inv`'s totality
+    /// (`inv 0 = 0`) makes the unconditional law false, and a field in
+    /// general has no order to phrase a positive version in.
+    pub is_field: NameId,
+    /// `Rat.rat_isField : Rat.IsField Rat.add Rat.mul Rat.neg Rat.inv
+    /// Rat.zero Rat.one` — **the worked instance**, assembled from the ten
+    /// existing laws (`Self::add_comm`/`add_assoc`/`add_zero`/`add_neg`/
+    /// `mul_comm`/`mul_assoc`/`mul_one`/`left_distrib`/[`Self::one_ne_zero`]/
+    /// `mul_inv_cancel_of_ne_zero`) via nested `And.intro` — no new algebra,
+    /// every leaf a bare reference to an already-admitted theorem, because
+    /// each one's *stated* type already matches the bundle's corresponding
+    /// component verbatim.
+    pub rat_is_field: NameId,
+    /// `Rat.mul_left_cancel_of_ne_zero : ∀ a b c, Not (Eq Rat a Rat.zero) →
+    /// Eq Rat (Rat.mul a b) (Rat.mul a c) → Eq Rat b c`.
+    ///
+    /// The consequence a field gives that a ring does not: scale by `a⁻¹`.
+    /// The same `b = b·1 = b·(a⁻¹·a)⁻¹ …` shape
+    /// `nat_prelude::group::declare_group_left_cancel` runs over an abstract
+    /// `IsGroupOn`, specialised to `Rat`'s own commutative multiplication —
+    /// only the one inverse law `a⁻¹·a = 1` is needed, not a bounded group's
+    /// closure/membership bookkeeping.
+    pub mul_left_cancel_of_ne_zero: NameId,
     /// `Rat.inv : Rat → Rat` — the multiplicative inverse, with `inv 0 = 0`
     /// (the standard total convention; `ℚ` has no partial operations here for
     /// the same reason SMT-LIB's `bvudiv` is total).
@@ -1466,6 +1509,10 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         mul_inv_cancel_of_neg: child(kernel, "mul_inv_cancel_of_neg"),
         mul_inv_cancel_of_ne_zero: child(kernel, "mul_inv_cancel_of_ne_zero"),
         inv_pos: child(kernel, "inv_pos"),
+        one_ne_zero: child(kernel, "one_ne_zero"),
+        is_field: child(kernel, "IsField"),
+        rat_is_field: child(kernel, "rat_isField"),
+        mul_left_cancel_of_ne_zero: child(kernel, "mul_left_cancel_of_ne_zero"),
         mul_pos: child(kernel, "mul_pos"),
         nat_div_succ_pos: child(kernel, "natDivSucc_pos"),
         sub_mul: child(kernel, "sub_mul"),

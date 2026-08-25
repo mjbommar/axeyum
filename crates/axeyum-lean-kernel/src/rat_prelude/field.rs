@@ -77,12 +77,24 @@ use super::defs::inv_body;
 use super::group::rsub;
 use super::ops::{
     den, den_pos, den_z, nat_eq_to_rat, nat_rewrite_prop, normalize, num, one_le_succ, radd,
-    rat_eq_rewrite, rat_theorem, rat_ty, rchain, rcongr, req, rle, rlt, rmul, rone, rsymm, rzero,
+    rat_eq_rewrite, rat_theorem, rat_ty, rchain, rcongr, req, rle, rlt, rmul, rone, rsymm, rtrans,
+    rzero,
 };
 use crate::KernelError;
+use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
+
+/// Delta height for `Rat.IsField`: above everything else this prelude has
+/// declared by the time `field::declare_field_laws` runs (`POLY_EVAL_HEIGHT`,
+/// 43, is the highest constant any `rat_prelude` module uses), following the
+/// same "single monotone sequence over the whole prelude" convention
+/// `probability.rs`'s own height constants document — even though `IsField`'s
+/// value never unfolds through a named `Definition` (its six operations are
+/// caller-supplied free variables, never called), so no earlier height is
+/// actually reachable from it.
+const FIELD_HEIGHT: u16 = 44;
 
 /// Admit `Rat.mul_inv_cancel` and the ordered-field lemmas derived from it.
 ///
@@ -99,7 +111,11 @@ pub(super) fn declare_field_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_inv_antitone(d, p)?;
     declare_mul_pos(d, p)?;
     declare_nat_div_succ_pos(d, p)?;
-    declare_inv_nat_div_succ(d, p)
+    declare_inv_nat_div_succ(d, p)?;
+    declare_one_ne_zero(d, p)?;
+    declare_is_field(d, &p)?;
+    declare_rat_is_field(d, p)?;
+    declare_mul_left_cancel_of_ne_zero(d, p)
 }
 
 /// `Rat.mul_pos : ∀ a b, 0 < a → 0 < b → 0 < a·b`.
@@ -1420,4 +1436,505 @@ fn declare_inv_nat_div_succ(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ker
         );
         (stmt, proof)
     })
+}
+
+// === `Rat.one_ne_zero` ======================================================
+
+/// Admit `Rat.one_ne_zero : Not (Eq Rat Rat.one Rat.zero)`.
+///
+/// One transport: assume `h : one = zero`, rewrite `Rat.zero_lt_one : 0 < 1`
+/// along `h` (replacing the `1` with `0`) to get `0 < 0`, refuted by
+/// `Rat.lt_irrefl 0`. No case split, no representation reasoning — the same
+/// route `Rat.inv_pos` uses to turn a `≤`/`<` contradiction into its goal,
+/// except here the goal already **is** `False`, so no `absurd` step is
+/// needed.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_one_ne_zero(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let one = rone(d, p);
+    let zero = rzero(d, p);
+    let eq_ty = req(d, one, zero);
+
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let zero_lt_one = d.lemma(p.zero_lt_one, &[]); // 0 < 1
+    let rewritten = rat_eq_rewrite(d, one, zero, h, zero_lt_one, &|d, t| rlt(d, p, zero, t)); // 0 < 0
+    let refuted = d.lemma(p.lt_irrefl, &[zero]); // Not (0 < 0)
+    let false_proof = d.apply(refuted, &[rewritten]);
+
+    let value = d.lam_fv(h_fv, eq_ty, false_proof);
+    let ty = d.not(eq_ty);
+    d.declare_theorem(p.one_ne_zero, ty, value)
+}
+
+// === `Rat.IsField` — the bundled-predicate shape ============================
+//
+// Mirrors `nat_prelude::group::declare_group_all`'s `Nat.IsGroupOn`: a plain
+// `Prop`-valued `Definition` over caller-supplied operations, right-nested
+// `And`. Unlike `IsGroupOn`, there is no bound `n` and no closure condition —
+// `Rat` is already the whole carrier, so every operation is already total on
+// it.
+
+/// `Rat → Rat → Rat`.
+fn field_binop_ty(d: &mut IntDev<'_>) -> ExprId {
+    let r = rat_ty(d);
+    let inner = d.arrow(r, r);
+    d.arrow(r, inner)
+}
+
+/// `Rat → Rat`.
+fn field_unop_ty(d: &mut IntDev<'_>) -> ExprId {
+    let r = rat_ty(d);
+    d.arrow(r, r)
+}
+
+/// `∀ a b, add a b = add b a`.
+fn field_add_comm_prop(d: &mut IntDev<'_>, add: ExprId) -> ExprId {
+    let r = rat_ty(d);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let ab = d.apply(add, &[a, b]);
+    let ba = d.apply(add, &[b, a]);
+    let eq = req(d, ab, ba);
+    let with_b = d.pi_fv(b_fv, r, eq);
+    d.pi_fv(a_fv, r, with_b)
+}
+
+/// `∀ a b c, add (add a b) c = add a (add b c)`.
+fn field_add_assoc_prop(d: &mut IntDev<'_>, add: ExprId) -> ExprId {
+    let r = rat_ty(d);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let ab = d.apply(add, &[a, b]);
+    let ab_c = d.apply(add, &[ab, c]);
+    let bc = d.apply(add, &[b, c]);
+    let a_bc = d.apply(add, &[a, bc]);
+    let eq = req(d, ab_c, a_bc);
+    let with_c = d.pi_fv(c_fv, r, eq);
+    let with_b = d.pi_fv(b_fv, r, with_c);
+    d.pi_fv(a_fv, r, with_b)
+}
+
+/// `∀ a, add a zero = a`.
+fn field_add_zero_prop(d: &mut IntDev<'_>, add: ExprId, zero: ExprId) -> ExprId {
+    let r = rat_ty(d);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let az = d.apply(add, &[a, zero]);
+    let eq = req(d, az, a);
+    d.pi_fv(a_fv, r, eq)
+}
+
+/// `∀ a, add a (neg a) = zero`.
+fn field_add_neg_prop(d: &mut IntDev<'_>, add: ExprId, neg: ExprId, zero: ExprId) -> ExprId {
+    let r = rat_ty(d);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let na = d.apply(neg, &[a]);
+    let a_na = d.apply(add, &[a, na]);
+    let eq = req(d, a_na, zero);
+    d.pi_fv(a_fv, r, eq)
+}
+
+/// `∀ a b, mul a b = mul b a`.
+fn field_mul_comm_prop(d: &mut IntDev<'_>, mul: ExprId) -> ExprId {
+    field_add_comm_prop(d, mul)
+}
+
+/// `∀ a b c, mul (mul a b) c = mul a (mul b c)`.
+fn field_mul_assoc_prop(d: &mut IntDev<'_>, mul: ExprId) -> ExprId {
+    field_add_assoc_prop(d, mul)
+}
+
+/// `∀ a, mul a one = a`.
+fn field_mul_one_prop(d: &mut IntDev<'_>, mul: ExprId, one: ExprId) -> ExprId {
+    field_add_zero_prop(d, mul, one)
+}
+
+/// `∀ a b c, mul a (add b c) = add (mul a b) (mul a c)`.
+fn field_distrib_prop(d: &mut IntDev<'_>, add: ExprId, mul: ExprId) -> ExprId {
+    let r = rat_ty(d);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let bc = d.apply(add, &[b, c]);
+    let left = d.apply(mul, &[a, bc]);
+    let ab = d.apply(mul, &[a, b]);
+    let ac = d.apply(mul, &[a, c]);
+    let right = d.apply(add, &[ab, ac]);
+    let eq = req(d, left, right);
+    let with_c = d.pi_fv(c_fv, r, eq);
+    let with_b = d.pi_fv(b_fv, r, with_c);
+    d.pi_fv(a_fv, r, with_b)
+}
+
+/// `Not (one = zero)`.
+fn field_one_ne_zero_prop(d: &mut IntDev<'_>, one: ExprId, zero: ExprId) -> ExprId {
+    let eq = req(d, one, zero);
+    d.not(eq)
+}
+
+/// `∀ a, Not (a = zero) → mul a (inv a) = one`.
+fn field_inv_cancel_prop(
+    d: &mut IntDev<'_>,
+    mul: ExprId,
+    inv: ExprId,
+    zero: ExprId,
+    one: ExprId,
+) -> ExprId {
+    let r = rat_ty(d);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let a_ne_zero = {
+        let eq = req(d, a, zero);
+        d.not(eq)
+    };
+    let ia = d.apply(inv, &[a]);
+    let prod = d.apply(mul, &[a, ia]);
+    let concl = req(d, prod, one);
+    let body = d.arrow(a_ne_zero, concl);
+    d.pi_fv(a_fv, r, body)
+}
+
+/// `IsField add mul neg inv zero one`'s ten leaf components — the same
+/// "rebuild the unfolded `Prop`s directly, never through the folded constant"
+/// convention `nat_prelude::group::is_group_on_parts` uses, so a caller
+/// decomposing a hypothesis or assembling an instance can name each
+/// component's exact type.
+struct FieldParts {
+    add_comm: ExprId,
+    add_assoc: ExprId,
+    add_zero: ExprId,
+    add_neg: ExprId,
+    mul_comm: ExprId,
+    mul_assoc: ExprId,
+    mul_one: ExprId,
+    distrib: ExprId,
+    one_ne_zero: ExprId,
+    inv_cancel: ExprId,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn field_parts(
+    d: &mut IntDev<'_>,
+    add: ExprId,
+    mul: ExprId,
+    neg: ExprId,
+    inv: ExprId,
+    zero: ExprId,
+    one: ExprId,
+) -> FieldParts {
+    FieldParts {
+        add_comm: field_add_comm_prop(d, add),
+        add_assoc: field_add_assoc_prop(d, add),
+        add_zero: field_add_zero_prop(d, add, zero),
+        add_neg: field_add_neg_prop(d, add, neg, zero),
+        mul_comm: field_mul_comm_prop(d, mul),
+        mul_assoc: field_mul_assoc_prop(d, mul),
+        mul_one: field_mul_one_prop(d, mul, one),
+        distrib: field_distrib_prop(d, add, mul),
+        one_ne_zero: field_one_ne_zero_prop(d, one, zero),
+        inv_cancel: field_inv_cancel_prop(d, mul, inv, zero, one),
+    }
+}
+
+/// Right-nested `And` of [`FieldParts`]'s ten leaves, in the order documented
+/// on [`RatPrelude::is_field`]:
+///
+/// `add_comm ∧ (add_assoc ∧ (add_zero ∧ (add_neg ∧ (mul_comm ∧ (mul_assoc ∧
+/// (mul_one ∧ (distrib ∧ (one_ne_zero ∧ inv_cancel))))))))`.
+fn field_body(d: &mut IntDev<'_>, parts: &FieldParts) -> ExprId {
+    let p9 = d.and(parts.one_ne_zero, parts.inv_cancel);
+    let p8 = d.and(parts.distrib, p9);
+    let p7 = d.and(parts.mul_one, p8);
+    let p6 = d.and(parts.mul_assoc, p7);
+    let p5 = d.and(parts.mul_comm, p6);
+    let p4 = d.and(parts.add_neg, p5);
+    let p3 = d.and(parts.add_zero, p4);
+    let p2 = d.and(parts.add_assoc, p3);
+    d.and(parts.add_comm, p2)
+}
+
+/// `d.const_app(p.is_field, &[add, mul, neg, inv, zero, one])`.
+#[allow(clippy::too_many_arguments)]
+fn is_field(
+    d: &mut IntDev<'_>,
+    p: &RatPrelude,
+    add: ExprId,
+    mul: ExprId,
+    neg: ExprId,
+    inv: ExprId,
+    zero: ExprId,
+    one: ExprId,
+) -> ExprId {
+    d.const_app(p.is_field, &[add, mul, neg, inv, zero, one])
+}
+
+/// `And.intro left right lp rp : And left right`.
+fn field_and_intro(
+    d: &mut IntDev<'_>,
+    left: ExprId,
+    right: ExprId,
+    lp: ExprId,
+    rp: ExprId,
+) -> ExprId {
+    let intro = d.int().logic.and_intro;
+    d.const_app(intro, &[left, right, lp, rp])
+}
+
+/// Admit `Rat.IsField : (Rat → Rat → Rat) → (Rat → Rat → Rat) → (Rat → Rat) →
+/// (Rat → Rat) → Rat → Rat → Prop`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the generated definition does not
+/// type-check or the name is already taken.
+fn declare_is_field(d: &mut IntDev<'_>, p: &RatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let r = rat_ty(d);
+    let prop = d.kernel().sort_zero();
+    let binop = field_binop_ty(d);
+    let unop = field_unop_ty(d);
+
+    let add_fv = d.fresh_fvar();
+    let add = d.kernel().fvar(add_fv);
+    let mul_fv = d.fresh_fvar();
+    let mul = d.kernel().fvar(mul_fv);
+    let neg_fv = d.fresh_fvar();
+    let neg = d.kernel().fvar(neg_fv);
+    let inv_fv = d.fresh_fvar();
+    let inv = d.kernel().fvar(inv_fv);
+    let zero_fv = d.fresh_fvar();
+    let zero = d.kernel().fvar(zero_fv);
+    let one_fv = d.fresh_fvar();
+    let one = d.kernel().fvar(one_fv);
+
+    let parts = field_parts(d, add, mul, neg, inv, zero, one);
+    let body = field_body(d, &parts);
+
+    let value = {
+        let with_one = d.lam_fv(one_fv, r, body);
+        let with_zero = d.lam_fv(zero_fv, r, with_one);
+        let with_inv = d.lam_fv(inv_fv, unop, with_zero);
+        let with_neg = d.lam_fv(neg_fv, unop, with_inv);
+        let with_mul = d.lam_fv(mul_fv, binop, with_neg);
+        d.lam_fv(add_fv, binop, with_mul)
+    };
+    let ty = {
+        let over_one = d.arrow(r, prop);
+        let over_zero = d.arrow(r, over_one);
+        let over_inv = d.arrow(unop, over_zero);
+        let over_neg = d.arrow(unop, over_inv);
+        let over_mul = d.arrow(binop, over_neg);
+        d.arrow(binop, over_mul)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.is_field,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(FIELD_HEIGHT),
+    })
+}
+
+/// Admit `Rat.rat_isField : Rat.IsField Rat.add Rat.mul Rat.neg Rat.inv
+/// Rat.zero Rat.one` — assembled entirely from already-admitted theorems.
+/// Each of the ten leaves' STATED type already matches
+/// [`field_parts`]'s corresponding component verbatim (`Rat.add_comm : ∀ a b,
+/// add a b = add b a`, …, `Rat.mul_inv_cancel_of_ne_zero : ∀ a, a ≠ 0 → mul a
+/// (inv a) = one`), so every leaf proof is a bare reference to the existing
+/// constant (`d.lemma(name, &[])`) — no new algebra, only `And.intro`
+/// bookkeeping.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the generated declaration does not
+/// type-check or the name is already taken.
+fn declare_rat_is_field(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let add = d.kernel().const_(p.int.rat_add, vec![]);
+    let mul = d.kernel().const_(p.int.rat_mul, vec![]);
+    let neg = d.kernel().const_(p.int.rat_neg, vec![]);
+    let inv = d.kernel().const_(p.inv, vec![]);
+    let zero = d.kernel().const_(p.zero, vec![]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    let ty = is_field(d, &p, add, mul, neg, inv, zero, one);
+    let parts = field_parts(d, add, mul, neg, inv, zero, one);
+
+    let add_comm = d.lemma(p.add_comm, &[]);
+    let add_assoc = d.lemma(p.add_assoc, &[]);
+    let add_zero = d.lemma(p.add_zero, &[]);
+    let add_neg = d.lemma(p.add_neg, &[]);
+    let mul_comm = d.lemma(p.mul_comm, &[]);
+    let mul_assoc = d.lemma(p.mul_assoc, &[]);
+    let mul_one = d.lemma(p.mul_one, &[]);
+    let distrib = d.lemma(p.left_distrib, &[]);
+    let one_ne_zero = d.lemma(p.one_ne_zero, &[]);
+    let inv_cancel = d.lemma(p.mul_inv_cancel_of_ne_zero, &[]);
+
+    let t9 = d.and(parts.one_ne_zero, parts.inv_cancel);
+    let t8 = d.and(parts.distrib, t9);
+    let t7 = d.and(parts.mul_one, t8);
+    let t6 = d.and(parts.mul_assoc, t7);
+    let t5 = d.and(parts.mul_comm, t6);
+    let t4 = d.and(parts.add_neg, t5);
+    let t3 = d.and(parts.add_zero, t4);
+    let t2 = d.and(parts.add_assoc, t3);
+
+    let p9v = field_and_intro(
+        d,
+        parts.one_ne_zero,
+        parts.inv_cancel,
+        one_ne_zero,
+        inv_cancel,
+    );
+    let p8v = field_and_intro(d, parts.distrib, t9, distrib, p9v);
+    let p7v = field_and_intro(d, parts.mul_one, t8, mul_one, p8v);
+    let p6v = field_and_intro(d, parts.mul_assoc, t7, mul_assoc, p7v);
+    let p5v = field_and_intro(d, parts.mul_comm, t6, mul_comm, p6v);
+    let p4v = field_and_intro(d, parts.add_neg, t5, add_neg, p5v);
+    let p3v = field_and_intro(d, parts.add_zero, t4, add_zero, p4v);
+    let p2v = field_and_intro(d, parts.add_assoc, t3, add_assoc, p3v);
+    let value = field_and_intro(d, parts.add_comm, t2, add_comm, p2v);
+
+    d.declare_theorem(p.rat_is_field, ty, value)
+}
+
+// === Consequences: cancellation ============================================
+//
+// `Rat.mul_eq_zero : ∀ a b, mul a b = zero → a = zero ∨ b = zero` already
+// exists (`laws.rs`) — ℚ having no zero divisors was proved before this
+// module, in service of `Rat.lt_trichotomy`. What was missing is the other
+// fact a field gives that a ring does not: cancellation.
+
+/// Admit `Rat.mul_left_cancel_of_ne_zero : ∀ a b c, Not (a = zero) → mul a b
+/// = mul a c → b = c`.
+///
+/// `b = 1·b = (a⁻¹·a)·b = a⁻¹·(a·b) = a⁻¹·(a·c) = (a⁻¹·a)·c = 1·c = c` — the
+/// same seven-step chain `nat_prelude::group::declare_group_left_cancel` runs
+/// over an abstract `IsGroupOn` hypothesis, specialised to `Rat`'s own
+/// commutative multiplication: only the one inverse law `a⁻¹·a = 1`
+/// (`Rat.mul_inv_cancel_of_ne_zero` plus `Rat.mul_comm`) is needed, not a
+/// bounded group's closure/membership side conditions.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_mul_left_cancel_of_ne_zero(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+
+    let zero = rzero(d, p);
+    let one = rone(d, p);
+
+    let a_ne_zero = {
+        let eq = req(d, a, zero);
+        d.not(eq)
+    };
+    let ha_fv = d.fresh_fvar();
+    let ha = d.kernel().fvar(ha_fv);
+
+    let ab = rmul(d, a, b);
+    let ac = rmul(d, a, c);
+    let hab_ty = req(d, ab, ac);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    // inv a, and both cancellation orientations.
+    let inv_a = d.const_app(p.inv, &[a]);
+    let a_inv_a = rmul(d, a, inv_a);
+    let inv_a_a = rmul(d, inv_a, a);
+    let a_inv_a_eq_one = d.lemma(p.mul_inv_cancel_of_ne_zero, &[a, ha]); // a*a⁻¹ = 1
+    let comm_inv = d.lemma(p.mul_comm, &[inv_a, a]); // a⁻¹*a = a*a⁻¹
+    let inv_a_a_eq_one = rtrans(d, inv_a_a, a_inv_a, one, comm_inv, a_inv_a_eq_one); // a⁻¹*a = 1
+
+    // step1 : b = 1*b
+    let mul_one_b = d.lemma(p.mul_one, &[b]); // b*1 = b
+    let comm_one_b = d.lemma(p.mul_comm, &[one, b]); // 1*b = b*1
+    let one_b = rmul(d, one, b);
+    let b_one = rmul(d, b, one);
+    let one_b_eq_b = rtrans(d, one_b, b_one, b, comm_one_b, mul_one_b);
+    let step1 = rsymm(d, one_b, b, one_b_eq_b); // b = 1*b
+
+    // step2 : 1*b = (a⁻¹*a)*b
+    let one_eq_inv_a_a = rsymm(d, inv_a_a, one, inv_a_a_eq_one); // 1 = a⁻¹*a
+    let inv_a_a_b = rmul(d, inv_a_a, b);
+    let step2 = rcongr(d, one, inv_a_a, one_eq_inv_a_a, &|d, t| rmul(d, t, b));
+
+    // step3 : (a⁻¹*a)*b = a⁻¹*(a*b)
+    let step3 = d.lemma(p.mul_assoc, &[inv_a, a, b]);
+    let inv_a_ab = rmul(d, inv_a, ab);
+
+    // step4 : a⁻¹*(a*b) = a⁻¹*(a*c)
+    let inv_a_ac = rmul(d, inv_a, ac);
+    let step4 = rcongr(d, ab, ac, hab, &|d, t| rmul(d, inv_a, t));
+
+    // step5 : a⁻¹*(a*c) = (a⁻¹*a)*c
+    let assoc_iaac = d.lemma(p.mul_assoc, &[inv_a, a, c]);
+    let inv_a_a_c = rmul(d, inv_a_a, c);
+    let step5 = rsymm(d, inv_a_a_c, inv_a_ac, assoc_iaac);
+
+    // step6 : (a⁻¹*a)*c = 1*c
+    let one_c = rmul(d, one, c);
+    let step6 = rcongr(d, inv_a_a, one, inv_a_a_eq_one, &|d, t| rmul(d, t, c));
+
+    // step7 : 1*c = c
+    let c_one = rmul(d, c, one);
+    let mul_one_c = d.lemma(p.mul_one, &[c]); // c*1 = c
+    let comm_one_c = d.lemma(p.mul_comm, &[one, c]); // 1*c = c*1
+    let step7 = rtrans(d, one_c, c_one, c, comm_one_c, mul_one_c);
+
+    let (_, proof_body) = rchain(
+        d,
+        b,
+        &[
+            (one_b, step1),
+            (inv_a_a_b, step2),
+            (inv_a_ab, step3),
+            (inv_a_ac, step4),
+            (inv_a_a_c, step5),
+            (one_c, step6),
+            (c, step7),
+        ],
+    );
+
+    let concl = req(d, b, c);
+    let stmt_inner = {
+        let inner = d.arrow(hab_ty, concl);
+        d.arrow(a_ne_zero, inner)
+    };
+    let value_inner = {
+        let with_hab = d.lam_fv(hab_fv, hab_ty, proof_body);
+        d.lam_fv(ha_fv, a_ne_zero, with_hab)
+    };
+
+    let binders = [(a_fv, carrier), (b_fv, carrier), (c_fv, carrier)];
+    let mut ty = stmt_inner;
+    let mut value = value_inner;
+    for &(fv, vty) in binders.iter().rev() {
+        ty = d.pi_fv(fv, vty, ty);
+        value = d.lam_fv(fv, vty, value);
+    }
+
+    d.declare_theorem(p.mul_left_cancel_of_ne_zero, ty, value)
 }

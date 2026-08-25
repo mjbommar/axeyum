@@ -67,6 +67,10 @@ fn every_named_declaration_exists() {
         ("mul_inv_cancel_of_neg", p.mul_inv_cancel_of_neg),
         ("mul_inv_cancel_of_ne_zero", p.mul_inv_cancel_of_ne_zero),
         ("inv_pos", p.inv_pos),
+        ("one_ne_zero", p.one_ne_zero),
+        ("IsField", p.is_field),
+        ("rat_isField", p.rat_is_field),
+        ("mul_left_cancel_of_ne_zero", p.mul_left_cancel_of_ne_zero),
         ("sub_mul", p.sub_mul),
         ("mul_inv_sub_one", p.mul_inv_sub_one),
         ("inv_sub_inv", p.inv_sub_inv),
@@ -895,6 +899,178 @@ fn the_product_toolkit_is_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "{label} rests on {footprint:?}");
     }
+}
+
+/// **`Rat.IsField`, and every leaf is asserted verbatim** — the curriculum
+/// target (`fields.md`): a bundled `Prop` predicate in the
+/// `nat_prelude::group::Nat.IsGroupOn` house style, with `Rat.rat_isField` the
+/// worked instance and `Rat.mul_left_cancel_of_ne_zero` the consequence a
+/// field gives that a ring does not.
+#[test]
+fn the_rationals_satisfy_is_field_and_cancel() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    assert_eq!(
+        rendered(&mut kernel, p.one_ne_zero),
+        "Not (Eq.{1} Rat Rat.one Rat.zero)"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.is_field),
+        "((x0 : ((x0 : Rat) -> ((x1 : Rat) -> Rat))) -> ((x1 : ((x1 : Rat) -> \
+         ((x2 : Rat) -> Rat))) -> ((x2 : ((x2 : Rat) -> Rat)) -> ((x3 : ((x3 : \
+         Rat) -> Rat)) -> ((x4 : Rat) -> ((x5 : Rat) -> Prop))))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.rat_is_field),
+        "Rat.IsField Rat.add Rat.mul Rat.neg Rat.inv Rat.zero Rat.one"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.mul_left_cancel_of_ne_zero),
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Not (Eq.{1} Rat x0 \
+         Rat.zero)) -> ((x4 : Eq.{1} Rat (Rat.mul x0 x1) (Rat.mul x0 x2)) -> \
+         Eq.{1} Rat x1 x2)))))"
+    );
+
+    for (label, name, expect_definition) in [
+        ("one_ne_zero", p.one_ne_zero, false),
+        ("IsField", p.is_field, true),
+        ("rat_isField", p.rat_is_field, false),
+        (
+            "mul_left_cancel_of_ne_zero",
+            p.mul_left_cancel_of_ne_zero,
+            false,
+        ),
+    ] {
+        let decl = kernel.environment().get(name);
+        if expect_definition {
+            assert!(
+                matches!(decl, Some(Declaration::Definition { .. })),
+                "Rat.{label} must be a checked Definition"
+            );
+        } else {
+            assert!(
+                matches!(decl, Some(Declaration::Theorem { .. })),
+                "Rat.{label} must be a checked Theorem"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// **The field laws compute at an explicit rational, and the kernel refuses
+/// the unrestricted `x·x⁻¹ = 1` when it is asked to reuse the real proof
+/// without the `x ≠ 0` hypothesis.**
+///
+/// `Rat.inv`'s totality (`inv 0 = 0`) is exactly what makes `mul_inv_cancel`
+/// need a hypothesis at all; the negative control here is the mistake that
+/// hypothesis exists to rule out.
+#[test]
+fn field_laws_compute_at_one_half_and_reject_the_unrestricted_inverse() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_eq_rewrite, req, rlt, rmul, rone, rrefl, rzero};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    // `1/2`, as `Rat.natDivSucc 1 1`, and its positivity (`1 ≤ 1`).
+    let one_nat = d.num(1);
+    let half = d.const_app(p.nat_div_succ, &[one_nat, one_nat]);
+    let one_le_one = d.lemma(p.int.nat.le_refl, &[one_nat]);
+    let half_pos = d.lemma(p.nat_div_succ_pos, &[one_nat, one_nat, one_le_one]); // 0 < 1/2
+
+    // `1/2 ≠ 0`, by the same rewrite-to-`lt_irrefl` route as `Rat.one_ne_zero`.
+    let zero = rzero(&mut d, p);
+    let half_eq_zero = req(&mut d, half, zero);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let rewritten = rat_eq_rewrite(&mut d, half, zero, h, half_pos, &|d, t| rlt(d, p, zero, t));
+    let refuted = d.lemma(p.lt_irrefl, &[zero]);
+    let false_proof = d.apply(refuted, &[rewritten]);
+    let half_ne_zero = d.lam_fv(h_fv, half_eq_zero, false_proof);
+
+    // Computation: `(1/2)⁻¹` REDUCES to `2/1` — `Eq.refl` alone must check.
+    let two_nat = d.num(2);
+    let zero_nat = d.zero();
+    let doubled = d.const_app(p.nat_div_succ, &[two_nat, zero_nat]); // 2/1
+    let reciprocal = d.const_app(p.inv, &[half]);
+    let inv_computes = req(&mut d, reciprocal, doubled);
+    let inv_proof = rrefl(&mut d, doubled);
+    let inv_name = d.kernel().name_str(anon, "Check.half_inv_computes");
+    let inv_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: inv_name,
+        uparams: vec![],
+        ty: inv_computes,
+        value: inv_proof,
+    });
+    assert!(
+        inv_accepted.is_ok(),
+        "`(1/2)⁻¹` must REDUCE to `2/1`: {inv_accepted:?}"
+    );
+
+    // The field law itself, applied at this concrete `1/2`: `(1/2)·(1/2)⁻¹ = 1`.
+    let one = rone(&mut d, p);
+    let product = rmul(&mut d, half, reciprocal);
+    let law_claim = req(&mut d, product, one);
+    let law_proof = d.lemma(p.mul_inv_cancel_of_ne_zero, &[half, half_ne_zero]);
+    let law_name = d.kernel().name_str(anon, "Check.half_mul_inv_cancel");
+    let law_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: law_name,
+        uparams: vec![],
+        ty: law_claim,
+        value: law_proof,
+    });
+    assert!(
+        law_accepted.is_ok(),
+        "the field law must apply at `1/2`: {law_accepted:?}"
+    );
+
+    // NEGATIVE CONTROL: `∀ x, mul x (inv x) = one`, UNRESTRICTED — false at
+    // `x = 0` (`Rat.inv Rat.zero = Rat.zero`, so the claim there is `0 = 1`).
+    // Reuse `Rat.mul_inv_cancel_of_ne_zero`'s own constant, applied to just
+    // `x` (no `x ≠ 0` proof supplied) — its type is `Not (x=0) -> …`, not the
+    // bare `Eq` the unrestricted statement needs, so the kernel must refuse.
+    let carrier = crate::rat_prelude::ops::rat_ty(&mut d);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let one2 = rone(&mut d, p);
+    let ix = d.const_app(p.inv, &[x]);
+    let bad_product = rmul(&mut d, x, ix);
+    let bad_concl = req(&mut d, bad_product, one2);
+    let bad_ty = d.pi_fv(x_fv, carrier, bad_concl);
+
+    let real_const = d.kernel().const_(p.mul_inv_cancel_of_ne_zero, vec![]);
+    let bad_body = d.apply(real_const, &[x]); // : Not (x=0) -> mul x (inv x) = one
+    let bad_value = d.lam_fv(x_fv, carrier, bad_body);
+    let bad_name = d.kernel().name_str(anon, "Check.unrestricted_inv_cancel");
+    let bad_accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: bad_name,
+        uparams: vec![],
+        ty: bad_ty,
+        value: bad_value,
+    });
+    assert!(
+        bad_accepted.is_err(),
+        "the kernel accepted `∀ x, x·x⁻¹ = 1` UNRESTRICTED — the `x ≠ 0` \
+         hypothesis was refused as if it were vacuous: {bad_accepted:?}"
+    );
 }
 
 /// **ℚ is a field, and the statement is asserted verbatim.**
