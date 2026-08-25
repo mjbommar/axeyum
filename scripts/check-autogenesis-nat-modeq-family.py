@@ -26,12 +26,32 @@ scoping decision explicitly). Naming a currently-blocked fact in
 would contradict that recorded plan, so this operation covers exactly the
 three ready facts.
 
-Registering this operation does NOT prove anything: it makes three `open`
-facts dispatchable to `fact-frontier.py`'s selection. No fact's
-`epistemic_status` changes here, and this script asserts that explicitly --
-a registration gate that let a fact drift to `proved` without an evidence
-row would be exactly the "checker that cannot fail" defect this ledger
-tracks.
+Registering this operation does not by itself prove anything: it makes three
+`open` facts dispatchable to `fact-frontier.py`'s selection. `execute-
+autogenesis-operation.py` cannot carry that dispatch through to a ledger
+write for THIS operation -- `selected_inputs()` requires the frontier's
+`admissible_fact_ids` to equal exactly `[selected_fact_id]`, and as long as
+two or more of the three facts this operation names remain simultaneously
+open and dependency-ready, the frontier's admissible set has more than one
+member and the automated executor refuses categorically, before even
+reaching driver dispatch (which also has no handler registered for
+`axeyum-lean-import/modeq-family-multi-target-v1`). So promotion here is the
+same hand-authored-commit-following-independently-rechecked-receipt pattern
+already used for `authoritative-mathlib-modeq-family-v1` (`Int.ModEq`,
+6b8c2526b): the checker in this file re-derives the receipt independently of
+any ledger claim, and a human- or agent-reviewed commit is what actually
+flips a fact's `epistemic_status`, one fact at a time so the transition
+stays reviewable.
+
+`F:ml430-nat-modeq-refl-d870c8f5` was flipped `proved` this way, with an
+evidence row bound to this operation's id, `checker_operation.goal_sha256`
+and `proof_sha256` matching exactly what `check_target` below re-derives.
+`F:ml430-nat-modeq-symm-0a3d4d18` and `F:ml430-nat-modeq-trans-ef9d1c46`
+remain `open` and dispatchable, for a following lane to close the same way.
+A registration gate that let an `open` fact drift to `proved` without a
+matching evidence row, or let a `proved` fact's evidence disagree with a
+fresh replay, would be exactly the "checker that cannot fail" defect this
+ledger tracks -- so this script checks both states explicitly.
 
 A checker that cannot fail is worse than no checker, so this script fails
 loudly on any mismatch rather than reporting completion alone: every field
@@ -60,6 +80,11 @@ REGISTRY = ROOT / "artifacts/autogenesis/operations.json"
 OPERATION_ID = "authoritative-mathlib-nat-modeq-family-v1"
 DISPATCHABLE_FACT_IDS = (
     "F:ml430-nat-modeq-refl-d870c8f5",
+    "F:ml430-nat-modeq-symm-0a3d4d18",
+    "F:ml430-nat-modeq-trans-ef9d1c46",
+)
+SETTLED_FACT_IDS = ("F:ml430-nat-modeq-refl-d870c8f5",)
+REMAINING_DISPATCHABLE_FACT_IDS = (
     "F:ml430-nat-modeq-symm-0a3d4d18",
     "F:ml430-nat-modeq-trans-ef9d1c46",
 )
@@ -173,7 +198,7 @@ def validate_external(external: dict[str, Any]) -> pathlib.Path:
     return path
 
 
-def check_target(target: dict[str, Any], max_binders: int) -> None:
+def check_target(target: dict[str, Any], max_binders: int) -> dict[str, Any]:
     fact_id = target["fact_id"]
     adapter = load(ROOT / target["statement_adapter_manifest"])
     modeq = load(ROOT / target["modeq_manifest"])
@@ -223,12 +248,17 @@ def check_target(target: dict[str, Any], max_binders: int) -> None:
         raise FamilyError(f"{fact_id}: rendered goal digest disagrees")
     if sha256_text(receipt["proof"]) != op["proof_sha256"]:
         raise FamilyError(f"{fact_id}: rendered proof digest disagrees")
+    return modeq
 
 
-def check_registration_grants_dispatch_not_proof(operation: dict[str, Any]) -> None:
-    """This operation makes three OPEN facts dispatchable; it must not have
-    proved anything. A registration gate that tolerated a status flip without
-    a real evidence row would be exactly the checker-that-cannot-fail defect
+def check_registration_grants_dispatch_not_proof(
+    operation: dict[str, Any], targets_by_fact: dict[str, dict[str, Any]]
+) -> None:
+    """This operation makes three facts dispatchable; registration alone must
+    not have proved any of them, and a promotion must carry an evidence row
+    that agrees exactly with a fresh replay. A registration gate that
+    tolerated a status flip without a real, matching evidence row -- in
+    either direction -- would be exactly the checker-that-cannot-fail defect
     this ledger tracks, moved one arrow upstream."""
     dispatchable = set(DISPATCHABLE_FACT_IDS)
     all_named = operation["applicability"]["fact_ids"]
@@ -237,12 +267,17 @@ def check_registration_grants_dispatch_not_proof(operation: dict[str, Any]) -> N
             f"DISPATCHABLE_FACT_IDS {sorted(dispatchable)} disagrees with "
             f"applicability.fact_ids {sorted(all_named)}"
         )
+    if set(SETTLED_FACT_IDS) | set(REMAINING_DISPATCHABLE_FACT_IDS) != dispatchable:
+        raise FamilyError(
+            "SETTLED_FACT_IDS and REMAINING_DISPATCHABLE_FACT_IDS no longer "
+            "partition DISPATCHABLE_FACT_IDS"
+        )
     if DEFERRED_FACT_ID in all_named:
         raise FamilyError(
             f"{DEFERRED_FACT_ID} is blocked on an unsettled dependency and must "
             "not be named by this operation yet"
         )
-    for fact_id in DISPATCHABLE_FACT_IDS:
+    for fact_id in REMAINING_DISPATCHABLE_FACT_IDS:
         fact = load(ROOT / "artifacts/facts" / (fact_id.replace("F:", "F-") + ".json"))
         if fact.get("epistemic_status") != "open":
             raise FamilyError(
@@ -261,6 +296,43 @@ def check_registration_grants_dispatch_not_proof(operation: dict[str, Any]) -> N
                 f"{fact_id}: an 'open' fact must carry no evidence row bound to "
                 f"{OPERATION_ID}; found {len(rows)}"
             )
+    for fact_id in SETTLED_FACT_IDS:
+        target = targets_by_fact[fact_id]
+        op = target["modeq"].get("operation") or {}
+        fact = load(ROOT / "artifacts/facts" / (fact_id.replace("F:", "F-") + ".json"))
+        if fact.get("epistemic_status") != "proved" or fact.get("proof_route") != "kernel-lean":
+            raise FamilyError(f"{fact_id}: not settled as expected")
+        if fact.get("axiom_footprint") != []:
+            raise FamilyError(f"{fact_id}: axiom footprint is not empty")
+        rows = [
+            row
+            for row in fact.get("evidence", [])
+            if isinstance(row, dict)
+            and isinstance(row.get("checker_operation"), dict)
+            and row["checker_operation"].get("id") == OPERATION_ID
+        ]
+        if len(rows) != 1:
+            raise FamilyError(
+                f"{fact_id}: expected exactly one evidence row bound to "
+                f"{OPERATION_ID}, found {len(rows)}"
+            )
+        row = rows[0]
+        if row.get("check_status") != "checked":
+            raise FamilyError(f"{fact_id}: bound evidence row is not checked")
+        bound = row["checker_operation"]
+        for key in (
+            "goal_sha256",
+            "proof_sha256",
+            "target_content_sha256",
+            "binders_used",
+            "admitted_declarations",
+            "target_definition",
+        ):
+            if bound.get(key) != op.get(key):
+                raise FamilyError(
+                    f"{fact_id}: evidence row {key}={bound.get(key)!r} disagrees "
+                    f"with the freshly replayed {key}={op.get(key)!r}"
+                )
     deferred = load(ROOT / "artifacts/facts" / (DEFERRED_FACT_ID.replace("F:", "F-") + ".json"))
     if deferred.get("depends_on") != ["F:ml430-nat-modeq-symm-0a3d4d18"]:
         raise FamilyError(
@@ -322,15 +394,18 @@ def main() -> int:
         targets = executor["targets"]
         if len(targets) != 3:
             raise FamilyError("expected exactly three targets in this family")
+        targets_by_fact: dict[str, dict[str, Any]] = {}
         for target in targets:
-            check_target(target, max_binders)
-        check_registration_grants_dispatch_not_proof(operation)
+            modeq = check_target(target, max_binders)
+            targets_by_fact[target["fact_id"]] = {"modeq": modeq}
+        check_registration_grants_dispatch_not_proof(operation, targets_by_fact)
         check_circularity_adversarial_control()
         check_bogus_path_declines(targets[0]["target_definition"])
         print(
             "AUTOGENESIS_NAT_MODEQ_FAMILY_OK|"
             f"operation={OPERATION_ID}|targets={len(targets)}|"
-            f"dispatchable_facts={','.join(DISPATCHABLE_FACT_IDS)}|"
+            f"settled_facts={','.join(SETTLED_FACT_IDS)}|"
+            f"remaining_dispatchable_facts={','.join(REMAINING_DISPATCHABLE_FACT_IDS)}|"
             f"deferred_fact={DEFERRED_FACT_ID}|"
             "circularity_adversarial_control=rejected|"
             "bogus_path_control=declined"
