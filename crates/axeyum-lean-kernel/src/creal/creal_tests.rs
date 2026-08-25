@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 206] = [
+    let expected: [(&str, crate::NameId, &str); 207] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -406,6 +406,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.riemannSum_add", p.riemann_sum_add, "theorem"),
         ("CReal.mul_riemannSum", p.mul_riemann_sum, "theorem"),
         ("CReal.riemannSum_le", p.riemann_sum_le, "theorem"),
+        ("CReal.riemannSum_const", p.riemann_sum_const, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -2457,6 +2458,72 @@ fn riemann_sum_of_the_constant_one_on_0_1_computes_to_one() {
             panic!(
                 "riemannSum (fun _ => one) zero one 0 did NOT compute to one at \
                  sample index 2 (not merely type-check): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory computation test**, extending
+/// [`riemann_sum_of_the_constant_one_on_0_1_computes_to_one`] to a
+/// NON-UNIT interval and a NON-ONE constant: a single-subinterval Riemann
+/// sum of the constant `2` on `[0, 3]` must COMPUTE to `6`, catching the
+/// exact bug class a definition can pass type-checking with but still have
+/// (`Δ` and the constant transposed, or a stray `Δ`-count arithmetic slip)
+/// that the all-`one`s `c = 1, [0, 1]` instance is too degenerate to expose
+/// — `1 · 1` reads the same whichever factor is which.
+///
+/// `c`, `[a, b]` and the target `6` are all built from `CReal.one`/`add`
+/// alone (never `CReal.ofNat`, which is its own delta-step-plus-`Rat`-
+/// normalization construction — irrelevant to what this test is checking),
+/// so the only new arithmetic this test exercises beyond the existing one
+/// is the constant/width multiplication, not a second embedding route.
+#[test]
+fn riemann_sum_of_the_constant_two_on_0_3_computes_to_six() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let two_c = d.const_app(p.add, &[one_c, one_c]); // 1 + 1 = 2
+    let three_c = d.const_app(p.add, &[two_c, one_c]); // 2 + 1 = 3
+    let six_c = d.const_app(p.add, &[three_c, three_c]); // 3 + 3 = 6
+
+    // const_two := fun _ : CReal => two_c.
+    let const_two = {
+        let x_fv = d.fresh_fvar();
+        let _x = d.kernel().fvar(x_fv);
+        d.lam_fv(x_fv, carrier, two_c)
+    };
+
+    let zero_m = d.num(0); // m := 0, so n = Nat.succ 0 = 1.
+    let rsum_term = d.const_app(p.riemann_sum, &[const_two, zero_c, three_c, zero_m]);
+
+    let index = d.num(2);
+    let lhs = d.const_app(p.seq, &[rsum_term, index]);
+    let rhs = d.const_app(p.seq, &[six_c, index]);
+    let stmt = req(&mut d, lhs, rhs);
+    let proof = rrefl(&mut d, lhs);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__riemann_sum_of_the_constant_two_on_0_3_computes_to_six",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: stmt,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "riemannSum (fun _ => 2) 0 3 0 did NOT compute to 6 at sample \
+                 index 2 (not merely type-check): {error:?}"
             )
         });
 }

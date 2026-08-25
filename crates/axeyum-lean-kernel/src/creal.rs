@@ -1723,6 +1723,12 @@ pub struct CRealPrelude {
     /// pointwise hypothesis is global (`∀ z`), not restricted to `[a, b]`;
     /// see `integral.rs`'s module documentation for why.
     pub riemann_sum_le: NameId,
+    /// `CReal.riemannSum_const : ∀ c a b m,
+    /// Equiv (riemannSum (fun _ => c) a b m) (mul c (add b (neg a)))` — a
+    /// constant function's Riemann sum is exactly base times height,
+    /// exactly (no error term), for every subinterval count `m`. See
+    /// `integral.rs`'s module documentation for the two-piece route.
+    pub riemann_sum_const: NameId,
 }
 
 impl CRealPrelude {
@@ -1994,6 +2000,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_add: kernel.name_str(creal, "riemannSum_add"),
         mul_riemann_sum: kernel.name_str(creal, "mul_riemannSum"),
         riemann_sum_le: kernel.name_str(creal, "riemannSum_le"),
+        riemann_sum_const: kernel.name_str(creal, "riemannSum_const"),
     }
 }
 
