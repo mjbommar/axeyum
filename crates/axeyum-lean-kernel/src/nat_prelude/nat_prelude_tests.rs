@@ -472,6 +472,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.id,
         p.is_group_on_fn,
         p.eq_on,
+        p.prod_range,
     ]
 }
 
@@ -721,6 +722,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.eq_on_symm,
         p.eq_on_trans,
         p.symmetric_group_is_group_on_fn,
+        p.prod_range_zero,
+        p.prod_range_succ,
+        p.exists_prime_factorization,
     ]
 }
 
@@ -4833,7 +4837,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        52 + 240,
+        53 + 243,
         "every promised definition and theorem must be rendered"
     );
 }
