@@ -325,7 +325,8 @@ pub(super) fn declare_derivative(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     declare_has_derivative_mul(d, p)?;
     declare_has_derivative_cube(d, p)?;
     declare_has_derivative_congr(d, p)?;
-    declare_has_derivative_chain(d, p)
+    declare_has_derivative_chain(d, p)?;
+    declare_has_derivative_chain_id_sq(d, p)
     // `hasDerivative_pow_two` is NOT called here: it mentions `CReal.pow`,
     // which `power.rs` declares later in `build_creal_prelude_uncached`'s own
     // pipeline. See `declare_has_derivative_pow_two`'s doc comment and the
@@ -7286,6 +7287,227 @@ fn declare_has_derivative_chain(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.has_derivative_chain,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.hasDerivative_chain_id_sq` — the chain rule's first concrete
+/// instantiation, `F := id`, `G := sq`. See
+/// [`CRealPrelude::has_derivative_chain_id_sq`]'s own doc comment for the
+/// statement and the route.
+///
+/// `F := fun r => r`, `F' := fun _ => one` ([`CRealPrelude::has_derivative_id`]),
+/// `G := fun r => mul r r`, `G' := fun x => add x x`
+/// ([`CRealPrelude::has_derivative_sq`]). Both self-map hypotheses on `F`
+/// are trivial: `id z` is defeq `z`, so `a ≤ id z` and `id z ≤ b` are defeq
+/// to the range hypotheses themselves — no `le_refl`, no case split.
+/// `UniformlyContinuousOn F a b` is [`CRealPrelude::uniformly_continuous_id`]
+/// directly, at the exact `F := fun r => r` this instantiation already uses
+/// (alpha-equivalent, so no transport needed there either).
+///
+/// The raw chain-rule output derivative is `fun x => mul (G' (F x)) (F' x)`,
+/// which beta-reduces to `fun x => mul (add x x) one` — `(x+x)*1`, not
+/// `hasDerivative_sq`'s own `fun x => add x x`. Closing that last step is
+/// the actual cross-check: [`CRealPrelude::has_derivative_congr`] transports
+/// the raw witness across `agree_g : Equiv (mul x x) (mul x x)`
+/// (`Equiv.refl`, since both sides reduce to the same term with no
+/// non-definitional step, unlike `hasDerivative_pow_two`'s `pow x 2` case)
+/// and `agree_gp : Equiv (add x x) (mul (add x x) one)` (`esymm` of
+/// [`CRealPrelude::mul_one`] at `add x x`).
+///
+/// `k1`, `k2` and their `BoundedOn` witnesses (on `F' := fun _ => one` and
+/// `G' := fun x => add x x` respectively) are left universally quantified —
+/// [`CRealPrelude::has_derivative_cube`]'s own pattern — rather than derived
+/// from a concrete magnitude bound on `[a,b]`: `fun _ => one` is bounded by
+/// `0` trivially, but a concrete bound for `fun x => x+x` needs an actual
+/// `CReal.bound`-derived `Nat` witness for arbitrary `a`, `b`, which is a
+/// separate undertaking this instantiation does not need to attempt.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_has_derivative_chain_id_sq(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    // F := id, F' := fun _ => one.
+    let id_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let one_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, one_c)
+    };
+
+    // G := sq, G' := fun x => add x x.
+    let sq_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let rr = cmul(d, p, r, r);
+        d.lam_fv(r_fv, carrier, rr)
+    };
+    let sq_deriv = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let xx = cadd(d, p, x, x);
+        d.lam_fv(x_fv, carrier, xx)
+    };
+
+    let hf = d.const_app(p.has_derivative_id, &[a, b]);
+    let hg = d.const_app(p.has_derivative_sq, &[a, b]);
+    let huc = d.const_app(p.uniformly_continuous_id, &[a, b]);
+
+    // Self-map hypotheses on `id`: `a <= id z` / `id z <= b` are defeq to
+    // `a <= z` / `z <= b`, so the hypothesis IS the conclusion.
+    let self_lo = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let range_az = d.const_app(p.le, &[a, z]);
+        let range_zb = d.const_app(p.le, &[z, b]);
+        let haz_fv = d.fresh_fvar();
+        let haz = d.kernel().fvar(haz_fv);
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, range_zb, haz);
+        let with_haz = d.lam_fv(haz_fv, range_az, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+    let self_hi = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let range_az = d.const_app(p.le, &[a, z]);
+        let range_zb = d.const_app(p.le, &[z, b]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let hzb = d.kernel().fvar(hzb_fv);
+        let with_hzb = d.lam_fv(hzb_fv, range_zb, hzb);
+        let with_haz = d.lam_fv(haz_fv, range_az, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let k1_fv = d.fresh_fvar();
+    let k1 = d.kernel().fvar(k1_fv);
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+    let hbfp_ty = bounded_on_ty(d, p, one_fn, a, b, k1);
+    let hbfp_fv = d.fresh_fvar();
+    let hbfp = d.kernel().fvar(hbfp_fv);
+    let hbgp_ty = bounded_on_ty(d, p, sq_deriv, a, b, k2);
+    let hbgp_fv = d.fresh_fvar();
+    let hbgp = d.kernel().fvar(hbgp_fv);
+
+    let mk_applied = d.const_app(
+        p.has_derivative_chain,
+        &[
+            id_fn, one_fn, sq_fn, sq_deriv, a, b, hf, hg, huc, self_lo, self_hi, k1, k2, hbfp, hbgp,
+        ],
+    );
+
+    // The chain rule's own raw subject/derivative, built the SAME way
+    // `declare_has_derivative_chain`'s own `gcirc`/`gcirc_p` are (its own
+    // `f := id_fn`, `g := sq_fn`, `gp := sq_deriv`, `fp := one_fn`
+    // substituted verbatim), so `mk_applied`'s actual type matches these
+    // exactly rather than only up to a defeq the kernel has to search for.
+    let raw_subject = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let fr = d.apply(id_fn, &[r]);
+        let gfr = d.apply(sq_fn, &[fr]);
+        d.lam_fv(r_fv, carrier, gfr)
+    };
+    let raw_deriv = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fx = d.apply(id_fn, &[x]);
+        let gpfx = d.apply(sq_deriv, &[fx]);
+        let fpx = d.apply(one_fn, &[x]);
+        let prod = cmul(d, p, gpfx, fpx);
+        d.lam_fv(x_fv, carrier, prod)
+    };
+
+    // agree_g : Equiv (sq_fn x) (raw_subject x) -- both reduce (pure beta,
+    // `id`'s own error-free case) to `mul x x`, so `Equiv.refl` at `mul x x`
+    // closes it up to defeq.
+    let agree_g = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_fv = d.fresh_fvar();
+        let hxb_fv = d.fresh_fvar();
+        let range_ax = d.const_app(p.le, &[a, x]);
+        let range_xb = d.const_app(p.le, &[x, b]);
+        let xx = cmul(d, p, x, x);
+        let refl = erefl(d, p, xx);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, refl);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        d.lam_fv(x_fv, carrier, with_hax)
+    };
+
+    // agree_gp : Equiv (sq_deriv x) (raw_deriv x) -- `raw_deriv x` reduces to
+    // `mul (add x x) one`, so this needs `esymm (mul_one (add x x))`, not
+    // `Equiv.refl`.
+    let agree_gp = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_fv = d.fresh_fvar();
+        let hxb_fv = d.fresh_fvar();
+        let range_ax = d.const_app(p.le, &[a, x]);
+        let range_xb = d.const_app(p.le, &[x, b]);
+        let xx_add = cadd(d, p, x, x);
+        let mul_term = cmul(d, p, xx_add, one_c);
+        let mul_one_lemma = d.lemma(p.mul_one, &[xx_add]); // Equiv (mul xx_add one) xx_add
+        let body = esymm(d, p, mul_term, xx_add, mul_one_lemma);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, body);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        d.lam_fv(x_fv, carrier, with_hax)
+    };
+
+    let applied = d.const_app(
+        p.has_derivative_congr,
+        &[
+            raw_subject,
+            raw_deriv,
+            a,
+            b,
+            mk_applied,
+            sq_fn,
+            sq_deriv,
+            agree_g,
+            agree_gp,
+        ],
+    );
+
+    let value = {
+        let with_hbgp = d.lam_fv(hbgp_fv, hbgp_ty, applied);
+        let with_hbfp = d.lam_fv(hbfp_fv, hbfp_ty, with_hbgp);
+        let with_k2 = d.lam_fv(k2_fv, nat, with_hbfp);
+        let with_k1 = d.lam_fv(k1_fv, nat, with_k2);
+        let with_b = d.lam_fv(b_fv, carrier, with_k1);
+        d.lam_fv(a_fv, carrier, with_b)
+    };
+    let ty = {
+        let target = hd_ty(d, p, sq_fn, sq_deriv, a, b);
+        let with_hbgp = d.arrow(hbgp_ty, target);
+        let with_hbfp = d.arrow(hbfp_ty, with_hbgp);
+        let with_k2 = d.pi_fv(k2_fv, nat, with_hbfp);
+        let with_k1 = d.pi_fv(k1_fv, nat, with_k2);
+        let with_b = d.pi_fv(b_fv, carrier, with_k1);
+        d.pi_fv(a_fv, carrier, with_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.has_derivative_chain_id_sq,
         uparams: vec![],
         ty,
         value,
