@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "F:complex-mul-sub-one-geom",
+  "title": "The complex finite geometric-sum identity",
+  "statement": "For a constructed complex number x and natural n, (1 - x) * sum_{i<n} x^i is Complex.Equiv-equivalent to 1 - x^n. The complex analogue of the already-registered F:creal-mul-sub-one-geom, one level up the tower; unlike the CReal version this one is proved by REDUCTION to the CReal identity component-wise rather than by re-running the induction (its direct edges cite CReal.* algebra lemmas, not CReal.mul_sub_one_geom itself -- see notes).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Complex.mul_sub_one_geom : ((x0 : Complex) -> ((x1 : AxNat) -> Complex.Equiv (Complex.mul (Complex.add Complex.one (Complex.neg x0)) (Complex.sumRange (fun (x2 : AxNat) => Complex.pow x0 x2) x1)) (Complex.add Complex.one (Complex.neg (Complex.pow x0 x1)))))",
+    "fragment": "Complex",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-add-comm",
+    "F:creal-mul-comm",
+    "F:complex-left-distrib"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Complex.mul_sub_one_geom",
+      "kind": "kernel-term",
+      "supports": "Complex.mul_sub_one_geom is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Complex.mul_sub_one_geom 2>/dev/null | grep -cE '^Complex\\.mul_sub_one_geom\\t'",
+      "checker_seconds": 10,
+      "notes": "`build_complex_prelude` admits Complex.mul_sub_one_geom through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` builds creal/complex/cpoint (extended 2026-08-25); it exits non-zero for a named filter that matches nothing, and `grep -c` (never `-q`) independently asserts the exact tab-anchored line is present. `--release` is MANDATORY: building the constructed carriers recurses deep enough in a debug build to overflow the default thread stack (measured on this tree: release exits 0, debug SIGABRTs at 134) -- the same resource-limit gotcha documented for `prelude_theorem_inventory --include-constructed`."
+    },
+    {
+      "id": "footprint-Complex.mul_sub_one_geom",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Complex prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free complex",
+      "checker_seconds": 5,
+      "notes": "`nat_axiom_inventory --include-constructed` builds the Complex environment as its own group and reports `complex: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree). That bounds every individual Complex theorem's footprint by [], since a theorem cannot depend on a trusted declaration the environment does not contain, and the enumeration covers Axiom, Opaque AND Quotient, not just Declaration::Axiom. `--include-constructed` is REQUIRED here -- without it `--require-axiom-free complex` is an error (verified: exit 1, '\"complex\" is not enumerated by this run'), not a silent pass, because complex is not built at all without the flag; this is the standing trap of an empty/absent result reading as a strong negative when the tool was never pointed at the subject."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:geometric-series",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_complex_prelude",
+    "source": "theorem name and dependency edges from theorem_dependency_inventory (builds creal/complex/cpoint); canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint()) -- no in-tree example prints Complex/CPoint theorem types; crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on keeps the sibling-mapped subset of a 21-edge direct-dependency set (CReal.add_assoc, CReal.add_comm, CReal.add_congr, CReal.add_neg, CReal.add_zero, CReal.left_distrib, CReal.mul_assoc, CReal.mul_comm, CReal.mul_congr, CReal.mul_one, CReal.mul_zero, CReal.neg_congr, plus Complex.Equiv.refl/symm/trans, Complex.add_congr, Complex.add_neg, Complex.left_distrib, Complex.mul_zero): CReal.add_comm -> F:creal-add-comm, CReal.mul_comm -> F:creal-mul-comm, Complex.left_distrib -> F:complex-left-distrib. NOTABLY this theorem's direct edges do NOT include CReal.mul_sub_one_geom (F:creal-mul-sub-one-geom) despite the name and statement mirroring it exactly -- the complex proof does not literally invoke the constructed-real one as a lemma, so that edge is absent from depends_on even though the mathematical analogy is real.",
+  "external_status": "proved"
+}
