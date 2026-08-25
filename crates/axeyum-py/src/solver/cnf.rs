@@ -20,7 +20,7 @@ use axeyum_cnf::{
     solve_with_drat_proof_with_limits, solve_with_drat_proof_within, write_drat,
 };
 use pyo3::prelude::*;
-use pyo3::types::PyModule;
+use pyo3::types::{PyBytes, PyModule};
 
 use crate::error::AxeyumError;
 
@@ -57,6 +57,27 @@ impl PyCnfFormula {
     /// The formula in DIMACS text. Byte-stable.
     fn to_dimacs(&self) -> String {
         self.formula.to_dimacs()
+    }
+
+    /// The formula in DIMACS, as `bytes`. Same bytes, byte-stable.
+    ///
+    /// The Rust renderer builds a `String` either way, so this saves the
+    /// `PyUnicode` construction, not the render: `CPython` scans a `str` for its
+    /// widest code point on creation, which is linear in a formula that can run
+    /// to tens of megabytes, and every consumer of DIMACS (a file, a hash, a
+    /// subprocess) wants bytes back immediately afterward.
+    ///
+    /// # Errors
+    ///
+    /// Propagates a Python allocation failure.
+    fn to_dimacs_bytes<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
+        // Rendered without the GIL: it is a pure-Rust format over the clause
+        // arena and is the expensive half for a large formula.
+        let text = py.detach(|| self.formula.to_dimacs());
+        PyBytes::new_with(py, text.len(), |slice| {
+            slice.copy_from_slice(text.as_bytes());
+            Ok(())
+        })
     }
 
     /// Whether `assignment` (one bool per variable, in order) satisfies it.
@@ -184,8 +205,8 @@ impl PyProofSolveOutcome {
 
     /// The satisfying assignment, when `sat`.
     #[getter]
-    fn assignment(&self) -> Option<Vec<bool>> {
-        self.assignment.clone()
+    fn assignment(&self) -> Option<&[bool]> {
+        self.assignment.as_deref()
     }
 
     /// The DRAT refutation text, when `unsat`.

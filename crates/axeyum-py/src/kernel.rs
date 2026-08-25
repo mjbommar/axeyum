@@ -49,7 +49,7 @@ use axeyum_lean_kernel::{
 use pyo3::create_exception;
 use pyo3::exceptions::{PyAttributeError, PyKeyError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyInt, PyModule, PyTuple};
+use pyo3::types::{PyDict, PyInt, PyList, PyModule, PyTuple};
 
 use crate::error::AxeyumError;
 use prelude_fields::Sub;
@@ -410,8 +410,14 @@ impl PyExprNode {
 
     /// A `const`'s universe arguments.
     #[getter]
-    fn levels(&self) -> Option<Vec<PyLevelId>> {
-        self.levels.clone()
+    fn levels<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyList>>> {
+        // Built straight from the iterator rather than cloned into a `Vec` that
+        // `PyO3` would immediately walk again; `&PyLevelId` has no
+        // `IntoPyObject`, so a borrow is not an option here.
+        self.levels
+            .as_deref()
+            .map(|levels| PyList::new(py, levels.iter().copied()))
+            .transpose()
     }
 
     /// A `proj`'s zero-based field index (constructor parameters excluded).
@@ -2270,6 +2276,24 @@ impl PyKernel {
                     },
                 )
             })
+            .collect()
+    }
+
+    /// Just the declaration NAMES, in environment order.
+    ///
+    /// [`declarations`](Self::declarations) clones every `Declaration` -- the
+    /// whole expression tree of every theorem's type AND proof -- into a Python
+    /// object, which for a built prelude is hundreds of them. A caller that only
+    /// wants to know what is declared, or to filter before fetching, pays none of
+    /// that here -- the `String` per name stays, because a `NameId` renders
+    /// through a `Display` wrapper and has no borrowable text -- and then
+    /// reaches for
+    /// [`get_declaration`](Self::get_declaration) for the ones it wants.
+    fn declaration_names(&self) -> Vec<String> {
+        self.inner
+            .environment()
+            .iter()
+            .map(|(id, _)| self.inner.display_name(*id).to_string())
             .collect()
     }
 

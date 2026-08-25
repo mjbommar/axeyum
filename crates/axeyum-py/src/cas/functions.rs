@@ -19,13 +19,30 @@ use crate::cas::expr::{
 use crate::cas::poly::MultiPoly;
 use crate::cas::rational;
 
+// Every macro below detaches from the interpreter around the CAS call.
+//
+// This is not a guess: the round trip through `Python::detach` was measured on
+// this host at **~50-60 ns** (the delta between `Kernel.def_eq` on identical
+// expressions, which detaches around a short-circuiting compare, at 82 ns/call
+// and two non-detaching trivial kernel methods at 23 and 31 ns/call). The
+// bodies here are whole rewrite passes over an expression tree -- `cas.simplify`
+// measures **~310 us/call** on a small rational-plus-trig fixture, four orders
+// of magnitude above that -- so holding the GIL through them serializes every
+// other thread in the process for no reason at all.
+//
+// The rule the ratio gives, and the reason `ir.eval` and the `Arena` builders
+// below are deliberately NOT detached: detach when the Rust work is at least a
+// few microseconds. `ir.eval` is ~376 ns/call, roughly six detach round trips,
+// so wrapping it would spend a sixth of the call on the handoff. The fix for a
+// per-item surface is a bulk entry point, not a detach.
+
 /// Binds `fn(&CasExpr) -> CasExpr`.
 macro_rules! total_unary {
     ($name:ident, $doc:literal) => {
         #[doc = $doc]
         #[pyfunction]
-        fn $name(expr: &Expr) -> Expr {
-            Expr::wrap(axeyum_cas::$name(expr.inner()))
+        fn $name(py: Python<'_>, expr: &Expr) -> Expr {
+            Expr::wrap(py.detach(|| axeyum_cas::$name(expr.inner())))
         }
     };
 }
@@ -35,8 +52,8 @@ macro_rules! partial_unary {
     ($name:ident, $doc:literal) => {
         #[doc = $doc]
         #[pyfunction]
-        fn $name(expr: &Expr) -> Option<Expr> {
-            Expr::wrap_option(axeyum_cas::$name(expr.inner()))
+        fn $name(py: Python<'_>, expr: &Expr) -> Option<Expr> {
+            Expr::wrap_option(py.detach(|| axeyum_cas::$name(expr.inner())))
         }
     };
 }
@@ -46,8 +63,8 @@ macro_rules! partial_in_var {
     ($name:ident, $doc:literal) => {
         #[doc = $doc]
         #[pyfunction]
-        fn $name(expr: &Expr, var: &str) -> Option<Expr> {
-            Expr::wrap_option(axeyum_cas::$name(expr.inner(), var))
+        fn $name(py: Python<'_>, expr: &Expr, var: &str) -> Option<Expr> {
+            Expr::wrap_option(py.detach(|| axeyum_cas::$name(expr.inner(), var)))
         }
     };
 }
@@ -57,8 +74,8 @@ macro_rules! partial_binary_in_var {
     ($name:ident, $doc:literal) => {
         #[doc = $doc]
         #[pyfunction]
-        fn $name(a: &Expr, b: &Expr, var: &str) -> Option<Expr> {
-            Expr::wrap_option(axeyum_cas::$name(a.inner(), b.inner(), var))
+        fn $name(py: Python<'_>, a: &Expr, b: &Expr, var: &str) -> Option<Expr> {
+            Expr::wrap_option(py.detach(|| axeyum_cas::$name(a.inner(), b.inner(), var)))
         }
     };
 }
@@ -720,9 +737,14 @@ impl Matrix {
     }
 
     fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        // `cast` + `get`, never `extract`: `extract` on a `#[pyclass]` CLONES the
+        // whole wrapped value -- an entire expression tree or certificate -- to
+        // compare it and then drops it, and builds a `TypeError` object for the
+        // ordinary `NotImplemented` case. `frozen` makes `Bound::get` a borrow
+        // with no runtime borrow check at all.
         other
-            .extract::<Matrix>()
-            .is_ok_and(|other| other.inner == self.inner)
+            .cast::<Matrix>()
+            .is_ok_and(|other| other.get().inner == self.inner)
     }
 
     fn __repr__(&self) -> String {

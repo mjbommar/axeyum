@@ -565,8 +565,8 @@ impl GeometryCertificate {
 
     /// The coordinate names, in order.
     #[getter]
-    fn coordinates(&self) -> Vec<String> {
-        self.inner.coordinates.clone()
+    fn coordinates(&self) -> &[String] {
+        &self.inner.coordinates
     }
 
     /// The generator list the identity is stated over.
@@ -632,9 +632,14 @@ impl GeometryCertificate {
     }
 
     fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        // `cast` + `get`, never `extract`: `extract` on a `#[pyclass]` CLONES the
+        // whole wrapped value -- an entire expression tree or certificate -- to
+        // compare it and then drops it, and builds a `TypeError` object for the
+        // ordinary `NotImplemented` case. `frozen` makes `Bound::get` a borrow
+        // with no runtime borrow check at all.
         other
-            .extract::<GeometryCertificate>()
-            .is_ok_and(|other| other.inner == self.inner)
+            .cast::<GeometryCertificate>()
+            .is_ok_and(|other| other.get().inner == self.inner)
     }
 
     fn __repr__(&self) -> String {
@@ -824,8 +829,8 @@ impl GeometryReport {
 
     /// The non-degeneracy conditions the proof actually used.
     #[getter]
-    fn conditions_used(&self) -> Vec<String> {
-        self.conditions_used.clone()
+    fn conditions_used(&self) -> &[String] {
+        &self.conditions_used
     }
 
     fn __repr__(&self) -> String {
