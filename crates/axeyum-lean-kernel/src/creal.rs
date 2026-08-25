@@ -1586,7 +1586,7 @@ pub struct CRealPrelude {
     /// Built from three pieces: [`Self::geom_tail_bounded_div`] itself
     /// (`le tail Y`), a fresh nonnegativity proof for the tail
     /// (`geometric.rs`'s own `geom_tail_nonneg`, via [`Self::sum_range_split`]
-    /// + [`Self::pow_nonneg`] — **not** available as a named theorem
+    /// with [`Self::pow_nonneg`] — **not** available as a named theorem
     /// elsewhere, since `series.rs`'s own module documentation lists a
     /// nonnegativity lemma for `sumRange` of a pointwise-nonnegative function
     /// among what it does not build), and `Y`'s own nonnegativity
