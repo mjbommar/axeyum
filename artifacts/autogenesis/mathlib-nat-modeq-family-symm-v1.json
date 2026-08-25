@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-modeq-family-candidate",
+  "state": "candidate-checked-not-admitted",
+  "source_fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
+  "statement_adapter": "artifacts/autogenesis/mathlib-nat-modeq-family-symm-statement-adapter-v1.json",
+  "operation": {
+    "implementation": "crates/axeyum-lean-import/examples/modeq_family_operation.rs",
+    "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqSymm",
+    "goal_sha256": "19b81746627496fcbc9b95c1f2c6a0a032a19ce0af406c56b30685c248abb409",
+    "proof_sha256": "c3c8334eb388852b3761dab96d302624455695b135c286798561486680244ebd",
+    "target_content_sha256": "686adf5994409844e729716ee1311dab77b207dbd2aafb84d0338f7c5714ec6c",
+    "binders_used": 4,
+    "max_binders": 8,
+    "admitted_declarations": 193,
+    "axioms": 0,
+    "theorem_dependencies": 0,
+    "target_dependency": false,
+    "ledger_writes": 0
+  },
+  "reproduction": "python3 scripts/check-autogenesis-nat-modeq-family.py",
+  "limitations": "The candidate is independently kernel checked but remains uncredited: registering the operation says this fact is dispatchable, not that it is proved. No ledger write has occurred and epistemic_status stays open until an authoritative execution transaction runs."
+}
