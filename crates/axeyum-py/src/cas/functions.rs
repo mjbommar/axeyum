@@ -812,13 +812,18 @@ pub struct Matrix {
 
 impl Matrix {
     /// Wraps a Rust matrix.
-    fn wrap(inner: CasMatrix) -> Self {
+    pub(crate) fn wrap(inner: CasMatrix) -> Self {
         Self { inner }
     }
 
     /// Wraps an optional Rust matrix.
-    fn wrap_option(value: Option<CasMatrix>) -> Option<Self> {
+    pub(crate) fn wrap_option(value: Option<CasMatrix>) -> Option<Self> {
         value.map(Self::wrap)
+    }
+
+    /// The wrapped Rust matrix.
+    pub(crate) fn inner(&self) -> &CasMatrix {
+        &self.inner
     }
 }
 

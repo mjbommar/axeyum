@@ -15,6 +15,7 @@ __all__ = [
     "HyperTerm",
     "Limits",
     "LinearForm",
+    "SymbolicClosedFormReport",
     "TelescopingCertificate",
     "TelescopingOutcome",
     "VERSION",
@@ -296,6 +297,49 @@ class LinearForm:
     def __repr__(self) -> builtins.str: ...
 
 @typing.final
+class SymbolicClosedFormReport:
+    r"""
+    What the **symbolic** closed-form checker established.
+    
+    Two counts the concrete report does not have, and both are load-bearing:
+    `forced_support` is the interval outside which the summand is *proved* to
+    vanish, and `confirmed_zero_points` is how many window points were **checked**
+    to vanish rather than assumed. A symbolic base case over an unbounded
+    summation is only as good as that bound, so dropping either number would
+    leave a report that cannot be falsified.
+    """
+    @property
+    def base(self) -> builtins.int:
+        r"""
+        The base index the identity is claimed from.
+        """
+    @property
+    def base_cases(self) -> builtins.int:
+        r"""
+        Base cases established at symbolic parameters by exact finite summation.
+        """
+    @property
+    def forced_support(self) -> tuple[builtins.int, builtins.int]:
+        r"""
+        The `k` interval outside which the summand at the first base index is
+        *forced* to vanish.
+        """
+    @property
+    def confirmed_zero_points(self) -> builtins.int:
+        r"""
+        Window points confirmed -- not assumed -- to vanish outside that support.
+        """
+    @property
+    def leading_zeros(self) -> builtins.list[builtins.int]:
+        r"""
+        Integers at or above `base` where the leading coefficient vanishes.
+        
+        A nonempty list breaks the induction; the checker rejects rather than
+        reports it, so a verified report always has this empty.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
 class TelescopingCertificate:
     r"""
     A creative-telescoping certificate.
@@ -342,6 +386,21 @@ class TelescopingCertificate:
     def check_closed_form(self, closed_form: HyperTerm, base: builtins.int, options: CheckOptions) -> ClosedFormReport:
         r"""
         Checks a claimed closed form against this certificate's recurrence.
+        
+        # Errors
+        
+        Raises `CasError` carrying every reason the claim was not established.
+        """
+    def check_closed_form_symbolic(self, closed_form: HyperTerm, base: builtins.int, options: CheckOptions) -> SymbolicClosedFormReport:
+        r"""
+        Checks a claimed closed form **without specializing the remaining
+        parameters**.
+        
+        This is the route for an identity with a symbolic parameter -- the
+        Chu-Vandermonde shape -- where the concrete checker cannot settle the
+        base cases at integers. Nothing is sampled: the summation collapses to
+        the finitely many `k` a parameter-free Gamma forces, and the report says
+        how many window points were *confirmed* zero rather than assumed.
         
         # Errors
         

@@ -13,6 +13,7 @@ use axeyum_cas::interval_arith::{Interval as CasInterval, evaluate_polynomial};
 use axeyum_cas::sets::Interval as CasSetInterval;
 use axeyum_cas::sturm;
 use pyo3::prelude::*;
+
 use pyo3::types::{PyAny, PyModule};
 
 use crate::cas::rational;
@@ -210,9 +211,57 @@ pub struct SetInterval {
     inner: CasSetInterval,
 }
 
+impl SetInterval {
+    /// Wraps a Rust set interval.
+    pub(crate) fn wrap(inner: CasSetInterval) -> Self {
+        Self { inner }
+    }
+
+    /// The wrapped Rust set interval.
+    pub(crate) fn inner(&self) -> CasSetInterval {
+        self.inner
+    }
+}
+
 #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl SetInterval {
+    /// `[a, b)`.
+    ///
+    /// # Errors
+    ///
+    /// Raises `ValueError` when an endpoint is not an exact rational.
+    #[staticmethod]
+    fn closed_open(a: &Bound<'_, PyAny>, b: &Bound<'_, PyAny>) -> PyResult<SetInterval> {
+        Ok(SetInterval {
+            inner: CasSetInterval::closed_open(rational::from_py(a)?, rational::from_py(b)?),
+        })
+    }
+
+    /// `(a, b]`.
+    ///
+    /// # Errors
+    ///
+    /// Raises `ValueError` when an endpoint is not an exact rational.
+    #[staticmethod]
+    fn open_closed(a: &Bound<'_, PyAny>, b: &Bound<'_, PyAny>) -> PyResult<SetInterval> {
+        Ok(SetInterval {
+            inner: CasSetInterval::open_closed(rational::from_py(a)?, rational::from_py(b)?),
+        })
+    }
+
+    /// The single point `{a}`.
+    ///
+    /// # Errors
+    ///
+    /// Raises `ValueError` when `a` is not an exact rational.
+    #[staticmethod]
+    fn point(a: &Bound<'_, PyAny>) -> PyResult<SetInterval> {
+        Ok(SetInterval {
+            inner: CasSetInterval::point(rational::from_py(a)?),
+        })
+    }
+
     /// `[a, b]`.
     ///
     /// # Errors
@@ -265,8 +314,60 @@ impl SetInterval {
         Ok(self.inner.contains(rational::from_py(x.as_any())?))
     }
 
+    /// The lower endpoint, or `None` for `-infinity`.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any Python error raised while building the fraction.
+    #[getter]
+    fn lower<'py>(&self, py: Python<'py>) -> PyResult<Option<PyFraction<'py>>> {
+        rational::optional_fraction(py, self.inner.lower)
+    }
+
+    /// Whether the lower endpoint is included.
+    #[getter]
+    fn lower_closed(&self) -> bool {
+        self.inner.lower_closed
+    }
+
+    /// The upper endpoint, or `None` for `+infinity`.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any Python error raised while building the fraction.
+    #[getter]
+    fn upper<'py>(&self, py: Python<'py>) -> PyResult<Option<PyFraction<'py>>> {
+        rational::optional_fraction(py, self.inner.upper)
+    }
+
+    /// Whether the upper endpoint is included.
+    #[getter]
+    fn upper_closed(&self) -> bool {
+        self.inner.upper_closed
+    }
+
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        // `cast` + `get`, never `extract`: `extract` on a `#[pyclass]` CLONES the
+        // whole wrapped value to compare it and then drops it.
+        other
+            .cast::<SetInterval>()
+            .is_ok_and(|other| other.get().inner == self.inner)
+    }
+
     fn __repr__(&self) -> String {
-        "SetInterval(...)".to_owned()
+        let render = |value: Option<axeyum_ir::Rational>, fallback: &str| {
+            value.map_or_else(
+                || fallback.to_owned(),
+                |value| format!("{}/{}", value.numerator(), value.denominator()),
+            )
+        };
+        format!(
+            "SetInterval({}{}, {}{})",
+            if self.inner.lower_closed { "[" } else { "(" },
+            render(self.inner.lower, "-inf"),
+            render(self.inner.upper, "inf"),
+            if self.inner.upper_closed { "]" } else { ")" },
+        )
     }
 }
 

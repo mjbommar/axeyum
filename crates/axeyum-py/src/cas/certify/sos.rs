@@ -296,6 +296,141 @@ fn check_unguarded(py: Python<'_>, artifact: &SosArtifact) -> PyResult<CheckRepo
         .map_err(|reason| CasError::new_err(format!("sos check rejected the artifact: {reason}")))
 }
 
+/// Guards a report the way [`check`] does: an empty obligation list is a
+/// failure, not a pass.
+///
+/// # Errors
+///
+/// Raises `CasError` when nothing was discharged.
+fn guard(id: &str, checker: &str, report: CasCheckReport) -> PyResult<CheckReport> {
+    if report.is_empty() {
+        return Err(CasError::new_err(format!(
+            "{checker} on {id:?} discharged no obligation; an empty obligation list is \
+             indistinguishable from a checker that did nothing"
+        )));
+    }
+    Ok(CheckReport { inner: report })
+}
+
+/// Re-derives an artifact through the kind-dispatching checker.
+///
+/// Identical in effect to [`check`], and bound separately because the crate has
+/// two entry points and a caller reading `sos::check_artifact` in Rust should
+/// find it here rather than guess.
+///
+/// # Errors
+///
+/// Raises `CasError` when the checker rejects the artifact or discharged
+/// nothing.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sos")
+)]
+#[pyfunction]
+fn check_artifact(py: Python<'_>, artifact: &SosArtifact) -> PyResult<CheckReport> {
+    let owned = artifact.inner.clone();
+    let report = py
+        .detach(|| sos::check::check_artifact(&owned))
+        .map_err(|reason| {
+            CasError::new_err(format!(
+                "sos check_artifact rejected the artifact: {reason}"
+            ))
+        })?;
+    guard(artifact.inner.id(), "sos check_artifact", report)
+}
+
+/// Re-derives a **Lyapunov** artifact through the stability checker specifically.
+///
+/// Raises rather than silently dispatching when the artifact is another kind:
+/// a per-kind checker that quietly runs a different one cannot be shown to
+/// fail on the wrong input, which is the only thing asking for it by name buys.
+///
+/// # Errors
+///
+/// Raises `CasError` when the artifact is not a Lyapunov artifact, when the
+/// checker rejects it, or when it discharged nothing.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sos")
+)]
+#[pyfunction]
+fn check_lyapunov(py: Python<'_>, artifact: &SosArtifact) -> PyResult<CheckReport> {
+    let CasSosArtifact::Lyapunov(problem, certificate) = &artifact.inner else {
+        return Err(CasError::new_err(format!(
+            "check_lyapunov was handed a {:?} artifact ({:?})",
+            artifact.inner.kind(),
+            artifact.inner.id()
+        )));
+    };
+    let (problem, certificate) = (problem.clone(), certificate.clone());
+    let report = py
+        .detach(|| sos::check::check_lyapunov(&problem, &certificate))
+        .map_err(|reason| {
+            CasError::new_err(format!(
+                "sos check_lyapunov rejected the artifact: {reason}"
+            ))
+        })?;
+    guard(artifact.inner.id(), "sos check_lyapunov", report)
+}
+
+/// Re-derives a **barrier** artifact through the safety checker specifically.
+///
+/// # Errors
+///
+/// Raises `CasError` when the artifact is not a barrier artifact, when the
+/// checker rejects it, or when it discharged nothing.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sos")
+)]
+#[pyfunction]
+fn check_barrier(py: Python<'_>, artifact: &SosArtifact) -> PyResult<CheckReport> {
+    let CasSosArtifact::Barrier(problem, certificate) = &artifact.inner else {
+        return Err(CasError::new_err(format!(
+            "check_barrier was handed a {:?} artifact ({:?})",
+            artifact.inner.kind(),
+            artifact.inner.id()
+        )));
+    };
+    let (problem, certificate) = (problem.clone(), certificate.clone());
+    let report = py
+        .detach(|| sos::check::check_barrier(&problem, &certificate))
+        .map_err(|reason| {
+            CasError::new_err(format!("sos check_barrier rejected the artifact: {reason}"))
+        })?;
+    guard(artifact.inner.id(), "sos check_barrier", report)
+}
+
+/// Re-derives a **psd-not-sos** artifact through the dual checker specifically.
+///
+/// # Errors
+///
+/// Raises `CasError` when the artifact is not a psd-not-sos artifact, when the
+/// checker rejects it, or when it discharged nothing.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas.certify.sos")
+)]
+#[pyfunction]
+fn check_psd_not_sos(py: Python<'_>, artifact: &SosArtifact) -> PyResult<CheckReport> {
+    let CasSosArtifact::PsdNotSos(problem, certificate) = &artifact.inner else {
+        return Err(CasError::new_err(format!(
+            "check_psd_not_sos was handed a {:?} artifact ({:?})",
+            artifact.inner.kind(),
+            artifact.inner.id()
+        )));
+    };
+    let (problem, certificate) = (problem.clone(), certificate.clone());
+    let report = py
+        .detach(|| sos::check::check_psd_not_sos(&problem, &certificate))
+        .map_err(|reason| {
+            CasError::new_err(format!(
+                "sos check_psd_not_sos rejected the artifact: {reason}"
+            ))
+        })?;
+    guard(artifact.inner.id(), "sos check_psd_not_sos", report)
+}
+
 /// The committed SOS corpus.
 #[cfg_attr(
     feature = "stub-gen",
@@ -474,6 +609,10 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("REPLAY_POINTS", axeyum_cas::sos::check::REPLAY_POINTS)?;
     module.add_function(wrap_pyfunction!(check, &module)?)?;
     module.add_function(wrap_pyfunction!(check_unguarded, &module)?)?;
+    module.add_function(wrap_pyfunction!(check_artifact, &module)?)?;
+    module.add_function(wrap_pyfunction!(check_lyapunov, &module)?)?;
+    module.add_function(wrap_pyfunction!(check_barrier, &module)?)?;
+    module.add_function(wrap_pyfunction!(check_psd_not_sos, &module)?)?;
     module.add_function(wrap_pyfunction!(corpus, &module)?)?;
     module.add_function(wrap_pyfunction!(by_id, &module)?)?;
     module.add_function(wrap_pyfunction!(sum_of_variable_squares, &module)?)?;

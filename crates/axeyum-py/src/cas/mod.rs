@@ -27,11 +27,20 @@
     clippy::wrong_self_convention
 )]
 
+pub(crate) mod algebraic;
+pub(crate) mod boolean;
 pub(crate) mod certify;
+pub(crate) mod combinatorics;
 pub(crate) mod expr;
 pub(crate) mod functions;
+pub(crate) mod gf;
+pub(crate) mod normal_forms;
+pub(crate) mod ntheory;
 pub(crate) mod poly;
 pub(crate) mod rational;
+pub(crate) mod special;
+pub(crate) mod stats;
+pub(crate) mod transforms;
 
 use pyo3::create_exception;
 use pyo3::prelude::*;
@@ -79,6 +88,15 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     module.add_class::<poly::MvPoly>()?;
     module.add_class::<poly::MultiPoly>()?;
     functions::register(&module)?;
+    ntheory::register(&module)?;
+    combinatorics::register(&module)?;
+    stats::register(&module)?;
+    special::register(&module)?;
+    transforms::register(&module)?;
+    normal_forms::register(&module)?;
+    algebraic::register(&module)?;
+    gf::register(&module)?;
+    boolean::register(&module)?;
 
     // `add_submodule` sets the attribute but not `sys.modules`, so without this
     // `import axeyum._native.cas.certify` fails while the attribute resolves --

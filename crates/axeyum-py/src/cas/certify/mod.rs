@@ -10,9 +10,11 @@
 //!   is the fail signal, and a checker whose exit cannot depend on what it found
 //!   is worse than no checker at all.
 
+pub(crate) mod ansatz;
 pub(crate) mod geometry;
 pub(crate) mod gf2;
 pub(crate) mod groebner;
+pub(crate) mod moments;
 pub(crate) mod sos;
 pub(crate) mod sturm;
 pub(crate) mod telescoping;
@@ -21,7 +23,16 @@ use pyo3::prelude::*;
 use pyo3::types::PyModule;
 
 /// The route submodules, in registration order. Used to populate `sys.modules`.
-pub(crate) const ROUTES: &[&str] = &["geometry", "gf2", "groebner", "sos", "sturm", "telescoping"];
+pub(crate) const ROUTES: &[&str] = &[
+    "ansatz",
+    "geometry",
+    "gf2",
+    "groebner",
+    "moments",
+    "sos",
+    "sturm",
+    "telescoping",
+];
 
 /// Registers the `certify` submodule on `parent` and returns it.
 ///
@@ -31,8 +42,10 @@ pub(crate) const ROUTES: &[&str] = &["geometry", "gf2", "groebner", "sos", "stur
 pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py, PyModule>> {
     let py = parent.py();
     let module = PyModule::new(py, "axeyum._native.cas.certify")?;
+    ansatz::register(&module)?;
     geometry::register(&module)?;
     gf2::register(&module)?;
+    moments::register(&module)?;
     groebner::register(&module)?;
     sos::register(&module)?;
     sturm::register(&module)?;
