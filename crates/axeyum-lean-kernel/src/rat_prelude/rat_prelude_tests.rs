@@ -1633,7 +1633,8 @@ fn ble_refl_trans_total_are_built_on_the_spec() {
 // --- `Rat.sumRange` and its algebra (`rat_prelude::sum`) -------------------
 
 /// Every declaration `sum::declare_sum` adds — `Rat.sumRange` itself and the
-/// six theorems built on it — is a **checked** definition or theorem with an
+/// ten theorems built on it (counted from the list below, not carried over
+/// from an earlier count) — is a **checked** definition or theorem with an
 /// empty axiom footprint, read out of the kernel, not off the diff.
 #[test]
 fn the_finite_sum_toolkit_is_axiom_free() {
@@ -1649,6 +1650,7 @@ fn the_finite_sum_toolkit_is_axiom_free() {
         ("sumRange_nonneg", p.sum_range_nonneg, true),
         ("sumRange_congr_lt", p.sum_range_congr_lt, true),
         ("sumRange_eq_zero_of_lt", p.sum_range_eq_zero_of_lt, true),
+        ("sumRange_swap", p.sum_range_swap, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
