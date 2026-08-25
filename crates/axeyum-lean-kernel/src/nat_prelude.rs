@@ -1453,6 +1453,21 @@ pub struct NatPrelude {
     /// in for `· < n` as carrier membership (representation option (a) from
     /// this slice's brief: a permutation is a `Nat → Nat`, not a `Nat`).
     pub is_group_on_fn: NameId,
+    /// `Nat.bijective_on_comp : ∀ n a b, BijectiveOn a n → BijectiveOn b n →
+    /// BijectiveOn (comp a b) n` — composition of self-maps preserves
+    /// bijectivity on the same bound, `IsGroupOnFn`'s closure conjunct over
+    /// `Nat.comp`. Injectivity is `Nat.injective_on_comp` applied directly;
+    /// `MapsInto` composes with no case split; surjectivity destructures both
+    /// witnesses via nested `Exists.rec`.
+    pub bijective_on_comp: NameId,
+    /// `Nat.bijective_on_perm_inverse : ∀ n f, BijectiveOn f n →
+    /// BijectiveOn (permInverse f n) n` — the inverse of a bijection on
+    /// `[0,n)` is itself one. Injectivity of `permInverse f n` follows
+    /// because `f` is its own left inverse on `[0,n)` (`permInverse_right`);
+    /// `MapsInto` is `permInverse`'s own unconditional bound
+    /// (`permInverse f n k < n` for **any** `k`, given `0 < n`); surjectivity
+    /// picks `f k` as the preimage of `k` (`permInverse_left`).
+    pub bijective_on_perm_inverse: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1848,6 +1863,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             id: kernel.name_str(nat, "id"),
             comp_assoc: kernel.name_str(nat, "comp_assoc"),
             is_group_on_fn: kernel.name_str(nat, "isGroupOnFn"),
+            bijective_on_comp: kernel.name_str(nat, "bijective_on_comp"),
+            bijective_on_perm_inverse: kernel.name_str(nat, "bijective_on_perm_inverse"),
         };
 
         let mut d = NatDev::new(kernel, p);

@@ -45,12 +45,53 @@
 //! `Nat.id` and `Nat.comp_assoc`, the operation and identity `IsGroupOnFn`
 //! would need, with associativity proved by *pure delta/beta/iota reduction*
 //! (`Nat.comp` unfolds to the same normal-form lambda on both sides — no
-//! `funext`, no axiom, nothing beyond what `Eq.refl` already checks). The
-//! full symmetric-group `IsGroupOnFn` *instance* (closure/identity/inverse
-//! laws bundled the way `group.rs::declare_mod_add_is_group` bundles ℤ/n) is
-//! the natural next slice, built on exactly the four pieces landed here:
-//! `Nat.comp`, `Nat.id`, `Nat.comp_assoc`, `Nat.permInverse` with its two
-//! correctness theorems.
+//! `funext`, no axiom, nothing beyond what `Eq.refl` already checks). A later
+//! slice adds `Nat.bijective_on_comp` (closure: composing two bijections on
+//! `[0,n)` is one) and `Nat.bijective_on_perm_inverse` (the inverse of a
+//! bijection on `[0,n)` is one) — the two "IF ONLY STEP 1/2 LANDS" targets
+//! this file's own follow-up brief asked for.
+//!
+//! ## The full `IsGroupOnFn` instance is REFUTED, not merely undone
+//!
+//! The natural next step reads as "bundle closure/identity/inverse the way
+//! `group.rs::declare_mod_add_is_group` bundles ℤ/n." That target is
+//! unreachable, and not for lack of a lemma: `Nat.IsGroupOnFn`'s `identity`
+//! and `inverse` conjuncts state `op a e = a` / `op a (inv a) = e` as
+//! **`Eq (Nat → Nat) _ _`** — literal, UNBOUNDED equality of total
+//! `Nat → Nat` functions (`fn_eq`, below) — and for the symmetric-group
+//! instance (`op := Nat.comp`, `inv a := Nat.permInverse a n`) that equality
+//! is provably **false**, not merely unproved:
+//!
+//! `Nat.permInverse a n k < n` holds for **every** `k`, not only `k < n`
+//! (`perm_inverse_lt_proof`, needing only `0 < n` — the search bound is `n`
+//! regardless of how large `k` is). So for `n > 0` and any `k ≥ n`,
+//! `Nat.MapsInto a n` applies at index `Nat.permInverse a n k` (which is
+//! `< n`) to give `a (Nat.permInverse a n k) < n ≤ k`, hence
+//! `a (Nat.permInverse a n k) ≠ k = Nat.id k`. That is a **counterexample**
+//! to `Nat.comp a (Nat.permInverse a n) = Nat.id` at every point `k ≥ n`, for
+//! every `n > 0` — and at `n = 0`, `Nat.permInverse a n` is the constant `0`
+//! (the base case, unconditionally), so `Nat.comp a (Nat.permInverse a 0)` is
+//! the constant `a 0`, which cannot equal `Nat.id` on an infinite carrier
+//! either. `Nat.permInverse a n` is only ever a two-sided inverse of `a` ON
+//! `[0,n)`; outside that range it is a fixed junk value, and `Nat.id` is the
+//! identity EVERYWHERE — no witness for `inv` closes that gap, because no
+//! `Nat → Nat` total function can.
+//!
+//! So `Nat.IsGroupOnFn`'s `identity`/`inverse` conjuncts, as declared, are
+//! satisfiable only by a genuinely constant-on-its-complement `op`/`e`
+//! (`group.rs`'s bare-`Nat` `IsGroupOn` never has this problem — a bound
+//! `a < n` is a real restriction that makes `e`/`inv a` themselves live
+//! `< n`, but `BijectiveOn f n` restricts `f`'s *behaviour*, not its *type*:
+//! `f` is still a total `Nat → Nat`, defined everywhere, and `Eq (Nat → Nat)`
+//! sees all of it). Repairing this needs a genuinely different predicate —
+//! `identity`/`inverse` stated with a **bounded** function equality
+//! (`Nat.EqOn f g n := ∀ i, i < n → f i = g i`, undeclared anywhere in this
+//! kernel) in place of `Eq (Nat → Nat) f g` — which is a new definition and a
+//! new `IsGroupOnFn`-shaped predicate, not a lemma this file's four existing
+//! pieces can discharge. That is out of this slice's scope; this file stops
+//! at the two `BijectiveOn`-preservation lemmas
+//! (`Nat.bijective_on_comp`/`Nat.bijective_on_perm_inverse`) the brief named
+//! as an acceptable outcome on their own.
 //!
 //! ## What's declared
 //!
@@ -88,6 +129,11 @@
 //!   proved by `Eq.refl`: both sides delta/beta-reduce to the literal term
 //!   `fun x => f (g (h x))`, so the kernel's own conversion check *is* the
 //!   proof.
+//! - `Nat.bijective_on_comp : ∀ n a b, BijectiveOn a n → BijectiveOn b n →
+//!   BijectiveOn (comp a b) n` — `IsGroupOnFn`'s closure conjunct.
+//! - `Nat.bijective_on_perm_inverse : ∀ n f, BijectiveOn f n →
+//!   BijectiveOn (permInverse f n) n` — the inverse of a bijection on
+//!   `[0,n)` is itself one.
 //!
 //! Internal to the induction (never given a kernel-level name, matching how
 //! `finite.rs`'s `compact_eq_of_le`/`_of_gt`/`compact_injective` stay plain
@@ -102,6 +148,10 @@
 //! `trichotomy`-free — only `lt_or_eq_of_le`/`le_of_lt_succ`, already proved)
 //! or on a concrete `Bool` value via `Bool.rec`, never on an assumed
 //! excluded middle.
+//!
+//! `Nat.symmetric_group_isGroupOnFn` — the full instance — is **not**
+//! declared. See "The full `IsGroupOnFn` instance is REFUTED" above: it is
+//! not an omission, it is a target this file found to be false as stated.
 
 use super::NatPrelude;
 use super::finite::ex_falso;
@@ -778,6 +828,356 @@ fn declare_comp_assoc(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
     d.declare_theorem(p.comp_assoc, ty, value)
 }
 
+/// Admit `Nat.bijective_on_comp : ∀ n a b, BijectiveOn a n → BijectiveOn b n →
+/// BijectiveOn (comp a b) n` — `IsGroupOnFn`'s closure conjunct over
+/// `Nat.comp`, and the first of this slice's two targets.
+///
+/// Destructure both `BijectiveOn` hypotheses into their three conjuncts
+/// (`InjectiveOn`/`MapsInto`/`SurjectiveOn`, `and_left`/`and_right` against
+/// `BijectiveOn`'s own right-nested `And` packing), then:
+///
+/// - `InjectiveOn (comp a b) n` is `Nat.injective_on_comp` (`relation.rs`)
+///   applied directly, at `f := a`, `g := b`.
+/// - `MapsInto (comp a b) n` needs no case split: `MapsInto b n` puts `b i`
+///   inside `a`'s bounded domain, so `MapsInto a n` closes it.
+/// - `SurjectiveOn (comp a b) n` destructures both witnesses via nested
+///   `Exists.rec` — `k`'s `a`-preimage `j` (from `SurjectiveOn a n`), then
+///   `j`'s `b`-preimage `i` (from `SurjectiveOn b n`) — reusing this file's
+///   own [`exists_predicate`]/[`exists_of_predicate`] bundling (the same
+///   `∃ i, i<m ∧ f i = k` shape [`perm_inverse_correct`] already
+///   destructures), the same two-level nesting `divisibility.rs::dvd_trans`
+///   uses to compose two existential witnesses.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+fn declare_bijective_on_comp(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let logic = p.logic;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+    let one = d.level_one();
+    let anon = d.anon_name();
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let inj_a_ty = d.const_app(p.injective_on, &[a, n]);
+    let maps_a_ty = d.const_app(p.maps_into, &[a, n]);
+    let surj_a_ty = d.const_app(p.surjective_on, &[a, n]);
+    let inner_a_ty = d.const_app(logic.and, &[maps_a_ty, surj_a_ty]);
+    let bij_a_ty = d.const_app(logic.and, &[inj_a_ty, inner_a_ty]);
+    let bij_a_fv = d.fresh_fvar();
+    let bij_a = d.kernel().fvar(bij_a_fv);
+
+    let inj_b_ty = d.const_app(p.injective_on, &[b, n]);
+    let maps_b_ty = d.const_app(p.maps_into, &[b, n]);
+    let surj_b_ty = d.const_app(p.surjective_on, &[b, n]);
+    let inner_b_ty = d.const_app(logic.and, &[maps_b_ty, surj_b_ty]);
+    let bij_b_ty = d.const_app(logic.and, &[inj_b_ty, inner_b_ty]);
+    let bij_b_fv = d.fresh_fvar();
+    let bij_b = d.kernel().fvar(bij_b_fv);
+
+    let inj_a = and_left(d, inj_a_ty, inner_a_ty, bij_a);
+    let inner_a = and_right(d, inj_a_ty, inner_a_ty, bij_a);
+    let maps_a = and_left(d, maps_a_ty, surj_a_ty, inner_a);
+    let surj_a = and_right(d, maps_a_ty, surj_a_ty, inner_a);
+
+    let inj_b = and_left(d, inj_b_ty, inner_b_ty, bij_b);
+    let inner_b = and_right(d, inj_b_ty, inner_b_ty, bij_b);
+    let maps_b = and_left(d, maps_b_ty, surj_b_ty, inner_b);
+    let surj_b = and_right(d, maps_b_ty, surj_b_ty, inner_b);
+
+    let comp_ab = d.const_app(p.comp, &[a, b]);
+
+    // --- InjectiveOn (comp a b) n ---
+    let inj_comp = d.lemma(p.injective_on_comp, &[n, a, b, maps_b, inj_b, inj_a]);
+
+    // --- MapsInto (comp a b) n ---
+    let maps_comp = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hi_ty = d.lt(i, n);
+        let bi = d.apply(b, &[i]);
+        let bi_lt_n = d.apply(maps_b, &[i, hi]);
+        let ai_lt_n = d.apply(maps_a, &[bi, bi_lt_n]);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, ai_lt_n);
+        d.lam_fv(i_fv, nat, with_hi)
+    };
+
+    // --- SurjectiveOn (comp a b) n ---
+    let surj_comp = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, n);
+
+        let target_pred = exists_predicate(d, &p, comp_ab, k, n);
+        let target_ty = exists_of_predicate(d, target_pred);
+
+        let pred_a = exists_predicate(d, &p, a, k, n);
+        let ex_a_ty = exists_of_predicate(d, pred_a);
+        let ex_a = d.apply(surj_a, &[k, hk]);
+
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let hand_a_fv = d.fresh_fvar();
+        let hand_a = d.kernel().fvar(hand_a_fv);
+        let hj_ty = d.lt(j, n);
+        let aj = d.apply(a, &[j]);
+        let aj_eq_k_ty = d.eq(aj, k);
+        let hand_a_ty = d.const_app(logic.and, &[hj_ty, aj_eq_k_ty]);
+        let hj = and_left(d, hj_ty, aj_eq_k_ty, hand_a);
+        let haj = and_right(d, hj_ty, aj_eq_k_ty, hand_a);
+
+        let pred_b = exists_predicate(d, &p, b, j, n);
+        let ex_b_ty = exists_of_predicate(d, pred_b);
+        let ex_b = d.apply(surj_b, &[j, hj]);
+
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hand_b_fv = d.fresh_fvar();
+        let hand_b = d.kernel().fvar(hand_b_fv);
+        let hi_ty = d.lt(i, n);
+        let bi = d.apply(b, &[i]);
+        let bi_eq_j_ty = d.eq(bi, j);
+        let hand_b_ty = d.const_app(logic.and, &[hi_ty, bi_eq_j_ty]);
+        let hi = and_left(d, hi_ty, bi_eq_j_ty, hand_b);
+        let hbi = and_right(d, hi_ty, bi_eq_j_ty, hand_b);
+
+        let ai_bi = d.apply(a, &[bi]);
+        let congr_step = d.congr(bi, j, hbi, &|d, x| d.apply(a, &[x]));
+        let ai_bi_eq_k = d.trans(ai_bi, aj, k, congr_step, haj);
+
+        let comp_i = d.apply(comp_ab, &[i]);
+        let comp_i_eq_k_ty = d.eq(comp_i, k);
+        // `comp_i` is definitionally `a (b i)` (`comp`'s own delta/beta
+        // unfolding), so `ai_bi_eq_k` — whose inferred type is literally
+        // `Eq Nat (a (b i)) k` — type-checks directly against
+        // `comp_i_eq_k_ty` via the kernel's conversion check, the same move
+        // `injective_on_comp`'s own proof (`relation.rs`) documents.
+        let and_proof_inner =
+            d.const_app(logic.and_intro, &[hi_ty, comp_i_eq_k_ty, hi, ai_bi_eq_k]);
+        let intro = d.kernel().const_(logic.exists_intro, vec![one]);
+        let witness_inner = d.apply(intro, &[nat, target_pred, i, and_proof_inner]);
+
+        let minor_b = {
+            let with_hand_b = d.lam_fv(hand_b_fv, hand_b_ty, witness_inner);
+            d.lam_fv(i_fv, nat, with_hand_b)
+        };
+        let motive_b = d
+            .kernel()
+            .lam(anon, ex_b_ty, target_ty, BinderInfo::Default);
+        let rec_b = d.kernel().const_(logic.exists_rec, vec![one]);
+        let result_b = d.apply(rec_b, &[nat, pred_b, motive_b, minor_b, ex_b]);
+
+        let minor_a = {
+            let with_hand_a = d.lam_fv(hand_a_fv, hand_a_ty, result_b);
+            d.lam_fv(j_fv, nat, with_hand_a)
+        };
+        let motive_a = d
+            .kernel()
+            .lam(anon, ex_a_ty, target_ty, BinderInfo::Default);
+        let rec_a = d.kernel().const_(logic.exists_rec, vec![one]);
+        let result_a = d.apply(rec_a, &[nat, pred_a, motive_a, minor_a, ex_a]);
+
+        let with_hk = d.lam_fv(hk_fv, hk_ty, result_a);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    let inj_comp_ty = d.const_app(p.injective_on, &[comp_ab, n]);
+    let maps_comp_ty = d.const_app(p.maps_into, &[comp_ab, n]);
+    let surj_comp_ty = d.const_app(p.surjective_on, &[comp_ab, n]);
+    let inner_comp_ty = d.const_app(logic.and, &[maps_comp_ty, surj_comp_ty]);
+    let bij_comp_ty = d.const_app(logic.and, &[inj_comp_ty, inner_comp_ty]);
+
+    let inner_comp_proof = d.const_app(
+        logic.and_intro,
+        &[maps_comp_ty, surj_comp_ty, maps_comp, surj_comp],
+    );
+    let bij_comp_proof = d.const_app(
+        logic.and_intro,
+        &[inj_comp_ty, inner_comp_ty, inj_comp, inner_comp_proof],
+    );
+
+    let value = {
+        let with_bij_b = d.lam_fv(bij_b_fv, bij_b_ty, bij_comp_proof);
+        let with_bij_a = d.lam_fv(bij_a_fv, bij_a_ty, with_bij_b);
+        let with_b = d.lam_fv(b_fv, fn_ty, with_bij_a);
+        let with_a = d.lam_fv(a_fv, fn_ty, with_b);
+        d.lam_fv(n_fv, nat, with_a)
+    };
+    let ty = {
+        let with_bij_b = d.arrow(bij_b_ty, bij_comp_ty);
+        let with_bij_a = d.arrow(bij_a_ty, with_bij_b);
+        let with_b = d.pi_fv(b_fv, fn_ty, with_bij_a);
+        let with_a = d.pi_fv(a_fv, fn_ty, with_b);
+        d.pi_fv(n_fv, nat, with_a)
+    };
+    d.declare_theorem(p.bijective_on_comp, ty, value)
+}
+
+/// Admit `Nat.bijective_on_perm_inverse : ∀ n f, BijectiveOn f n →
+/// BijectiveOn (permInverse f n) n` — the inverse of a bijection on `[0,n)`
+/// is itself one, and this slice's second target.
+///
+/// Write `g := permInverse f n` (a partial application of [`Self`]'s own
+/// `Nat.permInverse`, of type `Nat → Nat`).
+///
+/// - `InjectiveOn g n`: `f` is `g`'s LEFT inverse on `[0,n)`
+///   ([`declare_perm_inverse_right`]'s `permInverse_right`, needing
+///   `SurjectiveOn f n`), so `g i = g j` composed with `f` on both sides
+///   collapses directly to `i = j` — no case split, no use of `InjectiveOn f n`.
+/// - `MapsInto g n`: exactly [`perm_inverse_lt_proof`]'s own conclusion
+///   (`permInverse f n k < n` for **any** `k`, given `0 < n`, derived from
+///   `k < n` via `zero_le`/`lt_of_le_of_lt` the same way
+///   [`declare_perm_inverse_left`] derives its own `0 < n`).
+/// - `SurjectiveOn g n`: `f k` is the preimage of `k` under `g` —
+///   [`declare_perm_inverse_left`]'s `permInverse_left` is precisely
+///   `permInverse f n (f k) = k`, needing `MapsInto f n`/`InjectiveOn f n`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+fn declare_bijective_on_perm_inverse(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let logic = p.logic;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+    let one = d.level_one();
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+
+    let inj_f_ty = d.const_app(p.injective_on, &[f, n]);
+    let maps_f_ty = d.const_app(p.maps_into, &[f, n]);
+    let surj_f_ty = d.const_app(p.surjective_on, &[f, n]);
+    let inner_f_ty = d.const_app(logic.and, &[maps_f_ty, surj_f_ty]);
+    let bij_f_ty = d.const_app(logic.and, &[inj_f_ty, inner_f_ty]);
+    let bij_f_fv = d.fresh_fvar();
+    let bij_f = d.kernel().fvar(bij_f_fv);
+
+    let inj_f = and_left(d, inj_f_ty, inner_f_ty, bij_f);
+    let inner_f = and_right(d, inj_f_ty, inner_f_ty, bij_f);
+    let maps_f = and_left(d, maps_f_ty, surj_f_ty, inner_f);
+    let surj_f = and_right(d, maps_f_ty, surj_f_ty, inner_f);
+
+    let g = d.const_app(p.perm_inverse, &[f, n]); // `permInverse f n : Nat -> Nat`.
+
+    // --- InjectiveOn g n ---
+    let inj_g = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hj_fv = d.fresh_fvar();
+        let hj = d.kernel().fvar(hj_fv);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let hi_ty = d.lt(i, n);
+        let hj_ty = d.lt(j, n);
+        let gi = d.apply(g, &[i]);
+        let gj = d.apply(g, &[j]);
+        let heq_ty = d.eq(gi, gj);
+
+        let fgi = d.apply(f, &[gi]);
+        let fgj = d.apply(f, &[gj]);
+        let congr_step = d.congr(gi, gj, heq, &|d, x| d.apply(f, &[x]));
+
+        let left_eq = d.lemma(p.perm_inverse_right, &[f, n, surj_f, i, hi]); // f (g i) = i
+        let right_eq = d.lemma(p.perm_inverse_right, &[f, n, surj_f, j, hj]); // f (g j) = j
+
+        let left_sym = d.symm(fgi, i, left_eq); // i = f (g i)
+        let trans1 = d.trans(fgi, fgj, j, congr_step, right_eq); // f (g i) = j
+        let i_eq_j = d.trans(i, fgi, j, left_sym, trans1); // i = j
+
+        let with_heq = d.lam_fv(heq_fv, heq_ty, i_eq_j);
+        let with_hj = d.lam_fv(hj_fv, hj_ty, with_heq);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hj);
+        let with_j = d.lam_fv(j_fv, nat, with_hi);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+
+    // --- MapsInto g n ---
+    let maps_g = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, n);
+        let zero = d.zero();
+        let zero_le_k = d.lemma(p.zero_le, &[k]);
+        let pos_n = d.lemma(p.lt_of_le_of_lt, &[zero, k, n, zero_le_k, hk]);
+        let gk_lt_n = perm_inverse_lt_proof(d, &p, f, k, n, pos_n);
+        let with_hk = d.lam_fv(hk_fv, hk_ty, gk_lt_n);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    // --- SurjectiveOn g n ---
+    let surj_g = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, n);
+
+        let fk = d.apply(f, &[k]);
+        let fk_lt_n_ty = d.lt(fk, n);
+        let fk_lt_n = d.apply(maps_f, &[k, hk]);
+        let g_fk_eq_k = d.lemma(p.perm_inverse_left, &[f, n, maps_f, inj_f, k, hk]);
+
+        let target_pred = exists_predicate(d, &p, g, k, n);
+        let g_fk = d.apply(g, &[fk]);
+        let eq_ty = d.eq(g_fk, k);
+        let and_proof = d.const_app(logic.and_intro, &[fk_lt_n_ty, eq_ty, fk_lt_n, g_fk_eq_k]);
+        let intro = d.kernel().const_(logic.exists_intro, vec![one]);
+        let witness = d.apply(intro, &[nat, target_pred, fk, and_proof]);
+
+        let with_hk = d.lam_fv(hk_fv, hk_ty, witness);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    let inj_g_ty = d.const_app(p.injective_on, &[g, n]);
+    let maps_g_ty = d.const_app(p.maps_into, &[g, n]);
+    let surj_g_ty = d.const_app(p.surjective_on, &[g, n]);
+    let inner_g_ty = d.const_app(logic.and, &[maps_g_ty, surj_g_ty]);
+    let bij_g_ty = d.const_app(logic.and, &[inj_g_ty, inner_g_ty]);
+
+    let inner_g_proof = d.const_app(logic.and_intro, &[maps_g_ty, surj_g_ty, maps_g, surj_g]);
+    let bij_g_proof = d.const_app(
+        logic.and_intro,
+        &[inj_g_ty, inner_g_ty, inj_g, inner_g_proof],
+    );
+
+    let value = {
+        let with_bij_f = d.lam_fv(bij_f_fv, bij_f_ty, bij_g_proof);
+        let with_f = d.lam_fv(f_fv, fn_ty, with_bij_f);
+        d.lam_fv(n_fv, nat, with_f)
+    };
+    let ty = {
+        let with_bij_f = d.arrow(bij_f_ty, bij_g_ty);
+        let with_f = d.pi_fv(f_fv, fn_ty, with_bij_f);
+        d.pi_fv(n_fv, nat, with_f)
+    };
+    d.declare_theorem(p.bijective_on_perm_inverse, ty, value)
+}
+
 /// `Eq.{1} fn_ty x y`, for `fn_ty` the `Nat → Nat` carrier — `d.eq` is
 /// hardcoded to `Eq Nat`, so every function-valued equality in
 /// `Nat.IsGroupOnFn` is built directly this way (the same pattern
@@ -934,13 +1334,19 @@ fn inverse_prop_fn(
 /// "is a permutation of `[0,n)`" predicate, already proved equivalent to
 /// `InjectiveOn ∧ MapsInto` by `relation.rs::bijective_of_injective_on`).
 ///
-/// Not yet instantiated at the symmetric group here (that is the natural
-/// next slice: `Nat.comp`/`Nat.id`/[`declare_comp_assoc`]'s
-/// `Nat.comp_assoc` are exactly the operation, identity, and associativity
-/// conjunct; the inverse conjunct needs `Nat.permInverse_left`/`_right`
-/// plus a `BijectiveOn`-preservation lemma for `Nat.comp` this slice does
-/// not build) — landing the predicate itself, with `Nat.comp_assoc` already
-/// proved satisfying its associativity shape, is this slice's target.
+/// **Not instantiable at the symmetric group, and not for lack of a lemma.**
+/// `Nat.comp`/`Nat.id`/`Nat.comp_assoc` supply the closure and associativity
+/// conjuncts (closure needs [`declare_bijective_on_comp`]'s
+/// `Nat.bijective_on_comp`, landed alongside this predicate), but the
+/// `identity`/`inverse` conjuncts below are stated as literal, UNBOUNDED
+/// `Eq (Nat → Nat) _ _` (via [`fn_eq`]), and `Nat.permInverse a n` is
+/// provably NOT `Nat.comp a`'s two-sided inverse as a total function — only
+/// on `[0,n)`. See this module's own top-of-file doc, "The full `IsGroupOnFn`
+/// instance is REFUTED", for the counterexample. `Nat.bijective_on_comp` and
+/// `Nat.bijective_on_perm_inverse` are landed as the reachable, correctly
+/// bounded fragment; the full instance needs a redesigned predicate (bounded
+/// `Nat.EqOn` in place of `Eq (Nat → Nat)`) that does not exist in this
+/// kernel yet.
 ///
 /// # Errors
 ///
@@ -1011,5 +1417,7 @@ pub(super) fn declare_permutation_all(
     declare_id(d, p)?;
     declare_comp_assoc(d, p)?;
     declare_is_group_on_fn(d, p)?;
+    declare_bijective_on_comp(d, p)?;
+    declare_bijective_on_perm_inverse(d, p)?;
     Ok(())
 }
