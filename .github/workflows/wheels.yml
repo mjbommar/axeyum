@@ -1,0 +1,362 @@
+# Release wheels for the `axeyum` PyO3 binding.
+#
+# NOT triggered on push. `ci.yml` already launches an 8-job matrix on every
+# commit across two agent lanes and saturates the runner pool; a wheel matrix
+# (7 build jobs, 8 smoke jobs, QEMU for aarch64) on top of that would starve the
+# gate that actually decides whether main is green. This runs on demand
+# (`workflow_dispatch`) and on a `py-v*` tag, which is the only moment a wheel
+# is needed.
+name: wheels
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'py-v*'
+
+# Least privilege by default; the publish job opts back in to `id-token: write`.
+permissions: {}
+
+concurrency:
+  group: wheels-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ---------------------------------------------------------------- builds ---
+  # One build per platform, not one per interpreter: `pyo3/abi3-py312` (pinned
+  # in crates/axeyum-py/Cargo.toml) collapses the 3.12/3.13/3.14 matrix to a
+  # single `cp312-abi3` wheel. The free-threaded build is the documented
+  # exception and has its own job below.
+  linux:
+    name: linux (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64
+            runner: ubuntu-latest
+          - target: aarch64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v5
+      # manylinux_2_28 (glibc 2.28 / RHEL 8), not `auto`. `auto` picks the
+      # container's own glibc, and a locally built wheel here is tagged
+      # manylinux_2_34 -- installable on Ubuntu 24.04 and on nothing older.
+      # 2_28 is the current broad floor; 2_17 costs a compiler old enough to
+      # be a problem for this workspace's edition-2024 crates.
+      - name: build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: '2_28'
+          args: --release --out dist
+          sccache: 'true'
+      # A build step that produced the WRONG ABI still exits 0. Assert the tag.
+      - name: assert the wheel is abi3
+        run: |
+          set -euo pipefail
+          ls -l dist/
+          count=$(ls dist/*-cp312-abi3-*.whl | wc -l)
+          test "$count" -eq 1
+          echo "WHEEL|abi3|$(ls dist/*.whl)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-${{ matrix.target }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  macos:
+    name: macos (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-14
+          # x86_64 is built on an INTEL runner rather than cross-compiled from
+          # arm64, because the smoke job below has to import the wheel and only
+          # a native runner can do that. When macos-13 is retired this becomes a
+          # cross-build with no smoke coverage -- say so then, do not hide it.
+          - target: x86_64-apple-darwin
+            runner: macos-13
+    steps:
+      - uses: actions/checkout@v5
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist
+          sccache: 'true'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-${{ matrix.target }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  windows:
+    name: windows (x64)
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: x64
+          args: --release --out dist
+          sccache: 'true'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-windows-x64
+          path: dist/*.whl
+          if-no-files-found: error
+
+  # abi3 IS NOT AVAILABLE ON FREE-THREADED CPYTHON, so 3.14t needs its own
+  # version-specific wheel. No Cargo feature toggle and no environment variable
+  # is involved: pyo3-build-config 0.29.2 resolves the target ABI from the
+  # interpreter and ignores the abi3 feature when `Py_GIL_DISABLED` is set
+  # (`impl_.rs:1093`: `get_abi3_version().is_some() && !gil_disabled`), and
+  # maturin prints the fallback. Measured 2026-08-24 on this workspace:
+  #   Warning: abi3 does not yet support CPython 3.14t ... version-specific
+  #   Built wheel for CPython 3.14t to axeyum-0.1.0-cp314-cp314t-...whl
+  # `PYO3_USE_ABI3_FORWARD_COMPATIBILITY` is a different knob (it permits an
+  # abi3 build against a CPython newer than PyO3 knows) and does NOT apply.
+  freethreaded-linux-x86_64:
+    name: linux (x86_64, 3.14t free-threaded)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: x86_64
+          manylinux: '2_28'
+          interpreter: '3.14t'
+          args: --release --out dist
+          sccache: 'true'
+      # The whole point of this job is that the artifact is NOT abi3. If the
+      # fallback ever stops happening the wheel would silently be a duplicate
+      # of the abi3 one, so assert the tag rather than trusting the log line.
+      - name: assert the wheel is version-specific free-threaded
+        run: |
+          set -euo pipefail
+          ls -l dist/
+          count=$(ls dist/*-cp314-cp314t-*.whl | wc -l)
+          test "$count" -eq 1
+          test "$(ls dist/*abi3*.whl 2>/dev/null | wc -l)" -eq 0
+          echo "WHEEL|freethreaded|$(ls dist/*.whl)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-x86_64-freethreaded
+          path: dist/*.whl
+          if-no-files-found: error
+
+  sdist:
+    name: sdist
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  # ----------------------------------------------------------------- smoke ---
+  # A wheel that builds but cannot import is the failure this job exists to
+  # catch, and it is not hypothetical: the extension carries a compiled `.so`,
+  # generated `.pyi` stubs, a pure-Python package, and an optional extra, and
+  # any of the four can be missing from a wheel that maturin reports as built.
+  #
+  # Every row installs into a FRESH venv from the artifact only -- never from
+  # the checkout -- so the checkout's `python/axeyum/` cannot mask a wheel that
+  # is missing files. The checkout is present solely for `python/tests/`.
+  #
+  # `[agent]` is installed because `test_import.py` asserts that every
+  # documented submodule imports in a fresh interpreter, and `axeyum.agent`
+  # raises a ModuleNotFoundError naming the extra when it is absent. Installing
+  # it here also proves the extra's pins still resolve.
+  smoke:
+    name: smoke (${{ matrix.name }})
+    needs: [linux, macos, windows, freethreaded-linux-x86_64, sdist]
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64-py312
+            runner: ubuntu-latest
+            artifact: wheels-linux-x86_64
+            python: '3.12'
+          # The same abi3 wheel on the newest interpreter it claims. An abi3
+          # wheel that only works on its build interpreter is a real failure
+          # mode and one row cannot see it.
+          - name: linux-x86_64-py314
+            runner: ubuntu-latest
+            artifact: wheels-linux-x86_64
+            python: '3.14'
+          - name: linux-aarch64-py312
+            runner: ubuntu-24.04-arm
+            artifact: wheels-linux-aarch64
+            python: '3.12'
+          - name: macos-arm64-py312
+            runner: macos-14
+            artifact: wheels-macos-aarch64-apple-darwin
+            python: '3.12'
+          - name: macos-x86_64-py312
+            runner: macos-13
+            artifact: wheels-macos-x86_64-apple-darwin
+            python: '3.12'
+          - name: windows-x64-py312
+            runner: windows-latest
+            artifact: wheels-windows-x64
+            python: '3.12'
+          - name: linux-x86_64-py314t
+            runner: ubuntu-latest
+            artifact: wheels-linux-x86_64-freethreaded
+            python: '3.14t'
+          # Building FROM the sdist is the test that catches a workspace member
+          # missing from the source distribution -- `pip install <sdist>` needs
+          # every path dependency of `crates/axeyum-py` to be inside the
+          # tarball. Needs a Rust toolchain, unlike every other row.
+          - name: from-sdist-py312
+            runner: ubuntu-latest
+            artifact: sdist
+            python: '3.12'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.artifact == 'sdist'
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist
+      - name: install into a fresh venv
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -l dist/
+          # Exactly one distribution, or we are testing something other than
+          # what we think we are.
+          files=(dist/*)
+          test "${#files[@]}" -eq 1
+          uv python install "${{ matrix.python }}"
+          uv venv --python "${{ matrix.python }}" .smoke
+          if [ -f .smoke/bin/python ]; then PY=.smoke/bin/python; else PY=.smoke/Scripts/python.exe; fi
+          uv pip install --python "$PY" --no-cache "${files[0]}[agent]" pytest
+      - name: import every documented submodule
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f .smoke/bin/python ]; then PY=.smoke/bin/python; else PY=.smoke/Scripts/python.exe; fi
+          "$PY" -c "import axeyum, axeyum.smt, axeyum.cas, axeyum.kernel, axeyum.knowledge; print(axeyum.__version__)"
+      - name: test_import against the installed wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f .smoke/bin/python ]; then PY=.smoke/bin/python; else PY=.smoke/Scripts/python.exe; fi
+          # pytest from the artifact's venv, over the checkout's tests. The
+          # session conftest fails a run that collected zero tests, so this
+          # cannot pass by collecting nothing.
+          "$PY" -m pytest python/tests/test_import.py -q
+      # The no-libpython promise (ADR-0002 / plan 01) is a property of the
+      # shipped artifact, so check the artifact, not the build log.
+      - name: no libpython link
+        if: startsWith(matrix.runner, 'ubuntu')
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY=.smoke/bin/python
+          so=$("$PY" -c "import axeyum._native as n; print(n.__file__)")
+          echo "$so"
+          ldd "$so"
+          test "$(ldd "$so" | grep -c libpython)" -eq 0
+
+  # --------------------------------------------------------------- release ---
+  # Tag-only, and it can fail: the tag and the built version must agree, and
+  # every expected artifact must be present. A release job that only downloads
+  # files and exits 0 would be the checker-that-cannot-fail this repository
+  # keeps finding.
+  release:
+    name: release inventory
+    needs: smoke
+    if: startsWith(github.ref, 'refs/tags/py-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: staged
+          pattern: 'wheels-*'
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: staged
+      - name: the tag, the artifact set, and the version must agree
+        run: |
+          set -euo pipefail
+          ls -l staged/
+          tag_version="${GITHUB_REF_NAME#py-v}"
+          echo "tag version: ${tag_version}"
+          wheels=$(ls staged/*.whl | wc -l)
+          # 2 linux + 2 macos + 1 windows + 1 free-threaded
+          test "$wheels" -eq 6
+          test "$(ls staged/*.tar.gz | wc -l)" -eq 1
+          for f in staged/*.whl staged/*.tar.gz; do
+            case "$(basename "$f")" in
+              "axeyum-${tag_version}"*) ;;
+              *) echo "VERSION MISMATCH: $f is not ${tag_version}"; exit 1 ;;
+            esac
+          done
+          echo "RELEASE|wheels=${wheels}|version=${tag_version}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-staged
+          path: staged/*
+          if-no-files-found: error
+
+  # Publishing is a SEPARATE job so that the `pypi` environment is never even
+  # resolved unless the repository variable says to publish. Trusted publishing
+  # (OIDC): no API token is stored anywhere, which is why `id-token: write` is
+  # here and nowhere else in this file.
+  #
+  # To actually publish: set the repo variable AXEYUM_PYPI_PUBLISH=true, create
+  # the `pypi` environment, and register this repo + workflow as a trusted
+  # publisher on PyPI. Until then this job is skipped and `release` above is the
+  # end of the pipeline -- deliberately, so a tag cannot publish by accident.
+  publish:
+    name: publish to PyPI
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/py-v') && vars.AXEYUM_PYPI_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-staged
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
