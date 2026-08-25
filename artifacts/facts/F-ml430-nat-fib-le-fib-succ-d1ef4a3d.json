@@ -6,14 +6,34 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℕ}, Nat.fib n ≤ Nat.fib (n + 1)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.fib_le_succ"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "depends_on": [
     "F:ml430-nat-fib-add-two-b86e0c82"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.fib_le_succ",
+      "kind": "kernel-term",
+      "supports": "∀ {n : ℕ}, Nat.fib n ≤ Nat.fib (n + 1)",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --release --example nat_theorem_inventory -- fib_le_succ 2>/dev/null | grep -xFc 'Nat.fib_le_succ\t1\t((x0 : AxNat) -> AxNat.le (AxNat.fib x0) (AxNat.fib (AxNat.succ x0)))')\" -ge 1",
+      "notes": "`build_nat_prelude` admits `Nat.fib_le_succ : forall n, fib n <= fib (succ n)` through the trusted `Kernel::add_declaration` gate, which re-derives the type from the proof term. This is literally the pinned Mathlib v4.30 proposition `Nat.fib_le_fib_succ` (`n + 1` renders as `succ n`) -- found by comparing this fact's formal.statement against every candidate `nat_theorem_inventory --release` row a crude name match against the 1,117-theorem kernel inventory surfaced, not assumed from the name match alone. `--release` is required: the debug build of this binary can SIGABRT on stack depth for the full constructed-environment inventories (not this one specifically, but the convention is followed uniformly). Demonstrated to discriminate: substituting a single wrong token (e.g. flipping the `<=` operands) into the expected line makes this exact command exit 1 against the same kernel build."
+    },
+    {
+      "id": "footprint-Nat.fib_le_succ",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --release --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, and `Nat.fib_le_succ` is declared inside `build_nat_prelude`, so it cannot depend on a trusted declaration the Nat environment does not contain. Demonstrated to discriminate: `--require-axiom-free axreal` against the SAME kernel build exits 1 (`axreal trusted surface = 30, expected 0`), so the flag is not satisfied unconditionally."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -28,5 +48,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED 2026-08-25: the Nat prelude's `Nat.fib_le_succ` is the SAME proposition as this pinned Mathlib source declaration -- same quantifier structure, same hypotheses (none), same argument order, `n + 1` renders as the kernel's `AxNat.succ n`. Found by comparing this fact's `formal.statement` against the rendered type of every candidate a crude name match surfaced from the 1,117-theorem kernel inventory (most of that candidate set turned out to be REFUTED on close statement comparison; this one held up). The kernel proof is native -- `build_nat_prelude` proves it directly over the kernel's own `AxNat.fibAux`-based `Nat.fib`, not by importing or replaying anything from Mathlib -- so `proof_route` is `kernel-lean`, not `imported-kernel-lean`, and `axiom_footprint` is empty because the whole Nat prelude is. formal.statement is left as the original Lean surface transcription (not rewritten to the kernel's core-rendered form) since the two are the same proposition up to notation and the surface form is this ml430 fact family's standing convention. depends_on projects only direct upstream theorem uses whose endpoints both survived review; those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority -- they are independent of the kernel-native route that actually closed this fact. NOTE for anyone touching this fact again: `F:ml430-nat-fib-le-fib-succ-d1ef4a3d` is registered in `artifacts/autogenesis/nursery-v1.json` under partition `train` (not `held-out`), so closing it here does not violate `scripts/check-autogenesis-holdout-isolation.py`'s held-out isolation rule -- verified before this edit landed. Four sibling candidates from the same crude-match sweep (`Nat.choose_zero_right`, `Nat.choose_self`, `Nat.choose_succ_succ`, `Nat.zero_choose_succ`) are ALSO genuine statement matches to already-admitted kernel theorems, but their ml430 facts sit in the nursery's `held-out` partition and were deliberately left `open` -- that gate says establishing a held-out proposition by ANY route spends the partition."
 }
