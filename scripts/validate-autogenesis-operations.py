@@ -1027,9 +1027,16 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                         f"{label}.executor driver is inconsistent with applicability/admission"
                     )
             elif executor["driver"] == "axeyum-lean-import/modeq-family-multi-target-v1":
+                # The producer is fragment-agnostic (it never names Int, Nat,
+                # ModEq, or %; see producers::modeq_family) and a single
+                # operation may legitimately span both -- authored on the Int
+                # train facts, generalizing to the Nat development facts. So
+                # the closed set of valid values is every nonempty subset of
+                # {Int, Nat}, not just the two singletons.
                 if (
                     applicability["formal_languages"] != ["lean4-surface"]
-                    or applicability["fragments"] not in (["Int"], ["Nat"])
+                    or applicability["fragments"]
+                    not in (["Int"], ["Nat"], ["Int", "Nat"])
                     or admission["proof_route"] != "kernel-lean"
                     or admission["evidence_kind"] != "kernel-term"
                     or admission["axiom_footprint"] != []

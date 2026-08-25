@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
-"""Independently re-derive and check the Nat.ModEq-family operation.
+"""Independently re-derive and check the Nat.ModEq-family targets.
 
-`authoritative-mathlib-nat-modeq-family-v1` reuses the exact target-agnostic
-producer/checker pair (`producers::modeq_family` / `modeq_family_operation.rs`)
-already committed for `authoritative-mathlib-modeq-family-v1` (`Int.ModEq`).
-That producer never names `Int`, `Nat`, `ModEq`, or `%` -- it peels `Pi`
-binders into hypotheses and closes an `Eq`- or `Iff`-headed terminal goal by
-`refl`/`symm`/`trans`/`Iff.intro` alone, all reconstructed from `Eq.rec`/
-`Iff`'s own constructor. `Nat.ModEq n a b` unfolds transparently to the same
-`a % n = b % n` shape as `Int.ModEq`, so this is a BLIND generalization
-probe, not a new producer: `docs/autogenesis/242-nat-division-gates-modular-
-arithmetic.md` records that all four `natural-modular-equivalence`
-(development) streams import cleanly with zero axioms, and this script
-confirms the same bounded search actually closes three of the four --
+This checker's three Nat.ModEq targets are named by the SAME registered
+operation as the Int.ModEq family, `authoritative-mathlib-modeq-family-v1`
+(originally registered separately as `authoritative-mathlib-nat-modeq-family-v1`;
+merged 2026-08-25 -- see `scripts/check-development-partition.py`, which
+requires an operation naming a `development` fact to also name a `train`
+fact, and this producer's Int.ModEq facts are exactly the train facts it
+generalizes from, established first). The merge changed only the registry
+entry these facts are named under; the producer/checker pair, the goals, the
+proofs and every replayed digest below are unchanged.
+
+That producer/checker pair (`producers::modeq_family` /
+`modeq_family_operation.rs`) never names `Int`, `Nat`, `ModEq`, or `%` -- it
+peels `Pi` binders into hypotheses and closes an `Eq`- or `Iff`-headed
+terminal goal by `refl`/`symm`/`trans`/`Iff.intro` alone, all reconstructed
+from `Eq.rec`/`Iff`'s own constructor. `Nat.ModEq n a b` unfolds transparently
+to the same `a % n = b % n` shape as `Int.ModEq`, so this is a BLIND
+generalization probe, not a new producer: `docs/autogenesis/242-nat-division-
+gates-modular-arithmetic.md` records that all four `natural-modular-
+equivalence` (development) streams import cleanly with zero axioms, and this
+script confirms the same bounded search actually closes three of the four --
 `Nat.ModEq.refl`, `Nat.ModEq.symm`, `Nat.ModEq.trans` -- from their
 tracked, hash-pinned external Mathlib exports.
 
@@ -23,8 +31,10 @@ deliberately NOT named by this operation: it `depends_on`
 (`artifacts/autogenesis/nat-modeq-capability-selection-v1.json` records this
 scoping decision explicitly). Naming a currently-blocked fact in
 `applicability.fact_ids` would not change today's frontier selection and
-would contradict that recorded plan, so this operation covers exactly the
-three ready facts.
+would contradict that recorded plan, so the operation's Nat.ModEq coverage is
+exactly the three ready facts (its Int.ModEq coverage is the separate,
+already-settled four-fact family checked by
+`check-autogenesis-modeq-family.py`).
 
 Registering this operation does not by itself prove anything: it makes three
 `open` facts dispatchable to `fact-frontier.py`'s selection. `execute-
@@ -37,15 +47,16 @@ member and the automated executor refuses categorically, before even
 reaching driver dispatch (which also has no handler registered for
 `axeyum-lean-import/modeq-family-multi-target-v1`). So promotion here is the
 same hand-authored-commit-following-independently-rechecked-receipt pattern
-already used for `authoritative-mathlib-modeq-family-v1` (`Int.ModEq`,
-6b8c2526b): the checker in this file re-derives the receipt independently of
-any ledger claim, and a human- or agent-reviewed commit is what actually
-flips a fact's `epistemic_status`, one fact at a time so the transition
-stays reviewable.
+already used for the operation's Int.ModEq facts (`6b8c2526b`): the checker
+in this file re-derives the receipt independently of any ledger claim, and a
+human- or agent-reviewed commit is what actually flips a fact's
+`epistemic_status`, one fact at a time so the transition stays reviewable.
 
 `F:ml430-nat-modeq-refl-d870c8f5` was flipped `proved` this way, with an
-evidence row bound to this operation's id, `checker_operation.goal_sha256`
-and `proof_sha256` matching exactly what `check_target` below re-derives.
+evidence row bound to `authoritative-mathlib-modeq-family-v1`'s id (recorded
+at the time as `authoritative-mathlib-nat-modeq-family-v1`, before the merge
+above; only the id string changed), `checker_operation.goal_sha256` and
+`proof_sha256` matching exactly what `check_target` below re-derives.
 `F:ml430-nat-modeq-symm-0a3d4d18` and `F:ml430-nat-modeq-trans-ef9d1c46`
 remain `open` and dispatchable, for a following lane to close the same way.
 A registration gate that let an `open` fact drift to `proved` without a
@@ -77,7 +88,13 @@ from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "artifacts/autogenesis/operations.json"
-OPERATION_ID = "authoritative-mathlib-nat-modeq-family-v1"
+# Merged 2026-08-25 into the Int.ModEq operation so the development-partition
+# gate sees a train fact alongside these development facts (see module
+# docstring). The registered id under which these three facts were originally
+# closed was `authoritative-mathlib-nat-modeq-family-v1`; the fact ledger's
+# already-written evidence for `F:ml430-nat-modeq-refl-d870c8f5` was updated
+# to match.
+OPERATION_ID = "authoritative-mathlib-modeq-family-v1"
 DISPATCHABLE_FACT_IDS = (
     "F:ml430-nat-modeq-refl-d870c8f5",
     "F:ml430-nat-modeq-symm-0a3d4d18",
@@ -262,9 +279,12 @@ def check_registration_grants_dispatch_not_proof(
     this ledger tracks, moved one arrow upstream."""
     dispatchable = set(DISPATCHABLE_FACT_IDS)
     all_named = operation["applicability"]["fact_ids"]
-    if set(all_named) != dispatchable:
+    # A containment check, not equality: this operation also names its four
+    # Int.ModEq train facts (see module docstring), so applicability.fact_ids
+    # is a strict superset of DISPATCHABLE_FACT_IDS, not equal to it.
+    if not dispatchable <= set(all_named):
         raise FamilyError(
-            f"DISPATCHABLE_FACT_IDS {sorted(dispatchable)} disagrees with "
+            f"DISPATCHABLE_FACT_IDS {sorted(dispatchable)} missing from "
             f"applicability.fact_ids {sorted(all_named)}"
         )
     if set(SETTLED_FACT_IDS) | set(REMAINING_DISPATCHABLE_FACT_IDS) != dispatchable:
@@ -391,9 +411,14 @@ def main() -> int:
         if executor["driver"] != "axeyum-lean-import/modeq-family-multi-target-v1":
             raise FamilyError("operation driver changed")
         max_binders = executor["max_binders"]
-        targets = executor["targets"]
+        # The operation also carries the four Int.ModEq train targets (see
+        # module docstring); this checker's job is the three Nat.ModEq
+        # targets specifically, so it selects its own subset rather than
+        # assuming the operation names only them.
+        all_targets = executor["targets"]
+        targets = [t for t in all_targets if t["fact_id"] in DISPATCHABLE_FACT_IDS]
         if len(targets) != 3:
-            raise FamilyError("expected exactly three targets in this family")
+            raise FamilyError("expected exactly three Nat targets in this family")
         targets_by_fact: dict[str, dict[str, Any]] = {}
         for target in targets:
             modeq = check_target(target, max_binders)
