@@ -89,15 +89,20 @@ impl PyAssignment {
     }
 
     /// Pins the value the evaluator uses for `numerator / 0`.
+    ///
+    /// # Errors
+    ///
+    /// Raises `ValueError` when either rational has a zero denominator, and
+    /// `AxeyumError` when either leaves the `i128` reference range. The zero
+    /// denominator needs its own check: `Rational::checked_new` keeps `new`'s
+    /// `assert!(den != 0)` and panics rather than answering `None`.
     fn set_real_div_zero(
         &mut self,
         numerator: (i128, i128),
         quotient: (i128, i128),
     ) -> PyResult<()> {
-        let numerator = Rational::checked_new(numerator.0, numerator.1)
-            .ok_or_else(|| crate::error::AxeyumError::new_err("numerator is not representable"))?;
-        let quotient = Rational::checked_new(quotient.0, quotient.1)
-            .ok_or_else(|| crate::error::AxeyumError::new_err("quotient is not representable"))?;
+        let numerator = checked_rational(numerator.0, numerator.1, "numerator")?;
+        let quotient = checked_rational(quotient.0, quotient.1, "quotient")?;
         self.assignment.set_real_div_zero(numerator, quotient);
         Ok(())
     }
@@ -114,6 +119,23 @@ impl PyAssignment {
             self.assignment.len()
         )
     }
+}
+
+/// A rational from a `(num, den)` pair, with the zero denominator screened.
+///
+/// # Errors
+///
+/// Raises `ValueError` for `den == 0`, `AxeyumError` for an `i128` overflow.
+fn checked_rational(num: i128, den: i128, what: &str) -> PyResult<Rational> {
+    crate::cas::rational::checked(num, den).ok_or_else(|| {
+        if den == 0 {
+            pyo3::exceptions::PyValueError::new_err(format!(
+                "the {what} denominator must be non-zero"
+            ))
+        } else {
+            crate::error::AxeyumError::new_err(format!("{what} is not representable"))
+        }
+    })
 }
 
 /// Evaluates `term` under `assignment` — the trusted ground evaluator.

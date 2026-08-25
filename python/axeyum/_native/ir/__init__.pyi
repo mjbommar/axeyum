@@ -160,6 +160,15 @@ class Arena:
     def real_ratio(self, num: builtins.int, den: builtins.int) -> Term:
         r"""
         A real constant `num / den`; `den` must be non-zero.
+        
+        # Errors
+        
+        Raises `ValueError` for `den == 0` and `AxeyumError` when the ratio
+        leaves the `i128` reference range. `Rational::checked_new` is NOT a
+        guard for the first of those -- it keeps `new`'s `assert!(den != 0)`,
+        so it panics rather than answering `None` (measured 2026-08-25 through
+        this very function). `crate::cas::rational::checked` is the form that
+        screens both.
         """
     def real_const(self, value: builtins.int) -> Term:
         r"""
@@ -565,6 +574,12 @@ class Arena:
         This is `axeyum_ir::render`, the IR's only term-to-text path. It lives
         on the arena rather than on `Term.__str__` because a `Term` is a bare
         `(epoch, index)` pair and does not hold the arena that gives it meaning.
+        
+        # Errors
+        
+        Raises `BudgetExceeded` above [`MAX_RECURSIVE_DEPTH`]; `axeyum_ir::render`
+        recurses per node and overflows the thread stack beyond that, which is a
+        process ABORT rather than an exception.
         """
     def term_stats(self, roots: typing.Sequence[Term]) -> TermStats:
         r"""
@@ -614,6 +629,13 @@ class Assignment:
     def set_real_div_zero(self, numerator: tuple[builtins.int, builtins.int], quotient: tuple[builtins.int, builtins.int]) -> None:
         r"""
         Pins the value the evaluator uses for `numerator / 0`.
+        
+        # Errors
+        
+        Raises `ValueError` when either rational has a zero denominator, and
+        `AxeyumError` when either leaves the `i128` reference range. The zero
+        denominator needs its own check: `Rational::checked_new` keeps `new`'s
+        `assert!(den != 0)` and panics rather than answering `None`.
         """
     def __len__(self) -> builtins.int:
         r"""

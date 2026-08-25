@@ -381,8 +381,16 @@ pub fn from_real(
     den: i128,
 ) -> PyResult<Option<Term>> {
     let epoch = arena.epoch;
-    let rational = axeyum_ir::Rational::checked_new(num, den).ok_or_else(|| {
-        crate::error::AxeyumError::new_err(format!("{num}/{den} is not a representable rational"))
+    // `checked_new` is NOT a zero-denominator guard: it keeps `new`'s
+    // `assert!(den != 0)` and panics. `cas::rational::checked` screens both.
+    let rational = crate::cas::rational::checked(num, den).ok_or_else(|| {
+        if den == 0 {
+            pyo3::exceptions::PyValueError::new_err("a rational denominator must be non-zero")
+        } else {
+            crate::error::AxeyumError::new_err(format!(
+                "{num}/{den} is not a representable rational"
+            ))
+        }
     })?;
     let id = axeyum_fp::from_real(&mut arena.arena, dst.format, mode.into(), rational)
         .map_err(|e| map_ir_error(&e))?;

@@ -27,10 +27,15 @@ from collections.abc import Callable
 from typing import Any
 
 import pytest
-from hypothesis import given
+from _prop_helpers import Tally
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from axeyum import ir
+from axeyum import ir, solver
+
+# Counts examples on which the no-panic property was genuinely evaluated, so a
+# generator that stopped producing terms fails instead of passing vacuously.
+_NO_PANIC = Tally("no-panic over ir.eval / bv.lower_terms / solver.solve")
 
 MAX_WIDTH = 64
 WIDTHS = st.integers(min_value=1, max_value=MAX_WIDTH)
@@ -472,3 +477,151 @@ def test_int_div_mod_by_zero_are_total(x: int) -> None:
     ``mod x 0 = x``, and neither raises."""
     assert eval_int("int_div", x, 0) == 0
     assert eval_int("int_mod", x, 0) == x
+
+
+# --- the no-panic property ----------------------------------------------------
+#
+# Every test above compares a VALUE against an independent reference. This one
+# asserts something weaker over a much wider input space: whatever a random
+# term, a random sort and a random assignment do to the three front doors, the
+# outcome must be a value or an `Exception` -- never a `BaseException` that
+# `except Exception` cannot catch.
+#
+# `pyo3_runtime.PanicException` is exactly such a `BaseException`, and it is what
+# a Rust `panic!` becomes. `tools/panic_probe.py` covers this property over the
+# whole `axeyum._native` surface with a hand-written battery; this covers three
+# routes with GENERATED input, which is the half a fixed battery cannot reach.
+# `python/tests/test_no_panic_escapes.py` carries the per-site regression tests
+# and the negative control proving the assertion below is not vacuous.
+
+
+def escaped(error: BaseException) -> str | None:
+    """A description of `error` when it escapes `except Exception`, else `None`."""
+    if isinstance(error, Exception):
+        return None
+    return f"{type(error).__module__}.{type(error).__name__}: {error}"
+
+
+SORT_MAKERS: list[Callable[[], Any]] = [
+    ir.Sort.bool,
+    ir.Sort.int,
+    ir.Sort.real,
+    ir.Sort.string,
+    lambda: ir.Sort.bv(1),
+    lambda: ir.Sort.bv(8),
+    lambda: ir.Sort.bv(64),
+    lambda: ir.Sort.bv(129),
+    lambda: ir.Sort.array(ir.Sort.bv(8), ir.Sort.bv(8)),
+    lambda: ir.Sort.float(8, 24),
+]
+
+# Builders taking `(arena, [terms of one sort])`. Deliberately MIXED across
+# sorts: the generator picks a builder and a sort independently, so most draws
+# are ill-sorted. That is the point -- an ill-sorted call must be refused with a
+# `SortError`, and the refusal is what a missing guard turns into a panic.
+BUILDERS: list[tuple[str, int]] = [
+    ("not_", 1),
+    ("and_", 2),
+    ("or_", 2),
+    ("eq", 2),
+    ("ite", 3),
+    ("bvadd", 2),
+    ("bvmul", 2),
+    ("bvudiv", 2),
+    ("bvurem", 2),
+    ("bvsdiv", 2),
+    ("bvshl", 2),
+    ("bvult", 2),
+    ("bvnot", 1),
+    ("int_add", 2),
+    ("int_div", 2),
+    ("int_mod", 2),
+    ("int_lt", 2),
+    ("real_div", 2),
+    ("real_add", 2),
+    ("to_int", 1),
+    ("to_real", 1),
+    ("is_int", 1),
+    ("bv2nat", 1),
+    ("seq_len", 1),
+    ("select", 2),
+    ("store", 3),
+]
+
+VALUES: list[Any] = [True, False, 0, 1, -1, (1 << 70), "", "a", 0.5, None]
+
+
+@st.composite
+def random_query(draw):
+    """An arena, a term built from randomly (mis)matched pieces, an assignment.
+
+    Returns `(arena, term_or_None, assignment)`. `term` is `None` when every
+    builder attempt was refused -- which is itself a legitimate outcome and is
+    counted rather than discarded, because `assume()` would hide a generator
+    that had stopped producing terms at all.
+    """
+    arena = ir.Arena()
+    sort_index = draw(st.integers(min_value=0, max_value=len(SORT_MAKERS) - 1))
+    sort = SORT_MAKERS[sort_index]()
+    name, arity = draw(st.sampled_from(BUILDERS))
+    leaves = []
+    for index in range(arity):
+        try:
+            leaves.append(arena.var(arena.declare(f"v{index}", sort)))
+        except Exception:  # noqa: BLE001 - an undeclarable sort is a valid draw
+            leaves.append(None)
+    term = None
+    if all(leaf is not None for leaf in leaves):
+        try:
+            term = getattr(arena, name)(*leaves)
+        except Exception:  # noqa: BLE001 - an ill-sorted build is the common case
+            term = None
+    assignment = arena.assignment()
+    for index in range(arity):
+        symbol = arena.find_symbol(f"v{index}")
+        if symbol is None:
+            continue
+        try:
+            assignment.set(arena, symbol, draw(st.sampled_from(VALUES)))
+        except Exception:  # noqa: BLE001, S110 - a mis-sorted bind must be refused
+            pass
+    return arena, term, assignment
+
+
+@given(query=random_query())
+@settings(max_examples=300)
+def test_no_route_escapes_except_exception(query) -> None:
+    """`ir.eval`, `ir.bv.lower_terms` and `solver.solve` never raise a
+    non-`Exception` `BaseException` on any generated query."""
+    arena, term, assignment = query
+    if term is None:
+        _NO_PANIC.decline("no term built")
+        return
+    _NO_PANIC.check()
+
+    escapes: list[str] = []
+    for label, call in (
+        ("ir.eval", lambda: ir.eval(arena, term, assignment)),
+        ("ir.bv.lower_terms", lambda: ir.bv.lower_terms(arena, [term])),
+        ("solver.solve", lambda: solver.solve(arena, [term], solver.Config(timeout_ms=200))),
+        ("arena.render", lambda: arena.render(term)),
+        ("arena.write_script", lambda: arena.write_script([term])),
+    ):
+        try:
+            call()
+        except Exception:  # noqa: BLE001, S110 - a typed refusal IS the property
+            pass
+        except BaseException as error:  # noqa: BLE001
+            description = escaped(error)
+            escapes.append(f"{label} -> {description}")
+    assert not escapes, "\n".join(escapes)
+
+
+def test_no_panic_property_actually_built_terms() -> None:
+    """The generator must reach the routes it claims to test.
+
+    A draw where every builder is refused produces no term and checks nothing.
+    If that became the common case the property above would pass while testing
+    nothing at all -- the inert-gate failure, one layer in.
+    """
+    _NO_PANIC.require(minimum=40)

@@ -799,6 +799,31 @@ fn solve_recurrence(
     )))
 }
 
+/// The largest matrix the binding will allocate.
+///
+/// `CasMatrix::identity(n)` allocates `n * n` rationals with no fallible path:
+/// measured 2026-08-25, `cas.Matrix.identity(70000)` asks for 4.9e9 entries and
+/// the Rust allocator ABORTS the process (SIGABRT, exit 134). An abort is not a
+/// `PanicException` and not catchable, so the only fix is to refuse the shape
+/// before the allocation. 16.7 M entries is roughly 268 MB of `Rational`.
+pub(crate) const MAX_MATRIX_ENTRIES: usize = 1 << 24;
+
+/// Refuses a matrix shape the allocator could not satisfy.
+///
+/// # Errors
+///
+/// Raises `ValueError` above [`MAX_MATRIX_ENTRIES`] entries.
+fn check_matrix_shape(rows: usize, cols: usize) -> PyResult<()> {
+    let entries = rows.checked_mul(cols);
+    if entries.is_none_or(|entries| entries > MAX_MATRIX_ENTRIES) {
+        return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "a {rows}x{cols} matrix is above the {MAX_MATRIX_ENTRIES}-entry binding budget; \
+             the Rust allocator ABORTS rather than raising on a request this size"
+        )));
+    }
+    Ok(())
+}
+
 /// A dense matrix of expressions.
 #[cfg_attr(
     feature = "stub-gen",
@@ -845,15 +870,25 @@ impl Matrix {
     }
 
     /// The `n x n` identity.
+    ///
+    /// # Errors
+    ///
+    /// Raises `ValueError` above [`MAX_MATRIX_ENTRIES`] entries.
     #[staticmethod]
-    fn identity(n: usize) -> Matrix {
-        Matrix::wrap(CasMatrix::identity(n))
+    fn identity(n: usize) -> PyResult<Matrix> {
+        check_matrix_shape(n, n)?;
+        Ok(Matrix::wrap(CasMatrix::identity(n)))
     }
 
     /// An all-zero matrix.
+    ///
+    /// # Errors
+    ///
+    /// Raises `ValueError` above [`MAX_MATRIX_ENTRIES`] entries.
     #[staticmethod]
-    fn zeros(rows: usize, cols: usize) -> Matrix {
-        Matrix::wrap(CasMatrix::zeros(rows, cols))
+    fn zeros(rows: usize, cols: usize) -> PyResult<Matrix> {
+        check_matrix_shape(rows, cols)?;
+        Ok(Matrix::wrap(CasMatrix::zeros(rows, cols)))
     }
 
     /// The number of rows.

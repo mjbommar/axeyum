@@ -365,6 +365,8 @@ def write_script(arena: ir.Arena, assertions: typing.Sequence[ir.Term]) -> built
     # Errors
     
     Raises `EpochError` when an assertion belongs to another arena. The Rust
-    writer PANICS on a foreign term, which is why this is checked here.
+    writer PANICS on a foreign term, which is why this is checked here. Raises
+    `BudgetExceeded` for a term too deep for the writer's per-node recursion,
+    which would ABORT the process rather than raise.
     """
 

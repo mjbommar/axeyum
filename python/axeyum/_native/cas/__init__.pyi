@@ -1490,11 +1490,19 @@ class Matrix:
     def identity(n: builtins.int) -> Matrix:
         r"""
         The `n x n` identity.
+        
+        # Errors
+        
+        Raises `ValueError` above [`MAX_MATRIX_ENTRIES`] entries.
         """
     @staticmethod
     def zeros(rows: builtins.int, cols: builtins.int) -> Matrix:
         r"""
         An all-zero matrix.
+        
+        # Errors
+        
+        Raises `ValueError` above [`MAX_MATRIX_ENTRIES`] entries.
         """
     def get(self, row: builtins.int, col: builtins.int) -> typing.Optional[Expr]:
         r"""

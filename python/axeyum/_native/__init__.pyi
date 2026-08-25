@@ -18,6 +18,7 @@ __all__ = [
     "DatatypeValue",
     "FuncValue",
     "GenericArrayValue",
+    "InternalError",
     "RealAlgebraicValue",
     "ReplayUnavailable",
     "SmtLibParseError",
@@ -186,6 +187,12 @@ class GenericArrayValue:
         """
     def __len__(self) -> builtins.int: ...
     def __repr__(self) -> builtins.str: ...
+
+class InternalError(AxeyumError):
+    r"""
+    A Rust invariant was violated inside a call that could not be guarded by a preflight; the message names the Rust site. Not a normal outcome -- report it.
+    """
+    ...
 
 @typing.final
 class RealAlgebraicValue:
