@@ -119,14 +119,6 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-08-25 | `978340925` | **ℚ is an ordered field, by composition.** `Rat.IsOrderedField := IsField ∧ (translation-invariance ∧ closure-of-the-nonnegatives)`, reusing `rat_isField` verbatim because its declared type is already the folded application. All three briefed consequences already existed and were verified rather than re-derived. Its negative control drops BOTH hypotheses from `mul_nonneg` and is over a genuinely false statement (`1·(-1) = -1`), not merely an under-justified one. |
 | 2026-08-25 | `865bab083` | **No fact checker consumes a pipeline with `grep -q`, and a guard so none does again.** 81 facts / 132 commands rewritten to `test "$(… \| grep -c …)" -ge 1`, every non-`checker_command` field asserted byte-identical per file. The guard immediately caught 18 facts two other lanes added after its base. The defect is flakiness, not unsoundness — it fails closed — but it is real: `set -o pipefail; seq 200000 \| grep -q '^1$'` exits **141**. |
-| 2026-08-25 | `865bab083` | **48 facts for ℕ/ℤ/ℚ/ℝ, and the coverage measurement behind them.** 97% of admitted theorems had no fact; `rat` was 220-of-220 uncovered. `theorem_dependency_inventory` extended to `creal`/`complex`/`cpoint` (and now requires `--release`; a debug build overflows its stack). Checkers verified BOTH ways — real name exit 0, wrong name nonzero — and the `--include-constructed` flag shown to be load-bearing by failing without it. |
-| 2026-08-25 | `865bab083` | **`Nat.permInverse` — an explicit inverse for a bijection on `[0,n)`,** with both inverse laws, plus `Nat.id`, `comp_assoc`, and `IsGroupOnFn` over a carrier of FUNCTIONS. Needed because `bijective_of_injective_on` proves an EXISTS and `Exists.rec` eliminates only into `Prop`. Renamed from `inverseIndex`, which `int_prelude/wilson.rs` already owned. |
-| 2026-08-25 | `865bab083` | **`scripts/lane-merge-additive.py`** — refuses a both-sides conflict resolution whose hunk sides are delimiter-unbalanced, and can `splice` whole items out of the other branch's file instead. 18 controls; the one that matters reproduces the exact failure shape and asserts that keeping both sides really does leave the delimiters unbalanced. |
-| 2026-08-25 | `28a4e9553` | **`Subset` is a partial order and joins the lattice** (`subset_refl`/`_trans`/`_antisymm` pointwise, `setDiff_eq_inter_compl` as a bare `Eq.refl`, `union_eq_right_of_subset`), on top of 13 pointwise Boolean-lattice laws. Nothing in this kernel named an ORDER before; `relation.rs` had only equivalences. |
-| 2026-08-25 | `c6e0176e1` | **Finite groups over ℕ with ℤ/n as the worked instance,** and the ℚ `sumRange` sample-rate law — whose more useful half is negative: the closed form cannot reach `Cauchy`, because the per-term error sum is harmonic. The module doc now names the tractable route instead of the dead end. |
-| 2026-08-25 | `fd3888e63` | **The decoupling lane landed: no artifact depends on a repository we do not own** (ADR-0553). I verified the new gate FIRES rather than trusting its zero — exit 1 both on an artifact path containing `..` and on the original `ROOT.parent / "math-education"` script pattern. |
-| 2026-08-25 | `28a4e9553` | **Two correspondence-gate defects found by lanes USING the gate, not by the gate.** `CARRIERS["Nat"]` could never match `AxNat` (the `x` blocks the word-boundary erasure), so kernel-spelled transports failed closed and the gate steered authors toward prose-ℕ. And a `specialization` whose every `via` ref was `null` passed — an empty route dressed as prose. Both controlled, including the discrimination that null refs stay legitimate for rearrangement steps. |
-| 2026-08-25 | `a29b4b41c` | **`sequences-and-limits` (curriculum Layer 2, `lean-horizon`): `CReal.converges_squeeze`, the sandwich theorem.** Chosen over the other three candidates in doc 262's brief because it needed neither the still-unbuilt `sumRange` sample-rate law (comparison test / `converges_geometric` — `series.rs`'s own module doc: "plausibly a module the size of `completeness.rs` on its own") nor a verdict on `converges_of_monotone_bounded`'s constructive availability (left open, not attempted). `CReal.le x y := ∀ n, seq x n − seq y n ≤ 2/(n+1)` is already `Converges`'s own canonical-sample idiom, so `(hab n) n`/`(hbc n) n` land at the same index the two `Converges` hypotheses read at — no shift bridge, no Archimedean lemma, just `Rat.add_le_add`/`Rat.neg_le_neg` telescoping and one `Rat.natDivSucc_le_add_left` widening per side to `K := (2+K_a)+(2+K_c)`. Kernel-confirmed (`creal_prelude_builds`, `every_creal_declaration_is_checked_and_axiom_free`, 28/28 creal tests; `prelude_theorem_inventory --release --include-constructed` shows footprint 0 under `creal`/`complex`/`cpoint`). 189 pinned declarations, trusted surface still 0. Confirmed present in `crates/axeyum-lean-kernel/src/creal/convergence.rs` at merge time (post `session/rado-claim-ledger-2026-08-12`): `converges_add`, `converges_mul`, `converges_neg`, `converges_sub`, `converges_unique`, `converges_cauchy`, `converges_bounded`, `limitSeq_regular`, `limit_dist`, `sumRange_telescope`, `geom_sum_bounded`, `sumRange_tail_le` — all 12. |
 | 2026-08-24 | `da1701d97` | The knowledge overlay may not name a sibling repository: source, namespace, 24 links and three unreachable relation types removed; schema tightened so the vocabulary cannot come back; the validator no longer reads `ROOT.parent`. |
 | 2026-08-24 | `94f3beb0c` | The crosswalk and the tactic catalog, plus the two projections that went structurally empty with them. `uses_technique` no longer mandates an external source on every tactic. 13 tactic guards, each killed by exactly one test. |
 | 2026-08-24 | `70aaccb38` | `scripts/check-external-coupling.py` — 4 rules, 8 guards, 25 controls, each guard killed by exactly one test; wired into both aggregates with `--self-test` first. `graph_pin` and `resolved` removed from all 104 claims; the 777-line Python integration and the agent's `file://` allowlist entry deleted. |
@@ -139,322 +131,22 @@ now. Nothing was deleted.
 | 2026-08-24 | `c49566743` | Derive hash-bound transport chains with incomplete paths explicit rather than name-matched |
 | 2026-08-24 | `8e78d8e3e` | Publish separated formal, producer-credit, and transport coverage dimensions |
 | 2026-08-24 | `7160fc0bc` | Publish non-authoritative producer observations; current live queue has zero registered admissible candidates |
-| 2026-08-24 | `d076da943` | Correct branch-containment guidance and move derived-snapshot freshness out of the global construction gate into an explicit knowledge-owner check |
-| 2026-08-24 | `c4cfde641` | Refresh the kernel-derived declaration/dependency snapshot to the latest 1,122 declarations, 855 theorems, and 4,035 direct theorem edges without touching construction sources |
-| 2026-08-24 | `a8c08220a` | Derive a fail-closed capability-gap projection that groups all dependency-ready facts by typed surface and reports why autonomous dispatch is refused |
-| 2026-08-24 | `685d22efb` | Enrich the capability-gap view with frozen outcome-blind Mathlib family and statement-shape clusters while preserving dependency-component boundaries |
-| 2026-08-24 | `8f92809dc` | Add measured immediate descendant fan-out to each ready fact cluster as an explicitly non-authoritative scheduling observation |
-| 2026-08-24 | `6311bb4e9` | Correct the transport projection to recognize both exact supported receipt identities, turning four ModEq false negatives into hash-bound complete chains |
-| 2026-08-24 | `35804ac27` | Add a reviewed, pinned family-to-concept crosswalk and expose its topic labels in the capability-gap clusters without making fact-level coverage claims |
-| 2026-08-24 | `34c96c9e8` | Publish a derived concept-coverage view that keeps family-topic membership and qualified fact-level formalization counts separate |
-| 2026-08-24 | `5a7edfcfe` | Replace uninformative obstruction remedy status with observed overlay-presence evidence, exposing nine concrete unmodeled capability gaps |
-| 2026-08-24 | `3f42c3b2d` | Select and bind the three dependency-ready Nat.ModEq core laws as a non-authoritative next capability target, with commutativity deferred on its actual dependency |
-| 2026-08-24 | `2c63637c4` | Derive hash-bound, train/development-only producer outcome observations by reviewed family, statement shape, and abstraction boundary; reject held-out, duplicate, or invented outcome accounting |
-| 2026-08-24 | `913638251` | Preserve the train/development partition on every producer-outcome group and reject an out-of-partition group rather than aggregating away the evaluation boundary |
-| 2026-08-24 | `a4ededc55` | Repair capability-gap and concept-coverage projections so their fact-ID views exclude held-out rows; make the existing generic held-out isolation gate pass without exceptions |
-| 2026-08-24 | `d458725bf` | Derive the deterministic dependency-ready train/development producer frontier and reject out-of-partition or duplicate facts before a producer can receive them |
-| 2026-08-24 | `3f0545638` | Bind the nine independently recomputed must-decline mutations into the safe producer frontier so any future census has a non-vacuous soundness control |
-| 2026-08-24 | `d3f715af3` | Refresh the generated coverage census after receipt-identity repair: all nine formally mapped facts now have complete hash-bound transport chains |
-| 2026-08-24 | `c9bb67b5a` | Pre-register the general-producer evaluation funnel, stages, decline taxonomy, control-void rule, and forbidden-input boundary before execution |
-| 2026-08-24 | `432dcef75` | Add the fail-closed future-result schema and validator that requires complete safe-frontier accounting and rejects accepted false controls |
-| 2026-08-24 | `9aa74f0d3` | Gate the producer-result contract's mutation tests in the aggregate knowledge checks without fabricating an execution result |
-| 2026-08-24 | `e256492c2` | Refresh the kernel-derived snapshot after Decidable and CPoint construction: 1,142 declarations, 869 theorems, and 4,127 direct theorem edges |
-| 2026-08-24 | `c514c8350` | Add three manually reviewed, empty-footprint kernel-theorem semantic anchors and reject accidental inflation of fact coverage by the new source population |
-| 2026-08-24 | `abb4a6be4` | Derive a deterministic, non-semantic review queue for all unanchored empty-footprint kernel theorems, with candidate mappings kept out of the reviewed population |
-| 2026-08-24 | `601d17c82` | Review the first graph-central constructive-real equality cluster as three separate reflexive, symmetric, and transitive equivalence-law anchors |
-| 2026-08-24 | `bb74b057c` | Expose active reviewed kernel-theorem semantic anchors as a separately validated concept-coverage dimension without mixing them into fact or held-out populations |
-| 2026-08-24 | `32c75dfab` | Review the representative-independence laws for constructive-real negation, addition, and multiplication as separate partial well-definedness anchors |
-| 2026-08-24 | `fb53d3a2f` | Turn four recurring measured obstruction patterns into explicit non-executable candidate capabilities, with output status checked against the overlay |
-| 2026-08-24 | `9ee7c8cc9` | Derive a fail-closed candidate-capability demand ranking from exact retained obstruction-family and episode counts |
-| 2026-08-24 | `51e2a056f` | **The pairing collapse — the induction Wilson's sign needs.** `Int.prod_range_pairing_collapse`: a fixed-point-free involution pairing each factor with its inverse collapses `prodRange F n` to `1 mod p`. `prodRange_permute` removes ONE index at the SAME domain size, so unwound it reconstructs the product from itself — which is exactly why `((p−1)!)² ≡ 1` came free and the SIGN did not. **`WellFounded.fix` was NOT needed, correcting a plan that survived nine rewrites of `wilson.rs`'s module doc**: the step decreases the domain by exactly 2, so proving `And (family n) (family (succ n))` by plain `Nat.rec` suffices. Also a correction to my own dispatch — `setwise_fixed`/`restrict_pair` remove σ's own FIXED points, while this induction removes a matched SWAP pair; they are what the *interior excision* will need, not what this needed. One real bug found by bisection: `InjectiveOn`'s Pi groups VALUES before PROOFS and a draft interleaved them, visible only through the fully assembled term. |
-| 2026-08-24 | `2120333d0` | **Rectangle = triangle + corner — the honest form of the finite Cauchy product, and the repair of a claim I briefed FALSE.** A lane refuted `(Σa)(Σb) = Σ_{k<n} Σ_{i≤k} a_i b_{k−i}` by hand at `n = 2`: the rectangle contains `a₁b₁`, the antidiagonal triangle does not. `Nat.sumRange_rect_eq_diag_add_corner` names and quantifies that exact defect, and its triangle is character-for-character `sumRange_diagonal`'s own LHS so the two compose. The companion `Nat.sumRange_split` is quantified over the **split point and tail length** (bound `:= m+j`), not over `m ≤ n`, which keeps `Nat.sub` out of the induction entirely — ℝ and ℂ had this shape, ℕ did not. Rows are split at `n = (n−i)+i`: **one truncated subtraction, never nested**; the reflection parametrization needs nested `sub` and was rejected for it. `26 + 161` → `26 + 163`. |
-| 2026-08-24 | `51ba3f064`, `d5096751d` | **Two theorems whose FALSE neighbours have identical empty footprints, now pinned.** Delete `∀k<n, σ k ≠ k` from the pairing collapse and it is false at `σ = id`; drop the corner from the rectangle identity and you have the refuted Cauchy claim. Both footprints: still empty. Each pin asserts the load-bearing premise **by name** before comparing verbatim, and the int pin asserts the type does *not* mention `Prime` — the collapse holds for any positive modulus and narrowing it to Wilson's use would be a silent loss nothing else catches. Mutation-verified, one distinct kill each; a filter matching no test exits **1**, so `running 0 tests ... ok` cannot read as success. Also: **`AxNat` is not an axiomatized `Nat`** — the `Ax` is *axeyum*, `lean_pp`'s non-shadowing root for the CONSTRUCTED naturals, while in `AxReal` the same prefix means axiomatized and the surface is 30. I misread my own pin before checking `lean_pp.rs`; now a CLAUDE.md gotcha. |
-| 2026-08-24 | `b7816305c` | **The first derivative in this kernel** — `grep -ri derivativ` returned nothing before it. `CReal.HasDerivativeOn` is **uniform** differentiability on a closed interval with the modulus in `Type`, and that is forced: Markov's principle is unavailable, `Apart x y := lt x y ∨ lt y x` is an `Or`, and `Or`'s recursor does not eliminate into `Type`, so nothing can branch on a real comparison to compute. Seven declarations, all axiom-free; creal sweep 172 → 179. **The sum rule is blocked by ONE rational lemma that has now stopped two independent developments**: `Rat.natDivSucc` antitone in its index, which `uniform_continuity.rs` also needed for its unbuilt `ContinuousAt` bridge. `rat_prelude.rs`'s own doc says keeping it "off the critical path" was deliberate. The scalar rule has no blocker — rescaling F's *own* modulus by `e' := (k+1)e+k` makes the bound an exact identity, so antitonicity is not on its path. |
-| 2026-08-24 | `0fbe989bc` | **Vandermonde's convolution**, `choose (m+n) k = Σ_{i≤k} choose m i · choose n (k−i)`, plus `Σ choose n i² = choose 2n n`. Hand-checked at `(1,1,1)` and `(2,1,2)` before any kernel code, because `choose n 0 = 1` means the summand does *not* vanish outside range by accident. Induction on `m`: `succ_add` gives Pascal a `succ` shape for free and `succ_sub_succ` is unconditional, where induction on `n` stalls on `succ_sub_of_le` — **and `succ_sub_of_le` was built earlier specifically "for Vandermonde's convolution", per its own doc, and Vandermonde did not need it.** `sumRange_diagonal` was a red herring (double sum over antidiagonals vs a single sum at fixed `k`) and the lane said so rather than forcing it. **Fourth merge hazard today, and the only one the count check would have passed**: both trees pinned `26 + 163` for *different* theorem sets. Caught by the file list, not the count. |
-| 2026-08-24 | `5ca1ecca2` | **σ's two fixed points, named.** `inverseIndex_fixed_point` said the only fixed points on `{0..p−2}` are `0` and `p−2` but not *which element is fixed*, so nothing could instantiate the pairing collapse. `inverseIndex_fixes_zero` / `_fixes_last` / `_interior_fixed_point_free` are that transport, routed through `modEq_inverse_unique` (the forward direction) rather than `self_inverse_mod_prime` (the converse). `derived_laws` 109 → 112. **`restrict_pair` is refuted a second time and I was wrong about it twice**: it supplies only `InjectiveOn`/`MapsInto`, not fixed-point-freeness or the involution, and its builders are private. It is used by nothing. The failure class in pure form: a variable quantified in the STATEMENT but never bound in the PROOF term — `UnboundFVar` broke the prelude build so all 25 tests failed identically and pointed at nothing. |
-| 2026-08-24 | `aa3e8ea24` | **Linear algebra opens** — nothing matched `determinant\|matrix` in any prelude before. `Rat.det2` as a real `Definition`, the four basic laws (incl. `det2_row_add`, the fact that makes Gaussian elimination sound), `det2_mul`, and the four adjugate entries of `A·adj(A) = det(A)·I` with no hypothesis. **`det2_mul` avoided brute expansion**: FOILing needs an ℤ-style factor-multiset reorderer for `Rat.mul` that does not exist, so the lane proved row-linearity + repeated-row-vanishes and derived multiplicativity — Cauchy's own n=2 proof, and it dodges the nine-argument term shape that hides type errors. **A real limit, not a shortcut: `Rat.adj2` is NOT reified** — a function returning four rationals needs a tuple type this kernel does not have. No briefed statement was false this time, which is worth saying after three refutations today. |
-| 2026-08-24 | `421f01cc2` | **The finite Cauchy product over ℂ, in the only form that is true.** `mul (sumRange f n) (sumRange g n) ~ triangle + corner` — closing the arc a refutation opened this morning. Composes `sumRange_mul_double[f,g,n,n]` (whose real shape the lane read from `complex.rs:4864` rather than taking from my brief) with the `Equiv`-port of the ℕ rectangle decomposition. **The port was not mechanical, exactly as the ℕ lane warned when handing over**: `Complex.Equiv` has no free single-sided congruence, so every rewrite under `add` needs an explicit `add_congr` + `Equiv.refl`. It also leans on beta-reduction under nested binders — the two `rectangle(F,n)` terms arrive beta-equivalent but syntactically different — which is worth naming because that is precisely the shape producing this family's ~180 s rejections. Statement pin mutation-verified 10 → 9/1 → 10. |
-| 2026-08-24 | `2284ecfbd` | **`scripts/lane-commit.sh` had never worked in a linked worktree — where every dispatched lane runs.** `.git` is a FILE there, so `$PWD/.git/index-<lane>` is not a path and the helper died at `read-tree` with `Not a directory`, exit 3. Every lane silently fell back to plain `git commit`, the exact shared-index hazard the helper exists to remove; it failed loudly and a per-lane worktree has no index to share, so nothing was lost, but no lane commit today had its guard rails. **No gate covered it**: the control suite ran entirely in a `mktemp -d` main checkout, where `.git` is a directory and the bug is invisible — a suite exercising the tool only in the configuration where it works. Found by a lane reporting it as an aside. Case 6 added; reverting the one line kills exactly 6 and 6b, other seven green. |
-| 2026-08-24 | `22d85a1d9` | **`Rat.natDivSucc` is antitone — and the documented reason it did not exist was wrong.** Two developments months apart had stopped here: `uniform_continuity.rs`'s unbuilt `ContinuousAt` bridge and this morning's derivative sum rule. `rat_prelude.rs`'s own doc records keeping it "off the critical path" as deliberate, on the judgement that it needs a reciprocal route and an `inv_inv` law the prelude lacks. **The direct route never touches `Rat.inv` at all**: `natDivSucc` is a single `normalize` call and `Rat.le` is cross-multiplication, so unfold, `normalize_cross` both sides, scale, regroup, cancel. And the `Nat → Rat` transport I briefed as step 1 need not exist — `Int.le (ofNat m) (ofNat n)` unfolds *definitionally* to `Nat.le m n`. Third time today a briefed prerequisite dissolved once someone read the definition instead of the prose around it. |
-| 2026-08-24 | `2a2b84a09` | Two ledger rows. The Cauchy fact's `depends_on` names the ℕ repair, so the ledger records the order the correction actually happened in — refuted, repaired over ℕ, ported to ℂ. The antitonicity fact is recorded not as mathematics (it is elementary) but as a **dependency edge two capability strands were blocked on by a wrong cost estimate**; its notes say so. Both mutation-verified — reversing the pinned inequality asserts monotonicity, which is false and equally axiom-free: `583 passed; 1 failed` naming one test, restored, 584. |
-| 2026-08-24 | `bcbf1ff08` | **WILSON'S THEOREM.** `∀ p, (2 ≤ p ∧ ∀d, d∣p → d=1∨d=p) → (p−1)! ≡ −1 [p]`, axiom-free, no `WellFounded.fix`. **Ten lanes in one day, each a distinct obstruction rather than a subdivision.** The early `((p−1)!)² ≡ 1` was cheap for the reason the sign was hard: `prodRange_permute` removes one index at the *same* domain size, so unwound it reconstructs the product from itself and carries nothing about which square root is taken. `p = 2` needs its own branch (relating `p−2` to `p−3` in the front-peel needs `p ≥ 3`; the `p=2` branch needs no reindex at all). Injectivity of the reindexed σ′ derived *generically* from involution rather than transported across the shift, avoiding a truncated-subtraction side condition per index. Both large theorems type-checked on **first submission**. |
-| 2026-08-24 | `db346e2ea` | **The first nonlinear derivative**, `(r·r)' = x+x`, modulus the identity. Needed a ring-algebra toolkit that did not exist in `CRealPrelude` — including **`mul_neg_equiv`, the exact fact `uniform_continuity.rs`'s doc flagged as missing and nobody had built**. `sq_le_abs_sq` is the one to read: a single nonneg-product identity, never deciding `t`'s sign, because `CReal.le` is undecidable here. **And `hasDerivative_smul` does NOT close as I scouted it** — bounding `\|c·error_F\|` needs a genuinely two-variable product-of-bounds lemma, two nonneg identities, roughly double the algebra. Fourth briefed route today corrected rather than force-fit. |
-| 2026-08-24 | `6d47f75ae` | **Binary representation** — computer science had no foundation in this kernel. `testBit`, `testBit_le_one`, `mod_two_mul_split`, and the real theorem `sum_testBit_lt : Σ_{i<k} bit_i·2^i = n mod 2^k`. **Two of my briefed premises were wrong**: `Nat.div`/`mod` recurse structurally on the *dividend*, so `div_rec_lemma`'s trap does not apply to them (it does to the `n → n/2` shift, handled by recursing on the bit index with a `Nat → Nat` motive); and **`Nat.div_add_mod` does not exist** — `div_mod_unique` is what worked. Concrete computation test is part of the slice: a definition that type-checks but computes the wrong digit passes every sweep here. `size`/`sum_testBit_eq` deliberately left at a verified checkpoint. |
-| 2026-08-24 | `3972b08d6` | Wilson in the ledger, designed around the fact that **a footprint cannot carry it**: `+1` instead of `−1`, or primality weakened to `0 < p`, are both false and both equally axiom-free. Mutation controls re-run by me on the merged tree with **the occurrence count of each pattern asserted before applying it** — an earlier `sed` mutation silently failed to match (rustfmt had split the constant across lines) and the green suite read as a dead guard. `notes` records the converse as unproved, with its constructive subtlety: primality is a conjunction with a ∀-quantified disjunction, so one cannot argue by contradiction from not-prime. |
-| 2026-08-24 | `f599e95f5` | **Cramer's rule and the 2×2 inverse — the determinant slice closes.** The actual unlock is `Rat.mul_inv_cancel_of_ne_zero` and it is not about matrices: `Rat.inv` is TOTAL (`inv 0 = 0`), so the two existing cancellation lemmas are guarded by `0 < q` and `q < 0` and nothing had bridged `q ≠ 0` to either. **The lane verified `Rat.lt_trichotomy` is genuinely constructive here** rather than assuming it — built from `le_or_lt` + `le_antisymm` through `or_elim`, no `Classical.em`. Cramer is the **forward direction only** and the name says so (`cramer_two_unique_x`/`_y`): a solution must have the quotient form; existence is unattempted. Each factors through an unconditional column identity, no hypothesis. Two rendered-verbatim pins added on the lane's own initiative — a Cramer statement with the numerator columns transposed is false and equally axiom-free. Every term type-checked first try. |
-| 2026-08-24 | `a7ac623d7` | **A natural number IS the sum of its own bits** — `Nat.sum_testBit_eq`, closing binary representation. **The lane refused my fuel-invariance sketch and was right**: I asked for `sizeAux n n = sizeAux (succ n) n`, which says nothing about *why* `n` is enough fuel; it proved instead that the bound holds for ANY sufficient fuel (`Le n fuel → n < 2^(sizeAux fuel n)`), strictly stronger and what the headline actually consumes. Sixth briefed premise today corrected rather than worked around. **Both lemmas I suggested might already exist do not**: nothing `n < 2^n`-shaped exists under any name, and ℕ has no analogue of `emod_eq_self_of_in_range`, so `mod_eq_self_of_lt` was built here and flagged for promotion to `division.rs`. Computation checked by kernel `def_eq`, not inspection — a `size` that type-checks but computes wrong is axiom-free and passes every sweep. `28+170 → 30+175`. |
-| 2026-08-24 | `12eccad97` | Cramer in the ledger, named for the direction it proves. Existence is **not** proved — only that a solution must equal the quotient — and `notes` leads with that. Two things a reader would otherwise infer wrongly: the nonzero-determinant hypothesis cannot be made implicit (`Rat.inv` is total, so the statement without it is *false*, not ill-formed); and **`Rat.adj2` is not reified because this kernel has no tuple type** — a limit of the kernel, not a shortcut. |
-| 2026-08-24 | `e332ecfbd` | **Wilson's converse — primality becomes an IFF, constructively.** `Int.wilson_iff : ∀ n, 2 ≤ n → (Prime n ↔ (n−1)! ≡ −1 [n])`. I warned this might only be provable as the contrapositive: primality here is `2 ≤ n ∧ ∀d, d∣n → d=1∨d=n`, so one cannot conclude it by contradiction from not-prime. The lane did not need the fallback — `Nat.lt_or_eq_of_le` gives a genuine constructive disjunction on `d ≤ n`. **And the decidability that mattered was not the one I named**: I pointed at decidable `Nat` *equality*; the proof needed decidable `Nat` *order*, already in scope through `NatOps`. Seventh briefed premise today corrected by a lane reading the source. `Int.dvd_factorial_of_le` had to be proved by direct induction rather than transported from ℕ — `Int.factorial n` and `ofNat (Nat.factorial n)` are **not definitionally equal**, since `Int.factorial` unfolds through `Int.prodRange`. 410 lines against ten lanes for the forward direction. `derived_laws` 115 → 118. |
-| 2026-08-24 | (rejected, NOT landed) | **A lane committed two derivative witnesses verified only by `cargo check --lib`, and the kernel rejects them.** `hasDerivative_neg`/`hasDerivative_add` compiled and were hand-verified term-by-term against real lemma signatures read from the proof-construction code — and `build_creal_prelude` fails: **2 passed, 100 failed**, cascading through `creal_point`, `prelude_cache`, `creal_model`. I reproduced it in my own checkout before believing either report, and reverted; nothing broken reached the branch. **Root cause of the process failure: the real gate is slow** (550 s under contention), which is what tempts an agent to background it. The lane's own ranked risk list puts a sign bug it had already caught once in `hasDerivative_neg` Step 1 — sent back to run it down, with the instruction not to pipe the diagnostic through `tail`, which is why it had raw session-local `ExprId` indices instead of the rendered mismatch. Confirmed separately: **`Rat.natDivSucc_antitone` WAS the real blocker** — the lane traced the obligation and it is applied twice, once per side. |
-| 2026-08-24 | `54592604a` | **The weak law of large numbers, under the name mathematicians use — and it is a RENAMING.** `chebyshev_sampleMean_uncorrelated` already *was* the weak law; the brief made the lane read its rendered type and report it before doing anything, and the source's own doc comments on three theorems already said so. So `weak_law_of_large_numbers` forwards directly, its type is asserted **byte-identical** to the original by a dedicated test, and the commit says it is a rename. Recording a rename as a discovery is the failure this ledger exists to prevent. The genuinely new half is `variance_sampleMean_uncorrelated` — `variance_sumVars` gives the variance of the unscaled SUM, not the mean. **I also checked a gap the lane reported and it is not one**: `every_named_declaration_exists` skips `probability.rs`, but `the_probability_toolkit_is_axiom_free` asserts presence *and declaration kind*, which is stronger; mutation-verified by deleting a `declare_` call. |
-| 2026-08-24 | `160761bbf` | **Ceva's theorem — and the non-degeneracy hypothesis I insisted on is not needed.** I told the lane non-degeneracy was where my brief was most likely wrong and to hand-check `A = B = C`. It checked, with `sympy`, and the answer went the other way: `D := (1−q) + p·q` depends **only on the ratios**, never on the coordinates, so `NonCollinear A B C k` plays no part. The real condition is `PosBound (D·D) k` on the ratios. `cevian_pair_meet` is unconditional given that witness — two cevians always meet if not parallel; the ratio condition enters only for the third. Exhibiting direction only; the converse is not built and the name does not claim it. **A bug that looked like a kernel limitation and was not**: the lane's first hypothesis was "defeq cannot bridge a nested `lerp`", disproved by a throwaway probe; the real defect was `rn_cevian_t(pp, …)` for `rn_cevian_t(qq, …)`. Fourth argument-swap of the day. |
-| 2026-08-24 | `6bb3b9b17` | **Counting, the totient, and φ(p) = p−1.** Nothing in this kernel could count a decidable subset — no `countRange`, no filter, nothing; that gap is wider than the totient and `countRange` is the reusable half. **Euler's theorem is NOT proved and the reason is structural, not budgetary**: `a^φ(n) ≡ 1 [n]` needs a pairing argument over a *filtered subset*, and both proofs we have (Fermat's Frobenius route, Wilson's `prod_range_pairing_collapse`) pair a full CONTIGUOUS range. Recorded as an open slice in the module doc rather than hand-waved. Values hand-computed before any kernel work, then confirmed by `def_eq` — a `totient` that type-checks but counts wrong is axiom-free and passes every sweep. |
-| 2026-08-24 | (process) | **Three times today I read the outcome I wanted from a command that had already told me otherwise.** A push loop that grepped for `remote rejected` reported a failed push (`error: failed to push some refs`) as PUSHED; a merge where I skipped the fmt check landed unformatted and the hook refused the batch; and a commit where clippy printed `2` in the same command and I read the commit result instead of the number above it. All three are the banned-idiom class CLAUDE.md already records — a success check that cannot distinguish the failure modes — committed by me, hours after quoting that rule to a subagent. Push loop now checks the push's own exit status; gate outputs are now labelled (`clippy_errors=`, `fmt_diffs=`) so a nonzero cannot be skimmed past. |
-| 2026-08-24 | `031e5495c` | **The two-variable product-of-bounds lemma — and the first confirmation that its route works.** `abs_mul_le_of_bounds : \|c\| ≤ B → \|t\| ≤ b → \|c·t\| ≤ B·b`, via `2(Bb − xt) = (B−x)(b+t) + (B+x)(b−t)` with the cross terms cancelling. **Case-split-free by necessity, not elegance**: `CReal.le` is undecidable here, so deciding the sign of `c` or `t` is not available at all. I had briefed this route to two further lanes as "the route" on the strength of one scouting report that never tried it — one more assertion than I had earned; it is now demonstrated, `upper_bound` being one function instantiated at both `c` and `neg_c` inside a term the kernel accepts. **Kernel-rejected on the first attempt** (green `cargo check`, 100 failures), and the lane reported it as UNVERIFIED with the fix located rather than claiming completion — the second time that lane corrected its own prior report unprompted. The defect was a wrongly-typed assembly step, not the algebra. This is the module doc's own verbatim blocker for `hasDerivative_smul`. |
-| 2026-08-24 | `518c8684d` | **`countRange` gains congruence and split; Euler's route priced, not started.** The lane read `inverseIndex`'s actual construction and **refuted my premise that `coprimeIndex` is its direct analogue**: `inverseIndex` is a CLOSED-FORM self-map on the SAME range, existing only because `p` is prime, and its `maps_into`/`injective`/`involutive` proofs run on `finite.rs` machinery defined only for self-maps on one bound. `coprimeIndex` needs a map from a SMALLER range into a SPARSE SUBSET of a larger one for general composite `n` — strictly larger than I estimated. It built the two companion laws and stopped, which is the right call: a lane that starts a multi-slice construction on a wrong size estimate leaves a half-finished tree nobody can merge. |
-| 2026-08-24 | `132ad7ed9` | **Two duplicated `CReal` ring helpers promoted — and the third deliberately not.** Theorem count **978 before, 978 after**, measured both ways; that it did not move is the primary evidence nothing was altered. **My duplication list was wrong**: two copies of each, not three, so the slice's stated rationale did not apply as written. And **`abs_add_le` is NOT identical** — the copies differ in one line, `series.rs` discharging `neg (add a b) ~ add (neg a)(neg b)` through a different private proof — so merging would silently pick one proof route for the other's call site. The lane halted on exactly that, per the stop rule, and checked identity by byte diff twice: once initially and again after I merged `abs_mul_le_of_bounds` into `derivative.rs` mid-task. |
-| 2026-08-24 | (no change) | **Second duplicate dispatch of the day: the finite geometric series over ℂ already existed** — `Complex.mul_sub_one_geom`, plus `geom_series_div` and `geom_sum_eq_zero_of_root_of_unity`. The lane checked first because the brief made it step 0, built nothing, and cost ~100k tokens instead of the lane-hour the earlier duplicate cost. Root cause fixed: I now build a fresh inventory and grep it MYSELF before writing a brief. Two traps found doing that — **`grep -E` treats `\|` as a literal pipe**, so `'derivative\|Derivative'` returns 0 for a subject with six matches; and **definitions do not appear in a theorem inventory at all**, which had already misled one lane about `countRange`/`totient`. Always pair the query with a positive control that must match. |
-| 2026-08-24 | `8b139deac` | **Menelaus' theorem and Ceva's converse.** The lane derived Menelaus' division-free form symbolically before building, as required, confirming my sign-flip exactly with zero remainder: `cross X Y Z = (p·q·r + (1−p)(1−q)(1−r)) · cross A B C`. **Menelaus needs NO non-degeneracy at all** — not even Ceva's ratio condition: when the hypothesis kills the left factor the cross product vanishes regardless of the triangle, `A = B = C` included. Two configurations, two different answers to what degeneracy matters, which is exactly why the brief said to check rather than carry Ceva's finding across. Ceva's converse needs strictly more (`A ≠ B` as a witnessed `PosBound`), and its route multiplies through by `D` so the shared `z` factor cancels via `D·z ~ 1` — **`z` itself never needs to be invertible**, which is what keeps it constructive. |
-| 2026-08-24 | `5d91fb74b` | **The Fibonacci numbers.** The lane **rejected both recursion devices I offered**, correctly: the `And (P n) (P (succ n))` trick proves a *proposition* about two indices and gives no way to *define* a `Nat`-valued function. It curried an accumulator instead, so the absent tuple type stops mattering. That shape paid immediately — `fib_add_two`'s successor case needs **no rewriting at all**, the induction hypothesis at the shifted seed already having the goal's type up to δ/ι. `sum_fib` goes through a subtraction-free internal fact so `Nat.sub` drives zero induction steps. Values verified by `def_eq` with two negative controls. |
-| 2026-08-24 | `03730de46` | **Quadratic residues and Euler's criterion**, division-free: `p − 1 = m + m` as a hypothesis rather than computing `(p−1)/2`. **Step 2 of my brief already existed** as `Int.self_inverse_mod_prime` — and the brief said check rather than re-derive, so it cost nothing. Nine private `wilson.rs` helpers went `fn` → `pub(super) fn` rather than being duplicated into a tenth copy of the prime-bounds machinery. |
-| 2026-08-24 | `5a86b09c2` | **The scalar and difference rules — and my product-rule algebra was mislabeled.** `smul` is what `abs_mul_le_of_bounds` was built for and closed first try; the modulus rescaling needs **no antitonicity**, the rescaled hypothesis being *definitionally* F's at `e'`. But the lane checked my three-term decomposition numerically over exact rationals (no `sympy` available — it used `Fraction` trials rather than skipping) and found it **true but mislabeled**: the form I wrote needs continuity of *G*, not *F*. Corrected identity recorded in the module doc. **Tenth briefed premise corrected today.** The product rule needs a three-way *unequally weighted* accuracy fusion where `natDivSucc_halve` only splits equally — its own slice. |
-| 2026-08-24 | `194ae06e6` | **Bernoulli's law of large numbers, with a fair coin computed end to end.** `variance_indicator` did not exist. **The `IsDistribution` split is the finding**: two of the three statements need it, but `variance_indicator_le_quarter` correctly needs *none* — it is a fact about any rational. I once briefed Markov without that hypothesis and it was outright FALSE, so the standing instruction is to check each statement; here the answer was "one genuinely does not". The numeric instance is **tight** — `4·(1/2)·(1/2) = 1` exactly — so it sits on the bound rather than comfortably inside it. |
-| 2026-08-24 | `31eb693b3` | **The least common multiple, and `gcd·lcm = a·b` unconditionally.** I asked whether it needs positivity; it does not — the `a = 0` case collapses through `zero_mul` + `zero_div` **without ever touching `gcd 0 b`'s value**, so a `gcd_zero_right` lemma was never needed, and `lcm` being delta-equal to its quotient means no rewriting anywhere. Two facts reported rather than assumed: **`Nat.gcd` is a checked `WellFounded.fix`**, so its equations need `well_founded_fix_eq` and are not definitional; while **`div`/`mod` recurse on the DIVISOR**, so `div n 0 = 0` and `mod n 0 = n` hold by bare `refl` — which is what makes the `lcm 0 0 = 0` convention free. **`lcm_dvd` did not land and the lane checked for a shortcut before saying so**: it needs Gauss's lemma, and a well-founded route on `c` gets stuck exactly when `lcm a b > c`, needing the same fact. So `lcm` has half its universal property, and nothing is named to suggest otherwise. |
-| 2026-08-24 | `755f8e35d` | **Cassini's identity**, `fib(n+2)·fib(n) − fib(n+1)² = (−1)^(n+1)`, every index a literal successor so truncated `Nat.sub` never appears. **`Int.pow (neg one) n` works directly — the parity split I offered was not needed**: `Int.pow` recurses structurally on the NATURAL exponent with the base closed over, so it is total at a negative base. Different obstruction from `euler_criterion_pm_one`, which genuinely needed the `p−1 = m+m` device to dodge division. **And the ℕ→ℤ transport is FREE here, contradicting the precedent I warned about**: `Int.add`/`Int.mul` compute definitionally on two `ofNat` arguments, so no `Int.fib` and no homomorphism lemma were needed. `Int.factorial` differs because it is a ℤ-side DEFINITION unfolding through `prodRange`, not a cast. The rule is "check which side the definition lives on", not a blanket answer either way. |
-| 2026-08-24 | `2edf730d9` | **Gauss's lemma — and it was already inlined inside `euclid_lemma`.** Both prior lanes priced it against `coprime_of_bezout_one`'s ~250-line proof and I passed that estimate on; reading the source instead, **`euclid_lemma`'s `g = 1` branch already contains it** — scale the Bézout identity by `b`, cancel via `dvd_add_right_cancel_of_pos`. Ordinary structural induction, **no `WellFounded.fix`** despite `Nat.gcd` itself being one. Twelfth briefed premise corrected today, and the second where the correction was "much cheaper than we thought". `gcd_bezout` is a **balanced all-naturals** identity (`g + m·mn + n·nn = m·mp + n·np`) — anyone reaching for `ax+by=g` will not find it. **`lcm_dvd` still did not land, and that is the best part**: the lane designed a complete route, produced an eliminator chain it could not verify would type-check, and **reverted rather than commit and hope**. Three lanes today committed on a green `cargo check` and the kernel rejected all three; this one declined to be the fourth. |
-| 2026-08-24 | (review) | **Both generated ledgers were stale for the whole session, and both `--check` gates were red the entire time.** Theorem ledger 909 → **998** distinct, all axiom-free. Provenance ledger 152 → **160** settled, `via_multi_target` **unchanged at 7**. Every one of today's eight recorded facts is `no_operation` — 132 of 160 established, **82.5%, hand-constructed**. And `fact-frontier.py` currently returns **`admissible_fact_ids: []`, `refused-no-admissible-candidate`**: 141 dependency-ready facts, zero dispatchable, all rejected `no-registered-operation`. Doc 228's instrument is working exactly as designed and what it measures did not move. Retrospective item 4 says regenerate downstream artifacts in the same commit; I landed ~130 theorems and regenerated none, and nothing pointed me at it because I never ran the gates. |
-| 2026-08-24 | `7d4c2e64d` | **Heron's formula**, `16·Area² = 4a²b² − (a²+b²−c²)²`, squared throughout because there is no `CReal.sqrt`. **The lane checked step 0 and correctly built nothing there**: `cross` already IS twice the signed area (the shoelace determinant, doc already saying so), so no `doubleArea` synonym was added — the discipline I failed twice today. **The identity I briefed unverified turned out correct**, checked by exact `Fraction` trials, via a cleaner route than expanding: `cross² = a²b² − dot₂²` composed with `2·dot₂ = a²+b²−c²`. **Kernel-rejected on the lane's submission and the defect was ONE argument position** — `rn_op_congr` passed `dot2_val` where `fact_b : Equiv two_dot2 diff_val` demanded `two_dot2`, **and the lane's own comment on the next line already stated the correct form**. Fifth argument-position defect today. Also: the ring normalizer has a size ceiling — a flat `rn_ring_proof` over six raw coordinates SIGABRTs inside the 64 MiB thread; stage the proof. |
-| 2026-08-24 | (process) | **Two more self-inflicted gate misreads, same shape as the earlier three.** I ran rustdoc, it printed **101**, and I committed anyway — reading the commit result instead of the number two lines above it, exactly as I had done with clippy's `2` earlier. And a `--check` I piped through `tail` reported `exit=0` for a gate that really exits **1**; redirecting to a file and reading `$?` bare gives the truth. Labelling gate outputs half-worked. The remaining fix is **sequencing**: run the gates, read them, and only then commit — never both in one invocation where the commit line lands last. |
-| 2026-08-24 | `257f89a1c` | **The PRODUCT RULE** — `(FG)' = F'G + FG'`. Differential calculus over the constructed reals is now closed under negation, addition, subtraction, scalar multiples and products. **The lane rejected both fixes I proposed.** I ran its `cargo check`-clean submission through the real gate, parsed the two types, and reported a pure associativity inversion on both sides — proposing either restating the goal or inserting `add_assoc`. Neither was the bug: the `add_assoc` steps were already there, and **four `esymm` calls had their two endpoints passed in the wrong order** relative to what the underlying proof actually states, so each equivalence was built backwards. **Sixth argument-position defect today, fourth in the `symm` family.** The reusable half needed no new rational lemma: `1/(3e+2) × 3 = 1/(e+1)` falls straight out of `natDivSucc_scale` at `c := 2`. |
-| 2026-08-24 | `de47d419b` | **Transport a derivative along pointwise `Equiv`**, plus the `n = 2` cross-check. `congr` is the one every later calculus lane needs, because a constructive derivative is **not unique as a function** — only up to pointwise `Equiv` on the interval. **The lane argued the hypothesis shape from the type rather than assuming it**: every occurrence of `F x`/`F y`/`F' x` in `spec`'s conclusion sits behind the same four range hypotheses, so agreement on `[a,b]` suffices. `pow_two` transports `hasDerivative_sq` across one identity with the derivative side reused verbatim — had the general shape not matched at `n = 2`, one of the two would be wrong. **The kernel caught a build-order bug `cargo check` cannot see** (`pow` is declared after `derivative.rs` runs) — and I reproduced the same error while hand-merging, wiring one `declare_` call and not the other: **112 of 608 tests failed** on a function that compiled and was never called. |
-| 2026-08-24 | `436f0058e` | **`lcm_dvd`** — the least common multiple finally earns its name, with both halves of its universal property. **The route was written down by the lane that FAILED at it** and reverted rather than commit unverified; this lane followed it exactly. The fix for the shape that sank the first attempt: the single `goal` `ExprId` is computed once at the top of the step closure and threaded through unchanged, never rebuilt at a deeper nesting level. |
-| 2026-08-24 | `26dd00530` | **The Fibonacci addition formula and area-zero iff collinear.** `fib_add` uses the `And (P n) (P (succ n))` pairing device — **the same device the Fibonacci lane correctly REFUSED for defining `fib`**, because it proves a proposition and cannot define a function. Two lanes, opposite verdicts on the same tool, both right. **The bare collinearity iff is false and the lane said so**: at `A ~ B`, `cross A B C ~ 0` for every `C`. The medial-triangle factor turned out to be a **generic** ring identity in an arbitrary scale `h`, so nothing about `inv2`'s numeric value is needed. |
 | 2026-08-24 | `68f5d61a4` | `axeyum.m`: Mathematica-shaped verbs over the CAS -- parser, variable inference, readable printer; three iterations (equations, assumptions, limits at infinity; systems, definite integrals, Substitute, semantic Equal, mixed int/Fraction arithmetic on `Expr`; Sum, Reduce, Rationalize, NRoots, polynomial toolkit); 19 tests |
 | 2026-08-24 | `460bee2db` | Q2: replay of the deciding run's model via `solve_smtlib_with_model` (2.22x on sat), clone audit (12 borrows, 13 `__eq__` via cast), CAS detaches, bytes accessors, benchmarks |
 | 2026-08-24 | `d904a5c14` | `axeyum-solver`: `solve_smtlib_with_model` -- the front door returns arena, assertions and model; `solve_smtlib` wraps it; 152-file equality test |
 | 2026-08-24 | `68fb060e7` | Q1: 73 hypothesis differentials, 8 Rust unit tests, `ty` ratchet; fixed replay-over-empty-stack on the word-only fallback |
 | 2026-08-24 | `a4393ef18` | Q4: the eight open tier-R solver rows as typed ledgers + `get_assertions/get_info/get_option` + `SolveStats`; coverage backlog empty |
 | 2026-08-24 | `e0ce50f97` | Q3: release wheels (manylinux 2_28, macOS, Windows, 3.14t, sdist) with a smoke-install gate before publish |
-| 2026-08-24 | `b08986061` | `10-quality-best-practices.md`: sourced practice vs the measured binding; six quality slices |
-| 2026-08-24 | `48d7044a2` | Python coverage ledger: 831 of 4,672 public items referenced, 8 tier-R rows open, deferrals with reasons, `09-coverage-plan.md` ordered by consumer value |
-| 2026-08-24 | `5b7140d72` | Plan 03 A6: allowlisted metadata fetch with a family-level held-out guard and injection wrapper; cgroup-capped sandboxed `python_exec` with a discriminating self-check; 76 tests |
-| 2026-08-24 | `27c601025` | Review fixes: `ReplayUnavailable` and front-door-model replay (P0), forwarding modules for `axeyum.smt/ir/solver` (P1), CI `python` job 3.12-3.14 (P1), nightly clippy green (P1); frontier re-verification opt-in |
-| 2026-08-24 | `00a0803f7` | Plan 03 A5: obstruction graph derived from 16 episodes + 11 decline records, 12 clusters / 19 facts, F3 answered both ways; 26 guards |
-| 2026-08-24 | `b44cf88da` | Plan 03 A7: mobility census -- three-valued precondition evaluation over every open fact; 4 of 191 evaluable; 4 real catalog reach disagreements reported |
-| 2026-08-24 | `2f300656f` | Plan 03 A4: schema v2, deferred checker tools, model-free `Supervise`, independent second-kernel `Check`, holdout gate over episodes; live run proved `Nat.ModEq` refl and symm axiom-free (digests new to the ledger), $1.55; 94 tests |
-| 2026-08-24 | `0ba7eaac3` | Frontier agent (plan 03 A2): `[agent]` extra, six read-only partition-filtering tools, `Select -> Gather -> Plan -> WriteEpisode` graph, replay; ten live episodes ($1.635), 8/8 `NoGeneralRoute`; 86 tests |
-| 2026-08-24 | `0f64b8951` | Episode schema + fail-closed `check-agent-episode.py` (A1, 15 mutation-verified guards) and tactic catalog v1 with a dispatch-table-rejecting validator (A3, 13 guards) |
-| 2026-08-24 | `d27f86f5e` | Producers promoted to `axeyum-lean-import::producers` (byte-identical driver output, committed `proof_sha256` reproduced) and bound as `axeyum.producers` with typed `Declined` reasons; 46 tests |
-| 2026-08-24 | `4e56f777a` | `axeyum.cas` (~80 pure functions, `ZeroTest` certificates) and `cas.certify` (groebner, geometry, telescoping, sos, gf2, sturm as producer/certificate/checker triples with report counts; tampered certificates rejected); 350 tests |
-| 2026-08-24 | `552c29766` | `axeyum.ir` (epoch-checked `Arena`, full constructor set, trusted `eval`, bv preflight, fp, query) and `axeyum.solver` (`Config`, `CheckResult`, `Incremental`, three-valued `check_outcome`, proofs, cnf); smt sessions; typed `Value` variants; 157 tests |
-| 2026-08-24 | `537328b3c` | `axeyum.kernel`: epoch-checked handles, nine preludes with generated field tables, footprints/closures raising on absent names, `add_declaration` with typed `KernelError`, Lean rendering and NDJSON export, identity hashes; 57 tests |
-| 2026-08-24 | `df1e7d185` | `axeyum.knowledge`: read-only typed accessors over facts, frontier, operations, overlay, nursery (partition-safe), claims, concepts, pinned `math-education`, autogenesis artifact index; 161 tests mirroring the validators |
-| 2026-08-24 | `9dd2dc82a` | Generated native stubs with a drift gate (fails on drift and on zero compared), `just py-check`, conditional `check.sh` step, fleet-hosts `uv` row, Python user guide |
-| 2026-08-24 | `a8e8d34a9` | `crates/axeyum-py` binding crate, `axeyum.smt.solve` with `unknown` as a value and `Outcome.replay()`, differential vs `smtcomp_cli`, conftest that fails on zero collected tests |
-| 2026-08-24 | `9cfdf86fe` | Python strand: plans 01–03, two measured studies, three API inventories under `docs/python-2026-08/` |
 | 2026-08-22 | (pending) | Corrected-checker `Nat.fib_eq_zero` transaction is frozen from clean commit `39b408e619f2` before one crash-safe intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Nat.fib_eq_zero` unchanged; recovery performs exactly one ledger write, the registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
 | 2026-08-22 | (pending) | Historical-source preflight correctly rejects its still-open fact; V3 freezes the exact detached transition child, which preserves the registration gate surface and recovered post-state required by replay verification |
 | 2026-08-22 | (pending) | Isolated replay `b63854f8…bfaa0` independently repeats `Nat.fib_eq_zero` selection, certified execution, exit-75 recovery, one write, and the exact empty readiness delta |
-| 2026-08-22 | (pending) | Exact `Int.fib_eq_zero` is frozen bottom-up through a target-owned natAbs-zero support, a five-parameter residual, admitted `Nat.fib_eq_zero`, and the sealed integer Fibonacci/natAbs bridge before source construction |
-| 2026-08-22 | (pending) | First residual compile stops before export at two elaboration-only seams; V2 freezes explicit zero implications and direct use of the abstract natAbs-zero parameter with theorem boundaries unchanged |
-| 2026-08-22 | (pending) | Corrected residual compiles, but exporter cannot find the root-level olean; V3 freezes removal of the zero-byte partial plus exact temporary build-library staging before two fresh exports |
-| 2026-08-22 | (pending) | Temporary module staging yields two byte-identical 118,084-byte streams; four imports qualify target-owned natAbs-zero and the five-parameter Fibonacci residual with empty footprints |
-| 2026-08-22 | (pending) | Exact `Int.fib_eq_zero` specialization is frozen over three sealed inputs, two checked compositions, five arguments, and a four-theorem dependency contract before driver code or stream access |
-| 2026-08-22 | (pending) | Exact driver typechecks but Clippy stops at 105 lines before stream access; V2 freezes only output serialization extraction with the proof route and counters unchanged |
-| 2026-08-22 | (pending) | Helper extraction clears the line limit; V3 freezes one shared-reference correction for the serialization-only evidence argument before another focused compile |
-| 2026-08-22 | (pending) | Shared-reference correction passes focused Clippy; one no-retry execution is frozen over three reads, two checked compositions, one specialization, and zero ledger writes |
-| 2026-08-22 | (pending) | One authorized run constructs exact `Int.fib_eq_zero`, replays both compositions and specialization, survives two fresh imports, and seals a 624,146-byte empty-footprint capsule with four dependencies |
-| 2026-08-22 | (pending) | One nonrendering read of the sealed `Int.fib_eq_zero` root is frozen to bind its canonical kernel type before manifest creation or admission authority |
-| 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.fib_eq_zero` type `1822290d…70bc`; immutable manifest retains its empty footprint and exact four-dependency closure before operation registration |
-| 2026-08-22 | (pending) | Exact crash-safe `Int.fib_eq_zero` admission is frozen against receipt `e005b598…b00c`, one ledger write, one recovery, one isolated replay, and an expected empty unlock delta before registry code |
-| 2026-08-22 | (pending) | Exact `Int.fib_eq_zero` sealed-capsule execution is registered through typed frontier, execution, transaction, and replay machinery with four fixed dependencies and zero ledger writes so far |
-| 2026-08-22 | (pending) | Machine-selected `Int.fib_eq_zero` transaction `88397909…c3f` is frozen from clean registration commit `a2cd44951` before one intent fault and one recovery |
-| 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.fib_eq_zero` unchanged; one recovery performs one ledger write, the registered checker passes, and readiness remains empty as preregistered |
-| 2026-08-22 | (pending) | Isolated clean replay `e3ac1936…cf7a` independently repeats `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, one write, and the exact empty readiness delta |
-| 2026-08-22 | (pending) | Current frontier exposes three dependency-ready integer Fibonacci facts; `Int.fib_add` is frozen as the collision-free foundation because it alone unlocks the two-multiple chain |
-| 2026-08-22 | (pending) | One pinned root export and nonrendering import reject official `Int.fib_add` as assumption-bearing while localizing its replacement boundary to five direct theorem dependencies |
-| 2026-08-22 | (pending) | Five-root localization finds clean `Eq.symm` and `Int.eq_nat_or_neg` but rejects all three private sign-case proofs; a generic four-branch integer pair eliminator is frozen before source construction |
-| 2026-08-22 | (pending) | The generic pair eliminator compiles and reproduces empty-footprint twice, but exact clean dependencies include `Exists.elim` and `Or.elim`; V1 receives zero credit and V2 freezes hash-only correction without proof rerun |
-| 2026-08-22 | (pending) | Hash-only V2 accepts the pair eliminator with exact clean dependencies; recurrence uniqueness replaces four separate sign quadrants as the smaller reusable route to `Int.fib_add` |
-| 2026-08-22 | (pending) | Generic bi-infinite recurrence uniqueness compiles on the first bounded attempt with Fibonacci names absent; two exports and two imports remain separately authorized before theorem credit |
-| 2026-08-22 | (pending) | Bi-infinite recurrence uniqueness exports twice byte-identically and imports twice with an empty footprint; one public induction-API type query is frozen before specialization support code |
-| 2026-08-22 | (pending) | The sole pinned query finds no public `Int.inductionOn`; no second query is allowed, and a constructor-split plus `Nat.rec` induction adapter is frozen instead |
-| 2026-08-22 | (pending) | The constructive split-plus-`Nat.rec` adapter compiles on its first bounded attempt with forbidden classical and Fibonacci names absent; qualification remains separate |
-| 2026-08-22 | (pending) | The constructive induction adapter exports and imports twice with an empty footprint; the direct constructor split plus four exact succ/pred laws are frozen next |
-| 2026-08-22 | (pending) | Direct constructor split and four succ/pred laws all compile by constructor reduction on the first bounded attempt; five-root qualification remains separate |
-| 2026-08-22 | (pending) | All five constructor supports export byte-identically and import twice empty-footprint; exact constructive integer induction composition is frozen next |
-| 2026-08-22 | (pending) | Exact constructive integer induction compiles on the first bounded attempt from only target-owned adapter and constructor supports; qualification remains separate |
-| 2026-08-22 | (pending) | Exact constructive integer induction exports twice byte-identically and imports twice with an empty footprint; exact `Int.fib_add` specialization is the next bounded increment |
-| 2026-08-22 | (pending) | Durable V5 paths identify official `Int.fib` through its Even decider as the common carrier of all eight assumptions; V6 freezes a fully function-abstracted, decision-free eight-parameter residual before source construction |
-| 2026-08-22 | (pending) | V6 stops before export because each universal natAbs rewrite leaves its second occurrence; V7 freezes only three explicit repeated rewrite sequences with the abstraction boundary unchanged |
-| 2026-08-22 | (pending) | V7 exports twice as the same 351,201-byte residual, imports twice with zero axioms, and retains only clean Eq.symm/congrArg; exact eight-parameter specialization remains separately unauthorized |
-| 2026-08-22 | (pending) | Exact positive and modulo-case supports are already bound; V8 freezes two non-rendering reads for negative-even, negative-odd, and natAbs-neg identities before any specialization code |
-| 2026-08-22 | (pending) | V8 qualifies all remaining support identities empty-footprint; V9 freezes a five-stream exact natAbs composition, one reflexive support, seven dependencies, and one specialization before driver code |
-| 2026-08-22 | (pending) | The exact natAbs driver compiles and passes focused Clippy without reading proof streams; route-specific root assurance excludes unrelated assumptions in the official natAbs source before one fail-if-present execution |
-| 2026-08-22 | (pending) | Exact `intFibNatAbsV1` composes once, replays four receipts, survives two fresh imports, and seals as a 544,756-byte empty-footprint capsule with exactly seven dependencies and zero ledger writes |
-| 2026-08-22 | (pending) | V10 freezes the final `Int.gcd_fib` join over two exact capsules, a target-owned transparent `Int.gcd`, its reflexive equation, and one six-dependency theorem submission before driver code |
-| 2026-08-22 | (pending) | The final join driver compiles and passes focused Clippy without reading either capsule; one fail-if-present execution must still typecheck the explicit five-step equality chain and exact dependency set |
-| 2026-08-22 | (pending) | V10 declines at final theorem typechecking with no export or ledger write; V11 freezes link-by-link opaque type diagnostics before changing any equality combinator |
-| 2026-08-22 | (pending) | V11 instruments all five links and the completed chain with inference plus definitional-equality checks, compiles Clippy-clean, and still leaves both sealed streams unread pending one diagnostic invocation |
-| 2026-08-22 | (pending) | V11 stops at an unbound free variable in the diagnostic itself before target submission; V12 freezes closing both proof and expected equality over the same binders with no proof-chain change |
-| 2026-08-22 | (pending) | V12 closes every diagnostic proof and proposition over matching integer binders, compiles Clippy-clean, and preserves the exact proof chain before one new invocation |
-| 2026-08-22 | (pending) | Closed diagnostics accept `p0` and localize the first real mismatch to manual `congrArg` at `p1`; V13 freezes established `Eq.rec` congruence for both transports and reduces expected theorem dependencies to five |
-| 2026-08-22 | (pending) | V13 replaces all three congruence applications with the established `Eq.rec` construction, compiles Clippy-clean, and preserves link-by-link checks before one new invocation |
-| 2026-08-22 | (pending) | V13 accepts all five links, constructs exact `Int.gcd_fib` empty-footprint with five dependencies, survives two fresh imports, and seals a 1,152,698-byte capsule with zero ledger writes |
-| 2026-08-22 | (pending) | One hash-only, non-rendering read of the sealed `Int.gcd_fib` root is frozen to bind its canonical kernel type before any operation registration or ledger authority |
-| 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.gcd_fib` type `050ddb31…901b` with unchanged empty footprint and five dependencies; the sealed-capsule checker is ready before operation registration |
-| 2026-08-22 | (pending) | Exact crash-safe `Int.gcd_fib` admission is frozen against receipt `d02db0ee…3ac1`, one ledger write, one recovery, one isolated replay, and the predicted `Int.fib_gcd` unlock before registry code |
-| 2026-08-22 | (pending) | The exact sealed-capsule operation is registered through existing typed execution and transaction machinery; the older `Int.gcd_def` calibration gate now validates either the frozen open target or its proved empty-footprint poststate |
-| 2026-08-22 | (pending) | Machine-derived gate coupling is reviewed against all seven current mentions; no stale or unreviewed gates remain and the frontier uniquely selects `Int.gcd_fib` for crash-safe admission |
-| 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.gcd_fib` unchanged; recovery performs exactly one ledger write, the settled capsule checker passes, and the measured frontier unlocks exactly `Int.fib_gcd` |
-| 2026-08-22 | (pending) | Isolated clean replay `b33b25c…bcea` independently repeats selection, certified execution, exit-75 recovery, one write, and the exact `Int.fib_gcd` readiness delta |
-| 2026-08-22 | (pending) | Newly ready `Int.fib_gcd` is frozen as a one-capsule, four-theorem equality composition over admitted `Int.gcd_fib` and `Int.fib_natCast` before source construction or proof-stream access |
-| 2026-08-22 | (pending) | The exact `Int.fib_gcd` driver specializes natCast, transports symmetric gcd equality through `Int.ofNat` with checked `Eq.rec`, and preserves the four-dependency contract before execution |
-| 2026-08-22 | (pending) | One authorized run constructs exact `Int.fib_gcd`, survives two fresh imports, and seals a 1,154,781-byte empty-footprint capsule with exactly four theorem dependencies and zero ledger writes |
-| 2026-08-22 | (pending) | One hash-only, non-rendering read of the sealed `Int.fib_gcd` root is frozen to bind its canonical kernel type before any operation registration or ledger authority |
-| 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.fib_gcd` type `c073add7…64d` with unchanged empty footprint and four dependencies; the sealed-capsule checker is ready before operation registration |
-| 2026-08-22 | (pending) | Exact crash-safe `Int.fib_gcd` admission is frozen against receipt `6c5a72c0…02cc`, one ledger write, one recovery, one isolated replay, and an expected empty unlock delta before registry code |
-| 2026-08-22 | (pending) | Exact `Int.fib_gcd` sealed-capsule execution is registered through typed frontier, execution, transaction, and replay machinery with four fixed dependencies and zero ledger writes so far |
-| 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.fib_gcd` unchanged; recovery performs exactly one ledger write, its settled checker passes, and the measured readiness delta is empty as preregistered |
-| 2026-08-22 | (pending) | Isolated clean replay `400c8829…3d72` independently repeats selection, certified execution, exit-75 recovery, one write, and the exact empty readiness delta |
-| 2026-08-22 | (pending) | Next collision-free foundation is `Int.fib_dvd`; one pinned v4.30 root export of core `Int.natAbs_dvd_natAbs` is frozen before reading support bytes or constructing the target |
-| 2026-08-22 | (pending) | Pinned support export imports twice identically but reaches `propext`; it is sealed as rejected evidence, with zero target submissions or ledger writes, and the next route narrows to directional witness reconstruction |
-| 2026-08-22 | (pending) | V2 freezes four narrower core roots for directional witness transport, explicitly forbids the rejected biconditional, and keeps target construction and ledger authority at zero |
-| 2026-08-22 | (pending) | All four directional convenience roots import twice identically but each reaches `propext`; the sealed rejection localizes V3 below theorem-level divisibility helpers to direct existential witnesses |
-| 2026-08-22 | (pending) | V3 freezes a four-constructor, definitional `Int.natAbs` multiplication proof with every rejected divisibility helper forbidden before source construction or compilation |
-| 2026-08-22 | (pending) | V3 closes same-sign multiplication definitionally and declines only the two cross-sign branches at `natAbs (Int.negOfNat n) = n`; no exporter or target ran |
-| 2026-08-22 | (pending) | V4 freezes a private two-constructor `natAbs (Int.negOfNat n)` proof and changes only the two rejected cross-sign branches before one compile |
-| 2026-08-22 | (pending) | V4 compiles all four multiplication branches using only definitional reduction plus the private two-constructor support; theorem export and credit remain zero |
-| 2026-08-22 | (pending) | V5 freezes exact sudo-scoped module staging, one compile, two exports, two imports, cleanup, and empty-footprint acceptance before producing a durable direct multiplication capsule |
-| 2026-08-22 | (pending) | V5 exports and imports byte-identically with an empty footprint, but declines before sealing because the root records `Eq.symm` plus its private helper instead of the predicted empty direct dependency set |
-| 2026-08-22 | (pending) | V6 freezes hash-only qualification of the exact two-dependency empty closure and one manifest write, with exporter/importer reruns and target authority forbidden |
-| 2026-08-22 | (pending) | V6 qualifies and seals exact `intNatAbsMulDirectV1`: two byte-identical streams, exact two-dependency closure, empty footprint, no rerun, and zero target or ledger writes |
-| 2026-08-22 | (pending) | V7 freezes forward and reverse divisibility transport as direct existential-witness constructions, with same-sign/ofNat and opposite-sign/negOfNat witnesses and every rejected helper forbidden |
-| 2026-08-22 | (pending) | V7 compiles the forward transport and both same-sign reverse branches; only the two opposite-sign `Int.negOfNat 0` representations remain, before any export or target submission |
-| 2026-08-22 | (pending) | V8 freezes quotient-case splits only in the two opposite-sign branches: one impossible zero case, one genuine zero witness, and `negSucc` witnesses for both positive quotients |
-| 2026-08-22 | (pending) | V8 compiles both direct witness transports with no rejected helper named; the only new case splits are the preregistered opposite-sign quotient boundaries, before export or theorem credit |
-| 2026-08-22 | (pending) | V9 freezes exact staging, one compile, two two-root exports, two imports, forbidden-dependency audit, cleanup, and sealing before transport theorem credit |
-| 2026-08-22 | (pending) | V9 reproduces and seals both direct witness transports empty-footprint; their exact dependencies are only `Eq.symm`, `congrArg`, and `noConfusion_of_Nat`, with every rejected helper absent |
-| 2026-08-22 | (pending) | V10 freezes exact `Int.fib_dvd` over four sealed capsules: forward witness transport, admitted `Nat.fib_dvd`, two `intFibNatAbsV1` equality transports, and direct reverse witness transport before driver code |
-| 2026-08-22 | (pending) | V10 driver build declines on three local Rust type/API errors and two Clippy name collisions before reading any capsule or submitting any theorem; the proof construction itself remains unexecuted |
-| 2026-08-22 | (pending) | V11 freezes exactly five local driver repairs—two expression materializations, one kernel API rename, and two binding renames—while forbidding proof changes and all capsule reads |
-| 2026-08-22 | (pending) | V11 applies exactly those five repairs and builds focused Clippy-clean; no capsule was read and the exact proof construction is now ready for one separately authorized execution |
-| 2026-08-22 | (pending) | V12 freezes one complete, no-retry execution of the Clippy-clean exact driver: four reads, three checked compositions and replays, one target, one export, and two fresh imports |
-| 2026-08-22 | (pending) | V12 wrapper stops before driver launch because Clippy produced metadata but no runnable example binary; output stays absent and every proof-read, composition, target, and ledger counter remains zero |
-| 2026-08-22 | (pending) | V13 freezes one `cargo run` that includes the missing executable build and the unchanged four-input proof execution, with the same no-retry target and import budgets |
-| 2026-08-22 | (pending) | V13 reads all four capsules and replays three compositions, then declines before target submission because `infer` cannot type an open `m,n` hypothesis; output and ledger remain untouched |
-| 2026-08-22 | (pending) | V14 freezes replacing only open-term inference with direct `Dvd.dvd Int Int.instDvd m n` construction; the proof chain after `h` and every dependency prediction stay unchanged |
-| 2026-08-22 | (pending) | V14 removes open-term inference, constructs the exact Int divisibility hypothesis directly, and builds Clippy-clean without reading any capsule or submitting the target |
-| 2026-08-22 | (pending) | V15 freezes one post-repair `cargo run` over the same four capsules and unchanged six-dependency target contract before rereading any proof stream |
-| 2026-08-22 | (pending) | V15 constructs the complete proof after three replayed compositions, then declines only when inferring its open `m,n` result; target submission, output, and ledger remain zero |
-| 2026-08-22 | (pending) | V16 freezes direct construction of the exact Fibonacci divisibility conclusion, removing only open-result inference while leaving the completed proof term unchanged |
-| 2026-08-22 | (pending) | V16 constructs the exact conclusion directly and builds Clippy-clean; both former open-term inference sites are gone while proof, capsules, and dependency contract remain unchanged |
-| 2026-08-22 | (pending) | V17 freezes one fully direct-typed execution of the unchanged proof over four sealed capsules, with one target, two fresh imports, no retries, and zero ledger writes |
-| 2026-08-22 | (pending) | V17 reaches kernel submission but the closed target is rejected with a type mismatch; no theorem is accepted or exported, so V18 will typecheck all five proof links under closed binders first |
-| 2026-08-22 | (pending) | V18 freezes five binder-closed infer/definitional-equality checks from forward witness through final reverse transport, with the proof term unchanged and target submission forbidden during instrumentation |
-| 2026-08-22 | (pending) | V18 instruments all five proof links under identical closed binders and builds Clippy-clean without reading capsules; the next run will stop before submission at the first invalid link |
-| 2026-08-22 | (pending) | V19 freezes one instrumented run: at most five closed link checks and one target submission, with any decline localized before proof changes |
-| 2026-08-22 | (pending) | V19 proves links 1–2 and localizes the first failure to link 3: `Eq.rec` needs a destination-and-equality motive, not the unary divisibility predicate currently supplied |
-| 2026-08-22 | (pending) | V20 freezes lifting both unary divisibility predicates to `fun b (_ : left = b) => P b`, exactly matching Lean 4 `Eq.rec` without changing any mathematical link or dependency |
-| 2026-08-22 | (pending) | V20 implements the dependent motive but its build declines only because the deterministic suffix makes `eq_rec_transport` eight-argument; no execution or proof-stream read occurs |
-| 2026-08-22 | (pending) | V21 freezes one scoped `too_many_arguments` allowance on `eq_rec_transport`; the dependent motive and entire proof remain byte-for-byte unchanged before rebuilding |
-| 2026-08-22 | (pending) | V21 adds exactly that scoped allowance and builds the dependent `Eq.rec` motive Clippy-clean, without reading capsules or changing the proof |
-| 2026-08-22 | (pending) | V22 freezes one dependent-motive execution through all five closed link checks, one target submission, one export, and two fresh imports before rereading capsules |
-| 2026-08-22 | (pending) | V22 passes all five links, constructs exact `Int.fib_dvd` with six fixed dependencies and empty footprint, reproduces twice, and seals a 1,197,314-byte capsule with zero ledger writes |
-| 2026-08-22 | (pending) | One hash-only, nonrendering read of the sealed `Int.fib_dvd` root is frozen to bind its canonical kernel type before operation registration or ledger authority |
-| 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.fib_dvd` type `ed84c258…5016`, unchanged empty footprint, and six exact dependencies with zero rendering or ledger authority |
-| 2026-08-22 | (pending) | Exact crash-safe `Int.fib_dvd` admission is frozen against receipt `a39586b5…b897`, one ledger write, one recovery, and one isolated replay before operation registration |
-| 2026-08-22 | (pending) | Exact `Int.fib_dvd` sealed-capsule execution is registered through typed frontier, execution, transaction, and replay machinery with six fixed dependencies; exact live gate coupling leaves it uniquely admissible with zero ledger writes so far |
-| 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.fib_dvd` byte-identical; recovery performs exactly one authoritative ledger write, its settled capsule checker passes, and the measured readiness delta is empty as preregistered |
-| 2026-08-22 | (pending) | Isolated clean replay `e836fa51…667f` independently repeats selection, certified execution, exit-75 recovery, one write, and the exact empty readiness delta across all ten semantic checks |
-| 2026-08-22 | (pending) | The next collision-free foundation is `Int.fib_of_nonneg`; one non-rendering read of the existing target-owned clean-definition capsule is frozen to qualify `if_pos` before any target construction or ledger authority |
-| 2026-08-22 | (pending) | The frozen clean-definition read declines because `if_pos` is absent from the sliced capsule; zero target submissions and writes localize the next step to one pinned core-support export |
-| 2026-08-22 | (pending) | One pinned s5 export of core `if_pos` is frozen with two non-rendering imports, exact empty-footprint acceptance, and zero target or ledger authority |
-| 2026-08-22 | (pending) | The `Init.Prelude` export exits zero after a missing-constant panic and writes only 173 metadata bytes; two imports confirm no root, so the stream is rejected with zero support credit or writes |
-| 2026-08-22 | (pending) | V2 freezes the containing `Mathlib.Data.Int.Fib.Basic` environment but root-selects only `if_pos`, requires the target theorem absent, and preserves zero construction or ledger authority |
-| 2026-08-22 | (pending) | V2 exports only `if_pos`, imports it twice identically with zero dependencies and empty footprint, confirms `Int.fib_of_nonneg` absent, and seals the 18,458-byte support capsule with zero target submissions or writes |
-| 2026-08-22 | (pending) | Exact `Int.fib_of_nonneg` construction is frozen as one direct application of `if_pos` to the transparent nonnegative branch, with one expected dependency and the upstream target root forbidden |
-| 2026-08-22 | (pending) | Construction preflight declines before code because the target-owned `Int.fib` matches constructors rather than `0 ≤ n`; the positive branch is reflexive and the missing leaf is exactly `Int.negSucc_not_nonneg` |
-| 2026-08-22 | (pending) | One pinned root-selected export of `Int.negSucc_not_nonneg` is frozen with two imports, empty-footprint acceptance, forbidden-target absence, and zero theorem or ledger authority |
-| 2026-08-22 | (pending) | Both imports reproduce `Int.negSucc_not_nonneg` through `propext` and `iff_false`; the biconditional is sealed as rejected and the route narrows to its two directional order leaves |
-| 2026-08-22 | (pending) | V2 freezes only `Int.negSucc_lt_zero` and `Int.not_le_of_gt`, forbids both biconditionals, and preserves zero target or ledger authority before export |
-| 2026-08-22 | (pending) | Both directional order roots also reproduce through `propext`; they are sealed as rejected, localizing the clean route below theorem-level order to direct indexed-hypothesis elimination |
-| 2026-08-22 | (pending) | V3 freezes a target-owned function-parameterized residual with direct constructor matching and `nomatch`, forbidding all four rejected order/target roots before source code |
-| 2026-08-22 | (pending) | V3 compiles on pinned Lean 4.30: the `ofNat` branch uses only the positive presentation and the impossible `negSucc` branch closes directly by indexed `nomatch`, below theorem-level order |
-| 2026-08-22 | (pending) | Plain typechecking creates no `.olean`; the first exporter exits zero with unknown-module stderr and an empty root, so the second export never starts and all residual/target credit remains zero |
-| 2026-08-22 | (pending) | V4 freezes explicit `lean -o` module compilation before two fresh residual exports, correcting only the missing build artifact while preserving the exact source and zero target authority |
-| 2026-08-22 | (pending) | V4 creates the `.olean` but export still declines because checkout-root modules are outside Lake's search path; no stream is accepted, localizing V5 to exact scoped staging and cleanup |
-| 2026-08-22 | (pending) | V5 freezes one exact copy into Lake's module path, two exports/imports, and one mandatory removal, with no compilation retry or target authority |
-| 2026-08-22 | (pending) | V5 reproduces a 120,009-byte empty-footprint residual twice and cleans staging, but withholds credit because the exact dependency set is `[Eq.symm]` rather than the predicted empty set |
-| 2026-08-22 | (pending) | V6 freezes hash-only qualification of the exact `[Eq.symm]` closure already measured empty-footprint twice, forbidding all exporter, importer, theorem, and ledger reruns |
-| 2026-08-22 | (pending) | V6 qualifies the exact `[Eq.symm]` residual closure from the two prior empty-footprint imports without rerunning any exporter, importer, theorem submission, or ledger write |
-| 2026-08-22 | (pending) | V7 freezes exact `Int.fib_of_nonneg` specialization over the clean definition capsule and qualified residual, expecting direct roots `[residual, Int.fib_natCast]` with `Eq.symm` retained in closure |
-| 2026-08-22 | (pending) | The exact nonnegative Fibonacci driver compiles Clippy-clean after its single authorized compilation with both proof streams still unread; execution remains separately gated |
-| 2026-08-22 | (pending) | Clippy left no runnable example binary, so V1's compilation budget is exhausted without stream access; V2 explicitly freezes one binary build and one fail-if-present execution rather than silently overspending |
-| 2026-08-22 | (pending) | V2 composes and specializes exact `Int.fib_of_nonneg`, replays both receipts, survives two fresh imports, and seals a 401,185-byte empty-footprint capsule with exactly two direct theorem dependencies and zero ledger writes |
-| 2026-08-22 | (pending) | One hash-only, non-rendering read of the sealed `Int.fib_of_nonneg` root is frozen to bind its canonical kernel type before operation registration or ledger authority |
-| 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.fib_of_nonneg` type `a413a3af…9f0a` with unchanged empty footprint and two dependencies; operation registration remains unauthorized |
-| 2026-08-22 | (pending) | Exact crash-safe `Int.fib_of_nonneg` admission is frozen against receipt `21be310e…ed0e2`, one ledger write, one recovery, one isolated replay, and an expected empty unlock delta |
-| 2026-08-22 | (pending) | The sealed-capsule operation is registered through typed execution and transaction assurance; all ten gate mentions are reviewed as historical preregistration checks or the current admission/registry gates, and 45 focused mutation tests pass with zero ledger writes |
-| 2026-08-22 | (pending) | First apply preflight rejects the archived `--before-fact` before intent or write; corrected V2 freezes the canonical repository fact path with unchanged transaction identities and an empty journal |
-| 2026-08-22 | (pending) | Corrected apply exits 75 after durable intent with `Int.fib_of_nonneg` still open; recovery performs exactly one write, its registered checker passes, and the measured readiness delta is empty as preregistered |
-| 2026-08-22 | (pending) | One isolated clean replay is frozen from exact registration commit `7216f243c` against all primary selection, transaction, recovery, fact, and post-frontier identities |
-| 2026-08-22 | (pending) | Isolated replay independently reproduces the same selected operation, execution, transaction, intent, admission event, exact proved fact, one write, and empty post-admission readiness delta byte-for-byte |
-| 2026-08-22 | (pending) | Current frontier has no registered executable fact; bottom-up `Nat.fib_pos` is selected ahead of `Nat.fib_eq_zero` and `Int.fib_eq_zero`, while a frozen materialization step first turns admitted `Nat.fib_add_two` from a receipt-only ledger result into reusable exact-name library input |
-| 2026-08-22 | (pending) | The receipt-bound materializer now verifies the admitted proof/type hashes, submits the same proof under exact name `Nat.fib_add_two`, exports only that root, and checks two fresh imports; focused Clippy passes with the stream unread but leaves no executable binary |
-| 2026-08-22 | (pending) | Existing recurrence executable predates the new mode, so V2 explicitly freezes one current-source binary build and one fail-if-present materialization rather than treating the stale binary as runnable authority |
-| 2026-08-22 | (pending) | V2 reconstructs the receipt-bound recurrence once, verifies its admitted proof/type hashes, submits exact-name `Nat.fib_add_two` with no theorem dependencies, survives two fresh imports, and seals a reusable 56,115-byte library capsule without new theorem credit or ledger writes |
-| 2026-08-22 | (pending) | `Nat.fib_pos` V1 freezes a decision-free constructor/induction residual over zero presentation, one positivity, recurrence-step positivity, and successor positivity, forbidding the concrete Fibonacci function and both target/next theorem roots |
-| 2026-08-22 | (pending) | V1 spends its sole compile and stops before export on two local elaboration seams: successor binder inference and an induction hypothesis retaining the branch premise; V2 freezes only those two repairs |
-| 2026-08-22 | (pending) | V2 compiles and exports the repaired residual twice byte-identically; both imports are empty-footprint, but credit is withheld because rewriting retains clean direct dependencies `[Eq.symm, congrArg]` rather than the predicted empty set |
-| 2026-08-22 | (pending) | V3 qualifies the exact `[Eq.symm, congrArg]` closure from the two prior empty-footprint imports without rerunning exporter, importer, theorem submission, or ledger machinery |
-| 2026-08-22 | (pending) | V4 freezes only two core positivity roots—successor positivity and right-summand positivity—to close all four concrete residual contracts over the reusable exact recurrence without touching official Fibonacci targets |
-| 2026-08-22 | (pending) | One bounded `Init.Prelude` export qualifies `Nat.zero_lt_succ` and `Nat.add_pos_right` empty-footprint through two fresh imports and seals the 124,573-byte support capsule with zero target submissions or ledger writes |
-| 2026-08-22 | (pending) | V5 isolates recurrence-step positivity as a second function-abstracted residual over only a recurrence contract and generic right-summand positivity, leaving zero/one presentations as target-owned definitional constructions in the final driver |
-| 2026-08-22 | (pending) | V5 compiles and exports twice byte-identically with empty footprints, but withholds credit because the actual direct closure `[congrArg]` is narrower than predicted `[Eq.symm, congrArg]`; V6 freezes hash-only correction |
-| 2026-08-22 | (pending) | V6 qualifies the exact congrArg-only step residual from the two already completed imports with zero proof-stream, importer, theorem-submission, or ledger reruns |
-| 2026-08-22 | (pending) | V7 freezes exact `Nat.fib_pos` over four sealed inputs, two target-owned definitional base theorems, one step specialization, and one final specialization before driver code or proof-stream access |
-| 2026-08-22 | (pending) | The first exact-driver compile stops only at six nested mutable Rust borrows with all proof streams unread; V8 freezes local-variable refactoring, and the corrected driver passes focused Clippy without leaving a runnable binary |
-| 2026-08-22 | (pending) | V9 freezes one current-source binary build and one fail-if-present exact `Nat.fib_pos` execution from commit `820b8aa9c`, retaining the four-read, two-specialization, zero-ledger budget |
-| 2026-08-22 | (pending) | V9 fails closed before theorem submission because the narrow recurrence base cannot receive recursive `Nat.le`; V10 freezes the core-support capsule as base and composes recurrence plus both residuals into it |
-| 2026-08-22 | (pending) | The V10 base-order correction passes focused Clippy with no proof-stream read, but the only runnable binary predates the source; execution remains gated on an explicit current-source rebuild |
-| 2026-08-22 | (pending) | V11 freezes one current-source rebuild and one corrected exact-target invocation from `d3583bffc`, with fail-if-present output and unchanged zero-ledger authority |
-| 2026-08-22 | (pending) | V11 rejects non-theorem root `Nat.fib` before submission; V12 freezes composing only `Nat.fib_add_two`, whose checked closure already transports the referenced definition |
-| 2026-08-22 | (pending) | The V12 theorem-root correction passes focused Clippy without reading proof streams; its stale executable remains unauthorized for rerun |
-| 2026-08-22 | (pending) | V13 freezes one current-source rebuild and one fail-if-present rerun from `6a4e3b60b`, with four sealed reads and zero ledger writes |
-| 2026-08-22 | (pending) | V13 constructs exact empty-footprint `Nat.fib_pos` and survives two fresh imports, then fails only because the dedicated output directory is absent; V14 freezes that filesystem-only correction and one unchanged-binary rerun |
-| 2026-08-22 | (pending) | V14 creates only the dedicated output directory, reconstructs exact `Nat.fib_pos` unchanged, replays all five receipts, survives two fresh imports, and seals a 190,972-byte empty-footprint capsule with zero ledger writes |
-| 2026-08-22 | (pending) | One hash-only, nonrendering read of sealed `Nat.fib_pos` is frozen against exact capsule, declaration, fact, and tool identities before admission authority |
-| 2026-08-22 | (pending) | Hash-only audit binds canonical `Nat.fib_pos` type `24233cf6…9f56`, declaration `f441b137…6e65`, five direct dependencies, and an empty footprint with zero rendering or ledger writes |
-| 2026-08-22 | (pending) | Immutable capsule packaging is frozen before reopening the sealed directory: one manifest write, no root rewrite or proof-stream read, and restoration to root `0444` / directory `0555` |
-| 2026-08-22 | (pending) | The exact manifest is written once and resealed; its fail-closed checker binds receipt `60954cc8…6aff`, and operation registry validation accepts `Nat.fib_pos` as the twenty-second typed operation with zero ledger writes |
-| 2026-08-22 | (pending) | The first registration frontier refuses `Nat.fib_pos` because six reviewed checker names are not live gate mentions; a measured correction retains only `validate-autogenesis-operations.py`, with no execution, intent, or ledger write |
-| 2026-08-22 | (pending) | The corrected frontier selects and checks `Nat.fib_pos`, but transaction preparation rejects the previously unenumerated Nat capsule; an explicit five-dependency single-construction assurance contract is frozen with no transaction or write |
-| 2026-08-22 | (pending) | Transaction regression tests expose one pre-existing unreviewed `Int.fib_of_nonneg` replay-result gate when reopening that settled fixture; the exact gate name is added alongside the new Nat assurance case |
-| 2026-08-22 | (pending) | The explicit five-dependency Nat assurance path and repaired settled-fixture isolation pass all 19 transaction regression tests; transaction derivation remains unspent until the correction is committed |
-| 2026-08-22 | (pending) | Exact commit `a080a9ccc` uniquely selects `Nat.fib_pos`, checks receipt `60954cc8…6aff`, and derives transaction `6680a0de…b68e`; exit-75 recovery is frozen before intent or ledger write |
-| 2026-08-22 | (pending) | Exit-75 leaves `Nat.fib_pos` byte-identical and open; one recovery writes the proved empty-footprint fact, its registered checker passes, and the measured readiness delta is empty before isolated replay |
-| 2026-08-22 | (pending) | An isolated clean worktree semantically reproduces `Nat.fib_pos` selection, capsule checking, exit-75 recovery, one authoritative write, final proved fact, and empty readiness delta with all ten replay checks true |
-| 2026-08-22 | (pending) | `Nat.fib_eq_zero` V1 is frozen as a function-abstracted Nat case split over zero presentation, admitted positivity, and successor positivity, forbidding the concrete Fibonacci function and both official target roots |
-| 2026-08-22 | (pending) | V1 writes the residual once but stops before Lean at missing noninteractive `lake`; V2 freezes the located absolute Lean 4.30 Lake path with no source rewrite or extra authority |
-| 2026-08-22 | (pending) | V2 reaches one empty-inductive seam: `0 < 0` is not definitionally literal `False`; V3 freezes only replacing `False.elim` with `nomatch`, preserving statement and contracts |
-| 2026-08-22 | (pending) | V3 compiles the corrected proof but first export cannot locate an unmaterialized module and skips export two; V4 freezes explicit Lake module outputs plus removal of only the zero-byte partial |
-| 2026-08-22 | (pending) | V4 rebuilds the module explicitly, exports two 99,415-byte streams byte-identically, and qualifies the empty-footprint residual with exact clean dependencies `[Eq.symm, Iff.mpr, congrArg]` after two nonrendering imports |
-| 2026-08-22 | (pending) | Exact `Nat.fib_eq_zero` is frozen as one checked residual composition and one four-argument specialization over the sealed `Nat.fib_pos` capsule, expecting four direct theorem dependencies and zero ledger writes |
-| 2026-08-22 | (pending) | The exact `Nat.fib_eq_zero` driver passes focused Clippy under its single compile budget with both proof streams unread; Clippy leaves no runnable binary, so execution remains separately gated |
-| 2026-08-22 | (pending) | V2 freezes one current-source binary build and one fail-if-present exact `Nat.fib_eq_zero` execution from `26c1bceb9`, including one output-directory creation and zero ledger authority |
-| 2026-08-22 | (pending) | V2 composes and specializes exact `Nat.fib_eq_zero` once, replays both receipts, survives two fresh imports, and seals a 205,258-byte empty-footprint capsule with the predicted four dependencies and zero ledger writes |
-| 2026-08-22 | (pending) | One hash-only, nonrendering read of sealed `Nat.fib_eq_zero` is frozen against exact capsule, declaration, fact, and tool identities before admission authority |
-| 2026-08-22 | (pending) | Hash-only audit binds canonical `Nat.fib_eq_zero` type `cf9757fc…0f4c`, declaration `97093096…5c83`, four dependencies, and an empty footprint; one manifest-only packaging step is frozen next |
-| 2026-08-22 | (pending) | The manifest is written once and resealed; checker receipt `c8466767…f3d3`, the twenty-third typed operation, explicit four-dependency transaction assurance, and all 19 regression tests pass with zero ledger writes |
-| 2026-08-22 | (pending) | First clean execution refuses before receipt because the checker returns only its digest; one interface-only correction returns the unchanged authority map plus digest, with no transaction, intent, or write |
-| 2026-08-22 | `6599dfa2d` | **DRAT search progress — and it overturned my own fp16 diagnosis in one run.** I had told the user twice that the fp16 goal was blocked on SEARCH, and extrapolated 822 years from it. Instrumented, the search **finishes in 24.2 s** (424,601 conflicts → 827,048 steps, 193 MB) and then stops at a genuine terminal state; every remaining second was `check_drat` + `elaborate_drat_to_lrat`. fp8 confirms the shape: 1.3 s search, 8.9 MB, ~25 min to check. **Certification scales with proof size, not search space** — the opposite of what I reported. `progress` is a borrowed `Option<&mut dyn FnMut>` with an early `is_none` return on both hot paths, and the CLI line is `;`-prefixed so it can never match `^(sat\|unsat)$`. |
-| 2026-08-22 | `23f1b9701` | Fact corrected: the 822-year figure **measured the wrong stage** and is marked void on the fact rather than deleted. The six checks I ran that morning all reported "still working" and none of them *could* have reported anything else — the only instrumented stage had already completed. |
-| 2026-08-22 | (open, dispatched) | **The post-search check/elaborate stage has NO deadline and NO observability**, which is exactly the blind spot above. A checking stage that cannot be bounded can hang a gate, and a bound that reports `Ok` on expiry would be worse than none. |
-| 2026-08-22 | `085c3c32a`, `30737a155` | **Varignon: the first geometry fact to go axiom-BEARING → axiom-FREE.** Proved over our own constructed ℝ (`CPoint` on `CReal`, trusted surface 0), so the fact drops `cartesian-coordinatisation`, `characteristic-zero-specialisation` and the CAS normal-form assumption. Equality is `CReal.Equiv`, a defined `Prop` relation — using `Eq` here would have proved something vacuous. Nine geometry facts still carry the coordinatisation assumption. |
-| 2026-08-22 | `e8b69dbb7`, `cca5af9ee` | **Adapter wall: per-lemma primitive discovery took `Nat.zero_le` from 38 blocked rows to 0**, then four more blockers bridged (74 rows). Each bridge reconstructs from the stream's own primitives and asserts `theorem_dependencies` is EMPTY — the axiom footprint cannot see a theorem citation, which is the gap that sent an earlier version of this module back. |
-| 2026-08-22 | `8167ca72c` | **`absurd` was declared a `Theorem` and real Lean refuses it** — its type lands in `Sort v`, not `Prop`, so Lean declares it a `def`. Every gate we own was green; only `real_lean_wire_differential.rs` caught it. logic 13 → 12, distinct 464 → 463. |
-| 2026-08-22 | `e7cab8b13` | **Reverted my own `MAX_BINDERS` 8 → 12.** It broke five established facts' reproduction receipts (`max_binders` is part of the recorded contract) in exchange for a capability that closed nothing. The reason is now recorded at the constant so the next lane does not repeat it. |
-| 2026-08-22 | `b5e6b3ac2` | **The adapter cascade is EXACT, measured not predicted.** `ef0e23447` recorded its resulting distribution as NOT MEASURED; this is the measurement, over 138 real archive streams. Each bridged name vanished and each count is preserved to the unit — `Nat.lt_irrefl` 38 → `Nat.div_rec_lemma`, `if_pos` 18 → `dif_neg`, `Or.elim` 15 → `Or.resolve_right`, `of_decide_eq_true` 3 → `ne_true_of_eq_false`. The exactness is the finding: a census total cannot distinguish "admitted nothing" from "moved some rows", and neither happened, so the wall is a few deep homogeneous columns rather than a broad scatter. Isolation is structural — train 78 / development 60 / **held-out 0**, because the archive is train-development by construction. |
-| 2026-08-22 | `50307d833` | **The development partition was guarded by nothing**, one level down from the breach that cost 19 held-out rows. Measured: `train` **56** open facts, `development` 78, `held-out` 57 — the evaluation surface is larger than the entire surface we may build on, and 24 of 25 registered operations cover exactly one fact. A capsule converts an irreplaceable train row into one theorem and teaches nothing. Gate: an operation closing a development fact must also close a train fact (building on the eval set is the failure; settling it is the point), plus a ratchet on multi-target coverage and a budget report that is deliberately NOT gated. Partition is read from both the nursery and the split policy and they are required to agree. Seven guards, seven mutations, all kill, no two sharing a kill signature. |
-| 2026-08-22 | `01d6c09b3` | **`just check` was RED on `main`** and had been since 2026-08-21. `clippy -p axeyum-lean-import --all-targets` exited 101 on three examples; clippy IS the aggregate gate (`check.sh:199`), but `hooks/pre-push` runs `cargo check --all-targets`, which structurally cannot see clippy-only lints — `too_many_lines` is not a rustc lint. Not my code; a red shared gate blocks every lane's verification, so fixed rather than reported. Discriminating evidence: the identical command exits 101 before and 0 after. |
-| 2026-08-22 | (open, NOT mine) | **The reflexivity producer can only prove `Eq`, and that one limitation blocks 12 open TRAIN facts.** All 15 producer-declines give the identical reason, "terminal goal is not an exact Eq application"; every one is a `≤`/`<`/`≠`/`∣` goal in `natural-factorial` or `natural-fibonacci`. Three MORE of the fifteen were already closed one at a time by bespoke capsules — doing individually what one capability extension does generally. Dispatched as a producer widening, not twelve capsules. |
-| 2026-08-22 | (incident) | **The root filesystem hit 100% mid-session and TRUNCATED a source file**; `git checkout` to restore it also failed, out of disk space for `.git/index.lock`. `target/` was 422 GB on a 915 GB root while `/data0` sat 11% used. Freed 54 GB (`target/debug/incremental`, a pure rebuild cache) then 40 GB (`target/` inside 26 non-running agent worktrees; source and uncommitted work untouched) — 0 → 93 GB. The file was restored and verified to parse, and `git fsck` is clean. The standing relocation item in this lane's queue is now an incident, not a nice-to-have. |
-| 2026-08-22 | `69573134b` | **ℤ gets a division FUNCTION, and `integer=0` holds.** Our ℕ had `gcd`, `bezout`, Euclid's lemma and the infinitude of primes; ℤ stopped at the ring and order laws with `euclidean_decomposition` only as an EXISTENTIAL. Now `Int.ediv`/`Int.emod` (structural on the constructors), the keystone `Int.ediv_add_emod : b*(a/b)+a%b = a` which turns that existence theorem into a computation, and the canonicalizing bounds `emod_nonneg`/`emod_lt_of_pos`. Distinct theorems **463 → 467**, all axiom-free. Zero convention is Lean's: `emod a 0 = a` returns the DIVIDEND, which can be negative — that is why `emod_nonneg` is conditional, checked against all 20 of Lean core's own examples. `Int.negOfNat_add_subNatNat` was genuinely missing: every prior `subNatNat` lemma paired `Int.add` with a PURE `ofNat`/`negSucc` operand, never a second `negOfNat`. |
-| 2026-08-22 | `8d3def006` | **`Nat.div_rec_lemma` falls; the ModEq family is one blocker from a producer.** It gated far more than its 38 rows: `Int.ModEq` unfolds through `%` → `Int.emod` → `Nat.mod` → well-founded recursion, so the whole modular corner sat behind it. Cascade measured against the real archive after EACH step: `div_rec_lemma` → `not_succ_le_zero` → `div_rec_fuel_lemma`, identical on all four streams. `Nat.not_succ_le_zero` was mine and is the FOURTH instance of one pattern — the `B::` helper already existed, already used internally, never exposed as a name. `Nat.le.brecOn`, the other predicted successor, was already bridged. |
-| 2026-08-22 | `fb3dfb0f7` | **The checking stage is bounded and instrumented, and LRAT elaboration is the larger half.** Measured on fp8: `drat_check` 200.3 s at 335.6 steps/s, `lrat_elaborate` 357.6 s at 187.0 steps/s — roughly half the rate. fp16's check runs at ~89 steps/s (active set 2-3× larger, O(active) per step), extrapolating to ~2.6 h plus about as much again, consistent with the observed ~6 h. **A timeout is not a pass**: `ResourceOut`/`Interrupted` map to `Inconclusive`, never `Proved`, and I mutation-tested that guard myself — mapping `ResourceOut` to `Proved` kills exactly one test and leaves the `Interrupted` tests green, so it is precise rather than a blanket. The unbounded entry points are byte-for-byte untouched and the bounded ones reuse the same private `ForwardChecker`, so there is no second verification path. |
-| 2026-08-22 | `18bf3dfa4`, `206fe2a0f` | **I rewrote a fact's statement to match my own proof, and no gate could see it.** `30737a155` presented a route upgrade on the Varignon fact; it actually REPLACED `formal.statement` (smtlib2/`Real` → lean4/`CPoint`), dropped three assumptions and discarded two checked evidence rows. Different propositions, different carriers, neither implying the other. Repaired as an ADDITION — the original restored intact, the kernel result recorded as `F:geometry-varignon-over-constructed-reals`. A full-history audit found it was the only carrier change among 140 settled facts; the six other statement edits are benign (kernel-dumped types replacing hand-written seeds, and the `AxReal` rename). Now gated: every settled statement pinned by SHA-256, changes require an amendment naming both digests and a reason. Six guards, six mutations, one distinct kill each. `validate-facts.py` could not have caught this and should not try — it sees one snapshot, and drift is a property of two. |
 | 2026-08-21 | (pending) | All 35 dominance audits re-run at `496288979` from a `lane-snapshot` tree; `dominant_unsat` 262 / 324 → **269 / 326**, `lean-reconstruction-gap` 15 → **10**, certified/checked 278 → 280. Four rows moved: QF_NRA cvc5 (+3, `RealProduct`×2 + `MonomialBound`), QF_S (+2, `StringLength`), QF_NRA synthetic (+2, the prelude-warm instrument fix, proved by an A/B with the warm suppressed at two revisions), QF_SEQ (a `parse-error` became `sat`, no dominance change). `gen-proof-gap-matrix`, `gen-proof-gap-shape-census`, `gen-dominance-scoreboard` and `gen-autogenesis-baseline` regenerated; the six moved markers in `PROJECT-STATE.md` and the gap analysis renumbered **with** the account of what moved them, and the ten remaining Lean-reconstruction gaps recorded one line each with the fragment's own decline reason rather than the fallback route's. |
 | 2026-08-21 | `a3799dca2` | **`QF_FP/fp_misc`'s "timeout" was an unmemoized DAG walk in the classifier.** `array_bv_abs::abstract_term` re-explored shared subterms once per path; 8/8 `gdb` samples sat in it. Memo + visit budget, each guard mutation-verified to kill exactly one test: **124.7 s timeout → 314 ms**, 4,194,309 visits → 4,365 over 5,762 nodes. QF_FP `timeouts 1 → 0`, certified/checked 15/16 → **16/16**; `dominant` stays 15/16 and the row now declares `bit-blast` instead of `timeout`, because `887b52e64` withdrew its term-level FP route on purpose. Also measured and pinned: `QF_BVFP/Float-no-simp3-main` is not the "evidence exceeds 120 s" it was recorded as — its reduction certificate is `proved` in **28.3 ms** and is withheld only by `produce_evidence`'s blanket "timeout set → skip", whose deadline covers the SAT search and none of `lower_terms` / `tseitin_encode` / `check_drat` / LRAT. QF_FP and QF_BVFP audits re-run at `a3799dca2`; `proof_errors` 4 → **3**, certified/checked 280 → **281**, and the four moved markers in `PROJECT-STATE.md` and the gap analysis renumbered with the account of what moved them. |
 | 2026-08-21 | `17079b33d` | `:pattern` was parsed and dropped; the author's trigger now decides. Arena side table, alternatives unioned, multi-patterns joined, declines explicit. ADR-0537. |
 | 2026-08-21 | `da314781b` | QF_NIA post-fix: 39/83 = 47.0%, **+6** on its own pre-fix sweep four hours earlier. Which corrects the batch note: `40a1ab969` — one file in `dpll_lia.rs` — moved FOUR divisions (QF_UFLIA +18, QF_NIA +6, QF_SLIA +2, QF_RDL +1), one of them strings and one nonlinear, where it was expected to move QF_UFLIA. Scoped to the expected division, three of those rows would have been recorded at PRE-FIX values under today's date with the freshness gate green over them. |
 | 2026-08-21 | `f2060eeb2` | The freshness gate runs in hosted CI too — the third place the gap analysis named. Held back deliberately until the board was green, because a gate that reds CI on landing over a multi-hour sweep is one people learn to override. Runs in the `fetch-depth: 0` job, which is load-bearing: the solver-currency column needs history and degrades to NO-GIT on a shallow clone (verified against a `.git`-less tree — reports NO-GIT, still exits 0). |
-| 2026-08-21 | `5be2b296c` | The board re-measured: 21 entries across all nine divisions, **0 disagreements** in every one, gate `stale=0 verdict=PASS`. Three ratios rose and none is a gain — QF_LRA/QF_IDL/QF_RDL are a lower REFERENCE count on 16-thread hardware (baselines were 24-core); our counts there went 86→88, 68→66, 105→102. UF DECLINED 93.4%→89.2% and it is real: loaded and quiet runs agree (58/23/35, 60/23/33) against 77/8/14, so what moved is the composition of what we decide. Appended as measured, which is what append-only is for. |
-| 2026-08-21 | `df30d9fa9` | `parity-run.sh` said every ratio is a LOWER bound under contention. True of each solver's own count, false of the quotient: QF_LRA measured 89/127 = 70.1% at load 32 and 88/137 = 64.2% quiet, so the loaded run read six points HIGHER because the reference lost ten files and we lost none. Also: the freshness gate now reports each entry's `solver commit`, ancestry and `behind=N` — QF_BV was 4.0 days fresh and 352 solver commits behind, the number nobody had. Advisory by design; making it fatal kills seven controls. |
-| 2026-08-21 | `e7d8629c5` | `docs/PROJECT-STATE.md` said the parity ledger holds "eleven divisions" and named QF_ABV among its parity cells. It holds nine and has never held a QF_ABV entry — that list is committed and was never run. Two guards added to `check-parity-docs.py`, both derived from the ledger and both shown to fire on the real tree before the prose was fixed. |
-| 2026-08-21 | `35f46112b` | `scripts/parity-run.sh` was invoked by NO gate, so the repository's declared headline froze on 2026-08-06 for fifteen days and nothing went red. `scripts/check-parity-freshness.py` fails past 14 days per logic (warn 10), wired into BOTH `scripts/check.sh` and the justfile's `check`. Parser classifies every `## ` header and exits 2 on one it does not recognise — a silently skipped entry is indistinguishable from an absent one, which is how a stale logic reads as fresh. 12 controls, every guard mutation-verified. |
 | 2026-08-21 | `45587c513` | QF_NIA gap #4 diagnosed. "Multi-year catch-up" confirmed for the search — three cheapest levers yield 0 / +1 / +3 files, 4× clock buys 0 of 20 timeouts — and three premises corrected: **cvc5 is on this host** (`/nas3/data/axeyum/harness/bin/cvc5`, not on `$PATH`; two docs say otherwise), **z3 is 60 files from cvc5 here** (136 vs 76, cvc5's set a strict subset), and **the deficit is one family** (`VeryMax/ITS` = 74 of 104 misses; excluding it, 74.4 % of cvc5). `int-blast-ladder` decisive on 158/161; its constant-fit rule leaves **1 live rung on 32 files, 0 decided**. Four per-file passes committed. |
 | 2026-08-21 | `b3ef9a965` | The refusal census picked the next thing to build, and it was not what the gap felt like. `(get-model)` declined 66 times over 400 corpus files and **58 were arrays**, against 6 uninterpreted-sort tokens; arrays now render as `(store … ((as const (Array I E)) default) …)` and the same census reads **166 rendered, 9 refused**. Also `DecidedQuery::proof_eligible`: a bounded-string `unsat` the gate did not confirm cannot draw an Alethe proof of the *packed* assertions. That one is defence in depth and says so — over 184 QF_S/QF_SLIA benchmarks, deleting it changes no answer, because the QF_BV emitter declines those shapes. |
 | 2026-08-21 | `81361cdd1` | Gap #3's items 2–4. `solve_smtlib_session` answers `get-model`, `get-value`, `get-unsat-core`, `get-proof`, `get-assertions` and `echo` at the command where they stand; `set-option` reports `unsupported` for every option it does not honour; `(set-logic NONSENSE_XYZ)` says `unsupported` and still decides, as z3 does. `solve_smtlib_incremental` became the same walk with the output commands off, so no verdict could move — A/B over all 1,430 tracked `.smt2` at a 10 s budget: 2 differences, both on files that finish in 9.7–11.8 s, both binaries agreeing three of three at 60–120 s. 34 tests; 23 guards deleted one at a time, 22 killed a test and 16 killed exactly one. |
@@ -462,468 +154,6 @@ now. Nothing was deleted.
 | 2026-08-21 | `3a509de54` | Carcara HAS array rules: `check_alethe` gains `arrays_idx`/`arrays_row` under Carcara's semantics, `prove_qf_abv_unsat_alethe` emits `arrays_idx` instead of a name Carcara rejects, and `portable_artifact` decides Alethe portability from the artifact's rule vocabulary rather than its variant. Six guards, each deletion killing exactly one test. |
 | 2026-08-21 | `4b0f001c7` | Built Carcara for the first time and ran the crosscheck suite: **5 of 79 tests failed**. Four hand-wrote stale `!fn_app_*` ids into the problem (fixed by reading them from the proof); the fifth found `bv_poly_simp` checked by neither checker. Adds the shipped ROW-same proof's Carcara acceptance, its negative control, and tamper rejection in both checkers. |
 | 2026-08-21 | `f9ccdcb9d` | `alethe_portability_probe`: the first committed tool behind the "externally checkable" figure, plus the per-`ArrayAxiomKind` census showing the array-axiom family unreachable at every rung and why. |
-| 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
-| 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |
-| 2026-08-21 | (pending) | The corrected residual exports twice byte-identically but is rejected with eight assumptions; all five direct theorem dependencies are clean, localizing the next audit to non-theorem declaration closure before any specialization or ledger write |
-| 2026-08-21 | (pending) | One non-rendering declaration-path read is frozen from the declined natAbs residual to its exact eight blockers before choosing replacement carriers |
-| 2026-08-21 | (pending) | The first path audit yields no durable report and receives zero credit; V4 freezes a five-nearest-carrier projection before one fresh read |
-| 2026-08-21 | (pending) | V4 completes slowly but again leaves no durable report; memoized closure reuse plus an explicit fail-if-present output contract are frozen before tool edits or another stream read |
-| 2026-08-21 | (pending) | The blocker auditor now caches each candidate closure once and writes a synced fail-if-present JSON report; three focused controls and Clippy pass without a proof-stream read |
-| 2026-08-21 | (pending) | One repaired-auditor run is frozen to a new durable external report path with exact input/tool hashes, eight blockers, zero rendering, and zero theorem or ledger authority |
-| 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
-| 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
-| 2026-08-21 | `98657cef7` | V2 source compiles but a direct exporter invocation yields an empty stream; V3 freezes the unchanged source and exact `lake env lean4export` command |
-| 2026-08-21 | `fb81c699c` | V3 exposes that `lean4export` is not installed by name; V4 freezes `lake env` plus the absolute pinned exporter path |
-| 2026-08-21 | `bc55d7d5b` | V4 is blocked by s5's user quota before any bytes exist; V5 freezes direct output to the writable shared evidence pack |
-| 2026-08-21 | `cfd23abfa` | V5 exports the function-parameterized rearrangement twice with empty footprint; exact three-capsule specialization is frozen before driver code exists |
-| 2026-08-21 | `339213b8e` | First composition declines at recursive `Nat.le` while importing recurrence into the tiny residual base; V2 freezes recurrence as the base before one code repair |
-| 2026-08-21 | `8fa456002` | V2 reaches an empty-footprint exact target but rejects a role-ordered expected dependency array; V3 freezes the lexical order repair |
-| 2026-08-21 | `3ad85619a` | V3 specializes and reimports the exact corollary empty-footprint; one hash-only sealed-stream read is frozen before admission authority exists |
-| 2026-08-21 | `4263b1c04` | Hash-only audit binds canonical type `2295adda…25ad`; exact three-dependency crash-safe admission is frozen before operation code or ledger write |
-| 2026-08-21 | `2f9dd5bef` | Exact capsule checker, operation registry, gate coupling, and transaction mutation control make the corollary uniquely executable with zero ledger writes |
-| 2026-08-21 | `e1e9a6d9b` | First apply preflight rejects an archived `--before-fact` before intent or write; V2 freezes the canonical fact path with unchanged transaction identities |
-| 2026-08-21 | `72a756086` | V2 correctly rejects receipt replay from a descendant checkout; V3 freezes a dedicated clean worktree at exact registration commit `2f9dd5bef` |
-| 2026-08-21 | `11ceccd8d` | V3 reaches apply preflight but rejects a cross-filesystem journal; V4 freezes a dedicated `/data0` journal beside the exact-commit worktree |
-| 2026-08-21 | `6dd5cd1c2` | V4 stops after durable intent with exit 75, recovery performs one write, and the exact corollary settles axiom-free with no newly ready descendants |
-| 2026-08-21 | `f6937f80d` | Complete immutable archive v4 binds all primary identities; one isolated clean semantic replay is frozen before execution |
-| 2026-08-21 | (pending) | Isolated replay repeats selection, exit-75 recovery, exact checked result, one write, and the empty readiness delta from source commit `6dd5cd1c2` |
-| 2026-08-21 | (pending) | The remaining `Int.fib_add_one` orientation is frozen as a function-parameterized right-cancellation residual before source construction or trusted execution |
-| 2026-08-21 | (pending) | V1 fails closed before source construction because it reverses the admitted recurrence summands; V2 freezes explicit clean commutativity plus right cancellation |
-| 2026-08-21 | (pending) | V2 fails closed before source construction because the final target equality needs symmetry; V3 freezes the exact `Eq.symm`, `Eq.trans`, and `congrArg` dependency set |
-| 2026-08-21 | (pending) | V3 reconstructs the function-parameterized `fib_add_one` residual twice byte-identically with an empty footprint; exact specialization remains unauthorized |
-| 2026-08-21 | (pending) | A same-kernel native capsule for `Int.add_comm` plus `Int.add_neg_cancel_right` is frozen before driver code so exact `fib_add_one` composition cannot mix incompatible theorem handles |
-| 2026-08-21 | (pending) | The native algebra-pair driver compiles and passes focused Clippy without executing the prelude build or writing a proof capsule |
-| 2026-08-21 | (pending) | One native build explicitly qualifies `Int.add_comm` and right cancellation through two fresh imports; the capsule is byte-identical to the earlier cancellation closure |
-| 2026-08-21 | (pending) | Exact `Int.fib_add_one` specialization is frozen across the admitted recurrence, explicitly qualified native algebra pair, and clean parameterized residual before driver code |
-| 2026-08-21 | (pending) | The exact add-one composition driver compiles and passes focused Clippy without reading proof streams or submitting the target |
-| 2026-08-21 | (pending) | Exact `Int.fib_add_one` specializes once, replays its composition receipts, survives two fresh imports, and has an empty footprint with zero ledger writes |
-| 2026-08-21 | (pending) | One hash-only sealed-stream read is frozen to bind exact `Int.fib_add_one` type identity before any admission authority exists |
-| 2026-08-21 | (pending) | Hash-only audit binds canonical `Int.fib_add_one` type `b9c99a22…41c6` with unchanged empty footprint and zero ledger authority |
-| 2026-08-21 | (pending) | Exact crash-safe `Int.fib_add_one` admission is frozen against its sealed four-dependency capsule before operation code or ledger mutation |
-| 2026-08-21 | (pending) | Exact capsule checker, operation registry, transaction assurance, and mutation controls make `Int.fib_add_one` uniquely executable with zero ledger writes |
-| 2026-08-21 | (pending) | Exit-75 intent fault leaves the fact unchanged; one recovery write admits exact `Int.fib_add_one`, and the complete immutable primary archive binds an empty readiness delta |
-| 2026-08-21 | (pending) | Isolated replay repeats selection, exit-75 recovery, exact checked result, one write, and the empty readiness delta from source commit `20ffd649b` |
-| 2026-08-21 | (pending) | `Int.fib_neg_natCast` is frozen as a parameterized join of recurrence-derived negative values and independent sign-power parity, before source construction or target submission |
-| 2026-08-21 | (pending) | V1 stops before export at one `Nat`/`Int` binder inference mismatch; V2 freezes only explicit natural-number annotations in both presentation contracts |
-| 2026-08-21 | (pending) | V2 cleanly reconstructs the conditional negative-Fibonacci join twice; only recurrence-derived negative values, sign-power alternation, and two multiplication leaves remain explicit |
-| 2026-08-21 | (pending) | The negative-value leaf is frozen as a two-constructor definitional proof over the already admitted target-owned `Int.fib`, testing whether recurrence is unnecessary at this boundary |
-| 2026-08-21 | (pending) | The presentation theorem is dependency-free, but V1 rejects its `Int.fib` identity against the official blocker hash; one exact two-stream compatibility audit is frozen against the admitted recurrence capsule |
-| 2026-08-21 | (pending) | The compatibility audit qualifies all 60 reported dependency carriers but omits the root by design; V2 freezes a generic non-rendering root declaration comparator before code exists |
-| 2026-08-21 | (pending) | Root comparison finds matching definition kinds and kernel type shapes but different complete bodies; one checked presentation-theorem composition is frozen before execution |
-| 2026-08-21 | (pending) | Checked composition transports the negative-value presentation into the admitted recurrence capsule, replays, and adds exactly one axiom-free theorem; sign-power parity is now the remaining mathematical leaf |
-| 2026-08-21 | (pending) | Minus-one power parity is frozen as a function-parameterized induction over four explicit algebra contracts and the already sealed modulo-parity supports, before source construction |
-| 2026-08-21 | (pending) | V1 fails closed before Lean execution because one exporter invocation cannot prove two-export determinism; V2 freezes the unchanged source with a consistent two-export budget |
-| 2026-08-21 | (pending) | V2 compiles the residual unchanged, but the first exporter finds no installed module; V3 freezes an explicit Lake module output before recompilation |
-| 2026-08-21 | (pending) | V3 exports twice byte-identically with an empty footprint and zero direct theorem dependencies, but rejects its overstated four-dependency contract; V4 freezes one fresh exact empty-dependency audit |
-| 2026-08-21 | (pending) | V4 qualifies the sealed parameterized minus-one parity induction with an empty footprint; four concrete Int power/multiplication leaves are frozen before source construction |
-| 2026-08-21 | (pending) | Native-leaf V1 stops at the absent unqualified `pow_succ`; V2 freezes only the protected `Int.pow_succ` name repair before source construction |
-| 2026-08-21 | (pending) | Native-leaf V2 yields three clean roots but `Int.pow_succ` reaches `propext`; V3 freezes the identical statement with a direct `rfl` proof |
-| 2026-08-21 | (pending) | V3 confirms negative Int power successor is not definitional because power itself branches on parity; the exact raw parity presentation is frozen as an `rfl` theorem instead |
-| 2026-08-21 | (pending) | Raw V1 exposes the remaining `1^k` normalization; V2 freezes a structural `Nat` one-power proof and explicit transport through the two definitional Int branches |
-| 2026-08-21 | (pending) | Raw V2 reaches only overloaded successor-power elaboration; V3 freezes an explicit `1^k * 1 = 1` goal before reusing the same induction hypothesis |
-| 2026-08-21 | (pending) | Raw V3 exposes multiplication by one as the next propositional layer; V4 freezes target-owned structural zero-add, multiply-one, and one-power before rebuilding the raw Int theorem |
-| 2026-08-21 | (pending) | Raw V4 reconstructs zero-add, multiply-one, one-power, and exact negative-one power parity with empty footprints; the successor-parity bridge is frozen before source construction |
-| 2026-08-21 | (pending) | Bridge V1 reconstructs empty-footprint but its anonymous function binder cannot enter named-declaration specialization; V2 freezes only the concrete `(-1)^k` substitution |
-| 2026-08-21 | (pending) | Bridge V2 reconstructs the concrete expression with four proof contracts and an empty footprint; exact raw/parity specialization is frozen before driver code |
-| 2026-08-21 | (pending) | Exact power parity specializes, replays, and survives two fresh imports with the registered five dependencies; the final two left-multiplication leaves are frozen before source construction |
-| 2026-08-21 | (pending) | Multiplication V1 finds the audited ring-law names absent from `Int.Basic`; V2 freezes only the narrow `Mathlib.Algebra.Ring.Int.Defs` import repair |
-| 2026-08-21 | (pending) | V2 shows clean abstract ring laws become `propext`-bearing through the Int instance; V3 freezes direct constructor-case computation instead |
-| 2026-08-21 | (pending) | V3 exposes four non-definitional constructor goals; native `Int.one_mul` and `Int.neg_one_mul` are frozen over the existing axiom-free prelude machinery before code |
-| 2026-08-21 | (pending) | Native `Int.one_mul` and `Int.neg_one_mul` check with empty footprints; their two-import root-capsule builder passes focused tests and Clippy without execution |
-| 2026-08-21 | (pending) | One 58,304-byte native left-unit/sign capsule exports and survives two fresh imports with both theorem footprints empty and zero ledger writes |
-| 2026-08-21 | (pending) | Exact `Int.fib_neg_natCast` composition is frozen as one concrete four-proof bridge over the five sealed bottom-up inputs before source construction |
-| 2026-08-21 | (pending) | V1 stops before bridge elaboration because the compiled residual module is outside Lake's search path; V2 freezes only an explicit shared-volume `LEAN_PATH` repair |
-| 2026-08-21 | (pending) | V2 resolves the import path but stops before elaboration at Lean's package-root check; V3 freezes only the documented shared-directory `--root` flag |
-| 2026-08-21 | (pending) | V3 accepts both driver repairs and exposes the absent target-owned `Int.fib` module; V4 freezes only importing its already sealed presentation source |
-| 2026-08-21 | (pending) | V4 exports deterministically but generic parity instance synthesis reaches `propext`; V5 freezes only explicit core `Nat.decEq` as the decision provider |
-| 2026-08-21 | (pending) | V5 shows official `Nat.decEq` still traverses proposition-equality carriers; V6 freezes a local structural Nat decider using only recursion and no-confusion |
-| 2026-08-21 | (pending) | V6 proves proposition `ite` retains its decision witness in kernel shape; the next join is frozen decision-free over explicit modulo-two branch evidence |
-| 2026-08-21 | (pending) | Decision-free residual and four adapters compile unchanged; V1 export omits their new olean directory and V2 freezes only the two-directory `LEAN_PATH` repair |
-| 2026-08-21 | (pending) | V2 qualifies the residual and both negative adapters; the shared broad import contaminates only power adapters, so V3 freezes a Basic-only module split |
-| 2026-08-21 | (pending) | V3 qualifies both Basic-only power adapters empty-footprint; V4 freezes root-only packaging of the already clean negative pair before exact composition |
-| 2026-08-21 | (pending) | V4 seals the negative pair in an empty-axiom root pack; exact seven-stream decision-free `Int.fib_neg_natCast` composition is frozen before driver code |
-| 2026-08-21 | (pending) | Exact decision-free driver compiles Clippy-clean with six replayed compositions, five replayed specializations, and two fresh imports required before write |
-| 2026-08-21 | (pending) | Exact `Int.fib_neg_natCast` specializes once, replays all eleven receipts, survives two fresh imports, and closes with an empty footprint and eight dependencies |
-| 2026-08-21 | (pending) | Hash-only identity audit of the sealed negative-natural theorem is frozen before its one reread; it will feed exact selected-fact `Int.fib_neg`, not create an ad hoc fact |
-| 2026-08-21 | (pending) | Canonical support type `8696d229…447dad` is bound empty-footprint; one nonpublishing official-root composition audit is frozen with it as the sole target leaf |
-| 2026-08-21 | (pending) | The target-leaf audit driver compiles Clippy-clean and preserves both caller kernels whether exact official-root composition accepts or declines |
-| 2026-08-21 | (pending) | Monolithic target-leaf composition exits without a durable report and gets zero credit; bounded target-owned `Int.eq_nat_or_neg` outer residual is frozen instead |
-| 2026-08-21 | (pending) | Outer V1 is deterministic but its broad-environment case-split helper is contaminated; V2 freezes direct `Int` constructor cases with no helper theorem |
-| 2026-08-21 | (pending) | Direct constructor V2 retains assumptions through exact `Even`/conditional type closure; one nonrendering nearest-carrier audit is frozen before parity infrastructure work |
-| 2026-08-21 | (pending) | Full residual carrier audit again yields no durable report; bounded root export of `Int.instDecidablePredEven` is frozen as the exact parity-decision boundary |
-| 2026-08-21 | (pending) | Bounded decision-root audit localizes every blocker family through `Int.even_iff`; one direct-dependency audit is frozen before its target-owned reconstruction |
-| 2026-08-21 | (pending) | `Int.even_iff` audit exposes private/simp contamination around clean arithmetic; an explicit two-implication residual is frozen before source construction |
-| 2026-08-21 | (pending) | Two-direction `Int.even_iff` residual exports twice empty-footprint with zero theorem dependencies; forward modulo and backward quotient witnesses are frozen next |
-| 2026-08-21 | (pending) | Official `Int.mul_emod_right` reaches `propext` and is rejected; V2 freezes direction residuals over explicit double-mod-zero and half-witness leaves |
-| 2026-08-21 | (pending) | Both direction residuals export twice empty-footprint; two bounded core division/modulo candidates are frozen for one direct audit before arithmetic construction |
-| 2026-08-21 | (pending) | Both general Int division/modulo candidates reach `propext`; target-owned Nat double-mod-zero and half-witness parity arithmetic are frozen before Int lifting |
-| 2026-08-21 | (pending) | Two parameterized natural parity residuals compile once under pinned Lean 4.30; qualification and all downstream integer work remain pending |
-| 2026-08-21 | (pending) | Exact shared-filesystem module build and two root exports are frozen before execution; no composition or ledger authority is included |
-| 2026-08-21 | (pending) | V2 stops before module output because the shared source lacks an explicit Lean package root; V3 freezes only `--root` before one corrected execution |
-| 2026-08-21 | (pending) | V3 exports both parameterized natural parity roots twice byte-identically and independently audits both empty-footprint; modulo-step specialization remains separate |
-| 2026-08-21 | (pending) | Exact checked specialization of both natural parity residuals with clean `modStepTwo` is frozen before driver code or stream execution |
-| 2026-08-21 | (pending) | Closure driver V1 stops before stream access at Clippy's line threshold; V2 freezes only one function-scoped allowance before rebuilding |
-| 2026-08-21 | (pending) | Closure driver V2 passes focused Clippy with every proof stream still unread; one fail-if-present invocation remains authorized |
-| 2026-08-21 | (pending) | Clean `modStepTwo` closes both natural parity residuals through replayed specialization; both targets survive two fresh imports empty-footprint |
-| 2026-08-21 | (pending) | Target-owned `Int.ofNat`/`Int.negSucc` lifts are frozen over the new Nat supports plus clean modulo cases/successor flips before source construction |
-| 2026-08-21 | (pending) | Constructor lift V1 reaches only unavailable `neg_add_rev` at the final line; V2 freezes its exact narrow-import replacement `Int.neg_add` |
-| 2026-08-21 | (pending) | Constructor lift V2 compiles both positive/negative integer parity contracts under narrow Basic; export and footprint qualification remain separate |
-| 2026-08-21 | (pending) | Exact root-mapped module build, two exports, and two independent lift audits are frozen before qualification execution |
-| 2026-08-21 | (pending) | Integer double-mod lift qualifies empty-footprint; half-witness is rejected at `propext`, and its five direct theorem dependencies are frozen for one audit |
-| 2026-08-21 | (pending) | Half-lift contamination localizes solely to `Int.neg_add`; V4 freezes a target-owned raw-constructor proof for negated natural doubling |
-| 2026-08-21 | (pending) | V4 transport stops before Lean because its new evidence-pack directory is absent; V5 freezes only exact directory creation before unchanged compilation |
-| 2026-08-21 | (pending) | V5 compiles the target-owned raw `intNegNatDoubleV2` replacement; revised support and both lift footprints remain unqualified |
-| 2026-08-21 | (pending) | Revised helper plus both integer lift roots are frozen for two exports and three independent audits before any Nat-support specialization |
-| 2026-08-21 | (pending) | Target-owned negated doubling removes `Int.neg_add`; helper plus both integer lifts qualify empty-footprint in a 53% smaller root capsule |
-| 2026-08-21 | (pending) | Exact five-contract specialization of both integer lifts is frozen over closed Nat support plus clean parity roots before driver code |
-| 2026-08-21 | (pending) | Closed integer arithmetic driver passes focused Clippy with all three proof streams unread; one fail-if-present invocation remains |
-| 2026-08-21 | (pending) | Five clean contracts close both integer parity arithmetic premises through replayed specialization and two fresh imports |
-| 2026-08-21 | (pending) | Both exact `Even n`/`n % 2 = 0` directions are frozen for specialization over the closed integer premises before driver code |
-| 2026-08-21 | (pending) | Exact direction driver passes focused Clippy with both proof streams unread; one fail-if-present composition remains |
-| 2026-08-21 | (pending) | Both exact integer evenness directions specialize, replay, and survive two fresh imports with empty footprints |
-| 2026-08-21 | (pending) | Exact-name clean `Int.even_iff` reconstruction is frozen over the two closed directions with mandatory target absence before driver code |
-| 2026-08-21 | (pending) | Exact-Iff driver V1 stops before stream access on Clippy's primitive stable sort; V2 freezes only `sort_unstable` |
-| 2026-08-21 | (pending) | Exact-Iff driver V2 passes focused Clippy with both streams unread; one exact-name invocation remains |
-| 2026-08-21 | (pending) | Exact-name `Int.even_iff` reconstructs from clean directions, replays, and survives two fresh imports with an empty footprint |
-| 2026-08-21 | (pending) | A reflexive theorem carrier is frozen to expose the exact decision-instance definition closure for later clean `Int.even_iff` target-leaf composition |
-| 2026-08-21 | (pending) | Decision carrier source compiles; V2 freezes a separate explicit-root module build and reproducible closure export |
-| 2026-08-21 | (pending) | Carrier closure confirms exact instance→helper→`Int.even_iff`; checked target-leaf replacement with the clean theorem is frozen before driver code |
-| 2026-08-21 | (pending) | Clean decision target-leaf driver passes focused Clippy with both streams unread; one fail-if-present composition remains |
-| 2026-08-21 | (pending) | Exact official integer-even decision instance reconstructs over clean `Int.even_iff`, replays, and survives two fresh imports with empty helper/carrier footprints |
-| 2026-08-21 | (pending) | Exact `Int.fib_neg` is frozen for official-root composition over clean natCast plus clean exact decision/`even_iff` leaves before driver code |
-| 2026-08-21 | (pending) | V1 fails closed before driver construction because the preregistered clean-natCast SHA was transcribed incorrectly; V2 freezes only the exact sealed-file hash correction |
-| 2026-08-21 | (pending) | V2 preflight finds the evidence-pack parent absent with the output still absent; V3 freezes exactly one directory creation before unchanged driver construction |
-| 2026-08-21 | (pending) | V3 exact-target driver passes focused Clippy with all three proof streams unread; one fail-if-present composition remains |
-| 2026-08-21 | (pending) | The one-shot official composition accepts clean support, then fails closed on `Int.fib_neg_natCast` type-shape mismatch with zero target/output writes; target-owned constructor-residual qualification is frozen next |
-| 2026-08-21 | (pending) | Clean constructor-residual driver passes focused Clippy with all three proof streams unread; one fail-if-present support composition remains |
-| 2026-08-21 | (pending) | Residual composition fails closed at broad-source `Lean.RArray`; a function-parameterized constructor residual is frozen to remove `Int.fib` and its implementation closure entirely |
-| 2026-08-21 | (pending) | Generic residual V1 stops before elaboration because Lean requires a project-root source; V2 freezes staging of the unchanged sealed source into the pinned Mathlib checkout |
-| 2026-08-21 | (pending) | Function-parameterized residual exports twice byte-identically with `Int.fib` and `Lean.RArray` absent from its selected closure; clean-kernel composition is frozen next |
-| 2026-08-21 | (pending) | Function-residual clean-composition driver passes focused Clippy with all three streams unread; one fail-if-present invocation remains |
-| 2026-08-21 | (pending) | Semantic composition still reaches `Lean.RArray`, disproving the prior raw-text absence check; a kernel declaration-path audit is frozen to correct coverage and localize the carrier |
-| 2026-08-21 | (pending) | Kernel path audit finds all 137 `Lean.RArray` carriers below source `Int.even_iff`; V2 freezes clean `Int.even_iff` as the explicit checked target leaf while retaining the exact decision helper/instance |
-| 2026-08-21 | (pending) | V2 target-leaf driver stops before stream access on Clippy's 103-line function threshold; V3 freezes only one scoped line-count allowance |
-| 2026-08-21 | (pending) | V3 adds only the scoped allowance and passes focused Clippy with all proof streams unread; one clean-`even_iff` target-leaf invocation remains |
-| 2026-08-21 | (pending) | Clean-`even_iff` target-leaf composition yields a 756,528-byte empty-footprint generic outer residual with replay and two fresh imports; both constructor branch residuals are frozen next |
-| 2026-08-21 | (pending) | Both parameterized constructor branches compile and export twice byte-identically on the first proof attempt; positive-cast and negation parity adapters are frozen next |
-| 2026-08-21 | (pending) | All three parity adapters compile, reproduce, and audit empty-footprint in a 382,856-byte capsule; exact integer negation wrappers are frozen before specialization |
-| 2026-08-21 | (pending) | First negation-wrapper build stops before export because two kernel display names are unavailable at the Lean surface; a fixed six-name probe is frozen before proof edits |
-| 2026-08-21 | (pending) | Fixed probe resolves exact Lean surface names `Int.neg_add` and `Int.neg_neg`; V2 freezes only those two wrapper-reference repairs |
-| 2026-08-21 | (pending) | Wrapper V2 rejects general `Int.neg_add` for `propext` while confirming `Int.neg_neg` clean; a constructor residual for the strictly needed negated-double law is frozen |
-| 2026-08-21 | (pending) | Constructor residual proves the strictly weaker negated-double law reproducibly and empty-footprint in 84,802 bytes; parity V2 freezes only that premise narrowing |
-| 2026-08-21 | (pending) | Parity V2 reproduces all three empty-footprint adapters using only negated doubling; exact four-step clean specialization is frozen before driver code |
-| 2026-08-21 | (pending) | Concrete-parity driver V1 stops before stream access on two nonexistent consuming-kernel APIs; V2 freezes only the established `kernel().clone()` replacements |
-| 2026-08-21 | (pending) | V2 applies exactly both kernel-transfer corrections and passes focused Clippy with all five streams unread; one fail-if-present invocation remains |
-| 2026-08-21 | (pending) | V2 invocation fails closed before composition on a transcribed lift SHA; V3 freezes only the observed sealed-file hash correction |
-| 2026-08-21 | (pending) | V3 applies only the sealed lift SHA correction and passes focused Clippy without rereading proof streams; one invocation remains |
-| 2026-08-21 | (pending) | V3 reaches `NoAdditions` because clean decision already contains `intNegNatDoubleV2`; exact two-stream reuse qualification is frozen before replacing that edge |
-| 2026-08-21 | (pending) | Two-stream audit proves `intNegNatDoubleV2` exact-declaration identical and empty-footprint in the target; V4 freezes exact reuse in place of composition |
-| 2026-08-21 | (pending) | V4 exact-reuse driver passes focused Clippy with all streams unread; one fail-if-present invocation remains |
-| 2026-08-21 | (pending) | V4 specializes, replays, exports, and twice reimports four concrete parity supports empty-footprint; both concrete Fibonacci constructor branches are frozen next |
-| 2026-08-21 | (pending) | Concrete-branch driver V1 stops before stream access on Clippy's immediate-push lint; V2 freezes only an order-preserving `vec!` rewrite |
-| 2026-08-21 | (pending) | V2 applies only the order-preserving vector rewrite and passes focused Clippy with all five streams unread; one invocation remains |
-| 2026-08-21 | (pending) | V2 stops before composition because a clean selected neg-neg root shares a stream with rejected neg-add; V3 freezes route-specific root assurance |
-| 2026-08-21 | (pending) | V3 checks the selected neg-neg root's empty footprint and exact identity, then passes focused Clippy with streams unread; one invocation remains |
-| 2026-08-21 | (pending) | V3 declines before composition because the residual stream has assumptions; an exact two-root footprint audit is frozen before deciding whether route-specific assurance is sound |
-| 2026-08-21 | (pending) | Both selected source residuals are propext-bearing through the Even decision closure; V4 freezes exact source identities and requires cleanliness only after checked clean-`Int.even_iff` target-leaf replacement |
-| 2026-08-21 | (pending) | V4 binds both contaminated source identities and the exact clean destination leaf, then passes fmt and focused Clippy with streams unread; one invocation remains |
-| 2026-08-21 | (pending) | V4 replaces the contaminated decision leaf, specializes both concrete constructor branches empty-footprint, exports 821,459 bytes, and freshly reimports twice unchanged |
-| 2026-08-21 | (pending) | The final exact `Int.fib_neg` join is frozen: compose the clean function residual into both concrete branches and specialize once under the official name before any ledger authority |
-| 2026-08-21 | (pending) | Exact-join driver V1 stops before stream access on Clippy's 100-line threshold; V2 freezes only a scoped line-count allowance |
-| 2026-08-21 | (pending) | Exact-join V2 applies only the scoped allowance and passes fmt plus focused Clippy with both streams unread; one invocation remains |
-| 2026-08-21 | (pending) | Exact `Int.fib_neg` specializes axiom-free, exports an 826,942-byte capsule, and freshly imports twice unchanged; one canonical goal-identity audit is frozen before ledger authority |
-| 2026-08-21 | (pending) | Hash-only audit binds exact `Int.fib_neg` to canonical type `08d500fc...`, unchanged declaration identity, empty footprint, and three constructed dependencies; admission registration is next |
-| 2026-08-21 | (pending) | Exact `Int.fib_neg` crash-safe admission is frozen against the sealed capsule identities before pack sealing, operation code, or ledger mutation |
-| 2026-08-21 | (pending) | Initial operation validation rejects the unregistered fact scope and exposes missing standard audit-state counters; the schema correction remains pre-authority and pre-ledger |
-| 2026-08-21 | (pending) | Sealed `Int.fib_neg` checker, exact operation contract, transaction semantics, and mutation controls pass with the fact still open; crash-safe execution is next |
-| 2026-08-21 | (pending) | First clean frontier refuses `Int.fib_neg` on two historical live gate mentions; exact review adds the root-audit and downstream theorem-control gates before regenerating authority |
-| 2026-08-21 | (pending) | Crash-safe recovery admits exact `Int.fib_neg` with one authoritative write; the measured delta newly readies `Int.gcd_fib`, correcting the preregistered zero-unlock expectation |
-| 2026-08-21 | (pending) | Immutable primary evidence and an isolated clean replay reproduce every `Int.fib_neg` frontier, receipt, transaction, event, and readiness identity exactly |
-| 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
-| 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
-| 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
-| 2026-08-21 | (pending) | The Lean surface exposes four borrow goals; native `Int.add_neg_cancel_right` is derived instead from Axeyum's axiom-free associativity, inverse, and zero laws |
-| 2026-08-21 | `93a314e15` | A fresh pinned Mathlib 4.30 two-root export is frozen to replace the failed full-closure corollary audit |
-| 2026-08-21 | (pending) | The two-root export remains 15.1 MB and its audit emits no report, so official closure import is declined in favor of target-owned rearrangement |
-| 2026-08-21 | `6f10d2c1a` | The two newly ready integer Fibonacci recurrence corollaries are frozen for one exact non-rendering root audit before route selection |
-| 2026-08-21 | (pending) | The single full-closure audit emits no report and receives no retry; the route moves to a fresh bounded two-root export |
-| 2026-08-21 | `c254e3c9a` | Crash-safe recovery admits exact `Int.fib_add_two` with one authoritative write and makes two integer Fibonacci descendants newly ready |
-| 2026-08-21 | (pending) | Immutable primary evidence and an isolated clean replay seal the exact recurrence admission and reproduce its two-fact readiness delta |
-| 2026-08-21 | `c4c6524ac` | Exact `Int.fib_neg` root audit is frozen against the pinned clean exporter environment with zero reconstruction or ledger authority |
-| 2026-08-21 | (pending) | One root export and non-rendering importer pass find 26 direct dependencies and an assumption-bearing official `Int.fib_neg` proof |
-| 2026-08-21 | `1c728c757` | Exact 26-root dependency descent is frozen against the immutable `Int.fib_neg` stream with zero theorem authority |
-| 2026-08-21 | (pending) | Dependency classification splits 14 clean outer supports from 12 contaminated roots and localizes the next frontier to `Int.fib_neg_natCast` |
-| 2026-08-21 | `8dab71109` | Exact 36-root negative-natural Fibonacci descent is frozen before its one non-rendering stream reread |
-| 2026-08-21 | (pending) | Negative-natural classification preserves 18 clean transport supports and localizes the Fibonacci core to `Int.fib_of_odd` |
-| 2026-08-21 | `e9817256a` | The sole private `Int.fib_of_odd` dependency is frozen for one final non-rendering qualification |
-| 2026-08-21 | (pending) | Private-root audit exposes 37 automation dependencies and selects direct target-owned recurrence instead of solver-internal descent |
-| 2026-08-21 | `a01ee6d07` | Two open recurrence supports are frozen for qualification before they may enter the negative-index proof |
-| 2026-08-21 | (pending) | Parent-closure batch fails with zero completed audit and selects a fresh root export for dependency-free `Int.fib_natCast` |
-| 2026-08-21 | `8107bfa44` | Dedicated root audit selects dependency-free `Int.fib_natCast` and freezes one direct definitional construction |
-| 2026-08-21 | `89d97d476` | Corrected build-library-root execution is frozen after the first export-path failure without changing the proof |
-| 2026-08-21 | (pending) | Direct `rfl` theorem reproduces twice but retains nine assumptions, localizing the obstruction to official `Int.fib` itself |
-| 2026-08-21 | `eda6359ea` | One reusable non-rendering batch path auditor and exact `Int.fib` blocker audit are frozen before stream access |
-| 2026-08-21 | `f50e55508` | Absent-aware retry is frozen after theorem footprint and definition closure diverge at `Quot.ind` |
-| 2026-08-21 | `d1a17a762` | Target-owned constructor/parity replacement for official `Int.fib` is frozen before its single construction attempt |
-| 2026-08-21 | (pending) | Exact `Int.fib_natCast` reconstructs twice axiom-free over the 374 KB clean target-owned representation closure |
-| 2026-08-21 | `b689c548d` | Hash-only goal-identity audit is frozen before its tool exists or the sealed clean integer Fibonacci stream is reread |
-| 2026-08-21 | `09ddeb5b8` | One non-rendering sealed-stream read binds the exact canonical theorem type hash with unchanged empty footprint and zero ledger authority |
-| 2026-08-21 | `1ebf8e8e0` | Exact crash-safe `Int.fib_natCast` admission is frozen against its sealed capsule before operation code or ledger mutation |
-| 2026-08-21 | `e4d92ddb0` | An exact authoritative operation binds the clean integer Fibonacci capsule, theorem identity, and empty-footprint admission contract |
-| 2026-08-21 | `bd55299d4` | First transaction preparation fails closed because the generic capsule path required nonempty dependencies and two submissions; exact zero-dependency definitional assurance is added with mutation coverage |
-| 2026-08-21 | `4309e904f` | Crash-safe recovery admits exact `Int.fib_natCast` with one authoritative write and makes exact `Int.fib_add_two` newly ready |
-| 2026-08-21 | `c0092fb89` | Immutable primary evidence and isolated clean replay seal the exact `Int.fib_natCast` admission and its one-fact readiness delta |
-| 2026-08-21 | `c99a5c237` | Direct target-owned `Int.fib_add_two` construction is frozen after its premise becomes ready and before source or execution exists |
-| 2026-08-21 | `e7285abf2` | First recurrence source closes nonnegative and boundary cases, then stops at two explicit negative-successor normalization goals with zero submission or retry |
-| 2026-08-21 | `2a731be9b` | V2 freezes only explicit negative-constructor addition and hypothesis normalization before a new source exists |
-| 2026-08-21 | `aa9a3cfda` | V2 removes constructor-addition opacity but retains two explicit parity-branch sign identities with zero submission or retry |
-| 2026-08-21 | `1f40d30d7` | V3 freezes three named parity equalities and explicit conditional rewriting before its source exists |
-| 2026-08-21 | `4278c8f43` | V3 closes all parity and Fibonacci obligations and isolates exactly two additive-group normalization goals |
-| 2026-08-21 | `4278c8f43` | V4 freezes deterministic abelian normalization after all substantive recurrence reasoning |
-| 2026-08-21 | (pending) | V4 stops at the unavailable tactic before elaboration; V5 freezes only the narrow Abel import plus mandatory footprint audit |
-| 2026-08-21 | `f2057f744` | V5 compiles and reproduces but fails closed with a seven-name assumption footprint; all 23 direct dependencies are frozen for one audit |
-| 2026-08-21 | (pending) | One read splits nine clean dependencies from fourteen assumption carriers and freezes a seven-contract residualization route with zero closed-target authority |
-| 2026-08-21 | (pending) | First seven-contract source closes the natural and parity interfaces, then stops at retained negative-constructor matches; V2 freezes explicit conditional presentation only |
-| 2026-08-21 | (pending) | V2 exposes both negative conditionals and stops only at the two mis-parenthesized algebra contracts; V3 freezes their exact post-rewrite shapes |
-| 2026-08-21 | (pending) | V3 compiles the complete seven-contract theorem, then its sole exporter call fails before writing because `lean` is absent from PATH; V4 freezes the unchanged source under pinned `lake env` |
-| 2026-08-21 | (pending) | V4 resolves the exporter runtime but finds no compiled module; V5 freezes an explicit `.lake/build/lib/lean` output path for the unchanged theorem |
-| 2026-08-21 | (pending) | V5 reconstructs the seven-contract integer recurrence in a 447,839-byte capsule with two identical imports, six clean dependencies, and an empty footprint |
-| 2026-08-21 | (pending) | Six elementary residual leaves are frozen for an Omega/rfl proposal whose root-selected kernel audit, not tactic success, decides reuse |
-| 2026-08-21 | (pending) | V1 stops before elaboration because the narrow Omega object is absent; V2 freezes only the already-built umbrella `Mathlib` import |
-| 2026-08-21 | (pending) | V2 proves the three parity leaves but stops where Omega cannot see cast addition; V3 freezes only a definitional `rfl` cast proof |
-| 2026-08-21 | (pending) | V3 admits only definitional cast addition as clean and rejects five Omega proposals carrying propext plus Quot/String assumptions |
-| 2026-08-21 | (pending) | Two rejected sign identities are frozen for direct additive-cancellation proofs with all broad automation forbidden |
-| 2026-08-21 | (pending) | Direct cancellation stops at two unavailable generic names; a fixed eight-candidate integer declaration probe is frozen before retrying proof code |
-| 2026-08-21 | (pending) | The probe resolves four integer cancellation types; V2 freezes direct odd cancellation and explicit negation transport for the even identity |
-| 2026-08-21 | (pending) | Both direct algebra leaves compile but retain propext; one sealed-stream read is frozen to classify their seven distinct dependencies |
-| 2026-08-21 | (pending) | Four transports are clean while integer commutativity and cancellation retain propext; their eight nearest parents are frozen for one final descent |
-| 2026-08-21 | (pending) | Parent descent finds clean Nat commutativity, integer zero, and negation transport; exact target-owned constructor proofs replace the contaminated integer algebra layer next |
-| 2026-08-21 | (pending) | Primitive V1 exposes `Int.subNat`'s two-index reduction boundary; V2 freezes clean zero rewrites plus generalized successor case splits |
-| 2026-08-21 | (pending) | Primitive V2 confirms public integer operations stay opaque after constructor splits; eight kernel-level arithmetic carriers are frozen for one composition audit |
-| 2026-08-21 | (pending) | Private integer associativity remains tied to proposition-equality simp; three lower `subNat` computation theorems are frozen as the prospective clean substrate |
-| 2026-08-21 | (pending) | All three `subNat` conveniences remain propext-bearing; nine raw branch and constructor lemmas are frozen to select the true kernel composition boundary |
-| 2026-08-21 | (pending) | Nine branch conveniences are rejected, exposing eight raw computation/constructor roots for the final diagnostic descent and wrapper-free composition stop rule |
-| 2026-08-21 | (pending) | Five raw integer computation/constructor roots are empty-footprint; descent stops and a three-name type probe begins the upward cancellation reconstruction |
-| 2026-08-21 | (pending) | Raw zero/successor `subNatNat` types align with odd/even cancellation; wrapper-free upward composition is frozen before source construction |
-| 2026-08-21 | (pending) | Raw composition V1 stops at opaque Add/Neg projections before arithmetic; V2 freezes definitional projection reduction only |
-| 2026-08-21 | (pending) | V2 exposes concrete `Int.add`/`Int.neg` methods; V3 freezes their direct definitional reduction with the arithmetic proof unchanged |
-| 2026-08-21 | (pending) | V3 reaches explicit `Int.negOfNat` constructor matches; V4 freezes the final natural zero/successor split into raw `subNatNat` branches |
-| 2026-08-21 | (pending) | V4 closes five of six raw constructor branches; V5 freezes only `Nat.zero_add` plus overloaded-zero reduction in the last branch |
-| 2026-08-21 | (pending) | V5 reaches one raw `Nat.add 0 z` node; V6 freezes exact equality transport through `Nat.succ` instead of a generic rewrite |
-| 2026-08-21 | (pending) | V6 compiles wrapper-free raw cancellation but both roots retain propext; six remaining Nat helpers are frozen for exact classification |
-| 2026-08-21 | (pending) | Four Nat helpers are clean; V7 replaces the two propext subtraction conveniences with direct structural recursion and removes commutativity detours |
-| 2026-08-21 | (pending) | V7's local recursions stop at overloaded Nat operations; V8 freezes explicit `Nat.add`/`Nat.sub` propositions with all integer branches unchanged |
-| 2026-08-21 | (pending) | V8 finds named Nat functions still opaque; V9 freezes explicit recursion unfolding only inside the two local helper inductions |
-| 2026-08-21 | (pending) | V9 exposes predecessor-oriented `Nat.sub`; exact `add_sub_cancel` and `sub_self_add` candidates are frozen for a two-name type probe |
-| 2026-08-21 | (pending) | Two exact-oriented Nat subtraction equations are bound; V10 freezes direct use plus clean commutativity transport in the unchanged integer proof |
-| 2026-08-21 | (pending) | V10 compiles but retains propext through oriented Nat subtraction; the two exact roots are frozen for nearest-boundary classification |
-| 2026-08-21 | (pending) | Both oriented Nat equations are propext-bearing; two add/sub translation roots plus zero subtraction are frozen for the next clean boundary |
-| 2026-08-21 | (pending) | Zero subtraction is clean while translation simp is not; successor subtraction and addition recurrence roots are frozen for target-specific induction |
-| 2026-08-21 | (pending) | Existing closure lacks `Nat.add_succ`, so the audit fails closed; a fresh pinned two-root recurrence export is frozen before classification |
-| 2026-08-21 | (pending) | Fresh export proves both Nat recurrence roots empty-footprint; V11 freezes explicit target-specific subtraction induction over them |
-| 2026-08-21 | (pending) | V11 reconstructs both integer cancellation leaves empty-footprint; only three parity contracts remain before closed recurrence composition |
-| 2026-08-21 | (pending) | Parity V1 compiles but all roots inherit propext from `Nat.add_mod`; its single dependency closure is frozen for descent |
-| 2026-08-21 | (pending) | `Nat.add_mod` localizes to two directional modulo normalizers; both are frozen for clean specialization selection |
-| 2026-08-21 | (pending) | Both modulo normalizers retain propext; `add_mul_mod_self_left` and `mod_add_div` are frozen as the underlying arithmetic core |
-| 2026-08-21 | (pending) | General modulo arithmetic remains propext-bearing; V2 freezes a target-only two-step modulo-two recursion with all conveniences forbidden |
-| 2026-08-21 | (pending) | V2's parity recursion reaches only opaque `(k+2)%2`; V3 freezes explicit Nat add/mod unfolding inside the two local step proofs |
-| 2026-08-21 | (pending) | V3 cannot see `Nat.add` through overloaded projections; V4 freezes projection reduction before the same modulo unfold |
-| 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
-| 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
-| 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
-| 2026-08-21 | `d357b3307` | A registered sealed-capsule operation makes the frontier select exactly `Nat.fib_gcd` |
-| 2026-08-21 | `e242b72b3` | Crash-safe recovery admits exact `Nat.fib_gcd` with one authoritative write and unlocks `Nat.fib_dvd` |
-| 2026-08-21 | (pending) | Immutable primary evidence and isolated clean replay seal the exact `Nat.fib_gcd` admission |
-| 2026-08-21 | `fa143f3ec` | Exact `Nat.fib_dvd` reconstructs twice byte-identically from `Nat.fib_gcd` and five target-owned divisibility laws |
-| 2026-08-21 | `e8861458e` | A sealed-capsule operation makes the frontier select exactly the newly ready Fibonacci divisibility fact |
-| 2026-08-21 | `733126c0f` | Crash-safe recovery admits exact `Nat.fib_dvd` with one authoritative write and an honest empty unlock set |
-| 2026-08-21 | (pending) | Immutable primary evidence and isolated clean replay seal the exact `Nat.fib_dvd` leaf admission |
-| 2026-08-21 | `9ff54f11c` | Six clean order/divisibility supports reconstruct twice over r091 with empty footprints and byte-identical capsules |
-| 2026-08-21 | `dfc8874ca` | Target-owned divisibility addition and divisor-of-one supports reconstruct reproducibly without importing `Iff` |
-| 2026-08-21 | `5cdd964ba` | Divisibility reflexivity and multiplication utilities reconstruct twice and bind sealed evidence |
-| 2026-08-21 | `30d2c89b6` | Nonrendering parameter audit selects the official-representation successor GCD equation and typechecks all seven explicit inputs |
-| 2026-08-21 | `527508a56` | Target-owned `gcd_dvd_left`, `gcd_dvd_right`, and `dvd_gcd` reconstruct twice with byte-identical empty-footprint evidence |
-| 2026-08-21 | `71ba9fb1c` | Consecutive-Fibonacci coprimality reconstructs target-natively without `Iff` or foreign GCD convenience theorems |
-| 2026-08-21 | `dfa79618c` | Exact `Nat.gcd_fib_add_self` reconstructs twice with byte-identical empty-footprint evidence over the target-owned stack |
-| 2026-08-21 | `a475f13dd` | Sealed-capsule operation registration binds the exact target identity and reviews every gate coupling before dispatch |
-| 2026-08-21 | `07b0794ae` | Crash-safe recovery admits `Nat.gcd_fib_add_self` with one authoritative write and an empty kernel footprint |
-| 2026-08-21 | `dbfd95dce` | Immutable primary archive and isolated clean replay seal the Fibonacci GCD-shift admission |
-| 2026-08-21 | `916f32dbf` | Exact `Nat.gcd_greatest` reconstructs twice from four named premises with byte-identical empty-footprint evidence |
-| 2026-08-21 | `6e112b4bc` | The generic sealed-capsule operation driver registers the exact GCD universal-property theorem |
-| 2026-08-21 | `0b7f23e9b` | Crash-safe recovery admits `Nat.gcd_greatest` with one authoritative write and an empty kernel footprint |
-| 2026-08-21 | `fc191b3e5` | Full stable statement-survival atlas is preregistered before the one authorized comparison pass |
-| 2026-08-21 | `7edebb579` | Full Nat/Int atlas classifies all 9,839 v4.30/v4.32.1 union names and isolates representation-wide drift |
-| 2026-08-21 | `030d82adb` | First proof-isolated joint quotient/remainder reconstruction fails closed with a measured `propext` footprint |
-| 2026-08-21 | `ed3a69efb` | Direct-dependency footprint audit is frozen before its one importer pass |
-| 2026-08-21 | `2ae095f07` | The joint invariant's sole assumption carrier is localized to `Nat.sub_add_cancel` |
-| 2026-08-21 | `d204ddd51` | Local primitive-recursive subtraction restoration is selected as the exact replacement |
-| 2026-08-21 | `94b62795d` | The one missing primitive subtraction equation is bound proof-free |
-| 2026-08-21 | `7c7bb1f54` | The private joint Euclidean invariant reconstructs twice with an empty footprint |
-| 2026-08-21 | `bc529aab9` | Transparent public wrapper lift is preregistered before source execution |
-| 2026-08-21 | `aded65e22` | Wrapper lift fails closed at opaque official division before kernel submission |
-| 2026-08-21 | `47322738b` | Synchronized public quotient/remainder recursion is preregistered |
-| 2026-08-21 | `653cd1518` | Exact public recursion compiles but fails its first kernel gate through generated `_unary` |
-| 2026-08-21 | `54cdc1375` | Primitive bounded induction is frozen as the generated-recursion replacement |
-| 2026-08-21 | `cf41dba10` | Primitive induction removes generated recursion but retains one explicit `propext` footprint |
-| 2026-08-21 | `75c7668c2` | The complete 22-dependency footprint audit is preregistered before execution |
-| 2026-08-21 | `6e5779f0f` | One importer pass localizes the public proof footprint to `Nat.div_eq` and `Nat.mod_eq` |
-| 2026-08-21 | `5599832dd` | Public equation closure shows quotient fuel congruence clean and proposition/remainder wrappers contaminated |
-| 2026-08-21 | `c108486b4` | Target coprime shortcut declines through quotient and proposition axioms |
-| 2026-08-21 | `8e78f75e9` | Reusable ordered batch auditor reports identities, dependencies, and kernel footprints without proof rendering |
-| 2026-08-21 | `7e20d5288` | Seven subtractive gcd convenience roots all decline and expose an exact 17-name dependency union |
-| 2026-08-21 | `15398b7a9` | Fourteen-root descent splits seven clean helpers from seven gcd/proposition carriers |
-| 2026-08-21 | `327e4952c` | Pruned gcd route exposes the generated private recursion equation carrier |
-| 2026-08-21 | `748a3457b` | Generated gcd equation carrier narrows to three previously unmeasured dependencies |
-| 2026-08-21 | `656538cf9` | `WellFounded.Nat.fix_eq` is isolated as the sole generated gcd assumption carrier |
-| 2026-08-21 | `a3bc37896` | One direct public `Nat.gcd_def` compilation declines in both opaque constructor branches |
-| 2026-08-21 | `a87967970` | Exact Mathlib 4.30 extended-gcd root audit is bound to the clean `s5` export environment |
-| 2026-08-21 | `2fd42c900` | Official `Nat.gcd_eq_gcd_ab` declines with a measured Quotient-plus-`propext` footprint |
-| 2026-08-21 | `f611d3ffb` | All twelve direct extended-gcd theorem dependencies are frozen before rereading the sealed stream |
-| 2026-08-21 | `550badedf` | Eight clean helpers split from three contaminated xgcd coefficient roots and `eq_self` |
-| 2026-08-21 | `70eff2366` | Seventeen novel xgcd dependencies are preregistered while identity-matched clean `Eq.symm` is reused |
-| 2026-08-21 | `17cf9888b` | Imported xgcd projection routes close while empty-footprint `Nat.gcd.induction` remains available |
-| 2026-08-21 | `9485270f6` | One direct `rfl` reconstruction of public `Nat.xgcd_val` is frozen before source execution |
-| 2026-08-21 | `9f135d4f0` | The first execution ends before elaboration at Lean's package-root boundary without retry |
-| 2026-08-21 | `7f0f25baa` | Corrected rooted execution binds exact temporary paths and two-sided checkout cleanliness |
-| 2026-08-21 | `1e74d4601` | Full-status preflight preserves three pre-existing untracked sources and performs zero execution |
-| 2026-08-21 | `3cf835d15` | The exact three-file `s5` baseline is bound before the baseline-preserving projection run |
-| 2026-08-21 | `de5264b64` | A twice-imported `rfl` theorem still reaches `propext`, closing the public xgcd coefficient surface |
-| 2026-08-21 | (pending) | Generic official-gcd balanced Bézout bypasses public quotient and binds clean gcd leaves as specialization parameters before execution |
-| 2026-08-21 | (pending) | First generic balanced-Bézout source stops at three compiler diagnostics with zero export/import and exact baseline cleanup |
-| 2026-08-21 | (pending) | Corrected generic balanced-Bézout source binds direct Nat.mod equations and coefficient-scoped transport before execution |
-| 2026-08-21 | (pending) | V2 stops at dependent-conditional and definitional-shape diagnostics with zero export/import and exact cleanup |
-| 2026-08-21 | (pending) | V3 binds positivity reduction, normalized congrArg types, and induction-hypothesis change before execution |
-| 2026-08-21 | (pending) | V3 compiles but first audit localizes Quotient axioms to funext/conditional rewriting and propext to ring normalization |
-| 2026-08-21 | (pending) | Pointwise V4 quotient witness forbids binder rewriting, function equality, public division, and ring before execution |
-| 2026-08-21 | (pending) | Pointwise V4 quotient witness reconstructs twice with byte-identical empty footprints and seals exact evidence |
-| 2026-08-21 | (pending) | Explicit four-Nat balanced-Bézout Euclidean update is frozen before its one authorized compilation |
-| 2026-08-21 | (pending) | Explicit update compiles but its first audit retains one `propext`; exact nine-dependency descent replaces source guessing |
-| 2026-08-21 | (pending) | Exact nine-root dependency-local audit is frozen before one non-rendering sealed-stream read |
-| 2026-08-21 | (pending) | One sealed-stream read localizes the V1 footprint exactly to `Nat.mul_assoc` and `Nat.right_distrib` |
-| 2026-08-21 | (pending) | V2 injects exactly two clean leaf contracts while retaining the explicit balanced-Bézout update chain |
-| 2026-08-21 | (pending) | Parameterized V2 Euclidean update reconstructs twice with byte-identical empty footprints and no contaminated leaves |
-| 2026-08-21 | (pending) | Primitive-induction target-owned replacements for the two contaminated multiplication leaves are frozen before execution |
-| 2026-08-21 | (pending) | Both target-owned multiplication leaves reconstruct twice with empty footprints, closing the V2 parameter gap |
-| 2026-08-21 | (pending) | Exact three-theorem wrapper is frozen to close the balanced-Bézout Euclidean update before gcd induction |
-| 2026-08-21 | (pending) | Closed Euclidean update reconstructs twice empty-footprint with exactly the accepted update and two leaf dependencies |
-| 2026-08-21 | `99ea0b1e7` | Clean official-gcd balanced-Bézout induction is frozen with only two gcd computation leaves still explicit |
-| 2026-08-21 | `c8fae7455` | Generic official-gcd balanced-Bézout reconstructs twice with an empty footprint and preserves zero specialization authority |
-| 2026-08-21 | `0e23382f8` | Dependency-bound closure freezes exact accepted zero-left and successor gcd identities before implementation |
-| 2026-08-21 | `496e916b8` | First closed specialization declines at an exact `WellFounded.fix` type-shape mismatch with zero retry or theorem credit |
-| 2026-08-21 | `7550b31c4` | Proof-free `WellFounded.fix` closure audit is frozen before code or stream access |
-| 2026-08-21 | `96a6a4c34` | Twice-reproduced audit selects official-kernel gcd-leaf reconstruction over native representation transport |
-| 2026-08-21 | `3e6373de5` | Pointwise official-representation gcd zero-left reconstruction is frozen before compilation |
-| 2026-08-21 | `0a73f8458` | Source compiles but unbounded 340 MB export hits the unchanged two-million-record importer ceiling |
-| 2026-08-21 | `b866b31ee` | Exact theorem-root exporter retry is frozen with unchanged proof and importer limit |
-| 2026-08-21 | `dfcff00d1` | Root-selected zero-left gcd reconstructs twice with an empty footprint and only its local model dependency |
-| 2026-08-21 | `fb1a3613e` | Official-representation successor gcd root export is frozen without double-counting the native-support theorem |
-| 2026-08-21 | `9ec4bcfa1` | Official-representation successor gcd reconstructs twice empty-footprint, completing the leaf pair for composition |
-| 2026-08-21 | `1d03f09b3` | Five-stream official-kernel balanced-Bézout composition is frozen before implementation |
-| 2026-08-21 | `f1e0edb57` | Dedicated official-kernel driver compiles Clippy-clean and passes the full importer test suite without stream execution |
-| 2026-08-21 | `47343f64f` | First official-kernel invocation declines at missing recursive `Acc`; reverse composition base is selected with zero theorem credit |
-| 2026-08-21 | `2d62fc4a7` | Generic-kernel-base reversal is frozen with the same five streams and zero downstream authority |
-| 2026-08-21 | `c4bf44f90` | Reverse-direction driver compiles Clippy-clean with generic composition removed and no execution |
-| 2026-08-21 | (pending) | First generic-base run finds `Nat.mod_lt` already present; exact reuse replaces a zero-addition composition |
-| 2026-08-21 | `7e4af7cde` | Exact `Nat.mod_lt` identity reuse and the remaining three-root composition are frozen before code or stream access |
-| 2026-08-21 | `384826f41` | Exact-reuse driver compiles Clippy-clean, passes the full importer suite, and clears both full remote push gates without stream execution |
-| 2026-08-21 | (pending) | Exact `Nat.mod_lt` reuse closes official-representation balanced Bézout twice with byte-identical empty-footprint evidence |
-| 2026-08-21 | `3c2a2b29e` | Generic coprime-factor cancellation is frozen over an explicit balanced-Bézout parameter before source construction |
-| 2026-08-21 | (pending) | First generic cancellation source stops before elaboration at an unbound local module and restores the exact baseline |
-| 2026-08-21 | `cce486823` | Self-contained cancellation V2 freezes the same proof with only its four-natural certificate definition inlined |
-| 2026-08-21 | (pending) | Self-contained cancellation reconstructs twice deterministically but localizes its rejected footprint to `propext` |
-| 2026-08-21 | `efe97708a` | All seventeen direct cancellation dependencies are frozen before one non-rendering sealed-stream audit |
-| 2026-08-21 | (pending) | One exact audit splits eleven clean cancellation dependencies from six `propext` carriers |
-| 2026-08-21 | `4c81f2ce2` | Residual cancellation freezes direct witness replacements and leaves exactly three explicit theorem parameters |
-| 2026-08-21 | (pending) | Residual replay accepts the additive witness but retains one unexpected multiplicative-witness `propext` edge |
-| 2026-08-21 | `352a9c12a` | The multiplicative witness's exact three theorem dependencies are frozen before one same-stream audit |
-| 2026-08-21 | (pending) | Same-stream audit identifies `Nat.mul_assoc` as the witness's sole direct assumption carrier |
-| 2026-08-21 | `1d51489c7` | Residual V2 freezes exact multiplication-associativity parameterization before source construction |
-| 2026-08-21 | (pending) | Residual V2 reconstructs both witness leaves and four-parameter cancellation twice empty-footprint |
-| 2026-08-21 | `c9379241e` | All-Nat additive cancellation adapter is frozen as zero-divisor witness elimination plus positive successor delegation |
-| 2026-08-21 | (pending) | The all-Nat adapter reconstructs twice empty-footprint with only positive-divisor cancellation explicit |
-| 2026-08-21 | `dd15493b6` | Official cancellation composition is frozen across eight streams and one native positive-divisor leaf before code |
-| 2026-08-21 | (pending) | Eight-stream cancellation driver compiles Clippy-clean and passes the full importer suite without stream execution |
-| 2026-08-21 | (pending) | First official-cancellation run finds both multiplication leaves already present; checked exact reuse replaces the zero-addition composition |
-| 2026-08-21 | (pending) | Exact identity and kernel-type-shape reuse for both multiplication leaves is frozen before code or stream access |
-| 2026-08-21 | (pending) | Revised cancellation driver reuses both exact leaves without composition and passes the focused importer gate without stream execution |
-| 2026-08-21 | (pending) | Official coprime-factor divisibility cancellation reconstructs twice byte-identically with an empty footprint and exact five-theorem dependency set |
-| 2026-08-21 | (pending) | Five direct dependencies beneath assumption-bearing `Nat.dvd_antisymm` are frozen for one nonrendering audit before the gcd-shift target |
-| 2026-08-21 | (pending) | One exact audit localizes `Nat.dvd_antisymm`'s sole `propext` carrier to `Nat.le_of_dvd`; four direct dependencies are clean |
-| 2026-08-21 | (pending) | Clean native `le_of_dvd` duplication and target-owned divisibility antisymmetry are frozen before code or stream access |
-| 2026-08-21 | (pending) | Bounded clean divisibility-antisymmetry driver compiles without reading either proof-isolated input |
-| 2026-08-21 | (pending) | First clean antisymmetry run declines at a cross-kernel `NatPrelude` handle; no support publishes and the second run is skipped |
-| 2026-08-21 | (pending) | V2 freezes single-native-kernel support construction and checked named transport into r091 before code or stream access |
-| 2026-08-21 | (pending) | V2 clean order driver compiles Clippy-clean with all kernel-local handles confined to their native construction environment |
-| 2026-08-21 | (pending) | First V2 replay stops before antisymmetry submission because the native prelude lacks `Nat.eq_zero_of_zero_dvd`; the second is skipped and no support publishes |
-| 2026-08-21 | (pending) | V3 freezes an existential-witness proof of zero divisibility equality in the same native kernel before rebuilding or transporting antisymmetry |
-| 2026-08-21 | (pending) | V3 clean order driver closes the missing zero-divisibility leaf and passes Clippy plus the full importer suite without reading r091 |
-| 2026-08-21 | (pending) | First V3 replay accepts both prerequisite supports, then stops at absent convenience theorem `Nat.succ_pos`; the second is skipped and nothing publishes |
-| 2026-08-21 | (pending) | V4 freezes successor positivity as an inline native `zero_le` plus `le_succ_succ` proof before rebuilding antisymmetry |
-| 2026-08-21 | (pending) | V4 clean order driver replaces the absent convenience theorem with native order primitives and passes focused compile, Clippy, and importer tests |
-| 2026-08-21 | (pending) | First V4 replay reaches the trusted gate and rejects an unspecialized inner-induction hypothesis; the second is skipped and nothing publishes |
-| 2026-08-21 | (pending) | V5 freezes the complete antisymmetry proposition as the inner induction motive so each branch binds already-specialized divisibility hypotheses |
-| 2026-08-21 | (pending) | V5 clean order driver moves both divisibility binders inside the specialized induction branches and passes focused gates without reading r091 |
-| 2026-08-21 | (pending) | V5 clean zero-divisibility, divisor-bound, and divisibility-antisymmetry supports transport twice into r091 with byte-identical empty-footprint evidence |
-| 2026-08-21 | (pending) | Four portable root-selected support capsules are frozen before code or export so the exact target no longer depends on one monolithic reconstruction process |
-| 2026-08-21 | (pending) | Clean-order driver adds an explicit fail-if-present capsule path and two fresh independent imports before any proof-bearing stream write |
-| 2026-08-21 | (pending) | Clean divisibility antisymmetry exports twice as the same 158,285-byte root-selected capsule and independently reimports four times with unchanged empty-footprint evidence |
-| 2026-08-21 | (pending) | Official cancellation driver adds the same explicit capsule path, root selection, and two-import evidence check before writing |
-| 2026-08-21 | (pending) | Official cancellation exports twice as the same 888,104-byte root-selected capsule and independently reimports four times with unchanged empty-footprint evidence |
-| 2026-08-21 | (pending) | Dedicated Fibonacci-addition capsule driver reconstructs from the pinned recurrence and requires two independent imports before its fail-if-present write |
-| 2026-08-21 | `975bf5b47` | Exact Fibonacci coprimality gains a root-selected fail-if-present capsule boundary with two independent imports before write |
-| 2026-08-21 | (pending) | Four portable support roots export twice byte-identically, reimport sixteen raw times, and seal with unchanged identities and empty footprints |
-| 2026-08-21 | (pending) | Exact Fibonacci GCD-shift construction freezes induction, clean commutativity, mutual divisibility, and two zero-retry submissions before code |
-| 2026-08-21 | (pending) | First exact-target source build stops before execution at bounded naming and borrow diagnostics with zero stream reads or submissions |
-| 2026-08-21 | (pending) | V2 freezes only compiler-level corrections while preserving the exact proof route and zero-retry trusted-gate budget |
-| 2026-08-21 | (pending) | V2 clears all original diagnostics but stops before execution at one 103-line Clippy threshold with zero stream reads |
-| 2026-08-21 | (pending) | V3 freezes exactly one scoped line-count allowance with the proof body and target authority unchanged |
-| 2026-08-21 | (pending) | V3 exact-target driver compiles Clippy-clean over r091 plus four sealed roots without reading proof-bearing inputs |
-| 2026-08-21 | (pending) | First exact-target run declines before target submission at incompatible native and official `Nat.mul_zero` shapes; second run is skipped |
-| 2026-08-21 | (pending) | Official-r091 clean order freezes three target-owned proofs and requires cancellation compatibility before capsule export |
-| 2026-08-21 | (pending) | Official-r091 clean-order mode compiles Clippy-clean with cancellation compatibility checked before any capsule write |
-| 2026-08-21 | (pending) | First official-r091 support run stops before submission because pristine r091 lacks named `Nat.mul`; second run is skipped |
-| 2026-08-21 | (pending) | V2 freezes official cancellation composition before all clean-order handle resolution and proof construction |
-| 2026-08-21 | (pending) | V2 composes official cancellation before resolving clean-order proof handles and passes focused Clippy without stream access |
-| 2026-08-21 | (pending) | Cancellation-first V2 stops before support submission at missing recursive `Acc`; second run is skipped |
-| 2026-08-21 | (pending) | V3 freezes same-capsule `Nat.mod_lt` bootstrap before full cancellation composition and clean-order construction |
-| 2026-08-21 | (pending) | V3 composes and replays same-capsule `Nat.mod_lt` before cancellation and passes focused Clippy without stream access |
-| 2026-08-21 | (pending) | V3 bootstrap returns `NoAdditions`, confirming r091 already has `Nat.mod_lt`; second run is skipped before support submission |
-| 2026-08-21 | (pending) | V4 freezes exact checked reuse of existing r091 `Nat.mod_lt` as cancellation's sole target theorem leaf |
-| 2026-08-21 | (pending) | V4 verifies `Nat.mod_lt` identity and type shape and composes cancellation through the explicit target-leaf API without stream access |
-| 2026-08-21 | (pending) | V4 accepts `Nat.mod_lt` reuse but still finds another transitive path to missing `Acc`; run 2 is skipped before support submission |
-| 2026-08-21 | (pending) | One nonrendering closure audit freezes the official cancellation-to-`Acc` path and nearest compatible carriers before more bootstrap code |
-| 2026-08-21 | `7d931d9d3` | Non-rendering declaration-path auditor reports nearest carriers and target compatibility |
-| 2026-08-21 | `fe47460bd` | Fourteen autogenesis checker suites become gate-reachable; expired SMT negative control is replaced |
-| 2026-08-21 | (pending) | Single-read cancellation audit localizes the exact missing `Acc` package and freezes declaration-exact reconstruction |
-| 2026-08-21 | `b26edf6aa` | Exact official `Acc` package authorization retains atomic reconstruction and mutation controls |
-| 2026-08-21 | (pending) | Official cancellation composes twice over r091 with exact `Acc`, byte-identical receipts, and an empty footprint |
-| 2026-08-21 | (pending) | V5 freezes official clean-order reconstruction after exact `Acc` and cancellation acceptance |
-| 2026-08-21 | (pending) | V5 cancellation composition succeeds but eager unused `Iff` lookup stops before support submission; V6 freezes lazy resolution only |
-| 2026-08-21 | `f37c82184` | Shared proof builder resolves `Iff` only at its sole consumer |
-| 2026-08-21 | (pending) | V6 advances to missing positive-product factor support; V7 freezes a primitive-induction replacement |
-| 2026-08-21 | `29c126c0e` | Target-owned positive-product right-factor proof is added without importing broader order theory |
-| 2026-08-21 | (pending) | V7 advances to multiplicative monotonicity; V8 freezes two target-owned order leaves |
-| 2026-08-21 | (pending) | Parity V4 exposes overloaded addition but stops at opaque `Nat.mod`; V5 freezes a direct definitional-equality test without the failing unfold |
-| 2026-08-21 | (pending) | Parity V5 proves the two-step recurrence is not definitional; one non-rendering audit freezes the explicit recurrence and range primitives |
-| 2026-08-21 | (pending) | The old parity stream lacks `Nat.mod_lt`; a fresh exact-root export is frozen instead of treating incomplete coverage as evidence |
-| 2026-08-21 | (pending) | Exact modulo roots expose clean `Nat.mod_lt` and reject assumption-bearing `Nat.mod_eq_sub_mod`; its five-edge closure is frozen for localization |
-| 2026-08-21 | (pending) | Recurrence audit isolates `Nat.mod_eq` as the sole direct assumption carrier; its four-edge `modCore` boundary is frozen next |
-| 2026-08-21 | (pending) | `Nat.modCore_eq` is the deepest assumption-bearing bridge; its finite direct closure is frozen to separate recursion from simp infrastructure |
-| 2026-08-21 | (pending) | All modulo recursion machinery is clean; only generic simp proposition equalities carry assumptions, so a manual branch proof is frozen |
-| 2026-08-21 | (pending) | Manual modulo-core V1 preserves the route and stops on three elaboration details; V2 freezes only those corrections |
-| 2026-08-21 | (pending) | V2 reaches the inaccessible private clean fuel theorem; V3 freezes a local structural duplicate plus the unchanged branch proof |
-| 2026-08-21 | (pending) | V3 reconstructs fuel congruence and `modCoreEq` with empty footprints; the three clean public modulo bridges are frozen next |
-| 2026-08-21 | (pending) | Bridge V1 fails before execution on a self-containment policy conflict; V2 permits only the already-qualified fuel reduction |
-| 2026-08-21 | (pending) | V2 reconstructs all public modulo bridges empty-footprint; exact modulo-two step, cases, and successor leaves are frozen next |
-| 2026-08-21 | (pending) | Parity V1 finds its specialized recurrence already normalized; V2 removes only the redundant `dsimp` before qualification |
-| 2026-08-21 | (pending) | Parity V2 qualifies step and both successor roots cleanly; V3 replaces only `modCases`'s dependent match carrier |
-| 2026-08-21 | (pending) | Parity V3's explicit cases are accepted; V4 freezes the two required reflexive successful branches |
-| 2026-08-21 | (pending) | Parity V4 closes all four roots empty-footprint; exact eight-root `Int.fib_add_two` kernel composition is frozen before code |
-| 2026-08-21 | (pending) | Exact composition V1 fails before submission on the wrong Fibonacci support shape; V2 freezes the exact one-index recurrence capsule |
-| 2026-08-21 | (pending) | Exact composition V2 reconstructs `Int.fib_add_two` twice byte-identically with an empty footprint; ledger admission remains separate |
-| 2026-08-21 | (pending) | Exact recurrence admission freezes one non-rendering canonical goal-identity audit before operation registration |
-| 2026-08-21 | (pending) | Canonical goal identity matches the exact capsule; one eight-dependency sealed-capsule operation is registered pending crash-safe execution |
-| 2026-08-21 | `9fcc093a2` | **Cube-and-conquer certificate composition (ADR-0543).** A split proof is only a proof if the case-split is exhaustive; the composition records the splitting literals and re-derives exhaustiveness rather than trusting the producer's word for it. 770 lines in `crates/axeyum-cnf/src/cube.rs`. |
 | 2026-08-21 | `40a1ab969` | `crates/axeyum-solver/src/dpll_lia.rs` + ADR-0538 + `bench-results/lia-core-minimisation-20260821/`: theory-core minimisation rationed by an oracle-call work budget instead of a core-width gate. QF_UFLIA 92 → 114 (+22, −0) at 0 disagreements against z3 and 0 against the declared `:status`. |
 | 2026-08-21 | (pending) | `docs/research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md` + `bench-results/linear-arithmetic-diagnosis-20260821/`: gap #1 diagnosed — three causes not one, 800-file per-file classification, two A/Bs (one refuted, one +17 QF_UFLIA files at 0 disagreements). |
 | 2026-08-21 | `9333f779d` | **`bv_nego` returned a wrong `sat` above 128 bits.** `1u128 << (w - 1)` with legal widths to 65536: Rust masks the shift mod 128, so at `w = 129` the term became `x == 1` instead of `x == 2^128` and the shipped `SatBvBackend` answered **`sat`** to an unsatisfiable query (measured with overflow checks off; debug panicked instead). Fixed by following `bv_umulo`'s existing wide branch. Corpus reachability, which the gap analysis marked UNVERIFIED: **0 of 1430** tracked `.smt2` files use `bvnego` (control: `bvadd` in 106), so it is reachable only from the parser on user input. Three tests close the width asymmetry that hid it — widths 129/130/191/192/193/256/4096 by value *and* by the constant's structure, the 128-bit boundary staying narrow, and the end-to-end backend verdict. Two guards, each mutation-verified to kill exactly one test, registered as `ir-bv-nego-width`. |
@@ -935,94 +165,17 @@ now. Nothing was deleted.
 | 2026-08-20 | (pending) | `Evidence::UnsatRealHandelman`: multi-term Handelman/Positivstellensatz refutations for `QF_NRA`, with case splitting over a top-level disjunction and polynomial multipliers on asserted equalities. Certifies the three corpus rows `nra_product_cert` declined by design. 15 guards mutation-checked; 14 kill at least one test, and the fifteenth (the producer's own self-check) kills nothing and is documented as such at the function rather than pretended to be a guard. Three checks that provably could not fail were deleted instead of kept. `NamedPoly` is now shared with `nra_product_cert` rather than reimplemented — two name-keyed polynomial types would be two chances to disagree about what `a*b` means. |
 | 2026-08-20 | (pending) | `Kernel::whnf_core` is memoised — the second of Lean's two reduction caches (`m_whnf` beside `m_whnf_core`), which this kernel never had. `build_creal_prelude` 33.0 s → 13.0 s, template reuse 0.41 s → 0.15 s. Pure memoisation: same key discipline as the δ-free memo, split on `has_fvars`, cleared by `push`/`pop` and by environment revision, closed half covered by the `reduction_ctx_reads` tripwire. Six guards mutation-checked, each killing at least one test and four killing exactly one; a seventh looked unreachable and a `debug_assert_eq!` proved it is not, which is what the comment on it now records instead of the argument that was wrong. Root cause recorded: `502184d3f` did not slow the kernel down, it switched the literal-`Nat` acceleration ON for the first time, because `build_nat_binop_table` gates on `Bool`'s constructor order. |
 | 2026-08-20 | (pending) | `Kernel::reduce_nat_binop` moves out of the δ-free normaliser to Lean's two call sites — `whnf_core`'s δ loop (Lean `whnf`, `type_checker.cpp:670`) and `lazy_delta_step` (Lean `lazy_delta_reduction`, `:978`) — both under Lean's `!has_fvar` guard. `build_creal_prelude` 12.99 s → 6.79 s (median of three interleaved rounds), against 8.71 s before the acceleration was ever switched on. Measured separately: Lean's placement *without* the guard is 12.12 s, so the guard is the entire win and the placement is faithfulness, not speed. Identification unmoved — kernel lib 399/0; full kernel crate 609 passed / 1 failed, the one (`real_lean_wellfounded_elaborator_divergence`) failing byte-identically on an unmodified `HEAD` and being a real-Lean *elaborator* rejection rather than ours; solver `reconstruct::` 312/0; clippy 618/618 targets 0 diagnostics; prelude-reuse differential `compared=8 failures=0`; axiom ledger `axreal=30` and all others 0. Three new tests in `tests/nat_literal_arithmetic.rs` pin both call sites and both guards on an environment where the accelerated answer and the declared body disagree; each guard mutation kills exactly one. ADR-0536. |
-| 2026-08-20 | `b5c4bb48b` | Binder-info-insensitive kernel type-shape identity with adversarial controls |
-| 2026-08-20 | `24b16642e` | r082 overlap probe classifies kernel-compatible and structurally different types |
-| 2026-08-20 | `8dbd18c82` | Required Nat theorem closure census isolates a structurally unblocked first replay slice |
-| 2026-08-20 | `9caac0bf5` | First probe-local checked native Nat theorem slice composes over the imported r082 kernel |
-| 2026-08-20 | `b7573a525` | ADR-0523 fixes theorem-only identity-gated completed-clone composition as the public V1 boundary |
-| 2026-08-20 | `bdc9bf1c9` | Public checked theorem-slice composition API publishes only a fully admitted owned clone and replayable receipt |
-| 2026-08-20 | `75aa21d1a` | Composition boundary controls cover unsupported kinds, type mismatch, binder metadata, free variables, partial staging, and receipt mutation |
-| 2026-08-20 | `0bcbe935d` | The r082 public-API probe exposes the exact source closure and canonical composition receipt identity |
-| 2026-08-20 | `c17b7e65b` | Receipt V2 records translated definitional equality as attempt-only reuse authority and moves the r082 blocker to missing `Exists` |
-| 2026-08-20 | `fced2b166` | Receipt V3 atomically reconstructs a demanded singleton inductive and advances the r082 root to missing definition `Nat.mul` |
-| 2026-08-20 | `acade2a45` | Receipt V4 target-checks exact demanded definitions and advances the r082 root to the `Bool.rec` branch-order seam |
-| 2026-08-20 | `502184d3f` | Native Bool adopts official Lean constructor order with kernel-prelude consumers migrated |
-| 2026-08-20 | `012c6b4f6` | Solver reconstruction preserves semantic false/true branches under the official order |
-| 2026-08-20 | `866add778` | Official-order fixtures and golden reconstruction bodies pass the authoritative pre-push gate |
-| 2026-08-20 | `a5a111498` | Native `Nat.mod_lt` proves Lean's general positive-denominator contract and migrates GCD/Bezout consumers |
-| 2026-08-20 | `ac33a0a2d` | Named compatibility diagnostics bind `Nat.mod_lt` translated definitional equality and expose `Acc` next |
-| 2026-08-20 | `3d466b45c` | Receipt V5 reconstructs only canonical native `Acc` exactly and exposes `Nat.div_mod_exec` target type mismatch |
-| 2026-08-20 | `f099a4a37` | Semantic admission diagnostics isolate the 92-declaration division mismatch and the missing `Nat.dvd_mod_iff` consumer |
-| 2026-08-20 | `a12d44858` | Lean export audit reports canonical theorem identities, direct dependencies, and kernel-derived axiom footprints |
-| 2026-08-20 | `dd79317c5` | Proof-isolated theorem-pack composition replays two axiom-free official `Nat.mod` computation equations into r082 |
-| 2026-08-20 | `667201932` | Receipt-backed checked specialization admits constructive target `Nat.dvd_mod_iff` with an empty footprint and native type shape |
-| 2026-08-20 | `7e6e28c1f` | Explicit target-owned theorem leaves cut only compatible axiom-free source proofs and replay from a distinct receipt |
-| 2026-08-20 | `5fb817301` | Real r082 leaf probe removes `Nat.div_mod_exec` with two cuts and exposes assumption-bearing `Nat.gcd_succ` next |
-| 2026-08-20 | `91d7df736` | Dependency-ordered mixed composition moves exact `Nat.fib` and the established recurrence into the axiom-free native gcd kernel |
-| 2026-08-20 | `8403e6f65` | Twice-reconstructed native Fibonacci coprimality theorem closes with the exact planned dependency set and exposes the official/native gcd semantic bridge |
-| 2026-08-20 | `f94489c74` | Pointwise well-founded fuel congruence reconstructs axiom-free official `Nat.gcd_succ` and advances the checked target through `Nat.dvd_gcd` |
-| 2026-08-20 | `9e83ab67a` | All seven planned Fibonacci gcd/divisibility support roots compose and replay together in the official r082 target |
-| 2026-08-20 | `d12736b63` | Exact official Fibonacci coprimality reconstructs four times with an empty footprint and sealed deterministic evidence |
-| 2026-08-20 | `b44bf0ecb` | Dependency-bound theorem receipts require exact sorted premise names and canonical declaration identities |
-| 2026-08-20 | `b55bc977e` | Two fresh full audits preregister the exact eight-premise authority for the official Fibonacci receipt |
-| 2026-08-20 | `169aab71b` | Two fresh official reconstructions issue and replay one exact dependency-bound Fibonacci theorem receipt |
-| 2026-08-20 | `d5aed52ff` | Distinct registered admission preserves exact direct and transitive dependency identities without weakening isolated receipts |
-| 2026-08-20 | `3f96b5463` | Crash-safe exact Fibonacci coprimality admission makes one descendant ready and reproduces from a clean worktree |
-| 2026-08-20 | `e06115972` | Sealed admission evidence binds the exact post-recovery fact and frontier state |
-| 2026-08-20 | `6902efad7` | Historical child qualification accepts only the selected axiom-free settled child while retaining its deferred sibling open |
-| 2026-08-20 | `eca29a441` | Proof-free r091 qualification isolates Fibonacci addition, coprime-factor cancellation, and gcd extensionality obligations |
-| 2026-08-20 | `989e6242e` | One support-first construction and six-submission, zero-retry ceiling are frozen before implementation |
-| 2026-08-20 | `f8c7febc6` | Paired native induction reconstructs Fibonacci successor addition twice and composes it into the exact r091 target kernel |
-| 2026-08-20 | `1f9f01b3a` | Immutable first-support observation and mutation-tested checker preserve the empty-footprint, zero-target-credit boundary |
-| 2026-08-20 | `3acb61ef5` | Balanced-Bézout coprime-factor cancellation reconstructs twice and fails closed at the exact official/native Euclidean seam |
-| 2026-08-20 | `a29b99e15` | Immutable second-support evidence and mutation controls retain the typed composition decline without target credit |
-| 2026-08-20 | `62858ff72` | Support-only bridge plan freezes a constructive official Euclidean and balanced-Bézout route with zero target authority |
-| 2026-08-20 | `c4f133a00` | Official quotient and remainder computation roots import with stable identities and empty footprints |
-| 2026-08-20 | `a21f42b06` | Generated proof-isolated capsule exposes only the exact Euclidean statements and audited identities needed by a fresh context |
-| 2026-08-20 | `cf1a203d1` | Current-stable comparison plan corrects the target to Mathlib/Lean v4.32.1 and freezes one proof-free extraction |
-| 2026-08-20 | `f91670cd9` | Stable comparison classifies all 240 selected statements, with 234 structurally identical and six exact drifts |
 | 2026-08-20 | `01d54044a` | **Certified 278/324 (85.8%)**, from 267/327 (81.7%) this morning. Timeouts 10 -> 4, `proof_errors` 10 -> 4. Four of the recovered rows were emitters that had returned the CORRECT answer and were billed 31.9s of shared prelude construction inside a 15s cap; `prelude_warm_ms` is now a visible artifact field instead of one instance's bad luck. |
 | 2026-08-20 | `5a25f247a` | **Four DAG walks were exponential today, all the same bug written four times** — `contains_quantifier`, `lower_derived_bv`, `collect_enumerable_symbols_rec` (1.28e10 calls in 90s), `collect_nested_registrations`. `Float-no-simp3-main` >300s -> 19.4ms, `fp_fromsbv` 45s -> 3.8ms. The `certify.rs` memo deliberately does NOT collapse occurrences for the quantified-bit budget: that is a tree-sum, and collapsing it would undercount an exponentially shared quantifier nest and let a query past a budget check it cannot satisfy. |
-| 2026-08-20 | `71f1c29a0` | **Second Lean reconstruction**: the degree-2 Positivstellensatz product, `mul_nonneg` -> `lt_of_le_of_lt` -> `lt_irrefl`, kernel-checked over `CReal` (trusted surface 0) with a test naming the carrier. A strict factor is minted as `0 < e` — what the query says — and weakened with `le_of_lt`, rather than minting `0 <= e` directly: both are sound, but the latter puts a proposition in the module the query never states. |
-| 2026-08-20 | (open) | The two `BvAlternationCounterexample` rows still time out. The 64 MiB cap refuses their 625 MB / 2.38 GB modules but bounds what is RETURNED, not construction — they spend the budget building a module that is then thrown away. Bounding construction means threading a budget through every renderer. |
-| 2026-08-20 | `cfc5f8078` | **A Lean module too large to be useful is now refused, not returned.** `BvAlternationCounterexample` was returning `Ok` with 2.38 GB held as one `String`, on a box whose kernel OOM-killed a live session on 2026-08-17. Threshold measured across 262 recorded modules: median 3,169 B, largest legitimate 28.6 MB, pathological 625 MB / 2.38 GB — 64 MiB sits ~2x over the first and 10-37x under the second. Three rounds of mutation testing each found a real hole: deleting the guard left everything green (no fixture reached it), the threshold test hardcoded the cap so raising it would not fail, and clippy correctly flagged the result as assertions on constants — they are now `const` assertions, so the BUILD fails. Bounds what is RETURNED, not the peak; the code says so. |
-| 2026-08-20 | `9824cbff2` | **A timeout row now says which ROUTE it was attempting.** Nine of ten timing-out instances landed in one phase and were three unrelated failures — exponential blowup, a CORRECT decline arriving 35s late, and a success emitting 2.4 GB — indistinguishable in the JSON, with the second scored as a proof-production error while the emitter behaved correctly. `timeout_phase_detail` carries the `ProofFragment`, recorded before the attempt; it costs microseconds against a 35-second prelude. |
-| 2026-08-20 | `e14a13b5d` | **Two DAG walks were exponential because they recursed as trees.** `contains_quantifier` made 9.8e9 calls scanning a QUANTIFIER-FREE query for quantifiers on a 2,971-node arena; `lower_derived_bv` made 2.24e9. Neither is new — `lower_bv.rs` is unchanged since June — they were latent behind routes nothing reached until `887b52e64` correctly made FP rows decline `BvDefinedEnum`. `fp_misc` >40s -> **0s**, `fp_fromsbv` >40s -> 45s, both now DRAT-certified. `Float-no-simp3-main` decision is 4.6ms but its evidence still exceeds 120s — NOT fixed, left open. |
-| 2026-08-20 | (open, NOT mine) | **`lra_ctx()` builds a 35s CReal prelude before the route knows it will decline.** Measured: `cli__regress0__arith__div.01` returns the SAME decline message it always did, 35s later, of which `build_creal_prelude` is 35.23s. Two commits compound: `a6ee37c6a` moved the carrier (2.6ms -> 4.6s) and `502184d3f` — a 31-line commit that only swaps `Bool`'s constructor order — made prelude construction **4.7x slower** (6.9s -> 32.5s). Almost certainly an iota-reduction ordering accident, not a necessary cost. |
-| 2026-08-20 | (open, NOT mine) | **`BvAlternationCounterexample` returns `Ok` with a 2.4 GB module held in memory**, on a box that OOM-killed a live agent session on 2026-08-17. `bug802` 625 MB, `small-pipeline-fixpoint-3` 2.38 GB. Introduced by `8173bfc1b` 41 minutes AFTER the audit that recorded these as "declined fast", so the baseline never saw it. A route that succeeds at 2.4 GB is worse than one that declines. |
-| 2026-08-20 | (open) | **The audit's 15s cap cannot distinguish three different failures.** All eight timing-out rows land as `trust_holes: ["timeout"]` with `lean_error: null` — an exponential blowup, a CORRECT decline arriving 35s late, and a success emitting 2.4 GB are indistinguishable in the JSON. The second is scored as a proof-production error while the emitter behaved correctly. |
-| 2026-08-20 | `544778da6` | **Monomial bounds certified: three more corpus rows, seven QF_NRA files for the day** (`ones`, `mult.01`, `simple-mono-unsat`). Even exponents need no bound (`d^2 >= 0` for every real `d`); odd ones on an unbounded variable make the monomial unbounded below, so parity is carried and re-derived. Lower bounds must be NONNEGATIVE — `(-2)*(-3) = 6` is not a lower bound for `a*b`. **Three bugs found by instrumenting rather than guessing**: the disjunction handler was UNREACHABLE (a 2-arg `BoolOr` destructures as `[lhs, rhs]`, fell through the comparison `match` and hit an unconditional `continue`); the checker was `fresh == *certificate`, which subsumes every other guard so mutation testing showed the arithmetic killing NOTHING; and stage 1 then masked stage 2, so each stage-2 guard needed a forgery the query genuinely supports. 8 guards, each killed by exactly one test. |
-| 2026-08-20 | `e75ccc821` | **Refreshed 4 of 35 audits; certified moves 267/327 (81.7%) -> 273/323 (84.5%).** The number I quoted this morning to justify a work item is now partly measured rather than inherited. QF_S decides 87 -> 93, QF_SLIA 18 -> 25 — both strictly more than the committed audits recorded, the direction the stale-audit finding predicted. |
-| 2026-08-20 | `(open, NOT mine)` | **A corpus file no longer parses**, found only by refreshing: `sat__regress0__strings__issue5542-strings-seq-mix.smt2` panics with `Ir(SortsDiffer(BitVec(100), BitVec(197)))` — it mixes `String` and `(Seq Int)` in one query and the two encode at different bit-widths. The committed audit records it as decided `sat` with a replayed model. The panic is in `parse_script`, before any solver or evidence code, so it is not from this lane's work. Second defect the audits were hiding, after `replace-find-base`. |
-| 2026-08-20 | `(open, NOT mine)` | `cli__regress0__nl__issue3003`: `check_auto_explained` answers `sat` in 0.87 ms and `produce_evidence` answers `unknown` on the same query in the same tree. Confirmed not mine by disabling both new NRA producers and re-running — identical. The decision route and the evidence route disagree, which is the divergence class an independent NRA survey flagged the same day. |
-| 2026-08-20 | `1f61b1605` | The `source_revision` stamp needed one fix to be usable, found by using it: `scripts/lane-snapshot.sh` extracts `git archive`, so the clean tree an audit most wants has **no `.git`** — the recommended way to get an unmodified tree was the only way to lose the sha. It now reads `.lane-ref` and records `source: git \| lane-snapshot \| none`, so a supplied sha is never mistaken for a measured one. |
-| 2026-08-20 | `ae4f3edf0` | **Degree-2 Positivstellensatz certified: two more real corpus rows, four QF_NRA total today.** Two asserted lower bounds whose exact product is the polynomial a third assertion calls negative (`coeff-unsat-base`, `simple-mono`) — decided today by CAD, which is more machinery than the argument needs and emits nothing readable. Exact rational arithmetic over a NAME-KEYED polynomial, because `nra_real_root::MultiPoly` is private and keyed on arena-local `SymbolId`. **Strictness is the soundness argument**: `p >= 0` and `q >= 0` give `pq >= 0`, refuting `pq < 0` but NOT `pq <= 0` (satisfiable at p = 0); carried and re-derived, with a test in each direction since a rule that never refutes `<= 0` would satisfy one of them alone. `coeff-unsat` and `combine` need a product PLUS a linear step and are DECLINED with a test pinning the decline. 8 guards, 7 killed individually; the eighth is documented unreachable behind stage 1 rather than implied to be tested. |
-| 2026-08-20 | `cbba2efa3` | **QF_NRA monomial divisibility certified — and unlike the QF_NIA one, this covers REAL CORPUS FILES.** `cli__regress1__nl__zero-subset` and `cli__regress0__nl__subs0-unsat-confirm` are refuted by "this product divides that one" and shipped as bare `Unsat(None)`; both now report `real-zero-product-unsat certified=true checked=true`. Factors carried by SOURCE NAME, not arena-local ids. **Placement was the bug, not the matcher**: hooked in after the route `match` it passed every unit test and fired on neither corpus file, because the `PureReal` arm returns through `produce_nra_evidence` first. A hand-parsed unit test could never have caught that; running the corpus file did. Worth recording against my own QF_NIA work, which I measured against all eight committed QF_NIA rows and which fires on **none** — they are `div`/`mod` and multivariate shapes it declines. |
-| 2026-08-20 | `cbba2efa3` | Mutation testing needed two rounds again: 4 of 7 guards killed first time. Isolating stage-2 containment needed a certificate whose halves the query genuinely asserts but whose containment fails (`(= (* x x) 0)` vs `(not (= (* d e) 0))` — a SATISFIABLE query a checker without stage 2 would certify unsat); isolating the arm-drop needed a disjunct zeroing a SUM, which is a zeroing but not of a factor. One guard stays unkilled and the code says why: the empty-case check is unreachable behind stage 1 and becomes load-bearing only if stage 1 is loosened — `all()` over an empty list is vacuously true. |
-| 2026-08-20 | `(pending)` | `lane-push.sh --retry N`. A push passed every gate in 205s and was then rejected — `cannot lock ref 'refs/heads/main': is at 4c7ad5e63 but expected 92fa6188a` — because main advanced DURING the hook. The fast-forward pre-check cannot close the window it opens. `--retry` re-merges the target and pushes again, and only on a lock conflict, so a genuinely failed gate still fails at once (they both exit 1 and their messages are hundreds of lines apart). The fixture moves the remote ref from inside a pre-push hook, and it caught a real bug in my own guard: GitHub says `cannot lock ref`, a local file remote says `incorrect old value provided`, and matching only the phrasing I had seen in production left the control green while the retry never fired. |
-| 2026-08-20 | `6ae02f26c` | **All 35 dominance audits are stale, and one direction of the drift hid a capability regression.** I quoted "60 of 327 uncertified" to justify a work item; that number replays committed audits which record `logic`, `slice`, `timeout_ms`, a `version` integer — and **no sha, no date**. Every audit predates the newest solver-source commit, the oldest by 55 days. Newly certified but still counted bare: 20 of 31 string-family `bare-unsat` paths are certified today. **Newly UNDECIDED but still counted decided:** `replace-find-base` (2 paths) and `str-code-unsat-2` are recorded `audit_outcome=unsat, baseline_matches_audit=true` and now return `unknown` — verified with the shipped front door at 60s, axeyum 1/4 vs z3 4/4, DISAGREE=0. Sound, but a real loss no gate reported. The report now states its as-of date above the numbers and carries a per-audit provenance table; `--check` is gated in both aggregate gates, and a tampered provenance date exits 1. |
-| 2026-08-20 | `(corrected)` | **I got the regression claim wrong, and it was already published.** I reported `replace-find-base` and `str-code-unsat-2` as regressed from `unsat` to `unknown`, inferring it from the audit rows plus today's behaviour. Building the audit's own commit `8aff8d507` and running the byte-identical corpus files (`git hash-object` matches) shows otherwise: `str-code-unsat-2` returned `unknown` there too — never a regression — and `replace-find-base` returned **`sat`**, a WRONG ANSWER on a query z3 decides unsat. Today's `unknown` is therefore a FIX, not a loss. Corrected in the generated matrix and in the commit that follows. |
-| 2026-08-20 | (open) | **What the correction found is worse than what I claimed.** An audit row can disagree with the tree at its own commit: `replace-find-base` is recorded `audit_outcome=unsat, baseline_matches_audit=true` in an audit last touched by `8aff8d507`, and that commit's tree answers `sat`. `8aff8d507` is titled "refresh bare-route audits to v2" — a schema migration that can rewrite JSON without re-running anything. So the file's commit date is not the measurement's date, and there is no way to recover the real one from the artifact. **Next: make `audit_dominance` stamp the source sha it ran against**, so the question becomes answerable for future audits; then re-run the 35 and see what the real numbers are. |
-| 2026-08-20 | `e44f9d715` | **QF_NIA `unsat` now carries a refutation, band 2 -> band 1.** The proof-gap matrix loses 60 of 327 instances at "evidence marked certified" — four times what Lean reconstruction costs — and `QF_NIA` ranked *band 2, needs an UNSAT proof format first*. But `nia_square` was already deciding this fragment EXACTLY; the artifact existed and nothing emitted it. Three arguments certified (non-square discriminant, non-integral rational roots, rational-root exhaustion at degree >= 3). **The checker does not call the producer**: the in-tree `fresh == *cert` convention re-runs the matcher, which binds a certificate to its source but cannot discover that the producer's reasoning is wrong — both would be wrong together. Stage 2 re-derives from the coefficients alone, scanning `1..=|a0|` where the producer pairs cofactors to `sqrt|a0|`, so a completeness bug in the step that could turn a `sat` into a wrong `unsat` is not repeated. |
-| 2026-08-20 | `119a91c53` | Mutation testing the above, and the first run is the part worth keeping: nine guards, **five killed one test each and four killed nothing** — another guard rejected the same forgery first, the "six of seven were removable while green" shape. Isolating them needed certificates the producer would never emit: a degree-2 argument over `x^3+x^2+x-3 = 0`, which is SATISFIABLE at x=1 and whose leading three coefficients give a genuine non-square 13 with a valid bracket, so every other guard passes and only the degree check prevents certifying a satisfiable query; a constant term of right magnitude and wrong sign, leaving divisor set and recomputed count identical; and two cubics with IDENTICAL reason data so only the coefficient binding separates them. All nine now die individually. Two of my own harness bugs found on the way, both silent — a positional filter that matched no integration test name, and classifying cargo's `error: test failed` as `DID NOT BUILD`, which reported five real kills as compile failures. |
-| 2026-08-20 | `4e1f9b092` | **The `whnf_core` tripwire was gated on the ENTRY, and the links it guards are not the entry.** The new δ-chain memo routes each link into the split cache by *that link's own* closedness, but the `reduction_ctx_reads` assertion beside it read `!entry_closed || …` — a different set. An OPEN entry δ-unfolds to a CLOSED link, and that link is written to the kernel-global half whose key has **no context component at all**, unchecked. Measured before writing the guard: one `build_creal_prelude` routes **6 links** that way (0 with a tail context read, so the memo was correct — just unchecked). Now per-link, against a `reduction_ctx_reads` snapshot taken when each link is pushed. Reachability is what makes it more than decoration, so it has a test; `chain.into_iter().take(1)` kills exactly that test. **Neutering the assertion itself kills nothing, and the code says so** — no input can make it fire, because "a closed term's reduction cannot reach a context lookup" is a theorem about `has_fvars`. Its `entry_closed` sibling was always in that category too, and did not say so. |
-| 2026-08-20 | `813b80daa` | **13 stale measured markers, and renumbering them would have been wrong.** The prose explained the numbers and the explanations no longer described the artifacts. Fully-dominant fell 23/35 → 20/35, and **only two of the four losses are losses**: `QF_FP/fp_misc` went from fully Lean-reconstructed to a timeout, and `QF_BVFP/Float-no-simp3-main` stopped producing a certificate; against those, `fp_fromsbv` merely began declaring a `bit-blast` trust hole and `seq-ex1` merely met the redefinition of `evidence_checked` as *re-derives* rather than *portable*. A criterion that tightens under a metric moves it in the same direction as a capability regression, so the two are now reported apart. Also corrected: the baseline/audit gap was documented as "QF_NIA proof production rejects `IntPow2`", i.e. a refusal — all four are evidence-audit **timeouts**, which is a different fact. And two of the 20 "fully dominant" rows audited **zero** decisions, since `dominant_pct_audited == 100.0` and `audited_decided == 0` are not distinguished. |
-| 2026-08-20 | (open, dispatched) | **`QF_FP/solver__fp__fp_misc.smt2` no longer reconstructs, and it is not the prelude.** Fully Lean-reconstructed on 2026-07-21; at HEAD it times out in the `lean-reconstruction` phase at **14.7 s of 15 s and 124.7 s of 125 s**. The obvious hypothesis — that the audit ran inside the 11-hour window when `502184d3f` had prelude construction at 33 s — is **wrong**, and I tested it rather than publishing it: warming is now 6.6–11.9 s and the instance still times out at a 125 s budget. First hypothesis for whoever picks it up is the exponential-DAG-walk bug this repository has now shipped five separate times; FP lowers into exactly the large shared BV DAGs that trigger it. |
 | 2026-08-20 | `609417c9e` | `MAX_UNARY_TERMS` 4096 → 128: mutating the size guard away aborted the test binary rather than failing a test (cost 1026 overflows the stack; cost 514 renders a 13.2 MB module), so the budget admitted the crash it existed to prevent. Now pinned from both ends. The inequality sign re-check killed nothing and was deleted — positivity is enforced upstream by `checked_refutation` and downstream by both Farkas engines. The hypothesis-count check and the external `infer == False` re-gate also kill nothing and are kept, with the mutation pair that shows what the first one does (removing the equality registration kills 7 tests *through* it; removing both kills 1 and ships a quietly weaker module). New `lean_crosscheck` family `qf_s_string_length`: real Lean 4 accepts both modules, 173/173 in the full sweep. |
 | 2026-08-20 | `b495a396e` | The string-length certificate reaches the kernel. `reconstruct_string_length` folds the certificate's own facts into a `False` over the constructed integers; `checked_refutation` is now the single derivation both `check_string_length_refutation` and the reconstruction read, so the exported view cannot drift from the validated one. An asserted **equality** enters as an equality — `LraReconstructCtx` grew `hyp_overrides` so the route mints `a = 0` and derives the `≤` half rather than assuming it, which is the one distinction the certificate's fact table turns on. A single-disjunct `(or A)` declines: the query states the disjunction, not the disjunct. Variables are named after their source (`len_xx`, `code_x`). `Evidence::UnsatStringLength` became a struct variant carrying `lean_module: Option<String>`, re-derived on `check` and never read back; a decline is `None`, not a weaker certificate. No `ProofFragment` variant — `scan_proof_fragment` is arena-based and a string script has no faithful arena. |
 | 2026-08-19 | `pending` | `scripts/check-kernel-suites.sh`: the kernel's push-time / real-Lean suite partition, discovered from the source and asserted total; `hooks/pre-push` repointed at the non-Lean half (2,296 s → 80 s warm). Found `real_lean_string_monoid_crosscheck` owned by nothing and mis-formatting its check count; floor 218 → 219. |
 | 2026-08-19 | `e3e105cd6` | The local-ci freshness gate is ENFORCING in both `check.sh` and `justfile`, on a `PASS` record (`57af69142-s4.json`, 6656 s, 7561 tests + 179 doctests, no vacuous/unreadable step). Landed report-only the day before because the only record was FAIL; that was the sole blocker. Flip re-tested through the real call site: NO_RECORD / STALE / STEP VACUOUS all red, unmodified green. |
 | 2026-08-19 | (pending) | `artifacts/local-ci-runs/57af69142-s4.json`: first all-pass authoritative-gate record (5/5 steps, 7561+179 tests, 6656 s); `check-local-ci-freshness` flipped from `--report-only` to ENFORCING in `scripts/check.sh` and `justfile`. |
 | 2026-08-19 | `ae0676aec` | `docs/formalized-math-2026-08/` corrected against measurement: "system-proved theorems = zero" falsified (3 facts, re-derived, heavily qualified; C2 still zero); C1 landed 2026-08-14 and did **not** deliver `N x 149/day`, so the single-file-lock diagnosis is falsified by its own remedy; the rate metric retired as unmeasurable across preludes; ADR-0517/0518's two-checker finding and the 122-declaration coverage hole recorded, with the limitation stated at its true width (shipped artefact does not carry the whole carrier; 4 declarations kernel- but not elaborator-checkable). |
-| 2026-08-19 | `1afe65473` | Native/imported Nat prelude composition probe |
-| 2026-08-19 | `d1eb38a13` | Alpha-stable cross-kernel expression identity |
 | 2026-08-19 | `4c7af898d` | **ℝ is a lattice.** 15 `Rat` + 18 `CReal` declarations, every one accepted on first submission, all footprint-free. The predicted obstacle — a four-way sign split over `|a| − |b| ≤ |a − b|` — never appears. Nothing here has a side condition, so the failure mode is a *degenerate operation*, not a vacuous guard: `max x y := x` satisfies `le_max_left` by reflexivity and `abs x := x` satisfies `le_abs_self`, `neg_le_abs` and `abs_le`. So `not_le_zero_neg_one` and `not_equiv_abs_neg_one` are proved from the laws alone, the witness's exit status depends on both, and `max x x ≈ x` / `max 0 1 ≉ 0` / `min 0 1 ≉ 1` are admitted **through the kernel**. One level down, `Rat.max`/`Rat.min` are checked to COMPUTE on both branches with the wrong answer REFUSED — the nine `ℚ` laws are all one-sided and would hold of a projection. Three one-token mutations refused. |
 | 2026-08-19 | `e9f5cf287` | **The mathematics strand stops advising against work that is finished.** `02` gains a dated ℝ/ℂ status block, a `ℂ` row and a corrected `ℝ` row in the construction-order table, measured prelude counts, and a "not built" table with reused costings (cotransitivity ~400 lines, `apart_mul` ~300, completeness/`sqrt`/suprema uncosted, ℂ `abs` downstream of both). `05`'s D3 is re-ordered rather than deleted: it was a pre-flight check on a construction order that has since been walked, and is now a coverage measurement against Mathlib. `04` closes R4 and keeps the 30 `Real` axioms as the ADR-0509 negative control. `01`, `03`, `README` and `diary-real-keystone.md` corrected in place. |
 | 2026-08-19 | `c26e492b1` | **The axiomatized reals are renamed `AxReal` (ADR-0522 step 1), and two green assertions were reading the wrong carrier.** `CReal` contains `Real`: a front-door test asserting `contains("Real.add_le_add")` was satisfied by `CReal.add_le_add`, and `infeasibility_farkas_lean`'s ordered-field scan by `CReal.le` — the latter is a `proved` fact's checker command. One string literal moves the whole 30-row package. `--accept-rename OLD=NEW` is new: routing a rename through `--accept-population-change` would have published 30 retirements that never happened. |
-| 2026-08-19 | `417b9216b` | **Finished the `AxReal` rename at the place that publishes the name.** ADR-0522 renamed the axiomatized ordered field's declarations; the ledger kept filing them under prelude `real`, so the table a referee reads said `real 30` about 30 rows all named `AxReal.…` — the label contradicting its contents, and inviting the exact reading the rename existed to prevent (the reals this project ships are `creal`, in the same table at **0**). Landed atomically per that ADR's own warning: `total=30|axreal=30|…`, thirty before and thirty after, never thirty-one. The table now carries a generated paragraph saying what `axreal` is and that ADR-0509's *declared* is not *reached*; it previously assumed the reader knew. Generalises: **a rename is not landed until the thing that publishes the name has moved** — the declaration half is the half a compiler checks, and therefore the half that gets done. |
-| 2026-08-19 | `417b9216b` | Two substring bugs of the shape CLAUDE.md warns about, found by the rename and caught by neither gate. `real (\d+), integer (\d+), string (\d+)` matches inside **`creal 0, integer 0, string 0`** — ordinary prose now that the constructed carrier is the one at zero — captured (0,0,0), scored it against `axreal` (30) and reported a stale count, so a document stating the counts CORRECTLY would have redded the gate. And `check-fact-depends-derived.py`'s namespace list contains `Real`, matching at offset 2 of `AxReal.add_comm` to yield a name no kernel declares: `unnamed` never fires because a name WAS found, the lookup misses, and the fact is skipped **in silence** — the very silent-skip that file's header promises to report. Both fixed with `(?<![A-Za-z])`; the first controlled both ways (remove the lookbehind → 1 test dies; make the pattern inert → 5 do). |
-| 2026-08-19 | `17df9ba63` | **A control script that nothing invokes, found by a control script.** `scripts/tests/` held 8 controls and `test-check-lean-golden-pins.sh` was run by nothing — not `check.sh`, not the justfile, not the hook, not CI — while passing 6 assertions daily. Fifth instance of this shape here. `check-control-registration.sh` now derives the registry from the filesystem, so a new control is red until a gate names it. Also `lane-push.sh --to <branch>`: landing work is `push HEAD:main`, and without a target the range, the cost estimate and the fast-forward check all read `origin/<current-branch>` — measured on a fixture, the same doc-only landing reads FULL BATTERY instead of FREE. |
-| 2026-08-19 | `ad7f99e72` | Two `real-inverse` facts were red because of a lemma about `max`: both pinned `76 declarations admitted` and the lattice work made it 94. **A total every lane increments is not an anchor for a fact about one declaration** — replaced by the invariant the facts are about (trusted surface = 0) plus an explicit `>= 76` floor, demonstrated able to fail. They were also unreplayable: ~19 min in debug against the replay gate's 120 s budget, so it recorded TIMEOUT rather than a result. `--release` is ~12x here. |
 | 2026-08-18 | `4b5613e26` | `check-fact-derived-numbers.py`: every number a fact asserts about its own `axiom_footprint` re-derived from the array. Fixes `F:schedule-critical-chain-infeasible` (prose 30 vs array 26, plus an obsolete facade paragraph found by re-measuring: `Lra`/62 lines, not a 21-line shim) and the example's stale module doc. 52 of 3,243 prose numbers bound, denominator printed every run; 7 guards, each deletion kills exactly 1 test; wired into both `just check` (`facts`) and `check.sh` so `check-aggregate-scope.sh` records no new divergence. |
 | 2026-08-18 | `24578036f` | `gen-lean-axiom-ledger.py`: coverage command gains `--include-constructed` (on `--release`, 12x faster), `EXPECTED_PRELUDES` gains `rat`/`creal`/`complex`, and measurement drift is reported per prelude **with its direction** — REGRESSION / IMPROVEMENT / COVERAGE LOST / ADDED / RESHAPED, each with the re-pin command. Ledger now pins 8 groups by value (was 6); 39 tests (was 24); 11-mutation control registered in `mutation_controls.py`, no survivors. Already wired in both `check.sh` and `just check`, so no new gate divergence. |
 | 2026-08-18 | `7646b2c04` | `reject_self_refuting_module` at `gate_module_content` — the one boundary every route's module crosses; the Python predicate widened from one shape to the property and run over EVERY class; DECLINED pinned two-sided in its own manifest; the shadowed attested-path copy deleted after the mutation control that used to kill a test reported SURVIVED. 6 mutations, 0 survivors; 9 Rust unit tests, each with its discriminating twin. |
@@ -1061,8 +214,6 @@ now. Nothing was deleted.
 | 2026-08-18 | `3076b6ae0` | the one Lean module `rfl` refuted on its own: root-caused to a degenerate `(t, t)` witness, the route now declines, and a self-refuting attestation FAILS the run instead of being counted |
 | 2026-08-18 | `8e4894de4` | `ArrayAxiom` renders the query's own terms; a third `structural` verdict binds 95 modules to their query's subterms, 359 of 372 corruptions caught, and the attested class drops 124 → 28 with an anti-absorption guard |
 | 2026-08-18 | `pending` | binding coverage: +20 bound (105 → 125), 124 modules proved content-free, and the converse direction measured at 286/531 |
-| 2026-08-18 | `pending` | `scripts/cargo-serialized.sh`: heavy cargo now takes an flock and a memory ceiling, because "serialize" was prose and prose does not hold a lock (two dev boxes downed, one agent session OOM-killed). **`MemoryMax` alone does not bite** — it *is* applied (`memory.max` = 67108864) and a 400 MB allocation still succeeds by swapping, on a box whose 7 G of swap is 6 G full. With `MemorySwapMax=0` the same allocation is SIGKILLed by the cgroup (137), host untouched. `--self-check` proves it per host and discriminates: `AXEYUM_CARGO_SWAP=1G` flips it to `SURVIVED`, exit 1. |
-| 2026-08-18 | `pending` | `local-ci.sh`, the declared authoritative gate for `main`, cannot run on any fleet host and never has (`cargo nextest` 101, `rustup run 1.88.0` 1, on s4/s5/s7). Now refuses to start rather than limp, `--record` leaves a tracked per-(sha,host) JSON, and `provision-fleet-host.sh` installs the prerequisites (`1.88.0` needs `--profile minimal`, else rustup fails on `miri`/`cranelift` inherited from the nightly profile). The record carries per-step TEST COUNTS and marks a step that exited 0 having run zero tests as `vacuous`. |
 | 2026-08-18 | (pending) | `gen-adr-index.py --check-remote`: cross-checkout ADR-number collision detector, wired into `just check` and `check.sh`; found a second live collision (0468-0470) beyond the one already fixed today (471-474) |
 | 2026-08-18 | (pending) | `lean_pp::split_module_banner` + `tests/support/lean_golden.rs`: golden pins cover the module BODY, banner pinned once as committed text in `module_banner_pin`. |
 | 2026-08-18 | (pending) | `scripts/check-lean-golden-pins.sh` (+ controls): the golden-module gate, membership DISCOVERED not listed; wired into `just check`, `check.sh`, and diff-scoped `hooks/pre-push`. |
@@ -1552,32 +703,7 @@ The pinned reference carries **both** — `type_checker.h:31-32` declares
 trick. The whole δ chain is memoised, not just its head, because every δ step
 mints a fresh expression that no cache has ever seen.
 
-Acceptance is unchanged by construction: the memo returns exactly what the walk
-would have returned, the key is complete (revision + expression, split on
-`has_fvars` exactly as the δ-free memo is split, with the same `push`/`pop`
-scoping), and the closed half is covered by the existing `reduction_ctx_reads`
-tripwire.
-
-Verified: `prelude_build_timing` creal 33.0 s → **12.98 s** and template reuse
-0.41 s → 0.15 s; `axeyum-lean-kernel --lib` **398 passed**;
-`axeyum-solver --features full --lib reconstruct::` **300 passed** in 186 s
-against the ~294 s this suite normally takes, because it builds preludes;
-`gen-lean-axiom-ledger.py --check` exit 0 with `axreal=30` and every other
-prelude 0, unmoved; clippy `--workspace --all-targets --all-features -D
-warnings` clean. Peak RSS of a full uncached prelude sweep is 512 MB against
-368 MB before — the debug unit sweep's multi-GB profile is pre-existing and was
-measured on a clean HEAD snapshot to rule the memo out.
-
-Next on this axis, and the remaining 6.7 s: **our nat rules are in the wrong
-loop.** Lean calls `reduce_nat` from `whnf` — after `whnf_core`, before δ
-(`type_checker.cpp:765`) — and in `lazy_delta_reduction` guards it with
-`!has_fvar(t_n) && !has_fvar(s_n)` (`type_checker.cpp:1093`). Ours is called
-from inside `whnf_no_unfolding_uncached`, which *is* Lean's `whnf_core`, with no
-`has_fvar` guard anywhere. ADR-0459 already describes the intended placement as
-"tried after `whnf_core` and before δ", so the code does not match its own ADR.
-Moving it changes what the kernel identifies, so it needs an ADR and differential
-evidence, not a perf commit — but the prize is measured: with the rule off and
-this memo on, the same build is **6.56 s**, better than the pre-regression 8.7 s.
+Detail moved to [`../notes/112-prelude-perf.md`](docs/plan/notes/112-prelude-perf.md).
 
 **`Kernel::reduce_nat_binop` now sits where Lean calls `reduce_nat` — in the δ
 loop and in lazy-delta, never in the δ-free step — under Lean's `has_fvar`
@@ -1593,45 +719,7 @@ second under `!has_fvar(t_n) && !has_fvar(s_n)`. Both are now ported; the
 `whnf_core` site also carries the guard, which is stricter than Lean and is the
 decision ADR-0536 records.
 
-**The placement alone buys nothing — the guard is the whole prize, and that
-distinction is the finding.** Three interleaved rounds, release,
-`AXEYUM_PRELUDE_CACHE=0`, `taskset -c 0-7`, median `creal` seconds: before
-**12.99**, Lean's placement unguarded **12.12**, Lean's placement + guard
-**6.79**. 12.99 → 12.12 is inside this workload's run-to-run spread on a shared
-box. The rule fires 1.19 M times per `build_creal_prelude` and produces a literal
-575 times, and 99.98% of the probes are on a term that mentions a free variable —
-so the O(1) structural guard removes essentially all of the cost, and moving the
-call site removes essentially none of it. For scale, 8.71 s was the time *before*
-the acceleration was ever switched on.
-
-**Identification is unmoved, measured rather than argued.** `axeyum-lean-kernel`
-lib **399 passed / 0 failed**; the full kernel crate (lib + all 46 integration
-suites) **609 passed / 1 failed**, the one being
-`real_lean_wellfounded_elaborator_divergence`, which fails **byte-identically on
-an unmodified `HEAD`** in a snapshot tree and is a *Lean elaborator* rejection,
-not ours — a live separate finding, flagged for whoever owns ADR-0517;
-`axeyum-solver --features full --lib reconstruct::` **312 passed / 0 failed**;
-clippy 618/618 targets, 0 diagnostics; `check-prelude-reuse-equivalence.sh`
-`compared=8 failures=0` with live counters;
-`gen-lean-axiom-ledger.py --check` exit 0 with
-`total=30 axreal=30` and every other prelude 0. No declaration stopped admitting.
-That is a measurement over this repository's corpora, not a proof: the class the
-guard gives up is nonempty and a fixture constructs one — `Nat.mod ((fun _ => 7)
-x) 0`, whose operands reduce to literals while `has_fvars` is structurally true.
-Our corpus simply does not reach it.
-
-Four mutations, each alone: dropping either `has_fvars` guard kills exactly one
-test, dropping the `whnf_core` call site kills exactly one, and dropping the
-lazy-delta call site kills five — one of them by **overflowing the stack** on
-`2^64`-scale literals, which is ADR-0459's unbounded-successor-chain hazard
-reproducing on demand. That is which of the two sites carries the rule's reason
-for existing.
-
-Next on this axis: `reduce_nat_succ` is still in the δ-free step, a residual
-divergence from Lean's `reduce_nat`. It is one interned-name comparison per
-constant-headed reduction step, so it is not a cost today — revisit only if a
-profile says otherwise, since moving it would change identification for no
-measured gain.
+Detail moved to [`../notes/113-nat-rule-placement.md`](docs/plan/notes/113-nat-rule-placement.md).
 
 **All 35 dominance audits re-run at `496288979`; the fully-dominant UNSAT count
 is 269 / 326, not 262 / 324, and five of the fifteen "Lean-reconstruction gap"
@@ -1660,29 +748,7 @@ identical in every summary field, which is what makes the two runs comparable.
   prelude cheap enough to pay for inside the cap. This is the whole baseline
   denominator movement, 324 → 326.
 
-**A directory-backed audit row silently drops an instance it fails to decide.**
-That is how those two went missing while the row reported `timeouts 0`: the
-directory branch `continue`s past an undecided instance and leaves no record, so
-numerator and denominator shrink together. Only the two synthetic rows take that
-branch; the instances-array branch records the row instead. Not fixed here.
-
-**The audit's `lean_error` is the fallback route's message, not the fragment's
-reason.** All six QF_NRA gap rows classify as `Lra`, so the facade falls through
-to the generic LRA route and records *its* complaint (`QF_LRA: nonlinear real
-multiplication`). Calling the fragment entry points directly gives the real
-answer, and the three that matter split two ways: `simple-mono-unsat` and
-`subs0-unsat-confirm` are **principled declines** — their bound / zeroing case is
-only *entailed*, by `(or …)`, and minting it would put a proposition in the Lean
-module no assertion states; closing them needs kernel case analysis, not a
-looser mint. `mult.01` is **unimplemented and scoped**: the `Exactly` bound
-refuting `M != k` needs the upper bounds and an equality transport. The three
-`real-handelman-unsat` rows have no reconstruction at all and are the largest
-single QF_NRA item left. Per-instance table is in the gap analysis.
-
-Next on this axis: the three Handelman reconstructions; the `Or.rec` case
-analysis that would close the two principled declines; and the dir-branch drop,
-which makes a synthetic row's denominator depend on what the audit could decide
-that day.
+Detail moved to [`../notes/114-audit-refresh.md`](docs/plan/notes/114-audit-refresh.md).
 
 **`QF_FP/solver__fp__fp_misc.smt2` timed out because `array_bv_abs::abstract_term`
 walks a DAG as a tree; memoized, the row goes from 124.7 s of a 125 s budget to
@@ -1700,46 +766,7 @@ were in `abstract_term`, self-recursive dozens of frames deep. `perf` and a bare
 `ptrace_scope=1`); an unprivileged sampling loop returns an empty file that reads
 exactly like "nothing to see". `sudo gdb -p` works.
 
-**Every cap in that module was on the walk's RESULT.** `MAX_ABSTRACTED_TERMS`,
-`MAX_ABSTRACTED_NODES` and the 1 s solve timeout all run after
-`build_bv_abstraction` returns, so nothing bounded the walk itself. Memoizing
-took `fp_misc` from 4,194,309 visits to 4,365 over 5,762 reachable nodes; the new
-visit budget is what makes the memo's guard fail in 0.23 s instead of hanging.
-Sixth instance of this bug in this repository, and the second this week — the
-2026-08-20 pair (`contains_quantifier`, `lower_derived_bv`) were latent behind
-routes nothing reached until `887b52e64` made FP rows decline `BvDefinedEnum`,
-which is the same commit that exposed this one.
-
-**Not dominant, and that is the honest answer.** The 2026-07-21 row was dominant
-through `bv_defined_enum`, which `887b52e64` deliberately withdrew for FP
-arithmetic pending a certified `Fpa2Bv` reduction — pinned by that commit's own
-`declines_qf_fp_misc_without_certified_fpa2bv`. `fp_misc` now decides through
-bit-blast with an explicit `bit-blast` trust hole. `trust_holes: ["timeout"]`
-becoming `["bit-blast"]` is the whole improvement, and restoring dominance means
-certifying `Fpa2Bv`, not raising a budget.
-
-**`QF_BVFP/Float-no-simp3-main` is a budget, but not the one that was recorded.**
-The standing note said "decision is 4.6 ms but its evidence still exceeds 120 s".
-Measured at HEAD, `produce_evidence` returns in 19 ms and nothing times out. The
-same `887b52e64` decline removes its certifying route, and what it falls back to
-is a bare `unsat` only because `produce_evidence` skips
-`reduction_unsat_certificate` **outright** whenever `config.timeout` is set —
-which `audit_dominance` and `diagnose_evidence` both always do. Run the same
-export unbudgeted and it is `proved` in **28.3 ms**.
-
-I did not loosen that guard, and the measurement says why not: the `deadline` it
-would rely on reaches only `solve_with_drat_proof_within`. `lower_terms`,
-`tseitin_encode`, `check_drat` and the LRAT elaboration are all unbounded, and
-the guard covers 42 bare-`unsat` rows across the committed audits. Landed
-instead as a two-test pair asserting opposite outcomes on the same instance, so
-neither can pass vacuously and either direction of change breaks one.
-
-Next on this axis, in cost order: thread the deadline through
-`export_qf_bv_unsat_proof_impl`'s unbounded phases and then narrow the blanket
-budget guard to a real remaining-time attempt (this alone would move
-`Float-no-simp3-main` and any other BV-reducible bare `unsat` to certified);
-then `Fpa2Bv` certification, which is what both FP rows actually need for
-dominance.
+Detail moved to [`../notes/115-fp-misc-hang.md`](docs/plan/notes/115-fp-misc-hang.md).
 
 **Gap #7 closed for `:pattern`, declined for `:weight` (`DONE`,
 agent-quantifier-triggers, 2026-08-21).**
@@ -1790,33 +817,7 @@ from the append-only ledger, never from `bench-results/parity-lists/`: a list
 can be deleted, so anchoring there would let a logic be dropped from the tracked
 set to go green.
 
-**Freshness is not correctness, and that nearly bit on day one.** Mid-sweep,
-`40a1ab969` (ADR-0538) landed — one file, `dpll_lia.rs` — and the sweep tree did
-not contain it. A `2026-08-21` entry carrying the pre-fix QF_UFLIA number would
-have been *fresher-looking and more wrong* than the 2026-08-06 entry it
-replaced, with this gate green over it. Every arithmetic division was re-swept
-from a post-fix tree, and the gate now reports each entry's `solver commit`,
-its ancestry, and `behind=N` commits touching `crates/` — advisory, because a
-commit-count bound is red-by-construction during a burst and non-ancestry is
-legitimate when a lane measures from its own branch.
-
-**Two instrument defects fixed, both found by measuring.** `parity-run.sh`
-claimed every ratio is a lower bound under contention; true of each solver's own
-count, false of their quotient — QF_LRA read 70.1% at load 32 and 64.2% quiet,
-because contention cost the reference ten files and cost us none. And
-`docs/PROJECT-STATE.md` claimed the ledger held "eleven divisions" and named
-QF_ABV as a parity cell; it holds nine and has never held a QF_ABV entry —
-`parity-lists/QF_ABV.txt` is a committed list that was never run.
-
-Controls: 16 cases, every guard mutation-verified by deletion, mutation map in
-the suite's header. Two run against the real committed ledger, because a parser
-never pointed at its subject returns the same empty answer as a strong negative.
-
-**Next.** Wire the gate into `.github/workflows/ci.yml` (the third place the
-gap analysis named) once the board is green; measure QF_ABV and QF_UF, whose
-lists are committed and have never been run; and hand UF's reproducible
-composition shift (both/only 77/8/14 → 60/23/33 across ~100 commits) to the UF
-lane.
+Detail and older landed rows moved to [`../notes/117-parity-freshness.md`](docs/plan/notes/117-parity-freshness.md).
 
 **The data coupling to `../math-education` is removed and
 `scripts/check-external-coupling.py` refuses its return** (`WIP`,
@@ -1844,39 +845,7 @@ Four validators reached outside the checkout in code, one of them defaulting to
 `~/projects/personal/math-education/graph` — an absolute path into one machine's
 home directory, in a tracked file.
 
-**Not internalized, deliberately.** Re-pointing the 24 edges at local
-`C:factorial`-style entities keeps their shape and moves their semantics
-nowhere: an axeyum-local `C:factorial` means "whatever the sibling means", with
-nobody here to adjudicate it. That is the coupling laundered through a rename,
-and it would pass the new gate while the authority still lived elsewhere.
-ADR-0553 records the prerequisite instead: **a concept vocabulary this
-repository owns is required before a `formalizes` edge can mean anything**, and
-the three guards that went with that relation must return with it.
-
-The gate names mechanisms, not repositories, so a different sibling is caught
-too: the external-declaration vocabulary (including inside a schema enum), any
-`..` path segment in any string, a 40-hex revision under a key not in a registry
-that says which repository it pins, and source that builds a path out of the
-checkout across `scripts/`, `python/` and `tools/`. Measured: **1,885 artifacts,
-159,474 strings, findings=0** here — and **64 findings** over the four real
-pre-change artifacts read from `56eaab2cc`, which is the positive control. R4
-restored the deleted 777-line module and fired on its first constant.
-
-R3 does **not** forbid a foreign pin — Mathlib, the Lean toolchain and
-lean4export are pinned on purpose. It forbids an *undeclared* one.
-
-**Next, and it is the largest known gap:** 1,174 absolute paths in
-`artifacts/**` are deliberately uncovered. They record where a measurement
-physically ran (`/nas3/...`, `/home/mjbommar/lean-import-scale/...`), which is
-provenance rather than a dependency, and forbidding them is a separate policy
-question with a 1,174-row blast radius. If that policy is wanted, it is its own
-ADR and its own lane.
-
-Two downstream artifacts went **structurally empty** when the `formalizes`
-links went, and were reduced rather than left reporting zero — the concept
-coverage projection's validator had degenerated to comparing two empty sets, a
-check that cannot fail. Ten of fifteen census rows are now *named* instead of
-printed as zeroes.
+Detail moved to [`../notes/118-external-coupling.md`](docs/plan/notes/118-external-coupling.md).
 
 **Gap #4 diagnosed; "multi-year catch-up" confirmed for the search, and the
 sizing corrected three ways (`DONE`, agent-nia-diagnosis, 2026-08-21).**
@@ -1910,31 +879,7 @@ of 15 rungs. **32 files have one live rung and we decide zero of them.**
 
 Two findings worth not re-deriving:
 
-- **The projected-clause estimator over-approximates by 9.4×**, measured
-  (74,329,095 projected against 7,917,733 actual on one file). Lifting the gate
-  by exactly that factor decides **0 of 49** and causes **0** memory aborts — the
-  refusal was in front of a search that does not finish either. My explanation of
-  *where* the slack comes from (constant-operand multiplies) was also measured
-  and **refuted**: a popcount-aware charge moves the estimate 6 %.
-- **The technique this family needs is already implemented and unreached.**
-  `nia_linearize::small_domain_lemmas` splits a product whose narrow factor has a
-  width-≤4 box, which is exactly the `[-2, 2]` box these benchmarks declare — but
-  it is reachable only through the *lazy* refinement loop, which runs 19–126
-  rounds and times out when the admission envelope is lifted.
-
-**Postscript.** The board was re-measured 127 s after this landed
-(`5be2b296c`) and the row now reads **40.7 % (33/81)**. Three same-day cvc5
-runs give **76 / 76 / 81** against the **89** recorded 15 days earlier — the 89
-is the outlier, and every "N files behind" priced off it is a few files too
-large. My 38 is five above both same-day parity runs and I did not measure why;
-treat it as this instrument's count. Nothing in the diagnosis moves: the classes
-are per-file properties of our own failures, and a five-file boundary shift moves
-no class across a conclusion.
-
-Next, if this is picked up: an **eager** small-domain split feeding the resulting
-linear integer problem to the LIA route, measured against the 74 `VeryMax/ITS`
-misses. It is the one hypothesis these measurements have not refuted; it is
-unpriced, and it is a route, not a constant.
+Detail moved to [`../notes/118-nia-diagnosis.md`](docs/plan/notes/118-nia-diagnosis.md).
 
 **Gap #3 of the 2026-08-21 capability audit is closed at the command level**
 (`WIP`, agent-consumer-interface, 2026-08-21). §6.3 ranked the consumer
@@ -1951,71 +896,7 @@ drops `(get-model)` produces **no output and no complaint**, and that is
 indistinguishable from a solver with no model. It is this repository's own
 recurring failure: silence read as a negative result.
 
-ADR-0541 states the rule as **a command is answered or it says `unsupported`
-with a reason**. `solve_smtlib_session` walks the command stream and returns one
-response per output command; `solve_smtlib_incremental` is now that same walk
-with the output commands switched off (`SessionPolicy::VerdictsOnly`), not a
-second implementation, so the two cannot disagree about a verdict.
-
-**Every default was measured against both references, not assumed.** Z3 4.13.3
-and cvc5 1.3.4 both answer `(get-model)` in a script that never set
-`:produce-models`, so that default is `true`; both error on `(get-unsat-core)`
-without `:produce-unsat-cores`, so that one is `false`. An unhonored
-`set-option` answers `unsupported` (cvc5's behaviour and SMT-LIB §4.1.7; z3
-raises an error instead). `(set-logic NONSENSE_XYZ)` answers `unsupported` and
-still decides, which is exactly z3.
-
-**`set-logic` is recognized and deliberately not enforced, and the decision is
-priced.** Over the 1,430 tracked `.smt2` files every one declares a logic, and a
-minimal five-rule conformance check flags **5** — all `QF_SLIA` scripts using
-`(_ BitVec n)` sequence elements. z3 rejects all five at the parser; axeyum
-decides one. So enforcement costs one file, which is *not* the reason to
-decline: enforcement needs a complete logic → theory table, and a table with a
-hole refuses a **correct** file, which is a wrong answer where deciding a
-nonconforming script merely answers a superset.
-
-**The recognizer was a hand-written list and the list was wrong on first
-contact.** It omitted **`BV`**, which 59 tracked files declare. It is now a shape
-rule over the generated grammar, with the corpus's 40 distinct logic names as a
-positive control.
-
-**`get-model`/`get-value` decline rather than guess** — and a census said which
-refusal to stop making. A value whose sort has no re-parseable SMT-LIB spelling
-makes the whole command `unsupported`; over 400 corpus files that was **66
-refusals, 58 of them arrays** — more than every other cause combined. So arrays
-now render as `(store … ((as const (Array I E)) default) …)`, the spelling z3
-4.13.3 prints, and the same census re-run reads **166 models rendered, 9
-refused**. The residual is uninterpreted carrier tokens (7), algebraic reals (2)
-and datatypes (0 in this population): a `QF_UF`
-`(get-model)` is refused because z3's `U!val!0` universe block is a z3 extension
-whose element distinctness is conventional, and inventing our own spelling would
-hand a consumer something that looks like a model and is not one.
-
-Measuring the refusals rather than reasoning about them is what changed the
-order of work: uninterpreted sorts *felt* like the gap and arrays were ten times
-the volume.
-
-**`smtcomp_cli` is untouched** and stays single-query with no added output
-(SMT-COMP 2026 §7.1.2 treats stray verdict text as a reported result).
-
-**The new answers are cross-validated by z3, not diffed against it** — two
-models are both correct, so equality is the wrong test. Every reported value is
-pinned as an equation on the original script and z3 must call the result `sat`
-(**133/133**); every unsat core is re-run alone and z3 must call it `unsat`
-(**122/122**). Both controls fire, and both needed a fix first: z3
-**error-recovers**, so a sort-broken pin draws `(error …)` and the following
-`(check-sat)` still prints a verdict — the corrupted-value control passed on a
-script that never contained the corruption. And the harness's own `(get-value)`
-parser read the first parenthesised group as the *term*, which is wrong when the
-term is an atom and the value is an array; 89 files read as "z3 rejected our
-model" and the models were fine.
-
-**Next.** Render uninterpreted-sort models (7 refusals of 400 files) and
-algebraic reals (2); answer `get-info`/`get-option`, which say `unsupported`
-where z3 answers; decide
-whether `(exit)` should truncate the walk, which needs the parser to stop reading
-at it rather than the driver to stop executing; and the logic → theory table if
-conformance is ever wanted.
+Detail moved to [`../notes/119-consumer-interface.md`](docs/plan/notes/119-consumer-interface.md).
 
 **Gap #6, second and third turns: three more families converted, and the row's
 own denominator corrected (`WIP`, agent-checker-independence, 2026-08-21).**
@@ -2034,31 +915,7 @@ each deletion killing exactly one test.
 finding.** "~30 of 34 checkers re-run the producer" counts one shape and three
 situations. All 28 remaining were read:
 
-- **3 families (16 instances) are not the defect at all.** `bool-uf-exhaustive`
-  (7), `bool-euf-exhaustive` (6) and `bool-euf-online` (3) re-run a *complete
-  decision procedure* over the original assertions — exhaustive enumeration with
-  a trusted evaluator, or the online EUF solver. A satisfiable query is refused
-  by the re-run itself; there is no recognizer whose mistake could be reproduced.
-- **18 families / 33 instances are convertible** — the certificate names terms, sorts, counts
-  or coefficients from which its claim is re-derivable. Largest still owed:
-  `bv-forall-nonconstant` (6), `bv-uf-local` (6), `set-cardinality` (4),
-  `term-identity` (3).
-- **5 families (14 instances) cannot be made independent without changing the
-  CERTIFICATE**, and are now named in `evidence.rs` beside their checkers rather
-  than implied away: `uf-arith-congruence` (4, two counts),
-  `bv-abstraction` (4, discards the inner QF_BV evidence that establishes the
-  `unsat`), `datatype-structural` (3, one count),
-  `cross-store-array-disequality` (2, no derivation chain),
-  `fifo-bc04` (1, a whole-instance fingerprint plus compile-time constants).
-  `bool-euf-online` (3) is in both (A) and this class: its certificate is one
-  `atoms: usize`, so the re-run is the whole check — sound only because the
-  thing re-run is a decision procedure.
-
-Next in this lane, largest first: `bv-forall-nonconstant` and `bv-uf-local` (6
-each), then `set-cardinality` and `term-identity`. `bv-abstraction` is the one
-worth doing as a *certificate* change instead — it already produces and
-self-checks a QF_BV proof and then throws it away, so carrying it would move 4
-instances from class (C) straight into the externally-portable DRAT column.
+Detail moved to [`../notes/120-checker-independence.md`](docs/plan/notes/120-checker-independence.md).
 
 **Gap #5: the rule vocabulary was fixed and it was never the binding constraint
 (`WIP`, agent-portable-evidence, 2026-08-21).**
@@ -2081,61 +938,7 @@ Carcara 1.1.0 registers `arrays_idx`, `arrays_row`, `arrays_row_contra` and
 shape. Same problem, same proof, one identifier changed:
 `read_over_write_same` → `unknown rule` / `invalid`; `arrays_idx` → `valid`.
 
-That mattered to a published number: `Evidence::portable_artifact` reported
-*every* `UnsatAletheProof` as externally checkable, so a proof Carcara answers
-`invalid` counted toward the "artifact an external checker can read" figure —
-the `lia_generic` defect that function's own comment warns about, one level
-down. Portability is now decided from the artifact's **rule vocabulary**
-(`axeyum_cnf::non_carcara_checked_rules` against a pinned 179-rule list that
-excludes `hole`, `lia_generic` and `rare_rewrite`), not from the variant.
-
-**The number did not move, and the measurement says why.** 44 of 281 (15.7%)
-before and after: all 44 currently-claimed instances name only rules Carcara
-checks, so the published figure was right and is now defensible by a test rather
-than by a reading. The 85-instance `unsat-array-axiom` family — 30% of certified
-`unsat`, the target this lane was pointed at — is unreachable at every rung, per
-instance (`alethe_portability_probe --array-shapes`):
-
-| `ArrayAxiomKind` | instances | share |
-|---|---:|---:|
-| `ReadCongruence` | 70 | 82.4% |
-| `ReadOverWrite` | 8 | 9.4% |
-| `StoreShadowing` | 5 | 5.9% |
-| `SelectIte` | 1 | 1.2% |
-| `StoreIteSelect` | 1 | 1.2% |
-
-- `arrays_idx` reaches **1 of 85**: one certificate is the ROW-same shape, and
-  its disequality is inside a BTOR bv1 encoding rather than asserted at top
-  level, so the `assume` a proof needs is not a problem assertion. 67 of the 70
-  `ReadCongruence` instances share that bv1 head.
-- The whole zero-trust Alethe ladder reaches **0 of 85**.
-- `eliminate_arrays` then bit-blast reaches **0 of 85**, structurally: array
-  elimination rewrites every select-of-store to an `ite` and
-  `prove_qf_bv_unsat_alethe`'s fragment has no `Op::Ite` arm. Carcara has no
-  `bitblast_ite` either.
-
-So the next real slices, in the order their cost was measured, are: **`Op::Ite`
-in the bit-blast Alethe emitter** (unblocks elim→bitblast for the whole family
-but needs a Carcara-checkable `ite` treatment — the case split over
-`arrays_idx`/`arrays_row`, since Carcara has both branches); **clausification
-rules** `not_implies1`/`not_implies2` plus the existing `eq_congruent`, worth the
-3 pure-Boolean `ReadCongruence` instances (`arr1.smt2` and two siblings) but
-carrying a Lean-column regression risk, since 81 of these 85 currently produce
-Lean *reasoning* modules through `UnsatArrayAxiom` and a route change would swap
-that for an Alethe cert. Neither is a rule-name fix.
-
-**Open, found and not fixed here.** `bv_poly_simp` (Route 2) is checked by
-neither Carcara (`unknown rule`) nor `check_alethe`
-(`UnsupportedRule`) — Route 2 is the one Alethe emitter that does not
-re-validate its own output, which is why three doc comments could call the rule
-"Carcara-valid" unchallenged. It is not on the evidence path.
-`PortableArtifact` is not re-exported from `axeyum_solver`, so a consumer can
-call `portable_artifact` and cannot name its return type.
-
-QF_ABV dominance audit re-run from a clean `lane-snapshot` tree (`dirty=false`,
-sha `35d3fd6b1`): 169/169 audited decided, **85 certified, 85 checked, 85
-Lean-checked (81 reasoning / 4 attestation)**, 0 mismatches, 0 audit errors —
-per-instance identical to the committed artifact.
+Detail moved to [`../notes/121-portable-evidence.md`](docs/plan/notes/121-portable-evidence.md).
 
 **The GF(2) machinery is on `main`; the Kaser--Lemire attack is not** (`landed`,
 lemire-integration, 2026-08-23, ADR-0544, `b99d715bc`). Two lanes had produced
@@ -2174,17 +977,7 @@ checker command reaches `gf2_hayes` or `artifacts/gf2`. Exactly four of 45
 qualify, `depends_on`-closed. The other 41 would have left the ledger asserting
 evidence this repository can no longer produce.
 
-Verified: 694 `axeyum-cas` tests (690 pass, 4 ignored, 48 of them gf2); clippy
-clean under `-D warnings`; `cargo check --workspace --all-features` clean;
-`validate-facts.py` 347 facts / 0 errors; each retained fact's own
-`checker_command` runs a nonzero passing count; the four `certificate-spec`
-guards each mutation-verified to kill exactly one test (`__pycache__` cleared
-between mutants); the new pre-push caller-safety assertion shown to fire on a
-HEAD move, a staged file, and an untracked leftover, and to stay quiet otherwise.
-
-Not pushed. The research record is exported to
-`../lemire-half-degree-irreducibles` (`f7181da`, 768 files) and every source tip
-is pinned under `archive/*` in this repository.
+Detail moved to [`../notes/122-lemire-integration.md`](docs/plan/notes/122-lemire-integration.md).
 
 **Theorem correspondences (`WIP`, agent-correspondence-model, 2026-08-24).** The
 data model can now state that two settled facts are the same mathematical
@@ -2195,31 +988,7 @@ content, and cannot state it where `depends_on` belongs
 (`just correspondences`; 39 mutations, 39 killed, one test each). Three
 instances landed, all `route-recorded`.
 
-**Next**, and the ordering is deliberate. (1) **The 20 cross-carrier ℕ/ℤ pairs
-already in the ledger** — `modeq-*` (13 of them), `fib-*`, `gcd-greatest`,
-`add-modeq-*`. The carrier-erasure check makes each cheap to adjudicate and
-impossible to fake, and some will be **refused** as `depends_on` dependencies,
-which is the useful half of the answer. (2) **A fact for `Int.fib_cassini` and a
-fact for `Rat.det2_mul`** — see the blocker below; the correspondence between
-them is one JSON file once they exist. (3) `null` `via` refs are a named
-backlog: `Int.ofNat` injectivity, `↑a ∣ ↑b ↔ a ∣ b`, and the two CPoint/SMT-real
-carrier steps are each a missing fact that three correspondences point at.
-
-**Blocked, and worth someone's attention beyond this lane.**
-`artifacts/autogenesis/kernel-dependency-projection-v1.json` is STALE against
-theorems that landed the same day it was refreshed:
-`git merge-base --is-ancestor aa3e8ea24 e256492c2` is **false**, so the refresh
-at `e256492c2` predates the linear-algebra commit. It holds 195 `Rat.*`
-declarations and zero `det2`, zero `cramer`, zero `fib`. Every
-`kernel-declaration` endpoint anywhere in the knowledge overlay inherits that
-blind spot, and refreshing it needs a workspace `cargo run` this lane could not
-justify in a tree five lanes are editing.
-
-Two pre-existing gates are red for reasons this lane did not cause and did not
-fix: `check-control-registration.sh` reports `py_orphans` 199 → 203 (all
-`test_analyze_*`, committed by other lanes), and `check-aggregate-scope.sh`
-reports a long standing `just-only` list of autogenesis steps. The new gate is
-on **both** sides and adds no divergence.
+Detail moved to [`../notes/123-theorem-correspondences.md`](docs/plan/notes/123-theorem-correspondences.md).
 
 **Curriculum-directed kernel development (`WIP`, coordinator, 2026-08-25).**
 Target selection follows
@@ -2240,116 +1009,33 @@ was extended to build `creal`/`complex`/`cpoint`, which had been outside its
 coverage entirely, so a fact over those 423 theorems can now get a derived
 `depends_on` instead of a hand-asserted one.
 
-**Next.** (1) `complex`/`cpoint` remain at zero facts — the tooling blocker is
-gone, the rows are not written. (2) Both curriculum **destinations** are still
-kernel-thin and, more importantly, still carry **zero nursery pressure**; doc
-262's Gap 2 is the sharper one and is unchanged, because a producer cannot be
-evaluated against a population containing nothing from its subject.
-(3) `Rat.polyEval_mul` is open with its obstruction now characterised rather
-than unknown. (4) Series convergence needs `sumRange_tail_le`'s `le` bound
-converted to `Cauchy` shape.
+Detail and older landed rows moved to [`../notes/124-curriculum-frontier.md`](docs/plan/notes/124-curriculum-frontier.md).
 
-**Two findings from working the nodes outrank the counts.** The binding
-constraint is a **missing type** — no `List`, no `Finset`, no product — which is
-why a permutation cannot be a group element, why `det2` takes four scalars, and
-why Lagrange's identity at general `n` is unstatable. Each instance was found by
-a lane trying to prove the theorem, never by planning. And **a brief can name a
-false target**: `polyEval_mul` as I stated it is false for arbitrary
-coefficients, and the lane refuted it with a kernel-confirmed counterexample
-rather than failing to prove it. A node's frontier is characterised as much by
-what is false there as by what is proved.
+**WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
-**Two process defects, both fixed rather than noted.** A prelude can declare
-into another prelude's namespace, so a lane reading all of `nat_prelude/` could
-not see that `int_prelude/wilson.rs` already owned `Nat.inverseIndex`; the nat
-prelude built fine alone with the collision present and it surfaced 230 failures
-downstream as `DeclarationExists { name: NameId(457) }`. And two lanes adding
-functions to one file produce a conflict where keeping both sides does not
-parse — `scripts/lane-merge-additive.py` now refuses that resolution and can
-reconstruct instead.
+F1 is complete: the two authoritative multi-target operations have nine applicable facts, all nine have explicitly partial concept/encounter mappings, and seven evidence credits are checked against their fact records (the other two were settled by earlier one-target operations).
 
-**WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible
-version-1 sidecar joins existing facts and operations to reusable capabilities
-and pinned read-only `math-education` concepts or techniques. F1 is complete:
-the two authoritative multi-target operations have nine applicable facts, all
-nine have explicitly partial concept/encounter mappings, and seven evidence
-credits are checked against their fact records (the other two were settled by
-earlier one-target operations). The owning fact, operation, claim, and kernel
-schemas are unchanged; local/external endpoints and false complete-coverage or
-uncredited-producer edges are mutation-tested. F2 now projects 1,142 current
-kernel declarations and 4,127 direct theorem dependencies from accepted terms,
-with theorem/definition/inductive/constructor/recursor kinds and prelude
-visibility kept distinct. Next: normalize producer declines into typed,
-measured obstructions rather than hand-authoring the next bottleneck. F3 now
-normalizes 47 retained decline records into 20 families while preserving unknown
-remedies and unbound resolutions; next is representation/transport lineage.
-F4/F5/F6 now publish hash-bound transport coverage, non-authoritative scheduler
-observations, and a capability-gap projection. Live frontier evidence is the
-limiting result: 141 facts are dependency-ready but zero are admissible because none has a registered
-applicable operation. The frozen producer census is now also projected into
-partitioned family/statement-shape/abstraction outcome groups across its 138 sealed
-train/development facts, with zero held-out outcomes and no scheduler link;
-that is evidence for evaluating a general producer, not target authority.
-The capability-gap and concept-coverage views now enforce the same boundary:
-their visible fact IDs are restricted to train/development, while the 34
-held-out ready facts and 57 held-out topic facts are reported only as aggregate
-exclusions. The generic held-out isolation gate is green again; it caught the
-earlier unsafe projection rather than being weakened around it.
-The new producer-evaluation frontier turns that boundary into executable input:
-it exposes exactly 98 dependency-ready train/development facts (38 train, 60
-development), while retaining only aggregate counts for 34 held-out and nine
-out-of-population ready facts. Its nine independently refuted mutations are
-now bound as mandatory must-decline controls, leaving 89 ordinary candidate
-facts; a future census admitting any control is void rather than “partly
-successful.”
-The required evaluation protocol is also now pre-registered: it fixes the
-five-stage funnel, four observed stages, seven decline classes, and forbidden
-input boundary before any general-producer outcome exists.
-The matching result contract now rejects incomplete frontiers, non-monotone
-funnels, unbound protocols, and an accepted must-decline control; no producer
-result has yet been claimed.
-Three newly constructed kernel theorems now have narrowly reviewed, explicitly
-partial concept anchors: decidability-scoped excluded middle, a complex
-squared-norm power law, and unique circumcentre geometry. The overlay rejects
-a missing, non-theorem, or assumption-bearing kernel source; the coverage census
-keeps these kernel anchors separate so they cannot inflate fact, producer-credit,
-or transport coverage.
-The remaining kernel surface is now a reproducible semantic-review queue: 869
-empty-footprint theorems, three active reviewed anchors, and 866 unreviewed
-entries ordered only by direct graph observations. Candidate mappings do not
-remove a theorem from review, and queue order has no producer or admission
-authority.
-The first queue-driven review batch adds the reflexive, symmetric, and
-transitive `CReal.Equiv` theorems as separate partial equivalence-relation law
-anchors. Six active kernel anchors now leave 863 explicitly unreviewed
-empty-footprint theorems; this is a review-state count, not a completeness
-claim.
-The derived concept-coverage projection now makes kernel anchors visible in a
-third dimension, separate from both family-topic and fact-formalization
-coverage. Its six active anchors span four concepts/encounters, and its
-validator rejects an invented or omitted anchor against the active overlay.
-The next reviewed cluster adds the constructive-real negation, addition, and
-multiplication congruence laws as separate partial well-definedness anchors.
-This is an explicit representative-independence claim for three operations,
-not a claim that all constructed-real operations or all real analysis are
-covered.
-The obstruction graph now distinguishes four explicitly candidate capabilities
-from absent or active mechanisms: checked declaration import, typed transport,
-bounded reproducible export, and checked declaration reuse. They account for
-nine measured obstruction families but grant no producer or admission authority.
-The derived demand view now ranks those candidates only by retained obstruction
-family and episode counts: declaration/package import addresses three families
-and eleven episodes, while reproducible export addresses three and seven.
-This is investigative evidence, not an implementation mandate or proof-yield
-forecast.
-Next capability work must expand general-producer and adapter coverage over the
-train/development queue, compare it against that fixed observation, and only
-then evaluate an independently sealed held-out partition—not add more
-single-target metadata or solver work.
+The owning fact, operation, claim, and kernel schemas are unchanged; local/external endpoints and false complete-coverage or uncredited-producer edges are mutation-tested.
+
+F2 now projects 1,142 current kernel declarations and 4,127 direct theorem dependencies from accepted terms, with theorem/definition/inductive/constructor/recursor kinds and prelude visibility kept distinct.
+
+Next: normalize producer declines into typed, measured obstructions rather than hand-authoring the next bottleneck.
+
+F3 now normalizes 47 retained decline records into 20 families while preserving unknown remedies and unbound resolutions; next is representation/transport lineage.
+
+F4/F5/F6 now publish hash-bound transport coverage, non-authoritative scheduler observations, and a capability-gap projection.
+
+Live frontier evidence is the limiting result:
+
+141 facts are dependency-ready but zero are admissible because none has a registered applicable operation.
+
+Detail and older landed rows moved to [`../notes/40-autogenesis-knowledge-overlay.md`](docs/plan/notes/40-autogenesis-knowledge-overlay.md).
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, `Nat.fib_eq_zero`, and now `Int.fib_eq_zero` are durably proved with empty kernel footprints. An isolated clean replay independently reproduced `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, exactly one ledger write, its proved fact, and the preregistered empty readiness delta.
 
 **Next:** preregister exact `Int.fib_add` specialization over sealed recurrence uniqueness, exact constructive induction, admitted `Int.fib_add_two`, and the smallest clean algebra/base-value supports.
+
+Detail and older landed rows moved to [`../notes/40-autogenesis-program.md`](docs/plan/notes/40-autogenesis-program.md).
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
@@ -3243,6 +1929,8 @@ Cleared by their owners since this list was written: `103-creal-lean-divergence.
 is under the ceiling (2,958 B), and `PLAN.md` now records the 11 -> 10 ledger
 guard-count correction rather than publishing the wrong number.
 
+Detail and older landed rows moved to [`../notes/99-capability-assurance.md`](docs/plan/notes/99-capability-assurance.md).
+
 **`gen-adr-index.py --check-remote` detects an ADR number two checkouts both
 claimed, before merge (`DONE`, agent-adr-numbering, 2026-08-18).** `--check`
 only ever reads this working tree, so it could not see `origin/main` reusing
@@ -3334,33 +2022,7 @@ run **adjacent in time per file** so contention is shared across the arms:
 | **QF_UFLIA** | 92 | 112 | **114 (+22, −0)** | **0** disagreements / 114 | **0** / 114 |
 | QF_IDL (control) | 66 | 66 | **65 (+0, −1)** | **0** / 63 | **0** / 65 |
 
-- **The diagnosis's A/B reproduces**: identical baseline (92), +20 here against
-  its +17 on a more loaded sweep.
-- **The shipped version strictly dominates the constant bump** — every file the
-  bump decides, plus two more, losing none, while keeping the memory protection.
-- The decline it targets (`retained N literals in unminimized theory cores`)
-  occurs 31 times in the baseline arm and **0 times in 400 patched runs**. The
-  QF_UFLIA files that still decline now fail on the *pre-SAT skeleton envelope* —
-  a different constant, the diagnosis's separate `S2` class, and the next
-  increment on this route.
-- 7 of 8 guard mutations kill **exactly one** test; the survivor is a pre-existing
-  arm whose unreachability is documented in the test rather than papered over.
-- The control's single loss re-decides `unsat` on **all three** arms in isolation
-  — but the shipped arm is ~**11 %** slower on that file, which on a loaded box
-  pushed a 15-second file past the external kill. The change costs measurable
-  time on QF_IDL and buys nothing there; that is what the control shows.
-
-Capability ratchet (`progress_frontier`, `--features full`, 10 tests, 0 failed):
-no REGRESSION on any family, and the reference frame reports **scale 1.09x–1.14x**
-at load 3.1–4.2, so nothing is NOT COMPARABLE or ADVISORY. `lia_cuts` — the family
-whose engine this touches — sits at 35 against a floor of 26. No baseline raised.
-
-Not a parity result: the reference here is z3 4.13.3, cvc5 is absent on this
-host, and only `scripts/parity-run.sh` may move a `PARITY.md` number.
-
-Full method, controls and per-file data:
-[the budget-driven theory-core minimisation note](docs/research/05-algorithms/budget-driven-theory-core-minimisation-2026-08-21.md),
-[ADR-0538](docs/research/09-decisions/adr-0538-theory-core-minimisation-is-rationed-by-oracle-calls-not-by-core-width.md).
+Detail moved to [`../notes/agent-lia-core-minimisation.md`](docs/plan/notes/agent-lia-core-minimisation.md).
 
 **Ranked gap #1 is diagnosed: three causes, not one, and the largest single
 block of losses is a route that quits at 5 % budget use** (`WIP`,
@@ -3400,13 +2062,7 @@ in the shared tree:
   cores too wide to minimise are exactly the cores whose width then exhausts
   `MAX_DYNAMIC_LARGE_CORE_LITERALS`.
 
-Next: the shipped form of that fix is **not** the constant this A/B moved —
-minimisation should be budget-driven rather than width-gated, keeping the memory
-protection the `Large` bucket exists for. Nothing here has been through
-`scripts/parity-run.sh`, which is still gated by nothing (gap #2).
-
-Full finding, all counts and controls:
-[`../../research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md`](docs/research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md).
+Detail moved to [`../notes/agent-lra-diagnosis.md`](docs/plan/notes/agent-lra-diagnosis.md).
 
 **A mutant that did not compile was scored as coverage** (`WIP`,
 agent-mutation-harness, 2026-08-18). Measured against `mutation_controls.py` as
@@ -3442,58 +2098,7 @@ Detail: [`../notes/agent-mutation-harness.md`](docs/plan/notes/agent-mutation-ha
 **Both gap-analysis §7 defects closed, and both were worse than the audit
 recorded them** (`DONE`, agent-resource-guards, 2026-08-21).
 
-**`bv_nego` was a wrong `sat`, not a wrong term.** The audit called
-`1u128 << (w - 1)` a "silently wrong term" in release. Measured with overflow
-checks off, the shipped `SatBvBackend` returns **`sat`** for
-`(bvnego x) ∧ (x = 1)` at 129 bits — unsatisfiable, since negating 1 at 129 bits
-does not overflow. The pre-fix term is `WideBvConst(limbs [1, 0, 0])`, i.e.
-`x == 1` where `x == 2^128` was meant, so the query becomes trivially
-satisfiable. Debug panicked instead, which is why it read as a build-profile
-hazard rather than a soundness one.
-
-**The reachability question it marked UNVERIFIED has an answer: no.** `bvnego`
-occurs in **0 of 1430** tracked `.smt2` files; positive control in the same
-command, `bvadd` in 106. It is reachable only from the parser on user input.
-That lowers the severity — we did not ship a wrong answer on our own corpus —
-and it explains why no sweep could have caught it. The asymmetry that hid it is
-in the tests: the exhaustive overflow-predicate sweep loops `for w in 1..=4`,
-and the one wide test in that suite covers `bv_umulo`, whose wide branch has
-existed since it was written.
-
-**`memory_limit_mb` is no longer inert, but a faithful bound is still an ADR.**
-Two mechanisms now: a portable pre-allocation clause ceiling at a measured
-384 B/clause (zero hot-path cost — it changes a comparison that was already
-there), and a `/proc/self/status` probe at three BV phase boundaries plus the
-`solve`/`check_auto` front doors. `unknown` with `UnknownKind::MemoryLimit`,
-never an abort. **Allocation between two probes is still unbounded**, which is
-the 125 GB shape of the 2026-08-17 OOM exactly; closing that needs a
-`#[global_allocator]` hook, which is process-global, `unsafe impl` against a
-workspace-wide deny, and needs thread-local attribution to mean anything
-per-query. Opened as a research question rather than left unspoken.
-
-**Costs measured against a tree without the module**, release, `taskset -c 0-7`:
-the default path is 182.8–183.4 µs/check against a 184.0–185.3 baseline — not
-distinguishable. A configured limit costs **~32 µs per check, fixed**: 0.00013 %
-of a 24 s budget, 17 % of these deliberately tiny checks. The baseline's own
-"limit set" and "no limit" columns being identical *is* the defect.
-
-**Every guard in this lane survived its first mutation run.** All five memory
-guards: each was shadowed by another that rejected the same query — the probes
-are a chain where only the first over the limit can fire, and both clause
-ceilings reject the same oversized encoding. Nothing was wrong with the guards;
-nothing depended on any one of them. Fixed with a `#[cfg(test)]` seam that
-scripts the resident-set reading and by reaching the post-encoding gate
-directly, so each test can only be satisfied by one guard — and the isolation is
-*asserted*, not assumed (the projected-ceiling test fails if the estimate ever
-stops over-approximating rather than quietly stopping isolating). All seven
-guards across both defects now kill exactly one test each, registered as
-`solver-memory-budget` and `ir-bv-nego-width`.
-
-Next on this axis, in cost order: the allocator-hook ADR (the only thing that
-closes the between-probes gap); then a probe on the SAT search itself, where
-`axeyum-cnf`'s `DeadlineCallbacks::stop` is an existing periodic hook and the
-learnt-clause database is the one long-running allocator this lane did not
-bound.
+Detail moved to [`../notes/agent-resource-guards.md`](docs/plan/notes/agent-resource-guards.md).
 
 **Two of the three string-length certificates now carry a Lean term real Lean 4
 accepts; the third declines for two independent reasons, and the guard that was
@@ -3506,30 +2111,7 @@ the constructed integers (`try_new_over_integers`; `integer: axiom=0`), not
 `AxReal` and not `CReal`: lengths and code points are integers, and `ℤ` models
 every law a Farkas combination uses.
 
-Measured over the 217 committed `QF_S`/`QF_SLIA`/`QF_SEQ` files: 3 certificates,
-**2 reconstructed** — `r0_QF_SLIA_str004.smt2` and `r0_QF_S_str005.smt2`, taking
-different engines (strict / non-strict), both accepted by real Lean 4 with
-`#print axioms` reporting nothing but the query's own facts and the abstraction
-variables. `r1_QF_SLIA_str-code-unsat-2.smt2` declines twice over: it is a
-two-arm case split (refuting one arm proves nothing, and its first arm closes on
-its own, so the guard is load-bearing), and its second arm needs `10^28 −
-0x2FFFF` unary `one`s.
-
-The finding worth carrying forward is about the size guard, not the route. It
-was written at `4_096` and mutating it away did not fail a test — it **aborted
-the process** with a stack overflow, because the fold builds a left-nested `add`
-chain the kernel walks recursively. Measured: cost 514 renders a 13.2 MB module,
-cost 1026 SIGABRTs. So the guard was calibrated to admit exactly the failure it
-existed to prevent, and no test could have said so, because the test only ever
-exercised the decline side. **A budget needs pinning from both ends: at the
-budget it must still work.**
-
-Next: the case-split arm needs `Or.elim` in the kernel — the machinery exists
-(`reconstruct_disjunctive_lra_proof`) — but it buys nothing measurable while the
-only case-split corpus file also needs a `10^28` numeral. A binary numeral
-development for the ordered-ring engine is the change that would move that file,
-and it would also lift every other route's constant ceiling off `k` copies of
-`one`.
+Detail moved to [`../notes/agent-string-recon.md`](docs/plan/notes/agent-string-recon.md).
 
 **ADR-0521: ℂ is built, it is free, and its missing order is REFUTED rather than
 omitted (`WIP`, agent-complex-foundation, 2026-08-18).** `Complex` — a
@@ -3561,6 +2143,8 @@ order and the product. Fifty-eight declarations, every axiom footprint empty,
 whole trusted surface **0**:
 `cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness`. No
 `Quot.sound`, no `funext`, no `propext`; the kernel did not change.
+
+Detail and older landed rows moved to [`../notes/creal.md`](docs/plan/notes/creal.md).
 
 Detail and older landed rows moved to [`../notes/creal.md`](docs/plan/notes/creal.md).
 
@@ -3614,6 +2198,8 @@ and stable. In flight: Q5 typed stubs via pyo3-stub-gen behind an off-by-
 default feature, with `stubtest` and an `Any` ratchet. Next: Q6 (derive
 `eq`/`hash`/`str`; make `Config`/`Incremental` `Sync` so `unsendable` and
 then `gil_used = true` can go).
+
+Detail and older landed rows moved to [`../notes/python-layer.md`](docs/plan/notes/python-layer.md).
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
