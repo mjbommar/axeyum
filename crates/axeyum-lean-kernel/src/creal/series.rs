@@ -275,9 +275,11 @@ use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
-use crate::int_prelude::ops::IntDev;
+use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{radd, rat_eq_rewrite, req, rle, rneg, rrefl, rzero};
+use crate::rat_prelude::ops::{
+    nat_rewrite_prop, radd, rat_eq_rewrite, req, rle, rneg, rrefl, rzero,
+};
 
 /// Admit `CReal.sumRange`, its defining equations, congruence, additivity,
 /// scalar distribution, monotonicity, and the triangle inequality.
@@ -298,6 +300,7 @@ pub(super) fn declare_series(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     declare_sum_range_split(d, p)?;
     declare_sum_range_tail_le(d, p)?;
     declare_sum_range_tail_within(d, p)?;
+    declare_sum_range_tail_within_le(d, p)?;
     declare_sum_range_seq_equations(d, p)
 }
 
@@ -1636,6 +1639,128 @@ fn declare_sum_range_tail_within(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sum_range_tail_within,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sumRange_tail_within_le`. See the field documentation
+/// ([`super::CRealPrelude::sum_range_tail_within_le`]) for the statement and
+/// this module's documentation for why it exists: lifting
+/// [`declare_sum_range_tail_within`]'s ordered-pair form `(m, add m n)` to an
+/// arbitrary pair `(a, b)` with `a ≤ b` is the "Nat.le_total case split" the
+/// module documentation lists as one of the four remaining pieces.
+///
+/// `Nat.le_dest a b hle : Exists (fun k => Eq (add a k) b)`. Applying
+/// [`declare_sum_range_tail_within`] at `(a, k)` gives exactly this
+/// theorem's target *shape*, but indexed at `add a k` rather than `b`; one
+/// `Nat`-equality transport ([`nat_rewrite_prop`]) along the witness
+/// `Eq (add a k) b` carries every occurrence of the shared index over to
+/// `b`, and [`exists_elim`] discharges the existential.
+fn declare_sum_range_tail_within_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_add = d.prelude().add;
+    let nat_le_dest = d.prelude().le_dest;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let pointwise_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let fk = d.apply(f, &[k]);
+        let gk = d.apply(g, &[k]);
+        let abs_fk = cabs(d, p, fk);
+        let leq = cle(d, p, abs_fk, gk);
+        d.pi_fv(k_fv, nat, leq)
+    };
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    let hle_ty = d.le(a, b);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    // `target_at(x)`: the claim with the shared index left as `x`, so it
+    // reads directly off `declare_sum_range_tail_within`'s own conclusion
+    // shape at `x := add a k`, and is this theorem's conclusion at `x := b`.
+    let sum_f_a = d.const_app(p.sum_range, &[f, a]);
+    let neg_sum_f_a = cneg(d, p, sum_f_a);
+    let sum_g_a = d.const_app(p.sum_range, &[g, a]);
+    let neg_sum_g_a = cneg(d, p, sum_g_a);
+    let target_at = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let sum_f_x = d.const_app(p.sum_range, &[f, x]);
+        let tail_f_x = cadd(d, p, sum_f_x, neg_sum_f_a);
+        let u = sample(d, p, tail_f_x, x);
+        let sum_g_x = d.const_app(p.sum_range, &[g, x]);
+        let tail_g_x = cadd(d, p, sum_g_x, neg_sum_g_a);
+        let v = sample(d, p, tail_g_x, x);
+        let w = div_succ(d, p, 2, x);
+        let vw = radd(d, v, w);
+        within(d, p, u, vw)
+    };
+    let target = target_at(d, b);
+
+    // pred := λ k, Eq Nat (add a k) b.
+    let pred = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sum = d.const_app(nat_add, &[a, k]);
+        let body = d.eq(sum, b);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let represented = d.const_app(nat_le_dest, &[a, b, hle]);
+
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let a_plus_k = d.const_app(nat_add, &[a, k]);
+        let e_ty = d.eq(a_plus_k, b);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        // body_at_ak : target_at(add a k) -- exactly
+        // `sum_range_tail_within f g hyp a k`'s own conclusion.
+        let body_at_ak = d.lemma(p.sum_range_tail_within, &[f, g, a, k, hyp]);
+        let rewritten = nat_rewrite_prop(d, a_plus_k, b, e, body_at_ak, &|d, x| target_at(d, x));
+
+        let with_e = d.lam_fv(e_fv, e_ty, rewritten);
+        d.lam_fv(k_fv, nat, with_e)
+    };
+
+    let proof_body = exists_elim(d, pred, target, represented, minor);
+
+    let ty = {
+        let after_hle = d.arrow(hle_ty, target);
+        let after_hyp = d.arrow(pointwise_ty, after_hle);
+        let over_b = d.pi_fv(b_fv, nat, after_hyp);
+        let over_a = d.pi_fv(a_fv, nat, over_b);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_a);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let with_hle = d.lam_fv(hle_fv, hle_ty, proof_body);
+        let with_hyp = d.lam_fv(hyp_fv, pointwise_ty, with_hle);
+        let over_b = d.lam_fv(b_fv, nat, with_hyp);
+        let over_a = d.lam_fv(a_fv, nat, over_b);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_a);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_tail_within_le,
         uparams: vec![],
         ty,
         value,
