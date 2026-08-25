@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Validate the additive Autogenesis knowledge overlay.
 
-The overlay deliberately does not modify facts, operations, or external source
-graphs. This validator checks the relational contract that JSON Schema cannot:
-unique identities, typed endpoints, local resolution, pinned external
-revisions, and relation-domain/range compatibility. The sibling
-``../math-education`` checkout is optional; when present at the pinned commit,
-referenced concept and technique files are also resolved.
+The overlay is additive: it does not modify facts, operations, or kernel
+projections. This validator checks the relational contract that JSON Schema
+cannot: unique identities, typed endpoints, local resolution, and
+relation-domain/range compatibility.
+
+EVERY ENDPOINT RESOLVES INSIDE THIS CHECKOUT. Until 2026-08-24 this validator
+read a sibling repository at ``root.parent / "math-education"`` and resolved
+concept and technique ids against its files. ADR-0553 removed that: the overlay
+may not name an external repository, so there is nothing outside this tree to
+resolve against and no code here that looks. `scripts/check-external-coupling.py`
+is the gate that keeps it that way.
 """
 
 from __future__ import annotations
@@ -14,7 +19,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -28,8 +32,7 @@ TOP_KEYS = {
     "entities", "links",
 }
 ENTITY_KINDS = {
-    "concept", "encounter", "technique", "curriculum-node", "fact",
-    "kernel-declaration", "external-declaration", "operation", "producer",
+    "fact", "kernel-declaration", "operation", "producer",
     "checker", "capability", "obstruction", "episode", "evidence-artifact",
     "representation",
 }
@@ -40,10 +43,6 @@ ASSURANCE = {
 METHODS = {
     "kernel-derived", "checker-derived", "registry-derived",
     "mechanically-observed", "human-reviewed", "heuristic", "proposed",
-}
-FORMAL_COVERAGE = {
-    "exact-formalization", "supporting-law", "base-case", "recurrence-law",
-    "relation-law", "finite-instance", "counterexample", "representation-bridge",
 }
 
 
@@ -92,25 +91,6 @@ def schema_check(doc: Any, errors: list[str]) -> None:
     for key in ("sources", "namespaces", "relation_types", "entities", "links"):
         if not isinstance(doc.get(key), list):
             errors.append(f"{key} must be an array")
-
-
-def git_head(path: Path) -> str | None:
-    try:
-        return subprocess.run(
-            ["git", "-C", str(path), "rev-parse", "HEAD"],
-            check=True, capture_output=True, text=True,
-        ).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return None
-
-
-def math_education_resolves(root: Path, ident: str) -> bool:
-    stem = ident.split("@", 1)[0]
-    if stem.startswith("C:"):
-        return (root / "graph/concepts" / f"{stem[2:]}.md").is_file()
-    if stem.startswith("TQ:"):
-        return (root / "graph/techniques" / f"{stem[3:]}.md").is_file()
-    return False
 
 
 def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]]:
@@ -169,19 +149,6 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
         if isinstance(row, dict)
     }
 
-    external_source = source_by_id.get("math-education", {})
-    external_root = root.parent / "math-education"
-    external_available = external_root.is_dir()
-    external_revision = external_source.get("revision")
-    if external_available:
-        actual = git_head(external_root)
-        if actual != external_revision:
-            warnings.append(
-                "math-education checkout is present but not at the overlay pin; "
-                f"skipping live endpoint resolution (expected {external_revision}, got {actual})"
-            )
-            external_available = False
-
     def check_endpoint(endpoint: dict[str, Any], link_id: str, side: str) -> None:
         namespace_id = endpoint.get("namespace")
         namespace = ns_by_id.get(namespace_id)
@@ -209,15 +176,6 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
             errors.append(f"link {link_id} {side}: unknown operation {ident!r}")
         elif namespace_id == "axeyum-kernel" and ident not in kernel_declaration_ids:
             errors.append(f"link {link_id} {side}: unknown kernel declaration {ident!r}")
-        elif resolution == "external-pinned":
-            source = source_by_id.get(namespace.get("source_id"), {})
-            expected = source.get("revision")
-            if endpoint.get("source_revision") != expected:
-                errors.append(
-                    f"link {link_id} {side}: external endpoint must carry source revision {expected}"
-                )
-            if external_available and namespace_id == "math-education" and not math_education_resolves(external_root, ident):
-                errors.append(f"link {link_id} {side}: unresolved pinned math-education id {ident!r}")
 
     for link in links:
         link_id = link.get("id", "<missing>")
@@ -247,37 +205,6 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
                 errors.append(
                     f"link {link_id}: established-by target is not credited by the fact evidence"
                 )
-        if link.get("relation") == "formalizes":
-            qualifiers = link.get("qualifiers")
-            if not isinstance(qualifiers, dict):
-                errors.append(f"link {link_id}: formalizes requires qualifiers")
-            else:
-                coverage = qualifiers.get("coverage")
-                if coverage not in FORMAL_COVERAGE:
-                    errors.append(f"link {link_id}: unknown formal coverage {coverage!r}")
-                if qualifiers.get("completeness") != "partial":
-                    errors.append(
-                        f"link {link_id}: a single formalizes edge must be partial; "
-                        "complete concept coverage belongs only in a derived census"
-                    )
-            if source.get("kind") == "kernel-declaration":
-                declaration = next(
-                    (
-                        row for row in (kernel_projection or {}).get("declarations", [])
-                        if isinstance(row, dict) and row.get("id") == source.get("id")
-                    ),
-                    None,
-                )
-                if declaration is not None and declaration.get("declaration_kind") != "theorem":
-                    errors.append(
-                        f"link {link_id}: kernel formalizes source must be a theorem, "
-                        f"not {declaration.get('declaration_kind')!r}"
-                    )
-                if declaration is not None and declaration.get("axiom_footprint_size") != 0:
-                    errors.append(
-                        f"link {link_id}: kernel formalizes source must have an empty axiom footprint"
-                    )
-
     return errors, warnings
 
 
