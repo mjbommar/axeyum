@@ -614,7 +614,15 @@ def test_must_decline_population_is_derived_and_non_held_out() -> None:
     ids = M.must_decline_ids(ROOT)
     document = json.loads(NURSERY.read_text(encoding="utf-8"))
     partitions = {entry["fact_id"]: entry.get("partition") for entry in document["entries"]}
-    assert len(ids) == 9
+    # Derived from the nursery, not a literal: the must-decline population
+    # grows as mutation fixtures are registered, so pin it to its source.
+    nursery = json.loads((ROOT / "artifacts/autogenesis/nursery-v1.json").read_text())
+    expected = {
+        e["fact_id"]
+        for e in nursery["entries"]
+        if e.get("provenance_class") == "generated-mutation" and e["partition"] != "held-out"
+    }
+    assert set(ids) == expected
     assert all(partitions[fact_id] != "held-out" for fact_id in ids)
 
 

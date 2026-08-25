@@ -27,10 +27,10 @@ from axeyum.agent.models import NoGeneralRoute, StrategyProposal
 from axeyum.knowledge import nursery as nursery_api
 from axeyum.knowledge._paths import resolve_root
 
-TARGET = "F:ml430-nat-modeq-refl-d870c8f5"
+TARGET = "F:ml430-nat-modeq-symm-0a3d4d18"  # open + train/dev + exportable
 SIBLINGS = [
-    "F:ml430-nat-modeq-symm-0a3d4d18",
     "F:ml430-nat-modeq-trans-ef9d1c46",
+    "F:ml430-nat-modeq-comm-24b71e7a",
     "F:ml430-nat-modeq-one-516d46e8",
 ]
 SETTLED = "F:ml430-int-modeq-trans-6d7863e0"

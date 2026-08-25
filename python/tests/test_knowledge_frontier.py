@@ -102,7 +102,10 @@ def test_verify_rejects_a_tampered_frontier(tmp_path: Path) -> None:
     loaded = frontier.load(ROOT)
     tampered = dict(loaded.document)
     tampered["selection"] = dict(tampered["selection"])
-    tampered["selection"]["outcome"] = "selected"
+    # A sentinel the real frontier never carries, so the recomputed
+    # `frontier_sha256` differs from the stored one whatever the live outcome
+    # is (it flips between `selected` and `refused-...` as the ledger moves).
+    tampered["selection"]["outcome"] = "tampered-not-a-real-outcome"
     path = tmp_path / "tampered.json"
     path.write_text(json.dumps(tampered, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     result = loaded.verify(path)
