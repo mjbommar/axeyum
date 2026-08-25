@@ -1678,6 +1678,30 @@ pub struct CRealPrelude {
     /// [G's own error at (F x, F y)] + G'(F x) * [F's own error at (x,y)]`,
     /// no ring expansion), unlike the product rule.
     pub has_derivative_chain: NameId,
+
+    // --- the integral (creal/integral.rs) -------------------------------------
+    /// `CReal.riemannSum (f : CReal → CReal) (a b : CReal) (m : Nat) : CReal`
+    /// — a left-endpoint Riemann sum over `[a, b]` with `Nat.succ m` equal
+    /// subintervals: `sumRange (fun i => f(a + i·Δ)·Δ) (Nat.succ m)` with
+    /// `Δ := (b − a) · ofRat (Rat.natDivSucc 1 m)`. See `integral.rs`'s
+    /// module documentation for why the subinterval count is taken as
+    /// `Nat.succ m` (so `Δ` needs no `CReal.inv`/`PosBound` witness) and why
+    /// the sample point is the left endpoint.
+    pub riemann_sum: NameId,
+    /// `CReal.riemannSum_add : ∀ f g a b m,
+    /// Equiv (riemannSum (fun r => add (f r) (g r)) a b m)
+    ///       (add (riemannSum f a b m) (riemannSum g a b m))` — linearity in
+    /// the integrand, the additive half.
+    pub riemann_sum_add: NameId,
+    /// `CReal.mul_riemannSum : ∀ c f a b m,
+    /// Equiv (riemannSum (fun r => mul c (f r)) a b m) (mul c (riemannSum f a b m))`
+    /// — linearity in the integrand, the scalar half.
+    pub mul_riemann_sum: NameId,
+    /// `CReal.riemannSum_le : ∀ f g a b m, le a b → (∀ z, le (f z) (g z)) →
+    /// le (riemannSum f a b m) (riemannSum g a b m)` — monotonicity. The
+    /// pointwise hypothesis is global (`∀ z`), not restricted to `[a, b]`;
+    /// see `integral.rs`'s module documentation for why.
+    pub riemann_sum_le: NameId,
 }
 
 impl CRealPrelude {
@@ -1944,6 +1968,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_cube: kernel.name_str(creal, "hasDerivative_cube"),
         has_derivative_pow: kernel.name_str(creal, "hasDerivative_pow"),
         has_derivative_chain: kernel.name_str(creal, "hasDerivative_chain"),
+        riemann_sum: kernel.name_str(creal, "riemannSum"),
+        riemann_sum_add: kernel.name_str(creal, "riemannSum_add"),
+        mul_riemann_sum: kernel.name_str(creal, "mul_riemannSum"),
+        riemann_sum_le: kernel.name_str(creal, "riemannSum_le"),
     }
 }
 
@@ -2027,6 +2055,10 @@ pub(crate) fn build_creal_prelude_uncached(
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
+        // `riemannSum` is built directly on `sumRange`/`ofNat` and needs
+        // nothing from `power`, so it can land right after `series` rather
+        // than waiting for the `power`/`hasDerivative_pow*` tail below.
+        integral::declare_integral(&mut d, prelude)?;
         power::declare_power(&mut d, prelude)?;
         // `hasDerivative_pow_two` mentions `CReal.pow`, which `power.rs`
         // declares. It cannot live inside `derivative::declare_derivative`,
@@ -2956,6 +2988,7 @@ mod cotransitivity;
 mod density;
 mod derivative;
 mod field;
+mod integral;
 mod inverse;
 mod lattice;
 mod mul_self_zero;

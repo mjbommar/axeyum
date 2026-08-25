@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 201] = [
+    let expected: [(&str, crate::NameId, &str); 205] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -395,6 +395,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.has_derivative_chain,
             "theorem",
         ),
+        // The integral (creal/integral.rs). PRESENCE MATTERS AS MUCH AS THE
+        // FOOTPRINT here too — see the convergence block's own comment above.
+        ("CReal.riemannSum", p.riemann_sum, "def"),
+        ("CReal.riemannSum_add", p.riemann_sum_add, "theorem"),
+        ("CReal.mul_riemannSum", p.mul_riemann_sum, "theorem"),
+        ("CReal.riemannSum_le", p.riemann_sum_le, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -2159,3 +2165,71 @@ const HAS_DERIVATIVE_ON_SPEC_TYPE: &str = "((x0 : ((x0 : CReal) -> CReal)) -> ((
 
 /// The pinned type of `CReal.hasDerivative_sq`.
 const HAS_DERIVATIVE_SQ_TYPE: &str = "((x0 : CReal) -> ((x1 : CReal) -> CReal.HasDerivativeOn (fun (x2 : CReal) => CReal.mul x2 x2) (fun (x2 : CReal) => CReal.add x2 x2) x0 x1))";
+
+/// **Mandatory computation test** for `CReal.riemannSum` (see the task
+/// briefing this module was built against): a single-subinterval Riemann
+/// sum of the constant function `1` on `[0, 1]` must COMPUTE to `1`, not
+/// merely type-check.
+///
+/// `riemannSum (fun _ => one) zero one 0` has `m = 0`, so `n = Nat.succ 0 =
+/// 1` (one subinterval), `Δ = (one − zero) · Rat.natDivSucc 1 0 = 1 · 1`,
+/// and its single term samples at the left endpoint `i = 0`: `f(zero)·Δ =
+/// one · one`. `CReal.seq` of that at an arbitrary index must reduce, by
+/// unfolding alone (β/δ/ι — no lemma, no `Equiv`), to the same rational
+/// `CReal.seq one` reduces to at the same index. This is checked by
+/// declaring `Eq Rat (seq (riemannSum …) 2) (seq one 2)` with the proof
+/// `Eq.refl` at the LEFT side and letting `Kernel::add_declaration` verify
+/// the two sides are actually definitionally equal: if the sample point or
+/// the `Δ` arithmetic had the wrong shape (e.g. `Δ` and the index
+/// transposed — the exact failure mode the task briefing warns a
+/// type-correct definition can still have), this reduction would not close
+/// and `add_declaration` would return `Err`, not silently accept a vacuous
+/// or ill-typed term.
+#[test]
+fn riemann_sum_of_the_constant_one_on_0_1_computes_to_one() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+
+    // const_one := fun _ : CReal => one.
+    let const_one = {
+        let x_fv = d.fresh_fvar();
+        let _x = d.kernel().fvar(x_fv);
+        d.lam_fv(x_fv, carrier, one_c)
+    };
+
+    let zero_m = d.num(0); // m := 0, so n = Nat.succ 0 = 1.
+    let rsum_term = d.const_app(p.riemann_sum, &[const_one, zero_c, one_c, zero_m]);
+
+    let index = d.num(2);
+    let lhs = d.const_app(p.seq, &[rsum_term, index]);
+    let rhs = d.const_app(p.seq, &[one_c, index]);
+    let stmt = req(&mut d, lhs, rhs);
+    let proof = rrefl(&mut d, lhs);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__riemann_sum_of_the_constant_one_on_0_1_computes_to_one",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: stmt,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "riemannSum (fun _ => one) zero one 0 did NOT compute to one at \
+                 sample index 2 (not merely type-check): {error:?}"
+            )
+        });
+}
