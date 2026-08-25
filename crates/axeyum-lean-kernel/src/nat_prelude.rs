@@ -195,7 +195,7 @@ use fermat::declare_fermat;
 use fibonacci::declare_fib_all;
 use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
-    declare_restrict_maps_into,
+    declare_restrict_maps_into, declare_succ_pred_of_pos,
 };
 use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
@@ -306,6 +306,12 @@ pub struct NatPrelude {
     /// `Nat.not_lt_zero : ∀ n, Not (Lt n zero)`, proved via `noConfusion` (not a
     /// bespoke discriminator, unlike `not_succ_le_zero` above).
     pub not_lt_zero: NameId,
+    /// `Nat.succ_pred_of_pos : ∀ n, Lt zero n → Eq n (succ (pred n))`, by
+    /// induction on `n` (base case impossible via `not_lt_zero`; successor
+    /// case is `refl`, since `pred (succ m)` reduces to `m` definitionally).
+    /// The single declared home for a proof that used to be rebuilt privately
+    /// in `finite.rs`, `fermat.rs`, and `totient.rs`.
+    pub succ_pred_of_pos: NameId,
 
     // --- executable division equations -------------------------------------
     /// `div_zero : ∀ n, div n zero = zero`.
@@ -1648,6 +1654,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             no_confusion: kernel.name_str(nat, "noConfusion"),
             succ_ne_zero: kernel.name_str(nat, "succ_ne_zero"),
             not_lt_zero: kernel.name_str(nat, "not_lt_zero"),
+            succ_pred_of_pos: kernel.name_str(nat, "succ_pred_of_pos"),
             div_zero: kernel.name_str(nat, "div_zero"),
             mod_zero: kernel.name_str(nat, "mod_zero"),
             zero_div: kernel.name_str(nat, "zero_div"),
@@ -2034,6 +2041,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_succ_sub_of_le(&mut d, &p)?;
         declare_succ_mul_choose_eq(&mut d, &p)?;
         declare_prime_dvd_choose(&mut d, &p)?;
+        // Must run before `declare_fermat`/`declare_totient_all`: both build
+        // proofs of `Lt zero n -> Eq n (succ (pred n))` on the fly today and
+        // are being migrated to call this declared theorem instead.
+        declare_succ_pred_of_pos(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
         declare_totient_all(&mut d, &p)?;
         declare_finite_set_all(&mut d, &p)?;
