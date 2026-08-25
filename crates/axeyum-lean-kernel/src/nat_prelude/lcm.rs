@@ -649,6 +649,194 @@ pub(super) fn declare_lcm_dvd(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     Ok(())
 }
 
+/// `Nat.dvd_antisymm : ∀ a b, dvd a b → dvd b a → Eq a b`.
+///
+/// Conceptually belongs beside `dvd_gcd`/`dvd_gcd_iff` in
+/// `nat_prelude/divisibility.rs`, but lands here (flagged for promotion)
+/// because it needs `le_of_dvd`, declared by `declare_primes` — called
+/// *after* `declare_lcm` in `nat_prelude.rs`'s build order — and another
+/// lane held `divisibility.rs` when this was built. Called separately from
+/// `declare_lcm`/`declare_lcm_dvd` for exactly that ordering reason.
+///
+/// Double induction on `a` then `b` — both inner induction hypotheses are
+/// unused, so this is a case split, not real recursion, exactly like
+/// `two_le_succ_or_eq_one` in `primes.rs`. At `a = zero`, `dvd zero b`
+/// forces `b = zero` directly via `zero_mul` (`b`'s own shape never needs
+/// splitting, and `dvd b zero` is never used). At `a = succ k`, split on
+/// `b`: `b = zero` forces `succ k = zero` from `dvd zero (succ k)` alone,
+/// symmetrically — and that equation *is* the goal at that branch, so no
+/// absurdity lemma is needed either. At `b = succ j` (both endpoints now
+/// positive), `le_of_dvd` in both directions plus `le_antisymm` closes it.
+pub(super) fn declare_dvd_antisymm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    d.theorem(p.dvd_antisymm, 2, &|d, values| {
+        let (a, b) = (values[0], values[1]);
+        let antisymm_at = |d: &mut NatDev<'_>, x: ExprId| {
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let xy = d.dvd(x, y);
+            let yx = d.dvd(y, x);
+            let equality = d.eq(x, y);
+            let reverse = d.arrow(yx, equality);
+            let body = d.arrow(xy, reverse);
+            d.pi_fv(y_fv, nat, body)
+        };
+        let at_zero = |d: &mut NatDev<'_>| {
+            let zero = d.zero();
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let zy = d.dvd(zero, y);
+            let yz = d.dvd(y, zero);
+            let target = d.eq(zero, y);
+
+            let h1_fv = d.fresh_fvar();
+            let h1 = d.kernel().fvar(h1_fv); // dvd zero y
+            let h2_fv = d.fresh_fvar();
+
+            let body = dvd_elim(d, zero, y, target, h1, &|d, q, eq_proof| {
+                // eq_proof : Eq y (mul zero q)
+                let zero_q = d.mul(zero, q);
+                let zm = d.lemma(p.zero_mul, &[q]); // Eq zero_q zero
+                let (_, y_eq_zero) = d.chain(y, &[(zero_q, eq_proof), (zero, zm)]);
+                d.symm(y, zero, y_eq_zero) // Eq zero y
+            });
+            let with_h2 = d.lam_fv(h2_fv, yz, body);
+            let with_h1 = d.lam_fv(h1_fv, zy, with_h2);
+            d.lam_fv(y_fv, nat, with_h1)
+        };
+        let step_a = |d: &mut NatDev<'_>, k: ExprId, _ih: ExprId| {
+            let sx = d.succ(k);
+            let a_pos = d.zero_lt_succ(k); // Le 1 sx
+            let motive_y = |d: &mut NatDev<'_>, y: ExprId| {
+                let sxy = d.dvd(sx, y);
+                let ysx = d.dvd(y, sx);
+                let equality = d.eq(sx, y);
+                let reverse = d.arrow(ysx, equality);
+                d.arrow(sxy, reverse)
+            };
+            let y_zero = |d: &mut NatDev<'_>| {
+                let zero = d.zero();
+                let sxz = d.dvd(sx, zero);
+                let zsx = d.dvd(zero, sx);
+                let target = d.eq(sx, zero);
+
+                let h1_fv = d.fresh_fvar();
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv); // dvd zero sx
+
+                let body = dvd_elim(d, zero, sx, target, h2, &|d, q, eq_proof| {
+                    // eq_proof : Eq sx (mul zero q)
+                    let zero_q = d.mul(zero, q);
+                    let zm = d.lemma(p.zero_mul, &[q]); // Eq zero_q zero
+                    let (_, sx_eq_zero) = d.chain(sx, &[(zero_q, eq_proof), (zero, zm)]);
+                    sx_eq_zero // Eq sx zero -- the goal, verbatim
+                });
+                let with_h2 = d.lam_fv(h2_fv, zsx, body);
+                d.lam_fv(h1_fv, sxz, with_h2)
+            };
+            let y_step = |d: &mut NatDev<'_>, j: ExprId, _inner_ih: ExprId| {
+                let sy = d.succ(j);
+                let b_pos = d.zero_lt_succ(j); // Le 1 sy
+                let sxsy = d.dvd(sx, sy);
+                let sysx = d.dvd(sy, sx);
+
+                let h1_fv = d.fresh_fvar();
+                let h1 = d.kernel().fvar(h1_fv); // dvd sx sy
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv); // dvd sy sx
+
+                let le1 = d.lemma(p.le_of_dvd, &[sx, sy, b_pos, h1]); // Le sx sy
+                let le2 = d.lemma(p.le_of_dvd, &[sy, sx, a_pos, h2]); // Le sy sx
+                let body = d.lemma(p.le_antisymm, &[sx, sy, le1, le2]); // Eq sx sy
+
+                let with_h2 = d.lam_fv(h2_fv, sysx, body);
+                d.lam_fv(h1_fv, sxsy, with_h2)
+            };
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let body = d.induct(&motive_y, &y_zero, &y_step, y);
+            d.lam_fv(y_fv, nat, body)
+        };
+        let all_b = d.induct(&antisymm_at, &at_zero, &step_a, a);
+        let proof = d.apply(all_b, &[b]);
+        let ab = d.dvd(a, b);
+        let ba = d.dvd(b, a);
+        let conclusion = d.eq(a, b);
+        let reverse = d.arrow(ba, conclusion);
+        let stmt = d.arrow(ab, reverse);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.lcm_comm : ∀ a b, lcm a b = lcm b a`. Direct from `dvd_antisymm`:
+/// each of `lcm a b`/`lcm b a` divides the other via `lcm_dvd`, fed the
+/// matching `dvd_lcm_left`/`dvd_lcm_right` witnesses with the endpoints
+/// swapped.
+pub(super) fn declare_lcm_comm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.lcm_comm, 2, &|d, values| {
+        let (a, b) = (values[0], values[1]);
+        let lcm_ab = d.const_app(p.lcm, &[a, b]);
+        let lcm_ba = d.const_app(p.lcm, &[b, a]);
+
+        // dvd (lcm a b) (lcm b a)
+        let dvd_a_lcmba = d.lemma(p.dvd_lcm_right, &[b, a]); // dvd a (lcm b a)
+        let dvd_b_lcmba = d.lemma(p.dvd_lcm_left, &[b, a]); // dvd b (lcm b a)
+        let forward = d.lemma(p.lcm_dvd, &[a, b, lcm_ba, dvd_a_lcmba, dvd_b_lcmba]);
+
+        // dvd (lcm b a) (lcm a b)
+        let dvd_b_lcmab = d.lemma(p.dvd_lcm_right, &[a, b]); // dvd b (lcm a b)
+        let dvd_a_lcmab = d.lemma(p.dvd_lcm_left, &[a, b]); // dvd a (lcm a b)
+        let backward = d.lemma(p.lcm_dvd, &[b, a, lcm_ab, dvd_b_lcmab, dvd_a_lcmab]);
+
+        let proof = d.lemma(p.dvd_antisymm, &[lcm_ab, lcm_ba, forward, backward]);
+        (d.eq(lcm_ab, lcm_ba), proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.coprime_lcm_eq_mul : ∀ a b, gcd a b = 1 → lcm a b = a * b`. From the
+/// unconditional `gcd_mul_lcm` (`gcd a b * lcm a b = a * b`), substitute the
+/// coprimality hypothesis for `gcd a b` and cancel the leading `1` with
+/// `one_mul`.
+pub(super) fn declare_coprime_lcm_eq_mul(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_lcm_eq_mul, 2, &|d, values| {
+        let (a, b) = (values[0], values[1]);
+        let one = d.num(1);
+        let gcd_ab = d.gcd(a, b);
+        let lcm_ab = d.const_app(p.lcm, &[a, b]);
+        let a_b = d.mul(a, b);
+        let coprime_ty = d.eq(gcd_ab, one);
+        let conclusion = d.eq(lcm_ab, a_b);
+        let stmt = d.arrow(coprime_ty, conclusion);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv); // Eq gcd_ab one
+
+        let gml = d.lemma(p.gcd_mul_lcm, &[a, b]); // Eq (mul gcd_ab lcm_ab) a_b
+        let x = d.mul(gcd_ab, lcm_ab);
+        let one_lcm = d.mul(one, lcm_ab);
+        let step1 = d.congr(gcd_ab, one, h, &|d, t| d.mul(t, lcm_ab)); // Eq x one_lcm
+        let one_mul_eq = d.lemma(p.one_mul, &[lcm_ab]); // Eq one_lcm lcm_ab
+
+        let lcm_to_one_lcm = d.symm(one_lcm, lcm_ab, one_mul_eq); // Eq lcm_ab one_lcm
+        let one_lcm_to_x = d.symm(x, one_lcm, step1); // Eq one_lcm x
+
+        let (_, chained) = d.chain(
+            lcm_ab,
+            &[(one_lcm, lcm_to_one_lcm), (x, one_lcm_to_x), (a_b, gml)],
+        );
+        (stmt, d.lam_fv(h_fv, coprime_ty, chained))
+    })?;
+    Ok(())
+}
+
 /// `Eq (gcd a1 b1) 1`, given `a = g*a1`, `b = g*b1`, and `1 ≤ g`. Uses that
 /// `g` **is** `gcd a b` by construction (the caller always passes the
 /// literal `gcd a b` expression as `g`), so rewriting both arguments by

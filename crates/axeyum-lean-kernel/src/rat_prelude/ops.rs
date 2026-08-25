@@ -138,6 +138,22 @@ pub(crate) fn rsum_range(d: &mut IntDev<'_>, p: RatPrelude, f: ExprId, n: ExprId
     d.const_app(p.sum_range, &[f, n])
 }
 
+/// `Rat.pow a n`.
+pub(crate) fn rpow(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, n: ExprId) -> ExprId {
+    d.const_app(p.pow, &[a, n])
+}
+
+/// `Rat.polyEval c n x`.
+pub(crate) fn rpoly_eval(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    c: ExprId,
+    n: ExprId,
+    x: ExprId,
+) -> ExprId {
+    d.const_app(p.poly_eval, &[c, n, x])
+}
+
 /// `Rat.le a b`.
 pub(crate) fn rle(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, b: ExprId) -> ExprId {
     d.const_app(p.le, &[a, b])

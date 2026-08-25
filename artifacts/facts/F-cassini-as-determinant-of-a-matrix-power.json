@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:cassini-as-determinant-of-a-matrix-power",
+  "title": "Cassini's identity restated through det2: det2 applied to the ofInt-cast Fibonacci entries equals ofInt((-1)^(n+1))",
+  "statement": "For every natural n: det2 (ofInt (fib(n+2))) (ofInt (fib(n+1))) (ofInt (fib(n+1))) (ofInt (fib n)) = ofInt ((-1)^(n+1)), over the constructed rationals ℚ, where ofInt : ℤ -> ℚ is Rat.ofInt (the ring embedding) and fib is Nat.fib cast into ℤ. Read through det2's definition (det2 x y z w := x*w - y*z), the left side is exactly Cassini's identity's left side, fib(n+2)*fib(n) - fib(n+1)^2, cast termwise into ℚ -- and the four entries are exactly the entries of M^n for M = [[1,1],[1,0]] (M^n = [[fib(n+1), fib n],[fib n, fib(n-1)]] for n >= 1, extended to n=0 by M^0 = I), so this restates Cassini's identity as det(M^n) = (-1)^n for the specific matrix whose powers generate consecutive Fibonacci numbers. THIS FACT IS DERIVED FROM F:cassini-identity-over-constructed-integers, NOT reproved independently: the kernel proof transports Int.fib_cassini across Rat.ofInt using three ring-homomorphism lemmas (Rat.ofInt_add, Rat.ofInt_mul, Rat.ofInt_neg) and rewrites the cast difference into det2's applied form. IT DOES NOT USE Rat.det2_mul AT ALL -- confirmed by reading the proof term's direct dependencies, which are exactly Int.fib_cassini, Rat.ofInt_add, Rat.ofInt_mul, Rat.ofInt_neg. So while the CLASSICAL argument for why Cassini and determinant multiplicativity are one theorem goes through M, M^n and det2_mul applied n times with det2_id as the base case, THIS KERNEL'S PROOF of the present fact is a direct algebraic transport of Cassini and cites det2_mul nowhere: no matrix, matrix power, or matrix product is ever reified as a value (this kernel has no product/tuple type), and the identification of the four entries with M^n's entries is read off by a human, not mechanized as an induction over matrix powers.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> Eq.{1} Rat (Rat.det2 (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ (AxNat.succ x0))))) (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ x0)))) (Rat.ofInt (Int.ofNat (AxNat.fib (AxNat.succ x0)))) (Rat.ofInt (Int.ofNat (AxNat.fib x0)))) (Rat.ofInt (Int.pow (Int.neg Int.one) (AxNat.succ x0))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:cassini-identity-over-constructed-integers"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.det2_fib",
+      "kind": "kernel-term",
+      "supports": "`Rat.det2_fib` is admitted with exactly the type in `formal.statement` -- pinned verbatim by a committed test, `det2_fib_is_cassini_through_det2`, added specifically because (per that test's own doc comment) an empty axiom footprint on a theorem named `det2_fib` says nothing about which statement it proves, and this checks it is genuinely Cassini's identity read through `det2`, cast into ℚ by `ofInt`, and not some vacuous or mismatched restatement.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::det2_fib_is_cassini_through_det2 (asserts the whitespace-normalised KERNEL-RENDERED type verbatim with assert_eq!)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_rat_prelude return Err and every rat test fail)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::det2_fib_is_cassini_through_det2 -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
+      "notes": "Run 2026-08-24: `test result: ok. 1 passed; 0 failed`, exit 0. A deliberately misnamed test path exits 1."
+    },
+    {
+      "id": "footprint-Rat.det2_fib",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for Rat.det2_fib, verified as part of the same matrix-development sweep that verifies det2_mul.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::matrix_laws_are_axiom_free (requires det2_fib, among 19 named matrix declarations, to be a Declaration::Theorem with empty Kernel::axiom_footprint)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::matrix_laws_are_axiom_free -- --exact 2>&1 | grep -qE 'test result: ok\\. 1 passed; 0 failed'",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
+      "notes": "Run 2026-08-24: exit 0. Same command against a misnamed test path exits 1."
+    },
+    {
+      "id": "dependencies-Rat.det2_fib",
+      "kind": "kernel-term",
+      "supports": "Rat.det2_fib's direct theorem dependencies, read from the proof term by Kernel::theorem_dependencies, are EXACTLY Int.fib_cassini, Rat.ofInt_add, Rat.ofInt_mul, Rat.ofInt_neg -- confirming the DERIVED-FROM-CASSINI claim in `statement` above and, just as importantly, confirming the ABSENCE of Rat.det2_mul from this fact's proof term. This is the load-bearing evidence for this lane's depends_on decision: det2_fib depends on Cassini directly (so this fact records `depends_on: [F:cassini-identity-over-constructed-integers]`) and does NOT depend on det2_mul, so a correspondence between Cassini and determinant-multiplicativity is not a `depends_on` edge in disguise.",
+      "check_status": "checked",
+      "checkers": [
+        "theorem_dependency_inventory -- det2_fib (direct dependency list, exact string match)"
+      ],
+      "checker_command": "scripts/cargo-serialized.sh run --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- det2_fib 2>&1 | grep -qF \"Rat.det2_fib\tInt.fib_cassini,Rat.ofInt_add,Rat.ofInt_mul,Rat.ofInt_neg\"",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
+      "notes": "Run 2026-08-24: exit 0. A deliberately wrong substring run through the identical command exits 1."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-24",
+    "established_by": "lane agent-correspondence-cassini (2026-08-24), closing ADR-0546's motivating example. Rat.det2_fib itself was proved by an earlier lane (see matrix.rs's module comment on the Fibonacci-determinant bridge); this lane's contribution is making the already-admitted theorem an addressable fact, tracing its actual (not classically-imagined) proof dependencies, and using it as the `via` step of X:cassini-specializes-determinant-multiplicativity.",
+    "sources": [
+      "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs",
+      "crates/axeyum-lean-kernel/src/rat_prelude.rs",
+      "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
+      "artifacts/facts/F-cassini-identity-over-constructed-integers.json"
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred. (1) NO MATRIX TYPE: M, M^n and the matrix product [[a,b],[c,d]]*[[e,f],[g,h]] are never reified as values anywhere in this kernel -- there is no product/tuple type, so `matrix.rs`'s own module comment says so explicitly. The identification of this fact's four entries with M^n's entries is prose, not a mechanized computation of M^n. (2) NO INDUCTION VIA det2_mul: the classical route from determinant multiplicativity to Cassini is det(M^n) = det(M)^n by n applications of det2_mul (with det2_id as the n=0 base case), followed by det M = -1. THAT INDUCTION IS NOT MECHANIZED HERE -- the dependency check above confirms det2_fib's actual proof never cites det2_mul, so this fact does not, by itself, establish that Rat.det2_mul PLUS det M=-1 implies Cassini; it only establishes that Cassini, transported through ofInt, equals det2 applied at these four particular entries. (3) NO phi, NO Binet's formula, NO eigenvalues of M: this kernel has no CReal.sqrt (only the integer natSqrt), so phi as a NUMBER is not statable at all here, only a defining property such as x^2 = x + 1 would be -- and this fact makes no such statement. Nothing in this fact or its evidence should be read as claiming a formalized connection to phi.\n\nThe proof is constructive throughout: no Classical.em, no propext, no funext, no Quot.sound.\n\nexternal_status is `proved`: the classical reading of Cassini through determinants is well known; what is locally notable is only that this kernel's specific proof route is a direct cast-transport of Cassini rather than an induction over matrix powers, which is why the correspondence to determinant multiplicativity records this fact's `via` step with the matrix-power induction left as a NAMED GAP rather than mechanized."
+}

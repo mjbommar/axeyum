@@ -642,6 +642,26 @@ step obstruction-graph-valid  python3 scripts/validate-obstruction-graph.py
 step obstruction-dashboard    python3 scripts/gen-obstruction-dashboard.py --check
 step obstruction-graph-tests  python3 -m unittest scripts.tests.test_obstruction_graph
 
+# Theorem correspondences (ADR-0546). `just correspondences` runs the same two
+# steps.
+#
+# The claim being gated is "these two facts are the same idea", which is not a
+# proof dependency and must not become one: the validator refuses any pair the
+# fact ledger already connects through the TRANSITIVE `depends_on` closure, in
+# either direction. It also refuses an empty population -- the whole file is a
+# vocabulary, and a vocabulary with no instance cannot fail.
+#
+# The rule doing the most work is the structural one. `carrier-transport` is not
+# taken on trust: erasing the carrier from both formal statements must leave the
+# same string, and a fragment with no carrier spelling FAILS rather than skipping
+# the check. Read `CORRESPONDENCES|checked=N|kinds=...|derivation=...`, not the
+# status alone -- the per-kind counts include the ZEROES, so a vocabulary term
+# nobody instantiated is visible instead of merely declared. Every guard is
+# mutation-verified to kill exactly one test -- `python3
+# scripts/tests/mutation_controls.py correspondences` (39 anchors, 39 killed).
+step correspondences       python3 scripts/validate-correspondences.py
+step correspondences-tests python3 -m unittest scripts.tests.test_validate_correspondences
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0

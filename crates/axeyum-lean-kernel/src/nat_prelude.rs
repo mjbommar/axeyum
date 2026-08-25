@@ -133,6 +133,7 @@ mod bezout;
 mod binary;
 mod binomial;
 mod ble;
+mod catalan;
 mod choose;
 mod defs;
 mod diagonal;
@@ -141,6 +142,7 @@ mod division;
 mod fermat;
 mod fibonacci;
 mod finite;
+mod finite_set;
 mod gcd;
 mod helpers;
 mod lcm;
@@ -152,6 +154,7 @@ mod order_extra;
 mod order_more;
 mod primes;
 mod rectangle;
+mod relation;
 mod restrict_pair;
 mod totient;
 pub(crate) mod transposition;
@@ -170,6 +173,7 @@ use binomial::{
     declare_succ_sub_of_le,
 };
 use ble::declare_boolean_le;
+use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
@@ -184,8 +188,12 @@ use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
     declare_restrict_maps_into,
 };
+use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
-use lcm::{declare_gauss_lemma, declare_lcm, declare_lcm_dvd};
+use lcm::{
+    declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
+    declare_lcm_comm, declare_lcm_dvd,
+};
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
@@ -193,6 +201,11 @@ use order_extra::declare_order_extra;
 use order_more::declare_order_more;
 use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
 use rectangle::declare_rectangle;
+use relation::{
+    declare_bijective_of_injective_on, declare_bijective_on, declare_comp,
+    declare_eq_equivalence_on, declare_injective_on_comp, declare_mod_eq_equivalence_on,
+    declare_relation_properties,
+};
 use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
@@ -610,6 +623,42 @@ pub struct NatPrelude {
     /// `Nat.lcm_dvd : ∀ a b c, dvd a c → dvd b c → dvd (lcm a b) c` — the
     /// "least" half of the least common multiple's universal property.
     pub lcm_dvd: NameId,
+    /// `Nat.dvd_antisymm : ∀ a b, dvd a b → dvd b a → Eq a b` — antisymmetry
+    /// of divisibility. Conceptually belongs beside `dvd_gcd`/`dvd_gcd_iff`
+    /// in `nat_prelude/divisibility.rs`; it lands in `nat_prelude/lcm.rs`
+    /// instead (flagged for promotion) because it needs `le_of_dvd`
+    /// (declared in `primes.rs`, after `lcm.rs` runs) and another lane held
+    /// `divisibility.rs` when this was built. Double induction (`a` then
+    /// `b`, both inner IHs unused — a case split, not real recursion):
+    /// `a = 0` forces `b = 0` from `dvd 0 b` alone via `zero_mul`; at
+    /// `a = succ k`, `b = 0` forces `a = 0` symmetrically from `dvd 0 a`
+    /// (no absurdity lemma needed — it *is* the goal at that branch), and
+    /// `b = succ j` closes via `le_of_dvd` in both directions plus
+    /// `le_antisymm`.
+    pub dvd_antisymm: NameId,
+
+    // --- Catalan numbers (`catalan.rs`) --------------------------------------
+    /// `Nat.catalan n := choose (n+n) n − choose (n+n) (n+1)` — the closed
+    /// form. `Nat.sub` is TOTAL, so the definition needs no `≤` side
+    /// condition; the recursive convolution form was priced and NOT built
+    /// (it is course-of-values, so a curried accumulator does not reach it).
+    pub catalan: NameId,
+    /// `Nat.catalan_mul_succ : ∀ n, succ n · catalan n = choose (n+n) n` —
+    /// the multiplicative identity tying `catalan` to `choose`, stated so no
+    /// division is needed. Proved from two instances of
+    /// `Nat.succ_mul_choose_eq` on the odd row `2n−1`, tied together by
+    /// `Nat.choose_symm`; the truncated subtraction is handled by the
+    /// UNCONDITIONAL `Nat.mul_sub_left_distrib_total`, so no `≤` proof is
+    /// required anywhere.
+    pub catalan_mul_succ: NameId,
+    /// `Nat.lcm_comm : ∀ a b, lcm a b = lcm b a`. Direct from `dvd_antisymm`
+    /// fed the two `lcm_dvd` applications (each built from
+    /// `dvd_lcm_left`/`dvd_lcm_right` with the endpoints swapped).
+    pub lcm_comm: NameId,
+    /// `Nat.coprime_lcm_eq_mul : ∀ a b, gcd a b = 1 → lcm a b = a * b`. From
+    /// the unconditional `gcd_mul_lcm`, substituting the coprimality
+    /// hypothesis and cancelling the leading `1` with `one_mul`.
+    pub coprime_lcm_eq_mul: NameId,
     /// Balanced natural Bézout certificates:
     /// `bezout m n g := ∃ mp mn np nn, g + m*mn + n*nn = m*mp + n*np`.
     pub bezout: NameId,
@@ -1208,6 +1257,65 @@ pub struct NatPrelude {
     /// `1` (via `gcd_dvd`, `fib_add_two`, `dvd_add_iff_right`, `dvd_gcd` and
     /// the induction hypothesis) and closes with `eq_one_of_dvd_one`.
     pub coprime_fib_succ: NameId,
+
+    // --- relation properties bounded on `n` (`relation.rs`) -----------------
+    /// `Nat.ReflexiveOn r n := ∀ i, i < n → r i i`, for `r : Nat → Nat → Prop`.
+    pub reflexive_on: NameId,
+    /// `Nat.SymmetricOn r n := ∀ i j, i < n → j < n → r i j → r j i`.
+    pub symmetric_on: NameId,
+    /// `Nat.TransitiveOn r n := ∀ i j k, i < n → j < n → k < n → r i j →
+    /// r j k → r i k`.
+    pub transitive_on: NameId,
+    /// `Nat.EquivalenceOn r n := ReflexiveOn r n ∧ SymmetricOn r n ∧
+    /// TransitiveOn r n` (right-nested `And`).
+    pub equivalence_on: NameId,
+    /// `Nat.eq_equivalence_on : ∀ n, EquivalenceOn (Eq Nat) n` — equality is
+    /// an equivalence relation, the canonical worked instance.
+    pub eq_equivalence_on: NameId,
+    /// `Nat.modEq_equivalence_on : ∀ m n, EquivalenceOn (Nat.modEq m) n` —
+    /// congruence mod `m` is an equivalence relation; connects this L0 node
+    /// to the `modular-arithmetic` L2 node.
+    pub mod_eq_equivalence_on: NameId,
+    /// `Nat.BijectiveOn f n := InjectiveOn f n ∧ MapsInto f n ∧
+    /// SurjectiveOn f n`.
+    pub bijective_on: NameId,
+    /// `Nat.bijective_of_injective_on : ∀ n f, InjectiveOn f n →
+    /// MapsInto f n → BijectiveOn f n` — packaging over
+    /// [`Self::injective_on_imp_surjective_on`] (`finite.rs`).
+    pub bijective_of_injective_on: NameId,
+    /// `Nat.comp f g := fun x => f (g x)`.
+    pub comp: NameId,
+    /// `Nat.injective_on_comp : ∀ n f g, MapsInto g n → InjectiveOn g n →
+    /// InjectiveOn f n → InjectiveOn (comp f g) n`.
+    pub injective_on_comp: NameId,
+
+    // --- finite sets over a bounded universe (`finite_set.rs`) --------------
+    // Curriculum node `sets` (Layer 0, docs/curriculum/00-foundations/sets.md).
+    /// `Nat.setUnion p q := fun k => if p k then true else q k`.
+    pub set_union: NameId,
+    /// `Nat.setInter p q := fun k => if p k then q k else false`.
+    pub set_inter: NameId,
+    /// `Nat.setCompl p := fun k => if p k then false else true`.
+    pub set_compl: NameId,
+    /// `Nat.setDiff p q := fun k => if p k then (if q k then false else true) else false`
+    /// — `p k ∧ ¬ q k`.
+    pub set_diff: NameId,
+    /// `Nat.Subset p q n := ∀ k, k < n → p k = true → q k = true` — a
+    /// `Prop`-valued `Definition`, the same shape
+    /// [`Self::injective_on`] already uses.
+    pub subset: NameId,
+    /// `Nat.countRange_union_add_inter : ∀ p q n,
+    ///   countRange (setUnion p q) n + countRange (setInter p q) n =
+    ///   countRange p n + countRange q n` — the two-set inclusion–exclusion
+    /// law, stated additively (`Nat.sub` is truncated).
+    pub count_range_union_add_inter: NameId,
+    /// `Nat.countRange_le_of_subset : ∀ p q n,
+    ///   Subset p q n → countRange p n ≤ countRange q n` — cardinality
+    /// monotonicity.
+    pub count_range_le_of_subset: NameId,
+    /// `Nat.countRange_compl : ∀ p n,
+    ///   countRange p n + countRange (setCompl p) n = n`.
+    pub count_range_compl: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1412,6 +1520,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gcd_mul_lcm: kernel.name_str(nat, "gcd_mul_lcm"),
             gauss_lemma: kernel.name_str(nat, "gauss_lemma"),
             lcm_dvd: kernel.name_str(nat, "lcm_dvd"),
+            dvd_antisymm: kernel.name_str(nat, "dvd_antisymm"),
+            catalan: kernel.name_str(nat, "catalan"),
+            catalan_mul_succ: kernel.name_str(nat, "catalan_mul_succ"),
+            lcm_comm: kernel.name_str(nat, "lcm_comm"),
+            coprime_lcm_eq_mul: kernel.name_str(nat, "coprime_lcm_eq_mul"),
             bezout: kernel.name_str(nat, "bezout"),
             gcd_bezout: kernel.name_str(nat, "gcd_bezout"),
             mod_eq: kernel.name_str(nat, "modEq"),
@@ -1548,6 +1661,24 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_fib: kernel.name_str(nat, "sum_fib"),
             fib_add: kernel.name_str(nat, "fib_add"),
             coprime_fib_succ: kernel.name_str(nat, "coprime_fib_succ"),
+            reflexive_on: kernel.name_str(nat, "reflexiveOn"),
+            symmetric_on: kernel.name_str(nat, "symmetricOn"),
+            transitive_on: kernel.name_str(nat, "transitiveOn"),
+            equivalence_on: kernel.name_str(nat, "equivalenceOn"),
+            eq_equivalence_on: kernel.name_str(nat, "eq_equivalence_on"),
+            mod_eq_equivalence_on: kernel.name_str(nat, "modEq_equivalence_on"),
+            bijective_on: kernel.name_str(nat, "bijectiveOn"),
+            bijective_of_injective_on: kernel.name_str(nat, "bijective_of_injective_on"),
+            comp: kernel.name_str(nat, "comp"),
+            injective_on_comp: kernel.name_str(nat, "injective_on_comp"),
+            set_union: kernel.name_str(nat, "setUnion"),
+            set_inter: kernel.name_str(nat, "setInter"),
+            set_compl: kernel.name_str(nat, "setCompl"),
+            set_diff: kernel.name_str(nat, "setDiff"),
+            subset: kernel.name_str(nat, "Subset"),
+            count_range_union_add_inter: kernel.name_str(nat, "countRange_union_add_inter"),
+            count_range_le_of_subset: kernel.name_str(nat, "countRange_le_of_subset"),
+            count_range_compl: kernel.name_str(nat, "countRange_compl"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1578,6 +1709,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
         declare_primes(&mut d, &p)?;
+        // Needs `le_of_dvd` (just declared by `declare_primes`), so these
+        // cannot run inside `declare_lcm` above despite conceptually
+        // belonging there — see `dvd_antisymm`'s doc comment.
+        declare_dvd_antisymm(&mut d, &p)?;
+        declare_lcm_comm(&mut d, &p)?;
+        declare_coprime_lcm_eq_mul(&mut d, &p)?;
         declare_coprime_of_lt_prime(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
@@ -1588,6 +1725,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_prime_dvd_choose(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
         declare_totient_all(&mut d, &p)?;
+        declare_finite_set_all(&mut d, &p)?;
         declare_fin(&mut d, &p)?;
         declare_injective_surjective(&mut d, &p)?;
         declare_pigeonhole(&mut d, &p)?;
@@ -1605,9 +1743,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_diagonal(&mut d, &p)?;
         declare_rectangle(&mut d, &p)?;
         declare_vandermonde_all(&mut d, &p)?;
+        declare_catalan_all(&mut d, &p)?;
         declare_binary_all(&mut d, &p)?;
         declare_size_all(&mut d, &p)?;
         declare_fib_all(&mut d, &p)?;
+        declare_relation_properties(&mut d, &p)?;
+        declare_eq_equivalence_on(&mut d, &p)?;
+        declare_mod_eq_equivalence_on(&mut d, &p)?;
+        declare_bijective_on(&mut d, &p)?;
+        declare_bijective_of_injective_on(&mut d, &p)?;
+        declare_comp(&mut d, &p)?;
+        declare_injective_on_comp(&mut d, &p)?;
         Ok(p)
     })();
     match built {
