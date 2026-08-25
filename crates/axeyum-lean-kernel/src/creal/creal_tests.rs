@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 223] = [
+    let expected: [(&str, crate::NameId, &str); 225] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -165,6 +165,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.inv_index_irrelevant",
             p.inv_index_irrelevant,
+            "theorem",
+        ),
+        ("CReal.inv_nonneg", p.inv_nonneg, "theorem"),
+        (
+            "CReal.le_of_mul_le_mul_left",
+            p.le_of_mul_le_mul_left,
             "theorem",
         ),
         ("CReal.max", p.max, "def"),
@@ -3304,6 +3310,144 @@ fn the_inverse_route_cannot_prove_the_one_token_mutations() {
     assert!(
         refused.is_err(),
         "the kernel accepted `x⁻¹ ≈ x`, which is FALSE at x = 1 + 1"
+    );
+}
+
+/// **The cancellation lemmas' statements, pinned verbatim.** `inv_nonneg`'s
+/// conclusion mentions its own `PosBound` witness (unlike every prior
+/// hypothesis in this file, which only ever *gates* a statement) — so this is
+/// also the regression test for that binder being genuinely dependent
+/// (`pi_fv`, not `d.arrow`): an anonymous-binder Pi whose body still names
+/// the un-bound witness is an `UnboundFVar` the kernel refuses at
+/// `add_declaration` time, invisible to `cargo check`. It fired once while
+/// authoring this pair.
+#[test]
+fn the_cancellation_lemmas_have_the_statements_this_slice_specifies() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.inv_nonneg),
+        "((x0 : CReal) -> ((x1 : AxNat) -> ((x2 : CReal.PosBound x0 x1) -> \
+         CReal.le CReal.zero (CReal.inv x0 x1 x2))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.le_of_mul_le_mul_left),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : AxNat) -> \
+         ((x4 : CReal.PosBound x0 x3) -> ((x5 : CReal.le (CReal.mul x0 x1) \
+         (CReal.mul x0 x2)) -> CReal.le x1 x2))))))"
+    );
+    for (label, name) in [
+        ("inv_nonneg", p.inv_nonneg),
+        ("le_of_mul_le_mul_left", p.le_of_mul_le_mul_left),
+    ] {
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "CReal.{label} rests on {footprint:?}");
+    }
+}
+
+/// **A concrete, asymmetric instantiation of `le_of_mul_le_mul_left`.**
+/// `c := 1`, `x := 1`, `y := 1 + 1`, so `mul c x ≤ mul c y` is the TRUE
+/// direction `1 ≤ 1+1`. A symmetric instance (`x = y`) cannot catch an
+/// argument-order defect in the theorem's own `ty`/`value` construction —
+/// `le x y` and `le y x` coincide there — this one can: the assertion below
+/// pins the CONCLUSION's rendered type exactly, so a `x`/`y` transposition
+/// inside `declare_le_of_mul_le_mul_left` would print `CReal.le (CReal.add
+/// CReal.one CReal.one) CReal.one` instead, and the test would fail.
+#[test]
+fn le_of_mul_le_mul_left_concrete_asymmetric_instance() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let rat = p.rat;
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let two = d.const_app(p.add, &[one, one]);
+    let zero_nat = d.num(0);
+
+    // `PosBound one 0`: `le (ofRat (natDivSucc 1 0)) one`, and `natDivSucc 1
+    // 0` computes to `Rat.one` — `ofRat (natDivSucc 1 0)` IS `CReal.one` by
+    // defeq, so `le_refl one` closes it (same witness the domain-inhabited
+    // test above uses).
+    let h = d.lemma(p.le_refl, &[one]);
+
+    // `le one two`, from `le_add_of_nonneg one Rat.one (0 ≤ 1)`: its
+    // conclusion `le one (add one (ofRat Rat.one))` IS `le one two`
+    // syntactically, since `one := ofRat Rat.one` already.
+    let rat_zero = crate::rat_prelude::ops::rzero(&mut d, rat);
+    let rat_one = crate::rat_prelude::ops::rone(&mut d, rat);
+    let rat_zero_lt_one = d.lemma(rat.zero_lt_one, &[]);
+    let rat_zero_le_one = d.lemma(rat.le_of_lt, &[rat_zero, rat_one, rat_zero_lt_one]);
+    let one_le_two = d.lemma(p.le_add_of_nonneg, &[one, rat_one, rat_zero_le_one]);
+
+    // `le zero one`, for `mul_le_mul_of_nonneg_left`'s nonneg-left hypothesis.
+    let zero = d.kernel().const_(p.zero, vec![]);
+    let zero_lt_one = d.lemma(p.zero_lt_one, &[]);
+    let zero_le_one = d.lemma(p.le_of_lt, &[zero, one, zero_lt_one]);
+
+    // `le (mul one one) (mul one two)`.
+    let hyp = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[one, one, two, zero_le_one, one_le_two],
+    );
+
+    let concl = d.lemma(p.le_of_mul_le_mul_left, &[one, one, two, zero_nat, h, hyp]);
+
+    let name = d.kernel().name_str(anon, "Check.cancellation_one_two");
+    let ty = d.const_app(p.le, &[one, two]);
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: concl,
+    });
+    assert!(
+        admitted.is_ok(),
+        "le_of_mul_le_mul_left at c=x=1, y=1+1 did not produce `le one two`: {admitted:?}"
+    );
+
+    let rendered = d
+        .kernel()
+        .render_lean(ty)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert_eq!(
+        rendered,
+        "CReal.le CReal.one (CReal.add CReal.one CReal.one)"
+    );
+
+    // The TRANSPOSED conclusion, `le two one` (FALSE: 2 ≤ 1), for the SAME
+    // proof term: refused, because `concl`'s actual type is `le one two`.
+    let transposed_ty = d.const_app(p.le, &[two, one]);
+    let name = d.kernel().name_str(anon, "Check.cancellation_transposed");
+    let refused = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: transposed_ty,
+        value: concl,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted `le two one` (2 ≤ 1) from the same proof term \
+         that establishes `le one two` — le_of_mul_le_mul_left's x/y must be \
+         transposed"
     );
 }
 
