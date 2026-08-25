@@ -814,7 +814,7 @@ def build_authoritative_transaction(
         }
         result_description = "fresh-import axiom-free modeq-family target proof"
         replay_description = (
-            "the resolved multi-target statement adapter and candidate manifests "
+            "resolved multi-target statement adapter and candidate manifests "
             "through the operation's own reviewed checker module and requires the "
             "exact kernel-checked proof, dependency-free result, and matching "
             "target definition"
