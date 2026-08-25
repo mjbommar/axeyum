@@ -95,6 +95,14 @@ def parse(text: str | Expr) -> Expr:
     """
     if isinstance(text, Expr):
         return text
+    if "=" in text:
+        # An equation is its difference: `2x + 3 = 7` is the expression whose
+        # roots solve it. `==` is accepted as the Python spelling; anything
+        # else with `=` (`<=`, `>=`, `!=`, assignments) is outside the grammar.
+        sides = re.split(r"(?<![<>!=])==?(?![=])", text)
+        if len(sides) != 2 or any(op in text for op in ("<=", ">=", "!=")):
+            raise ValueError(f"cannot parse {text!r}: expected one `=` between two expressions")
+        return parse(sides[0]) - parse(sides[1])
     try:
         tree = ast.parse(_normalise(text), mode="eval")
     except SyntaxError as error:
@@ -161,7 +169,7 @@ _PLUS_NEG = re.compile(r"\+ \(-(\d+(?:/\d+)?)\)")
 _NEG_ONE_TIMES = re.compile(r"\(-1\)\*")
 
 
-def show(expr: Expr | None) -> str:
+def show(expr: Expr | list[Expr] | None) -> str:
     """A readable rendering: ``(x + 2)*(x + 3)`` for what Rust prints as ``(x - (-2))*(x - (-3))``.
 
     Purely textual -- it folds ``- (-c)`` to ``+ c``, ``+ (-c)`` to ``- c``
@@ -170,6 +178,8 @@ def show(expr: Expr | None) -> str:
     """
     if expr is None:
         return "None"
+    if isinstance(expr, list):
+        return "[" + ", ".join(show(e) for e in expr) + "]"
     s = str(expr)
     s = _DOUBLE_NEG.sub(r"+ \1", s)
     s = _PLUS_NEG.sub(r"- \1", s)
@@ -177,9 +187,30 @@ def show(expr: Expr | None) -> str:
     return s
 
 
-def Simplify(expr: str | Expr) -> Expr:
-    """``Simplify[e]``."""
-    return cas.simplify(parse(expr))
+_SIGNS = {"positive", "negative", "nonnegative", "nonzero"}
+
+
+def _assumptions(assume: dict[str, str] | None) -> cas.Assumptions | None:
+    if not assume:
+        return None
+    a = cas.Assumptions()
+    for name, sign in assume.items():
+        if sign not in _SIGNS:
+            raise ValueError(f"assume[{name!r}] must be one of {sorted(_SIGNS)}, got {sign!r}")
+        a = getattr(a, sign)(name)
+    return a
+
+
+def Simplify(expr: str | Expr, assume: dict[str, str] | None = None) -> Expr:
+    """``Simplify[e]``, or ``Simplify[e, Assumptions -> x > 0]`` as ``assume={"x": "positive"}``.
+
+    Without an assumption ``exp(ln(x))`` stays as it is, because it is only
+    ``x`` for positive ``x``; with ``assume={"x": "positive"}`` it simplifies.
+    Signs: ``positive``, ``negative``, ``nonnegative``, ``nonzero``.
+    """
+    e = parse(expr)
+    a = _assumptions(assume)
+    return cas.simplify(e) if a is None else cas.simplify_under_assumptions(e, a)
 
 
 def Expand(expr: str | Expr) -> Expr:
@@ -229,10 +260,27 @@ def Series(expr: str | Expr, var: str | None = None, order: int = 4) -> Expr | N
     return cas.series(e, _var(e, var), order)
 
 
-def Limit(expr: str | Expr, point: int | Fraction, var: str | None = None) -> Any:
-    """``Limit[e, x -> a]`` for a finite rational ``a``."""
+_INFINITIES = {
+    "inf": True,
+    "+inf": True,
+    "infinity": True,
+    "oo": True,
+    "-inf": False,
+    "-infinity": False,
+    "-oo": False,
+}
+
+
+def Limit(expr: str | Expr, point: Fraction | float | str, var: str | None = None) -> Any:
+    """``Limit[e, x -> a]`` for a rational ``a``, or ``"inf"`` / ``"-inf"`` (also ``float("inf")``)."""
     e = parse(expr)
-    p = cas.LimitPoint.finite(point)
+    if isinstance(point, str) and point.strip().lower() in _INFINITIES:
+        positive = _INFINITIES[point.strip().lower()]
+        p = cas.LimitPoint.pos_infinity() if positive else cas.LimitPoint.neg_infinity()
+    elif isinstance(point, float) and point in (float("inf"), float("-inf")):
+        p = cas.LimitPoint.pos_infinity() if point > 0 else cas.LimitPoint.neg_infinity()
+    else:
+        p = cas.LimitPoint.finite(point)
     return cas.limit(e, _var(e, var), p)
 
 

@@ -64,3 +64,29 @@ def test_show_only_folds_signs_and_never_reorders() -> None:
     assert m.show(m.parse("x - 2")) == "x - 2"
     assert m.show(None) == "None"
     assert m.show(cas.factor(m.parse("x^2 - 1"), "x")) == "(x - 1)*(x + 1)"
+
+
+def test_equations_parse_as_their_difference() -> None:
+    assert m.show(m.Solve("2x + 3 = 7")) == "[2]"
+    assert m.show(m.Solve("x^2 == 4")) == "[2, -2]"
+    with pytest.raises(ValueError, match="one `=`"):
+        m.parse("x <= 3")
+    with pytest.raises(ValueError, match="one `=`"):
+        m.parse("a = b = c")
+
+
+def test_simplify_with_assumptions() -> None:
+    assert m.show(m.Simplify("exp(ln(x))")) == "exp(ln(x))"
+    assert m.show(m.Simplify("exp(ln(x))", assume={"x": "positive"})) == "x"
+    with pytest.raises(ValueError, match="must be one of"):
+        m.Simplify("x", assume={"x": "big"})
+
+
+def test_limit_at_infinity() -> None:
+    assert str(m.Limit("1/x", "inf")) == "0"
+    assert str(m.Limit("1/x", float("-inf"))) == "0"
+    assert str(m.Limit("(x^2 - 1)/(x - 1)", 1)) == "2"
+
+
+def test_show_renders_lists() -> None:
+    assert m.show([m.parse("x"), None]) == "[x, None]"
