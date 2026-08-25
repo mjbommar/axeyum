@@ -40,8 +40,22 @@ arrow-free shapes. Next: Q6 (derive `eq`/`hash`/`str`; `Config`/`Incremental`
 `Sync`); a `ModEq`-unfolding producer to lift the *provability* wall; an
 arrow-capable export path.
 
+**Agentic-loop iterations (2026-08-25).** Ran the loop live and improved it
+three times: (3) `--skip-unreachable` preflights the frozen export before
+spending a model — observed offline over 5 facts, all declined retrieval-miss
+after ~26k tokens each because export absence is only found inside the producer
+tool, two model rounds in; (4) `--reachable-first` stably reorders `--next`
+selection so facts with an export come first (the first 5 eligible had 0); (5)
+the mobility summary now names the dominant unevaluable reason, making
+`unevaluable=186` legible as a reachability block (`no-frozen-export`), not a
+tactic gap. Verified the loop still proves its live frontier (`nat-modeq-symm`,
+`nat-modeq-trans`) via `modeq_family`.
+
 <!-- plan-section: landed-changes -->
 
+| 2026-08-25 | `be0c67f67` | mobility summary names the dominant unevaluable reason (`unevaluable_no_export`, `unevaluable_top`), so `unevaluable=186` reads as a reachability block not a tactic gap; regenerates the committed census (191->189) that had drifted stale |
+| 2026-08-25 | `e27140275` | `--reachable-first`: stably reorder `--next` selection so facts with a frozen export come first (the first 5 eligible had 0); deterministic, population unchanged |
+| 2026-08-25 | `b2813872f` | `--skip-unreachable`: preflight the frozen export before spending a model; skips retrieval-miss-only facts at zero cost (~26k tokens/fact saved), opt-in so replays are unchanged; 3 controls |
 | 2026-08-25 | `2a2e863f2` | `gen-statement-adapters.py`: proof-free Lean statement adapters from `formal.statement` to expand frozen-export coverage; `--exportable-only` drops arrow-bearing statements lean4export 3.1.0 refuses; verified end to end on s5; 7 controls |
 | 2026-08-25 | `57f3e68b4` `90d6cb5c0` | `14-frontier-reachability.md`: the ~3-of-146 gap decomposed into reachability x provability, measured; finding is the frontier is producer-bound (498 proved, open modeq facts are congruence goals the producers decline) |
 | 2026-08-25 | `5c5c2fd04` | fix: a deep `CasExpr` chain raises `BudgetExceeded` (`MAX_EXPR_DEPTH`) instead of segfaulting the process |
