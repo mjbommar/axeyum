@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-cramer-two-unique-x",
+  "title": "Cramer's rule pins down the first unknown of a nonsingular 2x2 rational linear system",
+  "statement": "Given a 2x2 rational linear system a*x+b*y=e, c*x+d*y=f with nonzero determinant det2(a,b,c,d), the first unknown x is forced to equal det2(e,b,f,d) / det2(a,b,c,d).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.cramer_two_unique_x : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> ((x4 : Rat) -> ((x5 : Rat) -> ((x6 : Rat) -> ((x7 : Rat) -> ((x8 : Eq.{1} Rat (Rat.add (Rat.mul x0 x4) (Rat.mul x1 x5)) x6) -> ((x9 : Eq.{1} Rat (Rat.add (Rat.mul x2 x4) (Rat.mul x3 x5)) x7) -> ((x10 : Not (Eq.{1} Rat (Rat.det2 x0 x1 x2 x3) Rat.zero)) -> Eq.{1} Rat x4 (Rat.div (Rat.det2 x6 x1 x7 x3) (Rat.det2 x0 x1 x2 x3)))))))))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8",
+      "x9",
+      "x10"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-left-distrib",
+    "F:rat-mul-assoc",
+    "F:rat-mul-comm",
+    "F:rat-mul-inv-cancel-of-ne-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.cramer_two_unique_x",
+      "kind": "kernel-term",
+      "supports": "Rat.cramer_two_unique_x is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.cramer_two_unique_x 2>/dev/null | grep -cE '^Rat\\.cramer_two_unique_x\\t'",
+      "notes": "`build_rat_prelude` admits Rat.cramer_two_unique_x through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `theorem_dependency_inventory` exits non-zero for a named filter that matches nothing (a deleted theorem cannot read as a re-derived one), and `grep -c` (never `-q`) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present -- two ways the same absence would be caught. `--release` is MANDATORY: this tool now also builds `creal`/`complex`/`cpoint`, which recurse deep enough in a debug build to overflow the default thread stack (measured: release exits 0 with 1092 theorems, debug SIGABRTs at 134) -- the same resource-limit gotcha already documented for `prelude_theorem_inventory --include-constructed`."
+    },
+    {
+      "id": "footprint-Rat.cramer_two_unique_x",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Rat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "notes": "`nat_axiom_inventory` builds the Rat environment as its own group and reports `rat: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-measured on this tree). That bounds every individual Rat theorem's footprint by [], since a theorem cannot depend on a trusted declaration the environment does not contain -- and the enumeration covers Axiom, Opaque AND Quotient, not just Declaration::Axiom, because Opaque has no proof body and Quotient admits Quot.sound. `--require-axiom-free <name>` is an error (not a silent pass/zero) for a prelude this run never built, which is what makes `rat` here a claim rather than an absence."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:cramers-rule",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-25",
+    "established_by": "axeyum-lean-kernel build_rat_prelude",
+    "source": "see F:rat-add-comm for the extraction method (shared for the whole batch)."
+  },
+  "notes": "depends_on keeps only the sibling-mapped subset of the 10-edge direct-dependency set (Rat.add_neg, Rat.add_zero, Rat.mul_one, Rat.right_distrib, Rat.sub_add_add, Rat.sub_mul are not registered facts).",
+  "external_status": "proved"
+}
