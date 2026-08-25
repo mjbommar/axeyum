@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 198] = [
+    let expected: [(&str, crate::NameId, &str); 199] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -296,6 +296,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.sumRange_telescope", p.sum_range_telescope, "theorem"),
         ("CReal.sumRange_split", p.sum_range_split, "theorem"),
         ("CReal.sumRange_tail_le", p.sum_range_tail_le, "theorem"),
+        (
+            "CReal.sumRange_tail_within",
+            p.sum_range_tail_within,
+            "theorem",
+        ),
         ("CReal.sumRange_seq_zero", p.sum_range_seq_zero, "theorem"),
         ("CReal.sumRange_seq_succ", p.sum_range_seq_succ, "theorem"),
         // Powers, and the geometric series over ℝ (creal/power.rs).
@@ -411,6 +416,68 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "{label} rests on {footprint:?}");
     }
+}
+
+/// **`CReal.sumRange_tail_within` on a trivial instance**: `f = g` the
+/// constant-zero sequence, `m = n = 0`. Not a soundness check on its own
+/// (the general theorem is already proved for every `f g m n`, so any
+/// instance holds) — it is the sanity check the module documentation's
+/// "series.rs" retrospective on `nra_monomial_bound_cert.rs`-style vacuity
+/// asks for: instantiate the theorem's own conclusion at a fully CONCRETE,
+/// CLOSED term and have the kernel independently `infer` its type, rather
+/// than trusting that a universally-quantified statement that type-checks
+/// is the statement intended. `Kernel::infer` requires a closed term
+/// (`tests.rs::inference_caches_only_closed_successes` pins that an
+/// unregistered free variable is refused), which is exactly why this test
+/// closes the pointwise hypothesis and both indices to ground terms instead
+/// of leaving `f` a free variable.
+#[test]
+fn sum_range_tail_within_specializes_to_the_zero_series_against_itself() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+
+    // zero_fn := λ _ : Nat, CReal.zero.
+    let zero_fn = {
+        let k_fv = d.fresh_fvar();
+        let _k = d.kernel().fvar(k_fv);
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        d.lam_fv(k_fv, nat, zero_c)
+    };
+    let zero_nat = d.num(0);
+
+    // pointwise : ∀ k, le (abs (zero_fn k)) (zero_fn k), via le_abs_self.
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zk = d.apply(zero_fn, &[k]);
+        let body = d.lemma(p.le_abs_self, &[zk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let instance = d.lemma(
+        p.sum_range_tail_within,
+        &[zero_fn, zero_fn, zero_nat, zero_nat, pointwise],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!(
+            "sumRange_tail_within refused at the trivial f = g = (fun _ => zero), \
+             m = n = 0 instance: {error:?}"
+        )
+    });
+
+    // Not just well-typed: the conclusion the kernel infers is genuinely a
+    // `Within` bound, not e.g. `True` or some other vacuous stand-in.
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Within"),
+        "the instantiated conclusion is not a `Within` bound: {rendered}"
+    );
 }
 
 /// The three setoid laws say what ADR-0512 says they say. An empty footprint on

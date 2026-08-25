@@ -1134,6 +1134,26 @@ pub struct CRealPrelude {
     /// mathematical engine of the comparison test (a real-valued tail bound,
     /// via `sum_range_split` + `abs_sumRange_le` + `sumRange_le`).
     pub sum_range_tail_le: NameId,
+    /// `CReal.sumRange_tail_within : ∀ f g m n, (∀ k, le (abs (f k)) (g k)) →
+    /// Within (seq (add (sumRange f (add m n)) (neg (sumRange f m))) (add m
+    /// n)) (add (seq (add (sumRange g (add m n)) (neg (sumRange g m))) (add m
+    /// n)) (natDivSucc 2 (add m n)))` — [`Self::sum_range_tail_le`]'s
+    /// `CReal.le`, unfolded at its own tail's defining index `add m n` and
+    /// repackaged as a `Within` bound on that same RATIONAL sample, widened
+    /// by `2/(add m n + 1)`. Built from **two** one-sided applications
+    /// ([`Self::le_abs_self`]/[`Self::neg_le_abs`] chained through
+    /// [`Self::le_trans`] against `sum_range_tail_le`'s conclusion, then each
+    /// applied at `add m n`) via `series::within_of_tail_le` (the
+    /// "within-swap via `neg_sub`"-shaped helper `series.rs`'s module
+    /// documentation names as the first piece to land), **not** one `abs_le`
+    /// call — `abs_le`'s hypothesis shape does not survive sampling at an
+    /// index. This is the middle leg the outer telescope in `series.rs`'s
+    /// module documentation needs; the outer telescope itself (bounding
+    /// `seq (sumRange f m) m − seq (sumRange f (add m n)) (add m n)` through
+    /// `CReal.regular` at a shared shifted index) and the inner one (bounding
+    /// this theorem's own `g`-side sample through `Cauchy (sumRange g)`'s
+    /// witness) are not built here.
+    pub sum_range_tail_within: NameId,
     /// `CReal.sumRange_seq_zero : Eq Rat (seq (sumRange f Nat.zero) k)
     /// Rat.zero` — the base case of the sample-rate law, closing by `Eq.refl`
     /// alone (`sumRange f zero` ι-reduces to `zero := ofRat Rat.zero`, and
@@ -1841,6 +1861,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_telescope: kernel.name_str(creal, "sumRange_telescope"),
         sum_range_split: kernel.name_str(creal, "sumRange_split"),
         sum_range_tail_le: kernel.name_str(creal, "sumRange_tail_le"),
+        sum_range_tail_within: kernel.name_str(creal, "sumRange_tail_within"),
         sum_range_seq_zero: kernel.name_str(creal, "sumRange_seq_zero"),
         sum_range_seq_succ: kernel.name_str(creal, "sumRange_seq_succ"),
         pow: kernel.name_str(creal, "pow"),
