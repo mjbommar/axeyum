@@ -2792,6 +2792,246 @@ fn sum_vars_succ_wrong_order_is_rejected() {
     );
 }
 
+// --- `Rat.sumRange` diagonal/rectangle reindexing (`rat_prelude::diagonal`) -
+
+/// Every declaration `diagonal::declare_diagonal` adds — the three theorems
+/// built on `Rat.sumRange` (counted from the list below, not carried over
+/// from an earlier count) — is a **checked** theorem with an empty axiom
+/// footprint, read out of the kernel, not off the diff.
+#[test]
+fn the_diagonal_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("sumRange_split", p.sum_range_split),
+        ("sumRange_diagonal", p.sum_range_diagonal),
+        (
+            "sumRange_rect_eq_diag_add_corner",
+            p.sum_range_rect_eq_diag_add_corner,
+        ),
+    ];
+    for (label, name) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "Rat.{label} must be a checked Theorem, found a different kind"
+        );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// `Rat.sumRange_diagonal` at a concrete instance: `F i j := 1` (constant),
+/// `n = 3`. Both the antidiagonal grouping (`Σ_{k<3} Σ_{i≤k} F i (k−i)`) and
+/// the row grouping (`Σ_{i<3} Σ_{j<3−i} F i j`) COUNT the same 6-point
+/// triangle `{(i,j) : i+j<3}` — `(0,0),(1,0),(0,1),(2,0),(1,1),(0,2)` — and
+/// both must independently reduce to `6`, so this is a genuine reindexing
+/// check over `Rat` values, not just an admission. A constant summand (not
+/// `add i j`, unlike `Nat`'s own version of this test) keeps the concrete
+/// arithmetic to `Rat.add`/normalize alone, without also needing a `Nat →
+/// Rat` conversion for the summand itself.
+#[test]
+fn sum_range_diagonal_computes_at_a_concrete_instance_over_rat() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // F := fun i j => 1 (constant Rat one).
+    let one = literal(&mut d, 1);
+    let ff = {
+        let i_fv = d.fresh_fvar();
+        let j_fv = d.fresh_fvar();
+        let inner = d.lam_fv(j_fv, nat, one);
+        d.lam_fv(i_fv, nat, inner)
+    };
+    let three = d.num(3);
+    let six = literal(&mut d, 6);
+
+    let proof = d.lemma(p.sum_range_diagonal, &[ff, three]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("sumRange_diagonal(F,3) should infer: {e:?}"));
+
+    // The antidiagonal (triangle) sum, built independently of
+    // `diagonal.rs`'s own helpers.
+    let triangle = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ki = d.sub(k, i);
+        let fiki = d.apply(ff, &[i, ki]);
+        let diag_inner = d.lam_fv(i_fv, nat, fiki);
+        let sk = d.succ(k);
+        let diag_sum = rsum_range(&mut d, p, diag_inner, sk);
+        let t_fn = d.lam_fv(k_fv, nat, diag_sum);
+        rsum_range(&mut d, p, t_fn, three)
+    };
+    // The row-major sum, likewise independently built.
+    let rows = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let fij = d.apply(ff, &[i, j]);
+        let row_inner = d.lam_fv(j_fv, nat, fij);
+        let ni = d.sub(three, i);
+        let row_sum_i = rsum_range(&mut d, p, row_inner, ni);
+        let row_fn = d.lam_fv(i_fv, nat, row_sum_i);
+        rsum_range(&mut d, p, row_fn, three)
+    };
+
+    let expected = req(&mut d, triangle, rows);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "sumRange_diagonal(F,3) should state the antidiagonal sum equals the row-major sum"
+    );
+    assert!(
+        d.kernel().def_eq(triangle, six),
+        "the antidiagonal (triangle) sum of the constant 1 over {{(i,j):i+j<3}} \
+         (6 points) must reduce to 6"
+    );
+    assert!(
+        d.kernel().def_eq(rows, six),
+        "the row-major sum of the constant 1 over {{(i,j):i+j<3}} (6 points) \
+         must reduce to 6"
+    );
+
+    assert!(
+        d.kernel().axiom_footprint(p.sum_range_diagonal).is_empty(),
+        "sumRange_diagonal must rest on zero axioms"
+    );
+}
+
+/// `Rat.sumRange_rect_eq_diag_add_corner` at a concrete instance: `F i j :=
+/// 1`, `n = 2`. The rectangle `{i<2,j<2}` (4 points) splits into the
+/// antidiagonal triangle `{i+j<2}` (3 points: `(0,0),(1,0),(0,1)`) and the
+/// corner `{i<2,j<2,i+j≥2}` (the single point `(1,1)`) — `4 = 3 + 1`, checked
+/// both as the theorem's own statement AND by independently reducing all
+/// three sums.
+#[test]
+fn sum_range_rect_eq_diag_add_corner_computes_at_a_concrete_instance_over_rat() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, req, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let one = literal(&mut d, 1);
+    let ff = {
+        let i_fv = d.fresh_fvar();
+        let j_fv = d.fresh_fvar();
+        let inner = d.lam_fv(j_fv, nat, one);
+        d.lam_fv(i_fv, nat, inner)
+    };
+    let two = d.num(2);
+
+    let proof = d.lemma(p.sum_range_rect_eq_diag_add_corner, &[ff, two]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("sumRange_rect_eq_diag_add_corner(F,2) should infer: {e:?}"));
+
+    // The rectangle {(i,j): i<2, j<2} -- 4 points -- built independently.
+    let rectangle = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let fij = d.apply(ff, &[i, j]);
+        let row_inner = d.lam_fv(j_fv, nat, fij);
+        let row_sum_i = rsum_range(&mut d, p, row_inner, two);
+        let rect_row = d.lam_fv(i_fv, nat, row_sum_i);
+        rsum_range(&mut d, p, rect_row, two)
+    };
+    // The antidiagonal triangle {(i,j): i+j<2} -- 3 points -- built
+    // independently.
+    let triangle = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ki = d.sub(k, i);
+        let fiki = d.apply(ff, &[i, ki]);
+        let diag_inner = d.lam_fv(i_fv, nat, fiki);
+        let sk = d.succ(k);
+        let diag_sum = rsum_range(&mut d, p, diag_inner, sk);
+        let t_fn = d.lam_fv(k_fv, nat, diag_sum);
+        rsum_range(&mut d, p, t_fn, two)
+    };
+    // The corner {(i,j): i<2, j<2, i+j>=2} -- the single point (1,1) --
+    // built independently.
+    let corner = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let k_fv = d.fresh_fvar();
+        let sub_2i = d.sub(two, i);
+        let shifted_idx = {
+            let k = d.kernel().fvar(k_fv);
+            d.add(sub_2i, k)
+        };
+        let fi_shifted = d.apply(ff, &[i, shifted_idx]);
+        let corner_inner = d.lam_fv(k_fv, nat, fi_shifted);
+        let corner_sum_i = rsum_range(&mut d, p, corner_inner, i);
+        let corner_row = d.lam_fv(i_fv, nat, corner_sum_i);
+        rsum_range(&mut d, p, corner_row, two)
+    };
+
+    let rhs = radd(&mut d, triangle, corner);
+    let expected = req(&mut d, rectangle, rhs);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "sumRange_rect_eq_diag_add_corner(F,2) should state rectangle = triangle + corner"
+    );
+
+    let four = literal(&mut d, 4);
+    let three = literal(&mut d, 3);
+    assert!(
+        d.kernel().def_eq(rectangle, four),
+        "the rectangle sum of the constant 1 over {{i<2,j<2}} (4 points) must reduce to 4"
+    );
+    assert!(
+        d.kernel().def_eq(triangle, three),
+        "the triangle sum of the constant 1 over {{i+j<2}} (3 points) must reduce to 3"
+    );
+    assert!(
+        d.kernel().def_eq(corner, one),
+        "the corner sum of the constant 1 over {{i<2,j<2,i+j>=2}} (1 point) must reduce to 1"
+    );
+
+    assert!(
+        d.kernel()
+            .axiom_footprint(p.sum_range_rect_eq_diag_add_corner)
+            .is_empty(),
+        "sumRange_rect_eq_diag_add_corner must rest on zero axioms"
+    );
+}
+
 // --- polynomials (`rat_prelude::polynomial`) --------------------------------
 
 /// Every declaration `polynomial::declare_polynomial` adds — `Rat.pow`,
@@ -3020,6 +3260,133 @@ fn rat_poly_eval_computation_check_can_fail() {
         d.declare_theorem(name, stmt, proof).is_err(),
         "the kernel accepted `polyEval (1+2i) 2 3 = 8`, so the polyEval computation \
          check proves nothing"
+    );
+}
+
+/// `polyEval_mul` (the finite Cauchy product) is NOT attempted in this
+/// prelude, and this test is the kernel-confirmed reason why: the natural
+/// candidate statement `polyEval (conv a b) (m+n-1) x = polyEval a m x *
+/// polyEval b n x`, with `conv a b k := sumRange (fun i => a i * b (k-i))
+/// (k+1)` the plain (untruncated) antidiagonal formula, is FALSE for
+/// `a`/`b` that are not required to vanish beyond their own bound.
+///
+/// Take `a 0 = 1`, `a (succ _) = 5` (so `m = 2` means "`a`'s declared
+/// coefficients are `1, 5`"), and `b 0 = 3`, `b (succ _) = 100` (`n = 1`
+/// means "`b`'s declared coefficient is `3`"; `b 1 = 100` is `b`'s value
+/// PAST its declared bound — `polyEval b 1 x` never looks at it, but nothing
+/// stops it being nonzero). The truncated rectangle product's `x^1`
+/// coefficient is `a 1 * b 0 = 5*3 = 15`. But `conv a b 1` — the coefficient
+/// `polyEval_mul` would need to equal `15` — is `a 0 * b 1 + a 1 * b 0 =
+/// 1*100 + 5*3 = 115`: `conv` sums the FULL antidiagonal `{(i,j) : i+j=1}`,
+/// which includes `(0,1)`, a point OUTSIDE the `m×n` rectangle `{i<2,j<1}`
+/// (since `j=1 ≥ n=1`). `conv`'s own formula is correct (it is exactly the
+/// infinite-power-series Cauchy product, confirmed positively below); the
+/// gap is that it is not, by itself, the TRUNCATED product `polyEval_mul`
+/// would need — that needs either an extra hypothesis (`a`/`b` vanish beyond
+/// `m`/`n`) or a `conv` bounded by BOTH `m` and `n` (not the same-bound `n×n`
+/// square `rat_prelude/diagonal.rs` supplies), neither built here.
+#[test]
+fn naive_conv_disagrees_with_the_truncated_rectangle_product() {
+    use crate::BinderInfo;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_ty, req, rmul, rrefl, rsum_range};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // A step function `Nat -> Rat`, `f 0 = at_zero`, `f (succ _) = beyond`,
+    // via `Nat.rec` -- exactly `rat_poly_eval_computes_a_concrete_polynomial`'s
+    // own `coeffs` builder, reused for both `a` and `b`.
+    let step = |d: &mut IntDev<'_>, at_zero: ExprId, beyond: ExprId| -> ExprId {
+        let anon_binder = d.anon_name();
+        let one_level = d.level_one();
+        let motive = d
+            .kernel()
+            .lam(anon_binder, nat, carrier, BinderInfo::Default);
+        let minor_succ = {
+            let j_fv = d.fresh_fvar();
+            let ih_fv = d.fresh_fvar();
+            let inner = d.lam_fv(ih_fv, carrier, beyond);
+            d.lam_fv(j_fv, nat, inner)
+        };
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let rec_name = d.prelude().rec;
+        let rec = d.kernel().const_(rec_name, vec![one_level]);
+        let body = d.apply(rec, &[motive, at_zero, minor_succ, i]);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let one_r = literal(&mut d, 1);
+    let five_r = literal(&mut d, 5);
+    let a = step(&mut d, one_r, five_r); // a 0 = 1, a 1 = 5
+
+    let three_r = literal(&mut d, 3);
+    let hundred_r = literal(&mut d, 100);
+    let b = step(&mut d, three_r, hundred_r); // b 0 = 3, b 1 = 100 (junk beyond n=1)
+
+    // conv a b k := sumRange (fun i => a i * b (k-i)) (k+1), built inline
+    // (not a named `Rat.conv` -- this test does not commit to that shape
+    // being the right one, per the module doc above).
+    let conv = |d: &mut IntDev<'_>, a: ExprId, b: ExprId, k: ExprId| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ai = d.apply(a, &[i]);
+        let ki = d.sub(k, i);
+        let bki = d.apply(b, &[ki]);
+        let term = rmul(d, ai, bki);
+        let inner = d.lam_fv(i_fv, nat, term);
+        let sk = d.succ(k);
+        rsum_range(d, p, inner, sk)
+    };
+
+    // Positive control: conv's OWN antidiagonal formula computes correctly
+    // (the "re-verify i<=k, so no truncation fires" check the task asked
+    // for, at a third concrete instance beyond k=0,1,2 symbolic hand-check).
+    let zero_n = d.zero();
+    let conv_0 = conv(&mut d, a, b, zero_n);
+    let expected_0 = literal(&mut d, 3); // a0*b0 = 1*3
+    let stmt0 = req(&mut d, conv_0, expected_0);
+    let proof0 = rrefl(&mut d, conv_0);
+    let name0 = d.kernel().name_str(anon, "Check.conv_k0_is_three");
+    d.declare_theorem(name0, stmt0, proof0)
+        .unwrap_or_else(|e| panic!("conv(a,b,0) did not reduce to 3: {}", d.explain(&e)));
+
+    let one_n = d.num(1);
+    let conv_1 = conv(&mut d, a, b, one_n);
+    let expected_1 = literal(&mut d, 115); // a0*b1 + a1*b0 = 100 + 15
+    let stmt1 = req(&mut d, conv_1, expected_1);
+    let proof1 = rrefl(&mut d, conv_1);
+    let name1 = d.kernel().name_str(anon, "Check.conv_k1_is_115");
+    d.declare_theorem(name1, stmt1, proof1)
+        .unwrap_or_else(|e| panic!("conv(a,b,1) did not reduce to 115: {}", d.explain(&e)));
+
+    // Negative control -- THE FINDING: conv(a,b,1) is NOT the truncated
+    // rectangle coefficient a1*b0 = 15. If it were, `polyEval_mul`'s naive
+    // statement (no vanishing-beyond-bound hypotheses on a/b) would be
+    // provable as stated; it is not.
+    let conv_1_again = conv(&mut d, a, b, one_n);
+    let fifteen = literal(&mut d, 15);
+    let wrong_stmt = req(&mut d, conv_1_again, fifteen);
+    let wrong_proof = rrefl(&mut d, conv_1_again);
+    let wrong_name = d.kernel().name_str(anon, "Check.conv_k1_is_not_fifteen");
+    assert!(
+        d.declare_theorem(wrong_name, wrong_stmt, wrong_proof)
+            .is_err(),
+        "the kernel accepted conv(a,b,1) = 15 (the truncated rectangle \
+         coefficient a1*b0), but conv(a,b,1) = 115 (a0*b1+a1*b0) since conv \
+         sums the FULL antidiagonal including the out-of-rectangle point \
+         (0,1) -- so the naive polyEval_mul statement is not merely \
+         unattempted here, it is false as stated without extra hypotheses"
     );
 }
 
