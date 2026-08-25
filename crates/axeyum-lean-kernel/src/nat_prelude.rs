@@ -1601,6 +1601,14 @@ pub struct NatPrelude {
     /// `Exists.rec` being restricted to `Prop` motives (`sum_range_diagonal`'s
     /// neighbouring finding, the opposite direction of the same restriction).
     pub cantor_diagonal: NameId,
+    /// `Nat.cantor_diagonal_neg : ∀ f : Nat → Nat → Bool,
+    ///   (∀ g : Nat → Bool, ∃ n, ∀ k, Eq Bool (f n k) (g k)) → False` — the
+    /// negative form: no `f` enumerates every `Nat → Bool` sequence, where
+    /// "enumerates" is stated pointwise (`∀ k, …`) rather than as a function
+    /// equality, so this needs no `funext` either. Follows from
+    /// [`Self::cantor_diagonal`] by nested `Exists.rec` elimination; see
+    /// `cantor.rs`'s module doc.
+    pub cantor_diagonal_neg: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2019,6 +2027,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             pow_sq_zero: kernel.name_str(nat, "pow_sq_zero"),
             pow_sq_succ: kernel.name_str(nat, "pow_sq_succ"),
             cantor_diagonal: kernel.name_str(nat, "cantor_diagonal"),
+            cantor_diagonal_neg: kernel.name_str(nat, "cantor_diagonal_neg"),
         };
 
         let mut d = NatDev::new(kernel, p);

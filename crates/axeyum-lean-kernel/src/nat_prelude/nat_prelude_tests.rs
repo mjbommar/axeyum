@@ -737,6 +737,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_sq_succ,
         p.succ_pred_of_pos,
         p.cantor_diagonal,
+        p.cantor_diagonal_neg,
     ]
 }
 
@@ -5016,7 +5017,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        55 + 253,
+        55 + 254,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -6922,5 +6923,36 @@ fn cantor_diagonal_applies_at_beq_and_the_diagonal_witness_reduces() {
     assert!(
         f.k.axiom_footprint(p.cantor_diagonal).is_empty(),
         "cantor_diagonal must rest on zero axioms"
+    );
+}
+
+/// `Nat.cantor_diagonal_neg` applies at a concrete `f := Nat.beq` and is
+/// axiom-free -- the negative form built from `cantor_diagonal` by nested
+/// `Exists.rec`, checked as a standalone declaration (its own `add_declaration`
+/// call already re-verified the proof term against the stated type; this test
+/// pins that the composed statement keeps applying downstream).
+#[test]
+fn cantor_diagonal_neg_applies_at_beq() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let f_concrete = f.k.const_(p.beq, vec![]);
+    let theorem = f.k.const_(p.cantor_diagonal_neg, vec![]);
+    let applied = f.k.app(theorem, f_concrete);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "cantor_diagonal_neg must apply to a concrete f: {}",
+            f.explain(&e)
+        )
+    });
+    let rendered = f.k.render_lean(inferred);
+    assert!(
+        rendered.contains("Exists") && rendered.contains("False"),
+        "unexpected residue type: {rendered}"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.cantor_diagonal_neg).is_empty(),
+        "cantor_diagonal_neg must rest on zero axioms"
     );
 }
