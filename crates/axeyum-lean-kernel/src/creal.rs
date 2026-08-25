@@ -1022,6 +1022,32 @@ pub struct CRealPrelude {
     /// `equiv_of_le_le`, `a ~ 0`. See `creal/order_extra.rs`.
     pub eq_zero_of_add_eq_zero_of_nonneg: NameId,
 
+    /// `CReal.le_of_forall_le_add_small : ∀ x y,
+    /// (∀ e : Nat, le x (add y (ofRat (natDivSucc 1 e)))) → le x y`.
+    ///
+    /// **The Archimedean squeeze bridge**, from an abstract `∀e` accuracy
+    /// family down to `CReal.le`'s own seq-level `∀n` shape. Fixing the goal
+    /// index `n`, instantiating the hypothesis at the SAME accuracy/sample
+    /// index `j` gives `x_j − y_{2j+1} ≤ 3/(j+1)` (`Rat.le_of_sub_le` /
+    /// `Rat.sub_le_of_le` around the hypothesis's own `add`), and two
+    /// `CReal.regular` round trips — `x_n ↔ x_j` and `y_{2j+1} ↔ y_n` — pay a
+    /// further `1/(n+1)+1/(j+1)` and `1/(2j+2)+1/(n+1)`. `1/(2j+2) ≤ 1/(j+1)`
+    /// (no antitone-in-index lemma: `1/(2j+2)+1/(2j+2) = 1/(j+1)` by
+    /// `Rat.natDivSucc_add`+`Rat.natDivSucc_halve`, then `a ≤ a+a` from
+    /// nonnegativity) folds the total to `2/(n+1) + 5/(j+1)`, and
+    /// `Rat.le_of_le_add_natDivSucc` (`k = 5`) closes it. See
+    /// `creal/archimedean_squeeze.rs`.
+    pub le_of_forall_le_add_small: NameId,
+    /// `CReal.equiv_zero_of_small : ∀ v,
+    /// (∀ e : Nat, le (abs v) (ofRat (natDivSucc 1 e))) → Equiv v zero`.
+    ///
+    /// A thin wrapper over [`Self::le_of_forall_le_add_small`], applied
+    /// twice: `le v zero` from `le_abs_self`/`le_trans` transported across
+    /// `add_zero`/`add_comm`, and `le zero v` from `neg_le_abs`/`add_le_add`
+    /// transported across `add_neg`. `equiv_of_le_le` closes both into one
+    /// `Equiv`. See `creal/archimedean_squeeze.rs`.
+    pub equiv_zero_of_small: NameId,
+
     // --- the integer square root (creal/sqrt.rs) ------------------------------
     /// `CReal.natSqrt : Nat -> Nat`, the missing computational primitive
     /// behind `CReal.sqrt`. See `creal/sqrt.rs`.
@@ -2116,6 +2142,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         eq_zero_of_mul_self_zero: kernel.name_str(creal, "eq_zero_of_mul_self_zero"),
         eq_zero_of_add_eq_zero_of_nonneg: kernel
             .name_str(creal, "eq_zero_of_add_eq_zero_of_nonneg"),
+        le_of_forall_le_add_small: kernel.name_str(creal, "le_of_forall_le_add_small"),
+        equiv_zero_of_small: kernel.name_str(creal, "equiv_zero_of_small"),
         nat_sqrt: kernel.name_str(creal, "natSqrt"),
         nat_sqrt_spec: kernel.name_str(creal, "natSqrtSpec"),
         nat_sqrt_le: kernel.name_str(creal, "natSqrtLe"),
@@ -2274,6 +2302,7 @@ pub(crate) fn build_creal_prelude_uncached(
         field::declare_field(&mut d, prelude)?;
         inverse::declare_inverse(&mut d, prelude)?;
         lattice::declare_lattice(&mut d, prelude)?;
+        archimedean_squeeze::declare_archimedean_squeeze(&mut d, prelude)?;
         archimedean::declare_archimedean(&mut d, prelude)?;
         density::declare_density(&mut d, prelude)?;
         cotransitivity::declare_cotransitivity(&mut d, prelude)?;
@@ -3213,6 +3242,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 }
 
 mod archimedean;
+mod archimedean_squeeze;
 mod completeness;
 mod convergence;
 mod cotransitivity;

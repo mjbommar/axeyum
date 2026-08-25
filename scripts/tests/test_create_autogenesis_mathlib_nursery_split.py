@@ -23,7 +23,7 @@ class MathlibNurserySplitTests(unittest.TestCase):
         counts: dict[str, int] = {}
         for row in nursery["entries"][2:]:
             counts[row["partition"]] = counts.get(row["partition"], 0) + 1
-        self.assertEqual(counts, {"development": 79, "held-out": 57, "train": 78})
+        self.assertEqual(counts, {"development": 99, "held-out": 37, "train": 78})
         self.assertEqual(nursery["state"], "frozen-evaluation")
 
     def test_mutations_are_bound_to_their_source_group_and_partition(self) -> None:

@@ -42,6 +42,23 @@
       },
       "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
       "irreversible": true
+    },
+    {
+      "date": "2026-08-25",
+      "family": "natural-binomial",
+      "from": "held-out",
+      "to": "development",
+      "reason": "ordinary hand development in crates/axeyum-lean-kernel/src/nat_prelude/choose.rs, unrelated to autogenesis, already proves at least 5 of the 20 held-out natural-binomial propositions by statement comparison (Nat.choose_zero_right, Nat.choose_self, Nat.choose_succ_succ, Nat.zero_choose_succ, Nat.choose_succ_self_eq_zero) even though every one of them kept epistemic_status open and no autogenesis operation was ever registered against them -- see docs/autogenesis/263-holdout-contamination-by-ordinary-development.md; the family is moved rather than split because partition_unit is whole-family-with-source-review-groups-indivisible and the shared choose.rs machinery (Pascal's rule, choose_symm, sum lemmas) is evidence about the remaining 15 siblings too",
+      "breach": {
+        "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+        "proof_shape": "natural-binomial:unconditional-equality",
+        "operation_id": "no-operation-ordinary-nat-prelude-choose-development",
+        "registered_commit": "8b9ddb7c5",
+        "registered_date": "2026-08-23",
+        "detected_date": "2026-08-25"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
     }
   ],
   "entries": [
@@ -829,7 +846,7 @@
     },
     {
       "fact_id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "generated-mutation",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-equality",
@@ -927,7 +944,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:conditional-proposition",
@@ -941,7 +958,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-le-add-9c463139",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-relation",
@@ -955,7 +972,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-le-choose-907b5042",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:conditional-proposition",
@@ -969,7 +986,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-le-succ-62ae968b",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-relation",
@@ -983,7 +1000,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-mono-a1af9c18",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:higher-order-property",
@@ -997,7 +1014,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-ne-zero-49c3d3cb",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:conditional-proposition",
@@ -1011,7 +1028,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-one-right-7eda8e39",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-equality",
@@ -1025,7 +1042,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-equality",
@@ -1039,7 +1056,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-equality",
@@ -1053,7 +1070,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-equality",
@@ -1067,7 +1084,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-symm-add-e4b68161",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-equality",
@@ -1081,7 +1098,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:conditional-proposition",
@@ -1095,7 +1112,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-equality",
@@ -1109,7 +1126,7 @@
     },
     {
       "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-equality",
@@ -1711,7 +1728,7 @@
     },
     {
       "fact_id": "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-relation",
@@ -1725,7 +1742,7 @@
     },
     {
       "fact_id": "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-relation",
@@ -2621,7 +2638,7 @@
     },
     {
       "fact_id": "F:ml430-nat-multichoose-one-b210386a",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-equality",
@@ -2635,7 +2652,7 @@
     },
     {
       "fact_id": "F:ml430-nat-multichoose-one-right-7755072d",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-equality",
@@ -2649,7 +2666,7 @@
     },
     {
       "fact_id": "F:ml430-nat-multichoose-zero-right-6ef827c8",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-binomial",
       "proof_shape": "natural-binomial:unconditional-equality",
@@ -3070,7 +3087,7 @@
   ],
   "longitudinal_result": "artifacts/autogenesis/autogenesis-1-result.json",
   "split_policy": "artifacts/autogenesis/mathlib-nursery-split-policy-v1.json",
-  "split_policy_sha256": "6713d17309f7cfdf160238a7bb9ba173aedc9379ab7e92c860f4a31059f6bd93",
+  "split_policy_sha256": "5acde2057cae7eb8f57a326bbf89b20fb76b95dff80bcca62fc61d3cd0d3a8a8",
   "source_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
   "notes": "Autogenesis-1 remains a disjoint longitudinal regression. The 214 Mathlib statements are frozen before target outcomes; source groups, families, family-scoped proof shapes, mutations, and declared dependency components cannot cross evaluation partitions."
 }

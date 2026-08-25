@@ -92,16 +92,20 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
     if not checked_candidate_fact_ids <= adapted_fact_ids:
         raise BaselineError("checked reflexivity candidate lacks a statement adapter")
     entries = [row for row in nursery.get("entries", []) if row.get("partition") in PARTITIONS]
-    # 157 = train 78 + development 79. It was 138 (train 78 + development 60)
-    # until 2026-08-22, when the `natural-gcd` family was moved out of held-out
-    # after an authoritative operation was registered against one of its rows
-    # and spent the family's blind-evaluation value. See the amendment ledger in
-    # artifacts/autogenesis/mathlib-nursery-split-policy-v1.json. The literal is
-    # kept rather than derived from the manifest on purpose: it is a tripwire, so
-    # an unexplained change to the evaluation population stops the census instead
-    # of silently re-sizing it.
-    if len(entries) != 157:
-        raise BaselineError(f"expected 157 train/development entries, found {len(entries)}")
+    # 177 = train 78 + development 99. It was 157 (train 78 + development 79)
+    # until 2026-08-25, when the `natural-binomial` family was moved out of
+    # held-out after ordinary hand development in nat_prelude/choose.rs -- with
+    # no autogenesis operation ever registered -- was found to already prove at
+    # least 5 of its 20 held-out rows, spending the family's blind-evaluation
+    # value. See docs/autogenesis/263-holdout-contamination-by-ordinary-
+    # development.md and the amendment ledger in
+    # artifacts/autogenesis/mathlib-nursery-split-policy-v1.json. Before that,
+    # it was 138 (train 78 + development 60) until 2026-08-22's `natural-gcd`
+    # move. The literal is kept rather than derived from the manifest on
+    # purpose: it is a tripwire, so an unexplained change to the evaluation
+    # population stops the census instead of silently re-sizing it.
+    if len(entries) != 177:
+        raise BaselineError(f"expected 177 train/development entries, found {len(entries)}")
     if any(row.get("partition") == "held-out" for row in entries):
         raise BaselineError("held-out entry entered the baseline")
 

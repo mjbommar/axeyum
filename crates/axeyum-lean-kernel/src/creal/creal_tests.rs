@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 219] = [
+    let expected: [(&str, crate::NameId, &str); 221] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -266,6 +266,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.eq_zero_of_add_eq_zero_of_nonneg",
             p.eq_zero_of_add_eq_zero_of_nonneg,
+            "theorem",
+        ),
+        (
+            "CReal.le_of_forall_le_add_small",
+            p.le_of_forall_le_add_small,
+            "theorem",
+        ),
+        (
+            "CReal.equiv_zero_of_small",
+            p.equiv_zero_of_small,
             "theorem",
         ),
         ("CReal.natSqrt", p.nat_sqrt, "def"),
@@ -4067,6 +4077,166 @@ fn riemann_sum_le_on_at_the_constant_function_type_checks_at_the_expected_statem
                 "CReal.riemannSum_le_on (fun _ => one) (fun _ => one) 0 3 0 hab hfg \
                  did NOT check against le (riemannSum f 0 3 0) (riemannSum g 0 3 0) \
                  (not merely SOME le statement): {error:?}"
+            )
+        });
+}
+
+/// **Concrete, argument-order-sensitive instantiation of
+/// `CReal.le_of_forall_le_add_small`.** `x := zero`, `y := one`: `le zero
+/// one` is a TRUE, ASYMMETRIC statement (`le one zero` is false), so the
+/// easy hypothesis built below (`zero ≤ one`, then `one ≤ one + qe` via
+/// `le_add_of_nonneg`, chained by `le_trans`) only has the SHAPE
+/// `∀ e, le x (add y qe)` when `x := zero` plays the bounded role and `y :=
+/// one` plays the base being added to — exactly the roles the lemma's name
+/// claims. The expected type is built independently via `cle`, not by
+/// re-deriving the applied value's own inferred type, so a transposed
+/// reading would fail to match here.
+#[test]
+fn le_of_forall_le_add_small_at_zero_one_proves_le_zero_one() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let one_real = d.kernel().const_(p.one, vec![]);
+
+    // le01 : le zero one, from zero_lt_one + le_of_lt.
+    let lt01 = d.lemma(p.zero_lt_one, &[]);
+    let le01 = d.lemma(p.le_of_lt, &[zero_real, one_real, lt01]);
+
+    // hyp : ∀ e, le zero (add one (ofRat (natDivSucc 1 e))).
+    let hyp = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let one_nat = d.num(1);
+        let qe_rat = super::div_succ(&mut d, p, 1, e);
+        let qe = super::embed(&mut d, p, qe_rat);
+        let nonneg = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, e]);
+        // le1_add : le one (add one qe)
+        let le1_add = d.lemma(p.le_add_of_nonneg, &[one_real, qe_rat, nonneg]);
+        let sum = super::cadd(&mut d, p, one_real, qe);
+        // step : le zero (add one qe)
+        let step = d.lemma(p.le_trans, &[zero_real, one_real, sum, le01, le1_add]);
+        d.lam_fv(e_fv, nat, step)
+    };
+
+    let value = d.lemma(p.le_of_forall_le_add_small, &[zero_real, one_real, hyp]);
+    let ty = super::cle(&mut d, p, zero_real, one_real);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__le_of_forall_le_add_small_at_zero_one_proves_le_zero_one",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.le_of_forall_le_add_small zero one hyp did NOT check \
+                 against le zero one (not merely SOME le statement, and not \
+                 the reverse le one zero): {error:?}"
+            )
+        });
+}
+
+/// **Concrete instantiation of `CReal.equiv_zero_of_small` at `v := zero`.**
+/// The hypothesis `∀ e, le (abs zero) qe` is built from `abs_le` (needing
+/// `le zero qe` via `ofRat_le` and `le (neg zero) qe` via `ofRat_neg` +
+/// `Rat.neg_zero` + `ofRat_le`, transported across the resulting `Equiv` by
+/// `le_congr`), and the expected conclusion `Equiv zero zero` is built
+/// independently via `equiv`, not by re-deriving the applied value's own
+/// inferred type.
+#[test]
+fn equiv_zero_of_small_at_zero_proves_equiv_zero_zero() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rle, rneg};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let rat = p.rat;
+    let nat = d.nat_ty();
+
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let zero_rat = d.kernel().const_(rat.zero, vec![]);
+
+    let hyp = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let one_nat = d.num(1);
+        let qe_rat = super::div_succ(&mut d, p, 1, e);
+        let qe = super::embed(&mut d, p, qe_rat);
+        let nonneg = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, e]);
+        // h1 : le zero qe
+        let h1 = d.lemma(p.of_rat_le, &[zero_rat, qe_rat, nonneg]);
+
+        // h2 : le (neg zero) qe, via Equiv (neg zero) (ofRat (Rat.neg
+        // Rat.zero)), Rat.neg_zero, and ofRat_le.
+        let eq1 = d.lemma(p.of_rat_neg, &[zero_rat]);
+        // eq1 : Equiv (neg zero) (ofRat (Rat.neg zero_rat))
+        let neg_zero_rat = rneg(&mut d, zero_rat);
+        let nz_eq = d.lemma(rat.neg_zero, &[]);
+        // nz_eq : Eq Rat (Rat.neg zero_rat) zero_rat
+        let nz_eq_sym = crate::rat_prelude::ops::rsymm(&mut d, zero_rat, neg_zero_rat, nz_eq);
+        // nz_eq_sym : Eq Rat zero_rat (Rat.neg zero_rat)
+        let le_negzr_qe = crate::rat_prelude::ops::rat_eq_rewrite(
+            &mut d,
+            zero_rat,
+            neg_zero_rat,
+            nz_eq_sym,
+            nonneg,
+            &|d, t| rle(d, rat, t, qe_rat),
+        );
+        // le_negzr_qe : Rat.le (Rat.neg zero_rat) qe_rat
+        let embedded = d.lemma(p.of_rat_le, &[neg_zero_rat, qe_rat, le_negzr_qe]);
+        // embedded : le (ofRat (Rat.neg zero_rat)) qe
+        let neg_zero = d.const_app(p.neg, &[zero_real]);
+        let embedded_neg_zero = super::embed(&mut d, p, neg_zero_rat);
+        let eq1_sym = d.lemma(p.equiv_symm, &[neg_zero, embedded_neg_zero, eq1]);
+        // eq1_sym : Equiv (ofRat (Rat.neg zero_rat)) (neg zero)
+        let refl_qe = d.lemma(p.equiv_refl, &[qe]);
+        let h2 = d.lemma(
+            p.le_congr,
+            &[
+                embedded_neg_zero,
+                neg_zero,
+                qe,
+                qe,
+                eq1_sym,
+                refl_qe,
+                embedded,
+            ],
+        );
+        // h2 : le (neg zero) qe
+        let step = d.lemma(p.abs_le, &[zero_real, qe, h1, h2]);
+        // step : le (abs zero) qe
+        d.lam_fv(e_fv, nat, step)
+    };
+
+    let value = d.lemma(p.equiv_zero_of_small, &[zero_real, hyp]);
+    let ty = super::equiv(&mut d, p, zero_real, zero_real);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__equiv_zero_of_small_at_zero_proves_equiv_zero_zero");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.equiv_zero_of_small zero hyp did NOT check against \
+                 Equiv zero zero (not merely SOME Equiv statement): {error:?}"
             )
         });
 }
