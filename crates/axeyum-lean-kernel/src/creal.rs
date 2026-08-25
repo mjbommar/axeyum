@@ -1568,6 +1568,36 @@ pub struct CRealPrelude {
     /// y` wrapper, because this bound's right-hand side (`pow x m`) is not
     /// already in `mul (1−x) _` shape.
     pub geom_tail_bounded_div: NameId,
+    /// `CReal.geom_tail_within : ∀ x, le zero x → ∀ k (h : PosBound (add one
+    /// (neg x)) k) m n, Within (seq (add (sumRange (fun j => pow x j) (Nat.add
+    /// m n)) (neg (sumRange (fun j => pow x j) m))) (Nat.add m n)) (add (seq
+    /// (mul (inv (add one (neg x)) k h) (pow x m)) (Nat.add m n)) (natDivSucc
+    /// 2 (Nat.add m n)))` — [`Self::geom_tail_bounded_div`]'s real-valued
+    /// bound, sampled at the tail's own canonical index `add m n` and
+    /// repackaged as a `Within` bound, the way
+    /// [`Self::sum_range_tail_within`] repackages
+    /// [`Self::sum_range_tail_le`] — except the "other side" here is not a
+    /// second sequence `g`'s tail but the single real quotient `xᵐ/(1−x)`,
+    /// whose own rational sample at `add m n` is carried forward rather than
+    /// closed into a `natDivSucc`-shaped constant (that closure needs a
+    /// geometric-decay-dominates-harmonic-rate estimate this development does
+    /// not yet build; see `geometric.rs`'s module documentation).
+    ///
+    /// Built from three pieces: [`Self::geom_tail_bounded_div`] itself
+    /// (`le tail Y`), a fresh nonnegativity proof for the tail
+    /// (`geometric.rs`'s own `geom_tail_nonneg`, via [`Self::sum_range_split`]
+    /// + [`Self::pow_nonneg`] — **not** available as a named theorem
+    /// elsewhere, since `series.rs`'s own module documentation lists a
+    /// nonnegativity lemma for `sumRange` of a pointwise-nonnegative function
+    /// among what it does not build), and `Y`'s own nonnegativity
+    /// ([`Self::inv_nonneg`] times [`Self::pow_nonneg`] via
+    /// [`Self::mul_nonneg`]) to get `le (neg tail) Y`. Applying both `CReal.le`
+    /// facts directly to the shared index `add m n` (each unfolds to its own
+    /// `Rat.le` bound at that index, exactly as
+    /// [`Self::sum_range_tail_within`]'s own proof applies `sum_range_tail_le`
+    /// to an index) and combining via the "within-swap via `neg_sub`" pattern
+    /// closes the `Within`.
+    pub geom_tail_within: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -2277,6 +2307,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_sub_one_geom_tail: kernel.name_str(creal, "mul_sub_one_geom_tail"),
         geom_tail_bounded: kernel.name_str(creal, "geom_tail_bounded"),
         geom_tail_bounded_div: kernel.name_str(creal, "geom_tail_bounded_div"),
+        geom_tail_within: kernel.name_str(creal, "geom_tail_within"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
