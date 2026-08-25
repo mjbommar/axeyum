@@ -1145,6 +1145,117 @@ pub struct CPointPrelude {
     /// `P = Q`), then discharges the resulting six-variable identity with
     /// `rn_ring_proof`.
     pub heron_sixteen_area_sq: NameId,
+    /// **Translation invariance of `cross`.** `∀ A B C V,
+    /// Equiv (cross (add A V) (add B V) (add C V)) (cross A B C)`.
+    ///
+    /// Unconditional pure ring algebra, discharged directly by
+    /// `rn_ring_proof` over the eight raw coordinates `Ax,Ay,Bx,By,Cx,Cy,Vx,Vy`
+    /// -- no squaring anywhere (unlike [`Self::heron_sixteen_area_sq`]), so
+    /// this is nowhere near the ring normalizer's size ceiling. The stated
+    /// type uses `CPoint.add`; the kernel accepts the raw-coordinate proof
+    /// against it by delta/iota-unfolding `add`'s `mk`-coordinatewise
+    /// definition (`x (add P Q) ~delta/iota~> add (x P) (x Q)`), the same
+    /// unfolding depth [`Self::cross`] itself, and every `cross`-headed
+    /// theorem in this file, already relies on.
+    pub cross_translate: NameId,
+    /// `CPoint.Collinear A B C := Exists CReal (fun t => CPoint.Equiv C
+    /// (CPoint.lerp A B t))` -- the classical "C lies on line AB" predicate,
+    /// stated with the SAME parametrisation [`Self::cevian_pair_meet`]'s `X :=
+    /// lerp B C p` idiom uses everywhere else in this file, not a bare
+    /// three-point determinant condition. Definitional, not asserted.
+    ///
+    /// Chosen as an existential (not, say, "`cross A B C ~ 0`" itself) because
+    /// that is the classical statement of collinearity and lets
+    /// [`Self::area_zero_of_collinear`] be a genuine theorem *about* it rather
+    /// than a restatement; see that field's doc for why only this one
+    /// direction is built here.
+    pub collinear: NameId,
+    /// **One direction of "signed area vanishes iff collinear".** `∀ A B C,
+    /// Collinear A B C → Equiv (cross A B C) CReal.zero`.
+    ///
+    /// This is the direction actually reachable without classical logic:
+    /// `Collinear A B C` is an `Exists`, and `Exists.rec` (`Exists` is `Prop`
+    /// with one non-subsingleton constructor) eliminates into any `Prop`
+    /// target -- which `Equiv (cross A B C) CReal.zero` already is, so
+    /// consuming the hypothesis needs no witness extraction. Given the
+    /// witness `t` and `hC : CPoint.Equiv C (lerp A B t)`: `cross A B (lerp A
+    /// B t) ~ CReal.zero` is a pure ring identity with NO hypothesis (a point
+    /// on segment `AB` is always collinear with `A, B` -- verified exactly
+    /// with `Fraction` trials before encoding, no `sympy` in this
+    /// environment), and `hC` transports `cross A B C ~ cross A B (lerp A B
+    /// t)` through a hand-built third-argument congruence for `cross`
+    /// (`cross`'s definition is not built from `dot`/`sub` the way
+    /// [`Self::dist_sq`] is, so it needs its own congruence chain through
+    /// `add_congr`/`mul_congr`/`neg_congr` rather than reusing
+    /// [`Self::dot_congr`]).
+    ///
+    /// **The converse (`cross A B C ~ 0 → Collinear A B C`) is NOT built
+    /// here.** It needs a witness `t` *constructed*, and `Exists.rec`'s
+    /// eliminator cannot supply one when the target is `Type`-valued (the
+    /// module doc's standing "`Exists`'s witness is not exposed by
+    /// `Exists.rec`" constraint -- see `creal.rs`'s own note at
+    /// [`CRealPrelude::inv`]). It is also not simply true without a
+    /// non-degeneracy hypothesis: at `A ~ B`, `cross A B C ~ 0` holds for
+    /// EVERY `C` (both raw factors collapse), while `Collinear A B C` at `A ~
+    /// B` forces `C ~ A` (`lerp A A t ~ A` for every `t`) -- so the bare iff
+    /// is false, not merely hard, and a witnessed `A ≠ B` hypothesis (the
+    /// [`Self::non_collinear`]-style `PosBound (distSq A B) k` idiom) would be
+    /// needed to state and prove it honestly. Left for a later slice.
+    pub area_zero_of_collinear: NameId,
+    /// **The medial triangle's (signed) area is a quarter of the original.**
+    /// `∀ A B C, Equiv (cross Ma Mb Mc) (mul inv2 (mul inv2 (cross A B C)))`,
+    /// `Ma := midpoint B C, Mb := midpoint C A, Mc := midpoint A B`.
+    ///
+    /// Stated as `mul inv2 (mul inv2 …)` rather than "divide `cross A B C` by
+    /// a `Nat`-built `4`" -- the same idiom [`Self::midpoint_dist_sq_quarter`]
+    /// and the `nine_point_radius_*` pair already use for a squared-midpoint
+    /// quarter -- because it is what makes the identity a PURE ring fact: an
+    /// `inv2` from each of two coordinate differences of midpoints multiplies
+    /// into an `inv2·inv2` factor on the left exactly matching the two
+    /// literal `inv2` factors on the right, so `rn_ring_proof` discharges it
+    /// treating `inv2` as an opaque atom -- **no fact that `inv2` numerically
+    /// denotes `1/2` (e.g. `mul two inv2 ~ one`) is used anywhere in this
+    /// proof.** Verified first over generic `h` in place of `inv2` (not fixed
+    /// at `1/2`) with `Fraction` trials: `cross(h·(B+C), h·(C+A), h·(A+B)) =
+    /// h²·cross(A,B,C)` identically, confirming it really is a ring identity
+    /// and not a numerical coincidence at `h = 1/2`. Only 6 monomials survive
+    /// cancellation on each side (checked with the same trial script) -- far
+    /// below the size that made a flat `rn_ring_proof` SIGABRT for
+    /// [`Self::heron_sixteen_area_sq`]'s first attempt, so this needed no
+    /// staging.
+    pub medial_triangle_cross_quarter: NameId,
+    /// **The converse of [`Self::area_zero_of_collinear`], under a witnessed
+    /// non-degeneracy hypothesis.** `∀ A B C k, PosBound (distSq A B) k →
+    /// Equiv (cross A B C) CReal.zero → Collinear A B C`.
+    ///
+    /// The hypothesis is unavoidable, not merely convenient: at `A ~ B`,
+    /// `cross A B C ~ 0` holds for every `C` (see
+    /// [`Self::area_zero_of_collinear`]'s own doc), so the bare "cross zero
+    /// implies collinear" is false, and `PosBound (distSq A B) k` is exactly
+    /// the [`Self::non_collinear`]-style witnessed idiom for `A ≠ B`.
+    ///
+    /// **The construction, on paper.** Write `u := B − A`, `v := C − A`
+    /// (per coordinate). `cross A B C ~ 0` is `u₁v₂ − u₂v₁ ~ 0`
+    /// (`cross_raw`'s formula reduces to exactly this after the `u₁u₂` cross
+    /// terms cancel -- checked with `Fraction` trials, not re-derived by the
+    /// kernel, which only ever sees the un-reduced `cross_raw` shape). The
+    /// projection parameter `t := (v·u) · (distSq A B)⁻¹` (`distSq A B`
+    /// invertible from the hypothesis) satisfies, as a PURE ring identity
+    /// with no hypothesis at all: `v₁·distSq A B ~ (v·u)·u₁ − u₂·(cross A B
+    /// C)` and its `v₂` mirror with `+u₁·(cross A B C)` -- both verified
+    /// exactly with `Fraction` trials before encoding. `cross A B C ~ 0`
+    /// (the theorem's hypothesis) kills the correction term in each, leaving
+    /// `v₁·distSq A B ~ (v·u)·u₁`; cancelling the invertible `distSq A B`
+    /// gives `v₁ ~ t·u₁`, i.e. `Cx − Ax ~ t·(Bx − Ax)`, i.e. exactly `Cx ~ x
+    /// (lerp A B t)` -- and the `y` mirror -- which is
+    /// `CPoint.Equiv C (lerp A B t)`, the witness `Collinear A B C` needs.
+    ///
+    /// Built from small reusable pieces (`eliminate_correction_proof`,
+    /// `divide_by_pos_bound_proof`) rather than one flat chain -- the same
+    /// staging discipline [`Self::heron_sixteen_area_sq`]'s own doc
+    /// describes, applied here to proof-term SHAPE rather than ring-normal-
+    /// form size.
+    pub collinear_of_area_zero: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -1270,6 +1381,11 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_menelaus_collinear_of_ratio_product(&mut d, p)?;
     declare_ceva_ratio_product_of_concurrent(&mut d, p)?;
     declare_heron_sixteen_area_sq(&mut d, p)?;
+    declare_cross_translate(&mut d, p)?;
+    declare_collinear(&mut d, p)?;
+    declare_area_zero_of_collinear(&mut d, p)?;
+    declare_medial_triangle_cross_quarter(&mut d, p)?;
+    declare_collinear_of_area_zero(&mut d, p)?;
     Ok(p)
 }
 
@@ -1395,6 +1511,11 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         ceva_ratio_product_of_concurrent: kernel
             .name_str(point, "ceva_ratio_product_of_concurrent"),
         heron_sixteen_area_sq: kernel.name_str(point, "heron_sixteen_area_sq"),
+        cross_translate: kernel.name_str(point, "cross_translate"),
+        collinear: kernel.name_str(point, "Collinear"),
+        area_zero_of_collinear: kernel.name_str(point, "area_zero_of_collinear"),
+        medial_triangle_cross_quarter: kernel.name_str(point, "medial_triangle_cross_quarter"),
+        collinear_of_area_zero: kernel.name_str(point, "collinear_of_area_zero"),
     }
 }
 
@@ -20169,6 +20290,785 @@ fn declare_heron_sixteen_area_sq(d: &mut IntDev<'_>, p: CPointPrelude) -> Result
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.heron_sixteen_area_sq,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// The triangle-area slice: translation invariance of `cross`, one direction
+// of "signed area vanishes iff collinear", and the medial triangle's area.
+// See `CPointPrelude::cross_translate`/`collinear`/`area_zero_of_collinear`/
+// `medial_triangle_cross_quarter` for the mathematical content; this section
+// is only the kernel plumbing.
+
+/// **Translation invariance of `cross`.** See
+/// [`CPointPrelude::cross_translate`].
+fn declare_cross_translate(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    let v_fv = d.fresh_fvar();
+    let pv = d.kernel().fvar(v_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+    let vx = d.const_app(p.x, &[pv]);
+    let vy = d.const_app(p.y, &[pv]);
+
+    let ax_r = RnExpr::Atom(ax);
+    let ay_r = RnExpr::Atom(ay);
+    let bx_r = RnExpr::Atom(bx);
+    let by_r = RnExpr::Atom(by);
+    let cx_r = RnExpr::Atom(cx);
+    let cy_r = RnExpr::Atom(cy);
+    let vx_r = RnExpr::Atom(vx);
+    let vy_r = RnExpr::Atom(vy);
+
+    let ax_v_r = RnExpr::add(ax_r.clone(), vx_r.clone());
+    let ay_v_r = RnExpr::add(ay_r.clone(), vy_r.clone());
+    let bx_v_r = RnExpr::add(bx_r.clone(), vx_r.clone());
+    let by_v_r = RnExpr::add(by_r.clone(), vy_r.clone());
+    let cx_v_r = RnExpr::add(cx_r.clone(), vx_r);
+    let cy_v_r = RnExpr::add(cy_r.clone(), vy_r);
+
+    let cross_translated_r = rn_cross(ax_v_r, ay_v_r, bx_v_r, by_v_r, cx_v_r, cy_v_r);
+    let cross_abc_r = rn_cross(ax_r, ay_r, bx_r, by_r, cx_r, cy_r);
+
+    let ring_pf = rn_ring_proof(d, creal, &cross_translated_r, &cross_abc_r);
+
+    // -- the theorem's stated conclusion, at the Point level ---------------
+    let a_v = padd(d, p, pa, pv);
+    let b_v = padd(d, p, pb, pv);
+    let c_v = padd(d, p, pc, pv);
+    let cross_translated_stated = d.const_app(p.cross, &[a_v, b_v, c_v]);
+    let cross_abc_stated = d.const_app(p.cross, &[pa, pb, pc]);
+    let ty_body = equiv(d, p, cross_translated_stated, cross_abc_stated);
+
+    let ty = {
+        let w1 = d.pi_fv(v_fv, point, ty_body);
+        let w2 = d.pi_fv(c_fv, point, w1);
+        let w3 = d.pi_fv(b_fv, point, w2);
+        d.pi_fv(a_fv, point, w3)
+    };
+    let value = {
+        let w1 = d.lam_fv(v_fv, point, ring_pf);
+        let w2 = d.lam_fv(c_fv, point, w1);
+        let w3 = d.lam_fv(b_fv, point, w2);
+        d.lam_fv(a_fv, point, w3)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cross_translate,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `λ t : CReal, CPoint.Equiv C (CPoint.lerp A B t)` -- the predicate behind
+/// [`CPointPrelude::collinear`], built fresh at every call site (never a
+/// shared `ExprId`) the same way `creal.rs`'s own `gap_predicate` is: the
+/// kernel bridges any two calls' results by delta/beta defeq at the final
+/// `add_declaration` check, so they need not be the identical `ExprId`.
+fn collinear_predicate(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    pa: ExprId,
+    pb: ExprId,
+    pc: ExprId,
+) -> ExprId {
+    let carrier = creal_ty(d, p);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let lerp_abt = d.const_app(p.point_lerp, &[pa, pb, t]);
+    let body = d.const_app(p.point_equiv, &[pc, lerp_abt]);
+    d.lam_fv(t_fv, carrier, body)
+}
+
+/// `CPoint.Collinear A B C := Exists CReal (fun t => CPoint.Equiv C (lerp A B
+/// t))`. See [`CPointPrelude::collinear`].
+fn declare_collinear(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let carrier = creal_ty(d, p);
+    let prop = d.kernel().sort_zero();
+    let one = d.level_one();
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let predicate = collinear_predicate(d, p, pa, pb, pc);
+    let exists_name = p.creal.rat.int.logic.exists_;
+    let exists_const = d.kernel().const_(exists_name, vec![one]);
+    let claim = d.apply(exists_const, &[carrier, predicate]);
+
+    let value = {
+        let w2 = d.lam_fv(c_fv, point, claim);
+        let w1 = d.lam_fv(b_fv, point, w2);
+        d.lam_fv(a_fv, point, w1)
+    };
+    let ty = {
+        let w2 = d.arrow(point, prop);
+        let w1 = d.arrow(point, w2);
+        d.arrow(point, w1)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.collinear,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 20),
+    })
+}
+
+/// Eliminate `witness : Exists CReal predicate` into `target`, given `minor :
+/// ∀ (t : CReal), predicate t → target`. The `CReal`-domain sibling of
+/// `int_prelude::ops::exists_elim`, which is hard-coded to the `Nat` domain
+/// (see that function's own doc) and so cannot be reused for a `∃ t : CReal,
+/// …` hypothesis like [`CPointPrelude::collinear`]'s.
+fn exists_elim_creal(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    predicate: ExprId,
+    target: ExprId,
+    witness: ExprId,
+    minor: ExprId,
+) -> ExprId {
+    let carrier = creal_ty(d, p);
+    let one = d.level_one();
+    let exists_name = p.creal.rat.int.logic.exists_;
+    let exists_const = d.kernel().const_(exists_name, vec![one]);
+    let exists_ty = d.apply(exists_const, &[carrier, predicate]);
+    let motive = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, exists_ty, target)
+    };
+    let rec_name = p.creal.rat.int.logic.exists_rec;
+    let rec = d.kernel().const_(rec_name, vec![one]);
+    d.apply(rec, &[carrier, predicate, motive, minor, witness])
+}
+
+/// The third-argument congruence of [`CPointPrelude::cross`]: given `hq :
+/// CPoint.Equiv Q Q'` (`A`, `B` untouched), a proof of `Equiv (cross_raw ax ay
+/// bx by (x Q) (y Q)) (cross_raw ax ay bx by (x Q') (y Q'))`.
+///
+/// Not itself a public declaration -- `cross` is built directly from `x`/`y`
+/// projections (`cross_raw`), not from [`CPointPrelude::dot`]/
+/// [`CPointPrelude::point_sub`] the way [`CPointPrelude::dist_sq`] is, so it
+/// cannot reuse [`CPointPrelude::dot_congr`] and needs its own small
+/// congruence chain -- mirroring `psub_congr_fact`'s role for
+/// `declare_dist_sq_congr`.
+fn cross_congr_c_fact(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    pa: ExprId,
+    pb: ExprId,
+    qc: ExprId,
+    qc2: ExprId,
+    hq: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[qc]);
+    let cy = d.const_app(p.y, &[qc]);
+    let cx2 = d.const_app(p.x, &[qc2]);
+    let cy2 = d.const_app(p.y, &[qc2]);
+
+    let ex_ty = equiv(d, p, cx, cx2);
+    let ey_ty = equiv(d, p, cy, cy2);
+    let hcx = d.and_left(ex_ty, ey_ty, hq);
+    let hcy = d.and_right(ex_ty, ey_ty, hq);
+
+    // u := bx - ax, w := by - ay -- neither depends on C, so both sides share
+    // exactly the same `u`/`w`.
+    let neg_ax = cneg(d, p, ax);
+    let neg_ay = cneg(d, p, ay);
+    let u = cadd(d, p, bx, neg_ax);
+    let w = cadd(d, p, by, neg_ay);
+    let refl_u = refl(d, p, u);
+    let refl_w = refl(d, p, w);
+
+    // v := cy - by ~ v' := cy2 - by ; z := cx - bx ~ z' := cx2 - bx.
+    let neg_by = cneg(d, p, by);
+    let neg_bx = cneg(d, p, bx);
+    let v = cadd(d, p, cy, neg_by);
+    let v2 = cadd(d, p, cy2, neg_by);
+    let z = cadd(d, p, cx, neg_bx);
+    let z2 = cadd(d, p, cx2, neg_bx);
+    let refl_neg_by = refl(d, p, neg_by);
+    let refl_neg_bx = refl(d, p, neg_bx);
+    let v_congr = d.lemma(
+        creal.add_congr,
+        &[cy, cy2, neg_by, neg_by, hcy, refl_neg_by],
+    );
+    let z_congr = d.lemma(
+        creal.add_congr,
+        &[cx, cx2, neg_bx, neg_bx, hcx, refl_neg_bx],
+    );
+
+    // uv := u*v ~ uv' := u*v'.
+    let uv = cmul(d, p, u, v);
+    let uv2 = cmul(d, p, u, v2);
+    let uv_congr = d.lemma(creal.mul_congr, &[u, u, v, v2, refl_u, v_congr]);
+
+    // wz := w*z ~ wz' := w*z'.
+    let wz = cmul(d, p, w, z);
+    let wz2 = cmul(d, p, w, z2);
+    let wz_congr = d.lemma(creal.mul_congr, &[w, w, z, z2, refl_w, z_congr]);
+
+    let neg_wz_congr = d.lemma(creal.neg_congr, &[wz, wz2, wz_congr]);
+
+    // value := uv + neg wz ~ uv2 + neg wz2 -- cross_raw's own final step.
+    let neg_wz = cneg(d, p, wz);
+    let neg_wz2 = cneg(d, p, wz2);
+    d.lemma(
+        creal.add_congr,
+        &[uv, uv2, neg_wz, neg_wz2, uv_congr, neg_wz_congr],
+    )
+}
+
+/// **One direction of "signed area vanishes iff collinear".** See
+/// [`CPointPrelude::area_zero_of_collinear`].
+fn declare_area_zero_of_collinear(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let carrier = creal_ty(d, p);
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+
+    let hcol_ty = d.const_app(p.collinear, &[pa, pb, pc]);
+    let hcol_fv = d.fresh_fvar();
+    let hcol = d.kernel().fvar(hcol_fv);
+
+    // -- minor : ∀ t, CPoint.Equiv C (lerp A B t) → Equiv (cross A B C) zero
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let lerp_abt = d.const_app(p.point_lerp, &[pa, pb, t]);
+    let ht_ty = d.const_app(p.point_equiv, &[pc, lerp_abt]);
+    let ht_fv = d.fresh_fvar();
+    let ht = d.kernel().fvar(ht_fv);
+
+    // cross A B C ~ cross A B (lerp A B t), from `ht` via the 3rd-arg
+    // congruence built above.
+    let congr_pf = cross_congr_c_fact(d, p, pa, pb, pc, lerp_abt, ht);
+
+    // cross A B (lerp A B t) ~ 0 -- a pure ring identity, no hypothesis: a
+    // point on segment AB is always collinear with A, B.
+    let ax_r = RnExpr::Atom(ax);
+    let ay_r = RnExpr::Atom(ay);
+    let bx_r = RnExpr::Atom(bx);
+    let by_r = RnExpr::Atom(by);
+    let t_r = RnExpr::Atom(t);
+    let lerp_x_r = rn_lerp(ax_r.clone(), bx_r.clone(), t_r.clone());
+    let lerp_y_r = rn_lerp(ay_r.clone(), by_r.clone(), t_r);
+    let cross_ablerp_r = rn_cross(ax_r, ay_r, bx_r, by_r, lerp_x_r, lerp_y_r);
+    let ring_pf = rn_ring_proof(d, creal, &cross_ablerp_r, &RnExpr::Zero);
+
+    let cross_abc = d.const_app(p.cross, &[pa, pb, pc]);
+    let cross_ablerp = d.const_app(p.cross, &[pa, pb, lerp_abt]);
+    let zero = czero(d, p);
+
+    let minor_proof = chain(
+        d,
+        p,
+        cross_abc,
+        &[(cross_ablerp, congr_pf), (zero, ring_pf)],
+    );
+    let minor = {
+        let w1 = d.lam_fv(ht_fv, ht_ty, minor_proof);
+        d.lam_fv(t_fv, carrier, w1)
+    };
+
+    let target = equiv(d, p, cross_abc, zero);
+    let predicate = collinear_predicate(d, p, pa, pb, pc);
+    let final_proof = exists_elim_creal(d, p, predicate, target, hcol, minor);
+
+    let ty = {
+        let inner = d.arrow(hcol_ty, target);
+        let w3 = d.pi_fv(c_fv, point, inner);
+        let w2 = d.pi_fv(b_fv, point, w3);
+        d.pi_fv(a_fv, point, w2)
+    };
+    let value = {
+        let with_hcol = d.lam_fv(hcol_fv, hcol_ty, final_proof);
+        let w3 = d.lam_fv(c_fv, point, with_hcol);
+        let w2 = d.lam_fv(b_fv, point, w3);
+        d.lam_fv(a_fv, point, w2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.area_zero_of_collinear,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// **The medial triangle's area.** See
+/// [`CPointPrelude::medial_triangle_cross_quarter`].
+fn declare_medial_triangle_cross_quarter(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+    let inv2 = d.kernel().const_(p.inv2, vec![]);
+
+    let ax_r = RnExpr::Atom(ax);
+    let ay_r = RnExpr::Atom(ay);
+    let bx_r = RnExpr::Atom(bx);
+    let by_r = RnExpr::Atom(by);
+    let cx_r = RnExpr::Atom(cx);
+    let cy_r = RnExpr::Atom(cy);
+    let inv2_r = RnExpr::Atom(inv2);
+
+    // `rn_midpoint u v := inv2 * (u + v)`, the `RnExpr` mirror of
+    // `CPoint.Scalar.midpoint`'s own `mul inv2 (add a b)` shape.
+    let rn_midpoint = |u: RnExpr, v: RnExpr| RnExpr::mul(inv2_r.clone(), RnExpr::add(u, v));
+
+    let max_r = rn_midpoint(bx_r.clone(), cx_r.clone());
+    let may_r = rn_midpoint(by_r.clone(), cy_r.clone());
+    let mbx_r = rn_midpoint(cx_r.clone(), ax_r.clone());
+    let mby_r = rn_midpoint(cy_r.clone(), ay_r.clone());
+    let mcx_r = rn_midpoint(ax_r.clone(), bx_r.clone());
+    let mcy_r = rn_midpoint(ay_r.clone(), by_r.clone());
+
+    let cross_medial_r = rn_cross(max_r, may_r, mbx_r, mby_r, mcx_r, mcy_r);
+    let cross_abc_r = rn_cross(ax_r, ay_r, bx_r, by_r, cx_r, cy_r);
+    let quarter_r = RnExpr::mul(inv2_r.clone(), RnExpr::mul(inv2_r, cross_abc_r));
+
+    let ring_pf = rn_ring_proof(d, creal, &cross_medial_r, &quarter_r);
+
+    // -- the theorem's stated conclusion, at the Point level ---------------
+    let ma = d.const_app(p.point_midpoint, &[pb, pc]);
+    let mb = d.const_app(p.point_midpoint, &[pc, pa]);
+    let mc = d.const_app(p.point_midpoint, &[pa, pb]);
+    let cross_medial_stated = d.const_app(p.cross, &[ma, mb, mc]);
+    let cross_abc_stated = d.const_app(p.cross, &[pa, pb, pc]);
+    let inv2_cross_abc_stated = cmul(d, p, inv2, cross_abc_stated);
+    let quarter_stated = cmul(d, p, inv2, inv2_cross_abc_stated);
+    let ty_body = equiv(d, p, cross_medial_stated, quarter_stated);
+
+    let ty = {
+        let w2 = d.pi_fv(c_fv, point, ty_body);
+        let w1 = d.pi_fv(b_fv, point, w2);
+        d.pi_fv(a_fv, point, w1)
+    };
+    let value = {
+        let w2 = d.lam_fv(c_fv, point, ring_pf);
+        let w1 = d.lam_fv(b_fv, point, w2);
+        d.lam_fv(a_fv, point, w1)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.medial_triangle_cross_quarter,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// `collinear_of_area_zero`: the converse of `area_zero_of_collinear`, under a
+// witnessed `A ≠ B`. See `CPointPrelude::collinear_of_area_zero`'s doc for
+// the construction on paper; this section is only the kernel plumbing.
+
+/// Given `ring_pf : Equiv (mul v dee) (add (mul s u) (mul factor
+/// cross_actual))` (a pure ring identity) and `hcross : Equiv cross_actual
+/// CReal.zero`, return `Equiv (mul v dee) (mul s u)` -- the correction term
+/// `mul factor cross_actual` collapses to `CReal.zero` and drops out.
+#[allow(clippy::too_many_arguments)]
+fn eliminate_correction_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    v: ExprId,
+    dee: ExprId,
+    s: ExprId,
+    u: ExprId,
+    factor: ExprId,
+    cross_actual: ExprId,
+    hcross: ExprId,
+    ring_pf: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let zero = czero(d, p);
+
+    let factor_cross = cmul(d, p, factor, cross_actual);
+    let refl_factor = refl(d, p, factor);
+    let step_a = d.lemma(
+        creal.mul_congr,
+        &[factor, factor, cross_actual, zero, refl_factor, hcross],
+    ); // Equiv(factor_cross, mul factor zero)
+    let factor_zero = cmul(d, p, factor, zero);
+    let mz = d.lemma(creal.mul_zero, &[factor]); // Equiv(factor_zero, zero)
+    let factor_cross_zero = chain(d, p, factor_cross, &[(factor_zero, step_a), (zero, mz)]);
+
+    let s_u = cmul(d, p, s, u);
+    let su_fc = cadd(d, p, s_u, factor_cross);
+    let su_zero = cadd(d, p, s_u, zero);
+    let refl_su = refl(d, p, s_u);
+    let step_b = d.lemma(
+        creal.add_congr,
+        &[s_u, s_u, factor_cross, zero, refl_su, factor_cross_zero],
+    ); // Equiv(su_fc, su_zero)
+    let az = d.lemma(creal.add_zero, &[s_u]); // Equiv(su_zero, s_u)
+
+    let v_d = cmul(d, p, v, dee);
+    chain(d, p, v_d, &[(su_fc, ring_pf), (su_zero, step_b), (s_u, az)])
+}
+
+/// Given `v_dee_eq_s_u : Equiv (mul v dee) (mul s u)` and `dee_dinv_eq_one :
+/// Equiv (mul dee dinv) CReal.one`, return `Equiv v (mul t u)`, `t := mul s
+/// dinv` (built by the caller so both share the same `ExprId`).
+///
+/// The "divide by an invertible `PosBound` witness" step
+/// [`CPointPrelude::circumcentre_unique`]'s own proof needs too, factored out
+/// here because this theorem needs it TWICE (once per coordinate) with the
+/// same `dee`/`dinv`/`t`.
+#[allow(clippy::too_many_arguments)]
+fn divide_by_pos_bound_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    v: ExprId,
+    dee: ExprId,
+    s: ExprId,
+    u: ExprId,
+    dinv: ExprId,
+    t: ExprId,
+    v_dee_eq_s_u: ExprId,
+    dee_dinv_eq_one: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let one = d.kernel().const_(creal.one, vec![]);
+
+    // v ~ v*one
+    let v_one = cmul(d, p, v, one);
+    let mo = d.lemma(creal.mul_one, &[v]); // Equiv(v_one, v)
+    let step1 = symm(d, p, v_one, v, mo);
+
+    // v*one ~ v*(dee*dinv)
+    let d_dinv = cmul(d, p, dee, dinv);
+    let v_ddinv = cmul(d, p, v, d_dinv);
+    let refl_v = refl(d, p, v);
+    let dee_dinv_symm = symm(d, p, d_dinv, one, dee_dinv_eq_one);
+    let step2 = d.lemma(creal.mul_congr, &[v, v, one, d_dinv, refl_v, dee_dinv_symm]); // Equiv(v_one, v_ddinv)
+
+    // v*(dee*dinv) ~ (v*dee)*dinv
+    let v_d = cmul(d, p, v, dee);
+    let vd_dinv = cmul(d, p, v_d, dinv);
+    let assoc1 = d.lemma(creal.mul_assoc, &[v, dee, dinv]); // Equiv(vd_dinv, v_ddinv)
+    let assoc1_symm = symm(d, p, vd_dinv, v_ddinv, assoc1);
+
+    // (v*dee)*dinv ~ (s*u)*dinv
+    let s_u = cmul(d, p, s, u);
+    let su_dinv = cmul(d, p, s_u, dinv);
+    let refl_dinv = refl(d, p, dinv);
+    let step4 = d.lemma(
+        creal.mul_congr,
+        &[v_d, s_u, dinv, dinv, v_dee_eq_s_u, refl_dinv],
+    ); // Equiv(vd_dinv, su_dinv)
+
+    // (s*u)*dinv ~ s*(u*dinv)
+    let u_dinv = cmul(d, p, u, dinv);
+    let s_udinv = cmul(d, p, s, u_dinv);
+    let assoc2 = d.lemma(creal.mul_assoc, &[s, u, dinv]); // Equiv(su_dinv, s_udinv)
+
+    // s*(u*dinv) ~ s*(dinv*u)
+    let dinv_u = cmul(d, p, dinv, u);
+    let s_dinvu = cmul(d, p, s, dinv_u);
+    let comm_u_dinv = d.lemma(creal.mul_comm, &[u, dinv]); // Equiv(u_dinv, dinv_u)
+    let refl_s = refl(d, p, s);
+    let step6 = d.lemma(
+        creal.mul_congr,
+        &[s, s, u_dinv, dinv_u, refl_s, comm_u_dinv],
+    ); // Equiv(s_udinv, s_dinvu)
+
+    // s*(dinv*u) ~ (s*dinv)*u = t*u  (t := mul s dinv, so this IS t*u)
+    let sdinv_u = cmul(d, p, t, u);
+    let assoc3 = d.lemma(creal.mul_assoc, &[s, dinv, u]); // Equiv(sdinv_u, s_dinvu)
+    let assoc3_symm = symm(d, p, sdinv_u, s_dinvu, assoc3);
+
+    chain(
+        d,
+        p,
+        v,
+        &[
+            (v_one, step1),
+            (v_ddinv, step2),
+            (vd_dinv, assoc1_symm),
+            (su_dinv, step4),
+            (s_udinv, assoc2),
+            (s_dinvu, step6),
+            (sdinv_u, assoc3_symm),
+        ],
+    )
+}
+
+/// Given `h : Equiv (add cx (neg ax)) w`, return `Equiv cx (add ax w)` --
+/// "isolate `cx`", the inverse rearrangement of [`sub_eq_zero_of_equiv`]'s
+/// shape but against an arbitrary `w` rather than `CReal.zero`.
+fn isolate_left_proof(
+    d: &mut IntDev<'_>,
+    p: CPointPrelude,
+    cx: ExprId,
+    ax: ExprId,
+    w: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let creal = p.creal;
+    let neg_ax = cneg(d, p, ax);
+    let cx_negax = cadd(d, p, cx, neg_ax);
+    let cx_negax_ax = cadd(d, p, cx_negax, ax);
+    let cancel = sub_add_cancel_proof(d, p, cx, ax); // Equiv(cx_negax_ax, cx)
+    let cancel_symm = symm(d, p, cx_negax_ax, cx, cancel);
+
+    let w_ax = cadd(d, p, w, ax);
+    let refl_ax = refl(d, p, ax);
+    let congr = d.lemma(creal.add_congr, &[cx_negax, w, ax, ax, h, refl_ax]); // Equiv(cx_negax_ax, w_ax)
+
+    let ax_w = cadd(d, p, ax, w);
+    let comm = d.lemma(creal.add_comm, &[w, ax]); // Equiv(w_ax, ax_w)
+
+    chain(
+        d,
+        p,
+        cx,
+        &[(cx_negax_ax, cancel_symm), (w_ax, congr), (ax_w, comm)],
+    )
+}
+
+/// **The converse of [`CPointPrelude::area_zero_of_collinear`], under a
+/// witnessed `A ≠ B`.** See [`CPointPrelude::collinear_of_area_zero`].
+fn declare_collinear_of_area_zero(d: &mut IntDev<'_>, p: CPointPrelude) -> Result<(), KernelError> {
+    let point = point_ty(d, p);
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let creal = p.creal;
+
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+    let k_fv = d.fresh_fvar();
+    let pk = d.kernel().fvar(k_fv);
+
+    let ax = d.const_app(p.x, &[pa]);
+    let ay = d.const_app(p.y, &[pa]);
+    let bx = d.const_app(p.x, &[pb]);
+    let by = d.const_app(p.y, &[pb]);
+    let cx = d.const_app(p.x, &[pc]);
+    let cy = d.const_app(p.y, &[pc]);
+
+    // -- the two hypotheses --------------------------------------------
+    let dist_ab = d.const_app(p.dist_sq, &[pa, pb]);
+    let hne_ty = d.const_app(creal.pos_bound, &[dist_ab, pk]);
+    let hne_fv = d.fresh_fvar();
+    let hne = d.kernel().fvar(hne_fv);
+
+    let cross_abc = d.const_app(p.cross, &[pa, pb, pc]);
+    let zero = czero(d, p);
+    let hcross_ty = equiv(d, p, cross_abc, zero);
+    let hcross_fv = d.fresh_fvar();
+    let hcross = d.kernel().fvar(hcross_fv);
+
+    // -- raw coordinate machinery ----------------------------------------
+    // `u := B - A` (matches `lerp_raw`'s own shape); `v := C - A`; `w := A -
+    // B` (matches `distSq A B`'s own raw unfolding, `dot(sub A B, sub A B)`).
+    let neg_ax = cneg(d, p, ax);
+    let neg_ay = cneg(d, p, ay);
+    let neg_bx = cneg(d, p, bx);
+    let neg_by = cneg(d, p, by);
+    let w1 = cadd(d, p, ax, neg_bx);
+    let w2 = cadd(d, p, ay, neg_by);
+    let u1 = cadd(d, p, bx, neg_ax);
+    let u2 = cadd(d, p, by, neg_ay);
+    let v1 = cadd(d, p, cx, neg_ax);
+    let v2 = cadd(d, p, cy, neg_ay);
+
+    let w1_sq = cmul(d, p, w1, w1);
+    let w2_sq = cmul(d, p, w2, w2);
+    let dee = cadd(d, p, w1_sq, w2_sq); // matches distSq A B's raw form
+    let v1_u1 = cmul(d, p, v1, u1);
+    let v2_u2 = cmul(d, p, v2, u2);
+    let s = cadd(d, p, v1_u1, v2_u2); // S := v.u
+
+    let (cross_raw_actual, ..) = cross_raw(d, p, ax, ay, bx, by, cx, cy);
+
+    // -- the two pure ring identities (no hypothesis) --------------------
+    let ax_r = RnExpr::Atom(ax);
+    let ay_r = RnExpr::Atom(ay);
+    let bx_r = RnExpr::Atom(bx);
+    let by_r = RnExpr::Atom(by);
+    let cx_r = RnExpr::Atom(cx);
+    let cy_r = RnExpr::Atom(cy);
+
+    let w1_r = RnExpr::add(ax_r.clone(), RnExpr::neg(bx_r.clone()));
+    let w2_r = RnExpr::add(ay_r.clone(), RnExpr::neg(by_r.clone()));
+    let u1_r = RnExpr::add(bx_r.clone(), RnExpr::neg(ax_r.clone()));
+    let u2_r = RnExpr::add(by_r.clone(), RnExpr::neg(ay_r.clone()));
+    let v1_r = RnExpr::add(cx_r.clone(), RnExpr::neg(ax_r.clone()));
+    let v2_r = RnExpr::add(cy_r.clone(), RnExpr::neg(ay_r.clone()));
+    let dee_r = RnExpr::add(
+        RnExpr::mul(w1_r.clone(), w1_r.clone()),
+        RnExpr::mul(w2_r.clone(), w2_r.clone()),
+    );
+    let s_r = RnExpr::add(
+        RnExpr::mul(v1_r.clone(), u1_r.clone()),
+        RnExpr::mul(v2_r.clone(), u2_r.clone()),
+    );
+    let cross_r = rn_cross(
+        ax_r.clone(),
+        ay_r.clone(),
+        bx_r.clone(),
+        by_r.clone(),
+        cx_r.clone(),
+        cy_r.clone(),
+    );
+
+    // v1*dee ~ s*u1 + (neg u2)*cross
+    let lhs1_r = RnExpr::mul(v1_r.clone(), dee_r.clone());
+    let rhs1_r = RnExpr::add(
+        RnExpr::mul(s_r.clone(), u1_r.clone()),
+        RnExpr::mul(RnExpr::neg(u2_r.clone()), cross_r.clone()),
+    );
+    let ring1_pf = rn_ring_proof(d, creal, &lhs1_r, &rhs1_r);
+
+    // v2*dee ~ s*u2 + u1*cross
+    let lhs2_r = RnExpr::mul(v2_r, dee_r);
+    let rhs2_r = RnExpr::add(RnExpr::mul(s_r, u2_r), RnExpr::mul(u1_r, cross_r));
+    let ring2_pf = rn_ring_proof(d, creal, &lhs2_r, &rhs2_r);
+
+    // -- eliminate the correction term in each, using `hcross` -----------
+    let neg_u2 = cneg(d, p, u2);
+    let v1_dee_eq_s_u1 = eliminate_correction_proof(
+        d,
+        p,
+        v1,
+        dee,
+        s,
+        u1,
+        neg_u2,
+        cross_raw_actual,
+        hcross,
+        ring1_pf,
+    );
+    let v2_dee_eq_s_u2 =
+        eliminate_correction_proof(d, p, v2, dee, s, u2, u1, cross_raw_actual, hcross, ring2_pf);
+
+    // -- divide by the witnessed-invertible `distSq A B` ------------------
+    let dinv = d.const_app(creal.inv, &[dist_ab, pk, hne]);
+    let t = cmul(d, p, s, dinv);
+    let dee_dinv_eq_one = d.lemma(creal.mul_inv_cancel, &[dist_ab, pk, hne]);
+
+    let v1_eq_t_u1 = divide_by_pos_bound_proof(
+        d,
+        p,
+        v1,
+        dist_ab,
+        s,
+        u1,
+        dinv,
+        t,
+        v1_dee_eq_s_u1,
+        dee_dinv_eq_one,
+    );
+    let v2_eq_t_u2 = divide_by_pos_bound_proof(
+        d,
+        p,
+        v2,
+        dist_ab,
+        s,
+        u2,
+        dinv,
+        t,
+        v2_dee_eq_s_u2,
+        dee_dinv_eq_one,
+    );
+
+    // -- isolate Cx, Cy: Equiv(Cx, Ax + t*u1) = Equiv(Cx, x(lerp A B t)) ---
+    let t_u1 = cmul(d, p, t, u1);
+    let t_u2 = cmul(d, p, t, u2);
+    let hc_x = isolate_left_proof(d, p, cx, ax, t_u1, v1_eq_t_u1);
+    let hc_y = isolate_left_proof(d, p, cy, ay, t_u2, v2_eq_t_u2);
+
+    let lerp_x = lerp_raw(d, p, ax, bx, t); // == cadd(ax, t_u1)
+    let lerp_y = lerp_raw(d, p, ay, by, t); // == cadd(ay, t_u2)
+    let ex_ty = equiv(d, p, cx, lerp_x);
+    let ey_ty = equiv(d, p, cy, lerp_y);
+    let h_point_equiv = and_intro(d, p, ex_ty, ey_ty, hc_x, hc_y);
+
+    // -- package the witness: Exists.intro CReal predicate t h_point_equiv
+    // (`h_point_equiv`'s stated type, `Equiv cx (lerp_raw ax bx t)`, is
+    // exactly `predicate`'s body beta/delta-unfolded at this `t` -- `x
+    // (CPoint.lerp A B t)` reduces to `lerp_raw (x A) (x B) t` the same way
+    // every other `lerp`-headed theorem in this file relies on.)
+    let predicate = collinear_predicate(d, p, pa, pb, pc);
+    let one = d.level_one();
+    let exists_intro_name = creal.rat.int.logic.exists_intro;
+    let exists_intro_const = d.kernel().const_(exists_intro_name, vec![one]);
+    let collinear_witness = d.apply(exists_intro_const, &[carrier, predicate, t, h_point_equiv]);
+
+    // -- assemble the theorem ---------------------------------------------
+    let collinear_ty = d.const_app(p.collinear, &[pa, pb, pc]);
+    let ty = {
+        let inner = d.arrow(hcross_ty, collinear_ty);
+        let with_hne = d.arrow(hne_ty, inner);
+        let with_k = d.pi_fv(k_fv, nat, with_hne);
+        let with_c = d.pi_fv(c_fv, point, with_k);
+        let with_b = d.pi_fv(b_fv, point, with_c);
+        d.pi_fv(a_fv, point, with_b)
+    };
+    let value = {
+        let with_hcross = d.lam_fv(hcross_fv, hcross_ty, collinear_witness);
+        let with_hne = d.lam_fv(hne_fv, hne_ty, with_hcross);
+        let with_k = d.lam_fv(k_fv, nat, with_hne);
+        let with_c = d.lam_fv(c_fv, point, with_k);
+        let with_b = d.lam_fv(b_fv, point, with_c);
+        d.lam_fv(a_fv, point, with_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.collinear_of_area_zero,
         uparams: vec![],
         ty,
         value,

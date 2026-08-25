@@ -185,7 +185,7 @@ use finite::{
     declare_restrict_maps_into,
 };
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
-use lcm::{declare_gauss_lemma, declare_lcm};
+use lcm::{declare_gauss_lemma, declare_lcm, declare_lcm_dvd};
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
@@ -607,6 +607,9 @@ pub struct NatPrelude {
     /// and cancels through `dvd_add_right_cancel_of_pos`, exactly the `g = 1`
     /// branch of `euclid_lemma` with the primality side condition dropped.
     pub gauss_lemma: NameId,
+    /// `Nat.lcm_dvd : ∀ a b c, dvd a c → dvd b c → dvd (lcm a b) c` — the
+    /// "least" half of the least common multiple's universal property.
+    pub lcm_dvd: NameId,
     /// Balanced natural Bézout certificates:
     /// `bezout m n g := ∃ mp mn np nn, g + m*mn + n*nn = m*mp + n*np`.
     pub bezout: NameId,
@@ -1188,6 +1191,23 @@ pub struct NatPrelude {
     /// `add_comm` + `add_sub_cancel_left` — `Nat.sub` never drives an
     /// induction step here, only the final one-line conversion.
     pub sum_fib: NameId,
+    /// `Nat.fib_add : ∀ m n, fib (succ (add m n)) =
+    /// add (mul (fib m) (fib n)) (mul (fib (succ m)) (fib (succ n)))` — the
+    /// Fibonacci addition formula, `succ`-shaped so `Nat.sub` never appears.
+    /// Proved by pairing `stmt_at n` with `stmt_at (succ n)` and inducting
+    /// ordinarily on `n` — the device `fibonacci.rs`'s own module doc names
+    /// for PROVING a proposition about two indices at once, as opposed to
+    /// DEFINING a function, which is why it was ruled out for `fib` itself.
+    /// The successor step folds two `fib_add_two` applications together
+    /// through `left_distrib` and a private four-term commutative regroup
+    /// (`add_regroup_four`; this prelude has no `add_add_add_comm`).
+    pub fib_add: NameId,
+    /// `Nat.coprime_fib_succ : ∀ n, gcd (fib n) (fib (succ n)) = 1` —
+    /// consecutive Fibonacci numbers are coprime. Induction on `n`; the step
+    /// never computes the new `gcd` equation, it shows the new gcd divides
+    /// `1` (via `gcd_dvd`, `fib_add_two`, `dvd_add_iff_right`, `dvd_gcd` and
+    /// the induction hypothesis) and closes with `eq_one_of_dvd_one`.
+    pub coprime_fib_succ: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -1391,6 +1411,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_lcm_right: kernel.name_str(nat, "dvd_lcm_right"),
             gcd_mul_lcm: kernel.name_str(nat, "gcd_mul_lcm"),
             gauss_lemma: kernel.name_str(nat, "gauss_lemma"),
+            lcm_dvd: kernel.name_str(nat, "lcm_dvd"),
             bezout: kernel.name_str(nat, "bezout"),
             gcd_bezout: kernel.name_str(nat, "gcd_bezout"),
             mod_eq: kernel.name_str(nat, "modEq"),
@@ -1525,6 +1546,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             fib_le_succ: kernel.name_str(nat, "fib_le_succ"),
             fib_pos_of_pos: kernel.name_str(nat, "fib_pos_of_pos"),
             sum_fib: kernel.name_str(nat, "sum_fib"),
+            fib_add: kernel.name_str(nat, "fib_add"),
+            coprime_fib_succ: kernel.name_str(nat, "coprime_fib_succ"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -1551,6 +1574,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_lcm(&mut d, &p)?;
         declare_gcd_bezout(&mut d, &p)?;
         declare_gauss_lemma(&mut d, &p)?;
+        declare_lcm_dvd(&mut d, &p)?;
         declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
         declare_primes(&mut d, &p)?;

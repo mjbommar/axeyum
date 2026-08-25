@@ -86,18 +86,27 @@
 //! that this slice's budget does not cover. Reported per the brief's explicit
 //! "both are acceptable" option: this file stops short of Cassini.
 //!
-//! # `gcd_fib`: pieces exist, not started
+//! # `fib_add` and `coprime_fib_succ`: two more pieces, `gcd_fib` still not
+//! started
 //!
-//! `gcd (fib m) (fib n) = fib (gcd m n)` is not attempted. The pieces this
-//! file DOES provide — `fib_add_two`, monotonicity (`fib_le_succ`), and
-//! positivity (`fib_pos_of_pos`) — are necessary ingredients (any proof needs
-//! to relate `fib` at a sum of indices, e.g. `fib (m+n) = fib m * fib (n+1) +
-//! fib (m-1) * fib n`, itself unproved here), but the identity's own proof
-//! (strong induction on the Euclidean algorithm's descent, mirroring
-//! `gcd.rs`/`bezout.rs`'s use of `Nat.gcd`'s recursion) is its own slice.
+//! `fib_add` (the addition formula, `succ`-shaped so no `Nat.sub` appears:
+//! `fib (m+n+1) = fib m * fib n + fib (m+1) * fib (n+1)`) and
+//! `coprime_fib_succ` (`gcd (fib n) (fib (succ n)) = 1`, consecutive
+//! Fibonacci numbers are coprime) are now both declared and kernel-confirmed
+//! axiom-free, below.
+//!
+//! `gcd (fib m) (fib n) = fib (gcd m n)` itself is still NOT attempted.
+//! `Nat.gcd` is a checked `WellFounded.fix` over `lt`, recursing on the
+//! FIRST argument via the executable remainder (`gcd.rs`'s module doc), so
+//! mirroring the Euclidean descent means an induction along that SAME
+//! well-founded order — strong induction, not the ordinary structural
+//! induction `fib_add` and `coprime_fib_succ` both get away with — and needs
+//! `well_founded_fix_eq` (the device `gcd_succ`/`gcd_zero_left` in `gcd.rs`
+//! already use) to unfold `gcd` at each step. That descent is its own slice.
 
 use super::NatPrelude;
 use super::finite::pos_implies_succ_pred;
+use super::helpers::{and_left, and_right, iff_reverse};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -497,6 +506,387 @@ fn declare_sum_fib(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError
     Ok(())
 }
 
+// ============================================================================
+// `add_regroup_four`: a private 4-term commutative regroup.
+// ============================================================================
+
+/// `Eq Nat (add (add a b) (add c e)) (add (add a c) (add b e))` — there is no
+/// `add_add_add_comm` in this prelude, so build it once from `add_assoc` and
+/// `add_right_comm`: `(a+b)+(c+e) = ((a+b)+c)+e` [`add_assoc`, reversed]
+/// `= ((a+c)+b)+e` [`add_right_comm` on the inner pair, under `(-)+e`]
+/// `= (a+c)+(b+e)` [`add_assoc`]. Needed once, in [`declare_fib_add`]'s step
+/// case, to reconcile the two different pairings `fib_add_two` applied at two
+/// different indices produces.
+fn add_regroup_four(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    e: ExprId,
+) -> ExprId {
+    let p = *p;
+    let ab = d.add(a, b);
+    let ce = d.add(c, e);
+    let start = d.add(ab, ce);
+
+    let abc = d.add(ab, c);
+    let step1 = d.add(abc, e);
+    let h1 = {
+        let fwd = d.lemma(p.add_assoc, &[ab, c, e]); // (ab+c)+e = ab+(c+e)
+        d.symm(step1, start, fwd)
+    };
+
+    let ac = d.add(a, c);
+    let acb = d.add(ac, b);
+    let step2 = d.add(acb, e);
+    let h2 = {
+        let h_comm = d.lemma(p.add_right_comm, &[a, b, c]); // (a+b)+c = (a+c)+b
+        d.congr(abc, acb, h_comm, &|d, x| d.add(x, e))
+    };
+
+    let be = d.add(b, e);
+    let target = d.add(ac, be);
+    let h3 = d.lemma(p.add_assoc, &[ac, b, e]); // (ac+b)+e = ac+(b+e)
+
+    let (_end, proof) = d.chain(start, &[(step1, h1), (step2, h2), (target, h3)]);
+    proof
+}
+
+// ============================================================================
+// `fib_add`: the addition formula.
+// ============================================================================
+
+/// `Nat.fib_add : ∀ m n, fib (succ (add m n)) =
+/// add (mul (fib m) (fib n)) (mul (fib (succ m)) (fib (succ n)))` — the
+/// Fibonacci addition formula, in `succ`-shaped form (no `Nat.sub` anywhere).
+///
+/// Hand-checked (`fib = 0,1,1,2,3,5,8,13,…`): `m=0,n=0`: `fib 1 = 1` vs
+/// `fib0*fib0+fib1*fib1 = 0+1 = 1`. `m=1,n=0`: `fib 2 = 1` vs
+/// `fib1*fib0+fib2*fib1 = 0+1 = 1`. `m=1,n=1`: `fib 3 = 2` vs
+/// `fib1*fib1+fib2*fib2 = 1+1 = 2`. `m=2,n=1`: `fib 4 = 3` vs
+/// `fib2*fib1+fib3*fib2 = 1+2 = 3`. `m=2,n=2`: `fib 5 = 5` vs
+/// `fib2*fib2+fib3*fib3 = 1+4 = 5`. `m=3,n=2`: `fib 6 = 8` vs
+/// `fib3*fib2+fib4*fib3 = 2+6 = 8`. `m=3,n=3`: `fib 7 = 13` vs
+/// `fib3^2+fib4^2 = 4+9 = 13`. All match.
+///
+/// Proved by pairing two statements per index and inducting ORDINARILY on
+/// `n` (`m` fixed, captured from the outer closure) — the "prove `P n ∧ P
+/// (succ n)` together by ordinary `Nat.rec`" device this file's own module
+/// doc already names for PROVING a proposition, as opposed to DEFINING a
+/// function (which is what ruled it out for `fib` itself). `R(n) := And
+/// (stmt_at n) (stmt_at (succ n))`, where `stmt_at k` is the statement at
+/// index `k`. The successor step reads `stmt_at (succ j)` off the induction
+/// hypothesis's second half for free (no work), and derives the NEW second
+/// half, `stmt_at (succ (succ j))`, from `fib_add_two` applied at TWO
+/// different indices (`succ k` to split the goal, then `j` and `succ j` to
+/// fold the two products each back into one), `left_distrib`, and
+/// [`add_regroup_four`] to reconcile the two different groupings those two
+/// substitutions produce.
+fn declare_fib_add(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+
+    d.theorem(p.fib_add, 2, &|d, values| {
+        let (m, n) = (values[0], values[1]);
+        let succ_m = d.succ(m);
+        let fm = d.const_app(p.fib, &[m]);
+        let fm1 = d.const_app(p.fib, &[succ_m]);
+
+        // `fib (succ (add m k)) = add (mul fm (fib k)) (mul fm1 (fib (succ k)))`
+        let stmt_at = |d: &mut NatDev<'_>, k: ExprId| -> ExprId {
+            let mk = d.add(m, k);
+            let idx = d.succ(mk);
+            let lhs = d.const_app(p.fib, &[idx]);
+            let fk = d.const_app(p.fib, &[k]);
+            let succ_k = d.succ(k);
+            let fk1 = d.const_app(p.fib, &[succ_k]);
+            let fm_fk = d.mul(fm, fk);
+            let fm1_fk1 = d.mul(fm1, fk1);
+            let rhs = d.add(fm_fk, fm1_fk1);
+            d.eq(lhs, rhs)
+        };
+
+        let pair_motive = |d: &mut NatDev<'_>, k: ExprId| -> ExprId {
+            let a = stmt_at(d, k);
+            let succ_k = d.succ(k);
+            let b = stmt_at(d, succ_k);
+            d.const_app(p.logic.and, &[a, b])
+        };
+
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let zero = d.zero();
+            let one = d.num(1);
+            let a_ty = stmt_at(d, zero);
+            let b_ty = stmt_at(d, one);
+
+            // A(0): fib (succ (add m 0)) = add (mul fm (fib 0)) (mul fm1 (fib 1))
+            //   `fib (succ (add m 0))` is defeq `fm1`.
+            let a_proof = {
+                let fm_zero = d.mul(fm, zero);
+                let fm1_one = d.mul(fm1, one);
+                let term0 = d.add(fm_zero, fm1_one);
+                let term1 = d.add(zero, fm1_one);
+                let term2 = d.add(zero, fm1);
+                let h1 = {
+                    let h = d.lemma(p.mul_zero, &[fm]); // mul fm 0 = 0
+                    d.congr(fm_zero, zero, h, &|d, x| {
+                        let fm1_one = d.mul(fm1, one);
+                        d.add(x, fm1_one)
+                    })
+                };
+                let h2 = {
+                    let h = d.lemma(p.mul_one, &[fm1]); // mul fm1 1 = fm1
+                    d.congr(fm1_one, fm1, h, &|d, x| d.add(zero, x))
+                };
+                let h3 = d.lemma(p.zero_add, &[fm1]); // add 0 fm1 = fm1
+                let (_e, chained) = d.chain(term0, &[(term1, h1), (term2, h2), (fm1, h3)]);
+                d.symm(term0, fm1, chained) // fm1 = term0
+            };
+
+            // B(0) = stmt_at(1): fib (succ (add m 1)) =
+            //   add (mul fm (fib 1)) (mul fm1 (fib 2))
+            //   `fib (succ (add m 1))` is defeq `fib (succ (succ m))`, related
+            //   to `fm, fm1` by `fib_add_two m`.
+            let b_proof = {
+                let succ_succ_m = d.succ(succ_m);
+                let start = d.const_app(p.fib, &[succ_succ_m]);
+                let sum = d.add(fm1, fm);
+                let h_add2 = d.lemma(p.fib_add_two, &[m]); // fib (succ succ m) = add fm1 fm
+                let swapped = d.add(fm, fm1);
+                let h_comm = d.lemma(p.add_comm, &[fm1, fm]); // add fm1 fm = add fm fm1
+                let fm_one = d.mul(fm, one);
+                let mid = d.add(fm_one, fm1);
+                let h3 = {
+                    let mul_one_fm = d.lemma(p.mul_one, &[fm]); // mul fm 1 = fm
+                    let h = d.symm(fm_one, fm, mul_one_fm); // fm = mul fm 1
+                    d.congr(fm, fm_one, h, &|d, x| d.add(x, fm1))
+                };
+                let fm1_one = d.mul(fm1, one);
+                let target = d.add(fm_one, fm1_one);
+                let h4 = {
+                    let mul_one_fm1 = d.lemma(p.mul_one, &[fm1]); // mul fm1 1 = fm1
+                    let h = d.symm(fm1_one, fm1, mul_one_fm1); // fm1 = mul fm1 1
+                    d.congr(fm1, fm1_one, h, &|d, x| {
+                        let fm_one = d.mul(fm, one);
+                        d.add(fm_one, x)
+                    })
+                };
+                let (_e, proof) = d.chain(
+                    start,
+                    &[(sum, h_add2), (swapped, h_comm), (mid, h3), (target, h4)],
+                );
+                proof
+            };
+
+            d.const_app(p.logic.and_intro, &[a_ty, b_ty, a_proof, b_proof])
+        };
+
+        let step = |d: &mut NatDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+            let a_ty = stmt_at(d, j);
+            let succ_j = d.succ(j);
+            let b_ty = stmt_at(d, succ_j);
+            let ih_a = and_left(d, a_ty, b_ty, ih); // stmt_at(j)
+            let ih_b = and_right(d, a_ty, b_ty, ih); // stmt_at(succ j)
+
+            let new_first = ih_b;
+
+            let succ_succ_j = d.succ(succ_j);
+            let succ_succ_succ_j = d.succ(succ_succ_j);
+            let k = d.add(m, j);
+            let succ_k = d.succ(k);
+            let succ_succ_k = d.succ(succ_k);
+            let succ_succ_succ_k = d.succ(succ_succ_k);
+
+            let fj = d.const_app(p.fib, &[j]);
+            let fj1 = d.const_app(p.fib, &[succ_j]);
+            let fj2 = d.const_app(p.fib, &[succ_succ_j]);
+            let fj3 = d.const_app(p.fib, &[succ_succ_succ_j]);
+            let fib_succ_k = d.const_app(p.fib, &[succ_k]);
+            let fib_succ_succ_k = d.const_app(p.fib, &[succ_succ_k]);
+
+            let a_term = d.mul(fm, fj1);
+            let b_term = d.mul(fm1, fj2);
+            let c_term = d.mul(fm, fj);
+            let e_term = d.mul(fm1, fj1);
+
+            let start = d.const_app(p.fib, &[succ_succ_succ_k]);
+
+            // Step 1: `fib_add_two` at `succ k`, splitting the goal in two.
+            let next1 = d.add(fib_succ_succ_k, fib_succ_k);
+            let h1 = d.lemma(p.fib_add_two, &[succ_k]);
+
+            // Step 2: substitute `fib_succ_succ_k` via `ih_b` (= stmt_at(succ j)).
+            let ab_term = d.add(a_term, b_term);
+            let next2 = d.add(ab_term, fib_succ_k);
+            let h2 = d.congr(fib_succ_succ_k, ab_term, ih_b, &|d, x| d.add(x, fib_succ_k));
+
+            // Step 3: substitute `fib_succ_k` via `ih_a` (= stmt_at(j)).
+            let ce_term = d.add(c_term, e_term);
+            let next3 = d.add(ab_term, ce_term);
+            let h3 = d.congr(fib_succ_k, ce_term, ih_a, &|d, x| {
+                let ab_term = d.add(a_term, b_term);
+                d.add(ab_term, x)
+            });
+
+            // Step 4: the 4-term regroup, `(A+B)+(C+E) = (A+C)+(B+E)`.
+            let ac_term = d.add(a_term, c_term);
+            let be_term = d.add(b_term, e_term);
+            let next4 = d.add(ac_term, be_term);
+            let h4 = add_regroup_four(d, &p, a_term, b_term, c_term, e_term);
+
+            // Step 5: fold each pair back into one `mul`, via `left_distrib`
+            // reversed and `fib_add_two` reversed (at `j`, then at `succ j`).
+            let fm_fj2 = d.mul(fm, fj2);
+            let ac_to_fm_fj2 = {
+                let fj1_fj = d.add(fj1, fj);
+                let folded = d.mul(fm, fj1_fj);
+                let left_distrib_h = d.lemma(p.left_distrib, &[fm, fj1, fj]);
+                let h_ld = d.symm(folded, ac_term, left_distrib_h);
+                let h_fib = {
+                    let h = d.lemma(p.fib_add_two, &[j]); // fj2 = add fj1 fj
+                    d.symm(fj2, fj1_fj, h) // add fj1 fj = fj2
+                };
+                let h_fold = d.congr(fj1_fj, fj2, h_fib, &|d, x| d.mul(fm, x));
+                d.trans(ac_term, folded, fm_fj2, h_ld, h_fold)
+            };
+            let fm1_fj3 = d.mul(fm1, fj3);
+            let be_to_fm1_fj3 = {
+                let fj2_fj1 = d.add(fj2, fj1);
+                let folded = d.mul(fm1, fj2_fj1);
+                let left_distrib_h = d.lemma(p.left_distrib, &[fm1, fj2, fj1]);
+                let h_ld = d.symm(folded, be_term, left_distrib_h);
+                let h_fib = {
+                    let h = d.lemma(p.fib_add_two, &[succ_j]); // fj3 = add fj2 fj1
+                    d.symm(fj3, fj2_fj1, h) // add fj2 fj1 = fj3
+                };
+                let h_fold = d.congr(fj2_fj1, fj3, h_fib, &|d, x| d.mul(fm1, x));
+                d.trans(be_term, folded, fm1_fj3, h_ld, h_fold)
+            };
+
+            let next5 = d.add(fm_fj2, be_term);
+            let h5 = d.congr(ac_term, fm_fj2, ac_to_fm_fj2, &|d, x| {
+                let be_term = d.add(b_term, e_term);
+                d.add(x, be_term)
+            });
+
+            let target = d.add(fm_fj2, fm1_fj3);
+            let h6 = d.congr(be_term, fm1_fj3, be_to_fm1_fj3, &|d, x| {
+                let fm_fj2 = d.mul(fm, fj2);
+                d.add(fm_fj2, x)
+            });
+
+            let (_e, new_second) = d.chain(
+                start,
+                &[
+                    (next1, h1),
+                    (next2, h2),
+                    (next3, h3),
+                    (next4, h4),
+                    (next5, h5),
+                    (target, h6),
+                ],
+            );
+
+            let new_a_ty = stmt_at(d, succ_j);
+            let new_b_ty = stmt_at(d, succ_succ_j);
+            d.const_app(
+                p.logic.and_intro,
+                &[new_a_ty, new_b_ty, new_first, new_second],
+            )
+        };
+
+        let pair_proof = d.induct(&pair_motive, &base, &step, n);
+        let a_ty = stmt_at(d, n);
+        let succ_n = d.succ(n);
+        let b_ty = stmt_at(d, succ_n);
+        let proof = and_left(d, a_ty, b_ty, pair_proof);
+        (a_ty, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `coprime_fib_succ`.
+// ============================================================================
+
+/// `Nat.coprime_fib_succ : ∀ n, gcd (fib n) (fib (succ n)) = 1` — consecutive
+/// Fibonacci numbers are coprime.
+///
+/// Ordinary induction on `n`; the base case is `gcd_zero_left` at `1`
+/// (`gcd (fib 0) (fib 1) = gcd 0 1 = 1`, defeq on both `fib` calls — exactly
+/// the same device [`declare_fib_le_succ`]'s base case uses). The step
+/// NEVER computes the new `gcd` equation directly: it shows the new gcd
+/// divides `1`, then closes with `eq_one_of_dvd_one`. The divisibility
+/// chase, writing `g` for the new gcd: `g` divides both its arguments
+/// (`gcd_dvd_left`, `gcd_dvd_right`); `fib_add_two` rewrites the LARGER
+/// argument as a sum, and `dvd_add_iff_right` peels the known-divisible
+/// summand off, giving `g` divides the SMALLER fib value too; `dvd_gcd`
+/// then gives `g` divides the OLD gcd, which the induction hypothesis says
+/// is `1`.
+fn declare_coprime_fib_succ(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+
+    d.theorem(p.coprime_fib_succ, 1, &|d, values| {
+        let n = values[0];
+
+        let motive = |d: &mut NatDev<'_>, k: ExprId| -> ExprId {
+            let fk = d.const_app(p.fib, &[k]);
+            let succ_k = d.succ(k);
+            let fk1 = d.const_app(p.fib, &[succ_k]);
+            let g = d.gcd(fk, fk1);
+            let one = d.num(1);
+            d.eq(g, one)
+        };
+
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let one = d.num(1);
+            d.lemma(p.gcd_zero_left, &[one]) // gcd 0 1 = 1, defeq gcd (fib 0) (fib 1) = 1
+        };
+
+        let step = |d: &mut NatDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+            // ih : Eq (gcd (fib j) (fib (succ j))) 1
+            let fj = d.const_app(p.fib, &[j]);
+            let succ_j = d.succ(j);
+            let fj1 = d.const_app(p.fib, &[succ_j]);
+            let succ_succ_j = d.succ(succ_j);
+            let fj2 = d.const_app(p.fib, &[succ_succ_j]);
+            let g = d.gcd(fj1, fj2);
+            let one = d.num(1);
+
+            let g_dvd_fj1 = d.lemma(p.gcd_dvd_left, &[fj1, fj2]); // g | fj1
+            let g_dvd_fj2 = d.lemma(p.gcd_dvd_right, &[fj1, fj2]); // g | fj2
+
+            // fj2 = add fj1 fj  (fib_add_two j)
+            let h_add2 = d.lemma(p.fib_add_two, &[j]);
+            let sum = d.add(fj1, fj);
+            let g_dvd_sum = {
+                let motive = d.eq_motive(fj2, &|d, x| d.dvd(g, x));
+                d.transport(fj2, motive, g_dvd_fj2, sum, h_add2) // g | (fj1 + fj)
+            };
+
+            // dvd_add_iff_right : dvd g fj1 -> (dvd g fj <-> dvd g (fj1+fj))
+            let iff_g = d.lemma(p.dvd_add_iff_right, &[g, fj1, fj, g_dvd_fj1]);
+            let dvd_fj_ty = d.dvd(g, fj);
+            let dvd_sum_ty = d.dvd(g, sum);
+            let reverse = iff_reverse(d, dvd_fj_ty, dvd_sum_ty, iff_g);
+            let g_dvd_fj = d.apply(reverse, &[g_dvd_sum]); // g | fj
+
+            // g | gcd (fj, fj1) via dvd_gcd
+            let g_dvd_gcd_j = d.lemma(p.dvd_gcd, &[g, fj, fj1, g_dvd_fj, g_dvd_fj1]);
+            let gcd_j = d.gcd(fj, fj1);
+            let g_dvd_one = {
+                let motive = d.eq_motive(gcd_j, &|d, x| d.dvd(g, x));
+                d.transport(gcd_j, motive, g_dvd_gcd_j, one, ih) // g | 1
+            };
+            d.lemma(p.eq_one_of_dvd_one, &[g, g_dvd_one])
+        };
+
+        let proof = d.induct(&motive, &base, &step, n);
+        (motive(d, n), proof)
+    })?;
+    Ok(())
+}
+
 /// Declare every theorem in this module.
 pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_fib_defs(d, p)?;
@@ -504,5 +894,7 @@ pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_fib_le_succ(d, p)?;
     declare_fib_pos_of_pos(d, p)?;
     declare_sum_fib(d, p)?;
+    declare_fib_add(d, p)?;
+    declare_coprime_fib_succ(d, p)?;
     Ok(())
 }

@@ -1432,6 +1432,50 @@ pub struct CRealPrelude {
     /// ring algebra, just `hasDerivative_add F (neg∘G) hf (hasDerivative_neg
     /// G hg)`.
     pub has_derivative_sub: NameId,
+    /// `CReal.hasDerivative_mul : ∀ F F' G G' a b, HasDerivativeOn F F' a b →
+    /// HasDerivativeOn G G' a b → UniformlyContinuousOn F a b → ∀ (k1 k2 k3 :
+    /// Nat), (∀ z, le a z → le z b → le (abs (F z)) (ofRat (natDivSucc
+    /// (succ k1) 0))) → (∀ z, le a z → le z b → le (abs (G z)) (ofRat
+    /// (natDivSucc (succ k2) 0))) → (∀ z, le a z → le z b → le (abs (G' z))
+    /// (ofRat (natDivSucc (succ k3) 0))) → HasDerivativeOn (fun r => mul (F
+    /// r) (G r)) (fun x => add (mul (F' x) (G x)) (mul (F x) (G' x))) a b` --
+    /// **the product rule**, closed by three EXPLICIT magnitude-bound
+    /// hypotheses (on `F`, `G` and `G'`, none derived) plus uniform
+    /// continuity of `F`, unblocked by a genuinely three-way accuracy split
+    /// (`Rat.natDivSucc_add` twice plus `Rat.natDivSucc_scale` at `c := 2`,
+    /// `hasDerivative_add`'s two-way `natDivSucc_halve` fuse one step
+    /// deeper) and a three-source combined modulus (`hasDerivative_add`'s
+    /// own `Nat.add`/antitonicity combination, extended to three sources).
+    /// See `creal/derivative.rs`'s module documentation for the corrected,
+    /// numerically re-verified error decomposition this closes.
+    pub has_derivative_mul: NameId,
+    /// `CReal.hasDerivative_congr : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// ∀ G G', (∀ x, le a x → le x b → Equiv (G x) (F x)) →
+    /// (∀ x, le a x → le x b → Equiv (G' x) (F' x)) →
+    /// HasDerivativeOn G G' a b` — transport a derivative along pointwise
+    /// `Equiv` **on the interval only**.
+    ///
+    /// `HasDerivativeOn.spec`'s own type guards every occurrence of
+    /// `F x`/`F y`/`F' x` in its conclusion behind the SAME range hypotheses
+    /// (`le a x`, `le x b`, `le a y`, `le y b`) the caller must already supply
+    /// to invoke `spec` at all, so agreement need only hold ON `[a,b]` —
+    /// off-interval agreement is neither needed nor assumed. Reuses `F`'s own
+    /// modulus verbatim; `abs_le_of_equiv` carries `F`'s own bound across.
+    ///
+    /// A constructive derivative is **not unique as a function**, only up to
+    /// pointwise `Equiv` on the interval, so without this two developments
+    /// producing the "same" derivative in different syntactic forms cannot be
+    /// connected at all.
+    pub has_derivative_congr: NameId,
+    /// `CReal.hasDerivative_pow_two : ∀ a b,
+    /// HasDerivativeOn (fun r => pow r 2) (fun x => add x x) a b` — `pow r 2`
+    /// ι-reduces to `mul (mul one r) r`, `Equiv`-equal to `mul r r`, so
+    /// [`Self::has_derivative_congr`] transports [`Self::has_derivative_sq`]'s
+    /// witness across that one identity with the derivative side reused
+    /// verbatim. **The cross-check this development wanted**: had the general
+    /// shape not matched `hasDerivative_sq` at `n = 2`, one of the two would be
+    /// wrong.
+    pub has_derivative_pow_two: NameId,
 }
 
 impl CRealPrelude {
@@ -1682,6 +1726,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         abs_mul_le_of_bounds: kernel.name_str(creal, "abs_mul_le_of_bounds"),
         has_derivative_smul: kernel.name_str(creal, "hasDerivative_smul"),
         has_derivative_sub: kernel.name_str(creal, "hasDerivative_sub"),
+        has_derivative_mul: kernel.name_str(creal, "hasDerivative_mul"),
+        has_derivative_congr: kernel.name_str(creal, "hasDerivative_congr"),
+        has_derivative_pow_two: kernel.name_str(creal, "hasDerivative_pow_two"),
     }
 }
 
@@ -1765,7 +1812,13 @@ pub(crate) fn build_creal_prelude_uncached(
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
-        power::declare_power(&mut d, prelude)
+        power::declare_power(&mut d, prelude)?;
+        // `hasDerivative_pow_two` mentions `CReal.pow`, which `power.rs`
+        // declares. It cannot live inside `derivative::declare_derivative`,
+        // which runs BEFORE `power::declare_power` above: the kernel rejects a
+        // term naming a constant not yet in the environment (`UnknownConst`).
+        // Wired in here instead, after `pow` exists.
+        derivative::declare_has_derivative_pow_two(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
