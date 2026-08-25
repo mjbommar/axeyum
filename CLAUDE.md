@@ -63,6 +63,23 @@ Two consequences that change how you work, not just how you feel about it:
   dies. Six of seven guards in one suite were removable with everything still
   green, because they all rejected through one shared check.
 
+  **Re-measured 2026-08-25 over the whole ledger, and the picture is better —
+  but check the METHOD before quoting either number, because the two
+  measurements do not share a denominator.** Across 488 facts and 590
+  `checker_command`s: 464 carry an explicitly discriminating shape (`grep -c`
+  consuming the pipe and a tested count, `--require-axiom-free`,
+  `--expect-axioms`, `--check`, `diff`), and the remaining 126 are
+  `cargo test` / `cargo run` whose status depends on the suite passing.
+
+  **Those 126 are NOT the failure mode**, and I nearly reported them as such.
+  A `cargo test --test X` exits nonzero when a test fails, so it does depend on
+  the finding — the real vacuity risk is a suite that compiles to ZERO tests
+  behind a feature gate and prints `running 0 tests ... ok`. All 5 distinct
+  `(crate, --test suite)` pairs the ledger names are UNGATED, verified by
+  reading each file's head for `#![cfg(feature`, so none can pass vacuously
+  that way. The lesson is the one this section already teaches, aimed at
+  myself: a crude classifier that flags a whole shape is not a measurement.
+
 ## Working Stance — we ship toward Z3 + Lean parity
 
 This is an ambitious, **achievable** build, and the job is to *complete it* — one
