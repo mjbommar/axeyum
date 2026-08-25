@@ -789,6 +789,43 @@ pub struct CRealPrelude {
     pub cauchy: NameId,
     /// `CReal.converges_cauchy : ∀ f L, Converges f L → Cauchy f`.
     pub converges_cauchy: NameId,
+    /// `CReal.regular_of_scaled_cauchy : ∀ f K,
+    /// (∀ m n, Within (seq (f m) m − seq (f n) n)
+    ///    (Rat.natDivSucc K m + Rat.natDivSucc K n)) →
+    /// Regular (speedup (fun n => seq (f n) n) K)`.
+    ///
+    /// The `Cauchy → Converges` bridge's reusable half. A `K`-scaled Cauchy
+    /// witness is not itself a [`Self::regular_seq`] instance: `RegularSeq`'s
+    /// fixed modulus has no room for the extra factor `K`. But the **diagonal**
+    /// `fun n => seq (f n) n` (a bare `Nat → Rat`, not a `Nat → CReal`) is
+    /// exactly [`Self::k_regular_pred`]'s shape at `c := K` — the Cauchy
+    /// hypothesis, read at `(m, n)`, *is* `KRegular (diagonal f) K`'s own
+    /// bound, up to widening the numerator `K ↦ K+1` by one
+    /// `Rat.natDivSucc_le_add_left` step each side — so
+    /// [`Self::regular_of_kregular`] applies unchanged and needs no new
+    /// estimate. This is **not** the `RegularSeq (X : Nat → CReal)` shape a
+    /// first reading of the goal suggests: routing a `Nat → CReal` sequence
+    /// through [`Self::regular_seq`]/[`Self::limit`] forces a
+    /// [`Self::regular`] bridge at the *shallow* outer index on top of the
+    /// Cauchy estimate, which costs a whole extra `1/(m+1)` per side and
+    /// overshoots `RegularSeq`'s fixed modulus by a factor of two — see
+    /// `convergence.rs`'s module documentation for the full accounting. Going
+    /// through the raw diagonal and [`Self::speedup`] instead has no such
+    /// bridge (the speed-up's own sample *is* the diagonal value, not a
+    /// resampling of it), and closes exactly.
+    pub regular_of_scaled_cauchy: NameId,
+    /// `CReal.converges_of_cauchy : ∀ f, Cauchy f →
+    /// Exists (fun L => Converges f L)`.
+    ///
+    /// **The `Cauchy → Converges` bridge.** Eliminates `Cauchy f`'s witness
+    /// `K`, builds `L := CReal.mk (speedup (diagonal f) K) (regularity proof)`
+    /// via [`Self::regular_of_scaled_cauchy`], and closes `Converges f L`
+    /// with [`Self::speedup_close`] (which bounds `f n` against `speedup
+    /// (diagonal f) K` at the *same* index `n` — exactly `Converges`'s own
+    /// shape) plus one `Rat.natDivSucc_add` fusion of the two-part rate into
+    /// a single witness `K+2`. `L` is not named outside the proof (`Cauchy`'s
+    /// own `K` is not either), so the conclusion is existential.
+    pub converges_of_cauchy: NameId,
 
     // --- algebra of limits (ADR-0512 phase R9, continued) --------------------
     /// `CReal.converges_add : ∀ f g L M, Converges f L → Converges g M →
@@ -2041,6 +2078,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
         speedup_close: kernel.name_str(creal, "speedup_close"),
+        regular_of_scaled_cauchy: kernel.name_str(creal, "regular_of_scaled_cauchy"),
+        converges_of_cauchy: kernel.name_str(creal, "converges_of_cauchy"),
         sum_range: kernel.name_str(creal, "sumRange"),
         sum_range_zero: kernel.name_str(creal, "sumRange_zero"),
         sum_range_succ: kernel.name_str(creal, "sumRange_succ"),
@@ -2195,6 +2234,7 @@ pub(crate) fn build_creal_prelude_uncached(
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
+        convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `riemannSum` is built directly on `sumRange`/`ofNat` and needs
         // nothing from `power`, so it can land right after `series` rather
