@@ -596,6 +596,27 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   the `__pycache__` trap under Gotchas, which makes hand loops report the
   *previous* mutant's result anyway.
 
+- **TWO LANES CAN EACH BUMP A PINNED COUNT CORRECTLY AND THE MERGE STILL WILL
+  NOT COMPILE.** The standing rule — "recompute by COUNTING the list, never by
+  adding to the old number" — is written for the LANE, and it works: measured
+  2026-08-25, both the chain-rule lane and the series lane landed one
+  declaration each and both correctly took `creal_tests.rs`'s pin from 199 to
+  200 against their own bases.
+
+  Git then merged both array ENTRIES cleanly, because they are different lines,
+  and left the DECLARED size at 200 with 201 entries:
+
+      error[E0308]: mismatched types
+      let expected: [(&str, crate::NameId, &str); 200] = [ ... ]
+
+  The case the rule does not cover is the COORDINATOR merging two correct
+  increments. So recount after every merge that touches a pinned list, not only
+  after a conflicted one — this merge had **zero conflicts**. It happened eight
+  times in one day across `creal_tests.rs` and `nat_prelude_tests.rs`.
+
+  `hooks/pre-push` refuses the push, so it does not reach `main`; the cost is a
+  wasted push attempt, which on this repository is several minutes of battery.
+
 - **AN ABSOLUTE PATH UNDER THE MAIN CHECKOUT SILENTLY EDITS THE MAIN CHECKOUT,
   EVEN FROM INSIDE A WORKTREE.** A lane working in
   `.claude/worktrees/agent-<id>/` opened `CLAUDE.md` by its familiar path,
