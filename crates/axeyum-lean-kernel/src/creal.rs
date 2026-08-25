@@ -580,6 +580,35 @@ pub struct CRealPrelude {
     /// `k = 1` at `32n+31`; nothing in [`Self::inv`]'s type says the results
     /// agree, and this does. [`Self::inv_congr`] at `y := x`.
     pub inv_index_irrelevant: NameId,
+    /// `CReal.inv_nonneg : ∀ x k (h : PosBound x k), le zero (inv x k h)`.
+    ///
+    /// **The prerequisite `mul_le_mul_of_nonneg_left` needs to cancel a
+    /// positive factor**, and nothing simpler substitutes for it: multiplying
+    /// through by `inv x k h` needs to know that factor is itself nonnegative,
+    /// and no existing law says so. Proved at the representative level, the
+    /// same way [`Self::inv`]'s own regularity is: `PosBound x k` gives
+    /// `L := 1/(2k+2) ≤ x_{j(n)}` at `inv`'s own sampling index `j(n)`
+    /// (`declare_inverse`'s `sample_lower`, reproduced here because it is
+    /// private to that module), so `0 < x_{j(n)}` and `Rat.inv_pos` makes the
+    /// reciprocal itself nonnegative at every `n` — `CReal.le`'s direct `∀n`
+    /// form needs nothing more.
+    pub inv_nonneg: NameId,
+    /// `CReal.le_of_mul_le_mul_left : ∀ c x y k (h : PosBound c k),
+    /// le (mul c x) (mul c y) → le x y` — **cancellation**, with the positive
+    /// factor's separating modulus threaded through as data, matching
+    /// [`Self::inv`]'s own signature.
+    ///
+    /// `0 < c` alone is not eliminable into this: `CReal`'s order is
+    /// undecidable, `Apart` is a bare `Or`, and there is no Markov principle in
+    /// this development. `PosBound c k` is exactly the data `inv` already
+    /// needs, so nothing new is assumed by asking for it here too.
+    ///
+    /// The route multiplies through by `inv c k h` on the left:
+    /// `mul_le_mul_of_nonneg_left` (needing [`Self::inv_nonneg`]) turns
+    /// `mul c x ≤ mul c y` into `mul inv (mul c x) ≤ mul inv (mul c y)`, and
+    /// `mul inv (mul c w) ≈ w` via `mul_assoc`, `mul_comm`, `mul_inv_cancel`
+    /// and `mul_one` transports each side back through [`Self::le_congr`].
+    pub le_of_mul_le_mul_left: NameId,
 
     // --- the lattice (ADR-0519 phase R5) --------------------------------------
     /// `CReal.max : CReal → CReal → CReal` — **pointwise, at the same index**.
@@ -2113,6 +2142,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_inv_cancel: kernel.name_str(creal, "mul_inv_cancel"),
         inv_congr: kernel.name_str(creal, "inv_congr"),
         inv_index_irrelevant: kernel.name_str(creal, "inv_index_irrelevant"),
+        inv_nonneg: kernel.name_str(creal, "inv_nonneg"),
+        le_of_mul_le_mul_left: kernel.name_str(creal, "le_of_mul_le_mul_left"),
         max: kernel.name_str(creal, "max"),
         min: kernel.name_str(creal, "min"),
         abs: kernel.name_str(creal, "abs"),
@@ -2340,6 +2371,7 @@ pub(crate) fn build_creal_prelude_uncached(
         product::declare_product(&mut d, prelude)?;
         field::declare_field(&mut d, prelude)?;
         inverse::declare_inverse(&mut d, prelude)?;
+        cancellation::declare_cancellation(&mut d, prelude)?;
         lattice::declare_lattice(&mut d, prelude)?;
         archimedean_squeeze::declare_archimedean_squeeze(&mut d, prelude)?;
         archimedean::declare_archimedean(&mut d, prelude)?;
@@ -3288,6 +3320,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 
 mod archimedean;
 mod archimedean_squeeze;
+mod cancellation;
 mod completeness;
 mod convergence;
 mod cotransitivity;
