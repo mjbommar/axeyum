@@ -143,6 +143,10 @@ fn every_named_declaration_exists() {
         ("det3", p.det3),
         ("det3_id", p.det3_id),
         ("det3_cofactor_row1", p.det3_cofactor_row1),
+        ("det3_ofInt", p.det3_ofint),
+        ("det3_example_generic", p.det3_example_generic),
+        ("det3_example_diagonal", p.det3_example_diagonal),
+        ("det3_example_singular", p.det3_example_singular),
     ];
     for (label, name) in expected {
         assert!(
@@ -412,6 +416,10 @@ fn matrix_laws_are_axiom_free() {
         ("det2_fib", p.det2_fib),
         ("det3_id", p.det3_id),
         ("det3_cofactor_row1", p.det3_cofactor_row1),
+        ("det3_ofInt", p.det3_ofint),
+        ("det3_example_generic", p.det3_example_generic),
+        ("det3_example_diagonal", p.det3_example_diagonal),
+        ("det3_example_singular", p.det3_example_singular),
     ];
     for (label, name) in expected {
         let declaration = kernel
