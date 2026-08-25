@@ -757,6 +757,68 @@ def build_authoritative_transaction(
                 "exact twice-reconstructed theorem identity, empty axiom footprint, "
                 "and named direct theorem dependencies"
             )
+    elif executor["driver"] == "axeyum-lean-import/modeq-family-multi-target-v1":
+        # `fact_id` is already bound by the generic check above
+        # (`identity.fact_id != fact_id` refuses before this branch ever
+        # runs), so this looks up the ONE target row a multi-target
+        # operation names for the fact this transaction is FOR -- it does
+        # not construct a second, parallel notion of which fact the receipt
+        # is about. `resolve_multi_target` is loaded from the executor
+        # module and reused verbatim (ADR-0554): never re-implemented here,
+        # so this lookup can never disagree with the one `build_receipt`
+        # itself used to produce the receipt under test.
+        executor_module = load_module(
+            "autogenesis_executor_for_modeq_transaction", EXECUTOR_SCRIPT
+        )
+        try:
+            target = executor_module.resolve_multi_target(operation, fact_id)
+        except executor_module.ExecutionError as error:
+            raise TransactionError(
+                f"modeq-family multi-target resolution failed: {error}"
+            ) from error
+        expected_statement_sha = hashlib.sha256(
+            before_fact["formal"]["statement"].encode()
+        ).hexdigest()
+        observation = result.get("observation")
+        if (
+            identity.get("formal_statement_sha256") != expected_statement_sha
+            or identity.get("target_definition") != target["target_definition"]
+            or not isinstance(observation, dict)
+            or observation.get("verdict") != "proved"
+            or observation.get("target_definition") != target["target_definition"]
+            or observation.get("axiom_footprint") != []
+            or observation.get("retained_answer_dependencies") != []
+            or observation.get("target_dependency") is not False
+            or observation.get("ledger_writes") != 0
+        ):
+            raise TransactionError(
+                "modeq-family multi-target execution assurance is inconsistent"
+            )
+        execution_input_binding = {
+            "target_fact_id": fact_id,
+            "statement_adapter_manifest": target["statement_adapter_manifest"],
+            "statement_adapter_manifest_sha256": identity[
+                "statement_adapter_manifest_sha256"
+            ],
+            "modeq_manifest": target["modeq_manifest"],
+            "modeq_manifest_sha256": identity["modeq_manifest_sha256"],
+            "external_artifact_sha256": identity["external_artifact_sha256"],
+            "formal_statement_sha256": expected_statement_sha,
+            "target_definition": target["target_definition"],
+            "goal_sha256": observation["goal_sha256"],
+            "proof_sha256": observation["proof_sha256"],
+            "target_content_sha256": observation["target_content_sha256"],
+            "binders_used": observation["binders_used"],
+            "max_binders": observation["max_binders"],
+            "admitted_declarations": observation["admitted_declarations"],
+        }
+        result_description = "fresh-import axiom-free modeq-family target proof"
+        replay_description = (
+            "the resolved multi-target statement adapter and candidate manifests "
+            "through the operation's own reviewed checker module and requires the "
+            "exact kernel-checked proof, dependency-free result, and matching "
+            "target definition"
+        )
     else:
         raise TransactionError("authoritative operation uses an unsupported driver")
     after_fact = json.loads(json.dumps(before_fact))
