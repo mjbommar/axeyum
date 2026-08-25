@@ -61,6 +61,164 @@ fn and_ty(d: &mut IntDev<'_>, p: CRealPrelude, left: ExprId, right: ExprId) -> E
     d.const_app(p.rat.int.logic.and, &[left, right])
 }
 
+/// `False.rec (fun _ => target) false_proof : target`.
+///
+/// A local copy of the identical private helper in `nat_prelude::fermat`,
+/// `nat_prelude::totient`, `nat_prelude::order_more`, and
+/// `nat_prelude::binomial` (each of those, in turn, a copy of the others) —
+/// adapted here to `IntDev` since this module builds over `IntDev`, not
+/// `NatDev`. Trivial enough (one `False.rec` application) that a fifth copy
+/// costs nothing next to threading a `NatDev`-specific dependency through the
+/// `creal` module boundary.
+#[allow(dead_code)] // staged for declare_kregular_sqrt_approx (Step A/B, not yet landed)
+fn ex_falso(d: &mut IntDev<'_>, p: CRealPrelude, target: ExprId, false_proof: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let nat = p.rat.int.nat;
+    let false_ty = d.kernel().const_(nat.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+    let level_zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(nat.logic.false_rec, vec![level_zero]);
+    d.apply(rec, &[motive, false_proof])
+}
+
+/// `h : Lt zero n ⊢ Eq n (succ (pred n))` — i.e. `1 ≤ n → n = succ (pred n)`
+/// (`Nat.lt zero n` is definitionally `Nat.le (succ zero) n = Nat.le 1 n`).
+///
+/// A local copy of `nat_prelude::finite::pos_implies_succ_pred` (itself
+/// duplicated in `fermat.rs` and `totient.rs` — this is the fourth copy, and
+/// per that helper's own doc comment, promoting it to a declared `Nat`
+/// theorem reachable outside `nat_prelude` is the right long-term fix, not
+/// attempted here). By induction on `n`: the base case is impossible via
+/// `not_lt_zero`; the successor case is `refl`, since `pred (succ m)` reduces
+/// to `m` definitionally. `n` may be any `Nat`-typed expression, not just a
+/// bound variable — `Nat.rec` does not require its target to reduce.
+#[allow(dead_code)] // staged for declare_kregular_sqrt_approx (Step A/B, not yet landed)
+fn one_le_implies_succ_pred(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let nat = p.rat.int.nat;
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let zero = d.zero();
+        let hyp = d.lt(zero, x);
+        let px = d.pred(x);
+        let spx = d.succ(px);
+        let concl = d.eq(x, spx);
+        d.arrow(hyp, concl)
+    };
+    d.induct(
+        &motive,
+        &|d: &mut IntDev<'_>| {
+            let zero = d.zero();
+            let hyp_ty = d.lt(zero, zero);
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+            let pz = d.pred(zero);
+            let spz = d.succ(pz);
+            let target_ty = d.eq(zero, spz);
+            let not_lt = d.lemma(nat.not_lt_zero, &[zero]);
+            let false_proof = d.apply(not_lt, &[hyp]);
+            let body = ex_falso(d, p, target_ty, false_proof);
+            d.lam_fv(hyp_fv, hyp_ty, body)
+        },
+        &|d: &mut IntDev<'_>, m: ExprId, _ih: ExprId| {
+            let sm = d.succ(m);
+            let zero = d.zero();
+            let hyp_ty = d.lt(zero, sm);
+            let hyp_fv = d.fresh_fvar();
+            let _hyp = d.kernel().fvar(hyp_fv);
+            let body = d.refl(sm);
+            d.lam_fv(hyp_fv, hyp_ty, body)
+        },
+        n,
+    )
+}
+
+/// Step A's Nat-level floor bracket (`docs/mathematics-2026-08/diary-creal-sqrt.md`):
+/// given a positive denominator `b` (`b_pos : Le one b`, e.g. `Rat.den_pos`)
+/// and a dividend `scaled`, writing `k := Nat.div scaled b` and
+/// `s := CReal.natSqrt k`, returns `s` together with
+///
+/// - `lower : Le (b*(s*s)) scaled`
+/// - `upper : Lt scaled (b*((succ s)*(succ s)))`
+///
+/// **Derivation.** `one_le_implies_succ_pred` turns `b_pos` (`Lt zero b`,
+/// definitionally `Le one b`) into `b = succ (pred b)`; rewriting
+/// `Nat.div_mod_exec (pred b) scaled` along that equality (in both the
+/// divisor position and inside the `div`/`mod` it names) gives `divMod b
+/// scaled k (Nat.mod scaled b)` with `k` and `Nat.mod scaled b` matching the
+/// `div`/`modulo` built directly from `b` — the rewrite target is chosen to
+/// land exactly there so no further massaging is needed. `Nat.div_mod_bounds`
+/// then gives `b*k ≤ scaled < b*(succ k)`. `natSqrtLe`/`natSqrtLt` give `s*s ≤
+/// k < (succ s)*(succ s)` i.e. `succ k ≤ (succ s)*(succ s)`; `mul_le_mul_left`
+/// scales both by `b` (`b*(s*s) ≤ b*k` and `b*(succ k) ≤ b*((succ
+/// s)*(succ s))`), and `le_trans`/`lt_of_lt_of_le` compose each with the
+/// `div_mod_bounds` half on the same side.
+#[allow(dead_code)] // staged for declare_kregular_sqrt_approx (Step A/B/C, not yet landed)
+fn nat_floor_bracket(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    b: ExprId,
+    b_pos: ExprId,
+    scaled: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let nat = p.rat.int.nat;
+
+    // b = succ (pred b).
+    let succ_pred_fn = one_le_implies_succ_pred(d, p, b);
+    let b_eq_succ_pred = d.apply(succ_pred_fn, &[b_pos]);
+    let pred_b = d.pred(b);
+    let sp = d.succ(pred_b);
+    let sp_eq_b = d.symm(b, sp, b_eq_succ_pred);
+
+    // The executable witness, stated at the successor-shaped divisor `sp`.
+    let exec = d.lemma(nat.div_mod_exec, &[pred_b, scaled]);
+    // exec : divMod sp scaled (Nat.div scaled sp) (Nat.mod scaled sp)
+
+    // Rewrite `sp` to `b` throughout, via `sp_eq_b : Eq sp b`.
+    let motive = d.eq_motive(sp, &|d, x| {
+        let q = NatOps::div(d, scaled, x);
+        let r = NatOps::modulo(d, scaled, x);
+        d.div_mod(x, scaled, q, r)
+    });
+    let relation = d.transport(sp, motive, exec, b, sp_eq_b);
+    // relation : divMod b scaled (Nat.div scaled b) (Nat.mod scaled b)
+
+    let k = NatOps::div(d, scaled, b);
+    let r = NatOps::modulo(d, scaled, b);
+    let bounds = d.lemma(nat.div_mod_bounds, &[b, scaled, k, r]);
+    let bounds = d.apply(bounds, &[relation]);
+    // bounds : And (Le (b*k) scaled) (Lt scaled (b*(succ k)))
+    let bk = d.mul(b, k);
+    let lower_ty = d.le(bk, scaled);
+    let succ_k = d.succ(k);
+    let b_succ_k = d.mul(b, succ_k);
+    let upper_ty = d.lt(scaled, b_succ_k);
+    let bounds_lower = d.and_left(lower_ty, upper_ty, bounds);
+    let bounds_upper = d.and_right(lower_ty, upper_ty, bounds);
+
+    let s = d.const_app(p.nat_sqrt, &[k]);
+    let ss = d.mul(s, s);
+    // s*s <= k
+    let sqrt_le = d.lemma(p.nat_sqrt_le, &[k]);
+    // k < (succ s)*(succ s), i.e. succ k <= (succ s)*(succ s)
+    let sqrt_lt = d.lemma(p.nat_sqrt_lt, &[k]);
+    let succ_s = d.succ(s);
+    let succ_s_sq = d.mul(succ_s, succ_s);
+
+    // b*(s*s) <= b*k <= scaled.
+    let b_ss = d.mul(b, ss);
+    let scale_lower = d.lemma(nat.mul_le_mul_left, &[b, ss, k, sqrt_le]);
+    let lower = d.lemma(nat.le_trans, &[b_ss, bk, scaled, scale_lower, bounds_lower]);
+
+    // scaled < b*(succ k) <= b*((succ s)*(succ s)).
+    let b_succ_s_sq = d.mul(b, succ_s_sq);
+    let scale_upper = d.lemma(nat.mul_le_mul_left, &[b, succ_k, succ_s_sq, sqrt_lt]);
+    let upper = d.lemma(
+        nat.lt_of_lt_of_le,
+        &[scaled, b_succ_k, b_succ_s_sq, bounds_upper, scale_upper],
+    );
+
+    (s, lower, upper)
+}
+
 /// From `h : Eq Bool b Bool.false`, derive `Not (Eq Bool b Bool.true)`.
 ///
 /// `b`'s two possible values are mutually exclusive
@@ -458,4 +616,113 @@ pub(super) fn declare_sqrt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     declare_nat_sqrt_le(d, p)?;
     declare_nat_sqrt_lt(d, p)?;
     declare_sqrt_approx(d, p)
+}
+
+#[cfg(test)]
+mod bridging_smoke_tests {
+    use super::*;
+    use crate::int_prelude::ops::IntDev;
+
+    /// Smoke-checks [`one_le_implies_succ_pred`] (the local copy of bridging
+    /// piece 1 from the sqrt route's "what is left" list) by wrapping it in
+    /// a declared theorem and letting the kernel accept or reject it —
+    /// building the Rust closures is not evidence the *term* is well-typed,
+    /// only `Kernel::add_declaration`'s trusted checker is.
+    #[test]
+    fn one_le_implies_succ_pred_type_checks() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let nat = d.nat_ty();
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+
+        let zero = d.zero();
+        let hyp = d.lt(zero, n);
+        let pn = d.pred(n);
+        let spn = d.succ(pn);
+        let concl = d.eq(n, spn);
+        let inner_ty = d.arrow(hyp, concl);
+
+        let body = one_le_implies_succ_pred(&mut d, p, n);
+
+        let value = d.lam_fv(n_fv, nat, body);
+        let ty = d.pi_fv(n_fv, nat, inner_ty);
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "sqrtSmokeOneLeImpliesSuccPred");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "one_le_implies_succ_pred must kernel-check: {:?}",
+            result.err()
+        );
+    }
+
+    /// Smoke-checks [`nat_floor_bracket`] (Step A's Nat-level core) at
+    /// symbolic `b`/`scaled`, with the hypothesis stated the way
+    /// [`crate::rat_prelude::ops::den_pos`] actually delivers it (`Le one
+    /// b`, not `Lt zero b`) — the real call site (`sqrtApprox`'s `den q`)
+    /// supplies exactly that shape, and `one_le_implies_succ_pred` expects
+    /// `Lt zero b`; this checks the kernel accepts the unfolding without an
+    /// explicit conversion step.
+    #[test]
+    fn nat_floor_bracket_type_checks() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let nat = d.nat_ty();
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let scaled_fv = d.fresh_fvar();
+        let scaled = d.kernel().fvar(scaled_fv);
+
+        let zero = d.zero();
+        let one = d.succ(zero);
+        let bpos_ty = d.le(one, b);
+        let bpos_fv = d.fresh_fvar();
+        let bpos = d.kernel().fvar(bpos_fv);
+
+        let (s, lower, upper) = nat_floor_bracket(&mut d, p, b, bpos, scaled);
+
+        let ss = d.mul(s, s);
+        let b_ss = d.mul(b, ss);
+        let lower_ty = d.le(b_ss, scaled);
+
+        let succ_s = d.succ(s);
+        let succ_s_sq = d.mul(succ_s, succ_s);
+        let b_succ_s_sq = d.mul(b, succ_s_sq);
+        let upper_ty = d.lt(scaled, b_succ_s_sq);
+
+        let body = and_intro(&mut d, p, lower_ty, upper_ty, lower, upper);
+        let concl_ty = and_ty(&mut d, p, lower_ty, upper_ty);
+
+        let with_bpos_value = d.lam_fv(bpos_fv, bpos_ty, body);
+        let with_bpos_ty = d.arrow(bpos_ty, concl_ty);
+        let with_scaled_value = d.lam_fv(scaled_fv, nat, with_bpos_value);
+        let with_scaled_ty = d.pi_fv(scaled_fv, nat, with_bpos_ty);
+        let value = d.lam_fv(b_fv, nat, with_scaled_value);
+        let ty = d.pi_fv(b_fv, nat, with_scaled_ty);
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "sqrtSmokeNatFloorBracket");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "nat_floor_bracket must kernel-check: {:?}",
+            result.err()
+        );
+    }
 }
