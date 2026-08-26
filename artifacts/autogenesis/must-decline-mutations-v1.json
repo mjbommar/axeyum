@@ -170,15 +170,32 @@
         "0 % 2": 0,
         "1 % 2": 1
       }
+    },
+    {
+      "fact_id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+      "partition": "development",
+      "family": "natural-binomial",
+      "mutation_of": "F:ml430-nat-choose-self-25bb9fb8",
+      "formal_statement": "∀ (n : ℕ), n.choose n = 0",
+      "mutation_kind": "polarity-reversal",
+      "claim": "false",
+      "check_kind": "choose_self_polarity_reversed",
+      "witness": {
+        "n": 0
+      },
+      "counterexample_explanation": "0 choose 0 is 1: selecting no elements from the empty set has exactly one witness, the empty selection. Therefore the claimed equality to 0 fails already at n = 0.",
+      "verified_value": {
+        "nat_choose(0,0)": 1
+      }
     }
   ],
   "independent_audit": {
     "date": "2026-08-22",
     "method": "each witness recomputed from scratch in plain Python using the language's own math.factorial / math.gcd / % / | / &, independently of the derivation that produced this file",
-    "positive_control": "12 known-answer cases (factorial 0 and 5, descFactorial 5 1, ascFactorial 1 3, fib 10, gcd 0 0, gcd 0 5, pred 2, 1|0, 1&0, 0%2, 1%2) all matched their expected values",
+    "positive_control": "13 known-answer cases (factorial 0 and 5, choose 0 0, descFactorial 5 1, ascFactorial 1 3, fib 10, gcd 0 0, gcd 0 5, pred 2, 1|0, 1&0, 0%2, 1%2) all matched their expected values",
     "negative_control": "the TRUE statement forall n, descFactorial n 0 = 1 yields zero counterexamples over n < 20 -- a method that refutes everything would prove nothing",
     "hypothesis_check": "two entries are implications whose witness must SATISFY the hypothesis before the conclusion can refute anything -- gcd(0,5) != 0 holds, and Prime 2 holds -- and both were confirmed rather than assumed",
-    "entries_refuted": 9,
+    "entries_refuted": 10,
     "disagreements": 0
   }
 }

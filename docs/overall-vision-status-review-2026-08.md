@@ -119,6 +119,10 @@ post-reconciliation population: 27 goals fail closed at statement import, and
 24 import but decline with `NoTypedApplication`; zero are accepted and no
 held-out capsule is accessed. This localizes the next work into two independent
 frontiers instead of treating 0/51 as one undifferentiated producer failure.
+Six of the 51 are independently refuted mutation controls (four importable,
+two import-rejected), leaving 20 importable and 25 import-rejected positive
+targets. Sound producer progress must never count acceptance of a control as
+conversion.
 
 The latest concurrent construction adds real axiom-free steps in the CReal
 Riemann-sum programme, Complex division algebra, and the Rat power/normal-form

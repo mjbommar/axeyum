@@ -7,6 +7,10 @@
       "NoTypedApplication": 24
     },
     "declined": 24,
+    "evaluation_classes": {
+      "must-decline-control": 6,
+      "positive-target": 45
+    },
     "excluded_held_out": 0,
     "import_rejected": 27,
     "population": 51,
@@ -16,6 +20,20 @@
       "Quot": 9,
       "dif_pos": 11,
       "propext": 1
+    },
+    "result_by_evaluation_class": {
+      "accepted": {
+        "must-decline-control": 0,
+        "positive-target": 0
+      },
+      "declined": {
+        "must-decline-control": 4,
+        "positive-target": 20
+      },
+      "import_rejected": {
+        "must-decline-control": 2,
+        "positive-target": 25
+      }
     }
   },
   "excluded_held_out_fact_ids": [],
@@ -25,6 +43,7 @@
     {
       "capsule_bytes": 399180,
       "capsule_sha256": "b3fa98f2c8a6486008bc79e48ac8b3f4c9e9eb01d21627e80c7239204e140c60",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -33,6 +52,7 @@
     {
       "capsule_bytes": 399181,
       "capsule_sha256": "50c3ee6d2bf715651c2b0a4bf25a3ba310400604b79af0e5b4a0a1349ada45f7",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -41,6 +61,7 @@
     {
       "capsule_bytes": 9836191,
       "capsule_sha256": "48b366c8483966dde112e765b58a36ab1dc49b626bf3157271d18707769a5a12",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-int-fib-add-181b6a2c",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -51,6 +72,7 @@
     {
       "capsule_bytes": 9835929,
       "capsule_sha256": "0a2576b799bb510266cc539e283a14a168cc30f5b0d933fa5f8ae44fd908fc5a",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-int-fib-two-mul-0e70f3dd",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -61,6 +83,7 @@
     {
       "capsule_bytes": 9841120,
       "capsule_sha256": "7f5cff249ce8c200c5ba5db56d2442e8caa96f63cae1d8b8fd9395a16209e3ac",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -71,6 +94,7 @@
     {
       "capsule_bytes": 9836026,
       "capsule_sha256": "61190007d8dce5a50e1b55eb71464ae71d4ea86e05da0dcfefce7d44a3738a78",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-int-fib-two-mul-add-two-0ba4a948",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -81,6 +105,7 @@
     {
       "capsule_bytes": 595403,
       "capsule_sha256": "1c4f220011cfcab9cfdaa397b702d1ce3342c131dfe64c91b2b023b85e2e337a",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -91,6 +116,7 @@
     {
       "capsule_bytes": 392964,
       "capsule_sha256": "6228e6b1f151b3e834e0cf7328b8f2d223babbbff5a13ba2a0e4190a3640ea6b",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-int-mod-modeq-6bec7847",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -99,6 +125,7 @@
     {
       "capsule_bytes": 409196,
       "capsule_sha256": "cfddd92fec5431ea21241fb357eef07f07228e8d141aa390c431d39169fbf146",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-int-modeq-sub-3148f130",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -107,6 +134,7 @@
     {
       "capsule_bytes": 393560,
       "capsule_sha256": "5f83f3e318c327983ee7c196f90674c4c6d2dd925021f5decd3ba92c4779a672",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -115,6 +143,7 @@
     {
       "capsule_bytes": 220939,
       "capsule_sha256": "d17ff0010101292d58e06e3b630ea03dd24c501c496de8d9c1c323cf8302c269",
+      "evaluation_class": "must-decline-control",
       "fact_id": "F:ml430-mutation-7afa5ec620720a1501bf349d",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -123,6 +152,7 @@
     {
       "capsule_bytes": 762278,
       "capsule_sha256": "f975b91d1bc5d03bb028a64524d145c97ca3ca3cfaa3a2f2783bdfe6fca31c61",
+      "evaluation_class": "must-decline-control",
       "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -133,6 +163,7 @@
     {
       "capsule_bytes": 393005,
       "capsule_sha256": "1d50769489e1959d09e84555748c0eb8b85ea0fc1141f0c0b672ddd2850591f2",
+      "evaluation_class": "must-decline-control",
       "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -141,6 +172,7 @@
     {
       "capsule_bytes": 515617,
       "capsule_sha256": "6b1680eb0e74cce8455145f4e9a5d43aaff28a466c3760b13ebb5e9e56ea282c",
+      "evaluation_class": "must-decline-control",
       "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -151,6 +183,7 @@
     {
       "capsule_bytes": 379988,
       "capsule_sha256": "a6315ac379629bbe05d9eedb89c40aaa9e5e717e019edaf37073b33c043a8d98",
+      "evaluation_class": "must-decline-control",
       "fact_id": "F:ml430-mutation-c86940b52af8159ca9b381d6",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -159,6 +192,7 @@
     {
       "capsule_bytes": 223616,
       "capsule_sha256": "8d32ac4322a331121c92db72438b9cca576f5167a3b2ec09bf50678af5502e7f",
+      "evaluation_class": "must-decline-control",
       "fact_id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -167,6 +201,7 @@
     {
       "capsule_bytes": 379914,
       "capsule_sha256": "86491871453070d6f17b3f5f8bc5a505d32a280f05e2f845d0daaff76c271fde",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -175,6 +210,7 @@
     {
       "capsule_bytes": 379915,
       "capsule_sha256": "80d6111af11f2a42525937da30e2cfa7df2301f423c380238b3ec6252bb61f52",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -183,6 +219,7 @@
     {
       "capsule_bytes": 223557,
       "capsule_sha256": "f172ac4da2c1e3bf380f220336378570d20f267df86e9ad67cc3f898322350c9",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-choose-le-add-9c463139",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -191,6 +228,7 @@
     {
       "capsule_bytes": 223485,
       "capsule_sha256": "d3a46369e4d57b388edbf51609e0d9bb1e491cbeef08063cf8909d6d9d2d3b46",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-choose-le-succ-62ae968b",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -199,6 +237,7 @@
     {
       "capsule_bytes": 804898,
       "capsule_sha256": "0bc4814e1d7455f0727261e19534a939ed1cd69835e39ccd572e07925cdb4f49",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-choose-mono-a1af9c18",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -209,6 +248,7 @@
     {
       "capsule_bytes": 223618,
       "capsule_sha256": "a77305147e5b0bcd5be6078cbf64556ddfc24883a72c4af3659efc896305ed18",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-choose-one-right-7eda8e39",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -217,6 +257,7 @@
     {
       "capsule_bytes": 223735,
       "capsule_sha256": "07647fb42b520f7b24c05a4e35b0936b4f11c8c29726b72189c0e45c0cd796eb",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-choose-symm-add-e4b68161",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -225,6 +266,7 @@
     {
       "capsule_bytes": 517185,
       "capsule_sha256": "0db1a60058b0021d4666f8c13b0f2bf90d636ca0f8b46ed13747721044ea5060",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -235,6 +277,7 @@
     {
       "capsule_bytes": 233954,
       "capsule_sha256": "46674b5b80df152df37c48994c74fa713d139f9b7e2c420cf1fe0c14e18867fc",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -243,6 +286,7 @@
     {
       "capsule_bytes": 228637,
       "capsule_sha256": "137aec6f44cff1c587f2ac266157735ab8ead3ac5449001b0d101e40541aba0e",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -251,6 +295,7 @@
     {
       "capsule_bytes": 239411,
       "capsule_sha256": "f59685fdfb4d3c3abd3bc6b09f5e8b2066bad01f8a2acfc720fba26d4de17e98",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -259,6 +304,7 @@
     {
       "capsule_bytes": 221932,
       "capsule_sha256": "ec21056a680f9c7b9bff103127a46bad74b9ef13f890e833734ca358a2022f38",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -267,6 +313,7 @@
     {
       "capsule_bytes": 1830589,
       "capsule_sha256": "41a72661251a6730aff597124ff014d998c783ffce48b5db236cf8acb4e0d41c",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -277,6 +324,7 @@
     {
       "capsule_bytes": 813126,
       "capsule_sha256": "7fa04ada34720f838f2bc571a2063671db93b7f396b98f37b1589511acf3f565",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -287,6 +335,7 @@
     {
       "capsule_bytes": 821989,
       "capsule_sha256": "8d10be4f79083e628b32afe803a96b3c66f7bc14f7df44a7a1c9676a359e5070",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-fib-strictmonoon-905810a9",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -297,6 +346,7 @@
     {
       "capsule_bytes": 751692,
       "capsule_sha256": "e4c55794209624d71509f57ffe4b4ca38bbcf9557c783dd640f3cfc865b43cb4",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-land-assoc-ad4775b8",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -307,6 +357,7 @@
     {
       "capsule_bytes": 756329,
       "capsule_sha256": "cdc73197d797427f230104d1216e4b8a74aa56e26900f98002eb5611daf40bcd",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-land-bit-b9ab7475",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -317,6 +368,7 @@
     {
       "capsule_bytes": 751482,
       "capsule_sha256": "c845fa2098fc234d53713e8f903ec2e58b3fa93d10d2f8fb3b97db73a6ebd1fa",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-land-comm-7e6ad72e",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -327,6 +379,7 @@
     {
       "capsule_bytes": 749371,
       "capsule_sha256": "e33bfdc847e394702f9d1b8dea548292ece99637d73a1de1d62b20f7ccf93d2e",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-ldiff-bit-6be49bb8",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -337,6 +390,7 @@
     {
       "capsule_bytes": 229823,
       "capsule_sha256": "cd63e187dd656829ada36a20642792435af80812075b55a8923f557e6a73bef1",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-le-fib-add-one-5284f0bf",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -345,6 +399,7 @@
     {
       "capsule_bytes": 751948,
       "capsule_sha256": "855708a36347f735bc2d4394a4acde6a67e48f838bf854837f44f0acf4054960",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-lor-assoc-82c4d0fd",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -355,6 +410,7 @@
     {
       "capsule_bytes": 755181,
       "capsule_sha256": "bca24bc3e307d670bce77998f3cb2a4b5f406d9b5c3fd284ad8204837b7b8d7c",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-lor-bit-a2f98c7c",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -365,6 +421,7 @@
     {
       "capsule_bytes": 751738,
       "capsule_sha256": "aba66123e61bbd62b899741f601199ac1635b7362571d63f297703c170611d3b",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-lor-comm-2666d7ef",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -375,6 +432,7 @@
     {
       "capsule_bytes": 379946,
       "capsule_sha256": "8451cbd9325ed1acb3573fcdab8276e38dea337bf554740d0d11702842c9d3f9",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-mod-modeq-436e4c10",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -383,6 +441,7 @@
     {
       "capsule_bytes": 379911,
       "capsule_sha256": "3816414b85576d4e70e6c4806155002083f6105c4d74af096f5fdcf962d4a09d",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-modeq-one-516d46e8",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -391,6 +450,7 @@
     {
       "capsule_bytes": 379837,
       "capsule_sha256": "4c077cb71f976a955f5ef6c8a9eff9136893262e3e4cf7c609b5d6c0b09f84b4",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -399,6 +459,7 @@
     {
       "capsule_bytes": 3741312,
       "capsule_sha256": "42ee29a1942dbb282b32400eac607b711d08fec0ef4986b120314c86f38a5249",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-multichoose-one-b210386a",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -409,6 +470,7 @@
     {
       "capsule_bytes": 3741312,
       "capsule_sha256": "5701c94b26a8c6de2cf78bd67aa2831fe915ca3b6dc9e58a00c81517f7c97453",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-multichoose-one-right-7755072d",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -419,6 +481,7 @@
     {
       "capsule_bytes": 3741316,
       "capsule_sha256": "add4de764f9aa6f39090f809ea7288cceca306d007908c7a9b5e7598cda45094",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-multichoose-zero-right-6ef827c8",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -429,6 +492,7 @@
     {
       "capsule_bytes": 516656,
       "capsule_sha256": "8e2ba4c431c73a0103f20294887b08e1935f688551a429756c5249f981e4c0ea",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -439,6 +503,7 @@
     {
       "capsule_bytes": 220641,
       "capsule_sha256": "a152289a763bf24d347f5f1b683d20def25f7edfe4f77c5fec5d330245eb1ff6",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-self-le-factorial-cfdffc69",
       "reason_kind": "NoTypedApplication",
       "result": "declined",
@@ -447,6 +512,7 @@
     {
       "capsule_bytes": 1840632,
       "capsule_sha256": "6542330737a48bbc0a2355ab98f3fa610db80514bef753fc8c179bd425b6614c",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-testbit-eq-inth-ffa07392",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -457,6 +523,7 @@
     {
       "capsule_bytes": 771276,
       "capsule_sha256": "6bb63854e0f7ccd7f79998de213306e02e761d136e40b5bc17c0324de774ae96",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -467,6 +534,7 @@
     {
       "capsule_bytes": 771841,
       "capsule_sha256": "441f234302db9cf934408daa782276bbe881bf98d84fb519371ed6c8d88d4f7d",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -477,6 +545,7 @@
     {
       "capsule_bytes": 780371,
       "capsule_sha256": "154e7cb62c5a12ac27e1743125669d0fccc09a50440863bd562ed6b7f6f75489",
+      "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-testbit-lor-7644e067",
       "reason_kind": "TrustedDeclarationInStatementClosure",
       "result": "import_rejected",
@@ -492,6 +561,10 @@
     "lean_version": "4.30.0",
     "mapping_sha256": "78ceebf4849689c0aa3b6b37b54aaf64df467c7e9e60f83a275462371c5d70e1",
     "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "must_decline_population": {
+      "path": "artifacts/autogenesis/must-decline-mutations-v1.json",
+      "sha256": "70d52bb9517419f0caf24958fa7f596bf8486cb3e6f293b673dbe16c486871af"
+    },
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "population_filter": {
       "path": "artifacts/autogenesis/open-ranked-proposition-census-v2.json",
