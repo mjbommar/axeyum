@@ -60,32 +60,62 @@
 //! circularity `geometric.rs`'s own module documentation names for the raw
 //! `pow half` sequence itself.
 //!
-//! **A genuinely new fact changes that module's own diagnosis, though.**
-//! `geometric.rs` names "no lemma bounding `CReal.pow` above by a
-//! `natDivSucc` rational" as one of three pieces missing to close
-//! `CReal.geom_cauchy` via `geom_pair_within` (`geom_tail_within_le` +
-//! `geom_pair_within` are landed there; the harmonic bound on the deferred
-//! `seq Yₘ b` leaf was the blocker). That bound **already exists** —
-//! `CRealPrelude::pow_half_le_nat_div_succ : ∀n, le (pow half n) (ofRat
-//! (natDivSucc 1 n))`, built in `geometric.rs` itself for the IVT bisection
-//! modulus (`ivt.rs`) — for the concrete base `1/2` this file needs. So
-//! `geom_pair_within`'s `Nat.le_total` split plus fusing its five leaves
-//! (including `seq Yₘ b`, `Yₘ := pow half m * inv (add one (neg half))`) is
-//! newly unblocked. It still goes through `CReal.inv`/`PosBound` to build
-//! `Yₘ` (`PosBound half 1` is easy — `half`'s own sample is the constant
-//! `1/2` — but it is `inv`, which the domination bound above deliberately
-//! never touches). Two live options for the next lane, neither attempted
-//! here: finish `geom_cauchy` through `inv` at this one concrete base (a
-//! bounded, contained use, not a new general reliance on `inv`), or build a
-//! from-scratch inv-free Cauchy witness directly off
-//! `sumRange_pow_half_closed_form` mirroring `series.rs`'s own
-//! index-bookkeeping. Either way, scaling the resulting `Cauchy (sumRange
-//! (pow half ·))` up to `Cauchy (sumRange expDominant)` (the `mul two`
-//! wrapper) is a further step, not free, because of the same `CReal.mul`
-//! index-shift.
+//! **A genuinely new fact changed that module's own diagnosis, and this
+//! file now closes `CReal.geom_cauchy` on it.** `geometric.rs` named "no
+//! lemma bounding `CReal.pow` above by a `natDivSucc` rational" as one of
+//! three pieces missing to close `CReal.geom_cauchy` via `geom_pair_within`
+//! (`geom_tail_within_le` + `geom_pair_within` are landed there; the
+//! harmonic bound on the deferred `seq Yₘ b` leaf was the blocker). That
+//! bound **already existed** — `CRealPrelude::pow_half_le_nat_div_succ :
+//! ∀n, le (pow half n) (ofRat (natDivSucc 1 n))`, built in `geometric.rs`
+//! itself for the IVT bisection modulus (`ivt.rs`) — for the concrete base
+//! `1/2` this file needs, and the other two pieces the old diagnosis named
+//! (a `pow`-at-two-bases comparison, a Bernoulli inequality) were never
+//! needed at all: the base-`1/2` route only ever needed the one harmonic
+//! bound.
 //!
-//! Separately, once *some* `Cauchy (sumRange expDominant)` witness exists (by
-//! either route above): `CReal.sumRange_cauchy_dominated_ordered_normalized`
+//! Three declarations close it, all below:
+//!
+//! - [`declare_geom_half_inv_leaf_bound`] (`CReal.geomHalfInvLeafBound`)
+//!   bounds the undischarged leaf `seq Yₘ b` in its full `CReal` form (`Yₘ ≤
+//!   2/(m+1)`, not yet sampled). This is the one place `CReal.inv`/`PosBound`
+//!   is used: `PosBound half 1` is `le_refl` at `half` itself (`half`'s own
+//!   sample is the constant `1/2`), transported to `PosBound (add one (neg
+//!   half)) 1` across `Equiv (add one (neg half)) half`
+//!   (`one_sub_half_equiv_half`, already built below); the `inv`-value
+//!   itself is pinned to the rational constant `2` by cancelling `half` from
+//!   both `Equiv (mul half (inv …)) one` (`mul_inv_cancel`) and `Equiv (mul
+//!   half (ofRat 2)) one` (a `Rat`-level computation, never
+//!   `Rat.normalize`'s `Nat.gcd`) via `le_of_mul_le_mul_left` run in both
+//!   directions plus `equiv_of_le_le` — never `inv_congr`. Multiplying
+//!   `pow_half_le_nat_div_succ` through by that constant `2` closes it.
+//!   Nothing downstream of this declaration touches `CReal.inv`/`PosBound`
+//!   again.
+//! - [`declare_geom_cauchy_ordered_half`] (`CReal.geomCauchyOrderedHalf`)
+//!   applies the leaf bound at index `b`, widens `geom_pair_within`'s two
+//!   `shift b` legs down to `b` (`Rat.natDivSucc_le_scaled`), and
+//!   reassociates + fuses the resulting seven-`natDivSucc` bound (fifteen
+//!   `Rat.add_assoc`/`Rat.add_comm`/`Rat.natDivSucc_add` steps, via
+//!   `series.rs`'s own `assoc_rev_eq`/`fuse_same_index`, made `pub(super)`
+//!   for this) down to `natDivSucc 7 b + natDivSucc 7 a` — `7` on the `b`
+//!   side exactly, `3` padded up to `7` on the `a` side by one
+//!   `Rat.natDivSucc_le_add_left`.
+//! - [`declare_geom_cauchy`] (`CReal.geomCauchy`, i.e. **`CReal.geom_cauchy`
+//!   itself**) runs the `Nat.le_total` split on top of that ordered bound,
+//!   verbatim in technique to
+//!   `series.rs::declare_sum_range_cauchy_of_dominated`'s own case split
+//!   (`within_symm` plus one `Rat.add_comm` rewrite in the `m ≤ n` branch,
+//!   none needed in the `n ≤ m` branch), with the fixed witness `K := 7` in
+//!   place of that theorem's `k + 8`, and needing no `Cauchy (sumRange g)`
+//!   hypothesis to eliminate (there is no `g` here) — `Cauchy (sumRange (fun
+//!   n => pow half n))`.
+//!
+//! **Scaling this up to `Cauchy (sumRange expDominant)`** (the `mul two`
+//! wrapper `expDominant` carries) is a further step, not free, because of
+//! `CReal.mul`'s own index shift (see below) — not attempted here.
+//!
+//! Separately, once *some* `Cauchy (sumRange expDominant)` witness exists:
+//! `CReal.sumRange_cauchy_dominated_ordered_normalized`
 //! (`series.rs`) already gives a raw, UNWRAPPED pointwise Cauchy-shaped bound
 //! for one ordered pair `a ≤ b` from exactly this kind of domination (`∀x, le
 //! (abs (f x)) (g x)`, plus a Cauchy witness for `sumRange g` in the same raw
@@ -118,12 +148,10 @@
 //! comparison, route (a)'s `CReal.pow` shape for everything built since.
 
 use super::series::{
-    assoc_rev_eq, chain_within3, exists_nat_intro, fuse_same_index, sum_range_cauchy_body,
-    within_symm,
+    assoc_rev_eq, exists_nat_intro, fuse_same_index, sum_range_cauchy_body, within_symm,
 };
 use super::{
-    CRealPrelude, DERIVED_HEIGHT, creal_ty, div_succ, embed, equiv, halves, modulus, sample, shift,
-    weaken, within,
+    CRealPrelude, DERIVED_HEIGHT, creal_ty, div_succ, embed, equiv, sample, shift, weaken, within,
 };
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -134,7 +162,7 @@ use crate::rat_prelude::RatPrelude;
 use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
     den, den_z, iregroup4, nat_rewrite_prop, normalize, num, radd, rat_eq_rewrite, rchain, rcongr,
-    rle, rmul, rone, rpow, rsymm, rzero,
+    rle, rmul, rone, rpow, rzero,
 };
 
 /// Height for `expTerm`/`expSeriesPartial`: both are thin definitional
@@ -2123,7 +2151,88 @@ fn declare_geom_cauchy_ordered_half(
     })
 }
 
-/// Admit `CReal.geom_half_inv_leaf_bound` and `CReal.geom_cauchy_ordered_half`.
+/// `CReal.geomCauchy`. See the field documentation
+/// ([`CRealPrelude::geom_cauchy`]) for the statement and the derivation —
+/// verbatim in *technique* to
+/// `series.rs::declare_sum_range_cauchy_of_dominated`'s own `Nat.le_total`
+/// case split, at the single fixed witness `K := 7` in place of that
+/// theorem's `k + 8`.
+fn declare_geom_cauchy(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let f = pow_half_fn(d, p);
+    let sum_f = d.const_app(p.sum_range, &[f]);
+    let target = d.const_app(p.cauchy, &[sum_f]);
+    let seven_nat = d.num(7);
+
+    let case_proof = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+
+        let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+        let sum_f_n = d.const_app(p.sum_range, &[f, n]);
+        let y_m = sample(d, p, sum_f_m, m);
+        let z_n = sample(d, p, sum_f_n, n);
+        let diff_mn = rsub(d, rat, y_m, z_n);
+        let bm = div_succ(d, p, 7, m);
+        let bn = div_succ(d, p, 7, n);
+        let bound_mn = radd(d, bm, bn);
+        let claim_mn = within(d, p, diff_mn, bound_mn);
+
+        let left_ty = d.le(m, n);
+        let right_ty = d.le(n, m);
+        let total_mn = {
+            let name = d.prelude().le_total;
+            d.const_app(name, &[m, n])
+        };
+
+        let body = d.or_elim(
+            left_ty,
+            right_ty,
+            claim_mn,
+            total_mn,
+            // m <= n: `geom_cauchy_ordered_half` at (a := m, b := n) gives
+            // `Within (z_n - y_m) (bn + bm)`; flip the difference, then
+            // reorder the bound.
+            &|d, hmn| {
+                let raw = d.lemma(p.geom_cauchy_ordered_half, &[m, n, hmn]);
+                let bn2 = div_succ(d, p, 7, n);
+                let bm2 = div_succ(d, p, 7, m);
+                let bound_nm = radd(d, bn2, bm2);
+                let flipped = within_symm(d, p, z_n, y_m, bound_nm, raw);
+                let comm_eq = d.lemma(rat.add_comm, &[bn2, bm2]);
+                rat_eq_rewrite(d, bound_nm, bound_mn, comm_eq, flipped, &|d, t| {
+                    within(d, p, diff_mn, t)
+                })
+            },
+            // n <= m: `geom_cauchy_ordered_half` at (a := n, b := m) lands
+            // exactly on `Within (y_m - z_n) (bm + bn)` -- no rewrite.
+            &|d, hnm| d.lemma(p.geom_cauchy_ordered_half, &[n, m, hnm]),
+        );
+        let over_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(m_fv, nat, over_n)
+    };
+
+    let predicate_f = {
+        let kf_fv = d.fresh_fvar();
+        let kf = d.kernel().fvar(kf_fv);
+        let body = sum_range_cauchy_body(d, p, sum_f, kf);
+        d.lam_fv(kf_fv, nat, body)
+    };
+    let target_proof = exists_nat_intro(d, p, predicate_f, seven_nat, case_proof);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_cauchy,
+        uparams: vec![],
+        ty: target,
+        value: target_proof,
+    })
+}
+
+/// Admit `CReal.geom_half_inv_leaf_bound`, `CReal.geom_cauchy_ordered_half`
+/// and `CReal.geom_cauchy`.
 ///
 /// # Errors
 ///
@@ -2134,5 +2243,6 @@ pub(super) fn declare_geom_cauchy_family(
     p: CRealPrelude,
 ) -> Result<(), KernelError> {
     declare_geom_half_inv_leaf_bound(d, p)?;
-    declare_geom_cauchy_ordered_half(d, p)
+    declare_geom_cauchy_ordered_half(d, p)?;
+    declare_geom_cauchy(d, p)
 }
