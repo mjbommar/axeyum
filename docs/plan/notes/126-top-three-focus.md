@@ -26,3 +26,14 @@ records the adjacent-step theorem. That pattern was subsequently extracted as
 the target-agnostic `Nat.monotone_of_le_succ` combinator. Production provenance
 still classifies the fact as `no_operation`, honestly separating checked
 mathematical compounding from autonomous production.
+
+## 2026-08-26 imported modular bridge assay
+
+The lane added a generic source-to-source imported-candidate transport probe
+and ran it over three frozen arithmetic `Nat.ModEq` goals. Six of eight public
+Mathlib shortcuts have a measured `propext` footprint, one axiom-free theorem
+has an incompatible closure, and reflexivity alone cannot close the goals.
+The resulting 0/3 census is gated and hash-binds the external 2.39 MiB capsule.
+It narrows the next construction to an empty-footprint behavioral theorem for
+the exact imported `Nat.mod` implementation; native relation theorems and
+assumption-bearing Mathlib shortcuts remain explicitly non-authoritative.

@@ -1199,6 +1199,13 @@ an authoritative operation and clean episode, then measure sibling conversion.
 The prerequisite candidate-capsule importer now keeps the target proof absent
 while independently admitting only the exact axiom-free candidate closures;
 the ordinary proof-isolated importer remains unchanged.
+The imported arithmetic bridge is now measured end to end on three frozen
+`Nat.ModEq` siblings. A reusable source-to-source candidate transport probe
+finds six public Mathlib shortcuts depend on `propext`, one axiom-free closure
+is not composable into the minimal target, and only reflexivity transports;
+bounded application converts 0/3. Next: prove one target-local, empty-footprint
+remainder behavior contract for the exact imported `Nat.mod` spine and require
+three sibling admissions before operation authority.
 The kernel projection now publishes both all-kind **direct** dependencies and
 proof-isolated direct **type** dependencies, additively beside theorem-only
 proof edges. The distinction was found before dispatch: a theorem's all-kind
