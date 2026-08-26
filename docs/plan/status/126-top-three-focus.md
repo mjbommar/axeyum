@@ -203,6 +203,12 @@ importable false controls remain rejected. Transport is no longer the dominant
 zero-conversion explanation. Next: extend the bounded application grammar
 against this immutable population, while tracking the 78 composition failures
 as a separate compatibility defect.
+The producer no longer erases retrieval priority by alphabetically sorting its
+input before spending the 128-term budget; it preserves caller ranking and
+deduplicates stably. The complete 51-goal artifact reproduces byte-for-byte
+with 0/24 conversion and identical telemetry. Candidate ordering was a latent
+policy defect, not this population's active limiter; do not spend the next
+increment tuning that budget.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
@@ -248,3 +254,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `9230d9666` | Reconcile six exact native propositions crash-safely, preserve zero production credit, and publish the clean 51-goal / zero-match remainder. |
 | 2026-08-26 | `2e060c8e6` | Add exact axiom-free native-candidate transport and demonstrate 8/12 ranked premises executable on a real imported modular goal. |
 | 2026-08-26 | `ba3f4acdd` | Expose native transport through Python and measure 210 executable ranked premises reaching 0/24 bounded-application conversion. |
+| 2026-08-26 | `2c86c0604` | Preserve ranked premise order through bounded search; the full census reproduces unchanged, ruling out alphabetical budget starvation as the active limiter. |

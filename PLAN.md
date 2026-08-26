@@ -143,6 +143,7 @@ now. Nothing was deleted.
 | 2026-08-26 | `9230d9666` | Reconcile six exact native propositions crash-safely, preserve zero production credit, and publish the clean 51-goal / zero-match remainder. |
 | 2026-08-26 | `2e060c8e6` | Add exact axiom-free native-candidate transport and demonstrate 8/12 ranked premises executable on a real imported modular goal. |
 | 2026-08-26 | `ba3f4acdd` | Expose native transport through Python and measure 210 executable ranked premises reaching 0/24 bounded-application conversion. |
+| 2026-08-26 | `2c86c0604` | Preserve ranked premise order through bounded search; the full census reproduces unchanged, ruling out alphabetical budget starvation as the active limiter. |
 | 2026-08-25 | `beb27f1ba` | **The trusted-core ceiling, raised the way the gate demanded.** Guard C failed at 5,508 past 5,500 with "say why before raising it." The baseline was RE-DERIVED by `git archive` rather than trusted, giving a per-file table summing to exactly +379 (`tc.rs` +347, `inductive.rs` +30, `env.rs` +2). Verdict: real and necessary — a universe-parameter closure fixing declarations **official Lean 4.30.0 refuses but this kernel wrongly admitted**, and `whnf_core` memoisation (138× cost, 1,857 s → 13.4 s) inside `def_eq`. Ceiling 5,900 with headroom matching the original's character; guard C re-verified to fire by injecting 500 lines in a scratch copy. The file's own comment said "5,110" where the real baseline was 5,129 — wrong from day one. |
 | 2026-08-25 | `0f2fb5fcd` | A doc line beginning with `+` is a Markdown list bullet, so ten `doc_list_item` errors pointed at ordinary prose one line below the cause. |
 | 2026-08-25 | `6de1d88f8` | Salvage: **the irrationality of √2** (`Nat.no_rational_sqrt_two`) and **`CReal.geom_tail_within`**, committed on behalf of two lanes killed mid-run by a spend limit. Both verified here: 695 tests, clippy `--all-targets`, axiom-free. |
@@ -1329,6 +1330,12 @@ importable false controls remain rejected. Transport is no longer the dominant
 zero-conversion explanation. Next: extend the bounded application grammar
 against this immutable population, while tracking the 78 composition failures
 as a separate compatibility defect.
+The producer no longer erases retrieval priority by alphabetically sorting its
+input before spending the 128-term budget; it preserves caller ranking and
+deduplicates stably. The complete 51-goal artifact reproduces byte-for-byte
+with 0/24 conversion and identical telemetry. Candidate ordering was a latent
+policy defect, not this population's active limiter; do not spend the next
+increment tuning that budget.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,

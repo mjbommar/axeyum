@@ -298,6 +298,12 @@ declined admission across the 24 importable goals. All 210 executable premises
 reached bounded application, which still returned `NoTypedApplication` on all
 24. Next priority is therefore the application grammar, with the 78 admission
 failures retained as a separate compatibility backlog.
+The application producer now preserves that deterministic ranked order rather
+than alphabetically resorting the candidates before spending its 128-term
+budget. Reproducing the complete census changes no outcome or telemetry, so
+alphabetical starvation was a real policy defect but not the current 0/24
+limiter. The next grammar work must add a genuinely missing proof construction,
+not another budget or ordering adjustment.
 
 ### Exit evidence
 
