@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 287] = [
+    let expected: [(&str, crate::NameId, &str); 288] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -847,6 +847,17 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // `Equiv`) into the explicit bound `UniformlyContinuousOn.spec`
         // needs as a hypothesis.
         ("CReal.equivAbsDiffLe", p.equiv_abs_diff_le, "theorem"),
+        // Roadmap step 1 toward `riemannSum_cauchy`'s common refinement
+        // (`creal/integral.rs`): `sumRange_reblock`'s raw global fine index
+        // sample point IS (an exact, UNCONDITIONAL `Equiv`) the local
+        // per-block sample point `fineBlockSum_close`'s own sum uses. Via
+        // `meshReciprocalMul`, `ofNat_add`/`ofNat_mul` and
+        // `mesh_count_width`.
+        (
+            "CReal.samplePoint_reblock",
+            p.sample_point_reblock,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel

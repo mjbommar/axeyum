@@ -2852,6 +2852,21 @@ pub struct CRealPrelude {
     /// the explicit bound `UniformlyContinuousOn.spec` needs as a
     /// hypothesis.
     pub equiv_abs_diff_le: NameId,
+    /// `CReal.samplePoint_reblock : ∀ a b : CReal, ∀ n m i j : Nat, Equiv
+    /// (sample_point a delta_m_prime globalIdx) (sample_point base_i
+    /// delta_fine j)` (`creal/integral.rs`) — roadmap step 1 toward
+    /// `riemannSum_cauchy`'s common refinement: `CReal.sumRange_reblock`'s
+    /// RAW global fine index sample point IS (an exact, UNCONDITIONAL
+    /// `Equiv`, no bound on `i`/`j` needed) the LOCAL per-block sample point
+    /// `CReal.fineBlockSum_close`'s own sum uses, `m_prime :=
+    /// ((n·m)+n)+m` ([`Self::mesh_reciprocal_mul`]'s own witness),
+    /// `globalIdx := Nat.add (Nat.mul (Nat.succ n) i) j`. Built from
+    /// [`Self::mesh_reciprocal_mul`] (the exact mesh identity),
+    /// [`Self::of_nat_add`]/[`Self::of_nat_mul`] (splitting the global
+    /// index) and [`Self::mesh_count_width`] (cancelling the `Nat.succ n`
+    /// factor). See `integral.rs`'s module documentation and this
+    /// declaration's own section header comment.
+    pub sample_point_reblock: NameId,
 }
 
 impl CRealPrelude {
@@ -3208,6 +3223,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         fine_sample_close: kernel.name_str(creal, "fineSample_close"),
         mesh_reciprocal_mul: kernel.name_str(creal, "meshReciprocalMul"),
         equiv_abs_diff_le: kernel.name_str(creal, "equivAbsDiffLe"),
+        sample_point_reblock: kernel.name_str(creal, "samplePoint_reblock"),
     }
 }
 
@@ -3407,6 +3423,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // not about a dependency.
         integral::declare_mesh_reciprocal_mul(&mut d, prelude)?;
         integral::declare_equiv_abs_diff_le(&mut d, prelude)?;
+        // `samplePoint_reblock` (roadmap step 1 toward `riemannSum_cauchy`'s
+        // common refinement) needs `meshReciprocalMul` (just above),
+        // `ofNat_add`/`ofNat_mul` (`integral::declare_of_nat_hom`, well
+        // above) and `mesh_count_width`
+        // (`monotone::declare_monotone_of_nonneg_deriv_all`, further above
+        // still), so it cannot land any earlier than this call site.
+        integral::declare_sample_point_reblock(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its
