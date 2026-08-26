@@ -1499,6 +1499,10 @@ unbounded bitwise theorem has received credit.
 The reifier's successor equation now also checks axiom-free, exposing the prefix
 plus one weighted digit as a stable induction interface. The round-trip theorem
 remains the next proof; implementation unfolding is no longer required.
+The Boolean digit map now round-trips through bit zero axiom-free. The kernel
+correctly rejected treating the one-bit weighted sum as definitionally equal to
+that digit, exposing weighted-sum normalization as the next arithmetic lemma
+instead of silently conflating the two.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

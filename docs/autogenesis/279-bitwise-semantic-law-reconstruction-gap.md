@@ -86,5 +86,12 @@ The reifier now exposes an axiom-free successor equation as well:
 induction interface for the missing round trip; consumers no longer need to
 unfold `sumRange` or depend on its implementation shape.
 
+The Boolean digit seam itself now round-trips too:
+`testBitBool (boolToBit b) 0 = b`, proved constructively by the two `Bool`
+cases with an empty footprint. An attempted jump directly to
+`reifyBits bits 1` was correctly rejected because weighted-sum normalization is
+not definitional for a symbolic bit. That arithmetic bridge remains explicit;
+the smaller Boolean theorem is retained rather than overstated.
+
 Run `just autogenesis-bitwise-semantic-law-demand` to validate the join and its
 negative controls.

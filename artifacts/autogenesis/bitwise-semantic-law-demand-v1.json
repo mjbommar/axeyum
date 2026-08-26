@@ -128,9 +128,12 @@
     "base_axiom_footprint_size": 0,
     "base_canonical_type": "((x0 : ((x0 : AxNat) -> Bool)) -> Eq.{1} AxNat (Axeyum.Autogenesis.reifyBits x0 AxNat.zero) AxNat.zero)",
     "base_theorem": "Axeyum.Autogenesis.reifyBits_zero",
+    "boolean_digit_roundtrip_axiom_footprint_size": 0,
+    "boolean_digit_roundtrip_canonical_type": "((x0 : Bool) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.boolToBit x0) AxNat.zero) x0)",
+    "boolean_digit_roundtrip_theorem": "Axeyum.Autogenesis.boolToBit_roundtrip_zero",
     "bitwise_definition": "Axeyum.Autogenesis.bitwiseReifyBounded",
     "definition": "Axeyum.Autogenesis.reifyBits",
-    "roundtrip_status": "missing",
+    "roundtrip_status": "boolean-digit-checked-weighted-sum-normalization-missing",
     "step_axiom_footprint_size": 0,
     "step_canonical_type": "((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : AxNat) -> Eq.{1} AxNat (Axeyum.Autogenesis.reifyBits x0 (AxNat.succ x1)) (AxNat.add (Axeyum.Autogenesis.reifyBits x0 x1) (AxNat.mul (Axeyum.Autogenesis.boolToBit (x0 x1)) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x1)))))",
     "step_theorem": "Axeyum.Autogenesis.reifyBits_succ"

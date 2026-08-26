@@ -479,6 +479,9 @@ The next proof obligation is precise: bounded observation round-trip below the
 chosen bit count, followed by a sufficient-bound argument for both inputs.
 The reifier now has clean base and successor equations, so that round-trip proof
 can proceed against a named induction interface rather than raw `sumRange`.
+The Boolean-to-digit map also round-trips at bit zero. The kernel rejected a
+direct definitional leap from `reifyBits bits 1`, so weighted-sum normalization
+is now an explicit arithmetic obligation rather than hidden conversion.
 
 ### Exit evidence
 
