@@ -134,10 +134,12 @@ use super::ring_helpers::right_distrib;
 use super::{
     CRealPrelude, and_intro, cadd, cle, clt, creal_ty, div_succ, embed, equiv, halves, sample,
 };
+use crate::BinderInfo;
 use crate::KernelError;
-use crate::env::Declaration;
+use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{nat_eq_to_rat, radd, rat_eq_rewrite, rle, rmul, rone, rzero};
 
@@ -150,7 +152,15 @@ use crate::rat_prelude::ops::{nat_eq_to_rat, radd, rat_eq_rewrite, rle, rmul, ro
 pub(super) fn declare_ivt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_ivt_step(d, p)?;
     declare_ivt_iter(d, p)?;
-    declare_ivt_approx(d, p)
+    declare_ivt_approx(d, p)?;
+    // The data-valued bisection (see this file's module documentation,
+    // "Data-valued bisection" and `docs/mathematics-2026-08/diary-exact-root-
+    // obstruction.md`) -- needs nothing beyond `ivt_step`/`ivt_iter`'s own
+    // dependencies (`lt_cotrans` is NOT needed here: the branch is read off
+    // `Rat.ble`, not `lt_cotrans`).
+    declare_ivt_bisect(d, p)?;
+    declare_ivt_bisect_lo(d, p)?;
+    declare_ivt_bisect_hi(d, p)
 }
 
 // --- small shared idiom (private to this module, per the codebase's own
@@ -2099,4 +2109,278 @@ fn declare_ivt_approx(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelE
         ty,
         value,
     })
+}
+
+// =============================================================================
+// `CReal.ivt_bisect` -- a DATA-VALUED bisection, replacing the `Exists`-
+// wrapped `ivt_iter` above. See `docs/mathematics-2026-08/diary-exact-root-
+// obstruction.md` for why the existential route is dead (two independent
+// obstructions), and `CRealPrelude::ivt_bisect`'s own doc comment in
+// `creal.rs` for the three design decisions this construction makes:
+//
+//   1. `eps` is the explicit `Nat` `n` (`eps_n := ofRat (natDivSucc 1 n)`),
+//      not an arbitrary `CReal` -- a real carries no `Nat` a construction
+//      could sample at.
+//   2. The per-step branch is read off a RATIONAL sample of `F m` via
+//      `Rat.ble`, a genuine `Bool`, at the FIXED index `j := succ (2*n)`
+//      (the same `j` at every step -- the slack `eps_n` never shrinks,
+//      matching `ivt_iter`, not `ivt_approx`'s per-accuracy schedule).
+//   3. The bracket carrier is `Bool → CReal`, not a new `Prod`/`Sigma` (this
+//      kernel has neither) and not two independently-recursing functions
+//      (which would need the identical pairing anyway, since each step's
+//      midpoint needs BOTH current endpoints). One `Nat.rec` computes the
+//      pair; `ivt_bisect_lo`/`ivt_bisect_hi` are its two projections.
+//
+// Sampling-index derivation (the "sufficiently precise" question): write
+// `eps_n := ofRat (natDivSucc 1 n)` and `j := succ (2*n)`. By
+// `Rat.natDivSucc_halve n : Eq (natDivSucc 2 j) (natDivSucc 1 n)`,
+// `thresh := natDivSucc 1 j` satisfies `thresh + thresh ~ eps_n` -- i.e.
+// `thresh = eps_n / 2` exactly (the same "Bishop shift 2n+1" identity
+// `sgn_eps_of`/`sgn_eps_double_eq_target` above already package for
+// `ivt_approx`, reused here as pure arithmetic; this slice does not yet
+// PROVE the invariant, so `sgn_eps_of`'s own positivity/doubling proofs are
+// not invoked, only its index shape). Given `s := seq (F m) j`:
+//
+//   - `CReal.rat_approx_upper (F m) j : le (F m) (ofRat (add s (natDivSucc 1
+//     j)))`, i.e. `F m ≤ s + thresh`. If `Rat.ble s thresh = true` (`s ≤
+//     thresh`), `F m ≤ thresh + thresh = eps_n` -- the "F m < eps" branch,
+//     bracket `(m, hi)`.
+//   - `CReal.rat_approx_lower (F m) j : le (ofRat (sub s (natDivSucc 1 j)))
+//     (F m)`, i.e. `s − thresh ≤ F m`. If `Rat.ble s thresh = false`, `s >
+//     thresh` (from `Rat.ble`'s spec plus totality), so `F m ≥ s − thresh >
+//     0 > −eps_n` -- the "−eps < F m" branch, bracket `(lo, m)`. (This
+//     branch's bound is in fact stronger than the invariant needs; the test
+//     only has to be SOUND for `ivt_step`'s six-part invariant, not tight.)
+//
+// This derivation is recorded here for the Step 3 invariant proof (not
+// attempted in this slice); this file only builds the COMPUTATION.
+// =============================================================================
+
+/// `j := succ (2*n)`, `thresh := Rat.natDivSucc 1 j` -- the fixed sampling
+/// index and branch threshold for a bisection at slack index `n`. See this
+/// section's module documentation for why `thresh` is exactly half of
+/// `eps_n := ofRat (natDivSucc 1 n)`.
+fn bisect_sample_index(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> (ExprId, ExprId) {
+    let two_nat = d.num(2);
+    let two_n = d.mul(two_nat, n);
+    let j = d.succ(two_n);
+    let thresh = div_succ(d, p, 1, j);
+    (j, thresh)
+}
+
+/// `m := lo + (hi − lo) * (1/2)` -- exact midpoint, the same construction
+/// [`declare_ivt_step`]'s own `m` uses.
+fn midpoint(d: &mut IntDev<'_>, p: CRealPrelude, lo: ExprId, hi: ExprId) -> ExprId {
+    let neg_lo = cneg(d, p, lo);
+    let width = cadd(d, p, hi, neg_lo);
+    let one_nat = d.num(1);
+    let (half, _half_nonneg) = nonneg_rat_bound(d, p, 1, one_nat);
+    let width_half = cmul(d, p, width, half);
+    cadd(d, p, lo, width_half)
+}
+
+/// `Bool.rec (fun _ => CReal) on_false on_true condition` -- the `if
+/// condition then on_true else on_false` idiom at `CReal` (`Sort 1`, hence
+/// `level_one()`). A copy of [`NatOps::bool_select_nat`]'s pattern with the
+/// target type generalized from the hardcoded `Nat` to `carrier` (`Nat` and
+/// `CReal` happen to share the same sort, which is why the level argument is
+/// unchanged, not because the two targets are otherwise related).
+fn bool_select_creal(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    condition: ExprId,
+    on_true: ExprId,
+    on_false: ExprId,
+) -> ExprId {
+    let bool_ty = d.bool_ty();
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, bool_ty, carrier, BinderInfo::Default);
+    let one = d.level_one();
+    let bool_rec = p.rat.int.logic.bool_rec;
+    let rec = d.kernel().const_(bool_rec, vec![one]);
+    d.apply(rec, &[motive, on_false, on_true, condition])
+}
+
+/// `Nat.rec.{1} motive base step target` -- the TYPE-valued analogue of
+/// [`NatOps::induct`] (which hardcodes `level_zero`, i.e. is `Prop`-only).
+/// Needed for `ivt_bisect`'s motive `fun _ : Nat => Bool → CReal`, a `Sort
+/// 1` family: legal unconditionally, since `Nat`'s OWN sort is nonzero, per
+/// `inductive.rs`'s `allows_large_elimination` rule (see this file's
+/// top-of-module documentation and the diary this slice starts from).
+fn data_induct(
+    d: &mut IntDev<'_>,
+    motive_body: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+    base: &dyn Fn(&mut IntDev<'_>) -> ExprId,
+    step: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId,
+    target: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let body = motive_body(d, x);
+        d.lam_fv(x_fv, nat, body)
+    };
+    let base_term = base(d);
+    let step_term = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let hyp_ty = motive_body(d, j);
+        let body = step(d, j, ih);
+        let inner = d.lam_fv(ih_fv, hyp_ty, body);
+        d.lam_fv(j_fv, nat, inner)
+    };
+    let one = d.level_one();
+    let name = d.prelude().rec;
+    let rec = d.kernel().const_(name, vec![one]);
+    d.apply(rec, &[motive, base_term, step_term, target])
+}
+
+/// `CReal.ivt_bisect` -- see this section's module documentation and
+/// [`super::CRealPrelude::ivt_bisect`]'s own doc comment for the statement
+/// and the three design decisions.
+fn declare_ivt_bisect(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let bracket_ty = d.arrow(bool_ty, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let cp0_fv = d.fresh_fvar();
+    let cp0 = d.kernel().fvar(cp0_fv);
+    let cq0_fv = d.fresh_fvar();
+    let cq0 = d.kernel().fvar(cq0_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let (sample_idx, thresh_rat) = bisect_sample_index(d, p, n);
+
+    let motive_body = |d: &mut IntDev<'_>, _x: ExprId| -> ExprId { d.arrow(bool_ty, carrier) };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        // b = true -> hi = cq0; b = false -> lo = cp0.
+        let body = bool_select_creal(d, p, carrier, b, cq0, cp0);
+        d.lam_fv(b_fv, bool_ty, body)
+    };
+
+    let step = |d: &mut IntDev<'_>, _j: ExprId, ih: ExprId| -> ExprId {
+        let lo = {
+            let fls = d.bool_false();
+            d.apply(ih, &[fls])
+        };
+        let hi = {
+            let tru = d.bool_true();
+            d.apply(ih, &[tru])
+        };
+        let m = midpoint(d, p, lo, hi);
+        let fm = d.apply(f, &[m]);
+        let s = sample(d, p, fm, sample_idx);
+        // br = true  <->  s <= thresh  <->  (derivable) F m <= eps_n
+        // br = false <->  s >  thresh  <->  (derivable) F m >  0 > -eps_n
+        let br = d.const_app(p.rat.ble, &[s, thresh_rat]);
+        // br=true: F m is small (<= eps_n), so the new bracket is (m, hi);
+        // br=false: F m is large (> 0 > -eps_n), so the new bracket is
+        // (lo, m). See this section's module documentation for the proof
+        // sketch relating `br` to the `ivt_step` branch it mirrors.
+        let new_lo = bool_select_creal(d, p, carrier, br, m, lo);
+        let new_hi = bool_select_creal(d, p, carrier, br, hi, m);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let body = bool_select_creal(d, p, carrier, b, new_hi, new_lo);
+        d.lam_fv(b_fv, bool_ty, body)
+    };
+
+    let bracket = data_induct(d, &motive_body, &base, &step, k);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, bracket);
+        let with_n = d.lam_fv(n_fv, nat, with_k);
+        let with_cq0 = d.lam_fv(cq0_fv, carrier, with_n);
+        let with_cp0 = d.lam_fv(cp0_fv, carrier, with_cq0);
+        d.lam_fv(f_fv, fn_ty, with_cp0)
+    };
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, bracket_ty);
+        let with_n = d.pi_fv(n_fv, nat, with_k);
+        let with_cq0 = d.pi_fv(cq0_fv, carrier, with_n);
+        let with_cp0 = d.pi_fv(cp0_fv, carrier, with_cq0);
+        d.pi_fv(f_fv, fn_ty, with_cp0)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.ivt_bisect,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(super::DERIVED_HEIGHT + 60),
+    })
+}
+
+/// Shared body for [`declare_ivt_bisect_lo`]/[`declare_ivt_bisect_hi`]:
+/// `fun F P Q n k => ivt_bisect F P Q n k selector`.
+fn declare_ivt_bisect_projection(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    name: NameId,
+    height: u16,
+    which: bool,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let cp0_fv = d.fresh_fvar();
+    let cp0 = d.kernel().fvar(cp0_fv);
+    let cq0_fv = d.fresh_fvar();
+    let cq0 = d.kernel().fvar(cq0_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let selector = if which { d.bool_true() } else { d.bool_false() };
+    let bisect = d.kernel().const_(p.ivt_bisect, vec![]);
+    let applied = d.apply(bisect, &[f, cp0, cq0, n, k, selector]);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, applied);
+        let with_n = d.lam_fv(n_fv, nat, with_k);
+        let with_cq0 = d.lam_fv(cq0_fv, carrier, with_n);
+        let with_cp0 = d.lam_fv(cp0_fv, carrier, with_cq0);
+        d.lam_fv(f_fv, fn_ty, with_cp0)
+    };
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, carrier);
+        let with_n = d.pi_fv(n_fv, nat, with_k);
+        let with_cq0 = d.pi_fv(cq0_fv, carrier, with_n);
+        let with_cp0 = d.pi_fv(cp0_fv, carrier, with_cq0);
+        d.pi_fv(f_fv, fn_ty, with_cp0)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(height),
+    })
+}
+
+/// `CReal.ivt_bisect_lo := fun F P Q n k => ivt_bisect F P Q n k Bool.false`.
+fn declare_ivt_bisect_lo(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_ivt_bisect_projection(d, p, p.ivt_bisect_lo, super::DERIVED_HEIGHT + 61, false)
+}
+
+/// `CReal.ivt_bisect_hi := fun F P Q n k => ivt_bisect F P Q n k Bool.true`.
+fn declare_ivt_bisect_hi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_ivt_bisect_projection(d, p, p.ivt_bisect_hi, super::DERIVED_HEIGHT + 61, true)
 }
