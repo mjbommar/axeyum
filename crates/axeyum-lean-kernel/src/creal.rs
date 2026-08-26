@@ -2582,6 +2582,20 @@ pub struct CRealPrelude {
     /// `monotone::declare_monotone_of_nonneg_deriv_all` (for
     /// `CReal.subdivisionPoint_in_bounds`).
     pub fine_sample_in_bounds: NameId,
+    /// `CReal.fineSample_close : ∀ F a b e m n i j, le a b →
+    /// UniformlyContinuousOn F a b → Nat.le i m → Nat.lt j (Nat.succ n) →
+    /// Nat.le deep m → close_within (F fine_j) (F base_i) (Rat.natDivSucc 1
+    /// e)`, `deep := (Nat.succ (bound (add b (neg a))))·(modulus F a b u e)
+    /// plus bound (add b (neg a))` (`creal/integral.rs`) — roadmap step 2
+    /// toward `riemannSum_cauchy`: EVERY fine sample point inside coarse
+    /// block `i` is within `1/(e+1)` of that block's own coarse value
+    /// `F(base_i)`, once the coarse block count `m` clears the Archimedean
+    /// threshold `deep` relative to `F`'s modulus of uniform continuity at
+    /// target precision `e`. Built from [`Self::mesh_le_of_ge`],
+    /// [`Self::fine_sample_in_bounds`], `UniformlyContinuousOn.spec`, and
+    /// the private `sample_offset_bound` (`creal/integral.rs`). See that
+    /// file's own module documentation for the derivation.
+    pub fine_sample_close: NameId,
 }
 
 impl CRealPrelude {
@@ -2918,6 +2932,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
         fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
+        fine_sample_close: kernel.name_str(creal, "fineSample_close"),
     }
 }
 
@@ -3067,6 +3082,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // declared yet there). See `integral.rs`'s module documentation for
         // what this bridges toward `riemannSum_cauchy`.
         integral::declare_fine_sample_in_bounds(&mut d, prelude)?;
+        // `fineSample_close` (roadmap step 2 toward `riemannSum_cauchy`)
+        // needs `fineSample_in_bounds` (just above), `mesh_le_of_ge`
+        // (`integral::declare_integral`, well above) and
+        // `UniformlyContinuousOn.spec`/`.modulus`
+        // (`uniform_continuity::declare_uniform_continuity`, further above
+        // still), so it cannot land any earlier than this call site.
+        integral::declare_fine_sample_close(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its
