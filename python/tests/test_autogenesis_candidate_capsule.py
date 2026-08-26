@@ -2,18 +2,9 @@
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
-SPEC = importlib.util.spec_from_file_location(
-    "candidate_capsule",
-    ROOT / "scripts/materialize-autogenesis-candidate-capsule.py",
-)
-assert SPEC and SPEC.loader
-CAPSULE = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(CAPSULE)
+from axeyum import autogenesis_candidate_capsule as CAPSULE
 
 
 class CandidateCapsuleTests(unittest.TestCase):

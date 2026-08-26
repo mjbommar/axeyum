@@ -523,19 +523,19 @@ autogenesis-ranked-proposition-census:
     python3 scripts/gen-autogenesis-ranked-proposition-census.py --ranking artifacts/autogenesis/open-lemma-candidate-ranking-post-reconciliation-v1.json --output artifacts/autogenesis/open-ranked-proposition-census-v2.json --allow-population-subset --check
 
 autogenesis-open-fixed-palette-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-fixed-palette-census-v2.json --check
 
 autogenesis-open-ranked-application-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --ranking artifacts/autogenesis/open-lemma-candidate-ranking-v1.json --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-ranked-application-census-v1.json --check
 
 autogenesis-open-ranked-transport-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --ranking artifacts/autogenesis/open-lemma-candidate-ranking-v1.json --transport-native-candidates --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-ranked-transport-application-census-v1.json --check
 
 autogenesis-open-ranked-transport-induction-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_rewrite_support_ranking
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_rewrite_support_ranking
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --ranking artifacts/autogenesis/open-lemma-rewrite-support-ranking-v1.json --transport-native-candidates --retrieved-induction --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-ranked-transport-induction-census-v1.json --check
 
 autogenesis-retrieved-induction-obstructions:
@@ -605,12 +605,12 @@ autogenesis-imported-definition-descriptor stream="/nas3/data/axeyum/autogenesis
     cargo run -q -p axeyum-lean-import --example imported_definition_descriptor -- "{{ stream }}" "{{ name }}"
 
 autogenesis-non-equality-terminal-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_non_equality_population
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_non_equality_population
     python3 scripts/gen-autogenesis-non-equality-population.py --check
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/non-equality-terminal-population-v1.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --ranking artifacts/autogenesis/open-lemma-rewrite-support-ranking-v1.json --transport-native-candidates --retrieved-induction --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/non-equality-retrieved-induction-census-v1.json --check
 
 autogenesis-open-modeq-family-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --modeq-family --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-modeq-family-census-v1.json --check
 
 autogenesis-proposition-reconciliation-proposals:
@@ -633,11 +633,11 @@ autogenesis-kernel-lemma-index:
 # Requires the installed Python extension because the census runs the real
 # Rust producer and independently admits every accepted term in the kernel.
 autogenesis-bounded-application-census:
-    uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_bounded_application_census
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_bounded_application_census
     uv run --no-sync python scripts/gen-autogenesis-bounded-application-census.py --check
 
 autogenesis-candidate-capsule-controls:
-    uv run --no-sync python -m unittest scripts.tests.test_materialize_autogenesis_candidate_capsule
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_candidate_capsule
 
 autogenesis-obstruction-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection

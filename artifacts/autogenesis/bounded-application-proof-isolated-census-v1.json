@@ -150,12 +150,12 @@
   ],
   "census": {
     "accepted": 6,
-    "conversion_percent": 5.5,
+    "conversion_percent": 5.4,
     "decline_reasons": {
-      "NoTypedApplication": 103
+      "NoTypedApplication": 105
     },
-    "declined": 103,
-    "population": 109
+    "declined": 105,
+    "population": 111
   },
   "kind": "axeyum-bounded-application-proof-isolated-census",
   "outcomes": [
@@ -439,21 +439,34 @@
         "Eq",
         "Nat",
         "Nat.choose",
-        "Nat.choose_succ_succ",
         "Nat.monotone_of_le_succ",
         "Nat.succ",
         "Nat.zero"
       ],
-      "fact_id": "F:nat-choose-self",
-      "premise_declarations": [
-        "Nat.choose_succ_succ"
-      ],
-      "premise_fact_ids": [
-        "F:nat-choose-succ-succ"
-      ],
+      "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
       "reason_kind": "NoTypedApplication",
       "result": "declined",
       "theorem": "Nat.choose_self"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.choose",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
+      "premise_declarations": [],
+      "premise_fact_ids": [
+        "F:ml430-nat-choose-eq-zero-of-lt-92ebab29"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.choose_succ_self_eq_zero"
     },
     {
       "candidate_declarations": [
@@ -464,7 +477,7 @@
         "Nat.monotone_of_le_succ",
         "Nat.succ"
       ],
-      "fact_id": "F:nat-choose-succ-succ",
+      "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
       "premise_declarations": [],
       "premise_fact_ids": [],
       "reason_kind": "NoTypedApplication",
@@ -537,7 +550,7 @@
         "Nat.succ",
         "Nat.zero"
       ],
-      "fact_id": "F:nat-choose-zero-right",
+      "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
       "premise_declarations": [],
       "premise_fact_ids": [],
       "reason_kind": "NoTypedApplication",
@@ -2084,27 +2097,13 @@
         "Nat",
         "Nat.factorial",
         "Nat.le",
-        "Nat.le_add_right",
-        "Nat.le_succ_succ",
         "Nat.monotone_of_le_succ",
-        "Nat.one_le_mul",
         "Nat.succ",
-        "Nat.zero",
-        "Nat.zero_le"
+        "Nat.zero"
       ],
-      "fact_id": "F:nat-one-le-factorial",
-      "premise_declarations": [
-        "Nat.le_add_right",
-        "Nat.le_succ_succ",
-        "Nat.one_le_mul",
-        "Nat.zero_le"
-      ],
-      "premise_fact_ids": [
-        "F:nat-le-add-right",
-        "F:nat-le-succ-succ",
-        "F:nat-one-le-mul",
-        "F:nat-zero-le"
-      ],
+      "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
       "reason_kind": "NoTypedApplication",
       "result": "declined",
       "theorem": "Nat.one_le_factorial"
@@ -2449,6 +2448,22 @@
       "reason_kind": "NoTypedApplication",
       "result": "declined",
       "theorem": "Nat.zero_add"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.choose",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.zero_choose_succ"
     },
     {
       "candidate_declarations": [

@@ -161,9 +161,7 @@ def test_retrieved_induction_uses_only_explicit_declarations(
     with pytest.raises(P.Declined):
         P.propose_bounded_induction(nat_kernel, goal)
     add_comm = nat_kernel.name("Nat.add_comm", must_exist=True)
-    candidate = P.propose_bounded_induction_with_rewrites(
-        nat_kernel, goal, [add_comm, add_comm]
-    )
+    candidate = P.propose_bounded_induction_with_rewrites(nat_kernel, goal, [add_comm, add_comm])
     admitted = nat_kernel.name("Axeyum.Test.RetrievedAddComm", must_exist=False)
     nat_kernel.add_declaration(Declaration.theorem(admitted, [], goal, candidate.proof))
     assert nat_kernel.axiom_footprint(admitted) == []
