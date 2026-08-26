@@ -1091,6 +1091,14 @@ including one that corrected a design note and redirected a whole line of work.
 A wrong brief with an escape hatch is recoverable; one that demands success is
 not.
 
+**Turn the architecture review into executable product increments** (`WIP`,
+top-three-focus, 2026-08-25). The durable plan is
+[`../../top-three-focus-plan-2026-08.md`](docs/top-three-focus-plan-2026-08.md).
+The first increment separates production episodes from fixtures and derives a
+kernel-authoritative lemma/dependency/fact search index. Next: expose typed,
+deterministic retrieval to the general producer and measure whether it closes
+new sibling facts without per-target proof code.
+
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
 F1 is complete: the two authoritative multi-target operations have nine applicable facts, all nine have explicitly partial concept/encounter mappings, and seven evidence credits are checked against their fact records (the other two were settled by earlier one-target operations).
