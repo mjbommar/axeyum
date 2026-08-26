@@ -67,6 +67,15 @@ Lean goals in train/development with 1,704 proof-isolated kernel-lemma rows; all
 lexical/type/graph score is retrieval context only. Its broad ties demonstrate
 the next need: exact type compatibility and bounded application over ranked
 candidates, with no fuzzy match receiving fact or operation authority.
+The import boundary now also exposes checked cross-kernel compatibility for two
+closed proposition expressions. It translates by exact declaration identity,
+re-infers in a private target clone, and requires target-kernel definitional
+equality; unlike declaration-type reuse it therefore cannot mistake two
+proof-free `definition : Prop := ...` goals as equal merely because both outer
+types are `Prop`. This is diagnostic candidate filtering only: it reads no
+proof, mutates neither kernel, and grants no fact or admission authority. Next:
+measure ranked native candidates against train/development imported goals and
+publish the match and decline distribution before registering any operation.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
@@ -100,3 +109,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `1d4eed93a` | Regenerate the merged theorem graph at 1,250 theorems and 7,184 direct edges after concurrent CReal construction. |
 | 2026-08-26 | `eb38cf63a` | Exclude 23 held-out goals before open-census capsule access, disclose the superseded contaminated run, and remeasure 0/57 train/development conversion. |
 | 2026-08-26 | `680952a5d` | Rank 1,704 proof-isolated kernel-lemma candidates for 142 train/development open goals while excluding all 37 held-out IDs before statement tokenization. |
+| 2026-08-26 | `2b6020af2` | Compare closed propositions across independently owned kernels without confusing their shared outer `Prop` type or granting proof/admission authority. |
