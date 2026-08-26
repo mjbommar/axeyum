@@ -2203,6 +2203,49 @@ pub struct CRealPrelude {
     /// handoff plan named.
     pub monotone_of_nonneg_deriv: NameId,
 
+    /// `CReal.strict_mono_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F F' a b
+    /// → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∀ x y, le a x → lt x y → le y b → lt (F x) (F y)` (`creal/monotone.rs`)
+    /// — the STRICT companion of [`Self::monotone_of_nonneg_deriv`]: a
+    /// derivative *uniformly bounded away from zero* by `1/(k+1)` on `[a,b]`
+    /// makes `F` strictly increasing there, given a strict input gap
+    /// (`lt x y`, not merely `le x y` — the conclusion is false at a
+    /// degenerate `x ~ y`, so this is genuinely required, not a convenience).
+    ///
+    /// The hypothesis is a `Nat`-indexed UNIFORM bound (`PosBound (F' z) k`'s
+    /// own shape, spelled out rather than named) rather than the pointwise
+    /// `∀ z, lt zero (F' z)`: the pointwise form hands a *different* rational
+    /// witness at every `z`, and nothing in this development extracts one
+    /// witness usable across an entire subdivision from that (no compactness
+    /// argument exists here, deliberately — see the module documentation for
+    /// why this is the honest choice, not a weakening).
+    ///
+    /// Built by halving the given bound (`CReal.strict_mono_of_pos_deriv`'s
+    /// own module doc: `Rat.natDivSucc_halve` + `Rat.natDivSucc_add` fuse
+    /// `1/(2k+2) + 1/(2k+2) = 1/(k+1)`) to get an error tolerance strictly
+    /// below the derivative's own lower bound, subdividing finely enough
+    /// (exactly [`Self::monotone_of_nonneg_deriv`]'s own construction) that
+    /// `hd_spec`'s error term stays under that tolerance on every piece, and
+    /// telescoping the resulting **positive** per-piece lower bound
+    /// `(1/(2k+2))·step` up to `(1/(2k+2))·(y−x)` — a REAL, not yet rational,
+    /// lower bound on `F y − F x`. The strict input gap `lt x y` supplies a
+    /// rational `r > 0` with `embed r ≤ y−x`; multiplying it by the rational
+    /// `1/(2k+2)` (via `CReal.ofRat_mul`, a genuine `Rat` product, not a
+    /// `CReal` one) produces the RATIONAL gap `CReal.lt` demands.
+    pub strict_mono_of_pos_deriv: NameId,
+
+    /// `CReal.strict_injective_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F
+    /// F' a b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k))
+    /// (F' z)) → ∀ x y, le a x → le x b → le a y → le y b → Apart x y →
+    /// Apart (F x) (F y)` (`creal/monotone.rs`) — Spivak ch. 12's entry point
+    /// for inverse functions: a uniformly positive derivative on `[a,b]`
+    /// makes `F` injective there, in the constructive (apartness) sense.
+    /// `Or.elim` on `Apart x y := lt x y ∨ lt y x` applies
+    /// [`Self::strict_mono_of_pos_deriv`] to whichever ordered pair the
+    /// witness supplies — never deciding which, since the witness already
+    /// says so.
+    pub strict_injective_of_pos_deriv: NameId,
+
     /// `CReal.ivt_step : ∀ F P Q eps, lt zero eps → le P Q → le (F P) eps →
     /// le (neg eps) (F Q) → ∃ P' Q', le P P' ∧ le P' Q' ∧ le Q' Q ∧
     /// le (F P') eps ∧ le (neg eps) (F Q') ∧ Equiv (add Q' (neg P')) (mul
@@ -2568,6 +2611,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
         sum_range_double: kernel.name_str(creal, "sumRange_double"),
         monotone_of_nonneg_deriv: kernel.name_str(creal, "monotone_of_nonneg_deriv"),
+        strict_mono_of_pos_deriv: kernel.name_str(creal, "strict_mono_of_pos_deriv"),
+        strict_injective_of_pos_deriv: kernel.name_str(creal, "strict_injective_of_pos_deriv"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
