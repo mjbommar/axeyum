@@ -23,14 +23,26 @@
     {
       "availability": "imported-candidate-dependency-assumption-bearing",
       "name": "testBit_low",
+      "native_analogue": "Nat.testBit_zero",
+      "native_analogue_result_sort": "AxNat",
+      "required_result_sort": "Bool",
       "statement": "forall n, testBit n 0 = decide (n % 2 = 1)",
       "source_declaration": "Nat.testBit_zero"
     },
     {
       "availability": "imported-candidate-dependency-assumption-bearing",
       "name": "testBit_succ",
+      "native_analogue": "Nat.testBit_succ",
+      "native_analogue_result_sort": "AxNat",
+      "required_result_sort": "Bool",
       "statement": "forall n i, testBit n (i + 1) = testBit (n / 2) i",
       "source_declaration": "Nat.testBit_add_one"
+    },
+    {
+      "availability": "missing-typed-transport",
+      "name": "boolean_numeric_observation_transport",
+      "statement": "relate imported Bool-valued testBit to native zero-or-one Nat.testBit without assuming operation equality",
+      "source_declaration": null
     },
     {
       "availability": "transparent-definition-needs-clean-reconstruction",
@@ -53,6 +65,18 @@
     {
       "content_sha256": "f1ff827b59c6a6afbd90487eb8e27aa815bff840aa045de020e69cff9f34d794",
       "name": "Nat.testBit"
+    }
+  ],
+  "native_analogues": [
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.testBit x0 AxNat.zero) (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))))",
+      "kernel_declaration_id": "Nat.testBit_zero"
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.testBit x0 (AxNat.succ x1)) (AxNat.testBit (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) x1)))",
+      "kernel_declaration_id": "Nat.testBit_succ"
     }
   ],
   "schema_version": 1,

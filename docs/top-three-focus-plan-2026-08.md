@@ -459,6 +459,9 @@ The follow-on demand artifact now binds five semantic laws to the exact
 candidate and operation identities and verifies that `testBit_succ` excludes
 the committed countermodel. This converts the vague reconstruction request into
 a typed, ordered leaf backlog without granting proof or execution authority.
+The first leaf lookup found existing axiom-free native zero/successor analogues
+but rejected direct reuse because their observation result is `AxNat`, not the
+imported `Bool`. A sixth typed transport obligation now owns that exact seam.
 
 ### Exit evidence
 

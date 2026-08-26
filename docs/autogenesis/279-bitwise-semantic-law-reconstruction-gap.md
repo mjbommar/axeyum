@@ -39,5 +39,13 @@ excludes the previously admitted countermodel. The artifact remains
 `reconstruction_eligible = false` until those laws have independently checked
 evidence rather than assumption-bearing imported dependencies.
 
+The native library already contains axiom-free `Nat.testBit_zero` and
+`Nat.testBit_succ` analogues. They are not direct solutions: native `testBit`
+returns an `AxNat` constrained to zero or one, while imported Lean `testBit`
+returns `Bool`. The demand therefore records both exact native types and a
+sixth, currently missing `boolean_numeric_observation_transport` obligation.
+Same-name retrieval cannot cross that result-sort boundary without a checked
+bridge.
+
 Run `just autogenesis-bitwise-semantic-law-demand` to validate the join and its
 negative controls.

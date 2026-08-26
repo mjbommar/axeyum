@@ -1465,6 +1465,10 @@ exact candidate type to the two exact implementation-graph definition hashes,
 and a checked successor-bit witness proves the interface excludes the earlier
 countermodel. All imported supports remain labeled assumption-bearing; next is
 clean reconstruction of the law leaves, beginning with `testBit_succ`.
+Exact retrieval found the native successor and zero-bit laws already axiom-free,
+but also caught their result-sort mismatch: native observation is `AxNat`, while
+the imported contract is `Bool`. The demand now binds both native types and
+adds an explicit missing Boolean/numeric observation-transport obligation.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

@@ -18,7 +18,10 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         cls.data = json.loads(MODULE.ARTIFACT.read_text())
 
     def test_live_artifact(self):
-        self.assertEqual(MODULE.validate(self.data), {"laws": 5, "operations": 2})
+        self.assertEqual(
+            MODULE.validate(self.data),
+            {"laws": 6, "native_analogues": 2, "operations": 2},
+        )
 
     def test_missing_law_fails_closed(self):
         data = copy.deepcopy(self.data)
@@ -36,6 +39,12 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         data = copy.deepcopy(self.data)
         data["countermodel_exclusion"]["law_rhs"] = False
         with self.assertRaisesRegex(ValueError, "receipt"):
+            MODULE.validate(data)
+
+    def test_native_analogue_type_mutation_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["native_analogues"][0]["canonical_type"] += " "
+        with self.assertRaisesRegex(ValueError, "type identity"):
             MODULE.validate(data)
 
 

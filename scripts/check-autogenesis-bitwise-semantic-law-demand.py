@@ -46,13 +46,14 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
             raise ValueError("operation identity is absent from implementation graph")
 
     laws = data.get("laws")
-    if not isinstance(laws, list) or len(laws) != 5:
+    if not isinstance(laws, list) or len(laws) != 6:
         raise ValueError("semantic-law population changed")
     names = [law.get("name") for law in laws]
     if names != [
         "testBit_zero_value",
         "testBit_low",
         "testBit_succ",
+        "boolean_numeric_observation_transport",
         "bitwise_equation",
         "double_add_div",
     ]:
@@ -64,6 +65,26 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
             and law.get("source_declaration") not in imported_dependencies
         ):
             raise ValueError("claimed imported law is absent from direct dependencies")
+
+    index = json.loads(
+        (ROOT / "artifacts/autogenesis/kernel-lemma-search-index-v1.json").read_text()
+    )
+    indexed = {row["kernel_declaration_id"]: row for row in index["lemmas"]}
+    analogues = data.get("native_analogues")
+    if not isinstance(analogues, list) or len(analogues) != 2:
+        raise ValueError("native analogue population changed")
+    for analogue in analogues:
+        declaration_id = analogue.get("kernel_declaration_id")
+        live = indexed.get(declaration_id)
+        if live is None or live.get("axiom_footprint_size") != 0:
+            raise ValueError("native analogue is absent or assumption-bearing")
+        if analogue.get("canonical_type") != live.get("canonical_type"):
+            raise ValueError("native analogue type identity drifted")
+        if "Eq.{1} AxNat" not in analogue["canonical_type"]:
+            raise ValueError("native analogue no longer exposes the numeric result sort")
+    transport = laws[3]
+    if transport.get("availability") != "missing-typed-transport":
+        raise ValueError("Boolean/numeric observation transport status changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":
@@ -78,7 +99,11 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         raise ValueError("semantic law no longer excludes the countermodel")
     if (exclusion.get("law_lhs"), exclusion.get("law_rhs")) != (lhs, rhs):
         raise ValueError("countermodel exclusion receipt changed")
-    return {"laws": len(laws), "operations": len(operations)}
+    return {
+        "laws": len(laws),
+        "native_analogues": len(analogues),
+        "operations": len(operations),
+    }
 
 
 def main() -> int:
@@ -93,6 +118,7 @@ def main() -> int:
     print(
         "BITWISE_SEMANTIC_LAW_DEMAND_OK|"
         f"laws={result['laws']}|operations={result['operations']}|"
+        f"native_analogues={result['native_analogues']}|"
         "countermodel_excluded=true|reconstruction_eligible=false"
     )
     return 0
