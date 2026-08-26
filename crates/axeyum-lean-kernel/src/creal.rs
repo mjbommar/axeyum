@@ -2436,6 +2436,36 @@ pub struct CRealPrelude {
     /// on `F`'s growth is an upper bound on `F⁻¹`'s modulus).
     pub strict_mono_magnitude: NameId,
 
+    /// `CReal.scale_cancel_le : ∀ (m : Nat) (u v : CReal),
+    /// le (mul (ofRat (natDivSucc 1 m)) u) v → le u (mul (ofNat (Nat.succ m)) v)`
+    /// (`creal/monotone.rs`) — the rational-cancellation step two lanes
+    /// independently stopped on: [`Self::strict_mono_magnitude`] (and every
+    /// other place this development samples at the recurring `1/(m+1)`
+    /// shape) produces a bound `(1/(m+1))·u ≤ v`, and turning that into a
+    /// bound on `u` alone means multiplying through by `(m+1)` and
+    /// cancelling `(m+1)·(1/(m+1)) = 1`. Stated at a bare `m`, not at
+    /// [`Self::strict_mono_magnitude`]'s own instantiation `m := 2k+1`,
+    /// because `Rat.natDivSucc 1 m` is the single recurring "epsilon" this
+    /// whole file samples at — narrowing the shape to one call site would
+    /// just mean rebuilding it at the next.
+    pub scale_cancel_le: NameId,
+
+    /// `CReal.diff_le_of_strict_mono_magnitude : ∀ F F' a b,
+    /// HasDerivativeOn F F' a b → ∀ k, (∀ z, le a z → le z b →
+    /// le (ofRat (natDivSucc 1 k)) (F' z)) → ∀ x y, le a x → le x y → le y b
+    /// → le (add y (neg x)) (mul (ofNat (Nat.succ (Nat.succ (Nat.mul 2 k))))
+    /// (add (abs (F x)) (abs (F y))))` (`creal/monotone.rs`) —
+    /// [`Self::strict_mono_magnitude`] cancelled by [`Self::scale_cancel_le`]
+    /// against the triangle inequality: a LOWER bound on `F`'s growth
+    /// becomes an UPPER bound on how far apart `x` and `y` can be for a
+    /// given spread of `F` values, `|x−y| ≤ 2(k+1)·(|Fx|+|Fy|)` — the exact
+    /// IVT root and Chapter 12's inverse-function continuity both need this
+    /// direction. Left as `add y (neg x)` rather than wrapped in `CReal.abs`:
+    /// the hypotheses already give `x ≤ y`, so this term IS the (nonnegative)
+    /// difference, and no public `CReal.abs_of_nonneg`-shaped fact exists yet
+    /// to fold that in for free.
+    pub diff_le_of_strict_mono_magnitude: NameId,
+
     /// `CReal.strict_injective_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F
     /// F' a b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k))
     /// (F' z)) → ∀ x y, le a x → le x b → le a y → le y b → Apart x y →
@@ -3074,6 +3104,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         monotone_of_nonneg_deriv: kernel.name_str(creal, "monotone_of_nonneg_deriv"),
         strict_mono_of_pos_deriv: kernel.name_str(creal, "strict_mono_of_pos_deriv"),
         strict_mono_magnitude: kernel.name_str(creal, "strict_mono_magnitude"),
+        scale_cancel_le: kernel.name_str(creal, "scale_cancel_le"),
+        diff_le_of_strict_mono_magnitude: kernel
+            .name_str(creal, "diff_le_of_strict_mono_magnitude"),
         strict_injective_of_pos_deriv: kernel.name_str(creal, "strict_injective_of_pos_deriv"),
         order_reflect_of_pos_deriv: kernel.name_str(creal, "order_reflect_of_pos_deriv"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
