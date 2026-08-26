@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-modeq-imported-bridge-assay",
+  "state": "diagnostic-only-no-operation-or-admission-authority",
+  "authority": "A candidate is usable only after source-to-target transport, empty-footprint checking, bounded construction, and independent target admission all succeed. This assay authorizes none.",
+  "environment": {
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_version": "3.1.0"
+  },
+  "source_adapter": {
+    "path": "scripts/lean/autogenesis_statement_adapter_nat_modeq_arithmetic_v1.lean",
+    "sha256": "91c4ac8dae0ddf75077975315b5354ab2d6e2ac28609121a75131c50f73e88b0",
+    "proof_free_targets": [
+      "Axeyum.Autogenesis.Statement.NatModEqArithmetic.addLeft",
+      "Axeyum.Autogenesis.Statement.NatModEqArithmetic.addRight",
+      "Axeyum.Autogenesis.Statement.NatModEqArithmetic.modulusZero"
+    ]
+  },
+  "external_candidate_capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-modeq-arithmetic-v1/family.ndjson",
+    "bytes": 2390435,
+    "sha256": "053cfad7c17fd4cf4435a7b4b2c2dfc46fffaa8a29728679ede5d6ee2b66a0f8"
+  },
+  "candidate_assay": [
+    {
+      "name": "Nat.ModEq.modulus_mul_add",
+      "declaration_sha256": "77be30b9fd9be6e090717b9d16017471acbe26a430f77a7cd4eb4bba053e54da",
+      "axiom_footprint": ["propext"],
+      "usable": false
+    },
+    {
+      "name": "Nat.ModEq.add_left",
+      "declaration_sha256": "a40e5370d09e13c2c924c56958b8c27b8958ade74152db4fb078f67a53bd4c24",
+      "axiom_footprint": ["propext"],
+      "usable": false
+    },
+    {
+      "name": "Nat.ModEq.add_right",
+      "declaration_sha256": "820933955e6c9e6def07209565efa3450fc8c404bea259884c8714ed4259a1d7",
+      "axiom_footprint": ["propext"],
+      "usable": false
+    },
+    {
+      "name": "Nat.modulus_add_modEq_iff",
+      "declaration_sha256": "ef9725362795e0ae22508fbb04dbd96935a86312ccf4bfb77dc67a2790991aed",
+      "axiom_footprint": ["propext"],
+      "usable": false
+    },
+    {
+      "name": "Nat.add_modulus_modEq_iff",
+      "declaration_sha256": "c1edaff7b7fc8c8b9b964204d77bc2464e9c52a629dea19fe7f8ad1db4a717a9",
+      "axiom_footprint": ["propext"],
+      "usable": false
+    },
+    {
+      "name": "Nat.modEq_zero_iff_dvd",
+      "declaration_sha256": "2c7f622b735b3c36e2bd3b91893ac0633a60c12cc04c7fa57769141da582a2d7",
+      "axiom_footprint": ["propext"],
+      "usable": false
+    },
+    {
+      "name": "dvd_refl",
+      "declaration_sha256": "825145f7951596992e73c115855052d06568c0960ae12172f29d45772d179ad0",
+      "axiom_footprint": [],
+      "usable": false,
+      "transport_obstruction": "UnsupportedMissingDeclaration:List:recursive-inductive"
+    },
+    {
+      "name": "Nat.ModEq.refl",
+      "declaration_sha256": "816f846f7a440ee40e1411e88a06485fb3ed227d13b2224f14080d460e6f872c",
+      "axiom_footprint": [],
+      "usable": true
+    }
+  ],
+  "target_outcomes": [
+    {
+      "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natAddModeqLeft",
+      "transported_candidates": ["Nat.ModEq.refl"],
+      "transport_declines": 7,
+      "construction_result": "NoTypedApplication",
+      "admitted": false
+    },
+    {
+      "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natAddModeqRight",
+      "transported_candidates": ["Nat.ModEq.refl"],
+      "transport_declines": 7,
+      "construction_result": "NoTypedApplication",
+      "admitted": false
+    },
+    {
+      "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natModulusModeqZero",
+      "transported_candidates": ["Nat.ModEq.refl"],
+      "transport_declines": 7,
+      "construction_result": "NoTypedApplication",
+      "admitted": false
+    }
+  ],
+  "census": {
+    "targets": 3,
+    "candidate_theorems": 8,
+    "candidates_with_nonempty_axiom_footprint": 6,
+    "candidates_transportable": 1,
+    "targets_converted": 0
+  },
+  "next_falsifiable_step": "Construct one target-local remainder behavior lemma for the exact imported Nat.mod implementation with an empty axiom footprint; transport it into all three frozen targets and require at least three independently admitted conversions before operation registration."
+}

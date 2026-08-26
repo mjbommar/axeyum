@@ -1,0 +1,192 @@
+{
+  "autonomous_production": {
+    "authoritative_named_facts": 34,
+    "authoritative_operations": 25,
+    "producer_outcome_census": {
+      "exact_source_facts": 24,
+      "groups": 38,
+      "held_out_observed_facts": 0,
+      "observed_facts": 138,
+      "outcomes": {
+        "admissible-proof": 2,
+        "kernel-rejection:candidate-typecheck-failed": 46,
+        "producer-decline:binder-budget-exceeded": 1,
+        "producer-decline:terminal-not-constant-headed-equality": 40,
+        "producer-decline:terminal-not-exact-equality": 49
+      },
+      "partitions": {
+        "development": 60,
+        "train": 78
+      },
+      "semantic_abstraction_facts": 114
+    },
+    "production_episodes": {
+      "fixture_episodes_excluded": 4,
+      "production_episodes": 16,
+      "schema_version_counts": {
+        "1": 10,
+        "2": 6
+      },
+      "verdict_counts": {
+        "budget-exhausted": 2,
+        "declined": 12,
+        "proved": 2
+      }
+    },
+    "registered_operations": 26,
+    "reusable_multi_target_operations": [
+      {
+        "fact_count": 4,
+        "id": "authoritative-mathlib-bounded-induction-factorial-family-v1"
+      },
+      {
+        "fact_count": 8,
+        "id": "authoritative-mathlib-modeq-family-v1"
+      }
+    ]
+  },
+  "fact_ledger": {
+    "facts": 698,
+    "proof_route_counts": {
+      "cas-certificate": 23,
+      "imported-kernel-lean": 5,
+      "kernel-lean": 450,
+      "search-certificate": 12,
+      "smt-clausal": 9,
+      "smt-term-level": 17
+    },
+    "status_counts": {
+      "computed": 2,
+      "conjectured": 3,
+      "open": 179,
+      "proved": 510,
+      "refuted": 4
+    }
+  },
+  "gate_reachability": {
+    "kernel_projection": {
+      "both": true,
+      "just_check": true,
+      "shell_fallback": true
+    },
+    "production_episodes": {
+      "both": true,
+      "just_check": true,
+      "shell_fallback": true
+    },
+    "python_authority": {
+      "both": true,
+      "just_check": true,
+      "shell_fallback": true
+    },
+    "semantic_coverage": {
+      "both": true,
+      "just_check": true,
+      "shell_fallback": true
+    }
+  },
+  "kernel_library": {
+    "axiom_free_declarations": 1614,
+    "declaration_kinds": {
+      "axiom": 30,
+      "constructor": 29,
+      "definition": 254,
+      "inductive": 22,
+      "recursor": 22,
+      "theorem": 1287
+    },
+    "declarations": 1644,
+    "direct_theorem_dependency_edges": 7677,
+    "theorems": 1287
+  },
+  "kind": "axeyum-product-health-snapshot",
+  "knowledge_connectivity": {
+    "distinct_exactly_linked_facts": 398,
+    "kernel_dependency_edges": 7677,
+    "kernel_theorems": 1287,
+    "maximum_dependency_depth": 26,
+    "theorems_with_exact_fact_links": 397,
+    "theorems_without_exact_fact_links": 890,
+    "unresolved_prefixed_kernel_evidence": 4,
+    "unresolved_reason_counts": {
+      "exact kernel evidence identity is absent from the current projection": 3,
+      "exact kernel evidence identity resolves to a current definition declaration, not a theorem": 1
+    }
+  },
+  "runtime_gate_status": {
+    "conclusion": "failure",
+    "failed_jobs": [
+      "clippy",
+      "docs resources and links",
+      "python (3.12)",
+      "python (3.13)",
+      "python (3.14)",
+      "rustdoc"
+    ],
+    "jobs": 14,
+    "meaning": "This reports only the provider-captured result for tested_commit; it is not transitive evidence for later commits.",
+    "provider": "github-actions",
+    "run_id": 33013805820,
+    "state": "failed-ancestor",
+    "tested_commit": "08b65942ff9db66f6ab019478ee4c5fd8e1571e3",
+    "url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820",
+    "workflow": "CI"
+  },
+  "schema_version": 1,
+  "scope": "committed-populations-and-static-gate-reachability",
+  "semantic_coverage": {
+    "concepts": 13,
+    "excluded_held_out_family_topic_facts": 37,
+    "excluded_held_out_formalizations": 0,
+    "family_topic_facts": 177,
+    "kernel_semantic_anchors": 6,
+    "qualified_formalization_facts": 13,
+    "with_family_topic": 7,
+    "with_kernel_semantic_anchors": 5,
+    "with_qualified_formalizations": 3
+  },
+  "source_receipts": [
+    {
+      "path": "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+      "sha256": "46923fd784bac0d4e6e00d85a1aefbf03d07fb787c6690c35476dacae09806e4"
+    },
+    {
+      "path": "artifacts/autogenesis/kernel-lemma-search-index-v1.json",
+      "sha256": "cfd3ccc95249a4085f13a4478faff30d3f270975793e9daa32c501084885fa74"
+    },
+    {
+      "path": "artifacts/autogenesis/operations.json",
+      "sha256": "3975199a16059f98c74c155bbb61e7609ec921081d1e30558eecc34939969c93"
+    },
+    {
+      "path": "artifacts/autogenesis/producer-outcome-observations-v1.json",
+      "sha256": "c81224843b1d7ca551b764c464106c67557684f5473be8046059eac16a32201c"
+    },
+    {
+      "path": "artifacts/autogenesis/concept-coverage-projection-v1.json",
+      "sha256": "abdfa02dabafb0cdbdb1f635dd58be965911a9c7bf3b7bf9b5ca5df8985153e1"
+    },
+    {
+      "path": "justfile",
+      "sha256": "b28ac6bedc15524a6742c3d97483483cde77961de3c05b3956d362a7c656fb0b"
+    },
+    {
+      "path": "scripts/check.sh",
+      "sha256": "59a9dbb9306d631f5a5a0c349c23ecfd9e2ad270720f05d6963c0bdee3b5c551"
+    },
+    {
+      "path": "artifacts/runtime/ci-latest-v1.json",
+      "sha256": "f1a191a98345c155b441a9dcdb12882595c068dd232d95eb1994d397850fb044"
+    },
+    {
+      "path": "artifacts/facts/F-*.json",
+      "population": 698,
+      "sha256": "ecaa872d002bdf157827c9b7d134d1b03ff1ff92038a69770bcc4f5210e455df"
+    },
+    {
+      "path": "artifacts/episodes/**/episode*.json excluding fixtures*",
+      "population": 16,
+      "sha256": "0d1c877e7e782532af1063b93efda690f16aae79751a0ac288e868d960a43dc9"
+    }
+  ]
+}

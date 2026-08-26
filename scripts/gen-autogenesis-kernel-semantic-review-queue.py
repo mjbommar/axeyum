@@ -12,15 +12,18 @@ import argparse
 import hashlib
 import json
 import pathlib
+import re
 import sys
 from collections import Counter
 from typing import Any
-
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 KERNEL = ROOT / "artifacts/autogenesis/kernel-dependency-projection-v1.json"
 OVERLAY = ROOT / "artifacts/autogenesis/knowledge-overlay-v1.json"
 OUTPUT = ROOT / "artifacts/autogenesis/kernel-semantic-review-queue-v1.json"
+DOC = ROOT / "docs/autogenesis/256-kernel-semantic-review-queue.md"
+DOC_START = "<!-- kernel-semantic-review-census:start -->"
+DOC_END = "<!-- kernel-semantic-review-census:end -->"
 
 
 def digest(path: pathlib.Path) -> str:
@@ -43,16 +46,13 @@ def build() -> dict[str, Any]:
     eligible = [
         declaration
         for declaration in declarations
-        if declaration["declaration_kind"] == "theorem"
-        and declaration["axiom_footprint_size"] == 0
+        if declaration["declaration_kind"] == "theorem" and declaration["axiom_footprint_size"] == 0
     ]
     queue = [
         {
             "kernel_declaration_id": declaration["id"],
             "visible_in": declaration["visible_in"],
-            "direct_theorem_dependency_count": len(
-                declaration["direct_theorem_dependencies"]
-            ),
+            "direct_theorem_dependency_count": len(declaration["direct_theorem_dependencies"]),
             "direct_reverse_theorem_reference_count": reverse[declaration["id"]],
             "review_status": "unreviewed",
             "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
@@ -90,18 +90,48 @@ def build() -> dict[str, Any]:
     }
 
 
+def render_doc(source: str, census: dict[str, int]) -> str:
+    block = "\n".join(
+        [
+            DOC_START,
+            "| Measure | Count |",
+            "|---|---:|",
+            f"| Empty-footprint kernel theorems | {census['empty_footprint_theorems']:,} |",
+            f"| Active reviewed semantic anchors | {census['reviewed_kernel_semantic_anchors']:,} |",
+            f"| Unreviewed queue entries | {census['unreviewed_queue_entries']:,} |",
+            DOC_END,
+        ]
+    )
+    pattern = re.compile(re.escape(DOC_START) + r".*?" + re.escape(DOC_END), re.DOTALL)
+    rendered, replacements = pattern.subn(block, source)
+    if replacements != 1:
+        raise ValueError(f"expected one generated census block in {DOC}, found {replacements}")
+    return rendered
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    rendered = json.dumps(build(), indent=2, sort_keys=True) + "\n"
+    data = build()
+    rendered = json.dumps(data, indent=2, sort_keys=True) + "\n"
+    rendered_doc = render_doc(DOC.read_text(), data["census"])
     if args.check:
+        stale = []
         if not OUTPUT.is_file() or OUTPUT.read_text() != rendered:
-            print("AUTOGENESIS_KERNEL_SEMANTIC_QUEUE_ERROR|queue is stale", file=sys.stderr)
+            stale.append(str(OUTPUT.relative_to(ROOT)))
+        if DOC.read_text() != rendered_doc:
+            stale.append(str(DOC.relative_to(ROOT)))
+        if stale:
+            print(
+                "AUTOGENESIS_KERNEL_SEMANTIC_QUEUE_ERROR|stale=" + ",".join(stale),
+                file=sys.stderr,
+            )
             return 1
     else:
         OUTPUT.write_text(rendered)
-    census = json.loads(rendered)["census"]
+        DOC.write_text(rendered_doc)
+    census = data["census"]
     print(
         "AUTOGENESIS_KERNEL_SEMANTIC_QUEUE|"
         f"theorems={census['kernel_theorems']}|"

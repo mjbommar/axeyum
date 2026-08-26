@@ -108,6 +108,8 @@ step autogenesis-must-decline-population python3 scripts/check-autogenesis-must-
 step autogenesis-bounded-induction-family python3 scripts/check-autogenesis-bounded-induction-family.py
 step autogenesis-modeq-family python3 scripts/check-autogenesis-modeq-family.py
 step autogenesis-nat-modeq-family python3 scripts/check-autogenesis-nat-modeq-family.py
+step autogenesis-nat-modeq-imported-bridge-assay python3 scripts/check-autogenesis-nat-modeq-imported-bridge-assay.py
+step autogenesis-nat-modeq-remainder-contract python3 scripts/check-autogenesis-nat-modeq-remainder-contract.py
 step established-fact-bounded-truth python3 scripts/check-established-facts-bounded-truth.py
 step lane-turn-controls ./scripts/tests/test-check-lane-turn.sh
 step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
@@ -693,6 +695,12 @@ step tactic-catalog-census python3 scripts/gen-tactic-catalog-census.py --check
 # unittest suite instead. See artifacts/episodes/README.md.
 step episodes       python3 scripts/check-agent-episode.py artifacts/episodes --production-only
 step episode-tests  python3 -m unittest scripts.tests.test_check_agent_episode
+
+# Generated product populations, static aggregate-gate reachability, and the
+# latest commit-bound provider receipt. Ancestor results remain non-transitive.
+step ci-receipt            python3 scripts/check-ci-receipt.py
+step product-health-tests python3 -m unittest scripts.tests.test_gen_product_health
+step product-health       python3 scripts/gen-product-health.py --check
 
 # The mobility census gate (docs/python-2026-08/07-mobility-census.md, slice A7).
 # `just mobility-census` runs the same two steps.

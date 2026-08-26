@@ -13,7 +13,7 @@
     {
       "id": "axeyum-knowledge",
       "source_id": "axeyum",
-      "entity_kinds": ["capability", "obstruction", "episode", "representation"],
+      "entity_kinds": ["capability", "obstruction", "episode", "representation", "concept"],
       "resolution": "overlay-entity",
       "path": "artifacts/autogenesis/knowledge-overlay-v1.json"
     },
@@ -77,6 +77,13 @@
       "source_kinds": ["fact"],
       "target_kinds": ["kernel-declaration"],
       "semantics": "An independently checked cross-kernel translation found the fact's proof-free proposition definitionally equal to the kernel declaration's theorem type. This diagnostic link neither settles the fact nor grants proof, operation, or admission authority."
+    },
+    {
+      "id": "formalizes",
+      "source_kinds": ["fact", "kernel-declaration"],
+      "target_kinds": ["concept"],
+      "semantics": "A checked fact or empty-footprint kernel theorem supplies the qualified formal content named by an Axeyum-owned concept. The human-reviewed edge is partial semantic metadata and grants no proof, admission, or operation authority.",
+      "reason_required": true
     }
   ],
   "entities": [
@@ -151,9 +158,240 @@
         "assurance_floor": "exact-dependency-contract-and-fresh-kernel-check",
         "admission_authority": false
       }
+    },
+    {
+      "id": "C:excluded-middle",
+      "kind": "concept",
+      "title": "Excluded middle",
+      "description": "The proposition schema p or not-p. A theorem requiring an explicit Decidable p witness covers the decidable instance only, not unrestricted classical excluded middle.",
+      "status": "active",
+      "attributes": {
+        "definition_scope": "local-self-contained",
+        "scheduler_authority": false
+      }
+    },
+    {
+      "id": "C:complex-number",
+      "kind": "concept",
+      "title": "Complex numbers",
+      "description": "Numbers with real and imaginary components together with their algebraic operations and norm laws. One identity about squared norm is supporting content, not complete complex analysis.",
+      "status": "active",
+      "attributes": {
+        "definition_scope": "local-self-contained",
+        "scheduler_authority": false
+      }
+    },
+    {
+      "id": "C:circle",
+      "kind": "concept",
+      "title": "Circle geometry",
+      "description": "Geometry of points at equal distance from a centre, including circumcircles of non-collinear triples. A circumcentre uniqueness theorem covers one defining construction only.",
+      "status": "active",
+      "attributes": {
+        "definition_scope": "local-self-contained",
+        "scheduler_authority": false
+      }
+    },
+    {
+      "id": "C:factorial",
+      "kind": "concept",
+      "title": "Factorial and factorial products",
+      "description": "Finite products of consecutive natural numbers, including ordinary factorial and rising or falling factorial variants. Individual zero, one, and conversion identities cover particular laws only.",
+      "status": "active",
+      "attributes": {
+        "definition_scope": "local-self-contained",
+        "scheduler_authority": false
+      }
+    },
+    {
+      "id": "C:modular-arithmetic",
+      "kind": "concept",
+      "title": "Modular arithmetic",
+      "description": "Arithmetic organized by congruence modulo an integer, where values are compared through a fixed modulus. Reflexivity, symmetry, and transitivity are structural laws of congruence, not the whole subject.",
+      "status": "active",
+      "attributes": {
+        "definition_scope": "local-self-contained",
+        "scheduler_authority": false
+      }
+    },
+    {
+      "id": "C:equivalence-relation",
+      "kind": "concept",
+      "title": "Equivalence relation",
+      "description": "A binary relation satisfying reflexivity, symmetry, and transitivity. Each law is tracked separately so one theorem cannot imply complete relation coverage.",
+      "status": "active",
+      "attributes": {
+        "definition_scope": "local-self-contained",
+        "scheduler_authority": false
+      }
     }
   ],
   "links": [
+    {
+      "id": "L:kernel-decidable-em-formalizes-excluded-middle",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Decidable.em" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:excluded-middle" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem proves p or not-p only from an explicit Decidable p witness; it formalizes the decidable fragment and does not assert unrestricted classical excluded middle.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-dependency-projection-v1.json", "docs/autogenesis/255-kernel-semantic-anchor-batch.md"] },
+      "qualifiers": { "coverage": "scoped-law", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-complex-normsq-pow-formalizes-complex-number",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Complex.normSq_pow" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:complex-number" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem states that the constructed complex squared norm respects natural powers; this is one algebraic norm law, not complete coverage of complex numbers.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-dependency-projection-v1.json", "docs/autogenesis/255-kernel-semantic-anchor-batch.md"] },
+      "qualifiers": { "coverage": "supporting-law", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-circumcentre-unique-formalizes-circle",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "CPoint.circumcentre_unique" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:circle" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem gives uniqueness of an equidistant centre for a non-collinear triple; it is one circumcircle law rather than a full circle-geometry formalization.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-dependency-projection-v1.json", "docs/autogenesis/255-kernel-semantic-anchor-batch.md"] },
+      "qualifiers": { "coverage": "defining-construction", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:descfactorial-one-formalizes-factorial",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-descfactorial-one-d4856d4a" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:factorial" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The checked falling-factorial identity at length one is one exact law of the broader factorial-product family.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-descfactorial-one-d4856d4a.json"] },
+      "qualifiers": { "coverage": "supporting-law", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:ascfactorial-zero-formalizes-factorial",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-ascfactorial-zero-fd183202" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:factorial" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem gives the empty-product value for rising factorial, a base law rather than complete factorial coverage.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json"] },
+      "qualifiers": { "coverage": "base-law", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:descfactorial-zero-formalizes-factorial",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-descfactorial-zero-966b01df" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:factorial" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem gives the empty-product value for falling factorial, a base law rather than complete factorial coverage.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-descfactorial-zero-966b01df.json"] },
+      "qualifiers": { "coverage": "base-law", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:zero-ascfactorial-formalizes-factorial",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-zero-ascfactorial-af4fcdca" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:factorial" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem gives the positive-length zero-input boundary for rising factorial, one boundary law of the family.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-zero-ascfactorial-af4fcdca.json"] },
+      "qualifiers": { "coverage": "boundary-law", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:one-ascfactorial-formalizes-factorial",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-one-ascfactorial-8bacb017" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:factorial" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem connects rising factorial from one to ordinary factorial, a representation bridge within the factorial-product family.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-one-ascfactorial-8bacb017.json"] },
+      "qualifiers": { "coverage": "representation-bridge", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:int-modeq-refl-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-refl-30e15520" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "Reflexivity of integer congruence is one exact structural law of modular arithmetic.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-refl-30e15520.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:int-modeq-symm-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-symm-984a6e67" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "Symmetry of integer congruence is one exact structural law of modular arithmetic.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-symm-984a6e67.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:int-modeq-trans-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-trans-6d7863e0" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "Transitivity of integer congruence is one exact structural law of modular arithmetic.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-trans-6d7863e0.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:int-modeq-comm-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-comm-1e4bcc07" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The biconditional commutation law exposes symmetry of integer congruence as a reusable modular-arithmetic equivalence.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-comm-1e4bcc07.json"] },
+      "qualifiers": { "coverage": "derived-relation-law", "law": "commutative-iff", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:int-modeq-refl-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-refl-30e15520" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This theorem supplies the reflexive law for integer congruence viewed as an equivalence relation; the other laws are separate edges.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-refl-30e15520.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:int-modeq-symm-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-symm-984a6e67" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This theorem supplies the symmetric law for integer congruence viewed as an equivalence relation; the other laws are separate edges.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-symm-984a6e67.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:int-modeq-trans-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-int-modeq-trans-6d7863e0" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This theorem supplies the transitive law for integer congruence viewed as an equivalence relation; the other laws are separate edges.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-int-modeq-trans-6d7863e0.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "completeness": "partial", "admission_authority": false }
+    },
     {
       "id": "L:bounded-induction-operation-capability",
       "relation": "realizes-capability",
@@ -309,6 +547,149 @@
       "reason": "The proof-free imported Mathlib proposition and independently constructed native theorem type are definitionally equal after exact-name translation into a private target kernel.",
       "provenance": { "method": "checker-derived", "sources": ["artifacts/autogenesis/open-ranked-proposition-census-v1.json", "crates/axeyum-lean-import/examples/proposition_compatibility_audit.rs"] },
       "qualifiers": { "fact_status_unchanged": true, "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-refl-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-refl-d870c8f5" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "Reflexivity of natural congruence is one exact structural law of modular arithmetic.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-refl-d870c8f5.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-symm-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-symm-0a3d4d18" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "Symmetry of natural congruence is one exact structural law of modular arithmetic.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-symm-0a3d4d18.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-trans-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-trans-ef9d1c46" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "Transitivity of natural congruence is one exact structural law of modular arithmetic.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-trans-ef9d1c46.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-comm-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-comm-24b71e7a" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The biconditional commutation law exposes symmetry of natural congruence as a reusable modular-arithmetic equivalence.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-comm-24b71e7a.json"] },
+      "qualifiers": { "coverage": "derived-relation-law", "law": "commutative-iff", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-refl-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-refl-d870c8f5" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This theorem supplies the reflexive law for natural congruence viewed as an equivalence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-refl-d870c8f5.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-symm-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-symm-0a3d4d18" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This theorem supplies the symmetric law for natural congruence viewed as an equivalence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-symm-0a3d4d18.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-trans-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-trans-ef9d1c46" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This theorem supplies the transitive law for natural congruence viewed as an equivalence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-trans-ef9d1c46.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-refl-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_refl" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The axiom-free native theorem is the reflexive law for Axeyum's balanced-witness natural congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-symm-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_symm" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The axiom-free native theorem is the symmetry law for Axeyum's balanced-witness natural congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-trans-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_trans" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The axiom-free native theorem is the transitivity law for Axeyum's balanced-witness natural congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-refl-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_refl" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This axiom-free native theorem supplies reflexivity for the balanced-witness congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-symm-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_symm" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This axiom-free native theorem supplies symmetry for the balanced-witness congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-trans-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_trans" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This axiom-free native theorem supplies transitivity for the balanced-witness congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
     }
   ]
 }

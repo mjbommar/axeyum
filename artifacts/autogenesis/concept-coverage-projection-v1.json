@@ -1,14 +1,19 @@
 {
   "census": {
-    "concepts": 9,
+    "concepts": 13,
     "excluded_held_out_family_topic_facts": 37,
+    "excluded_held_out_formalizations": 0,
     "family_topic_facts": 177,
-    "with_family_topic": 7
+    "kernel_semantic_anchors": 6,
+    "qualified_formalization_facts": 13,
+    "with_family_topic": 7,
+    "with_kernel_semantic_anchors": 5,
+    "with_qualified_formalizations": 3
   },
   "concepts": [
     {
       "concept_id": "C:binomial-coefficient",
-      "coverage_state": "family-topic-only",
+      "coverage_state": "family-topic",
       "family_topic_fact_count": 20,
       "family_topic_fact_ids": [
         "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
@@ -32,11 +37,15 @@
         "F:ml430-nat-multichoose-one-right-7755072d",
         "F:ml430-nat-multichoose-zero-right-6ef827c8"
       ],
-      "trust": "family-topic guidance only; the C: id is an unresolved citation label, not a formalization target"
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
     },
     {
       "concept_id": "C:bit",
-      "coverage_state": "family-topic-only",
+      "coverage_state": "family-topic",
       "family_topic_fact_count": 19,
       "family_topic_fact_ids": [
         "F:ml430-mutation-a6dd1759bce60d820292e107",
@@ -59,11 +68,76 @@
         "F:ml430-nat-testbit-lor-7644e067",
         "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
       ],
-      "trust": "family-topic guidance only; the C: id is an unresolved citation label, not a formalization target"
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
+    },
+    {
+      "concept_id": "C:circle",
+      "coverage_state": "kernel-anchors",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "kernel_semantic_anchor_count": 1,
+      "kernel_semantic_anchor_ids": [
+        "CPoint.circumcentre_unique"
+      ],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
+    },
+    {
+      "concept_id": "C:complex-number",
+      "coverage_state": "kernel-anchors",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "kernel_semantic_anchor_count": 1,
+      "kernel_semantic_anchor_ids": [
+        "Complex.normSq_pow"
+      ],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
+    },
+    {
+      "concept_id": "C:equivalence-relation",
+      "coverage_state": "qualified-facts+kernel-anchors",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "kernel_semantic_anchor_count": 3,
+      "kernel_semantic_anchor_ids": [
+        "Nat.mod_eq_refl",
+        "Nat.mod_eq_symm",
+        "Nat.mod_eq_trans"
+      ],
+      "qualified_formalization_fact_count": 6,
+      "qualified_formalization_fact_ids": [
+        "F:ml430-int-modeq-refl-30e15520",
+        "F:ml430-int-modeq-symm-984a6e67",
+        "F:ml430-int-modeq-trans-6d7863e0",
+        "F:ml430-nat-modeq-refl-d870c8f5",
+        "F:ml430-nat-modeq-symm-0a3d4d18",
+        "F:ml430-nat-modeq-trans-ef9d1c46"
+      ],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
+    },
+    {
+      "concept_id": "C:excluded-middle",
+      "coverage_state": "kernel-anchors",
+      "family_topic_fact_count": 0,
+      "family_topic_fact_ids": [],
+      "kernel_semantic_anchor_count": 1,
+      "kernel_semantic_anchor_ids": [
+        "Decidable.em"
+      ],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
     },
     {
       "concept_id": "C:factorial",
-      "coverage_state": "family-topic-only",
+      "coverage_state": "family-topic+qualified-facts",
       "family_topic_fact_count": 15,
       "family_topic_fact_ids": [
         "F:ml430-mutation-7afa5ec620720a1501bf349d",
@@ -82,11 +156,21 @@
         "F:ml430-nat-self-le-factorial-cfdffc69",
         "F:ml430-nat-zero-ascfactorial-af4fcdca"
       ],
-      "trust": "family-topic guidance only; the C: id is an unresolved citation label, not a formalization target"
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 5,
+      "qualified_formalization_fact_ids": [
+        "F:ml430-nat-ascfactorial-zero-fd183202",
+        "F:ml430-nat-descfactorial-one-d4856d4a",
+        "F:ml430-nat-descfactorial-zero-966b01df",
+        "F:ml430-nat-one-ascfactorial-8bacb017",
+        "F:ml430-nat-zero-ascfactorial-af4fcdca"
+      ],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
     },
     {
       "concept_id": "C:fibonacci-sequence",
-      "coverage_state": "family-topic-only",
+      "coverage_state": "family-topic",
       "family_topic_fact_count": 32,
       "family_topic_fact_ids": [
         "F:ml430-int-fib-add-181b6a2c",
@@ -122,11 +206,15 @@
         "F:ml430-nat-le-fib-add-one-5284f0bf",
         "F:ml430-nat-le-fib-self-0cbccb4d"
       ],
-      "trust": "family-topic guidance only; the C: id is an unresolved citation label, not a formalization target"
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
     },
     {
       "concept_id": "C:greatest-common-divisor",
-      "coverage_state": "family-topic-only",
+      "coverage_state": "family-topic",
       "family_topic_fact_count": 30,
       "family_topic_fact_ids": [
         "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
@@ -160,18 +248,26 @@
         "F:ml430-nat-gcd-greatest-0a04214a",
         "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8"
       ],
-      "trust": "family-topic guidance only; the C: id is an unresolved citation label, not a formalization target"
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
     },
     {
       "concept_id": "C:logarithm",
-      "coverage_state": "family-topic-only",
+      "coverage_state": "",
       "family_topic_fact_count": 0,
       "family_topic_fact_ids": [],
-      "trust": "family-topic guidance only; the C: id is an unresolved citation label, not a formalization target"
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
     },
     {
       "concept_id": "C:modular-arithmetic",
-      "coverage_state": "family-topic-only",
+      "coverage_state": "family-topic+qualified-facts+kernel-anchors",
       "family_topic_fact_count": 40,
       "family_topic_fact_ids": [
         "F:ml430-int-add-modeq-left-ee732b5b",
@@ -215,11 +311,28 @@
         "F:ml430-nat-modeq-trans-ef9d1c46",
         "F:ml430-nat-modulus-modeq-zero-fd9af096"
       ],
-      "trust": "family-topic guidance only; the C: id is an unresolved citation label, not a formalization target"
+      "kernel_semantic_anchor_count": 3,
+      "kernel_semantic_anchor_ids": [
+        "Nat.mod_eq_refl",
+        "Nat.mod_eq_symm",
+        "Nat.mod_eq_trans"
+      ],
+      "qualified_formalization_fact_count": 8,
+      "qualified_formalization_fact_ids": [
+        "F:ml430-int-modeq-comm-1e4bcc07",
+        "F:ml430-int-modeq-refl-30e15520",
+        "F:ml430-int-modeq-symm-984a6e67",
+        "F:ml430-int-modeq-trans-6d7863e0",
+        "F:ml430-nat-modeq-comm-24b71e7a",
+        "F:ml430-nat-modeq-refl-d870c8f5",
+        "F:ml430-nat-modeq-symm-0a3d4d18",
+        "F:ml430-nat-modeq-trans-ef9d1c46"
+      ],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
     },
     {
       "concept_id": "C:prime-number",
-      "coverage_state": "family-topic-only",
+      "coverage_state": "family-topic",
       "family_topic_fact_count": 21,
       "family_topic_fact_ids": [
         "F:ml430-mutation-5179f333b8333ecff8adc223",
@@ -244,14 +357,22 @@
         "F:ml430-nat-prime-pred-pos-4e67ac4c",
         "F:ml430-nat-succ-pred-prime-4feb123f"
       ],
-      "trust": "family-topic guidance only; the C: id is an unresolved citation label, not a formalization target"
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
     },
     {
       "concept_id": "C:square-root",
-      "coverage_state": "family-topic-only",
+      "coverage_state": "",
       "family_topic_fact_count": 0,
       "family_topic_fact_ids": [],
-      "trust": "family-topic guidance only; the C: id is an unresolved citation label, not a formalization target"
+      "kernel_semantic_anchor_count": 0,
+      "kernel_semantic_anchor_ids": [],
+      "qualified_formalization_fact_count": 0,
+      "qualified_formalization_fact_ids": [],
+      "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
     }
   ],
   "derivation": {
@@ -261,9 +382,9 @@
       "development",
       "train"
     ],
+    "knowledge_overlay_sha256": "105cd3da3bc2c1bb12a65e8a276702ab62645f1315de9b233541919387370200",
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
-    "removed_dimensions": "ADR-0553 removed qualified_formalization_* and kernel_semantic_anchor_*; both were read from overlay formalizes links resolved against an external repository, and both became structurally empty when it was removed",
-    "trust_boundary": "train/development family-topic coverage only; never held-out inspection, proof, operation, or admission authority"
+    "trust_boundary": "train/development fact coverage plus local reviewed kernel anchors only; never held-out disclosure, proof, operation, or admission authority"
   },
   "kind": "axeyum-autogenesis-concept-coverage-projection",
   "schema_version": 1

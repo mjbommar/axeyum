@@ -171,6 +171,17 @@ BigRational checker proves the slack PSD. `K_3 <= 3` and empty-three <= 1 verify
 controls fail or decline in their distinct channels. The published target solver discarded
 its dual variables, so none of 73/115/168 is certified yet.
 
+**Theta external-artifact front door, 2026-08-26.** ADR-0588 separates the independently
+retrieved graph from a strict `axeyum.theta-clique-dual.v1` rational artifact. The parser
+rejects ambiguous graph records, unknown fields/schema, noncanonical or unreduced rationals,
+and then reuses the exact graph-support and bounded BigRational PSD checker. On the actual
+500-vertex / 112,332-edge `C500.9`, the universal empty-multiplier bound 500 verifies in
+50.30 seconds / 70,500 KiB; changing only the bound to 499 exits 1 at a checked PSD
+obstruction. This establishes the real-instance interchange path, not the published bound 73.
+Current searches found numerical theta tooling but do not justify an exact-certificate priority
+claim. Producing and rationalizing the missing target dual, plus binding the reduction trace,
+remains the mathematical artifact gap.
+
 **S-box positive-certificate slice, 2026-08-26.** ADR-0558 adds a portable named-wire
 Boolean-circuit artifact and bounded complete truth-table checker. The published
 `PRIMATEs^-1` witness matches all 32 independently sourced rows with 8 AND, 35 XOR, and 2 NOT
@@ -185,6 +196,36 @@ one-AND boundary. The published PRIMATEs-inverse MC=8 circuit normalizes into th
 9,326-variable / 31,712-clause formula; 222 selector units solve, lift, and replay. Unpinned
 MC=8 at 30 seconds and the known MC=6 lower-bound control at 120 seconds both interrupted,
 so no MC=7 frontier result is credited. Symmetry/performance work is next.
+
+**S-box semantic selector covers, 2026-08-26.** ADR-0586 exposes a stable typed map from
+all three multiplicative encodings' selector variables to left/right AND operands, output
+coordinates, and constant/input/earlier-AND basis terms. The strict external SAT-model route
+now checks the exact queried CNF, projects and replays the source Boolean-ANF system, lifts a
+portable circuit, and exhaustively replays the PRIMATEs-inverse truth table before writing it.
+The 191-record MC=7 map leaves the 20,585-variable / 69,809-clause formula byte-identical.
+A checked 32-cell cover now names variables 2--6 as gate zero's five left-operand input
+coefficients. An eight-worker proof-free SAT portfolio is live without a wall-clock cutoff;
+its cells carry no credit until a SAT model passes the full replay route, or every leaf has a
+checked DRAT proof. The interval remains `[7,8]`.
+
+**S-box first checked semantic leaf, 2026-08-26.** ADR-0587 adds the missing strict
+partial-cover front door: given the base DIMACS, Boolean-product selectors, and a cube index,
+Axeyum regenerates the cube and `base AND cube` itself before checking a retained textual DRAT.
+It reports only `leaf-unsat-checked`, never global UNSAT. CaDiCaL refuted index zero, the
+all-zero affine left operand of gate zero, in 0.05 seconds and emitted a 413,418-byte proof;
+the file-backed checker accepts it against the regenerated 20,585-variable / 69,814-clause
+leaf. Removing the final 64 bytes is rejected. Thus one of 32 leaves is now checked, while
+the other eight active portfolio cells continue without a wall-clock cutoff. This is exact
+partial progress, not a lower bound: `[7,8]` remains unchanged until either a replayed SAT
+model appears or all leaves and the covering proof check.
+
+**Regression replay gate made load-stable, 2026-08-26.** The pre-push sweep failed twice on
+different corpus rows because it ran `solve_smtlib` and its direct
+`solve_smtlib_with_model` source projection sequentially under independent one-second
+wall-clock deadlines; one run decided while the other correctly timed out. The test now runs
+the model-carrying entry point once and replays every SAT result against that same deciding
+run. This directly tests the evidence contract without turning host load into a false API
+divergence. The 152-file sweep replays 44 SAT results and all-target/all-feature Clippy passes.
 
 **SIMD semantic/minimality calibration, 2026-08-26.** ADR-0559 adds exact provenance-tag
 semantics for unary AVX2 `vpshufb` and same-source `vperm2i128`. Global 32-byte reversal

@@ -1282,8 +1282,12 @@ def _tier_c(
                 decline_class="operational-failure",
                 duration_ms=elapsed(),
             )
-        spent = elapsed()
-        if spent > PRODUCER_WALL_SECONDS * 1000:
+        # Keep the unrounded monotonic duration for the policy decision.  The
+        # public receipt is integer milliseconds, but rounding a sub-ms call
+        # down to zero must not let it escape a zero-second budget.
+        spent_seconds = max(0.0, time.monotonic() - started)
+        spent = int(spent_seconds * 1000)
+        if spent_seconds > PRODUCER_WALL_SECONDS:
             return ProducerError(
                 fact_id=fact_id,
                 tool=tool,

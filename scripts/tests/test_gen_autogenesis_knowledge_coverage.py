@@ -1,15 +1,7 @@
-"""Controls for the Autogenesis knowledge-coverage census.
-
-The one test here used to be `test_kernel_anchor_does_not_inflate_fact_coverage`,
-which appended a synthetic `formalizes` link from a kernel declaration and
-asserted the fact-coverage row did not move while the kernel-anchor row did.
-ADR-0553 removed both populations, so that test could not be repaired -- its
-subject no longer exists. It is replaced by the guard that the removal made
-necessary: with ten of fifteen rows gone, the remaining census is small enough
-that an EMPTY one would still render and still exit 0.
-"""
+"""Controls for the local, self-contained Autogenesis coverage census."""
 
 import contextlib
+import copy
 import importlib.util
 import io
 import json
@@ -17,7 +9,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location(
@@ -44,9 +35,11 @@ class KnowledgeCoverageTests(unittest.TestCase):
                 MODULE.OPERATIONS = operations_path
                 MODULE.OUTPUT = output
                 sys.argv = ["gen-autogenesis-knowledge-coverage.py"]
-                with contextlib.redirect_stdout(io.StringIO()):
-                    with contextlib.redirect_stderr(io.StringIO()):
-                        status = MODULE.main()
+                with (
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(io.StringIO()),
+                ):
+                    status = MODULE.main()
             finally:
                 MODULE.OVERLAY, MODULE.OPERATIONS, MODULE.OUTPUT, sys.argv = old
             return status, (output.read_text() if output.exists() else "")
@@ -60,9 +53,7 @@ class KnowledgeCoverageTests(unittest.TestCase):
 
     @staticmethod
     def count(rendered, label):
-        line = next(
-            line for line in rendered.splitlines() if line.startswith(f"| {label} |")
-        )
+        line = next(line for line in rendered.splitlines() if line.startswith(f"| {label} |"))
         return int(line.rsplit("|", 2)[1].strip())
 
     def test_committed_population_renders_and_is_non_empty(self):
@@ -91,12 +82,36 @@ class KnowledgeCoverageTests(unittest.TestCase):
         uncredited = self.count(rendered, "Applicable facts with no `established-by` credit")
         self.assertEqual(applicable, credited + uncredited)
 
-    def test_the_removed_dimensions_are_named_rather_than_reported_as_zero(self):
+    def test_local_semantic_population_is_nonempty(self):
         overlay, operations = self.committed()
-        _status, rendered = self.run_against(overlay, operations)
-        self.assertIn("ADR-0553", rendered)
-        for label in ("External concepts reached", "Exact-formalization links"):
-            self.assertNotIn(label, rendered)
+        status, rendered = self.run_against(overlay, operations)
+        self.assertEqual(status, 0)
+        self.assertGreater(self.count(rendered, "Axeyum-owned concepts reached"), 0)
+        self.assertGreater(
+            self.count(rendered, "Reviewed empty-footprint kernel theorem anchors"), 0
+        )
+        self.assertNotIn("External concepts reached", rendered)
+
+    def test_kernel_anchor_does_not_inflate_fact_coverage(self):
+        overlay, operations = self.committed()
+        status, before = self.run_against(overlay, operations)
+        self.assertEqual(status, 0)
+        link = copy.deepcopy(
+            next(link for link in overlay["links"] if link["relation"] == "formalizes")
+        )
+        link["id"] = "L:synthetic-kernel-anchor"
+        link["source"]["id"] = "Nat.add_comm"
+        overlay["links"].append(link)
+        status, after = self.run_against(overlay, operations)
+        self.assertEqual(status, 0)
+        self.assertEqual(
+            self.count(before, "Fact records with qualified formal content"),
+            self.count(after, "Fact records with qualified formal content"),
+        )
+        self.assertEqual(
+            self.count(after, "Reviewed empty-footprint kernel theorem anchors"),
+            self.count(before, "Reviewed empty-footprint kernel theorem anchors") + 1,
+        )
 
 
 if __name__ == "__main__":

@@ -12,14 +12,18 @@
 | Credited facts mapped with `established-by` | 7 |
 | Applicable facts with no `established-by` credit | 5 |
 
-## Removed dimensions
+## Local semantic vocabulary
 
-ADR-0553 removed the `formalizes` / `uses-technique` census: concepts,
-encounters and techniques reached, exact-formalization and supporting-law
-link counts, facts with qualified formal content, and the reviewed
-kernel-theorem anchor population. All ten counted edges into a namespace
-resolved against a sibling repository. They are not reported as zero,
-because a row pinned at zero reads as a measurement and is not one.
+| Measure | Count |
+|---|---:|
+| Active qualified `formalizes` links | 28 |
+| Axeyum-owned concepts reached | 6 |
+| Fact records with qualified formal content | 13 |
+| Reviewed empty-footprint kernel theorem anchors | 6 |
+
+The former sibling-backed namespace remains absent. These rows count only
+self-contained Axeyum concept entities and active, human-reviewed links;
+they do not resolve or pin another checkout.
 
 ## Interpretation
 
@@ -27,3 +31,4 @@ The current multi-target operation population is listed from the operation regis
 while credit is read from fact evidence. A fact that was already settled through a
 different operation may be in a reusable operation's applicability set without being
 credited to that operation; the two counts are deliberately separate.
+Semantic links are qualified review metadata and never theorem or admission credit.

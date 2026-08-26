@@ -284,6 +284,17 @@ remaining foundation is a target-local reconstruction over the imported
 definition (or an independently checked semantic bridge), followed by the same
 three-sibling unchanged-operation bar.
 
+That reconstruction has now crossed the boundary for the first sibling.
+Lean 4.30 reports that its own `Nat.mod_self`, `Nat.add_mod_left`, and
+`Nat.add_mod_right` proofs all carry `propext`; importing those names therefore
+repeats the failed shortcut. A new target-local `modSelf` contract instead
+reduces the exact `Nat.mod` / `Nat.modCore.go` implementation directly. Lean
+reports an empty footprint, source-to-source transport succeeds, bounded
+application closes the proof-free modulus-zero goal, and Axeyum independently
+admits it with no target dependency. Conversion is now 1/3. The remaining
+construction is one implementation-local periodicity law reusable by both
+addition siblings; operation authority still waits for 3/3.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring
@@ -522,6 +533,45 @@ records all three. The derived authority reports 450 kernel facts, 356 named
 facts, 1,302 graph edges, and zero missing edges; the fact DAG gains one fact
 with dependents without changing theorem status or proof credit.
 
+The semantic-review queue is now honest at the same moving boundary. It had
+three mutually inconsistent states: its JSON stopped at 1,275 theorems, its
+Markdown still advertised 869 theorems and three anchors, and its control named
+an overlay link that no longer existed. The generator now owns a marked census
+block in the document as well as the JSON, and its mutation control synthesizes
+an active/candidate link instead of depending on historical overlay content.
+The refreshed result is 1,287 empty-footprint theorems, zero active reviewed
+semantic anchors, and 1,287 unreviewed entries. That zero is a real knowledge
+gap, not a reason to infer semantics from theorem names.
+
+The zero also exposed a structural gap left by a correct decoupling decision.
+ADR-0553 removed every semantic edge that resolved against the read-only
+`math-education` sibling, but the queue still described a `formalizes` workflow
+that the local schema no longer represented. Axeyum now owns the smallest
+viable replacement: three self-contained concepts and three restored reviewed
+kernel anchors for scoped excluded middle, a complex squared-norm power law,
+and circumcentre uniqueness. The relation is accepted only for locally resolved
+concepts, empty-footprint kernel theorems, human-reviewed assurance, and an
+explicitly partial coverage qualifier. Fourteen validator controls and five
+coverage controls protect those boundaries; the external-coupling scan still
+reports zero findings. The queue is now actionable at 3 reviewed / 1,284
+unreviewed rather than structurally pinned at zero. Next: add small reviewed
+local concept batches whose definitions Axeyum can adjudicate, never bulk-copy
+or name-match the reference corpus.
+
+The first follow-on batch applies that process to statements already carrying
+strong ledger evidence. Three additional local concepts—factorial products,
+modular arithmetic, and equivalence relations—receive twelve proposition-level
+links from nine settled train/development facts. Each edge was reviewed against
+the fact's formal statement and names its exact base, boundary, bridge, or
+relation law. The concept projection once again joins family-topic guidance,
+qualified fact formalization, and kernel anchors: 13 concepts in the union, 177
+family-topic facts, nine formalized facts, three kernel anchors, and zero
+held-out formalization links. The validator independently joins the overlay and
+nursery and rejects dropped facts, invented anchors, stale source hashes, and
+held-out identities. This is the first useful connective tissue beyond the
+three seed anchors; it remains partial semantic review, not automated
+classification or production credit.
+
 ### Exit evidence
 
 - Kernel theorem count agrees exactly with the theorem-production authority.
@@ -616,6 +666,60 @@ selection as historical. Either child may advance only to a checked,
 axiom-free `kernel-lean` proof; an open child must remain free of admission
 fields. This keeps top-down selection evidence stable while allowing bottom-up
 theorem construction to move the ledger forward.
+
+The product-health front door is now generated from the committed authorities
+rather than maintained as another prose estimate. Its first snapshot measures
+1,287 kernel theorems, 698 ledger facts, 397 exactly linked theorems, 16
+non-fixture episodes, two reusable multi-target operations, and two admissible
+general-producer observations among 138 facts. Source-population hashes make
+the JSON and Markdown stale when their evidence changes, and both aggregate
+gates run the generator's controls and freshness check. Crucially, the artifact
+records runtime gate status as `not-recorded`: static reachability is useful,
+but it is not a successful `just check` or CI receipt. Next: define an
+authenticated, commit-bound execution receipt before displaying runtime health.
+
+The same front door now consumes the held-out-safe concept projection rather
+than leaving semantic enrichment in a specialist artifact. It reports nine
+qualified formalization facts and three reviewed kernel anchors across thirteen
+projected concepts, and verifies that semantic coverage is reachable from both
+aggregate gates. These figures remain explicitly partial human-reviewed
+mappings; they are not inferred classifications and do not change the 2/138
+general-producer result.
+
+The first exact imported modular-arithmetic bridge assay now prevents a false
+shortcut at the next representation boundary. Eight public Mathlib 4.30
+candidate theorems were exported separately from three proof-free `Nat.ModEq`
+targets and passed through a new source-to-source checked transport probe. Six
+obvious arithmetic shortcuts carry `propext`; `dvd_refl` is axiom-free but its
+closure cannot yet compose into the minimal target capsule; only
+`Nat.ModEq.refl` transports, and bounded application converts 0/3 targets.
+This was a useful hard boundary rather than producer progress. The first exact
+behavior contract now reconstructs `n % n = 0` directly over imported
+`Nat.mod`, transports with an empty footprint, and independently admits the
+modulus-zero sibling. The assay therefore advances from 0/3 to 1/3 without
+settling the fact or registering an operation. Next: construct one shared
+implementation-local periodicity law for the two addition siblings and require
+the unchanged probe to reach 3/3 before operation registration.
+
+Runtime health now has a provider-captured, commit-bound evidence path. The
+first receipt binds canonical GitHub Actions run `33013805820` to tested commit
+`08b65942ff9d`, the exact workflow bytes, and all 14 completed jobs. It records
+eight successes and six failures, so product health honestly reports
+`failed-ancestor`. Two failures identified integration debt in this lane—the
+new example invalidated a generated completeness inventory, and the lane status
+exceeded its size ceiling—and are repaired in the receipt follow-up. The other
+failed jobs remain explicit and owned separately. Next: capture a later
+completed run after repairs; never infer current-head green from an ancestor
+receipt.
+
+The connected-knowledge substrate now represents both sides of the natural
+congruence boundary without collapsing them. Four settled imported `Nat.ModEq`
+facts add reviewed modular-arithmetic coverage, three of them add equivalence-
+relation laws, and the axiom-free native reflexive/symmetric/transitive
+theorems add three kernel anchors across the same concepts. Product health moves
+from 9 reviewed facts / 3 anchors to 13 / 6, with zero held-out disclosure. All
+edges record their representation and deny declaration-equivalence authority;
+semantic proximity can guide retrieval but cannot authorize transport.
 
 ## Sequencing
 
