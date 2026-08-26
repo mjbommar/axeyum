@@ -112,20 +112,20 @@ Counts are `CReal.*` declarations matching the topic, from
 | 3–4 | Functions, graphs | — | no carrier needed |
 | 5 | Limits | **K** | 11 `converges_*`, incl. `converges_of_cauchy`, `converges_unique`, `converges_squeeze` |
 | 6 | Continuous functions | **K** | 9 `continuous_*` / `uniformly_continuous_*` |
-| **7** | **"Three Hard Theorems"** — IVT, EVT, boundedness | **X → K** | **IVT: approximate form under construction** — `ivt_step` + `ivt_iter` landed, `ivt_approx` in flight now that `pow_half_le_natDivSucc` exists. **EVT: unavailable** (attained maximum). **Boundedness: open**, needs a computable bucket-index function |
+| **7** | **"Three Hard Theorems"** — IVT, EVT, boundedness | **X → K** | **IVT: closed.** `ivt_approx` proved; `ivt_bisect` is data-valued (one `Nat.rec` into `Bool → CReal`) with a proven invariant. An **exact** root is refuted, not merely unbuilt — two kernel-computed counterexamples: a stationary endpoint freezes its slack, and `F := id` on `[−1,2]` converges to `1/2` where the root is `0`. **EVT: unavailable** (an attained maximum is not constructive). **Boundedness: in flight** — `bucketIndexFloorLower`/`Upper` landed, sandwiching the clamped sample between grid points **with no sign hypothesis** (`q ≥ 0` holds unconditionally via `Rat.le_max_right`) |
 | 8 | Least upper bounds | **X → K** | classical LUB unavailable; **Bishop completeness** proved instead (`creal/completeness.rs`): every regular sequence of reals has a limit, *constructed* |
 | 9–10 | Derivatives, differentiation rules | **K** | 17 `hasDerivative_*` incl. `_chain`, `_mul`, `_pow`, and **`_unique`** — which needs `lt a b`: without it the naive statement is FALSE (at `a = b` the spec is vacuous, so `const zero` and `const one` are both derivatives of `id`) |
-| **11** | Significance of the derivative (MVT) | **X → K** | MVT unavailable (rests on EVT); **`monotone_of_nonneg_deriv` proved without it**, by direct subdivision. Also `constant_of_zero_deriv`, `antitone_of_nonpos_deriv`, **`strict_mono_of_pos_deriv`**, `strict_injective_of_pos_deriv` |
+| **11** | Significance of the derivative (MVT) | **X → K** | MVT unavailable (rests on EVT); **`monotone_of_nonneg_deriv` proved without it**, by direct subdivision. Also `constant_of_zero_deriv`, `antitone_of_nonpos_deriv`, **`strict_mono_of_pos_deriv`**, `strict_injective_of_pos_deriv`, `strict_antitone_of_neg_deriv`, `strict_mono_comp`, and the **rate**: `strict_mono_magnitude` + `scale_cancel_le` → `diff_le_of_strict_mono_magnitude` (`|x−y| ≤ 2(k+1)(|Fx|+|Fy|)`). `scale_cancel_le` deliberately avoids `le_of_mul_le_mul_left`'s `PosBound`/`inv` machinery by exploiting that `ofNat n` is **defeq** to `ofRat (natDivSucc n 0)` |
 | 12 | Inverse functions | **K / X** | `order_reflect_of_pos_deriv` ✓ (needs `Apart` as data). **Order PRESERVATION is reachable; order REFLECTION is exactly as hard as an exact IVT preimage** — both convert a codomain fact into domain position information |
-| 13 | Integrals | **K** | partial — `riemannSum` + laws, `sumRange_reblock` (general block size), `within_of_two_sided_le`, the succ-shape bridge. The **limit** is not yet built; blocked on a per-block uniform-continuity bound |
+| 13 | Integrals | **K** | partial — `riemannSum` + laws, `sumRange_reblock`, `within_of_two_sided_le`, `fineBlockSum_close` (per-block bound **and** per-block fold), plus `meshReciprocalMul` and `equivAbsDiffLe`. **The obstruction is now named, not guessed:** relating the reblocked global sum to the per-block sums applies `F` to sample points that are `Equiv` but not syntactically equal, and `CReal → CReal` functions are **not automatically `Equiv`-respecting** in this setoid (ADR-0512). Five steps scoped; step 1 (sample-point bridging) in flight |
 | 14 | Fundamental Theorem of Calculus | — | open, downstream of 13 |
 | 15–17 | Trig, π irrational, planetary motion | — | open; no transcendental functions exist |
-| 18 | Log and exp | **K** | partial — `expTerm`, `expSeriesPartial`; `e` blocked on the geometric Cauchy telescope |
+| 18 | Log and exp | **K** | partial — `expTerm`, `expSeriesPartial`, and **`expTerm_le_geom`** (`1/n! ≤ 2·(1/2)ⁿ`, unconditional, no case split) on a `Nat` engine `2ⁿ ≤ 2·n!` proved by a **shift-by-one induction** — the naive one fails at `n=0→1`, where doubling the hypothesis needs `n ≥ 1`. `e` is blocked on ONE bridge: `Rat.pow (natDivSucc 1 1) n` and `Rat.normalize 1 (2ⁿ)` are the same value in different representations |
 | 20 | Taylor polynomials | — | open |
 | 21 | `e` is irrational | — | open (√2's irrationality **is** proved, `Nat.no_rational_sqrt_two`) |
 | 22–23 | Sequences and series | **K** | comparison test, dominated convergence, telescoping, geometric tail bounds |
 | 24 | Uniform convergence, power series | — | open |
-| 25–27 | Complex numbers and functions | **K** | ~1,000 `Complex.*` declarations; field, `conj`, `normSq`, roots of unity, Ptolemy |
+| 25–27 | Complex numbers and functions | **K** | ~1,000 `Complex.*` declarations; field, `conj`, `normSq`, roots of unity, Ptolemy, `add_pow`, `mul_sub_one_geom`; conjugation now closed over the ring and division: `conj_zero`, `conj_one`, `conj_pow`, `conj_div`, `div_congr`. `Complex.exp`/`abs`/`arg` absent — all gated on a general `CReal.sqrt`, itself an open climb. **FTA needs polynomial infrastructure that does not exist at all** |
 | 28 | Fields | **K** | `Rat`, `CReal`, `Complex` field laws |
 | **29** | **Construction of the real numbers** | **K** | **`CReal` *is* this** — Bishop setoid over constructed rationals, trusted surface 0 (ADR-0512) |
 | 30 | Uniqueness of the reals | — | open (needs LUB, so likely **X**) |
@@ -180,3 +180,34 @@ The route that works stays entirely at the `CReal` level —
 statement about the reals, not about their representatives. That distinction is
 the general lesson: **an argument phrased about representatives inherits the
 sampling schedule; one phrased about the setoid does not.**
+
+## Postscript II: a cited blocker is often older than the code that removed it
+
+Three times in one session a lane found that the obstacle its brief or a module
+doc named had already been dissolved by unrelated work, by someone who never
+knew what they were unblocking.
+
+- `exponential.rs`'s module doc gave two routes to `Cauchy (sumRange expTerm)`
+  and stated **"neither is built."** By then a later lane had landed
+  `CReal.ofRat_pow` and `pow_half_le_natDivSucc` in `geometric.rs`, which is
+  most of route (a). The doc had stopped the work it described for weeks.
+- `Complex.conj_div`'s `PosBound` transport was briefed as "the whole
+  difficulty" on the previous lane's own analysis. `Complex.pos_bound_conj`
+  already existed and transported at the **same `k`**, collapsing it to one
+  call.
+- Chapter 7's boundedness was expected to need a sign hypothesis on `w`. It does
+  not: `q ≥ 0` holds unconditionally via `Rat.le_max_right`, which is exactly
+  what makes `natAbs (num q)` an *exact* read rather than a bounding one.
+
+The pattern is structural, not careless. A doc records the frontier **at the
+moment it was written**, and in a repository with several lanes running it goes
+stale in hours — while reading exactly like a current statement of fact. The
+cost is asymmetric: a stale "this is impossible" note suppresses attempts
+silently and forever, whereas a stale "this is easy" note is corrected by the
+first lane that tries.
+
+So: **before building machinery to get around a documented blocker, check
+whether it is still there** — read the inventory, not the prose. And when a lane
+finds a doc wrong, correcting the doc is part of the deliverable, not a
+courtesy. Two of the three above were corrected in the same commit that used
+the finding; the third is this note.
