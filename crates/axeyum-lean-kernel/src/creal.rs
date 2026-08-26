@@ -2360,6 +2360,13 @@ pub struct CRealPrelude {
     /// `CReal.expSeriesPartial : Nat → CReal := CReal.sumRange CReal.expTerm`
     /// — the `k`-th partial sum `Σ_{n<k} 1/n!`. See `creal/exponential.rs`.
     pub exp_series_partial: NameId,
+    /// `CReal.expTerm_le_geom : ∀ n, le (expTerm n) (ofRat (Rat.normalize 2
+    /// (Nat.pow 2 n) _))` — `1/n! ≤ 2·(1/2)ⁿ` for every `n`, unconditional
+    /// (no case split): both sides are `2` at `n=0` and `1` at `n=1`, and
+    /// the ratio only widens from there. A pure `Rat`/`Nat` cross-
+    /// multiplication proof (`creal/exponential.rs`), reducing to the `Nat`
+    /// fact `2ⁿ ≤ 2·n!` — never touches `CReal.pow` or `CReal.inv`.
+    pub exp_term_le_geom: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -3174,6 +3181,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_close_of_equiv: kernel.name_str(creal, "hasDerivative_closeOfEquiv"),
         exp_term: kernel.name_str(creal, "expTerm"),
         exp_series_partial: kernel.name_str(creal, "expSeriesPartial"),
+        exp_term_le_geom: kernel.name_str(creal, "expTerm_le_geom"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
