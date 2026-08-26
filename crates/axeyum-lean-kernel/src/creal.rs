@@ -2283,6 +2283,29 @@ pub struct CRealPrelude {
     /// says so.
     pub strict_injective_of_pos_deriv: NameId,
 
+    /// `CReal.order_reflect_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F F' a
+    /// b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∀ x y, le a x → le x b → le a y → le y b → Apart x y → lt (F x) (F y)
+    /// → lt x y` (`creal/inverse_fn.rs`) — the CONVERSE half of
+    /// [`Self::strict_mono_of_pos_deriv`], and the reason it is stated with
+    /// `Apart x y` as a HYPOTHESIS rather than derived: producing `lt x y`
+    /// from nothing but a codomain inequality would require deciding which
+    /// of `lt x y`/`lt y x` holds, and `CReal.lt` is not decidable. Given
+    /// `Apart x y` as DATA (not derived via excluded middle), the proof
+    /// cases on it: the `lt x y` branch is the goal already; the `lt y x`
+    /// branch applies [`Self::strict_mono_of_pos_deriv`] to get
+    /// `lt (F y) (F x)`, which together with the hypothesis `lt (F x) (F y)`
+    /// gives `lt (F x) (F x)` via `lt_trans`, refuted by `lt_irrefl`.
+    ///
+    /// Unconditional order-reflection (no `Apart x y` hypothesis) is NOT
+    /// proved here and is not reachable with this development's current
+    /// machinery: it is exactly as hard as finding an exact preimage
+    /// (`creal/ivt.rs`'s `ivt_approx`, still open), since both require
+    /// turning a codomain inequality into domain POSITION information, which
+    /// needs some form of bisection/localisation this file does not have in
+    /// exact form.
+    pub order_reflect_of_pos_deriv: NameId,
+
     /// `CReal.ivt_step : ∀ F P Q eps, lt zero eps → le P Q → le (F P) eps →
     /// le (neg eps) (F Q) → ∃ P' Q', le P P' ∧ le P' Q' ∧ le Q' Q ∧
     /// le (F P') eps ∧ le (neg eps) (F Q') ∧ Equiv (add Q' (neg P')) (mul
@@ -2663,6 +2686,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         monotone_of_nonneg_deriv: kernel.name_str(creal, "monotone_of_nonneg_deriv"),
         strict_mono_of_pos_deriv: kernel.name_str(creal, "strict_mono_of_pos_deriv"),
         strict_injective_of_pos_deriv: kernel.name_str(creal, "strict_injective_of_pos_deriv"),
+        order_reflect_of_pos_deriv: kernel.name_str(creal, "order_reflect_of_pos_deriv"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
@@ -2804,6 +2828,11 @@ pub(crate) fn build_creal_prelude_uncached(
         // particular it cannot join `monotone::declare_monotone`'s own call
         // site, which runs before `integral` for exactly that reason.
         monotone::declare_monotone_of_nonneg_deriv_all(&mut d, prelude)?;
+        // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
+        // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
+        // above); nothing later depends on it, so it lands right after its
+        // one real dependency.
+        inverse_fn::declare_order_reflect_of_pos_deriv(&mut d, prelude)?;
         power::declare_power(&mut d, prelude)?;
         // `hasDerivative_pow_two` mentions `CReal.pow`, which `power.rs`
         // declares. It cannot live inside `derivative::declare_derivative`,
@@ -3755,6 +3784,7 @@ mod field;
 mod geometric;
 mod integral;
 mod inverse;
+mod inverse_fn;
 mod ivt;
 mod lattice;
 mod monotone;
