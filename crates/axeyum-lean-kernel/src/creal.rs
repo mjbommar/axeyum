@@ -1972,6 +1972,61 @@ pub struct CRealPrelude {
     /// never forming `Rat.inv`, matching `bernoulli_harmonic_bound`'s own
     /// design.
     pub pow_half_le_nat_div_succ: NameId,
+    /// `CReal.geomHalfInvLeafBound : ∀ a, le (mul (inv (add one (neg half)) 1
+    /// h) (pow half a)) (ofRat (natDivSucc 2 a))`, `h` built internally (not
+    /// a parameter) — the leaf [`Self::geom_pair_within`]'s own field doc
+    /// names as undischarged (`seq Yₐ b`, `Yₐ := pow half a · inv (add one
+    /// (neg half)) 1 h`), bounded in its full `CReal` form (`Yₐ ≤ 2/(a+1)`,
+    /// not yet sampled at any index `b`).
+    ///
+    /// See `exponential.rs`'s module documentation for the derivation:
+    /// `PosBound half 1` is `le_refl` applied to `half` itself (`half`'s own
+    /// sample is the constant `1/2`); `PosBound (add one (neg half)) 1`
+    /// transports it across `Equiv (add one (neg half)) half` via
+    /// [`Self::le_congr`]; the `inv`-value itself is pinned to the rational
+    /// constant `2` by cancelling `half` from both `Equiv (mul half (inv
+    /// …)) one` ([`Self::mul_inv_cancel`]) and `Equiv (mul half (ofRat 2))
+    /// one` (a `Rat`-level computation) via [`Self::le_of_mul_le_mul_left`]
+    /// run in both directions plus [`Self::equiv_of_le_le`] — never via
+    /// [`Self::inv_congr`]. Multiplying [`Self::pow_half_le_nat_div_succ`]
+    /// through by that constant `2` closes it. `inv` enters only here, for
+    /// this one concrete base; nothing downstream of this declaration
+    /// touches `CReal.inv`/`PosBound` again.
+    pub geom_half_inv_leaf_bound: NameId,
+    /// `CReal.geomCauchyOrderedHalf : ∀ a b, Nat.le a b → Within (seq
+    /// (sumRange (pow half) b) b − seq (sumRange (pow half) a) a)
+    /// (natDivSucc 7 b + natDivSucc 7 a)`.
+    ///
+    /// The ordered-pair, fully-normalized geometric Cauchy bound at the
+    /// concrete base `1/2`. [`Self::geom_half_inv_leaf_bound`] applied at
+    /// index `b` and `Rat.le_of_sub_le`-converted bounds the leaf by
+    /// `natDivSucc 2 a + natDivSucc 2 b`; two `Rat.natDivSucc_le_scaled`
+    /// widenings retire the two `shift b` legs
+    /// `Rat.natDivSucc_le_scaled` widenings retire the two `shift b` legs
+    /// [`Self::geom_pair_within`] carries; and the seven resulting leaves
+    /// (`2×natDivSucc 1 b`, `2×natDivSucc 2 b`, `1×natDivSucc 1 b`,
+    /// `natDivSucc 2 a`, `natDivSucc 1 a`) fuse to `natDivSucc 7 b +
+    /// natDivSucc 7 a` — `7` on the `b` side exactly, `3` padded up to `7` on
+    /// the `a` side via one `Rat.natDivSucc_le_add_left`. `inv` enters only
+    /// here, for this one concrete base; nothing downstream of this
+    /// declaration touches `CReal.inv`/`PosBound` again.
+    pub geom_cauchy_ordered_half: NameId,
+    /// `CReal.geomCauchy : Cauchy (sumRange (fun n => pow half n))` —
+    /// **`CReal.geom_cauchy`**, closing the goal `geometric.rs`'s own module
+    /// documentation named as blocked (the blocker itself was stale — see
+    /// `exponential.rs`'s module documentation for the correction).
+    ///
+    /// [`Self::geom_cauchy_ordered_half`]'s own bound is not symmetric in its
+    /// two indices (the `b`-side leg costs more than the `a`-side one), so
+    /// this eliminates the `Nat.le_total` disjunction — never branching on
+    /// [`Self::le`] itself, which is undecidable — and calls
+    /// `geom_cauchy_ordered_half` at whichever of `(m, n)`/`(n, m)` satisfies
+    /// its own `a ≤ b` side condition, exactly mirroring
+    /// `series.rs::declare_sum_range_cauchy_of_dominated`'s own case split
+    /// (`within_symm` plus one `Rat.add_comm` rewrite in the `m ≤ n` branch,
+    /// no rewrite needed in the `n ≤ m` branch), with the single fixed
+    /// witness `K := 7` in place of that theorem's `k + 8`.
+    pub geom_cauchy: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -3358,6 +3413,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pow_le_pow_of_base_le: kernel.name_str(creal, "pow_le_pow_of_base_le"),
         of_rat_pow: kernel.name_str(creal, "ofRat_pow"),
         pow_half_le_nat_div_succ: kernel.name_str(creal, "pow_half_le_natDivSucc"),
+        geom_half_inv_leaf_bound: kernel.name_str(creal, "geomHalfInvLeafBound"),
+        geom_cauchy_ordered_half: kernel.name_str(creal, "geomCauchyOrderedHalf"),
+        geom_cauchy: kernel.name_str(creal, "geomCauchy"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
@@ -3711,6 +3769,15 @@ pub(crate) fn build_creal_prelude_uncached(
         // `Rat.normalize`; nothing else in this file depends on them, so they
         // land last.
         exponential::declare_exponential(&mut d, prelude)?;
+        // `geom_cauchy`/`geom_cauchy_ordered_half` need `half`/`half_rat`/
+        // `one_sub_half_equiv_half` (declared as Rust helpers, not kernel
+        // declarations, so no ordering constraint from them) plus
+        // `geom_pair_within`/`pow_half_le_nat_div_succ`
+        // (`geometric::declare_geometric`, well above). Placed after
+        // `exponential::declare_exponential` only because its own private
+        // `half`/`one_sub_half_equiv_half` builders are reused verbatim, not
+        // because anything `exponential` DECLARES is a dependency.
+        exponential::declare_geom_cauchy_family(&mut d, prelude)?;
         // `ivt::declare_ivt` needs `CReal.lt_cotrans` (`cotransitivity`, well
         // above), `CReal.mesh_count_width` (`monotone::declare_monotone_of_nonneg_deriv_all`,
         // also above) and ordinary ring/order laws; nothing later depends on

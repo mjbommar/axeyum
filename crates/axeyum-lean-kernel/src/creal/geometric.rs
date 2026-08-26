@@ -83,23 +83,26 @@
 //! `add m n`) and closes with the same "within-swap via `neg_sub`" helper
 //! (`within_of_tail_le`, reproduced verbatim below — private to `series.rs`).
 //!
-//! **This is not yet `Cauchy`, and landing it does not finish the goal.**
-//! Reaching `Cauchy`'s own `∃ K, ∀ m n, Within (…) (natDivSucc K m +
-//! natDivSucc K n)` shape from `geom_tail_within` needs bounding the deferred
-//! sample `seq Yₘ (add m n)` — a quantity that decays **geometrically** in
-//! `m` — by a **harmonic**-shaped `natDivSucc K' m` for one `K'` fixed
-//! *uniformly in `m`*. That is not index arithmetic; it is a genuine missing
-//! piece of real analysis, and nothing in this development supplies it:
-//! there is no lemma bounding `CReal.pow` above by a `natDivSucc` rational, no
-//! lemma comparing `pow` at two different bases for the same exponent
-//! (needed to compare `xⁿ` against `(1−ε)ⁿ` for the rational `ε` `PosBound`
-//! supplies), and no Bernoulli-type inequality (`(1+ε)ⁿ ≥ 1+nε`) from which
-//! such a bound is normally derived. Each is a standalone, moderate
-//! induction in its own right (see this file's own `geom_tail_nonneg` for
-//! the size of a *comparable* induction), but together they are substantially
-//! more work than the index-arithmetic difficulty this task was framed
-//! around, and none of the three exists yet in any file this slice may
-//! touch. **This is the precise remaining blocker for `CReal.geom_cauchy`.**
+//! **This is not yet `Cauchy`, and landing it alone would not finish the
+//! goal — but the goal itself is now closed, in `exponential.rs`, and the
+//! diagnosis below turned out to name a blocker that had already been
+//! removed by unrelated work.** Reaching `Cauchy`'s own `∃ K, ∀ m n, Within
+//! (…) (natDivSucc K m + natDivSucc K n)` shape from `geom_tail_within`
+//! needs bounding the deferred sample `seq Yₘ (add m n)` — a quantity that
+//! decays **geometrically** in `m` — by a **harmonic**-shaped `natDivSucc
+//! K' m` for one `K'` fixed *uniformly in `m`*. This paragraph used to say
+//! "there is no lemma bounding `CReal.pow` above by a `natDivSucc`
+//! rational", and that was true when it was written — but
+//! `CRealPrelude::pow_half_le_nat_div_succ`, added to *this file* later (for
+//! the IVT bisection modulus, `ivt.rs`), is exactly that lemma at the
+//! concrete base `1/2`. Nothing else in the "no comparing `pow` at two
+//! different bases" / "no Bernoulli-type inequality" pair was ever built or
+//! needed: the base-`1/2` route only ever needed the one harmonic bound,
+//! not a general comparison. `exponential.rs`'s own module documentation
+//! has the corrected account and the full derivation
+//! (`CReal.geomHalfInvLeafBound` → `CReal.geomCauchyOrderedHalf` →
+//! `CReal.geomCauchy`, the last of these `Cauchy (sumRange (fun n => pow
+//! half n))` itself).
 //!
 //! ## `geom_tail_within_le` and `geom_pair_within`: the index generalization
 //! and the canonical-index normalization, landed without the harmonic bound
