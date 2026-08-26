@@ -42,6 +42,7 @@ INT_FIB_EQ_ZERO_FACT = "F:ml430-int-fib-eq-zero-8193c7cb"
 # intend to dispatch out of the way of the one it does.
 NAT_MODEQ_SYMM_FACT = "F:ml430-nat-modeq-symm-0a3d4d18"
 NAT_MODEQ_TRANS_FACT = "F:ml430-nat-modeq-trans-ef9d1c46"
+NAT_MODEQ_ADD_LEFT_FACT = "F:ml430-nat-add-modeq-left-e3b1fba9"
 
 
 def settle_reflexivity_fact(facts):
@@ -635,6 +636,68 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
                 execution=forged,
                 operation=operation,
                 registry=registry,
+            )
+
+    def test_imported_candidate_family_delta_retains_exact_theorem_dependency(self):
+        executor = MODULE.load_module(
+            "executor_for_imported_candidate_transaction_test",
+            MODULE.EXECUTOR_SCRIPT,
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_imported_candidate_transaction_test",
+            executor.FRONTIER_SCRIPT,
+        )
+        facts = frontier_module.load()
+        before = facts[NAT_MODEQ_ADD_LEFT_FACT]
+        registry = executor.load_module(
+            "registry_for_imported_candidate_transaction_test",
+            executor.REGISTRY_SCRIPT,
+        ).load_registry()
+        operation = next(
+            op
+            for op in registry["operations"]
+            if op["id"] == "authoritative-mathlib-nat-modeq-remainder-family-v1"
+        )
+        frontier = frontier_module.build_machine_frontier(facts, registry)
+        observation = executor.expected_imported_candidate_family_observation(
+            operation, before
+        )
+        execution_receipt = executor.build_receipt(
+            frontier=frontier,
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="e" * 40,
+            observation=observation,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution_receipt,
+            operation=operation,
+            registry=registry,
+        )
+        after = transaction["authoritative_write"]["after_fact"]
+        binding = after["evidence"][0]["checker_operation"]
+        self.assertEqual(
+            binding["retained_answer_dependencies"],
+            ["Axeyum.Autogenesis.Candidate.NatModRemainder.addModLeft"],
+        )
+        checker = MODULE.load_module(
+            "fact_checker_for_imported_candidate_transaction_test",
+            MODULE.FACT_OPERATION_SCRIPT,
+        )
+        checked = checker.check_fact(
+            after, lambda _operation, fact=None: observation
+        )
+        self.assertEqual(checked["operation_id"], operation["id"])
+
+        changed = copy.deepcopy(after)
+        changed["evidence"][0]["checker_operation"][
+            "retained_answer_dependencies"
+        ] = []
+        with self.assertRaisesRegex(checker.FactOperationError, "stale or mutated"):
+            checker.check_fact(
+                changed, lambda _operation, fact=None: observation
             )
 
     def test_checked_theorem_receipt_delta_retains_source_and_proof_identities(self):

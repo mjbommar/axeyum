@@ -133,6 +133,7 @@ def check_target(target: dict[str, Any], max_binders: int) -> dict[str, Any]:
         "declarations": str(outcome["admitted_declarations"]),
         "axioms": "0",
         "theorem_dependencies": "1",
+        "theorem_dependency_names": outcome["theorem_dependency_names"][0],
         "target_dependency": "false",
         "goal_sha256": outcome["goal_sha256"],
         "proof_sha256": outcome["proof_sha256"],

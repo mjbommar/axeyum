@@ -967,6 +967,81 @@ def build_authoritative_transaction(
             "exact kernel-checked proof, dependency-free result, and matching "
             "target definition"
         )
+    elif executor["driver"] == "axeyum-lean-import/imported-candidate-family-multi-target-v1":
+        executor_module = load_module(
+            "autogenesis_executor_for_imported_candidate_transaction",
+            EXECUTOR_SCRIPT,
+        )
+        try:
+            target, outcome, target_input, candidate_input = (
+                executor_module.imported_candidate_family_target_contract(
+                    operation, before_fact
+                )
+            )
+        except executor_module.ExecutionError as error:
+            raise TransactionError(
+                f"imported-candidate multi-target resolution failed: {error}"
+            ) from error
+        expected_statement_sha = hashlib.sha256(
+            before_fact["formal"]["statement"].encode()
+        ).hexdigest()
+        expected_dependencies = outcome["theorem_dependency_names"]
+        observation = result.get("observation")
+        if (
+            identity.get("formal_statement_sha256") != expected_statement_sha
+            or identity.get("target_definition") != target["target_definition"]
+            or identity.get("receipt_manifest_sha256")
+            != hashlib.sha256(
+                json.dumps(
+                    json.loads((ROOT / executor["receipt_manifest"]).read_text()),
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+            ).hexdigest()
+            or identity.get("target_artifact_sha256") != target_input["sha256"]
+            or identity.get("candidate_artifact_sha256") != candidate_input["sha256"]
+            or identity.get("retained_dependency_set_sha256")
+            != executor_module.digest(expected_dependencies)
+            or not isinstance(observation, dict)
+            or observation.get("verdict") != "proved"
+            or observation.get("target_definition") != target["target_definition"]
+            or observation.get("axiom_footprint") != []
+            or observation.get("retained_answer_dependencies") != expected_dependencies
+            or observation.get("target_dependency") is not False
+            or observation.get("ledger_writes") != 0
+        ):
+            raise TransactionError(
+                "imported-candidate multi-target execution assurance is inconsistent"
+            )
+        execution_input_binding = {
+            "target_fact_id": fact_id,
+            "receipt_manifest": executor["receipt_manifest"],
+            "receipt_manifest_sha256": identity["receipt_manifest_sha256"],
+            "target_artifact_sha256": identity["target_artifact_sha256"],
+            "candidate_artifact_sha256": identity["candidate_artifact_sha256"],
+            "retained_dependency_set_sha256": identity[
+                "retained_dependency_set_sha256"
+            ],
+            "formal_statement_sha256": expected_statement_sha,
+            "target_definition": target["target_definition"],
+            "goal_sha256": observation["goal_sha256"],
+            "proof_sha256": observation["proof_sha256"],
+            "target_content_sha256": observation["target_content_sha256"],
+            "binders_used": observation["binders_used"],
+            "max_binders": observation["max_binders"],
+            "application_depth": observation["application_depth"],
+            "terms_considered": observation["terms_considered"],
+            "admitted_declarations": observation["admitted_declarations"],
+            "retained_answer_dependencies": expected_dependencies,
+        }
+        result_description = (
+            "fresh-import axiom-free imported-candidate family target proof"
+        )
+        replay_description = (
+            "resolves immutable target and candidate streams through the operation's "
+            "reviewed checker and requires the exact kernel-checked proof, one named "
+            "retained theorem dependency, and no target dependency"
+        )
     else:
         raise TransactionError("authoritative operation uses an unsupported driver")
     after_fact = json.loads(json.dumps(before_fact))

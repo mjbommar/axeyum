@@ -81,6 +81,9 @@ def validate() -> dict:
             identity = row.get(key, "")
             if len(identity) != 64 or any(char not in "0123456789abcdef" for char in identity):
                 fail(f"{row.get('fact_id')}: {key} is malformed")
+        dependencies = row.get("theorem_dependency_names")
+        if not isinstance(dependencies, list) or len(dependencies) != 1 or dependencies[0] not in EXPECTED_ROOTS:
+            fail(f"{row.get('fact_id')}: retained theorem dependency changed")
         fact = json.loads((ROOT / "artifacts/facts" / (row["fact_id"].replace(":", "-") + ".json")).read_text())
         statement = (fact.get("formal") or {}).get("statement", "")
         if hashlib.sha256(statement.encode()).hexdigest() != row.get("formal_statement_sha256"):

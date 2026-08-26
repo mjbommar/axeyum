@@ -55,6 +55,9 @@ MODEQ_FAMILY_CHECKERS = {
         ROOT / "scripts/check-autogenesis-nat-modeq-family.py"
     ),
 }
+IMPORTED_CANDIDATE_FAMILY_CHECKER = (
+    ROOT / "scripts/check-autogenesis-nat-modeq-remainder-operation.py"
+)
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 EVIDENCE_RE = re.compile(
     r"^;\s*evidence\s+kind=(\S+)\s+certified=(\S+)\s+"
@@ -752,6 +755,77 @@ def run_modeq_family_multi_target_registered(
     except family_module.FamilyError as error:
         raise ExecutionError(f"modeq-family target replay failed: {error}") from error
     return expected_modeq_family_target_observation(operation, fact)
+
+
+def imported_candidate_family_target_contract(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Resolve one receipt-backed imported-candidate target without replaying it."""
+    executor = operation["executor"]
+    target = resolve_multi_target(operation, fact["id"])
+    checker = load_module(
+        "imported_candidate_family_for_execution",
+        IMPORTED_CANDIDATE_FAMILY_CHECKER,
+    )
+    if ROOT / executor["receipt_manifest"] != checker.MANIFEST:
+        raise ExecutionError("imported-candidate receipt manifest path changed")
+    try:
+        outcome, target_input, candidate_input = checker.target_contract(fact["id"])
+    except checker.RemainderOperationError as error:
+        raise ExecutionError(f"imported-candidate target contract failed: {error}") from error
+    if (
+        target["target_definition"] != outcome["target_definition"]
+        or executor["max_binders"] != 2
+        or byte_digest(fact["formal"]["statement"].encode())
+        != outcome["formal_statement_sha256"]
+        or outcome["axiom_footprint"] != []
+        or outcome["theorem_dependencies"] != 1
+        or outcome["target_dependency"] is not False
+    ):
+        raise ExecutionError("imported-candidate target contract is inconsistent")
+    return target, outcome, target_input, candidate_input
+
+
+def expected_imported_candidate_family_observation(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> dict[str, Any]:
+    target, outcome, _target_input, _candidate_input = (
+        imported_candidate_family_target_contract(operation, fact)
+    )
+    return {
+        "verdict": "proved",
+        "evidence_label": operation["executor"]["expected_evidence_label"],
+        "target_definition": target["target_definition"],
+        "goal_sha256": outcome["goal_sha256"],
+        "proof_sha256": outcome["proof_sha256"],
+        "target_content_sha256": outcome["target_content_sha256"],
+        "binders_used": outcome["binders_used"],
+        "max_binders": operation["executor"]["max_binders"],
+        "application_depth": outcome["application_depth"],
+        "terms_considered": outcome["terms_considered"],
+        "admitted_declarations": outcome["admitted_declarations"],
+        "axiom_footprint": [],
+        "retained_answer_dependencies": outcome["theorem_dependency_names"],
+        "target_dependency": False,
+        "ledger_writes": 0,
+    }
+
+
+def run_imported_candidate_family_registered(
+    operation: dict[str, Any], fact: dict[str, Any] | None
+) -> dict[str, Any]:
+    if fact is None:
+        raise ExecutionError("imported-candidate family requires the selected fact")
+    target = resolve_multi_target(operation, fact["id"])
+    checker = load_module(
+        "imported_candidate_family_replay_for_execution",
+        IMPORTED_CANDIDATE_FAMILY_CHECKER,
+    )
+    try:
+        checker.check_target(target, operation["executor"]["max_binders"])
+    except checker.RemainderOperationError as error:
+        raise ExecutionError(f"imported-candidate target replay failed: {error}") from error
+    return expected_imported_candidate_family_observation(operation, fact)
 
 
 def parse_observation(stdout: str) -> dict[str, Any]:
@@ -1452,6 +1526,10 @@ def run_registered(
                 "modeq-family multi-target operation rejects a trigger"
             )
         return run_modeq_family_multi_target_registered(operation, fact)
+    if driver == "axeyum-lean-import/imported-candidate-family-multi-target-v1":
+        if trigger is not None:
+            raise ExecutionError("imported-candidate family rejects a trigger")
+        return run_imported_candidate_family_registered(operation, fact)
     raise ExecutionError(f"unsupported execution driver {driver!r}")
 
 
@@ -1657,6 +1735,30 @@ def build_receipt(
             "target_fact_id": fact["id"],
             "statement_adapter_manifest": target["statement_adapter_manifest"],
             "modeq_manifest": target["modeq_manifest"],
+            "target_definition": target["target_definition"],
+            "max_binders": executor["max_binders"],
+        }
+    elif executor["driver"] == "axeyum-lean-import/imported-candidate-family-multi-target-v1":
+        target, outcome, target_input, candidate_input = (
+            imported_candidate_family_target_contract(operation, fact)
+        )
+        manifest = json.loads((ROOT / executor["receipt_manifest"]).read_text())
+        expected_observation = expected_imported_candidate_family_observation(
+            operation, fact
+        )
+        input_identity = {
+            "formal_statement_sha256": outcome["formal_statement_sha256"],
+            "target_definition": target["target_definition"],
+            "receipt_manifest_sha256": digest(manifest),
+            "target_artifact_sha256": target_input["sha256"],
+            "candidate_artifact_sha256": candidate_input["sha256"],
+            "retained_dependency_set_sha256": digest(
+                outcome["theorem_dependency_names"]
+            ),
+        }
+        request_input = {
+            "target_fact_id": fact["id"],
+            "receipt_manifest": executor["receipt_manifest"],
             "target_definition": target["target_definition"],
             "max_binders": executor["max_binders"],
         }
