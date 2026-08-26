@@ -100,7 +100,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 329] = [
+    let expected: [(&str, crate::NameId, &str); 333] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -262,6 +262,15 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.converges_lower_bound",
             p.converges_lower_bound,
+            "theorem",
+        ),
+        // The EVENTUAL form: the pointwise bound need only hold at `f (n +
+        // s)`, not at `f n` itself -- needed for `CReal.two_le_e`, since
+        // `expSeriesPartial 0 = 0` fails the non-eventual bound at `a := 2`.
+        // See `convergence.rs`'s own doc on the declaration.
+        (
+            "CReal.converges_lower_bound_shift",
+            p.converges_lower_bound_shift,
             "theorem",
         ),
         (
@@ -1023,6 +1032,22 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // `exponential.rs::declare_e` redoes `CReal.mul`'s own index shift
         // by hand for exactly this reason.
         ("CReal.e", p.e, "def"),
+        // `e`'s own defining property -- the missing link every OTHER
+        // property of `e` is built on. See
+        // `exponential.rs::declare_e_converges`.
+        ("CReal.e_converges", p.e_converges, "theorem"),
+        // `2 <= e`: the EVENTUAL argument, since `expSeriesPartial 0 = 0 <
+        // 2` -- `CReal.converges_lower_bound_shift` at shift `2`, closed by
+        // `CReal.sumRange_mono_outer` plus a concrete `expSeriesPartial 2`
+        // reduction. See `exponential.rs::declare_two_le_e`.
+        ("CReal.two_le_e", p.two_le_e, "theorem"),
+        // `e <= 4` (not the sharper `3`; see `declare_e_le_four`'s own doc
+        // for why): the SAME `expTerm <= expDominant` domination this file
+        // already built for the Cauchy argument, summed via
+        // `CReal.sumRange_le`/`CReal.sumRange_pow_half_closed_form`. Holds at
+        // every `n` -- no shift needed, unlike `two_le_e`. See
+        // `exponential.rs::declare_e_le_four`.
+        ("CReal.e_le_four", p.e_le_four, "theorem"),
         // Found by the coverage assertion above, not by anyone noticing: these
         // seven were live in the prelude and unlisted here, so this test had
         // never checked them. `lt_cotrans`/`apart_cotrans` are Ch 12's

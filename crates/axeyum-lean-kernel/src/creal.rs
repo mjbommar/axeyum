@@ -915,6 +915,16 @@ pub struct CRealPrelude {
     /// fixed-rate form the `Converges` predicate states) `converges_comp`
     /// needed.
     pub converges_lower_bound: NameId,
+    /// `CReal.converges_lower_bound_shift : ∀ s a f L, (∀ n, le a (f
+    /// (Nat.add n s))) → Converges f L → le a L`.
+    ///
+    /// The EVENTUAL form [`Self::converges_lower_bound`] cannot supply: that
+    /// one needs its pointwise bound at literally every `n`, including `n =
+    /// 0`, which a bound established only from monotonicity past some point
+    /// (e.g. `CReal.e`'s partial sums, zero at `n = 0`) does not have. See
+    /// `creal/convergence.rs`'s own doc on the declaration for the shift +
+    /// re-weaken telescope.
+    pub converges_lower_bound_shift: NameId,
     /// `CReal.converges_upper_bound : ∀ f L b, (∀ n, le (f n) b) →
     /// Converges f L → le L b`. The mirror of
     /// [`Self::converges_lower_bound`].
@@ -2694,6 +2704,30 @@ pub struct CRealPrelude {
     /// `CReal.regular_of_scaled_cauchy`. See
     /// `creal/exponential.rs::declare_e`.
     pub e: NameId,
+    /// `CReal.e_converges : Converges expSeriesPartial e` — `e`'s own
+    /// defining property, and the missing link every OTHER property of `e`
+    /// (`two_le_e`, `e_le_four`, …) is built on. See
+    /// `creal/exponential.rs::declare_e_converges`.
+    pub e_converges: NameId,
+    /// `CReal.two_le_e : le two e` — the first NUMERIC bound on Euler's
+    /// number. Needs an EVENTUAL argument
+    /// ([`Self::converges_lower_bound_shift`]), not
+    /// [`Self::converges_lower_bound`] directly: `expSeriesPartial 0 = 0 <
+    /// 2`, so the bound only holds from index `2` on, where monotonicity
+    /// (`CReal.sumRange_mono_outer` at the nonnegative summand `expTerm`)
+    /// takes over. See `creal/exponential.rs::declare_two_le_e`.
+    pub two_le_e: NameId,
+    /// `CReal.e_le_four : le e four` — an upper bound on Euler's number, from
+    /// the SAME domination `expTerm n ≤ expDominant n` this file already
+    /// built for the Cauchy argument, summed via `CReal.sumRange_le` and the
+    /// closed form `CReal.sumRange_pow_half_closed_form`: `Σ expDominant n =
+    /// 2·Σ(1/2)ⁱ = 2·(2·(1−(1/2)ⁿ)) ≤ 4`. No shift needed — this bound holds
+    /// at every `n`, including `n = 0`, unlike [`Self::two_le_e`]. See
+    /// `creal/exponential.rs::declare_e_le_four` for why `4`, not the
+    /// classically sharper `3`: the bound as built doubles a bound that is
+    /// already loose by a factor of `2·(1/2)⁰ = 2` at `n = 0`/`1`, and
+    /// tightening it needs an index-`2` split this slice does not attempt.
+    pub e_le_four: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -3448,6 +3482,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_sub: kernel.name_str(creal, "converges_sub"),
         converges_squeeze: kernel.name_str(creal, "converges_squeeze"),
         converges_lower_bound: kernel.name_str(creal, "converges_lower_bound"),
+        converges_lower_bound_shift: kernel.name_str(creal, "converges_lower_bound_shift"),
         converges_upper_bound: kernel.name_str(creal, "converges_upper_bound"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
@@ -3620,6 +3655,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_dominant_cauchy: kernel.name_str(creal, "expDominantCauchy"),
         exp_series_partial_converges: kernel.name_str(creal, "expSeriesPartialConverges"),
         e: kernel.name_str(creal, "e"),
+        e_converges: kernel.name_str(creal, "e_converges"),
+        two_le_e: kernel.name_str(creal, "two_le_e"),
+        e_le_four: kernel.name_str(creal, "e_le_four"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
