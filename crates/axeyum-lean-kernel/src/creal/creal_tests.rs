@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 234] = [
+    let expected: [(&str, crate::NameId, &str); 235] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -523,6 +523,10 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.monotone_of_nonneg_deriv,
             "theorem",
         ),
+        // The one bisection step of the constructive approximate IVT
+        // (creal/ivt.rs), registered last: it reuses `CReal.lt_cotrans` and
+        // `CReal.mesh_count_width`, both above.
+        ("CReal.ivt_step", p.ivt_step, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -4647,5 +4651,109 @@ fn monotone_of_nonneg_deriv_applies_to_the_identity_on_0_1() {
     assert!(
         rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
         "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.ivt_step`: the identity
+/// function on the ASYMMETRIC bracket `[zero, one]` (asymmetric about `zero`,
+/// unlike `[-1, 1]`, so a transposed-endpoint defect cannot pass), at
+/// `eps := one`. `F P = id zero = zero ≤ one = eps` and `neg eps = neg one ≤
+/// one = id one = F Q` both hold, so `ivt_step`'s hypotheses are genuinely
+/// satisfiable here, not vacuously discharged.
+#[test]
+fn ivt_step_applies_to_the_identity_on_zero_one() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let neg_one = d.const_app(p.neg, &[one_c]);
+
+    // identity := fun r => r.
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+
+    let heps = d.lemma(p.zero_lt_one, &[]);
+    let hpq = d.lemma(p.le_of_lt, &[zero_c, one_c, heps]);
+    let hfp = hpq; // le (id zero) one, defeq le zero one, via beta.
+
+    // hfq : le (neg one) one, via `lt (neg one) one` (the same estimate
+    // `ivt.rs`'s private `neg_lt_of_pos` builds, duplicated here since tests
+    // are a sibling module and cannot call it).
+    let hfq = {
+        let refl_neg_one = d.lemma(p.le_refl, &[neg_one]);
+        let step1 = d.lemma(
+            p.add_lt_add_of_le_of_lt,
+            &[neg_one, neg_one, zero_c, one_c, refl_neg_one, heps],
+        );
+        // step1 : lt (add neg_one zero) (add neg_one one)
+        let neg_one_zero = d.const_app(p.add, &[neg_one, zero_c]);
+        let neg_one_one = d.const_app(p.add, &[neg_one, one_c]);
+        let add_zero_negone = d.lemma(p.add_zero, &[neg_one]); // Equiv neg_one_zero neg_one
+        let refl_target = d.lemma(p.equiv_refl, &[neg_one_one]);
+        let step2 = d.lemma(
+            p.lt_congr,
+            &[
+                neg_one_zero,
+                neg_one,
+                neg_one_one,
+                neg_one_one,
+                add_zero_negone,
+                refl_target,
+                step1,
+            ],
+        );
+        // step2 : lt neg_one neg_one_one
+        let comm = d.lemma(p.add_comm, &[neg_one, one_c]); // Equiv neg_one_one (add one neg_one)
+        let one_negone = d.const_app(p.add, &[one_c, neg_one]);
+        let vanish = d.lemma(p.add_neg, &[one_c]); // Equiv one_negone zero
+        let compose = d.lemma(
+            p.equiv_trans,
+            &[neg_one_one, one_negone, zero_c, comm, vanish],
+        );
+        let refl_neg_one2 = d.lemma(p.equiv_refl, &[neg_one]);
+        let step3 = d.lemma(
+            p.lt_congr,
+            &[
+                neg_one,
+                neg_one,
+                neg_one_one,
+                zero_c,
+                refl_neg_one2,
+                compose,
+                step2,
+            ],
+        );
+        // step3 : lt neg_one zero
+        let lt_neg_one_one = d.lemma(p.lt_trans, &[neg_one, zero_c, one_c, step3, heps]);
+        d.lemma(p.le_of_lt, &[neg_one, one_c, lt_neg_one_one])
+    };
+
+    let instance = d.lemma(
+        p.ivt_step,
+        &[identity, zero_c, one_c, one_c, heps, hpq, hfp, hfq],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("ivt_step refused at the identity on [zero, one]: {error:?}")
+    });
+
+    let rendered = d.kernel().render_lean(ty);
+    assert!(
+        rendered.contains("Exists") && rendered.matches("Exists").count() >= 2,
+        "the conclusion must be a nested nat existential `Exists CReal (fun P' => Exists CReal \
+         (fun Q' => ...))`, got: {rendered}"
+    );
+    assert!(
+        rendered.contains("CReal.le") && rendered.contains("Equiv"),
+        "the conclusion must carry both the four `CReal.le` bracket/sign facts and the \
+         `Equiv`-typed width identity, got: {rendered}"
     );
 }
