@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
 """Generate the honest F1 coverage census for the Autogenesis knowledge overlay.
 
-ADR-0553 removed ten of this census's fifteen rows. Every one of them counted
-`formalizes` or `uses-technique` edges, whose targets were `concept`,
-`encounter` and `technique` entities in a namespace resolved against a sibling
-repository. With that namespace gone the relations are gone, so those rows could
-only ever read zero -- and a census row that cannot move is not a measurement,
-it is decoration that makes the report look richer than it is.
-
-What survives measures the operation population, which is local and does move:
-how many authoritative multi-target operations exist, how many facts are in
-their applicability sets, and how many of those the fact EVIDENCE credits to
-them. Restoring the rest requires a concept vocabulary this repository owns.
+All counted endpoints resolve inside Axeyum. ADR-0553 removed a sibling-backed
+educational namespace; semantic dimensions returned only after Axeyum gained a
+small self-contained concept vocabulary with independently validated relation
+domains. Missing mappings remain missing rather than being inferred by name.
 """
 
 from __future__ import annotations
@@ -20,6 +13,7 @@ import argparse
 import json
 import pathlib
 import sys
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OVERLAY = ROOT / "artifacts/autogenesis/knowledge-overlay-v1.json"
 OPERATIONS = ROOT / "artifacts/autogenesis/operations.json"
@@ -38,20 +32,33 @@ def main() -> int:
     overlay = json.loads(OVERLAY.read_text())
     operations = json.loads(OPERATIONS.read_text())["operations"]
     multi = [
-        operation for operation in operations
-        if operation["scope"] == "authoritative"
-        and len(operation["applicability"]["fact_ids"]) > 1
+        operation
+        for operation in operations
+        if operation["scope"] == "authoritative" and len(operation["applicability"]["fact_ids"]) > 1
     ]
     multi_ids = {operation["id"] for operation in multi}
-    applicable = {
-        fact for operation in multi for fact in operation["applicability"]["fact_ids"]
-    }
+    applicable = {fact for operation in multi for fact in operation["applicability"]["fact_ids"]}
     links = overlay["links"]
     credited = {
         endpoint(link, "source")[2]
         for link in links
-        if link["relation"] == "established-by"
-        and endpoint(link, "target")[2] in multi_ids
+        if link["relation"] == "established-by" and endpoint(link, "target")[2] in multi_ids
+    }
+    formalizes = [
+        link for link in links if link["relation"] == "formalizes" and link["status"] == "active"
+    ]
+    mapped_facts = {
+        endpoint(link, "source")[2] for link in formalizes if endpoint(link, "source")[1] == "fact"
+    }
+    kernel_anchors = {
+        endpoint(link, "source")[2]
+        for link in formalizes
+        if endpoint(link, "source")[1] == "kernel-declaration"
+    }
+    local_concepts = {
+        endpoint(link, "target")[2]
+        for link in formalizes
+        if endpoint(link, "target")[:2] == ("axeyum-knowledge", "concept")
     }
     if not applicable:
         print(
@@ -75,14 +82,18 @@ def main() -> int:
         f"| Credited facts mapped with `established-by` | {len(credited & applicable)} |",
         f"| Applicable facts with no `established-by` credit | {len(applicable - credited)} |",
         "",
-        "## Removed dimensions",
+        "## Local semantic vocabulary",
         "",
-        "ADR-0553 removed the `formalizes` / `uses-technique` census: concepts,",
-        "encounters and techniques reached, exact-formalization and supporting-law",
-        "link counts, facts with qualified formal content, and the reviewed",
-        "kernel-theorem anchor population. All ten counted edges into a namespace",
-        "resolved against a sibling repository. They are not reported as zero,",
-        "because a row pinned at zero reads as a measurement and is not one.",
+        "| Measure | Count |",
+        "|---|---:|",
+        f"| Active qualified `formalizes` links | {len(formalizes)} |",
+        f"| Axeyum-owned concepts reached | {len(local_concepts)} |",
+        f"| Fact records with qualified formal content | {len(mapped_facts)} |",
+        f"| Reviewed empty-footprint kernel theorem anchors | {len(kernel_anchors)} |",
+        "",
+        "The former sibling-backed namespace remains absent. These rows count only",
+        "self-contained Axeyum concept entities and active, human-reviewed links;",
+        "they do not resolve or pin another checkout.",
         "",
         "## Interpretation",
         "",
@@ -90,6 +101,7 @@ def main() -> int:
         "while credit is read from fact evidence. A fact that was already settled through a",
         "different operation may be in a reusable operation's applicability set without being",
         "credited to that operation; the two counts are deliberately separate.",
+        "Semantic links are qualified review metadata and never theorem or admission credit.",
     ]
     rendered = "\n".join(lines) + "\n"
     if args.check:
@@ -101,7 +113,8 @@ def main() -> int:
     print(
         "AUTOGENESIS_KNOWLEDGE_COVERAGE|"
         f"operations={len(multi)}|applicable={len(applicable)}|"
-        f"credited={len(credited & applicable)}"
+        f"credited={len(credited & applicable)}|concepts={len(local_concepts)}|"
+        f"kernel_anchors={len(kernel_anchors)}"
     )
     return 0
 

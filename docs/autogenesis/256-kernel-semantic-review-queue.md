@@ -12,8 +12,8 @@ population. At the current snapshot it contains:
 | Measure | Count |
 |---|---:|
 | Empty-footprint kernel theorems | 1,287 |
-| Active reviewed semantic anchors | 0 |
-| Unreviewed queue entries | 1,287 |
+| Active reviewed semantic anchors | 3 |
+| Unreviewed queue entries | 1,284 |
 <!-- kernel-semantic-review-census:end -->
 
 Each entry records only mechanical information already in the kernel

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://axeyum.dev/ontology/autogenesis-knowledge-overlay.schema.json",
   "title": "Axeyum Autogenesis Knowledge Overlay",
-  "description": "An additive, versioned property-graph overlay joining existing Axeyum and pinned external entities without changing their owning schemas. Edges are qualified claims: their assurance and provenance are first-class and never inferred from relation names.",
+  "description": "An additive, versioned property-graph overlay joining existing Axeyum entities and a self-contained local concept vocabulary without changing their owning schemas. Edges are qualified claims: their assurance and provenance are first-class and never inferred from relation names. No endpoint resolves outside this checkout.",
   "type": "object",
   "required": ["schema_version", "kind", "sources", "namespaces", "relation_types", "entities", "links"],
   "additionalProperties": false,
@@ -32,11 +32,11 @@
   },
   "$defs": {
     "entityKind": {
-      "description": "Every kind here must be supplied by some local namespace. The educational vocabulary (concept, encounter, technique, curriculum-node) and `external-declaration` were removed by ADR-0553: they were only ever resolvable against a sibling repository, and this overlay may not name one.",
+      "description": "Every kind here must be supplied by some local namespace. `concept` is an Axeyum-owned, self-contained vocabulary entry; it may be adapted from reference material but cannot resolve against a sibling repository. Encounter, technique, curriculum-node, and external-declaration remain excluded.",
       "enum": [
         "fact", "kernel-declaration", "operation", "producer",
         "checker", "capability", "obstruction", "episode", "evidence-artifact",
-        "representation"
+        "representation", "concept"
       ]
     },
     "source": {
@@ -114,7 +114,7 @@
       "required": ["id", "kind", "title", "description", "status"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "pattern": "^K:[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "id": { "type": "string", "pattern": "^(?:K|C):[a-z0-9]+(?:-[a-z0-9]+)*$" },
         "kind": { "$ref": "#/$defs/entityKind" },
         "title": { "type": "string", "minLength": 1 },
         "description": { "type": "string", "minLength": 1 },

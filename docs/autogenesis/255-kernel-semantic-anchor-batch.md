@@ -22,10 +22,14 @@ This batch adds three anchors from the newly landed library surface:
 | `Complex.normSq_pow` | `C:complex-number` | One algebraic squared-norm/power law for constructed complex numbers; no analytic or whole-topic coverage claim. |
 | `CPoint.circumcentre_unique` | `C:circle` | Unique equidistant centre for a non-collinear triple; one circumcentre law, not a complete formalization of circle geometry. |
 
-The sources are the accepted constructed-kernel declarations recorded in
-[`kernel-dependency-projection-v1.json`](../../artifacts/autogenesis/kernel-dependency-projection-v1.json)
-and the read-only, pinned `math-education` concept files at revision
-`ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c`.
+The theorem sources are the accepted constructed-kernel declarations recorded
+in
+[`kernel-dependency-projection-v1.json`](../../artifacts/autogenesis/kernel-dependency-projection-v1.json).
+The concept definitions now live as self-contained Axeyum-owned entities in
+[`knowledge-overlay-v1.json`](../../artifacts/autogenesis/knowledge-overlay-v1.json).
+They were reviewed and adapted from educational reference material, but no
+external checkout, revision, identifier resolver, or provenance path is part of
+the graph contract.
 
 ## Why this is the right granularity
 
@@ -48,10 +52,10 @@ the overlay informs search or reporting, never admission
 
 ## Controls and next work
 
-`validate-autogenesis-knowledge.py` now rejects both a missing kernel endpoint
-and an attempt to formalize a concept from a kernel definition. Existing
-partial-coverage controls continue to reject a single edge claiming full
-concept coverage.
+`validate-autogenesis-knowledge.py` rejects a missing local concept, a missing
+kernel endpoint, an attempt to formalize a concept from a kernel definition or
+assumption-bearing declaration, non-human assurance, and a single edge claiming
+full concept coverage.
 
 Run:
 

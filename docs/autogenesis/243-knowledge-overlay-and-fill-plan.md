@@ -2,7 +2,24 @@
 
 Date: 2026-08-24
 
-## Decision
+## Current status after ADR-0553
+
+This document records the design exploration that originally used pinned
+identifiers from a sibling repository. That implementation was removed by
+ADR-0553 because “reference only” does not permit an Axeyum runtime dependency,
+namespace resolver, or provenance path into another checkout. The historical
+sections below explain the useful design lessons but are not the current data
+contract.
+
+The current overlay owns a deliberately small, self-contained concept
+vocabulary. It may copy or adapt reviewed definitions from reference material,
+but every entity and edge resolves inside Axeyum. The first restored batch has
+three local concepts and three qualified kernel-theorem `formalizes` links;
+[`256-kernel-semantic-review-queue.md`](256-kernel-semantic-review-queue.md)
+measures the remaining review population. No bulk corpus was vendored, and no
+file outside this repository is read by validation.
+
+## Historical decision
 
 Axeyum now has a backward-compatible, versioned knowledge overlay joining its
 facts and operations to reusable capabilities and to selected identifiers from

@@ -13,7 +13,7 @@
     {
       "id": "axeyum-knowledge",
       "source_id": "axeyum",
-      "entity_kinds": ["capability", "obstruction", "episode", "representation"],
+      "entity_kinds": ["capability", "obstruction", "episode", "representation", "concept"],
       "resolution": "overlay-entity",
       "path": "artifacts/autogenesis/knowledge-overlay-v1.json"
     },
@@ -77,6 +77,13 @@
       "source_kinds": ["fact"],
       "target_kinds": ["kernel-declaration"],
       "semantics": "An independently checked cross-kernel translation found the fact's proof-free proposition definitionally equal to the kernel declaration's theorem type. This diagnostic link neither settles the fact nor grants proof, operation, or admission authority."
+    },
+    {
+      "id": "formalizes",
+      "source_kinds": ["fact", "kernel-declaration"],
+      "target_kinds": ["concept"],
+      "semantics": "A checked fact or empty-footprint kernel theorem supplies the qualified formal content named by an Axeyum-owned concept. The human-reviewed edge is partial semantic metadata and grants no proof, admission, or operation authority.",
+      "reason_required": true
     }
   ],
   "entities": [
@@ -151,9 +158,75 @@
         "assurance_floor": "exact-dependency-contract-and-fresh-kernel-check",
         "admission_authority": false
       }
+    },
+    {
+      "id": "C:excluded-middle",
+      "kind": "concept",
+      "title": "Excluded middle",
+      "description": "The proposition schema p or not-p. A theorem requiring an explicit Decidable p witness covers the decidable instance only, not unrestricted classical excluded middle.",
+      "status": "active",
+      "attributes": {
+        "definition_scope": "local-self-contained",
+        "scheduler_authority": false
+      }
+    },
+    {
+      "id": "C:complex-number",
+      "kind": "concept",
+      "title": "Complex numbers",
+      "description": "Numbers with real and imaginary components together with their algebraic operations and norm laws. One identity about squared norm is supporting content, not complete complex analysis.",
+      "status": "active",
+      "attributes": {
+        "definition_scope": "local-self-contained",
+        "scheduler_authority": false
+      }
+    },
+    {
+      "id": "C:circle",
+      "kind": "concept",
+      "title": "Circle geometry",
+      "description": "Geometry of points at equal distance from a centre, including circumcircles of non-collinear triples. A circumcentre uniqueness theorem covers one defining construction only.",
+      "status": "active",
+      "attributes": {
+        "definition_scope": "local-self-contained",
+        "scheduler_authority": false
+      }
     }
   ],
   "links": [
+    {
+      "id": "L:kernel-decidable-em-formalizes-excluded-middle",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Decidable.em" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:excluded-middle" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem proves p or not-p only from an explicit Decidable p witness; it formalizes the decidable fragment and does not assert unrestricted classical excluded middle.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-dependency-projection-v1.json", "docs/autogenesis/255-kernel-semantic-anchor-batch.md"] },
+      "qualifiers": { "coverage": "scoped-law", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-complex-normsq-pow-formalizes-complex-number",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Complex.normSq_pow" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:complex-number" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem states that the constructed complex squared norm respects natural powers; this is one algebraic norm law, not complete coverage of complex numbers.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-dependency-projection-v1.json", "docs/autogenesis/255-kernel-semantic-anchor-batch.md"] },
+      "qualifiers": { "coverage": "supporting-law", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-circumcentre-unique-formalizes-circle",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "CPoint.circumcentre_unique" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:circle" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The theorem gives uniqueness of an equidistant centre for a non-collinear triple; it is one circumcircle law rather than a full circle-geometry formalization.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-dependency-projection-v1.json", "docs/autogenesis/255-kernel-semantic-anchor-batch.md"] },
+      "qualifiers": { "coverage": "defining-construction", "completeness": "partial", "admission_authority": false }
+    },
     {
       "id": "L:bounded-induction-operation-capability",
       "relation": "realizes-capability",

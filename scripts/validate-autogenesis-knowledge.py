@@ -28,21 +28,44 @@ DEFAULT_OVERLAY = ROOT / "artifacts/autogenesis/knowledge-overlay-v1.json"
 SCHEMA = ROOT / "artifacts/ontology/autogenesis-knowledge-overlay.schema.json"
 
 TOP_KEYS = {
-    "schema_version", "kind", "sources", "namespaces", "relation_types",
-    "entities", "links",
+    "schema_version",
+    "kind",
+    "sources",
+    "namespaces",
+    "relation_types",
+    "entities",
+    "links",
 }
 ENTITY_KINDS = {
-    "fact", "kernel-declaration", "operation", "producer",
-    "checker", "capability", "obstruction", "episode", "evidence-artifact",
+    "fact",
+    "kernel-declaration",
+    "operation",
+    "producer",
+    "checker",
+    "capability",
+    "obstruction",
+    "episode",
+    "evidence-artifact",
     "representation",
+    "concept",
 }
 ASSURANCE = {
-    "formal-derived", "independently-checked", "registry-derived",
-    "mechanically-observed", "human-reviewed", "heuristic", "proposed",
+    "formal-derived",
+    "independently-checked",
+    "registry-derived",
+    "mechanically-observed",
+    "human-reviewed",
+    "heuristic",
+    "proposed",
 }
 METHODS = {
-    "kernel-derived", "checker-derived", "registry-derived",
-    "mechanically-observed", "human-reviewed", "heuristic", "proposed",
+    "kernel-derived",
+    "checker-derived",
+    "registry-derived",
+    "mechanically-observed",
+    "human-reviewed",
+    "heuristic",
+    "proposed",
 }
 
 
@@ -106,8 +129,11 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
     entities = doc["entities"]
     links = doc["links"]
     for label, rows in (
-        ("sources", sources), ("namespaces", namespaces),
-        ("relation_types", relations), ("entities", entities), ("links", links),
+        ("sources", sources),
+        ("namespaces", namespaces),
+        ("relation_types", relations),
+        ("entities", entities),
+        ("links", links),
     ):
         duplicate_ids(rows, label, errors)
 
@@ -121,7 +147,9 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
             errors.append(f"source {source['id']}: pinned source has no revision")
     for namespace in namespaces:
         if namespace.get("source_id") not in source_by_id:
-            errors.append(f"namespace {namespace['id']}: unknown source_id {namespace.get('source_id')!r}")
+            errors.append(
+                f"namespace {namespace['id']}: unknown source_id {namespace.get('source_id')!r}"
+            )
         for kind in namespace.get("entity_kinds", []):
             if kind not in ENTITY_KINDS:
                 errors.append(f"namespace {namespace['id']}: unknown entity kind {kind!r}")
@@ -138,15 +166,19 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
         document = load_json(path, errors)
         if isinstance(document, dict) and isinstance(document.get("id"), str):
             fact_docs[document["id"]] = document
-    operation_ids = {
-        row.get("id") for row in (operation_doc or {}).get("operations", [])
-    }
+    operation_ids = {row.get("id") for row in (operation_doc or {}).get("operations", [])}
     kernel_projection = load_json(
         root / "artifacts/autogenesis/kernel-dependency-projection-v1.json", errors
     )
     kernel_declaration_ids = {
-        row.get("id") for row in (kernel_projection or {}).get("declarations", [])
+        row.get("id")
+        for row in (kernel_projection or {}).get("declarations", [])
         if isinstance(row, dict)
+    }
+    kernel_declarations = {
+        row.get("id"): row
+        for row in (kernel_projection or {}).get("declarations", [])
+        if isinstance(row, dict) and isinstance(row.get("id"), str)
     }
 
     def check_endpoint(endpoint: dict[str, Any], link_id: str, side: str) -> None:
@@ -158,7 +190,9 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
         kind = endpoint.get("kind")
         ident = endpoint.get("id")
         if kind not in namespace.get("entity_kinds", []):
-            errors.append(f"link {link_id} {side}: kind {kind!r} not allowed by namespace {namespace_id}")
+            errors.append(
+                f"link {link_id} {side}: kind {kind!r} not allowed by namespace {namespace_id}"
+            )
         pattern = namespace.get("id_pattern")
         if pattern and (not isinstance(ident, str) or re.fullmatch(pattern, ident) is None):
             errors.append(f"link {link_id} {side}: id {ident!r} violates namespace pattern")
@@ -205,6 +239,23 @@ def validate_document(doc: Any, root: Path = ROOT) -> tuple[list[str], list[str]
                 errors.append(
                     f"link {link_id}: established-by target is not credited by the fact evidence"
                 )
+        if link.get("relation") == "formalizes":
+            if link.get("assurance") != "human-reviewed":
+                errors.append(f"link {link_id}: formalizes assurance must be human-reviewed")
+            qualifiers = link.get("qualifiers")
+            if not isinstance(qualifiers, dict) or not qualifiers.get("coverage"):
+                errors.append(f"link {link_id}: formalizes requires a coverage qualifier")
+            if not isinstance(qualifiers, dict) or qualifiers.get("completeness") != "partial":
+                errors.append(f"link {link_id}: formalizes completeness must be partial")
+            if source.get("kind") == "kernel-declaration":
+                declaration = kernel_declarations.get(source.get("id"))
+                if declaration is not None:
+                    if declaration.get("declaration_kind") != "theorem":
+                        errors.append(f"link {link_id}: formalizes kernel source is not a theorem")
+                    if declaration.get("axiom_footprint_size") != 0:
+                        errors.append(
+                            f"link {link_id}: formalizes kernel theorem has a nonempty axiom footprint"
+                        )
     return errors, warnings
 
 

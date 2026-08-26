@@ -2,18 +2,22 @@
   "census": {
     "empty_footprint_theorems": 1287,
     "kernel_theorems": 1287,
-    "reviewed_kernel_semantic_anchors": 0,
-    "unreviewed_queue_entries": 1287
+    "reviewed_kernel_semantic_anchors": 3,
+    "unreviewed_queue_entries": 1284
   },
   "derivation": {
     "candidate_rule": "theorem with empty recorded axiom footprint and no active kernel-source formalizes link",
     "kernel_projection_sha256": "46923fd784bac0d4e6e00d85a1aefbf03d07fb787c6690c35476dacae09806e4",
-    "knowledge_overlay_sha256": "c165e9fd36d6126c4f0f8c7b3b8b69f0f32c37b7ae1abf26197dfdfa704567fd",
+    "knowledge_overlay_sha256": "8178aaf53cffbfe29fb4c48fe683127ff961429f9fb1fb5b321da01ba015f5b5",
     "ordering": "descending direct reverse theorem-reference count, descending direct theorem-dependency count, ascending declaration id",
     "trust_boundary": "review planning only; never concept classification, producer dispatch, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-semantic-review-queue",
-  "reviewed_kernel_semantic_anchor_ids": [],
+  "reviewed_kernel_semantic_anchor_ids": [
+    "CPoint.circumcentre_unique",
+    "Complex.normSq_pow",
+    "Decidable.em"
+  ],
   "schema_version": 1,
   "unreviewed_entries": [
     {
@@ -11771,16 +11775,6 @@
     {
       "direct_reverse_theorem_reference_count": 0,
       "direct_theorem_dependency_count": 16,
-      "kernel_declaration_id": "CPoint.circumcentre_unique",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "cpoint"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 0,
-      "direct_theorem_dependency_count": 16,
       "kernel_declaration_id": "CPoint.collinear_of_area_zero",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
@@ -12320,16 +12314,6 @@
       "direct_reverse_theorem_reference_count": 0,
       "direct_theorem_dependency_count": 10,
       "kernel_declaration_id": "Complex.apart_of_normSq_pos",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "complex"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 0,
-      "direct_theorem_dependency_count": 10,
-      "kernel_declaration_id": "Complex.normSq_pow",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
@@ -15692,25 +15676,6 @@
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
         "complex"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 0,
-      "direct_theorem_dependency_count": 0,
-      "kernel_declaration_id": "Decidable.em",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "axreal",
-        "characterization",
-        "complex",
-        "cpoint",
-        "creal",
-        "integer",
-        "logic",
-        "nat",
-        "rat",
-        "string"
       ]
     },
     {
