@@ -125,9 +125,9 @@
   "schema_version": 1,
   "source": {
     "census_path": "artifacts/autogenesis/open-ranked-transport-induction-census-v1.json",
-    "census_sha256": "9188473efdb115b4a6aa7cb69e543b72d3047d500304ca31057d288786f1ad15",
+    "census_sha256": "fd81860589349483e65c9cbefc26e26eec1329c7f2b4532b1c823503efb918b6",
     "ranking_path": "artifacts/autogenesis/open-lemma-rewrite-support-ranking-v1.json",
-    "ranking_sha256": "39ce801b37b88f8fc17a7d5ad9e6e9bb957d63eb4cbd1d5a340ace066987ab67"
+    "ranking_sha256": "612c053fd91f4fa674b46492e27d1a89628166bc6c06f3912964cf4216127199"
   },
   "state": "measurement-derived-candidate-only",
   "strategy_queue": [

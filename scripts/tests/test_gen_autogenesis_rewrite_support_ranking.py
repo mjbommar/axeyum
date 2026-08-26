@@ -70,7 +70,11 @@ class RewriteSupportRankingTests(unittest.TestCase):
     def test_build_preserves_held_out_exclusion_and_interleaves_support(self) -> None:
         primary = {
             "state": "candidate-only-train-development-held-out-unread",
-            "excluded_held_out_fact_ids": ["F:held-out"],
+            "held_out_exclusion": {
+                "count": 1,
+                "nursery_sha256": "a" * 64,
+                "identities_redacted": True,
+            },
             "goals": [
                 {
                     "fact_id": "F:test",
@@ -105,7 +109,8 @@ class RewriteSupportRankingTests(unittest.TestCase):
 
         result = MODULE.build(primary, index)
 
-        self.assertEqual(result["excluded_held_out_fact_ids"], ["F:held-out"])
+        self.assertEqual(result["held_out_exclusion"], primary["held_out_exclusion"])
+        self.assertNotIn("F:held-out", str(result))
         self.assertEqual(result["census"]["rewrite_support_candidate_rows"], 1)
         self.assertEqual(
             [row["retrieval_role"] for row in result["goals"][0]["candidates"]],

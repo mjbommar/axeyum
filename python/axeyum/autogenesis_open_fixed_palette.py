@@ -19,7 +19,7 @@ from typing import Any
 from axeyum import producers
 from axeyum.kernel import Declaration
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "artifacts/autogenesis/open-fixed-palette-census-v1.json"
 NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
 CANDIDATES = tuple(
@@ -204,7 +204,18 @@ def measure(
     if ranking_path is not None:
         ranking_bytes = ranking_path.read_bytes()
         ranking = json.loads(ranking_bytes)
-        held_out = set(ranking.get("excluded_held_out_fact_ids", []))
+        held_out = {
+            row["fact_id"]
+            for row in nursery.get("entries", [])
+            if isinstance(row, dict) and row.get("partition") == "held-out"
+        }
+        exclusion = ranking.get("held_out_exclusion")
+        if not held_out or exclusion != {
+            "count": len(held_out),
+            "nursery_sha256": digest(nursery_bytes),
+            "identities_redacted": True,
+        }:
+            raise ValueError("ranking held-out exclusion receipt disagrees with the nursery")
         for goal in ranking.get("goals", []):
             if not isinstance(goal, dict) or not isinstance(goal.get("fact_id"), str):
                 raise ValueError(  # noqa: TRY004
@@ -360,9 +371,9 @@ def measure(
     }
     result: dict[str, Any] = {
         "schema_version": (
-            5
+            6
             if modeq_family
-            else (4 if retrieved_induction else (3 if transport_native_candidates else 2))
+            else (5 if retrieved_induction else (4 if transport_native_candidates else 3))
         ),
         "kind": (
             "axeyum-open-modeq-family-census"
@@ -437,7 +448,11 @@ def measure(
                 "decline_reasons": dict(sorted(transport_decline_reasons.items())),
             },
         },
-        "excluded_held_out_fact_ids": excluded_held_out,
+        "held_out_exclusion": {
+            "count": len(excluded_held_out),
+            "nursery_sha256": digest(nursery_bytes),
+            "identities_redacted": True,
+        },
         "outcomes": outcomes,
         "limitations": (
             "The existing target-agnostic definitional-equivalence producer receives no retrieved theorem premise. Held-out rows are excluded before capsule access. Acceptance still requires independent kernel admission; declines outside its Eq/Iff closure are not proposition falsehood."
