@@ -115,7 +115,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 339] = [
+    let expected: [(&str, crate::NameId, &str); 340] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1023,6 +1023,19 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.riemannSumTotalEpsLe",
             p.riemann_sum_total_eps_le,
+            "theorem",
+        ),
+        // Spivak ch.13->14: the reindexed, INDEPENDENT-accuracy Cauchy-shape
+        // statement (`creal/integral.rs`) -- `riemannSum_cauchy` applied at
+        // `e := p` and `e := q` separately, `common_refinement` to identify
+        // the two refinement targets, then `sharedIndexToCanonical` applied
+        // TWICE with its three free index arguments specialized to `p`
+        // (resp. `q`) rather than left free, plus one `CReal.regular` leg
+        // bridging `rsum_l`'s own `p`-vs-`q` sample gap, chained via
+        // `chain_within3`.
+        (
+            "CReal.riemannSumDeepCauchy",
+            p.riemann_sum_deep_cauchy,
             "theorem",
         ),
         // Chapter 18/22: the geometric domination of `expTerm`, ending at the
