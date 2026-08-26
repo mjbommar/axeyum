@@ -120,7 +120,7 @@
 //! `declare_integral`'s caller for that check.
 
 use super::ring_helpers::right_distrib;
-use super::series::chain_within3;
+use super::series::{chain_within3, within_symm};
 use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, div_succ, embed, equiv, halves,
     modulus, sample, shift, within,
@@ -5227,6 +5227,251 @@ mod succ_shape_bridge_tests {
     }
 }
 
+// --- the common-refinement construction -- comparing two ARBITRARY,
+// otherwise-unrelated subinterval counts, not a count against its own
+// refinement. -----------------------------------------------------------
+//
+// [`declare_riemann_sum_cauchy`]'s own module placement comment (and
+// [`declare_shared_index_to_canonical`]'s doc comment) name the exact gap
+// this closes: `riemannSum_cauchy` only ever compares a count `m` to ONE
+// `succ_mul_succ`-refinement of itself (`m` and `(n+1)(m+1)-1` for a chosen
+// refinement factor `n`). Neither it nor `sharedIndexToCanonical` says
+// anything about two counts `m1, m2` with no such relationship. This
+// section is that bridge, standalone and `riemannSum`-independent (pure
+// `Nat` arithmetic, reusable anywhere a common refinement of two counts is
+// needed).
+
+/// `(base + k) + m = (base + m) + k` — the additive reassociation
+/// [`common_refinement`] needs to reorder a trailing `+m2+m1`/`+m1+m2` once
+/// [`succ_mul_succ`]'s own multiplicative commutation has already lined up
+/// the leading product. A verbatim re-derivation of `nat_prelude/euler.rs`'s
+/// private `swap_tail` (Rust-private there; `creal` cannot see it, and that
+/// crate's own module boundary is out of this slice's scope per the task
+/// briefing — see [`succ_mul_succ`]'s own doc comment for the identical
+/// call this file already makes on a `nat_prelude` name it CAN see): two
+/// `Nat.add_assoc` steps around one `Nat.add_comm` in the middle.
+fn nat_add_swap_tail(d: &mut IntDev<'_>, base: ExprId, k: ExprId, m: ExprId) -> ExprId {
+    let np = d.prelude();
+    let bk = NatOps::add(d, base, k);
+    let start = NatOps::add(d, bk, m);
+    let km = NatOps::add(d, k, m);
+    let mid1 = NatOps::add(d, base, km);
+    let assoc1 = d.lemma(np.add_assoc, &[base, k, m]); // Eq start mid1
+    let mk = NatOps::add(d, m, k);
+    let mid2 = NatOps::add(d, base, mk);
+    let commute = d.lemma(np.add_comm, &[k, m]); // Eq km mk
+    let step2 = NatOps::congr(d, km, mk, commute, &|d, t| NatOps::add(d, base, t)); // Eq mid1 mid2
+    let bm = NatOps::add(d, base, m);
+    let target = NatOps::add(d, bm, k);
+    let assoc2 = d.lemma(np.add_assoc, &[base, m, k]); // Eq target mid2
+    let step3 = NatOps::symm(d, target, mid2, assoc2); // Eq mid2 target
+    let (_, proof) = NatOps::chain(d, start, &[(mid1, assoc1), (mid2, step2), (target, step3)]);
+    proof
+}
+
+/// The common-refinement construction: given two arbitrary `Nat` counts
+/// `m1, m2` with no assumed relationship, produces a SINGLE `Nat` `l` that
+/// is [`succ_mul_succ`]'s own refinement target from BOTH directions —
+/// directly, `succ l = (succ m2)*(succ m1)` (refining `m1` by factor `m2`),
+/// and, after rewriting through the returned equality, `succ l = (succ
+/// m1)*(succ m2)` (refining `m2` by factor `m1`) as well.
+///
+/// Two [`succ_mul_succ`] calls give `l := ((m2*m1)+m2)+m1` and `l2 :=
+/// ((m1*m2)+m1)+m2`. These are not the same term syntactically, but are
+/// propositionally equal: `Nat.mul_comm` identifies the leading products
+/// (`m2*m1 = m1*m2`), then [`nat_add_swap_tail`] reorders the trailing
+/// `+m2+m1` into `+m1+m2` once the leading terms agree.
+///
+/// **The `Nat.mul_comm` step is load-bearing only at SYMBOLIC `m1, m2`.** At
+/// any CONCRETE literal pair, `Nat.mul`/`Nat.add` already reduce both `l`
+/// and `l2` to the identical numeral by pure computation, so a construction
+/// that dropped the commutation (or reassociated wrongly) would be
+/// INVISIBLE there — a concrete instantiation cannot exercise this bug,
+/// only a symbolic one can (see this declaration's own test module, which
+/// checks both, plus a genuine negative control at the proof-term level
+/// rather than the value level for exactly this reason).
+///
+/// Returns `(l, l2, l2_eq_l)`: `l2_eq_l : Eq Nat l2 l`, oriented so a caller
+/// holding a fact about `l2` (from the SECOND [`succ_mul_succ`] call) can
+/// [`nat_rewrite_prop`](crate::rat_prelude::ops::nat_rewrite_prop) it onto
+/// `l` — the target the FIRST call already lands on directly, with no
+/// rewrite needed on that side.
+fn common_refinement(d: &mut IntDev<'_>, m1: ExprId, m2: ExprId) -> (ExprId, ExprId, ExprId) {
+    let (l, _sm2_sm1_eq) = succ_mul_succ(d, m2, m1); // l  = ((m2*m1)+m2)+m1
+    let (l2, _sm1_sm2_eq) = succ_mul_succ(d, m1, m2); // l2 = ((m1*m2)+m1)+m2
+
+    let x1 = NatOps::mul(d, m2, m1);
+    let x2 = NatOps::mul(d, m1, m2);
+    let np = d.prelude();
+    let comm_mul = d.lemma(np.mul_comm, &[m2, m1]); // Eq x1 x2
+
+    // Eq l l1_prime, l1_prime := (x2+m2)+m1, via congruence on comm_mul in
+    // the one-hole context `fun t => (t+m2)+m1`.
+    let l1_prime = {
+        let t = NatOps::add(d, x2, m2);
+        NatOps::add(d, t, m1)
+    };
+    let congr_step = NatOps::congr(d, x1, x2, comm_mul, &|d, t| {
+        let inner = NatOps::add(d, t, m2);
+        NatOps::add(d, inner, m1)
+    });
+
+    // Eq l1_prime l2, via `nat_add_swap_tail` at base := x2, k := m2, m := m1:
+    // (x2+m2)+m1 = (x2+m1)+m2 = l2.
+    let swap = nat_add_swap_tail(d, x2, m2, m1);
+
+    let (_, l_eq_l2) = NatOps::chain(d, l, &[(l1_prime, congr_step), (l2, swap)]);
+    let l2_eq_l = NatOps::symm(d, l, l2, l_eq_l2);
+
+    (l, l2, l2_eq_l)
+}
+
+#[cfg(test)]
+mod common_refinement_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// **The load-bearing check.** [`common_refinement`] at SYMBOLIC `m1,
+    /// m2` (free variables, so `Nat.mul`/`Nat.add` cannot simply compute the
+    /// answer out from under the proof) — wraps the produced `Eq Nat l2 l`
+    /// in a throwaway anonymous theorem and lets the kernel accept or
+    /// reject it, the same idiom [`succ_shape_bridge_tests`] already uses
+    /// for [`succ_mul_succ`] one section up.
+    #[test]
+    fn common_refinement_type_checks_symbolically() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+
+        let m1_fv = d.fresh_fvar();
+        let m1 = d.kernel().fvar(m1_fv);
+        let m2_fv = d.fresh_fvar();
+        let m2 = d.kernel().fvar(m2_fv);
+
+        let (l, l2, l2_eq_l) = common_refinement(&mut d, m1, m2);
+        let claim = d.eq(l2, l);
+
+        let value = {
+            let with_m2 = d.lam_fv(m2_fv, nat, l2_eq_l);
+            d.lam_fv(m1_fv, nat, with_m2)
+        };
+        let ty = {
+            let over_m2 = d.pi_fv(m2_fv, nat, claim);
+            d.pi_fv(m1_fv, nat, over_m2)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "commonRefinementSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "common_refinement must type-check at symbolic m1, m2: {:?}",
+            result.err()
+        );
+    }
+
+    /// The mandatory concrete instantiation `m1 = 2, m2 = 3` (`m1 != m2`,
+    /// the same caution [`succ_shape_bridge_tests`] applies to
+    /// [`succ_mul_succ`] itself: a transposed-argument defect is invisible
+    /// at `m1 = m2`). `l = ((3*2)+3)+2 = 11`, `l2 = ((2*3)+2)+3 = 11` — both
+    /// reduce to the SAME literal by pure computation (confirmed
+    /// independently by `Eq.refl` below), which is exactly why the
+    /// SYMBOLIC test above, not this one, is the one that actually
+    /// exercises `Nat.mul_comm`/[`nat_add_swap_tail`].
+    #[test]
+    fn common_refinement_reduces_at_two_three() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let m1 = d.num(2);
+        let m2 = d.num(3);
+        let (l, l2, l2_eq_l) = common_refinement(&mut d, m1, m2);
+
+        let eleven = d.num(11);
+        let l_eq_eleven = d.eq(l, eleven);
+        let l_refl = d.refl(eleven);
+        let anon = d.kernel().anon();
+        let name1 = d.kernel().name_str(anon, "commonRefinementSmokeLEleven");
+        let r1 = d.kernel().add_declaration(Declaration::Theorem {
+            name: name1,
+            uparams: vec![],
+            ty: l_eq_eleven,
+            value: l_refl,
+        });
+        assert!(r1.is_ok(), "l must reduce to 11: {:?}", r1.err());
+
+        let l2_eq_eleven = d.eq(l2, eleven);
+        let l2_refl = d.refl(eleven);
+        let name2 = d.kernel().name_str(anon, "commonRefinementSmokeL2Eleven");
+        let r2 = d.kernel().add_declaration(Declaration::Theorem {
+            name: name2,
+            uparams: vec![],
+            ty: l2_eq_eleven,
+            value: l2_refl,
+        });
+        assert!(r2.is_ok(), "l2 must reduce to 11: {:?}", r2.err());
+
+        // The composed proof also checks concretely (sanity, not the main
+        // point -- see the symbolic test above).
+        let claim = d.eq(l2, l);
+        let name3 = d.kernel().name_str(anon, "commonRefinementSmokeConcrete");
+        let r3 = d.kernel().add_declaration(Declaration::Theorem {
+            name: name3,
+            uparams: vec![],
+            ty: claim,
+            value: l2_eq_l,
+        });
+        assert!(
+            r3.is_ok(),
+            "common_refinement's composed proof must also check concretely: {:?}",
+            r3.err()
+        );
+    }
+
+    /// **Negative control, at the proof-term level rather than the value
+    /// level** (a value-level control is unavailable here -- see
+    /// [`common_refinement`]'s own doc comment for why any concrete
+    /// literal pair makes `l` and `l2` compute to the same numeral
+    /// regardless of whether the construction is right). Reuses the EXACT
+    /// SAME proof term `l2_eq_l` — built once, not re-derived — against the
+    /// off-by-one type `Eq Nat l2 (succ l)`. That statement is genuinely
+    /// FALSE (a successor is never equal to its own predecessor's value:
+    /// concretely `11 != 12`), not vacuous and not accidentally true, so
+    /// the kernel must refuse it.
+    #[test]
+    fn common_refinement_proof_rejected_at_wrong_type() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let m1 = d.num(2);
+        let m2 = d.num(3);
+        let (l, _l2, l2_eq_l) = common_refinement(&mut d, m1, m2);
+        let succ_l = d.succ(l);
+        let wrong = d.eq(_l2, succ_l);
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "commonRefinementSmokeWrong");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: wrong,
+            value: l2_eq_l,
+        });
+        assert!(
+            result.is_err(),
+            "the l2_eq_l proof must be REFUSED against the off-by-one type Eq Nat l2 (succ l)"
+        );
+    }
+}
+
 #[cfg(test)]
 mod sample_offset_bound_tests {
     use super::*;
@@ -7502,15 +7747,87 @@ mod riemann_sum_cauchy_tests {
 /// representative-index gap `series.rs`'s own module documentation measures
 /// for `CReal.sumRange_cauchy_of_dominated`'s shared-index estimates.
 ///
-/// **Does not by itself produce `RegularSeq`/`Cauchy`** for `fun n =>
-/// riemannSum F a b n`, and so does not by itself reach `CReal.integral`:
-/// that needs, in addition, a construction relating an ARBITRARY pair
-/// `(p, q)` of subinterval counts through a common refinement (so
-/// `riemannSum_cauchy` — which only compares a count `m` past an
-/// Archimedean threshold against a `succ_mul_succ`-refinement of it — can be
-/// applied at all between two otherwise-unrelated counts). That
-/// construction is comparable in size to this bridge and is separate,
-/// unattempted work.
+/// **Does not by itself produce `RegularSeq`/`Cauchy`**, and so does not by
+/// itself reach `CReal.integral`. [`common_refinement`] (this file, right
+/// after [`succ_mul_succ`]) is the construction this doc comment used to
+/// call "separate, unattempted work": given two ARBITRARY, otherwise
+/// unrelated `Nat` counts `m1, m2`, it builds the shared refinement target
+/// `l` both `succ_mul_succ(m2, m1)` and `succ_mul_succ(m1, m2)` land on,
+/// identifying the two via `Nat.mul_comm` plus one additive reassociation.
+/// It is landed and kernel-verified, both symbolically (the load-bearing
+/// check — see its own doc comment for why a CONCRETE instantiation cannot
+/// exercise the commutation bug at all) and with a genuine proof-term-level
+/// negative control.
+///
+/// **That construction is necessary but not sufficient, and the reason is
+/// worth stating precisely because it changes WHICH sequence
+/// `CReal.integral` has to be built from.** `riemannSum_cauchy`'s bound
+/// (`total_eps`, this file's own computation inside
+/// [`declare_riemann_sum_cauchy`]) is `width/(e+1)` — a function of the
+/// chosen ACCURACY `e`, and INDEPENDENT of the subinterval count `m` itself
+/// (`m` only has to satisfy `m = deep(e) + k` for some `k ≥ 0`, i.e. "deep
+/// enough for `e`"). `CReal.RegularSeq`/`Cauchy` demand a bound that shrinks
+/// as a function of the SEQUENCE'S OWN index — `natDivSucc K p +
+/// natDivSucc K q` for a FIXED `K`, i.e. rate exactly `O(1/p)`. For the
+/// LITERAL raw-indexed sequence `fun n => riemannSum F a b n`, matching
+/// these two requires choosing `e` as a function of the outer index `p`
+/// itself while keeping `deep(e) ≤ p` — i.e. INVERTING `deep`, which is
+/// built from `CReal.UniformlyContinuousOn`'s `modulus : Nat → Nat` field
+/// (`uniform_continuity.rs`'s own carrier declaration: fully general, no
+/// growth constraint). This is the SAME class of obstruction
+/// `uniform_continuity.rs`'s own module documentation already names and
+/// declines to build for a different bridge
+/// (`uniformly_continuous_imp_continuous_at`: "a genuine `Nat`-division
+/// search ... not a rearrangement"), not a new one — and for an arbitrary
+/// modulus, no fixed `K` need exist at all: if `deep` grows faster than
+/// linearly, the best achievable rate at index `p` is slower than `O(1/p)`,
+/// which no choice of `K` can dominate.
+///
+/// **The fix is to reindex, not to invert.** Define `Y(n) := riemannSum F a
+/// b (deep(f, a, b, u, n) + 0)` (`deep` computed by the SAME `width_of` /
+/// `uc_modulus` / [`direct_bound_le`] / `NatOps::mul`/`add` recipe
+/// [`declare_riemann_sum_cauchy`] already builds inline — see that
+/// declaration's own test module for the precedent of reconstructing this
+/// EXTERNALLY, term-for-term, so the kernel sees the same expression rather
+/// than needing a bridging lemma). Now `e := n` directly (no inversion), and
+/// `RegularSeq Y`'s two arbitrary indices `p, q` become two arbitrary `Nat`s
+/// `m1 := deep(p)+0`, `m2 := deep(q)+0` fed straight into
+/// [`common_refinement`] — exactly the shape that construction was built
+/// for. The full route: `riemannSum_cauchy` twice (`e:=p, n_refine:=m2` and
+/// `e:=q, n_refine:=m1`), [`crate::rat_prelude::ops::nat_rewrite_prop`] once
+/// (aligning the second call's refinement target onto `common_refinement`'s
+/// `l`, since the first call already lands there with no rewrite needed),
+/// [`declare_shared_index_to_canonical`] twice (`jj := p` and `jj := q`
+/// respectively resolves every remaining term to the right `O(1/p)`/`O(1/q)`
+/// shape), and `series.rs`'s `within_symm` plus one `Rat.bounds_add`/
+/// `Rat.sub_add_sub` step (`chain_within3`'s own first fuse, one leg
+/// shorter) to combine the two three-leg outputs into a single `p`-vs-`q`
+/// bound.
+///
+/// **What is STILL missing, sized precisely rather than gestured at:**
+/// every piece above produces a bound that MENTIONS `seq(total_eps) j` —
+/// the sample of a CONCRETE `CReal` (`total_eps`, built from `ofNat`, `mul`,
+/// and an embedded rational), not yet a closed-form rational. Turning that
+/// into a genuine `K/(index+1)` bound needs its own short lemma: `total_eps
+/// ~ mul(width, embed(natDivSucc 1 e))` (an `Equiv`, via the ALREADY-PROVED
+/// [`declare_riemann_sum_const`]'s own `mesh_inverse_identity` plus
+/// `mul_assoc`/`mul_comm`/`mul_congr` ring rewriting — the exact same
+/// "eight-step associativity/commutativity rewrite" that declaration already
+/// performs, at a different target), and then one sample-closeness bridge
+/// from that `Equiv` to a rational bound on `width`'s own magnitude (via
+/// [`direct_bound_le`], already used for exactly this purpose elsewhere in
+/// this file). This is a genuinely new, self-contained sub-lemma — comparable
+/// in size to [`direct_bound_le`] itself, not a rearrangement of existing
+/// pieces — and is the actual remaining gate on `CReal.integral`, not the
+/// common-refinement construction this doc comment used to point at.
+///
+/// Once that bound exists, `CReal.integral` should be built via
+/// `CReal.regular_of_scaled_cauchy`/`CReal.mk` on `speedup(diagonal Y, K)`
+/// (`convergence.rs`), NOT `completeness.rs`'s `CReal.limit`: the scaled
+/// form takes exactly the `natDivSucc K m + natDivSucc K n` shape this
+/// construction produces directly, while `CReal.limit` needs the EXACT
+/// modulus `1/(m+1)+1/(n+1)` with no slack, which would need an additional
+/// [`weaken`](super::weaken) step this route does not.
 ///
 /// # Errors
 ///
@@ -7748,4 +8065,270 @@ mod shared_index_to_canonical_tests {
              the middle (`H`) leg from the reconstructed bound"
         );
     }
+}
+
+// --- `CReal.riemannSum_sharedAccuracyClose` -- the common-refinement
+// construction wired together, for two counts sharing ONE accuracy `e`.
+// See [`declare_shared_index_to_canonical`]'s own doc comment for exactly
+// what this is (a real, self-contained step) and is not yet (literal
+// `RegularSeq`/`Cauchy` for the raw-indexed sequence, which additionally
+// needs reindexing via `deep` plus a new CReal-magnitude bound). ---------
+
+/// `magnitude*outer + c` -- [`declare_riemann_sum_cauchy`]'s own internal
+/// Archimedean depth `deep`, reconstructed EXTERNALLY term-for-term (same
+/// `width_of`/`uc_modulus`/[`direct_bound_le`]/`NatOps::mul`/`add` calls, in
+/// the same order) so that, after substitution, `riemann_sum_cauchy`'s
+/// conclusion type at THESE `e`, `k` arguments computes exactly the `m1`/
+/// `m2` this section builds -- no bridging lemma needed, the same idiom
+/// `riemann_sum_cauchy`'s own concrete test already uses (see
+/// [`riemann_sum_cauchy_tests`]'s doc comment for the precedent).
+fn deep_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    u: ExprId,
+    e: ExprId,
+) -> ExprId {
+    let width = width_of(d, p, a, b);
+    let modulus_fn = d.const_app(p.uc_modulus, &[f, a, b, u]);
+    let outer = d.apply(modulus_fn, &[e]);
+    let (c, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+    let me = NatOps::mul(d, magnitude, outer);
+    NatOps::add(d, me, c)
+}
+
+/// `seq(totalEps) i + natDivSucc 2 i`, `totalEps` built from `(a, b, e, m)`
+/// EXACTLY the way [`declare_riemann_sum_cauchy`]'s own body computes it --
+/// reconstructed here so [`declare_riemann_sum_shared_accuracy_close`] can
+/// build the explicit `Nat -> Rat` bound function
+/// [`CRealPrelude::shared_index_to_canonical`] needs, matching
+/// `riemann_sum_cauchy`'s own conclusion by beta-reduction alone.
+fn shared_accuracy_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    e: ExprId,
+    m: ExprId,
+    i: ExprId,
+) -> ExprId {
+    let delta_m = delta_of(d, p, a, b, m);
+    let one_nat = d.num(1);
+    let eps_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+    let eps_embed = embed(d, p, eps_rat);
+    let eps_term = cmul(d, p, eps_embed, delta_m);
+    let sm = d.succ(m);
+    let sm_real = d.const_app(p.of_nat, &[sm]);
+    let total_eps = cmul(d, p, sm_real, eps_term);
+    let seq_y_i = sample(d, p, total_eps, i);
+    let slack = div_succ(d, p, 2, i);
+    radd(d, seq_y_i, slack)
+}
+
+/// `fun i => shared_accuracy_bound(a, b, e, m, i)`, as an actual `Nat ->
+/// Rat` term -- the explicit `bound` argument
+/// [`CRealPrelude::shared_index_to_canonical`] takes.
+fn shared_accuracy_bound_fn(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    e: ExprId,
+    m: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let body = shared_accuracy_bound(d, p, a, b, e, m, i);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// From `Within (x-y) bxy` and `Within (y-z) byz`, derive `Within (x-z)
+/// (bxy+byz)` -- `series.rs`'s private `chain_within3`'s own FIRST fuse
+/// step, one leg shorter (this file sees only that function's public
+/// three-leg entry point, and this construction only ever has two legs to
+/// combine, so it is reproduced directly rather than padded to three).
+fn chain_within2(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+    bxy: ExprId,
+    byz: ExprId,
+    pxy: ExprId,
+    pyz: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let xy = rsub(d, rat, x, y);
+    let yz = rsub(d, rat, y, z);
+    let (lxy, rxy) = halves(d, p, xy, bxy, pxy);
+    let (lyz, ryz) = halves(d, p, yz, byz, pyz);
+    let combined = d.lemma(rat.bounds_add, &[xy, bxy, yz, byz, lxy, rxy, lyz, ryz]);
+    let xy_plus_yz = radd(d, xy, yz);
+    let xz = rsub(d, rat, x, z);
+    let fuse = d.lemma(rat.sub_add_sub, &[x, y, z]);
+    let bound = radd(d, bxy, byz);
+    rat_eq_rewrite(d, xy_plus_yz, xz, fuse, combined, &|d, t| {
+        within(d, p, t, bound)
+    })
+}
+
+/// `CReal.riemannSum_sharedAccuracyClose`. See
+/// [`CRealPrelude::riemann_sum_shared_accuracy_close`] for the full
+/// statement and exactly what this is -- and is not yet -- toward
+/// `CReal.integral`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_riemann_sum_shared_accuracy_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let k1_fv = d.fresh_fvar();
+    let k1 = d.kernel().fvar(k1_fv);
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    // m1 := deep(e)+k1, m2 := deep(e)+k2 -- SAME e, so one accuracy covers
+    // both.
+    let deep = deep_at(d, p, f, a, b, u, e);
+    let m1 = NatOps::add(d, deep, k1);
+    let m2 = NatOps::add(d, deep, k2);
+
+    // Application 1: e:=e, n_refine:=m2, k:=k1. Internally m = deep+k1 = m1,
+    // m_prime = succ_mul_succ(m2, m1) -- EXACTLY `common_refinement`'s `l`.
+    let h1 = d.lemma(p.riemann_sum_cauchy, &[f, a, b, e, m2, k1, hab, u]);
+    // Application 2: e:=e, n_refine:=m1, k:=k2. Internally m = deep+k2 = m2,
+    // m_prime = succ_mul_succ(m1, m2) -- `common_refinement`'s `l2`.
+    let h2_raw = d.lemma(p.riemann_sum_cauchy, &[f, a, b, e, m1, k2, hab, u]);
+
+    let (l, l2, l2_eq_l) = common_refinement(d, m1, m2);
+
+    // Rewrite l2 -> l inside h2_raw's own ∀i statement, so both applications
+    // below land at the SAME shared refinement `l`.
+    let h2 = {
+        let rsum_m2_for_motive = rsum(d, p, f, a, b, m2);
+        let neg_rsum_m2_for_motive = cneg(d, p, rsum_m2_for_motive);
+        nat_rewrite_prop(d, l2, l, l2_eq_l, h2_raw, &|d, x| {
+            let rsum_x = rsum(d, p, f, a, b, x);
+            let t = cadd(d, p, rsum_x, neg_rsum_m2_for_motive);
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let seq_t_i = sample(d, p, t, i);
+            let bound_i = shared_accuracy_bound(d, p, a, b, e, m2, i);
+            let claim = within(d, p, seq_t_i, bound_i);
+            d.pi_fv(i_fv, nat, claim)
+        })
+    };
+
+    let oi_fv = d.fresh_fvar();
+    let oi = d.kernel().fvar(oi_fv);
+    let oj_fv = d.fresh_fvar();
+    let oj = d.kernel().fvar(oj_fv);
+    let jj1_fv = d.fresh_fvar();
+    let jj1 = d.kernel().fvar(jj1_fv);
+    let jj2_fv = d.fresh_fvar();
+    let jj2 = d.kernel().fvar(jj2_fv);
+
+    let rsum_l = rsum(d, p, f, a, b, l);
+    let rsum_m1 = rsum(d, p, f, a, b, m1);
+    let rsum_m2 = rsum(d, p, f, a, b, m2);
+
+    let bound1_fn = shared_accuracy_bound_fn(d, p, a, b, e, m1);
+    let bound2_fn = shared_accuracy_bound_fn(d, p, a, b, e, m2);
+
+    let app1 = d.lemma(
+        p.shared_index_to_canonical,
+        &[rsum_l, rsum_m1, bound1_fn, h1, l, oi, jj1],
+    );
+    let app2 = d.lemma(
+        p.shared_index_to_canonical,
+        &[rsum_l, rsum_m2, bound2_fn, h2, l, oj, jj2],
+    );
+
+    let b_val = sample(d, p, rsum_l, l);
+    let a_val = sample(d, p, rsum_m1, oi);
+    let c_val = sample(d, p, rsum_m2, oj);
+
+    let shift_jj1 = shift(d, jj1);
+    let m_l_sj1 = modulus(d, p, l, shift_jj1);
+    let bound1_jj1 = d.apply(bound1_fn, &[jj1]);
+    let m_sj1_oi = modulus(d, p, shift_jj1, oi);
+    let m_l_sj1_plus_bound1 = radd(d, m_l_sj1, bound1_jj1);
+    let bnd1 = radd(d, m_l_sj1_plus_bound1, m_sj1_oi);
+
+    let shift_jj2 = shift(d, jj2);
+    let m_l_sj2 = modulus(d, p, l, shift_jj2);
+    let bound2_jj2 = d.apply(bound2_fn, &[jj2]);
+    let m_sj2_oj = modulus(d, p, shift_jj2, oj);
+    let m_l_sj2_plus_bound2 = radd(d, m_l_sj2, bound2_jj2);
+    let bnd2 = radd(d, m_l_sj2_plus_bound2, m_sj2_oj);
+
+    let app1_symm = within_symm(d, p, b_val, a_val, bnd1, app1);
+    let final_proof = chain_within2(d, p, a_val, b_val, c_val, bnd1, bnd2, app1_symm, app2);
+
+    let final_bound = radd(d, bnd1, bnd2);
+    let diff = rsub(d, p.rat, a_val, c_val);
+    let concl_ty = within(d, p, diff, final_bound);
+
+    let ty = {
+        let after_jj2 = d.pi_fv(jj2_fv, nat, concl_ty);
+        let after_jj1 = d.pi_fv(jj1_fv, nat, after_jj2);
+        let after_oj = d.pi_fv(oj_fv, nat, after_jj1);
+        let after_oi = d.pi_fv(oi_fv, nat, after_oj);
+        let after_u = d.pi_fv(u_fv, u_ty, after_oi);
+        let after_hab = d.arrow(hab_ty, after_u);
+        let over_k2 = d.pi_fv(k2_fv, nat, after_hab);
+        let over_k1 = d.pi_fv(k1_fv, nat, over_k2);
+        let over_e = d.pi_fv(e_fv, nat, over_k1);
+        let over_b = d.pi_fv(b_fv, carrier, over_e);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_jj2 = d.lam_fv(jj2_fv, nat, final_proof);
+        let with_jj1 = d.lam_fv(jj1_fv, nat, with_jj2);
+        let with_oj = d.lam_fv(oj_fv, nat, with_jj1);
+        let with_oi = d.lam_fv(oi_fv, nat, with_oj);
+        let with_u = d.lam_fv(u_fv, u_ty, with_oi);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_k2 = d.lam_fv(k2_fv, nat, with_hab);
+        let over_k1 = d.lam_fv(k1_fv, nat, over_k2);
+        let over_e = d.lam_fv(e_fv, nat, over_k1);
+        let over_b = d.lam_fv(b_fv, carrier, over_e);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sum_shared_accuracy_close,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
