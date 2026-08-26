@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `8935a4045` | Describe imported transparent definitions by exact body/type identities, closure, and footprint; both bitwise operations reach `propext`, ruling out clean grafting. |
 | 2026-08-26 | `b4d64c3ea` | Make the refuted generalized capsule fail closed at emission time unless the caller explicitly opts into diagnostic-only output. |
 | 2026-08-26 | `6eb41d48b` | Construct an axiom-free Boolean view of native numeric bits and prove its successor equation by reflexivity, while withholding imported-definition equivalence credit. |
 | 2026-08-26 | `af86b673a` | Bind existing axiom-free numeric `testBit` analogues while refusing their Bool-valued imported use until a checked observation-transport seam exists. |
