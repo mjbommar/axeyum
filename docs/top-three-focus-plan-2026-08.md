@@ -236,12 +236,16 @@ search. On the immutable 51-row population it admits `Nat.choose n 1 = n`
 axiom-free with checked dependencies on Pascal's rule, the zero-column rule,
 and generic additive equations. The result is 1/51 overall, 1/20 among
 importable positive targets, and 0/6 false controls. This is the first positive
-construction on that open population, but remains measurement-only until the
-same ranking digest and candidate identities pass through an authoritative
-episode and crash-safe fact transition. The next sequence is therefore:
-register that exact multi-target contract, reproduce the one transition
-cleanly, cache checked candidate transport, then attack the 27 import
-rejections and 15 non-equality terminal shapes as separate bottlenecks.
+construction on that open population, but remains measurement-only. The
+derived obstruction projection makes the next sequence executable: 25 positive
+targets demand type-slice generalization, 13 demand a non-equality terminal
+family, five demand a missing rewrite/induction plan, one exceeds the binder
+budget, and one is ready for eventual operation integration. Because a
+one-target registry row would violate the reusable-producer goal, operation
+registration waits until the unchanged contract converts at least three
+siblings. The immediate work is therefore the highest-yield general boundary:
+route the 25 import-blocked positives through type-slice generalization, then
+rerun the same producer and look for a real multi-target family.
 
 ## Comparative position
 

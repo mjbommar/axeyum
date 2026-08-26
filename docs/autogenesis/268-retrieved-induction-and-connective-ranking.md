@@ -88,11 +88,23 @@ twenty candidate closures.
 
 ## Sequence from here
 
-1. Register this exact producer/ranking/receipt tuple as a multi-target
-   operation only after the agent episode and crash-safe transaction schemas
-   carry the retrieved candidate identities and ranking digest. Then rerun the
-   selected open fact through a clean authoritative episode; do not convert the
-   measurement artifact into ledger status by hand.
+The generated
+[`retrieved-induction-obstruction-projection-v1.json`](../../artifacts/autogenesis/retrieved-induction-obstruction-projection-v1.json)
+turns every census outcome into typed scheduling demand. Among the 45 positive
+targets, 25 require the existing type-slice/generalization boundary before any
+producer can run, 13 require a non-equality terminal family, five reached the
+equality grammar but need a missing rewrite or induction plan, one exceeded the
+binder/generalization budget, and one has a checked proof ready for later
+operation integration. The six controls are retained as observations but are
+never eligible for the strategy queue. The projection is candidate-only: it
+cannot authorize a proof, operation, applicability decision, or fact
+transition.
+
+1. Do **not** register a one-target operation for the lone success. First find
+   at least two sibling targets accepted by the same fixed producer contract,
+   then extend the operation/episode/transaction schemas to bind the ranking
+   digest and exact premise identities. This preserves the plan's
+   one-operation-per-family rule instead of manufacturing autonomous credit.
 2. Cache independently checked transported candidate closures by exact source
    identity and target-kernel compatibility. Measure import, transport,
    specialization, and kernel-check time separately before raising any search
@@ -110,6 +122,10 @@ twenty candidate closures.
 6. After one clean transition, recompute the frontier and require a later proof
    to consume the newly admitted theorem. That closes the stronger
    proof-compounding arrow; one isolated conversion does not.
+
+Regenerate and validate the typed backlog with
+`just autogenesis-retrieved-induction-obstructions`. Its source digests bind it
+to the exact immutable census and ranking that produced these counts.
 
 Over the horizon, this two-stage retrieval should become a typed proof-plan
 graph: topical lemmas introduce operators and intermediate propositions;
