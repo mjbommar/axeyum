@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `3bb1207e8` | Construct bounded Boolean-bit reification as a binary weighted sum and check its zero-length base axiom-free; retain the round-trip theorem as missing. |
 | 2026-08-26 | `f0782cc25` | Construct the axiom-free pointwise bitwise observation algebra and isolate Nat reification as the remaining mathematical obligation. |
 | 2026-08-26 | `8935a4045` | Describe imported transparent definitions by exact body/type identities, closure, and footprint; both bitwise operations reach `propext`, ruling out clean grafting. |
 | 2026-08-26 | `b4d64c3ea` | Make the refuted generalized capsule fail closed at emission time unless the caller explicitly opts into diagnostic-only output. |
