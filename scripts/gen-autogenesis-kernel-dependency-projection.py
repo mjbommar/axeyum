@@ -30,7 +30,8 @@ def inventory() -> dict[str, dict[str, object]]:
     )
     rows: dict[str, dict[str, object]] = {}
     for line in proc.stdout.splitlines():
-        prelude, kind, name, footprint, declarations, theorems, canonical_type = line.split("\t", 6)
+        prelude, kind, name, footprint, type_declarations, declarations, theorems, canonical_type = line.split("\t", 7)
+        direct_type_declarations = [dependency for dependency in type_declarations.split(",") if dependency]
         direct_declarations = [dependency for dependency in declarations.split(",") if dependency]
         direct_theorems = [dependency for dependency in theorems.split(",") if dependency]
         row = {
@@ -38,6 +39,7 @@ def inventory() -> dict[str, dict[str, object]]:
             "declaration_kind": kind,
             "visible_in": [prelude],
             "axiom_footprint_size": int(footprint),
+            "direct_type_dependencies": direct_type_declarations,
             "direct_declaration_dependencies": direct_declarations,
             "direct_theorem_dependencies": direct_theorems,
             "canonical_type": canonical_type,
@@ -49,6 +51,7 @@ def inventory() -> dict[str, dict[str, object]]:
         for field in (
             "declaration_kind",
             "axiom_footprint_size",
+            "direct_type_dependencies",
             "direct_declaration_dependencies",
             "direct_theorem_dependencies",
             "canonical_type",
@@ -90,7 +93,7 @@ def projection() -> dict[str, object]:
             "method": "kernel-derived",
             "command": " ".join(COMMAND),
             "scope": "all constructed Axeyum kernel preludes",
-            "edge_semantics": "direct theorem references from accepted theorem terms only; each declaration also carries all-kind direct references as bounded-search vocabulary",
+            "edge_semantics": "direct theorem references from accepted theorem terms only; each declaration separately carries proof-isolated type references and all-kind type-plus-value references",
             "non_theorem_policy": "definitions, inductives, constructors, recursors, axioms, opaque constants, and quotient declarations are nodes only; this projection does not invent theorem-dependency edges for them",
         },
         "census": {

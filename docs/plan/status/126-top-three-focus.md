@@ -21,13 +21,15 @@ an authoritative operation and clean episode, then measure sibling conversion.
 The prerequisite candidate-capsule importer now keeps the target proof absent
 while independently admitting only the exact axiom-free candidate closures;
 the ordinary proof-isolated importer remains unchanged.
-The kernel projection now also publishes each declaration's all-kind **direct**
-dependencies, additively beside the theorem-only proof edges. This gives
-bounded search the target's exact vocabulary without flooding it with the
-transitive implementation closure; the Fibonacci control includes `Nat.fib`
-but excludes `Nat.fibAux`. Next: use that field to select a minimal candidate
-capsule, measure the bounded producer across the discovered sibling family,
-then register only the supported operation.
+The kernel projection now publishes both all-kind **direct** dependencies and
+proof-isolated direct **type** dependencies, additively beside theorem-only
+proof edges. The distinction was found before dispatch: a theorem's all-kind
+row observes its finished proof and cannot authorize premise selection. The
+type row gives bounded search statement vocabulary without proof leakage or a
+transitive flood; for Fibonacci it includes `Nat.fib` but excludes both
+`Nat.fibAux` and the two lemmas used by the checked proof. Next: combine that
+type-only vocabulary with independently retrieved fact dependencies, measure
+the sibling family, then register only the supported operation.
 
 <!-- plan-section: landed-changes -->
 
@@ -47,3 +49,4 @@ then register only the supported operation.
 | 2026-08-26 | `ebe2b7b2e` | Re-derive the kernel projection and lemma-search artifacts at 1,242 theorems after rebasing concurrent mathematics work. |
 | 2026-08-26 | `fa821fc54` | Merge the next constructive-real theorem and advance the same generated search population to 1,243 without clobbering either lane. |
 | 2026-08-26 | `5916d47cc` | Publish stable all-kind direct declaration dependencies through Rust, Python, and the generated kernel projection, with direct-versus-transitive controls. |
+| 2026-08-26 | `17b0c1163` | Split proof-isolated type dependencies from type-plus-value evidence before premise selection could leak a finished theorem's proof. |

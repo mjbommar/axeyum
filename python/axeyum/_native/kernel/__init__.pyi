@@ -882,6 +882,14 @@ class Kernel:
 
         Raises `KeyError` if nothing is declared under `name`.
         """
+    def declaration_type_dependencies(self, name: builtins.str  |  NameId) -> builtins.list[builtins.str]:
+        r"""
+        The declarations referenced directly by `name`'s type, never its value.
+
+        # Errors
+
+        Raises `KeyError` if nothing is declared under `name`.
+        """
     def theorem_dependencies(self, name: builtins.str  |  NameId) -> builtins.list[builtins.str]:
         r"""
         The theorem declarations `name` refers to directly (self-reference dropped).

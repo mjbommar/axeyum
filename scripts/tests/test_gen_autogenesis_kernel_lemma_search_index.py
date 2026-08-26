@@ -76,6 +76,21 @@ class KernelLemmaSearchIndexTests(unittest.TestCase):
     def test_every_search_row_has_a_kernel_rendered_type(self):
         self.assertTrue(all(row["canonical_type"] for row in self.rows.values()))
 
+    def test_search_rows_preserve_direct_all_kind_vocabulary(self):
+        direct = self.rows["Nat.fib_mono"]["direct_declaration_dependencies"]
+        self.assertIn("Nat.fib", direct)
+        self.assertNotIn("Nat.fibAux", direct)
+        self.assertTrue(
+            set(self.rows["Nat.fib_mono"]["direct_theorem_dependencies"]).issubset(direct)
+        )
+
+    def test_search_rows_separate_statement_vocabulary_from_proof_evidence(self):
+        row = self.rows["Nat.fib_mono"]
+        statement = row["direct_type_dependencies"]
+        self.assertIn("Nat.fib", statement)
+        self.assertNotIn("Nat.monotone_of_le_succ", statement)
+        self.assertNotIn("Nat.fib_le_succ", statement)
+
     def test_explicit_declaration_identity_precedes_legacy_evidence_id(self):
         self.assertEqual(
             INDEX.exact_kernel_declaration(

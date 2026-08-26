@@ -45,6 +45,13 @@ class KernelProjectionControls(unittest.TestCase):
         self.assertIn("Nat.fib", direct)
         self.assertNotIn("Nat.fibAux", direct)
 
+    def test_type_edges_do_not_leak_the_finished_proof(self):
+        rows = {row["id"]: row for row in self.data["declarations"]}
+        statement = rows["Nat.fib_mono"]["direct_type_dependencies"]
+        self.assertIn("Nat.fib", statement)
+        self.assertNotIn("Nat.monotone_of_le_succ", statement)
+        self.assertNotIn("Nat.fib_le_succ", statement)
+
     def test_missing_direct_declaration_endpoint_is_rejected(self):
         data = copy.deepcopy(self.data)
         data["declarations"][0]["direct_declaration_dependencies"] = ["Absent.constant"]

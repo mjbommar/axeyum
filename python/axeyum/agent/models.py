@@ -264,6 +264,8 @@ class LemmaNeighbourhoodRow(_Frozen):
     canonical_type: str
     axiom_footprint_size: int
     visible_in: tuple[str, ...]
+    direct_type_declarations: tuple[str, ...]
+    direct_declarations: tuple[str, ...]
     dependencies: tuple[str, ...]
     dependents: tuple[str, ...]
     dependency_depth: int
@@ -290,6 +292,8 @@ class LemmaCandidateRow(_Frozen):
     source_dependency_fact_id: str
     axiom_footprint_size: int
     visible_in: tuple[str, ...]
+    direct_type_declarations: tuple[str, ...]
+    direct_declarations: tuple[str, ...]
     dependency_depth: int
 
 

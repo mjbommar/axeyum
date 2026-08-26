@@ -45,6 +45,12 @@ fn emit(label: &str, kernel: &Kernel) {
                 .map(|dependency| kernel.display_name(dependency).to_string())
                 .collect::<Vec<_>>()
                 .join(",");
+            let direct_type_declarations = kernel
+                .declaration_type_dependencies(*name)
+                .into_iter()
+                .map(|dependency| kernel.display_name(dependency).to_string())
+                .collect::<Vec<_>>()
+                .join(",");
             let canonical_type = kernel.render_lean(declaration.ty());
             assert!(
                 !canonical_type.contains(['\t', '\n', '\r']),
@@ -55,6 +61,7 @@ fn emit(label: &str, kernel: &Kernel) {
                 rendered,
                 kind(declaration),
                 footprint_size,
+                direct_type_declarations,
                 direct_declarations,
                 direct_theorems,
                 canonical_type,
@@ -66,13 +73,14 @@ fn emit(label: &str, kernel: &Kernel) {
         name,
         declaration_kind,
         footprint_size,
+        direct_type_declarations,
         direct_declarations,
         direct_theorems,
         canonical_type,
     ) in rows
     {
         println!(
-            "{label}\t{declaration_kind}\t{name}\t{footprint_size}\t{direct_declarations}\t{direct_theorems}\t{canonical_type}"
+            "{label}\t{declaration_kind}\t{name}\t{footprint_size}\t{direct_type_declarations}\t{direct_declarations}\t{direct_theorems}\t{canonical_type}"
         );
     }
 }
