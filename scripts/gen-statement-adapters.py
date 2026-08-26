@@ -86,7 +86,7 @@ def main(argv: list[str]) -> int:
             continue
         print(f"GEN_ADAPTER|class|{fid}|{'arrow' if arrow else 'exportable'}", file=sys.stderr)
         name = camel(fid)
-        if name in names_seen:
+        while name in names_seen:
             name = name + "X"
         names_seen.add(name)
         lines.append(f"def {name} : Prop :=")

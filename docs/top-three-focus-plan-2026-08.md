@@ -173,6 +173,30 @@ plumbing, not operation authority: the tool is not added to the agent's tier-C
 surface until the registry, receipt schema, and crash-safe transaction agree on
 the multi-target contract.
 
+The first open-population test prevents the settled controls from being read as
+an estimate of autonomous yield. Eighty open or conjectured, arrow-free Mathlib
+statements were elaborated as proof-free definitions against pinned Lean 4.30.0
+and Mathlib commit `c5ea00351c28e24afc9f0f84379aa41082b1188f`. Every target
+received the same 13 elementary declarations; there was no per-target premise
+selection. Bounded application accepted **0 of 80**. Thirty-seven capsules
+passed proof-isolated import and returned the typed `NoTypedApplication`
+decline. Forty-three were rejected before search because their statement
+closures reached a theorem, axiom, or quotient primitive outside the explicit
+candidate set. This is a useful fail-closed result, not 43 solver failures: it
+separates two bottlenecks that need different work—safe statement-environment
+construction and actual premise/term search. The external NDJSON remains
+unvendored; the committed census records every capsule hash, rejection, and
+decline. The adapter run also exposed and fixed repeated generated-name
+collisions, so arbitrarily many normalized mutation slugs now remain unique.
+
+This changes the immediate sequence. Registering the three-target settled
+control family would duplicate existing provenance and manufacture no new
+knowledge. First extend the importer/exporter contract so rich target types can
+reuse an independently checked, explicitly allowlisted type environment without
+granting that environment as proof candidates. Then rank candidates from exact
+fact and kernel dependencies, and rerun the unchanged open population. Only a
+producer that converts previously open siblings earns operation authority.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring
