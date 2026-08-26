@@ -585,9 +585,10 @@ autogenesis-imported-testbit-bitwise-statement source="/nas3/data/axeyum/autogen
 
 autogenesis-bitwise-semantic-law-demand:
     cargo run -q -p axeyum-lean-kernel --example nat_testbit_bool_bridge
-    uv run --no-sync python -m unittest scripts.tests.test_check_autogenesis_bitwise_semantic_law_demand scripts.tests.test_check_autogenesis_imported_definition_reflexivity_footprint
+    uv run --no-sync python -m unittest scripts.tests.test_check_autogenesis_bitwise_semantic_law_demand scripts.tests.test_check_autogenesis_imported_definition_reflexivity_footprint scripts.tests.test_gen_autogenesis_bitwise_family_projection
     python3 scripts/check-autogenesis-bitwise-semantic-law-demand.py
     python3 scripts/check-autogenesis-imported-definition-reflexivity-footprint.py
+    python3 scripts/gen-autogenesis-bitwise-family-projection.py --check
 
 autogenesis-imported-definition-reflexivity-footprint-replay stream="/nas3/data/axeyum/autogenesis/reference-packs/imported-candidates-v1/Nat.testBit_bitwise.ndjson":
     cargo run -q -p axeyum-lean-import --example imported_definition_reflexivity_footprint -- "{{ stream }}"

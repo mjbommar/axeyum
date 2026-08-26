@@ -205,6 +205,15 @@ separately authored bit proof. This is reusable family construction, not three
 one-off reconstructions. It intentionally does not claim identity with Lean's
 assumption-bearing `lor`, `land`, or `ldiff` definitions.
 
+The generated
+[`bitwise-clean-family-projection-v1.json`](../../artifacts/autogenesis/bitwise-clean-family-projection-v1.json)
+connects those three clean results to the three corresponding open development
+facts. Every row is deliberately a `target-owned-semantic-analogue`, not an
+exact proposition match; all three remain ineligible for authoritative
+operation registration and fact transition. This makes the useful connection
+queryable while preventing the graph from silently collapsing “same bit law”
+into “same imported operation.”
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.
