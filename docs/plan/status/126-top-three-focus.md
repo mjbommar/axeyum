@@ -31,6 +31,9 @@ family, rather than adding one-off proof code. The three manually orchestrated
 episodes have also been converted into a generic one-command runner: callers
 choose only an external receipt directory; the frontier, registry, transaction,
 intent fault, recovery, and settled checker choose and police everything else.
+The new family-level queue ranks natural binomial first: one ready sibling is
+already accepted by the unchanged retrieved-induction producer, so the next
+falsifiable bar is two more accepted siblings and then operation integration.
 
 Priority 3 also repaired the CI-observed sub-millisecond budget escape: policy
 now compares an unrounded monotonic duration while receipts retain integer
@@ -42,6 +45,7 @@ Detail and older landed rows moved to [`../notes/126-top-three-focus.md`](../not
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `9e3f1185a` | Join ready facts, measured obstructions, semantic analogues, and operation coverage into a held-out-safe reusable-family queue; natural binomial ranks first with one accepted sibling and two needed. |
 | 2026-08-26 | `98628e363` | Replace manual per-fact episode orchestration with a generic frontier-selected authoritative runner that retains crash-safe receipts and permits exactly one machine-selected ledger path to change. |
 | 2026-08-26 | `aff331097` | Settle `Nat.mod_modEq` through the third fresh crash-safe episode; the imported Nat.mod family reaches 3/3 durable admissions and the frontier returns zero admissible registered targets. |
 | 2026-08-26 | `04f75cdf9` | Settle `Nat.add_modEq_right` through a fresh crash-safe episode; exact `addModRight` dependency replay passes and `modulusZero` becomes the sole admissible target. |

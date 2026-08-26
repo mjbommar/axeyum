@@ -56,6 +56,25 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The Rust and Python surfaces are broad, but integration churn can leave
   `main` red and evidence fixtures can be mistaken for production populations.
 
+### Current reusable-family queue
+
+The generated
+[`next reusable family queue`](../artifacts/autogenesis/next-reusable-family-queue-v1.json)
+now joins the dependency-ready evaluation frontier, measured producer
+obstructions, clean semantic analogues, and operation registry at the family
+level. It excludes held-out and answer-bearing mutation controls before
+ranking. Of 91 ready train/development facts across ten families, only 29 have
+a current measured producer outcome and only one is accepted by an unchanged
+producer. No family yet has three accepted siblings.
+
+The next family is therefore **natural binomial**, not bitwise or another
+one-off theorem. `Nat.choose_one_right` already passes the retrieved-induction
+producer axiom-free; the falsifiable next step is to convert two more of its
+seven ready siblings with the same contract. Natural bitwise remains third:
+it has twelve ready facts and three clean target-owned analogues, but exact
+imported identity is still blocked, so promoting those analogues would be a
+category error rather than autonomous progress.
+
 ### Landed autonomous-loop increment
 
 The first action against this plan moved three facts through the authoritative

@@ -728,6 +728,26 @@ The command is exposed as `just autogenesis-authoritative-fact OUTPUT`. Its
 unit controls run in both aggregate gates; control reachability remains at the
 14-module baseline and aggregate-scope differences remain exactly allowlisted.
 
+### Reusable-family priority projection (2026-08-26)
+
+The generated family queue aggregates the producer-evaluation frontier by
+mathematical family, after excluding all ten answer-bearing mutation controls.
+It joins the retained retrieved-induction outcomes, operation registry, and
+clean bitwise analogue projection. Its ordering is explicit and deterministic:
+operation-ready, expand an already accepted unchanged producer, shared proof
+composition, shared producer grammar, shared statement contract, missing
+measurement, then fragmented obstructions.
+
+The live result contains ten families and 91 non-control ready facts. Only 29
+have measured outcomes; one is accepted; none meets the three-target operation
+bar. Natural binomial ranks first because
+`F:ml430-nat-choose-one-right-7eda8e39` is already accepted axiom-free by the
+retrieved-induction producer. Integer modular equivalence ranks second with a
+five-target terminal-grammar demand. Natural bitwise ranks third despite three
+clean analogues because seven measured ready facts still require exact shared
+statement contracts. The queue therefore makes “two more natural-binomial
+siblings under the unchanged producer” the next falsifiable construction task.
+
 | 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
 | 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
 | 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |
