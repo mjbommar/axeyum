@@ -156,7 +156,7 @@ agree exactly; operation and autonomous credit remain zero. Next: point
 bounded application at the now-clean 51-goal population and measure whether
 semantic/type-directed retrieval improves the honest 0/51 construction rate.
 After rebasing over the next concurrent CReal theorem, mutable views were
-regenerated again at 1,621 declarations / 1,267 theorems / 7,373 edges. The
+regenerated again at 1,625 declarations / 1,271 theorems / 7,417 edges. The
 historical authorization artifacts remain pinned to their archived
 pre-transition index, while the post-transition 51-goal census absorbs the new
 kernel state and remains zero exact matches.
@@ -206,4 +206,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `3d4bb31eb` | Materialize six live hash-bound reconciliation proposals with zero writes, operations, and autonomous credit. |
 | 2026-08-26 | `6a348363b` | Extend the crash-safe applier with live-rebuilt, operation-free reconciliation events and recovery controls at every durable boundary. |
 | 2026-08-26 | `4e025a444` | Preserve the pre-reconciliation ranking and bind the 57-goal census to its immutable path and hash. |
-| 2026-08-26 | `01d3fb754` | Reconcile six exact native propositions crash-safely, preserve zero production credit, and publish the clean 51-goal / zero-match remainder. |
+| 2026-08-26 | `9230d9666` | Reconcile six exact native propositions crash-safely, preserve zero production credit, and publish the clean 51-goal / zero-match remainder. |
