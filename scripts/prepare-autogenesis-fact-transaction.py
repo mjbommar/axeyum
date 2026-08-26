@@ -14,6 +14,8 @@ from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 FACTS = ROOT / "artifacts/facts"
+CENSUS = ROOT / "artifacts/autogenesis/open-ranked-proposition-census-v1.json"
+OVERLAY = ROOT / "artifacts/autogenesis/knowledge-overlay-v1.json"
 EVIDENCE_SCRIPT = ROOT / "scripts/create-autogenesis-premise-evidence.py"
 EVENT_SCRIPT = ROOT / "scripts/create-autogenesis-accepted-event.py"
 VALIDATOR_SCRIPT = ROOT / "scripts/validate-facts.py"
@@ -150,6 +152,7 @@ def build_proposition_reconciliation_transaction(
         "precondition": {
             "epistemic_status": "open",
             "evidence": [],
+            "source_is_authoritative": True,
             "native_axiom_footprint": [],
             "definitionally_matches": True,
         },
@@ -168,6 +171,40 @@ def build_proposition_reconciliation_transaction(
     }
     transaction["transaction_sha256"] = digest(transaction)
     return transaction
+
+
+def derive_proposition_reconciliation(
+    transaction: dict[str, Any],
+) -> dict[str, Any]:
+    """Rebuild one reconciliation proposal from authoritative live inputs."""
+    identity = transaction.get("identity", {})
+    fact_id = identity.get("fact_id")
+    native_fact_id = identity.get("native_fact_id")
+    theorem = identity.get("native_theorem")
+    link_id = identity.get("knowledge_link_id")
+    if not all(isinstance(value, str) for value in (fact_id, native_fact_id, theorem, link_id)):
+        raise TransactionError("reconciliation identity is malformed")
+    before = json.loads((FACTS / f"{fact_id.replace(':', '-')}.json").read_text())
+    native = json.loads((FACTS / f"{native_fact_id.replace(':', '-')}.json").read_text())
+    census = json.loads(CENSUS.read_text())
+    matches = [
+        row
+        for row in census.get("matches", [])
+        if row.get("fact_id") == fact_id and row.get("native_theorem") == theorem
+    ]
+    if len(matches) != 1:
+        raise TransactionError("live census does not contain one exact proposition match")
+    overlay = json.loads(OVERLAY.read_text())
+    links = [row for row in overlay.get("links", []) if row.get("id") == link_id]
+    if len(links) != 1:
+        raise TransactionError("live overlay does not contain one exact knowledge link")
+    return build_proposition_reconciliation_transaction(
+        before_fact=before,
+        native_fact=native,
+        match=matches[0],
+        overlay_link=links[0],
+        census_sha256=hashlib.sha256(CENSUS.read_bytes()).hexdigest(),
+    )
 
 
 def build_transaction(

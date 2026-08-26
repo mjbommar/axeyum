@@ -69,7 +69,8 @@
         "definitionally_matches": true,
         "epistemic_status": "open",
         "evidence": [],
-        "native_axiom_footprint": []
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
       },
       "production_credit": {
         "autonomous": false,
@@ -78,7 +79,7 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "7bef16be277900058b462f9b409c6e1ac643d4e24c36d7cec1c03e1cef49be86"
+      "transaction_sha256": "f735538d64cfc92cd13d40680ca8b51e57ed0b43b3cdc377c67077b67e32ecff"
     },
     {
       "admission_event": null,
@@ -149,7 +150,8 @@
         "definitionally_matches": true,
         "epistemic_status": "open",
         "evidence": [],
-        "native_axiom_footprint": []
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
       },
       "production_credit": {
         "autonomous": false,
@@ -158,7 +160,7 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "5b3762a03f36ca60cf70839b83db3a9213e9951dae2b60c50ead6977eee4ece9"
+      "transaction_sha256": "eae33b1dd3e9d584ba856883eae3f8bb1829886cf9ceaa850708195aae590c64"
     },
     {
       "admission_event": null,
@@ -227,7 +229,8 @@
         "definitionally_matches": true,
         "epistemic_status": "open",
         "evidence": [],
-        "native_axiom_footprint": []
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
       },
       "production_credit": {
         "autonomous": false,
@@ -236,7 +239,7 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "c5fe7adf1c5b9bd74367d33e734ecc0b41b6beb11cc7f787813f89fe82dcf769"
+      "transaction_sha256": "f38283a5d9eafd638d5b730857d2468edfe239999b50ed43b66679fe67e1bb6f"
     },
     {
       "admission_event": null,
@@ -305,7 +308,8 @@
         "definitionally_matches": true,
         "epistemic_status": "open",
         "evidence": [],
-        "native_axiom_footprint": []
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
       },
       "production_credit": {
         "autonomous": false,
@@ -314,7 +318,7 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "f23658c7557edb6375aa43660061a5897394836b7f2866cf323cf9c9eca2b9be"
+      "transaction_sha256": "e1a987ff0468a5ea364d0883fd1d471c2161941f3d575de30e111f9ffb2a81d0"
     },
     {
       "admission_event": null,
@@ -383,7 +387,8 @@
         "definitionally_matches": true,
         "epistemic_status": "open",
         "evidence": [],
-        "native_axiom_footprint": []
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
       },
       "production_credit": {
         "autonomous": false,
@@ -392,7 +397,7 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "7be2d703f47260dd5dd2bda43ed1c97e1a850f91831384c7b1c8584ef7ad1b51"
+      "transaction_sha256": "a71bbe567719b3ca9e1e5c5dd05848cd27a990de057cd7b59879fbad211d4a67"
     },
     {
       "admission_event": null,
@@ -461,7 +466,8 @@
         "definitionally_matches": true,
         "epistemic_status": "open",
         "evidence": [],
-        "native_axiom_footprint": []
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
       },
       "production_credit": {
         "autonomous": false,
@@ -470,7 +476,7 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "506f3f34db31a9f9f9835a338cb1e830f4730c48bfa8e8193d6aa5686211cf10"
+      "transaction_sha256": "fc14739dbb39fb62d46f19dee58e4123dab05ec5d442ce2ffbb845e968166226"
     }
   ],
   "schema_version": 1,
@@ -478,7 +484,7 @@
     "census_sha256": "2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87",
     "kernel_lemma_index_sha256": "e9fd5d16ee4739402bd9985c5c67e3b49b69761c9b004363129b579b06fc0041",
     "knowledge_overlay_sha256": "c165e9fd36d6126c4f0f8c7b3b8b69f0f32c37b7ae1abf26197dfdfa704567fd",
-    "transaction_builder_sha256": "6cba96d9706d77989400d9158947b0dd52a249739a6f9c02daa37e8dd91b0427"
+    "transaction_builder_sha256": "cf84ac4154215dcc40aa15388ca3af0f38dc699c986d7487e8c4e569b54ab698"
   },
   "state": "prepared-read-only-no-ledger-writes",
   "summary": {

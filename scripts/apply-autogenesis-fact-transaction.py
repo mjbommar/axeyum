@@ -82,6 +82,32 @@ def atomic_write(path: pathlib.Path, payload: bytes) -> None:
 
 def build_admission_event(transaction: dict[str, Any]) -> dict[str, Any]:
     identity = transaction["identity"]
+    if transaction.get("kind") == "axeyum-proposition-reconciliation-transaction-proposal":
+        event: dict[str, Any] = {
+            "schema_version": 1,
+            "kind": "axeyum-autogenesis-durable-reconciliation-event",
+            "event_type": "fact-reconciled",
+            "sequence": 1,
+            "identity": {
+                "fact_id": identity["fact_id"],
+                "native_fact_id": identity["native_fact_id"],
+                "native_theorem": identity["native_theorem"],
+                "transaction_sha256": transaction["transaction_sha256"],
+                "before_fact_sha256": identity["before_fact_sha256"],
+                "after_fact_sha256": identity["after_fact_sha256"],
+                "proposition_census_sha256": identity["proposition_census_sha256"],
+            },
+            "durable_state": {
+                "epistemic_status": transaction["authoritative_write"]["after_fact"][
+                    "epistemic_status"
+                ],
+                "fact_sha256": identity["after_fact_sha256"],
+            },
+            "production_credit": transaction["production_credit"],
+            "publication": {"artifact_archived": False, "git_published": False},
+        }
+        event["event_sha256"] = digest(event)
+        return event
     event: dict[str, Any] = {
         "schema_version": 1,
         "kind": "axeyum-autogenesis-durable-admission-event",
@@ -277,7 +303,25 @@ def main() -> int:
                 execution=args.execution,
                 trigger_bundle=args.trigger_bundle,
             )
-            expected = prepare.derive(derive_args)
+            if (
+                transaction.get("kind")
+                == "axeyum-proposition-reconciliation-transaction-proposal"
+            ):
+                if any(
+                    value is not None
+                    for value in (
+                        args.bundle,
+                        args.frontier,
+                        args.execution,
+                        args.trigger_bundle,
+                    )
+                ):
+                    raise ApplyError(
+                        "reconciliation apply accepts only transaction, before-fact, journal, and target mode"
+                    )
+                expected = prepare.derive_proposition_reconciliation(transaction)
+            else:
+                expected = prepare.derive(derive_args)
             prepare.verify_transaction(transaction, expected)
             if (
                 args.fixture_fact_root is None
