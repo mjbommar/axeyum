@@ -239,6 +239,14 @@ cell-8 tree had 636/683 terminal leaves complete and cell 4 had 106/373; all com
 were UNSAT, but only the named subtree has received this new independent replay. Neither
 top-level cell nor the MC=7 formula is therefore certified, and `[7,8]` is unchanged.
 
+**First multi-gigabyte S-box subtree accepted, 2026-08-26.** A hard descendant under cell 8
+was replaced by a complete selector-37--41 partition. Axeyum reconstructed its 20,585-variable
+/ 69,839-clause root, then accepted all 32 leaf DRATs and the covering DRAT: 1,545,410,870
+proof bytes, one split / 32 leaves / 33 nodes, 23:33.77 wall, and 192,700 KiB peak RSS. Formula,
+manifest, cover, and checker output are separately hash-bound in the sibling package. This is
+a checked subtree suitable for recursive composition, not a checked ancestor or MC=7 result;
+the interval remains `[7,8]`.
+
 **Regression replay gate made load-stable, 2026-08-26.** The pre-push sweep failed twice on
 different corpus rows because it ran `solve_smtlib` and its direct
 `solve_smtlib_with_model` source projection sequentially under independent one-second
