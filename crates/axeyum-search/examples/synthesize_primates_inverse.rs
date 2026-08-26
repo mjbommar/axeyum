@@ -30,6 +30,7 @@ struct Arguments {
     drat_path: Option<PathBuf>,
     eliminate_internal_constants: bool,
     operand_order: String,
+    checked_lower_budget: Option<usize>,
 }
 
 fn arguments() -> Arguments {
@@ -48,6 +49,7 @@ fn arguments() -> Arguments {
     let mut drat_path: Option<PathBuf> = None;
     let mut eliminate_internal_constants = true;
     let mut operand_order = "lex".to_string();
+    let mut checked_lower_budget = None;
     let mut index = 2;
     while index < args.len() {
         match args[index].as_str() {
@@ -89,6 +91,20 @@ fn arguments() -> Arguments {
                 assert!(matches!(operand_order.as_str(), "none" | "first" | "lex"));
                 index += 2;
             }
+            "--exact-budget-after-checked-lower" => {
+                let lower = args
+                    .get(index + 1)
+                    .expect("--exact-budget-after-checked-lower needs a budget")
+                    .parse::<usize>()
+                    .expect("checked lower budget must be an integer");
+                assert_eq!(
+                    lower.checked_add(1),
+                    Some(budget),
+                    "checked lower budget must be exactly one below the query"
+                );
+                checked_lower_budget = Some(lower);
+                index += 2;
+            }
             other => panic!("unknown argument: {other}"),
         }
     }
@@ -101,6 +117,7 @@ fn arguments() -> Arguments {
         drat_path,
         eliminate_internal_constants,
         operand_order,
+        checked_lower_budget,
     }
 }
 
@@ -150,6 +167,12 @@ fn print_encoding_options(args: &Arguments) {
         }
     );
     println!("operand-order={}", args.operand_order);
+    if let Some(lower) = args.checked_lower_budget {
+        println!("exact-budget-irredundancy=enabled");
+        println!("checked-lower-budget-premise={lower}");
+    } else {
+        println!("exact-budget-irredundancy=disabled");
+    }
 }
 
 fn print_problem_header(args: &Arguments) {
@@ -168,25 +191,29 @@ fn run_system_cnf(
         encode_multiplicative_anf_system(problem, limits, options).expect("ANF system must fit");
     let encoding = encode_boolean_anf_cnf(source.system(), BooleanAnfCnfLimits::default())
         .expect("ANF-to-CNF lowering must fit");
+    let formula = if args.checked_lower_budget.is_some() {
+        encoding
+            .formula_with_source_clauses(&source.exact_budget_irredundancy_source_clauses())
+            .expect("exact-budget clauses must reference source selectors")
+    } else {
+        encoding.formula().clone()
+    };
     print_problem_header(args);
     print_encoding_options(args);
     println!("semantics=system");
     println!("anf-variables={}", source.system().variable_count());
     println!("anf-equations={}", source.system().equations().len());
-    println!("variables={}", encoding.formula().variable_count());
-    println!("clauses={}", encoding.formula().clauses().len());
+    println!("variables={}", formula.variable_count());
+    println!("clauses={}", formula.clauses().len());
     if let Some(path) = &args.dimacs_path {
-        std::fs::write(path, encoding.formula().to_dimacs()).expect("write DIMACS");
+        std::fs::write(path, formula.to_dimacs()).expect("write DIMACS");
         println!("dimacs={}", path.display());
         println!("verdict=encoded");
         return;
     }
     if let Some(path) = &args.drat_path {
         let reader = BufReader::new(File::open(path).expect("open textual DRAT"));
-        assert_eq!(
-            check_drat_backward_reader(encoding.formula(), reader),
-            Ok(true)
-        );
+        assert_eq!(check_drat_backward_reader(&formula, reader), Ok(true));
         println!("drat={}", path.display());
         println!("drat-mode=file-backed-backward");
         println!("verdict=unsat-checked");
@@ -194,7 +221,7 @@ fn run_system_cnf(
     }
     let started = Instant::now();
     let outcome = axeyum_cnf::solve_with_drat_proof_with_limits(
-        encoding.formula(),
+        &formula,
         Some(started + Duration::from_secs(args.seconds)),
         limits.max_conflicts,
     );
@@ -210,7 +237,7 @@ fn run_system_cnf(
             println!("verdict=sat-replayed");
         }
         ProofSolveOutcome::Unsat(proof) => {
-            assert_eq!(check_drat_backward(encoding.formula(), &proof), Ok(true));
+            assert_eq!(check_drat_backward(&formula, &proof), Ok(true));
             println!("verdict=unsat-checked");
             println!("drat-steps={}", proof.len());
         }
@@ -219,61 +246,48 @@ fn run_system_cnf(
     }
 }
 
-fn main() {
-    let args = arguments();
-    let budget = args.budget;
-    let seconds = args.seconds;
-    let problem = MultiplicativeSynthesisProblem {
-        input_bits: 5,
-        output_bits: 5,
-        truth_table: TABLE.to_vec(),
-        and_gates: budget,
-    };
-    let limits = MultiplicativeSynthesisLimits {
-        max_conflicts: 10_000_000,
-        ..MultiplicativeSynthesisLimits::default()
-    };
-    let options = encoding_options(&args);
-    if let Some(path) = &args.anf_path {
-        export_anf(&problem, limits, options, path, budget);
-        return;
-    }
-    if args.encoding == "system" {
-        run_system_cnf(&args, &problem, limits, options);
-        return;
-    }
+fn run_direct_cnf(
+    args: &Arguments,
+    problem: &MultiplicativeSynthesisProblem,
+    limits: MultiplicativeSynthesisLimits,
+    options: MultiplicativeEncodingOptions,
+) {
     let encoding = match args.encoding.as_str() {
-        "anf" => encode_multiplicative_circuit_anf(&problem, limits, options),
-        "truth" => encode_multiplicative_circuit_with_options(&problem, limits, options),
+        "anf" => encode_multiplicative_circuit_anf(problem, limits, options),
+        "truth" => encode_multiplicative_circuit_with_options(problem, limits, options),
         _ => unreachable!("validated above"),
     }
     .expect("encoding must fit");
-    print_problem_header(&args);
-    print_encoding_options(&args);
+    let formula = if args.checked_lower_budget.is_some() {
+        encoding
+            .formula_with_exact_budget_irredundancy()
+            .expect("exact-budget clauses must reference selectors")
+    } else {
+        encoding.formula().clone()
+    };
+    print_problem_header(args);
+    print_encoding_options(args);
     println!("semantics={}", args.encoding);
-    println!("variables={}", encoding.formula().variable_count());
-    println!("clauses={}", encoding.formula().clauses().len());
-    if let Some(path) = args.dimacs_path {
-        std::fs::write(&path, encoding.formula().to_dimacs()).expect("write DIMACS");
+    println!("variables={}", formula.variable_count());
+    println!("clauses={}", formula.clauses().len());
+    if let Some(path) = &args.dimacs_path {
+        std::fs::write(path, formula.to_dimacs()).expect("write DIMACS");
         println!("dimacs={}", path.display());
         println!("verdict=encoded");
         return;
     }
-    if let Some(path) = args.drat_path {
-        let reader = BufReader::new(File::open(&path).expect("open textual DRAT"));
-        assert_eq!(
-            check_drat_backward_reader(encoding.formula(), reader),
-            Ok(true)
-        );
+    if let Some(path) = &args.drat_path {
+        let reader = BufReader::new(File::open(path).expect("open textual DRAT"));
+        assert_eq!(check_drat_backward_reader(&formula, reader), Ok(true));
         println!("drat={}", path.display());
         println!("drat-mode=file-backed-backward");
         println!("verdict=unsat-checked");
         return;
     }
     let started = Instant::now();
-    let deadline = started + Duration::from_secs(seconds);
+    let deadline = started + Duration::from_secs(args.seconds);
     let vivified = vivify_within(
-        encoding.formula(),
+        &formula,
         VivifyOptions::default(),
         Some((started + Duration::from_secs(10)).min(deadline)),
     );
@@ -293,9 +307,9 @@ fn main() {
         ProofSolveOutcome::Unsat(proof) => {
             let mut combined = vivified.proof;
             combined.extend(proof);
-            assert_eq!(check_drat_backward(encoding.formula(), &combined), Ok(true));
+            assert_eq!(check_drat_backward(&formula, &combined), Ok(true));
             MultiplicativeSynthesisOutcome::Unsat {
-                formula: encoding.formula().clone(),
+                formula: formula.clone(),
                 proof: combined,
             }
         }
@@ -320,4 +334,33 @@ fn main() {
         MultiplicativeSynthesisOutcome::ResourceOut => println!("verdict=resource-out"),
         MultiplicativeSynthesisOutcome::Interrupted => println!("verdict=interrupted"),
     }
+}
+
+fn main() {
+    let args = arguments();
+    let budget = args.budget;
+    let problem = MultiplicativeSynthesisProblem {
+        input_bits: 5,
+        output_bits: 5,
+        truth_table: TABLE.to_vec(),
+        and_gates: budget,
+    };
+    let limits = MultiplicativeSynthesisLimits {
+        max_conflicts: 10_000_000,
+        ..MultiplicativeSynthesisLimits::default()
+    };
+    let options = encoding_options(&args);
+    if let Some(path) = &args.anf_path {
+        assert!(
+            args.checked_lower_budget.is_none(),
+            "exact-budget irredundancy contains disjunctive clauses; export the checked system CNF"
+        );
+        export_anf(&problem, limits, options, path, budget);
+        return;
+    }
+    if args.encoding == "system" {
+        run_system_cnf(&args, &problem, limits, options);
+        return;
+    }
+    run_direct_cnf(&args, &problem, limits, options);
 }
