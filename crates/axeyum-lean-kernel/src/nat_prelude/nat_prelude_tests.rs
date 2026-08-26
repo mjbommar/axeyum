@@ -7287,6 +7287,18 @@ fn fib_mono_composes_fib_le_succ_and_records_the_dependency() {
     assert!(dependencies.contains(&p.fib_le_succ));
     assert!(dependencies.contains(&p.monotone_of_le_succ));
     assert!(!dependencies.contains(&p.le_trans));
+
+    let direct = f.k.declaration_dependencies(p.fib_mono);
+    assert!(
+        dependencies
+            .iter()
+            .all(|dependency| direct.contains(dependency))
+    );
+    assert!(direct.contains(&p.fib));
+    assert!(
+        !direct.contains(&p.fib_aux),
+        "the direct vocabulary must not absorb fib's transitive implementation closure"
+    );
 }
 
 /// `Nat.catalan` computes: the kernel's own `def_eq` reduces `catalan 0..5`

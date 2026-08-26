@@ -118,6 +118,20 @@ bounded composition after a fresh import. This closes the checker/import
 precondition for dispatch; it does not itself register an operation or admit a
 new fact.
 
+A first cross-target census exposed a second, narrower prerequisite. Offering
+each Nat goal its direct theorem dependencies plus the target's whole transitive
+declaration closure produced 10 successes across 251 bounded candidates, but
+even the already-demonstrated `Nat.fib_mono` composition declined: irrelevant
+implementation constants consumed the fixed term budget. The kernel and Python
+APIs, and the generated projection, now expose stable all-kind **direct**
+declaration dependencies separately from both theorem-only proof dependencies
+and the transitive audit closure. This is additive and backward-compatible.
+The distinguishing control is concrete: `Nat.fib_mono` directly names
+`Nat.fib`, while `Nat.fibAux` appears only transitively and is excluded from the
+search vocabulary. The next census must use exact direct vocabulary before an
+operation family is registered; the initial 10 successes are discovery data,
+not autonomous-production credit.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring

@@ -1,11 +1,8 @@
 //! Emit the complete constructed-prelude declaration surface for Autogenesis.
 //!
-//! Rows are `prelude<TAB>kind<TAB>name<TAB>axiom-footprint-size<TAB>` followed
-//! by a comma-separated list of *direct theorem dependencies* and the
-//! kernel-rendered canonical type. The dependency field is deliberately empty
-//! for non-theorems: a definition/recursor dependency closure is not proof-term
-//! theorem dependency and must not be conflated with it by the knowledge
-//! overlay.
+//! Rows carry both all-kind direct declaration references and the theorem-only
+//! subset. The latter remains the proof dependency relation; the former is
+//! search vocabulary and must not be confused with a transitive closure.
 
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
@@ -42,6 +39,12 @@ fn emit(label: &str, kernel: &Kernel) {
             } else {
                 String::new()
             };
+            let direct_declarations = kernel
+                .declaration_dependencies(*name)
+                .into_iter()
+                .map(|dependency| kernel.display_name(dependency).to_string())
+                .collect::<Vec<_>>()
+                .join(",");
             let canonical_type = kernel.render_lean(declaration.ty());
             assert!(
                 !canonical_type.contains(['\t', '\n', '\r']),
@@ -52,15 +55,24 @@ fn emit(label: &str, kernel: &Kernel) {
                 rendered,
                 kind(declaration),
                 footprint_size,
+                direct_declarations,
                 direct_theorems,
                 canonical_type,
             )
         })
         .collect::<Vec<_>>();
     rows.sort_by(|left, right| left.0.cmp(&right.0));
-    for (name, declaration_kind, footprint_size, dependencies, canonical_type) in rows {
+    for (
+        name,
+        declaration_kind,
+        footprint_size,
+        direct_declarations,
+        direct_theorems,
+        canonical_type,
+    ) in rows
+    {
         println!(
-            "{label}\t{declaration_kind}\t{name}\t{footprint_size}\t{dependencies}\t{canonical_type}"
+            "{label}\t{declaration_kind}\t{name}\t{footprint_size}\t{direct_declarations}\t{direct_theorems}\t{canonical_type}"
         );
     }
 }
