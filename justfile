@@ -523,6 +523,9 @@ autogenesis-bounded-application-census:
     uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_bounded_application_census
     uv run --no-sync python scripts/gen-autogenesis-bounded-application-census.py --check
 
+autogenesis-candidate-capsule-controls:
+    uv run --no-sync python -m unittest scripts.tests.test_materialize_autogenesis_candidate_capsule
+
 autogenesis-obstruction-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection
     python3 scripts/validate-autogenesis-obstruction-projection.py

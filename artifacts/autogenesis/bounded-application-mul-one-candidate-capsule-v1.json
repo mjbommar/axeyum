@@ -1,0 +1,30 @@
+{
+  "application_depth": 1,
+  "authority": "candidate and receipt only; no fact admission or autonomous-production credit",
+  "axiom_footprint": [],
+  "binders_used": 1,
+  "candidate_declarations": [
+    "Eq",
+    "Nat",
+    "Nat.monotone_of_le_succ",
+    "Nat.mul",
+    "Nat.succ",
+    "Nat.zero",
+    "Nat.zero_add"
+  ],
+  "capsule_bytes": 17330,
+  "capsule_sha256": "ec220357d4d89a17c6856367922391a56b1ffe6ced3fb78557bd6bb4fbdc6be5",
+  "external_artifact": {
+    "path": "/data0/axeyum/autogenesis/reference-packs/bounded-application-mul-one-v1/root.ndjson"
+  },
+  "kind": "axeyum-proof-isolated-candidate-capsule-receipt",
+  "proof_sha256": "e62ca6f5e210e063e1e1fa1373372e37d96c6e8002681193fde1bef53cde5d26",
+  "schema_version": 1,
+  "target": "Nat.mul_one",
+  "target_definition": "Axeyum.Autogenesis.Statement.Native.mulOne",
+  "target_theorem_bytes_present": false,
+  "terms_considered": 6,
+  "theorem_dependencies": [
+    "Nat.zero_add"
+  ]
+}
