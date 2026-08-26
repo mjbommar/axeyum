@@ -140,6 +140,14 @@ inputs plus the `f false false = false` side condition, followed separately by
 the still-missing equivalence between target-owned `testBitBool` semantics and
 the exact imported Lean operations.
 
+The constructed number's half of the unbounded argument is now closed too.
+`testBitBool_zero` proves every observation of zero is false, and
+`reifyBitsLow_outside` proves every bit at `offset + k` of a width-`k`
+reification is false. Both are universal and axiom-free. The remaining width
+argument is therefore about the inputs: derive a checked bound past which
+native `testBitBool x` and `testBitBool y` are false, then use
+`f false false = false` to join the bounded and outside cases.
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.
