@@ -173,7 +173,8 @@ pub(super) fn declare_uniform_continuity(
     declare_bucket_index(d, p)?;
     declare_bucket_index_floor(d, p)?;
     declare_bucket_clamp_upper(d, p)?;
-    declare_bucket_clamp_lower(d, p)
+    declare_bucket_clamp_lower(d, p)?;
+    declare_bucket_index_bound(d, p)
 }
 
 // --- the bucket-index primitive ---------------------------------------------
@@ -962,6 +963,322 @@ fn declare_bucket_clamp_lower(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.bucket_clamp_lower,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the uniform bucket-index bound -----------------------------------------
+//
+// `bucket_index`'s own doc comment names this exactly: a COMPUTABLE `Nat`
+// bound on `bucketIndex w k` for every `w` known only to satisfy `w <= bnd`
+// (no lower bound on `w` at all -- unlike `bucket_clamp_lower`, which needs
+// `0 <= w` to relate the clamp back DOWNWARD; bounding the clamp from ABOVE
+// needs no sign hypothesis, since clamping only ever shrinks a large
+// negative sample toward zero).
+
+/// `CReal.bound x`. Local copy of `product.rs`'s private `bound_of` (see
+/// that file's own copy for why this one line is duplicated rather than
+/// shared across a module boundary).
+fn ubound_of(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.bound, &[x])
+}
+
+/// `CReal.bound x + 1` -- local copy of `product.rs`'s private
+/// `magnitude_of`.
+fn magnitude_of(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let base = ubound_of(d, p, x);
+    d.succ(base)
+}
+
+/// `(CReal.bound x + 1)/1` -- local copy of `product.rs`'s private
+/// `bound_value`, i.e. exactly the target [`CRealPrelude::bound_within`]
+/// proves `seq x m` lands within.
+fn bound_value(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let k = magnitude_of(d, p, x);
+    let zero_nat = d.num(0);
+    div_succ_at(d, p, k, zero_nat)
+}
+
+/// Admit [`CRealPrelude::bucket_index_bound`]. See that field's own doc
+/// comment for the statement and the route: bound the clamped sample `q`
+/// directly from `hle : CReal.le w bnd` and [`CRealPrelude::bound_within`]
+/// (no regularity chain on `w` itself, unlike [`declare_bucket_clamp_upper`]/
+/// [`declare_bucket_clamp_lower`]), then invert
+/// [`CRealPrelude::bucket_index_floor_lower`]'s cross-multiplication in the
+/// other direction.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+fn declare_bucket_index_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let bnd_fv = d.fresh_fvar();
+    let bnd = d.kernel().fvar(bnd_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    // --- shared setup, rebuilt identically to `bucket_index`'s own recipe --
+    let (j, wj, q) = clamp_setup(d, p, w, k);
+    let bj = sample(d, p, bnd, j);
+    let zero_rat = rzero(d, rat);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let k1 = d.succ(k);
+    let hle_ty = cle(d, p, w, bnd);
+
+    // --- seq w j <= seq bnd j + 2/(j+1), from `hle` at index j -------------
+    let bound2j = div_succ(d, p, 2, j);
+    let hle_at_j = d.apply(hle, &[j]);
+    let wj_le_bj_plus_b2j = d.lemma(rat.le_of_sub_le, &[wj, bj, bound2j, hle_at_j]);
+
+    // --- seq bnd j <= B := (bound bnd + 1)/1, from `bound_within` ----------
+    let bw = d.lemma(p.bound_within, &[bnd, j]);
+    let b_val = bound_value(d, p, bnd);
+    let (_, bj_le_b) = halves(d, p, bj, b_val, bw);
+
+    // --- combine -> wj <= B + bound2j ---------------------------------------
+    let refl_b2j = d.lemma(rat.le_refl, &[bound2j]);
+    let widen1 = d.lemma(
+        rat.add_le_add,
+        &[bj, b_val, bound2j, bound2j, bj_le_b, refl_b2j],
+    );
+    let bj_plus_b2j = radd(d, bj, bound2j);
+    let b_plus_b2j = radd(d, b_val, bound2j);
+    let wj_le_b_plus_b2j = d.lemma(
+        rat.le_trans,
+        &[wj, bj_plus_b2j, b_plus_b2j, wj_le_bj_plus_b2j, widen1],
+    );
+
+    // --- widen 2/(j+1) up to natDivSucc 2 0 (= 2 as a Rat) ------------------
+    let div1j = div_succ(d, p, 1, j);
+    let div10 = div_succ(d, p, 1, zero_nat);
+    let one_le_j = d.lemma(rat.nat_div_succ_le_one, &[j]);
+    let doubled_le = d.lemma(
+        rat.add_le_add,
+        &[div1j, div10, div1j, div10, one_le_j, one_le_j],
+    );
+    let fuse_j = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, j]);
+    let fuse_0 = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, zero_nat]);
+    let div1j_double = radd(d, div1j, div1j);
+    let div10_double = radd(d, div10, div10);
+    let two_0 = div_succ(d, p, 2, zero_nat);
+    let step_l = rat_eq_rewrite(d, div1j_double, bound2j, fuse_j, doubled_le, &|d, t| {
+        rle(d, rat, t, div10_double)
+    });
+    let bound2j_le_20 = rat_eq_rewrite(d, div10_double, two_0, fuse_0, step_l, &|d, t| {
+        rle(d, rat, bound2j, t)
+    });
+
+    // --- widen again -> wj <= B + two_0 -------------------------------------
+    let refl_b = d.lemma(rat.le_refl, &[b_val]);
+    let widen2 = d.lemma(
+        rat.add_le_add,
+        &[b_val, b_val, bound2j, two_0, refl_b, bound2j_le_20],
+    );
+    let b_plus_20 = radd(d, b_val, two_0);
+    let wj_le_b_plus_20 = d.lemma(
+        rat.le_trans,
+        &[wj, b_plus_b2j, b_plus_20, wj_le_b_plus_b2j, widen2],
+    );
+
+    // --- fuse B + two_0 into one natDivSucc: C := magnitude_of(bnd) + 2 ----
+    let magnitude_bnd = magnitude_of(d, p, bnd);
+    let c_nat = NatOps::add(d, magnitude_bnd, two_nat);
+    let fuse_c = d.lemma(rat.nat_div_succ_add, &[magnitude_bnd, two_nat, zero_nat]);
+    let c_named = div_succ_at(d, p, c_nat, zero_nat);
+    let wj_le_c = rat_eq_rewrite(d, b_plus_20, c_named, fuse_c, wj_le_b_plus_20, &|d, t| {
+        rle(d, rat, wj, t)
+    });
+
+    // --- q <= c_named, via `Rat.max_le` -------------------------------------
+    let zero_le_c = d.lemma(rat.zero_le_nat_div_succ, &[c_nat, zero_nat]);
+    let q_le_c = d.lemma(rat.max_le, &[wj, zero_rat, c_named, wj_le_c, zero_le_c]);
+
+    // --- chain with `bucket_index_floor_lower` ------------------------------
+    let m_named = d.const_app(p.bucket_index, &[w, k]);
+    let floor_lower = d.lemma(p.bucket_index_floor_lower, &[w, k]);
+    let rep_m_named = div_succ_at(d, p, m_named, k);
+    let m_le_c = d.lemma(
+        rat.le_trans,
+        &[rep_m_named, q, c_named, floor_lower, q_le_c],
+    );
+    // : Rat.le rep_m_named c_named
+
+    // --- invert the cross-multiplication into a `Nat.le` --------------------
+    //
+    // `rep_m_named`/`c_named` unfold (Regular reducibility, `nat_div_succ`'s
+    // own definition) to `Rat.normalize` applied to exactly the arguments
+    // rebuilt below, so `rep_m`/`rep_c` are DEFEQ to them (Prop proof
+    // irrelevance handles the positivity witnesses) -- the same bridge
+    // `declare_bucket_index_floor`'s own `rep_m_named`/`rep_m` split relies
+    // on.
+    let mz = d.of_nat(m_named);
+    let k1z = d.of_nat(k1);
+    let pos_k1 = one_le_succ(d, k);
+    let rep_m = normalize(d, mz, k1, pos_k1);
+    let nm = num(d, rep_m);
+    let dm = den(d, rep_m);
+    let dm_z = den_z(d, rep_m);
+    let dm_pos = den_pos(d, rep_m);
+    let cross_m = d.lemma(rat.normalize_cross, &[mz, k1, pos_k1]);
+    // : Eq (nm*k1z) (mz*dm_z)
+
+    let cz = d.of_nat(c_nat);
+    let one_lit = d.succ(zero_nat);
+    let pos_one = one_le_succ(d, zero_nat);
+    let rep_c = normalize(d, cz, one_lit, pos_one);
+    let nc = num(d, rep_c);
+    let dc = den(d, rep_c);
+    let dc_z = den_z(d, rep_c);
+    let dc_pos = den_pos(d, rep_c);
+    let cross_c = d.lemma(rat.normalize_cross, &[cz, one_lit, pos_one]);
+    // : Eq (nc*one_litz) (cz*dc_z)
+    let one_litz = d.of_nat(one_lit);
+
+    // `m_le_c`, DEFEQ-viewed at the `Int` level (`Rat.le q r := Int.le
+    // (num q * den_z r) (num r * den_z q)`): `Int.le (nm*dc_z) (nc*dm_z)`.
+    let nm_dcz = d.imul(nm, dc_z);
+    let nc_dmz = d.imul(nc, dm_z);
+
+    // Multiply both sides by `one_lit` (nonneg, no positivity needed) so the
+    // `nc*one_litz` shape `cross_c` speaks about appears on the right.
+    let h1 = d.lemma(rat.int_mul_le_mul_right, &[nm_dcz, nc_dmz, one_lit, m_le_c]);
+    let lhs0 = d.imul(nm_dcz, one_litz);
+    let rhs0 = d.imul(nc_dmz, one_litz);
+    // h1 : Int.le lhs0 rhs0
+
+    // LHS: (nm*dc_z)*one_litz = nm*(dc_z*one_litz) = nm*dc_z.
+    let dcz_onelitz = d.imul(dc_z, one_litz);
+    let assoc_l1 = d.lemma(rat.int.mul_assoc, &[nm, dc_z, one_litz]);
+    let nm_dczonelitz = d.imul(nm, dcz_onelitz);
+    let mul_one_dcz = d.lemma(rat.int.mul_one, &[dc_z]);
+    let step_l2 = d.icongr(dcz_onelitz, dc_z, mul_one_dcz, &|d, t| d.imul(nm, t));
+    let (lhs_target, eq_lhs) = d.ichain(lhs0, &[(nm_dczonelitz, assoc_l1), (nm_dcz, step_l2)]);
+
+    // RHS: (nc*dm_z)*one_litz = nc*(dm_z*one_litz) = nc*(one_litz*dm_z)
+    //    = (nc*one_litz)*dm_z = (cz*dc_z)*dm_z = cz*(dc_z*dm_z)
+    //    = cz*(dm_z*dc_z) = (cz*dm_z)*dc_z.
+    let dmz_onelitz = d.imul(dm_z, one_litz);
+    let assoc_r1 = d.lemma(rat.int.mul_assoc, &[nc, dm_z, one_litz]);
+    let nc_dmzonelitz = d.imul(nc, dmz_onelitz);
+    let onelitz_dmz = d.imul(one_litz, dm_z);
+    let comm_r2 = d.lemma(rat.int.mul_comm, &[dm_z, one_litz]);
+    let step_r2 = d.icongr(dmz_onelitz, onelitz_dmz, comm_r2, &|d, t| d.imul(nc, t));
+    let nc_onelitzdmz = d.imul(nc, onelitz_dmz);
+    let nc_onelitz = d.imul(nc, one_litz);
+    let nc_onelitz_dmz = d.imul(nc_onelitz, dm_z);
+    let assoc_r3 = d.lemma(rat.int.mul_assoc, &[nc, one_litz, dm_z]);
+    let step_r3 = d.isymm(nc_onelitz_dmz, nc_onelitzdmz, assoc_r3);
+    let cz_dcz = d.imul(cz, dc_z);
+    let cz_dcz_dmz = d.imul(cz_dcz, dm_z);
+    let step_r4 = d.icongr(nc_onelitz, cz_dcz, cross_c, &|d, t| d.imul(t, dm_z));
+    let dcz_dmz = d.imul(dc_z, dm_z);
+    let cz_dczdmz = d.imul(cz, dcz_dmz);
+    let assoc_r5 = d.lemma(rat.int.mul_assoc, &[cz, dc_z, dm_z]);
+    let dmz_dcz = d.imul(dm_z, dc_z);
+    let cz_dmzdcz = d.imul(cz, dmz_dcz);
+    let comm_r6 = d.lemma(rat.int.mul_comm, &[dc_z, dm_z]);
+    let step_r6 = d.icongr(dcz_dmz, dmz_dcz, comm_r6, &|d, t| d.imul(cz, t));
+    let cz_dmz = d.imul(cz, dm_z);
+    let cz_dmz_dcz = d.imul(cz_dmz, dc_z);
+    let assoc_r7 = d.lemma(rat.int.mul_assoc, &[cz, dm_z, dc_z]);
+    let step_r7 = d.isymm(cz_dmz_dcz, cz_dmzdcz, assoc_r7);
+
+    let (rhs_target, eq_rhs) = d.ichain(
+        rhs0,
+        &[
+            (nc_dmzonelitz, assoc_r1),
+            (nc_onelitzdmz, step_r2),
+            (nc_onelitz_dmz, step_r3),
+            (cz_dcz_dmz, step_r4),
+            (cz_dczdmz, assoc_r5),
+            (cz_dmzdcz, step_r6),
+            (cz_dmz_dcz, step_r7),
+        ],
+    );
+
+    let motive1 = d.ieq_motive(lhs0, &|d, x| d.ile(x, rhs0));
+    let step1 = d.itransport(lhs0, motive1, h1, lhs_target, eq_lhs);
+    let motive2 = d.ieq_motive(rhs0, &|d, x| d.ile(lhs_target, x));
+    let step2 = d.itransport(rhs0, motive2, step1, rhs_target, eq_rhs);
+    // step2 : Int.le nm_dcz cz_dmz_dcz
+
+    let h2 = d.lemma(
+        rat.int_le_of_mul_le_mul_right,
+        &[nm, cz_dmz, dc, dc_pos, step2],
+    );
+    // h2 : Int.le nm cz_dmz
+
+    let h2k = d.lemma(rat.int_mul_le_mul_right, &[nm, cz_dmz, k1, h2]);
+    let lhs2_0 = d.imul(nm, k1z);
+    let rhs2_0 = d.imul(cz_dmz, k1z);
+    // h2k : Int.le lhs2_0 rhs2_0
+
+    // LHS: nm*k1z = mz*dm_z, directly `cross_m`.
+    let lhs2_target = d.imul(mz, dm_z);
+
+    // RHS: (cz*dm_z)*k1z = cz*(dm_z*k1z) = cz*(k1z*dm_z) = (cz*k1z)*dm_z.
+    let dmz_k1z = d.imul(dm_z, k1z);
+    let assoc_s1 = d.lemma(rat.int.mul_assoc, &[cz, dm_z, k1z]);
+    let cz_dmzk1z = d.imul(cz, dmz_k1z);
+    let k1z_dmz = d.imul(k1z, dm_z);
+    let comm_s2 = d.lemma(rat.int.mul_comm, &[dm_z, k1z]);
+    let step_s2 = d.icongr(dmz_k1z, k1z_dmz, comm_s2, &|d, t| d.imul(cz, t));
+    let cz_k1zdmz = d.imul(cz, k1z_dmz);
+    let cz_k1z = d.imul(cz, k1z);
+    let cz_k1z_dmz = d.imul(cz_k1z, dm_z);
+    let assoc_s3 = d.lemma(rat.int.mul_assoc, &[cz, k1z, dm_z]);
+    let step_s3 = d.isymm(cz_k1z_dmz, cz_k1zdmz, assoc_s3);
+
+    let (rhs2_target, eq_rhs2) = d.ichain(
+        rhs2_0,
+        &[
+            (cz_dmzk1z, assoc_s1),
+            (cz_k1zdmz, step_s2),
+            (cz_k1z_dmz, step_s3),
+        ],
+    );
+
+    let motive3 = d.ieq_motive(lhs2_0, &|d, x| d.ile(x, rhs2_0));
+    let step3 = d.itransport(lhs2_0, motive3, h2k, lhs2_target, cross_m);
+    let motive4 = d.ieq_motive(rhs2_0, &|d, x| d.ile(lhs2_target, x));
+    let step4 = d.itransport(rhs2_0, motive4, step3, rhs2_target, eq_rhs2);
+    // step4 : Int.le (mz*dm_z) (cz_k1z*dm_z)
+
+    let h3 = d.lemma(
+        rat.int_le_of_mul_le_mul_right,
+        &[mz, cz_k1z, dm, dm_pos, step4],
+    );
+    // h3 : Int.le mz cz_k1z  ~defeq~ Nat.le m_named (Nat.mul c_nat k1)
+
+    let m_bound = NatOps::mul(d, c_nat, k1);
+    let conclusion = NatOps::le(d, m_named, m_bound);
+    let ty = {
+        let with_hyp = d.arrow(hle_ty, conclusion);
+        let with_k = d.pi_fv(k_fv, nat_ty, with_hyp);
+        let with_bnd = d.pi_fv(bnd_fv, carrier, with_k);
+        d.pi_fv(w_fv, carrier, with_bnd)
+    };
+    let value = {
+        let with_hle = d.lam_fv(hle_fv, hle_ty, h3);
+        let with_k = d.lam_fv(k_fv, nat_ty, with_hle);
+        let with_bnd = d.lam_fv(bnd_fv, carrier, with_k);
+        d.lam_fv(w_fv, carrier, with_bnd)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bucket_index_bound,
         uparams: vec![],
         ty,
         value,

@@ -1225,6 +1225,42 @@ pub struct CRealPrelude {
     /// falls out as `1 (regularity slack) + 2 (the clamp's own slack)`. See
     /// `creal/uniform_continuity.rs`.
     pub bucket_clamp_lower: NameId,
+    /// `CReal.bucketIndexBound : ∀ (w bnd : CReal) (k : Nat), CReal.le w bnd →
+    /// Nat.le (CReal.bucketIndex w k) (Nat.mul (Nat.add (Nat.succ
+    /// (CReal.bound bnd)) 2) (Nat.succ k))` — step 2 toward
+    /// `bounded_of_uniformly_continuous`: a COMPUTABLE `Nat` bound on
+    /// `bucketIndex w k`, uniform over every `w` known only to satisfy `w ≤
+    /// bnd` (no lower bound on `w` needed at all — see below).
+    ///
+    /// The route is simpler than [`Self::bucket_index_floor_lower`]/
+    /// [`Self::bucket_index_floor_upper`]'s own needed: it does **not**
+    /// reuse [`Self::bucket_clamp_upper`]/[`Self::bucket_clamp_lower`],
+    /// because those relate the clamped sample back to `w`'s own
+    /// regularity, which is exactly the chain a bound on `w` alone lets us
+    /// skip. Instead the clamped sample `q := Rat.max (seq w j) 0` (`j` the
+    /// accuracy index [`Self::bucket_index`] itself samples at) is bounded
+    /// directly: `hle` at index `j` gives `seq w j ≤ seq bnd j + 2/(j+1)`
+    /// (`Rat.le_of_sub_le`), [`Self::bound_within`] `bnd j` gives `seq bnd j
+    /// ≤ (bound bnd + 1)/1`, `2/(j+1) ≤ 2/1` widens via
+    /// `Rat.natDivSucc_le_one` applied twice plus `Rat.natDivSucc_add`, and
+    /// the two fuse into a single integer bound `C := bound bnd + 3` via
+    /// `Rat.natDivSucc_add` again — at which point `Rat.max_le` (using `0 ≤
+    /// C` from `Rat.zero_le_natDivSucc`) gives `q ≤ C` with **no sign
+    /// hypothesis on `w` anywhere**, unlike the clamp lemmas: clamping to
+    /// `≥ 0` only ever needs a sign hypothesis to relate the clamp back
+    /// DOWNWARD to `w` (`bucket_clamp_lower`'s own concern), never to bound
+    /// it from above.
+    ///
+    /// The remaining step inverts [`Self::bucket_index_floor_lower`]
+    /// (`natDivSucc (bucketIndex w k) k ≤ q`) against `q ≤ C` by
+    /// cross-multiplication, the same `Rat.normalize_cross` +
+    /// `Rat.int_le_of_mul_le_mul_right` shape
+    /// [`Self::bucket_index_floor_lower`]'s own proof uses, run in the
+    /// OTHER direction: from a `Rat.le` between two `Rat.normalize`
+    /// representatives (one at denominator `k+1`, one at denominator `1`)
+    /// to a `Nat.le` on the numerator `bucketIndex w k` itself, scaled by
+    /// `k+1`. See `creal/uniform_continuity.rs`.
+    pub bucket_index_bound: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -3252,6 +3288,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bucket_index_floor_upper: kernel.name_str(creal, "bucketIndexFloorUpper"),
         bucket_clamp_upper: kernel.name_str(creal, "bucketClampUpper"),
         bucket_clamp_lower: kernel.name_str(creal, "bucketClampLower"),
+        bucket_index_bound: kernel.name_str(creal, "bucketIndexBound"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),

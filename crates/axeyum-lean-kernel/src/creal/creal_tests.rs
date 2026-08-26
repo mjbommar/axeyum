@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 311] = [
+    let expected: [(&str, crate::NameId, &str); 312] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -324,6 +324,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ),
         ("CReal.bucketClampUpper", p.bucket_clamp_upper, "theorem"),
         ("CReal.bucketClampLower", p.bucket_clamp_lower, "theorem"),
+        ("CReal.bucketIndexBound", p.bucket_index_bound, "theorem"),
         ("CReal.ratSqLe", p.rat_sq_le, "theorem"),
         ("CReal.ratSqSandwich", p.rat_sq_sandwich, "theorem"),
         (
@@ -7675,6 +7676,57 @@ fn bucket_clamp_lower_at_zero_and_zero_reduces_to_zero_minus_three_over_two() {
             panic!(
                 "bucket_clamp_lower at (CReal.zero, 0, le_refl) must read as \
                  CReal.le (CReal.ofRat (Rat.zero - natDivSucc 3 1)) CReal.zero: {error:?}"
+            )
+        });
+}
+
+/// **Mandatory concrete instantiation for `CReal.bucketIndexBound`.** At
+/// `w := CReal.zero`, `bnd := CReal.zero`, `k := 0`,
+/// `hle := CReal.le_refl CReal.zero`: `CReal.bound CReal.zero` samples `seq
+/// CReal.zero 0 = Rat.zero`, so `bound = natAbs (num Rat.zero) + 1 = 0 + 1
+/// = 1`, and the computed bound formula `(succ (bound bnd) + 2) * succ k`
+/// reduces to `(succ 1 + 2) * succ 0 = 4 * 1 = 4`. `bucketIndex CReal.zero
+/// 0` samples at `j = (succ 0)*(succ 0) = 1`, clamps `Rat.zero` to itself,
+/// and floor-divides `natAbs 0 * 1 / 1 = 0`.
+///
+/// The expected type is the RAW literal `Nat.le 0 4` -- no reference to
+/// `bucket_index`, `bound`, or any of the proof's own intermediate terms --
+/// so the kernel has to reduce BOTH sides of the theorem's own statement
+/// (`CReal.bucketIndex czero 0` and the `(bound+3)*(k+1)` scaling formula)
+/// down to these numerals, not merely accept a restatement of the same
+/// unevaluated expression. This is what would catch a transposed `bound
+/// bnd`/`bound w`, an off-by-one in the `+2`/`+3` split (the same slack
+/// [`CRealPrelude::bucket_clamp_upper`]/[`CRealPrelude::bucket_clamp_lower`]
+/// warn about), or a swapped `mul`/`add` in the final scaling.
+#[test]
+fn bucket_index_bound_at_zero_zero_and_zero_computes_to_zero_le_four() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let four_nat = d.num(4);
+    let czero = d.kernel().const_(p.zero, vec![]);
+
+    let hle = d.lemma(p.le_refl, &[czero]); // CReal.le CReal.zero CReal.zero
+    let proof = d.const_app(p.bucket_index_bound, &[czero, czero, zero_nat, hle]);
+
+    let expected_ty = NatOps::le(&mut d, zero_nat, four_nat);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bucket_index_bound_at_zero_zero_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "bucket_index_bound at (CReal.zero, CReal.zero, 0, le_refl) must \
+                 reduce to Nat.le 0 4: {error:?}"
             )
         });
 }
