@@ -446,10 +446,18 @@ failure plus two setup errors already present outside this lane: the repository
 currently violates its standard-library-only `scripts/` test in three existing
 scripts, and the held-out gate rejects newly referenced exclusion lists. Do not
 report the full Python gate green until those concurrent integration defects
-land.
+land. The script-layer defect is now repaired: extension-dependent producer
+implementations and tests live under the typed Python package, while three
+stable standard-library-only launchers preserve the existing commands. This
+made seven hidden type diagnostics visible and fixed them without widening the
+four-diagnostic baseline. The refreshed bounded census is 6/111 (5.4%), so two
+new eligible theorem goals correctly register as producer declines rather than
+volume credit. The held-out-isolation setup errors remain a separate
+project-wide gate failure to audit next.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `7e8fe9b3b` | Restore the standard-library-only script boundary with typed package implementations and stable launchers; fix seven newly exposed diagnostics and refresh honest bounded yield from 6/109 to 6/111. |
 | 2026-08-26 | `f1e1724e2` | Add held-out-safe tier-R retrieval for reusable target-owned capsule roots, preserving capsule identity, empty footprints, semantic-analogue qualification, and zero operation authority. |
 | 2026-08-26 | `81b5bae31` | Repair the typed agent read surface so structural statement floors, proof-reconstruction eligibility, and clean-definition routing survive the generated index boundary. |
 | 2026-08-26 | `e56f1b339` | Root-export the three clean bitwise siblings as one reproducible external NDJSON capsule; fresh import admits 116 declarations, no axioms, and the same generic dependency for every root. |

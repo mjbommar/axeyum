@@ -563,14 +563,21 @@ now makes release discipline a prerequisite for further scale.
 - No product claim depends on a skipped, warning-only, zero-population, or stale
   gate.
 
-Current integration evidence is not green. The 2026-08-26 full Python run
-collected 1,861 tests and produced 1,824 passes, 34 skips, one failure, and two
-setup errors. The failures are outside the target-owned capsule change but are
-still product truth: three existing scripts violate the standard-library-only
-knowledge-layer invariant, and held-out isolation rejects exclusion-list
-references introduced by the concurrent nursery expansion. Focused agent and
-typing checks pass; the project-wide Python claim remains withheld until those
-shared defects are repaired.
+The first integration defect from the 2026-08-26 full Python run is now closed
+rather than waived. Three producer programs that require the compiled Axeyum
+extension live in the typed `axeyum` package; their stable `scripts/` commands
+are standard-library-only launchers. Their tests moved with the implementation,
+and the repository guard proves that no script imports the package. Moving the
+code inside the type boundary exposed and repaired seven previously invisible
+diagnostics; the type checker is back at its four named baseline diagnostics
+with a positive control. The same refresh measures 6 accepted proofs among 111
+eligible theorem goals (5.4%), down from 6/109 (5.5%): mathematical inventory
+growth did not masquerade as producer progress.
+
+The project-wide Python claim is still withheld. The prior 1,861-test run also
+reported two held-out-isolation setup errors from exclusion-list references
+introduced by concurrent nursery expansion; that separate shared defect has
+not yet been re-audited here.
 
 ## Sequencing
 
