@@ -1512,7 +1512,10 @@ fn declare_left_distrib(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kerne
 
 /// Chain `Equiv start …` through `(next, step)` pairs, the way
 /// [`rchain`] chains `Eq`.
-fn equiv_chain(
+///
+/// `pub(super)`: `sqrt.rs`'s `declare_sqrt_mul` reuses this for its own
+/// ring-rearrangement chain (`(sqrt x·sqrt y)² ~ (sqrt x)²·(sqrt y)²`).
+pub(super) fn equiv_chain(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     start: ExprId,

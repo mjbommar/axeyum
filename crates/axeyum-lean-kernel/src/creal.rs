@@ -1461,6 +1461,16 @@ pub struct CRealPrelude {
     /// `mul_self_zero::diff_of_squares` at `(u1, u)` to expand the bracket's
     /// width term. See `creal/sqrt.rs`.
     pub mul_self_sqrt: NameId,
+    /// `CReal.sqrt_mul : ∀ x y, CReal.le CReal.zero x → CReal.le CReal.zero y
+    /// → Equiv (sqrt (mul x y)) (mul (sqrt x) (sqrt y))`.
+    ///
+    /// Composed from already-landed facts, not a new epsilon estimate:
+    /// `mul_self_sqrt(x)`/`mul_self_sqrt(y)` plus a ring rearrangement give
+    /// `(sqrt x·sqrt y)² ~ x·y`; `sqrt_sq` at `t := mul (sqrt x) (sqrt y)`
+    /// (nonneg via `mul_nonneg`/`sqrt_nonneg`) gives `sqrt(t²) ~ t`; and
+    /// `sqrt_congr` carries the first equivalence through `sqrt`, chaining
+    /// to `sqrt (mul x y) ~ mul (sqrt x) (sqrt y)`. See `creal/sqrt.rs`.
+    pub sqrt_mul: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -3593,6 +3603,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sqrt_sq: kernel.name_str(creal, "sqrt_sq"),
         sqrt_nonneg: kernel.name_str(creal, "sqrt_nonneg"),
         mul_self_sqrt: kernel.name_str(creal, "mul_self_sqrt"),
+        sqrt_mul: kernel.name_str(creal, "sqrt_mul"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3914,6 +3925,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // itself, but is placed right after it since both round out the
         // laws relating `sqrt` back to its argument.
         sqrt::declare_mul_self_sqrt(&mut d, prelude)?;
+        // `sqrt_mul` needs `mul_self_sqrt` (just above), `sqrt_sq`/
+        // `sqrt_congr`/`sqrt_nonneg` (earlier in this file), and
+        // `mul_nonneg`/`mul_comm`/`mul_assoc`/`mul_congr` (`product.rs`, far
+        // earlier) -- no new epsilon estimate, so it is placed right after
+        // `mul_self_sqrt` rather than waiting for anything below.
+        sqrt::declare_sqrt_mul(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`

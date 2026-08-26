@@ -228,7 +228,7 @@ use crate::rat_prelude::ops::{
     rat_ty, rchain, rcongr, rle, rlt, rmul, rneg, rone, rrefl, rsymm, rzero,
 };
 
-use super::product::{cmul, fuse_at, index_le, mul_index, mul_shift, regular_between};
+use super::product::{cmul, equiv_chain, fuse_at, index_le, mul_index, mul_shift, regular_between};
 use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, div_succ, equiv, halves, modulus, sample,
     weaken, within,
@@ -4260,6 +4260,174 @@ pub(super) fn declare_mul_self_sqrt(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.mul_self_sqrt,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sqrt_mul : ∀ x y, le zero x → le zero y → Equiv (sqrt (mul x y))
+/// (mul (sqrt x) (sqrt y))`.
+///
+/// Composed from already-landed facts, not a new epsilon estimate. Writing
+/// `p := sqrt x`, `q := sqrt y`, `B := mul p q`, `A := sqrt (mul x y)`:
+///
+/// 1. `mul_self_sqrt(x)`/`mul_self_sqrt(y)` give `p*p ~ x`, `q*q ~ y`.
+/// 2. A five-step `Equiv` chain built from `mul_assoc`/`mul_comm`/`mul_congr`
+///    reshuffles `(p*q)*(p*q) ~ (p*p)*(q*q)` — the same middle-two-swap
+///    `declare_mul_assoc` itself needs, but at the `Equiv`, not `Eq`, level
+///    (`CReal.mul` is commutative/associative only up to `Equiv`).
+/// 3. `mul_congr` on step 1's two facts turns that into `B*B ~ x*y`,
+///    chained with step 2.
+/// 4. `sqrt_sq` at `t := B` (nonneg via `mul_nonneg`/`sqrt_nonneg`) gives
+///    `sqrt (B*B) ~ B`; `sqrt_congr` carries step 3 through `sqrt`, giving
+///    `sqrt (B*B) ~ A`. `Equiv.trans`/`Equiv.symm` close `B ~ A`, hence
+///    `A ~ B`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_sqrt_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let hx_fv = d.fresh_fvar();
+    let hx = d.kernel().fvar(hx_fv);
+    let hy_fv = d.fresh_fvar();
+    let hy = d.kernel().fvar(hy_fv);
+
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let hx_ty = d.const_app(p.le, &[zero_real, x]);
+    let hy_ty = d.const_app(p.le, &[zero_real, y]);
+
+    let sqrt_x = d.const_app(p.sqrt, &[x]);
+    let sqrt_y = d.const_app(p.sqrt, &[y]);
+    let big_b = cmul(d, p, sqrt_x, sqrt_y);
+    let xy = cmul(d, p, x, y);
+    let big_a = d.const_app(p.sqrt, &[xy]);
+
+    let hsx = d.lemma(p.sqrt_nonneg, &[x]);
+    let hsy = d.lemma(p.sqrt_nonneg, &[y]);
+    let hb = d.lemma(p.mul_nonneg, &[sqrt_x, sqrt_y, hsx, hsy]);
+
+    let msx = d.lemma(p.mul_self_sqrt, &[x, hx]);
+    // msx : Equiv (mul sqrt_x sqrt_x) x
+    let msy = d.lemma(p.mul_self_sqrt, &[y, hy]);
+    // msy : Equiv (mul sqrt_y sqrt_y) y
+
+    // --- Ring rearrangement: (p*q)*(p*q) ~ (p*p)*(q*q), p := sqrt_x, q := sqrt_y. ---
+    let pp = cmul(d, p, sqrt_x, sqrt_x);
+    let qq = cmul(d, p, sqrt_y, sqrt_y);
+    let pq = cmul(d, p, sqrt_x, sqrt_y);
+    let qp = cmul(d, p, sqrt_y, sqrt_x);
+
+    let s0 = cmul(d, p, pq, pq);
+
+    // S0 -> S1 : (p*q)*(p*q) ~ p*(q*(p*q)), via mul_assoc(p, q, p*q).
+    let step01 = d.lemma(p.mul_assoc, &[sqrt_x, sqrt_y, pq]);
+    let qpq = cmul(d, p, sqrt_y, pq);
+    let s1 = cmul(d, p, sqrt_x, qpq);
+
+    // S1 -> S2 : q*(p*q) ~ (q*p)*q, via symm(mul_assoc(q, p, q)).
+    let qp_q = cmul(d, p, qp, sqrt_y);
+    let assoc_qpq = d.lemma(p.mul_assoc, &[sqrt_y, sqrt_x, sqrt_y]);
+    // assoc_qpq : Equiv (mul (mul q p) q) (mul q (mul p q)) = Equiv qp_q qpq
+    let step_inner_12 = d.lemma(p.equiv_symm, &[qp_q, qpq, assoc_qpq]);
+    let refl_p1 = d.lemma(p.equiv_refl, &[sqrt_x]);
+    let step12 = d.lemma(
+        p.mul_congr,
+        &[sqrt_x, sqrt_x, qpq, qp_q, refl_p1, step_inner_12],
+    );
+    let s2 = cmul(d, p, sqrt_x, qp_q);
+
+    // S2 -> S3 : (q*p)*q ~ (p*q)*q, via congr(mul_comm(q, p)).
+    let pq_q = cmul(d, p, pq, sqrt_y);
+    let comm_qp = d.lemma(p.mul_comm, &[sqrt_y, sqrt_x]);
+    // comm_qp : Equiv (mul q p) (mul p q) = Equiv qp pq
+    let refl_q1 = d.lemma(p.equiv_refl, &[sqrt_y]);
+    let step_inner_23 = d.lemma(p.mul_congr, &[qp, pq, sqrt_y, sqrt_y, comm_qp, refl_q1]);
+    let refl_p2 = d.lemma(p.equiv_refl, &[sqrt_x]);
+    let step23 = d.lemma(
+        p.mul_congr,
+        &[sqrt_x, sqrt_x, qp_q, pq_q, refl_p2, step_inner_23],
+    );
+    let s3 = cmul(d, p, sqrt_x, pq_q);
+
+    // S3 -> S4 : (p*q)*q ~ p*(q*q), via mul_assoc(p, q, q), wrapped: p*((p*q)*q) ~ p*(p*(q*q)).
+    let assoc_pqq = d.lemma(p.mul_assoc, &[sqrt_x, sqrt_y, sqrt_y]);
+    // assoc_pqq : Equiv (mul (mul p q) q) (mul p (mul q q)) = Equiv pq_q (p*qq)
+    let p_qq = cmul(d, p, sqrt_x, qq);
+    let refl_p3 = d.lemma(p.equiv_refl, &[sqrt_x]);
+    let step34 = d.lemma(
+        p.mul_congr,
+        &[sqrt_x, sqrt_x, pq_q, p_qq, refl_p3, assoc_pqq],
+    );
+    let s4 = cmul(d, p, sqrt_x, p_qq);
+    // s4 = p*(p*(q*q))
+
+    // S4 -> S5 : p*(p*(q*q)) ~ (p*p)*(q*q), via symm(mul_assoc(p, p, q*q)).
+    let s5 = cmul(d, p, pp, qq);
+    let assoc_final = d.lemma(p.mul_assoc, &[sqrt_x, sqrt_x, qq]);
+    // assoc_final : Equiv (mul (mul p p) qq) (mul p (mul p qq)) = Equiv s5 s4
+    let step45 = d.lemma(p.equiv_symm, &[s5, s4, assoc_final]);
+
+    let (_, ring_eq) = equiv_chain(
+        d,
+        p,
+        s0,
+        &[
+            (s1, step01),
+            (s2, step12),
+            (s3, step23),
+            (s4, step34),
+            (s5, step45),
+        ],
+    );
+    // ring_eq : Equiv s0 s5 = Equiv (B*B) ((p*p)*(q*q))
+
+    let sq_eq = d.lemma(p.mul_congr, &[pp, x, qq, y, msx, msy]);
+    // sq_eq : Equiv ((p*p)*(q*q)) (x*y)
+
+    let (_, bb_eq_xy) = equiv_chain(d, p, s0, &[(s5, ring_eq), (xy, sq_eq)]);
+    // bb_eq_xy : Equiv (B*B) (x*y)
+
+    let bb = cmul(d, p, big_b, big_b);
+    let sqrt_bb = d.const_app(p.sqrt, &[bb]);
+    let sqrt_sq_b = d.lemma(p.sqrt_sq, &[big_b, hb]);
+    // sqrt_sq_b : Equiv (sqrt (mul B B)) B
+    let sqrt_congr_bb = d.lemma(p.sqrt_congr, &[bb, xy, bb_eq_xy]);
+    // sqrt_congr_bb : Equiv (sqrt (mul B B)) (sqrt (mul x y)) = Equiv sqrt_bb big_a
+
+    let sym_sqrt_sq_b = d.lemma(p.equiv_symm, &[sqrt_bb, big_b, sqrt_sq_b]);
+    // sym_sqrt_sq_b : Equiv B sqrt_bb
+    let b_eq_a = d.lemma(
+        p.equiv_trans,
+        &[big_b, sqrt_bb, big_a, sym_sqrt_sq_b, sqrt_congr_bb],
+    );
+    // b_eq_a : Equiv B A
+    let body = d.lemma(p.equiv_symm, &[big_b, big_a, b_eq_a]);
+    // body : Equiv A B
+
+    let value = {
+        let with_hy = d.lam_fv(hy_fv, hy_ty, body);
+        let with_hx = d.lam_fv(hx_fv, hx_ty, with_hy);
+        let with_y = d.lam_fv(y_fv, carrier, with_hx);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let concl = equiv(d, p, big_a, big_b);
+        let after_hy = d.arrow(hy_ty, concl);
+        let after_hx = d.arrow(hx_ty, after_hy);
+        let with_y = d.pi_fv(y_fv, carrier, after_hx);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sqrt_mul,
         uparams: vec![],
         ty,
         value,
