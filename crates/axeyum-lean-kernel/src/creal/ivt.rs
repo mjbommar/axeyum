@@ -99,7 +99,15 @@
 //! via `CReal.pow`; and [`CReal.ivt_approx`](super::CRealPrelude::ivt_approx)
 //! — the outer `∀ e : Nat, ∃ x, …` statement, closing `ivt_iter` against
 //! [`CReal.UniformlyContinuousOn`](super::CRealPrelude::uniformly_continuous_on)
-//! and [`CReal.pow_half_le_natDivSucc`](super::CRealPrelude::pow_half_le_nat_div_succ).
+//! and [`CReal.pow_half_le_natDivSucc`](super::CRealPrelude::pow_half_le_nat_div_succ);
+//! and [`CReal.ivt_bisect`](super::CRealPrelude::ivt_bisect) (with its two
+//! projections `ivt_bisect_lo`/`ivt_bisect_hi`) — a DATA-VALUED bisection
+//! replacing `ivt_iter`'s `Exists`-wrapped bracket with one computed by
+//! `Nat.rec`, per `docs/mathematics-2026-08/diary-exact-root-obstruction.md`.
+//! This slice lands the computation and a concrete reduction check only; the
+//! invariant spec theorem (that this bracket satisfies `ivt_step`'s own
+//! six-part invariant) is a separate, not-yet-landed slice — see the
+//! "Data-valued bisection" section near the bottom of this file.
 //!
 //! **The bound `pow_half_le_natDivSucc` supplies is linear (`1/(N+1)`), not
 //! the tight geometric `1/2^N`** — it is a valid but looser upper bound, so
