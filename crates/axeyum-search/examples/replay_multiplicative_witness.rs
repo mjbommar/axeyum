@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use axeyum_cas::boolean_circuit::BooleanCircuitArtifact;
 use axeyum_cnf::ProofSolveOutcome;
 use axeyum_search::multiplicative_circuit::{
-    MultiplicativeSynthesisLimits, MultiplicativeSynthesisProblem, encode_multiplicative_circuit,
-    normalize_multiplicative_witness,
+    MultiplicativeEncodingOptions, MultiplicativeSynthesisLimits, MultiplicativeSynthesisProblem,
+    encode_multiplicative_circuit_with_options, normalize_multiplicative_witness,
 };
 
 fn main() {
@@ -29,14 +29,23 @@ fn main() {
         truth_table: artifact.truth_table.clone(),
         and_gates,
     };
-    let encoding =
-        encode_multiplicative_circuit(&problem, MultiplicativeSynthesisLimits::default())
-            .expect("encode synthesis problem");
+    let encoding = encode_multiplicative_circuit_with_options(
+        &problem,
+        MultiplicativeSynthesisLimits::default(),
+        MultiplicativeEncodingOptions {
+            eliminate_internal_constants: false,
+            partial_operand_order: false,
+            lexicographic_operand_order: true,
+        },
+    )
+    .expect("encode synthesis problem");
     let pinned = encoding
         .formula_with_witness(&witness)
         .expect("pin witness selectors");
     println!("schema=axeyum.mc-witness-replay.v1");
     println!("and-gates={and_gates}");
+    println!("internal-constants=retained");
+    println!("operand-order=full-lexicographic");
     println!("variables={}", encoding.formula().variable_count());
     println!("base-clauses={}", encoding.formula().clauses().len());
     println!("pinned-clauses={}", pinned.clauses().len());

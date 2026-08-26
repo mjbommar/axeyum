@@ -24,6 +24,8 @@ struct Arguments {
     dimacs_path: Option<PathBuf>,
     anf_path: Option<PathBuf>,
     drat_path: Option<PathBuf>,
+    eliminate_internal_constants: bool,
+    operand_order: String,
 }
 
 fn arguments() -> Arguments {
@@ -40,6 +42,8 @@ fn arguments() -> Arguments {
     let mut dimacs_path: Option<PathBuf> = None;
     let mut anf_path: Option<PathBuf> = None;
     let mut drat_path: Option<PathBuf> = None;
+    let mut eliminate_internal_constants = true;
+    let mut operand_order = "lex".to_string();
     let mut index = 2;
     while index < args.len() {
         match args[index].as_str() {
@@ -66,6 +70,18 @@ fn arguments() -> Arguments {
                 ));
                 index += 2;
             }
+            "--retain-internal-constants" => {
+                eliminate_internal_constants = false;
+                index += 1;
+            }
+            "--operand-order" => {
+                operand_order.clone_from(
+                    args.get(index + 1)
+                        .expect("--operand-order needs none, first, or lex"),
+                );
+                assert!(matches!(operand_order.as_str(), "none" | "first" | "lex"));
+                index += 2;
+            }
             other => panic!("unknown argument: {other}"),
         }
     }
@@ -76,6 +92,8 @@ fn arguments() -> Arguments {
         dimacs_path,
         anf_path,
         drat_path,
+        eliminate_internal_constants,
+        operand_order,
     }
 }
 
@@ -107,6 +125,26 @@ fn export_anf(
     println!("verdict=encoded");
 }
 
+fn encoding_options(args: &Arguments) -> MultiplicativeEncodingOptions {
+    MultiplicativeEncodingOptions {
+        eliminate_internal_constants: args.eliminate_internal_constants,
+        partial_operand_order: args.operand_order == "first",
+        lexicographic_operand_order: args.operand_order == "lex",
+    }
+}
+
+fn print_encoding_options(args: &Arguments) {
+    println!(
+        "internal-constants={}",
+        if args.eliminate_internal_constants {
+            "eliminated"
+        } else {
+            "retained"
+        }
+    );
+    println!("operand-order={}", args.operand_order);
+}
+
 fn main() {
     let args = arguments();
     let budget = args.budget;
@@ -121,10 +159,7 @@ fn main() {
         max_conflicts: 10_000_000,
         ..MultiplicativeSynthesisLimits::default()
     };
-    let options = MultiplicativeEncodingOptions {
-        eliminate_internal_constants: true,
-        partial_operand_order: true,
-    };
+    let options = encoding_options(&args);
     if let Some(path) = args.anf_path {
         export_anf(&problem, limits, options, &path, budget);
         return;
@@ -138,8 +173,7 @@ fn main() {
     println!("schema=axeyum.mc-synthesis-run.v1");
     println!("problem=primates-inverse");
     println!("and-budget={budget}");
-    println!("internal-constants=eliminated");
-    println!("operand-order=first-coefficient");
+    print_encoding_options(&args);
     println!("semantics={}", args.encoding);
     println!("variables={}", encoding.formula().variable_count());
     println!("clauses={}", encoding.formula().clauses().len());

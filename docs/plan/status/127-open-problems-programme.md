@@ -151,3 +151,13 @@ decomposition with a non-normal first term is rejected. The open rank-19 formula
 variables / 89,206 clauses and again reached 300 seconds without model/proof. This remains
 `interrupted`, not rank evidence. The de Groote normalization is classical prior mathematics;
 the next safe step is a complete stabilizer-orbit cover, not a single assumed orbit.
+
+**S-box complete operand ordering, 2026-08-26.** ADR-0569 replaces the partial
+first-coefficient breaker with an opt-in complete lexicographic order on every pair of affine
+AND operands across the truth-CNF, direct-ANF-CNF, and portable-ANF routes. Exhaustive
+three-bit comparison, every two-input function, a reversed witness, and the published
+PRIMATEs-inverse MC=8 circuit all pass lift/replay controls; the old MC=6 formula remains
+byte-identical when its mode is selected. The complete MC=6 formula is 6,406 variables /
+21,901 clauses and reached 300 seconds with `UNKNOWN`, no model, and no proof. Zhang--Huang
+already specify this full order and report their control at 239 seconds, so the technique is
+prior art and Axeyum's known lower-bound reproduction remains open. MC=7 was not attempted.

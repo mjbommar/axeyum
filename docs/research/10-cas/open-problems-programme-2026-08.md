@@ -52,7 +52,10 @@ These are hypotheses until the first vertical slices measure the actual gaps.
   the positive half: named shared wires, explicit MSB order/gate semantics, complete truth
   tables, bounded exhaustive replay, and stable gate counts. ADR-0561 completes this for
   multiplicative complexity: deterministic affine-between-AND CNF, replayed model lifting,
-  and backward-checked DRAT. General bit-gate complexity remains open.
+  and backward-checked DRAT. ADR-0569 adds full lexicographic AND-operand ordering to the
+  truth-CNF, direct-ANF-CNF, and portable-ANF routes, with witness canonicalization before
+  replay. This is Zhang--Huang prior art and did not decide the known MC=6 control at 300
+  seconds. General bit-gate complexity remains open.
 - Exact-rational matrix certificates with dimension/resource admission, fraction-free or
   BigInt arithmetic, independently checked `LDL^T`, and explicit PSD semantics. ADR-0557
   now removes the arithmetic-width blocker: bounded `BigRational` symmetric elimination

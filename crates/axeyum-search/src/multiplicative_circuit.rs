@@ -66,6 +66,12 @@ pub struct MultiplicativeEncodingOptions {
     /// Break operand-swap symmetry by requiring the first input coefficient of
     /// the left affine form to be at least the corresponding right coefficient.
     pub partial_operand_order: bool,
+    /// Break the complete operand-swap symmetry by lexicographically ordering
+    /// every affine coefficient vector, with `false < true`.
+    ///
+    /// This subsumes [`Self::partial_operand_order`]. AND is commutative, so
+    /// swapping the two forms always supplies the admitted orientation.
+    pub lexicographic_operand_order: bool,
 }
 
 impl Default for MultiplicativeSynthesisLimits {
@@ -178,6 +184,7 @@ pub struct MultiplicativeEncoding {
     formula: CnfFormula,
     layout: SelectorLayout,
     problem: MultiplicativeSynthesisProblem,
+    options: MultiplicativeEncodingOptions,
 }
 
 /// Exact selector-level Boolean ANF system for multiplicative synthesis.
@@ -267,6 +274,7 @@ impl MultiplicativeEncoding {
         }
         let mut formula = self.formula.clone();
         for (gate, (left, right)) in witness.gates.iter().enumerate() {
+            let (left, right) = ordered_operands(left, right, self.options);
             pin_affine(
                 &mut formula,
                 &self.layout.left[gate],
@@ -293,6 +301,28 @@ impl MultiplicativeEncoding {
         }
         Ok(formula)
     }
+}
+
+fn affine_bits(affine: &AffineSelection) -> Vec<bool> {
+    std::iter::once(affine.constant)
+        .chain(affine.inputs.iter().copied())
+        .chain(affine.earlier_ands.iter().copied())
+        .collect()
+}
+
+fn ordered_operands<'a>(
+    left: &'a AffineSelection,
+    right: &'a AffineSelection,
+    options: MultiplicativeEncodingOptions,
+) -> (&'a AffineSelection, &'a AffineSelection) {
+    let swap = if options.lexicographic_operand_order {
+        affine_bits(left) < affine_bits(right)
+    } else if options.partial_operand_order {
+        left.inputs.first() == Some(&false) && right.inputs.first() == Some(&true)
+    } else {
+        false
+    };
+    if swap { (right, left) } else { (left, right) }
 }
 
 fn lift_selector_assignment(
@@ -563,6 +593,54 @@ impl RawBuilder {
         self.clause(&[(left, false), (right, false), (output, true)])?;
         self.clause(&[(left, false), (right, true), (output, false)])?;
         self.clause(&[(left, true), (right, false), (output, false)])
+    }
+
+    fn equivalent(
+        &mut self,
+        left: usize,
+        right: usize,
+    ) -> Result<usize, MultiplicativeSynthesisError> {
+        let equal = self.variable()?;
+        self.clause(&[(equal, true), (left, true), (right, false)])?;
+        self.clause(&[(equal, true), (left, false), (right, true)])?;
+        self.clause(&[(equal, false), (left, false), (right, false)])?;
+        self.clause(&[(equal, false), (left, true), (right, true)])?;
+        Ok(equal)
+    }
+
+    fn conjunction(
+        &mut self,
+        left: usize,
+        right: usize,
+    ) -> Result<usize, MultiplicativeSynthesisError> {
+        let both = self.variable()?;
+        self.and_equiv(both, left, right)?;
+        Ok(both)
+    }
+
+    /// Enforce `left >= right` lexicographically with `false < true`.
+    fn lex_ge(
+        &mut self,
+        left: &[usize],
+        right: &[usize],
+    ) -> Result<(), MultiplicativeSynthesisError> {
+        debug_assert_eq!(left.len(), right.len());
+        let mut equal_prefix = None;
+        for (index, (&left_bit, &right_bit)) in left.iter().zip(right).enumerate() {
+            let mut forbidden = vec![(left_bit, false), (right_bit, true)];
+            if let Some(prefix) = equal_prefix {
+                forbidden.push((prefix, true));
+            }
+            self.clause(&forbidden)?;
+            if index + 1 < left.len() {
+                let equal_bit = self.equivalent(left_bit, right_bit)?;
+                equal_prefix = Some(match equal_prefix {
+                    None => equal_bit,
+                    Some(prefix) => self.conjunction(prefix, equal_bit)?,
+                });
+            }
+        }
+        Ok(())
     }
 
     fn parity_equals(
@@ -853,6 +931,78 @@ fn add_nonzero_equation(
     Ok(())
 }
 
+fn add_anf_lex_ge(
+    system: &mut BooleanAnfSystem,
+    left: &[usize],
+    right: &[usize],
+    max_monomials: usize,
+) -> Result<(), MultiplicativeSynthesisError> {
+    debug_assert_eq!(left.len(), right.len());
+    let mut equal_prefix = BooleanAnfPolynomial::one();
+    for (&left_bit, &right_bit) in left.iter().zip(right) {
+        // prefix_equal * !left * right = 0 forbids the first unequal
+        // coefficient from having left=false and right=true.
+        let mut not_left = BooleanAnfPolynomial::variable(left_bit);
+        not_left.toggle_constant();
+        let violation = equal_prefix
+            .product(&not_left, max_monomials)?
+            .product(&BooleanAnfPolynomial::variable(right_bit), max_monomials)?;
+        add_nonzero_equation(system, violation)?;
+
+        // Over GF(2), 1 + left + right is the Boolean equality indicator.
+        let mut equal_bit = BooleanAnfPolynomial::one();
+        equal_bit.xor_assign(&BooleanAnfPolynomial::variable(left_bit));
+        equal_bit.xor_assign(&BooleanAnfPolynomial::variable(right_bit));
+        equal_prefix = equal_prefix.product(&equal_bit, max_monomials)?;
+    }
+    Ok(())
+}
+
+fn apply_anf_encoding_options(
+    system: &mut BooleanAnfSystem,
+    problem: &MultiplicativeSynthesisProblem,
+    layout: &SelectorLayout,
+    limits: MultiplicativeSynthesisLimits,
+    options: MultiplicativeEncodingOptions,
+) -> Result<(), MultiplicativeSynthesisError> {
+    if options.eliminate_internal_constants {
+        for gate in 0..problem.and_gates {
+            add_nonzero_equation(system, BooleanAnfPolynomial::variable(layout.left[gate][0]))?;
+            add_nonzero_equation(
+                system,
+                BooleanAnfPolynomial::variable(layout.right[gate][0]),
+            )?;
+        }
+        for (output, selectors) in layout.outputs.iter().enumerate() {
+            let shift = problem.output_bits - output - 1;
+            let mut equation = BooleanAnfPolynomial::variable(selectors[0]);
+            if ((problem.truth_table[0] >> shift) & 1) != 0 {
+                equation.toggle_constant();
+            }
+            add_nonzero_equation(system, equation)?;
+        }
+    }
+    if options.lexicographic_operand_order {
+        for gate in 0..problem.and_gates {
+            add_anf_lex_ge(
+                system,
+                &layout.left[gate],
+                &layout.right[gate],
+                limits.max_clauses,
+            )?;
+        }
+    } else if options.partial_operand_order {
+        for gate in 0..problem.and_gates {
+            let left = BooleanAnfPolynomial::variable(layout.left[gate][1]);
+            let right = BooleanAnfPolynomial::variable(layout.right[gate][1]);
+            let mut equation = left.product(&right, limits.max_clauses)?;
+            equation.xor_assign(&right);
+            add_nonzero_equation(system, equation)?;
+        }
+    }
+    Ok(())
+}
+
 fn anf_affine_coefficient_equation(
     selectors: &[usize],
     prior_coefficients: &[Vec<usize>],
@@ -961,35 +1111,7 @@ pub fn encode_multiplicative_anf_system(
     };
     let mut system = BooleanAnfSystem::new(variable_count, anf_limits)?;
 
-    if options.eliminate_internal_constants {
-        for gate in 0..problem.and_gates {
-            add_nonzero_equation(
-                &mut system,
-                BooleanAnfPolynomial::variable(layout.left[gate][0]),
-            )?;
-            add_nonzero_equation(
-                &mut system,
-                BooleanAnfPolynomial::variable(layout.right[gate][0]),
-            )?;
-        }
-        for (output, selectors) in layout.outputs.iter().enumerate() {
-            let shift = problem.output_bits - output - 1;
-            let mut equation = BooleanAnfPolynomial::variable(selectors[0]);
-            if ((problem.truth_table[0] >> shift) & 1) != 0 {
-                equation.toggle_constant();
-            }
-            add_nonzero_equation(&mut system, equation)?;
-        }
-    }
-    if options.partial_operand_order {
-        for gate in 0..problem.and_gates {
-            let left = BooleanAnfPolynomial::variable(layout.left[gate][1]);
-            let right = BooleanAnfPolynomial::variable(layout.right[gate][1]);
-            let mut equation = left.product(&right, limits.max_clauses)?;
-            equation.xor_assign(&right);
-            add_nonzero_equation(&mut system, equation)?;
-        }
-    }
+    apply_anf_encoding_options(&mut system, problem, &layout, limits, options)?;
 
     let mut next_variable = selector_variables;
     let mut gate_coefficients = Vec::<Vec<usize>>::new();
@@ -1093,7 +1215,11 @@ fn apply_encoding_options(
             builder.clause(&[(selectors[0], !constant)])?;
         }
     }
-    if options.partial_operand_order {
+    if options.lexicographic_operand_order {
+        for gate in 0..problem.and_gates {
+            builder.lex_ge(&layout.left[gate], &layout.right[gate])?;
+        }
+    } else if options.partial_operand_order {
         for gate in 0..problem.and_gates {
             builder.clause(&[(layout.left[gate][1], false), (layout.right[gate][1], true)])?;
         }
@@ -1156,6 +1282,7 @@ pub fn encode_multiplicative_circuit_anf(
         formula: builder.finish()?,
         layout,
         problem: problem.clone(),
+        options,
     })
 }
 
@@ -1200,25 +1327,12 @@ pub fn encode_multiplicative_circuit_with_options(
     let outputs = (0..problem.output_bits)
         .map(|_| allocate_vector(&mut builder, 1 + problem.input_bits + problem.and_gates))
         .collect::<Result<Vec<_>, _>>()?;
-
-    if options.eliminate_internal_constants {
-        for gate in 0..problem.and_gates {
-            builder.clause(&[(left[gate][0], true)])?;
-            builder.clause(&[(right[gate][0], true)])?;
-        }
-        for (output, selectors) in outputs.iter().enumerate() {
-            let shift = problem.output_bits - output - 1;
-            let constant = ((problem.truth_table[0] >> shift) & 1) != 0;
-            builder.clause(&[(selectors[0], !constant)])?;
-        }
-    }
-    if options.partial_operand_order {
-        for gate in 0..problem.and_gates {
-            // Forbid left_first=0, right_first=1. Operand commutativity makes
-            // one of the two orientations available for every assignment.
-            builder.clause(&[(left[gate][1], false), (right[gate][1], true)])?;
-        }
-    }
+    let layout = SelectorLayout {
+        left,
+        right,
+        outputs,
+    };
+    apply_encoding_options(&mut builder, problem, &layout, options)?;
     let gate_values = (0..problem.and_gates)
         .map(|_| allocate_vector(&mut builder, rows))
         .collect::<Result<Vec<_>, _>>()?;
@@ -1226,12 +1340,14 @@ pub fn encode_multiplicative_circuit_with_options(
     for (row, _) in problem.truth_table.iter().enumerate() {
         for gate in 0..problem.and_gates {
             let earlier: Vec<usize> = (0..gate).map(|index| gate_values[index][row]).collect();
-            let mut left_terms = affine_terms(&mut builder, &left[gate], &earlier, problem, row)?;
+            let mut left_terms =
+                affine_terms(&mut builder, &layout.left[gate], &earlier, problem, row)?;
             let left_value = builder.variable()?;
             left_terms.push(left_value);
             builder.parity_equals(&left_terms, false)?;
 
-            let mut right_terms = affine_terms(&mut builder, &right[gate], &earlier, problem, row)?;
+            let mut right_terms =
+                affine_terms(&mut builder, &layout.right[gate], &earlier, problem, row)?;
             let right_value = builder.variable()?;
             right_terms.push(right_value);
             builder.parity_equals(&right_terms, false)?;
@@ -1240,7 +1356,7 @@ pub fn encode_multiplicative_circuit_with_options(
         let all_gate_values: Vec<usize> = (0..problem.and_gates)
             .map(|gate| gate_values[gate][row])
             .collect();
-        for (output, coefficients) in outputs.iter().enumerate() {
+        for (output, coefficients) in layout.outputs.iter().enumerate() {
             let terms = affine_terms(&mut builder, coefficients, &all_gate_values, problem, row)?;
             let shift = problem.output_bits - output - 1;
             let expected = ((problem.truth_table[row] >> shift) & 1) != 0;
@@ -1250,12 +1366,9 @@ pub fn encode_multiplicative_circuit_with_options(
 
     Ok(MultiplicativeEncoding {
         formula: builder.finish()?,
-        layout: SelectorLayout {
-            left,
-            right,
-            outputs,
-        },
+        layout,
         problem: problem.clone(),
+        options,
     })
 }
 
@@ -1471,28 +1584,37 @@ mod tests {
     #[test]
     fn proved_reductions_preserve_all_two_input_boundaries() {
         let limits = MultiplicativeSynthesisLimits::default();
-        let options = MultiplicativeEncodingOptions {
-            eliminate_internal_constants: true,
-            partial_operand_order: true,
-        };
-        for packed in 0_u16..16 {
-            let table: Vec<u64> = (0..4).map(|row| u64::from((packed >> row) & 1)).collect();
-            for budget in 0..=1 {
-                let basic =
-                    synthesize_multiplicative_circuit(&problem(&table, budget), limits, None)
-                        .unwrap();
-                let reduced = synthesize_multiplicative_circuit_with_options(
-                    &problem(&table, budget),
-                    limits,
-                    options,
-                    None,
-                )
-                .unwrap();
-                assert_eq!(
-                    matches!(basic, MultiplicativeSynthesisOutcome::Sat(_)),
-                    matches!(reduced, MultiplicativeSynthesisOutcome::Sat(_)),
-                    "packed={packed}, budget={budget}"
-                );
+        for options in [
+            MultiplicativeEncodingOptions {
+                eliminate_internal_constants: true,
+                partial_operand_order: true,
+                lexicographic_operand_order: false,
+            },
+            MultiplicativeEncodingOptions {
+                eliminate_internal_constants: true,
+                partial_operand_order: false,
+                lexicographic_operand_order: true,
+            },
+        ] {
+            for packed in 0_u16..16 {
+                let table: Vec<u64> = (0..4).map(|row| u64::from((packed >> row) & 1)).collect();
+                for budget in 0..=1 {
+                    let basic =
+                        synthesize_multiplicative_circuit(&problem(&table, budget), limits, None)
+                            .unwrap();
+                    let reduced = synthesize_multiplicative_circuit_with_options(
+                        &problem(&table, budget),
+                        limits,
+                        options,
+                        None,
+                    )
+                    .unwrap();
+                    assert_eq!(
+                        matches!(basic, MultiplicativeSynthesisOutcome::Sat(_)),
+                        matches!(reduced, MultiplicativeSynthesisOutcome::Sat(_)),
+                        "packed={packed}, budget={budget}, options={options:?}"
+                    );
+                }
             }
         }
     }
@@ -1505,6 +1627,12 @@ mod tests {
             MultiplicativeEncodingOptions {
                 eliminate_internal_constants: true,
                 partial_operand_order: true,
+                lexicographic_operand_order: false,
+            },
+            MultiplicativeEncodingOptions {
+                eliminate_internal_constants: true,
+                partial_operand_order: false,
+                lexicographic_operand_order: true,
             },
         ] {
             for packed in 0_u16..16 {
@@ -1532,6 +1660,106 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn lexicographic_operand_breaker_matches_all_three_bit_pairs() {
+        for left in 0_u8..8 {
+            for right in 0_u8..8 {
+                let mut builder = RawBuilder::new(MultiplicativeSynthesisLimits::default());
+                let left_variables = allocate_vector(&mut builder, 3).unwrap();
+                let right_variables = allocate_vector(&mut builder, 3).unwrap();
+                builder.lex_ge(&left_variables, &right_variables).unwrap();
+                let formula = builder.finish().unwrap();
+                let mut values = vec![false; formula.variable_count()];
+                for (index, &variable) in left_variables.iter().enumerate() {
+                    values[variable] = ((left >> (2 - index)) & 1) != 0;
+                }
+                for (index, &variable) in right_variables.iter().enumerate() {
+                    values[variable] = ((right >> (2 - index)) & 1) != 0;
+                }
+                // The Tseitin prefix variables are functionally determined;
+                // enumerate them rather than trusting the comparator builder.
+                let auxiliaries = formula.variable_count() - 6;
+                let satisfiable = (0..1_usize << auxiliaries).any(|packed| {
+                    for bit in 0..auxiliaries {
+                        values[6 + bit] = ((packed >> bit) & 1) != 0;
+                    }
+                    formula.evaluate(&values) == Ok(true)
+                });
+                assert_eq!(satisfiable, left >= right, "left={left}, right={right}");
+            }
+        }
+    }
+
+    #[test]
+    fn anf_lexicographic_operand_breaker_matches_all_three_bit_pairs() {
+        let limits = BooleanAnfLimits {
+            max_variables: 6,
+            max_monomials_per_polynomial: 64,
+            max_equations: 3,
+            max_total_monomials: 128,
+        };
+        let mut system = BooleanAnfSystem::new(6, limits).unwrap();
+        add_anf_lex_ge(&mut system, &[0, 1, 2], &[3, 4, 5], 64).unwrap();
+        for left in 0_u8..8 {
+            for right in 0_u8..8 {
+                let assignment = (0..3)
+                    .map(|index| ((left >> (2 - index)) & 1) != 0)
+                    .chain((0..3).map(|index| ((right >> (2 - index)) & 1) != 0))
+                    .collect::<Vec<_>>();
+                assert_eq!(
+                    system.evaluate(&assignment),
+                    Ok(left >= right),
+                    "left={left}, right={right}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn lexicographic_formula_pinning_canonicalizes_swapped_operands() {
+        let options = MultiplicativeEncodingOptions {
+            eliminate_internal_constants: false,
+            partial_operand_order: false,
+            lexicographic_operand_order: true,
+        };
+        let encoding = encode_multiplicative_circuit_with_options(
+            &problem(&[0, 0, 0, 1], 1),
+            MultiplicativeSynthesisLimits::default(),
+            options,
+        )
+        .unwrap();
+        // x1 < x0 as coefficient vectors, so the pinning boundary must swap
+        // this otherwise-valid orientation before adding selector units.
+        let witness = MultiplicativeCircuitWitness {
+            gates: vec![(
+                AffineSelection {
+                    constant: false,
+                    inputs: vec![false, true],
+                    earlier_ands: vec![],
+                },
+                AffineSelection {
+                    constant: false,
+                    inputs: vec![true, false],
+                    earlier_ands: vec![],
+                },
+            )],
+            outputs: vec![AffineSelection {
+                constant: false,
+                inputs: vec![false, false],
+                earlier_ands: vec![true],
+            }],
+        };
+        let pinned = encoding.formula_with_witness(&witness).unwrap();
+        let ProofSolveOutcome::Sat(model) = solve_with_drat_proof_with_limits(
+            &pinned,
+            None,
+            MultiplicativeSynthesisLimits::default().max_conflicts,
+        ) else {
+            panic!("operand swap must preserve the pinned AND witness");
+        };
+        encoding.lift_model(&model).unwrap();
     }
 
     #[test]

@@ -639,3 +639,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0566](adr-0566-unary-avx2-synthesis-is-permutation-preserving-and-model-lifted.md) | Synthesize bounded unary AVX2 byte permutations with complete lossless controls, lifted models, replay, and checked DRAT lower bounds | accepted |
 | [0567](adr-0567-tensor-summand-ordering-removes-only-permutation-symmetry.md) | Optionally lex-order GF(2) rank-one summands without changing the bounded tensor-rank question | accepted |
 | [0568](adr-0568-matrix-tensor-search-normalizes-one-summand-under-the-stabilizer.md) | Normalize one matrix-multiplication rank-one summand by factor rank and order only the remaining terms | accepted |
+| [0569](adr-0569-multiplicative-synthesis-orders-complete-and-operands.md) | Completely remove per-gate operand-swap symmetry in multiplicative circuit synthesis | accepted |
