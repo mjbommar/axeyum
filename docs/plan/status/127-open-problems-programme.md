@@ -105,6 +105,17 @@ controls fail closed; focused tests, all-target/all-feature Clippy, and warning-
 pass. The live `n=351` producer has not returned SAT, so this closes an evidence-route gap rather
 than establishing a new bound.
 
+**Rado 351 local-search experiment closed honestly, 2026-08-26.** The ordinary portfolio
+completed 192 equal-budget jobs / 3.84 billion moves in 5,142.3 wall seconds without a
+colouring. The experimental constraint-weighted portfolio completed 96 jobs / 1.92 billion
+moves, also without a colouring; normalized user CPU was 225.66 versus 207.89 seconds per job
+(+8.55%), and peak RSS was 401,924 versus 178,932 KiB (2.25 times). Different thread counts and
+changing contention make wall time non-comparable. Weighting demonstrated no frontier benefit
+and was removed rather than promoted. The independently justified CLI `noise`/`tie` controls,
+percentage validation, and one-colour/100%-noise panic repair remain; focused tests,
+all-target/all-feature Clippy, and warning-denied Rustdoc pass. Both completed `not-found` runs
+carry no UNSAT or upper-bound credit; the exact proof-producing run remains live.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
