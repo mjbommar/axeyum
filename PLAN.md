@@ -117,6 +117,8 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `3bb1207e8` | Construct bounded Boolean-bit reification as a binary weighted sum and check its zero-length base axiom-free; retain the round-trip theorem as missing. |
+| 2026-08-26 | `f0782cc25` | Construct the axiom-free pointwise bitwise observation algebra and isolate Nat reification as the remaining mathematical obligation. |
 | 2026-08-26 | `8935a4045` | Describe imported transparent definitions by exact body/type identities, closure, and footprint; both bitwise operations reach `propext`, ruling out clean grafting. |
 | 2026-08-26 | `b4d64c3ea` | Make the refuted generalized capsule fail closed at emission time unless the caller explicitly opts into diagnostic-only output. |
 | 2026-08-26 | `6eb41d48b` | Construct an axiom-free Boolean view of native numeric bits and prove its successor equation by reflexivity, while withholding imported-definition equivalence credit. |
@@ -1485,6 +1487,14 @@ direct closures, and footprints. Each concrete implementation reaches
 `propext`; `testBit` does so through its typeclass-expanded shift/and/equality
 route, while `bitwise` reaches a private unary worker and `PSigma`. Clean work
 must therefore reconstruct target-owned semantics rather than graft definitions.
+The target-owned pointwise bitwise algebra now checks axiom-free for arbitrary
+Boolean operators. The remaining mathematical obligation is sharply isolated:
+reify that observation function as a natural number, then prove its observations
+round-trip. Observation-level success is explicitly denied theorem credit.
+Bounded reification is now implemented as the binary weighted sum, and its
+zero-length base theorem checks axiom-free. The exact remaining proof is the
+bounded observation round-trip for `i < k`; neither that induction nor the
+unbounded bitwise theorem has received credit.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
