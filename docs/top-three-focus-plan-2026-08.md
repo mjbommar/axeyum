@@ -278,6 +278,24 @@ bounded lemma selection, transport, and composition.
 6. Admit successful results through the existing crash-safe transaction and
    repeat from a clean checkout.
 
+### Native-candidate transport checkpoint
+
+Commit `2e060c8e6` turns a retrieved native theorem name into an executable
+premise through the existing checked theorem-composition boundary. A same-name
+theorem already in the imported target is compatibility-checked and required
+to have an empty kernel footprint; an absent theorem is admitted with its
+supported closure into a private clone and checked there. Neither case grants
+fact or operation authority.
+
+On the clean `Nat.add_modEq_left` target, 8 of its 12 ranked candidates became
+available in the imported kernel: five newly composed and three validated as
+already present. Four declined transport with typed errors. Bounded application
+still found no proof. This is useful separation: executable premise transport
+now works for a real imported goal, while retrieval precision and proof grammar
+remain measured bottlenecks. Next, expose this exact boundary through Python,
+classify every candidate independently across the 51-goal population, and only
+then decide whether to extend retrieval or the application grammar.
+
 ### Exit evidence
 
 - At least one new authoritative operation covers three or more previously open

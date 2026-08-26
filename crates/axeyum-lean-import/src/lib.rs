@@ -40,6 +40,7 @@ use axeyum_lean_kernel::{
 };
 use serde_json::{Map, Value};
 
+mod candidate_transport;
 mod checked_theorem_receipt;
 mod contract_residualization;
 mod identity;
@@ -57,6 +58,9 @@ mod trusted_substitution;
 mod type_slice;
 mod type_slice_receipt;
 
+pub use candidate_transport::{
+    CandidateTransportReceipt, CompletedCandidateTransport, transport_checked_theorem_candidate,
+};
 pub use checked_theorem_receipt::{
     CHECKED_DEPENDENCY_THEOREM_RECEIPT_VERSION, CHECKED_SEMANTIC_THEOREM_RECEIPT_VERSION,
     CheckedDependencyTheoremAuthority, CheckedDependencyTheoremReceipt,
