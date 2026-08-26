@@ -14,8 +14,8 @@
     },
     "conversion_percent": 0.0,
     "decline_reasons": {
-      "BinderBudgetExceeded": 2,
-      "NotEqualityGoal": 1
+      "NotEqualityGoal": 1,
+      "TerminalNotDefEqNoRewrite": 2
     },
     "declined": 3,
     "evaluation_classes": {
@@ -199,7 +199,7 @@
       "capsule_sha256": "37b51b79a569d67f083514b86b0ed731aa877144cdbf5ef6c3c6b6806ac1b82d",
       "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
-      "reason_kind": "BinderBudgetExceeded",
+      "reason_kind": "TerminalNotDefEqNoRewrite",
       "result": "declined",
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseEqZeroOfLt"
     },
@@ -489,7 +489,7 @@
       "capsule_sha256": "5ce7f332fea4fcf9b26e98345248a0e5ebd8b77d3d8139af551d0c2907bb96b4",
       "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
-      "reason_kind": "BinderBudgetExceeded",
+      "reason_kind": "TerminalNotDefEqNoRewrite",
       "result": "declined",
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseSymmOfEqAdd"
     }

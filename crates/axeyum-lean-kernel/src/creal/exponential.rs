@@ -3803,8 +3803,478 @@ fn declare_e_le_four(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
     })
 }
 
-/// Admit `CReal.e`, `CReal.e_converges`, `CReal.two_le_e` and
-/// `CReal.e_le_four`. Run **after** [`declare_exp_convergence`] (shares
+/// `CReal.three := add two one`.
+fn three(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let t = two(d, p);
+    let o = d.kernel().const_(p.one, vec![]);
+    cadd(d, p, t, o)
+}
+
+/// `Equiv (mul two half) one`, i.e. `2 · (1/2) = 1` — the `CReal`-level lift
+/// of [`rat_two_mul_half_eq_one`], extracted verbatim from `step2` inside
+/// [`two_mul_one_sub_half_equiv_one`] so [`two_mul_pow_half_succ_equiv`] can
+/// reuse it without re-deriving.
+fn two_mul_half_equiv_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let t = two(d, p);
+    let h = half(d, p);
+    let (two_r, half_r, rat_eq) = rat_two_mul_half_eq_one(d, p);
+    let mul_proof = d.lemma(p.of_rat_mul, &[two_r, half_r]);
+    let mul_r = rmul(d, two_r, half_r);
+    let one_r = rone(d, p.rat);
+    let ofrat_eq = ofrat_congr(d, p, mul_r, one_r, rat_eq);
+    let mul_two_half = cmul(d, p, t, h);
+    let embed_mul_r = embed(d, p, mul_r);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    echain(
+        d,
+        p,
+        mul_two_half,
+        &[(embed_mul_r, mul_proof), (one_c, ofrat_eq)],
+    )
+}
+
+/// `Equiv (add half half) one`, i.e. `1/2 + 1/2 = 1` — the `CReal`-level lift
+/// of [`rat_half_add_half_eq_one`], extracted verbatim from the `g_new` block
+/// inside [`one_sub_half_equiv_half`] so the additive form of the index-shift
+/// identity (used by [`exp_tail_partial_bound`]'s induction step) can reuse
+/// it without re-deriving.
+fn half_add_half_equiv_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let h = half(d, p);
+    let (half_r, rat_eq) = rat_half_add_half_eq_one(d, p);
+    let add_proof = d.lemma(p.of_rat_add, &[half_r, half_r]);
+    let add_hh_r = radd(d, half_r, half_r);
+    let one_r = rone(d, p.rat);
+    let ofrat_eq = ofrat_congr(d, p, add_hh_r, one_r, rat_eq);
+    let hh = cadd(d, p, h, h);
+    let mid = embed(d, p, add_hh_r);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    echain(d, p, hh, &[(mid, add_proof), (one_c, ofrat_eq)])
+}
+
+/// `Equiv (mul two (pow half (Nat.succ m))) (pow half m)` — the index-shift
+/// identity behind the `e ≤ 3` split: `2 · (1/2)^(m+1) = (1/2)^m`. Built from
+/// `pow_succ`'s ι-unfold (`pow half (succ m)` is DEFEQ to `mul (pow half m)
+/// half`, never invoked as an explicit lemma — see the module's own
+/// `two_le_e`/`e_le_four` precedent for relying on this kind of defeq
+/// directly), `mul_comm`, `mul_assoc`, and [`two_mul_half_equiv_one`].
+///
+/// Chain: `mul two (mul (pow half m) half) ~ mul two (mul half (pow half m))`
+/// (`mul_comm`) `~ mul (mul two half) (pow half m)` (`mul_assoc`, symm)
+/// `~ mul one (pow half m)` (`two_mul_half_equiv_one`) `~ mul (pow half m)
+/// one` (`mul_comm`) `~ pow half m` (`mul_one`).
+fn two_mul_pow_half_succ_equiv(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
+    let t = two(d, p);
+    let h = half(d, p);
+    let pow_m = cpow(d, p, h, m);
+    let mul_pow_m_half = cmul(d, p, pow_m, h); // defeq to `pow half (succ m)`
+
+    let comm1 = d.lemma(p.mul_comm, &[pow_m, h]); // Equiv (mul pow_m h) (mul h pow_m)
+    let refl_two = d.lemma(p.equiv_refl, &[t]);
+    let mul_h_pow_m = cmul(d, p, h, pow_m);
+    let step1 = d.lemma(
+        p.mul_congr,
+        &[t, t, mul_pow_m_half, mul_h_pow_m, refl_two, comm1],
+    );
+    // step1 : Equiv (mul two mul_pow_m_half) (mul two mul_h_pow_m)
+
+    let mul_two_h = cmul(d, p, t, h);
+    let assoc = d.lemma(p.mul_assoc, &[t, h, pow_m]);
+    // assoc : Equiv (mul (mul two h) pow_m) (mul two mul_h_pow_m)
+    let mul_two_h_pow_m = cmul(d, p, t, mul_h_pow_m);
+    let assoc_symm_lhs = cmul(d, p, mul_two_h, pow_m);
+    let assoc_symm = d.lemma(p.equiv_symm, &[assoc_symm_lhs, mul_two_h_pow_m, assoc]);
+    // assoc_symm : Equiv (mul two mul_h_pow_m) assoc_symm_lhs
+
+    let two_half_one = two_mul_half_equiv_one(d, p);
+    // two_half_one : Equiv (mul two half) one
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let refl_pow_m = d.lemma(p.equiv_refl, &[pow_m]);
+    let step3 = d.lemma(
+        p.mul_congr,
+        &[mul_two_h, one_c, pow_m, pow_m, two_half_one, refl_pow_m],
+    );
+    // step3 : Equiv assoc_symm_lhs (mul one pow_m)
+
+    let mul_one_pow_m = cmul(d, p, one_c, pow_m);
+    let comm2 = d.lemma(p.mul_comm, &[one_c, pow_m]);
+    // comm2 : Equiv (mul one pow_m) (mul pow_m one)
+    let mul_pow_m_one = cmul(d, p, pow_m, one_c);
+    let mo = d.lemma(p.mul_one, &[pow_m]);
+    // mo : Equiv (mul pow_m one) pow_m
+
+    let start = cmul(d, p, t, mul_pow_m_half);
+    echain(
+        d,
+        p,
+        start,
+        &[
+            (mul_two_h_pow_m, step1),
+            (assoc_symm_lhs, assoc_symm),
+            (mul_one_pow_m, step3),
+            (mul_pow_m_one, comm2),
+            (pow_m, mo),
+        ],
+    )
+}
+
+/// `le (expTerm (Nat.add k 2)) (pow half (Nat.add k 1))` — the shifted-by-2
+/// domination the classical `e ≤ 3` split needs, for a BOUND `k`. From
+/// [`CRealPrelude::exp_term_le_dominant`] at `k+2` (`le (expTerm (k+2))
+/// (expDominant (k+2))`, `expDominant (k+2)` defeq `mul two (pow half
+/// (k+2))`, `k+2` defeq `succ (k+1)`) rewritten along
+/// [`two_mul_pow_half_succ_equiv`] at `m := k+1`.
+///
+/// No new `Nat`-level fact: unlike [`CRealPrelude::exp_term_le_geom`]'s own
+/// `2ⁿ ≤ 2·n!`, this is pure `CReal` algebra reusing an already-proved
+/// pointwise bound.
+fn exp_term_shift2_le_pow_half(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId) -> ExprId {
+    let two_nat = d.num(2);
+    let one_nat = d.num(1);
+    let k2 = NatOps::add(d, k, two_nat);
+    let k1 = NatOps::add(d, k, one_nat);
+
+    let exp_term_le_dominant_const = d.kernel().const_(p.exp_term_le_dominant, vec![]);
+    let base = d.apply(exp_term_le_dominant_const, &[k2]);
+    // base : le (expTerm k2) (expDominant k2), defeq le (expTerm k2) (mul two (pow half k2))
+
+    let equiv_shift = two_mul_pow_half_succ_equiv(d, p, k1);
+    // equiv_shift : Equiv (mul two (pow half (succ k1))) (pow half k1)
+    // succ k1 defeq k2 (k1 = add k 1 defeq succ k, k2 = add k 2 defeq succ (succ k))
+
+    let exp_term_const = d.kernel().const_(p.exp_term, vec![]);
+    let exp_term_k2 = d.apply(exp_term_const, &[k2]);
+    let refl_lhs = d.lemma(p.equiv_refl, &[exp_term_k2]);
+
+    let t = two(d, p);
+    let h = half(d, p);
+    let pow_k2 = cpow(d, p, h, k2);
+    let mul_two_pow_k2 = cmul(d, p, t, pow_k2);
+    let pow_k1 = cpow(d, p, h, k1);
+
+    d.lemma(
+        p.le_congr,
+        &[
+            exp_term_k2,
+            exp_term_k2,
+            mul_two_pow_k2,
+            pow_k1,
+            refl_lhs,
+            equiv_shift,
+            base,
+        ],
+    )
+}
+
+/// `∀ k, le (add (sumRange expTerm (Nat.add k 2)) (pow half k)) three` — the
+/// telescoping invariant behind `e ≤ 3`: `Σ_{n<k+2} 1/n! + (1/2)^k ≤ 3`,
+/// tight at `k = 0` (`2 + 1 = 3`, both sides exact) and closed at every step
+/// by [`exp_term_shift2_le_pow_half`] plus the ADDITIVE form of the same
+/// index-shift identity `two_mul_pow_half_succ_equiv` proves multiplicatively
+/// (`pow half (k+1) + pow half (k+1) ~ pow half k`, via `left_distrib` +
+/// [`half_add_half_equiv_one`] + `mul_one`, since `pow half (succ k)` is
+/// defeq `mul (pow half k) half`).
+///
+/// Induction on `k`. Base: `sumRange expTerm 2 + pow half 0` is defeq
+/// `add two one = three` (`sumRange expTerm 2` reduces to `two` by the same
+/// `Kernel::def_eq` chain [`declare_two_le_e`]'s own concrete test exercises;
+/// `pow half 0` reduces to `one` by `pow_zero`'s ι-reduction) — `le_refl`
+/// alone closes it.
+fn exp_tail_partial_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k: ExprId,
+    three_c: ExprId,
+) -> ExprId {
+    let exp_term_const = d.kernel().const_(p.exp_term, vec![]);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let two_nat = d.num(2);
+        let x2 = NatOps::add(d, x, two_nat);
+        let sum_x2 = d.const_app(p.sum_range, &[exp_term_const, x2]);
+        let h = half(d, p);
+        let pow_x = cpow(d, p, h, x);
+        let lhs = cadd(d, p, sum_x2, pow_x);
+        cle(d, p, lhs, three_c)
+    };
+
+    let base_case = |d: &mut IntDev<'_>| -> ExprId { d.lemma(p.le_refl, &[three_c]) };
+
+    let step_case = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let two_nat = d.num(2);
+        let j2 = NatOps::add(d, j, two_nat);
+        let sum_j2 = d.const_app(p.sum_range, &[exp_term_const, j2]);
+        let h = half(d, p);
+        let pow_j = cpow(d, p, h, j);
+        let succ_j = d.succ(j);
+        let pow_succ_j = cpow(d, p, h, succ_j); // = C, defeq mul pow_j half
+        let exp_term_j2 = d.apply(exp_term_const, &[j2]); // = B
+
+        let l1 = exp_term_shift2_le_pow_half(d, p, j);
+        // l1 : le (expTerm j2) (pow half (add j 1)), defeq le exp_term_j2 pow_succ_j
+
+        let le_refl_c = d.lemma(p.le_refl, &[pow_succ_j]);
+        let step_le1 = d.lemma(
+            p.add_le_add,
+            &[
+                exp_term_j2,
+                pow_succ_j,
+                pow_succ_j,
+                pow_succ_j,
+                l1,
+                le_refl_c,
+            ],
+        );
+        // step_le1 : le (add exp_term_j2 pow_succ_j) (add pow_succ_j pow_succ_j)
+
+        // (add pow_succ_j pow_succ_j) ~ pow_j, via left_distrib symm + half_add_half_equiv_one + mul_one.
+        let mul_pj_half = cmul(d, p, pow_j, h);
+        let ld = d.lemma(p.left_distrib, &[pow_j, h, h]);
+        // ld : Equiv (mul pow_j (add half half)) (add mul_pj_half mul_pj_half)
+        let hh = cadd(d, p, h, h);
+        let mul_pj_addhh = cmul(d, p, pow_j, hh);
+        let ld_symm_lhs = cadd(d, p, mul_pj_half, mul_pj_half);
+        let ld_symm = d.lemma(p.equiv_symm, &[mul_pj_addhh, ld_symm_lhs, ld]);
+        // ld_symm : Equiv ld_symm_lhs mul_pj_addhh
+
+        let hh_one = half_add_half_equiv_one(d, p);
+        let refl_pj = d.lemma(p.equiv_refl, &[pow_j]);
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let congr1 = d.lemma(p.mul_congr, &[pow_j, pow_j, hh, one_c, refl_pj, hh_one]);
+        // congr1 : Equiv mul_pj_addhh (mul pow_j one)
+        let mul_pj_one = cmul(d, p, pow_j, one_c);
+        let mo = d.lemma(p.mul_one, &[pow_j]); // Equiv mul_pj_one pow_j
+
+        let cc_equiv_pj = echain(
+            d,
+            p,
+            ld_symm_lhs,
+            &[(mul_pj_addhh, ld_symm), (mul_pj_one, congr1), (pow_j, mo)],
+        );
+        // cc_equiv_pj : Equiv (add pow_succ_j pow_succ_j) pow_j (ld_symm_lhs defeq add pow_succ_j pow_succ_j)
+
+        let add_c_c = cadd(d, p, pow_succ_j, pow_succ_j);
+        let bc = cadd(d, p, exp_term_j2, pow_succ_j);
+        let refl_bc = d.lemma(p.equiv_refl, &[bc]);
+        let step_bc_le = d.lemma(
+            p.le_congr,
+            &[bc, bc, add_c_c, pow_j, refl_bc, cc_equiv_pj, step_le1],
+        );
+        // step_bc_le : le (add exp_term_j2 pow_succ_j) pow_j
+
+        let le_refl_sum = d.lemma(p.le_refl, &[sum_j2]);
+        let step2 = d.lemma(
+            p.add_le_add,
+            &[sum_j2, sum_j2, bc, pow_j, le_refl_sum, step_bc_le],
+        );
+        // step2 : le (add sum_j2 bc) (add sum_j2 pow_j)
+
+        let ih_lhs = cadd(d, p, sum_j2, pow_j);
+        let add_sum_j2_bc = cadd(d, p, sum_j2, bc);
+        let combined = d.lemma(p.le_trans, &[add_sum_j2_bc, ih_lhs, three_c, step2, ih]);
+        // combined : le add_sum_j2_bc three_c
+
+        let assoc = d.lemma(p.add_assoc, &[sum_j2, exp_term_j2, pow_succ_j]);
+        // assoc : Equiv goal_lhs add_sum_j2_bc
+        let sum_j2_plus_exp_term_j2 = cadd(d, p, sum_j2, exp_term_j2);
+        let goal_lhs = cadd(d, p, sum_j2_plus_exp_term_j2, pow_succ_j);
+        let assoc_symm = d.lemma(p.equiv_symm, &[goal_lhs, add_sum_j2_bc, assoc]);
+        // assoc_symm : Equiv add_sum_j2_bc goal_lhs
+
+        let refl_three = d.lemma(p.equiv_refl, &[three_c]);
+        d.lemma(
+            p.le_congr,
+            &[
+                add_sum_j2_bc,
+                goal_lhs,
+                three_c,
+                three_c,
+                assoc_symm,
+                refl_three,
+                combined,
+            ],
+        )
+        // result : le goal_lhs three_c, goal_lhs defeq sumRange expTerm (add (succ j) 2)
+    };
+
+    d.induct(&motive, &base_case, &step_case, k)
+}
+
+/// `le zero three`.
+fn zero_le_three(d: &mut IntDev<'_>, p: CRealPrelude, three_c: ExprId) -> ExprId {
+    let zero_c = czero(d, p);
+    let two_c = two(d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let two_nn = two_nonneg_proof(d, p);
+    let zlt1 = d.lemma(p.zero_lt_one, &[]);
+    let one_nn = d.lemma(p.le_of_lt, &[zero_c, one_c, zlt1]);
+    let step = d.lemma(
+        p.add_le_add,
+        &[zero_c, two_c, zero_c, one_c, two_nn, one_nn],
+    );
+    // step : le (add zero zero) (add two one) = le (add zero zero) three_c
+    let az = d.lemma(p.add_zero, &[zero_c]); // Equiv (add zero zero) zero
+    let refl_three = d.lemma(p.equiv_refl, &[three_c]);
+    let zero_plus_zero = cadd(d, p, zero_c, zero_c);
+    d.lemma(
+        p.le_congr,
+        &[
+            zero_plus_zero,
+            zero_c,
+            three_c,
+            three_c,
+            az,
+            refl_three,
+            step,
+        ],
+    )
+}
+
+/// `le one three`.
+fn one_le_three(d: &mut IntDev<'_>, p: CRealPrelude, three_c: ExprId) -> ExprId {
+    let zero_c = czero(d, p);
+    let two_c = two(d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let two_nn = two_nonneg_proof(d, p);
+    let refl_one = d.lemma(p.le_refl, &[one_c]);
+    let step = d.lemma(
+        p.add_le_add,
+        &[zero_c, two_c, one_c, one_c, two_nn, refl_one],
+    );
+    // step : le (add zero one) (add two one) = le (add zero one) three_c
+    let comm = d.lemma(p.add_comm, &[zero_c, one_c]);
+    let az = d.lemma(p.add_zero, &[one_c]);
+    let add_zero_one = cadd(d, p, zero_c, one_c);
+    let add_one_zero = cadd(d, p, one_c, zero_c);
+    let eq_chain = echain(d, p, add_zero_one, &[(add_one_zero, comm), (one_c, az)]);
+    let refl_three = d.lemma(p.equiv_refl, &[three_c]);
+    d.lemma(
+        p.le_congr,
+        &[
+            add_zero_one,
+            one_c,
+            three_c,
+            three_c,
+            eq_chain,
+            refl_three,
+            step,
+        ],
+    )
+}
+
+/// `∀ n, le (sumRange expTerm n) three` — the top-level bound, over ALL `n`
+/// (not just `n ≥ 2`), by a NESTED case split on `{0, 1, k+2}`: unlike
+/// [`declare_e_le_four`]'s `per_n` (one uniform algebraic bound at every
+/// `n`), the classical `e ≤ 3` argument genuinely kinks at index `2`
+/// (`expTerm 0 = expTerm 1 = 1`, not yet geometric), so no single formula
+/// dominates `expTerm` from `n = 0` while also being tight enough to sum to
+/// `3`. `n = 0`/`n = 1` close directly ([`zero_le_three`]/[`one_le_three`]);
+/// `n = k + 2` closes via [`exp_tail_partial_bound`] with the nonnegative
+/// `pow half k` term dropped ([`CRealPrelude::pow_nonneg`] + `add_zero`).
+fn e_le_three_per_n(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId, three_c: ExprId) -> ExprId {
+    let exp_term_const = d.kernel().const_(p.exp_term, vec![]);
+
+    let outer_motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let sum_x = d.const_app(p.sum_range, &[exp_term_const, x]);
+        cle(d, p, sum_x, three_c)
+    };
+    let outer_base = |d: &mut IntDev<'_>| -> ExprId { zero_le_three(d, p, three_c) };
+    let outer_step = |d: &mut IntDev<'_>, m: ExprId, _ih: ExprId| -> ExprId {
+        let inner_motive = |d: &mut IntDev<'_>, y: ExprId| -> ExprId {
+            let succ_y = d.succ(y);
+            let sum_succ_y = d.const_app(p.sum_range, &[exp_term_const, succ_y]);
+            cle(d, p, sum_succ_y, three_c)
+        };
+        let inner_base = |d: &mut IntDev<'_>| -> ExprId { one_le_three(d, p, three_c) };
+        let inner_step = |d: &mut IntDev<'_>, k: ExprId, _ih2: ExprId| -> ExprId {
+            let tail = exp_tail_partial_bound(d, p, k, three_c);
+            // tail : le (add (sumRange expTerm (add k 2)) (pow half k)) three_c
+            let two_nat = d.num(2);
+            let k2 = NatOps::add(d, k, two_nat);
+            let sum_k2 = d.const_app(p.sum_range, &[exp_term_const, k2]);
+            let h = half(d, p);
+            let pow_k = cpow(d, p, h, k);
+            let half_nn = half_nonneg_proof(d, p);
+            let pow_nn = d.lemma(p.pow_nonneg, &[h, half_nn, k]);
+            // pow_nn : le zero pow_k
+
+            let zero_c = czero(d, p);
+            let le_refl_sum = d.lemma(p.le_refl, &[sum_k2]);
+            let step_le = d.lemma(
+                p.add_le_add,
+                &[sum_k2, sum_k2, zero_c, pow_k, le_refl_sum, pow_nn],
+            );
+            // step_le : le (add sum_k2 zero) (add sum_k2 pow_k)
+            let sum_k2_pad = cadd(d, p, sum_k2, zero_c);
+            let sum_k2_pow_k = cadd(d, p, sum_k2, pow_k);
+            let combined = d.lemma(
+                p.le_trans,
+                &[sum_k2_pad, sum_k2_pow_k, three_c, step_le, tail],
+            );
+            // combined : le sum_k2_pad three_c
+
+            let az = d.lemma(p.add_zero, &[sum_k2]); // Equiv sum_k2_pad sum_k2
+            let refl_three = d.lemma(p.equiv_refl, &[three_c]);
+            d.lemma(
+                p.le_congr,
+                &[
+                    sum_k2_pad, sum_k2, three_c, three_c, az, refl_three, combined,
+                ],
+            )
+            // result : le sum_k2 three_c, sum_k2 defeq sumRange expTerm (succ (succ k))
+        };
+        d.induct(&inner_motive, &inner_base, &inner_step, m)
+    };
+
+    d.induct(&outer_motive, &outer_base, &outer_step, n)
+}
+
+/// `CReal.e_le_three : le e three`, `three := add two one` — the sharpened
+/// upper bound. See [`CRealPrelude::e_le_three`]'s own doc for the
+/// mathematics and why the split is worth its cost over [`declare_e_le_four`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_e_le_three(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let exp_series_partial_const = d.kernel().const_(p.exp_series_partial, vec![]);
+    let e_const = d.kernel().const_(p.e, vec![]);
+    let e_converges_proof = d.kernel().const_(p.e_converges, vec![]);
+
+    let three_c = three(d, p);
+
+    let ptwise_upper = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = e_le_three_per_n(d, p, n, three_c);
+        d.lam_fv(n_fv, nat, body)
+    };
+    // ptwise_upper : ∀ n, le (expSeriesPartial n) three (by delta).
+
+    let value = d.const_app(
+        p.converges_upper_bound,
+        &[
+            exp_series_partial_const,
+            e_const,
+            three_c,
+            ptwise_upper,
+            e_converges_proof,
+        ],
+    );
+    let ty = cle(d, p, e_const, three_c);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.e_le_three,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.e`, `CReal.e_converges`, `CReal.two_le_e`,
+/// `CReal.e_le_four` and `CReal.e_le_three`. Run **after**
+/// [`declare_exp_convergence`] (shares
 /// `exp_dominant_cauchy_body_concrete`'s dependencies:
 /// `geomCauchy_ordered_half`, `exp_term_abs_le_dominant`,
 /// `sum_range_cauchy_dominated_ordered_normalized`, `regular_of_scaled_cauchy`
@@ -3831,5 +4301,6 @@ pub(super) fn declare_e_family(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
     declare_e(d, p, raw, k_final, exp_series_partial_body)?;
     declare_e_converges(d, p, raw, k_final, exp_series_partial_body)?;
     declare_two_le_e(d, p)?;
-    declare_e_le_four(d, p)
+    declare_e_le_four(d, p)?;
+    declare_e_le_three(d, p)
 }

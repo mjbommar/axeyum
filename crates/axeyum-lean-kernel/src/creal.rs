@@ -2758,6 +2758,26 @@ pub struct CRealPrelude {
     /// already loose by a factor of `2·(1/2)⁰ = 2` at `n = 0`/`1`, and
     /// tightening it needs an index-`2` split this slice does not attempt.
     pub e_le_four: NameId,
+    /// `CReal.e_le_three : le e three`, `three := add two one` — the classical
+    /// index-2 split sharpening [`Self::e_le_four`]: `e = Σ 1/n! = 1 + 1 +
+    /// Σ_{n≥2} 1/n!`, the first two terms exact, and for `n ≥ 2`, `1/n! ≤
+    /// (1/2)^(n-1)` so the tail is at most `Σ_{k≥1} (1/2)^k = 1`. Built
+    /// WITHOUT any new `Nat`-level factorial fact: the shifted pointwise bound
+    /// `expTerm (k+2) ≤ pow half (k+1)` is [`Self::exp_term_le_dominant`] at
+    /// `k+2` composed with the pure `CReal`-algebra identity `2 · pow half
+    /// (succ m) ~ pow half m` (`pow_succ`'s ι-unfold + `mul_assoc` +
+    /// `mul_comm` + `2·half ~ 1`), and the tail sum is closed by an induction
+    /// proving `∀ k, sumRange expTerm (k+2) + pow half k ≤ three` (the
+    /// telescoping invariant, tight at `k = 0`: `2 + 1 = 3`), then the same
+    /// shifted identity in its ADDITIVE form (`pow half (k+1) + pow half
+    /// (k+1) ~ pow half k`, via `left_distrib` + `half + half ~ 1`) closes the
+    /// step. The top-level statement over ALL `n` (not just `n ≥ 2`) needs a
+    /// genuine case split — `expTerm 0 = expTerm 1 = 1`, not yet geometric —
+    /// so unlike [`Self::e_le_four`] this is NOT one uniform `∀n` bound but a
+    /// nested `Nat.rec` on `{0, 1, k+2}`, matching the mathematical kink at
+    /// index `2` rather than an artifact of the formalization. See
+    /// `creal/exponential.rs::declare_e_le_three`.
+    pub e_le_three: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -3392,6 +3412,33 @@ pub struct CRealPrelude {
     ///    collapses the resulting rational product back into a single
     ///    `natDivSucc`.
     pub riemann_sum_total_eps_le: NameId,
+    /// `CReal.riemannSumDeepCauchy : ∀ F a b, CReal.le a b →
+    /// CReal.UniformlyContinuousOn F a b → ∀ p q : Nat, Within (seq
+    /// (riemannSum F a b (deep F a b u p)) p − seq (riemannSum F a b (deep F
+    /// a b u q)) q) (bound p q)` — the Cauchy-shape statement for the
+    /// RAW-indexed sequence `fun n => riemannSum F a b (deep n)`, at two
+    /// INDEPENDENT accuracies `p`, `q` (`deep` computed EXACTLY the way
+    /// [`Self::riemann_sum_cauchy`]'s own body computes it, extra depth `k`
+    /// fixed at `0`).
+    ///
+    /// **The reindexing route, not the shared-accuracy one.** Unlike
+    /// [`Self::riemann_sum_shared_accuracy_close`] (one accuracy `e`, two
+    /// arbitrary extra depths `k1`/`k2`), this specializes
+    /// [`Self::shared_index_to_canonical`]'s three free index arguments
+    /// `pp := qq := jj := p` (resp. `q`) in each of its two applications —
+    /// the specialization that declaration's own doc comment names as the
+    /// disproved worry, made safe because those three arguments are
+    /// genuinely unconstrained by the common-refinement target's own
+    /// magnitude. That is what makes every leg of the resulting bound a
+    /// function of `p`/`q` alone, independent of the (potentially far
+    /// larger) shared refinement count — exactly the property needed to
+    /// eventually reindex `riemannSum` into a literal `CReal.Cauchy`
+    /// witness at rate `O(1/p) + O(1/q)`, rather than a rate governed by an
+    /// unconstrained modulus. See `creal/integral.rs`'s
+    /// `declare_riemann_sum_deep_cauchy` for the three-leg
+    /// [`Self::regular`]/`shared_index_to_canonical`/`shared_index_to_canonical`
+    /// telescope via `series::chain_within3`.
+    pub riemann_sum_deep_cauchy: NameId,
 }
 
 impl CRealPrelude {
@@ -3751,6 +3798,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         e_converges: kernel.name_str(creal, "e_converges"),
         two_le_e: kernel.name_str(creal, "two_le_e"),
         e_le_four: kernel.name_str(creal, "e_le_four"),
+        e_le_three: kernel.name_str(creal, "e_le_three"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
@@ -3792,6 +3840,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         shared_index_to_canonical: kernel.name_str(creal, "sharedIndexToCanonical"),
         riemann_sum_shared_accuracy_close: kernel.name_str(creal, "riemannSum_sharedAccuracyClose"),
         riemann_sum_total_eps_le: kernel.name_str(creal, "riemannSumTotalEpsLe"),
+        riemann_sum_deep_cauchy: kernel.name_str(creal, "riemannSumDeepCauchy"),
     }
 }
 
@@ -4096,6 +4145,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // `riemann_sum_const`'s own private rearrangement helper (just
         // above) — nothing from `riemannSum_cauchy` itself.
         integral::declare_riemann_sum_total_eps_le(&mut d, prelude)?;
+        // `riemannSumDeepCauchy` (the reindexed, INDEPENDENT-accuracy
+        // Cauchy-shape statement toward `CReal.integral`) needs
+        // `riemannSum_cauchy` and `sharedIndexToCanonical` (both well above,
+        // `common_refinement`'s own dependencies) plus `CReal.regular` (core,
+        // far above); it does NOT need `riemannSum_total_eps_le` (just
+        // above) or `riemannSum_shared_accuracy_close` -- it lands here only
+        // to stay next to the roadmap step chain it continues.
+        integral::declare_riemann_sum_deep_cauchy(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

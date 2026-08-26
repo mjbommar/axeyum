@@ -36,7 +36,9 @@ class NextReusableFamilyQueueTests(unittest.TestCase):
         )
         self.assertEqual(document["rows"][0]["measured_fact_count"], 8)
         self.assertEqual(document["rows"][0]["unmeasured_fact_count"], 0)
-        self.assertEqual(document["rows"][0]["capability_demands"]["binder-or-generalization"], 2)
+        self.assertEqual(
+            document["rows"][0]["capability_demands"]["missing-rewrite-or-induction-plan"], 3
+        )
         self.assertEqual(
             document["rows"][0]["capability_demands"]["non-equality-terminal-family"], 3
         )
