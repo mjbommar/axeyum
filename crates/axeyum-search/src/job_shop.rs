@@ -4,6 +4,7 @@
 //! share only the typed problem. Search models are lifted to start times and
 //! replayed against precedence, machine capacity, and the claimed makespan.
 
+use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
 use axeyum_cnf::{CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar};
@@ -282,6 +283,190 @@ fn parse_numbers(line: &str) -> Result<Vec<usize>, JobShopError> {
                 .map_err(|_| JobShopError::Parse(format!("invalid integer `{word}`")))
         })
         .collect()
+}
+
+/// Parse one zero-based job permutation per machine.
+///
+/// This is the compact solution convention used by several public job-shop
+/// archives: row `m` gives the processing order of jobs on machine `m`.
+/// Blank lines and lines beginning with `#` are ignored.
+///
+/// # Errors
+///
+/// Refuses the wrong number of rows or jobs, non-integers, out-of-range job
+/// indices, and repeated or missing jobs on any machine.
+pub fn parse_job_shop_machine_orders(
+    problem: &JobShopProblem,
+    text: &str,
+) -> Result<Vec<Vec<usize>>, JobShopError> {
+    let rows = text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(parse_numbers)
+        .collect::<Result<Vec<_>, _>>()?;
+    if rows.len() != problem.machines {
+        return Err(JobShopError::Parse(format!(
+            "machine-order witness has {} rows, expected {}",
+            rows.len(),
+            problem.machines
+        )));
+    }
+    for (machine, row) in rows.iter().enumerate() {
+        if row.len() != problem.jobs.len() {
+            return Err(JobShopError::Parse(format!(
+                "machine {machine} has {} jobs, expected {}",
+                row.len(),
+                problem.jobs.len()
+            )));
+        }
+        let mut seen = vec![false; problem.jobs.len()];
+        for &job in row {
+            if job >= problem.jobs.len() || seen[job] {
+                return Err(JobShopError::Parse(format!(
+                    "machine {machine} has invalid or repeated job {job}"
+                )));
+            }
+            seen[job] = true;
+        }
+    }
+    Ok(rows)
+}
+
+fn operation_ids_by_job_machine(
+    problem: &JobShopProblem,
+    ids: &[Vec<usize>],
+) -> Result<Vec<Vec<usize>>, JobShopError> {
+    let mut result = vec![vec![usize::MAX; problem.machines]; problem.jobs.len()];
+    for (job, operations) in problem.jobs.iter().enumerate() {
+        if operations.len() != problem.machines {
+            return Err(JobShopError::Malformed(format!(
+                "job {job} has {} operations, expected {}",
+                operations.len(),
+                problem.machines
+            )));
+        }
+        for (operation, item) in operations.iter().enumerate() {
+            if item.machine >= problem.machines
+                || item.duration == 0
+                || result[job][item.machine] != usize::MAX
+            {
+                return Err(JobShopError::Malformed(format!(
+                    "job {job} has invalid operation metadata"
+                )));
+            }
+            result[job][item.machine] = ids[job][operation];
+        }
+    }
+    Ok(result)
+}
+
+/// Construct the deterministic earliest schedule induced by machine orders.
+///
+/// The precedence DAG contains every within-job edge and every consecutive
+/// pair from each machine row. Stable topological longest paths then give the
+/// earliest start of every operation. The result is independently replayed
+/// before it is returned.
+///
+/// # Errors
+///
+/// Refuses malformed problem/order shapes, arithmetic overflow, or cyclic
+/// orders (which do not describe a feasible non-preemptive schedule).
+pub fn schedule_job_shop_machine_orders(
+    problem: &JobShopProblem,
+    orders: &[Vec<usize>],
+) -> Result<JobShopSchedule, JobShopError> {
+    if orders.len() != problem.machines {
+        return Err(JobShopError::Malformed(format!(
+            "machine-order witness has {} rows, expected {}",
+            orders.len(),
+            problem.machines
+        )));
+    }
+    let (flat, ids) = flat_operations(problem);
+    let operation_ids = operation_ids_by_job_machine(problem, &ids)?;
+
+    let mut edges = vec![Vec::new(); flat.len()];
+    let mut indegree = vec![0usize; flat.len()];
+    let mut add_edge = |from: usize, to: usize| {
+        edges[from].push(to);
+        indegree[to] += 1;
+    };
+    for job_ids in &ids {
+        for pair in job_ids.windows(2) {
+            add_edge(pair[0], pair[1]);
+        }
+    }
+    for (machine, row) in orders.iter().enumerate() {
+        if row.len() != problem.jobs.len() {
+            return Err(JobShopError::Malformed(format!(
+                "machine {machine} has {} jobs, expected {}",
+                row.len(),
+                problem.jobs.len()
+            )));
+        }
+        let mut seen = vec![false; problem.jobs.len()];
+        let mut machine_ids = Vec::with_capacity(row.len());
+        for &job in row {
+            if job >= problem.jobs.len() || seen[job] {
+                return Err(JobShopError::Malformed(format!(
+                    "machine {machine} has invalid or repeated job {job}"
+                )));
+            }
+            seen[job] = true;
+            machine_ids.push(operation_ids[job][machine]);
+        }
+        for pair in machine_ids.windows(2) {
+            add_edge(pair[0], pair[1]);
+        }
+    }
+
+    let mut ready = indegree
+        .iter()
+        .enumerate()
+        .filter_map(|(id, &degree)| (degree == 0).then_some(id))
+        .collect::<BTreeSet<_>>();
+    let mut earliest = vec![0usize; flat.len()];
+    let mut emitted = 0usize;
+    while let Some(id) = ready.pop_first() {
+        emitted += 1;
+        let end = earliest[id]
+            .checked_add(flat[id].duration)
+            .ok_or_else(|| JobShopError::Malformed("schedule time overflow".to_owned()))?;
+        for &successor in &edges[id] {
+            earliest[successor] = earliest[successor].max(end);
+            indegree[successor] -= 1;
+            if indegree[successor] == 0 {
+                ready.insert(successor);
+            }
+        }
+    }
+    if emitted != flat.len() {
+        return Err(JobShopError::InvalidSchedule(
+            "machine orders and job chains contain a cycle".to_owned(),
+        ));
+    }
+    let mut starts = problem
+        .jobs
+        .iter()
+        .map(|operations| vec![0usize; operations.len()])
+        .collect::<Vec<_>>();
+    let mut makespan = 0usize;
+    for (id, operation) in flat.iter().enumerate() {
+        starts[operation.job][operation.operation] = earliest[id];
+        makespan = makespan.max(
+            earliest[id]
+                .checked_add(operation.duration)
+                .ok_or_else(|| JobShopError::Malformed("schedule time overflow".to_owned()))?,
+        );
+    }
+    let schedule = JobShopSchedule {
+        schema: JOB_SHOP_SCHEDULE_SCHEMA.to_owned(),
+        makespan,
+        starts,
+    };
+    check_job_shop_schedule(problem, &schedule)?;
+    Ok(schedule)
 }
 
 /// Replay a complete schedule independently of the SAT encoding.
@@ -1257,6 +1442,37 @@ mod tests {
                 .unwrap()
                 .operations,
             4
+        );
+    }
+
+    #[test]
+    fn machine_order_witness_parses_builds_and_replays() {
+        let problem = JobShopProblem::parse_orlib(TINY).unwrap();
+        let orders = parse_job_shop_machine_orders(&problem, "# machine rows\n0 1\n1 0\n").unwrap();
+        let schedule = schedule_job_shop_machine_orders(&problem, &orders).unwrap();
+        assert_eq!(schedule.starts, vec![vec![0, 2], vec![0, 2]]);
+        assert_eq!(schedule.makespan, 3);
+        assert_eq!(
+            check_job_shop_schedule(&problem, &schedule)
+                .unwrap()
+                .operations,
+            4
+        );
+    }
+
+    #[test]
+    fn machine_order_witness_rejects_bad_permutations_and_cycles() {
+        let problem = JobShopProblem::parse_orlib(TINY).unwrap();
+        assert!(matches!(
+            parse_job_shop_machine_orders(&problem, "0 0\n1 0\n"),
+            Err(JobShopError::Parse(_))
+        ));
+        let cyclic = parse_job_shop_machine_orders(&problem, "1 0\n0 1\n").unwrap();
+        assert_eq!(
+            schedule_job_shop_machine_orders(&problem, &cyclic),
+            Err(JobShopError::InvalidSchedule(
+                "machine orders and job chains contain a cycle".to_owned()
+            ))
         );
     }
 
