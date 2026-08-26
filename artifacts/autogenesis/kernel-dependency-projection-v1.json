@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1595,
+    "axiom_free_declarations": 1598,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
       "definition": 251,
       "inductive": 22,
       "recursor": 22,
-      "theorem": 1271
+      "theorem": 1274
     },
-    "declarations": 1625,
-    "direct_theorem_dependency_edges": 7417,
-    "theorems": 1271
+    "declarations": 1628,
+    "direct_theorem_dependency_edges": 7436,
+    "theorems": 1274
   },
   "declarations": [
     {
@@ -24248,6 +24248,52 @@
     },
     {
       "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (Complex.normSq x0) x2) -> ((x4 : AxNat) -> ((x5 : CReal.PosBound (Complex.normSq x1) x4) -> ((x6 : AxNat) -> ((x7 : CReal.PosBound (Complex.normSq (Complex.mul x0 x1)) x6) -> Complex.Equiv (Complex.inv (Complex.mul x0 x1) x6 x7) (Complex.mul (Complex.inv x0 x2 x3) (Complex.inv x1 x4 x5))))))))))",
+      "declaration_kind": "theorem",
+      "direct_declaration_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.Equiv.refl",
+        "Complex.Equiv.symm",
+        "Complex.Equiv.trans",
+        "Complex.inv",
+        "Complex.mul",
+        "Complex.mul_assoc",
+        "Complex.mul_comm",
+        "Complex.mul_congr",
+        "Complex.mul_inv_cancel",
+        "Complex.mul_one",
+        "Complex.normSq",
+        "Complex.one",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "Complex.Equiv.refl",
+        "Complex.Equiv.symm",
+        "Complex.Equiv.trans",
+        "Complex.mul_assoc",
+        "Complex.mul_comm",
+        "Complex.mul_congr",
+        "Complex.mul_inv_cancel",
+        "Complex.mul_one"
+      ],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.inv",
+        "Complex.mul",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "id": "Complex.inv_mul",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : Complex) -> ((x1 : AxNat) -> ((x2 : CReal.PosBound (Complex.normSq x0) x1) -> Complex.Equiv (Complex.mul (Complex.inv x0 x1 x2) x0) Complex.one)))",
       "declaration_kind": "theorem",
       "direct_declaration_dependencies": [
@@ -26562,6 +26608,47 @@
         "Nat"
       ],
       "id": "Complex.root_of_unity_pow",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex) -> ((x3 : AxNat) -> ((x4 : CReal.PosBound (Complex.normSq x2) x3) -> Complex.Equiv (Complex.div (Complex.add x0 (Complex.neg x1)) x2 x3 x4) (Complex.add (Complex.div x0 x2 x3 x4) (Complex.neg (Complex.div x1 x2 x3 x4))))))))",
+      "declaration_kind": "theorem",
+      "direct_declaration_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.Equiv.refl",
+        "Complex.Equiv.trans",
+        "Complex.add",
+        "Complex.add_congr",
+        "Complex.add_div",
+        "Complex.div",
+        "Complex.neg",
+        "Complex.neg_div",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "Complex.Equiv.refl",
+        "Complex.Equiv.trans",
+        "Complex.add_congr",
+        "Complex.add_div",
+        "Complex.neg_div"
+      ],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.add",
+        "Complex.div",
+        "Complex.neg",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "id": "Complex.sub_div",
       "visible_in": [
         "complex"
       ]
@@ -63264,6 +63351,63 @@
     },
     {
       "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : AxNat) -> Eq.{1} Rat (Rat.pow (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero)) x0) (Rat.normalize (Int.ofNat (AxNat.succ AxNat.zero)) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x0) (AxNat.pow_pos (AxNat.succ (AxNat.succ AxNat.zero)) x0 (AxNat.le_succ (AxNat.succ AxNat.zero)))))",
+      "declaration_kind": "theorem",
+      "direct_declaration_dependencies": [
+        "Eq",
+        "Eq.rec",
+        "Eq.refl",
+        "Int.ofNat",
+        "Nat",
+        "Nat.le_succ",
+        "Nat.pow",
+        "Nat.pow_pos",
+        "Nat.rec",
+        "Nat.succ",
+        "Nat.zero",
+        "Rat",
+        "Rat.mul",
+        "Rat.natDivSucc",
+        "Rat.normalize",
+        "Rat.normalize_mul_normalize",
+        "Rat.one",
+        "Rat.pow",
+        "Rat.pow_succ",
+        "Rat.pow_zero",
+        "Rat.self_normalize"
+      ],
+      "direct_theorem_dependencies": [
+        "Nat.le_succ",
+        "Nat.pow_pos",
+        "Rat.normalize_mul_normalize",
+        "Rat.pow_succ",
+        "Rat.pow_zero",
+        "Rat.self_normalize"
+      ],
+      "direct_type_dependencies": [
+        "Eq",
+        "Int.ofNat",
+        "Nat",
+        "Nat.le_succ",
+        "Nat.pow",
+        "Nat.pow_pos",
+        "Nat.succ",
+        "Nat.zero",
+        "Rat",
+        "Rat.natDivSucc",
+        "Rat.normalize",
+        "Rat.pow"
+      ],
+      "id": "Rat.pow_natDivSucc_two",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : Rat) -> ((x1 : AxNat) -> Eq.{1} Rat (Rat.pow x0 (AxNat.succ x1)) (Rat.mul (Rat.pow x0 x1) x0)))",
       "declaration_kind": "theorem",
       "direct_declaration_dependencies": [
@@ -87210,6 +87354,46 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "Complex.inv_mul",
+      "target": "Complex.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.inv_mul",
+      "target": "Complex.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.inv_mul",
+      "target": "Complex.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.inv_mul",
+      "target": "Complex.mul_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.inv_mul",
+      "target": "Complex.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.inv_mul",
+      "target": "Complex.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.inv_mul",
+      "target": "Complex.mul_inv_cancel"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.inv_mul",
+      "target": "Complex.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "Complex.inv_mul_cancel",
       "target": "Complex.Equiv.trans"
     },
@@ -89002,6 +89186,31 @@
       "relation": "direct-theorem-depends-on",
       "source": "Complex.root_of_unity_pow",
       "target": "Nat.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.sub_div",
+      "target": "Complex.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.sub_div",
+      "target": "Complex.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.sub_div",
+      "target": "Complex.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.sub_div",
+      "target": "Complex.add_div"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.sub_div",
+      "target": "Complex.neg_div"
     },
     {
       "relation": "direct-theorem-depends-on",
@@ -104407,6 +104616,36 @@
       "relation": "direct-theorem-depends-on",
       "source": "Rat.polyEval_smul",
       "target": "Rat.sumRange_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.pow_natDivSucc_two",
+      "target": "Nat.le_succ"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.pow_natDivSucc_two",
+      "target": "Nat.pow_pos"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.pow_natDivSucc_two",
+      "target": "Rat.normalize_mul_normalize"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.pow_natDivSucc_two",
+      "target": "Rat.pow_succ"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.pow_natDivSucc_two",
+      "target": "Rat.pow_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.pow_natDivSucc_two",
+      "target": "Rat.self_normalize"
     },
     {
       "relation": "direct-theorem-depends-on",

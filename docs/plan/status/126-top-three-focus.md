@@ -155,8 +155,11 @@ zero matches. Durable events, live after-facts, v1 matches, and v2 exclusions
 agree exactly; operation and autonomous credit remain zero. Next: point
 bounded application at the now-clean 51-goal population and measure whether
 semantic/type-directed retrieval improves the honest 0/51 construction rate.
-After rebasing over the next concurrent CReal theorem, mutable views were
-regenerated again at 1,625 declarations / 1,271 theorems / 7,417 edges. The
+After rebasing over concurrent CReal, Nat, Complex, and Rat construction,
+mutable views were regenerated again at 1,628 declarations / 1,274 theorems /
+7,436 edges. The full 753-test kernel suite passes. These additions are
+credible manual library construction, not autonomous-production credit; the
+semantic-review queue still has all 1,274 indexed theorems unreviewed. The
 historical authorization artifacts remain pinned to their archived
 pre-transition index, while the post-transition 51-goal census absorbs the new
 kernel state and remains zero exact matches.
