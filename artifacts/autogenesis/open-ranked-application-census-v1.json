@@ -406,8 +406,8 @@
         "Nat.mod_lt",
         "Nat.div_mod_unique",
         "Nat.mod_eq_trans",
-        "Nat.mod_eq_add_left",
         "Nat.div_mod_bounds",
+        "Nat.mod_eq_add_left",
         "Nat.mod_eq_add_right",
         "Nat.mod_eq_refl",
         "Nat.mod_eq_symm",
@@ -1031,8 +1031,8 @@
         "Nat.mod_lt",
         "Nat.div_mod_unique",
         "Nat.mod_eq_trans",
-        "Nat.mod_eq_add_left",
         "Nat.div_mod_bounds",
+        "Nat.mod_eq_add_left",
         "Nat.mod_eq_add_right",
         "Nat.mod_eq_refl",
         "Nat.mod_eq_symm",
@@ -1056,8 +1056,8 @@
         "Nat.mod_lt",
         "Nat.div_mod_unique",
         "Nat.mod_eq_trans",
-        "Nat.mod_eq_add_left",
         "Nat.div_mod_bounds",
+        "Nat.mod_eq_add_left",
         "Nat.mod_eq_add_right",
         "Nat.mod_eq_refl",
         "Nat.mod_eq_symm",
@@ -1081,8 +1081,8 @@
         "Nat.mod_lt",
         "Nat.div_mod_unique",
         "Nat.mod_eq_trans",
-        "Nat.mod_eq_add_left",
         "Nat.div_mod_bounds",
+        "Nat.mod_eq_add_left",
         "Nat.mod_eq_add_right",
         "Nat.mod_eq_refl",
         "Nat.mod_eq_symm",
@@ -1329,7 +1329,7 @@
   "source": {
     "candidate_ranking": {
       "path": "artifacts/autogenesis/open-lemma-candidate-ranking-v1.json",
-      "sha256": "580e33a7542374c8a253fea6aafd5394907347a6e506217da2e00626a2961594"
+      "sha256": "7a996b2f5fed6f1cb36535686e452c946f95992c5636285799b447c60be3b1ef"
     },
     "external_capsule_directory": "/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1",
     "lean4export_format": "3.1.0",

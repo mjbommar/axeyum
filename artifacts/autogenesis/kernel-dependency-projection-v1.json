@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1598,
+    "axiom_free_declarations": 1599,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
       "definition": 251,
       "inductive": 22,
       "recursor": 22,
-      "theorem": 1274
+      "theorem": 1275
     },
-    "declarations": 1628,
-    "direct_theorem_dependency_edges": 7436,
-    "theorems": 1274
+    "declarations": 1629,
+    "direct_theorem_dependency_edges": 7458,
+    "theorems": 1275
   },
   "declarations": [
     {
@@ -19759,6 +19759,124 @@
         "Rat"
       ],
       "id": "CReal.sqrtApprox",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : CReal) -> ((x1 : AxNat) -> And (Rat.le (Rat.normalize (Int.mul (Int.ofNat (CReal.natSqrt (AxNat.div (AxNat.mul (Int.natAbs (Rat.num (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero))) (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) (Rat.den (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero))))) (Int.ofNat (CReal.natSqrt (AxNat.div (AxNat.mul (Int.natAbs (Rat.num (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero))) (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) (Rat.den (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero)))))) (AxNat.mul (AxNat.succ x1) (AxNat.succ x1)) (AxNat.one_le_mul (AxNat.succ x1) (AxNat.succ x1) (AxNat.le_succ_succ AxNat.zero x1 (AxNat.zero_le x1)) (AxNat.le_succ_succ AxNat.zero x1 (AxNat.zero_le x1)))) (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero)) (Rat.lt (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero) (Rat.normalize (Int.mul (Int.ofNat (AxNat.succ (CReal.natSqrt (AxNat.div (AxNat.mul (Int.natAbs (Rat.num (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero))) (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) (Rat.den (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero)))))) (Int.ofNat (AxNat.succ (CReal.natSqrt (AxNat.div (AxNat.mul (Int.natAbs (Rat.num (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero))) (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) (Rat.den (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero))))))) (AxNat.mul (AxNat.succ x1) (AxNat.succ x1)) (AxNat.one_le_mul (AxNat.succ x1) (AxNat.succ x1) (AxNat.le_succ_succ AxNat.zero x1 (AxNat.zero_le x1)) (AxNat.le_succ_succ AxNat.zero x1 (AxNat.zero_le x1)))))))",
+      "declaration_kind": "theorem",
+      "direct_declaration_dependencies": [
+        "And",
+        "And.intro",
+        "And.rec",
+        "CReal",
+        "CReal.natSqrt",
+        "CReal.natSqrtLe",
+        "CReal.natSqrtLt",
+        "CReal.seq",
+        "Eq",
+        "Eq.rec",
+        "Eq.refl",
+        "False",
+        "False.rec",
+        "Int",
+        "Int.le",
+        "Int.lt",
+        "Int.mul",
+        "Int.mul_assoc",
+        "Int.mul_comm",
+        "Int.natAbs",
+        "Int.ofNat",
+        "Int.of_nat_nat_abs_of_nonneg",
+        "Nat",
+        "Nat.div",
+        "Nat.divMod",
+        "Nat.div_mod_bounds",
+        "Nat.div_mod_exec",
+        "Nat.le",
+        "Nat.le_succ_succ",
+        "Nat.le_trans",
+        "Nat.lt",
+        "Nat.lt_of_lt_of_le",
+        "Nat.mod",
+        "Nat.mul",
+        "Nat.mul_le_mul_left",
+        "Nat.not_lt_zero",
+        "Nat.one_le_mul",
+        "Nat.pred",
+        "Nat.rec",
+        "Nat.succ",
+        "Nat.zero",
+        "Nat.zero_le",
+        "Rat.den",
+        "Rat.den_pos",
+        "Rat.int_le_of_mul_le_mul_right",
+        "Rat.int_lt_of_mul_lt_mul_right",
+        "Rat.int_mul_le_mul_right",
+        "Rat.int_mul_lt_mul_right",
+        "Rat.int_nonneg_of_nonneg",
+        "Rat.le",
+        "Rat.le_max_right",
+        "Rat.lt",
+        "Rat.max",
+        "Rat.normalize",
+        "Rat.normalize_cross",
+        "Rat.num",
+        "Rat.zero"
+      ],
+      "direct_theorem_dependencies": [
+        "CReal.natSqrtLe",
+        "CReal.natSqrtLt",
+        "Int.mul_assoc",
+        "Int.mul_comm",
+        "Int.of_nat_nat_abs_of_nonneg",
+        "Nat.div_mod_bounds",
+        "Nat.div_mod_exec",
+        "Nat.le_succ_succ",
+        "Nat.le_trans",
+        "Nat.lt_of_lt_of_le",
+        "Nat.mul_le_mul_left",
+        "Nat.not_lt_zero",
+        "Nat.one_le_mul",
+        "Nat.zero_le",
+        "Rat.den_pos",
+        "Rat.int_le_of_mul_le_mul_right",
+        "Rat.int_lt_of_mul_lt_mul_right",
+        "Rat.int_mul_le_mul_right",
+        "Rat.int_mul_lt_mul_right",
+        "Rat.int_nonneg_of_nonneg",
+        "Rat.le_max_right",
+        "Rat.normalize_cross"
+      ],
+      "direct_type_dependencies": [
+        "And",
+        "CReal",
+        "CReal.natSqrt",
+        "CReal.seq",
+        "Int.mul",
+        "Int.natAbs",
+        "Int.ofNat",
+        "Nat",
+        "Nat.div",
+        "Nat.le_succ_succ",
+        "Nat.mul",
+        "Nat.one_le_mul",
+        "Nat.succ",
+        "Nat.zero",
+        "Nat.zero_le",
+        "Rat.den",
+        "Rat.le",
+        "Rat.lt",
+        "Rat.max",
+        "Rat.normalize",
+        "Rat.num",
+        "Rat.zero"
+      ],
+      "id": "CReal.sqrtApproxSqBracket",
       "visible_in": [
         "complex",
         "cpoint",
@@ -83806,6 +83924,116 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.sq_nonneg",
       "target": "Rat.zero_le_natDivSucc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "CReal.natSqrtLe"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "CReal.natSqrtLt"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Int.mul_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Int.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Int.of_nat_nat_abs_of_nonneg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Nat.div_mod_bounds"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Nat.div_mod_exec"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Nat.le_succ_succ"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Nat.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Nat.lt_of_lt_of_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Nat.mul_le_mul_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Nat.not_lt_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Nat.one_le_mul"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Nat.zero_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Rat.den_pos"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Rat.int_le_of_mul_le_mul_right"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Rat.int_lt_of_mul_lt_mul_right"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Rat.int_mul_le_mul_right"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Rat.int_mul_lt_mul_right"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Rat.int_nonneg_of_nonneg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Rat.le_max_right"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sqrtApproxSqBracket",
+      "target": "Rat.normalize_cross"
     },
     {
       "relation": "direct-theorem-depends-on",
