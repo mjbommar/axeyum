@@ -13,7 +13,7 @@
       "direct_declaration_dependencies or direct_theorem_dependencies as target evidence",
       "producer outcome"
     ],
-    "lemma_index_sha256": "4aaf3b5d24e3903b2e8e715ba42fee864001de5a35200cb2d8c23f8143691a80",
+    "lemma_index_sha256": "e9fd5d16ee4739402bd9985c5c67e3b49b69761c9b004363129b579b06fc0041",
     "max_candidates_per_goal": 12,
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "population_rule": "open or conjectured lean4 fact in train or development",
@@ -7579,7 +7579,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -8399,7 +8399,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -8475,7 +8475,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -8538,7 +8538,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -8557,7 +8557,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -8578,7 +8578,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -8641,7 +8641,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 39,
+          "direct_reverse_theorem_reference_count": 40,
           "exact_fact_ids": [
             "F:nat-mul-one"
           ],
@@ -9380,7 +9380,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -9443,7 +9443,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -9462,7 +9462,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -9863,7 +9863,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -9931,7 +9933,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -11544,7 +11548,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -11612,7 +11618,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -11833,7 +11841,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -11901,7 +11911,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -12122,7 +12134,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -12190,7 +12204,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -12367,7 +12383,9 @@
             "succ"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -12417,7 +12435,9 @@
             "succ"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -12727,7 +12747,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -12795,7 +12817,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -13017,7 +13041,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -13085,7 +13111,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -13306,7 +13334,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -13374,7 +13404,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -13595,7 +13627,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -13663,7 +13697,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -13840,7 +13876,9 @@
             "succ"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -13890,7 +13928,9 @@
             "succ"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -14156,7 +14196,9 @@
             "succ"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -14206,7 +14248,9 @@
             "succ"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -14516,7 +14560,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -14584,7 +14630,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -14805,7 +14853,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -14873,7 +14923,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -15094,7 +15146,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -15162,7 +15216,9 @@
             "nat"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -15339,7 +15395,9 @@
             "succ"
           ],
           "direct_reverse_theorem_reference_count": 3,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-choose-succ-self-eq-zero"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -15389,7 +15447,9 @@
             "succ"
           ],
           "direct_reverse_theorem_reference_count": 2,
-          "exact_fact_ids": [],
+          "exact_fact_ids": [
+            "F:nat-zero-choose-succ"
+          ],
           "fragment_token_overlap": [
             "nat"
           ],
@@ -15768,7 +15828,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -15831,7 +15891,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -15850,7 +15910,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -16027,7 +16087,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -16090,7 +16150,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -16109,7 +16169,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -16553,7 +16613,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -16616,7 +16676,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -16635,7 +16695,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -16813,7 +16873,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -16876,7 +16936,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -16895,7 +16955,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -17073,7 +17133,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -17136,7 +17196,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -17155,7 +17215,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -17598,7 +17658,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -17661,7 +17721,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -17680,7 +17740,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -17857,7 +17917,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -17920,7 +17980,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -17939,7 +17999,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -18116,7 +18176,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -18179,7 +18239,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -18198,7 +18258,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -18643,7 +18703,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -18706,7 +18766,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -18725,7 +18785,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -18902,7 +18962,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -18965,7 +19025,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -18984,7 +19044,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -19693,7 +19753,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -19756,7 +19816,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -19775,7 +19835,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -19952,7 +20012,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -20015,7 +20075,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -20034,7 +20094,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -20231,7 +20291,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -20294,7 +20354,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -20470,7 +20530,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -20533,7 +20593,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -20552,7 +20612,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -20730,7 +20790,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -20793,7 +20853,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -20812,7 +20872,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -21065,7 +21125,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -21339,7 +21399,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -21613,7 +21673,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -21690,7 +21750,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -21753,7 +21813,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -21772,7 +21832,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -21793,7 +21853,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -21856,7 +21916,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 39,
+          "direct_reverse_theorem_reference_count": 40,
           "exact_fact_ids": [
             "F:nat-mul-one"
           ],
@@ -22106,7 +22166,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -22169,7 +22229,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -22378,7 +22438,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -22441,7 +22501,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -22913,7 +22973,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -22976,7 +23036,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -23185,7 +23245,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -23248,7 +23308,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -23321,7 +23381,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -23384,7 +23444,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -23403,7 +23463,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -23424,7 +23484,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -23487,7 +23547,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 39,
+          "direct_reverse_theorem_reference_count": 40,
           "exact_fact_ids": [
             "F:nat-mul-one"
           ],
@@ -24033,7 +24093,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -24307,7 +24367,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -24581,7 +24641,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -24854,7 +24914,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -25127,7 +25187,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -25400,7 +25460,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -25673,7 +25733,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -25953,7 +26013,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -26188,12 +26248,32 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 0,
+          "direct_reverse_theorem_reference_count": 1,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
           ],
           "kernel_declaration_id": "CReal.strict_mono_magnitude",
+          "name_token_overlap": [
+            "mono",
+            "strict"
+          ],
+          "score": 18,
+          "type_dependency_token_overlap": [
+            "nat"
+          ]
+        },
+        {
+          "axiom_footprint_size": 0,
+          "canonical_type_token_overlap": [
+            "nat"
+          ],
+          "direct_reverse_theorem_reference_count": 0,
+          "exact_fact_ids": [],
+          "fragment_token_overlap": [
+            "nat"
+          ],
+          "kernel_declaration_id": "CReal.diff_le_of_strict_mono_magnitude",
           "name_token_overlap": [
             "mono",
             "strict"
@@ -26246,27 +26326,6 @@
           "score": 16,
           "type_dependency_token_overlap": [
             "fib",
-            "nat"
-          ]
-        },
-        {
-          "axiom_footprint_size": 0,
-          "canonical_type_token_overlap": [
-            "nat"
-          ],
-          "direct_reverse_theorem_reference_count": 88,
-          "exact_fact_ids": [
-            "F:nat-zero-le"
-          ],
-          "fragment_token_overlap": [
-            "nat"
-          ],
-          "kernel_declaration_id": "Nat.zero_le",
-          "name_token_overlap": [
-            "nat"
-          ],
-          "score": 12,
-          "type_dependency_token_overlap": [
             "nat"
           ]
         }
@@ -26515,7 +26574,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -26691,6 +26750,28 @@
           "fragment_token_overlap": [
             "nat"
           ],
+          "kernel_declaration_id": "CReal.strict_mono_magnitude",
+          "name_token_overlap": [
+            "mono",
+            "strict"
+          ],
+          "score": 22,
+          "type_dependency_token_overlap": [
+            "nat",
+            "on"
+          ]
+        },
+        {
+          "axiom_footprint_size": 0,
+          "canonical_type_token_overlap": [
+            "nat",
+            "on"
+          ],
+          "direct_reverse_theorem_reference_count": 1,
+          "exact_fact_ids": [],
+          "fragment_token_overlap": [
+            "nat"
+          ],
           "kernel_declaration_id": "Nat.bijective_on_comp",
           "name_token_overlap": [
             "nat",
@@ -26757,7 +26838,7 @@
           "fragment_token_overlap": [
             "nat"
           ],
-          "kernel_declaration_id": "CReal.strict_mono_magnitude",
+          "kernel_declaration_id": "CReal.diff_le_of_strict_mono_magnitude",
           "name_token_overlap": [
             "mono",
             "strict"
@@ -26811,28 +26892,6 @@
             "fib",
             "nat"
           ]
-        },
-        {
-          "axiom_footprint_size": 0,
-          "canonical_type_token_overlap": [
-            "nat",
-            "on"
-          ],
-          "direct_reverse_theorem_reference_count": 0,
-          "exact_fact_ids": [],
-          "fragment_token_overlap": [
-            "nat"
-          ],
-          "kernel_declaration_id": "Nat.eqOn_refl",
-          "name_token_overlap": [
-            "nat",
-            "on"
-          ],
-          "score": 22,
-          "type_dependency_token_overlap": [
-            "nat",
-            "on"
-          ]
         }
       ],
       "fact_id": "F:ml430-nat-fib-strictmonoon-905810a9",
@@ -26878,7 +26937,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -26941,7 +27000,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -26960,7 +27019,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -26981,7 +27040,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -27044,7 +27103,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 39,
+          "direct_reverse_theorem_reference_count": 40,
           "exact_fact_ids": [
             "F:nat-mul-one"
           ],
@@ -27409,7 +27468,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -27472,7 +27531,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -27491,7 +27550,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -27512,7 +27571,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -27575,7 +27634,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 39,
+          "direct_reverse_theorem_reference_count": 40,
           "exact_fact_ids": [
             "F:nat-mul-one"
           ],
@@ -28145,7 +28204,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -28425,7 +28484,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -28501,7 +28560,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -28564,7 +28623,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -28583,7 +28642,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -28604,7 +28663,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -28667,7 +28726,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 39,
+          "direct_reverse_theorem_reference_count": 40,
           "exact_fact_ids": [
             "F:nat-mul-one"
           ],
@@ -29032,7 +29091,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -29095,7 +29154,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -29114,7 +29173,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -29135,7 +29194,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -29198,7 +29257,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 39,
+          "direct_reverse_theorem_reference_count": 40,
           "exact_fact_ids": [
             "F:nat-mul-one"
           ],
@@ -29417,7 +29476,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -29480,7 +29539,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -29499,7 +29558,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -29520,7 +29579,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -29576,7 +29635,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -29639,7 +29698,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -29658,7 +29717,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -29679,7 +29738,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -29742,7 +29801,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 39,
+          "direct_reverse_theorem_reference_count": 40,
           "exact_fact_ids": [
             "F:nat-mul-one"
           ],
@@ -33653,7 +33712,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -33716,7 +33775,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -33735,7 +33794,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -33756,7 +33815,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -33819,7 +33878,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 39,
+          "direct_reverse_theorem_reference_count": 40,
           "exact_fact_ids": [
             "F:nat-mul-one"
           ],
@@ -33914,7 +33973,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -33977,7 +34036,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -33996,7 +34055,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -34017,7 +34076,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -34080,7 +34139,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 39,
+          "direct_reverse_theorem_reference_count": 40,
           "exact_fact_ids": [
             "F:nat-mul-one"
           ],
@@ -34175,7 +34234,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -34238,7 +34297,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -34257,7 +34316,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -34278,7 +34337,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -34341,7 +34400,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 39,
+          "direct_reverse_theorem_reference_count": 40,
           "exact_fact_ids": [
             "F:nat-mul-one"
           ],
@@ -34558,7 +34617,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -34621,7 +34680,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -34640,7 +34699,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -37275,7 +37334,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -37429,7 +37488,7 @@
             "nat",
             "succ"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -37451,7 +37510,7 @@
             "nat",
             "succ"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -37475,7 +37534,7 @@
             "nat",
             "succ"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -37523,7 +37582,7 @@
             "nat",
             "succ"
           ],
-          "direct_reverse_theorem_reference_count": 27,
+          "direct_reverse_theorem_reference_count": 28,
           "exact_fact_ids": [
             "F:rat-natdivsucc-mul"
           ],
@@ -37531,6 +37590,30 @@
             "nat"
           ],
           "kernel_declaration_id": "Rat.natDivSucc_mul",
+          "name_token_overlap": [
+            "nat",
+            "succ"
+          ],
+          "score": 22,
+          "type_dependency_token_overlap": [
+            "nat",
+            "succ"
+          ]
+        },
+        {
+          "axiom_footprint_size": 0,
+          "canonical_type_token_overlap": [
+            "nat",
+            "succ"
+          ],
+          "direct_reverse_theorem_reference_count": 26,
+          "exact_fact_ids": [
+            "F:rat-natdivsucc-halve"
+          ],
+          "fragment_token_overlap": [
+            "nat"
+          ],
+          "kernel_declaration_id": "Rat.natDivSucc_halve",
           "name_token_overlap": [
             "nat",
             "succ"
@@ -37570,30 +37653,6 @@
             "succ"
           ],
           "direct_reverse_theorem_reference_count": 25,
-          "exact_fact_ids": [
-            "F:rat-natdivsucc-halve"
-          ],
-          "fragment_token_overlap": [
-            "nat"
-          ],
-          "kernel_declaration_id": "Rat.natDivSucc_halve",
-          "name_token_overlap": [
-            "nat",
-            "succ"
-          ],
-          "score": 22,
-          "type_dependency_token_overlap": [
-            "nat",
-            "succ"
-          ]
-        },
-        {
-          "axiom_footprint_size": 0,
-          "canonical_type_token_overlap": [
-            "nat",
-            "succ"
-          ],
-          "direct_reverse_theorem_reference_count": 24,
           "exact_fact_ids": [
             "F:rat-natdivsucc-scale"
           ],
@@ -37777,7 +37836,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -37840,7 +37899,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -37859,7 +37918,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -37880,7 +37939,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -38063,7 +38122,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -38126,7 +38185,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -38145,7 +38204,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -38166,7 +38225,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -38347,7 +38406,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -38410,7 +38469,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -38429,7 +38488,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -38450,7 +38509,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -38632,7 +38691,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -38695,7 +38754,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -38714,7 +38773,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -38735,7 +38794,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],
@@ -38916,7 +38975,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 82,
+          "direct_reverse_theorem_reference_count": 83,
           "exact_fact_ids": [
             "F:nat-le-trans"
           ],
@@ -38979,7 +39038,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 64,
+          "direct_reverse_theorem_reference_count": 65,
           "exact_fact_ids": [],
           "fragment_token_overlap": [
             "nat"
@@ -38998,7 +39057,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 60,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-natdivsucc-add"
           ],
@@ -39019,7 +39078,7 @@
           "canonical_type_token_overlap": [
             "nat"
           ],
-          "direct_reverse_theorem_reference_count": 59,
+          "direct_reverse_theorem_reference_count": 61,
           "exact_fact_ids": [
             "F:rat-zero-le-natdivsucc"
           ],

@@ -624,7 +624,7 @@
   "source": {
     "external_capsule_directory": "/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1",
     "population_sha256": "039829b2dbd10d84a73212793e5df52c9cf45f4902e2673acbf73cb502d00467",
-    "ranking_sha256": "f819948ffb25355ea14ff6d846fbfdcaaa407bedfc78b73de0cfc5c4966ac0a8"
+    "ranking_sha256": "76cd60d7adaa4d21779f72dcd2fdaf02e28487e8cf62853fa01059949604fc7a"
   },
   "state": "diagnostic-only-no-ledger-or-admission-authority"
 }

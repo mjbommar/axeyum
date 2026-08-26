@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-choose-succ-self-eq-zero",
+  "title": "A binomial coefficient above the diagonal is zero",
+  "statement": "For every natural n: C(n, n+1) = 0.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.choose_succ_self_eq_zero : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.choose x0 (AxNat.succ x0)) AxNat.zero)",
+    "fragment": "Nat",
+    "free_symbols": ["x0"]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-choose-succ-succ",
+    "F:nat-succ-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.choose_succ_self_eq_zero",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.choose_succ_self_eq_zero",
+      "supports": "Nat.choose_succ_self_eq_zero is admitted by the trusted kernel gate with the exact type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- choose_succ_self_eq_zero 2>/dev/null | grep -xFc $'Nat.choose_succ_self_eq_zero\\t1\\t((x0 : AxNat) -> Eq.{1} AxNat (AxNat.choose x0 (AxNat.succ x0)) AxNat.zero)')\" -ge 1",
+      "notes": "The inventory builds the Nat prelude and prints Kernel::render_lean of the admitted type; the exact-line check fails on a missing declaration or type drift."
+    },
+    {
+      "id": "footprint-Nat.choose_succ_self_eq_zero",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: []",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Nat.choose_succ_self_eq_zero 2>/dev/null | grep -xFc $'nat\\tNat.choose_succ_self_eq_zero\\t0\\t')\" -ge 1",
+      "notes": "The theorem-specific kernel footprint enumeration reports no trusted dependency."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:binomial-coefficient",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-26",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name, canonical type, direct dependencies, and footprint read from kernel inventory examples after the ranked compatibility census exposed the missing fact link"
+  },
+  "notes": "This record registers existing native mathematics; it is not autonomous production. depends_on is the exact direct theorem edge set projected by theorem_dependency_inventory, restricted to registered fact endpoints.",
+  "external_status": "proved"
+}

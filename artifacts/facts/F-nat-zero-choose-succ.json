@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-zero-choose-succ",
+  "title": "A positive choice from zero is zero",
+  "statement": "For every natural k: C(0, k+1) = 0.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.zero_choose_succ : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.choose AxNat.zero (AxNat.succ x0)) AxNat.zero)",
+    "fragment": "Nat",
+    "free_symbols": ["x0"]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.zero_choose_succ",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.zero_choose_succ",
+      "supports": "Nat.zero_choose_succ is admitted by the trusted kernel gate with the exact type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- zero_choose_succ 2>/dev/null | grep -xFc $'Nat.zero_choose_succ\\t1\\t((x0 : AxNat) -> Eq.{1} AxNat (AxNat.choose AxNat.zero (AxNat.succ x0)) AxNat.zero)')\" -ge 1",
+      "notes": "The inventory builds the Nat prelude and prints Kernel::render_lean of the admitted type; the exact-line check fails on a missing declaration or type drift."
+    },
+    {
+      "id": "footprint-Nat.zero_choose_succ",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: []",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Nat.zero_choose_succ 2>/dev/null | grep -xFc $'nat\\tNat.zero_choose_succ\\t0\\t')\" -ge 1",
+      "notes": "The theorem-specific kernel footprint enumeration reports no trusted dependency."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:binomial-coefficient",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-26",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name, canonical type, direct dependencies, and footprint read from kernel inventory examples after the ranked compatibility census exposed the missing fact link"
+  },
+  "notes": "This record registers existing native mathematics; it is not autonomous production. theorem_dependency_inventory reports no direct theorem dependencies.",
+  "external_status": "proved"
+}
