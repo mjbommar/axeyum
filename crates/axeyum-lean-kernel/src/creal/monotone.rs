@@ -3883,7 +3883,8 @@ pub(super) fn declare_monotone_of_nonneg_deriv_all(
     declare_strict_injective_of_pos_deriv(d, p)?;
     declare_constant_of_zero_deriv(d, p)?;
     declare_antitone_of_nonpos_deriv(d, p)?;
-    declare_strict_antitone_of_neg_deriv(d, p)
+    declare_strict_antitone_of_neg_deriv(d, p)?;
+    declare_strict_mono_comp(d, p)
 }
 
 // =============================================================================
@@ -4504,6 +4505,186 @@ pub(super) fn declare_strict_antitone_of_neg_deriv(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.strict_antitone_of_neg_deriv,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.strict_mono_comp`
+// =============================================================================
+//
+// Spivak ch. 12's composition corollary: a strictly increasing `F` composed
+// with a strictly increasing `G` is strictly increasing. Deliberately stated
+// WITHOUT `HasDerivativeOn`/`hasDerivative_chain`: the chain rule
+// (`derivative.rs`) fixes ONE shared interval `[a, b]` for both `F` and `G`
+// (an explicit self-map hypothesis on `F`, not a second interval -- see its
+// own doc comment), so reusing it here would force `G` to be strictly
+// increasing on the SAME `[a, b]` `F` is, which is not the composition this
+// theorem is about (`G` acts on `F`'s RANGE, generally a different
+// interval). Taking `F`'s and `G`'s strict-monotonicity CONCLUSIONS as
+// hypotheses (the shape `strict_mono_of_pos_deriv`/`strict_antitone_of_neg_deriv`
+// already produce) plus an explicit range hypothesis (`F` maps `[a, b]` into
+// `[c, d]`) needs no chain rule and no derivative at all: composing the two
+// `lt` conclusions is direct function application, once `x`/`y`'s bounds are
+// shown to imply `F`'s domain requirements at `x` and at `y` individually
+// (`le_trans` against `le_of_lt hxy`).
+
+/// `CReal.strict_mono_comp : ∀ F G a b c d, (∀ x y, le a x → lt x y → le y b
+/// → lt (F x) (F y)) → (∀ x y, le c x → lt x y → le y d → lt (G x) (G y)) →
+/// (∀ z, le a z → le z b → le c (F z)) → (∀ z, le a z → le z b → le (F z) d)
+/// → ∀ x y, le a x → lt x y → le y b → lt (G (F x)) (G (F y))`. See the block
+/// comment above for why this is stated without `HasDerivativeOn`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_strict_mono_comp(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    // hF_ty : ∀ x y, le a x → lt x y → le y b → lt (F x) (F y).
+    let strict_mono_ty = |d: &mut IntDev<'_>, func: ExprId, lo: ExprId, hi: ExprId| {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let fx = d.apply(func, &[x]);
+        let fy = d.apply(func, &[y]);
+        let concl = clt(d, p, fx, fy);
+        let y_le_hi = cle(d, p, y, hi);
+        let after_hyb = d.arrow(y_le_hi, concl);
+        let x_lt_y = clt(d, p, x, y);
+        let after_hxy = d.arrow(x_lt_y, after_hyb);
+        let lo_le_x = cle(d, p, lo, x);
+        let after_hax = d.arrow(lo_le_x, after_hxy);
+        let over_y = d.pi_fv(y_fv, carrier, after_hax);
+        d.pi_fv(x_fv, carrier, over_y)
+    };
+    let hf_ty = strict_mono_ty(d, f, a, b);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+    let hg_ty = strict_mono_ty(d, g, c, e);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    // hrange_lo_ty : ∀ z, le a z → le z b → le c (F z).
+    let hrange_lo_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fz = d.apply(f, &[z]);
+        let concl = cle(d, p, c, fz);
+        let z_le_b = cle(d, p, z, b);
+        let after_upper = d.arrow(z_le_b, concl);
+        let a_le_z = cle(d, p, a, z);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hrange_lo_fv = d.fresh_fvar();
+    let hrange_lo = d.kernel().fvar(hrange_lo_fv);
+
+    // hrange_hi_ty : ∀ z, le a z → le z b → le (F z) e.
+    let hrange_hi_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fz = d.apply(f, &[z]);
+        let concl = cle(d, p, fz, e);
+        let z_le_b = cle(d, p, z, b);
+        let after_upper = d.arrow(z_le_b, concl);
+        let a_le_z = cle(d, p, a, z);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hrange_hi_fv = d.fresh_fvar();
+    let hrange_hi = d.kernel().fvar(hrange_hi_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hax_ty = cle(d, p, a, x);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxy_ty = clt(d, p, x, y);
+    let hxy_fv = d.fresh_fvar();
+    let hxy = d.kernel().fvar(hxy_fv);
+    let hyb_ty = cle(d, p, y, b);
+    let hyb_fv = d.fresh_fvar();
+    let hyb = d.kernel().fvar(hyb_fv);
+
+    let le_xy = d.lemma(p.le_of_lt, &[x, y, hxy]); // le x y
+    let le_xb = d.lemma(p.le_trans, &[x, y, b, le_xy, hyb]); // le x b
+    let le_ay = d.lemma(p.le_trans, &[a, x, y, hax, le_xy]); // le a y
+
+    // hf x y hax hxy hyb : lt (F x) (F y)
+    let fx_lt_fy = d.apply(hf, &[x, y, hax, hxy, hyb]);
+
+    let fx = d.apply(f, &[x]);
+    let fy = d.apply(f, &[y]);
+    let c_le_fx = d.apply(hrange_lo, &[x, hax, le_xb]); // le c (F x)
+    let fy_le_e = d.apply(hrange_hi, &[y, le_ay, hyb]); // le (F y) e
+
+    // hg (F x) (F y) c_le_fx fx_lt_fy fy_le_e : lt (G (F x)) (G (F y))
+    let value_body = d.apply(hg, &[fx, fy, c_le_fx, fx_lt_fy, fy_le_e]);
+
+    let value = {
+        let with_hyb = d.lam_fv(hyb_fv, hyb_ty, value_body);
+        let with_hxy = d.lam_fv(hxy_fv, hxy_ty, with_hyb);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxy);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        let with_hrange_hi = d.lam_fv(hrange_hi_fv, hrange_hi_ty, with_x);
+        let with_hrange_lo = d.lam_fv(hrange_lo_fv, hrange_lo_ty, with_hrange_hi);
+        let with_hg = d.lam_fv(hg_fv, hg_ty, with_hrange_lo);
+        let with_hf = d.lam_fv(hf_fv, hf_ty, with_hg);
+        let with_e = d.lam_fv(e_fv, carrier, with_hf);
+        let with_c = d.lam_fv(c_fv, carrier, with_e);
+        let with_b = d.lam_fv(b_fv, carrier, with_c);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_g = d.lam_fv(g_fv, func_ty, with_a);
+        d.lam_fv(f_fv, func_ty, with_g)
+    };
+    let gfx = d.apply(g, &[fx]);
+    let gfy = d.apply(g, &[fy]);
+    let ty = {
+        let concl = clt(d, p, gfx, gfy);
+        let after_hyb = d.arrow(hyb_ty, concl);
+        let after_hxy = d.arrow(hxy_ty, after_hyb);
+        let after_hax = d.arrow(hax_ty, after_hxy);
+        let over_y = d.pi_fv(y_fv, carrier, after_hax);
+        let over_x = d.pi_fv(x_fv, carrier, over_y);
+        let after_hrange_hi = d.arrow(hrange_hi_ty, over_x);
+        let after_hrange_lo = d.arrow(hrange_lo_ty, after_hrange_hi);
+        let after_hg = d.arrow(hg_ty, after_hrange_lo);
+        let after_hf = d.arrow(hf_ty, after_hg);
+        let over_e = d.pi_fv(e_fv, carrier, after_hf);
+        let over_c = d.pi_fv(c_fv, carrier, over_e);
+        let over_b = d.pi_fv(b_fv, carrier, over_c);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_g = d.pi_fv(g_fv, func_ty, over_a);
+        d.pi_fv(f_fv, func_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.strict_mono_comp,
         uparams: vec![],
         ty,
         value,

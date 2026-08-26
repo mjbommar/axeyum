@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 257] = [
+    let expected: [(&str, crate::NameId, &str); 258] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -648,6 +648,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.strict_antitone_of_neg_deriv,
             "theorem",
         ),
+        // Spivak ch. 12's composition corollary (creal/monotone.rs): a
+        // strictly increasing `F` composed with a strictly increasing `G` is
+        // strictly increasing, stated over the strict-monotonicity
+        // conclusions plus an explicit range hypothesis -- no
+        // `HasDerivativeOn`/chain rule needed.
+        ("CReal.strict_mono_comp", p.strict_mono_comp, "theorem"),
         // `ivt_step` iterated `n` times by structural induction
         // (creal/ivt.rs) -- the bracket-shrinking construction `ivt_approx`
         // needs; the closing Archimedean/continuity combination is not
@@ -5787,6 +5793,126 @@ fn strict_antitone_of_neg_deriv_applies_to_negated_identity_on_0_1() {
     assert!(
         rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
         "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.strict_mono_comp`:
+/// `F := G := fun r => r` (the identity), both strictly increasing on
+/// `[0, 1]` by the trivial witness `fun x y _ hxy _ => hxy` (since
+/// `identity x = x` beta-reduces, the conclusion `lt (F x) (F y)` literally
+/// IS the hypothesis `lt x y`), and the identity trivially maps `[0, 1]`
+/// into itself (`hrange_lo := fun z haz _ => haz`, `hrange_hi := fun z _ hzb
+/// => hzb`). Applied at `x := zero`, `y := one` with the STRICT input gap
+/// `CReal.zero_lt_one`; distinct `x`/`y` rules out the degenerate case. The
+/// expected conclusion, after both identities beta-reduce away, is exactly
+/// `lt zero one`.
+#[test]
+fn strict_mono_comp_applies_to_the_identity_composed_with_itself_on_0_1() {
+    use crate::expr::ExprId;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+
+    // A strict-monotonicity witness for the identity on [lo, hi]: the
+    // conclusion `lt (identity x) (identity y)` is beta-defeq to `lt x y`,
+    // so the body is just the middle hypothesis itself.
+    let id_strict_mono = |d: &mut IntDev<'_>, lo: ExprId, hi: ExprId| {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hax_ty = d.const_app(p.le, &[lo, x]);
+        let hax_fv = d.fresh_fvar();
+        let hxy_ty = d.const_app(p.lt, &[x, y]);
+        let hxy_fv = d.fresh_fvar();
+        let hxy = d.kernel().fvar(hxy_fv);
+        let hyb_ty = d.const_app(p.le, &[y, hi]);
+        let hyb_fv = d.fresh_fvar();
+        let with_hyb = d.lam_fv(hyb_fv, hyb_ty, hxy);
+        let with_hxy = d.lam_fv(hxy_fv, hxy_ty, with_hyb);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxy);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let hf = id_strict_mono(&mut d, zero_c, one_c);
+    let hg = id_strict_mono(&mut d, zero_c, one_c);
+
+    // The identity trivially maps [0, 1] into [0, 1].
+    let hrange_lo = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let haz_fv = d.fresh_fvar();
+        let haz = d.kernel().fvar(haz_fv);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, haz);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+    let hrange_hi = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let hzb_fv = d.fresh_fvar();
+        let hzb = d.kernel().fvar(hzb_fv);
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, hzb);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy = d.lemma(p.zero_lt_one, &[]);
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.strict_mono_comp,
+        &[
+            identity, identity, zero_c, one_c, zero_c, one_c, hf, hg, hrange_lo, hrange_hi, zero_c,
+            one_c, hax, hxy, hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("strict_mono_comp refused at identity-composed-with-itself on [0,1]: {error:?}")
+    });
+
+    // The conclusion is `lt (G (F zero)) (G (F one))`, un-reduced (`render_lean`
+    // does not beta-reduce): with `F := G := identity` that is
+    // `lt (identity (identity zero)) (identity (identity one))`, defeq to
+    // (but not syntactically) `lt zero one`.
+    let inner_zero = d.apply(identity, &[zero_c]);
+    let expected_gfzero = d.apply(identity, &[inner_zero]);
+    let inner_one = d.apply(identity, &[one_c]);
+    let expected_gfone = d.apply(identity, &[inner_one]);
+    let expected_ty = d.const_app(p.lt, &[expected_gfzero, expected_gfone]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `lt (identity (identity zero)) (identity (identity one))`"
+    );
+
+    // And separately confirm it really is defeq to the reduced statement
+    // `lt zero one`, so the theorem did not smuggle in some other pair.
+    let reduced_ty = d.const_app(p.lt, &[zero_c, one_c]);
+    assert!(
+        d.kernel().def_eq(ty, reduced_ty),
+        "the conclusion must be defeq to `lt zero one`, got {rendered}"
     );
 }
 

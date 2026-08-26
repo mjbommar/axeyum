@@ -2346,6 +2346,19 @@ pub struct CRealPrelude {
     /// generic `lt (neg u) (neg v) → lt v u` derived from the field axioms
     /// (this development has `neg_le_neg` for `le` but no strict analogue).
     pub strict_antitone_of_neg_deriv: NameId,
+    /// `CReal.strict_mono_comp : ∀ F G a b c d, (∀ x y, le a x → lt x y → le
+    /// y b → lt (F x) (F y)) → (∀ x y, le c x → lt x y → le y d → lt (G x)
+    /// (G y)) → (∀ z, le a z → le z b → le c (F z)) → (∀ z, le a z → le z b →
+    /// le (F z) d) → ∀ x y, le a x → lt x y → le y b → lt (G (F x)) (G (F y))`
+    /// (`creal/monotone.rs`) — Spivak ch. 12's composition corollary: a
+    /// strictly increasing `F` composed with a strictly increasing `G` is
+    /// strictly increasing. Stated over the strict-monotonicity
+    /// CONCLUSIONS directly (not `HasDerivativeOn`/`hasDerivative_neg`'s
+    /// chain rule, whose shared-interval self-map hypothesis would force `G`
+    /// onto `F`'s own domain rather than `F`'s range) plus an explicit range
+    /// hypothesis (`F` maps `[a, b]` into `[c, d]`); composing the two `lt`
+    /// facts is then direct function application.
+    pub strict_mono_comp: NameId,
 
     /// `CReal.ivt_iter : ∀ F P0 Q0 eps, lt zero eps → le P0 Q0 → le (F P0)
     /// eps → le (neg eps) (F Q0) → ∀ n : Nat, ∃ P Q, le P0 P ∧ le P Q ∧ le Q
@@ -2704,6 +2717,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
         strict_antitone_of_neg_deriv: kernel.name_str(creal, "strict_antitone_of_neg_deriv"),
+        strict_mono_comp: kernel.name_str(creal, "strict_mono_comp"),
         ivt_iter: kernel.name_str(creal, "ivt_iter"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
     }
