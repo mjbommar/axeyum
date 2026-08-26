@@ -7263,6 +7263,31 @@ fn fib_le_succ_pos_of_pos_and_sum_fib_apply_and_are_axiom_free() {
     );
 }
 
+/// The stronger Fibonacci monotonicity theorem is real lemma composition:
+/// its checked closure cites the adjacent-step theorem rather than rebuilding
+/// the recurrence proof.
+#[test]
+fn fib_mono_composes_fib_le_succ_and_records_the_dependency() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let two = f.num(2);
+    let five = f.num(5);
+    let h = f.lemma(p.le_refl, &[two]);
+    let h = f.lemma(p.le_step, &[two, two, h]);
+    let three = f.succ(two);
+    let h = f.lemma(p.le_step, &[two, three, h]);
+    let four = f.succ(three);
+    let h = f.lemma(p.le_step, &[two, four, h]);
+    let proof = f.lemma(p.fib_mono, &[two, five, h]);
+    f.k.infer(proof)
+        .unwrap_or_else(|e| panic!("fib_mono(2,5) should infer: {}", f.explain(&e)));
+
+    assert!(f.k.axiom_footprint(p.fib_mono).is_empty());
+    let dependencies = f.k.theorem_dependencies(p.fib_mono);
+    assert!(dependencies.contains(&p.fib_le_succ));
+    assert!(dependencies.contains(&p.le_trans));
+}
+
 /// `Nat.catalan` computes: the kernel's own `def_eq` reduces `catalan 0..5`
 /// to the literal Catalan numbers `1, 1, 2, 5, 14, 42` — see `catalan.rs`'s
 /// module doc for the hand check. The negative control matters as much as

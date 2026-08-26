@@ -22,13 +22,13 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- The generated kernel projection currently contains 1,540 declarations: 1,195
+- The generated kernel projection currently contains 1,544 declarations: 1,199
   theorems, 242 definitions, 29 constructors, 22 inductives, 22 recursors, and
-  30 axioms. It reports 1,510 axiom-free declarations and 6,672 direct
+  30 axioms. It reports 1,514 axiom-free declarations and 6,772 direct
   theorem-dependency edges. This is a substantial checked library, but it is
   not an autonomous-production count.
-- The fact ledger contains 696 propositions: 501 proved, 4 refuted, 2 computed,
-  186 open, and 3 conjectured. Its 26 authoritative/counterfactual operation
+- The fact ledger contains 696 propositions: 502 proved, 4 refuted, 2 computed,
+  185 open, and 3 conjectured. Its 26 authoritative/counterfactual operation
   rows contain only 2 reusable multi-target producers and name only 33 fact
   IDs. Most checked theorems therefore remain human-constructed, and most
   ledger facts have no reusable producer assigned.
@@ -69,11 +69,16 @@ consume a selected library lemma rather than merely being scheduled by it.
 The first deterministic bridge for that next increment is now implemented.
 The agent's `lemma_candidates` read tool joins an open goal's authored
 `depends_on` edges to exact fact-to-kernel links in the generated lemma index.
-For `Nat.fib` monotonicity it returns the proved dependency
-`Nat.fib_le_succ` as an axiom-free kernel candidate. Unlinked dependencies are
-reported rather than repaired by name similarity. This makes a real
-lemma-consuming attempt possible, but remains retrieval only: applicability,
-term construction, and kernel acceptance are still unproved work.
+For `Nat.fib` monotonicity it returned the proved dependency
+`Nat.fib_le_succ` as an axiom-free kernel candidate. A reference composition
+now closes that stronger theorem by eliminating its order derivation and
+chaining the adjacent-step lemma; the kernel records direct dependencies on
+`Nat.fib_le_succ` and `Nat.le_trans`, and the ledger is settled from that
+axiom-free term. Unlinked dependencies remain explicit rather than repaired by
+name similarity. This proves mathematical compounding through the connected
+graph, but not autonomous construction: the reference constructor was written
+by hand and production provenance correctly counts the result among the 472
+settled facts with no authoritative operation.
 
 ## Comparative position
 
@@ -117,9 +122,9 @@ bounded lemma selection, transport, and composition.
 1. Convert producer declines into a ranked, typed strategy backlog.
 2. Build a kernel-derived lemma-search index with exact dependency and
    visibility information; do not ask an LLM to invent the available library.
-3. Implement the first measured composition attempt on the live `Nat.fib`
-   monotonicity target using the exact `Nat.fib_le_succ` candidate, then either
-   admit it or record the typed obstruction.
+3. Generalize the checked `Nat.fib_mono` reference construction into an
+   operation that recognizes the adjacent-step monotonicity schema without
+   naming Fibonacci or the target theorem.
 4. Generalize that implementation into bounded best-first lemma composition.
 5. Let an LLM propose lemma applications only across the untrusted boundary;
    the same kernel and footprint checks retain authority.

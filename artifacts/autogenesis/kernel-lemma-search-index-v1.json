@@ -1,18 +1,18 @@
 {
   "census": {
-    "distinct_exactly_linked_facts": 312,
-    "kernel_dependency_edges": 6672,
-    "kernel_theorems": 1195,
+    "distinct_exactly_linked_facts": 313,
+    "kernel_dependency_edges": 6807,
+    "kernel_theorems": 1202,
     "maximum_dependency_depth": 26,
-    "theorems_with_exact_fact_links": 308,
-    "theorems_without_exact_fact_links": 887,
+    "theorems_with_exact_fact_links": 309,
+    "theorems_without_exact_fact_links": 893,
     "unresolved_prefixed_kernel_evidence": 90
   },
   "derivation": {
     "fact_identity_rule": "kernel-term evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
     "fact_population": "sorted artifacts/facts/F-*.json",
     "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
-    "kernel_projection_sha256": "ccd1660e40457addf98bf8f3cb900d5710444f51f1808a45cf881da46e525e3e",
+    "kernel_projection_sha256": "8cd20340f5947abd70b72ffffb8981b1ed3fece8f50b1a484d3044d03a9b8a2b",
     "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-lemma-search-index",
@@ -2767,6 +2767,7 @@
         "CReal.hasDerivative_pow_two",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.inv_congr",
         "CReal.inv_index_irrelevant",
         "CReal.ivt_iter",
@@ -2781,10 +2782,12 @@
         "CReal.mul_sub_one_geom_tail",
         "CReal.mul_sumRange",
         "CReal.not_equiv_abs_neg_one",
+        "CReal.ofRat_pow",
         "CReal.one_le_pow_of_one_le",
         "CReal.pos_of_pos_bound",
         "CReal.pow_add",
         "CReal.pow_congr",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.pow_le_one",
         "CReal.pow_le_pow_of_le_one",
         "CReal.pow_le_pow_of_one_le",
@@ -2795,6 +2798,7 @@
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
         "CReal.sumRange_comparisonTest",
@@ -2969,6 +2973,7 @@
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.inv_congr",
         "CReal.ivt_iter",
         "CReal.ivt_step",
@@ -2991,11 +2996,13 @@
         "CReal.pos_bound_of_lt",
         "CReal.pos_of_pos_bound",
         "CReal.pow_add",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.pow_le_one",
         "CReal.pow_succ_gt_one",
         "CReal.pow_succ_lt_one",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
         "CReal.sumRange_comparisonTest",
@@ -3177,6 +3184,7 @@
         "CReal.hasDerivative_pow_two",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.inv_congr",
         "CReal.ivt_iter",
         "CReal.ivt_step",
@@ -3193,6 +3201,7 @@
         "CReal.not_equiv_mul_one_one_zero",
         "CReal.not_le_zero_neg_one",
         "CReal.ofRat_pos",
+        "CReal.ofRat_pow",
         "CReal.pos_bound_of_lt",
         "CReal.pos_of_pos_bound",
         "CReal.pow_add",
@@ -3201,6 +3210,7 @@
         "CReal.riemannSum_add",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
         "CReal.sumRange_comparisonTest",
@@ -3282,7 +3292,9 @@
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
-        "CReal.monotone_of_nonneg_deriv"
+        "CReal.hasDerivative_unique",
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv"
       ],
       "exact_fact_ids": [
         "F:creal-hasderivativeon-spec"
@@ -3331,7 +3343,9 @@
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
+        "CReal.hasDerivative_unique",
         "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_tail_le",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_mul",
@@ -3367,7 +3381,9 @@
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_comparisonTest",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_const",
@@ -3587,12 +3603,14 @@
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
         "CReal.sumRange_double",
@@ -3725,6 +3743,7 @@
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
@@ -3737,6 +3756,7 @@
         "CReal.pos_of_pos_bound",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
         "CReal.sumRange_comparisonTest",
@@ -3898,6 +3918,7 @@
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_step",
         "CReal.lt_congr",
         "CReal.monotone_of_nonneg_deriv",
@@ -3908,6 +3929,7 @@
         "CReal.riemannSum_add",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
         "CReal.sumRange_congr",
@@ -4002,6 +4024,7 @@
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_step",
         "CReal.lt_of_le_of_lt",
         "CReal.monotone_of_nonneg_deriv",
@@ -4010,6 +4033,7 @@
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_le",
         "CReal.uniformly_continuous_add",
@@ -4134,6 +4158,7 @@
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
@@ -4143,6 +4168,7 @@
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_comparisonTest",
         "CReal.sumRange_tail_le",
@@ -4344,6 +4370,7 @@
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
@@ -4356,6 +4383,7 @@
         "CReal.pos_of_pos_bound",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
         "CReal.sumRange_comparisonTest",
@@ -4537,7 +4565,8 @@
         "Rat.zero_le_natDivSucc"
       ],
       "direct_theorem_dependents": [
-        "CReal.monotone_of_nonneg_deriv"
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv"
       ],
       "exact_fact_ids": [
         "F:creal-archimedean"
@@ -5151,7 +5180,9 @@
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
         "CReal.equiv_zero_of_small",
         "CReal.hasDerivative_closeOfEquiv",
+        "CReal.hasDerivative_unique",
         "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv",
         "Complex.eq_zero_of_normSq_eq_zero"
       ],
       "exact_fact_ids": [],
@@ -5183,7 +5214,9 @@
         "CReal.le_trans",
         "CReal.neg_le_abs"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.hasDerivative_unique"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.equiv_zero_of_small",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -5513,7 +5546,8 @@
         "Rat.zero_le_natDivSucc"
       ],
       "direct_theorem_dependents": [
-        "CReal.monotone_of_nonneg_deriv"
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.hasDerivative_closeOfEquiv",
@@ -5890,6 +5924,66 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 20,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.HasDerivativeOn.spec",
+        "CReal.abs_congr",
+        "CReal.abs_le",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.equiv_of_le_le",
+        "CReal.equiv_zero_of_small",
+        "CReal.le_abs_self",
+        "CReal.le_add_of_nonneg",
+        "CReal.le_congr",
+        "CReal.le_of_equiv",
+        "CReal.le_of_mul_le_mul_left",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.left_distrib",
+        "CReal.lt_cotrans",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_zero",
+        "CReal.neg_congr",
+        "CReal.neg_le_abs",
+        "CReal.neg_le_neg",
+        "CReal.ofRat_add",
+        "CReal.ofRat_le",
+        "CReal.ofRat_neg",
+        "CReal.ofRat_pos",
+        "CReal.pos_bound_of_lt",
+        "Nat.add_comm",
+        "Nat.le_add_right",
+        "Rat.le_of_lt",
+        "Rat.le_or_lt",
+        "Rat.le_refl",
+        "Rat.le_trans",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_antitone",
+        "Rat.natDivSucc_halve",
+        "Rat.natDivSucc_pos",
+        "Rat.neg_nonpos_of_nonneg"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.hasDerivative_unique",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 19,
       "direct_theorem_dependencies": [
         "CReal.Equiv.refl",
@@ -6054,7 +6148,9 @@
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_tail_within",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_mul",
@@ -6091,6 +6187,7 @@
       "direct_theorem_dependents": [
         "CPoint.Scalar.threePosBound",
         "CPoint.Scalar.twoPosBound",
+        "CReal.hasDerivative_unique",
         "CReal.le_of_lt"
       ],
       "exact_fact_ids": [
@@ -6133,6 +6230,7 @@
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_step",
         "CReal.le_of_mul_le_mul_left",
         "CReal.monotone_of_nonneg_deriv",
@@ -6142,6 +6240,7 @@
         "CReal.not_le_zero_neg_one",
         "CReal.one_le_pow_of_one_le",
         "CReal.pos_of_pos_bound",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.pow_le_one",
         "CReal.pow_le_pow_of_base_le",
         "CReal.pow_le_pow_of_le_one",
@@ -6151,6 +6250,7 @@
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_comparisonTest",
         "CReal.sumRange_telescope_ge",
@@ -6262,6 +6362,7 @@
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_mul",
+        "CReal.hasDerivative_unique",
         "CReal.le_congr",
         "CReal.lt_congr",
         "CReal.not_apart_one_of_pow_succ_eq_one",
@@ -6333,6 +6434,7 @@
         "CReal.pow_nonneg",
         "CReal.pow_succ_gt_one",
         "CReal.pow_succ_lt_one",
+        "CReal.strict_mono_of_pos_deriv",
         "Complex.eq_conj_iff_real"
       ],
       "exact_fact_ids": [],
@@ -6360,7 +6462,9 @@
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_one"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.hasDerivative_unique"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.le_of_mul_le_mul_left",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -6391,6 +6495,7 @@
         "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_iter",
         "CReal.ivt_step",
         "CReal.lt_of_le_of_lt",
@@ -6403,6 +6508,7 @@
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_le",
         "CReal.uniformly_continuous_mul",
@@ -6454,6 +6560,7 @@
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_iter",
         "CReal.le_congr",
         "CReal.le_of_lt",
@@ -6469,6 +6576,7 @@
         "CReal.pow_le_pow_of_base_le",
         "CReal.pow_le_pow_of_one_le",
         "CReal.pow_succ_gt_one",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_comparisonTest",
         "CReal.sumRange_tail_le",
         "CReal.sumRange_tail_within",
@@ -6563,6 +6671,7 @@
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
@@ -6571,6 +6680,7 @@
         "CReal.mul_sumRange",
         "CReal.riemannSum_add",
         "CReal.riemannSum_const",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_const",
         "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
@@ -6712,6 +6822,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.apart_cotrans",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_step"
       ],
       "exact_fact_ids": [],
@@ -6749,6 +6860,7 @@
         "CReal.apart_irrefl",
         "CReal.not_apart_one_of_pow_succ_eq_one",
         "CReal.not_equiv_of_apart",
+        "CReal.order_reflect_of_pos_deriv",
         "Complex.apart_irrefl",
         "Complex.mul_eq_zero_not_both_apart_zero"
       ],
@@ -6811,7 +6923,8 @@
         "CReal.le_trans"
       ],
       "direct_theorem_dependents": [
-        "CReal.ivt_step"
+        "CReal.ivt_step",
+        "CReal.order_reflect_of_pos_deriv"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.lt_trans",
@@ -6885,7 +6998,8 @@
       ],
       "direct_theorem_dependents": [
         "CReal.ivt_step",
-        "CReal.monotone_of_nonneg_deriv"
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.mesh_count_width",
@@ -7089,6 +7203,7 @@
         "CReal.pow_add",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "Complex.add_pow",
         "Complex.apart_symm",
@@ -7178,6 +7293,7 @@
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_pow_two",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.inv_congr",
         "CReal.ivt_step",
         "CReal.le_of_mul_le_mul_left",
@@ -7196,6 +7312,7 @@
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_const",
         "CReal.uniformly_continuous_mul",
@@ -7316,6 +7433,7 @@
         "CReal.hasDerivative_pow_two",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.inv_congr",
         "CReal.ivt_iter",
         "CReal.ivt_step",
@@ -7325,10 +7443,12 @@
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
+        "CReal.ofRat_pow",
         "CReal.pow_add",
         "CReal.pow_congr",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_const",
         "CReal.uniformly_continuous_mul",
@@ -7490,6 +7610,7 @@
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.uniformly_continuous_mul"
       ],
@@ -7538,6 +7659,7 @@
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds"
       ],
       "exact_fact_ids": [
@@ -7618,6 +7740,7 @@
         "CReal.pow_succ_lt_one",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_const",
         "Complex.I_is_fourth_root",
@@ -7831,11 +7954,13 @@
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
         "CReal.mul_sumRange",
         "CReal.no_total_inverse",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
@@ -7997,9 +8122,11 @@
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.uniformly_continuous_const",
         "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
@@ -8068,7 +8195,9 @@
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_tail_within",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_mul",
@@ -8100,7 +8229,9 @@
         "CReal.geom_tail_within",
         "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_comparisonTest"
       ],
       "exact_fact_ids": [],
@@ -8310,6 +8441,7 @@
       "direct_theorem_dependents": [
         "CReal.monotone_of_nonneg_deriv",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds"
       ],
       "exact_fact_ids": [],
@@ -8352,10 +8484,12 @@
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_pow",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.ofNat_add",
         "CReal.riemannSum_const",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_const",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_mul",
@@ -8392,14 +8526,17 @@
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_sq",
+        "CReal.hasDerivative_unique",
         "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_pos",
         "CReal.ofNat_le",
         "CReal.pos_bound_of_lt",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_const",
@@ -8432,8 +8569,10 @@
         "CReal.mul_pos",
         "CReal.not_equiv_mul_one_one_zero",
         "CReal.ofNat_mul",
+        "CReal.ofRat_pow",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.uniformly_continuous_mul"
       ],
@@ -8456,6 +8595,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.bounded_on_id_unit",
+        "CReal.hasDerivative_unique",
         "CReal.uniformly_continuous_const"
       ],
       "exact_fact_ids": [],
@@ -8477,10 +8617,32 @@
         "CReal.le_of_equiv"
       ],
       "direct_theorem_dependents": [
+        "CReal.hasDerivative_unique",
         "CReal.mul_pos"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.ofRat_pos",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 18,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.trans",
+        "CReal.mul_congr",
+        "CReal.ofRat_mul"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.pow_half_le_natDivSucc"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.ofRat_pow",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -8531,6 +8693,24 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 21,
+      "direct_theorem_dependencies": [
+        "CReal.lt_irrefl",
+        "CReal.lt_trans",
+        "CReal.strict_mono_of_pos_deriv"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.order_reflect_of_pos_deriv",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 18,
       "direct_theorem_dependencies": [
         "CReal.Equiv.symm",
@@ -8544,6 +8724,7 @@
         "Rat.natDivSucc_lt_of_pos"
       ],
       "direct_theorem_dependents": [
+        "CReal.hasDerivative_unique",
         "Complex.eq_conj_iff_real",
         "Complex.geom_sum_eq_zero_of_root_of_unity"
       ],
@@ -8609,6 +8790,49 @@
       "direct_theorem_dependents": [],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.pow_congr",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 19,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.le_congr",
+        "CReal.ofRat_le",
+        "CReal.ofRat_pow",
+        "CReal.ratUnitEqOne",
+        "Nat.mul_one",
+        "Nat.zero_add",
+        "Rat.add_le_add",
+        "Rat.add_zero",
+        "Rat.bernoulli_harmonic_bound",
+        "Rat.le_antisymm",
+        "Rat.le_of_lt",
+        "Rat.le_refl",
+        "Rat.le_total",
+        "Rat.le_trans",
+        "Rat.left_distrib",
+        "Rat.lt_irrefl",
+        "Rat.lt_of_lt_of_le",
+        "Rat.mul_le_mul_of_nonneg_left",
+        "Rat.mul_left_cancel_of_ne_zero",
+        "Rat.mul_one",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_halve",
+        "Rat.natDivSucc_mul",
+        "Rat.natDivSucc_scale",
+        "Rat.zero_le_natDivSucc",
+        "Rat.zero_lt_one"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.pow_half_le_natDivSucc",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -8917,8 +9141,10 @@
         "CReal.ivt_step",
         "CReal.mesh_count_width",
         "CReal.monotone_of_nonneg_deriv",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_const"
       ],
@@ -9273,6 +9499,92 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 21,
+      "direct_theorem_dependencies": [
+        "CReal.strict_mono_of_pos_deriv"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.strict_injective_of_pos_deriv",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 20,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.HasDerivativeOn.spec",
+        "CReal.abs_congr",
+        "CReal.abs_le",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.archimedean",
+        "CReal.equiv_of_le_le",
+        "CReal.hasDerivative_closeOfEquiv",
+        "CReal.le_abs_self",
+        "CReal.le_congr",
+        "CReal.le_of_lt",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.left_distrib",
+        "CReal.mesh_count_width",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_nonneg",
+        "CReal.mul_one",
+        "CReal.mul_zero",
+        "CReal.neg_congr",
+        "CReal.neg_le_abs",
+        "CReal.neg_le_neg",
+        "CReal.ofNat_le",
+        "CReal.ofRat_add",
+        "CReal.ofRat_le",
+        "CReal.ofRat_mul",
+        "CReal.ratUnitEqOne",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.sumRange_const",
+        "CReal.sumRange_telescope_ge",
+        "Nat.le_succ",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.zero_le",
+        "Rat.mul_pos",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_halve",
+        "Rat.natDivSucc_mul",
+        "Rat.natDivSucc_pos",
+        "Rat.natDivSucc_scale",
+        "Rat.self_normalize",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.order_reflect_of_pos_deriv",
+        "CReal.strict_injective_of_pos_deriv"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.strict_mono_of_pos_deriv",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 19,
       "direct_theorem_dependencies": [
         "CReal.Equiv.refl",
@@ -9303,7 +9615,8 @@
         "Rat.zero_le_natDivSucc"
       ],
       "direct_theorem_dependents": [
-        "CReal.monotone_of_nonneg_deriv"
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.subdivisionPoint_in_bounds",
@@ -9480,7 +9793,8 @@
         "Rat.natDivSucc_add"
       ],
       "direct_theorem_dependents": [
-        "CReal.monotone_of_nonneg_deriv"
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.sumRange_const",
@@ -9796,7 +10110,8 @@
         "CReal.sumRange_telescope"
       ],
       "direct_theorem_dependents": [
-        "CReal.monotone_of_nonneg_deriv"
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.strict_mono_of_pos_deriv"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.sumRange_telescope_ge",
@@ -16525,6 +16840,7 @@
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
+        "CReal.hasDerivative_unique",
         "CReal.mul_comm",
         "CReal.mul_nonneg",
         "CReal.uniformly_continuous_add",
@@ -19231,12 +19547,35 @@
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
+        "Nat.fib_mono",
         "Nat.fib_pos_of_pos"
       ],
       "exact_fact_ids": [
         "F:ml430-nat-fib-le-fib-succ-d1ef4a3d"
       ],
       "kernel_declaration_id": "Nat.fib_le_succ",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 4,
+      "direct_theorem_dependencies": [
+        "Nat.fib_le_succ",
+        "Nat.le_trans"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [
+        "F:ml430-nat-fib-mono-cc6afe09"
+      ],
+      "kernel_declaration_id": "Nat.fib_mono",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -20064,6 +20403,7 @@
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
+        "CReal.hasDerivative_unique",
         "CReal.natSqrtSpec",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_mul",
@@ -20491,6 +20831,7 @@
       "direct_theorem_dependents": [
         "CReal.monotone_of_nonneg_deriv",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_le",
         "Complex.sumRange_congr_lt",
         "Complex.sumRange_diagonal",
@@ -20745,6 +21086,7 @@
         "CReal.monotone_of_nonneg_deriv",
         "CReal.natSqrtSpec",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "Complex.sumRange_diagonal",
         "Complex.sumRange_rect_eq_diag_add_corner",
         "Int.dvd_factorial_of_le",
@@ -20776,6 +21118,7 @@
         "Nat.exists_prime_dvd",
         "Nat.exists_prime_factorization",
         "Nat.exists_prime_gt",
+        "Nat.fib_mono",
         "Nat.injective_on_imp_surjective_on",
         "Nat.inverseIndex_fixed_point",
         "Nat.inverseIndex_fixes_last",
@@ -21994,8 +22337,10 @@
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_inv_cancel",
         "CReal.mul_nonneg",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.uniformly_continuous_mul",
         "Int.mul_one",
@@ -25115,6 +25460,7 @@
         "CReal.converges_bounded",
         "CReal.eq_zero_of_mul_self_zero",
         "CReal.mesh_count_width",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.ratIndexRatioLeOne",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
@@ -25213,6 +25559,7 @@
         "CReal.eq_zero_of_mul_self_zero",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.natSqrtSpec",
+        "CReal.strict_mono_of_pos_deriv",
         "Int.emod_lt_of_pos",
         "Int.emod_nonneg",
         "Int.euclid_neg_succ",
@@ -25851,6 +26198,7 @@
         "CReal.mul_inv_cancel",
         "CReal.mul_one",
         "CReal.ofRat_le",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
         "CReal.regular_of_scaled_cauchy",
@@ -26028,6 +26376,7 @@
         "CReal.min_le_left",
         "CReal.min_le_right",
         "CReal.mul_inv_cancel",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.ratSqLe",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
@@ -26113,7 +26462,9 @@
         "Rat.mul_one",
         "Rat.right_distrib"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.pow_half_le_natDivSucc"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Rat.bernoulli_harmonic_bound",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -28215,6 +28566,7 @@
         "Rat.eq_of_cross"
       ],
       "direct_theorem_dependents": [
+        "CReal.pow_half_le_natDivSucc",
         "Rat.abs_mul",
         "Rat.abs_neg",
         "Rat.abs_zero",
@@ -28389,12 +28741,14 @@
       "direct_theorem_dependents": [
         "CPoint.Scalar.threePosBound",
         "CPoint.Scalar.twoPosBound",
+        "CReal.hasDerivative_unique",
         "CReal.inv_nonneg",
         "CReal.le_of_lt",
         "CReal.lt_cotrans",
         "CReal.mul_inv_cancel",
         "CReal.mul_pos",
         "CReal.pos_bound_of_lt",
+        "CReal.pow_half_le_natDivSucc",
         "Rat.abs_mul",
         "Rat.bernoulli",
         "Rat.bernoulli_law_of_large_numbers",
@@ -28461,6 +28815,7 @@
         "Rat.int_le_or_lt"
       ],
       "direct_theorem_dependents": [
+        "CReal.hasDerivative_unique",
         "CReal.lt_cotrans",
         "CReal.ratSqLe",
         "Rat.abs_mul",
@@ -28498,6 +28853,7 @@
         "CReal.converges_add",
         "CReal.converges_mul",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.hasDerivative_unique",
         "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
         "CReal.le_of_forall_le_add_small",
@@ -28508,6 +28864,7 @@
         "CReal.mul_inv_cancel",
         "CReal.mul_one",
         "CReal.ofRat_le",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.ratSqLe",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
@@ -28558,6 +28915,7 @@
         "Int.le_total"
       ],
       "direct_theorem_dependents": [
+        "CReal.pow_half_le_natDivSucc",
         "Rat.zero_le_max_neg"
       ],
       "exact_fact_ids": [
@@ -28595,6 +28953,7 @@
         "CReal.converges_of_cauchy",
         "CReal.converges_squeeze",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.hasDerivative_unique",
         "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
         "CReal.le_max_left",
@@ -28613,6 +28972,7 @@
         "CReal.mul_nonneg",
         "CReal.mul_one",
         "CReal.ofRat_le",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
         "CReal.regular_of_scaled_cauchy",
@@ -28664,6 +29024,7 @@
       "direct_theorem_dependents": [
         "CReal.left_distrib",
         "CReal.mul_inv_cancel",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.ratSqLe",
         "Rat.bernoulli",
         "Rat.bernoulli_harmonic_bound",
@@ -28710,6 +29071,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.lt_irrefl",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.ratSqLe",
         "Rat.covariance_sq_le_variance_mul",
         "Rat.covariance_sq_le_variance_mul_of_pos",
@@ -28778,6 +29140,7 @@
         "CReal.inv_nonneg",
         "CReal.lt_irrefl",
         "CReal.mul_inv_cancel",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.ratSqLe",
         "Rat.inv_le_of_pos_le",
         "Rat.inv_pos",
@@ -29461,6 +29824,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.pow_half_le_natDivSucc",
         "Rat.abs_mul",
         "Rat.bernoulli_harmonic_bound",
         "Rat.bernoulli_law_of_large_numbers",
@@ -29523,6 +29887,7 @@
         "Rat.mul_one"
       ],
       "direct_theorem_dependents": [
+        "CReal.pow_half_le_natDivSucc",
         "Rat.det2_eq_zero_of_lin_dep"
       ],
       "exact_fact_ids": [],
@@ -29624,6 +29989,7 @@
         "CReal.eq_zero_of_mul_self_zero",
         "CReal.mul_one",
         "CReal.not_equiv_mul_one_one_zero",
+        "CReal.pow_half_le_natDivSucc",
         "Rat.bernoulli",
         "Rat.bernoulli_harmonic_bound",
         "Rat.bernoulli_law_of_large_numbers",
@@ -29681,6 +30047,7 @@
       "direct_theorem_dependents": [
         "CReal.mul_pos",
         "CReal.ratSqLe",
+        "CReal.strict_mono_of_pos_deriv",
         "Rat.chebyshev_inequality"
       ],
       "exact_fact_ids": [
@@ -29832,6 +30199,7 @@
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_pow",
+        "CReal.hasDerivative_unique",
         "CReal.inv_nonneg",
         "CReal.ivt_step",
         "CReal.le_add_of_nonneg",
@@ -29848,9 +30216,11 @@
         "CReal.mul_inv_cancel",
         "CReal.mul_one",
         "CReal.ofNat_add",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
         "CReal.riemannSum_const",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_cauchy_dominated_ordered_normalized",
         "CReal.sumRange_const",
         "CReal.uniformly_continuous_add",
@@ -29894,6 +30264,7 @@
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
+        "CReal.hasDerivative_unique",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_mul"
       ],
@@ -29928,6 +30299,7 @@
         "CReal.converges_add",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_unique",
         "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
         "CReal.le_of_forall_le_add_small",
@@ -29936,6 +30308,8 @@
         "CReal.lt_cotrans",
         "CReal.lt_irrefl",
         "CReal.mul_inv_cancel",
+        "CReal.pow_half_le_natDivSucc",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_cauchy_dominated_ordered_normalized",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_mul"
@@ -30107,8 +30481,10 @@
         "CReal.mul_inv_cancel",
         "CReal.mul_nonneg",
         "CReal.ofNat_mul",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.uniformly_continuous_mul",
         "Rat.inv_natDivSucc",
@@ -30142,10 +30518,12 @@
       ],
       "direct_theorem_dependents": [
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.hasDerivative_unique",
         "CReal.inv_nonneg",
         "CReal.lt_cotrans",
         "CReal.mul_inv_cancel",
         "CReal.pos_of_pos_bound",
+        "CReal.strict_mono_of_pos_deriv",
         "Rat.inv_natDivSucc",
         "Rat.uniform_is_distribution"
       ],
@@ -30179,11 +30557,13 @@
         "CReal.mesh_count_width",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_nonneg",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.ratIndexRatioLeOne",
         "CReal.regular_of_kregular",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
         "CReal.speedup_close",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.uniformly_continuous_mul",
         "Rat.inv_natDivSucc",
@@ -30687,6 +31067,7 @@
         "CReal.Equiv.of_pointwise",
         "CReal.Equiv.refl",
         "CReal.converges_of_const",
+        "CReal.hasDerivative_unique",
         "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
         "CReal.mul_inv_cancel",
@@ -31319,6 +31700,7 @@
       "direct_theorem_dependents": [
         "CReal.monotone_of_nonneg_deriv",
         "CReal.ratUnitEqOne",
+        "CReal.strict_mono_of_pos_deriv",
         "Rat.add_assoc",
         "Rat.bernoulli_law_of_large_numbers",
         "Rat.covariance_sumVars_left",
@@ -32352,12 +32734,14 @@
         "CReal.mul_inv_cancel",
         "CReal.mul_nonneg",
         "CReal.ofRat_le",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
         "CReal.sq_nonneg",
+        "CReal.strict_mono_of_pos_deriv",
         "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_cauchy_dominated_ordered_normalized",
         "CReal.uniformly_continuous_const",
@@ -32387,6 +32771,7 @@
       "direct_theorem_dependents": [
         "CPoint.Scalar.threePosBound",
         "CPoint.Scalar.twoPosBound",
+        "CReal.pow_half_le_natDivSucc",
         "CReal.zero_lt_one",
         "Rat.bernoulli",
         "Rat.bernoulli_law_of_large_numbers",

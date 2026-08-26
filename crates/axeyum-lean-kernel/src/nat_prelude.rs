@@ -1260,6 +1260,9 @@ pub struct NatPrelude {
     /// `zero_le`, and the step needs no induction hypothesis at all —
     /// `fib_add_two` plus `le_add_right` gives it unconditionally.
     pub fib_le_succ: NameId,
+    /// `Nat.fib_mono : ∀ a b, Le a b → Le (fib a) (fib b)` — composed from
+    /// `fib_le_succ` by induction on the `Le a b` derivation.
+    pub fib_mono: NameId,
     /// `Nat.fib_pos_of_pos : ∀ n, Lt zero n → Lt zero (fib n)` — every `fib`
     /// value past the zeroth is positive. From the unconditional `∀ i, Lt
     /// zero (fib (succ i))` (induction on `i`, base `le_refl`, step
@@ -2126,6 +2129,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             fib: kernel.name_str(nat, "fib"),
             fib_add_two: kernel.name_str(nat, "fib_add_two"),
             fib_le_succ: kernel.name_str(nat, "fib_le_succ"),
+            fib_mono: kernel.name_str(nat, "fib_mono"),
             fib_pos_of_pos: kernel.name_str(nat, "fib_pos_of_pos"),
             sum_fib: kernel.name_str(nat, "sum_fib"),
             fib_add: kernel.name_str(nat, "fib_add"),

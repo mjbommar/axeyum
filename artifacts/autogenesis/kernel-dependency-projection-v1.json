@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1510,
+    "axiom_free_declarations": 1517,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
       "definition": 242,
       "inductive": 22,
       "recursor": 22,
-      "theorem": 1195
+      "theorem": 1202
     },
-    "declarations": 1540,
-    "direct_theorem_dependency_edges": 6672,
-    "theorems": 1195
+    "declarations": 1547,
+    "direct_theorem_dependency_edges": 6807,
+    "theorems": 1202
   },
   "declarations": [
     {
@@ -4587,6 +4587,63 @@
     },
     {
       "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.HasDerivativeOn.spec",
+        "CReal.abs_congr",
+        "CReal.abs_le",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.equiv_of_le_le",
+        "CReal.equiv_zero_of_small",
+        "CReal.le_abs_self",
+        "CReal.le_add_of_nonneg",
+        "CReal.le_congr",
+        "CReal.le_of_equiv",
+        "CReal.le_of_mul_le_mul_left",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.left_distrib",
+        "CReal.lt_cotrans",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_zero",
+        "CReal.neg_congr",
+        "CReal.neg_le_abs",
+        "CReal.neg_le_neg",
+        "CReal.ofRat_add",
+        "CReal.ofRat_le",
+        "CReal.ofRat_neg",
+        "CReal.ofRat_pos",
+        "CReal.pos_bound_of_lt",
+        "Nat.add_comm",
+        "Nat.le_add_right",
+        "Rat.le_of_lt",
+        "Rat.le_or_lt",
+        "Rat.le_refl",
+        "Rat.le_trans",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_antitone",
+        "Rat.natDivSucc_halve",
+        "Rat.natDivSucc_pos",
+        "Rat.neg_nonpos_of_nonneg"
+      ],
+      "id": "CReal.hasDerivative_unique",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "declaration_kind": "definition",
       "direct_theorem_dependencies": [],
       "id": "CReal.inv",
@@ -6102,6 +6159,22 @@
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.trans",
+        "CReal.mul_congr",
+        "CReal.ofRat_mul"
+      ],
+      "id": "CReal.ofRat_pow",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
         "CReal.Equiv.of_pointwise"
       ],
       "id": "CReal.ofRat_sub",
@@ -6138,6 +6211,21 @@
         "CReal.zero_lt_one"
       ],
       "id": "CReal.one_le_pow_of_one_le",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.lt_irrefl",
+        "CReal.lt_trans",
+        "CReal.strict_mono_of_pos_deriv"
+      ],
+      "id": "CReal.order_reflect_of_pos_deriv",
       "visible_in": [
         "complex",
         "cpoint",
@@ -6221,6 +6309,46 @@
         "CReal.mul_congr"
       ],
       "id": "CReal.pow_congr",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.le_congr",
+        "CReal.ofRat_le",
+        "CReal.ofRat_pow",
+        "CReal.ratUnitEqOne",
+        "Nat.mul_one",
+        "Nat.zero_add",
+        "Rat.add_le_add",
+        "Rat.add_zero",
+        "Rat.bernoulli_harmonic_bound",
+        "Rat.le_antisymm",
+        "Rat.le_of_lt",
+        "Rat.le_refl",
+        "Rat.le_total",
+        "Rat.le_trans",
+        "Rat.left_distrib",
+        "Rat.lt_irrefl",
+        "Rat.lt_of_lt_of_le",
+        "Rat.mul_le_mul_of_nonneg_left",
+        "Rat.mul_left_cancel_of_ne_zero",
+        "Rat.mul_one",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_halve",
+        "Rat.natDivSucc_mul",
+        "Rat.natDivSucc_scale",
+        "Rat.zero_le_natDivSucc",
+        "Rat.zero_lt_one"
+      ],
+      "id": "CReal.pow_half_le_natDivSucc",
       "visible_in": [
         "complex",
         "cpoint",
@@ -6777,6 +6905,83 @@
       "declaration_kind": "definition",
       "direct_theorem_dependencies": [],
       "id": "CReal.sqrtApprox",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.strict_mono_of_pos_deriv"
+      ],
+      "id": "CReal.strict_injective_of_pos_deriv",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.HasDerivativeOn.spec",
+        "CReal.abs_congr",
+        "CReal.abs_le",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.archimedean",
+        "CReal.equiv_of_le_le",
+        "CReal.hasDerivative_closeOfEquiv",
+        "CReal.le_abs_self",
+        "CReal.le_congr",
+        "CReal.le_of_lt",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.left_distrib",
+        "CReal.mesh_count_width",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_nonneg",
+        "CReal.mul_one",
+        "CReal.mul_zero",
+        "CReal.neg_congr",
+        "CReal.neg_le_abs",
+        "CReal.neg_le_neg",
+        "CReal.ofNat_le",
+        "CReal.ofRat_add",
+        "CReal.ofRat_le",
+        "CReal.ofRat_mul",
+        "CReal.ratUnitEqOne",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.sumRange_const",
+        "CReal.sumRange_telescope_ge",
+        "Nat.le_succ",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.zero_le",
+        "Rat.mul_pos",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_halve",
+        "Rat.natDivSucc_mul",
+        "Rat.natDivSucc_pos",
+        "Rat.natDivSucc_scale",
+        "Rat.self_normalize",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "id": "CReal.strict_mono_of_pos_deriv",
       "visible_in": [
         "complex",
         "cpoint",
@@ -15157,6 +15362,23 @@
         "Nat.zero_le"
       ],
       "id": "Nat.fib_le_succ",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Nat.fib_le_succ",
+        "Nat.le_trans"
+      ],
+      "id": "Nat.fib_mono",
       "visible_in": [
         "complex",
         "cpoint",
@@ -34877,6 +35099,231 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.HasDerivativeOn.spec"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.abs_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.abs_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.add_le_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.equiv_of_le_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.equiv_zero_of_small"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.le_abs_self"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.le_add_of_nonneg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.le_of_equiv"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.le_of_mul_le_mul_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.left_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.lt_cotrans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.mul_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.neg_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.neg_le_abs"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.neg_le_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.ofRat_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.ofRat_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.ofRat_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.ofRat_pos"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "CReal.pos_bound_of_lt"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "Nat.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "Nat.le_add_right"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "Rat.le_of_lt"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "Rat.le_or_lt"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "Rat.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "Rat.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "Rat.natDivSucc_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "Rat.natDivSucc_antitone"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "Rat.natDivSucc_halve"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "Rat.natDivSucc_pos"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.hasDerivative_unique",
+      "target": "Rat.neg_nonpos_of_nonneg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "CReal.inv_congr",
       "target": "CReal.Equiv.refl"
     },
@@ -37542,6 +37989,26 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofRat_pow",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofRat_pow",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofRat_pow",
+      "target": "CReal.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofRat_pow",
+      "target": "CReal.ofRat_mul"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "CReal.ofRat_sub",
       "target": "CReal.Equiv.of_pointwise"
     },
@@ -37594,6 +38061,21 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.one_le_pow_of_one_le",
       "target": "CReal.zero_lt_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.order_reflect_of_pos_deriv",
+      "target": "CReal.lt_irrefl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.order_reflect_of_pos_deriv",
+      "target": "CReal.lt_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.order_reflect_of_pos_deriv",
+      "target": "CReal.strict_mono_of_pos_deriv"
     },
     {
       "relation": "direct-theorem-depends-on",
@@ -37714,6 +38196,146 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.pow_congr",
       "target": "CReal.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "CReal.ofRat_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "CReal.ofRat_pow"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "CReal.ratUnitEqOne"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Nat.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Nat.zero_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.add_le_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.bernoulli_harmonic_bound"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.le_antisymm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.le_of_lt"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.le_total"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.left_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.lt_irrefl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.lt_of_lt_of_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.mul_le_mul_of_nonneg_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.mul_left_cancel_of_ne_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.natDivSucc_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.natDivSucc_halve"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.natDivSucc_mul"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.natDivSucc_scale"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.zero_le_natDivSucc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_half_le_natDivSucc",
+      "target": "Rat.zero_lt_one"
     },
     {
       "relation": "direct-theorem-depends-on",
@@ -38673,6 +39295,271 @@
     {
       "relation": "direct-theorem-depends-on",
       "source": "CReal.sq_nonneg",
+      "target": "Rat.zero_le_natDivSucc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_injective_of_pos_deriv",
+      "target": "CReal.strict_mono_of_pos_deriv"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.HasDerivativeOn.spec"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.abs_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.abs_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.add_le_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.archimedean"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.equiv_of_le_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.hasDerivative_closeOfEquiv"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.le_abs_self"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.le_of_lt"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.left_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.mesh_count_width"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.mul_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.mul_le_mul_of_nonneg_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.mul_nonneg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.mul_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.neg_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.neg_le_abs"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.neg_le_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.ofNat_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.ofRat_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.ofRat_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.ofRat_mul"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.ratUnitEqOne"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.subdivisionPoint_in_bounds"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.sumRange_const"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "CReal.sumRange_telescope_ge"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "Nat.le_succ"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "Nat.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "Nat.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "Nat.zero_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "Rat.mul_pos"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "Rat.natDivSucc_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "Rat.natDivSucc_halve"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "Rat.natDivSucc_mul"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "Rat.natDivSucc_pos"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "Rat.natDivSucc_scale"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
+      "target": "Rat.self_normalize"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_of_pos_deriv",
       "target": "Rat.zero_le_natDivSucc"
     },
     {
@@ -49119,6 +50006,16 @@
       "relation": "direct-theorem-depends-on",
       "source": "Nat.fib_le_succ",
       "target": "Nat.zero_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.fib_mono",
+      "target": "Nat.fib_le_succ"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.fib_mono",
+      "target": "Nat.le_trans"
     },
     {
       "relation": "direct-theorem-depends-on",

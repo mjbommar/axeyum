@@ -1142,6 +1142,13 @@ lemmas and keeps absent links explicit. The first live composition target is
 `Nat.fib` monotonicity through the axiom-free `Nat.fib_le_succ` dependency;
 retrieval is landed, while proof construction and admission remain the next
 falsifiable step.
+That reference composition is now checked and admitted: `Nat.fib_mono`
+eliminates an order derivation and its kernel-observed direct dependencies are
+`Nat.fib_le_succ` and `Nat.le_trans`, with an empty axiom footprint. It settles
+the corresponding fact and demonstrates genuine library compounding. It is
+deliberately not counted as autonomous yield: the constructor is hand-authored,
+the production ledger places it in `no_operation`, and the next step is to
+generalize this exact term shape into a target-agnostic producer.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
