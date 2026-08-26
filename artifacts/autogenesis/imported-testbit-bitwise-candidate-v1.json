@@ -63,6 +63,18 @@
     ],
     "records": 698
   },
+  "reconstruction_target": {
+    "abstractions": 2,
+    "axiom_footprint": [],
+    "bytes": 10087,
+    "declarations": 12,
+    "goal_sha256": "7b80ddde0c0aadca39121bc61bf1da72d51f0fd7864c956f2c11a207fe9930a9",
+    "normalization_rewrites": 0,
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/imported-candidate-goals-v1/Nat.testBit_bitwise.statement.ndjson",
+    "sha256": "439a843eee0855ba1c363587af7d4704aa8a69454e2f389700464317a7f6a27e",
+    "target_content_sha256": "d030bec4714ba94b9b1fdb41c157b610b0b667ae761fdc461e85cde1cf916de5",
+    "target_definition": "Axeyum.Autogenesis.ImportedCandidateGoal"
+  },
   "schema_version": 1,
   "source": {
     "export_command_shape": "lean4export Mathlib.Data.Nat.Bitwise -- Nat.testBit_bitwise",

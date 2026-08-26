@@ -51,13 +51,19 @@ def validate(data: dict[str, Any], verify_external: bool) -> dict[str, int]:
     if len(dependencies) != 29:
         raise ValueError("reviewed direct theorem dependency count changed")
     stream = data.get("external_stream", {})
+    target = data.get("reconstruction_target", {})
+    if target.get("axiom_footprint") != [] or target.get("abstractions") != 2:
+        raise ValueError("proof-free reconstruction target boundary changed")
+    if target.get("declarations") != 12 or target.get("normalization_rewrites") != 0:
+        raise ValueError("proof-free reconstruction target population changed")
     if verify_external:
-        path = Path(stream.get("path", ""))
-        raw = path.read_bytes()
-        if len(raw) != stream.get("bytes"):
-            raise ValueError("external stream byte count changed")
-        if hashlib.sha256(raw).hexdigest() != stream.get("sha256"):
-            raise ValueError("external stream digest changed")
+        for label, receipt in (("candidate", stream), ("target", target)):
+            path = Path(receipt.get("path", ""))
+            raw = path.read_bytes()
+            if len(raw) != receipt.get("bytes"):
+                raise ValueError(f"external {label} stream byte count changed")
+            if hashlib.sha256(raw).hexdigest() != receipt.get("sha256"):
+                raise ValueError(f"external {label} stream digest changed")
     return {
         "direct_theorem_dependencies": len(dependencies),
         "axiom_footprint": len(expected_footprint),

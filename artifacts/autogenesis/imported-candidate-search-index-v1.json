@@ -4,7 +4,7 @@
     {
       "alpha_type_expression_sha256": "9b0cf9b6b6b581e5520a76f39d748eab8478da3565863efeee41bff41146b77e",
       "audit_artifact_path": "artifacts/autogenesis/imported-testbit-bitwise-candidate-v1.json",
-      "audit_artifact_sha256": "cdb5e47778eb4824cb3c0d1535109c390c2460d76f96f4ecba3f2889b0906939",
+      "audit_artifact_sha256": "0b9bb9886f44cdff621ad271996f6bc845ac9a132f0f1a998b78c9e67077db5e",
       "axiom_footprint": [
         "Quot",
         "Quot.lift",
@@ -72,7 +72,7 @@
     "audit_artifacts": [
       {
         "path": "artifacts/autogenesis/imported-testbit-bitwise-candidate-v1.json",
-        "sha256": "cdb5e47778eb4824cb3c0d1535109c390c2460d76f96f4ecba3f2889b0906939"
+        "sha256": "0b9bb9886f44cdff621ad271996f6bc845ac9a132f0f1a998b78c9e67077db5e"
       }
     ]
   },

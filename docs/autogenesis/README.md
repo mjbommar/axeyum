@@ -281,6 +281,7 @@ compounding, not automation theatre.
 | [Imported generic bitwise candidate audit](275-imported-testbit-bitwise-candidate.md) | Does pinned Lean already provide the three-sibling generic theorem, and does its independently imported proof satisfy Axeyum's empty-footprint boundary? |
 | [Footprint-aware imported candidate index](276-imported-candidate-index.md) | How can exact imported theorem candidates participate in retrieval while assumption-bearing proofs are routed to reconstruction before execution? |
 | [Imported candidate agent read surface](277-imported-candidate-agent-read-surface.md) | How does the agent query imported candidates while preserving source, footprint, and `reconstruct-required` execution refusal? |
+| [Proof-free imported reconstruction target](278-proof-free-imported-reconstruction-target.md) | Can an assumption-bearing imported theorem be converted into an axiom-free statement-only target without leaking its proof? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

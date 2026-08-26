@@ -34,6 +34,12 @@ class ImportedTestBitBitwiseCandidateTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "footprint"):
             MODULE.validate(data, verify_external=False)
 
+    def test_reconstruction_target_assumption_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["reconstruction_target"]["axiom_footprint"] = ["propext"]
+        with self.assertRaisesRegex(ValueError, "reconstruction target"):
+            MODULE.validate(data, verify_external=False)
+
 
 if __name__ == "__main__":
     unittest.main()
