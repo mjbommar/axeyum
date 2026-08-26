@@ -29,6 +29,10 @@ fn run() -> Result<(), String> {
     let successor_name = kernel.name_str(autogenesis, "testBitBool_succ");
     let observation_name = kernel.name_str(autogenesis, "bitwiseObservation");
     let observation_apply_name = kernel.name_str(autogenesis, "bitwiseObservation_apply");
+    let bool_to_bit_name = kernel.name_str(autogenesis, "boolToBit");
+    let reify_bits_name = kernel.name_str(autogenesis, "reifyBits");
+    let reify_bits_zero_name = kernel.name_str(autogenesis, "reifyBits_zero");
+    let bitwise_reify_name = kernel.name_str(autogenesis, "bitwiseReifyBounded");
 
     {
         let mut d = NatDev::new(&mut kernel, prelude);
@@ -162,6 +166,109 @@ fn run() -> Result<(), String> {
         }
         d.declare_theorem(observation_apply_name, theorem_type, theorem_value)
             .map_err(|error| format!("bitwiseObservation_apply rejected: {error:?}"))?;
+
+        // boolToBit false = 0; boolToBit true = 1.
+        let bool_to_bit_value = {
+            let motive = d.kernel().lam(anon, bool_ty, nat, BinderInfo::Default);
+            let zero = d.zero();
+            let one_value = d.num(1);
+            let level = d.level_one();
+            let rec = d.kernel().const_(prelude.logic.bool_rec, vec![level]);
+            let bit_fv = d.fresh_fvar();
+            let bit = d.kernel().fvar(bit_fv);
+            let body = d.apply(rec, &[motive, zero, one_value, bit]);
+            d.lam_fv(bit_fv, bool_ty, body)
+        };
+        let bool_to_bit_type = d.arrow(bool_ty, nat);
+        d.kernel()
+            .add_declaration(Declaration::Definition {
+                name: bool_to_bit_name,
+                uparams: vec![],
+                ty: bool_to_bit_type,
+                value: bool_to_bit_value,
+                hint: ReducibilityHint::Regular(2),
+            })
+            .map_err(|error| format!("boolToBit rejected: {error:?}"))?;
+
+        // reifyBits bits k := sumRange (fun i => boolToBit (bits i) * 2^i) k.
+        let bits_type = d.arrow(nat, bool_ty);
+        let reify_value = {
+            let bits_fv = d.fresh_fvar();
+            let bits = d.kernel().fvar(bits_fv);
+            let count_fv = d.fresh_fvar();
+            let count = d.kernel().fvar(count_fv);
+            let index_fv = d.fresh_fvar();
+            let index = d.kernel().fvar(index_fv);
+            let observed = d.apply(bits, &[index]);
+            let digit = d.const_app(bool_to_bit_name, &[observed]);
+            let two = d.num(2);
+            let place = d.pow(two, index);
+            let term = d.mul(digit, place);
+            let summand = d.lam_fv(index_fv, nat, term);
+            let body = d.const_app(prelude.sum_range, &[summand, count]);
+            let with_count = d.lam_fv(count_fv, nat, body);
+            d.lam_fv(bits_fv, bits_type, with_count)
+        };
+        let reify_type = {
+            let over_count = d.arrow(nat, nat);
+            d.arrow(bits_type, over_count)
+        };
+        d.kernel()
+            .add_declaration(Declaration::Definition {
+                name: reify_bits_name,
+                uparams: vec![],
+                ty: reify_type,
+                value: reify_value,
+                hint: ReducibilityHint::Regular(5),
+            })
+            .map_err(|error| format!("reifyBits rejected: {error:?}"))?;
+
+        let bits_fv = d.fresh_fvar();
+        let bits = d.kernel().fvar(bits_fv);
+        let zero = d.zero();
+        let reified_zero = d.const_app(reify_bits_name, &[bits, zero]);
+        let reify_zero_type = d.eq(reified_zero, zero);
+        let reify_zero_proof = d.refl(zero);
+        let theorem_type = d.pi_fv(bits_fv, bits_type, reify_zero_type);
+        let theorem_value = d.lam_fv(bits_fv, bits_type, reify_zero_proof);
+        d.declare_theorem(reify_bits_zero_name, theorem_type, theorem_value)
+            .map_err(|error| format!("reifyBits_zero rejected: {error:?}"))?;
+
+        // The bounded Nat candidate associated with the pointwise algebra.
+        let reified_bitwise_value = {
+            let f_fv = d.fresh_fvar();
+            let f = d.kernel().fvar(f_fv);
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let count_fv = d.fresh_fvar();
+            let count = d.kernel().fvar(count_fv);
+            let index_fv = d.fresh_fvar();
+            let index = d.kernel().fvar(index_fv);
+            let observed = d.const_app(observation_name, &[f, x, y, index]);
+            let bits = d.lam_fv(index_fv, nat, observed);
+            let body = d.const_app(reify_bits_name, &[bits, count]);
+            let with_count = d.lam_fv(count_fv, nat, body);
+            let with_y = d.lam_fv(y_fv, nat, with_count);
+            let with_x = d.lam_fv(x_fv, nat, with_y);
+            d.lam_fv(f_fv, bool_binary, with_x)
+        };
+        let reified_bitwise_type = {
+            let over_count = d.arrow(nat, nat);
+            let over_y = d.arrow(nat, over_count);
+            let over_x = d.arrow(nat, over_y);
+            d.arrow(bool_binary, over_x)
+        };
+        d.kernel()
+            .add_declaration(Declaration::Definition {
+                name: bitwise_reify_name,
+                uparams: vec![],
+                ty: reified_bitwise_type,
+                value: reified_bitwise_value,
+                hint: ReducibilityHint::Regular(7),
+            })
+            .map_err(|error| format!("bitwiseReifyBounded rejected: {error:?}"))?;
     }
 
     let declaration = kernel
@@ -188,10 +295,18 @@ fn run() -> Result<(), String> {
     if !observation_footprint.is_empty() {
         return Err("bitwise observation algebra gained assumptions".to_owned());
     }
+    let reify_zero_type = match kernel.environment().get(reify_bits_zero_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("reifyBits_zero disappeared".to_owned()),
+    };
+    if !kernel.axiom_footprint(reify_bits_zero_name).is_empty() {
+        return Err("bounded reification base gained assumptions".to_owned());
+    }
     println!(
-        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}",
+        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}",
         kernel.render_lean(ty),
-        kernel.render_lean(observation_type)
+        kernel.render_lean(observation_type),
+        kernel.render_lean(reify_zero_type)
     );
     Ok(())
 }

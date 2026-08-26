@@ -343,6 +343,10 @@ The target-owned pointwise bitwise algebra now checks axiom-free for arbitrary
 Boolean operators. The remaining mathematical obligation is sharply isolated:
 reify that observation function as a natural number, then prove its observations
 round-trip. Observation-level success is explicitly denied theorem credit.
+Bounded reification is now implemented as the binary weighted sum, and its
+zero-length base theorem checks axiom-free. The exact remaining proof is the
+bounded observation round-trip for `i < k`; neither that induction nor the
+unbounded bitwise theorem has received credit.
 
 <!-- plan-section: landed-changes -->
 

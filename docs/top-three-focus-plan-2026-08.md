@@ -474,6 +474,9 @@ remaining route is target-owned semantic reconstruction, not definition grafting
 The pointwise Boolean algebra is now implemented and axiom-free. The unresolved
 core is Nat reification: synthesize one number from the observation function and
 prove test-bit round-trip, rather than conflating that step with Boolean logic.
+The bounded weighted-sum reifier and its empty-footprint zero case now exist.
+The next proof obligation is precise: bounded observation round-trip below the
+chosen bit count, followed by a sufficient-bound argument for both inputs.
 
 ### Exit evidence
 

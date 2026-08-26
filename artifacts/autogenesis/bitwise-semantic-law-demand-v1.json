@@ -121,8 +121,16 @@
     "axiom_footprint_size": 0,
     "canonical_type": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.bitwiseObservation x0 x1 x2 x3) (x0 (Axeyum.Autogenesis.testBitBool x1 x3) (Axeyum.Autogenesis.testBitBool x2 x3))))))",
     "definition": "Axeyum.Autogenesis.bitwiseObservation",
-    "nat_reification_status": "missing",
+    "nat_reification_status": "bounded-construction-base-checked-roundtrip-missing",
     "theorem": "Axeyum.Autogenesis.bitwiseObservation_apply"
+  },
+  "native_reification": {
+    "base_axiom_footprint_size": 0,
+    "base_canonical_type": "((x0 : ((x0 : AxNat) -> Bool)) -> Eq.{1} AxNat (Axeyum.Autogenesis.reifyBits x0 AxNat.zero) AxNat.zero)",
+    "base_theorem": "Axeyum.Autogenesis.reifyBits_zero",
+    "bitwise_definition": "Axeyum.Autogenesis.bitwiseReifyBounded",
+    "definition": "Axeyum.Autogenesis.reifyBits",
+    "roundtrip_status": "missing"
   },
   "schema_version": 1,
   "source": {

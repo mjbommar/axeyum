@@ -72,5 +72,13 @@ whose Boolean observations equal that function. The artifact records
 `nat_reification_status = missing`; the observation-level theorem alone cannot
 receive credit for `Nat.testBit_bitwise`.
 
+Bounded Nat reification is now constructive too. `reifyBits bits k` sums
+`boolToBit (bits i) * 2^i` below `k`, and `bitwiseReifyBounded` applies that
+packer to the pointwise algebra. The zero-length theorem checks by reflexivity
+with an empty footprint. The remaining theorem is no longer “invent a
+reifier”; it is the bounded round trip: for `i < k`, observing
+`reifyBits bits k` at `i` returns `bits i` (under the Boolean/numeric bridge).
+That theorem is still missing and receives zero credit.
+
 Run `just autogenesis-bitwise-semantic-law-demand` to validate the join and its
 negative controls.
