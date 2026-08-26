@@ -278,6 +278,7 @@ compounding, not automation theatre.
 | [Imported implementation-demand graph](272-imported-implementation-demand.md) | Which transparent Mathlib definitions and decision/recursion boundaries lie beneath the 14 sliced semantic-contract roots? |
 | [Imported implementation frontier](273-imported-implementation-frontier.md) | Which context-bound implementation nodes are shared by the most demanded roots and targets, without turning reachability into proof authority? |
 | [Bit-observation contract slice](274-bit-observation-contract-slice.md) | What exact transparent core do all four `Nat.testBit` siblings share, what remains target-specific, and why are the five current behavior lemmas insufficient? |
+| [Imported generic bitwise candidate audit](275-imported-testbit-bitwise-candidate.md) | Does pinned Lean already provide the three-sibling generic theorem, and does its independently imported proof satisfy Axeyum's empty-footprint boundary? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

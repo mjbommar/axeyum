@@ -1,0 +1,71 @@
+{
+  "authority": "candidate audit only; no semantic contract authority, no proof authority, no operation authority, no transport authority, no applicability authority, no axiom-free claim, and no fact-transition authority",
+  "candidate": {
+    "declaration_content_sha256": "726b08bc9e4acac588eec49023c0631190dc21ac2d5e45b836d60519a551a1ad",
+    "direct_theorem_dependencies": [
+      "Bool.false_eq_true",
+      "Decidable.decide.congr_simp",
+      "Eq.symm",
+      "Eq.trans",
+      "Nat.le_refl",
+      "Nat.mod_succ",
+      "Nat.mul_add_div",
+      "Nat.mul_add_mod_self_left",
+      "Nat.mul_div_right",
+      "Nat.mul_mod_right",
+      "Nat.testBit_add_one",
+      "Nat.testBit_zero",
+      "Nat.zero_lt_succ._simp_1",
+      "Nat.zero_ne_one._simp_1",
+      "Nat.zero_testBit",
+      "_private.Init.Data.Nat.Bitwise.Lemmas.0.Nat.bitwise.eq_def",
+      "_private.Init.Data.Nat.Bitwise.Lemmas.0.Nat.testBit_bitwise._simp_1_2",
+      "congr",
+      "congrArg",
+      "congrFun'",
+      "decide_false",
+      "decide_true",
+      "eq_false",
+      "eq_self",
+      "gt_iff_lt._simp_1",
+      "ite_cond_eq_false",
+      "ite_cond_eq_true",
+      "ite_congr",
+      "of_eq_true"
+    ],
+    "name": "Nat.testBit_bitwise",
+    "source_file": "Init/Data/Nat/Bitwise/Lemmas.lean",
+    "source_line": 401
+  },
+  "external_stream": {
+    "bytes": 2222315,
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/imported-candidates-v1/Nat.testBit_bitwise.ndjson",
+    "sha256": "58c09fb4f8b3af7adacd8d0c22e945507e6ffb3920b0581c22d17afa1867d3b9"
+  },
+  "kind": "axeyum-autogenesis-imported-candidate-audit",
+  "kernel_import": {
+    "admitted_declarations": 809,
+    "axiom_footprint": [
+      "Quot",
+      "Quot.lift",
+      "Quot.mk",
+      "Quot.sound",
+      "propext"
+    ],
+    "axiom_free": false,
+    "imported_axioms": [
+      "Quot.sound",
+      "propext"
+    ],
+    "records": 698
+  },
+  "schema_version": 1,
+  "source": {
+    "export_command_shape": "lean4export Mathlib.Data.Nat.Bitwise -- Nat.testBit_bitwise",
+    "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lean_version": "4.30.0",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f"
+  },
+  "state": "independently-imported-assumption-bearing-candidate"
+}

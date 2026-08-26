@@ -424,6 +424,15 @@ shows that the five existing `Nat.testBit` behavior candidates do not describe
 bitwise operators or list lookup. The next bottom-up theorem must be a smaller
 operator-parametric recurrence/observation law; using any of the desired four
 conclusions as its own contract witness would be circular.
+The pinned source audit then found the exact generic upstream theorem:
+`Nat.testBit_bitwise` specializes to the and/or/difference siblings. A
+root-selected 2.2 MiB export independently imports, but its proof footprint is
+`propext` plus the quotient package and it has 29 direct theorem dependencies.
+It is therefore strategy evidence, not an admissible contract witness. The
+next producer capability is exact imported-candidate retrieval with footprint-
+aware `reconstruct-required` routing, followed by constructive reconstruction
+of that generic theorem in the imported kernel. The list/bits sibling remains
+a separate projection-law family.
 
 ### Exit evidence
 

@@ -288,6 +288,14 @@ axiom-free `Nat.testBit` candidates cover zero/successor, bounds, and sums, but
 not the required `Nat.bitwise` or list-lookup commutation. Next: inventory exact
 lower-level recurrence theorems and construct one operator-parametric generic
 law without using a desired target conclusion as its own contract witness.
+Pinned Lean already supplies that generic law as `Nat.testBit_bitwise`, and
+Mathlib's and/or/difference targets are direct specializations. A root-selected
+external export independently imports, but its measured footprint contains
+`propext` and the quotient package, with 29 direct theorem dependencies. It is
+candidate guidance only. Next: add an exact imported-candidate search
+population with footprint-aware `reconstruct-required` routing, then rebuild
+the generic theorem constructively inside the imported kernel before any
+three-sibling production claim.
 
 <!-- plan-section: landed-changes -->
 
