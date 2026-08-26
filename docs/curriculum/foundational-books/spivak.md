@@ -112,12 +112,12 @@ Counts are `CReal.*` declarations matching the topic, from
 | 3–4 | Functions, graphs | — | no carrier needed |
 | 5 | Limits | **K** | 11 `converges_*`, incl. `converges_of_cauchy`, `converges_unique`, `converges_squeeze` |
 | 6 | Continuous functions | **K** | 9 `continuous_*` / `uniformly_continuous_*` |
-| **7** | **"Three Hard Theorems"** — IVT, EVT, boundedness | **X** | **0.** See below. |
+| **7** | **"Three Hard Theorems"** — IVT, EVT, boundedness | **X → K** | **IVT: approximate form under construction** — `ivt_step` + `ivt_iter` landed, `ivt_approx` in flight now that `pow_half_le_natDivSucc` exists. **EVT: unavailable** (attained maximum). **Boundedness: open**, needs a computable bucket-index function |
 | 8 | Least upper bounds | **X → K** | classical LUB unavailable; **Bishop completeness** proved instead (`creal/completeness.rs`): every regular sequence of reals has a limit, *constructed* |
-| 9–10 | Derivatives, differentiation rules | **K** | 16 `hasDerivative_*` incl. `_chain`, `_mul`, `_pow` |
-| **11** | Significance of the derivative (MVT) | **X → K** | MVT unavailable (rests on EVT); **`monotone_of_nonneg_deriv` proved without it**, by direct subdivision |
-| 12 | Inverse functions | — | open |
-| 13 | Integrals | **K** | partial — `riemannSum` + 6 laws; the **limit** is not yet built |
+| 9–10 | Derivatives, differentiation rules | **K** | 17 `hasDerivative_*` incl. `_chain`, `_mul`, `_pow`, and **`_unique`** — which needs `lt a b`: without it the naive statement is FALSE (at `a = b` the spec is vacuous, so `const zero` and `const one` are both derivatives of `id`) |
+| **11** | Significance of the derivative (MVT) | **X → K** | MVT unavailable (rests on EVT); **`monotone_of_nonneg_deriv` proved without it**, by direct subdivision. Also `constant_of_zero_deriv`, `antitone_of_nonpos_deriv`, **`strict_mono_of_pos_deriv`**, `strict_injective_of_pos_deriv` |
+| 12 | Inverse functions | **K / X** | `order_reflect_of_pos_deriv` ✓ (needs `Apart` as data). **Order PRESERVATION is reachable; order REFLECTION is exactly as hard as an exact IVT preimage** — both convert a codomain fact into domain position information |
+| 13 | Integrals | **K** | partial — `riemannSum` + laws, `sumRange_reblock` (general block size), `within_of_two_sided_le`, the succ-shape bridge. The **limit** is not yet built; blocked on a per-block uniform-continuity bound |
 | 14 | Fundamental Theorem of Calculus | — | open, downstream of 13 |
 | 15–17 | Trig, π irrational, planetary motion | — | open; no transcendental functions exist |
 | 18 | Log and exp | **K** | partial — `expTerm`, `expSeriesPartial`; `e` blocked on the geometric Cauchy telescope |
@@ -153,3 +153,30 @@ a brief attempting it must say *do not try to prove MVT first*.
 
 So the `X` rows are the interesting ones. A reader who sees "0" there and infers
 missing effort has it backwards: those zeros are where the logic is speaking.
+
+
+## Postscript: the one lemma that gated six chapters
+
+Measured across this session, Chapters **7, 12, 18, 21, 22 and 23** were all
+blocked on a single estimate — `pow half n ≤ 1/(n+1)`, geometric decay
+dominating harmonic rate. Its *rational* form already existed
+(`Rat.bernoulli_harmonic_bound`, a **Chapter 2** result); only the transport to
+`CReal` was missing.
+
+Two things about how that was found are worth keeping.
+
+**No single lane could see it.** Each arrived independently — the IVT lane
+needed it to turn "`N` halvings" into "width small enough"; the `e` lane needed
+a decay rate for its `1/n! ≤ 2·(1/2)ⁿ` domination; the geometric lane needed it
+for `geom_pair_within`'s undischarged leaf. Three reports of *where a lane
+stopped*, converging on one cause.
+
+**The obvious route was refuted before it was attempted.** A lane established
+that there is no samples-level bridge from `seq (CReal.pow x a) b` to `Rat.pow`
+of a sample of `x`: `CReal.mul`'s shift is `bound x + bound y + 1`, so unrolling
+`pow` nests `bound(pow x j)` **recursively**, and no closed-form index exists.
+The route that works stays entirely at the `CReal` level —
+`pow (ofRat q) n ~ ofRat (Rat.pow q n)` by induction — because `Equiv` is a
+statement about the reals, not about their representatives. That distinction is
+the general lesson: **an argument phrased about representatives inherits the
+sampling schedule; one phrased about the setoid does not.**
