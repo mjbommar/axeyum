@@ -1313,10 +1313,11 @@ Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and 
 bound-certification targets.  The Axeyum-side programme contract is
 `docs/research/10-cas/open-problems-programme-2026-08.md`: pin current literature status,
 generate deterministically, run untrusted search, independently replay/check, bind evidence,
-and reconstruct formal identities into the kernel where applicable. Next: add materially
-stronger scheduling propagation or measured conflict-guided complete splits for `abz7@655`;
-exact job-chain windows and a first semantic order cover are complete, but the monolith and
-all four cover leaves remain `UNKNOWN`. The
+and reconstruct formal identities into the kernel where applicable. Current focus stays on
+`abz7`: deterministic detectable-precedence closure is complete and exhausted after one round,
+and an exact checker-compatible FlatZinc/DRCP route is calibrated against both an independent
+Rust checker and the Rocq-verified FznDrcpCheck. Sustained `abz7@655` proof production and
+`@656` witness searches are live without short wall-clock cutoffs. The
 settled-cell calibration is green for `R_3(x-y=z)=14` (42 variables,
 356 clauses, 25 checked DRAT steps); a mutated DIMACS header fails closed, and the aggregate
 claim sweep reports 104 claims re-checked / 0 errors / 25 rows explicitly not re-checked.
@@ -1520,6 +1521,27 @@ proof SAT now branches only on variables occurring in clauses, taking the sparse
 more than two minutes without completion to a 3.55-second checked proof. Exact formulas,
 semantic maps, cover proof, manifest, and resource receipt are retained in the sibling package;
 incomplete 4.15 GB leaf proof streams were deleted. `abz7 = 656` remains uncertified.
+
+**Job-shop detectable-precedence closure, 2026-08-26.** ADR-0574 adds deterministic
+longest-path earliest/latest propagation over job and logically necessary machine edges.
+Every machine pair is classified free, forced in either direction, or infeasible; forced
+edges close to a fixpoint and remain attached to typed selectors. Baseline/closure parity and
+lifted replay cover all 64 two-job/two-machine routing/duration patterns across bounds zero
+through eight (576 checks). `abz7@655` forces 256 orders and `@656` forces 254, but both
+stabilize after one productive round. A matched 180-second SAT run remained unknown. A
+redundant time-capacity encoding was measured at 2.27 million variables / 7.97 million clauses
+and 2.12 GiB RSS, then removed rather than retained as a misleading capability.
+
+**Job-shop DRCP proof interchange, 2026-08-26.** ADR-0575 adds strict deterministic bounded
+job-shop FlatZinc export on the exact predicate surface shared by Pumpkin and its checkers:
+job-chain domains, `int_lin_le` precedences, and unit-demand/capacity-one cumulative machine
+constraints. The `ft06@54` calibration emits a 19,396-byte gzipped full DRCP proof accepted by
+Pumpkin's independent checker and FznDrcpCheck rebuilt from its Rocq development; weakening a
+machine duration makes both reject inference 1887. CP 2026 already establishes the general
+formally verified DRCP route, so no technique novelty is claimed. A full `abz7@655` DRCP run
+is live on `/data0`; only completion plus both checks can establish the lower bound. A
+deterministic makespan-678 schedule has independently replayed and now warms a sustained
+six-hour CP-SAT search for the still-missing 656 witness.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
