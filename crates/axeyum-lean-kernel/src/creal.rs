@@ -2240,6 +2240,14 @@ pub struct CRealPrelude {
     /// documentation for the derivation and for why `geom_tail_within`
     /// could be re-derived from this without editing that file.
     pub within_of_two_sided_le: NameId,
+    /// `CReal.le_add_of_abs_sub_le : ∀ x y : CReal, ∀ q : Rat, le (abs (add x
+    /// (neg y))) (ofRat q) → le x (add y (ofRat q))` (`creal/integral.rs`) —
+    /// roadmap step 2 toward `riemannSum_cauchy`: the abs-bound shape
+    /// `UniformlyContinuousOn.spec`'s conclusion (and `fineSample_close`)
+    /// produces splits into the CReal-level one-sided form `sumRange_le`
+    /// consumes. Via `le_abs_self`, `le_trans`, `add_le_add`, and the
+    /// add-rearrangement identity that folds `y + (x + (-y))` back to `x`.
+    pub le_add_of_abs_sub_le: NameId,
     /// `CReal.hasDerivative_closeOfEquiv : ∀ F F' a b, HasDerivativeOn F F' a b →
     /// ∀ u v, le a u → le u b → le a v → le v b → Equiv u v → Equiv (F u) (F v)`
     /// — differentiability implies (local) continuity: two `Equiv`-related
@@ -2936,6 +2944,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_le_on: kernel.name_str(creal, "riemannSum_le_on"),
         sum_range_reblock: kernel.name_str(creal, "sumRange_reblock"),
         within_of_two_sided_le: kernel.name_str(creal, "within_of_two_sided_le"),
+        le_add_of_abs_sub_le: kernel.name_str(creal, "le_add_of_abs_sub_le"),
         has_derivative_close_of_equiv: kernel.name_str(creal, "hasDerivative_closeOfEquiv"),
         exp_term: kernel.name_str(creal, "expTerm"),
         exp_series_partial: kernel.name_str(creal, "expSeriesPartial"),
@@ -3089,6 +3098,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // in between; declared here as the same kind of standalone,
         // reusable building block as `sumRange_reblock` just above.
         integral::declare_within_of_two_sided_le(&mut d, prelude)?;
+        // `le_add_of_abs_sub_le` (roadmap step 2 toward `riemannSum_cauchy`)
+        // only needs `le_abs_self`/`le_trans`/`add_le_add`/`le_congr` (all
+        // far above, basic order/setoid facts) and this file's own private
+        // `add_sub_cancel` ring identity; no dependency on anything in
+        // between, so it lands here as the same kind of standalone,
+        // reusable building block as `sumRange_reblock`/
+        // `within_of_two_sided_le` just above.
+        integral::declare_le_add_of_abs_sub_le(&mut d, prelude)?;
         // `ofNat_add`/`ofNat_mul` only need `CReal.ofNat`
         // (`archimedean::declare_archimedean`, well above) and the `Rat`-level
         // `ofRat_add`/`ofRat_mul`/`natDivSucc_add`/`natDivSucc_mul` facts that

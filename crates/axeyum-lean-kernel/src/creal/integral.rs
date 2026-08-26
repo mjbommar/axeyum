@@ -130,8 +130,8 @@ use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{
-    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rchain, req, rle, rmul, rneg, rone,
-    rzero,
+    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rat_ty, rchain, req, rle, rmul, rneg,
+    rone, rzero,
 };
 
 /// Delta height for `CReal.riemannSum`: above `CReal.sumRange`
@@ -2026,6 +2026,89 @@ pub(super) fn declare_within_of_two_sided_le(
     })
 }
 
+// --- roadmap step 2: an abs-bound splits into a one-sided bound -----------
+
+/// `CReal.le_add_of_abs_sub_le : ∀ x y : CReal, ∀ q : Rat, le (abs (add x
+/// (neg y))) (ofRat q) → le x (add y (ofRat q))` — roadmap step 2 toward
+/// `riemannSum_cauchy`: `close_within`'s own `abs`-bound shape (exactly what
+/// `UniformlyContinuousOn.spec`'s conclusion and [`declare_fine_sample_close`]
+/// produce) unfolds all the way down to the CReal-level one-sided form
+/// `sumRange_le`'s pointwise hypothesis needs, rather than stopping at the
+/// difference-only `le (add x (neg y)) (ofRat q)`.
+///
+/// Route: `le_abs_self` gives `d ≤ |d|` at `d := x + (-y)`; `le_trans`
+/// against the hypothesis collapses that to `d ≤ q`; `add_le_add` adds `y`
+/// on the left of both sides to get `y + d ≤ y + q`; and `add_sub_cancel`
+/// (this file's own ring identity, `y + (x + (-y)) ~ x`) folds the left side
+/// down to exactly `x` via `le_congr`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_le_add_of_abs_sub_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+
+    let ny = cneg(d, p, y);
+    let diff = cadd(d, p, x, ny); // x + (-y)
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let q_embed = embed(d, p, q);
+    let hyp_ty = cle(d, p, abs_diff, q_embed);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // self_le : le diff abs_diff.
+    let self_le = d.lemma(p.le_abs_self, &[diff]);
+    // d_le_q : le diff q_embed.
+    let d_le_q = d.lemma(p.le_trans, &[diff, abs_diff, q_embed, self_le, h]);
+
+    // grown : le (add y diff) (add y q_embed).
+    let refl_y = d.lemma(p.le_refl, &[y]);
+    let grown = d.lemma(p.add_le_add, &[y, y, diff, q_embed, refl_y, d_le_q]);
+
+    // cancel : Equiv (add y diff) x -- exactly `add_sub_cancel(y, x)`'s own
+    // conclusion, since `diff` IS `add x (neg y)`.
+    let cancel = add_sub_cancel(d, p, y, x);
+
+    let y_diff = cadd(d, p, y, diff);
+    let yq = cadd(d, p, y, q_embed);
+    let refl_yq = d.lemma(p.equiv_refl, &[yq]);
+    let conclusion_proof = d.lemma(p.le_congr, &[y_diff, x, yq, yq, cancel, refl_yq, grown]);
+    // conclusion_proof : le x yq.
+
+    let ty = {
+        let conclusion = cle(d, p, x, yq);
+        let after_h = d.arrow(hyp_ty, conclusion);
+        let over_q = d.pi_fv(q_fv, rat_carrier, after_h);
+        let over_y = d.pi_fv(y_fv, carrier, over_q);
+        d.pi_fv(x_fv, carrier, over_y)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, conclusion_proof);
+        let over_q = d.lam_fv(q_fv, rat_carrier, with_h);
+        let over_y = d.lam_fv(y_fv, carrier, over_q);
+        d.lam_fv(x_fv, carrier, over_y)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.le_add_of_abs_sub_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 fn double_block(d: &mut IntDev<'_>, p: CRealPrelude, g: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let two = d.num(2);
@@ -3582,6 +3665,77 @@ mod sample_offset_bound_tests {
         assert!(
             result.is_ok(),
             "sample_offset_bound must type-check: {:?}",
+            result.err()
+        );
+    }
+}
+
+#[cfg(test)]
+mod le_add_of_abs_sub_le_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The mandatory concrete instantiation: `x := ofNat 3`, `y := ofNat 2`,
+    /// `q := Rat.natDivSucc 1 0` (`= 1`) — the TIGHT boundary case `3 ≤ 2 +
+    /// 1`, chosen (per this slice's own caution about argument-order
+    /// defects) so that swapping `x`/`y`, or adding `q` on the wrong side,
+    /// produces a DIFFERENT concrete conclusion type than the one this test
+    /// reconstructs independently -- the kernel's own type-checker is what
+    /// catches the mismatch, not a comment.
+    ///
+    /// `h` (the hypothesis `le (abs (add x (neg y))) (ofRat q)`) is left an
+    /// assumed free variable rather than proved from scratch — proving it
+    /// numerically would need `ofNat` subtraction reduction, `abs` of a
+    /// literal, and a `Rat` literal identity, none of which this slice's
+    /// declaration itself needs. What this test checks is exactly what the
+    /// declaration's own TYPE promises: applying it at concrete literals
+    /// yields a term whose type is the expected concrete conclusion.
+    #[test]
+    fn le_add_of_abs_sub_le_applies_at_three_two_and_one() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let three = d.num(3);
+        let two = d.num(2);
+        let x = d.const_app(p.of_nat, &[three]);
+        let y = d.const_app(p.of_nat, &[two]);
+
+        let one_nat = d.num(1);
+        let zero_nat = d.num(0);
+        let q = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]); // 1/(0+1) = 1
+
+        let ny = cneg(&mut d, p, y);
+        let diff = cadd(&mut d, p, x, ny);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+        let q_embed = embed(&mut d, p, q);
+        let hyp_ty = cle(&mut d, p, abs_diff, q_embed);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let applied = d.const_app(p.le_add_of_abs_sub_le, &[x, y, q, h]);
+
+        // Independently reconstruct the expected conclusion: le x (add y
+        // q_embed), i.e. `3 ≤ 2 + 1`.
+        let yq = cadd(&mut d, p, y, q_embed);
+        let expected = cle(&mut d, p, x, yq);
+
+        let ty = d.arrow(hyp_ty, expected);
+        let value = d.lam_fv(h_fv, hyp_ty, applied);
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "leAddOfAbsSubLeThreeTwoOneSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "le_add_of_abs_sub_le must apply at (3, 2, 1) with the expected \
+             conclusion type: {:?}",
             result.err()
         );
     }

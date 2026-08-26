@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 270] = [
+    let expected: [(&str, crate::NameId, &str); 271] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -561,6 +561,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.within_of_two_sided_le",
             p.within_of_two_sided_le,
+            "theorem",
+        ),
+        // Roadmap step 2 toward `riemannSum_cauchy` (`creal/integral.rs`):
+        // the abs-bound `close_within`'s own shape produces splits into the
+        // CReal-level one-sided form `le x (add y (ofRat q))` that
+        // `sumRange_le` consumes, via `le_abs_self`/`le_trans`/`add_le_add`
+        // plus the add-rearrangement ring identity.
+        (
+            "CReal.le_add_of_abs_sub_le",
+            p.le_add_of_abs_sub_le,
             "theorem",
         ),
         // The continuity-from-differentiability bridge (creal/monotone.rs),
