@@ -59,6 +59,117 @@ def validate_before(fact: dict[str, Any]) -> None:
             raise TransactionError(f"open fact precondition already carries {forbidden}")
 
 
+def build_proposition_reconciliation_transaction(
+    *,
+    before_fact: dict[str, Any],
+    native_fact: dict[str, Any],
+    match: dict[str, Any],
+    overlay_link: dict[str, Any],
+    census_sha256: str,
+) -> dict[str, Any]:
+    """Prepare a non-autonomous open-to-proved reconciliation proposal.
+
+    This route registers already-constructed native mathematics. It deliberately
+    has no operation identity and cannot receive autonomous-production credit.
+    """
+    validate_before(before_fact)
+    fact_id = before_fact.get("id")
+    theorem = match.get("native_theorem")
+    if match.get("fact_id") != fact_id or not isinstance(theorem, str):
+        raise TransactionError("proposition match does not bind the open fact")
+    if not isinstance(census_sha256, str) or len(census_sha256) != 64:
+        raise TransactionError("proposition census digest is invalid")
+    if (
+        native_fact.get("epistemic_status") != "proved"
+        or native_fact.get("proof_route") != "kernel-lean"
+        or native_fact.get("axiom_footprint") != []
+    ):
+        raise TransactionError("native fact is not an axiom-free proved kernel fact")
+    declarations = {
+        evidence.get("kernel_declaration")
+        for evidence in native_fact.get("evidence", [])
+        if isinstance(evidence, dict)
+    }
+    if theorem not in declarations:
+        raise TransactionError("native fact evidence does not bind the matched theorem")
+    source = overlay_link.get("source", {})
+    target = overlay_link.get("target", {})
+    qualifiers = overlay_link.get("qualifiers", {})
+    if (
+        overlay_link.get("relation") != "definitionally-matches"
+        or overlay_link.get("assurance") != "independently-checked"
+        or overlay_link.get("status") != "active"
+        or source.get("kind") != "fact"
+        or source.get("id") != fact_id
+        or target.get("kind") != "kernel-declaration"
+        or target.get("id") != theorem
+        or qualifiers.get("admission_authority") is not False
+        or qualifiers.get("fact_status_unchanged") is not True
+    ):
+        raise TransactionError("knowledge-overlay link does not bind the qualified match")
+
+    after_fact = json.loads(json.dumps(before_fact))
+    after_fact["epistemic_status"] = "proved"
+    after_fact["proof_route"] = "kernel-lean"
+    after_fact["axiom_footprint"] = []
+    after_fact["evidence"] = [
+        {
+            "id": f"reconciliation-{theorem}",
+            "kind": "kernel-term",
+            "kernel_declaration": theorem,
+            "supports": before_fact["formal"]["statement"],
+            "check_status": "checked",
+            "checkers": [
+                "axeyum-lean-kernel",
+                "axeyum-lean-import/checked-proposition-compatibility",
+            ],
+            "artifact": f"sha256:{census_sha256}",
+            "notes": "Registers an independently constructed native theorem whose proposition definitionally matches this proof-free imported goal. No Autogenesis operation produced the theorem.",
+        }
+    ]
+    provenance = dict(after_fact["provenance"])
+    provenance["established_by"] = (
+        f"non-autonomous reconciliation with native fact {native_fact['id']}"
+    )
+    after_fact["provenance"] = provenance
+    before_sha = digest(before_fact)
+    after_sha = digest(after_fact)
+    transaction = {
+        "schema_version": 1,
+        "kind": "axeyum-proposition-reconciliation-transaction-proposal",
+        "state": "prepared",
+        "identity": {
+            "fact_id": fact_id,
+            "native_fact_id": native_fact["id"],
+            "native_theorem": theorem,
+            "before_fact_sha256": before_sha,
+            "after_fact_sha256": after_sha,
+            "proposition_census_sha256": census_sha256,
+            "knowledge_link_id": overlay_link.get("id"),
+        },
+        "precondition": {
+            "epistemic_status": "open",
+            "evidence": [],
+            "native_axiom_footprint": [],
+            "definitionally_matches": True,
+        },
+        "production_credit": {
+            "operation_id": None,
+            "autonomous": False,
+            "classification": "no_operation",
+        },
+        "authoritative_write": {
+            "path": f"artifacts/facts/{fact_id.replace('F:', 'F-')}.json",
+            "before_sha256": before_sha,
+            "after_sha256": after_sha,
+            "after_fact": after_fact,
+        },
+        "admission_event": None,
+    }
+    transaction["transaction_sha256"] = digest(transaction)
+    return transaction
+
+
 def build_transaction(
     *,
     before_fact: dict[str, Any],

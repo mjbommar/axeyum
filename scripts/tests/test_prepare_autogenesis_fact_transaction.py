@@ -203,6 +203,120 @@ class FactTransactionTests(unittest.TestCase):
             )
 
 
+class PropositionReconciliationTransactionTests(unittest.TestCase):
+    def inputs(self):
+        before = {
+            "schema_version": 1,
+            "id": "F:ml430-nat-choose-self-control",
+            "statement": "source proposition",
+            "formal": {"language": "lean4-surface", "statement": "forall n, choose n n = 1"},
+            "epistemic_status": "open",
+            "depends_on": [],
+            "evidence": [],
+            "provenance": {"date": "2026-08-26", "established_by": "not established"},
+        }
+        native = {
+            "id": "F:nat-choose-self",
+            "epistemic_status": "proved",
+            "proof_route": "kernel-lean",
+            "axiom_footprint": [],
+            "evidence": [{"kernel_declaration": "Nat.choose_self"}],
+        }
+        match = {
+            "fact_id": before["id"],
+            "native_theorem": "Nat.choose_self",
+        }
+        link = {
+            "id": "L:control-definitionally-matches-native",
+            "relation": "definitionally-matches",
+            "source": {"kind": "fact", "id": before["id"]},
+            "target": {"kind": "kernel-declaration", "id": "Nat.choose_self"},
+            "assurance": "independently-checked",
+            "status": "active",
+            "qualifiers": {"fact_status_unchanged": True, "admission_authority": False},
+        }
+        return before, native, match, link
+
+    def build(self):
+        before, native, match, link = self.inputs()
+        return MODULE.build_proposition_reconciliation_transaction(
+            before_fact=before,
+            native_fact=native,
+            match=match,
+            overlay_link=link,
+            census_sha256="a" * 64,
+        )
+
+    def test_reconciliation_is_explicitly_non_autonomous_and_operation_free(self):
+        transaction = self.build()
+        after = transaction["authoritative_write"]["after_fact"]
+        self.assertEqual(transaction["state"], "prepared")
+        self.assertEqual(
+            transaction["production_credit"],
+            {"operation_id": None, "autonomous": False, "classification": "no_operation"},
+        )
+        self.assertIsNone(transaction["admission_event"])
+        self.assertEqual(after["epistemic_status"], "proved")
+        self.assertEqual(after["axiom_footprint"], [])
+        self.assertEqual(after["evidence"][0]["kernel_declaration"], "Nat.choose_self")
+        self.assertNotIn("checker_operation", after["evidence"][0])
+
+    def test_mutated_match_link_or_native_assurance_fails_closed(self):
+        mutations = (
+            ("match", lambda value: value.__setitem__("fact_id", "F:wrong"), "does not bind"),
+            (
+                "link",
+                lambda value: value["target"].__setitem__("id", "Nat.wrong"),
+                "does not bind",
+            ),
+            (
+                "link-authority",
+                lambda value: value["qualifiers"].__setitem__("admission_authority", True),
+                "does not bind",
+            ),
+            (
+                "native-footprint",
+                lambda value: value.__setitem__("axiom_footprint", ["Classical.choice"]),
+                "not an axiom-free",
+            ),
+        )
+        for label, mutate, message in mutations:
+            with self.subTest(label=label):
+                before, native, match, link = self.inputs()
+                target = link if label.startswith("link") else native if label.startswith("native") else match
+                mutate(target)
+                with self.assertRaisesRegex(MODULE.TransactionError, message):
+                    MODULE.build_proposition_reconciliation_transaction(
+                        before_fact=before,
+                        native_fact=native,
+                        match=match,
+                        overlay_link=link,
+                        census_sha256="a" * 64,
+                    )
+
+    def test_settled_source_or_unbound_native_theorem_fails_closed(self):
+        before, native, match, link = self.inputs()
+        before["epistemic_status"] = "proved"
+        with self.assertRaisesRegex(MODULE.TransactionError, "not open"):
+            MODULE.build_proposition_reconciliation_transaction(
+                before_fact=before,
+                native_fact=native,
+                match=match,
+                overlay_link=link,
+                census_sha256="a" * 64,
+            )
+        before, native, match, link = self.inputs()
+        native["evidence"] = []
+        with self.assertRaisesRegex(MODULE.TransactionError, "does not bind"):
+            MODULE.build_proposition_reconciliation_transaction(
+                before_fact=before,
+                native_fact=native,
+                match=match,
+                overlay_link=link,
+                census_sha256="a" * 64,
+            )
+
+
 class AuthoritativeFactTransactionTests(unittest.TestCase):
     def inputs(self):
         executor = MODULE.load_module("executor_for_transaction_test", MODULE.EXECUTOR_SCRIPT)
