@@ -490,6 +490,19 @@ pub struct NatPrelude {
     pub le_of_add_le_add_right: NameId,
     /// `mul_le_mul_left : ∀ c a b, Le a b → Le (c*a) (c*b)`.
     pub mul_le_mul_left: NameId,
+    /// `mul_succ_add_lt_of_le_of_lt : ∀ n m i j, Le i m → Lt j (succ n) →
+    /// Lt (add (mul (succ n) i) j) (mul (succ n) (succ m))` — the "flatten a
+    /// row-major (block, offset) index" bound: a block index `i` capped at
+    /// `m` and an in-block offset `j` capped below the block width `succ n`
+    /// together stay strictly below the total count `(succ n)*(succ m)`.
+    /// Needed by `CReal.riemannSum_cauchy`'s roadmap step 3 (out of scope
+    /// here) to place a global fine index — `CReal.samplePoint_reblock`'s
+    /// own `Nat.add (Nat.mul (Nat.succ n) i) j` — inside the `Nat.succ
+    /// m_prime` bound `riemannSum_sample_in_bounds`/
+    /// `subdivisionPoint_in_bounds` need, `Nat.succ m_prime` being `(Nat.succ
+    /// n)*(Nat.succ m)` definitionally (`crate::creal::integral`'s private
+    /// `succ_mul_succ`).
+    pub mul_succ_add_lt_of_le_of_lt: NameId,
     /// `le_of_mul_le_mul_left_succ : ∀ c a b, Le ((succ c)*a) ((succ c)*b) → Le a b`.
     pub le_of_mul_le_mul_left_succ: NameId,
     /// `le_of_mul_le_mul_left : ∀ c a b, Le one c → Le (c*a) (c*b) → Le a b`.
@@ -1934,6 +1947,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             le_of_add_le_add_left: kernel.name_str(nat, "le_of_add_le_add_left"),
             le_of_add_le_add_right: kernel.name_str(nat, "le_of_add_le_add_right"),
             mul_le_mul_left: kernel.name_str(nat, "mul_le_mul_left"),
+            mul_succ_add_lt_of_le_of_lt: kernel.name_str(nat, "mul_succ_add_lt_of_le_of_lt"),
             le_of_mul_le_mul_left_succ: kernel.name_str(nat, "le_of_mul_le_mul_left_succ"),
             le_of_mul_le_mul_left: kernel.name_str(nat, "le_of_mul_le_mul_left"),
             mul_left_cancel_of_pos: kernel.name_str(nat, "mul_left_cancel_of_pos"),
