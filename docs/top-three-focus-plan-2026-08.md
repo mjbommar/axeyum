@@ -522,6 +522,16 @@ records all three. The derived authority reports 450 kernel facts, 356 named
 facts, 1,302 graph edges, and zero missing edges; the fact DAG gains one fact
 with dependents without changing theorem status or proof credit.
 
+The semantic-review queue is now honest at the same moving boundary. It had
+three mutually inconsistent states: its JSON stopped at 1,275 theorems, its
+Markdown still advertised 869 theorems and three anchors, and its control named
+an overlay link that no longer existed. The generator now owns a marked census
+block in the document as well as the JSON, and its mutation control synthesizes
+an active/candidate link instead of depending on historical overlay content.
+The refreshed result is 1,287 empty-footprint theorems, zero active reviewed
+semantic anchors, and 1,287 unreviewed entries. That zero is a real knowledge
+gap, not a reason to infer semantics from theorem names.
+
 ### Exit evidence
 
 - Kernel theorem count agrees exactly with the theorem-production authority.

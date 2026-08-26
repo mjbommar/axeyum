@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `f5695d52b` | Synchronize the semantic-review JSON and human census at 1,287 unreviewed theorems, and replace a deleted-link-dependent control with synthetic active/candidate mutations. |
 | 2026-08-26 | `2b943b2e7` | Generate a hash-bound product-health snapshot from kernel, fact, connectivity, operation, producer-outcome, episode, and aggregate-gate authorities without converting static wiring into a runtime-green claim. |
 | 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
 | 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
@@ -1663,6 +1664,11 @@ It reports 1,287 theorems, 698 facts, 397 exact links, 16 production episodes,
 and 2/138 admissible general-producer observations. Both aggregate gates check
 its freshness and controls. Runtime status remains explicitly `not-recorded`;
 the snapshot proves static reachability, not a green build or CI run.
+The semantic-review queue's three-way drift is also repaired. Its generated
+JSON and marked Markdown census now agree at 1,287 empty-footprint theorems,
+zero active reviewed anchors, and 1,287 unreviewed entries. The control no
+longer depends on a deleted historical overlay link; it synthesizes active and
+candidate variants and proves only the active one leaves the queue.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
