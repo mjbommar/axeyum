@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 244] = [
+    let expected: [(&str, crate::NameId, &str); 245] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -566,6 +566,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // (creal/ivt.rs), registered last: it reuses `CReal.lt_cotrans` and
         // `CReal.mesh_count_width`, both above.
         ("CReal.ivt_step", p.ivt_step, "theorem"),
+        // `ivt_step` iterated `n` times by structural induction
+        // (creal/ivt.rs) -- the bracket-shrinking construction `ivt_approx`
+        // needs; the closing Archimedean/continuity combination is not
+        // built yet (see `CRealPrelude::ivt_iter`'s own doc comment).
+        ("CReal.ivt_iter", p.ivt_iter, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
