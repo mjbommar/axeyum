@@ -102,14 +102,22 @@ pub enum UnaryAvx2SynthesisError {
 }
 
 #[derive(Debug)]
-struct Builder {
+pub(crate) struct Builder {
     variables: usize,
     clauses: Vec<Vec<(usize, bool)>>,
     limits: UnaryAvx2SynthesisLimits,
 }
 
 impl Builder {
-    fn variable(&mut self) -> Result<usize, UnaryAvx2SynthesisError> {
+    pub(crate) fn new(limits: UnaryAvx2SynthesisLimits) -> Self {
+        Self {
+            variables: 0,
+            clauses: Vec::new(),
+            limits,
+        }
+    }
+
+    pub(crate) fn variable(&mut self) -> Result<usize, UnaryAvx2SynthesisError> {
         self.variables = self.variables.saturating_add(1);
         if self.variables > self.limits.max_variables {
             return Err(UnaryAvx2SynthesisError::LimitExceeded {
@@ -121,11 +129,17 @@ impl Builder {
         Ok(self.variables - 1)
     }
 
-    fn variables(&mut self, count: usize) -> Result<Vec<usize>, UnaryAvx2SynthesisError> {
+    pub(crate) fn variables(
+        &mut self,
+        count: usize,
+    ) -> Result<Vec<usize>, UnaryAvx2SynthesisError> {
         (0..count).map(|_| self.variable()).collect()
     }
 
-    fn clause(&mut self, literals: &[(usize, bool)]) -> Result<(), UnaryAvx2SynthesisError> {
+    pub(crate) fn clause(
+        &mut self,
+        literals: &[(usize, bool)],
+    ) -> Result<(), UnaryAvx2SynthesisError> {
         self.clauses.push(literals.to_vec());
         if self.clauses.len() > self.limits.max_clauses {
             return Err(UnaryAvx2SynthesisError::LimitExceeded {
@@ -137,7 +151,7 @@ impl Builder {
         Ok(())
     }
 
-    fn at_most_one(&mut self, choices: &[usize]) -> Result<(), UnaryAvx2SynthesisError> {
+    pub(crate) fn at_most_one(&mut self, choices: &[usize]) -> Result<(), UnaryAvx2SynthesisError> {
         for left in 0..choices.len() {
             for right in left + 1..choices.len() {
                 self.clause(&[(choices[left], true), (choices[right], true)])?;
@@ -146,7 +160,7 @@ impl Builder {
         Ok(())
     }
 
-    fn exactly_one(&mut self, choices: &[usize]) -> Result<(), UnaryAvx2SynthesisError> {
+    pub(crate) fn exactly_one(&mut self, choices: &[usize]) -> Result<(), UnaryAvx2SynthesisError> {
         self.clause(
             &choices
                 .iter()
@@ -157,7 +171,7 @@ impl Builder {
         self.at_most_one(choices)
     }
 
-    fn gated_exactly_one(
+    pub(crate) fn gated_exactly_one(
         &mut self,
         family: usize,
         choices: &[usize],
@@ -171,7 +185,7 @@ impl Builder {
         self.at_most_one(choices)
     }
 
-    fn finish(self) -> Result<CnfFormula, UnaryAvx2SynthesisError> {
+    pub(crate) fn finish(self) -> Result<CnfFormula, UnaryAvx2SynthesisError> {
         let mut formula = CnfFormula::new(self.variables);
         for clause in self.clauses {
             let literals = clause
@@ -289,7 +303,10 @@ impl UnaryAvx2Encoding {
     }
 }
 
-fn selected(choices: &[usize], values: &[bool]) -> Result<usize, UnaryAvx2SynthesisError> {
+pub(crate) fn selected(
+    choices: &[usize],
+    values: &[bool],
+) -> Result<usize, UnaryAvx2SynthesisError> {
     let selected: Vec<usize> = choices
         .iter()
         .enumerate()
@@ -304,7 +321,10 @@ fn selected(choices: &[usize], values: &[bool]) -> Result<usize, UnaryAvx2Synthe
     Ok(selected[0])
 }
 
-fn selected_u8(choices: &[usize], values: &[bool]) -> Result<u8, UnaryAvx2SynthesisError> {
+pub(crate) fn selected_u8(
+    choices: &[usize],
+    values: &[bool],
+) -> Result<u8, UnaryAvx2SynthesisError> {
     u8::try_from(selected(choices, values)?)
         .map_err(|_| UnaryAvx2SynthesisError::InvalidModel("selector does not fit u8".to_owned()))
 }
@@ -372,7 +392,7 @@ fn lane_permutation_controls(
     Ok(controls)
 }
 
-fn valid_permutation_target(target: &ByteTags) -> bool {
+pub(crate) fn valid_permutation_target(target: &ByteTags) -> bool {
     let mut seen = [false; AVX2_BYTES];
     for &tag in target.as_array() {
         let Some(tag) = tag.map(usize::from) else {
@@ -506,11 +526,7 @@ fn encode_unary_avx2_sequence_internal(
             limit: limits.max_steps,
         });
     }
-    let mut builder = Builder {
-        variables: 0,
-        clauses: Vec::new(),
-        limits,
-    };
+    let mut builder = Builder::new(limits);
     let mut states = Vec::with_capacity(steps + 1);
     for _ in 0..=steps {
         let mut state = Vec::with_capacity(AVX2_BYTES);

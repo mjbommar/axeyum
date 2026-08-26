@@ -655,3 +655,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0582](adr-0582-exact-budget-circuit-search-must-name-its-lower-bound-premise.md) | Exact-budget circuit search must name its lower-bound premise | accepted |
 | [0583](adr-0583-weighted-cnf-composition-precedes-machine-cost-claims.md) | Compose bounded integer costs as checked CNF, lift weighted SIMD models, and keep dependent-latency claims distinct from scheduling | accepted |
 | [0584](adr-0584-the-kernel-stack-envelope-is-measured-not-limited.md) | Kernel recursion gets a measured stack budget and a ratchet, not a recursion-depth limit | accepted |
+| [0585](adr-0585-multi-source-simd-synthesis-uses-ssa-live-values.md) | Multi-source SIMD synthesis uses SSA live values | accepted |

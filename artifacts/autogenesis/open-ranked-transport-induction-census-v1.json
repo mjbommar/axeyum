@@ -49,7 +49,11 @@
       }
     }
   },
-  "excluded_held_out_fact_ids": [],
+  "held_out_exclusion": {
+    "count": 0,
+    "identities_redacted": true,
+    "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8"
+  },
   "kind": "axeyum-open-ranked-transport-induction-census",
   "limitations": "Ranked native theorem transport supplies explicit premises to bounded induction and retrieved equality rewriting. Held-out rows are excluded before capsule access. Import and transport rejections measure compatibility boundaries, not proposition falsehood.",
   "outcomes": [
@@ -4911,16 +4915,16 @@
       "trusted_declaration_kind": "Theorem"
     }
   ],
-  "schema_version": 4,
+  "schema_version": 5,
   "source": {
     "candidate_ranking": {
       "path": "artifacts/autogenesis/open-lemma-rewrite-support-ranking-v1.json",
-      "sha256": "39ce801b37b88f8fc17a7d5ad9e6e9bb957d63eb4cbd1d5a340ace066987ab67"
+      "sha256": "612c053fd91f4fa674b46492e27d1a89628166bc6c06f3912964cf4216127199"
     },
     "external_capsule_directory": "/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1",
     "lean4export_format": "3.1.0",
     "lean_version": "4.30.0",
-    "mapping_sha256": "78ceebf4849689c0aa3b6b37b54aaf64df467c7e9e60f83a275462371c5d70e1",
+    "mapping_sha256": "3271e9aa4343376499d288c38edded424dc91bff61062f5de40b5027fb9d2fb3",
     "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
     "must_decline_population": {
       "path": "artifacts/autogenesis/must-decline-mutations-v1.json",
@@ -4929,7 +4933,7 @@
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "population_filter": {
       "path": "artifacts/autogenesis/open-ranked-proposition-census-v2.json",
-      "sha256": "78ceebf4849689c0aa3b6b37b54aaf64df467c7e9e60f83a275462371c5d70e1"
+      "sha256": "3271e9aa4343376499d288c38edded424dc91bff61062f5de40b5027fb9d2fb3"
     }
   },
   "state": "train-development-measurement-held-out-excluded",

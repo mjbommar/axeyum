@@ -139,7 +139,7 @@ def build(primary: dict[str, Any], index: dict[str, Any]) -> dict[str, Any]:
             }
         )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "axeyum-open-lemma-rewrite-support-ranking",
         "state": primary["state"],
         "derivation": {
@@ -169,7 +169,7 @@ def build(primary: dict[str, Any], index: dict[str, Any]) -> dict[str, Any]:
             ),
             "combined_candidate_rows": sum(row["candidate_count"] for row in goals),
         },
-        "excluded_held_out_fact_ids": primary["excluded_held_out_fact_ids"],
+        "held_out_exclusion": primary["held_out_exclusion"],
         "goals": goals,
     }
 

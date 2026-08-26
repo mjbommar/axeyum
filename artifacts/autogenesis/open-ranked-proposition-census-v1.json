@@ -624,9 +624,9 @@
   "source": {
     "external_capsule_directory": "/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1",
     "population_path": "artifacts/autogenesis/open-fixed-palette-census-v1.json",
-    "population_sha256": "039829b2dbd10d84a73212793e5df52c9cf45f4902e2673acbf73cb502d00467",
+    "population_sha256": "a03d301d8d0aec305ab91985897811cf5c22568aa20e49baaed1b7c0e51b897d",
     "ranking_path": "artifacts/autogenesis/open-lemma-candidate-ranking-pre-reconciliation-v1.json",
-    "ranking_sha256": "76cd60d7adaa4d21779f72dcd2fdaf02e28487e8cf62853fa01059949604fc7a"
+    "ranking_sha256": "5a38759f8af99acafd1807944e611ff53e7d8e17e34450114469af9f021bd9ef"
   },
   "state": "diagnostic-only-no-ledger-or-admission-authority"
 }

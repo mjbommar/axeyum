@@ -100,6 +100,221 @@ pub enum Avx2Shuffle {
     AlignRight(u8),
 }
 
+/// One of the four nonzero half selections of two-source `vperm2i128`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinaryHalfSelect {
+    /// Low 128-bit lane of the first source.
+    FirstLow,
+    /// High 128-bit lane of the first source.
+    FirstHigh,
+    /// Low 128-bit lane of the second source.
+    SecondLow,
+    /// High 128-bit lane of the second source.
+    SecondHigh,
+}
+
+/// Element width for lane-local AVX2 unpack operations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnpackWidth {
+    /// `vpunpcklbw` / `vpunpckhbw`.
+    Bytes,
+    /// `vpunpcklwd` / `vpunpckhwd`.
+    Words,
+    /// `vpunpckldq` / `vpunpckhdq`.
+    Dwords,
+    /// `vpunpcklqdq` / `vpunpckhqdq`.
+    Qwords,
+}
+
+impl UnpackWidth {
+    fn bytes(self) -> usize {
+        match self {
+            Self::Bytes => 1,
+            Self::Words => 2,
+            Self::Dwords => 4,
+            Self::Qwords => 8,
+        }
+    }
+}
+
+/// One SSA instruction in the modeled multi-source AVX2 shuffle language.
+///
+/// Value zero is the original input register. Instruction `i` produces value
+/// `i + 1`, and every source index must refer to an earlier value. The unary
+/// variant retains the complete semantics already exposed by [`Avx2Shuffle`];
+/// synthesis layers may justify and document narrower control sets separately.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Avx2ProgramInstruction {
+    /// Apply an existing unary instruction to one earlier value.
+    Unary {
+        /// Earlier SSA value.
+        source: usize,
+        /// Unary operation and control.
+        operation: Avx2Shuffle,
+    },
+    /// Two-source lane-local `vpalignr`; each lane is extracted from
+    /// `second || first`, with `second` supplying the low half of the
+    /// conceptual concatenation.
+    AlignRight {
+        /// First source operand, supplying the high half of each concatenation.
+        first: usize,
+        /// Second source operand, supplying the low half of each concatenation.
+        second: usize,
+        /// Byte shift, restricted to 0 through 16 by program validation.
+        immediate: u8,
+    },
+    /// Two-source `vperm2i128` without its zeroing controls.
+    Permute2x128 {
+        /// First source operand.
+        first: usize,
+        /// Second source operand.
+        second: usize,
+        /// Source half for destination bytes 0 through 15.
+        low: BinaryHalfSelect,
+        /// Source half for destination bytes 16 through 31.
+        high: BinaryHalfSelect,
+    },
+    /// Lane-local low or high unpack at byte/word/dword/qword granularity.
+    Unpack {
+        /// First source operand, emitted first in each pair.
+        first: usize,
+        /// Second source operand, emitted second in each pair.
+        second: usize,
+        /// Element width.
+        width: UnpackWidth,
+        /// Select the high half of each 128-bit lane instead of the low half.
+        high: bool,
+    },
+    /// `vpblendd`: each immediate bit selects a dword from the second source
+    /// when set and the first source when clear.
+    BlendDwords {
+        /// First source operand.
+        first: usize,
+        /// Second source operand.
+        second: usize,
+        /// One selection bit per destination dword.
+        mask: u8,
+    },
+}
+
+impl Avx2ProgramInstruction {
+    fn sources(&self) -> (usize, Option<usize>) {
+        match self {
+            Self::Unary { source, .. } => (*source, None),
+            Self::AlignRight { first, second, .. }
+            | Self::Permute2x128 { first, second, .. }
+            | Self::Unpack { first, second, .. }
+            | Self::BlendDwords { first, second, .. } => (*first, Some(*second)),
+        }
+    }
+
+    fn replay(&self, values: &[ByteTags]) -> ByteTags {
+        match self {
+            Self::Unary { source, operation } => operation.replay(&values[*source]),
+            Self::AlignRight {
+                first,
+                second,
+                immediate,
+            } => ByteTags(std::array::from_fn(|out| {
+                let lane = (out / 16) * 16;
+                let index = out % 16 + usize::from(*immediate);
+                if index < 16 {
+                    values[*second].0[lane + index]
+                } else {
+                    values[*first].0[lane + index - 16]
+                }
+            })),
+            Self::Permute2x128 {
+                first,
+                second,
+                low,
+                high,
+            } => ByteTags(std::array::from_fn(|out| {
+                let selection = if out < 16 { *low } else { *high };
+                let offset = out % 16;
+                let (source, base) = match selection {
+                    BinaryHalfSelect::FirstLow => (*first, 0),
+                    BinaryHalfSelect::FirstHigh => (*first, 16),
+                    BinaryHalfSelect::SecondLow => (*second, 0),
+                    BinaryHalfSelect::SecondHigh => (*second, 16),
+                };
+                values[source].0[base + offset]
+            })),
+            Self::Unpack {
+                first,
+                second,
+                width,
+                high,
+            } => {
+                let element_bytes = width.bytes();
+                ByteTags(std::array::from_fn(|out| {
+                    let lane = (out / 16) * 16;
+                    let output_in_lane = out % 16;
+                    let output_element = output_in_lane / element_bytes;
+                    let byte = output_in_lane % element_bytes;
+                    let source = if output_element % 2 == 0 {
+                        *first
+                    } else {
+                        *second
+                    };
+                    let input_element =
+                        output_element / 2 + if *high { 8 / element_bytes } else { 0 };
+                    values[source].0[lane + input_element * element_bytes + byte]
+                }))
+            }
+            Self::BlendDwords {
+                first,
+                second,
+                mask,
+            } => ByteTags(std::array::from_fn(|out| {
+                let dword = out / 4;
+                let source = if mask & (1 << dword) == 0 {
+                    *first
+                } else {
+                    *second
+                };
+                values[source].0[out]
+            })),
+        }
+    }
+}
+
+/// Replay an SSA multi-source program from one identity input register.
+///
+/// # Errors
+///
+/// Rejects an empty program, a forward/out-of-range source, or a two-source
+/// align immediate outside the retained nonzero range 0 through 16.
+pub fn replay_program(program: &[Avx2ProgramInstruction]) -> Result<ByteTags, SimdError> {
+    if program.is_empty() {
+        return Err(SimdError::EmptyProgram);
+    }
+    let mut values = vec![ByteTags::identity()];
+    for (instruction, step) in program.iter().enumerate() {
+        let available = instruction + 1;
+        let (first, second) = step.sources();
+        for source in [Some(first), second].into_iter().flatten() {
+            if source >= available {
+                return Err(SimdError::ProgramSourceOutOfRange {
+                    instruction,
+                    source,
+                    available,
+                });
+            }
+        }
+        if let Avx2ProgramInstruction::AlignRight { immediate, .. } = step
+            && *immediate > 16
+        {
+            return Err(SimdError::AlignImmediateOutOfRange {
+                instruction,
+                immediate: *immediate,
+            });
+        }
+        values.push(step.replay(&values));
+    }
+    values.last().copied().ok_or(SimdError::EmptyProgram)
+}
+
 impl Avx2Shuffle {
     /// Replays this instruction on provenance tags.
     pub fn replay(&self, input: &ByteTags) -> ByteTags {
@@ -275,6 +490,24 @@ pub enum SimdError {
     OneStepNotRefuted,
     /// The producer returned UNSAT but the independent checker rejected it.
     ProofRejected,
+    /// A multi-source program has no instruction and therefore no result.
+    EmptyProgram,
+    /// An SSA instruction refers to its own or a future value.
+    ProgramSourceOutOfRange {
+        /// Zero-based instruction position.
+        instruction: usize,
+        /// Rejected value index.
+        source: usize,
+        /// Number of values available before this instruction.
+        available: usize,
+    },
+    /// The nonzero permutation language retains only align immediates 0..=16.
+    AlignImmediateOutOfRange {
+        /// Zero-based instruction position.
+        instruction: usize,
+        /// Rejected immediate.
+        immediate: u8,
+    },
 }
 
 impl From<CnfError> for SimdError {
@@ -294,8 +527,9 @@ mod tests {
     use axeyum_cnf::{check_drat_backward, parse_drat, write_drat};
 
     use super::{
-        AVX2_BYTES, Avx2Shuffle, ByteTags, byte_reverse_sequence, one_step_eligibility,
-        refute_one_step, replay_sequence,
+        AVX2_BYTES, Avx2ProgramInstruction, Avx2Shuffle, BinaryHalfSelect, ByteTags, SimdError,
+        UnpackWidth, byte_reverse_sequence, one_step_eligibility, refute_one_step, replay_program,
+        replay_sequence,
     };
 
     #[test]
@@ -304,6 +538,135 @@ mod tests {
             replay_sequence(&byte_reverse_sequence()),
             ByteTags::reversed()
         );
+    }
+
+    fn lane_reverse() -> Avx2Shuffle {
+        Avx2Shuffle::Pshufb([
+            15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8, 7,
+            6, 5, 4, 3, 2, 1, 0,
+        ])
+    }
+
+    #[test]
+    fn multi_source_program_replays_operand_order_and_ssa_values() {
+        let prefix = Avx2ProgramInstruction::Unary {
+            source: 0,
+            operation: lane_reverse(),
+        };
+        let aligned = replay_program(&[
+            prefix.clone(),
+            Avx2ProgramInstruction::AlignRight {
+                first: 1,
+                second: 0,
+                immediate: 12,
+            },
+        ])
+        .unwrap();
+        assert_eq!(
+            &aligned.as_array()[..16],
+            &[
+                Some(12),
+                Some(13),
+                Some(14),
+                Some(15),
+                Some(15),
+                Some(14),
+                Some(13),
+                Some(12),
+                Some(11),
+                Some(10),
+                Some(9),
+                Some(8),
+                Some(7),
+                Some(6),
+                Some(5),
+                Some(4),
+            ]
+        );
+
+        let permuted = replay_program(&[
+            prefix.clone(),
+            Avx2ProgramInstruction::Permute2x128 {
+                first: 0,
+                second: 1,
+                low: BinaryHalfSelect::SecondHigh,
+                high: BinaryHalfSelect::FirstLow,
+            },
+        ])
+        .unwrap();
+        assert_eq!(permuted.as_array()[0], Some(31));
+        assert_eq!(permuted.as_array()[15], Some(16));
+        assert_eq!(permuted.as_array()[16], Some(0));
+        assert_eq!(permuted.as_array()[31], Some(15));
+
+        let unpacked = replay_program(&[
+            prefix.clone(),
+            Avx2ProgramInstruction::Unpack {
+                first: 0,
+                second: 1,
+                width: UnpackWidth::Bytes,
+                high: false,
+            },
+        ])
+        .unwrap();
+        assert_eq!(
+            &unpacked.as_array()[..8],
+            &[
+                Some(0),
+                Some(15),
+                Some(1),
+                Some(14),
+                Some(2),
+                Some(13),
+                Some(3),
+                Some(12),
+            ]
+        );
+
+        let blended = replay_program(&[
+            prefix,
+            Avx2ProgramInstruction::BlendDwords {
+                first: 0,
+                second: 1,
+                mask: 0b0000_0010,
+            },
+        ])
+        .unwrap();
+        assert_eq!(
+            &blended.as_array()[..4],
+            &[Some(0), Some(1), Some(2), Some(3)]
+        );
+        assert_eq!(
+            &blended.as_array()[4..8],
+            &[Some(11), Some(10), Some(9), Some(8)]
+        );
+    }
+
+    #[test]
+    fn multi_source_program_validation_fails_closed() {
+        assert_eq!(replay_program(&[]), Err(SimdError::EmptyProgram));
+        assert!(matches!(
+            replay_program(&[Avx2ProgramInstruction::Unary {
+                source: 1,
+                operation: lane_reverse(),
+            }]),
+            Err(SimdError::ProgramSourceOutOfRange {
+                instruction: 0,
+                source: 1,
+                available: 1,
+            })
+        ));
+        assert!(matches!(
+            replay_program(&[Avx2ProgramInstruction::AlignRight {
+                first: 0,
+                second: 0,
+                immediate: 17,
+            }]),
+            Err(SimdError::AlignImmediateOutOfRange {
+                instruction: 0,
+                immediate: 17,
+            })
+        ));
     }
 
     #[test]

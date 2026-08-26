@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `a88fa732f` | Redact all 37 held-out identities from agent-readable rankings and censuses; replace them with count/hash receipts, derive exclusions independently, and restore the 1,881-test Python authority to green. |
 | 2026-08-26 | `7e8fe9b3b` | Restore the standard-library-only script boundary with typed package implementations and stable launchers; fix seven newly exposed diagnostics and refresh honest bounded yield from 6/109 to 6/111. |
 | 2026-08-26 | `f1e1724e2` | Add held-out-safe tier-R retrieval for reusable target-owned capsule roots, preserving capsule identity, empty footprints, semantic-analogue qualification, and zero operation authority. |
 | 2026-08-26 | `81b5bae31` | Repair the typed agent read surface so structural statement floors, proof-reconstruction eligibility, and clean-definition routing survive the generated index boundary. |
@@ -1620,8 +1621,13 @@ stable standard-library-only launchers preserve the existing commands. This
 made seven hidden type diagnostics visible and fixed them without widening the
 four-diagnostic baseline. The refreshed bounded census is 6/111 (5.4%), so two
 new eligible theorem goals correctly register as producer declines rather than
-volume credit. The held-out-isolation setup errors remain a separate
-project-wide gate failure to audit next.
+volume credit. The held-out-isolation setup errors are now closed without an
+exception: all agent-readable exclusion arrays were replaced by
+count/hash/redaction receipts, and consumers independently derive the protected
+set from the nursery. The gate scans 1,066 files against 37 held-out facts and
+reports zero references. The full Python authority is now green at 1,881
+collected, 1,847 passed, and 34 skipped, with zero failures or errors; Rust,
+docs, and remote CI remain separate claims.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
@@ -1838,6 +1844,20 @@ a throughput, port-scheduling, whole-machine, ISA-wide, or priority claim. The d
 package retains deterministic compressed CNF/DRAT, hashes, diary, provenance, and a cleanly
 built LaTeX note. Multi-source live-register semantics and a real scheduler objective remain
 the open SIMD boundary.
+
+**SIMD multi-source live-value synthesis, 2026-08-26.** ADR-0585 replaces the unary
+accumulator boundary with a reusable bounded SSA program encoding: the original input and every
+earlier result remain selectable as operands. Its exact fourteen-family AVX2 language adds
+two-source `vpalignr`, nonzero-control `vperm2i128`, all low/high byte/word/dword/qword unpacks,
+and `vpblendd` to the prior permutation families. A GCC intrinsic differential agrees on 11
+two-source modes across all 32 bytes and rejects an align-direction mutation. Global byte
+reversal's one-step formula has 2,697 variables / 97,314 clauses; CaDiCaL's 1,922,088-byte DRAT
+is accepted by Axeyum's file-backed checker, while a two-byte truncation fails. The 4,372-variable
+/ 239,078-clause two-step formula lifts and replays `vpshufb; vperm2i128`. This proves minimum
+length two only in the exact constant-control SSA language. It excludes memory, insert/extract,
+logic composition, register allocation, and scheduling, and carries no novelty-priority claim.
+The prior unary formula remains byte-identical, and the sibling package retains deterministic
+compressed CNF/DRAT, a manifest, diary, provenance, and LaTeX write-up.
 
 **Boolean-ANF control route, 2026-08-26.** ADR-0562 adds canonical resource-bounded Boolean
 polynomials, deterministic Bosphorus interchange, and a sparse coefficient-DAG formulation of

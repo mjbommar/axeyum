@@ -218,6 +218,20 @@ package retains deterministic compressed CNF/DRAT, hashes, diary, provenance, an
 built LaTeX note. Multi-source live-register semantics and a real scheduler objective remain
 the open SIMD boundary.
 
+**SIMD multi-source live-value synthesis, 2026-08-26.** ADR-0585 replaces the unary
+accumulator boundary with a reusable bounded SSA program encoding: the original input and every
+earlier result remain selectable as operands. Its exact fourteen-family AVX2 language adds
+two-source `vpalignr`, nonzero-control `vperm2i128`, all low/high byte/word/dword/qword unpacks,
+and `vpblendd` to the prior permutation families. A GCC intrinsic differential agrees on 11
+two-source modes across all 32 bytes and rejects an align-direction mutation. Global byte
+reversal's one-step formula has 2,697 variables / 97,314 clauses; CaDiCaL's 1,922,088-byte DRAT
+is accepted by Axeyum's file-backed checker, while a two-byte truncation fails. The 4,372-variable
+/ 239,078-clause two-step formula lifts and replays `vpshufb; vperm2i128`. This proves minimum
+length two only in the exact constant-control SSA language. It excludes memory, insert/extract,
+logic composition, register allocation, and scheduling, and carries no novelty-priority claim.
+The prior unary formula remains byte-identical, and the sibling package retains deterministic
+compressed CNF/DRAT, a manifest, diary, provenance, and LaTeX write-up.
+
 **Boolean-ANF control route, 2026-08-26.** ADR-0562 adds canonical resource-bounded Boolean
 polynomials, deterministic Bosphorus interchange, and a sparse coefficient-DAG formulation of
 the complete affine-between-AND search. The PRIMATEs-inverse MC=6 control is 738 variables / 759
