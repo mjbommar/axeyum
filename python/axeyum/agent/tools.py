@@ -1,4 +1,4 @@
-"""The eight tier-R tools: everything the loop is allowed to look at, and nothing else.
+"""The tier-R tools: everything the loop is allowed to look at, and nothing else.
 
 Tier R is *read*. No tool here writes a ledger, registers an operation, admits a
 declaration, or invokes a checker; the only bytes an R tool causes to be written
@@ -36,6 +36,7 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
 from ..knowledge import facts as facts_api
 from ..knowledge import frontier as frontier_api
+from ..knowledge import imported_candidates as imported_candidates_api
 from ..knowledge import lemmas as lemmas_api
 from ..knowledge import nursery as nursery_api
 from ..knowledge import operations as operations_api
@@ -51,6 +52,8 @@ from .models import (
     FactView,
     FrontierPage,
     FrontierRow,
+    ImportedCandidateRow,
+    ImportedCandidatesPage,
     LemmaCandidateRow,
     LemmaCandidatesPage,
     LemmaNeighbourhoodPage,
@@ -80,6 +83,7 @@ TOOL_TIERS: dict[str, Literal["read", "proposed", "checked"]] = {
     "kernel_theorems": "read",
     "lemma_neighbourhood": "read",
     "lemma_candidates": "read",
+    "imported_candidates": "read",
     "operation_registry": "read",
     "overlay_query": "read",
     # Tier R, GUARDED (slice A6). Still `read` -- they read the world and write
@@ -599,6 +603,59 @@ def lemma_candidates(
         )
 
     return _timed("lemma_candidates", ctx, body)
+
+
+def imported_candidates(
+    ctx: RunContext[AgentDeps],
+    name_glob: str = "",
+    canonical_type_contains: str = "",
+) -> ImportedCandidatesPage:
+    """Search exact imported theorem candidates without authorizing reuse.
+
+    Imported candidates remain separate from native kernel lemmas. Every row
+    carries its measured footprint and execution eligibility; a
+    ``reconstruct-required`` row is strategy context and must not be sent to a
+    proof-reuse or transport path.
+
+    Args:
+        name_glob: Shell-style glob over imported candidate names.
+        canonical_type_contains: Exact substring of the imported canonical type.
+    """
+
+    def body() -> ImportedCandidatesPage:
+        if sum(map(bool, (name_glob, canonical_type_contains))) != 1:
+            raise ToolRefusal(
+                "supply exactly one of name_glob or canonical_type_contains"
+            )
+        index = imported_candidates_api.load(ctx.deps.root)
+        if name_glob:
+            selected = [row for row in index if glob_match(row.name, name_glob)]
+        else:
+            selected = list(index.with_type_fragment(canonical_type_contains))
+        selected.sort(key=lambda row: (row.name, row.declaration_content_sha256))
+        rows = tuple(
+            ImportedCandidateRow(
+                name=row.name,
+                canonical_type=row.canonical_type,
+                alpha_type_expression_sha256=row.alpha_type_expression_sha256,
+                declaration_content_sha256=row.declaration_content_sha256,
+                axiom_footprint=row.axiom_footprint,
+                direct_theorem_dependency_count=len(row.direct_theorem_dependencies),
+                retrieval_disposition=row.retrieval_disposition,
+                strategy_eligible=row.strategy_eligible,
+                execution_eligible=row.execution_eligible,
+            )
+            for row in selected[:MAX_ROWS]
+        )
+        return ImportedCandidatesPage(
+            name_glob=name_glob,
+            canonical_type_contains=canonical_type_contains,
+            matched=len(selected),
+            total_candidates=len(index),
+            rows=rows,
+        )
+
+    return _timed("imported_candidates", ctx, body)
 
 
 def operation_registry(ctx: RunContext[AgentDeps], fact_id: str = "") -> OperationRegistryView:
@@ -1303,6 +1360,7 @@ TIER_R_TOOLS: tuple[Callable[..., Any], ...] = (
     kernel_theorems,
     lemma_neighbourhood,
     lemma_candidates,
+    imported_candidates,
     operation_registry,
     overlay_query,
 )
@@ -1450,6 +1508,7 @@ __all__ = [
     "fact_get",
     "fact_neighbourhood",
     "frontier_select",
+    "imported_candidates",
     "independent_check",
     "is_output_tool",
     "kernel_theorems",

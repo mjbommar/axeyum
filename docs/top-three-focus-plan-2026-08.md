@@ -439,6 +439,12 @@ receipt, 29 theorem dependencies, and the five-member footprint. It is search-
 eligible and explicitly execution-ineligible. A Rust descriptor reproduces
 those fields from the stream. Next: expose these rows through the agent's
 candidate-only read surface and dispatch reconstruction rather than proof reuse.
+The read surface now exists as a ninth tier-R tool. Exact-name and canonical-
+type queries return imported rows separately from native lemmas, and the live
+bitwise row remains strategy-eligible but execution-ineligible. Empty/two-axis
+queries decline, and the toolset policy hash changes with the new surface.
+Next: define a reconstruction proposal that consumes the descriptor but never
+the imported proof term, then independently check the newly constructed term.
 
 ### Exit evidence
 

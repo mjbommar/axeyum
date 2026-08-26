@@ -302,6 +302,12 @@ and a Rust descriptor reproduces canonical/alpha type hashes, declaration and
 dependency identities, 29 theorem dependencies, and the five-member footprint
 from the external stream. Next: expose this index through the candidate-only
 agent read surface and dispatch reconstruction for its row.
+The agent now exposes that index through a separate ninth tier-R tool. Exact
+name/type queries preserve the bitwise candidate's source, five-member
+footprint, 29-dependency count, and `execution_eligible=false`; invalid query
+shapes fail closed and the toolset policy fingerprint moves. Next: implement a
+reconstruction proposal that consumes strategy metadata without importing the
+assumption-bearing proof term.
 
 <!-- plan-section: landed-changes -->
 
