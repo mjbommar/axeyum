@@ -227,6 +227,26 @@ exact type-compatibility filter and type-directed application attempt over
 these candidates, not a larger lexical score or an LLM assertion that one is
 the same theorem.
 
+That connective layer now has its first measured success. A second-hop graph
+projection retains topical anchors, then selects simple axiom-free equations
+about operators introduced by those anchors. A target-agnostic bounded
+induction producer specializes those exact retrieved declarations in its live
+scope and constructs forward equality chains without invoking broad residual
+search. On the immutable 51-row population it admits `Nat.choose n 1 = n`
+axiom-free with checked dependencies on Pascal's rule, the zero-column rule,
+and generic additive equations. The result is 1/51 overall, 1/20 among
+importable positive targets, and 0/6 false controls. This is the first positive
+construction on that open population, but remains measurement-only. The
+derived obstruction projection makes the next sequence executable: 25 positive
+targets demand type-slice generalization, 13 demand a non-equality terminal
+family, five demand a missing rewrite/induction plan, one exceeds the binder
+budget, and one is ready for eventual operation integration. Because a
+one-target registry row would violate the reusable-producer goal, operation
+registration waits until the unchanged contract converts at least three
+siblings. The immediate work is therefore the highest-yield general boundary:
+route the 25 import-blocked positives through type-slice generalization, then
+rerun the same producer and look for a real multi-target family.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring

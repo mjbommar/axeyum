@@ -25,6 +25,7 @@ __all__ = [
     "ImportReport",
     "MAX_BINDERS",
     "MAX_INDUCTIONS",
+    "MAX_RETRIEVED_DECLARATIONS",
     "MODEQ_MAX_BINDERS",
     "ModEqCandidate",
     "StatementImport",
@@ -34,6 +35,7 @@ __all__ = [
     "import_statement_ndjson",
     "propose_bounded_application",
     "propose_bounded_induction",
+    "propose_bounded_induction_with_rewrites",
     "propose_modeq_family",
     "transport_native_candidate",
 ]
@@ -45,6 +47,7 @@ FORMAT_VERSION: builtins.str
 IDENTITY_VERSION: builtins.str
 MAX_BINDERS: builtins.int
 MAX_INDUCTIONS: builtins.int
+MAX_RETRIEVED_DECLARATIONS: builtins.int
 MODEQ_MAX_BINDERS: builtins.int
 @typing.final
 class ApplicationCandidate:
@@ -568,6 +571,21 @@ def propose_bounded_induction(kernel: kernel.Kernel, goal: kernel.ExprId) -> Can
     
     Raises `EpochError` if `goal` was interned by another kernel, and `Declined`
     carrying a typed `.reason` when the bounded search does not close the goal.
+    """
+
+def propose_bounded_induction_with_rewrites(kernel: kernel.Kernel, goal: kernel.ExprId, declarations: typing.Sequence[kernel.NameId]) -> Candidate:
+    r"""
+    Proposes bounded induction with exact retrieved declarations available for
+    typed equality rewriting in the current induction scope.
+
+    `declarations` is an explicit retrieval boundary, not proof authority. The
+    producer preserves caller order, ignores unusable candidates, applies fixed
+    Rust-side budgets, and returns an untrusted term for same-kernel admission.
+
+    # Errors
+
+    Raises `EpochError` for a foreign goal/name handle and `Declined` with the
+    bounded-induction reason when the combined grammar cannot close the goal.
     """
 
 def propose_modeq_family(kernel: kernel.Kernel, goal: kernel.ExprId) -> ModEqCandidate:
