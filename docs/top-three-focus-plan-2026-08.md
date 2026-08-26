@@ -22,21 +22,48 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- A live high-stack production inventory reported 1,184 distinct theorems with
-  empty measured axiom footprints. The committed declaration projection was
-  stale at 1,100; regenerating it from current code now agrees exactly at 1,184.
-  After merging the next constructive-real and rational increments, the
-  projection and search index advanced together through at least 1,195. The production-
-  provenance ledger credits
-  only 8 established facts to reusable
-  multi-target operations; most theorems remain human-built.
+- The generated kernel projection currently contains 1,540 declarations: 1,195
+  theorems, 242 definitions, 29 constructors, 22 inductives, 22 recursors, and
+  30 axioms. It reports 1,510 axiom-free declarations and 6,672 direct
+  theorem-dependency edges. This is a substantial checked library, but it is
+  not an autonomous-production count.
+- The fact ledger contains 696 propositions: 498 proved, 4 refuted, 2 computed,
+  189 open, and 3 conjectured. Its 26 authoritative/counterfactual operation
+  rows contain only 2 reusable multi-target producers and name only 33 fact
+  IDs. Most checked theorems therefore remain human-constructed, and most
+  ledger facts have no reusable producer assigned.
 - Sixteen live agent episodes exist. Two produced axiom-free proofs re-derived
   in a second kernel, but the current producer vocabulary closes only a tiny
   frontier.
 - The kernel, fact ledger, tactic catalog, obstruction graph, and concept graph
   are separately useful, but do not yet form one lemma-search substrate.
+- The generated lemma index now covers all 1,195 kernel theorems and their 6,672
+  direct edges, but only 308 theorems link exactly to 312 fact records. It keeps
+  90 unresolved evidence IDs explicit rather than guessing, leaving 887
+  theorems without exact fact links.
 - The Rust and Python surfaces are broad, but integration churn can leave
   `main` red and evidence fixtures can be mistaken for production populations.
+
+## Comparative position
+
+Axeyum should not be described as a replacement for any one neighboring
+project. It combines narrower versions of several systems around a different
+unit of value: a checked, provenance-bearing result that becomes searchable
+input to the next bounded production attempt.
+
+| Neighbor | What it is far ahead on | Axeyum's distinct strength | Axeyum's present weakness |
+|---|---|---|---|
+| Lean and Mathlib | Mature elaboration, tactics, IDE experience, ecosystem, and a research-scale mathematical library | Independent Rust checking, explicit axiom footprints, and treating imported Lean as one evidence route inside a heterogeneous system | Much smaller library, partial Lean-core coverage, little interactive elaboration, and minimal user community |
+| Z3 and cvc5 | Solver performance, theory breadth/depth, quantifier heuristics, proof production, and industrial use | Route-specific evidence reports, original-query model replay, and a path from solver evidence into durable kernel theorems and a fact ledger | Uneven proof assurance across logics, incomplete theory combination, and many routes that still have no transferable proof |
+| Isabelle/Sledgehammer-style systems | Mature interactive proving plus external-prover orchestration and large proof corpora | A more explicit machine-readable ledger/operation/episode model aimed at measuring autonomous compounding | No comparably mature proof language, IDE, simplifier ecosystem, or broad automated premise-selection results |
+| AlphaProof/LLM proof agents | Learned proof search at enormous training and compute scale | Deterministic non-LLM producers, typed declines, strict held-out controls, and a checker/transaction boundary designed to remain authoritative when models change | Two successful production episodes out of sixteen is evidence of a functioning seed, not yet a productive autonomous system |
+| Standalone CAS and program analyzers | Deep domain algorithms and mature domain workflows | One evidence/provenance vocabulary spanning CAS, SMT, kernel proofs, BMC, symbolic execution, and property checking | Breadth creates maintenance cost; many integrations are shallow relative to the specialist tools and lack one polished product front door |
+
+The strategic wager is therefore credible but unproved: Axeyum is strongest in
+trust-boundary design and connective tissue, competitive only on selected
+narrow reasoning fragments, and weak in autonomous conversion rate, specialist
+algorithm depth, library scale, and product ergonomics. The next milestone must
+raise the first of those weaknesses without weakening the first strength.
 
 ## Priority 1: autonomous reusable proof production
 
