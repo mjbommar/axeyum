@@ -1368,6 +1368,17 @@ all 300 starts at makespan 656 and returned `sat-replayed` against the 175,770-v
 657 search as evidence. It does not prove optimality: sustained `abz7@655` DRCP producers remain
 live, and only a completed proof accepted by both calibrated checkers can close the lower half.
 
+**Job-shop FDS gap localization, 2026-08-26.** The current pinned OptalCP 2026.2.0 preview
+benchmark was reproduced on the byte-equivalent `abz7` instance with four workers, seed 1,
+zero gap tolerances, verified solutions, and two level-4 no-overlap / level-3 cumulative FDS
+workers. It internally raised the lower bound to 656 at 59.877 seconds and reported optimum at
+108.466 seconds (5,833,383 branches, 2,636,506 failures). This is strong search-direction
+telemetry, not evidence: its `proof: true` field has no exported proof object, every one of 300
+solution-value slots is null, and no independent checker can replay its inference. A hash-bound
+package receipt records that fail-closed boundary. The generic missing capability is now sharply
+identified as certifiable scheduling propagation/search composition, while all seven independent
+DRCP/DRAT proof producers continue without short cutoffs.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
