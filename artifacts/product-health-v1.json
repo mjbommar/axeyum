@@ -78,6 +78,11 @@
       "both": true,
       "just_check": true,
       "shell_fallback": true
+    },
+    "semantic_coverage": {
+      "both": true,
+      "just_check": true,
+      "shell_fallback": true
     }
   },
   "kernel_library": {
@@ -114,6 +119,17 @@
   },
   "schema_version": 1,
   "scope": "committed-populations-and-static-gate-reachability",
+  "semantic_coverage": {
+    "concepts": 13,
+    "excluded_held_out_family_topic_facts": 37,
+    "excluded_held_out_formalizations": 0,
+    "family_topic_facts": 177,
+    "kernel_semantic_anchors": 3,
+    "qualified_formalization_facts": 9,
+    "with_family_topic": 7,
+    "with_kernel_semantic_anchors": 3,
+    "with_qualified_formalizations": 3
+  },
   "source_receipts": [
     {
       "path": "artifacts/autogenesis/kernel-dependency-projection-v1.json",
@@ -130,6 +146,10 @@
     {
       "path": "artifacts/autogenesis/producer-outcome-observations-v1.json",
       "sha256": "c81224843b1d7ca551b764c464106c67557684f5473be8046059eac16a32201c"
+    },
+    {
+      "path": "artifacts/autogenesis/concept-coverage-projection-v1.json",
+      "sha256": "a4d34991bc320d122cb910993d93d63e743126abf46e34323f9ed45c7d091e06"
     },
     {
       "path": "justfile",
