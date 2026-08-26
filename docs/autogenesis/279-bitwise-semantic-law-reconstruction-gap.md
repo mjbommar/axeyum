@@ -32,7 +32,7 @@ into the executable capsule.
 The first machine-readable demand is
 [`bitwise-semantic-law-demand-v1.json`](../../artifacts/autogenesis/bitwise-semantic-law-demand-v1.json).
 It binds the exact `Nat.testBit` and `Nat.bitwise` content identities from the
-implementation graph, the candidate's alpha-stable type identity, five required
+implementation graph, the candidate's alpha-stable type identity, six required
 laws, and the pinned Lean source revision. Its checker also evaluates the
 `testBit_succ` witness at `n = 2, i = 0`, proving that the required interface
 excludes the previously admitted countermodel. The artifact remains
@@ -54,6 +54,15 @@ zero/positive bit values to `Bool.false`/`Bool.true`, then admits
 measured footprint is empty. This proves the result-sort adaptation itself is
 available; equivalence with the exact imported `Nat.testBit` definition remains
 missing and is still denied credit in the artifact.
+
+Definition-level inspection now binds both imported operations beyond their
+graph hashes: alpha-stable type and value hashes, direct declaration
+dependencies, and measured footprints. Both `Nat.testBit` and `Nat.bitwise`
+carry `propext` through their concrete implementation closures. For
+`testBit`, the 13 direct dependencies expose the typeclass-expanded
+`HAnd`/`HShiftRight`/`BEq` route; for `bitwise`, the direct seam is the private
+unary worker plus `PSigma`. This rules out a cheap exact-definition graft as
+the clean bridge and makes target-owned semantic reconstruction the next step.
 
 Run `just autogenesis-bitwise-semantic-law-demand` to validate the join and its
 negative controls.

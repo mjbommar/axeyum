@@ -334,6 +334,11 @@ still missing and explicitly receives zero credit.
 The old capsule command now also fails closed by default: writing the refuted
 statement requires an explicit `--emit-refuted-diagnostic` opt-in, so omitting
 the separate metadata checker cannot accidentally make it a producer target.
+Exact definition descriptors now bind both imported operation bodies, types,
+direct closures, and footprints. Each concrete implementation reaches
+`propext`; `testBit` does so through its typeclass-expanded shift/and/equality
+route, while `bitwise` reaches a private unary worker and `PSigma`. Clean work
+must therefore reconstruct target-owned semantics rather than graft definitions.
 
 <!-- plan-section: landed-changes -->
 

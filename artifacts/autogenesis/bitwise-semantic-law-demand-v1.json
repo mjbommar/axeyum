@@ -59,11 +59,42 @@
   ],
   "operations": [
     {
+      "alpha_type_expression_sha256": "e01a23e8815a63592991ea128772decdf5eeda9e622eb5eb727b1deec7fbcab0",
+      "alpha_value_expression_sha256": "d4cc135b37f81881405de3f9486523b903ed4039853de21f61527baa37f0f2c9",
+      "axiom_footprint": [
+        "propext"
+      ],
       "content_sha256": "38cd05001a9d7f264cd50692ba43718c4913c3ec80243776fe919cb5c79d91ac",
+      "direct_declaration_dependencies": [
+        "Bool",
+        "Nat",
+        "Nat.bitwise._unary",
+        "PSigma.mk"
+      ],
       "name": "Nat.bitwise"
     },
     {
+      "alpha_type_expression_sha256": "59774957aa71cee4d3b7ab60073514f57d42787199e3096e78d0fe155553a1b4",
+      "alpha_value_expression_sha256": "1daa13a2d14ceab27017d31711d6e180190ae480f906b6a8da1375368d8713c9",
+      "axiom_footprint": [
+        "propext"
+      ],
       "content_sha256": "f1ff827b59c6a6afbd90487eb8e27aa815bff840aa045de020e69cff9f34d794",
+      "direct_declaration_dependencies": [
+        "Bool",
+        "HAnd.hAnd",
+        "HShiftRight.hShiftRight",
+        "Nat",
+        "Nat.instAndOp",
+        "Nat.instShiftRight",
+        "OfNat.ofNat",
+        "bne",
+        "instBEqOfDecidableEq",
+        "instDecidableEqNat",
+        "instHAndOfAndOp",
+        "instHShiftRightOfShiftRight",
+        "instOfNatNat"
+      ],
       "name": "Nat.testBit"
     }
   ],

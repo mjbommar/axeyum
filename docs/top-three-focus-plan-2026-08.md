@@ -468,6 +468,9 @@ exact imported-definition equivalence, not Boolean adaptation in general.
 The refuted capsule generator itself now refuses default execution; only an
 explicit diagnostic flag permits emission, closing reliance on a downstream
 metadata checker for this semantic safety decision.
+Definition-level descriptors now show that both imported operation closures
+carry `propext`, with exact body/type hashes and direct dependency sets. The
+remaining route is target-owned semantic reconstruction, not definition grafting.
 
 ### Exit evidence
 

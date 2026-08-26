@@ -40,6 +40,12 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "implementation graph"):
             MODULE.validate(data)
 
+    def test_operation_footprint_omission_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["operations"][0]["axiom_footprint"] = []
+        with self.assertRaisesRegex(ValueError, "operation footprint"):
+            MODULE.validate(data)
+
     def test_countermodel_exclusion_mutation_fails_closed(self):
         data = copy.deepcopy(self.data)
         data["countermodel_exclusion"]["law_rhs"] = False

@@ -44,6 +44,15 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     for operation in operations:
         if (operation.get("name"), operation.get("content_sha256")) not in graph_identities:
             raise ValueError("operation identity is absent from implementation graph")
+        if operation.get("axiom_footprint") != ["propext"]:
+            raise ValueError("imported operation footprint changed")
+        for field in ("alpha_type_expression_sha256", "alpha_value_expression_sha256"):
+            value = operation.get(field)
+            if not isinstance(value, str) or len(value) != 64:
+                raise ValueError(f"imported operation {field} is malformed")
+        dependencies = operation.get("direct_declaration_dependencies")
+        if not isinstance(dependencies, list) or dependencies != sorted(dependencies):
+            raise ValueError("imported operation dependency identity changed")
 
     laws = data.get("laws")
     if not isinstance(laws, list) or len(laws) != 6:
