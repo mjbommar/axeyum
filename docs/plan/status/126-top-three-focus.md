@@ -24,6 +24,11 @@ The next CI run exposed and the lane repaired a separate dependency gate: move
 `anyhow` to the published 1.0.103 soundness fix, allow the OSI-approved
 Unicode-DFS-2016 data license, and narrowly document six unmaintained
 build-time-only rust-unic advisories inherited from the current stub generator.
+The end-to-end code audit now records the live 1,195-theorem/696-fact boundary,
+the exact graph linkage deficit, and Axeyum's comparative position against
+proof assistants, SMT solvers, proof agents, CAS, and program analyzers. A
+newly merged constructive-real comment also exposed a broken public Rustdoc
+link; `2d43f2791` repaired it and the focused warning-denied kernel docs pass.
 
 <!-- plan-section: landed-changes -->
 
@@ -31,3 +36,5 @@ build-time-only rust-unic advisories inherited from the current stub generator.
 | 2026-08-25 | `86431e6cd` | Autonomous-loop read tool exposes held-out-safe kernel lemma neighborhoods as candidate-only context. |
 | 2026-08-25 | `92271d133` | Kernel projection and lemma index advanced together to the then-current 1,185-theorem population. |
 | 2026-08-25 | `d904fa59c` | Python CI installs its agent dependencies; the pinned-nightly MIR fixture and all authentication hashes move together. |
+| 2026-08-25 | `d0037b378` | Restore dependency assurance with the published `anyhow` fix and narrowly documented transitive stub-generator exceptions. |
+| 2026-08-25 | `2d43f2791` | Repair the CReal geometric-series Rustdoc reference exposed by the merged theorem lane. |
