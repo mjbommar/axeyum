@@ -2125,6 +2125,15 @@ pub struct CRealPrelude {
     /// `Nat.le`-shaped internally, so no `Nat.lt → Nat.le` conversion is
     /// needed here at all.
     pub subdivision_point_in_bounds: NameId,
+    /// `CReal.sumRange_double : ∀ (g : Nat → CReal) (k : Nat), Equiv
+    /// (sumRange g (Nat.mul 2 k)) (sumRange (fun i => add (g (Nat.mul 2 i))
+    /// (g (Nat.succ (Nat.mul 2 i)))) k)` (`creal/integral.rs`) — grouping
+    /// `2k` consecutive terms of an arbitrary `g` into `k` consecutive
+    /// pairs, exactly (no error term). The reblocking identity a
+    /// dyadic-refinement comparison of `riemannSum` at subdivision counts
+    /// `m` and `2m+1` needs; see `integral.rs`'s module documentation for
+    /// what still separates this from `riemannSum_cauchy`.
+    pub sum_range_double: NameId,
     /// `CReal.monotone_of_nonneg_deriv : ∀ F F' a b, HasDerivativeOn F F' a
     /// b → (∀ z, le a z → le z b → le zero (F' z)) → ∀ x y, le a x → le x y →
     /// le y b → le (F x) (F y)` (`creal/monotone.rs`) — a nonnegative
@@ -2436,6 +2445,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
+        sum_range_double: kernel.name_str(creal, "sumRange_double"),
         monotone_of_nonneg_deriv: kernel.name_str(creal, "monotone_of_nonneg_deriv"),
     }
 }
@@ -2528,6 +2538,7 @@ pub(crate) fn build_creal_prelude_uncached(
         // nothing from `power`, so it can land right after `series` rather
         // than waiting for the `power`/`hasDerivative_pow*` tail below.
         integral::declare_integral(&mut d, prelude)?;
+        integral::declare_sum_range_double(&mut d, prelude)?;
         // `monotone_of_nonneg_deriv` and its two supporting lemmas
         // (`sumRange_const`, `mesh_count_width`, `subdivisionPoint_in_bounds`)
         // reuse `CReal.ofNat_le` (`integral::declare_integral`, just above)
