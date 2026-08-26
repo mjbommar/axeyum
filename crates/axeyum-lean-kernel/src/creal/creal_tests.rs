@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 317] = [
+    let expected: [(&str, crate::NameId, &str); 320] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -946,6 +946,23 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.sumRange_pow_half_closed_form",
             p.sum_pow_half_closed_form,
+            "theorem",
+        ),
+        // `Cauchy` scaled through `CReal.mul`'s index shift (this lane): the
+        // general "Cauchy transport across a pointwise Equiv" lemma, built to
+        // bridge `CReal.mul_sumRange`'s Equiv rather than re-deriving
+        // `product.rs`'s mulShift/mul_index bookkeeping by hand — see
+        // `exponential.rs`'s module documentation just above
+        // `declare_cauchy_of_pointwise_equiv`.
+        (
+            "CReal.cauchyOfPointwiseEquiv",
+            p.cauchy_of_pointwise_equiv,
+            "theorem",
+        ),
+        ("CReal.expDominantCauchy", p.exp_dominant_cauchy, "theorem"),
+        (
+            "CReal.expSeriesPartialConverges",
+            p.exp_series_partial_converges,
             "theorem",
         ),
         // Found by the coverage assertion above, not by anyone noticing: these

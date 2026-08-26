@@ -147,11 +147,13 @@
 //! So the shipped construction uses **both**: route (b) for the one-shot
 //! comparison, route (a)'s `CReal.pow` shape for everything built since.
 
+use super::convergence::{converges_applied, exists_elim, exists_ty};
 use super::series::{
     assoc_rev_eq, exists_nat_intro, fuse_same_index, sum_range_cauchy_body, within_symm,
 };
 use super::{
-    CRealPrelude, DERIVED_HEIGHT, creal_ty, div_succ, embed, equiv, sample, shift, weaken, within,
+    CRealPrelude, DERIVED_HEIGHT, creal_ty, div_succ, embed, equiv, halves, sample, shift, weaken,
+    within,
 };
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -2245,4 +2247,473 @@ pub(super) fn declare_geom_cauchy_family(
     declare_geom_half_inv_leaf_bound(d, p)?;
     declare_geom_cauchy_ordered_half(d, p)?;
     declare_geom_cauchy(d, p)
+}
+
+// ============================================================================
+// `Cauchy (sumRange expDominant)`, and `Converges expSeriesPartial` — carrying
+// `geomCauchy` through `CReal.mul`'s index shift.
+// ============================================================================
+//
+// `expDominant n := mul two (pow half n)`, so `sumRange expDominant m` is
+// only `Equiv` to `mul two (sumRange (pow half ·) m)` (`CReal.mul_sumRange`,
+// already landed) — `CReal.mul`'s own representative resamples its factors
+// at a shifted index depending on both factors' magnitude (`product.rs`), so
+// the two sides are not literally the same rational at any index. Two
+// candidate routes were open for scaling `geomCauchy` through that shift:
+//
+// (a) re-derive `product.rs`'s `mulShift`/`mul_index`/`regular_between`
+//     bookkeeping by hand for the specific pair `(two, sumRange (pow half
+//     ·) m)`, building a bespoke "`Cauchy f` scaled by a constant" witness;
+// (b) reuse the machinery `convergence.rs::declare_converges_mul` already
+//     built for exactly this shape (a fixed sequence times a convergent
+//     one), and separately transport the result across `mul_sumRange`'s
+//     `Equiv`.
+//
+// Route (b) needs no new index-shift bookkeeping at all: `CReal.converges_mul`
+// already proves `Converges f L → Converges g M → Converges (fun n => mul (f
+// n) (g n)) (mul L M)`, handling `CReal.mul`'s shift internally (via
+// `product::product_gap`/`regular_between`, reused there). Taking `f := const
+// two` (via `CReal.converges_of_const`) and `g := sumRange (pow half ·)`
+// (convergent, from `CReal.geomCauchy` + `CReal.converges_of_cauchy`) gives
+// `Converges (fun n => mul two (sumRange (pow half ·) n)) (mul two L)` for
+// free. `CReal.converges_cauchy` turns that into `Cauchy (fun n => mul two
+// (sumRange (pow half ·) n))` — call it `Cauchy G`.
+//
+// What is genuinely new, and is [`declare_cauchy_of_pointwise_equiv`] below:
+// **`Cauchy G` is not yet `Cauchy (sumRange expDominant)`** — `G n` and
+// `sumRange expDominant n` are only `Equiv`, via `mul_sumRange`, not equal.
+// Scaling a `Cauchy` witness across a pointwise `Equiv` is itself a genuinely
+// GENERAL lemma (nothing about `mul`, `two`, or the geometric series is
+// specific to it): `∀ G F, (∀n, Equiv (G n) (F n)) → Cauchy G → Cauchy F`,
+// with the witness padded by one regularity unit (`natDivSucc 2 ·`) on each
+// side, exactly the way `convergence.rs::converges_gap_at` pads a
+// `Converges`-shaped middle term — except the middle term here is a genuine
+// two-index `Cauchy` bound (`k@m + k@n`), not `converges_gap_at`'s
+// single-index `Converges` bound, so that helper does not fit verbatim and
+// [`telescope_cauchy_pad2`] rebuilds the combine/reassemble step generically.
+//
+// So: **no bespoke `CReal.mul`-index-shift proof was written for this file.**
+// The general lemma this lane needed and built is `Cauchy` transport across a
+// pointwise `Equiv`; the "scaling by a constant" half of the job was already
+// available off the shelf via `converges_mul`/`converges_of_const`.
+
+/// Combine three `Within` proofs telescoping `x − w`:
+///
+/// - `t1 : Within (x − y) (natDivSucc 2 a)`
+/// - `t2 : Within (y − z) (natDivSucc k a + natDivSucc k b)`
+/// - `t3 : Within (z − w) (natDivSucc 2 b)`
+///
+/// into `Within (x − w) (natDivSucc (k+2) a + natDivSucc (k+2) b)`, returning
+/// `(k+2, proof)`.
+///
+/// [`declare_cauchy_of_pointwise_equiv`] needs this twice (`G`'s `Cauchy`
+/// witness widened by one `Equiv`-derived regularity unit on each of `m`/`n`).
+/// Built the same way `convergence.rs::converges_gap_at` combines a
+/// `Converges`-shaped middle bound (`fuse_at` + `Rat.sub_add_sub` twice), but
+/// generalized: `converges_gap_at`'s own middle hypothesis is single-index
+/// (`Within (seq u n − seq v n) (natDivSucc k n)`), which is why that helper
+/// cannot be reused verbatim against a genuinely two-index `Cauchy` middle
+/// term (`k@a + k@b`) — combining it needs the raw `Rat.bounds_add` +
+/// `Rat.add_assoc`/`Rat.add_comm` reassembly below rather than `fuse_at`.
+fn telescope_cauchy_pad2(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+    w: ExprId,
+    a: ExprId,
+    b: ExprId,
+    k: ExprId,
+    t1: ExprId,
+    t2: ExprId,
+    t3: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let two_nat = d.num(2);
+
+    let q1 = rsub(d, rat, x, y);
+    let q2 = rsub(d, rat, y, z);
+    let q3 = rsub(d, rat, z, w);
+    let bound1 = div_succ(d, p, 2, a);
+    let ka = d.const_app(rat.nat_div_succ, &[k, a]);
+    let kb = d.const_app(rat.nat_div_succ, &[k, b]);
+    let bound2 = radd(d, ka, kb);
+    let bound3 = div_succ(d, p, 2, b);
+
+    // combine (x−y) + (y−z).
+    let (l1, u1) = halves(d, p, q1, bound1, t1);
+    let (l2, u2) = halves(d, p, q2, bound2, t2);
+    let c12 = d.lemma(rat.bounds_add, &[q1, bound1, q2, bound2, l1, u1, l2, u2]);
+    let q12 = radd(d, q1, q2);
+    let b12 = radd(d, bound1, bound2);
+
+    // combine that with (z−w).
+    let (l12, u12) = halves(d, p, q12, b12, c12);
+    let (l3, u3) = halves(d, p, q3, bound3, t3);
+    let c123 = d.lemma(rat.bounds_add, &[q12, b12, q3, bound3, l12, u12, l3, u3]);
+    let q123 = radd(d, q12, q3);
+    let b123 = radd(d, b12, bound3);
+
+    // Quantity identity: (q1+q2)+q3 = x-w.
+    let xw = rsub(d, rat, x, w);
+    let assoc_q = d.lemma(rat.add_assoc, &[q1, q2, q3]);
+    let q23 = radd(d, q2, q3);
+    let q1_q23 = radd(d, q1, q23);
+    let fuse_inner_q = d.lemma(rat.sub_add_sub, &[y, z, w]);
+    let yw = rsub(d, rat, y, w);
+    let lift_inner_q = rcongr(d, q23, yw, fuse_inner_q, &|d, t| radd(d, q1, t));
+    let q1_yw = radd(d, q1, yw);
+    let fuse_outer_q = d.lemma(rat.sub_add_sub, &[x, y, w]);
+    let (_, quantity_chain) = rchain(
+        d,
+        q123,
+        &[(q1_q23, assoc_q), (q1_yw, lift_inner_q), (xw, fuse_outer_q)],
+    );
+    let at_xw = rat_eq_rewrite(d, q123, xw, quantity_chain, c123, &|d, t| {
+        within(d, p, t, b123)
+    });
+
+    // Bound reassembly: ((2@a) + (k@a+k@b)) + (2@b) -> (k+2)@a + (k+2)@b.
+    let assoc_b = d.lemma(rat.add_assoc, &[bound1, bound2, bound3]);
+    let b23 = radd(d, bound2, bound3);
+    let bound1_23 = radd(d, bound1, b23);
+
+    let assoc_inner_b = d.lemma(rat.add_assoc, &[ka, kb, bound3]);
+    let kb_bound3 = radd(d, kb, bound3);
+    let ka_kbbound3 = radd(d, ka, kb_bound3);
+    let lift_assoc_inner = rcongr(d, b23, ka_kbbound3, assoc_inner_b, &|d, t| {
+        radd(d, bound1, t)
+    });
+    let bound1_ka_kbbound3 = radd(d, bound1, ka_kbbound3);
+
+    let (fused_b, fuse_b_eq) = fuse_same_index(d, p, k, two_nat, b);
+    let lift_fuse_b = rcongr(d, kb_bound3, fused_b, fuse_b_eq, &|d, t| {
+        let inner = radd(d, ka, t);
+        radd(d, bound1, inner)
+    });
+    let ka_fusedb = radd(d, ka, fused_b);
+    let bound1_ka_fusedb = radd(d, bound1, ka_fusedb);
+
+    let assoc_rev_1 = assoc_rev_eq(d, p, bound1, ka, fused_b);
+    let bound1_ka = radd(d, bound1, ka);
+    let bound1ka_fusedb = radd(d, bound1_ka, fused_b);
+
+    let comm_1 = d.lemma(rat.add_comm, &[bound1, ka]);
+    let ka_bound1 = radd(d, ka, bound1);
+    let lift_comm = rcongr(d, bound1_ka, ka_bound1, comm_1, &|d, t| radd(d, t, fused_b));
+    let kabound1_fusedb = radd(d, ka_bound1, fused_b);
+
+    let (fused_a, fuse_a_eq) = fuse_same_index(d, p, k, two_nat, a);
+    let lift_fuse_a = rcongr(d, ka_bound1, fused_a, fuse_a_eq, &|d, t| {
+        radd(d, t, fused_b)
+    });
+    let target = radd(d, fused_a, fused_b);
+
+    let (_, bound_chain) = rchain(
+        d,
+        b123,
+        &[
+            (bound1_23, assoc_b),
+            (bound1_ka_kbbound3, lift_assoc_inner),
+            (bound1_ka_fusedb, lift_fuse_b),
+            (bound1ka_fusedb, assoc_rev_1),
+            (kabound1_fusedb, lift_comm),
+            (target, lift_fuse_a),
+        ],
+    );
+
+    let final_proof = rat_eq_rewrite(d, b123, target, bound_chain, at_xw, &|d, t| {
+        within(d, p, xw, t)
+    });
+
+    let k_plus_2 = d.add(k, two_nat);
+    (k_plus_2, final_proof)
+}
+
+/// `CReal.cauchyOfPointwiseEquiv : ∀ G F, (∀ n, Equiv (G n) (F n)) → Cauchy G
+/// → Cauchy F`.
+///
+/// See the module documentation above for why this is the piece that was
+/// actually missing (not a bespoke `CReal.mul` index-shift lemma). Widens the
+/// `Cauchy G` witness `k` to `k+2` by inserting one `Equiv`-derived
+/// regularity unit on each side of `G`'s own middle term
+/// (`telescope_cauchy_pad2`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cauchy_of_pointwise_equiv(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let seq_ty = d.arrow(nat, carrier);
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+
+    let heq_ty = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let gn = d.apply(g, &[n]);
+        let fn_val = d.apply(f, &[n]);
+        let claim = equiv(d, p, gn, fn_val);
+        d.pi_fv(n_fv, nat, claim)
+    };
+    let heq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(heq_fv);
+
+    let cauchy_g_ty = d.const_app(p.cauchy, &[g]);
+    let hcauchy_fv = d.fresh_fvar();
+    let hcauchy = d.kernel().fvar(hcauchy_fv);
+
+    let target = d.const_app(p.cauchy, &[f]);
+
+    let predicate_g = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = sum_range_cauchy_body(d, p, g, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hbody_ty = sum_range_cauchy_body(d, p, g, k);
+        let hbody_fv = d.fresh_fvar();
+        let hbody = d.kernel().fvar(hbody_fv);
+
+        let (k_plus_2, case_proof) = {
+            let m_fv = d.fresh_fvar();
+            let m = d.kernel().fvar(m_fv);
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+
+            let gm = d.apply(g, &[m]);
+            let gn = d.apply(g, &[n]);
+            let fm = d.apply(f, &[m]);
+            let fn_val = d.apply(f, &[n]);
+
+            let x = sample(d, p, fm, m);
+            let y = sample(d, p, gm, m);
+            let z = sample(d, p, gn, n);
+            let w = sample(d, p, fn_val, n);
+
+            let heq_m_outer = d.apply(heq, &[m]);
+            let heq_m = d.apply(heq_m_outer, &[m]);
+            let two_at_m = div_succ(d, p, 2, m);
+            let t1 = within_symm(d, p, y, x, two_at_m, heq_m);
+
+            let t2 = {
+                let outer = d.apply(hbody, &[m]);
+                d.apply(outer, &[n])
+            };
+
+            let heq_n_outer = d.apply(heq, &[n]);
+            let t3 = d.apply(heq_n_outer, &[n]);
+
+            let (k_plus_2, proof) = telescope_cauchy_pad2(d, p, x, y, z, w, m, n, k, t1, t2, t3);
+
+            let over_n = d.lam_fv(n_fv, nat, proof);
+            (k_plus_2, d.lam_fv(m_fv, nat, over_n))
+        };
+
+        let predicate_f = {
+            let k2_fv = d.fresh_fvar();
+            let k2 = d.kernel().fvar(k2_fv);
+            let body = sum_range_cauchy_body(d, p, f, k2);
+            d.lam_fv(k2_fv, nat, body)
+        };
+        let target_proof = exists_nat_intro(d, p, predicate_f, k_plus_2, case_proof);
+
+        let with_hbody = d.lam_fv(hbody_fv, hbody_ty, target_proof);
+        d.lam_fv(k_fv, nat, with_hbody)
+    };
+
+    let proof_body = exists_elim(d, p, nat, predicate_g, target, hcauchy, minor);
+
+    let value = {
+        let with_hcauchy = d.lam_fv(hcauchy_fv, cauchy_g_ty, proof_body);
+        let with_heq = d.lam_fv(heq_fv, heq_ty, with_hcauchy);
+        let with_f = d.lam_fv(f_fv, seq_ty, with_heq);
+        d.lam_fv(g_fv, seq_ty, with_f)
+    };
+    let ty = {
+        let after_hcauchy = d.arrow(cauchy_g_ty, target);
+        let after_heq = d.arrow(heq_ty, after_hcauchy);
+        let with_f = d.pi_fv(f_fv, seq_ty, after_heq);
+        d.pi_fv(g_fv, seq_ty, with_f)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cauchy_of_pointwise_equiv,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.expDominantCauchy : Cauchy (sumRange expDominant)`.
+///
+/// Built via route (b) in the module documentation above: `CReal.geomCauchy`
+/// gives `Cauchy (sumRange (pow half ·))`; `CReal.converges_of_cauchy` lifts
+/// it to `Converges (sumRange (pow half ·)) L` for some `L` (eliminated
+/// immediately, into the Prop goal `Cauchy (sumRange expDominant)` — never
+/// into data); `CReal.converges_of_const`/`CReal.converges_mul` give
+/// `Converges (fun n => mul two (sumRange (pow half ·) n)) (mul two L)`;
+/// `CReal.converges_cauchy` turns that into `Cauchy (fun n => mul two
+/// (sumRange (pow half ·) n))`; and
+/// [`CRealPrelude::cauchy_of_pointwise_equiv`] transports it across
+/// `CReal.mul_sumRange`'s `Equiv` onto `Cauchy (sumRange expDominant)`.
+///
+/// This never touches `CReal.inv`/`CRealPrelude::pos_bound` — the containment
+/// `geomCauchy`'s own route has (`inv` reached only by
+/// `geomHalfInvLeafBound`/`geomCauchyOrderedHalf`) is preserved, since
+/// nothing here calls either.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_exp_dominant_cauchy(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+
+    let f = pow_half_fn(d, p);
+    let sum_f = d.const_app(p.sum_range, &[f]);
+    let geom_cauchy_proof = d.lemma(p.geom_cauchy, &[]);
+
+    let ex_conv = d.lemma(p.converges_of_cauchy, &[sum_f, geom_cauchy_proof]);
+
+    let two_creal = two(d, p);
+    let exp_dominant_const = d.kernel().const_(p.exp_dominant, vec![]);
+    let sum_g_dominant = d.const_app(p.sum_range, &[exp_dominant_const]);
+    let target = d.const_app(p.cauchy, &[sum_g_dominant]);
+
+    let predicate_l = {
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let body = converges_applied(d, p, sum_f, l);
+        d.lam_fv(l_fv, carrier, body)
+    };
+
+    let minor = {
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let hl_ty = converges_applied(d, p, sum_f, l);
+        let hl_fv = d.fresh_fvar();
+        let hl = d.kernel().fvar(hl_fv);
+
+        let const_two_fn = {
+            let ignore_fv = d.fresh_fvar();
+            d.lam_fv(ignore_fv, nat, two_creal)
+        };
+        let h_const = d.lemma(p.converges_of_const, &[two_creal]);
+
+        let h_prod = d.lemma(
+            p.converges_mul,
+            &[const_two_fn, sum_f, two_creal, l, h_const, hl],
+        );
+
+        let fg = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let cn = d.apply(const_two_fn, &[n]);
+            let sn = d.apply(sum_f, &[n]);
+            let prod = cmul(d, p, cn, sn);
+            d.lam_fv(n_fv, nat, prod)
+        };
+        let mul_two_l = cmul(d, p, two_creal, l);
+
+        let h_cauchy_g = d.lemma(p.converges_cauchy, &[fg, mul_two_l, h_prod]);
+
+        let heq = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let body = d.lemma(p.mul_sum_range, &[two_creal, f, n]);
+            d.lam_fv(n_fv, nat, body)
+        };
+
+        let cauchy_f_proof = d.lemma(
+            p.cauchy_of_pointwise_equiv,
+            &[fg, sum_g_dominant, heq, h_cauchy_g],
+        );
+
+        let with_hl = d.lam_fv(hl_fv, hl_ty, cauchy_f_proof);
+        d.lam_fv(l_fv, carrier, with_hl)
+    };
+
+    let proof_body = exists_elim(d, p, carrier, predicate_l, target, ex_conv, minor);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_dominant_cauchy,
+        uparams: vec![],
+        ty: target,
+        value: proof_body,
+    })
+}
+
+/// `CReal.expSeriesPartialConverges : Exists CReal (fun L => Converges
+/// expSeriesPartial L)` — `CReal.sumRange_converges_of_dominated` applied to
+/// `CReal.exp_term_abs_le_dominant` and [`CRealPrelude::exp_dominant_cauchy`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_exp_series_partial_converges(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let exp_term_const = d.kernel().const_(p.exp_term, vec![]);
+    let exp_dominant_const = d.kernel().const_(p.exp_dominant, vec![]);
+    let exp_series_partial_const = d.kernel().const_(p.exp_series_partial, vec![]);
+
+    let hyp1 = d.lemma(p.exp_term_abs_le_dominant, &[]);
+    let hyp2 = d.lemma(p.exp_dominant_cauchy, &[]);
+
+    let proof = d.lemma(
+        p.sum_range_converges_of_dominated,
+        &[exp_term_const, exp_dominant_const, hyp1, hyp2],
+    );
+
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+    let body = converges_applied(d, p, exp_series_partial_const, l);
+    let predicate = d.lam_fv(l_fv, carrier, body);
+    let ty = exists_ty(d, p, carrier, predicate);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_series_partial_converges,
+        uparams: vec![],
+        ty,
+        value: proof,
+    })
+}
+
+/// Admit `CReal.cauchyOfPointwiseEquiv`, `CReal.expDominantCauchy` and
+/// `CReal.expSeriesPartialConverges`. Run **after**
+/// [`declare_geom_cauchy_family`] (needs `geomCauchy`/`geomCauchyOrderedHalf`)
+/// and after `series::declare_series`/`convergence::declare_convergence`/
+/// `convergence::declare_cauchy_convergence` (needs `mul_sumRange`,
+/// `sum_range_converges_of_dominated`, `converges_mul`, `converges_cauchy`,
+/// `converges_of_const`, `converges_of_cauchy` — all declared well before
+/// `exponential::declare_exponential` runs, per `creal.rs`'s own ordering).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_exp_convergence(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_cauchy_of_pointwise_equiv(d, p)?;
+    declare_exp_dominant_cauchy(d, p)?;
+    declare_exp_series_partial_converges(d, p)
 }
