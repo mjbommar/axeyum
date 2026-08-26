@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "kind": "axeyum-autogenesis-nat-modeq-remainder-contract",
-  "state": "three-of-three-operation-eligible-not-registered-not-admitted",
+  "state": "three-of-three-operation-registered-not-admitted",
   "authority": "This receipt makes the unchanged contract family eligible for operation registration. It does not settle facts; only authoritative dispatch and the crash-safe transaction may do that.",
   "environment": {
     "lean_version": "4.30.0",
@@ -30,6 +30,8 @@
       "role": "candidate-family",
       "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-modeq-remainder-v1/candidates-v2.ndjson",
       "bytes": 549652,
+      "records": 10603,
+      "mode": "0444",
       "sha256": "d94b424c18f21949c861b703ad1040bb6b223d33645d39180ce0f62b84fbcf7e"
     },
     {
@@ -37,6 +39,8 @@
       "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
       "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-modeq-remainder-v1/target-add-left.ndjson",
       "bytes": 379915,
+      "records": 7128,
+      "mode": "0444",
       "sha256": "735e71fd619b3ed7d2be74a050aa526cacc5cca2d919a21971c3b6cfea1ae6fc"
     },
     {
@@ -44,6 +48,8 @@
       "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
       "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-modeq-remainder-v1/target-add-right.ndjson",
       "bytes": 379916,
+      "records": 7128,
+      "mode": "0444",
       "sha256": "bba13e5fd35e847f0e705697e65527873d4febd04c8c7e6010fcec9b555c89b9"
     },
     {
@@ -51,6 +57,8 @@
       "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
       "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-modeq-remainder-v1/target-modulus-zero.ndjson",
       "bytes": 379838,
+      "records": 7127,
+      "mode": "0444",
       "sha256": "d72f1dc259bf5a0eb6dcbf426b5c805f03d03d17d7f58a75f6bf7eea097c0124"
     }
   ],
@@ -58,6 +66,7 @@
     {
       "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
       "target_definition": "Axeyum.Autogenesis.Statement.NatModEqArithmetic.addLeft",
+      "formal_statement_sha256": "b9f57462c5e59311615e5c49b653c779c2ddd6a53fff8db07144b5abe06a4cf8",
       "transported_candidates": 3,
       "transport_added": 2,
       "transport_reused": 1,
@@ -76,6 +85,7 @@
     {
       "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
       "target_definition": "Axeyum.Autogenesis.Statement.NatModEqArithmetic.addRight",
+      "formal_statement_sha256": "1149b9bee2dfd52c5ad5430c3b2d8354cbc1f3c7fc41ee90be034a2f38dabf98",
       "transported_candidates": 3,
       "transport_added": 2,
       "transport_reused": 1,
@@ -94,6 +104,7 @@
     {
       "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
       "target_definition": "Axeyum.Autogenesis.Statement.NatModEqArithmetic.modulusZero",
+      "formal_statement_sha256": "26868f993ec21c92f8d8761418dce9fb613a0af4f1b380926f9716d99fd0a1da",
       "transported_candidates": 3,
       "transport_added": 2,
       "transport_reused": 1,
@@ -116,6 +127,8 @@
     "remaining_siblings": 0,
     "operation_registration_bar": 3,
     "operation_registration_eligible": true,
+    "operation_registered": true,
+    "operation_id": "authoritative-mathlib-nat-modeq-remainder-family-v1",
     "facts_settled": 0
   },
   "next_falsifiable_step": "Register this exact three-target family as one authoritative operation, dispatch it through clean episodes, and require crash-safe transactions to settle the facts without changing the candidate set or trusted base."

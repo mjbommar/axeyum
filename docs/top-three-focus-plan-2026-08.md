@@ -295,7 +295,9 @@ admits it with no target dependency. A shared implementation-local recurrence
 and periodicity spine now closes both addition orientations through the same
 unchanged candidate family. Conversion is 3/3 with every final footprint empty
 and every target dependency false. This makes the family operation-eligible;
-zero facts are settled until registry dispatch and crash-safe transactions run.
+it is now registered as one authoritative three-target operation whose gate
+freshly replays every capsule and proof identity. Zero facts are settled until
+per-fact execution receipts and crash-safe transactions run.
 
 ## Comparative position
 
@@ -700,8 +702,12 @@ contracts now reconstruct self-modulus and addition periodicity directly over
 imported `Nat.mod`. The unchanged probe advances from 0/3 to 3/3: every target
 is independently admitted with an empty footprint and no hidden-target
 dependency. Zero facts are settled. Next: register exactly this family as one
-authoritative multi-target operation and dispatch all three through clean,
-crash-safe transactions without changing the candidate set or trusted base.
+authoritative multi-target operation. Registration is now complete: the 27th
+authoritative operation binds the shared receipt and freshly replays all three
+targets. The remaining boundary is per-fact execution/transaction support for
+a retained checked theorem dependency, followed by three fresh frontier
+selections and crash-safe settlements without changing the candidate set or
+trusted base.
 
 Runtime health now has a provider-captured, commit-bound evidence path. The
 first receipt binds canonical GitHub Actions run `33013805820` to tested commit

@@ -16,8 +16,9 @@ authoritative execution layer.
 The durable result is
 [`nat-modeq-remainder-contract-v2.json`](../../artifacts/autogenesis/nat-modeq-remainder-contract-v2.json):
 3/3 conversions, zero remaining siblings, and zero facts settled. The last
-number matters. This receipt makes the family eligible for operation
-registration; it does not bypass authoritative dispatch or the crash-safe fact
+number matters. The family is now registered as documented in
+[`287-imported-nat-mod-operation-registration.md`](287-imported-nat-mod-operation-registration.md),
+but registration does not bypass authoritative dispatch or the crash-safe fact
 transaction.
 
 ## Shared mathematical spine
@@ -40,8 +41,8 @@ receipt.
 
 ## Next falsifiable step
 
-Register exactly this three-target family as one reusable authoritative
-operation. Dispatch each still-open fact through a clean episode and require
+Dispatch each still-open fact through the registered operation in a clean
+episode and require
 the normal crash-safe transaction to attach evidence and settle it. Any change
 to candidate roots, capsule hashes, footprint, or trusted base requires a new
 receipt rather than inheriting this eligibility result.

@@ -1,7 +1,7 @@
 {
   "autonomous_production": {
-    "authoritative_named_facts": 34,
-    "authoritative_operations": 25,
+    "authoritative_named_facts": 37,
+    "authoritative_operations": 26,
     "producer_outcome_census": {
       "exact_source_facts": 24,
       "groups": 38,
@@ -33,7 +33,7 @@
         "proved": 2
       }
     },
-    "registered_operations": 26,
+    "registered_operations": 27,
     "reusable_multi_target_operations": [
       {
         "fact_count": 4,
@@ -42,6 +42,10 @@
       {
         "fact_count": 8,
         "id": "authoritative-mathlib-modeq-family-v1"
+      },
+      {
+        "fact_count": 3,
+        "id": "authoritative-mathlib-nat-modeq-remainder-family-v1"
       }
     ]
   },
@@ -156,7 +160,7 @@
     },
     {
       "path": "artifacts/autogenesis/operations.json",
-      "sha256": "3975199a16059f98c74c155bbb61e7609ec921081d1e30558eecc34939969c93"
+      "sha256": "e5ede740764bf1b479d85d5490c59bf2d443b5270e532b241939fa1b96ae28d4"
     },
     {
       "path": "artifacts/autogenesis/producer-outcome-observations-v1.json",
@@ -168,11 +172,11 @@
     },
     {
       "path": "justfile",
-      "sha256": "cb9dbd6a34dac0da6465e8b53157dc53505daa2fea429d45c5776e880efb4d0e"
+      "sha256": "c745396f6c97dc0426a2074cf2c17bc8c266687c803b968837cb8d1aff1cee55"
     },
     {
       "path": "scripts/check.sh",
-      "sha256": "d14c772127302e9476fd80352caf774b20f31971794880d52fcbed640fae19a7"
+      "sha256": "4b4f95dc06007e7dcdb5b1703c1154cf0d554960b81c02eeebd6c8f9af3ff394"
     },
     {
       "path": "artifacts/runtime/ci-latest-v1.json",

@@ -18,6 +18,15 @@
       "observation_kind": "mechanically-observed",
       "operation_id": "authoritative-mathlib-modeq-family-v1",
       "qualified_formal_mappings": 8
+    },
+    {
+      "admission_authority": false,
+      "applicable_facts": 3,
+      "complete_transport_chains": 0,
+      "evidence_credited_facts": 0,
+      "observation_kind": "mechanically-observed",
+      "operation_id": "authoritative-mathlib-nat-modeq-remainder-family-v1",
+      "qualified_formal_mappings": 0
     }
   ],
   "schema_version": 1,

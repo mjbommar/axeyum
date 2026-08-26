@@ -26,11 +26,11 @@ def fail(message: str) -> None:
     raise SystemExit(f"nat-modeq-remainder-contract-v2: {message}")
 
 
-def main() -> None:
+def validate() -> dict:
     document = json.loads(ARTIFACT.read_text())
     if document.get("schema_version") != 2 or document.get("kind") != "axeyum-autogenesis-nat-modeq-remainder-contract":
         fail("schema identity changed")
-    if document.get("state") != "three-of-three-operation-eligible-not-registered-not-admitted":
+    if document.get("state") != "three-of-three-operation-registered-not-admitted":
         fail("authority boundary changed")
 
     contract = document.get("contract_source", {})
@@ -55,6 +55,8 @@ def main() -> None:
     for row in inputs:
         if not isinstance(row.get("bytes"), int) or row["bytes"] <= 0:
             fail("external input byte count is absent")
+        if not isinstance(row.get("records"), int) or row["records"] <= 0 or row.get("mode") != "0444":
+            fail("external input record count or immutable mode is absent")
         digest = row.get("sha256", "")
         if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
             fail("external input hash is malformed")
@@ -80,6 +82,9 @@ def main() -> None:
             if len(identity) != 64 or any(char not in "0123456789abcdef" for char in identity):
                 fail(f"{row.get('fact_id')}: {key} is malformed")
         fact = json.loads((ROOT / "artifacts/facts" / (row["fact_id"].replace(":", "-") + ".json")).read_text())
+        statement = (fact.get("formal") or {}).get("statement", "")
+        if hashlib.sha256(statement.encode()).hexdigest() != row.get("formal_statement_sha256"):
+            fail(f"{row.get('fact_id')}: formal statement identity changed")
         if fact.get("epistemic_status") != "open":
             fail(f"{row.get('fact_id')}: target is no longer open; archive or supersede this eligibility receipt")
 
@@ -89,10 +94,17 @@ def main() -> None:
         "remaining_siblings": 0,
         "operation_registration_bar": 3,
         "operation_registration_eligible": True,
+        "operation_registered": True,
+        "operation_id": "authoritative-mathlib-nat-modeq-remainder-family-v1",
         "facts_settled": 0,
     }:
         fail("census disagrees with checked rows")
-    print("nat-modeq-remainder-contract-v2: ok (3/3 eligible, empty footprint, 0 facts settled)")
+    return document
+
+
+def main() -> None:
+    validate()
+    print("nat-modeq-remainder-contract-v2: ok (3/3 registered, empty footprint, 0 facts settled)")
 
 
 if __name__ == "__main__":

@@ -14,8 +14,10 @@ congruence, modulo recurrence, addition periodicity, and self-modulus over the
 exact imported implementation. Every transport and independent admission has
 an empty footprint and no hidden-target dependency. Public shortcuts carrying
 `propext` remain rejected. The family is now operation-eligible, but zero facts
-are settled. Next: register this exact multi-target family and dispatch all
-three through clean episodes and crash-safe transactions.
+are settled. It is now the 27th authoritative registered operation, and its
+gate freshly replays all three exact capsules and proof identities. Next:
+extend per-fact execution/transaction receipts to preserve the one checked
+theorem dependency, then dispatch all three through clean crash-safe episodes.
 
 Priority 3 also repaired the CI-observed sub-millisecond budget escape: policy
 now compares an unrounded monotonic duration while receipts retain integer
