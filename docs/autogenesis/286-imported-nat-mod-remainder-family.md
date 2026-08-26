@@ -8,7 +8,10 @@ One unchanged empty-footprint contract family converts all three frozen
 arithmetic `Nat.ModEq` siblings. For every target, Axeyum transports the same
 three candidate roots, bounded application constructs a proof, and a fresh
 theorem admission succeeds with no axiom footprint and no dependency on the
-hidden target declaration.
+hidden target declaration. Each final theorem has exactly one direct theorem
+dependency—the transported behavior contract actually used by the proof—and
+the receipt records stable goal, proof, and declaration identities for the
+authoritative execution layer.
 
 The durable result is
 [`nat-modeq-remainder-contract-v2.json`](../../artifacts/autogenesis/nat-modeq-remainder-contract-v2.json):

@@ -68,11 +68,16 @@ def main() -> None:
             "transport_added": 2,
             "transport_reused": 1,
             "axiom_footprint": [],
+            "theorem_dependencies": 1,
             "target_dependency": False,
             "independently_admitted": True,
         }.items():
             if row.get(key) != expected:
                 fail(f"{row.get('fact_id')}: outcome field {key} changed")
+        for key in ("goal_sha256", "proof_sha256", "target_content_sha256"):
+            identity = row.get(key, "")
+            if len(identity) != 64 or any(char not in "0123456789abcdef" for char in identity):
+                fail(f"{row.get('fact_id')}: {key} is malformed")
         fact = json.loads((ROOT / "artifacts/facts" / (row["fact_id"].replace(":", "-") + ".json")).read_text())
         if fact.get("epistemic_status") != "open":
             fail(f"{row.get('fact_id')}: target is no longer open; archive or supersede this eligibility receipt")

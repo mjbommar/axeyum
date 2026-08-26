@@ -65,7 +65,11 @@
       "application_depth": 2,
       "terms_considered": 19,
       "axiom_footprint": [],
+      "theorem_dependencies": 1,
       "target_dependency": false,
+      "goal_sha256": "1b601c208f582f00145f99deb91e89632c3e121fb45264b81791199d554fc2c6",
+      "proof_sha256": "5990553800738bab8907f76fc86c529d3d374c006eeef748a1bd56554ee93c12",
+      "target_content_sha256": "6547029f3acbea0b074757291012df37aed8a71c9c465b6bd490bd2517233916",
       "independently_admitted": true
     },
     {
@@ -78,7 +82,11 @@
       "application_depth": 2,
       "terms_considered": 19,
       "axiom_footprint": [],
+      "theorem_dependencies": 1,
       "target_dependency": false,
+      "goal_sha256": "a0ce8c6d1686ebf5a3191af636c84f5b0e4b1f3fd9574b01223b4f447fadc569",
+      "proof_sha256": "35a1eba650da01e632e5d1f6fdd658b0158690a33f84274877ef198e7f1e4478",
+      "target_content_sha256": "a3829f99900194a952a793c03433af509562b02d511e7fffff7be1cfe9da0d01",
       "independently_admitted": true
     },
     {
@@ -91,7 +99,11 @@
       "application_depth": 1,
       "terms_considered": 7,
       "axiom_footprint": [],
+      "theorem_dependencies": 1,
       "target_dependency": false,
+      "goal_sha256": "cf41c009def284a46cdcf22937377af099045ff8d4bddcf6a848f0044d803d8a",
+      "proof_sha256": "85448f6c53e67dbcf3070bcda19f3c9e01fd09c5a99baeb8b70b549914d8ac89",
+      "target_content_sha256": "8122881ce9e05a18f9ec1df21c7e42d5bd65bce0e20a51b2db93976d59b3e303",
       "independently_admitted": true
     }
   ],
