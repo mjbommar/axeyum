@@ -156,10 +156,10 @@ agree exactly; operation and autonomous credit remain zero. Next: point
 bounded application at the now-clean 51-goal population and measure whether
 semantic/type-directed retrieval improves the honest 0/51 construction rate.
 After rebasing over concurrent CReal, Nat, Complex, and Rat construction,
-mutable views were regenerated again at 1,628 declarations / 1,274 theorems /
-7,436 edges. The full 753-test kernel suite passes. These additions are
+mutable views were regenerated again at 1,629 declarations / 1,275 theorems /
+7,458 edges. The full 753-test kernel suite passes. These additions are
 credible manual library construction, not autonomous-production credit; the
-semantic-review queue still has all 1,274 indexed theorems unreviewed. The
+semantic-review queue still has all 1,275 indexed theorems unreviewed. The
 historical authorization artifacts remain pinned to their archived
 pre-transition index, while the post-transition 51-goal census absorbs the new
 kernel state and remains zero exact matches.
@@ -178,6 +178,14 @@ mutation (`Nat.choose_self = 0` at `n = 0`). The clean census therefore contains
 45 positive targets and six false controls: 20/4 in the importable population
 and 25/2 in the import-rejected population. Control acceptance is a soundness
 failure, never production credit.
+Surface-operator normalization now contributes arithmetic, modular, order, and
+divisibility vocabulary to live retrieval; for the two Nat additive ModEq
+goals, `Nat.mod_eq_add_left` and `Nat.mod_eq_add_right` move into slots 1-2.
+The first ranked-application census then fails closed before search on all 51
+rows: 48 selected declarations are absent from the imported goal capsules and
+three candidate closures reach a trusted declaration. Next work is a general
+proof-isolated native-candidate materialization/transport boundary, not a
+larger application grammar pretending graph names are executable lemmas.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
