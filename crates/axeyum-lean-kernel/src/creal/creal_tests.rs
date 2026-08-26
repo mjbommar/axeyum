@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 291] = [
+    let expected: [(&str, crate::NameId, &str); 292] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -357,6 +357,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.natSqrtLe", p.nat_sqrt_le, "theorem"),
         ("CReal.natSqrtLt", p.nat_sqrt_lt, "theorem"),
         ("CReal.sqrtApprox", p.sqrt_approx, "def"),
+        (
+            "CReal.sqrtApproxSqBracket",
+            p.sqrt_approx_sq_bracket,
+            "theorem",
+        ),
         // Bishop's speed-up combinator (creal/speedup.rs).
         ("CReal.KRegular", p.k_regular_pred, "def"),
         ("CReal.speedup", p.speedup, "def"),
@@ -7565,4 +7570,86 @@ fn bucket_clamp_lower_at_zero_and_zero_reduces_to_zero_minus_three_over_two() {
                  CReal.le (CReal.ofRat (Rat.zero - natDivSucc 3 1)) CReal.zero: {error:?}"
             )
         });
+}
+
+/// **Mandatory computation test for `CReal.sqrtApproxSqBracket`.** At
+/// `x := CReal.ofNat 4`, `n := 0`: `d = 1`, `j = 1`, the clamped sample is
+/// `4`, `natSqrt 4 = 2` (`2*2 = 4 ≤ 4`, and `4 < 3*3 = 9`), so the bracket's
+/// two halves are `Rat.le (2*2) 4` and `Rat.lt 4 (3*3)` — `4 ≤ 4` and
+/// `4 < 9`, both true. Checked against an INDEPENDENTLY built expected type
+/// (`Rat.natDivSucc k 0` for the literals, not a reuse of `sqrtApprox`'s own
+/// formula), so the kernel has to actually reduce `natSqrt`/`Nat.div`/
+/// `Int.natAbs`/`Rat.max`/`CReal.seq` down to these numerals, not merely
+/// accept a restatement of the same unevaluated expression.
+#[test]
+fn sqrt_approx_sq_bracket_at_ofnat_four_and_zero_computes_to_four_le_four_and_four_lt_nine() {
+    use crate::rat_prelude::ops::{rle, rlt, rmul};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let four_nat = d.num(4);
+    let zero_nat = d.num(0);
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+
+    let x = d.const_app(p.of_nat, &[four_nat]);
+    let n = zero_nat;
+
+    let proof = d.const_app(p.sqrt_approx_sq_bracket, &[x, n]);
+
+    let literal = |d: &mut IntDev<'_>, k: ExprId| -> ExprId {
+        d.const_app(p.rat.nat_div_succ, &[k, zero_nat])
+    };
+    let four_rat = literal(&mut d, four_nat);
+    let two_rat = literal(&mut d, two_nat);
+    let three_rat = literal(&mut d, three_nat);
+
+    let two_sq = rmul(&mut d, two_rat, two_rat);
+    let three_sq = rmul(&mut d, three_rat, three_rat);
+    let lower_ty = rle(&mut d, p.rat, two_sq, four_rat);
+    let upper_ty = rlt(&mut d, p.rat, four_rat, three_sq);
+    let and_name = p.rat.int.logic.and;
+    let expected_ty = d.const_app(and_name, &[lower_ty, upper_ty]);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sqrt_approx_sq_bracket_at_ofnat_four_and_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "sqrtApproxSqBracket (ofNat 4) 0 must read as \
+                 And (Rat.le (2*2) 4) (Rat.lt 4 (3*3)): {error:?}"
+            )
+        });
+
+    // Negative control: the same proof does NOT check against a WRONG
+    // bound (claiming the clamped sample is `3`, not `4` -- `4 <= 3` is
+    // false, so a proof of the real bracket must be refused here).
+    let lower_ty_wrong = rle(&mut d, p.rat, two_sq, three_rat);
+    let expected_ty_wrong = d.const_app(and_name, &[lower_ty_wrong, upper_ty]);
+    let name_wrong = d.kernel().name_str(
+        anon,
+        "__sqrt_approx_sq_bracket_wrong_bound_must_be_rejected",
+    );
+    let bad_proof = d.const_app(p.sqrt_approx_sq_bracket, &[x, n]);
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: expected_ty_wrong,
+        value: bad_proof,
+    });
+    assert!(
+        result.is_err(),
+        "sqrtApproxSqBracket must NOT check against the wrong bound \
+         `2*2 <= 3` (4 <= 3 is false) -- a checker that accepts both the \
+         right and a wrong bound cannot distinguish them"
+    );
 }

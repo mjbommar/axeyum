@@ -1299,8 +1299,19 @@ pub struct CRealPrelude {
     /// `CReal.sqrtApprox : CReal → Nat → Rat` — the rational square-root
     /// approximant `CReal.sqrt` is built from. See `creal/sqrt.rs` for the
     /// exact schedule; **no `Regular` proof exists for it yet** (that is the
-    /// open obligation `CReal.sqrt` still needs).
+    /// open obligation `CReal.sqrt` still needs). [`Self::sqrt_approx_sq_bracket`]
+    /// is the same-index quality bound that obligation has to be built from;
+    /// see its own doc for exactly what remains (a `KRegular` proof, not a
+    /// `Regular` one directly — [`Self::regular_of_kregular`] already closes
+    /// the constant-factor-to-exact gap generically).
     pub sqrt_approx: NameId,
+    /// `CReal.sqrtApproxSqBracket : ∀ x n,
+    /// And (Rat.le (Rat.mul (sqrtApprox x n) (sqrtApprox x n)) q)
+    ///     (Rat.lt q (Rat.mul s1 s1))`, `q := Rat.max (CReal.seq x
+    /// ((succ n)*(succ n))) Rat.zero`, `s1` the next `natSqrt` candidate up.
+    /// The single-index approximation-quality bracket `sqrtApprox` was built
+    /// to satisfy. See `creal/sqrt.rs`.
+    pub sqrt_approx_sq_bracket: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -3143,6 +3154,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         nat_sqrt_le: kernel.name_str(creal, "natSqrtLe"),
         nat_sqrt_lt: kernel.name_str(creal, "natSqrtLt"),
         sqrt_approx: kernel.name_str(creal, "sqrtApprox"),
+        sqrt_approx_sq_bracket: kernel.name_str(creal, "sqrtApproxSqBracket"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),

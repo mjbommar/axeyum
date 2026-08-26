@@ -43,6 +43,59 @@
 //! 2400+ lines; `mul_self_zero.rs`, reusing most of that, still took a
 //! four-lane chain — its own commit message says so) and is exactly the
 //! obstruction named in this slice's report, not solved by it.
+//!
+//! ## Update: the obstruction is real, but it is smaller than "the exact
+//! Bishop bound" — [`declare_sqrt_approx_sq_bracket`] and `speedup.rs` narrow it
+//!
+//! Two things landed after the paragraph above was written, neither of which
+//! this file cross-referenced until now (checked against
+//! `prelude_theorem_inventory --include-constructed`, 2026-08-26: no
+//! `CReal.sqrt`, no `KRegular`-instance for `sqrtApprox`, so the obstruction
+//! is CONFIRMED still open, not stale — but it is not the obstruction this
+//! paragraph originally described).
+//!
+//! **First, `speedup.rs`'s `KRegular`/`speedup`/`regular_of_kregular` mean
+//! `CReal.sqrt` does NOT need the exact `1/(m+1)+1/(n+1)` bound at all.**
+//! `regular_of_kregular : ∀ f c, KRegular f c → Regular (speedup f c)` closes
+//! the "some constant factor" → "exactly Bishop's constant" gap generically,
+//! with NO slack-widening step (`speedup.rs`'s own doc: "two rewrites, no
+//! weakening step") — reindexing exactly divides the constant out. So the
+//! real remaining obligation is `KRegular sqrtApprox c` for SOME `c`, which
+//! is a strictly easier target than `Regular sqrtApprox` itself, and
+//! `speedup.rs`'s own doc already names this as the sole gap it leaves open
+//! ("proving `sqrtApprox` itself is `KRegular` for some concrete `c` ... is
+//! the ~2000-line rational-inequality half `sqrt.rs`'s docs describe").
+//!
+//! **Second, [`declare_sqrt_approx_sq_bracket`] proves the SAME-INDEX piece
+//! that `KRegular` has to be assembled from**: `(sqrtApprox x n)² ≤ q < ((s+1)/
+//! (n+1))²`, `q := max(seq x (n+1)², 0)` — read back from
+//! [`nat_floor_bracket`]'s `Nat`-level bracket via the identical
+//! cross-multiplication route `uniform_continuity.rs` already uses for
+//! `bucketIndex`'s own (unsquared) floor bound, confirming that file's "verbatim
+//! in *recipe*" claim down to the lemma calls, not just the definition shape.
+//!
+//! **The remaining proof sketch, for the next lane** (not attempted here —
+//! genuinely the ~2000-line half, even after the two shortcuts above): fix
+//! `m, n`, write `d1 := m+1`, `d2 := n+1`, `u1 := sqrtApprox x m`,
+//! `u2 := sqrtApprox x n`, `q1, q2` their respective clamped samples. WLOG
+//! `u1 ≥ u2`. Chain: `u1² ≤ q1` (this file's own bracket) `≤ q2 + Δ` (`Δ :=
+//! |q1−q2|`, from `Rat.sub_max_le` — `max` is 1-Lipschitz — composed with `x`'s
+//! own `CReal.regular` at `(j1,j2)`) `< (u2 + natDivSucc 1 n)² + Δ` (this
+//! file's own bracket, other direction). Setting `E := natDivSucc 1 m +
+//! natDivSucc 1 n`, `Δ ≤ E²` holds because `Δ ≤ modulus(j1,j2) =
+//! natDivSucc 1 (d1²) + natDivSucc 1 (d2²)`, each term strictly smaller than
+//! the corresponding `1/d1²`/`1/d2²` term inside `E² = 1/d1² + 2/(d1·d2) +
+//! 1/d2²` — so `(u2 + natDivSucc 1 n)² + Δ ≤ (u2 + natDivSucc 1 n + E)²`
+//! (expand; the cross term `2·E·(u2+1/d2) ≥ 0` absorbs the rest), and
+//! [`CRealPrelude::rat_sq_le`] (`u²≤s² → 0≤s → u≤s`, **no division by a sum of
+//! roots anywhere**, exactly this file's own opening claim about
+//! `ratSqSandwich`) gives `u1 ≤ u2 + natDivSucc 1 n + E = u2 + 2·natDivSucc 1 n
+//! + natDivSucc 1 m ≤ u2 + 2·(natDivSucc 1 m + natDivSucc 1 n)`. The
+//! symmetric case (`u2 ≥ u1`) is the same argument with `m`/`n` swapped, and
+//! the two combine into `KRegular sqrtApprox 1` (`c = 1`, i.e. constant factor
+//! `2`) — **independent of any magnitude bound on `x`**, unlike `CReal.mul`'s
+//! canonical-bound machinery: `sqrt` is norm-*reducing*, and this route never
+//! needs to know how big `x` is, only how close two of its samples are.
 
 use crate::BinderInfo;
 use crate::KernelError;
@@ -50,7 +103,9 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{den, normalize, num, one_le_succ, rat_ty, rzero};
+use crate::rat_prelude::ops::{
+    den, den_pos, den_z, normalize, num, one_le_succ, rat_ty, rle, rlt, rzero,
+};
 
 use super::{CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, sample};
 
@@ -70,7 +125,6 @@ fn and_ty(d: &mut IntDev<'_>, p: CRealPrelude, left: ExprId, right: ExprId) -> E
 /// `NatDev`. Trivial enough (one `False.rec` application) that a fifth copy
 /// costs nothing next to threading a `NatDev`-specific dependency through the
 /// `creal` module boundary.
-#[allow(dead_code)] // staged for declare_kregular_sqrt_approx (Step A/B, not yet landed)
 fn ex_falso(d: &mut IntDev<'_>, p: CRealPrelude, target: ExprId, false_proof: ExprId) -> ExprId {
     let anon = d.anon_name();
     let nat = p.rat.int.nat;
@@ -92,7 +146,6 @@ fn ex_falso(d: &mut IntDev<'_>, p: CRealPrelude, target: ExprId, false_proof: Ex
 /// `not_lt_zero`; the successor case is `refl`, since `pred (succ m)` reduces
 /// to `m` definitionally. `n` may be any `Nat`-typed expression, not just a
 /// bound variable — `Nat.rec` does not require its target to reduce.
-#[allow(dead_code)] // staged for declare_kregular_sqrt_approx (Step A/B, not yet landed)
 fn one_le_implies_succ_pred(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
     let nat = p.rat.int.nat;
     let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
@@ -151,7 +204,6 @@ fn one_le_implies_succ_pred(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> E
 /// scales both by `b` (`b*(s*s) ≤ b*k` and `b*(succ k) ≤ b*((succ
 /// s)*(succ s))`), and `le_trans`/`lt_of_lt_of_le` compose each with the
 /// `div_mod_bounds` half on the same side.
-#[allow(dead_code)] // staged for declare_kregular_sqrt_approx (Step A/B/C, not yet landed)
 fn nat_floor_bracket(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -217,6 +269,288 @@ fn nat_floor_bracket(
     );
 
     (s, lower, upper)
+}
+
+/// `CReal.sqrtApproxSqBracket : ∀ x n,
+///   And (Rat.le (Rat.mul S S) Q) (Rat.lt Q (Rat.mul S1 S1))`, where
+/// (writing `d := succ n`, `j := d*d`, `q := Rat.max (CReal.seq x j)
+/// Rat.zero`, `s :=` the same `Nat` [`declare_sqrt_approx`] computes)
+/// `Q := q`, `S := Rat.normalize (Int.ofNat s) d _` — **definitionally**
+/// `CReal.sqrtApprox x n` (that is its entire body) — and `S1 := Rat.normalize
+/// (Int.ofNat (succ s)) d _`, the next candidate up.
+///
+/// The single-index approximation-quality bracket `sqrtApprox` was built to
+/// satisfy but this file never stated in `Rat`: `(sqrtApprox x n)² ≤ q <
+/// ((s+1)/d)²`. It is [`nat_floor_bracket`]'s own `Nat`-level bracket (called
+/// here unmodified, at `scaled = a*j`), read back into `Rat` by the identical
+/// cross-multiplication route
+/// [`super::uniform_continuity::declare_bucket_index_floor`] already uses for
+/// `bucketIndex` — this file's own module doc names that primitive as
+/// "verbatim in *recipe*" to `sqrtApprox`, and this proof confirms it down to
+/// the lemma calls: `Rat.int_mul_le_mul_right`/`int_le_of_mul_le_mul_right`
+/// scale and cancel by the OTHER side's denominator, `Rat.normalize_cross`
+/// supplies the one identity relating a `normalize`d representative's
+/// numerator back to the value it was built from, and the result lands on
+/// the cross-multiplied shape `Rat.le`/`Rat.lt` unfold to — exactly as there,
+/// just with the linear numerator `m` replaced throughout by the squared
+/// numerator `s*s` (`(s+1)*(s+1)` for the upper half).
+///
+/// **This is NOT [`CReal.sqrt`]'s missing `KRegular` property.** It compares
+/// `sqrtApprox x n` against `x`'s OWN sample at the SAME index `n` — no
+/// second index, no cross-index estimate, no use of
+/// [`CRealPrelude::rat_sq_le`]/[`CRealPrelude::rat_sq_sandwich`]. It is the
+/// per-index quality fact `KRegular sqrtApprox c` would have to be built
+/// FROM: comparing `sqrtApprox x m` against `sqrtApprox x n` needs this
+/// bracket applied once at `m` and once at `n`, `x`'s own regularity
+/// relating the two different sample points `(m+1)²`/`(n+1)²`, and
+/// `rat_sq_le`'s division-free squeeze (`u² ≤ s² → 0 ≤ s → u ≤ s`) applied to
+/// `u := sqrtApprox x m` against `s := sqrtApprox x n + natDivSucc 1 m +
+/// natDivSucc 1 n` (the two error terms folded additively, never as a
+/// quotient) to turn the resulting bound on the SQUARES into one on the
+/// approximants themselves — not attempted here.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_sqrt_approx_sq_bracket(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = p.rat.int.nat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    // --- shared setup, rebuilt identically to `declare_sqrt_approx`'s own recipe.
+    let dd = d.succ(n);
+    let j = NatOps::mul(d, dd, dd);
+    let sample_q = sample(d, p, x, j);
+    let zero_rat = rzero(d, rat);
+    let q = d.const_app(rat.max, &[sample_q, zero_rat]);
+
+    let q_nonneg = d.lemma(rat.le_max_right, &[sample_q, zero_rat]); // Rat.le 0 q
+    let num_q = num(d, q);
+    let num_q_nonneg = d.lemma(rat.int_nonneg_of_nonneg, &[q, q_nonneg]); // Int.le 0 (num q)
+    let a = d.const_app(rat.int.nat_abs, &[num_q]);
+    let num_q_eq = d.lemma(rat.int.of_nat_nat_abs_of_nonneg, &[num_q, num_q_nonneg]); // Eq (ofNat a) (num q)
+    let b = den(d, q);
+    let bz = den_z(d, q);
+    let b_pos = den_pos(d, q);
+
+    let scaled = NatOps::mul(d, a, j);
+    let (s, lower, upper_strict) = nat_floor_bracket(d, p, b, b_pos, scaled);
+
+    let pos_d = one_le_succ(d, n); // 1 <= dd
+    let j_pos = d.lemma(nat.one_le_mul, &[dd, dd, pos_d, pos_d]); // 1 <= j
+
+    let az = d.of_nat(a);
+    let jz = d.of_nat(j);
+    let sz = d.of_nat(s);
+    let ssz = d.imul(sz, sz);
+
+    // rep_s := normalize (s*s) j j_pos, defeq `Rat.mul (sqrtApprox x n) (sqrtApprox x n)`
+    // ONLY after `normalize_mul_normalize` (a proved lemma, not unfolding) —
+    // not needed here since the declared statement below is phrased directly
+    // in terms of `rep_s`/`rep_s1`, which unfold `sqrtApprox`'s own recipe.
+    let rep_s = normalize(d, ssz, j, j_pos);
+    let nm = num(d, rep_s);
+    let dm = den(d, rep_s);
+    let dm_z = den_z(d, rep_s);
+    let cross_s = d.lemma(rat.normalize_cross, &[ssz, j, j_pos]);
+    // cross_s : Eq (nm*jz) (ssz*dm_z)
+
+    // ============ LOWER: Rat.le rep_s q ============
+    let lower_final = {
+        let bz_ssz = d.imul(bz, ssz);
+        let az_jz = d.imul(az, jz);
+        let scaled_lower = d.lemma(rat.int_mul_le_mul_right, &[bz_ssz, az_jz, dm, lower]);
+        // : Int.le (bz_ssz*dm_z) (az_jz*dm_z)
+        let lhs0 = d.imul(bz_ssz, dm_z);
+        let rhs0 = d.imul(az_jz, dm_z);
+
+        let ssz_dmz = d.imul(ssz, dm_z);
+        let nm_jz = d.imul(nm, jz);
+        let cross_s_rev = d.isymm(nm_jz, ssz_dmz, cross_s); // Eq (ssz*dm_z)(nm*jz)
+
+        let bz_sszdmz = d.imul(bz, ssz_dmz);
+        let assoc_l1 = d.lemma(rat.int.mul_assoc, &[bz, ssz, dm_z]); // Eq lhs0 (bz*(ssz*dm_z))
+        let bz_nmjz = d.imul(bz, nm_jz);
+        let step_l2 = d.icongr(ssz_dmz, nm_jz, cross_s_rev, &|d, t| d.imul(bz, t));
+        let bz_nm = d.imul(bz, nm);
+        let bz_nm_jz = d.imul(bz_nm, jz);
+        let assoc_l3 = d.lemma(rat.int.mul_assoc, &[bz, nm, jz]); // Eq ((bz*nm)*jz)(bz*(nm*jz))
+        let assoc_l3_rev = d.isymm(bz_nm_jz, bz_nmjz, assoc_l3);
+        let comm_l4 = d.lemma(rat.int.mul_comm, &[bz, nm]); // Eq (bz*nm)(nm*bz)
+        let nm_bz = d.imul(nm, bz);
+        let nm_bz_jz = d.imul(nm_bz, jz);
+        let step_l4 = d.icongr(bz_nm, nm_bz, comm_l4, &|d, t| d.imul(t, jz));
+
+        let (target_lhs, eq_lhs) = d.ichain(
+            lhs0,
+            &[
+                (bz_sszdmz, assoc_l1),
+                (bz_nmjz, step_l2),
+                (bz_nm_jz, assoc_l3_rev),
+                (nm_bz_jz, step_l4),
+            ],
+        );
+
+        let jz_dmz = d.imul(jz, dm_z);
+        let az_jzdmz = d.imul(az, jz_dmz);
+        let assoc_r1 = d.lemma(rat.int.mul_assoc, &[az, jz, dm_z]); // Eq (rhs0)(az*(jz*dm_z))
+        let dmz_jz = d.imul(dm_z, jz);
+        let az_dmzjz = d.imul(az, dmz_jz);
+        let comm_r2 = d.lemma(rat.int.mul_comm, &[jz, dm_z]); // Eq (jz*dm_z)(dm_z*jz)
+        let step_r2 = d.icongr(jz_dmz, dmz_jz, comm_r2, &|d, t| d.imul(az, t));
+        let az_dmz = d.imul(az, dm_z);
+        let az_dmz_jz = d.imul(az_dmz, jz);
+        let assoc_r3 = d.lemma(rat.int.mul_assoc, &[az, dm_z, jz]); // Eq ((az*dm_z)*jz)(az*(dm_z*jz))
+        let assoc_r3_rev = d.isymm(az_dmz_jz, az_dmzjz, assoc_r3);
+
+        let (target_rhs, eq_rhs) = d.ichain(
+            rhs0,
+            &[
+                (az_jzdmz, assoc_r1),
+                (az_dmzjz, step_r2),
+                (az_dmz_jz, assoc_r3_rev),
+            ],
+        );
+
+        let motive1 = d.ieq_motive(lhs0, &|d, x| d.ile(x, rhs0));
+        let step1 = d.itransport(lhs0, motive1, scaled_lower, target_lhs, eq_lhs);
+        let motive2 = d.ieq_motive(rhs0, &|d, x| d.ile(target_lhs, x));
+        let step2 = d.itransport(rhs0, motive2, step1, target_rhs, eq_rhs);
+        // step2 : Int.le ((nm*bz)*jz) ((az*dm_z)*jz)
+
+        let lower_cross = d.lemma(
+            rat.int_le_of_mul_le_mul_right,
+            &[nm_bz, az_dmz, j, j_pos, step2],
+        );
+        // : Int.le (nm*bz) (az*dm_z)
+
+        let eq_az_dmz = d.icongr(az, num_q, num_q_eq, &|d, t| d.imul(t, dm_z));
+        let num_q_dmz = d.imul(num_q, dm_z);
+        let motive3 = d.ieq_motive(az_dmz, &|d, x| d.ile(nm_bz, x));
+        d.itransport(az_dmz, motive3, lower_cross, num_q_dmz, eq_az_dmz)
+        // : Int.le (nm*bz) (num_q*dm_z)  ==defeq==  Rat.le rep_s q
+    };
+
+    // ============ UPPER: Rat.lt q rep_s1 ============
+    let succ_s = d.succ(s);
+    let s1z = d.of_nat(succ_s);
+    let s1sq_z = d.imul(s1z, s1z);
+    let rep_s1 = normalize(d, s1sq_z, j, j_pos);
+    let nm1 = num(d, rep_s1);
+    let dm1 = den(d, rep_s1);
+    let dm1_z = den_z(d, rep_s1);
+    let dm1_pos = den_pos(d, rep_s1);
+    let cross_s1 = d.lemma(rat.normalize_cross, &[s1sq_z, j, j_pos]);
+    // cross_s1 : Eq (nm1*jz) (s1sq_z*dm1_z)
+
+    // `upper_strict : Nat.lt scaled (b*succ_s_sq)`, defeq `Int.lt az_jz bz_s1sqz`.
+    let upper_final = {
+        let az_jz = d.imul(az, jz);
+        let bz_s1sqz = d.imul(bz, s1sq_z);
+        let scaled_upper = d.lemma(
+            rat.int_mul_lt_mul_right,
+            &[az_jz, bz_s1sqz, dm1, dm1_pos, upper_strict],
+        );
+        // : Int.lt (az_jz*dm1_z) (bz_s1sqz*dm1_z)
+        let lhs0 = d.imul(az_jz, dm1_z);
+        let rhs0 = d.imul(bz_s1sqz, dm1_z);
+
+        let jz_dm1z = d.imul(jz, dm1_z);
+        let az_jzdm1z = d.imul(az, jz_dm1z);
+        let assoc_l1 = d.lemma(rat.int.mul_assoc, &[az, jz, dm1_z]); // Eq lhs0 (az*(jz*dm1_z))
+        let dm1z_jz = d.imul(dm1_z, jz);
+        let az_dm1zjz = d.imul(az, dm1z_jz);
+        let comm_l2 = d.lemma(rat.int.mul_comm, &[jz, dm1_z]); // Eq (jz*dm1_z)(dm1_z*jz)
+        let step_l2 = d.icongr(jz_dm1z, dm1z_jz, comm_l2, &|d, t| d.imul(az, t));
+        let az_dm1z = d.imul(az, dm1_z);
+        let az_dm1z_jz = d.imul(az_dm1z, jz);
+        let assoc_l3 = d.lemma(rat.int.mul_assoc, &[az, dm1_z, jz]); // Eq ((az*dm1_z)*jz)(az*(dm1_z*jz))
+        let assoc_l3_rev = d.isymm(az_dm1z_jz, az_dm1zjz, assoc_l3);
+
+        let (target_lhs, eq_lhs) = d.ichain(
+            lhs0,
+            &[
+                (az_jzdm1z, assoc_l1),
+                (az_dm1zjz, step_l2),
+                (az_dm1z_jz, assoc_l3_rev),
+            ],
+        );
+
+        let s1sqz_dm1z = d.imul(s1sq_z, dm1_z);
+        let bz_s1sqzdm1z = d.imul(bz, s1sqz_dm1z);
+        let assoc_r1 = d.lemma(rat.int.mul_assoc, &[bz, s1sq_z, dm1_z]); // Eq rhs0 (bz*(s1sqz*dm1_z))
+        let nm1_jz = d.imul(nm1, jz);
+        let cross_s1_rev = d.isymm(nm1_jz, s1sqz_dm1z, cross_s1); // Eq (s1sqz*dm1_z)(nm1*jz)
+        let bz_nm1jz = d.imul(bz, nm1_jz);
+        let step_r2 = d.icongr(s1sqz_dm1z, nm1_jz, cross_s1_rev, &|d, t| d.imul(bz, t));
+        let bz_nm1 = d.imul(bz, nm1);
+        let bz_nm1_jz = d.imul(bz_nm1, jz);
+        let assoc_r3 = d.lemma(rat.int.mul_assoc, &[bz, nm1, jz]); // Eq ((bz*nm1)*jz)(bz*(nm1*jz))
+        let assoc_r3_rev = d.isymm(bz_nm1_jz, bz_nm1jz, assoc_r3);
+        let comm_r4 = d.lemma(rat.int.mul_comm, &[bz, nm1]); // Eq (bz*nm1)(nm1*bz)
+        let nm1_bz = d.imul(nm1, bz);
+        let nm1_bz_jz = d.imul(nm1_bz, jz);
+        let step_r4 = d.icongr(bz_nm1, nm1_bz, comm_r4, &|d, t| d.imul(t, jz));
+
+        let (target_rhs, eq_rhs) = d.ichain(
+            rhs0,
+            &[
+                (bz_s1sqzdm1z, assoc_r1),
+                (bz_nm1jz, step_r2),
+                (bz_nm1_jz, assoc_r3_rev),
+                (nm1_bz_jz, step_r4),
+            ],
+        );
+
+        let motive1 = d.ieq_motive(lhs0, &|d, x| d.ilt(x, rhs0));
+        let step1 = d.itransport(lhs0, motive1, scaled_upper, target_lhs, eq_lhs);
+        let motive2 = d.ieq_motive(rhs0, &|d, x| d.ilt(target_lhs, x));
+        let step2 = d.itransport(rhs0, motive2, step1, target_rhs, eq_rhs);
+        // step2 : Int.lt ((az*dm1_z)*jz) ((nm1*bz)*jz)
+
+        let upper_cross = d.lemma(
+            rat.int_lt_of_mul_lt_mul_right,
+            &[az_dm1z, nm1_bz, j, j_pos, step2],
+        );
+        // : Int.lt (az*dm1_z) (nm1*bz)
+
+        let eq_az_dm1z = d.icongr(az, num_q, num_q_eq, &|d, t| d.imul(t, dm1_z));
+        let num_q_dm1z = d.imul(num_q, dm1_z);
+        let motive3 = d.ieq_motive(az_dm1z, &|d, x| d.ilt(x, nm1_bz));
+        d.itransport(az_dm1z, motive3, upper_cross, num_q_dm1z, eq_az_dm1z)
+        // : Int.lt (num_q*dm1_z) (nm1*bz)  ==defeq==  Rat.lt q rep_s1
+    };
+
+    let stmt_lower = rle(d, rat, rep_s, q);
+    let stmt_upper = rlt(d, rat, q, rep_s1);
+    let stmt = and_ty(d, p, stmt_lower, stmt_upper);
+    let proof = and_intro(d, p, stmt_lower, stmt_upper, lower_final, upper_final);
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat_ty, proof);
+        d.lam_fv(x_fv, carrier, with_n)
+    };
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat_ty, stmt);
+        d.pi_fv(x_fv, carrier, over_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sqrt_approx_sq_bracket,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 /// From `h : Eq Bool b Bool.false`, derive `Not (Eq Bool b Bool.true)`.
@@ -615,7 +949,8 @@ pub(super) fn declare_sqrt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     declare_nat_sqrt_spec(d, p)?;
     declare_nat_sqrt_le(d, p)?;
     declare_nat_sqrt_lt(d, p)?;
-    declare_sqrt_approx(d, p)
+    declare_sqrt_approx(d, p)?;
+    declare_sqrt_approx_sq_bracket(d, p)
 }
 
 #[cfg(test)]
