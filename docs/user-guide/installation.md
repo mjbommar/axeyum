@@ -33,6 +33,18 @@ x = (_ bv255 8)
 The example uses the pure-Rust solver. `full` enables Axeyum's SMT-LIB front
 door and multi-theory API; it does not enable a native solver.
 
+That first command deliberately solves one fixed teaching query and rejects
+arguments. To run an actual file through the general SMT-LIB session driver:
+
+```sh
+cargo run -q -p axeyum-bench --example axeyum_cli -- path/to/query.smt2
+```
+
+The driver also accepts `-` for stdin and `--timeout-ms N`. It answers each
+`check-sat` and supported output command in order; unsupported commands are
+reported rather than silently ignored. It remains a repository example, not an
+installed standalone binary.
+
 If you only need the scalar Boolean/bit-vector API, the solver crate's default
 `qfbv` profile is smaller:
 
