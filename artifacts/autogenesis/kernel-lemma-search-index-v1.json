@@ -1,18 +1,18 @@
 {
   "census": {
     "distinct_exactly_linked_facts": 312,
-    "kernel_dependency_edges": 6568,
-    "kernel_theorems": 1184,
+    "kernel_dependency_edges": 6595,
+    "kernel_theorems": 1185,
     "maximum_dependency_depth": 26,
     "theorems_with_exact_fact_links": 308,
-    "theorems_without_exact_fact_links": 876,
+    "theorems_without_exact_fact_links": 877,
     "unresolved_prefixed_kernel_evidence": 90
   },
   "derivation": {
     "fact_identity_rule": "kernel-term evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
     "fact_population": "sorted artifacts/facts/F-*.json",
     "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
-    "kernel_projection_sha256": "f1c25af45a75f04d9d780933bc644561bd9984a902d871f3b13949a9c91c7cb5",
+    "kernel_projection_sha256": "692d22c3b69fd35af4af354777e12cc849bdc2432db0bd5b5cee2994c3cfc3ad",
     "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-lemma-search-index",
@@ -2767,6 +2767,7 @@
         "CReal.hasDerivative_sq",
         "CReal.inv_congr",
         "CReal.inv_index_irrelevant",
+        "CReal.ivt_step",
         "CReal.le_of_mul_le_mul_left",
         "CReal.lt_congr",
         "CReal.mesh_count_width",
@@ -2963,6 +2964,7 @@
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
         "CReal.inv_congr",
+        "CReal.ivt_step",
         "CReal.le_congr",
         "CReal.le_of_mul_le_mul_left",
         "CReal.lt_congr",
@@ -3165,6 +3167,7 @@
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
         "CReal.inv_congr",
+        "CReal.ivt_step",
         "CReal.le_of_mul_le_mul_left",
         "CReal.mesh_count_width",
         "CReal.monotone_of_nonneg_deriv",
@@ -3569,6 +3572,7 @@
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_sub_one_geom",
@@ -3704,6 +3708,7 @@
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_pos",
@@ -3874,6 +3879,7 @@
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.ivt_step",
         "CReal.lt_congr",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
@@ -3976,6 +3982,7 @@
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_sq",
+        "CReal.ivt_step",
         "CReal.lt_of_le_of_lt",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
@@ -4012,6 +4019,7 @@
         "CReal.le_trans"
       ],
       "direct_theorem_dependents": [
+        "CReal.ivt_step",
         "Complex.eq_conj_iff_real"
       ],
       "exact_fact_ids": [],
@@ -4104,6 +4112,7 @@
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_sub_one_geom",
@@ -4311,6 +4320,7 @@
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_pos",
@@ -5877,6 +5887,48 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 19,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_lt_add_of_le_of_lt",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.le_congr",
+        "CReal.le_of_lt",
+        "CReal.le_refl",
+        "CReal.left_distrib",
+        "CReal.lt_congr",
+        "CReal.lt_cotrans",
+        "CReal.lt_trans",
+        "CReal.mesh_count_width",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_nonneg",
+        "CReal.mul_one",
+        "CReal.ofRat_add",
+        "CReal.ofRat_le",
+        "CReal.ratUnitEqOne",
+        "Rat.natDivSucc_add",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.ivt_step",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 15,
       "direct_theorem_dependencies": [
         "CReal.le_max_left"
@@ -5969,6 +6021,7 @@
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.ivt_step",
         "CReal.le_of_mul_le_mul_left",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
@@ -6159,6 +6212,7 @@
         "Rat.le_of_lt"
       ],
       "direct_theorem_dependents": [
+        "CReal.ivt_step",
         "CReal.lt_trans",
         "CReal.one_le_pow_of_one_le",
         "CReal.pow_le_pow_of_one_le",
@@ -6223,6 +6277,7 @@
         "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_sq",
+        "CReal.ivt_step",
         "CReal.lt_of_le_of_lt",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
@@ -6390,6 +6445,7 @@
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_sub_one_geom",
@@ -6491,6 +6547,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.apart_congr",
+        "CReal.ivt_step",
         "CReal.pow_succ_gt_one",
         "CReal.pow_succ_lt_one",
         "Complex.apart_irrefl",
@@ -6536,7 +6593,8 @@
         "Rat.sub_le_of_le"
       ],
       "direct_theorem_dependents": [
-        "CReal.apart_cotrans"
+        "CReal.apart_cotrans",
+        "CReal.ivt_step"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.lt_cotrans",
@@ -6634,7 +6692,9 @@
         "CReal.le_of_lt",
         "CReal.le_trans"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.ivt_step"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.lt_trans",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -6706,6 +6766,7 @@
         "Rat.natDivSucc_scale"
       ],
       "direct_theorem_dependents": [
+        "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv"
       ],
       "exact_fact_ids": [],
@@ -6996,6 +7057,7 @@
         "CReal.hasDerivative_pow_two",
         "CReal.hasDerivative_sq",
         "CReal.inv_congr",
+        "CReal.ivt_step",
         "CReal.le_of_mul_le_mul_left",
         "CReal.mesh_count_width",
         "CReal.monotone_of_nonneg_deriv",
@@ -7132,6 +7194,7 @@
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
         "CReal.inv_congr",
+        "CReal.ivt_step",
         "CReal.le_of_mul_le_mul_left",
         "CReal.mesh_count_width",
         "CReal.monotone_of_nonneg_deriv",
@@ -7343,6 +7406,7 @@
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_sq",
+        "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.pow_nonneg",
@@ -7413,6 +7477,7 @@
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_pow_two",
         "CReal.inv_congr",
+        "CReal.ivt_step",
         "CReal.le_of_mul_le_mul_left",
         "CReal.mesh_count_width",
         "CReal.monotone_of_nonneg_deriv",
@@ -8122,6 +8187,7 @@
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_pow",
+        "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.riemannSum_const",
         "CReal.sumRange_const",
@@ -8160,6 +8226,7 @@
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_sq",
+        "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_pos",
         "CReal.ofNat_le",
@@ -8658,6 +8725,7 @@
       "direct_theorem_dependents": [
         "CReal.eq_zero_of_mul_self_zero",
         "CReal.hasDerivative_pow",
+        "CReal.ivt_step",
         "CReal.mesh_count_width",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.riemannSum_const",
@@ -29463,6 +29531,7 @@
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_pow",
         "CReal.inv_nonneg",
+        "CReal.ivt_step",
         "CReal.le_add_of_nonneg",
         "CReal.le_of_forall_le_add_small",
         "CReal.le_trans",
@@ -31958,6 +32027,7 @@
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_sq",
         "CReal.inv_nonneg",
+        "CReal.ivt_step",
         "CReal.le_add_of_nonneg",
         "CReal.le_max_left",
         "CReal.le_max_right",

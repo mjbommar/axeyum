@@ -28,6 +28,8 @@ work a live production inventory found 1,184 theorems while the committed
 projection still held 1,100. Regenerating both artifacts brought them into exact
 agreement at 1,184. Their separate derivations remain valuable: freshness must
 continue to fail if theorem construction advances only one population.
+After merging the immediately subsequent `CReal.ivt_step` theorem, both derived
+artifacts advanced together to 1,185.
 
 ## Reproduce and gate
 
@@ -48,8 +50,9 @@ order:
 1. resolve exact-but-dangling kernel evidence identities or document why they
    target a different admitted population;
 2. preserve exact agreement between the projection and production inventory;
-3. use `axeyum.knowledge.lemmas` for deterministic lookup by declaration, fact,
-   direct prerequisite, and reverse consumer;
+3. use `axeyum.knowledge.lemmas` for deterministic programmatic lookup, or the
+   autonomous loop's read-only `lemma_neighbourhood` tool for held-out-safe
+   retrieval by theorem-name glob or exact fact identity;
 4. attach typed theorem signatures and normalized head symbols derived from the
    kernel, without granting applicability authority;
 5. join operation/tactic preconditions through exact identifiers;
