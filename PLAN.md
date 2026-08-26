@@ -1144,7 +1144,10 @@ retrieval is landed, while proof construction and admission remain the next
 falsifiable step.
 That reference composition is now checked and admitted: `Nat.fib_mono`
 eliminates an order derivation and its kernel-observed direct dependencies are
-`Nat.fib_le_succ` and `Nat.le_trans`, with an empty axiom footprint. It settles
+`Nat.fib_le_succ` and the target-agnostic `Nat.monotone_of_le_succ`, with an
+empty axiom footprint. The latter combinator is now independently checked for
+any `Nat → Nat` function, extracting the reusable proof shape from Fibonacci.
+The result settles
 the corresponding fact and demonstrates genuine library compounding. It is
 deliberately not counted as autonomous yield: the constructor is hand-authored,
 the production ledger places it in `no_operation`, and the next step is to

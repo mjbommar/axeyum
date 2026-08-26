@@ -7285,7 +7285,8 @@ fn fib_mono_composes_fib_le_succ_and_records_the_dependency() {
     assert!(f.k.axiom_footprint(p.fib_mono).is_empty());
     let dependencies = f.k.theorem_dependencies(p.fib_mono);
     assert!(dependencies.contains(&p.fib_le_succ));
-    assert!(dependencies.contains(&p.le_trans));
+    assert!(dependencies.contains(&p.monotone_of_le_succ));
+    assert!(!dependencies.contains(&p.le_trans));
 }
 
 /// `Nat.catalan` computes: the kernel's own `def_eq` reduces `catalan 0..5`

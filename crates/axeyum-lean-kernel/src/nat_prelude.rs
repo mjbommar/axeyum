@@ -453,6 +453,9 @@ pub struct NatPrelude {
     pub le_of_succ_le_succ: NameId,
     /// `le_trans : ∀ (a b c : Nat), Le a b → Le b c → Le a c`.
     pub le_trans: NameId,
+    /// `Nat.monotone_of_le_succ : ∀ f, (∀ n, Le (f n) (f (succ n))) →
+    /// ∀ a b, Le a b → Le (f a) (f b)`.
+    pub monotone_of_le_succ: NameId,
     /// `lt_or_eq_of_le : ∀ a b, Le a b → Or (Lt a b) (Eq Nat a b)`.
     pub lt_or_eq_of_le: NameId,
     /// `lt_of_lt_of_le : ∀ a b c, Lt a b → Le b c → Lt a c`.
@@ -1913,6 +1916,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             le_succ_succ: kernel.name_str(nat, "le_succ_succ"),
             le_of_succ_le_succ: kernel.name_str(nat, "le_of_succ_le_succ"),
             le_trans: kernel.name_str(nat, "le_trans"),
+            monotone_of_le_succ: kernel.name_str(nat, "monotone_of_le_succ"),
             lt_or_eq_of_le: kernel.name_str(nat, "lt_or_eq_of_le"),
             lt_of_lt_of_le: kernel.name_str(nat, "lt_of_lt_of_le"),
             lt_of_le_of_lt: kernel.name_str(nat, "lt_of_le_of_lt"),

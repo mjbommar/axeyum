@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1517,
+    "axiom_free_declarations": 1522,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
-      "definition": 242,
+      "definition": 243,
       "inductive": 22,
       "recursor": 22,
-      "theorem": 1202
+      "theorem": 1206
     },
-    "declarations": 1547,
-    "direct_theorem_dependency_edges": 6807,
-    "theorems": 1202
+    "declarations": 1552,
+    "direct_theorem_dependency_edges": 6838,
+    "theorems": 1206
   },
   "declarations": [
     {
@@ -3552,6 +3552,17 @@
     },
     {
       "axiom_footprint_size": 0,
+      "declaration_kind": "definition",
+      "direct_theorem_dependencies": [],
+      "id": "CReal.bucketIndex",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
         "CReal.Equiv.refl",
@@ -5227,6 +5238,31 @@
         "CReal.le_trans"
       ],
       "id": "CReal.lt_trans",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.add_comm",
+        "CReal.add_le_add",
+        "CReal.add_zero",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.ofRat_le",
+        "Nat.le_of_succ_le_succ",
+        "Nat.lt_or_eq_of_le",
+        "Nat.not_lt_zero",
+        "Or.elim",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "id": "CReal.mag_bound_le_sumRange_of_lt",
       "visible_in": [
         "complex",
         "cpoint",
@@ -6915,9 +6951,50 @@
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_lt_add_of_le_of_lt",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.hasDerivative_neg",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.lt_congr",
+        "CReal.neg_le_neg",
+        "CReal.strict_mono_of_pos_deriv"
+      ],
+      "id": "CReal.strict_antitone_of_neg_deriv",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
         "CReal.strict_mono_of_pos_deriv"
       ],
       "id": "CReal.strict_injective_of_pos_deriv",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.le_of_lt",
+        "CReal.le_trans"
+      ],
+      "id": "CReal.strict_mono_comp",
       "visible_in": [
         "complex",
         "cpoint",
@@ -15376,7 +15453,7 @@
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
         "Nat.fib_le_succ",
-        "Nat.le_trans"
+        "Nat.monotone_of_le_succ"
       ],
       "id": "Nat.fib_mono",
       "visible_in": [
@@ -17201,6 +17278,22 @@
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [],
       "id": "Nat.mod_zero",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Nat.le_trans"
+      ],
+      "id": "Nat.monotone_of_le_succ",
       "visible_in": [
         "complex",
         "cpoint",
@@ -36394,6 +36487,71 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "CReal.add_le_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "CReal.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "CReal.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "CReal.ofRat_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "Nat.le_of_succ_le_succ"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "Nat.lt_or_eq_of_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "Nat.not_lt_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "Or.elim"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.mag_bound_le_sumRange_of_lt",
+      "target": "Rat.zero_le_natDivSucc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "CReal.max_congr",
       "target": "Rat.neg_le_neg"
     },
@@ -39299,8 +39457,93 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.add_lt_add_of_le_of_lt"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.hasDerivative_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.lt_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.neg_le_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_antitone_of_neg_deriv",
+      "target": "CReal.strict_mono_of_pos_deriv"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "CReal.strict_injective_of_pos_deriv",
       "target": "CReal.strict_mono_of_pos_deriv"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_comp",
+      "target": "CReal.le_of_lt"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.strict_mono_comp",
+      "target": "CReal.le_trans"
     },
     {
       "relation": "direct-theorem-depends-on",
@@ -50015,7 +50258,7 @@
     {
       "relation": "direct-theorem-depends-on",
       "source": "Nat.fib_mono",
-      "target": "Nat.le_trans"
+      "target": "Nat.monotone_of_le_succ"
     },
     {
       "relation": "direct-theorem-depends-on",
@@ -51996,6 +52239,11 @@
       "relation": "direct-theorem-depends-on",
       "source": "Nat.mod_two_mul_split",
       "target": "Nat.zero_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Nat.monotone_of_le_succ",
+      "target": "Nat.le_trans"
     },
     {
       "relation": "direct-theorem-depends-on",

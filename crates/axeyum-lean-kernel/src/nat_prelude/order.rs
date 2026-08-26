@@ -250,6 +250,79 @@ pub(super) fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
         d.declare_theorem(p.le_trans, ty, value)?;
     }
 
+    // monotone_of_le_succ : adjacent monotonicity implies full monotonicity.
+    // Eliminate the order derivation; each step chains the accumulated result
+    // with the supplied adjacent-step proof.
+    {
+        let fn_ty = d.arrow(nat, nat);
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let adjacent_fv = d.fresh_fvar();
+        let adjacent = d.kernel().fvar(adjacent_fv);
+        let adjacent_ty = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let fn_n = d.kernel().app(f, n);
+            let sn = d.succ(n);
+            let fn_sn = d.kernel().app(f, sn);
+            let body = d.le(fn_n, fn_sn);
+            d.pi_fv(n_fv, nat, body)
+        };
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let h_ty = d.le(a, b);
+        let fa = d.kernel().app(f, a);
+        let fb = d.kernel().app(f, b);
+        let conclusion = d.le(fa, fb);
+        let motive = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_ty = d.le(a, x);
+            let fx = d.kernel().app(f, x);
+            let body = d.le(fa, fx);
+            let inner = d.kernel().lam(anon, hx_ty, body, BinderInfo::Default);
+            d.lam_fv(x_fv, nat, inner)
+        };
+        let minor_refl = d.const_app(p.le_refl, &[fa]);
+        let minor_step = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_fv = d.fresh_fvar();
+            let hx_ty = d.le(a, x);
+            let ih_fv = d.fresh_fvar();
+            let ih = d.kernel().fvar(ih_fv);
+            let fx = d.kernel().app(f, x);
+            let sx = d.succ(x);
+            let fsx = d.kernel().app(f, sx);
+            let ih_ty = d.le(fa, fx);
+            let adjacent_x = d.kernel().app(adjacent, x);
+            let body = d.const_app(p.le_trans, &[fa, fx, fsx, ih, adjacent_x]);
+            let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+            let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+            d.lam_fv(x_fv, nat, with_hx)
+        };
+        let proof = d.const_app(p.le_rec, &[a, motive, minor_refl, minor_step, b, h]);
+        let ty = {
+            let out = d.kernel().pi(anon, h_ty, conclusion, BinderInfo::Default);
+            let out = d.pi_fv(b_fv, nat, out);
+            let out = d.pi_fv(a_fv, nat, out);
+            let out = d.pi_fv(adjacent_fv, adjacent_ty, out);
+            d.pi_fv(f_fv, fn_ty, out)
+        };
+        let value = {
+            let out = d.lam_fv(h_fv, h_ty, proof);
+            let out = d.lam_fv(b_fv, nat, out);
+            let out = d.lam_fv(a_fv, nat, out);
+            let out = d.lam_fv(adjacent_fv, adjacent_ty, out);
+            d.lam_fv(f_fv, fn_ty, out)
+        };
+        d.declare_theorem(p.monotone_of_le_succ, ty, value)?;
+    }
+
     // le_of_succ_le_succ : ∀ n m, Le (succ n) (succ m) → Le n m
     //
     // Eliminate the derivation with the predecessor-style family
