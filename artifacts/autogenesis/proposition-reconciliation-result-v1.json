@@ -1,0 +1,194 @@
+{
+  "authority": "Metadata reconciliation of independently constructed native theorems; not autonomous theorem production and not an Autogenesis operation.",
+  "events": [
+    {
+      "durable_state": {
+        "epistemic_status": "proved",
+        "fact_sha256": "153fe7fd17cc1c14e66ba3a8e70d715b993706f6c5377b9e2dfc471176e208f2"
+      },
+      "event_sha256": "29c5f675fdfeef2a03780f425cc2e8a9a5b503edc9f649c196019c17bce88dfd",
+      "event_type": "fact-reconciled",
+      "identity": {
+        "after_fact_sha256": "153fe7fd17cc1c14e66ba3a8e70d715b993706f6c5377b9e2dfc471176e208f2",
+        "before_fact_sha256": "88d444adf9131a2fe21c61bcc5d8199b0935eda2df51bd5c76a2304c7bcdb9ea",
+        "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+        "native_fact_id": "F:nat-choose-zero-right",
+        "native_theorem": "Nat.choose_zero_right",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+        "transaction_sha256": "2905cec8219235fb16b5f6482cd6f55af67e14c1adb7cea01a46e70c3dd305dc"
+      },
+      "kind": "axeyum-autogenesis-durable-reconciliation-event",
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "publication": {
+        "artifact_archived": false,
+        "git_published": false
+      },
+      "schema_version": 1,
+      "sequence": 1
+    },
+    {
+      "durable_state": {
+        "epistemic_status": "proved",
+        "fact_sha256": "3bf3cb5688bbb6cd651715b9006d153cdb793663c0c5ed42b3d7195539514b13"
+      },
+      "event_sha256": "876bf3a97a5bf487704da014cf065695acb366e86871f19d0d39fabaad971546",
+      "event_type": "fact-reconciled",
+      "identity": {
+        "after_fact_sha256": "3bf3cb5688bbb6cd651715b9006d153cdb793663c0c5ed42b3d7195539514b13",
+        "before_fact_sha256": "b1936c360fa077b87f3cde0e4c5bec9cfdd3d6f9d8637dcf8f02cc6dbf3e397d",
+        "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
+        "native_fact_id": "F:nat-zero-choose-succ",
+        "native_theorem": "Nat.zero_choose_succ",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+        "transaction_sha256": "57d5c27515a08ce23517694fa790cb0c6f9da930d453efc01187273c402fcd2a"
+      },
+      "kind": "axeyum-autogenesis-durable-reconciliation-event",
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "publication": {
+        "artifact_archived": false,
+        "git_published": false
+      },
+      "schema_version": 1,
+      "sequence": 1
+    },
+    {
+      "durable_state": {
+        "epistemic_status": "proved",
+        "fact_sha256": "afb4a8f5211629027fef069510fb741315df6453c2c0cfeffc8f846bb29c67af"
+      },
+      "event_sha256": "49d335e2946a680df7ca792c6266ad358d1780d023f9d064e75fa9eb34164260",
+      "event_type": "fact-reconciled",
+      "identity": {
+        "after_fact_sha256": "afb4a8f5211629027fef069510fb741315df6453c2c0cfeffc8f846bb29c67af",
+        "before_fact_sha256": "6ba14bc9f97bbf8a0d4a43e7861a7cf2fe32e25366d8d1ad406b9221f6ec8a5d",
+        "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
+        "native_fact_id": "F:nat-choose-succ-self-eq-zero",
+        "native_theorem": "Nat.choose_succ_self_eq_zero",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+        "transaction_sha256": "7f0bb3b721ea847e3d8766c064f775c1c86ac119a456b69d3604b80b56ef6d65"
+      },
+      "kind": "axeyum-autogenesis-durable-reconciliation-event",
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "publication": {
+        "artifact_archived": false,
+        "git_published": false
+      },
+      "schema_version": 1,
+      "sequence": 1
+    },
+    {
+      "durable_state": {
+        "epistemic_status": "proved",
+        "fact_sha256": "a19384dc8a6ea18026f31ddebd5fbc4f8f3e8757749936c6925f9f2125825d80"
+      },
+      "event_sha256": "8065db9515c5284e9f07b0326b8abf7069365b361b5e0745bdf0870f2aff2089",
+      "event_type": "fact-reconciled",
+      "identity": {
+        "after_fact_sha256": "a19384dc8a6ea18026f31ddebd5fbc4f8f3e8757749936c6925f9f2125825d80",
+        "before_fact_sha256": "81877372cc34eaa5a0d2b6c12461ca24f7731c528998a2ede446e99adc8b41e9",
+        "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
+        "native_fact_id": "F:nat-one-le-factorial",
+        "native_theorem": "Nat.one_le_factorial",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+        "transaction_sha256": "b4aaad37aedef97bfdae2cc511616656d8cdbc6d7ad86da6f549447babe95c5b"
+      },
+      "kind": "axeyum-autogenesis-durable-reconciliation-event",
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "publication": {
+        "artifact_archived": false,
+        "git_published": false
+      },
+      "schema_version": 1,
+      "sequence": 1
+    },
+    {
+      "durable_state": {
+        "epistemic_status": "proved",
+        "fact_sha256": "a744d2f193ec9ac8c486efe8dc7232559f04a4065ca88e864cef3d5da2901835"
+      },
+      "event_sha256": "5e310560aa4d9ce75b1e654979330125f5ea5cf000cfed5e2f979f33814c16e7",
+      "event_type": "fact-reconciled",
+      "identity": {
+        "after_fact_sha256": "a744d2f193ec9ac8c486efe8dc7232559f04a4065ca88e864cef3d5da2901835",
+        "before_fact_sha256": "18a7c7220acdb38f72bcc573cbd525e5d8aeac7cf6f637e18a49444ef68c69d8",
+        "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
+        "native_fact_id": "F:nat-choose-succ-succ",
+        "native_theorem": "Nat.choose_succ_succ",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+        "transaction_sha256": "e0c4f50466d32a825ac729fbb122ea6a21a4f57ceb449356f5fb5a26ca9bb9ed"
+      },
+      "kind": "axeyum-autogenesis-durable-reconciliation-event",
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "publication": {
+        "artifact_archived": false,
+        "git_published": false
+      },
+      "schema_version": 1,
+      "sequence": 1
+    },
+    {
+      "durable_state": {
+        "epistemic_status": "proved",
+        "fact_sha256": "92d8ebb4f203ca0666d463a105c90d6a219ebb3bee60bf4e874c3f80ee1c3645"
+      },
+      "event_sha256": "6f2efa837189368ff3e98b89be5422563caf45949f650c33d90486478445a83b",
+      "event_type": "fact-reconciled",
+      "identity": {
+        "after_fact_sha256": "92d8ebb4f203ca0666d463a105c90d6a219ebb3bee60bf4e874c3f80ee1c3645",
+        "before_fact_sha256": "4ca873910df6ce4103ffdc202e5d9cd5d6f6826daa79a0660117c52ccfbf4ef8",
+        "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+        "native_fact_id": "F:nat-choose-self",
+        "native_theorem": "Nat.choose_self",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+        "transaction_sha256": "ffbf5d7aa4c73faae3dbadae54375c160b3db0889d8cb625c0048109e5dd9d23"
+      },
+      "kind": "axeyum-autogenesis-durable-reconciliation-event",
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "publication": {
+        "artifact_archived": false,
+        "git_published": false
+      },
+      "schema_version": 1,
+      "sequence": 1
+    }
+  ],
+  "kind": "axeyum-proposition-reconciliation-result",
+  "schema_version": 1,
+  "source": {
+    "post_reconciliation_census": "artifacts/autogenesis/open-ranked-proposition-census-v2.json",
+    "pre_reconciliation_census": "artifacts/autogenesis/open-ranked-proposition-census-v1.json",
+    "proposals_sha256": "b2d5e7f0d3c72d7d87517a5cfbe4440127640970d19f1a7599fa7728d6b3d54a"
+  },
+  "state": "six-crash-safe-reconciliations-committed",
+  "summary": {
+    "autonomous_credit_count": 0,
+    "durable_event_count": 6,
+    "held_out_access_count": 0,
+    "operation_count": 0,
+    "reconciled_fact_count": 6
+  }
+}
