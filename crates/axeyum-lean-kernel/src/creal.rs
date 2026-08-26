@@ -2917,6 +2917,24 @@ pub struct CRealPrelude {
     /// factor). See `integral.rs`'s module documentation and this
     /// declaration's own section header comment.
     pub sample_point_reblock: NameId,
+    /// `CReal.reblockBlock_eq_fineBlockSum : ∀ F a b m n i, le a b → Nat.le i
+    /// m → UniformlyContinuousOn F a b → Equiv (sumRange (fun j => summand_fn
+    /// F a delta_m_prime ((Nat.succ n)*i + j)) (Nat.succ n)) (sumRange
+    /// (summand_fn F base_i delta_fine) (Nat.succ n))` (`creal/integral.rs`)
+    /// — the per-block fold gluing [`Self::sum_range_reblock`]'s flat global
+    /// sum (read at `g := summand_fn F a delta_m_prime`, exactly `riemannSum
+    /// F a b m_prime`'s own summand at the REFINED total count `m_prime`) to
+    /// [`Self::fine_block_sum_close`]'s per-block sum: an EXACT identity (no
+    /// error term), by a bounded pointwise `Equiv`-congruence induction
+    /// against a per-index derivation built from [`Self::sample_point_reblock`]
+    /// (the exact sample-point identity), `Nat.mul_succ_add_lt_of_le_of_lt`
+    /// (placing the global index in `Nat.succ`-shape), [`Self::equiv_abs_diff_le`]
+    /// / [`Self::uc_spec`] (promoting the sample-point `Equiv` through `F` at
+    /// every accuracy) and [`Self::equiv_zero_of_small`] (closing the
+    /// resulting `∀ e, …` bound back to a full `Equiv`). Roadmap step 4 (the
+    /// outer fold over all `Nat.succ m` coarse blocks) and step 5 (assembly
+    /// into `riemannSum_cauchy`) are NOT attempted here.
+    pub reblock_block_eq_fine_block_sum: NameId,
 }
 
 impl CRealPrelude {
@@ -3277,6 +3295,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_reciprocal_mul: kernel.name_str(creal, "meshReciprocalMul"),
         equiv_abs_diff_le: kernel.name_str(creal, "equivAbsDiffLe"),
         sample_point_reblock: kernel.name_str(creal, "samplePoint_reblock"),
+        reblock_block_eq_fine_block_sum: kernel.name_str(creal, "reblockBlock_eq_fineBlockSum"),
     }
 }
 
@@ -3483,6 +3502,15 @@ pub(crate) fn build_creal_prelude_uncached(
         // (`monotone::declare_monotone_of_nonneg_deriv_all`, further above
         // still), so it cannot land any earlier than this call site.
         integral::declare_sample_point_reblock(&mut d, prelude)?;
+        // `reblockBlock_eq_fineBlockSum` (the per-block fold gluing
+        // `sumRange_reblock`'s flat sum to `fineBlockSum_close`'s per-block
+        // sum) needs `samplePoint_reblock` (just above), `fineSample_in_bounds`
+        // (`monotone::declare_monotone_of_nonneg_deriv_all`, well above),
+        // `equivAbsDiffLe` (`integral::declare_equiv_abs_diff_le`, well
+        // above) and `UniformlyContinuousOn.spec`/`equiv_zero_of_small`
+        // (further above still), so it cannot land any earlier than this
+        // call site.
+        integral::declare_reblock_block_eq_fine_block_sum(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

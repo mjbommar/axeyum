@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 291] = [
+    let expected: [(&str, crate::NameId, &str); 292] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -861,6 +861,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.samplePoint_reblock",
             p.sample_point_reblock,
+            "theorem",
+        ),
+        // The per-block fold gluing `sumRange_reblock`'s flat global sum to
+        // `fineBlockSum_close`'s per-block sum (`creal/integral.rs`): an
+        // EXACT identity (no error term), via a bounded pointwise `Equiv`
+        // congruence against `samplePoint_reblock`, `equivAbsDiffLe`,
+        // `UniformlyContinuousOn.spec` and `equiv_zero_of_small`.
+        (
+            "CReal.reblockBlock_eq_fineBlockSum",
+            p.reblock_block_eq_fine_block_sum,
             "theorem",
         ),
     ];

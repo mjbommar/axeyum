@@ -5679,3 +5679,706 @@ mod equiv_abs_diff_le_tests {
         );
     }
 }
+
+// --- the per-block fold: gluing `sumRange_reblock`'s flat sum to
+// `fineBlockSum_close`'s per-block sum ---------------------------------------
+//
+// `CReal.sumRange_reblock` regroups an arbitrary `g : Nat -> CReal` summed
+// over `(succ n)*(succ m)` terms into `succ m` consecutive blocks of `succ n`
+// terms each (`reblock_block`, this file's own private helper). Read at
+// `g := summand_fn F a delta_m_prime` -- exactly `riemannSum F a b m_prime`'s
+// own summand at the REFINED total subdivision count `m_prime`
+// (`succ m_prime = (succ n)*(succ m)` by `succ_mul_succ`, the identity
+// `samplePoint_reblock`/`meshReciprocalMul` already use) -- block `i`'s own
+// flat sum is `sumRange (fun j => g ((succ n)*i + j)) (succ n)`, applying `F`
+// at the RAW global fine index. `CReal.fineBlockSum_close` instead bounds a
+// sum built from the LOCAL per-block arithmetic (`base_i := sample_point a
+// delta_m i`, `delta_fine := delta_m * natDivSucc(1, n)`), applying `F` at
+// `base_i + j*delta_fine`.
+//
+// This section proves the two sums are `Equiv`, EXACTLY (no error term at
+// all) -- the missing link `fineBlockSum_close`'s own per-block bound needs
+// before it can say anything about `sumRange_reblock`'s flat global sum. Two
+// obstructions, both already solved elsewhere in this file:
+//
+// - The two sample points (`sample_point a delta_m_prime globalIdx` and
+//   `sample_point base_i delta_fine j`) are only `Equiv`, not syntactically
+//   equal (`samplePoint_reblock`, roadmap step 1) -- and `CReal -> CReal`
+//   functions are NOT automatically `Equiv`-respecting in this setoid
+//   (ADR-0512). `CReal.equivAbsDiffLe` turns the exact `Equiv` into an
+//   explicit bound at every accuracy `e`, `UniformlyContinuousOn.spec` lifts
+//   that through `F`, and `CReal.equiv_zero_of_small` (`archimedean_squeeze.rs`)
+//   promotes the resulting `∀ e, …` bound back to a full `Equiv (F x) (F y)`.
+// - Both sample points need to be placed in `[a, b]` before `spec` applies:
+//   the LOCAL point is `CReal.fineSample_in_bounds`'s own `x` exactly; the
+//   RAW GLOBAL point needs its index in `Nat.succ`-shape
+//   (`riemannSum_sample_in_bounds` takes a `Nat.lt _ (Nat.succ _)` bound),
+//   which `Nat.mul_succ_add_lt_of_le_of_lt` (roadmap step 2,
+//   `nat_prelude/order.rs`) gives directly at `(succ n)*(succ m)`, transported
+//   along `succ_mul_succ`'s own identity to `succ m_prime`.
+//
+// Roadmap step 4 (the outer fold over all `succ m` coarse blocks) and step 5
+// (assembly into `riemannSum_cauchy` via `within_of_two_sided_le`) are
+// explicitly NOT attempted here.
+
+/// `∀ i, Nat.lt i bound → Equiv (f i) (g i)` — the bounded pointwise `Equiv`
+/// hypothesis a `sumRange`-congruence induction restricted to `Nat.lt`
+/// needs. Reproduces the shape of `series.rs`'s private `bounded_le_pointwise`
+/// with `CReal.Equiv` in place of `CReal.le` (that file is out of scope for
+/// edits in this slice, so this rebuilds the shape rather than importing it).
+fn bounded_equiv_pointwise(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    g: ExprId,
+    bound: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hyp = d.lt(i, bound);
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let eqv = equiv(d, p, fi, gi);
+    let body = d.arrow(hyp, eqv);
+    d.pi_fv(i_fv, nat, body)
+}
+
+/// Proof of `bounded_equiv_pointwise(f, g, k) → Equiv (sumRange f k)
+/// (sumRange g k)`, by induction on `k`. `series.rs`'s own `CReal.sumRange_congr`
+/// takes an UNRESTRICTED pointwise hypothesis (`∀ i, Equiv (f i) (g i)`, no
+/// bound on `i`), too strong for [`pointwise_block_equiv`]: it can only place
+/// a fine sample point in `[a, b]` for `j < Nat.succ n`. This is the
+/// `Nat.lt`-bounded analogue instead, mirroring `series.rs`'s own bounded
+/// `CReal.sumRange_le` induction (`add_congr` in place of `add_le_add`).
+/// Kept private/file-local rather than a new `CRealPrelude` name --
+/// [`declare_reblock_block_eq_fine_block_sum`] is its only call site.
+fn sum_range_congr_lt_proof(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    g: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let hyp = bounded_equiv_pointwise(d, p, f, g, x);
+        let lhs = d.const_app(p.sum_range, &[f, x]);
+        let rhs = d.const_app(p.sum_range, &[g, x]);
+        let concl = equiv(d, p, lhs, rhs);
+        d.arrow(hyp, concl)
+    };
+    d.induct(
+        &motive,
+        &|d| {
+            let zero = d.zero();
+            let hyp_ty = bounded_equiv_pointwise(d, p, f, g, zero);
+            let h_fv = d.fresh_fvar();
+            let zero_c = czero(d, p);
+            let body = d.lemma(p.equiv_refl, &[zero_c]);
+            d.lam_fv(h_fv, hyp_ty, body)
+        },
+        &|d, j, ih| {
+            let sj = d.succ(j);
+            let hyp_ty = bounded_equiv_pointwise(d, p, f, g, sj);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            // h_lt_j : ∀ i, Nat.lt i j → Equiv (f i) (g i), weakened from `h`.
+            let h_lt_j = {
+                let i_fv = d.fresh_fvar();
+                let i = d.kernel().fvar(i_fv);
+                let hi_ty = d.lt(i, j);
+                let hi_fv = d.fresh_fvar();
+                let hi = d.kernel().fvar(hi_fv);
+                let np = d.prelude();
+                let le_succ_j = d.lemma(np.le_succ, &[j]);
+                let lifted = d.lemma(np.lt_of_lt_of_le, &[i, j, sj, hi, le_succ_j]);
+                let applied = d.apply(h, &[i, lifted]);
+                let with_hi = d.lam_fv(hi_fv, hi_ty, applied);
+                d.lam_fv(i_fv, nat, with_hi)
+            };
+            let sub1 = d.apply(ih, &[h_lt_j]);
+
+            let np = d.prelude();
+            let lt_j_sj = d.lemma(np.lt_succ_self, &[j]);
+            let sub2 = d.apply(h, &[j, lt_j_sj]);
+
+            let f_prior = d.const_app(p.sum_range, &[f, j]);
+            let g_prior = d.const_app(p.sum_range, &[g, j]);
+            let fj = d.apply(f, &[j]);
+            let gj = d.apply(g, &[j]);
+            let body = d.lemma(p.add_congr, &[f_prior, g_prior, fj, gj, sub1, sub2]);
+            d.lam_fv(h_fv, hyp_ty, body)
+        },
+        k,
+    )
+}
+
+/// `Equiv (add (neg x) x) zero` — the commuted form of `add_neg`. Reproduced
+/// verbatim from `monotone.rs`'s private `neg_add_self` (that file is out of
+/// scope for edits in this slice).
+fn neg_add_self_local(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let zero_c = czero(d, p);
+    let nx = cneg(d, p, x);
+    let x_nx = cadd(d, p, x, nx);
+    let nx_x = cadd(d, p, nx, x);
+    let comm = d.lemma(p.add_comm, &[x, nx]);
+    let comm_symm = d.lemma(p.equiv_symm, &[x_nx, nx_x, comm]);
+    let cancel = d.lemma(p.add_neg, &[x]);
+    echain(d, p, nx_x, &[(x_nx, comm_symm), (zero_c, cancel)])
+}
+
+/// From `h : Equiv (add a (neg b)) zero`, derive `Equiv a b` — the general
+/// "a difference `Equiv` to zero means the two sides are `Equiv`" bridge.
+/// Reproduced verbatim from `monotone.rs`'s private `equiv_of_sub_equiv_zero`
+/// (that file is out of scope for edits in this slice).
+fn equiv_of_sub_equiv_zero_local(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let nb = cneg(d, p, b);
+    let diff = cadd(d, p, a, nb);
+    let lhs = cadd(d, p, diff, b);
+    let zero_c = czero(d, p);
+
+    let a_from_lhs = {
+        let assoc = d.lemma(p.add_assoc, &[a, nb, b]);
+        let nb_b = cadd(d, p, nb, b);
+        let a_nbb = cadd(d, p, a, nb_b);
+        let nas = neg_add_self_local(d, p, b);
+        let refl_a = d.lemma(p.equiv_refl, &[a]);
+        let cong = d.lemma(p.add_congr, &[a, a, nb_b, zero_c, refl_a, nas]);
+        let a_zero = cadd(d, p, a, zero_c);
+        let trim = d.lemma(p.add_zero, &[a]);
+        echain(d, p, lhs, &[(a_nbb, assoc), (a_zero, cong), (a, trim)])
+    };
+    let b_from_lhs = {
+        let refl_b = d.lemma(p.equiv_refl, &[b]);
+        let cong = d.lemma(p.add_congr, &[diff, zero_c, b, b, h, refl_b]);
+        let zero_b = cadd(d, p, zero_c, b);
+        let comm = d.lemma(p.add_comm, &[zero_c, b]);
+        let b_zero = cadd(d, p, b, zero_c);
+        let trim = d.lemma(p.add_zero, &[b]);
+        echain(d, p, lhs, &[(zero_b, cong), (b_zero, comm), (b, trim)])
+    };
+    let a_from_lhs_symm = d.lemma(p.equiv_symm, &[lhs, a, a_from_lhs]);
+    d.lemma(p.equiv_trans, &[a, lhs, b, a_from_lhs_symm, b_from_lhs])
+}
+
+/// The per-fine-index proof `Equiv (g_shifted j) (block_summand j)`, at a
+/// free `j` with `hj : Nat.lt j (Nat.succ n)` -- the pointwise hypothesis
+/// [`sum_range_congr_lt_proof`] needs. `g_shifted j` is defeq `mul (F
+/// (sample_point a delta_m_prime globalIdx)) delta_m_prime`
+/// (`summand_fn F a delta_m_prime` applied at the RAW global index
+/// `globalIdx := (succ n)*i + j`); `block_summand j` is defeq `mul (F
+/// (sample_point base_i delta_fine j)) delta_fine` (`summand_fn F base_i
+/// delta_fine` applied at `j`).
+///
+/// Route: [`sample_point_reblock_proof`] gives the exact (unconditional)
+/// sample-point `Equiv`; `Nat.mul_succ_add_lt_of_le_of_lt` (transported
+/// along [`succ_mul_succ`]'s own identity) places the global sample point in
+/// `[a, b]` via [`CRealPrelude::riemann_sample_in_bounds`]
+/// (accessed as `p.riemann_sample_in_bounds`), and
+/// [`CRealPrelude::fine_sample_in_bounds`] places the local one directly;
+/// [`CRealPrelude::equiv_abs_diff_le`] turns the sample-point `Equiv` into
+/// the explicit distance bound [`CRealPrelude::uc_spec`] demands at every
+/// accuracy, and [`CRealPrelude::equiv_zero_of_small`] plus
+/// [`equiv_of_sub_equiv_zero_local`] promote the resulting `∀ e, …` bound
+/// back to a full `Equiv (F lhs_pt) (F rhs_pt)`; [`mesh_reblock_delta_eq`]'s
+/// own mesh identity folds that, via `mul_congr`, into the actual per-term
+/// shape.
+#[allow(clippy::too_many_arguments)]
+fn pointwise_block_equiv(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    m: ExprId,
+    n: ExprId,
+    i: ExprId,
+    j: ExprId,
+    hab: ExprId,
+    hi: ExprId,
+    hj: ExprId,
+    u: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let logic = p.rat.int.logic;
+
+    // The sample-point identity (unconditional in `i`, `j`).
+    let (lhs_pt, rhs_pt, hsp) = sample_point_reblock_proof(d, p, a, b, n, m, i, j);
+
+    // The mesh identity, independently (`sample_point_reblock_proof` needs
+    // its own internal copy; `delta_m_prime`/`delta_fine`/`delta_eq` are
+    // needed again below to fold the outer `delta` factor).
+    let (m_prime, succ_proof) = succ_mul_succ(d, n, m);
+    let width = width_of(d, p, a, b);
+    let (delta_m_prime, delta_fine, delta_eq) = mesh_reblock_delta_eq(d, p, width, n, m, m_prime);
+
+    // Place `lhs_pt` (the raw global fine sample point) in `[a, b]`: the
+    // global index needs a `Nat.succ`-shaped bound, from
+    // `Nat.mul_succ_add_lt_of_le_of_lt` (roadmap step 2) transported along
+    // `succ_mul_succ`'s own identity.
+    let np = d.prelude();
+    let sn = d.succ(n);
+    let sm = d.succ(m);
+    let sn_i = NatOps::mul(d, sn, i);
+    let global_idx = NatOps::add(d, sn_i, j);
+    let mul_sn_sm = NatOps::mul(d, sn, sm);
+    let hlt_global = d.lemma(np.mul_succ_add_lt_of_le_of_lt, &[n, m, i, j, hi, hj]);
+    let succ_m_prime = d.succ(m_prime);
+    let motive_bound = d.eq_motive(mul_sn_sm, &|d, x| d.lt(global_idx, x));
+    let hlt_succ_mprime = d.transport(
+        mul_sn_sm,
+        motive_bound,
+        hlt_global,
+        succ_m_prime,
+        succ_proof,
+    );
+
+    let a_le_lhs_ty = cle(d, p, a, lhs_pt);
+    let lhs_le_b_ty = cle(d, p, lhs_pt, b);
+    let lhs_and = d.lemma(
+        p.riemann_sample_in_bounds,
+        &[a, b, m_prime, global_idx, hab, hlt_succ_mprime],
+    );
+    let a_le_lhs = d.const_app(logic.and_left, &[a_le_lhs_ty, lhs_le_b_ty, lhs_and]);
+    let lhs_le_b = d.const_app(logic.and_right, &[a_le_lhs_ty, lhs_le_b_ty, lhs_and]);
+
+    // Place `rhs_pt` (the local per-block fine sample point) in `[a, b]`
+    // directly.
+    let a_le_rhs_ty = cle(d, p, a, rhs_pt);
+    let rhs_le_b_ty = cle(d, p, rhs_pt, b);
+    let rhs_and = d.lemma(p.fine_sample_in_bounds, &[a, b, m, n, i, j, hab, hi, hj]);
+    let a_le_rhs = d.const_app(logic.and_left, &[a_le_rhs_ty, rhs_le_b_ty, rhs_and]);
+    let rhs_le_b = d.const_app(logic.and_right, &[a_le_rhs_ty, rhs_le_b_ty, rhs_and]);
+
+    // `F` respects the exact `Equiv` between the two sample points.
+    let f_lhs = d.apply(f, &[lhs_pt]);
+    let f_rhs = d.apply(f, &[rhs_pt]);
+    let v = {
+        let nfr = cneg(d, p, f_rhs);
+        cadd(d, p, f_lhs, nfr)
+    };
+    let hyp_small = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let modulus_fn = d.const_app(p.uc_modulus, &[f, a, b, u]);
+        let mod_e = d.apply(modulus_fn, &[e]);
+        let hclose_input = d.lemma(p.equiv_abs_diff_le, &[lhs_pt, rhs_pt, hsp, mod_e]);
+        let spec_out = d.lemma(
+            p.uc_spec,
+            &[
+                f,
+                a,
+                b,
+                u,
+                e,
+                lhs_pt,
+                rhs_pt,
+                a_le_lhs,
+                lhs_le_b,
+                a_le_rhs,
+                rhs_le_b,
+                hclose_input,
+            ],
+        );
+        d.lam_fv(e_fv, nat, spec_out)
+    };
+    let v_equiv_zero = d.lemma(p.equiv_zero_of_small, &[v, hyp_small]);
+    let f_equiv = equiv_of_sub_equiv_zero_local(d, p, f_lhs, f_rhs, v_equiv_zero);
+
+    // Fold the mesh identity `delta_m_prime ~ delta_fine` through `mul_congr`
+    // to reach the actual per-term shape `summand_fn`'s own `mul (F sp)
+    // delta` produces.
+    d.lemma(
+        p.mul_congr,
+        &[f_lhs, f_rhs, delta_m_prime, delta_fine, f_equiv, delta_eq],
+    )
+}
+
+/// `CReal.reblockBlock_eq_fineBlockSum : ∀ F a b m n i, le a b → Nat.le i m →
+/// UniformlyContinuousOn F a b → Equiv (sumRange (fun j => summand_fn F a
+/// delta_m_prime ((Nat.succ n)*i + j)) (Nat.succ n)) (sumRange (summand_fn F
+/// base_i delta_fine) (Nat.succ n))`, `delta_m_prime := mul (width_of a b)
+/// (embed (Rat.natDivSucc 1 m_prime))` at the REFINED total count `m_prime`
+/// (`succ_mul_succ`'s witness, `Nat.succ m_prime` definitionally `(Nat.succ
+/// n)*(Nat.succ m)`), `base_i := sample_point a delta_m i`, `delta_fine :=
+/// mul delta_m (embed (Rat.natDivSucc 1 n))`.
+///
+/// The per-block fold gluing `CReal.sumRange_reblock`'s flat global sum
+/// (read at `g := summand_fn F a delta_m_prime` -- exactly `riemannSum F a b
+/// m_prime`'s own summand) to `CReal.fineBlockSum_close`'s per-block sum: an
+/// EXACT identity (no error term at all), by bounded pointwise congruence
+/// ([`sum_range_congr_lt_proof`]) against [`pointwise_block_equiv`]'s
+/// per-index derivation. See this section's own header comment for the two
+/// obstructions it resolves and this module's own top-level documentation
+/// for the overall roadmap.
+///
+/// Roadmap step 4 (folding this over all `Nat.succ m` coarse blocks against
+/// `fineBlockSum_close`'s own `≤`-bound) and step 5 (assembling the result
+/// into `riemannSum_cauchy` via `within_of_two_sided_le`) are explicitly NOT
+/// attempted here.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_reblock_block_eq_fine_block_sum(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let hi_ty = d.le(i, m);
+    let hi_fv = d.fresh_fvar();
+    let hi = d.kernel().fvar(hi_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let (m_prime, _succ_proof) = succ_mul_succ(d, n, m);
+    let width = width_of(d, p, a, b);
+    let (delta_m_prime, delta_fine, _delta_eq) = mesh_reblock_delta_eq(d, p, width, n, m, m_prime);
+    let delta_m = delta_of(d, p, a, b, m);
+    let base_i = sample_point(d, p, a, delta_m, i);
+    let sn = d.succ(n);
+
+    let g = summand_fn(d, p, f, a, delta_m_prime);
+    let offset = NatOps::mul(d, sn, i);
+    let f_shifted = reblock_shifted_fn(d, offset, g);
+    let block_summand = summand_fn(d, p, f, base_i, delta_fine);
+
+    let hyp_proof = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let hj_ty = d.lt(j, sn);
+        let hj_fv = d.fresh_fvar();
+        let hj = d.kernel().fvar(hj_fv);
+
+        let body = pointwise_block_equiv(d, p, f, a, b, m, n, i, j, hab, hi, hj, u);
+        let with_hj = d.lam_fv(hj_fv, hj_ty, body);
+        d.lam_fv(j_fv, nat, with_hj)
+    };
+
+    let congr_proof = sum_range_congr_lt_proof(d, p, f_shifted, block_summand, sn);
+    let proof_body = d.apply(congr_proof, &[hyp_proof]);
+
+    let concl = {
+        let lhs = d.const_app(p.sum_range, &[f_shifted, sn]);
+        let rhs = d.const_app(p.sum_range, &[block_summand, sn]);
+        equiv(d, p, lhs, rhs)
+    };
+
+    let ty = {
+        let after_u = d.arrow(u_ty, concl);
+        let after_hi = d.arrow(hi_ty, after_u);
+        let after_hab = d.arrow(hab_ty, after_hi);
+        let over_i = d.pi_fv(i_fv, nat, after_hab);
+        let over_n = d.pi_fv(n_fv, nat, over_i);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_b = d.pi_fv(b_fv, carrier, over_m);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_u = d.lam_fv(u_fv, u_ty, proof_body);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_u);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_hi);
+        let over_i = d.lam_fv(i_fv, nat, with_hab);
+        let over_n = d.lam_fv(n_fv, nat, over_i);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_b = d.lam_fv(b_fv, carrier, over_m);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.reblock_block_eq_fine_block_sum,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+#[cfg(test)]
+mod reblock_block_eq_fine_block_sum_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Run `f` on a **256 MiB** thread.
+    ///
+    /// The default test-thread stack is 2 MiB. Checking the concrete
+    /// instantiation below against its independently-reconstructed expected
+    /// type needs the kernel to fully normalize nested `CReal`/`Rat`/`Int`
+    /// arithmetic built from many chained `mul`/`add`/`neg` applications over
+    /// a unary `Nat` encoding, which recurses far deeper than the default
+    /// stack allows even in `--release` (measured: SIGABRT at both the
+    /// default stack AND under `--release`, so this is not a debug-only
+    /// frame-size artifact — see `creal_point/creal_point_tests.rs`'s own
+    /// `on_a_deep_stack` for the analogous, file-private pattern this
+    /// reproduces). This is a resource limit, not a proof bug: the identical
+    /// computation succeeds outright once given `RUST_MIN_STACK=1GiB` by
+    /// hand, confirmed before adding this wrapper.
+    fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
+        std::thread::Builder::new()
+            .stack_size(256 * 1024 * 1024)
+            .spawn(f)
+            .expect("spawning a deep-stack thread must succeed")
+            .join()
+            .expect("the deep-stack thread must not panic")
+    }
+
+    /// **Mandatory concrete instantiation, with a negative control.**
+    /// `F := identity`, `a := zero`, `b := one`, `m := 0` (single coarse
+    /// block), `n := 1` (each coarse block split into TWO fine sub-pieces,
+    /// so `delta_fine := delta_m * natDivSucc(1, 1) = delta_m / 2` is
+    /// genuinely half of `delta_m`, not merely `delta_m * natDivSucc(1, 0) =
+    /// delta_m * 1` — `n := 0` was tried first and REJECTED as a test
+    /// instance: at `n := 0` the fine and coarse meshes coincide, so a
+    /// negative control built by swapping them is vacuous, exactly the
+    /// degenerate-instantiation trap this session's own briefing warns
+    /// about), `i := 0`. Checks that the declared theorem's proof, applied
+    /// at these literals, type-checks against an INDEPENDENTLY reconstructed
+    /// expected conclusion (built directly from
+    /// `summand_fn`/`reblock_shifted_fn`/`sample_point`/
+    /// `mesh_reblock_delta_eq`/`succ_mul_succ`, not by calling back into
+    /// [`declare_reblock_block_eq_fine_block_sum`]'s own body) -- AND that
+    /// the SAME proof term is REFUSED at a plausible transposed-mesh
+    /// conclusion (`base_i` sampled with the COARSE mesh `delta_m` instead of
+    /// the fine mesh `delta_fine`, the natural "forgot which mesh this
+    /// block's own summand uses" bug). A test confirming only the expected
+    /// value cannot distinguish "correct" from "compares everything equal".
+    #[test]
+    fn reblock_block_eq_fine_block_sum_applies_at_concrete_half_split_block() {
+        on_a_deep_stack(reblock_block_eq_fine_block_sum_half_split_body);
+    }
+
+    fn reblock_block_eq_fine_block_sum_half_split_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+
+        let identity = {
+            let r_fv = d.fresh_fvar();
+            let r = d.kernel().fvar(r_fv);
+            d.lam_fv(r_fv, carrier, r)
+        };
+        let zero_c = czero(&mut d, p);
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let zero_n = d.zero();
+        let one_n = d.num(1);
+
+        let hab = {
+            let zero_lt_one = d.lemma(p.zero_lt_one, &[]);
+            d.lemma(p.le_of_lt, &[zero_c, one_c, zero_lt_one])
+        };
+        let hi = {
+            let np = d.prelude();
+            d.lemma(np.le_refl, &[zero_n])
+        };
+        let u = d.lemma(p.uniformly_continuous_id, &[zero_c, one_c]);
+
+        let applied = d.const_app(
+            p.reblock_block_eq_fine_block_sum,
+            &[identity, zero_c, one_c, zero_n, one_n, zero_n, hab, hi, u],
+        );
+
+        // Independently reconstruct the expected conclusion.
+        let (m_prime0, _sp0) = succ_mul_succ(&mut d, one_n, zero_n);
+        let width0 = width_of(&mut d, p, zero_c, one_c);
+        let (delta_m_prime0, delta_fine0, _de0) =
+            mesh_reblock_delta_eq(&mut d, p, width0, one_n, zero_n, m_prime0);
+        let delta_m0 = delta_of(&mut d, p, zero_c, one_c, zero_n);
+        let base_i0 = sample_point(&mut d, p, zero_c, delta_m0, zero_n);
+        let sn0 = d.succ(one_n);
+        let g0 = summand_fn(&mut d, p, identity, zero_c, delta_m_prime0);
+        let offset0 = NatOps::mul(&mut d, sn0, zero_n);
+        let f_shifted0 = reblock_shifted_fn(&mut d, offset0, g0);
+
+        let correct_block_summand0 = summand_fn(&mut d, p, identity, base_i0, delta_fine0);
+        let sum_shifted0 = d.const_app(p.sum_range, &[f_shifted0, sn0]);
+        let sum_correct0 = d.const_app(p.sum_range, &[correct_block_summand0, sn0]);
+        let expected = equiv(&mut d, p, sum_shifted0, sum_correct0);
+
+        let anon = d.kernel().anon();
+        let name_ok = d
+            .kernel()
+            .name_str(anon, "__reblockBlockEqFineBlockSumHalfSplitOk");
+        let result_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: expected,
+            value: applied,
+        });
+        assert!(
+            result_ok.is_ok(),
+            "reblock_block_eq_fine_block_sum at the half-split block (F := \
+             id, a := zero, b := one, m := 0, n := 1, i := 0) must have the \
+             expected conclusion type: {:?}",
+            result_ok.err()
+        );
+
+        // Negative control: the WRONG block summand, sampled with the
+        // COARSE mesh `delta_m0` instead of the fine mesh `delta_fine0` --
+        // genuinely different meshes at `n := 1` (`delta_fine0` is HALF of
+        // `delta_m0`), so this is not the vacuous `n := 0` collapse.
+        let wrong_block_summand0 = summand_fn(&mut d, p, identity, base_i0, delta_m0);
+        let sum_wrong0 = d.const_app(p.sum_range, &[wrong_block_summand0, sn0]);
+        let wrong_expected = equiv(&mut d, p, sum_shifted0, sum_wrong0);
+        let name_bad = d
+            .kernel()
+            .name_str(anon, "__reblockBlockEqFineBlockSumHalfSplitBad");
+        let result_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: wrong_expected,
+            value: applied,
+        });
+        assert!(
+            result_bad.is_err(),
+            "the SAME proof must be REFUSED against a conclusion built from \
+             the coarse mesh instead of the fine one"
+        );
+    }
+}
+
+#[cfg(test)]
+mod pointwise_block_equiv_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// **Symbolic construction.** Independent evidence, beyond the
+    /// whole-prelude build, that [`pointwise_block_equiv`] produces a
+    /// well-typed proof term at genuinely free variables (`F, a, b, m, n, i,
+    /// j` and every hypothesis), not just at the ground literals the
+    /// concrete test above uses -- the same idiom as
+    /// `sample_point_reblock_type_checks_symbolically`, guarding against the
+    /// class of defect where a proof type-checks at every concrete instance
+    /// tried but relies on a defeq shortcut (e.g. a numeral fully reducing)
+    /// that a free variable does not get.
+    #[test]
+    fn pointwise_block_equiv_type_checks_symbolically() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+
+        let hab_ty = cle(&mut d, p, a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+
+        let hi_ty = d.le(i, m);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+
+        let sn = d.succ(n);
+        let hj_ty = d.lt(j, sn);
+        let hj_fv = d.fresh_fvar();
+        let hj = d.kernel().fvar(hj_fv);
+
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+
+        let body = pointwise_block_equiv(&mut d, p, f, a, b, m, n, i, j, hab, hi, hj, u);
+
+        // Independently reconstruct the expected conclusion.
+        let (lhs_pt, rhs_pt, _hsp) = sample_point_reblock_proof(&mut d, p, a, b, n, m, i, j);
+        let (m_prime, _sp) = succ_mul_succ(&mut d, n, m);
+        let width = width_of(&mut d, p, a, b);
+        let (delta_m_prime, delta_fine, _de) =
+            mesh_reblock_delta_eq(&mut d, p, width, n, m, m_prime);
+        let f_lhs = d.apply(f, &[lhs_pt]);
+        let f_rhs = d.apply(f, &[rhs_pt]);
+        let lhs_term = cmul(&mut d, p, f_lhs, delta_m_prime);
+        let rhs_term = cmul(&mut d, p, f_rhs, delta_fine);
+        let concl = equiv(&mut d, p, lhs_term, rhs_term);
+
+        let ty = {
+            let after_u = d.arrow(u_ty, concl);
+            let after_hj = d.arrow(hj_ty, after_u);
+            let after_hi = d.arrow(hi_ty, after_hj);
+            let after_hab = d.arrow(hab_ty, after_hi);
+            let over_j = d.pi_fv(j_fv, nat, after_hab);
+            let over_i = d.pi_fv(i_fv, nat, over_j);
+            let over_n = d.pi_fv(n_fv, nat, over_i);
+            let over_m = d.pi_fv(m_fv, nat, over_n);
+            let over_b = d.pi_fv(b_fv, carrier, over_m);
+            let over_a = d.pi_fv(a_fv, carrier, over_b);
+            d.pi_fv(f_fv, f_ty, over_a)
+        };
+        let value = {
+            let with_u = d.lam_fv(u_fv, u_ty, body);
+            let with_hj = d.lam_fv(hj_fv, hj_ty, with_u);
+            let with_hi = d.lam_fv(hi_fv, hi_ty, with_hj);
+            let with_hab = d.lam_fv(hab_fv, hab_ty, with_hi);
+            let over_j = d.lam_fv(j_fv, nat, with_hab);
+            let over_i = d.lam_fv(i_fv, nat, over_j);
+            let over_n = d.lam_fv(n_fv, nat, over_i);
+            let over_m = d.lam_fv(m_fv, nat, over_n);
+            let over_b = d.lam_fv(b_fv, carrier, over_m);
+            let over_a = d.lam_fv(a_fv, carrier, over_b);
+            d.lam_fv(f_fv, f_ty, over_a)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d
+            .kernel()
+            .name_str(anon, "__pointwise_block_equiv_symbolic_smoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "pointwise_block_equiv must type-check at free variables: {:?}",
+            result.err()
+        );
+    }
+}
