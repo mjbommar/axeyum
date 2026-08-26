@@ -22,6 +22,7 @@
     {
       "id": "kernel-logic-iff-mpr",
       "kind": "kernel-term",
+      "kernel_declaration": "Iff.mpr",
       "supports": "If p if-and-only-if q, and q holds, then p holds.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Iff.mpr 2>/dev/null | grep -Ec '^Iff\\.mpr[[:space:]]')\" -ge 1",

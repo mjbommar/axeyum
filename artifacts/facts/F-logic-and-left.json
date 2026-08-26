@@ -21,6 +21,7 @@
     {
       "id": "kernel-logic-and-left",
       "kind": "kernel-term",
+      "kernel_declaration": "And.left",
       "supports": "If p and q both hold, then p holds.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- And.left 2>/dev/null | grep -Ec '^And\\.left[[:space:]]')\" -ge 1",

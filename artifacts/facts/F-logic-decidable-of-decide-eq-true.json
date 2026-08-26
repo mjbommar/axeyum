@@ -23,6 +23,7 @@
     {
       "id": "kernel-logic-decidable-of-decide-eq-true",
       "kind": "kernel-term",
+      "kernel_declaration": "Decidable.of_decide_eq_true",
       "supports": "For a decidable proposition p, if the decision procedure for p returns the Boolean true, then p holds.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Decidable.of_decide_eq_true 2>/dev/null | grep -Ec '^Decidable\\.of_decide_eq_true[[:space:]]')\" -ge 1",

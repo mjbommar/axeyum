@@ -20,6 +20,7 @@
     {
       "id": "kernel-succ-add",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.succ_add",
       "supports": "succ a + b = succ (a + b) for all a b ",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- succ_add 2>/dev/null | grep -Ec '^Nat\\.succ_add[[:space:]]')\" -ge 1",

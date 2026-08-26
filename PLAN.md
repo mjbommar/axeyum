@@ -1115,8 +1115,9 @@ then retrieved `Nat.fib_le_succ`; a checked, axiom-free
 the corresponding fact with real kernel-observed dependencies. This is genuine
 library compounding but remains correctly classified as `no_operation` because
 the reference constructor was hand-authored. Exact evidence identity now links
-346 kernel theorems to 350 facts, with 53 historical shorthand IDs left
-explicitly unresolved. Next: expose that target-agnostic combinator through an
+382 kernel theorems to 386 facts, with 17 evidence IDs left explicitly
+unresolved because their declarations are outside the projection or their IDs
+are descriptive. Next: expose that target-agnostic combinator through an
 authoritative producer, then measure sibling conversion.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.

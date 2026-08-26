@@ -19,6 +19,7 @@
     {
       "id": "kernel-logic-bool-false-ne-true",
       "kind": "kernel-term",
+      "kernel_declaration": "Bool.false_ne_true",
       "supports": "The Boolean value false is not equal to the Boolean value true.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Bool.false_ne_true 2>/dev/null | grep -Ec '^Bool\\.false_ne_true[[:space:]]')\" -ge 1",
