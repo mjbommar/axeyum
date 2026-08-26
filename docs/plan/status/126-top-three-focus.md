@@ -186,6 +186,14 @@ rows: 48 selected declarations are absent from the imported goal capsules and
 three candidate closures reach a trusted declaration. Next work is a general
 proof-isolated native-candidate materialization/transport boundary, not a
 larger application grammar pretending graph names are executable lemmas.
+That boundary now exists for one exact source theorem at a time. It validates
+same-name target reuse or independently composes a missing source closure, and
+in both cases requires an axiom-free theorem before publishing the private
+target clone. The real `Nat.add_modEq_left` probe makes 8/12 ranked candidates
+executable (five added, three reused, four typed transport declines), then
+honestly reaches `NoTypedApplication`. Next: expose this primitive through the
+typed Python producer surface and rerun the 51-goal census with transport and
+proof-search outcomes reported separately.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
@@ -229,3 +237,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `6a348363b` | Extend the crash-safe applier with live-rebuilt, operation-free reconciliation events and recovery controls at every durable boundary. |
 | 2026-08-26 | `4e025a444` | Preserve the pre-reconciliation ranking and bind the 57-goal census to its immutable path and hash. |
 | 2026-08-26 | `9230d9666` | Reconcile six exact native propositions crash-safely, preserve zero production credit, and publish the clean 51-goal / zero-match remainder. |
+| 2026-08-26 | `2e060c8e6` | Add exact axiom-free native-candidate transport and demonstrate 8/12 ranked premises executable on a real imported modular goal. |
