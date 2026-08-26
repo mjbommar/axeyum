@@ -563,6 +563,26 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.within_of_two_sided_le,
             "theorem",
         ),
+        // Roadmap step 2 toward `riemannSum_cauchy` (`creal/integral.rs`):
+        // the abs-bound `close_within`'s own shape produces splits into the
+        // CReal-level one-sided form `le x (add y (ofRat q))` that
+        // `sumRange_le` consumes, via `le_abs_self`/`le_trans`/`add_le_add`
+        // plus the add-rearrangement ring identity.
+        (
+            "CReal.le_add_of_abs_sub_le",
+            p.le_add_of_abs_sub_le,
+            "theorem",
+        ),
+        // The full abs-splitting lemma (`creal/integral.rs`) the per-block
+        // fold's two applications of `sumRange_le` (upper and lower) both
+        // need from a single `close_within` fact: the first conjunct reuses
+        // `le_add_of_abs_sub_le` verbatim, the second mirrors its route with
+        // `neg_le_abs` in place of `le_abs_self`.
+        (
+            "CReal.two_sided_of_abs_sub_le",
+            p.two_sided_of_abs_sub_le,
+            "theorem",
+        ),
         // The continuity-from-differentiability bridge (creal/monotone.rs),
         // the missing piece the monotone_of_nonneg_deriv handoff plan did not
         // name: a `HasDerivativeOn` interpolation endpoint is only ever
@@ -744,6 +764,17 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // `UniformlyContinuousOn.spec` plus `mesh_le_of_ge` and
         // `fineSample_in_bounds`.
         ("CReal.fineSample_close", p.fine_sample_close, "theorem"),
+        // Roadmap step 3 toward `riemannSum_cauchy` (`creal/integral.rs`):
+        // each coarse block's fine Riemann sub-sum bounded two-sidedly
+        // against the single coarse term `riemannSum` itself would use at
+        // that block, within `Δ_m · natDivSucc(1, e)`, via `fineSample_close`
+        // per fine index, `two_sided_of_abs_sub_le` to split it, and two
+        // applications of `sumRange_le`.
+        (
+            "CReal.fineBlockSum_close",
+            p.fine_block_sum_close,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
