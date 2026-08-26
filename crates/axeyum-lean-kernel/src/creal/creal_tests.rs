@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 255] = [
+    let expected: [(&str, crate::NameId, &str); 257] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -445,6 +445,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.pow_le_pow_of_base_le",
             p.pow_le_pow_of_base_le,
+            "theorem",
+        ),
+        ("CReal.ofRat_pow", p.of_rat_pow, "theorem"),
+        (
+            "CReal.pow_half_le_natDivSucc",
+            p.pow_half_le_nat_div_succ,
             "theorem",
         ),
         (
@@ -5608,4 +5614,50 @@ fn has_derivative_unique_applies_to_the_identity_on_0_1() {
         rendered.contains("CReal.one"),
         "both candidate derivatives are the constant one: {rendered}"
     );
+}
+
+/// **Mandatory concrete instantiation for `CReal.pow_half_le_natDivSucc`.**
+/// At `n = 3`: `(1/2)³ = 1/8 ≤ 1/4 = natDivSucc 1 3`, checked against the
+/// literal statement (not merely SOME `le` proposition). `n = 0` and `n = 1`
+/// hold with equality (`1 ≤ 1`, `1/2 ≤ 1/2`) and cannot detect a
+/// wrong-direction bound, which is why this checks `n = 3` specifically.
+#[test]
+fn pow_half_le_nat_div_succ_at_three_bounds_one_eighth_by_one_quarter() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let three_nat = d.num(3);
+    let one_nat = d.num(1);
+
+    let value = d.const_app(p.pow_half_le_nat_div_succ, &[three_nat]);
+
+    let half = super::div_succ(&mut d, p, 1, one_nat);
+    let half_creal = super::embed(&mut d, p, half);
+    let pow_half_3 = d.const_app(p.pow, &[half_creal, three_nat]);
+    let nat_div_1_3 = super::div_succ(&mut d, p, 1, three_nat);
+    let bound = super::embed(&mut d, p, nat_div_1_3);
+    let ty = d.const_app(p.le, &[pow_half_3, bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__pow_half_le_nat_div_succ_at_three_bounds_one_eighth_by_one_quarter",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.pow_half_le_natDivSucc 3 did NOT check against \
+                 le (pow (ofRat (natDivSucc 1 1)) 3) (ofRat (natDivSucc 1 3)) \
+                 (not merely SOME le statement): {error:?}"
+            )
+        });
 }

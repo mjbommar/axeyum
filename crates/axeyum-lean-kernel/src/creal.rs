@@ -1695,6 +1695,43 @@ pub struct CRealPrelude {
     /// the two with `le_trans` to land on `pow x (succ j) ≤ pow y (succ j)`
     /// up to the same `ι`-reduction.
     pub pow_le_pow_of_base_le: NameId,
+    /// `CReal.ofRat_pow : ∀ q n, Equiv (pow (ofRat q) n) (ofRat (Rat.pow q
+    /// n))` — the embedding `ℚ ↪ ℝ` is a `Nat`-power homomorphism. Induction
+    /// on `n`: both `CReal.pow` and `Rat.pow` share the identical
+    /// `Nat.rec`-on-the-exponent shape (`pow _ 0 ≡ one`/`Rat.one`, `pow _
+    /// (succ j) ≡ mul (pow _ j) _` with the fresh factor on the right), so
+    /// neither `pow_zero`/`pow_succ` unfolding lemma is needed — the base and
+    /// step terms below are accepted directly against the ι-reduced motive.
+    /// The step chains [`Self::mul_congr`] (against the inductive hypothesis,
+    /// on the left factor, [`Self::equiv_refl`] on the right) with
+    /// [`Self::of_rat_mul`] (collapsing the product of two embeddings into
+    /// the embedding of the product) via [`Self::equiv_trans`]. This is the
+    /// missing piece `creal/geometric.rs`'s own module documentation names:
+    /// there was no bridge from a `CReal.pow` at an embedded base to `Rat.pow`
+    /// of the same rational, because `CReal.mul`'s sampling schedule is
+    /// data-dependent and recursively self-referential across nested `pow`
+    /// applications — this sidesteps that entirely by working at the
+    /// `Equiv`/setoid level, never touching a sample.
+    pub of_rat_pow: NameId,
+    /// `CReal.pow_half_le_natDivSucc : ∀ n, le (pow (ofRat (natDivSucc 1 1))
+    /// n) (ofRat (natDivSucc 1 n))` — geometric decay at base `1/2` dominates
+    /// the harmonic rate, the estimate `creal/power.rs`'s own module
+    /// documentation names as missing for `CReal.geom_cauchy`'s undischarged
+    /// `seq Yₐ b` leaf (`creal/geometric.rs`'s `geom_pair_within`).
+    ///
+    /// Via [`Self::of_rat_pow`] (at `q := 1/2`) plus
+    /// [`crate::rat_prelude::RatPrelude::bernoulli_harmonic_bound`] (at `x :=
+    /// 1/2, t := 1`) transported back across it with [`Self::of_rat_le`] and
+    /// [`Self::le_congr`]. `bernoulli_harmonic_bound`'s conclusion is stated
+    /// against the inline `Nat.rec` companion `L t m := 1 + m·t`, not
+    /// `natDivSucc` directly, so this also proves (privately, in
+    /// `geometric.rs`) that `L Rat.one m` is exactly the whole-number
+    /// embedding `natDivSucc (Nat.succ m) 0`, and cancels that positive
+    /// factor from the resulting `L one m · pow (1/2) m ≤ 1` via
+    /// `Rat.le_total`/`Rat.le_antisymm`/`Rat.mul_left_cancel_of_ne_zero` —
+    /// never forming `Rat.inv`, matching `bernoulli_harmonic_bound`'s own
+    /// design.
+    pub pow_half_le_nat_div_succ: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -2610,6 +2647,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_tail_within_le: kernel.name_str(creal, "geom_tail_within_le"),
         geom_pair_within: kernel.name_str(creal, "geom_pair_within"),
         pow_le_pow_of_base_le: kernel.name_str(creal, "pow_le_pow_of_base_le"),
+        of_rat_pow: kernel.name_str(creal, "ofRat_pow"),
+        pow_half_le_nat_div_succ: kernel.name_str(creal, "pow_half_le_natDivSucc"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
