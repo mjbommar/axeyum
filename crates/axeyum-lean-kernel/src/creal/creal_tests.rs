@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 264] = [
+    let expected: [(&str, crate::NameId, &str); 265] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -694,6 +694,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // No existential elimination -- the threshold is read directly off
         // `CReal.bound`.
         ("CReal.mesh_le_of_ge", p.mesh_le_of_ge, "theorem"),
+        // The fine-sample placement lemma `riemannSum_cauchy`'s per-block
+        // fold needs (`creal/integral.rs`): every FINE sample point inside a
+        // COARSE block lies in `[a, b]`, the one-index-shift generalization
+        // `riemannSum_sample_in_bounds`/`subdivisionPoint_in_bounds` do not
+        // cover on their own.
+        (
+            "CReal.fineSample_in_bounds",
+            p.fine_sample_in_bounds,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -4449,6 +4459,192 @@ fn riemann_sample_in_bounds_at_zero_three_two_one_lands_strictly_inside() {
                 "CReal.riemannSum_sample_in_bounds 0 3 2 1 hab hlt did NOT check \
                  against And (le 0 sp) (le sp 3) at the expected sample point \
                  (not merely SOME And of le statements): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory computation test for `CReal.fineSample_in_bounds`.**
+/// Instantiates it at `a := CReal.zero`, `b := CReal.ofNat 1`, `m := n :=
+/// 1` (so BOTH the coarse partition and each block's fine partition split
+/// into `succ 1 = 2` pieces), `i := m := 1`, `j := n := 1` — the LAST fine
+/// sample point of the LAST coarse block, the hardest boundary case: `Δ_m =
+/// 1 · 1/2 = 1/2`, `base = 0 + 1·Δ_m = 1/2`, `Δ_fine = Δ_m · 1/2 = 1/4`,
+/// `x = base + 1·Δ_fine = 3/4` — strictly inside `[0, 1]`, one `Δ_fine`
+/// short of `b`, which an off-by-one in either the coarse or fine index
+/// arithmetic would push past. `hi : Nat.le 1 1` and `hj : Nat.lt 1 2` are
+/// both `Nat.le.refl` (the latter via `Lt n (succ n)`'s own `Nat.le (succ
+/// n) (succ n)` unfolding). Checks the kernel accepts the application at
+/// the EXACT expected `And (le a x) (le x b)` type, built independently
+/// here from `CReal.add`/`CReal.neg`/`CReal.mul`/`CReal.ofNat`/`CReal.ofRat`
+/// rather than by calling back into `integral.rs`'s private term builders.
+#[test]
+fn fine_sample_in_bounds_at_zero_one_m1_n1_last_block_last_sample() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let b = d.const_app(p.of_nat, &[one_nat]);
+    let m = one_nat;
+    let n = one_nat;
+    let i = one_nat;
+    let j = one_nat;
+
+    // hab : CReal.le zero (ofNat 1), the same route the
+    // `riemannSum_sample_in_bounds` computation test above uses.
+    let hab = {
+        let rat_1 = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_1, rle])
+    };
+
+    let np = d.prelude();
+    // hi : Nat.le 1 1, i.e. `Nat.le.refl 1`.
+    let hi = d.const_app(np.le_refl, &[one_nat]);
+    // hj : Nat.lt 1 2, defeq `Nat.le 2 2`, i.e. `Nat.le.refl 2`.
+    let hj = d.const_app(np.le_refl, &[two_nat]);
+
+    let value = d.const_app(p.fine_sample_in_bounds, &[a, b, m, n, i, j, hab, hi, hj]);
+
+    // The expected fine sample point, built independently: `x := add base
+    // (mul (ofNat j) delta_fine)`, `base := add a (mul (ofNat i) delta_m)`,
+    // `delta_m := mul (add b (neg a)) (ofRat (natDivSucc 1 m))`,
+    // `delta_fine := mul delta_m (ofRat (natDivSucc 1 n))` -- exactly
+    // `integral.rs`'s own `sample_point`/`delta_nonneg_of`/
+    // `fine_term_and_bounds` shapes.
+    let ty = {
+        let neg_a = d.const_app(p.neg, &[a]);
+        let width = d.const_app(p.add, &[b, neg_a]);
+        let rat_frac_m = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+        let frac_m = d.const_app(p.of_rat, &[rat_frac_m]);
+        let delta_m = d.const_app(p.mul, &[width, frac_m]);
+        let of_nat_i = d.const_app(p.of_nat, &[i]);
+        let i_delta_m = d.const_app(p.mul, &[of_nat_i, delta_m]);
+        let base = d.const_app(p.add, &[a, i_delta_m]);
+
+        let rat_frac_n = d.const_app(p.rat.nat_div_succ, &[one_nat, n]);
+        let frac_n = d.const_app(p.of_rat, &[rat_frac_n]);
+        let delta_fine = d.const_app(p.mul, &[delta_m, frac_n]);
+        let of_nat_j = d.const_app(p.of_nat, &[j]);
+        let term = d.const_app(p.mul, &[of_nat_j, delta_fine]);
+        let x = d.const_app(p.add, &[base, term]);
+
+        let a_le_x = super::cle(&mut d, p, a, x);
+        let x_le_b = super::cle(&mut d, p, x, b);
+        d.const_app(p.rat.int.logic.and, &[a_le_x, x_le_b])
+    };
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__fine_sample_in_bounds_at_zero_one_m1_n1_last_block_last_sample",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.fineSample_in_bounds 0 1 1 1 1 1 hab hi hj did NOT \
+                 check against And (le 0 x) (le x 1) at the expected fine \
+                 sample point (not merely SOME And of le statements): \
+                 {error:?}"
+            )
+        });
+}
+
+/// **Transposition guard for `CReal.fineSample_in_bounds`.** Identical to
+/// [`fine_sample_in_bounds_at_zero_one_m1_n1_last_block_last_sample`] but at
+/// `m := 1`, `n := 2` (`m != n`, per this session's own briefing: `m = n`
+/// cannot detect a coarse/fine mesh or index transposition), `i := m := 1`,
+/// `j := n := 2` — again the last fine sample of the last coarse block:
+/// `Δ_m = 1/2`, `base = 1/2`, `Δ_fine = Δ_m · 1/3 = 1/6`, `x = 1/2 + 2·1/6 =
+/// 5/6`, strictly inside `[0, 1]`.
+#[test]
+fn fine_sample_in_bounds_at_zero_one_m1_n2_last_block_last_sample() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let b = d.const_app(p.of_nat, &[one_nat]);
+    let m = one_nat;
+    let n = two_nat;
+    let i = one_nat;
+    let j = two_nat;
+
+    let hab = {
+        let rat_1 = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_1, rle])
+    };
+
+    let np = d.prelude();
+    // hi : Nat.le 1 1.
+    let hi = d.const_app(np.le_refl, &[one_nat]);
+    // hj : Nat.lt 2 3, defeq `Nat.le 3 3`.
+    let hj = d.const_app(np.le_refl, &[three_nat]);
+
+    let value = d.const_app(p.fine_sample_in_bounds, &[a, b, m, n, i, j, hab, hi, hj]);
+
+    let ty = {
+        let neg_a = d.const_app(p.neg, &[a]);
+        let width = d.const_app(p.add, &[b, neg_a]);
+        let rat_frac_m = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+        let frac_m = d.const_app(p.of_rat, &[rat_frac_m]);
+        let delta_m = d.const_app(p.mul, &[width, frac_m]);
+        let of_nat_i = d.const_app(p.of_nat, &[i]);
+        let i_delta_m = d.const_app(p.mul, &[of_nat_i, delta_m]);
+        let base = d.const_app(p.add, &[a, i_delta_m]);
+
+        let rat_frac_n = d.const_app(p.rat.nat_div_succ, &[one_nat, n]);
+        let frac_n = d.const_app(p.of_rat, &[rat_frac_n]);
+        let delta_fine = d.const_app(p.mul, &[delta_m, frac_n]);
+        let of_nat_j = d.const_app(p.of_nat, &[j]);
+        let term = d.const_app(p.mul, &[of_nat_j, delta_fine]);
+        let x = d.const_app(p.add, &[base, term]);
+
+        let a_le_x = super::cle(&mut d, p, a, x);
+        let x_le_b = super::cle(&mut d, p, x, b);
+        d.const_app(p.rat.int.logic.and, &[a_le_x, x_le_b])
+    };
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__fine_sample_in_bounds_at_zero_one_m1_n2_last_block_last_sample",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.fineSample_in_bounds 0 1 1 2 1 2 hab hi hj did NOT \
+                 check against And (le 0 x) (le x 1) at the expected fine \
+                 sample point (not merely SOME And of le statements): \
+                 {error:?}"
             )
         });
 }

@@ -3102,7 +3102,10 @@ pub(super) fn declare_fine_sample_in_bounds(
             let le_succ_m = d.const_app(np.le_succ, &[m]);
             d.const_app(np.le_trans, &[i, m, succ_m, hi, le_succ_m])
         };
-        let and_base = d.const_app(p.subdivision_point_in_bounds, &[a, b, m, i, hab, hle_i_succm]);
+        let and_base = d.const_app(
+            p.subdivision_point_in_bounds,
+            &[a, b, m, i, hab, hle_i_succm],
+        );
         let a_le_base_ty = cle(d, p, a, base);
         let base_le_b_ty = cle(d, p, base, b);
         let a_le_base = d.const_app(logic.and_left, &[a_le_base_ty, base_le_b_ty, and_base]);
@@ -3153,7 +3156,13 @@ pub(super) fn declare_fine_sample_in_bounds(
         );
         d.lemma(
             p.le_trans,
-            &[x, base_plus_delta, b, x_le_base_plus_delta, base_plus_delta_le_b],
+            &[
+                x,
+                base_plus_delta,
+                b,
+                x_le_base_plus_delta,
+                base_plus_delta_le_b,
+            ],
         )
     };
 
