@@ -2192,6 +2192,14 @@ fn declare_of_nat_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelE
     let of_nat_a = embed(d, p, rat_a); // defeq (ofNat a)
     let of_nat_b = embed(d, p, rat_b); // defeq (ofNat b)
     let sum_real = cadd(d, p, of_nat_a, of_nat_b);
+    // The nicer, `CReal.ofNat`-headed form of `sum_real`, defeq to it (one
+    // delta step each side), used only for the OUTWARD-facing `ty`/`value` so
+    // the declared statement and its rendered type read `ofNat a`/`ofNat b`
+    // rather than the unfolded `ofRat (natDivSucc a 0)` the internal rewrite
+    // chain below works with.
+    let of_nat_a_nice = d.const_app(p.of_nat, &[a]);
+    let of_nat_b_nice = d.const_app(p.of_nat, &[b]);
+    let sum_real_nice = cadd(d, p, of_nat_a_nice, of_nat_b_nice);
 
     // step1 : Equiv sum_real (ofRat (Rat.add rat_a rat_b))
     let step1 = d.lemma(p.of_rat_add, &[rat_a, rat_b]);
@@ -2206,13 +2214,15 @@ fn declare_of_nat_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelE
         let embedded = embed(d, p, t);
         equiv(d, p, sum_real, embedded)
     });
-    // rewritten : Equiv sum_real (embed rat_target) -- defeq Equiv sum_real (ofNat nat_sum)
+    // rewritten : Equiv sum_real (embed rat_target) -- defeq
+    // Equiv sum_real_nice (ofNat nat_sum), since `sum_real ~defeq~ sum_real_nice`
+    // and `embed rat_target ~defeq~ ofNat nat_sum`.
     let of_nat_sum = d.const_app(p.of_nat, &[nat_sum]);
-    let flipped = d.lemma(p.equiv_symm, &[sum_real, of_nat_sum, rewritten]);
-    // flipped : Equiv of_nat_sum sum_real
+    let flipped = d.lemma(p.equiv_symm, &[sum_real_nice, of_nat_sum, rewritten]);
+    // flipped : Equiv of_nat_sum sum_real_nice
 
     let ty = {
-        let concl = equiv(d, p, of_nat_sum, sum_real);
+        let concl = equiv(d, p, of_nat_sum, sum_real_nice);
         let over_b = d.pi_fv(b_fv, nat, concl);
         d.pi_fv(a_fv, nat, over_b)
     };
@@ -2245,6 +2255,11 @@ fn declare_of_nat_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelE
     let of_nat_a = embed(d, p, rat_a);
     let of_nat_b = embed(d, p, rat_b);
     let prod_real = cmul(d, p, of_nat_a, of_nat_b);
+    // The nicer, `CReal.ofNat`-headed form, defeq to `prod_real` -- see
+    // `declare_of_nat_add`'s identical comment above.
+    let of_nat_a_nice = d.const_app(p.of_nat, &[a]);
+    let of_nat_b_nice = d.const_app(p.of_nat, &[b]);
+    let prod_real_nice = cmul(d, p, of_nat_a_nice, of_nat_b_nice);
 
     // step1 : Equiv prod_real (ofRat (Rat.mul rat_a rat_b))
     let step1 = d.lemma(p.of_rat_mul, &[rat_a, rat_b]);
@@ -2260,10 +2275,10 @@ fn declare_of_nat_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelE
         equiv(d, p, prod_real, embedded)
     });
     let of_nat_prod = d.const_app(p.of_nat, &[nat_prod]);
-    let flipped = d.lemma(p.equiv_symm, &[prod_real, of_nat_prod, rewritten]);
+    let flipped = d.lemma(p.equiv_symm, &[prod_real_nice, of_nat_prod, rewritten]);
 
     let ty = {
-        let concl = equiv(d, p, of_nat_prod, prod_real);
+        let concl = equiv(d, p, of_nat_prod, prod_real_nice);
         let over_b = d.pi_fv(b_fv, nat, concl);
         d.pi_fv(a_fv, nat, over_b)
     };
