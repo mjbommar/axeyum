@@ -181,7 +181,7 @@
   "source": {
     "post_reconciliation_census": "artifacts/autogenesis/open-ranked-proposition-census-v2.json",
     "pre_reconciliation_census": "artifacts/autogenesis/open-ranked-proposition-census-v1.json",
-    "proposals_sha256": "b2d5e7f0d3c72d7d87517a5cfbe4440127640970d19f1a7599fa7728d6b3d54a"
+    "proposals_sha256": "5b67e6a871cc7ceb351f8c8349d5aad1cf1b8f9f1cb9ca86d9c3de1a494fd217"
   },
   "state": "six-crash-safe-reconciliations-committed",
   "summary": {

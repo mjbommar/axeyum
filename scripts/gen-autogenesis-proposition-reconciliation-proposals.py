@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FACTS = ROOT / "artifacts/facts"
 CENSUS = ROOT / "artifacts/autogenesis/open-ranked-proposition-census-v1.json"
-INDEX = ROOT / "artifacts/autogenesis/kernel-lemma-search-index-v1.json"
+INDEX = ROOT / "artifacts/autogenesis/kernel-lemma-search-index-pre-reconciliation-v1.json"
 OVERLAY = ROOT / "artifacts/autogenesis/knowledge-overlay-v1.json"
 TRANSACTION = ROOT / "scripts/prepare-autogenesis-fact-transaction.py"
 OUTPUT = ROOT / "artifacts/autogenesis/proposition-reconciliation-proposals-v1.json"
@@ -79,6 +79,7 @@ def main() -> int:
         "state": "prepared-read-only-no-ledger-writes",
         "source": {
             "census_sha256": census_sha,
+            "kernel_lemma_index_path": str(INDEX.relative_to(ROOT)),
             "kernel_lemma_index_sha256": file_sha256(INDEX),
             "knowledge_overlay_sha256": file_sha256(OVERLAY),
             "transaction_builder_sha256": file_sha256(TRANSACTION),

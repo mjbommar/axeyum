@@ -482,6 +482,7 @@
   "schema_version": 1,
   "source": {
     "census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+    "kernel_lemma_index_path": "artifacts/autogenesis/kernel-lemma-search-index-pre-reconciliation-v1.json",
     "kernel_lemma_index_sha256": "446e0a717279f7e7a65b874fba9a3a1a7c3fcb5396dd81919a3b53518245c8d0",
     "knowledge_overlay_sha256": "c165e9fd36d6126c4f0f8c7b3b8b69f0f32c37b7ae1abf26197dfdfa704567fd",
     "transaction_builder_sha256": "cf84ac4154215dcc40aa15388ca3af0f38dc699c986d7487e8c4e569b54ab698"

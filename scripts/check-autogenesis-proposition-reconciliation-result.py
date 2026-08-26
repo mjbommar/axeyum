@@ -35,6 +35,13 @@ def main() -> int:
     after = json.loads(AFTER.read_text())
     if result.get("source", {}).get("proposals_sha256") != file_sha256(PROPOSALS):
         raise SystemExit("reconciliation result does not bind the proposals artifact")
+    proposal_source = proposals.get("source", {})
+    index_path = ROOT / proposal_source.get("kernel_lemma_index_path", "")
+    if (
+        not index_path.is_file()
+        or proposal_source.get("kernel_lemma_index_sha256") != file_sha256(index_path)
+    ):
+        raise SystemExit("proposals do not bind the archived pre-reconciliation index")
     transactions = {
         row["transaction_sha256"]: row for row in proposals.get("proposals", [])
     }
