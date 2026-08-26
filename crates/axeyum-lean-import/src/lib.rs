@@ -306,6 +306,27 @@ pub enum StatementImportError {
         /// Number of universe parameters on the target.
         observed: usize,
     },
+    /// The explicit candidate list repeated a declaration name.
+    DuplicateCandidate,
+    /// The target definition itself was offered as a candidate proof source.
+    CandidateIsTarget {
+        /// Exact requested target name.
+        target: String,
+    },
+    /// An exact candidate declaration was absent or repeated.
+    CandidateCardinality {
+        /// Exact requested candidate name.
+        candidate: String,
+        /// Number of matching declarations.
+        observed: usize,
+    },
+    /// A checked candidate still reaches one or more trusted assumptions.
+    CandidateHasAxioms {
+        /// Exact requested candidate name.
+        candidate: String,
+        /// Number of reached trusted declarations.
+        observed: usize,
+    },
     /// A proof-bearing or trusted declaration entered the statement stream.
     TrustedDeclaration {
         /// Exact rendered declaration name.
@@ -340,6 +361,26 @@ impl fmt::Display for StatementImportError {
             Self::TargetUniverseParameters { target, observed } => write!(
                 f,
                 "statement target {target:?} has {observed} universe parameters; expected none"
+            ),
+            Self::DuplicateCandidate => {
+                write!(f, "candidate declaration names must be unique")
+            }
+            Self::CandidateIsTarget { target } => {
+                write!(f, "candidate declaration list contains target {target:?}")
+            }
+            Self::CandidateCardinality {
+                candidate,
+                observed,
+            } => write!(
+                f,
+                "candidate declaration {candidate:?} occurs {observed} times; expected one"
+            ),
+            Self::CandidateHasAxioms {
+                candidate,
+                observed,
+            } => write!(
+                f,
+                "candidate declaration {candidate:?} reaches {observed} trusted declaration(s)"
             ),
             Self::TrustedDeclaration { name, kind } => {
                 write!(
@@ -2023,6 +2064,111 @@ pub fn import_statement_ndjson<R: BufRead>(
         }
     }
 
+    finish_statement_import(kernel, report, target)
+}
+
+/// Import a proof-free target together with an explicit checked candidate set.
+///
+/// This is the theorem-composition counterpart to [`import_statement_ndjson`].
+/// The target remains a transparent `definition : Prop`, so it contributes no
+/// proof. A proof-bearing declaration is accepted only when its exact rendered
+/// name occurs in `candidate_declarations` (or when it is one of the fixed,
+/// independently reconstructed substitutions). Every candidate must exist
+/// exactly once and have an empty kernel-measured axiom footprint.
+///
+/// Importing a candidate does not make it applicable. The untrusted producer
+/// must still receive the same explicit names, construct a term, and submit it
+/// to the kernel. It never scans the imported environment.
+///
+/// # Errors
+///
+/// Returns [`StatementImportError`] for ordinary import failures, a target that
+/// is not proof-free, an unlisted trusted declaration, candidate identity
+/// drift, or an assumption-bearing candidate.
+pub fn import_candidate_statement_ndjson<R: BufRead>(
+    reader: R,
+    limits: ImportLimits,
+    target: &str,
+    candidate_declarations: &[String],
+) -> Result<CompletedStatementImport, StatementImportError> {
+    let mut allowed = candidate_declarations.to_vec();
+    allowed.sort();
+    allowed.dedup();
+    if allowed.len() != candidate_declarations.len() {
+        return Err(StatementImportError::DuplicateCandidate);
+    }
+    if allowed.iter().any(|name| name == target) {
+        return Err(StatementImportError::CandidateIsTarget {
+            target: target.to_owned(),
+        });
+    }
+
+    let mut kernel = Kernel::new();
+    let report = import_into_staging_kernel_with_trusted_substitution(reader, &mut kernel, limits)?;
+    let mut allowed_closure = Vec::new();
+    for candidate in &allowed {
+        let matches = kernel
+            .environment()
+            .iter()
+            .filter(|(name, _)| kernel.display_name(**name).to_string() == *candidate)
+            .map(|(name, _)| *name)
+            .collect::<Vec<_>>();
+        if matches.len() != 1 {
+            return Err(StatementImportError::CandidateCardinality {
+                candidate: candidate.clone(),
+                observed: matches.len(),
+            });
+        }
+        let footprint = kernel.axiom_footprint(matches[0]);
+        if !footprint.is_empty() {
+            return Err(StatementImportError::CandidateHasAxioms {
+                candidate: candidate.clone(),
+                observed: footprint.len(),
+            });
+        }
+        allowed_closure.push(candidate.clone());
+        allowed_closure.extend(
+            kernel
+                .declaration_dependency_closure(matches[0])
+                .into_iter()
+                .map(|name| kernel.display_name(name).to_string()),
+        );
+    }
+    allowed_closure.sort();
+    allowed_closure.dedup();
+    for identity in &report.declaration_identities {
+        if is_exempted_trusted_declaration(
+            identity.kind,
+            &identity.name,
+            &report.substituted_theorems,
+        ) {
+            continue;
+        }
+        let listed_theorem = identity.kind == DeclarationKind::Theorem
+            && allowed_closure.binary_search(&identity.name).is_ok();
+        if !listed_theorem
+            && matches!(
+                identity.kind,
+                DeclarationKind::Axiom
+                    | DeclarationKind::Theorem
+                    | DeclarationKind::Opaque
+                    | DeclarationKind::Quotient
+            )
+        {
+            return Err(StatementImportError::TrustedDeclaration {
+                name: identity.name.clone(),
+                kind: identity.kind,
+            });
+        }
+    }
+    finish_statement_import(kernel, report, target)
+}
+
+fn finish_statement_import(
+    mut kernel: Kernel,
+    report: ImportReport,
+    target: &str,
+) -> Result<CompletedStatementImport, StatementImportError> {
     let matches: Vec<_> = kernel
         .environment()
         .iter()

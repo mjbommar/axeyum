@@ -28,6 +28,7 @@ __all__ = [
     "StatementImport",
     "StatementImportError",
     "audit_circularity",
+    "import_candidate_statement_ndjson",
     "import_statement_ndjson",
     "propose_bounded_application",
     "propose_bounded_induction",
@@ -454,6 +455,27 @@ def audit_circularity(kernel: kernel.Kernel, candidate: kernel.NameId, target: k
     # Errors
     
     Raises `EpochError` if either name was interned by another kernel.
+    """
+
+def import_candidate_statement_ndjson(source: typing.Any, limits: typing.Optional[ImportLimits], target: builtins.str, candidates: typing.Sequence[builtins.str]) -> StatementImport:
+    r"""
+    Imports a proof-free target plus an exact axiom-free theorem candidate set.
+
+    Unlike [`import_statement_ndjson`], this capsule may carry proof-bearing
+    declarations, but only those whose exact names occur in `candidates`; every
+    one is independently kernel-checked and must have an empty measured axiom
+    footprint. The target remains a transparent `definition : Prop`, never a
+    theorem. The bounded-application producer must still receive the same names
+    explicitly and cannot scan the returned environment.
+
+    `source` is a path (`str` / `os.PathLike`) or the NDJSON `bytes`. `limits`
+    of `None` uses the Rust `ImportLimits::default()`.
+
+    # Errors
+
+    Raises `TypeError` for an invalid source, `OSError` for an unreadable path,
+    and `StatementImportError` for any wire, target-isolation, candidate-identity
+    or axiom-footprint failure.
     """
 
 def import_statement_ndjson(source: typing.Any, limits: typing.Optional[ImportLimits], target: builtins.str) -> StatementImport:

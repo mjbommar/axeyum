@@ -18,6 +18,9 @@ composition from three retrieved declarations and declines when the adjacent
 lemma is absent. Its typed Python surface now preserves the explicit retrieval
 boundary, fixed search telemetry, and typed declines. Next: dispatch it through
 an authoritative operation and clean episode, then measure sibling conversion.
+The prerequisite candidate-capsule importer now keeps the target proof absent
+while independently admitting only the exact axiom-free candidate closures;
+the ordinary proof-isolated importer remains unchanged.
 
 <!-- plan-section: landed-changes -->
 
@@ -33,3 +36,6 @@ an authoritative operation and clean episode, then measure sibling conversion.
 | 2026-08-25 | `3375112a9` | Recomputed scheduling admits `Nat.ModEq.comm`; durable-state-driven multi-target credit reaches 11. |
 | 2026-08-25 | `3cfb80172` | Resolve five manually verified Nat evidence identities; exact links reach 315 theorems and 319 facts without guessing. |
 | 2026-08-26 | `228494275` | Expose bounded retrieved-lemma application through the typed Python producer surface with full Python, stub, and type-gate coverage. |
+| 2026-08-26 | `0c261718f` | Add the fail-closed candidate-capsule import boundary required for theorem-composition dispatch. |
+| 2026-08-26 | `ebe2b7b2e` | Re-derive the kernel projection and lemma-search artifacts at 1,242 theorems after rebasing concurrent mathematics work. |
+| 2026-08-26 | `fa821fc54` | Merge the next constructive-real theorem and advance the same generated search population to 1,243 without clobbering either lane. |

@@ -62,6 +62,7 @@ axeyum._native.kernel.Prelude.__getattr__ -> return  Attribute access over a pre
 axeyum._native.kernel.Prelude.__getitem__ -> return  Item access over a prelude's declarations; same as `__getattr__`.
 axeyum._native.producers.DeclineReason.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
 axeyum._native.producers.ImportLimits.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
+axeyum._native.producers.import_candidate_statement_ndjson(source)  A filesystem path (str, bytes or os.PathLike) or in-memory NDJSON bytes; `resolve_source` decides which and raises TypeError otherwise.
 axeyum._native.producers.import_statement_ndjson(source)  A filesystem path (str, bytes or os.PathLike) or an in-memory bytes buffer; `resolve_source` decides which and raises TypeError otherwise.
 axeyum._native.smt.ScriptTerm.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
 axeyum._native.smt.get_value -> return  One model value per `(get-value ...)` term, each typed by its own sort -- the same union as the IR evaluator returns.
