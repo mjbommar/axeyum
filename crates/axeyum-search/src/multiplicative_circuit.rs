@@ -178,6 +178,43 @@ struct SelectorLayout {
     outputs: Vec<Vec<usize>>,
 }
 
+/// Owner of one affine-coefficient selector in a multiplicative circuit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum MultiplicativeSelectorOwner {
+    /// Left affine operand of an AND gate.
+    GateLeft(usize),
+    /// Right affine operand of an AND gate.
+    GateRight(usize),
+    /// Affine form producing one output coordinate.
+    Output(usize),
+}
+
+/// Basis term controlled by one affine-coefficient selector.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum MultiplicativeBasisTerm {
+    /// Constant one.
+    Constant,
+    /// Primary input in declared order.
+    Input(usize),
+    /// Output of an earlier AND gate.
+    EarlierAnd(usize),
+}
+
+/// Stable semantic identity of a selector shared by all multiplicative encodings.
+///
+/// `variable` is zero-based. Direct CNF encodings use the same index; the
+/// portable Boolean-ANF route preserves it as a source variable before adding
+/// definitional extension variables.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct MultiplicativeSelector {
+    /// Mathematical affine form that owns the coefficient.
+    pub owner: MultiplicativeSelectorOwner,
+    /// Mathematical basis term selected by the coefficient.
+    pub term: MultiplicativeBasisTerm,
+    /// Zero-based source/CNF variable index.
+    pub variable: usize,
+}
+
 /// Deterministic CNF plus the private map needed to lift a satisfying model.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MultiplicativeEncoding {
@@ -200,6 +237,11 @@ impl MultiplicativeAnfEncoding {
     /// Algebraic equations over the selector coefficients.
     pub fn system(&self) -> &BooleanAnfSystem {
         &self.system
+    }
+
+    /// Typed selector map for semantic partitioning and witness pinning.
+    pub fn selectors(&self) -> Vec<MultiplicativeSelector> {
+        selector_records(&self.problem, &self.layout)
     }
 
     /// CNF clauses selecting the syntactically irredundant exact-budget form.
@@ -291,6 +333,11 @@ impl MultiplicativeEncoding {
     /// Exact synthesis formula.
     pub fn formula(&self) -> &CnfFormula {
         &self.formula
+    }
+
+    /// Typed selector map for semantic partitioning and witness pinning.
+    pub fn selectors(&self) -> Vec<MultiplicativeSelector> {
+        selector_records(&self.problem, &self.layout)
     }
 
     /// Restrict this formula to syntactically irredundant exact-budget circuits.
@@ -409,6 +456,53 @@ impl MultiplicativeEncoding {
         }
         Ok(formula)
     }
+}
+
+fn selector_term(input_bits: usize, offset: usize) -> MultiplicativeBasisTerm {
+    if offset == 0 {
+        MultiplicativeBasisTerm::Constant
+    } else if offset <= input_bits {
+        MultiplicativeBasisTerm::Input(offset - 1)
+    } else {
+        MultiplicativeBasisTerm::EarlierAnd(offset - 1 - input_bits)
+    }
+}
+
+fn selector_records(
+    problem: &MultiplicativeSynthesisProblem,
+    layout: &SelectorLayout,
+) -> Vec<MultiplicativeSelector> {
+    let mut records = Vec::new();
+    for gate in 0..problem.and_gates {
+        for (owner, variables) in [
+            (
+                MultiplicativeSelectorOwner::GateLeft(gate),
+                &layout.left[gate],
+            ),
+            (
+                MultiplicativeSelectorOwner::GateRight(gate),
+                &layout.right[gate],
+            ),
+        ] {
+            records.extend(variables.iter().enumerate().map(|(offset, &variable)| {
+                MultiplicativeSelector {
+                    owner,
+                    term: selector_term(problem.input_bits, offset),
+                    variable,
+                }
+            }));
+        }
+    }
+    for (output, variables) in layout.outputs.iter().enumerate() {
+        records.extend(variables.iter().enumerate().map(|(offset, &variable)| {
+            MultiplicativeSelector {
+                owner: MultiplicativeSelectorOwner::Output(output),
+                term: selector_term(problem.input_bits, offset),
+                variable,
+            }
+        }));
+    }
+    records
 }
 
 fn exact_budget_irredundancy_clauses(
@@ -2121,6 +2215,56 @@ mod tests {
                 .iter()
                 .map(|&v| (v, true))
                 .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn selector_map_is_semantic_stable_and_shared_by_all_backends() {
+        let target = problem(&[0, 0, 0, 1], 2);
+        let limits = MultiplicativeSynthesisLimits::default();
+        let options = MultiplicativeEncodingOptions {
+            eliminate_internal_constants: true,
+            partial_operand_order: false,
+            lexicographic_operand_order: true,
+        };
+        let direct = encode_multiplicative_circuit_with_options(&target, limits, options).unwrap();
+        let anf = encode_multiplicative_circuit_anf(&target, limits, options).unwrap();
+        let source = encode_multiplicative_anf_system(&target, limits, options).unwrap();
+        assert_eq!(direct.selectors(), anf.selectors());
+        assert_eq!(direct.selectors(), source.selectors());
+
+        let selectors = source.selectors();
+        assert_eq!(selectors.len(), 19);
+        assert_eq!(
+            selectors[0],
+            MultiplicativeSelector {
+                owner: MultiplicativeSelectorOwner::GateLeft(0),
+                term: MultiplicativeBasisTerm::Constant,
+                variable: 0,
+            }
+        );
+        assert_eq!(
+            selectors[9],
+            MultiplicativeSelector {
+                owner: MultiplicativeSelectorOwner::GateLeft(1),
+                term: MultiplicativeBasisTerm::EarlierAnd(0),
+                variable: 9,
+            }
+        );
+        assert_eq!(
+            selectors[18],
+            MultiplicativeSelector {
+                owner: MultiplicativeSelectorOwner::Output(0),
+                term: MultiplicativeBasisTerm::EarlierAnd(1),
+                variable: 18,
+            }
+        );
+        assert_eq!(
+            selectors
+                .iter()
+                .map(|selector| selector.variable)
+                .collect::<Vec<_>>(),
+            (0..19).collect::<Vec<_>>()
         );
     }
 

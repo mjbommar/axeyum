@@ -186,6 +186,17 @@ one-AND boundary. The published PRIMATEs-inverse MC=8 circuit normalizes into th
 MC=8 at 30 seconds and the known MC=6 lower-bound control at 120 seconds both interrupted,
 so no MC=7 frontier result is credited. Symmetry/performance work is next.
 
+**S-box semantic selector covers, 2026-08-26.** ADR-0586 exposes a stable typed map from
+all three multiplicative encodings' selector variables to left/right AND operands, output
+coordinates, and constant/input/earlier-AND basis terms. The strict external SAT-model route
+now checks the exact queried CNF, projects and replays the source Boolean-ANF system, lifts a
+portable circuit, and exhaustively replays the PRIMATEs-inverse truth table before writing it.
+The 191-record MC=7 map leaves the 20,585-variable / 69,809-clause formula byte-identical.
+A checked 32-cell cover now names variables 2--6 as gate zero's five left-operand input
+coefficients. An eight-worker proof-free SAT portfolio is live without a wall-clock cutoff;
+its cells carry no credit until a SAT model passes the full replay route, or every leaf has a
+checked DRAT proof. The interval remains `[7,8]`.
+
 **SIMD semantic/minimality calibration, 2026-08-26.** ADR-0559 adds exact provenance-tag
 semantics for unary AVX2 `vpshufb` and same-source `vperm2i128`. Global 32-byte reversal
 replays in two instructions; the complete one-step family query is a deterministic
