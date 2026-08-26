@@ -133,3 +133,12 @@ not advertised as a first result despite finding no earlier artifact in current 
 The target `abz7@655` formula fits at 381,418 variables / 4,343,486 clauses, but its lower
 run and the `@656` witness run both reached 300 seconds without proof/model. Both verdicts are
 interrupted, so `abz7 = 656` is not yet certified here.
+
+**Bilinear term-order symmetry, 2026-08-26.** ADR-0567 adds an opt-in complete breaker for
+permutation of rank-one summands while leaving all retained baseline formulas byte-stable.
+It lex-orders concatenated factor bits, canonicalizes padded witnesses, and passes an
+exhaustive comparator test plus reversed-Strassen and Wang rank-20 replay controls. The open
+rank-19 formula is 22,688 variables / 89,388 clauses; CaDiCaL reached 300.19 seconds and
+7,140,981 conflicts without model/proof. This is interrupted telemetry, not rank evidence,
+and it shows that the `19!` term labels are not the whole obstruction. Search found explicit
+prior term ordering, so no technique-novelty claim is made; stabilizer/basis symmetry is next.

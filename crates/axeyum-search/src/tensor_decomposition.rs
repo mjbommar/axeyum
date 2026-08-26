@@ -77,6 +77,7 @@ pub struct TensorRankEncoding {
     target: Gf2Tensor,
     layout: FactorLayout,
     budget: usize,
+    ordered_terms: bool,
 }
 
 impl TensorRankEncoding {
@@ -163,8 +164,34 @@ impl TensorRankEncoding {
             ));
         }
         let mut formula = self.formula.clone();
-        for term in 0..self.budget {
-            let supplied = witness.terms.get(term);
+        let mut supplied_terms = witness.terms.iter().map(Some).collect::<Vec<_>>();
+        supplied_terms.resize(self.budget, None);
+        if self.ordered_terms {
+            supplied_terms.sort_by_key(|term| {
+                let mut bits = Vec::with_capacity(self.target.dimensions.iter().sum());
+                for (dimension, support) in [
+                    (
+                        self.target.dimensions[0],
+                        term.map(|item| item.a.as_slice()),
+                    ),
+                    (
+                        self.target.dimensions[1],
+                        term.map(|item| item.b.as_slice()),
+                    ),
+                    (
+                        self.target.dimensions[2],
+                        term.map(|item| item.c.as_slice()),
+                    ),
+                ] {
+                    bits.extend(
+                        (0..dimension)
+                            .map(|index| support.is_some_and(|entries| entries.contains(&index))),
+                    );
+                }
+                bits
+            });
+        }
+        for (term, &supplied) in supplied_terms.iter().enumerate() {
             for (variables, support) in [
                 (&self.layout.a[term], supplied.map(|item| item.a.as_slice())),
                 (&self.layout.b[term], supplied.map(|item| item.b.as_slice())),
@@ -267,6 +294,44 @@ impl Builder {
         self.clause(&[(parity, !value)])
     }
 
+    fn equivalent(&mut self, left: usize, right: usize) -> Result<usize, TensorRankEncodingError> {
+        let equal = self.variable()?;
+        self.clause(&[(equal, true), (left, true), (right, false)])?;
+        self.clause(&[(equal, true), (left, false), (right, true)])?;
+        self.clause(&[(equal, false), (left, false), (right, false)])?;
+        self.clause(&[(equal, false), (left, true), (right, true)])?;
+        Ok(equal)
+    }
+
+    fn conjunction(&mut self, left: usize, right: usize) -> Result<usize, TensorRankEncodingError> {
+        let both = self.variable()?;
+        self.clause(&[(both, true), (left, false)])?;
+        self.clause(&[(both, true), (right, false)])?;
+        self.clause(&[(left, true), (right, true), (both, false)])?;
+        Ok(both)
+    }
+
+    /// Enforce `left <= right` lexicographically with `false < true`.
+    fn lex_le(&mut self, left: &[usize], right: &[usize]) -> Result<(), TensorRankEncodingError> {
+        debug_assert_eq!(left.len(), right.len());
+        let mut equal_prefix = None;
+        for (index, (&left_bit, &right_bit)) in left.iter().zip(right).enumerate() {
+            let mut forbidden = vec![(left_bit, true), (right_bit, false)];
+            if let Some(prefix) = equal_prefix {
+                forbidden.push((prefix, true));
+            }
+            self.clause(&forbidden)?;
+            if index + 1 < left.len() {
+                let equal_bit = self.equivalent(left_bit, right_bit)?;
+                equal_prefix = Some(match equal_prefix {
+                    None => equal_bit,
+                    Some(prefix) => self.conjunction(prefix, equal_bit)?,
+                });
+            }
+        }
+        Ok(())
+    }
+
     fn finish(self) -> Result<CnfFormula, TensorRankEncodingError> {
         let mut formula = CnfFormula::new(self.variables);
         for clause in self.clauses {
@@ -295,6 +360,33 @@ pub fn encode_tensor_rank(
     budget: usize,
     limits: TensorRankEncodingLimits,
 ) -> Result<TensorRankEncoding, TensorRankEncodingError> {
+    encode_tensor_rank_internal(target, budget, limits, false)
+}
+
+/// Encode bounded rank with a complete lexicographic breaker for the
+/// permutation symmetry among rank-one summands.
+///
+/// Sorting does not remove any decomposition because tensor addition is
+/// commutative. The order compares the concatenated `a`, `b`, and `c` factor
+/// bits with `false < true`; padded zero summands consequently occur first.
+///
+/// # Errors
+///
+/// Refuses malformed targets and any construction exceeding explicit limits.
+pub fn encode_tensor_rank_with_ordered_terms(
+    target: &Gf2Tensor,
+    budget: usize,
+    limits: TensorRankEncodingLimits,
+) -> Result<TensorRankEncoding, TensorRankEncodingError> {
+    encode_tensor_rank_internal(target, budget, limits, true)
+}
+
+fn encode_tensor_rank_internal(
+    target: &Gf2Tensor,
+    budget: usize,
+    limits: TensorRankEncodingLimits,
+    ordered_terms: bool,
+) -> Result<TensorRankEncoding, TensorRankEncodingError> {
     if budget > limits.max_rank {
         return Err(TensorRankEncodingError::LimitExceeded {
             resource: "rank",
@@ -317,6 +409,23 @@ pub fn encode_tensor_rank(
         layout.a.push(builder.variables(target.dimensions[0])?);
         layout.b.push(builder.variables(target.dimensions[1])?);
         layout.c.push(builder.variables(target.dimensions[2])?);
+    }
+    if ordered_terms {
+        for term in 0..budget.saturating_sub(1) {
+            let left = [
+                &layout.a[term][..],
+                &layout.b[term][..],
+                &layout.c[term][..],
+            ]
+            .concat();
+            let right = [
+                &layout.a[term + 1][..],
+                &layout.b[term + 1][..],
+                &layout.c[term + 1][..],
+            ]
+            .concat();
+            builder.lex_le(&left, &right)?;
+        }
     }
     let [a_dimension, b_dimension, c_dimension] = target.dimensions;
     for a in 0..a_dimension {
@@ -341,6 +450,7 @@ pub fn encode_tensor_rank(
         target: target.clone(),
         layout,
         budget,
+        ordered_terms,
     })
 }
 
@@ -403,6 +513,73 @@ mod tests {
         };
         let lifted = encoding.lift_model(&model).unwrap();
         assert_eq!(lifted.terms.len(), 7);
+    }
+
+    #[test]
+    fn ordered_terms_accept_an_unsorted_witness_and_lift_canonically() {
+        let target = Gf2Tensor::matrix_multiplication(2, 2, 2).unwrap();
+        let encoding =
+            encode_tensor_rank_with_ordered_terms(&target, 8, TensorRankEncodingLimits::default())
+                .unwrap();
+        let mut witness = strassen();
+        witness.terms.reverse();
+        let pinned = encoding.formula_with_witness(&witness).unwrap();
+        let SatResult::Sat(model) = solve_with_rustsat_batsat(&pinned).unwrap() else {
+            panic!("term sorting must preserve a padded decomposition");
+        };
+        let lifted = encoding.lift_model(&model).unwrap();
+        assert_eq!(lifted.terms.len(), 7);
+        assert!(lifted.terms.windows(2).all(|pair| {
+            let bits = |term: &Gf2RankOneTerm| {
+                [
+                    (0..4).map(|i| term.a.contains(&i)).collect::<Vec<_>>(),
+                    (0..4).map(|i| term.b.contains(&i)).collect::<Vec<_>>(),
+                    (0..4).map(|i| term.c.contains(&i)).collect::<Vec<_>>(),
+                ]
+                .concat()
+            };
+            bits(&pair[0]) <= bits(&pair[1])
+        }));
+    }
+
+    #[test]
+    fn lexicographic_breaker_matches_all_two_bit_pairs() {
+        let mut builder = Builder {
+            variables: 0,
+            clauses: Vec::new(),
+            limits: TensorRankEncodingLimits::default(),
+        };
+        let left = builder.variables(2).unwrap();
+        let right = builder.variables(2).unwrap();
+        builder.lex_le(&left, &right).unwrap();
+        let base = builder.finish().unwrap();
+
+        for left_value in 0_u8..4 {
+            for right_value in 0_u8..4 {
+                let mut formula = base.clone();
+                for (variables, value) in [(&left, left_value), (&right, right_value)] {
+                    for (offset, &variable) in variables.iter().enumerate() {
+                        let bit = value & (1 << (1 - offset)) != 0;
+                        let literal = CnfLit::positive(cnf_var(variable).unwrap());
+                        formula
+                            .add_clause(CnfClause::new(vec![if bit {
+                                literal
+                            } else {
+                                literal.negated()
+                            }]))
+                            .unwrap();
+                    }
+                }
+                assert_eq!(
+                    matches!(
+                        solve_with_rustsat_batsat(&formula).unwrap(),
+                        SatResult::Sat(_)
+                    ),
+                    left_value <= right_value,
+                    "left={left_value:02b} right={right_value:02b}"
+                );
+            }
+        }
     }
 
     #[test]

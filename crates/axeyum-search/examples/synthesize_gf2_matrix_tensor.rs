@@ -6,7 +6,9 @@ use std::{fs::File, io::BufReader};
 
 use axeyum_cas::gf2_tensor::{Gf2Tensor, Gf2TensorDecomposition};
 use axeyum_cnf::{ProofSolveOutcome, check_drat_backward, check_drat_backward_reader};
-use axeyum_search::tensor_decomposition::{TensorRankEncodingLimits, encode_tensor_rank};
+use axeyum_search::tensor_decomposition::{
+    TensorRankEncodingLimits, encode_tensor_rank, encode_tensor_rank_with_ordered_terms,
+};
 
 struct Arguments {
     m: usize,
@@ -17,13 +19,14 @@ struct Arguments {
     dimacs: Option<PathBuf>,
     witness: Option<PathBuf>,
     drat: Option<PathBuf>,
+    ordered_terms: bool,
 }
 
 fn arguments() -> Arguments {
     let args: Vec<String> = std::env::args().skip(1).collect();
     assert!(
         args.len() >= 4,
-        "usage: synthesize_gf2_matrix_tensor M N P RANK [SECONDS] [--dimacs PATH] [--witness PATH] [--check-drat PATH]"
+        "usage: synthesize_gf2_matrix_tensor M N P RANK [SECONDS] [--ordered-terms] [--dimacs PATH] [--witness PATH] [--check-drat PATH]"
     );
     let parse = |index: usize, name: &str| {
         args[index]
@@ -43,7 +46,13 @@ fn arguments() -> Arguments {
     let mut dimacs = None;
     let mut witness = None;
     let mut drat = None;
+    let mut ordered_terms = false;
     while index < args.len() {
+        if args[index] == "--ordered-terms" {
+            ordered_terms = true;
+            index += 1;
+            continue;
+        }
         let destination = match args[index].as_str() {
             "--dimacs" => &mut dimacs,
             "--witness" => &mut witness,
@@ -64,6 +73,7 @@ fn arguments() -> Arguments {
         dimacs,
         witness,
         drat,
+        ordered_terms,
     }
 }
 
@@ -71,12 +81,21 @@ fn main() {
     let args = arguments();
     let target =
         Gf2Tensor::matrix_multiplication(args.m, args.n, args.p).expect("valid matrix dimensions");
-    let encoding = encode_tensor_rank(&target, args.rank, TensorRankEncodingLimits::default())
-        .expect("encoding must fit explicit defaults");
+    let encoding = if args.ordered_terms {
+        encode_tensor_rank_with_ordered_terms(
+            &target,
+            args.rank,
+            TensorRankEncodingLimits::default(),
+        )
+    } else {
+        encode_tensor_rank(&target, args.rank, TensorRankEncodingLimits::default())
+    }
+    .expect("encoding must fit explicit defaults");
     println!("schema=axeyum.gf2-tensor-rank-run.v1");
     println!("matrix={}x{}x{}", args.m, args.n, args.p);
     println!("tensor-dimensions={:?}", target.dimensions);
     println!("rank-budget={}", args.rank);
+    println!("ordered-terms={}", args.ordered_terms);
     println!("variables={}", encoding.formula().variable_count());
     println!("clauses={}", encoding.formula().clauses().len());
 

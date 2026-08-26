@@ -637,3 +637,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0564](adr-0564-bounded-gf2-tensor-rank-search-lifts-and-replays-models.md) | Encode complete bounded GF(2) tensor rank in SAT and admit models only after independent coefficient replay | accepted |
 | [0565](adr-0565-job-shop-optimality-uses-replayed-schedules-and-checked-refutations.md) | Certify classical job-shop optima with independently replayed schedules and DRAT-checked bounded-makespan refutations | accepted |
 | [0566](adr-0566-unary-avx2-synthesis-is-permutation-preserving-and-model-lifted.md) | Synthesize bounded unary AVX2 byte permutations with complete lossless controls, lifted models, replay, and checked DRAT lower bounds | accepted |
+| [0567](adr-0567-tensor-summand-ordering-removes-only-permutation-symmetry.md) | Optionally lex-order GF(2) rank-one summands without changing the bounded tensor-rank question | accepted |
