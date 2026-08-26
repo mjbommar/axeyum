@@ -893,6 +893,22 @@ pub struct CRealPrelude {
     /// and one `Rat.natDivSucc_le_add_left` widening per side to a common
     /// witness `K := (2+K_a)+(2+K_c)`.
     pub converges_squeeze: NameId,
+    /// `CReal.converges_lower_bound : ∀ a f L, (∀ n, le a (f n)) →
+    /// Converges f L → le a L`.
+    ///
+    /// A non-strict lower bound on a convergent sequence bounds its limit
+    /// below — the "compare at an arbitrary third index" idiom
+    /// [`Self::le_trans`] itself uses, routed through `f j` instead of a
+    /// second `CReal`. See `creal/convergence.rs`'s own module documentation
+    /// for why this (and its mirror [`Self::converges_upper_bound`]) answers
+    /// the domain-hypothesis question the (unbuilt, and not provable in the
+    /// fixed-rate form the `Converges` predicate states) `converges_comp`
+    /// needed.
+    pub converges_lower_bound: NameId,
+    /// `CReal.converges_upper_bound : ∀ f L b, (∀ n, le (f n) b) →
+    /// Converges f L → le L b`. The mirror of
+    /// [`Self::converges_lower_bound`].
+    pub converges_upper_bound: NameId,
 
     // --- boundedness of sequences, and sequential continuity (phase R10) ----
     /// `CReal.Bounded (g : Nat → CReal) : Prop :=
@@ -2873,6 +2889,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_neg: kernel.name_str(creal, "converges_neg"),
         converges_sub: kernel.name_str(creal, "converges_sub"),
         converges_squeeze: kernel.name_str(creal, "converges_squeeze"),
+        converges_lower_bound: kernel.name_str(creal, "converges_lower_bound"),
+        converges_upper_bound: kernel.name_str(creal, "converges_upper_bound"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
         converges_mul: kernel.name_str(creal, "converges_mul"),

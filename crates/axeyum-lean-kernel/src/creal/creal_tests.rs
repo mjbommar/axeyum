@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 276] = [
+    let expected: [(&str, crate::NameId, &str); 278] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -225,6 +225,21 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // The squeeze theorem: no shift bridge needed, since `CReal.le` is
         // already stated at the same canonical-sample index `Converges` uses.
         ("CReal.converges_squeeze", p.converges_squeeze, "theorem"),
+        // The domain-hypothesis half of `converges_comp` (that composition
+        // itself is NOT provable in `Converges`'s fixed-rate form -- see
+        // `convergence.rs`'s own module documentation): a non-strict bound on
+        // a convergent sequence passes to its limit, each direction via the
+        // same "arbitrary third index" idiom `le_trans` itself uses.
+        (
+            "CReal.converges_lower_bound",
+            p.converges_lower_bound,
+            "theorem",
+        ),
+        (
+            "CReal.converges_upper_bound",
+            p.converges_upper_bound,
+            "theorem",
+        ),
         // Boundedness and sequential continuity (phase R10).
         ("CReal.Bounded", p.bounded, "def"),
         ("CReal.converges_bounded", p.converges_bounded, "theorem"),
