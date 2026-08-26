@@ -54,7 +54,7 @@
     "proof_route_counts": {
       "cas-certificate": 23,
       "imported-kernel-lean": 5,
-      "kernel-lean": 450,
+      "kernel-lean": 451,
       "search-certificate": 12,
       "smt-clausal": 9,
       "smt-term-level": 17
@@ -62,8 +62,8 @@
     "status_counts": {
       "computed": 2,
       "conjectured": 3,
-      "open": 179,
-      "proved": 510,
+      "open": 178,
+      "proved": 511,
       "refuted": 4
     }
   },
@@ -160,7 +160,7 @@
     },
     {
       "path": "artifacts/autogenesis/operations.json",
-      "sha256": "e5ede740764bf1b479d85d5490c59bf2d443b5270e532b241939fa1b96ae28d4"
+      "sha256": "7886695d03a39974f24554cd1e9e8a600638a565d29bb864d4278b1e24461a46"
     },
     {
       "path": "artifacts/autogenesis/producer-outcome-observations-v1.json",
@@ -185,7 +185,7 @@
     {
       "path": "artifacts/facts/F-*.json",
       "population": 698,
-      "sha256": "ecaa872d002bdf157827c9b7d134d1b03ff1ff92038a69770bcc4f5210e455df"
+      "sha256": "40b3110490cd6002bdc2fc4a207774cea379882d33c0574ac9e9614d75f7e423"
     },
     {
       "path": "artifacts/episodes/**/episode*.json excluding fixtures*",

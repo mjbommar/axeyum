@@ -1,15 +1,15 @@
 {
   "census": {
     "by_partition": {
-      "development": 66,
+      "development": 65,
       "train": 38
     },
-    "candidate_facts": 94,
-    "evaluation_dependency_ready_facts": 104,
+    "candidate_facts": 93,
+    "evaluation_dependency_ready_facts": 103,
     "excluded_held_out_ready_facts": 22,
     "excluded_outside_evaluation_ready_facts": 9,
-    "global_dependency_ready_facts": 135,
-    "groups": 93,
+    "global_dependency_ready_facts": 134,
+    "groups": 92,
     "must_decline_controls": 10
   },
   "derivation": {
@@ -17,8 +17,8 @@
       "development",
       "train"
     ],
-    "frontier_sha256": "eaefa772f1d953af6c8c34fc3cf9e8c2617cc6f336f6a6e302724d66114cef51",
-    "ledger_sha256": "16b154e1d54562baea35e49f344e3e47819e8b1e14cd1107725ebb14099b7181",
+    "frontier_sha256": "a3c78d0a47add12eedb5eb4e6c48c65174582bb7193b388b3b018488ecf39a46",
+    "ledger_sha256": "51c1a6cb14cd0dfb9dbf7dfdbeb28132a1c85b69b4930112bc59f0f9c440f38e",
     "must_decline_controls_sha256": "70d52bb9517419f0caf24958fa7f596bf8486cb3e6f293b673dbe16c486871af",
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "reviewed_fact_catalog_sha256": "4a6ac0c9ee34e7c6a09b596e501ba94be4b1d962cf9ed02c7f1ed4dece771117",
@@ -437,16 +437,6 @@
       "fact_count": 1,
       "fact_ids": [
         "F:ml430-nat-modulus-modeq-zero-fd9af096"
-      ],
-      "family": "natural-modular-equivalence",
-      "partition": "development",
-      "statement_shape": "unconditional-relation"
-    },
-    {
-      "dependency_component_id": "mathlib-v4.30.0-6fc2be2d83334e77",
-      "fact_count": 1,
-      "fact_ids": [
-        "F:ml430-nat-add-modeq-left-e3b1fba9"
       ],
       "family": "natural-modular-equivalence",
       "partition": "development",
