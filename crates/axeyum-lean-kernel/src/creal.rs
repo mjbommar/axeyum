@@ -2256,6 +2256,17 @@ pub struct CRealPrelude {
     /// first conjunct reuses [`Self::le_add_of_abs_sub_le`] verbatim; the
     /// second mirrors its route with `neg_le_abs` in place of `le_abs_self`.
     pub two_sided_of_abs_sub_le: NameId,
+    /// `CReal.fineBlockSum_close : ∀ F a b e m n i, le a b →
+    /// UniformlyContinuousOn F a b → Nat.le i m → Nat.le deep m → And (le
+    /// blockSum (add coarseTerm epsTerm)) (le coarseTerm (add blockSum
+    /// epsTerm))` (`creal/integral.rs`) — roadmap step 3 toward
+    /// `riemannSum_cauchy`: each coarse block's fine Riemann sub-sum bounded
+    /// two-sidedly against the single coarse term `riemannSum` itself would
+    /// use at that block, within `Δ_m · natDivSucc(1, e)`. Via
+    /// `fineSample_close` per fine index, [`Self::two_sided_of_abs_sub_le`]
+    /// to split it, and two applications of `sumRange_le` to lift the
+    /// per-term bounds to the block sum.
+    pub fine_block_sum_close: NameId,
     /// `CReal.hasDerivative_closeOfEquiv : ∀ F F' a b, HasDerivativeOn F F' a b →
     /// ∀ u v, le a u → le u b → le a v → le v b → Equiv u v → Equiv (F u) (F v)`
     /// — differentiability implies (local) continuity: two `Equiv`-related
@@ -2954,6 +2965,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         within_of_two_sided_le: kernel.name_str(creal, "within_of_two_sided_le"),
         le_add_of_abs_sub_le: kernel.name_str(creal, "le_add_of_abs_sub_le"),
         two_sided_of_abs_sub_le: kernel.name_str(creal, "two_sided_of_abs_sub_le"),
+        fine_block_sum_close: kernel.name_str(creal, "fineBlockSum_close"),
         has_derivative_close_of_equiv: kernel.name_str(creal, "hasDerivative_closeOfEquiv"),
         exp_term: kernel.name_str(creal, "expTerm"),
         exp_series_partial: kernel.name_str(creal, "expSeriesPartial"),
@@ -3152,6 +3164,11 @@ pub(crate) fn build_creal_prelude_uncached(
         // (`uniform_continuity::declare_uniform_continuity`, further above
         // still), so it cannot land any earlier than this call site.
         integral::declare_fine_sample_close(&mut d, prelude)?;
+        // `fineBlockSum_close` (roadmap step 3 toward `riemannSum_cauchy`)
+        // needs `fineSample_close` (just above) and `two_sided_of_abs_sub_le`
+        // (`integral::declare_two_sided_of_abs_sub_le`, well above), so it
+        // cannot land any earlier than this call site.
+        integral::declare_fine_block_sum_close(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 272] = [
+    let expected: [(&str, crate::NameId, &str); 273] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -753,6 +753,17 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // `UniformlyContinuousOn.spec` plus `mesh_le_of_ge` and
         // `fineSample_in_bounds`.
         ("CReal.fineSample_close", p.fine_sample_close, "theorem"),
+        // Roadmap step 3 toward `riemannSum_cauchy` (`creal/integral.rs`):
+        // each coarse block's fine Riemann sub-sum bounded two-sidedly
+        // against the single coarse term `riemannSum` itself would use at
+        // that block, within `Δ_m · natDivSucc(1, e)`, via `fineSample_close`
+        // per fine index, `two_sided_of_abs_sub_le` to split it, and two
+        // applications of `sumRange_le`.
+        (
+            "CReal.fineBlockSum_close",
+            p.fine_block_sum_close,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
