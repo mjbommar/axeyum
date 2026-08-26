@@ -1,7 +1,7 @@
 # Axeyum overall vision and status review
 
 Date: 2026-08-26  
-Repository checkpoint: `c75ff8af5a9b7907abdde01873ef656d8f716da8`
+Repository checkpoint: `12fd6fd13` (review lane; concurrent mathematics merged through `f00bf790c`)
 
 This review starts from executable code, generated artifacts, and recent Git
 history. Documentation is used to explain contracts, not as evidence that a
@@ -62,13 +62,13 @@ kernel and rejects unsupported or contaminated streams explicitly.
 
 The generated current projection measures:
 
-- 1,604 declarations;
-- 1,250 theorems;
+- 1,614 declarations;
+- 1,260 theorems;
 - 251 definitions;
 - 29 constructors, 22 inductives, and 22 recursors;
 - 30 declared axioms, all in the retained `AxReal` negative-control package;
-- 1,574 declarations with an empty measured footprint; and
-- 7,184 direct theorem-dependency edges.
+- 1,584 declarations with an empty measured footprint; and
+- 7,317 direct theorem-dependency edges.
 
 The constructive Nat, Int, Rat, CReal, Complex, logic, and string packages have
 zero measured trusted declarations. This is a narrower, differently engineered
@@ -92,11 +92,15 @@ Lean theorem does not upgrade a proofless SMT route.
 
 ### Knowledge and autonomous loop
 
-The ledger contains 696 propositions: 502 proved, 4 refuted, 2 computed, 185
-open, and 3 conjectured. Validation re-derives evidence and reports 603 rows
-with two or more independent checks. The lemma index covers all 1,250 kernel
-theorems and 7,184 direct edges, but only 395 theorems link exactly to 390
-ledger facts; 855 kernel theorems have no exact fact link.
+The ledger contains 698 propositions: 510 proved, 4 refuted, 2 computed, 179
+open, and 3 conjectured. Validation re-derives evidence and reports 609 rows
+with two or more independent checks. The lemma index covers all 1,260 kernel
+theorems and 7,317 direct edges; 397 theorems now link exactly to 398 ledger
+facts. Six previously open Mathlib-derived records were reconciled to exact
+native theorem propositions through independently checked, operation-free
+transactions. This raised proved counts but received zero autonomous-production
+credit. The remaining 51 mapped open goals have zero exact match among their
+612 top-ranked native candidate pairs.
 
 The operation registry, typed producer declines, agent episodes, held-out
 partitions, candidate capsules, second-kernel checks, and crash-safe ledger

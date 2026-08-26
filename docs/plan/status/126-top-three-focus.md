@@ -146,6 +146,15 @@ status-driven ranking refreshes cannot rewrite or invalidate the experiment
 that justified reconciliation. Next: execute the six exact crash-safe
 transitions, regenerate current views, and publish the 51-goal remaining-target
 result separately.
+All six crash-safe reconciliations are now committed and checked as one
+coordinated transition. The ledger moves from 185 open / 504 proved to 179 open
+/ 510 proved; exact linkage reaches 397 theorems / 398 facts. The current
+ranking shrinks from 142 goals / 1,704 pairs to 136 / 1,632, while the mapped
+open-population comparison moves exactly from 57 goals / six matches to 51 /
+zero matches. Durable events, live after-facts, v1 matches, and v2 exclusions
+agree exactly; operation and autonomous credit remain zero. Next: point
+bounded application at the now-clean 51-goal population and measure whether
+semantic/type-directed retrieval improves the honest 0/51 construction rate.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
@@ -188,3 +197,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `3d4bb31eb` | Materialize six live hash-bound reconciliation proposals with zero writes, operations, and autonomous credit. |
 | 2026-08-26 | `6a348363b` | Extend the crash-safe applier with live-rebuilt, operation-free reconciliation events and recovery controls at every durable boundary. |
 | 2026-08-26 | `4e025a444` | Preserve the pre-reconciliation ranking and bind the 57-goal census to its immutable path and hash. |
+| 2026-08-26 | `12fd6fd13` | Reconcile six exact native propositions crash-safely, preserve zero production credit, and publish the clean 51-goal / zero-match remainder. |

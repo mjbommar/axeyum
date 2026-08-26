@@ -11,15 +11,23 @@ zero audit errors, and zero held-out accesses.
 
 The six matches are five binomial statements and one factorial positivity
 statement. They are not newly proved by Autogenesis: independent native kernel
-development already constructed the theorem terms. The finding is that the
+development already constructed the theorem terms. The finding was that the
 Mathlib-derived statement records and native library declarations were not
 connected strongly enough for retrieval and accounting to recognize that
-existing work.
+existing work. The six records have now been reconciled through checked,
+operation-free transactions; the result remains explicitly non-autonomous.
 
 The durable observation is
 [`open-ranked-proposition-census-v1.json`](../../artifacts/autogenesis/open-ranked-proposition-census-v1.json).
 It binds the candidate ranking, corrected population, and every external
 statement-capsule size and SHA-256. The external NDJSON remains outside Git.
+The immutable pre-reconciliation ranking is
+[`open-lemma-candidate-ranking-pre-reconciliation-v1.json`](../../artifacts/autogenesis/open-lemma-candidate-ranking-pre-reconciliation-v1.json).
+The checked transition result is
+[`proposition-reconciliation-result-v1.json`](../../artifacts/autogenesis/proposition-reconciliation-result-v1.json),
+and the post-reconciliation rerun is
+[`open-ranked-proposition-census-v2.json`](../../artifacts/autogenesis/open-ranked-proposition-census-v2.json):
+51 goals, 612 candidate pairs, zero exact matches, and zero held-out access.
 
 ## What is checked
 
