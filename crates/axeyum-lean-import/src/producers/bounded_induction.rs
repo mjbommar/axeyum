@@ -20,9 +20,9 @@
 //! `descFactorial n 1 = n`, `ascFactorial n 0 = 1`, and `descFactorial n 0 =
 //! 1` (single induction, one congrArg-with-hypothesis rewrite bridges the
 //! `succ`-case); and, via the residual-lemma extension
-//! ([`Search::try_residual_lemma`]), `ascFactorial 0 k.succ = 0` (the
+//! (`Search::try_residual_lemma`), `ascFactorial 0 k.succ = 0` (the
 //! step-case's second factor multiplies out to `0` regardless of the first,
-//! closed by [`kabstract_occurrences`] finding the induction hypothesis
+//! closed by `kabstract_occurrences` finding the induction hypothesis
 //! occurrence behind a `brecOn`/`below` structure *projection* — a shape
 //! spine-argument matching alone could not see into) and `ascFactorial 1 k =
 //! k!` (the step-case bridge needs the auxiliary identity `1 + n = n.succ`,
@@ -40,11 +40,11 @@
 //! reaches a base case whose only hypothesis is `n < 0` (`Nat.lt` unfolds to
 //! the indexed `Nat.le (succ n) 0`), and closing a Prop-headed goal from a
 //! hypothesis it never inspects is not something the congruence-rewrite
-//! machinery above can do at all. [`Search::local_hyps`] now retains every
+//! machinery above can do at all. `Search::local_hyps` now retains every
 //! ordinary (non-induction) Pi-bound hypothesis introduced along the current
 //! derivation, and when a terminal goal is otherwise stuck,
-//! [`Search::try_absurd_elimination`] looks for one whose type unfolds to an
-//! application of a [`LeShape`]-shaped indexed family (discovered
+//! `Search::try_absurd_elimination` looks for one whose type unfolds to an
+//! application of a `LeShape`-shaped indexed family (discovered
 //! structurally — nothing here names `Nat.le`, `Nat.lt`, or any target
 //! declaration) at index `zero`, with its parameter structurally
 //! `succ`-shaped. That hypothesis can never be inhabited, and its OWN
@@ -62,7 +62,7 @@
 //! hypothesis `n < k' -> descFactorial n k' = 0` — usable only once `n <
 //! succ k'` is turned into `n < k'`, which is false whenever `n = k'`. That
 //! needs a genuine case split (`n < succ k' -> n < k' ∨ n = k'`, via the
-//! SAME [`LeShape`] recursor, this time consuming both constructors rather
+//! SAME `LeShape` recursor, this time consuming both constructors rather
 //! than ruling one out) whose `n = k'` branch then needs `n - n = 0`
 //! (`Nat.sub_self`) — itself not a single-step induction, since `Nat.sub`
 //! recurses on its second argument and `pred (n - m)` at `m = succ m'` needs
@@ -71,7 +71,7 @@
 //! the same spirit as this one — but they are additional capabilities, not
 //! a corollary of absurd elimination, and are not implemented here. Also
 //! fixed alongside this capability, because building it exposed the gap
-//! directly: [`instantiate_hypothesis`] previously applied an induction
+//! directly: `instantiate_hypothesis` previously applied an induction
 //! hypothesis's proof to a goal binder's fresh variable without checking
 //! that the two binders' domains actually agree, which a hypothesis whose
 //! own type depends on the induction variable (like `n < k`) makes false at
@@ -81,16 +81,16 @@
 //!
 //! ## Case-split elimination and diagonal generalization
 //!
-//! [`Search::try_case_split_elimination`] supplies the genuine case split
+//! `Search::try_case_split_elimination` supplies the genuine case split
 //! the previous section named: for a stuck goal it looks for a retained
-//! hypothesis whose type unfolds to a [`LeShape`]-shaped family at a
+//! hypothesis whose type unfolds to a `LeShape`-shaped family at a
 //! SUCC-shaped (not zero-shaped) index, and consumes both of that family's
 //! constructors — the "at-param" branch recovers `n = k'` (via the family's
 //! `refl` shape) and transports a proof of the goal's own predecessor
 //! instance along it; the "step" branch recovers a strictly smaller
 //! instance of the outer family and re-applies whichever induction
 //! hypothesis was stuck waiting for exactly that predecessor
-//! ([`Search::stuck_hyps`]). This closes `descFactorial_of_lt`'s step case
+//! (`Search::stuck_hyps`). This closes `descFactorial_of_lt`'s step case
 //! down to needing `n - n = 0` at the `n = k'` branch, exactly as
 //! diagnosed — and does so as its own nested, budget-sharing proof
 //! obligation, not a corollary of absurd elimination.
@@ -103,8 +103,8 @@
 //! `succ n' - succ n'` unfolds to `pred (succ n' - n')` — a term about
 //! `succ n'`, never `n'` alone).
 //!
-//! - [`Search::try_split_congruence`] closes the gap this leaves in
-//!   [`Search::try_residual_lemma`]: when a congruence wrap's residual
+//! - `Search::try_split_congruence` closes the gap this leaves in
+//!   `Search::try_residual_lemma`: when a congruence wrap's residual
 //!   `Eq(candidate, expected)` has the SAME head applied to the SAME
 //!   arguments on both sides but collapsed onto ONE occurrence site (`n' -
 //!   n'` vs `succ n' - succ n'` — the same `n'` at every position), the
@@ -120,13 +120,13 @@
 //!   FALSE (e.g. `descFactorial y0 y1 = descFactorial (succ y0) (succ
 //!   y1)`, tried and declined when this fires from an unrelated degenerate
 //!   match) simply fails to prove, never fabricates a wrong witness.
-//! - [`Search::try_absorbing_argument`] supplies the hypothesis-INDEPENDENT
+//! - `Search::try_absorbing_argument` supplies the hypothesis-INDEPENDENT
 //!   half: once `n - n = 0` and `0 * x = 0` are each real but unrelated
 //!   facts, closing `(succ q - succ q) * descFactorial (succ q) (succ q) =
 //!   0` needs BOTH chained by congruence with NEITHER ever occurring in the
 //!   induction hypothesis at all (the recursive call's own first argument
 //!   has already moved past it) — a shape the single IH-driven rewrite in
-//!   [`Search::try_congr_rewrite`] cannot reach regardless of how the
+//!   `Search::try_congr_rewrite` cannot reach regardless of how the
 //!   residual it poses is generalized. It tries each top-level argument
 //!   position of the goal's own (WHNF-reduced) application spine as an
 //!   independent target for `Eq(arg, goal.rhs)`, and on success asks for
@@ -147,7 +147,7 @@
 //! top-level argument requires ALSO forcing the (still `succ q`-generic,
 //! un-inducted) recursive value's own `brecOn`/`below` structure — which
 //! entangles the operand with the very `q` this producer is still
-//! generalizing, so [`Search::generalize_opaque_operands`]'s re-`whnf`
+//! generalizing, so `Search::generalize_opaque_operands`'s re-`whnf`
 //! attempt reproduces the SAME entangled expression rather than a clean
 //! `HMul.hMul 0 B`. Separating that operand without already knowing
 //! `descFactorial`'s specific recursive shape needs a genuinely different
@@ -181,13 +181,13 @@ pub const MAX_BINDERS: usize = 8;
 pub const MAX_INDUCTIONS: usize = 2;
 
 /// Maximum number of residual auxiliary-lemma attempts
-/// ([`Search::try_residual_lemma`]) one derivation may make in total,
+/// (`Search::try_residual_lemma`) one derivation may make in total,
 /// decremented on every attempt regardless of outcome. A congruence rewrite
 /// whose final check fails only up to an arithmetic identity between two
 /// zero/succ-shaped terms (e.g. `1 + n = n.succ`, needed when a course-of-
 /// values-compiled operator's recursion argument is itself a sum rather than
 /// a bare variable) is generalized back into its own standalone `Pi` goal
-/// and proved via a nested, budget-sharing call to [`Search::attempt`] —
+/// and proved via a nested, budget-sharing call to `Search::attempt` —
 /// this bounds how many such side quests one derivation may spawn, so the
 /// capability cannot turn a single decline into unbounded extra search.
 pub const MAX_RESIDUAL_LEMMAS: usize = 300;
