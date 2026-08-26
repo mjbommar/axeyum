@@ -1,11 +1,11 @@
 {
   "census": {
     "distinct_exactly_linked_facts": 398,
-    "kernel_dependency_edges": 7341,
-    "kernel_theorems": 1263,
+    "kernel_dependency_edges": 7373,
+    "kernel_theorems": 1267,
     "maximum_dependency_depth": 26,
     "theorems_with_exact_fact_links": 397,
-    "theorems_without_exact_fact_links": 866,
+    "theorems_without_exact_fact_links": 870,
     "unresolved_prefixed_kernel_evidence": 4,
     "unresolved_reason_counts": {
       "exact kernel evidence identity is absent from the current projection": 3,
@@ -16,7 +16,7 @@
     "fact_identity_rule": "kernel-term evidence with explicit kernel_declarations or kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
     "fact_population": "sorted artifacts/facts/F-*.json",
     "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
-    "kernel_projection_sha256": "b478ebe0ed18c1534ac6ce9962bef22f59ddee89b7e91dde690e7416094a2c8b",
+    "kernel_projection_sha256": "e2d05879add365e07bf6bb7cbd2265b221fd7565b2335a92f984325eb7be6ac1",
     "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-lemma-search-index",
@@ -6090,6 +6090,7 @@
         "Complex.I_sq",
         "Complex.add_assoc",
         "Complex.add_comm",
+        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.add_zero",
@@ -6118,6 +6119,7 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_add_le",
         "Complex.normSq_conj",
@@ -6330,6 +6332,7 @@
         "Complex.I_sq",
         "Complex.add_assoc",
         "Complex.add_comm",
+        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.add_zero",
@@ -6357,6 +6360,7 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
@@ -6592,6 +6596,7 @@
         "Complex.I_sq",
         "Complex.add_assoc",
         "Complex.add_comm",
+        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.add_zero",
@@ -6620,6 +6625,7 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
@@ -7326,6 +7332,7 @@
         "Complex.I_is_fourth_root",
         "Complex.add_assoc",
         "Complex.add_comm",
+        "Complex.add_div",
         "Complex.add_pow",
         "Complex.apart_irrefl",
         "Complex.apart_symm",
@@ -7340,6 +7347,7 @@
         "Complex.mul_conj",
         "Complex.mul_inv_cancel",
         "Complex.mul_sub_one_geom",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_mul",
@@ -7501,6 +7509,7 @@
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_comm",
+        "Complex.add_div",
         "Complex.add_pow",
         "Complex.apart_irrefl",
         "Complex.apart_of_normSq_pos",
@@ -7527,6 +7536,7 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
@@ -7725,6 +7735,7 @@
         "Complex.add_assoc",
         "Complex.add_comm",
         "Complex.add_congr",
+        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.add_zero",
@@ -7750,6 +7761,7 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_congr",
         "Complex.normSq_conj",
@@ -8059,6 +8071,7 @@
         "CReal.uniformly_continuous_neg",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
+        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.apart_irrefl",
@@ -8084,6 +8097,7 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_mul",
@@ -8353,6 +8367,7 @@
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_comm",
+        "Complex.add_div",
         "Complex.add_pow",
         "Complex.add_zero",
         "Complex.apart_irrefl",
@@ -8380,6 +8395,7 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_add_le",
         "Complex.normSq_conj",
@@ -14846,6 +14862,7 @@
         "CReal.sumRange_const",
         "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
+        "Complex.add_div",
         "Complex.add_pow",
         "Complex.apart_irrefl",
         "Complex.apart_symm",
@@ -14857,6 +14874,7 @@
         "Complex.mul_conj",
         "Complex.mul_inv_cancel",
         "Complex.mul_sub_one_geom",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_mul",
@@ -16392,6 +16410,7 @@
         "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
+        "Complex.add_div",
         "Complex.add_pow",
         "Complex.apart_irrefl",
         "Complex.apart_symm",
@@ -16403,6 +16422,7 @@
         "Complex.mul_conj",
         "Complex.mul_inv_cancel",
         "Complex.mul_sub_one_geom",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
@@ -16582,6 +16602,7 @@
         "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
+        "Complex.add_div",
         "Complex.add_pow",
         "Complex.apart_irrefl",
         "Complex.apart_of_normSq_pos",
@@ -16602,6 +16623,7 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_congr",
         "Complex.normSq_conj",
@@ -17506,6 +17528,7 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
@@ -17780,6 +17803,7 @@
         "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
+        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.apart_irrefl",
@@ -17810,6 +17834,7 @@
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
         "Complex.neg_congr",
+        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_mul",
@@ -23481,6 +23506,7 @@
         "Complex.add_pow",
         "Complex.conj_div",
         "Complex.conj_pow",
+        "Complex.div_mul_cancel",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
         "Complex.mul_sub_one_geom",
@@ -23586,6 +23612,7 @@
         "Complex.add_pow",
         "Complex.conj_div",
         "Complex.conj_pow",
+        "Complex.div_mul_cancel",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
         "Complex.inv_mul_cancel",
@@ -23898,6 +23925,71 @@
         "F:complex-add-congr"
       ],
       "kernel_declaration_id": "Complex.add_congr",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex) -> ((x3 : AxNat) -> ((x4 : CReal.PosBound (Complex.normSq x2) x3) -> Complex.Equiv (Complex.div (Complex.add x0 x1) x2 x3 x4) (Complex.add (Complex.div x0 x2 x3 x4) (Complex.div x1 x2 x3 x4)))))))",
+      "dependency_depth": 18,
+      "direct_declaration_dependencies": [
+        "And.intro",
+        "CReal.Equiv",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.PosBound",
+        "CReal.add",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.neg",
+        "CReal.neg_congr",
+        "CReal.zero",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.add",
+        "Complex.div",
+        "Complex.im",
+        "Complex.inv",
+        "Complex.normSq",
+        "Complex.re",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.neg_congr"
+      ],
+      "direct_theorem_dependents": [],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.add",
+        "Complex.div",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Complex.add_div",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex"
@@ -24958,6 +25050,51 @@
     },
     {
       "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (Complex.normSq x1) x2) -> Complex.Equiv (Complex.div (Complex.mul x0 x1) x1 x2 x3) x0))))",
+      "dependency_depth": 21,
+      "direct_declaration_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.Equiv.refl",
+        "Complex.Equiv.trans",
+        "Complex.div",
+        "Complex.div_self",
+        "Complex.mul",
+        "Complex.mul_congr",
+        "Complex.mul_div_assoc",
+        "Complex.mul_one",
+        "Complex.normSq",
+        "Complex.one",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "Complex.Equiv.refl",
+        "Complex.Equiv.trans",
+        "Complex.div_self",
+        "Complex.mul_congr",
+        "Complex.mul_div_assoc",
+        "Complex.mul_one"
+      ],
+      "direct_theorem_dependents": [],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.mul",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Complex.div_mul_cancel",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : Complex) -> ((x1 : AxNat) -> ((x2 : CReal.PosBound (Complex.normSq x0) x1) -> Complex.Equiv (Complex.div x0 x0 x1 x2) Complex.one)))",
       "dependency_depth": 20,
       "direct_declaration_dependencies": [
@@ -24973,7 +25110,9 @@
       "direct_theorem_dependencies": [
         "Complex.mul_inv_cancel"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "Complex.div_mul_cancel"
+      ],
       "direct_type_dependencies": [
         "CReal.PosBound",
         "Complex",
@@ -25595,6 +25734,7 @@
       "direct_theorem_dependents": [
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
+        "Complex.mul_div_assoc",
         "Complex.pow_add"
       ],
       "direct_type_dependencies": [
@@ -25707,6 +25847,7 @@
         "Complex.conj_div",
         "Complex.conj_pow",
         "Complex.div_congr",
+        "Complex.div_mul_cancel",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
         "Complex.one_is_root_of_unity",
@@ -25795,6 +25936,43 @@
         "F:complex-mul-conj"
       ],
       "kernel_declaration_id": "Complex.mul_conj",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex) -> ((x3 : AxNat) -> ((x4 : CReal.PosBound (Complex.normSq x2) x3) -> Complex.Equiv (Complex.div (Complex.mul x0 x1) x2 x3 x4) (Complex.mul x0 (Complex.div x1 x2 x3 x4)))))))",
+      "dependency_depth": 19,
+      "direct_declaration_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.inv",
+        "Complex.mul",
+        "Complex.mul_assoc",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "Complex.mul_assoc"
+      ],
+      "direct_theorem_dependents": [
+        "Complex.div_mul_cancel"
+      ],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.mul",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Complex.mul_div_assoc",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex"
@@ -25991,6 +26169,7 @@
         "CReal.neg_congr"
       ],
       "direct_theorem_dependents": [
+        "Complex.div_mul_cancel",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
         "Complex.ofNat_mul",
@@ -26244,6 +26423,73 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Complex.neg_congr",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (Complex.normSq x1) x2) -> Complex.Equiv (Complex.div (Complex.neg x0) x1 x2 x3) (Complex.neg (Complex.div x0 x1 x2 x3))))))",
+      "dependency_depth": 18,
+      "direct_declaration_dependencies": [
+        "And.intro",
+        "CReal.Equiv",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.PosBound",
+        "CReal.add",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_zero",
+        "CReal.neg",
+        "CReal.neg_congr",
+        "CReal.zero",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.im",
+        "Complex.inv",
+        "Complex.neg",
+        "Complex.normSq",
+        "Complex.re",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_zero",
+        "CReal.neg_congr"
+      ],
+      "direct_theorem_dependents": [],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.neg",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Complex.neg_div",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex"

@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1587,
+    "axiom_free_declarations": 1591,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
       "definition": 251,
       "inductive": 22,
       "recursor": 22,
-      "theorem": 1263
+      "theorem": 1267
     },
-    "declarations": 1617,
-    "direct_theorem_dependency_edges": 7341,
-    "theorems": 1263
+    "declarations": 1621,
+    "direct_theorem_dependency_edges": 7373,
+    "theorems": 1267
   },
   "declarations": [
     {
@@ -22465,6 +22465,68 @@
     },
     {
       "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex) -> ((x3 : AxNat) -> ((x4 : CReal.PosBound (Complex.normSq x2) x3) -> Complex.Equiv (Complex.div (Complex.add x0 x1) x2 x3 x4) (Complex.add (Complex.div x0 x2 x3 x4) (Complex.div x1 x2 x3 x4)))))))",
+      "declaration_kind": "theorem",
+      "direct_declaration_dependencies": [
+        "And.intro",
+        "CReal.Equiv",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.PosBound",
+        "CReal.add",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.neg",
+        "CReal.neg_congr",
+        "CReal.zero",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.add",
+        "Complex.div",
+        "Complex.im",
+        "Complex.inv",
+        "Complex.normSq",
+        "Complex.re",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.neg_congr"
+      ],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.add",
+        "Complex.div",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "id": "Complex.add_div",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : Complex) -> Complex.Equiv (Complex.add x0 (Complex.neg x0)) Complex.zero)",
       "declaration_kind": "theorem",
       "direct_declaration_dependencies": [
@@ -23479,6 +23541,48 @@
     },
     {
       "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (Complex.normSq x1) x2) -> Complex.Equiv (Complex.div (Complex.mul x0 x1) x1 x2 x3) x0))))",
+      "declaration_kind": "theorem",
+      "direct_declaration_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.Equiv.refl",
+        "Complex.Equiv.trans",
+        "Complex.div",
+        "Complex.div_self",
+        "Complex.mul",
+        "Complex.mul_congr",
+        "Complex.mul_div_assoc",
+        "Complex.mul_one",
+        "Complex.normSq",
+        "Complex.one",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "Complex.Equiv.refl",
+        "Complex.Equiv.trans",
+        "Complex.div_self",
+        "Complex.mul_congr",
+        "Complex.mul_div_assoc",
+        "Complex.mul_one"
+      ],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.mul",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "id": "Complex.div_mul_cancel",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : Complex) -> ((x1 : AxNat) -> ((x2 : CReal.PosBound (Complex.normSq x0) x1) -> Complex.Equiv (Complex.div x0 x0 x1 x2) Complex.one)))",
       "declaration_kind": "theorem",
       "direct_declaration_dependencies": [
@@ -24318,6 +24422,38 @@
     },
     {
       "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex) -> ((x3 : AxNat) -> ((x4 : CReal.PosBound (Complex.normSq x2) x3) -> Complex.Equiv (Complex.div (Complex.mul x0 x1) x2 x3 x4) (Complex.mul x0 (Complex.div x1 x2 x3 x4)))))))",
+      "declaration_kind": "theorem",
+      "direct_declaration_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.inv",
+        "Complex.mul",
+        "Complex.mul_assoc",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "Complex.mul_assoc"
+      ],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.mul",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "id": "Complex.mul_div_assoc",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex.Equiv (Complex.mul x0 x1) Complex.zero) -> Not (And (Complex.Apart x0 Complex.zero) (Complex.Apart x1 Complex.zero)))))",
       "declaration_kind": "theorem",
       "direct_declaration_dependencies": [
@@ -24728,6 +24864,70 @@
         "Complex.neg"
       ],
       "id": "Complex.neg_congr",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (Complex.normSq x1) x2) -> Complex.Equiv (Complex.div (Complex.neg x0) x1 x2 x3) (Complex.neg (Complex.div x0 x1 x2 x3))))))",
+      "declaration_kind": "theorem",
+      "direct_declaration_dependencies": [
+        "And.intro",
+        "CReal.Equiv",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.PosBound",
+        "CReal.add",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_zero",
+        "CReal.neg",
+        "CReal.neg_congr",
+        "CReal.zero",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.im",
+        "Complex.inv",
+        "Complex.neg",
+        "Complex.normSq",
+        "Complex.re",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_zero",
+        "CReal.neg_congr"
+      ],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.neg",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "id": "Complex.neg_div",
       "visible_in": [
         "complex"
       ]
@@ -85172,6 +85372,66 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.left_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.add_div",
+      "target": "CReal.neg_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "Complex.add_neg",
       "target": "CReal.Equiv.refl"
     },
@@ -86107,6 +86367,36 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "Complex.div_mul_cancel",
+      "target": "Complex.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.div_mul_cancel",
+      "target": "Complex.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.div_mul_cancel",
+      "target": "Complex.div_self"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.div_mul_cancel",
+      "target": "Complex.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.div_mul_cancel",
+      "target": "Complex.mul_div_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.div_mul_cancel",
+      "target": "Complex.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "Complex.div_self",
       "target": "Complex.mul_inv_cancel"
     },
@@ -86807,6 +87097,11 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "Complex.mul_div_assoc",
+      "target": "Complex.mul_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "Complex.mul_eq_zero_not_both_apart_zero",
       "target": "CReal.Equiv.refl"
     },
@@ -87188,6 +87483,71 @@
     {
       "relation": "direct-theorem-depends-on",
       "source": "Complex.neg_congr",
+      "target": "CReal.neg_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.left_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
+      "target": "CReal.mul_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Complex.neg_div",
       "target": "CReal.neg_congr"
     },
     {
