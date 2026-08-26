@@ -7059,6 +7059,47 @@ fn add_mixed_radix_indices(
     Ok(result)
 }
 
+fn connected_witt_complementary_autocorrelation_probe(
+    phase_spatial: &[[u128; 8]],
+    target: &PrincipalUnitStructure,
+) -> Result<(BigUint, BigUint, BigUint, BigUint), HayesError> {
+    let channels = phase_spatial
+        .iter()
+        .map(|residues| {
+            std::array::from_fn::<BigInt, 4, _>(|residue| {
+                BigInt::from(residues[residue]) - BigInt::from(residues[residue + 4])
+            })
+        })
+        .collect::<Vec<_>>();
+    let mut origin = BigUint::from(0_u8);
+    let mut square_sum = BigUint::from(0_u8);
+    let mut off_identity_max = BigUint::from(0_u8);
+    let mut off_identity_absolute_sum = BigUint::from(0_u8);
+    for shift in 0..target.group_order {
+        let mut correlation = BigInt::from(0_i8);
+        for index in 0..target.group_order {
+            let shifted = add_mixed_radix_indices(index, shift, &target.factors)?;
+            for residue in 0..4 {
+                correlation += &channels[index][residue] * &channels[shifted][residue];
+            }
+        }
+        let magnitude = correlation.magnitude().clone();
+        square_sum += magnitude.pow(2);
+        if shift == 0 {
+            origin = magnitude;
+        } else {
+            off_identity_max = off_identity_max.max(magnitude.clone());
+            off_identity_absolute_sum += magnitude;
+        }
+    }
+    Ok((
+        origin,
+        square_sum,
+        off_identity_max,
+        off_identity_absolute_sum,
+    ))
+}
+
 fn mixed_radix_character_conductor(
     mut character: usize,
     factors: &[PrincipalUnitFactor],
@@ -7378,6 +7419,13 @@ fn binary_connected_witt_spectrum(
                 HayesError::InvalidParameter("connected phase total overflow".to_owned())
             })?;
         }
+    }
+    if std::env::var_os("AXEYUM_COMPLEMENTARY_PROBE").is_some() {
+        let (origin, square_sum, off_identity_max, off_identity_absolute_sum) =
+            connected_witt_complementary_autocorrelation_probe(&phase_spatial, &target)?;
+        eprintln!(
+            "COMPLEMENTARY ell={ell} origin={origin} square_sum={square_sum} off_max={off_identity_max} off_l1={off_identity_absolute_sum}"
+        );
     }
 
     Ok(BinaryConnectedWittSpectrumReport {
@@ -11139,6 +11187,24 @@ mod tests {
             report.connected_witt_spectrum.conductor_spectra,
             report.valuation_correlations,
         );
+    }
+
+    #[test]
+    #[ignore = "temporary complementary-family sweep"]
+    fn connected_witt_complementary_family_sweep() {
+        for ell in 5..=10 {
+            for offset in [1_usize, 2] {
+                let interval_degree = ell - 1;
+                let degree = 2 * ell + offset - interval_degree;
+                binary_dyadic_autocorrelation_fibre_report(
+                    ell,
+                    degree,
+                    interval_degree,
+                    HayesLimits::default(),
+                )
+                .unwrap();
+            }
+        }
     }
 
     #[test]
