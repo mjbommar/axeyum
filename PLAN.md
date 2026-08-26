@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `0554b6b86` | Materialize the assumption-bearing imported bitwise candidate as a proof-free, axiom-free generalized reconstruction target with exact external receipt validation. |
 | 2026-08-26 | `2397eb08f` | Expose exact imported candidates through a separate ninth tier-R agent tool that preserves footprint-aware reconstruction routing and refuses invalid query shapes. |
 | 2026-08-26 | `1c7cb953e` | Add a machine-readable imported-candidate descriptor and separate footprint-aware search index; assumption-bearing candidates route to reconstruction before execution. |
 | 2026-08-26 | `6e0f87c2d` | Export and independently audit upstream `Nat.testBit_bitwise`; preserve its exact 29-dependency, five-assumption footprint as reconstruct-required guidance rather than contract evidence. |
