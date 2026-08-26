@@ -331,6 +331,203 @@ where
     }
 }
 
+/// A recursively split, file-backed cube refutation.
+///
+/// A leaf carries an ordinary DRAT proof of the formula at that node. A split
+/// carries an exhaustive set of child cubes, one recursively checkable child
+/// per cube, and a DRAT proof that the child cubes cover the node. Formulas are
+/// never supplied by the artifact: the checker rebuilds every child as
+/// `parent AND cube` while descending.
+pub enum CubeRefutationReaderTree<R> {
+    /// An ordinary DRAT refutation of the current formula.
+    Leaf(R),
+    /// An exhaustive recursive split of the current formula.
+    Split {
+        /// Child cubes, in artifact order.
+        cubes: Vec<Cube>,
+        /// One proof tree per child cube.
+        children: Vec<CubeRefutationReaderTree<R>>,
+        /// DRAT refutation of the covering formula for `cubes`.
+        covering_proof: R,
+    },
+}
+
+/// Why a recursive cube refutation did not certify.
+#[derive(Debug)]
+pub enum CubeTreeCheckError {
+    /// A split contained no cubes.
+    EmptyCubeSet {
+        /// Zero-based child-index path to the split.
+        path: Vec<usize>,
+    },
+    /// The cube and child counts differ.
+    ChildCountMismatch {
+        /// Zero-based child-index path to the split.
+        path: Vec<usize>,
+        /// Number of declared cubes.
+        cubes: usize,
+        /// Number of supplied child trees.
+        children: usize,
+    },
+    /// A child cube could not be appended to its parent formula.
+    InvalidCube {
+        /// Zero-based child-index path including the invalid child.
+        path: Vec<usize>,
+        /// Formula-construction error.
+        source: CnfError,
+    },
+    /// A leaf proof parsed but did not derive the empty clause.
+    LeafIncomplete {
+        /// Zero-based child-index path to the leaf.
+        path: Vec<usize>,
+    },
+    /// A leaf proof was invalid.
+    LeafInvalid {
+        /// Zero-based child-index path to the leaf.
+        path: Vec<usize>,
+        /// DRAT-checking error.
+        source: DratError,
+    },
+    /// The covering formula could not be constructed.
+    CoveringFormulaInvalid {
+        /// Zero-based child-index path to the split.
+        path: Vec<usize>,
+        /// Formula-construction error.
+        source: CnfError,
+    },
+    /// The covering proof parsed but did not derive the empty clause.
+    CoveringProofIncomplete {
+        /// Zero-based child-index path to the split.
+        path: Vec<usize>,
+    },
+    /// The covering proof was invalid.
+    CoveringProofInvalid {
+        /// Zero-based child-index path to the split.
+        path: Vec<usize>,
+        /// DRAT-checking error.
+        source: DratError,
+    },
+}
+
+impl fmt::Display for CubeTreeCheckError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EmptyCubeSet { path } => write!(f, "empty cube split at {path:?}"),
+            Self::ChildCountMismatch {
+                path,
+                cubes,
+                children,
+            } => write!(
+                f,
+                "cube/child count mismatch at {path:?}: {cubes} cubes, {children} children"
+            ),
+            Self::InvalidCube { path, source } => {
+                write!(f, "invalid cube at {path:?}: {source}")
+            }
+            Self::LeafIncomplete { path } => {
+                write!(f, "leaf at {path:?} did not derive the empty clause")
+            }
+            Self::LeafInvalid { path, source } => {
+                write!(f, "invalid leaf proof at {path:?}: {source}")
+            }
+            Self::CoveringFormulaInvalid { path, source } => {
+                write!(f, "invalid covering formula at {path:?}: {source}")
+            }
+            Self::CoveringProofIncomplete { path } => {
+                write!(
+                    f,
+                    "covering proof at {path:?} did not derive the empty clause"
+                )
+            }
+            Self::CoveringProofInvalid { path, source } => {
+                write!(f, "invalid covering proof at {path:?}: {source}")
+            }
+        }
+    }
+}
+
+impl core::error::Error for CubeTreeCheckError {}
+
+/// Checks a recursively split refutation with file-backed backward DRAT.
+///
+/// Every child formula and every covering formula is reconstructed from the
+/// trusted root formula and the artifact's literal cubes. The `path` in an
+/// error is the zero-based child-index path from the root, so a failed leaf in
+/// a large adaptive tree is named precisely.
+///
+/// # Errors
+///
+/// Rejects an empty or malformed split, an out-of-range cube literal, or any
+/// incomplete/invalid leaf or covering proof.
+pub fn check_cube_refutation_reader_tree<R: BufRead>(
+    base: &CnfFormula,
+    tree: CubeRefutationReaderTree<R>,
+) -> Result<(), CubeTreeCheckError> {
+    fn visit<R: BufRead>(
+        formula: &CnfFormula,
+        tree: CubeRefutationReaderTree<R>,
+        path: &mut Vec<usize>,
+    ) -> Result<(), CubeTreeCheckError> {
+        match tree {
+            CubeRefutationReaderTree::Leaf(proof) => {
+                match check_drat_backward_reader(formula, proof) {
+                    Ok(true) => Ok(()),
+                    Ok(false) => Err(CubeTreeCheckError::LeafIncomplete { path: path.clone() }),
+                    Err(source) => Err(CubeTreeCheckError::LeafInvalid {
+                        path: path.clone(),
+                        source,
+                    }),
+                }
+            }
+            CubeRefutationReaderTree::Split {
+                cubes,
+                children,
+                covering_proof,
+            } => {
+                if cubes.is_empty() {
+                    return Err(CubeTreeCheckError::EmptyCubeSet { path: path.clone() });
+                }
+                if cubes.len() != children.len() {
+                    return Err(CubeTreeCheckError::ChildCountMismatch {
+                        path: path.clone(),
+                        cubes: cubes.len(),
+                        children: children.len(),
+                    });
+                }
+                for (index, (cube, child)) in cubes.iter().zip(children).enumerate() {
+                    path.push(index);
+                    let child_formula = augmented_formula(formula, cube).map_err(|source| {
+                        CubeTreeCheckError::InvalidCube {
+                            path: path.clone(),
+                            source,
+                        }
+                    })?;
+                    visit(&child_formula, child, path)?;
+                    path.pop();
+                }
+                let covering = covering_formula(formula, &cubes).map_err(|source| {
+                    CubeTreeCheckError::CoveringFormulaInvalid {
+                        path: path.clone(),
+                        source,
+                    }
+                })?;
+                match check_drat_backward_reader(&covering, covering_proof) {
+                    Ok(true) => Ok(()),
+                    Ok(false) => {
+                        Err(CubeTreeCheckError::CoveringProofIncomplete { path: path.clone() })
+                    }
+                    Err(source) => Err(CubeTreeCheckError::CoveringProofInvalid {
+                        path: path.clone(),
+                        source,
+                    }),
+                }
+            }
+        }
+    }
+
+    visit(base, tree, &mut Vec::new())
+}
+
 /// Why [`boolean_product_cubes`] declined to generate a cube set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CubeGenError {
@@ -678,6 +875,62 @@ mod tests {
         let covering = Cursor::new(write_drat(&refutation.covering_proof).into_bytes());
         check_cube_refutation_backward_readers(&base, &refutation.cubes, readers, covering)
             .expect("textual file-backed composition must check");
+    }
+
+    #[test]
+    fn recursive_file_backed_checker_rebuilds_every_level() {
+        let (base, s0, s1, _x) = selector_gated_unsat();
+        let root_cubes = boolean_product_cubes(&[s0]).unwrap();
+        let (root_outcome, _) = certify_by_cubes(&base, root_cubes, None, 10_000, 10_000);
+        let CubeCertifyOutcome::Unsat(root) = root_outcome else {
+            panic!("expected root refutation");
+        };
+
+        let first_formula = augmented_formula(&base, &root.cubes[0]).unwrap();
+        let nested_cubes = boolean_product_cubes(&[s1]).unwrap();
+        let (nested_outcome, _) =
+            certify_by_cubes(&first_formula, nested_cubes, None, 10_000, 10_000);
+        let CubeCertifyOutcome::Unsat(nested) = nested_outcome else {
+            panic!("expected nested refutation");
+        };
+        let nested_children = nested
+            .cube_proofs
+            .iter()
+            .map(|proof| {
+                CubeRefutationReaderTree::Leaf(Cursor::new(write_drat(proof).into_bytes()))
+            })
+            .collect();
+        let tree = CubeRefutationReaderTree::Split {
+            cubes: root.cubes.clone(),
+            children: vec![
+                CubeRefutationReaderTree::Split {
+                    cubes: nested.cubes,
+                    children: nested_children,
+                    covering_proof: Cursor::new(write_drat(&nested.covering_proof).into_bytes()),
+                },
+                CubeRefutationReaderTree::Leaf(Cursor::new(
+                    write_drat(&root.cube_proofs[1]).into_bytes(),
+                )),
+            ],
+            covering_proof: Cursor::new(write_drat(&root.covering_proof).into_bytes()),
+        };
+        check_cube_refutation_reader_tree(&base, tree)
+            .expect("recursive composition must check from the root formula");
+    }
+
+    #[test]
+    fn recursive_file_backed_checker_rejects_a_missing_child() {
+        let (base, s0, _s1, _x) = selector_gated_unsat();
+        let cubes = boolean_product_cubes(&[s0]).unwrap();
+        let tree = CubeRefutationReaderTree::Split {
+            cubes,
+            children: vec![CubeRefutationReaderTree::Leaf(Cursor::new(Vec::new()))],
+            covering_proof: Cursor::new(Vec::new()),
+        };
+        assert!(matches!(
+            check_cube_refutation_reader_tree(&base, tree),
+            Err(CubeTreeCheckError::ChildCountMismatch { .. })
+        ));
     }
 
     #[test]
