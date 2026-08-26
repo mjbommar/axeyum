@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 312] = [
+    let expected: [(&str, crate::NameId, &str); 313] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -510,6 +510,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.geomHalfInvLeafBound",
             p.geom_half_inv_leaf_bound,
+            "theorem",
+        ),
+        (
+            "CReal.geomCauchyOrderedHalf",
+            p.geom_cauchy_ordered_half,
             "theorem",
         ),
         (

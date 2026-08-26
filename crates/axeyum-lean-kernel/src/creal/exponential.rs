@@ -1546,18 +1546,6 @@ fn two_ds_mul_half_rat_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     proof
 }
 
-/// `λ i, CReal.pow half i` — the summand [`CRealPrelude::geom_cauchy`] is
-/// stated over. Same shape as `geometric.rs::pow_fn(half)` (private there,
-/// reproduced here).
-fn geom_half_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
-    let h = half(d, p);
-    let i_fv = d.fresh_fvar();
-    let i = d.kernel().fvar(i_fv);
-    let body = d.const_app(p.pow, &[h, i]);
-    let nat = d.nat_ty();
-    d.lam_fv(i_fv, nat, body)
-}
-
 /// `CReal.geomHalfInvLeafBound`. See the field documentation
 /// ([`CRealPrelude::geom_half_inv_leaf_bound`]) for the statement and the
 /// derivation.
@@ -1791,7 +1779,351 @@ fn declare_geom_half_inv_leaf_bound(
     })
 }
 
-/// Admit `CReal.geom_half_inv_leaf_bound`.
+/// Rebuild `a_real := add one (neg half)` and `h_pos_a_real : PosBound
+/// a_real 1`, the same recipe [`declare_geom_half_inv_leaf_bound`] uses
+/// internally. Every call here is a plain constant application at fixed
+/// arguments — no fresh free variable is minted — so this reconstruction is
+/// deterministic and lands on the identical term
+/// [`CRealPrelude::geom_half_inv_leaf_bound`]'s own stored type mentions,
+/// letting a call to that theorem plug directly into an expression built
+/// from this pair with no extra `Equiv`/`Eq` bridge.
+fn geom_half_a_real_pos_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId) {
+    let one_nat = d.num(1);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let h = half(d, p);
+    let neg_h = cneg(d, p, h);
+    let a_real = cadd(d, p, one_c, neg_h);
+    let hp_half = d.lemma(p.le_refl, &[h]);
+    let eq_a_half = one_sub_half_equiv_half(d, p);
+    let eq_half_a = d.lemma(p.equiv_symm, &[a_real, h, eq_a_half]);
+    let refl_half = d.lemma(p.equiv_refl, &[h]);
+    let h_pos_a_real = d.lemma(
+        p.le_congr,
+        &[h, h, h, a_real, refl_half, eq_half_a, hp_half],
+    );
+    let _ = one_nat;
+    (a_real, h_pos_a_real)
+}
+
+/// `CReal.geomCauchyOrderedHalf`. See the field documentation
+/// ([`CRealPrelude::geom_cauchy_ordered_half`]) for the statement and the
+/// derivation.
+#[allow(clippy::too_many_lines)]
+fn declare_geom_cauchy_ordered_half(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    let h = half(d, p);
+    let (a_real, h_pos_a_real) = geom_half_a_real_pos_bound(d, p);
+
+    let half_rat_term = half_rat(d, p);
+    let half_le_zero = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, one_nat]);
+    let rzero_here = rzero(d, rat);
+    let h0 = d.lemma(p.of_rat_le, &[rzero_here, half_rat_term, half_le_zero]);
+
+    let f = pow_half_fn(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hle_ty = d.le(a, b);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    let raw = d.lemma(
+        p.geom_pair_within,
+        &[h, h0, one_nat, h_pos_a_real, a, b, hle],
+    );
+
+    // Reconstruct `diff`/`total` exactly as `geom_pair_within`'s own body
+    // builds them, so `weaken` below sees the SAME `bound` its `proof`
+    // argument (`raw`) actually carries.
+    let sum_f_b = d.const_app(p.sum_range, &[f, b]);
+    let sum_f_a = d.const_app(p.sum_range, &[f, a]);
+    let y_pt = sample(d, p, sum_f_b, b);
+    let z_pt = sample(d, p, sum_f_a, a);
+    let diff = rsub(d, rat, y_pt, z_pt);
+
+    let t = shift(d, b);
+    let t1 = div_succ(d, p, 1, t);
+    let b1 = div_succ(d, p, 1, b);
+    let a1 = div_succ(d, p, 1, a);
+    let pow_half_a = cpow(d, p, h, a);
+    let inv_expr = cinv(d, p, a_real, one_nat, h_pos_a_real);
+    let y_a = cmul(d, p, inv_expr, pow_half_a);
+    let v = sample(d, p, y_a, b);
+    let b2 = div_succ(d, p, 2, b);
+
+    let bxy = radd(d, t1, b1);
+    let byz = radd(d, v, b2);
+    let bzw = radd(d, a1, t1);
+    let bxy_byz = radd(d, bxy, byz);
+    let total = radd(d, bxy_byz, bzw);
+
+    // --- widen: `t1 -> b1` (twice) and `v -> v_bound` -------------------
+    let wt = d.lemma(rat.nat_div_succ_le_scaled, &[one_nat, one_nat, b]);
+    // wt : le t1 b1
+
+    let hv_at_a = d.lemma(p.geom_half_inv_leaf_bound, &[a]);
+    // hv_at_a : le y_a (ofRat (natDivSucc 2 a))
+    let raw_v = d.apply(hv_at_a, &[b]);
+    // raw_v : (defeq) Rat.le (Rat.sub v a2) b2
+    let a2 = div_succ(d, p, 2, a);
+    let y_leaf_le = d.lemma(rat.le_of_sub_le, &[v, a2, b2, raw_v]);
+    // y_leaf_le : le v (radd a2 b2) = le v vb
+    let vb = radd(d, a2, b2);
+
+    let bxy_w = radd(d, b1, b1);
+    let byz_w = radd(d, vb, b2);
+    let bzw_w = radd(d, a1, b1);
+
+    let refl_b1 = d.lemma(rat.le_refl, &[b1]);
+    let refl_a1 = d.lemma(rat.le_refl, &[a1]);
+    let refl_b2 = d.lemma(rat.le_refl, &[b2]);
+
+    let step1 = d.lemma(rat.add_le_add, &[t1, b1, b1, b1, wt, refl_b1]);
+    // step1 : le bxy bxy_w
+    let step2 = d.lemma(rat.add_le_add, &[v, vb, b2, b2, y_leaf_le, refl_b2]);
+    // step2 : le byz byz_w
+    let step3 = d.lemma(rat.add_le_add, &[bxy, bxy_w, byz, byz_w, step1, step2]);
+    // step3 : le bxy_byz (radd bxy_w byz_w)
+    let step4 = d.lemma(rat.add_le_add, &[a1, a1, t1, b1, refl_a1, wt]);
+    // step4 : le bzw bzw_w
+    let bxy_byz_w = radd(d, bxy_w, byz_w);
+    let order = d.lemma(
+        rat.add_le_add,
+        &[bxy_byz, bxy_byz_w, bzw, bzw_w, step3, step4],
+    );
+    // order : le total wider
+    let wider = radd(d, bxy_byz_w, bzw_w);
+    // wider = ((b1+b1)+(vb+b2))+(a1+b1) = ((b1+b1)+((a2+b2)+b2))+(a1+b1)
+
+    // --- reassociate + fuse: `wider` -> `natDivSucc 7 b + natDivSucc 7 a` -----
+    let m_right = radd(d, b2, b2); // b2+b2
+    let m = radd(d, bxy_w, m_right); // (b1+b1)+(b2+b2)
+    let a2_plus_m_right = radd(d, a2, m_right);
+
+    // s1 : ((b1+b1)+(a2+(b2+b2)))+(a1+b1)
+    let step_r1 = d.lemma(rat.add_assoc, &[a2, b2, b2]);
+    // step_r1 : Eq vb a2_plus_m_right
+    let s1_inner = radd(d, bxy_w, a2_plus_m_right);
+    let s1 = radd(d, s1_inner, bzw_w);
+    let step_r1_lifted = rcongr(d, byz_w, a2_plus_m_right, step_r1, &|d, t| {
+        let inner = radd(d, bxy_w, t);
+        radd(d, inner, bzw_w)
+    });
+    // step_r1_lifted : Eq wider s1
+
+    // s2 : (((b1+b1)+a2)+(b2+b2))+(a1+b1)
+    let bxy_w_plus_a2 = radd(d, bxy_w, a2);
+    let step_r2 = assoc_rev_eq(d, p, bxy_w, a2, m_right);
+    // step_r2 : Eq s1_inner (bxy_w_plus_a2+m_right)
+    let s2_inner = radd(d, bxy_w_plus_a2, m_right);
+    let s2 = radd(d, s2_inner, bzw_w);
+    let step_r2_lifted = rcongr(d, s1_inner, s2_inner, step_r2, &|d, t| radd(d, t, bzw_w));
+    // step_r2_lifted : Eq s1 s2
+
+    // s3 : ((a2+(b1+b1))+(b2+b2))+(a1+b1)
+    let a2_plus_bxy_w = radd(d, a2, bxy_w);
+    let step_r3 = d.lemma(rat.add_comm, &[bxy_w, a2]);
+    // step_r3 : Eq bxy_w_plus_a2 a2_plus_bxy_w
+    let s3_inner = radd(d, a2_plus_bxy_w, m_right);
+    let s3 = radd(d, s3_inner, bzw_w);
+    let step_r3_lifted = rcongr(d, bxy_w_plus_a2, a2_plus_bxy_w, step_r3, &|d, t| {
+        let inner = radd(d, t, m_right);
+        radd(d, inner, bzw_w)
+    });
+    // step_r3_lifted : Eq s2 s3
+
+    // s4 : (a2+m)+(a1+b1)
+    let step_r4 = d.lemma(rat.add_assoc, &[a2, bxy_w, m_right]);
+    // step_r4 : Eq s3_inner (a2+m)
+    let a2_plus_m = radd(d, a2, m);
+    let s4 = radd(d, a2_plus_m, bzw_w);
+    let step_r4_lifted = rcongr(d, s3_inner, a2_plus_m, step_r4, &|d, t| radd(d, t, bzw_w));
+    // step_r4_lifted : Eq s3 s4
+
+    // s5 : a2+(m+(a1+b1))
+    let step_r5 = d.lemma(rat.add_assoc, &[a2, m, bzw_w]);
+    // step_r5 : Eq s4 (a2+(m+bzw_w)) -- top-level, no lifting needed
+    let m_plus_bzw_w = radd(d, m, bzw_w);
+    let s5 = radd(d, a2, m_plus_bzw_w);
+
+    // s6 : a2+((m+a1)+b1)
+    let step_r6 = assoc_rev_eq(d, p, m, a1, b1);
+    // step_r6 : Eq m_plus_bzw_w ((m+a1)+b1)
+    let m_plus_a1 = radd(d, m, a1);
+    let m_plus_a1_plus_b1 = radd(d, m_plus_a1, b1);
+    let s6 = radd(d, a2, m_plus_a1_plus_b1);
+    let step_r6_lifted = rcongr(d, m_plus_bzw_w, m_plus_a1_plus_b1, step_r6, &|d, t| {
+        radd(d, a2, t)
+    });
+    // step_r6_lifted : Eq s5 s6
+
+    // s7 : a2+((a1+m)+b1)
+    let step_r7 = d.lemma(rat.add_comm, &[m, a1]);
+    // step_r7 : Eq m_plus_a1 (a1+m)
+    let a1_plus_m = radd(d, a1, m);
+    let a1_plus_m_plus_b1 = radd(d, a1_plus_m, b1);
+    let s7 = radd(d, a2, a1_plus_m_plus_b1);
+    let step_r7_lifted = rcongr(d, m_plus_a1, a1_plus_m, step_r7, &|d, t| {
+        let inner = radd(d, t, b1);
+        radd(d, a2, inner)
+    });
+    // step_r7_lifted : Eq s6 s7
+
+    // s8 : a2+(a1+(m+b1))
+    let step_r8 = d.lemma(rat.add_assoc, &[a1, m, b1]);
+    // step_r8 : Eq a1_plus_m_plus_b1 (a1+(m+b1))
+    let m_plus_b1 = radd(d, m, b1);
+    let a1_plus_m_plus_b1_r = radd(d, a1, m_plus_b1);
+    let s8 = radd(d, a2, a1_plus_m_plus_b1_r);
+    let step_r8_lifted = rcongr(
+        d,
+        a1_plus_m_plus_b1,
+        a1_plus_m_plus_b1_r,
+        step_r8,
+        &|d, t| radd(d, a2, t),
+    );
+    // step_r8_lifted : Eq s7 s8
+
+    // s9 : (a2+a1)+(m+b1)
+    let step_r9 = assoc_rev_eq(d, p, a2, a1, m_plus_b1);
+    // step_r9 : Eq s8 ((a2+a1)+m_plus_b1) -- top-level, no lifting needed
+    let a2_plus_a1 = radd(d, a2, a1);
+    let s9 = radd(d, a2_plus_a1, m_plus_b1);
+
+    // s10 : a3+(m+b1)
+    let (a3, step_r10) = fuse_same_index(d, p, two_nat, one_nat, a);
+    // step_r10 : Eq a2_plus_a1 a3
+    let s10 = radd(d, a3, m_plus_b1);
+    let step_r10_lifted = rcongr(d, a2_plus_a1, a3, step_r10, &|d, t| radd(d, t, m_plus_b1));
+    // step_r10_lifted : Eq s9 s10
+
+    // s11 : a3+((bb2+m_right)+b1)
+    let (bb2, step_r11) = fuse_same_index(d, p, one_nat, one_nat, b);
+    // step_r11 : Eq bxy_w bb2
+    let bb2_plus_m_right = radd(d, bb2, m_right);
+    let bb2_plus_m_right_plus_b1 = radd(d, bb2_plus_m_right, b1);
+    let s11 = radd(d, a3, bb2_plus_m_right_plus_b1);
+    let step_r11_lifted = rcongr(d, bxy_w, bb2, step_r11, &|d, t| {
+        let inner_m = radd(d, t, m_right);
+        let inner_mb1 = radd(d, inner_m, b1);
+        radd(d, a3, inner_mb1)
+    });
+    // step_r11_lifted : Eq s10 s11
+
+    // s12 : a3+((bb2+bb4)+b1)
+    let (bb4, step_r12) = fuse_same_index(d, p, two_nat, two_nat, b);
+    // step_r12 : Eq m_right bb4
+    let bb2_plus_bb4 = radd(d, bb2, bb4);
+    let bb2_plus_bb4_plus_b1 = radd(d, bb2_plus_bb4, b1);
+    let s12 = radd(d, a3, bb2_plus_bb4_plus_b1);
+    let step_r12_lifted = rcongr(d, m_right, bb4, step_r12, &|d, t| {
+        let inner_m = radd(d, bb2, t);
+        let inner_mb1 = radd(d, inner_m, b1);
+        radd(d, a3, inner_mb1)
+    });
+    // step_r12_lifted : Eq s11 s12
+
+    // s13 : a3+(bb6+b1)
+    let four_nat = d.num(4);
+    let (bb6, step_r13) = fuse_same_index(d, p, two_nat, four_nat, b);
+    // step_r13 : Eq bb2_plus_bb4 bb6
+    let bb6_plus_b1 = radd(d, bb6, b1);
+    let s13 = radd(d, a3, bb6_plus_b1);
+    let step_r13_lifted = rcongr(d, bb2_plus_bb4, bb6, step_r13, &|d, t| {
+        let inner_mb1 = radd(d, t, b1);
+        radd(d, a3, inner_mb1)
+    });
+    // step_r13_lifted : Eq s12 s13
+
+    // s14 : a3+b7
+    let six_nat = d.num(6);
+    let (b7, step_r14) = fuse_same_index(d, p, six_nat, one_nat, b);
+    // step_r14 : Eq bb6_plus_b1 b7
+    let s14 = radd(d, a3, b7);
+    let step_r14_lifted = rcongr(d, bb6_plus_b1, b7, step_r14, &|d, t| radd(d, a3, t));
+    // step_r14_lifted : Eq s13 s14
+
+    // s15 : b7+a3
+    let step_r15 = d.lemma(rat.add_comm, &[a3, b7]);
+    // step_r15 : Eq s14 s15 -- top-level, no lifting needed
+    let s15 = radd(d, b7, a3);
+
+    let (_, wider_to_s15) = rchain(
+        d,
+        wider,
+        &[
+            (s1, step_r1_lifted),
+            (s2, step_r2_lifted),
+            (s3, step_r3_lifted),
+            (s4, step_r4_lifted),
+            (s5, step_r5),
+            (s6, step_r6_lifted),
+            (s7, step_r7_lifted),
+            (s8, step_r8_lifted),
+            (s9, step_r9),
+            (s10, step_r10_lifted),
+            (s11, step_r11_lifted),
+            (s12, step_r12_lifted),
+            (s13, step_r13_lifted),
+            (s14, step_r14_lifted),
+            (s15, step_r15),
+        ],
+    );
+
+    let le_wider_s15 = {
+        let refl_wider = d.lemma(rat.le_refl, &[wider]);
+        rat_eq_rewrite(d, wider, s15, wider_to_s15, refl_wider, &|d, t| {
+            rle(d, rat, wider, t)
+        })
+    };
+
+    let a7 = div_succ(d, p, 7, a);
+    let three_nat = d.num(3);
+    let pad_le = d.lemma(rat.nat_div_succ_le_add_left, &[three_nat, four_nat, a]);
+    // pad_le : le a3 a7 (3+4 reduces to 7)
+    let refl_b7 = d.lemma(rat.le_refl, &[b7]);
+    let le_s15_target = d.lemma(rat.add_le_add, &[b7, b7, a3, a7, refl_b7, pad_le]);
+    let target = radd(d, b7, a7);
+    let le_wider_target = d.lemma(
+        rat.le_trans,
+        &[wider, s15, target, le_wider_s15, le_s15_target],
+    );
+    let final_order = d.lemma(
+        rat.le_trans,
+        &[total, wider, target, order, le_wider_target],
+    );
+
+    let result = weaken(d, p, diff, total, target, raw, final_order);
+
+    let value = {
+        let with_hle = d.lam_fv(hle_fv, hle_ty, result);
+        let over_b = d.lam_fv(b_fv, nat, with_hle);
+        d.lam_fv(a_fv, nat, over_b)
+    };
+    let ty = {
+        let claim = within(d, p, diff, target);
+        let after_hle = d.arrow(hle_ty, claim);
+        let over_b = d.pi_fv(b_fv, nat, after_hle);
+        d.pi_fv(a_fv, nat, over_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_cauchy_ordered_half,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.geom_half_inv_leaf_bound` and `CReal.geom_cauchy_ordered_half`.
 ///
 /// # Errors
 ///
@@ -1801,5 +2133,6 @@ pub(super) fn declare_geom_cauchy_family(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
 ) -> Result<(), KernelError> {
-    declare_geom_half_inv_leaf_bound(d, p)
+    declare_geom_half_inv_leaf_bound(d, p)?;
+    declare_geom_cauchy_ordered_half(d, p)
 }
