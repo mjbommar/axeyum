@@ -4423,6 +4423,173 @@ fn rat_poly_eval_computation_check_can_fail() {
     );
 }
 
+// --- `Rat.pow_natDivSucc_two` (`rat_prelude::pow_bridge`) -------------------
+
+/// `Rat.pow_natDivSucc_two` is a checked `Theorem` with an empty axiom
+/// footprint, read out of the kernel (`built()` already implies the kernel
+/// accepted the proof — a rejection would have made `build_rat_prelude`
+/// return `Err` and `built()`'s own `.expect` panic, so this test's job is
+/// the *kind*/footprint check, not re-proving acceptance).
+#[test]
+fn the_pow_bridge_is_axiom_free() {
+    let (kernel, p) = built();
+    let declaration = kernel
+        .environment()
+        .get(p.pow_nat_div_succ_two)
+        .expect("Rat.pow_natDivSucc_two was interned but never declared");
+    assert!(
+        matches!(declaration, Declaration::Theorem { .. }),
+        "Rat.pow_natDivSucc_two must be a checked Theorem, found a different kind"
+    );
+    let footprint: Vec<String> = kernel
+        .axiom_footprint(p.pow_nat_div_succ_two)
+        .into_iter()
+        .map(|entry| kernel.display_name(entry).to_string())
+        .collect();
+    assert!(
+        footprint.is_empty(),
+        "Rat.pow_natDivSucc_two rests on {footprint:?}"
+    );
+}
+
+/// **The mandatory concrete computation test**, on BOTH sides of the bridge
+/// independently: `Rat.pow (Rat.natDivSucc 1 1) 3` (repeated multiplication
+/// of `1/2`) and `Rat.normalize 1 (2^3) _` (the direct `1/8`) each reduce,
+/// by `Eq.refl` alone, to the SAME literal `Rat.natDivSucc 1 7` (`1/8`).
+/// This does not use `Rat.pow_natDivSucc_two` at all, so it cannot be fooled
+/// by a bridge that type-checks but relates the wrong two things.
+#[test]
+fn pow_nat_div_succ_two_sides_compute_to_one_eighth() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{normalize, req, rpow, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let one_nat = d.num(1);
+    let g = d.const_app(p.nat_div_succ, &[one_nat, one_nat]);
+    let three_n = d.num(3);
+    let pow_g_3 = rpow(&mut d, p, g, three_n);
+    let seven_nat = d.num(7);
+    let one_eighth = d.const_app(p.nat_div_succ, &[one_nat, seven_nat]);
+
+    // Side 1: `pow g 3` reduces to `natDivSucc 1 7`.
+    {
+        let stmt = req(&mut d, pow_g_3, one_eighth);
+        let proof = rrefl(&mut d, pow_g_3);
+        let name = d
+            .kernel()
+            .name_str(anon, "Check.pow_half_cubed_is_one_eighth");
+        d.declare_theorem(name, stmt, proof).unwrap_or_else(|e| {
+            panic!(
+                "Rat.pow (natDivSucc 1 1) 3 did not reduce to 1/8: {}",
+                d.explain(&e)
+            )
+        });
+    }
+
+    // Side 2: `normalize 1 (2^3) _` also reduces to `natDivSucc 1 7`.
+    {
+        let two = d.num(2);
+        let pow2_3 = d.pow(two, three_n);
+        let one_int = d.of_nat(one_nat);
+        let nat = p.int.nat;
+        let two_pos = d.lemma(nat.le_succ, &[one_nat]);
+        let pow_pos_fn = d.lemma(nat.pow_pos, &[two, three_n]);
+        let w = d.apply(pow_pos_fn, &[two_pos]);
+        let target_3 = normalize(&mut d, one_int, pow2_3, w);
+        let stmt = req(&mut d, target_3, one_eighth);
+        let proof = rrefl(&mut d, target_3);
+        let name = d
+            .kernel()
+            .name_str(anon, "Check.normalize_one_two_cubed_is_one_eighth");
+        d.declare_theorem(name, stmt, proof).unwrap_or_else(|e| {
+            panic!(
+                "Rat.normalize 1 (2^3) _ did not reduce to 1/8: {}",
+                d.explain(&e)
+            )
+        });
+    }
+}
+
+/// The negative control for the check above: `pow (natDivSucc 1 1) 3 =
+/// natDivSucc 1 6` (i.e. `1/8 = 1/7`) must be REFUSED, or the reduction
+/// check proves nothing.
+#[test]
+fn pow_nat_div_succ_two_reduction_check_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rpow, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let one_nat = d.num(1);
+    let g = d.const_app(p.nat_div_succ, &[one_nat, one_nat]);
+    let three_n = d.num(3);
+    let pow_g_3 = rpow(&mut d, p, g, three_n);
+    let six_nat = d.num(6);
+    let one_seventh = d.const_app(p.nat_div_succ, &[one_nat, six_nat]);
+    let stmt = req(&mut d, pow_g_3, one_seventh);
+    let proof = rrefl(&mut d, pow_g_3);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.pow_half_cubed_is_not_one_seventh");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `Rat.pow (natDivSucc 1 1) 3 = natDivSucc 1 6`, so the \
+         reduction check proves nothing"
+    );
+}
+
+/// **The mandatory symbolic-construction cross-check.** `Rat.pow_natDivSucc_two`,
+/// applied at the SAME concrete `n = 3` used above, must have exactly the type
+/// `Eq Rat (pow g 3) (target 3)` built independently of the theorem's own
+/// (symbolic) proof — confirming the general theorem is genuinely about this
+/// value and not some other pair that merely happens to type-check for every
+/// `n` it was tried at (the failure mode `creal/exponential.rs`'s own module
+/// note in this crate's `CLAUDE.md` warns concrete-only testing can hide).
+#[test]
+fn pow_nat_div_succ_two_matches_its_general_theorem_at_three() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{normalize, req, rpow};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let one_nat = d.num(1);
+    let g = d.const_app(p.nat_div_succ, &[one_nat, one_nat]);
+    let three_n = d.num(3);
+    let pow_g_3 = rpow(&mut d, p, g, three_n);
+
+    let two = d.num(2);
+    let pow2_3 = d.pow(two, three_n);
+    let one_int = d.of_nat(one_nat);
+    let nat = p.int.nat;
+    let two_pos = d.lemma(nat.le_succ, &[one_nat]);
+    let pow_pos_fn = d.lemma(nat.pow_pos, &[two, three_n]);
+    let w = d.apply(pow_pos_fn, &[two_pos]);
+    let target_3 = normalize(&mut d, one_int, pow2_3, w);
+
+    let expected_ty = req(&mut d, pow_g_3, target_3);
+    let instantiated = d.lemma(p.pow_nat_div_succ_two, &[three_n]);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.pow_bridge_at_three_matches_expected_type");
+    d.declare_theorem(name, expected_ty, instantiated)
+        .unwrap_or_else(|e| {
+            panic!(
+                "Rat.pow_natDivSucc_two at n=3 has a different type than expected: {}",
+                d.explain(&e)
+            )
+        });
+}
+
 /// `polyEval_mul` (the finite Cauchy product) is NOT attempted in this
 /// prelude, and this test is the kernel-confirmed reason why: the natural
 /// candidate statement `polyEval (conv a b) (m+n-1) x = polyEval a m x *
