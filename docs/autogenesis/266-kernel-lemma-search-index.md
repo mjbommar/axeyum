@@ -93,3 +93,13 @@ The first producer evaluation should then ask whether bounded retrieval from
 this artifact improves held-out conversion without per-target code. That result,
 not graph density by itself, decides whether additional semantic enrichment is
 worth its maintenance cost.
+
+The first candidate-construction bridge is now concrete. Exact theorem names
+returned by `lemma_candidates` can be resolved to kernel `NameId` handles and
+passed, with the goal type, to `propose_bounded_application`. The producer does
+not scan the environment or receive a target theorem name; it builds a bounded
+type-directed application closure and returns an untrusted term. Kernel
+admission remains mandatory, and a failed bounded search remains a typed
+decline. This is the intended graph-to-producer boundary; operation dispatch
+and durable episode admission must preserve it rather than widening retrieval
+inside the producer.

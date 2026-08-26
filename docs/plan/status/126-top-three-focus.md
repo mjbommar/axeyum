@@ -15,8 +15,9 @@ hand-authored. The graph links 395 theorems to 390 facts (four identities remain
 explicitly unresolved) and exposes every canonical kernel type through typed
 agent queries. A bounded application producer now reconstructs the Fibonacci
 composition from three retrieved declarations and declines when the adjacent
-lemma is absent. Next: expose and dispatch it authoritatively, then measure
-sibling conversion.
+lemma is absent. Its typed Python surface now preserves the explicit retrieval
+boundary, fixed search telemetry, and typed declines. Next: dispatch it through
+an authoritative operation and clean episode, then measure sibling conversion.
 
 <!-- plan-section: landed-changes -->
 
@@ -31,3 +32,4 @@ sibling conversion.
 | 2026-08-25 | `43f87f269` | Durable symmetry unlock promotes `Nat.ModEq.comm` into the unchanged family operation with source-bound evidence. |
 | 2026-08-25 | `3375112a9` | Recomputed scheduling admits `Nat.ModEq.comm`; durable-state-driven multi-target credit reaches 11. |
 | 2026-08-25 | `3cfb80172` | Resolve five manually verified Nat evidence identities; exact links reach 315 theorems and 319 facts without guessing. |
+| 2026-08-26 | `228494275` | Expose bounded retrieved-lemma application through the typed Python producer surface with full Python, stub, and type-gate coverage. |

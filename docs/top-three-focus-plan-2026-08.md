@@ -97,9 +97,13 @@ term of `Nat.fib_mono` by deterministic type-directed application; the kernel
 admits it axiom-free with the two theorem dependencies observed in the proof.
 Removing the adjacent-step candidate makes the same bounded search decline.
 It neither scans the environment nor receives the target theorem. The remaining
-boundary is Python/agent exposure plus authoritative operation and episode
-admission; until those land, production provenance must continue to say
-`no_operation`.
+boundary is no longer language exposure: the typed Python surface accepts the
+goal plus exact retrieved `NameId` values, returns the untrusted proof and its
+fixed-budget telemetry, and preserves typed declines; the full Python suite,
+generated-stub check, stubtest, Ruff, and type-budget gates accept the surface.
+What remains is authoritative agent dispatch, operation registration, and
+episode admission. Until those land, production provenance must continue to
+say `no_operation`.
 
 ## Comparative position
 
