@@ -418,13 +418,13 @@ To solve your own SMT-LIB file through the command-faithful, multi-query front
 door (rather than the fixed teaching example):
 
 ```sh
-cargo run -q -p axeyum-bench --example axeyum_cli -- your-query.smt2
+cargo run -q -p axeyum-bench --bin axeyum -- your-query.smt2
 ```
 
 It prints one response per output command, reports unsupported commands
-explicitly, and exits nonzero on parse, execution, or in-script errors. Axeyum
-is not yet published as a standalone `axeyum` binary; this checked-in example
-is the current general CLI surface.
+explicitly, and exits nonzero on parse, execution, or in-script errors. The
+binary is built from the repository and is not yet published as a crate or
+prebuilt release.
 
 - [Project State](docs/PROJECT-STATE.md) — what is built, what has actually been
   measured, what remains partial, and what "Z3/Lean parity" does and does not

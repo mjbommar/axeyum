@@ -37,13 +37,13 @@ That first command deliberately solves one fixed teaching query and rejects
 arguments. To run an actual file through the general SMT-LIB session driver:
 
 ```sh
-cargo run -q -p axeyum-bench --example axeyum_cli -- path/to/query.smt2
+cargo run -q -p axeyum-bench --bin axeyum -- path/to/query.smt2
 ```
 
 The driver also accepts `-` for stdin and `--timeout-ms N`. It answers each
 `check-sat` and supported output command in order; unsupported commands are
-reported rather than silently ignored. It remains a repository example, not an
-installed standalone binary.
+reported rather than silently ignored. The named binary is built from the
+repository; it is not yet distributed as a prebuilt release or published crate.
 
 If you only need the scalar Boolean/bit-vector API, the solver crate's default
 `qfbv` profile is smaller:
