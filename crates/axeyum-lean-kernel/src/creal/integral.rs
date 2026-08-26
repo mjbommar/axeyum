@@ -8613,3 +8613,215 @@ pub(super) fn declare_riemann_sum_total_eps_le(
         value,
     })
 }
+
+// --- `CReal.riemannSumDeepCauchy` -- Spivak ch.13->14's Cauchy-shape
+// statement for the RAW-indexed sequence `fun n => riemannSum F a b (deep
+// n)`, at two INDEPENDENT accuracies `p`, `q` (not one shared `e`, unlike
+// [`declare_riemann_sum_shared_accuracy_close`]). This is the reindexing
+// route [`declare_shared_index_to_canonical`]'s own doc comment names: `e :=
+// n` directly, no inversion of `deep` needed. --------------------------------
+
+/// `CReal.riemannSumDeepCauchy : ∀ F a b, CReal.le a b → CReal.UniformlyContinuousOn
+/// F a b → ∀ p q : Nat, Within (Rat.sub (seq (riemannSum F a b (deep F a b u p)) p)
+/// (seq (riemannSum F a b (deep F a b u q)) q)) (bound p q)`, `deep` computed
+/// EXACTLY the way [`declare_riemann_sum_cauchy`]'s own body computes it (see
+/// [`deep_at`]), with the extra depth `k` fixed at `0` (so the sequence is
+/// literally `riemannSum F a b (deep p)`, no free `k` left over) and `bound
+/// p q := (modulus p (shift p) + shared_accuracy_bound(a,b,p,m1,p)) +
+/// modulus (shift p) p) + modulus p q + ((modulus q (shift q) +
+/// shared_accuracy_bound(a,b,q,m2,q)) + modulus (shift q) q)`.
+///
+/// # The construction
+///
+/// Two [`CRealPrelude::riemann_sum_cauchy`] calls at the two INDEPENDENT
+/// accuracies (`e := p`, `n_refine := m2`, `k := 0` for the first; `e := q`,
+/// `n_refine := m1`, `k := 0` for the second — `m1 := deep(p)`, `m2 :=
+/// deep(q)`), [`common_refinement`] to identify their two refinement targets
+/// into a single `l`, then TWO [`CRealPrelude::shared_index_to_canonical`]
+/// applications — **the key move, and the one
+/// [`declare_shared_index_to_canonical`]'s own doc comment flags as the
+/// disproved worry**: rather than leaving `pp`/`qq`/`jj` free (the way
+/// [`declare_riemann_sum_shared_accuracy_close`] does, landing `X := rsum_l`
+/// at canonical index `l` itself in both applications), THIS construction
+/// sets `pp := qq := jj := p` in the first application (`X := rsum_l`, `Y :=
+/// rsum_m1`) and `pp := qq := jj := q` in the second (`X := rsum_l`, `Y :=
+/// rsum_m2`). Because `sharedIndexToCanonical`'s three index arguments are
+/// genuinely free `Nat`s, unconstrained by `l`'s own magnitude, this choice
+/// is available, and it is what makes EVERY leg of the resulting bound a
+/// function of `p`/`q` alone: `modulus(p, shift p)` and `modulus(shift p,
+/// p)` are `rsum_l`'s own regularity at indices built from `p` alone (not
+/// `l`), and the hypothesis leg reads `H(p)`, i.e. `riemann_sum_cauchy`'s
+/// OWN bound at exactly the sample index the final statement is stated at.
+///
+/// This leaves `rsum_l` sampled at TWO DIFFERENT indices — `l`'s stand-in
+/// `p` from the first application, `q` from the second — so a third,
+/// genuinely new leg bridges them: `rsum_l`'s own [`CRealPrelude::regular`]
+/// between `p` and `q` directly (no dependence on `l`'s internal
+/// construction at all, since `regular` is a property every `CReal`
+/// satisfies uniformly). [`chain_within3`] fuses the three legs — `seq
+/// rsum_m1 p → seq rsum_l p` (the first application, flipped via
+/// [`within_symm`]), `seq rsum_l p → seq rsum_l q` (the bridging `regular`
+/// leg), `seq rsum_l q → seq rsum_m2 q` (the second application) — into the
+/// single three-leg `Within` this declaration states.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_riemann_sum_deep_cauchy(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let pn_fv = d.fresh_fvar();
+    let pn = d.kernel().fvar(pn_fv);
+    let qn_fv = d.fresh_fvar();
+    let qn = d.kernel().fvar(qn_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    // m1 := deep(f,a,b,u,pn) + 0, m2 := deep(f,a,b,u,qn) + 0 -- built with
+    // the SAME `+0` shape `riemann_sum_cauchy`'s own internal `m := deep +
+    // k` computes at `k := 0`, so the terms below are the SAME ExprId as
+    // what `h1`/`h2_raw`'s own conclusion types mention -- no bridging
+    // lemma needed, the same idiom `deep_at`'s own doc comment names.
+    let deep1 = deep_at(d, p, f, a, b, u, pn);
+    let deep2 = deep_at(d, p, f, a, b, u, qn);
+    let zero1 = d.num(0);
+    let m1 = NatOps::add(d, deep1, zero1);
+    let zero2 = d.num(0);
+    let m2 = NatOps::add(d, deep2, zero2);
+
+    // Application 1: e := pn, n_refine := m2, k := zero1. Internal m = m1,
+    // m_prime = succ_mul_succ(m2, m1) == common_refinement's `l`.
+    let h1 = d.lemma(p.riemann_sum_cauchy, &[f, a, b, pn, m2, zero1, hab, u]);
+    // Application 2: e := qn, n_refine := m1, k := zero2. Internal m = m2,
+    // m_prime = succ_mul_succ(m1, m2) == common_refinement's `l2`.
+    let h2_raw = d.lemma(p.riemann_sum_cauchy, &[f, a, b, qn, m1, zero2, hab, u]);
+
+    let (l, l2, l2_eq_l) = common_refinement(d, m1, m2);
+
+    // Rewrite l2 -> l inside h2_raw's own ∀i statement, so both applications
+    // below land at the SAME shared refinement `l` -- verbatim shape of
+    // `declare_riemann_sum_shared_accuracy_close`'s own `h2`, with `e :=
+    // qn`.
+    let h2 = {
+        let rsum_m2_for_motive = rsum(d, p, f, a, b, m2);
+        let neg_rsum_m2_for_motive = cneg(d, p, rsum_m2_for_motive);
+        nat_rewrite_prop(d, l2, l, l2_eq_l, h2_raw, &|d, x| {
+            let rsum_x = rsum(d, p, f, a, b, x);
+            let t = cadd(d, p, rsum_x, neg_rsum_m2_for_motive);
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let seq_t_i = sample(d, p, t, i);
+            let bound_i = shared_accuracy_bound(d, p, a, b, qn, m2, i);
+            let claim = within(d, p, seq_t_i, bound_i);
+            d.pi_fv(i_fv, nat, claim)
+        })
+    };
+
+    let rsum_l = rsum(d, p, f, a, b, l);
+    let rsum_m1 = rsum(d, p, f, a, b, m1);
+    let rsum_m2 = rsum(d, p, f, a, b, m2);
+
+    let bound1_fn = shared_accuracy_bound_fn(d, p, a, b, pn, m1);
+    let bound2_fn = shared_accuracy_bound_fn(d, p, a, b, qn, m2);
+
+    // app1 : Within (seq rsum_l pn - seq rsum_m1 pn) bnd_a -- `pp := qq :=
+    // jj := pn`, the disproved-worry specialization.
+    let app1 = d.lemma(
+        p.shared_index_to_canonical,
+        &[rsum_l, rsum_m1, bound1_fn, h1, pn, pn, pn],
+    );
+    // app2 : Within (seq rsum_l qn - seq rsum_m2 qn) bnd_c -- `pp := qq :=
+    // jj := qn`.
+    let app2 = d.lemma(
+        p.shared_index_to_canonical,
+        &[rsum_l, rsum_m2, bound2_fn, h2, qn, qn, qn],
+    );
+
+    let x_val = sample(d, p, rsum_m1, pn);
+    let y_val = sample(d, p, rsum_l, pn);
+    let z_val = sample(d, p, rsum_l, qn);
+    let w_val = sample(d, p, rsum_m2, qn);
+
+    let shift_pn = shift(d, pn);
+    let m_pn_spn = modulus(d, p, pn, shift_pn);
+    let bound1_pn = d.apply(bound1_fn, &[pn]);
+    let m_spn_pn = modulus(d, p, shift_pn, pn);
+    let bnd_a_inner = radd(d, m_pn_spn, bound1_pn);
+    let bnd_a = radd(d, bnd_a_inner, m_spn_pn);
+
+    let bnd_b = modulus(d, p, pn, qn);
+
+    let shift_qn = shift(d, qn);
+    let m_qn_sqn = modulus(d, p, qn, shift_qn);
+    let bound2_qn = d.apply(bound2_fn, &[qn]);
+    let m_sqn_qn = modulus(d, p, shift_qn, qn);
+    let bnd_c_inner = radd(d, m_qn_sqn, bound2_qn);
+    let bnd_c = radd(d, bnd_c_inner, m_sqn_qn);
+
+    // leg_a : Within (x_val - y_val) bnd_a, flipped from app1 : Within
+    // (y_val - x_val) bnd_a.
+    let leg_a = within_symm(d, p, y_val, x_val, bnd_a, app1);
+    // leg_b : Within (y_val - z_val) bnd_b -- `rsum_l`'s OWN regularity
+    // between `pn` and `qn`, independent of `l`'s internal construction.
+    let leg_b = d.lemma(p.regular, &[rsum_l, pn, qn]);
+    // leg_c : Within (z_val - w_val) bnd_c, directly from app2.
+    let leg_c = app2;
+
+    let proof = chain_within3(
+        d, p, x_val, y_val, z_val, w_val, bnd_a, bnd_b, bnd_c, leg_a, leg_b, leg_c,
+    );
+
+    // `chain_within3`'s own bound shape: (bnd_a+bnd_b)+bnd_c.
+    let final_bound = {
+        let ab = radd(d, bnd_a, bnd_b);
+        radd(d, ab, bnd_c)
+    };
+    let concl_ty = {
+        let diff = rsub(d, p.rat, x_val, w_val);
+        within(d, p, diff, final_bound)
+    };
+
+    let ty = {
+        let after_u = d.pi_fv(u_fv, u_ty, concl_ty);
+        let after_hab = d.arrow(hab_ty, after_u);
+        let over_qn = d.pi_fv(qn_fv, nat, after_hab);
+        let over_pn = d.pi_fv(pn_fv, nat, over_qn);
+        let over_b = d.pi_fv(b_fv, carrier, over_pn);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_u = d.lam_fv(u_fv, u_ty, proof);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_qn = d.lam_fv(qn_fv, nat, with_hab);
+        let over_pn = d.lam_fv(pn_fv, nat, over_qn);
+        let over_b = d.lam_fv(b_fv, carrier, over_pn);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sum_deep_cauchy,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
