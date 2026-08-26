@@ -98,6 +98,18 @@ fn start_colouring(
     }
 }
 
+fn validate_options(options: &MinConflictsOptions) -> Result<(), SearchError> {
+    if options.noise_percent > 100 || options.tie_percent > 100 {
+        return Err(SearchError::InvalidParameter {
+            what: format!(
+                "min-conflicts percentages must be in 0..=100, got noise={} tie={}",
+                options.noise_percent, options.tie_percent
+            ),
+        });
+    }
+    Ok(())
+}
+
 /// Min-conflicts search for a colouring of `problem` with no monochromatic
 /// forbidden set.
 ///
@@ -121,6 +133,7 @@ pub fn min_conflicts(
     start: Option<&Witness>,
     options: &MinConflictsOptions,
 ) -> Result<Option<Witness>, SearchError> {
+    validate_options(options)?;
     let points = problem.points();
     let colours = problem.colours();
     let forbidden = problem.forbidden();
@@ -167,7 +180,7 @@ pub fn min_conflicts(
         let point = set[rng.below(set.len())];
         let current = colouring[point - 1];
 
-        let chosen = if u64::from(options.noise_percent) > rng.next() % 100 {
+        let chosen = if colours > 1 && u64::from(options.noise_percent) > rng.next() % 100 {
             // Noise: any other colour, uniformly.
             let offset = 1 + rng.below(colours - 1);
             ((current - 1 + offset) % colours) + 1
@@ -286,5 +299,28 @@ mod tests {
             min_conflicts(&problem, Some(&start), &MinConflictsOptions::default()),
             Err(SearchError::InvalidParameter { .. })
         ));
+    }
+
+    #[test]
+    fn invalid_percentages_and_one_colour_noise_fail_safely() {
+        let family = Schur::new(2).expect("family");
+        let problem = family.problem(4).expect("problem");
+        let invalid = MinConflictsOptions {
+            noise_percent: 101,
+            ..MinConflictsOptions::default()
+        };
+        assert!(matches!(
+            min_conflicts(&problem, None, &invalid),
+            Err(SearchError::InvalidParameter { .. })
+        ));
+
+        let one_colour = Schur::new(1).expect("family");
+        let impossible = one_colour.problem(2).expect("problem");
+        let noisy = MinConflictsOptions {
+            noise_percent: 100,
+            max_moves: 10,
+            ..MinConflictsOptions::default()
+        };
+        assert_eq!(min_conflicts(&impossible, None, &noisy).unwrap(), None);
     }
 }

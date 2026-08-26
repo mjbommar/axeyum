@@ -1630,6 +1630,29 @@ controls fail closed; focused tests, all-target/all-feature Clippy, and warning-
 pass. The live `n=351` producer has not returned SAT, so this closes an evidence-route gap rather
 than establishing a new bound.
 
+**Rado 351 local-search experiment closed honestly, 2026-08-26.** The ordinary portfolio
+completed 192 equal-budget jobs / 3.84 billion moves in 5,142.3 wall seconds without a
+colouring. The experimental constraint-weighted portfolio completed 96 jobs / 1.92 billion
+moves, also without a colouring; normalized user CPU was 225.66 versus 207.89 seconds per job
+(+8.55%), and peak RSS was 401,924 versus 178,932 KiB (2.25 times). Different thread counts and
+changing contention make wall time non-comparable. Weighting demonstrated no frontier benefit
+and was removed rather than promoted. The independently justified CLI `noise`/`tie` controls,
+percentage validation, and one-colour/100%-noise panic repair remain; focused tests,
+all-target/all-feature Clippy, and warning-denied Rustdoc pass. Both completed `not-found` runs
+carry no UNSAT or upper-bound credit; the exact proof-producing run remains live.
+
+**Rado exact lower bound advanced, 2026-08-26.** The seed-619 CaDiCaL producer completed the
+canonical 351-point formula SAT after 58:35 and the canonical 352-point formula SAT after
+4.35 seconds. Both complete assignments passed the strict SAT Competition importer, the
+regenerated CNF evaluator, unique one-hot decoding, independent enumeration of the defining
+relation, and lifted-witness re-encoding. The retained strongest witness has 352 entries,
+uses all five colours, covers 27,378 defining triples / 142,167 clauses, and has SHA-256
+`a117a27b0eb55fde8b022e8a6332a6cb7c9d3f2951f252643137bf347565a5cc`. Therefore the checked
+conclusion is now `R_5(3(x-y)=2z) > 352`; no upper bound or exact value is claimed. A persistent
+exact driver is live at 353 and advances only after both replay routes. A post-result literature
+refresh through 2026-08-26 found no five-colour bound at least 352 for this equation, but that
+negative retrieval is not proof of priority.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
