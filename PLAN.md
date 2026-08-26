@@ -1495,6 +1495,9 @@ Bounded reification is now implemented as the binary weighted sum, and its
 zero-length base theorem checks axiom-free. The exact remaining proof is the
 bounded observation round-trip for `i < k`; neither that induction nor the
 unbounded bitwise theorem has received credit.
+The reifier's successor equation now also checks axiom-free, exposing the prefix
+plus one weighted digit as a stable induction interface. The round-trip theorem
+remains the next proof; implementation unfolding is no longer required.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
