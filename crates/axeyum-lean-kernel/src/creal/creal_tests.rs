@@ -20,12 +20,27 @@ use crate::{Declaration, Kernel};
 fn built() -> (Kernel, CRealPrelude) {
     use std::sync::OnceLock;
     static TEMPLATE: OnceLock<(Kernel, CRealPrelude)> = OnceLock::new();
-    let (kernel, prelude) = TEMPLATE.get_or_init(|| {
-        let mut kernel = Kernel::new();
-        let prelude = build_creal_prelude(&mut kernel).expect("CReal prelude must build");
-        (kernel, prelude)
-    });
-    (kernel.clone(), *prelude)
+    // Run on a deep stack: whichever test happens to be the first (in
+    // execution order, not file order) to call `built()` pays the FULL
+    // `build_creal_prelude` cost on top of the clone below, and after
+    // `CReal.mul_self_sqrt` landed that combination overflows the default
+    // 2 MiB test-thread stack for a test with no reasoning of its own about
+    // `mul_self_sqrt` -- `abs_add_le_at_one_and_neg_one_has_slack` SIGABRTed
+    // this way, on the default stack, in both single- and multi-threaded
+    // runs, and passed clean with a bigger stack and in `--release` (the
+    // discriminator this file's own module docs elsewhere use: a genuine
+    // margin overrun disappears under either, runaway recursion does not).
+    // Every call is wrapped, not just the build -- the clone that runs on
+    // EVERY call is itself not free to assume is shallow just because one
+    // caller's stack happened to survive it.
+    on_a_deep_stack_creal(move || {
+        let (kernel, prelude) = TEMPLATE.get_or_init(|| {
+            let mut kernel = Kernel::new();
+            let prelude = build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+            (kernel, prelude)
+        });
+        (kernel.clone(), *prelude)
+    })
 }
 
 /// The build itself, with the kernel's rejection **rendered**. A `Debug` of

@@ -4136,8 +4136,9 @@ pub(super) fn declare_mul_self_sqrt(
         let congr1 = rcongr(d, u1_minus_u, d1, u1_minus_u_eq_d1, &|d, t| {
             rmul(d, t, u1_plus_u)
         });
+        // congr1 : Eq Rat (u1_minus_u * u1_plus_u) (d1 * u1_plus_u) = Eq Rat u1_minus_u_times w
         let u1_minus_u_times = rmul(d, u1_minus_u, u1_plus_u);
-        let congr1_rev = rsymm(d, w, u1_minus_u_times, congr1);
+        let congr1_rev = rsymm(d, u1_minus_u_times, w, congr1);
         let neg_u_sq = rneg(d, u_sq);
         let u1sq_minus_usq = radd(d, u1_sq, neg_u_sq);
         let (_, w_eq_diff) = rchain(
