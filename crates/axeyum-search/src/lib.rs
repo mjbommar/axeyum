@@ -82,6 +82,7 @@
 //! # Ok::<(), axeyum_search::SearchError>(())
 //! ```
 
+pub mod boolean_anf_cnf;
 pub mod certify;
 pub mod colouring;
 pub mod compose;

@@ -56,6 +56,11 @@ These are hypotheses until the first vertical slices measure the actual gaps.
   truth-CNF, direct-ANF-CNF, and portable-ANF routes, with witness canonicalization before
   replay. This is Zhang--Huang prior art and did not decide the known MC=6 control at 300
   seconds. General bit-gate complexity remains open.
+  ADR-0570 now supplies the trusted algebraic bridge that was missing from the external
+  Bosphorus experiment: deterministic definitional ANF-to-CNF lowering, source-model
+  projection/replay, and file-backed checked DRAT. Its retained MC=6 refutation independently
+  reproduces the known lower endpoint, so Axeyum now checks the published `[7,8]` bracket;
+  the seven-AND frontier itself remains open.
 - Exact-rational matrix certificates with dimension/resource admission, fraction-free or
   BigInt arithmetic, independently checked `LDL^T`, and explicit PSD semantics. ADR-0557
   now removes the arithmetic-width blocker: bounded `BigRational` symmetric elimination

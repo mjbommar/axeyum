@@ -1,11 +1,15 @@
 //! Run the generic multiplicative-complexity encoder on PRIMATEs inverse.
 
+use std::fs::File;
+use std::io::BufReader;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use axeyum_cnf::{
-    ProofSolveOutcome, VivifyOptions, check_drat_backward, parse_drat, vivify_within,
+    ProofSolveOutcome, VivifyOptions, check_drat_backward, check_drat_backward_reader,
+    vivify_within,
 };
+use axeyum_search::boolean_anf_cnf::{BooleanAnfCnfLimits, encode_boolean_anf_cnf};
 use axeyum_search::multiplicative_circuit::{
     MultiplicativeEncodingOptions, MultiplicativeSynthesisLimits, MultiplicativeSynthesisOutcome,
     MultiplicativeSynthesisProblem, encode_multiplicative_anf_system,
@@ -48,8 +52,11 @@ fn arguments() -> Arguments {
     while index < args.len() {
         match args[index].as_str() {
             "--encoding" => {
-                encoding.clone_from(args.get(index + 1).expect("--encoding needs anf or truth"));
-                assert!(matches!(encoding.as_str(), "anf" | "truth"));
+                encoding.clone_from(
+                    args.get(index + 1)
+                        .expect("--encoding needs anf, system, or truth"),
+                );
+                assert!(matches!(encoding.as_str(), "anf" | "system" | "truth"));
                 index += 2;
             }
             "--dimacs" => {
@@ -145,6 +152,73 @@ fn print_encoding_options(args: &Arguments) {
     println!("operand-order={}", args.operand_order);
 }
 
+fn print_problem_header(args: &Arguments) {
+    println!("schema=axeyum.mc-synthesis-run.v1");
+    println!("problem=primates-inverse");
+    println!("and-budget={}", args.budget);
+}
+
+fn run_system_cnf(
+    args: &Arguments,
+    problem: &MultiplicativeSynthesisProblem,
+    limits: MultiplicativeSynthesisLimits,
+    options: MultiplicativeEncodingOptions,
+) {
+    let source =
+        encode_multiplicative_anf_system(problem, limits, options).expect("ANF system must fit");
+    let encoding = encode_boolean_anf_cnf(source.system(), BooleanAnfCnfLimits::default())
+        .expect("ANF-to-CNF lowering must fit");
+    print_problem_header(args);
+    print_encoding_options(args);
+    println!("semantics=system");
+    println!("anf-variables={}", source.system().variable_count());
+    println!("anf-equations={}", source.system().equations().len());
+    println!("variables={}", encoding.formula().variable_count());
+    println!("clauses={}", encoding.formula().clauses().len());
+    if let Some(path) = &args.dimacs_path {
+        std::fs::write(path, encoding.formula().to_dimacs()).expect("write DIMACS");
+        println!("dimacs={}", path.display());
+        println!("verdict=encoded");
+        return;
+    }
+    if let Some(path) = &args.drat_path {
+        let reader = BufReader::new(File::open(path).expect("open textual DRAT"));
+        assert_eq!(
+            check_drat_backward_reader(encoding.formula(), reader),
+            Ok(true)
+        );
+        println!("drat={}", path.display());
+        println!("drat-mode=file-backed-backward");
+        println!("verdict=unsat-checked");
+        return;
+    }
+    let started = Instant::now();
+    let outcome = axeyum_cnf::solve_with_drat_proof_with_limits(
+        encoding.formula(),
+        Some(started + Duration::from_secs(args.seconds)),
+        limits.max_conflicts,
+    );
+    println!("elapsed-ms={}", started.elapsed().as_millis());
+    match outcome {
+        ProofSolveOutcome::Sat(model) => {
+            let assignment = encoding
+                .lift_source_assignment(source.system(), &model)
+                .expect("project and replay source ANF model");
+            source
+                .lift_assignment(&assignment)
+                .expect("lift and replay circuit");
+            println!("verdict=sat-replayed");
+        }
+        ProofSolveOutcome::Unsat(proof) => {
+            assert_eq!(check_drat_backward(encoding.formula(), &proof), Ok(true));
+            println!("verdict=unsat-checked");
+            println!("drat-steps={}", proof.len());
+        }
+        ProofSolveOutcome::ResourceOut => println!("verdict=resource-out"),
+        ProofSolveOutcome::Interrupted => println!("verdict=interrupted"),
+    }
+}
+
 fn main() {
     let args = arguments();
     let budget = args.budget;
@@ -160,8 +234,12 @@ fn main() {
         ..MultiplicativeSynthesisLimits::default()
     };
     let options = encoding_options(&args);
-    if let Some(path) = args.anf_path {
-        export_anf(&problem, limits, options, &path, budget);
+    if let Some(path) = &args.anf_path {
+        export_anf(&problem, limits, options, path, budget);
+        return;
+    }
+    if args.encoding == "system" {
+        run_system_cnf(&args, &problem, limits, options);
         return;
     }
     let encoding = match args.encoding.as_str() {
@@ -170,9 +248,7 @@ fn main() {
         _ => unreachable!("validated above"),
     }
     .expect("encoding must fit");
-    println!("schema=axeyum.mc-synthesis-run.v1");
-    println!("problem=primates-inverse");
-    println!("and-budget={budget}");
+    print_problem_header(&args);
     print_encoding_options(&args);
     println!("semantics={}", args.encoding);
     println!("variables={}", encoding.formula().variable_count());
@@ -184,11 +260,13 @@ fn main() {
         return;
     }
     if let Some(path) = args.drat_path {
-        let text = std::fs::read_to_string(&path).expect("read textual DRAT");
-        let proof = parse_drat(&text).expect("parse textual DRAT");
-        assert_eq!(check_drat_backward(encoding.formula(), &proof), Ok(true));
+        let reader = BufReader::new(File::open(&path).expect("open textual DRAT"));
+        assert_eq!(
+            check_drat_backward_reader(encoding.formula(), reader),
+            Ok(true)
+        );
         println!("drat={}", path.display());
-        println!("drat-steps={}", proof.len());
+        println!("drat-mode=file-backed-backward");
         println!("verdict=unsat-checked");
         return;
     }

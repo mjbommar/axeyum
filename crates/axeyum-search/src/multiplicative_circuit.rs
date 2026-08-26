@@ -193,12 +193,64 @@ pub struct MultiplicativeAnfEncoding {
     system: BooleanAnfSystem,
     layout: SelectorLayout,
     problem: MultiplicativeSynthesisProblem,
+    options: MultiplicativeEncodingOptions,
 }
 
 impl MultiplicativeAnfEncoding {
     /// Algebraic equations over the selector coefficients.
     pub fn system(&self) -> &BooleanAnfSystem {
         &self.system
+    }
+
+    /// Selector units that bind this source system to a positive witness.
+    ///
+    /// Operand pairs are canonicalized under the selected safe symmetry mode.
+    /// Auxiliary coefficient variables remain free for the exact ANF equations
+    /// to determine.
+    ///
+    /// # Errors
+    ///
+    /// Refuses gate, output, or affine-basis dimensions that disagree with the
+    /// encoded problem.
+    pub fn source_units_with_witness(
+        &self,
+        witness: &MultiplicativeCircuitWitness,
+    ) -> Result<Vec<(usize, bool)>, MultiplicativeSynthesisError> {
+        if witness.gates.len() != self.problem.and_gates
+            || witness.outputs.len() != self.problem.output_bits
+        {
+            return Err(MultiplicativeSynthesisError::NonMultiplicativeNormalForm(
+                "witness gate or output count disagrees with the problem".to_owned(),
+            ));
+        }
+        let mut units = Vec::new();
+        for (gate, (left, right)) in witness.gates.iter().enumerate() {
+            let (left, right) = ordered_operands(left, right, self.options);
+            append_affine_units(
+                &mut units,
+                &self.layout.left[gate],
+                left,
+                self.problem.input_bits,
+                gate,
+            )?;
+            append_affine_units(
+                &mut units,
+                &self.layout.right[gate],
+                right,
+                self.problem.input_bits,
+                gate,
+            )?;
+        }
+        for (output, affine) in witness.outputs.iter().enumerate() {
+            append_affine_units(
+                &mut units,
+                &self.layout.outputs[output],
+                affine,
+                self.problem.input_bits,
+                self.problem.and_gates,
+            )?;
+        }
+        Ok(units)
     }
 
     /// Lift a satisfying selector assignment and independently replay it.
@@ -417,6 +469,28 @@ fn pin_affine(
             }]))
             .map_err(|error| MultiplicativeSynthesisError::InvalidModel(format!("{error:?}")))?;
     }
+    Ok(())
+}
+
+fn append_affine_units(
+    units: &mut Vec<(usize, bool)>,
+    selectors: &[usize],
+    affine: &AffineSelection,
+    input_bits: usize,
+    earlier_ands: usize,
+) -> Result<(), MultiplicativeSynthesisError> {
+    if affine.inputs.len() != input_bits || affine.earlier_ands.len() != earlier_ands {
+        return Err(MultiplicativeSynthesisError::NonMultiplicativeNormalForm(
+            "affine coefficient width disagrees with its gate position".to_owned(),
+        ));
+    }
+    units.extend(
+        selectors.iter().copied().zip(
+            std::iter::once(affine.constant)
+                .chain(affine.inputs.iter().copied())
+                .chain(affine.earlier_ands.iter().copied()),
+        ),
+    );
     Ok(())
 }
 
@@ -935,27 +1009,46 @@ fn add_anf_lex_ge(
     system: &mut BooleanAnfSystem,
     left: &[usize],
     right: &[usize],
+    first_variable: usize,
     max_monomials: usize,
-) -> Result<(), MultiplicativeSynthesisError> {
+) -> Result<usize, MultiplicativeSynthesisError> {
     debug_assert_eq!(left.len(), right.len());
-    let mut equal_prefix = BooleanAnfPolynomial::one();
-    for (&left_bit, &right_bit) in left.iter().zip(right) {
+    let mut next_variable = first_variable;
+    let mut equal_prefix = None;
+    for (index, (&left_bit, &right_bit)) in left.iter().zip(right).enumerate() {
         // prefix_equal * !left * right = 0 forbids the first unequal
         // coefficient from having left=false and right=true.
         let mut not_left = BooleanAnfPolynomial::variable(left_bit);
         not_left.toggle_constant();
-        let violation = equal_prefix
-            .product(&not_left, max_monomials)?
-            .product(&BooleanAnfPolynomial::variable(right_bit), max_monomials)?;
+        let violation =
+            not_left.product(&BooleanAnfPolynomial::variable(right_bit), max_monomials)?;
+        let violation = match equal_prefix {
+            Some(prefix) => {
+                BooleanAnfPolynomial::variable(prefix).product(&violation, max_monomials)?
+            }
+            None => violation,
+        };
         add_nonzero_equation(system, violation)?;
 
-        // Over GF(2), 1 + left + right is the Boolean equality indicator.
-        let mut equal_bit = BooleanAnfPolynomial::one();
-        equal_bit.xor_assign(&BooleanAnfPolynomial::variable(left_bit));
-        equal_bit.xor_assign(&BooleanAnfPolynomial::variable(right_bit));
-        equal_prefix = equal_prefix.product(&equal_bit, max_monomials)?;
+        if index + 1 < left.len() {
+            // Over GF(2), 1 + left + right is the equality indicator.
+            let mut equal_bit = BooleanAnfPolynomial::one();
+            equal_bit.xor_assign(&BooleanAnfPolynomial::variable(left_bit));
+            equal_bit.xor_assign(&BooleanAnfPolynomial::variable(right_bit));
+            let prefix_value = match equal_prefix {
+                Some(prefix) => {
+                    BooleanAnfPolynomial::variable(prefix).product(&equal_bit, max_monomials)?
+                }
+                None => equal_bit,
+            };
+            let mut definition = BooleanAnfPolynomial::variable(next_variable);
+            definition.xor_assign(&prefix_value);
+            add_nonzero_equation(system, definition)?;
+            equal_prefix = Some(next_variable);
+            next_variable += 1;
+        }
     }
-    Ok(())
+    Ok(next_variable)
 }
 
 fn apply_anf_encoding_options(
@@ -964,7 +1057,9 @@ fn apply_anf_encoding_options(
     layout: &SelectorLayout,
     limits: MultiplicativeSynthesisLimits,
     options: MultiplicativeEncodingOptions,
-) -> Result<(), MultiplicativeSynthesisError> {
+    first_variable: usize,
+) -> Result<usize, MultiplicativeSynthesisError> {
+    let mut next_variable = first_variable;
     if options.eliminate_internal_constants {
         for gate in 0..problem.and_gates {
             add_nonzero_equation(system, BooleanAnfPolynomial::variable(layout.left[gate][0]))?;
@@ -984,10 +1079,11 @@ fn apply_anf_encoding_options(
     }
     if options.lexicographic_operand_order {
         for gate in 0..problem.and_gates {
-            add_anf_lex_ge(
+            next_variable = add_anf_lex_ge(
                 system,
                 &layout.left[gate],
                 &layout.right[gate],
+                next_variable,
                 limits.max_clauses,
             )?;
         }
@@ -1000,7 +1096,7 @@ fn apply_anf_encoding_options(
             add_nonzero_equation(system, equation)?;
         }
     }
-    Ok(())
+    Ok(next_variable)
 }
 
 fn anf_affine_coefficient_equation(
@@ -1102,7 +1198,16 @@ pub fn encode_multiplicative_anf_system(
         .and_gates
         .saturating_mul(monomial_masks)
         .saturating_mul(3);
-    let variable_count = selector_variables.saturating_add(auxiliary_variables);
+    let option_variables = if options.lexicographic_operand_order {
+        (0..problem.and_gates)
+            .map(|gate| problem.input_bits.saturating_add(gate))
+            .fold(0_usize, usize::saturating_add)
+    } else {
+        0
+    };
+    let variable_count = selector_variables
+        .saturating_add(option_variables)
+        .saturating_add(auxiliary_variables);
     let anf_limits = BooleanAnfLimits {
         max_variables: limits.max_variables,
         max_monomials_per_polynomial: limits.max_clauses,
@@ -1111,9 +1216,14 @@ pub fn encode_multiplicative_anf_system(
     };
     let mut system = BooleanAnfSystem::new(variable_count, anf_limits)?;
 
-    apply_anf_encoding_options(&mut system, problem, &layout, limits, options)?;
-
-    let mut next_variable = selector_variables;
+    let mut next_variable = apply_anf_encoding_options(
+        &mut system,
+        problem,
+        &layout,
+        limits,
+        options,
+        selector_variables,
+    )?;
     let mut gate_coefficients = Vec::<Vec<usize>>::new();
     for gate in 0..problem.and_gates {
         let (output, next) = add_anf_gate_equations(
@@ -1162,6 +1272,7 @@ pub fn encode_multiplicative_anf_system(
         system,
         layout,
         problem: problem.clone(),
+        options,
     })
 }
 
@@ -1695,24 +1806,29 @@ mod tests {
     #[test]
     fn anf_lexicographic_operand_breaker_matches_all_three_bit_pairs() {
         let limits = BooleanAnfLimits {
-            max_variables: 6,
+            max_variables: 8,
             max_monomials_per_polynomial: 64,
-            max_equations: 3,
+            max_equations: 5,
             max_total_monomials: 128,
         };
-        let mut system = BooleanAnfSystem::new(6, limits).unwrap();
-        add_anf_lex_ge(&mut system, &[0, 1, 2], &[3, 4, 5], 64).unwrap();
+        let mut system = BooleanAnfSystem::new(8, limits).unwrap();
+        assert_eq!(
+            add_anf_lex_ge(&mut system, &[0, 1, 2], &[3, 4, 5], 6, 64),
+            Ok(8)
+        );
         for left in 0_u8..8 {
             for right in 0_u8..8 {
-                let assignment = (0..3)
+                let source = (0..3)
                     .map(|index| ((left >> (2 - index)) & 1) != 0)
                     .chain((0..3).map(|index| ((right >> (2 - index)) & 1) != 0))
                     .collect::<Vec<_>>();
-                assert_eq!(
-                    system.evaluate(&assignment),
-                    Ok(left >= right),
-                    "left={left}, right={right}"
-                );
+                let satisfiable = (0..4).any(|packed| {
+                    let mut assignment = source.clone();
+                    assignment.push((packed & 1) != 0);
+                    assignment.push((packed & 2) != 0);
+                    system.evaluate(&assignment) == Ok(true)
+                });
+                assert_eq!(satisfiable, left >= right, "left={left}, right={right}");
             }
         }
     }

@@ -1272,6 +1272,18 @@ byte-identical when its mode is selected. The complete MC=6 formula is 6,406 var
 already specify this full order and report their control at 239 seconds, so the technique is
 prior art and Axeyum's known lower-bound reproduction remains open. MC=7 was not attempted.
 
+**Trusted Boolean-ANF/CNF bridge, 2026-08-26.** ADR-0570 adds a generic deterministic
+definitional extension from bounded Boolean-ANF systems to CNF, with shared monomial-prefix
+gates, exact parity chains, projected SAT-model replay, and independently checked DRAT. The
+published PRIMATEs-inverse MC=8 witness traverses the complete portable-ANF/CNF/circuit route.
+The byte-stable MC=6 source system lowers to 16,820 variables / 57,017 clauses; CaDiCaL 3.0.1
+refuted it in 228.81 seconds, and Axeyum's file-backed backward checker accepted the
+1,068,108,069-byte proof in 1,377.68 seconds. A 100-line truncation fails closed. This finally
+reproduces the known MC>=7 endpoint and, with the replayed MC<=8 witness, independently
+checks the published `[7,8]` bracket. It does not decide MC=7. ANF/CNF conversion and the
+lower bound are prior work; incomplete forward-citation access precludes a first-artifact
+novelty claim.
+
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
 F1 is complete: the two authoritative multi-target operations have nine applicable facts, all nine have explicitly partial concept/encounter mappings, and seven evidence credits are checked against their fact records (the other two were settled by earlier one-target operations).

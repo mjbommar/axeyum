@@ -84,6 +84,14 @@ impl BooleanAnfPolynomial {
         self.monomials.len()
     }
 
+    /// Canonical square-free monomials in lexicographic factor order.
+    ///
+    /// An empty factor slice is the constant-one monomial. The outer iterator
+    /// is deterministic because the representation is a [`BTreeSet`].
+    pub fn monomials(&self) -> impl ExactSizeIterator<Item = &[usize]> {
+        self.monomials.iter().map(Vec::as_slice)
+    }
+
     /// Whether this is identically zero.
     pub fn is_zero(&self) -> bool {
         self.monomials.is_empty()
