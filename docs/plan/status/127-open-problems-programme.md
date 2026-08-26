@@ -171,6 +171,17 @@ BigRational checker proves the slack PSD. `K_3 <= 3` and empty-three <= 1 verify
 controls fail or decline in their distinct channels. The published target solver discarded
 its dual variables, so none of 73/115/168 is certified yet.
 
+**Theta external-artifact front door, 2026-08-26.** ADR-0588 separates the independently
+retrieved graph from a strict `axeyum.theta-clique-dual.v1` rational artifact. The parser
+rejects ambiguous graph records, unknown fields/schema, noncanonical or unreduced rationals,
+and then reuses the exact graph-support and bounded BigRational PSD checker. On the actual
+500-vertex / 112,332-edge `C500.9`, the universal empty-multiplier bound 500 verifies in
+50.30 seconds / 70,500 KiB; changing only the bound to 499 exits 1 at a checked PSD
+obstruction. This establishes the real-instance interchange path, not the published bound 73.
+Current searches found numerical theta tooling but do not justify an exact-certificate priority
+claim. Producing and rationalizing the missing target dual, plus binding the reduction trace,
+remains the mathematical artifact gap.
+
 **S-box positive-certificate slice, 2026-08-26.** ADR-0558 adds a portable named-wire
 Boolean-circuit artifact and bounded complete truth-table checker. The published
 `PRIMATEs^-1` witness matches all 32 independently sourced rows with 8 AND, 35 XOR, and 2 NOT

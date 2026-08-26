@@ -658,3 +658,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0585](adr-0585-multi-source-simd-synthesis-uses-ssa-live-values.md) | Multi-source SIMD synthesis uses SSA live values | accepted |
 | [0586](adr-0586-multiplicative-selector-maps-precede-semantic-covers.md) | Multiplicative selector maps precede semantic covers | accepted |
 | [0587](adr-0587-partial-cube-progress-is-a-leaf-verdict.md) | Partial cube progress is a leaf verdict | accepted |
+| [0588](adr-0588-theta-duals-enter-through-an-instance-separate-artifact.md) | Theta duals enter through an instance-separate artifact | accepted |
