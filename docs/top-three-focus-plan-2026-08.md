@@ -27,9 +27,9 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- The generated kernel projection currently contains 1,600 declarations: 1,246
+- The generated kernel projection currently contains 1,604 declarations: 1,250
   theorems, 251 definitions, 29 constructors, 22 inductives, 22 recursors, and
-  30 axioms. It reports 1,570 axiom-free declarations and 7,108 direct
+  30 axioms. It reports 1,574 axiom-free declarations and 7,184 direct
   theorem-dependency edges. This is a substantial checked library, but it is
   not an autonomous-production count.
 - The fact ledger contains 696 propositions: 502 proved, 4 refuted, 2 computed,
@@ -42,7 +42,7 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
   frontier.
 - The kernel, fact ledger, tactic catalog, obstruction graph, and concept graph
   are separately useful, but do not yet form one lemma-search substrate.
-- The generated lemma index now covers all 1,246 kernel theorems and their 7,108
+- The generated lemma index now covers all 1,250 kernel theorems and their 7,184
   direct edges, with a kernel-rendered canonical type on every row and a
   bounded type-fragment query in the agent read surface. Exactly 395
   theorems link to 390 fact records; 846 theorems have
@@ -179,24 +179,32 @@ surface until the registry, receipt schema, and crash-safe transaction agree on
 the multi-target contract.
 
 The first open-population test prevents the settled controls from being read as
-an estimate of autonomous yield. Eighty open or conjectured, arrow-free Mathlib
-statements were elaborated as proof-free definitions against pinned Lean 4.30.0
-and Mathlib commit `c5ea00351c28e24afc9f0f84379aa41082b1188f`. Every target
-received the same 13 elementary declarations; there was no per-target premise
-selection. Bounded application accepted **0 of 80**. Thirty-seven capsules
-passed proof-isolated import and returned the typed `NoTypedApplication`
-decline. Forty-three were rejected before search because their statement
-closures reached a theorem, axiom, or quotient primitive outside the explicit
-candidate set. This is a useful fail-closed result, not 43 solver failures: it
+an estimate of autonomous yield. Fifty-seven train/development open or
+conjectured, arrow-free Mathlib statements were elaborated as proof-free
+definitions against pinned Lean 4.30.0 and Mathlib commit
+`c5ea00351c28e24afc9f0f84379aa41082b1188f`. Every target received the same 13
+elementary declarations; there was no per-target premise selection. Bounded
+application accepted **0 of 57**. Thirty capsules passed proof-isolated import
+and returned the typed `NoTypedApplication` decline. Twenty-seven were rejected
+before search because their statement closures reached a theorem, axiom, or
+quotient primitive outside the explicit candidate set. This is a useful
+fail-closed result, not 27 solver failures: it
 separates two bottlenecks that need different work—safe statement-environment
 construction and actual premise/term search. The external NDJSON remains
 unvendored; the committed census records every capsule hash, rejection, and
 decline. The adapter run also exposed and fixed repeated generated-name
 collisions, so arbitrarily many normalized mutation slugs now remain unique.
 
+The first exploratory run incorrectly included 23 held-out rows. It produced
+no proof and read no source proof body, but running the search grammar on those
+targets still spent evaluation information. The v2 artifact records those IDs
+as excluded and does not open their capsules; the script now fails closed when
+a mapping identity is absent from the nursery. No claim below relies on the
+contaminated 80-row run.
+
 This changes the immediate sequence. Registering the three-target settled
 control family would duplicate existing provenance and manufacture no new
-knowledge. The 43 rejections do **not** call for a second importer allowlist:
+knowledge. The 27 rejections do **not** call for a second importer allowlist:
 Axeyum already implements the safer ADR-0484 type-slice route, which generalizes
 definitions with proof-bearing implementation closures, checks the fresh goal,
 and requires exact specialization back to the source proposition. Route this
@@ -205,6 +213,19 @@ semantic contracts where abstraction erased required behavior, rank proof
 candidates from exact fact and kernel dependencies, and rerun the unchanged
 open population. Only a producer that converts previously open siblings earns
 operation authority.
+
+The first held-out-safe premise-ranking projection now makes the connected
+graph operational without pretending lexical overlap is semantics. It ranks at
+most 12 kernel lemmas for each of 142 open/conjectured Lean goals in train or
+development, using only the visible statement, canonical kernel types, direct
+type dependencies, and graph centrality. All 37 held-out fact IDs are excluded
+before statement tokenization. The artifact contains 1,704 candidate rows and
+grants no applicability or production authority. Its weakness is visible in
+the output: the independently proved `Nat.choose_self` is only third among a
+large tie for the corresponding source fact. The next connective layer is an
+exact type-compatibility filter and type-directed application attempt over
+these candidates, not a larger lexical score or an LLM assertion that one is
+the same theorem.
 
 ## Comparative position
 

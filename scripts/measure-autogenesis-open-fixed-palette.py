@@ -22,6 +22,7 @@ from axeyum.kernel import Declaration
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "artifacts/autogenesis/open-fixed-palette-census-v1.json"
+NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
 CANDIDATES = tuple(
     sorted(
         (
@@ -51,9 +52,43 @@ def capsule_path(directory: Path, fact_id: str) -> Path:
     return directory / f"{fact_id.replace(':', '-', 1)}.ndjson"
 
 
+def eligible_mapping(
+    mapping: dict[str, str], nursery: dict[str, Any]
+) -> tuple[dict[str, str], list[str]]:
+    partitions = {
+        row["fact_id"]: row["partition"]
+        for row in nursery.get("entries", [])
+        if isinstance(row, dict)
+        and isinstance(row.get("fact_id"), str)
+        and isinstance(row.get("partition"), str)
+    }
+    missing = sorted(set(mapping) - set(partitions))
+    if missing:
+        raise ValueError(f"mapping contains facts absent from the nursery: {missing}")
+    unsupported = sorted(
+        fact_id
+        for fact_id in mapping
+        if partitions[fact_id] not in {"train", "development", "held-out"}
+    )
+    if unsupported:
+        raise ValueError(f"mapping contains unsupported nursery partitions: {unsupported}")
+    excluded = sorted(
+        fact_id for fact_id in mapping if partitions[fact_id] == "held-out"
+    )
+    eligible = {
+        fact_id: target
+        for fact_id, target in mapping.items()
+        if partitions[fact_id] in {"train", "development"}
+    }
+    return eligible, excluded
+
+
 def measure(mapping_path: Path, capsule_directory: Path) -> dict[str, Any]:
     mapping_bytes = mapping_path.read_bytes()
     mapping: dict[str, str] = json.loads(mapping_bytes)
+    nursery_bytes = NURSERY.read_bytes()
+    nursery = json.loads(nursery_bytes)
+    mapping, excluded_held_out = eligible_mapping(mapping, nursery)
     outcomes = []
     for fact_id, target_definition in sorted(mapping.items()):
         path = capsule_path(capsule_directory, fact_id)
@@ -111,14 +146,17 @@ def measure(mapping_path: Path, capsule_directory: Path) -> dict[str, Any]:
         if row["result"] == "import_rejected"
     )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "axeyum-open-fixed-palette-census",
+        "state": "train-development-measurement-held-out-excluded",
         "authority": "measurement only; no operation registration or fact admission",
+        "supersedes": "the initial 80-row exploratory run, which improperly executed the grammar on 23 held-out targets; it found no proof and read no source proof body, but its held-out outcomes are contaminated and carry no evaluation credit",
         "source": {
             "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
             "lean_version": "4.30.0",
             "lean4export_format": "3.1.0",
             "mapping_sha256": digest(mapping_bytes),
+            "nursery_sha256": digest(nursery_bytes),
             "external_capsule_directory": str(capsule_directory),
         },
         "strategy": {
@@ -134,6 +172,7 @@ def measure(mapping_path: Path, capsule_directory: Path) -> dict[str, Any]:
         },
         "census": {
             "population": len(outcomes),
+            "excluded_held_out": len(excluded_held_out),
             "accepted": counts["accepted"],
             "declined": counts["declined"],
             "import_rejected": counts["import_rejected"],
@@ -143,7 +182,9 @@ def measure(mapping_path: Path, capsule_directory: Path) -> dict[str, Any]:
             "decline_reasons": dict(sorted(decline_reasons.items())),
             "rejection_declarations": dict(sorted(rejection_declarations.items())),
         },
+        "excluded_held_out_fact_ids": excluded_held_out,
         "outcomes": outcomes,
+        "limitations": "One fixed elementary palette is a negative baseline, not a general producer evaluation. Held-out rows are excluded before capsule access. Import rejections measure statement-boundary incompatibility, not solver inability or proposition falsehood.",
     }
 
 
@@ -168,6 +209,7 @@ def main() -> int:
         "OPEN_FIXED_PALETTE_CENSUS|"
         f"population={census['population']}|accepted={census['accepted']}|"
         f"declined={census['declined']}|import_rejected={census['import_rejected']}|"
+        f"excluded_held_out={census['excluded_held_out']}|"
         f"conversion_percent={census['conversion_percent']}"
     )
     return 0

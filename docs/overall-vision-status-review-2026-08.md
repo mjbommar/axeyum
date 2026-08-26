@@ -62,13 +62,13 @@ kernel and rejects unsupported or contaminated streams explicitly.
 
 The generated current projection measures:
 
-- 1,600 declarations;
-- 1,246 theorems;
+- 1,604 declarations;
+- 1,250 theorems;
 - 251 definitions;
 - 29 constructors, 22 inductives, and 22 recursors;
 - 30 declared axioms, all in the retained `AxReal` negative-control package;
-- 1,570 declarations with an empty measured footprint; and
-- 7,108 direct theorem-dependency edges.
+- 1,574 declarations with an empty measured footprint; and
+- 7,184 direct theorem-dependency edges.
 
 The constructive Nat, Int, Rat, CReal, Complex, logic, and string packages have
 zero measured trusted declarations. This is a narrower, differently engineered
@@ -94,9 +94,9 @@ Lean theorem does not upgrade a proofless SMT route.
 
 The ledger contains 696 propositions: 502 proved, 4 refuted, 2 computed, 185
 open, and 3 conjectured. Validation re-derives evidence and reports 603 rows
-with two or more independent checks. The lemma index covers all 1,246 kernel
-theorems and 7,108 direct edges, but only 395 theorems link exactly to 390
-ledger facts; 851 kernel theorems have no exact fact link.
+with two or more independent checks. The lemma index covers all 1,250 kernel
+theorems and 7,184 direct edges, but only 395 theorems link exactly to 390
+ledger facts; 855 kernel theorems have no exact fact link.
 
 The operation registry, typed producer declines, agent episodes, held-out
 partitions, candidate capsules, second-kernel checks, and crash-safe ledger
@@ -107,15 +107,18 @@ compounding claim remains small:
 - an earlier fixed reflexivity grammar accepted 2 of 138 checked type slices;
 - proof-isolated bounded application accepted 6 of 109 already settled Nat
   controls; and
-- the same search over 80 genuinely open/conjectured arrow-free statements
+- the same search over 57 train/development open/conjectured arrow-free statements
   with one target-independent elementary palette accepted 0.
 
-Of those 80, 37 reached search and returned `NoTypedApplication`; 43 failed
+Of those 57, 30 reached search and returned `NoTypedApplication`; 27 failed
 closed because the direct statement capsule reached an unlisted theorem,
 axiom, or quotient declaration. The existing ADR-0484 type-slice route—not a
 weaker importer—handles that second class by generalization and exact checked
 specialization. The remaining problem is productive proof search and semantic
-contracts, not merely transport.
+contracts, not merely transport. An initial exploratory run also touched 23
+held-out targets; although it produced no proof and read no source proof body,
+that was an evaluation-policy breach. The committed v2 census excludes those
+rows before reading their capsules and records their identities explicitly.
 
 ## Comparative position
 
@@ -158,7 +161,7 @@ Primary external references: [Lean documentation](https://lean-lang.org/lean4/do
 ## Weakest parts
 
 1. **Autonomous conversion, by a wide margin.** Architecture and checking are
-   ahead of premise selection and proof construction. Zero of the latest 80
+   ahead of premise selection and proof construction. Zero of the latest 57
    open targets converted under the fixed baseline.
 2. **Graph connectivity and semantic availability.** Two thirds of kernel
    theorems lack exact fact links. Type slices often erase the behavior a proof

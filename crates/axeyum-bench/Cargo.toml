@@ -47,3 +47,9 @@ name = "cvc5_smt_stream_bench"
 
 [[example]]
 name = "cvc5_qfbv_timeout_sweep"
+
+# Promote the accepted ADR-0541 general SMT-LIB driver to a named binary while
+# retaining its historical example target and source path for compatibility.
+[[bin]]
+name = "axeyum"
+path = "src/bin/axeyum.rs"

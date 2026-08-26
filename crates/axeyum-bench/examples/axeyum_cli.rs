@@ -25,9 +25,9 @@
 //! # Interface
 //!
 //! ```sh
-//! cargo run -q -p axeyum-bench --example axeyum_cli -- script.smt2
-//! cargo run -q -p axeyum-bench --example axeyum_cli -- --timeout-ms 5000 script.smt2
-//! cat script.smt2 | cargo run -q -p axeyum-bench --example axeyum_cli -- -
+//! cargo run -q -p axeyum-bench --bin axeyum -- script.smt2
+//! cargo run -q -p axeyum-bench --bin axeyum -- --timeout-ms 5000 script.smt2
+//! cat script.smt2 | cargo run -q -p axeyum-bench --bin axeyum -- -
 //! ```
 //!
 //! One line per *output* command, in script order, on stdout. Diagnostics go to
@@ -145,7 +145,7 @@ fn emit(response: &SmtLibResponse) -> bool {
     }
 }
 
-fn main() -> ExitCode {
+pub(crate) fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
     let mut path: Option<String> = None;
     let mut timeout_ms: Option<u64> = std::env::var("AXEYUM_TIMEOUT_MS")
