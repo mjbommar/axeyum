@@ -868,6 +868,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.sample_point_reblock,
             "theorem",
         ),
+        // The per-block fold gluing `sumRange_reblock`'s flat global sum to
+        // `fineBlockSum_close`'s per-block sum (`creal/integral.rs`): an
+        // EXACT identity (no error term), via a bounded pointwise `Equiv`
+        // congruence against `samplePoint_reblock`, `equivAbsDiffLe`,
+        // `UniformlyContinuousOn.spec` and `equiv_zero_of_small`.
+        (
+            "CReal.reblockBlock_eq_fineBlockSum",
+            p.reblock_block_eq_fine_block_sum,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
