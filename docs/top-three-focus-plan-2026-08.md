@@ -163,6 +163,16 @@ This closes materialization for controlled native targets; portable artifact
 distribution and authoritative multi-target receipt/transaction dispatch are
 still the next boundary.
 
+The common agent producer boundary can now consume those receipts. Resolution
+uses the lemma index's exact fact identity rather than theorem-name similarity,
+requires exactly one matching receipt, re-derives both byte length and SHA-256,
+and carries the receipt's candidate list into the candidate importer and
+bounded producer. A portable in-test capsule proves the route never imports the
+target theorem and reproduces the Fibonacci dependencies. This is executable
+plumbing, not operation authority: the tool is not added to the agent's tier-C
+surface until the registry, receipt schema, and crash-safe transaction agree on
+the multi-target contract.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring

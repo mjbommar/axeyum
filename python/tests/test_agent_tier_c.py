@@ -168,6 +168,64 @@ def test_the_index_resolves_an_export_when_no_manifest_names(tmp_path: Path, mon
     assert resolution.target_definition.endswith("natModEqComm")
 
 
+def test_candidate_capsule_receipt_resolves_exact_candidates(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "candidate.ndjson"
+    source.write_text('{"kind":"fixture"}\n')
+    fact_id = "F:ml430-native-candidate-0000cafe"
+    receipt = {
+        "kind": "axeyum-proof-isolated-candidate-capsule-receipt",
+        "target": "Nat.example",
+        "target_definition": "Axeyum.Statement.example",
+        "candidate_declarations": ["Nat.zero_add"],
+        "capsule_bytes": source.stat().st_size,
+        "capsule_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "external_artifact": {"path": str(source)},
+    }
+    lemma = SimpleNamespace(fact_ids=(fact_id,))
+    index = SimpleNamespace(get=lambda theorem: lemma)
+    monkeypatch.setattr(tools, "_adapter_records", lambda root: [receipt])
+    monkeypatch.setattr(tools.lemmas_api, "load", lambda root: index)
+    resolution = tools.resolve_export(tmp_path, fact_id)
+    assert resolution.source == "candidate-capsule-receipt"
+    assert resolution.candidate_declarations == ("Nat.zero_add",)
+
+
+def test_bounded_application_runs_only_the_receipt_candidates(tmp_path: Path) -> None:
+    from axeyum import producers
+    from axeyum.kernel import Declaration, Kernel
+
+    source = Kernel()
+    source.build_nat_prelude()
+    target = source.get_declaration("Nat.fib_mono")
+    assert target is not None
+    target_text = "Axeyum.Autogenesis.Statement.Native.fibMonoTierC"
+    target_name = source.name(target_text, must_exist=False)
+    source.add_declaration(Declaration.definition(target_name, [], source.sort_zero(), target.ty))
+    names = ("Nat.fib", "Nat.fib_le_succ", "Nat.monotone_of_le_succ")
+    capsule = source.render_lean4export_ndjson_roots(
+        "4.30.0", [target_name, *(source.name(name, must_exist=True) for name in names)]
+    ).encode()
+    path = tmp_path / "fib.ndjson"
+    path.write_bytes(capsule)
+    export = tools.ExportResolution(
+        fact_id="F:ml430-native-fib-mono-0000cafe",
+        path=path,
+        sha256=hashlib.sha256(capsule).hexdigest(),
+        target_definition=target_text,
+        source="candidate-capsule-receipt",
+        candidate_declarations=names,
+    )
+    measured = tools.run_producer("bounded_application", export)
+    assert measured["axiom_footprint"] == ()
+    assert measured["theorem_dependencies"] == (
+        "Nat.fib_le_succ",
+        "Nat.monotone_of_le_succ",
+    )
+
+    isolated = producers.import_candidate_statement_ndjson(capsule, None, target_text, names)
+    assert isolated.kernel().contains("Nat.fib_mono") is False
+
+
 def test_a_fact_with_no_frozen_export_is_refused(root: Path) -> None:
     with pytest.raises(tools.ExportUnavailable, match="no frozen statement export"):
         tools.resolve_export(root, "F:ml430-int-fib-add-181b6a2c")
