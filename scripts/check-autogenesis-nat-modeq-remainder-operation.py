@@ -176,7 +176,7 @@ def validate() -> dict[str, Any]:
 
 def main() -> None:
     validate()
-    print("nat-modeq-remainder-operation: ok (3 targets freshly replayed, registration only)")
+    print("nat-modeq-remainder-operation: ok (3 targets freshly replayed, execution-eligible)")
 
 
 if __name__ == "__main__":

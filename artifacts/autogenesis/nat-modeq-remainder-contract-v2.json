@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "kind": "axeyum-autogenesis-nat-modeq-remainder-contract",
-  "state": "three-of-three-operation-registered-not-admitted",
+  "state": "three-of-three-operation-contract",
   "authority": "This receipt makes the unchanged contract family eligible for operation registration. It does not settle facts; only authoritative dispatch and the crash-safe transaction may do that.",
   "environment": {
     "lean_version": "4.30.0",
@@ -137,8 +137,7 @@
     "operation_registration_bar": 3,
     "operation_registration_eligible": true,
     "operation_registered": true,
-    "operation_id": "authoritative-mathlib-nat-modeq-remainder-family-v1",
-    "facts_settled": 0
+    "operation_id": "authoritative-mathlib-nat-modeq-remainder-family-v1"
   },
-  "next_falsifiable_step": "Register this exact three-target family as one authoritative operation, dispatch it through clean episodes, and require crash-safe transactions to settle the facts without changing the candidate set or trusted base."
+  "next_falsifiable_step": "Dispatch this exact three-target family through clean episodes and require crash-safe transactions to settle the facts without changing the candidate set or trusted base."
 }

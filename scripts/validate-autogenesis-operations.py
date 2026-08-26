@@ -585,7 +585,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
         if (
             manifest.get("schema_version") != 2
             or manifest.get("kind") != "axeyum-autogenesis-nat-modeq-remainder-contract"
-            or manifest.get("state") != "three-of-three-operation-registered-not-admitted"
+            or manifest.get("state") != "three-of-three-operation-contract"
             or (manifest.get("contract_source") or {}).get("lean_axiom_footprint") != []
         ):
             raise RegistryError(f"{label}.receipt_manifest is not operation-eligible")

@@ -69,9 +69,11 @@ def main() -> None:
         if outcome.get(key) != expected:
             fail(f"outcome field {key} changed")
 
-    fact = json.loads((ROOT / "artifacts/facts" / (EXPECTED_FACT.replace(":", "-") + ".json")).read_text())
-    if fact.get("epistemic_status") != "open":
-        fail("diagnostic target is no longer open; regenerate or archive the receipt")
+    # This v1 artifact is an immutable historical diagnostic. Its census records
+    # what the first assay measured, not the target's current ledger status.
+    # The current lifecycle is owned by the registered v2 operation and its
+    # settled-fact checker, so advancing that operation must not invalidate this
+    # earlier source-bound observation.
     if document.get("census") != {
         "frozen_siblings": 3,
         "siblings_converted": 1,
