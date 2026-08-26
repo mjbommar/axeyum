@@ -125,6 +125,8 @@ pub enum JobShopEnergeticDomain {
     JobChains,
     /// Windows after deterministic detectable-precedence closure.
     PrecedenceClosure,
+    /// Re-run deterministic precedence closure under the certificate assumptions.
+    AssumptionClosure,
 }
 
 /// One explicit start-domain assumption used by a conditional conflict.
@@ -291,6 +293,74 @@ pub struct JobShopConditionalEnergeticUnitScan {
     pub candidates_checked: usize,
     /// Exact task-energy contributions evaluated, including bound searches.
     pub task_checks: usize,
+}
+
+/// Energetic scan after propagating an explicit conjunction of start bounds.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JobShopConditionalEnergeticContextScan {
+    /// Propagation measurements under the assumptions.
+    pub propagation: JobShopPrecedencePropagation,
+    /// Strongest interval after propagation.
+    pub check: CumulativeEnergeticCheck,
+    /// Machine containing the strongest interval.
+    pub machine: usize,
+    /// Machine/interval pairs examined.
+    pub intervals_checked: usize,
+    /// Task contributions evaluated.
+    pub task_checks: usize,
+    /// Portable conditional conflict when the context overloads a resource.
+    pub conflict: Option<JobShopConditionalEnergeticConflict>,
+}
+
+/// Explicit limits for contextual energetic unit iteration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct JobShopConditionalEnergeticFixpointLimits {
+    /// Per-round exhaustive unit-scan limits.
+    pub unit: JobShopConditionalEnergeticUnitLimits,
+    /// Maximum contextual rounds.
+    pub max_rounds: usize,
+    /// Maximum contextual conflicts retained across rounds.
+    pub max_total_conflicts: usize,
+}
+
+impl Default for JobShopConditionalEnergeticFixpointLimits {
+    fn default() -> Self {
+        Self {
+            unit: JobShopConditionalEnergeticUnitLimits::default(),
+            max_rounds: 100,
+            max_total_conflicts: 100_000,
+        }
+    }
+}
+
+/// One checked contextual unit-derivation round.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct JobShopConditionalEnergeticFixpointRound {
+    /// Entailed start bounds before this round.
+    pub assumptions_before: Vec<JobShopStartBound>,
+    /// Checked contextual explanations found in this round.
+    pub conflicts: Vec<JobShopConditionalEnergeticConflict>,
+    /// Entailed start bounds after negating the new conflicting bounds.
+    pub assumptions_after: Vec<JobShopStartBound>,
+    /// Candidate bounds examined.
+    pub candidates_checked: usize,
+    /// Exact task contributions evaluated.
+    pub task_checks: usize,
+}
+
+/// Checked contextual energetic unit closure from standalone premise conflicts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct JobShopConditionalEnergeticFixpoint {
+    /// Ordered contextual rounds.
+    pub rounds: Vec<JobShopConditionalEnergeticFixpointRound>,
+    /// Final strongest entailed start bounds.
+    pub assumptions: Vec<JobShopStartBound>,
+    /// All contextual conflict clauses in derivation order.
+    pub conflicts: Vec<JobShopConditionalEnergeticConflict>,
+    /// Whether a round produced no stronger bound.
+    pub stabilized: bool,
 }
 
 fn cumulative_task_energy(
@@ -591,6 +661,9 @@ fn job_shop_domain_windows(
             }
             Ok(result.windows)
         }
+        JobShopEnergeticDomain::AssumptionClosure => Err(JobShopError::Malformed(
+            "assumption closure requires explicit conditional bounds".to_owned(),
+        )),
     }
 }
 
@@ -656,7 +729,7 @@ pub fn check_job_shop_energetic_conflict(
 
 fn apply_job_shop_start_bounds(
     problem: &JobShopProblem,
-    machine: usize,
+    machine: Option<usize>,
     assumptions: &[JobShopStartBound],
     windows: &mut [JobShopOperationWindow],
 ) -> Result<(), JobShopError> {
@@ -694,9 +767,10 @@ fn apply_job_shop_start_bounds(
                 "conditional operation {job}:{operation} is out of range"
             ))
         })?;
-        if item.machine != machine {
+        if machine.is_some_and(|machine| item.machine != machine) {
             return Err(JobShopError::Malformed(format!(
-                "conditional operation {job}:{operation} is not on machine {machine}"
+                "conditional operation {job}:{operation} is not on machine {}",
+                machine.expect("checked as some")
             )));
         }
         let flat = problem
@@ -773,13 +847,28 @@ pub fn check_job_shop_conditional_energetic_conflict(
             "conditional energetic interval exceeds makespan bound".to_owned(),
         ));
     }
-    let mut windows = job_shop_domain_windows(problem, bound, conflict.domain)?;
-    apply_job_shop_start_bounds(
-        problem,
-        conflict.machine,
-        &conflict.assumptions,
-        &mut windows,
-    )?;
+    let windows = if conflict.domain == JobShopEnergeticDomain::AssumptionClosure {
+        let propagation = propagate_job_shop_precedences_with_start_bounds(
+            problem,
+            bound,
+            &conflict.assumptions,
+        )?;
+        if propagation.infeasible {
+            return Err(JobShopError::InvalidSchedule(
+                "assumption precedence closure is already infeasible".to_owned(),
+            ));
+        }
+        propagation.windows
+    } else {
+        let mut windows = job_shop_domain_windows(problem, bound, conflict.domain)?;
+        apply_job_shop_start_bounds(
+            problem,
+            Some(conflict.machine),
+            &conflict.assumptions,
+            &mut windows,
+        )?;
+        windows
+    };
     let tasks = job_shop_machine_task_windows(problem, bound, conflict.machine, Some(&windows))?;
     let energetic = check_cumulative_energetic_interval(
         &tasks,
@@ -896,7 +985,7 @@ fn conditional_energy_with_bounds(
     interval_end: usize,
 ) -> Result<CumulativeEnergeticCheck, JobShopError> {
     let mut windows = base_windows.to_vec();
-    apply_job_shop_start_bounds(problem, machine, assumptions, &mut windows)?;
+    apply_job_shop_start_bounds(problem, Some(machine), assumptions, &mut windows)?;
     let tasks = job_shop_machine_task_windows(problem, bound, machine, Some(&windows))?;
     check_cumulative_energetic_interval(&tasks, 1, interval_start, interval_end)
 }
@@ -1067,10 +1156,14 @@ enum UnitBoundDirection {
     Upper,
 }
 
+#[derive(Clone, Copy)]
 struct UnitEnergeticProbe {
     assumption: JobShopStartBound,
     required_energy: usize,
 }
+
+type UnitConflictKey = (usize, usize, u8);
+type UnitConflictCandidate = (UnitConflictKey, JobShopConditionalEnergeticConflict);
 
 struct UnitIntervalContext {
     interval_start: usize,
@@ -1198,31 +1291,106 @@ fn find_conditional_energetic_unit_bound(
 }
 
 fn stronger_unit_conflict(
+    key: (usize, usize, u8),
     candidate: &JobShopConditionalEnergeticConflict,
     current: &JobShopConditionalEnergeticConflict,
 ) -> bool {
-    match (candidate.assumptions[0], current.assumptions[0]) {
+    let candidate = candidate
+        .assumptions
+        .iter()
+        .find(|assumption| assumption.key() == key)
+        .copied();
+    let current = current
+        .assumptions
+        .iter()
+        .find(|assumption| assumption.key() == key)
+        .copied();
+    match (candidate, current) {
         (
-            JobShopStartBound::StartAtMost {
+            Some(JobShopStartBound::StartAtMost {
                 time: candidate, ..
-            },
-            JobShopStartBound::StartAtMost { time: current, .. },
+            }),
+            Some(JobShopStartBound::StartAtMost { time: current, .. }),
         ) => candidate > current,
         (
-            JobShopStartBound::StartAtLeast {
+            Some(JobShopStartBound::StartAtLeast {
                 time: candidate, ..
-            },
-            JobShopStartBound::StartAtLeast { time: current, .. },
+            }),
+            Some(JobShopStartBound::StartAtLeast { time: current, .. }),
         ) => candidate < current,
         _ => false,
     }
 }
 
 struct UnitScanContext<'a> {
+    problem: &'a JobShopProblem,
     bound: usize,
     domain: JobShopEnergeticDomain,
     windows: &'a [JobShopOperationWindow],
+    base_assumptions: &'a [JobShopStartBound],
     limits: JobShopConditionalEnergeticUnitLimits,
+}
+
+impl UnitScanContext<'_> {
+    fn conflict_for_probe(
+        &self,
+        probe: &UnitEnergeticProbe,
+        machine: usize,
+        interval_start: usize,
+        interval_end: usize,
+        base_capacity_energy: usize,
+    ) -> Result<Option<UnitConflictCandidate>, JobShopError> {
+        let key = probe.assumption.key();
+        if self
+            .base_assumptions
+            .iter()
+            .any(|assumption| assumption.key() == key)
+        {
+            return Ok(None);
+        }
+        let mut assumptions = self.base_assumptions.to_vec();
+        assumptions.push(probe.assumption);
+        assumptions.sort_unstable_by_key(|assumption| assumption.key());
+        let (required_energy, capacity_energy) =
+            if self.domain == JobShopEnergeticDomain::AssumptionClosure {
+                let propagation = propagate_job_shop_precedences_with_start_bounds(
+                    self.problem,
+                    self.bound,
+                    &assumptions,
+                )?;
+                if propagation.infeasible {
+                    return Ok(None);
+                }
+                let tasks = job_shop_machine_task_windows(
+                    self.problem,
+                    self.bound,
+                    machine,
+                    Some(&propagation.windows),
+                )?;
+                let check =
+                    check_cumulative_energetic_interval(&tasks, 1, interval_start, interval_end)?;
+                if !check.overloaded {
+                    return Ok(None);
+                }
+                (check.required_energy, check.capacity_energy)
+            } else {
+                (probe.required_energy, base_capacity_energy)
+            };
+        Ok(Some((
+            key,
+            JobShopConditionalEnergeticConflict {
+                schema: JOB_SHOP_CONDITIONAL_ENERGETIC_CONFLICT_SCHEMA.to_owned(),
+                bound: self.bound,
+                domain: self.domain,
+                assumptions,
+                machine,
+                interval_start,
+                interval_end,
+                required_energy,
+                capacity_energy,
+            },
+        )))
+    }
 }
 
 #[derive(Default)]
@@ -1280,22 +1448,20 @@ impl UnitScanState {
                 let Some(probe) = probe else {
                     continue;
                 };
-                let conflict = JobShopConditionalEnergeticConflict {
-                    schema: JOB_SHOP_CONDITIONAL_ENERGETIC_CONFLICT_SCHEMA.to_owned(),
-                    bound: context.bound,
-                    domain: context.domain,
-                    assumptions: vec![probe.assumption],
+                let Some((key, conflict)) = context.conflict_for_probe(
+                    &probe,
                     machine,
                     interval_start,
                     interval_end,
-                    required_energy: probe.required_energy,
-                    capacity_energy: base.capacity_energy,
+                    base.capacity_energy,
+                )?
+                else {
+                    continue;
                 };
-                let key = probe.assumption.key();
                 if self
                     .retained
                     .get(&key)
-                    .is_none_or(|current| stronger_unit_conflict(&conflict, current))
+                    .is_none_or(|current| stronger_unit_conflict(key, &conflict, current))
                 {
                     self.retained.insert(key, conflict);
                     if self.retained.len() > context.limits.max_conflicts {
@@ -1319,6 +1485,73 @@ impl UnitScanState {
     }
 }
 
+fn conditional_unit_interval_count(
+    problem: &JobShopProblem,
+    bound: usize,
+    limits: JobShopConditionalEnergeticUnitLimits,
+) -> Result<usize, JobShopError> {
+    if bound > limits.energetic.max_horizon {
+        return Err(JobShopError::LimitExceeded {
+            resource: "conditional energetic horizon",
+            observed: bound,
+            limit: limits.energetic.max_horizon,
+        });
+    }
+    let intervals = bound
+        .checked_mul(bound.checked_add(1).ok_or_else(|| {
+            JobShopError::Malformed("conditional interval count overflow".to_owned())
+        })?)
+        .and_then(|value| value.checked_div(2))
+        .and_then(|value| value.checked_mul(problem.machines))
+        .ok_or_else(|| JobShopError::Malformed("conditional interval count overflow".to_owned()))?;
+    if intervals > limits.energetic.max_intervals {
+        return Err(JobShopError::LimitExceeded {
+            resource: "conditional energetic intervals",
+            observed: intervals,
+            limit: limits.energetic.max_intervals,
+        });
+    }
+    Ok(intervals)
+}
+
+fn scan_conditional_units_from_windows(
+    problem: &JobShopProblem,
+    bound: usize,
+    domain: JobShopEnergeticDomain,
+    base_assumptions: &[JobShopStartBound],
+    windows: &[JobShopOperationWindow],
+    limits: JobShopConditionalEnergeticUnitLimits,
+) -> Result<JobShopConditionalEnergeticUnitScan, JobShopError> {
+    let intervals_checked = conditional_unit_interval_count(problem, bound, limits)?;
+    let context = UnitScanContext {
+        problem,
+        bound,
+        domain,
+        windows,
+        base_assumptions,
+        limits,
+    };
+    let mut state = UnitScanState::default();
+    for machine in 0..problem.machines {
+        let tasks = job_shop_machine_task_windows(problem, bound, machine, Some(windows))?;
+        for interval_start in 0..bound {
+            for interval_end in interval_start + 1..=bound {
+                state.check_interval(&context, &tasks, machine, interval_start, interval_end)?;
+            }
+        }
+    }
+    let conflicts = state.retained.into_values().collect::<Vec<_>>();
+    for conflict in &conflicts {
+        check_job_shop_conditional_energetic_conflict(problem, bound, conflict)?;
+    }
+    Ok(JobShopConditionalEnergeticUnitScan {
+        conflicts,
+        intervals_checked,
+        candidates_checked: state.candidates_checked,
+        task_checks: state.task_checks,
+    })
+}
+
 /// Exhaustively find strongest standalone unit-bound energetic deductions.
 ///
 /// Every integer interval on every machine is checked from the selected base
@@ -1340,52 +1573,203 @@ pub fn scan_job_shop_conditional_energetic_unit_conflicts(
     domain: JobShopEnergeticDomain,
     limits: JobShopConditionalEnergeticUnitLimits,
 ) -> Result<JobShopConditionalEnergeticUnitScan, JobShopError> {
-    if bound > limits.energetic.max_horizon {
-        return Err(JobShopError::LimitExceeded {
-            resource: "conditional energetic horizon",
-            observed: bound,
-            limit: limits.energetic.max_horizon,
-        });
-    }
-    let intervals_checked = bound
-        .checked_mul(bound.checked_add(1).ok_or_else(|| {
-            JobShopError::Malformed("conditional interval count overflow".to_owned())
-        })?)
-        .and_then(|value| value.checked_div(2))
-        .and_then(|value| value.checked_mul(problem.machines))
-        .ok_or_else(|| JobShopError::Malformed("conditional interval count overflow".to_owned()))?;
-    if intervals_checked > limits.energetic.max_intervals {
-        return Err(JobShopError::LimitExceeded {
-            resource: "conditional energetic intervals",
-            observed: intervals_checked,
-            limit: limits.energetic.max_intervals,
-        });
-    }
     let windows = job_shop_domain_windows(problem, bound, domain)?;
-    let context = UnitScanContext {
+    scan_conditional_units_from_windows(problem, bound, domain, &[], &windows, limits)
+}
+
+/// Exhaustively derive new unit bounds under an established bound context.
+///
+/// The context is propagated through job and detectable machine precedences
+/// first. Every returned explanation contains the complete context plus one
+/// additional conflicting bound and is independently replayed using
+/// [`JobShopEnergeticDomain::AssumptionClosure`]. When the context assumptions
+/// are already unit clauses, Boolean propagation reduces each returned clause
+/// to the newly derived unit.
+///
+/// # Errors
+///
+/// Refuses malformed or infeasible contexts, a root energetic conflict that
+/// should use the context-scan route, arithmetic overflow, or explicit limit
+/// exhaustion.
+pub fn scan_job_shop_contextual_energetic_unit_conflicts(
+    problem: &JobShopProblem,
+    bound: usize,
+    assumptions: &[JobShopStartBound],
+    limits: JobShopConditionalEnergeticUnitLimits,
+) -> Result<JobShopConditionalEnergeticUnitScan, JobShopError> {
+    let propagation =
+        propagate_job_shop_precedences_with_start_bounds(problem, bound, assumptions)?;
+    if propagation.infeasible {
+        return Err(JobShopError::InvalidSchedule(
+            "start-bound context is already infeasible by precedence propagation".to_owned(),
+        ));
+    }
+    scan_conditional_units_from_windows(
+        problem,
         bound,
-        domain,
-        windows: &windows,
+        JobShopEnergeticDomain::AssumptionClosure,
+        assumptions,
+        &propagation.windows,
         limits,
+    )
+}
+
+fn negate_start_bound(bound: JobShopStartBound) -> Result<JobShopStartBound, JobShopError> {
+    match bound {
+        JobShopStartBound::StartAtMost {
+            job,
+            operation,
+            time,
+        } => Ok(JobShopStartBound::StartAtLeast {
+            job,
+            operation,
+            time: time.checked_add(1).ok_or_else(|| {
+                JobShopError::Malformed("start-bound negation overflow".to_owned())
+            })?,
+        }),
+        JobShopStartBound::StartAtLeast {
+            job,
+            operation,
+            time,
+        } => Ok(JobShopStartBound::StartAtMost {
+            job,
+            operation,
+            time: time.checked_sub(1).ok_or_else(|| {
+                JobShopError::InvalidSchedule(
+                    "conditional conflict negates an always-true lower bound".to_owned(),
+                )
+            })?,
+        }),
+    }
+}
+
+fn merge_entailed_start_bound(
+    assumptions: &mut Vec<JobShopStartBound>,
+    candidate: JobShopStartBound,
+) -> bool {
+    let key = candidate.key();
+    let Some(index) = assumptions
+        .iter()
+        .position(|assumption| assumption.key() == key)
+    else {
+        assumptions.push(candidate);
+        assumptions.sort_unstable_by_key(|assumption| assumption.key());
+        return true;
     };
-    let mut state = UnitScanState::default();
-    for machine in 0..problem.machines {
-        let tasks = job_shop_machine_task_windows(problem, bound, machine, Some(&windows))?;
-        for interval_start in 0..bound {
-            for interval_end in interval_start + 1..=bound {
-                state.check_interval(&context, &tasks, machine, interval_start, interval_end)?;
-            }
+    let stronger = match (candidate, assumptions[index]) {
+        (
+            JobShopStartBound::StartAtLeast { time: new, .. },
+            JobShopStartBound::StartAtLeast { time: old, .. },
+        ) => new > old,
+        (
+            JobShopStartBound::StartAtMost { time: new, .. },
+            JobShopStartBound::StartAtMost { time: old, .. },
+        ) => new < old,
+        _ => false,
+    };
+    if stronger {
+        assumptions[index] = candidate;
+    }
+    stronger
+}
+
+fn new_conflicting_bound(
+    context: &[JobShopStartBound],
+    conflict: &JobShopConditionalEnergeticConflict,
+) -> Result<JobShopStartBound, JobShopError> {
+    let difference = conflict
+        .assumptions
+        .iter()
+        .filter(|assumption| !context.contains(assumption))
+        .copied()
+        .collect::<Vec<_>>();
+    if difference.len() != 1 {
+        return Err(JobShopError::Malformed(format!(
+            "contextual explanation adds {} bounds instead of one",
+            difference.len()
+        )));
+    }
+    Ok(difference[0])
+}
+
+/// Iterate checked contextual energetic units to a bounded fixpoint.
+///
+/// Each premise must be a replayable one-assumption conflict; its negation
+/// seeds the entailed context. Every later explanation contains that complete
+/// context plus exactly one conflicting bound. Negating the new bound yields
+/// the next entailed unit, so the returned ordered clauses form a checkable
+/// implication chain rather than an untrusted domain mutation.
+///
+/// # Errors
+///
+/// Refuses invalid or non-unit premises, malformed contextual explanations,
+/// contradictory propagation, arithmetic overflow, or explicit round/conflict
+/// limit exhaustion.
+pub fn close_job_shop_conditional_energetic_units(
+    problem: &JobShopProblem,
+    bound: usize,
+    premises: &[JobShopConditionalEnergeticConflict],
+    limits: JobShopConditionalEnergeticFixpointLimits,
+) -> Result<JobShopConditionalEnergeticFixpoint, JobShopError> {
+    if limits.max_rounds == 0 {
+        return Err(JobShopError::Malformed(
+            "conditional energetic fixpoint requires a positive round limit".to_owned(),
+        ));
+    }
+    let mut assumptions = Vec::new();
+    for premise in premises {
+        check_job_shop_conditional_energetic_conflict(problem, bound, premise)?;
+        if premise.assumptions.len() != 1 {
+            return Err(JobShopError::Malformed(
+                "conditional energetic fixpoint premise is not unit".to_owned(),
+            ));
+        }
+        merge_entailed_start_bound(
+            &mut assumptions,
+            negate_start_bound(premise.assumptions[0])?,
+        );
+    }
+    let mut rounds = Vec::new();
+    let mut all_conflicts = Vec::new();
+    let mut stabilized = false;
+    for _ in 0..limits.max_rounds {
+        let scan = scan_job_shop_contextual_energetic_unit_conflicts(
+            problem,
+            bound,
+            &assumptions,
+            limits.unit,
+        )?;
+        let before = assumptions.clone();
+        let mut changed = false;
+        for conflict in &scan.conflicts {
+            let bad_bound = new_conflicting_bound(&before, conflict)?;
+            changed |= merge_entailed_start_bound(&mut assumptions, negate_start_bound(bad_bound)?);
+        }
+        all_conflicts.extend(scan.conflicts.iter().cloned());
+        if all_conflicts.len() > limits.max_total_conflicts {
+            return Err(JobShopError::LimitExceeded {
+                resource: "conditional energetic fixpoint conflicts",
+                observed: all_conflicts.len(),
+                limit: limits.max_total_conflicts,
+            });
+        }
+        rounds.push(JobShopConditionalEnergeticFixpointRound {
+            assumptions_before: before,
+            conflicts: scan.conflicts,
+            assumptions_after: assumptions.clone(),
+            candidates_checked: scan.candidates_checked,
+            task_checks: scan.task_checks,
+        });
+        if !changed {
+            stabilized = true;
+            break;
         }
     }
-    let conflicts = state.retained.into_values().collect::<Vec<_>>();
-    for conflict in &conflicts {
-        check_job_shop_conditional_energetic_conflict(problem, bound, conflict)?;
-    }
-    Ok(JobShopConditionalEnergeticUnitScan {
-        conflicts,
-        intervals_checked,
-        candidates_checked: state.candidates_checked,
-        task_checks: state.task_checks,
+    Ok(JobShopConditionalEnergeticFixpoint {
+        rounds,
+        assumptions,
+        conflicts: all_conflicts,
+        stabilized,
     })
 }
 
@@ -2054,6 +2438,7 @@ fn precedence_bounds(
     operations: &[FlatOperation],
     edges: &[Vec<usize>],
     bound: usize,
+    initial_windows: Option<&[JobShopOperationWindow]>,
 ) -> Option<(Vec<usize>, Vec<usize>)> {
     let count = operations.len();
     let mut indegree = vec![0usize; count];
@@ -2073,17 +2458,35 @@ fn precedence_bounds(
         }
     }
 
-    let mut earliest = vec![0usize; count];
+    let mut earliest = if let Some(windows) = initial_windows {
+        if windows.len() != count {
+            return None;
+        }
+        windows
+            .iter()
+            .zip(operations)
+            .map(|(window, operation)| {
+                (window.job == operation.job && window.operation == operation.operation)
+                    .then_some(window.earliest)
+            })
+            .collect::<Option<Vec<_>>>()?
+    } else {
+        vec![0usize; count]
+    };
     for &operation in &topo {
         let end = earliest[operation].checked_add(operations[operation].duration)?;
         for &successor in &edges[operation] {
             earliest[successor] = earliest[successor].max(end);
         }
     }
-    let mut latest = operations
-        .iter()
-        .map(|operation| bound.checked_sub(operation.duration))
-        .collect::<Option<Vec<_>>>()?;
+    let mut latest = if let Some(windows) = initial_windows {
+        windows.iter().map(|window| window.latest).collect()
+    } else {
+        operations
+            .iter()
+            .map(|operation| bound.checked_sub(operation.duration))
+            .collect::<Option<Vec<_>>>()?
+    };
     for &operation in topo.iter().rev() {
         for &successor in &edges[operation] {
             latest[operation] = latest[operation]
@@ -2107,9 +2510,10 @@ fn precedence_bounds(
 /// # Errors
 ///
 /// Refuses malformed operation metadata or arithmetic overflow.
-pub fn propagate_job_shop_precedences(
+fn propagate_job_shop_precedences_from_windows(
     problem: &JobShopProblem,
     bound: usize,
+    initial_windows: Option<&[JobShopOperationWindow]>,
 ) -> Result<JobShopPrecedencePropagation, JobShopError> {
     if problem.jobs.is_empty() || problem.machines == 0 {
         return Err(JobShopError::Malformed("empty problem".to_owned()));
@@ -2134,7 +2538,9 @@ pub fn propagate_job_shop_precedences(
     let mut statuses = vec![JobShopMachineOrderStatus::Free; pairs.len()];
     let mut rounds = 0;
     loop {
-        let Some((earliest, latest)) = precedence_bounds(&operations, &edges, bound) else {
+        let Some((earliest, latest)) =
+            precedence_bounds(&operations, &edges, bound, initial_windows)
+        else {
             return Ok(JobShopPrecedencePropagation {
                 windows: Vec::new(),
                 machine_orders: statuses,
@@ -2204,6 +2610,41 @@ pub fn propagate_job_shop_precedences(
     }
 }
 
+/// Propagate job precedences and pairwise detectable machine precedences to a
+/// deterministic fixpoint.
+///
+/// # Errors
+///
+/// Refuses malformed operation metadata or arithmetic overflow.
+pub fn propagate_job_shop_precedences(
+    problem: &JobShopProblem,
+    bound: usize,
+) -> Result<JobShopPrecedencePropagation, JobShopError> {
+    propagate_job_shop_precedences_from_windows(problem, bound, None)
+}
+
+/// Propagate explicit start bounds through job and detectable machine edges.
+///
+/// Bounds are canonical semantic assumptions, not raw solver literals. The
+/// propagation starts from exact job-chain windows narrowed by those bounds,
+/// then repeats deterministic detectable-precedence closure to a fixpoint.
+/// Assumptions may concern any machine; their consequences can cross machines
+/// through job chains.
+///
+/// # Errors
+///
+/// Refuses noncanonical, redundant, contradictory, or out-of-range bounds,
+/// malformed problem metadata, or arithmetic overflow.
+pub fn propagate_job_shop_precedences_with_start_bounds(
+    problem: &JobShopProblem,
+    bound: usize,
+    assumptions: &[JobShopStartBound],
+) -> Result<JobShopPrecedencePropagation, JobShopError> {
+    let mut windows = job_shop_domain_windows(problem, bound, JobShopEnergeticDomain::JobChains)?;
+    apply_job_shop_start_bounds(problem, None, assumptions, &mut windows)?;
+    propagate_job_shop_precedences_from_windows(problem, bound, Some(&windows))
+}
+
 /// Scan energetic intervals after detectable-precedence closure.
 ///
 /// This composes two independently replayable inference layers: first the
@@ -2236,6 +2677,63 @@ pub fn scan_job_shop_energetic_intervals_with_precedence_closure(
         JobShopEnergeticDomain::PrecedenceClosure,
         Some(&propagation.windows),
     )
+}
+
+/// Propagate explicit start bounds, then exhaustively scan energetic intervals.
+///
+/// The returned conflict, when present, records the complete assumption
+/// conjunction and uses [`JobShopEnergeticDomain::AssumptionClosure`], so
+/// independent replay reconstructs both propagation and the overload. A
+/// merely strong interval remains a measurement and emits no certificate.
+///
+/// # Errors
+///
+/// Refuses malformed assumptions, a context already contradicted by precedence
+/// propagation, arithmetic overflow, or scan work exceeding explicit limits.
+pub fn scan_job_shop_conditional_energetic_intervals_with_start_bounds(
+    problem: &JobShopProblem,
+    bound: usize,
+    assumptions: &[JobShopStartBound],
+    limits: JobShopEnergeticLimits,
+) -> Result<JobShopConditionalEnergeticContextScan, JobShopError> {
+    let propagation =
+        propagate_job_shop_precedences_with_start_bounds(problem, bound, assumptions)?;
+    if propagation.infeasible {
+        return Err(JobShopError::InvalidSchedule(
+            "start-bound context is already infeasible by precedence propagation".to_owned(),
+        ));
+    }
+    let scan = scan_job_shop_energetic_intervals_from_windows(
+        problem,
+        bound,
+        limits,
+        JobShopEnergeticDomain::AssumptionClosure,
+        Some(&propagation.windows),
+    )?;
+    let conflict = scan
+        .conflict
+        .map(|root| JobShopConditionalEnergeticConflict {
+            schema: JOB_SHOP_CONDITIONAL_ENERGETIC_CONFLICT_SCHEMA.to_owned(),
+            bound,
+            domain: JobShopEnergeticDomain::AssumptionClosure,
+            assumptions: assumptions.to_vec(),
+            machine: root.machine,
+            interval_start: root.interval_start,
+            interval_end: root.interval_end,
+            required_energy: root.required_energy,
+            capacity_energy: root.capacity_energy,
+        });
+    if let Some(conflict) = &conflict {
+        check_job_shop_conditional_energetic_conflict(problem, bound, conflict)?;
+    }
+    Ok(JobShopConditionalEnergeticContextScan {
+        propagation,
+        check: scan.check,
+        machine: scan.machine,
+        intervals_checked: scan.intervals_checked,
+        task_checks: scan.task_checks,
+        conflict,
+    })
 }
 
 /// Exact CNF question “does this instance have makespan at most `bound`?”.
@@ -3178,6 +3676,67 @@ mod tests {
                 limit: 1,
             })
         );
+    }
+
+    #[test]
+    fn conditional_energetic_units_close_as_a_checked_clause_chain() {
+        let problem = JobShopProblem::parse_orlib(FT06).unwrap();
+        let premises = scan_job_shop_conditional_energetic_unit_conflicts(
+            &problem,
+            55,
+            JobShopEnergeticDomain::PrecedenceClosure,
+            JobShopConditionalEnergeticUnitLimits::default(),
+        )
+        .unwrap()
+        .conflicts;
+        let closure = close_job_shop_conditional_energetic_units(
+            &problem,
+            55,
+            &premises,
+            JobShopConditionalEnergeticFixpointLimits::default(),
+        )
+        .unwrap();
+        assert!(closure.stabilized);
+        assert!(!closure.rounds.is_empty());
+        assert!(closure.rounds.last().unwrap().conflicts.is_empty());
+        for conflict in &closure.conflicts {
+            check_job_shop_conditional_energetic_conflict(&problem, 55, conflict).unwrap();
+        }
+
+        let encoding =
+            encode_job_shop_with_precedence_closure(&problem, 55, JobShopEncodingLimits::default())
+                .unwrap();
+        let mut conflicts = premises.clone();
+        conflicts.extend(closure.conflicts);
+        let strengthened = encoding
+            .formula_with_conditional_energetic_conflicts(&conflicts)
+            .unwrap();
+        assert_eq!(
+            strengthened.clauses().len(),
+            encoding.formula().clauses().len() + conflicts.len()
+        );
+        let SatResult::Sat(model) = solve_with_rustsat_batsat(&strengthened).unwrap() else {
+            panic!("ft06 at its optimum remains feasible after checked unit closure");
+        };
+        assert_eq!(encoding.lift_model(&model).unwrap().makespan, 55);
+
+        let mut malformed = premises;
+        malformed[0]
+            .assumptions
+            .push(JobShopStartBound::StartAtMost {
+                job: 0,
+                operation: 0,
+                time: 0,
+            });
+        assert!(matches!(
+            close_job_shop_conditional_energetic_units(
+                &problem,
+                55,
+                &malformed,
+                JobShopConditionalEnergeticFixpointLimits::default()
+            ),
+            Err(JobShopError::InvalidSchedule(_) | JobShopError::Malformed(_))
+        ));
     }
 
     #[test]

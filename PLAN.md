@@ -1447,6 +1447,19 @@ task checks complete in 7.49 seconds and retain exactly two deductions: `start(2
 unknown. This exhausts standalone units, not contextual propagation under learned bounds, and
 does not change the open lower-bound verdict.
 
+**Contextual energetic fixpoint, 2026-08-26.** ADR-0580 turns replayed unit conflicts into a
+bounded implication chain: semantic start bounds propagate across job chains and detectable
+machine precedences, every contextual overload retains the complete assumption conjunction, and
+each clause is independently replayed before insertion. A single release command reproduces four
+exhaustive `abz7@655` rounds with conflict counts 2/2/1/0 and six final bounds. Forced machine
+orders rise from 256 to 861; 1,289,053,403 exact task-energy checks produce five contextual plus
+two premise clauses, growing the 175,170-variable formula from 1,690,226 to 1,690,233 clauses.
+The closure stabilizes without a precedence or energetic contradiction, and matched 30-second
+CaDiCaL runs remain unknown, so no lower bound or speedup is claimed. This exhausts the current
+contextual energetic-unit layer; certified edge-finding/not-first/not-last explanations or checked
+branch composition are the next materially different lower-bound routes. All seven sustained
+DRCP/DRAT producers remain live.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding

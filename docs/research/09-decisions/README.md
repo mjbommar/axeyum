@@ -650,3 +650,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0577](adr-0577-energetic-overloads-are-recomputed-not-trusted.md) | Recompute cumulative compulsory energy and admit only strict overload certificates | accepted |
 | [0578](adr-0578-conditional-energetic-explanations-become-checked-prefix-clauses.md) | Replay conditional energetic overloads and translate their assumptions into exact CNF prefix clauses | accepted |
 | [0579](adr-0579-standalone-energetic-unit-scans-are-exhaustive-and-bounded.md) | Exhaust all machine intervals for strongest independently replayed start-bound units | accepted |
+| [0580](adr-0580-contextual-energetic-units-close-as-a-checked-clause-chain.md) | Iterate replayed scheduling bounds through precedence closure and energetic unit explanations | accepted |
