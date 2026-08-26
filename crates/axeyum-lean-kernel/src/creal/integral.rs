@@ -6865,6 +6865,19 @@ mod riemann_sum_reblock_close_tests {
     use super::*;
     use crate::Declaration;
 
+    /// Runs `f` on a 256 MiB stack. See
+    /// `reblock_block_eq_fine_block_sum_tests::on_a_deep_stack` for the
+    /// same pattern one step earlier in this pipeline, and
+    /// `creal_point/creal_point_tests.rs` for the original.
+    fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
+        std::thread::Builder::new()
+            .stack_size(256 * 1024 * 1024)
+            .spawn(f)
+            .expect("spawning a deep-stack thread must succeed")
+            .join()
+            .expect("the deep-stack thread must not panic")
+    }
+
     /// **Mandatory concrete instantiation, with a negative control.**
     /// `F := identity`, `a := ofNat 0`, `b := ofNat 1`, `e := 0`, `m := 2`,
     /// `n := 1` (`m != n`, per this slice's own caution about
@@ -6887,6 +6900,21 @@ mod riemann_sum_reblock_close_tests {
     /// this is not a vacuous check.
     #[test]
     fn riemann_sum_reblock_close_applies_at_concrete_literals() {
+        on_a_deep_stack(riemann_sum_reblock_close_concrete_body);
+    }
+
+    /// Fully normalizing this instantiation drives the kernel deep through
+    /// nested `CReal`/`Rat`/`Int` arithmetic over a unary `Nat`, past the
+    /// default 2 MiB stack. Measured 2026-08-26: SIGABRT on the default
+    /// stack, `ok` under `RUST_MIN_STACK=256MiB` — a resource limit, not a
+    /// proof bug.
+    ///
+    /// This wrapper is not optional and its absence is INVISIBLE to the lane
+    /// that omits it: the author had `RUST_MIN_STACK` exported from an
+    /// earlier hand-bisect, so the suite passed 93/93 in that shell and
+    /// SIGABRTed in a clean one. A test whose result depends on an ambient
+    /// environment variable is not a gate. Carry the stack explicitly.
+    fn riemann_sum_reblock_close_concrete_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
