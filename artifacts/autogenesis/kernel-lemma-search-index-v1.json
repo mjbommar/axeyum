@@ -1,15 +1,15 @@
 {
   "census": {
-    "distinct_exactly_linked_facts": 313,
+    "distinct_exactly_linked_facts": 314,
     "kernel_dependency_edges": 6838,
     "kernel_theorems": 1206,
     "maximum_dependency_depth": 26,
-    "theorems_with_exact_fact_links": 309,
-    "theorems_without_exact_fact_links": 897,
-    "unresolved_prefixed_kernel_evidence": 90
+    "theorems_with_exact_fact_links": 310,
+    "theorems_without_exact_fact_links": 896,
+    "unresolved_prefixed_kernel_evidence": 89
   },
   "derivation": {
-    "fact_identity_rule": "kernel-term evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
+    "fact_identity_rule": "kernel-term evidence with an explicit kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
     "fact_population": "sorted artifacts/facts/F-*.json",
     "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
     "kernel_projection_sha256": "42819bf2a32a37a83508088affc4597843081db4d1953c5525de971c10973e79",
@@ -21262,7 +21262,9 @@
         "Rat.sumRange_diagonal",
         "Rat.sumRange_rect_eq_diag_add_corner"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-le-trans"
+      ],
       "kernel_declaration_id": "Nat.le_trans",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34401,12 +34403,6 @@
       "candidate_declaration_id": "le_total",
       "evidence_id": "kernel-le_total",
       "fact_id": "F:nat-le-total",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "le_trans",
-      "evidence_id": "kernel-le_trans",
-      "fact_id": "F:nat-le-trans",
       "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
     },
     {

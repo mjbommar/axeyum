@@ -14,9 +14,12 @@ fact records name them exactly?**
 ## Authority boundary
 
 Every theorem row and dependency edge originates in declarations accepted by
-the Axeyum kernel. Fact links use only exact `kernel-<declaration>` or
-`kernel:<declaration>` evidence identities. Unresolved prefixed evidence is
-retained and counted. The generator does not fuzzy-match names.
+the Axeyum kernel. Fact links use an explicit evidence-level
+`kernel_declaration` when present, then fall back for compatibility to exact
+`kernel-<declaration>` or `kernel:<declaration>` evidence identities. Historical
+evidence IDs therefore remain stable while an exact fully-qualified declaration
+can be added without guessing. Unresolved identities are retained and counted;
+the generator does not fuzzy-match names.
 
 The artifact is nevertheless search data, not proof authority. A row does not
 say that a theorem applies to a goal, that a fact is semantically equivalent to
@@ -47,8 +50,12 @@ landing a refresh after theorem construction changes the source projection.
 The generated census makes incompleteness visible. Work should proceed in this
 order:
 
-1. resolve exact-but-dangling kernel evidence identities or document why they
-   target a different admitted population;
+1. For each exact-but-dangling kernel evidence identity, inspect the evidence's
+   actual checker and the live declaration projection. If they identify the
+   same theorem, add its fully-qualified ID as `kernel_declaration` on that
+   evidence row. If they do not, leave it unresolved and document which admitted
+   population the evidence targets. Never infer a namespace from the fact's
+   fragment or from suffix uniqueness alone;
 2. preserve exact agreement between the projection and production inventory;
 3. use `axeyum.knowledge.lemmas` for deterministic programmatic lookup, or the
    autonomous loop's read-only `lemma_neighbourhood` tool for held-out-safe

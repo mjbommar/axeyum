@@ -22,9 +22,9 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- The generated kernel projection currently contains 1,544 declarations: 1,199
+- The generated kernel projection currently contains 1,552 declarations: 1,206
   theorems, 242 definitions, 29 constructors, 22 inductives, 22 recursors, and
-  30 axioms. It reports 1,514 axiom-free declarations and 6,772 direct
+  30 axioms. It reports 1,522 axiom-free declarations and 6,838 direct
   theorem-dependency edges. This is a substantial checked library, but it is
   not an autonomous-production count.
 - The fact ledger contains 696 propositions: 502 proved, 4 refuted, 2 computed,
@@ -38,8 +38,8 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The kernel, fact ledger, tactic catalog, obstruction graph, and concept graph
   are separately useful, but do not yet form one lemma-search substrate.
 - The generated lemma index now covers all 1,195 kernel theorems and their 6,672
-  direct edges, but only 308 theorems link exactly to 312 fact records. It keeps
-  90 unresolved evidence IDs explicit rather than guessing, leaving 887
+  direct edges, but only 310 theorems link exactly to 314 fact records. It keeps
+  89 unresolved evidence IDs explicit rather than guessing, leaving 896
   theorems without exact fact links.
 - The Rust and Python surfaces are broad, but integration churn can leave
   `main` red and evidence fixtures can be mistaken for production populations.

@@ -36,7 +36,13 @@ def digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def exact_kernel_declaration(evidence_id: object) -> str | None:
+def exact_kernel_declaration(evidence: object) -> str | None:
+    if not isinstance(evidence, dict):
+        return None
+    explicit = evidence.get("kernel_declaration")
+    if isinstance(explicit, str) and explicit:
+        return explicit
+    evidence_id = evidence.get("id")
     if not isinstance(evidence_id, str):
         return None
     for prefix in ("kernel-", "kernel:"):
@@ -92,7 +98,7 @@ def build() -> dict[str, Any]:
             if evidence.get("kind") != "kernel-term":
                 continue
             evidence_id = evidence.get("id")
-            declaration = exact_kernel_declaration(evidence_id)
+            declaration = exact_kernel_declaration(evidence)
             if declaration is None:
                 continue
             if declaration in theorem_rows:
@@ -135,7 +141,7 @@ def build() -> dict[str, Any]:
         "derivation": {
             "kernel_projection_sha256": digest(KERNEL),
             "fact_population": "sorted artifacts/facts/F-*.json",
-            "fact_identity_rule": "kernel-term evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
+            "fact_identity_rule": "kernel-term evidence with an explicit kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
             "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
             "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority",
         },
