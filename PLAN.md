@@ -1382,6 +1382,13 @@ manifest, cover, and checker output are separately hash-bound in the sibling pac
 a checked subtree suitable for recursive composition, not a checked ancestor or MC=7 result;
 the interval remains `[7,8]`.
 
+**Second multi-gigabyte S-box subtree accepted, 2026-08-26.** A sibling selector-37--41
+replacement also passes the recursive checker: 1,281,549,482 proof bytes, one split / 32 leaves
+/ 33 nodes, 13:51.34 wall, and 197,944 KiB peak RSS against a reconstructed 69,839-clause root.
+Its four authority hashes are retained in the sibling package. Both accepted replacements are
+now composable into their incomplete ancestors; neither is promoted to a top-level or MC=7
+verdict.
+
 **Regression replay gate made load-stable, 2026-08-26.** The pre-push sweep failed twice on
 different corpus rows because it ran `solve_smtlib` and its direct
 `solve_smtlib_with_model` source projection sequentially under independent one-second
