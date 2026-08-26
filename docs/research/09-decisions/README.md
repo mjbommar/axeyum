@@ -648,3 +648,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0575](adr-0575-bounded-job-shop-flatzinc-is-a-proof-interchange.md) | Export exact bounded job-shop models on the solver-and-checker shared DRCP surface | accepted |
 | [0576](adr-0576-job-shop-machine-orders-are-replayable-witnesses.md) | Import compact machine-job permutations by deterministic earliest-schedule reconstruction and independent replay | accepted |
 | [0577](adr-0577-energetic-overloads-are-recomputed-not-trusted.md) | Recompute cumulative compulsory energy and admit only strict overload certificates | accepted |
+| [0578](adr-0578-conditional-energetic-explanations-become-checked-prefix-clauses.md) | Replay conditional energetic overloads and translate their assumptions into exact CNF prefix clauses | accepted |

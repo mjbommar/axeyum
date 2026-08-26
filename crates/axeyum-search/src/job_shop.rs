@@ -16,6 +16,10 @@ pub const JOB_SHOP_SCHEDULE_SCHEMA: &str = "axeyum.job-shop-schedule.v1";
 /// Portable energetic-overload certificate schema.
 pub const JOB_SHOP_ENERGETIC_CONFLICT_SCHEMA: &str = "axeyum.job-shop-energetic-conflict.v1";
 
+/// Portable conditional energetic-overload certificate schema.
+pub const JOB_SHOP_CONDITIONAL_ENERGETIC_CONFLICT_SCHEMA: &str =
+    "axeyum.job-shop-conditional-energetic-conflict.v1";
+
 /// One non-preemptive operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct JobShopOperation {
@@ -123,6 +127,39 @@ pub enum JobShopEnergeticDomain {
     PrecedenceClosure,
 }
 
+/// One explicit start-domain assumption used by a conditional conflict.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
+pub enum JobShopStartBound {
+    /// Assume the operation starts no earlier than `time`.
+    StartAtLeast {
+        /// Job index.
+        job: usize,
+        /// Operation index within the job.
+        operation: usize,
+        /// Inclusive lower bound.
+        time: usize,
+    },
+    /// Assume the operation starts no later than `time`.
+    StartAtMost {
+        /// Job index.
+        job: usize,
+        /// Operation index within the job.
+        operation: usize,
+        /// Inclusive upper bound.
+        time: usize,
+    },
+}
+
+impl JobShopStartBound {
+    fn key(self) -> (usize, usize, u8) {
+        match self {
+            Self::StartAtLeast { job, operation, .. } => (job, operation, 0),
+            Self::StartAtMost { job, operation, .. } => (job, operation, 1),
+        }
+    }
+}
+
 /// A portable claim that one machine is energetically overloaded.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -143,6 +180,50 @@ pub struct JobShopEnergeticConflict {
     pub required_energy: usize,
     /// Claimed available energy; the checker recomputes it exactly.
     pub capacity_energy: usize,
+}
+
+/// A portable energetic contradiction under explicit start bounds.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct JobShopConditionalEnergeticConflict {
+    /// Stable artifact schema.
+    pub schema: String,
+    /// Makespan bound whose base domains are reconstructed.
+    pub bound: usize,
+    /// Checked base-domain derivation.
+    pub domain: JobShopEnergeticDomain,
+    /// Canonically sorted conjunction of start bounds.
+    pub assumptions: Vec<JobShopStartBound>,
+    /// Zero-based overloaded machine.
+    pub machine: usize,
+    /// Start of the half-open overload interval.
+    pub interval_start: usize,
+    /// End of the half-open overload interval.
+    pub interval_end: usize,
+    /// Claimed required energy; replay recomputes it.
+    pub required_energy: usize,
+    /// Claimed capacity energy; replay recomputes it.
+    pub capacity_energy: usize,
+}
+
+/// Successful conditional-conflict replay measurements.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JobShopConditionalEnergeticCheck {
+    /// Recomputed energetic inequality.
+    pub energetic: CumulativeEnergeticCheck,
+    /// Non-tautological bounds applied to the base domains.
+    pub assumptions_applied: usize,
+}
+
+/// Measurements from one bounded conditional energetic explanation search.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JobShopConditionalEnergeticSearch {
+    /// Base interval before any assumptions were applied.
+    pub base: CumulativeEnergeticCheck,
+    /// Number of strict single-operation domain tightenings evaluated.
+    pub candidates_checked: usize,
+    /// Checked explanation, when the assumption ceiling permits an overload.
+    pub conflict: Option<JobShopConditionalEnergeticConflict>,
 }
 
 /// Strongest interval found by a deterministic bounded energetic scan.
@@ -439,6 +520,39 @@ fn job_shop_machine_task_windows(
     Ok(tasks)
 }
 
+fn job_shop_domain_windows(
+    problem: &JobShopProblem,
+    bound: usize,
+    domain: JobShopEnergeticDomain,
+) -> Result<Vec<JobShopOperationWindow>, JobShopError> {
+    match domain {
+        JobShopEnergeticDomain::JobChains => {
+            let (earliest, latest) = job_chain_windows(problem, bound)?;
+            let mut windows = Vec::with_capacity(problem.operation_count());
+            for (job, operations) in problem.jobs.iter().enumerate() {
+                for operation in 0..operations.len() {
+                    windows.push(JobShopOperationWindow {
+                        job,
+                        operation,
+                        earliest: earliest[job][operation],
+                        latest: latest[job][operation],
+                    });
+                }
+            }
+            Ok(windows)
+        }
+        JobShopEnergeticDomain::PrecedenceClosure => {
+            let result = propagate_job_shop_precedences(problem, bound)?;
+            if result.infeasible {
+                return Err(JobShopError::InvalidSchedule(
+                    "precedence closure is already infeasible".to_owned(),
+                ));
+            }
+            Ok(result.windows)
+        }
+    }
+}
+
 /// Independently replay a portable job-shop energetic conflict.
 ///
 /// Job-chain domains, task membership, unit demands, and interval capacity are
@@ -472,24 +586,8 @@ pub fn check_job_shop_energetic_conflict(
             "energetic interval exceeds makespan bound".to_owned(),
         ));
     }
-    let propagation = match conflict.domain {
-        JobShopEnergeticDomain::JobChains => None,
-        JobShopEnergeticDomain::PrecedenceClosure => {
-            let result = propagate_job_shop_precedences(problem, bound)?;
-            if result.infeasible {
-                return Err(JobShopError::InvalidSchedule(
-                    "precedence closure is already infeasible".to_owned(),
-                ));
-            }
-            Some(result)
-        }
-    };
-    let tasks = job_shop_machine_task_windows(
-        problem,
-        bound,
-        conflict.machine,
-        propagation.as_ref().map(|result| result.windows.as_slice()),
-    )?;
+    let windows = job_shop_domain_windows(problem, bound, conflict.domain)?;
+    let tasks = job_shop_machine_task_windows(problem, bound, conflict.machine, Some(&windows))?;
     let check = check_cumulative_energetic_interval(
         &tasks,
         1,
@@ -513,6 +611,413 @@ pub fn check_job_shop_energetic_conflict(
         ));
     }
     Ok(check)
+}
+
+fn apply_job_shop_start_bounds(
+    problem: &JobShopProblem,
+    machine: usize,
+    assumptions: &[JobShopStartBound],
+    windows: &mut [JobShopOperationWindow],
+) -> Result<(), JobShopError> {
+    if assumptions.is_empty() {
+        return Err(JobShopError::Malformed(
+            "conditional energetic conflict has no assumptions".to_owned(),
+        ));
+    }
+    let mut previous = None;
+    for assumption in assumptions {
+        let key = assumption.key();
+        if previous.is_some_and(|prior| prior >= key) {
+            return Err(JobShopError::Malformed(
+                "conditional energetic assumptions are not canonical".to_owned(),
+            ));
+        }
+        previous = Some(key);
+        let (job, operation, time) = match *assumption {
+            JobShopStartBound::StartAtLeast {
+                job,
+                operation,
+                time,
+            }
+            | JobShopStartBound::StartAtMost {
+                job,
+                operation,
+                time,
+            } => (job, operation, time),
+        };
+        let operations = problem.jobs.get(job).ok_or_else(|| {
+            JobShopError::Malformed(format!("conditional job {job} is out of range"))
+        })?;
+        let item = operations.get(operation).ok_or_else(|| {
+            JobShopError::Malformed(format!(
+                "conditional operation {job}:{operation} is out of range"
+            ))
+        })?;
+        if item.machine != machine {
+            return Err(JobShopError::Malformed(format!(
+                "conditional operation {job}:{operation} is not on machine {machine}"
+            )));
+        }
+        let flat = problem
+            .jobs
+            .iter()
+            .take(job)
+            .map(Vec::len)
+            .sum::<usize>()
+            .checked_add(operation)
+            .ok_or_else(|| JobShopError::Malformed("operation index overflow".to_owned()))?;
+        let window = windows.get_mut(flat).ok_or_else(|| {
+            JobShopError::Malformed("conditional operation window mismatch".to_owned())
+        })?;
+        if window.job != job || window.operation != operation {
+            return Err(JobShopError::Malformed(
+                "conditional operation window mismatch".to_owned(),
+            ));
+        }
+        match *assumption {
+            JobShopStartBound::StartAtLeast { .. } => {
+                if time <= window.earliest || time > window.latest {
+                    return Err(JobShopError::Malformed(format!(
+                        "conditional lower bound {time} does not strictly narrow {job}:{operation}"
+                    )));
+                }
+                window.earliest = time;
+            }
+            JobShopStartBound::StartAtMost { .. } => {
+                if time >= window.latest || time < window.earliest {
+                    return Err(JobShopError::Malformed(format!(
+                        "conditional upper bound {time} does not strictly narrow {job}:{operation}"
+                    )));
+                }
+                window.latest = time;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Independently replay an energetic conflict under explicit start bounds.
+///
+/// The checker reconstructs the selected base domains, applies a canonical
+/// conjunction of inclusive lower/upper bounds, rebuilds every task on the
+/// claimed machine, and recomputes the strict energetic overload. Assumptions
+/// may narrow domains but cannot widen them; contradictory assumptions are
+/// rejected rather than credited as energetic evidence.
+///
+/// # Errors
+///
+/// Refuses wrong schema/bound, noncanonical or redundant assumptions,
+/// out-of-range operations, bounds outside the base domain, empty narrowed
+/// domains, assumptions irrelevant to the claimed machine, mismatched totals,
+/// or a non-overloaded interval.
+pub fn check_job_shop_conditional_energetic_conflict(
+    problem: &JobShopProblem,
+    bound: usize,
+    conflict: &JobShopConditionalEnergeticConflict,
+) -> Result<JobShopConditionalEnergeticCheck, JobShopError> {
+    if conflict.schema != JOB_SHOP_CONDITIONAL_ENERGETIC_CONFLICT_SCHEMA {
+        return Err(JobShopError::Malformed(format!(
+            "unsupported conditional energetic-conflict schema `{}`",
+            conflict.schema
+        )));
+    }
+    if conflict.bound != bound {
+        return Err(JobShopError::Malformed(format!(
+            "conditional energetic-conflict bound {} does not match {bound}",
+            conflict.bound
+        )));
+    }
+    if conflict.interval_end > bound {
+        return Err(JobShopError::Malformed(
+            "conditional energetic interval exceeds makespan bound".to_owned(),
+        ));
+    }
+    let mut windows = job_shop_domain_windows(problem, bound, conflict.domain)?;
+    apply_job_shop_start_bounds(
+        problem,
+        conflict.machine,
+        &conflict.assumptions,
+        &mut windows,
+    )?;
+    let tasks = job_shop_machine_task_windows(problem, bound, conflict.machine, Some(&windows))?;
+    let energetic = check_cumulative_energetic_interval(
+        &tasks,
+        1,
+        conflict.interval_start,
+        conflict.interval_end,
+    )?;
+    if energetic.required_energy != conflict.required_energy
+        || energetic.capacity_energy != conflict.capacity_energy
+    {
+        return Err(JobShopError::InvalidSchedule(format!(
+            "conditional energetic totals mismatch: claimed {}/{}, recomputed {}/{}",
+            conflict.required_energy,
+            conflict.capacity_energy,
+            energetic.required_energy,
+            energetic.capacity_energy
+        )));
+    }
+    if !energetic.overloaded {
+        return Err(JobShopError::InvalidSchedule(
+            "conditional energetic interval is not overloaded".to_owned(),
+        ));
+    }
+    Ok(JobShopConditionalEnergeticCheck {
+        energetic,
+        assumptions_applied: conflict.assumptions.len(),
+    })
+}
+
+type JobShopEnergeticCandidates = (Vec<(usize, JobShopStartBound)>, usize);
+
+fn conditional_energetic_candidates(
+    tasks: &[CumulativeTaskWindow],
+    windows: &[JobShopOperationWindow],
+    interval_start: usize,
+    interval_end: usize,
+) -> Result<JobShopEnergeticCandidates, JobShopError> {
+    let mut candidates = Vec::new();
+    let mut candidates_checked = 0usize;
+    for task in tasks {
+        if task.earliest_start == task.latest_start {
+            continue;
+        }
+        let operation = windows.get(task.task).ok_or_else(|| {
+            JobShopError::Malformed("conditional search operation mismatch".to_owned())
+        })?;
+        let base_task =
+            check_cumulative_energetic_interval(&[*task], 1, interval_start, interval_end)?
+                .required_energy;
+        let alternatives = [
+            (
+                JobShopStartBound::StartAtLeast {
+                    job: operation.job,
+                    operation: operation.operation,
+                    time: task.latest_start,
+                },
+                CumulativeTaskWindow {
+                    earliest_start: task.latest_start,
+                    ..*task
+                },
+            ),
+            (
+                JobShopStartBound::StartAtMost {
+                    job: operation.job,
+                    operation: operation.operation,
+                    time: task.earliest_start,
+                },
+                CumulativeTaskWindow {
+                    latest_start: task.earliest_start,
+                    ..*task
+                },
+            ),
+        ];
+        let mut best = None;
+        for (assumption, narrowed) in alternatives {
+            candidates_checked = candidates_checked.checked_add(1).ok_or_else(|| {
+                JobShopError::Malformed("conditional candidate count overflow".to_owned())
+            })?;
+            let narrowed_energy =
+                check_cumulative_energetic_interval(&[narrowed], 1, interval_start, interval_end)?
+                    .required_energy;
+            let gain = narrowed_energy.checked_sub(base_task).ok_or_else(|| {
+                JobShopError::Malformed("conditional energetic gain underflow".to_owned())
+            })?;
+            if gain > 0
+                && best.as_ref().is_none_or(
+                    |(best_gain, best_bound): &(usize, JobShopStartBound)| {
+                        gain > *best_gain
+                            || (gain == *best_gain && assumption.key() < best_bound.key())
+                    },
+                )
+            {
+                best = Some((gain, assumption));
+            }
+        }
+        candidates.extend(best);
+    }
+    candidates.sort_unstable_by(|left, right| {
+        right
+            .0
+            .cmp(&left.0)
+            .then_with(|| left.1.key().cmp(&right.1.key()))
+    });
+    Ok((candidates, candidates_checked))
+}
+
+fn conditional_energy_with_bounds(
+    problem: &JobShopProblem,
+    bound: usize,
+    machine: usize,
+    base_windows: &[JobShopOperationWindow],
+    assumptions: &[JobShopStartBound],
+    interval_start: usize,
+    interval_end: usize,
+) -> Result<CumulativeEnergeticCheck, JobShopError> {
+    let mut windows = base_windows.to_vec();
+    apply_job_shop_start_bounds(problem, machine, assumptions, &mut windows)?;
+    let tasks = job_shop_machine_task_windows(problem, bound, machine, Some(&windows))?;
+    check_cumulative_energetic_interval(&tasks, 1, interval_start, interval_end)
+}
+
+fn relax_conditional_energetic_assumptions(
+    problem: &JobShopProblem,
+    bound: usize,
+    machine: usize,
+    base_windows: &[JobShopOperationWindow],
+    assumptions: &mut [JobShopStartBound],
+    interval_start: usize,
+    interval_end: usize,
+) -> Result<CumulativeEnergeticCheck, JobShopError> {
+    for index in 0..assumptions.len() {
+        let (job, operation) = match assumptions[index] {
+            JobShopStartBound::StartAtLeast { job, operation, .. }
+            | JobShopStartBound::StartAtMost { job, operation, .. } => (job, operation),
+        };
+        let base = base_windows
+            .iter()
+            .find(|window| window.job == job && window.operation == operation)
+            .ok_or_else(|| {
+                JobShopError::Malformed("conditional relaxation operation mismatch".to_owned())
+            })?;
+        loop {
+            let relaxed = match assumptions[index] {
+                JobShopStartBound::StartAtLeast { time, .. }
+                    if time.saturating_sub(1) > base.earliest =>
+                {
+                    JobShopStartBound::StartAtLeast {
+                        job,
+                        operation,
+                        time: time - 1,
+                    }
+                }
+                JobShopStartBound::StartAtMost { time, .. }
+                    if time.checked_add(1).is_some_and(|next| next < base.latest) =>
+                {
+                    JobShopStartBound::StartAtMost {
+                        job,
+                        operation,
+                        time: time + 1,
+                    }
+                }
+                _ => break,
+            };
+            let previous = std::mem::replace(&mut assumptions[index], relaxed);
+            let check = conditional_energy_with_bounds(
+                problem,
+                bound,
+                machine,
+                base_windows,
+                assumptions,
+                interval_start,
+                interval_end,
+            )?;
+            if !check.overloaded {
+                assumptions[index] = previous;
+                break;
+            }
+        }
+    }
+    conditional_energy_with_bounds(
+        problem,
+        bound,
+        machine,
+        base_windows,
+        assumptions,
+        interval_start,
+        interval_end,
+    )
+}
+
+/// Find a short checked energetic explanation for one machine interval.
+///
+/// For every flexible operation on the machine, the search evaluates the two
+/// strongest one-sided domain assumptions: pinning its upper bound to the base
+/// earliest start, or its lower bound to the base latest start. It retains the
+/// direction with the larger exact energetic gain, then takes gains in stable
+/// descending order until the interval overloads. Because task contributions
+/// are additive, this is complete for an overload using at most
+/// `max_assumptions` such extreme bounds, using at most one bound per operation,
+/// on this fixed interval. The returned artifact is replayed by the independent
+/// checker before it is credited.
+///
+/// # Errors
+///
+/// Refuses a zero assumption ceiling, malformed domains/intervals, arithmetic
+/// overflow, or any internally proposed artifact that fails replay.
+pub fn find_job_shop_conditional_energetic_conflict(
+    problem: &JobShopProblem,
+    bound: usize,
+    domain: JobShopEnergeticDomain,
+    machine: usize,
+    interval_start: usize,
+    interval_end: usize,
+    max_assumptions: usize,
+) -> Result<JobShopConditionalEnergeticSearch, JobShopError> {
+    if max_assumptions == 0 {
+        return Err(JobShopError::Malformed(
+            "conditional energetic search requires a positive assumption ceiling".to_owned(),
+        ));
+    }
+    let windows = job_shop_domain_windows(problem, bound, domain)?;
+    let tasks = job_shop_machine_task_windows(problem, bound, machine, Some(&windows))?;
+    let base = check_cumulative_energetic_interval(&tasks, 1, interval_start, interval_end)?;
+    if base.overloaded {
+        return Ok(JobShopConditionalEnergeticSearch {
+            base,
+            candidates_checked: 0,
+            conflict: None,
+        });
+    }
+
+    let (candidates, candidates_checked) =
+        conditional_energetic_candidates(&tasks, &windows, interval_start, interval_end)?;
+
+    let mut required_energy = base.required_energy;
+    let mut assumptions = Vec::new();
+    for (gain, assumption) in candidates.into_iter().take(max_assumptions) {
+        required_energy = required_energy.checked_add(gain).ok_or_else(|| {
+            JobShopError::Malformed("conditional required energy overflow".to_owned())
+        })?;
+        assumptions.push(assumption);
+        if required_energy > base.capacity_energy {
+            break;
+        }
+    }
+    if required_energy <= base.capacity_energy {
+        return Ok(JobShopConditionalEnergeticSearch {
+            base,
+            candidates_checked,
+            conflict: None,
+        });
+    }
+    assumptions.sort_unstable_by_key(|assumption| assumption.key());
+    let relaxed = relax_conditional_energetic_assumptions(
+        problem,
+        bound,
+        machine,
+        &windows,
+        &mut assumptions,
+        interval_start,
+        interval_end,
+    )?;
+    let conflict = JobShopConditionalEnergeticConflict {
+        schema: JOB_SHOP_CONDITIONAL_ENERGETIC_CONFLICT_SCHEMA.to_owned(),
+        bound,
+        domain,
+        assumptions,
+        machine,
+        interval_start,
+        interval_end,
+        required_energy: relaxed.required_energy,
+        capacity_energy: relaxed.capacity_energy,
+    };
+    check_job_shop_conditional_energetic_conflict(problem, bound, &conflict)?;
+    Ok(JobShopConditionalEnergeticSearch {
+        base,
+        candidates_checked,
+        conflict: Some(conflict),
+    })
 }
 
 /// Exhaustively scan integer intervals for a job-chain energetic overload.
@@ -1491,6 +1996,103 @@ impl JobShopEncoding {
         }
         Ok(formula)
     }
+
+    /// Translate a checked conditional energetic conflict into a CNF clause.
+    ///
+    /// Each start-bound assumption is represented by the existing exact
+    /// prefix-OR variables. The returned clause is the disjunction of the
+    /// assumptions' semantic negations. `None` means one assumption is already
+    /// impossible in this encoding's (possibly tighter) operation layout, so
+    /// its negation is a tautology and adding a clause would have no effect.
+    ///
+    /// # Errors
+    ///
+    /// Refuses a certificate that fails independent energetic replay or an
+    /// operation/layout mismatch.
+    pub fn conditional_energetic_clause(
+        &self,
+        conflict: &JobShopConditionalEnergeticConflict,
+    ) -> Result<Option<CnfClause>, JobShopError> {
+        check_job_shop_conditional_energetic_conflict(&self.problem, self.bound, conflict)?;
+        let mut literals = Vec::with_capacity(conflict.assumptions.len());
+        for assumption in &conflict.assumptions {
+            let (job, operation, time) = match *assumption {
+                JobShopStartBound::StartAtLeast {
+                    job,
+                    operation,
+                    time,
+                }
+                | JobShopStartBound::StartAtMost {
+                    job,
+                    operation,
+                    time,
+                } => (job, operation, time),
+            };
+            let layout = self
+                .layout
+                .get(job)
+                .and_then(|operations| operations.get(operation))
+                .ok_or_else(|| {
+                    JobShopError::Malformed(
+                        "conditional energetic operation/layout mismatch".to_owned(),
+                    )
+                })?;
+            let latest = layout
+                .earliest
+                .checked_add(layout.choices.len().saturating_sub(1))
+                .ok_or_else(|| JobShopError::Malformed("layout bound overflow".to_owned()))?;
+            match *assumption {
+                JobShopStartBound::StartAtLeast { .. } => {
+                    if layout.earliest >= time {
+                        continue;
+                    }
+                    if latest < time {
+                        return Ok(None);
+                    }
+                    let prefix = layout.prefix[time - layout.earliest - 1];
+                    literals.push(CnfLit::positive(CnfVar::new(prefix).map_err(|error| {
+                        JobShopError::Cnf(format!("conditional prefix variable: {error:?}"))
+                    })?));
+                }
+                JobShopStartBound::StartAtMost { .. } => {
+                    if latest <= time {
+                        continue;
+                    }
+                    if layout.earliest > time {
+                        return Ok(None);
+                    }
+                    let prefix = layout.prefix[time - layout.earliest];
+                    literals.push(
+                        CnfLit::positive(CnfVar::new(prefix).map_err(|error| {
+                            JobShopError::Cnf(format!("conditional prefix variable: {error:?}"))
+                        })?)
+                        .negated(),
+                    );
+                }
+            }
+        }
+        Ok(Some(CnfClause::new(literals)))
+    }
+
+    /// Add one independently checked conditional energetic clause.
+    ///
+    /// A tautological explanation leaves the formula byte-for-byte unchanged.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::conditional_energetic_clause`], plus CNF insertion errors.
+    pub fn formula_with_conditional_energetic_conflict(
+        &self,
+        conflict: &JobShopConditionalEnergeticConflict,
+    ) -> Result<CnfFormula, JobShopError> {
+        let mut formula = self.formula.clone();
+        if let Some(clause) = self.conditional_energetic_clause(conflict)? {
+            formula.add_clause(clause).map_err(|error| {
+                JobShopError::Cnf(format!("conditional energetic clause: {error:?}"))
+            })?;
+        }
+        Ok(formula)
+    }
 }
 
 fn encode_machine_orders(
@@ -1848,7 +2450,8 @@ mod tests {
     use super::*;
     use axeyum_cnf::cube::{boolean_product_cubes, covering_formula};
     use axeyum_cnf::{
-        ProofSolveOutcome, SatResult, check_drat, solve_with_drat_proof, solve_with_rustsat_batsat,
+        ProofSolveOutcome, SatResult, check_drat, check_drat_backward, solve_with_drat_proof,
+        solve_with_rustsat_batsat,
     };
 
     const TINY: &str = "2 2\n0 2 1 1\n1 2 0 1\n";
@@ -2027,6 +2630,89 @@ mod tests {
                 limit: 9,
             })
         );
+    }
+
+    #[test]
+    fn conditional_energetic_conflict_becomes_an_entailed_prefix_clause() {
+        let problem = JobShopProblem::parse_orlib("2 1\n0 2\n0 2\n").unwrap();
+        let search = find_job_shop_conditional_energetic_conflict(
+            &problem,
+            4,
+            JobShopEnergeticDomain::JobChains,
+            0,
+            0,
+            3,
+            2,
+        )
+        .unwrap();
+        assert_eq!(search.candidates_checked, 4);
+        assert_eq!(
+            (search.base.required_energy, search.base.capacity_energy),
+            (2, 3)
+        );
+        let conflict = search.conflict.unwrap();
+        assert_eq!(conflict.assumptions.len(), 2);
+        let check = check_job_shop_conditional_energetic_conflict(&problem, 4, &conflict).unwrap();
+        assert_eq!(check.assumptions_applied, 2);
+        assert_eq!(check.energetic.required_energy, 4);
+
+        let encoding =
+            encode_job_shop_with_job_windows(&problem, 4, JobShopEncodingLimits::default())
+                .unwrap();
+        let clause = encoding
+            .conditional_energetic_clause(&conflict)
+            .unwrap()
+            .unwrap();
+        assert_eq!(clause.lits().len(), 2);
+        assert!(clause.lits().iter().all(|literal| literal.is_negated()));
+
+        // Falsifying every learned literal recreates the checked assumptions;
+        // the original formula must then refute. This validates the semantic
+        // prefix mapping independently of adding the learned clause itself.
+        let mut falsified = encoding.formula().clone();
+        for &literal in clause.lits() {
+            falsified
+                .add_clause(CnfClause::new(vec![literal.negated()]))
+                .unwrap();
+        }
+        let ProofSolveOutcome::Unsat(proof) = solve_with_drat_proof(&falsified) else {
+            panic!("conditional energetic assumptions must be infeasible");
+        };
+        assert_eq!(check_drat_backward(&falsified, &proof), Ok(true));
+
+        let strengthened = encoding
+            .formula_with_conditional_energetic_conflict(&conflict)
+            .unwrap();
+        assert_eq!(
+            strengthened.clauses().len(),
+            encoding.formula().clauses().len() + 1
+        );
+        let SatResult::Sat(model) = solve_with_rustsat_batsat(&strengthened).unwrap() else {
+            panic!("the makespan-four boundary remains feasible");
+        };
+        encoding.lift_model(&model).unwrap();
+
+        let mut mutated = conflict.clone();
+        mutated.required_energy = 3;
+        assert!(matches!(
+            check_job_shop_conditional_energetic_conflict(&problem, 4, &mutated),
+            Err(JobShopError::InvalidSchedule(_))
+        ));
+        mutated = conflict.clone();
+        mutated.assumptions.reverse();
+        assert!(matches!(
+            check_job_shop_conditional_energetic_conflict(&problem, 4, &mutated),
+            Err(JobShopError::Malformed(_))
+        ));
+        mutated = conflict;
+        let JobShopStartBound::StartAtMost { time, .. } = &mut mutated.assumptions[0] else {
+            unreachable!()
+        };
+        *time = 2;
+        assert!(matches!(
+            check_job_shop_conditional_energetic_conflict(&problem, 4, &mutated),
+            Err(JobShopError::Malformed(_))
+        ));
     }
 
     #[test]

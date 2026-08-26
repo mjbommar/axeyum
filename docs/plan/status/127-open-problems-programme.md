@@ -50,6 +50,18 @@ required/capacity energy in 0.75 seconds. Repeating after all 256 forced precede
 the same ratio, so no root conflict exists and none is emitted. Conditional conflict composition
 under branch domains is the next required layer; the target lower bound remains open.
 
+**Checked conditional energetic clauses, 2026-08-26.** ADR-0578 adds canonical semantic
+start-bound assumptions, independent conditional-overload replay, and an exact bridge from each
+assumption's negation to the existing operation prefix variables. A bounded deterministic
+producer searches one interval and relaxes its explanation before replay. On the strongest
+`abz7@655` interval it checks 40 candidates and proves that job 2 operation 10 must start after
+532: the contrary domain requires 539 units in 538 available. The 175,170-variable /
+1,690,226-clause precedence-closure formula gains exactly one checked unit. Matched 30-second
+CaDiCaL runs remained unknown, so no speedup or lower-bound claim is made. Fourteen focused
+job-shop tests and all-feature Clippy are green; the next layer is a bounded all-interval unit
+fixpoint before multi-assumption clauses or checked cover composition. All seven full-proof
+producers remain live.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
