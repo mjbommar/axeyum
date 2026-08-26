@@ -52,7 +52,7 @@
 //! the example itself was fixed. **A doc comment cannot fix a call site it
 //! does not know about.**
 //!
-//! The fix is the `stack_size(64 * 1024 * 1024)` worker in `main` below, and
+//! The fix is the `axeyum_lean_kernel::on_a_deep_stack` worker in `main` below, and
 //! it makes `--release` UNNECESSARY here: a debug build now exits 0 and
 //! reports the same theorem count as release, measured on this tree by two
 //! independent lanes. Passing `--release` remains correct and is faster, so
@@ -88,16 +88,11 @@ fn main() -> ExitCode {
     // without it. `just check` then failed in `check-fact-depends-derived.py`
     // with `died with <Signals.SIGABRT: 6>`.
     //
-    // A doc comment cannot fix a call site it does not know about. `complex`
-    // and `cpoint` already solve this the same way in their test modules
-    // (`stack_size(64 * 1024 * 1024)`), so do it here and let every caller --
-    // debug or release, present or future -- work unchanged.
-    std::thread::Builder::new()
-        .stack_size(64 * 1024 * 1024)
-        .spawn(run)
-        .expect("spawn the deep-stack worker")
-        .join()
-        .expect("the deep-stack worker must not panic")
+    // A doc comment cannot fix a call site it does not know about, so carry
+    // the stack here and let every caller -- debug or release, present or
+    // future -- work unchanged. The size is `axeyum_lean_kernel::
+    // DEEP_STACK_BYTES`, the one documented envelope (see `src/stack.rs`).
+    axeyum_lean_kernel::on_a_deep_stack(run)
 }
 
 fn run() -> ExitCode {

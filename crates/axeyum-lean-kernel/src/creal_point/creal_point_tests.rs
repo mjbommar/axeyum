@@ -2,7 +2,7 @@
 //! produces axiom-free?
 
 use super::{CPointPrelude, build_cpoint_prelude};
-use crate::Kernel;
+use crate::{Kernel, on_a_deep_stack};
 
 fn built() -> (Kernel, CPointPrelude) {
     use std::sync::OnceLock;
@@ -17,33 +17,6 @@ fn built() -> (Kernel, CPointPrelude) {
         })
     });
     (kernel.clone(), *prelude)
-}
-
-/// Run `f` on a **64 MiB** thread.
-///
-/// The default test-thread stack is 2 MiB, and `built()` constructs the whole
-/// `CPoint` prelude — which recurses deeply enough through
-/// `Kernel::add_declaration` to blow it. This is not a proof bug and it does
-/// not mean anything is wrong with the term: it aborts the PROCESS with
-/// `SIGABRT`, so the harness reports "signal: 6" and no test name, which reads
-/// like a crash rather than a resource limit.
-///
-/// **It appears only as the prelude grows.** `apollonius_…` was fine until
-/// `creal_point.rs` gained ~2,000 lines for Ceva, and it was still fine under a
-/// filtered `--lib creal_point` run — it aborted only in the full `--lib`
-/// sweep. So a narrow per-module run does NOT establish that this is safe, and
-/// the next test to cross the threshold will look like a regression in whatever
-/// change happened to be in flight.
-///
-/// `complex/complex_tests.rs` carries the identical helper for the identical
-/// reason; if a third module needs it, promote it rather than writing it again.
-fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
-    std::thread::Builder::new()
-        .stack_size(64 * 1024 * 1024)
-        .spawn(f)
-        .expect("spawning a deep-stack thread must succeed")
-        .join()
-        .expect("the deep-stack thread must not panic")
 }
 
 /// The build itself, with the kernel's rejection **rendered** rather than

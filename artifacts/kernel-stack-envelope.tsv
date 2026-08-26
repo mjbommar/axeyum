@@ -1,0 +1,57 @@
+# How much stack the Lean kernel needs to build each prelude.
+#
+# profile<TAB>prelude<TAB>budget_bytes
+#
+# Each number is the SMALLEST POWER OF TWO on which
+# `examples/kernel_stack_envelope` completes that prelude's build, found by
+# bisection with `scripts/check-kernel-stack-envelope.sh --measure`. It is a
+# measured requirement, not a preference: one power of two below each row, the
+# build aborts with SIGABRT (exit 134), and `--check` re-demonstrates that on
+# every run so a green result is never vacuous.
+#
+# Measured 2026-08-26 on s4 (rustc via the repo's default toolchain).
+#
+# ## What these numbers say
+#
+# * `creal` in a DEBUG build needs 2,097,152 bytes -- EXACTLY the default stack
+#   Rust gives a spawned thread, which is what a `#[test]` runs on. There was no
+#   margin at all. `CReal.e` landing is what pushed it over, and the symptom was
+#   `every_creal_declaration_is_checked_and_axiom_free` -- the guard behind this
+#   project's axiom-freedom claim -- silently aborting instead of running.
+#
+# * `cpoint` in a DEBUG build needs 33,554,432 bytes. The `on_a_deep_stack`
+#   copies that covered it used 64 MiB, so the real headroom was 2x, not the
+#   comfortable margin the number suggests. `DEEP_STACK_BYTES` is 256 MiB, which
+#   is 8x this row.
+#
+# * Debug costs up to 32x release for the same term (cpoint: 33,554,432 vs
+#   1,048,576). That ratio is why `prelude_theorem_inventory` must be run
+#   `--release`, and it is the measured reason a single recursion-DEPTH limit
+#   cannot be calibrated once: the same term fits in one profile and not the
+#   other while its depth is identical.
+#
+# ## When a row goes red
+#
+# Re-derive it (`--measure --profile <p> --prelude <name>`), raise the row, and
+# say in the commit what grew. A rising row is not a defect; an unexplained one
+# is.
+#
+# `logic`, `axreal` and `string` have RELEASE rows deliberately omitted: their
+# release builds complete on 8 KiB, the smallest stack the bisection probes, so
+# a pinned budget for them could not be shown to fail and would report a
+# permanent WARN. They keep their debug rows, where they need 128-256 KiB.
+debug	logic	131072
+debug	nat	262144
+debug	integer	262144
+debug	axreal	131072
+debug	rat	1048576
+debug	creal	2097152
+debug	cpoint	33554432
+debug	complex	4194304
+debug	string	131072
+release	nat	65536
+release	integer	65536
+release	rat	131072
+release	creal	131072
+release	cpoint	1048576
+release	complex	262144

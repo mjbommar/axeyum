@@ -6131,29 +6131,6 @@ mod reblock_block_eq_fine_block_sum_tests {
     use super::*;
     use crate::Declaration;
 
-    /// Run `f` on a **256 MiB** thread.
-    ///
-    /// The default test-thread stack is 2 MiB. Checking the concrete
-    /// instantiation below against its independently-reconstructed expected
-    /// type needs the kernel to fully normalize nested `CReal`/`Rat`/`Int`
-    /// arithmetic built from many chained `mul`/`add`/`neg` applications over
-    /// a unary `Nat` encoding, which recurses far deeper than the default
-    /// stack allows even in `--release` (measured: SIGABRT at both the
-    /// default stack AND under `--release`, so this is not a debug-only
-    /// frame-size artifact — see `creal_point/creal_point_tests.rs`'s own
-    /// `on_a_deep_stack` for the analogous, file-private pattern this
-    /// reproduces). This is a resource limit, not a proof bug: the identical
-    /// computation succeeds outright once given `RUST_MIN_STACK=1GiB` by
-    /// hand, confirmed before adding this wrapper.
-    fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
-        std::thread::Builder::new()
-            .stack_size(256 * 1024 * 1024)
-            .spawn(f)
-            .expect("spawning a deep-stack thread must succeed")
-            .join()
-            .expect("the deep-stack thread must not panic")
-    }
-
     /// **Mandatory concrete instantiation, with a negative control.**
     /// `F := identity`, `a := zero`, `b := one`, `m := 0` (single coarse
     /// block), `n := 1` (each coarse block split into TWO fine sub-pieces,
@@ -6176,7 +6153,7 @@ mod reblock_block_eq_fine_block_sum_tests {
     /// value cannot distinguish "correct" from "compares everything equal".
     #[test]
     fn reblock_block_eq_fine_block_sum_applies_at_concrete_half_split_block() {
-        on_a_deep_stack(reblock_block_eq_fine_block_sum_half_split_body);
+        crate::on_a_deep_stack(reblock_block_eq_fine_block_sum_half_split_body);
     }
 
     fn reblock_block_eq_fine_block_sum_half_split_body() {
@@ -6865,19 +6842,6 @@ mod riemann_sum_reblock_close_tests {
     use super::*;
     use crate::Declaration;
 
-    /// Runs `f` on a 256 MiB stack. See
-    /// `reblock_block_eq_fine_block_sum_tests::on_a_deep_stack` for the
-    /// same pattern one step earlier in this pipeline, and
-    /// `creal_point/creal_point_tests.rs` for the original.
-    fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
-        std::thread::Builder::new()
-            .stack_size(256 * 1024 * 1024)
-            .spawn(f)
-            .expect("spawning a deep-stack thread must succeed")
-            .join()
-            .expect("the deep-stack thread must not panic")
-    }
-
     /// **Mandatory concrete instantiation, with a negative control.**
     /// `F := identity`, `a := ofNat 0`, `b := ofNat 1`, `e := 0`, `m := 2`,
     /// `n := 1` (`m != n`, per this slice's own caution about
@@ -6900,7 +6864,7 @@ mod riemann_sum_reblock_close_tests {
     /// this is not a vacuous check.
     #[test]
     fn riemann_sum_reblock_close_applies_at_concrete_literals() {
-        on_a_deep_stack(riemann_sum_reblock_close_concrete_body);
+        crate::on_a_deep_stack(riemann_sum_reblock_close_concrete_body);
     }
 
     /// Fully normalizing this instantiation drives the kernel deep through
@@ -7351,18 +7315,6 @@ mod riemann_sum_cauchy_tests {
     use super::*;
     use crate::Declaration;
 
-    /// Runs `f` on a 256 MiB stack — see
-    /// `riemann_sum_reblock_close_tests::on_a_deep_stack` for the same
-    /// pattern one step earlier in this pipeline.
-    fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
-        std::thread::Builder::new()
-            .stack_size(256 * 1024 * 1024)
-            .spawn(f)
-            .expect("spawning a deep-stack thread must succeed")
-            .join()
-            .expect("the deep-stack thread must not panic")
-    }
-
     /// **Mandatory concrete instantiation, with a negative control.**
     /// `F := identity`, `a := ofNat 0`, `b := ofNat 1`, `e := 0`, `n := 1`,
     /// `k := 0` (i.e. `m := deep` exactly — `k` is kept as a genuine free
@@ -7388,7 +7340,7 @@ mod riemann_sum_cauchy_tests {
     /// literals here, not a vacuous relabeling.
     #[test]
     fn riemann_sum_cauchy_applies_at_concrete_literals() {
-        on_a_deep_stack(riemann_sum_cauchy_concrete_body);
+        crate::on_a_deep_stack(riemann_sum_cauchy_concrete_body);
     }
 
     fn riemann_sum_cauchy_concrete_body() {

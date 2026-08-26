@@ -98,15 +98,10 @@ fn main() {
     //
     // Same fix, and the same reasoning, as `theorem_dependency_inventory`:
     // `--release` happens to survive, but a doc note saying so cannot reach a
-    // caller that does not read it. `complex`/`cpoint`'s own test modules use
-    // `stack_size(64 * 1024 * 1024)`; do it here and every caller works
-    // unchanged, debug or release.
-    std::thread::Builder::new()
-        .stack_size(64 * 1024 * 1024)
-        .spawn(run)
-        .expect("spawn the deep-stack worker")
-        .join()
-        .expect("the deep-stack worker must not panic");
+    // caller that does not read it. Carry the one documented envelope
+    // (`axeyum_lean_kernel::DEEP_STACK_BYTES`, see `src/stack.rs`) here and
+    // every caller works unchanged, debug or release.
+    axeyum_lean_kernel::on_a_deep_stack(run);
 }
 
 fn run() {
