@@ -1202,6 +1202,16 @@ undecided after 300 seconds; Bosphorus solve mode overran its requested deadline
 interrupted. External rewrites have no UNSAT authority without a checked equivalence chain, so
 the published MC=6 lower control remains unreproduced and MC=7 has not been attempted.
 
+**External Rado-bound correction, 2026-08-26.** ADR-0563 adds generic palette
+canonicalization and a dual-route colouring witness CLI: independent defining-relation replay,
+then evaluation against the freshly regenerated CNF. A live search located Li's public
+296-point `R_5(3)>296` witness at pinned commit `e0b30e5...75a74`; Axeyum verifies its
+equivalent `3(x-y)=z` colouring and the 1,480-variable / 125,222-clause formula. A one-colour
+mutation fails at monochromatic `[1,22,63]`. This supersedes Axeyum's 251-point retained best
+and removes any novelty claim for that weaker bound. A 144-million-move probe across all five
+warm extensions and a cold start found no 297-point witness; that is explicitly not an upper
+bound.
+
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
 F1 is complete: the two authoritative multi-target operations have nine applicable facts, all nine have explicitly partial concept/encounter mappings, and seven evidence credits are checked against their fact records (the other two were settled by earlier one-target operations).

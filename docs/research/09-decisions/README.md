@@ -633,3 +633,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0560](adr-0560-theta-duals-are-reconstructed-from-the-graph.md) | Check exact Lovasz theta clique bounds by reconstructing the dual slack from the graph and sparse nonedge multipliers | accepted |
 | [0561](adr-0561-multiplicative-circuit-synthesis-is-proof-carrying-and-model-lifted.md) | Encode complete affine-between-AND circuit synthesis with replayed SAT models and independently checked DRAT refutations | accepted |
 | [0562](adr-0562-boolean-anf-interchange-keeps-external-algebra-untrusted.md) | Export bounded canonical Boolean ANF systems while replaying SAT witnesses and withholding credit from uncertified rewrites | accepted |
+| [0563](adr-0563-external-colouring-witnesses-replay-both-semantics-and-cnf.md) | Admit external finite-colouring witnesses only after independent relation replay and regenerated-CNF evaluation | accepted |

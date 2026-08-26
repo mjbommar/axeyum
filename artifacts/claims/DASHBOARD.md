@@ -10,8 +10,8 @@ One row per claim under `artifacts/claims/<family>/<id>/claim.json`: what is ass
 
 - Claims: 104 across 3 families (`offdiag-schur` 48, `rado` 43, `vdw` 13)
 - Epistemic status: `computed` 101, `open` 3
-- Evidence rows: 266 — `checked` 262, `not-checked` 1, `replay-only` 3
-- Evidence kinds: `cube-cover` 6, `cube-tree-cover` 1, `instance-pin` 52, `unsat-certificate` 100, `witness-replay` 107
+- Evidence rows: 267 — `checked` 263, `not-checked` 1, `replay-only` 3
+- Evidence kinds: `cube-cover` 6, `cube-tree-cover` 1, `instance-pin` 52, `unsat-certificate` 100, `witness-replay` 108
 - Topic citations: 438 — unresolved by design (ADR-0553); nothing in this repository resolves them
 - Frontier records (open/conjectured claims): 3
 
@@ -115,7 +115,7 @@ One row per claim under `artifacts/claims/<family>/<id>/claim.json`: what is ass
 | [`rado-r4-a5-b3`](rado/rado-r4-a5-b3/claim.json) | R_4(5(x-y)=3z) = 625 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`unsat-certificate`: checked | 3 |
 | [`rado-r4-a5-b4-frontier`](rado/rado-r4-a5-b4-frontier/claim.json) | R_4(5(x-y)=4z) = 741 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`cube-tree-cover`: checked | 5 |
 | [`rado-r4-a6-b5-frontier`](rado/rado-r4-a6-b5-frontier/claim.json) | R_4(6(x-y)=5z) > 1500: the shell construction at the next point of the k=4 row | `open` | `witness-replay`: checked | 5 |
-| [`rado-r5-a3-b1-frontier`](rado/rado-r5-a3-b1-frontier/claim.json) | R_5(3(x-y)=1z) > 243: the a^k law fails at five colours | `open` | `instance-pin`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked | 3 |
+| [`rado-r5-a3-b1-frontier`](rado/rado-r5-a3-b1-frontier/claim.json) | R_5(3(x-y)=1z) > 296: Li's public witness independently replayed | `open` | `witness-replay`: checked<br>`instance-pin`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked | 3 |
 | [`rado-r5-a3-b2-frontier`](rado/rado-r5-a3-b2-frontier/claim.json) | R_5(3(x-y)=2z) > 350: first five-colour bound for this family | `open` | `witness-replay`: checked<br>`witness-replay`: checked | 5 |
 
 ### `vdw`
@@ -155,17 +155,17 @@ Open and conjectured claims carry a mandatory `frontier` record: what is current
 
 **Attack notes:** The satisfiable side is closed (the construction hands over the witness free). For the refutation, reuse the 313 recipe at greater depth: branch on more points (depth 8-10), cap per-cell conflicts, defer checking, and certify offline with certify_dumped_cover; distribute cells across s5-s7. The probe suggests concentrating splits inside the staircase-compatible subtree rather than uniformly.
 
-### `rado-r5-a3-b1-frontier` — R_5(3(x-y)=1z) > 243: the a^k law fails at five colours
+### `rado-r5-a3-b1-frontier` — R_5(3(x-y)=1z) > 296: Li's public witness independently replayed
 
 - Status: `open`
 - Claim: [`rado/rado-r5-a3-b1-frontier/claim.json`](rado/rado-r5-a3-b1-frontier/claim.json)
 
 **Known**
 
-- R_5(3(x-y)=1z) > 243, witnessed and verified (evidence row witness-243). This is the whole content of the claim: the a^k prediction is refuted, the true value is unknown.
+- R_5(3(x-y)=1z) > 296, from Li's public witness independently replayed by Axeyum (evidence row li-witness-296); the true value is unknown.
 - R_3(3(x-y)=1z) = 27 = 3^3 (ledger claim rado-r3-a3-b1) and R_4(3(x-y)=1z) = 81 = 3^4 (ledger claim rado-r4-a3-b1, CDLW Table 10), so the law holds at k=3 and k=4 and fails at k=5.
 - Lemma 4.1's lower bound R_k >= a^k remains SOUND at k=5 -- a lower bound cannot be refuted by exhibiting a larger colouring. What fails is its tightness.
-- Corroborating but UNVERIFIED: Li (SSRN 6814341) reportedly gives R_5(3) > 296 and conjectures the law holds exactly for k <= 2(a-1), which for a=3 means k <= 4. Our data (27, 81, and >243 at k=5) is consistent with that threshold at every point we have.
+- Li's public artifact repository directly supplies and verifies the 296-point witness. Axeyum independently verifies the converted artifact; the SSRN prose remains access-limited, but the lower-bound object no longer is.
 - Incremental climbing from the 243 witness reached a verified 5-colouring of [251] (evidence row witness-251) and stalled at 252 across four seed families; that is a search limit, not a threshold.
 
 **Would settle:** A verified 5-colouring of [n-1] together with an exhaustive checked refutation of F_n, for the same n. Both artifact kinds and their checkers exist in this family. The obstruction is the refutation side at five colours, which has never been done at any n for any member of this family.
